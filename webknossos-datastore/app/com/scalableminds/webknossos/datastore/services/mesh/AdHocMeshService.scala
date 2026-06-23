@@ -27,18 +27,19 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext}
 import scala.reflect.ClassTag
 
-case class AdHocMeshRequest(datasetId: Option[ObjectId],
-                            dataSourceId: Option[DataSourceId],
-                            dataLayer: SegmentationLayer,
-                            cuboid: Cuboid,
-                            segmentId: Long,
-                            voxelSizeFactor: Vec3Double, // assumed to be in dataset’s unit
-                            tokenContext: TokenContext,
-                            mapping: Option[String] = None,
-                            mappingType: Option[String] = None,
-                            additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
-                            annotationVersion: Option[Long],
-                            findNeighbors: Boolean = true,
+case class AdHocMeshRequest(
+    datasetId: Option[ObjectId],
+    dataSourceId: Option[DataSourceId],
+    dataLayer: SegmentationLayer,
+    cuboid: Cuboid,
+    segmentId: Long,
+    voxelSizeFactor: Vec3Double, // assumed to be in dataset’s unit
+    tokenContext: TokenContext,
+    mapping: Option[String] = None,
+    mappingType: Option[String] = None,
+    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
+    annotationVersion: Option[Long],
+    findNeighbors: Boolean = true
 )
 
 case class DataTypeFunctors[T, B](
@@ -58,11 +59,13 @@ class AdHocMeshActor(val service: AdHocMeshService, val timeout: FiniteDuration)
 
 }
 
-class AdHocMeshService(binaryDataService: BinaryDataService,
-                       mappingService: MappingService,
-                       actorSystem: ActorSystem,
-                       adHocMeshTimeout: FiniteDuration,
-                       adHocMeshActorPoolSize: Int)(implicit ec: ExecutionContext)
+class AdHocMeshService(
+    binaryDataService: BinaryDataService,
+    mappingService: MappingService,
+    actorSystem: ActorSystem,
+    adHocMeshTimeout: FiniteDuration,
+    adHocMeshActorPoolSize: Int
+)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
 
@@ -75,33 +78,41 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
 
   def requestAdHocMeshViaActor(request: AdHocMeshRequest): Fox[(Array[Float], List[Int])] =
     Fox.fromFutureBox {
-      actor.ask(request).mapTo[Box[(Array[Float], List[Int])]].recover {
-        case e: Exception => Failure(e.getMessage)
+      actor.ask(request).mapTo[Box[(Array[Float], List[Int])]].recover { case e: Exception =>
+        Failure(e.getMessage)
       }
     }
 
   def requestAdHocMesh(request: AdHocMeshRequest)(using tc: TokenContext): Fox[(Array[Float], List[Int])] =
     request.dataLayer.elementClass match {
       case ElementClass.uint8 | ElementClass.int8 =>
-        generateAdHocMeshImpl[Byte, ByteBuffer](request,
-                                                DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte))
+        generateAdHocMeshImpl[Byte, ByteBuffer](
+          request,
+          DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte)
+        )
 
       case ElementClass.uint16 | ElementClass.int16 =>
         generateAdHocMeshImpl[Short, ShortBuffer](
           request,
-          DataTypeFunctors[Short, ShortBuffer](_.asShortBuffer, _.get(_), _.toShort))
+          DataTypeFunctors[Short, ShortBuffer](_.asShortBuffer, _.get(_), _.toShort)
+        )
 
       case ElementClass.uint32 | ElementClass.int32 =>
-        generateAdHocMeshImpl[Int, IntBuffer](request,
-                                              DataTypeFunctors[Int, IntBuffer](_.asIntBuffer, _.get(_), _.toInt))
+        generateAdHocMeshImpl[Int, IntBuffer](
+          request,
+          DataTypeFunctors[Int, IntBuffer](_.asIntBuffer, _.get(_), _.toInt)
+        )
       case ElementClass.uint64 | ElementClass.int64 =>
-        generateAdHocMeshImpl[Long, LongBuffer](request,
-                                                DataTypeFunctors[Long, LongBuffer](_.asLongBuffer, _.get(_), identity))
+        generateAdHocMeshImpl[Long, LongBuffer](
+          request,
+          DataTypeFunctors[Long, LongBuffer](_.asLongBuffer, _.get(_), identity)
+        )
     }
 
   private def generateAdHocMeshImpl[T: ClassTag, B <: Buffer](
       request: AdHocMeshRequest,
-      dataTypeFunctors: DataTypeFunctors[T, B])(using tc: TokenContext): Fox[(Array[Float], List[Int])] = {
+      dataTypeFunctors: DataTypeFunctors[T, B]
+  )(using tc: TokenContext): Fox[(Array[Float], List[Int])] = {
 
     def applyJsonMappingIfNeeded(data: Array[T]): Box[Array[T]] =
       request.mapping match {
@@ -111,7 +122,8 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
               mappingService.applyMapping(
                 DataServiceMappingRequest(request.dataSourceId, request.dataLayer, mappingName),
                 data,
-                dataTypeFunctors.fromLong)
+                dataTypeFunctors.fromLong
+              )
             case _ => Full(data)
           }
         case _ =>
@@ -174,11 +186,10 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
       val back_xz = BoundingBox(Vec3Int(0, y, 0), x, 1, z)
       val back_yz = BoundingBox(Vec3Int(x, 0, 0), 1, y, z)
       val surfaceBoundingBoxes = List(front_xy, front_xz, front_yz, back_xy, back_xz, back_yz)
-      surfaceBoundingBoxes.zipWithIndex.filter {
-        case (surfaceBoundingBox, _) =>
-          subVolumeContainsSegmentId(data, dataDimensions, surfaceBoundingBox, segmentId)
-      }.map {
-        case (_, index) => index
+      surfaceBoundingBoxes.zipWithIndex.filter { case (surfaceBoundingBox, _) =>
+        subVolumeContainsSegmentId(data, dataDimensions, surfaceBoundingBox, segmentId)
+      }.map { case (_, index) =>
+        index
       }
     }
 
@@ -189,15 +200,19 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
       request.dataSourceId,
       request.dataLayer,
       cuboid,
-      DataServiceRequestSettings(additionalCoordinates = request.additionalCoordinates,
-                                 version = request.annotationVersion)
+      DataServiceRequestSettings(
+        additionalCoordinates = request.additionalCoordinates,
+        version = request.annotationVersion
+      )
     )
 
     val dataDimensions = Vec3Int(cuboid.width, cuboid.height, cuboid.depth)
 
-    val offset = Vec3Float(cuboid.topLeft.voxelXInMag.toFloat,
-                           cuboid.topLeft.voxelYInMag.toFloat,
-                           cuboid.topLeft.voxelZInMag.toFloat)
+    val offset = Vec3Float(
+      cuboid.topLeft.voxelXInMag.toFloat,
+      cuboid.topLeft.voxelYInMag.toFloat,
+      cuboid.topLeft.voxelZInMag.toFloat
+    )
     val scale = Vec3Float(cuboid.topLeft.mag) * Vec3Float(request.voxelSizeFactor)
     val typedSegmentId = dataTypeFunctors.fromLong(request.segmentId)
 
@@ -209,9 +224,11 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
       typedData = convertData(agglomerateMappedData)
       mappedData <- applyJsonMappingIfNeeded(typedData).toFox
       mappedSegmentId <- applyJsonMappingIfNeeded(Array(typedSegmentId)).map(_.head).toFox
-      neighbors = if (request.findNeighbors) { findNeighbors(mappedData, dataDimensions, mappedSegmentId) } else {
-        List()
-      }
+      neighbors =
+        if (request.findNeighbors) { findNeighbors(mappedData, dataDimensions, mappedSegmentId) }
+        else {
+          List()
+        }
 
     } yield {
       for {

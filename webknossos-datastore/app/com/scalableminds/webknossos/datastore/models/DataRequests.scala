@@ -55,7 +55,7 @@ case class WebknossosAdHocMeshRequest(
     mappingType: Option[String] = None,
     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
     annotationVersion: Option[Long],
-    findNeighbors: Boolean = true,
+    findNeighbors: Boolean = true
 ) {
   def cuboid: Cuboid =
     Cuboid(VoxelPosition(position.x, position.y, position.z, mag), cubeSize.x, cubeSize.y, cubeSize.z)

@@ -5,12 +5,20 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.controllers.{GetEffectiveVoxelSizeParameters, PathValidationResult}
-import com.scalableminds.webknossos.datastore.explore.{ExploreRemoteDatasetRequest, ExploreRemoteDatasetResponse, ExploreRemoteLayerParameters}
+import com.scalableminds.webknossos.datastore.explore.{
+  ExploreRemoteDatasetRequest,
+  ExploreRemoteDatasetResponse,
+  ExploreRemoteLayerParameters
+}
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, UsableDataSource}
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, RawCuboidRequest, VoxelSize}
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.datastore.services.{DataSourceWithRootPathInfo, PathStorageUsageRequest, PathStorageUsageResponse}
+import com.scalableminds.webknossos.datastore.services.{
+  DataSourceWithRootPathInfo,
+  PathStorageUsageRequest,
+  PathStorageUsageResponse
+}
 import com.typesafe.scalalogging.LazyLogging
 import controllers.RpcTokenHolder
 import play.api.libs.json.JsObject
@@ -26,16 +34,19 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
 
   private lazy val effectiveAiModelVoxelSizeCache: AlfuCache[UPath, VoxelSize] = AlfuCache(timeToLive = 15 minutes)
 
-  def getDataLayerThumbnail(dataset: Dataset,
-                            dataLayerName: String,
-                            mag1BoundingBox: BoundingBox,
-                            mag: Vec3Int,
-                            mappingName: Option[String],
-                            intensityRangeOpt: Option[(Double, Double)],
-                            colorSettingsOpt: Option[ThumbnailColorSettings]): Fox[Array[Byte]] = {
+  def getDataLayerThumbnail(
+      dataset: Dataset,
+      dataLayerName: String,
+      mag1BoundingBox: BoundingBox,
+      mag: Vec3Int,
+      mappingName: Option[String],
+      intensityRangeOpt: Option[(Double, Double)],
+      colorSettingsOpt: Option[ThumbnailColorSettings]
+  ): Fox[Array[Byte]] = {
     val targetMagBoundingBox = mag1BoundingBox / mag
     logger.info(
-      s"Thumbnail called for: ${dataset._id}, organization: ${dataset._organization}, directoryName: ${dataset.directoryName}, Layer: $dataLayerName")
+      s"Thumbnail called for: ${dataset._id}, organization: ${dataset._organization}, directoryName: ${dataset.directoryName}, Layer: $dataLayerName"
+    )
     rpc(s"${dataStore.url}/data/datasets/${dataset._id}/layers/$dataLayerName/thumbnail.jpg")
       .addQueryParam("token", RpcTokenHolder.webknossosToken)
       .addQueryParam("mag", mag.toMagLiteral(allowScalar = false))
@@ -52,16 +63,19 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
       .getWithBytesResponse
   }
 
-  def getLayerData(dataset: Dataset,
-                   layerName: String,
-                   mag1BoundingBox: BoundingBox,
-                   mag: Vec3Int,
-                   additionalCoordinates: Option[Seq[AdditionalCoordinate]]): Fox[Array[Byte]] = {
+  def getLayerData(
+      dataset: Dataset,
+      layerName: String,
+      mag1BoundingBox: BoundingBox,
+      mag: Vec3Int,
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]]
+  ): Fox[Array[Byte]] = {
     val targetMagBoundingBox = mag1BoundingBox / mag
     rpc(s"${dataStore.url}/data/datasets/${dataset._id}/layers/$layerName/readData")
       .addQueryParam("token", RpcTokenHolder.webknossosToken)
       .postJsonWithBytesResponse(
-        RawCuboidRequest(mag1BoundingBox.topLeft, targetMagBoundingBox.size, mag, additionalCoordinates))
+        RawCuboidRequest(mag1BoundingBox.topLeft, targetMagBoundingBox.size, mag, additionalCoordinates)
+      )
   }
 
   def findPositionWithData(dataset: Dataset, dataLayerName: String): Fox[JsObject] =
@@ -89,13 +103,16 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
     )
   }
 
-  def exploreRemoteDataset(layerParameters: List[ExploreRemoteLayerParameters],
-                           organizationId: String,
-                           userToken: String): Fox[ExploreRemoteDatasetResponse] =
+  def exploreRemoteDataset(
+      layerParameters: List[ExploreRemoteLayerParameters],
+      organizationId: String,
+      userToken: String
+  ): Fox[ExploreRemoteDatasetResponse] =
     rpc(s"${dataStore.url}/data/datasets/exploreRemote")
       .addQueryParam("token", userToken)
       .postJsonWithJsonResponse[ExploreRemoteDatasetRequest, ExploreRemoteDatasetResponse](
-        ExploreRemoteDatasetRequest(layerParameters, organizationId))
+        ExploreRemoteDatasetRequest(layerParameters, organizationId)
+      )
 
   def validatePaths(paths: Seq[UPath]): Fox[List[PathValidationResult]] =
     rpc(s"${dataStore.url}/data/datasets/validatePaths")
@@ -147,7 +164,8 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
         rpc(s"${dataStore.url}/data/aiModels/effectiveVoxelSize")
           .addQueryParam("token", RpcTokenHolder.webknossosToken)
           .postJsonWithJsonResponse[GetEffectiveVoxelSizeParameters, VoxelSize](
-            GetEffectiveVoxelSizeParameters(modelPath))
+            GetEffectiveVoxelSizeParameters(modelPath)
+          )
     )
 
   def writeMirror(datasetIds: Seq[ObjectId], failOnError: Boolean): Fox[Seq[(ObjectId, String)]] =
@@ -156,8 +174,11 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
       .addQueryParam("token", RpcTokenHolder.webknossosToken)
       .postJsonWithJsonResponse[Seq[ObjectId], Seq[(ObjectId, String)]](datasetIds)
 
-  def scanRealPathsForVirtual(dataSourcesWithrootPathInfo: Seq[DataSourceWithRootPathInfo])(implicit ec: ExecutionContext): Fox[Unit] = {
-    val dataSourcesThatCanHaveRealpaths = dataSourcesWithrootPathInfo.filter(_.dataSource.toUsable.exists(_.allExplicitPaths.exists(_.isLocal)))
+  def scanRealPathsForVirtual(
+      dataSourcesWithrootPathInfo: Seq[DataSourceWithRootPathInfo]
+  )(implicit ec: ExecutionContext): Fox[Unit] = {
+    val dataSourcesThatCanHaveRealpaths =
+      dataSourcesWithrootPathInfo.filter(_.dataSource.toUsable.exists(_.allExplicitPaths.exists(_.isLocal)))
     if (dataSourcesThatCanHaveRealpaths.nonEmpty) {
       for {
         _ <- rpc(s"${dataStore.url}/data/triggers/scanRealPathsForVirtual")
@@ -167,7 +188,11 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
     } else Fox.successful(())
   }
 
-  def getOrganizationBaseDirectory(organizationId: String, requireAllowsUpload: Boolean = false, requireLocal: Boolean = false): Fox[UPath] =
+  def getOrganizationBaseDirectory(
+      organizationId: String,
+      requireAllowsUpload: Boolean = false,
+      requireLocal: Boolean = false
+  ): Fox[UPath] =
     rpc(s"${dataStore.url}/data/getOrganizationBaseDirectory")
       .addQueryParam("organizationId", organizationId)
       .addQueryParam("requireLocal", requireLocal)

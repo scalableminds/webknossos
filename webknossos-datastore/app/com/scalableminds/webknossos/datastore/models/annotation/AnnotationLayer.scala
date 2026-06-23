@@ -15,7 +15,7 @@ case class AnnotationLayer(
     tracingId: String,
     typ: AnnotationLayerType,
     name: String,
-    stats: JsObject,
+    stats: JsObject
 ) {
   def toProto: AnnotationLayerProto =
     AnnotationLayerProto(tracingId, name, AnnotationLayerType.toProto(typ))
@@ -36,14 +36,18 @@ object AnnotationLayer extends FoxImplicits {
       case AnnotationLayerType.Volume   => defaultVolumeLayerName
     }
 
-  def layersFromIds(skeletonTracingIdOpt: Option[String],
-                    volumeTracingIdOpt: Option[String],
-                    assertNonEmpty: Boolean = true)(implicit ec: ExecutionContext): Fox[List[AnnotationLayer]] = {
+  def layersFromIds(
+      skeletonTracingIdOpt: Option[String],
+      volumeTracingIdOpt: Option[String],
+      assertNonEmpty: Boolean = true
+  )(implicit ec: ExecutionContext): Fox[List[AnnotationLayer]] = {
     val annotationLayers: List[AnnotationLayer] = List(
       skeletonTracingIdOpt.map(
-        AnnotationLayer(_, AnnotationLayerType.Skeleton, defaultSkeletonLayerName, AnnotationLayerStatistics.unknown)),
+        AnnotationLayer(_, AnnotationLayerType.Skeleton, defaultSkeletonLayerName, AnnotationLayerStatistics.unknown)
+      ),
       volumeTracingIdOpt.map(
-        AnnotationLayer(_, AnnotationLayerType.Volume, defaultVolumeLayerName, AnnotationLayerStatistics.unknown))
+        AnnotationLayer(_, AnnotationLayerType.Volume, defaultVolumeLayerName, AnnotationLayerStatistics.unknown)
+      )
     ).flatten
     for {
       _ <- Fox.fromBool(!assertNonEmpty || annotationLayers.nonEmpty) ?~> Msg.Annotation.needsEitherSkeletonOrVolume
@@ -70,12 +74,14 @@ object AnnotationLayerStatistics {
   def unknown: JsObject = Json.obj()
 }
 
-case class FetchedAnnotationLayer(tracingId: String,
-                                  name: String,
-                                  tracing: Either[SkeletonTracing, VolumeTracing],
-                                  volumeDataOpt: Option[Array[Byte]] = None,
-                                  editedMappingEdgesOpt: Option[Array[Byte]] = None,
-                                  baseMappingNameOpt: Option[String] = None) {
+case class FetchedAnnotationLayer(
+    tracingId: String,
+    name: String,
+    tracing: Either[SkeletonTracing, VolumeTracing],
+    volumeDataOpt: Option[Array[Byte]] = None,
+    editedMappingEdgesOpt: Option[Array[Byte]] = None,
+    baseMappingNameOpt: Option[String] = None
+) {
   def typ: AnnotationLayerType =
     if (tracing.isLeft) AnnotationLayerType.Skeleton else AnnotationLayerType.Volume
 
@@ -98,20 +104,20 @@ object FetchedAnnotationLayer {
       tracing: Either[SkeletonTracing, VolumeTracing],
       volumeDataOpt: Option[Array[Byte]] = None,
       editedEdgesDataOpt: Option[Array[Byte]] = None,
-      baseMappingNameOpt: Option[String] = None)(implicit ec: ExecutionContext): Fox[FetchedAnnotationLayer] =
+      baseMappingNameOpt: Option[String] = None
+  )(implicit ec: ExecutionContext): Fox[FetchedAnnotationLayer] =
     for {
       _ <- Fox.fromBool(
-        (annotationLayer.typ == AnnotationLayerType.Skeleton && tracing.isLeft) || annotationLayer.typ == AnnotationLayerType.Volume && tracing.isRight) ?~> Msg.Annotation.Download.fetchTypeMismatch
-    } yield {
-      FetchedAnnotationLayer(
-        annotationLayer.tracingId,
-        annotationLayer.name,
-        tracing,
-        volumeDataOpt,
-        editedEdgesDataOpt,
-        baseMappingNameOpt
-      )
-    }
+        (annotationLayer.typ == AnnotationLayerType.Skeleton && tracing.isLeft) || annotationLayer.typ == AnnotationLayerType.Volume && tracing.isRight
+      ) ?~> Msg.Annotation.Download.fetchTypeMismatch
+    } yield FetchedAnnotationLayer(
+      annotationLayer.tracingId,
+      annotationLayer.name,
+      tracing,
+      volumeDataOpt,
+      editedEdgesDataOpt,
+      baseMappingNameOpt
+    )
 
   // To support compound download. There, at most one skeleton tracing and at most one volume tracing exist per annotation. Volume data is handled separately there.
   @SuppressWarnings(Array("OptionGet")) // Can be suppressed as the assertions ensure full options
@@ -120,15 +126,22 @@ object FetchedAnnotationLayer {
       volumeTracingIdOpt: Option[String],
       skeletonTracingOpt: Option[SkeletonTracing],
       volumeTracingOpt: Option[VolumeTracing],
-      assertNonEmpty: Boolean = true)(implicit ec: ExecutionContext): Fox[List[FetchedAnnotationLayer]] =
+      assertNonEmpty: Boolean = true
+  )(implicit ec: ExecutionContext): Fox[List[FetchedAnnotationLayer]] =
     for {
-      _ <- Fox.fromBool(skeletonTracingIdOpt.isDefined == skeletonTracingOpt.isDefined) ?~> Msg.Annotation.mismatchingSkeletonIdsAndTracings
-      _ <- Fox.fromBool(volumeTracingIdOpt.isDefined == volumeTracingOpt.isDefined) ?~> Msg.Annotation.mismatchingVolumeIdsAndTracings
+      _ <- Fox.fromBool(
+        skeletonTracingIdOpt.isDefined == skeletonTracingOpt.isDefined
+      ) ?~> Msg.Annotation.mismatchingSkeletonIdsAndTracings
+      _ <- Fox.fromBool(
+        volumeTracingIdOpt.isDefined == volumeTracingOpt.isDefined
+      ) ?~> Msg.Annotation.mismatchingVolumeIdsAndTracings
       annotationLayers: List[FetchedAnnotationLayer] = List(
         skeletonTracingIdOpt.map(
-          FetchedAnnotationLayer(_, AnnotationLayer.defaultSkeletonLayerName, Left(skeletonTracingOpt.get))),
+          FetchedAnnotationLayer(_, AnnotationLayer.defaultSkeletonLayerName, Left(skeletonTracingOpt.get))
+        ),
         volumeTracingIdOpt.map(
-          FetchedAnnotationLayer(_, AnnotationLayer.defaultVolumeLayerName, Right(volumeTracingOpt.get)))
+          FetchedAnnotationLayer(_, AnnotationLayer.defaultVolumeLayerName, Right(volumeTracingOpt.get))
+        )
       ).flatten
       _ <- Fox.fromBool(!assertNonEmpty || annotationLayers.nonEmpty) ?~> Msg.Annotation.needsEitherSkeletonOrVolume
     } yield annotationLayers

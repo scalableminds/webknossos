@@ -22,9 +22,11 @@ import play.api.mvc.{Action, AnyContent, ResponseHeader, Result}
 
 import scala.concurrent.ExecutionContext
 
-class DataProxyController @Inject()(accessTokenService: DataStoreAccessTokenService,
-                                    dataVaultService: DataVaultService,
-                                    datasetCache: DatasetCache)(implicit ec: ExecutionContext)
+class DataProxyController @Inject() (
+    accessTokenService: DataStoreAccessTokenService,
+    dataVaultService: DataVaultService,
+    datasetCache: DatasetCache
+)(implicit ec: ExecutionContext)
     extends Controller
     with FoxImplicits {
 
@@ -54,11 +56,13 @@ class DataProxyController @Inject()(accessTokenService: DataStoreAccessTokenServ
     Seq(contentEncoding, contentRange, acceptRanges).flatten
   }
 
-  def proxyAttachment(datasetId: ObjectId,
-                      dataLayerName: String,
-                      attachmentType: String,
-                      attachmentName: String,
-                      path: String): Action[AnyContent] = Action.async { implicit request =>
+  def proxyAttachment(
+      datasetId: ObjectId,
+      dataLayerName: String,
+      attachmentType: String,
+      attachmentName: String,
+      path: String
+  ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
         _ <- validatePath(path)
@@ -88,22 +92,25 @@ class DataProxyController @Inject()(accessTokenService: DataStoreAccessTokenServ
 
   private def adaptPathsForDataSource(dataSource: UsableDataSource) =
     dataSource.copy(
-      dataLayers = dataSource.dataLayers.map(
-        layer =>
-          layer.mapped(magMapping = mag => adaptPathForMag(mag, layer.name),
-                       attachmentMapping = attachments => adaptPathsForAttachments(attachments, layer.name)))
+      dataLayers = dataSource.dataLayers.map(layer =>
+        layer.mapped(
+          magMapping = mag => adaptPathForMag(mag, layer.name),
+          attachmentMapping = attachments => adaptPathsForAttachments(attachments, layer.name)
+        )
+      )
     )
 
   private def adaptPathForMag(mag: MagLocator, layerName: String): MagLocator =
     mag.copy(
-      path = Some(UPath.fromStringUnsafe(s"./layers/$layerName/mags/${mag.mag.toMagLiteral(allowScalar = true)}")))
+      path = Some(UPath.fromStringUnsafe(s"./layers/$layerName/mags/${mag.mag.toMagLiteral(allowScalar = true)}"))
+    )
 
   private def adaptPathsForAttachments(attachments: DataLayerAttachments, layerName: String): DataLayerAttachments =
-    attachments.mappedWithType(
-      (attachment, attachmentType) =>
-        attachment.copy(
-          path = UPath.fromStringUnsafe(s"./layers/$layerName/attachments/$attachmentType/${attachment.name}")
-      ))
+    attachments.mappedWithType((attachment, attachmentType) =>
+      attachment.copy(
+        path = UPath.fromStringUnsafe(s"./layers/$layerName/attachments/$attachmentType/${attachment.name}")
+      )
+    )
 
   private def validatePath(path: String): Fox[Unit] =
     for {

@@ -26,19 +26,20 @@ trait AbstractVolumeTracingBucketProvider extends BucketProvider with VolumeTrac
   def bucketStream(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])]
 }
 
-class VolumeTracingBucketProvider(layer: VolumeTracingLayer)
-    extends AbstractVolumeTracingBucketProvider {
+class VolumeTracingBucketProvider(layer: VolumeTracingLayer) extends AbstractVolumeTracingBucketProvider {
 
   val volumeDataStore: FossilDBClient = layer.volumeDataStore
   val temporaryTracingService: TemporaryTracingService = layer.temporaryTracingService
 
-  override def load(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext,
-                                                          tc: TokenContext): Fox[Array[Byte]] =
+  override def load(
+      readInstruction: DataReadInstruction
+  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     // Don’t use the layer version, because BucketProvider (with layer) may be cached across versions. readInstruction has the current version.
     loadBucket(layer, readInstruction.bucket, readInstruction.version)
 
-  override def loadMultiple(readInstructions: Seq[DataReadInstruction])(implicit ec: ExecutionContext,
-                                                                        tc: TokenContext): Fox[Seq[Box[Array[Byte]]]] =
+  override def loadMultiple(
+      readInstructions: Seq[DataReadInstruction]
+  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[Seq[Box[Array[Byte]]]] =
     if (readInstructions.isEmpty) Fox.successful(Seq.empty)
     else {
       for {
@@ -55,14 +56,14 @@ class VolumeTracingBucketProvider(layer: VolumeTracingLayer)
     bucketStreamWithVersion(layer, version)
 }
 
-class TemporaryVolumeTracingBucketProvider(layer: VolumeTracingLayer)
-    extends AbstractVolumeTracingBucketProvider {
+class TemporaryVolumeTracingBucketProvider(layer: VolumeTracingLayer) extends AbstractVolumeTracingBucketProvider {
 
   val volumeDataStore: FossilDBClient = layer.volumeDataStore
   val temporaryTracingService: TemporaryTracingService = layer.temporaryTracingService
 
-  override def load(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext,
-                                                          tc: TokenContext): Fox[Array[Byte]] =
+  override def load(
+      readInstruction: DataReadInstruction
+  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
       _ <- temporaryTracingService.assertTracingStillPresent(layer.name)
       data <- loadBucket(layer, readInstruction.bucket, readInstruction.version)
@@ -86,7 +87,7 @@ case class VolumeTracingLayer(
     tokenContext: TokenContext,
     additionalAxes: Option[Seq[AdditionalAxis]],
     attachments: Option[DataLayerAttachments] = None,
-    volumeDataStore: FossilDBClient,
+    volumeDataStore: FossilDBClient
 )(implicit val ec: ExecutionContext)
     extends SegmentationLayer
     with ProtoGeometryImplicits
@@ -114,9 +115,11 @@ case class VolumeTracingLayer(
     else
       new VolumeTracingBucketProvider(this)
 
-  override def bucketProvider(dataVaultServiceOpt: Option[DataVaultService],
-                              dataSourceId: DataSourceId,
-                              sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider =
+  override def bucketProvider(
+      dataVaultServiceOpt: Option[DataVaultService],
+      dataSourceId: DataSourceId,
+      sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]
+  ): BucketProvider =
     volumeBucketProvider
 
   def bucketProvider: AbstractVolumeTracingBucketProvider = volumeBucketProvider

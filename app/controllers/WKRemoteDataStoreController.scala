@@ -43,7 +43,7 @@ import scala.concurrent.duration.DurationInt
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class WKRemoteDataStoreController @Inject()(
+class WKRemoteDataStoreController @Inject() (
     datasetService: DatasetService,
     dataStoreService: DataStoreService,
     dataStoreDAO: DataStoreDAO,
@@ -60,7 +60,8 @@ class WKRemoteDataStoreController @Inject()(
     uploadToPathsService: UploadToPathsService,
     jobService: JobService,
     credentialDAO: CredentialDAO,
-    wkSilhouetteEnvironment: WkSilhouetteEnvironment)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+    wkSilhouetteEnvironment: WkSilhouetteEnvironment
+)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with LazyLogging {
 
@@ -73,18 +74,24 @@ class WKRemoteDataStoreController @Inject()(
         val uploadInfo = request.body
         for {
           user <- bearerTokenService.userForToken(token) ~> FORBIDDEN
-          organization <- organizationDAO.findOne(uploadInfo.organizationId)(using GlobalAccessContext) ?~> Msg.Organization
-            .notFound(uploadInfo.organizationId) ~> NOT_FOUND
+          organization <- organizationDAO.findOne(uploadInfo.organizationId)(using
+            GlobalAccessContext
+          ) ?~> Msg.Organization.notFound(uploadInfo.organizationId) ~> NOT_FOUND
           _ <- organizationService.assertUsedStorageNotExceeded(
             organization,
-            uploadInfo.resumableUploadInfo.totalFileSizeInBytes) ?~> Msg.Dataset.Upload.storageExceeded ~> FORBIDDEN
+            uploadInfo.resumableUploadInfo.totalFileSizeInBytes
+          ) ?~> Msg.Dataset.Upload.storageExceeded ~> FORBIDDEN
           _ <- Fox.fromBool(organization._id == user._organization) ?~> Msg.notAllowed ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(uploadInfo.datasetName)
-          _ <- Fox.fromBool(dataStore.onlyAllowedOrganization.forall(_ == organization._id)) ?~> Msg.Dataset.Upload.datastoreRestricted
+          _ <- Fox.fromBool(
+            dataStore.onlyAllowedOrganization.forall(_ == organization._id)
+          ) ?~> Msg.Dataset.Upload.datastoreRestricted
           _ <- Fox.serialCombined(uploadInfo.layersToLink.getOrElse(List.empty))(l =>
-            layerToLinkService.validateLayerToLink(l, user)) ?~> Msg.Dataset.Upload.invalidLinkedLayers
+            layerToLinkService.validateLayerToLink(l, user)
+          ) ?~> Msg.Dataset.Upload.invalidLinkedLayers
           _ <- Fox.runIf(request.body.requireUniqueName.getOrElse(false))(
-            datasetService.checkNameAvailable(organization._id, request.body.datasetName))
+            datasetService.checkNameAvailable(organization._id, request.body.datasetName)
+          )
           preliminaryDataSource = UnusableDataSource(DataSourceId("", ""), None, DataSourceStatus.notYetUploaded)
           dataset <- datasetService.createAndSetUpDataset(
             uploadInfo.datasetName,
@@ -94,9 +101,11 @@ class WKRemoteDataStoreController @Inject()(
             user,
             isVirtual = uploadInfo.isVirtual.getOrElse(true),
             creationType = DatasetCreationType.Upload,
-            importURLOpt = None,
+            importURLOpt = None
           ) ?~> Msg.Dataset.Upload.createFailed
-          _ <- datasetService.addInitialTeams(dataset, uploadInfo.initialTeamIds, user)(using AuthorizedAccessContext(user))
+          _ <- datasetService.addInitialTeams(dataset, uploadInfo.initialTeamIds, user)(using
+            AuthorizedAccessContext(user)
+          )
           additionalInfo = DatasetUploadAdditionalInfo(dataset._id, dataset.directoryName)
         } yield Ok(Json.toJson(additionalInfo))
       }
@@ -111,17 +120,25 @@ class WKRemoteDataStoreController @Inject()(
           dataset <- datasetDAO.findOne(request.body.datasetId)(using AuthorizedAccessContext(user))
           _ <- Fox.fromBool(dataset.isVirtual) ?~> Msg.Dataset.Upload.reserveMagUploadNotVirtual
           (dataSource, dataLayer) <- datasetService.getDataSourceAndLayerFor(dataset, request.body.layerName)
-          _ <- Fox.fromBool(!dataLayer.mags.exists(_.mag.maxDim == request.body.mag.mag.maxDim)) ?~> s"New mag ${request.body.mag.mag} conflicts with existing mag of the layer."
-          _ <- Fox.fromBool(dataset._dataStore == dataStore.name) ?~> "Cannot upload mag to existing dataset via different datastore."
-          _ <- uploadToPathsService.handleExistingPendingMag(dataset,
-                                                             request.body.layerName,
-                                                             request.body.mag.mag,
-                                                             request.body.overwritePending)
-          _ <- datasetMagDAO.insertWithUploadPending(request.body.datasetId,
-                                                     request.body.layerName,
-                                                     request.body.mag.mag,
-                                                     request.body.mag.axisOrder,
-                                                     request.body.mag.channelIndex)
+          _ <- Fox.fromBool(
+            !dataLayer.mags.exists(_.mag.maxDim == request.body.mag.mag.maxDim)
+          ) ?~> s"New mag ${request.body.mag.mag} conflicts with existing mag of the layer."
+          _ <- Fox.fromBool(
+            dataset._dataStore == dataStore.name
+          ) ?~> "Cannot upload mag to existing dataset via different datastore."
+          _ <- uploadToPathsService.handleExistingPendingMag(
+            dataset,
+            request.body.layerName,
+            request.body.mag.mag,
+            request.body.overwritePending
+          )
+          _ <- datasetMagDAO.insertWithUploadPending(
+            request.body.datasetId,
+            request.body.layerName,
+            request.body.mag.mag,
+            request.body.mag.axisOrder,
+            request.body.mag.channelIndex
+          )
         } yield Ok(Json.toJson(MagUploadAdditionalInfo(dataSource.id)))
       }
     }
@@ -136,18 +153,24 @@ class WKRemoteDataStoreController @Inject()(
           _ <- Fox.fromBool(dataset.isVirtual) ?~> Msg.Dataset.Upload.reserveAttachmentUploadNotVirtual
           (dataSource, dataLayer) <- datasetService.getDataSourceAndLayerFor(dataset, request.body.layerName)
           isSingletonAttachment = LayerAttachmentType.isSingletonAttachment(request.body.attachmentType)
-          existsError = if (isSingletonAttachment) Msg.Dataset.Layer.attachmentSingletonAlreadyFilled
-          else Msg.Dataset.Layer.attachmentNameTaken
+          existsError =
+            if (isSingletonAttachment) Msg.Dataset.Layer.attachmentSingletonAlreadyFilled
+            else Msg.Dataset.Layer.attachmentNameTaken
           existingAttachmentOpt = dataLayer.attachments.flatMap(
-            _.getByTypeAndNameAlwaysReturnSingletons(request.body.attachmentType, request.body.attachment.name))
+            _.getByTypeAndNameAlwaysReturnSingletons(request.body.attachmentType, request.body.attachment.name)
+          )
           _ <- Fox.fromBool(existingAttachmentOpt.isEmpty) ?~> existsError
-          _ <- Fox.fromBool(dataset._dataStore == dataStore.name) ?~> "Cannot upload attachment to existing dataset via different datastore."
+          _ <- Fox.fromBool(
+            dataset._dataStore == dataStore.name
+          ) ?~> "Cannot upload attachment to existing dataset via different datastore."
           dummyAttachmentPath <- UPath.fromString("<pending upload>").toFox
-          _ <- uploadToPathsService.handleExistingPendingAttachment(dataset,
-                                                                    request.body.layerName,
-                                                                    request.body.attachmentType,
-                                                                    request.body.attachment.name,
-                                                                    request.body.overwritePending)
+          _ <- uploadToPathsService.handleExistingPendingAttachment(
+            dataset,
+            request.body.layerName,
+            request.body.attachmentType,
+            request.body.attachment.name,
+            request.body.overwritePending
+          )
           _ <- datasetAttachmentDAO.insertWithUploadPending(
             request.body.datasetId,
             request.body.layerName,
@@ -160,70 +183,86 @@ class WKRemoteDataStoreController @Inject()(
       }
     }
 
-  def getUnfinishedDatasetUploadsForUser(name: String,
-                                         key: String,
-                                         token: String,
-                                         organizationId: String): Action[AnyContent] =
+  def getUnfinishedDatasetUploadsForUser(
+      name: String,
+      key: String,
+      token: String,
+      organizationId: String
+  ): Action[AnyContent] =
     Action.async { _ =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
           user <- bearerTokenService.userForToken(token) ~> FORBIDDEN
-          organization <- organizationDAO.findOne(organizationId)(using GlobalAccessContext) ?~> Msg.Organization.notFound(
-            organizationId) ~> NOT_FOUND
+          organization <- organizationDAO.findOne(organizationId)(using GlobalAccessContext) ?~> Msg.Organization
+            .notFound(organizationId) ~> NOT_FOUND
           _ <- Fox.fromBool(organization._id == user._organization) ?~> Msg.notAllowed ~> FORBIDDEN
-          datasets <- datasetService.getAllUnfinishedDatasetUploadsOfUser(user._id, user._organization)(using GlobalAccessContext) ?~> Msg.Dataset.Upload.couldNotLoadUnfinishedUploads
+          datasets <- datasetService.getAllUnfinishedDatasetUploadsOfUser(user._id, user._organization)(using
+            GlobalAccessContext
+          ) ?~> Msg.Dataset.Upload.couldNotLoadUnfinishedUploads
           teamIdsPerDataset <- Fox.combined(datasets.map(dataset => teamDAO.findAllowedTeamIdsForDataset(dataset.id)))
-          unfinishedUploads = datasets.zip(teamIdsPerDataset).map {
-            case (d, teamIds) =>
-              UnfinishedUpload("<filled-in by datastore>",
-                               d.dataSourceId,
-                               d.name,
-                               d.folderId.toString,
-                               d.created,
-                               None, // Filled by datastore.
-                               teamIds.map(_.toString))
+          unfinishedUploads = datasets.zip(teamIdsPerDataset).map { case (d, teamIds) =>
+            UnfinishedUpload(
+              "<filled-in by datastore>",
+              d.dataSourceId,
+              d.name,
+              d.folderId.toString,
+              d.created,
+              None, // Filled by datastore.
+              teamIds.map(_.toString)
+            )
           }
         } yield Ok(Json.toJson(unfinishedUploads))
       }
     }
 
-  def reportDatasetUpload(name: String,
-                          key: String,
-                          token: String,
-                          datasetId: ObjectId): Action[ReportDatasetUploadParameters] =
+  def reportDatasetUpload(
+      name: String,
+      key: String,
+      token: String,
+      datasetId: ObjectId
+  ): Action[ReportDatasetUploadParameters] =
     Action.async(validateJson[ReportDatasetUploadParameters]) { implicit request =>
       implicit val ctx: DBAccessContext = GlobalAccessContext
       dataStoreService.validateAccess(name, key) { _ =>
         for {
           user <- bearerTokenService.userForToken(token) ~> FORBIDDEN
           dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
-          _ = datasetService.trackNewDataset(dataset,
-                                             user,
-                                             request.body.needsConversion,
-                                             request.body.datasetSizeBytes,
-                                             addVariantLabel = "upload without conversion")
+          _ = datasetService.trackNewDataset(
+            dataset,
+            user,
+            request.body.needsConversion,
+            request.body.datasetSizeBytes,
+            addVariantLabel = "upload without conversion"
+          )
           dataSourceWithLinkedLayersOpt <- Fox.runOptional(request.body.dataSourceOpt) {
             implicit val ctx: DBAccessContext = AuthorizedAccessContext(user)
             layerToLinkService.addLayersToLinkToDataSource(_, request.body.layersToLink)
           }
           _ <- Fox.runOptional(dataSourceWithLinkedLayersOpt) { dataSource =>
             logger.info(s"Updating dataset $datasetId in database after upload reported from datastore $name.")
-            datasetDAO.updateDataSource(datasetId,
-                                        dataset._dataStore,
-                                        dataSource.hashCode(),
-                                        dataSource,
-                                        isUsable = true)
+            datasetDAO.updateDataSource(
+              datasetId,
+              dataset._dataStore,
+              dataSource.hashCode(),
+              dataSource,
+              isUsable = true
+            )
           }
           updated <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
           _ <- Fox.runIf(!request.body.needsConversion)(usedStorageService.refreshStorageReportForDataset(updated))
           _ <- Fox.runIf(!request.body.needsConversion)(datasetService.scanRealpathsIfVirtual(updated))
           _ <- Fox.runIf(!request.body.needsConversion)(
-            datasetService.writeMirrorForVirtual(updated)(using GlobalAccessContext))
+            datasetService.writeMirrorForVirtual(updated)(using GlobalAccessContext)
+          )
           _ <- Fox.runIf(request.body.needsConversion) {
             for {
               voxelSize <- request.body.voxelSize.toFox ?~> Msg.Dataset.Upload.needsConversionMissingVoxelSize
               dataStoreClient <- datasetService.clientFor(dataset)(using GlobalAccessContext)
-              organizationBaseDirectory <- dataStoreClient.getOrganizationBaseDirectory(dataset._organization, requireAllowsUpload = true, requireLocal = true)
+              organizationBaseDirectory <- dataStoreClient.getOrganizationBaseDirectory(
+                dataset._organization,
+                requireAllowsUpload = true,
+                requireLocal = true
+              )
               _ <- jobService.submitConvertToWkwJob(updated, user, voxelSize, organizationBaseDirectory)
             } yield ()
           }
@@ -236,10 +275,13 @@ class WKRemoteDataStoreController @Inject()(
       dataStoreService.validateAccess(name, key) { _ =>
         for {
           dataset <- datasetDAO.findOne(request.body.datasetId)(using GlobalAccessContext) ?~> Msg.Dataset.notFound(
-            request.body.datasetId) ~> NOT_FOUND
-          _ <- datasetMagDAO.findOneWithPendingUpload(request.body.datasetId,
-                                                      request.body.layerName,
-                                                      request.body.mag.mag) ?~> Msg.Dataset.Upload.magNotPending
+            request.body.datasetId
+          ) ~> NOT_FOUND
+          _ <- datasetMagDAO.findOneWithPendingUpload(
+            request.body.datasetId,
+            request.body.layerName,
+            request.body.mag.mag
+          ) ?~> Msg.Dataset.Upload.magNotPending
           _ <- request.body.mag.path.toFox ?~> Msg.Dataset.Upload.magPathNotSet
           _ <- datasetMagDAO.finishUpload(request.body.datasetId, request.body.layerName, request.body.mag)
           dataStoreClient <- datasetService.clientFor(dataset)(using GlobalAccessContext)
@@ -254,16 +296,20 @@ class WKRemoteDataStoreController @Inject()(
       dataStoreService.validateAccess(name, key) { _ =>
         for {
           dataset <- datasetDAO.findOne(request.body.datasetId)(using GlobalAccessContext) ?~> Msg.Dataset.notFound(
-            request.body.datasetId) ~> NOT_FOUND
+            request.body.datasetId
+          ) ~> NOT_FOUND
           _ <- datasetAttachmentDAO.findOneWithPendingUpload(
             request.body.datasetId,
             request.body.layerName,
             request.body.attachmentType,
-            request.body.attachment.name) ?~> Msg.Dataset.Upload.attachmentNotPending
-          _ <- datasetAttachmentDAO.finishUpload(request.body.datasetId,
-                                                 request.body.layerName,
-                                                 request.body.attachmentType,
-                                                 request.body.attachment)
+            request.body.attachment.name
+          ) ?~> Msg.Dataset.Upload.attachmentNotPending
+          _ <- datasetAttachmentDAO.finishUpload(
+            request.body.datasetId,
+            request.body.layerName,
+            request.body.attachmentType,
+            request.body.attachment
+          )
           dataStoreClient <- datasetService.clientFor(dataset)(using GlobalAccessContext)
           _ <- dataStoreClient.invalidateDatasetInDSCache(dataset._id)
           _ <- usedStorageService.refreshStorageReportForDataset(dataset)
@@ -292,14 +338,16 @@ class WKRemoteDataStoreController @Inject()(
           selectedOrgaLabel = organizationId.map(id => s"for organization $id").getOrElse("for all organizations")
           _ = logger.info(
             s"Received dataset list from datastore ${dataStore.name} $selectedOrgaLabel: " +
-              s"${dataSourcesWithPathInfo.count(_.dataSource.isUsable)} active, ${dataSourcesWithPathInfo.count(
-                !_.dataSource.isUsable)} inactive")
+              s"${dataSourcesWithPathInfo.count(_.dataSource.isUsable)} active, ${dataSourcesWithPathInfo.count(!_.dataSource.isUsable)} inactive"
+          )
           existingIds <- datasetService.updateDataSources(dataStore, dataSourcesWithPathInfo)
           _ <- datasetService.deactivateUnreportedDataSources(existingIds, dataStore, organizationId)
           _ = if (Instant.since(before) > (30 seconds))
-            Instant.logSince(before,
-                             s"Updating datasources from datastore ${dataStore.name} $selectedOrgaLabel",
-                             logger)
+            Instant.logSince(
+              before,
+              s"Updating datasources from datastore ${dataStore.name} $selectedOrgaLabel",
+              logger
+            )
         } yield Ok
       }
     }
@@ -324,8 +372,7 @@ class WKRemoteDataStoreController @Inject()(
       }
     }
 
-  /**
-    * Called by the datastore after a dataset has been deleted on disk.
+  /** Called by the datastore after a dataset has been deleted on disk.
     */
   def deleteDataset(name: String, key: String): Action[ObjectId] = Action.async(validateJson[ObjectId]) {
     implicit request =>
@@ -336,23 +383,25 @@ class WKRemoteDataStoreController @Inject()(
       }
   }
 
-  def findDatasetId(name: String,
-                    key: String,
-                    datasetDirectoryName: String,
-                    organizationId: String): Action[AnyContent] =
+  def findDatasetId(
+      name: String,
+      key: String,
+      datasetDirectoryName: String,
+      organizationId: String
+  ): Action[AnyContent] =
     Action.async { _ =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
-          organization <- organizationDAO.findOne(organizationId)(using GlobalAccessContext) ?~> Msg.Organization.notFound(
-            organizationId) ~> NOT_FOUND
-          dataset <- datasetDAO.findOneByNameAndOrganization(datasetDirectoryName, organization._id)(using GlobalAccessContext) ?~> Msg.Dataset.notFound(datasetDirectoryName)
+          organization <- organizationDAO.findOne(organizationId)(using GlobalAccessContext) ?~> Msg.Organization
+            .notFound(organizationId) ~> NOT_FOUND
+          dataset <- datasetDAO.findOneByNameAndOrganization(datasetDirectoryName, organization._id)(using
+            GlobalAccessContext
+          ) ?~> Msg.Dataset.notFound(datasetDirectoryName)
         } yield Ok(Json.toJson(dataset._id))
       }
     }
 
-  def findDatasetLocalRootPath(name: String,
-                               key: String,
-                               datasetId: ObjectId): Action[AnyContent] =
+  def findDatasetLocalRootPath(name: String, key: String, datasetId: ObjectId): Action[AnyContent] =
     Action.async { _ =>
       dataStoreService.validateAccess(name, key) { dataStore =>
         for {
@@ -367,7 +416,9 @@ class WKRemoteDataStoreController @Inject()(
     Action.async { _ =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
-          dataset <- datasetDAO.findOne(datasetId)(using GlobalAccessContext) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
+          dataset <- datasetDAO.findOne(datasetId)(using GlobalAccessContext) ?~> Msg.Dataset.notFound(
+            datasetId
+          ) ~> NOT_FOUND
           dataSource <- datasetService.dataSourceFor(dataset)
         } yield Ok(Json.toJson(dataSource))
       }
@@ -377,13 +428,18 @@ class WKRemoteDataStoreController @Inject()(
     Action.async(validateJson[DataSource]) { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
-          dataset <- datasetDAO.findOne(datasetId)(using GlobalAccessContext) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
+          dataset <- datasetDAO.findOne(datasetId)(using GlobalAccessContext) ?~> Msg.Dataset.notFound(
+            datasetId
+          ) ~> NOT_FOUND
           _ <- Fox.runIf(!dataset.isVirtual)(
-            datasetDAO.updateDataSource(datasetId,
-                                        name,
-                                        request.body.hashCode(),
-                                        request.body,
-                                        isUsable = request.body.toUsable.isDefined)(using GlobalAccessContext))
+            datasetDAO.updateDataSource(
+              datasetId,
+              name,
+              request.body.hashCode(),
+              request.body,
+              isUsable = request.body.toUsable.isDefined
+            )(using GlobalAccessContext)
+          )
         } yield Ok
       }
     }

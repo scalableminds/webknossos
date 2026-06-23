@@ -25,7 +25,7 @@ import java.nio.file.{Files, Path}
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class DataSourceMirrorService @Inject()(
+class DataSourceMirrorService @Inject() (
     config: DataStoreConfig,
     baseDirService: BaseDirService
 ) extends FoxImplicits
@@ -33,11 +33,16 @@ class DataSourceMirrorService @Inject()(
 
   private def getMirrorDir(dataSource: UsableDataSource, createIfMissing: Boolean): Box[Path] =
     for {
-      orgaDir <- baseDirService.getOneLocalForOrga(dataSource.id.organizationId, createIfMissing = createIfMissing, checkWritable = true)
+      orgaDir <- baseDirService.getOneLocalForOrga(
+        dataSource.id.organizationId,
+        createIfMissing = createIfMissing,
+        checkWritable = true
+      )
     } yield orgaDir.resolve(".mirror").resolve(dataSource.id.directoryName)
 
-  def writeMirror(dataSource: UsableDataSource, datasetId: ObjectId)(
-      implicit ec: ExecutionContext): Fox[Option[String]] =
+  def writeMirror(dataSource: UsableDataSource, datasetId: ObjectId)(implicit
+      ec: ExecutionContext
+  ): Fox[Option[String]] =
     if (dataSource.allExplicitPaths.forall(_.isLocal)) {
       for {
         mirrorDir <- getMirrorDir(dataSource, createIfMissing = true).toFox
@@ -48,7 +53,9 @@ class DataSourceMirrorService @Inject()(
           tryo(FileUtils.deleteDirectory(tempMirrorDir.toFile)).toFox
         } ?~> Msg.Dataset.Mirror.deleteStaleTempMirrorFailed
         _ <- tryo(Files.createDirectory(tempMirrorDir)).toFox ?~> Msg.Dataset.Mirror.createTempMirrorDirFailed
-        updatedLayers <- Fox.serialCombined(dataSource.dataLayers)(writeMirrorLayer(_, tempMirrorDir)) ?~> Msg.Dataset.Mirror.writeMirrorLayersFailed
+        updatedLayers <- Fox.serialCombined(dataSource.dataLayers)(
+          writeMirrorLayer(_, tempMirrorDir)
+        ) ?~> Msg.Dataset.Mirror.writeMirrorLayersFailed
         mirrorDataSource = dataSource.copy(dataLayers = updatedLayers)
         _ <- writeMirrorProperties(mirrorDataSource, tempMirrorDir) ?~> Msg.Dataset.Mirror.writeMirrorPropertiesFailed
         _ <- writeReadme(tempMirrorDir, datasetId) ?~> Msg.Dataset.Mirror.writeReadmeFailed
@@ -63,8 +70,13 @@ class DataSourceMirrorService @Inject()(
     val layerDir = mirrorDir.resolve(layer.name)
     for {
       _ <- tryo(Files.createDirectory(layerDir)).toFox ?~> Msg.Dataset.Mirror.createLayerDirFailed
-      updatedMags <- Fox.serialCombined(layer.mags.toList)(writeMirrorMag(_, layerDir)) ?~> Msg.Dataset.Mirror.writeMagsFailed
-      updatedAttachmentsOpt <- writeMirrorAttachments(layer.attachments, layerDir) ?~> Msg.Dataset.Mirror.writeAttachmentsFailed
+      updatedMags <- Fox.serialCombined(layer.mags.toList)(
+        writeMirrorMag(_, layerDir)
+      ) ?~> Msg.Dataset.Mirror.writeMagsFailed
+      updatedAttachmentsOpt <- writeMirrorAttachments(
+        layer.attachments,
+        layerDir
+      ) ?~> Msg.Dataset.Mirror.writeAttachmentsFailed
       layerWithUpdatedMags = layer.mapped(newMags = Some(updatedMags))
       updatedLayer = updatedAttachmentsOpt.fold(layerWithUpdatedMags)(layerWithUpdatedMags.withAttachments)
     } yield updatedLayer
@@ -81,33 +93,40 @@ class DataSourceMirrorService @Inject()(
         } yield mag.copy(path = Some(UPath.fromLocalPath(defaultMagPath)))
     }
 
-  private def writeMirrorAttachments(attachmentsOpt: Option[DataLayerAttachments], layerDir: Path)(
-      implicit ec: ExecutionContext): Fox[Option[DataLayerAttachments]] =
+  private def writeMirrorAttachments(attachmentsOpt: Option[DataLayerAttachments], layerDir: Path)(implicit
+      ec: ExecutionContext
+  ): Fox[Option[DataLayerAttachments]] =
     Fox.runOptional(attachmentsOpt) { attachments =>
       for {
         updatedMeshes <- Fox.serialCombined(attachments.meshes.toList)(
-          writeMirrorAttachment(_, LayerAttachmentType.mesh, layerDir))
-        updatedAgglomerates <- Fox.serialCombined(attachments.agglomerates.toList)(
-          writeMirrorAttachment(_, LayerAttachmentType.agglomerate, layerDir))
-        updatedSegmentIndex <- Fox.runOptional(attachments.segmentIndex)(
-          writeMirrorAttachment(_, LayerAttachmentType.segmentIndex, layerDir))
-        updatedConnectomes <- Fox.serialCombined(attachments.connectomes.toList)(
-          writeMirrorAttachment(_, LayerAttachmentType.connectome, layerDir))
-        updatedCumsum <- Fox.runOptional(attachments.cumsum)(
-          writeMirrorAttachment(_, LayerAttachmentType.cumsum, layerDir))
-      } yield
-        DataLayerAttachments(
-          meshes = updatedMeshes,
-          agglomerates = updatedAgglomerates,
-          segmentIndex = updatedSegmentIndex,
-          connectomes = updatedConnectomes,
-          cumsum = updatedCumsum
+          writeMirrorAttachment(_, LayerAttachmentType.mesh, layerDir)
         )
+        updatedAgglomerates <- Fox.serialCombined(attachments.agglomerates.toList)(
+          writeMirrorAttachment(_, LayerAttachmentType.agglomerate, layerDir)
+        )
+        updatedSegmentIndex <- Fox.runOptional(attachments.segmentIndex)(
+          writeMirrorAttachment(_, LayerAttachmentType.segmentIndex, layerDir)
+        )
+        updatedConnectomes <- Fox.serialCombined(attachments.connectomes.toList)(
+          writeMirrorAttachment(_, LayerAttachmentType.connectome, layerDir)
+        )
+        updatedCumsum <- Fox.runOptional(attachments.cumsum)(
+          writeMirrorAttachment(_, LayerAttachmentType.cumsum, layerDir)
+        )
+      } yield DataLayerAttachments(
+        meshes = updatedMeshes,
+        agglomerates = updatedAgglomerates,
+        segmentIndex = updatedSegmentIndex,
+        connectomes = updatedConnectomes,
+        cumsum = updatedCumsum
+      )
     }
 
-  private def writeMirrorAttachment(attachment: LayerAttachment,
-                                    attachmentType: LayerAttachmentType.LayerAttachmentType,
-                                    layerDir: Path)(implicit ec: ExecutionContext): Fox[LayerAttachment] = {
+  private def writeMirrorAttachment(
+      attachment: LayerAttachment,
+      attachmentType: LayerAttachmentType.LayerAttachmentType,
+      layerDir: Path
+  )(implicit ec: ExecutionContext): Fox[LayerAttachment] = {
     val attachmentTypeDir = layerDir.resolve(LayerAttachmentType.defaultDirectoryNameFor(attachmentType))
     val suffix = LayerAttachmentDataformat.suffixFor(attachment.dataFormat)
     val defaultAttachmentPath = attachmentTypeDir.resolve(attachment.name + suffix)
@@ -137,15 +156,18 @@ class DataSourceMirrorService @Inject()(
     } yield ()
   }
 
-  private def writeMirrorProperties(dataSource: UsableDataSource, mirrorDir: Path)(
-      implicit ec: ExecutionContext): Fox[Unit] = {
+  private def writeMirrorProperties(dataSource: UsableDataSource, mirrorDir: Path)(implicit
+      ec: ExecutionContext
+  ): Fox[Unit] = {
     val propertiesFile = mirrorDir.resolve(UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
     val dataSourceWithRelativizedPaths = dataSource.copy(
       dataLayers = dataSource.dataLayers.map(_.relativizePaths(UPath.fromLocalPath(mirrorDir)))
     )
     JsonHelper
-      .writeToFile(propertiesFile,
-                   JsonHelper.removeKeyRecursively(Json.toJson(dataSourceWithRelativizedPaths), Set("resolutions")))
+      .writeToFile(
+        propertiesFile,
+        JsonHelper.removeKeyRecursively(Json.toJson(dataSourceWithRelativizedPaths), Set("resolutions"))
+      )
       .toFox
   }
 

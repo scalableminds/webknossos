@@ -10,14 +10,17 @@ trait MissingBucketHeaders extends FoxImplicits {
   protected lazy val missingBucketsHeader: String = "MISSING-BUCKETS"
 
   protected def createMissingBucketsHeaders(indices: List[Int]): Seq[(String, String)] =
-    List(missingBucketsHeader -> formatMissingBucketList(indices),
-         "Access-Control-Expose-Headers" -> missingBucketsHeader)
+    List(
+      missingBucketsHeader -> formatMissingBucketList(indices),
+      "Access-Control-Expose-Headers" -> missingBucketsHeader
+    )
 
   private def formatMissingBucketList(indices: List[Int]): String =
     "[" + indices.mkString(", ") + "]"
 
-  protected def parseMissingBucketHeader(headerLiteralOpt: Option[String])(
-      implicit ec: ExecutionContext): Fox[List[Int]] =
+  protected def parseMissingBucketHeader(
+      headerLiteralOpt: Option[String]
+  )(implicit ec: ExecutionContext): Fox[List[Int]] =
     for {
       headerLiteral: String <- headerLiteralOpt.toFox
       headerLiteralTrim = headerLiteral.trim

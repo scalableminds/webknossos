@@ -17,9 +17,11 @@ trait DataLayer {
   def resolutions: Seq[Vec3Int]
   def elementClass: ElementClass.Value
 
-  def bucketProvider(dataVaultServiceOpt: Option[DataVaultService],
-                     dataSourceId: DataSourceId,
-                     sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider
+  def bucketProvider(
+      dataVaultServiceOpt: Option[DataVaultService],
+      dataSourceId: DataSourceId,
+      sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]
+  ): BucketProvider
 
   def bucketProviderCacheKey: String
 
@@ -69,9 +71,11 @@ trait StaticLayer extends DataLayer {
 
   def dataFormat: DataFormat.Value
 
-  def bucketProvider(dataVaultServiceOpt: Option[DataVaultService],
-                     dataSourceId: DataSourceId,
-                     sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider =
+  def bucketProvider(
+      dataVaultServiceOpt: Option[DataVaultService],
+      dataSourceId: DataSourceId,
+      sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]
+  ): BucketProvider =
     new DatasetArrayBucketProvider(this, dataSourceId, dataVaultServiceOpt, sharedChunkContentsCache)
 
   def bucketProviderCacheKey: String = this.name
@@ -105,7 +109,8 @@ trait StaticLayer extends DataLayer {
       magMapping: MagLocator => MagLocator = m => m,
       attachmentMapping: DataLayerAttachments => DataLayerAttachments = a => a,
       name: String = this.name,
-      coordinateTransformations: Option[Seq[CoordinateTransformation]] = this.coordinateTransformations): StaticLayer =
+      coordinateTransformations: Option[Seq[CoordinateTransformation]] = this.coordinateTransformations
+  ): StaticLayer =
     this match {
       case l: StaticColorLayer =>
         l.copy(
@@ -175,17 +180,18 @@ trait SegmentationLayer extends DataLayer {
   def category: LayerCategory.Value = LayerCategory.segmentation
 }
 
-case class StaticColorLayer(name: String,
-                            dataFormat: DataFormat.Value,
-                            boundingBox: BoundingBox,
-                            elementClass: ElementClass.Value,
-                            mags: Seq[MagLocator],
-                            defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-                            adminViewConfiguration: Option[LayerViewConfiguration] = None,
-                            coordinateTransformations: Option[Seq[CoordinateTransformation]] = None,
-                            additionalAxes: Option[Seq[AdditionalAxis]] = None,
-                            attachments: Option[DataLayerAttachments] = None)
-    extends StaticLayer {
+case class StaticColorLayer(
+    name: String,
+    dataFormat: DataFormat.Value,
+    boundingBox: BoundingBox,
+    elementClass: ElementClass.Value,
+    mags: Seq[MagLocator],
+    defaultViewConfiguration: Option[LayerViewConfiguration] = None,
+    adminViewConfiguration: Option[LayerViewConfiguration] = None,
+    coordinateTransformations: Option[Seq[CoordinateTransformation]] = None,
+    additionalAxes: Option[Seq[AdditionalAxis]] = None,
+    attachments: Option[DataLayerAttachments] = None
+) extends StaticLayer {
   def category: LayerCategory.Value = LayerCategory.color
 }
 
@@ -195,7 +201,7 @@ object StaticColorLayer {
       for {
         mags: List[MagLocator] <- (json \ "mags").validate[List[MagLocator]] match {
           case JsSuccess(value, _) => JsSuccess(value)
-          case JsError(_) =>
+          case JsError(_)          =>
             (json \ "wkwResolutions").validate[List[WkwResolution]] match {
               case JsSuccess(value, _) => JsSuccess(value.map(_.toMagLocator))
               case JsError(_)          => JsError("Either 'mags' or 'wkwResolutions' must be provided")
@@ -210,39 +216,38 @@ object StaticColorLayer {
         coordinateTransformations <- (json \ "coordinateTransformations").validateOpt[List[CoordinateTransformation]]
         additionalAxes <- (json \ "additionalAxes").validateOpt[Seq[AdditionalAxis]]
         attachments <- (json \ "attachments").validateOpt[DataLayerAttachments]
-      } yield {
-        StaticColorLayer(
-          name,
-          dataFormat,
-          boundingBox,
-          elementClass,
-          mags,
-          defaultViewConfiguration.filter(_.nonEmpty),
-          adminViewConfiguration.filter(_.nonEmpty),
-          coordinateTransformations.filter(_.nonEmpty),
-          additionalAxes,
-          attachments
-        )
-      }
+      } yield StaticColorLayer(
+        name,
+        dataFormat,
+        boundingBox,
+        elementClass,
+        mags,
+        defaultViewConfiguration.filter(_.nonEmpty),
+        adminViewConfiguration.filter(_.nonEmpty),
+        coordinateTransformations.filter(_.nonEmpty),
+        additionalAxes,
+        attachments
+      )
 
     def writes(layer: StaticColorLayer): JsValue =
       Json.writes[StaticColorLayer].writes(layer)
   }
 }
 
-case class StaticSegmentationLayer(name: String,
-                                   dataFormat: DataFormat.Value,
-                                   boundingBox: BoundingBox,
-                                   elementClass: ElementClass.Value,
-                                   mags: Seq[MagLocator],
-                                   defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-                                   adminViewConfiguration: Option[LayerViewConfiguration] = None,
-                                   coordinateTransformations: Option[Seq[CoordinateTransformation]] = None,
-                                   additionalAxes: Option[Seq[AdditionalAxis]] = None,
-                                   attachments: Option[DataLayerAttachments] = None,
-                                   largestSegmentId: Option[Long] = None,
-                                   mappings: Option[Set[String]] = None)
-    extends StaticLayer
+case class StaticSegmentationLayer(
+    name: String,
+    dataFormat: DataFormat.Value,
+    boundingBox: BoundingBox,
+    elementClass: ElementClass.Value,
+    mags: Seq[MagLocator],
+    defaultViewConfiguration: Option[LayerViewConfiguration] = None,
+    adminViewConfiguration: Option[LayerViewConfiguration] = None,
+    coordinateTransformations: Option[Seq[CoordinateTransformation]] = None,
+    additionalAxes: Option[Seq[AdditionalAxis]] = None,
+    attachments: Option[DataLayerAttachments] = None,
+    largestSegmentId: Option[Long] = None,
+    mappings: Option[Set[String]] = None
+) extends StaticLayer
     with SegmentationLayer
 
 object StaticSegmentationLayer {
@@ -251,7 +256,7 @@ object StaticSegmentationLayer {
       for {
         mags: List[MagLocator] <- (json \ "mags").validate[List[MagLocator]] match {
           case JsSuccess(value, _) => JsSuccess(value)
-          case JsError(_) =>
+          case JsError(_)          =>
             (json \ "wkwResolutions").validate[List[WkwResolution]] match {
               case JsSuccess(value, _) => JsSuccess(value.map(_.toMagLocator))
               case JsError(_)          => JsError("Either 'mags' or 'wkwResolutions' must be provided")
@@ -268,22 +273,20 @@ object StaticSegmentationLayer {
         coordinateTransformations <- (json \ "coordinateTransformations").validateOpt[List[CoordinateTransformation]]
         additionalAxes <- (json \ "additionalAxes").validateOpt[Seq[AdditionalAxis]]
         attachments <- (json \ "attachments").validateOpt[DataLayerAttachments]
-      } yield {
-        StaticSegmentationLayer(
-          name,
-          dataFormat,
-          boundingBox,
-          elementClass,
-          mags,
-          defaultViewConfiguration.filter(_.nonEmpty),
-          adminViewConfiguration.filter(_.nonEmpty),
-          coordinateTransformations.filter(_.nonEmpty),
-          additionalAxes,
-          attachments,
-          largestSegmentId,
-          mappings
-        )
-      }
+      } yield StaticSegmentationLayer(
+        name,
+        dataFormat,
+        boundingBox,
+        elementClass,
+        mags,
+        defaultViewConfiguration.filter(_.nonEmpty),
+        adminViewConfiguration.filter(_.nonEmpty),
+        coordinateTransformations.filter(_.nonEmpty),
+        additionalAxes,
+        attachments,
+        largestSegmentId,
+        mappings
+      )
 
     def writes(layer: StaticSegmentationLayer): JsValue =
       Json.writes[StaticSegmentationLayer].writes(layer)

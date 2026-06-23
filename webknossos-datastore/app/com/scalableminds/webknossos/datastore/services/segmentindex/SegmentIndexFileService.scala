@@ -32,52 +32,57 @@ import scala.concurrent.ExecutionContext
 case class SegmentIndexFileKey(dataSourceId: DataSourceId, layerName: String, attachment: LayerAttachment)
     extends AttachmentKey
 
-class SegmentIndexFileService @Inject()(hdf5SegmentIndexFileService: Hdf5SegmentIndexFileService,
-                                        zarrSegmentIndexFileService: ZarrSegmentIndexFileService,
-                                        agglomerateService: AgglomerateService,
-                                        binaryDataServiceHolder: BinaryDataServiceHolder,
-                                        config: DataStoreConfig)
-    extends FoxImplicits
+class SegmentIndexFileService @Inject() (
+    hdf5SegmentIndexFileService: Hdf5SegmentIndexFileService,
+    zarrSegmentIndexFileService: ZarrSegmentIndexFileService,
+    agglomerateService: AgglomerateService,
+    binaryDataServiceHolder: BinaryDataServiceHolder,
+    config: DataStoreConfig
+) extends FoxImplicits
     with SegmentStatistics {
 
   protected lazy val bucketScanner = new NativeBucketScanner()
 
-  private val segmentIndexFileKeyCache
-    : AlfuCache[(DataSourceId, String), SegmentIndexFileKey] = AlfuCache() // dataSourceId, layerName → SegmentIndexFileKey
+  private val segmentIndexFileKeyCache: AlfuCache[(DataSourceId, String), SegmentIndexFileKey] =
+    AlfuCache() // dataSourceId, layerName → SegmentIndexFileKey
 
   private lazy val segmentVolumeCache
-    : AlfuCache[(DataSourceId, String, SegmentIndexFileKey, Option[AgglomerateFileKey], Long, Vec3Int), Long] =
+      : AlfuCache[(DataSourceId, String, SegmentIndexFileKey, Option[AgglomerateFileKey], Long, Vec3Int), Long] =
     AlfuCache(maxCapacity = 10000)
 
   private lazy val segmentBoundingBoxCache
-    : AlfuCache[(DataSourceId, String, SegmentIndexFileKey, Option[AgglomerateFileKey], Long, Vec3Int), BoundingBox] =
+      : AlfuCache[(DataSourceId, String, SegmentIndexFileKey, Option[AgglomerateFileKey], Long, Vec3Int), BoundingBox] =
     AlfuCache(maxCapacity = 10000)
 
-  def lookUpSegmentIndexFileKey(dataSourceId: DataSourceId, dataLayer: DataLayer)(
-      implicit ec: ExecutionContext): Fox[SegmentIndexFileKey] =
-    segmentIndexFileKeyCache.getOrLoad((dataSourceId, dataLayer.name),
-                                       _ => lookUpSegmentIndexFileKeyImpl(dataSourceId, dataLayer).toFox)
+  def lookUpSegmentIndexFileKey(dataSourceId: DataSourceId, dataLayer: DataLayer)(implicit
+      ec: ExecutionContext
+  ): Fox[SegmentIndexFileKey] =
+    segmentIndexFileKeyCache.getOrLoad(
+      (dataSourceId, dataLayer.name),
+      _ => lookUpSegmentIndexFileKeyImpl(dataSourceId, dataLayer).toFox
+    )
 
-  private def lookUpSegmentIndexFileKeyImpl(dataSourceId: DataSourceId,
-                                            dataLayer: DataLayer): Box[SegmentIndexFileKey] =
+  private def lookUpSegmentIndexFileKeyImpl(
+      dataSourceId: DataSourceId,
+      dataLayer: DataLayer
+  ): Box[SegmentIndexFileKey] =
     for {
       attachment <- Box(dataLayer.attachments.flatMap(_.segmentIndex))
       _ <- Box.fromBool(attachment.path.isAbsolute) ~> Msg.SegmentIndexFile.pathNotAbsolute
-    } yield
-      SegmentIndexFileKey(
-        dataSourceId,
-        dataLayer.name,
-        attachment
-      )
+    } yield SegmentIndexFileKey(
+      dataSourceId,
+      dataLayer.name,
+      attachment
+    )
 
-  /**
-    * Read the segment index file and return the bucket positions for the given segment id.
-    * The bucket positions are the top left corners of the buckets that contain the segment in the file mag.
-    * The bucket positions are in mag1 coordinates though!
-    * If a segment is not present in the file, an empty array is returned, not a failure!
+  /** Read the segment index file and return the bucket positions for the given segment id. The bucket positions are the
+    * top left corners of the buckets that contain the segment in the file mag. The bucket positions are in mag1
+    * coordinates though! If a segment is not present in the file, an empty array is returned, not a failure!
     */
-  def readSegmentIndex(segmentIndexFileKey: SegmentIndexFileKey,
-                       segmentId: Long)(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Vec3Int]] =
+  def readSegmentIndex(segmentIndexFileKey: SegmentIndexFileKey, segmentId: Long)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Array[Vec3Int]] =
     segmentIndexFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
         zarrSegmentIndexFileService.readSegmentIndex(segmentIndexFileKey: SegmentIndexFileKey, segmentId: Long)
@@ -93,13 +98,15 @@ class SegmentIndexFileService @Inject()(hdf5SegmentIndexFileService: Hdf5Segment
       .map(_ / Vec3Int.full(DataLayer.bucketLength)) // map positions to cube indices
       .distinct
 
-  def getSegmentVolume(datasetId: ObjectId,
-                       dataSourceId: DataSourceId,
-                       dataLayer: DataLayer,
-                       segmentIndexFileKey: SegmentIndexFileKey,
-                       agglomerateFileKeyOpt: Option[AgglomerateFileKey],
-                       segmentId: Long,
-                       mag: Vec3Int)(using ec: ExecutionContext, tc: TokenContext): Fox[Long] =
+  def getSegmentVolume(
+      datasetId: ObjectId,
+      dataSourceId: DataSourceId,
+      dataLayer: DataLayer,
+      segmentIndexFileKey: SegmentIndexFileKey,
+      agglomerateFileKeyOpt: Option[AgglomerateFileKey],
+      segmentId: Long,
+      mag: Vec3Int
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     segmentVolumeCache.getOrLoad(
       (dataSourceId, dataLayer.name, segmentIndexFileKey, agglomerateFileKeyOpt, segmentId, mag),
       _ =>
@@ -109,16 +116,18 @@ class SegmentIndexFileService @Inject()(hdf5SegmentIndexFileService: Hdf5Segment
           None, // see #7556
           getBucketPositions(segmentIndexFileKey, agglomerateFileKeyOpt),
           getDataForBucketPositions(datasetId, dataSourceId, dataLayer, agglomerateFileKeyOpt)
-      )
+        )
     )
 
-  def getSegmentBoundingBox(datasetId: ObjectId,
-                            dataSourceId: DataSourceId,
-                            dataLayer: DataLayer,
-                            segmentIndexFileKey: SegmentIndexFileKey,
-                            agglomerateFileKeyOpt: Option[AgglomerateFileKey],
-                            segmentId: Long,
-                            mag: Vec3Int)(using ec: ExecutionContext, tc: TokenContext): Fox[BoundingBox] =
+  def getSegmentBoundingBox(
+      datasetId: ObjectId,
+      dataSourceId: DataSourceId,
+      dataLayer: DataLayer,
+      segmentIndexFileKey: SegmentIndexFileKey,
+      agglomerateFileKeyOpt: Option[AgglomerateFileKey],
+      segmentId: Long,
+      mag: Vec3Int
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[BoundingBox] =
     segmentBoundingBoxCache.getOrLoad(
       (dataSourceId, dataLayer.name, segmentIndexFileKey, agglomerateFileKeyOpt, segmentId, mag),
       _ =>
@@ -128,42 +137,47 @@ class SegmentIndexFileService @Inject()(hdf5SegmentIndexFileService: Hdf5Segment
           None, // see #7556
           getBucketPositions(segmentIndexFileKey, agglomerateFileKeyOpt),
           getDataForBucketPositions(datasetId, dataSourceId, dataLayer, agglomerateFileKeyOpt)
-      )
+        )
     )
 
-  private def getDataForBucketPositions(datasetId: ObjectId,
-                                        dataSourceId: DataSourceId,
-                                        dataLayer: DataLayer,
-                                        agglomerateFileKeyOpt: Option[AgglomerateFileKey])(
+  private def getDataForBucketPositions(
+      datasetId: ObjectId,
+      dataSourceId: DataSourceId,
+      dataLayer: DataLayer,
+      agglomerateFileKeyOpt: Option[AgglomerateFileKey]
+  )(
       bucketPositionsInRequestedMag: Seq[Vec3Int],
       requestedMag: Vec3Int,
-      additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
-      using ec: ExecutionContext,
-      tc: TokenContext): Fox[(Seq[Box[Array[Byte]]], ElementClass.Value)] = {
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]]
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[(Seq[Box[Array[Byte]]], ElementClass.Value)] = {
     // Additional coordinates parameter ignored, see #7556
 
     val mag1BucketPositions = bucketPositionsInRequestedMag.map(_ * requestedMag)
 
-    val bucketRequests = mag1BucketPositions.map(
-      mag1BucketPosition =>
-        DataServiceDataRequest(
-          datasetId = Some(datasetId),
-          dataSourceId = Some(dataSourceId),
-          dataLayer = dataLayer,
-          cuboid = Cuboid(
-            VoxelPosition(mag1BucketPosition.x * DataLayer.bucketLength,
-                          mag1BucketPosition.y * DataLayer.bucketLength,
-                          mag1BucketPosition.z * DataLayer.bucketLength,
-                          requestedMag),
-            DataLayer.bucketLength,
-            DataLayer.bucketLength,
-            DataLayer.bucketLength
+    val bucketRequests = mag1BucketPositions.map(mag1BucketPosition =>
+      DataServiceDataRequest(
+        datasetId = Some(datasetId),
+        dataSourceId = Some(dataSourceId),
+        dataLayer = dataLayer,
+        cuboid = Cuboid(
+          VoxelPosition(
+            mag1BucketPosition.x * DataLayer.bucketLength,
+            mag1BucketPosition.y * DataLayer.bucketLength,
+            mag1BucketPosition.z * DataLayer.bucketLength,
+            requestedMag
           ),
-          settings = DataServiceRequestSettings(halfByte = false,
-                                                appliedAgglomerate = agglomerateFileKeyOpt.map(_.attachment.name),
-                                                version = None,
-                                                additionalCoordinates = None),
-      ))
+          DataLayer.bucketLength,
+          DataLayer.bucketLength,
+          DataLayer.bucketLength
+        ),
+        settings = DataServiceRequestSettings(
+          halfByte = false,
+          appliedAgglomerate = agglomerateFileKeyOpt.map(_.attachment.name),
+          version = None,
+          additionalCoordinates = None
+        )
+      )
+    )
     for {
       bucketData <- binaryDataServiceHolder.binaryDataService.handleMultipleBucketRequests(bucketRequests)
     } yield (bucketData, dataLayer.elementClass)
@@ -171,20 +185,25 @@ class SegmentIndexFileService @Inject()(hdf5SegmentIndexFileService: Hdf5Segment
 
   // Reads bucket positions from segment index file. Returns target-mag bucket positions
   // (even though the file stores mag1 bucket positions)
-  private def getBucketPositions(segmentIndexFileKey: SegmentIndexFileKey,
-                                 agglomerateFileKeyOpt: Option[AgglomerateFileKey])(
-      segmentOrAgglomerateId: Long,
-      requestedMag: Vec3Int)(using ec: ExecutionContext, tc: TokenContext): Fox[Set[Vec3IntProto]] =
+  private def getBucketPositions(
+      segmentIndexFileKey: SegmentIndexFileKey,
+      agglomerateFileKeyOpt: Option[AgglomerateFileKey]
+  )(segmentOrAgglomerateId: Long, requestedMag: Vec3Int)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Set[Vec3IntProto]] =
     for {
       segmentIds <- getSegmentIdsForAgglomerateIdIfNeeded(agglomerateFileKeyOpt, segmentOrAgglomerateId)
       positionsPerSegment <- Fox.serialCombined(segmentIds)(segmentId =>
-        getBucketPositions(segmentIndexFileKey, segmentId, requestedMag))
+        getBucketPositions(segmentIndexFileKey, segmentId, requestedMag)
+      )
       positionsCollected = positionsPerSegment.flatten.toSet.map(vec3IntToProto)
     } yield positionsCollected
 
-  private def getBucketPositions(segmentIndexFileKey: SegmentIndexFileKey, segmentId: Long, requestedMag: Vec3Int)(
-      using ec: ExecutionContext,
-      tc: TokenContext): Fox[Array[Vec3Int]] =
+  private def getBucketPositions(segmentIndexFileKey: SegmentIndexFileKey, segmentId: Long, requestedMag: Vec3Int)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Array[Vec3Int]] =
     for {
       mag1BucketPositions <- readSegmentIndex(segmentIndexFileKey, segmentId)
       bucketPositionsInRequestedMag = mag1BucketPositions.map(_ / requestedMag)
@@ -192,36 +211,35 @@ class SegmentIndexFileService @Inject()(hdf5SegmentIndexFileService: Hdf5Segment
 
   private def getSegmentIdsForAgglomerateIdIfNeeded(
       agglomerateFileKeyOpt: Option[AgglomerateFileKey],
-      segmentOrAgglomerateId: Long)(using ec: ExecutionContext, tc: TokenContext): Fox[Seq[Long]] =
+      segmentOrAgglomerateId: Long
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Seq[Long]] =
     // Editable mappings cannot happen here since those requests go to the tracingstore
     agglomerateFileKeyOpt match {
       case Some(agglomerateFileKey) =>
         for {
           largestAgglomerateId <- agglomerateService.largestAgglomerateId(agglomerateFileKey)
-          segmentIds <- if (segmentOrAgglomerateId <= largestAgglomerateId) {
-            agglomerateService.segmentIdsForAgglomerateId(
-              agglomerateFileKey,
-              segmentOrAgglomerateId
-            )
-          } else
-            Fox.successful(List.empty) // agglomerate id is outside of file range, was likely created during brushing
+          segmentIds <-
+            if (segmentOrAgglomerateId <= largestAgglomerateId) {
+              agglomerateService.segmentIdsForAgglomerateId(
+                agglomerateFileKey,
+                segmentOrAgglomerateId
+              )
+            } else
+              Fox.successful(List.empty) // agglomerate id is outside of file range, was likely created during brushing
         } yield segmentIds
       case None => Fox.successful(List(segmentOrAgglomerateId))
     }
 
   def clearCache(dataSourceId: DataSourceId, layerNameOpt: Option[String]): Int = {
-    segmentVolumeCache.clear {
-      case (keyDataSourceId, keyLayerName, _, _, _, _) =>
-        keyDataSourceId == dataSourceId && layerNameOpt.forall(_ == keyLayerName)
+    segmentVolumeCache.clear { case (keyDataSourceId, keyLayerName, _, _, _, _) =>
+      keyDataSourceId == dataSourceId && layerNameOpt.forall(_ == keyLayerName)
     }
-    segmentBoundingBoxCache.clear {
-      case (keyDataSourceId, keyLayerName, _, _, _, _) =>
-        keyDataSourceId == dataSourceId && layerNameOpt.forall(_ == keyLayerName)
+    segmentBoundingBoxCache.clear { case (keyDataSourceId, keyLayerName, _, _, _, _) =>
+      keyDataSourceId == dataSourceId && layerNameOpt.forall(_ == keyLayerName)
     }
 
-    segmentIndexFileKeyCache.clear {
-      case (keyDataSourceId, keyLayerName) =>
-        dataSourceId == keyDataSourceId && layerNameOpt.forall(_ == keyLayerName)
+    segmentIndexFileKeyCache.clear { case (keyDataSourceId, keyLayerName) =>
+      dataSourceId == keyDataSourceId && layerNameOpt.forall(_ == keyLayerName)
     }
 
     val clearedHdf5Count = hdf5SegmentIndexFileService.clearCache(dataSourceId, layerNameOpt)
@@ -233,5 +251,6 @@ class SegmentIndexFileService @Inject()(hdf5SegmentIndexFileService: Hdf5Segment
 
   private def unsupportedDataFormat(segmentIndexFileKey: SegmentIndexFileKey)(implicit ec: ExecutionContext) =
     Fox.failure(
-      s"Trying to load segment index file with unsupported data format ${segmentIndexFileKey.attachment.dataFormat}")
+      s"Trying to load segment index file with unsupported data format ${segmentIndexFileKey.attachment.dataFormat}"
+    )
 }

@@ -26,7 +26,7 @@ trait TracingMigrationService[T <: GeneratedMessage] extends FoxImplicits {
   def migrateTracing(tracing: T): Fox[T] = {
     def migrateIter(tracingFox: Fox[T], migrations: List[T => Fox[T]]): Fox[T] =
       migrations match {
-        case List() => tracingFox
+        case List()       => tracingFox
         case head :: tail =>
           tracingFox.shiftBox.flatMap {
             case Full(tracing) =>
@@ -39,7 +39,7 @@ trait TracingMigrationService[T <: GeneratedMessage] extends FoxImplicits {
   }
 }
 
-class SkeletonTracingMigrationService @Inject()()(implicit val ec: ExecutionContext)
+class SkeletonTracingMigrationService @Inject() ()(implicit val ec: ExecutionContext)
     extends TracingMigrationService[SkeletonTracing]
     with ColorGenerator {
   override protected val migrations: List[SkeletonTracing => Fox[SkeletonTracing]] = List(removeSingleUserBoundingBox)
@@ -53,7 +53,7 @@ class SkeletonTracingMigrationService @Inject()()(implicit val ec: ExecutionCont
   }
 }
 
-class VolumeTracingMigrationService @Inject()()(implicit val ec: ExecutionContext)
+class VolumeTracingMigrationService @Inject() ()(implicit val ec: ExecutionContext)
     extends TracingMigrationService[VolumeTracing]
     with ColorGenerator {
   override protected val migrations: List[VolumeTracing => Fox[VolumeTracing]] = List(removeSingleUserBoundingBox)

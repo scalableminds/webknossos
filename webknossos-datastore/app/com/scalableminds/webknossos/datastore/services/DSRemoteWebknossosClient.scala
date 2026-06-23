@@ -131,7 +131,10 @@ class DSRemoteWebknossosClient @Inject() (
       .addQueryParam("key", dataStoreKey)
       .postJson[ReportAttachmentUploadParameters](parameters)
 
-  def reportDataSources(dataSourcesWithPathInfo: Seq[DataSourceWithRootPathInfo], organizationId: Option[String]): Fox[?] =
+  def reportDataSources(
+      dataSourcesWithPathInfo: Seq[DataSourceWithRootPathInfo],
+      organizationId: Option[String]
+  ): Fox[?] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources")
       .addQueryParam("key", dataStoreKey)
       .addQueryParam("organizationId", organizationId)

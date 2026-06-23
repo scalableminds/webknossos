@@ -11,7 +11,7 @@ import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileC
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class Hdf5ConnectomeFileService @Inject()() extends FoxImplicits with ConnectomeFileUtils {
+class Hdf5ConnectomeFileService @Inject() () extends FoxImplicits with ConnectomeFileUtils {
 
   private lazy val fileHandleCache = new Hdf5FileCache(30)
 

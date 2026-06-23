@@ -4,7 +4,12 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.{Box, Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.helpers.{PathSchemes, S3UriUtils, UPath}
-import com.scalableminds.webknossos.datastore.storage.{CredentialConfigReader, DataVaultCredential, S3AccessKeyCredential, S3ClientPoolHolder}
+import com.scalableminds.webknossos.datastore.storage.{
+  CredentialConfigReader,
+  DataVaultCredential,
+  S3AccessKeyCredential,
+  S3ClientPoolHolder
+}
 import com.typesafe.scalalogging.LazyLogging
 import software.amazon.awssdk.transfer.s3.S3TransferManager
 
@@ -13,19 +18,27 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
-class ManagedS3Service @Inject()(config: DataStoreConfig, baseDirService: BaseDirService, s3ClientPoolHolder: S3ClientPoolHolder)(
-    implicit ec: ExecutionContext)
+class ManagedS3Service @Inject() (
+    config: DataStoreConfig,
+    baseDirService: BaseDirService,
+    s3ClientPoolHolder: S3ClientPoolHolder
+)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
 
   private val transferManagerCache: AlfuCache[(URI, S3AccessKeyCredential), S3TransferManager] =
-    AlfuCache(timeToIdle = 356.days, timeToLive = 356.days, onRemovalFn = Some { (_, managerBox) =>
-      managerBox.foreach(_.close())
-    })
+    AlfuCache(
+      timeToIdle = 356.days,
+      timeToLive = 356.days,
+      onRemovalFn = Some { (_, managerBox) =>
+        managerBox.foreach(_.close())
+      }
+    )
 
   def pathIsInManagedS3(path: UPath): Boolean =
     path.getScheme.contains(PathSchemes.schemeS3) && globalCredentials.exists(c =>
-      UPath.fromString(c.name).map(path.startsWith).getOrElse(false))
+      UPath.fromString(c.name).map(path.startsWith).getOrElse(false)
+    )
 
   def findGlobalCredentialFor(pathOpt: Option[UPath]): Option[S3AccessKeyCredential] =
     pathOpt.flatMap(findGlobalCredentialFor)
@@ -50,15 +63,18 @@ class ManagedS3Service @Inject()(config: DataStoreConfig, baseDirService: BaseDi
   def s3UploadBaseDir(organizationId: String): Box[UPath] =
     baseDirService.getOneForOrga(organizationId, requireS3 = true, requireAllowsUpload = true)
 
-  private def transferManagerForEndpoint(s3UploadEndpoint: URI, credential: S3AccessKeyCredential): Fox[S3TransferManager] =
-    transferManagerCache.getOrLoad((s3UploadEndpoint, credential), _ => {
-      for {
-        client <- s3ClientPoolHolder.s3ClientPool.getS3Client(Some(credential),
-          s3UploadEndpoint,
-          isForUpload = true)
-        transferManager = S3TransferManager.builder().transferDirectoryMaxConcurrency(30).s3Client(client).build()
-      } yield transferManager
-    })
+  private def transferManagerForEndpoint(
+      s3UploadEndpoint: URI,
+      credential: S3AccessKeyCredential
+  ): Fox[S3TransferManager] =
+    transferManagerCache.getOrLoad(
+      (s3UploadEndpoint, credential),
+      _ =>
+        for {
+          client <- s3ClientPoolHolder.s3ClientPool.getS3Client(Some(credential), s3UploadEndpoint, isForUpload = true)
+          transferManager = S3TransferManager.builder().transferDirectoryMaxConcurrency(30).s3Client(client).build()
+        } yield transferManager
+    )
 
   def transferManager(targetPath: UPath): Fox[S3TransferManager] = for {
     endpoint <- S3UriUtils.endpointFromUPath(targetPath).toFox

@@ -14,7 +14,7 @@ import java.nio.file.Path
 import javax.inject.Inject
 import scala.reflect.ClassTag
 
-class MappingService @Inject()(config: DataStoreConfig, baseDirService: BaseDirService) extends LazyLogging {
+class MappingService @Inject() (config: DataStoreConfig, baseDirService: BaseDirService) extends LazyLogging {
 
   private lazy val mappingsDir = "mappings"
   private lazy val mappingFileExtension = "json"
@@ -33,9 +33,11 @@ class MappingService @Inject()(config: DataStoreConfig, baseDirService: BaseDirS
       result <- FileIO.readFileToByteArray(mappingFilePath.toFile)
     } yield result
 
-  def applyMapping[T: ClassTag](request: DataServiceMappingRequest,
-                                data: Array[T],
-                                fromLongFn: Long => T): Box[Array[T]] = {
+  def applyMapping[T: ClassTag](
+      request: DataServiceMappingRequest,
+      data: Array[T],
+      fromLongFn: Long => T
+  ): Box[Array[T]] = {
 
     def loadAndParseMapping(mappingRequest: DataServiceMappingRequest): Box[AbstractDataLayerMapping] =
       for {

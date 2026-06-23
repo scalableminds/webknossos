@@ -61,7 +61,8 @@ class Hdf5FileCache(val maxEntries: Int) extends LRUConcurrentCache[AttachmentKe
     value.scheduleForRemoval()
 
   private def getOrCreateCachedHdf5File(key: AttachmentKey, filePath: Path)(
-      loadFn: Path => CachedHdf5File): CachedHdf5File = {
+      loadFn: Path => CachedHdf5File
+  ): CachedHdf5File = {
     def handleUncachedHdf5File() = {
       val hdf5File = loadFn(filePath)
       // We don't need to check the return value of the `tryAccess` call as we just created the hdf5 file handle and use it only to increase the access counter.

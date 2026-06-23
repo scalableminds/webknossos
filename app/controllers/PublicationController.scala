@@ -14,9 +14,11 @@ import com.scalableminds.util.objectid.ObjectId
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class PublicationController @Inject()(publicationService: PublicationService,
-                                      publicationDAO: PublicationDAO,
-                                      sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
+class PublicationController @Inject() (
+    publicationService: PublicationService,
+    publicationDAO: PublicationDAO,
+    sil: Silhouette[WkEnv]
+)(implicit ec: ExecutionContext)
     extends Controller
     with ProtoGeometryImplicits
     with FoxImplicits {
@@ -32,11 +34,9 @@ class PublicationController @Inject()(publicationService: PublicationService,
     }
 
   def listPublications: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
-    {
-      for {
-        publications <- publicationDAO.findAll ?~> Msg.publicationNotFound ~> NOT_FOUND
-        jsResult <- Fox.serialCombined(publications)(publicationService.publicWrites)
-      } yield Ok(Json.toJson(jsResult))
-    }
+    for {
+      publications <- publicationDAO.findAll ?~> Msg.publicationNotFound ~> NOT_FOUND
+      jsResult <- Fox.serialCombined(publications)(publicationService.publicWrites)
+    } yield Ok(Json.toJson(jsResult))
   }
 }

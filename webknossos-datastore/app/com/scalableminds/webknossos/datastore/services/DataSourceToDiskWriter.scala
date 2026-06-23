@@ -17,16 +17,19 @@ trait DataSourceToDiskWriter extends DataSourceValidation with FoxImplicits {
   private val propertiesFileName = Path.of(UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
   private val logFileName = Path.of("datasource-properties-backups.log")
 
-  def updateDataSourceOnDisk(dataSourcePath: Path, dataSource: UsableDataSource)(
-      implicit ec: ExecutionContext): Fox[Unit] =
+  def updateDataSourceOnDisk(dataSourcePath: Path, dataSource: UsableDataSource)(implicit
+      ec: ExecutionContext
+  ): Fox[Unit] =
     for {
       _ <- assertValidDataSource(dataSource).toFox
       propertiesFile = dataSourcePath.resolve(propertiesFileName)
       _ <- backupPreviousProperties(dataSourcePath).toFox ?~> Msg.Dataset.DataSource.updateFileFailed
       dataSourceWithRelativizedPaths = relativizePathsOfDataSource(dataSourcePath, dataSource)
       _ <- JsonHelper
-        .writeToFile(propertiesFile,
-                     JsonHelper.removeKeyRecursively(Json.toJson(dataSourceWithRelativizedPaths), Set("resolutions")))
+        .writeToFile(
+          propertiesFile,
+          JsonHelper.removeKeyRecursively(Json.toJson(dataSourceWithRelativizedPaths), Set("resolutions"))
+        )
         .toFox ?~> Msg.Dataset.DataSource.updateFileFailed
     } yield ()
 

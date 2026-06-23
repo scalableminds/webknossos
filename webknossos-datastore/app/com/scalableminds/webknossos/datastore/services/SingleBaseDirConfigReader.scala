@@ -6,10 +6,10 @@ import com.typesafe.config.{Config, ConfigException}
 import play.api.Configuration
 
 case class BaseDirConfig(
-  path: UPath,
-  organizationId: Option[String],
-  allowsUpload: Boolean,
-  doScan: Boolean
+    path: UPath,
+    organizationId: Option[String],
+    allowsUpload: Boolean,
+    doScan: Boolean
 )
 
 class BaseDirConfigReader {
@@ -26,7 +26,8 @@ class BaseDirConfigReader {
       if a.path != b.path && a.path.startsWith(b.path)
     } throw new ConfigException.BadValue(
       "datastore.baseDirectories",
-      s"Configured path ${a.path} is a subpath of ${b.path}. Configured base directories must not be nested.")
+      s"Configured path ${a.path} is a subpath of ${b.path}. Configured base directories must not be nested."
+    )
     baseDirConfigs
   }
 

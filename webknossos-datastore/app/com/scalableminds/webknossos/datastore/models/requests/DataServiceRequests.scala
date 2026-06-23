@@ -5,10 +5,12 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, SegmentationLayer}
 
-case class DataServiceRequestSettings(halfByte: Boolean = false,
-                                      appliedAgglomerate: Option[String] = None,
-                                      version: Option[Long] = None,
-                                      additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None)
+case class DataServiceRequestSettings(
+    halfByte: Boolean = false,
+    appliedAgglomerate: Option[String] = None,
+    version: Option[Long] = None,
+    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None
+)
 
 case class DataServiceDataRequest(
     datasetId: Option[ObjectId], // None in case of volume tracings

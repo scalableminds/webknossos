@@ -9,7 +9,7 @@ import java.net.URI
 import javax.inject.Inject
 import scala.util.Try
 
-class DefaultMails @Inject()(conf: WkConf) {
+class DefaultMails @Inject() (conf: WkConf) {
 
   private val uri = conf.Http.uri
   private val defaultSender = conf.Mail.defaultSender
@@ -17,11 +17,13 @@ class DefaultMails @Inject()(conf: WkConf) {
   private val newOrganizationMailingList = conf.WebKnossos.newOrganizationMailingList
   private val additionalFooter = conf.Mail.additionalFooter
 
-  def registerAdminNotifierMail(name: String,
-                                email: String,
-                                organization: Organization,
-                                autoActivate: Boolean,
-                                recipient: String): Mail =
+  def registerAdminNotifierMail(
+      name: String,
+      email: String,
+      organization: Organization,
+      autoActivate: Boolean,
+      recipient: String
+  ): Mail =
     Mail(
       from = defaultSender,
       subject =
@@ -30,11 +32,13 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(recipient)
     )
 
-  def overLimitMail(multiUser: MultiUser,
-                    projectName: String,
-                    taskId: String,
-                    annotationId: String,
-                    projectOwner: String): Mail =
+  def overLimitMail(
+      multiUser: MultiUser,
+      projectName: String,
+      taskId: String,
+      annotationId: String,
+      projectOwner: String
+  ): Mail =
     Mail(
       from = defaultSender,
       subject = s"WEBKNOSSOS | Time limit reached. ${multiUser.abbreviatedName} in $projectName",
@@ -84,12 +88,14 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(newOrganizationMailingList)
     )
 
-  def inviteMail(recipient: String,
-                 inviteTokenValue: String,
-                 autoVerify: Boolean,
-                 organizationName: String,
-                 senderName: String): Mail = {
-    val host = Try { new URI(uri) }.toOption.getOrElse(uri)
+  def inviteMail(
+      recipient: String,
+      inviteTokenValue: String,
+      autoVerify: Boolean,
+      organizationName: String,
+      senderName: String
+  ): Mail = {
+    val host = Try(new URI(uri)).toOption.getOrElse(uri)
     Mail(
       from = defaultSender,
       subject = s"$senderName invited you to join their WEBKNOSSOS organization at $host",
@@ -184,11 +190,13 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(supportEmail)
     )
 
-  def jobSuccessfulGenericMail(multiUser: MultiUser,
-                               datasetName: String,
-                               jobLink: String,
-                               jobTitle: String,
-                               jobDescription: String): Mail =
+  def jobSuccessfulGenericMail(
+      multiUser: MultiUser,
+      datasetName: String,
+      jobLink: String,
+      jobTitle: String,
+      jobDescription: String
+  ): Mail =
     Mail(
       from = defaultSender,
       subject = s"$jobTitle is ready",

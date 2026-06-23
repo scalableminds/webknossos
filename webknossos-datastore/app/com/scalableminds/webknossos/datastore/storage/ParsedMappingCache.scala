@@ -15,8 +15,9 @@ case class MappingCacheKey(
 class ParsedMappingCache(val maxEntries: Int)
     extends LRUConcurrentCache[MappingCacheKey, Box[AbstractDataLayerMapping]] {
 
-  def withCache[T](mappingRequest: DataServiceMappingRequest)(
-      loadFn: DataServiceMappingRequest => Box[AbstractDataLayerMapping])(f: AbstractDataLayerMapping => T): Box[T] = {
+  def withCache[T](
+      mappingRequest: DataServiceMappingRequest
+  )(loadFn: DataServiceMappingRequest => Box[AbstractDataLayerMapping])(f: AbstractDataLayerMapping => T): Box[T] = {
 
     val mappingCacheKey = MappingCacheKey(
       mappingRequest.dataSourceIdOrVolumeDummy.organizationId,

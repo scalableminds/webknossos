@@ -26,12 +26,13 @@ import scala.concurrent.ExecutionContext
 
 case class CredentializedUPath(upath: UPath, credential: Option[DataVaultCredential])
 
-class DataVaultService @Inject()(ws: WSClient,
-                                 config: DataStoreConfig,
-                                 remoteWebknossosClient: DSRemoteWebknossosClient,
-                                 managedS3Service: ManagedS3Service,
-                                 s3ClientPoolHolder: S3ClientPoolHolder)
-    extends LazyLogging
+class DataVaultService @Inject() (
+    ws: WSClient,
+    config: DataStoreConfig,
+    remoteWebknossosClient: DSRemoteWebknossosClient,
+    managedS3Service: ManagedS3Service,
+    s3ClientPoolHolder: S3ClientPoolHolder
+) extends LazyLogging
     with Formatter
     with FoxImplicits {
 
@@ -71,8 +72,9 @@ class DataVaultService @Inject()(ws: WSClient,
       _ = removeVaultFromCache(CredentializedUPath(attachment.path, credentialBox.toOption))
     } yield ()
 
-  private def credentializedUPathForMag(magLocator: MagLocator)(
-      implicit ec: ExecutionContext): Fox[CredentializedUPath] =
+  private def credentializedUPathForMag(
+      magLocator: MagLocator
+  )(implicit ec: ExecutionContext): Fox[CredentializedUPath] =
     for {
       credentialBox <- credentialFor(magLocator).shiftBox
       magPath <- magLocator.path.toFox
@@ -162,7 +164,7 @@ class DataVaultService @Inject()(ws: WSClient,
       case _    => Failure(s"Unknown file system scheme $scheme")
     }
     vaultBox match {
-      case Full(_) => logger.info(s"Created data vault for ${credentializedUpath.upath.toString}.")
+      case Full(_)    => logger.info(s"Created data vault for ${credentializedUpath.upath.toString}.")
       case f: Failure =>
         logger.warn(s"Failed to create DataVault for ${credentializedUpath.upath.toString}: ${formatFailureChain(f)}")
       case Empty =>

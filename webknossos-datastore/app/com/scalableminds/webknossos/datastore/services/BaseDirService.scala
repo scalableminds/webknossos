@@ -10,11 +10,16 @@ import jakarta.inject.Inject
 
 import java.nio.file.{Files, Path}
 
-class BaseDirService @Inject()(config: DataStoreConfig) extends LazyLogging {
+class BaseDirService @Inject() (config: DataStoreConfig) extends LazyLogging {
 
   val baseDirectories: Seq[BaseDirConfig] = new BaseDirConfigReader().read(config.Datastore.baseDirectories)
 
-  def getOneForOrga(organizationId: String, requireAllowsUpload: Boolean = false, requireLocal: Boolean = false, requireS3: Boolean = false): Box[UPath] = {
+  def getOneForOrga(
+      organizationId: String,
+      requireAllowsUpload: Boolean = false,
+      requireLocal: Boolean = false,
+      requireS3: Boolean = false
+  ): Box[UPath] = {
     val orgaSpecificPath: Option[UPath] =
       baseDirectories
         .filter(_.organizationId.contains(organizationId))
@@ -24,19 +29,24 @@ class BaseDirService @Inject()(config: DataStoreConfig) extends LazyLogging {
         .map(_.path)
 
     val orgaAgnosticPath: Option[UPath] =
-      baseDirectories.filter(_.organizationId.isEmpty)
+      baseDirectories
+        .filter(_.organizationId.isEmpty)
         .filter(d => !requireS3 || d.path.getScheme.contains(PathSchemes.schemeS3))
         .filter(d => !requireLocal || d.path.isLocal)
         .find(d => !requireAllowsUpload || d.allowsUpload)
         .map(_.path / organizationId)
 
-    Box(orgaSpecificPath.orElse(orgaAgnosticPath)) ?~! s"No matching base directory configured for organization $organizationId."
+    Box(
+      orgaSpecificPath.orElse(orgaAgnosticPath)
+    ) ?~! s"No matching base directory configured for organization $organizationId."
   }
 
-  def getOneLocalForOrga(organizationId: String,
-                         requireAllowsUpload: Boolean = false,
-                         createIfMissing: Boolean = false,
-                         checkWritable: Boolean = false): Box[Path] =
+  def getOneLocalForOrga(
+      organizationId: String,
+      requireAllowsUpload: Boolean = false,
+      createIfMissing: Boolean = false,
+      checkWritable: Boolean = false
+  ): Box[Path] =
     for {
       selectedUPath <- getOneForOrga(organizationId, requireAllowsUpload, requireLocal = true)
       selected <- selectedUPath.toLocalPath
@@ -54,7 +64,8 @@ class BaseDirService @Inject()(config: DataStoreConfig) extends LazyLogging {
       for {
         path <- entry.path.toLocalPath
         orgId <- Box(entry.organizationId)
-      } yield (path, orgId))
+      } yield (path, orgId)
+    )
   }
 
   def allLocalBaseDirsForOrga(organizationId: String, requireDoScan: Boolean = false): Seq[Path] = {
@@ -78,9 +89,15 @@ class BaseDirService @Inject()(config: DataStoreConfig) extends LazyLogging {
 
   private def checkWritable(orgaPath: Path): Box[Unit] =
     for {
-      _ <- Box.fromBool(Files.exists(orgaPath)) ?~! "Datastore cannot write to organization data directory, it does not exist."
-      _ <- Box.fromBool(Files.isDirectory(orgaPath)) ?~! "Datastore cannot write to organization data directory, it exists but is no directory."
-      _ <- Box.fromBool(Files.isWritable(orgaPath)) ?~! "Datastore cannot write to organization data directory. No write access."
+      _ <- Box.fromBool(
+        Files.exists(orgaPath)
+      ) ?~! "Datastore cannot write to organization data directory, it does not exist."
+      _ <- Box.fromBool(
+        Files.isDirectory(orgaPath)
+      ) ?~! "Datastore cannot write to organization data directory, it exists but is no directory."
+      _ <- Box.fromBool(
+        Files.isWritable(orgaPath)
+      ) ?~! "Datastore cannot write to organization data directory. No write access."
     } yield ()
 
 }

@@ -20,9 +20,10 @@ class N5ChunkReader(header: DatasetHeader) extends ChunkReader(header) with Lazy
 
   private val dataExtractor: N5DataExtractor = new N5DataExtractor
 
-  override protected def readChunkBytesAndShape(path: VaultPath, range: ByteRange)(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[(Array[Byte], Option[Array[Int]])] = {
+  override protected def readChunkBytesAndShape(path: VaultPath, range: ByteRange)(implicit
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[(Array[Byte], Option[Array[Int]])] = {
 
     def processBytes(bytes: Array[Byte], expectedElementCount: Int): Box[Array[Byte]] =
       for {

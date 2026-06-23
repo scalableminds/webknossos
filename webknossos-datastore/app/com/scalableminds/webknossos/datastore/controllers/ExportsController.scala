@@ -26,9 +26,11 @@ object JobExportProperties {
   implicit val jsonFormat: OFormat[JobExportProperties] = Json.format[JobExportProperties]
 }
 
-class ExportsController @Inject()(webknossosClient: DSRemoteWebknossosClient,
-                                  accessTokenService: DataStoreAccessTokenService,
-                                  baseDirService: BaseDirService)(implicit ec: ExecutionContext)
+class ExportsController @Inject() (
+    webknossosClient: DSRemoteWebknossosClient,
+    accessTokenService: DataStoreAccessTokenService,
+    baseDirService: BaseDirService
+)(implicit ec: ExecutionContext)
     extends Controller
     with FoxImplicits {
 

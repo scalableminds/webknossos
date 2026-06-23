@@ -7,7 +7,7 @@ import play.api.Configuration
 
 import scala.concurrent.duration._
 
-class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigReader {
+class DataStoreConfig @Inject() (configuration: Configuration) extends ConfigReader {
   override val raw: Configuration = configuration
 
   object Http {
@@ -62,14 +62,8 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
     object DataVaults {
       val credentials: List[Config] = getList[Config]("datastore.dataVaults.credentials")
     }
-    val children: List[Object] = List(WebKnossos,
-                        WatchFileSystem,
-                        Cache,
-                        AdHocMesh,
-                        Redis,
-                        AgglomerateTree,
-                        AgglomerateGraph,
-                        DataVaults)
+    val children: List[Object] =
+      List(WebKnossos, WatchFileSystem, Cache, AdHocMesh, Redis, AgglomerateTree, AgglomerateGraph, DataVaults)
   }
 
   object SlackNotifications {

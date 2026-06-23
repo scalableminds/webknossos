@@ -291,7 +291,7 @@ object Msg {
     }
     object Create {
       val forbidden: String = "You do not have permission to create a new organization."
-      val directoryCreateFailed: String =  "Could not create organization directory on disk on the data store server."
+      val directoryCreateFailed: String = "Could not create organization directory on disk on the data store server."
       val failed: String = "Could not create a new organization."
     }
   }

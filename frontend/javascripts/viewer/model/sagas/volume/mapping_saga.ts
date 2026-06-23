@@ -491,8 +491,8 @@ function* finishMappingActivation(action: SetMappingDataAction): Saga<void> {
   // without a GPU) and finish the activation (status ACTIVATING -> ENABLED).
   const { layerName, mapping, mappingColors, isMergerModeMapping } = action;
 
-  // The mapping's name/type live in the active mapping (configured by SET_MAPPING or already
-  // active); the data action no longer carries them.
+  // The SetMappingDataAction only updates the mapping data. The mapping's name and type are already configured.
+  // So we read them from the current active mapping.
   const activeMapping = yield* select((state) =>
     getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
   );

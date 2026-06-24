@@ -907,19 +907,15 @@ export function* tryToIncorporateActions(
       splitSegmentIdToOldAgglomerate,
     ] of splitSegmentIdToOldAgglomeratePerLayer.entries()) {
       if (splitSegmentIdToOldAgglomerate && splitSegmentIdToOldAgglomerate.size > 0) {
-        // Any involved old agglomerate id works as sourceAgglomerateId; the function re-maps the
-        // local segments of every old agglomerate referenced in the passed map anyway.
-        const sourceAgglomerateId = splitSegmentIdToOldAgglomerate.values().next().value as number;
         const activeMapping = yield* select(
           (store) => store.temporaryConfiguration.activeMappingByLayer[tracingId],
         );
         const splitMappingInfo = yield* splitAgglomerateInMapping(
           activeMapping,
-          sourceAgglomerateId,
+          splitSegmentIdToOldAgglomerate,
           tracingId,
           actionBatch.version,
           false,
-          splitSegmentIdToOldAgglomerate,
         );
 
         if (splitMappingInfo == null) {

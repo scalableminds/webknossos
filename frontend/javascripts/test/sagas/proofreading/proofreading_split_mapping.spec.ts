@@ -45,8 +45,7 @@ describe("splitAgglomerateInMapping", () => {
   function runSplit(
     context: WebknossosTestContext,
     activeMapping: ActiveMappingInfo,
-    sourceAgglomerateId: number,
-    additionalSegmentIdToOldAgglomerateId: Map<number, number>,
+    segmentIdToOldAgglomerateId: Map<number, number>,
     addAdditionalSegmentsToMapping: boolean,
     // The full mapping the (mocked) tracingstore returns after the split.
     mappingAfterSplit: Array<[number, number]>,
@@ -57,11 +56,10 @@ describe("splitAgglomerateInMapping", () => {
     return startSaga(function* () {
       return yield* splitAgglomerateInMapping(
         activeMapping,
-        sourceAgglomerateId,
+        segmentIdToOldAgglomerateId,
         tracingId,
         version,
         false,
-        additionalSegmentIdToOldAgglomerateId,
         addAdditionalSegmentsToMapping,
       );
     }).toPromise();
@@ -83,7 +81,7 @@ describe("splitAgglomerateInMapping", () => {
         ]),
       );
       // Segment info extracted from the foreign update action: Agglomerate 100 = {segment 1, segment 2} was split.
-      const additionalSegmentIdToOldAgglomerateId = new Map([
+      const segmentIdToOldAgglomerateId = new Map([
         [1, 100],
         [2, 100],
       ]);
@@ -99,8 +97,7 @@ describe("splitAgglomerateInMapping", () => {
       const result = await runSplit(
         context,
         activeMapping,
-        100,
-        additionalSegmentIdToOldAgglomerateId,
+        segmentIdToOldAgglomerateId,
         addAdditionalSegmentsToMapping,
         mappingAfterSplit,
       );
@@ -139,7 +136,7 @@ describe("splitAgglomerateInMapping", () => {
     ]);
     const activeMapping = buildActiveMapping(segmentIdToOldAgglomerateId);
 
-    const result = await runSplit(context, activeMapping, 100, segmentIdToOldAgglomerateId, false, [
+    const result = await runSplit(context, activeMapping, segmentIdToOldAgglomerateId, false, [
       [1, 100],
       [2, 300],
       [3, 200],

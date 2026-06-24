@@ -4,9 +4,9 @@ import PullQueue from "viewer/model/bucket_data_handling/pullqueue";
 import { requestWithFallback } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "viewer/model";
+import { sleep } from "libs/utils";
 import type { BucketAddress } from "viewer/constants";
 import { BucketStateEnum, DataBucket } from "viewer/model/bucket_data_handling/bucket";
-import { sleep } from "libs/utils";
 
 vi.mock("viewer/model/sagas/root_saga", function () {
   return function* () {

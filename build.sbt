@@ -2,16 +2,8 @@ import sbt._
 
 ThisBuild / version := "wk"
 ThisBuild / scalaVersion := "3.8.3"
-inThisBuild(
-  List(
-    semanticdbEnabled := false,
-    semanticdbVersion := scalafixSemanticdb.revision
-  )
-)
-addCommandAlias(
-  "fix",
-  "set ThisBuild / semanticdbEnabled := true; util/scalafixAll; webknossosDatastore/scalafixAll; webknossosTracingstore/scalafixAll; webknossos/scalafixAll; set ThisBuild / semanticdbEnabled := false"
-)
+ThisBuild / semanticdbEnabled := false
+
 // fix jni for scala version 3
 sbtJniCoreScope := Compile
 

@@ -34,7 +34,7 @@ trait AbstractRequestLogging extends LazyLogging with Formatter {
 
   def logTime(notifier: String => Unit, durationThreshold: FiniteDuration = 2 minutes)(
       block: => Fox[Result]
-  )(implicit request: Request[?], ec: ExecutionContext): Fox[Result] = {
+  )(implicit request: Request[?]): Fox[Result] = {
     def logTimeFormatted(executionTime: FiniteDuration, request: Request[?], result: Result): Unit = {
       val debugString =
         s"Request `${request.method}` `${request.uri}` took ${formatDuration(executionTime)} and was${

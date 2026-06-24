@@ -8,7 +8,7 @@ import {
 import { message } from "antd";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
-import { fastDiffSetAndMap, sleep } from "libs/utils";
+import { ColoredLogger, fastDiffSetAndMap, sleep } from "libs/utils";
 import min from "lodash-es/min";
 import { buffers, eventChannel } from "redux-saga";
 import {
@@ -483,6 +483,7 @@ function* handleSetMapping(
 }
 
 function* finishMappingActivation(action: SetMappingDataAction): Saga<void> {
+  console.log("handle finishMappingActivation");
   // Runs on every SET_MAPPING_DATA, i.e. for phase 2 of an activation (case 1) as well as for a
   // standalone data update of an already-active mapping (case 2). The mapping data has already
   // been stored in the store (by the SET_MAPPING_DATA reducer). Here we update
@@ -496,11 +497,16 @@ function* finishMappingActivation(action: SetMappingDataAction): Saga<void> {
     getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
   );
 
+  console.log("activeMapping", activeMapping);
+
   // Mirror the gate of the SET_MAPPING_DATA reducer.
   const isActivationAllowed = yield* select((state) =>
     isMappingActivationAllowed(state, activeMapping.mappingName, layerName, !!isMergerModeMapping),
   );
-  if (!isActivationAllowed) return;
+  if (!isActivationAllowed) {
+    ColoredLogger.logGreen("[finishMappingActivation] cancel because activation not allowed");
+    return;
+  }
 
   // Only proceed if the reducer actually applied this exact mapping and the activation is still
   // in progress. This skips superseded/rejected actions and avoids double-finishing.
@@ -508,6 +514,11 @@ function* finishMappingActivation(action: SetMappingDataAction): Saga<void> {
     activeMapping.mapping !== mapping ||
     activeMapping.mappingStatus !== MappingStatusEnum.ACTIVATING
   ) {
+    ColoredLogger.logGreen(
+      "[finishMappingActivation] cancel",
+      activeMapping.mapping !== mapping,
+      activeMapping.mappingStatus,
+    );
     return;
   }
 
@@ -523,6 +534,7 @@ function* finishMappingActivation(action: SetMappingDataAction): Saga<void> {
   if (mappings != null) {
     yield* call([mappings, mappings.updateMappingTextures], mapping);
   }
+  ColoredLogger.logGreen("[finishMappingActivation] about to be done");
 
   yield* put(finishMappingInitializationAction(layerName));
   message.destroy(MAPPING_MESSAGE_KEY);

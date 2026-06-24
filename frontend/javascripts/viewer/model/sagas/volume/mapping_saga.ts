@@ -11,7 +11,6 @@ import Toast from "libs/toast";
 import { fastDiffSetAndMap, sleep } from "libs/utils";
 import min from "lodash-es/min";
 import { buffers, eventChannel } from "redux-saga";
-import type { ActionPattern } from "redux-saga/effects";
 import {
   actionChannel,
   all,
@@ -79,12 +78,11 @@ import type {
   NumberLikeMap,
   StoreAnnotation,
 } from "viewer/store";
-import type { Action } from "../../actions/actions";
 import { setActiveCellAction, updateSegmentAction } from "../../actions/volumetracing_actions";
 import type DataCube from "../../bucket_data_handling/data_cube";
 import { listenToStoreProperty } from "../../helpers/listener_helpers";
 import { ensureWkInitialized } from "../ready_sagas";
-import { waitUntilNotBusy } from "../saga_helpers";
+import { waitUntilNoActiveOperations } from "../saga_helpers";
 
 type APIMappings = Record<string, APIMapping>;
 type Container<T> = { value: T };
@@ -352,17 +350,18 @@ function* watchChangedBucketsForLayer(layerName: string): Saga<never> {
     // Updating the HDF5 mapping is an async task which requires communication with
     // the back-end. If the front-end does a proofreading operation in parallel,
     // there is a risk of a race condition. Therefore, we cancel the updateHdf5
-    // saga as soon as WK enters a busy state and retry afterwards.
+    // saga as soon as an operation starts and retry afterwards.
+    // Theoretically, the take on REGISTER_OPERATION could be narrowed down
+    // so that we only cancel when its a proofreading operation or rebasing operation.
+    // However, for now the wide `take` should be okay, too.
     while (true) {
-      let isBusy = yield* select((state) => state.uiInformation.busyBlockingInfo.isBusy);
-      if (!isBusy) {
+      const isBlocked = yield* select(
+        (state) => state.operationContext.activeOperations.length > 0,
+      );
+      if (!isBlocked) {
         const { cancel } = yield* race({
           updateHdf5: call(updateLocalHdf5Mapping, layerName, layerInfo, mappingName),
-          cancel: take(
-            ((action: Action) =>
-              action.type === "SET_BUSY_BLOCKING_INFO_ACTION" &&
-              action.value.isBusy) as ActionPattern,
-          ),
+          cancel: take("REGISTER_OPERATION"),
         });
         if (!cancel) {
           return;
@@ -370,7 +369,7 @@ function* watchChangedBucketsForLayer(layerName: string): Saga<never> {
         console.log("Cancelled updateHdf5");
       }
 
-      yield call(waitUntilNotBusy);
+      yield* waitUntilNoActiveOperations();
       console.log("Retrying updateHdf5...");
     }
   }

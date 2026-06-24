@@ -3,6 +3,7 @@ import Date from "libs/date";
 import { getUid } from "libs/uid_generator";
 import type { Dispatch } from "redux";
 import type { APIUserCompact } from "types/api_types";
+import type { OperationContext } from "viewer/model/sagas/operation_context_saga";
 import type {
   UpdateAction,
   UpdateActionWithIsolationRequirement,
@@ -23,7 +24,6 @@ export type NotifyAboutUpdatedBucketsAction = ReturnType<typeof notifyAboutUpdat
 export type SaveNowAction = ReturnType<typeof saveNowAction>;
 export type ShiftSaveQueueAction = ReturnType<typeof shiftSaveQueueAction>;
 type DiscardSaveQueueAction = ReturnType<typeof discardSaveQueueAction>;
-export type SetSaveBusyAction = ReturnType<typeof setSaveBusyAction>;
 export type SetLastSaveTimestampAction = ReturnType<typeof setLastSaveTimestampAction>;
 export type SetVersionNumberAction = ReturnType<typeof setVersionNumberAction>;
 export type UndoAction = ReturnType<typeof undoAction>;
@@ -42,7 +42,7 @@ export type UnsubscribeFromAnnotationMutexAction = ReturnType<
 export type SnapshotAnnotationStateForNextRebaseAction = ReturnType<
   typeof snapshotAnnotationStateForNextRebaseAction
 >;
-export type PrepareRebaseAction = ReturnType<typeof prepareRebaseAction>;
+export type RewindForRebaseAction = ReturnType<typeof rewindForRebaseAction>;
 export type FinishedRebaseAction = ReturnType<typeof finishedRebaseAction>;
 export type StartForwardingUpdateActionsAction = ReturnType<
   typeof startForwardingUpdateActionsAction
@@ -69,7 +69,6 @@ export type SaveAction =
   | ShiftSaveQueueAction
   | DiscardSaveQueueAction
   | NotifyAboutUpdatedBucketsAction
-  | SetSaveBusyAction
   | SetLastSaveTimestampAction
   | SetVersionNumberAction
   | UndoAction
@@ -82,7 +81,7 @@ export type SaveAction =
   | SubscribeToAnnotationMutexAction
   | UnsubscribeFromAnnotationMutexAction
   | SnapshotAnnotationStateForNextRebaseAction
-  | PrepareRebaseAction
+  | RewindForRebaseAction
   | FinishedRebaseAction
   | StartForwardingUpdateActionsAction
   | FinishForwardingUpdateActionsAction
@@ -119,9 +118,10 @@ export const pushSaveQueueTransactionIsolated = (
 export const notifyAboutUpdatedBucketsAction = (count: number) =>
   ({ type: "NOTIFY_ABOUT_UPDATED_BUCKETS", count }) as const;
 
-export const saveNowAction = () =>
+export const saveNowAction = (operationContext?: OperationContext) =>
   ({
     type: "SAVE_NOW",
+    operationContext,
   }) as const;
 
 export const exitingAnnotationAction = () =>
@@ -138,12 +138,6 @@ export const shiftSaveQueueAction = (count: number) =>
 export const discardSaveQueueAction = () =>
   ({
     type: "DISCARD_SAVE_QUEUE",
-  }) as const;
-
-export const setSaveBusyAction = (isBusy: boolean) =>
-  ({
-    type: "SET_SAVE_BUSY",
-    isBusy,
   }) as const;
 
 export const setLastSaveTimestampAction = () =>
@@ -222,17 +216,22 @@ export const dispatchEnsureTracingsWereDiffedToSaveQueueAction = async (
   }
 };
 
-export const ensureHasNewestVersionAction = (callback: () => void) =>
+export const ensureHasNewestVersionAction = (
+  callback: () => void,
+  operationContext?: OperationContext,
+) =>
   ({
     type: "ENSURE_HAS_NEWEST_VERSION",
     callback,
+    operationContext,
   }) as const;
 
 export const dispatchEnsureHasNewestVersionAsync = async (
   dispatch: Dispatch<any>,
+  operationContext?: OperationContext,
 ): Promise<void> => {
   const readyDeferred = new Deferred();
-  const action = ensureHasNewestVersionAction(() => readyDeferred.resolve(null));
+  const action = ensureHasNewestVersionAction(() => readyDeferred.resolve(null), operationContext);
   dispatch(action);
   await readyDeferred.promise();
 };
@@ -273,10 +272,10 @@ export const snapshotAnnotationStateForNextRebaseAction = () =>
     type: "SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE",
   }) as const;
 
-export const prepareRebaseAction = () =>
+export const rewindForRebaseAction = () =>
   ({
     // Sets the annotation in the store to the info stored in RebaseRelevantAnnotationState.
-    type: "PREPARE_REBASING",
+    type: "REWIND_FOR_REBASE",
   }) as const;
 
 export const finishedRebaseAction = () =>

@@ -3,9 +3,8 @@ import { Modal } from "antd";
 import Toast from "libs/toast";
 import messages from "messages";
 import { call, delay, fork, put, race, spawn, take, takeEvery } from "typed-redux-saga";
-import { MappingStatusEnum, type SagaIdentifier } from "viewer/constants";
+import { MappingStatusEnum } from "viewer/constants";
 import { type Action, escalateErrorAction } from "viewer/model/actions/actions";
-import { setBusyBlockingInfoAction } from "viewer/model/actions/ui_actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import { Store } from "viewer/singletons";
@@ -14,75 +13,51 @@ import {
   setMappingIsLockedAction,
   setVolumeBucketDataHasChangedAction,
 } from "../actions/volumetracing_actions";
+import {
+  getOrCreateOperationContext,
+  type OperationContext,
+  type OperationOptions,
+} from "./operation_context_saga";
 
-export function* takeEveryUnlessBusy<P extends ActionPattern>(
+// Narrows an action-pattern argument (a single action-type string or an array of them)
+// to the matching member(s) of the Action union, so the handler can be typed precisely.
+// Any other pattern (e.g. a predicate function) falls back to the full Action union.
+type ActionFromPattern<P> = P extends Action["type"]
+  ? Extract<Action, { type: P }>
+  : P extends ReadonlyArray<infer U>
+    ? U extends Action["type"]
+      ? Extract<Action, { type: U }>
+      : Action
+    : Action;
+
+export function* takeEveryInOperationContext<P extends ActionPattern>(
   actionDescriptor: P,
-  saga: (arg0: Action) => Saga<void>,
-  reason: string,
+  saga: (action: ActionFromPattern<P>, ctx: OperationContext) => Saga<void>,
+  options: OperationOptions,
 ): Saga<void> {
-  /*
-   * Similar to takeEvery, this function can be used to react to
-   * actions to start sagas. However, the difference is that once the given
-   * saga is executed, webKnossos will be marked as busy. When being busy,
-   * following actions which match the actionDescriptor are ignored.
-   * When the given saga finishes, busy is set to false.
-   *
-   * Note that busyBlockingInfo is also used/respected in other places within
-   * webKnossos.
+  /* Listens for actions and runs the provided saga inside an operation context,
+   * automatically acquiring and releasing the context. If an action carries an
+   * operationContext field, that context is used as the parent (for nested operations);
+   * otherwise creates a fresh context.
+   * Ignores the action if the operation context cannot be acquired (i.e., another operation
+   * is already ongoing which doesn't allow additional executions).
    */
-  function* sagaBusyWrapper(action: Action) {
-    const busyBlockingInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
-
-    if (busyBlockingInfo.isBusy) {
+  function* wrapper(action: Action) {
+    const existingCtx = (action as any).operationContext ?? null;
+    const ctx = yield* getOrCreateOperationContext(
+      { ...options, behaviorWhenDisallowed: "ignore" },
+      existingCtx,
+    );
+    if (ctx == null) {
+      const operations = yield* select((state) => state.operationContext.activeOperations);
       console.warn(
-        `Ignoring ${action.type} request (reason: ${busyBlockingInfo.reason || "null"})`,
+        `Ignoring ${String((action as any).type)} operation, because another operation is already running (${operations.map((op) => op.id).join(", ")}).`,
       );
       return;
     }
-
-    yield* put(setBusyBlockingInfoAction(true, reason));
-    yield* call(saga, action);
-    yield* put(setBusyBlockingInfoAction(false));
+    yield* ctx.execute(() => saga(action as ActionFromPattern<P>, ctx));
   }
-
-  yield* takeEvery(actionDescriptor, sagaBusyWrapper);
-}
-
-// A little helper function executing a passed saga while setting WK's busy state to busy with the passed reason.
-// Additionally, the saga can be executed while wk is already in a busy state, in case the current saga's identifier is whitelisted.
-// If it is not whitelisted, it will wait until the busy state is available again.
-export function* enforceExecutionAsBusyBlockingUnlessAllowed<T>(
-  saga: () => Saga<T>,
-  reason: string,
-  sagaIdentifier: SagaIdentifier,
-): Saga<T> {
-  let busyInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
-  while (busyInfo.isBusy && !busyInfo.allowedSagas.includes(sagaIdentifier)) {
-    yield* take(["SET_BUSY_BLOCKING_INFO_ACTION", "ALLOW_SAGA_WHILE_BUSY_ACTION"]);
-    busyInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
-  }
-
-  if (!busyInfo.isBusy) {
-    yield* put(setBusyBlockingInfoAction(true, reason));
-  }
-  const retVal = yield* call(saga);
-  if (!busyInfo.isBusy) {
-    yield* put(setBusyBlockingInfoAction(false));
-  }
-  return retVal;
-}
-
-export function* waitUntilNotBusy(): Saga<void> {
-  const isBusy = yield* select((state) => state.uiInformation.busyBlockingInfo.isBusy);
-  if (!isBusy) {
-    return;
-  }
-  while (true) {
-    const setBusyAction = yield take("SET_BUSY_BLOCKING_INFO_ACTION");
-    if (!setBusyAction.value.isBusy) {
-      return;
-    }
-  }
+  yield* takeEvery(actionDescriptor, wrapper);
 }
 
 type EnsureMappingIsLockedReturnType = {
@@ -268,5 +243,20 @@ export function* waitFor(
     }
     if (yield select(selector)) return;
     yield delay(throttleMs);
+  }
+}
+
+export function* waitUntilNoActiveOperations(): Saga<void> {
+  // Waits until there are no active operations anymore. In contrast to the generic
+  // `waitFor`, this listens specifically for UNREGISTER_OPERATION actions (the only
+  // actions that can decrease the active operation count), so no polling delay is needed.
+  if (yield* select((state) => state.operationContext.activeOperations.length === 0)) {
+    return;
+  }
+  while (true) {
+    yield take("UNREGISTER_OPERATION");
+    if (yield* select((state) => state.operationContext.activeOperations.length === 0)) {
+      return;
+    }
   }
 }

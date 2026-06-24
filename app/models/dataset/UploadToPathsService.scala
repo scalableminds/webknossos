@@ -123,7 +123,7 @@ class UploadToPathsService @Inject() (
       ) ?~> s"Dataset is not in uploading status, got ${dataset.status}."
       _ <- Fox.fromBool(
         dataset._uploader.contains(requestingUser._id)
-      ) ?~> s"Cannot reserve paths for a dataset someone else uploaded."
+      ) ?~> "Cannot reserve paths for a dataset someone else uploaded."
       dataSourceWithFixedDirectoryName = parameters.dataSource.copy(
         id = DataSourceId(dataset.directoryName, requestingUser._organization),
         statusOpt = Some(DataSourceStatus.notYetUploaded)

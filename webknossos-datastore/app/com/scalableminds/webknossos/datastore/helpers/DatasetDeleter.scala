@@ -43,7 +43,7 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants {
       ec: ExecutionContext
   ): Fox[Unit] =
     if (retryCount > 15) {
-      Fox.failure(s"Deleting dataset failed: too many retries.")
+      Fox.failure("Deleting dataset failed: too many retries.")
     } else {
       try {
         val deduplicatedTargetPath =

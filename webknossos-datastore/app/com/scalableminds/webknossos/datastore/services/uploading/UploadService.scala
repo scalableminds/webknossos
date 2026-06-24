@@ -378,7 +378,7 @@ class UploadService @Inject() (
       if (knownUpload) {
         logger.info(f"Cancelling ${uploadFullName(uploadDomain, uploadId, datasetId, dataSourceId)}...")
         cleanUpUploaded(uploadId, reason = "Cancelled by user", uploadDomain)
-      } else Fox.failure(s"Unknown upload")
+      } else Fox.failure("Unknown upload")
   }
 
   private def uploadFullName(

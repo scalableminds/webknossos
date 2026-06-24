@@ -406,7 +406,7 @@ class EditableMappingUpdater(
           _ <- updateSegmentToAgglomerate(
             agglomerateGraph2.segments,
             agglomerateId1
-          ) ?~> s"Failed to update segment to agglomerate buffer"
+          ) ?~> "Failed to update segment to agglomerate buffer"
           _ = updateAgglomerateGraph(agglomerateId1, mergedGraph)
           _ = if (agglomerateId1 != agglomerateId2)
             // The second agglomerate vanishes, as all its segments have been moved to agglomerateId1

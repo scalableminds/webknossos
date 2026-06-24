@@ -309,7 +309,7 @@ class NmlWriter @Inject() (implicit ec: ExecutionContext)
             writer.writeAttribute("editedMappingBaseMappingName", _)
           }
           if (skipVolumeData) {
-            writer.writeComment(f"Note that volume data was omitted when downloading this annotation.")
+            writer.writeComment("Note that volume data was omitted when downloading this annotation.")
           }
           writeVolumeSegmentInfos(volumeTracing.segments)
           Xml.withinElementSync("groups")(writeSegmentGroupsAsXml(volumeTracing.segmentGroups))

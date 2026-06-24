@@ -91,7 +91,7 @@ class FossilDBClient(
         case Failure(exception) =>
           val box = exception match {
             case e: StatusRuntimeException if e.getStatus == Status.UNAVAILABLE =>
-              new com.scalableminds.util.tools.Failure(s"FossilDB is unavailable", Full(e), Empty) ~> 500
+              new com.scalableminds.util.tools.Failure("FossilDB is unavailable", Full(e), Empty) ~> 500
             case e: Exception =>
               val messageWithCauses = new StringBuilder
               messageWithCauses.append(e.toString)

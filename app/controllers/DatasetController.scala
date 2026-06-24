@@ -724,7 +724,7 @@ class DatasetController @Inject() (
           // (at the time of writing, in MAX_DEPTH_FOR_SAM in quick_select_settings.tsx).
           _ <- Fox.fromBool(
             targetMagSelectedBbox.size.sorted.x <= 50
-          ) ?~> s"Target-mag selected bbox depth must be at most 50"
+          ) ?~> "Target-mag selected bbox depth must be at most 50"
           _ <- Fox.fromBool(
             targetMagSelectedBbox.size.sorted.z == targetMagSelectedBbox.size.sorted.y
           ) ?~> s"Target-mag selected bbox must equally sized long edges, got ${targetMagSelectedBbox.size}"
@@ -943,7 +943,7 @@ class DatasetController @Inject() (
         _ <- Fox.fromBool(
           dataset.status == DataSourceStatus.notYetUploadedToPaths || dataset.status == DataSourceStatus.notYetUploaded
         ) ?~> s"Dataset is not in uploading-to-paths status, got ${dataset.status}."
-        _ <- Fox.fromBool(!dataset.isUsable) ?~> s"Dataset is already marked as usable."
+        _ <- Fox.fromBool(!dataset.isUsable) ?~> "Dataset is already marked as usable."
         _ <- datasetDAO.updateDatasetStatusByDatasetId(datasetId, newStatus = "", isUsable = true)
         updated <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
         _ <- datasetService.scanRealpathsIfVirtual(updated)
@@ -975,7 +975,7 @@ class DatasetController @Inject() (
         _ = logger.info(s"Writing mirrors for all datasets as requested by superuser ${request.identity._id}...")
         beforeAll = Instant.now
         datasets <- datasetDAO.findAll(using GlobalAccessContext)
-        _ = Instant.logSince(beforeAll, s"Writing mirrors for all datasets: fetch datasets from DB", logger)
+        _ = Instant.logSince(beforeAll, "Writing mirrors for all datasets: fetch datasets from DB", logger)
         eligibleDatasets = datasets.filter(d => d.isVirtual && d.isUsable)
         byDataStore = eligibleDatasets.groupBy(_._dataStore)
         _ <- Fox.serialCombined(byDataStore.keys) { dataStoreName =>

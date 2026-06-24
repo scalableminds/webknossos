@@ -2,7 +2,6 @@ import sbt._
 
 ThisBuild / version := "wk"
 ThisBuild / scalaVersion := "3.8.3"
-ThisBuild / scalafixDependencies += "io.github.dedis" %% "scapegoat-scalafix" % "1.1.4"
 inThisBuild(
   List(
     semanticdbEnabled := false,

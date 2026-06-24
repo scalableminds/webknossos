@@ -1,3 +1,4 @@
+import { sleep } from "libs/utils";
 import { DataBucket } from "viewer/model/bucket_data_handling/bucket";
 import TemporalBucketManager from "viewer/model/bucket_data_handling/temporal_bucket_manager";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -146,6 +147,7 @@ describe("TemporalBucketManager", () => {
     bucket1.receiveData(new Uint8Array(1 << 15));
     bucket2.receiveData(new Uint8Array(1 << 15));
 
+    await sleep(0); // sleep a bit so that the event loop can process the `then` from above
     expect(resolved).toBe(true);
   });
 });

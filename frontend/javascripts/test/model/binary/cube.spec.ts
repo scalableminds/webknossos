@@ -136,6 +136,7 @@ describe("DataCube", () => {
   }) => {
     cube._labelVoxelInResolution_DEPRECATED([1, 1, 1], null, 42, 0, null);
 
+    await sleep(100);
     expect(pullQueue.processedQueue[0]).toEqual({
       bucket: [0, 0, 0, 0, []],
       priority: -1,

@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import "viewer/model";
 import type { BucketAddress } from "viewer/constants";
 import { BucketStateEnum, DataBucket } from "viewer/model/bucket_data_handling/bucket";
+import { sleep } from "libs/utils";
 
 vi.mock("viewer/model/sagas/root_saga", function () {
   return function* () {
@@ -105,7 +106,7 @@ describe("PullQueue", () => {
     context.buckets = buckets;
   });
 
-  it<TestContext>("Successful pulling: should receive the correct data", ({
+  it<TestContext>("Successful pulling: should receive the correct data", async ({
     pullQueue,
     buckets,
   }) => {
@@ -117,6 +118,8 @@ describe("PullQueue", () => {
       { type: "data", data: new Uint8Array(bucketData2) },
     ]);
     pullQueue.pull();
+
+    await sleep(0); // sleep a bit so that the event loop can process the fetches
 
     expect(buckets[0].state).toBe(BucketStateEnum.LOADED);
     expect(buckets[1].state).toBe(BucketStateEnum.LOADED);
@@ -138,23 +141,30 @@ describe("PullQueue", () => {
     prepare();
     pullQueue.pull();
 
+    await sleep(0); // sleep a bit so that the event loop can process the fetches
+
     expect(requestWithFallback).toHaveBeenCalledTimes(1);
     expect(buckets[0].state).toBe(BucketStateEnum.UNREQUESTED);
     expect(buckets[1].state).toBe(BucketStateEnum.UNREQUESTED);
   });
 
-  it<TestContext>("Request Failure: should reinsert dirty buckets", ({ pullQueue, buckets }) => {
+  it<TestContext>("Request Failure: should reinsert dirty buckets", async ({
+    pullQueue,
+    buckets,
+  }) => {
     prepare();
     buckets[0].dirty = true;
     buckets[0].data = new Uint8Array(32 * 32 * 32);
     pullQueue.pull();
+
+    await sleep(50); // sleep a bit so that the event loop can process the fetches
 
     expect(requestWithFallback).toHaveBeenCalledTimes(2);
     expect(buckets[0].state).toBe(BucketStateEnum.LOADED);
     expect(buckets[1].state).toBe(BucketStateEnum.UNREQUESTED);
   });
 
-  it<TestContext>("Partial failure: failure results are retried, empty results are not", ({
+  it<TestContext>("Partial failure: failure results are retried, empty results are not", async ({
     pullQueue,
     buckets,
   }) => {
@@ -166,6 +176,8 @@ describe("PullQueue", () => {
       .mockReset()
       .mockResolvedValueOnce([{ type: "failure" }, { type: "empty" }]);
     pullQueue.pull();
+
+    await sleep(0); // sleep a bit so that the event loop can process the fetches
 
     expect(buckets[0].state).toBe(BucketStateEnum.UNREQUESTED);
     expect(buckets[1].state).toBe(BucketStateEnum.LOADED);

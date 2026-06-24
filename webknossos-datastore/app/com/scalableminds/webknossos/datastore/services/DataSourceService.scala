@@ -174,7 +174,7 @@ class DataSourceService @Inject() (
       Full(RealPathInfo(attachment.path, attachment.path, hasLocalData = false))
     } else {
       for {
-        _ <- Box.fromBool(attachment.path.isAbsolute) ?~ "Attachment path as stored in db must be absolute"
+        _ <- Box.fromBool(attachment.path.isAbsolute) ?~> "Attachment path as stored in db must be absolute"
         attachmentPath <- attachment.path.toLocalPath
         realAttachmentPath <- tryo(attachmentPath.toRealPath())
         // Does this dataset have local data, i.e. the data that is referenced by the mag path is within the dataset directory

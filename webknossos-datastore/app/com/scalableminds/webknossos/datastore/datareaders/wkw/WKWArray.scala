@@ -96,17 +96,17 @@ class WKWArray(
 
   private def computeMortonIndex(x: Int, y: Int, z: Int): Box[Int] =
     for {
-      _ <- Box.fromBool(x >= 0 && x < header.numChunksPerShardDimension) ?~! error(
+      _ <- Box.fromBool(x >= 0 && x < header.numChunksPerShardDimension) ?~> error(
         "X coordinate is out of range",
         s"[0, ${header.numChunksPerShardDimension})",
         x
       )
-      _ <- Box.fromBool(y >= 0 && y < header.numChunksPerShardDimension) ?~! error(
+      _ <- Box.fromBool(y >= 0 && y < header.numChunksPerShardDimension) ?~> error(
         "Y coordinate is out of range",
         s"[0, ${header.numChunksPerShardDimension})",
         y
       )
-      _ <- Box.fromBool(z >= 0 && z < header.numChunksPerShardDimension) ?~! error(
+      _ <- Box.fromBool(z >= 0 && z < header.numChunksPerShardDimension) ?~> error(
         "Z coordinate is out of range",
         s"[0, ${header.numChunksPerShardDimension})",
         z

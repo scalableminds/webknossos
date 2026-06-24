@@ -245,30 +245,19 @@ object Fox {
 
 class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
 
-  // Add error message in case of Failure and Empty (wrapping Empty in a Failure)
-  def ?~>(s: String): Fox[A] =
-    new Fox(futureBox.map(_ ?~! s))
+  /** Add error message in case of Failure and Empty (wrapping Empty in a Failure) */
+  def ?~>(msg: String): Fox[A] =
+    new Fox(futureBox.map(_ ?~> msg))
 
-  // Add error message only in case of Failure, pass through Empty
-  def ?->(s: String): Fox[A] =
-    Fox.fromFutureBox {
-      futureBox.map {
-        case Full(value) => Full(value)
-        case f: Failure  => f ?~! s
-        case Empty       => Empty
-      }
-    }
+  /** Add error message only in case of Failure, pass through Empty */
+  def ?->(msg: String): Fox[A] =
+    new Fox(futureBox.map(_ ?-> msg))
 
-  // Overwrite error message in case of Failure and Empty (wrapping Empty in a Failure).
-  def ??~>(s: String): Fox[A] =
-    Fox.fromFutureBox {
-      futureBox.map {
-        case Full(value) => Full(value)
-        case _           => Failure(s)
-      }
-    }
+  /** Overwrite error message in case of Failure and Empty (wrapping Empty in a Failure). */
+  def ??~>(msg: String): Fox[A] =
+    new Fox(futureBox.map(_ ??~> msg))
 
-  // Add http error code in case of Failure or Empty (wrapping Empty in a Failure)
+  /** Add http error code in case of Failure or Empty (wrapping Empty in a Failure) */
   def ~>(errorCode: Int): Fox[A] =
     new Fox(futureBox.map(_ ~> errorCode))
 

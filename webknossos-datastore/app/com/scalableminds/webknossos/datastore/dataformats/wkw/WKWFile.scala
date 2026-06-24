@@ -50,7 +50,7 @@ trait WKWCompressionHelper {
         val rawChunk: Array[Byte] = Array.ofDim[Byte](numBytesPerChunk)
         for {
           bytesDecompressed <- tryo(lz4Decompressor.decompress(compressedChunk, rawChunk, numBytesPerChunk))
-          _ <- Box.fromBool(bytesDecompressed == compressedChunk.length) ?~! error(
+          _ <- Box.fromBool(bytesDecompressed == compressedChunk.length) ?~> error(
             "Decompressed unexpected number of bytes",
             compressedChunk.length,
             bytesDecompressed
@@ -89,7 +89,7 @@ object WKWFile extends WKWCompressionHelper {
           if (blocks.hasNext) {
             val data = blocks.next()
             for {
-              _ <- Box.fromBool(data.length == header.numBytesPerChunk) ?~! error(
+              _ <- Box.fromBool(data.length == header.numBytesPerChunk) ?~> error(
                 "Unexpected chunk size",
                 header.numBytesPerChunk,
                 data.length

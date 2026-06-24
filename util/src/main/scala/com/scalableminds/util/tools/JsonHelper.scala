@@ -22,8 +22,8 @@ object JsonHelper extends LazyLogging {
 
   def parseAs[T: Reads](s: String): Box[T] =
     for {
-      jsValue <- tryo(Json.parse(s)) ?~ "Failed to parse json"
-      validated <- as[T](jsValue) ?~ "Failed to validate json against schema"
+      jsValue <- tryo(Json.parse(s)) ?~> "Failed to parse json"
+      validated <- as[T](jsValue) ?~> "Failed to validate json against schema"
     } yield validated
 
   def as[T: Reads](jsReadable: JsReadable): Box[T] =

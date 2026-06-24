@@ -23,7 +23,7 @@ trait UpdateGroupHandling extends LazyLogging {
       groupVersions <- Full(updateActionGroupsWithVersions.map(_._1))
       _ <- Box.fromBool(
         groupVersions.sorted(using Ordering[Long].reverse) == groupVersions
-      ) ?~! Msg.Annotation.ApplyUpdate.updateGroupVersionsNotSortedDesc
+      ) ?~> Msg.Annotation.ApplyUpdate.updateGroupVersionsNotSortedDesc
       splitGroupLists: List[List[(Long, List[UpdateAction])]] = SequenceUtils.splitAndIsolate(
         updateActionGroupsWithVersions.reverse
       )(actionGroup => actionGroup._2.exists(updateAction => isIsolationSensitiveAction(updateAction)))

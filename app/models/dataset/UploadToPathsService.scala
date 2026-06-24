@@ -173,7 +173,7 @@ class UploadToPathsService @Inject() (
         (for {
           fromConfigUPaths <- Box.combined(fromConfigStrs)(UPath.fromString)
           fromConfigAbsolute = fromConfigUPaths.map(_.toAbsolute)
-        } yield fromConfigAbsolute) ?~! "Could not parse config uploadToPaths.prefixes"
+        } yield fromConfigAbsolute) ?~> "Could not parse config uploadToPaths.prefixes"
     }
   }
 

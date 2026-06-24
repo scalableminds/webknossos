@@ -324,13 +324,13 @@ final case class ShardingCodecConfiguration(
   override def name: String = ShardingCodecConfiguration.name
   def isSupported: Box[Unit] =
     for {
-      _ <- Box.fromBool(index_codecs.size <= 2) ?~! s"Maximum of 2 index codecs supported, got ${index_codecs.size}"
+      _ <- Box.fromBool(index_codecs.size <= 2) ?~> s"Maximum of 2 index codecs supported, got ${index_codecs.size}"
       _ <- Box.fromBool(
         index_codecs.count(_.name == "bytes") == 1
-      ) ?~! s"Exactly one bytes codec supported, got ${index_codecs.count(_.name == "bytes")}"
+      ) ?~> s"Exactly one bytes codec supported, got ${index_codecs.count(_.name == "bytes")}"
       _ <- Box.fromBool(
         index_codecs.count(_.name == "crc32c") <= 1
-      ) ?~! s"Maximum of 1 crc32c codec supported, got ${index_codecs.count(_.name == "crc32c")}"
+      ) ?~> s"Maximum of 1 crc32c codec supported, got ${index_codecs.count(_.name == "crc32c")}"
     } yield ()
 
 }

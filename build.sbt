@@ -10,7 +10,7 @@ inThisBuild(
 )
 addCommandAlias(
   "fix",
-  "set ThisBuild / semanticdbEnabled := true; scalafix; set ThisBuild / semanticdbEnabled := false"
+  "set ThisBuild / semanticdbEnabled := true; scalafixAll; set ThisBuild / semanticdbEnabled := false"
 )
 // fix jni for scala version 3
 sbtJniCoreScope := Compile

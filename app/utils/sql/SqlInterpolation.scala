@@ -63,7 +63,7 @@ case class SqlToken(sql: String, values: List[SqlValue] = List()) {
         protected def extractValue(rs: PositionedResult): R = resultConverter(rs)
       }
 
-      override def getDumpInfo = DumpInfo(DumpInfo.simpleNameFor(getClass), mainInfo = s"[$debugInfo]")
+      override def getDumpInfo: DumpInfo = DumpInfo(DumpInfo.simpleNameFor(getClass), mainInfo = s"[$debugInfo]")
 
       protected def createBuilder: mutable.Builder[R, Vector[R]] = Vector.newBuilder[R]
     }

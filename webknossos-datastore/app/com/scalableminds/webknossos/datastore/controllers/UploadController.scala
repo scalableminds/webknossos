@@ -27,11 +27,12 @@ import java.io.File
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class UploadController @Inject()(
+class UploadController @Inject() (
     accessTokenService: DataStoreAccessTokenService,
     uploadService: UploadService,
     dsRemoteWebknossosClient: DSRemoteWebknossosClient,
-    slackNotificationService: DSSlackNotificationService)(implicit bodyParsers: PlayBodyParsers, ec: ExecutionContext)
+    slackNotificationService: DSSlackNotificationService
+)(implicit bodyParsers: PlayBodyParsers, ec: ExecutionContext)
     extends Controller {
 
   override def allowRemoteOrigin: Boolean = true
@@ -39,15 +40,20 @@ class UploadController @Inject()(
   def reserveDatasetUpload(): Action[DatasetUploadInfo] =
     Action.async(validateJson[DatasetUploadInfo]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(
-        UserAccessRequest.administrateDatasets(request.body.organizationId)) {
+        UserAccessRequest.administrateDatasets(request.body.organizationId)
+      ) {
         for {
           isKnownUpload <- uploadService.isKnownUpload(request.body.resumableUploadInfo.uploadId, UploadDomain.dataset)
           _ <- Fox.runIf(!isKnownUpload) {
             for {
-              reserveUploadAdditionalInfo <- dsRemoteWebknossosClient.reserveDatasetUpload(request.body) ?~> Msg.Dataset.Upload.validationFailed
-              _ <- uploadService.reserveDatasetUpload(request.body,
-                                                      reserveUploadAdditionalInfo.newDatasetId,
-                                                      reserveUploadAdditionalInfo.directoryName)
+              reserveUploadAdditionalInfo <- dsRemoteWebknossosClient.reserveDatasetUpload(
+                request.body
+              ) ?~> Msg.Dataset.Upload.validationFailed
+              _ <- uploadService.reserveDatasetUpload(
+                request.body,
+                reserveUploadAdditionalInfo.newDatasetId,
+                reserveUploadAdditionalInfo.directoryName
+              )
             } yield ()
           }
         } yield Ok
@@ -61,7 +67,9 @@ class UploadController @Inject()(
           isKnownUpload <- uploadService.isKnownUpload(request.body.resumableUploadInfo.uploadId, UploadDomain.mag)
           _ <- Fox.runIf(!isKnownUpload) {
             for {
-              reserveUploadAdditionalInfo <- dsRemoteWebknossosClient.reserveMagUpload(request.body) ?~> Msg.Dataset.Upload.validationFailed
+              reserveUploadAdditionalInfo <- dsRemoteWebknossosClient.reserveMagUpload(
+                request.body
+              ) ?~> Msg.Dataset.Upload.validationFailed
               _ <- uploadService.reserveMagUpload(request.body, reserveUploadAdditionalInfo.dataSourceId)
             } yield ()
           }
@@ -73,11 +81,15 @@ class UploadController @Inject()(
     Action.async(validateJson[AttachmentUploadInfo]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(request.body.datasetId)) {
         for {
-          isKnownUpload <- uploadService.isKnownUpload(request.body.resumableUploadInfo.uploadId,
-                                                       UploadDomain.attachment)
+          isKnownUpload <- uploadService.isKnownUpload(
+            request.body.resumableUploadInfo.uploadId,
+            UploadDomain.attachment
+          )
           _ <- Fox.runIf(!isKnownUpload) {
             for {
-              reserveUploadAdditionalInfo <- dsRemoteWebknossosClient.reserveAttachmentUpload(request.body) ?~> "dataset.upload.validation.failed"
+              reserveUploadAdditionalInfo <- dsRemoteWebknossosClient.reserveAttachmentUpload(
+                request.body
+              ) ?~> "dataset.upload.validation.failed"
               _ <- uploadService.reserveAttachmentUpload(request.body, reserveUploadAdditionalInfo.dataSourceId)
             } yield ()
           }
@@ -90,10 +102,13 @@ class UploadController @Inject()(
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.administrateDatasets(organizationName)) {
         for {
           uploadDomainValidated <- UploadDomain.fromString(uploadDomain).toFox
-          _ <- Fox.fromBool(uploadDomainValidated == UploadDomain.dataset) ?~> "Listing unfinished downloads is only supported for datasets."
+          _ <- Fox.fromBool(
+            uploadDomainValidated == UploadDomain.dataset
+          ) ?~> "Listing unfinished downloads is only supported for datasets."
           unfinishedUploads <- dsRemoteWebknossosClient.getUnfinishedUploadsForUser(organizationName)
           unfinishedUploadsWithUploadIds <- Fox.fromFuture(
-            uploadService.enrichUnfinishedUploadInfoWithUploadIds(unfinishedUploads))
+            uploadService.enrichUnfinishedUploadInfoWithUploadIds(unfinishedUploads)
+          )
           unfinishedUploadsWithUploadIdsWithoutDataSourceId = unfinishedUploadsWithUploadIds.map(_.withoutDataSourceId)
         } yield Ok(Json.toJson(unfinishedUploadsWithUploadIdsWithoutDataSourceId))
       }
@@ -123,36 +138,38 @@ class UploadController @Inject()(
             "resumableCurrentChunkSize" -> number,
             "resumableTotalChunks" -> longNumber,
             "resumableIdentifier" -> nonEmptyText
-          )).fill((-1, -1, -1, -1, ""))
+          )
+        ).fill((-1, -1, -1, -1, ""))
 
         uploadForm
           .bindFromRequest(request.body.dataParts)
           .fold(
             hasErrors = formWithErrors => Fox.successful(JsonBadRequest(formWithErrors.errors.head.message)),
-            success = {
-              case (chunkNumber, chunkSize, currentChunkSize, totalChunkCount, uploadFileId) =>
-                val uploadId = uploadService.extractDatasetUploadId(uploadFileId)
-                for {
-                  uploadDomainValidated <- UploadDomain.fromString(uploadDomain).toFox
-                  datasetId <- uploadService
-                    .getDatasetIdByUploadId(uploadId, uploadDomainValidated) ?~> Msg.Dataset.Upload
-                    .noSuchUpload(uploadId, uploadDomain)
-                  result <- accessTokenService
-                    .validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
-                      for {
-                        isKnownUpload <- uploadService.isKnownUploadByFileId(uploadFileId, uploadDomainValidated)
-                        _ <- Fox.fromBool(isKnownUpload) ?~> "dataset.upload.validation.failed"
-                        chunkFile <- request.body.file("file").toFox ?~> "zip.file.notFound"
-                        _ <- uploadService.handleUploadChunk(uploadFileId,
-                                                             chunkSize,
-                                                             currentChunkSize,
-                                                             totalChunkCount,
-                                                             chunkNumber,
-                                                             new File(chunkFile.ref.path.toString),
-                                                             uploadDomainValidated)
-                      } yield Ok
-                    }
-                } yield result
+            success = { case (chunkNumber, chunkSize, currentChunkSize, totalChunkCount, uploadFileId) =>
+              val uploadId = uploadService.extractDatasetUploadId(uploadFileId)
+              for {
+                uploadDomainValidated <- UploadDomain.fromString(uploadDomain).toFox
+                datasetId <- uploadService.getDatasetIdByUploadId(
+                  uploadId,
+                  uploadDomainValidated
+                ) ?~> Msg.Dataset.Upload.noSuchUpload(uploadId, uploadDomain)
+                result <- accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
+                  for {
+                    isKnownUpload <- uploadService.isKnownUploadByFileId(uploadFileId, uploadDomainValidated)
+                    _ <- Fox.fromBool(isKnownUpload) ?~> "dataset.upload.validation.failed"
+                    chunkFile <- request.body.file("file").toFox ?~> "zip.file.notFound"
+                    _ <- uploadService.handleUploadChunk(
+                      uploadFileId,
+                      chunkSize,
+                      currentChunkSize,
+                      totalChunkCount,
+                      chunkNumber,
+                      new File(chunkFile.ref.path.toString),
+                      uploadDomainValidated
+                    )
+                  } yield Ok
+                }
+              } yield result
             }
           )
       }
@@ -200,7 +217,9 @@ class UploadController @Inject()(
     Action.async(validateJson[CancelUploadInformation]) { implicit request =>
       for {
         uploadDomainValidated <- UploadDomain.fromString(uploadDomain).toFox
-        _ <- Fox.fromBool(uploadDomainValidated == UploadDomain.dataset) ?~> "Cancel upload is only supported for datasets."
+        _ <- Fox.fromBool(
+          uploadDomainValidated == UploadDomain.dataset
+        ) ?~> "Cancel upload is only supported for datasets."
         datasetIdFox = uploadService.isKnownUpload(uploadId, uploadDomainValidated).flatMap {
           case false => Fox.failure(Msg.Dataset.Upload.noSuchUpload(request.body.uploadId, uploadDomain))
           case true  => uploadService.getDatasetIdByUploadId(uploadId, uploadDomainValidated)

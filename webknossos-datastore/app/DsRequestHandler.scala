@@ -22,19 +22,15 @@ trait AdditionalHeaders extends MissingBucketHeaders {
     )
 }
 
-class DsRequestHandler @Inject()(webCommands: WebCommands,
-                                 optionalDevContext: OptionalDevContext,
-                                 router: Router,
-                                 errorHandler: HttpErrorHandler,
-                                 configuration: HttpConfiguration,
-                                 filters: HttpFilters,
-                                 conf: DataStoreConfig)
-    extends DefaultHttpRequestHandler(webCommands,
-                                      optionalDevContext,
-                                      () => router,
-                                      errorHandler,
-                                      configuration,
-                                      filters)
+class DsRequestHandler @Inject() (
+    webCommands: WebCommands,
+    optionalDevContext: OptionalDevContext,
+    router: Router,
+    errorHandler: HttpErrorHandler,
+    configuration: HttpConfiguration,
+    filters: HttpFilters,
+    conf: DataStoreConfig
+) extends DefaultHttpRequestHandler(webCommands, optionalDevContext, () => router, errorHandler, configuration, filters)
     with InjectedController
     with ExtendedController
     with AdditionalHeaders
@@ -43,12 +39,12 @@ class DsRequestHandler @Inject()(webCommands: WebCommands,
 
   override def routeRequest(request: RequestHeader): Option[Handler] =
     if (request.method == "OPTIONS") {
-      Some(Action { options(request) })
+      Some(Action(options(request)))
     } else if (request.path == "/" || request.path == "/index.html") {
       Some(Action {
         Ok(
-          views.html
-            .datastoreFrontpage("Datastore", conf.Datastore.name, conf.Datastore.WebKnossos.uri, "/data/health"))
+          views.html.datastoreFrontpage("Datastore", conf.Datastore.name, conf.Datastore.WebKnossos.uri, "/data/health")
+        )
       })
     } else if (isInvalidApiVersion(request)) {
       Some(Action {

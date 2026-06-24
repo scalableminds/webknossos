@@ -209,7 +209,6 @@ const defaultState: WebknossosState = {
   },
   save: {
     queue: [],
-    isBusy: false,
     isSavingDisabled: false,
     lastSaveTimestamp: 0,
     progressInfo: {
@@ -293,10 +292,6 @@ const defaultState: WebknossosState = {
       left: false,
     },
     theme: getSystemColorTheme(),
-    busyBlockingInfo: {
-      isBusy: false,
-      allowedSagas: [],
-    },
     isWkInitialized: false,
     isUiReady: false,
     quickSelectState: "inactive",
@@ -320,6 +315,10 @@ const defaultState: WebknossosState = {
       unmappedSegmentId: null,
     },
   },
-  localSegmentationData: {},
+  localSegmentationStateByLayer: {},
+  operationContext: {
+    activeOperations: [],
+    childOperations: [],
+  },
 };
 export default defaultState;

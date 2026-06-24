@@ -24,7 +24,7 @@ case class SegmentIndexFileAttributes(
     formatVersion: Long,
     nHashBuckets: Long,
     hashFunction: String,
-    dtypeBucketEntries: String,
+    dtypeBucketEntries: String
 ) extends ArrayArtifactHashing {
   lazy val applyHashFunction: Long => Long = getHashFunction(hashFunction)
 }
@@ -38,32 +38,31 @@ object SegmentIndexFileAttributes extends SegmentIndexFileUtils with VoxelyticsZ
         nHashBuckets <- (attrs \ attrKeyNHashBuckets).validate[Long]
         hashFunction <- (attrs \ attrKeyHashFunction).validate[String]
         dtypeBucketEntries <- (attrs \ attrKeyDtypeBucketEntries).validate[String]
-      } yield
-        SegmentIndexFileAttributes(
-          formatVersion,
-          nHashBuckets,
-          hashFunction,
-          dtypeBucketEntries
-        )
+      } yield SegmentIndexFileAttributes(
+        formatVersion,
+        nHashBuckets,
+        hashFunction,
+        dtypeBucketEntries
+      )
     }
   }
 }
 
-class ZarrSegmentIndexFileService @Inject()(dataVaultService: DataVaultService, chunkCacheService: DSChunkCacheService)
+class ZarrSegmentIndexFileService @Inject() (dataVaultService: DataVaultService, chunkCacheService: DSChunkCacheService)
     extends FoxImplicits
     with SegmentIndexFileUtils {
 
   private lazy val openArraysCache = AlfuCache[(SegmentIndexFileKey, String), DatasetArray]()
   private lazy val attributesCache = AlfuCache[SegmentIndexFileKey, SegmentIndexFileAttributes]()
 
-  private def readSegmentIndexFileAttributes(segmentIndexFileKey: SegmentIndexFileKey)(
-      using ec: ExecutionContext,
-      tc: TokenContext): Fox[SegmentIndexFileAttributes] =
+  private def readSegmentIndexFileAttributes(
+      segmentIndexFileKey: SegmentIndexFileKey
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[SegmentIndexFileAttributes] =
     attributesCache.getOrLoad(segmentIndexFileKey, key => readSegmentIndexFileAttributesImpl(key))
 
-  private def readSegmentIndexFileAttributesImpl(segmentIndexFileKey: SegmentIndexFileKey)(
-      using ec: ExecutionContext,
-      tc: TokenContext): Fox[SegmentIndexFileAttributes] =
+  private def readSegmentIndexFileAttributesImpl(
+      segmentIndexFileKey: SegmentIndexFileKey
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[SegmentIndexFileAttributes] =
     for {
       groupVaultPath <- dataVaultService.vaultPathFor(segmentIndexFileKey.attachment)
       groupHeaderBytes <- (groupVaultPath / SegmentIndexFileAttributes.FILENAME_ZARR_JSON)
@@ -73,8 +72,10 @@ class ZarrSegmentIndexFileService @Inject()(dataVaultService: DataVaultService, 
         .toFox ?~> "Could not parse segment index file attributes from zarr group file."
     } yield segmentIndexFileAttributes
 
-  def readSegmentIndex(segmentIndexFileKey: SegmentIndexFileKey,
-                       segmentId: Long)(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Vec3Int]] =
+  def readSegmentIndex(segmentIndexFileKey: SegmentIndexFileKey, segmentId: Long)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Array[Vec3Int]] =
     for {
       attributes <- readSegmentIndexFileAttributes(segmentIndexFileKey)
       hashBucketOffsetsArray <- openZarrArray(segmentIndexFileKey, keyHashBucketOffsets)
@@ -86,23 +87,29 @@ class ZarrSegmentIndexFileService @Inject()(dataVaultService: DataVaultService, 
       topLeftsOpt <- Fox.runIf(hashBucketExists)(readTopLefts(segmentIndexFileKey, bucketStart, bucketEnd, segmentId))
     } yield topLeftsOpt.getOrElse(Array.empty)
 
-  private def readTopLefts(segmentIndexFileKey: SegmentIndexFileKey,
-                           bucketStart: Long,
-                           bucketEnd: Long,
-                           segmentId: Long)(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Vec3Int]] =
+  private def readTopLefts(
+      segmentIndexFileKey: SegmentIndexFileKey,
+      bucketStart: Long,
+      bucketEnd: Long,
+      segmentId: Long
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Vec3Int]] =
     for {
       attributes <- readSegmentIndexFileAttributes(segmentIndexFileKey)
       hashBucketsArray <- openZarrArray(segmentIndexFileKey, keyHashBuckets)
       topLeftsArray <- openZarrArray(segmentIndexFileKey, keyTopLefts)
-      bucket <- hashBucketsArray.readAsMultiArray(offset = Array(bucketStart, 0),
-                                                  shape = Array((bucketEnd - bucketStart + 1).toInt, 3))
+      bucket <- hashBucketsArray.readAsMultiArray(
+        offset = Array(bucketStart, 0),
+        shape = Array((bucketEnd - bucketStart + 1).toInt, 3)
+      )
       bucketLocalOffsetOpt = findLocalOffsetInBucket(bucket, segmentId)
       topLeftOpts <- Fox.runOptional(bucketLocalOffsetOpt) { bucketLocalOffset =>
         for {
           topLeftStart <- tryo(bucket.getLong(bucket.getIndex.set(Array(bucketLocalOffset, 1)))).toFox
           topLeftEnd <- tryo(bucket.getLong(bucket.getIndex.set(Array(bucketLocalOffset, 2)))).toFox
           topLeftCount = (topLeftEnd - topLeftStart).toInt
-          _ <- Fox.fromBool(attributes.dtypeBucketEntries == "uint16") ?~> "value for dtype_bucket_entries in segment index file is not supported, only uint16 is supported"
+          _ <- Fox.fromBool(
+            attributes.dtypeBucketEntries == "uint16"
+          ) ?~> "value for dtype_bucket_entries in segment index file is not supported, only uint16 is supported"
           topLeftsMA <- topLeftsArray.readAsMultiArray(offset = Array(topLeftStart, 0), shape = Array(topLeftCount, 3))
           topLefts <- tryo((0 until topLeftCount).map { idx =>
             Vec3Int(
@@ -118,23 +125,30 @@ class ZarrSegmentIndexFileService @Inject()(dataVaultService: DataVaultService, 
   private def findLocalOffsetInBucket(bucket: MultiArray, segmentId: Long): Option[Int] =
     (0 until bucket.getShape()(0)).find(idx => bucket.getLong(bucket.getIndex.set(Array(idx, 0))) == segmentId)
 
-  private def openZarrArray(segmentIndexFileKey: SegmentIndexFileKey,
-                            zarrArrayName: String)(using ec: ExecutionContext, tc: TokenContext): Fox[DatasetArray] =
-    openArraysCache.getOrLoad((segmentIndexFileKey, zarrArrayName),
-                              _ => openZarrArrayImpl(segmentIndexFileKey, zarrArrayName))
+  private def openZarrArray(segmentIndexFileKey: SegmentIndexFileKey, zarrArrayName: String)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[DatasetArray] =
+    openArraysCache.getOrLoad(
+      (segmentIndexFileKey, zarrArrayName),
+      _ => openZarrArrayImpl(segmentIndexFileKey, zarrArrayName)
+    )
 
-  private def openZarrArrayImpl(segmentIndexFileKey: SegmentIndexFileKey, zarrArrayName: String)(
-      using ec: ExecutionContext,
-      tc: TokenContext): Fox[DatasetArray] =
+  private def openZarrArrayImpl(segmentIndexFileKey: SegmentIndexFileKey, zarrArrayName: String)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[DatasetArray] =
     for {
       groupVaultPath <- dataVaultService.vaultPathFor(segmentIndexFileKey.attachment)
-      zarrArray <- Zarr3Array.open(groupVaultPath / zarrArrayName,
-                                   DataSourceId("dummy", "unused"),
-                                   "layer",
-                                   None,
-                                   None,
-                                   None,
-                                   chunkCacheService.sharedChunkContentsCache)
+      zarrArray <- Zarr3Array.open(
+        groupVaultPath / zarrArrayName,
+        DataSourceId("dummy", "unused"),
+        "layer",
+        None,
+        None,
+        None,
+        chunkCacheService.sharedChunkContentsCache
+      )
     } yield zarrArray
 
   def clearCache(dataSourceId: DataSourceId, layerNameOpt: Option[String]): Int = {
@@ -142,9 +156,8 @@ class ZarrSegmentIndexFileService @Inject()(dataVaultService: DataVaultService, 
       segmentIndexFileKey.dataSourceId == dataSourceId && layerNameOpt.forall(segmentIndexFileKey.layerName == _)
     }
 
-    openArraysCache.clear {
-      case (segmentIndexFileKey, _) =>
-        segmentIndexFileKey.dataSourceId == dataSourceId && layerNameOpt.forall(segmentIndexFileKey.layerName == _)
+    openArraysCache.clear { case (segmentIndexFileKey, _) =>
+      segmentIndexFileKey.dataSourceId == dataSourceId && layerNameOpt.forall(segmentIndexFileKey.layerName == _)
     }
   }
 }

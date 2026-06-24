@@ -52,7 +52,7 @@ import java.nio.{ByteBuffer, ByteOrder}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
-class VolumeTracingController @Inject()(
+class VolumeTracingController @Inject() (
     val volumeTracingService: VolumeTracingService,
     val config: TracingStoreConfig,
     val remoteDataStoreClient: TSRemoteDatastoreClient,
@@ -66,7 +66,8 @@ class VolumeTracingController @Inject()(
     volumeSegmentIndexService: VolumeSegmentIndexService,
     fullMeshService: TSFullMeshService,
     temporaryMergedVolumeStatsStore: TemporaryMergedVolumeStatsStore,
-    val rpc: RPC)(implicit val ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
+    val rpc: RPC
+)(implicit val ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
     extends Controller
     with ProtoGeometryImplicits
     with MissingBucketHeaders
@@ -113,17 +114,17 @@ class VolumeTracingController @Inject()(
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           for {
             tracings <- annotationService.findMultipleVolumes(request.body)
-          } yield {
-            Ok(tracings.toByteArray).as(protobufMimeType)
-          }
+          } yield Ok(tracings.toByteArray).as(protobufMimeType)
         }
       }
     }
 
-  def initialData(annotationId: ObjectId,
-                  tracingId: String,
-                  minMag: Option[Int],
-                  maxMag: Option[Int]): Action[AnyContent] =
+  def initialData(
+      annotationId: ObjectId,
+      tracingId: String,
+      minMag: Option[Int],
+      maxMag: Option[Int]
+  ): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
@@ -133,11 +134,13 @@ class VolumeTracingController @Inject()(
               // The annotation object may not yet exist here. Caller is responsible to save that too.
               tracing <- annotationService.findVolumeRaw(tracingId) ?~> Msg.Annotation.notFound
               magRestrictions = MagRestrictions(minMag, maxMag)
-              mags <- volumeTracingService.initializeWithData(annotationId,
-                                                              tracingId,
-                                                              tracing.value,
-                                                              initialData,
-                                                              magRestrictions)
+              mags <- volumeTracingService.initializeWithData(
+                annotationId,
+                tracingId,
+                tracing.value,
+                initialData,
+                magRestrictions
+              )
               _ <- volumeTracingService.updateMagList(tracingId, tracing.value, mags)
             } yield Ok(Json.toJson(tracingId))
           }
@@ -158,16 +161,20 @@ class VolumeTracingController @Inject()(
           val shouldCreateSegmentIndex = volumeSegmentIndexService.shouldCreateSegmentIndexForMerged(tracingsFlat)
           for {
             mergedTracingRaw <- volumeTracingService
-              .merge(tracingsFlat,
-                     MergedVolumeStats.empty(shouldCreateSegmentIndex),
-                     None,
-                     newVersion = 0L,
-                     additionalBoundingBoxes = Seq.empty)
+              .merge(
+                tracingsFlat,
+                MergedVolumeStats.empty(shouldCreateSegmentIndex),
+                None,
+                newVersion = 0L,
+                additionalBoundingBoxes = Seq.empty
+              )
               .toFox
-            mergedTracing = mergedTracingRaw.copy(segments = Seq.empty,
-                                                  segmentGroups = Seq.empty,
-                                                  userBoundingBoxes = Seq.empty,
-                                                  userStates = Seq.empty)
+            mergedTracing = mergedTracingRaw.copy(
+              segments = Seq.empty,
+              segmentGroups = Seq.empty,
+              userBoundingBoxes = Seq.empty,
+              userStates = Seq.empty
+            )
             _ <- volumeTracingService.saveVolume(newTracingId, mergedTracing.version, mergedTracing)
           } yield Ok
         }
@@ -186,10 +193,12 @@ class VolumeTracingController @Inject()(
               initialData <- request.body.asRaw.map(_.asFile).toFox ?~> Msg.Nml.zipFileNotFound
               // The annotation object may not yet exist here. Caller is responsible to save that too.
               tracing <- annotationService.findVolumeRaw(tracingId) ?~> Msg.Annotation.notFound
-              mergedVolumeStats <- volumeTracingService.initializeWithDataMultiple(annotationId,
-                                                                                   tracingId,
-                                                                                   tracing.value,
-                                                                                   initialData)
+              mergedVolumeStats <- volumeTracingService.initializeWithDataMultiple(
+                annotationId,
+                tracingId,
+                tracing.value,
+                initialData
+              )
               _ = temporaryMergedVolumeStatsStore.insert(tracingId, mergedVolumeStats, to = Some(1 hour))
             } yield Ok
           }
@@ -220,26 +229,33 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def allDataZip(tracingId: String,
-                 annotationId: Option[ObjectId],
-                 version: Option[Long],
-                 volumeDataZipFormat: String,
-                 voxelSizeFactor: Option[String],
-                 voxelSizeUnit: Option[String]): Action[AnyContent] =
+  def allDataZip(
+      tracingId: String,
+      annotationId: Option[ObjectId],
+      version: Option[Long],
+      volumeDataZipFormat: String,
+      voxelSizeFactor: Option[String],
+      voxelSizeUnit: Option[String]
+  ): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(
-          annotationId.map(UserAccessRequest.readAnnotation).getOrElse(UserAccessRequest.readTracing(tracingId))) {
+          annotationId.map(UserAccessRequest.readAnnotation).getOrElse(UserAccessRequest.readTracing(tracingId))
+        ) {
           for {
-            _ <- Fox.fromBool(if (version.isDefined) annotationId.isDefined else true) ?~> "Volume data request with version needs passed annotationId"
+            _ <- Fox.fromBool(
+              if (version.isDefined) annotationId.isDefined else true
+            ) ?~> "Volume data request with version needs passed annotationId"
             annotationIdFilled <- Fox.fillOption(annotationId)(
-              remoteWebknossosClient.getAnnotationIdForTracing(tracingId))
+              remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
+            )
             tracing <- annotationService.findVolume(annotationIdFilled, tracingId, version) ?~> Msg.Annotation.notFound
             volumeDataZipFormatParsed <- VolumeDataZipFormat.fromString(volumeDataZipFormat).toFox
             voxelSizeFactorParsedOpt <- Fox.runOptional(voxelSizeFactor)(f => Vec3Double.fromUriLiteral(f).toFox)
             voxelSizeUnitParsedOpt <- Fox.runOptional(voxelSizeUnit)(u => LengthUnit.fromString(u).toFox)
             voxelSize = voxelSizeFactorParsedOpt.map(voxelSizeParsed =>
-              VoxelSize.fromFactorAndUnitWithDefault(voxelSizeParsed, voxelSizeUnitParsedOpt))
+              VoxelSize.fromFactorAndUnitWithDefault(voxelSizeParsed, voxelSizeUnitParsedOpt)
+            )
             data <- volumeTracingService.allDataZip(
               annotationIdFilled,
               tracingId,
@@ -260,12 +276,16 @@ class VolumeTracingController @Inject()(
             requestedVersion <- SequenceUtils
               .findUniqueElement(request.body.map(_.version))
               .toFox ?~> "All data requests must request the same volume version"
-            tracing <- annotationService.findVolume(annotationId, tracingId, requestedVersion) ?~> Msg.Annotation
-              .notFound
-            (data, emptyIndices, failureIndices) <- if (tracing.getHasEditableMapping) {
-              val mappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
-              editableMappingService.volumeData(mappingLayer, request.body)
-            } else volumeTracingService.data(annotationId, tracingId, tracing, request.body)
+            tracing <- annotationService.findVolume(
+              annotationId,
+              tracingId,
+              requestedVersion
+            ) ?~> Msg.Annotation.notFound
+            (data, emptyIndices, failureIndices) <-
+              if (tracing.getHasEditableMapping) {
+                val mappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
+                editableMappingService.volumeData(mappingLayer, request.body)
+              } else volumeTracingService.data(annotationId, tracingId, tracing, request.body)
           } yield Ok(data).withHeaders(createMissingBucketsHeaders(emptyIndices, failureIndices)*)
         }
       }
@@ -280,15 +300,18 @@ class VolumeTracingController @Inject()(
             tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Msg.Annotation.notFound
             currentVersion <- request.body.dataParts("currentVersion").headOption.flatMap(_.toIntOpt).toFox
             zipFile <- request.body.files.headOption.map(f => new File(f.ref.path.toString)).toFox
-            largestSegmentId <- volumeTracingService.importVolumeData(annotationId,
-                                                                      tracingId,
-                                                                      tracing,
-                                                                      zipFile,
-                                                                      currentVersion)
+            largestSegmentId <- volumeTracingService.importVolumeData(
+              annotationId,
+              tracingId,
+              tracing,
+              zipFile,
+              currentVersion
+            )
             _ <- annotationTransactionService.handleSingleUpdateAction(
               annotationId,
               tracing.version,
-              ImportVolumeDataVolumeAction(tracingId, Some(largestSegmentId)))
+              ImportVolumeDataVolumeAction(tracingId, Some(largestSegmentId))
+            )
           } yield Ok(Json.toJson(largestSegmentId))
         }
       }
@@ -303,10 +326,11 @@ class VolumeTracingController @Inject()(
           // There are no shared vertices between triangles.
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
           tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Msg.Annotation.notFound
-          (vertices: Array[Float], neighbors: List[Int]) <- if (tracing.getHasEditableMapping) {
-            val editableMappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
-            editableMappingService.createAdHocMesh(editableMappingLayer, request.body)
-          } else volumeTracingService.createAdHocMesh(annotationId, tracingId, tracing, request.body)
+          (vertices: Array[Float], neighbors: List[Int]) <-
+            if (tracing.getHasEditableMapping) {
+              val editableMappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
+              editableMappingService.createAdHocMesh(editableMappingLayer, request.body)
+            } else volumeTracingService.createAdHocMesh(annotationId, tracingId, tracing, request.body)
         } yield {
           // We need four bytes for each float
           val responseBuffer = ByteBuffer.allocate(vertices.length * 4).order(ByteOrder.LITTLE_ENDIAN)
@@ -321,7 +345,12 @@ class VolumeTracingController @Inject()(
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-          data: Array[Byte] <- fullMeshService.loadFor(annotationId, tracingId, request.body, version = None) ?~> Msg.Mesh.loadFullFailed
+          data: Array[Byte] <- fullMeshService.loadFor(
+            annotationId,
+            tracingId,
+            request.body,
+            version = None
+          ) ?~> Msg.Mesh.loadFullFailed
         } yield Ok(data)
       }
     }
@@ -338,9 +367,7 @@ class VolumeTracingController @Inject()(
         annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
         tracing <- annotationService.findVolume(annotationId, tracingId)
         positionOpt <- volumeTracingService.findData(annotationId, tracingId, tracing)
-      } yield {
-        Ok(Json.obj("position" -> positionOpt, "mag" -> positionOpt.map(_ => Vec3Int.ones)))
-      }
+      } yield Ok(Json.obj("position" -> positionOpt, "mag" -> positionOpt.map(_ => Vec3Int.ones)))
     }
   }
 
@@ -352,13 +379,15 @@ class VolumeTracingController @Inject()(
           tracing <- annotationService.findVolume(annotationId, tracingId)
           mappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)
           segmentVolumes <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
-            volumeSegmentStatisticsService.getSegmentVolume(annotationId,
-                                                            tracingId,
-                                                            segmentId,
-                                                            request.body.mag,
-                                                            mappingName,
-                                                            request.body.additionalCoordinates,
-                                                            request.body.annotationVersion)
+            volumeSegmentStatisticsService.getSegmentVolume(
+              annotationId,
+              tracingId,
+              segmentId,
+              request.body.mag,
+              mappingName,
+              request.body.additionalCoordinates,
+              request.body.annotationVersion
+            )
           }
         } yield Ok(Json.toJson(segmentVolumes))
       }
@@ -372,13 +401,15 @@ class VolumeTracingController @Inject()(
           tracing <- annotationService.findVolume(annotationId, tracingId)
           mappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)
           segmentBoundingBoxes: List[BoundingBox] <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
-            volumeSegmentStatisticsService.getSegmentBoundingBox(annotationId,
-                                                                 tracingId,
-                                                                 segmentId,
-                                                                 request.body.mag,
-                                                                 mappingName,
-                                                                 request.body.additionalCoordinates,
-                                                                 request.body.annotationVersion)
+            volumeSegmentStatisticsService.getSegmentBoundingBox(
+              annotationId,
+              tracingId,
+              segmentId,
+              request.body.mag,
+              mappingName,
+              request.body.additionalCoordinates,
+              request.body.annotationVersion
+            )
           }
         } yield Ok(Json.toJson(segmentBoundingBoxes))
       }
@@ -398,17 +429,20 @@ class VolumeTracingController @Inject()(
               segmentId = segmentId,
               mappingName = baseMappingName,
               mappingType = baseMappingName.map(_ => "HDF5"),
-              editableMappingTracingId = None, // This param is used only when loading meshes from static meshfiles. Here, the underlying load bucket function will apply the editable mapping if there is one.
+              editableMappingTracingId =
+                None, // This param is used only when loading meshes from static meshfiles. Here, the underlying load bucket function will apply the editable mapping if there is one.
               annotationVersion = None,
               mag = Some(request.body.mag),
               seedPosition = None,
-              additionalCoordinates = request.body.additionalCoordinates,
+              additionalCoordinates = request.body.additionalCoordinates
             )
             for {
-              data: Array[Byte] <- fullMeshService.loadFor(annotationId,
-                                                           tracingId,
-                                                           fullMeshRequest,
-                                                           request.body.annotationVersion) ?~> Msg.Mesh.loadFullFailed
+              data: Array[Byte] <- fullMeshService.loadFor(
+                annotationId,
+                tracingId,
+                fullMeshRequest,
+                request.body.annotationVersion
+              ) ?~> Msg.Mesh.loadFullFailed
               surfaceArea <- fullMeshService.surfaceAreaFromStlBytes(data).toFox
             } yield surfaceArea
           }
@@ -424,7 +458,9 @@ class VolumeTracingController @Inject()(
           tracing <- annotationService.findVolume(annotationId, tracingId)
           fallbackLayer <- volumeTracingService.getFallbackLayer(annotationId, tracing)
           mappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)
-          _ <- Fox.fromBool(DataLayer.bucketSize <= request.body.cubeSize) ?~> "cubeSize must be at least one bucket (32³)"
+          _ <- Fox.fromBool(
+            DataLayer.bucketSize <= request.body.cubeSize
+          ) ?~> "cubeSize must be at least one bucket (32³)"
           bucketPositions: Set[Vec3IntProto] <- volumeSegmentIndexService.getSegmentToBucketIndex(
             tracing,
             fallbackLayer,
@@ -447,16 +483,18 @@ class VolumeTracingController @Inject()(
     }
 
   // Used in task creation. History is dropped. Caller is responsible to create and save a matching AnnotationProto object
-  def duplicate(tracingId: String,
-                newAnnotationId: ObjectId,
-                newTracingId: String,
-                ownerId: ObjectId,
-                requestingUserId: ObjectId,
-                minMag: Option[Int],
-                maxMag: Option[Int],
-                editPosition: Option[String],
-                editRotation: Option[String],
-                boundingBox: Option[String]): Action[AnyContent] =
+  def duplicate(
+      tracingId: String,
+      newAnnotationId: ObjectId,
+      newTracingId: String,
+      ownerId: ObjectId,
+      requestingUserId: ObjectId,
+      minMag: Option[Int],
+      maxMag: Option[Int],
+      editPosition: Option[String],
+      editRotation: Option[String],
+      boundingBox: Option[String]
+  ): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {

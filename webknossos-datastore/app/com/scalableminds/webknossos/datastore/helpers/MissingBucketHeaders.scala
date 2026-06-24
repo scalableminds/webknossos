@@ -11,7 +11,10 @@ trait MissingBucketHeaders extends FoxImplicits {
   protected lazy val emptyBucketIndicesHeader: String = "Empty-Bucket-Indices"
   protected lazy val legacyMissingBucketsHeader: String = "MISSING-BUCKETS"
 
-  protected def createMissingBucketsHeaders(emptyBucketIndices: Seq[Int], failureBucketIndices: Seq[Int]): Seq[(String, String)] =
+  protected def createMissingBucketsHeaders(
+      emptyBucketIndices: Seq[Int],
+      failureBucketIndices: Seq[Int]
+  ): Seq[(String, String)] =
     Seq(
       emptyBucketIndicesHeader -> formatIndices(emptyBucketIndices),
       failureBucketIndicesHeader -> formatIndices(failureBucketIndices),
@@ -23,8 +26,9 @@ trait MissingBucketHeaders extends FoxImplicits {
   private def formatIndices(indices: Seq[Int]): String =
     "[" + indices.mkString(", ") + "]"
 
-  protected def parseMissingBucketHeader(headerLiteralOpt: Option[String])(
-      implicit ec: ExecutionContext): Fox[Seq[Int]] =
+  protected def parseMissingBucketHeader(
+      headerLiteralOpt: Option[String]
+  )(implicit ec: ExecutionContext): Fox[Seq[Int]] =
     for {
       headerLiteral: String <- headerLiteralOpt.toFox
       headerLiteralTrim = headerLiteral.trim

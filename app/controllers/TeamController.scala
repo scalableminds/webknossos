@@ -18,10 +18,11 @@ object TeamParameters {
   implicit val jsonFormat: Format[TeamParameters] = Json.format[TeamParameters]
 }
 
-class TeamController @Inject()(teamDAO: TeamDAO, userDAO: UserDAO, teamService: TeamService, sil: Silhouette[WkEnv])(
-    implicit ec: ExecutionContext,
-    playBodyParsers: PlayBodyParsers)
-    extends Controller {
+class TeamController @Inject() (teamDAO: TeamDAO, userDAO: UserDAO, teamService: TeamService, sil: Silhouette[WkEnv])(
+    implicit
+    ec: ExecutionContext,
+    playBodyParsers: PlayBodyParsers
+) extends Controller {
 
   def list(isEditable: Option[Boolean]): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     val onlyEditableTeams = isEditable.getOrElse(false)

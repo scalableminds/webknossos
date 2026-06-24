@@ -11,11 +11,12 @@ import play.api.inject.ApplicationLifecycle
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext
 
-class VirtualDatasetsRealPathScanService @Inject()(
+class VirtualDatasetsRealPathScanService @Inject() (
     datasetService: DatasetService,
     datasetDAO: DatasetDAO,
     val actorSystem: ActorSystem,
-    val lifecycle: ApplicationLifecycle)(implicit val ec: ExecutionContext)
+    val lifecycle: ApplicationLifecycle
+)(implicit val ec: ExecutionContext)
     extends IntervalScheduler
     with LazyLogging
     with FoxImplicits {
@@ -42,7 +43,8 @@ class VirtualDatasetsRealPathScanService @Inject()(
         firstDataset <- datasets.headOption.toFox
         // we skip unusable datasets
         dataSourceBoxes <- Fox.fromFuture(
-          Fox.serialSequence(datasets)(datasetService.usableDataSourceFor(_, useRealPaths = false)))
+          Fox.serialSequence(datasets)(datasetService.usableDataSourceFor(_, useRealPaths = false))
+        )
         dataSources = dataSourceBoxes.flatten
         client <- datasetService.clientFor(firstDataset)
         _ <- client.scanRealPathsForVirtual(dataSources)

@@ -13,16 +13,27 @@ import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 
-/**
-  * Generates Slick classes that mirror the SQL tables of the currently active schema.
-  * Differs from parent Slick.SourceCodeGenerator by not updating unchanged tables.
-  **/
+/** Generates Slick classes that mirror the SQL tables of the currently active schema. Differs from parent
+  * Slick.SourceCodeGenerator by not updating unchanged tables.
+  */
 class ContentStableSourceCodeGenerator(model: slickModel.Model) extends SourceCodeGenerator(model) {
 
   private val logger = LoggerFactory.getLogger(classOf[ContentStableSourceCodeGenerator])
 
-  /** A set of absolute paths of every file this code generator intends to produce (whether or not
-    * it was actually rewritten). Used afterwards to prune files of tables that no longer exist. */
+  // We don’t use snake case in sql column names, so skip slick’s snake-to-camel conversion.
+  override def Table =
+    (t: slickModel.Table) =>
+      new SourceCodeTableDef(t) {
+        override def Column =
+          (c: slickModel.Column) =>
+            new Column(c) {
+              override def rawName: String = this.model.name
+            }
+      }
+
+  /** A set of absolute paths of every file this code generator intends to produce (whether or not it was actually
+    * rewritten). Used afterwards to prune files of tables that no longer exist.
+    */
   private val intendedFiles = scala.collection.mutable.Set[String]()
 
   /** Names of the files actually rewritten in this run (content differed from disk). */
@@ -70,16 +81,16 @@ class ContentStableSourceCodeGenerator(model: slickModel.Model) extends SourceCo
     } else {
       logger.info(
         s"Slick codegen: updated ${updatedFiles.size} of ${intendedFiles.size} generated files " +
-          s"($unchanged unchanged, $pruned pruned): ${updatedFiles.sorted.mkString(", ")}")
+          s"($unchanged unchanged, $pruned pruned): ${updatedFiles.sorted.mkString(", ")}"
+      )
     }
   }
 }
 
-/**
-  * Entry point invoked from the sbt slick code generation task (see project/AssetCompilation.scala).
+/** Entry point invoked from the sbt slick code generation task (see project/AssetCompilation.scala).
   *
-  * args(0): slick config URI, e.g. file:///.../conf/slick.conf#slick
-  * args(1): output base directory for the generated sources
+  * args(0): slick config URI, e.g. file:///.../conf/slick.conf#slick args(1): output base directory for the generated
+  * sources
   *
   * This replicates slick.codegen.SourceCodeGenerator.run for the config-URI case, but uses
   * ContentStableSourceCodeGenerator and multi-file output.

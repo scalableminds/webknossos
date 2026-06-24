@@ -10,20 +10,18 @@ import javax.inject.Inject
 
 case class TeamMembership(teamId: ObjectId, isTeamManager: Boolean)
 object TeamMembership {
-  implicit val jsonReads: Reads[TeamMembership] = {
+  implicit val jsonReads: Reads[TeamMembership] =
     ((__ \ "id").read[ObjectId] and
       (__ \ "isTeamManager").read[Boolean])((id, isTeamManager) => TeamMembership(id, isTeamManager))
-  }
 }
 
-class TeamMembershipService @Inject()(teamDAO: TeamDAO) {
+class TeamMembershipService @Inject() (teamDAO: TeamDAO) {
   def publicWrites(teamMembership: TeamMembership)(using ctx: DBAccessContext): Fox[JsObject] =
     for {
       team <- teamDAO.findOne(teamMembership.teamId)
-    } yield
-      Json.obj(
-        "id" -> teamMembership.teamId,
-        "name" -> team.name,
-        "isTeamManager" -> teamMembership.isTeamManager
-      )
+    } yield Json.obj(
+      "id" -> teamMembership.teamId,
+      "name" -> team.name,
+      "isTeamManager" -> teamMembership.isTeamManager
+    )
 }

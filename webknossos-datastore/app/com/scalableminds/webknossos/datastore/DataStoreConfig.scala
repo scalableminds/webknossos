@@ -8,7 +8,7 @@ import play.api.Configuration
 import java.nio.file.Path
 import scala.concurrent.duration._
 
-class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigReader {
+class DataStoreConfig @Inject() (configuration: Configuration) extends ConfigReader {
   override val raw: Configuration = configuration
 
   object Http {
@@ -68,15 +68,17 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
       val objectKeyPrefix: String = get[String]("datastore.s3Upload.objectKeyPrefix")
       val credentialName: String = get[String]("datastore.s3Upload.credentialName")
     }
-    val children: List[Object] = List(WebKnossos,
-                        WatchFileSystem,
-                        Cache,
-                        AdHocMesh,
-                        Redis,
-                        AgglomerateTree,
-                        AgglomerateGraph,
-                        DataVaults,
-                        S3Upload)
+    val children: List[Object] = List(
+      WebKnossos,
+      WatchFileSystem,
+      Cache,
+      AdHocMesh,
+      Redis,
+      AgglomerateTree,
+      AgglomerateGraph,
+      DataVaults,
+      S3Upload
+    )
   }
 
   object SlackNotifications {

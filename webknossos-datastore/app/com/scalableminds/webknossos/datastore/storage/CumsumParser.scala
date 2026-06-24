@@ -15,10 +15,12 @@ object CumsumParser extends LazyLogging {
   // the cumsum json object contains "max_ids" and "cumsum"
   // the jsonReader can only go through the file in forward direction, but we need max_ids first
   // if the json contains cumsum first, it is skipped at first and parseImpl will call itself again to read it second
-  def parseImpl(f: File,
-                maxReaderRange: Long,
-                initialBoundingBoxList: List[(Long, Long, Long, Long, Long, Long)],
-                before: Instant): BoundingBoxCache = {
+  def parseImpl(
+      f: File,
+      maxReaderRange: Long,
+      initialBoundingBoxList: List[(Long, Long, Long, Long, Long, Long)],
+      before: Instant
+  ): BoundingBoxCache = {
     val r = new FileReader(f)
     try {
       val jsonReader = new JsonReader(r)
@@ -29,7 +31,7 @@ object CumsumParser extends LazyLogging {
       var correctOrder = true
 
       jsonReader.beginObject()
-      while (jsonReader.hasNext) {
+      while (jsonReader.hasNext)
         jsonReader.nextName() match {
           case "max_ids" if boundingBoxList.isEmpty =>
             boundingBoxList = parseBoundingBoxes(jsonReader)
@@ -45,24 +47,23 @@ object CumsumParser extends LazyLogging {
           case _ =>
             jsonReader.skipValue()
         }
-      }
       jsonReader.endObject()
 
       if (!correctOrder) {
         parseImpl(f, maxReaderRange, boundingBoxList, before)
       } else {
         Instant.logSince(before, s"Cumsum JSON parsing", logger)
-        new BoundingBoxCache(cache,
-                             BoundingBoxFinder(positionSets._1, positionSets._2, positionSets._3, minBoundingBox),
-                             maxReaderRange)
+        new BoundingBoxCache(
+          cache,
+          BoundingBoxFinder(positionSets._1, positionSets._2, positionSets._3, minBoundingBox),
+          maxReaderRange
+        )
       }
     } catch {
       case e: JsonParseException =>
         logger.error(s"Parse exception while parsing cumsum: ${e.getMessage}.")
         throw e
-    } finally {
-      r.close()
-    }
+    } finally r.close()
   }
 
   def parse(f: File, maxReaderRange: Long): BoundingBoxCache =
@@ -77,12 +78,16 @@ object CumsumParser extends LazyLogging {
       reader.nextLong()
     }
     reader.endObject()
-    list.sorted.map { case formRx(x, y, z, w, h, d) => (x.toLong, y.toLong, z.toLong, w.toLong, h.toLong, d.toLong) }.toList
+    list.sorted.map { case formRx(x, y, z, w, h, d) =>
+      (x.toLong, y.toLong, z.toLong, w.toLong, h.toLong, d.toLong)
+    }.toList
   }
 
-  private def parseCumSum(reader: JsonReader,
-                          boundingBoxes: List[(Long, Long, Long, Long, Long, Long)],
-                          positionSets: (util.TreeSet[Long], util.TreeSet[Long], util.TreeSet[Long])) = {
+  private def parseCumSum(
+      reader: JsonReader,
+      boundingBoxes: List[(Long, Long, Long, Long, Long, Long)],
+      positionSets: (util.TreeSet[Long], util.TreeSet[Long], util.TreeSet[Long])
+  ) = {
     def addToFinder(bb: (Long, Long, Long, Long, Long, Long)) = {
       positionSets._1.add(bb._1)
       positionSets._2.add(bb._2)
@@ -90,9 +95,11 @@ object CumsumParser extends LazyLogging {
     }
 
     @tailrec
-    def iter(list: List[(Long, Long, Long, Long, Long, Long)],
-             hashMap: mutable.HashMap[(Long, Long, Long), BoundingBoxValues],
-             prevEnd: Long): Unit =
+    def iter(
+        list: List[(Long, Long, Long, Long, Long, Long)],
+        hashMap: mutable.HashMap[(Long, Long, Long), BoundingBoxValues],
+        prevEnd: Long
+    ): Unit =
       list match {
         case head :: tail if reader.hasNext =>
           addToFinder(head)

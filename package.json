@@ -34,6 +34,7 @@
     "@types/shelljs": "^0.8.5",
     "@types/three": "^0.169.0",
     "@types/url-join": "^4.0.0",
+    "@typescript/native-preview": "^7.0.0-dev.20260619.1",
     "@vitejs/plugin-react": "^5.1.2",
     "@vitest/coverage-v8": "^4.0.16",
     "abort-controller": "^3.0.0",

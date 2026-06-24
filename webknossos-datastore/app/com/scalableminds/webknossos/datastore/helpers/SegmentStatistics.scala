@@ -11,20 +11,24 @@ import play.api.libs.json.{Json, OFormat}
 
 import scala.concurrent.ExecutionContext
 
-case class SegmentStatisticsParameters(mag: Vec3Int,
-                                       segmentIds: List[Long],
-                                       mappingName: Option[String],
-                                       additionalCoordinates: Option[Seq[AdditionalCoordinate]],
-                                       annotationVersion: Option[Long])
+case class SegmentStatisticsParameters(
+    mag: Vec3Int,
+    segmentIds: List[Long],
+    mappingName: Option[String],
+    additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+    annotationVersion: Option[Long]
+)
 object SegmentStatisticsParameters {
   implicit val jsonFormat: OFormat[SegmentStatisticsParameters] = Json.format[SegmentStatisticsParameters]
 }
-case class SegmentStatisticsParametersMeshBased(mag: Vec3Int,
-                                                segmentIds: List[Long],
-                                                mappingName: Option[String],
-                                                additionalCoordinates: Option[Seq[AdditionalCoordinate]],
-                                                meshFileName: Option[String],
-                                                annotationVersion: Option[Long])
+case class SegmentStatisticsParametersMeshBased(
+    mag: Vec3Int,
+    segmentIds: List[Long],
+    mappingName: Option[String],
+    additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+    meshFileName: Option[String],
+    annotationVersion: Option[Long]
+)
 object SegmentStatisticsParametersMeshBased {
   implicit val jsonFormat: OFormat[SegmentStatisticsParametersMeshBased] =
     Json.format[SegmentStatisticsParametersMeshBased]
@@ -39,24 +43,28 @@ trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits {
       mag: Vec3Int,
       additionalCoordinates: Option[Seq[AdditionalCoordinate]],
       getBucketPositions: (Long, Vec3Int) => Fox[Set[Vec3IntProto]],
-      getDataForBucketPositions: (
-          Seq[Vec3Int],
-          Vec3Int,
-          Option[Seq[AdditionalCoordinate]]) => Fox[(Seq[Box[Array[Byte]]], ElementClass.Value)])(
-      implicit ec: ExecutionContext): Fox[Long] =
+      getDataForBucketPositions: (Seq[Vec3Int], Vec3Int, Option[Seq[AdditionalCoordinate]]) => Fox[
+        (Seq[Box[Array[Byte]]], ElementClass.Value)
+      ]
+  )(implicit ec: ExecutionContext): Fox[Long] =
     for {
       bucketPositionsProtos: Set[Vec3IntProto] <- getBucketPositions(segmentId, mag)
       bucketPositionsInRequestedMag = bucketPositionsProtos.map(vec3IntFromProto)
-      (bucketBoxes, elementClass) <- getDataForBucketPositions(bucketPositionsInRequestedMag.toSeq,
-                                                               mag,
-                                                               additionalCoordinates)
+      (bucketBoxes, elementClass) <- getDataForBucketPositions(
+        bucketPositionsInRequestedMag.toSeq,
+        mag,
+        additionalCoordinates
+      )
       counts <- Fox.serialCombined(bucketBoxes.toList) {
         case Full(bucketBytes) =>
           tryo(
-            bucketScanner.countSegmentVoxels(bucketBytes,
-                                             ElementClass.bytesPerElement(elementClass),
-                                             ElementClass.isSigned(elementClass),
-                                             segmentId)).toFox
+            bucketScanner.countSegmentVoxels(
+              bucketBytes,
+              ElementClass.bytesPerElement(elementClass),
+              ElementClass.isSigned(elementClass),
+              segmentId
+            )
+          ).toFox
         case Empty      => Full(0L).toFox
         case f: Failure => f.toFox
       }
@@ -68,25 +76,27 @@ trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits {
       mag: Vec3Int,
       additionalCoordinates: Option[Seq[AdditionalCoordinate]],
       getBucketPositions: (Long, Vec3Int) => Fox[Set[Vec3IntProto]],
-      getDataForBucketPositions: (
-          Seq[Vec3Int],
-          Vec3Int,
-          Option[Seq[AdditionalCoordinate]]) => Fox[(Seq[Box[Array[Byte]]], ElementClass.Value)])(
-      implicit ec: ExecutionContext): Fox[BoundingBox] =
+      getDataForBucketPositions: (Seq[Vec3Int], Vec3Int, Option[Seq[AdditionalCoordinate]]) => Fox[
+        (Seq[Box[Array[Byte]]], ElementClass.Value)
+      ]
+  )(implicit ec: ExecutionContext): Fox[BoundingBox] =
     for {
       allBucketPositions: Set[Vec3IntProto] <- getBucketPositions(segmentId, mag)
       relevantBucketPositions = filterOutInnerBucketPositions(allBucketPositions.toSeq)
-      boundingBoxMutable = scala.collection.mutable.ListBuffer[Int](Int.MaxValue,
-                                                                    Int.MaxValue,
-                                                                    Int.MaxValue,
-                                                                    Int.MinValue,
-                                                                    Int.MinValue,
-                                                                    Int.MinValue) //topleft, bottomright
+      boundingBoxMutable = scala.collection.mutable.ListBuffer[Int](
+        Int.MaxValue,
+        Int.MaxValue,
+        Int.MaxValue,
+        Int.MinValue,
+        Int.MinValue,
+        Int.MinValue
+      ) // topleft, bottomright
       (bucketBoxes, elementClass) <- getDataForBucketPositions(relevantBucketPositions, mag, additionalCoordinates)
       _ <- Fox.serialCombined(relevantBucketPositions.zip(bucketBoxes)) {
         case (bucketPosition, Full(bucketData)) =>
           Fox.successful(
-            extendBoundingBoxByData(segmentId, boundingBoxMutable, bucketPosition, bucketData, elementClass))
+            extendBoundingBoxByData(segmentId, boundingBoxMutable, bucketPosition, bucketData, elementClass)
+          )
         case (_, Empty)      => Fox.successful(())
         case (_, f: Failure) => f.toFox
       }
@@ -113,15 +123,18 @@ trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits {
       val maxZ = bucketPositions.map(_.z).max
       bucketPositions
         .filter(pos =>
-          pos.x == minX || pos.x == maxX || pos.y == minY || pos.y == maxY || pos.z == minZ || pos.z == maxZ)
+          pos.x == minX || pos.x == maxX || pos.y == minY || pos.y == maxY || pos.z == minZ || pos.z == maxZ
+        )
         .map(vec3IntFromProto)
     }
 
-  private def extendBoundingBoxByData(segmentId: Long,
-                                      boundingBoxMutable: scala.collection.mutable.ListBuffer[Int],
-                                      bucketPosition: Vec3Int,
-                                      bucketBytes: Array[Byte],
-                                      elementClass: ElementClass.Value): Unit = {
+  private def extendBoundingBoxByData(
+      segmentId: Long,
+      boundingBoxMutable: scala.collection.mutable.ListBuffer[Int],
+      bucketPosition: Vec3Int,
+      bucketBytes: Array[Byte],
+      elementClass: ElementClass.Value
+  ): Unit = {
     val bucketTopLeftInTargetMagVoxels = bucketPosition * DataLayer.bucketLength
     val extendedBBArray: Array[Int] =
       bucketScanner.extendSegmentBoundingBox(

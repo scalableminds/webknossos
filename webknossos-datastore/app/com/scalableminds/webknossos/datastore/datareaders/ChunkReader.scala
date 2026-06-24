@@ -17,8 +17,10 @@ class ChunkReader(header: DatasetHeader) extends FoxImplicits {
   private lazy val shortcutChunkTyper = new ShortcutChunkTyper(header)
 
   def read(path: VaultPath, chunkShapeFromMetadata: Array[Int], range: ByteRange, useSkipTypingShortcut: Boolean)(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[MultiArray] = {
+      implicit
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[MultiArray] = {
     val r = Random.nextDouble()
 
     for {
@@ -39,8 +41,9 @@ class ChunkReader(header: DatasetHeader) extends FoxImplicits {
     } yield typed
   }
 
-  def createFromFillValue(chunkShape: Array[Int], useSkipTypingShortcut: Boolean)(
-      implicit ec: ExecutionContext): Fox[MultiArray] =
+  def createFromFillValue(chunkShape: Array[Int], useSkipTypingShortcut: Boolean)(implicit
+      ec: ExecutionContext
+  ): Fox[MultiArray] =
     if (useSkipTypingShortcut)
       shortcutChunkTyper.createFromFillValueCached(chunkShape) ?~> Msg.Dataset.Chunk.shortcutCreateFromFillValueFailed
     else
@@ -48,9 +51,10 @@ class ChunkReader(header: DatasetHeader) extends FoxImplicits {
 
   // Returns bytes (optional, Fox.empty may later be replaced with fill value)
   // and chunk shape (optional, only for data formats where each chunk reports its own shape, e.g. N5)
-  protected def readChunkBytesAndShape(path: VaultPath, range: ByteRange)(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[(Array[Byte], Option[Array[Int]])] =
+  protected def readChunkBytesAndShape(path: VaultPath, range: ByteRange)(implicit
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[(Array[Byte], Option[Array[Int]])] =
     for {
       bytes <- path.readBytes(range)
       decompressed <- tryo(header.compressorImpl.decompress(bytes)).toFox ?~> Msg.Dataset.Chunk.decompressFailed

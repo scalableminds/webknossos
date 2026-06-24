@@ -34,7 +34,7 @@ class VoxelyticsController @Inject() (
   private lazy val conf = wkConf.Voxelytics
 
   def storeWorkflow: Action[WorkflowDescription] =
-    sil.SecuredAction.async(validateJson[WorkflowDescription]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[WorkflowDescription]) { implicit request =>
       for {
         _ <- Fox.fromBool(wkConf.Features.voxelyticsEnabled) ?~> Msg.Voxelytics.notEnabled
         _ <- voxelyticsService.checkAuthForWorkflowCreation(
@@ -67,7 +67,7 @@ class VoxelyticsController @Inject() (
     }
 
   def listWorkflows: Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       for {
         _ <- Fox.fromBool(wkConf.Features.voxelyticsEnabled) ?~> Msg.Voxelytics.notEnabled
         // Auth is implemented in `voxelyticsDAO.findRunsForWorkflowListing`
@@ -123,7 +123,7 @@ class VoxelyticsController @Inject() (
     } yield workflowsAsJson
 
   def getWorkflow(workflowHash: String, runIdOpt: Option[ObjectId]): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       for {
         _ <- Fox.fromBool(wkConf.Features.voxelyticsEnabled) ?~> Msg.Voxelytics.notEnabled
         // Auth is implemented in `voxelyticsDAO.findRuns`
@@ -179,7 +179,7 @@ class VoxelyticsController @Inject() (
     }
 
   def deleteWorkflow(workflowHash: String): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       for {
         _ <- Fox.fromBool(wkConf.Features.voxelyticsEnabled) ?~> Msg.Voxelytics.notEnabled
         _ <- userService.assertIsSuperUser(request.identity)
@@ -190,7 +190,7 @@ class VoxelyticsController @Inject() (
     }
 
   def storeWorkflowEvents(workflowHash: String, runName: String): Action[List[WorkflowEvent]] =
-    sil.SecuredAction.async(validateJson[List[WorkflowEvent]]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[List[WorkflowEvent]]) { implicit request =>
       def createWorkflowEvent(runId: ObjectId, events: List[WorkflowEvent]): Fox[Unit] =
         events.headOption.map { firstEvent =>
           for {
@@ -249,7 +249,7 @@ class VoxelyticsController @Inject() (
     }
 
   def getChunkStatistics(workflowHash: String, runIdOpt: Option[ObjectId], taskName: String): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       for {
         _ <- Fox.fromBool(wkConf.Features.voxelyticsEnabled) ?~> Msg.Voxelytics.notEnabled
         runs <- voxelyticsDAO.findRuns(
@@ -270,7 +270,7 @@ class VoxelyticsController @Inject() (
       taskName: String,
       artifactName: Option[String]
   ): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       for {
         _ <- Fox.fromBool(wkConf.Features.voxelyticsEnabled) ?~> Msg.Voxelytics.notEnabled
         runs <- voxelyticsDAO.findRuns(
@@ -286,7 +286,7 @@ class VoxelyticsController @Inject() (
     }
 
   def appendLogs: Action[List[JsObject]] =
-    sil.SecuredAction.async(validateJson[List[JsObject]]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[List[JsObject]]) { implicit request =>
       for {
         _ <- Fox.fromBool(wkConf.Features.voxelyticsEnabled) ?~> Msg.Voxelytics.notEnabled
         organization <- organizationDAO.findOne(request.identity._organization)
@@ -303,7 +303,7 @@ class VoxelyticsController @Inject() (
       endTimestamp: Long,
       limit: Option[Int]
   ): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       for {
         _ <- Fox.fromBool(wkConf.Features.voxelyticsEnabled) ?~> Msg.Voxelytics.notEnabled
         runName <- voxelyticsDAO.getRunNameById(runId, request.identity._organization)

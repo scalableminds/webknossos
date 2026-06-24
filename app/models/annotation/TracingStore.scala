@@ -14,7 +14,7 @@ import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Result, Results}
 import utils.sql.{SQLDAO, SqlClient}
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 case class TracingStore(
     name: String,
@@ -45,16 +45,16 @@ class TracingStoreService @Inject() (
       )
     )
 
-  def validateAccess(name: String, key: String)(block: TracingStore => Future[Result]): Fox[Result] =
+  def validateAccess(name: String, key: String)(block: TracingStore => Fox[Result]): Fox[Result] =
     Fox.fromFuture(
       tracingStoreDAO
         .findOneByKey(key) // Check if key is valid
-        .flatMap(tracingStore => Fox.fromFuture(block(tracingStore))) // Run underlying action
+        .flatMap(tracingStore => block(tracingStore)) // Run underlying action
         .getOrElse {
           logger.info(s"Denying tracing store request from $name due to unknown key.")
           Forbidden(Msg.TracingStore.notFound)
         }
-    ) // Default error
+    )
 
   def clientFor(dataset: Dataset): Fox[WKRemoteTracingStoreClient] =
     for {

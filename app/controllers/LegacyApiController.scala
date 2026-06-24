@@ -63,7 +63,7 @@ class LegacyApiController @Inject() (
     with MetadataAssertions {
 
   def updatePartialV12(datasetId: ObjectId): Action[DatasetUpdatePartialParameters] =
-    sil.SecuredAction.async(validateJson[DatasetUpdatePartialParameters]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[DatasetUpdatePartialParameters]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
         _ <- Fox.assertTrue(
@@ -106,7 +106,7 @@ class LegacyApiController @Inject() (
 
   /* provide v8 */
 
-  def isValidNewNameV8(datasetName: String, organizationId: String): Action[AnyContent] = sil.SecuredAction.async {
+  def isValidNewNameV8(datasetName: String, organizationId: String): Action[AnyContent] = sil.SecuredAction.fox {
     implicit request =>
       for {
         _ <- Fox.successful(logVersioned(request))
@@ -115,7 +115,7 @@ class LegacyApiController @Inject() (
   }
 
   def readDatasetV8(organizationId: String, datasetName: String, sharingToken: Option[String]): Action[AnyContent] =
-    sil.UserAwareAction.async { implicit request =>
+    sil.UserAwareAction.fox { implicit request =>
       for {
         dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
         result <- Fox.fromFuture(datasetController.read(dataset._id, sharingToken)(request))
@@ -124,7 +124,7 @@ class LegacyApiController @Inject() (
     }
 
   def updateDatasetV8(organizationId: String, datasetName: String): Action[DatasetUpdateParameters] =
-    sil.SecuredAction.async(validateJson[DatasetUpdateParameters]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[DatasetUpdateParameters]) { implicit request =>
       for {
         _ <- Fox.successful(logVersioned(request))
         dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
@@ -134,7 +134,7 @@ class LegacyApiController @Inject() (
     }
 
   def updateDatasetTeamsV8(organizationId: String, datasetName: String): Action[List[ObjectId]] =
-    sil.SecuredAction.async(validateJson[List[ObjectId]]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[List[ObjectId]]) { implicit request =>
       for {
         _ <- Fox.successful(logVersioned(request))
         dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
@@ -143,7 +143,7 @@ class LegacyApiController @Inject() (
     }
 
   def getDatasetSharingTokenV8(organizationId: String, datasetName: String): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       for {
         _ <- Fox.successful(logVersioned(request))
         dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
@@ -151,7 +151,7 @@ class LegacyApiController @Inject() (
       } yield sharingToken
     }
 
-  def readTaskV8(taskId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def readTaskV8(taskId: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       _ <- Fox.successful(logVersioned(request))
       result <- Fox.fromFuture(taskController.read(taskId)(request))
@@ -160,7 +160,7 @@ class LegacyApiController @Inject() (
   }
 
   def createTaskV8: Action[List[LegacyTaskParameters]] =
-    sil.SecuredAction.async(validateJson[List[LegacyTaskParameters]]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[List[LegacyTaskParameters]]) { implicit request =>
       for {
         taskParametersWithDatasetId <- Fox.serialCombined(request.body)(params =>
           for {
@@ -180,7 +180,7 @@ class LegacyApiController @Inject() (
       pageNumber: Option[Int] = None,
       includeTotalCount: Option[Boolean]
   ): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       for {
         _ <- Fox.successful(logVersioned(request))
         result <- Fox.fromFuture(projectController.tasksForProject(id, limit, pageNumber, includeTotalCount)(request))
@@ -201,7 +201,7 @@ class LegacyApiController @Inject() (
       searchQuery: Option[String],
       limit: Option[Int],
       compact: Option[Boolean]
-  ): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+  ): Action[AnyContent] = sil.UserAwareAction.fox { implicit request =>
     datasetController.list(
       isActive,
       isUnreported,
@@ -229,7 +229,7 @@ class LegacyApiController @Inject() (
       searchQuery: Option[String],
       limit: Option[Int],
       compact: Option[Boolean]
-  ): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+  ): Action[AnyContent] = sil.UserAwareAction.fox { implicit request =>
     for {
       result <- datasetController.list(
         isActive,
@@ -248,7 +248,7 @@ class LegacyApiController @Inject() (
   }
 
   def readDatasetV6(organizationName: String, datasetName: String, sharingToken: Option[String]): Action[AnyContent] =
-    sil.UserAwareAction.async { implicit request =>
+    sil.UserAwareAction.fox { implicit request =>
       for {
         dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationName)
         result <- Fox.fromFuture(datasetController.read(dataset._id, sharingToken)(request))
@@ -259,7 +259,7 @@ class LegacyApiController @Inject() (
   /* provide v5 */
 
   def assertValidNewNameV5(organizationName: String, datasetName: String): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       for {
         organization <- organizationDAO.findOne(organizationName) // the old organizationName is now the organization id
         _ <- Fox.fromBool(organization._id == request.identity._organization) ~> FORBIDDEN

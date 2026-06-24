@@ -80,7 +80,7 @@ class VolumeTracingController @Inject() (
   private def unpackMultiple(tracings: VolumeTracings): Seq[Option[VolumeTracing]] =
     tracings.tracings.toList.map(_.tracing)
 
-  def save(newTracingId: String): Action[VolumeTracing] = Action.async(validateProto[VolumeTracing]) {
+  def save(newTracingId: String): Action[VolumeTracing] = Action.fox(validateProto[VolumeTracing]) {
     implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
@@ -94,7 +94,7 @@ class VolumeTracingController @Inject() (
   }
 
   def get(tracingId: String, annotationId: ObjectId, version: Option[Long]): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
           for {
@@ -105,7 +105,7 @@ class VolumeTracingController @Inject() (
     }
 
   def getMultiple: Action[List[Option[TracingSelector]]] =
-    Action.async(validateJson[List[Option[TracingSelector]]]) { implicit request =>
+    Action.fox(validateJson[List[Option[TracingSelector]]]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           for {
@@ -121,7 +121,7 @@ class VolumeTracingController @Inject() (
       minMag: Option[Int],
       maxMag: Option[Int]
   ): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
@@ -150,7 +150,7 @@ class VolumeTracingController @Inject() (
    * After volumeData is merged, this tracing object (version 0L will later be overwritten by the actual merged tracing)
    */
   def initializeForMerge(newTracingId: String): Action[VolumeTracings] =
-    Action.async(validateProto[VolumeTracings]) { implicit request =>
+    Action.fox(validateProto[VolumeTracings]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           val tracingsFlat = unpackMultiple(request.body).flatten
@@ -181,7 +181,7 @@ class VolumeTracingController @Inject() (
    * Assume initializeForMerge has already run. We can now merge the actual volume data an store the resulting stats
    */
   def initialDataMultiple(annotationId: ObjectId, tracingId: String): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
@@ -208,7 +208,7 @@ class VolumeTracingController @Inject() (
    * VolumeTracing objects and overwrite the initialized one.
    */
   def mergedFromContents(newTracingId: String): Action[VolumeTracings] =
-    Action.async(validateProto[VolumeTracings]) { implicit request =>
+    Action.fox(validateProto[VolumeTracings]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           val tracingsFlat = unpackMultiple(request.body).flatten
@@ -233,7 +233,7 @@ class VolumeTracingController @Inject() (
       voxelSizeFactor: Option[String],
       voxelSizeUnit: Option[String]
   ): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(
           annotationId.map(UserAccessRequest.readAnnotation).getOrElse(UserAccessRequest.readTracing(tracingId))
@@ -265,7 +265,7 @@ class VolumeTracingController @Inject() (
     }
 
   def data(tracingId: String, annotationId: ObjectId): Action[List[WebknossosDataRequest]] =
-    Action.async(validateJson[List[WebknossosDataRequest]]) { implicit request =>
+    Action.fox(validateJson[List[WebknossosDataRequest]]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
           for {
@@ -288,7 +288,7 @@ class VolumeTracingController @Inject() (
     }
 
   def importVolumeData(tracingId: String): Action[MultipartFormData[TemporaryFile]] =
-    Action.async(parse.multipartFormData) { implicit request =>
+    Action.fox(parse.multipartFormData) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeTracing(tracingId)) {
           for {
@@ -314,7 +314,7 @@ class VolumeTracingController @Inject() (
     }
 
   def requestAdHocMesh(tracingId: String): Action[WebknossosAdHocMeshRequest] =
-    Action.async(validateJson[WebknossosAdHocMeshRequest]) { implicit request =>
+    Action.fox(validateJson[WebknossosAdHocMeshRequest]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           // The client expects the ad-hoc mesh as a flat float-array. Three consecutive floats form a 3D point, three
@@ -337,7 +337,7 @@ class VolumeTracingController @Inject() (
     }
 
   def loadFullMeshStl(tracingId: String): Action[FullMeshRequest] =
-    Action.async(validateJson[FullMeshRequest]) { implicit request =>
+    Action.fox(validateJson[FullMeshRequest]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
@@ -357,7 +357,7 @@ class VolumeTracingController @Inject() (
   private def formatNeighborList(neighbors: List[Int]): String =
     "[" + neighbors.mkString(", ") + "]"
 
-  def findData(tracingId: String): Action[AnyContent] = Action.async { implicit request =>
+  def findData(tracingId: String): Action[AnyContent] = Action.fox { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
       for {
         annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
@@ -368,7 +368,7 @@ class VolumeTracingController @Inject() (
   }
 
   def getSegmentVolume(tracingId: String): Action[SegmentStatisticsParameters] =
-    Action.async(validateJson[SegmentStatisticsParameters]) { implicit request =>
+    Action.fox(validateJson[SegmentStatisticsParameters]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
@@ -390,7 +390,7 @@ class VolumeTracingController @Inject() (
     }
 
   def getSegmentBoundingBox(tracingId: String): Action[SegmentStatisticsParameters] =
-    Action.async(validateJson[SegmentStatisticsParameters]) { implicit request =>
+    Action.fox(validateJson[SegmentStatisticsParameters]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
@@ -412,7 +412,7 @@ class VolumeTracingController @Inject() (
     }
 
   def getSegmentSurfaceArea(tracingId: String): Action[SegmentStatisticsParametersMeshBased] =
-    Action.async(validateJson[SegmentStatisticsParametersMeshBased]) { implicit request =>
+    Action.fox(validateJson[SegmentStatisticsParametersMeshBased]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
@@ -447,7 +447,7 @@ class VolumeTracingController @Inject() (
     }
 
   def getSegmentIndex(tracingId: String, segmentId: Long): Action[GetSegmentIndexParameters] =
-    Action.async(validateJson[GetSegmentIndexParameters]) { implicit request =>
+    Action.fox(validateJson[GetSegmentIndexParameters]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
@@ -491,7 +491,7 @@ class VolumeTracingController @Inject() (
       editRotation: Option[String],
       boundingBox: Option[String]
   ): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {

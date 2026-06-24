@@ -221,7 +221,7 @@ class DatasetController @Inject() (
     with MetadataAssertions {
 
   def removeFromThumbnailCache(datasetId: ObjectId): Action[AnyContent] =
-    sil.SecuredAction.async { _ =>
+    sil.SecuredAction.fox { _ =>
       for {
         _ <- thumbnailCachingService.removeFromCache(datasetId)
       } yield Ok
@@ -235,7 +235,7 @@ class DatasetController @Inject() (
       mappingName: Option[String],
       sharingToken: Option[String]
   ): Action[AnyContent] =
-    sil.UserAwareAction.async { implicit request =>
+    sil.UserAwareAction.fox { implicit request =>
       val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
       for {
         _ <- datasetDAO.findOne(datasetId)(using ctx) ?~> notFoundMessage(
@@ -246,7 +246,7 @@ class DatasetController @Inject() (
     }
 
   def exploreRemoteDataset(): Action[List[WKExploreRemoteLayerParameters]] =
-    sil.SecuredAction.async(validateJson[List[WKExploreRemoteLayerParameters]]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[List[WKExploreRemoteLayerParameters]]) { implicit request =>
       for {
         exploreResponse <- wkExploreRemoteLayerService.exploreRemoteDatasource(request.body, request.identity)
       } yield Ok(Json.toJson(exploreResponse))
@@ -254,7 +254,7 @@ class DatasetController @Inject() (
 
   // Note: This route is used by external applications, keep stable
   def exploreAndAddRemoteDataset(): Action[ExploreAndAddRemoteDatasetParameters] =
-    sil.SecuredAction.async(validateJson[ExploreAndAddRemoteDatasetParameters]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[ExploreAndAddRemoteDatasetParameters]) { implicit request =>
       val adaptedParameters =
         WKExploreRemoteLayerParameters(request.body.remoteUri, None, None, None, request.body.dataStoreName)
       for {
@@ -292,7 +292,7 @@ class DatasetController @Inject() (
     }
 
   def addVirtualDataset(name: String): Action[DataSourceRegistrationInfo] =
-    sil.SecuredAction.async(validateJson[DataSourceRegistrationInfo]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[DataSourceRegistrationInfo]) { implicit request =>
       for {
         dataStore <- dataStoreDAO.findOneByName(request.body.dataStoreName) ?~> Msg.DataStore.notFound ~> NOT_FOUND
         user = request.identity
@@ -345,7 +345,7 @@ class DatasetController @Inject() (
       limit: Option[Int],
       // Change output format to return only a compact list with essential information on the datasets
       compact: Option[Boolean]
-  ): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+  ): Action[AnyContent] = sil.UserAwareAction.fox { implicit request =>
     for {
       _ <- Fox.successful(())
       organizationIdOpt =
@@ -419,7 +419,7 @@ class DatasetController @Inject() (
       }
     } yield js.flatten
 
-  def accessList(datasetId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def accessList(datasetId: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
       organization <- organizationDAO.findOne(dataset._organization)
@@ -435,7 +435,7 @@ class DatasetController @Inject() (
   }
 
   def dataSourceForSuperUser(datasetId: ObjectId): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       log() {
         for {
           _ <- userService.assertIsSuperUser(
@@ -450,7 +450,7 @@ class DatasetController @Inject() (
     }
 
   def duplicateToOrga(datasetId: ObjectId, targetOrganizationId: String): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       log() {
         for {
           _ <- userService.assertIsSuperUser(
@@ -489,7 +489,7 @@ class DatasetController @Inject() (
       // Optional sharing token allowing access to datasets your team does not normally have access to.")
       sharingToken: Option[String]
   ): Action[AnyContent] =
-    sil.UserAwareAction.async { implicit request =>
+    sil.UserAwareAction.fox { implicit request =>
       log() {
         val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
         for {
@@ -513,7 +513,7 @@ class DatasetController @Inject() (
     }
 
   def findByImportURL(importURL: String): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       for {
         datasetBox <- datasetDAO.findOneByImportURL(importURL, request.identity._organization).shiftBox
         js <- datasetBox match {
@@ -526,7 +526,7 @@ class DatasetController @Inject() (
     }
 
   def health(datasetId: ObjectId, sharingToken: Option[String]): Action[AnyContent] =
-    sil.UserAwareAction.async { implicit request =>
+    sil.UserAwareAction.fox { implicit request =>
       val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
       for {
         dataset <- datasetDAO.findOne(datasetId)(using ctx) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
@@ -542,7 +542,7 @@ class DatasetController @Inject() (
     }
 
   def updatePartial(datasetId: ObjectId): Action[DatasetUpdatePartialParameters] =
-    sil.SecuredAction.async(validateJson[DatasetUpdatePartialParameters]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[DatasetUpdatePartialParameters]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
         _ <- Fox.assertTrue(
@@ -568,7 +568,7 @@ class DatasetController @Inject() (
 
   // Note that there exists also updatePartial (which will only expect the changed fields)
   def update(datasetId: ObjectId): Action[DatasetUpdateParameters] =
-    sil.SecuredAction.async(validateJson[DatasetUpdateParameters]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[DatasetUpdateParameters]) { implicit request =>
       val name = if (request.body.displayName.isDefined) request.body.displayName else request.body.name
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
@@ -594,7 +594,7 @@ class DatasetController @Inject() (
     }
 
   def updateTeams(datasetId: ObjectId): Action[List[ObjectId]] =
-    sil.SecuredAction.async(validateJson[List[ObjectId]]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[List[ObjectId]]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
         _ <- Fox.assertTrue(
@@ -614,7 +614,7 @@ class DatasetController @Inject() (
     }
 
   def getSharingToken(datasetId: ObjectId): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
         _ <- Fox.fromBool(dataset._organization == request.identity._organization) ~> FORBIDDEN
@@ -623,7 +623,7 @@ class DatasetController @Inject() (
     }
 
   def deleteSharingToken(datasetId: ObjectId): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
         _ <- Fox.fromBool(dataset._organization == request.identity._organization) ~> FORBIDDEN
@@ -635,7 +635,7 @@ class DatasetController @Inject() (
     }
 
   def isValidNewName(datasetName: String): Action[AnyContent] =
-    sil.SecuredAction.async { _ =>
+    sil.SecuredAction.fox { _ =>
       for {
         validName <- datasetService.assertValidDatasetName(datasetName).futureBox
       } yield validName match {
@@ -646,7 +646,7 @@ class DatasetController @Inject() (
     }
 
   def getOrganizationForDataset(datasetName: String, sharingToken: Option[String]): Action[AnyContent] =
-    sil.UserAwareAction.async { implicit request =>
+    sil.UserAwareAction.fox { implicit request =>
       val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
       for {
         organizationId <- datasetDAO.getOrganizationIdForDataset(datasetName)(using ctx)
@@ -658,7 +658,7 @@ class DatasetController @Inject() (
       organizationId: String,
       sharingToken: Option[String]
   ): Action[AnyContent] =
-    sil.UserAwareAction.async { implicit request =>
+    sil.UserAwareAction.fox { implicit request =>
       val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
       for {
         datasetBox <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)(using ctx).futureBox
@@ -711,7 +711,7 @@ class DatasetController @Inject() (
       intensityMin: Option[Float],
       intensityMax: Option[Float]
   ): Action[SegmentAnythingMaskParameters] =
-    sil.SecuredAction.async(validateJson[SegmentAnythingMaskParameters]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[SegmentAnythingMaskParameters]) { implicit request =>
       log() {
         for {
           _ <- Fox.fromBool(conf.Features.segmentAnythingEnabled) ?~> Msg.SegmentAnything.notEnabled
@@ -778,7 +778,7 @@ class DatasetController @Inject() (
     }
 
   def delete(datasetId: ObjectId): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
           for {
@@ -799,7 +799,7 @@ class DatasetController @Inject() (
     }
 
   def compose(): Action[ComposeRequest] =
-    sil.SecuredAction.async(validateJson[ComposeRequest]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[ComposeRequest]) { implicit request =>
       for {
         (_, newDatasetId) <- composeService.composeDataset(
           request.body,
@@ -809,28 +809,28 @@ class DatasetController @Inject() (
     }
 
   def composeAddLayer(datasetId: ObjectId): Action[ComposeRequestLayer] =
-    sil.SecuredAction.async(validateJson[ComposeRequestLayer]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[ComposeRequestLayer]) { implicit request =>
       for {
         _ <- composeService.addLayer(datasetId, request.body) ?~> Msg.Dataset.Compose.addLayerFailed
       } yield Ok
     }
 
   def composeAddMag(datasetId: ObjectId): Action[ComposeAddMagRequest] =
-    sil.SecuredAction.async(validateJson[ComposeAddMagRequest]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[ComposeAddMagRequest]) { implicit request =>
       for {
         _ <- composeService.addMag(datasetId, request.body) ?~> Msg.Dataset.Compose.addMagFailed
       } yield Ok
     }
 
   def composeAddAttachment(datasetId: ObjectId): Action[ComposeAddAttachmentRequest] =
-    sil.SecuredAction.async(validateJson[ComposeAddAttachmentRequest]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[ComposeAddAttachmentRequest]) { implicit request =>
       for {
         _ <- composeService.addAttachment(datasetId, request.body) ?~> Msg.Dataset.Compose.addAttachmentFailed
       } yield Ok
     }
 
   def reserveMagUploadToPath(datasetId: ObjectId): Action[ReserveMagUploadToPathRequest] =
-    sil.SecuredAction.async(validateJson[ReserveMagUploadToPathRequest]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[ReserveMagUploadToPathRequest]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
         _ <- Fox.fromBool(dataset.isVirtual) ?~> Msg.Dataset.Upload.magUploadOnlyVirtual
@@ -842,7 +842,7 @@ class DatasetController @Inject() (
     }
 
   def finishMagUploadToPath(datasetId: ObjectId): Action[ReserveMagUploadToPathRequest] =
-    sil.SecuredAction.async(validateJson[ReserveMagUploadToPathRequest]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[ReserveMagUploadToPathRequest]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
         _ <- Fox.assertTrue(
@@ -869,7 +869,7 @@ class DatasetController @Inject() (
     }
 
   def reserveAttachmentUploadToPath(datasetId: ObjectId): Action[ReserveAttachmentUploadToPathRequest] =
-    sil.SecuredAction.async(validateJson[ReserveAttachmentUploadToPathRequest]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[ReserveAttachmentUploadToPathRequest]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
         _ <- Fox.assertTrue(
@@ -881,7 +881,7 @@ class DatasetController @Inject() (
     }
 
   def finishAttachmentUploadToPath(datasetId: ObjectId): Action[ReserveAttachmentUploadToPathRequest] =
-    sil.SecuredAction.async(validateJson[ReserveAttachmentUploadToPathRequest]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[ReserveAttachmentUploadToPathRequest]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
         _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
@@ -912,7 +912,7 @@ class DatasetController @Inject() (
     }
 
   def reserveUploadToPaths(): Action[ReserveDatasetUploadToPathsRequest] =
-    sil.SecuredAction.async(validateJson[ReserveDatasetUploadToPathsRequest]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[ReserveDatasetUploadToPathsRequest]) { implicit request =>
       for {
         newDatasetId <- Fox.successful(ObjectId.generate)
         dataSourceWithPaths <- datasetUploadToPathsService.reserveDatasetUploadToPaths(
@@ -926,7 +926,7 @@ class DatasetController @Inject() (
   def reserveUploadToPathsForPreliminary(
       datasetId: ObjectId
   ): Action[ReserveDatasetUploadToPathsForPreliminaryRequest] =
-    sil.SecuredAction.async(validateJson[ReserveDatasetUploadToPathsForPreliminaryRequest]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[ReserveDatasetUploadToPathsForPreliminaryRequest]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
         dataSourceWithPaths <- datasetUploadToPathsService.reserveDatasetUploadToPathsForPreliminary(
@@ -938,7 +938,7 @@ class DatasetController @Inject() (
     }
 
   def finishUploadToPaths(datasetId: ObjectId): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
         _ <- Fox.assertTrue(
@@ -960,7 +960,7 @@ class DatasetController @Inject() (
     }
 
   def writeMirror(datasetId: ObjectId): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
         _ <- Fox.assertTrue(
@@ -973,7 +973,7 @@ class DatasetController @Inject() (
     }
 
   def writeAllMirrors(): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       for {
         _ <- userService.assertIsSuperUser(request.identity)
         _ = logger.info(s"Writing mirrors for all datasets as requested by superuser ${request.identity._id}...")
@@ -1008,7 +1008,7 @@ class DatasetController @Inject() (
     }
 
   def usedStorageDetails(datasetId: ObjectId): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
         // While reading these details is not exactly editing, only those who can see the settings page should see this.

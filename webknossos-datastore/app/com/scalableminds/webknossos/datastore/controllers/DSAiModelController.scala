@@ -36,7 +36,7 @@ class DSAiModelController @Inject() (
   private lazy val filenameStatisticsJson = "statistics.json"
 
   def effectiveVoxelSize: Action[GetEffectiveVoxelSizeParameters] =
-    Action.async(validateJson[GetEffectiveVoxelSizeParameters]) { implicit request =>
+    Action.fox(validateJson[GetEffectiveVoxelSizeParameters]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
         for {
           modelVaultPath <- dataVaultService.vaultPathFor(request.body.modelPath)

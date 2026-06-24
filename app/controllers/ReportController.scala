@@ -172,14 +172,14 @@ class ReportController @Inject() (
 )(implicit ec: ExecutionContext)
     extends Controller {
 
-  def projectProgressReport(teamId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def projectProgressReport(teamId: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       _ <- teamDAO.findOne(teamId) ?~> Msg.Team.notFound(teamId) ~> NOT_FOUND
       entries <- reportDAO.projectProgress(teamId)
     } yield Ok(Json.toJson(entries))
   }
 
-  def availableTasksReport(teamId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def availableTasksReport(teamId: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       team <- teamDAO.findOne(teamId) ?~> Msg.Team.notFound(teamId) ~> NOT_FOUND
       users <- userDAO.findAllByTeams(List(team._id))

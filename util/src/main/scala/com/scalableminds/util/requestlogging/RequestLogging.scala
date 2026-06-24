@@ -2,12 +2,13 @@ package com.scalableminds.util.requestlogging
 
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.time.Instant
+import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import play.api.http.{HttpEntity, Status}
 import play.api.mvc.{Request, Result}
 
-import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration.*
+import scala.concurrent.ExecutionContext
 
 trait AbstractRequestLogging extends LazyLogging with Formatter {
 
@@ -32,8 +33,8 @@ trait AbstractRequestLogging extends LazyLogging with Formatter {
     }
 
   def logTime(notifier: String => Unit, durationThreshold: FiniteDuration = 2 minutes)(
-      block: => Future[Result]
-  )(implicit request: Request[?], ec: ExecutionContext): Future[Result] = {
+      block: => Fox[Result]
+  )(implicit request: Request[?], ec: ExecutionContext): Fox[Result] = {
     def logTimeFormatted(executionTime: FiniteDuration, request: Request[?], result: Result): Unit = {
       val debugString =
         s"Request `${request.method}` `${request.uri}` took ${formatDuration(executionTime)} and was${
@@ -59,7 +60,7 @@ trait RequestLogging extends AbstractRequestLogging {
 
   def log(
       notifier: Option[String => Unit] = None
-  )(block: => Future[Result])(implicit request: Request[?], ec: ExecutionContext): Future[Result] =
+  )(block: => Fox[Result])(implicit request: Request[?], ec: ExecutionContext): Fox[Result] =
     for {
       result: Result <- block
       _ = logRequestFormatted(request, result, notifier)

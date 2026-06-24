@@ -27,14 +27,14 @@ class MaintenanceController @Inject() (
 
   private val adHocMaintenanceDuration: FiniteDuration = 5 minutes
 
-  def listCurrentAndUpcoming: Action[AnyContent] = sil.UserAwareAction.async { _ =>
+  def listCurrentAndUpcoming: Action[AnyContent] = sil.UserAwareAction.fox { _ =>
     for {
       currentAndUpcomingMaintenances <- maintenanceDAO.findCurrentAndUpcoming
       js = currentAndUpcomingMaintenances.map(maintenanceService.publicWrites)
     } yield Ok(Json.toJson(js))
   }
 
-  def readOne(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def readOne(id: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       _ <- userService.assertIsSuperUser(request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
       maintenance <- maintenanceDAO.findOne(id)
@@ -42,7 +42,7 @@ class MaintenanceController @Inject() (
   }
 
   def update(id: ObjectId): Action[MaintenanceParameters] =
-    sil.SecuredAction.async(validateJson[MaintenanceParameters]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[MaintenanceParameters]) { implicit request =>
       for {
         _ <- userService.assertIsSuperUser(request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- maintenanceDAO.findOne(id) ?~> Msg.maintenanceNotFound
@@ -51,14 +51,14 @@ class MaintenanceController @Inject() (
       } yield Ok(maintenanceService.publicWrites(updated))
     }
 
-  def delete(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def delete(id: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       _ <- userService.assertIsSuperUser(request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
       _ <- maintenanceDAO.deleteOne(id)
     } yield Ok
   }
 
-  def listAll: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def listAll: Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       _ <- userService.assertIsSuperUser(request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
       maintenances <- maintenanceDAO.findAll(using GlobalAccessContext)
@@ -66,7 +66,7 @@ class MaintenanceController @Inject() (
     } yield Ok(Json.toJson(js))
   }
 
-  def create: Action[MaintenanceParameters] = sil.SecuredAction.async(validateJson[MaintenanceParameters]) {
+  def create: Action[MaintenanceParameters] = sil.SecuredAction.fox(validateJson[MaintenanceParameters]) {
     implicit request =>
       for {
         _ <- userService.assertIsSuperUser(request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
@@ -81,7 +81,7 @@ class MaintenanceController @Inject() (
       } yield Ok(maintenanceService.publicWrites(newMaintenance))
   }
 
-  def createAdHocMaintenance: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def createAdHocMaintenance: Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       _ <- userService.assertIsSuperUser(request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
       newMaintenance = Maintenance(

@@ -32,7 +32,7 @@ class WKRemoteWorkerController @Inject() (
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
-  def requestJobs(key: String, workerVersion: Option[String]): Action[AnyContent] = Action.async {
+  def requestJobs(key: String, workerVersion: Option[String]): Action[AnyContent] = Action.fox {
     for {
       worker <- workerDAO.findOneByKey(key) ?~> Msg.Job.workerNotFound
       _ = workerDAO.updateHeartBeat(worker._id)
@@ -89,7 +89,7 @@ class WKRemoteWorkerController @Inject() (
     lowPriorityOrEmpty ++ highPriorityOrEmpty
   }
 
-  def updateJobStatus(key: String, id: ObjectId): Action[JobStatus] = Action.async(validateJson[JobStatus]) {
+  def updateJobStatus(key: String, id: ObjectId): Action[JobStatus] = Action.fox(validateJson[JobStatus]) {
     implicit request =>
       for {
         _ <- workerDAO.findOneByKey(key) ?~> Msg.Job.workerNotFound
@@ -114,7 +114,7 @@ class WKRemoteWorkerController @Inject() (
       } yield Ok
   }
 
-  def attachVoxelyticsWorkflow(key: String, id: ObjectId): Action[String] = Action.async(validateJson[String]) {
+  def attachVoxelyticsWorkflow(key: String, id: ObjectId): Action[String] = Action.fox(validateJson[String]) {
     implicit request =>
       for {
         _ <- workerDAO.findOneByKey(key) ?~> Msg.Job.workerNotFound
@@ -132,7 +132,7 @@ class WKRemoteWorkerController @Inject() (
   }
 
   def attachDatasetToInference(key: String, id: ObjectId): Action[String] =
-    Action.async(validateJson[String]) { implicit request =>
+    Action.fox(validateJson[String]) { implicit request =>
       implicit val ctx: DBAccessContext = GlobalAccessContext
       for {
         _ <- workerDAO.findOneByKey(key) ?~> Msg.Job.workerNotFound

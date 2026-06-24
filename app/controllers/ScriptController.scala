@@ -32,7 +32,7 @@ class ScriptController @Inject() (
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
-  def create: Action[ScriptParameters] = sil.SecuredAction.async(validateJson[ScriptParameters]) { implicit request =>
+  def create: Action[ScriptParameters] = sil.SecuredAction.fox(validateJson[ScriptParameters]) { implicit request =>
     for {
       isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(request.identity, request.identity._organization)
       _ <- Fox.fromBool(isTeamManagerOrAdmin) ?~> Msg.notAllowed ~> FORBIDDEN
@@ -49,14 +49,14 @@ class ScriptController @Inject() (
     } yield Ok(js)
   }
 
-  def get(scriptId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def get(scriptId: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       script <- scriptDAO.findOne(scriptId) ?~> Msg.Script.notFound(scriptId) ~> NOT_FOUND
       js <- scriptService.publicWrites(script) ?~> Msg.Script.publicWritesFailed
     } yield Ok(js)
   }
 
-  def list: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def list: Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       scripts <- scriptDAO.findAll
       js <- Fox.serialCombined(scripts)(s => scriptService.publicWrites(s))
@@ -64,7 +64,7 @@ class ScriptController @Inject() (
   }
 
   def update(scriptId: ObjectId): Action[ScriptParameters] =
-    sil.SecuredAction.async(validateJson[ScriptParameters]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[ScriptParameters]) { implicit request =>
       for {
         oldScript <- scriptDAO.findOne(scriptId) ?~> Msg.Script.notFound(scriptId) ~> NOT_FOUND
         _ <- Fox.fromBool(oldScript._owner == request.identity._id) ?~> Msg.Script.updateOnlyOwner ~> FORBIDDEN
@@ -78,7 +78,7 @@ class ScriptController @Inject() (
       } yield Ok(js)
     }
 
-  def delete(scriptId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def delete(scriptId: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       oldScript <- scriptDAO.findOne(scriptId) ?~> Msg.Script.notFound(scriptId) ~> NOT_FOUND
       _ <- Fox.fromBool(oldScript._owner == request.identity._id) ?~> Msg.Script.deleteOnlyOwner ~> FORBIDDEN

@@ -60,14 +60,14 @@ class Application @Inject() (
     addNoCacheHeaderFallback(Ok("Ok"))
   }
 
-  def checkCertificate: Action[AnyContent] = Action.async { _ =>
+  def checkCertificate: Action[AnyContent] = Action.fox { _ =>
     certificateValidationService.checkCertificateCached().map {
       case (true, expiresAt)  => Ok(Json.obj("isValid" -> true, "expiresAt" -> expiresAt))
       case (false, expiresAt) => BadRequest(Json.obj("isValid" -> false, "expiresAt" -> expiresAt))
     }
   }
 
-  def helpEmail(): Action[HelpEmailParameters] = sil.SecuredAction.async(validateJson[HelpEmailParameters]) {
+  def helpEmail(): Action[HelpEmailParameters] = sil.SecuredAction.fox(validateJson[HelpEmailParameters]) {
     implicit request =>
       for {
         organization <- organizationDAO.findOne(request.identity._organization)

@@ -27,7 +27,7 @@ class AnnotationPrivateLinkController @Inject() (
 
   private val bearerTokenService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
-  def annotationSource(accessTokenOrId: String, userToken: Option[String]): Action[AnyContent] = Action.async { _ =>
+  def annotationSource(accessTokenOrId: String, userToken: Option[String]): Action[AnyContent] = Action.fox { _ =>
     for {
       annotationByLinkBox <- findAnnotationByPrivateLinkIfNotExpired(accessTokenOrId).shiftBox
       annotation <- annotationByLinkBox match {
@@ -58,7 +58,7 @@ class AnnotationPrivateLinkController @Inject() (
       annotation <- annotationDAO.findOne(annotationPrivateLink._annotation)(using GlobalAccessContext)
     } yield annotation
 
-  def list: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def list: Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       links <- annotationPrivateLinkDAO.findAll
       linksJsonList <- Fox.serialCombined(links)(annotationPrivateLinkService.publicWrites)
@@ -66,14 +66,14 @@ class AnnotationPrivateLinkController @Inject() (
   }
 
   def listByAnnotation(annotationId: ObjectId): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       for {
         links <- annotationPrivateLinkDAO.findAllByAnnotation(annotationId)
         linksJsonList <- Fox.serialCombined(links)(annotationPrivateLinkService.publicWrites)
       } yield Ok(Json.toJson(linksJsonList))
     }
 
-  def get(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def get(id: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       annotationPrivateLink <- annotationPrivateLinkDAO.findOne(id)
       _ <- Fox.fromBool(
@@ -86,7 +86,7 @@ class AnnotationPrivateLinkController @Inject() (
     } yield Ok(annotationPrivateLinkJs)
   }
 
-  def create: Action[AnnotationPrivateLinkParams] = sil.SecuredAction.async(validateJson[AnnotationPrivateLinkParams]) {
+  def create: Action[AnnotationPrivateLinkParams] = sil.SecuredAction.fox(validateJson[AnnotationPrivateLinkParams]) {
     implicit request =>
       val params = request.body
       val _id = ObjectId.generate
@@ -103,7 +103,7 @@ class AnnotationPrivateLinkController @Inject() (
   }
 
   def update(id: ObjectId): Action[AnnotationPrivateLinkParams] =
-    sil.SecuredAction.async(validateJson[AnnotationPrivateLinkParams]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[AnnotationPrivateLinkParams]) { implicit request =>
       val params = request.body
       for {
         annotationId <- ObjectId.fromString(params.annotation)
@@ -120,7 +120,7 @@ class AnnotationPrivateLinkController @Inject() (
       } yield Ok(js)
     }
 
-  def delete(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def delete(id: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       aPLInfo <- annotationPrivateLinkDAO.findOne(id) ?~> Msg.Annotation.PrivateLink.notFound(id) ~> NOT_FOUND
       _ <- annotationDAO.assertUpdateAccess(aPLInfo._annotation) ?~> Msg.Annotation.Edit.notAllowed ~> FORBIDDEN

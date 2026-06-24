@@ -52,7 +52,7 @@ class VolumeTracingZarrStreamingController @Inject() (
   override def defaultErrorCode: Int = NOT_FOUND
 
   def volumeTracingDirectoryContent(tracingId: String, zarrVersion: Int): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
@@ -73,7 +73,7 @@ class VolumeTracingZarrStreamingController @Inject() (
     }
 
   def volumeTracingDirectoryContentJson(tracingId: String, zarrVersion: Int): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
@@ -88,7 +88,7 @@ class VolumeTracingZarrStreamingController @Inject() (
     }
 
   def volumeTracingMagDirectoryContent(tracingId: String, mag: String, zarrVersion: Int): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
@@ -110,7 +110,7 @@ class VolumeTracingZarrStreamingController @Inject() (
     }
 
   def volumeTracingMagDirectoryContentJson(tracingId: String, mag: String, zarrVersion: Int): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
@@ -126,7 +126,7 @@ class VolumeTracingZarrStreamingController @Inject() (
     }
 
   def zArray(tracingId: String, mag: String): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
@@ -165,7 +165,7 @@ class VolumeTracingZarrStreamingController @Inject() (
     }
 
   def zarrJsonForMag(tracingId: String, mag: String): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
@@ -217,9 +217,9 @@ class VolumeTracingZarrStreamingController @Inject() (
       }
     }
 
-  def zGroup(tracingId: String): Action[AnyContent] = Action.async { implicit request =>
+  def zGroup(tracingId: String): Action[AnyContent] = Action.fox { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
-      Future(Ok(Json.toJson(NgffGroupHeader(zarr_format = 2))))
+      Fox.successful(Ok(Json.toJson(NgffGroupHeader(zarr_format = 2))))
     }
   }
 
@@ -228,7 +228,7 @@ class VolumeTracingZarrStreamingController @Inject() (
     */
   def zAttrs(
       tracingId: String
-  ): Action[AnyContent] = Action.async { implicit request =>
+  ): Action[AnyContent] = Action.fox { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
       for {
         annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
@@ -246,7 +246,7 @@ class VolumeTracingZarrStreamingController @Inject() (
 
   def zarrJson(
       tracingId: String
-  ): Action[AnyContent] = Action.async { implicit request =>
+  ): Action[AnyContent] = Action.fox { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
       for {
         annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
@@ -265,7 +265,7 @@ class VolumeTracingZarrStreamingController @Inject() (
   }
 
   def zarrSource(tracingId: String, tracingName: Option[String], zarrVersion: Int): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
@@ -296,7 +296,7 @@ class VolumeTracingZarrStreamingController @Inject() (
     }
 
   def rawZarrCube(tracingId: String, mag: String, coordinates: String): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)

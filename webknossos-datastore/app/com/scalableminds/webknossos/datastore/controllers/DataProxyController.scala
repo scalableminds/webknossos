@@ -31,7 +31,7 @@ class DataProxyController @Inject() (
     extends Controller {
 
   def proxyMag(datasetId: ObjectId, dataLayerName: String, mag: String, path: String): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
           _ <- validatePath(path)
@@ -62,7 +62,7 @@ class DataProxyController @Inject() (
       attachmentType: String,
       attachmentName: String,
       path: String
-  ): Action[AnyContent] = Action.async { implicit request =>
+  ): Action[AnyContent] = Action.fox { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
         _ <- validatePath(path)
@@ -81,7 +81,7 @@ class DataProxyController @Inject() (
     }
   }
 
-  def proxyDatasource(datasetId: ObjectId): Action[AnyContent] = Action.async { implicit request =>
+  def proxyDatasource(datasetId: ObjectId): Action[AnyContent] = Action.fox { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
         dataSource <- datasetCache.getById(datasetId) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND

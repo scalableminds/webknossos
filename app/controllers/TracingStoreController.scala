@@ -24,7 +24,7 @@ class TracingStoreController @Inject() (
 )(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller {
 
-  def listOne: Action[AnyContent] = sil.UserAwareAction.async {
+  def listOne: Action[AnyContent] = sil.UserAwareAction.fox {
     for {
       tracingStore <- tracingStoreDAO.findFirst ?~> Msg.TracingStore.listFailed
       js <- tracingStoreService.publicWrites(tracingStore)
@@ -32,7 +32,7 @@ class TracingStoreController @Inject() (
   }
 
   def update(name: String): Action[TracingStoreParameters] =
-    sil.SecuredAction.async(validateJson[TracingStoreParameters]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[TracingStoreParameters]) { implicit request =>
       for {
         _ <- Fox.fromBool(request.identity.isAdmin)
         existing <- tracingStoreDAO.findOneByName(name) ?~> Msg.TracingStore.notFound ~> NOT_FOUND

@@ -18,7 +18,7 @@ class ShortLinkController @Inject() (shortLinkDAO: ShortLinkDAO, sil: Silhouette
     val bodyParsers: PlayBodyParsers
 ) extends Controller {
 
-  def create: Action[String] = sil.UserAwareAction.async(validateJson[String]) { implicit request =>
+  def create: Action[String] = sil.UserAwareAction.fox(validateJson[String]) { implicit request =>
     val longLink = request.body
     val _id = ObjectId.generate
     val key = RandomIDGenerator.generateBlocking(12)
@@ -29,7 +29,7 @@ class ShortLinkController @Inject() (shortLinkDAO: ShortLinkDAO, sil: Silhouette
     } yield Ok(Json.toJson(inserted))
   }
 
-  def getByKey(key: String): Action[AnyContent] = Action.async { _ =>
+  def getByKey(key: String): Action[AnyContent] = Action.fox { _ =>
     for {
       shortLink <- shortLinkDAO.findOneByKey(key) ?~> Msg.shortLinkNotFound
     } yield Ok(Json.toJson(shortLink))

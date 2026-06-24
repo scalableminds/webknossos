@@ -100,7 +100,7 @@ class AnnotationIOController @Inject() (
      Returns:
         JSON object containing annotation information about the newly created annotation, including the assigned id
    */
-  def upload: Action[MultipartFormData[TemporaryFile]] = sil.SecuredAction.async(parse.multipartFormData) {
+  def upload: Action[MultipartFormData[TemporaryFile]] = sil.SecuredAction.fox(parse.multipartFormData) {
     implicit request =>
       log() {
         val shouldCreateGroupForEachFile: Boolean =
@@ -428,7 +428,7 @@ class AnnotationIOController @Inject() (
       skipVolumeData: Option[Boolean],
       volumeDataZipFormat: Option[String]
   ): Action[AnyContent] =
-    sil.UserAwareAction.async { implicit request =>
+    sil.UserAwareAction.fox { implicit request =>
       logger.trace(s"Requested download for annotation: $typ/$id")
       for {
         identifier <- AnnotationIdentifier.parse(typ, id)
@@ -459,7 +459,7 @@ class AnnotationIOController @Inject() (
       skipVolumeData: Option[Boolean],
       volumeDataZipFormat: Option[String]
   ): Action[AnyContent] =
-    sil.UserAwareAction.async { implicit request =>
+    sil.UserAwareAction.fox { implicit request =>
       for {
         annotation <- provider.provideAnnotation(id, request.identity) ?~> Msg.Annotation.notFound ~> NOT_FOUND
         result <- Fox.fromFuture(

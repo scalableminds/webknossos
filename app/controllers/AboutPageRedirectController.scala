@@ -31,7 +31,7 @@ class AboutPageRedirectController @Inject() (
     extends Controller
     with CspHeaders {
 
-  def redirectToAboutPageOrSendMainView: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+  def redirectToAboutPageOrSendMainView: Action[AnyContent] = sil.UserAwareAction.fox { implicit request =>
     if (matchesRedirectRoute(request)) {
       val status = if (request.uri == "/") SEE_OTHER else MOVED_PERMANENTLY
       Fox.successful(Redirect(conf.AboutPageRedirect.prefix + request.uri, status = status))

@@ -18,7 +18,7 @@ class Application @Inject() (tracingDataStore: TracingDataStore, redisClient: Tr
 
   override def allowRemoteOrigin: Boolean = true
 
-  def health: Action[AnyContent] = Action.async { implicit request =>
+  def health: Action[AnyContent] = Action.fox { implicit request =>
     log() {
       for {
         before <- Instant.nowFox

@@ -39,7 +39,7 @@ class UploadController @Inject() (
   override def allowRemoteOrigin: Boolean = true
 
   def reserveDatasetUpload(): Action[DatasetUploadInfo] =
-    Action.async(validateJson[DatasetUploadInfo]) { implicit request =>
+    Action.fox(validateJson[DatasetUploadInfo]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.administrateDatasets(request.body.organizationId)
       ) {
@@ -62,7 +62,7 @@ class UploadController @Inject() (
     }
 
   def reserveMagUpload(): Action[MagUploadInfo] =
-    Action.async(validateJson[MagUploadInfo]) { implicit request =>
+    Action.fox(validateJson[MagUploadInfo]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(request.body.datasetId)) {
         for {
           isKnownUpload <- uploadService.isKnownUpload(request.body.resumableUploadInfo.uploadId, UploadDomain.mag)
@@ -79,7 +79,7 @@ class UploadController @Inject() (
     }
 
   def reserveAttachmentUpload(): Action[AttachmentUploadInfo] =
-    Action.async(validateJson[AttachmentUploadInfo]) { implicit request =>
+    Action.fox(validateJson[AttachmentUploadInfo]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(request.body.datasetId)) {
         for {
           isKnownUpload <- uploadService.isKnownUpload(
@@ -99,7 +99,7 @@ class UploadController @Inject() (
     }
 
   def getUnfinishedUploads(organizationName: String, uploadDomain: String): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.administrateDatasets(organizationName)) {
         for {
           uploadDomainValidated <- UploadDomain.fromString(uploadDomain).toFox
@@ -130,7 +130,7 @@ class UploadController @Inject() (
     - token (string): datastore token identifying the uploading user
    */
   def uploadChunk(uploadDomain: String): Action[MultipartFormData[Files.TemporaryFile]] =
-    Action.async(parse.multipartFormData) { implicit request =>
+    Action.fox(parse.multipartFormData) { implicit request =>
       log(Some(slackNotificationService.noticeFailedUploadRequest)) {
         val uploadForm = Form(
           tuple(
@@ -177,7 +177,7 @@ class UploadController @Inject() (
     }
 
   def testChunk(resumableChunkNumber: Int, resumableIdentifier: String, uploadDomain: String): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       val uploadId = uploadService.extractDatasetUploadId(resumableIdentifier)
       for {
         uploadDomainValidated <- UploadDomain.fromString(uploadDomain).toFox
@@ -193,7 +193,7 @@ class UploadController @Inject() (
       } yield result
     }
 
-  def finishUpload(uploadDomain: String, uploadId: String): Action[AnyContent] = Action.async { implicit request =>
+  def finishUpload(uploadDomain: String, uploadId: String): Action[AnyContent] = Action.fox { implicit request =>
     log(Some(slackNotificationService.noticeFailedUploadRequest)) {
       logTime(slackNotificationService.noticeSlowRequest) {
         for {
@@ -215,7 +215,7 @@ class UploadController @Inject() (
   }
 
   def cancelUpload(uploadDomain: String, uploadId: String): Action[CancelUploadInformation] =
-    Action.async(validateJson[CancelUploadInformation]) { implicit request =>
+    Action.fox(validateJson[CancelUploadInformation]) { implicit request =>
       for {
         uploadDomainValidated <- UploadDomain.fromString(uploadDomain).toFox
         _ <- Fox.fromBool(

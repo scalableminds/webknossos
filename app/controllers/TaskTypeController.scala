@@ -39,7 +39,7 @@ class TaskTypeController @Inject() (
 )(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller {
 
-  def create: Action[TaskTypeParameters] = sil.SecuredAction.async(validateJson[TaskTypeParameters]) {
+  def create: Action[TaskTypeParameters] = sil.SecuredAction.fox(validateJson[TaskTypeParameters]) {
     implicit request =>
       for {
         _ <- Fox.assertTrue(
@@ -65,7 +65,7 @@ class TaskTypeController @Inject() (
       } yield Ok(js)
   }
 
-  def get(taskTypeId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def get(taskTypeId: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       taskType <- taskTypeDAO.findOne(taskTypeId) ?~> Msg.TaskType.notFound(taskTypeId) ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, taskType._team))
@@ -73,7 +73,7 @@ class TaskTypeController @Inject() (
     } yield Ok(js)
   }
 
-  def list: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def list: Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       taskTypes <- taskTypeDAO.findAll
       js <- Fox.serialCombined(taskTypes)(t => taskTypeService.publicWrites(t))
@@ -81,7 +81,7 @@ class TaskTypeController @Inject() (
   }
 
   def update(taskTypeId: ObjectId): Action[TaskTypeParameters] =
-    sil.SecuredAction.async(validateJson[TaskTypeParameters]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[TaskTypeParameters]) { implicit request =>
       for {
         existing <- taskTypeDAO.findOne(taskTypeId) ?~> Msg.TaskType.notFound(taskTypeId) ~> NOT_FOUND
         _ <- Fox.fromBool(request.body.tracingType == existing.tracingType) ?~> Msg.TaskType.tracingTypeImmutable
@@ -114,7 +114,7 @@ class TaskTypeController @Inject() (
       } yield JsonOk(js, Msg.TaskType.editSuccess)
     }
 
-  def delete(taskTypeId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def delete(taskTypeId: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       taskType <- taskTypeDAO.findOne(taskTypeId) ?~> Msg.TaskType.notFound(taskTypeId) ~> NOT_FOUND
       _ <- Fox.assertTrue(

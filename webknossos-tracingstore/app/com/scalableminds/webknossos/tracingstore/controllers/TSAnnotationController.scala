@@ -59,7 +59,7 @@ class TSAnnotationController @Inject() (
     with KeyValueStoreConversions {
 
   def save(annotationId: ObjectId, toTemporaryStore: Boolean = false): Action[AnnotationProto] =
-    Action.async(validateProto[AnnotationProto]) { implicit request =>
+    Action.fox(validateProto[AnnotationProto]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           for {
@@ -70,7 +70,7 @@ class TSAnnotationController @Inject() (
     }
 
   def update(annotationId: ObjectId): Action[List[UpdateActionGroup]] =
-    Action.async(validateJson[List[UpdateActionGroup]]) { implicit request =>
+    Action.fox(validateJson[List[UpdateActionGroup]]) { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccessFromTokenContext(
@@ -90,7 +90,7 @@ class TSAnnotationController @Inject() (
       newestVersion: Option[Long] = None,
       oldestVersion: Option[Long] = None,
       truncate: Option[Boolean] = None
-  ): Action[AnyContent] = Action.async { implicit request =>
+  ): Action[AnyContent] = Action.fox { implicit request =>
     log() {
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
         for {
@@ -106,7 +106,7 @@ class TSAnnotationController @Inject() (
     }
   }
 
-  def newestVersion(annotationId: ObjectId): Action[AnyContent] = Action.async { implicit request =>
+  def newestVersion(annotationId: ObjectId): Action[AnyContent] = Action.fox { implicit request =>
     log() {
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
         for {
@@ -117,7 +117,7 @@ class TSAnnotationController @Inject() (
   }
 
   def get(annotationId: ObjectId, version: Option[Long]): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
@@ -138,7 +138,7 @@ class TSAnnotationController @Inject() (
       isFromTask: Boolean,
       datasetBoundingBox: Option[String]
   ): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
@@ -160,7 +160,7 @@ class TSAnnotationController @Inject() (
     }
 
   def resetToBase(annotationId: ObjectId): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
@@ -178,7 +178,7 @@ class TSAnnotationController @Inject() (
     }
 
   def largestIdOrZero(annotationId: ObjectId, tracingId: String, domain: String): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
@@ -287,7 +287,7 @@ class TSAnnotationController @Inject() (
       newAnnotationId: ObjectId,
       requestingUserId: ObjectId
   ): Action[MergedFromIdsRequest] =
-    Action.async(validateJson[MergedFromIdsRequest]) { implicit request =>
+    Action.fox(validateJson[MergedFromIdsRequest]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           for {

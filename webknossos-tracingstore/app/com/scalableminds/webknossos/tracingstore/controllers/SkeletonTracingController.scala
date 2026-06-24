@@ -42,7 +42,7 @@ class SkeletonTracingController @Inject() (
   private def unpackMultiple(tracings: SkeletonTracings): Seq[Option[SkeletonTracing]] =
     tracings.tracings.map(_.tracing)
 
-  def save(newTracingId: String): Action[SkeletonTracing] = Action.async(validateProto[SkeletonTracing]) {
+  def save(newTracingId: String): Action[SkeletonTracing] = Action.fox(validateProto[SkeletonTracing]) {
     implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
@@ -56,18 +56,18 @@ class SkeletonTracingController @Inject() (
       }
   }
 
-  def saveMultiple(): Action[SkeletonTracingsWithIds] = Action.async(validateProto[SkeletonTracingsWithIds]) {
+  def saveMultiple(): Action[SkeletonTracingsWithIds] = Action.fox(validateProto[SkeletonTracingsWithIds]) {
     implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
             val zipped: List[(SkeletonTracingOpt, StringOpt)] = request.body.tracings.zip(request.body.tracingId).toList
             for {
-              resultBoxes: List[Box[Boolean]] <- Fox.sequence(zipped.map {
+              resultBoxes: List[Box[Boolean]] <- Fox.fromFuture(Fox.sequence(zipped.map {
                 case (SkeletonTracingOpt(Some(tracing), _), StringOpt(Some(tracingId), _)) =>
                   skeletonTracingService.saveSkeleton(tracingId, version = 0, tracing).map(_ => true)
                 case _ => Fox.empty
-              })
+              }))
             } yield Ok(Json.toJson(resultBoxes))
           }
         }
@@ -75,7 +75,7 @@ class SkeletonTracingController @Inject() (
   }
 
   def get(tracingId: String, annotationId: ObjectId, version: Option[Long]): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
           for {
@@ -86,7 +86,7 @@ class SkeletonTracingController @Inject() (
     }
 
   def getMultiple: Action[List[Option[TracingSelector]]] =
-    Action.async(validateJson[List[Option[TracingSelector]]]) { implicit request =>
+    Action.fox(validateJson[List[Option[TracingSelector]]]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           for {
@@ -97,7 +97,7 @@ class SkeletonTracingController @Inject() (
     }
 
   def mergedFromContents(newTracingId: String): Action[SkeletonTracings] =
-    Action.async(validateProto[SkeletonTracings]) { implicit request =>
+    Action.fox(validateProto[SkeletonTracings]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           val tracings: Seq[Option[SkeletonTracing]] = unpackMultiple(request.body)
@@ -122,7 +122,7 @@ class SkeletonTracingController @Inject() (
       editRotation: Option[String],
       boundingBox: Option[String]
   ): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {

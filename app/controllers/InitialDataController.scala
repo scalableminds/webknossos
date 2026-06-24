@@ -44,7 +44,7 @@ class InitialDataController @Inject() (initialDataService: InitialDataService, s
     ec: ExecutionContext
 ) extends Controller {
 
-  def triggerInsert: Action[AnyContent] = sil.UserAwareAction.async { _ =>
+  def triggerInsert: Action[AnyContent] = sil.UserAwareAction.fox { _ =>
     for {
       _ <- initialDataService.insert
     } yield Ok

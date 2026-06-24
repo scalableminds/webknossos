@@ -36,7 +36,7 @@ class AnnotationPrivateLinkController @Inject() (
       }
       writtenAnnotation <- annotationService.writesAsAnnotationSource(
         annotation,
-        accessViaPrivateLink = annotationByLinkBox.nonEmpty
+        accessViaPrivateLink = annotationByLinkBox.isDefined
       )
     } yield Ok(writtenAnnotation)
   }

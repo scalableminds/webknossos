@@ -35,7 +35,7 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 
 import java.nio.file.Path
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 class VolumeTracingZarrStreamingController @Inject() (
     tracingService: VolumeTracingService,

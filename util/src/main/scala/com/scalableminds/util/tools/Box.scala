@@ -1,18 +1,5 @@
 package com.scalableminds.util.tools
 
-trait BoxToIterableImplicit {
-
-  import scala.language.implicitConversions
-
-  /** This implicit transformation allows one to use a `Box` as an `Iterable` of zero or one elements.
-    *
-    * @return
-    *   A single-element `List` with the contents if the box is `Full` and `[[scala.collection.immutable.Nil Nil]]`
-    *   otherwise.
-    */
-  implicit def box2Iterable[T](in: Box[T]): Iterable[T] = in.toList
-}
-
 // Adapted from https://github.com/lift/framework/blob/main/core/common/src/main/scala/net/liftweb/common/Box.scala
 // (Removed some code not used by us, changed some naming, added Box.fromBool)
 
@@ -41,7 +28,7 @@ trait BoxToIterableImplicit {
   * It also provides implicit methods to transform `Option` to `Box`, `Box` to `[[scala.collection.Iterable Iterable]]`,
   * and `Box` to `Option`.
   */
-object Box extends Tryo with BoxToIterableImplicit {
+object Box extends Tryo {
 
   /** Helper class to provide an easy way for converting a `List[Box[T]]` into a `Box[List[T]]`.
     */
@@ -83,7 +70,7 @@ object Box extends Tryo with BoxToIterableImplicit {
           theListOfBoxes
         )
       } else {
-        Full(theListOfBoxes.flatten)
+        Full(theListOfBoxes.flatMap(_.toOption))
       }
   }
 
@@ -254,7 +241,7 @@ object Box extends Tryo with BoxToIterableImplicit {
   *    (loggedInUser === mockUser) must beTrue
   *     }}}
   */
-sealed abstract class Box[+A] extends Product with Serializable {
+sealed abstract class Box[+A] extends IterableOnce[A] with Product with Serializable {
   self =>
 
   /** Returns `true` if this `Box` contains no value (i.e., it is `Empty` or `Failure` or `ParamFailure`).

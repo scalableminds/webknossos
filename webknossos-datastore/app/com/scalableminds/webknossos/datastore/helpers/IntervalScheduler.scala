@@ -55,12 +55,13 @@ trait IntervalScheduler {
 
   private var scheduled: Option[Cancellable] = None
 
-  lifecycle.addStopHook((() => stop()))
+  lifecycle.addStopHook(() => stop())
 
   if (tickerEnabled) {
     if (tickerInterval < innerTickerInterval) {
       throw new IllegalArgumentException(
-        s"IntervalScheduler was initialized with interval $tickerInterval. Only intervals larger than the inner ticker interval $innerTickerInterval are supported.")
+        s"IntervalScheduler was initialized with interval $tickerInterval. Only intervals larger than the inner ticker interval $innerTickerInterval are supported."
+      )
     }
     scheduled = Some(actorSystem.scheduler.scheduleWithFixedDelay(tickerInitialDelay, innerTickerInterval)(innerTick))
   }

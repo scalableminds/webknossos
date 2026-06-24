@@ -17,7 +17,7 @@ import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
 import scala.concurrent.ExecutionContext
 
-class DSMeshController @Inject()(
+class DSMeshController @Inject() (
     accessTokenService: DataStoreAccessTokenService,
     meshFileService: MeshFileService,
     fullMeshService: DSFullMeshService,
@@ -41,16 +41,18 @@ class DSMeshController @Inject()(
       }
     }
 
-  def listMeshChunksForSegment(datasetId: ObjectId,
-                               dataLayerName: String,
-                               /* If targetMappingName is set, assume that meshFile contains meshes for
+  def listMeshChunksForSegment(
+      datasetId: ObjectId,
+      dataLayerName: String,
+      /* If targetMappingName is set, assume that meshFile contains meshes for
                                             the oversegmentation. Collect mesh chunks of all *unmapped* segment ids
                                             belonging to the supplied agglomerate id.
                                             If it is not set, use meshFile as is, assume passed id is present in meshFile
                                    Note: in case of an editable mapping, targetMappingName is its baseMapping name.
-                                */
-                               targetMappingName: Option[String],
-                               editableMappingTracingId: Option[String]): Action[ListMeshChunksRequest] =
+       */
+      targetMappingName: Option[String],
+      editableMappingTracingId: Option[String]
+  ): Action[ListMeshChunksRequest] =
     Action.async(validateJson[ListMeshChunksRequest]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
@@ -78,12 +80,14 @@ class DSMeshController @Inject()(
         for {
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
           meshFileKey <- meshFileService.lookUpMeshFileKey(dataSource.id, dataLayer, request.body.meshFileName)
-          (data, encoding) <- meshFileService.readMeshChunk(meshFileKey, request.body.requests) ?~> Msg.Mesh.File.loadChunkFailed
-        } yield {
+          (data, encoding) <- meshFileService.readMeshChunk(
+            meshFileKey,
+            request.body.requests
+          ) ?~> Msg.Mesh.File.loadChunkFailed
+        } yield
           if (encoding.contains("gzip")) {
             Ok(data).withHeaders("Content-Encoding" -> "gzip")
           } else Ok(data)
-        }
       }
     }
 
@@ -92,7 +96,12 @@ class DSMeshController @Inject()(
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
-          data: Array[Byte] <- fullMeshService.loadFor(datasetId, dataSource, dataLayer, request.body) ?~> Msg.Mesh.File.loadChunkFailed
+          data: Array[Byte] <- fullMeshService.loadFor(
+            datasetId,
+            dataSource,
+            dataLayer,
+            request.body
+          ) ?~> Msg.Mesh.File.loadChunkFailed
 
         } yield Ok(data)
       }

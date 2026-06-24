@@ -17,24 +17,26 @@ import com.scalableminds.util.tools.Box
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTracingService,
-                                               annotationService: TSAnnotationService,
-                                               volumeSegmentIndexService: VolumeSegmentIndexService,
-                                               editableMappingService: EditableMappingService)
-    extends ProtoGeometryImplicits
+class VolumeSegmentStatisticsService @Inject() (
+    volumeTracingService: VolumeTracingService,
+    annotationService: TSAnnotationService,
+    volumeSegmentIndexService: VolumeSegmentIndexService,
+    editableMappingService: EditableMappingService
+) extends ProtoGeometryImplicits
     with LazyLogging
     with SegmentStatistics {
 
   protected lazy val bucketScanner = new NativeBucketScanner()
 
   // Returns the segment volume (=number of voxels) in the target mag
-  def getSegmentVolume(annotationId: ObjectId,
-                       tracingId: String,
-                       segmentId: Long,
-                       mag: Vec3Int,
-                       mappingName: Option[String],
-                       additionalCoordinates: Option[Seq[AdditionalCoordinate]],
-                       annotationVersion: Option[Long],
+  def getSegmentVolume(
+      annotationId: ObjectId,
+      tracingId: String,
+      segmentId: Long,
+      mag: Vec3Int,
+      mappingName: Option[String],
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+      annotationVersion: Option[Long]
   )(using ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     calculateSegmentVolume(
       segmentId,
@@ -51,7 +53,8 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       mag: Vec3Int,
       mappingName: Option[String],
       additionalCoordinates: Option[Seq[AdditionalCoordinate]],
-      annotationVersion: Option[Long])(using ec: ExecutionContext, tc: TokenContext): Fox[BoundingBox] =
+      annotationVersion: Option[Long]
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[BoundingBox] =
     calculateSegmentBoundingBox(
       segmentId,
       mag,
@@ -63,9 +66,8 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
   private def getDataForBucketPositions(annotationId: ObjectId, annotationVersion: Option[Long], tracingId: String)(
       bucketPositions: Seq[Vec3Int],
       mag: Vec3Int,
-      additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
-      using tc: TokenContext,
-      ec: ExecutionContext): Fox[(Seq[Box[Array[Byte]]], ElementClass.Value)] =
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]]
+  )(using tc: TokenContext, ec: ExecutionContext): Fox[(Seq[Box[Array[Byte]]], ElementClass.Value)] =
     for {
       tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Msg.Annotation.notFound
       dataRequests = bucketPositions.map { position =>
@@ -79,15 +81,18 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
           additionalCoordinates = additionalCoordinates
         )
       }.toList
-      bucketDataBoxes <- if (tracing.getHasEditableMapping) {
-        val mappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
-        editableMappingService.volumeDataBucketBoxes(mappingLayer, dataRequests)
-      } else
-        volumeTracingService.dataBucketBoxes(annotationId,
-                                             tracingId,
-                                             tracing,
-                                             dataRequests,
-                                             includeFallbackDataIfAvailable = true)
+      bucketDataBoxes <-
+        if (tracing.getHasEditableMapping) {
+          val mappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
+          editableMappingService.volumeDataBucketBoxes(mappingLayer, dataRequests)
+        } else
+          volumeTracingService.dataBucketBoxes(
+            annotationId,
+            tracingId,
+            tracing,
+            dataRequests,
+            includeFallbackDataIfAvailable = true
+          )
     } yield (bucketDataBoxes, elementClassFromProto(tracing.elementClass))
 
   private def getBucketPositions(
@@ -95,7 +100,8 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       tracingId: String,
       mappingName: Option[String],
       additionalCoordinates: Option[Seq[AdditionalCoordinate]],
-      annotationVersion: Option[Long])(segmentId: Long, mag: Vec3Int)(using ec: ExecutionContext, tc: TokenContext) =
+      annotationVersion: Option[Long]
+  )(segmentId: Long, mag: Vec3Int)(using ec: ExecutionContext, tc: TokenContext) =
     for {
       tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Msg.Annotation.notFound
       fallbackLayer <- volumeTracingService.getFallbackLayer(annotationId, tracing)

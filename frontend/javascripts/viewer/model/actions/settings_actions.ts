@@ -33,6 +33,7 @@ export type FinishMappingInitializationAction = ReturnType<
 >;
 export type ClearMappingAction = ReturnType<typeof clearMappingAction>;
 export type SetMappingAction = ReturnType<typeof setMappingAction>;
+export type SetMappingDataAction = ReturnType<typeof setMappingDataAction>;
 export type SetMappingNameAction = ReturnType<typeof setMappingNameAction>;
 type SetHideUnmappedIdsAction = ReturnType<typeof setHideUnmappedIdsAction>;
 export type SetKeyboardShortcutsConfigAction = ReturnType<typeof setKeyboardShortcutsConfigAction>;
@@ -53,6 +54,7 @@ export type SettingAction =
   | FinishMappingInitializationAction
   | ClearMappingAction
   | SetMappingAction
+  | SetMappingDataAction
   | SetMappingNameAction
   | SetHideUnmappedIdsAction
   | SetHistogramDataForLayerAction
@@ -204,14 +206,19 @@ export const clearMappingAction = (layerName: string) =>
     layerName,
   }) as const;
 
+// Properties of a mapping that carry actual mapping data. Used by setMappingDataAction
+// and by the setCustomColors helper (which only reads mapping + mappingColors).
 export type OptionalMappingProperties = {
   mapping?: Mapping;
   mappingColors?: Array<number>;
   hideUnmappedIds?: boolean;
-  showLoadingIndicator?: boolean;
   isMergerModeMapping?: boolean;
 };
 
+// Phase 1 of activating a mapping by name: requests that the mapping becomes active, without
+// carrying its data (cf. mapping_saga.ts). The mapping saga loads the data and then dispatches
+// setMappingDataAction (phase 2). This is the only action that configures the active mapping's
+// name and type — setMappingDataAction merely updates the data of the mapping configured here.
 export const setMappingAction = (
   layerName: string,
   mappingName: string | null | undefined,
@@ -220,22 +227,56 @@ export const setMappingAction = (
   // for future rebases. Only set to true, if this info is really stored this was on the server.
   isVersionStoredOnServer: boolean,
   {
-    mapping,
-    mappingColors,
     hideUnmappedIds,
     showLoadingIndicator,
     isMergerModeMapping,
-  }: OptionalMappingProperties = {},
+    dataIsProvidedExternally,
+  }: {
+    hideUnmappedIds?: boolean;
+    showLoadingIndicator?: boolean;
+    isMergerModeMapping?: boolean;
+    // If true, the caller supplies the mapping data itself via a follow-up setMappingDataAction
+    // (e.g. the front-end API / merger mode), so the mapping saga must NOT try to load it from the
+    // server. This action then only configures name/type/status in the store.
+    dataIsProvidedExternally?: boolean;
+  } = {},
 ) =>
   ({
     type: "SET_MAPPING",
     layerName,
     mappingName,
     mappingType,
+    hideUnmappedIds,
+    showLoadingIndicator,
+    isMergerModeMapping,
+    dataIsProvidedExternally,
+    isVersionStoredOnServer,
+  }) as const;
+
+// Updates the DATA of the layer's already-configured active mapping.
+// The mapping dictionary is stored and the status is set to ACTIVATING;
+// finishMappingActivation in the mapping saga sets it to ENABLED once the
+// textures have been updated. See the two-case explanation in mapping_saga.ts.
+export const setMappingDataAction = (
+  layerName: string,
+  mapping: Mapping,
+  isVersionStoredOnServer: boolean, // same as in setMappingAction (see above).
+  {
+    mappingColors,
+    hideUnmappedIds,
+    isMergerModeMapping,
+  }: {
+    mappingColors?: Array<number>;
+    hideUnmappedIds?: boolean;
+    isMergerModeMapping?: boolean;
+  } = {},
+) =>
+  ({
+    type: "SET_MAPPING_DATA",
+    layerName,
     mapping,
     mappingColors,
     hideUnmappedIds,
-    showLoadingIndicator,
     isMergerModeMapping,
     isVersionStoredOnServer,
   }) as const;

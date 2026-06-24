@@ -16,27 +16,30 @@ class WKWBucketStreamSink(val layer: DataLayer, tracingHasFallbackLayer: Boolean
     with FoxImplicits
     with ByteUtils {
 
-  def apply(bucketStream: Iterator[(BucketPosition, Array[Byte])], mags: Seq[Vec3Int])(
-      implicit ec: ExecutionContext): Iterator[NamedStream] = {
+  def apply(bucketStream: Iterator[(BucketPosition, Array[Byte])], mags: Seq[Vec3Int])(implicit
+      ec: ExecutionContext
+  ): Iterator[NamedStream] = {
     val (dataType, numChannels) = ElementClass.toArrayDataTypeAndChannel(layer.elementClass)
     val header = WKWHeader(1, DataLayer.bucketLength, ChunkType.LZ4, dataType, numChannels)
-    bucketStream.flatMap {
-      case (bucket, data) =>
-        val skipBucket = if (tracingHasFallbackLayer) isRevertedElement(data) else isAllZero(data)
-        if (skipBucket) {
-          // If the tracing has no fallback segmentation, all-zero buckets can be omitted entirely
-          None
-        } else {
-          val filePath = wkwFilePath(bucket)
-          Some(
-            NamedFunctionStream(
-              filePath,
-              os => WKWFile.write(os, header, Array(data).iterator).toFox
-            ))
-        }
+    bucketStream.flatMap { case (bucket, data) =>
+      val skipBucket = if (tracingHasFallbackLayer) isRevertedElement(data) else isAllZero(data)
+      if (skipBucket) {
+        // If the tracing has no fallback segmentation, all-zero buckets can be omitted entirely
+        None
+      } else {
+        val filePath = wkwFilePath(bucket)
+        Some(
+          NamedFunctionStream(
+            filePath,
+            os => WKWFile.write(os, header, Array(data).iterator).toFox
+          )
+        )
+      }
     } ++ mags.map { mag =>
-      NamedFunctionStream(f"${mag.toMagLiteral(allowScalar = true)}/$FILENAME_HEADER_WKW",
-                          os => Fox.successful(header.writeTo(new DataOutputStream(os), isHeaderFile = true)))
+      NamedFunctionStream(
+        f"${mag.toMagLiteral(allowScalar = true)}/$FILENAME_HEADER_WKW",
+        os => Fox.successful(header.writeTo(new DataOutputStream(os), isHeaderFile = true))
+      )
     }
   }
 

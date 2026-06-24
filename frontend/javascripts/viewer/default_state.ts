@@ -320,6 +320,6 @@ const defaultState: WebknossosState = {
       unmappedSegmentId: null,
     },
   },
-  localSegmentationData: {},
+  localSegmentationStateByLayer: {},
 };
 export default defaultState;

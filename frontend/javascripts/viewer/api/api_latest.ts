@@ -122,6 +122,7 @@ import {
 } from "viewer/model/actions/segmentation_actions";
 import {
   setMappingAction,
+  setMappingDataAction,
   setMappingEnabledAction,
   updateDatasetSettingAction,
   updateLayerSettingAction,
@@ -1736,31 +1737,33 @@ class DataApi {
       throw new Error(messages["mapping.unsupported_layer"]);
     }
 
-    const {
-      colors: mappingColors,
-      hideUnmappedIds,
-      showLoadingIndicator,
-      isMergerModeMapping,
-    } = options;
+    const { colors: mappingColors, hideUnmappedIds, isMergerModeMapping } = options;
     if (mappingColors != null) {
       // Consider removing custom color support if this event is rarely used
       // (see `mappingColors` handling in mapping_saga.ts)
       sendAnalyticsEvent("setMapping called with custom colors");
     }
-    const mappingProperties = {
-      mapping:
-        mapping instanceof Map
-          ? (new Map(mapping as Map<unknown, unknown>) as Mapping)
-          : new Map(
-              Object.entries(mapping).map(([key, value]) => [Number.parseInt(key, 10), value]),
-            ),
-      mappingColors,
-      hideUnmappedIds,
-      showLoadingIndicator,
-      isMergerModeMapping,
-    };
+    const mappingObject =
+      mapping instanceof Map
+        ? (new Map(mapping as Map<unknown, unknown>) as Mapping)
+        : new Map(Object.entries(mapping).map(([key, value]) => [Number.parseInt(key, 10), value]));
+    // The mapping data is supplied directly here, so this is the two-phase activation from
+    // mapping_saga.ts: setMappingAction configures the (synthetic) mapping name/type, with
+    // dataIsProvidedExternally so the mapping saga does NOT try to load it from the server;
+    // setMappingDataAction then supplies the data the caller already holds.
     Store.dispatch(
-      setMappingAction(layerName, "<custom mapping>", "JSON", false, mappingProperties),
+      setMappingAction(layerName, "<custom mapping>", "JSON", false, {
+        hideUnmappedIds,
+        isMergerModeMapping,
+        dataIsProvidedExternally: true,
+      }),
+    );
+    Store.dispatch(
+      setMappingDataAction(layerName, mappingObject, false, {
+        mappingColors,
+        hideUnmappedIds,
+        isMergerModeMapping,
+      }),
     );
   }
 
@@ -2569,7 +2572,7 @@ class DataApi {
       return null;
     }
 
-    const { currentMeshFile } = Store.getState().localSegmentationData[effectiveLayer.name];
+    const { currentMeshFile } = Store.getState().localSegmentationStateByLayer[effectiveLayer.name];
     return currentMeshFile != null ? currentMeshFile.name : null;
   }
 
@@ -2601,13 +2604,13 @@ class DataApi {
     const state = Store.getState();
 
     if (
-      state.localSegmentationData[effectiveLayerName].availableMeshFiles == null ||
-      !state.localSegmentationData[effectiveLayerName].availableMeshFiles.find(
+      state.localSegmentationStateByLayer[effectiveLayerName].availableMeshFiles == null ||
+      !state.localSegmentationStateByLayer[effectiveLayerName].availableMeshFiles.find(
         (el) => el.name === meshFileName,
       )
     ) {
       throw new Error(
-        `The provided mesh file (${meshFileName}) is not available for this dataset. Available mesh files are: ${(state.localSegmentationData[effectiveLayerName].availableMeshFiles || []).join(", ")}`,
+        `The provided mesh file (${meshFileName}) is not available for this dataset. Available mesh files are: ${(state.localSegmentationStateByLayer[effectiveLayerName].availableMeshFiles || []).join(", ")}`,
       );
     }
 
@@ -2641,7 +2644,7 @@ class DataApi {
     }
 
     const { dataset } = state;
-    const currentMeshFile = state.localSegmentationData[effectiveLayerName].currentMeshFile;
+    const currentMeshFile = state.localSegmentationStateByLayer[effectiveLayerName].currentMeshFile;
 
     if (currentMeshFile == null) {
       throw new Error(
@@ -2716,13 +2719,14 @@ class DataApi {
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
 
     if (
-      state.localSegmentationData[effectiveLayerName]?.meshes?.[additionalCoordKey]?.[segmentId] !=
-      null
+      state.localSegmentationStateByLayer[effectiveLayerName]?.meshes?.[additionalCoordKey]?.[
+        segmentId
+      ] != null
     ) {
       Store.dispatch(updateMeshVisibilityAction(effectiveLayerName, segmentId, isVisible));
     } else {
       throw new Error(
-        `Mesh for segment ${segmentId} was not found in State.localSegmentationData.`,
+        `Mesh for segment ${segmentId} was not found in State.localSegmentationStateByLayer.`,
       );
     }
   }
@@ -2744,13 +2748,14 @@ class DataApi {
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
 
     if (
-      state.localSegmentationData[effectiveLayerName]?.meshes?.[additionalCoordKey]?.[segmentId] !=
-      null
+      state.localSegmentationStateByLayer[effectiveLayerName]?.meshes?.[additionalCoordKey]?.[
+        segmentId
+      ] != null
     ) {
       Store.dispatch(removeMeshAction(effectiveLayerName, segmentId));
     } else {
       throw new Error(
-        `Mesh for segment ${segmentId} was not found in State.localSegmentationData.`,
+        `Mesh for segment ${segmentId} was not found in State.localSegmentationStateByLayer.`,
       );
     }
   }
@@ -2771,8 +2776,9 @@ class DataApi {
     const additionalCoordinates = state.flycam.additionalCoordinates;
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
     const segmentIds = Object.keys(
-      Store.getState().localSegmentationData[effectiveLayerName]?.meshes?.[additionalCoordKey] ||
-        EMPTY_OBJECT,
+      Store.getState().localSegmentationStateByLayer[effectiveLayerName]?.meshes?.[
+        additionalCoordKey
+      ] || EMPTY_OBJECT,
     );
 
     for (const segmentId of segmentIds) {
@@ -2918,14 +2924,14 @@ class DataApi {
         throw new Error(`meshOpacity must be between 0 and 1, but got ${meshOpacity}`);
       }
       if (
-        state.localSegmentationData[effectiveLayerName]?.meshes?.[additionalCoordKey]?.[
+        state.localSegmentationStateByLayer[effectiveLayerName]?.meshes?.[additionalCoordKey]?.[
           segmentId
         ] != null
       ) {
         Store.dispatch(updateMeshOpacityAction(effectiveLayerName, segmentId, meshOpacity));
       } else {
         throw new Error(
-          `Mesh for segment ${segmentId} was not found in State.localSegmentationData.`,
+          `Mesh for segment ${segmentId} was not found in State.localSegmentationStateByLayer.`,
         );
       }
     }

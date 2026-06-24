@@ -44,10 +44,10 @@ object ObjectId extends FoxImplicits {
     id(8) = processRandomBytes(4)
 
     // 3 bytes (6 hex chars): incrementing counter with randomized start. Big endian
-    val c = atomicCounter.getAndIncrement() & 0xFFFFFF
-    id(9) = (c >> 16 & 0xFF).toByte
-    id(10) = (c >> 8 & 0xFF).toByte
-    id(11) = (c & 0xFF).toByte
+    val c = atomicCounter.getAndIncrement() & 0xffffff
+    id(9) = (c >> 16 & 0xff).toByte
+    id(10) = (c >> 8 & 0xff).toByte
+    id(11) = (c & 0xff).toByte
 
     ObjectId(hex2Str(id))
   }
@@ -92,7 +92,8 @@ object ObjectId extends FoxImplicits {
     new PathBindable[ObjectId] {
       override def bind(key: String, value: String): Either[String, ObjectId] =
         fromStringWithPrefixSync(value).toRight(
-          s"Cannot parse URI path parameter $key with value “$value” as ObjectId.")
+          s"Cannot parse URI path parameter $key with value “$value” as ObjectId."
+        )
 
       override def unbind(key: String, value: ObjectId): String = value.id
     }
@@ -114,8 +115,8 @@ object ObjectId extends FoxImplicits {
     while (inputIndex < len) {
       val b = bytes(inputIndex)
       val outputIndex = 2 * inputIndex
-      hex(outputIndex) = HEX_CHARS((b & 0xF0) >>> 4)
-      hex(outputIndex + 1) = HEX_CHARS(b & 0x0F)
+      hex(outputIndex) = HEX_CHARS((b & 0xf0) >>> 4)
+      hex(outputIndex + 1) = HEX_CHARS(b & 0x0f)
       inputIndex = inputIndex + 1
     }
     new String(hex)

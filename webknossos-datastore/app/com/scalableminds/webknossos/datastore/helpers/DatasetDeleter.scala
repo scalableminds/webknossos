@@ -11,11 +11,13 @@ import scala.concurrent.ExecutionContext
 trait DatasetDeleter extends LazyLogging with DirectoryConstants with FoxImplicits {
   def dataBaseDir: Path
 
-  def deleteOnDisk(datasetId: ObjectId,
-                   organizationId: String,
-                   datasetName: String,
-                   path: Option[Path] = None,
-                   reason: Option[String] = None)(implicit ec: ExecutionContext): Fox[Unit] = {
+  def deleteOnDisk(
+      datasetId: ObjectId,
+      organizationId: String,
+      datasetName: String,
+      path: Option[Path] = None,
+      reason: Option[String] = None
+  )(implicit ec: ExecutionContext): Fox[Unit] = {
 
     val dataSourcePath = path.getOrElse(dataBaseDir.resolve(organizationId).resolve(datasetName))
 
@@ -25,18 +27,21 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants with FoxImplici
       PathUtils.ensureDirectory(trashPath)
 
       logger.info(
-        s"Deleting dataset $datasetId by moving it from $dataSourcePath to $targetPath ${reason.map(r => s"because $r").getOrElse("...")}")
+        s"Deleting dataset $datasetId by moving it from $dataSourcePath to $targetPath ${reason.map(r => s"because $r").getOrElse("...")}"
+      )
       deleteWithRetry(dataSourcePath, targetPath)
     } else {
       logger.info(
-        s"Dataset deletion requested for dataset $datasetId at $dataSourcePath, but it does not exist. Skipping deletion on disk.")
+        s"Dataset deletion requested for dataset $datasetId at $dataSourcePath, but it does not exist. Skipping deletion on disk."
+      )
       Fox.successful(())
     }
   }
 
   @tailrec
-  private def deleteWithRetry(sourcePath: Path, targetPath: Path, retryCount: Int = 0)(
-      implicit ec: ExecutionContext): Fox[Unit] =
+  private def deleteWithRetry(sourcePath: Path, targetPath: Path, retryCount: Int = 0)(implicit
+      ec: ExecutionContext
+  ): Fox[Unit] =
     if (retryCount > 15) {
       Fox.failure(s"Deleting dataset failed: too many retries.")
     } else {
@@ -48,7 +53,7 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants with FoxImplici
         Fox.successful(())
       } catch {
         case _: java.nio.file.FileAlreadyExistsException => deleteWithRetry(sourcePath, targetPath, retryCount + 1)
-        case e: Exception                                => Fox.failure(s"Deleting dataset failed: ${e.toString}", Full(e))
+        case e: Exception => Fox.failure(s"Deleting dataset failed: ${e.toString}", Full(e))
       }
     }
 

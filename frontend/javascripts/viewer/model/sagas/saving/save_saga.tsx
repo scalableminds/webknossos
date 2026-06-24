@@ -57,7 +57,7 @@ import {
   setVersionNumberAction,
   startForwardingUpdateActionsAction,
 } from "viewer/model/actions/save_actions";
-import { setMappingAction } from "viewer/model/actions/settings_actions";
+import { setMappingAction, setMappingDataAction } from "viewer/model/actions/settings_actions";
 import { applySkeletonUpdateActionsFromServerAction } from "viewer/model/actions/skeletontracing_actions";
 import {
   applyVolumeUpdateActionsFromServerAction,
@@ -710,6 +710,7 @@ export function* tryToIncorporateActions(
           break;
         }
         case "updateLargestSegmentId":
+        case "updateVolumeBucketDataHasChanged":
         case "createSegment":
         case "mergeSegmentItems":
         case "deleteSegment":
@@ -932,16 +933,12 @@ export function* tryToIncorporateActions(
           splitMappingInfo;
 
         yield* put(
-          setMappingAction(
+          setMappingDataAction(
             tracingId,
-            activeMapping.mappingName,
-            activeMapping.mappingType,
+            splitMapping,
             true, // Might be optimistic. The mapping might not be in in the same state as on the server when reapplying local updates.
             // The finishedApplyingMissingUpdatesAction action takes care of storing the newest info in RebaseRelevantAnnotationState
             // after the backend updates are applied.
-            {
-              mapping: splitMapping || undefined,
-            },
           ),
         );
         const loadedMeshes = yield* select((state) => getAllLoadedMeshes(state, tracingId));

@@ -33,7 +33,8 @@ trait RedisTemporaryStore extends LazyLogging with FoxImplicits {
   private lazy val redisClient: LettuceClient = {
     val client = LettuceClient.create(redisUri)
     client.setOptions(
-      ClientOptions.builder()
+      ClientOptions
+        .builder()
         .socketOptions(SocketOptions.builder().connectTimeout(connectionTimeout).build())
         .timeoutOptions(TimeoutOptions.builder().fixedTimeout(commandTimeout).build())
         .build()
@@ -42,7 +43,8 @@ trait RedisTemporaryStore extends LazyLogging with FoxImplicits {
   }
 
   private lazy val connection: StatefulRedisConnection[String, String] = {
-    val conn = redisClient.connectAsync(StringCodec.UTF8, redisUri)
+    val conn = redisClient
+      .connectAsync(StringCodec.UTF8, redisUri)
       .toCompletableFuture
       .orTimeout(connectionTimeout.toSeconds, TimeUnit.SECONDS)
       .get()
@@ -96,12 +98,13 @@ trait RedisTemporaryStore extends LazyLogging with FoxImplicits {
     withCommands { cmd =>
       for {
         keysList <- Fox.fromFuture(cmd.keys(pattern).asScala.map(_.asScala.toSeq))
-        values <- if (keysList.isEmpty)
-                    Fox.successful(Seq.empty)
-                  else
-                    Fox.fromFuture(
-                      cmd.mget(keysList*).asScala.map(_.asScala.filter(_.hasValue).map(_.getValue).toSeq)
-                    )
+        values <-
+          if (keysList.isEmpty)
+            Fox.successful(Seq.empty)
+          else
+            Fox.fromFuture(
+              cmd.mget(keysList*).asScala.map(_.asScala.filter(_.hasValue).map(_.getValue).toSeq)
+            )
       } yield values
     }
 
@@ -131,11 +134,13 @@ trait RedisTemporaryStore extends LazyLogging with FoxImplicits {
 
   def checkHealth: Fox[Unit] =
     withCommands { cmd =>
-      Fox.fromFuture(
-        cmd.ping().toCompletableFuture.orTimeout(connectionTimeout.toSeconds, TimeUnit.SECONDS).asScala
-      ).flatMap { reply =>
-        if (reply == "PONG") Fox.successful(()) else Fox.failure(s"Unexpected Redis ping reply: $reply")
-      }
+      Fox
+        .fromFuture(
+          cmd.ping().toCompletableFuture.orTimeout(connectionTimeout.toSeconds, TimeUnit.SECONDS).asScala
+        )
+        .flatMap { reply =>
+          if (reply == "PONG") Fox.successful(()) else Fox.failure(s"Unexpected Redis ping reply: $reply")
+        }
     } ?-> "Redis health check failed."
 
   def insertIntoSet(id: String, value: String): Fox[Boolean] =

@@ -30,7 +30,7 @@ function ConnectomeSettings({ segmentationLayer }: Props) {
   const dataset = useWkSelector((state) => state.dataset);
   const connectomeData = useWkSelector((state) =>
     segmentationLayer != null
-      ? state.localSegmentationData[segmentationLayer.name].connectomeData
+      ? state.localSegmentationStateByLayer[segmentationLayer.name].connectomeData
       : null,
   );
   const particleSize = useWkSelector((state) => state.userConfiguration.particleSize);

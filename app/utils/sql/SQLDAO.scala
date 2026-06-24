@@ -39,7 +39,9 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject() (sqlClient: SqlClie
   def findOne(id: ObjectId)(using ctx: DBAccessContext): Fox[C] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $id AND $accessQuery".as[R](using resultConverter))
+      r <- run(
+        q"SELECT $columns FROM $existingCollectionName WHERE _id = $id AND $accessQuery".as[R](using resultConverter)
+      )
       parsed <- parseFirst(r, id)
     } yield parsed
 

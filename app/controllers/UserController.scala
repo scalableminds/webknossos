@@ -45,16 +45,18 @@ object UpdateLastTaskTypeIdParameters {
   implicit val jsonFormat: OFormat[UpdateLastTaskTypeIdParameters] = Json.format[UpdateLastTaskTypeIdParameters]
 }
 
-class UserController @Inject()(userService: UserService,
-                               userDAO: UserDAO,
-                               multiUserDAO: MultiUserDAO,
-                               credentialsProvider: CredentialsProvider,
-                               organizationService: OrganizationService,
-                               annotationDAO: AnnotationDAO,
-                               annotationService: AnnotationService,
-                               teamDAO: TeamDAO,
-                               conf: WkConf,
-                               sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+class UserController @Inject() (
+    userService: UserService,
+    userDAO: UserDAO,
+    multiUserDAO: MultiUserDAO,
+    credentialsProvider: CredentialsProvider,
+    organizationService: OrganizationService,
+    annotationDAO: AnnotationDAO,
+    annotationService: AnnotationService,
+    teamDAO: TeamDAO,
+    conf: WkConf,
+    sil: Silhouette[WkEnv]
+)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
 
@@ -77,10 +79,12 @@ class UserController @Inject()(userService: UserService,
     }
   }
 
-  def annotations(isFinished: Option[Boolean],
-                  limit: Option[Int],
-                  pageNumber: Option[Int] = None,
-                  includeTotalCount: Option[Boolean] = None): Action[AnyContent] =
+  def annotations(
+      isFinished: Option[Boolean],
+      limit: Option[Int],
+      pageNumber: Option[Int] = None,
+      includeTotalCount: Option[Boolean] = None
+  ): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         annotations <- annotationDAO.findAllListableExplorationals(
@@ -91,7 +95,8 @@ class UserController @Inject()(userService: UserService,
           pageNumber.getOrElse(0)
         )
         annotationCount: Option[Int] <- Fox.runIf(includeTotalCount.getOrElse(false))(
-          annotationDAO.countAllFor(request.identity._id, isFinished, AnnotationType.Explorational))
+          annotationDAO.countAllFor(request.identity._id, isFinished, AnnotationType.Explorational)
+        )
         jsonList = annotations.map(annotationService.writeCompactInfo)
         _ = userDAO.updateLastActivity(request.identity._id)(using GlobalAccessContext)
       } yield {
@@ -103,35 +108,41 @@ class UserController @Inject()(userService: UserService,
       }
     }
 
-  def tasks(isFinished: Option[Boolean],
-            limit: Option[Int],
-            pageNumber: Option[Int] = None,
-            includeTotalCount: Option[Boolean] = None): Action[AnyContent] = sil.SecuredAction.async {
-    implicit request =>
-      for {
-        annotations <- annotationDAO.findAllFor(request.identity._id,
-                                                isFinished,
-                                                AnnotationType.Task,
-                                                limit.getOrElse(annotationService.DefaultAnnotationListLimit),
-                                                pageNumber.getOrElse(0))
-        annotationCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
-          annotationDAO.countAllFor(request.identity._id, isFinished, AnnotationType.Task))
-        jsonList <- Fox.serialCombined(annotations)(a => annotationService.publicWrites(a, Some(request.identity)))
-        _ = userDAO.updateLastActivity(request.identity._id)(using GlobalAccessContext)
-      } yield {
-        val result = Ok(Json.toJson(jsonList))
-        annotationCount match {
-          case Some(count) => result.withHeaders("X-Total-Count" -> count.toString)
-          case None        => result
-        }
+  def tasks(
+      isFinished: Option[Boolean],
+      limit: Option[Int],
+      pageNumber: Option[Int] = None,
+      includeTotalCount: Option[Boolean] = None
+  ): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      annotations <- annotationDAO.findAllFor(
+        request.identity._id,
+        isFinished,
+        AnnotationType.Task,
+        limit.getOrElse(annotationService.DefaultAnnotationListLimit),
+        pageNumber.getOrElse(0)
+      )
+      annotationCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
+        annotationDAO.countAllFor(request.identity._id, isFinished, AnnotationType.Task)
+      )
+      jsonList <- Fox.serialCombined(annotations)(a => annotationService.publicWrites(a, Some(request.identity)))
+      _ = userDAO.updateLastActivity(request.identity._id)(using GlobalAccessContext)
+    } yield {
+      val result = Ok(Json.toJson(jsonList))
+      annotationCount match {
+        case Some(count) => result.withHeaders("X-Total-Count" -> count.toString)
+        case None        => result
       }
+    }
   }
 
-  def userAnnotations(userId: ObjectId,
-                      isFinished: Option[Boolean],
-                      limit: Option[Int],
-                      pageNumber: Option[Int] = None,
-                      includeTotalCount: Option[Boolean] = None): Action[AnyContent] =
+  def userAnnotations(
+      userId: ObjectId,
+      isFinished: Option[Boolean],
+      limit: Option[Int],
+      pageNumber: Option[Int] = None,
+      includeTotalCount: Option[Boolean] = None
+  ): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         user <- userDAO.findOne(userId) ?~> Msg.User.notFound(userId) ~> NOT_FOUND
@@ -144,7 +155,8 @@ class UserController @Inject()(userService: UserService,
           pageNumber.getOrElse(0)
         )
         annotationCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
-          annotationDAO.countAllFor(userId, isFinished, AnnotationType.Explorational))
+          annotationDAO.countAllFor(userId, isFinished, AnnotationType.Explorational)
+        )
         jsonList = annotations.map(annotationService.writeCompactInfo)
       } yield {
         val result = Ok(Json.toJson(jsonList))
@@ -155,22 +167,27 @@ class UserController @Inject()(userService: UserService,
       }
     }
 
-  def userTasks(userId: ObjectId,
-                isFinished: Option[Boolean],
-                limit: Option[Int],
-                pageNumber: Option[Int] = None,
-                includeTotalCount: Option[Boolean] = None): Action[AnyContent] =
+  def userTasks(
+      userId: ObjectId,
+      isFinished: Option[Boolean],
+      limit: Option[Int],
+      pageNumber: Option[Int] = None,
+      includeTotalCount: Option[Boolean] = None
+  ): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         user <- userDAO.findOne(userId) ?~> Msg.User.notFound(userId) ~> NOT_FOUND
         _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> Msg.notAllowed ~> FORBIDDEN
-        annotations <- annotationDAO.findAllFor(userId,
-                                                isFinished,
-                                                AnnotationType.Task,
-                                                limit.getOrElse(annotationService.DefaultAnnotationListLimit),
-                                                pageNumber.getOrElse(0))
+        annotations <- annotationDAO.findAllFor(
+          userId,
+          isFinished,
+          AnnotationType.Task,
+          limit.getOrElse(annotationService.DefaultAnnotationListLimit),
+          pageNumber.getOrElse(0)
+        )
         annotationCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
-          annotationDAO.countAllFor(userId, isFinished, AnnotationType.Task))
+          annotationDAO.countAllFor(userId, isFinished, AnnotationType.Task)
+        )
         jsonList <- Fox.serialCombined(annotations)(a => annotationService.publicWrites(a, Some(request.identity)))
       } yield {
         val result = Ok(Json.toJson(jsonList))
@@ -208,17 +225,20 @@ class UserController @Inject()(userService: UserService,
         Fox.successful(())
     })
 
-  private def checkTeamManagerOnlyUpdates(user: User,
-                                          experiences: Map[String, Int],
-                                          oldExperiences: Map[String, Int],
-                                          teams: List[TeamMembership],
-                                          oldTeams: List[TeamMembership])(issuingUser: User): Fox[Boolean] =
+  private def checkTeamManagerOnlyUpdates(
+      user: User,
+      experiences: Map[String, Int],
+      oldExperiences: Map[String, Int],
+      teams: List[TeamMembership],
+      oldTeams: List[TeamMembership]
+  )(issuingUser: User): Fox[Boolean] =
     if (experiences == oldExperiences && teams == oldTeams)
       Fox.successful(true)
     else userService.isEditableBy(user, issuingUser)
 
   private def checkPasswordIfEmailChanged(user: User, passwordOpt: Option[String], oldEmail: String, email: String)(
-      issuingUser: User): Fox[Unit] =
+      issuingUser: User
+  ): Fox[Unit] =
     if (oldEmail == email) {
       Fox.successful(())
     } else if (user._id == issuingUser._id) {
@@ -234,18 +254,17 @@ class UserController @Inject()(userService: UserService,
                   case None    => Failure(Msg.User.noUserWithThisEmail)
                 }
               }
-              .recover {
-                case _: ProviderException =>
-                  Failure(Msg.User.invalidCredentials)
-              })
+              .recover { case _: ProviderException =>
+                Failure(Msg.User.invalidCredentials)
+              }
+          )
         case None => Fox.failure(Msg.User.invalidCredentials)
       }
     } else {
       Fox.failure(Msg.notAllowed)
     }
 
-  private def checkEmailDoesNotExistIfChanged(email: String, oldEmail: String)(
-      using ctx: DBAccessContext): Fox[Unit] =
+  private def checkEmailDoesNotExistIfChanged(email: String, oldEmail: String)(using ctx: DBAccessContext): Fox[Unit] =
     if (oldEmail == email) {
       Fox.successful(())
     } else {
@@ -256,7 +275,8 @@ class UserController @Inject()(userService: UserService,
     }
 
   private def checkAdminOnlyUpdates(user: User, isActive: Boolean, isAdmin: Boolean, isDatasetManager: Boolean)(
-      issuingUser: User): Boolean =
+      issuingUser: User
+  ): Boolean =
     if (isActive && user.isAdmin == isAdmin && isDatasetManager == user.isDatasetManager)
       true
     else issuingUser.isAdminOf(user)
@@ -266,16 +286,18 @@ class UserController @Inject()(userService: UserService,
 
   private def checkNoActivateBeyondLimit(user: User, isActive: Boolean): Fox[Unit] =
     for {
-      _ <- Fox.runIf(user.isDeactivated && isActive)(organizationService
-        .assertUsersCanBeAdded(user._organization)(using GlobalAccessContext, ec)) ?~> Msg.Organization.usersUserLimitReached
+      _ <- Fox.runIf(user.isDeactivated && isActive)(
+        organizationService.assertUsersCanBeAdded(user._organization)(using GlobalAccessContext, ec)
+      ) ?~> Msg.Organization.usersUserLimitReached
     } yield ()
 
   private def checkNoDeactivateWithRemainingTask(user: User, isActive: Boolean): Fox[Unit] =
     if (!isActive && !user.isDeactivated) {
       for {
         activeTasks: List[ObjectId] <- annotationDAO.findActiveTaskIdsForUser(user._id)
-        _ <- Fox.fromBool(activeTasks.isEmpty) ?~> s"Cannot deactivate user with active tasks. Task ids are: ${activeTasks
-          .mkString(";")}"
+        _ <- Fox.fromBool(
+          activeTasks.isEmpty
+        ) ?~> s"Cannot deactivate user with active tasks. Task ids are: ${activeTasks.mkString(";")}"
       } yield ()
     } else Fox.successful(())
 
@@ -314,56 +336,73 @@ class UserController @Inject()(userService: UserService,
         experiences = request.body.experiences.getOrElse(oldExperience)
         lastTaskTypeId = request.body.lastTaskTypeId.orElse(user.lastTaskTypeId)
         _ <- Fox.runIf(user._id != request.identity._id)(
-          Fox.assertTrue(userService.isEditableBy(user, request.identity))) ?~> Msg.notAllowed ~> FORBIDDEN
+          Fox.assertTrue(userService.isEditableBy(user, request.identity))
+        ) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- checkTeamManagerOnlyUpdates(user, experiences, oldExperience, teamMemberships, oldTeamMemberships)(
-          request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
-        _ <- Fox.fromBool(checkAdminOnlyUpdates(user, isActive, isAdmin, isDatasetManager)(request.identity)) ?~> Msg.notAllowed ~> FORBIDDEN
+          request.identity
+        ) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- Fox.fromBool(
+          checkAdminOnlyUpdates(user, isActive, isAdmin, isDatasetManager)(request.identity)
+        ) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- checkPasswordIfEmailChanged(user, request.body.password, oldEmail, email)(request.identity)
         _ <- checkEmailDoesNotExistIfChanged(email, oldEmail)
-        _ <- Fox.fromBool(checkNoSelfDeactivate(user, isActive)(request.identity)) ?~> Msg.User.noSelfDeactivate ~> FORBIDDEN
+        _ <- Fox.fromBool(
+          checkNoSelfDeactivate(user, isActive)(request.identity)
+        ) ?~> Msg.User.noSelfDeactivate ~> FORBIDDEN
         _ <- checkNoDeactivateWithRemainingTask(user, isActive)
         _ <- checkNoActivateBeyondLimit(user, isActive)
         _ <- preventZeroAdmins(user, isAdmin)
         _ <- preventZeroOwners(user, isActive)
-        _ <- checkNameUpdatePermissions(user,
-                                        request.identity,
-                                        multiUser.firstName,
-                                        multiUser.lastName,
-                                        firstName,
-                                        lastName)
-        teams <- Fox.combined(teamMemberships.map(t =>
-          teamDAO.findOne(t.teamId)(using GlobalAccessContext) ?~> Msg.Team.notFound(t.teamId) ~> NOT_FOUND))
+        _ <- checkNameUpdatePermissions(
+          user,
+          request.identity,
+          multiUser.firstName,
+          multiUser.lastName,
+          firstName,
+          lastName
+        )
+        teams <- Fox.combined(
+          teamMemberships.map(t =>
+            teamDAO.findOne(t.teamId)(using GlobalAccessContext) ?~> Msg.Team.notFound(t.teamId) ~> NOT_FOUND
+          )
+        )
         oldTeamMemberships <- userService.teamMembershipsFor(user._id)
         teamsWithoutUpdate <- Fox.filterNot(oldTeamMemberships)(t =>
-          userService.isTeamManagerOrAdminOf(request.identity, t.teamId))
+          userService.isTeamManagerOrAdminOf(request.identity, t.teamId)
+        )
         assignedMembershipWTeams = teamMemberships.zip(teams)
         teamsWithUpdate <- Fox.filter(assignedMembershipWTeams)(t =>
-          userService.isTeamManagerOrAdminOf(request.identity, t._1.teamId))
+          userService.isTeamManagerOrAdminOf(request.identity, t._1.teamId)
+        )
         _ <- ensureProperTeamAdministration(user, multiUser.fullName, teamsWithUpdate)
         trimmedExperiences = experiences.map { case (key, value) => key.trim -> value }
         updatedTeams = teamsWithUpdate.map(_._1) ++ teamsWithoutUpdate
-        _ <- userService.update(user,
-                                multiUser,
-                                firstName.trim,
-                                lastName.trim,
-                                email,
-                                isActive,
-                                isAdmin,
-                                isDatasetManager,
-                                updatedTeams,
-                                trimmedExperiences,
-                                lastTaskTypeId)
+        _ <- userService.update(
+          user,
+          multiUser,
+          firstName.trim,
+          lastName.trim,
+          email,
+          isActive,
+          isAdmin,
+          isDatasetManager,
+          updatedTeams,
+          trimmedExperiences,
+          lastTaskTypeId
+        )
         updatedUser <- userDAO.findOne(userId)
         updatedJs <- userService.publicWrites(updatedUser, request.identity)
       } yield Ok(updatedJs)
     }
 
-  private def checkNameUpdatePermissions(originalUser: User,
-                                         issuingUser: User,
-                                         firstNameBefore: String,
-                                         lastNameBefore: String,
-                                         firstName: String,
-                                         lastName: String): Fox[Unit] =
+  private def checkNameUpdatePermissions(
+      originalUser: User,
+      issuingUser: User,
+      firstNameBefore: String,
+      lastNameBefore: String,
+      firstName: String,
+      lastName: String
+  ): Fox[Unit] =
     if (firstName.trim == firstNameBefore && lastName.trim == lastNameBefore)
       Fox.successful(())
     else {

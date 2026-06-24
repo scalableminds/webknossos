@@ -36,18 +36,20 @@ object RpcTokenHolder {
   lazy val webknossosToken: String = RandomIDGenerator.generateBlocking()
 }
 
-class UserTokenController @Inject()(datasetDAO: DatasetDAO,
-                                    datasetService: DatasetService,
-                                    annotationPrivateLinkDAO: AnnotationPrivateLinkDAO,
-                                    userService: UserService,
-                                    annotationInformationProvider: AnnotationInformationProvider,
-                                    annotationStore: AnnotationStore,
-                                    dataStoreService: DataStoreService,
-                                    tracingStoreService: TracingStoreService,
-                                    jobDAO: JobDAO,
-                                    wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-                                    conf: WkConf,
-                                    sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+class UserTokenController @Inject() (
+    datasetDAO: DatasetDAO,
+    datasetService: DatasetService,
+    annotationPrivateLinkDAO: AnnotationPrivateLinkDAO,
+    userService: UserService,
+    annotationInformationProvider: AnnotationInformationProvider,
+    annotationStore: AnnotationStore,
+    dataStoreService: DataStoreService,
+    tracingStoreService: TracingStoreService,
+    jobDAO: JobDAO,
+    wkSilhouetteEnvironment: WkSilhouetteEnvironment,
+    conf: WkConf,
+    sil: Silhouette[WkEnv]
+)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
   private val bearerTokenService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
@@ -83,8 +85,9 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
        - a user token (allow what that user may do)
        - a dataset sharing token (allow seeing dataset / annotations that token belongs to)
    */
-  private def validateUserAccess(accessRequest: UserAccessRequest, token: Option[String])(
-      implicit ec: ExecutionContext): Fox[Result] =
+  private def validateUserAccess(accessRequest: UserAccessRequest, token: Option[String])(implicit
+      ec: ExecutionContext
+  ): Fox[Result] =
     if (token.contains(RpcTokenHolder.webknossosToken)) {
       Fox.successful(Ok(Json.toJson(UserAccessAnswer(granted = true))))
     } else {
@@ -106,19 +109,19 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
       } yield Ok(Json.toJson(answer))
     }
 
-  private def handleDataSetAccess(idOpt: Option[String], mode: AccessMode.Value, userBox: Box[User])(
-      using ctx: DBAccessContext): Fox[UserAccessAnswer] = {
+  private def handleDataSetAccess(idOpt: Option[String], mode: AccessMode.Value, userBox: Box[User])(using
+      ctx: DBAccessContext
+  ): Fox[UserAccessAnswer] = {
 
     def tryRead: Fox[UserAccessAnswer] =
       for {
         idStr <- idOpt.toFox
         datasetId <- ObjectId.fromString(idStr)
         datasetBox <- datasetDAO.findOne(datasetId).shiftBox
-      } yield
-        datasetBox match {
-          case Full(_) => UserAccessAnswer(granted = true)
-          case _       => UserAccessAnswer(granted = false, Some("No read access on dataset"))
-        }
+      } yield datasetBox match {
+        case Full(_) => UserAccessAnswer(granted = true)
+        case _       => UserAccessAnswer(granted = false, Some("No read access on dataset"))
+      }
 
     def tryWrite: Fox[UserAccessAnswer] =
       for {
@@ -163,23 +166,29 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
     }
   }
 
-  private def handleTracingAccess(tracingIdOpt: Option[String],
-                                  mode: AccessMode,
-                                  userBox: Box[User],
-                                  token: Option[String]): Fox[UserAccessAnswer] =
+  private def handleTracingAccess(
+      tracingIdOpt: Option[String],
+      mode: AccessMode,
+      userBox: Box[User],
+      token: Option[String]
+  ): Fox[UserAccessAnswer] =
     if (tracingIdOpt.contains(TracingId.dummy))
       Fox.successful(UserAccessAnswer(granted = true))
     else
       for {
         tracingId <- tracingIdOpt.toFox
-        annotation <- annotationInformationProvider.annotationForTracing(tracingId)(using GlobalAccessContext) ?~> Msg.Annotation.notFound
+        annotation <- annotationInformationProvider.annotationForTracing(tracingId)(using
+          GlobalAccessContext
+        ) ?~> Msg.Annotation.notFound
         result <- handleAnnotationAccess(Some(annotation._id.toString), mode, userBox, token)
       } yield result
 
-  private def handleAnnotationAccess(annotationIdOpt: Option[String],
-                                     mode: AccessMode,
-                                     userBox: Box[User],
-                                     token: Option[String]): Fox[UserAccessAnswer] = {
+  private def handleAnnotationAccess(
+      annotationIdOpt: Option[String],
+      mode: AccessMode,
+      userBox: Box[User],
+      token: Option[String]
+  ): Fox[UserAccessAnswer] = {
     // Access is explicitly checked by userBox, not by DBAccessContext, as there is no token sharing for annotations
     // Optionally, an accessToken can be provided which explicitly looks up the read right the private link table
 
@@ -208,20 +217,22 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
           .getOrElse(Fox.empty)
           .shiftBox
         allowedByToken = annotationAccessByToken.exists(annotation._id == _._annotation)
-        restrictions <- annotationInformationProvider.restrictionsFor(AnnotationIdentifier(annotation.typ,
-                                                                                           annotation._id))(using GlobalAccessContext) ?~> Msg.Annotation.Restrictions.notFound
+        restrictions <- annotationInformationProvider.restrictionsFor(
+          AnnotationIdentifier(annotation.typ, annotation._id)
+        )(using GlobalAccessContext) ?~> Msg.Annotation.Restrictions.notFound
         allowedByUser <- checkRestrictions(restrictions) ?~> Msg.Annotation.Restrictions.failedToCheck
         allowed = allowedByToken || allowedByUser
-      } yield {
+      } yield
         if (allowed) UserAccessAnswer(granted = true)
         else UserAccessAnswer(granted = false, Some(s"No ${mode.toString} access to tracing"))
-      }
     }
   }
 
-  private def handleJobExportAccess(jobIdOpt: Option[String],
-                                    mode: AccessMode,
-                                    userBox: Box[User]): Fox[UserAccessAnswer] =
+  private def handleJobExportAccess(
+      jobIdOpt: Option[String],
+      mode: AccessMode,
+      userBox: Box[User]
+  ): Fox[UserAccessAnswer] =
     if (mode != AccessMode.read)
       Fox.successful(UserAccessAnswer(granted = false, Some(s"Unsupported access mode for job exports: $mode")))
     else {

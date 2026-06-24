@@ -116,9 +116,9 @@ object AssetCompilation {
       val schemaOutDir = sourceManagedValue / "schema"
       val slickTablesOutPath = schemaOutDir / "com" / "scalableminds" / "webknossos" / "schema" / "Tables.scala"
 
-      // The generator reads the live DB; schema.sql mtime is our proxy for "schema changed". This only
-      // gates whether we connect to the DB at all, the generator itself rewrites only the table files
-      // whose content actually changed, so re-running it when nothing changed costs no recompiles.
+      // The generator reads the live DB; We check a stamp file written bei dbtool.js to decide whether to re-generate.
+      // This only gates whether we connect to the DB at all, the generator itself rewrites only the table files
+      // whose content actually changed.
       val shouldUpdate = !slickTablesOutPath.exists || !codeGenStampFile.exists || codeGenStampFile.lastModified < schemaRefreshedStampFile.lastModified
 
       if (shouldUpdate) {

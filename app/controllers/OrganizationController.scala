@@ -32,7 +32,7 @@ object OrganizationParameters {
   implicit val jsonFormat: OFormat[OrganizationParameters] = Json.format[OrganizationParameters]
 }
 
-class OrganizationController @Inject()(
+class OrganizationController @Inject() (
     organizationDAO: OrganizationDAO,
     organizationService: OrganizationService,
     inviteDAO: InviteDAO,
@@ -44,7 +44,8 @@ class OrganizationController @Inject()(
     defaultMails: DefaultMails,
     freeCreditTransactionService: FreeCreditTransactionService,
     actorSystem: ActorSystem,
-    sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
+    sil: Silhouette[WkEnv]
+)(implicit ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
 
@@ -54,9 +55,7 @@ class OrganizationController @Inject()(
   def organizationsIsEmpty: Action[AnyContent] = Action.async { _ =>
     for {
       orgaTableIsEmpty <- organizationDAO.isEmpty ?~> Msg.Organization.listFailed
-    } yield {
-      Ok(Json.toJson(orgaTableIsEmpty))
-    }
+    } yield Ok(Json.toJson(orgaTableIsEmpty))
   }
 
   def get(organizationId: String): Action[AnyContent] =
@@ -64,16 +63,15 @@ class OrganizationController @Inject()(
       for {
         org <- organizationDAO.findOne(organizationId)(using GlobalAccessContext)
         js <- organizationService.publicWrites(org, request.identity)
-      } yield {
-        Ok(Json.toJson(js))
-      }
+      } yield Ok(Json.toJson(js))
     }
 
   def list(compact: Option[Boolean]): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       organizations <- organizationDAO.findAll ?~> Msg.Organization.listFailed
-      js <- if (compact.getOrElse(false)) Fox.successful(organizations.map(organizationService.compactWrites))
-      else Fox.serialCombined(organizations)(o => organizationService.publicWrites(o))
+      js <-
+        if (compact.getOrElse(false)) Fox.successful(organizations.map(organizationService.compactWrites))
+        else Fox.serialCombined(organizations)(o => organizationService.publicWrites(o))
     } yield Ok(Json.toJson(js))
   }
 
@@ -89,13 +87,15 @@ class OrganizationController @Inject()(
         org <- organizationService.createOrganization(request.body.organization, request.body.organizationName)
         user <- userDAO.findFirstByMultiUser(owner._id)
         teamMemberships <- userService.initialTeamMemberships(org._id, inviteIdOpt = None)
-        _ <- userService.joinOrganization(user,
-                                          org._id,
-                                          autoActivate = true,
-                                          isAdmin = true,
-                                          isDatasetManager = false,
-                                          isOrganizationOwner = true,
-                                          teamMemberships = teamMemberships)
+        _ <- userService.joinOrganization(
+          user,
+          org._id,
+          autoActivate = true,
+          isAdmin = true,
+          isDatasetManager = false,
+          isOrganizationOwner = true,
+          teamMemberships = teamMemberships
+        )
         _ <- freeCreditTransactionService.handOutMonthlyFreeCredits()
       } yield Ok(org._id)
     }
@@ -105,12 +105,11 @@ class OrganizationController @Inject()(
       allOrgs <- organizationDAO.findAll(using GlobalAccessContext) ?~> Msg.Organization.listFailed
       org <- allOrgs.headOption.toFox ?~> Msg.Organization.listFailed
       js <- organizationService.publicWrites(org, request.identity)
-    } yield {
+    } yield
       if (allOrgs.length > 1) // Cannot list organizations publicly if there are multiple ones, due to privacy reasons
         Ok(JsNull)
       else
         Ok(Json.toJson(js))
-    }
   }
 
   def getByInvite(inviteToken: String): Action[AnyContent] = Action.async { _ =>
@@ -134,7 +133,9 @@ class OrganizationController @Inject()(
           "version" -> conf.WebKnossos.TermsOfService.version,
           "enabled" -> conf.WebKnossos.TermsOfService.enabled,
           "url" -> conf.WebKnossos.TermsOfService.url
-        )))
+        )
+      )
+    )
   }
 
   def termsOfServiceAcceptanceNeeded: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
@@ -143,13 +144,13 @@ class OrganizationController @Inject()(
       needsAcceptance = conf.WebKnossos.TermsOfService.enabled &&
         organization.lastTermsOfServiceAcceptanceVersion < conf.WebKnossos.TermsOfService.version
       acceptanceDeadline = conf.WebKnossos.TermsOfService.acceptanceDeadline
-    } yield
-      Ok(
-        Json.obj(
-          "acceptanceNeeded" -> needsAcceptance,
-          "acceptanceDeadline" -> acceptanceDeadline,
-          "acceptanceDeadlinePassed" -> acceptanceDeadline.isPast
-        ))
+    } yield Ok(
+      Json.obj(
+        "acceptanceNeeded" -> needsAcceptance,
+        "acceptanceDeadline" -> acceptanceDeadline,
+        "acceptanceDeadlinePassed" -> acceptanceDeadline.isPast
+      )
+    )
   }
 
   def acceptTermsOfService(version: Int): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
@@ -162,7 +163,9 @@ class OrganizationController @Inject()(
   def update(organizationId: String): Action[OrganizationParameters] =
     sil.SecuredAction.async(validateJson[OrganizationParameters]) { implicit request =>
       for {
-        organization <- organizationDAO.findOne(organizationId) ?~> Msg.Organization.notFound(organizationId) ~> NOT_FOUND
+        organization <- organizationDAO.findOne(organizationId) ?~> Msg.Organization.notFound(
+          organizationId
+        ) ~> NOT_FOUND
         _ <- Fox.fromBool(request.identity.isAdminOf(organization._id)) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- organizationDAO.updateFields(organization._id, request.body.name, request.body.newUserMailingList)
         updated <- organizationDAO.findOne(organization._id)
@@ -187,15 +190,19 @@ class OrganizationController @Inject()(
       for {
         _ <- userService.assertIsSuperUser(request.identity._multiUser) ?~> Msg.notAllowed ~> FORBIDDEN
         multiUser <- multiUserDAO.findOneByEmail(request.body)
-        organization <- organizationDAO.findOne(organizationId) ?~> Msg.Organization.notFound(organizationId) ~> NOT_FOUND
+        organization <- organizationDAO.findOne(organizationId) ?~> Msg.Organization.notFound(
+          organizationId
+        ) ~> NOT_FOUND
         user <- userDAO.findFirstByMultiUser(multiUser._id)
         teamMemberships <- userService.initialTeamMemberships(organization._id, inviteIdOpt = None)
-        user <- userService.joinOrganization(user,
-                                             organization._id,
-                                             autoActivate = true,
-                                             isAdmin = false,
-                                             isDatasetManager = false,
-                                             teamMemberships = teamMemberships)
+        user <- userService.joinOrganization(
+          user,
+          organization._id,
+          autoActivate = true,
+          isAdmin = false,
+          isDatasetManager = false,
+          teamMemberships = teamMemberships
+        )
       } yield Ok(user._id.toString)
     }
 
@@ -203,7 +210,8 @@ class OrganizationController @Inject()(
     for {
       _ <- Fox.fromBool(request.identity.isAdmin) ?~> Msg.Organization.pricingUpdatesOnlyAdmin
       organization <- organizationDAO.findOne(request.identity._organization) ?~> Msg.Organization.notFound(
-        request.identity._organization) ~> NOT_FOUND
+        request.identity._organization
+      ) ~> NOT_FOUND
       multiUser <- multiUserDAO.findOne(request.identity._multiUser)
       _ = Mailer ! Send(defaultMails.extendPricingPlanMail(multiUser, organization.name))
     } yield Ok
@@ -214,14 +222,16 @@ class OrganizationController @Inject()(
       for {
         _ <- Fox.fromBool(request.identity.isAdmin) ?~> Msg.Organization.pricingUpdatesOnlyAdmin
         organization <- organizationDAO.findOne(request.identity._organization) ?~> Msg.Organization.notFound(
-          request.identity._organization) ~> NOT_FOUND
+          request.identity._organization
+        ) ~> NOT_FOUND
         multiUser <- multiUserDAO.findOne(request.identity._multiUser)
         requestedPlan <- PricingPlan.fromString(requestedPlan).toFox
-        mail = if (requestedPlan == PricingPlan.Team) {
-          defaultMails.upgradePricingPlanToTeamMail
-        } else {
-          defaultMails.upgradePricingPlanToPowerMail
-        }
+        mail =
+          if (requestedPlan == PricingPlan.Team) {
+            defaultMails.upgradePricingPlanToTeamMail
+          } else {
+            defaultMails.upgradePricingPlanToPowerMail
+          }
         _ = Mailer ! Send(mail(multiUser, organization.name))
       } yield Ok
   }
@@ -231,7 +241,8 @@ class OrganizationController @Inject()(
       for {
         _ <- Fox.fromBool(request.identity.isAdmin) ?~> Msg.Organization.pricingUpdatesOnlyAdmin
         organization <- organizationDAO.findOne(request.identity._organization) ?~> Msg.Organization.notFound(
-          request.identity._organization) ~> NOT_FOUND
+          request.identity._organization
+        ) ~> NOT_FOUND
         multiUser <- multiUserDAO.findOne(request.identity._multiUser)
         _ = Mailer ! Send(defaultMails.upgradePricingPlanUsersMail(multiUser, requestedUsers, organization.name))
       } yield Ok
@@ -242,7 +253,8 @@ class OrganizationController @Inject()(
       for {
         _ <- Fox.fromBool(request.identity.isAdmin) ?~> Msg.Organization.pricingUpdatesOnlyAdmin
         organization <- organizationDAO.findOne(request.identity._organization) ?~> Msg.Organization.notFound(
-          request.identity._organization) ~> NOT_FOUND
+          request.identity._organization
+        ) ~> NOT_FOUND
         multiUser <- multiUserDAO.findOne(request.identity._multiUser)
         _ = Mailer ! Send(defaultMails.upgradePricingPlanStorageMail(multiUser, requestedStorage, organization.name))
       } yield Ok
@@ -260,7 +272,8 @@ class OrganizationController @Inject()(
       for {
         _ <- Fox.fromBool(request.identity.isAdmin) ?~> Msg.Organization.pricingUpdatesOnlyAdmin
         organization <- organizationDAO.findOne(request.identity._organization) ?~> Msg.Organization.notFound(
-          request.identity._organization) ~> NOT_FOUND
+          request.identity._organization
+        ) ~> NOT_FOUND
         multiUser <- multiUserDAO.findOne(request.identity._multiUser)
         aiPlanLabel = aiAddonLabelForPricingPlan(organization.pricingPlan)
         pricingPlanLabel = organization.pricingPlan.toString
@@ -274,14 +287,17 @@ class OrganizationController @Inject()(
         _ <- Fox.fromBool(requestedCredits > 0) ?~> Msg.Organization.creditOrdersNotPositive
         _ <- Fox.fromBool(request.identity.isOrganizationOwner) ?~> Msg.Organization.creditOrdersOnlyOwner
         organization <- organizationDAO.findOne(request.identity._organization) ?~> Msg.Organization.notFound(
-          request.identity._organization) ~> NOT_FOUND
+          request.identity._organization
+        ) ~> NOT_FOUND
         multiUser <- multiUserDAO.findOne(request.identity._multiUser)
         _ = logger.info(
-          s"Received credit order for organization ${organization.name} with $requestedCredits credits by user ${request.identity._id}")
+          s"Received credit order for organization ${organization.name} with $requestedCredits credits by user ${request.identity._id}"
+        )
         _ = Mailer ! Send(defaultMails.orderCreditsMail(multiUser, requestedCredits))
         _ = Mailer ! Send(
           defaultMails
-            .orderCreditsRequestMail(multiUser, organization.name, s"Purchase $requestedCredits WEBKNOSSOS credits."))
+            .orderCreditsRequestMail(multiUser, organization.name, s"Purchase $requestedCredits WEBKNOSSOS credits.")
+        )
       } yield Ok
     }
 
@@ -291,18 +307,19 @@ class OrganizationController @Inject()(
         organization <- organizationDAO.findOne(request.identity._organization)
         activeUserCount <- userDAO.countAllForOrganization(request.identity._organization)
         // Note that this does not yet account for storage
-        isExceeded = organization.includedUsers.exists(userLimit => activeUserCount > userLimit) || organization.paidUntil
-          .exists(_.isPast)
+        isExceeded = organization.includedUsers.exists(userLimit =>
+          activeUserCount > userLimit
+        ) || organization.paidUntil.exists(_.isPast)
         isAlmostExceeded = (activeUserCount > 1 && organization.includedUsers.exists(userLimit =>
-          activeUserCount > userLimit - 2)) || organization.paidUntil.exists(paidUntil =>
-          (paidUntil - (6 * 7 days)).isPast)
-      } yield
-        Ok(
-          Json.obj(
-            "pricingPlan" -> organization.pricingPlan,
-            "isExceeded" -> isExceeded,
-            "isAlmostExceeded" -> isAlmostExceeded
-          ))
+          activeUserCount > userLimit - 2
+        )) || organization.paidUntil.exists(paidUntil => (paidUntil - (6 * 7 days)).isPast)
+      } yield Ok(
+        Json.obj(
+          "pricingPlan" -> organization.pricingPlan,
+          "isExceeded" -> isExceeded,
+          "isAlmostExceeded" -> isAlmostExceeded
+        )
+      )
     }
 
   def updatePlan(): Action[OrganizationPlanUpdate] =
@@ -310,7 +327,8 @@ class OrganizationController @Inject()(
       for {
         _ <- userService.assertIsSuperUser(request.identity)
         organization <- organizationDAO.findOne(request.body.organizationId) ?~> Msg.Organization.notFound(
-          request.body.organizationId) ~> NOT_FOUND
+          request.body.organizationId
+        ) ~> NOT_FOUND
         _ <- organizationDAO.insertPlanUpdate(organization._id, request.body)
         _ <- organizationDAO.updatePlan(organization._id, request.body)
       } yield Ok
@@ -322,13 +340,14 @@ class OrganizationController @Inject()(
         isSuperUser <- userService.isSuperUser(request.identity._multiUser)
         _ <- Fox.fromBool(isSuperUser || request.identity.isAdmin) ?~> Msg.Organization.listPlanUpdatesOnlyAdmin
         planUpdates <- organizationDAO.findPlanUpdates(request.identity._organization)
-        planUpdatesWithFallback <- if (planUpdates.nonEmpty) {
-          Fox.successful(planUpdates)
-        } else {
-          organizationDAO
-            .findOne(request.identity._organization)
-            .map(organization => Seq(defaultPlanUpdate(organization)))
-        }
+        planUpdatesWithFallback <-
+          if (planUpdates.nonEmpty) {
+            Fox.successful(planUpdates)
+          } else {
+            organizationDAO
+              .findOne(request.identity._organization)
+              .map(organization => Seq(defaultPlanUpdate(organization)))
+          }
       } yield Ok(Json.toJson(planUpdatesWithFallback))
     }
 

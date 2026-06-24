@@ -89,7 +89,7 @@ trait ResultImplicits extends BoxToResultHelpers {
 
   extension [R[_], B](ab: ActionBuilder[R, B])
     def fox(block: => Fox[Result])(using ec: ExecutionContext): Action[B] =
-      ab.async { _ => block.futureBox.map(asResult) }
+      ab.async(_ => block.futureBox.map(asResult))
     def fox(block: R[B] => Fox[Result])(using ec: ExecutionContext): Action[B] =
       ab.async(req => block(req).futureBox.map(asResult))
     def fox[A](bodyParser: BodyParser[A])(block: R[A] => Fox[Result])(using ec: ExecutionContext): Action[A] =

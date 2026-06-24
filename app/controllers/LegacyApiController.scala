@@ -201,7 +201,7 @@ class LegacyApiController @Inject() (
       searchQuery: Option[String],
       limit: Option[Int],
       compact: Option[Boolean]
-  ): Action[AnyContent] = sil.UserAwareAction.fox { implicit request =>
+  ): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     datasetController.list(
       isActive,
       isUnreported,
@@ -231,18 +231,20 @@ class LegacyApiController @Inject() (
       compact: Option[Boolean]
   ): Action[AnyContent] = sil.UserAwareAction.fox { implicit request =>
     for {
-      result <- datasetController.list(
-        isActive,
-        isUnreported,
-        organizationName,
-        onlyMyOrganization,
-        uploaderId,
-        folderId,
-        includeSubfolders,
-        searchQuery,
-        limit,
-        compact
-      )(request)
+      result <- Fox.fromFuture(
+        datasetController.list(
+          isActive,
+          isUnreported,
+          organizationName,
+          onlyMyOrganization,
+          uploaderId,
+          folderId,
+          includeSubfolders,
+          searchQuery,
+          limit,
+          compact
+        )(request)
+      )
       adaptedResult <- replaceInResult(replaceVoxelSize)(result)
     } yield adaptedResult
   }

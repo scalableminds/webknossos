@@ -80,17 +80,16 @@ class VolumeTracingController @Inject() (
   private def unpackMultiple(tracings: VolumeTracings): Seq[Option[VolumeTracing]] =
     tracings.tracings.toList.map(_.tracing)
 
-  def save(newTracingId: String): Action[VolumeTracing] = Action.fox(validateProto[VolumeTracing]) {
-    implicit request =>
-      log() {
-        logTime(slackNotificationService.noticeSlowRequest) {
-          accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
-            for {
-              _ <- volumeTracingService.saveVolume(newTracingId, version = 0, request.body)
-            } yield Ok
-          }
+  def save(newTracingId: String): Action[VolumeTracing] = Action.fox(validateProto[VolumeTracing]) { implicit request =>
+    log() {
+      logTime(slackNotificationService.noticeSlowRequest) {
+        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
+          for {
+            _ <- volumeTracingService.saveVolume(newTracingId, version = 0, request.body)
+          } yield Ok
         }
       }
+    }
   }
 
   def get(tracingId: String, annotationId: ObjectId, version: Option[Long]): Action[AnyContent] =

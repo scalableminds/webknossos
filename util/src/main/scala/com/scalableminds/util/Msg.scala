@@ -719,7 +719,7 @@ object Msg {
     val invalidLastName: String = "Please check your last name for any special characters."
     object Token {
       val deleted: String = "Token was deleted."
-      val invalid: String = "The supplied token is invalid."
+      val invalid: String = "The supplied token is invalid or expired."
     }
     object Configuration {
       val updateSuccess: String = "Your configuration was successfully updated."

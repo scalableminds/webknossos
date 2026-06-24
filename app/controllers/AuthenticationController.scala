@@ -34,7 +34,6 @@ import play.api.data.validation.Constraints._
 import play.api.libs.json._
 import play.api.mvc._
 import play.silhouette.api.actions.SecuredRequest
-import play.silhouette.api.exceptions.ProviderException
 import play.silhouette.api.services.AuthenticatorResult
 import play.silhouette.api.util.{Credentials, PasswordInfo}
 import play.silhouette.api.{LoginInfo, Silhouette}
@@ -129,7 +128,7 @@ object WebAuthnCreationOptionsRelyingParty {
 }
 
 case class WebAuthnChallenge(data: Array[Byte]) extends Challenge {
-  def getValue() = data
+  def getValue: Array[Byte] = data
 }
 
 /** Object reference: https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions#user
@@ -218,26 +217,21 @@ class AuthenticationController @Inject() (
     extends Controller
     with AuthForms {
 
-  private val combinedAuthenticatorService = wkSilhouetteEnvironment.combinedAuthenticatorService
-  private val bearerTokenAuthenticatorService = combinedAuthenticatorService.tokenAuthenticatorService
-
-  private val secureRandom = new SecureRandom()
-
-  private lazy val Mailer =
-    actorSystem.actorSelection("/user/mailActor")
-
-  private lazy val ssoKey =
-    conf.WebKnossos.User.ssoKey
+  private lazy val combinedAuthenticatorService = wkSilhouetteEnvironment.combinedAuthenticatorService
+  private lazy val bearerTokenAuthenticatorService = combinedAuthenticatorService.tokenAuthenticatorService
+  private lazy val secureRandom = new SecureRandom()
+  private lazy val Mailer = actorSystem.actorSelection("/user/mailActor")
+  private lazy val ssoKey = conf.WebKnossos.User.ssoKey
 
   private lazy val origin = new Origin(conf.Http.uri)
   private lazy val usesHttps = conf.Http.uri.startsWith("https://")
   private lazy val webAuthnPubKeyParams = Array(
     // COSE Algorithm: EdDSA
-    WebAuthnCreationOptionsPubKeyParam(-8, "public-key"),
+    WebAuthnCreationOptionsPubKeyParam(-8),
     // COSE Algorithm: ES256
-    WebAuthnCreationOptionsPubKeyParam(-7, "public-key"),
+    WebAuthnCreationOptionsPubKeyParam(-7),
     // COSE Algorithm: RS256
-    WebAuthnCreationOptionsPubKeyParam(-257, "public-key")
+    WebAuthnCreationOptionsPubKeyParam(-257)
   )
   private lazy val webAuthnManager = WebAuthnManager.createNonStrictWebAuthnManager()
   private val webauthnTimeout = 2 minutes
@@ -296,9 +290,9 @@ class AuthenticationController @Inject() (
       password: Option[String],
       inviteBox: Box[Invite] = Empty,
       isEmailVerified: Boolean = false
-  ): Fox[User] = {
-    val passwordInfo: PasswordInfo = userService.getPasswordInfo(password)
+  ): Fox[User] =
     for {
+      passwordInfo: PasswordInfo = userService.getPasswordInfo(password)
       teamMemberships <- userService.initialTeamMemberships(
         organization._id,
         inviteIdOpt = inviteBox.map(_._id).toOption
@@ -333,51 +327,39 @@ class AuthenticationController @Inject() (
           .registerAdminNotifierMail(multiUser.fullName, email, organization, autoActivate, newUserEmailRecipient)
       )
     } yield user
-  }
 
-  private def authenticateInner(loginInfo: LoginInfo)(implicit header: RequestHeader): Future[Result] =
+  private def authenticateInner(loginInfo: LoginInfo)(implicit header: RequestHeader): Fox[Result] =
     for {
-      result <- userService.retrieve(loginInfo).flatMap {
-        case Some(user) if !user.isDeactivated =>
-          for {
-            authenticator <- combinedAuthenticatorService.create(loginInfo)
-            value <- combinedAuthenticatorService.init(authenticator)
-            result <- combinedAuthenticatorService.embed(value, Ok)
-            _ <- Fox.runIf(conf.WebKnossos.User.EmailVerification.activated)(
-              emailVerificationService.assertEmailVerifiedOrResendVerificationMail(user)(using GlobalAccessContext, ec)
-            )
-            _ <- multiUserDAO.updateLastLoggedInIdentity(user._multiUser, user._id)(using GlobalAccessContext)
-            _ = userDAO.updateLastActivity(user._id)(using GlobalAccessContext)
-            _ = logger.info(f"User ${user._id} authenticated.")
-          } yield result
-        case None =>
-          Future.successful(BadRequest(Msg.User.invalidCredentials))
-        case Some(_) => Future.successful(BadRequest(Msg.User.isDeactivated))
-      }
-    } yield result
+      userOpt <- Fox.fromFuture(userService.retrieve(loginInfo)) ??~> Msg.User.invalidCredentials
+      user <- userOpt.toFox ??~> Msg.User.invalidCredentials
+      _ <- Fox.fromBool(!user.isDeactivated) ?~> Msg.User.isDeactivated
+      authenticator <- Fox.fromFuture(combinedAuthenticatorService.create(loginInfo))
+      value <- Fox.fromFuture(combinedAuthenticatorService.init(authenticator))
+      resultWithCookie <- Fox.fromFuture(combinedAuthenticatorService.embed(value, Ok))
+      _ <- Fox.runIf(conf.WebKnossos.User.EmailVerification.activated)(
+        emailVerificationService.assertEmailVerifiedOrResendVerificationMail(user)(using GlobalAccessContext, ec)
+      )
+      _ <- multiUserDAO.updateLastLoggedInIdentity(user._multiUser, user._id)(using GlobalAccessContext)
+      _ = userDAO.updateLastActivity(user._id)(using GlobalAccessContext)
+      _ = logger.info(f"User ${user._id} authenticated.")
+    } yield resultWithCookie
 
-  def authenticate: Action[AnyContent] = Action.async { implicit request =>
+  def authenticate: Action[AnyContent] = Action.fox { implicit request =>
     signInForm
       .bindFromRequest()
       .fold(
-        bogusForm => Future.successful(BadRequest(bogusForm.toString)),
-        signInData => {
-          val email = signInData.email.toLowerCase
-          val userFopt: Future[Option[User]] =
-            userService.userFromMultiUserEmail(email)(using GlobalAccessContext).futureBox.map(_.toOption)
-          val idF = userFopt.map(userOpt =>
-            userOpt.map(_._id.id).getOrElse("")
-          ) // do not fail here if there is no user for email. Fail below.
-          idF
-            .map(id => Credentials(id, signInData.password))
-            .flatMap(credentials => credentialsProvider.authenticate(credentials))
-            .flatMap { loginInfo =>
-              authenticateInner(loginInfo)
-            }
-            .recover { case _: ProviderException =>
-              BadRequest(Msg.User.invalidCredentials)
-            }
-        }
+        bogusForm => Fox.failure(bogusForm.toString),
+        formValues =>
+          for {
+            email = formValues.email.toLowerCase
+            user <- userService.userFromMultiUserEmail(email)(using
+              GlobalAccessContext
+            ) ??~> Msg.User.invalidCredentials
+            loginInfo <- Fox.fromFuture(
+              credentialsProvider.authenticate(Credentials(user._id.toString, formValues.password))
+            ) ??~> Msg.User.invalidCredentials
+            resultWithCookie <- authenticateInner(loginInfo)
+          } yield resultWithCookie
       )
   }
 
@@ -498,41 +480,31 @@ class AuthenticationController @Inject() (
       ) ?~> "Only admins can send invites that promote new users to admin or dataset manager."
     } yield ()
 
-  // If a user has forgotten their password
+  // User has forgotten their password and wants a reset link email
   def handleStartResetPassword: Action[AnyContent] = Action.fox { implicit request =>
     emailForm
       .bindFromRequest()
       .fold(
-        bogusForm => Fox.successful(BadRequest(bogusForm.toString)),
-        formEmail => {
-          val userFopt: Future[Option[User]] =
-            userService
-              .userFromMultiUserEmail(formEmail.toLowerCase)(using GlobalAccessContext)
-              .futureBox
-              .map(_.toOption)
-          val idF = userFopt.map(userOpt =>
-            userOpt.map(_._id.id).getOrElse("")
-          ) // do not fail here if there is no user for email. Fail below to unify error handling.
-          idF.flatMap(id => userService.retrieve(LoginInfo(CredentialsProvider.ID, id))).flatMap {
-            case None => Future.successful(Ok) // No email sent, but same reply, in order not to leak list of accounts.
-            case Some(user) =>
-              for {
-                multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
-                token <- Fox.fromFuture(
-                  bearerTokenAuthenticatorService
-                    .createAndInit(user.loginInfo, TokenType.ResetPassword, deleteOld = true)
-                )
-              } yield {
-                Mailer ! Send(defaultMails.resetPasswordMail(multiUser.fullName, formEmail.toLowerCase, token))
-                Ok
-              }
-          }
-        }
+        bogusForm => Fox.failure(bogusForm.toString),
+        formEmail =>
+          for {
+            resultBox <- sendResetPasswordMail(formEmail.toLowerCase).shiftBox
+            // We send Ok even if the Box is not Full! This is not to leak existing account info via this route.
+          } yield Ok
       )
   }
 
-  // TODO test
-  // If a user has forgotten their password
+  private def sendResetPasswordMail(email: String): Fox[Unit] =
+    for {
+      user <- userService.userFromMultiUserEmail(email)(using GlobalAccessContext)
+      multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
+      resetPasswordToken <- Fox.fromFuture(
+        bearerTokenAuthenticatorService.createAndInit(user.loginInfo, TokenType.ResetPassword, deleteOld = true)
+      )
+      _ = Mailer ! Send(defaultMails.resetPasswordMail(multiUser.fullName, email, resetPasswordToken))
+    } yield ()
+
+  // User has forgotten their password and clicked the reset link in the email
   def handleResetPassword: Action[AnyContent] = Action.fox { implicit request =>
     resetPasswordForm
       .bindFromRequest()
@@ -551,7 +523,6 @@ class AuthenticationController @Inject() (
       )
   }
 
-  // TODO test
   // Users who are logged in can change their password. The old password has to be validated again.
   def changePassword: Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     changePasswordForm
@@ -708,8 +679,8 @@ class AuthenticationController @Inject() (
           Msg.Passkeys.unauthorized ~> UNAUTHORIZED
         userId <- multiUser._lastLoggedInIdentity.toFox
         loginInfo = LoginInfo("credentials", userId.toString)
-        result <- Fox.fromFuture(authenticateInner(loginInfo))
-      } yield result
+        resultWithCookie <- authenticateInner(loginInfo)
+      } yield resultWithCookie
   }
 
   def webauthnRegisterStart(): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>

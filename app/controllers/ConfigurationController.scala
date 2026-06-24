@@ -54,9 +54,9 @@ class ConfigurationController @Inject() (
   }
 
   def readDatasetViewConfiguration(datasetId: ObjectId, sharingToken: Option[String]): Action[List[String]] =
-    sil.UserAwareAction.fox(validateJson[List[String]]) { implicit request =>
-      val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
+    sil.UserAwareAction.async(validateJson[List[String]]) { implicit request =>
       for {
+        ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
         configuration <- request.identity.toFox
           .flatMap(user =>
             datasetConfigurationService.getDatasetViewConfigurationForUserAndDataset(request.body, user, datasetId)(

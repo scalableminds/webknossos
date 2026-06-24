@@ -635,7 +635,7 @@ class DatasetController @Inject() (
     }
 
   def isValidNewName(datasetName: String): Action[AnyContent] =
-    sil.SecuredAction.fox { _ =>
+    sil.SecuredAction.async { _ =>
       for {
         validName <- datasetService.assertValidDatasetName(datasetName).futureBox
       } yield validName match {
@@ -659,19 +659,17 @@ class DatasetController @Inject() (
       sharingToken: Option[String]
   ): Action[AnyContent] =
     sil.UserAwareAction.fox { implicit request =>
-      val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
       for {
-        datasetBox <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)(using ctx).futureBox
-        result <- (datasetBox match {
+        ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
+        datasetBox <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)(using ctx).shiftBox
+        js <- (datasetBox match {
           case Full(dataset) =>
             Fox.successful(
-              Ok(
-                Json.obj(
-                  "id" -> dataset._id,
-                  "name" -> dataset.name,
-                  "organization" -> dataset._organization,
-                  "directoryName" -> dataset.directoryName
-                )
+              Json.obj(
+                "id" -> dataset._id,
+                "name" -> dataset.name,
+                "organization" -> dataset._organization,
+                "directoryName" -> dataset.directoryName
               )
             )
           case Empty =>
@@ -680,17 +678,15 @@ class DatasetController @Inject() (
               dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)(using GlobalAccessContext)
               // Just checking if the user can switch to an organization to access the dataset.
               _ <- authenticationService.getOrganizationToSwitchTo(user, Some(dataset._id), None, None)
-            } yield Ok(
-              Json.obj(
-                "id" -> dataset._id,
-                "name" -> dataset.name,
-                "organization" -> dataset._organization,
-                "directoryName" -> dataset.directoryName
-              )
+            } yield Json.obj(
+              "id" -> dataset._id,
+              "name" -> dataset.name,
+              "organization" -> dataset._organization,
+              "directoryName" -> dataset.directoryName
             )
           case _ => Fox.failure(notFoundMessage(datasetName))
         }) ?~> notFoundMessage(datasetName) ~> NOT_FOUND
-      } yield result
+      } yield Ok(js)
     }
 
   private def notFoundMessage(datasetId: ObjectId)(using ctx: DBAccessContext): String =

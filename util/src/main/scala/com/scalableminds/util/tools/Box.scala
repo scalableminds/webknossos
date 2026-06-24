@@ -1,6 +1,17 @@
 package com.scalableminds.util.tools
 
-import scala.language.implicitConversions
+trait BoxToIterableImplicit {
+
+  import scala.language.implicitConversions
+
+  /** This implicit transformation allows one to use a `Box` as an `Iterable` of zero or one elements.
+    *
+    * @return
+    *   A single-element `List` with the contents if the box is `Full` and `[[scala.collection.immutable.Nil Nil]]`
+    *   otherwise.
+    */
+  implicit def box2Iterable[T](in: Box[T]): Iterable[T] = in.toList
+}
 
 // Adapted from https://github.com/lift/framework/blob/main/core/common/src/main/scala/net/liftweb/common/Box.scala
 // (Removed some code not used by us, changed some naming, added Box.fromBool)
@@ -30,7 +41,7 @@ import scala.language.implicitConversions
   * It also provides implicit methods to transform `Option` to `Box`, `Box` to `[[scala.collection.Iterable Iterable]]`,
   * and `Box` to `Option`.
   */
-object Box extends Tryo {
+object Box extends Tryo with BoxToIterableImplicit {
 
   /** Helper class to provide an easy way for converting a `List[Box[T]]` into a `Box[List[T]]`.
     */
@@ -137,15 +148,7 @@ object Box extends Tryo {
     *   A `Full` containing the transformed value if `pf.isDefinedAt(value)` and `Empty` otherwise.
     */
   def apply[InType, OutType](value: InType)(pf: PartialFunction[InType, OutType]): Box[OutType] =
-    pf.andThen(Full.apply(_)).applyOrElse(value, (_: InType) => Empty)
-
-  /** This implicit transformation allows one to use a `Box` as an `Iterable` of zero or one elements.
-    *
-    * @return
-    *   A single-element `List` with the contents if the box is `Full` and `[[scala.collection.immutable.Nil Nil]]`
-    *   otherwise.
-    */
-  implicit def box2Iterable[T](in: Box[T]): Iterable[T] = in.toList
+    pf.andThen(Full.apply).applyOrElse(value, (_: InType) => Empty)
 
   /** This method allows one to encapsulate any object in a Box in a null-safe manner, converting `null` values to
     * `Empty`.
@@ -782,7 +785,7 @@ final class ParamFailure[T](
     val param: T
 ) extends Failure(msg, exception, chain)
     with Serializable {
-  override def toString(): String =
+  override def toString: String =
     "ParamFailure(" + msg + ", " + exception +
       ", " + chain + ", " + param + ")"
 

@@ -149,7 +149,7 @@ class FolderDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected def parse(r: FoldersRow): Fox[Folder] =
     for {
       metadata <- parseMetadata(r.metadata)
-    } yield Folder(ObjectId(r._Id), r.name, metadata)
+    } yield Folder(ObjectId(r._id), r.name, metadata)
 
   private def parseWithParent(t: (String, String, String, Option[String])): Fox[FolderWithParent] =
     for {

@@ -112,9 +112,9 @@ class InviteDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected def parse(r: InvitesRow): Fox[Invite] =
     Fox.successful(
       Invite(
-        ObjectId(r._Id),
+        ObjectId(r._id),
         r.tokenvalue,
-        r._Organization,
+        r._organization,
         r.autoactivate,
         r.isadmin,
         r.isdatasetmanager,

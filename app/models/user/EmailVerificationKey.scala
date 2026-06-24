@@ -32,10 +32,10 @@ class EmailVerificationKeyDAO @Inject() (sqlClient: SqlClient)(implicit ec: Exec
   ): Fox[EmailVerificationKey] =
     Fox.successful(
       EmailVerificationKey(
-        ObjectId(row._Id),
+        ObjectId(row._id),
         row.key,
         row.email,
-        ObjectId(row._Multiuser),
+        ObjectId(row._multiuser),
         row.validuntil.map(Instant.fromSql),
         row.isused
       )

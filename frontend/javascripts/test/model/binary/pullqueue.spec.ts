@@ -114,8 +114,8 @@ describe("PullQueue", () => {
     const bucketData2 = range(0, 32 * 32 * 32).map((i) => (2 * i) % 256);
 
     vi.mocked(requestWithFallback).mockResolvedValue([
-      new Uint8Array(bucketData1),
-      new Uint8Array(bucketData2),
+      { type: "data", data: new Uint8Array(bucketData1) },
+      { type: "data", data: new Uint8Array(bucketData2) },
     ]);
     pullQueue.pull();
     return runAsync([
@@ -132,7 +132,7 @@ describe("PullQueue", () => {
     vi.mocked(requestWithFallback)
       .mockReset()
       .mockRejectedValueOnce(new Error("Expected promise rejection in tests. Can be ignored."))
-      .mockResolvedValueOnce([new Uint8Array(32 ** 3)]);
+      .mockResolvedValueOnce([{ type: "data", data: new Uint8Array(32 ** 3) }]);
   }
 
   it<TestContext>("Request Failure: should not request twice if not bucket dirty", async ({
@@ -162,6 +162,27 @@ describe("PullQueue", () => {
         expect(requestWithFallback).toHaveBeenCalledTimes(2);
         expect(buckets[0].state).toBe(BucketStateEnum.LOADED);
         expect(buckets[1].state).toBe(BucketStateEnum.UNREQUESTED);
+      },
+    ]);
+  });
+
+  it<TestContext>("Partial failure: failure results are retried, empty results are not", ({
+    pullQueue,
+    buckets,
+  }) => {
+    // A single response can now contain successfully read data, genuinely empty buckets
+    // and buckets that failed to be read. Failures must be retried (reset to UNREQUESTED),
+    // while empty buckets are terminal (here rendered black because renderMissingDataBlack
+    // is enabled in the mocked store, leading to LOADED).
+    vi.mocked(requestWithFallback)
+      .mockReset()
+      .mockResolvedValueOnce([{ type: "failure" }, { type: "empty" }]);
+    pullQueue.pull();
+
+    return runAsync([
+      async () => {
+        expect(buckets[0].state).toBe(BucketStateEnum.UNREQUESTED);
+        expect(buckets[1].state).toBe(BucketStateEnum.LOADED);
       },
     ]);
   });

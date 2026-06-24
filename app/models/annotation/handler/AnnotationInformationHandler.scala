@@ -14,10 +14,12 @@ import models.dataset.{DatasetDAO, DatasetService}
 import scala.annotation.{nowarn, tailrec}
 import scala.concurrent.ExecutionContext
 
-class AnnotationInformationHandlerSelector @Inject()(projectInformationHandler: ProjectInformationHandler,
-                                                     taskInformationHandler: TaskInformationHandler,
-                                                     taskTypeInformationHandler: TaskTypeInformationHandler,
-                                                     savedTracingInformationHandler: SavedTracingInformationHandler) {
+class AnnotationInformationHandlerSelector @Inject() (
+    projectInformationHandler: ProjectInformationHandler,
+    taskInformationHandler: TaskInformationHandler,
+    taskTypeInformationHandler: TaskTypeInformationHandler,
+    savedTracingInformationHandler: SavedTracingInformationHandler
+) {
   val informationHandlers: Map[AnnotationType, AnnotationInformationHandler] = Map(
     AnnotationType.CompoundProject -> projectInformationHandler,
     AnnotationType.CompoundTask -> taskInformationHandler,
@@ -52,7 +54,7 @@ trait AnnotationInformationHandler extends FoxImplicits {
       }
 
     annotations match {
-      case List() => Fox.successful(true)
+      case List()    => Fox.successful(true)
       case head :: _ =>
         if (allOnSameDatasetIter(annotations, head._dataset))
           Fox.successful(true)

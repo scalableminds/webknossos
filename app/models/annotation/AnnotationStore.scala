@@ -13,9 +13,10 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-class AnnotationStore @Inject()(
+class AnnotationStore @Inject() (
     annotationInformationHandlerSelector: AnnotationInformationHandlerSelector,
-    temporaryAnnotationStore: TemporaryStore[String, Annotation])(implicit ec: ExecutionContext)
+    temporaryAnnotationStore: TemporaryStore[String, Annotation]
+)(implicit ec: ExecutionContext)
     extends LazyLogging {
 
   private val cacheTimeout = 60 minutes

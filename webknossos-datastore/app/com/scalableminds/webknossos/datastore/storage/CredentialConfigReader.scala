@@ -26,39 +26,36 @@ class CredentialConfigReader(underlyingConfig: Config) extends ConfigReader {
       name <- getOptional[String]("name")
       keyId <- getOptional[String]("identifier")
       key <- getOptional[String]("secret")
-    } yield
-      S3AccessKeyCredential(
-        name,
-        keyId,
-        key,
-        None,
-        None
-      )
+    } yield S3AccessKeyCredential(
+      name,
+      keyId,
+      key,
+      None,
+      None
+    )
 
   private def getAsHttpsBasicAuth: Option[HttpBasicAuthCredential] =
     for {
       name <- getOptional[String]("name")
       username <- getOptional[String]("identifier")
       password <- getOptional[String]("secret")
-    } yield
-      HttpBasicAuthCredential(
-        name,
-        username,
-        password,
-        None,
-        None
-      )
+    } yield HttpBasicAuthCredential(
+      name,
+      username,
+      password,
+      None,
+      None
+    )
 
   private def getAsGoogleServiceAccount: Option[GoogleServiceAccountCredential] =
     for {
       name <- getOptional[String]("name")
       secret <- getOptional[String]("secret")
       secretJson <- JsonHelper.parseAs[JsValue](secret).toOption
-    } yield
-      GoogleServiceAccountCredential(
-        name,
-        secretJson,
-        None,
-        None
-      )
+    } yield GoogleServiceAccountCredential(
+      name,
+      secretJson,
+      None,
+      None
+    )
 }

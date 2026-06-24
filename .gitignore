@@ -26,6 +26,7 @@ RUNNING_PID
 metals.sbt
 __pycache__/
 .jvmopts
+build/
 
 # Webknossos
 backup/
@@ -87,7 +88,7 @@ tmp/
 errorShots/
 
 
-# Sublime 
+# Sublime
 *.sublime-project
 *.sublime-workspace
 
@@ -112,7 +113,7 @@ conf/application.local.conf
 tools/debugging/version-visualizer/data/*
 !tools/debugging/version-visualizer/data/.gitignore
 
-# Yarn 
+# Yarn
 .yarn/*
 !.yarn/cache
 !.yarn/patches
@@ -126,4 +127,3 @@ public/index.html
 tsconfig.tsbuildinfo
 
 .claude
-.jvmopts

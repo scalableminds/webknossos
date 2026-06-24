@@ -35,7 +35,7 @@ case class Task(
     isDeleted: Boolean = false
 )
 
-class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class TaskDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Task, TasksRow, Tasks](sqlClient) {
   protected val collection = Tasks
   protected def resultConverter = GetResultTasksRow
@@ -48,24 +48,22 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       editRotation <- Vec3Double
         .fromList(parseArrayLiteral(r.editrotation).map(_.toDouble))
         .toFox ?~> "could not parse edit rotation"
-    } yield {
-      Task(
-        ObjectId(r._Id),
-        ObjectId(r._Project),
-        r._Script.map(ObjectId(_)),
-        ObjectId(r._Tasktype),
-        Experience(r.neededexperienceDomain, r.neededexperienceValue),
-        r.totalinstances,
-        r.pendinginstances,
-        r.tracingtime,
-        parseBboxOpt(r.boundingbox),
-        editPosition,
-        editRotation,
-        r.creationinfo,
-        Instant.fromSql(r.created),
-        r.isdeleted
-      )
-    }
+    } yield Task(
+      ObjectId(r._id),
+      ObjectId(r._project),
+      r._script.map(ObjectId(_)),
+      ObjectId(r._tasktype),
+      Experience(r.neededexperience_domain, r.neededexperience_value),
+      r.totalinstances,
+      r.pendinginstances,
+      r.tracingtime,
+      parseBboxOpt(r.boundingbox),
+      editPosition,
+      editRotation,
+      r.creationinfo,
+      Instant.fromSql(r.created),
+      r.isdeleted
+    )
 
   private def parseBboxOpt(bboxLiteral: Option[String]): Option[BoundingBox] =
     bboxLiteral.map(b => parseArrayLiteral(b).map(_.toInt)).flatMap(BoundingBox.fromSQL)
@@ -91,8 +89,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def findAllByTaskType(taskTypeId: ObjectId)(using ctx: DBAccessContext): Fox[List[Task]] =
     findAllByProjectAndTaskTypeAndIdsAndUser(None, Some(taskTypeId), None, None, None)
 
-  def findAllByProject(projectId: ObjectId, limit: Int, pageNumber: Int)(
-      using ctx: DBAccessContext): Fox[List[Task]] =
+  def findAllByProject(projectId: ObjectId, limit: Int, pageNumber: Int)(using ctx: DBAccessContext): Fox[List[Task]] =
     for {
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
       r <- run(q"""SELECT $columns
@@ -147,9 +144,11 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         AND pendingInstances > 0
         LIMIT 1"""
 
-  def assignNext(userId: ObjectId,
-                 teamIds: List[ObjectId],
-                 isTeamManagerOrAdmin: Boolean = false): Fox[(ObjectId, ObjectId)] = {
+  def assignNext(
+      userId: ObjectId,
+      teamIds: List[ObjectId],
+      isTeamManagerOrAdmin: Boolean = false
+  ): Fox[(ObjectId, ObjectId)] = {
 
     val annotationId = ObjectId.generate
     val now = Instant.now
@@ -274,7 +273,8 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def listExperienceDomains(organizationId: String): Fox[List[String]] =
     for {
       rowsRaw <- run(
-        q"SELECT domain FROM webknossos.experienceDomains WHERE _organization = $organizationId".as[String])
+        q"SELECT domain FROM webknossos.experienceDomains WHERE _organization = $organizationId".as[String]
+      )
     } yield rowsRaw.toList
 
   def findTaskBoundingBoxesByAnnotationIds(annotationIds: Seq[ObjectId]): Fox[Seq[NamedBoundingBox]] =
@@ -286,10 +286,10 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                          AND t.boundingBox IS NOT NULL
                          ORDER BY t._id
                          """.as[(String, ObjectId, ObjectId)])
-      namedBboxes = rowsRaw.flatMap {
-        case (bboxLiteral, taskId, annotationId) =>
-          parseBboxOpt(Some(bboxLiteral)).map(bbox =>
-            NamedBoundingBox(0, Some(s"Task bounding box of instance $annotationId of task $taskId"), None, None, bbox))
+      namedBboxes = rowsRaw.flatMap { case (bboxLiteral, taskId, annotationId) =>
+        parseBboxOpt(Some(bboxLiteral)).map(bbox =>
+          NamedBoundingBox(0, Some(s"Task bounding box of instance $annotationId of task $taskId"), None, None, bbox)
+        )
       }
     } yield namedBboxes
 
@@ -312,13 +312,14 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       _ <- assertUpdateAccess(id)
       query = q"UPDATE $collectionName SET totalInstances = $newTotalInstances WHERE _id = $id".asUpdate
-      _ <- run(query.withTransactionIsolation(Serializable),
-               retryCount = 50,
-               retryIfErrorContains = List(transactionSerializationError))
+      _ <- run(
+        query.withTransactionIsolation(Serializable),
+        retryCount = 50,
+        retryIfErrorContains = List(transactionSerializationError)
+      )
     } yield ()
 
-  def incrementTotalInstancesOfAllWithProject(projectId: ObjectId, delta: Long)(
-      using ctx: DBAccessContext): Fox[Unit] =
+  def incrementTotalInstancesOfAllWithProject(projectId: ObjectId, delta: Long)(using ctx: DBAccessContext): Fox[Unit] =
     for {
       accessQuery <- readAccessQuery
       _ <- run(

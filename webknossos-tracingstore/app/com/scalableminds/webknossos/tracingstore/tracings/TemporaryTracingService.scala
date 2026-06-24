@@ -15,12 +15,14 @@ import scala.concurrent.duration.DurationInt
 
 // This services holds temporary stores, meant for temporary tracings only (e.g. compound projects)
 // They cannot be used for download or updating/versioning
-class TemporaryTracingService @Inject()(skeletonStore: TemporaryTracingStore[SkeletonTracing],
-                                        volumeStore: TemporaryTracingStore[VolumeTracing],
-                                        volumeDataStore: TemporaryTracingStore[Array[Byte]],
-                                        annotationStore: TemporaryTracingStore[AnnotationProto],
-                                        segmentIndexStore: TemporaryTracingStore[Set[Vec3IntProto]],
-                                        temporaryTracingIdStore: TracingStoreRedisStore)(implicit ec: ExecutionContext)
+class TemporaryTracingService @Inject() (
+    skeletonStore: TemporaryTracingStore[SkeletonTracing],
+    volumeStore: TemporaryTracingStore[VolumeTracing],
+    volumeDataStore: TemporaryTracingStore[Array[Byte]],
+    annotationStore: TemporaryTracingStore[AnnotationProto],
+    segmentIndexStore: TemporaryTracingStore[Set[Vec3IntProto]],
+    temporaryTracingIdStore: TracingStoreRedisStore
+)(implicit ec: ExecutionContext)
     extends FoxImplicits {
 
   implicit def skeletonTracingCompanion: GeneratedMessageCompanion[SkeletonTracing] = SkeletonTracing
@@ -87,8 +89,10 @@ class TemporaryTracingService @Inject()(skeletonStore: TemporaryTracingStore[Ske
     Fox.successful(())
   }
 
-  def saveVolumeSegmentIndexBuffer(tracingId: String,
-                                   bucketPositionsBySegmentId: Seq[(String, Set[Vec3IntProto])]): Fox[Unit] = {
+  def saveVolumeSegmentIndexBuffer(
+      tracingId: String,
+      bucketPositionsBySegmentId: Seq[(String, Set[Vec3IntProto])]
+  ): Fox[Unit] = {
     segmentIndexStore.insertAll(bucketPositionsBySegmentId, Some(temporaryStoreTimeout))
     registerTracingId(tracingId)
     Fox.successful(())

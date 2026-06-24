@@ -11,9 +11,10 @@ import utils.sql.{SimpleSQLDAO, SqlClient, SqlToken}
 
 import scala.concurrent.ExecutionContext
 
-class PathDeletionController @Inject()(conf: WkConf, pathDeletionDAO: PathDeletionDAO)(implicit ec: ExecutionContext,
-                                                                                       bodyParsers: PlayBodyParsers)
-    extends Controller {
+class PathDeletionController @Inject() (conf: WkConf, pathDeletionDAO: PathDeletionDAO)(implicit
+    ec: ExecutionContext,
+    bodyParsers: PlayBodyParsers
+) extends Controller {
 
   def listPathsToDelete(key: String): Action[AnyContent] = Action.async { _ =>
     for {
@@ -34,7 +35,7 @@ class PathDeletionController @Inject()(conf: WkConf, pathDeletionDAO: PathDeleti
 
 }
 
-class PathDeletionService @Inject()(pathDeletionDAO: PathDeletionDAO) {
+class PathDeletionService @Inject() (pathDeletionDAO: PathDeletionDAO) {
 
   def deletePaths(datastoreClient: WKRemoteDataStoreClient, pathsToDelete: Seq[UPath]): Fox[Unit] =
     for {
@@ -44,7 +45,7 @@ class PathDeletionService @Inject()(pathDeletionDAO: PathDeletionDAO) {
 
 }
 
-class PathDeletionDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext) extends SimpleSQLDAO(sqlClient) {
+class PathDeletionDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext) extends SimpleSQLDAO(sqlClient) {
 
   def findAll: Fox[Seq[String]] =
     run(q"""SELECT path from webknossos.remote_paths_to_delete ORDER BY created""".as[String])
@@ -63,7 +64,8 @@ class PathDeletionDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
     else
       for {
         _ <- run(
-          q"""DELETE FROM webknossos.remote_paths_to_delete WHERE path in ${SqlToken.tupleFromList(paths)}""".asUpdate)
+          q"""DELETE FROM webknossos.remote_paths_to_delete WHERE path in ${SqlToken.tupleFromList(paths)}""".asUpdate
+        )
       } yield ()
 
 }

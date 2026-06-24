@@ -832,7 +832,7 @@ export class VoxelPipetteToolController extends ToolController {
     };
   }
 }
-export class FillCellToolController extends ToolController {
+export class FillCellToolController extends VolumeToolController {
   static getPlaneMouseControls(_planeId: OrthoView): MouseBindingMap {
     return {
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {

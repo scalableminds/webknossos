@@ -20,7 +20,7 @@ object DataSourceId {
     override def writes(datasetId: DataSourceId): JsValue =
       Json.obj(
         "name" -> datasetId.directoryName,
-        "team" -> datasetId.organizationId,
+        "team" -> datasetId.organizationId
       )
   }
 }

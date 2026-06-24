@@ -13,10 +13,10 @@ import utils.WkConf
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class ShortLinkController @Inject()(shortLinkDAO: ShortLinkDAO, sil: Silhouette[WkEnv], wkConf: WkConf)(
-    implicit ec: ExecutionContext,
-    val bodyParsers: PlayBodyParsers)
-    extends Controller
+class ShortLinkController @Inject() (shortLinkDAO: ShortLinkDAO, sil: Silhouette[WkEnv], wkConf: WkConf)(implicit
+    ec: ExecutionContext,
+    val bodyParsers: PlayBodyParsers
+) extends Controller
     with FoxImplicits {
 
   def create: Action[String] = sil.UserAwareAction.async(validateJson[String]) { implicit request =>

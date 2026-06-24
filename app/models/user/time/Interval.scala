@@ -39,11 +39,13 @@ case class Week(week: Int, year: Int) extends Interval with Ordered[Week] {
 
   def start: Instant =
     Instant.fromZonedDateTime(
-      asZonedDateTime.`with`(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).`with`(LocalTime.MIN))
+      asZonedDateTime.`with`(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).`with`(LocalTime.MIN)
+    )
 
   def end: Instant =
     Instant.fromZonedDateTime(
-      asZonedDateTime.`with`(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY)).`with`(LocalTime.MAX))
+      asZonedDateTime.`with`(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY)).`with`(LocalTime.MAX)
+    )
 
   private def asZonedDateTime: ZonedDateTime =
     ZonedDateTime

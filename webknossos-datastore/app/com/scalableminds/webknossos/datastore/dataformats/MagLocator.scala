@@ -7,12 +7,14 @@ import com.scalableminds.webknossos.datastore.models.datasource.MagFormatHelper
 import com.scalableminds.webknossos.datastore.storage.LegacyDataVaultCredential
 import play.api.libs.json.{Json, OFormat}
 
-case class MagLocator(mag: Vec3Int,
-                      path: Option[UPath] = None,
-                      credentials: Option[LegacyDataVaultCredential] = None,
-                      axisOrder: Option[AxisOrder] = None,
-                      channelIndex: Option[Int] = None,
-                      credentialId: Option[String] = None) {
+case class MagLocator(
+    mag: Vec3Int,
+    path: Option[UPath] = None,
+    credentials: Option[LegacyDataVaultCredential] = None,
+    axisOrder: Option[AxisOrder] = None,
+    channelIndex: Option[Int] = None,
+    credentialId: Option[String] = None
+) {
 
   def withoutCredentials: MagLocator = this.copy(credentials = None, credentialId = None)
 }

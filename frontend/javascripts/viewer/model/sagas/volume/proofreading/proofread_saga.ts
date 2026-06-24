@@ -2362,7 +2362,7 @@ export function* splitAgglomerateInMapping(
       } else if (splitSegmentIds.has(segmentId)) {
         console.error(
           "Got a agglomerate id mapping reply from the server which did not include the new agglomerate id of a requested segment.",
-          `${segmentId} was not present in ${mappingAfterSplit}.`,
+          `${segmentId} was not present in ${mappingAfterSplit.entries()}.`,
         );
       }
       return [segmentId, prevAgglomerateId];
@@ -2382,14 +2382,19 @@ export function* splitAgglomerateInMapping(
       if (addAdditionalSegmentsToMapping) {
         splitMapping.set(segmentId, mappedId);
       }
+    } else if (splitSegmentIds.has(segmentId)) {
+      console.error(
+        "Got a agglomerate id mapping reply from the server which did not include the new agglomerate id of a requested segment.",
+        `${segmentId} was not present in ${mappingAfterSplit.entries()}.`,
+      );
     }
   }
-  // Below newToOldAgglomerateIds is used to generate the new ids list / set
-  // as they are exactly the keys of newToOldAgglomerateIds (every newId has a record)
+
+  const newAgglomerateIds = new Set(newToOldAgglomerateIds.keys());
   if (syncAgglomerateTrees && activeMapping.mappingName) {
     yield* call(
       syncAgglomerateTreesAfterSplitAction,
-      Array.from(newToOldAgglomerateIds.keys()),
+      Array.from(newAgglomerateIds),
       Array.from(oldAgglomerateIds),
       volumeTracingId,
     );
@@ -2398,7 +2403,7 @@ export function* splitAgglomerateInMapping(
   return {
     splitMapping: splitMapping as Mapping,
     oldAgglomerateIds,
-    newAgglomerateIds: new Set(newToOldAgglomerateIds.keys()),
+    newAgglomerateIds,
     newToOldAgglomerateIds,
   };
 }

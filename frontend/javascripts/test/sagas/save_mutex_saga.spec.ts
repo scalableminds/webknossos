@@ -34,6 +34,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   getPositionForSegmentId,
   mockInitialBucketAndAgglomerateData,
+  operationFinished,
+  operationStarted,
 } from "./proofreading/proofreading_test_utils";
 
 const blockingUser: APIUserCompact = { firstName: "Sample", lastName: "User", id: "1111" };
@@ -65,11 +67,11 @@ async function makeProofreadMerge(
     yield put(setActiveCellAction(1));
     // Execute the actual merge and wait for the finished mapping.
     yield put(proofreadMergeAction(getPositionForSegmentId(4), 4));
-    yield take("SET_BUSY_BLOCKING_INFO_ACTION");
+    yield take(operationStarted("PROOFREADING"));
     if (waitTillFinished) {
-      // Wait for UI made busy and back to idle again to ensure saving of the whole sagas is done.
+      // Wait for proofreading operation to start and then finish to ensure saving of the whole saga is done.
       yield take("SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE");
-      yield take("SET_BUSY_BLOCKING_INFO_ACTION");
+      yield take(operationFinished("PROOFREADING"));
     }
   });
   await task.toPromise();

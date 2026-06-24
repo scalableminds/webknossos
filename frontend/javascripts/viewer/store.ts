@@ -42,7 +42,6 @@ import type {
   OrthoViewWithoutTD,
   OverwriteMode,
   Rect,
-  SagaIdentifier,
   TDViewDisplayMode,
   Vector2,
   Vector3,
@@ -70,8 +69,10 @@ import VolumeTracingReducer from "viewer/model/reducers/volumetracing_reducer";
 import type { UpdateAction } from "viewer/model/sagas/volume/update_actions";
 import type { KeyboardConfiguration } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
 import type { Toolkit } from "./model/accessors/tool_accessor";
+import type { OperationId } from "./model/actions/operation_context_actions";
 import { eventEmitterMiddleware } from "./model/helpers/event_emitter_middleware";
 import FlycamInfoCacheReducer from "./model/reducers/flycam_info_cache_reducer";
+import OperationContextReducer from "./model/reducers/operation_context_reducer";
 import OrganizationReducer from "./model/reducers/organization_reducer";
 import ProofreadingReducer from "./model/reducers/proofreading_reducer";
 import type { TreeGroup, TreeMap } from "./model/types/tree_types";
@@ -503,7 +504,6 @@ export type ProofreadingPostProcessingInfo = {
   readonly tracingId: string;
 };
 export type SaveState = {
-  readonly isBusy: boolean;
   readonly isSavingDisabled: boolean; // true when the user explicitly disabled saving in the WK menu dropdown
   readonly queue: Array<SaveQueueEntry>;
   readonly lastSaveTimestamp: number;
@@ -563,11 +563,6 @@ export type BorderOpenStatus = {
   right: boolean;
 };
 export type Theme = "light" | "dark";
-export type BusyBlockingInfo = {
-  isBusy: boolean;
-  reason?: string;
-  allowedSagas: SagaIdentifier[];
-};
 export type ContextMenuInfo = {
   readonly contextMenuPosition: Readonly<[number, number]> | null | undefined;
   readonly clickedNodeId: number | null | undefined;
@@ -603,7 +598,6 @@ type UiInformation = {
   readonly theme: Theme;
   readonly isWkInitialized: boolean;
   readonly isUiReady: boolean;
-  readonly busyBlockingInfo: BusyBlockingInfo;
   readonly quickSelectState:
     | "inactive"
     | "drawing" // the user is currently drawing a bounding box
@@ -698,6 +692,24 @@ export type StoreDataset = APIDataset & {
   areLayersPreprocessed: true;
 };
 
+// Tracks which named operations are currently running and how they relate to each other.
+// `activeOperations` is the stack of top-level operations (e.g. "PROOFREADING", "FLOODFILL").
+// An operation blocks concurrent starts of the same ID and all other operations, by default.
+// `childOperations` lists sub-operations that a parent has explicitly pre-authorized to run
+// inside it (e.g. "SAVE" inside "PROOFREADING") so they bypass the normal exclusion check.
+// While operations are ongoing, the UI is typically blocked for the user (except when saving
+// in non-live-collab mode).
+export type OperationContextState = {
+  readonly activeOperations: ReadonlyArray<{
+    readonly id: OperationId;
+    readonly description?: string;
+  }>;
+  readonly childOperations: ReadonlyArray<{
+    readonly id: OperationId;
+    readonly parentId: OperationId;
+  }>;
+};
+
 export type WebknossosState = {
   readonly datasetConfiguration: DatasetConfiguration;
   readonly userConfiguration: UserConfiguration;
@@ -719,6 +731,7 @@ export type WebknossosState = {
     string, // layerName
     LocalSegmentationState
   >;
+  readonly operationContext: OperationContextState;
 };
 const sagaMiddleware = createSagaMiddleware();
 export type Reducer = (state: WebknossosState, action: Action) => WebknossosState;
@@ -738,6 +751,7 @@ export const combinedReducer = reduceReducers(
   UiReducer,
   ConnectomeReducer,
   OrganizationReducer,
+  OperationContextReducer,
 ) as Reducer;
 
 const store = createStore<WebknossosState, Action>(

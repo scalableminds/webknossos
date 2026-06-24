@@ -21,7 +21,6 @@ import type { AdditionalCoordinate, ServerEditableMapping } from "types/api_type
 import Constants, {
   MappingStatusEnum,
   OrthoViews,
-  SagaIdentifier,
   TreeTypeEnum,
   type Vector3,
 } from "viewer/constants";
@@ -92,12 +91,7 @@ import {
   setTreeNameAction,
   setTreesAgglomerateInfoTracingIdAction,
 } from "viewer/model/actions/skeletontracing_actions";
-import {
-  allowSagaWhileBusyAction,
-  disallowSagaWhileBusyAction,
-  type EnterAction,
-  type EscapeAction,
-} from "viewer/model/actions/ui_actions";
+import type { EnterAction, EscapeAction } from "viewer/model/actions/ui_actions";
 import {
   clickSegmentAction,
   initializeEditableMappingAction,
@@ -130,10 +124,11 @@ import {
 } from "../../../accessors/flycam_accessor";
 import type { Action } from "../../../actions/actions";
 import type { Tree } from "../../../types/tree_types";
+import type { OperationContext } from "../../operation_context_saga";
 import { ensureWkInitialized } from "../../ready_sagas";
 import {
   spawnUntilCanceled,
-  takeEveryUnlessBusy,
+  takeEveryInOperationContext,
   takeWithBatchActionSupport,
 } from "../../saga_helpers";
 import { subscribeToAnnotationMutex } from "../../saving/save_mutex_saga";
@@ -161,41 +156,45 @@ const PROOFREADING_BUSY_REASON = "Proofreading in progress";
 export default function* proofreadRootSaga(): Saga<void> {
   yield* takeWithBatchActionSupport("INITIALIZE_SKELETONTRACING");
   yield* call(ensureWkInitialized);
+  const proofreadingOptions = {
+    id: "PROOFREADING" as const,
+    description: PROOFREADING_BUSY_REASON,
+  };
 
-  yield* takeEveryUnlessBusy(
+  yield* takeEveryInOperationContext(
     "MERGE_TREES",
     runSagaAndCatchSoftError(handleMergeViaTree),
-    PROOFREADING_BUSY_REASON,
+    proofreadingOptions,
   );
-  yield* takeEveryUnlessBusy(
+  yield* takeEveryInOperationContext(
     ["DELETE_EDGE", "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS"],
     runSagaAndCatchSoftError(handleSplitViaTree),
-    PROOFREADING_BUSY_REASON,
+    proofreadingOptions,
   );
   yield* takeEvery(["PROOFREAD_AT_POSITION"], runSagaAndCatchSoftError(proofreadAtPosition));
   yield* takeEvery(
     ["CLEAR_PROOFREADING_BY_PRODUCTS"],
     runSagaAndCatchSoftError(clearProofreadingByproducts),
   );
-  yield* takeEveryUnlessBusy(
+  yield* takeEveryInOperationContext(
     "PROOFREAD_MERGE",
     runSagaAndCatchSoftError(handleProofreadMerge),
-    PROOFREADING_BUSY_REASON,
+    proofreadingOptions,
   );
-  yield* takeEveryUnlessBusy(
+  yield* takeEveryInOperationContext(
     "MIN_CUT_AGGLOMERATE",
     runSagaAndCatchSoftError(handleMinCutAgglomerate),
-    PROOFREADING_BUSY_REASON,
+    proofreadingOptions,
   );
-  yield* takeEveryUnlessBusy(
+  yield* takeEveryInOperationContext(
     ["MIN_CUT_PARTITIONS", "ENTER"],
     runSagaAndCatchSoftError(performPartitionedMinCut),
-    PROOFREADING_BUSY_REASON,
+    proofreadingOptions,
   );
-  yield* takeEveryUnlessBusy(
+  yield* takeEveryInOperationContext(
     ["CUT_AGGLOMERATE_FROM_NEIGHBORS"],
     runSagaAndCatchSoftError(handleProofreadCutFromNeighbors),
-    PROOFREADING_BUSY_REASON,
+    proofreadingOptions,
   );
 
   yield* takeEvery(
@@ -276,16 +275,12 @@ function proofreadCoarseMagIndex(): number {
     : 3;
 }
 
-function* syncWithBackend() {
-  yield* put(allowSagaWhileBusyAction(SagaIdentifier.SAVE_SAGA));
-  yield* call([Model, Model.ensureSavedState]);
-  yield* put(disallowSagaWhileBusyAction(SagaIdentifier.SAVE_SAGA));
+function* syncWithBackend(ctx: OperationContext | undefined): Saga<void> {
+  yield* call([Model, Model.ensureSavedState], ctx);
 }
 
-function* pollNewestBackendVersion() {
-  yield* put(allowSagaWhileBusyAction(SagaIdentifier.SAVE_SAGA));
-  yield* call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
-  yield* put(disallowSagaWhileBusyAction(SagaIdentifier.SAVE_SAGA));
+function* pollNewestBackendVersion(ctx: OperationContext): Saga<void> {
+  yield* call(dispatchEnsureHasNewestVersionAsync, Store.dispatch, ctx);
 }
 
 function* subscribeToAnnotationMutexInLiveCollab(proofreadingSagaId: string) {
@@ -472,7 +467,7 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
   );
 }
 
-export function* createEditableMapping(): Saga<string> {
+export function* createEditableMapping(ctx?: OperationContext): Saga<string> {
   /*
    * Returns the name of the editable mapping. This is not identical to the
    * name of the HDF5 mapping for which the editable mapping is about to be created.
@@ -493,7 +488,7 @@ export function* createEditableMapping(): Saga<string> {
   // Ensure a saved state so that the mapping is locked and editable before doing the first proofreading operation.
   // This needs to happen before initializeEditableMappingAction is dispatched, because the backend wouldn't be
   // able to handle mapping requests that might be triggered right after initializing the mapping.
-  yield* call(syncWithBackend);
+  yield* call(syncWithBackend, ctx);
 
   const editableMapping: ServerEditableMapping = {
     baseMappingName: baseMappingName,
@@ -504,7 +499,7 @@ export function* createEditableMapping(): Saga<string> {
 
   yield* put(setTreesAgglomerateInfoTracingIdAction(volumeTracingId));
   // Save, that the agglomerate info of all agglomerate trees was updated.
-  yield* call(syncWithBackend);
+  yield* call(syncWithBackend, ctx);
 
   return volumeTracingId;
 }
@@ -540,6 +535,7 @@ function lookupAgglomerateId(
 // Note: the skeletontracing reducer already mutated the trees according to the received action.
 function* setupTreeProofreadingAction(
   action: MergeTreesAction | DeleteEdgeAction | MinCutAgglomerateAction,
+  ctx: OperationContext,
 ) {
   const allowUpdate = yield* select(mayEditAnnotation);
   if (!allowUpdate) return null;
@@ -567,7 +563,7 @@ function* setupTreeProofreadingAction(
       // the affected agglomerate tree(s) may not be in sync with the backend yet. So poll the latest updates.
       // It is ensured that no new updates by other users are created during processing this proofreading
       // interaction as we subscribed to the mutex above.
-      yield* call(pollNewestBackendVersion);
+      yield* call(pollNewestBackendVersion, ctx);
     }
     // Replay the current action with the proofreading saga as the initiator.
     // The reducer ignores the current action as the initiator is marked as "USER".
@@ -613,7 +609,7 @@ function* setupTreeProofreadingAction(
       return null;
     }
 
-    const preparation = yield* call(prepareSplitOrMerge, true);
+    const preparation = yield* call(prepareSplitOrMerge, true, ctx);
     if (!preparation) {
       return null;
     }
@@ -656,11 +652,11 @@ function* setupTreeProofreadingAction(
   }
 }
 
-function* handleMergeViaTree(action: MergeTreesAction): Saga<void> {
+function* handleMergeViaTree(action: MergeTreesAction, ctx: OperationContext): Saga<void> {
   // Ignore MergeTrees actions that were dispatched by the proofreading saga itself.
   if (action.initiator === "PROOFREADING") return;
 
-  const setup = yield* call(setupTreeProofreadingAction, action);
+  const setup = yield* call(setupTreeProofreadingAction, action, ctx);
   if (!setup) return;
   const {
     unsubscribeFromAnnotationMutex,
@@ -707,7 +703,12 @@ function* handleMergeViaTree(action: MergeTreesAction): Saga<void> {
 
     yield* call(pushPendingProofreadingOperationInfo, volumeTracingId, sourceInfo, targetInfo);
     yield* put(pushSaveQueueTransaction(items));
-    const postProcessResult = yield* call(syncAndUpdatePostProcessingInfo, sourceInfo, targetInfo);
+    const postProcessResult = yield* call(
+      syncAndUpdatePostProcessingInfo,
+      sourceInfo,
+      targetInfo,
+      ctx,
+    );
     if (!postProcessResult) return;
     ({ sourceInfo, targetInfo } = postProcessResult);
 
@@ -783,7 +784,7 @@ function* handleMergeViaTree(action: MergeTreesAction): Saga<void> {
     ];
     yield* call(refreshAffectedSegmentItems, volumeTracingId, refreshInfos);
     // Now that the segment items are up-to-date we can sync with the back-end and release the mutex.
-    yield* call(syncWithBackend);
+    yield* call(syncWithBackend, ctx);
     // Refreshing the meshes might take a while and won't block the saga here.
     yield* spawnUntilCanceled(refreshAffectedMeshes, volumeTracingId, refreshInfos);
   } finally {
@@ -793,11 +794,14 @@ function* handleMergeViaTree(action: MergeTreesAction): Saga<void> {
   }
 }
 
-function* handleSplitViaTree(action: DeleteEdgeAction | MinCutAgglomerateAction): Saga<void> {
+function* handleSplitViaTree(
+  action: DeleteEdgeAction | MinCutAgglomerateAction,
+  ctx: OperationContext,
+): Saga<void> {
   // Ignore DeleteEdge actions that were dispatched by the proofreading saga itself.
   if (action.type === "DELETE_EDGE" && action.initiator === "PROOFREADING") return;
 
-  const setup = yield* call(setupTreeProofreadingAction, action);
+  const setup = yield* call(setupTreeProofreadingAction, action, ctx);
   if (!setup) return;
 
   const {
@@ -858,7 +862,12 @@ function* handleSplitViaTree(action: DeleteEdgeAction | MinCutAgglomerateAction)
 
     yield* call(pushPendingProofreadingOperationInfo, volumeTracingId, sourceInfo, targetInfo);
     yield* put(pushSaveQueueTransaction(items));
-    const postProcessResult = yield* call(syncAndUpdatePostProcessingInfo, sourceInfo, targetInfo);
+    const postProcessResult = yield* call(
+      syncAndUpdatePostProcessingInfo,
+      sourceInfo,
+      targetInfo,
+      ctx,
+    );
     if (!postProcessResult) return;
     ({ sourceInfo, targetInfo } = postProcessResult);
 
@@ -917,7 +926,7 @@ function* handleSplitViaTree(action: DeleteEdgeAction | MinCutAgglomerateAction)
     if (newSourceAgglomerateId === newTargetAgglomerateId) {
       // The split was unsuccessful.
       Toast.warning("The split operation was unsuccessful. Please retry.");
-      yield* call(syncWithBackend);
+      yield* call(syncWithBackend, ctx);
       return;
     }
 
@@ -990,7 +999,7 @@ function* handleSplitViaTree(action: DeleteEdgeAction | MinCutAgglomerateAction)
     ];
     yield* call(refreshAffectedSegmentItems, volumeTracingId, refreshInfos);
     // Now that the segment items are up-to-date we can sync with the back-end and release the mutex.
-    yield* call(syncWithBackend);
+    yield* call(syncWithBackend, ctx);
     // Refreshing the meshes might take a while and won't block the saga here.
     yield* spawnUntilCanceled(refreshAffectedMeshes, volumeTracingId, refreshInfos);
   } finally {
@@ -1076,7 +1085,10 @@ function* performMinCut(
   return [false, edgesToRemove];
 }
 
-function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction): Saga<void> {
+function* performPartitionedMinCut(
+  action: MinCutPartitionsAction | EnterAction,
+  ctx: OperationContext,
+): Saga<void> {
   const isMultiSplitActive = yield* select((state) => state.userConfiguration.isMultiSplitActive);
   const isFromEditingEvent = action.type === "ENTER" && isEditableEventTarget(action.event.target);
   const activeTool = yield* select((state) => state.uiInformation.activeTool);
@@ -1084,7 +1096,7 @@ function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction)
     return;
   }
 
-  const preparation = yield* call(prepareSplitOrMerge, false);
+  const preparation = yield* call(prepareSplitOrMerge, false, ctx);
   if (!preparation) {
     return;
   }
@@ -1142,6 +1154,7 @@ function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction)
       syncAndUpdatePostProcessingInfo,
       dummySourceInfo,
       dummySourceInfo,
+      ctx,
     );
     if (!postProcessResult) return;
     const agglomerateIdBeforeSplit = postProcessResult.sourceInfo.agglomerateId;
@@ -1239,7 +1252,7 @@ function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction)
 
     // Now that the segment items are up-to-date we can sync with the back-end
     // and release the mutex.
-    yield* call(syncWithBackend);
+    yield* call(syncWithBackend, ctx);
 
     // Refreshing the meshes might take a while and won't block the saga
     // here.
@@ -1365,8 +1378,12 @@ const MISSING_INFORMATION_WARNING =
 function* syncAndUpdatePostProcessingInfo<
   T1 extends IdInfo | IdInfoOpt | IdInfoWithoutPosition,
   T2 extends IdInfo | IdInfoOpt | IdInfoWithoutPosition,
->(sourceInfo: T1, targetInfo: T2): Saga<{ sourceInfo: T1; targetInfo: T2 } | null> {
-  yield* call(syncWithBackend);
+>(
+  sourceInfo: T1,
+  targetInfo: T2,
+  ctx: OperationContext,
+): Saga<{ sourceInfo: T1; targetInfo: T2 } | null> {
+  yield* call(syncWithBackend, ctx);
   const proofreadingPostProcessingInfo = yield* call(popPendingProofreadingOperationInfo);
   if (!proofreadingPostProcessingInfo) {
     Toast.error(messages["proofreading.post_processing_info_not_found"]);
@@ -1388,6 +1405,7 @@ function* refreshProofreadingSegmentsAndMeshes(
   targetInfo: IdInfoOpt,
   sourceAgglomerateId: number,
   targetAgglomerateId: number,
+  ctx: OperationContext,
 ): Saga<void> {
   /* Ensure segment items exist for affected segments and reload affected meshes */
   const refreshInfos = [
@@ -1408,16 +1426,16 @@ function* refreshProofreadingSegmentsAndMeshes(
     },
   ];
   yield* call(refreshAffectedSegmentItems, volumeTracingId, refreshInfos);
-  yield* call(syncWithBackend);
+  yield* call(syncWithBackend, ctx);
   // Refreshing the meshes might take a while and won't block the saga here.
   yield* spawnUntilCanceled(refreshAffectedMeshes, volumeTracingId, refreshInfos);
 }
 
-function* handleProofreadMerge(action: ProofreadMergeAction) {
+function* handleProofreadMerge(action: ProofreadMergeAction, ctx: OperationContext) {
   const allowUpdate = yield* select((state) => mayEditAnnotation(state));
   if (!allowUpdate) return;
 
-  const preparation = yield* call(prepareSplitOrMerge, false);
+  const preparation = yield* call(prepareSplitOrMerge, false, ctx);
   if (!preparation) return;
 
   let { volumeTracing, activeMapping } = preparation;
@@ -1487,7 +1505,7 @@ function* handleProofreadMerge(action: ProofreadMergeAction) {
     );
 
     const postProcessResult = yield* call(() =>
-      syncAndUpdatePostProcessingInfo(sourceInfo, targetInfo),
+      syncAndUpdatePostProcessingInfo(sourceInfo, targetInfo, ctx),
     );
     if (!postProcessResult) return;
     ({ sourceInfo, targetInfo } = postProcessResult);
@@ -1526,6 +1544,7 @@ function* handleProofreadMerge(action: ProofreadMergeAction) {
       targetInfo,
       sourceAgglomerateId,
       targetAgglomerateId,
+      ctx,
     );
   } finally {
     if (unsubscribeFromAnnotationMutex) {
@@ -1534,11 +1553,14 @@ function* handleProofreadMerge(action: ProofreadMergeAction) {
   }
 }
 
-function* handleMinCutAgglomerate(action: MinCutAgglomerateWithPositionAction) {
+function* handleMinCutAgglomerate(
+  action: MinCutAgglomerateWithPositionAction,
+  ctx: OperationContext,
+) {
   const allowUpdate = yield* select((state) => mayEditAnnotation(state));
   if (!allowUpdate) return;
 
-  const preparation = yield* call(prepareSplitOrMerge, false);
+  const preparation = yield* call(prepareSplitOrMerge, false, ctx);
   if (!preparation) return;
 
   let { agglomerateFileMag, volumeTracing, activeMapping, annotationVersion } = preparation;
@@ -1591,7 +1613,7 @@ function* handleMinCutAgglomerate(action: MinCutAgglomerateWithPositionAction) {
   );
   try {
     const postProcessResult = yield* call(() =>
-      syncAndUpdatePostProcessingInfo(sourceInfo, targetInfo),
+      syncAndUpdatePostProcessingInfo(sourceInfo, targetInfo, ctx),
     );
     if (!postProcessResult) return;
     ({ sourceInfo, targetInfo } = postProcessResult);
@@ -1681,6 +1703,7 @@ function* handleMinCutAgglomerate(action: MinCutAgglomerateWithPositionAction) {
       targetInfo,
       sourceAgglomerateId,
       targetAgglomerateId,
+      ctx,
     );
   } finally {
     if (unsubscribeFromAnnotationMutex) {
@@ -1689,7 +1712,7 @@ function* handleMinCutAgglomerate(action: MinCutAgglomerateWithPositionAction) {
   }
 }
 
-function* handleProofreadCutFromNeighbors(action: Action) {
+function* handleProofreadCutFromNeighbors(action: Action, ctx: OperationContext) {
   // Actually, action is CutAgglomerateFromNeighborsAction but the
   // takeEveryUnlessBusy wrapper does not understand this.
   if (action.type !== "CUT_AGGLOMERATE_FROM_NEIGHBORS") {
@@ -1702,7 +1725,7 @@ function* handleProofreadCutFromNeighbors(action: Action) {
   const allowUpdate = yield* select(mayEditAnnotation);
   if (!allowUpdate) return;
 
-  const preparation = yield* call(prepareSplitOrMerge, false);
+  const preparation = yield* call(prepareSplitOrMerge, false, ctx);
   if (!preparation) {
     return;
   }
@@ -1762,7 +1785,12 @@ function* handleProofreadCutFromNeighbors(action: Action) {
   );
   try {
     const dummyInfo = idInfos[0];
-    const postProcessResult = yield* call(syncAndUpdatePostProcessingInfo, dummyInfo, dummyInfo);
+    const postProcessResult = yield* call(
+      syncAndUpdatePostProcessingInfo,
+      dummyInfo,
+      dummyInfo,
+      ctx,
+    );
     if (!postProcessResult) return;
     const targetAgglomerateIdBeforeSplit = postProcessResult.sourceInfo.agglomerateId;
 
@@ -1823,7 +1851,7 @@ function* handleProofreadCutFromNeighbors(action: Action) {
     ];
     yield* call(refreshAffectedSegmentItems, volumeTracingId, refreshInfos);
 
-    yield* call(syncWithBackend);
+    yield* call(syncWithBackend, ctx);
 
     // Refreshing the meshes might take a while and won't block the saga
     // here.
@@ -1847,7 +1875,10 @@ type Preparation = {
   annotationVersion: number;
 };
 
-export function* prepareSplitOrMerge(isTreeProofreading: boolean): Saga<Preparation | null> {
+export function* prepareSplitOrMerge(
+  isTreeProofreading: boolean,
+  ctx: OperationContext,
+): Saga<Preparation | null> {
   const volumeTracingLayer = yield* select((state) => getActiveSegmentationTracingLayer(state));
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
   if (volumeTracingLayer == null || volumeTracing == null) {
@@ -1865,7 +1896,7 @@ export function* prepareSplitOrMerge(isTreeProofreading: boolean): Saga<Preparat
 
   if (!volumeTracing.hasEditableMapping) {
     try {
-      mappingName = yield* call(createEditableMapping);
+      mappingName = yield* call(createEditableMapping, ctx);
     } catch (e) {
       console.error(e);
       return null;

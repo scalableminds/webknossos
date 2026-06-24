@@ -79,8 +79,6 @@ export function* pushSaveQueueAsync(): Saga<never> {
       yield* take("PUSH_SAVE_QUEUE_TRANSACTION");
       // The save queue was empty and just got filled. Ignore any pre-existing saveNow actions from
       // the buffer as we don't want to immediately save now (new SAVE_NOW actions are needed for that.
-      // todop (lo pri): if we remove this flush, two subsequent save_now actions cause problems.
-      // why are these two save_now actions there in the first place?
       yield* flush(saveNowChannel);
     }
 

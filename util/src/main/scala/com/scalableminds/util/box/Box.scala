@@ -86,7 +86,6 @@ sealed abstract class Box[+A] extends IterableOnce[A] with Product with Serializ
 
   override def equals(other: Any): Boolean = (this, other) match {
     case (Full(x), Full(y)) => x == y
-    case (Full(x), y)       => x == y
     case (x, y: AnyRef)     => x eq y
     case _                  => false
   }

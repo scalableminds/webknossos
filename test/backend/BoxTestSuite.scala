@@ -104,8 +104,8 @@ class BoxTestSuite extends AsyncWordSpec {
     "not be equal to a Full wrapping a different value" in
       assert(Full(42) != Full(43))
 
-    "be equal to its unwrapped value (via equals)" in
-      assert(Full(42).equals(42))
+    "not be equal to its unwrapped value" in
+      assert(!Full(42).equals(42))
 
   }
 

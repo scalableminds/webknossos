@@ -1,9 +1,10 @@
 package com.scalableminds.webknossos.datastore.services.mesh
 
 import com.scalableminds.util.Msg
+import com.scalableminds.util.box.{Box, Full}
 import com.scalableminds.util.geometry.Vec3Float
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Fox, Full}
+import com.scalableminds.util.box.Box.tryo
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId

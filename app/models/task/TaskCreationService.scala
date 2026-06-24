@@ -4,6 +4,7 @@ import com.scalableminds.util.Msg
 
 import java.io.File
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.Fox
@@ -26,7 +27,6 @@ import models.dataset.{Dataset, DatasetDAO, DatasetService}
 import models.project.{Project, ProjectDAO}
 import models.team.{Team, TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserExperiencesDAO, UserService}
-import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import play.api.libs.json.{JsObject, Json}
 import telemetry.SlackNotificationService
 import com.scalableminds.util.objectid.ObjectId

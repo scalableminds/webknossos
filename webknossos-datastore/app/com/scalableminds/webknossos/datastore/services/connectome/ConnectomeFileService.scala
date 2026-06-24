@@ -2,9 +2,10 @@ package com.scalableminds.webknossos.datastore.services.connectome
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.Box
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Fox}
+import com.scalableminds.util.box.Box.tryo
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.datasource.{

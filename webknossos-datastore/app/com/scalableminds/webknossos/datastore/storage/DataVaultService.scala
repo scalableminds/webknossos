@@ -1,10 +1,11 @@
 package com.scalableminds.webknossos.datastore.storage
 
 import com.scalableminds.util.Msg
+import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.mvc.Formatter
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Failure, Fox, Full, Empty}
+import com.scalableminds.util.box.Box.tryo
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.datavault.{

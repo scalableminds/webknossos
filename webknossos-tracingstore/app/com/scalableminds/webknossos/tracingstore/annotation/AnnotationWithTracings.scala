@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.annotation
 
+import com.scalableminds.util.box.{Box, Failure, Full}
 import com.scalableminds.webknossos.datastore.Annotation.{
   AnnotationLayerProto,
   AnnotationProto,
@@ -21,7 +22,6 @@ import com.scalableminds.webknossos.tracingstore.tracings.skeleton.SkeletonTraci
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.SkeletonUpdateAction
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ApplyableVolumeUpdateAction
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.{Box, Failure, Full}
 
 import scala.concurrent.ExecutionContext
 

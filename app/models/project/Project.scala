@@ -2,6 +2,7 @@ package models.project
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.box.Full
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
@@ -11,7 +12,6 @@ import models.annotation.{AnnotationState, AnnotationType}
 import models.task.TaskDAO
 import models.team.TeamDAO
 import models.user.{User, UserService}
-import com.scalableminds.util.tools.Full
 import play.api.libs.json._
 import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient}

@@ -3,11 +3,11 @@ package com.scalableminds.webknossos.datastore.dataformats.wkw
 import java.io._
 import org.apache.commons.io.IOUtils
 import com.google.common.io.LittleEndianDataInputStream
+import com.scalableminds.util.box.{Box, Failure, Full}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import net.jpountz.lz4.LZ4Factory
-import com.scalableminds.util.tools.{Box, Failure, Full}
-import com.scalableminds.util.tools.Box.tryo
+import Box.tryo
 
 import scala.concurrent.ExecutionContext
 

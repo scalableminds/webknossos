@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
+import com.scalableminds.util.box.Box
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.tools.ByteUtils
 import com.scalableminds.webknossos.datastore.datareaders.{
@@ -13,7 +14,6 @@ import com.scalableminds.webknossos.datastore.datareaders.{
 }
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.Box
 import play.api.libs.json.{Format, JsObject, JsResult, JsString, JsSuccess, JsValue, Json, OFormat, Reads, Writes}
 import play.api.libs.json.Json.WithDefaultValues
 import ucar.ma2.{Array => MultiArray}

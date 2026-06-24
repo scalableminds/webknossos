@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.dataformats.wkw
 
 import com.google.common.io.{LittleEndianDataInputStream => DataInputStream}
+import com.scalableminds.util.box.Box
 import com.scalableminds.webknossos.datastore.dataformats.wkw.util.ResourceBox
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
@@ -18,8 +19,7 @@ import org.apache.commons.io.IOUtils
 
 import java.io._
 import java.nio.{ByteBuffer, ByteOrder}
-import com.scalableminds.util.tools.Box
-import com.scalableminds.util.tools.Box.tryo
+import Box.tryo
 
 object ChunkType extends Enumeration(1) {
   val Raw, LZ4, LZ4HC = Value

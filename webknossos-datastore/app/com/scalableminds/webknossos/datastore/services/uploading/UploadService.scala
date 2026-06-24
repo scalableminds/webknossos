@@ -4,14 +4,16 @@ import com.scalableminds.util.Msg
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import org.apache.pekko.actor.ActorSystem
-import scala.concurrent.duration._
+
+import scala.concurrent.duration.*
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.util.geometry.Vec3Double
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools._
+import com.scalableminds.util.box.Box.tryo
+import com.scalableminds.util.tools.{Fox, JsonHelper, TextUtils}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
@@ -28,7 +30,7 @@ import com.scalableminds.webknossos.datastore.models.LengthUnit.LengthUnit
 import com.scalableminds.webknossos.datastore.models.{UnfinishedUpload, VoxelSize}
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType.LayerAttachmentType
 import com.scalableminds.webknossos.datastore.models.datasource.UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON
-import com.scalableminds.webknossos.datastore.models.datasource._
+import com.scalableminds.webknossos.datastore.models.datasource.*
 import com.scalableminds.webknossos.datastore.services.uploading.UploadDomain.UploadDomain
 import com.scalableminds.webknossos.datastore.services.{DSRemoteWebknossosClient, DataSourceService, ManagedS3Service}
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
@@ -41,7 +43,7 @@ import java.io.{File, RandomAccessFile}
 import java.net.URI
 import java.nio.file.{Files, Path}
 import scala.concurrent.{ExecutionContext, Future}
-import scala.jdk.FutureConverters._
+import scala.jdk.FutureConverters.*
 
 case class ResumableUploadInfo(
     uploadId: String, // upload id that was also used in chunk upload (this time without file paths)

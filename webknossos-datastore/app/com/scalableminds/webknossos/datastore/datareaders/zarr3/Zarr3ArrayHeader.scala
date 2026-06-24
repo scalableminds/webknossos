@@ -1,8 +1,9 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
+import com.scalableminds.util.box.{Box, Full}
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Full, JsonHelper}
+import com.scalableminds.util.box.Box.tryo
+import com.scalableminds.util.tools.JsonHelper
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator

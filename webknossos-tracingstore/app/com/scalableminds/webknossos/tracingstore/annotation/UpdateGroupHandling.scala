@@ -1,9 +1,9 @@
 package com.scalableminds.webknossos.tracingstore.annotation
 
 import com.scalableminds.util.Msg
+import com.scalableminds.util.box.{Box, Full}
 import com.scalableminds.util.collections.SequenceUtils
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.{Box, Full}
 
 trait UpdateGroupHandling extends LazyLogging {
 

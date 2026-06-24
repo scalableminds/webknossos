@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.services.mesh
 
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.{Box, Failure}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Float, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
@@ -15,7 +16,6 @@ import com.scalableminds.webknossos.datastore.models.requests.{
 import com.scalableminds.webknossos.datastore.services.mcubes.MarchingCubes
 import com.scalableminds.webknossos.datastore.services.BinaryDataService
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.{Box, Failure}
 import com.scalableminds.webknossos.datastore.services.mapping.MappingService
 import org.apache.pekko.actor.{Actor, ActorRef, ActorSystem, Props}
 import org.apache.pekko.pattern.ask

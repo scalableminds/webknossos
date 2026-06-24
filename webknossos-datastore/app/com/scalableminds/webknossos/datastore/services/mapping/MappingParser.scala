@@ -2,8 +2,8 @@ package com.scalableminds.webknossos.datastore.services.mapping
 
 import com.google.gson.JsonParseException
 import com.google.gson.stream.JsonReader
+import com.scalableminds.util.box.{Box, Failure}
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Box, Failure}
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayerMapping
 import com.typesafe.scalalogging.LazyLogging
 

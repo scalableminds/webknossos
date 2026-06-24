@@ -1,6 +1,7 @@
 package models.dataset
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.box.Full
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.image.Color
@@ -12,7 +13,6 @@ import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfi
 import com.scalableminds.webknossos.datastore.models.datasource.{StaticLayer, UsableDataSource}
 import com.typesafe.scalalogging.LazyLogging
 import models.configuration.DatasetConfigurationService
-import com.scalableminds.util.tools.Full
 import play.api.http.Status.NOT_FOUND
 import com.scalableminds.util.objectid.ObjectId
 import play.api.libs.json.{JsArray, JsObject}

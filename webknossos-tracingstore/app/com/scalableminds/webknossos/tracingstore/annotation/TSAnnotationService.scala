@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.tracingstore.annotation
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.{Empty, Full}
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
@@ -34,7 +35,6 @@ import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.Skel
 import com.scalableminds.webknossos.tracingstore.tracings.volume._
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient}
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.{Empty, Full}
 import play.api.libs.json.{JsObject, JsValue, Json}
 
 import javax.inject.Inject

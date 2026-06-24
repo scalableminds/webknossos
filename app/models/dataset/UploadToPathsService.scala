@@ -2,9 +2,10 @@ package models.dataset
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.box.{Box, Failure, Full}
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Box, Failure, Fox, Full, TextUtils}
+import com.scalableminds.util.tools.{Fox, TextUtils}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.helpers.UPath
@@ -170,8 +171,9 @@ class UploadToPathsService @Inject() (
         fallbackFromBaseFolder
       case Some(fromConfigStrs) =>
         (for {
-          fromConfig <- fromConfigStrs.map(UPath.fromString)
-        } yield fromConfig.map(_.toAbsolute)).toList.toSingleBox("Could not parse config uploadToPaths.prefixes")
+          fromConfigUPaths <- Box.combined(fromConfigStrs)(UPath.fromString)
+          fromConfigAbsolute = fromConfigUPaths.map(_.toAbsolute)
+        } yield fromConfigAbsolute) ?~! "Could not parse config uploadToPaths.prefixes"
     }
   }
 

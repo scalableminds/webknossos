@@ -1,8 +1,8 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr
 
+import com.scalableminds.util.box.{Box, Failure, Full}
 import com.scalableminds.webknossos.datastore.models
 import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
-import com.scalableminds.util.tools.{Box, Failure, Full}
 import play.api.libs.json.{Json, OFormat}
 
 case class NgffCoordinateTransformation(

@@ -1,6 +1,8 @@
 package com.scalableminds.util.tools
 
-import scala.concurrent.duration._
+import com.scalableminds.util.box.{Box, Empty, Failure, Full, ParamFailure}
+
+import scala.concurrent.duration.*
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Success, Try}
 
@@ -79,7 +81,7 @@ object Fox {
         case Some(Empty)            => Empty
         case Some(failure: Failure) => failure
         case _                      =>
-          Full(results.map(_.getOrThrow("An exception should never be thrown, all boxes must be full")).toList)
+          Full(results.map(_.get("An exception should never be thrown, all boxes must be full")).toList)
       }
     })
 
@@ -242,7 +244,6 @@ object Fox {
 }
 
 class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
-  private val self: Fox[A] = this
 
   // Add error message in case of Failure and Empty (wrapping Empty in a Failure)
   def ?~>(s: String): Fox[A] =
@@ -332,7 +333,7 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
   def toFutureOrThrowException(justification: String): Future[A] =
     for {
       box: Box[A] <- this.futureBox
-    } yield box.getOrThrow(justification)
+    } yield box.get(justification)
 
   def toFutureWithEmptyToFailure: Future[A] =
     (for {
@@ -348,7 +349,7 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
   @deprecated(message = "Do not use this in production code", since = "forever")
   def get(justification: String, awaitTimeout: FiniteDuration = 10 seconds): A = {
     val box = await(justification, awaitTimeout)
-    box.getOrThrow(justification)
+    box.get(justification)
   }
 
   /** Awaits the future and returns the box.
@@ -372,22 +373,5 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
       case Empty       => Full(fillValue)
       case f: Failure  => f
     })
-
-  /** Makes Fox play with Scala 2.8 for comprehensions
-    */
-  def withFilter(p: A => Boolean): WithFilter = new WithFilter(p)
-
-  /** Makes Fox play with Scala 2.8 for comprehension
-    */
-  class WithFilter(p: A => Boolean) {
-    def map[B](f: A => B): Fox[B] = self.filter(p).map(f)
-
-    def flatMap[B](f: A => Fox[B]): Fox[B] = self.filter(p).flatMap(f)
-
-    def foreach[U](f: A => U): Unit = self.filter(p).foreach(f)
-
-    def withFilter(q: A => Boolean): WithFilter =
-      new WithFilter(x => p(x) && q(x))
-  }
 
 }

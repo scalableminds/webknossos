@@ -2,10 +2,11 @@ package models.dataset
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.box.{Box, Full}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, Full, JsonHelper}
+import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
@@ -31,7 +32,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   StaticLayer,
   StaticSegmentationLayer,
   ThinPlateSplineCorrespondences,
-  DataLayerAttachments => AttachmentWrapper
+  DataLayerAttachments as AttachmentWrapper
 }
 import com.scalableminds.webknossos.datastore.services.RealPathInfo
 import com.scalableminds.webknossos.schema.Tables.{
@@ -41,9 +42,9 @@ import com.scalableminds.webknossos.schema.Tables.{
   DatasetLayersRow,
   DatasetMags,
   DatasetMagsRow,
-  GetResultDatasetMagsRow,
   Datasets,
   DatasetsRow,
+  GetResultDatasetMagsRow,
   GetResultDatasetsRow
 }
 import controllers.DatasetUpdatePartialParameters
@@ -51,10 +52,10 @@ import models.dataset.DatasetCreationType.DatasetCreationType
 
 import javax.inject.Inject
 import models.organization.OrganizationDAO
-import play.api.libs.json._
+import play.api.libs.json.*
 import slick.dbio.DBIO
 import slick.jdbc.GetResult
-import slick.jdbc.PostgresProfile.api._
+import slick.jdbc.PostgresProfile.api.*
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.sql.SqlAction
 import utils.sql.{SQLDAO, SimpleSQLDAO, SqlClient, SqlToken}
@@ -1018,7 +1019,7 @@ class DatasetMagDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
               )
            )
               """.as[Option[String]])
-      paths <- pathsStrOpts.flatten.map(UPath.fromString).toList.toSingleBox("Invalid UPath").toFox
+      paths <- Box.combined(pathsStrOpts.flatten)(UPath.fromString).toFox
     } yield paths
 
   // Note equivalent in DatasetLayerAttachmentsDAO
@@ -1675,7 +1676,7 @@ class DatasetLayerAttachmentDAO @Inject() (sqlClient: SqlClient)(implicit ec: Ex
               )
            )
               """.as[String])
-      paths <- pathsStr.map(UPath.fromString).toList.toSingleBox("Invalid UPath").toFox
+      paths <- Box.combined(pathsStr)(UPath.fromString).toFox
     } yield paths
 
   // Note equivalent in DatasetMagsDAO

@@ -10,7 +10,7 @@ import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.{LayerViewConfiguration, StaticLayer}
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
-import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import play.api.libs.json._
 

@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.datareaders.wkw
 
 import com.google.common.io.LittleEndianDataInputStream
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.Box
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
@@ -9,8 +10,7 @@ import com.scalableminds.webknossos.datastore.dataformats.wkw.{MortonEncoding, W
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkUtils, DatasetArray}
 import com.scalableminds.webknossos.datastore.datavault.{ByteRange, StartEndExclusiveByteRange, VaultPath}
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataSourceId}
-import com.scalableminds.util.tools.Box
-import com.scalableminds.util.tools.Box.tryo
+import Box.tryo
 import ucar.ma2.{Array => MultiArray}
 
 import java.io.ByteArrayInputStream

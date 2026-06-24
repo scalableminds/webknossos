@@ -3,16 +3,16 @@ package com.scalableminds.util.mvc
 import com.google.protobuf.CodedInputStream
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.{Box, Empty, Failure, Full, ParamFailure}
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools._
-import com.scalableminds.util.tools.Box.tryo
-import play.api.http.Status._
+import com.scalableminds.util.box.Box.tryo
+import play.api.http.Status.*
 import play.api.http.{HeaderNames, HttpEntity, Status, Writeable}
-import play.api.libs.json._
+import play.api.libs.json.*
 import play.api.mvc.Results.BadRequest
-import play.api.mvc._
-import play.twirl.api._
+import play.api.mvc.*
+import play.twirl.api.*
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 import play.filters.csp.CSPConfig
 

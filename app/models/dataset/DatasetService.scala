@@ -2,9 +2,10 @@ package models.dataset
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.box.{Box, Empty, EmptyBox, Full}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Box, Empty, EmptyBox, Fox, Full, JsonHelper, TextUtils}
+import com.scalableminds.util.tools.{Fox, JsonHelper, TextUtils}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.datasource.{

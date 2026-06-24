@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.explore
 
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.Box
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.image.Color
 import com.scalableminds.util.tools.TextUtils.normalizeStrong
@@ -29,7 +30,6 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   LayerViewConfiguration,
   StaticLayer
 }
-import com.scalableminds.util.tools.Box
 import play.api.libs.json.{JsArray, JsBoolean, JsNumber, Json}
 
 import scala.concurrent.ExecutionContext

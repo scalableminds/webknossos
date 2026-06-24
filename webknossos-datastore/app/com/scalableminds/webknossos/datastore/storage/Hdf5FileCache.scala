@@ -10,8 +10,8 @@ import ch.systemsx.cisd.hdf5.{
   IHDF5StringReader
 }
 import com.scalableminds.util.Msg
+import com.scalableminds.util.box.{Box, Failure, Full}
 import com.scalableminds.util.cache.LRUConcurrentCache
-import com.scalableminds.util.tools.{Box, Failure, Full}
 import com.scalableminds.webknossos.datastore.dataformats.SafeCacheable
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachment
 import com.scalableminds.webknossos.datastore.services.ArrayArtifactHashing

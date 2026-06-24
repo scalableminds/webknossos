@@ -49,11 +49,11 @@ class TaskDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
         .fromList(parseArrayLiteral(r.editrotation).map(_.toDouble))
         .toFox ?~> "could not parse edit rotation"
     } yield Task(
-      ObjectId(r._Id),
-      ObjectId(r._Project),
-      r._Script.map(ObjectId(_)),
-      ObjectId(r._Tasktype),
-      Experience(r.neededexperienceDomain, r.neededexperienceValue),
+      ObjectId(r._id),
+      ObjectId(r._project),
+      r._script.map(ObjectId(_)),
+      ObjectId(r._tasktype),
+      Experience(r.neededexperience_domain, r.neededexperience_value),
       r.totalinstances,
       r.pendinginstances,
       r.tracingtime,

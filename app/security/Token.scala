@@ -71,9 +71,9 @@ class TokenDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       tokenType <- TokenType.fromString(r.tokentype).toFox
     } yield Token(
-      ObjectId(r._Id),
+      ObjectId(r._id),
       r.value,
-      LoginInfo(r.logininfoProviderid, r.logininfoProviderkey),
+      LoginInfo(r.logininfo_providerid, r.logininfo_providerkey),
       Instant.fromSql(r.lastuseddatetime),
       Instant.fromSql(r.expirationdatetime),
       r.idletimeout.map(FiniteDuration(_, MILLISECONDS)),

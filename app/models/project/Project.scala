@@ -44,9 +44,9 @@ class ProjectDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected def parse(r: ProjectsRow): Fox[Project] =
     Fox.successful(
       Project(
-        ObjectId(r._Id),
-        ObjectId(r._Team),
-        ObjectId(r._Owner),
+        ObjectId(r._id),
+        ObjectId(r._team),
+        ObjectId(r._owner),
         r.name,
         r.priority,
         r.paused,

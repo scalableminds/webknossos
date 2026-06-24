@@ -190,15 +190,15 @@ class AiModelDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   protected def parse(r: AimodelsRow): Fox[AiModel] =
     for {
-      trainingAnnotationIds <- findTrainingAnnotationIdsFor(ObjectId(r._Id))
+      trainingAnnotationIds <- findTrainingAnnotationIdsFor(ObjectId(r._id))
       path <- Fox.runOptional(r.path)(UPath.fromString(_).toFox)
       aiModelWithoutSharedOrgas = AiModel(
-        ObjectId(r._Id),
-        r._Organization,
+        ObjectId(r._id),
+        r._organization,
         List(),
-        r._Datastore.trim,
-        r._User.map(ObjectId(_)),
-        r._Trainingjob.map(ObjectId(_)),
+        r._datastore.trim,
+        r._user.map(ObjectId(_)),
+        r._trainingjob.map(ObjectId(_)),
         trainingAnnotationIds,
         path,
         r.uploadtopathispending,

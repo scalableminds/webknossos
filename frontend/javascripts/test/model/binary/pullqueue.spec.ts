@@ -1,6 +1,5 @@
 import isEqual from "lodash-es/isEqual";
 import range from "lodash-es/range";
-import runAsync from "test/helpers/run_async";
 import PullQueue from "viewer/model/bucket_data_handling/pullqueue";
 import { requestWithFallback } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -118,14 +117,11 @@ describe("PullQueue", () => {
       { type: "data", data: new Uint8Array(bucketData2) },
     ]);
     pullQueue.pull();
-    return runAsync([
-      () => {
-        expect(buckets[0].state).toBe(BucketStateEnum.LOADED);
-        expect(buckets[1].state).toBe(BucketStateEnum.LOADED);
-        expect(buckets[0].getData()).toEqual(new Uint8Array(bucketData1));
-        expect(buckets[1].getData()).toEqual(new Uint8Array(bucketData2));
-      },
-    ]);
+
+    expect(buckets[0].state).toBe(BucketStateEnum.LOADED);
+    expect(buckets[1].state).toBe(BucketStateEnum.LOADED);
+    expect(buckets[0].getData()).toEqual(new Uint8Array(bucketData1));
+    expect(buckets[1].getData()).toEqual(new Uint8Array(bucketData2));
   });
 
   function prepare() {
@@ -142,13 +138,9 @@ describe("PullQueue", () => {
     prepare();
     pullQueue.pull();
 
-    return runAsync([
-      async () => {
-        expect(requestWithFallback).toHaveBeenCalledTimes(1);
-        expect(buckets[0].state).toBe(BucketStateEnum.UNREQUESTED);
-        expect(buckets[1].state).toBe(BucketStateEnum.UNREQUESTED);
-      },
-    ]);
+    expect(requestWithFallback).toHaveBeenCalledTimes(1);
+    expect(buckets[0].state).toBe(BucketStateEnum.UNREQUESTED);
+    expect(buckets[1].state).toBe(BucketStateEnum.UNREQUESTED);
   });
 
   it<TestContext>("Request Failure: should reinsert dirty buckets", ({ pullQueue, buckets }) => {
@@ -157,13 +149,9 @@ describe("PullQueue", () => {
     buckets[0].data = new Uint8Array(32 * 32 * 32);
     pullQueue.pull();
 
-    return runAsync([
-      async () => {
-        expect(requestWithFallback).toHaveBeenCalledTimes(2);
-        expect(buckets[0].state).toBe(BucketStateEnum.LOADED);
-        expect(buckets[1].state).toBe(BucketStateEnum.UNREQUESTED);
-      },
-    ]);
+    expect(requestWithFallback).toHaveBeenCalledTimes(2);
+    expect(buckets[0].state).toBe(BucketStateEnum.LOADED);
+    expect(buckets[1].state).toBe(BucketStateEnum.UNREQUESTED);
   });
 
   it<TestContext>("Partial failure: failure results are retried, empty results are not", ({
@@ -179,11 +167,7 @@ describe("PullQueue", () => {
       .mockResolvedValueOnce([{ type: "failure" }, { type: "empty" }]);
     pullQueue.pull();
 
-    return runAsync([
-      async () => {
-        expect(buckets[0].state).toBe(BucketStateEnum.UNREQUESTED);
-        expect(buckets[1].state).toBe(BucketStateEnum.LOADED);
-      },
-    ]);
+    expect(buckets[0].state).toBe(BucketStateEnum.UNREQUESTED);
+    expect(buckets[1].state).toBe(BucketStateEnum.LOADED);
   });
 });

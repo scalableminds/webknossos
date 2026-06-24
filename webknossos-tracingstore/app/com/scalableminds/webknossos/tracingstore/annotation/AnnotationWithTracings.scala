@@ -30,7 +30,6 @@ case class AnnotationWithTracings(
     tracingsById: Map[String, Either[SkeletonTracingWithUpdatedTreeIds, VolumeTracing]],
     editableMappingsByTracingId: Map[String, (EditableMappingInfo, EditableMappingUpdater)]
 ) extends LazyLogging
-    
     with ProtoGeometryConversions {
 
   // Assumes that there is at most one skeleton layer per annotation. This is true as of this writing

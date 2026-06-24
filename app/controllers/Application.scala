@@ -89,8 +89,7 @@ class Application @Inject() (
 }
 
 class ReleaseInformationDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
-    extends SimpleSQLDAO(sqlClient)
-     {
+    extends SimpleSQLDAO(sqlClient) {
   def getSchemaVersion(implicit ec: ExecutionContext): Fox[Int] =
     for {
       rList <- run(q"SELECT schemaVersion FROM webknossos.releaseInformation".as[Int])

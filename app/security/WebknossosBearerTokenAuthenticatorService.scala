@@ -30,8 +30,7 @@ class WebknossosBearerTokenAuthenticatorService(
     userService: UserService,
     conf: WkConf
 )(implicit override val executionContext: ExecutionContext)
-    extends BearerTokenAuthenticatorService(settings, repository, idGenerator, clock)
-     {
+    extends BearerTokenAuthenticatorService(settings, repository, idGenerator, clock) {
 
   private val resetPasswordExpiry: FiniteDuration =
     conf.Silhouette.TokenAuthenticator.resetPasswordExpiry.toMillis millis

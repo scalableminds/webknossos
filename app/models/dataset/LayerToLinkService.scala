@@ -17,8 +17,7 @@ import play.api.http.Status.NOT_FOUND
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class LayerToLinkService @Inject() (datasetDAO: DatasetDAO, userService: UserService, datasetService: DatasetService)
-     {
+class LayerToLinkService @Inject() (datasetDAO: DatasetDAO, userService: UserService, datasetService: DatasetService) {
 
   def validateLayerToLink(layerIdentifier: LinkedLayerIdentifier, requestingUser: User)(implicit
       ec: ExecutionContext

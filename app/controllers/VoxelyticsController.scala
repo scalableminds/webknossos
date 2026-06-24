@@ -28,8 +28,7 @@ class VoxelyticsController @Inject() (
     wkConf: WkConf,
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
-    extends Controller
-     {
+    extends Controller {
 
   private val WORKFLOW_EVENT_INSERT_BATCH_SIZE = 500
   private lazy val conf = wkConf.Voxelytics

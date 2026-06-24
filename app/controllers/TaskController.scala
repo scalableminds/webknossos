@@ -52,8 +52,7 @@ class TaskController @Inject() (
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
-    with ProtoGeometryConversions
-     {
+    with ProtoGeometryConversions {
 
   def read(taskId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {

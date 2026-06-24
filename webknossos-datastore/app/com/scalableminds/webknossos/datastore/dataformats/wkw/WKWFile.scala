@@ -65,7 +65,7 @@ trait WKWCompressionHelper {
   }
 }
 
-object WKWFile extends WKWCompressionHelper  {
+object WKWFile extends WKWCompressionHelper {
 
   def read[T](
       is: InputStream

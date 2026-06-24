@@ -46,7 +46,6 @@ class EditableMappingUpdater(
     tracingDataStore: TracingDataStore
 ) extends KeyValueStoreConversions
     with ReversionHelper
-    
     with EditableMappingElementKeys
     with LazyLogging {
 

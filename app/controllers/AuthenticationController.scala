@@ -216,8 +216,7 @@ class AuthenticationController @Inject() (
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
-    with AuthForms
-     {
+    with AuthForms {
 
   private val combinedAuthenticatorService = wkSilhouetteEnvironment.combinedAuthenticatorService
   private val bearerTokenAuthenticatorService = combinedAuthenticatorService.tokenAuthenticatorService

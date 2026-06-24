@@ -29,7 +29,6 @@ class ThumbnailService @Inject() (
     datasetDAO: DatasetDAO,
     thumbnailDAO: ThumbnailDAO
 ) extends LazyLogging
-    
     with MimeTypes {
 
   private val DefaultThumbnailWidth = 400

@@ -25,8 +25,7 @@ class ProjectInformationHandler @Inject() (
     val datasetDAO: DatasetDAO,
     val annotationDataSourceTemporaryStore: AnnotationDataSourceTemporaryStore
 )(implicit val ec: ExecutionContext)
-    extends AnnotationInformationHandler
-     {
+    extends AnnotationInformationHandler {
 
   override def provideAnnotation(projectId: ObjectId, userOpt: Option[User])(using
       ctx: DBAccessContext

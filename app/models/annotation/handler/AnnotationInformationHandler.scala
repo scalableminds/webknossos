@@ -27,7 +27,7 @@ class AnnotationInformationHandlerSelector @Inject() (
   ).withDefaultValue(savedTracingInformationHandler)
 }
 
-trait AnnotationInformationHandler  {
+trait AnnotationInformationHandler {
 
   def datasetDAO: DatasetDAO
   def datasetService: DatasetService

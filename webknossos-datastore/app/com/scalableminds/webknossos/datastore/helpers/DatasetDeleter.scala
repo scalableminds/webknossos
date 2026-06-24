@@ -8,7 +8,7 @@ import java.nio.file.{Files, Path}
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 
-trait DatasetDeleter extends LazyLogging with DirectoryConstants  {
+trait DatasetDeleter extends LazyLogging with DirectoryConstants {
   def dataBaseDir: Path
 
   def deleteOnDisk(

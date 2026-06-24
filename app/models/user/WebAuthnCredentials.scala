@@ -32,7 +32,7 @@ case class WebAuthnCredential(
     name: String,
     credentialRecord: WebAuthnCredentialRecord,
     isDeleted: Boolean
-)  {
+) {
   def serializeAttestedCredential(objectConverter: ObjectConverter): Array[Byte] = {
     val converter = new AttestedCredentialDataConverter(objectConverter);
     converter.convert(credentialRecord.getAttestedCredentialData)

@@ -18,8 +18,7 @@ class AnnotationInformationProvider @Inject() (
     annotationInformationHandlerSelector: AnnotationInformationHandlerSelector,
     annotationStore: AnnotationStore
 )(implicit ec: ExecutionContext)
-    extends play.api.http.Status
-     {
+    extends play.api.http.Status {
 
   def provideAnnotation(typ: String, id: ObjectId, user: User)(using ctx: DBAccessContext): Fox[Annotation] =
     provideAnnotation(typ, id, Some(user))

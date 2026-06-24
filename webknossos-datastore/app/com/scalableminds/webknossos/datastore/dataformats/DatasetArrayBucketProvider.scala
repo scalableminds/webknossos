@@ -29,7 +29,6 @@ class DatasetArrayBucketProvider(
     dataVaultServiceOpt: Option[DataVaultService],
     sharedChunkContentsCacheOpt: Option[AlfuCache[String, MultiArray]]
 ) extends BucketProvider
-    
     with LazyLogging {
 
   // Cache the DatasetArrays of all mags of this layer

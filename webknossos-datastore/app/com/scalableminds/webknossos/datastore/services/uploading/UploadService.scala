@@ -167,7 +167,6 @@ class UploadService @Inject() (
 )(implicit ec: ExecutionContext)
     extends DatasetDeleter
     with DirectoryConstants
-    
     with WKWDataFormatHelper
     with LazyLogging {
 

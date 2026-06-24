@@ -19,7 +19,7 @@ trait ColorGenerator {
     ColorProto(getRandomComponent, getRandomComponent, getRandomComponent, 1.0)
 }
 
-trait TracingMigrationService[T <: GeneratedMessage]  {
+trait TracingMigrationService[T <: GeneratedMessage] {
   implicit protected def ec: ExecutionContext
 
   protected def migrations: List[T => Fox[T]]

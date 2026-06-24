@@ -26,8 +26,7 @@ class TimeController @Inject() (
     timeSpanService: TimeSpanService,
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext)
-    extends Controller
-     {
+    extends Controller {
 
   // Called by webknossos-libs client. Sums monthly. Includes exploratives
   def userLoggedTime(userId: ObjectId): Action[AnyContent] =

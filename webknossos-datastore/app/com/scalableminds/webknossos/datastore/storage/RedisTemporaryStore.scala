@@ -18,7 +18,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters.*
 import scala.jdk.FutureConverters.*
 
-trait RedisTemporaryStore extends LazyLogging  {
+trait RedisTemporaryStore extends LazyLogging {
   implicit def ec: ExecutionContext
   protected def address: String
   protected def port: Int

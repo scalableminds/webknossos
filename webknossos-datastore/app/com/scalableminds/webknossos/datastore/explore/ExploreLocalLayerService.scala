@@ -20,9 +20,7 @@ import scala.concurrent.ExecutionContext
 import scala.jdk.CollectionConverters.IteratorHasAsScala
 
 // Calls explorers on local datasets that have already been uploaded to the binaryData dir
-class ExploreLocalLayerService @Inject() (dataVaultService: DataVaultService)
-    extends ExploreLayerUtils
-     {
+class ExploreLocalLayerService @Inject() (dataVaultService: DataVaultService) extends ExploreLayerUtils {
 
   def exploreLocal(path: Path, dataSourceId: DataSourceId, layerDirectory: String = "")(implicit
       ec: ExecutionContext

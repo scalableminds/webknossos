@@ -23,8 +23,7 @@ class TemporaryTracingService @Inject() (
     annotationStore: TemporaryTracingStore[AnnotationProto],
     segmentIndexStore: TemporaryTracingStore[Set[Vec3IntProto]],
     temporaryTracingIdStore: TracingStoreRedisStore
-)(implicit ec: ExecutionContext)
-     {
+)(implicit ec: ExecutionContext) {
 
   implicit def skeletonTracingCompanion: GeneratedMessageCompanion[SkeletonTracing] = SkeletonTracing
   implicit def volumeTracingCompanion: GeneratedMessageCompanion[VolumeTracing] = VolumeTracing

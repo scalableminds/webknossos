@@ -31,8 +31,7 @@ import scala.concurrent.ExecutionContext
 class EditableMappingBucketProvider(layer: EditableMappingLayer)
     extends BucketProvider
     with ProtoGeometryConversions
-    with LazyLogging
-     {
+    with LazyLogging {
 
   override def load(
       readInstruction: DataReadInstruction

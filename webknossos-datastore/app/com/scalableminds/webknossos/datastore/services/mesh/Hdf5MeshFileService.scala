@@ -12,10 +12,7 @@ import jakarta.inject.Inject
 
 import scala.concurrent.ExecutionContext
 
-class Hdf5MeshFileService @Inject() (config: DataStoreConfig)
-    extends NeuroglancerMeshHelper
-    with MeshFileUtils
-     {
+class Hdf5MeshFileService @Inject() (config: DataStoreConfig) extends NeuroglancerMeshHelper with MeshFileUtils {
 
   private lazy val fileHandleCache = new Hdf5FileCache(30)
 

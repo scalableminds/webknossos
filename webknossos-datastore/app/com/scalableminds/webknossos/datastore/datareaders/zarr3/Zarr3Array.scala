@@ -14,7 +14,7 @@ import ucar.ma2.{Array => MultiArray}
 
 import scala.concurrent.ExecutionContext
 
-object Zarr3Array extends LazyLogging  {
+object Zarr3Array extends LazyLogging {
 
   def open(
       path: VaultPath,

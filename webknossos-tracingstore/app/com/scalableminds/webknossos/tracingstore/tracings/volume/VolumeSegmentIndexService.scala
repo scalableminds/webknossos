@@ -49,7 +49,6 @@ class VolumeSegmentIndexService @Inject() (
     with VolumeBucketCompression
     with SegmentIndexKeyHelper
     with ReversionHelper
-    
     with LazyLogging {
 
   private val volumeSegmentIndexClient: FossilDBClient = tracingDataStore.volumeSegmentIndex

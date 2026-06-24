@@ -12,8 +12,7 @@ import scala.annotation.tailrec
 class VersionedFossilDbIterator(prefix: String, fossilDbClient: FossilDBClient, version: Option[Long] = None)
     extends Iterator[VersionedKeyValuePair[Array[Byte]]]
     with KeyValueStoreConversions
-    with LazyLogging
-     {
+    with LazyLogging {
   private val batchSize = 64
 
   private var currentStartAfterKey: Option[String] = None

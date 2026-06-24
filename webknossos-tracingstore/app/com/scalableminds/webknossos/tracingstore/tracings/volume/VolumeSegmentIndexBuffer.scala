@@ -54,7 +54,6 @@ class VolumeSegmentIndexBuffer(
 ) extends KeyValueStoreConversions
     with SegmentIndexKeyHelper
     with ProtoGeometryConversions
-    
     with LazyLogging {
 
   private lazy val segmentIndexBuffer: mutable.Map[String, (Set[Vec3IntProto], Boolean)] =

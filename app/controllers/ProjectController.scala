@@ -45,8 +45,7 @@ class ProjectController @Inject() (
     taskService: TaskService,
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
-    extends Controller
-     {
+    extends Controller {
 
   def list: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {

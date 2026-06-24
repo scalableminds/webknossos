@@ -21,8 +21,7 @@ import scala.concurrent.ExecutionContext
 
 class ManagedS3Service @Inject() (config: DataStoreConfig, s3ClientPoolHolder: S3ClientPoolHolder)(implicit
     ec: ExecutionContext
-)
-    extends LazyLogging {
+) extends LazyLogging {
 
   def pathIsInManagedS3(path: UPath): Boolean =
     path.getScheme.contains(PathSchemes.schemeS3) && globalCredentials.exists(c =>

@@ -26,8 +26,7 @@ object NeuroglancerPrecomputedMeshInfo {
 
 class NeuroglancerPrecomputedMeshFileService @Inject() (dataVaultService: DataVaultService)(implicit
     ec: ExecutionContext
-)
-    extends NeuroglancerMeshHelper {
+) extends NeuroglancerMeshHelper {
 
   private lazy val meshInfoCache = AlfuCache[MeshFileKey, NeuroglancerMesh](100)
 

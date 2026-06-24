@@ -28,7 +28,6 @@ class FolderController @Inject() (
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller
-    
     with MetadataAssertions {
 
   def getRoot: Action[AnyContent] = sil.SecuredAction.async { implicit request =>

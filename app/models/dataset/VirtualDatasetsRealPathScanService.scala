@@ -19,8 +19,7 @@ class VirtualDatasetsRealPathScanService @Inject() (
     val lifecycle: ApplicationLifecycle
 )(implicit val ec: ExecutionContext)
     extends IntervalScheduler
-    with LazyLogging
-     {
+    with LazyLogging {
 
   implicit private val ctx: DBAccessContext = GlobalAccessContext
 

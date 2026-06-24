@@ -83,8 +83,7 @@ class ConnectomeFileService @Inject() (
     hdf5ConnectomeFileService: Hdf5ConnectomeFileService,
     zarrConnectomeFileService: ZarrConnectomeFileService,
     config: DataStoreConfig
-)
-    extends LazyLogging {
+) extends LazyLogging {
 
   private val connectomeFileKeyCache: AlfuCache[(DataSourceId, String, String), ConnectomeFileKey] =
     AlfuCache() // dataSourceId, layerName, connectomeFileName → ConnectomeFileKey

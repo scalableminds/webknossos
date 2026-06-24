@@ -13,7 +13,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingSe
 
 import scala.concurrent.ExecutionContext
 
-trait AnnotationReversion  {
+trait AnnotationReversion {
 
   def volumeTracingService: VolumeTracingService
 

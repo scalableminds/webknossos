@@ -30,8 +30,7 @@ class ScriptController @Inject() (
     userService: UserService,
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
-    extends Controller
-     {
+    extends Controller {
 
   def create: Action[ScriptParameters] = sil.SecuredAction.async(validateJson[ScriptParameters]) { implicit request =>
     for {

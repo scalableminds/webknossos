@@ -50,7 +50,6 @@ class DSFullMeshService @Inject() (
     adHocMeshServiceHolder: AdHocMeshServiceHolder
 ) extends LazyLogging
     with FullMeshHelper
-    
     with MeshMappingHelper {
 
   val binaryDataService: BinaryDataService = binaryDataServiceHolder.binaryDataService

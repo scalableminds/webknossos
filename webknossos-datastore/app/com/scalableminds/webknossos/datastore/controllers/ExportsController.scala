@@ -31,8 +31,7 @@ class ExportsController @Inject() (
     accessTokenService: DataStoreAccessTokenService,
     config: DataStoreConfig
 )(implicit ec: ExecutionContext)
-    extends Controller
-     {
+    extends Controller {
 
   override def allowRemoteOrigin: Boolean = true
 

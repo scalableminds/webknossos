@@ -37,7 +37,6 @@ class TSFullMeshService @Inject() (
 ) extends FallbackDataHelper
     with ProtoGeometryConversions
     with FullMeshHelper
-    
     with LazyLogging {
 
   def loadFor(annotationId: ObjectId, tracingId: String, fullMeshRequest: FullMeshRequest, version: Option[Long])(using

@@ -54,7 +54,6 @@ class TSAnnotationService @Inject() (
     with FallbackDataHelper
     with ProtoGeometryConversions
     with AnnotationReversion
-    
     with UpdateGroupHandling
     with LazyLogging {
 

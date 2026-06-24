@@ -34,8 +34,7 @@ object DataStore {
 
 class DataStoreService @Inject() (dataStoreDAO: DataStoreDAO, jobService: JobService, conf: WkConf)(implicit
     ec: ExecutionContext
-)
-    extends Results {
+) extends Results {
 
   def publicWrites(dataStore: DataStore): Fox[JsObject] =
     for {

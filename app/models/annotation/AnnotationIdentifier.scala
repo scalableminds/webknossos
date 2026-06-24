@@ -14,7 +14,7 @@ case class AnnotationIdentifier(annotationType: AnnotationType, identifier: Obje
 
 }
 
-object AnnotationIdentifier  {
+object AnnotationIdentifier {
 
   def parse(typ: String, id: ObjectId)(implicit ec: ExecutionContext): Fox[AnnotationIdentifier] =
     for {

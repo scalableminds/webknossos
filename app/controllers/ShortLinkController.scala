@@ -16,8 +16,7 @@ import scala.concurrent.ExecutionContext
 class ShortLinkController @Inject() (shortLinkDAO: ShortLinkDAO, sil: Silhouette[WkEnv], wkConf: WkConf)(implicit
     ec: ExecutionContext,
     val bodyParsers: PlayBodyParsers
-) extends Controller
-     {
+) extends Controller {
 
   def create: Action[String] = sil.UserAwareAction.async(validateJson[String]) { implicit request =>
     val longLink = request.body

@@ -17,7 +17,7 @@ case class ObjectId(id: String) {
   override def toString: String = id
 }
 
-object ObjectId  {
+object ObjectId {
   private lazy val atomicCounter = new AtomicInteger(Random.nextInt(0x1000000))
   private lazy val HEX_CHARS: Array[Char] = "0123456789abcdef".toCharArray
 

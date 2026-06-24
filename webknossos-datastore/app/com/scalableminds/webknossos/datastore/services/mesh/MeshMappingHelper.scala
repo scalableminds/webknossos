@@ -13,7 +13,7 @@ import com.scalableminds.util.tools.Full
 
 import scala.concurrent.ExecutionContext
 
-trait MeshMappingHelper  {
+trait MeshMappingHelper {
 
   protected val dsRemoteWebknossosClient: DSRemoteWebknossosClient
   protected val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient

@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 
 import scala.concurrent.ExecutionContext
 
-object ZarrCoordinatesParser  {
+object ZarrCoordinatesParser {
 
   def parseNDimensionalDotCoordinates(
       coordinates: String,

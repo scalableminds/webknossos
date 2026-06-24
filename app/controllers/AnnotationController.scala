@@ -93,8 +93,7 @@ class AnnotationController @Inject() (
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
-    with UserAwareRequestLogging
-     {
+    with UserAwareRequestLogging {
 
   implicit val timeout: Timeout = Timeout(5 seconds)
   private val taskReopenAllowed = conf.Features.taskReopenAllowed + (10 seconds)

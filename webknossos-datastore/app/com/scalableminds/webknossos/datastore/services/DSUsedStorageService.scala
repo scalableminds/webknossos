@@ -36,8 +36,7 @@ class DSUsedStorageService @Inject() (
     config: DataStoreConfig,
     dataVaultService: DataVaultService,
     managedS3Service: ManagedS3Service
-)
-    extends LazyLogging {
+) extends LazyLogging {
 
   def measureStorageForPaths(paths: List[String], organizationId: String)(implicit
       ec: ExecutionContext,

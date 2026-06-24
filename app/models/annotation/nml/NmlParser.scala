@@ -38,8 +38,7 @@ import scala.xml.{Attribute, NodeSeq, XML, Node => XMLNode}
 class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
     extends LazyLogging
     with ProtoGeometryConversions
-    with ColorGenerator
-     {
+    with ColorGenerator {
 
   private val DEFAULT_TIME = 0L
   private val DEFAULT_VIEWPORT = 0

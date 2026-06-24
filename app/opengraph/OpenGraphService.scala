@@ -36,7 +36,7 @@ class OpenGraphService @Inject() (
     annotationDAO: AnnotationDAO,
     shortLinkDAO: ShortLinkDAO,
     conf: WkConf
-)  {
+) {
 
   private val thumbnailWidth = 1000
   private val thumbnailHeight = 300

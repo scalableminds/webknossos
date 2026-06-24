@@ -57,7 +57,6 @@ class VolumeTracingService @Inject() (
     with VolumeDataZipHelper
     with ProtoGeometryConversions
     with AnnotationUserStateUtils
-    
     with Formatter
     with LazyLogging {
 

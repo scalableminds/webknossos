@@ -33,8 +33,7 @@ class DataStoreController @Inject() (
     sil: Silhouette[WkEnv],
     multiUserDAO: MultiUserDAO
 )(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
-    extends Controller
-     {
+    extends Controller {
 
   def list: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     for {

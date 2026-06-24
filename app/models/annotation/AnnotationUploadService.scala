@@ -45,7 +45,6 @@ case class SharedParsingParameters(
 
 class AnnotationUploadService @Inject() (tempFileService: WkTempFileService, nmlParser: NmlParser)
     extends LazyLogging
-    
     with Formatter {
 
   private def extractFromNmlFile(file: File, name: String, sharedParsingParameters: SharedParsingParameters)(using

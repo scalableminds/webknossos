@@ -20,8 +20,7 @@ case class SitemapURL(
     priority: Option[String] = None
 )
 
-class SitemapWriter @Inject() (publicationDAO: PublicationDAO, wkConf: WkConf)(implicit ec: ExecutionContext)
-     {
+class SitemapWriter @Inject() (publicationDAO: PublicationDAO, wkConf: WkConf)(implicit ec: ExecutionContext) {
   private val proxyURLs = wkConf.AboutPageRedirect.routes.filter(!_.contains("*")).map(SitemapURL(_))
   private lazy val outputFactory = XMLOutputFactory.newInstance()
 

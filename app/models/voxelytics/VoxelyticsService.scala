@@ -161,7 +161,7 @@ object ArtifactChecksumEntry {
   implicit val jsonFormat: OFormat[ArtifactChecksumEntry] = Json.format[ArtifactChecksumEntry]
 }
 
-class VoxelyticsService @Inject() (voxelyticsDAO: VoxelyticsDAO)(implicit ec: ExecutionContext)  {
+class VoxelyticsService @Inject() (voxelyticsDAO: VoxelyticsDAO)(implicit ec: ExecutionContext) {
 
   def checkAuth(runId: ObjectId, user: User): Fox[Unit] =
     for {

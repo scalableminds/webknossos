@@ -34,7 +34,6 @@ class ZarrAgglomerateService @Inject() (
     dataVaultService: DataVaultService,
     chunkCacheService: DSChunkCacheService
 ) extends AgglomerateFileUtils
-    
     with LazyLogging {
 
   private lazy val openArraysCache = AlfuCache[(AgglomerateFileKey, String), DatasetArray]()

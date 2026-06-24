@@ -27,7 +27,7 @@ class DatasetArray(
     channelIndex: Option[Int],
     additionalAxes: Option[Seq[AdditionalAxis]],
     sharedChunkContentsCache: AlfuCache[String, MultiArray]
-)  {
+) {
 
   protected lazy val fullAxisOrder: FullAxisOrder =
     FullAxisOrder.fromAxisOrderAndAdditionalAxes(rank, axisOrder, additionalAxes)

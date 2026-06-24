@@ -20,19 +20,20 @@ class HistogramTestSuite extends AsyncWordSpec {
   private def longs(values: Long*): Array[_ >: Byte with Short with Int with Long with Float] = values.toArray
   private def floats(values: Float*): Array[_ >: Byte with Short with Int with Long with Float] = values.toArray
 
-  private def assertSingleHistogram(elementClass: ElementClass.Value,
-                                    data: Array[_ >: Byte with Short with Int with Long with Float],
-                                    expectedMin: Double,
-                                    expectedMax: Double,
-                                    expectedBinCounts: Map[Int, Long]): Assertion = {
+  private def assertSingleHistogram(
+      elementClass: ElementClass.Value,
+      data: Array[_ >: Byte with Short with Int with Long with Float],
+      expectedMin: Double,
+      expectedMax: Double,
+      expectedBinCounts: Map[Int, Long]
+  ): Assertion = {
     val histograms = service.calculateHistogramValues(data, elementClass)
     assert(histograms.length == 1)
     val h = histograms.head
     assert(h.min == expectedMin)
     assert(h.max == expectedMax)
-    expectedBinCounts.foreach {
-      case (bin, count) =>
-        assert(h.elementCounts(bin) == count, s"bin $bin: expected $count, got ${h.elementCounts(bin)}")
+    expectedBinCounts.foreach { case (bin, count) =>
+      assert(h.elementCounts(bin) == count, s"bin $bin: expected $count, got ${h.elementCounts(bin)}")
     }
     succeed
   }
@@ -41,7 +42,7 @@ class HistogramTestSuite extends AsyncWordSpec {
 
     "elementClass is uint8" should {
       // Values 1, 10, 255 (as unsigned) → bins 1, 10, 255
-      "place unsigned byte values into correct bins" in {
+      "place unsigned byte values into correct bins" in
         assertSingleHistogram(
           ElementClass.uint8,
           bytes(1, 10, (-1).toByte), // (-1).toByte == 255 as unsigned
@@ -49,8 +50,7 @@ class HistogramTestSuite extends AsyncWordSpec {
           expectedMax = 255.0,
           expectedBinCounts = Map(1 -> 1L, 10 -> 1L, 255 -> 1L)
         )
-      }
-      "count multiple values in the same bin" in {
+      "count multiple values in the same bin" in
         assertSingleHistogram(
           ElementClass.uint8,
           bytes(5, 5, 5),
@@ -58,13 +58,12 @@ class HistogramTestSuite extends AsyncWordSpec {
           expectedMax = 255.0,
           expectedBinCounts = Map(5 -> 3L)
         )
-      }
     }
 
     "elementClass is int8" should {
       // Signed bytes: bin = value + 128
       // -128 → 0, 0 → 128, 127 → 255
-      "map signed byte values to correct bins" in {
+      "map signed byte values to correct bins" in
         assertSingleHistogram(
           ElementClass.int8,
           bytes((-128).toByte, 0, 127),
@@ -72,8 +71,7 @@ class HistogramTestSuite extends AsyncWordSpec {
           expectedMax = 127.0,
           expectedBinCounts = Map(0 -> 1L, 128 -> 1L, 255 -> 1L)
         )
-      }
-      "place negative bytes below the midpoint bin" in {
+      "place negative bytes below the midpoint bin" in
         assertSingleHistogram(
           ElementClass.int8,
           bytes((-1).toByte, (-64).toByte),
@@ -82,12 +80,11 @@ class HistogramTestSuite extends AsyncWordSpec {
           // -1 + 128 = 127, -64 + 128 = 64
           expectedBinCounts = Map(127 -> 1L, 64 -> 1L)
         )
-      }
     }
 
     "elementClass is uint16" should {
       // Unsigned: bin = (value & 0xFFFF) >> 8; values 0, 256, 65535 → bins 0, 1, 255
-      "place unsigned short values into correct bins" in {
+      "place unsigned short values into correct bins" in
         assertSingleHistogram(
           ElementClass.uint16,
           shorts(0, 256, (-1).toShort), // (-1).toShort == 65535 as unsigned
@@ -95,7 +92,6 @@ class HistogramTestSuite extends AsyncWordSpec {
           expectedMax = 65535.0,
           expectedBinCounts = Map(0 -> 1L, 1 -> 1L, 255 -> 1L)
         )
-      }
     }
 
     "elementClass is int16" should {
@@ -103,7 +99,7 @@ class HistogramTestSuite extends AsyncWordSpec {
       // Short.MinValue (-32768) → -128 + 128 = 0
       // 0 → 0 + 128 = 128
       // Short.MaxValue (32767) → 127 + 128 = 255
-      "map signed short values to correct bins" in {
+      "map signed short values to correct bins" in
         assertSingleHistogram(
           ElementClass.int16,
           shorts(Short.MinValue, 0, Short.MaxValue),
@@ -111,8 +107,7 @@ class HistogramTestSuite extends AsyncWordSpec {
           expectedMax = 32767.0,
           expectedBinCounts = Map(0 -> 1L, 128 -> 1L, 255 -> 1L)
         )
-      }
-      "place negative shorts below the midpoint bin" in {
+      "place negative shorts below the midpoint bin" in
         assertSingleHistogram(
           ElementClass.int16,
           shorts((-256).toShort),
@@ -121,13 +116,12 @@ class HistogramTestSuite extends AsyncWordSpec {
           // (-256 >> 8) + 128 = -1 + 128 = 127
           expectedBinCounts = Map(127 -> 1L)
         )
-      }
     }
 
     "elementClass is uint32" should {
       // Unsigned: bin = value >>> 24
       // 0 → 0, 1<<24 → 1, -1 (0xFFFFFFFF) → 255
-      "place unsigned int values into correct bins" in {
+      "place unsigned int values into correct bins" in
         assertSingleHistogram(
           ElementClass.uint32,
           ints(0, 1 << 24, -1),
@@ -135,7 +129,6 @@ class HistogramTestSuite extends AsyncWordSpec {
           expectedMax = math.pow(2, 32) - 1,
           expectedBinCounts = Map(0 -> 1L, 1 -> 1L, 255 -> 1L)
         )
-      }
     }
 
     "elementClass is int32" should {
@@ -143,7 +136,7 @@ class HistogramTestSuite extends AsyncWordSpec {
       // Int.MinValue → -128 + 128 = 0
       // 0 → 0 + 128 = 128
       // Int.MaxValue → 127 + 128 = 255
-      "map signed int values to correct bins" in {
+      "map signed int values to correct bins" in
         assertSingleHistogram(
           ElementClass.int32,
           ints(Int.MinValue, 0, Int.MaxValue),
@@ -151,8 +144,7 @@ class HistogramTestSuite extends AsyncWordSpec {
           expectedMax = 2147483647.0,
           expectedBinCounts = Map(0 -> 1L, 128 -> 1L, 255 -> 1L)
         )
-      }
-      "place negative ints below the midpoint bin" in {
+      "place negative ints below the midpoint bin" in
         assertSingleHistogram(
           ElementClass.int32,
           ints(-1),
@@ -161,13 +153,12 @@ class HistogramTestSuite extends AsyncWordSpec {
           // (-1 >> 24) + 128 = -1 + 128 = 127
           expectedBinCounts = Map(127 -> 1L)
         )
-      }
     }
 
     "elementClass is uint64" should {
       // Unsigned: bin = (value >>> 56).toInt
       // 0L → 0, 1L<<56 → 1, -1L (0xFFF...F) → 255
-      "place unsigned long values into correct bins" in {
+      "place unsigned long values into correct bins" in
         assertSingleHistogram(
           ElementClass.uint64,
           longs(0L, 1L << 56, -1L),
@@ -175,7 +166,6 @@ class HistogramTestSuite extends AsyncWordSpec {
           expectedMax = math.pow(2, 64) - 1,
           expectedBinCounts = Map(0 -> 1L, 1 -> 1L, 255 -> 1L)
         )
-      }
     }
 
     "elementClass is int64" should {
@@ -183,7 +173,7 @@ class HistogramTestSuite extends AsyncWordSpec {
       // Long.MinValue → -128 + 128 = 0
       // 0L → 0 + 128 = 128
       // Long.MaxValue → 127 + 128 = 255
-      "map signed long values to correct bins" in {
+      "map signed long values to correct bins" in
         assertSingleHistogram(
           ElementClass.int64,
           longs(Long.MinValue, 0L, Long.MaxValue),
@@ -191,8 +181,7 @@ class HistogramTestSuite extends AsyncWordSpec {
           expectedMax = math.pow(2, 63) - 1,
           expectedBinCounts = Map(0 -> 1L, 128 -> 1L, 255 -> 1L)
         )
-      }
-      "place negative longs below the midpoint bin" in {
+      "place negative longs below the midpoint bin" in
         assertSingleHistogram(
           ElementClass.int64,
           longs(-1L),
@@ -201,7 +190,6 @@ class HistogramTestSuite extends AsyncWordSpec {
           // (-1L >> 56).toInt + 128 = -1 + 128 = 127
           expectedBinCounts = Map(127 -> 1L)
         )
-      }
     }
 
     "elementClass is float" should {

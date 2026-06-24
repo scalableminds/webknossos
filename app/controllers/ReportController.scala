@@ -170,8 +170,7 @@ class ReportController @Inject() (
     multiUserDAO: MultiUserDAO,
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext)
-    extends Controller
-     {
+    extends Controller {
 
   def projectProgressReport(teamId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {

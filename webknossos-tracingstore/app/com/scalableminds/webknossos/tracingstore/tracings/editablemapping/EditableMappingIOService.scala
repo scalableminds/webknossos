@@ -33,7 +33,6 @@ class EditableMappingIOService @Inject() (
     chunkCacheService: TSChunkCacheService,
     editableMappingService: EditableMappingService
 ) extends LazyLogging
-    
     with KeyValueStoreConversions {
 
   // 10000 edges per chunk (an edge is two Longs in edges and one bool in edgeIsAddition)

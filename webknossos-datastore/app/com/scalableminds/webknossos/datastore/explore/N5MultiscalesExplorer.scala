@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.StaticLayer
 
 import scala.concurrent.ExecutionContext
 
-class N5MultiscalesExplorer(implicit val ec: ExecutionContext) extends N5Explorer  {
+class N5MultiscalesExplorer(implicit val ec: ExecutionContext) extends N5Explorer {
 
   override def name: String = "N5 Multiscales"
 

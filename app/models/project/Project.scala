@@ -31,7 +31,7 @@ case class Project(
     isBlacklistedFromReport: Boolean,
     created: Instant = Instant.now,
     isDeleted: Boolean = false
-)  {
+) {
 
   def isDeletableBy(user: User): Boolean = user._id == _owner || user.isAdmin
 
@@ -158,8 +158,7 @@ class ProjectDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
 class ProjectService @Inject() (projectDAO: ProjectDAO, teamDAO: TeamDAO, userService: UserService, taskDAO: TaskDAO)(
     implicit ec: ExecutionContext
-) extends LazyLogging
-     {
+) extends LazyLogging {
 
   def validateProjectName(name: String): Fox[Unit] =
     for {

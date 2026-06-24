@@ -18,7 +18,6 @@ class FreeCreditTransactionService @Inject() (
     val actorSystem: ActorSystem
 )(implicit val ec: ExecutionContext)
     extends Controller
-    
     with LazyLogging
     with IntervalScheduler {
 

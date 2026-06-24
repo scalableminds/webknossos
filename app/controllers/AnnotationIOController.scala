@@ -79,7 +79,6 @@ class AnnotationIOController @Inject() (
     annotationUploadService: AnnotationUploadService
 )(implicit ec: ExecutionContext, val materializer: Materializer)
     extends Controller
-    
     with ProtoGeometryConversions
     with AnnotationLayerPrecedence
     with LazyLogging {

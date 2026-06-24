@@ -13,7 +13,7 @@ import org.apache.commons.io.IOUtils
 import scala.concurrent.ExecutionContext
 import scala.jdk.CollectionConverters.EnumerationHasAsScala
 
-object ZipIO extends LazyLogging  {
+object ZipIO extends LazyLogging {
 
   /** Representation of an opened zip file
     *

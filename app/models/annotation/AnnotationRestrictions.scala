@@ -36,7 +36,7 @@ class AnnotationRestrictions(implicit ec: ExecutionContext) {
   def allowDownload(user: User): Fox[Boolean] = allowDownload(Some(user))
 }
 
-object AnnotationRestrictions  {
+object AnnotationRestrictions {
   def writeAsJson(ar: AnnotationRestrictions, u: Option[User]): Fox[JsObject] =
     for {
       allowAccess <- ar.allowAccess(u)
@@ -53,7 +53,7 @@ object AnnotationRestrictions  {
 
 class AnnotationRestrictionDefaults @Inject() (userService: UserService, annotationMutexDAO: AnnotationMutexDAO)(
     implicit ec: ExecutionContext
-)  {
+) {
 
   def defaultsFor(annotation: Annotation): AnnotationRestrictions =
     new AnnotationRestrictions {

@@ -24,7 +24,7 @@ object RemoteFallbackLayer extends ProtoGeometryConversions {
     elementClassProtoBox.map(elementClassProto => RemoteFallbackLayer(datasetId, dataLayer.name, elementClassProto))
   }
 }
-trait FallbackDataHelper  {
+trait FallbackDataHelper {
   def remoteDatastoreClient: TSRemoteDatastoreClient
   def remoteWebknossosClient: TSRemoteWebknossosClient
 

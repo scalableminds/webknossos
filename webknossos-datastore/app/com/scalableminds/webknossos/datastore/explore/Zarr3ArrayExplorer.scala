@@ -18,7 +18,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 
 import scala.concurrent.ExecutionContext
 
-class Zarr3ArrayExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplorer  {
+class Zarr3ArrayExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplorer {
 
   override def name: String = "Zarr v3 Array"
 

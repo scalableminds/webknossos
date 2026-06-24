@@ -21,7 +21,7 @@ case class AnnotationLayer(
     AnnotationLayerProto(tracingId, name, AnnotationLayerType.toProto(typ))
 }
 
-object AnnotationLayer  {
+object AnnotationLayer {
   implicit val jsonFormat: OFormat[AnnotationLayer] = Json.format[AnnotationLayer]
 
   def fromProto(p: AnnotationLayerProto): AnnotationLayer =

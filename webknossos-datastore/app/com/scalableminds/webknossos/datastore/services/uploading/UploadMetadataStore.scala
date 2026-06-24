@@ -13,7 +13,7 @@ import play.api.libs.json.Json
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-trait UploadMetadataStore  {
+trait UploadMetadataStore {
 
   protected def domain: UploadDomain
   protected def store: DataStoreRedisStore

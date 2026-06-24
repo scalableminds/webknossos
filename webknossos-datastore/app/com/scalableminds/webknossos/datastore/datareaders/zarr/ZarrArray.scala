@@ -14,7 +14,7 @@ import com.scalableminds.util.tools.Box.tryo
 
 import scala.concurrent.ExecutionContext
 
-object ZarrArray extends LazyLogging  {
+object ZarrArray extends LazyLogging {
   def open(
       path: VaultPath,
       dataSourceId: DataSourceId,

@@ -23,8 +23,7 @@ class AgglomerateService @Inject() (
     zarrAgglomerateService: ZarrAgglomerateService,
     hdf5AgglomerateService: Hdf5AgglomerateService,
     config: DataStoreConfig
-) extends LazyLogging
-     {
+) extends LazyLogging {
 
   private val agglomerateFileKeyCache: AlfuCache[(DataSourceId, String, String), AgglomerateFileKey] =
     AlfuCache() // dataSourceId, layerName, mappingName → AgglomerateFileKey

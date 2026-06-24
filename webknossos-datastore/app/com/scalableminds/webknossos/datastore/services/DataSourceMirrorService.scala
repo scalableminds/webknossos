@@ -28,8 +28,7 @@ import scala.concurrent.ExecutionContext
 
 class DataSourceMirrorService @Inject() (
     config: DataStoreConfig
-)
-    extends LazyLogging {
+) extends LazyLogging {
   private val dataBaseDir: Path = config.Datastore.baseDirectory
 
   private def getMirrorDir(dataSource: UsableDataSource) =

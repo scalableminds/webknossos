@@ -21,8 +21,7 @@ import scala.concurrent.ExecutionContext
 
 class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, dataStoreHost: String)
     extends DataVault
-    with LazyLogging
-     {
+    with LazyLogging {
 
   private val readTimeout = 10 minutes
 

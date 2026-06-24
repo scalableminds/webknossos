@@ -118,8 +118,7 @@ class AiModelController @Inject() (
     dataStoreDAO: DataStoreDAO,
     uploadToPathsService: UploadToPathsService
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
-    extends Controller
-     {
+    extends Controller {
 
   def readAiModelInfo(aiModelId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {

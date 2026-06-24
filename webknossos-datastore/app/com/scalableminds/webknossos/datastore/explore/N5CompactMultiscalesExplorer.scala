@@ -14,7 +14,7 @@ import com.scalableminds.util.tools.Box.tryo
 
 import scala.concurrent.ExecutionContext
 
-class N5CompactMultiscalesExplorer(implicit val ec: ExecutionContext) extends N5Explorer  {
+class N5CompactMultiscalesExplorer(implicit val ec: ExecutionContext) extends N5Explorer {
 
   override def name: String = "N5 Multiscales with compact metadata"
 

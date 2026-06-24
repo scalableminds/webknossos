@@ -17,7 +17,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 import scala.concurrent.ExecutionContext
 import scala.util.Try
 
-trait ExploreLayerUtils  {
+trait ExploreLayerUtils {
 
   protected def adaptLayersAndVoxelSize(
       layersWithVoxelSizes: List[(StaticLayer, VoxelSize)],

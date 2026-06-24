@@ -21,8 +21,7 @@ object Histogram { implicit val jsonFormat: OFormat[Histogram] = Json.format[His
 
 class FindDataService @Inject() (dataServicesHolder: BinaryDataServiceHolder)(implicit ec: ExecutionContext)
     extends DataConverter
-    with DataFinder
-     {
+    with DataFinder {
 
   private lazy val binaryDataService: BinaryDataService = dataServicesHolder.binaryDataService
 

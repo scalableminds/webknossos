@@ -18,7 +18,7 @@ import java.util.zip.{ZipEntry, ZipFile}
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 
-trait VolumeDataZipHelper extends WKWDataFormatHelper with ReversionHelper  with LazyLogging {
+trait VolumeDataZipHelper extends WKWDataFormatHelper with ReversionHelper with LazyLogging {
 
   protected def withBucketsFromZip(
       zipFile: File

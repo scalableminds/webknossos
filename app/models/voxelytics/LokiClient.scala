@@ -22,7 +22,6 @@ import scala.math.Ordering.Implicits.infixOrderingOps
 
 class LokiClient @Inject() (wkConf: WkConf, rpc: RPC, val actorSystem: ActorSystem)(implicit ec: ExecutionContext)
     extends LazyLogging
-    
     with MimeTypes {
 
   private lazy val conf = wkConf.Voxelytics.Loki

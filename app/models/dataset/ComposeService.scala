@@ -65,8 +65,7 @@ object ComposeAddAttachmentRequest {
 
 class ComposeService @Inject() (datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDAO, datasetService: DatasetService)(
     implicit ec: ExecutionContext
-) extends ExploreLayerUtils
-     {
+) extends ExploreLayerUtils {
 
   def composeDataset(composeRequest: ComposeRequest, user: User)(using
       ctx: DBAccessContext

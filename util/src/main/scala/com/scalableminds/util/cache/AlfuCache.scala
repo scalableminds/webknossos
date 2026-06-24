@@ -13,7 +13,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.jdk.CollectionConverters._
 
-class AlfuCache[K, V](store: AsyncCache[K, Box[V]])  {
+class AlfuCache[K, V](store: AsyncCache[K, Box[V]]) {
 
   def getOrLoad(key: K, loadFn: K => Fox[V])(implicit ec: ExecutionContext): Fox[V] =
     for {

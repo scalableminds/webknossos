@@ -53,7 +53,7 @@ case class Annotation(
     created: Instant = Instant.now,
     modified: Instant = Instant.now,
     isDeleted: Boolean = false
-)  {
+) {
 
   def nameOpt: Option[String] = if (name.isEmpty) None else Some(name)
 

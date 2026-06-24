@@ -47,7 +47,6 @@ class VolumeTracingZarrStreamingController @Inject() (
 )(implicit ec: ExecutionContext)
     extends ExtendedController
     with ProtoGeometryConversions
-    
     with Zarr3OutputHelper {
 
   override def defaultErrorCode: Int = NOT_FOUND

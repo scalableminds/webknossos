@@ -48,8 +48,7 @@ case class User(
     loggedOutEverywhereTime: Option[Instant] = None,
     isDeleted: Boolean = false
 ) extends DBAccessContextPayload
-    with Identity
-     {
+    with Identity {
 
   def toStringAnonymous: String = s"User ${_id}"
 

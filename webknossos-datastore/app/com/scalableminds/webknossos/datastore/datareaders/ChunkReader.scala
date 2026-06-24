@@ -11,7 +11,7 @@ import ucar.ma2.{Array => MultiArray}
 
 import scala.concurrent.ExecutionContext
 
-class ChunkReader(header: DatasetHeader)  {
+class ChunkReader(header: DatasetHeader) {
 
   private lazy val chunkTyper = ChunkTyper.createFromHeader(header)
   private lazy val shortcutChunkTyper = new ShortcutChunkTyper(header)

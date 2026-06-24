@@ -14,7 +14,7 @@ import com.scalableminds.util.tools.Box.tryo
 import scala.concurrent.ExecutionContext
 import ucar.ma2.{Array => MultiArray}
 
-object PrecomputedArray extends LazyLogging  {
+object PrecomputedArray extends LazyLogging {
   def open(
       magPath: VaultPath,
       dataSourceId: DataSourceId,

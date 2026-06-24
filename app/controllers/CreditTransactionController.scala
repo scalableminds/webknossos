@@ -35,8 +35,7 @@ class CreditTransactionController @Inject() (
     userService: UserService,
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext)
-    extends Controller
-     {
+    extends Controller {
 
   def addCredits(
       organizationId: String,

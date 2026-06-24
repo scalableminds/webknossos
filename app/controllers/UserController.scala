@@ -57,8 +57,7 @@ class UserController @Inject() (
     conf: WkConf,
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
-    extends Controller
-     {
+    extends Controller {
 
   def current: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     log() {

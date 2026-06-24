@@ -25,7 +25,7 @@ object ChunkTyper {
   }
 }
 
-abstract class ChunkTyper  {
+abstract class ChunkTyper {
   val header: DatasetHeader
 
   def ma2DataType: MADataType

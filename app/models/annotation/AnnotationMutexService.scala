@@ -33,7 +33,6 @@ class AnnotationMutexService @Inject() (
     annotationMutexDAO: AnnotationMutexDAO
 )(implicit val ec: ExecutionContext)
     extends IntervalScheduler
-    
     with LazyLogging {
 
   override protected def tickerInterval: FiniteDuration = 1 hour

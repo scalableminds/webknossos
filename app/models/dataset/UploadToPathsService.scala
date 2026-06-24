@@ -53,8 +53,7 @@ class UploadToPathsService @Inject() (
     pathDeletionService: PathDeletionService,
     folderDAO: FolderDAO,
     conf: WkConf
-)
-    extends DataSourceValidation {
+) extends DataSourceValidation {
 
   def reserveDatasetUploadToPaths(
       parameters: ReserveDatasetUploadToPathsRequest,

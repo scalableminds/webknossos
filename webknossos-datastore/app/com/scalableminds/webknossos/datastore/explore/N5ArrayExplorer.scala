@@ -18,7 +18,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 
 import scala.concurrent.ExecutionContext
 
-class N5ArrayExplorer(implicit val ec: ExecutionContext) extends N5Explorer  {
+class N5ArrayExplorer(implicit val ec: ExecutionContext) extends N5Explorer {
 
   override def name: String = "N5 Array"
 

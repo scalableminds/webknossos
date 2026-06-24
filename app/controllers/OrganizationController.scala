@@ -47,8 +47,7 @@ class OrganizationController @Inject() (
     actorSystem: ActorSystem,
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
-    extends Controller
-     {
+    extends Controller {
 
   private val combinedAuthenticatorService = wkSilhouetteEnvironment.combinedAuthenticatorService
   private lazy val Mailer = actorSystem.actorSelection("/user/mailActor")

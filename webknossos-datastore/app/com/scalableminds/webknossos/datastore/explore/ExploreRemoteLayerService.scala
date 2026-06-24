@@ -50,7 +50,6 @@ class ExploreRemoteLayerService @Inject() (
     remoteWebknossosClient: DSRemoteWebknossosClient,
     dataStoreConfig: DataStoreConfig
 ) extends ExploreLayerUtils
-    
     with Formatter
     with LazyLogging {
 

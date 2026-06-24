@@ -12,8 +12,7 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 
-class MappingService @Inject() (config: DataStoreConfig)(implicit ec: ExecutionContext)
-    extends LazyLogging {
+class MappingService @Inject() (config: DataStoreConfig)(implicit ec: ExecutionContext) extends LazyLogging {
 
   lazy val cache = new ParsedMappingCache(config.Datastore.Cache.Mapping.maxEntries)
 

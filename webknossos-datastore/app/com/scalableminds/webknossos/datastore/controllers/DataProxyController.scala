@@ -28,8 +28,7 @@ class DataProxyController @Inject() (
     dataVaultService: DataVaultService,
     datasetCache: DatasetCache
 )(implicit ec: ExecutionContext)
-    extends Controller
-     {
+    extends Controller {
 
   def proxyMag(datasetId: ObjectId, dataLayerName: String, mag: String, path: String): Action[AnyContent] =
     Action.async { implicit request =>

@@ -25,8 +25,7 @@ class SavedTracingInformationHandler @Inject() (
     val annotationDataSourceTemporaryStore: AnnotationDataSourceTemporaryStore
 )(implicit val ec: ExecutionContext)
     extends AnnotationInformationHandler
-    with Formatter
-     {
+    with Formatter {
 
   override val useCache = false
 

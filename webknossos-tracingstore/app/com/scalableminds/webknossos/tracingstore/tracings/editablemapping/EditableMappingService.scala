@@ -103,7 +103,6 @@ class EditableMappingService @Inject() (
 )(implicit ec: ExecutionContext)
     extends KeyValueStoreConversions
     with FallbackDataHelper
-    
     with ReversionHelper
     with EditableMappingElementKeys
     with LazyLogging

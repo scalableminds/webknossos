@@ -39,8 +39,7 @@ object GoogleServiceAccountCredentialParameters {
 class CredentialController @Inject() (credentialDAO: CredentialDAO, sil: Silhouette[WkEnv])(implicit
     ec: ExecutionContext,
     val bodyParsers: PlayBodyParsers
-) extends Controller
-     {
+) extends Controller {
 
   def createHttpBasicAuthCredential: Action[HttpBasicAuthCredentialParameters] =
     sil.SecuredAction.async(validateJson[HttpBasicAuthCredentialParameters]) { implicit request =>

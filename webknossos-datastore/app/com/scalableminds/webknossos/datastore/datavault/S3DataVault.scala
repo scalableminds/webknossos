@@ -40,8 +40,7 @@ class S3DataVault(
     s3ClientPool: S3ClientPool,
     implicit val ec: ExecutionContext
 ) extends DataVault
-    with LazyLogging
-     {
+    with LazyLogging {
   private lazy val bucketName = S3UriUtils.hostBucketFromUri(uri) match {
     case Some(value) => value
     case None        => throw new Exception(s"Could not parse S3 bucket for ${uri.toString}")

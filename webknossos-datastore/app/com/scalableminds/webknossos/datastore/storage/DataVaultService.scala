@@ -35,8 +35,7 @@ class DataVaultService @Inject() (
     managedS3Service: ManagedS3Service,
     s3ClientPoolHolder: S3ClientPoolHolder
 ) extends LazyLogging
-    with Formatter
-     {
+    with Formatter {
 
   private val vaultCache: AlfuCache[CredentializedUPath, DataVault] =
     AlfuCache(maxCapacity = 100)

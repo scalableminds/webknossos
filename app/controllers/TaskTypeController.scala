@@ -37,8 +37,7 @@ class TaskTypeController @Inject() (
     userService: UserService,
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
-    extends Controller
-     {
+    extends Controller {
 
   def create: Action[TaskTypeParameters] = sil.SecuredAction.async(validateJson[TaskTypeParameters]) {
     implicit request =>

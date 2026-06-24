@@ -16,7 +16,7 @@ import ucar.ma2.{Array => MultiArray}
 import java.io.ByteArrayInputStream
 import scala.concurrent.ExecutionContext
 
-object WKWArray extends WKWDataFormatHelper  {
+object WKWArray extends WKWDataFormatHelper {
   def open(
       path: VaultPath,
       dataSourceId: DataSourceId,

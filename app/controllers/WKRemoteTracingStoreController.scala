@@ -42,8 +42,7 @@ class WKRemoteTracingStoreController @Inject() (
     wkConf: WkConf,
     annotationDataSourceTemporaryStore: AnnotationDataSourceTemporaryStore
 )(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
-    extends Controller
-     {
+    extends Controller {
 
   val bearerTokenService: WebknossosBearerTokenAuthenticatorService =
     wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService

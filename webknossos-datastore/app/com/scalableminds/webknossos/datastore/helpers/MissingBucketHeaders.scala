@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.Box.tryo
 
 import scala.concurrent.ExecutionContext
 
-trait MissingBucketHeaders  {
+trait MissingBucketHeaders {
 
   protected lazy val missingBucketsHeader: String = "MISSING-BUCKETS"
 

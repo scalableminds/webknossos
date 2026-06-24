@@ -12,7 +12,7 @@ import com.scalableminds.util.tools.Box.tryo
 import java.nio.{ByteBuffer, ByteOrder}
 import scala.concurrent.ExecutionContext
 
-trait NeuroglancerPrecomputedShardingUtils  {
+trait NeuroglancerPrecomputedShardingUtils {
 
   // SHARDING
   // Implemented according to https://github.com/google/neuroglancer/blob/233fc39b07a0480a8e1c90fc5ca835330a0bf287/src/datasource/precomputed/sharded.md,

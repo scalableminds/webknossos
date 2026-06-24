@@ -34,7 +34,7 @@ case class RedundantTracingProperties(
     userStateBoundingBoxVisibilities: Map[ObjectId, Seq[Id32WithBool]] // UserId → Seq(bboxId, bboxIsVisible)
 )
 
-trait AnnotationLayerPrecedence  {
+trait AnnotationLayerPrecedence {
 
   protected def combineLargestSegmentIdsByPrecedence(
       fromNml: Option[Long],

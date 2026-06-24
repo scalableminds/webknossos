@@ -29,7 +29,6 @@ class AboutPageRedirectController @Inject() (
     environment: Environment
 )(implicit ec: ExecutionContext)
     extends Controller
-    
     with CspHeaders {
 
   def redirectToAboutPageOrSendMainView: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>

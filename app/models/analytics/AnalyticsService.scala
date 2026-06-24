@@ -32,8 +32,7 @@ class AnalyticsService @Inject() (
     val lifecycle: ApplicationLifecycle
 )(implicit val ec: ExecutionContext)
     extends LazyLogging
-    with IntervalScheduler
-     {
+    with IntervalScheduler {
 
   private lazy val conf = wkConf.BackendAnalytics
   private lazy val wellKnownUris = tryo(conf.wellKnownUris.map(_.split("\\|")).map(parts => (parts(0), parts(1))).toMap)

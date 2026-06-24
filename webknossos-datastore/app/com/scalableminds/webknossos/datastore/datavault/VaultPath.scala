@@ -16,7 +16,7 @@ import java.io.{ByteArrayInputStream, ByteArrayOutputStream, IOException}
 import java.net.URI
 import scala.concurrent.ExecutionContext
 
-class VaultPath(upath: UPath, dataVault: DataVault) extends LazyLogging  {
+class VaultPath(upath: UPath, dataVault: DataVault) extends LazyLogging {
 
   def readBytes(
       byteRange: ByteRange = ByteRange.complete

@@ -35,7 +35,6 @@ class DataSourceService @Inject() (
     with DatasetDeleter
     with LazyLogging
     with DataSourceToDiskWriter
-    
     with DataSourceValidation
     with Formatter {
 

@@ -28,7 +28,6 @@ class EditableMappingMergeService @Inject() (
     editableMappingService: EditableMappingService
 ) extends KeyValueStoreConversions
     with UpdateGroupHandling
-    
     with FallbackDataHelper {
 
   /*

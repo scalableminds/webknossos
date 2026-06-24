@@ -30,8 +30,7 @@ class TaskService @Inject() (
     scriptService: ScriptService,
     taskTypeService: TaskTypeService,
     projectDAO: ProjectDAO
-)(implicit ec: ExecutionContext)
-     {
+)(implicit ec: ExecutionContext) {
 
   def publicWrites(task: Task)(using ctx: DBAccessContext): Fox[JsObject] =
     for {

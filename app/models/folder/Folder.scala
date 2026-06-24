@@ -34,8 +34,7 @@ class FolderService @Inject() (
     folderDAO: FolderDAO,
     organizationDAO: OrganizationDAO
 )(implicit ec: ExecutionContext)
-    extends LazyLogging
-     {
+    extends LazyLogging {
 
   val defaultRootName: String = "Datasets"
 

@@ -66,8 +66,7 @@ class MeshFileService @Inject() (
     zarrMeshFileService: ZarrMeshFileService,
     neuroglancerPrecomputedMeshService: NeuroglancerPrecomputedMeshFileService,
     config: DataStoreConfig
-)
-    extends LazyLogging {
+) extends LazyLogging {
 
   private val meshFileKeyCache: AlfuCache[(DataSourceId, String, String), MeshFileKey] =
     AlfuCache() // dataSourceId, layerName, meshFileName → MeshFileKey

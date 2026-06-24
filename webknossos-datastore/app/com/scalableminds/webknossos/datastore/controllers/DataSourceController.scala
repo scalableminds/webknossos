@@ -81,8 +81,7 @@ class DataSourceController @Inject() (
     val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient
 )(implicit bodyParsers: PlayBodyParsers, ec: ExecutionContext)
     extends Controller
-    with MeshMappingHelper
-     {
+    with MeshMappingHelper {
 
   override def allowRemoteOrigin: Boolean = true
 

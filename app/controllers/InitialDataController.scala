@@ -42,8 +42,7 @@ import scala.concurrent.ExecutionContext
 
 class InitialDataController @Inject() (initialDataService: InitialDataService, sil: Silhouette[WkEnv])(implicit
     ec: ExecutionContext
-) extends Controller
-     {
+) extends Controller {
 
   def triggerInsert: Action[AnyContent] = sil.UserAwareAction.async { _ =>
     for {

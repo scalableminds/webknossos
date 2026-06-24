@@ -20,7 +20,7 @@ import ucar.ma2.{Array => MultiArray}
 
 import scala.concurrent.ExecutionContext
 
-trait AbstractVolumeTracingBucketProvider extends BucketProvider with VolumeTracingBucketHelper  {
+trait AbstractVolumeTracingBucketProvider extends BucketProvider with VolumeTracingBucketHelper {
 
   def bucketStreamWithVersion(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte], Long)]
 

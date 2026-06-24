@@ -16,8 +16,7 @@ import scala.concurrent.ExecutionContext
 
 class AnnotationMerger @Inject() (datasetDAO: DatasetDAO, tracingStoreService: TracingStoreService)(implicit
     ec: ExecutionContext
-)
-    extends LazyLogging {
+) extends LazyLogging {
 
   def mergeTwo(
       annotationA: Annotation,

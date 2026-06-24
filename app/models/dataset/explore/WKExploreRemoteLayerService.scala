@@ -57,8 +57,7 @@ class WKExploreRemoteLayerService @Inject() (
     dataStoreDAO: DataStoreDAO,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
     rpc: RPC
-)
-    extends ExploreLayerUtils
+) extends ExploreLayerUtils
     with LazyLogging {
 
   private lazy val bearerTokenService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService

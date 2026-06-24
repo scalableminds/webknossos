@@ -6,7 +6,7 @@ import com.scalableminds.webknossos.datastore.services.mesh.DataTypeFunctors
 import java.nio._
 import scala.reflect.ClassTag
 
-trait DataConverter  {
+trait DataConverter {
 
   def putByte(buf: ByteBuffer, lon: Long): ByteBuffer = buf.put(lon.toByte)
   def putShort(buf: ByteBuffer, lon: Long): ByteBuffer = buf.putShort(lon.toShort)

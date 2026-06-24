@@ -21,8 +21,7 @@ class SkeletonTracingService @Inject() (
     with ProtoGeometryConversions
     with BoundingBoxMerger
     with ColorGenerator
-    with AnnotationUserStateUtils
-     {
+    with AnnotationUserStateUtils {
 
   implicit val tracingCompanion: SkeletonTracing.type = SkeletonTracing
 

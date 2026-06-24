@@ -17,9 +17,7 @@ import java.nio.ByteBuffer
 import scala.concurrent.ExecutionContext
 import scala.jdk.CollectionConverters.{IterableHasAsScala, IteratorHasAsScala}
 
-class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCredential])
-    extends DataVault
-     {
+class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCredential]) extends DataVault {
 
   private lazy val storageOptions: StorageOptions = credential match {
     case Some(credential: GoogleServiceAccountCredential) =>

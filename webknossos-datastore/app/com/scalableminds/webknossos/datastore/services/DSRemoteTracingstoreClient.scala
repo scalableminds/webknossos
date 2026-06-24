@@ -22,8 +22,7 @@ object EditableMappingSegmentListResult {
 class DSRemoteTracingstoreClient @Inject() (
     rpc: RPC,
     val lifecycle: ApplicationLifecycle
-) extends LazyLogging
-     {
+) extends LazyLogging {
 
   private def getZarrVersionDependantSubPath =
     (zarrVersion: Int) => if (zarrVersion == 2) "zarr" else "zarr3_experimental"

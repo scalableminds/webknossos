@@ -15,7 +15,7 @@ import java.util.stream.Collectors
 import scala.concurrent.{ExecutionContext, Promise}
 import scala.jdk.CollectionConverters._
 
-class FileSystemDataVault extends DataVault  {
+class FileSystemDataVault extends DataVault {
 
   override def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(using
       ec: ExecutionContext,

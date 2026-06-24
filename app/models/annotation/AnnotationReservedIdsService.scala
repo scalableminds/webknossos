@@ -17,8 +17,7 @@ import scala.concurrent.ExecutionContext
 class AnnotationReservedIdsService @Inject() (
     annotationReservedIdsDAO: AnnotationReservedIdsDAO,
     tracingStoreService: TracingStoreService
-)
-    extends LazyLogging {
+) extends LazyLogging {
 
   private val mutexes = new scala.collection.concurrent.TrieMap[ObjectId, Semaphore]()
 

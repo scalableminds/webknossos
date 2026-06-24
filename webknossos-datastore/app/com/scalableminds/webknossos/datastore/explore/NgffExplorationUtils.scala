@@ -34,7 +34,7 @@ import play.api.libs.json.{JsArray, JsBoolean, JsNumber, Json}
 
 import scala.concurrent.ExecutionContext
 
-trait NgffExplorationUtils  {
+trait NgffExplorationUtils {
 
   protected case class ChannelAttributes(
       color: Option[Color],

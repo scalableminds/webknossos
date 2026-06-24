@@ -19,8 +19,7 @@ import java.util.Base64
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class OpenIdConnectClient @Inject() (rpc: RPC, conf: WkConf)(implicit ec: ExecutionContext)
-    extends LazyLogging {
+class OpenIdConnectClient @Inject() (rpc: RPC, conf: WkConf)(implicit ec: ExecutionContext) extends LazyLogging {
 
   private val keyTypeRsa = "RSA"
 

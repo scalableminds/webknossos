@@ -22,8 +22,7 @@ class TracingStoreController @Inject() (
     tracingStoreDAO: TracingStoreDAO,
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
-    extends Controller
-     {
+    extends Controller {
 
   def listOne: Action[AnyContent] = sil.UserAwareAction.async {
     for {

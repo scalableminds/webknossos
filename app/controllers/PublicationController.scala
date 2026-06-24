@@ -20,8 +20,7 @@ class PublicationController @Inject() (
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext)
     extends Controller
-    with ProtoGeometryConversions
-     {
+    with ProtoGeometryConversions {
 
   override def allowRemoteOrigin: Boolean = true
 

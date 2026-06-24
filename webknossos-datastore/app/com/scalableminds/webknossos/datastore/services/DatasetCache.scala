@@ -10,8 +10,7 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
-class DatasetCache @Inject() (remoteWebknossosClient: DSRemoteWebknossosClient)(implicit ec: ExecutionContext)
-     {
+class DatasetCache @Inject() (remoteWebknossosClient: DSRemoteWebknossosClient)(implicit ec: ExecutionContext) {
 
   lazy val cache: AlfuCache[ObjectId, UsableDataSource] = AlfuCache[ObjectId, UsableDataSource](
     timeToLive = 1 day, // Cache for a longer time, since we invalidate the cache manually

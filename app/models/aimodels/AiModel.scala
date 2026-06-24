@@ -56,8 +56,7 @@ class AiModelService @Inject() (
     jobDAO: JobDAO,
     jobService: JobService,
     rpc: RPC
-)
-    extends LazyLogging {
+) extends LazyLogging {
 
   val pretrainedNeuronModelId: ObjectId = ObjectId("576500000000000000000001")
   val pretrainedMitochondriaModelId: ObjectId = ObjectId("576500000000000000000002")

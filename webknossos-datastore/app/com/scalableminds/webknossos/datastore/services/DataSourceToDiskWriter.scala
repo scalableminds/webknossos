@@ -14,7 +14,7 @@ import java.nio.file.{Files, Path}
 import scala.concurrent.ExecutionContext
 import scala.io.Source
 
-trait DataSourceToDiskWriter extends DataSourceValidation  {
+trait DataSourceToDiskWriter extends DataSourceValidation {
 
   private val propertiesFileName = Path.of(UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
   private val logFileName = Path.of("datasource-properties-backups.log")

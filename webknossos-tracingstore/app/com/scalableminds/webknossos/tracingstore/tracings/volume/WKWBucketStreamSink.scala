@@ -14,7 +14,6 @@ import scala.concurrent.ExecutionContext
 class WKWBucketStreamSink(val layer: DataLayer, tracingHasFallbackLayer: Boolean)
     extends WKWDataFormatHelper
     with ReversionHelper
-    
     with ByteUtils {
 
   def apply(bucketStream: Iterator[(BucketPosition, Array[Byte])], mags: Seq[Vec3Int])(implicit

@@ -16,7 +16,7 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-trait DatasetErrorLoggingService extends IntervalScheduler with Formatter with LazyLogging  {
+trait DatasetErrorLoggingService extends IntervalScheduler with Formatter with LazyLogging {
 
   protected def applicationHealthService: Option[ApplicationHealthService]
 

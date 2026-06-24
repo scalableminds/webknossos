@@ -19,7 +19,6 @@ import scala.concurrent.ExecutionContext
 
 class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val ec: ExecutionContext)
     extends RemoteLayerExplorer
-    
     with ExploreLayerUtils {
   override def name: String = "Neuroglancer URI Explorer"
 

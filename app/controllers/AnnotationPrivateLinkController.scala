@@ -23,8 +23,7 @@ class AnnotationPrivateLinkController @Inject() (
     annotationPrivateLinkService: AnnotationPrivateLinkService,
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
-    extends Controller
-     {
+    extends Controller {
 
   private val bearerTokenService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 

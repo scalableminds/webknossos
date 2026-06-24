@@ -31,8 +31,7 @@ class DSAiModelController @Inject() (
     accessTokenService: DataStoreAccessTokenService,
     dataVaultService: DataVaultService
 )(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
-    extends Controller
-     {
+    extends Controller {
 
   private lazy val filenameStatisticsJson = "statistics.json"
 

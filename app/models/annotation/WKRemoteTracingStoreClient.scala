@@ -41,8 +41,7 @@ class WKRemoteTracingStoreClient(
     rpc: RPC,
     annotationDataSourceTemporaryStore: AnnotationDataSourceTemporaryStore
 )(implicit ec: ExecutionContext)
-    extends LazyLogging
-     {
+    extends LazyLogging {
 
   private def baseInfo = dataset match {
     case Some(ds) => s" Dataset: ${ds.name} Tracingstore: ${tracingStore.url}"

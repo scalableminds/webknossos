@@ -38,8 +38,7 @@ class SegmentIndexFileService @Inject() (
     agglomerateService: AgglomerateService,
     binaryDataServiceHolder: BinaryDataServiceHolder,
     config: DataStoreConfig
-)
-    extends SegmentStatistics {
+) extends SegmentStatistics {
 
   protected lazy val bucketScanner = new NativeBucketScanner()
 

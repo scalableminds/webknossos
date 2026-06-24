@@ -23,8 +23,7 @@ class MaintenanceController @Inject() (
     maintenanceService: MaintenanceService,
     userService: UserService
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
-    extends Controller
-     {
+    extends Controller {
 
   private val adHocMaintenanceDuration: FiniteDuration = 5 minutes
 

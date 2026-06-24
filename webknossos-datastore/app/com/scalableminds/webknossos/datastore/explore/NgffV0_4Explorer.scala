@@ -19,10 +19,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 
 import scala.concurrent.ExecutionContext
 
-class NgffV0_4Explorer(implicit val ec: ExecutionContext)
-    extends RemoteLayerExplorer
-    with NgffExplorationUtils
-     {
+class NgffV0_4Explorer(implicit val ec: ExecutionContext) extends RemoteLayerExplorer with NgffExplorationUtils {
 
   override def name: String = "OME NGFF Zarr v0.4"
 

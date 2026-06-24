@@ -19,7 +19,7 @@ case class MagWithAttributes(
     boundingBox: BoundingBox
 )
 
-trait RemoteLayerExplorer  {
+trait RemoteLayerExplorer {
 
   implicit def ec: ExecutionContext
 

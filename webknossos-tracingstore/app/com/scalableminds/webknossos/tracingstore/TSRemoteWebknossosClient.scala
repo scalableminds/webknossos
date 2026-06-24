@@ -48,7 +48,6 @@ class TSRemoteWebknossosClient @Inject() (
     config: TracingStoreConfig,
     val lifecycle: ApplicationLifecycle
 ) extends RemoteWebknossosClient
-    
     with LazyLogging {
 
   private val tracingStoreKey: String = config.Tracingstore.key

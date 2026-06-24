@@ -78,8 +78,7 @@ class DSRemoteWebknossosClient @Inject() (
 )(implicit val ec: ExecutionContext)
     extends RemoteWebknossosClient
     with IntervalScheduler
-    with LazyLogging
-     {
+    with LazyLogging {
 
   private val dataStoreKey: String = config.Datastore.key
   private val dataStoreName: String = config.Datastore.name

@@ -13,8 +13,7 @@ class EmailVerificationController @Inject() (
     emailVerificationService: EmailVerificationService,
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
-    extends Controller
-     {
+    extends Controller {
 
   def verify(key: String): Action[AnyContent] = Action.async { _ =>
     for {

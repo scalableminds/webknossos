@@ -33,8 +33,7 @@ class TeamService @Inject() (
     teamDAO: TeamDAO,
     projectDAO: ProjectDAO,
     taskTypeDAO: TaskTypeDAO
-)(implicit ec: ExecutionContext)
-     {
+)(implicit ec: ExecutionContext) {
 
   def publicWrites(team: Team, organizationOpt: Option[Organization] = None): Fox[JsObject] =
     for {

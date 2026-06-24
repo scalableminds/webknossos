@@ -210,7 +210,6 @@ trait RequestTokenHelper {
 
 trait ExtendedController
     extends JsonResults
-    
     with ResultImplicits
     with Status
     with InjectedController

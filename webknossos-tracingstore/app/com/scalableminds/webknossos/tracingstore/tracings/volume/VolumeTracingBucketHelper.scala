@@ -176,7 +176,6 @@ trait BucketKeys extends WKWDataFormatHelper with AdditionalCoordinateKey {
 
 trait VolumeTracingBucketHelper
     extends KeyValueStoreConversions
-    
     with VolumeBucketCompression
     with BucketKeys
     with ReversionHelper {
@@ -442,7 +441,6 @@ class VersionedBucketIterator(
     with KeyValueStoreConversions
     with VolumeBucketCompression
     with BucketKeys
-    
     with ReversionHelper {
   private val batchSize = 100
 

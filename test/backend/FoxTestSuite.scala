@@ -8,7 +8,7 @@ import org.scalatest.wordspec.AsyncWordSpec
 import scala.concurrent.Future
 import scala.util.Try
 
-class FoxTestSuite extends AsyncWordSpec  {
+class FoxTestSuite extends AsyncWordSpec {
 
   "Fox" should {
     "contain exception from failed Future" in {

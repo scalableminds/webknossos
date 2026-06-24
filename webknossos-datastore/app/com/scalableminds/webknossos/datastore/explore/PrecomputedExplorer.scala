@@ -23,7 +23,7 @@ import com.scalableminds.webknossos.datastore.services.mesh.{NeuroglancerMesh, N
 
 import scala.concurrent.ExecutionContext
 
-class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplorer  {
+class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplorer {
   override def name: String = "Neuroglancer Precomputed"
 
   override def explore(remotePath: VaultPath, credentialId: Option[String])(using

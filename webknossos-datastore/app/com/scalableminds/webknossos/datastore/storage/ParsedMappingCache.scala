@@ -25,9 +25,7 @@ object CachedMapping {
     )
 }
 
-class ParsedMappingCache(val maxEntries: Int)
-    extends LRUConcurrentCache[CachedMapping, Fox[AbstractDataLayerMapping]]
-     {
+class ParsedMappingCache(val maxEntries: Int) extends LRUConcurrentCache[CachedMapping, Fox[AbstractDataLayerMapping]] {
 
   def withCache[T](
       mappingRequest: DataServiceMappingRequest

@@ -2359,7 +2359,7 @@ export function* splitAgglomerateInMapping(
         // a given newId shares the same prevAgglomerateId — overwriting an existing entry is a no-op.
         newToOldAgglomerateIds.set(mappedIdNumber, Number(prevAgglomerateId));
         return [segmentId, mappedId];
-      } else {
+      } else if (splitSegmentIds.has(segmentId)) {
         console.error(
           "Got a agglomerate id mapping reply from the server which did not include the new agglomerate id of a requested segment.",
           `${segmentId} was not present in ${mappingAfterSplit}.`,

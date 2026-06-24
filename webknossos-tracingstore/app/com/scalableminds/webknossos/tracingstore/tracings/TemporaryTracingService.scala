@@ -1,7 +1,8 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -23,7 +24,7 @@ class TemporaryTracingService @Inject() (
     segmentIndexStore: TemporaryTracingStore[Set[Vec3IntProto]],
     temporaryTracingIdStore: TracingStoreRedisStore
 )(implicit ec: ExecutionContext)
-    extends FoxImplicits {
+     {
 
   implicit def skeletonTracingCompanion: GeneratedMessageCompanion[SkeletonTracing] = SkeletonTracing
   implicit def volumeTracingCompanion: GeneratedMessageCompanion[VolumeTracing] = VolumeTracing

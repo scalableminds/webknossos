@@ -2,7 +2,7 @@ package controllers
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
 import models.project._
 import models.task._
@@ -46,7 +46,7 @@ class ProjectController @Inject() (
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller
-    with FoxImplicits {
+     {
 
   def list: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {

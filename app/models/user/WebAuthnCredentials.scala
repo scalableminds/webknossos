@@ -4,7 +4,8 @@ import com.fasterxml.jackson.core.`type`.TypeReference
 import com.fasterxml.jackson.annotation._
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{JsonHelper, Fox, FoxImplicits}
+import com.scalableminds.util.tools.{JsonHelper, Fox}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.schema.Tables.{
   Webauthncredentials,
   WebauthncredentialsRow,
@@ -31,7 +32,7 @@ case class WebAuthnCredential(
     name: String,
     credentialRecord: WebAuthnCredentialRecord,
     isDeleted: Boolean
-) extends FoxImplicits {
+)  {
   def serializeAttestedCredential(objectConverter: ObjectConverter): Array[Byte] = {
     val converter = new AttestedCredentialDataConverter(objectConverter);
     converter.convert(credentialRecord.getAttestedCredentialData)

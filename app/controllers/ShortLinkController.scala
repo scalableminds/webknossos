@@ -3,7 +3,7 @@ package controllers
 import com.scalableminds.util.Msg
 import com.scalableminds.util.objectid.ObjectId
 import play.silhouette.api.Silhouette
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import models.shortlinks.{ShortLink, ShortLinkDAO}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
@@ -17,7 +17,7 @@ class ShortLinkController @Inject() (shortLinkDAO: ShortLinkDAO, sil: Silhouette
     ec: ExecutionContext,
     val bodyParsers: PlayBodyParsers
 ) extends Controller
-    with FoxImplicits {
+     {
 
   def create: Action[String] = sil.UserAwareAction.async(validateJson[String]) { implicit request =>
     val longLink = request.body

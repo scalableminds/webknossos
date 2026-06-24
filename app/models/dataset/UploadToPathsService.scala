@@ -4,7 +4,8 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Box, Failure, Fox, FoxImplicits, Full, TextUtils}
+import com.scalableminds.util.tools.{Box, Failure, Fox, Full, TextUtils}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentDataformat.LayerAttachmentDataformat
@@ -52,8 +53,8 @@ class UploadToPathsService @Inject() (
     pathDeletionService: PathDeletionService,
     folderDAO: FolderDAO,
     conf: WkConf
-) extends FoxImplicits
-    with DataSourceValidation {
+)
+    extends DataSourceValidation {
 
   def reserveDatasetUploadToPaths(
       parameters: ReserveDatasetUploadToPathsRequest,

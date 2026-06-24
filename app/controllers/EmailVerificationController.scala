@@ -2,7 +2,6 @@ package controllers
 
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
-import com.scalableminds.util.tools.FoxImplicits
 import models.user.EmailVerificationService
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.WkEnv
@@ -15,7 +14,7 @@ class EmailVerificationController @Inject() (
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
     extends Controller
-    with FoxImplicits {
+     {
 
   def verify(key: String): Action[AnyContent] = Action.async { _ =>
     for {

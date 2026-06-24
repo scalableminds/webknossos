@@ -6,7 +6,8 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import com.scalableminds.util.tools.{Fox, TextUtils}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.Annotation.{AnnotationLayerProto, AnnotationProto}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
@@ -96,8 +97,7 @@ class AnnotationService @Inject() (
     conf: WkConf,
     rpc: RPC
 )(implicit ec: ExecutionContext, val materializer: Materializer)
-    extends FoxImplicits
-    with ProtoGeometryConversions
+    extends ProtoGeometryConversions
     with AnnotationLayerPrecedence
     with LazyLogging {
 

@@ -3,7 +3,8 @@ package com.scalableminds.util.io
 import java.io._
 import java.nio.file.{Files, Path}
 import java.util.zip.{GZIPOutputStream => DefaultGZIPOutputStream, _}
-import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import com.scalableminds.util.tools.{Fox, TextUtils}
+import com.scalableminds.util.tools.Fox.toFox
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import com.scalableminds.util.tools.Box.tryo
@@ -12,7 +13,7 @@ import org.apache.commons.io.IOUtils
 import scala.concurrent.ExecutionContext
 import scala.jdk.CollectionConverters.EnumerationHasAsScala
 
-object ZipIO extends LazyLogging with FoxImplicits {
+object ZipIO extends LazyLogging  {
 
   /** Representation of an opened zip file
     *

@@ -5,7 +5,8 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import com.scalableminds.util.tools.{Fox, TextUtils}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
@@ -78,7 +79,7 @@ class AnnotationIOController @Inject() (
     annotationUploadService: AnnotationUploadService
 )(implicit ec: ExecutionContext, val materializer: Materializer)
     extends Controller
-    with FoxImplicits
+    
     with ProtoGeometryConversions
     with AnnotationLayerPrecedence
     with LazyLogging {

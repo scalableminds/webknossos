@@ -1,7 +1,8 @@
 package com.scalableminds.webknossos.datastore.datareaders.n5
 
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.tools.{Fox, JsonHelper, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkReader, DatasetArray, DatasetHeader}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
@@ -13,7 +14,7 @@ import ucar.ma2.{Array => MultiArray}
 
 import scala.concurrent.ExecutionContext
 
-object N5Array extends LazyLogging with FoxImplicits {
+object N5Array extends LazyLogging  {
 
   def open(
       path: VaultPath,

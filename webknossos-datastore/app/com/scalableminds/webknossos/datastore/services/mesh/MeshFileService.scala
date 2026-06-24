@@ -4,7 +4,8 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Box, Fox}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayer,
@@ -65,8 +66,8 @@ class MeshFileService @Inject() (
     zarrMeshFileService: ZarrMeshFileService,
     neuroglancerPrecomputedMeshService: NeuroglancerPrecomputedMeshFileService,
     config: DataStoreConfig
-) extends FoxImplicits
-    with LazyLogging {
+)
+    extends LazyLogging {
 
   private val meshFileKeyCache: AlfuCache[(DataSourceId, String, String), MeshFileKey] =
     AlfuCache() // dataSourceId, layerName, meshFileName → MeshFileKey

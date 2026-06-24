@@ -3,7 +3,7 @@ package controllers
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import play.silhouette.api.Silhouette
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import models.annotation.{AnnotationDAO, AnnotationType}
 import models.team.TeamDAO
 import models.user.{MultiUserDAO, User, UserDAO, UserService}
@@ -171,7 +171,7 @@ class ReportController @Inject() (
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext)
     extends Controller
-    with FoxImplicits {
+     {
 
   def projectProgressReport(teamId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {

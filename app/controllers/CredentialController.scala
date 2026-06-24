@@ -2,7 +2,7 @@ package controllers
 
 import com.scalableminds.util.Msg
 import play.silhouette.api.Silhouette
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.storage.{
   GoogleServiceAccountCredential,
   HttpBasicAuthCredential,
@@ -40,7 +40,7 @@ class CredentialController @Inject() (credentialDAO: CredentialDAO, sil: Silhoue
     ec: ExecutionContext,
     val bodyParsers: PlayBodyParsers
 ) extends Controller
-    with FoxImplicits {
+     {
 
   def createHttpBasicAuthCredential: Action[HttpBasicAuthCredentialParameters] =
     sil.SecuredAction.async(validateJson[HttpBasicAuthCredentialParameters]) { implicit request =>

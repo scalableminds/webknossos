@@ -6,7 +6,8 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.mvc.ExtendedController
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{Zarr3OutputHelper, ZarrCoordinatesParser}
@@ -46,7 +47,7 @@ class VolumeTracingZarrStreamingController @Inject() (
 )(implicit ec: ExecutionContext)
     extends ExtendedController
     with ProtoGeometryConversions
-    with FoxImplicits
+    
     with Zarr3OutputHelper {
 
   override def defaultErrorCode: Int = NOT_FOUND

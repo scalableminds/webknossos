@@ -3,7 +3,8 @@ package com.scalableminds.webknossos.datastore.services.mesh
 import com.scalableminds.util.Msg
 import com.scalableminds.util.geometry.Vec3Float
 import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Fox, FoxImplicits, Full}
+import com.scalableminds.util.tools.{Box, Fox, Full}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache}
@@ -14,7 +15,7 @@ import scala.concurrent.ExecutionContext
 class Hdf5MeshFileService @Inject() (config: DataStoreConfig)
     extends NeuroglancerMeshHelper
     with MeshFileUtils
-    with FoxImplicits {
+     {
 
   private lazy val fileHandleCache = new Hdf5FileCache(30)
 

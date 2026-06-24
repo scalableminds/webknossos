@@ -2,7 +2,8 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.geometry.{ListOfVec3IntProto, Vec3IntProto}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 import com.scalableminds.webknossos.tracingstore.TSRemoteDatastoreClient
@@ -53,7 +54,7 @@ class VolumeSegmentIndexBuffer(
 ) extends KeyValueStoreConversions
     with SegmentIndexKeyHelper
     with ProtoGeometryConversions
-    with FoxImplicits
+    
     with LazyLogging {
 
   private lazy val segmentIndexBuffer: mutable.Map[String, (Set[Vec3IntProto], Boolean)] =

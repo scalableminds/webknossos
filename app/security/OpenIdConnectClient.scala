@@ -1,7 +1,8 @@
 package security
 
 import com.scalableminds.util.Msg
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{JsObject, Json, OFormat}
@@ -19,8 +20,7 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 class OpenIdConnectClient @Inject() (rpc: RPC, conf: WkConf)(implicit ec: ExecutionContext)
-    extends FoxImplicits
-    with LazyLogging {
+    extends LazyLogging {
 
   private val keyTypeRsa = "RSA"
 

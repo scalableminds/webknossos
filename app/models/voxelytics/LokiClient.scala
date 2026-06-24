@@ -2,7 +2,8 @@ package models.voxelytics
 
 import com.scalableminds.util.mvc.MimeTypes
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import models.voxelytics.VoxelyticsLogLevel.VoxelyticsLogLevel
@@ -21,7 +22,7 @@ import scala.math.Ordering.Implicits.infixOrderingOps
 
 class LokiClient @Inject() (wkConf: WkConf, rpc: RPC, val actorSystem: ActorSystem)(implicit ec: ExecutionContext)
     extends LazyLogging
-    with FoxImplicits
+    
     with MimeTypes {
 
   private lazy val conf = wkConf.Voxelytics.Loki

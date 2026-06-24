@@ -2,7 +2,8 @@ package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
 import com.scalableminds.webknossos.datastore.SegmentToAgglomerateProto.{
@@ -45,7 +46,7 @@ class EditableMappingUpdater(
     tracingDataStore: TracingDataStore
 ) extends KeyValueStoreConversions
     with ReversionHelper
-    with FoxImplicits
+    
     with EditableMappingElementKeys
     with LazyLogging {
 

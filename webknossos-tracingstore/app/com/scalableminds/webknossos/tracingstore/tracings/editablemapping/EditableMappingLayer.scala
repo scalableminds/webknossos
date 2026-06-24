@@ -4,7 +4,8 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.dataformats.BucketProvider
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
@@ -31,7 +32,7 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer)
     extends BucketProvider
     with ProtoGeometryConversions
     with LazyLogging
-    with FoxImplicits {
+     {
 
   override def load(
       readInstruction: DataReadInstruction

@@ -3,7 +3,8 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.util.tools.{Box, Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataFormatHelper, WKWFile}
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.{BloscCodec, BloscCodecConfiguration, Zarr3ArrayHeader}
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
@@ -17,7 +18,7 @@ import java.util.zip.{ZipEntry, ZipFile}
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 
-trait VolumeDataZipHelper extends WKWDataFormatHelper with ReversionHelper with FoxImplicits with LazyLogging {
+trait VolumeDataZipHelper extends WKWDataFormatHelper with ReversionHelper  with LazyLogging {
 
   protected def withBucketsFromZip(
       zipFile: File

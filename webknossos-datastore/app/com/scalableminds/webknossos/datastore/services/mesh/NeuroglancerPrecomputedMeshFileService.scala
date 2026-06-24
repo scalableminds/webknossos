@@ -3,7 +3,8 @@ package com.scalableminds.webknossos.datastore.services.mesh
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Float
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.ShardingSpecification
 import com.scalableminds.webknossos.datastore.datavault.{ByteRange, VaultPath}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
@@ -25,8 +26,8 @@ object NeuroglancerPrecomputedMeshInfo {
 
 class NeuroglancerPrecomputedMeshFileService @Inject() (dataVaultService: DataVaultService)(implicit
     ec: ExecutionContext
-) extends FoxImplicits
-    with NeuroglancerMeshHelper {
+)
+    extends NeuroglancerMeshHelper {
 
   private lazy val meshInfoCache = AlfuCache[MeshFileKey, NeuroglancerMesh](100)
 

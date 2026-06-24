@@ -3,7 +3,7 @@ package com.scalableminds.util.mvc
 import com.google.protobuf.CodedInputStream
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools._
 import com.scalableminds.util.tools.Box.tryo
@@ -210,7 +210,7 @@ trait RequestTokenHelper {
 
 trait ExtendedController
     extends JsonResults
-    with FoxImplicits
+    
     with ResultImplicits
     with Status
     with InjectedController

@@ -2,7 +2,8 @@ package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Fox, FoxImplicits, Full}
+import com.scalableminds.util.tools.{Box, Fox, Full}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import org.apache.commons.io.FileUtils
 import org.apache.commons.lang3.builder.HashCodeBuilder
@@ -14,7 +15,7 @@ import java.util.stream.Collectors
 import scala.concurrent.{ExecutionContext, Promise}
 import scala.jdk.CollectionConverters._
 
-class FileSystemDataVault extends DataVault with FoxImplicits {
+class FileSystemDataVault extends DataVault  {
 
   override def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(using
       ec: ExecutionContext,

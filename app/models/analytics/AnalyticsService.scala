@@ -3,7 +3,8 @@ package models.analytics
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import models.user.{MultiUserDAO, UserDAO}
@@ -32,7 +33,7 @@ class AnalyticsService @Inject() (
 )(implicit val ec: ExecutionContext)
     extends LazyLogging
     with IntervalScheduler
-    with FoxImplicits {
+     {
 
   private lazy val conf = wkConf.BackendAnalytics
   private lazy val wellKnownUris = tryo(conf.wellKnownUris.map(_.split("\\|")).map(parts => (parts(0), parts(1))).toMap)

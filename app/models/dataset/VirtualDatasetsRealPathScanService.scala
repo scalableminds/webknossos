@@ -1,7 +1,8 @@
 package models.dataset
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.typesafe.scalalogging.LazyLogging
 import jakarta.inject.Inject
@@ -19,7 +20,7 @@ class VirtualDatasetsRealPathScanService @Inject() (
 )(implicit val ec: ExecutionContext)
     extends IntervalScheduler
     with LazyLogging
-    with FoxImplicits {
+     {
 
   implicit private val ctx: DBAccessContext = GlobalAccessContext
 

@@ -5,7 +5,6 @@ import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.FoxImplicits
 import play.api.libs.json._
 
 import javax.inject.Inject
@@ -25,7 +24,7 @@ class AnnotationPrivateLinkController @Inject() (
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
     extends Controller
-    with FoxImplicits {
+     {
 
   private val bearerTokenService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 

@@ -1,6 +1,6 @@
 package utils.sql
 
-import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import com.scalableminds.util.tools.{Fox, TextUtils}
 import com.typesafe.scalalogging.LazyLogging
 import slick.dbio.{DBIO, DBIOAction, Effect, NoStream}
 import slick.jdbc.PostgresProfile.api._
@@ -14,8 +14,7 @@ import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
 
 class SimpleSQLDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
-    extends FoxImplicits
-    with LazyLogging
+    extends LazyLogging
     with SqlTypeImplicits
     with SqlEscaping
     with SqlInterpolationSyntax {

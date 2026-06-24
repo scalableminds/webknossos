@@ -1,6 +1,5 @@
 package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
-import com.scalableminds.util.tools.FoxImplicits
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FossilDBClient,
   KeyValueStoreConversions,
@@ -14,7 +13,7 @@ class VersionedFossilDbIterator(prefix: String, fossilDbClient: FossilDBClient, 
     extends Iterator[VersionedKeyValuePair[Array[Byte]]]
     with KeyValueStoreConversions
     with LazyLogging
-    with FoxImplicits {
+     {
   private val batchSize = 64
 
   private var currentStartAfterKey: Option[String] = None

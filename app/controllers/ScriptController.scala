@@ -3,7 +3,7 @@ package controllers
 import com.scalableminds.util.Msg
 
 import javax.inject.Inject
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import models.task._
 import play.silhouette.api.Silhouette
 import models.user.UserService
@@ -31,7 +31,7 @@ class ScriptController @Inject() (
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
-    with FoxImplicits {
+     {
 
   def create: Action[ScriptParameters] = sil.SecuredAction.async(validateJson[ScriptParameters]) { implicit request =>
     for {

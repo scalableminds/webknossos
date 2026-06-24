@@ -6,7 +6,7 @@ import java.io.{File, FileInputStream, InputStream}
 import java.nio.file.{Files, Path, StandardCopyOption}
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.mvc.Formatter
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, TreeGroup}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{SegmentGroup, VolumeTracing}
 import com.typesafe.scalalogging.LazyLogging
@@ -45,7 +45,7 @@ case class SharedParsingParameters(
 
 class AnnotationUploadService @Inject() (tempFileService: WkTempFileService, nmlParser: NmlParser)
     extends LazyLogging
-    with FoxImplicits
+    
     with Formatter {
 
   private def extractFromNmlFile(file: File, name: String, sharedParsingParameters: SharedParsingParameters)(using

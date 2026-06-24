@@ -1,13 +1,12 @@
 package com.scalableminds.webknossos.datastore.services
 
-import com.scalableminds.util.tools.FoxImplicits
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.datastore.services.mesh.DataTypeFunctors
 
 import java.nio._
 import scala.reflect.ClassTag
 
-trait DataConverter extends FoxImplicits {
+trait DataConverter  {
 
   def putByte(buf: ByteBuffer, lon: Long): ByteBuffer = buf.put(lon.toByte)
   def putShort(buf: ByteBuffer, lon: Long): ByteBuffer = buf.putShort(lon.toShort)

@@ -3,7 +3,8 @@ package controllers
 import com.scalableminds.util.Msg
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import models.organization.OrganizationDAO
 import models.user.UserService
 import models.voxelytics._
@@ -28,7 +29,7 @@ class VoxelyticsController @Inject() (
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
-    with FoxImplicits {
+     {
 
   private val WORKFLOW_EVENT_INSERT_BATCH_SIZE = 500
   private lazy val conf = wkConf.Voxelytics

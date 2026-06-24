@@ -1,7 +1,8 @@
 package models.annotation
 
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Empty, Failure, Fox, FoxImplicits, Full}
+import com.scalableminds.util.tools.{Empty, Failure, Fox, Full}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationIdDomain.AnnotationIdDomain
 import com.typesafe.scalalogging.LazyLogging
 import slick.dbio.{DBIO, Effect, NoStream}
@@ -16,8 +17,8 @@ import scala.concurrent.ExecutionContext
 class AnnotationReservedIdsService @Inject() (
     annotationReservedIdsDAO: AnnotationReservedIdsDAO,
     tracingStoreService: TracingStoreService
-) extends FoxImplicits
-    with LazyLogging {
+)
+    extends LazyLogging {
 
   private val mutexes = new scala.collection.concurrent.TrieMap[ObjectId, Semaphore]()
 

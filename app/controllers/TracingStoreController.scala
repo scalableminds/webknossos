@@ -2,7 +2,7 @@ package controllers
 
 import com.scalableminds.util.Msg
 import play.silhouette.api.Silhouette
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import models.annotation.{TracingStoreDAO, TracingStoreService}
 import play.api.libs.json.{Json, OFormat}
 
@@ -23,7 +23,7 @@ class TracingStoreController @Inject() (
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller
-    with FoxImplicits {
+     {
 
   def listOne: Action[AnyContent] = sil.UserAwareAction.async {
     for {

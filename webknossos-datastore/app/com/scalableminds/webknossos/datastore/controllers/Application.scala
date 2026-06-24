@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.controllers
 
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.helpers.NativeBucketScanner
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.datastore.services.ApplicationHealthService

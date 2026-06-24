@@ -2,7 +2,8 @@ package models.annotation
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.IdWithBool.Id32WithBool
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonUserStateProto}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeUserStateProto}
@@ -33,7 +34,7 @@ case class RedundantTracingProperties(
     userStateBoundingBoxVisibilities: Map[ObjectId, Seq[Id32WithBool]] // UserId → Seq(bboxId, bboxIsVisible)
 )
 
-trait AnnotationLayerPrecedence extends FoxImplicits {
+trait AnnotationLayerPrecedence  {
 
   protected def combineLargestSegmentIdsByPrecedence(
       fromNml: Option[Long],

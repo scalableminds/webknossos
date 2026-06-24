@@ -3,7 +3,7 @@ package controllers
 import com.scalableminds.util.Msg
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import models.annotation.{AnnotationState, AnnotationType}
 
 import scala.collection.immutable.ListMap
@@ -27,7 +27,7 @@ class TimeController @Inject() (
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext)
     extends Controller
-    with FoxImplicits {
+     {
 
   // Called by webknossos-libs client. Sums monthly. Includes exploratives
   def userLoggedTime(userId: ObjectId): Action[AnyContent] =

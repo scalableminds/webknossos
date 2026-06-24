@@ -7,7 +7,8 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
 import com.scalableminds.webknossos.datastore.SegmentToAgglomerateProto.SegmentToAgglomerateChunkProto
@@ -102,7 +103,7 @@ class EditableMappingService @Inject() (
 )(implicit ec: ExecutionContext)
     extends KeyValueStoreConversions
     with FallbackDataHelper
-    with FoxImplicits
+    
     with ReversionHelper
     with EditableMappingElementKeys
     with LazyLogging

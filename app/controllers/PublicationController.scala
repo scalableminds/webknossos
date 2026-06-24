@@ -2,7 +2,7 @@ package controllers
 
 import com.scalableminds.util.Msg
 import play.silhouette.api.Silhouette
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 
 import models.dataset.{PublicationDAO, PublicationService}
@@ -21,7 +21,7 @@ class PublicationController @Inject() (
 )(implicit ec: ExecutionContext)
     extends Controller
     with ProtoGeometryConversions
-    with FoxImplicits {
+     {
 
   override def allowRemoteOrigin: Boolean = true
 

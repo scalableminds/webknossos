@@ -1,6 +1,7 @@
 package controllers
 
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.typesafe.config.ConfigRenderOptions
 import mail.{DefaultMails, Send}
 import models.organization.OrganizationDAO
@@ -89,7 +90,7 @@ class Application @Inject() (
 
 class ReleaseInformationDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient)
-    with FoxImplicits {
+     {
   def getSchemaVersion(implicit ec: ExecutionContext): Fox[Int] =
     for {
       rList <- run(q"SELECT schemaVersion FROM webknossos.releaseInformation".as[Int])

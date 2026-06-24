@@ -2,7 +2,8 @@ package com.scalableminds.webknossos.datastore.explore
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.{PrecomputedHeader, PrecomputedScale}
@@ -22,7 +23,7 @@ import com.scalableminds.webknossos.datastore.services.mesh.{NeuroglancerMesh, N
 
 import scala.concurrent.ExecutionContext
 
-class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplorer with FoxImplicits {
+class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplorer  {
   override def name: String = "Neuroglancer Precomputed"
 
   override def explore(remotePath: VaultPath, credentialId: Option[String])(using

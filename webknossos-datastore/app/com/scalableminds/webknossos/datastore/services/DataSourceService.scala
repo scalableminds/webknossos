@@ -6,7 +6,8 @@ import com.google.inject.name.Named
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.{MagLocator, MappingProvider}
 import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, IntervalScheduler, UPath}
@@ -34,7 +35,7 @@ class DataSourceService @Inject() (
     with DatasetDeleter
     with LazyLogging
     with DataSourceToDiskWriter
-    with FoxImplicits
+    
     with DataSourceValidation
     with Formatter {
 

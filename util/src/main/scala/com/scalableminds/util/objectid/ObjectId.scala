@@ -2,7 +2,8 @@ package com.scalableminds.util.objectid
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.tools.TextUtils.parseCommaSeparated
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import play.api.libs.json.{Format, JsError, JsResult, JsString, JsSuccess, JsValue}
 import play.api.mvc.{PathBindable, QueryStringBindable}
 
@@ -16,7 +17,7 @@ case class ObjectId(id: String) {
   override def toString: String = id
 }
 
-object ObjectId extends FoxImplicits {
+object ObjectId  {
   private lazy val atomicCounter = new AtomicInteger(Random.nextInt(0x1000000))
   private lazy val HEX_CHARS: Array[Char] = "0123456789abcdef".toCharArray
 

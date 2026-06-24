@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.models.annotation
 
 import com.scalableminds.util.Msg
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationLayerProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -21,7 +21,7 @@ case class AnnotationLayer(
     AnnotationLayerProto(tracingId, name, AnnotationLayerType.toProto(typ))
 }
 
-object AnnotationLayer extends FoxImplicits {
+object AnnotationLayer  {
   implicit val jsonFormat: OFormat[AnnotationLayer] = Json.format[AnnotationLayer]
 
   def fromProto(p: AnnotationLayerProto): AnnotationLayer =

@@ -1,13 +1,14 @@
 package backend
 
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import org.scalatest.wordspec.AsyncWordSpec
 
 import scala.concurrent.Future
 import scala.util.Try
 
-class FoxTestSuite extends AsyncWordSpec with FoxImplicits {
+class FoxTestSuite extends AsyncWordSpec  {
 
   "Fox" should {
     "contain exception from failed Future" in {

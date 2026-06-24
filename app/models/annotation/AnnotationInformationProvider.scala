@@ -2,7 +2,8 @@ package models.annotation
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.DBAccessContext
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import models.annotation.AnnotationType.AnnotationType
 import models.annotation.handler.AnnotationInformationHandlerSelector
 import models.user.User
@@ -18,7 +19,7 @@ class AnnotationInformationProvider @Inject() (
     annotationStore: AnnotationStore
 )(implicit ec: ExecutionContext)
     extends play.api.http.Status
-    with FoxImplicits {
+     {
 
   def provideAnnotation(typ: String, id: ObjectId, user: User)(using ctx: DBAccessContext): Fox[Annotation] =
     provideAnnotation(typ, id, Some(user))

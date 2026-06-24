@@ -4,7 +4,8 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits, Full}
+import com.scalableminds.util.tools.{Fox, Full}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.schema.Tables.{Aimodels, AimodelsRow, GetResultAimodelsRow}
 import models.aimodels.AiModelCategory.AiModelCategory
 import models.dataset.{DataStore, DataStoreDAO, DataStoreService, WKRemoteDataStoreClient}
@@ -55,8 +56,8 @@ class AiModelService @Inject() (
     jobDAO: JobDAO,
     jobService: JobService,
     rpc: RPC
-) extends FoxImplicits
-    with LazyLogging {
+)
+    extends LazyLogging {
 
   val pretrainedNeuronModelId: ObjectId = ObjectId("576500000000000000000001")
   val pretrainedMitochondriaModelId: ObjectId = ObjectId("576500000000000000000002")

@@ -4,7 +4,8 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.PathUtils
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, StaticLayer, UsableDataSource}
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
@@ -21,7 +22,7 @@ import scala.jdk.CollectionConverters.IteratorHasAsScala
 // Calls explorers on local datasets that have already been uploaded to the binaryData dir
 class ExploreLocalLayerService @Inject() (dataVaultService: DataVaultService)
     extends ExploreLayerUtils
-    with FoxImplicits {
+     {
 
   def exploreLocal(path: Path, dataSourceId: DataSourceId, layerDirectory: String = "")(implicit
       ec: ExecutionContext

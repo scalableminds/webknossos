@@ -5,7 +5,8 @@ import com.scalableminds.webknossos.datastore.Annotation.{
   AnnotationProto,
   AnnotationUserStateProto
 }
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -29,7 +30,7 @@ case class AnnotationWithTracings(
     tracingsById: Map[String, Either[SkeletonTracingWithUpdatedTreeIds, VolumeTracing]],
     editableMappingsByTracingId: Map[String, (EditableMappingInfo, EditableMappingUpdater)]
 ) extends LazyLogging
-    with FoxImplicits
+    
     with ProtoGeometryConversions {
 
   // Assumes that there is at most one skeleton layer per annotation. This is true as of this writing

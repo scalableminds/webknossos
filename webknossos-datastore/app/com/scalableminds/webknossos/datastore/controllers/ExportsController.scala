@@ -4,7 +4,7 @@ import java.nio.file.{Files, Path}
 import com.google.inject.Inject
 import com.scalableminds.util.Msg
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.services.{
   DSRemoteWebknossosClient,
@@ -32,7 +32,7 @@ class ExportsController @Inject() (
     config: DataStoreConfig
 )(implicit ec: ExecutionContext)
     extends Controller
-    with FoxImplicits {
+     {
 
   override def allowRemoteOrigin: Boolean = true
 

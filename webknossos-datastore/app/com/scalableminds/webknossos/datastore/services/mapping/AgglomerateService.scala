@@ -5,7 +5,8 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Box, Fox}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
@@ -23,7 +24,7 @@ class AgglomerateService @Inject() (
     hdf5AgglomerateService: Hdf5AgglomerateService,
     config: DataStoreConfig
 ) extends LazyLogging
-    with FoxImplicits {
+     {
 
   private val agglomerateFileKeyCache: AlfuCache[(DataSourceId, String, String), AgglomerateFileKey] =
     AlfuCache() // dataSourceId, layerName, mappingName → AgglomerateFileKey

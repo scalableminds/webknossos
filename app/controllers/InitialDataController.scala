@@ -6,7 +6,7 @@ import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import models.aimodels.{AiModel, AiModelCategory, AiModelDAO, AiModelService}
 import models.annotation.{TracingStore, TracingStoreDAO}
@@ -43,7 +43,7 @@ import scala.concurrent.ExecutionContext
 class InitialDataController @Inject() (initialDataService: InitialDataService, sil: Silhouette[WkEnv])(implicit
     ec: ExecutionContext
 ) extends Controller
-    with FoxImplicits {
+     {
 
   def triggerInsert: Action[AnyContent] = sil.UserAwareAction.async { _ =>
     for {
@@ -75,8 +75,7 @@ class InitialDataService @Inject() (
     organizationService: OrganizationService,
     conf: WkConf
 )(implicit ec: ExecutionContext)
-    extends FoxImplicits
-    with LazyLogging {
+    extends LazyLogging {
   implicit val ctx: GlobalAccessContext.type = GlobalAccessContext
 
   private val defaultUserEmail = conf.WebKnossos.SampleOrganization.User.email

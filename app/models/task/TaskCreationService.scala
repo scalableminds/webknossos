@@ -6,7 +6,8 @@ import java.io.File
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{
   SkeletonTracing,
   SkeletonTracingOpt,
@@ -50,8 +51,7 @@ class TaskCreationService @Inject() (
     datasetService: DatasetService,
     tracingStoreService: TracingStoreService
 )(implicit ec: ExecutionContext)
-    extends FoxImplicits
-    with ProtoGeometryConversions {
+    extends ProtoGeometryConversions {
 
   def assertBatchLimit(batchSize: Int, taskType: TaskType): Fox[Unit] = {
     val batchLimit =
@@ -332,7 +332,6 @@ class TaskCreationService @Inject() (
             case _               => Failure(Msg.Task.Create.needsEitherSkeletonOrVolume)
           }
       }
-
     paramBox map { params =>
       val parsedNmlTracingBoundingBox = params._1.map(b => BoundingBox(b.topLeft, b.width, b.height, b.depth))
       val bbox = if (nmlFormParams.boundingBox.isDefined) nmlFormParams.boundingBox else parsedNmlTracingBoundingBox

@@ -5,6 +5,7 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.schema.Tables.{Multiusers, MultiusersRow, GetResultMultiusersRow}
 import models.user.Theme.Theme
 import play.api.libs.json.Format.GenericFormat

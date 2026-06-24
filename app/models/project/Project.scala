@@ -3,7 +3,8 @@ package models.project
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.schema.Tables.{Projects, ProjectsRow, GetResultProjectsRow}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.{AnnotationState, AnnotationType}
@@ -30,7 +31,7 @@ case class Project(
     isBlacklistedFromReport: Boolean,
     created: Instant = Instant.now,
     isDeleted: Boolean = false
-) extends FoxImplicits {
+)  {
 
   def isDeletableBy(user: User): Boolean = user._id == _owner || user.isAdmin
 
@@ -158,7 +159,7 @@ class ProjectDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
 class ProjectService @Inject() (projectDAO: ProjectDAO, teamDAO: TeamDAO, userService: UserService, taskDAO: TaskDAO)(
     implicit ec: ExecutionContext
 ) extends LazyLogging
-    with FoxImplicits {
+     {
 
   def validateProjectName(name: String): Fox[Unit] =
     for {

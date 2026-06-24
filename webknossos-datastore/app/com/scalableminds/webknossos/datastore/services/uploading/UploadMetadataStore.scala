@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.services.uploading
 
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType.LayerAttachmentType
@@ -13,7 +13,7 @@ import play.api.libs.json.Json
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-trait UploadMetadataStore extends FoxImplicits {
+trait UploadMetadataStore  {
 
   protected def domain: UploadDomain
   protected def store: DataStoreRedisStore

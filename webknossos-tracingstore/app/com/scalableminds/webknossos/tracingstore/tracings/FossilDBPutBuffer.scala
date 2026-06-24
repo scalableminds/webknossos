@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.collection.mutable
@@ -11,7 +12,7 @@ import scala.concurrent.ExecutionContext
 // Caution: Not thread safe! Make sure no concurrent access happens.
 class FossilDBPutBuffer(fossilDBClient: FossilDBClient, version: Option[Long] = None, maxElements: Int = 100)
     extends LazyLogging
-    with FoxImplicits {
+     {
 
   private lazy val buffer: mutable.Map[(String, Long), Array[Byte]] =
     new mutable.HashMap[(String, Long), Array[Byte]]()

@@ -5,6 +5,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import play.silhouette.api.Silhouette
 import play.silhouette.api.actions.SecuredRequest
 import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import models.dataset.{DatasetDAO, DatasetService}
 import models.organization.OrganizationDAO

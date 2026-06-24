@@ -4,7 +4,8 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.datareaders.DatasetArray
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Array
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedArray
@@ -28,7 +29,7 @@ class DatasetArrayBucketProvider(
     dataVaultServiceOpt: Option[DataVaultService],
     sharedChunkContentsCacheOpt: Option[AlfuCache[String, MultiArray]]
 ) extends BucketProvider
-    with FoxImplicits
+    
     with LazyLogging {
 
   // Cache the DatasetArrays of all mags of this layer

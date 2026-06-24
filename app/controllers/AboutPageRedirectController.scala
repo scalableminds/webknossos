@@ -5,7 +5,8 @@ import play.silhouette.api.Silhouette
 import play.silhouette.api.actions.UserAwareRequest
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.mvc.CspHeaders
-import com.scalableminds.util.tools.{Box, Fox, FoxImplicits, TextUtils}
+import com.scalableminds.util.tools.{Box, Fox, TextUtils}
+import com.scalableminds.util.tools.Fox.toFox
 import models.user.{MultiUser, MultiUserDAO, Theme}
 import opengraph.{OpenGraphService, OpenGraphTags}
 import play.api.mvc.{Action, AnyContent}
@@ -28,7 +29,7 @@ class AboutPageRedirectController @Inject() (
     environment: Environment
 )(implicit ec: ExecutionContext)
     extends Controller
-    with FoxImplicits
+    
     with CspHeaders {
 
   def redirectToAboutPageOrSendMainView: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>

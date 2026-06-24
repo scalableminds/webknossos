@@ -4,7 +4,8 @@ import com.scalableminds.util.Msg
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, ElementClass}
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
@@ -48,7 +49,7 @@ class VolumeSegmentIndexService @Inject() (
     with VolumeBucketCompression
     with SegmentIndexKeyHelper
     with ReversionHelper
-    with FoxImplicits
+    
     with LazyLogging {
 
   private val volumeSegmentIndexClient: FossilDBClient = tracingDataStore.volumeSegmentIndex

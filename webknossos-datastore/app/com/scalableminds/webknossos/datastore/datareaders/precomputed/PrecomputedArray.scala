@@ -2,7 +2,8 @@ package com.scalableminds.webknossos.datastore.datareaders.precomputed
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, DatasetArray}
 import com.scalableminds.webknossos.datastore.datavault.{StartEndExclusiveByteRange, VaultPath}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
@@ -13,7 +14,7 @@ import com.scalableminds.util.tools.Box.tryo
 import scala.concurrent.ExecutionContext
 import ucar.ma2.{Array => MultiArray}
 
-object PrecomputedArray extends LazyLogging with FoxImplicits {
+object PrecomputedArray extends LazyLogging  {
   def open(
       magPath: VaultPath,
       dataSourceId: DataSourceId,

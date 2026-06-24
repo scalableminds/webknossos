@@ -1,7 +1,8 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
 import com.google.inject.Inject
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.geometry.{ColorProto, NamedBoundingBoxProto => ProtoBox}
@@ -18,7 +19,7 @@ trait ColorGenerator {
     ColorProto(getRandomComponent, getRandomComponent, getRandomComponent, 1.0)
 }
 
-trait TracingMigrationService[T <: GeneratedMessage] extends FoxImplicits {
+trait TracingMigrationService[T <: GeneratedMessage]  {
   implicit protected def ec: ExecutionContext
 
   protected def migrations: List[T => Fox[T]]

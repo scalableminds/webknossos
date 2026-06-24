@@ -2,7 +2,7 @@ package controllers
 
 import com.scalableminds.util.Msg
 import play.silhouette.api.Silhouette
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 
 import javax.inject.Inject
 import models.dataset.{DataStore, DataStoreDAO, DataStoreService}
@@ -34,7 +34,7 @@ class DataStoreController @Inject() (
     multiUserDAO: MultiUserDAO
 )(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller
-    with FoxImplicits {
+     {
 
   def list: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     for {

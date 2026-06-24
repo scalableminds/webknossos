@@ -2,7 +2,8 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer}
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition, WebknossosDataRequest}
@@ -175,7 +176,7 @@ trait BucketKeys extends WKWDataFormatHelper with AdditionalCoordinateKey {
 
 trait VolumeTracingBucketHelper
     extends KeyValueStoreConversions
-    with FoxImplicits
+    
     with VolumeBucketCompression
     with BucketKeys
     with ReversionHelper {
@@ -441,7 +442,7 @@ class VersionedBucketIterator(
     with KeyValueStoreConversions
     with VolumeBucketCompression
     with BucketKeys
-    with FoxImplicits
+    
     with ReversionHelper {
   private val batchSize = 100
 

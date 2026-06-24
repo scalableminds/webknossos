@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.services
 
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffMetadata, ZarrHeader}
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.{NgffZarr3GroupHeader, Zarr3ArrayHeader}
 import com.scalableminds.webknossos.datastore.models.datasource.StaticSegmentationLayer
@@ -23,7 +23,7 @@ class DSRemoteTracingstoreClient @Inject() (
     rpc: RPC,
     val lifecycle: ApplicationLifecycle
 ) extends LazyLogging
-    with FoxImplicits {
+     {
 
   private def getZarrVersionDependantSubPath =
     (zarrVersion: Int) => if (zarrVersion == 2) "zarr" else "zarr3_experimental"

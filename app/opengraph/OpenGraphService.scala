@@ -5,7 +5,8 @@ import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.datasource.{LayerCategory, StaticLayer}
 import models.annotation.AnnotationDAO
 import models.dataset.{Dataset, DatasetDAO, DatasetLayerDAO}
@@ -35,7 +36,7 @@ class OpenGraphService @Inject() (
     annotationDAO: AnnotationDAO,
     shortLinkDAO: ShortLinkDAO,
     conf: WkConf
-) extends FoxImplicits {
+)  {
 
   private val thumbnailWidth = 1000
   private val thumbnailHeight = 300

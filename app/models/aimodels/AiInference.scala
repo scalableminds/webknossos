@@ -4,6 +4,7 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.schema.Tables.{Aiinferences, AiinferencesRow, GetResultAiinferencesRow}
 import models.dataset.{DataStoreDAO, DataStoreService, DatasetDAO, DatasetService}
 import models.job.{JobDAO, JobService}

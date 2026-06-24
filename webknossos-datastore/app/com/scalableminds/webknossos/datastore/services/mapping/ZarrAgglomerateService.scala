@@ -4,7 +4,8 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{
@@ -33,7 +34,7 @@ class ZarrAgglomerateService @Inject() (
     dataVaultService: DataVaultService,
     chunkCacheService: DSChunkCacheService
 ) extends AgglomerateFileUtils
-    with FoxImplicits
+    
     with LazyLogging {
 
   private lazy val openArraysCache = AlfuCache[(AgglomerateFileKey, String), DatasetArray]()

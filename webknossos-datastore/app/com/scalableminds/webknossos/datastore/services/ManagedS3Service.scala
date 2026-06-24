@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.services
 
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.helpers.{PathSchemes, S3UriUtils, UPath}
 import com.scalableminds.webknossos.datastore.storage.{
@@ -20,8 +21,8 @@ import scala.concurrent.ExecutionContext
 
 class ManagedS3Service @Inject() (config: DataStoreConfig, s3ClientPoolHolder: S3ClientPoolHolder)(implicit
     ec: ExecutionContext
-) extends FoxImplicits
-    with LazyLogging {
+)
+    extends LazyLogging {
 
   def pathIsInManagedS3(path: UPath): Boolean =
     path.getScheme.contains(PathSchemes.schemeS3) && globalCredentials.exists(c =>

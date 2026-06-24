@@ -159,9 +159,9 @@ describe("wkstore_adapter", () => {
         }),
       );
 
-    const results = await requestWithFallback(colorLayer, batch);
-    expect(results[0]).toEqual({ type: "data", data: bucketData1 });
-    expect(results[1]).toEqual({ type: "data", data: bucketData2 });
+    const [buffer1, buffer2] = await requestWithFallback(colorLayer, batch);
+    expect(buffer1).toEqual({ type: "data", data: bucketData1 });
+    expect(buffer2).toEqual({ type: "data", data: bucketData2 });
     expect(RequestMock.sendJSONReceiveArraybufferWithHeaders).toHaveBeenCalledTimes(2);
 
     expect(RequestMock.sendJSONReceiveArraybufferWithHeaders).toHaveBeenCalledWith(
@@ -270,9 +270,9 @@ describe("wkstore_adapter", () => {
       "failure-bucket-indices": "[]",
       "missing-buckets": "[1]",
     });
-    const results = await requestWithFallback(colorLayer, batch);
-    expect(results[0]).toEqual({ type: "data", data: bucketData1 });
-    expect(results[1]).toEqual({ type: "empty" });
+    const [buffer1, buffer2] = await requestWithFallback(colorLayer, batch);
+    expect(buffer1).toEqual({ type: "data", data: bucketData1 });
+    expect(buffer2).toEqual({ type: "empty" });
   });
 
   it<TestContext>("requestWithFallback: marks buckets reported as failures", async ({
@@ -285,9 +285,9 @@ describe("wkstore_adapter", () => {
       "failure-bucket-indices": "[1]",
       "missing-buckets": "[1]",
     });
-    const results = await requestWithFallback(colorLayer, batch);
-    expect(results[0]).toEqual({ type: "data", data: bucketData1 });
-    expect(results[1]).toEqual({ type: "failure" });
+    const [buffer1, buffer2] = await requestWithFallback(colorLayer, batch);
+    expect(buffer1).toEqual({ type: "data", data: bucketData1 });
+    expect(buffer2).toEqual({ type: "failure" });
   });
 
   it<TestContext>("requestWithFallback: treats legacy missing-buckets header as empty", async ({
@@ -298,9 +298,9 @@ describe("wkstore_adapter", () => {
     mockResponse(bucketData1.buffer, {
       "missing-buckets": "[1]",
     });
-    const results = await requestWithFallback(colorLayer, batch);
-    expect(results[0]).toEqual({ type: "data", data: bucketData1 });
-    expect(results[1]).toEqual({ type: "empty" });
+    const [buffer1, buffer2] = await requestWithFallback(colorLayer, batch);
+    expect(buffer1).toEqual({ type: "data", data: bucketData1 });
+    expect(buffer2).toEqual({ type: "empty" });
   });
 
   it<TestContext>("sendToStore: Request Handling should send the correct request parameters", () => {

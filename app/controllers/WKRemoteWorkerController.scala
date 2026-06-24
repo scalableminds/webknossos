@@ -32,7 +32,7 @@ class WKRemoteWorkerController @Inject() (
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
-  def requestJobs(key: String, workerVersion: Option[String]): Action[AnyContent] = Action.fox {
+  def requestJobs(key: String, workerVersion: Option[String]): Action[AnyContent] = Action.fox { _ =>
     for {
       worker <- workerDAO.findOneByKey(key) ?~> Msg.Job.workerNotFound
       _ = workerDAO.updateHeartBeat(worker._id)

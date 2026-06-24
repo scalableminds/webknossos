@@ -24,7 +24,7 @@ class TracingStoreController @Inject() (
 )(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller {
 
-  def listOne: Action[AnyContent] = sil.UserAwareAction.fox {
+  def listOne: Action[AnyContent] = sil.UserAwareAction.fox { _ =>
     for {
       tracingStore <- tracingStoreDAO.findFirst ?~> Msg.TracingStore.listFailed
       js <- tracingStoreService.publicWrites(tracingStore)

@@ -8,7 +8,6 @@ import play.api.http.{HttpEntity, Status}
 import play.api.mvc.{Request, Result}
 
 import scala.concurrent.duration.*
-import scala.concurrent.ExecutionContext
 
 trait AbstractRequestLogging extends LazyLogging with Formatter {
 

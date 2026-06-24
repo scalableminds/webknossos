@@ -19,18 +19,28 @@ import play.filters.csp.CSPConfig
 import java.io.FileInputStream
 import scala.concurrent.{ExecutionContext, Future}
 
-trait BoxToResultHelpers extends Formatter with RemoteOriginHelpers with HeaderNames {
+trait FoxToResultHelpers extends Formatter with RemoteOriginHelpers with HeaderNames {
 
+  // Override this in your controller to add the CORS headers to the results of its actions
+  protected def allowRemoteOrigin: Boolean = false
+
+  // Override this in your controller make this the default error code for Failures
   protected def defaultErrorCode: Int = BAD_REQUEST
 
-  def asResult[T <: Result](b: Box[T]): Result = {
+  extension [R[_], B](ab: ActionBuilder[R, B])
+    def fox(block: R[B] => Fox[Result])(using ec: ExecutionContext): Action[B] =
+      ab.async(req => block(req).futureBox.map(asResult))
+    def fox[A](bodyParser: BodyParser[A])(block: R[A] => Fox[Result])(using ec: ExecutionContext): Action[A] =
+      ab.async(bodyParser)(req => block(req).futureBox.map(asResult))
+
+  private def asResult[T <: Result](b: Box[T]): Result = {
     val result = b match {
       case Full(result) =>
         result
       case ParamFailure(msg, _, chain, statusCode: Int) =>
         new JsonResult(statusCode)(msg, formatChainOpt(chain))
       case ParamFailure(_, _, _, msgs: JsArray) =>
-        new JsonResult(defaultErrorCode)(jsonMessages(msgs))
+        new JsonResult(defaultErrorCode)(Json.obj("messages" -> msgs))
       case Failure(msg, _, chain) =>
         new JsonResult(defaultErrorCode)(msg, formatChainOpt(chain))
       case Empty =>
@@ -45,21 +55,16 @@ trait BoxToResultHelpers extends Formatter with RemoteOriginHelpers with HeaderN
       case _           => None
     }
 
-  private def jsonMessages(msgs: JsArray): JsObject =
-    Json.obj("messages" -> msgs)
-
-  // Override this in your controller to add the CORS headers to the results of its actions
-  def allowRemoteOrigin: Boolean = false
-
   private def allowRemoteOriginIfSelected(result: Result): Result =
     if (allowRemoteOrigin) {
       addRemoteOriginHeaders(result)
     } else result
 
-  def addNoCacheHeaderFallback(result: Result): Result =
+  protected def addNoCacheHeaderFallback(result: Result): Result =
     if (result.header.headers.contains(CACHE_CONTROL)) {
       result
     } else result.withHeaders(CACHE_CONTROL -> "no-cache")
+
 }
 
 trait RemoteOriginHelpers {
@@ -83,18 +88,6 @@ trait CspHeaders extends HeaderNames {
       action: Action[AnyContent]
   )(implicit request: Request[AnyContent], ec: ExecutionContext): Future[Result] =
     action.apply(request).map(addCspHeader)
-}
-
-trait ResultImplicits extends BoxToResultHelpers {
-
-  extension [R[_], B](ab: ActionBuilder[R, B])
-    def fox(block: => Fox[Result])(using ec: ExecutionContext): Action[B] =
-      ab.async(_ => block.futureBox.map(asResult))
-    def fox(block: R[B] => Fox[Result])(using ec: ExecutionContext): Action[B] =
-      ab.async(req => block(req).futureBox.map(asResult))
-    def fox[A](bodyParser: BodyParser[A])(block: R[A] => Fox[Result])(using ec: ExecutionContext): Action[A] =
-      ab.async(bodyParser)(req => block(req).futureBox.map(asResult))
-
 }
 
 class JsonResult(status: Int)
@@ -215,7 +208,7 @@ trait RequestTokenHelper {
 
 trait ExtendedController
     extends JsonResults
-    with ResultImplicits
+    with FoxToResultHelpers
     with Status
     with InjectedController
     with MimeTypes

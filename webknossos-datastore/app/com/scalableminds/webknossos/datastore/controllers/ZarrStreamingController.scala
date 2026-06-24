@@ -43,11 +43,11 @@ class ZarrStreamingController @Inject() (
     extends Controller
     with Zarr3OutputHelper {
 
-  override def defaultErrorCode: Int = NOT_FOUND
+  override protected def defaultErrorCode: Int = NOT_FOUND
 
   val binaryDataService: BinaryDataService = binaryDataServiceHolder.binaryDataService
 
-  override def allowRemoteOrigin: Boolean = true
+  override protected def allowRemoteOrigin: Boolean = true
 
   /** Serve .zattrs file for a dataset Uses the OME-NGFF standard (see https://ngff.openmicroscopy.org/latest/)
     */

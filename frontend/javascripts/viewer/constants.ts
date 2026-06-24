@@ -522,7 +522,3 @@ export enum PerformanceMarkEnum {
   TRACING_VIEW_LOAD = "tracing_view_load_start",
   SHADER_COMPILE = "shader_compile_start",
 }
-
-export enum SagaIdentifier {
-  SAVE_SAGA = "save_saga",
-}

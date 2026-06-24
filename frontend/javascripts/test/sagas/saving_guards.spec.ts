@@ -8,6 +8,7 @@ import { setPositionAction } from "viewer/model/actions/flycam_actions";
 import {
   disableSavingAction,
   dispatchEnsureHasNewestVersionAsync,
+  saveNowAction,
 } from "viewer/model/actions/save_actions";
 import { createNodeAction, createTreeAction } from "viewer/model/actions/skeletontracing_actions";
 import { setVersionRestoreVisibilityAction } from "viewer/model/actions/ui_actions";
@@ -41,7 +42,7 @@ describe("Saving guards", () => {
     const saveCountBefore = context.receivedDataPerSaveRequest.length;
 
     // Force a save attempt — the guard (checked after the race fires) should block it.
-    Store.dispatch({ type: "SAVE_NOW" });
+    Store.dispatch(saveNowAction());
 
     // Also provoke via dispatchEnsureHasNewestVersionAsync (which watchForNewerAnnotationVersion
     // should handle without deadlocking, and which should not cause a save).
@@ -73,7 +74,7 @@ describe("Saving guards", () => {
     const saveCountAfterOpen = context.receivedDataPerSaveRequest.length;
 
     // Force-push: the race fires, then the guard blocks the drain.
-    Store.dispatch({ type: "SAVE_NOW" });
+    Store.dispatch(saveNowAction());
     await sleep(200);
 
     expect(context.receivedDataPerSaveRequest.length).toBe(saveCountAfterOpen);

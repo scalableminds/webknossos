@@ -6,6 +6,7 @@ import type { ConnectomeAction } from "viewer/model/actions/connectome_actions";
 import type { DatasetAction } from "viewer/model/actions/dataset_actions";
 import type { FlycamAction } from "viewer/model/actions/flycam_actions";
 import type { FlycamInfoCacheAction } from "viewer/model/actions/flycam_info_cache_actions";
+import type { OperationContextAction } from "viewer/model/actions/operation_context_actions";
 import type { OrganizationAction } from "viewer/model/actions/organization_actions";
 import type { ProofreadAction } from "viewer/model/actions/proofread_actions";
 import type { SaveAction } from "viewer/model/actions/save_actions";
@@ -42,6 +43,7 @@ export type Action =
   | ConnectomeAction
   | ProofreadAction
   | OrganizationAction
+  | OperationContextAction
   | ReturnType<typeof wkInitializedAction>
   | ReturnType<typeof uiReadyAction>
   | ReturnType<typeof sceneControllerInitializedAction>

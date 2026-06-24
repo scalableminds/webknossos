@@ -80,22 +80,22 @@ class BoxTestSuite extends AsyncWordSpec {
 
     "pass through ?~> unchanged" in {
       val box: Box[Int] = Full(1)
-      assert(box.?~>("err") == Full(1))
+      assert((box ?~> "err") == Full(1))
     }
 
     "pass through ~> unchanged" in {
       val box: Box[Int] = Full(1)
-      assert(box.~>(404) == Full(1))
+      assert((box ~> 404) == Full(1))
     }
 
     "pass through ?-> unchanged" in {
       val box: Box[Int] = Full(1)
-      assert(box.?->("err") == Full(1))
+      assert((box ?-> "err") == Full(1))
     }
 
     "pass through ??~> unchanged" in {
       val box: Box[Int] = Full(1)
-      assert(box.??~>("err") == Full(1))
+      assert((box ??~> "err") == Full(1))
     }
 
     "be equal to another Full wrapping the same value" in
@@ -159,12 +159,12 @@ class BoxTestSuite extends AsyncWordSpec {
       assert(!Empty.iterator.hasNext)
 
     "become a Failure with a message via ?~>" in {
-      val result = Empty.?~>("something went wrong")
+      val result = Empty ?~> "something went wrong"
       assert(result == Failure("something went wrong", Empty, Empty))
     }
 
     "become a ParamFailure[Int] with an error code via ~>" in {
-      val result = Empty.~>(404)
+      val result = Empty ~> 404
       result match {
         case ParamFailure(_, _, _, code) => assert(code == 404)
         case _                           => fail("expected ParamFailure")
@@ -172,12 +172,12 @@ class BoxTestSuite extends AsyncWordSpec {
     }
 
     "become a Failure (overwriting message) via ??~>" in {
-      val result = Empty.??~>("overwritten")
+      val result = Empty ??~> "overwritten"
       assert(result == Failure("overwritten", Empty, Empty))
     }
 
     "pass through ?-> unchanged (Empty stays Empty)" in {
-      val result: Box[Nothing] = Empty.?->("ignored")
+      val result: Box[Nothing] = Empty ?-> "ignored"
       assert(result == Empty)
     }
 
@@ -221,13 +221,13 @@ class BoxTestSuite extends AsyncWordSpec {
 
     "chain with a new Failure wrapping the old one via ?~>" in {
       val inner = Failure("inner")
-      val outer = inner.?~>("outer")
+      val outer = inner ?~> "outer"
       assert(outer == Failure("outer", Empty, Full(inner)))
     }
 
     "add an HTTP error code while preserving the message via ~>" in {
       val f = Failure("not found")
-      val pf = f.~>(404)
+      val pf = f ~> 404
       pf match {
         case ParamFailure(msg, _, _, code) =>
           assert(msg == "not found")
@@ -238,13 +238,13 @@ class BoxTestSuite extends AsyncWordSpec {
 
     "chain Failures with ?-> (same as ?~> for Failure)" in {
       val inner = Failure("inner")
-      val outer = inner.?->("outer")
+      val outer = inner ?-> "outer"
       assert(outer == Failure("outer", Empty, Full(inner)))
     }
 
     "overwrite its message via ??~>" in {
       val f = Failure("original")
-      val result = f.??~>("replacement")
+      val result = f ??~> "replacement"
       assert(result == Failure("replacement", Empty, Empty))
     }
 
@@ -284,7 +284,7 @@ class BoxTestSuite extends AsyncWordSpec {
 
     "preserve the param when chaining with ?~>" in {
       val pf = ParamFailure("original", "my-param")
-      val chained = pf.?~>("chained")
+      val chained = pf ?~> "chained"
       chained match {
         case ParamFailure(msg, _, chain, param) =>
           assert(msg == "chained")
@@ -296,7 +296,7 @@ class BoxTestSuite extends AsyncWordSpec {
 
     "wrap itself in chain when ~> adds an error code" in {
       val pf = ParamFailure("err", "some-data")
-      val withCode = pf.~>(500)
+      val withCode = pf ~> 500
       withCode match {
         case ParamFailure(msg, _, chain, code) =>
           assert(msg == "err")

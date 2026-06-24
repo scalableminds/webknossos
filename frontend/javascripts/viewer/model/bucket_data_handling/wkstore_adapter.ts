@@ -153,11 +153,6 @@ export async function requestWithFallback(
     return bucketResults;
   }
 
-  if (maybeVolumeTracing == null) {
-    // Satisfy typescript
-    return bucketResults;
-  }
-
   // Request empty buckets from the datastore as a fallback
   const fallbackBatch = emptyBucketIndices.map((idx) => batch[idx]);
   const fallbackResults = await requestFromStore(

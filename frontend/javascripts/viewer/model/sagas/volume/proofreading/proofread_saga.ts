@@ -2283,8 +2283,8 @@ function getSegmentIdsThatMapToAgglomerate(
  * Re-builds the local mapping to reflect a server-side agglomerate split by re-requesting the affected
  * segments' new agglomerate ids and returning the updated mapping plus the involved old/new ids.
  *
- * @param activeMapping - Current full mapping; copied over to splitMapping return value unchanged
- *   except for reassigned segments.
+ * @param activeMapping - Current mapping info which is copied and mutated to reflect the reassigned segments
+ *   before returning the new mapping as splitMapping.
  * @param sourceAgglomerateId - The agglomerate that was split; all of its local segments are re-requested.
  * @param volumeTracingId - Id of the volume tracing whose (editable) mapping is updated.
  * @param version - Annotation version at which to look up the post-split agglomerate ids.

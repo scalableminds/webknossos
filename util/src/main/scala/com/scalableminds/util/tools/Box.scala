@@ -32,7 +32,7 @@ object Box extends Tryo {
 
   /** Helper class to provide an easy way for converting a `List[Box[T]]` into a `Box[List[T]]`.
     */
-  implicit class ListOfBoxes[T](val theListOfBoxes: List[Box[T]]) extends AnyVal {
+  implicit class ListOfBoxes[T](private val theListOfBoxes: List[Box[T]]) extends AnyVal {
 
     /** Convert a `List` of `Box`es into a single `Box` containing a `List[T]`, where `T` is the parameterized type of
       * the `Box`es.
@@ -789,7 +789,7 @@ final class ParamFailure[T](
     })
 
   override def ~>[T](errorCode: => T): ParamFailure[T] =
-    ParamFailure(msg, exception, Full(this), errorCode)
+    ParamFailure("hello!", exception, Full(this), errorCode)
 
   override def ?~!(msg: => String): Failure = ParamFailure(msg, Empty, Full(this), this.param)
 }

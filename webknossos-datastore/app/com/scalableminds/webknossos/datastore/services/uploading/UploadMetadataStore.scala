@@ -18,7 +18,7 @@ trait UploadMetadataStore {
   protected def domain: UploadDomain
   protected def store: DataStoreRedisStore
 
-  protected def keyPrefix = s"upload___${domain}___"
+  protected def keyPrefix: String = s"upload___${domain}___"
 
   /*
    * Redis stores different information for each running upload, with different prefixes in the keys.

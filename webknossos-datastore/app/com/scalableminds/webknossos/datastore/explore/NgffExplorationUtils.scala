@@ -207,8 +207,8 @@ trait NgffExplorationUtils {
 
   private def createAdditionalAxis(name: String, index: Int, bounds: Seq[Int]): Box[AdditionalAxis] =
     for {
-      normalizedName <- Box(normalizeStrong(name)) ?~> s"Axis name '$name' would be empty if sanitized"
-      _ <- Box(Option(bounds.length == 2).collect { case true => () })
+      normalizedName <- Box.fromOption(normalizeStrong(name)) ?~> s"Axis name '$name' would be empty if sanitized"
+      _ <- Box.fromOption(Option(bounds.length == 2).collect { case true => () })
     } yield AdditionalAxis(normalizedName, bounds, index)
 
   protected def getAdditionalAxes(multiscale: NgffMultiscalesItem, remotePath: VaultPath)(using

@@ -190,7 +190,7 @@ trait ValidationHelpers {
   ): BodyParser[A] =
     bodyParsers.raw.validate { raw =>
       if (raw.size < raw.memoryThreshold) {
-        Box(raw.asBytes()).flatMap(x => tryo(companion.parseFrom(x.toArray))) match {
+        Box.fromOption(raw.asBytes()).flatMap(x => tryo(companion.parseFrom(x.toArray))) match {
           case Full(parsed) => Right(parsed)
           case _            => Left(BadRequest("Invalid protobuf request body"))
         }

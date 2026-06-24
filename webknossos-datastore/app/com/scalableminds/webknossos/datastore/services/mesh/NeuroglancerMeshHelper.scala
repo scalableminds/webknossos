@@ -112,7 +112,7 @@ object WebknossosSegmentInfo {
       meshFormat: String,
       chunkScale: Array[Double] = Array(1.0, 1.0, 1.0)
   ): Box[WebknossosSegmentInfo] =
-    Box(chunkInfos.headOption).flatMap { firstChunkInfo =>
+    Box.fromOption(chunkInfos.headOption).flatMap { firstChunkInfo =>
       tryo {
         WebknossosSegmentInfo(
           meshFormat = meshFormat,

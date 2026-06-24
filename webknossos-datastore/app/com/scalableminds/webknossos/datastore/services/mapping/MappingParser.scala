@@ -15,7 +15,7 @@ object MappingParser extends LazyLogging {
 
   def parse[T](r: Reader, fromLongFn: Long => T): Box[DataLayerMapping[T]] =
     try
-      Box(parseImpl(r, fromLongFn))
+      Box.fromOption(parseImpl(r, fromLongFn))
     catch {
       case e: JsonParseException =>
         logger.error(s"Parse exception while parsing mapping: ${e.getMessage}.")

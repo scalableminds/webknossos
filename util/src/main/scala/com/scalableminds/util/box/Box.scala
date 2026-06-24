@@ -41,13 +41,11 @@ object Box extends Tryo {
     }
   }
 
-  // TODO replace by .toBox as extension on Option?
-  def apply[T](in: Option[T]): Box[T] = in match {
+  def fromOption[T](in: Option[T]): Box[T] = in match {
     case Some(x) => Full(x)
     case _       => Empty
   }
 
-  // TODO replace by .toBox as extension on Try?
   def fromTry[T](t: scala.util.Try[T]): Box[T] =
     t.fold(e => Failure(e.getMessage, Full(e), Empty), Full(_))
 
@@ -97,32 +95,22 @@ sealed abstract class Box[+A] extends IterableOnce[A] with Product with Serializ
 
 /** Box that contains a value. */
 final case class Full[+A](value: A) extends Box[A] {
+
   def isEmpty: Boolean = false
-
   def get(justification: => String): A = value
-
   override def getOrElse[B >: A](default: => B): B = value
   override def orElse[B >: A](alternative: => Box[B]): Box[B] = this
-
   override def map[B](f: A => B): Box[B] = Full(f(value))
-
   override def flatMap[B](f: A => Box[B]): Box[B] = f(value)
-
   override def filter(p: A => Boolean): Box[A] = if (p(value)) this else Empty
-
   override def exists(func: A => Boolean): Boolean = func(value)
-
   override def contains[B >: A](v: B): Boolean = value == v
-
   override def forall(func: A => Boolean): Boolean = func(value)
-
   override def foreach[U](f: A => U): Unit = f(value)
-
   override def toOption: Option[A] = Some(value)
-
   override def iterator: Iterator[A] = Iterator(value)
-
   override def toList: List[A] = List(value)
+
 }
 
 /** Singleton object representing a completely empty `Box` with no value or failure information.
@@ -166,13 +154,10 @@ sealed case class Failure(msg: String, exception: Box[Throwable], chain: Box[Fai
     }
 
   override def map[B](f: Nothing => B): Box[B] = this
-
   override def flatMap[B](f: Nothing => Box[B]): Box[B] = this
 
   override def ?~>(msg: => String): Failure = Failure(msg, Empty, Full(this))
-
   override def ~>(errorCode: Int): ParamFailure[Int] = ParamFailure(msg, exception, chain, errorCode)
-
   override def ?->(msg: String): Box[Nothing] = ?~>(msg)
 
   override def equals(other: Any): Boolean = (this, other) match {
@@ -218,7 +203,8 @@ final class ParamFailure[T](
       case x    => x.hashCode()
     })
 
-  override def ?~>(msg: => String): Failure = ParamFailure(msg, Empty, Full(this), this.param)
+  override def ?~>(msg: => String): Failure =
+    ParamFailure(msg, Empty, Full(this), this.param)
 
   override def ~>(errorCode: Int): ParamFailure[Int] =
     ParamFailure(msg, exception, Full(this), errorCode)

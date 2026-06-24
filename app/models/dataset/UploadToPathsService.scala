@@ -162,7 +162,7 @@ class UploadToPathsService @Inject() (
 
   private lazy val configuredUploadToPathsPrefixes: Box[Seq[UPath]] = {
     val fallbackFromBaseFolder = for {
-      datastoreBaseFolder <- Box(conf.Datastore.baseDirectory)
+      datastoreBaseFolder <- Box.fromOption(conf.Datastore.baseDirectory)
       fromDatastoreBaseFolder <- UPath.fromString(datastoreBaseFolder)
     } yield Seq(fromDatastoreBaseFolder.toAbsolute)
     conf.WebKnossos.Datasets.UploadToPaths.prefixes match {
@@ -184,7 +184,7 @@ class UploadToPathsService @Inject() (
         case Some(requested) =>
           if (configuredPrefixes.contains(requested)) Full(requested)
           else Failure("Requested path prefix is not in list of configured ones.")
-        case None => Box(configuredPrefixes.headOption)
+        case None => Box.fromOption(configuredPrefixes.headOption)
       }
     } yield selectedPrefix
 

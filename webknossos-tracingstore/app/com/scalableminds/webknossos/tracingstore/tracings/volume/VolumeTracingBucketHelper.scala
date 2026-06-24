@@ -193,7 +193,7 @@ trait VolumeTracingBucketHelper
     for {
       bucketKeyValueBoxesFromFossil <-
         if (volumeLayer.isTemporaryTracing) {
-          Fox.successful(temporaryTracingService.getVolumeBuckets(bucketKeys).map(Box(_)))
+          Fox.successful(temporaryTracingService.getVolumeBuckets(bucketKeys).map(Box.fromOption))
         } else {
           volumeDataStore.getMultipleKeysByList(bucketKeys, version)(wrapInBox).map(_.map(_.map(_.value)))
         }

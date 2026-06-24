@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.services.mapping
 
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.box.Box
+import com.scalableminds.util.box.{Box, Empty}
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.time.Instant
@@ -62,10 +62,10 @@ class AgglomerateService @Inject() (
       mappingName: String
   ): Box[AgglomerateFileKey] =
     for {
-      attachment <- Box(dataLayer.attachments match {
-        case Some(attachments) => attachments.agglomerates.find(_.name == mappingName)
-        case None              => None
-      })
+      attachment <- dataLayer.attachments match {
+        case Some(attachments) => Box.fromOption(attachments.agglomerates.find(_.name == mappingName))
+        case None              => Empty
+      }
       resolvedPath <- tryo(attachment.resolvedPath(config.Datastore.baseDirectory, dataSourceId))
     } yield AgglomerateFileKey(
       dataSourceId,

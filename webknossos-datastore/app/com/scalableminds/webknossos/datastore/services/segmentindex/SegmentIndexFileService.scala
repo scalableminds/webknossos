@@ -67,7 +67,7 @@ class SegmentIndexFileService @Inject() (
       dataLayer: DataLayer
   ): Box[SegmentIndexFileKey] =
     for {
-      attachment <- Box(dataLayer.attachments.flatMap(_.segmentIndex))
+      attachment <- Box.fromOption(dataLayer.attachments.flatMap(_.segmentIndex))
       resolvedPath <- tryo(attachment.resolvedPath(config.Datastore.baseDirectory, dataSourceId))
     } yield SegmentIndexFileKey(
       dataSourceId,

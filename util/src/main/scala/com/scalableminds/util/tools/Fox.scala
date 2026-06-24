@@ -20,7 +20,7 @@ object Fox {
 
   extension [T](o: Option[T])
     def toFox(using ec: ExecutionContext): Fox[T] =
-      new Fox(Future.successful(Box(o)))
+      new Fox(Future.successful(Box.fromOption(o)))
 
   def fromBool(b: Boolean)(implicit ec: ExecutionContext): Fox[Unit] =
     if (b) Fox.successful(())

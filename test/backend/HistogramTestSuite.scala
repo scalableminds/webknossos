@@ -14,15 +14,15 @@ class HistogramTestSuite extends AsyncWordSpec {
   private val service = new FindDataService(null.asInstanceOf[BinaryDataServiceHolder])
 
   // Helper to widen typed arrays to the existential type expected by calculateHistogramValues.
-  private def bytes(values: Byte*): Array[_ >: Byte with Short with Int with Long with Float] = values.toArray
-  private def shorts(values: Short*): Array[_ >: Byte with Short with Int with Long with Float] = values.toArray
-  private def ints(values: Int*): Array[_ >: Byte with Short with Int with Long with Float] = values.toArray
-  private def longs(values: Long*): Array[_ >: Byte with Short with Int with Long with Float] = values.toArray
-  private def floats(values: Float*): Array[_ >: Byte with Short with Int with Long with Float] = values.toArray
+  private def bytes(values: Byte*): Array[? >: Byte & Short & Int & Long & Float] = values.toArray
+  private def shorts(values: Short*): Array[? >: Byte & Short & Int & Long & Float] = values.toArray
+  private def ints(values: Int*): Array[? >: Byte & Short & Int & Long & Float] = values.toArray
+  private def longs(values: Long*): Array[? >: Byte & Short & Int & Long & Float] = values.toArray
+  private def floats(values: Float*): Array[? >: Byte & Short & Int & Long & Float] = values.toArray
 
   private def assertSingleHistogram(
       elementClass: ElementClass.Value,
-      data: Array[_ >: Byte with Short with Int with Long with Float],
+      data: Array[? >: Byte & Short & Int & Long & Float],
       expectedMin: Double,
       expectedMax: Double,
       expectedBinCounts: Map[Int, Long]
@@ -238,7 +238,7 @@ class HistogramTestSuite extends AsyncWordSpec {
       // Bin 0 of each channel is zeroed out after accumulation.
       "return three histograms for RGB data" in {
         // One pixel: R=10, G=20, B=30  (none in bin 0, so no zeroing effect)
-        val data: Array[_ >: Byte with Short with Int with Long with Float] =
+        val data: Array[? >: Byte & Short & Int & Long & Float] =
           Array[Byte](10, 20, 30)
         val histograms = service.calculateHistogramValues(data, ElementClass.uint24)
         assert(histograms.length == 3)
@@ -250,7 +250,7 @@ class HistogramTestSuite extends AsyncWordSpec {
       }
       "zero out bin 0 in each channel histogram" in {
         // Pixel with R=0, G=5, B=10 — the R channel hits bin 0, which gets cleared
-        val data: Array[_ >: Byte with Short with Int with Long with Float] =
+        val data: Array[? >: Byte & Short & Int & Long & Float] =
           Array[Byte](0, 5, 10)
         val histograms = service.calculateHistogramValues(data, ElementClass.uint24)
         assert(histograms.length == 3)
@@ -260,7 +260,7 @@ class HistogramTestSuite extends AsyncWordSpec {
       }
       "handle multiple pixels correctly" in {
         // Two pixels: (1, 2, 3) and (1, 4, 6)
-        val data: Array[_ >: Byte with Short with Int with Long with Float] =
+        val data: Array[? >: Byte & Short & Int & Long & Float] =
           Array[Byte](1, 2, 3, 1, 4, 6)
         val histograms = service.calculateHistogramValues(data, ElementClass.uint24)
         assert(histograms.length == 3)
@@ -274,7 +274,7 @@ class HistogramTestSuite extends AsyncWordSpec {
 
     "data is empty" should {
       "return a histogram with all zero counts for uint8" in {
-        val data: Array[_ >: Byte with Short with Int with Long with Float] = Array.empty[Byte]
+        val data: Array[? >: Byte & Short & Int & Long & Float] = Array.empty[Byte]
         val histograms = service.calculateHistogramValues(data, ElementClass.uint8)
         assert(histograms.length == 1)
         val h = histograms.head

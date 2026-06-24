@@ -191,7 +191,7 @@ class DataVaultTestSuite extends AsyncWordSpec {
               new VaultPath(
                 upath,
                 S3DataVault
-                  .create(CredentializedUPath(upath, None), clientPool)(globalExecutionContext)
+                  .create(CredentializedUPath(upath, None), clientPool)(using globalExecutionContext)
                   .getOrElse(fail("Failed to create S3DataVault"))
               )
             (vaultPath / "s0/5/5/5").readBytes(range)(using globalExecutionContext, emptyTokenContext).futureBox.map {
@@ -260,7 +260,7 @@ class DataVaultTestSuite extends AsyncWordSpec {
               new VaultPath(
                 upath,
                 S3DataVault
-                  .create(CredentializedUPath(upath, None), clientPool)(globalExecutionContext)
+                  .create(CredentializedUPath(upath, None), clientPool)(using globalExecutionContext)
                   .getOrElse(fail("Failed to create S3DataVault"))
               )
             (vaultPath / "33792-34304_29696-30208_3216-3232")
@@ -280,7 +280,7 @@ class DataVaultTestSuite extends AsyncWordSpec {
             WsTestClient.withClient { ws =>
               val clientPool = new S3ClientPool(ws)
               val s3DataVault = S3DataVault
-                .create(CredentializedUPath(upath, None), clientPool)(globalExecutionContext)
+                .create(CredentializedUPath(upath, None), clientPool)(using globalExecutionContext)
                 .getOrElse(fail("Failed to create S3DataVault"))
               val vaultPath = new VaultPath(upath, s3DataVault)
               vaultPath.readBytes()(using globalExecutionContext, emptyTokenContext).futureBox.map(assertBoxEmpty)
@@ -294,7 +294,7 @@ class DataVaultTestSuite extends AsyncWordSpec {
             WsTestClient.withClient { ws =>
               val clientPool = new S3ClientPool(ws)
               val s3DataVault = S3DataVault
-                .create(CredentializedUPath(upath, None), clientPool)(globalExecutionContext)
+                .create(CredentializedUPath(upath, None), clientPool)(using globalExecutionContext)
                 .getOrElse(fail("Failed to create S3DataVault"))
               val vaultPath = new VaultPath(upath, s3DataVault)
               vaultPath.readBytes()(using globalExecutionContext, emptyTokenContext).futureBox.map(assertBoxEmpty)
@@ -315,10 +315,10 @@ class DataVaultTestSuite extends AsyncWordSpec {
               new VaultPath(
                 upath,
                 S3DataVault
-                  .create(CredentializedUPath(upath, None), clientPool)(globalExecutionContext)
+                  .create(CredentializedUPath(upath, None), clientPool)(using globalExecutionContext)
                   .getOrElse(fail("Failed to create S3DataVault"))
               )
-            vaultPath.listDirectory(maxItems = 3)(globalExecutionContext).futureBox.map {
+            vaultPath.listDirectory(maxItems = 3)(using globalExecutionContext).futureBox.map {
               case Full(result) =>
                 assert(result.length == 3)
                 assert(
@@ -340,10 +340,10 @@ class DataVaultTestSuite extends AsyncWordSpec {
               val clientPool = new S3ClientPool(ws)
               val s3DataVault =
                 S3DataVault
-                  .create(CredentializedUPath(nonExistentUpath, None), clientPool)(globalExecutionContext)
+                  .create(CredentializedUPath(nonExistentUpath, None), clientPool)(using globalExecutionContext)
                   .getOrElse(fail("Failed to create S3DataVault"))
               val vaultPath = new VaultPath(nonExistentUpath, s3DataVault)
-              vaultPath.listDirectory(maxItems = 5)(globalExecutionContext).futureBox.map(assertBoxFailure)
+              vaultPath.listDirectory(maxItems = 5)(using globalExecutionContext).futureBox.map(assertBoxFailure)
             }
           }
         }
@@ -422,7 +422,7 @@ class DataVaultTestSuite extends AsyncWordSpec {
     }
   }
 
-  private def assertBoxEmpty(box: Box[_]): Assertion = box match {
+  private def assertBoxEmpty(box: Box[?]): Assertion = box match {
     case Full(_)       => fail()
     case box: EmptyBox =>
       box match {
@@ -431,7 +431,7 @@ class DataVaultTestSuite extends AsyncWordSpec {
       }
   }
 
-  private def assertBoxFailure(box: Box[_]): Assertion = box match {
+  private def assertBoxFailure(box: Box[?]): Assertion = box match {
     case Full(_)       => fail()
     case box: EmptyBox =>
       box match {

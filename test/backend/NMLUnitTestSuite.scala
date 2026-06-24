@@ -50,7 +50,7 @@ class NMLUnitTestSuite extends AsyncWordSpec {
           status = "",
           logoUrl = None
         )
-      )(scala.concurrent.ExecutionContext.global)
+      )
   }
 
   private val nmlParser = new NmlParser(mockDatasetDAO)
@@ -65,7 +65,7 @@ class NMLUnitTestSuite extends AsyncWordSpec {
       )
     )
     val nmlFunctionStream =
-      new NmlWriter()(scala.concurrent.ExecutionContext.global).toNmlStream(
+      new NmlWriter().toNmlStream(
         "",
         AnnotationProto("", 0L, Seq.empty, 0L),
         annotationLayers,
@@ -114,7 +114,6 @@ class NMLUnitTestSuite extends AsyncWordSpec {
           tuple match {
             case NmlParseSuccessWithoutFile(tracing, _, _, _, _) =>
               assert(tracing == dummyTracing)
-            case _ => fail()
           }
         case _ => fail()
       }
@@ -137,7 +136,6 @@ class NMLUnitTestSuite extends AsyncWordSpec {
           tuple match {
             case NmlParseSuccessWithoutFile(tracing, _, _, _, _) =>
               assert(tracing == dummyTracing)
-            case _ => fail()
           }
         case _ => fail()
       }

@@ -60,7 +60,7 @@ trait RequestLogging extends AbstractRequestLogging {
 
   def log(
       notifier: Option[String => Unit] = None
-  )(block: => Fox[Result])(implicit request: Request[?], ec: ExecutionContext): Fox[Result] =
+  )(block: => Fox[Result])(implicit request: Request[?]): Fox[Result] =
     for {
       result: Result <- block
       _ = logRequestFormatted(request, result, notifier)

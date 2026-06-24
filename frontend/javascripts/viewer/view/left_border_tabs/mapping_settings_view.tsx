@@ -214,6 +214,8 @@ function MappingSettingsView({ layerName }: Props) {
     mappingType === "JSON" &&
     hideUnmappedIds != null;
 
+  console.log("MappingSettingsView: mappingStatus=", mappingStatus);
+
   return (
     <React.Fragment>
       {!isMergerModeEnabled ? (

@@ -591,9 +591,6 @@ function _ShareModalView(props: Props) {
             </RadioGroup>
           </Col>
         </Row>
-        {/*
-          Concurrent Editing can only be enabled by super users for now.
-        */}
         <Row>
           <Col span={6} style={LEFT_COL_STYLE}>
             Can users edit simultaneously?

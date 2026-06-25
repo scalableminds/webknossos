@@ -19,7 +19,6 @@ import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateServic
 
 import java.nio.file.Path
 import scala.concurrent.ExecutionContext
-import scala.util.Random
 
 class BinaryDataService(
     val dataBaseDir: Path,
@@ -204,36 +203,28 @@ class BinaryDataService(
 
   private def handleBucketRequest(request: DataServiceDataRequest, bucket: BucketPosition)(using
       tc: TokenContext
-  ): Fox[Array[Byte]] = {
-    val r = Random.nextDouble()
-    if (bucket.voxelMag1X < 100) {
-      Fox.empty
-    } else if (bucket.voxelMag1X < 200 && r < 0.5) {
-      Fox.failure("simulated chunk read failure")
-    } else {
-      if (request.dataLayer.containsMag(bucket.mag)) {
-        val readInstruction =
-          DataReadInstruction(
-            dataBaseDir,
-            request.dataSourceIdOrVolumeDummy,
-            request.dataLayer,
-            bucket,
-            request.settings.version
-          )
-        val dataSourceId = request.dataSourceIdOrVolumeDummy
-        val bucketProvider =
-          bucketProviderCache.getOrLoadAndPut((dataSourceId, request.dataLayer.bucketProviderCacheKey))(_ =>
-            request.dataLayer.bucketProvider(dataVaultServiceOpt, dataSourceId, sharedChunkContentsCache)
-          )
-        datasetErrorLoggingService.withErrorLogging(
-          request.datasetId,
-          dataSourceId,
-          s"loading bucket for ${request.datasetId} (${request.dataSourceId}) layer ${request.dataLayer.name} at ${readInstruction.bucket}, cuboid: ${request.cuboid}",
-          bucketProvider.load(readInstruction)
+  ): Fox[Array[Byte]] =
+    if (request.dataLayer.containsMag(bucket.mag)) {
+      val readInstruction =
+        DataReadInstruction(
+          dataBaseDir,
+          request.dataSourceIdOrVolumeDummy,
+          request.dataLayer,
+          bucket,
+          request.settings.version
         )
-      } else Fox.empty
-    }
-  }
+      val dataSourceId = request.dataSourceIdOrVolumeDummy
+      val bucketProvider =
+        bucketProviderCache.getOrLoadAndPut((dataSourceId, request.dataLayer.bucketProviderCacheKey))(_ =>
+          request.dataLayer.bucketProvider(dataVaultServiceOpt, dataSourceId, sharedChunkContentsCache)
+        )
+      datasetErrorLoggingService.withErrorLogging(
+        request.datasetId,
+        dataSourceId,
+        s"loading bucket for ${request.datasetId} (${request.dataSourceId}) layer ${request.dataLayer.name} at ${readInstruction.bucket}, cuboid: ${request.cuboid}",
+        bucketProvider.load(readInstruction)
+      )
+    } else Fox.empty
 
   /** Given a list of loaded buckets, cut out the data of the cuboid
     */

@@ -77,12 +77,7 @@ object Fox {
 
   def combined[T](seq: Seq[Fox[T]])(implicit ec: ExecutionContext): Fox[List[T]] =
     new Fox(Future.sequence(seq.map(_.futureBox)).map { results =>
-      results.find(_.isEmpty) match {
-        case Some(Empty)            => Empty
-        case Some(failure: Failure) => failure
-        case _                      =>
-          Full(results.map(_.get("An exception should never be thrown, all boxes must be full")).toList)
-      }
+      Box.combined(results).map(_.toList)
     })
 
   // Run serially, fail on the first failure

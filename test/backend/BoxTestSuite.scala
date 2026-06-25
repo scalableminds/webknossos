@@ -282,6 +282,13 @@ class BoxTestSuite extends AsyncWordSpec {
       assert(ParamFailure.unapply(box).isEmpty)
     }
 
+    "not be equal to a plain Failure with the same msg/exception/chain (symmetrically)" in {
+      val failure = Failure("err", Empty, Empty)
+      val paramFailure = ParamFailure("err", Empty, Empty, 1)
+      assert(!paramFailure.equals(failure))
+      assert(!failure.equals(paramFailure))
+    }
+
     "preserve the param when chaining with ?~>" in {
       val pf = ParamFailure("original", "my-param")
       val chained = pf ?~> "chained"
@@ -315,15 +322,44 @@ class BoxTestSuite extends AsyncWordSpec {
       assert(result == Full(Seq(10, 20, 30)))
     }
 
-    "return a ParamFailure when any element fails" in {
+    "return the first failure when any element fails" in {
       val result = Box.combined(List(1, 2, 3)) { x =>
-        if (x == 2) Failure("bad element") else Full(x)
+        if (x >= 2) Failure(s"bad element $x") else Full(x)
       }
-      assert(result.isInstanceOf[Failure])
+      assert(result == Failure("bad element 2"))
+    }
+
+    "return the first non-Full box, even when it is Empty" in {
+      val result = Box.combined(List(1, 2, 3)) { x =>
+        if (x == 2) Empty else if (x == 3) Failure("bad element 3") else Full(x)
+      }
+      assert(result == Empty)
     }
 
     "return a Full of empty Seq for an empty input sequence" in
       assert(Box.combined(List.empty[Int])(Full(_)) == Full(Seq.empty))
+
+  }
+
+  "Box.combined (Seq[Box] variant)" should {
+
+    "combine a sequence of Full boxes into a Full of Seq" in {
+      val result = Box.combined(Seq(Full(1), Full(2), Full(3)))
+      assert(result == Full(Seq(1, 2, 3)))
+    }
+
+    "return the first failure when any box is a Failure" in {
+      val result = Box.combined(Seq(Full(1), Failure("first"), Failure("second")))
+      assert(result == Failure("first"))
+    }
+
+    "return the first non-Full box, even when it is Empty" in {
+      val result: Box[Seq[Int]] = Box.combined(Seq[Box[Int]](Full(1), Empty, Failure("later")))
+      assert(result == Empty)
+    }
+
+    "return a Full of empty Seq for an empty input sequence" in
+      assert(Box.combined(Seq.empty[Box[Int]]) == Full(Seq.empty))
 
   }
 

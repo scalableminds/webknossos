@@ -1,5 +1,7 @@
 package com.scalableminds.util.box
 
+import javax.swing.Box
+
 // Adapted from https://github.com/lift/framework/blob/main/core/common/src/main/scala/net/liftweb/common/Box.scala
 
 /*
@@ -20,24 +22,19 @@ package com.scalableminds.util.box
 
 object Box extends Tryo {
 
-  def combined[A, B](seq: Seq[A])(f: A => Box[B]): Box[Seq[B]] = {
-    val boxes = seq.map(f)
-    if (boxes.exists(_.isInstanceOf[Failure])) {
-      val failureChain =
-        boxes.collect { case failure: Failure =>
-          failure
-        }.reduceRight { (topmostFailure, latestFailure) =>
-          topmostFailure.copy(chain = Full(latestFailure))
-        }
+  /* Applies f on all elements of seq, then returns a single box. If all resuls of f are Full,
+   * returns Full with the whole sequence.
+   * If any are non-Full (Empty, Failure, or ParamFailure) returns the first of those. */
+  def combined[A, B](seq: Seq[A])(f: A => Box[B]): Box[Seq[B]] =
+    combined(seq.map(f))
 
-      ParamFailure(
-        failureChain.msg,
-        Empty,
-        Full(failureChain),
-        boxes
-      )
-    } else {
-      Full(boxes.flatten)
+  /* Transforms Seq[Box[A]] to Box[Seq[A]]. If all boxes are Full, returns a Full of the sequence.
+   * If any are non-Full (Empty, Failure, or ParamFailure) returns the first of those. */
+  def combined[T](boxes: Seq[Box[T]]): Box[Seq[T]] = {
+    val firstNonFullOpt = boxes.collectFirst { case nonFull: EmptyBox => nonFull }
+    firstNonFullOpt match {
+      case Some(nonFull) => nonFull
+      case None          => Full(boxes.flatten)
     }
   }
 
@@ -160,6 +157,7 @@ sealed case class Failure(msg: String, exception: Box[Throwable], chain: Box[Fai
   override def ?->(msg: String): Box[Nothing] = ?~>(msg)
 
   override def equals(other: Any): Boolean = (this, other) match {
+    case (_, _: ParamFailure[_])                 => false
     case (Failure(x, y, z), Failure(x1, y1, z1)) => (x, y, z) == (x1, y1, z1)
     case (x, y: AnyRef)                          => x eq y
     case _                                       => false

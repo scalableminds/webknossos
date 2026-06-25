@@ -4,10 +4,10 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.ExtendedTypes.{ExtendedDouble, ExtendedString}
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.StringNumberConversions.{toBooleanOpt, toDoubleOpt, toFloatOpt, toIntOpt, toLongOpt}
+import com.scalableminds.util.tools.{Box, Empty, Failure, Fox, Full, MathUtils}
 import com.scalableminds.util.tools.Fox.toFox
-import com.scalableminds.webknossos.datastore.SkeletonTracing._
+import com.scalableminds.webknossos.datastore.SkeletonTracing.*
 import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing}
@@ -26,14 +26,13 @@ import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{MultiCompone
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.{SharedParsingParameters, UploadedVolumeLayer}
 import models.dataset.DatasetDAOLike
-import com.scalableminds.util.tools.Box._
-import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
+import com.scalableminds.util.tools.Box.*
 
 import java.io.InputStream
 import javax.inject.Inject
 import scala.collection.{immutable, mutable}
 import scala.concurrent.ExecutionContext
-import scala.xml.{Attribute, NodeSeq, XML, Node => XMLNode}
+import scala.xml.{Attribute, NodeSeq, XML, Node as XMLNode}
 
 class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
     extends LazyLogging
@@ -476,7 +475,7 @@ class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
   private def parseVisibility(node: XMLNode, color: Option[ColorProto]): Option[Boolean] =
     getSingleAttribute(node, "isVisible").toBooleanOpt match {
       case Some(isVisible) => Some(isVisible)
-      case None            => color.map(c => !c.a.isNearZero)
+      case None            => color.map(c => !MathUtils.isNearZero(c.a))
     }
 
   private def parseTree(

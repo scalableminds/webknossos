@@ -573,12 +573,17 @@ function* applyStateOfStack(
   }
 
   const activeTool = yield* select((state) => state.uiInformation.activeTool);
-  if (activeTool === AnnotationTool.PROOFREAD) {
-    const warningMessage =
-      direction === "undo"
-        ? messages["undo.no_undo_during_proofread"]
-        : messages["undo.no_redo_during_proofread"];
-    Toast.warning(warningMessage);
+  const isLiveCollaboration = yield* select(
+    (state) => state.annotation.collaborationMode === "Concurrent",
+  );
+  const notSupportedWarning =
+    activeTool === AnnotationTool.PROOFREAD
+      ? messages["undo.no_undo_during_proofread"]
+      : isLiveCollaboration
+        ? messages["undo.no_undo_in_live_collab"]
+        : null;
+  if (notSupportedWarning) {
+    Toast.warning(notSupportedWarning);
     return;
   }
 

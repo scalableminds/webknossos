@@ -105,7 +105,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
     case "INITIALIZE_ANNOTATION": {
       // rebaseRelevantServerAnnotationState stores rebasing relevant information of the annotation.
       // It always is in sync with the latest known version on the server. After initializing it is the current version.
-      // activeMappingByLayer are initialized automatically when they are being loaded by the saga.
+      // mappingDataByLayer entries are initialized automatically when the mappings are loaded by the saga.
       const stateWithAnnotationRebaseInformation = update(state, {
         save: {
           rebaseRelevantServerAnnotationState: {
@@ -115,7 +115,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
             annotationDescription: {
               $set: action.annotation.description,
             },
-            activeMappingByLayer: {
+            mappingDataByLayer: {
               $set: {},
             },
           },

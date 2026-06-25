@@ -3,7 +3,7 @@ import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
 import { useDispatch } from "react-redux";
 import { AltOrOptionKey, CtrlOrCmdKey } from "viewer/constants";
-import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
+import { mayEditSkeletonTree } from "viewer/model/accessors/annotation_accessor";
 import { getTreeAndNodeOrNull } from "viewer/model/accessors/skeletontracing_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
@@ -41,18 +41,19 @@ export function useNodeContextMenuOptions(
   const skeletonTracing = useWkSelector((state) => state.annotation.skeleton);
   const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
   const useLegacyBindings = useWkSelector((state) => state.userConfiguration.useLegacyBindings);
-  const allowUpdate = useWkSelector(mayEditAnnotation);
+  const { node: clickedNode, tree: clickedTree } =
+    skeletonTracing && clickedNodeId != null
+      ? getTreeAndNodeOrNull(skeletonTracing, clickedNodeId)
+      : { node: null, tree: null };
+  // Whether the clicked tree may be edited. In concurrent collaboration mode, only agglomerate
+  // trees (proofreading) may be mutated.
+  const mayEditClickedTree = useWkSelector((state) => mayEditSkeletonTree(state, clickedTree));
   const isProofreadingActive = useWkSelector(
     (state) => state.uiInformation.activeTool === AnnotationTool.PROOFREAD,
   );
 
   const dispatch = useDispatch();
   const actions = useContextMenuActions();
-
-  const { node: clickedNode, tree: clickedTree } =
-    skeletonTracing && clickedNodeId != null
-      ? getTreeAndNodeOrNull(skeletonTracing, clickedNodeId)
-      : { node: null, tree: null };
 
   const minCutItem = useMaybeMinCutItem(clickedTree);
   const meshItems = useMeshItems(contextInfo);
@@ -97,7 +98,7 @@ export function useNodeContextMenuOptions(
       label: "Activate & Focus Tree in Skeleton Tab",
     },
     ...(minCutItem ? [minCutItem] : []),
-    ...(allowUpdate
+    ...(mayEditClickedTree
       ? [
           {
             key: "merge-trees",
@@ -224,7 +225,7 @@ export function useNodeContextMenuOptions(
         measureAndShowFullTreeLength(clickedTree.treeId, clickedTree.name, voxelSize.unit),
       label: "Path Length of this Tree",
     },
-    allowUpdate
+    mayEditClickedTree
       ? {
           key: "hide-tree",
           onClick: () => dispatch(setTreeVisibilityAction(clickedTree.treeId, false)),

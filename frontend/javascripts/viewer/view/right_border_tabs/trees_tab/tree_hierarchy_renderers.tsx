@@ -85,6 +85,7 @@ export type Props = {
   deselectAllTrees: () => void;
   onDeleteGroup: (arg0: number) => void;
   allowUpdate: boolean;
+  isConcurrentCollabMode: boolean;
 };
 
 export function renderTreeNode(
@@ -136,8 +137,10 @@ export function renderTreeNode(
 }
 
 const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void): MenuProps => {
-  const isEditingDisabled = !props.allowUpdate;
   const isAgglomerateTree = tree.type === TreeTypeEnum.AGGLOMERATE;
+  // In concurrent collaboration mode, only agglomerate trees (proofreading) may be edited.
+  const isEditingDisabled =
+    !props.allowUpdate || (props.isConcurrentCollabMode && !isAgglomerateTree);
 
   return {
     items: [
@@ -225,6 +228,9 @@ const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void
       isAgglomerateTree
         ? {
             key: "convertToNormalTree",
+            // Converting to a normal tree would change the tree's type, which is not allowed in
+            // concurrent collaboration mode.
+            disabled: props.isConcurrentCollabMode,
             onClick: () => {
               setTreeType(tree.treeId, TreeTypeEnum.DEFAULT);
               hideContextMenu();
@@ -284,7 +290,9 @@ const createMenuForTreeGroup = (
 ): MenuProps => {
   const { id } = node;
 
-  const isEditingDisabled = !props.allowUpdate;
+  // Group operations restructure the tree hierarchy and are not tied to a single agglomerate
+  // tree, so they are disabled in concurrent collaboration mode.
+  const isEditingDisabled = !props.allowUpdate || props.isConcurrentCollabMode;
   const hasSubgroup = anySatisfyDeep(node.children, (child) => child.type === GroupTypeEnum.GROUP);
   const labelForActiveItems = getLabelForActiveItems();
 

@@ -7,6 +7,8 @@ import type {
   VolumeUserState,
 } from "types/api_types";
 import type { EmptyObject } from "types/type_utils";
+import { TreeTypeEnum } from "viewer/constants";
+import type { Tree } from "viewer/model/types/tree_types";
 import type { StoreAnnotation, WebknossosState } from "viewer/store";
 import { sum } from "../helpers/iterator_utils";
 
@@ -79,6 +81,26 @@ export function maySendSaveRequest(state: WebknossosState) {
       // (and for sending save requests, we also manipulate the save queue).
       !state.save.rebaseRelevantServerAnnotationState.isRebasingOrForwarding,
   );
+}
+
+export function isConcurrentCollaborationMode(state: WebknossosState) {
+  // "Live collaboration" / "simultaneous editing": multiple users edit the same
+  // annotation at the same time. In this mode, normal skeleton editing is forbidden
+  // because it would interfere with concurrent edits/rebasing. Only proofreading
+  // (which operates on agglomerate trees) is allowed.
+  return state.annotation.collaborationMode === "Concurrent";
+}
+
+export function mayEditSkeletonTree(state: WebknossosState, tree: Tree | null | undefined) {
+  // Whether the given existing tree may be mutated. In concurrent collaboration
+  // mode, only agglomerate trees (i.e. proofreading) may be edited.
+  if (!mayEditAnnotation(state)) {
+    return false;
+  }
+  if (!isConcurrentCollaborationMode(state)) {
+    return true;
+  }
+  return tree?.type === TreeTypeEnum.AGGLOMERATE;
 }
 
 export function mayEditAnnotationViewConfig(state: WebknossosState) {

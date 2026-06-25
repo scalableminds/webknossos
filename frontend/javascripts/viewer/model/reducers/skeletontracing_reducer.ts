@@ -9,7 +9,7 @@ import orderBy from "lodash-es/orderBy";
 import uniqBy from "lodash-es/uniqBy";
 import type { MetadataEntryProto } from "types/api_types";
 import { userSettings } from "types/schemas/user_settings.schema";
-import { TreeTypeEnum } from "viewer/constants";
+import { type TreeType, TreeTypeEnum } from "viewer/constants";
 import {
   areGeometriesTransformed,
   enforceSkeletonTracing,
@@ -61,6 +61,77 @@ import {
 import { getUserStateForTracing } from "../accessors/annotation_accessor";
 import { max, maxBy } from "../helpers/iterator_utils";
 import { applySkeletonUpdateActionsFromServer } from "./update_action_application/skeleton";
+
+function isAgglomerateTree(tree: { type: TreeType } | null | undefined): boolean {
+  return tree?.type === TreeTypeEnum.AGGLOMERATE;
+}
+
+// In concurrent collaboration ("live collaboration") mode, normal skeleton editing must be
+// forbidden because it would interfere with concurrent edits/rebasing. Only proofreading,
+// which operates on agglomerate trees, is allowed.
+function isSkeletonMutationAllowedInCollabMode(
+  state: WebknossosState,
+  action: Action,
+  skeletonTracing: SkeletonTracing,
+): boolean {
+  if (state.annotation.collaborationMode !== "Concurrent") {
+    return true;
+  }
+
+  switch (action.type) {
+    // Mutations targeting a single existing tree by treeId.
+    case "SET_TREE_NAME":
+    case "SET_TREE_METADATA":
+    case "SET_TREE_AGGLOMERATE_INFO_ID":
+    case "SET_EDGES_ARE_VISIBLE":
+    case "SET_TREE_GROUP":
+    case "DELETE_TREE": {
+      return isAgglomerateTree(getTree(skeletonTracing, action.treeId));
+    }
+    case "DELETE_TREES": {
+      return action.treeIds.every((treeId) => isAgglomerateTree(getTree(skeletonTracing, treeId)));
+    }
+    // Node specific actions are not supported for agglomerate trees anyway. We can simply forbid
+    // all these in collaborative settings.
+    case "DELETE_NODE":
+    case "SET_NODE_POSITION":
+    case "CREATE_BRANCHPOINT":
+    case "DELETE_BRANCHPOINT_BY_ID":
+    case "CREATE_COMMENT":
+    case "DELETE_COMMENT":
+    case "DELETE_BRANCHPOINT":
+    case "CREATE_NODE": {
+      return false;
+    }
+    case "DELETE_EDGE":
+    case "MERGE_TREES": {
+      // Proofreading dispatches these with initiator "PROOFREADING" on agglomerate trees. The
+      // user-initiated variants during proofreading return early in the respective case bodies.
+      const sourceTree = findTreeByNodeId(skeletonTracing.trees, action.sourceNodeId);
+      return isAgglomerateTree(sourceTree);
+    }
+
+    case "ADD_TREES_AND_GROUPS": {
+      // Allowed only when importing agglomerate trees (e.g. the proofreading agglomerate import).
+      return action.trees.values().every(isAgglomerateTree);
+    }
+    case "SET_TREES_AGGLOMERATE_INFO_TRACING_ID": {
+      // Only ever mutates agglomerate trees.
+      return true;
+    }
+    // Creating, resetting or restructuring non-agglomerate content is never allowed.
+    case "CREATE_TREE":
+    case "RESET_SKELETON_TRACING":
+    case "SET_TREE_GROUPS": {
+      return false;
+    }
+
+    default:
+      // Block any other (unmapped) mutation action in concurrent mode to be safe. When adding new
+      // skeleton-mutation actions, classify them above.
+      return false;
+  }
+}
 
 function SkeletonTracingReducer(
   state: WebknossosState,
@@ -687,6 +758,15 @@ function SkeletonTracingReducer(
    */
   const { restrictions, isUpdatingCurrentlyAllowed } = state.annotation;
   if (!(isUpdatingCurrentlyAllowed || ignoreAllowUpdate)) {
+    return state;
+  }
+
+  // In concurrent collaboration mode, only agglomerate trees may be mutated (proofreading).
+  // Updates that originate from the server (ignoreAllowUpdate) must still be applied.
+  if (
+    !ignoreAllowUpdate &&
+    !isSkeletonMutationAllowedInCollabMode(state, action, skeletonTracing)
+  ) {
     return state;
   }
 

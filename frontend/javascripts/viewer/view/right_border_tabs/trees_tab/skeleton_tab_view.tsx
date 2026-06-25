@@ -44,7 +44,11 @@ import React from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import { LongUnitToShortUnitMap } from "viewer/constants";
-import { isAnnotationOwner, mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
+import {
+  isAnnotationOwner,
+  isConcurrentCollaborationMode,
+  mayEditAnnotation,
+} from "viewer/model/accessors/annotation_accessor";
 import {
   areGeometriesTransformed,
   enforceSkeletonTracing,
@@ -778,6 +782,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         activeTreeId={this.props.skeletonTracing.activeTreeId}
         activeGroupId={this.props.skeletonTracing.activeGroupId}
         allowUpdate={this.props.allowUpdate}
+        isConcurrentCollabMode={this.props.isConcurrentCollabMode}
         sortBy={sortBy}
         selectedTreeIds={this.state.selectedTreeIds}
         onSingleSelectTree={this.onSingleSelectTree}
@@ -806,7 +811,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
   }
 
   getActionsDropdown(): MenuProps {
-    const isEditingDisabled = !this.props.allowUpdate;
+    const isEditingDisabled = !this.props.allowUpdate || this.props.isConcurrentCollabMode;
     const activeMenuKey = this.props.userConfiguration.sortTreesByName
       ? "sortByName"
       : "sortByTime";
@@ -937,12 +942,11 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       title = "Importing NML";
     }
     const { groupToDelete } = this.state;
-    const isEditingDisabled = !this.props.allowUpdate;
-    const { isAnnotationLockedByUser, isOwner } = this.props;
-    const isEditingDisabledMessage = messages["tracing.read_only_mode_notification"](
-      isAnnotationLockedByUser,
-      isOwner,
-    );
+    const { isAnnotationLockedByUser, isOwner, isConcurrentCollabMode } = this.props;
+    const isEditingDisabled = !this.props.allowUpdate || isConcurrentCollabMode;
+    const isEditingDisabledMessage = isConcurrentCollabMode
+      ? messages["tracing.skeleton_editing_disabled_in_live_collab"]
+      : messages["tracing.read_only_mode_notification"](isAnnotationLockedByUser, isOwner);
     const isDownloading = this.state.isDownloadingCSV || this.state.isDownloadingNML;
 
     return (
@@ -998,7 +1002,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                   <ButtonComponent
                     onClick={this.handleDelete}
                     title={isEditingDisabled ? isEditingDisabledMessage : "Delete Selected Trees"}
-                    disabled={isEditingDisabled}
+                    disabled={isEditingDisabled} // todop: should be allowed when only agglo trees are selected
                     icon={<DeleteOutlined />}
                     variant="text"
                     color="default"
@@ -1006,7 +1010,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                   <ButtonComponent
                     onClick={this.toggleAllTrees}
                     title="Toggle Visibility of All Trees (1)"
-                    disabled={isEditingDisabled}
+                    disabled={isEditingDisabled} // todop: should be allowed regardless of agglo trees. also test this manually to see that reducers handle this okay.
                     icon={<Icon component={ToggleOnIcon} />}
                     variant="text"
                     color="default"
@@ -1014,7 +1018,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                   <ButtonComponent
                     onClick={this.toggleInactiveTrees}
                     title="Toggle Visibility of Inactive Trees (2)"
-                    disabled={isEditingDisabled}
+                    disabled={isEditingDisabled} // todop: same here.
                     icon={<Icon component={ToggleOffIcon} />}
                     variant="text"
                     color="default"
@@ -1097,6 +1101,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 
 const mapStateToProps = (state: WebknossosState) => ({
   allowUpdate: mayEditAnnotation(state),
+  isConcurrentCollabMode: isConcurrentCollaborationMode(state),
   skeletonTracing: state.annotation.skeleton,
   annotationId: state.annotation.annotationId,
   userConfiguration: state.userConfiguration,

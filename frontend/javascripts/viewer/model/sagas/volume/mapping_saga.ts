@@ -8,7 +8,7 @@ import {
 import { message } from "antd";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
-import { ColoredLogger, fastDiffSetAndMap, sleep } from "libs/utils";
+import { fastDiffSetAndMap, sleep } from "libs/utils";
 import min from "lodash-es/min";
 import { buffers, eventChannel } from "redux-saga";
 import {

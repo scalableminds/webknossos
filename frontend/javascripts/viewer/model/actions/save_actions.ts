@@ -298,7 +298,7 @@ export const snapshotMappingDataForNextRebaseAction = (volumeLayerIdToUpdate: st
   // Should be triggered whenever the mapping is changed in sync with the backend.
   // E.g. when new parts of the partial mapping are loaded from the backend.
   // Never when the mapping is changed by the user via actions as these are not in sync
-  // with the backend and only data in sync with the backend in allowed to be part of the rebase state.
+  // with the backend and only data in sync with the backend is allowed to be part of the rebase state.
   ({
     type: "SNAPSHOT_MAPPING_DATA_FOR_NEXT_REBASE_ACTION",
     volumeLayerIdToUpdate,

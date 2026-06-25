@@ -121,7 +121,6 @@ sealed abstract class EmptyBox extends Box[Nothing] with Serializable {
   def get(justification: => String): Nothing =
     throw new NullPointerException(s"An Empty Box was opened with justification “$justification”.")
 
-  override def getOrElse[B >: Nothing](default: => B): B = default
   override def orElse[B >: Nothing](alternative: => Box[B]): Box[B] = alternative
   override def filter(p: Nothing => Boolean): Box[Nothing] = this
 

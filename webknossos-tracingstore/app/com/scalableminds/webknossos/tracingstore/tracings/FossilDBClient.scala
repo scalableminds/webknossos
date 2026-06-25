@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.tracingstore.tracings
 
 import com.google.protobuf.ByteString
 import com.scalableminds.fossildb.proto.fossildbapi.*
-import com.scalableminds.util.box.{Box, Empty, Full}
+import com.scalableminds.util.box.{Box, Empty, Full, Failure}
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.tracingstore.TracingStoreConfig
@@ -12,14 +12,12 @@ import io.grpc.health.v1.*
 import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder
 import io.grpc.{Status, StatusRuntimeException}
 import Box.tryo
-import com.scalableminds.util
-import com.scalableminds.util.box
 import play.api.libs.json.{Reads, Writes}
 import scalapb.grpc.Grpc
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success}
+import scala.util.{Failure as TryFailure, Success}
 
 trait KeyValueStoreConversions {
 
@@ -75,9 +73,9 @@ class FossilDBClient(
     for {
       box <- resultFox.shiftBox
       _ <- box match {
-        case Full(())                    => Fox.successful(())
-        case Empty                       => Fox.empty
-        case util.box.Failure(msg, _, _) =>
+        case Full(())           => Fox.successful(())
+        case Empty              => Fox.empty
+        case Failure(msg, _, _) =>
           val errorText = s"Failed to connect to FossilDB at $authority: $msg"
           logger.error(errorText)
           Fox.failure(errorText)
@@ -90,10 +88,10 @@ class FossilDBClient(
       future.transformWith {
         case Success(value) =>
           Future.successful(Full(value))
-        case Failure(exception) =>
+        case TryFailure(exception) =>
           val box = exception match {
             case e: StatusRuntimeException if e.getStatus == Status.UNAVAILABLE =>
-              new util.box.Failure("FossilDB is unavailable", Full(e), Empty) ~> 500
+              new Failure("FossilDB is unavailable", Full(e), Empty) ~> 500
             case e: Exception =>
               val messageWithCauses = new StringBuilder
               messageWithCauses.append(e.toString)
@@ -103,7 +101,7 @@ class FossilDBClient(
                 messageWithCauses.append(cause.toString)
                 cause = cause.getCause
               }
-              new util.box.Failure(
+              new Failure(
                 s"Request to FossilDB failed: $messageWithCauses",
                 Full(e),
                 Empty
@@ -198,9 +196,9 @@ class FossilDBClient(
                 parsed <- fromByteArray(versionValuePair.value.toByteArray)
               } yield VersionedKeyValuePair(VersionedKey(key, versionValuePair.actualVersion), parsed)
             case VersionValueBoxProto(None, Some(errorMessage), _) =>
-              box.Failure(s"Failed to get entry from FossilDB: $errorMessage")
+              Failure(s"Failed to get entry from FossilDB: $errorMessage")
             case VersionValueBoxProto(None, None, _) => Empty
-            case _ => box.Failure("Unexpected reply format in FossilDB getMultipleKeysByList")
+            case _ => Failure("Unexpected reply format in FossilDB getMultipleKeysByList")
           }
       }
     } yield parsedValues
@@ -229,11 +227,11 @@ class FossilDBClient(
       _ <- assertSuccess(reply.success, reply.errorMessage)
     } yield ()
     for {
-      box <- putFox.shiftBox
-      _ <- box match {
-        case Full(())                    => Fox.successful(())
-        case Empty                       => Fox.empty
-        case util.box.Failure(msg, _, _) =>
+      putBox <- putFox.shiftBox
+      _ <- putBox match {
+        case Full(())           => Fox.successful(())
+        case Empty              => Fox.empty
+        case Failure(msg, _, _) =>
           slackNotificationService.reportFossilWriteError("put", msg)
           Fox.failure("Could not save to FossilDB: " + msg)
       }
@@ -273,9 +271,9 @@ class FossilDBClient(
     for {
       box <- putFox.shiftBox
       _ <- box match {
-        case Full(())                    => Fox.successful(())
-        case Empty                       => Fox.empty
-        case util.box.Failure(msg, _, _) =>
+        case Full(())           => Fox.successful(())
+        case Empty              => Fox.empty
+        case Failure(msg, _, _) =>
           slackNotificationService.reportFossilWriteError("multi-put", msg)
           Fox.failure("Could not multi-put to FossilDB: " + msg)
       }

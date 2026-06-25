@@ -789,7 +789,7 @@ final class ParamFailure[T](
     })
 
   override def ~>[T](errorCode: => T): ParamFailure[T] =
-    ParamFailure("hello!", exception, Full(this), errorCode)
+    ParamFailure(msg, exception, Full(this), errorCode)
 
   override def ?~!(msg: => String): Failure = ParamFailure(msg, Empty, Full(this), this.param)
 }

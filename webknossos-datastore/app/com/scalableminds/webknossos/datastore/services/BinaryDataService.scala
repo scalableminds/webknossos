@@ -184,16 +184,16 @@ class BinaryDataService(
   def handleDataRequests(
       requests: List[DataServiceDataRequest]
   )(using tc: TokenContext): Fox[(Array[Byte], Seq[Int], Seq[Int])] = {
-    val requestData = requests.zipWithIndex.map { case (request, index) =>
+    val requestData = requests.map { request =>
       for {
         data <- handleDataRequest(request)
         dataConverted <- convertAccordingToRequest(request, data)
-      } yield (dataConverted, index)
+      } yield dataConverted
     }
 
     Fox.fromFuture {
       Fox.sequence(requestData).map { boxes =>
-        val byteArrays = boxes.collect { case Full((byteArray, _)) => byteArray }
+        val byteArrays = boxes.collect { case Full(byteArray) => byteArray }
         val emptyIndices = boxes.zipWithIndex.collect { case (Empty, i) => i }
         val failureIndices = boxes.zipWithIndex.collect { case (_: Failure, i) => i }
         (byteArrays.appendArrays, emptyIndices, failureIndices)

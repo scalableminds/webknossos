@@ -949,9 +949,9 @@ export function* tryToIncorporateActions(
           setMappingDataAction(
             tracingId,
             splitMapping,
-            true, // Might be optimistic. The mapping might not be in in the same state as on the server when reapplying local updates.
-            // The finishedApplyingMissingUpdatesAction action takes care of storing the newest info in RebaseRelevantAnnotationState
-            // after the backend updates are applied.
+            false, // Upon finishing the forwarding of missing backend actions the
+            // finishedApplyingMissingUpdatesAction action takes care of storing the
+            // newest info in RebaseRelevantAnnotationState after the backend updates are applied.
           ),
         );
         const loadedMeshes = yield* select((state) => getAllLoadedMeshes(state, tracingId));

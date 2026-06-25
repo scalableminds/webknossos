@@ -174,7 +174,7 @@ export default function* watchActivatedMappings(): Saga<void> {
   const setMappingActionChannel = yield* actionChannel("SET_MAPPING");
   yield* call(ensureWkInitialized);
   yield* takeLatest(setMappingActionChannel, handleSetMapping, oldActiveMappingByLayer);
-  yield* takeEvery("SET_MAPPING_DATA", finishMappingActivation);
+  yield* takeLatest("SET_MAPPING_DATA", finishMappingActivation);
   yield* takeEvery(
     "ENSURE_LAYER_MAPPINGS_ARE_LOADED",
     function* handler(action: EnsureLayerMappingsAreLoadedAction) {

@@ -41,8 +41,7 @@ This opens a dialog that submits a long-running job to materialize the volume an
 
 Volume annotations can be stored at multiple [magnifications](../terminology.md) — `1-1-1` being full resolution, `4-4-2` meaning downsampled by 4× in x/y and 2× in z, and so on. By default, edits are stored at every available magnification, which can significantly increase annotation size when labeling large structures such as nuclei.
 
-Restricting the annotation to a coarser magnification reduces storage overhead and improves the responsiveness of annotation tools such as the brush — the browser has less data to update and upload with each stroke. Annotation quality is not affected, since the label data simply does not need to be recorded at resolutions finer than what was used to annotate. The restriction is set when the volume layer is first created — either at annotation creation or when adding a new layer to an existing annotation.
-
+Restricting the annotation to a coarser magnification reduces storage overhead and improves the responsiveness of annotation tools such as the brush — the browser has less data to update and upload with each stroke. Annotation quality is typically unaffected when the selected magnification matches your annotation granularity; choosing a too-coarse level can reduce recoverable fine detail. The restriction is set when the volume layer is first created — either at annotation creation or when adding a new layer to an existing annotation.
 ### When creating an annotation
 
 On the dataset dashboard, click the three-dot menu next to **New Annotation** for the dataset you want to annotate. Use the magnification slider to exclude finer levels — for example, skipping `1-1-1` or the two finest magnifications is a common choice for large structures.

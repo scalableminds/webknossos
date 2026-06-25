@@ -1,7 +1,5 @@
 package com.scalableminds.util.box
 
-import javax.swing.Box
-
 // Adapted from https://github.com/lift/framework/blob/main/core/common/src/main/scala/net/liftweb/common/Box.scala
 
 /*

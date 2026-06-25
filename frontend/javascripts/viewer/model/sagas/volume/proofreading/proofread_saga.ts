@@ -788,15 +788,9 @@ function* handleMergeViaTree(action: MergeTreesAction, ctx: OperationContext): S
     yield* call(refreshAffectedSegmentItems, volumeTracingId, refreshInfos);
     // Now that the segment items are up-to-date we can sync with the back-end and release the mutex.
     yield* call(syncWithBackend, ctx);
-    const shouldDoMeshRefreshing = yield* call(
-      shouldReloadMeshesAfterProofreadAction,
-      volumeTracingId,
-      [sourceInfo.agglomerateId, targetInfo.agglomerateId],
-    );
-    if (shouldDoMeshRefreshing) {
-      // Refreshing the meshes might take a while and won't block the saga here.
-      yield* spawnUntilCanceled(refreshAffectedMeshes, volumeTracingId, refreshInfos);
-    }
+
+    // Refreshing the meshes might take a while and won't block the saga here.
+    yield* spawnUntilCanceled(maybeRefreshAffectedMeshes, volumeTracingId, refreshInfos);
   } finally {
     if (unsubscribeFromAnnotationMutex) {
       yield* call(unsubscribeFromAnnotationMutex);
@@ -1011,15 +1005,8 @@ function* handleSplitViaTree(
     // Now that the segment items are up-to-date we can sync with the back-end and release the mutex.
     yield* call(syncWithBackend, ctx);
 
-    const shouldDoMeshRefreshing = yield* call(
-      shouldReloadMeshesAfterProofreadAction,
-      volumeTracingId,
-      [sourceInfo.agglomerateId, targetInfo.agglomerateId],
-    );
-    if (shouldDoMeshRefreshing) {
-      // Refreshing the meshes might take a while and won't block the saga here.
-      yield* spawnUntilCanceled(refreshAffectedMeshes, volumeTracingId, refreshInfos);
-    }
+    // Refreshing the meshes might take a while and won't block the saga here.
+    yield* spawnUntilCanceled(maybeRefreshAffectedMeshes, volumeTracingId, refreshInfos);
   } finally {
     if (unsubscribeFromAnnotationMutex) {
       yield* call(unsubscribeFromAnnotationMutex);
@@ -1283,16 +1270,9 @@ function* performPartitionedMinCut(
     // and release the mutex.
     yield* call(syncWithBackend, ctx);
 
-    const shouldDoMeshRefreshing = yield* call(
-      shouldReloadMeshesAfterProofreadAction,
-      volumeTracingId,
-      [agglomerateIdBeforeSplit],
-    );
-    if (shouldDoMeshRefreshing) {
-      // Refreshing the meshes might take a while and won't block the saga
-      // here.
-      yield* spawnUntilCanceled(refreshAffectedMeshes, volumeTracingId, refreshInfos);
-    }
+    // Refreshing the meshes might take a while and won't block the saga
+    // here.
+    yield* spawnUntilCanceled(maybeRefreshAffectedMeshes, volumeTracingId, refreshInfos);
   } finally {
     if (unsubscribeFromAnnotationMutex) {
       yield* call(unsubscribeFromAnnotationMutex);
@@ -1464,15 +1444,8 @@ function* refreshProofreadingSegmentsAndMeshes(
   yield* call(refreshAffectedSegmentItems, volumeTracingId, refreshInfos);
   yield* call(syncWithBackend, ctx);
 
-  const shouldDoMeshRefreshing = yield* call(
-    shouldReloadMeshesAfterProofreadAction,
-    volumeTracingId,
-    [sourceInfo.agglomerateId, targetInfo.agglomerateId],
-  );
-  if (shouldDoMeshRefreshing) {
-    // Refreshing the meshes might take a while and won't block the saga here.
-    yield* spawnUntilCanceled(refreshAffectedMeshes, volumeTracingId, refreshInfos);
-  }
+  // Refreshing the meshes might take a while and won't block the saga here.
+  yield* spawnUntilCanceled(maybeRefreshAffectedMeshes, volumeTracingId, refreshInfos);
 }
 
 function* handleProofreadMerge(action: ProofreadMergeAction, ctx: OperationContext) {
@@ -1897,16 +1870,9 @@ function* handleProofreadCutFromNeighbors(action: Action, ctx: OperationContext)
 
     yield* call(syncWithBackend, ctx);
 
-    const shouldDoMeshRefreshing = yield* call(
-      shouldReloadMeshesAfterProofreadAction,
-      volumeTracingId,
-      [targetAgglomerateIdBeforeSplit],
-    );
-    if (shouldDoMeshRefreshing) {
-      // Refreshing the meshes might take a while and won't block the saga
-      // here.
-      yield* spawnUntilCanceled(refreshAffectedMeshes, volumeTracingId, refreshInfos);
-    }
+    // Refreshing the meshes might take a while and won't block the saga
+    // here.
+    yield* spawnUntilCanceled(maybeRefreshAffectedMeshes, volumeTracingId, refreshInfos);
   } finally {
     if (unsubscribeFromAnnotationMutex) {
       yield* call(unsubscribeFromAnnotationMutex);
@@ -2217,6 +2183,25 @@ export function* getOpacityByOldAgglomerateId(
     }
     return opacities;
   });
+}
+
+function* maybeRefreshAffectedMeshes(
+  layerName: string,
+  items: Array<{
+    oldAgglomerateId?: number;
+    newAgglomerateId: number;
+    nodePosition: Vector3;
+    opacity?: number; // see refreshAffectedMeshes below.
+  }>,
+) {
+  const shouldDoMeshRefreshing = yield* call(shouldReloadMeshesAfterProofreadAction, layerName, [
+    ...items.map((i) => i.oldAgglomerateId).filter((id) => id != null),
+  ]);
+  if (shouldDoMeshRefreshing) {
+    // Refreshing the meshes might take a while and won't block the saga
+    // here.
+    yield* spawnUntilCanceled(refreshAffectedMeshes, layerName, items);
+  }
 }
 
 export function* refreshAffectedMeshes(

@@ -506,6 +506,7 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
     ErrorHandling.notify(exception);
     Toast.error(
       "An unrecoverable error occurred while synchronizing this annotation. Please refresh the page.",
+      { sticky: true },
     );
     // A hard error was thrown. Terminate this saga.
     return { successful: false, shouldTerminate: true };

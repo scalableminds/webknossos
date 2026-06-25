@@ -174,7 +174,7 @@ export default function* watchActivatedMappings(): Saga<void> {
   const setMappingActionChannel = yield* actionChannel("SET_MAPPING");
   yield* call(ensureWkInitialized);
   yield* takeLatest(setMappingActionChannel, handleSetMapping, oldActiveMappingByLayer);
-  yield* takeEvery("SET_MAPPING_DATA", finishMappingActivation);
+  yield* takeLatest("SET_MAPPING_DATA", finishMappingActivation);
   yield* takeEvery(
     "ENSURE_LAYER_MAPPINGS_ARE_LOADED",
     function* handler(action: EnsureLayerMappingsAreLoadedAction) {
@@ -500,7 +500,9 @@ function* finishMappingActivation(action: SetMappingDataAction): Saga<void> {
   const isActivationAllowed = yield* select((state) =>
     isMappingActivationAllowed(state, activeMapping.mappingName, layerName, !!isMergerModeMapping),
   );
-  if (!isActivationAllowed) return;
+  if (!isActivationAllowed) {
+    return;
+  }
 
   // Only proceed if the reducer actually applied this exact mapping and the activation is still
   // in progress. This skips superseded/rejected actions and avoids double-finishing.
@@ -562,8 +564,9 @@ function* updateLocalHdf5Mapping(
     // in coarse magnifications.
     // A toast will be shown to the user in the warnAboutSegmentationZoom saga.
     if (previousMapping == null) {
-      // If an annotation with activated mapping is loaded in a zoom state where the threshold is exceeded,
-      // a mapping needs to be set to let the mapping activation conclude (compare updateMappingTextures in mappings.ts).
+      // If an annotation with activated mapping is loaded (on page load) with an exceeded zoom threshold,
+      // we set an empty mapping object. This needs to be done to let the mapping activation conclude
+      // (compare finishMappingActivation in mapping_saga.ts).
       // In cases where a mapping is already set and the zoom threshold is exceeded, it is not changed
       // to avoid useless updates to the cuckoo textures. Once the threshold is no longer exceeded, the mapping
       // will be updated again.

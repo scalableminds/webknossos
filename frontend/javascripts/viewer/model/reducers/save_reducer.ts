@@ -2,6 +2,7 @@ import update from "immutability-helper";
 import Date from "libs/date";
 import chunk from "lodash-es/chunk";
 import isEqual from "lodash-es/isEqual";
+import mapValues from "lodash-es/mapValues";
 import sumBy from "lodash-es/sumBy";
 import { getStats, type TracingStats } from "viewer/model/accessors/annotation_accessor";
 import type { Action } from "viewer/model/actions/actions";
@@ -202,6 +203,16 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
 
     case "REWIND_FOR_REBASE": {
       const rebaseInfo = state.save.rebaseRelevantServerAnnotationState;
+      // Only the mapping data is part of the rebase baseline. All other ActiveMappingInfo
+      // fields are local view state that no update action carries, so we keep their live
+      // values and only replace the mapping data for the layers that have a snapshot entry (see #9559).
+      const restoredMappingByLayer = mapValues(
+        state.temporaryConfiguration.activeMappingByLayer,
+        (liveMappingInfo, layerName) =>
+          layerName in rebaseInfo.mappingDataByLayer
+            ? { ...liveMappingInfo, mapping: rebaseInfo.mappingDataByLayer[layerName] }
+            : liveMappingInfo,
+      );
       return update(state, {
         annotation: {
           version: {
@@ -217,7 +228,7 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
         },
         temporaryConfiguration: {
           activeMappingByLayer: {
-            $set: rebaseInfo.activeMappingByLayer,
+            $set: restoredMappingByLayer,
           },
         },
         save: {
@@ -255,9 +266,9 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
       return update(state, {
         save: {
           rebaseRelevantServerAnnotationState: {
-            activeMappingByLayer: {
+            mappingDataByLayer: {
               [action.volumeLayerIdToUpdate]: {
-                $set: mappingInfoOfLayer,
+                $set: mappingInfoOfLayer?.mapping,
               },
             },
           },
@@ -276,8 +287,11 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
             annotationVersion: {
               $set: state.annotation.version,
             },
-            activeMappingByLayer: {
-              $set: state.temporaryConfiguration.activeMappingByLayer,
+            mappingDataByLayer: {
+              $set: mapValues(
+                state.temporaryConfiguration.activeMappingByLayer,
+                (mappingInfo) => mappingInfo.mapping,
+              ),
             },
             skeleton: {
               $set: state.annotation.skeleton,

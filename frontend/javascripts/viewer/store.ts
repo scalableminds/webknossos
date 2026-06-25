@@ -462,6 +462,7 @@ export type AnnotationMutexInformation = {
 //
 // This state should always reflect the most recent annotation version stored,
 // on the server that is known to the user.
+// It should only contain information which can be updated via update actions.
 // After successfully pulling and applying the latest updates from the server,
 // it must be updated to match that version.
 // Moreover, after successfully saving, it should also be updated.
@@ -481,7 +482,9 @@ export type AnnotationMutexInformation = {
 export type RebaseRelevantAnnotationState = {
   readonly annotationVersion: number;
   readonly annotationDescription: string;
-  readonly activeMappingByLayer: Record<string, ActiveMappingInfo>;
+  // Only the mapping data per layer is part of the rebase baseline. The other ActiveMappingInfo
+  // fields don't have update actions updating this info.
+  readonly mappingDataByLayer: Record<string, Mapping | null | undefined>;
   readonly skeleton: SkeletonTracing | null | undefined;
   readonly volumes: Array<VolumeTracing>;
   readonly isRebasingOrForwarding: boolean;

@@ -55,7 +55,7 @@ class TSRemoteDatastoreClient @Inject() (
     for {
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
       response <- rpc(s"$remoteLayerUri/data").withTokenFromContext.silent.postJson(dataRequests)
-      _ <- Fox.fromBool(Status.isSuccessful(response.status))
+      _ <- Fox.fromBool(Status.isSuccessful(response.status)) ?~> "failed to fetch fallback data from datastore"
       bytes = response.bodyAsBytes.toArray
       emptyIndices <- parseMissingBucketHeader(
         response.header(emptyBucketIndicesHeader)

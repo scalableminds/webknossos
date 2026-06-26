@@ -21,6 +21,7 @@ import {
 } from "viewer/model/accessors/skeletontracing_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import type { Action } from "viewer/model/actions/actions";
+import type { SkeletonTracingAction } from "viewer/model/actions/skeletontracing_actions";
 import {
   applyUserStateToGroups,
   convertServerAdditionalAxesToFrontEnd,
@@ -69,9 +70,11 @@ function isAgglomerateTree(tree: { type: TreeType } | null | undefined): boolean
 // In concurrent collaboration ("live collaboration") mode, normal skeleton editing must be
 // forbidden because it would interfere with concurrent edits/rebasing. Only proofreading,
 // which operates on agglomerate trees, is allowed.
+// The switch below is exhaustive over all skeleton actions (enforced via the `never` default), so
+// that any newly added skeleton action has to be classified explicitly here.
 function isSkeletonMutationAllowedInCollabMode(
   state: WebknossosState,
-  action: Action,
+  action: SkeletonTracingAction,
   skeletonTracing: SkeletonTracing,
 ): boolean {
   if (state.annotation.collaborationMode !== "Concurrent") {
@@ -126,10 +129,54 @@ function isSkeletonMutationAllowedInCollabMode(
       return false;
     }
 
-    default:
-      // Block any other (unmapped) mutation action in concurrent mode to be safe. When adding new
-      // skeleton-mutation actions, classify them above.
+    // The following actions either don't mutate the skeleton in a way that is relevant here, are
+    // handled before this guard runs (the reducer's first switch / the INITIALIZE_SKELETONTRACING
+    // special case), or are handled by sagas. We block them defensively in concurrent mode.
+    // TODO: Re-evaluate the ones that do mutate trees (e.g. color/type/visibility changes) and
+    // decide whether they should be allowed for agglomerate trees.
+    case "INITIALIZE_SKELETONTRACING":
+    case "SET_ACTIVE_NODE":
+    case "CENTER_ACTIVE_NODE":
+    case "SET_TREE_ACTIVE_GROUP":
+    case "DESELECT_ACTIVE_TREE_GROUP":
+    case "SET_NODE_RADIUS":
+    case "REQUEST_DELETE_BRANCHPOINT":
+    case "SET_ACTIVE_TREE":
+    case "SET_ACTIVE_TREE_BY_NAME":
+    case "DESELECT_ACTIVE_TREE":
+    case "SELECT_NEXT_TREE":
+    case "SET_TREE_COLOR":
+    case "SET_TREE_TYPE":
+    case "SHUFFLE_TREE_COLOR":
+    case "SHUFFLE_ALL_TREE_COLORS":
+    case "SET_TREE_COLOR_INDEX":
+    case "TOGGLE_TREE":
+    case "TOGGLE_ALL_TREES":
+    case "TOGGLE_INACTIVE_TREES":
+    case "TOGGLE_TREE_GROUP":
+    case "SET_TREE_VISIBILITY":
+    case "SET_EXPANDED_TREE_GROUPS_BY_KEYS":
+    case "SET_EXPANDED_TREE_GROUPS_BY_IDS":
+    case "EXPAND_PARENT_GROUPS_OF_TREE":
+    case "FOCUS_TREE":
+    case "NONE":
+    case "SET_SKELETON_TRACING":
+    case "SET_SHOW_SKELETONS":
+    case "SET_MERGER_MODE_ENABLED":
+    case "UPDATE_NAVIGATION_LIST":
+    case "LOAD_AGGLOMERATE_TREE_FROM_ID":
+    case "LOAD_AGGLOMERATE_TREE_AT_POSITION":
+    case "APPLY_SKELETON_UPDATE_ACTIONS_FROM_SERVER":
+    case "ADD_NEW_USER_BOUNDING_BOX": {
       return false;
+    }
+
+    default: {
+      // Exhaustiveness check: if this errors, a new skeleton action was added and must be
+      // classified in one of the cases above.
+      const _exhaustiveCheck: never = action;
+      return false;
+    }
   }
 }
 
@@ -763,9 +810,11 @@ function SkeletonTracingReducer(
 
   // In concurrent collaboration mode, only agglomerate trees may be mutated (proofreading).
   // Updates that originate from the server (ignoreAllowUpdate) must still be applied.
+  // Non-skeleton actions are narrowed here; they end up in the exhaustive switch's default and are
+  // blocked, which leaves the skeleton state unchanged (other reducers still handle the action).
   if (
     !ignoreAllowUpdate &&
-    !isSkeletonMutationAllowedInCollabMode(state, action, skeletonTracing)
+    !isSkeletonMutationAllowedInCollabMode(state, action as SkeletonTracingAction, skeletonTracing)
   ) {
     return state;
   }

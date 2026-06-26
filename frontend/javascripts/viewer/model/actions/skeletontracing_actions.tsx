@@ -174,7 +174,6 @@ export const skeletonActionPolicies: Record<SkeletonTracingAction["type"], Skele
   APPLY_SKELETON_UPDATE_ACTIONS_FROM_SERVER: { needsUpdatePermission: false },
   SET_ACTIVE_NODE: { needsUpdatePermission: false },
   CENTER_ACTIVE_NODE: { needsUpdatePermission: false },
-  SET_NODE_RADIUS: { needsUpdatePermission: false },
   REQUEST_DELETE_BRANCHPOINT: { needsUpdatePermission: false },
   SET_ACTIVE_TREE: { needsUpdatePermission: false },
   SET_ACTIVE_TREE_BY_NAME: { needsUpdatePermission: false },
@@ -182,11 +181,7 @@ export const skeletonActionPolicies: Record<SkeletonTracingAction["type"], Skele
   SET_TREE_ACTIVE_GROUP: { needsUpdatePermission: false },
   DESELECT_ACTIVE_TREE_GROUP: { needsUpdatePermission: false },
   SELECT_NEXT_TREE: { needsUpdatePermission: false },
-  SET_TREE_COLOR: { needsUpdatePermission: false },
-  SET_TREE_COLOR_INDEX: { needsUpdatePermission: false },
   SET_TREE_TYPE: { needsUpdatePermission: false },
-  SHUFFLE_TREE_COLOR: { needsUpdatePermission: false },
-  SHUFFLE_ALL_TREE_COLORS: { needsUpdatePermission: false },
   TOGGLE_TREE: { needsUpdatePermission: false },
   TOGGLE_ALL_TREES: { needsUpdatePermission: false },
   TOGGLE_INACTIVE_TREES: { needsUpdatePermission: false },
@@ -198,7 +193,6 @@ export const skeletonActionPolicies: Record<SkeletonTracingAction["type"], Skele
   FOCUS_TREE: { needsUpdatePermission: false },
   SET_SKELETON_TRACING: { needsUpdatePermission: false },
   SET_SHOW_SKELETONS: { needsUpdatePermission: false },
-  SET_MERGER_MODE_ENABLED: { needsUpdatePermission: false },
   UPDATE_NAVIGATION_LIST: { needsUpdatePermission: false },
   LOAD_AGGLOMERATE_TREE_FROM_ID: { needsUpdatePermission: false },
   LOAD_AGGLOMERATE_TREE_AT_POSITION: { needsUpdatePermission: false },
@@ -217,6 +211,8 @@ export const skeletonActionPolicies: Record<SkeletonTracingAction["type"], Skele
   CREATE_TREE: { needsUpdatePermission: true, collab: "block" },
   RESET_SKELETON_TRACING: { needsUpdatePermission: true, collab: "block" },
   SET_TREE_GROUPS: { needsUpdatePermission: true, collab: "block" },
+  SET_MERGER_MODE_ENABLED: { needsUpdatePermission: true, collab: "block" },
+  SET_NODE_RADIUS: { needsUpdatePermission: true, collab: "block" },
 
   // Only ever touches agglomerate trees, so it is safe in concurrent collaboration mode.
   SET_TREES_AGGLOMERATE_INFO_TRACING_ID: { needsUpdatePermission: true, collab: "allow" },
@@ -232,6 +228,10 @@ export const skeletonActionPolicies: Record<SkeletonTracingAction["type"], Skele
   SET_TREE_AGGLOMERATE_INFO_ID: { needsUpdatePermission: true, collab: "onlyAgglomerateTree" },
   SET_EDGES_ARE_VISIBLE: { needsUpdatePermission: true, collab: "onlyAgglomerateTree" },
   SET_TREE_GROUP: { needsUpdatePermission: true, collab: "onlyAgglomerateTree" },
+  SET_TREE_COLOR: { needsUpdatePermission: true, collab: "onlyAgglomerateTree" },
+  SET_TREE_COLOR_INDEX: { needsUpdatePermission: true, collab: "onlyAgglomerateTree" },
+  SHUFFLE_TREE_COLOR: { needsUpdatePermission: true, collab: "onlyAgglomerateTree" },
+  SHUFFLE_ALL_TREE_COLORS: { needsUpdatePermission: true, collab: "onlyAgglomerateTree" },
 };
 
 export const SkeletonTracingSaveRelevantActions = [

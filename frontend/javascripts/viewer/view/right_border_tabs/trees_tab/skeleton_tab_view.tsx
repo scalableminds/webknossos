@@ -43,7 +43,7 @@ import messages from "messages";
 import React from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
-import { LongUnitToShortUnitMap } from "viewer/constants";
+import { LongUnitToShortUnitMap, TreeTypeEnum } from "viewer/constants";
 import {
   isAnnotationOwner,
   isConcurrentCollaborationMode,
@@ -552,6 +552,30 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     }
   };
 
+  isDeleteOnlyAffectingAgglomerateTrees(): boolean {
+    // Mirrors handleDelete's deletion target (selected trees if more than one is selected,
+    // otherwise the active tree) and reports whether every affected tree is an agglomerate tree.
+    // Used to keep the delete button enabled in concurrent collaboration mode when the deletion is
+    // actually permitted (only agglomerate trees, i.e. proofreading).
+    const { skeletonTracing } = this.props;
+    if (skeletonTracing == null) {
+      return false;
+    }
+    const { selectedTreeIds } = this.state;
+    const treeIdsToDelete =
+      selectedTreeIds.length > 1
+        ? selectedTreeIds
+        : skeletonTracing.activeTreeId != null
+          ? [skeletonTracing.activeTreeId]
+          : [];
+    return (
+      treeIdsToDelete.length > 0 &&
+      treeIdsToDelete.every(
+        (treeId) => skeletonTracing.trees.getNullable(treeId)?.type === TreeTypeEnum.AGGLOMERATE,
+      )
+    );
+  }
+
   shuffleAllTreeColors = () => {
     this.props.onShuffleAllTreeColors();
   };
@@ -944,6 +968,11 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     const { groupToDelete } = this.state;
     const { isAnnotationLockedByUser, isOwner, isConcurrentCollabMode } = this.props;
     const isEditingDisabled = !this.props.allowUpdate || isConcurrentCollabMode;
+    // In concurrent collaboration mode, deleting is still allowed if every affected tree is an
+    // agglomerate tree (the reducer permits that, as proofreading mutates agglomerate trees).
+    const isDeleteDisabled =
+      !this.props.allowUpdate ||
+      (isConcurrentCollabMode && !this.isDeleteOnlyAffectingAgglomerateTrees());
     const isEditingDisabledMessage = isConcurrentCollabMode
       ? messages["tracing.skeleton_editing_disabled_in_live_collab"]
       : messages["tracing.read_only_mode_notification"](isAnnotationLockedByUser, isOwner);
@@ -1001,8 +1030,8 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                   />
                   <ButtonComponent
                     onClick={this.handleDelete}
-                    title={isEditingDisabled ? isEditingDisabledMessage : "Delete Selected Trees"}
-                    disabled={isEditingDisabled} // todop: should be allowed when only agglo trees are selected
+                    title={isDeleteDisabled ? isEditingDisabledMessage : "Delete Selected Trees"}
+                    disabled={isDeleteDisabled}
                     icon={<DeleteOutlined />}
                     variant="text"
                     color="default"
@@ -1010,7 +1039,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                   <ButtonComponent
                     onClick={this.toggleAllTrees}
                     title="Toggle Visibility of All Trees (1)"
-                    disabled={isEditingDisabled} // todop: should be allowed regardless of agglo trees. also test this manually to see that reducers handle this okay.
+                    disabled={!this.props.allowUpdate}
                     icon={<Icon component={ToggleOnIcon} />}
                     variant="text"
                     color="default"
@@ -1018,7 +1047,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                   <ButtonComponent
                     onClick={this.toggleInactiveTrees}
                     title="Toggle Visibility of Inactive Trees (2)"
-                    disabled={isEditingDisabled} // todop: same here.
+                    disabled={!this.props.allowUpdate}
                     icon={<Icon component={ToggleOffIcon} />}
                     variant="text"
                     color="default"

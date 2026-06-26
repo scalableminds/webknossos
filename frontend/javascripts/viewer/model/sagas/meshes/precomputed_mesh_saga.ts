@@ -74,6 +74,14 @@ function initializeMeshLoadingTokenChannel() {
   }
 }
 
+function* acquireWorker() {
+  yield* take(meshLoadingTokenChannel);
+}
+
+function* releaseWorker() {
+  yield put(meshLoadingTokenChannel, "token");
+}
+
 // Avoid redundant fetches of mesh files for the same layer by
 // storing Deferreds per layer lazily.
 let fetchDeferredsPerLayer: Record<string, Deferred<Array<APIMeshFileInfo>, unknown>> = {};
@@ -221,7 +229,7 @@ function* loadPrecomputedMeshForSegmentId(
   // the first meshes are fully visible earlier and the memory pressure of
   // in-flight chunk buffers stays bounded. Note that the loading state for
   // this segment was already set above so that the UI reflects the pending load.
-  yield* take(meshLoadingTokenChannel);
+  yield call(acquireWorker);
   try {
     let availableChunksMap: ChunksMap = {};
     let chunkScale: Vector3 | null = null;
@@ -270,9 +278,9 @@ function* loadPrecomputedMeshForSegmentId(
       );
     }
   } finally {
-    // Also returns the token in case this saga was cancelled by a REMOVE_MESH
+    // Also release worker token even when cancelled by a REMOVE_MESH
     // action (see loadPrecomputedMesh).
-    meshLoadingTokenChannel.put("token");
+    yield* call(releaseWorker);
   }
 
   yield* put(finishedLoadingMeshAction(layerName, segmentId));

@@ -347,93 +347,94 @@ function* loadFullAdHocMesh(
   // loading indicator is shown) means the UI reflects the pending load immediately.
   yield call(acquireMeshWorker);
   try {
-  const cubeSize = marchingCubeSizeInTargetMag();
-  const dataset = yield* select((state) => state.dataset);
-  const mag = magInfo.getMagByIndexOrThrow(zoomStep);
+    const cubeSize = marchingCubeSizeInTargetMag();
+    const dataset = yield* select((state) => state.dataset);
+    const mag = magInfo.getMagByIndexOrThrow(zoomStep);
 
-  const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
-  const annotation = yield* select((state) => state.annotation);
-  const visibleSegmentationLayer = yield* select((state) => getVisibleSegmentationLayer(state));
-  if (visibleSegmentationLayer == null) {
-    throw new Error(
-      "Loading the ad-hoc mesh failed because the visible segmentation layer must not be null.",
+    const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
+    const annotation = yield* select((state) => state.annotation);
+    const visibleSegmentationLayer = yield* select((state) => getVisibleSegmentationLayer(state));
+    if (visibleSegmentationLayer == null) {
+      throw new Error(
+        "Loading the ad-hoc mesh failed because the visible segmentation layer must not be null.",
+      );
+    }
+    // Fetch from datastore if no volumetracing ...
+    let forceUsingDataStore = volumeTracing == null || visibleSegmentationLayer.tracingId == null;
+    if (meshExtraInfo.useDataStore != null) {
+      // ... except if the caller specified whether to use the data store ...
+      forceUsingDataStore = meshExtraInfo.useDataStore;
+    } else if (volumeTracing?.hasEditableMapping) {
+      // ... or if an editable mapping is active.
+      forceUsingDataStore = false;
+    }
+
+    // Segment stats can only be used for segmentation layers that have a segment index
+    // and that don't have editable mappings.
+    const usePositionsFromSegmentIndex = yield* call(
+      getUsePositionsFromSegmentIndex,
+      volumeTracing,
+      dataset,
+      layer.name,
+      visibleSegmentationLayer.tracingId,
     );
-  }
-  // Fetch from datastore if no volumetracing ...
-  let forceUsingDataStore = volumeTracing == null || visibleSegmentationLayer.tracingId == null;
-  if (meshExtraInfo.useDataStore != null) {
-    // ... except if the caller specified whether to use the data store ...
-    forceUsingDataStore = meshExtraInfo.useDataStore;
-  } else if (volumeTracing?.hasEditableMapping) {
-    // ... or if an editable mapping is active.
-    forceUsingDataStore = false;
-  }
 
-  // Segment stats can only be used for segmentation layers that have a segment index
-  // and that don't have editable mappings.
-  const usePositionsFromSegmentIndex = yield* call(
-    getUsePositionsFromSegmentIndex,
-    volumeTracing,
-    dataset,
-    layer.name,
-    visibleSegmentationLayer.tracingId,
-  );
+    const layerSourceInfo: LayerSourceInfo = {
+      dataset,
+      annotation,
+      tracingId: visibleSegmentationLayer.tracingId,
+      segmentationLayerName:
+        visibleSegmentationLayer.fallbackLayer ?? visibleSegmentationLayer.name,
+      useDataStore: forceUsingDataStore,
+    };
 
-  const layerSourceInfo: LayerSourceInfo = {
-    dataset,
-    annotation,
-    tracingId: visibleSegmentationLayer.tracingId,
-    segmentationLayerName: visibleSegmentationLayer.fallbackLayer ?? visibleSegmentationLayer.name,
-    useDataStore: forceUsingDataStore,
-  };
+    let positionsToRequest = usePositionsFromSegmentIndex
+      ? yield* getChunkPositionsFromSegmentIndex(
+          layerSourceInfo,
+          segmentId,
+          cubeSize,
+          mag,
+          clippedPosition,
+          additionalCoordinates,
+          mappingName,
+          annotation.version,
+        )
+      : [clippedPosition];
 
-  let positionsToRequest = usePositionsFromSegmentIndex
-    ? yield* getChunkPositionsFromSegmentIndex(
-        layerSourceInfo,
+    if (positionsToRequest.length === 0) {
+      //if no positions are requested, remove the mesh,
+      //so that the old one isn't displayed anymore
+      yield* put(removeMeshAction(layer.name, segmentId));
+    }
+    while (positionsToRequest.length > 0) {
+      const currentPosition = positionsToRequest.shift();
+      if (currentPosition == null) {
+        throw new Error("Satisfy typescript");
+      }
+      const neighbors = yield* call(
+        maybeLoadMeshChunk,
+        layer,
         segmentId,
-        cubeSize,
-        mag,
-        clippedPosition,
-        additionalCoordinates,
-        mappingName,
-        annotation.version,
-      )
-    : [clippedPosition];
+        currentPosition,
+        zoomStep,
+        meshExtraInfo,
+        magInfo,
+        isInitialRequest,
+        removeExistingMesh && isInitialRequest,
+        layerSourceInfo,
+        !usePositionsFromSegmentIndex,
+      );
+      isInitialRequest = false;
 
-  if (positionsToRequest.length === 0) {
-    //if no positions are requested, remove the mesh,
-    //so that the old one isn't displayed anymore
-    yield* put(removeMeshAction(layer.name, segmentId));
-  }
-  while (positionsToRequest.length > 0) {
-    const currentPosition = positionsToRequest.shift();
-    if (currentPosition == null) {
-      throw new Error("Satisfy typescript");
+      // If we are using the positions from the segment index, the backend will
+      // send an empty neighbors array, as it's not necessary to have them.
+      if (usePositionsFromSegmentIndex && neighbors.length > 0) {
+        throw new Error("Retrieved neighbor positions even though these were not requested.");
+      }
+      positionsToRequest = positionsToRequest.concat(neighbors);
     }
-    const neighbors = yield* call(
-      maybeLoadMeshChunk,
-      layer,
-      segmentId,
-      currentPosition,
-      zoomStep,
-      meshExtraInfo,
-      magInfo,
-      isInitialRequest,
-      removeExistingMesh && isInitialRequest,
-      layerSourceInfo,
-      !usePositionsFromSegmentIndex,
-    );
-    isInitialRequest = false;
 
-    // If we are using the positions from the segment index, the backend will
-    // send an empty neighbors array, as it's not necessary to have them.
-    if (usePositionsFromSegmentIndex && neighbors.length > 0) {
-      throw new Error("Retrieved neighbor positions even though these were not requested.");
-    }
-    positionsToRequest = positionsToRequest.concat(neighbors);
-  }
-
-  yield* put(finishedLoadingMeshAction(layer.name, segmentId));
+    yield* put(finishedLoadingMeshAction(layer.name, segmentId));
   } finally {
     yield* call(releaseMeshWorker);
   }

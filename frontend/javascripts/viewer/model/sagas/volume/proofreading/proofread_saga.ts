@@ -52,6 +52,7 @@ import {
   getMeshInfoForSegment,
   getSegmentsForLayer,
   getVolumeTracingById,
+  isMeshLoaded,
 } from "viewer/model/accessors/volumetracing_accessor";
 import {
   dispatchMaybeFetchMeshFilesAsync,
@@ -293,13 +294,19 @@ function* subscribeToAnnotationMutexInLiveCollab(proofreadingSagaId: string) {
   return null;
 }
 
-function* ensureSegmentItemAndLoadCoarseMesh(
+function* ensureSegmentItemAndMaybeLoadCoarseMesh(
   layerName: string,
   segmentId: number,
   position: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | undefined,
 ): Saga<void> {
   yield* call(ensureSegmentItem, layerName, segmentId, position, additionalCoordinates);
+  const autoRenderMeshInProofreading = yield* select(
+    (state) => state.userConfiguration.autoRenderMeshInProofreading,
+  );
+  if (!autoRenderMeshInProofreading) {
+    return;
+  }
   yield* call(loadCoarseMesh, layerName, segmentId, position, additionalCoordinates);
 }
 
@@ -320,12 +327,6 @@ function* loadCoarseMesh(
   opacity?: number,
   isVisible?: boolean,
 ): Saga<void> {
-  const autoRenderMeshInProofreading = yield* select(
-    (state) => state.userConfiguration.autoRenderMeshInProofreading,
-  );
-  if (!autoRenderMeshInProofreading) {
-    return;
-  }
   const dataset = yield* select((state) => state.dataset);
   const layer = getLayerByName(dataset, layerName);
 
@@ -464,7 +465,7 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
 
   /* Load a coarse mesh of the agglomerate at the click position */
   yield* call(
-    ensureSegmentItemAndLoadCoarseMesh,
+    ensureSegmentItemAndMaybeLoadCoarseMesh,
     layerName,
     segmentId,
     position,
@@ -790,8 +791,9 @@ function* handleMergeViaTree(action: MergeTreesAction, ctx: OperationContext): S
     yield* call(refreshAffectedSegmentItems, volumeTracingId, refreshInfos);
     // Now that the segment items are up-to-date we can sync with the back-end and release the mutex.
     yield* call(syncWithBackend, ctx);
+
     // Refreshing the meshes might take a while and won't block the saga here.
-    yield* spawnUntilCanceled(refreshAffectedMeshes, volumeTracingId, refreshInfos);
+    yield* spawnUntilCanceled(maybeRefreshAffectedMeshes, volumeTracingId, refreshInfos);
   } finally {
     if (unsubscribeFromAnnotationMutex) {
       yield* call(unsubscribeFromAnnotationMutex);
@@ -1005,8 +1007,9 @@ function* handleSplitViaTree(
     yield* call(refreshAffectedSegmentItems, volumeTracingId, refreshInfos);
     // Now that the segment items are up-to-date we can sync with the back-end and release the mutex.
     yield* call(syncWithBackend, ctx);
+
     // Refreshing the meshes might take a while and won't block the saga here.
-    yield* spawnUntilCanceled(refreshAffectedMeshes, volumeTracingId, refreshInfos);
+    yield* spawnUntilCanceled(maybeRefreshAffectedMeshes, volumeTracingId, refreshInfos);
   } finally {
     if (unsubscribeFromAnnotationMutex) {
       yield* call(unsubscribeFromAnnotationMutex);
@@ -1272,7 +1275,7 @@ function* performPartitionedMinCut(
 
     // Refreshing the meshes might take a while and won't block the saga
     // here.
-    yield* spawnUntilCanceled(refreshAffectedMeshes, volumeTracingId, refreshInfos);
+    yield* spawnUntilCanceled(maybeRefreshAffectedMeshes, volumeTracingId, refreshInfos);
   } finally {
     if (unsubscribeFromAnnotationMutex) {
       yield* call(unsubscribeFromAnnotationMutex);
@@ -1443,8 +1446,9 @@ function* refreshProofreadingSegmentsAndMeshes(
   ];
   yield* call(refreshAffectedSegmentItems, volumeTracingId, refreshInfos);
   yield* call(syncWithBackend, ctx);
+
   // Refreshing the meshes might take a while and won't block the saga here.
-  yield* spawnUntilCanceled(refreshAffectedMeshes, volumeTracingId, refreshInfos);
+  yield* spawnUntilCanceled(maybeRefreshAffectedMeshes, volumeTracingId, refreshInfos);
 }
 
 function* handleProofreadMerge(action: ProofreadMergeAction, ctx: OperationContext) {
@@ -1871,7 +1875,7 @@ function* handleProofreadCutFromNeighbors(action: Action, ctx: OperationContext)
 
     // Refreshing the meshes might take a while and won't block the saga
     // here.
-    yield* spawnUntilCanceled(refreshAffectedMeshes, volumeTracingId, refreshInfos);
+    yield* spawnUntilCanceled(maybeRefreshAffectedMeshes, volumeTracingId, refreshInfos);
   } finally {
     if (unsubscribeFromAnnotationMutex) {
       yield* call(unsubscribeFromAnnotationMutex);
@@ -2139,6 +2143,22 @@ export function* refreshAffectedSegmentItems(
   yield* all(ensureSegmentItemEffects);
 }
 
+export function* shouldReloadMeshesAfterProofreadAction(
+  layerName: string,
+  oldAgglomerateIds: number[],
+): Saga<boolean> {
+  const autoRenderMeshInProofreading = yield* select(
+    (state) => state.userConfiguration.autoRenderMeshInProofreading,
+  );
+  if (autoRenderMeshInProofreading) {
+    return true;
+  }
+  const hasAnyInvolvedMeshLoaded = yield* select((state) =>
+    oldAgglomerateIds.some((id) => isMeshLoaded(state, id, layerName)),
+  );
+  return hasAnyInvolvedMeshLoaded;
+}
+
 // Display properties of a mesh that should survive a reload.
 export type PreservedMeshDisplayProps = {
   opacity?: number;
@@ -2176,6 +2196,25 @@ export function* getMeshDisplayPropsByOldAgglomerateId(
     }
     return displayPropsByAgglomerateId;
   });
+}
+
+function* maybeRefreshAffectedMeshes(
+  layerName: string,
+  items: Array<{
+    oldAgglomerateId?: number;
+    newAgglomerateId: number;
+    nodePosition: Vector3;
+    opacity?: number; // see refreshAffectedMeshes below.
+  }>,
+) {
+  const shouldDoMeshRefreshing = yield* call(shouldReloadMeshesAfterProofreadAction, layerName, [
+    ...items.map((i) => i.oldAgglomerateId).filter((id) => id != null),
+  ]);
+  if (shouldDoMeshRefreshing) {
+    // Refreshing the meshes might take a while and won't block the saga
+    // here.
+    yield* spawnUntilCanceled(refreshAffectedMeshes, layerName, items);
+  }
 }
 
 export function* refreshAffectedMeshes(

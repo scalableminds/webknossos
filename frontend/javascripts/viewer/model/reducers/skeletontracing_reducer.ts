@@ -23,6 +23,7 @@ import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import {
   type SkeletonActionPolicy,
+  type SkeletonCollabPolicy,
   type SkeletonTracingAction,
   skeletonActionPolicies,
 } from "viewer/model/actions/skeletontracing_actions";
@@ -105,24 +106,13 @@ function resolveAffectedTrees(
 
 // In concurrent collaboration ("live collaboration") mode, normal skeleton editing must be
 // forbidden because it would interfere with concurrent edits/rebasing. Only proofreading, which
-// operates on agglomerate trees, is allowed. The decision is driven by `skeletonActionPolicies`.
-function isSkeletonMutationAllowedInCollabMode(
-  state: WebknossosState,
+// operates on agglomerate trees, is allowed. The collab policy comes from `skeletonActionPolicies`.
+function isCollabModeMutationAllowed(
+  collab: SkeletonCollabPolicy,
   action: Action,
   skeletonTracing: SkeletonTracing,
 ): boolean {
-  if (state.annotation.collaborationMode !== "Concurrent") {
-    return true;
-  }
-
-  const policy: SkeletonActionPolicy | undefined =
-    skeletonActionPolicies[action.type as SkeletonTracingAction["type"]];
-  if (policy == null || !policy.needsUpdatePermission) {
-    // Non-skeleton actions and view/selection actions don't mutate trees and are always allowed.
-    return true;
-  }
-
-  switch (policy.collab) {
+  switch (collab) {
     case "allow":
       return true;
     case "block":
@@ -132,7 +122,7 @@ function isSkeletonMutationAllowedInCollabMode(
       return affectedTrees.length > 0 && affectedTrees.every(isAgglomerateTree);
     }
     default: {
-      const _exhaustiveCheck: never = policy.collab;
+      const _exhaustiveCheck: never = collab;
       return false;
     }
   }
@@ -244,6 +234,28 @@ function SkeletonTracingReducer(
     return state;
   }
 
+  // Permission + collaboration gate, driven by the action's policy in `skeletonActionPolicies`.
+  // Actions without a policy (non-skeleton/saga-only) or without `needsUpdatePermission` skip the
+  // gate and are handled below (or ignored via the switch's default).
+  const policy: SkeletonActionPolicy | undefined =
+    skeletonActionPolicies[action.type as SkeletonTracingAction["type"]];
+  if (policy?.needsUpdatePermission) {
+    const { isUpdatingCurrentlyAllowed } = state.annotation;
+    if (!(isUpdatingCurrentlyAllowed || ignoreAllowUpdate)) {
+      return state;
+    }
+    // In concurrent collaboration mode, only agglomerate trees may be mutated (proofreading).
+    // Updates that originate from the server (ignoreAllowUpdate) must still be applied.
+    if (
+      !ignoreAllowUpdate &&
+      state.annotation.collaborationMode === "Concurrent" &&
+      !isCollabModeMutationAllowed(policy.collab, action, skeletonTracing)
+    ) {
+      return state;
+    }
+  }
+
+  const { restrictions } = state.annotation;
   switch (action.type) {
     case "SET_ACTIVE_NODE": {
       const { nodeId } = action;
@@ -757,27 +769,6 @@ function SkeletonTracingReducer(
       );
     }
 
-    default: // pass
-  }
-
-  /**
-   * The following actions are only executed if isUpdatingCurrentlyAllowed is true!
-   */
-  const { restrictions, isUpdatingCurrentlyAllowed } = state.annotation;
-  if (!(isUpdatingCurrentlyAllowed || ignoreAllowUpdate)) {
-    return state;
-  }
-
-  // In concurrent collaboration mode, only agglomerate trees may be mutated (proofreading).
-  // Updates that originate from the server (ignoreAllowUpdate) must still be applied.
-  if (
-    !ignoreAllowUpdate &&
-    !isSkeletonMutationAllowedInCollabMode(state, action, skeletonTracing)
-  ) {
-    return state;
-  }
-
-  switch (action.type) {
     case "CREATE_NODE": {
       if (areGeometriesTransformed(state)) {
         // Don't create nodes if the skeleton layer is rendered with transforms.

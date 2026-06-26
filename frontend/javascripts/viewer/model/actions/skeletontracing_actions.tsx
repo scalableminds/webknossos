@@ -159,9 +159,14 @@ export type SkeletonTracingAction =
 //     - "allow": always allowed (only ever touches agglomerate trees anyway).
 //     - "onlyAgglomerateTree": allowed only if the affected tree(s) are agglomerate trees
 //       (i.e. proofreading). The affected trees are resolved at runtime in the reducer.
+// Whether a mutation may run in concurrent collaboration mode: never ("block"), always ("allow",
+// only ever touches agglomerate trees), or only if the affected tree(s) are agglomerate trees
+// ("onlyAgglomerateTree", resolved at runtime in the reducer).
+export type SkeletonCollabPolicy = "block" | "allow" | "onlyAgglomerateTree";
+
 export type SkeletonActionPolicy =
   | { needsUpdatePermission: false }
-  | { needsUpdatePermission: true; collab: "block" | "allow" | "onlyAgglomerateTree" };
+  | { needsUpdatePermission: true; collab: SkeletonCollabPolicy };
 
 export const skeletonActionPolicies: Record<SkeletonTracingAction["type"], SkeletonActionPolicy> = {
   // Initialization / server-applied updates / view & selection state. Applied unconditionally.

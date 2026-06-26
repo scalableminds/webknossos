@@ -185,6 +185,17 @@ function SkeletonTracingReducer(
   action: Action,
   ignoreAllowUpdate: boolean = false,
 ): WebknossosState {
+  state = reduceSkeletonActionsWithoutPermissions(state, action);
+  state = reduceSkeletonActionsWithPermissions(state, action, ignoreAllowUpdate);
+
+  return state;
+}
+
+function reduceSkeletonActionsWithoutPermissions(state: WebknossosState, action: Action) {
+  /**
+   * Actions that should be executed regardless of permissions (allowUpdate etc) need to be handled
+   * in this function.
+   */
   if (action.type === "INITIALIZE_SKELETONTRACING") {
     const userState = getUserStateForTracing(
       action.tracing,
@@ -280,10 +291,6 @@ function SkeletonTracingReducer(
     return state;
   }
 
-  /**
-   * ATTENTION: The actions that should be executed regardless of whether allowUpdate is true or false
-   * should be added here!
-   */
   switch (action.type) {
     case "SET_ACTIVE_NODE": {
       const { nodeId } = action;
@@ -800,11 +807,24 @@ function SkeletonTracingReducer(
     default: // pass
   }
 
+  return state;
+}
+
+function reduceSkeletonActionsWithPermissions(
+  state: WebknossosState,
+  action: Action,
+  ignoreAllowUpdate: boolean = false,
+) {
   /**
-   * ATTENTION: The following actions are only executed if isUpdatingCurrentlyAllowed is true!
+   * The following actions are only executed if isUpdatingCurrentlyAllowed is true!
    */
   const { restrictions, isUpdatingCurrentlyAllowed } = state.annotation;
   if (!(isUpdatingCurrentlyAllowed || ignoreAllowUpdate)) {
+    return state;
+  }
+
+  const skeletonTracing = getSkeletonTracing(state.annotation);
+  if (skeletonTracing == null) {
     return state;
   }
 

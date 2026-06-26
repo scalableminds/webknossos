@@ -53,7 +53,7 @@ import { Model } from "viewer/singletons";
 import Store, { type StoreDataset, type VolumeTracing } from "viewer/store";
 import { getAdditionalCoordinatesAsString } from "../../accessors/flycam_accessor";
 import { ensureSceneControllerInitialized, ensureWkInitialized } from "../ready_sagas";
-import { acquireWorker, releaseWorker } from "./common_mesh_saga";
+import { acquireMeshWorker, releaseMeshWorker } from "./common_mesh_saga";
 
 const MAX_RETRY_COUNT = 5;
 const RETRY_WAIT_TIME = 5000;
@@ -259,7 +259,7 @@ function* loadAdHocMesh(
   const { zoomStep, magInfo } = yield* call(getInfoForMeshLoading, layer, meshExtraInfo);
   batchCounterPerSegment[segmentId] = 0;
 
-  yield call(acquireWorker);
+  yield call(acquireMeshWorker);
   try {
     // If a REMOVE_MESH action is dispatched and consumed
     // here before loadFullAdHocMesh is finished, the latter saga
@@ -285,7 +285,7 @@ function* loadAdHocMesh(
       ),
     });
   } finally {
-    yield* call(releaseWorker);
+    yield* call(releaseMeshWorker);
   }
   removeMeshWithoutVoxels(segmentId, layer.name, seedAdditionalCoordinates);
 }

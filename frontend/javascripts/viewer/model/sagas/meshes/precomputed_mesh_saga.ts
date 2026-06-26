@@ -55,7 +55,7 @@ import Store from "viewer/store";
 import { getBaseSegmentationName } from "viewer/view/right_border_tabs/segments_tab/segments_view_helper";
 import { ensureSceneControllerInitialized, ensureWkInitialized } from "../ready_sagas";
 import { getMeshExtraInfo } from "./ad_hoc_mesh_saga";
-import { acquireWorker, releaseWorker } from "./common_mesh_saga";
+import { acquireMeshWorker, releaseMeshWorker } from "./common_mesh_saga";
 
 const MIN_BATCH_SIZE_IN_BYTES = 2 ** 16;
 
@@ -206,7 +206,7 @@ function* loadPrecomputedMeshForSegmentId(
   // the first meshes are fully visible earlier and the memory pressure of
   // in-flight chunk buffers stays bounded. Note that the loading state for
   // this segment was already set above so that the UI reflects the pending load.
-  yield call(acquireWorker);
+  yield call(acquireMeshWorker);
   try {
     let availableChunksMap: ChunksMap = {};
     let chunkScale: Vector3 | null = null;
@@ -257,7 +257,7 @@ function* loadPrecomputedMeshForSegmentId(
   } finally {
     // Also release worker token even when cancelled by a REMOVE_MESH
     // action (see loadPrecomputedMesh).
-    yield* call(releaseWorker);
+    yield* call(releaseMeshWorker);
   }
 
   yield* put(finishedLoadingMeshAction(layerName, segmentId));

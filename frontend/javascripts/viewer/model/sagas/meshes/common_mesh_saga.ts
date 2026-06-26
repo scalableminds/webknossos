@@ -48,11 +48,11 @@ export function initializeMeshLoadingTokenChannel() {
   }
 }
 
-export function* acquireWorker() {
+export function* acquireMeshWorker() {
   yield* take(meshLoadingTokenChannel);
 }
 
-export function* releaseWorker() {
+export function* releaseMeshWorker() {
   yield put(meshLoadingTokenChannel, "token");
 }
 

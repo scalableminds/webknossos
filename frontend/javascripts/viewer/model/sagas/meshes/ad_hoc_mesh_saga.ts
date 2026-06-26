@@ -259,34 +259,29 @@ function* loadAdHocMesh(
   const { zoomStep, magInfo } = yield* call(getInfoForMeshLoading, layer, meshExtraInfo);
   batchCounterPerSegment[segmentId] = 0;
 
-  yield call(acquireMeshWorker);
-  try {
-    // If a REMOVE_MESH action is dispatched and consumed
-    // here before loadFullAdHocMesh is finished, the latter saga
-    // should be canceled automatically to avoid populating mesh data even though
-    // the mesh was removed. This is accomplished by redux-saga's race effect.
-    yield* race({
-      loadFullAdHocMesh: call(
-        loadFullAdHocMesh,
-        layer,
-        segmentId,
-        seedPosition,
-        seedAdditionalCoordinates,
-        zoomStep,
-        meshExtraInfo,
-        magInfo,
-        removeExistingMesh,
-      ),
-      cancel: take(
-        ((action: Action) =>
-          action.type === "REMOVE_MESH" &&
-          action.segmentId === segmentId &&
-          action.layerName === layer.name) as ActionPattern,
-      ),
-    });
-  } finally {
-    yield* call(releaseMeshWorker);
-  }
+  // If a REMOVE_MESH action is dispatched and consumed
+  // here before loadFullAdHocMesh is finished, the latter saga
+  // should be canceled automatically to avoid populating mesh data even though
+  // the mesh was removed. This is accomplished by redux-saga's race effect.
+  yield* race({
+    loadFullAdHocMesh: call(
+      loadFullAdHocMesh,
+      layer,
+      segmentId,
+      seedPosition,
+      seedAdditionalCoordinates,
+      zoomStep,
+      meshExtraInfo,
+      magInfo,
+      removeExistingMesh,
+    ),
+    cancel: take(
+      ((action: Action) =>
+        action.type === "REMOVE_MESH" &&
+        action.segmentId === segmentId &&
+        action.layerName === layer.name) as ActionPattern,
+    ),
+  });
   removeMeshWithoutVoxels(segmentId, layer.name, seedAdditionalCoordinates);
 }
 
@@ -348,6 +343,10 @@ function* loadFullAdHocMesh(
   );
   yield* put(startedLoadingMeshAction(layer.name, segmentId));
 
+  // Limit the number of segments meshed concurrently. Acquiring here (after the
+  // loading indicator is shown) means the UI reflects the pending load immediately.
+  yield call(acquireMeshWorker);
+  try {
   const cubeSize = marchingCubeSizeInTargetMag();
   const dataset = yield* select((state) => state.dataset);
   const mag = magInfo.getMagByIndexOrThrow(zoomStep);
@@ -435,6 +434,9 @@ function* loadFullAdHocMesh(
   }
 
   yield* put(finishedLoadingMeshAction(layer.name, segmentId));
+  } finally {
+    yield* call(releaseMeshWorker);
+  }
 }
 
 function* getChunkPositionsFromSegmentIndex(

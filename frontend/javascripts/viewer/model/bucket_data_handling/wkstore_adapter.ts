@@ -88,10 +88,9 @@ function createSendBucketInfo(zoomedAddress: BucketAddress, magInfo: MagInfo): S
   };
 }
 
-// The outcome of requesting a single bucket. Previously a bucket buffer was
-// either present or null/undefined ("missing"). The backend now distinguishes
-// genuinely empty buckets (no data, e.g. not annotated yet) from buckets that
-// could not be read (failures), which have to be retried.
+// The outcome of requesting a single bucket. Empty buckets don't contain
+// any data (e.g., a volume bucket that wasn't annotated). "Failure" means
+// that the bucket data could not be read (a retry is necessary).
 export type BucketRequestResult =
   | { type: "data"; data: Uint8Array<ArrayBuffer> }
   | { type: "empty" }

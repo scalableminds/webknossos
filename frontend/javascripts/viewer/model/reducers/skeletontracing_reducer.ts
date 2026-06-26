@@ -138,9 +138,12 @@ function isSkeletonMutationAllowedInCollabMode(
 }
 
 function doesSkeletonActionNeedUpdatePermission(action: Action): boolean {
-  const policy: SkeletonActionPolicy | undefined =
-    skeletonActionPolicies[action.type as SkeletonTracingAction["type"]];
-  return policy != null && policy.needsUpdatePermission;
+  if (action.type in skeletonActionPolicies) {
+    const policy: SkeletonActionPolicy =
+      skeletonActionPolicies[action.type as SkeletonTracingAction["type"]];
+    return policy.needsUpdatePermission;
+  }
+  return false; // the reducer was given an action which it won't act on, the return value won't matter
 }
 
 function SkeletonTracingReducer(

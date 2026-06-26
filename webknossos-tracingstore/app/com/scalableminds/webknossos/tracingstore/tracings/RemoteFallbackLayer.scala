@@ -28,7 +28,7 @@ trait FallbackDataHelper extends FoxImplicits {
   def remoteDatastoreClient: TSRemoteDatastoreClient
   def remoteWebknossosClient: TSRemoteWebknossosClient
 
-  private lazy val fallbackBucketDataCache: AlfuCache[FallbackDataKey, (Array[Byte], Seq[Int], Seq[Int])] =
+  private lazy val fallbackBucketDataCache: AlfuCache[FallbackDataKey, (Array[Byte], Seq[Int])] =
     AlfuCache(maxCapacity = 3000)
 
   def remoteFallbackLayerForVolumeTracing(tracing: VolumeTracing, annotationId: ObjectId)(implicit
@@ -45,12 +45,18 @@ trait FallbackDataHelper extends FoxImplicits {
       tc: TokenContext
   ): Fox[Array[Byte]] =
     for {
-      (data, emptyBucketIndices, failureBucketIndices) <- fallbackBucketDataCache.getOrLoad(
+      (data, emptyBucketIndices) <- fallbackBucketDataCache.getOrLoad(
         FallbackDataKey(remoteFallbackLayer, dataRequest, tc.userTokenOpt),
-        k => remoteDatastoreClient.getData(k.remoteFallbackLayer, Seq(k.dataRequest))
+        k =>
+          for {
+            (dataInner, emptyIndices, failureIndices) <- remoteDatastoreClient
+              .getData(k.remoteFallbackLayer, Seq(k.dataRequest))
+            // failures are rejected *inside* of the load function to avoid caching them.
+            // empties are rejected *outside* because they are permanent errors and can be cached.
+            _ <- Fox.fromBool(failureIndices.isEmpty) ?~> Msg.Annotation.Volume.fallbackDataLoadingFailed
+          } yield (dataInner, emptyIndices)
       )
       dataOrEmpty <- if (emptyBucketIndices.isEmpty) Fox.successful(data) else Fox.empty
-      _ <- Fox.fromBool(failureBucketIndices.isEmpty) ?~> Msg.Annotation.Volume.fallbackDataLoadingFailed
     } yield dataOrEmpty
 
   // Get multiple buckets at once: pro: fewer requests, con: no tracingstore-side caching

@@ -134,10 +134,12 @@ function SkeletonTracingReducer(
   ignoreAllowUpdate: boolean = false,
 ): WebknossosState {
   /**
-   * INITIALIZE_SKELETONTRACING and the first switch below handle actions that are applied regardless
-   * of permissions (allowUpdate etc). After that, a permission + collaboration gate guards the
-   * mutations in the second switch. Whether an action needs update permission is declared centrally
-   * in `skeletonActionPolicies`.
+   * INITIALIZE_SKELETONTRACING is handled as a special case here without any
+   * permission checks. The action should always be handled and is also the only one
+   * that can deal with a not pre-existing skeleton tracing which is why
+   * it is not part of the big switch-block below.
+   * After that, a permission + collaboration gate guards the mutations in the second switch.
+   * Whether an action needs update permission is declared centrally in `skeletonActionPolicies`.
    */
   if (action.type === "INITIALIZE_SKELETONTRACING") {
     const userState = getUserStateForTracing(
@@ -239,15 +241,19 @@ function SkeletonTracingReducer(
   // gate and are handled below (or ignored via the switch's default).
   const policy: SkeletonActionPolicy | undefined =
     skeletonActionPolicies[action.type as SkeletonTracingAction["type"]];
-  if (policy?.needsUpdatePermission) {
+  // Updates that originate from the server (ignoreAllowUpdate) must still be applied.
+  if (!ignoreAllowUpdate && policy?.needsUpdatePermission) {
+    // The current action does not originate from the server and needs a permission check.
     const { isUpdatingCurrentlyAllowed } = state.annotation;
-    if (!(isUpdatingCurrentlyAllowed || ignoreAllowUpdate)) {
+    if (!isUpdatingCurrentlyAllowed) {
+      // Since editing is not allowed currently (e.g., opened in read-only mode), ignore the action.
       return state;
     }
-    // In concurrent collaboration mode, only agglomerate trees may be mutated (proofreading).
-    // Updates that originate from the server (ignoreAllowUpdate) must still be applied.
+    // Now, the action may be handled except for when the concurrent collaboration mode
+    // is active. In that case, we delegate the check to isCollabModeMutationAllowed
+    // which checks that only agglomerate trees may be mutated (because proofreading is
+    // currently the only mode that supports live collaboration).
     if (
-      !ignoreAllowUpdate &&
       state.annotation.collaborationMode === "Concurrent" &&
       !isCollabModeMutationAllowed(policy.collab, action, skeletonTracing)
     ) {

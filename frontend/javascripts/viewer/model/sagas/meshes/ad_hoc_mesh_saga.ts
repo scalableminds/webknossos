@@ -53,6 +53,7 @@ import { Model } from "viewer/singletons";
 import Store, { type StoreDataset, type VolumeTracing } from "viewer/store";
 import { getAdditionalCoordinatesAsString } from "../../accessors/flycam_accessor";
 import { ensureSceneControllerInitialized, ensureWkInitialized } from "../ready_sagas";
+import { acquireWorker, releaseWorker } from "./common_mesh_saga";
 
 const MAX_RETRY_COUNT = 5;
 const RETRY_WAIT_TIME = 5000;
@@ -258,29 +259,34 @@ function* loadAdHocMesh(
   const { zoomStep, magInfo } = yield* call(getInfoForMeshLoading, layer, meshExtraInfo);
   batchCounterPerSegment[segmentId] = 0;
 
-  // If a REMOVE_MESH action is dispatched and consumed
-  // here before loadFullAdHocMesh is finished, the latter saga
-  // should be canceled automatically to avoid populating mesh data even though
-  // the mesh was removed. This is accomplished by redux-saga's race effect.
-  yield* race({
-    loadFullAdHocMesh: call(
-      loadFullAdHocMesh,
-      layer,
-      segmentId,
-      seedPosition,
-      seedAdditionalCoordinates,
-      zoomStep,
-      meshExtraInfo,
-      magInfo,
-      removeExistingMesh,
-    ),
-    cancel: take(
-      ((action: Action) =>
-        action.type === "REMOVE_MESH" &&
-        action.segmentId === segmentId &&
-        action.layerName === layer.name) as ActionPattern,
-    ),
-  });
+  yield call(acquireWorker);
+  try {
+    // If a REMOVE_MESH action is dispatched and consumed
+    // here before loadFullAdHocMesh is finished, the latter saga
+    // should be canceled automatically to avoid populating mesh data even though
+    // the mesh was removed. This is accomplished by redux-saga's race effect.
+    yield* race({
+      loadFullAdHocMesh: call(
+        loadFullAdHocMesh,
+        layer,
+        segmentId,
+        seedPosition,
+        seedAdditionalCoordinates,
+        zoomStep,
+        meshExtraInfo,
+        magInfo,
+        removeExistingMesh,
+      ),
+      cancel: take(
+        ((action: Action) =>
+          action.type === "REMOVE_MESH" &&
+          action.segmentId === segmentId &&
+          action.layerName === layer.name) as ActionPattern,
+      ),
+    });
+  } finally {
+    yield* call(releaseWorker);
+  }
   removeMeshWithoutVoxels(segmentId, layer.name, seedAdditionalCoordinates);
 }
 

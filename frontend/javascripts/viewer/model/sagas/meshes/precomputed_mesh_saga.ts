@@ -10,7 +10,6 @@ import { chunkDynamically, sleep } from "libs/utils";
 import sortBy from "lodash-es/sortBy";
 import zip from "lodash-es/zip";
 import messages from "messages";
-import { buffers, type Channel, channel } from "redux-saga";
 import type { ActionPattern } from "redux-saga/effects";
 import { actionChannel, call, put, race, take, takeEvery } from "typed-redux-saga";
 import type {
@@ -56,31 +55,9 @@ import Store from "viewer/store";
 import { getBaseSegmentationName } from "viewer/view/right_border_tabs/segments_tab/segments_view_helper";
 import { ensureSceneControllerInitialized, ensureWkInitialized } from "../ready_sagas";
 import { getMeshExtraInfo } from "./ad_hoc_mesh_saga";
+import { acquireWorker, releaseWorker } from "./common_mesh_saga";
 
 const MIN_BATCH_SIZE_IN_BYTES = 2 ** 16;
-
-// Semaphore that limits how many segments are meshed at the same time.
-// Each saga that loads a mesh has to take a token from this channel first
-// and puts it back when it is done (see loadPrecomputedMeshForSegmentId).
-// The channel is (re)initialized in the root saga below.
-let meshLoadingTokenChannel: Channel<"token">;
-
-function initializeMeshLoadingTokenChannel() {
-  meshLoadingTokenChannel = channel<"token">(
-    buffers.fixed(Constants.PARALLEL_MESH_LOADING_SEGMENT_COUNT),
-  );
-  for (let i = 0; i < Constants.PARALLEL_MESH_LOADING_SEGMENT_COUNT; i++) {
-    meshLoadingTokenChannel.put("token");
-  }
-}
-
-function* acquireWorker() {
-  yield* take(meshLoadingTokenChannel);
-}
-
-function* releaseWorker() {
-  yield put(meshLoadingTokenChannel, "token");
-}
 
 // Avoid redundant fetches of mesh files for the same layer by
 // storing Deferreds per layer lazily.
@@ -564,7 +541,6 @@ function* loadPrecomputedMeshesInChunksForLod(
 export default function* precomputedMeshSaga(): Saga<void> {
   // Buffer actions since they might be dispatched before WK_INITIALIZED
   fetchDeferredsPerLayer = {};
-  initializeMeshLoadingTokenChannel();
   const maybeFetchMeshFilesActionChannel = yield* actionChannel("MAYBE_FETCH_MESH_FILES");
   const loadPrecomputedMeshActionChannel = yield* actionChannel("LOAD_PRECOMPUTED_MESH_ACTION");
 

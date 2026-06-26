@@ -75,7 +75,7 @@ function isAgglomerateTree(tree: { type: TreeType } | null | undefined): boolean
 // `collab: "onlyAgglomerateTree"` in `skeletonActionPolicies` are handled here; for those, the
 // collab guard allows the mutation only if all affected trees are agglomerate trees.
 function resolveAffectedTrees(
-  action: SkeletonTracingAction,
+  action: Action,
   skeletonTracing: SkeletonTracing,
 ): Array<{ type: TreeType } | null | undefined> {
   switch (action.type) {
@@ -108,16 +108,17 @@ function resolveAffectedTrees(
 // operates on agglomerate trees, is allowed. The decision is driven by `skeletonActionPolicies`.
 function isSkeletonMutationAllowedInCollabMode(
   state: WebknossosState,
-  action: SkeletonTracingAction,
+  action: Action,
   skeletonTracing: SkeletonTracing,
 ): boolean {
   if (state.annotation.collaborationMode !== "Concurrent") {
     return true;
   }
 
-  const policy = skeletonActionPolicies[action.type];
-  if (!policy.needsUpdatePermission) {
-    // View/selection actions don't mutate trees and are therefore always allowed.
+  const policy: SkeletonActionPolicy | undefined =
+    skeletonActionPolicies[action.type as SkeletonTracingAction["type"]];
+  if (policy == null || !policy.needsUpdatePermission) {
+    // Non-skeleton actions and view/selection actions don't mutate trees and are always allowed.
     return true;
   }
 
@@ -137,32 +138,16 @@ function isSkeletonMutationAllowedInCollabMode(
   }
 }
 
-function doesSkeletonActionNeedUpdatePermission(action: Action): boolean {
-  if (action.type in skeletonActionPolicies) {
-    const policy: SkeletonActionPolicy =
-      skeletonActionPolicies[action.type as SkeletonTracingAction["type"]];
-    return policy.needsUpdatePermission;
-  }
-  return false; // the reducer was given an action which it won't act on, the return value won't matter
-}
-
 function SkeletonTracingReducer(
   state: WebknossosState,
   action: Action,
   ignoreAllowUpdate: boolean = false,
 ): WebknossosState {
-  state = reduceSkeletonActionsWithoutPermissions(state, action);
-  if (doesSkeletonActionNeedUpdatePermission(action)) {
-    state = reduceSkeletonActionsWithPermissions(state, action, ignoreAllowUpdate);
-  }
-
-  return state;
-}
-
-function reduceSkeletonActionsWithoutPermissions(state: WebknossosState, action: Action) {
   /**
-   * Actions that should be executed regardless of permissions (allowUpdate etc) need to be handled
-   * in this function.
+   * INITIALIZE_SKELETONTRACING and the first switch below handle actions that are applied regardless
+   * of permissions (allowUpdate etc). After that, a permission + collaboration gate guards the
+   * mutations in the second switch. Whether an action needs update permission is declared centrally
+   * in `skeletonActionPolicies`.
    */
   if (action.type === "INITIALIZE_SKELETONTRACING") {
     const userState = getUserStateForTracing(
@@ -775,14 +760,6 @@ function reduceSkeletonActionsWithoutPermissions(state: WebknossosState, action:
     default: // pass
   }
 
-  return state;
-}
-
-function reduceSkeletonActionsWithPermissions(
-  state: WebknossosState,
-  action: Action,
-  ignoreAllowUpdate: boolean = false,
-) {
   /**
    * The following actions are only executed if isUpdatingCurrentlyAllowed is true!
    */
@@ -791,18 +768,11 @@ function reduceSkeletonActionsWithPermissions(
     return state;
   }
 
-  const skeletonTracing = getSkeletonTracing(state.annotation);
-  if (skeletonTracing == null) {
-    return state;
-  }
-
   // In concurrent collaboration mode, only agglomerate trees may be mutated (proofreading).
   // Updates that originate from the server (ignoreAllowUpdate) must still be applied.
-  // Non-skeleton actions are narrowed here; they end up in the exhaustive switch's default and are
-  // blocked, which leaves the skeleton state unchanged (other reducers still handle the action).
   if (
     !ignoreAllowUpdate &&
-    !isSkeletonMutationAllowedInCollabMode(state, action as SkeletonTracingAction, skeletonTracing)
+    !isSkeletonMutationAllowedInCollabMode(state, action, skeletonTracing)
   ) {
     return state;
   }

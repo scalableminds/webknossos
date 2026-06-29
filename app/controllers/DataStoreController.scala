@@ -2,7 +2,7 @@ package controllers
 
 import com.scalableminds.util.Msg
 import play.silhouette.api.Silhouette
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 
 import javax.inject.Inject
 import models.dataset.{DataStore, DataStoreDAO, DataStoreService}
@@ -26,23 +26,23 @@ object DataStoreParameters {
   implicit val jsonFormat: OFormat[DataStoreParameters] = Json.format[DataStoreParameters]
 }
 
-class DataStoreController @Inject()(
+class DataStoreController @Inject() (
     dataStoreDAO: DataStoreDAO,
     dataStoreService: DataStoreService,
     userService: UserService,
     sil: Silhouette[WkEnv],
-    multiUserDAO: MultiUserDAO)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
-    extends Controller
-    with FoxImplicits {
+    multiUserDAO: MultiUserDAO
+)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
+    extends Controller {
 
-  def list: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+  def list: Action[AnyContent] = sil.UserAwareAction.fox { implicit request =>
     for {
       dataStores <- dataStoreDAO.findAll ?~> Msg.DataStore.listFailed
       js <- Fox.serialCombined(dataStores)(d => dataStoreService.publicWrites(d))
     } yield Ok(Json.toJson(js))
   }
 
-  def create: Action[DataStoreParameters] = sil.SecuredAction.async(validateJson[DataStoreParameters]) {
+  def create: Action[DataStoreParameters] = sil.SecuredAction.fox(validateJson[DataStoreParameters]) {
     implicit request =>
       for {
         _ <- userService.assertIsSuperUser(request.identity) ~> FORBIDDEN
@@ -61,7 +61,7 @@ class DataStoreController @Inject()(
       } yield Ok(Json.toJson(js))
   }
 
-  def delete(name: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def delete(name: String): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       multiUser <- multiUserDAO.findOne(request.identity._multiUser)
       _ <- Fox.fromBool(multiUser.isSuperUser) ?~> Msg.notAllowed ~> FORBIDDEN

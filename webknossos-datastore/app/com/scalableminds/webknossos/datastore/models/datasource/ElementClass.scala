@@ -78,15 +78,15 @@ object ElementClass extends ExtendedEnumeration {
 
   def fromProto(elementClassProto: ElementClassProto): ElementClass.Value =
     elementClassProto match {
-      case ElementClassProto.uint8  => uint8
-      case ElementClassProto.uint16 => uint16
-      case ElementClassProto.uint24 => uint24
-      case ElementClassProto.uint32 => uint32
-      case ElementClassProto.uint64 => uint64
-      case ElementClassProto.int8   => int8
-      case ElementClassProto.int16  => int16
-      case ElementClassProto.int32  => int32
-      case ElementClassProto.int64  => int64
+      case ElementClassProto.uint8           => uint8
+      case ElementClassProto.uint16          => uint16
+      case ElementClassProto.uint24          => uint24
+      case ElementClassProto.uint32          => uint32
+      case ElementClassProto.uint64          => uint64
+      case ElementClassProto.int8            => int8
+      case ElementClassProto.int16           => int16
+      case ElementClassProto.int32           => int32
+      case ElementClassProto.int64           => int64
       case ElementClassProto.Unrecognized(_) =>
         throw new RuntimeException(s"Cannot convert ElementClassProto $elementClassProto to ElementClass")
     }
@@ -107,12 +107,12 @@ object ElementClass extends ExtendedEnumeration {
 
   /* only used for segmentation layers, so only unsigned integers 8 16 32 64 */
   private def maxSegmentIdValue(elementClass: ElementClass.Value): Long = elementClass match {
-    case ElementClass.uint8  => (1L << 8L) - 1
-    case ElementClass.int8   => Byte.MaxValue
-    case ElementClass.uint16 => (1L << 16L) - 1
-    case ElementClass.int16  => Short.MaxValue
-    case ElementClass.uint32 => (1L << 32L) - 1
-    case ElementClass.int32  => Int.MaxValue
+    case ElementClass.uint8                       => (1L << 8L) - 1
+    case ElementClass.int8                        => Byte.MaxValue
+    case ElementClass.uint16                      => (1L << 16L) - 1
+    case ElementClass.int16                       => Short.MaxValue
+    case ElementClass.uint32                      => (1L << 32L) - 1
+    case ElementClass.int32                       => Int.MaxValue
     case ElementClass.uint64 | ElementClass.int64 =>
       (1L << 53L) - 1 // Front-end can only handle segment-ids up to (2^53)-1
   }
@@ -122,7 +122,8 @@ object ElementClass extends ExtendedEnumeration {
 
   def largestSegmentIdIsInRange(largestSegmentIdOpt: Option[Long], elementClass: ElementClass.Value): Boolean =
     segmentationElementClasses.contains(elementClass) && largestSegmentIdOpt.forall(largestSegmentId =>
-      largestSegmentId >= 0L && largestSegmentId <= maxSegmentIdValue(elementClass))
+      largestSegmentId >= 0L && largestSegmentId <= maxSegmentIdValue(elementClass)
+    )
 
   def toChannelAndZarrString(elementClass: ElementClass.Value): (Int, String) = elementClass match {
     case ElementClass.uint8  => (1, "|u1")

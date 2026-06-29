@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.{ByteUtils, Fox}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
-import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, ProtoGeometryImplicits}
+import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, ProtoGeometryConversions}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 
 import scala.collection.mutable
@@ -17,7 +17,7 @@ case class MergedVolumeStats(
     seenMags: Set[Vec3Int],
     idMaps: Seq[Map[Long, Long]],
     createdSegmentIndex: Boolean
-) extends ProtoGeometryImplicits {
+) extends ProtoGeometryConversions {
   def magsMergedWith(other: Seq[Vec3IntProto]): Seq[Vec3IntProto] =
     (seenMags ++ other.map(vec3IntFromProto).toSet).toSeq.sortBy(_.maxDim).map(vec3IntToProto)
 }
@@ -31,7 +31,7 @@ class MergedVolume(elementClass: ElementClassProto, remapSegmentIds: Boolean, in
     extends ByteUtils
     with VolumeDataZipHelper
     with VolumeBucketCompression
-    with ProtoGeometryImplicits {
+    with ProtoGeometryConversions {
   private val mergedVolume = mutable.HashMap.empty[BucketPosition, Array[Byte]]
   private val idSets = mutable.ListBuffer[mutable.Set[Long]]()
   private var idMaps = Seq[(Array[Long], Array[Long])]()
@@ -39,7 +39,8 @@ class MergedVolume(elementClass: ElementClassProto, remapSegmentIds: Boolean, in
   private val bytesPerElement = ElementClass.bytesPerElement(ElementClass.fromProto(elementClass))
   private val elementsAreSigned = ElementClass.isSigned(ElementClass.fromProto(elementClass))
   private lazy val expectedUncompressedBucketSize: Int =
-    ElementClass.bytesPerElement(elementClass) * scala.math.pow(DataLayer.bucketLength, 3).intValue
+    ElementClass
+      .bytesPerElement(ElementClass.fromProto(elementClass)) * scala.math.pow(DataLayer.bucketLength, 3).intValue
   private lazy val bucketScanner = new NativeBucketScanner()
 
   def addIdSetFromDataZip(zipFile: File)(implicit ec: ExecutionContext): Fox[Unit] =
@@ -56,16 +57,18 @@ class MergedVolume(elementClass: ElementClassProto, remapSegmentIds: Boolean, in
       } yield ()
     } else Fox.successful(())
 
-  def addIdSetFromBucketStream(bucketStream: Iterator[(BucketPosition, Array[Byte])], allowedMags: Set[Vec3Int]): Unit =
+  def addIdSetFromBucketStream(
+      bucketStream: Iterator[(BucketPosition, Array[Byte])],
+      allowedMags: Set[Vec3Int]
+  ): Unit =
     if (remapSegmentIds) {
       val idSet: mutable.Set[Long] = scala.collection.mutable.Set()
-      bucketStream.foreach {
-        case (bucketPosition, data) =>
-          if (allowedMags.contains(bucketPosition.mag)) {
-            val bucketSegmentIds =
-              bucketScanner.collectSegmentIds(data, bytesPerElement, elementsAreSigned, skipZeroes = true)
-            idSet ++= bucketSegmentIds
-          }
+      bucketStream.foreach { case (bucketPosition, data) =>
+        if (allowedMags.contains(bucketPosition.mag)) {
+          val bucketSegmentIds =
+            bucketScanner.collectSegmentIds(data, bytesPerElement, elementsAreSigned, skipZeroes = true)
+          idSet ++= bucketSegmentIds
+        }
       }
       addIdSet(idSet)
     }
@@ -94,14 +97,15 @@ class MergedVolume(elementClass: ElementClassProto, remapSegmentIds: Boolean, in
       idMaps = idMapsBuffer.toSeq.map(_.toArray.unzip)
     }
 
-  def addFromBucketStream(sourceVolumeIndex: Int,
-                          bucketStream: Iterator[(BucketPosition, Array[Byte])],
-                          allowedMags: Option[Set[Vec3Int]] = None): Unit =
-    bucketStream.foreach {
-      case (bucketPosition, bytes) =>
-        if (!isAllZero(bytes) && allowedMags.forall(_.contains(bucketPosition.mag))) {
-          add(sourceVolumeIndex, bucketPosition, bytes)
-        }
+  def addFromBucketStream(
+      sourceVolumeIndex: Int,
+      bucketStream: Iterator[(BucketPosition, Array[Byte])],
+      allowedMags: Option[Set[Vec3Int]] = None
+  ): Unit =
+    bucketStream.foreach { case (bucketPosition, bytes) =>
+      if (!isAllZero(bytes) && allowedMags.forall(_.contains(bucketPosition.mag))) {
+        add(sourceVolumeIndex, bucketPosition, bytes)
+      }
     }
 
   def addFromDataZip(sourceVolumeIndex: Int, zipFile: File)(implicit ec: ExecutionContext): Fox[Unit] =
@@ -116,13 +120,15 @@ class MergedVolume(elementClass: ElementClassProto, remapSegmentIds: Boolean, in
       val previousBucketData = mergedVolume(bucketPosition)
       val idMap = if (skipMapping) (Array.empty[Long], Array.empty[Long]) else idMaps(sourceVolumeIndex)
       val decompressed = decompressIfNeeded(previousBucketData, expectedUncompressedBucketSize, "")
-      bucketScanner.mergeVolumeBucketInPlace(decompressed,
-                                             data,
-                                             skipMapping,
-                                             idMap._1,
-                                             idMap._2,
-                                             bytesPerElement,
-                                             elementsAreSigned)
+      bucketScanner.mergeVolumeBucketInPlace(
+        decompressed,
+        data,
+        skipMapping,
+        idMap._1,
+        idMap._2,
+        bytesPerElement,
+        elementsAreSigned
+      )
       val compressed = compressVolumeBucket(decompressed, expectedUncompressedBucketSize)
       mergedVolume.update(bucketPosition, compressed)
     } else {
@@ -145,8 +151,8 @@ class MergedVolume(elementClass: ElementClassProto, remapSegmentIds: Boolean, in
     } yield ()
 
   private def presentMags: Set[Vec3Int] =
-    mergedVolume.map {
-      case (bucketPosition: BucketPosition, _) => bucketPosition.mag
+    mergedVolume.map { case (bucketPosition: BucketPosition, _) =>
+      bucketPosition.mag
     }.toSet
 
   def stats(createdSegmentIndex: Boolean): MergedVolumeStats =

@@ -11,11 +11,12 @@ import play.api.routing.Router
 import scala.concurrent.Future
 
 @Singleton
-class ErrorHandler @Inject()(env: Environment,
-                             config: Configuration,
-                             sourceMapper: OptionalSourceMapper,
-                             router: Provider[Router])
-    extends DefaultHttpErrorHandler(env, config, sourceMapper, router)
+class ErrorHandler @Inject() (
+    env: Environment,
+    config: Configuration,
+    sourceMapper: OptionalSourceMapper,
+    router: Provider[Router]
+) extends DefaultHttpErrorHandler(env, config, sourceMapper, router)
     with SecuredErrorHandler {
 
   override def onNotAuthenticated(implicit request: RequestHeader): Future[Result] =

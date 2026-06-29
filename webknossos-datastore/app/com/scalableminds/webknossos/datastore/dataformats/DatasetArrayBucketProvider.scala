@@ -4,7 +4,8 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.datareaders.DatasetArray
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Array
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedArray
@@ -22,12 +23,12 @@ import ucar.ma2.{Array => MultiArray}
 
 import scala.concurrent.ExecutionContext
 
-class DatasetArrayBucketProvider(dataLayer: StaticLayer,
-                                 dataSourceId: DataSourceId,
-                                 dataVaultServiceOpt: Option[DataVaultService],
-                                 sharedChunkContentsCacheOpt: Option[AlfuCache[String, MultiArray]])
-    extends BucketProvider
-    with FoxImplicits
+class DatasetArrayBucketProvider(
+    dataLayer: StaticLayer,
+    dataSourceId: DataSourceId,
+    dataVaultServiceOpt: Option[DataVaultService],
+    sharedChunkContentsCacheOpt: Option[AlfuCache[String, MultiArray]]
+) extends BucketProvider
     with LazyLogging {
 
   // Cache the DatasetArrays of all mags of this layer
@@ -35,19 +36,24 @@ class DatasetArrayBucketProvider(dataLayer: StaticLayer,
 
   def load(readInstruction: DataReadInstruction)(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
-      datasetArray <- datasetArrayCache.getOrLoad(readInstruction.bucket.mag,
-                                                  _ => openDatasetArrayWithTimeLogging(readInstruction))
+      datasetArray <- datasetArrayCache.getOrLoad(
+        readInstruction.bucket.mag,
+        _ => openDatasetArrayWithTimeLogging(readInstruction)
+      )
       bucket = readInstruction.bucket
       offset = Vec3Int(bucket.topLeft.voxelXInMag, bucket.topLeft.voxelYInMag, bucket.topLeft.voxelZInMag)
       shape = Vec3Int.full(bucket.bucketLength)
-      bucketData <- datasetArray.readBytesWithAdditionalCoordinates(offset,
-                                                                    shape,
-                                                                    bucket.additionalCoordinates,
-                                                                    dataLayer.elementClass == ElementClass.uint24)
+      bucketData <- datasetArray.readBytesWithAdditionalCoordinates(
+        offset,
+        shape,
+        bucket.additionalCoordinates,
+        dataLayer.elementClass == ElementClass.uint24
+      )
     } yield bucketData
 
   private def openDatasetArrayWithTimeLogging(
-      readInstruction: DataReadInstruction)(using ec: ExecutionContext, tc: TokenContext): Fox[DatasetArray] = {
+      readInstruction: DataReadInstruction
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[DatasetArray] = {
     val before = Instant.now
     val result = openDatasetArray(readInstruction)
     result.onComplete { _ =>
@@ -61,56 +67,67 @@ class DatasetArrayBucketProvider(dataLayer: StaticLayer,
     result
   }
 
-  private def openDatasetArray(readInstruction: DataReadInstruction)(using ec: ExecutionContext,
-                                                                     tc: TokenContext): Fox[DatasetArray] = {
+  private def openDatasetArray(
+      readInstruction: DataReadInstruction
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[DatasetArray] = {
     val magLocatorOpt: Option[MagLocator] =
       dataLayer.mags.find(_.mag == readInstruction.bucket.mag)
 
     magLocatorOpt match {
-      case None => Fox.empty
+      case None             => Fox.empty
       case Some(magLocator) =>
         dataVaultServiceOpt match {
           case Some(dataVaultServiceOpt: DataVaultService) =>
             for {
-              magPath: VaultPath <- dataVaultServiceOpt.vaultPathFor(magLocator,
-                                                                     readInstruction.dataSourceId,
-                                                                     readInstruction.dataLayer.name)
+              magPath: VaultPath <- dataVaultServiceOpt.vaultPathFor(
+                magLocator,
+                readInstruction.dataSourceId,
+                readInstruction.dataLayer.name
+              )
               chunkContentsCache <- sharedChunkContentsCacheOpt.toFox
               datasetArray <- dataLayer.dataFormat match {
                 case DataFormat.zarr =>
-                  ZarrArray.open(magPath,
-                                 dataSourceId,
-                                 dataLayer.name,
-                                 magLocator.axisOrder,
-                                 magLocator.channelIndex,
-                                 dataLayer.additionalAxes,
-                                 chunkContentsCache)
+                  ZarrArray.open(
+                    magPath,
+                    dataSourceId,
+                    dataLayer.name,
+                    magLocator.axisOrder,
+                    magLocator.channelIndex,
+                    dataLayer.additionalAxes,
+                    chunkContentsCache
+                  )
                 case DataFormat.wkw =>
                   WKWArray.open(magPath, dataSourceId, dataLayer.name, chunkContentsCache)
                 case DataFormat.n5 =>
-                  N5Array.open(magPath,
-                               dataSourceId,
-                               dataLayer.name,
-                               magLocator.axisOrder,
-                               magLocator.channelIndex,
-                               dataLayer.additionalAxes,
-                               chunkContentsCache)
+                  N5Array.open(
+                    magPath,
+                    dataSourceId,
+                    dataLayer.name,
+                    magLocator.axisOrder,
+                    magLocator.channelIndex,
+                    dataLayer.additionalAxes,
+                    chunkContentsCache
+                  )
                 case DataFormat.zarr3 =>
-                  Zarr3Array.open(magPath,
-                                  dataSourceId,
-                                  dataLayer.name,
-                                  magLocator.axisOrder,
-                                  magLocator.channelIndex,
-                                  dataLayer.additionalAxes,
-                                  chunkContentsCache)
+                  Zarr3Array.open(
+                    magPath,
+                    dataSourceId,
+                    dataLayer.name,
+                    magLocator.axisOrder,
+                    magLocator.channelIndex,
+                    dataLayer.additionalAxes,
+                    chunkContentsCache
+                  )
                 case DataFormat.neuroglancerPrecomputed =>
-                  PrecomputedArray.open(magPath,
-                                        dataSourceId,
-                                        dataLayer.name,
-                                        magLocator.axisOrder,
-                                        magLocator.channelIndex,
-                                        dataLayer.additionalAxes,
-                                        chunkContentsCache)
+                  PrecomputedArray.open(
+                    magPath,
+                    dataSourceId,
+                    dataLayer.name,
+                    magLocator.axisOrder,
+                    magLocator.channelIndex,
+                    dataLayer.additionalAxes,
+                    chunkContentsCache
+                  )
                 case _ => Fox.failure(s"Cannot open ${dataLayer.dataFormat} layer “${dataLayer.name}” as DatasetArray")
               }
             } yield datasetArray

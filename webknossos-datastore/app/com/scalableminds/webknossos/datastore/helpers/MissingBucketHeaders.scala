@@ -1,23 +1,27 @@
 package com.scalableminds.webknossos.datastore.helpers
 
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.util.tools.Box.tryo
 
 import scala.concurrent.ExecutionContext
 
-trait MissingBucketHeaders extends FoxImplicits {
+trait MissingBucketHeaders {
 
   protected lazy val missingBucketsHeader: String = "MISSING-BUCKETS"
 
   protected def createMissingBucketsHeaders(indices: List[Int]): Seq[(String, String)] =
-    List(missingBucketsHeader -> formatMissingBucketList(indices),
-         "Access-Control-Expose-Headers" -> missingBucketsHeader)
+    List(
+      missingBucketsHeader -> formatMissingBucketList(indices),
+      "Access-Control-Expose-Headers" -> missingBucketsHeader
+    )
 
   private def formatMissingBucketList(indices: List[Int]): String =
     "[" + indices.mkString(", ") + "]"
 
-  protected def parseMissingBucketHeader(headerLiteralOpt: Option[String])(
-      implicit ec: ExecutionContext): Fox[List[Int]] =
+  protected def parseMissingBucketHeader(
+      headerLiteralOpt: Option[String]
+  )(implicit ec: ExecutionContext): Fox[List[Int]] =
     for {
       headerLiteral: String <- headerLiteralOpt.toFox
       headerLiteralTrim = headerLiteral.trim

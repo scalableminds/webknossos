@@ -2,7 +2,8 @@ package models.annotation.handler
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.DBAccessContext
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 
 import javax.inject.Inject
 import models.annotation._
@@ -15,7 +16,7 @@ import models.dataset.{DatasetDAO, DatasetService}
 
 import scala.concurrent.ExecutionContext
 
-class TaskInformationHandler @Inject()(
+class TaskInformationHandler @Inject() (
     taskDAO: TaskDAO,
     annotationDAO: AnnotationDAO,
     userService: UserService,
@@ -23,12 +24,11 @@ class TaskInformationHandler @Inject()(
     projectDAO: ProjectDAO,
     val datasetService: DatasetService,
     val datasetDAO: DatasetDAO,
-    val annotationDataSourceTemporaryStore: AnnotationDataSourceTemporaryStore)(implicit val ec: ExecutionContext)
-    extends AnnotationInformationHandler
-    with FoxImplicits {
+    val annotationDataSourceTemporaryStore: AnnotationDataSourceTemporaryStore
+)(implicit val ec: ExecutionContext)
+    extends AnnotationInformationHandler {
 
-  override def provideAnnotation(taskId: ObjectId, userOpt: Option[User])(
-      using ctx: DBAccessContext): Fox[Annotation] =
+  override def provideAnnotation(taskId: ObjectId, userOpt: Option[User])(using ctx: DBAccessContext): Fox[Annotation] =
     for {
       task <- taskDAO.findOne(taskId) ?~> Msg.Task.notFound(taskId)
       annotations <- annotationDAO.findAllByTaskIdAndType(task._id, AnnotationType.Task)
@@ -56,13 +56,11 @@ class TaskInformationHandler @Inject()(
     for {
       task <- taskDAO.findOne(taskId) ?~> Msg.Task.notFound(taskId)
       project <- projectDAO.findOne(task._project)
-    } yield {
-      new AnnotationRestrictions {
-        override def allowAccess(userOption: Option[User]): Fox[Boolean] =
-          (for {
-            user <- userOption.toFox
-            allowed <- userService.isTeamManagerOrAdminOf(user, project._team)
-          } yield allowed).orElse(Fox.successful(false))
-      }
+    } yield new AnnotationRestrictions {
+      override def allowAccess(userOption: Option[User]): Fox[Boolean] =
+        (for {
+          user <- userOption.toFox
+          allowed <- userService.isTeamManagerOrAdminOf(user, project._team)
+        } yield allowed).orElse(Fox.successful(false))
     }
 }

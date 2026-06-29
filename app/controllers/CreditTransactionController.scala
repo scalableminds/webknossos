@@ -4,7 +4,8 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import models.organization.{
   CreditState,
   CreditTransaction,
@@ -25,32 +26,38 @@ import security.WkEnv
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class CreditTransactionController @Inject()(organizationDAO: OrganizationDAO,
-                                            creditTransactionService: CreditTransactionService,
-                                            freeCreditTransactionService: FreeCreditTransactionService,
-                                            creditTransactionDAO: CreditTransactionDAO,
-                                            creditTransactionPublicWritesService: CreditTransactionPublicWritesService,
-                                            userService: UserService,
-                                            sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
-    extends Controller
-    with FoxImplicits {
+class CreditTransactionController @Inject() (
+    organizationDAO: OrganizationDAO,
+    creditTransactionService: CreditTransactionService,
+    freeCreditTransactionService: FreeCreditTransactionService,
+    creditTransactionDAO: CreditTransactionDAO,
+    creditTransactionPublicWritesService: CreditTransactionPublicWritesService,
+    userService: UserService,
+    sil: Silhouette[WkEnv]
+)(implicit ec: ExecutionContext)
+    extends Controller {
 
-  def addCredits(organizationId: String,
-                 creditAmount: Int,
-                 moneySpent: String,
-                 currency: String,
-                 comment: Option[String],
-                 expiresAt: Option[String]): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def addCredits(
+      organizationId: String,
+      creditAmount: Int,
+      moneySpent: String,
+      currency: String,
+      comment: Option[String],
+      expiresAt: Option[String]
+  ): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       _ <- userService.assertIsSuperUser(request.identity) ?~> "Only super users can add credits to an organization"
-      _ <- organizationDAO.findOne(organizationId)(using GlobalAccessContext) ?~> Msg.Organization.notFound(organizationId)
+      _ <- organizationDAO.findOne(organizationId)(using GlobalAccessContext) ?~> Msg.Organization.notFound(
+        organizationId
+      )
       moneySpentInDecimal <- tryo(BigDecimal(moneySpent)).toFox ?~> s"moneySpent $moneySpent is not a valid decimal"
       _ <- Fox.fromBool(moneySpentInDecimal >= 0) ?~> "moneySpent must be a positive number"
       _ <- Fox.fromBool(creditAmount > 0) ?~> "creditAmount must be a positive number"
       commentNoOptional = comment.getOrElse(s"Adding $creditAmount credits for $moneySpentInDecimal $currency.")
       expirationDateOpt <- Fox.runOptional(expiresAt)(Instant.fromString(_).toFox)
-      _ <- Fox
-        .runOptional(expirationDateOpt)(expirationDate => Fox.fromBool(!expirationDate.isPast)) ?~> "Expiration date must be in the future"
+      _ <- Fox.runOptional(expirationDateOpt)(expirationDate =>
+        Fox.fromBool(!expirationDate.isPast)
+      ) ?~> "Expiration date must be in the future"
       milliCreditsAmount = creditAmount * 1000
       addCreditsTransaction = CreditTransaction(
         ObjectId.generate,
@@ -68,7 +75,7 @@ class CreditTransactionController @Inject()(organizationDAO: OrganizationDAO,
   }
 
   def refundCreditTransaction(organizationId: String, transactionId: ObjectId): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       for {
         _ <- userService.assertIsSuperUser(request.identity) ?~> "Only super users can manually refund credits"
         transaction <- creditTransactionDAO.findOne(transactionId)
@@ -77,14 +84,14 @@ class CreditTransactionController @Inject()(organizationDAO: OrganizationDAO,
       } yield Ok
     }
 
-  def revokeExpiredCredits(): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def revokeExpiredCredits(): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       _ <- userService.assertIsSuperUser(request.identity) ?~> "Only super users can manually revoke expired credits"
       _ <- freeCreditTransactionService.revokeExpiredCredits()
     } yield Ok
   }
 
-  def list(): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def list(): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       isSuperUser <- userService.isSuperUser(request.identity._multiUser)
       _ <- Fox.fromBool(isSuperUser || request.identity.isAdmin) ?~> Msg.Organization.listCreditTransactionsOnlyAdmin

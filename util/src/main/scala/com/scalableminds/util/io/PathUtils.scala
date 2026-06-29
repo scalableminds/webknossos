@@ -1,16 +1,20 @@
 package com.scalableminds.util.io
 
 import java.io.File
-import java.nio.file._
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Box, Failure, Full}
 import org.apache.commons.io.FileUtils
 
 import scala.jdk.CollectionConverters.IteratorHasAsScala
-import java.nio.file.{Files, Paths, SimpleFileVisitor, FileVisitResult}
-import java.nio.file.attribute.BasicFileAttributes
-import org.apache.commons.io.FileUtils
+import java.nio.file.{
+  AccessDeniedException,
+  FileAlreadyExistsException,
+  FileVisitOption,
+  Files,
+  NoSuchFileException,
+  Path
+}
 import scala.util.Random
 
 object PathUtils extends LazyLogging {
@@ -203,7 +207,7 @@ object PathUtils extends LazyLogging {
   // use when you want to move a directory to a subdir of itself. Otherwise, just go for FileUtils.moveDirectory
   def moveDirectoryViaTemp(source: Path, dst: Path): Box[Unit] = tryo {
     val tmpId = Random.alphanumeric.take(10).mkString("")
-    val tmpPath = source.getParent.resolve(s".${tmpId}")
+    val tmpPath = source.getParent.resolve(s".$tmpId")
     FileUtils.moveDirectory(source.toFile, tmpPath.toFile)
     FileUtils.moveDirectory(tmpPath.toFile, dst.toFile)
   }

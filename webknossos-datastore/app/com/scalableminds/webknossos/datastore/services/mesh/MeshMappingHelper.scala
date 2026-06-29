@@ -6,13 +6,14 @@ import com.scalableminds.webknossos.datastore.services.{
   DSRemoteTracingstoreClient,
   DSRemoteWebknossosClient
 }
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId}
 import com.scalableminds.util.tools.Full
 
 import scala.concurrent.ExecutionContext
 
-trait MeshMappingHelper extends FoxImplicits {
+trait MeshMappingHelper {
 
   protected val dsRemoteWebknossosClient: DSRemoteWebknossosClient
   protected val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient
@@ -56,15 +57,17 @@ trait MeshMappingHelper extends FoxImplicits {
             tracingstoreUri,
             tracingId,
             annotationVersionOpt,
-            agglomerateId)
-          segmentIds <- if (segmentIdsResult.agglomerateIdIsPresent)
-            Fox.successful(segmentIdsResult.segmentIds)
-          else // the agglomerate id is not present in the editable mapping. Fetch its info from the base mapping.
-            for {
-              agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-              agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSourceId, dataLayer, mappingName)
-              localSegmentIds <- agglomerateService.segmentIdsForAgglomerateId(agglomerateFileKey, agglomerateId)
-            } yield localSegmentIds
+            agglomerateId
+          )
+          segmentIds <-
+            if (segmentIdsResult.agglomerateIdIsPresent)
+              Fox.successful(segmentIdsResult.segmentIds)
+            else // the agglomerate id is not present in the editable mapping. Fetch its info from the base mapping.
+              for {
+                agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
+                agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSourceId, dataLayer, mappingName)
+                localSegmentIds <- agglomerateService.segmentIdsForAgglomerateId(agglomerateFileKey, agglomerateId)
+              } yield localSegmentIds
         } yield segmentIds
       case _ => Fox.failure("Cannot determine segment ids for editable mapping without base mapping")
     }

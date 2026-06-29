@@ -14,6 +14,7 @@ import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import constants from "viewer/constants";
 import { reuseInstanceOnEquality } from "viewer/model/accessors/accessor_helpers";
+import { isSaving } from "viewer/model/accessors/annotation_accessor";
 import { Model, Store } from "viewer/singletons";
 import type { SaveState } from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
@@ -53,7 +54,7 @@ function SaveButton() {
       ? progressInfo.processedActionCount / progressInfo.totalActionCount
       : null;
   });
-  const isBusy = useWkSelector((state) => state.save.isBusy);
+  const isBusy = useWkSelector(isSaving);
   const windowWidth = useWindowWidth();
 
   const [isStateSaved, setIsStateSaved] = useState(false);

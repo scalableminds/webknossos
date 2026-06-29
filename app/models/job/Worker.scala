@@ -6,6 +6,7 @@ import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.scalableminds.webknossos.schema.Tables.{Workers, WorkersRow, GetResultWorkersRow}
@@ -46,8 +47,8 @@ class WorkerDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
         JobCommand.fromString(s).toFox ?~> f"$s is not a valid job command"
       }
     } yield Worker(
-      ObjectId(r._Id),
-      r._Datastore,
+      ObjectId(r._id),
+      r._datastore,
       r.name,
       r.key,
       r.maxparallelhighpriorityjobs,

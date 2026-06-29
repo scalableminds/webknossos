@@ -6,7 +6,8 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.image.Color
 import com.scalableminds.util.mvc.MimeTypes
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.{StaticLayer, UsableDataSource}
 import com.typesafe.scalalogging.LazyLogging
@@ -28,7 +29,6 @@ class ThumbnailService @Inject() (
     datasetDAO: DatasetDAO,
     thumbnailDAO: ThumbnailDAO
 ) extends LazyLogging
-    with FoxImplicits
     with MimeTypes {
 
   private val DefaultThumbnailWidth = 400

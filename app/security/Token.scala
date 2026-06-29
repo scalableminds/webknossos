@@ -5,6 +5,7 @@ import play.silhouette.impl.authenticators.BearerTokenAuthenticator
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.schema.Tables.{Tokens, TokensRow, GetResultTokensRow}
 import TokenType.TokenType
 import com.scalableminds.util.objectid.ObjectId
@@ -71,9 +72,9 @@ class TokenDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       tokenType <- TokenType.fromString(r.tokentype).toFox
     } yield Token(
-      ObjectId(r._Id),
+      ObjectId(r._id),
       r.value,
-      LoginInfo(r.logininfoProviderid, r.logininfoProviderkey),
+      LoginInfo(r.logininfo_providerid, r.logininfo_providerkey),
       Instant.fromSql(r.lastuseddatetime),
       Instant.fromSql(r.expirationdatetime),
       r.idletimeout.map(FiniteDuration(_, MILLISECONDS)),

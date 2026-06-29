@@ -2,7 +2,8 @@ package models.dataset
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext}
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.datasource.{
   StaticColorLayer,
   StaticLayer,
@@ -16,8 +17,7 @@ import play.api.http.Status.NOT_FOUND
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class LayerToLinkService @Inject() (datasetDAO: DatasetDAO, userService: UserService, datasetService: DatasetService)
-    extends FoxImplicits {
+class LayerToLinkService @Inject() (datasetDAO: DatasetDAO, userService: UserService, datasetService: DatasetService) {
 
   def validateLayerToLink(layerIdentifier: LinkedLayerIdentifier, requestingUser: User)(implicit
       ec: ExecutionContext

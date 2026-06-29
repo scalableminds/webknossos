@@ -5,6 +5,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.schema.Tables.{Tasks, TasksRow, GetResultTasksRow}
 import com.scalableminds.webknossos.tracingstore.tracings.NamedBoundingBox
 
@@ -49,11 +50,11 @@ class TaskDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
         .fromList(parseArrayLiteral(r.editrotation).map(_.toDouble))
         .toFox ?~> "could not parse edit rotation"
     } yield Task(
-      ObjectId(r._Id),
-      ObjectId(r._Project),
-      r._Script.map(ObjectId(_)),
-      ObjectId(r._Tasktype),
-      Experience(r.neededexperienceDomain, r.neededexperienceValue),
+      ObjectId(r._id),
+      ObjectId(r._project),
+      r._script.map(ObjectId(_)),
+      ObjectId(r._tasktype),
+      Experience(r.neededexperience_domain, r.neededexperience_value),
       r.totalinstances,
       r.pendinginstances,
       r.tracingtime,

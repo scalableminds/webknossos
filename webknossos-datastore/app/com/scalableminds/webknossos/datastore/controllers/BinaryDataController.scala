@@ -8,10 +8,10 @@ import com.scalableminds.util.image.{Color, JPEGWriter}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.helpers.MissingBucketHeaders
 import com.scalableminds.webknossos.datastore.image.{ImageCreator, ImageCreatorParameters}
-import com.scalableminds.webknossos.datastore.models.DataRequestCollection._
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.requests.{
   DataServiceDataRequest,
@@ -53,7 +53,7 @@ class BinaryDataController @Inject() (
   val adHocMeshService: AdHocMeshService = adHocMeshServiceHolder.dataStoreAdHocMeshService
 
   def requestViaWebknossos(datasetId: ObjectId, dataLayerName: String): Action[List[WebknossosDataRequest]] =
-    Action.async(validateJson[List[WebknossosDataRequest]]) { implicit request =>
+    Action.fox(validateJson[List[WebknossosDataRequest]]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 10 minutes) {
           val t = Instant.now
@@ -94,7 +94,7 @@ class BinaryDataController @Inject() (
       // If true, use lossy compression by sending only half-bytes of the data
       halfByte: Boolean,
       mappingName: Option[String]
-  ): Action[AnyContent] = Action.async { implicit request =>
+  ): Action[AnyContent] = Action.fox { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
         (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
@@ -106,17 +106,17 @@ class BinaryDataController @Inject() (
           depth,
           DataServiceRequestSettings(halfByte = halfByte, appliedAgglomerate = mappingName)
         )
-        (data, indices) <- requestData(datasetId, dataSource.id, dataLayer, dataRequest)
+        (data, indices) <- requestData(datasetId, dataSource.id, dataLayer, List(dataRequest))
       } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices)*)
     }
   }
 
   def requestRawCuboidPost(datasetId: ObjectId, dataLayerName: String): Action[RawCuboidRequest] =
-    Action.async(validateJson[RawCuboidRequest]) { implicit request =>
+    Action.fox(validateJson[RawCuboidRequest]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
-          (data, indices) <- requestData(datasetId, dataSource.id, dataLayer, request.body)
+          (data, indices) <- requestData(datasetId, dataSource.id, dataLayer, List(request.body))
         } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices)*)
       }
     }
@@ -131,7 +131,7 @@ class BinaryDataController @Inject() (
       y: Int,
       z: Int,
       cubeSize: Int
-  ): Action[AnyContent] = Action.async { implicit request =>
+  ): Action[AnyContent] = Action.fox { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
         (dataSource, dataLayer) <- datasetCache.getWithLayer(
@@ -144,7 +144,7 @@ class BinaryDataController @Inject() (
           cubeSize,
           cubeSize
         )
-        (data, indices) <- requestData(datasetId, dataSource.id, dataLayer, dataRequest)
+        (data, indices) <- requestData(datasetId, dataSource.id, dataLayer, List(dataRequest))
       } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices)*)
     }
   }
@@ -163,7 +163,7 @@ class BinaryDataController @Inject() (
       intensityMax: Option[Double],
       color: Option[String],
       invertColor: Option[Boolean]
-  ): Action[RawBuffer] = Action.async(parse.raw) { implicit request =>
+  ): Action[RawBuffer] = Action.fox(parse.raw) { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
         (dataSource, dataLayer) <- datasetCache.getWithLayer(
@@ -178,7 +178,7 @@ class BinaryDataController @Inject() (
           depth = 1,
           DataServiceRequestSettings(appliedAgglomerate = mappingName)
         )
-        (data, _) <- requestData(datasetId, dataSource.id, dataLayer, dataRequest)
+        (data, _) <- requestData(datasetId, dataSource.id, dataLayer, List(dataRequest))
         intensityRange: Option[(Double, Double)] = intensityMin.flatMap(min => intensityMax.map(max => (min, max)))
         layerColor = color.flatMap(Color.fromHTML)
         params = ImageCreatorParameters(
@@ -209,7 +209,7 @@ class BinaryDataController @Inject() (
       datasetId: ObjectId,
       dataLayerName: String,
       mappingName: String
-  ): Action[AnyContent] = Action.async { implicit request =>
+  ): Action[AnyContent] = Action.fox { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
         (dataSource, dataLayer) <- datasetCache.getWithLayer(
@@ -227,7 +227,7 @@ class BinaryDataController @Inject() (
   /** Handles ad-hoc mesh requests.
     */
   def requestAdHocMesh(datasetId: ObjectId, dataLayerName: String): Action[WebknossosAdHocMeshRequest] =
-    Action.async(validateJson[WebknossosAdHocMeshRequest]) { implicit request =>
+    Action.fox(validateJson[WebknossosAdHocMeshRequest]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
           (dataSource, dataLayer) <- datasetCache.getWithLayer(
@@ -271,7 +271,7 @@ class BinaryDataController @Inject() (
     "[" + neighbors.mkString(", ") + "]"
 
   def findData(datasetId: ObjectId, dataLayerName: String): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
           (dataSource, dataLayer) <- datasetCache.getWithLayer(
@@ -284,7 +284,7 @@ class BinaryDataController @Inject() (
     }
 
   def histogram(datasetId: ObjectId, dataLayerName: String): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Msg.Dataset.Histogram
@@ -299,7 +299,7 @@ class BinaryDataController @Inject() (
       datasetId: ObjectId,
       dataSourceId: DataSourceId,
       dataLayer: DataLayer,
-      dataRequests: DataRequestCollection
+      dataRequests: List[AbstractDataRequest]
   )(using tc: TokenContext): Fox[(Array[Byte], List[Int])] = {
     val requests =
       dataRequests.map(r =>

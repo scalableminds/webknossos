@@ -6,13 +6,14 @@ import com.scalableminds.webknossos.datastore.services.{
   DSRemoteTracingstoreClient,
   DSRemoteWebknossosClient
 }
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId}
 import com.scalableminds.util.tools.Full
 
 import scala.concurrent.ExecutionContext
 
-trait MeshMappingHelper extends FoxImplicits {
+trait MeshMappingHelper {
 
   protected val dsRemoteWebknossosClient: DSRemoteWebknossosClient
   protected val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient

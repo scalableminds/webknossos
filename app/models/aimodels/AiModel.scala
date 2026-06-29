@@ -4,7 +4,8 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits, Full}
+import com.scalableminds.util.tools.{Fox, Full}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.schema.Tables.{Aimodels, AimodelsRow, GetResultAimodelsRow}
 import models.aimodels.AiModelCategory.AiModelCategory
 import models.dataset.{DataStore, DataStoreDAO, DataStoreService, WKRemoteDataStoreClient}
@@ -55,8 +56,7 @@ class AiModelService @Inject() (
     jobDAO: JobDAO,
     jobService: JobService,
     rpc: RPC
-) extends FoxImplicits
-    with LazyLogging {
+) extends LazyLogging {
 
   val pretrainedNeuronModelId: ObjectId = ObjectId("576500000000000000000001")
   val pretrainedMitochondriaModelId: ObjectId = ObjectId("576500000000000000000002")
@@ -190,15 +190,15 @@ class AiModelDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   protected def parse(r: AimodelsRow): Fox[AiModel] =
     for {
-      trainingAnnotationIds <- findTrainingAnnotationIdsFor(ObjectId(r._Id))
+      trainingAnnotationIds <- findTrainingAnnotationIdsFor(ObjectId(r._id))
       path <- Fox.runOptional(r.path)(UPath.fromString(_).toFox)
       aiModelWithoutSharedOrgas = AiModel(
-        ObjectId(r._Id),
-        r._Organization,
+        ObjectId(r._id),
+        r._organization,
         List(),
-        r._Datastore.trim,
-        r._User.map(ObjectId(_)),
-        r._Trainingjob.map(ObjectId(_)),
+        r._datastore.trim,
+        r._user.map(ObjectId(_)),
+        r._trainingjob.map(ObjectId(_)),
         trainingAnnotationIds,
         path,
         r.uploadtopathispending,

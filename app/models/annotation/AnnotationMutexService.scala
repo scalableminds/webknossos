@@ -5,7 +5,8 @@ import org.apache.pekko.actor.ActorSystem
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.schema.Tables.AnnotationMutexesRow
 import com.typesafe.scalalogging.LazyLogging
@@ -32,7 +33,6 @@ class AnnotationMutexService @Inject() (
     annotationMutexDAO: AnnotationMutexDAO
 )(implicit val ec: ExecutionContext)
     extends IntervalScheduler
-    with FoxImplicits
     with LazyLogging {
 
   override protected def tickerInterval: FiniteDuration = 1 hour
@@ -79,8 +79,8 @@ class AnnotationMutexDAO @Inject() (sqlClient: SqlClient)(implicit ec: Execution
 
   private def parse(r: AnnotationMutexesRow): AnnotationMutex =
     AnnotationMutex(
-      ObjectId(r._Annotation),
-      ObjectId(r._User),
+      ObjectId(r._annotation),
+      ObjectId(r._user),
       r.sessionid,
       Instant.fromSql(r.expiry)
     )

@@ -3,6 +3,7 @@ package models.job
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.schema.Tables.{Jobs, JobsRow, GetResultJobsRow}
 import models.job.JobState.JobState
 import models.job.JobCommand.JobCommand
@@ -110,15 +111,15 @@ class JobDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
       command <- JobCommand.fromString(r.command).toFox
       commandArgs <- JsonHelper.parseAs[JsObject](r.commandargs).toFox
     } yield Job(
-      ObjectId(r._Id),
-      ObjectId(r._Owner),
-      r._Datastore.trim,
+      ObjectId(r._id),
+      ObjectId(r._owner),
+      r._datastore.trim,
       command,
       commandArgs,
       state,
       manualStateOpt,
-      r._Worker.map(ObjectId(_)),
-      r._VoxelyticsWorkflowhash,
+      r._worker.map(ObjectId(_)),
+      r._voxelytics_workflowhash,
       r.latestrunid,
       r.returnvalue,
       r.retriedbysuperuser,

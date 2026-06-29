@@ -4,7 +4,7 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -42,14 +42,13 @@ class WKRemoteTracingStoreController @Inject() (
     wkConf: WkConf,
     annotationDataSourceTemporaryStore: AnnotationDataSourceTemporaryStore
 )(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
-    extends Controller
-    with FoxImplicits {
+    extends Controller {
 
   val bearerTokenService: WebknossosBearerTokenAuthenticatorService =
     wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
   def updateAnnotation(name: String, key: String, annotationId: ObjectId): Action[AnnotationProto] =
-    Action.async(validateProto[AnnotationProto]) { implicit request =>
+    Action.fox(validateProto[AnnotationProto]) { implicit request =>
       // tracingstore only sends this request after ensuring write access
       implicit val ctx: DBAccessContext = GlobalAccessContext
       tracingStoreService.validateAccess(name, key) { _ =>
@@ -74,7 +73,7 @@ class WKRemoteTracingStoreController @Inject() (
     }
 
   def handleTracingUpdateReport(name: String, key: String): Action[AnnotationUpdatesReport] =
-    Action.async(validateJson[AnnotationUpdatesReport]) { implicit request =>
+    Action.fox(validateJson[AnnotationUpdatesReport]) { implicit request =>
       implicit val ctx: DBAccessContext = GlobalAccessContext
       tracingStoreService.validateAccess(name, key) { _ =>
         val report = request.body
@@ -110,7 +109,7 @@ class WKRemoteTracingStoreController @Inject() (
     else Fox.successful(())
 
   def dataSourceForAnnotation(name: String, key: String, annotationId: ObjectId): Action[AnyContent] =
-    Action.async { _ =>
+    Action.fox { _ =>
       tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
         annotationDataSourceTemporaryStore.find(annotationId) match {
@@ -127,7 +126,7 @@ class WKRemoteTracingStoreController @Inject() (
     }
 
   def datasetIdForAnnotation(name: String, key: String, annotationId: ObjectId): Action[AnyContent] =
-    Action.async { _ =>
+    Action.fox { _ =>
       tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
         annotationDataSourceTemporaryStore.find(annotationId) match {
@@ -143,7 +142,7 @@ class WKRemoteTracingStoreController @Inject() (
     }
 
   def annotationIdForTracing(name: String, key: String, tracingId: String): Action[AnyContent] =
-    Action.async { _ =>
+    Action.fox { _ =>
       tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
         if (tracingId == TracingId.dummy) {
@@ -159,7 +158,7 @@ class WKRemoteTracingStoreController @Inject() (
     }
 
   def dataStoreUriForDataset(name: String, key: String, datasetId: ObjectId): Action[AnyContent] =
-    Action.async { _ =>
+    Action.fox { _ =>
       tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
         for {
@@ -170,7 +169,7 @@ class WKRemoteTracingStoreController @Inject() (
     }
 
   def getDataSource(name: String, key: String, datasetId: ObjectId): Action[AnyContent] =
-    Action.async { _ =>
+    Action.fox { _ =>
       tracingStoreService.validateAccess(name, key) { _ =>
         for {
           dataset <- datasetDAO.findOne(datasetId)(using GlobalAccessContext) ?~> Msg.Dataset.notFound(
@@ -187,7 +186,7 @@ class WKRemoteTracingStoreController @Inject() (
       annotationId: ObjectId,
       previousVersion: Long
   ): Action[AnnotationLayerParameters] =
-    Action.async(validateJson[AnnotationLayerParameters]) { implicit request =>
+    Action.fox(validateJson[AnnotationLayerParameters]) { implicit request =>
       tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
         for {

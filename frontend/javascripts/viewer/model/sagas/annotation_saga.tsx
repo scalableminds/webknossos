@@ -192,6 +192,7 @@ function* warnAboutSegmentationZoom(): Saga<never> {
       "SET_ZOOM_STEP",
       "SET_STORED_LAYOUTS",
       "SET_MAPPING",
+      "SET_MAPPING_DATA",
       "SET_MAPPING_ENABLED",
       "FINISH_MAPPING_INITIALIZATION",
       (action: Action) =>

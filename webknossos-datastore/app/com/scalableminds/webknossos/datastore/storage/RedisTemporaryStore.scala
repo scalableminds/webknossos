@@ -1,7 +1,8 @@
 package com.scalableminds.webknossos.datastore.storage
 
 import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import com.typesafe.scalalogging.LazyLogging
 import io.lettuce.core.{ClientOptions, RedisURI, SocketOptions, TimeoutOptions, RedisClient as LettuceClient}
 import io.lettuce.core.codec.StringCodec
@@ -17,7 +18,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters.*
 import scala.jdk.FutureConverters.*
 
-trait RedisTemporaryStore extends LazyLogging with FoxImplicits {
+trait RedisTemporaryStore extends LazyLogging {
   implicit def ec: ExecutionContext
   protected def address: String
   protected def port: Int

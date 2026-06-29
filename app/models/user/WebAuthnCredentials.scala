@@ -4,7 +4,8 @@ import tools.jackson.core.`type`.TypeReference
 import com.fasterxml.jackson.annotation._
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{JsonHelper, Fox, FoxImplicits}
+import com.scalableminds.util.tools.{JsonHelper, Fox}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.schema.Tables.{
   Webauthncredentials,
   WebauthncredentialsRow,
@@ -31,7 +32,7 @@ case class WebAuthnCredential(
     name: String,
     credentialRecord: WebAuthnCredentialRecord,
     isDeleted: Boolean
-) extends FoxImplicits {
+) {
   def serializeAttestedCredential(objectConverter: ObjectConverter): Array[Byte] = {
     val converter = new AttestedCredentialDataConverter(objectConverter)
     converter.convert(credentialRecord.getAttestedCredentialData)
@@ -108,7 +109,7 @@ class WebAuthnCredentialDAO @Inject() (sqlClient: SqlClient)(implicit ec: Execut
         null, // clientExtensions - Client extensions are ignored.
         null // transports - All transport methods are allowed.
       )
-    } yield WebAuthnCredential(ObjectId(r._Id), ObjectId(r._Multiuser), r.name, record, r.isdeleted)
+    } yield WebAuthnCredential(ObjectId(r._id), ObjectId(r._multiuser), r.name, record, r.isdeleted)
   }
 
   def findAllForUser(multiUserId: ObjectId)(using ctx: DBAccessContext): Fox[List[WebAuthnCredential]] =

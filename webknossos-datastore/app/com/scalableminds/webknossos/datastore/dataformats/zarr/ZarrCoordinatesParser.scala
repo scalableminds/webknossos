@@ -2,13 +2,14 @@ package com.scalableminds.webknossos.datastore.dataformats.zarr
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 
 import scala.concurrent.ExecutionContext
 
-object ZarrCoordinatesParser extends FoxImplicits {
+object ZarrCoordinatesParser {
 
   def parseNDimensionalDotCoordinates(
       coordinates: String,

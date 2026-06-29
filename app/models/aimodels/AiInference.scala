@@ -4,6 +4,7 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.schema.Tables.{Aiinferences, AiinferencesRow, GetResultAiinferencesRow}
 import models.dataset.{DataStoreDAO, DataStoreService, DatasetDAO, DatasetService}
 import models.job.{JobDAO, JobService}
@@ -84,13 +85,13 @@ class AiInferenceDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionCont
     for {
       boundingBox <- BoundingBox.fromSQL(parseArrayLiteral(r.boundingbox).map(_.toInt)).toFox
     } yield AiInference(
-      ObjectId(r._Id),
-      r._Organization,
-      r._Aimodel.map(ObjectId(_)),
-      r._Newdataset.map(ObjectId(_)),
-      r._Annotation.map(ObjectId(_)),
+      ObjectId(r._id),
+      r._organization,
+      r._aimodel.map(ObjectId(_)),
+      r._newdataset.map(ObjectId(_)),
+      r._annotation.map(ObjectId(_)),
       boundingBox,
-      ObjectId(r._Inferencejob),
+      ObjectId(r._inferencejob),
       r.newsegmentationlayername,
       r.maskannotationlayername,
       Instant.fromSql(r.created),

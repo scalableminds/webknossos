@@ -5,7 +5,8 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, ElementClass}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.models.{DataRequest, VoxelPosition}
@@ -20,8 +21,7 @@ object Histogram { implicit val jsonFormat: OFormat[Histogram] = Json.format[His
 
 class FindDataService @Inject() (dataServicesHolder: BinaryDataServiceHolder)(implicit ec: ExecutionContext)
     extends DataConverter
-    with DataFinder
-    with FoxImplicits {
+    with DataFinder {
 
   private lazy val binaryDataService: BinaryDataService = dataServicesHolder.binaryDataService
 

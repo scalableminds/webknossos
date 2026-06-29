@@ -6,6 +6,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, Full, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.helpers.UPath
@@ -157,12 +158,12 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       metadata <- JsonHelper.parseAs[JsArray](r.metadata).toFox
       creationType <- Fox.runOptional(r.creationtype)(DatasetCreationType.fromString(_).toFox)
     } yield Dataset(
-      ObjectId(r._Id),
-      r._Datastore.trim,
-      r._Organization.trim,
-      r._Publication.map(ObjectId(_)),
-      r._Uploader.map(ObjectId(_)),
-      ObjectId(r._Folder),
+      ObjectId(r._id),
+      r._datastore.trim,
+      r._organization.trim,
+      r._publication.map(ObjectId(_)),
+      r._uploader.map(ObjectId(_)),
+      ObjectId(r._folder),
       r.inboxsourcehash,
       defaultViewConfigurationOpt,
       adminViewConfigurationOpt,

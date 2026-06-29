@@ -126,7 +126,7 @@ class AnnotationTransactionService @Inject() (
       previousActionGroupsToCommit <- getAllUncommittedFor(annotationId, updateGroup.transactionId)
       _ <- Fox.fromBool(
         previousActionGroupsToCommit.exists(_.transactionGroupIndex == 0) || updateGroup.transactionGroupCount == 1
-      ) ?~> s"Trying to commit a transaction without a group that has transactionGroupIndex 0."
+      ) ?~> "Trying to commit a transaction without a group that has transactionGroupIndex 0."
       concatenatedGroup = concatenateUpdateGroupsOfTransaction(previousActionGroupsToCommit, updateGroup)
       commitResult <- commitUpdates(annotationId, List(concatenatedGroup))
       _ <- removeAllUncommittedFor(annotationId, updateGroup.transactionId)

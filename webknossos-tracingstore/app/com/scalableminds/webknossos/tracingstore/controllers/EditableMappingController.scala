@@ -5,6 +5,7 @@ import com.google.inject.Inject
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
 import com.scalableminds.webknossos.datastore.controllers.Controller
@@ -42,7 +43,7 @@ class EditableMappingController @Inject() (
     with KeyValueStoreConversions {
 
   def editableMappingInfo(tracingId: String, annotationId: ObjectId, version: Option[Long]): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
           for {
@@ -56,7 +57,7 @@ class EditableMappingController @Inject() (
     }
 
   def segmentIdsForAgglomerate(tracingId: String, agglomerateId: Long, version: Option[Long]): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
@@ -78,7 +79,7 @@ class EditableMappingController @Inject() (
     }
 
   def agglomerateIdsForSegments(tracingId: String, annotationId: ObjectId, version: Option[Long]): Action[ListOfLong] =
-    Action.async(validateProto[ListOfLong]) { implicit request =>
+    Action.fox(validateProto[ListOfLong]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
           for {
@@ -101,7 +102,7 @@ class EditableMappingController @Inject() (
     }
 
   def agglomerateGraphMinCut(tracingId: String): Action[MinCutParameters] =
-    Action.async(validateJson[MinCutParameters]) { implicit request =>
+    Action.fox(validateJson[MinCutParameters]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
@@ -124,7 +125,7 @@ class EditableMappingController @Inject() (
     }
 
   def agglomerateGraphNeighbors(tracingId: String): Action[NeighborsParameters] =
-    Action.async(validateJson[NeighborsParameters]) { implicit request =>
+    Action.fox(validateJson[NeighborsParameters]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
@@ -147,7 +148,7 @@ class EditableMappingController @Inject() (
     }
 
   def agglomerateGraph(tracingId: String, agglomerateId: Long, version: Option[Long]): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
@@ -184,7 +185,7 @@ class EditableMappingController @Inject() (
     }
 
   def agglomerateTree(tracingId: String, agglomerateId: Long, version: Option[Long]): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
@@ -204,7 +205,7 @@ class EditableMappingController @Inject() (
     }
 
   def editedEdgesZip(tracingId: String, version: Option[Long]): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
@@ -232,7 +233,7 @@ class EditableMappingController @Inject() (
       startVersion: Long,
       baseMappingName: String
   ): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
         for {
           editedEdgesZip <- request.body.asRaw.map(_.asFile).toFox ?~> Msg.zipFileNotFound

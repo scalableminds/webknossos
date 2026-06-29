@@ -188,7 +188,7 @@ export async function waitUntilNotBusy(page: Page): Promise<void> {
   const startTime = Date.now();
   while (
     await page.evaluate(
-      () => window.webknossos.DEV.store.getState().uiInformation.busyBlockingInfo.isBusy,
+      () => window.webknossos.DEV.store.getState().operationContext.activeOperations.length > 0,
     )
   ) {
     await sleep(1_000);

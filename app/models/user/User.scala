@@ -3,7 +3,8 @@ package models.user
 import play.silhouette.api.{Identity, LoginInfo}
 import com.scalableminds.util.accesscontext._
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.schema.Tables.{
@@ -47,8 +48,7 @@ case class User(
     loggedOutEverywhereTime: Option[Instant] = None,
     isDeleted: Boolean = false
 ) extends DBAccessContextPayload
-    with Identity
-    with FoxImplicits {
+    with Identity {
 
   def toStringAnonymous: String = s"User ${_id}"
 
@@ -101,12 +101,12 @@ class UserDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       userConfiguration <- JsonHelper.parseAs[JsObject](r.userconfiguration).toFox
     } yield User(
-      ObjectId(r._Id),
-      ObjectId(r._Multiuser),
-      r._Organization,
+      ObjectId(r._id),
+      ObjectId(r._multiuser),
+      r._organization,
       Instant.fromSql(r.lastactivity),
       userConfiguration,
-      LoginInfo(User.default_login_provider_id, r._Id),
+      LoginInfo(User.default_login_provider_id, r._id),
       r.isadmin,
       r.isorganizationowner,
       r.isdatasetmanager,
@@ -555,7 +555,7 @@ class UserDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
         q"SELECT _user, _team, isTeamManager FROM webknossos.user_team_roles WHERE _user = $userId".as[UserTeamRolesRow]
       )
       teamMemberships <- Fox.combined(rows.map { r =>
-        ObjectId.fromString(r._Team).map(teamIdValidated => TeamMembership(teamIdValidated, r.isteammanager))
+        ObjectId.fromString(r._team).map(teamIdValidated => TeamMembership(teamIdValidated, r.isteammanager))
       })
     } yield teamMemberships
 

@@ -1,6 +1,7 @@
 package models.dataset.credential
 
 import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.storage.{
   CredentialType,
   DataVaultCredential,
@@ -31,8 +32,8 @@ class CredentialDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
       r.name,
       username,
       password,
-      Some(r._User),
-      Some(r._Organization)
+      Some(r._user),
+      Some(r._organization)
     )
 
   private def parseAsS3AccessKeyCredential(r: CredentialsRow): Fox[S3AccessKeyCredential] =
@@ -43,8 +44,8 @@ class CredentialDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
       r.name,
       keyId,
       key,
-      Some(r._User),
-      Some(r._Organization)
+      Some(r._user),
+      Some(r._organization)
     )
 
   private def parseAsGoogleServiceAccountCredential(r: CredentialsRow): Fox[GoogleServiceAccountCredential] =
@@ -54,8 +55,8 @@ class CredentialDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
     } yield GoogleServiceAccountCredential(
       r.name,
       secretJson,
-      Some(r._User),
-      Some(r._Organization)
+      Some(r._user),
+      Some(r._organization)
     )
 
   def insertOne(_id: ObjectId, credential: HttpBasicAuthCredential): Fox[Unit] =

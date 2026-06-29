@@ -3,7 +3,8 @@ package models.team
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.schema.Tables.{Teams, TeamsRow, GetResultTeamsRow}
 
 import javax.inject.Inject
@@ -32,8 +33,7 @@ class TeamService @Inject() (
     teamDAO: TeamDAO,
     projectDAO: ProjectDAO,
     taskTypeDAO: TaskTypeDAO
-)(implicit ec: ExecutionContext)
-    extends FoxImplicits {
+)(implicit ec: ExecutionContext) {
 
   def publicWrites(team: Team, organizationOpt: Option[Organization] = None): Fox[JsObject] =
     for {
@@ -98,8 +98,8 @@ class TeamDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected def parse(r: TeamsRow): Fox[Team] =
     Fox.successful(
       Team(
-        ObjectId(r._Id),
-        r._Organization,
+        ObjectId(r._id),
+        r._organization,
         r.name,
         r.isorganizationteam,
         Instant.fromSql(r.created),

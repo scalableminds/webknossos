@@ -3,15 +3,13 @@
  * with update actions that need to be saved to the server. Note that for proofreading,
  * the proofreading saga is directly responsible for filling the queue.
  */
-
 import { buffers } from "redux-saga";
-import { actionChannel, call, flush, put, race, take, takeLatest } from "typed-redux-saga";
+import { actionChannel, call, flush, put, race, take } from "typed-redux-saga";
 import { mayAddToSaveQueue } from "viewer/model/accessors/annotation_accessor";
 import { selectTracing } from "viewer/model/accessors/tracing_accessor";
 import { FlycamActions } from "viewer/model/actions/flycam_actions";
 import {
   type EnsureTracingsWereDiffedToSaveQueueAction,
-  type FinishedRebaseAction,
   pushSaveQueueTransaction,
 } from "viewer/model/actions/save_actions";
 import type { InitializeSkeletonTracingAction } from "viewer/model/actions/skeletontracing_actions";
@@ -98,7 +96,7 @@ export function* setupSavingForTracingType(
 
   yield* call(ensureWkInitialized);
 
-  const actionBuffer = buffers.expanding<Action>();
+  const tracingActionBuffer = buffers.expanding<Action>();
   const tracingActionChannel = yield* actionChannel(
     tracingType === "skeleton"
       ? [
@@ -108,15 +106,17 @@ export function* setupSavingForTracingType(
           "SET_SKELETON_TRACING",
         ]
       : VolumeTracingSaveRelevantActions,
-    actionBuffer,
+    tracingActionBuffer,
   );
+
   // During rebasing, the local users updates are replayed and thus the identity of skeleton nodes and edges in the diffable map entries change.
   // But content wise they should be the same. Thus, after rebasing reload the tracing to avoid diffs caused by the diffable map identity mismatches.
-  yield* takeLatest(
+  // FINISHED_REBASING and FINISH_FORWARDING_UPDATE_ACTIONS actions are stored in the following
+  // buffer.
+  const finishedRebaseActionBuffer = buffers.expanding<Action>();
+  const finishedRebaseActionChannel = yield* actionChannel(
     ["FINISHED_REBASING", "FINISH_FORWARDING_UPDATE_ACTIONS"],
-    function* resetPrevTracing(_action: FinishedRebaseAction) {
-      prevTracing = yield* getTracing();
-    },
+    finishedRebaseActionBuffer,
   );
 
   // See Model.ensureSavedState for an explanation of this action channel.
@@ -124,36 +124,55 @@ export function* setupSavingForTracingType(
     ["ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE"],
     buffers.expanding<EnsureTracingsWereDiffedToSaveQueueAction>(1),
   );
-  let ensureAction: EnsureTracingsWereDiffedToSaveQueueAction | undefined;
-  function* resolveEnsureDiffedActions() {
-    const pendingActions: EnsureTracingsWereDiffedToSaveQueueAction[] =
-      yield* flush(ensureDiffedChannel);
-
-    // include the first action we already took from the race
-    const actionsToProcess = ensureAction ? [ensureAction, ...pendingActions] : pendingActions;
-    ensureAction = undefined;
-
-    for (const action of actionsToProcess) {
-      (action as EnsureTracingsWereDiffedToSaveQueueAction).callback(tracingId);
+  let ensureActions: EnsureTracingsWereDiffedToSaveQueueAction[] = [];
+  function resolveEnsureDiffedActions() {
+    for (const action of ensureActions) {
+      action.callback(tracingId);
     }
+    ensureActions = [];
   }
 
   while (true) {
-    // Prioritize consumption of tracingActionChannel since we don't want to
-    // reply to the ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE action if there
-    // are unprocessed user actions.
-    if (!actionBuffer.isEmpty()) {
-      yield* take(tracingActionChannel);
-    } else {
-      // Wait for either a user action or the "ensureAction".
-      const actions = yield* race({
-        _tracingAction: take(tracingActionChannel),
-        ensureAction: take(ensureDiffedChannel),
-      });
-      if (actions.ensureAction != null) {
-        ensureAction = actions.ensureAction;
-      }
+    // Wait for either:
+    // - a finished rebase/forwarding which needs to reset prevTracing
+    // - a user action which requires diffing
+    // - an "ensureAction" to confirm that diffing ran
+    // The order of the race effect parameters is important, because it
+    // defines the priority in case multiple takes are possible.
+    // Concretely, if a rebase was finished, this needs to be taken care of
+    // as a top priority.
+    // Afterwards, we prioritize consumption of tracingActionChannel since we
+    // don't want to eply to the ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE action
+    // if there are unprocessed user actions.
+    const [finishedRebaseAction, _tracingAction, newEnsureAction] = yield* race([
+      take(finishedRebaseActionChannel),
+      take(tracingActionChannel),
+      take(ensureDiffedChannel),
+    ]);
+    if (finishedRebaseAction != null) {
+      yield* flush(finishedRebaseActionChannel);
+      prevTracing = yield* getTracing();
+      continue;
     }
+    if (newEnsureAction != null) {
+      // Consume entire channel so that we know which ensureActions we
+      // can resolve after diffing. New "ensureActions" that might arrive
+      // during diffing, will be buffered and should kick-off new diffing
+      // in the next while-loop-iteration.
+      const remainingActions = yield* flush(ensureDiffedChannel);
+
+      // include the first action we already took from the race
+      ensureActions = [
+        newEnsureAction as EnsureTracingsWereDiffedToSaveQueueAction,
+        ...remainingActions,
+      ];
+    }
+
+    // We are about to diff old and new tracing to produce update actions
+    // for the save queue. All buffered actions in tracingActionBuffer can
+    // be flushed away, because it won't make sense to diff again when
+    // `tracing` cannot have changed without a new tracingActionChannel entry.
+    tracingActionBuffer.flush();
 
     const allowSave = yield* select(mayAddToSaveQueue);
     if (!allowSave) {

@@ -4,7 +4,7 @@ import org.apache.pekko.actor.ActorSystem
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables.{Invites, InvitesRow, GetResultInvitesRow}
 import com.typesafe.scalalogging.LazyLogging
 import mail.{DefaultMails, Send}
@@ -38,8 +38,7 @@ class InviteService @Inject() (
     organizationDAO: OrganizationDAO,
     inviteDAO: InviteDAO
 )(implicit ec: ExecutionContext)
-    extends FoxImplicits
-    with LazyLogging {
+    extends LazyLogging {
   private val tokenValueGenerator = new RandomIDGenerator
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
@@ -112,9 +111,9 @@ class InviteDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected def parse(r: InvitesRow): Fox[Invite] =
     Fox.successful(
       Invite(
-        ObjectId(r._Id),
+        ObjectId(r._id),
         r.tokenvalue,
-        r._Organization,
+        r._organization,
         r.autoactivate,
         r.isadmin,
         r.isdatasetmanager,

@@ -5,6 +5,7 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.schema.Tables.{Multiusers, MultiusersRow, GetResultMultiusersRow}
 import models.user.Theme.Theme
 import play.api.libs.json.Format.GenericFormat
@@ -52,13 +53,13 @@ class MultiUserDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContex
       novelUserExperienceInfos <- JsonHelper.parseAs[JsObject](r.noveluserexperienceinfos).toFox
       theme <- Theme.fromString(r.selectedtheme).toFox
     } yield MultiUser(
-      ObjectId(r._Id),
+      ObjectId(r._id),
       r.email,
-      PasswordInfo(r.passwordinfoHasher, r.passwordinfoPassword),
+      PasswordInfo(r.passwordinfo_hasher, r.passwordinfo_password),
       r.firstname,
       r.lastname,
       r.issuperuser,
-      r._Lastloggedinidentity.map(ObjectId(_)),
+      r._lastloggedinidentity.map(ObjectId(_)),
       novelUserExperienceInfos,
       theme,
       Instant.fromSql(r.created),

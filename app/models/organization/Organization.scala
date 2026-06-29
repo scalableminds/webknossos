@@ -4,6 +4,7 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.schema.Tables.{
   OrganizationPlanUpdatesRow,
   Organizations,
@@ -74,7 +75,7 @@ class OrganizationDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionCon
       pricingPlan <- PricingPlan.fromString(r.pricingplan).toFox
       aiPlan <- Fox.runOptional(r.aiplan)(aiPlanLiteral => AiPlan.fromString(aiPlanLiteral).toFox)
     } yield Organization(
-      r._Id,
+      r._id,
       r.additionalinformation,
       r.logourl,
       r.name,
@@ -83,7 +84,7 @@ class OrganizationDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionCon
       r.paiduntil.map(Instant.fromSql),
       r.includedusers,
       r.includedstorage,
-      ObjectId(r._Rootfolder),
+      ObjectId(r._rootfolder),
       r.newusermailinglist,
       r.enableautoverify,
       r.lasttermsofserviceacceptancetime.map(Instant.fromSql),
@@ -400,7 +401,7 @@ class OrganizationDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionCon
       includedStorageBytes = if (row.includedstoragechanged) Some(row.includedstorage.map(ByteCount(_))) else None
       includedUsers = if (row.includeduserschanged) Some(row.includedusers) else None
     } yield OrganizationPlanUpdate(
-      row._Organization,
+      row._organization,
       row.description,
       pricingPlan,
       aiPlan,

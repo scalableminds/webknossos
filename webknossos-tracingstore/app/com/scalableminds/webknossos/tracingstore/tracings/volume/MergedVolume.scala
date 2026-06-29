@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.{ByteUtils, Fox}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
-import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, ProtoGeometryImplicits}
+import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, ProtoGeometryConversions}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 
 import scala.collection.mutable
@@ -17,7 +17,7 @@ case class MergedVolumeStats(
     seenMags: Set[Vec3Int],
     idMaps: Seq[Map[Long, Long]],
     createdSegmentIndex: Boolean
-) extends ProtoGeometryImplicits {
+) extends ProtoGeometryConversions {
   def magsMergedWith(other: Seq[Vec3IntProto]): Seq[Vec3IntProto] =
     (seenMags ++ other.map(vec3IntFromProto).toSet).toSeq.sortBy(_.maxDim).map(vec3IntToProto)
 }
@@ -31,7 +31,7 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
     extends ByteUtils
     with VolumeDataZipHelper
     with VolumeBucketCompression
-    with ProtoGeometryImplicits {
+    with ProtoGeometryConversions {
   private val mergedVolume = mutable.HashMap.empty[BucketPosition, Array[Byte]]
   private val idSets = mutable.ListBuffer[mutable.Set[Long]]()
   private var idMaps = Seq[(Array[Long], Array[Long])]()
@@ -39,7 +39,8 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
   private val bytesPerElement = ElementClass.bytesPerElement(ElementClass.fromProto(elementClass))
   private val elementsAreSigned = ElementClass.isSigned(ElementClass.fromProto(elementClass))
   private lazy val expectedUncompressedBucketSize: Int =
-    ElementClass.bytesPerElement(elementClass) * scala.math.pow(DataLayer.bucketLength, 3).intValue
+    ElementClass
+      .bytesPerElement(ElementClass.fromProto(elementClass)) * scala.math.pow(DataLayer.bucketLength, 3).intValue
   private lazy val bucketScanner = new NativeBucketScanner()
 
   def addIdSetFromDataZip(zipFile: File)(implicit ec: ExecutionContext): Fox[Unit] = {

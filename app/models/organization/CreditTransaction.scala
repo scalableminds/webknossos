@@ -4,6 +4,7 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.schema.Tables.{
   CreditTransactions,
   CreditTransactionsRow,
@@ -50,24 +51,24 @@ class CreditTransactionDAO @Inject() (
 
   override protected def parse(row: CreditTransactionsRow): Fox[CreditTransaction] =
     for {
-      transactionState <- CreditTransactionState.fromString(row.transactionState).toFox
-      creditState <- CreditState.fromString(row.creditState).toFox
-      id <- ObjectId.fromString(row._Id)
-      jobIdOpt <- Fox.runOptional(row._PaidJob)(ObjectId.fromString)
-      relatedTransactionOpt <- Fox.runOptional(row._RelatedTransaction)(ObjectId.fromString)
+      transactionState <- CreditTransactionState.fromString(row.transaction_state).toFox
+      creditState <- CreditState.fromString(row.credit_state).toFox
+      id <- ObjectId.fromString(row._id)
+      jobIdOpt <- Fox.runOptional(row._paid_job)(ObjectId.fromString)
+      relatedTransactionOpt <- Fox.runOptional(row._related_transaction)(ObjectId.fromString)
     } yield CreditTransaction(
       id,
-      row._Organization,
+      row._organization,
       relatedTransactionOpt,
       jobIdOpt,
-      row.milliCreditDelta,
+      row.milli_credit_delta,
       row.comment,
       transactionState,
       creditState,
-      row.expirationDate.map(Instant.fromSql),
-      Instant.fromSql(row.createdAt),
-      Instant.fromSql(row.updatedAt),
-      row.isDeleted
+      row.expiration_date.map(Instant.fromSql),
+      Instant.fromSql(row.created_at),
+      Instant.fromSql(row.updated_at),
+      row.is_deleted
     )
 
   implicit val getCreditTransactions: GetResult[CreditTransaction] =

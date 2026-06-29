@@ -322,16 +322,17 @@ class VolumeTracingZarrStreamingController @Inject() (
             version = None,
             additionalCoordinates = additionalCoordinates
           )
-          (data, missingBucketIndices) <-
+          (data, emptyIndices, failureIndices) <-
             if (tracing.getHasEditableMapping) {
               val mappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
               editableMappingService.volumeData(mappingLayer, List(wkRequest))
             } else tracingService.data(annotationId, tracingId, tracing, List(wkRequest))
+          _ <- Fox.fromBool(failureIndices.isEmpty) ?~> Msg.Zarr.chunkLoadingError ~> INTERNAL_SERVER_ERROR
           dataWithFallback <- getFallbackLayerDataIfEmpty(
             tracing,
             annotationId,
             data,
-            missingBucketIndices,
+            emptyIndices,
             magParsed,
             Vec3Int(x, y, z),
             cubeSize,
@@ -345,13 +346,13 @@ class VolumeTracingZarrStreamingController @Inject() (
       tracing: VolumeTracing,
       annotationId: ObjectId,
       data: Array[Byte],
-      missingBucketIndices: List[Int],
+      emptyBucketIndices: Seq[Int],
       mag: Vec3Int,
       position: Vec3Int,
       cubeSize: Int,
       additionalCoordinates: Option[Seq[AdditionalCoordinate]]
   )(using tc: TokenContext): Fox[Array[Byte]] =
-    if (missingBucketIndices.nonEmpty) {
+    if (emptyBucketIndices.nonEmpty) {
       for {
         remoteFallbackLayer <- tracingService.remoteFallbackLayerForVolumeTracing(
           tracing,
@@ -366,14 +367,14 @@ class VolumeTracingZarrStreamingController @Inject() (
           version = None,
           additionalCoordinates = additionalCoordinates
         )
-        (fallbackData, fallbackMissingBucketIndices) <- remoteDataStoreClient.getData(
+        (fallbackData, fallbackEmptyBucketIndices, fallbackFailureBucketIndices) <- remoteDataStoreClient.getData(
           remoteFallbackLayer,
           List(request)
         ) ~> SERVICE_UNAVAILABLE // return 503 if the request fails, assuming the datastore is still initializing
         // We only expect missing buckets if something went wrong with loading the fallback layer, e.g. applying the agglomerate. Otherwise, a fill value is used and returned to us.
         _ <- Fox.fromBool(
-          fallbackMissingBucketIndices.isEmpty
-        ) ?~> "Could not retrieve data from fallback layer" ~> INTERNAL_SERVER_ERROR
+          fallbackEmptyBucketIndices.isEmpty && fallbackFailureBucketIndices.isEmpty
+        ) ?~> Msg.Annotation.Volume.fallbackDataLoadingFailed ~> INTERNAL_SERVER_ERROR
       } yield fallbackData
     } else Fox.successful(data)
 }

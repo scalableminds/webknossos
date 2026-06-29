@@ -7,6 +7,7 @@ import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { ColorWKBlue } from "theme";
 import type { APIUser } from "types/api_types";
 import { HelpChatMarkdown } from "./help_chat_markdown";
+import { getUid } from "libs/uid_generator";
 
 const STORAGE_MESSAGES_KEY = "wk_help_chat_messages";
 const STORAGE_SESSION_KEY = "wk_help_chat_session_id";
@@ -34,7 +35,7 @@ function loadSessionId(): string {
   const stored = sessionStorage.getItem(STORAGE_SESSION_KEY);
   if (stored) return stored;
 
-  const id = crypto.randomUUID();
+  const id = getUid();
   sessionStorage.setItem(STORAGE_SESSION_KEY, id);
 
   return id;

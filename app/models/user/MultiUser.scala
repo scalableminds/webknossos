@@ -53,13 +53,13 @@ class MultiUserDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContex
       novelUserExperienceInfos <- JsonHelper.parseAs[JsObject](r.noveluserexperienceinfos).toFox
       theme <- Theme.fromString(r.selectedtheme).toFox
     } yield MultiUser(
-      ObjectId(r._Id),
+      ObjectId(r._id),
       r.email,
-      PasswordInfo(r.passwordinfoHasher, r.passwordinfoPassword),
+      PasswordInfo(r.passwordinfo_hasher, r.passwordinfo_password),
       r.firstname,
       r.lastname,
       r.issuperuser,
-      r._Lastloggedinidentity.map(ObjectId(_)),
+      r._lastloggedinidentity.map(ObjectId(_)),
       novelUserExperienceInfos,
       theme,
       Instant.fromSql(r.created),

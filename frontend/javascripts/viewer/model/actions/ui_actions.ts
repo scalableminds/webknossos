@@ -1,4 +1,4 @@
-import type { OrthoView, SagaIdentifier, Vector3 } from "viewer/constants";
+import type { OrthoView, Vector3 } from "viewer/constants";
 import type { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import type { BorderOpenStatus, Theme, WebknossosState } from "viewer/store";
 import type { StartAiJobDrawerState } from "viewer/view/ai_jobs/constants";
@@ -17,9 +17,6 @@ type SetThemeAction = ReturnType<typeof setThemeAction>;
 type SetDownloadModalVisibilityAction = ReturnType<typeof setDownloadModalVisibilityAction>;
 type SetShareModalVisibilityAction = ReturnType<typeof setShareModalVisibilityAction>;
 type SetIsWkInitializedAction = ReturnType<typeof setIsWkInitializedAction>;
-export type SetBusyBlockingInfoAction = ReturnType<typeof setBusyBlockingInfoAction>;
-type AllowSagaWhileBusyAction = ReturnType<typeof allowSagaWhileBusyAction>;
-type DisallowSagaWhileBusyAction = ReturnType<typeof disallowSagaWhileBusyAction>;
 type SetPythonClientModalVisibilityAction = ReturnType<typeof setPythonClientModalVisibilityAction>;
 type SetaIJobDrawerStateAction = ReturnType<typeof setAIJobDrawerStateAction>;
 export type EnterAction = ReturnType<typeof enterAction>;
@@ -73,9 +70,6 @@ export type UiAction =
   | SetZarrLinksModalVisibilityAction
   | SetKeyboardShortcutConfigModalVisibilityAction
   | SetDuplicateAnnotationModalVisibilityAction
-  | SetBusyBlockingInfoAction
-  | AllowSagaWhileBusyAction
-  | DisallowSagaWhileBusyAction
   | SetIsWkInitializedAction
   | EnterAction
   | EscapeAction
@@ -190,29 +184,6 @@ export const setDuplicateAnnotationModalVisibilityAction = (visible: boolean) =>
   ({
     type: "SET_DUPLICATE_ANNOTATION_MODAL_VISIBILITY",
     visible,
-  }) as const;
-export const setBusyBlockingInfoAction = (isBusy: boolean, reason?: string) =>
-  ({
-    type: "SET_BUSY_BLOCKING_INFO_ACTION",
-    value: {
-      isBusy,
-      reason,
-    },
-  }) as const;
-export const allowSagaWhileBusyAction = (allowedSaga: SagaIdentifier) =>
-  ({
-    type: "ALLOW_SAGA_WHILE_BUSY_ACTION",
-    value: {
-      allowedSaga,
-    },
-  }) as const;
-
-export const disallowSagaWhileBusyAction = (allowedSaga: SagaIdentifier) =>
-  ({
-    type: "DISALLOW_SAGA_WHILE_BUSY_ACTION",
-    value: {
-      allowedSaga,
-    },
   }) as const;
 export const setIsWkInitializedAction = (isInitialized: boolean) =>
   ({

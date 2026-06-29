@@ -109,7 +109,7 @@ class WebAuthnCredentialDAO @Inject() (sqlClient: SqlClient)(implicit ec: Execut
         null, // clientExtensions - Client extensions are ignored.
         null // transports - All transport methods are allowed.
       )
-    } yield WebAuthnCredential(ObjectId(r._Id), ObjectId(r._Multiuser), r.name, record, r.isdeleted)
+    } yield WebAuthnCredential(ObjectId(r._id), ObjectId(r._multiuser), r.name, record, r.isdeleted)
   }
 
   def findAllForUser(multiUserId: ObjectId)(using ctx: DBAccessContext): Fox[List[WebAuthnCredential]] =

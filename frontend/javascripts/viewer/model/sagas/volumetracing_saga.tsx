@@ -9,7 +9,10 @@ import { ContourModeEnum, OrthoViews, OverwriteModeEnum } from "viewer/constants
 import { getSegmentIdInfoForPosition } from "viewer/controller/combinations/volume_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "viewer/geometries/helper_geometries";
-import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
+import {
+  isUserInterfaceBlocked,
+  mayEditAnnotation,
+} from "viewer/model/accessors/annotation_accessor";
 import {
   getSupportedValueRangeOfLayer,
   isInSupportedValueRangeForLayer,
@@ -40,7 +43,7 @@ import {
   updateTemporarySettingAction,
   updateUserSettingAction,
 } from "viewer/model/actions/settings_actions";
-import { setBusyBlockingInfoAction, setToolAction } from "viewer/model/actions/ui_actions";
+import { setToolAction } from "viewer/model/actions/ui_actions";
 import type {
   ClickSegmentAction,
   CreateCellAction,
@@ -56,9 +59,10 @@ import {
 import { markVolumeTransactionEnd } from "viewer/model/bucket_data_handling/bucket";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select, take } from "viewer/model/sagas/effect_generators";
+import type { OperationContext } from "viewer/model/sagas/operation_context_saga";
 import {
   requestBucketModificationInVolumeTracing,
-  takeEveryUnlessBusy,
+  takeEveryInOperationContext,
   takeWithBatchActionSupport,
 } from "viewer/model/sagas/saga_helpers";
 import listenToMinCut from "viewer/model/sagas/volume/min_cut_saga";
@@ -77,11 +81,16 @@ const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
 
 function* watchVolumeTracingAsync(): Saga<void> {
   yield* call(ensureWkInitialized);
-  yield* takeEveryUnlessBusy(
+  yield* takeEveryInOperationContext(
     "INTERPOLATE_SEGMENTATION_LAYER",
     maybeInterpolateSegmentationLayer,
-    "Interpolating segment",
+    { id: "INTERPOLATE_SEGMENTATION_LAYER", description: "Interpolating segment" },
   );
+  yield* takeEveryInOperationContext("DELETE_SEGMENT_DATA", handleDeleteSegmentData, {
+    id: "DELETE_SEGMENT",
+    description: "Segment is being deleted.",
+  });
+
   yield* fork(warnOfTooLowOpacity);
 }
 
@@ -150,10 +159,10 @@ export function* editVolumeLayerAsync(): Saga<never> {
       continue;
     }
     const wroteVoxelsBox = { value: false };
-    const busyBlockingInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
+    const isBlocked = yield* select(isUserInterfaceBlocked);
 
-    if (busyBlockingInfo.isBusy) {
-      console.warn(`Ignoring brush request (reason: ${busyBlockingInfo.reason || "null"})`);
+    if (isBlocked) {
+      console.warn("Ignoring brush request: An operation is currently running.");
       continue;
     }
 
@@ -582,31 +591,28 @@ function* ensureValidBrushSize(): Saga<void> {
   );
 }
 
-function* handleDeleteSegmentData(): Saga<void> {
-  yield* take("WK_INITIALIZED");
-  while (true) {
-    const action = (yield* take("DELETE_SEGMENT_DATA")) as DeleteSegmentDataAction;
+function* handleDeleteSegmentData(
+  action: DeleteSegmentDataAction,
+  ctx: OperationContext,
+): Saga<void> {
+  yield* put(
+    pushSaveQueueTransaction([deleteSegmentDataVolumeAction(action.segmentId, action.layerName)]),
+  );
+  yield* call([Model, Model.ensureSavedState], ctx);
 
-    yield* put(setBusyBlockingInfoAction(true, "Segment is being deleted."));
-    yield* put(
-      pushSaveQueueTransaction([deleteSegmentDataVolumeAction(action.segmentId, action.layerName)]),
-    );
-    yield* call([Model, Model.ensureSavedState]);
-
-    yield* call([api.data, api.data.reloadBuckets], action.layerName, (bucket) =>
-      bucket.containsValue(action.segmentId),
-    );
-
-    yield* put(setBusyBlockingInfoAction(false));
-    if (action.callback) {
-      action.callback();
-    }
+  yield* call(
+    [api.data, api.data.reloadBuckets],
+    action.layerName,
+    (bucket) => bucket.containsValue(action.segmentId),
+    ctx,
+  );
+  if (action.callback) {
+    action.callback();
   }
 }
 
 export default [
   editVolumeLayerAsync,
-  handleDeleteSegmentData,
   ensureToolIsAllowedInMag,
   floodFill,
   watchVolumeTracingAsync,

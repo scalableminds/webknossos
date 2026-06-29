@@ -18,20 +18,44 @@ const ALPHA = Math.PI / 2;
 // biome-ignore format: don't format array
 const ROTATIONS = {
   YZ: [
-    Math.cos(ALPHA), 0, Math.sin(ALPHA), 0,
-    0, 1, 0, 0,
-    -Math.sin(ALPHA), 0, Math.cos(ALPHA), 0,
-    0, 0, 0, 1,
+    Math.cos(ALPHA),
+    0,
+    Math.sin(ALPHA),
+    0,
+    0,
+    1,
+    0,
+    0,
+    -Math.sin(ALPHA),
+    0,
+    Math.cos(ALPHA),
+    0,
+    0,
+    0,
+    0,
+    1,
   ] as Matrix4x4,
   XZ: [
-    1, 0, 0, 0,
-    0, Math.cos(ALPHA), -Math.sin(ALPHA), 0,
-    0, Math.sin(ALPHA), Math.cos(ALPHA), 0,
-    0, 0, 0, 1,
-  ] as Matrix4x4
-}
+    1,
+    0,
+    0,
+    0,
+    0,
+    Math.cos(ALPHA),
+    -Math.sin(ALPHA),
+    0,
+    0,
+    Math.sin(ALPHA),
+    Math.cos(ALPHA),
+    0,
+    0,
+    0,
+    0,
+    1,
+  ] as Matrix4x4,
+};
 
-export default function determineBucketsForOblique(
+export default function determineBucketsForPlane(
   loadingStrategy: LoadingStrategy,
   denseMags: Array<Vector3>,
   position: Vector3,

@@ -65,25 +65,25 @@ class TaskTypeDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext
     for {
       tracingType <- TracingType.fromString(r.tracingtype).toFox ?~> "failed to parse tracing type"
       settingsAllowedModes <- Fox.combined(
-        parseArrayLiteral(r.settingsAllowedmodes).map(TracingMode.fromString(_).toFox)
+        parseArrayLiteral(r.settings_allowedmodes).map(TracingMode.fromString(_).toFox)
       ) ?~> "failed to parse tracing mode"
-      settingsPreferredMode = r.settingsPreferredmode.flatMap(TracingMode.fromString)
+      settingsPreferredMode = r.settings_preferredmode.flatMap(TracingMode.fromString)
       recommendedConfiguration <- Fox.runOptional(r.recommendedconfiguration)(recCom =>
         JsonHelper.parseAs[JsValue](recCom).toFox
       )
     } yield TaskType(
-      ObjectId(r._Id),
-      ObjectId(r._Team),
+      ObjectId(r._id),
+      ObjectId(r._team),
       r.summary,
       r.description,
       AnnotationSettings(
         settingsAllowedModes,
         settingsPreferredMode,
-        r.settingsBranchpointsallowed,
-        r.settingsSomaclickingallowed,
-        r.settingsVolumeinterpolationallowed,
-        r.settingsMergermode,
-        MagRestrictions(r.settingsMagrestrictionsMin, r.settingsMagrestrictionsMax)
+        r.settings_branchpointsallowed,
+        r.settings_somaclickingallowed,
+        r.settings_volumeinterpolationallowed,
+        r.settings_mergermode,
+        MagRestrictions(r.settings_magrestrictions_min, r.settings_magrestrictions_max)
       ),
       recommendedConfiguration,
       tracingType,

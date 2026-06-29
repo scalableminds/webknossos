@@ -79,8 +79,8 @@ class AnnotationMutexDAO @Inject() (sqlClient: SqlClient)(implicit ec: Execution
 
   private def parse(r: AnnotationMutexesRow): AnnotationMutex =
     AnnotationMutex(
-      ObjectId(r._Annotation),
-      ObjectId(r._User),
+      ObjectId(r._annotation),
+      ObjectId(r._user),
       r.sessionid,
       Instant.fromSql(r.expiry)
     )

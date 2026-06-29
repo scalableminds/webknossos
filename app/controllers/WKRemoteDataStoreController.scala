@@ -408,7 +408,7 @@ class WKRemoteDataStoreController @Inject() (
           dataset <- datasetDAO.findOne(datasetId)(using GlobalAccessContext) ?~> Msg.Dataset.notFound(datasetId)
           _ <- Fox.fromBool(dataset._dataStore == dataStore.name) ?~> Msg.notAllowed ~> FORBIDDEN
           localRootPathOpt = dataset.rootPath.filter(UPath.fromString(_).map(_.isLocal).getOrElse(false))
-        } yield Ok(Json.toJson(localRootPathOpt.getOrElse(""))) // Emptystring means no local rootpath
+        } yield Ok(Json.toJson(localRootPathOpt.getOrElse(""))) // Empty string means no local rootpath
       }
     }
 

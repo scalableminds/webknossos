@@ -175,10 +175,10 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
       .postJsonWithJsonResponse[Seq[ObjectId], Seq[(ObjectId, String)]](datasetIds)
 
   def scanRealPathsForVirtual(
-      dataSourcesWithrootPathInfo: Seq[DataSourceWithRootPathInfo]
+      dataSourcesWithRootPathInfo: Seq[DataSourceWithRootPathInfo]
   )(implicit ec: ExecutionContext): Fox[Unit] = {
     val dataSourcesThatCanHaveRealpaths =
-      dataSourcesWithrootPathInfo.filter(_.dataSource.toUsable.exists(_.allExplicitPaths.exists(_.isLocal)))
+      dataSourcesWithRootPathInfo.filter(_.dataSource.toUsable.exists(_.allExplicitPaths.exists(_.isLocal)))
     if (dataSourcesThatCanHaveRealpaths.nonEmpty) {
       for {
         _ <- rpc(s"${dataStore.url}/data/triggers/scanRealPathsForVirtual")

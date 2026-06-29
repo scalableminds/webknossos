@@ -43,14 +43,14 @@ class VirtualDatasetsRealPathScanService @Inject() (
       for {
         firstDataset <- datasets.headOption.toFox
         // we skip unusable datasets
-        dataSourceBoxes <- Fox.fromFuture(
+        dataSourceWithRootPathInfoBoxes <- Fox.fromFuture(
           Fox.serialSequence(datasets)(d =>
             datasetService
               .usableDataSourceFor(d, useRealPaths = false)
               .map(ds => DataSourceWithRootPathInfo(ds, d.rootPath, d.rootRealPath))
           )
         )
-        dataSourcesWithRootPathInfo = dataSourceBoxes.flatten
+        dataSourcesWithRootPathInfo = dataSourceWithRootPathInfoBoxes.flatten
         client <- datasetService.clientFor(firstDataset)
         _ <- client.scanRealPathsForVirtual(dataSourcesWithRootPathInfo)
       } yield ()

@@ -10,7 +10,7 @@ import type { Point2, Vector3, ViewMode, Viewport } from "viewer/constants";
 import constants, { FlightViewport } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import TDController from "viewer/controller/td_controller";
-import ArbitraryPlane from "viewer/geometries/arbitrary_plane";
+import FlightModePlane from "viewer/geometries/arbitrary_plane";
 import Crosshair from "viewer/geometries/crosshair";
 import {
   getMoveOffset3d,
@@ -45,7 +45,7 @@ import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_act
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import { api } from "viewer/singletons";
 import Store from "viewer/store";
-import ArbitraryView from "viewer/view/arbitrary_view";
+import FlightModeView from "viewer/view/arbitrary_view";
 import type {
   KeyboardShortcutHandlerMap,
   KeyboardShortcutsMap,
@@ -59,13 +59,13 @@ type Props = {
   viewMode: ViewMode;
 };
 
-class ArbitraryController extends React.PureComponent<Props> {
+class FlightModeController extends React.PureComponent<Props> {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'arbitraryView' has no initializer and is... Remove this comment to see the full error message
-  arbitraryView: ArbitraryView;
+  arbitraryView: FlightModeView;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'isStarted' has no initializer and is not... Remove this comment to see the full error message
   isStarted: boolean;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'plane' has no initializer and is not def... Remove this comment to see the full error message
-  plane: ArbitraryPlane;
+  plane: FlightModePlane;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'crosshair' has no initializer and is not... Remove this comment to see the full error message
   crosshair: Crosshair;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'lastNodeMatrix' has no initializer and i... Remove this comment to see the full error message
@@ -369,14 +369,14 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   start(): void {
-    this.arbitraryView = new ArbitraryView();
+    this.arbitraryView = new FlightModeView();
     this.arbitraryView.start();
-    this.plane = new ArbitraryPlane();
+    this.plane = new FlightModePlane();
     this.crosshair = new Crosshair(Store.getState().userConfiguration.crosshairSize);
     this.crosshair.setVisibility(Store.getState().userConfiguration.displayCrosshair);
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'ArbitraryPlane' is not assignabl... Remove this comment to see the full error message
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'FlightModePlane' is not assignabl... Remove this comment to see the full error message
     this.arbitraryView.addGeometry(this.plane);
-    this.arbitraryView.setArbitraryPlane(this.plane);
+    this.arbitraryView.setFlightModePlane(this.plane);
     // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Crosshair' is not assignable to ... Remove this comment to see the full error message
     this.arbitraryView.addGeometry(this.crosshair);
     this.bindToEvents();
@@ -494,4 +494,4 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 }
 
-export default ArbitraryController;
+export default FlightModeController;

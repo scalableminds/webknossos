@@ -72,7 +72,7 @@ export function renderToTexture(
     ): T {
       const isFlightMode = state.temporaryConfiguration.viewMode === constants.MODE_FLIGHT;
       const adaptedCamera = camera.clone() as T;
-      // The near value is already set in the camera (done in the CameraController/ArbitraryView).
+      // The near value is already set in the camera (done in the CameraController/FlightModeView).
       if (isFlightMode) {
         // The far value has to be set, since in normal rendering the far clipping is
         // achieved by the data plane which is not rendered during node picking

@@ -9,7 +9,7 @@ import type { PullQueueItem } from "viewer/model/bucket_data_handling/pullqueue"
 import { globalPositionToBucketPosition } from "viewer/model/helpers/position_converter";
 import type { MagInfo } from "../helpers/mag_info";
 
-export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
+export class PrefetchStrategyFlight extends AbstractPrefetchStrategy {
   velocityRangeStart = 0;
   velocityRangeEnd = Number.POSITIVE_INFINITY;
   roundTripTimeRangeStart = 0;

@@ -36,7 +36,7 @@ type FlightModeMeshes = {
 
 const flipYRotationMatrix = new Matrix4().makeRotationY(Math.PI);
 
-class ArbitraryPlane {
+class FlightModePlane {
   meshes: FlightModeMeshes;
   plane!: Mesh<PlaneGeometry, PlaneShaderMaterial, Object3DEventMap>;
   isDirty: boolean;
@@ -188,4 +188,4 @@ class ArbitraryPlane {
   }
 }
 
-export default ArbitraryPlane;
+export default FlightModePlane;

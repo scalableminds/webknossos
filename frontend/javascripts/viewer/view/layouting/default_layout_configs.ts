@@ -30,7 +30,7 @@ import type {
 export const currentLayoutVersion = 16;
 const layoutHeaderHeight = 20;
 const dummyExtent = 500;
-export const show3DViewportInArbitrary = false;
+export const show3DViewportInFlightMode = false;
 const defaultSplitterSize = 1;
 export const DEFAULT_LAYOUT_NAME = "Custom Layout";
 // The border has two parts: The parts that contains the tabs via a sub-layout and the borderBar.
@@ -271,7 +271,7 @@ const _getDefaultLayouts = () => {
   const OrthoLayout2d = buildOrthoLayout(true, true);
   const OrthoLayoutView2d = buildOrthoLayout(false, true);
   const VolumeTracingView2d = buildOrthoLayout(false, true);
-  const eventual3DViewportForArbitrary = show3DViewportInArbitrary
+  const eventual3DViewportForArbitrary = show3DViewportInFlightMode
     ? [[[OrthoViewports.TDView]]]
     : [];
   const ArbitraryMainLayout = buildMainLayout([

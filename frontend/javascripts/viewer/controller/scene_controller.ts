@@ -30,7 +30,7 @@ import constants, {
 } from "viewer/constants";
 import { destroyRenderer, getRenderer } from "viewer/controller/renderer";
 import { setSceneController } from "viewer/controller/scene_controller_provider";
-import type ArbitraryPlane from "viewer/geometries/arbitrary_plane";
+import type FlightModePlane from "viewer/geometries/arbitrary_plane";
 import computeSplitBoundaryMeshWithSplines from "viewer/geometries/compute_split_boundary_mesh_with_splines";
 import Cube from "viewer/geometries/cube";
 import {
@@ -482,7 +482,7 @@ class SceneController {
     }
   };
 
-  update(optArbitraryPlane?: ArbitraryPlane): void {
+  update(optFlightModePlane?: FlightModePlane): void {
     const state = Store.getState();
     const { flycam } = state;
     const globalPosition = getPosition(flycam);
@@ -495,7 +495,7 @@ class SceneController {
       );
     }
 
-    if (!optArbitraryPlane) {
+    if (!optFlightModePlane) {
       for (const currentPlane of Object.values(this.planes)) {
         const [scaleX, scaleY] = getPlaneScalingFactor(state, flycam, currentPlane.planeID);
         const isVisible = scaleX > 0 && scaleY > 0;

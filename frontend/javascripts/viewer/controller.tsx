@@ -18,7 +18,7 @@ import type { ViewMode } from "viewer/constants";
 import constants, { ControlModeEnum } from "viewer/constants";
 import { initializeSceneController } from "viewer/controller/scene_controller";
 import UrlManager from "viewer/controller/url_manager";
-import ArbitraryController from "viewer/controller/viewmodes/arbitrary_controller";
+import FlightModeController from "viewer/controller/viewmodes/arbitrary_controller";
 import PlaneController from "viewer/controller/viewmodes/plane_controller";
 import { wkInitializedAction } from "viewer/model/actions/actions";
 import {
@@ -422,7 +422,7 @@ class Controller extends PureComponent<PropsWithRouter, State> {
       return (
         <>
           {cover != null ? cover : null}
-          <ArbitraryController viewMode={viewMode} />
+          <FlightModeController viewMode={viewMode} />
         </>
       );
     } else if (isPlane) {

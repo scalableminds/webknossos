@@ -16,7 +16,7 @@ import Constants, { FLIGHT_CAM_DISTANCE, FlightViewport, OrthoViews } from "view
 import getSceneController, {
   getSceneControllerOrNull,
 } from "viewer/controller/scene_controller_provider";
-import type ArbitraryPlane from "viewer/geometries/arbitrary_plane";
+import type FlightModePlane from "viewer/geometries/arbitrary_plane";
 import { getZoomedMatrix } from "viewer/model/accessors/flycam_accessor";
 import { getInputCatcherRect } from "viewer/model/accessors/view_mode_accessor";
 import { uiReadyAction } from "viewer/model/actions/actions";
@@ -24,7 +24,7 @@ import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import Store from "viewer/store";
 import {
   getGroundTruthLayoutRect,
-  show3DViewportInArbitrary,
+  show3DViewportInFlightMode,
 } from "viewer/view/layouting/default_layout_configs";
 import { clearCanvas, renderToTexture, setupRenderArea } from "viewer/view/rendering_utils";
 
@@ -34,10 +34,10 @@ type GeometryLike = {
 
 const flipYRotationMatrix = new Matrix4().makeRotationY(Math.PI);
 
-class ArbitraryView {
+class FlightModeView {
   cameras: OrthoViewMap<OrthographicCamera>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'plane' has no initializer and is not def... Remove this comment to see the full error message
-  plane: ArbitraryPlane;
+  plane: FlightModePlane;
   setClippingDistance: (value: number) => void;
   needsRerender: boolean;
   additionalInfo: string = "";
@@ -191,10 +191,22 @@ class ArbitraryView {
       const m = getZoomedMatrix(Store.getState().flycam);
       // biome-ignore format: don't format array
       camera.matrix.set(
-        m[0], m[4], m[8], m[12],
-        m[1], m[5], m[9], m[13],
-        m[2], m[6], m[10], m[14],
-        m[3], m[7], m[11], m[15],
+        m[0],
+        m[4],
+        m[8],
+        m[12],
+        m[1],
+        m[5],
+        m[9],
+        m[13],
+        m[2],
+        m[6],
+        m[10],
+        m[14],
+        m[3],
+        m[7],
+        m[11],
+        m[15],
       );
       camera.matrix.multiply(flipYRotationMatrix);
       camera.matrix.multiply(new Matrix4().makeTranslation(...this.cameraPosition));
@@ -218,7 +230,7 @@ class ArbitraryView {
 
       renderViewport(FlightViewport, camera);
 
-      if (show3DViewportInArbitrary) {
+      if (show3DViewportInFlightMode) {
         if (this.plane.meshes.debuggerPlane != null) {
           this.plane.meshes.debuggerPlane.visible = true;
         }
@@ -290,7 +302,7 @@ class ArbitraryView {
     geometry.addToScene(this.group);
   }
 
-  setArbitraryPlane(p: ArbitraryPlane) {
+  setFlightModePlane(p: FlightModePlane) {
     this.plane = p;
   }
 
@@ -324,4 +336,4 @@ class ArbitraryView {
   }
 }
 
-export default ArbitraryView;
+export default FlightModeView;

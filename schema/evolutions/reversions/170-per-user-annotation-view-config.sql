@@ -4,7 +4,7 @@ do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 170 
 
 DROP VIEW webknossos.annotations_;
 
--- Readd old viewConfiguration column
+-- Re-add old viewConfiguration column
 ALTER TABLE webknossos.annotations ADD COLUMN viewConfiguration JSONB;
 
 -- migrate owner view config to annotation table

@@ -6,7 +6,7 @@ import type { AdditionalCoordinate, APIUpdateActionBatch } from "types/api_types
 import type { Vector3 } from "viewer/constants";
 import { getAdditionalCoordinatesAsString } from "viewer/model/accessors/flycam_accessor";
 import { replaceSaveQueueAction } from "viewer/model/actions/save_actions";
-import { setMappingAction } from "viewer/model/actions/settings_actions";
+import { setMappingDataAction } from "viewer/model/actions/settings_actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import { api } from "viewer/singletons";
@@ -48,7 +48,7 @@ export function saveQueueEntriesToServerUpdateActionBatches(
   }));
 }
 
-type IdsToReloadPerMappingId = Map<string, number[]>;
+type IdsToReloadPerMappingId = Map<string, Set<number>>;
 type AnchorPositionToUnmappedIdByMappingId = Map<string, Map<string, number>>;
 
 function appendToIdsToReloadMapping(
@@ -57,9 +57,9 @@ function appendToIdsToReloadMapping(
   segmentId2: number,
 ) {
   if (!idsToReloadByMappingId.has(actionTracingId)) {
-    idsToReloadByMappingId.set(actionTracingId, []);
+    idsToReloadByMappingId.set(actionTracingId, new Set());
   }
-  idsToReloadByMappingId.get(actionTracingId)!.push(segmentId2);
+  idsToReloadByMappingId.get(actionTracingId)!.add(segmentId2);
 }
 
 async function appendIdToReloadFromPositionAsync(
@@ -166,7 +166,7 @@ function* addMissingSegmentsToLoadedMappings(
   );
   for (const volumeTracingId of idsToReloadPerMapping.keys()) {
     const idsToReload = idsToReloadPerMapping.get(volumeTracingId);
-    if (idsToReload == null || idsToReload.length === 0) {
+    if (idsToReload == null || idsToReload.size === 0) {
       continue;
     }
     const activeMapping = activeMappingByLayer[volumeTracingId];
@@ -186,18 +186,14 @@ function* addMissingSegmentsToLoadedMappings(
       ),
     );
     yield* put(
-      setMappingAction(
+      setMappingDataAction(
         volumeTracingId,
-        activeMapping.mappingName,
-        activeMapping.mappingType,
+        mergedMapping as Mapping,
         // Although this version is stored on the server, the used version to fetch the mapping info might be different
         // from the version stored in RebaseRelevantAnnotationState. Thus, we update RebaseRelevantAnnotationState not via the
         // isVersionStoredOnServer below. Instead the higher level function of the rebasing process take care of updating the
         // RebaseRelevantAnnotationState.
         false,
-        {
-          mapping: mergedMapping as Mapping,
-        },
       ),
     );
   }

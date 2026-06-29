@@ -1,6 +1,6 @@
 package models.task
 
-import com.scalableminds.util.mvc.JsonResultAttribues
+import com.scalableminds.util.mvc.JsonResultAttributes
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full, ParamFailure}
 import play.api.http.Status
@@ -10,11 +10,12 @@ import scala.concurrent.{ExecutionContext, Future}
 
 case class TaskCreationResult(tasks: List[JsObject], warnings: List[String])
 
-object TaskCreationResult extends JsonResultAttribues with Status {
+object TaskCreationResult extends JsonResultAttributes with Status {
   implicit val jsonFormat: Format[TaskCreationResult] = Json.format[TaskCreationResult]
 
-  def fromTaskJsFoxes(taskJsons: List[Fox[JsObject]], warnings: List[String])(
-      implicit ec: ExecutionContext): Future[TaskCreationResult] = {
+  def fromTaskJsFoxes(taskJsons: List[Fox[JsObject]], warnings: List[String])(implicit
+      ec: ExecutionContext
+  ): Future[TaskCreationResult] = {
     val taskJsonFuture: Future[List[Box[JsObject]]] = Fox.sequence(taskJsons)
     taskJsonFuture.map { taskJsonBoxes =>
       TaskCreationResult.fromBoxResults(taskJsonBoxes, warnings)

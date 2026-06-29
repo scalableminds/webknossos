@@ -99,10 +99,8 @@ jobs:
         run: tools/assert-complete-migrations.sh
       - name: Assert no 'SELECT *'  are present in scala files
         run: tools/assert-no-select-asterisk-present.sh
-
-      - name: Lint backend code and check formatting
-        run: sbt ";scapegoat; util/scapegoat; webknossosTracingstore/scapegoat; webknossosDatastore/scapegoat; scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"
-
+      - name: Check backend formatting and lint
+        run: sbt "scalafmtCheck; Test/scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck; scalafix --check; Test/scalafix --check; util/scalafix --check; webknossosTracingstore/scalafix --check; webknossosDatastore/scalafix --check"
       - name: Run backend unit tests
         run: sbt -v "testOnly backend.*"
 
@@ -309,6 +307,7 @@ jobs:
             echo "enabled=true" >> "$GITHUB_OUTPUT"
             SANITIZED=$(echo "$GITHUB_REF_NAME" | tr -cd '[:alnum:]' | tr '[:upper:]' '[:lower:]' | sed 's/^[0-9]*//')
             echo "env_url=https://${SANITIZED}.webknossos.xyz" >> "$GITHUB_OUTPUT"
+            echo "dynamic_env=dev-${SANITIZED}" >> "$GITHUB_OUTPUT"
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -319,7 +318,7 @@ jobs:
         with:
           step: start
           token: ${{ secrets.GITHUB_TOKEN }}
-          env: dev
+          env: ${{ steps.autodeploy.outputs.dynamic_env }}
       - name: Trigger autodeployment hook
         if: steps.autodeploy.outputs.enabled == 'true'
         run: |
@@ -339,7 +338,7 @@ jobs:
           env: ${{ steps.gh_deployment.outputs.env }}
           deployment_id: ${{ steps.gh_deployment.outputs.deployment_id }}
           env_url: ${{ steps.autodeploy.outputs.env_url }}
-          override: false
+          override: true
       - name: Slack Notification
         if: github.ref == 'refs/heads/master'
         run: .github/slack-notification.sh

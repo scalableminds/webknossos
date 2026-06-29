@@ -7,7 +7,8 @@ import com.scalableminds.webknossos.datastore.models.VoxelSize
 import models.dataset.Dataset
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.typesafe.scalalogging.LazyLogging
 import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
 import models.analytics.{AnalyticsService, FailedJobEvent, RunJobEvent}
@@ -25,23 +26,24 @@ import utils.WkConf
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class JobService @Inject()(wkConf: WkConf,
-                           actorSystem: ActorSystem,
-                           userDAO: UserDAO,
-                           mailchimpClient: MailchimpClient,
-                           multiUserDAO: MultiUserDAO,
-                           jobDAO: JobDAO,
-                           workerDAO: WorkerDAO,
-                           organizationDAO: OrganizationDAO,
-                           datasetDAO: DatasetDAO,
-                           defaultMails: DefaultMails,
-                           analyticsService: AnalyticsService,
-                           userService: UserService,
-                           creditTransactionService: CreditTransactionService,
-                           wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-                           slackNotificationService: SlackNotificationService)(implicit ec: ExecutionContext)
-    extends FoxImplicits
-    with LazyLogging
+class JobService @Inject() (
+    wkConf: WkConf,
+    actorSystem: ActorSystem,
+    userDAO: UserDAO,
+    mailchimpClient: MailchimpClient,
+    multiUserDAO: MultiUserDAO,
+    jobDAO: JobDAO,
+    workerDAO: WorkerDAO,
+    organizationDAO: OrganizationDAO,
+    datasetDAO: DatasetDAO,
+    defaultMails: DefaultMails,
+    analyticsService: AnalyticsService,
+    userService: UserService,
+    creditTransactionService: CreditTransactionService,
+    wkSilhouetteEnvironment: WkSilhouetteEnvironment,
+    slackNotificationService: SlackNotificationService
+)(implicit ec: ExecutionContext)
+    extends LazyLogging
     with Formatter {
 
   private val ONE_GIGAVOXEL = math.pow(10, 9)
@@ -57,13 +59,14 @@ class JobService @Inject()(wkConf: WkConf,
 
   private def trackNewlyFailed(jobBeforeChange: Job, jobAfterChange: Job): Unit = {
     for {
-      user <- userDAO.findOne(jobBeforeChange._owner)(GlobalAccessContext)
-      multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
-      organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
+      user <- userDAO.findOne(jobBeforeChange._owner)(using GlobalAccessContext)
+      multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
+      organization <- organizationDAO.findOne(user._organization)(using GlobalAccessContext)
       superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
       _ = analyticsService.track(FailedJobEvent(user, jobBeforeChange.command))
       workflowLink = jobAfterChange.workflowLinkSlackFormatted(wkConf.Http.uri)
-      msg = s"Job `${jobBeforeChange._id}` failed${durationLabel(jobAfterChange)}. Command `${jobBeforeChange.command}`, organization: ${organization.name}.$workflowLink"
+      msg =
+        s"Job `${jobBeforeChange._id}` failed${durationLabel(jobAfterChange)}. Command `${jobBeforeChange.command}`, organization: ${organization.name}.$workflowLink"
       _ = logger.warn(msg)
       _ = slackNotificationService.warn(
         s"Failed job$superUserLabel",
@@ -81,14 +84,15 @@ class JobService @Inject()(wkConf: WkConf,
 
   private def trackNewlySuccessful(jobBeforeChange: Job, jobAfterChange: Job): Unit = {
     for {
-      user <- userDAO.findOne(jobBeforeChange._owner)(GlobalAccessContext)
-      organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
+      user <- userDAO.findOne(jobBeforeChange._owner)(using GlobalAccessContext)
+      organization <- organizationDAO.findOne(user._organization)(using GlobalAccessContext)
       resultLink = jobAfterChange.resultLinkPublic(organization._id, wkConf.Http.uri)
       resultLinkSlack = jobAfterChange.resultLinkSlackFormatted(organization._id, wkConf.Http.uri)
       workflowLink = jobAfterChange.workflowLinkSlackFormatted(wkConf.Http.uri)
-      multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
+      multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
       superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
-      msg = s"Job `${jobBeforeChange._id}` succeeded${durationLabel(jobAfterChange)}. Command `${jobBeforeChange.command}`, organization: ${organization.name}.$resultLinkSlack$workflowLink"
+      msg =
+        s"Job `${jobBeforeChange._id}` succeeded${durationLabel(jobAfterChange)}. Command `${jobBeforeChange.command}`, organization: ${organization.name}.$resultLinkSlack$workflowLink"
       _ = logger.info(msg)
       _ = slackNotificationService.success(
         s"Successful job$superUserLabel",
@@ -103,7 +107,7 @@ class JobService @Inject()(wkConf: WkConf,
 
   private def sendSuccessEmailNotification(user: User, job: Job, resultLink: String): Unit =
     for {
-      multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
+      multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
       datasetName = job.datasetName.getOrElse("")
       genericEmailTemplate = defaultMails.jobSuccessfulGenericMail(multiUser, datasetName, resultLink, _, _)
       emailTemplate <- (job.command match {
@@ -114,7 +118,8 @@ class JobService @Inject()(wkConf: WkConf,
             genericEmailTemplate(
               "Tiff Export",
               "Your dataset has been exported as Tiff and is ready for download."
-            ))
+            )
+          )
         case JobCommand.infer_neurons =>
           Some(defaultMails.jobSuccessfulNeuronSegmentationMail(multiUser, datasetName, resultLink))
         case JobCommand.infer_instances =>
@@ -122,7 +127,8 @@ class JobService @Inject()(wkConf: WkConf,
             genericEmailTemplate(
               "Instance Segmentation",
               "Your instance segmentation is ready."
-            ))
+            )
+          )
         case JobCommand.infer_mitochondria =>
           Some(defaultMails.jobSuccessfulMitoSegmentationMail(multiUser, datasetName, resultLink))
         case JobCommand.align_sections =>
@@ -136,19 +142,22 @@ class JobService @Inject()(wkConf: WkConf,
             genericEmailTemplate(
               "Volume Annotation Merged",
               "Your volume annotation has been successfully merged with the existing segmentation. The result is available as a new dataset in your dashboard."
-            ))
+            )
+          )
         case JobCommand.compute_mesh_file =>
           Some(
             genericEmailTemplate(
               "Mesh Generation",
               "Your 3D meshes for the whole segmentation layer of your dataset are ready. Load pre-computed meshes by right-clicking any segment and choosing the corresponding option for near instant visualizations."
-            ))
+            )
+          )
         case JobCommand.render_animation =>
           Some(
             genericEmailTemplate(
               "Dataset Animation",
               "Your WEBKNOSSOS dataset animation is ready."
-            ))
+            )
+          )
         case _ => None
       }).toFox
       // some jobs, e.g. "find largest segment ideas", do not require an email notification
@@ -157,11 +166,11 @@ class JobService @Inject()(wkConf: WkConf,
 
   private def sendFailedEmailNotification(user: User, job: Job): Unit =
     for {
-      multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
+      multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
       datasetName = job.datasetName.getOrElse("")
       emailTemplate = job.command match {
         case JobCommand.convert_to_wkw => defaultMails.jobFailedUploadConvertMail(multiUser, datasetName)
-        case _                         => defaultMails.jobFailedGenericMail(multiUser, datasetName, job.command.toString)
+        case _ => defaultMails.jobFailedGenericMail(multiUser, datasetName, job.command.toString)
       }
       _ = Mailer ! Send(emailTemplate)
     } yield ()
@@ -169,62 +178,67 @@ class JobService @Inject()(wkConf: WkConf,
   def cleanUpIfFailed(job: Job): Fox[Unit] =
     if (job.state == JobState.FAILURE && job.command == JobCommand.convert_to_wkw) {
       logger.info(
-        s"WKW conversion job ${job._id} failed. Deleting dataset from the database, freeing the directoryName...")
+        s"WKW conversion job ${job._id} failed. Deleting dataset from the database, freeing the directoryName..."
+      )
       val commandArgs = job.args.value
       for {
         datasetDirectoryName <- commandArgs.get("dataset_directory_name").map(_.as[String]).toFox
         organizationId <- commandArgs.get("organization_id").map(_.as[String]).toFox
-        dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(datasetDirectoryName, organizationId)(
-          GlobalAccessContext)
+        dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(datasetDirectoryName, organizationId)(using
+          GlobalAccessContext
+        )
         _ <- datasetDAO.deleteDataset(dataset._id)
       } yield ()
     } else Fox.successful(())
 
-  def publicWrites(job: Job)(implicit ctx: DBAccessContext): Fox[JsValue] =
+  def publicWrites(job: Job)(using ctx: DBAccessContext): Fox[JsValue] =
     for {
       owner <- userDAO.findOne(job._owner) ?~> Msg.User.notFound
       ownerMultiUser <- multiUserDAO.findOne(owner._multiUser)
       organization <- organizationDAO.findOne(owner._organization) ?~> Msg.Organization.notFound(owner._organization)
       creditTransactionBox <- creditTransactionService.findTransactionOfJob(job._id).shiftBox
-    } yield
-      Json.toJson(
-        JobCompactInfo(
-          id = job._id,
-          command = job.command,
-          organizationId = organization._id,
-          ownerFirstName = ownerMultiUser.firstName,
-          ownerLastName = ownerMultiUser.lastName,
-          ownerEmail = ownerMultiUser.email,
-          args = job.args - "webknossos_token" - "user_auth_token",
-          state = job.effectiveState,
-          returnValue = job.returnValue,
-          resultLink = job.constructResultLink(organization._id),
-          voxelyticsWorkflowHash = job._voxelyticsWorkflowHash,
-          created = job.created,
-          started = job.started,
-          ended = job.ended,
-          costInMilliCredits = creditTransactionBox.toOption.map(t => t.milliCreditDelta * -1) // delta is negative, so cost should be positive.
-        )
+    } yield Json.toJson(
+      JobCompactInfo(
+        id = job._id,
+        command = job.command,
+        organizationId = organization._id,
+        ownerFirstName = ownerMultiUser.firstName,
+        ownerLastName = ownerMultiUser.lastName,
+        ownerEmail = ownerMultiUser.email,
+        args = job.args - "webknossos_token" - "user_auth_token",
+        state = job.effectiveState,
+        returnValue = job.returnValue,
+        resultLink = job.constructResultLink(organization._id),
+        voxelyticsWorkflowHash = job._voxelyticsWorkflowHash,
+        created = job.created,
+        started = job.started,
+        ended = job.ended,
+        lastRetry = job.lastRetry,
+        costInMilliCredits = creditTransactionBox.toOption.map(t =>
+          t.milliCreditDelta * -1
+        ) // delta is negative, so cost should be positive.
       )
+    )
 
   // Only seen by the workers
-  def parameterWrites(job: Job)(implicit ctx: DBAccessContext): Fox[JsObject] =
+  def parameterWrites(job: Job)(using ctx: DBAccessContext): Fox[JsObject] =
     for {
       owner <- userDAO.findOne(job._owner)
       userAuthToken <- Fox.fromFuture(
-        wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(owner.loginInfo))
-    } yield {
-      Json.obj(
-        "job_id" -> job._id.id,
-        "command" -> job.command,
-        "job_kwargs" -> (job.args ++ Json.obj("user_auth_token" -> userAuthToken.id))
+        wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(owner.loginInfo)
       )
-    }
+    } yield Json.obj(
+      "job_id" -> job._id.id,
+      "command" -> job.command,
+      "job_kwargs" -> (job.args ++ Json.obj("user_auth_token" -> userAuthToken.id))
+    )
 
   def submitJob(command: JobCommand, commandArgs: JsObject, owner: User, dataStoreName: String): Fox[Job] =
     for {
       _ <- Fox.fromBool(wkConf.Features.jobsEnabled) ?~> Msg.Job.notEnabled
-      _ <- Fox.assertTrue(jobIsSupportedByAvailableWorkers(command, dataStoreName)) ?~> Msg.Job.noWorkerForDatastoreAndJob
+      _ <- Fox.assertTrue(
+        jobIsSupportedByAvailableWorkers(command, dataStoreName)
+      ) ?~> Msg.Job.noWorkerForDatastoreAndJob
       job = Job(ObjectId.generate, owner._id, dataStoreName, command, commandArgs)
       _ <- jobDAO.insertOne(job)
       _ = analyticsService.track(RunJobEvent(owner, command))
@@ -232,8 +246,8 @@ class JobService @Inject()(wkConf: WkConf,
 
   def submitConvertToWkwJob(dataset: Dataset, user: User, voxelSize: VoxelSize): Fox[Unit] =
     for {
-      organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Msg.Organization.notFound(
-        dataset._organization)
+      organization <- organizationDAO.findOne(dataset._organization)(using GlobalAccessContext) ?~> Msg.Organization
+        .notFound(dataset._organization)
       commandArgs = Json.obj(
         "organization_id" -> organization._id,
         "organization_display_name" -> organization.name,
@@ -243,26 +257,37 @@ class JobService @Inject()(wkConf: WkConf,
         "voxel_size_factor" -> voxelSize.factor.toUriLiteral,
         "voxel_size_unit" -> voxelSize.unit
       )
-      _ <- submitJob(JobCommand.convert_to_wkw, commandArgs, user, dataset._dataStore) ?~> Msg.Job.ConvertToWkw.submitFailed
+      _ <- submitJob(
+        JobCommand.convert_to_wkw,
+        commandArgs,
+        user,
+        dataset._dataStore
+      ) ?~> Msg.Job.ConvertToWkw.submitFailed
     } yield ()
 
-  def submitPaidJob(command: JobCommand,
-                    commandArgs: JsObject,
-                    jobBoundingBoxInTargetMag: BoundingBox,
-                    creditTransactionComment: String,
-                    user: User,
-                    datastoreName: String)(implicit ctx: DBAccessContext): Fox[Job] =
+  def submitPaidJob(
+      command: JobCommand,
+      commandArgs: JsObject,
+      jobBoundingBoxInTargetMag: BoundingBox,
+      creditTransactionComment: String,
+      user: User,
+      datastoreName: String
+  )(using ctx: DBAccessContext): Fox[Job] =
     for {
       isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
       _ <- Fox.fromBool(isTeamManagerOrAdmin || user.isDatasetManager) ?~> Msg.Job.paidNoAdminOrManager
       costInMilliCredits <- calculateJobCostInMilliCredits(jobBoundingBoxInTargetMag, command)
-      _ <- Fox.assertTrue(creditTransactionService.hasEnoughCredits(user._organization, costInMilliCredits)) ?~> Msg.Job.Credits.notEnoughCredits
-      creditTransaction <- creditTransactionService.reserveCredits(user._organization,
-                                                                   costInMilliCredits,
-                                                                   creditTransactionComment)
+      _ <- Fox.assertTrue(
+        creditTransactionService.hasEnoughCredits(user._organization, costInMilliCredits)
+      ) ?~> Msg.Job.Credits.notEnoughCredits
+      creditTransaction <- creditTransactionService.reserveCredits(
+        user._organization,
+        costInMilliCredits,
+        creditTransactionComment
+      )
       job <- submitJob(command, commandArgs, user, datastoreName).shiftBox.flatMap {
         case Full(job) => Fox.successful(job)
-        case _ =>
+        case _         =>
           creditTransactionService
             .refundTransactionWhenStartingJobFailed(creditTransaction)
             .flatMap(_ => Fox.failure(Msg.Job.submitFailed))
@@ -284,27 +309,31 @@ class JobService @Inject()(wkConf: WkConf,
   def assertBoundingBoxLimits(boundingBox: String, mag: Option[String]): Fox[Unit] =
     for {
       boundingBoxInMag <- BoundingBox.fromLiteralWithMagOpt(boundingBox, mag).toFox ?~> Msg.Job.invalidBoundingBoxOrMag
-      _ <- Fox.fromBool(boundingBoxInMag.volume <= wkConf.Features.exportTiffMaxVolumeMVx * 1024 * 1024) ?~> Msg.Job.volumeExceeded
-      _ <- Fox.fromBool(boundingBoxInMag.size.maxDim <= wkConf.Features.exportTiffMaxEdgeLengthVx) ?~> Msg.Job.edgeLengthExceeded
+      _ <- Fox.fromBool(
+        boundingBoxInMag.volume <= wkConf.Features.exportTiffMaxVolumeMVx * 1024 * 1024
+      ) ?~> Msg.Job.volumeExceeded
+      _ <- Fox.fromBool(
+        boundingBoxInMag.size.maxDim <= wkConf.Features.exportTiffMaxEdgeLengthVx
+      ) ?~> Msg.Job.edgeLengthExceeded
     } yield ()
 
   private def getJobCostInMilliCreditsPerGVx(jobCommand: JobCommand): Fox[Int] =
     jobCommand match {
-      case JobCommand.infer_neurons        => Fox.successful(wkConf.Features.neuronInferralCostInMilliCreditsPerGVx)
-      case JobCommand.infer_nuclei         => Fox.successful(wkConf.Features.nucleiInferralCostInMilliCreditsPerGVx)
-      case JobCommand.infer_mitochondria   => Fox.successful(wkConf.Features.mitochondriaInferralCostInMilliCreditsPerGVx)
-      case JobCommand.infer_instances      => Fox.successful(wkConf.Features.instancesInferralCostInMilliCreditsPerGVx)
-      case JobCommand.train_neuron_model   => Fox.successful(0)
+      case JobCommand.infer_neurons      => Fox.successful(wkConf.Features.neuronInferralCostInMilliCreditsPerGVx)
+      case JobCommand.infer_nuclei       => Fox.successful(wkConf.Features.nucleiInferralCostInMilliCreditsPerGVx)
+      case JobCommand.infer_mitochondria => Fox.successful(wkConf.Features.mitochondriaInferralCostInMilliCreditsPerGVx)
+      case JobCommand.infer_instances    => Fox.successful(wkConf.Features.instancesInferralCostInMilliCreditsPerGVx)
+      case JobCommand.train_neuron_model => Fox.successful(0)
       case JobCommand.train_instance_model => Fox.successful(0)
       case JobCommand.align_sections       => Fox.successful(wkConf.Features.alignmentCostInMilliCreditsPerGVx)
       case _                               => Fox.failure(s"Unsupported job command $jobCommand")
     }
 
   def calculateJobCostInMilliCredits(boundingBoxInTargetMag: BoundingBox, jobCommand: JobCommand): Fox[Int] =
-    getJobCostInMilliCreditsPerGVx(jobCommand).map(costPerGVx => {
+    getJobCostInMilliCreditsPerGVx(jobCommand).map { costPerGVx =>
       val volumeInGVx = boundingBoxInTargetMag.volume / ONE_GIGAVOXEL
       val costInMilliCredits = math.ceil(volumeInGVx * costPerGVx).toInt
       math.max(costInMilliCredits, 0)
-    })
+    }
 
 }

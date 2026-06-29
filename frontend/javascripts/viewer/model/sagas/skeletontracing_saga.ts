@@ -551,7 +551,7 @@ function* removeConnectomeAgglomerateTreeWithId(
   const { layerName, mappingName, agglomerateId } = action;
   const treeName = getTreeNameForAgglomerateTree(agglomerateId, mappingName);
   const skeleton = yield* select(
-    (state) => state.localSegmentationData[layerName].connectomeData.skeleton,
+    (state) => state.localSegmentationStateByLayer[layerName].connectomeData.skeleton,
   );
   if (skeleton == null) return;
   const { trees } = skeleton;

@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.services
 
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.helpers.{PathSchemes, S3UriUtils, UPath}
 import com.scalableminds.webknossos.datastore.storage.{
@@ -18,14 +19,14 @@ import java.net.URI
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class ManagedS3Service @Inject()(config: DataStoreConfig, s3ClientPoolHolder: S3ClientPoolHolder)(
-    implicit ec: ExecutionContext)
-    extends FoxImplicits
-    with LazyLogging {
+class ManagedS3Service @Inject() (config: DataStoreConfig, s3ClientPoolHolder: S3ClientPoolHolder)(implicit
+    ec: ExecutionContext
+) extends LazyLogging {
 
   def pathIsInManagedS3(path: UPath): Boolean =
     path.getScheme.contains(PathSchemes.schemeS3) && globalCredentials.exists(c =>
-      UPath.fromString(c.name).map(path.startsWith).getOrElse(false))
+      UPath.fromString(c.name).map(path.startsWith).getOrElse(false)
+    )
 
   def findGlobalCredentialFor(pathOpt: Option[UPath]): Option[S3AccessKeyCredential] =
     pathOpt.flatMap(findGlobalCredentialFor)
@@ -72,9 +73,11 @@ class ManagedS3Service @Inject()(config: DataStoreConfig, s3ClientPoolHolder: S3
 
   private lazy val s3UploadClientFox: Fox[S3AsyncClient] = for {
     s3UploadCredential <- s3UploadCredentialOpt.toFox
-    client <- s3ClientPoolHolder.s3ClientPool.getS3Client(Some(s3UploadCredential),
-                                                          s3UploadEndpoint,
-                                                          isForUpload = true)
+    client <- s3ClientPoolHolder.s3ClientPool.getS3Client(
+      Some(s3UploadCredential),
+      s3UploadEndpoint,
+      isForUpload = true
+    )
   } yield client
 
   lazy val s3UploadTransferManagerFox: Fox[S3TransferManager] = for {

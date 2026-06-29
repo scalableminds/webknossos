@@ -1,6 +1,7 @@
 import java.nio.file.{Files, StandardCopyOption}
 import java.util.function.Consumer
 
+import play.sbt.PlayImport.PlayKeys
 import sbt.Keys._
 import sbt._
 import sys.process.Process
@@ -47,10 +48,10 @@ object AssetCompilation {
 
     Files
       .walk(from.toPath)
-      .forEach(toConsumer(cpSrc => {
+      .forEach(toConsumer { cpSrc =>
         val cpDest = to.toPath.resolve(from.toPath.relativize(cpSrc))
         Files.copy(cpSrc, cpDest)
-      }))
+      })
   }
 
   private def deleteRecursively(file: File): Unit = {
@@ -101,14 +102,24 @@ object AssetCompilation {
     Def task {
       val streamsValue = streams.value
       val baseDirectoryValue = baseDirectory.value
-      val dependencyClasspathValue = (Compile / dependencyClasspath).value
+      // Classpath of the standalone slick code generator subproject (see build.sbt). It carries our
+      // ContentStableSourceCodeGenerator plus slick-codegen and the postgres driver.
+      val codegenClasspathValue = (LocalProject("webknossosSlickCodegen") / Compile / fullClasspath).value
       val runnerValue = (Compile / runner).value
       val sourceManagedValue = sourceManaged.value
 
-      val schemaPath = baseDirectoryValue / "schema" / "postgres" / "schema.sql"
-      val slickTablesOutPath = sourceManagedValue / "schema" / "com" / "scalableminds" / "webknossos" / "schema" / "Tables.scala"
+      // Records the last schema update (written by dbtool.js)
+      val schemaRefreshedStampFile = baseDirectoryValue / "schema" / "refreshStamp" / "stamp"
+      // Records the last successful generation.
+      val codeGenStampFile = sourceManagedValue / "slick-schema-codegen.stamp"
 
-      val shouldUpdate = !slickTablesOutPath.exists || slickTablesOutPath.lastModified < schemaPath.lastModified
+      val schemaOutDir = sourceManagedValue / "schema"
+      val slickTablesOutPath = schemaOutDir / "com" / "scalableminds" / "webknossos" / "schema" / "Tables.scala"
+
+      // The generator reads the live DB; We check a stamp file written bei dbtool.js to decide whether to re-generate.
+      // This only gates whether we connect to the DB at all, the generator itself rewrites only the table files
+      // whose content actually changed.
+      val shouldUpdate = !slickTablesOutPath.exists || !codeGenStampFile.exists || codeGenStampFile.lastModified < schemaRefreshedStampFile.lastModified
 
       if (shouldUpdate) {
         streamsValue.log.info(
@@ -124,21 +135,31 @@ object AssetCompilation {
           "Updating Slick SQL schema from local database..."
         )
 
-        runnerValue.run(
-          "slick.codegen.SourceCodeGenerator",
-          dependencyClasspathValue.files,
+        val startNanos = System.nanoTime()
+        val runResult = runnerValue.run(
+          "com.scalableminds.codegen.SchemaCodeGenerator",
+          codegenClasspathValue.files,
           Array(
             "file://" + (baseDirectoryValue / "conf" / "slick.conf").toString + "#slick",
-            (sourceManagedValue / "schema").toString
+            schemaOutDir.toString
           ),
           streamsValue.log
         )
+        streamsValue.log.info(f"Slick codegen took ${(System.nanoTime() - startNanos) / 1.0e9}%.1fs")
+
+        // Fail this task if the subprocess failed.
+        runResult.get
+
+        // Mark this schema.sql state as generated so we do not re-run until the schema changes again.
+        IO.touch(codeGenStampFile)
 
       } else {
         streamsValue.log.info("Slick SQL schema already up to date.")
       }
 
-      Seq((slickTablesOutPath))
+      // Return every generated source so sbt tracks the full set (one file per table plus the container).
+      val schemaPackageDir = schemaOutDir / "com" / "scalableminds" / "webknossos" / "schema"
+      Option(schemaPackageDir.listFiles).getOrElse(Array.empty[File]).filter(_.getName.endsWith(".scala")).toSeq
     }
 
   val settings = Seq(
@@ -146,6 +167,8 @@ object AssetCompilation {
     stage := (stage dependsOn assetsGenerationTask).value,
     dist := (dist dependsOn assetsGenerationTask).value,
     Compile / sourceGenerators += slickClassesFromDBSchemaTask,
-    Compile / managedSourceDirectories += sourceManaged.value
+    Compile / managedSourceDirectories += sourceManaged.value,
+    // Trigger hot reload (including schema re-generation) if schema changed
+    PlayKeys.playMonitoredFiles += baseDirectory.value / "schema" / "refreshStamp"
   )
 }

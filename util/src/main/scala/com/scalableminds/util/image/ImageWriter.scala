@@ -4,11 +4,13 @@ import java.awt.image.{BufferedImage, DataBufferByte}
 import java.io._
 import javax.imageio._
 import javax.imageio.stream._
+import java.{util => ju}
+import javax.imageio
 
 class ImageWriter(imageType: String, imageExt: String) {
-  val imageQuality = 1F
-  val iter = ImageIO.getImageWritersByFormatName(imageType)
-  val writer = iter.next()
+  val imageQuality = 1f
+  val iter: ju.Iterator[imageio.ImageWriter] = ImageIO.getImageWritersByFormatName(imageType)
+  val writer: imageio.ImageWriter = iter.next()
   val iwp: ImageWriteParam = writer.getDefaultWriteParam()
 
   def writeToFile(buffered: BufferedImage): File = {
@@ -16,7 +18,7 @@ class ImageWriter(imageType: String, imageExt: String) {
     writeToFile(buffered, file)
   }
 
-  def writeToFile(buffered: BufferedImage, file: File) = {
+  def writeToFile(buffered: BufferedImage, file: File): File = {
     if (file.exists) file.delete
     var output: FileImageOutputStream = null
     try {
@@ -25,21 +27,17 @@ class ImageWriter(imageType: String, imageExt: String) {
       val image = new IIOImage(buffered, null, null)
       writer.write(null, image, iwp)
       writer.reset()
-    } finally {
-      if (output != null) output.close()
-    }
+    } finally if (output != null) output.close()
     file
   }
 
-  def writeToOutputStream(buffered: BufferedImage)(output: OutputStream) =
+  def writeToOutputStream(buffered: BufferedImage)(output: OutputStream): Unit =
     try {
       writer.setOutput(ImageIO.createImageOutputStream(output))
       val image = new IIOImage(buffered, null, null)
       writer.write(null, image, iwp)
       writer.reset()
-    } finally {
-      if (output != null) output.close()
-    }
+    } finally if (output != null) output.close()
 }
 
 class JPEGWriter extends ImageWriter("jpeg", ".jpg") {
@@ -51,7 +49,7 @@ class PNGWriter extends ImageWriter("png", ".png")
 
 class WebPWriter {
   val imageExt = ".webp"
-  val imageQuality = 0.7F
+  val imageQuality = 0.7f
 
   System.loadLibrary("webpwrapper")
 
@@ -69,9 +67,7 @@ class WebPWriter {
       output = new FileOutputStream(file)
       val data = buffered.getData.getDataBuffer.asInstanceOf[DataBufferByte].getData
       output.write(webPEncode(data, buffered.getWidth, buffered.getHeight, imageQuality * 100, buffered.getType))
-    } finally {
-      if (output != null) output.close()
-    }
+    } finally if (output != null) output.close()
     file
   }
 }

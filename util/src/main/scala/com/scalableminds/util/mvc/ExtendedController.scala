@@ -3,7 +3,7 @@ package com.scalableminds.util.mvc
 import com.google.protobuf.CodedInputStream
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools._
 import com.scalableminds.util.tools.Box.tryo
@@ -19,18 +19,28 @@ import play.filters.csp.CSPConfig
 import java.io.FileInputStream
 import scala.concurrent.{ExecutionContext, Future}
 
-trait BoxToResultHelpers extends Formatter with RemoteOriginHelpers with HeaderNames {
+trait FoxToResultHelpers extends Formatter with RemoteOriginHelpers with HeaderNames {
 
+  // Override this in your controller to add the CORS headers to the results of its actions
+  protected def allowRemoteOrigin: Boolean = false
+
+  // Override this in your controller make this the default error code for Failures
   protected def defaultErrorCode: Int = BAD_REQUEST
 
-  def asResult[T <: Result](b: Box[T]): Result = {
+  extension [R[_], B](ab: ActionBuilder[R, B])
+    def fox(block: R[B] => Fox[Result])(using ec: ExecutionContext): Action[B] =
+      ab.async(req => block(req).futureBox.map(asResult))
+    def fox[A](bodyParser: BodyParser[A])(block: R[A] => Fox[Result])(using ec: ExecutionContext): Action[A] =
+      ab.async(bodyParser)(req => block(req).futureBox.map(asResult))
+
+  private def asResult[T <: Result](b: Box[T]): Result = {
     val result = b match {
       case Full(result) =>
         result
       case ParamFailure(msg, _, chain, statusCode: Int) =>
         new JsonResult(statusCode)(msg, formatChainOpt(chain))
       case ParamFailure(_, _, _, msgs: JsArray) =>
-        new JsonResult(defaultErrorCode)(jsonMessages(msgs))
+        new JsonResult(defaultErrorCode)(Json.obj("messages" -> msgs))
       case Failure(msg, _, chain) =>
         new JsonResult(defaultErrorCode)(msg, formatChainOpt(chain))
       case Empty =>
@@ -45,21 +55,16 @@ trait BoxToResultHelpers extends Formatter with RemoteOriginHelpers with HeaderN
       case _           => None
     }
 
-  private def jsonMessages(msgs: JsArray): JsObject =
-    Json.obj("messages" -> msgs)
-
-  // Override this in your controller to add the CORS headers to the results of its actions
-  def allowRemoteOrigin: Boolean = false
-
   private def allowRemoteOriginIfSelected(result: Result): Result =
     if (allowRemoteOrigin) {
       addRemoteOriginHeaders(result)
     } else result
 
-  def addNoCacheHeaderFallback(result: Result): Result =
+  protected def addNoCacheHeaderFallback(result: Result): Result =
     if (result.header.headers.contains(CACHE_CONTROL)) {
       result
     } else result.withHeaders(CACHE_CONTROL -> "no-cache")
+
 }
 
 trait RemoteOriginHelpers {
@@ -79,43 +84,21 @@ trait CspHeaders extends HeaderNames {
   def addCspHeader(result: Result): Result =
     result.withHeaders((CONTENT_SECURITY_POLICY, contentSecurityPolicyDirectivesString))
 
-  def addCspHeader(action: Action[AnyContent])(implicit request: Request[AnyContent],
-                                               ec: ExecutionContext): Future[Result] =
+  def addCspHeader(
+      action: Action[AnyContent]
+  )(implicit request: Request[AnyContent], ec: ExecutionContext): Future[Result] =
     action.apply(request).map(addCspHeader)
-}
-
-trait ResultImplicits extends BoxToResultHelpers {
-
-  implicit def fox2FutureResult[T <: Result](b: Fox[T])(implicit ec: ExecutionContext): Future[Result] =
-    b.futureBox.map(asResult)
-
-  implicit def futureBox2Result[T <: Result](b: Box[Future[T]])(implicit ec: ExecutionContext): Future[Result] =
-    b match {
-      case Full(f) =>
-        f.map(value => asResult(Full(value)))
-      case Empty =>
-        Future.successful(asResult(Empty))
-      case f: Failure =>
-        Future.successful(asResult(f))
-    }
-
-  implicit def boxFuture2Result[T <: Result](f: Future[Box[T]])(implicit ec: ExecutionContext): Future[Result] =
-    f.map { b =>
-      asResult(b)
-    }
-
-  implicit def box2Result[T <: Result](b: Box[T]): Result =
-    asResult(b)
-
 }
 
 class JsonResult(status: Int)
     extends Result(header = ResponseHeader(status), body = HttpEntity.NoEntity)
-    with JsonResultAttribues {
+    with JsonResultAttributes {
 
   private def createResult(content: JsValue)(implicit writeable: Writeable[JsValue]): Result =
-    Result(header = ResponseHeader(status),
-           body = HttpEntity.Strict(writeable.transform(content), writeable.contentType))
+    Result(
+      header = ResponseHeader(status),
+      body = HttpEntity.Strict(writeable.transform(content), writeable.contentType)
+    )
 
   private def messageTypeFromStatus =
     if (status == OK)
@@ -182,15 +165,15 @@ trait MimeTypes {
   val octetStreamMimeType: String = "application/octet-stream"
 }
 
-trait JsonResults extends JsonResultAttribues {
+trait JsonResults extends JsonResultAttributes {
   val JsonOk = new JsonResult(OK)
   val JsonBadRequest = new JsonResult(BAD_REQUEST)
   val JsonNotFound = new JsonResult(NOT_FOUND)
 }
 
-trait JsonResultAttribues {
-  val jsonSuccess = "success"
-  val jsonError = "error"
+trait JsonResultAttributes {
+  protected val jsonSuccess = "success"
+  protected val jsonError = "error"
 }
 
 trait ValidationHelpers {
@@ -200,9 +183,11 @@ trait ValidationHelpers {
       _.validate[A].asEither.left.map(e => BadRequest(JsError.toJson(e)))
     )
 
-  def validateProto[A <: GeneratedMessage](implicit bodyParsers: PlayBodyParsers,
-                                           companion: GeneratedMessageCompanion[A],
-                                           ec: ExecutionContext): BodyParser[A] =
+  def validateProto[A <: GeneratedMessage](implicit
+      bodyParsers: PlayBodyParsers,
+      companion: GeneratedMessageCompanion[A],
+      ec: ExecutionContext
+  ): BodyParser[A] =
     bodyParsers.raw.validate { raw =>
       if (raw.size < raw.memoryThreshold) {
         Box(raw.asBytes())
@@ -223,8 +208,7 @@ trait RequestTokenHelper {
 
 trait ExtendedController
     extends JsonResults
-    with FoxImplicits
-    with ResultImplicits
+    with FoxToResultHelpers
     with Status
     with InjectedController
     with MimeTypes

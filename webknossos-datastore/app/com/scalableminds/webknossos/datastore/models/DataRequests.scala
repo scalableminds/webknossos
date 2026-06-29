@@ -55,7 +55,7 @@ case class WebknossosAdHocMeshRequest(
     mappingType: Option[String] = None,
     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
     annotationVersion: Option[Long],
-    findNeighbors: Boolean = true,
+    findNeighbors: Boolean = true
 ) {
   def cuboid: Cuboid =
     Cuboid(VoxelPosition(position.x, position.y, position.z, mag), cubeSize.x, cubeSize.y, cubeSize.z)
@@ -82,17 +82,11 @@ object RawCuboidRequest {
   implicit val jsonFormat: OFormat[RawCuboidRequest] = Json.format[RawCuboidRequest]
 }
 
-object DataRequestCollection {
-  type DataRequestCollection = List[AbstractDataRequest]
-
-  implicit def requestToCollection(request: AbstractDataRequest): DataRequestCollection = List(request)
-}
-
 case class AdditionalCoordinate(
     name: String,
     value: Int
 ) {
-  override def toString = s"$name=$value"
+  override def toString: String = s"$name=$value"
 }
 
 object AdditionalCoordinate {

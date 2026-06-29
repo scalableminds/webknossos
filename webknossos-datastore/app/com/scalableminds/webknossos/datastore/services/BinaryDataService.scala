@@ -6,27 +6,29 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, LayerCategory}
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
-import com.scalableminds.webknossos.datastore.storage._
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.{Box, Empty, Full}
-import ucar.ma2.{Array => MultiArray}
+import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
+import ucar.ma2.Array as MultiArray
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateService
+import com.scalableminds.webknossos.datastore.storage.{BucketProviderCache, DataVaultService}
 
 import java.nio.file.Path
 import scala.concurrent.ExecutionContext
 
-class BinaryDataService(val dataBaseDir: Path,
-                        val agglomerateServiceOpt: Option[AgglomerateService],
-                        dataVaultServiceOpt: Option[DataVaultService],
-                        sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]],
-                        datasetErrorLoggingService: DatasetErrorLoggingService)(implicit ec: ExecutionContext)
-    extends FoxImplicits
-    with LazyLogging {
+class BinaryDataService(
+    val dataBaseDir: Path,
+    val agglomerateServiceOpt: Option[AgglomerateService],
+    dataVaultServiceOpt: Option[DataVaultService],
+    sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]],
+    datasetErrorLoggingService: DatasetErrorLoggingService
+)(implicit ec: ExecutionContext)
+    extends LazyLogging {
 
   /* Note that this must stay in sync with the front-end constant MAX_MAG_FOR_AGGLOMERATE_MAPPING
      compare https://github.com/scalableminds/webknossos/issues/5223 */
@@ -34,7 +36,7 @@ class BinaryDataService(val dataBaseDir: Path,
 
   private lazy val bucketProviderCache = new BucketProviderCache(maxEntries = 5000)
 
-  def handleDataRequest(request: DataServiceDataRequest)(implicit tc: TokenContext): Fox[Array[Byte]] = {
+  def handleDataRequest(request: DataServiceDataRequest)(using tc: TokenContext): Fox[Array[Byte]] = {
     val bucketQueue = request.cuboid.allBucketsInCuboid
 
     if (!request.cuboid.hasValidDimensions) {
@@ -55,13 +57,15 @@ class BinaryDataService(val dataBaseDir: Path,
     }
   }
 
-  def handleMultipleBucketRequests(requests: Seq[DataServiceDataRequest])(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[Seq[Box[Array[Byte]]]] =
+  def handleMultipleBucketRequests(
+      requests: Seq[DataServiceDataRequest]
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Seq[Box[Array[Byte]]]] =
     if (requests.isEmpty) Fox.successful(Seq.empty)
     else {
       for {
-        _ <- Fox.fromBool(requests.forall(_.isSingleBucket)) ?~> "data requests handed to handleMultipleBucketRequests don’t contain bucket requests"
+        _ <- Fox.fromBool(
+          requests.forall(_.isSingleBucket)
+        ) ?~> "data requests handed to handleMultipleBucketRequests don’t contain bucket requests"
         dataLayer <- SequenceUtils.findUniqueElement(requests.map(_.dataLayer)).toFox
         // dataSource is None and unused for volume tracings. Insert dummy DataSourceId (also unused in that case, except for logging)
         dataSourceId <- SequenceUtils.findUniqueElement(requests.map(_.dataSourceIdOrVolumeDummy)).toFox
@@ -74,16 +78,18 @@ class BinaryDataService(val dataBaseDir: Path,
         requestsSelected: Seq[DataServiceDataRequest] = requests.zipWithIndex.collect {
           case (request, idx) if !indicesWhereOutsideRange.contains(idx) => request
         }
-        readInstructions = requestsSelected.map(
-          r =>
-            DataReadInstruction(
-              dataBaseDir,
-              dataSourceId,
-              dataLayer,
-              r.cuboid.topLeft.toBucket.copy(additionalCoordinates = r.settings.additionalCoordinates),
-              r.settings.version))
+        readInstructions = requestsSelected.map(r =>
+          DataReadInstruction(
+            dataBaseDir,
+            dataSourceId,
+            dataLayer,
+            r.cuboid.topLeft.toBucket.copy(additionalCoordinates = r.settings.additionalCoordinates),
+            r.settings.version
+          )
+        )
         bucketProvider = bucketProviderCache.getOrLoadAndPut((dataSourceId, dataLayer.bucketProviderCacheKey))(_ =>
-          dataLayer.bucketProvider(dataVaultServiceOpt, dataSourceId, sharedChunkContentsCache))
+          dataLayer.bucketProvider(dataVaultServiceOpt, dataSourceId, sharedChunkContentsCache)
+        )
         bucketBoxes <- datasetErrorLoggingService.withErrorLoggingMultiple(
           firstRequest.datasetId,
           dataSourceId,
@@ -94,7 +100,9 @@ class BinaryDataService(val dataBaseDir: Path,
           case (request, Full(bucketBytes)) => convertAccordingToRequest(request, bucketBytes)
           case (_, other)                   => other.toFox
         })
-        _ <- Fox.fromBool(bucketBoxesConverted.length + indicesWhereOutsideRange.size == requests.length) ?~> Msg.Dataset.bucketCountMismatch
+        _ <- Fox.fromBool(
+          bucketBoxesConverted.length + indicesWhereOutsideRange.size == requests.length
+        ) ?~> Msg.Dataset.bucketCountMismatch
         bucketBoxesIterator = bucketBoxesConverted.iterator
         allBucketBoxes = requests.indices.map { index =>
           if (indicesWhereOutsideRange.contains(index)) Empty
@@ -103,15 +111,19 @@ class BinaryDataService(val dataBaseDir: Path,
       } yield allBucketBoxes
     }
 
-  private def convertIfNecessary(isNecessary: Boolean,
-                                 inputArray: Array[Byte],
-                                 conversionFunc: Array[Byte] => Fox[Array[Byte]],
-                                 request: DataServiceDataRequest): Fox[Array[Byte]] =
+  private def convertIfNecessary(
+      isNecessary: Boolean,
+      inputArray: Array[Byte],
+      conversionFunc: Array[Byte] => Fox[Array[Byte]],
+      request: DataServiceDataRequest
+  ): Fox[Array[Byte]] =
     if (isNecessary) {
-      datasetErrorLoggingService.withErrorLogging(request.datasetId,
-                                                  request.dataSourceIdOrVolumeDummy,
-                                                  "converting bucket data",
-                                                  conversionFunc(inputArray))
+      datasetErrorLoggingService.withErrorLogging(
+        request.datasetId,
+        request.dataSourceIdOrVolumeDummy,
+        "converting bucket data",
+        conversionFunc(inputArray)
+      )
     } else Fox.successful(inputArray)
 
   /*
@@ -121,7 +133,8 @@ class BinaryDataService(val dataBaseDir: Path,
   private def clipToLayerBoundingBox(request: DataServiceDataRequest)(inputArray: Array[Byte]): Box[Array[Byte]] = {
     val bytesPerElement = request.dataLayer.bytesPerElement
     val requestBboxInMag = request.cuboid.toBoundingBoxInMag
-    val layerBboxInMag = request.dataLayer.boundingBox / request.mag // Note that this div is implemented to round to the bigger bbox so we don’t lose voxels inside.
+    val layerBboxInMag =
+      request.dataLayer.boundingBox / request.mag // Note that this div is implemented to round to the bigger bbox so we don’t lose voxels inside.
     val intersectionOpt = requestBboxInMag.intersection(layerBboxInMag).map(_.move(-requestBboxInMag.topLeft))
     val outputArray = Array.fill[Byte](inputArray.length)(0)
     intersectionOpt.foreach { intersection =>
@@ -134,18 +147,21 @@ class BinaryDataService(val dataBaseDir: Path,
           (intersection.topLeft.x +
             y * requestBboxInMag.width +
             z * requestBboxInMag.width * requestBboxInMag.height) * bytesPerElement
-        System.arraycopy(inputArray,
-                         offset,
-                         outputArray,
-                         offset,
-                         (intersection.bottomRight.x - intersection.topLeft.x) * bytesPerElement)
+        System.arraycopy(
+          inputArray,
+          offset,
+          outputArray,
+          offset,
+          (intersection.bottomRight.x - intersection.topLeft.x) * bytesPerElement
+        )
       }
     }
     Full(outputArray)
   }
 
-  private def convertAccordingToRequest(request: DataServiceDataRequest, inputArray: Array[Byte])(
-      implicit tc: TokenContext): Fox[Array[Byte]] =
+  private def convertAccordingToRequest(request: DataServiceDataRequest, inputArray: Array[Byte])(using
+      tc: TokenContext
+  ): Fox[Array[Byte]] =
     for {
       clippedData <- convertIfNecessary(
         !request.cuboid.toMag1BoundingBox.isFullyContainedIn(request.dataLayer.boundingBox),
@@ -165,40 +181,43 @@ class BinaryDataService(val dataBaseDir: Path,
       resultData <- convertIfNecessary(request.settings.halfByte, mappedData, convertToHalfByte, request)
     } yield resultData
 
-  def handleDataRequests(requests: List[DataServiceDataRequest])(
-      implicit tc: TokenContext): Fox[(Array[Byte], List[Int])] = {
-    val requestsCount = requests.length
-    val requestData = requests.zipWithIndex.map {
-      case (request, index) =>
-        for {
-          data <- handleDataRequest(request)
-          dataConverted <- convertAccordingToRequest(request, data)
-        } yield (dataConverted, index)
+  def handleDataRequests(
+      requests: List[DataServiceDataRequest]
+  )(using tc: TokenContext): Fox[(Array[Byte], Seq[Int], Seq[Int])] = {
+    val requestData = requests.map { request =>
+      for {
+        data <- handleDataRequest(request)
+        dataConverted <- convertAccordingToRequest(request, data)
+      } yield dataConverted
     }
 
     Fox.fromFuture {
-      Fox.sequenceOfFulls(requestData).map { l =>
-        val bytesArrays = l.map { case (byteArray, _) => byteArray }
-        val foundIndices = l.map { case (_, index)    => index }
-        val notFoundIndices = List.range(0, requestsCount).diff(foundIndices)
-        (bytesArrays.appendArrays, notFoundIndices)
+      Fox.sequence(requestData).map { boxes =>
+        val byteArrays = boxes.collect { case Full(byteArray) => byteArray }
+        val emptyIndices = boxes.zipWithIndex.collect { case (Empty, i) => i }
+        val failureIndices = boxes.zipWithIndex.collect { case (_: Failure, i) => i }
+        (byteArrays.appendArrays, emptyIndices, failureIndices)
       }
     }
   }
 
-  private def handleBucketRequest(request: DataServiceDataRequest, bucket: BucketPosition)(
-      implicit tc: TokenContext): Fox[Array[Byte]] =
+  private def handleBucketRequest(request: DataServiceDataRequest, bucket: BucketPosition)(using
+      tc: TokenContext
+  ): Fox[Array[Byte]] =
     if (request.dataLayer.containsMag(bucket.mag)) {
       val readInstruction =
-        DataReadInstruction(dataBaseDir,
-                            request.dataSourceIdOrVolumeDummy,
-                            request.dataLayer,
-                            bucket,
-                            request.settings.version)
+        DataReadInstruction(
+          dataBaseDir,
+          request.dataSourceIdOrVolumeDummy,
+          request.dataLayer,
+          bucket,
+          request.settings.version
+        )
       val dataSourceId = request.dataSourceIdOrVolumeDummy
       val bucketProvider =
         bucketProviderCache.getOrLoadAndPut((dataSourceId, request.dataLayer.bucketProviderCacheKey))(_ =>
-          request.dataLayer.bucketProvider(dataVaultServiceOpt, dataSourceId, sharedChunkContentsCache))
+          request.dataLayer.bucketProvider(dataVaultServiceOpt, dataSourceId, sharedChunkContentsCache)
+        )
       datasetErrorLoggingService.withErrorLogging(
         request.datasetId,
         dataSourceId,
@@ -207,8 +226,7 @@ class BinaryDataService(val dataBaseDir: Path,
       )
     } else Fox.empty
 
-  /**
-    * Given a list of loaded buckets, cut out the data of the cuboid
+  /** Given a list of loaded buckets, cut out the data of the cuboid
     */
   private def cutOutCuboid(request: DataServiceDataRequest, rs: List[(BucketPosition, Array[Byte])]): Array[Byte] = {
     val bytesPerElement = request.dataLayer.bytesPerElement
@@ -218,33 +236,32 @@ class BinaryDataService(val dataBaseDir: Path,
     val result = new Array[Byte](cuboid.volume * bytesPerElement)
     val bucketLength = DataLayer.bucketLength
 
-    rs.reverse.foreach {
-      case (bucket, data) =>
-        val xMin = math.max(0, math.max(cuboid.topLeft.voxelXInMag, bucket.topLeft.voxelXInMag))
-        val yMin = math.max(0, math.max(cuboid.topLeft.voxelYInMag, bucket.topLeft.voxelYInMag))
-        val zMin = math.max(0, math.max(cuboid.topLeft.voxelZInMag, bucket.topLeft.voxelZInMag))
+    rs.reverse.foreach { case (bucket, data) =>
+      val xMin = math.max(0, math.max(cuboid.topLeft.voxelXInMag, bucket.topLeft.voxelXInMag))
+      val yMin = math.max(0, math.max(cuboid.topLeft.voxelYInMag, bucket.topLeft.voxelYInMag))
+      val zMin = math.max(0, math.max(cuboid.topLeft.voxelZInMag, bucket.topLeft.voxelZInMag))
 
-        val xMax = math.max(0, math.min(cuboid.bottomRight.voxelXInMag, bucket.topLeft.voxelXInMag + bucketLength))
-        val yMax = math.max(0, math.min(cuboid.bottomRight.voxelYInMag, bucket.topLeft.voxelYInMag + bucketLength))
-        val zMax = math.max(0, math.min(cuboid.bottomRight.voxelZInMag, bucket.topLeft.voxelZInMag + bucketLength))
+      val xMax = math.max(0, math.min(cuboid.bottomRight.voxelXInMag, bucket.topLeft.voxelXInMag + bucketLength))
+      val yMax = math.max(0, math.min(cuboid.bottomRight.voxelYInMag, bucket.topLeft.voxelYInMag + bucketLength))
+      val zMax = math.max(0, math.min(cuboid.bottomRight.voxelZInMag, bucket.topLeft.voxelZInMag + bucketLength))
 
-        for {
-          z <- zMin until zMax
-          y <- yMin until yMax
-          // We can bulk copy a row of voxels and do not need to iterate in the x dimension
-        } {
-          val dataOffset =
-            (xMin % bucketLength +
-              y % bucketLength * bucketLength +
-              z % bucketLength * bucketLength * bucketLength) * bytesPerElement
+      for {
+        z <- zMin until zMax
+        y <- yMin until yMax
+        // We can bulk copy a row of voxels and do not need to iterate in the x dimension
+      } {
+        val dataOffset =
+          (xMin % bucketLength +
+            y % bucketLength * bucketLength +
+            z % bucketLength * bucketLength * bucketLength) * bytesPerElement
 
-          val rx = xMin - cuboid.topLeft.voxelXInMag
-          val ry = y - cuboid.topLeft.voxelYInMag
-          val rz = z - cuboid.topLeft.voxelZInMag
+        val rx = xMin - cuboid.topLeft.voxelXInMag
+        val ry = y - cuboid.topLeft.voxelYInMag
+        val rz = z - cuboid.topLeft.voxelZInMag
 
-          val resultOffset = (rx + ry * resultShape.x + rz * resultShape.x * resultShape.y) * bytesPerElement
-          System.arraycopy(data, dataOffset, result, resultOffset, (xMax - xMin) * bytesPerElement)
-        }
+        val resultOffset = (rx + ry * resultShape.x + rz * resultShape.x * resultShape.y) * bytesPerElement
+        System.arraycopy(data, dataOffset, result, resultOffset, (xMax - xMin) * bytesPerElement)
+      }
     }
     result
   }
@@ -256,8 +273,8 @@ class BinaryDataService(val dataBaseDir: Path,
       val compressed = new Array[Byte](compressedSize)
       var i = 0
       while (i * 2 + 1 < aSize) {
-        val first = (a(i * 2) & 0xF0).toByte
-        val second = (a(i * 2 + 1) & 0xF0).toByte >> 4 & 0x0F
+        val first = (a(i * 2) & 0xf0).toByte
+        val second = (a(i * 2 + 1) & 0xf0).toByte >> 4 & 0x0f
         val value = (first | second).asInstanceOf[Byte]
         compressed(i) = value
         i += 1
@@ -278,7 +295,8 @@ class BinaryDataService(val dataBaseDir: Path,
 
     def chunkContentsPredicate(key: String): Boolean =
       key.startsWith(s"${dataSourceId.toString}") && layerName.forall(l =>
-        key.startsWith(s"${dataSourceId.toString}__$l"))
+        key.startsWith(s"${dataSourceId.toString}__$l")
+      )
 
     val removedChunksCount = sharedChunkContentsCache.map(_.clear(chunkContentsPredicate)).getOrElse(0)
 

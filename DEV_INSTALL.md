@@ -24,15 +24,18 @@
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
 # Install git, node.js, postgres, sbt, gfind, gsed, draco
-brew install openjdk draco openssl git node postgresql sbt findutils coreutils gnu-sed redis brotli wget
+brew install openjdk@21 draco openssl git node postgresql sbt findutils coreutils gnu-sed redis brotli wget cmake
 
 # Set env variables for openjdk and openssl
 # You probably want to add these lines manually to avoid conflicts in your zshrc
-echo 'export JAVA_HOME=/opt/homebrew/opt/openjdk/libexec/openjdk.jdk/Contents/Home' >> ~/.zshrc
-echo 'export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"' >> ~/.zshrc
+echo 'export JAVA_HOME="/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home"' >> ~/.zshrc
+echo 'export PATH="$JAVA_HOME/bin:$PATH"' >> ~/.zshrc
 echo 'export PATH="/opt/homebrew/opt/openssl/bin:$PATH"' >> ~/.zshrc
 echo 'export LDFLAGS="-L/opt/homebrew/opt/openssl/lib"' >> ~/.zshrc
 echo 'export CPPFLAGS="-I/opt/homebrew/opt/openssl/include"' >> ~/.zshrc
+
+# Enforce sbt using openjdk version 21.
+mkdir -p ~/.config/sbt && echo "-java-home /opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home" > ~/.config/sbt/sbtopts && cat ~/.config/sbt/sbtopts
 
 # Start postgres and redis
 brew services start postgresql
@@ -46,6 +49,7 @@ psql -c "ALTER USER postgres WITH SUPERUSER;"
 psql -c "GRANT ALL PRIVILEGES ON DATABASE webknossos TO postgres;"
 
 # Enable corepack for nodeJs and yarn
+npm install -g corepack 
 corepack enable
 
 # Checkout the WEBKNOSSOS git repository

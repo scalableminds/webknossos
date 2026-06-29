@@ -2,7 +2,8 @@ package models.annotation
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.IdWithBool.Id32WithBool
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonUserStateProto}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeUserStateProto}
@@ -33,10 +34,12 @@ case class RedundantTracingProperties(
     userStateBoundingBoxVisibilities: Map[ObjectId, Seq[Id32WithBool]] // UserId → Seq(bboxId, bboxIsVisible)
 )
 
-trait AnnotationLayerPrecedence extends FoxImplicits {
+trait AnnotationLayerPrecedence {
 
-  protected def combineLargestSegmentIdsByPrecedence(fromNml: Option[Long],
-                                                     fromFallbackLayer: Option[Option[Long]]): Option[Long] =
+  protected def combineLargestSegmentIdsByPrecedence(
+      fromNml: Option[Long],
+      fromFallbackLayer: Option[Option[Long]]
+  ): Option[Long] =
     if (fromNml.nonEmpty)
       // This was called for an NML upload. The NML had an explicit largestSegmentId. Use that.
       fromNml
@@ -51,8 +54,9 @@ trait AnnotationLayerPrecedence extends FoxImplicits {
 
   protected def adaptSkeletonTracing(
       skeletonTracing: SkeletonTracing,
-      oldPrecedenceLayerProperties: Option[RedundantTracingProperties]): SkeletonTracing =
-    oldPrecedenceLayerProperties.map { p: RedundantTracingProperties =>
+      oldPrecedenceLayerProperties: Option[RedundantTracingProperties]
+  ): SkeletonTracing =
+    oldPrecedenceLayerProperties.map { (p: RedundantTracingProperties) =>
       skeletonTracing.copy(
         editPosition = p.editPosition,
         editRotation = p.editRotation,
@@ -63,9 +67,11 @@ trait AnnotationLayerPrecedence extends FoxImplicits {
       )
     }.getOrElse(skeletonTracing)
 
-  protected def adaptVolumeTracing(volumeTracing: VolumeTracing,
-                                   oldPrecedenceLayerProperties: Option[RedundantTracingProperties]): VolumeTracing =
-    oldPrecedenceLayerProperties.map { p: RedundantTracingProperties =>
+  protected def adaptVolumeTracing(
+      volumeTracing: VolumeTracing,
+      oldPrecedenceLayerProperties: Option[RedundantTracingProperties]
+  ): VolumeTracing =
+    oldPrecedenceLayerProperties.map { (p: RedundantTracingProperties) =>
       volumeTracing.copy(
         editPosition = p.editPosition,
         editRotation = p.editRotation,
@@ -78,18 +84,20 @@ trait AnnotationLayerPrecedence extends FoxImplicits {
 
   private def adaptSkeletonUserStates(
       userStates: Seq[SkeletonUserStateProto],
-      oldPrecedenceLayerProperties: RedundantTracingProperties): Seq[SkeletonUserStateProto] = {
+      oldPrecedenceLayerProperties: RedundantTracingProperties
+  ): Seq[SkeletonUserStateProto] = {
     val adaptedExistingUserStates = userStates.map { userState =>
       val userId = ObjectId(userState.userId)
       oldPrecedenceLayerProperties.userStateBoundingBoxVisibilities.get(userId) match {
-        case None => userState
+        case None                             => userState
         case Some(precedenceBboxVisibilities) =>
           userState.copy(boundingBoxVisibilities = precedenceBboxVisibilities)
       }
     }
     // We also have to create new user states for the users the old precedence layer has, but the new precedence layer is missing.
     val newUserPrecedenceProperties = oldPrecedenceLayerProperties.userStateBoundingBoxVisibilities.filter(tuple =>
-      !userStates.exists(_.userId == tuple._1.toString))
+      !userStates.exists(_.userId == tuple._1.toString)
+    )
     val newUserStates = newUserPrecedenceProperties.map {
       case (userId: ObjectId, boundingBoxVisibilities: Seq[Id32WithBool]) =>
         SkeletonTracingDefaults
@@ -103,18 +111,20 @@ trait AnnotationLayerPrecedence extends FoxImplicits {
 
   private def adaptVolumeUserStates(
       userStates: Seq[VolumeUserStateProto],
-      oldPrecedenceLayerProperties: RedundantTracingProperties): Seq[VolumeUserStateProto] = {
+      oldPrecedenceLayerProperties: RedundantTracingProperties
+  ): Seq[VolumeUserStateProto] = {
     val adaptedExistingUserStates = userStates.map { userState =>
       val userId = ObjectId(userState.userId)
       oldPrecedenceLayerProperties.userStateBoundingBoxVisibilities.get(userId) match {
-        case None => userState
+        case None                             => userState
         case Some(precedenceBboxVisibilities) =>
           userState.copy(boundingBoxVisibilities = precedenceBboxVisibilities)
       }
     }
     // We also have to create new user states for the users the old precedence layer has, but the new precedence layer is missing.
     val newUserPrecedenceProperties = oldPrecedenceLayerProperties.userStateBoundingBoxVisibilities.filter(tuple =>
-      !userStates.exists(_.userId == tuple._1.toString))
+      !userStates.exists(_.userId == tuple._1.toString)
+    )
     val newUserStates = newUserPrecedenceProperties.map {
       case (userId: ObjectId, boundingBoxVisibilities: Seq[Id32WithBool]) =>
         VolumeTracingDefaults
@@ -126,34 +136,40 @@ trait AnnotationLayerPrecedence extends FoxImplicits {
     adaptedExistingUserStates ++ newUserStates
   }
 
-  protected def getOldPrecedenceLayerProperties(existingAnnotationId: Option[ObjectId],
-                                                existingAnnotationLayers: List[AnnotationLayer],
-                                                previousVersion: Option[Long],
-                                                dataset: Dataset,
-                                                tracingStoreClient: WKRemoteTracingStoreClient)(
-      implicit ec: ExecutionContext): Fox[Option[RedundantTracingProperties]] =
+  protected def getOldPrecedenceLayerProperties(
+      existingAnnotationId: Option[ObjectId],
+      existingAnnotationLayers: List[AnnotationLayer],
+      previousVersion: Option[Long],
+      dataset: Dataset,
+      tracingStoreClient: WKRemoteTracingStoreClient
+  )(implicit ec: ExecutionContext): Fox[Option[RedundantTracingProperties]] =
     for {
-      oldPrecedenceLayer <- fetchOldPrecedenceLayer(existingAnnotationId,
-                                                    existingAnnotationLayers,
-                                                    previousVersion,
-                                                    dataset,
-                                                    tracingStoreClient)
+      oldPrecedenceLayer <- fetchOldPrecedenceLayer(
+        existingAnnotationId,
+        existingAnnotationLayers,
+        previousVersion,
+        dataset,
+        tracingStoreClient
+      )
       oldPrecedenceLayerProperties: Option[RedundantTracingProperties] = oldPrecedenceLayer.map(
-        extractPrecedenceProperties)
+        extractPrecedenceProperties
+      )
     } yield oldPrecedenceLayerProperties
 
   // If there is more than one tracing, select the one that has precedence for the parameters (they should be identical anyway)
   protected def selectLayerWithPrecedenceFetched(
       skeletonLayers: List[FetchedAnnotationLayer],
-      volumeLayers: List[FetchedAnnotationLayer])(implicit ec: ExecutionContext): Fox[FetchedAnnotationLayer] =
+      volumeLayers: List[FetchedAnnotationLayer]
+  )(implicit ec: ExecutionContext): Fox[FetchedAnnotationLayer] =
     if (skeletonLayers.nonEmpty) {
       Fox.successful(skeletonLayers.minBy(_.tracingId))
     } else if (volumeLayers.nonEmpty) {
       Fox.successful(volumeLayers.minBy(_.tracingId))
     } else Fox.failure(Msg.Annotation.downloadNoLayers)
 
-  private def selectLayerWithPrecedence(annotationLayers: List[AnnotationLayer])(
-      implicit ec: ExecutionContext): Fox[AnnotationLayer] = {
+  private def selectLayerWithPrecedence(
+      annotationLayers: List[AnnotationLayer]
+  )(implicit ec: ExecutionContext): Fox[AnnotationLayer] = {
     val skeletonLayers = annotationLayers.filter(_.typ == AnnotationLayerType.Skeleton)
     val volumeLayers = annotationLayers.filter(_.typ == AnnotationLayerType.Volume)
     if (skeletonLayers.nonEmpty) {
@@ -163,26 +179,31 @@ trait AnnotationLayerPrecedence extends FoxImplicits {
     } else Fox.failure("Trying to select precedence layer from empty layer list.")
   }
 
-  private def fetchOldPrecedenceLayer(existingAnnotationIdOpt: Option[ObjectId],
-                                      existingAnnotationLayers: List[AnnotationLayer],
-                                      previousVersion: Option[Long],
-                                      dataset: Dataset,
-                                      tracingStoreClient: WKRemoteTracingStoreClient)(
-      implicit ec: ExecutionContext): Fox[Option[FetchedAnnotationLayer]] =
+  private def fetchOldPrecedenceLayer(
+      existingAnnotationIdOpt: Option[ObjectId],
+      existingAnnotationLayers: List[AnnotationLayer],
+      previousVersion: Option[Long],
+      dataset: Dataset,
+      tracingStoreClient: WKRemoteTracingStoreClient
+  )(implicit ec: ExecutionContext): Fox[Option[FetchedAnnotationLayer]] =
     if (existingAnnotationLayers.isEmpty) Fox.successful(None)
     else
       for {
-        existingAnnotationId <- existingAnnotationIdOpt.toFox ?~> Msg.Annotation.fetchOldPrecedenceLayerNeedsAnnotationId
+        existingAnnotationId <-
+          existingAnnotationIdOpt.toFox ?~> Msg.Annotation.fetchOldPrecedenceLayerNeedsAnnotationId
         oldPrecedenceLayer <- selectLayerWithPrecedence(existingAnnotationLayers)
-        oldPrecedenceLayerFetched <- if (oldPrecedenceLayer.typ == AnnotationLayerType.Skeleton)
-          tracingStoreClient.getSkeletonTracing(existingAnnotationId, oldPrecedenceLayer, previousVersion)
-        else
-          tracingStoreClient.getVolumeTracing(existingAnnotationId,
-                                              oldPrecedenceLayer,
-                                              previousVersion,
-                                              skipVolumeAndEdgesData = true,
-                                              volumeDataZipFormat = VolumeDataZipFormat.wkw,
-                                              dataset.voxelSize)
+        oldPrecedenceLayerFetched <-
+          if (oldPrecedenceLayer.typ == AnnotationLayerType.Skeleton)
+            tracingStoreClient.getSkeletonTracing(existingAnnotationId, oldPrecedenceLayer, previousVersion)
+          else
+            tracingStoreClient.getVolumeTracing(
+              existingAnnotationId,
+              oldPrecedenceLayer,
+              previousVersion,
+              skipVolumeAndEdgesData = true,
+              volumeDataZipFormat = VolumeDataZipFormat.wkw,
+              dataset.voxelSize
+            )
       } yield Some(oldPrecedenceLayerFetched)
 
   private def extractPrecedenceProperties(oldPrecedenceLayer: FetchedAnnotationLayer): RedundantTracingProperties =
@@ -192,8 +213,8 @@ trait AnnotationLayerPrecedence extends FoxImplicits {
           s.editPosition,
           s.editRotation,
           s.zoomLevel,
-          s.userBoundingBoxes ++ s.userBoundingBox.map(
-            com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto(0, None, None, None, _)),
+          s.userBoundingBoxes ++ s.userBoundingBox
+            .map(com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto(0, None, None, None, _)),
           s.editPositionAdditionalCoordinates,
           s.userStates.map(userState => (ObjectId(userState.userId), userState.boundingBoxVisibilities)).toMap
         )
@@ -202,8 +223,8 @@ trait AnnotationLayerPrecedence extends FoxImplicits {
           v.editPosition,
           v.editRotation,
           v.zoomLevel,
-          v.userBoundingBoxes ++ v.userBoundingBox.map(
-            com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto(0, None, None, None, _)),
+          v.userBoundingBoxes ++ v.userBoundingBox
+            .map(com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto(0, None, None, None, _)),
           v.editPositionAdditionalCoordinates,
           v.userStates.map(userState => (ObjectId(userState.userId), userState.boundingBoxVisibilities)).toMap
         )

@@ -15,7 +15,6 @@ import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 import java.io.File
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
-import scala.reflect.ClassTag
 
 class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: ExecutionContext)
     extends LazyLogging
@@ -42,35 +41,15 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
   def addQueryParam(key: String, value: Boolean): RPCRequest =
     addQueryParam(key, value.toString)
 
-  def addQueryParam(key: String, valueOptional: Option[String]): RPCRequest =
-    valueOptional.map(addQueryParam(key, _)).getOrElse(this)
-
-  // ClassTags added to work around type erasure (otherwise, all Option[x] variants would be indistinguishable)
-  // Compare https://stackoverflow.com/a/3309490
-  def addQueryParam[A: ClassTag](key: String, value: Option[Int]): RPCRequest =
-    addQueryParam(key, value.map(_.toString))
-
-  def addQueryParam[A: ClassTag, B: ClassTag](key: String, value: Option[Long]): RPCRequest =
-    addQueryParam(key, value.map(_.toString))
-
-  def addQueryParam[A: ClassTag, B: ClassTag, C: ClassTag](key: String, value: Option[ObjectId]): RPCRequest =
-    addQueryParam(key, value.map(_.toString))
-
-  def addQueryParam[A: ClassTag, B: ClassTag, C: ClassTag, D: ClassTag](key: String,
-                                                                        value: Option[Double]): RPCRequest =
-    addQueryParam(key, value.map(_.toString))
-
-  def addQueryParam[A: ClassTag, B: ClassTag, C: ClassTag, D: ClassTag, E: ClassTag](
-      key: String,
-      value: Option[Boolean]): RPCRequest =
-    addQueryParam(key, value.map(_.toString))
+  def addQueryParam[A](key: String, value: Option[A]): RPCRequest =
+    value.map(v => addQueryParam(key, v.toString)).getOrElse(this)
 
   def addQueryParam(key: String, value: String): RPCRequest = {
     request = request.addQueryStringParameters(key -> value)
     this
   }
 
-  def withTokenFromContext(implicit tc: TokenContext): RPCRequest =
+  def withTokenFromContext(using tc: TokenContext): RPCRequest =
     addQueryParam("token", tc.userTokenOpt)
 
   def addHttpHeader(headerName: String, headerValue: String): RPCRequest = {
@@ -192,8 +171,9 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
     extractBytesResponse(performRequest)
   }
 
-  def postJsonWithProtoResponse[J: Writes, T <: GeneratedMessage](body: J)(
-      companion: GeneratedMessageCompanion[T]): Fox[T] = {
+  def postJsonWithProtoResponse[J: Writes, T <: GeneratedMessage](
+      body: J
+  )(companion: GeneratedMessageCompanion[T]): Fox[T] = {
     request =
       request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType).withBody(Json.toJson(body)).withMethod("POST")
     parseProtoResponse(performRequest)(companion)
@@ -216,8 +196,9 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
     parseJsonResponse(performRequest)
   }
 
-  def postProtoWithProtoResponse[T <: GeneratedMessage, J <: GeneratedMessage](body: T)(
-      companion: GeneratedMessageCompanion[J]): Fox[J] = {
+  def postProtoWithProtoResponse[T <: GeneratedMessage, J <: GeneratedMessage](
+      body: T
+  )(companion: GeneratedMessageCompanion[J]): Fox[J] = {
     request =
       request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> protobufMimeType).withBody(body.toByteArray).withMethod("POST")
     parseProtoResponse(performRequest)(companion)
@@ -253,7 +234,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
     }
     request
       .execute()
-      .map { result: WSResponse =>
+      .map { (result: WSResponse) =>
         val duration = Instant.since(before)
         val logSlow = verbose && duration > slowRequestLoggingThreshold
         if (Status.isSuccessful(result.status)) {
@@ -273,12 +254,11 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
           Failure(compactErrorMsg) ~> result.status
         }
       }
-      .recover {
-        case e =>
-          val errorMsg = s"Error sending $debugInfo: " +
-            s"${e.getMessage}\n${e.getStackTrace.mkString("\n    ")}"
-          if (logOnFailure) logger.error(errorMsg)
-          Failure(errorMsg)
+      .recover { case e =>
+        val errorMsg = s"Error sending $debugInfo: " +
+          s"${e.getMessage}\n${e.getStackTrace.mkString("\n    ")}"
+        if (logOnFailure) logger.error(errorMsg)
+        Failure(errorMsg)
       }
   }
 
@@ -294,12 +274,12 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
   private def parseJsonResponse[T: Reads](r: Fox[WSResponse]): Fox[T] =
     r.flatMap { response =>
       if (verbose) {
-        logger.debug(s"Successful $debugInfo. ResponseBody: '${response.body.take(100)}'")
+        logger.debug(s"Successful $debugInfo. ResponseBody: '${response.body[String].take(100)}'")
       }
       JsonHelper.parseAs[T](response.body) match {
         case Full(value) =>
           Fox.successful(value)
-        case Empty => Fox.empty
+        case Empty      => Fox.empty
         case f: Failure =>
           val errorMsg = s"$debugInfo returned invalid JSON: $f"
           logger.error(errorMsg)
@@ -312,9 +292,9 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
       if (verbose) {
         logger.debug(s"Successful $debugInfo, ResponseBody: <${response.body.length} bytes of protobuf data>")
       }
-      try {
+      try
         Fox.successful(companion.parseFrom(response.bodyAsBytes.toArray))
-      } catch {
+      catch {
         case e: Exception =>
           val errorMsg = s"$debugInfo returned invalid Protocol Buffer Data: $e"
           logger.error(errorMsg)
@@ -336,7 +316,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
         body.bytes.take(100).utf8String + (if (body.bytes.size > 100) s"... <omitted ${body.bytes.size - 100} bytes>"
                                            else "")
       case _: SourceBody =>
-        s"<streaming source>"
+        "<streaming source>"
       case _ =>
         ""
     }

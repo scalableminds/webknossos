@@ -8,7 +8,7 @@ import scala.util.Using.Releasable
 import scala.util.{Success, Using, Failure => TryFailure}
 
 object ResourceBox {
-  def apply[R: Releasable](resource: => R): Box[R] =
+  def apply[R](resource: => R): Box[R] =
     tryo(resource) ?~ "Exception during resource creation"
 
   def manage[R: Releasable, T](resource: => R)(f: R => Box[T]): Box[T] =

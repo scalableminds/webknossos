@@ -5,24 +5,26 @@ import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 
 import javax.inject.Inject
 import models.dataset.{DatasetDAO, DatasetService}
 import models.configuration.DatasetConfigurationService
 import models.user.{UserKeyboardShortcutsConfigsDAO, UserService}
-import play.api.libs.json.{JsObject, JsValue, Json}
+import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.{URLSharing, WkEnv}
 
 import scala.concurrent.ExecutionContext
 
-class ConfigurationController @Inject()(
+class ConfigurationController @Inject() (
     userService: UserService,
     datasetService: DatasetService,
     datasetDAO: DatasetDAO,
     datasetConfigurationService: DatasetConfigurationService,
     userKeyboardShortcutsConfigsDAO: UserKeyboardShortcutsConfigsDAO,
-    sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+    sil: Silhouette[WkEnv]
+)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
   def read: Action[AnyContent] = sil.UserAwareAction { implicit request =>
@@ -30,14 +32,13 @@ class ConfigurationController @Inject()(
     addNoCacheHeaderFallback(Ok(Json.toJson(config)))
   }
 
-  def update: Action[JsValue] = sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
+  def update: Action[JsObject] = sil.SecuredAction.fox(validateJson[JsObject]) { implicit request =>
     for {
-      configuration <- request.body.asOpt[JsObject].toFox ?~> Msg.User.Configuration.invalid
-      _ <- userService.updateUserConfiguration(request.identity, configuration)
+      _ <- userService.updateUserConfiguration(request.identity, request.body)
     } yield JsonOk(Msg.User.Configuration.updateSuccess)
   }
 
-  def readKeyboardShortcutsConfig: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+  def readKeyboardShortcutsConfig: Action[AnyContent] = sil.UserAwareAction.fox { implicit request =>
     for {
       shortcuts <- request.identity
         .map(u => userKeyboardShortcutsConfigsDAO.findOneForUser(u._multiUser))
@@ -45,57 +46,53 @@ class ConfigurationController @Inject()(
     } yield addNoCacheHeaderFallback(Ok(shortcuts))
   }
 
-  def updateKeyboardShortcutsConfig(): Action[JsValue] = sil.SecuredAction.async(parse.json(maxLength = 204800)) {
+  def updateKeyboardShortcutsConfig(): Action[JsObject] = sil.SecuredAction.fox(validateJson[JsObject]) {
     implicit request =>
       for {
-        shortcuts <- request.body
-          .validate[JsObject]
-          .asOpt
-          .toFox ?~> Msg.User.Configuration.invalidKeyboardShortcutsConfig
-        _ <- userKeyboardShortcutsConfigsDAO.updateForMultiUser(request.identity._multiUser, shortcuts)
+        _ <- userKeyboardShortcutsConfigsDAO.updateForMultiUser(request.identity._multiUser, request.body)
       } yield JsonOk(Msg.User.Configuration.updatedKeyboardShortcutsConfig)
   }
 
   def readDatasetViewConfiguration(datasetId: ObjectId, sharingToken: Option[String]): Action[List[String]] =
     sil.UserAwareAction.async(validateJson[List[String]]) { implicit request =>
-      val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
       for {
+        ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
         configuration <- request.identity.toFox
           .flatMap(user =>
             datasetConfigurationService.getDatasetViewConfigurationForUserAndDataset(request.body, user, datasetId)(
-              GlobalAccessContext))
+              using GlobalAccessContext
+            )
+          )
           .orElse(
-            datasetConfigurationService.getDatasetViewConfigurationForDataset(request.body, datasetId)(ctx)
+            datasetConfigurationService.getDatasetViewConfigurationForDataset(request.body, datasetId)(using ctx)
           )
           .getOrElse(Map.empty)
       } yield Ok(Json.toJson(configuration))
     }
 
-  def updateDatasetViewConfiguration(datasetId: ObjectId): Action[JsValue] =
-    sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
+  def updateDatasetViewConfiguration(datasetId: ObjectId): Action[JsObject] =
+    sil.SecuredAction.fox(validateJson[JsObject]) { implicit request =>
+      val conf = request.body.fields.toMap
+      val datasetConf = conf - "layers"
+      val layerConf = conf.get("layers")
       for {
-        jsConfiguration <- request.body.asOpt[JsObject].toFox ?~> Msg.User.Configuration.invalidForDataset
-        conf = jsConfiguration.fields.toMap
-        datasetConf = conf - "layers"
-        layerConf = conf.get("layers")
         _ <- userService.updateDatasetViewConfiguration(request.identity, datasetId, datasetConf, layerConf)
       } yield JsonOk(Msg.User.Configuration.updateSuccessForDataset)
     }
 
   def readDatasetAdminViewConfiguration(datasetId: ObjectId): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       for {
         configuration <- datasetConfigurationService.getCompleteAdminViewConfiguration(datasetId)
       } yield Ok(Json.toJson(configuration))
     }
 
-  def updateDatasetAdminViewConfiguration(datasetId: ObjectId): Action[JsValue] =
-    sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
+  def updateDatasetAdminViewConfiguration(datasetId: ObjectId): Action[JsObject] =
+    sil.SecuredAction.fox(validateJson[JsObject]) { implicit request =>
       for {
-        dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext)
+        dataset <- datasetDAO.findOne(datasetId)(using GlobalAccessContext)
         _ <- datasetService.isEditableBy(dataset, Some(request.identity)) ?~> Msg.notAllowed ~> FORBIDDEN
-        jsObject <- request.body.asOpt[JsObject].toFox ?~> Msg.User.Configuration.invalidForDataset
-        _ <- datasetConfigurationService.updateAdminViewConfigurationFor(dataset, jsObject.fields.toMap)
+        _ <- datasetConfigurationService.updateAdminViewConfigurationFor(dataset, request.body.fields.toMap)
       } yield JsonOk(Msg.User.Configuration.updateSuccessForDataset)
     }
 }

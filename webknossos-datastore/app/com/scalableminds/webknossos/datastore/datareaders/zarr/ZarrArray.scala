@@ -1,7 +1,8 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr
 
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.tools.{Fox, JsonHelper, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, DatasetArray, DatasetHeader}
 import ucar.ma2.{Array => MultiArray}
@@ -13,15 +14,16 @@ import com.scalableminds.util.tools.Box.tryo
 
 import scala.concurrent.ExecutionContext
 
-object ZarrArray extends LazyLogging with FoxImplicits {
-  def open(path: VaultPath,
-           dataSourceId: DataSourceId,
-           layerName: String,
-           axisOrderOpt: Option[AxisOrder],
-           channelIndex: Option[Int],
-           additionalAxes: Option[Seq[AdditionalAxis]],
-           sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext,
-                                                                    tc: TokenContext): Fox[ZarrArray] =
+object ZarrArray extends LazyLogging {
+  def open(
+      path: VaultPath,
+      dataSourceId: DataSourceId,
+      layerName: String,
+      axisOrderOpt: Option[AxisOrder],
+      channelIndex: Option[Int],
+      additionalAxes: Option[Seq[AdditionalAxis]],
+      sharedChunkContentsCache: AlfuCache[String, MultiArray]
+  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[ZarrArray] =
     for {
       headerBytes <- (path / ZarrHeader.FILENAME_DOT_ZARRAY)
         .readBytes() ?~> s"Could not read header at ${ZarrHeader.FILENAME_DOT_ZARRAY}"
@@ -37,24 +39,28 @@ object ZarrArray extends LazyLogging with FoxImplicits {
           channelIndex,
           additionalAxes,
           sharedChunkContentsCache
-        )).toFox ?~> "Could not open zarr2 array"
+        )
+      ).toFox ?~> "Could not open zarr2 array"
     } yield array
 
 }
 
-class ZarrArray(vaultPath: VaultPath,
-                dataSourceId: DataSourceId,
-                layerName: String,
-                header: DatasetHeader,
-                axisOrder: AxisOrder,
-                channelIndex: Option[Int],
-                additionalAxes: Option[Seq[AdditionalAxis]],
-                sharedChunkContentsCache: AlfuCache[String, MultiArray])
-    extends DatasetArray(vaultPath,
-                         dataSourceId,
-                         layerName,
-                         header,
-                         axisOrder,
-                         channelIndex,
-                         additionalAxes,
-                         sharedChunkContentsCache)
+class ZarrArray(
+    vaultPath: VaultPath,
+    dataSourceId: DataSourceId,
+    layerName: String,
+    header: DatasetHeader,
+    axisOrder: AxisOrder,
+    channelIndex: Option[Int],
+    additionalAxes: Option[Seq[AdditionalAxis]],
+    sharedChunkContentsCache: AlfuCache[String, MultiArray]
+) extends DatasetArray(
+      vaultPath,
+      dataSourceId,
+      layerName,
+      header,
+      axisOrder,
+      channelIndex,
+      additionalAxes,
+      sharedChunkContentsCache
+    )

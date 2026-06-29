@@ -104,10 +104,9 @@ describe("VolumeTracingSaga", () => {
     expectValueDeepEqual(expect, saga.next(), take("START_EDITING"));
     saga.next(startEditing);
     saga.next(true);
-    saga.next({
-      isBusy: false,
-    });
+    saga.next(false); // isBlocked = false
     saga.next(volumeTracing);
+    saga.next(ContourModeEnum.DRAW);
     saga.next(OverwriteModeEnum.OVERWRITE_ALL);
     saga.next(AnnotationTool.BRUSH);
     saga.next(false);
@@ -148,10 +147,9 @@ describe("VolumeTracingSaga", () => {
     expectValueDeepEqual(expect, saga.next(), take("START_EDITING"));
     saga.next(startEditing);
     saga.next(true);
-    saga.next({
-      isBusy: false,
-    });
+    saga.next(false); // isBlocked = false
     saga.next(volumeTracing);
+    saga.next(ContourModeEnum.DRAW);
     saga.next(OverwriteModeEnum.OVERWRITE_ALL);
     saga.next(AnnotationTool.TRACE);
     saga.next(false);
@@ -203,10 +201,9 @@ describe("VolumeTracingSaga", () => {
     expectValueDeepEqual(expect, saga.next(), take("START_EDITING"));
     saga.next(startEditing);
     saga.next(true);
-    saga.next({
-      isBusy: false,
-    });
+    saga.next(false); // isBlocked = false
     saga.next(volumeTracing);
+    saga.next(ContourModeEnum.DRAW);
     saga.next(OverwriteModeEnum.OVERWRITE_ALL);
     saga.next(AnnotationTool.TRACE);
     saga.next(false);
@@ -269,10 +266,9 @@ describe("VolumeTracingSaga", () => {
     expectValueDeepEqual(expect, saga.next(), take("START_EDITING"));
     saga.next(startEditing);
     saga.next(true);
-    saga.next({
-      isBusy: false,
-    });
-    saga.next({ ...volumeTracing, contourTracingMode: ContourModeEnum.DELETE });
+    saga.next(false); // isBlocked = false
+    saga.next({ ...volumeTracing });
+    saga.next(ContourModeEnum.DELETE);
     saga.next(OverwriteModeEnum.OVERWRITE_ALL);
     saga.next(AnnotationTool.TRACE);
     saga.next(false);
@@ -335,13 +331,11 @@ describe("VolumeTracingSaga", () => {
     expectValueDeepEqual(expect, saga.next(), take("START_EDITING"));
     saga.next(startEditing);
     saga.next(true);
-    // When isBusy is true, the saga should wait for a new START_EDITING action
+    // When isBlocked is true, the saga should wait for a new START_EDITING action
     // (thus, other actions, such as finishLayer, will be ignored).
     expectValueDeepEqual(
       expect,
-      saga.next({
-        isBusy: true,
-      }),
+      saga.next(true), // isBlocked = true
       take("START_EDITING"),
     );
   });
@@ -352,10 +346,9 @@ describe("VolumeTracingSaga", () => {
     expectValueDeepEqual(expect, saga.next(), take("START_EDITING"));
     saga.next(startEditing);
     saga.next(true);
-    saga.next({
-      isBusy: false,
-    });
+    saga.next(false); // isBlocked = false
     saga.next(volumeTracing);
+    saga.next(ContourModeEnum.DRAW);
     saga.next(OverwriteModeEnum.OVERWRITE_ALL);
     saga.next(AnnotationTool.BRUSH);
     saga.next(false);

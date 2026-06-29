@@ -321,8 +321,8 @@ class UrlManager {
       }
     }
 
-    for (const layerName of Object.keys(state.localSegmentationData)) {
-      const { currentMeshFile } = state.localSegmentationData[layerName];
+    for (const layerName of Object.keys(state.localSegmentationStateByLayer)) {
+      const { currentMeshFile } = state.localSegmentationStateByLayer[layerName];
       const currentMeshFileName = currentMeshFile?.name;
       const localMeshes = getMeshesForCurrentAdditionalCoordinates(state, layerName);
       const meshes =

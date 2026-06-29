@@ -9,7 +9,7 @@
  # changed in v12: Dataset upload now expects layersToLink in new format with datasetId instead of orgaId+directoryName
  # changed in v11: Datasets reserveManualUpload flow via WK side. Note: older versions of the route are *not* supported for security reasons.
  # changed in v9: Datasets are now identified by their id, not their name. The routes now need to pass a dataset id instead of a name and organization id tuple.
-   # Requests to the TracingStore and DatasStore need to address a dataset based on its directoryName and organization id.
+   # Requests to the TracingStore and DataStore need to address a dataset based on its directoryName and organization id.
  # changed in v8: Datasets' name was renamed to id and the displayName is now named name.
  # changed in v7: datasources now contain scale as object with keys factor and unit, e.g. {"factor": [11,11,5.5], "unit": "nm"}
  # changed in v6: isValidName always returns Ok, with a JSON object containing possible errors and key "isValid"

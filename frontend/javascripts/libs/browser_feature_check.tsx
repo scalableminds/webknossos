@@ -12,7 +12,7 @@ export default function checkBrowserFeatures() {
     [].at(0);
     new Set().difference(new Set());
     [].values().flatMap((el) => [el, el]);
-    crypto.randomUUID();
+    new Set().union(new Set().difference(new Set()));
   } catch (exception) {
     Toast.warning(
       <div>

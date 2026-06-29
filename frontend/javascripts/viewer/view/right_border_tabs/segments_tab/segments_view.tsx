@@ -246,6 +246,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
         seedAdditionalCoordinates,
         meshFileName,
         undefined,
+        undefined,
       ),
     );
   },

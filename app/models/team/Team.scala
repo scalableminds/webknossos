@@ -98,8 +98,8 @@ class TeamDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected def parse(r: TeamsRow): Fox[Team] =
     Fox.successful(
       Team(
-        ObjectId(r._Id),
-        r._Organization,
+        ObjectId(r._id),
+        r._organization,
         r.name,
         r.isorganizationteam,
         Instant.fromSql(r.created),

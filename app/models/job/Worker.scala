@@ -46,8 +46,8 @@ class WorkerDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
         JobCommand.fromString(s).toFox ?~> f"$s is not a valid job command"
       }
     } yield Worker(
-      ObjectId(r._Id),
-      r._Datastore,
+      ObjectId(r._id),
+      r._datastore,
       r.name,
       r.key,
       r.maxparallelhighpriorityjobs,

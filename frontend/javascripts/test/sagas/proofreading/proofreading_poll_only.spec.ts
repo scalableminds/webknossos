@@ -462,7 +462,7 @@ describe.each(
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* () {
-      const rebaseActionChannel = yield actionChannel(["PREPARE_REBASING", "FINISHED_REBASING"]);
+      const rebaseActionChannel = yield actionChannel(["REWIND_FOR_REBASE", "FINISHED_REBASING"]);
       yield initializePollOnlyAnnotation(context, tracingId);
 
       const foreignMergeAction = {

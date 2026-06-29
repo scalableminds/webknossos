@@ -37,6 +37,9 @@ class FolderService @Inject() (
     extends LazyLogging {
 
   val defaultRootName: String = "Datasets"
+  val defaultPrivateFolderName: String = "My Datasets"
+  val defaultSharedFolderName: String = "Shared Datasets"
+  val defaultSharedTeamName: String = "Shared with Colleagues"
 
   def publicWrites(
       folder: Folder,

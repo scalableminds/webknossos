@@ -68,7 +68,7 @@ export default function determineBucketsForPlane(
   let zoomStepDiff = 0;
 
   while (logZoomStep + zoomStepDiff < denseMags.length && zoomStepDiff <= MAX_ZOOM_STEP_DIFF) {
-    addNecessaryBucketsToPriorityQueueOblique(
+    addNecessaryBucketsToPriorityQueuePlane(
       loadingStrategy,
       denseMags,
       position,
@@ -83,7 +83,7 @@ export default function determineBucketsForPlane(
   }
 }
 
-function addNecessaryBucketsToPriorityQueueOblique(
+function addNecessaryBucketsToPriorityQueuePlane(
   loadingStrategy: LoadingStrategy,
   denseMags: Array<Vector3>,
   position: Vector3,

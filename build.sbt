@@ -23,6 +23,7 @@ ThisBuild / scalacOptions ++= Seq(
   "-release:17",
   "-feature",
   "-deprecation",
+  "-Wunused:imports,privates,locals,implicits,linted",
   "-language:implicitConversions",
   "-language:postfixOps",
   "-Wconf:src=target/.*:s",

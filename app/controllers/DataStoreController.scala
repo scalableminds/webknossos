@@ -26,12 +26,13 @@ object DataStoreParameters {
   implicit val jsonFormat: OFormat[DataStoreParameters] = Json.format[DataStoreParameters]
 }
 
-class DataStoreController @Inject()(
+class DataStoreController @Inject() (
     dataStoreDAO: DataStoreDAO,
     dataStoreService: DataStoreService,
     userService: UserService,
     sil: Silhouette[WkEnv],
-    multiUserDAO: MultiUserDAO)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
+    multiUserDAO: MultiUserDAO
+)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
 

@@ -28,7 +28,10 @@ object TransposeSetting {
   implicit object TransposeSettingFormat extends Format[TransposeSetting] {
 
     override def reads(json: JsValue): JsResult[TransposeSetting] =
-      json.validate[String].map(StringTransposeSetting(_)).orElse(json.validate[Array[Int]].map(IntArrayTransposeSetting(_)))
+      json
+        .validate[String]
+        .map(StringTransposeSetting(_))
+        .orElse(json.validate[Array[Int]].map(IntArrayTransposeSetting(_)))
 
     override def writes(transposeSetting: TransposeSetting): JsValue =
       transposeSetting match {
@@ -132,11 +135,13 @@ class BloscCodec(cname: String, clevel: Int, shuffle: CompressionSetting, typesi
 
 object BloscCodec {
   def fromConfiguration(configuration: BloscCodecConfiguration): BloscCodec =
-    new BloscCodec(configuration.cname,
-                   configuration.clevel,
-                   configuration.shuffle,
-                   configuration.typesize,
-                   configuration.blocksize)
+    new BloscCodec(
+      configuration.cname,
+      configuration.clevel,
+      configuration.shuffle,
+      configuration.typesize,
+      configuration.blocksize
+    )
 }
 
 class GzipCodec(level: Int) extends BytesToBytesCodec {
@@ -189,11 +194,12 @@ class Crc32CCodec extends BytesToBytesCodec with ByteUtils with LazyLogging {
   }
 }
 
-class ShardingCodec(val chunk_shape: Array[Int],
-                    val codecs: Seq[CodecConfiguration],
-                    val index_codecs: Seq[CodecConfiguration],
-                    val index_location: IndexLocationSetting.IndexLocationSetting = IndexLocationSetting.end)
-    extends ArrayToBytesCodec {
+class ShardingCodec(
+    val chunk_shape: Array[Int],
+    val codecs: Seq[CodecConfiguration],
+    val index_codecs: Seq[CodecConfiguration],
+    val index_location: IndexLocationSetting.IndexLocationSetting = IndexLocationSetting.end
+) extends ArrayToBytesCodec {
 
   // https://zarr-specs.readthedocs.io/en/latest/v3/codecs/sharding-indexed/v1.0.html
   // encode, decode not implemented as sharding is done in Zarr3Array
@@ -232,12 +238,13 @@ object TransposeCodecConfiguration {
     Json.format[TransposeCodecConfiguration]
   val name = "transpose"
 }
-final case class BloscCodecConfiguration(cname: String,
-                                         clevel: Int,
-                                         shuffle: CompressionSetting,
-                                         typesize: Option[Int],
-                                         blocksize: Int)
-    extends CodecConfiguration {
+final case class BloscCodecConfiguration(
+    cname: String,
+    clevel: Int,
+    shuffle: CompressionSetting,
+    typesize: Option[Int],
+    blocksize: Int
+) extends CodecConfiguration {
   override def name: String = BloscCodecConfiguration.name
 }
 
@@ -308,20 +315,22 @@ object CodecSpecification {
   implicit val jsonFormat: OFormat[CodecSpecification] = Json.format[CodecSpecification]
 }
 
-final case class ShardingCodecConfiguration(chunk_shape: Array[Int],
-                                            codecs: Seq[CodecConfiguration],
-                                            index_codecs: Seq[CodecConfiguration],
-                                            index_location: IndexLocationSetting.IndexLocationSetting =
-                                              IndexLocationSetting.end)
-    extends CodecConfiguration {
+final case class ShardingCodecConfiguration(
+    chunk_shape: Array[Int],
+    codecs: Seq[CodecConfiguration],
+    index_codecs: Seq[CodecConfiguration],
+    index_location: IndexLocationSetting.IndexLocationSetting = IndexLocationSetting.end
+) extends CodecConfiguration {
   override def name: String = ShardingCodecConfiguration.name
   def isSupported: Box[Unit] =
     for {
       _ <- Box.fromBool(index_codecs.size <= 2) ?~! s"Maximum of 2 index codecs supported, got ${index_codecs.size}"
-      _ <- Box.fromBool(index_codecs.count(_.name == "bytes") == 1) ?~! s"Exactly one bytes codec supported, got ${index_codecs
-        .count(_.name == "bytes")}"
-      _ <- Box.fromBool(index_codecs.count(_.name == "crc32c") <= 1) ?~! s"Maximum of 1 crc32c codec supported, got ${index_codecs
-        .count(_.name == "crc32c")}"
+      _ <- Box.fromBool(
+        index_codecs.count(_.name == "bytes") == 1
+      ) ?~! s"Exactly one bytes codec supported, got ${index_codecs.count(_.name == "bytes")}"
+      _ <- Box.fromBool(
+        index_codecs.count(_.name == "crc32c") <= 1
+      ) ?~! s"Maximum of 1 crc32c codec supported, got ${index_codecs.count(_.name == "crc32c")}"
     } yield ()
 
 }
@@ -334,8 +343,9 @@ object ShardingCodecConfiguration {
 
 object CodecTreeExplorer {
 
-  def findOne(condition: Function[CodecConfiguration, Boolean])(
-      codecs: Seq[CodecConfiguration]): Option[CodecConfiguration] = {
+  def findOne(
+      condition: Function[CodecConfiguration, Boolean]
+  )(codecs: Seq[CodecConfiguration]): Option[CodecConfiguration] = {
     val results: Seq[Option[CodecConfiguration]] = codecs.map {
       case s: ShardingCodecConfiguration =>
         if (condition(s)) {

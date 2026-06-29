@@ -11,7 +11,7 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 
-class MappingService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionContext)
+class MappingService @Inject() (config: DataStoreConfig)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
 
@@ -23,9 +23,11 @@ class MappingService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionCo
     request.dataLayer.mappingProvider.load(readInstruction).toFox
   }
 
-  def applyMapping[T: ClassTag](request: DataServiceMappingRequest,
-                                data: Array[T],
-                                fromLongFn: Long => T): Fox[Array[T]] = {
+  def applyMapping[T: ClassTag](
+      request: DataServiceMappingRequest,
+      data: Array[T],
+      fromLongFn: Long => T
+  ): Fox[Array[T]] = {
 
     def loadAndParseMapping(mappingRequest: DataServiceMappingRequest): Fox[AbstractDataLayerMapping] =
       for {

@@ -275,11 +275,11 @@ function CreateAnimationModal(props: Props) {
 
     // Submit currently visible pre-computed & ad-hoc meshes
     const axis = getAdditionalCoordinatesAsString([]);
-    const layerNames = Object.keys(state.localSegmentationData);
+    const layerNames = Object.keys(state.localSegmentationStateByLayer);
     const { preferredQualityForMeshAdHocComputation } = state.temporaryConfiguration;
 
     const meshes: RenderAnimationOptions["meshes"] = layerNames.flatMap((layerName) => {
-      const meshInfos = state.localSegmentationData[layerName]?.meshes?.[axis] || {};
+      const meshInfos = state.localSegmentationStateByLayer[layerName]?.meshes?.[axis] || {};
 
       const layer = getLayerByName(state.dataset, layerName) as APISegmentationLayer;
       const fullLayerName = layer.fallbackLayerInfo?.name || layerName;

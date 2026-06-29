@@ -152,48 +152,6 @@ function UiReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
-    case "SET_BUSY_BLOCKING_INFO_ACTION": {
-      if (action.value.isBusy && state.uiInformation.busyBlockingInfo.isBusy) {
-        throw new Error(
-          "Busy-mutex violated. Cannot set isBusy to true, as it is already set to true.",
-        );
-      }
-
-      return updateKey(state, "uiInformation", {
-        busyBlockingInfo: {
-          ...action.value,
-          allowedSagas: [],
-        },
-      });
-    }
-    case "ALLOW_SAGA_WHILE_BUSY_ACTION": {
-      if (!state.uiInformation.busyBlockingInfo.isBusy) {
-        throw new Error(
-          "Busy-mutex violated. Trying to white list a saga but the mutex isn't busy.",
-        );
-      }
-
-      return updateKey2(state, "uiInformation", "busyBlockingInfo", {
-        allowedSagas: state.uiInformation.busyBlockingInfo.allowedSagas.concat(
-          action.value.allowedSaga,
-        ),
-      });
-    }
-
-    case "DISALLOW_SAGA_WHILE_BUSY_ACTION": {
-      if (!state.uiInformation.busyBlockingInfo.isBusy) {
-        throw new Error(
-          "Busy-mutex violated. Trying to remove saga from white list but the mutex isn't busy.",
-        );
-      }
-
-      return updateKey2(state, "uiInformation", "busyBlockingInfo", {
-        allowedSagas: state.uiInformation.busyBlockingInfo.allowedSagas.filter(
-          (s) => s !== action.value.allowedSaga,
-        ),
-      });
-    }
-
     case "SET_IS_WK_INITIALIZED": {
       return updateKey(state, "uiInformation", { isWkInitialized: action.isInitialized });
     }

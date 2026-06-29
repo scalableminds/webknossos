@@ -28,32 +28,36 @@ import utils.MetadataAssertions
 
 import scala.concurrent.ExecutionContext
 
-case class LegacyTaskParameters(taskTypeId: ObjectId,
-                                neededExperience: Experience,
-                                pendingInstances: Int,
-                                projectName: String,
-                                scriptId: Option[ObjectId],
-                                boundingBox: Option[BoundingBox],
-                                dataSet: String,
-                                datasetId: Option[ObjectId],
-                                editPosition: Vec3Int,
-                                editRotation: Vec3Double,
-                                creationInfo: Option[String],
-                                description: Option[String],
-                                baseAnnotation: Option[BaseAnnotation])
+case class LegacyTaskParameters(
+    taskTypeId: ObjectId,
+    neededExperience: Experience,
+    pendingInstances: Int,
+    projectName: String,
+    scriptId: Option[ObjectId],
+    boundingBox: Option[BoundingBox],
+    dataSet: String,
+    datasetId: Option[ObjectId],
+    editPosition: Vec3Int,
+    editRotation: Vec3Double,
+    creationInfo: Option[String],
+    description: Option[String],
+    baseAnnotation: Option[BaseAnnotation]
+)
 
 object LegacyTaskParameters {
   implicit val taskParametersFormat: Format[LegacyTaskParameters] = Json.format[LegacyTaskParameters]
 }
 
-class LegacyApiController @Inject()(datasetController: DatasetController,
-                                    projectController: ProjectController,
-                                    taskController: TaskController,
-                                    organizationDAO: OrganizationDAO,
-                                    datasetService: DatasetService,
-                                    datasetDAO: DatasetDAO,
-                                    analyticsService: AnalyticsService,
-                                    sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+class LegacyApiController @Inject() (
+    datasetController: DatasetController,
+    projectController: ProjectController,
+    taskController: TaskController,
+    organizationDAO: OrganizationDAO,
+    datasetService: DatasetService,
+    datasetDAO: DatasetDAO,
+    analyticsService: AnalyticsService,
+    sil: Silhouette[WkEnv]
+)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with MetadataAssertions {
 
@@ -61,7 +65,9 @@ class LegacyApiController @Inject()(datasetController: DatasetController,
     sil.SecuredAction.async(validateJson[DatasetUpdatePartialParameters]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
-        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- Fox.assertTrue(
+          datasetService.isEditableBy(dataset, Some(request.identity))
+        ) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- Fox.runOptional(request.body.metadata)(assertNoDuplicateMetadataKeys)
         _ <- datasetDAO.updatePartial(dataset._id, request.body)
         _ <- Fox.runOptional(request.body.dataSource) { dataSourceUpdates =>
@@ -83,10 +89,12 @@ class LegacyApiController @Inject()(datasetController: DatasetController,
                   s.copy(attachments = findOriginalAttachments(existingDataSource, s.name))
               }
             )
-            _ <- datasetService.updateDataSourceFromUserChanges(dataset,
-                                                                updatesWithUndoneAttachmentChanges,
-                                                                request.body.layerRenamings.getOrElse(Seq.empty),
-                                                                request.body.attachmentRenamings.getOrElse(Seq.empty))
+            _ <- datasetService.updateDataSourceFromUserChanges(
+              dataset,
+              updatesWithUndoneAttachmentChanges,
+              request.body.layerRenamings.getOrElse(Seq.empty),
+              request.body.attachmentRenamings.getOrElse(Seq.empty)
+            )
           } yield ()
         }
         updated <- datasetDAO.findOne(datasetId)
@@ -155,20 +163,22 @@ class LegacyApiController @Inject()(datasetController: DatasetController,
       for {
         taskParametersWithDatasetId <- Fox.serialCombined(request.body)(params =>
           for {
-            dataset <- datasetDAO.findOneByIdOrNameAndOrganization(params.datasetId,
-                                                                   params.dataSet,
-                                                                   request.identity._organization)
-          } yield TaskParameters.fromLegacyTaskParameters(params, dataset._id))
+            dataset <- datasetDAO
+              .findOneByIdOrNameAndOrganization(params.datasetId, params.dataSet, request.identity._organization)
+          } yield TaskParameters.fromLegacyTaskParameters(params, dataset._id)
+        )
         requestWithUpdatedBody = request.withBody(taskParametersWithDatasetId)
         result <- Fox.fromFuture(taskController.create()(requestWithUpdatedBody))
         adaptedResult <- replaceInResult(addLegacyDataSetFieldToTaskCreationResult)(result)
       } yield adaptedResult
     }
 
-  def tasksForProjectV8(id: ObjectId,
-                        limit: Option[Int] = None,
-                        pageNumber: Option[Int] = None,
-                        includeTotalCount: Option[Boolean]): Action[AnyContent] =
+  def tasksForProjectV8(
+      id: ObjectId,
+      limit: Option[Int] = None,
+      pageNumber: Option[Int] = None,
+      includeTotalCount: Option[Boolean]
+  ): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         _ <- Fox.successful(logVersioned(request))
@@ -179,51 +189,59 @@ class LegacyApiController @Inject()(datasetController: DatasetController,
 
   /* provide v7 */
 
-  def listDatasetsV7(isActive: Option[Boolean],
-                     isUnreported: Option[Boolean],
-                     organizationName: Option[String],
-                     onlyMyOrganization: Option[Boolean],
-                     uploaderId: Option[ObjectId],
-                     folderId: Option[ObjectId],
-                     includeSubfolders: Option[Boolean],
-                     searchQuery: Option[String],
-                     limit: Option[Int],
-                     compact: Option[Boolean]): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
-    datasetController.list(isActive,
-                           isUnreported,
-                           organizationName,
-                           onlyMyOrganization,
-                           uploaderId,
-                           folderId,
-                           includeSubfolders,
-                           searchQuery,
-                           limit,
-                           compact)(request)
+  def listDatasetsV7(
+      isActive: Option[Boolean],
+      isUnreported: Option[Boolean],
+      organizationName: Option[String],
+      onlyMyOrganization: Option[Boolean],
+      uploaderId: Option[ObjectId],
+      folderId: Option[ObjectId],
+      includeSubfolders: Option[Boolean],
+      searchQuery: Option[String],
+      limit: Option[Int],
+      compact: Option[Boolean]
+  ): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+    datasetController.list(
+      isActive,
+      isUnreported,
+      organizationName,
+      onlyMyOrganization,
+      uploaderId,
+      folderId,
+      includeSubfolders,
+      searchQuery,
+      limit,
+      compact
+    )(request)
   }
 
   /* provide v6 */
 
-  def listDatasetsV6(isActive: Option[Boolean],
-                     isUnreported: Option[Boolean],
-                     organizationName: Option[String],
-                     onlyMyOrganization: Option[Boolean],
-                     uploaderId: Option[ObjectId],
-                     folderId: Option[ObjectId],
-                     includeSubfolders: Option[Boolean],
-                     searchQuery: Option[String],
-                     limit: Option[Int],
-                     compact: Option[Boolean]): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+  def listDatasetsV6(
+      isActive: Option[Boolean],
+      isUnreported: Option[Boolean],
+      organizationName: Option[String],
+      onlyMyOrganization: Option[Boolean],
+      uploaderId: Option[ObjectId],
+      folderId: Option[ObjectId],
+      includeSubfolders: Option[Boolean],
+      searchQuery: Option[String],
+      limit: Option[Int],
+      compact: Option[Boolean]
+  ): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     for {
-      result <- datasetController.list(isActive,
-                                       isUnreported,
-                                       organizationName,
-                                       onlyMyOrganization,
-                                       uploaderId,
-                                       folderId,
-                                       includeSubfolders,
-                                       searchQuery,
-                                       limit,
-                                       compact)(request)
+      result <- datasetController.list(
+        isActive,
+        isUnreported,
+        organizationName,
+        onlyMyOrganization,
+        uploaderId,
+        folderId,
+        includeSubfolders,
+        searchQuery,
+        limit,
+        compact
+      )(request)
       adaptedResult <- replaceInResult(replaceVoxelSize)(result)
     } yield adaptedResult
   }
@@ -266,7 +284,7 @@ class LegacyApiController @Inject()(datasetController: DatasetController,
   private def addLegacyDataSetFieldToTaskCreationResult(jsResult: JsObject) =
     for {
       tasksResults <- tryo((jsResult \ "tasks").as[List[JsObject]]).toFox
-      adaptedTasks <- Fox.serialCombined(tasksResults)(taskResult => {
+      adaptedTasks <- Fox.serialCombined(tasksResults)(taskResult =>
         (taskResult \ "status").asOpt[JsNumber] match {
           case Some(JsNumber(value)) if value == BigDecimal(200) =>
             for {
@@ -276,7 +294,7 @@ class LegacyApiController @Inject()(datasetController: DatasetController,
             } yield adaptedTaskResult
           case _ => Fox.successful(taskResult)
         }
-      })
+      )
       adaptedJsResult <- tryo(jsResult - "tasks" + ("tasks" -> Json.toJson(adaptedTasks))).toFox
     } yield adaptedJsResult
 
@@ -286,12 +304,13 @@ class LegacyApiController @Inject()(datasetController: DatasetController,
   private def replaceVoxelSize(jsObject: JsObject) = {
     val voxelSizeOpt = (jsObject \ "dataSource" \ "scale").asOpt[VoxelSize]
     voxelSizeOpt match {
-      case None => Fox.successful(jsObject)
+      case None            => Fox.successful(jsObject)
       case Some(voxelSize) =>
         val inNanometer = voxelSize.toNanometer
         for {
           newDataSource <- tryo(
-            (jsObject \ "dataSource").as[JsObject] - "scale" + ("scale" -> Json.toJson(inNanometer))).toFox
+            (jsObject \ "dataSource").as[JsObject] - "scale" + ("scale" -> Json.toJson(inNanometer))
+          ).toFox
           newValue <- tryo(jsObject - "dataSource" + ("dataSource" -> newDataSource)).toFox
         } yield newValue
     }
@@ -305,8 +324,8 @@ class LegacyApiController @Inject()(datasetController: DatasetController,
             bodyJsValue <- JsonHelper.parseAs[JsValue](data.toArray).toFox
             newJson <- bodyJsValue match {
               case JsArray(value) =>
-                for { valueList <- Fox.serialCombined(value.toList)(el => replacement(el.as[JsObject])) } yield
-                  Json.toJson(valueList)
+                for { valueList <- Fox.serialCombined(value.toList)(el => replacement(el.as[JsObject])) } yield Json
+                  .toJson(valueList)
               case jsObj: JsObject => replacement(jsObj)
               case v: JsValue      => Fox.successful(v)
             }

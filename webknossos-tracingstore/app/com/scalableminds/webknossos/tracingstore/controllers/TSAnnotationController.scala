@@ -35,22 +35,25 @@ import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
 import scala.concurrent.ExecutionContext
 
-case class MergedFromIdsRequest(annotationIds: Seq[ObjectId],
-                                ownerIds: Seq[ObjectId],
-                                additionalBoundingBoxes: Seq[NamedBoundingBox])
+case class MergedFromIdsRequest(
+    annotationIds: Seq[ObjectId],
+    ownerIds: Seq[ObjectId],
+    additionalBoundingBoxes: Seq[NamedBoundingBox]
+)
 
 object MergedFromIdsRequest {
   implicit val jsonFormat: OFormat[MergedFromIdsRequest] = Json.format[MergedFromIdsRequest]
 }
 
-class TSAnnotationController @Inject()(
+class TSAnnotationController @Inject() (
     accessTokenService: TracingStoreAccessTokenService,
     slackNotificationService: TSSlackNotificationService,
     annotationService: TSAnnotationService,
     editableMappingMergeService: EditableMappingMergeService,
     annotationTransactionService: AnnotationTransactionService,
     skeletonTracingService: SkeletonTracingService,
-    volumeTracingService: VolumeTracingService)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+    volumeTracingService: VolumeTracingService
+)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with KeyValueStoreConversions {
 
@@ -69,8 +72,10 @@ class TSAnnotationController @Inject()(
     Action.async(validateJson[List[UpdateActionGroup]]) { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
-          accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeAnnotation(annotationId),
-                                                            useCaching = false) {
+          accessTokenService.validateAccessFromTokenContext(
+            UserAccessRequest.writeAnnotation(annotationId),
+            useCaching = false
+          ) {
             for {
               _ <- annotationTransactionService.handleUpdateGroups(annotationId, request.body)
             } yield Ok
@@ -79,18 +84,22 @@ class TSAnnotationController @Inject()(
       }
     }
 
-  def updateActionLog(annotationId: ObjectId,
-                      newestVersion: Option[Long] = None,
-                      oldestVersion: Option[Long] = None,
-                      truncate: Option[Boolean] = None): Action[AnyContent] = Action.async { implicit request =>
+  def updateActionLog(
+      annotationId: ObjectId,
+      newestVersion: Option[Long] = None,
+      oldestVersion: Option[Long] = None,
+      truncate: Option[Boolean] = None
+  ): Action[AnyContent] = Action.async { implicit request =>
     log() {
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
         for {
           newestMaterializableVersion <- annotationService.currentMaterializableVersion(annotationId)
-          updateLog <- annotationService.updateActionLog(annotationId,
-                                                         newestVersion.getOrElse(newestMaterializableVersion),
-                                                         oldestVersion.getOrElse(0),
-                                                         truncate.getOrElse(false))
+          updateLog <- annotationService.updateActionLog(
+            annotationId,
+            newestVersion.getOrElse(newestMaterializableVersion),
+            oldestVersion.getOrElse(0),
+            truncate.getOrElse(false)
+          )
         } yield Ok(updateLog)
       }
     }
@@ -119,13 +128,15 @@ class TSAnnotationController @Inject()(
       }
     }
 
-  def duplicate(annotationId: ObjectId,
-                newAnnotationId: ObjectId,
-                ownerId: ObjectId,
-                requestingUserId: ObjectId,
-                version: Option[Long],
-                isFromTask: Boolean,
-                datasetBoundingBox: Option[String]): Action[AnyContent] =
+  def duplicate(
+      annotationId: ObjectId,
+      newAnnotationId: ObjectId,
+      ownerId: ObjectId,
+      requestingUserId: ObjectId,
+      version: Option[Long],
+      isFromTask: Boolean,
+      datasetBoundingBox: Option[String]
+  ): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
@@ -139,7 +150,8 @@ class TSAnnotationController @Inject()(
                 requestingUserId,
                 version,
                 isFromTask,
-                datasetBoundingBoxParsed) ?~> Msg.Annotation.duplicateFailed
+                datasetBoundingBoxParsed
+              ) ?~> Msg.Annotation.duplicateFailed
             } yield Ok(annotationProto.toByteArray).as(protobufMimeType)
           }
         }
@@ -153,9 +165,11 @@ class TSAnnotationController @Inject()(
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
             for {
               currentVersion <- annotationService.currentMaterializableVersion(annotationId)
-              _ <- annotationTransactionService.handleSingleUpdateAction(annotationId,
-                                                                         currentVersion,
-                                                                         ResetToBaseAnnotationAction())
+              _ <- annotationTransactionService.handleSingleUpdateAction(
+                annotationId,
+                currentVersion,
+                ResetToBaseAnnotationAction()
+              )
             } yield Ok
           }
         }
@@ -175,10 +189,11 @@ class TSAnnotationController @Inject()(
                   for {
                     volume <- annotationService.findVolume(annotationId, tracingId)
                     maxSegmentId <- volume.segments.map(_.segmentId).maxOption match {
-                      case Some(fromTracing) => Fox.successful(fromTracing)
+                      case Some(fromTracing)                      => Fox.successful(fromTracing)
                       case None if volume.fallbackLayer.isDefined =>
                         Fox.failure(
-                          "Reserving segment ids is not supported for volume annotations with fallback layer.")
+                          "Reserving segment ids is not supported for volume annotations with fallback layer."
+                        )
                       case _ => Fox.successful(fallbackId)
                     }
                   } yield maxSegmentId
@@ -191,7 +206,8 @@ class TSAnnotationController @Inject()(
                   for {
                     skeleton <- annotationService.findSkeleton(annotationId, tracingId)
                     maxIdsPerTree: Seq[Long] = skeleton.trees.map(
-                      _.nodes.map(_.id).maxOption.map(_.toLong).getOrElse(fallbackId))
+                      _.nodes.map(_.id).maxOption.map(_.toLong).getOrElse(fallbackId)
+                    )
                   } yield maxIdsPerTree.maxOption.getOrElse(fallbackId)
                 case AnnotationIdDomain.Tree =>
                   for {
@@ -209,7 +225,8 @@ class TSAnnotationController @Inject()(
                     maxBboxId <- skeletonBox match {
                       case Full(skeleton) =>
                         Fox.successful(
-                          skeleton.userBoundingBoxes.map(_.id).maxOption.map(_.toLong).getOrElse(fallbackId))
+                          skeleton.userBoundingBoxes.map(_.id).maxOption.map(_.toLong).getOrElse(fallbackId)
+                        )
                       case Empty =>
                         for {
                           volume <- annotationService.findVolume(annotationId, tracingId)
@@ -227,7 +244,8 @@ class TSAnnotationController @Inject()(
   private def findAndAdaptVolumesForAnnotation(
       annotation: AnnotationProto,
       requestingUserId: ObjectId,
-      ownerId: ObjectId)(using tc: TokenContext): Fox[Seq[VolumeTracing]] = {
+      ownerId: ObjectId
+  )(using tc: TokenContext): Fox[Seq[VolumeTracing]] = {
     val volumeLayersOfAnnotation = annotation.annotationLayers.filter(_.typ == AnnotationLayerTypeProto.Volume)
     for {
       volumeTracings <- annotationService
@@ -235,17 +253,19 @@ class TSAnnotationController @Inject()(
           Some(TracingSelector(l.tracingId))
         })
         .map(_.flatten)
-      volumeTracingsAdapted = volumeTracings.map(
-        tracing =>
-          tracing.copy(userStates =
-            Seq(volumeTracingService.renderVolumeUserStateIntoUserState(tracing, requestingUserId, ownerId))))
+      volumeTracingsAdapted = volumeTracings.map(tracing =>
+        tracing.copy(userStates =
+          Seq(volumeTracingService.renderVolumeUserStateIntoUserState(tracing, requestingUserId, ownerId))
+        )
+      )
     } yield volumeTracingsAdapted
   }
 
   private def findAndAdaptSkeletonsForAnnotation(
       annotation: AnnotationProto,
       requestingUserId: ObjectId,
-      ownerId: ObjectId)(using tc: TokenContext): Fox[Seq[SkeletonTracing]] = {
+      ownerId: ObjectId
+  )(using tc: TokenContext): Fox[Seq[SkeletonTracing]] = {
     val skeletonLayersOfAnnotation = annotation.annotationLayers.filter(_.typ == AnnotationLayerTypeProto.Skeleton)
     for {
       skeletonTracings <- annotationService
@@ -253,22 +273,29 @@ class TSAnnotationController @Inject()(
           Some(TracingSelector(l.tracingId))
         })
         .map(_.flatten)
-      skeletonTracingsAdapted = skeletonTracings.map(
-        tracing =>
-          tracing.copy(userStates =
-            Seq(skeletonTracingService.renderSkeletonUserStateIntoUserState(tracing, requestingUserId, ownerId))))
+      skeletonTracingsAdapted = skeletonTracings.map(tracing =>
+        tracing.copy(userStates =
+          Seq(skeletonTracingService.renderSkeletonUserStateIntoUserState(tracing, requestingUserId, ownerId))
+        )
+      )
     } yield skeletonTracingsAdapted
   }
 
-  def mergedFromIds(toTemporaryStore: Boolean,
-                    newAnnotationId: ObjectId,
-                    requestingUserId: ObjectId): Action[MergedFromIdsRequest] =
+  def mergedFromIds(
+      toTemporaryStore: Boolean,
+      newAnnotationId: ObjectId,
+      requestingUserId: ObjectId
+  ): Action[MergedFromIdsRequest] =
     Action.async(validateJson[MergedFromIdsRequest]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           for {
-            _ <- Fox.fromBool(request.body.annotationIds.length == request.body.ownerIds.length) ?~> "annotationIds and ownerIds must have the same length"
-            annotations: Seq[AnnotationProto] <- annotationService.getMultiple(request.body.annotationIds) ?~> Msg.Annotation.notFound
+            _ <- Fox.fromBool(
+              request.body.annotationIds.length == request.body.ownerIds.length
+            ) ?~> "annotationIds and ownerIds must have the same length"
+            annotations: Seq[AnnotationProto] <- annotationService.getMultiple(
+              request.body.annotationIds
+            ) ?~> Msg.Annotation.notFound
             skeletonLayers = annotations.flatMap(_.annotationLayers.filter(_.typ == AnnotationLayerTypeProto.Skeleton))
             volumeLayers = annotations.flatMap(_.annotationLayers.filter(_.typ == AnnotationLayerTypeProto.Volume))
             newSkeletonId = TracingId.generate
@@ -280,22 +307,26 @@ class TSAnnotationController @Inject()(
               .findUniqueElement(volumeLayers.map(_.name))
               .getOrElse(AnnotationLayer.defaultVolumeLayerName)
             volumeTracingsAdaptedNested: Seq[Seq[VolumeTracing]] <- Fox.serialCombined(
-              annotations.zip(request.body.ownerIds)) {
-              case (annotation, ownerId) =>
-                findAndAdaptVolumesForAnnotation(annotation, requestingUserId, ownerId)
+              annotations.zip(request.body.ownerIds)
+            ) { case (annotation, ownerId) =>
+              findAndAdaptVolumesForAnnotation(annotation, requestingUserId, ownerId)
             }
             volumeTracings = volumeTracingsAdaptedNested.flatten
             firstVolumeAnnotationIndex = annotations.indexWhere(
-              _.annotationLayers.exists(_.typ == AnnotationLayerTypeProto.Volume))
-            firstVolumeAnnotationId = if (firstVolumeAnnotationIndex < 0) None
-            else Some(request.body.annotationIds(firstVolumeAnnotationIndex))
+              _.annotationLayers.exists(_.typ == AnnotationLayerTypeProto.Volume)
+            )
+            firstVolumeAnnotationId =
+              if (firstVolumeAnnotationIndex < 0) None
+              else Some(request.body.annotationIds(firstVolumeAnnotationIndex))
             mergeEditableMappingsResultBox <- editableMappingMergeService
-              .mergeEditableMappings(request.body.annotationIds,
-                                     firstVolumeAnnotationId,
-                                     newAnnotationId,
-                                     newVolumeId,
-                                     volumeTracings.zip(volumeLayers.map(_.tracingId)),
-                                     toTemporaryStore)
+              .mergeEditableMappings(
+                request.body.annotationIds,
+                firstVolumeAnnotationId,
+                newAnnotationId,
+                newVolumeId,
+                volumeTracings.zip(volumeLayers.map(_.tracingId)),
+                toTemporaryStore
+              )
               .shiftBox
             (newMappingName: Option[String], newTargetVersion: Long) <- mergeEditableMappingsResultBox match {
               case Full(targetVersion) => Fox.successful((Some(newVolumeId), targetVersion))
@@ -308,52 +339,67 @@ class TSAnnotationController @Inject()(
               volumeTracings,
               newVolumeId,
               newVersion = newTargetVersion,
-              toTemporaryStore) ?~> Msg.Annotation.Merge.mergeVolumeDataFailed
+              toTemporaryStore
+            ) ?~> Msg.Annotation.Merge.mergeVolumeDataFailed
             mergedVolumeOpt <- Fox.runIf(volumeTracings.nonEmpty)(
               volumeTracingService
-                .merge(volumeTracings,
-                       mergedVolumeStats,
-                       newMappingName,
-                       newVersion = newTargetVersion,
-                       additionalBoundingBoxes = request.body.additionalBoundingBoxes)
-                .toFox) ?~> Msg.Annotation.Merge.mergeVolumeFailed
+                .merge(
+                  volumeTracings,
+                  mergedVolumeStats,
+                  newMappingName,
+                  newVersion = newTargetVersion,
+                  additionalBoundingBoxes = request.body.additionalBoundingBoxes
+                )
+                .toFox
+            ) ?~> Msg.Annotation.Merge.mergeVolumeFailed
             _ <- Fox.runOptional(mergedVolumeOpt)(
-              volumeTracingService.saveVolume(newVolumeId, version = newTargetVersion, _, toTemporaryStore))
+              volumeTracingService.saveVolume(newVolumeId, version = newTargetVersion, _, toTemporaryStore)
+            )
             skeletonTracingsAdaptedNested: Seq[Seq[SkeletonTracing]] <- Fox.serialCombined(
-              annotations.zip(request.body.ownerIds)) {
-              case (annotation, ownerId) =>
-                findAndAdaptSkeletonsForAnnotation(annotation, requestingUserId, ownerId)
+              annotations.zip(request.body.ownerIds)
+            ) { case (annotation, ownerId) =>
+              findAndAdaptSkeletonsForAnnotation(annotation, requestingUserId, ownerId)
             }
             skeletonTracings = skeletonTracingsAdaptedNested.flatten
             mergedSkeletonOpt <- Fox.runIf(skeletonTracings.nonEmpty)(
               skeletonTracingService
-                .merge(skeletonTracings,
-                       newVersion = newTargetVersion,
-                       additionalBoundingBoxes = request.body.additionalBoundingBoxes)
-                .toFox)
+                .merge(
+                  skeletonTracings,
+                  newVersion = newTargetVersion,
+                  additionalBoundingBoxes = request.body.additionalBoundingBoxes
+                )
+                .toFox
+            )
             _ <- Fox.runOptional(mergedSkeletonOpt)(
               skeletonTracingService
-                .saveSkeleton(newSkeletonId, version = newTargetVersion, _, toTemporaryStore = toTemporaryStore))
-            mergedSkeletonLayerOpt = mergedSkeletonOpt.map(
-              _ =>
-                AnnotationLayerProto(name = mergedSkeletonName,
-                                     tracingId = newSkeletonId,
-                                     typ = AnnotationLayerTypeProto.Skeleton))
-            mergedVolumeLayerOpt = mergedVolumeOpt.map(
-              _ =>
-                AnnotationLayerProto(name = mergedVolumeName,
-                                     tracingId = newVolumeId,
-                                     typ = AnnotationLayerTypeProto.Volume))
+                .saveSkeleton(newSkeletonId, version = newTargetVersion, _, toTemporaryStore = toTemporaryStore)
+            )
+            mergedSkeletonLayerOpt = mergedSkeletonOpt.map(_ =>
+              AnnotationLayerProto(
+                name = mergedSkeletonName,
+                tracingId = newSkeletonId,
+                typ = AnnotationLayerTypeProto.Skeleton
+              )
+            )
+            mergedVolumeLayerOpt = mergedVolumeOpt.map(_ =>
+              AnnotationLayerProto(
+                name = mergedVolumeName,
+                tracingId = newVolumeId,
+                typ = AnnotationLayerTypeProto.Volume
+              )
+            )
             mergedLayers = Seq(mergedSkeletonLayerOpt, mergedVolumeLayerOpt).flatten
             firstAnnotation <- annotations.headOption.toFox
             mergedAnnotation = firstAnnotation
               .withAnnotationLayers(mergedLayers)
               .withEarliestAccessibleVersion(newTargetVersion)
               .withVersion(newTargetVersion)
-            _ <- annotationService.saveAnnotationProto(newAnnotationId,
-                                                       newTargetVersion,
-                                                       mergedAnnotation,
-                                                       toTemporaryStore)
+            _ <- annotationService.saveAnnotationProto(
+              newAnnotationId,
+              newTargetVersion,
+              mergedAnnotation,
+              toTemporaryStore
+            )
           } yield Ok(mergedAnnotation.toByteArray).as(protobufMimeType)
         }
       }

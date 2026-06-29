@@ -42,7 +42,8 @@ trait WKWCompressionHelper {
   }
 
   protected def decompressChunk(sourceChunkType: ChunkType.Value, numBytesPerChunk: Int)(
-      compressedChunk: Array[Byte]): Box[Array[Byte]] = {
+      compressedChunk: Array[Byte]
+  ): Box[Array[Byte]] = {
     val result = sourceChunkType match {
       case ChunkType.LZ4 | ChunkType.LZ4HC =>
         val rawChunk: Array[Byte] = Array.ofDim[Byte](numBytesPerChunk)
@@ -51,10 +52,9 @@ trait WKWCompressionHelper {
           _ <- Box.fromBool(bytesDecompressed == compressedChunk.length) ?~! error(
             "Decompressed unexpected number of bytes",
             compressedChunk.length,
-            bytesDecompressed)
-        } yield {
-          rawChunk
-        }
+            bytesDecompressed
+          )
+        } yield rawChunk
       case ChunkType.Raw =>
         Full(compressedChunk)
       case _ =>
@@ -66,8 +66,9 @@ trait WKWCompressionHelper {
 
 object WKWFile extends WKWCompressionHelper with FoxImplicits {
 
-  def read[T](is: InputStream)(f: (WKWHeader, Iterator[Array[Byte]]) => Fox[T])(
-      implicit ec: ExecutionContext): Fox[T] = {
+  def read[T](
+      is: InputStream
+  )(f: (WKWHeader, Iterator[Array[Byte]]) => Fox[T])(implicit ec: ExecutionContext): Fox[T] = {
     val dataStream = new LittleEndianDataInputStream(is)
     for {
       header <- WKWHeader(dataStream, readJumpTable = true).toFox
@@ -87,14 +88,14 @@ object WKWFile extends WKWCompressionHelper with FoxImplicits {
           if (blocks.hasNext) {
             val data = blocks.next()
             for {
-              _ <- Box.fromBool(data.length == header.numBytesPerChunk) ?~! error("Unexpected chunk size",
-                                                                                  header.numBytesPerChunk,
-                                                                                  data.length)
+              _ <- Box.fromBool(data.length == header.numBytesPerChunk) ?~! error(
+                "Unexpected chunk size",
+                header.numBytesPerChunk,
+                data.length
+              )
               compressedChunk <- if (header.isCompressed) compressChunk(header.blockType)(data) else Full(data)
               _ <- tryo(dataBuffer.write(compressedChunk))
-            } yield {
-              chunkLengths :+ compressedChunk.length
-            }
+            } yield chunkLengths :+ compressedChunk.length
           } else {
             Failure("No more chunks in iterator.")
           }

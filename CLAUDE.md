@@ -7,7 +7,7 @@
 Code Verification:
 - TypeScript type-checking: `yarn typecheck`
 - Unit tests (vitest): `yarn test`
-- Formatting (biome): `yarn fix-format` 
+- Formatting (biome): `yarn fix-frontend` 
 - Linting (biome): `yarn check-frontend`
 
 

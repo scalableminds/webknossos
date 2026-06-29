@@ -332,7 +332,8 @@ class TaskCreationService @Inject() (
             case _               => Failure(Msg.Task.Create.needsEitherSkeletonOrVolume)
           }
       }
-    paramBox map { params =>
+
+    paramBox.map { params =>
       val parsedNmlTracingBoundingBox = params._1.map(b => BoundingBox(b.topLeft, b.width, b.height, b.depth))
       val bbox = if (nmlFormParams.boundingBox.isDefined) nmlFormParams.boundingBox else parsedNmlTracingBoundingBox
       TaskParameters(

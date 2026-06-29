@@ -6,7 +6,8 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.mvc.ExtendedController
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{Zarr3OutputHelper, ZarrCoordinatesParser}
@@ -16,10 +17,10 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr.{
   NgffMetadataV0_5,
   ZarrHeader
 }
-import com.scalableminds.webknossos.datastore.datareaders.zarr3._
+import com.scalableminds.webknossos.datastore.datareaders.zarr3.*
 import com.scalableminds.webknossos.datastore.datareaders.{ArrayOrder, AxisOrder}
-import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, UPath}
-import com.scalableminds.webknossos.datastore.models.datasource._
+import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryConversions, UPath}
+import com.scalableminds.webknossos.datastore.models.datasource.*
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, WebknossosDataRequest}
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
@@ -34,7 +35,7 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 
 import java.nio.file.Path
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 class VolumeTracingZarrStreamingController @Inject() (
     tracingService: VolumeTracingService,
@@ -45,14 +46,13 @@ class VolumeTracingZarrStreamingController @Inject() (
     remoteWebknossosClient: TSRemoteWebknossosClient
 )(implicit ec: ExecutionContext)
     extends ExtendedController
-    with ProtoGeometryImplicits
-    with FoxImplicits
+    with ProtoGeometryConversions
     with Zarr3OutputHelper {
 
   override def defaultErrorCode: Int = NOT_FOUND
 
   def volumeTracingDirectoryContent(tracingId: String, zarrVersion: Int): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
@@ -73,7 +73,7 @@ class VolumeTracingZarrStreamingController @Inject() (
     }
 
   def volumeTracingDirectoryContentJson(tracingId: String, zarrVersion: Int): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
@@ -88,7 +88,7 @@ class VolumeTracingZarrStreamingController @Inject() (
     }
 
   def volumeTracingMagDirectoryContent(tracingId: String, mag: String, zarrVersion: Int): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
@@ -110,7 +110,7 @@ class VolumeTracingZarrStreamingController @Inject() (
     }
 
   def volumeTracingMagDirectoryContentJson(tracingId: String, mag: String, zarrVersion: Int): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
@@ -126,7 +126,7 @@ class VolumeTracingZarrStreamingController @Inject() (
     }
 
   def zArray(tracingId: String, mag: String): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
@@ -138,7 +138,7 @@ class VolumeTracingZarrStreamingController @Inject() (
             .fromBool(existingMags.contains(magParsed)) ?~> Msg.Annotation.Volume.wrongMag(tracingId, mag) ~> NOT_FOUND
 
           cubeLength = DataLayer.bucketLength
-          (channels, dtype) = ElementClass.toChannelAndZarrString(tracing.elementClass)
+          (channels, dtype) = ElementClass.toChannelAndZarrString(elementClassFromProto(tracing.elementClass))
           // data request method always decompresses before sending
           compressor = None
 
@@ -165,7 +165,7 @@ class VolumeTracingZarrStreamingController @Inject() (
     }
 
   def zarrJsonForMag(tracingId: String, mag: String): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
@@ -217,9 +217,9 @@ class VolumeTracingZarrStreamingController @Inject() (
       }
     }
 
-  def zGroup(tracingId: String): Action[AnyContent] = Action.async { implicit request =>
+  def zGroup(tracingId: String): Action[AnyContent] = Action.fox { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
-      Future(Ok(Json.toJson(NgffGroupHeader(zarr_format = 2))))
+      Fox.successful(Ok(Json.toJson(NgffGroupHeader(zarr_format = 2))))
     }
   }
 
@@ -228,7 +228,7 @@ class VolumeTracingZarrStreamingController @Inject() (
     */
   def zAttrs(
       tracingId: String
-  ): Action[AnyContent] = Action.async { implicit request =>
+  ): Action[AnyContent] = Action.fox { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
       for {
         annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
@@ -246,7 +246,7 @@ class VolumeTracingZarrStreamingController @Inject() (
 
   def zarrJson(
       tracingId: String
-  ): Action[AnyContent] = Action.async { implicit request =>
+  ): Action[AnyContent] = Action.fox { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
       for {
         annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
@@ -265,7 +265,7 @@ class VolumeTracingZarrStreamingController @Inject() (
   }
 
   def zarrSource(tracingId: String, tracingName: Option[String], zarrVersion: Int): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
@@ -275,18 +275,20 @@ class VolumeTracingZarrStreamingController @Inject() (
             name = layerName,
             dataFormat = if (zarrVersion == 2) DataFormat.zarr else DataFormat.zarr3,
             largestSegmentId = tracing.largestSegmentId,
-            boundingBox = tracing.boundingBox,
-            elementClass = tracing.elementClass,
-            mags = tracing.mags.toList.map(m =>
-              MagLocator(
-                m,
-                Some(UPath.fromLocalPath(Path.of(s"./$layerName/${m.toMagLiteral(allowScalar = true)}"))),
-                None,
-                Some(AxisOrder.cxyz),
-                None,
-                None
-              )
-            ),
+            boundingBox = boundingBoxFromProto(tracing.boundingBox),
+            elementClass = elementClassFromProto(tracing.elementClass),
+            mags = tracing.mags.toList
+              .map(vec3IntFromProto)
+              .map(m =>
+                MagLocator(
+                  m,
+                  Some(UPath.fromLocalPath(Path.of(s"./$layerName/${m.toMagLiteral(allowScalar = true)}"))),
+                  None,
+                  Some(AxisOrder.cxyz),
+                  None,
+                  None
+                )
+              ),
             mappings = None
           )
         } yield Ok(Json.toJson(zarrLayer))
@@ -294,7 +296,7 @@ class VolumeTracingZarrStreamingController @Inject() (
     }
 
   def rawZarrCube(tracingId: String, mag: String, coordinates: String): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
@@ -320,16 +322,17 @@ class VolumeTracingZarrStreamingController @Inject() (
             version = None,
             additionalCoordinates = additionalCoordinates
           )
-          (data, missingBucketIndices) <-
+          (data, emptyIndices, failureIndices) <-
             if (tracing.getHasEditableMapping) {
               val mappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
               editableMappingService.volumeData(mappingLayer, List(wkRequest))
             } else tracingService.data(annotationId, tracingId, tracing, List(wkRequest))
+          _ <- Fox.fromBool(failureIndices.isEmpty) ?~> Msg.Zarr.chunkLoadingError ~> INTERNAL_SERVER_ERROR
           dataWithFallback <- getFallbackLayerDataIfEmpty(
             tracing,
             annotationId,
             data,
-            missingBucketIndices,
+            emptyIndices,
             magParsed,
             Vec3Int(x, y, z),
             cubeSize,
@@ -343,13 +346,13 @@ class VolumeTracingZarrStreamingController @Inject() (
       tracing: VolumeTracing,
       annotationId: ObjectId,
       data: Array[Byte],
-      missingBucketIndices: List[Int],
+      emptyBucketIndices: Seq[Int],
       mag: Vec3Int,
       position: Vec3Int,
       cubeSize: Int,
       additionalCoordinates: Option[Seq[AdditionalCoordinate]]
   )(using tc: TokenContext): Fox[Array[Byte]] =
-    if (missingBucketIndices.nonEmpty) {
+    if (emptyBucketIndices.nonEmpty) {
       for {
         remoteFallbackLayer <- tracingService.remoteFallbackLayerForVolumeTracing(
           tracing,
@@ -364,14 +367,14 @@ class VolumeTracingZarrStreamingController @Inject() (
           version = None,
           additionalCoordinates = additionalCoordinates
         )
-        (fallbackData, fallbackMissingBucketIndices) <- remoteDataStoreClient.getData(
+        (fallbackData, fallbackEmptyBucketIndices, fallbackFailureBucketIndices) <- remoteDataStoreClient.getData(
           remoteFallbackLayer,
           List(request)
         ) ~> SERVICE_UNAVAILABLE // return 503 if the request fails, assuming the datastore is still initializing
         // We only expect missing buckets if something went wrong with loading the fallback layer, e.g. applying the agglomerate. Otherwise, a fill value is used and returned to us.
         _ <- Fox.fromBool(
-          fallbackMissingBucketIndices.isEmpty
-        ) ?~> "Could not retrieve data from fallback layer" ~> INTERNAL_SERVER_ERROR
+          fallbackEmptyBucketIndices.isEmpty && fallbackFailureBucketIndices.isEmpty
+        ) ?~> Msg.Annotation.Volume.fallbackDataLoadingFailed ~> INTERNAL_SERVER_ERROR
       } yield fallbackData
     } else Fox.successful(data)
 }

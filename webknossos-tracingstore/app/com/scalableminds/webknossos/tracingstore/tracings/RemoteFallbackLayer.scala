@@ -1,12 +1,14 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 import com.scalableminds.webknossos.datastore.models.WebknossosDataRequest
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.FallbackDataKey
@@ -17,17 +19,17 @@ import scala.concurrent.ExecutionContext
 
 case class RemoteFallbackLayer(datasetId: ObjectId, layerName: String, elementClass: ElementClassProto)
 
-object RemoteFallbackLayer extends ProtoGeometryImplicits {
+object RemoteFallbackLayer extends ProtoGeometryConversions {
   def fromDataLayerAndDatasetId(dataLayer: DataLayer, datasetId: ObjectId): Box[RemoteFallbackLayer] = {
     val elementClassProtoBox = ElementClass.toProto(dataLayer.elementClass)
     elementClassProtoBox.map(elementClassProto => RemoteFallbackLayer(datasetId, dataLayer.name, elementClassProto))
   }
 }
-trait FallbackDataHelper extends FoxImplicits {
+trait FallbackDataHelper {
   def remoteDatastoreClient: TSRemoteDatastoreClient
   def remoteWebknossosClient: TSRemoteWebknossosClient
 
-  private lazy val fallbackBucketDataCache: AlfuCache[FallbackDataKey, (Array[Byte], List[Int])] =
+  private lazy val fallbackBucketDataCache: AlfuCache[FallbackDataKey, (Array[Byte], Seq[Int])] =
     AlfuCache(maxCapacity = 3000)
 
   def remoteFallbackLayerForVolumeTracing(tracing: VolumeTracing, annotationId: ObjectId)(implicit
@@ -44,17 +46,24 @@ trait FallbackDataHelper extends FoxImplicits {
       tc: TokenContext
   ): Fox[Array[Byte]] =
     for {
-      (data, missingBucketIndices) <- fallbackBucketDataCache.getOrLoad(
+      (data, emptyBucketIndices) <- fallbackBucketDataCache.getOrLoad(
         FallbackDataKey(remoteFallbackLayer, dataRequest, tc.userTokenOpt),
-        k => remoteDatastoreClient.getData(k.remoteFallbackLayer, Seq(k.dataRequest))
+        k =>
+          for {
+            (dataInner, emptyIndices, failureIndices) <- remoteDatastoreClient
+              .getData(k.remoteFallbackLayer, Seq(k.dataRequest))
+            // failures are rejected *inside* of the load function to avoid caching them.
+            // empties are rejected *outside* because they are permanent errors and can be cached.
+            _ <- Fox.fromBool(failureIndices.isEmpty) ?~> Msg.Annotation.Volume.fallbackDataLoadingFailed
+          } yield (dataInner, emptyIndices)
       )
-      dataOrEmpty <- if (missingBucketIndices.isEmpty) Fox.successful(data) else Fox.empty
+      dataOrEmpty <- if (emptyBucketIndices.isEmpty) Fox.successful(data) else Fox.empty
     } yield dataOrEmpty
 
   // Get multiple buckets at once: pro: fewer requests, con: no tracingstore-side caching
   def getFallbackBucketsFromDataStore(
       remoteFallbackLayer: RemoteFallbackLayer,
       dataRequests: Seq[WebknossosDataRequest]
-  )(using tc: TokenContext): Fox[(Array[Byte], List[Int])] =
+  )(using tc: TokenContext): Fox[(Array[Byte], Seq[Int], Seq[Int])] =
     remoteDatastoreClient.getData(remoteFallbackLayer, dataRequests)
 }

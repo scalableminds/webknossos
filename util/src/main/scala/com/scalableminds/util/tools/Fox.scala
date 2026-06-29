@@ -4,28 +4,21 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Success, Try}
 
-trait FoxImplicits {
-  /*
-   * Intermediate class for implicit conversion. Never instantiate manually, always use `toFox` (e.g. for box, try, options)
-   */
-  class Foxable[+A](futureBox: Future[Box[A]]) {
-    def toFox(implicit ec: ExecutionContext) = new Fox(futureBox)
-  }
+object Fox {
 
-  implicit protected def box2Foxable[T](b: Box[T]): Foxable[T] =
-    new Foxable(Future.successful(b))
+  extension [T](b: Box[T])
+    def toFox(using ec: ExecutionContext): Fox[T] =
+      new Fox(Future.successful(b))
 
-  implicit protected def try2Foxable[T](t: Try[T]): Foxable[T] = t match {
-    case Success(result)       => new Foxable(Future.successful(Full(result)))
-    case scala.util.Failure(e) => new Foxable(Future.successful(Failure(e.toString, Full(e), Empty)))
-  }
+  extension [T](t: Try[T])
+    def toFox(using ec: ExecutionContext): Fox[T] = t match {
+      case Success(result)       => new Fox(Future.successful(Full(result)))
+      case scala.util.Failure(e) => new Fox(Future.successful(Failure(e.toString, Full(e), Empty)))
+    }
 
-  implicit protected def option2Foxable[T](b: Option[T]): Foxable[T] =
-    new Foxable(Future.successful(Box(b)))
-
-}
-
-object Fox extends FoxImplicits {
+  extension [T](o: Option[T])
+    def toFox(using ec: ExecutionContext): Fox[T] =
+      new Fox(Future.successful(Box(o)))
 
   def fromBool(b: Boolean)(implicit ec: ExecutionContext): Fox[Unit] =
     if (b) Fox.successful(())

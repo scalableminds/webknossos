@@ -3,7 +3,8 @@ package models.user.time
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.typesafe.scalalogging.LazyLogging
 import mail.{DefaultMails, Send}
 
@@ -32,8 +33,7 @@ class TimeSpanService @Inject() (
     conf: WkConf,
     actorSystem: ActorSystem
 )(implicit ec: ExecutionContext)
-    extends FoxImplicits
-    with LazyLogging {
+    extends LazyLogging {
 
   private lazy val Mailer: ActorSelection =
     actorSystem.actorSelection("/user/mailActor")

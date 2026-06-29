@@ -16,14 +16,14 @@ class PathDeletionController @Inject() (conf: WkConf, pathDeletionDAO: PathDelet
     bodyParsers: PlayBodyParsers
 ) extends Controller {
 
-  def listPathsToDelete(key: String): Action[AnyContent] = Action.async { _ =>
+  def listPathsToDelete(key: String): Action[AnyContent] = Action.fox { _ =>
     for {
       _ <- authenticateExternalPathDeletionService(key)
       paths <- pathDeletionDAO.findAll
     } yield Ok(Json.toJson(paths))
   }
 
-  def markAsDeleted(key: String): Action[Seq[String]] = Action.async(validateJson[Seq[String]]) { implicit request =>
+  def markAsDeleted(key: String): Action[Seq[String]] = Action.fox(validateJson[Seq[String]]) { implicit request =>
     for {
       _ <- authenticateExternalPathDeletionService(key)
       _ <- Fox.serialCombined(request.body.grouped(100))(pathDeletionDAO.markAsDeleted)

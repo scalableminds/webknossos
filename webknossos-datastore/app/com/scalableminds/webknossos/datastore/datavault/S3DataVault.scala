@@ -2,7 +2,8 @@ package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Box, Empty, Fox, FoxImplicits, Full, Failure => BoxFailure}
+import com.scalableminds.util.tools.{Box, Empty, Fox, Full, Failure => BoxFailure}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.storage.{
   CredentializedUPath,
   LegacyDataVaultCredential,
@@ -39,8 +40,7 @@ class S3DataVault(
     s3ClientPool: S3ClientPool,
     implicit val ec: ExecutionContext
 ) extends DataVault
-    with LazyLogging
-    with FoxImplicits {
+    with LazyLogging {
   private lazy val bucketName = S3UriUtils.hostBucketFromUri(uri) match {
     case Some(value) => value
     case None        => throw new Exception(s"Could not parse S3 bucket for ${uri.toString}")

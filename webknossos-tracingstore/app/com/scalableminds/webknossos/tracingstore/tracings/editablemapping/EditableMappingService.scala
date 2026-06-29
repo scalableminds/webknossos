@@ -7,7 +7,8 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
 import com.scalableminds.webknossos.datastore.SegmentToAgglomerateProto.SegmentToAgglomerateChunkProto
@@ -17,10 +18,9 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.Elemen
 import com.scalableminds.webknossos.datastore.helpers.{
   NativeBucketScanner,
   NodeDefaults,
-  ProtoGeometryImplicits,
+  ProtoGeometryConversions,
   SkeletonTracingDefaults
 }
-import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
 import com.scalableminds.webknossos.datastore.models._
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
@@ -103,12 +103,11 @@ class EditableMappingService @Inject() (
 )(implicit ec: ExecutionContext)
     extends KeyValueStoreConversions
     with FallbackDataHelper
-    with FoxImplicits
     with ReversionHelper
     with EditableMappingElementKeys
     with LazyLogging
     with UpdateGroupHandling
-    with ProtoGeometryImplicits {
+    with ProtoGeometryConversions {
 
   val defaultSegmentToAgglomerateChunkSize: Int = 64 * 1024 // max. 1 MiB chunks (two 8-byte numbers per element)
 
@@ -218,9 +217,9 @@ class EditableMappingService @Inject() (
       segmentIdAtVoxel <- toSegmentId(voxelAsBytes, remoteFallbackLayer.elementClass)
     } yield segmentIdAtVoxel
 
-  def volumeData(editableMappingLayer: EditableMappingLayer, dataRequests: DataRequestCollection)(using
+  def volumeData(editableMappingLayer: EditableMappingLayer, dataRequests: List[AbstractDataRequest])(using
       tc: TokenContext
-  ): Fox[(Array[Byte], List[Int])] = {
+  ): Fox[(Array[Byte], Seq[Int], Seq[Int])] = {
     val requests = dataRequests.map(r =>
       DataServiceDataRequest(
         None,
@@ -233,7 +232,7 @@ class EditableMappingService @Inject() (
     binaryDataService.handleDataRequests(requests)
   }
 
-  def volumeDataBucketBoxes(editableMappingLayer: EditableMappingLayer, dataRequests: DataRequestCollection)(using
+  def volumeDataBucketBoxes(editableMappingLayer: EditableMappingLayer, dataRequests: List[AbstractDataRequest])(using
       tc: TokenContext
   ): Fox[Seq[Box[Array[Byte]]]] = {
     val requests = dataRequests.map(r =>
@@ -596,8 +595,8 @@ class EditableMappingService @Inject() (
       EdgeWithPositions(
         segmentId1,
         segmentId2,
-        position1,
-        position2
+        vec3IntFromProto(position1),
+        vec3IntFromProto(position2)
       )
     }
 
@@ -607,7 +606,7 @@ class EditableMappingService @Inject() (
       val position = agglomerateGraph.positions(index)
       NodeWithPosition(
         segmentId,
-        position
+        vec3IntFromProto(position)
       )
     }
 

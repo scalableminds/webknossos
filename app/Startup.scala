@@ -40,7 +40,7 @@ class Startup @Inject() (
 
   private val beforeStartup = Instant.now
 
-  logger.info(s"Executing Startup: Start actors, register cleanup services and stop hooks...")
+  logger.info("Executing Startup: Start actors, register cleanup services and stop hooks...")
 
   startActors(actorSystem)
 
@@ -124,7 +124,7 @@ class Startup @Inject() (
   }
 
   private def ensurePostgresDatabase(): Unit = {
-    logger.info(s"Ensuring Postgres database...")
+    logger.info("Ensuring Postgres database...")
     val processLogger =
       ProcessLogger((o: String) => logger.info(s"dbtool: $o"), (e: String) => logger.error(s"dbtool: $e"))
 

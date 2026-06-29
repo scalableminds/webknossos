@@ -2,8 +2,8 @@ package controllers
 
 import com.scalableminds.util.Msg
 import play.silhouette.api.Silhouette
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 
 import models.dataset.{PublicationDAO, PublicationService}
 import play.api.libs.json._
@@ -20,20 +20,19 @@ class PublicationController @Inject() (
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext)
     extends Controller
-    with ProtoGeometryImplicits
-    with FoxImplicits {
+    with ProtoGeometryConversions {
 
   override def allowRemoteOrigin: Boolean = true
 
   def read(publicationId: ObjectId): Action[AnyContent] =
-    sil.UserAwareAction.async { implicit request =>
+    sil.UserAwareAction.fox { implicit request =>
       for {
         publication <- publicationDAO.findOne(publicationId) ?~> Msg.publicationNotFound ~> NOT_FOUND
         js <- publicationService.publicWrites(publication)
       } yield Ok(js)
     }
 
-  def listPublications: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+  def listPublications: Action[AnyContent] = sil.UserAwareAction.fox { implicit request =>
     for {
       publications <- publicationDAO.findAll ?~> Msg.publicationNotFound ~> NOT_FOUND
       jsResult <- Fox.serialCombined(publications)(publicationService.publicWrites)

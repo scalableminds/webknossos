@@ -341,6 +341,11 @@ const Constants = {
   REGISTER_SEGMENTS_BB_MAX_SEGMENT_COUNT: 5000,
   DEFAULT_MESH_OPACITY: 1,
   PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT: 32,
+  // Maximum number of segments for which precomputed meshes are loaded simultaneously.
+  // This way, the first meshes are fully loaded (and visible) early and the
+  // memory pressure of in-flight chunk buffers stays bounded when meshes are
+  // requested for many segments at once (e.g., for a whole segment group).
+  PARALLEL_MESH_LOADING_SEGMENT_COUNT: 4,
   NARROW_SCREEN_WIDTH: 1400,
   VERY_NARROW_SCREEN_WIDTH: 1200,
   NUMBER_OF_TOOLS_IN_TOOLBAR: 5,

@@ -2,7 +2,8 @@ package com.scalableminds.webknossos.tracingstore.tracings
 
 import com.google.protobuf.ByteString
 import com.scalableminds.fossildb.proto.fossildbapi._
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.tracingstore.TracingStoreConfig
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.typesafe.scalalogging.LazyLogging
@@ -49,8 +50,7 @@ class FossilDBClient(
     config: TracingStoreConfig,
     slackNotificationService: TSSlackNotificationService
 )(implicit ec: ExecutionContext)
-    extends FoxImplicits
-    with LazyLogging {
+    extends LazyLogging {
   private val address = config.Tracingstore.Fossildb.address
   private val port = config.Tracingstore.Fossildb.port
   private val channel =
@@ -91,7 +91,7 @@ class FossilDBClient(
         case Failure(exception) =>
           val box = exception match {
             case e: StatusRuntimeException if e.getStatus == Status.UNAVAILABLE =>
-              new com.scalableminds.util.tools.Failure(s"FossilDB is unavailable", Full(e), Empty) ~> 500
+              new com.scalableminds.util.tools.Failure("FossilDB is unavailable", Full(e), Empty) ~> 500
             case e: Exception =>
               val messageWithCauses = new StringBuilder
               messageWithCauses.append(e.toString)

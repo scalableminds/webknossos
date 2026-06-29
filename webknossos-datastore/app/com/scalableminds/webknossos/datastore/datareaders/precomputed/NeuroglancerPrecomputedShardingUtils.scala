@@ -3,7 +3,8 @@ package com.scalableminds.webknossos.datastore.datareaders.precomputed
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.io.ZipIO
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.datavault.{ByteRange, StartEndExclusiveByteRange, VaultPath}
 import com.scalableminds.util.tools.Box
 import com.scalableminds.util.tools.Box.tryo
@@ -11,7 +12,7 @@ import com.scalableminds.util.tools.Box.tryo
 import java.nio.{ByteBuffer, ByteOrder}
 import scala.concurrent.ExecutionContext
 
-trait NeuroglancerPrecomputedShardingUtils extends FoxImplicits {
+trait NeuroglancerPrecomputedShardingUtils {
 
   // SHARDING
   // Implemented according to https://github.com/google/neuroglancer/blob/233fc39b07a0480a8e1c90fc5ca835330a0bf287/src/datasource/precomputed/sharded.md,

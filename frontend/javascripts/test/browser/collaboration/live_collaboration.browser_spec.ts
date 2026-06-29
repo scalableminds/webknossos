@@ -18,7 +18,6 @@ import { setCollaborationModeAction } from "viewer/model/actions/annotation_acti
 import { setPositionAction } from "viewer/model/actions/flycam_actions";
 import { proofreadMergeAction } from "viewer/model/actions/proofread_actions";
 import { cycleToolAction } from "viewer/model/actions/ui_actions";
-import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import { setActiveCellAction } from "viewer/model/actions/volumetracing_actions";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { setCollaborationModeForAnnotation, updateDatasetTeams } from "../../../admin/rest_api";
@@ -121,21 +120,6 @@ describe("Live Collaboration", () => {
 
       // Log redux actions
       await page.evaluate(() => (window.webknossos.DEV.flags.logActions = true));
-
-      // Patch the active user in the store to be a superuser so the collaboration
-      // mode controls become available. This only affects the local Redux state —
-      // no backend call is made.
-      const activeUser = await page.evaluate(
-        () => window.webknossos.DEV.store.getState().activeUser,
-      );
-      const setActiveUserActionObj = setActiveUserAction({
-        ...activeUser,
-        isSuperUser: true,
-      } as any);
-      await page.evaluate(
-        (action) => window.webknossos.DEV.store.dispatch(action),
-        setActiveUserActionObj,
-      );
 
       // Activate HDF5 mapping
       await page.evaluate(

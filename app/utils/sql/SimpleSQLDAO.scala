@@ -1,14 +1,12 @@
 package utils.sql
 
-import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import com.scalableminds.util.tools.{Fox, TextUtils}
 import com.typesafe.scalalogging.LazyLogging
 import slick.dbio.{DBIO, DBIOAction, Effect, NoStream}
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.sql.SqlAction
 import slick.util.{Dumpable, TreePrinter}
-import utils.sql.SqlInterpolation.sqlInterpolation
-
 import java.io.{ByteArrayOutputStream, PrintWriter}
 import java.nio.charset.StandardCharsets
 import javax.inject.Inject
@@ -16,12 +14,10 @@ import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
 
 class SimpleSQLDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
-    extends FoxImplicits
-    with LazyLogging
+    extends LazyLogging
     with SqlTypeImplicits
-    with SqlEscaping {
-
-  implicit protected def sqlInterpolationWrapper(s: StringContext): SqlInterpolator = sqlInterpolation(s)
+    with SqlEscaping
+    with SqlInterpolationSyntax {
 
   // Concurrent access for Serializable transactions leads to this error, can be solved by retry.
   protected lazy val transactionSerializationError = "could not serialize access"

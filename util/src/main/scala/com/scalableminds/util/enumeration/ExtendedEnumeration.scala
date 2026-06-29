@@ -1,12 +1,13 @@
 package com.scalableminds.util.enumeration
 
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.util.tools.TextUtils.parseCommaSeparated
 import play.api.libs.json.{Format, Json}
 
 import scala.concurrent.ExecutionContext
 
-abstract class ExtendedEnumeration extends Enumeration with FoxImplicits {
+abstract class ExtendedEnumeration extends Enumeration {
   implicit val format: Format[Value] = Json.formatEnum(this)
   def fromString(s: String): Option[Value] =
     values.find(_.toString == s)

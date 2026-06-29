@@ -17,7 +17,7 @@ import utils.MetadataAssertions
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class FolderController @Inject()(
+class FolderController @Inject() (
     folderDAO: FolderDAO,
     folderService: FolderService,
     teamDAO: TeamDAO,
@@ -25,7 +25,8 @@ class FolderController @Inject()(
     teamService: TeamService,
     datasetDAO: DatasetDAO,
     organizationDAO: OrganizationDAO,
-    sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
+    sil: Silhouette[WkEnv]
+)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits
     with MetadataAssertions {
@@ -58,8 +59,11 @@ class FolderController @Inject()(
         _ <- assertNoDuplicateMetadataKeys(params.metadata)
         _ <- folderDAO.updateMetadata(id, params.metadata)
         _ <- folderDAO.updateName(id, params.name) ?~> Msg.Folder.updateNameFailed
-        _ <- folderService
-          .updateAllowedTeams(id, params.allowedTeams, request.identity) ?~> Msg.Folder.updateTeamsFailed
+        _ <- folderService.updateAllowedTeams(
+          id,
+          params.allowedTeams,
+          request.identity
+        ) ?~> Msg.Folder.updateTeamsFailed
         updated <- folderDAO.findOne(id)
         folderJson <- folderService.publicWrites(updated, Some(request.identity), Some(organization))
       } yield Ok(folderJson)

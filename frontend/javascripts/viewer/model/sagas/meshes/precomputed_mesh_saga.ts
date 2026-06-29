@@ -75,7 +75,7 @@ function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
 
   function* maybeActivateMeshFile(availableMeshFiles: APIMeshFileInfo[]) {
     const currentMeshFile = yield* select(
-      (state) => state.localSegmentationData[layerName].currentMeshFile,
+      (state) => state.localSegmentationStateByLayer[layerName].currentMeshFile,
     );
     if (!currentMeshFile && availableMeshFiles.length > 0 && autoActivate) {
       yield* put(updateCurrentMeshFileAction(layerName, availableMeshFiles[0].name));
@@ -114,8 +114,15 @@ function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
 }
 
 function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
-  const { segmentId, seedPosition, seedAdditionalCoordinates, meshFileName, layerName, opacity } =
-    action;
+  const {
+    segmentId,
+    seedPosition,
+    seedAdditionalCoordinates,
+    meshFileName,
+    layerName,
+    opacity,
+    isVisible,
+  } = action;
   const layer = yield* select((state) =>
     layerName != null
       ? getSegmentationLayerByName(state.dataset, layerName)
@@ -140,6 +147,7 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
       meshFileName,
       layer,
       opacity,
+      isVisible,
     ),
     cancel: take(
       ((otherAction: Action) =>
@@ -164,6 +172,7 @@ function* loadPrecomputedMeshForSegmentId(
   meshFileName: string,
   segmentationLayer: APISegmentationLayer,
   opacity: number | undefined,
+  isVisible: boolean | undefined,
 ): Saga<void> {
   const layerName = segmentationLayer.name;
   const annotationVersion = yield* select((state) => state.annotation.version);
@@ -177,6 +186,7 @@ function* loadPrecomputedMeshForSegmentId(
       meshFileName,
       mappingName,
       opacity,
+      isVisible,
     ),
   );
   yield* put(startedLoadingMeshAction(layerName, segmentId));

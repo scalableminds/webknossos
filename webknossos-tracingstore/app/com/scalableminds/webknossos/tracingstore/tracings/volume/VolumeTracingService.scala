@@ -142,7 +142,7 @@ class VolumeTracingService @Inject() (
         volumeDataStore,
         temporaryTracingService,
         false
-      )(using tc, ec)
+      )(using ec)
       _ <- Fox.runIf(volumeLayer.tracing.getHasSegmentIndex)(volumeBucketBuffer.prefill(updateActions.flatMap {
         case a: UpdateBucketVolumeAction => Some(a.bucketPosition)
         case _                           => None
@@ -227,7 +227,7 @@ class VolumeTracingService @Inject() (
       a: DeleteSegmentDataVolumeAction,
       segmentIndexBuffer: VolumeSegmentIndexBuffer,
       version: Long
-  )(using tc: TokenContext): Fox[VolumeTracing] =
+  )(using tc: TokenContext): Fox[Unit] =
     for {
       _ <- Fox.successful(())
       volumeLayer = volumeTracingLayer(annotationId, tracingId, volumeTracing)
@@ -283,7 +283,7 @@ class VolumeTracingService @Inject() (
         }
       )
       _ <- segmentIndexBuffer.flush()
-    } yield volumeTracing.copy(volumeBucketDataHasChanged = Some(true))
+    } yield ()
 
   private def assertMagIsValid(tracing: VolumeTracing, mag: Vec3Int): Fox[Unit] =
     if (tracing.mags.nonEmpty) {
@@ -755,9 +755,6 @@ class VolumeTracingService @Inject() (
       _ <- Fox.fromBool(mags.nonEmpty) ?~> "Initializing without any mags. No data or mag restrictions too tight?"
       _ <- saveVolume(tracingId, tracing.version, tracing.copy(mags = mags.toList.sortBy(_.maxDim).map(vec3IntToProto)))
     } yield ()
-
-  def volumeBucketsAreEmpty(tracingId: String): Boolean =
-    volumeDataStore.getMultipleKeys(None, Some(tracingId), limit = Some(1))(wrapInBox).isEmpty
 
   def createAdHocMesh(
       annotationId: ObjectId,

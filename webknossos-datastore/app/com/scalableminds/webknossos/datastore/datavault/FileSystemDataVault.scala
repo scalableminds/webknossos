@@ -16,16 +16,18 @@ import scala.jdk.CollectionConverters._
 
 class FileSystemDataVault extends DataVault with FoxImplicits {
 
-  override def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(
-      using ec: ExecutionContext,
-      tc: TokenContext): Fox[(Array[Byte], Encoding.Value, Option[String])] =
+  override def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[(Array[Byte], Encoding.Value, Option[String])] =
     for {
       localPath <- vaultPathToLocalPath(path)
       (bytes, rangeHeader) <- readBytesLocal(localPath, range)
     } yield (bytes, Encoding.identity, rangeHeader)
 
-  private def readBytesLocal(localPath: Path, range: ByteRange)(
-      implicit ec: ExecutionContext): Fox[(Array[Byte], Option[String])] =
+  private def readBytesLocal(localPath: Path, range: ByteRange)(implicit
+      ec: ExecutionContext
+  ): Fox[(Array[Byte], Option[String])] =
     if (Files.exists(localPath)) {
       range match {
         case CompleteByteRange() =>
@@ -89,28 +91,34 @@ class FileSystemDataVault extends DataVault with FoxImplicits {
   override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
     for {
       localPath <- vaultPathToLocalPath(path)
-      listing = if (Files.isDirectory(localPath)) {
-        Files
-          .list(localPath)
-          .filter(file => Files.isDirectory(file))
-          .collect(Collectors.toList())
-          .asScala
-          .toList
-          .map(dir => new VaultPath(UPath.fromLocalPath(dir), this))
-          .take(maxItems)
-      } else List.empty
+      listing =
+        if (Files.isDirectory(localPath)) {
+          Files
+            .list(localPath)
+            .filter(file => Files.isDirectory(file))
+            .collect(Collectors.toList())
+            .asScala
+            .toList
+            .map(dir => new VaultPath(UPath.fromLocalPath(dir), this))
+            .take(maxItems)
+        } else List.empty
     } yield listing
 
   override def getUsedStorageBytes(path: VaultPath)(using ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     for {
       localPath <- vaultPathToLocalPath(path)
-      usedStorageBytes <- tryo(FileUtils.sizeOfAsBigInteger(localPath.toFile).longValue).toFox ?~> "Failed to get used storage bytes"
+      usedStorageBytes <- tryo(
+        FileUtils.sizeOfAsBigInteger(localPath.toFile).longValue
+      ).toFox ?~> "Failed to get used storage bytes"
     } yield usedStorageBytes
 
   private def vaultPathToLocalPath(path: VaultPath)(implicit ec: ExecutionContext): Fox[Path] =
     for {
-      localPath <- path.toUPath.toLocalPath.toFox ?~> s"trying to read from FileSystemDataVault, but path $path is not local."
-      _ <- Fox.fromBool(localPath.isAbsolute) ?~> s"trying to read from FileSystemDataVault, but path $path is not absolute."
+      localPath <-
+        path.toUPath.toLocalPath.toFox ?~> s"trying to read from FileSystemDataVault, but path $path is not local."
+      _ <- Fox.fromBool(
+        localPath.isAbsolute
+      ) ?~> s"trying to read from FileSystemDataVault, but path $path is not absolute."
     } yield localPath
 
   // There is only one instance of this DataVault, so the hashCode does not depend on any values.

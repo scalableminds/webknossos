@@ -328,7 +328,7 @@ function* loadFullAdHocMesh(
   removeExistingMesh: boolean,
 ): Saga<void> {
   let isInitialRequest = true;
-  const { mappingName, mappingType, opacity } = meshExtraInfo;
+  const { mappingName, mappingType, opacity, isVisible } = meshExtraInfo;
   const clippedPosition = clipPositionToCubeBoundary(position, zoomStep, magInfo);
   yield* put(
     addAdHocMeshAction(
@@ -339,6 +339,7 @@ function* loadFullAdHocMesh(
       mappingName,
       mappingType,
       opacity,
+      isVisible,
     ),
   );
   yield* put(startedLoadingMeshAction(layer.name, segmentId));
@@ -673,6 +674,7 @@ function* refreshMesh(action: RefreshMeshAction): Saga<void> {
         meshInfo.seedAdditionalCoordinates,
         meshInfo.meshFileName,
         meshInfo.opacity,
+        meshInfo.isVisible,
         layerName,
       ),
     );

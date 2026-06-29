@@ -36,7 +36,7 @@ case class Project(
 
 }
 
-class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class ProjectDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Project, ProjectsRow, Projects](sqlClient) {
   protected val collection = Projects
   protected def resultConverter = GetResultProjectsRow
@@ -44,9 +44,9 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected def parse(r: ProjectsRow): Fox[Project] =
     Fox.successful(
       Project(
-        ObjectId(r._Id),
-        ObjectId(r._Team),
-        ObjectId(r._Owner),
+        ObjectId(r._id),
+        ObjectId(r._team),
+        ObjectId(r._owner),
         r.name,
         r.priority,
         r.paused,
@@ -54,7 +54,8 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         r.isblacklistedfromreport,
         Instant.fromSql(r.created),
         r.isdeleted
-      ))
+      )
+    )
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     q"""(_team IN (SELECT _team FROM webknossos.user_team_roles WHERE _user = $requestingUserId))
@@ -154,9 +155,9 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     deleteOneWithNameSuffix(projectId)
 }
 
-class ProjectService @Inject()(projectDAO: ProjectDAO, teamDAO: TeamDAO, userService: UserService, taskDAO: TaskDAO)(
-    implicit ec: ExecutionContext)
-    extends LazyLogging
+class ProjectService @Inject() (projectDAO: ProjectDAO, teamDAO: TeamDAO, userService: UserService, taskDAO: TaskDAO)(
+    implicit ec: ExecutionContext
+) extends LazyLogging
     with FoxImplicits {
 
   def validateProjectName(name: String): Fox[Unit] =
@@ -184,23 +185,22 @@ class ProjectService @Inject()(projectDAO: ProjectDAO, teamDAO: TeamDAO, userSer
     for {
       ownerBox <- userService.findOneCached(project._owner).flatMap(u => userService.compactWrites(u)).shiftBox
       teamNameBox <- teamDAO.findOne(project._team)(using GlobalAccessContext).map(_.name).shiftBox
-    } yield {
-      Json.obj(
-        "name" -> project.name,
-        "team" -> project._team.toString,
-        "teamName" -> teamNameBox.toOption,
-        "owner" -> ownerBox.toOption,
-        "priority" -> project.priority,
-        "paused" -> project.paused,
-        "expectedTime" -> project.expectedTime,
-        "isBlacklistedFromReport" -> project.isBlacklistedFromReport,
-        "id" -> project._id.toString,
-        "created" -> project.created
-      )
-    }
+    } yield Json.obj(
+      "name" -> project.name,
+      "team" -> project._team.toString,
+      "teamName" -> teamNameBox.toOption,
+      "owner" -> ownerBox.toOption,
+      "priority" -> project.priority,
+      "paused" -> project.paused,
+      "expectedTime" -> project.expectedTime,
+      "isBlacklistedFromReport" -> project.isBlacklistedFromReport,
+      "id" -> project._id.toString,
+      "created" -> project.created
+    )
 
-  def publicWritesWithStatus(project: Project, pendingInstances: Long, tracingTime: Long)(
-      using ctx: DBAccessContext): Fox[JsObject] =
+  def publicWritesWithStatus(project: Project, pendingInstances: Long, tracingTime: Long)(using
+      ctx: DBAccessContext
+  ): Fox[JsObject] =
     for {
       projectJson <- publicWrites(project)
     } yield projectJson ++ Json.obj("pendingInstances" -> JsNumber(pendingInstances), "tracingTime" -> tracingTime)

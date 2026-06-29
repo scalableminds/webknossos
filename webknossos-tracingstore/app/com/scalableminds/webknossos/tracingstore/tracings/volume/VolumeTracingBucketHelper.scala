@@ -313,7 +313,9 @@ trait VolumeTracingBucketHelper
     }
   }
 
-  private def loadFallbackBucket(layer: VolumeTracingLayer, bucket: BucketPosition)(using ec: ExecutionContext): Fox[Array[Byte]] = {
+  private def loadFallbackBucket(layer: VolumeTracingLayer, bucket: BucketPosition)(using
+      ec: ExecutionContext
+  ): Fox[Array[Byte]] = {
     val dataRequest: WebknossosDataRequest = WebknossosDataRequest(
       position = Vec3Int(bucket.topLeft.mag1X, bucket.topLeft.mag1Y, bucket.topLeft.mag1Z),
       mag = bucket.mag,
@@ -326,8 +328,10 @@ trait VolumeTracingBucketHelper
     for {
       remoteFallbackLayer <- layer.volumeTracingService
         .remoteFallbackLayerForVolumeTracing(layer.tracing, layer.annotationId)
-      bucketData <- layer.volumeTracingService
-        .getFallbackBucketFromDataStore(remoteFallbackLayer, dataRequest)(using ec, layer.tokenContext)
+      bucketData <- layer.volumeTracingService.getFallbackBucketFromDataStore(remoteFallbackLayer, dataRequest)(using
+        ec,
+        layer.tokenContext
+      )
     } yield bucketData
 
   }

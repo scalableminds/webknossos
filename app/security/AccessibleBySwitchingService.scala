@@ -13,14 +13,14 @@ import models.voxelytics.VoxelyticsDAO
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class AccessibleBySwitchingService @Inject()(
+class AccessibleBySwitchingService @Inject() (
     userDAO: UserDAO,
     multiUserDAO: MultiUserDAO,
     annotationDAO: AnnotationDAO,
     organizationDAO: OrganizationDAO,
     datasetDAO: DatasetDAO,
     annotationProvider: AnnotationInformationProvider,
-    voxelyticsDAO: VoxelyticsDAO,
+    voxelyticsDAO: VoxelyticsDAO
 )(implicit ec: ExecutionContext) {
 
   /*
@@ -28,22 +28,29 @@ class AccessibleBySwitchingService @Inject()(
    not superadmin - fetch all identities, construct access context, try until one works
    */
 
-  def getOrganizationToSwitchTo(user: User,
-                                datasetId: Option[ObjectId],
-                                annotationId: Option[ObjectId],
-                                workflowHash: Option[String])(using ctx: DBAccessContext): Fox[Organization] =
+  def getOrganizationToSwitchTo(
+      user: User,
+      datasetId: Option[ObjectId],
+      annotationId: Option[ObjectId],
+      workflowHash: Option[String]
+  )(using ctx: DBAccessContext): Fox[Organization] =
     for {
       isSuperUser <- multiUserDAO.findOne(user._multiUser).map(_.isSuperUser)
-      selectedOrganization <- if (isSuperUser)
-        accessibleBySwitchingForSuperUser(datasetId, annotationId, workflowHash)
-      else
-        accessibleBySwitchingForMultiUser(user._multiUser, datasetId, annotationId, workflowHash)
-      _ <- Fox.fromBool(selectedOrganization._id != user._organization) // User is already in correct orga, but still could not see dataset. Assume this had a reason.
+      selectedOrganization <-
+        if (isSuperUser)
+          accessibleBySwitchingForSuperUser(datasetId, annotationId, workflowHash)
+        else
+          accessibleBySwitchingForMultiUser(user._multiUser, datasetId, annotationId, workflowHash)
+      _ <- Fox.fromBool(
+        selectedOrganization._id != user._organization
+      ) // User is already in correct orga, but still could not see dataset. Assume this had a reason.
     } yield selectedOrganization
 
-  private def accessibleBySwitchingForSuperUser(datasetIdOpt: Option[ObjectId],
-                                                annotationIdOpt: Option[ObjectId],
-                                                workflowHashOpt: Option[String]): Fox[Organization] = {
+  private def accessibleBySwitchingForSuperUser(
+      datasetIdOpt: Option[ObjectId],
+      annotationIdOpt: Option[ObjectId],
+      workflowHashOpt: Option[String]
+  ): Fox[Organization] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
     (datasetIdOpt, annotationIdOpt, workflowHashOpt) match {
       case (Some(datasetId), None, None) =>
@@ -66,21 +73,26 @@ class AccessibleBySwitchingService @Inject()(
     }
   }
 
-  private def accessibleBySwitchingForMultiUser(multiUserId: ObjectId,
-                                                datasetIdOpt: Option[ObjectId],
-                                                annotationIdOpt: Option[ObjectId],
-                                                workflowHashOpt: Option[String]): Fox[Organization] =
+  private def accessibleBySwitchingForMultiUser(
+      multiUserId: ObjectId,
+      datasetIdOpt: Option[ObjectId],
+      annotationIdOpt: Option[ObjectId],
+      workflowHashOpt: Option[String]
+  ): Fox[Organization] =
     for {
       identities <- userDAO.findAllByMultiUser(multiUserId)
       selectedIdentity <- Fox.find(identities)(identity =>
-        canAccessDatasetOrAnnotationOrWorkflow(identity, datasetIdOpt, annotationIdOpt, workflowHashOpt))
+        canAccessDatasetOrAnnotationOrWorkflow(identity, datasetIdOpt, annotationIdOpt, workflowHashOpt)
+      )
       selectedOrganization <- organizationDAO.findOne(selectedIdentity._organization)(using GlobalAccessContext)
     } yield selectedOrganization
 
-  private def canAccessDatasetOrAnnotationOrWorkflow(user: User,
-                                                     datasetIdOpt: Option[ObjectId],
-                                                     annotationIdOpt: Option[ObjectId],
-                                                     workflowHashOpt: Option[String]): Fox[Boolean] = {
+  private def canAccessDatasetOrAnnotationOrWorkflow(
+      user: User,
+      datasetIdOpt: Option[ObjectId],
+      annotationIdOpt: Option[ObjectId],
+      workflowHashOpt: Option[String]
+  ): Fox[Boolean] = {
     val ctx = AuthorizedAccessContext(user)
     (datasetIdOpt, annotationIdOpt, workflowHashOpt) match {
       case (Some(datasetId), None, None) =>

@@ -1,4 +1,3 @@
-import { message } from "antd";
 import { CuckooTableUint32 } from "libs/cuckoo/cuckoo_table_uint32";
 import { CuckooTableUint64 } from "libs/cuckoo/cuckoo_table_uint64";
 import Toast from "libs/toast";
@@ -12,8 +11,6 @@ import {
   getMappingInfo,
   getMappings,
 } from "viewer/model/accessors/dataset_accessor";
-import { finishMappingInitializationAction } from "viewer/model/actions/settings_actions";
-import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import type { Mapping, NumberLike } from "viewer/store";
 import Store from "viewer/store";
 
@@ -62,7 +59,6 @@ class Mappings {
   cuckooTable: CuckooTableUint64 | CuckooTableUint32 | null = null;
   previousMapping: Mapping | null | undefined = null;
   currentKeyCount: number = 0;
-  storePropertyUnsubscribers: Array<() => void> = [];
 
   constructor(layerName: string) {
     this.layerName = layerName;
@@ -78,16 +74,14 @@ class Mappings {
       ? new CuckooTableUint64(MAPPING_TEXTURE_WIDTH)
       : new CuckooTableUint32(MAPPING_TEXTURE_WIDTH);
 
-    this.storePropertyUnsubscribers.push(
-      listenToStoreProperty(
-        (state) =>
-          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, this.layerName).mapping,
-        (mapping) => {
-          this.updateMappingTextures(mapping);
-        },
-        true,
-      ),
-    );
+    // The textures are usually kept up to date by the mapping saga (see finishMappingActivation
+    // which calls updateMappingTextures). However, when the textures are (lazily) set up after a
+    // mapping was already activated, we need to populate them once from the current store state.
+    const mapping = getMappingInfo(
+      Store.getState().temporaryConfiguration.activeMappingByLayer,
+      this.layerName,
+    ).mapping;
+    this.updateMappingTextures(mapping);
   }
 
   is64Bit() {
@@ -98,7 +92,10 @@ class Mappings {
   async updateMappingTextures(mapping: Mapping | null | undefined): Promise<void> {
     if (mapping == null) return;
     if (this.cuckooTable == null) {
-      throw new Error("cuckooTable null when updateMappingTextures was called.");
+      // The textures have not been set up yet (e.g. the layer is not being rendered, or this is
+      // running in a test context without a GPU). Once setupMappingTextures runs, it populates the
+      // textures from the current store state, so there is nothing to do here.
+      return;
     }
 
     const { changed, onlyA, onlyB } =
@@ -140,9 +137,6 @@ class Mappings {
     }
 
     this.previousMapping = mapping;
-
-    message.destroy(MAPPING_MESSAGE_KEY);
-    Store.dispatch(finishMappingInitializationAction(this.layerName));
   }
 
   getCuckooTable() {
@@ -157,10 +151,8 @@ class Mappings {
   }
 
   destroy() {
-    this.storePropertyUnsubscribers.forEach((fn) => {
-      fn();
-    });
-    this.storePropertyUnsubscribers = [];
+    this.cuckooTable = null;
+    this.previousMapping = null;
   }
 }
 

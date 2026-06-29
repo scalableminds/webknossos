@@ -263,7 +263,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
 
           if (oldVolumeTracing == null) {
             throw new VolumeImportError(
-              "The volume data could not be imported because no editable volume layer is active. Please make sure that exactly one volume layer is visible and try again.",
+              "The volume data could not be imported because no editable volume layer is active. Please make sure that an editable volume layer is visible and try again.",
             );
           }
 

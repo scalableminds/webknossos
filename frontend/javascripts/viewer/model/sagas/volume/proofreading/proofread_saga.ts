@@ -27,6 +27,7 @@ import Constants, {
 import { getSegmentIdForPositionAsync } from "viewer/controller/combinations/volume_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import {
+  isAgglomerateTree,
   isAnnotationEditableByNonOwners,
   mayEditAnnotation,
 } from "viewer/model/accessors/annotation_accessor";
@@ -585,9 +586,9 @@ function* setupTreeProofreadingAction(
     }
 
     const isModifyingOnlyAgglomerateTrees =
-      sourceTree.type === TreeTypeEnum.AGGLOMERATE && targetTree.type === TreeTypeEnum.AGGLOMERATE;
+      isAgglomerateTree(sourceTree) && isAgglomerateTree(targetTree);
     const isModifyingAnyAgglomerateTrees =
-      sourceTree.type === TreeTypeEnum.AGGLOMERATE || targetTree.type === TreeTypeEnum.AGGLOMERATE;
+      isAgglomerateTree(sourceTree) || isAgglomerateTree(targetTree);
     const isProofreadingToolActive = yield* select(
       (state) => state.uiInformation.activeTool === AnnotationTool.PROOFREAD,
     );

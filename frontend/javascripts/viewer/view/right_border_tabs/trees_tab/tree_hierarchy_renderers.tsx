@@ -29,6 +29,7 @@ import {
   TreeTypeEnum,
   type Vector3,
 } from "viewer/constants";
+import { isAgglomerateTree } from "viewer/model/accessors/annotation_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import {
   addTreesAndGroupsAction,
@@ -99,12 +100,11 @@ export function renderTreeNode(
   const tree = props.trees.getNullable(node.id);
   if (tree == null) return null;
 
-  const maybeProofreadingIcon =
-    tree.type === TreeTypeEnum.AGGLOMERATE ? (
-      <FastTooltip title="Agglomerate Tree">
-        <Icon component={ProofreadingIcon} />
-      </FastTooltip>
-    ) : null;
+  const maybeProofreadingIcon = isAgglomerateTree(tree) ? (
+    <FastTooltip title="Agglomerate Tree">
+      <Icon component={ProofreadingIcon} />
+    </FastTooltip>
+  ) : null;
 
   return (
     <Space
@@ -137,10 +137,9 @@ export function renderTreeNode(
 }
 
 const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void): MenuProps => {
-  const isAgglomerateTree = tree.type === TreeTypeEnum.AGGLOMERATE;
+  const isAgglomerate = isAgglomerateTree(tree);
   // In concurrent collaboration mode, only agglomerate trees (proofreading) may be edited.
-  const isEditingDisabled =
-    !props.allowUpdate || (props.isConcurrentCollabMode && !isAgglomerateTree);
+  const isEditingDisabled = !props.allowUpdate || (props.isConcurrentCollabMode && !isAgglomerate);
 
   return {
     items: [
@@ -225,7 +224,7 @@ const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void
         icon: <Icon component={HideSkeletonEdgesIcon} aria-label="Hide Tree Edges Icon" />,
         label: "Hide/Show Edges of This Tree",
       },
-      isAgglomerateTree
+      isAgglomerate
         ? {
             key: "convertToNormalTree",
             // Converting to a normal tree would change the tree's type, which is not allowed in

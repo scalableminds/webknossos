@@ -43,8 +43,9 @@ import messages from "messages";
 import React from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
-import { LongUnitToShortUnitMap, TreeTypeEnum } from "viewer/constants";
+import { LongUnitToShortUnitMap } from "viewer/constants";
 import {
+  isAgglomerateTree,
   isAnnotationOwner,
   isConcurrentCollaborationMode,
   mayEditAnnotation,
@@ -570,8 +571,8 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
           : [];
     return (
       treeIdsToDelete.length > 0 &&
-      treeIdsToDelete.every(
-        (treeId) => skeletonTracing.trees.getNullable(treeId)?.type === TreeTypeEnum.AGGLOMERATE,
+      treeIdsToDelete.every((treeId) =>
+        isAgglomerateTree(skeletonTracing.trees.getNullable(treeId)),
       )
     );
   }

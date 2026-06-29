@@ -7,7 +7,7 @@ import type {
   VolumeUserState,
 } from "types/api_types";
 import type { EmptyObject } from "types/type_utils";
-import { TreeTypeEnum } from "viewer/constants";
+import { type TreeType, TreeTypeEnum } from "viewer/constants";
 import type { Tree } from "viewer/model/types/tree_types";
 import type { StoreAnnotation, WebknossosState } from "viewer/store";
 import { sum } from "../helpers/iterator_utils";
@@ -91,6 +91,10 @@ export function isConcurrentCollaborationMode(state: WebknossosState) {
   return state.annotation.collaborationMode === "Concurrent";
 }
 
+export function isAgglomerateTree(tree: { type: TreeType } | null | undefined): boolean {
+  return tree?.type === TreeTypeEnum.AGGLOMERATE;
+}
+
 export function mayEditSkeletonTree(state: WebknossosState, tree: Tree | null | undefined) {
   // Whether the given existing tree may be mutated. In concurrent collaboration
   // mode, only agglomerate trees (i.e. proofreading) may be edited.
@@ -100,7 +104,7 @@ export function mayEditSkeletonTree(state: WebknossosState, tree: Tree | null | 
   if (!isConcurrentCollaborationMode(state)) {
     return true;
   }
-  return tree?.type === TreeTypeEnum.AGGLOMERATE;
+  return isAgglomerateTree(tree);
 }
 
 export function mayEditAnnotationViewConfig(state: WebknossosState) {

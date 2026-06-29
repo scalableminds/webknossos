@@ -64,13 +64,9 @@ import {
   GroupTypeEnum,
   getNodeKey,
 } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
-import { getUserStateForTracing } from "../accessors/annotation_accessor";
+import { getUserStateForTracing, isAgglomerateTree } from "../accessors/annotation_accessor";
 import { max, maxBy } from "../helpers/iterator_utils";
 import { applySkeletonUpdateActionsFromServer } from "./update_action_application/skeleton";
-
-function isAgglomerateTree(tree: { type: TreeType } | null | undefined): boolean {
-  return tree?.type === TreeTypeEnum.AGGLOMERATE;
-}
 
 // Resolves the existing tree(s) that the given mutation would affect. Only actions classified as
 // `collab: "onlyAgglomerateTree"` in `skeletonActionPolicies` are handled here; for those, the

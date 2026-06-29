@@ -7,7 +7,7 @@ import com.scalableminds.util.tools.TristateOptionJsonHelper
 import com.scalableminds.webknossos.datastore.IdWithBool.{Id32WithBool, Id64WithBool}
 import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing, VolumeUserStateProto}
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition}
 import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, UpdateAction, UserStateUpdateAction}
 import com.scalableminds.webknossos.tracingstore.tracings.{GroupUtils, MetadataEntry, NamedBoundingBox}
@@ -115,7 +115,7 @@ case class UpdateTracingVolumeAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends ApplyableVolumeUpdateAction
-    with ProtoGeometryImplicits {
+    with ProtoGeometryConversions {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
@@ -128,8 +128,8 @@ case class UpdateTracingVolumeAction(
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
     tracing.copy(
       activeSegmentId = Some(activeSegmentId),
-      editPosition = editPosition,
-      editRotation = editRotation,
+      editPosition = vec3IntToProto(editPosition),
+      editRotation = vec3DoubleToProto(editRotation),
       largestSegmentId = largestSegmentId,
       zoomLevel = zoomLevel,
       editPositionAdditionalCoordinates = AdditionalCoordinate.toProto(editPositionAdditionalCoordinates)
@@ -265,7 +265,7 @@ case class UpdateUserBoundingBoxVolumeAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends ApplyableVolumeUpdateAction
-    with ProtoGeometryImplicits {
+    with ProtoGeometryConversions {
   override def applyOn(tracing: VolumeTracing): VolumeTracing = {
     def updateUserBoundingBoxes() =
       tracing.userBoundingBoxes.map { currentBoundingBox =>
@@ -398,7 +398,7 @@ case class CreateSegmentVolumeAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends ApplyableVolumeUpdateAction
-    with ProtoGeometryImplicits {
+    with ProtoGeometryConversions {
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
@@ -438,7 +438,7 @@ case class LegacyUpdateSegmentVolumeAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends ApplyableVolumeUpdateAction
-    with ProtoGeometryImplicits
+    with ProtoGeometryConversions
     with VolumeUpdateActionHelper {
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction =
@@ -477,7 +477,7 @@ case class UpdateSegmentPartialVolumeAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends ApplyableVolumeUpdateAction
-    with ProtoGeometryImplicits
+    with ProtoGeometryConversions
     with VolumeUpdateActionHelper {
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction =

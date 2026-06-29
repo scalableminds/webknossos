@@ -1,16 +1,17 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
 import com.scalableminds.util.enumeration.ExtendedEnumeration
+import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
-import com.scalableminds.webknossos.datastore.geometry.{BoundingBoxProto => ProtoBoundingBox}
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.geometry.BoundingBoxProto as ProtoBoundingBox
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 
 // Mark where a bounding box came from during merge for lookup in the correct id map
 object BoundingBoxSource extends ExtendedEnumeration {
   val singleA, singleB, userA, userB = Value
 }
 
-trait BoundingBoxMerger extends ProtoGeometryImplicits {
+trait BoundingBoxMerger extends ProtoGeometryConversions {
 
   protected type UserBboxIdMap = Map[Int, Int]
 
@@ -21,8 +22,13 @@ trait BoundingBoxMerger extends ProtoGeometryImplicits {
     for {
       boundinBoxA <- boundingBoxAOpt
       boundinBoxB <- boundingBoxBOpt
-    } yield com.scalableminds.util.geometry.BoundingBox
-      .union(List[com.scalableminds.util.geometry.BoundingBox](boundinBoxA, boundinBoxB))
+      union = BoundingBox.union(
+        List[BoundingBox](
+          boundingBoxFromProto(boundinBoxA),
+          boundingBoxFromProto(boundinBoxB)
+        )
+      )
+    } yield boundingBoxToProto(union)
 
   protected def combineUserBoundingBoxes(
       singleBoundingBoxAOpt: Option[ProtoBoundingBox],

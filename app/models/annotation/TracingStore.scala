@@ -2,7 +2,8 @@ package models.annotation
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.schema.Tables.{Tracingstores, TracingstoresRow, GetResultTracingstoresRow}
 import com.typesafe.scalalogging.LazyLogging
@@ -13,7 +14,7 @@ import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Result, Results}
 import utils.sql.{SQLDAO, SqlClient}
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 case class TracingStore(
     name: String,
@@ -33,8 +34,7 @@ class TracingStoreService @Inject() (
     rpc: RPC,
     tracingDataSourceTemporaryStore: AnnotationDataSourceTemporaryStore
 )(implicit ec: ExecutionContext)
-    extends FoxImplicits
-    with LazyLogging
+    extends LazyLogging
     with Results {
 
   def publicWrites(tracingStore: TracingStore): Fox[JsObject] =
@@ -45,16 +45,16 @@ class TracingStoreService @Inject() (
       )
     )
 
-  def validateAccess(name: String, key: String)(block: TracingStore => Future[Result]): Fox[Result] =
+  def validateAccess(name: String, key: String)(block: TracingStore => Fox[Result]): Fox[Result] =
     Fox.fromFuture(
       tracingStoreDAO
         .findOneByKey(key) // Check if key is valid
-        .flatMap(tracingStore => Fox.fromFuture(block(tracingStore))) // Run underlying action
+        .flatMap(tracingStore => block(tracingStore)) // Run underlying action
         .getOrElse {
           logger.info(s"Denying tracing store request from $name due to unknown key.")
           Forbidden(Msg.TracingStore.notFound)
         }
-    ) // Default error
+    )
 
   def clientFor(dataset: Dataset): Fox[WKRemoteTracingStoreClient] =
     for {

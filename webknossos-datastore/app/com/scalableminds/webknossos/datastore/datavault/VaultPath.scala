@@ -4,7 +4,8 @@ import com.aayushatharva.brotli4j.Brotli4jLoader
 import com.aayushatharva.brotli4j.decoder.BrotliInputStream
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.io.ZipIO
-import com.scalableminds.util.tools.{Box, Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.util.tools.{Box, Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.webknossos.datastore.helpers.UPath
@@ -15,7 +16,7 @@ import java.io.{ByteArrayInputStream, ByteArrayOutputStream, IOException}
 import java.net.URI
 import scala.concurrent.ExecutionContext
 
-class VaultPath(upath: UPath, dataVault: DataVault) extends LazyLogging with FoxImplicits {
+class VaultPath(upath: UPath, dataVault: DataVault) extends LazyLogging {
 
   def readBytes(
       byteRange: ByteRange = ByteRange.complete

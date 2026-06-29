@@ -52,7 +52,7 @@ object CumsumParser extends LazyLogging {
       if (!correctOrder) {
         parseImpl(f, maxReaderRange, boundingBoxList, before)
       } else {
-        Instant.logSince(before, s"Cumsum JSON parsing", logger)
+        Instant.logSince(before, "Cumsum JSON parsing", logger)
         new BoundingBoxCache(
           cache,
           BoundingBoxFinder(positionSets._1, positionSets._2, positionSets._3, minBoundingBox),

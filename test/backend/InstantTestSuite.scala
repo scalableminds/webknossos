@@ -17,8 +17,7 @@ class InstantTestSuite extends AsyncWordSpec {
       assert(JsonHelper.parseAs[Instant]("\"1707389459123\"").toOption.contains(Instant(1707389459123L)))
       assert(JsonHelper.parseAs[Instant]("\"2024-02-08T10:50:59.123Z\"").toOption.contains(Instant(1707389459123L)))
     }
-    "be serialized to iso string" in {
+    "be serialized to iso string" in
       assert(Instant(1707389459123L).toString == "2024-02-08T10:50:59.123Z")
-    }
   }
 }

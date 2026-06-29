@@ -2,17 +2,8 @@ import sbt._
 
 ThisBuild / version := "wk"
 ThisBuild / scalaVersion := "3.8.3"
-ThisBuild / scalafixDependencies += "io.github.dedis" %% "scapegoat-scalafix" % "1.1.4"
-inThisBuild(
-  List(
-    semanticdbEnabled := false,
-    semanticdbVersion := scalafixSemanticdb.revision
-  )
-)
-addCommandAlias(
-  "fix",
-  "set ThisBuild / semanticdbEnabled := true; scalafix; set ThisBuild / semanticdbEnabled := false"
-)
+ThisBuild / semanticdbEnabled := false
+
 // fix jni for scala version 3
 sbtJniCoreScope := Compile
 
@@ -24,7 +15,6 @@ ThisBuild / scalacOptions ++= Seq(
   "-feature",
   "-deprecation",
   "-Wunused:imports,privates,locals,implicits,linted",
-  "-language:implicitConversions",
   "-language:postfixOps",
   "-Wconf:src=target/.*:s",
   "-Wconf:src=webknossos-datastore/target/.*:s",

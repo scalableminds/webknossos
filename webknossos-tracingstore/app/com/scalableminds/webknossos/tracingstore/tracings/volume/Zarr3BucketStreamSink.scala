@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.zarr.Zarr3OutputHelper
 import com.scalableminds.webknossos.datastore.datareaders.zarr3._
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
-import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, UPath}
+import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryConversions, UPath}
 import com.scalableminds.webknossos.datastore.models.datasource.{
   AdditionalAxis,
   DataFormat,
@@ -21,7 +21,7 @@ import scala.concurrent.ExecutionContext
 
 // Creates data zip from volume tracings
 class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLayer: Boolean)
-    extends ProtoGeometryImplicits
+    extends ProtoGeometryConversions
     with ReversionHelper
     with Zarr3OutputHelper
     with ByteUtils {
@@ -66,9 +66,9 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
   }
 
   private def createVolumeDataSource(voxelSize: Option[VoxelSize]): UsableDataSource = {
-    val magLocators = layer.tracing.mags.map { mag =>
+    val magLocators = layer.tracing.mags.map(vec3IntFromProto).map { mag =>
       MagLocator(
-        mag = vec3IntToProto(mag),
+        mag = mag,
         axisOrder = Some(AxisOrder.cAdditionalxyz(rank)),
         path = Some(UPath.fromStringUnsafe(s"./$defaultLayerName/${mag.toMagLiteral(allowScalar = true)}"))
       )

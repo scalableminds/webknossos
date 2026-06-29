@@ -5,7 +5,8 @@ import java.io.File
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Box, Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.util.tools.{Box, Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.util.tools.JsonHelper.{boxFormat, optionFormat}
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{
@@ -40,8 +41,7 @@ class WKRemoteTracingStoreClient(
     rpc: RPC,
     annotationDataSourceTemporaryStore: AnnotationDataSourceTemporaryStore
 )(implicit ec: ExecutionContext)
-    extends LazyLogging
-    with FoxImplicits {
+    extends LazyLogging {
 
   private def baseInfo = dataset match {
     case Some(ds) => s" Dataset: ${ds.name} Tracingstore: ${tracingStore.url}"

@@ -1,6 +1,7 @@
 package models.dataset.credential
 
 import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.storage.{
   CredentialType,
   DataVaultCredential,

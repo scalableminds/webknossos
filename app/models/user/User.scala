@@ -3,7 +3,8 @@ package models.user
 import play.silhouette.api.{Identity, LoginInfo}
 import com.scalableminds.util.accesscontext._
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.schema.Tables.{
@@ -47,8 +48,7 @@ case class User(
     loggedOutEverywhereTime: Option[Instant] = None,
     isDeleted: Boolean = false
 ) extends DBAccessContextPayload
-    with Identity
-    with FoxImplicits {
+    with Identity {
 
   def toStringAnonymous: String = s"User ${_id}"
 

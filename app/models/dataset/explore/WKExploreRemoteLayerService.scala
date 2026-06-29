@@ -3,7 +3,8 @@ package models.dataset.explore
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.collections.SequenceUtils
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.explore.{
   ExploreLayerUtils,
   ExploreRemoteDatasetResponse,
@@ -56,8 +57,7 @@ class WKExploreRemoteLayerService @Inject() (
     dataStoreDAO: DataStoreDAO,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
     rpc: RPC
-) extends FoxImplicits
-    with ExploreLayerUtils
+) extends ExploreLayerUtils
     with LazyLogging {
 
   private lazy val bearerTokenService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService

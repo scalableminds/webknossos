@@ -182,11 +182,10 @@ class DSLegacyApiController @Inject() (
     }
 
   def reserveUploadV11(): Action[LegacyReserveUploadInformationV11] =
-    Action.async(validateJson[LegacyReserveUploadInformationV11]) { implicit request =>
+    Action.fox(validateJson[LegacyReserveUploadInformationV11]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.administrateDatasets(request.body.organization)
       ) {
-
         for {
           adaptedLayersToLink <- Fox.serialCombined(request.body.layersToLink.getOrElse(List.empty))(adaptLayerToLink)
           adaptedRequestBody = DatasetUploadInfo(
@@ -229,7 +228,7 @@ class DSLegacyApiController @Inject() (
   // To be called by people with disk access but not DatasetManager role. This way, they can upload a dataset manually on disk,
   // and it can be put in a webknossos folder where they have access
   def reserveManualUploadV10(): Action[LegacyReserveManualUploadInformation] =
-    Action.async(validateJson[LegacyReserveManualUploadInformation]) { implicit request =>
+    Action.fox(validateJson[LegacyReserveManualUploadInformation]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.administrateDatasets(request.body.organization)
       ) {
@@ -585,7 +584,7 @@ class DSLegacyApiController @Inject() (
       }
     }
 
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.administrateDatasets(organizationId)) {
         for {
           datasetIdOpt: Option[ObjectId] <- Fox.fromFuture(

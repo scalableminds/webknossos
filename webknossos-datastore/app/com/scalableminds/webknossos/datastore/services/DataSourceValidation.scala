@@ -38,7 +38,7 @@ trait DataSourceValidation {
         dataSource.segmentationLayers.forall { layer =>
           ElementClass.segmentationElementClasses.contains(layer.elementClass)
         },
-        s"Invalid element class for a segmentation layer."
+        "Invalid element class for a segmentation layer."
       ),
       check(
         dataSource.segmentationLayers.forall { layer =>

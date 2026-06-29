@@ -1,11 +1,12 @@
 package com.scalableminds.webknossos.datastore.helpers
 
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.util.tools.Box.tryo
 
 import scala.concurrent.ExecutionContext
 
-trait MissingBucketHeaders extends FoxImplicits {
+trait MissingBucketHeaders {
 
   protected lazy val failureBucketIndicesHeader: String = "failure-bucket-indices"
   protected lazy val emptyBucketIndicesHeader: String = "empty-bucket-indices"

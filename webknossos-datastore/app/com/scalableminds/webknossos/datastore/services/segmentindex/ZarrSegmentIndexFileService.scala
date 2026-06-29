@@ -4,7 +4,8 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.datareaders.DatasetArray
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3Array
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
@@ -49,8 +50,7 @@ object SegmentIndexFileAttributes extends SegmentIndexFileUtils with VoxelyticsZ
 }
 
 class ZarrSegmentIndexFileService @Inject() (dataVaultService: DataVaultService, chunkCacheService: DSChunkCacheService)
-    extends FoxImplicits
-    with SegmentIndexFileUtils {
+    extends SegmentIndexFileUtils {
 
   private lazy val openArraysCache = AlfuCache[(SegmentIndexFileKey, String), DatasetArray]()
   private lazy val attributesCache = AlfuCache[SegmentIndexFileKey, SegmentIndexFileAttributes]()

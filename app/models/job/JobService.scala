@@ -207,6 +207,7 @@ class JobService @Inject() (
         ownerEmail = ownerMultiUser.email,
         args = job.args - "webknossos_token" - "user_auth_token",
         state = job.effectiveState,
+        errorDetails = job.latestRunErrorDetails,
         returnValue = job.returnValue,
         resultLink = job.constructResultLink(organization._id),
         voxelyticsWorkflowHash = job._voxelyticsWorkflowHash,

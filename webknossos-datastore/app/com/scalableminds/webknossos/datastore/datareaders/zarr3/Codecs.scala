@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
+import com.scalableminds.util.box.Box
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.tools.ByteUtils
 import com.scalableminds.webknossos.datastore.datareaders.{
@@ -13,7 +14,6 @@ import com.scalableminds.webknossos.datastore.datareaders.{
 }
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.Box
 import play.api.libs.json.{Format, JsObject, JsResult, JsString, JsSuccess, JsValue, Json, OFormat, Reads, Writes}
 import play.api.libs.json.Json.WithDefaultValues
 import ucar.ma2.{Array => MultiArray}
@@ -324,13 +324,13 @@ final case class ShardingCodecConfiguration(
   override def name: String = ShardingCodecConfiguration.name
   def isSupported: Box[Unit] =
     for {
-      _ <- Box.fromBool(index_codecs.size <= 2) ?~! s"Maximum of 2 index codecs supported, got ${index_codecs.size}"
+      _ <- Box.fromBool(index_codecs.size <= 2) ?~> s"Maximum of 2 index codecs supported, got ${index_codecs.size}"
       _ <- Box.fromBool(
         index_codecs.count(_.name == "bytes") == 1
-      ) ?~! s"Exactly one bytes codec supported, got ${index_codecs.count(_.name == "bytes")}"
+      ) ?~> s"Exactly one bytes codec supported, got ${index_codecs.count(_.name == "bytes")}"
       _ <- Box.fromBool(
         index_codecs.count(_.name == "crc32c") <= 1
-      ) ?~! s"Maximum of 1 crc32c codec supported, got ${index_codecs.count(_.name == "crc32c")}"
+      ) ?~> s"Maximum of 1 crc32c codec supported, got ${index_codecs.count(_.name == "crc32c")}"
     } yield ()
 
 }

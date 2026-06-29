@@ -12,8 +12,8 @@ import models.annotation.AnnotationDAO
 import models.dataset.{Dataset, DatasetDAO, DatasetLayerDAO}
 import models.organization.{Organization, OrganizationDAO}
 import models.shortlinks.ShortLinkDAO
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.Full
+import com.scalableminds.util.box.Box.tryo
+import com.scalableminds.util.box.Full
 import security.URLSharing
 import utils.WkConf
 

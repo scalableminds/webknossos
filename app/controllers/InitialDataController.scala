@@ -3,6 +3,7 @@ package controllers
 import com.scalableminds.util.Msg
 import play.silhouette.api.{LoginInfo, Silhouette}
 import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.box.Full
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
@@ -16,7 +17,6 @@ import models.project.{Project, ProjectDAO}
 import models.task.{TaskType, TaskTypeDAO}
 import models.team._
 import models.user._
-import com.scalableminds.util.tools.Full
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.helpers.UPath

@@ -2,9 +2,10 @@ package models.dataset
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.box.{Box, Failure, Full}
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Box, Failure, Fox, Full, TextUtils}
+import com.scalableminds.util.tools.{Fox, TextUtils}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.helpers.UPath
@@ -161,7 +162,7 @@ class UploadToPathsService @Inject() (
 
   private lazy val configuredUploadToPathsPrefixes: Box[Seq[UPath]] = {
     val fallbackFromBaseFolder = for {
-      datastoreBaseFolder <- Box(conf.Datastore.baseDirectory)
+      datastoreBaseFolder <- Box.fromOption(conf.Datastore.baseDirectory)
       fromDatastoreBaseFolder <- UPath.fromString(datastoreBaseFolder)
     } yield Seq(fromDatastoreBaseFolder.toAbsolute)
     conf.WebKnossos.Datasets.UploadToPaths.prefixes match {
@@ -170,8 +171,9 @@ class UploadToPathsService @Inject() (
         fallbackFromBaseFolder
       case Some(fromConfigStrs) =>
         (for {
-          fromConfig <- fromConfigStrs.map(UPath.fromString)
-        } yield fromConfig.map(_.toAbsolute)).toList.toSingleBox("Could not parse config uploadToPaths.prefixes")
+          fromConfigUPaths <- Box.combined(fromConfigStrs)(UPath.fromString)
+          fromConfigAbsolute = fromConfigUPaths.map(_.toAbsolute)
+        } yield fromConfigAbsolute) ?~> "Could not parse config uploadToPaths.prefixes"
     }
   }
 
@@ -182,7 +184,7 @@ class UploadToPathsService @Inject() (
         case Some(requested) =>
           if (configuredPrefixes.contains(requested)) Full(requested)
           else Failure("Requested path prefix is not in list of configured ones.")
-        case None => Box(configuredPrefixes.headOption)
+        case None => Box.fromOption(configuredPrefixes.headOption)
       }
     } yield selectedPrefix
 

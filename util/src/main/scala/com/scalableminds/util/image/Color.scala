@@ -1,9 +1,9 @@
 package com.scalableminds.util.image
 
 import com.scalableminds.util.tools.ExtendedTypes._
-import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.box.Box.tryo
 import play.api.libs.json.Json._
-import play.api.libs.json.{Format, JsValue, _}
+import play.api.libs.json.*
 
 case class Color(r: Double, g: Double, b: Double, a: Double) {
   def toHtml: String = "#%02x%02x%02x".format((r * 255).toInt, (g * 255).toInt, (b * 255).toInt)

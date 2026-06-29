@@ -1,5 +1,7 @@
 package com.scalableminds.util.tools
 
+import com.scalableminds.util.box.{Box, Failure, Full}
+
 import java.io.{PrintWriter, StringWriter}
 import scala.concurrent.ExecutionContext
 

@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.helpers
 
-import com.scalableminds.util.tools.{Box, Failure, Full}
+import com.scalableminds.util.box.{Box, Failure, Full}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 
 import java.net.URI

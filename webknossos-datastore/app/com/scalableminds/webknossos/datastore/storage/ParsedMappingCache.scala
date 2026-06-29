@@ -1,11 +1,11 @@
 package com.scalableminds.webknossos.datastore.storage
 
+import com.scalableminds.util.box.Failure
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.AbstractDataLayerMapping
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceMappingRequest
 import com.scalableminds.webknossos.datastore.storage
-import com.scalableminds.util.tools.Failure
 
 case class CachedMapping(
     organization: String,

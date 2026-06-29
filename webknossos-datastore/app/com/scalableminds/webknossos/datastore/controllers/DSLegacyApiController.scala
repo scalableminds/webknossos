@@ -2,8 +2,9 @@ package com.scalableminds.webknossos.datastore.controllers
 
 import com.scalableminds.util.Msg
 import com.google.inject.Inject
+import com.scalableminds.util.box.Full
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, Full}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.zarr.Zarr3OutputHelper
 import com.scalableminds.webknossos.datastore.helpers.MissingBucketHeaders
 import com.scalableminds.webknossos.datastore.models.{

@@ -13,7 +13,7 @@ import models.organization.OrganizationDAO
 import javax.inject.Inject
 import models.task.{BaseAnnotation, TaskParameters}
 import models.user.{Experience, User}
-import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.box.Box.tryo
 import play.api.http.HttpEntity
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}

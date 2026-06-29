@@ -1,11 +1,11 @@
 package com.scalableminds.webknossos.datastore.dataformats
 
+import com.scalableminds.util.box.Box
 import java.nio.file.Path
 
 import com.scalableminds.webknossos.datastore.models.datasource.SegmentationLayer
 import com.scalableminds.webknossos.datastore.models.requests.MappingReadInstruction
 import com.scalableminds.util.io.{FileIO, PathUtils}
-import com.scalableminds.util.tools.Box
 import org.apache.commons.io.FilenameUtils
 
 class MappingProvider(layer: SegmentationLayer) {

@@ -11,18 +11,18 @@ import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.{MagLocator, MappingProvider}
 import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, IntervalScheduler, UPath}
-import com.scalableminds.webknossos.datastore.models.datasource._
+import com.scalableminds.webknossos.datastore.models.datasource.*
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools._
+import com.scalableminds.util.box.Box.tryo
+import com.scalableminds.util.box.{Box, Failure, Full}
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.Json
 
 import java.io.File
 import java.nio.file.{Files, Path}
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 class DataSourceService @Inject() (
     config: DataStoreConfig,
@@ -174,7 +174,7 @@ class DataSourceService @Inject() (
       Full(RealPathInfo(attachment.path, attachment.path, hasLocalData = false))
     } else {
       for {
-        _ <- Box.fromBool(attachment.path.isAbsolute) ?~ "Attachment path as stored in db must be absolute"
+        _ <- Box.fromBool(attachment.path.isAbsolute) ?~> "Attachment path as stored in db must be absolute"
         attachmentPath <- attachment.path.toLocalPath
         realAttachmentPath <- tryo(attachmentPath.toRealPath())
         // Does this dataset have local data, i.e. the data that is referenced by the mag path is within the dataset directory
@@ -366,7 +366,7 @@ class DataSourceService @Inject() (
   def deleteLocalPathsFromDisk(paths: Seq[UPath]): Box[Unit] = {
     val localPaths = paths.filter(_.isLocal).flatMap(_.toLocalPath).filter(_.toAbsolutePath.startsWith(dataBaseDir))
     for {
-      _ <- localPaths.map(PathUtils.deleteDirectoryRecursively).toList.toSingleBox("Failed to delete local paths")
+      _ <- Box.combined(localPaths)(PathUtils.deleteDirectoryRecursively)
     } yield ()
   }
 

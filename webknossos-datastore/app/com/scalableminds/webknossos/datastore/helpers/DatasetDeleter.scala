@@ -1,7 +1,9 @@
 package com.scalableminds.webknossos.datastore.helpers
+
+import com.scalableminds.util.box.Full
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, Full}
+import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 
 import java.nio.file.{Files, Path}

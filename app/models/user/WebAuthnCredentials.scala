@@ -19,7 +19,7 @@ import com.webauthn4j.data.extension.authenticator.{
   AuthenticationExtensionsAuthenticatorOutputs,
   RegistrationExtensionAuthenticatorOutput
 }
-import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.box.Box.tryo
 import utils.sql.{SQLDAO, SqlClient}
 import play.api.libs.json._
 

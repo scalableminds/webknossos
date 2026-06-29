@@ -2,6 +2,7 @@ package models.user
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.box.{Box, Full}
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.security.SCrypt
@@ -15,8 +16,7 @@ import mail.{DefaultMails, Send}
 import models.dataset.DatasetDAO
 import models.organization.OrganizationDAO
 import models.team._
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Full}
+import com.scalableminds.util.box.Box.tryo
 import models.project.ProjectDAO
 import models.task.TaskDAO
 import org.apache.pekko.actor.ActorSystem

@@ -209,7 +209,6 @@ const defaultState: WebknossosState = {
   },
   save: {
     queue: [],
-    isBusy: false,
     isSavingDisabled: false,
     lastSaveTimestamp: 0,
     progressInfo: {
@@ -222,7 +221,7 @@ const defaultState: WebknossosState = {
       annotationVersion: 1,
       skeleton: undefined,
       volumes: [],
-      activeMappingByLayer: {},
+      mappingDataByLayer: {},
       isRebasingOrForwarding: false,
     },
     proofreadingPostProcessingInfo: null,
@@ -293,10 +292,6 @@ const defaultState: WebknossosState = {
       left: false,
     },
     theme: getSystemColorTheme(),
-    busyBlockingInfo: {
-      isBusy: false,
-      allowedSagas: [],
-    },
     isWkInitialized: false,
     isUiReady: false,
     quickSelectState: "inactive",
@@ -321,5 +316,9 @@ const defaultState: WebknossosState = {
     },
   },
   localSegmentationStateByLayer: {},
+  operationContext: {
+    activeOperations: [],
+    childOperations: [],
+  },
 };
 export default defaultState;

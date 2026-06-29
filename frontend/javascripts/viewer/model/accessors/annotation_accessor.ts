@@ -91,7 +91,7 @@ export function isConcurrentCollaborationMode(state: WebknossosState) {
   return state.annotation.collaborationMode === "Concurrent";
 }
 
-export function isAgglomerateTree(tree: { type: TreeType } | null | undefined): boolean {
+export function isAgglomerateTree(tree: Tree | null | undefined): boolean {
   return tree?.type === TreeTypeEnum.AGGLOMERATE;
 }
 

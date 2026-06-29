@@ -74,7 +74,7 @@ import { applySkeletonUpdateActionsFromServer } from "./update_action_applicatio
 function resolveAffectedTrees(
   action: Action,
   skeletonTracing: SkeletonTracing,
-): Array<{ type: TreeType } | null | undefined> {
+): Array<Tree | null | undefined> {
   switch (action.type) {
     case "SET_TREE_NAME":
     case "SET_TREE_METADATA":
@@ -94,9 +94,8 @@ function resolveAffectedTrees(
       // Allowed only when importing agglomerate trees (e.g. the proofreading agglomerate import).
       return Array.from(action.trees.values());
     default:
-      // An action not classified as "onlyAgglomerateTree" should never reach this helper. Return a
-      // nullish tree so that the caller blocks the mutation defensively.
-      return [null];
+      // An action not classified as "onlyAgglomerateTree" should never reach this helper.
+      return [];
   }
 }
 

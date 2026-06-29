@@ -12,13 +12,13 @@ import play.core.WebCommands
 import javax.inject.Inject
 
 trait AdditionalHeaders extends MissingBucketHeaders {
-  def options(request: RequestHeader): Result =
+  protected def options(request: RequestHeader): Result =
     Ok(":D").withHeaders(
       "Access-Control-Allow-Origin" -> "*",
       "Access-Control-Max-Age" -> "600",
       "Access-Control-Allow-Methods" -> "POST, GET, DELETE, PUT, HEAD, PATCH, OPTIONS",
       "Access-Control-Allow-Headers" -> request.headers.get("Access-Control-Request-Headers").getOrElse(""),
-      "Access-Control-Expose-Headers" -> missingBucketsHeader
+      "Access-Control-Expose-Headers" -> s"$failureBucketIndicesHeader, $emptyBucketIndicesHeader, $legacyMissingBucketsHeader"
     )
 }
 

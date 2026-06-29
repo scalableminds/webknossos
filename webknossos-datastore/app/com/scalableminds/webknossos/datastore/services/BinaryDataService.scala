@@ -11,12 +11,12 @@ import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, LayerCategory}
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
-import com.scalableminds.webknossos.datastore.storage._
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.{Box, Empty, Full}
-import ucar.ma2.{Array => MultiArray}
+import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
+import ucar.ma2.Array as MultiArray
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateService
+import com.scalableminds.webknossos.datastore.storage.{BucketProviderCache, DataVaultService}
 
 import java.nio.file.Path
 import scala.concurrent.ExecutionContext
@@ -182,22 +182,21 @@ class BinaryDataService(
     } yield resultData
 
   def handleDataRequests(
-      requests: Seq[DataServiceDataRequest]
-  )(using tc: TokenContext): Fox[(Array[Byte], List[Int])] = {
-    val requestsCount = requests.length
-    val requestData = requests.zipWithIndex.map { case (request, index) =>
+      requests: List[DataServiceDataRequest]
+  )(using tc: TokenContext): Fox[(Array[Byte], Seq[Int], Seq[Int])] = {
+    val requestData = requests.map { request =>
       for {
         data <- handleDataRequest(request)
         dataConverted <- convertAccordingToRequest(request, data)
-      } yield (dataConverted, index)
+      } yield dataConverted
     }
 
     Fox.fromFuture {
-      Fox.sequenceOfFulls(requestData).map { l =>
-        val bytesArrays = l.map { case (byteArray, _) => byteArray }
-        val foundIndices = l.map { case (_, index) => index }
-        val notFoundIndices = List.range(0, requestsCount).diff(foundIndices)
-        (bytesArrays.appendArrays, notFoundIndices)
+      Fox.sequence(requestData).map { boxes =>
+        val byteArrays = boxes.collect { case Full(byteArray) => byteArray }
+        val emptyIndices = boxes.zipWithIndex.collect { case (Empty, i) => i }
+        val failureIndices = boxes.zipWithIndex.collect { case (_: Failure, i) => i }
+        (byteArrays.appendArrays, emptyIndices, failureIndices)
       }
     }
   }

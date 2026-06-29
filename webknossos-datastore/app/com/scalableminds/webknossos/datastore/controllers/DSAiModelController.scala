@@ -26,9 +26,10 @@ object ModelStatistics {
   implicit val jsonFormat: OFormat[ModelStatistics] = Json.format[ModelStatistics]
 }
 
-class DSAiModelController @Inject()(accessTokenService: DataStoreAccessTokenService, dataVaultService: DataVaultService)(
-    implicit ec: ExecutionContext,
-    playBodyParsers: PlayBodyParsers)
+class DSAiModelController @Inject() (
+    accessTokenService: DataStoreAccessTokenService,
+    dataVaultService: DataVaultService
+)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
 

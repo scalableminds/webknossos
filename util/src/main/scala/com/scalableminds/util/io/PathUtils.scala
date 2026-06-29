@@ -7,7 +7,14 @@ import com.scalableminds.util.tools.{Box, Failure, Full}
 import org.apache.commons.io.FileUtils
 
 import scala.jdk.CollectionConverters.IteratorHasAsScala
-import java.nio.file.{AccessDeniedException, FileAlreadyExistsException, FileVisitOption, Files, NoSuchFileException, Path}
+import java.nio.file.{
+  AccessDeniedException,
+  FileAlreadyExistsException,
+  FileVisitOption,
+  Files,
+  NoSuchFileException,
+  Path
+}
 import scala.util.Random
 
 object PathUtils extends LazyLogging {

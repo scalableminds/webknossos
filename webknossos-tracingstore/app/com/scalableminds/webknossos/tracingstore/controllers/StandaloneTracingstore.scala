@@ -7,7 +7,7 @@ import play.api.mvc.{Action, AnyContent}
 
 import javax.inject.Inject
 
-class StandaloneTracingstore @Inject()() extends Controller with ApiVersioning {
+class StandaloneTracingstore @Inject() () extends Controller with ApiVersioning {
 
   def buildInfo: Action[AnyContent] = Action {
     addNoCacheHeaderFallback(
@@ -15,9 +15,12 @@ class StandaloneTracingstore @Inject()() extends Controller with ApiVersioning {
         Ok(
           Json.obj(
             "webknossosTracingstore" -> Json.toJson(
-              webknossosTracingstore.BuildInfo.toMap.view.mapValues(_.toString).toMap),
-            "httpApiVersioning" -> apiVersioningInfo,
+              webknossosTracingstore.BuildInfo.toMap.view.mapValues(_.toString).toMap
+            ),
+            "httpApiVersioning" -> apiVersioningInfo
           )
-        )))
+        )
+      )
+    )
   }
 }

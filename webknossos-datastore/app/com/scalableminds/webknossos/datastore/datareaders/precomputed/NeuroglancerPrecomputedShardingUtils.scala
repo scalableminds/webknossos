@@ -42,9 +42,12 @@ trait NeuroglancerPrecomputedShardingUtils extends FoxImplicits {
     // See https://github.com/google/neuroglancer/blob/233fc39b07a0480a8e1c90fc5ca835330a0bf287/src/datasource/precomputed/sharded.md#shard-index-format
     index
       .grouped(16) // 16 Bytes: 2 uint64 numbers: start_offset, end_offset
-      .map((bytes: Array[Byte]) => {
-        (BigInt(bytes.take(8).reverse).toLong, BigInt(bytes.slice(8, 16).reverse).toLong) // bytes reversed because they are stored little endian
-      })
+      .map((bytes: Array[Byte]) =>
+        (
+          BigInt(bytes.take(8).reverse).toLong,
+          BigInt(bytes.slice(8, 16).reverse).toLong
+        ) // bytes reversed because they are stored little endian
+      )
       .toSeq
 
   private def getMinishardIndexRange(minishardNumber: Int, parsedShardIndex: Seq[(Long, Long)]): ByteRange = {
@@ -84,9 +87,8 @@ trait NeuroglancerPrecomputedShardingUtils extends FoxImplicits {
      */
     val chunkIds = new Array[Long](n)
     chunkIds(0) = longArray(0)
-    for (i <- 1 until n) {
+    for (i <- 1 until n)
       chunkIds(i) = longArray(i) + chunkIds(i - 1)
-    }
     /*
      From: https://github.com/google/neuroglancer/blob/233fc39b07a0480a8e1c90fc5ca835330a0bf287/src/datasource/precomputed/sharded.md#minishard-index-format
      The size of the data for chunk i is stored as array[2, i].
@@ -106,13 +108,15 @@ trait NeuroglancerPrecomputedShardingUtils extends FoxImplicits {
     chunkIds.lazyZip(chunkStartOffsets).lazyZip(chunkSizes).toArray
   }
 
-  def getMinishardIndex(shardPath: VaultPath, minishardNumber: Int)(using ec: ExecutionContext,
-                                                                    tc: TokenContext): Fox[Array[(Long, Long, Long)]] =
+  def getMinishardIndex(shardPath: VaultPath, minishardNumber: Int)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Array[(Long, Long, Long)]] =
     minishardIndexCache.getOrLoad((shardPath, minishardNumber), readMinishardIndex)
 
-  private def readMinishardIndex(vaultPathAndMinishardNumber: (VaultPath, Int))(
-      using ec: ExecutionContext,
-      tc: TokenContext): Fox[Array[(Long, Long, Long)]] = {
+  private def readMinishardIndex(
+      vaultPathAndMinishardNumber: (VaultPath, Int)
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Array[(Long, Long, Long)]] = {
     val (vaultPath, minishardNumber) = vaultPathAndMinishardNumber
     for {
       index <- getShardIndex(vaultPath)
@@ -123,8 +127,9 @@ trait NeuroglancerPrecomputedShardingUtils extends FoxImplicits {
     } yield minishardIndex
   }
 
-  def getChunkRange(chunkId: Long, minishardIndex: Array[(Long, Long, Long)])(
-      implicit ec: ExecutionContext): Fox[StartEndExclusiveByteRange] =
+  def getChunkRange(chunkId: Long, minishardIndex: Array[(Long, Long, Long)])(implicit
+      ec: ExecutionContext
+  ): Fox[StartEndExclusiveByteRange] =
     for {
       chunkSpecification <- minishardIndex
         .find(_._1 == chunkId)
@@ -133,8 +138,10 @@ trait NeuroglancerPrecomputedShardingUtils extends FoxImplicits {
       chunkEnd = (shardIndexRange.end) + chunkSpecification._2 + chunkSpecification._3
     } yield ByteRange.startEndExclusive(chunkStart, chunkEnd)
 
-  def getChunk(chunkRange: ByteRange, shardPath: VaultPath)(using ec: ExecutionContext,
-                                                            tc: TokenContext): Fox[Array[Byte]] =
+  def getChunk(chunkRange: ByteRange, shardPath: VaultPath)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Array[Byte]] =
     for {
       rawBytes <- shardPath.readBytes(chunkRange)
       bytes = shardingSpecification.data_encoding match {

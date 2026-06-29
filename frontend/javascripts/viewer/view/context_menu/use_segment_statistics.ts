@@ -29,7 +29,7 @@ export function useSegmentStatistics(
   const volumeTracing = useWkSelector(getActiveSegmentationTracing);
   const currentMeshFile = useWkSelector((state) =>
     visibleSegmentationLayer != null
-      ? state.localSegmentationData[visibleSegmentationLayer.name].currentMeshFile
+      ? state.localSegmentationStateByLayer[visibleSegmentationLayer.name].currentMeshFile
       : null,
   );
   const isSegmentIndexAvailable = getMaybeSegmentIndexAvailability(

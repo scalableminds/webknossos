@@ -533,8 +533,8 @@ class TaskCreationService @Inject() (
       case _          => Fox.empty
     }
 
-  private def warnIfTeamHasNoAccess(requestedTasks: List[TaskParameters], dataset: Dataset, requestingUser: User)(
-      using ctx: DBAccessContext
+  private def warnIfTeamHasNoAccess(requestedTasks: List[TaskParameters], dataset: Dataset, requestingUser: User)(using
+      ctx: DBAccessContext
   ): Fox[List[String]] = {
     val projectNames = requestedTasks.map(_.projectName).distinct
     for {

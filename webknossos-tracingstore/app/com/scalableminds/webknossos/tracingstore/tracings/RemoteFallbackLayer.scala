@@ -30,26 +30,31 @@ trait FallbackDataHelper extends FoxImplicits {
   private lazy val fallbackBucketDataCache: AlfuCache[FallbackDataKey, (Array[Byte], List[Int])] =
     AlfuCache(maxCapacity = 3000)
 
-  def remoteFallbackLayerForVolumeTracing(tracing: VolumeTracing, annotationId: ObjectId)(
-      implicit ec: ExecutionContext): Fox[RemoteFallbackLayer] =
+  def remoteFallbackLayerForVolumeTracing(tracing: VolumeTracing, annotationId: ObjectId)(implicit
+      ec: ExecutionContext
+  ): Fox[RemoteFallbackLayer] =
     for {
-      layerName <- tracing.fallbackLayer.toFox ?~> "This feature is only defined on volume annotations with fallback segmentation layer."
+      layerName <-
+        tracing.fallbackLayer.toFox ?~> "This feature is only defined on volume annotations with fallback segmentation layer."
       datasetId <- remoteWebknossosClient.getDatasetIdForAnnotation(annotationId)
     } yield RemoteFallbackLayer(datasetId, layerName, tracing.elementClass)
 
-  def getFallbackBucketFromDataStore(remoteFallbackLayer: RemoteFallbackLayer, dataRequest: WebknossosDataRequest)(
-      using ec: ExecutionContext,
-      tc: TokenContext): Fox[Array[Byte]] =
+  def getFallbackBucketFromDataStore(remoteFallbackLayer: RemoteFallbackLayer, dataRequest: WebknossosDataRequest)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Array[Byte]] =
     for {
       (data, missingBucketIndices) <- fallbackBucketDataCache.getOrLoad(
         FallbackDataKey(remoteFallbackLayer, dataRequest, tc.userTokenOpt),
-        k => remoteDatastoreClient.getData(k.remoteFallbackLayer, Seq(k.dataRequest)))
+        k => remoteDatastoreClient.getData(k.remoteFallbackLayer, Seq(k.dataRequest))
+      )
       dataOrEmpty <- if (missingBucketIndices.isEmpty) Fox.successful(data) else Fox.empty
     } yield dataOrEmpty
 
   // Get multiple buckets at once: pro: fewer requests, con: no tracingstore-side caching
   def getFallbackBucketsFromDataStore(
       remoteFallbackLayer: RemoteFallbackLayer,
-      dataRequests: Seq[WebknossosDataRequest])(using tc: TokenContext): Fox[(Array[Byte], List[Int])] =
+      dataRequests: Seq[WebknossosDataRequest]
+  )(using tc: TokenContext): Fox[(Array[Byte], List[Int])] =
     remoteDatastoreClient.getData(remoteFallbackLayer, dataRequests)
 }

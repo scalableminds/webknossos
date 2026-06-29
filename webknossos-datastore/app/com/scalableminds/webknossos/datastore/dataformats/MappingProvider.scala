@@ -31,9 +31,11 @@ object MappingProvider {
 
   def exploreMappings(layerDir: Path): Option[Set[String]] = {
     val mappingSet = PathUtils
-      .listFiles(layerDir.resolve(MappingProvider.mappingsDir),
-                 silent = true,
-                 PathUtils.fileExtensionFilter(MappingProvider.mappingFileExtension))
+      .listFiles(
+        layerDir.resolve(MappingProvider.mappingsDir),
+        silent = true,
+        PathUtils.fileExtensionFilter(MappingProvider.mappingFileExtension)
+      )
       .map { paths =>
         paths.map(path => FilenameUtils.removeExtension(path.getFileName.toString))
       }

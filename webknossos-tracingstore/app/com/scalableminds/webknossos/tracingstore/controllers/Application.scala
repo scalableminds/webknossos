@@ -11,9 +11,9 @@ import play.api.mvc.{Action, AnyContent}
 
 import scala.concurrent.ExecutionContext
 
-class Application @Inject()(tracingDataStore: TracingDataStore, redisClient: TracingStoreRedisStore)(
-    implicit ec: ExecutionContext)
-    extends Controller
+class Application @Inject() (tracingDataStore: TracingDataStore, redisClient: TracingStoreRedisStore)(implicit
+    ec: ExecutionContext
+) extends Controller
     with Formatter {
 
   override def allowRemoteOrigin: Boolean = true
@@ -27,8 +27,8 @@ class Application @Inject()(tracingDataStore: TracingDataStore, redisClient: Tra
         _ <- redisClient.checkHealth
         afterRedis = Instant.now
         _ = logger.info(
-          s"Answering ok for Tracingstore health check, took ${formatDuration(afterRedis - before)} (FossilDB at ${tracingDataStore.healthClient.authority} ${formatDuration(
-            afterFossil - before)}, Redis at ${redisClient.authority} ${formatDuration(afterRedis - afterFossil)}).")
+          s"Answering ok for Tracingstore health check, took ${formatDuration(afterRedis - before)} (FossilDB at ${tracingDataStore.healthClient.authority} ${formatDuration(afterFossil - before)}, Redis at ${redisClient.authority} ${formatDuration(afterRedis - afterFossil)})."
+        )
       } yield Ok("Ok")
     }
   }

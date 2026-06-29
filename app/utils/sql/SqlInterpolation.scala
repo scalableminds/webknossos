@@ -228,12 +228,14 @@ case class BoundingBoxValue(v: BoundingBox) extends SqlValue with SqlEscaping {
     override def toString: String = s"($x,$y,$z,$width,$height,$depth)"
   }
 
-  private val bboxSql = BoundingBoxSql(v.topLeft.x.toDouble,
-                                       v.topLeft.y.toDouble,
-                                       v.topLeft.z.toDouble,
-                                       v.width.toDouble,
-                                       v.height.toDouble,
-                                       v.depth.toDouble)
+  private val bboxSql = BoundingBoxSql(
+    v.topLeft.x.toDouble,
+    v.topLeft.y.toDouble,
+    v.topLeft.z.toDouble,
+    v.width.toDouble,
+    v.height.toDouble,
+    v.depth.toDouble
+  )
 
   override def setParameter(pp: PositionedParameters): Unit =
     pp.setObject(bboxSql, Types.OTHER)

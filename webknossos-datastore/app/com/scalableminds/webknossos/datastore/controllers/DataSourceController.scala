@@ -59,7 +59,7 @@ object PathValidationResult {
   implicit val jsonFormat: OFormat[PathValidationResult] = Json.format[PathValidationResult]
 }
 
-class DataSourceController @Inject()(
+class DataSourceController @Inject() (
     dataSourceService: DataSourceService,
     dataSourceMirrorService: DataSourceMirrorService,
     datasetCache: DatasetCache,
@@ -77,7 +77,7 @@ class DataSourceController @Inject()(
     meshFileService: MeshFileService,
     dataVaultService: DataVaultService,
     val dsRemoteWebknossosClient: DSRemoteWebknossosClient,
-    val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,
+    val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient
 )(implicit bodyParsers: PlayBodyParsers, ec: ExecutionContext)
     extends Controller
     with MeshMappingHelper
@@ -95,7 +95,8 @@ class DataSourceController @Inject()(
     accessTokenService.validateAccessFromTokenContext(
       organizationId
         .map(id => UserAccessRequest.administrateDatasets(id))
-        .getOrElse(UserAccessRequest.administrateDatasets)) {
+        .getOrElse(UserAccessRequest.administrateDatasets)
+    ) {
       for {
         _ <- dataSourceService.checkInbox(verbose = true, organizationId = organizationId)
       } yield Ok
@@ -118,10 +119,13 @@ class DataSourceController @Inject()(
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
         dataSource <- datasetCache.getById(datasetId)
-        dataSourceId = dataSource.id // We would ideally want to use datasetId here as well, but mappings are not accessed by datasetId yet.
-        exploredMappings = dataSourceService.exploreMappings(dataSourceId.organizationId,
-                                                             dataSourceId.directoryName,
-                                                             dataLayerName)
+        dataSourceId =
+          dataSource.id // We would ideally want to use datasetId here as well, but mappings are not accessed by datasetId yet.
+        exploredMappings = dataSourceService.exploreMappings(
+          dataSourceId.organizationId,
+          dataSourceId.directoryName,
+          dataLayerName
+        )
       } yield addNoCacheHeaderFallback(Ok(Json.toJson(exploredMappings)))
     }
   }
@@ -148,8 +152,10 @@ class DataSourceController @Inject()(
       for {
         (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
         agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, mappingName)
-        skeleton <- agglomerateService
-          .generateTreeAsSkeleton(agglomerateFileKey, agglomerateId) ?~> Msg.AgglomerateTree.failed
+        skeleton <- agglomerateService.generateTreeAsSkeleton(
+          agglomerateFileKey,
+          agglomerateId
+        ) ?~> Msg.AgglomerateTree.failed
       } yield Ok(skeleton.toByteArray).as(protobufMimeType)
     }
   }
@@ -164,8 +170,10 @@ class DataSourceController @Inject()(
       for {
         (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
         agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, mappingName)
-        agglomerateGraph <- agglomerateService
-          .generateAgglomerateGraph(agglomerateFileKey, agglomerateId) ?~> Msg.AgglomerateGraph.failed
+        agglomerateGraph <- agglomerateService.generateAgglomerateGraph(
+          agglomerateFileKey,
+          agglomerateId
+        ) ?~> Msg.AgglomerateGraph.failed
       } yield Ok(agglomerateGraph.toByteArray).as(protobufMimeType)
     }
   }
@@ -229,7 +237,8 @@ class DataSourceController @Inject()(
 
   def createOrganizationDirectory(organizationId: String): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContextForSyncBlock(
-      UserAccessRequest.administrateDatasets(organizationId)) {
+      UserAccessRequest.administrateDatasets(organizationId)
+    ) {
       val newOrganizationDirectory = new File(f"${dataSourceService.dataBaseDir}/$organizationId")
       newOrganizationDirectory.mkdirs()
       if (newOrganizationDirectory.isDirectory)
@@ -247,9 +256,11 @@ class DataSourceController @Inject()(
             before <- Instant.nowFox
             pathStorageReports <- storageUsageService.measureStorageForPaths(request.body.paths, organizationId)
             _ = if (Instant.since(before) > (10 seconds)) {
-              Instant.logSince(before,
-                               s"Measuring storage for orga $organizationId for ${request.body.paths.length} paths.",
-                               logger)
+              Instant.logSince(
+                before,
+                s"Measuring storage for orga $organizationId for ${request.body.paths.length} paths.",
+                logger
+              )
             }
           } yield Ok(Json.toJson(PathStorageUsageResponse(reports = pathStorageReports)))
         }
@@ -273,7 +284,8 @@ class DataSourceController @Inject()(
     val clearedVaultCacheEntriesOpt = dataSourceService.invalidateVaultCache(dataSource, layerName)
     clearedVaultCacheEntriesOpt.foreach { clearedVaultCacheEntries =>
       logger.info(
-        s"Cleared caches for ${layerName.map(l => s"layer '$l' of ").getOrElse("")}dataset $organizationId/$datasetDirectoryName: closed $closedAgglomerateFileHandleCount agglomerate file handles, $closedMeshFileHandleCount mesh file handles, $closedSegmentIndexFileHandleCount segment index file handles, $closedConnectomeFileHandleCount connectome file handles, removed $clearedBucketProviderCount bucketProviders, $clearedVaultCacheEntries vault cache entries and $removedChunksCount image chunk cache entries.")
+        s"Cleared caches for ${layerName.map(l => s"layer '$l' of ").getOrElse("")}dataset $organizationId/$datasetDirectoryName: closed $closedAgglomerateFileHandleCount agglomerate file handles, $closedMeshFileHandleCount mesh file handles, $closedSegmentIndexFileHandleCount segment index file handles, $closedConnectomeFileHandleCount connectome file handles, removed $clearedBucketProviderCount bucketProviders, $clearedVaultCacheEntries vault cache entries and $removedChunksCount image chunk cache entries."
+      )
     }
   }
 
@@ -298,7 +310,8 @@ class DataSourceController @Inject()(
             datasetId,
             dataSourceId.organizationId,
             dataSourceId.directoryName,
-            reason = Some("the user wants to delete the dataset")) ?~> Msg.Dataset.Delete.failed
+            reason = Some("the user wants to delete the dataset")
+          ) ?~> Msg.Dataset.Delete.failed
         } yield Ok
       }
     }
@@ -328,17 +341,21 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
-          meshFileKey <- connectomeFileService.lookUpConnectomeFileKey(dataSource.id,
-                                                                       dataLayer,
-                                                                       request.body.connectomeFile)
+          meshFileKey <- connectomeFileService.lookUpConnectomeFileKey(
+            dataSource.id,
+            dataLayer,
+            request.body.connectomeFile
+          )
           synapses <- connectomeFileService.synapsesForAgglomerates(meshFileKey, request.body.agglomerateIds)
         } yield Ok(Json.toJson(synapses))
       }
     }
 
-  def getSynapticPartnerForSynapses(datasetId: ObjectId,
-                                    dataLayerName: String,
-                                    direction: String): Action[BySynapseIdsRequest] =
+  def getSynapticPartnerForSynapses(
+      datasetId: ObjectId,
+      dataLayerName: String,
+      direction: String
+  ): Action[BySynapseIdsRequest] =
     Action.async(validateJson[BySynapseIdsRequest]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
@@ -346,12 +363,16 @@ class DataSourceController @Inject()(
             .fromString(direction)
             .toFox ?~> "could not parse synaptic partner direction"
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
-          meshFileKey <- connectomeFileService.lookUpConnectomeFileKey(dataSource.id,
-                                                                       dataLayer,
-                                                                       request.body.connectomeFile)
-          agglomerateIds <- connectomeFileService.synapticPartnerForSynapses(meshFileKey,
-                                                                             request.body.synapseIds,
-                                                                             directionValidated)
+          meshFileKey <- connectomeFileService.lookUpConnectomeFileKey(
+            dataSource.id,
+            dataLayer,
+            request.body.connectomeFile
+          )
+          agglomerateIds <- connectomeFileService.synapticPartnerForSynapses(
+            meshFileKey,
+            request.body.synapseIds,
+            directionValidated
+          )
         } yield Ok(Json.toJson(agglomerateIds))
       }
     }
@@ -361,9 +382,11 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
-          meshFileKey <- connectomeFileService.lookUpConnectomeFileKey(dataSource.id,
-                                                                       dataLayer,
-                                                                       request.body.connectomeFile)
+          meshFileKey <- connectomeFileService.lookUpConnectomeFileKey(
+            dataSource.id,
+            dataLayer,
+            request.body.connectomeFile
+          )
           synapsePositions <- connectomeFileService.positionsForSynapses(meshFileKey, request.body.synapseIds)
         } yield Ok(Json.toJson(synapsePositions))
       }
@@ -374,9 +397,11 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
-          meshFileKey <- connectomeFileService.lookUpConnectomeFileKey(dataSource.id,
-                                                                       dataLayer,
-                                                                       request.body.connectomeFile)
+          meshFileKey <- connectomeFileService.lookUpConnectomeFileKey(
+            dataSource.id,
+            dataLayer,
+            request.body.connectomeFile
+          )
           synapseTypes <- connectomeFileService.typesForSynapses(meshFileKey, request.body.synapseIds)
         } yield Ok(Json.toJson(synapseTypes))
       }
@@ -392,14 +417,16 @@ class DataSourceController @Inject()(
       }
     }
 
-  /**
-    * Query the segment index file for a single segment
+  /** Query the segment index file for a single segment
     *
-    * @return List of bucketPositions as positions (not indices) of 32³ buckets in mag
+    * @return
+    *   List of bucketPositions as positions (not indices) of 32³ buckets in mag
     */
-  def getSegmentIndex(datasetId: ObjectId,
-                      dataLayerName: String,
-                      segmentId: String): Action[GetSegmentIndexParameters] =
+  def getSegmentIndex(
+      datasetId: ObjectId,
+      dataLayerName: String,
+      segmentId: String
+  ): Action[GetSegmentIndexParameters] =
     Action.async(validateJson[GetSegmentIndexParameters]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
@@ -416,10 +443,13 @@ class DataSourceController @Inject()(
             omitMissing = false
           )
           topLeftsNested: Seq[Array[Vec3Int]] <- Fox.serialCombined(segmentIds)(sId =>
-            segmentIndexFileService.readSegmentIndex(segmentIndexFileKey, sId))
+            segmentIndexFileService.readSegmentIndex(segmentIndexFileKey, sId)
+          )
           topLefts: Array[Vec3Int] = topLeftsNested.toArray.flatten
-          bucketPositions = segmentIndexFileService.topLeftsToDistinctTargetMagBucketPositions(topLefts,
-                                                                                               request.body.mag)
+          bucketPositions = segmentIndexFileService.topLeftsToDistinctTargetMagBucketPositions(
+            topLefts,
+            request.body.mag
+          )
           bucketPositionsForCubeSize = bucketPositions
             .map(_.scale(DataLayer.bucketLength)) // bucket positions raw are indices of 32³ buckets
             .map(_ / request.body.cubeSize)
@@ -429,10 +459,10 @@ class DataSourceController @Inject()(
       }
     }
 
-  /**
-    * Query the segment index file for multiple segments
+  /** Query the segment index file for multiple segments
     *
-    * @return List of bucketPositions as indices of 32³ buckets (in target mag)
+    * @return
+    *   List of bucketPositions as indices of 32³ buckets (in target mag)
     */
   def querySegmentIndex(datasetId: ObjectId, dataLayerName: String): Action[GetMultipleSegmentIndexParameters] =
     Action.async(validateJson[GetMultipleSegmentIndexParameters]) { implicit request =>
@@ -453,10 +483,13 @@ class DataSourceController @Inject()(
                 omitMissing = true // assume agglomerate ids not present in the mapping belong to user-brushed segments
               )
               topLeftsNested: Seq[Array[Vec3Int]] <- Fox.serialCombined(segmentIds)(sId =>
-                segmentIndexFileService.readSegmentIndex(segmentIndexFileKey, sId))
+                segmentIndexFileService.readSegmentIndex(segmentIndexFileKey, sId)
+              )
               topLefts: Array[Vec3Int] = topLeftsNested.toArray.flatten
-              bucketPositions = segmentIndexFileService.topLeftsToDistinctTargetMagBucketPositions(topLefts,
-                                                                                                   request.body.mag)
+              bucketPositions = segmentIndexFileService.topLeftsToDistinctTargetMagBucketPositions(
+                topLefts,
+                request.body.mag
+              )
             } yield SegmentIndexData(segmentOrAgglomerateId, bucketPositions.toSeq)
           }
         } yield Ok(Json.toJson(segmentIdsAndBucketPositions))
@@ -470,7 +503,8 @@ class DataSourceController @Inject()(
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
           segmentIndexFileKey <- segmentIndexFileService.lookUpSegmentIndexFileKey(dataSource.id, dataLayer)
           agglomerateFileKeyOpt <- Fox.runOptional(request.body.mappingName)(
-            agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, _))
+            agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, _)
+          )
           volumes <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
             segmentIndexFileService.getSegmentVolume(
               datasetId,
@@ -493,15 +527,18 @@ class DataSourceController @Inject()(
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
           segmentIndexFileKey <- segmentIndexFileService.lookUpSegmentIndexFileKey(dataSource.id, dataLayer)
           agglomerateFileKeyOpt <- Fox.runOptional(request.body.mappingName)(
-            agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, _))
+            agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, _)
+          )
           boxes <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
-            segmentIndexFileService.getSegmentBoundingBox(datasetId,
-                                                          dataSource.id,
-                                                          dataLayer,
-                                                          segmentIndexFileKey,
-                                                          agglomerateFileKeyOpt,
-                                                          segmentId,
-                                                          request.body.mag)
+            segmentIndexFileService.getSegmentBoundingBox(
+              datasetId,
+              dataSource.id,
+              dataLayer,
+              segmentIndexFileKey,
+              agglomerateFileKeyOpt,
+              segmentId,
+              request.body.mag
+            )
           }
         } yield Ok(Json.toJson(boxes))
       }
@@ -513,7 +550,8 @@ class DataSourceController @Inject()(
         for {
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
           meshFileKeyOpt <- Fox.runOptional(request.body.meshFileName)(
-            meshFileService.lookUpMeshFileKey(dataSource.id, dataLayer, _))
+            meshFileService.lookUpMeshFileKey(dataSource.id, dataLayer, _)
+          )
           mappingNameForMeshFile <- Fox.runOptional(meshFileKeyOpt)(meshFileService.mappingNameForMeshFile)
           surfaceAreas <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
             val fullMeshRequest = FullMeshRequest(
@@ -527,7 +565,7 @@ class DataSourceController @Inject()(
               annotationVersion = None,
               mag = Some(request.body.mag),
               seedPosition = None,
-              additionalCoordinates = request.body.additionalCoordinates,
+              additionalCoordinates = request.body.additionalCoordinates
             )
             fullMeshService.segmentSurfaceAreaCache.getOrLoad(
               (datasetId, dataLayer.name, fullMeshRequest),
@@ -544,7 +582,8 @@ class DataSourceController @Inject()(
   def exploreRemoteDataset(): Action[ExploreRemoteDatasetRequest] =
     Action.async(validateJson[ExploreRemoteDatasetRequest]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(
-        UserAccessRequest.administrateDatasets(request.body.organizationId)) {
+        UserAccessRequest.administrateDatasets(request.body.organizationId)
+      ) {
         val reportMutable = ListBuffer[String]()
         val hasLocalFilesystemRequest =
           request.body.layerParameters.exists(param => new URI(param.remoteUri).getScheme == PathSchemes.schemeFile)
@@ -578,8 +617,8 @@ class DataSourceController @Inject()(
         for {
           _ <- Fox.successful(())
           pathsAllowed = request.body.map(dataVaultService.pathIsAllowedToAddDirectly)
-          result = request.body.zip(pathsAllowed).map {
-            case (path, isAllowed) => PathValidationResult(path, isAllowed)
+          result = request.body.zip(pathsAllowed).map { case (path, isAllowed) =>
+            PathValidationResult(path, isAllowed)
           }
         } yield Ok(Json.toJson(result))
       }
@@ -610,7 +649,8 @@ class DataSourceController @Inject()(
               failures = resultBoxes.filter(_.isEmpty)
               failuresFormatted = failures.map(_.toString).mkString(", ")
               _ = logger.info(
-                s"Wrote dataset mirrors where needed for ${request.body.length} datasets (${failures.length} failures: $failuresFormatted)")
+                s"Wrote dataset mirrors where needed for ${request.body.length} datasets (${failures.length} failures: $failuresFormatted)"
+              )
               results = resultBoxes.flatMap(_.toOption.flatten)
             } yield Ok(Json.toJson(results))
           }
@@ -632,14 +672,16 @@ class DataSourceController @Inject()(
     for {
       dataSourceFromDB <- dsRemoteWebknossosClient.getDataSource(datasetId) ~> NOT_FOUND
       dataSourceId = dataSourceFromDB.id
-      dataSourceFromDirOpt = if (dataSourceService.existsOnDisk(dataSourceId)) {
-        Some(
-          dataSourceService.dataSourceFromDir(
-            dataSourceService.dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName),
-            dataSourceId.organizationId,
-            resolvePaths = true
-          ))
-      } else None
+      dataSourceFromDirOpt =
+        if (dataSourceService.existsOnDisk(dataSourceId)) {
+          Some(
+            dataSourceService.dataSourceFromDir(
+              dataSourceService.dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName),
+              dataSourceId.organizationId,
+              resolvePaths = true
+            )
+          )
+        } else None
       _ <- Fox.runOptional(dataSourceFromDirOpt)(ds => dsRemoteWebknossosClient.updateDataSource(ds, datasetId))
       _ = datasetCache.invalidateCache(datasetId)
       newUsableFromDBBox <- datasetCache.getById(datasetId).shiftBox

@@ -7,15 +7,14 @@ export function getUid(): string {
   // we fallback to this implementation. Note that this is no a safe
   // in a cryptographic sense and should only be used for non-security
   // purposes.
-  function randomDigit() {
-    const random = (Math.random() * 16) | 0;
-    return random.toString(16);
+  function randomHexDigit() {
+    return (Math.random() * 16) | 0;
   }
 
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
-    const r = randomDigit();
-    // @ts-expect-error & on string relies on JS automatic type coercion
-    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    // According to the UUID standard, X needs to be between 0 and f,
+    // while y has to be between 8 and b.
+    const v = c === "x" ? randomHexDigit() : Math.floor(Math.random() * 4) + 8;
     return v.toString(16);
   });
 }

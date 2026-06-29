@@ -27,15 +27,17 @@ class ZipDataVault(outerVaultPath: VaultPath) extends DataVault with LazyLogging
   private def getCentralDirectory(using ec: ExecutionContext, tc: TokenContext): Fox[Map[String, ZipCentralDirEntry]] =
     _centralDir match {
       case Some(cd) => Fox.successful(cd)
-      case None =>
+      case None     =>
         for {
           cd <- readCentralDirectory()
           _ = _centralDir = Some(cd)
         } yield cd
     }
 
-  private def readCentralDirectory()(using ec: ExecutionContext,
-                                     tc: TokenContext): Fox[Map[String, ZipCentralDirEntry]] =
+  private def readCentralDirectory()(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Map[String, ZipCentralDirEntry]] =
     for {
       suffixBytes <- outerVaultPath.readLastBytes(ZipDataVault.eocdSearchSize)
       eocdInfo <- findEocd(suffixBytes).toFox
@@ -50,10 +52,12 @@ class ZipDataVault(outerVaultPath: VaultPath) extends DataVault with LazyLogging
     val sigBytes = ZipDataVault.eocdSignature
     var pos = buf.length - ZipDataVault.eocdFixedSize
     while (pos >= 0) {
-      if ((buf(pos).toInt & 0xff) == (sigBytes & 0xff) &&
-          (buf(pos + 1).toInt & 0xff) == ((sigBytes >> 8) & 0xff) &&
-          (buf(pos + 2).toInt & 0xff) == ((sigBytes >> 16) & 0xff) &&
-          (buf(pos + 3).toInt & 0xff) == ((sigBytes >> 24) & 0xff)) {
+      if (
+        (buf(pos).toInt & 0xff) == (sigBytes & 0xff) &&
+        (buf(pos + 1).toInt & 0xff) == ((sigBytes >> 8) & 0xff) &&
+        (buf(pos + 2).toInt & 0xff) == ((sigBytes >> 16) & 0xff) &&
+        (buf(pos + 3).toInt & 0xff) == ((sigBytes >> 24) & 0xff)
+      ) {
         val bb = ByteBuffer.wrap(buf).order(ByteOrder.LITTLE_ENDIAN)
         val totalEntries = bb.getShort(pos + 10).toInt & 0xffff
         val cdSize = bb.getInt(pos + 12).toLong & 0xffffffffL
@@ -66,7 +70,8 @@ class ZipDataVault(outerVaultPath: VaultPath) extends DataVault with LazyLogging
           val locatorSig = bb.getInt(locatorPos)
           if (locatorSig != ZipDataVault.zip64EocdLocatorSignature)
             return Failure(
-              s"Expected ZIP64 EOCD locator signature at offset $locatorPos, got 0x${locatorSig.toHexString}")
+              s"Expected ZIP64 EOCD locator signature at offset $locatorPos, got 0x${locatorSig.toHexString}"
+            )
           val zip64EocdAbsOffset = bb.getLong(locatorPos + 8)
           return Full((zip64EocdAbsOffset, -1L))
         }
@@ -77,14 +82,14 @@ class ZipDataVault(outerVaultPath: VaultPath) extends DataVault with LazyLogging
     Failure("Could not find End of Central Directory (EOCD) record in zip file")
   }
 
-  private def resolveCdBounds(eocdInfo: (Long, Long))(using ec: ExecutionContext,
-                                                        tc: TokenContext): Fox[(Long, Long)] =
+  private def resolveCdBounds(eocdInfo: (Long, Long))(using ec: ExecutionContext, tc: TokenContext): Fox[(Long, Long)] =
     eocdInfo match {
       case (cdOffset, cdSize) if cdSize >= 0 => Fox.successful((cdOffset, cdSize))
-      case (zip64EocdAbsOffset, _) =>
+      case (zip64EocdAbsOffset, _)           =>
         for {
           zip64EocdBytes <- outerVaultPath.readBytes(
-            ByteRange.startEndExclusive(zip64EocdAbsOffset, zip64EocdAbsOffset + ZipDataVault.zip64EocdSize))
+            ByteRange.startEndExclusive(zip64EocdAbsOffset, zip64EocdAbsOffset + ZipDataVault.zip64EocdSize)
+          )
           result <- parseZip64Eocd(zip64EocdBytes).toFox
         } yield result
     }
@@ -96,7 +101,8 @@ class ZipDataVault(outerVaultPath: VaultPath) extends DataVault with LazyLogging
     val sig = bb.getInt(0)
     if (sig != ZipDataVault.zip64EocdSignature)
       return Failure(
-        s"Expected ZIP64 EOCD signature 0x${ZipDataVault.zip64EocdSignature.toHexString}, got 0x${sig.toHexString}")
+        s"Expected ZIP64 EOCD signature 0x${ZipDataVault.zip64EocdSignature.toHexString}, got 0x${sig.toHexString}"
+      )
     Full((bb.getLong(48), bb.getLong(40))) // (cdOffset, cdSize)
   }
 
@@ -108,7 +114,8 @@ class ZipDataVault(outerVaultPath: VaultPath) extends DataVault with LazyLogging
       val sig = bb.getInt(pos)
       if (sig != ZipDataVault.centralDirEntrySignature)
         return Failure(
-          s"Expected central directory entry signature 0x${ZipDataVault.centralDirEntrySignature.toHexString} at offset $pos, got 0x${sig.toHexString}")
+          s"Expected central directory entry signature 0x${ZipDataVault.centralDirEntrySignature.toHexString} at offset $pos, got 0x${sig.toHexString}"
+        )
       val compressionMethod = bb.getShort(pos + 10).toInt & 0xffff
       var compressedSize = bb.getInt(pos + 20).toLong & 0xffffffffL
       var uncompressedSize = bb.getInt(pos + 24).toLong & 0xffffffffL
@@ -144,12 +151,14 @@ class ZipDataVault(outerVaultPath: VaultPath) extends DataVault with LazyLogging
   // Fields not needed are returned as -1.
   // Per spec, fields appear in this order (only if the corresponding CD field was 0xFFFFFFFF):
   //   uncompressedSize (8), compressedSize (8), localHeaderOffset (8), diskNumber (4)
-  private def parseZip64ExtraInCd(cdBytes: Array[Byte],
-                                   extraStart: Int,
-                                   extraLen: Int,
-                                   needUncompressedSize: Boolean,
-                                   needCompressedSize: Boolean,
-                                   needLocalHeaderOffset: Boolean): Box[(Long, Long, Long)] = {
+  private def parseZip64ExtraInCd(
+      cdBytes: Array[Byte],
+      extraStart: Int,
+      extraLen: Int,
+      needUncompressedSize: Boolean,
+      needCompressedSize: Boolean,
+      needLocalHeaderOffset: Boolean
+  ): Box[(Long, Long, Long)] = {
     val bb = ByteBuffer.wrap(cdBytes).order(ByteOrder.LITTLE_ENDIAN)
     var pos = extraStart
     val end = extraStart + extraLen
@@ -182,7 +191,8 @@ class ZipDataVault(outerVaultPath: VaultPath) extends DataVault with LazyLogging
 
   override def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(using
       ec: ExecutionContext,
-      tc: TokenContext): Fox[(Array[Byte], Encoding.Value, Option[String])] =
+      tc: TokenContext
+  ): Fox[(Array[Byte], Encoding.Value, Option[String])] =
     path.toUPath match {
       case ZipEntryUPath(_, innerPath) =>
         val normalizedPath = normalizeInnerPath(innerPath)
@@ -192,11 +202,16 @@ class ZipDataVault(outerVaultPath: VaultPath) extends DataVault with LazyLogging
             case Some(e) => Fox.successful(e)
             case None    => Fox.empty
           }
-          _ <- if (entry.compressionMethod == 0) Fox.successful(())
-               else Fox.failure(s"Only STORED (uncompressed) zip entries are supported, but entry '$normalizedPath' uses compression method ${entry.compressionMethod}")
+          _ <-
+            if (entry.compressionMethod == 0) Fox.successful(())
+            else
+              Fox.failure(
+                s"Only STORED (uncompressed) zip entries are supported, but entry '$normalizedPath' uses compression method ${entry.compressionMethod}"
+              )
           // Read the 30 fixed bytes of the local file header to find the variable-length offsets
           localHeaderBytes <- outerVaultPath.readBytes(
-            ByteRange.startEndExclusive(entry.localHeaderOffset, entry.localHeaderOffset + 30))
+            ByteRange.startEndExclusive(entry.localHeaderOffset, entry.localHeaderOffset + 30)
+          )
           localHeaderBb = ByteBuffer.wrap(localHeaderBytes).order(ByteOrder.LITTLE_ENDIAN)
           fileNameLen = localHeaderBb.getShort(26).toInt & 0xffff
           extraLen = localHeaderBb.getShort(28).toInt & 0xffff

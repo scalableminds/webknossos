@@ -160,6 +160,14 @@ class UPathTestSuite extends AsyncWordSpec {
       checkStartsNotWith("https://example.com/pathSomewhereElse", "https://example.com/path")
     }
 
+    "preserve zip inner path when appending ZipEntryUPath to local or remote path" in {
+      val zipPath = UPath.fromStringUnsafe("archive.zip|zip:inner/file.bin")
+      val localBase = UPath.fromStringUnsafe("/data/dir")
+      val remoteBase = UPath.fromStringUnsafe("s3://bucket/prefix")
+      assert((localBase / zipPath).toString == "/data/dir/archive.zip|zip:inner/file.bin")
+      assert((remoteBase / zipPath).toString == "s3://bucket/prefix/archive.zip|zip:inner/file.bin")
+    }
+
     "parse ZipEntryUPath correctly" in {
       val upath = UPath.fromStringUnsafe("s3://bucket/archive.zip|zip:inner/file.bin")
       assert(upath.toString == "s3://bucket/archive.zip|zip:inner/file.bin")
@@ -184,9 +192,8 @@ class UPathTestSuite extends AsyncWordSpec {
       assert(upath.toString == "s3://bucket/archive.zip|zip:inner/file.bin")
     }
 
-    "reject double leading slash in zip inner path" in {
+    "reject double leading slash in zip inner path" in
       assert(UPath.fromString("s3://bucket/archive.zip|zip://inner/file.bin").isEmpty)
-    }
 
     "round-trip ZipEntryUPath through JSON" in {
       import play.api.libs.json.Json

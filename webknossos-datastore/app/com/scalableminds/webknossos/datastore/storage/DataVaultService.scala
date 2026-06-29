@@ -93,18 +93,7 @@ class DataVaultService @Inject() (
   def resolveMagPath(magLocator: MagLocator, localDatasetDir: Path, layerDir: Path): UPath =
     magLocator.path match {
       case Some(magLocatorPath) =>
-        magLocatorPath.toLocalPath match {
-          case Full(localPath) =>
-            if (localPath.isAbsolute) {
-              // absolute local path, keep unchanged
-              magLocatorPath
-            } else {
-              // relative local path, resolve in dataset dir
-              UPath.fromLocalPath(localDatasetDir.resolve(localPath).normalize)
-            }
-          case _ => // remote path, keep unchanged
-            magLocatorPath
-        }
+        magLocatorPath.resolvedIn(UPath.fromLocalPath(localDatasetDir))
 
       case _ =>
         val localDirWithScalarMag = layerDir.resolve(magLocator.mag.toMagLiteral(allowScalar = true))

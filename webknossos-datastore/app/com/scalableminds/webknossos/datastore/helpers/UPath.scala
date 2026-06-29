@@ -17,8 +17,12 @@ trait UPath {
   def /(other: ObjectId): UPath =
     this / other.toString
 
+  // TODO consider allowing this only in well-defined cases
   def /(other: UPath): UPath =
-    this / other.toString
+    other match {
+      case ZipEntryUPath(outerPath, innerPath) => ZipEntryUPath(this / outerPath, innerPath)
+      case _                                   => this / other.toString
+    }
 
   def toAbsolute: UPath
 
@@ -104,8 +108,7 @@ object UPath {
     if (withColonIdx >= 0 || rootRefIdx >= 0) {
       val (outerLiteral, innerPath) =
         if (withColonIdx >= 0)
-          (literal.substring(0, withColonIdx),
-           literal.substring(withColonIdx + ZipEntryUPath.separatorWithPath.length))
+          (literal.substring(0, withColonIdx), literal.substring(withColonIdx + ZipEntryUPath.separatorWithPath.length))
         else
           (literal.substring(0, rootRefIdx), "")
       if (innerPath.startsWith("//"))

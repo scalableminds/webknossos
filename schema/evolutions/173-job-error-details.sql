@@ -1,6 +1,6 @@
 START TRANSACTION;
 
-do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 169 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
+do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 172 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
 
 DROP VIEW webknossos.jobs_;
 
@@ -10,6 +10,6 @@ ALTER TABLE webknossos.jobs ADD CONSTRAINT latestRunErrorDetailsIsJsonObject CHE
 
 CREATE VIEW webknossos.jobs_ AS SELECT * FROM webknossos.jobs WHERE NOT isDeleted;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 170;
+UPDATE webknossos.releaseInformation SET schemaVersion = 173;
 
 COMMIT TRANSACTION;

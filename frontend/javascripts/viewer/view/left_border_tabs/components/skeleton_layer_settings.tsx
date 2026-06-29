@@ -3,7 +3,7 @@ import { Flex, Switch } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
 import { location } from "libs/window";
-import { settings } from "messages";
+import { settings, settingsTooltips } from "messages";
 import React, { useCallback } from "react";
 import { useDispatch } from "react-redux";
 import type { AnnotationLayerType } from "types/api_types";
@@ -11,7 +11,9 @@ import { AnnotationLayerEnum } from "types/api_types";
 import { userSettings } from "types/schemas/user_settings.schema";
 import Constants, { ControlModeEnum, LongUnitToShortUnitMap } from "viewer/constants";
 import defaultState from "viewer/default_state";
+import { isRotated } from "viewer/model/accessors/flycam_accessor";
 import {
+  areGeometriesTransformed,
   enforceSkeletonTracing,
   getActiveNode,
 } from "viewer/model/accessors/skeletontracing_accessor";
@@ -39,6 +41,10 @@ export default function SkeletonLayerSettings() {
   const controlMode = useWkSelector((state) => state.temporaryConfiguration.controlMode);
   const isArbitraryMode = useWkSelector((state) =>
     Constants.MODES_ARBITRARY.includes(state.temporaryConfiguration.viewMode),
+  );
+  // Section clipping requires an axis-aligned, untransformed scene.
+  const isSectionClippingAvailable = useWkSelector(
+    (state) => !isRotated(state.flycam) && !areGeometriesTransformed(state),
   );
 
   const isPublicViewMode = controlMode === ControlModeEnum.VIEW;
@@ -127,6 +133,11 @@ export default function SkeletonLayerSettings() {
 
   const onChangeHighlightCommentedNodes = useCallback(
     (value: boolean) => onChangeUser("highlightCommentedNodes", value),
+    [onChangeUser],
+  );
+
+  const onChangeClipSkeletonToCurrentSection = useCallback(
+    (value: boolean) => onChangeUser("clipSkeletonToCurrentSection", value),
     [onChangeUser],
   );
 
@@ -256,8 +267,25 @@ export default function SkeletonLayerSettings() {
               value={userConfiguration.clippingDistance}
               onChange={onChangeClippingDistance}
               defaultValue={defaultState.userConfiguration.clippingDistance}
+              disabled={
+                userConfiguration.clipSkeletonToCurrentSection && isSectionClippingAvailable
+              }
             />
           )}
+          {!isArbitraryMode ? (
+            <SwitchSetting
+              label={settings.clipSkeletonToCurrentSection}
+              value={userConfiguration.clipSkeletonToCurrentSection}
+              onChange={onChangeClipSkeletonToCurrentSection}
+              disabled={!isSectionClippingAvailable}
+              tooltipText={settingsTooltips.clipSkeletonToCurrentSection}
+              disabledReason={
+                isSectionClippingAvailable
+                  ? null
+                  : "Only available when neither the camera nor the dataset is rotated or transformed."
+              }
+            />
+          ) : null}
           <SwitchSetting
             label={settings.overrideNodeRadius}
             value={userConfiguration.overrideNodeRadius}

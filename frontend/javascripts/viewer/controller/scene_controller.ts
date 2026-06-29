@@ -60,7 +60,10 @@ import {
   getPosition,
   getRotationInRadian,
 } from "viewer/model/accessors/flycam_accessor";
-import { getSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
+import {
+  getSkeletonTracing,
+  isSkeletonSectionClippingActive,
+} from "viewer/model/accessors/skeletontracing_accessor";
 import { getSomeTracing, getTaskBoundingBoxes } from "viewer/model/accessors/tracing_accessor";
 import { getPlaneScalingFactor } from "viewer/model/accessors/view_mode_accessor";
 import { sceneControllerInitializedAction } from "viewer/model/actions/actions";
@@ -410,9 +413,16 @@ class SceneController {
     // This method is called for each of the four cams. Even
     // though they are all looking at the same scene, some
     // things have to be changed for each cam.
-    const { datasetConfiguration, userConfiguration, flycam } = Store.getState();
+    const state = Store.getState();
+    const { dataset, datasetConfiguration, userConfiguration, flycam } = state;
     const { tdViewDisplayPlanes, tdViewDisplayDatasetBorders, tdViewDisplayLayerBorders } =
       userConfiguration;
+
+    // Section clipping renders only the skeleton on the currently visible section.
+    // It is performed in the node/edge shaders (in voxel/section space) and is only
+    // possible when neither the camera nor the skeleton layer is rotated/transformed.
+    // Otherwise we fall back to the regular distance-based clipping.
+    const isSectionClippingActive = isSkeletonSectionClippingActive(state);
     // Only set the visibility of the dataset bounding box for the TDView.
     // This has to happen before updateForCam is called as otherwise cross section visibility
     // might be changed unintentionally.
@@ -441,6 +451,15 @@ class SceneController {
 
     const originalPosition = getPosition(flycam);
     const rotation = getRotationInRadian(flycam);
+
+    // Tell the skeleton shaders which section to clip to for this render pass. The
+    // 3D viewport (and any unsafe state) disables section clipping via clippingAxis -1.
+    const clippingAxis =
+      isSectionClippingActive && id !== OrthoViews.TDView ? Dimensions.getIndices(id)[2] : -1;
+    for (const skeleton of Object.values(this.skeletons)) {
+      skeleton.setSectionClippingUniforms(clippingAxis, originalPosition);
+    }
+
     if (id !== OrthoViews.TDView) {
       for (const planeId of OrthoViewValuesWithoutTDView) {
         if (planeId === id) {
@@ -451,11 +470,17 @@ class SceneController {
           const ind = Dimensions.getIndices(planeId);
           // Offset the plane so the user can see the skeletonTracing behind the plane.
           // The offset is passed to the shader as a uniform to be subtracted from the position to render the correct data.
+          // When section clipping is active, ensure the offset is at least one full
+          // perpendicular voxel so that the (precise) shader-side clipping is never
+          // overruled by the data plane occluding on-section nodes/edges.
+          const effectiveClippingDistanceInUnit = isSectionClippingActive
+            ? Math.max(this.clippingDistanceInUnit, dataset.dataSource.scale.factor[ind[2]])
+            : this.clippingDistanceInUnit;
           const unrotatedPositionOffset = [0, 0, 0] as Vector3;
           unrotatedPositionOffset[ind[2]] =
             planeId === OrthoViews.PLANE_XY
-              ? Math.floor(this.clippingDistanceInUnit)
-              : Math.floor(-this.clippingDistanceInUnit);
+              ? Math.floor(effectiveClippingDistanceInUnit)
+              : Math.floor(-effectiveClippingDistanceInUnit);
           this.rotatedPositionOffsetVector
             .set(...unrotatedPositionOffset)
             .applyEuler(this.flycamRotationEuler);

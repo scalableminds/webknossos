@@ -4,7 +4,8 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import models.organization.{
   CreditState,
   CreditTransaction,
@@ -34,8 +35,7 @@ class CreditTransactionController @Inject() (
     userService: UserService,
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext)
-    extends Controller
-    with FoxImplicits {
+    extends Controller {
 
   def addCredits(
       organizationId: String,
@@ -44,7 +44,7 @@ class CreditTransactionController @Inject() (
       currency: String,
       comment: Option[String],
       expiresAt: Option[String]
-  ): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  ): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       _ <- userService.assertIsSuperUser(request.identity) ?~> "Only super users can add credits to an organization"
       _ <- organizationDAO.findOne(organizationId)(using GlobalAccessContext) ?~> Msg.Organization.notFound(
@@ -75,7 +75,7 @@ class CreditTransactionController @Inject() (
   }
 
   def refundCreditTransaction(organizationId: String, transactionId: ObjectId): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       for {
         _ <- userService.assertIsSuperUser(request.identity) ?~> "Only super users can manually refund credits"
         transaction <- creditTransactionDAO.findOne(transactionId)
@@ -84,14 +84,14 @@ class CreditTransactionController @Inject() (
       } yield Ok
     }
 
-  def revokeExpiredCredits(): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def revokeExpiredCredits(): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       _ <- userService.assertIsSuperUser(request.identity) ?~> "Only super users can manually revoke expired credits"
       _ <- freeCreditTransactionService.revokeExpiredCredits()
     } yield Ok
   }
 
-  def list(): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def list(): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       isSuperUser <- userService.isSuperUser(request.identity._multiUser)
       _ <- Fox.fromBool(isSuperUser || request.identity.isAdmin) ?~> Msg.Organization.listCreditTransactionsOnlyAdmin

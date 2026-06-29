@@ -2,7 +2,8 @@ package models.annotation.handler
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.DBAccessContext
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 
 import javax.inject.Inject
 import models.annotation._
@@ -24,8 +25,7 @@ class ProjectInformationHandler @Inject() (
     val datasetDAO: DatasetDAO,
     val annotationDataSourceTemporaryStore: AnnotationDataSourceTemporaryStore
 )(implicit val ec: ExecutionContext)
-    extends AnnotationInformationHandler
-    with FoxImplicits {
+    extends AnnotationInformationHandler {
 
   override def provideAnnotation(projectId: ObjectId, userOpt: Option[User])(using
       ctx: DBAccessContext

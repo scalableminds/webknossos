@@ -99,8 +99,8 @@ jobs:
         run: tools/assert-complete-migrations.sh
       - name: Assert no 'SELECT *'  are present in scala files
         run: tools/assert-no-select-asterisk-present.sh
-      - name: Check backend formatting
-        run: sbt "scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"
+      - name: Check backend formatting and lint
+        run: sbt "scalafmtCheck; Test/scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck; scalafix --check; Test/scalafix --check; util/scalafix --check; webknossosTracingstore/scalafix --check; webknossosDatastore/scalafix --check"
       - name: Run backend unit tests
         run: sbt -v "testOnly backend.*"
 

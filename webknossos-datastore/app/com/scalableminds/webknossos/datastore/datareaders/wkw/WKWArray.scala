@@ -3,7 +3,8 @@ package com.scalableminds.webknossos.datastore.datareaders.wkw
 import com.google.common.io.LittleEndianDataInputStream
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{MortonEncoding, WKWDataFormatHelper, WKWHeader}
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkUtils, DatasetArray}
 import com.scalableminds.webknossos.datastore.datavault.{ByteRange, StartEndExclusiveByteRange, VaultPath}
@@ -15,7 +16,7 @@ import ucar.ma2.{Array => MultiArray}
 import java.io.ByteArrayInputStream
 import scala.concurrent.ExecutionContext
 
-object WKWArray extends WKWDataFormatHelper with FoxImplicits {
+object WKWArray extends WKWDataFormatHelper {
   def open(
       path: VaultPath,
       dataSourceId: DataSourceId,

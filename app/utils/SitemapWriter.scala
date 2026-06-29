@@ -1,7 +1,7 @@
 package utils
 
 import com.scalableminds.util.accesscontext.GlobalAccessContext
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.xml.Xml
 import com.sun.xml.txw2.output.IndentingXMLStreamWriter
 
@@ -20,8 +20,7 @@ case class SitemapURL(
     priority: Option[String] = None
 )
 
-class SitemapWriter @Inject() (publicationDAO: PublicationDAO, wkConf: WkConf)(implicit ec: ExecutionContext)
-    extends FoxImplicits {
+class SitemapWriter @Inject() (publicationDAO: PublicationDAO, wkConf: WkConf)(implicit ec: ExecutionContext) {
   private val proxyURLs = wkConf.AboutPageRedirect.routes.filter(!_.contains("*")).map(SitemapURL(_))
   private lazy val outputFactory = XMLOutputFactory.newInstance()
 

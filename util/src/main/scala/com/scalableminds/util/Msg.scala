@@ -624,7 +624,7 @@ object Msg {
   object Project {
     def notFound(id: ObjectId): String = s"Project “$id” could not be found or accessed."
     def notFound(name: String): String = s"Project with name “$name” could not be found or accessed."
-    val deleteSuccess: String = s"Project was successfully deleted."
+    val deleteSuccess: String = "Project was successfully deleted."
     def nameTaken(name: String): String =
       s"A project named “$name” already exists. Please choose a different name."
     def nameTooShort: String = "Project name must be at least three characters long."
@@ -700,7 +700,7 @@ object Msg {
       "You are not authorized to view this resource. Please log in."
     val passwordsDontMatch: String = "The two passwords do not match."
     val isDeactivated: String =
-      s"Your account has not been activated by an admin yet. Please contact your organization’s admin for help."
+      "Your account has not been activated by an admin yet. Please contact your organization’s admin for help."
     val noUserWithThisEmail: String = "There is no user registered with this email."
     val invalidCredentials: String = "Incorrect email or password. Please try again."
     val createFailed: String = "Could not create user."
@@ -719,7 +719,7 @@ object Msg {
     val invalidLastName: String = "Please check your last name for any special characters."
     object Token {
       val deleted: String = "Token was deleted."
-      val invalid: String = "The supplied token is invalid."
+      val invalid: String = "The supplied token is invalid or expired."
     }
     object Configuration {
       val updateSuccess: String = "Your configuration was successfully updated."

@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.services.mapping
 
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.datasource.{AbstractDataLayerMapping, DataLayerMapping}
 import com.scalableminds.webknossos.datastore.models.requests.{DataServiceMappingRequest, MappingReadInstruction}
@@ -11,9 +12,7 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 
-class MappingService @Inject() (config: DataStoreConfig)(implicit ec: ExecutionContext)
-    extends FoxImplicits
-    with LazyLogging {
+class MappingService @Inject() (config: DataStoreConfig)(implicit ec: ExecutionContext) extends LazyLogging {
 
   lazy val cache = new ParsedMappingCache(config.Datastore.Cache.Mapping.maxEntries)
 

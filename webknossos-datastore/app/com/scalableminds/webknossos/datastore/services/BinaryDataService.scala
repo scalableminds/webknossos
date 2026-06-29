@@ -6,7 +6,8 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, LayerCategory}
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
@@ -27,8 +28,7 @@ class BinaryDataService(
     sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]],
     datasetErrorLoggingService: DatasetErrorLoggingService
 )(implicit ec: ExecutionContext)
-    extends FoxImplicits
-    with LazyLogging {
+    extends LazyLogging {
 
   /* Note that this must stay in sync with the front-end constant MAX_MAG_FOR_AGGLOMERATE_MAPPING
      compare https://github.com/scalableminds/webknossos/issues/5223 */
@@ -182,7 +182,7 @@ class BinaryDataService(
     } yield resultData
 
   def handleDataRequests(
-      requests: List[DataServiceDataRequest]
+      requests: Seq[DataServiceDataRequest]
   )(using tc: TokenContext): Fox[(Array[Byte], List[Int])] = {
     val requestsCount = requests.length
     val requestData = requests.zipWithIndex.map { case (request, index) =>

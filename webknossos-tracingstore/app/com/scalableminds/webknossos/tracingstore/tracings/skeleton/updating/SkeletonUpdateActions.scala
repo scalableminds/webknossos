@@ -15,7 +15,7 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing.{
 }
 import com.scalableminds.webknossos.datastore.helpers.{
   NodeDefaults,
-  ProtoGeometryImplicits,
+  ProtoGeometryConversions,
   SkeletonTracingDefaults,
   TreeAgglomerateInfo
 }
@@ -320,13 +320,13 @@ case class CreateNodeSkeletonAction(
     info: Option[String] = None
 ) extends SkeletonUpdateAction
     with SkeletonUpdateActionHelper
-    with ProtoGeometryImplicits {
+    with ProtoGeometryConversions {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
     val rotationOrDefault = rotation getOrElse NodeDefaults.rotation
     val newNode = Node(
       id,
-      position,
-      rotationOrDefault,
+      vec3IntToProto(position),
+      vec3DoubleToProto(rotationOrDefault),
       radius getOrElse NodeDefaults.radius,
       viewport getOrElse NodeDefaults.viewport,
       resolution getOrElse NodeDefaults.mag,
@@ -370,14 +370,14 @@ case class UpdateNodeSkeletonAction(
     info: Option[String] = None
 ) extends SkeletonUpdateAction
     with SkeletonUpdateActionHelper
-    with ProtoGeometryImplicits {
+    with ProtoGeometryConversions {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
 
     val rotationOrDefault = rotation getOrElse NodeDefaults.rotation
     val newNode = Node(
       id,
-      position,
-      rotationOrDefault,
+      vec3IntToProto(position),
+      vec3DoubleToProto(rotationOrDefault),
       radius getOrElse NodeDefaults.radius,
       viewport getOrElse NodeDefaults.viewport,
       resolution getOrElse NodeDefaults.mag,
@@ -502,13 +502,13 @@ case class UpdateTracingSkeletonAction(
     info: Option[String] = None,
     editPositionAdditionalCoordinates: Option[Seq[AdditionalCoordinate]] = None
 ) extends SkeletonUpdateAction
-    with ProtoGeometryImplicits {
+    with ProtoGeometryConversions {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing =
     tracing.copy(
-      editPosition = editPosition,
-      editRotation = editRotation,
+      editPosition = vec3IntToProto(editPosition),
+      editRotation = vec3DoubleToProto(editRotation),
       zoomLevel = zoomLevel,
-      userBoundingBox = userBoundingBox,
+      userBoundingBox = boundingBoxOptToProto(userBoundingBox),
       activeNodeId = activeNode,
       editPositionAdditionalCoordinates = AdditionalCoordinate.toProto(editPositionAdditionalCoordinates)
     )
@@ -732,7 +732,7 @@ case class UpdateUserBoundingBoxSkeletonAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends SkeletonUpdateAction
-    with ProtoGeometryImplicits {
+    with ProtoGeometryConversions {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
     def updateUserBoundingBoxes() =
       tracing.userBoundingBoxes.map { currentBoundingBox =>

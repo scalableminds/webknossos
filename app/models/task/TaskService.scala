@@ -3,7 +3,8 @@ package models.task
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 
 import javax.inject.Inject
 import models.annotation.{Annotation, AnnotationDAO, AnnotationIdentifier, AnnotationStore, AnnotationType}
@@ -29,8 +30,7 @@ class TaskService @Inject() (
     scriptService: ScriptService,
     taskTypeService: TaskTypeService,
     projectDAO: ProjectDAO
-)(implicit ec: ExecutionContext)
-    extends FoxImplicits {
+)(implicit ec: ExecutionContext) {
 
   def publicWrites(task: Task)(using ctx: DBAccessContext): Fox[JsObject] =
     for {

@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{
   GetMultipleSegmentIndexParameters,
   MissingBucketHeaders,
-  ProtoGeometryImplicits,
+  ProtoGeometryConversions,
   SegmentIndexData
 }
 import com.scalableminds.webknossos.datastore.models.WebknossosDataRequest
@@ -32,7 +32,7 @@ class TSRemoteDatastoreClient @Inject() (
     val lifecycle: ApplicationLifecycle
 )(implicit ec: ExecutionContext)
     extends LazyLogging
-    with ProtoGeometryImplicits
+    with ProtoGeometryConversions
     with MissingBucketHeaders {
 
   private lazy val dataStoreUriCache: AlfuCache[ObjectId, String] = AlfuCache()

@@ -6,10 +6,11 @@ import java.io.File
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.collections.SequenceUtils
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 
 import javax.inject.Inject
 import models.annotation._
@@ -51,10 +52,9 @@ class TaskController @Inject() (
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
-    with ProtoGeometryImplicits
-    with FoxImplicits {
+    with ProtoGeometryConversions {
 
-  def read(taskId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def read(taskId: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       task <- taskDAO.findOne(taskId) ?~> Msg.Task.notFound(taskId) ~> NOT_FOUND
       js <- taskService.publicWrites(task)
@@ -62,7 +62,7 @@ class TaskController @Inject() (
   }
 
   def create: Action[List[TaskParameters]] =
-    sil.SecuredAction.async(validateJson[List[TaskParameters]]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[List[TaskParameters]]) { implicit request =>
       for {
         _ <- Fox.fromBool(request.body.nonEmpty) ?~> Msg.Task.Create.noTasks
         taskTypeId <- SequenceUtils
@@ -112,7 +112,7 @@ class TaskController @Inject() (
      - As File attachment
        - A zip file containing base annotations (each either NML or zip with NML + volume) for the new tasks. One task will be created per annotation.
    */
-  def createFromFiles: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def createFromFiles: Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       body <- request.body.asMultipartFormData.toFox ?~> Msg.Task.Create.multipartPayloadInvalid
       inputFiles = body.files.filter(file =>
@@ -159,7 +159,7 @@ class TaskController @Inject() (
   }
 
   def update(taskId: ObjectId): Action[TaskParameters] =
-    sil.SecuredAction.async(validateJson[TaskParameters]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[TaskParameters]) { implicit request =>
       val params = request.body
       for {
         task <- taskDAO.findOne(taskId) ?~> Msg.Task.notFound(taskId) ~> NOT_FOUND
@@ -176,7 +176,7 @@ class TaskController @Inject() (
       } yield JsonOk(json, Msg.Task.editSuccess)
     }
 
-  def delete(taskId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def delete(taskId: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       task <- taskDAO.findOne(taskId) ?~> Msg.Task.notFound(taskId) ~> NOT_FOUND
       project <- projectDAO.findOne(task._project)
@@ -185,14 +185,14 @@ class TaskController @Inject() (
     } yield JsonOk(Msg.Task.deleteSuccess)
   }
 
-  def listTasksForType(taskTypeId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def listTasksForType(taskTypeId: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       tasks <- taskDAO.findAllByTaskType(taskTypeId) ?~> Msg.TaskType.notFound(taskTypeId) ~> NOT_FOUND
       js <- Fox.serialCombined(tasks)(taskService.publicWrites(_))
     } yield Ok(Json.toJson(js))
   }
 
-  def listTasks: Action[ListTasksParameters] = sil.SecuredAction.async(validateJson[ListTasksParameters]) {
+  def listTasks: Action[ListTasksParameters] = sil.SecuredAction.fox(validateJson[ListTasksParameters]) {
     implicit request =>
       for {
         tasks <- taskDAO.findAllByProjectAndTaskTypeAndIdsAndUser(
@@ -206,7 +206,7 @@ class TaskController @Inject() (
       } yield Ok(Json.toJson(jsSeq))
   }
 
-  def request: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def request: Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     log() {
       val user = request.identity
       for {
@@ -225,7 +225,7 @@ class TaskController @Inject() (
     }
   }
 
-  def assignOne(id: ObjectId, userId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def assignOne(id: ObjectId, userId: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     log() {
       for {
         assignee <- userService.findOneCached(userId)
@@ -243,7 +243,7 @@ class TaskController @Inject() (
     }
   }
 
-  def peekNext: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def peekNext: Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     val user = request.identity
     for {
       teamIds <- userService.teamIdsFor(user._id)
@@ -253,7 +253,7 @@ class TaskController @Inject() (
     } yield Ok(taskJson)
   }
 
-  def listExperienceDomains: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def listExperienceDomains: Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       experienceDomains <- taskDAO.listExperienceDomains(request.identity._organization)
     } yield Ok(Json.toJson(experienceDomains))

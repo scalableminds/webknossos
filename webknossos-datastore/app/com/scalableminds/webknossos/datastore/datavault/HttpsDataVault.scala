@@ -2,7 +2,8 @@ package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.tools.{Box, Fox, FoxImplicits, Full}
+import com.scalableminds.util.tools.{Box, Fox, Full}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.storage.{
   DataVaultCredential,
   HttpBasicAuthCredential,
@@ -20,8 +21,7 @@ import scala.concurrent.ExecutionContext
 
 class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, dataStoreHost: String)
     extends DataVault
-    with LazyLogging
-    with FoxImplicits {
+    with LazyLogging {
 
   private val readTimeout = 10 minutes
 

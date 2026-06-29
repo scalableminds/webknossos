@@ -316,7 +316,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
         body.bytes.take(100).utf8String + (if (body.bytes.size > 100) s"... <omitted ${body.bytes.size - 100} bytes>"
                                            else "")
       case _: SourceBody =>
-        s"<streaming source>"
+        "<streaming source>"
       case _ =>
         ""
     }

@@ -2,7 +2,8 @@ package com.scalableminds.webknossos.datastore.explore
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header
@@ -17,7 +18,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 
 import scala.concurrent.ExecutionContext
 
-class N5ArrayExplorer(implicit val ec: ExecutionContext) extends N5Explorer with FoxImplicits {
+class N5ArrayExplorer(implicit val ec: ExecutionContext) extends N5Explorer {
 
   override def name: String = "N5 Array"
 

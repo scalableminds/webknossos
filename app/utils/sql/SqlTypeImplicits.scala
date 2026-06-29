@@ -6,6 +6,7 @@ import play.api.libs.json.JsValue
 import slick.jdbc.{GetResult, PositionedResult}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.datastore.helpers.UPath
+import scala.language.implicitConversions
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -125,7 +126,8 @@ trait SqlTypeImplicits {
   implicit def iterableToSqlValueList[T](v: Iterable[T])(implicit innerConversion: T => SqlValue): List[SqlValue] =
     v.map(innerConversion(_)).toList
 
-  implicit def nestedIterableToSqlValueLists[T](v: Iterable[Iterable[T]])(
-      implicit innerConversion: T => SqlValue): List[List[SqlValue]] =
+  implicit def nestedIterableToSqlValueLists[T](v: Iterable[Iterable[T]])(implicit
+      innerConversion: T => SqlValue
+  ): List[List[SqlValue]] =
     v.map(i => i.map(innerConversion(_)).toList).toList
 }

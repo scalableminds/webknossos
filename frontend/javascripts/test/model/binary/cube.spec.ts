@@ -1,7 +1,6 @@
 import { sleep } from "libs/utils";
 import datasetServerObject from "test/fixtures/dataset_server_object";
 import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontracing_server_objects";
-import runAsync from "test/helpers/run_async";
 import type { Vector3, Vector4 } from "viewer/constants";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import { assertNonNullBucket, type DataBucket } from "viewer/model/bucket_data_handling/bucket";
@@ -137,14 +136,11 @@ describe("DataCube", () => {
   }) => {
     cube._labelVoxelInResolution_DEPRECATED([1, 1, 1], null, 42, 0, null);
 
-    return runAsync([
-      () => {
-        expect(pullQueue.processedQueue[0]).toEqual({
-          bucket: [0, 0, 0, 0, []],
-          priority: -1,
-        });
-      },
-    ]);
+    await sleep(100);
+    expect(pullQueue.processedQueue[0]).toEqual({
+      bucket: [0, 0, 0, 0, []],
+      priority: -1,
+    });
   });
 
   it<TestContext>("Voxel Labeling should push buckets after they were pulled", async ({
@@ -152,14 +148,9 @@ describe("DataCube", () => {
     pushQueue,
   }) => {
     await cube._labelVoxelInResolution_DEPRECATED([1, 1, 1], null, 42, 0, null);
-
     const bucket = cube.getBucket([0, 0, 0, 0, []]);
 
-    return runAsync([
-      () => {
-        expect(pushQueue.insert).toHaveBeenCalledWith(bucket);
-      },
-    ]);
+    expect(pushQueue.insert).toHaveBeenCalledWith(bucket);
   });
 
   it<TestContext>("Voxel Labeling should push buckets immediately if they are pulled already", async ({
@@ -172,11 +163,7 @@ describe("DataCube", () => {
     bucket.receiveData(new Uint8Array(4 * 32 ** 3));
     await cube._labelVoxelInResolution_DEPRECATED([0, 0, 0], null, 42, 0, null);
 
-    return runAsync([
-      () => {
-        expect(pushQueue.insert).toHaveBeenCalledWith(bucket);
-      },
-    ]);
+    expect(pushQueue.insert).toHaveBeenCalledWith(bucket);
   });
 
   it<TestContext>("Voxel Labeling should only instantiate one bucket when labeling the same bucket twice", async ({

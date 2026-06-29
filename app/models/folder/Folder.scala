@@ -2,8 +2,9 @@ package models.folder
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.DBAccessContext
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
-import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
+import com.scalableminds.webknossos.schema.Tables.{Folders, FoldersRow, GetResultFoldersRow}
 import com.typesafe.scalalogging.LazyLogging
 import models.organization.{Organization, OrganizationDAO}
 import models.team.{TeamDAO, TeamService}
@@ -27,35 +28,39 @@ object FolderParameters {
   implicit val jsonFormat: OFormat[FolderParameters] = Json.format[FolderParameters]
 }
 
-class FolderService @Inject()(teamDAO: TeamDAO,
-                              teamService: TeamService,
-                              folderDAO: FolderDAO,
-                              organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext)
-    extends LazyLogging
-    with FoxImplicits {
+class FolderService @Inject() (
+    teamDAO: TeamDAO,
+    teamService: TeamService,
+    folderDAO: FolderDAO,
+    organizationDAO: OrganizationDAO
+)(implicit ec: ExecutionContext)
+    extends LazyLogging {
 
   val defaultRootName: String = "Datasets"
 
   def publicWrites(
       folder: Folder,
       requestingUser: Option[User] = None,
-      requestingUserOrganization: Option[Organization] = None)(implicit ctx: DBAccessContext): Fox[JsObject] =
+      requestingUserOrganization: Option[Organization] = None
+  )(using ctx: DBAccessContext): Fox[JsObject] =
     for {
       teams <- teamService.allowedTeamsForFolder(folder._id, cumulative = false, requestingUser)
-      teamsJs <- Fox.serialCombined(teams)(t => teamService.publicWrites(t, requestingUserOrganization)) ?~> Msg.Dataset.List.teamWritesFailed
+      teamsJs <- Fox.serialCombined(teams)(t =>
+        teamService.publicWrites(t, requestingUserOrganization)
+      ) ?~> Msg.Dataset.List.teamWritesFailed
       teamsCumulative <- teamService.allowedTeamsForFolder(folder._id, cumulative = true, requestingUser)
       teamsCumulativeJs <- Fox.serialCombined(teamsCumulative)(t =>
-        teamService.publicWrites(t, requestingUserOrganization)) ?~> Msg.Dataset.List.teamWritesFailed
+        teamService.publicWrites(t, requestingUserOrganization)
+      ) ?~> Msg.Dataset.List.teamWritesFailed
       isEditable <- folderDAO.isEditable(folder._id)
-    } yield
-      Json.obj(
-        "id" -> folder._id,
-        "name" -> folder.name,
-        "metadata" -> folder.metadata,
-        "allowedTeams" -> teamsJs,
-        "allowedTeamsCumulative" -> teamsCumulativeJs,
-        "isEditable" -> isEditable
-      )
+    } yield Json.obj(
+      "id" -> folder._id,
+      "name" -> folder.name,
+      "metadata" -> folder.metadata,
+      "allowedTeams" -> teamsJs,
+      "allowedTeamsCumulative" -> teamsCumulativeJs,
+      "isEditable" -> isEditable
+    )
 
   def publicWritesWithParent(folderWithParent: FolderWithParent, allEditableIds: Set[ObjectId]): JsObject =
     Json.obj(
@@ -66,8 +71,9 @@ class FolderService @Inject()(teamDAO: TeamDAO,
       "isEditable" -> allEditableIds.contains(folderWithParent._id)
     )
 
-  def updateAllowedTeams(folderId: ObjectId, teams: List[ObjectId], requestingUser: User)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateAllowedTeams(folderId: ObjectId, teams: List[ObjectId], requestingUser: User)(using
+      ctx: DBAccessContext
+  ): Fox[Unit] =
     for {
       _ <- folderDAO.findOne(folderId) ?~> Msg.Folder.notFound
       includeMemberOnlyTeams = requestingUser.isDatasetManager
@@ -82,8 +88,9 @@ class FolderService @Inject()(teamDAO: TeamDAO,
   def assertValidFolderName(name: String): Fox[Unit] =
     Fox.fromBool(!name.contains("/")) ?~> Msg.Folder.nameMustNotContainSlash
 
-  def getOrCreateFromPathLiteral(folderPathLiteral: String, organizationId: String)(
-      implicit ctx: DBAccessContext): Fox[ObjectId] =
+  def getOrCreateFromPathLiteral(folderPathLiteral: String, organizationId: String)(using
+      ctx: DBAccessContext
+  ): Fox[ObjectId] =
     for {
       organization <- organizationDAO.findOne(organizationId)
       foldersWithParents: Seq[FolderWithParent] <- folderDAO.findTreeOf(organization._rootFolder)
@@ -99,14 +106,17 @@ class FolderService @Inject()(teamDAO: TeamDAO,
       targetFolderId <- createMissingFoldersForPathNames(existingFolderId, remainingPathNames)
     } yield targetFolderId
 
-  private def findLowestMatchingFolder(root: FolderWithParent,
-                                       foldersWithParents: Seq[FolderWithParent],
-                                       pathNames: List[String]): (ObjectId, List[String]) = {
+  private def findLowestMatchingFolder(
+      root: FolderWithParent,
+      foldersWithParents: Seq[FolderWithParent],
+      pathNames: List[String]
+  ): (ObjectId, List[String]) = {
 
     @tailrec
     def findFolderIter(currentParent: FolderWithParent, remainingPathNames: List[String]): (ObjectId, List[String]) = {
       val nextOpt = foldersWithParents.find(folder =>
-        folder._parent.contains(currentParent._id) && remainingPathNames.headOption.contains(folder.name))
+        folder._parent.contains(currentParent._id) && remainingPathNames.headOption.contains(folder.name)
+      )
       nextOpt match {
         case Some(next) => findFolderIter(next, remainingPathNames.drop(1))
         case None       => (currentParent._id, remainingPathNames)
@@ -116,8 +126,9 @@ class FolderService @Inject()(teamDAO: TeamDAO,
     findFolderIter(root, pathNames.drop(1))
   }
 
-  private def createMissingFoldersForPathNames(parentFolderId: ObjectId, remainingPathNames: List[String])(
-      implicit ctx: DBAccessContext): Fox[ObjectId] =
+  private def createMissingFoldersForPathNames(parentFolderId: ObjectId, remainingPathNames: List[String])(using
+      ctx: DBAccessContext
+  ): Fox[ObjectId] =
     remainingPathNames match {
       case pathNamesHead :: pathNamesTail =>
         for {
@@ -129,7 +140,7 @@ class FolderService @Inject()(teamDAO: TeamDAO,
     }
 }
 
-class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class FolderDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Folder, FoldersRow, Folders](sqlClient) {
 
   protected val collection = Folders
@@ -138,7 +149,7 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected def parse(r: FoldersRow): Fox[Folder] =
     for {
       metadata <- parseMetadata(r.metadata)
-    } yield Folder(ObjectId(r._Id), r.name, metadata)
+    } yield Folder(ObjectId(r._id), r.name, metadata)
 
   private def parseWithParent(t: (String, String, String, Option[String])): Fox[FolderWithParent] =
     for {
@@ -244,25 +255,25 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       firstRow <- rows.headOption.toFox
     } yield firstRow
 
-  def updateName(folderId: ObjectId, name: String)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateName(folderId: ObjectId, name: String)(using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(folderId)
       _ <- run(q"UPDATE webknossos.folders SET name = $name WHERE _id = $folderId".asUpdate)
     } yield ()
 
-  def updateMetadata(folderId: ObjectId, metadata: JsArray)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateMetadata(folderId: ObjectId, metadata: JsArray)(using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(folderId)
       _ <- run(q"UPDATE webknossos.folders SET metadata = $metadata WHERE _id = $folderId".asUpdate)
     } yield ()
 
-  def findAllEditableIds(implicit ctx: DBAccessContext): Fox[List[ObjectId]] =
+  def findAllEditableIds(using ctx: DBAccessContext): Fox[List[ObjectId]] =
     for {
       updateAccessQuery <- accessQueryFromAccessQ(updateAccessQ)
       rows <- run(q"SELECT _id FROM webknossos.folders_ WHERE $updateAccessQuery".as[ObjectId])
     } yield rows.toList
 
-  def isEditable(folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[Boolean] =
+  def isEditable(folderId: ObjectId)(using ctx: DBAccessContext): Fox[Boolean] =
     for {
       updateAccessQuery <- accessQueryFromAccessQ(updateAccessQ)
       rows <- run(q"""SELECT EXISTS(
@@ -275,7 +286,7 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       result <- rows.headOption.toFox
     } yield result
 
-  def findTreeOf(folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[FolderWithParent]] =
+  def findTreeOf(folderId: ObjectId)(using ctx: DBAccessContext): Fox[List[FolderWithParent]] =
     for {
       accessQueryWithPrefix <- accessQueryFromAccessQWithPrefix(readAccessQWithPrefix, prefix = q"f.")
       accessQuery <- readAccessQuery
@@ -296,7 +307,7 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- Fox.combined(rows.toList.map(parseWithParent))
     } yield parsed
 
-  def insertAsChild(parentId: ObjectId, f: Folder)(implicit ctx: DBAccessContext): Fox[Unit] = {
+  def insertAsChild(parentId: ObjectId, f: Folder)(using ctx: DBAccessContext): Fox[Unit] = {
     val insertPathQuery =
       q"""INSERT INTO webknossos.folder_paths(_ancestor, _descendant, depth)
              SELECT _ancestor, ${f._id}, depth + 1 -- links to ancestors
@@ -309,7 +320,7 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     } yield ()
   }
 
-  def moveSubtree(idValidated: ObjectId, newParentIdValidated: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
+  def moveSubtree(idValidated: ObjectId, newParentIdValidated: ObjectId)(using ctx: DBAccessContext): Fox[Unit] = {
     val deleteObsoletePathsQuery =
       q"""
          DELETE FROM webknossos.folder_paths fp1
@@ -332,7 +343,7 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     } yield ()
   }
 
-  override def deleteOne(folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
+  override def deleteOne(folderId: ObjectId)(using ctx: DBAccessContext): Fox[Unit] = {
     val deleteFolderQuery = q"UPDATE webknossos.folders SET isDeleted = true WHERE _id = $folderId".asUpdate
     val deletePathsQuery =
       q"DELETE FROM webknossos.folder_paths WHERE _ancestor = $folderId OR _descendant = $folderId".asUpdate

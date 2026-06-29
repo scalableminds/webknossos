@@ -488,6 +488,9 @@ export function createBucketResponseFunction(
     return {
       buffer: new Uint8Array(typedArray.buffer).buffer,
       headers: {
+        "empty-bucket-indices": "[]",
+        "failure-bucket-indices": "[]",
+        // Legacy header, kept until the backend stops sending it.
         "missing-buckets": "[]",
       },
     };

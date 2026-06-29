@@ -20,12 +20,13 @@ object DataVaultCredential {
   implicit val jsonFormat: OFormat[DataVaultCredential] = Json.format[DataVaultCredential]
 }
 
-case class HttpBasicAuthCredential(name: String,
-                                   username: String,
-                                   password: String,
-                                   user: Option[String],
-                                   organization: Option[String])
-    extends DataVaultCredential {
+case class HttpBasicAuthCredential(
+    name: String,
+    username: String,
+    password: String,
+    user: Option[String],
+    organization: Option[String]
+) extends DataVaultCredential {
   override def userId: Option[String] = user
 }
 
@@ -33,12 +34,13 @@ object HttpBasicAuthCredential {
   implicit val jsonFormat: OFormat[HttpBasicAuthCredential] = Json.format[HttpBasicAuthCredential]
 }
 
-case class S3AccessKeyCredential(name: String,
-                                 accessKeyId: String,
-                                 secretAccessKey: String,
-                                 user: Option[String],
-                                 organization: Option[String])
-    extends DataVaultCredential {
+case class S3AccessKeyCredential(
+    name: String,
+    accessKeyId: String,
+    secretAccessKey: String,
+    user: Option[String],
+    organization: Option[String]
+) extends DataVaultCredential {
   override def userId: Option[String] = user
 
   def toCredentialsProvider: StaticCredentialsProvider = StaticCredentialsProvider.create(
@@ -50,11 +52,12 @@ object S3AccessKeyCredential {
   implicit val jsonFormat: OFormat[S3AccessKeyCredential] = Json.format[S3AccessKeyCredential]
 }
 
-case class GoogleServiceAccountCredential(name: String,
-                                          secretJson: JsValue,
-                                          user: Option[String],
-                                          organization: Option[String])
-    extends DataVaultCredential {
+case class GoogleServiceAccountCredential(
+    name: String,
+    secretJson: JsValue,
+    user: Option[String],
+    organization: Option[String]
+) extends DataVaultCredential {
   override def userId: Option[String] = user
 }
 
@@ -64,18 +67,22 @@ object GoogleServiceAccountCredential {
 
 case class LegacyDataVaultCredential(user: String, password: Option[String]) extends DataVaultCredential {
   def toBasicAuth: HttpBasicAuthCredential =
-    HttpBasicAuthCredential(name = "",
-                            username = user,
-                            password = password.getOrElse(""),
-                            user = Some(""),
-                            organization = Some(""))
+    HttpBasicAuthCredential(
+      name = "",
+      username = user,
+      password = password.getOrElse(""),
+      user = Some(""),
+      organization = Some("")
+    )
 
   def toS3AccessKey: S3AccessKeyCredential =
-    S3AccessKeyCredential(name = "",
-                          accessKeyId = user,
-                          secretAccessKey = password.getOrElse(""),
-                          user = Some(""),
-                          organization = Some(""))
+    S3AccessKeyCredential(
+      name = "",
+      accessKeyId = user,
+      secretAccessKey = password.getOrElse(""),
+      user = Some(""),
+      organization = Some("")
+    )
 
   override def name: String = ""
   override def userId: Option[String] = Some("")

@@ -8,18 +8,19 @@ import utils.SitemapWriter
 
 import scala.concurrent.ExecutionContext
 
-class SitemapController @Inject()(sitemapWriter: SitemapWriter, sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
+class SitemapController @Inject() (sitemapWriter: SitemapWriter, sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
     extends Controller {
 
   // Only called explicitly via RequestHandler
-  def getSitemap(prefix: String): Action[AnyContent] = sil.UserAwareAction.async { _ =>
+  def getSitemap(prefix: String): Action[AnyContent] = sil.UserAwareAction.fox { _ =>
     for {
       sitemap <- sitemapWriter.getSitemap(prefix)
-    } yield
-      Ok(sitemap)
-        .as(xmlMimeType)
-        .withHeaders(CONTENT_DISPOSITION ->
-          """sitemap.xml""")
+    } yield Ok(sitemap)
+      .as(xmlMimeType)
+      .withHeaders(
+        CONTENT_DISPOSITION ->
+          """sitemap.xml"""
+      )
   }
 
 }

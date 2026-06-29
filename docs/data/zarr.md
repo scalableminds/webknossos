@@ -15,7 +15,7 @@ You can try the OME-Zarr support with the following datasets. Load them in WEBKN
     - `https://static.webknossos.org/data/l4_sample/`
     - Source: Dense connectomic reconstruction in layer 4 of the somatosensory cortex. Motta et al. Science 2019. [10.1126/science.aay3134](https://doi.org/10.1126/science.aay3134)
 
-## Zarr Folder Structure
+## Zarr Folder Structure (v0.4)
 WEBKNOSSOS expects the following file structure for OME-Zarr (v0.4) datasets:
 
 ```
@@ -63,11 +63,11 @@ WEBKNOSSOS expects the following file structure for OME-Zarr (v0.4) datasets:
                 └── n
 ```
 
-See [OME-Zarr 0.4 spec](https://ngff.openmicroscopy.org/latest/index.html#image-layout) for details.
+See [OME-Zarr 0.4 spec](https://ngff.openmicroscopy.org/specifications/0.4/index.html#on-disk-or-in-cloud-layout) for details.
 
 ### Zarr Folder Structure (v0.5)
 
-For OME-Zarr (v0.5) datasets, the structure is slightly different (See [OME-Zarr 0.5 spec](https://ngff--242.org.readthedocs.build/latest/index.html#image-layout)):
+For OME-Zarr (v0.5) datasets, the structure is slightly different (See [OME-Zarr 0.5 spec](https://ngff.openmicroscopy.org/specifications/0.5/index.html)):
 
 ```
 ├── 123.zarr                  # One OME-Zarr image (id=123).

@@ -3,7 +3,7 @@ package controllers
 import com.scalableminds.util.Msg
 import com.scalableminds.util.objectid.ObjectId
 import play.silhouette.api.Silhouette
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import models.dataset.DatasetDAO
 import models.folder.{Folder, FolderDAO, FolderParameters, FolderService}
 import models.organization.OrganizationDAO
@@ -17,7 +17,7 @@ import utils.MetadataAssertions
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class FolderController @Inject()(
+class FolderController @Inject() (
     folderDAO: FolderDAO,
     folderService: FolderService,
     teamDAO: TeamDAO,
@@ -25,12 +25,12 @@ class FolderController @Inject()(
     teamService: TeamService,
     datasetDAO: DatasetDAO,
     organizationDAO: OrganizationDAO,
-    sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
+    sil: Silhouette[WkEnv]
+)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller
-    with FoxImplicits
     with MetadataAssertions {
 
-  def getRoot: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def getRoot: Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       organization <- organizationDAO.findOne(request.identity._organization)
       rootFolder <- folderDAO.findOne(organization._rootFolder)
@@ -38,7 +38,7 @@ class FolderController @Inject()(
     } yield Ok(rootFolderJson)
   }
 
-  def get(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def get(id: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       folder <- folderDAO.findOne(id) ?~> Msg.Folder.notFound
       organization <- organizationDAO.findOne(request.identity._organization)
@@ -46,7 +46,7 @@ class FolderController @Inject()(
     } yield Ok(folderJson)
   }
 
-  def update(id: ObjectId): Action[FolderParameters] = sil.SecuredAction.async(validateJson[FolderParameters]) {
+  def update(id: ObjectId): Action[FolderParameters] = sil.SecuredAction.fox(validateJson[FolderParameters]) {
     implicit request =>
       for {
         _ <- Fox.successful(())
@@ -58,14 +58,17 @@ class FolderController @Inject()(
         _ <- assertNoDuplicateMetadataKeys(params.metadata)
         _ <- folderDAO.updateMetadata(id, params.metadata)
         _ <- folderDAO.updateName(id, params.name) ?~> Msg.Folder.updateNameFailed
-        _ <- folderService
-          .updateAllowedTeams(id, params.allowedTeams, request.identity) ?~> Msg.Folder.updateTeamsFailed
+        _ <- folderService.updateAllowedTeams(
+          id,
+          params.allowedTeams,
+          request.identity
+        ) ?~> Msg.Folder.updateTeamsFailed
         updated <- folderDAO.findOne(id)
         folderJson <- folderService.publicWrites(updated, Some(request.identity), Some(organization))
       } yield Ok(folderJson)
   }
 
-  def move(id: ObjectId, newParentId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def move(id: ObjectId, newParentId: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       organization <- organizationDAO.findOne(request.identity._organization)
       _ <- Fox.fromBool(organization._rootFolder != id) ?~> Msg.Folder.moveRoot
@@ -78,7 +81,7 @@ class FolderController @Inject()(
     } yield Ok(folderJson)
   }
 
-  def delete(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def delete(id: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       organization <- organizationDAO.findOne(request.identity._organization)
       _ <- Fox.fromBool(organization._rootFolder != id) ?~> Msg.Folder.deleteRoot
@@ -91,7 +94,7 @@ class FolderController @Inject()(
     } yield Ok
   }
 
-  def getTree: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def getTree: Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       organization <- organizationDAO.findOne(request.identity._organization)
       foldersWithParents <- folderDAO.findTreeOf(organization._rootFolder)
@@ -101,7 +104,7 @@ class FolderController @Inject()(
     } yield Ok(Json.toJson(foldersWithParentsJson))
   }
 
-  def create(parentId: ObjectId, name: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def create(parentId: ObjectId, name: String): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       _ <- folderService.assertValidFolderName(name)
       newFolder = Folder(ObjectId.generate, name, JsArray.empty)

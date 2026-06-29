@@ -48,6 +48,9 @@ export type UpdateActiveTreeUpdateAction = ReturnType<typeof updateActiveTree>;
 type LEGACY_UpdateSkeletonTracingUpdateAction = ReturnType<typeof LEGACY_updateSkeletonTracing>;
 type LEGACY_UpdateVolumeTracingUpdateAction = ReturnType<typeof LEGACY_updateVolumeTracingAction>;
 export type UpdateActiveSegmentIdUpdateAction = ReturnType<typeof updateActiveSegmentId>;
+export type UpdateVolumeBucketDataHasChangedUpdateAction = ReturnType<
+  typeof updateVolumeBucketDataHasChanged
+>;
 export type UpdateLargestSegmentIdVolumeAction = ReturnType<typeof updateLargestSegmentId>;
 export type CreateSegmentUpdateAction = ReturnType<typeof createSegmentVolumeAction>;
 export type LEGACY_UpdateSegmentUpdateAction = ReturnType<typeof LEGACY_updateSegmentVolumeAction>;
@@ -196,6 +199,7 @@ export const ApplicableSkeletonUpdateActionNamesHelperNamesList = Object.keys(
 
 export type ApplicableVolumeUpdateAction =
   | UpdateLargestSegmentIdVolumeAction
+  | UpdateVolumeBucketDataHasChangedUpdateAction
   | UpdateSegmentPartialUpdateAction
   | UpdateMetadataOfSegmentUpdateAction
   | UpsertSegmentGroupUpdateAction
@@ -236,6 +240,7 @@ export type UpdateActionWithoutIsolationRequirement =
   | UpdateActiveTreeUpdateAction
   | UpdateActiveSegmentIdUpdateAction
   | UpdateLargestSegmentIdVolumeAction
+  | UpdateVolumeBucketDataHasChangedUpdateAction
   | AddUserBoundingBoxInSkeletonTracingAction
   | AddUserBoundingBoxInVolumeTracingAction
   | DeleteUserBoundingBoxInSkeletonTracingAction
@@ -625,6 +630,7 @@ function LEGACY_updateVolumeTracingAction(
   editPositionAdditionalCoordinates: AdditionalCoordinate[] | null,
   rotation: Vector3,
   zoomLevel: number,
+  hideUnregisteredSegments: boolean,
 ) {
   return {
     name: "updateVolumeTracing",
@@ -635,7 +641,7 @@ function LEGACY_updateVolumeTracingAction(
       editPositionAdditionalCoordinates,
       editRotation: rotation,
       largestSegmentId: tracing.largestSegmentId,
-      hideUnregisteredSegments: tracing.hideUnregisteredSegments,
+      hideUnregisteredSegments,
       zoomLevel,
     },
   } as const;
@@ -652,6 +658,16 @@ export function updateActiveSegmentId(activeSegmentId: number, actionTracingId: 
       actionTracingId,
       activeSegmentId,
     },
+  } as const;
+}
+
+export function updateVolumeBucketDataHasChanged(
+  volumeBucketDataHasChanged: boolean,
+  actionTracingId: string,
+) {
+  return {
+    name: "updateVolumeBucketDataHasChanged",
+    value: { volumeBucketDataHasChanged, actionTracingId },
   } as const;
 }
 

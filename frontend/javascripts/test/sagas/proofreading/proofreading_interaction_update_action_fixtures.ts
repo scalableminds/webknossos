@@ -957,16 +957,7 @@ export const splitSegment2And3WithAgglomerateTree1 = [
       },
     },
   ],
-  [
-    {
-      name: "updateSegmentPartial" as const,
-      value: {
-        actionTracingId: VOLUME_TRACING_ID,
-        id: 1,
-        anchorPosition: [3, 3, 3] as Vector3,
-      },
-    },
-  ],
+
   [
     {
       name: "createTree" as const,
@@ -1006,6 +997,16 @@ export const splitSegment2And3WithAgglomerateTree1 = [
         treeId: 3,
         source: 5,
         target: 6,
+      },
+    },
+  ],
+  [
+    {
+      name: "updateSegmentPartial" as const,
+      value: {
+        actionTracingId: VOLUME_TRACING_ID,
+        id: 1,
+        anchorPosition: [3, 3, 3] as Vector3,
       },
     },
   ],

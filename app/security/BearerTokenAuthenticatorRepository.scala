@@ -22,11 +22,12 @@ class BearerTokenAuthenticatorRepository(tokenDAO: TokenDAO)(implicit ec: Execut
     (for {
       _ <- tokenDAO.updateLastUsedDateTime(
         newAuthenticator.id,
-        Instant.fromZonedDateTime(newAuthenticator.lastUsedDateTime),
+        Instant.fromZonedDateTime(newAuthenticator.lastUsedDateTime)
       )
       updated <- findOneByValue(newAuthenticator.id)
     } yield updated).toFutureOrThrowException(
-      "Could not update Token. Throwing exception because update cannot return a box, as defined by Silhouette trait AuthenticatorDAO")
+      "Could not update Token. Throwing exception because update cannot return a box, as defined by Silhouette trait AuthenticatorDAO"
+    )
 
   override def remove(value: String): Future[Unit] =
     for {
@@ -45,9 +46,11 @@ class BearerTokenAuthenticatorRepository(tokenDAO: TokenDAO)(implicit ec: Execut
       tokenAuthenticator <- tokenSQL.toBearerTokenAuthenticator
     } yield tokenAuthenticator).toFutureOption
 
-  def add(authenticator: BearerTokenAuthenticator,
-          tokenType: TokenType,
-          deleteOld: Boolean = true): Future[BearerTokenAuthenticator] =
+  def add(
+      authenticator: BearerTokenAuthenticator,
+      tokenType: TokenType,
+      deleteOld: Boolean = true
+  ): Future[BearerTokenAuthenticator] =
     for {
       _ <- if (deleteOld) removeByLoginInfoIfPresent(authenticator.loginInfo, tokenType) else Future.successful(())
       _ <- insert(authenticator, tokenType).futureBox

@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.collection.mutable
@@ -10,8 +11,7 @@ import scala.concurrent.ExecutionContext
 // Caution: Caller is responsible to call a final flush() after putting everything
 // Caution: Not thread safe! Make sure no concurrent access happens.
 class FossilDBPutBuffer(fossilDBClient: FossilDBClient, version: Option[Long] = None, maxElements: Int = 100)
-    extends LazyLogging
-    with FoxImplicits {
+    extends LazyLogging {
 
   private lazy val buffer: mutable.Map[(String, Long), Array[Byte]] =
     new mutable.HashMap[(String, Long), Array[Byte]]()
@@ -25,9 +25,10 @@ class FossilDBPutBuffer(fossilDBClient: FossilDBClient, version: Option[Long] = 
         .orElse(this.version)
         .toFox ?~> "FossilDBPutBuffer put without version (needs to be passed to put or to buffer)"
       _ = buffer.put((key, versionToPut), value)
-      result <- if (isFull) {
-        flush()
-      } else Fox.successful(())
+      result <-
+        if (isFull) {
+          flush()
+        } else Fox.successful(())
     } yield result
 
   private def isFull = size >= maxElements

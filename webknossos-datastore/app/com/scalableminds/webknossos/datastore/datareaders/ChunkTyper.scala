@@ -1,7 +1,8 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.util.tools.Box
 import com.scalableminds.util.tools.Box.tryo
 
@@ -24,7 +25,7 @@ object ChunkTyper {
   }
 }
 
-abstract class ChunkTyper extends FoxImplicits {
+abstract class ChunkTyper {
   val header: DatasetHeader
 
   def ma2DataType: MADataType
@@ -38,10 +39,12 @@ abstract class ChunkTyper extends FoxImplicits {
     fillValueChunkCache.getOrLoad(chunkShape.mkString(","), _ => createFromFillValue(chunkShape).toFox)
 
   protected def createFromFillValue(chunkShape: Array[Int]): Box[MultiArray] =
-    MultiArrayUtils.createFilledArray(ma2DataType,
-                                      chunkShapeOrdered(chunkShape),
-                                      header.fillValueNumber,
-                                      header.fillValueBoolean)
+    MultiArrayUtils.createFilledArray(
+      ma2DataType,
+      chunkShapeOrdered(chunkShape),
+      header.fillValueNumber,
+      header.fillValueBoolean
+    )
 
   // Chunk shape in header is in C-Order (XYZ), but data may be in F-Order (ZYX), so the chunk shape
   // associated with the array needs to be adjusted.
@@ -138,9 +141,8 @@ class BoolChunkTyper(val header: DatasetHeader) extends ChunkTyper {
 
   def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): Box[MultiArray] = tryo {
     val typedStorage = new Array[Boolean](chunkShape.product)
-    bytes.zipWithIndex.foreach {
-      case (b, i) =>
-        typedStorage(i) = b != 0
+    bytes.zipWithIndex.foreach { case (b, i) =>
+      typedStorage(i) = b != 0
     }
     MultiArray.factory(ma2DataType, chunkShapeOrdered(chunkShape), typedStorage)
   }

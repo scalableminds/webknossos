@@ -4,7 +4,8 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Box, Fox}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayer,
@@ -21,7 +22,7 @@ import scala.concurrent.ExecutionContext
 case class ListMeshChunksRequest(
     meshFileName: String,
     segmentId: Long,
-    annotationVersion: Option[Long],
+    annotationVersion: Option[Long]
 )
 
 object ListMeshChunksRequest {
@@ -60,47 +61,53 @@ object MeshFileInfo {
   implicit val jsonFormat: OFormat[MeshFileInfo] = Json.format[MeshFileInfo]
 }
 
-class MeshFileService @Inject()(hdf5MeshFileService: Hdf5MeshFileService,
-                                zarrMeshFileService: ZarrMeshFileService,
-                                neuroglancerPrecomputedMeshService: NeuroglancerPrecomputedMeshFileService,
-                                config: DataStoreConfig)
-    extends FoxImplicits
-    with LazyLogging {
+class MeshFileService @Inject() (
+    hdf5MeshFileService: Hdf5MeshFileService,
+    zarrMeshFileService: ZarrMeshFileService,
+    neuroglancerPrecomputedMeshService: NeuroglancerPrecomputedMeshFileService,
+    config: DataStoreConfig
+) extends LazyLogging {
 
-  private val meshFileKeyCache
-    : AlfuCache[(DataSourceId, String, String), MeshFileKey] = AlfuCache() // dataSourceId, layerName, meshFileName → MeshFileKey
+  private val meshFileKeyCache: AlfuCache[(DataSourceId, String, String), MeshFileKey] =
+    AlfuCache() // dataSourceId, layerName, meshFileName → MeshFileKey
 
-  def lookUpMeshFileKey(dataSourceId: DataSourceId, dataLayer: DataLayer, meshFileName: String)(
-      implicit ec: ExecutionContext): Fox[MeshFileKey] =
-    meshFileKeyCache.getOrLoad((dataSourceId, dataLayer.name, meshFileName),
-                               _ => lookUpMeshFileKeyImpl(dataSourceId, dataLayer, meshFileName).toFox)
+  def lookUpMeshFileKey(dataSourceId: DataSourceId, dataLayer: DataLayer, meshFileName: String)(implicit
+      ec: ExecutionContext
+  ): Fox[MeshFileKey] =
+    meshFileKeyCache.getOrLoad(
+      (dataSourceId, dataLayer.name, meshFileName),
+      _ => lookUpMeshFileKeyImpl(dataSourceId, dataLayer, meshFileName).toFox
+    )
 
-  private def lookUpMeshFileKeyImpl(dataSourceId: DataSourceId,
-                                    dataLayer: DataLayer,
-                                    meshFileName: String): Box[MeshFileKey] =
+  private def lookUpMeshFileKeyImpl(
+      dataSourceId: DataSourceId,
+      dataLayer: DataLayer,
+      meshFileName: String
+  ): Box[MeshFileKey] =
     for {
       attachment <- Box(dataLayer.attachments match {
         case Some(attachments) => attachments.meshes.find(_.name == meshFileName)
         case None              => None
       })
       resolvedPath <- tryo(attachment.resolvedPath(config.Datastore.baseDirectory, dataSourceId))
-    } yield
-      MeshFileKey(
-        dataSourceId,
-        dataLayer.name,
-        attachment.copy(path = resolvedPath)
-      )
+    } yield MeshFileKey(
+      dataSourceId,
+      dataLayer.name,
+      attachment.copy(path = resolvedPath)
+    )
 
-  def listMeshFiles(dataSourceId: DataSourceId, dataLayer: DataLayer)(implicit ec: ExecutionContext,
-                                                                      tc: TokenContext): Fox[Seq[MeshFileInfo]] = {
+  def listMeshFiles(dataSourceId: DataSourceId, dataLayer: DataLayer)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Seq[MeshFileInfo]] = {
     val meshFileNames = dataLayer.attachments.map(_.meshes).getOrElse(Seq.empty).map(_.name)
 
     Fox.fromFuture(
       Fox
         .serialSequence(meshFileNames) { meshFileName =>
           for {
-            meshFileKey <- lookUpMeshFileKey(dataSourceId, dataLayer, meshFileName) ?~> Msg.Mesh.File.lookUpFailed(
-              meshFileName)
+            meshFileKey <- lookUpMeshFileKey(dataSourceId, dataLayer, meshFileName) ?~> Msg.Mesh.File
+              .lookUpFailed(meshFileName)
             formatVersion <- versionForMeshFile(meshFileKey) ?~> Msg.Mesh.File.readVersionFailed(meshFileName)
             mappingName <- mappingNameForMeshFile(meshFileKey) ?~> Msg.Mesh.File.readMappingNameFailed(meshFileName)
           } yield MeshFileInfo(meshFileName, mappingName, formatVersion)
@@ -116,8 +123,9 @@ class MeshFileService @Inject()(hdf5MeshFileService: Hdf5MeshFileService,
   }
 
   // Same as above but this variant constructs the meshFilePath itself and converts null to None
-  def mappingNameForMeshFile(meshFileKey: MeshFileKey)(implicit ec: ExecutionContext,
-                                                       tc: TokenContext): Fox[Option[String]] =
+  def mappingNameForMeshFile(
+      meshFileKey: MeshFileKey
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Option[String]] =
     meshFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
         zarrMeshFileService.mappingNameForMeshFile(meshFileKey)
@@ -128,7 +136,7 @@ class MeshFileService @Inject()(hdf5MeshFileService: Hdf5MeshFileService,
       case _ => unsupportedDataFormat(meshFileKey)
     }
 
-  private def versionForMeshFile(meshFileKey: MeshFileKey)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
+  private def versionForMeshFile(meshFileKey: MeshFileKey)(using ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     meshFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
         zarrMeshFileService.versionForMeshFile(meshFileKey)
@@ -139,16 +147,17 @@ class MeshFileService @Inject()(hdf5MeshFileService: Hdf5MeshFileService,
       case _ => unsupportedDataFormat(meshFileKey)
     }
 
-  def getVertexQuantizationBits(meshFileKey: MeshFileKey)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Int] =
+  def getVertexQuantizationBits(meshFileKey: MeshFileKey)(using ec: ExecutionContext, tc: TokenContext): Fox[Int] =
     meshFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.neuroglancerPrecomputed =>
         neuroglancerPrecomputedMeshService.getVertexQuantizationBits(meshFileKey)
       case _ => Fox.successful(0)
     }
 
-  def listMeshChunksForSegmentsMerged(meshFileKey: MeshFileKey, segmentIds: Seq[Long])(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[WebknossosSegmentInfo] =
+  def listMeshChunksForSegmentsMerged(meshFileKey: MeshFileKey, segmentIds: Seq[Long])(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[WebknossosSegmentInfo] =
     meshFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
         zarrMeshFileService.listMeshChunksForMultipleSegments(meshFileKey, segmentIds)
@@ -159,20 +168,21 @@ class MeshFileService @Inject()(hdf5MeshFileService: Hdf5MeshFileService,
       case _ => unsupportedDataFormat(meshFileKey)
     }
 
-  def readMeshChunk(meshFileKey: MeshFileKey, meshChunkDataRequests: Seq[MeshChunkDataRequest],
-  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[(Array[Byte], String)] =
+  def readMeshChunk(meshFileKey: MeshFileKey, meshChunkDataRequests: Seq[MeshChunkDataRequest])(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[(Array[Byte], String)] =
     meshFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 => zarrMeshFileService.readMeshChunk(meshFileKey, meshChunkDataRequests)
-      case LayerAttachmentDataformat.hdf5  => hdf5MeshFileService.readMeshChunk(meshFileKey, meshChunkDataRequests).toFox
+      case LayerAttachmentDataformat.hdf5 => hdf5MeshFileService.readMeshChunk(meshFileKey, meshChunkDataRequests).toFox
       case LayerAttachmentDataformat.neuroglancerPrecomputed =>
         neuroglancerPrecomputedMeshService.readMeshChunk(meshFileKey, meshChunkDataRequests)
       case _ => unsupportedDataFormat(meshFileKey)
     }
 
   def clearCache(dataSourceId: DataSourceId, layerNameOpt: Option[String]): Int = {
-    meshFileKeyCache.clear {
-      case (keyDataSourceId, keyLayerName, _) =>
-        dataSourceId == keyDataSourceId && layerNameOpt.forall(_ == keyLayerName)
+    meshFileKeyCache.clear { case (keyDataSourceId, keyLayerName, _) =>
+      dataSourceId == keyDataSourceId && layerNameOpt.forall(_ == keyLayerName)
     }
 
     val clearedHdf5Count = hdf5MeshFileService.clearCache(dataSourceId, layerNameOpt)

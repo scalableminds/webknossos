@@ -32,9 +32,9 @@ case class VoxelPosition(
     obj match {
       case other: VoxelPosition =>
         other.mag1X == mag1X &&
-          other.mag1Y == mag1Y &&
-          other.mag1Z == mag1Z &&
-          other.mag == mag
+        other.mag1Y == mag1Y &&
+        other.mag1Z == mag1Z &&
+        other.mag == mag
       case _ =>
         false
     }

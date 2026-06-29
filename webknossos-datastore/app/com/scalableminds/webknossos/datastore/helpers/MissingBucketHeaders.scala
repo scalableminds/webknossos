@@ -7,8 +7,8 @@ import scala.concurrent.ExecutionContext
 
 trait MissingBucketHeaders extends FoxImplicits {
 
-  protected lazy val failureBucketIndicesHeader: String = "Failure-Bucket-Indices"
-  protected lazy val emptyBucketIndicesHeader: String = "Empty-Bucket-Indices"
+  protected lazy val failureBucketIndicesHeader: String = "failure-bucket-indices"
+  protected lazy val emptyBucketIndicesHeader: String = "empty-bucket-indices"
   protected lazy val legacyMissingBucketsHeader: String = "MISSING-BUCKETS"
 
   protected def createMissingBucketsHeaders(

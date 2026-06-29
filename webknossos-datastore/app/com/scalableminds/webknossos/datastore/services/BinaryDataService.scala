@@ -10,12 +10,12 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, LayerCategory}
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
-import com.scalableminds.webknossos.datastore.storage.*
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import ucar.ma2.Array as MultiArray
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateService
+import com.scalableminds.webknossos.datastore.storage.{BucketProviderCache, DataVaultService}
 
 import java.nio.file.Path
 import scala.concurrent.ExecutionContext

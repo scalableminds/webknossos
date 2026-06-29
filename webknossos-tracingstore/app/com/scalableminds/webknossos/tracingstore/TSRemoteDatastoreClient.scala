@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.tracingstore
 
 import com.google.inject.Inject
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
@@ -55,14 +56,14 @@ class TSRemoteDatastoreClient @Inject() (
     for {
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
       response <- rpc(s"$remoteLayerUri/data").withTokenFromContext.silent.postJson(dataRequests)
-      _ <- Fox.fromBool(Status.isSuccessful(response.status)) ?~> "failed to fetch fallback data from datastore"
+      _ <- Fox.fromBool(Status.isSuccessful(response.status)) ?~> Msg.Annotation.Volume.fallbackDataLoadingFailed
       bytes = response.bodyAsBytes.toArray
       emptyIndices <- parseMissingBucketHeader(
         response.header(emptyBucketIndicesHeader)
-      ) ?~> "failed to parse empty bucket indices header"
+      ) ?~> Msg.Annotation.Volume.emptyBucketIndicesHeaderParsingFailed
       failureIndices <- parseMissingBucketHeader(
         response.header(failureBucketIndicesHeader)
-      ) ?~> "failed to parse failure bucket indices header"
+      ) ?~> Msg.Annotation.Volume.failureBucketIndicesHeaderParsingFailed
     } yield (bytes, emptyIndices, failureIndices)
 
   def getVoxelAtPosition(remoteFallbackLayer: RemoteFallbackLayer, pos: Vec3Int, mag: Vec3Int)(using

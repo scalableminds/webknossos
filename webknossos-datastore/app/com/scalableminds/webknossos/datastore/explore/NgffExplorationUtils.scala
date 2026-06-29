@@ -4,7 +4,8 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.image.Color
 import com.scalableminds.util.tools.TextUtils.normalizeStrong
-import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import com.scalableminds.util.tools.{Fox, TextUtils}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.zarr.{
   NgffAxis,
@@ -33,7 +34,7 @@ import play.api.libs.json.{JsArray, JsBoolean, JsNumber, Json}
 
 import scala.concurrent.ExecutionContext
 
-trait NgffExplorationUtils extends FoxImplicits {
+trait NgffExplorationUtils {
 
   protected case class ChannelAttributes(
       color: Option[Color],
@@ -361,6 +362,6 @@ trait NgffExplorationUtils extends FoxImplicits {
       }
     } yield layerTuples.flatten
 
-  implicit def multiScalesV0_5ToV0_4(multiscalesItemV0_5: NgffMultiscalesItemV0_5): NgffMultiscalesItem =
+  def multiScalesV0_5ToV0_4(multiscalesItemV0_5: NgffMultiscalesItemV0_5): NgffMultiscalesItem =
     NgffMultiscalesItemV0_5.asV0_4(multiscalesItemV0_5)
 }

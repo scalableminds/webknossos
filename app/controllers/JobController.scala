@@ -5,6 +5,7 @@ import play.silhouette.api.Silhouette
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import models.dataset.{DataStoreDAO, DatasetDAO, DatasetLayerAdditionalAxesDAO, DatasetService}
 import models.job._
 import models.organization.{CreditTransactionDAO, CreditTransactionService, OrganizationDAO, PricingPlan}
@@ -88,7 +89,7 @@ class JobController @Inject() (
     extends Controller
     with Zarr3OutputHelper {
 
-  def status: Action[AnyContent] = sil.SecuredAction.async { _ =>
+  def status: Action[AnyContent] = sil.SecuredAction.fox { _ =>
     for {
       _ <- Fox.successful(())
       jobCountsByState <- jobDAO.countByState
@@ -102,7 +103,7 @@ class JobController @Inject() (
   }
 
   def list(command: Option[String], skipForDeletedDatasets: Option[Boolean]): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       for {
         _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> Msg.Job.notEnabled
         commandValidatedOpt <- Fox.runOptional(command)(JobCommand.fromString(_).toFox)
@@ -110,7 +111,7 @@ class JobController @Inject() (
       } yield Ok(Json.toJson(jobsCompact.map(_.enrich)))
     }
 
-  def get(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def get(id: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> Msg.Job.notEnabled
       job <- jobDAO.findOne(id) ?~> Msg.Job.notFound
@@ -124,7 +125,7 @@ class JobController @Inject() (
    * The worker-written “state” field is later updated by the worker when it has successfully cancelled the job run.
    * When both fields are set, the cancelling is complete and wk no longer includes the job in the to_cancel list sent to worker
    */
-  def cancel(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def cancel(id: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> Msg.Job.notEnabled
       job <- jobDAO.findOne(id)
@@ -142,7 +143,7 @@ class JobController @Inject() (
    * Users may retry their failed jobs once (a second failure is likely persistent,
    * so they are asked to contact administrators instead). Super users may always retry.
    */
-  def retry(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def retry(id: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> Msg.Job.notEnabled
       job <- jobDAO.findOne(id) ?~> Msg.Job.notFound
@@ -160,7 +161,7 @@ class JobController @Inject() (
       mag: String,
       agglomerateView: Option[String]
   ): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
         organization <- organizationDAO.findOne(dataset._organization)(using GlobalAccessContext) ?~> Msg.Organization
@@ -190,7 +191,7 @@ class JobController @Inject() (
     }
 
   def runComputeSegmentIndexFileJob(datasetId: ObjectId, layerName: String): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
         organization <- organizationDAO.findOne(dataset._organization)(using GlobalAccessContext) ?~> Msg.Organization
@@ -223,7 +224,7 @@ class JobController @Inject() (
       bbox: String,
       newDatasetName: String
   ): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
           dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
@@ -263,7 +264,7 @@ class JobController @Inject() (
     }
 
   def runAlignSectionsJob(datasetId: ObjectId): Action[AlignSectionsJobOptions] =
-    sil.SecuredAction.async(validateJson[AlignSectionsJobOptions]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[AlignSectionsJobOptions]) { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
           dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
@@ -315,7 +316,7 @@ class JobController @Inject() (
       annotationId: Option[ObjectId],
       asOmeTiff: Boolean
   ): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
           dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
@@ -384,7 +385,7 @@ class JobController @Inject() (
       includesEditableMapping: Boolean,
       boundingBox: Option[String]
   ): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
           dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
@@ -428,7 +429,7 @@ class JobController @Inject() (
     }
 
   def runFindLargestSegmentIdJob(datasetId: ObjectId, layerName: String): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
           dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
@@ -458,7 +459,7 @@ class JobController @Inject() (
     }
 
   def runRenderAnimationJob(datasetId: ObjectId): Action[AnimationJobOptions] =
-    sil.SecuredAction.async(validateJson[AnimationJobOptions]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[AnimationJobOptions]) { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
           dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
@@ -512,7 +513,7 @@ class JobController @Inject() (
     }
 
   def redirectToExport(jobId: ObjectId): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       for {
         job <- jobDAO.findOne(jobId)
         dataStore <- dataStoreDAO.findOneByName(job._dataStore) ?~> Msg.DataStore.notFound
@@ -524,7 +525,7 @@ class JobController @Inject() (
     }
 
   def getJobCreditCost(command: String, boundingBoxInMag: String): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       for {
         boundingBox <- BoundingBox.fromLiteral(boundingBoxInMag).toFox
         jobCommand <- JobCommand.fromString(command).toFox

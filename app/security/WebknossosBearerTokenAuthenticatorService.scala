@@ -11,7 +11,7 @@ import play.silhouette.impl.authenticators.{
   BearerTokenAuthenticatorSettings
 }
 import com.scalableminds.util.accesscontext.GlobalAccessContext
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import models.user.{User, UserService}
 import TokenType.TokenType
 import com.scalableminds.util.Msg
@@ -30,8 +30,7 @@ class WebknossosBearerTokenAuthenticatorService(
     userService: UserService,
     conf: WkConf
 )(implicit override val executionContext: ExecutionContext)
-    extends BearerTokenAuthenticatorService(settings, repository, idGenerator, clock)
-    with FoxImplicits {
+    extends BearerTokenAuthenticatorService(settings, repository, idGenerator, clock) {
 
   private val resetPasswordExpiry: FiniteDuration =
     conf.Silhouette.TokenAuthenticator.resetPasswordExpiry.toMillis millis

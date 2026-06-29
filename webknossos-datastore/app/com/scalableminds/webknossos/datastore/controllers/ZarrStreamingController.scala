@@ -6,6 +6,7 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{Zarr3OutputHelper, ZarrCoordinatesParser}
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
@@ -42,18 +43,18 @@ class ZarrStreamingController @Inject() (
     extends Controller
     with Zarr3OutputHelper {
 
-  override def defaultErrorCode: Int = NOT_FOUND
+  override protected def defaultErrorCode: Int = NOT_FOUND
 
   val binaryDataService: BinaryDataService = binaryDataServiceHolder.binaryDataService
 
-  override def allowRemoteOrigin: Boolean = true
+  override protected def allowRemoteOrigin: Boolean = true
 
   /** Serve .zattrs file for a dataset Uses the OME-NGFF standard (see https://ngff.openmicroscopy.org/latest/)
     */
   def requestZAttrs(
       datasetId: ObjectId,
       dataLayerName: String = ""
-  ): Action[AnyContent] = Action.async { implicit request =>
+  ): Action[AnyContent] = Action.fox { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
         (dataSource, dataLayer) <- datasetCache.getWithLayer(
@@ -68,7 +69,7 @@ class ZarrStreamingController @Inject() (
   def requestZarrJson(
       datasetId: ObjectId,
       dataLayerName: String = ""
-  ): Action[AnyContent] = Action.async { implicit request =>
+  ): Action[AnyContent] = Action.fox { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
         (dataSource, dataLayer) <- datasetCache.getWithLayer(
@@ -87,7 +88,7 @@ class ZarrStreamingController @Inject() (
   }
 
   def zAttrsWithAnnotationPrivateLink(accessToken: String, dataLayerName: String = ""): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       ifIsAnnotationLayerOrElse(
         accessToken,
         dataLayerName,
@@ -106,7 +107,7 @@ class ZarrStreamingController @Inject() (
     }
 
   def zarrJsonWithAnnotationPrivateLink(accessToken: String, dataLayerName: String = ""): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       ifIsAnnotationLayerOrElse(
         accessToken,
         dataLayerName,
@@ -133,7 +134,7 @@ class ZarrStreamingController @Inject() (
   def requestDataSource(
       datasetId: ObjectId,
       zarrVersion: Int
-  ): Action[AnyContent] = Action.async { implicit request =>
+  ): Action[AnyContent] = Action.fox { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
         dataSource <- datasetCache.getById(datasetId) ~> NOT_FOUND
@@ -197,7 +198,7 @@ class ZarrStreamingController @Inject() (
   }
 
   def dataSourceWithAnnotationPrivateLink(accessToken: String, zarrVersion: Int): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       for {
         annotationSource <- remoteWebknossosClient.getAnnotationSource(accessToken) ~> NOT_FOUND
         relevantTokenContext =
@@ -226,7 +227,7 @@ class ZarrStreamingController @Inject() (
       dataLayerName: String,
       mag: String,
       coordinates: String
-  ): Action[AnyContent] = Action.async { implicit request =>
+  ): Action[AnyContent] = Action.fox { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       rawZarrCube(datasetId, dataLayerName, mag, coordinates)
     }
@@ -238,7 +239,7 @@ class ZarrStreamingController @Inject() (
       mag: String,
       coordinates: String
   ): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       ifIsAnnotationLayerOrElse(
         accessToken,
         dataLayerName,
@@ -287,15 +288,17 @@ class ZarrStreamingController @Inject() (
         ),
         DataServiceRequestSettings(halfByte = false, additionalCoordinates = additionalCoordinates)
       )
-      (data, notFoundIndices) <- binaryDataService.handleDataRequests(List(request))
-      _ <- Fox.fromBool(notFoundIndices.isEmpty) ?~> Msg.Zarr.chunkLoadingError ~> INTERNAL_SERVER_ERROR
+      (data, emptyIndices, failureIndices) <- binaryDataService.handleDataRequests(List(request))
+      _ <- Fox.fromBool(
+        emptyIndices.isEmpty && failureIndices.isEmpty
+      ) ?~> Msg.Zarr.chunkLoadingError ~> INTERNAL_SERVER_ERROR
     } yield Ok(data)
 
   def requestZArray(
       datasetId: ObjectId,
       dataLayerName: String,
       mag: String
-  ): Action[AnyContent] = Action.async { implicit request =>
+  ): Action[AnyContent] = Action.fox { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       zArray(datasetId, dataLayerName, mag)
     }
@@ -317,7 +320,7 @@ class ZarrStreamingController @Inject() (
       datasetId: ObjectId,
       dataLayerName: String,
       mag: String
-  ): Action[AnyContent] = Action.async { implicit request =>
+  ): Action[AnyContent] = Action.fox { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       zarrJsonForMag(datasetId, dataLayerName, mag)
     }
@@ -335,7 +338,7 @@ class ZarrStreamingController @Inject() (
       zarrHeader = Zarr3ArrayHeader.fromDataLayer(dataLayer, magParsed)
     } yield Ok(Json.toJson(zarrHeader))
 
-  def zArrayPrivateLink(accessToken: String, dataLayerName: String, mag: String): Action[AnyContent] = Action.async {
+  def zArrayPrivateLink(accessToken: String, dataLayerName: String, mag: String): Action[AnyContent] = Action.fox {
     implicit request =>
       ifIsAnnotationLayerOrElse(
         accessToken,
@@ -348,7 +351,7 @@ class ZarrStreamingController @Inject() (
       )
   }
 
-  def zarrJsonPrivateLink(accessToken: String, dataLayerName: String, mag: String): Action[AnyContent] = Action.async {
+  def zarrJsonPrivateLink(accessToken: String, dataLayerName: String, mag: String): Action[AnyContent] = Action.fox {
     implicit request =>
       ifIsAnnotationLayerOrElse(
         accessToken,
@@ -385,7 +388,7 @@ class ZarrStreamingController @Inject() (
       mag: String,
       zarrVersion: Int
   ): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         dataLayerMagDirectoryContents(datasetId, dataLayerName, mag, zarrVersion)
       }
@@ -419,7 +422,7 @@ class ZarrStreamingController @Inject() (
       mag: String,
       zarrVersion: Int
   ): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       ifIsAnnotationLayerOrElse(
         accessToken,
         dataLayerName,
@@ -449,7 +452,7 @@ class ZarrStreamingController @Inject() (
       datasetId: ObjectId,
       dataLayerName: String,
       zarrVersion: Int
-  ): Action[AnyContent] = Action.async { implicit request =>
+  ): Action[AnyContent] = Action.fox { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       dataLayerDirectoryContents(datasetId, dataLayerName, zarrVersion)
     }
@@ -479,7 +482,7 @@ class ZarrStreamingController @Inject() (
       dataLayerName: String,
       zarrVersion: Int
   ): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       ifIsAnnotationLayerOrElse(
         accessToken,
         dataLayerName,
@@ -502,7 +505,7 @@ class ZarrStreamingController @Inject() (
     }
 
   def requestDataSourceDirectoryContents(datasetId: ObjectId, zarrVersion: Int): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
           dataSource <- datasetCache.getById(datasetId) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND
@@ -521,7 +524,7 @@ class ZarrStreamingController @Inject() (
     }
 
   def dataSourceDirectoryContentsPrivateLink(accessToken: String, zarrVersion: Int): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       for {
         annotationSource <- remoteWebknossosClient.getAnnotationSource(accessToken)
         dataSource <- datasetCache.getById(annotationSource.datasetId) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND
@@ -545,7 +548,7 @@ class ZarrStreamingController @Inject() (
     }
 
   def requestZGroup(datasetId: ObjectId, dataLayerName: String = ""): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContextForSyncBlock(UserAccessRequest.readDataset(datasetId)) {
         Ok(zGroupJson)
       }
@@ -554,7 +557,7 @@ class ZarrStreamingController @Inject() (
   private def zGroupJson: JsValue = Json.toJson(NgffGroupHeader(zarr_format = 2))
 
   def zGroupPrivateLink(accessToken: String, dataLayerName: String): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       ifIsAnnotationLayerOrElse(
         accessToken,
         dataLayerName,

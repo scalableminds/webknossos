@@ -3,7 +3,8 @@ package controllers
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import models.aimodels.{AiInference, AiInferenceDAO, AiInferenceService, AiModel, AiModelDAO, AiModelService}
 import models.annotation.AnnotationDAO
 import models.dataset.{DataStoreDAO, DatasetDAO, DatasetService, UploadToPathsService}
@@ -117,17 +118,16 @@ class AiModelController @Inject() (
     dataStoreDAO: DataStoreDAO,
     uploadToPathsService: UploadToPathsService
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
-    extends Controller
-    with FoxImplicits {
+    extends Controller {
 
-  def readAiModelInfo(aiModelId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def readAiModelInfo(aiModelId: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       aiModel <- aiModelDAO.findOne(aiModelId) ?~> Msg.AiModel.notFound ~> NOT_FOUND
       jsResult <- aiModelService.publicWrites(aiModel, request.identity)
     } yield Ok(jsResult)
   }
 
-  def aiModelVoxelSize(aiModelId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def aiModelVoxelSize(aiModelId: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       aiModel <- aiModelDAO.findOne(aiModelId) ?~> Msg.AiModel.notFound ~> NOT_FOUND
       dataStore <- dataStoreDAO.findOneByName(aiModel._dataStore)
@@ -135,21 +135,21 @@ class AiModelController @Inject() (
     } yield Ok(Json.toJson(voxelSize))
   }
 
-  def readAiInferenceInfo(aiInferenceId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def readAiInferenceInfo(aiInferenceId: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       aiInference <- aiInferenceDAO.findOne(aiInferenceId) ?~> Msg.AiInference.notFound ~> NOT_FOUND
       jsResult <- aiInferenceService.publicWrites(aiInference, request.identity)
     } yield Ok(jsResult)
   }
 
-  def listAiModels: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def listAiModels: Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       aiModels <- aiModelDAO.findAll
       jsResults <- Fox.serialCombined(aiModels)(model => aiModelService.publicWrites(model, request.identity))
     } yield Ok(Json.toJson(jsResults))
   }
 
-  def listAiInferences: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def listAiInferences: Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       aiInferences <- aiInferenceDAO.findAll
       jsResults <- Fox.serialCombined(aiInferences)(inference =>
@@ -159,7 +159,7 @@ class AiModelController @Inject() (
   }
 
   def runNeuronTraining: Action[RunNeuronModelTrainingParameters] =
-    sil.SecuredAction.async(validateJson[RunNeuronModelTrainingParameters]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[RunNeuronModelTrainingParameters]) { implicit request =>
       for {
         organization <- organizationDAO.findOne(request.identity._organization)(using
           GlobalAccessContext
@@ -226,7 +226,7 @@ class AiModelController @Inject() (
     }
 
   def runInstanceTraining: Action[RunInstanceModelTrainingParameters] =
-    sil.SecuredAction.async(validateJson[RunInstanceModelTrainingParameters]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[RunInstanceModelTrainingParameters]) { implicit request =>
       for {
         organization <- organizationDAO.findOne(request.identity._organization)(using
           GlobalAccessContext
@@ -294,7 +294,7 @@ class AiModelController @Inject() (
     }
 
   def runInstanceModelInference: Action[RunInferenceParameters] =
-    sil.SecuredAction.async(validateJson[RunInferenceParameters]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[RunInferenceParameters]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(request.body.datasetId)
         _ <- Fox.fromBool(
@@ -357,7 +357,7 @@ class AiModelController @Inject() (
     }
 
   def runNeuronModelInference: Action[RunInferenceParameters] =
-    sil.SecuredAction.async(validateJson[RunInferenceParameters]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[RunInferenceParameters]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(request.body.datasetId)
         _ <- Fox.fromBool(
@@ -426,7 +426,7 @@ class AiModelController @Inject() (
     }
 
   def updateAiModelInfo(aiModelId: ObjectId): Action[UpdateAiModelParameters] =
-    sil.SecuredAction.async(validateJson[UpdateAiModelParameters]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[UpdateAiModelParameters]) { implicit request =>
       // Automatically add the owning organization to the shared organizations to ensure it is impossible for the owning organization to loose access..
       val sharedOrganizationIdsOpt = request.body.sharedOrganizationIds.map { sharedOrganizationIds =>
         if (!sharedOrganizationIds.contains(request.identity._organization)) {
@@ -464,7 +464,7 @@ class AiModelController @Inject() (
     }
 
   def reserveUploadToPath: Action[ReserveAiModelUploadToPathParameters] =
-    sil.SecuredAction.async(validateJson[ReserveAiModelUploadToPathParameters]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[ReserveAiModelUploadToPathParameters]) { implicit request =>
       for {
         _ <- dataStoreDAO.findOneByName(request.body.dataStoreName) ?~> Msg.DataStore.notFound
         aiModelId <- request.body.existingAiModelId match {
@@ -521,7 +521,7 @@ class AiModelController @Inject() (
   }
 
   def finishUploadToPath(id: ObjectId): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       for {
         existingAiModel <- aiModelDAO.findOne(id)
         _ <- Fox.fromBool(existingAiModel.uploadToPathIsPending) ?~> Msg.AiModel.FinishUpload.notPending
@@ -533,7 +533,7 @@ class AiModelController @Inject() (
     }
 
   def deleteAiModel(aiModelId: ObjectId): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       for {
         referencesCount <- aiInferenceDAO.countForModel(aiModelId)
         _ <- Fox.fromBool(referencesCount == 0) ?~> Msg.AiModel.Delete.referencedByInferences

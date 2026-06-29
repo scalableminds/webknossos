@@ -4,7 +4,7 @@ import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Node, SkeletonTracing, SkeletonUserStateProto}
 
-object SkeletonTracingDefaults extends ProtoGeometryImplicits {
+object SkeletonTracingDefaults extends ProtoGeometryConversions {
   private val datasetName = ""
   private val trees = Seq()
   private def createdTimestamp = System.currentTimeMillis()
@@ -23,8 +23,8 @@ object SkeletonTracingDefaults extends ProtoGeometryImplicits {
       createdTimestamp,
       boundingBox,
       activeNodeId,
-      editPosition,
-      editRotation,
+      vec3IntToProto(editPosition),
+      vec3DoubleToProto(editRotation),
       zoomLevel,
       version,
       userBoundingBox
@@ -40,7 +40,7 @@ object SkeletonTracingDefaults extends ProtoGeometryImplicits {
     )
 }
 
-object NodeDefaults extends ProtoGeometryImplicits {
+object NodeDefaults extends ProtoGeometryConversions {
   val id: Int = 0
   val rotation: Vec3Double = Vec3Double.zeros
   val position: Vec3Int = Vec3Int.zeros
@@ -52,5 +52,15 @@ object NodeDefaults extends ProtoGeometryImplicits {
   def createdTimestamp: Long = System.currentTimeMillis()
 
   def createInstance: Node =
-    Node(id, position, rotation, radius, viewport, mag, bitDepth, interpolation, createdTimestamp)
+    Node(
+      id,
+      vec3IntToProto(position),
+      vec3DoubleToProto(rotation),
+      radius,
+      viewport,
+      mag,
+      bitDepth,
+      interpolation,
+      createdTimestamp
+    )
 }

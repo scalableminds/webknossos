@@ -4,6 +4,7 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import models.aimodels.AiInferenceDAO
 import models.dataset.DatasetDAO
 import models.job.JobCommand.JobCommand
@@ -31,7 +32,7 @@ class WKRemoteWorkerController @Inject() (
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
-  def requestJobs(key: String, workerVersion: Option[String]): Action[AnyContent] = Action.async {
+  def requestJobs(key: String, workerVersion: Option[String]): Action[AnyContent] = Action.fox { _ =>
     for {
       worker <- workerDAO.findOneByKey(key) ?~> Msg.Job.workerNotFound
       _ = workerDAO.updateHeartBeat(worker._id)
@@ -88,7 +89,7 @@ class WKRemoteWorkerController @Inject() (
     lowPriorityOrEmpty ++ highPriorityOrEmpty
   }
 
-  def updateJobStatus(key: String, id: ObjectId): Action[JobStatus] = Action.async(validateJson[JobStatus]) {
+  def updateJobStatus(key: String, id: ObjectId): Action[JobStatus] = Action.fox(validateJson[JobStatus]) {
     implicit request =>
       for {
         _ <- workerDAO.findOneByKey(key) ?~> Msg.Job.workerNotFound
@@ -113,7 +114,7 @@ class WKRemoteWorkerController @Inject() (
       } yield Ok
   }
 
-  def attachVoxelyticsWorkflow(key: String, id: ObjectId): Action[String] = Action.async(validateJson[String]) {
+  def attachVoxelyticsWorkflow(key: String, id: ObjectId): Action[String] = Action.fox(validateJson[String]) {
     implicit request =>
       for {
         _ <- workerDAO.findOneByKey(key) ?~> Msg.Job.workerNotFound
@@ -131,7 +132,7 @@ class WKRemoteWorkerController @Inject() (
   }
 
   def attachDatasetToInference(key: String, id: ObjectId): Action[String] =
-    Action.async(validateJson[String]) { implicit request =>
+    Action.fox(validateJson[String]) { implicit request =>
       implicit val ctx: DBAccessContext = GlobalAccessContext
       for {
         _ <- workerDAO.findOneByKey(key) ?~> Msg.Job.workerNotFound

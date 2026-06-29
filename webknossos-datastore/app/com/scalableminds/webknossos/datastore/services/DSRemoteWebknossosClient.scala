@@ -6,7 +6,7 @@ import com.google.inject.name.Named
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.helpers.{IntervalScheduler, UPath}
@@ -78,8 +78,7 @@ class DSRemoteWebknossosClient @Inject() (
 )(implicit val ec: ExecutionContext)
     extends RemoteWebknossosClient
     with IntervalScheduler
-    with LazyLogging
-    with FoxImplicits {
+    with LazyLogging {
 
   private val dataStoreKey: String = config.Datastore.key
   private val dataStoreName: String = config.Datastore.name

@@ -3,7 +3,7 @@ package controllers
 import com.scalableminds.util.Msg
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import models.annotation.{AnnotationState, AnnotationType}
 
 import scala.collection.immutable.ListMap
@@ -26,12 +26,11 @@ class TimeController @Inject() (
     timeSpanService: TimeSpanService,
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext)
-    extends Controller
-    with FoxImplicits {
+    extends Controller {
 
   // Called by webknossos-libs client. Sums monthly. Includes exploratives
   def userLoggedTime(userId: ObjectId): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       for {
         user <- userDAO.findOne(userId) ?~> Msg.User.notFound(userId) ~> NOT_FOUND
         _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> Msg.notAllowed ~> FORBIDDEN
@@ -58,7 +57,7 @@ class TimeController @Inject() (
       annotationTypes: String,
       annotationStates: String,
       projectIds: Option[String]
-  ): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  ): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       projectIdsValidated <- ObjectId.fromCommaSeparated(projectIds)
       annotationTypesValidated <- AnnotationType.fromCommaSeparated(
@@ -89,7 +88,7 @@ class TimeController @Inject() (
       annotationStates: String,
       projectIds: Option[String]
   ): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       for {
         projectIdsValidated <- ObjectId.fromCommaSeparated(projectIds)
         annotationTypesValidated <- AnnotationType.fromCommaSeparated(
@@ -120,7 +119,7 @@ class TimeController @Inject() (
       teamIds: Option[String],
       projectIds: Option[String]
   ): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       for {
         teamIdsValidated <- ObjectId.fromCommaSeparated(teamIds) ?~> Msg.TimeTracking.invalidTeamIds
         annotationTypesValidated <- AnnotationType.fromCommaSeparated(

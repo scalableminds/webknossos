@@ -15,7 +15,7 @@ class DSSlackNotificationService @Inject() (rpc: RPC, config: DataStoreConfig) e
 
   def noticeSlowRequest(msg: String): Unit =
     slackClient.info(
-      title = s"Slow request",
+      title = "Slow request",
       msg = msg
     )
 

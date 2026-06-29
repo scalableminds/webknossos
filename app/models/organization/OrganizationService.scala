@@ -4,7 +4,8 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import com.scalableminds.util.tools.{Fox, TextUtils}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import controllers.RpcTokenHolder
@@ -32,8 +33,7 @@ class OrganizationService @Inject() (
     rpc: RPC,
     conf: WkConf
 )(implicit ec: ExecutionContext)
-    extends FoxImplicits
-    with LazyLogging {
+    extends LazyLogging {
 
   def compactWrites(organization: Organization): JsObject =
     Json.obj(

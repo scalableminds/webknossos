@@ -53,6 +53,38 @@ trait UPath {
   }
 }
 
+case class ZipEntryUPath(outerPath: UPath, innerPath: String) extends UPath {
+  override def toString: String =
+    if (innerPath.isEmpty) s"$outerPath${ZipEntryUPath.separatorRoot}"
+    else s"$outerPath${ZipEntryUPath.separatorWithPath}$innerPath"
+  override def getScheme: Option[String] = outerPath.getScheme
+  override def isAbsolute: Boolean = outerPath.isAbsolute
+  override def isRemote: Boolean = outerPath.isRemote
+  override def toLocalPath: Box[Path] = Failure(s"ZipEntryUPath cannot be accessed as a local path: $this")
+  override def toRemoteUri: Box[URI] = outerPath.toRemoteUri
+  override def toAbsolute: UPath = ZipEntryUPath(outerPath.toAbsolute, innerPath)
+  override def relativizedIn(p: UPath): UPath = this
+  override def basename: String = innerPath.split("/").filter(_.nonEmpty).lastOption.getOrElse("")
+  override def parent: UPath = {
+    val parts = innerPath.split("/").filter(_.nonEmpty)
+    if (parts.length <= 1) outerPath
+    else ZipEntryUPath(outerPath, parts.dropRight(1).mkString("/"))
+  }
+  override def /(other: String): UPath =
+    ZipEntryUPath(outerPath, s"$innerPath/$other".replaceAll("//+", "/").stripPrefix("/"))
+  override def startsWith(other: UPath): Boolean = other match {
+    case ZipEntryUPath(op, ip) => outerPath == op && innerPath.startsWith(ip)
+    case _                     => outerPath.startsWith(other)
+  }
+  private lazy val hashCodeCached = new HashCodeBuilder(23, 37).append(outerPath).append(innerPath).toHashCode
+  override def hashCode(): Int = hashCodeCached
+}
+
+object ZipEntryUPath {
+  val separatorWithPath: String = "|zip:"
+  val separatorRoot: String = "|zip"
+}
+
 object UPath {
   def separator: String = "/"
   def schemeSeparator: String = "://"
@@ -62,6 +94,26 @@ object UPath {
 
   // Warning: throws! Prefer fromString (returns Box) for user-supplied input
   def fromStringUnsafe(literal: String): UPath = {
+    // Detect "|zip:path" (entry) or "|zip" at end (root reference, inner path = "").
+    // Per spec, two or more leading slashes in the inner path are an error.
+    val withColonIdx = literal.indexOf(ZipEntryUPath.separatorWithPath)
+    val rootRefIdx =
+      if (literal.endsWith(ZipEntryUPath.separatorRoot) && withColonIdx < 0)
+        literal.length - ZipEntryUPath.separatorRoot.length
+      else -1
+    if (withColonIdx >= 0 || rootRefIdx >= 0) {
+      val (outerLiteral, innerPath) =
+        if (withColonIdx >= 0)
+          (literal.substring(0, withColonIdx),
+           literal.substring(withColonIdx + ZipEntryUPath.separatorWithPath.length))
+        else
+          (literal.substring(0, rootRefIdx), "")
+      if (innerPath.startsWith("//"))
+        throw new Exception(
+          s"Invalid zip inner path '$innerPath': multiple leading slashes are not allowed (per zip: URL spec)"
+        )
+      return ZipEntryUPath(fromStringUnsafe(outerLiteral), innerPath.stripPrefix("/"))
+    }
     val schemeOpt = if (literal.contains(schemeSeparator)) literal.split(schemeSeparator).headOption else None
     schemeOpt match {
       case None                                                    => fromLocalPath(Path.of(literal))

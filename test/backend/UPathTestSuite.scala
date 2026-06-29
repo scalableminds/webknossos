@@ -159,6 +159,49 @@ class UPathTestSuite extends AsyncWordSpec {
       // startsWith compares actual parents, not string prefix!
       checkStartsNotWith("https://example.com/pathSomewhereElse", "https://example.com/path")
     }
+
+    "parse ZipEntryUPath correctly" in {
+      val upath = UPath.fromStringUnsafe("s3://bucket/archive.zip|zip:inner/file.bin")
+      assert(upath.toString == "s3://bucket/archive.zip|zip:inner/file.bin")
+      assert(upath.isRemote)
+      assert(!upath.isLocal)
+      assert(upath.isAbsolute)
+      assert(upath.basename == "file.bin")
+      assert(upath.parent.toString == "s3://bucket/archive.zip|zip:inner")
+      assert(upath.parent.parent.toString == "s3://bucket/archive.zip")
+      assert((upath / "extra").toString == "s3://bucket/archive.zip|zip:inner/file.bin/extra")
+    }
+
+    "parse ZipEntryUPath root reference (no colon)" in {
+      val upath = UPath.fromStringUnsafe("s3://bucket/archive.zip|zip")
+      assert(upath.toString == "s3://bucket/archive.zip|zip")
+      assert(upath.isRemote)
+      assert(upath.isAbsolute)
+    }
+
+    "strip single leading slash from zip inner path" in {
+      val upath = UPath.fromStringUnsafe("s3://bucket/archive.zip|zip:/inner/file.bin")
+      assert(upath.toString == "s3://bucket/archive.zip|zip:inner/file.bin")
+    }
+
+    "reject double leading slash in zip inner path" in {
+      assert(UPath.fromString("s3://bucket/archive.zip|zip://inner/file.bin").isEmpty)
+    }
+
+    "round-trip ZipEntryUPath through JSON" in {
+      import play.api.libs.json.Json
+      val upath = UPath.fromStringUnsafe("s3://bucket/archive.zip|zip:inner/file.bin")
+      val json = Json.toJson(upath)
+      val parsed = json.as[UPath]
+      assert(parsed.toString == upath.toString)
+    }
+
+    "construct ZipEntryUPath from local outer path" in {
+      val upath = UPath.fromStringUnsafe("/local/data.zip|zip:subdir/entry.txt")
+      assert(upath.toString == "/local/data.zip|zip:subdir/entry.txt")
+      assert(upath.isLocal)
+      assert(upath.basename == "entry.txt")
+    }
   }
 
   private def checkStartsWith(pathLiteral1: String, pathLiteral2: String) =

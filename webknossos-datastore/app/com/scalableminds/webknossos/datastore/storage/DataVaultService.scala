@@ -13,11 +13,12 @@ import com.scalableminds.webknossos.datastore.datavault.{
   GoogleCloudDataVault,
   HttpsDataVault,
   S3DataVault,
-  VaultPath
+  VaultPath,
+  ZipDataVault
 }
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.helpers.{PathSchemes, UPath}
+import com.scalableminds.webknossos.datastore.helpers.{PathSchemes, UPath, ZipEntryUPath}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, LayerAttachment}
 import com.scalableminds.webknossos.datastore.services.{DSRemoteWebknossosClient, ManagedS3Service}
 import play.api.libs.ws.WSClient
@@ -39,6 +40,10 @@ class DataVaultService @Inject() (
 
   private val vaultCache: AlfuCache[CredentializedUPath, DataVault] =
     AlfuCache(maxCapacity = 100)
+
+  // Keyed by the outer (zip file) credentialized path so all entries in the same zip share a vault.
+  private val zipVaultCache: AlfuCache[CredentializedUPath, ZipDataVault] =
+    AlfuCache(maxCapacity = 20)
 
   def vaultPathFor(upath: UPath)(implicit ec: ExecutionContext): Fox[VaultPath] = {
     val credentialOpt = managedS3Service.findGlobalCredentialFor(Some(upath))
@@ -157,9 +162,22 @@ class DataVaultService @Inject() (
       config.Datastore.localDirectoryWhitelist.exists(whitelistEntry => path.toString.startsWith(whitelistEntry))
 
   def vaultPathFor(credentializedUpath: CredentializedUPath)(implicit ec: ExecutionContext): Fox[VaultPath] =
+    credentializedUpath.upath match {
+      case zipPath: ZipEntryUPath =>
+        val outerCredPath = CredentializedUPath(zipPath.outerPath, credentializedUpath.credential)
+        for {
+          zipVault <- zipVaultCache.getOrLoad(outerCredPath, createZipVault(_))
+        } yield new VaultPath(credentializedUpath.upath, zipVault)
+      case _ =>
+        for {
+          vault <- vaultCache.getOrLoad(credentializedUpath, createVault(_).toFox) ?~> Msg.DataVault.setupFailed
+        } yield new VaultPath(credentializedUpath.upath, vault)
+    }
+
+  private def createZipVault(outerCredPath: CredentializedUPath)(implicit ec: ExecutionContext): Fox[ZipDataVault] =
     for {
-      vault <- vaultCache.getOrLoad(credentializedUpath, createVault(_).toFox) ?~> Msg.DataVault.setupFailed
-    } yield new VaultPath(credentializedUpath.upath, vault)
+      outerVaultPath <- vaultPathFor(outerCredPath)
+    } yield new ZipDataVault(outerVaultPath)
 
   private def removeVaultFromCache(credentializedUpath: CredentializedUPath)(implicit ec: ExecutionContext): Fox[Unit] =
     Fox.successful(vaultCache.remove(credentializedUpath))

@@ -3,11 +3,11 @@ import features from "features";
 
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
+import { getUid } from "libs/uid_generator";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { ColorWKBlue } from "theme";
 import type { APIUser } from "types/api_types";
 import { HelpChatMarkdown } from "./help_chat_markdown";
-import { getUid } from "libs/uid_generator";
 
 const STORAGE_MESSAGES_KEY = "wk_help_chat_messages";
 const STORAGE_SESSION_KEY = "wk_help_chat_session_id";

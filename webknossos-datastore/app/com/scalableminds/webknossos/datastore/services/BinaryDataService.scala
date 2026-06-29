@@ -5,7 +5,6 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.BucketPosition
@@ -197,7 +196,7 @@ class BinaryDataService(
         val bytesArrays = l.map { case (byteArray, _) => byteArray }
         val foundIndices = l.map { case (_, index) => index }
         val notFoundIndices = List.range(0, requestsCount).diff(foundIndices)
-        (bytesArrays.appendArrays, notFoundIndices)
+        (SequenceUtils.concatArrays(bytesArrays), notFoundIndices)
       }
     }
   }

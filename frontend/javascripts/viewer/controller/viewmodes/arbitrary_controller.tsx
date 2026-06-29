@@ -60,18 +60,12 @@ type Props = {
 };
 
 class FlightModeController extends React.PureComponent<Props> {
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'arbitraryView' has no initializer and is... Remove this comment to see the full error message
-  arbitraryView: FlightModeView;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'isStarted' has no initializer and is not... Remove this comment to see the full error message
-  isStarted: boolean;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'plane' has no initializer and is not def... Remove this comment to see the full error message
-  plane: FlightModePlane;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'crosshair' has no initializer and is not... Remove this comment to see the full error message
-  crosshair: Crosshair;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'lastNodeMatrix' has no initializer and i... Remove this comment to see the full error message
-  lastNodeMatrix: Matrix4x4;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'input' has no initializer and is not def... Remove this comment to see the full error message
-  input: {
+  flightModeView!: FlightModeView;
+  isStarted!: boolean;
+  plane!: FlightModePlane;
+  crosshair!: Crosshair;
+  lastNodeMatrix!: Matrix4x4;
+  input!: {
     mouseController: InputMouse | null | undefined;
     keyboard?: InputKeyboard;
   };
@@ -98,7 +92,7 @@ class FlightModeController extends React.PureComponent<Props> {
         {
           leftClick: (pos: Point2, viewport: string, event: MouseEvent, isTouch: boolean) => {
             SkeletonToolController.onLeftClick(
-              this.arbitraryView,
+              this.flightModeView,
               pos,
               event.shiftKey,
               event.altKey,
@@ -348,7 +342,7 @@ class FlightModeController extends React.PureComponent<Props> {
           this.setClippingDistance(clippingDistanceFlight);
           this.crosshair.setScale(crosshairSize);
           this.crosshair.setVisibility(displayCrosshair);
-          this.arbitraryView.resizeThrottled();
+          this.flightModeView.resizeThrottled();
         },
       ),
       listenToStoreProperty(
@@ -369,23 +363,23 @@ class FlightModeController extends React.PureComponent<Props> {
   }
 
   start(): void {
-    this.arbitraryView = new FlightModeView();
-    this.arbitraryView.start();
+    this.flightModeView = new FlightModeView();
+    this.flightModeView.start();
     this.plane = new FlightModePlane();
     this.crosshair = new Crosshair(Store.getState().userConfiguration.crosshairSize);
     this.crosshair.setVisibility(Store.getState().userConfiguration.displayCrosshair);
     // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'FlightModePlane' is not assignabl... Remove this comment to see the full error message
-    this.arbitraryView.addGeometry(this.plane);
-    this.arbitraryView.setFlightModePlane(this.plane);
+    this.flightModeView.addGeometry(this.plane);
+    this.flightModeView.setFlightModePlane(this.plane);
     // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Crosshair' is not assignable to ... Remove this comment to see the full error message
-    this.arbitraryView.addGeometry(this.crosshair);
+    this.flightModeView.addGeometry(this.crosshair);
     this.bindToEvents();
     this.initKeyboard();
     this.initMouse();
     this.init();
     const { clippingDistance } = Store.getState().userConfiguration;
     getSceneController().setClippingDistance(clippingDistance);
-    this.arbitraryView.draw();
+    this.flightModeView.draw();
     this.isStarted = true;
     this.forceUpdate();
   }
@@ -404,7 +398,7 @@ class FlightModeController extends React.PureComponent<Props> {
       this.destroyInput();
     }
 
-    this.arbitraryView.stop();
+    this.flightModeView.stop();
     this.plane.stop();
     this.isStarted = false;
   }
@@ -450,7 +444,7 @@ class FlightModeController extends React.PureComponent<Props> {
   }
 
   setClippingDistance(value: number): void {
-    this.arbitraryView.setClippingDistance(value);
+    this.flightModeView.setClippingDistance(value);
   }
 
   pushBranch(): void {
@@ -486,11 +480,11 @@ class FlightModeController extends React.PureComponent<Props> {
   }
 
   render() {
-    if (!this.arbitraryView) {
+    if (!this.flightModeView) {
       return null;
     }
 
-    return <TDController cameras={this.arbitraryView.getCameras()} />;
+    return <TDController cameras={this.flightModeView.getCameras()} />;
   }
 }
 

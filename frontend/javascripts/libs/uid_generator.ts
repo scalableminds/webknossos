@@ -4,8 +4,8 @@ export function getUid(): string {
   }
 
   // If randomUUID is not available (e.g., only http instead of https)
-  // we fallback to this implementation. Note that this is no a safe
-  // in a cryptographic sense and should only be used for non-security
+  // we fallback to this implementation. Note that this is not a safe
+  // implementation in a cryptographic sense and should only be used for non-security
   // purposes.
   function randomHexDigit() {
     return (Math.random() * 16) | 0;

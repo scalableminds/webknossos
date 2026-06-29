@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.explore
 
 import com.scalableminds.util.geometry.Vec3Double
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.{

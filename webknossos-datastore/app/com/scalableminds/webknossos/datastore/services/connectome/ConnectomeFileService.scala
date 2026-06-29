@@ -3,7 +3,8 @@ package com.scalableminds.webknossos.datastore.services.connectome
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.tools.{Box, Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Box, Fox}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayer,
@@ -83,8 +84,7 @@ class ConnectomeFileService @Inject() (
     hdf5ConnectomeFileService: Hdf5ConnectomeFileService,
     zarrConnectomeFileService: ZarrConnectomeFileService,
     config: DataStoreConfig
-) extends FoxImplicits
-    with LazyLogging {
+) extends LazyLogging {
 
   private val connectomeFileKeyCache: AlfuCache[(DataSourceId, String, String), ConnectomeFileKey] =
     AlfuCache() // dataSourceId, layerName, connectomeFileName → ConnectomeFileKey

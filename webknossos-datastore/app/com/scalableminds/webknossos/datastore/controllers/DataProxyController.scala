@@ -4,7 +4,8 @@ import com.google.inject.Inject
 import com.scalableminds.util.Msg
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datavault.{ByteRange, Encoding}
 import com.scalableminds.webknossos.datastore.datavault.Encoding.Encoding
@@ -27,11 +28,10 @@ class DataProxyController @Inject() (
     dataVaultService: DataVaultService,
     datasetCache: DatasetCache
 )(implicit ec: ExecutionContext)
-    extends Controller
-    with FoxImplicits {
+    extends Controller {
 
   def proxyMag(datasetId: ObjectId, dataLayerName: String, mag: String, path: String): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
           _ <- validatePath(path)
@@ -62,7 +62,7 @@ class DataProxyController @Inject() (
       attachmentType: String,
       attachmentName: String,
       path: String
-  ): Action[AnyContent] = Action.async { implicit request =>
+  ): Action[AnyContent] = Action.fox { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
         _ <- validatePath(path)
@@ -81,7 +81,7 @@ class DataProxyController @Inject() (
     }
   }
 
-  def proxyDatasource(datasetId: ObjectId): Action[AnyContent] = Action.async { implicit request =>
+  def proxyDatasource(datasetId: ObjectId): Action[AnyContent] = Action.fox { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
         dataSource <- datasetCache.getById(datasetId) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND

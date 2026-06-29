@@ -6,7 +6,8 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -47,7 +48,6 @@ class TSRemoteWebknossosClient @Inject() (
     config: TracingStoreConfig,
     val lifecycle: ApplicationLifecycle
 ) extends RemoteWebknossosClient
-    with FoxImplicits
     with LazyLogging {
 
   private val tracingStoreKey: String = config.Tracingstore.key

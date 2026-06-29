@@ -4,7 +4,8 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.util.tools.{Box, Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.helpers.UPath
@@ -28,8 +29,7 @@ import scala.concurrent.ExecutionContext
 class DataSourceMirrorService @Inject() (
     config: DataStoreConfig,
     baseDirService: BaseDirService
-) extends FoxImplicits
-    with LazyLogging {
+) extends LazyLogging {
 
   private def getMirrorDir(dataSource: UsableDataSource, createIfMissing: Boolean): Box[Path] =
     for {

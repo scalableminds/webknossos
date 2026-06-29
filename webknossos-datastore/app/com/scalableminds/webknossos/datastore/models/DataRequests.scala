@@ -82,12 +82,6 @@ object RawCuboidRequest {
   implicit val jsonFormat: OFormat[RawCuboidRequest] = Json.format[RawCuboidRequest]
 }
 
-object DataRequestCollection {
-  type DataRequestCollection = List[AbstractDataRequest]
-
-  implicit def requestToCollection(request: AbstractDataRequest): DataRequestCollection = List(request)
-}
-
 case class AdditionalCoordinate(
     name: String,
     value: Int

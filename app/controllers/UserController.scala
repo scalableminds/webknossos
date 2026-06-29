@@ -3,7 +3,7 @@ package controllers
 import com.scalableminds.util.Msg
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
 import models.organization.OrganizationService
 import models.team._
@@ -57,10 +57,9 @@ class UserController @Inject() (
     conf: WkConf,
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
-    extends Controller
-    with FoxImplicits {
+    extends Controller {
 
-  def current: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def current: Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     log() {
       for {
         userJs <- userService.publicWrites(request.identity, request.identity)
@@ -69,7 +68,7 @@ class UserController @Inject() (
     }
   }
 
-  def user(userId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def user(userId: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     log() {
       for {
         user <- userDAO.findOne(userId) ?~> Msg.User.notFound(userId) ~> NOT_FOUND
@@ -85,7 +84,7 @@ class UserController @Inject() (
       pageNumber: Option[Int] = None,
       includeTotalCount: Option[Boolean] = None
   ): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       for {
         annotations <- annotationDAO.findAllListableExplorationals(
           isFinished,
@@ -113,7 +112,7 @@ class UserController @Inject() (
       limit: Option[Int],
       pageNumber: Option[Int] = None,
       includeTotalCount: Option[Boolean] = None
-  ): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  ): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       annotations <- annotationDAO.findAllFor(
         request.identity._id,
@@ -143,7 +142,7 @@ class UserController @Inject() (
       pageNumber: Option[Int] = None,
       includeTotalCount: Option[Boolean] = None
   ): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       for {
         user <- userDAO.findOne(userId) ?~> Msg.User.notFound(userId) ~> NOT_FOUND
         _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> Msg.notAllowed ~> FORBIDDEN
@@ -174,7 +173,7 @@ class UserController @Inject() (
       pageNumber: Option[Int] = None,
       includeTotalCount: Option[Boolean] = None
   ): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.fox { implicit request =>
       for {
         user <- userDAO.findOne(userId) ?~> Msg.User.notFound(userId) ~> NOT_FOUND
         _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> Msg.notAllowed ~> FORBIDDEN
@@ -207,7 +206,7 @@ class UserController @Inject() (
       isTeamManagerOrAdmin: Option[Boolean],
       // Optional filtering: If true, list only users who are admin, if false, list only users who are not admin
       isAdmin: Option[Boolean]
-  ): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  ): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       userCompactInfos <- userDAO.findAllCompactWithFilters(isEditable, isTeamManagerOrAdmin, isAdmin, request.identity)
       js <- Fox.serialCombined(userCompactInfos.sortBy(_.lastName.toLowerCase))(userService.publicWritesCompact)
@@ -318,7 +317,7 @@ class UserController @Inject() (
     } else Fox.successful(())
 
   def update(userId: ObjectId): Action[UserUpdateParameters] =
-    sil.SecuredAction.async(validateJson[UserUpdateParameters]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[UserUpdateParameters]) { implicit request =>
       for {
         user <- userDAO.findOne(userId) ?~> Msg.User.notFound(userId) ~> NOT_FOUND
         multiUser <- multiUserDAO.findOne(user._multiUser)
@@ -419,7 +418,7 @@ class UserController @Inject() (
     }
 
   def updateLastTaskTypeId(userId: ObjectId): Action[UpdateLastTaskTypeIdParameters] =
-    sil.SecuredAction.async(validateJson[UpdateLastTaskTypeIdParameters]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[UpdateLastTaskTypeIdParameters]) { implicit request =>
       for {
         user <- userDAO.findOne(userId) ?~> Msg.User.notFound(userId) ~> NOT_FOUND
         isEditable <- userService.isEditableBy(user, request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
@@ -431,7 +430,7 @@ class UserController @Inject() (
     }
 
   def updateNovelUserExperienceInfos(userId: ObjectId): Action[JsObject] =
-    sil.SecuredAction.async(validateJson[JsObject]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[JsObject]) { implicit request =>
       for {
         _ <- Fox.fromBool(request.identity._id == userId) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- multiUserDAO.updateNovelUserExperienceInfos(request.identity._multiUser, request.body)
@@ -441,7 +440,7 @@ class UserController @Inject() (
     }
 
   def updateSelectedTheme(userId: ObjectId): Action[Theme] =
-    sil.SecuredAction.async(validateJson[Theme]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[Theme]) { implicit request =>
       for {
         _ <- Fox.fromBool(request.identity._id == userId) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- multiUserDAO.updateSelectedTheme(request.identity._multiUser, request.body)

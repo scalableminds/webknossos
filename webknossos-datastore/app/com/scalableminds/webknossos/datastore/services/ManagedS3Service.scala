@@ -1,7 +1,8 @@
 package com.scalableminds.webknossos.datastore.services
 
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.tools.{Box, Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Box, Fox}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.helpers.{PathSchemes, S3UriUtils, UPath}
 import com.scalableminds.webknossos.datastore.storage.{
@@ -23,8 +24,7 @@ class ManagedS3Service @Inject() (
     baseDirService: BaseDirService,
     s3ClientPoolHolder: S3ClientPoolHolder
 )(implicit ec: ExecutionContext)
-    extends FoxImplicits
-    with LazyLogging {
+    extends LazyLogging {
 
   private val transferManagerCache: AlfuCache[(URI, S3AccessKeyCredential), S3TransferManager] =
     AlfuCache(

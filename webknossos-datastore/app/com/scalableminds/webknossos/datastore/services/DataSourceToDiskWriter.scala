@@ -2,7 +2,8 @@ package com.scalableminds.webknossos.datastore.services
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Box, Failure, Fox, FoxImplicits, Full, JsonHelper}
+import com.scalableminds.util.tools.{Box, Failure, Fox, Full, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.datasource.UsableDataSource
 import play.api.libs.json.Json
@@ -12,7 +13,7 @@ import java.nio.file.{Files, Path}
 import scala.concurrent.ExecutionContext
 import scala.io.Source
 
-trait DataSourceToDiskWriter extends DataSourceValidation with FoxImplicits {
+trait DataSourceToDiskWriter extends DataSourceValidation {
 
   private val propertiesFileName = Path.of(UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
   private val logFileName = Path.of("datasource-properties-backups.log")

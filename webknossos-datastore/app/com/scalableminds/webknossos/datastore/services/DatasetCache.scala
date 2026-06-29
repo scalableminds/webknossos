@@ -3,15 +3,15 @@ package com.scalableminds.webknossos.datastore.services
 import com.scalableminds.util.Msg
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.datasource.{StaticLayer, UsableDataSource}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
-class DatasetCache @Inject() (remoteWebknossosClient: DSRemoteWebknossosClient)(implicit ec: ExecutionContext)
-    extends FoxImplicits {
+class DatasetCache @Inject() (remoteWebknossosClient: DSRemoteWebknossosClient)(implicit ec: ExecutionContext) {
 
   lazy val cache: AlfuCache[ObjectId, UsableDataSource] = AlfuCache[ObjectId, UsableDataSource](
     timeToLive = 1 day, // Cache for a longer time, since we invalidate the cache manually

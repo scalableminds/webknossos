@@ -2,7 +2,8 @@ package com.scalableminds.webknossos.datastore.explore
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Double
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffDataset, NgffMultiscalesItem}
@@ -19,10 +20,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 
 import scala.concurrent.ExecutionContext
 
-class NgffV0_5Explorer(implicit val ec: ExecutionContext)
-    extends RemoteLayerExplorer
-    with NgffExplorationUtils
-    with FoxImplicits {
+class NgffV0_5Explorer(implicit val ec: ExecutionContext) extends RemoteLayerExplorer with NgffExplorationUtils {
 
   override def name: String = "OME NGFF Zarr v0.5"
 
@@ -40,9 +38,15 @@ class NgffV0_5Explorer(implicit val ec: ExecutionContext)
       layerLists: List[List[(StaticLayer, VoxelSize)]] <- Fox.serialCombined(groupHeader.ngffMetadata.multiscales)(
         multiscale =>
           for {
-            channelCount <- getNgffMultiscaleChannelCount(multiscale, remotePath)
+            channelCount <- getNgffMultiscaleChannelCount(multiScalesV0_5ToV0_4(multiscale), remotePath)
             channelAttributes = getChannelAttributes(groupHeader.ngffMetadata.omero)
-            layers <- layersFromNgffMultiscale(multiscale, remotePath, credentialId, channelCount, channelAttributes)
+            layers <- layersFromNgffMultiscale(
+              multiScalesV0_5ToV0_4(multiscale),
+              remotePath,
+              credentialId,
+              channelCount,
+              channelAttributes
+            )
           } yield layers
       )
       layers: List[(StaticLayer, VoxelSize)] = layerLists.flatten
@@ -159,7 +163,7 @@ class NgffV0_5Explorer(implicit val ec: ExecutionContext)
       layers: List[List[(StaticLayer, VoxelSize)]] <- Fox.serialCombined(groupHeader.ngffMetadata.multiscales)(
         multiscale =>
           layersFromNgffMultiscale(
-            multiscale.copy(name = Some(s"labels-$labelPath")),
+            multiScalesV0_5ToV0_4(multiscale.copy(name = Some(s"labels-$labelPath"))),
             fullLabelPath,
             credentialId,
             1,

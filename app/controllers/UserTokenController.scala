@@ -4,6 +4,7 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.services.AccessMode.AccessMode
 import com.scalableminds.webknossos.datastore.services.{
   AccessMode,
@@ -55,7 +56,7 @@ class UserTokenController @Inject() (
   private val bearerTokenService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
   // Generates a token that can be used for requests to a datastore. The token is valid for 1 day by default
-  def generateTokenForDataStore: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+  def generateTokenForDataStore: Action[AnyContent] = sil.UserAwareAction.fox { implicit request =>
     val tokenFox: Fox[String] = request.identity match {
       case Some(user) =>
         bearerTokenService.createAndInitDataStoreTokenForUser(user)
@@ -67,14 +68,14 @@ class UserTokenController @Inject() (
   }
 
   def validateAccessViaDatastore(name: String, key: String, token: Option[String]): Action[UserAccessRequest] =
-    Action.async(validateJson[UserAccessRequest]) { implicit request =>
+    Action.fox(validateJson[UserAccessRequest]) { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         validateUserAccess(request.body, token)
       }
     }
 
   def validateAccessViaTracingstore(name: String, key: String, token: Option[String]): Action[UserAccessRequest] =
-    Action.async(validateJson[UserAccessRequest]) { implicit request =>
+    Action.fox(validateJson[UserAccessRequest]) { implicit request =>
       tracingStoreService.validateAccess(name, key) { _ =>
         validateUserAccess(request.body, token)
       }

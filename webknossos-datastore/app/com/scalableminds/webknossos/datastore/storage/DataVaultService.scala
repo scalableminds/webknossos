@@ -3,7 +3,8 @@ package com.scalableminds.webknossos.datastore.storage
 import com.scalableminds.util.Msg
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.mvc.Formatter
-import com.scalableminds.util.tools.{Box, Failure, Fox, FoxImplicits, Full, Empty}
+import com.scalableminds.util.tools.{Box, Failure, Fox, Full, Empty}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.datavault.{
   DataVault,
@@ -33,8 +34,7 @@ class DataVaultService @Inject() (
     managedS3Service: ManagedS3Service,
     s3ClientPoolHolder: S3ClientPoolHolder
 ) extends LazyLogging
-    with Formatter
-    with FoxImplicits {
+    with Formatter {
 
   private val vaultCache: AlfuCache[CredentializedUPath, DataVault] =
     AlfuCache(maxCapacity = 100)

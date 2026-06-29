@@ -24,7 +24,7 @@ object ExtendedTypes {
       }
   }
 
-  implicit class ExtendedDouble(val d: Double) extends AnyVal {
+  implicit class ExtendedDouble(private val d: Double) extends AnyVal {
 
     /** Tests if the value is near zero
       */
@@ -38,7 +38,7 @@ object ExtendedTypes {
 
   }
 
-  implicit class ExtendedString(val s: String) extends AnyVal {
+  implicit class ExtendedString(private val s: String) extends AnyVal {
 
     def toFloatOpt: Option[Float] = StringToFloat.convert(s)
 

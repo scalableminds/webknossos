@@ -38,46 +38,70 @@ class ParsingTestSuite extends AsyncWordSpec with WKWDataFormatHelper with Volum
     "correctly parse various wkw paths" in {
       assert(
         parseWKWFilePath("a/random/path/to/32-32-16/z6/y5/x4.wkw").contains(
-          BucketPosition(4 * 32 * DataLayer.bucketLength,
-                         5 * 32 * DataLayer.bucketLength,
-                         6 * 16 * DataLayer.bucketLength,
-                         Vec3Int(32, 32, 16),
-                         None)))
+          BucketPosition(
+            4 * 32 * DataLayer.bucketLength,
+            5 * 32 * DataLayer.bucketLength,
+            6 * 16 * DataLayer.bucketLength,
+            Vec3Int(32, 32, 16),
+            None
+          )
+        )
+      )
       assert(
         parseWKWFilePath("/absolute/path/to/32-32-16/z6/y5/x4.wkw").contains(
-          BucketPosition(4 * 32 * DataLayer.bucketLength,
-                         5 * 32 * DataLayer.bucketLength,
-                         6 * 16 * DataLayer.bucketLength,
-                         Vec3Int(32, 32, 16),
-                         None)))
+          BucketPosition(
+            4 * 32 * DataLayer.bucketLength,
+            5 * 32 * DataLayer.bucketLength,
+            6 * 16 * DataLayer.bucketLength,
+            Vec3Int(32, 32, 16),
+            None
+          )
+        )
+      )
       assert(
         parseWKWFilePath("32-32-16/z6/y5/x4.wkw").contains(
-          BucketPosition(4 * 32 * DataLayer.bucketLength,
-                         5 * 32 * DataLayer.bucketLength,
-                         6 * 16 * DataLayer.bucketLength,
-                         Vec3Int(32, 32, 16),
-                         None)))
+          BucketPosition(
+            4 * 32 * DataLayer.bucketLength,
+            5 * 32 * DataLayer.bucketLength,
+            6 * 16 * DataLayer.bucketLength,
+            Vec3Int(32, 32, 16),
+            None
+          )
+        )
+      )
       assert(
         parseWKWFilePath("1/z6/y5/x4.wkw").contains(
-          BucketPosition(4 * 1 * DataLayer.bucketLength,
-                         5 * 1 * DataLayer.bucketLength,
-                         6 * 1 * DataLayer.bucketLength,
-                         Vec3Int(1, 1, 1),
-                         None)))
+          BucketPosition(
+            4 * 1 * DataLayer.bucketLength,
+            5 * 1 * DataLayer.bucketLength,
+            6 * 1 * DataLayer.bucketLength,
+            Vec3Int(1, 1, 1),
+            None
+          )
+        )
+      )
       assert(
         parseWKWFilePath("/1/z6/y5/x0.wkw").contains(
-          BucketPosition(0 * 1 * DataLayer.bucketLength,
-                         5 * 1 * DataLayer.bucketLength,
-                         6 * 1 * DataLayer.bucketLength,
-                         Vec3Int(1, 1, 1),
-                         None)))
+          BucketPosition(
+            0 * 1 * DataLayer.bucketLength,
+            5 * 1 * DataLayer.bucketLength,
+            6 * 1 * DataLayer.bucketLength,
+            Vec3Int(1, 1, 1),
+            None
+          )
+        )
+      )
       assert(
         parseWKWFilePath("some/pre.fix/to/1/z6/y5/x4.wkw").contains(
-          BucketPosition(4 * 1 * DataLayer.bucketLength,
-                         5 * 1 * DataLayer.bucketLength,
-                         6 * 1 * DataLayer.bucketLength,
-                         Vec3Int(1, 1, 1),
-                         None)))
+          BucketPosition(
+            4 * 1 * DataLayer.bucketLength,
+            5 * 1 * DataLayer.bucketLength,
+            6 * 1 * DataLayer.bucketLength,
+            Vec3Int(1, 1, 1),
+            None
+          )
+        )
+      )
     }
 
     "reject invalid wkw paths" in {
@@ -89,25 +113,31 @@ class ParsingTestSuite extends AsyncWordSpec with WKWDataFormatHelper with Volum
   }
 
   "parseZarrChunkPath" should {
-    "correctly parse a simple zarr chunk path with scalar mag" in {
+    "correctly parse a simple zarr chunk path with scalar mag" in
       assert(
         parseZarrChunkPath("1/0.4.3.6", Zarr3ArrayHeader.dummy).contains(
-          BucketPosition(4 * 1 * DataLayer.bucketLength,
-                         3 * 1 * DataLayer.bucketLength,
-                         6 * 1 * DataLayer.bucketLength,
-                         Vec3Int(1, 1, 1),
-                         None)))
-    }
+          BucketPosition(
+            4 * 1 * DataLayer.bucketLength,
+            3 * 1 * DataLayer.bucketLength,
+            6 * 1 * DataLayer.bucketLength,
+            Vec3Int(1, 1, 1),
+            None
+          )
+        )
+      )
 
-    "correctly parse a zarr chunk path with legacy c. prefix" in {
+    "correctly parse a zarr chunk path with legacy c. prefix" in
       assert(
         parseZarrChunkPath("some/prefix/2-2-1/c.0.1.2.3", Zarr3ArrayHeader.dummy).contains(
-          BucketPosition(1 * 2 * DataLayer.bucketLength,
-                         2 * 2 * DataLayer.bucketLength,
-                         3 * 1 * DataLayer.bucketLength,
-                         Vec3Int(2, 2, 1),
-                         None)))
-    }
+          BucketPosition(
+            1 * 2 * DataLayer.bucketLength,
+            2 * 2 * DataLayer.bucketLength,
+            3 * 1 * DataLayer.bucketLength,
+            Vec3Int(2, 2, 1),
+            None
+          )
+        )
+      )
 
     "refuse invalid zarr chunk paths" in {
       assert(parseZarrChunkPath("missing-mag/0.1.2.3", Zarr3ArrayHeader.dummy).isEmpty)
@@ -126,30 +156,39 @@ class ParsingTestSuite extends AsyncWordSpec with WKWDataFormatHelper with Volum
       }
     }
 
-    "correctly parse chunk coordinates with additional axes" in {
+    "correctly parse chunk coordinates with additional axes" in
       ZarrCoordinatesParser
         .parseNDimensionalDotCoordinates(
           "0.1.2.3.4.5.6.7",
           Some(
-            Seq(AdditionalAxis("a", Seq(1, 10), 1),
-                AdditionalAxis("b", Seq(1, 10), 2),
-                AdditionalAxis("c", Seq(1, 10), 3),
-                AdditionalAxis("d", Seq(1, 10), 4)))
+            Seq(
+              AdditionalAxis("a", Seq(1, 10), 1),
+              AdditionalAxis("b", Seq(1, 10), 2),
+              AdditionalAxis("c", Seq(1, 10), 3),
+              AdditionalAxis("d", Seq(1, 10), 4)
+            )
+          )
         )
         .futureBox
         .map { parsed1 =>
           assert(
             parsed1 == Full(
-              (5,
-               6,
-               7,
-               Some(
-                 List(AdditionalCoordinate("a", 1),
-                      AdditionalCoordinate("b", 2),
-                      AdditionalCoordinate("c", 3),
-                      AdditionalCoordinate("d", 4))))))
+              (
+                5,
+                6,
+                7,
+                Some(
+                  List(
+                    AdditionalCoordinate("a", 1),
+                    AdditionalCoordinate("b", 2),
+                    AdditionalCoordinate("c", 3),
+                    AdditionalCoordinate("d", 4)
+                  )
+                )
+              )
+            )
+          )
         }
-    }
 
     "reject invalid chunk coordinates" in {
       for {

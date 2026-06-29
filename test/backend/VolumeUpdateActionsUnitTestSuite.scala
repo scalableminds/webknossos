@@ -5,7 +5,7 @@ import com.scalableminds.util.image.Color
 import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing}
 import com.scalableminds.webknossos.datastore.geometry.{AdditionalCoordinateProto, Vec3IntProto}
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 import com.scalableminds.webknossos.tracingstore.tracings.MetadataEntry
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   ApplyableVolumeUpdateAction,
@@ -22,7 +22,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
 }
 import org.scalatest.wordspec.AsyncWordSpec
 
-class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryImplicits {
+class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryConversions {
 
   private def applyUpdateAction(action: ApplyableVolumeUpdateAction): VolumeTracing =
     action.applyOn(Dummies.volumeTracing)
@@ -53,16 +53,21 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryI
             "Group 2",
             groupId2,
             Seq(
-              SegmentGroup("Group 3", groupId3, Seq(SegmentGroup("Group 4", groupId4, Seq(), Some(true))), Some(true))),
-            Some(true))),
+              SegmentGroup("Group 3", groupId3, Seq(SegmentGroup("Group 4", groupId4, Seq(), Some(true))), Some(true))
+            ),
+            Some(true)
+          )
+        ),
         Some(true)
       ),
-      SegmentGroup("Group 5",
-                   groupId5,
-                   Seq(SegmentGroup("Group 6", groupId6, Seq(), Some(true)),
-                       SegmentGroup("Group 7", groupId7, Seq(), Some(true))),
-                   Some(true))
-    ))
+      SegmentGroup(
+        "Group 5",
+        groupId5,
+        Seq(SegmentGroup("Group 6", groupId6, Seq(), Some(true)), SegmentGroup("Group 7", groupId7, Seq(), Some(true))),
+        Some(true)
+      )
+    )
+  )
 
   private val segmentWithMetadata1 = Segment(
     segmentId = 1,
@@ -98,7 +103,7 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryI
     anchorPositionAdditionalCoordinates = Seq(AdditionalCoordinateProto(name = "t", value = 3)),
     groupId = None,
     metadata = Seq(
-      MetadataEntryProto(key = "someKey1", stringValue = Some("someStringValue - segment 2")),
+      MetadataEntryProto(key = "someKey1", stringValue = Some("someStringValue - segment 2"))
     )
   )
 
@@ -111,37 +116,44 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryI
       val result = action.applyOn(Dummies.volumeTracing.withSegments(Seq(segmentWithMetadata1, segmentWithMetadata2)))
 
       assert(
-        result.segments == Seq(Segment(
-          segmentId = 1,
-          name = Some("Name 1 and Name 2"),
-          metadata = Seq(
-            MetadataEntryProto(key = "someKey1-1", stringValue = Some("someStringValue - segment 1")),
-            MetadataEntryProto(key = "someKey2", stringListValue = Seq("list", "value", "segment 1")),
-            MetadataEntryProto(key = "identicalKey", stringValue = Some("identicalValue")),
-            MetadataEntryProto(key = "someKey1-2", stringValue = Some("someStringValue - segment 2")),
-            MetadataEntryProto(key = "someKey3", stringListValue = Seq("list", "value", "segment 2")),
-          ),
-          anchorPosition = Some(Vec3IntProto(1, 1, 1)),
-          groupId = Some(1),
-        )))
+        result.segments == Seq(
+          Segment(
+            segmentId = 1,
+            name = Some("Name 1 and Name 2"),
+            metadata = Seq(
+              MetadataEntryProto(key = "someKey1-1", stringValue = Some("someStringValue - segment 1")),
+              MetadataEntryProto(key = "someKey2", stringListValue = Seq("list", "value", "segment 1")),
+              MetadataEntryProto(key = "identicalKey", stringValue = Some("identicalValue")),
+              MetadataEntryProto(key = "someKey1-2", stringValue = Some("someStringValue - segment 2")),
+              MetadataEntryProto(key = "someKey3", stringListValue = Seq("list", "value", "segment 2"))
+            ),
+            anchorPosition = Some(Vec3IntProto(1, 1, 1)),
+            groupId = Some(1)
+          )
+        )
+      )
     }
 
     "should merge two segments (both segments exist, but source lacks some properties)" in {
       val action = MergeSegmentItemsVolumeAction(1, 2, 1, 2, Dummies.tracingId)
       val result = action.applyOn(
-        Dummies.volumeTracing.withSegments(Seq(segment1WithoutAdditionalProps, segment2WithAdditionalProps)))
+        Dummies.volumeTracing.withSegments(Seq(segment1WithoutAdditionalProps, segment2WithAdditionalProps))
+      )
 
       assert(
-        result.segments == Seq(Segment(
-          segmentId = 1,
-          name = Some("Segment 1 and Name 2"),
-          metadata = Seq(
-            MetadataEntryProto(key = "someKey1", stringValue = Some("someStringValue - segment 2")),
-          ),
-          anchorPosition = segment2WithAdditionalProps.anchorPosition,
-          anchorPositionAdditionalCoordinates = segment2WithAdditionalProps.anchorPositionAdditionalCoordinates,
-          groupId = segment2WithAdditionalProps.groupId,
-        )))
+        result.segments == Seq(
+          Segment(
+            segmentId = 1,
+            name = Some("Segment 1 and Name 2"),
+            metadata = Seq(
+              MetadataEntryProto(key = "someKey1", stringValue = Some("someStringValue - segment 2"))
+            ),
+            anchorPosition = segment2WithAdditionalProps.anchorPosition,
+            anchorPositionAdditionalCoordinates = segment2WithAdditionalProps.anchorPositionAdditionalCoordinates,
+            groupId = segment2WithAdditionalProps.groupId
+          )
+        )
+      )
     }
 
     "merge two segments (segment 1 doesn't exist, though)" in {
@@ -160,7 +172,8 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryI
             ),
             anchorPosition = Some(Vec3IntProto(2, 2, 2)),
             groupId = Some(2)
-          ))
+          )
+        )
       )
     }
 
@@ -237,7 +250,7 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryI
         color = None,
         groupId = None,
         creationTime = None,
-        actionTracingId = Dummies.tracingId,
+        actionTracingId = Dummies.tracingId
       )
       val result = applyUpdateAction(updateSegmentPartialAction)
 
@@ -260,7 +273,7 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryI
         color = Some(Some(Color(1.0, 1.0, 0.0, 1.0))),
         groupId = Some(Some(1)),
         creationTime = Some(Some(Dummies.timestampLong)),
-        actionTracingId = Dummies.tracingId,
+        actionTracingId = Dummies.tracingId
       )
       val result = applyUpdateAction(updateSegmentPartialAction)
 
@@ -286,10 +299,10 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryI
           upsertEntriesByKey = Seq(
             MetadataEntry(key = "testString", stringValue = Some("string")),
             MetadataEntry(key = "testNumber", numberValue = Some(6)),
-            MetadataEntry(key = "testBoolean", boolValue = Some(false)),
+            MetadataEntry(key = "testBoolean", boolValue = Some(false))
           ),
           removeEntriesByKey = Seq(),
-          actionTracingId = Dummies.tracingId,
+          actionTracingId = Dummies.tracingId
         )
 
       val result = applyUpdateAction(updateMetadataAction)
@@ -310,7 +323,7 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryI
           id = 5,
           upsertEntriesByKey = Seq(),
           removeEntriesByKey = Seq("testString", "testNumber"),
-          actionTracingId = Dummies.tracingId,
+          actionTracingId = Dummies.tracingId
         )
       val result2 = deleteMetadataAction.applyOn(result)
       assert(result2.segments.length == Dummies.volumeTracing.segments.length)
@@ -318,7 +331,8 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryI
       val segmentMetadata2 = segment2.metadata.map(MetadataEntry.fromProto)
       assert(segment.segmentId == updateMetadataAction.id)
       assert(
-        segmentMetadata2.length == updateMetadataAction.upsertEntriesByKey.length - deleteMetadataAction.removeEntriesByKey.length)
+        segmentMetadata2.length == updateMetadataAction.upsertEntriesByKey.length - deleteMetadataAction.removeEntriesByKey.length
+      )
       assert(segmentMetadata2.head == updateMetadataAction.upsertEntriesByKey(2))
 
     }
@@ -345,7 +359,9 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryI
             updatedNameTop,
             1,
             isExpanded = Some(true),
-            List(UpdateActionSegmentGroup(updatedNameNested, 3, isExpanded = Some(false), List())))),
+            List(UpdateActionSegmentGroup(updatedNameNested, 3, isExpanded = Some(false), List()))
+          )
+        ),
         actionTracingId = Dummies.tracingId
       )
       val result = applyUpdateAction(updateSegmentGroupsVolumeAction)
@@ -371,10 +387,13 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryI
       val result = applyUpdateAction(upsertGroupAction)
       assert(result.segmentGroups.length == 1)
       assert(
-        result.segmentGroups.head == SegmentGroup(initialName,
-                                                  groupId = groupId,
-                                                  children = Seq(),
-                                                  isExpanded = Some(true)))
+        result.segmentGroups.head == SegmentGroup(
+          initialName,
+          groupId = groupId,
+          children = Seq(),
+          isExpanded = Some(true)
+        )
+      )
 
     }
 
@@ -395,7 +414,8 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryI
           groupId = groupId,
           children = tracingWithSegmentGroups.segmentGroups.head.children,
           isExpanded = tracingWithSegmentGroups.segmentGroups.head.isExpanded
-        ))
+        )
+      )
     }
 
     "reparent a segment group recursively correctly to root" in {
@@ -416,11 +436,15 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryI
           Seq(SegmentGroup("Group 2", groupId2, Seq(), Some(true))),
           Some(true)
         ),
-        SegmentGroup("Group 5",
-                     groupId5,
-                     Seq(SegmentGroup("Group 6", groupId6, Seq(), Some(true)),
-                         SegmentGroup("Group 7", groupId7, Seq(), Some(true))),
-                     Some(true)),
+        SegmentGroup(
+          "Group 5",
+          groupId5,
+          Seq(
+            SegmentGroup("Group 6", groupId6, Seq(), Some(true)),
+            SegmentGroup("Group 7", groupId7, Seq(), Some(true))
+          ),
+          Some(true)
+        ),
         SegmentGroup("Group 3", groupId3, Seq(SegmentGroup("Group 4", groupId4, Seq(), Some(true))), Some(true))
       )
       assert(result.segmentGroups == expectedGroupsAfterReparenting)
@@ -443,16 +467,21 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryI
           Seq(),
           Some(true)
         ),
-        SegmentGroup("Group 5",
-                     groupId5,
-                     Seq(SegmentGroup("Group 6", groupId6, Seq(), Some(true)),
-                         SegmentGroup("Group 7", groupId7, Seq(), Some(true))),
-                     Some(true)),
+        SegmentGroup(
+          "Group 5",
+          groupId5,
+          Seq(
+            SegmentGroup("Group 6", groupId6, Seq(), Some(true)),
+            SegmentGroup("Group 7", groupId7, Seq(), Some(true))
+          ),
+          Some(true)
+        ),
         SegmentGroup(
           "Group 2",
           groupId2,
           Seq(SegmentGroup("Group 3", groupId3, Seq(SegmentGroup("Group 4", groupId4, Seq(), Some(true))), Some(true))),
-          Some(true))
+          Some(true)
+        )
       )
       assert(result.segmentGroups == expectedGroupsAfterReparenting)
 
@@ -472,15 +501,21 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryI
         SegmentGroup(
           "Group 1",
           groupId1,
-          Seq(SegmentGroup("Group 2", groupId2, Seq(), Some(true)),
-              SegmentGroup("Group 3", groupId3, Seq(SegmentGroup("Group 4", groupId4, Seq(), Some(true))), Some(true))),
+          Seq(
+            SegmentGroup("Group 2", groupId2, Seq(), Some(true)),
+            SegmentGroup("Group 3", groupId3, Seq(SegmentGroup("Group 4", groupId4, Seq(), Some(true))), Some(true))
+          ),
           Some(true)
         ),
-        SegmentGroup("Group 5",
-                     groupId5,
-                     Seq(SegmentGroup("Group 6", groupId6, Seq(), Some(true)),
-                         SegmentGroup("Group 7", groupId7, Seq(), Some(true))),
-                     Some(true))
+        SegmentGroup(
+          "Group 5",
+          groupId5,
+          Seq(
+            SegmentGroup("Group 6", groupId6, Seq(), Some(true)),
+            SegmentGroup("Group 7", groupId7, Seq(), Some(true))
+          ),
+          Some(true)
+        )
       )
       assert(result.segmentGroups == expectedGroupsAfterReparenting)
     }
@@ -503,25 +538,36 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryI
             SegmentGroup(
               "Group 2",
               groupId2,
-              Seq(SegmentGroup(
-                "Group 3",
-                groupId3,
-                Seq(SegmentGroup(
-                  "Group 4",
-                  groupId4,
-                  Seq(SegmentGroup("Group 5",
-                                   groupId5,
-                                   Seq(SegmentGroup("Group 6", groupId6, Seq(), Some(true)),
-                                       SegmentGroup("Group 7", groupId7, Seq(), Some(true))),
-                                   Some(true))),
+              Seq(
+                SegmentGroup(
+                  "Group 3",
+                  groupId3,
+                  Seq(
+                    SegmentGroup(
+                      "Group 4",
+                      groupId4,
+                      Seq(
+                        SegmentGroup(
+                          "Group 5",
+                          groupId5,
+                          Seq(
+                            SegmentGroup("Group 6", groupId6, Seq(), Some(true)),
+                            SegmentGroup("Group 7", groupId7, Seq(), Some(true))
+                          ),
+                          Some(true)
+                        )
+                      ),
+                      Some(true)
+                    )
+                  ),
                   Some(true)
-                )),
-                Some(true)
-              )),
+                )
+              ),
               Some(true)
-            )),
+            )
+          ),
           Some(true)
-        ),
+        )
       )
       assert(result.segmentGroups == expectedGroupsAfterReparenting)
     }
@@ -545,15 +591,22 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryI
               "Group 2",
               groupId2,
               Seq(
-                SegmentGroup(newName, groupId3, Seq(SegmentGroup("Group 4", groupId4, Seq(), Some(true))), Some(true))),
-              Some(true))),
+                SegmentGroup(newName, groupId3, Seq(SegmentGroup("Group 4", groupId4, Seq(), Some(true))), Some(true))
+              ),
+              Some(true)
+            )
+          ),
           Some(true)
         ),
-        SegmentGroup("Group 5",
-                     groupId5,
-                     Seq(SegmentGroup("Group 6", groupId6, Seq(), Some(true)),
-                         SegmentGroup("Group 7", groupId7, Seq(), Some(true))),
-                     Some(true))
+        SegmentGroup(
+          "Group 5",
+          groupId5,
+          Seq(
+            SegmentGroup("Group 6", groupId6, Seq(), Some(true)),
+            SegmentGroup("Group 7", groupId7, Seq(), Some(true))
+          ),
+          Some(true)
+        )
       )
       assert(result.segmentGroups == expectedGroupsAfterRenaming)
     }
@@ -573,21 +626,23 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryI
           "Group 1",
           groupId1,
           Seq(
-            SegmentGroup("Group 2",
-                         groupId2,
-                         Seq(
-                           SegmentGroup("Group 3",
-                                        groupId3,
-                                        Seq(SegmentGroup("Group 4", groupId4, Seq(), Some(true))),
-                                        Some(true))),
-                         Some(true))),
+            SegmentGroup(
+              "Group 2",
+              groupId2,
+              Seq(
+                SegmentGroup("Group 3", groupId3, Seq(SegmentGroup("Group 4", groupId4, Seq(), Some(true))), Some(true))
+              ),
+              Some(true)
+            )
+          ),
           Some(true)
         ),
-        SegmentGroup("Group 5",
-                     groupId5,
-                     Seq(SegmentGroup(newName, groupId6, Seq(), Some(true)),
-                         SegmentGroup("Group 7", groupId7, Seq(), Some(true))),
-                     Some(true))
+        SegmentGroup(
+          "Group 5",
+          groupId5,
+          Seq(SegmentGroup(newName, groupId6, Seq(), Some(true)), SegmentGroup("Group 7", groupId7, Seq(), Some(true))),
+          Some(true)
+        )
       )
       assert(result2.segmentGroups == expectedGroupsAfterRenaming)
     }
@@ -601,11 +656,15 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryI
       )
       val result = deleteGroup1Action.applyOn(tracingWithSegmentGroups)
       val expectedGroupsAfterDeletion = Seq(
-        SegmentGroup("Group 5",
-                     groupId5,
-                     Seq(SegmentGroup("Group 6", groupId6, Seq(), Some(true)),
-                         SegmentGroup("Group 7", groupId7, Seq(), Some(true))),
-                     Some(true))
+        SegmentGroup(
+          "Group 5",
+          groupId5,
+          Seq(
+            SegmentGroup("Group 6", groupId6, Seq(), Some(true)),
+            SegmentGroup("Group 7", groupId7, Seq(), Some(true))
+          ),
+          Some(true)
+        )
       )
       assert(result.segmentGroups == expectedGroupsAfterDeletion)
     }
@@ -622,11 +681,15 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryI
           Seq(),
           Some(true)
         ),
-        SegmentGroup("Group 5",
-                     groupId5,
-                     Seq(SegmentGroup("Group 6", groupId6, Seq(), Some(true)),
-                         SegmentGroup("Group 7", groupId7, Seq(), Some(true))),
-                     Some(true))
+        SegmentGroup(
+          "Group 5",
+          groupId5,
+          Seq(
+            SegmentGroup("Group 6", groupId6, Seq(), Some(true)),
+            SegmentGroup("Group 7", groupId7, Seq(), Some(true))
+          ),
+          Some(true)
+        )
       )
       assert(result.segmentGroups == expectedGroupsAfterDeletion)
     }
@@ -643,11 +706,15 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryI
           Seq(SegmentGroup("Group 2", groupId2, Seq(), Some(true))),
           Some(true)
         ),
-        SegmentGroup("Group 5",
-                     groupId5,
-                     Seq(SegmentGroup("Group 6", groupId6, Seq(), Some(true)),
-                         SegmentGroup("Group 7", groupId7, Seq(), Some(true))),
-                     Some(true))
+        SegmentGroup(
+          "Group 5",
+          groupId5,
+          Seq(
+            SegmentGroup("Group 6", groupId6, Seq(), Some(true)),
+            SegmentGroup("Group 7", groupId7, Seq(), Some(true))
+          ),
+          Some(true)
+        )
       )
       assert(result.segmentGroups == expectedGroupsAfterDeletion)
     }

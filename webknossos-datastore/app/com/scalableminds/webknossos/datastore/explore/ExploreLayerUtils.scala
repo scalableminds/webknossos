@@ -1,7 +1,8 @@
 package com.scalableminds.webknossos.datastore.explore
 
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedHeader
 import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffGroupHeader, NgffMetadata, ZarrHeader}
@@ -16,7 +17,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 import scala.concurrent.ExecutionContext
 import scala.util.Try
 
-trait ExploreLayerUtils extends FoxImplicits {
+trait ExploreLayerUtils {
 
   protected def adaptLayersAndVoxelSize(
       layersWithVoxelSizes: List[(StaticLayer, VoxelSize)],

@@ -5,6 +5,7 @@ import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessCo
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
@@ -69,7 +70,7 @@ class WKRemoteDataStoreController @Inject() (
     wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
   def reserveDatasetUpload(name: String, key: String, token: String): Action[DatasetUploadInfo] =
-    Action.async(validateJson[DatasetUploadInfo]) { implicit request =>
+    Action.fox(validateJson[DatasetUploadInfo]) { implicit request =>
       dataStoreService.validateAccess(name, key) { dataStore =>
         val uploadInfo = request.body
         for {
@@ -112,7 +113,7 @@ class WKRemoteDataStoreController @Inject() (
     }
 
   def reserveMagUpload(name: String, key: String, token: String): Action[MagUploadInfo] =
-    Action.async(validateJson[MagUploadInfo]) { implicit request =>
+    Action.fox(validateJson[MagUploadInfo]) { implicit request =>
       dataStoreService.validateAccess(name, key) { dataStore =>
         // DS write access was asserted already at this point.
         for {
@@ -144,7 +145,7 @@ class WKRemoteDataStoreController @Inject() (
     }
 
   def reserveAttachmentUpload(name: String, key: String, token: String): Action[AttachmentUploadInfo] =
-    Action.async(validateJson[AttachmentUploadInfo]) { implicit request =>
+    Action.fox(validateJson[AttachmentUploadInfo]) { implicit request =>
       dataStoreService.validateAccess(name, key) { dataStore =>
         // DS write access was asserted already at this point.
         for {
@@ -189,7 +190,7 @@ class WKRemoteDataStoreController @Inject() (
       token: String,
       organizationId: String
   ): Action[AnyContent] =
-    Action.async { _ =>
+    Action.fox { _ =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
           user <- bearerTokenService.userForToken(token) ~> FORBIDDEN
@@ -221,7 +222,7 @@ class WKRemoteDataStoreController @Inject() (
       token: String,
       datasetId: ObjectId
   ): Action[ReportDatasetUploadParameters] =
-    Action.async(validateJson[ReportDatasetUploadParameters]) { implicit request =>
+    Action.fox(validateJson[ReportDatasetUploadParameters]) { implicit request =>
       implicit val ctx: DBAccessContext = GlobalAccessContext
       dataStoreService.validateAccess(name, key) { _ =>
         for {
@@ -271,7 +272,7 @@ class WKRemoteDataStoreController @Inject() (
     }
 
   def reportMagUpload(name: String, key: String): Action[ReportMagUploadParameters] =
-    Action.async(validateJson[ReportMagUploadParameters]) { implicit request =>
+    Action.fox(validateJson[ReportMagUploadParameters]) { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
           dataset <- datasetDAO.findOne(request.body.datasetId)(using GlobalAccessContext) ?~> Msg.Dataset.notFound(
@@ -292,7 +293,7 @@ class WKRemoteDataStoreController @Inject() (
     }
 
   def reportAttachmentUpload(name: String, key: String): Action[ReportAttachmentUploadParameters] =
-    Action.async(validateJson[ReportAttachmentUploadParameters]) { implicit request =>
+    Action.fox(validateJson[ReportAttachmentUploadParameters]) { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
           dataset <- datasetDAO.findOne(request.body.datasetId)(using GlobalAccessContext) ?~> Msg.Dataset.notFound(
@@ -317,7 +318,7 @@ class WKRemoteDataStoreController @Inject() (
       }
     }
 
-  def statusUpdate(name: String, key: String): Action[DataStoreStatus] = Action.async(validateJson[DataStoreStatus]) {
+  def statusUpdate(name: String, key: String): Action[DataStoreStatus] = Action.fox(validateJson[DataStoreStatus]) {
     implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         val okLabel = if (request.body.ok) "ok" else "not ok"
@@ -329,7 +330,7 @@ class WKRemoteDataStoreController @Inject() (
   }
 
   def updateAll(name: String, key: String, organizationId: Option[String]): Action[List[DataSourceWithRootPathInfo]] =
-    Action.async(validateJson[List[DataSourceWithRootPathInfo]]) { implicit request =>
+    Action.fox(validateJson[List[DataSourceWithRootPathInfo]]) { implicit request =>
       dataStoreService.validateAccess(name, key) { dataStore =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
         val dataSourcesWithPathInfo = request.body
@@ -353,7 +354,7 @@ class WKRemoteDataStoreController @Inject() (
     }
 
   def updateOne(name: String, key: String): Action[DataSource] =
-    Action.async(validateJson[DataSource]) { implicit request =>
+    Action.fox(validateJson[DataSource]) { implicit request =>
       dataStoreService.validateAccess(name, key) { dataStore =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
         for {
@@ -364,7 +365,7 @@ class WKRemoteDataStoreController @Inject() (
     }
 
   def updateRealPaths(name: String, key: String): Action[List[DataSourcePathInfo]] =
-    Action.async(validateJson[List[DataSourcePathInfo]]) { implicit request =>
+    Action.fox(validateJson[List[DataSourcePathInfo]]) { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
           _ <- datasetService.updateRealPaths(request.body)(using GlobalAccessContext)
@@ -374,7 +375,7 @@ class WKRemoteDataStoreController @Inject() (
 
   /** Called by the datastore after a dataset has been deleted on disk.
     */
-  def deleteDataset(name: String, key: String): Action[ObjectId] = Action.async(validateJson[ObjectId]) {
+  def deleteDataset(name: String, key: String): Action[ObjectId] = Action.fox(validateJson[ObjectId]) {
     implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
@@ -389,7 +390,7 @@ class WKRemoteDataStoreController @Inject() (
       datasetDirectoryName: String,
       organizationId: String
   ): Action[AnyContent] =
-    Action.async { _ =>
+    Action.fox { _ =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
           organization <- organizationDAO.findOne(organizationId)(using GlobalAccessContext) ?~> Msg.Organization
@@ -402,7 +403,7 @@ class WKRemoteDataStoreController @Inject() (
     }
 
   def findDatasetLocalRootPath(name: String, key: String, datasetId: ObjectId): Action[AnyContent] =
-    Action.async { _ =>
+    Action.fox { _ =>
       dataStoreService.validateAccess(name, key) { dataStore =>
         for {
           dataset <- datasetDAO.findOne(datasetId)(using GlobalAccessContext) ?~> Msg.Dataset.notFound(datasetId)
@@ -413,7 +414,7 @@ class WKRemoteDataStoreController @Inject() (
     }
 
   def getDataSource(name: String, key: String, datasetId: ObjectId): Action[AnyContent] =
-    Action.async { _ =>
+    Action.fox { _ =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
           dataset <- datasetDAO.findOne(datasetId)(using GlobalAccessContext) ?~> Msg.Dataset.notFound(
@@ -425,7 +426,7 @@ class WKRemoteDataStoreController @Inject() (
     }
 
   def updateDataSource(name: String, key: String, datasetId: ObjectId): Action[DataSource] =
-    Action.async(validateJson[DataSource]) { implicit request =>
+    Action.fox(validateJson[DataSource]) { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
           dataset <- datasetDAO.findOne(datasetId)(using GlobalAccessContext) ?~> Msg.Dataset.notFound(
@@ -444,7 +445,7 @@ class WKRemoteDataStoreController @Inject() (
       }
     }
 
-  def jobExportProperties(name: String, key: String, jobId: ObjectId): Action[AnyContent] = Action.async { _ =>
+  def jobExportProperties(name: String, key: String, jobId: ObjectId): Action[AnyContent] = Action.fox { _ =>
     dataStoreService.validateAccess(name, key) { _ =>
       for {
         job <- jobDAO.findOne(jobId)(using GlobalAccessContext)
@@ -457,7 +458,7 @@ class WKRemoteDataStoreController @Inject() (
     }
   }
 
-  def findCredential(name: String, key: String, credentialId: ObjectId): Action[AnyContent] = Action.async { _ =>
+  def findCredential(name: String, key: String, credentialId: ObjectId): Action[AnyContent] = Action.fox { _ =>
     dataStoreService.validateAccess(name, key) { _ =>
       for {
         credential <- credentialDAO.findOne(credentialId)

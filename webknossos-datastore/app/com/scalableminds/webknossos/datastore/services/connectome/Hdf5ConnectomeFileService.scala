@@ -3,7 +3,8 @@ package com.scalableminds.webknossos.datastore.services.connectome
 import com.scalableminds.util.Msg
 import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.services.connectome.SynapticPartnerDirection.SynapticPartnerDirection
 import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache}
@@ -11,7 +12,7 @@ import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileC
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class Hdf5ConnectomeFileService @Inject() () extends FoxImplicits with ConnectomeFileUtils {
+class Hdf5ConnectomeFileService @Inject() () extends ConnectomeFileUtils {
 
   private lazy val fileHandleCache = new Hdf5FileCache(30)
 

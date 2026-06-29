@@ -6,7 +6,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
-import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, ProtoGeometryImplicits, SegmentStatistics}
+import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, ProtoGeometryConversions, SegmentStatistics}
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, WebknossosDataRequest}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
@@ -22,7 +22,7 @@ class VolumeSegmentStatisticsService @Inject() (
     annotationService: TSAnnotationService,
     volumeSegmentIndexService: VolumeSegmentIndexService,
     editableMappingService: EditableMappingService
-) extends ProtoGeometryImplicits
+) extends ProtoGeometryConversions
     with LazyLogging
     with SegmentStatistics {
 

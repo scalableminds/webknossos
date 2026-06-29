@@ -13,6 +13,7 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.*
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
@@ -177,7 +178,6 @@ class UploadService @Inject() (
     @Named("webknossos-datastore") actorSystem: ActorSystem
 )(implicit ec: ExecutionContext)
     extends DirectoryConstants
-    with FoxImplicits
     with WKWDataFormatHelper
     with LazyLogging {
 
@@ -398,7 +398,7 @@ class UploadService @Inject() (
       if (knownUpload) {
         logger.info(f"Cancelling ${uploadFullName(uploadDomain, uploadId, datasetId, dataSourceId)}...")
         cleanUpUploaded(uploadId, reason = "Cancelled by user", uploadDomain)
-      } else Fox.failure(s"Unknown upload")
+      } else Fox.failure("Unknown upload")
   }
 
   private def uploadFullName(

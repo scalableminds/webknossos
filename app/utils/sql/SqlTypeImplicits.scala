@@ -6,6 +6,7 @@ import play.api.libs.json.JsValue
 import slick.jdbc.{GetResult, PositionedResult}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.datastore.helpers.UPath
+import scala.language.implicitConversions
 
 import scala.concurrent.duration.FiniteDuration
 

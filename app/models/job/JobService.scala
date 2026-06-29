@@ -7,7 +7,8 @@ import com.scalableminds.webknossos.datastore.models.VoxelSize
 import models.dataset.{Dataset, DatasetDAO}
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.typesafe.scalalogging.LazyLogging
 import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
 import models.analytics.{AnalyticsService, FailedJobEvent, RunJobEvent}
@@ -42,8 +43,7 @@ class JobService @Inject() (
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
     slackNotificationService: SlackNotificationService
 )(implicit ec: ExecutionContext)
-    extends FoxImplicits
-    with LazyLogging
+    extends LazyLogging
     with Formatter {
 
   private val ONE_GIGAVOXEL = math.pow(10, 9)

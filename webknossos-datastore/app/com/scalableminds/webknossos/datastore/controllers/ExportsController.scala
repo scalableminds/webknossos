@@ -4,7 +4,8 @@ import java.nio.file.{Files, Path}
 import com.google.inject.Inject
 import com.scalableminds.util.Msg
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.services.{
   BaseDirService,
   DSRemoteWebknossosClient,
@@ -31,12 +32,11 @@ class ExportsController @Inject() (
     accessTokenService: DataStoreAccessTokenService,
     baseDirService: BaseDirService
 )(implicit ec: ExecutionContext)
-    extends Controller
-    with FoxImplicits {
+    extends Controller {
 
   override def allowRemoteOrigin: Boolean = true
 
-  def download(jobId: ObjectId): Action[AnyContent] = Action.async { implicit request =>
+  def download(jobId: ObjectId): Action[AnyContent] = Action.fox { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.downloadJobExport(jobId)) {
       for {
         exportProperties <- webknossosClient.getJobExportProperties(jobId)

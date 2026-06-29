@@ -32,7 +32,7 @@ object Box extends Tryo {
 
   /** Helper class to provide an easy way for converting a `List[Box[T]]` into a `Box[List[T]]`.
     */
-  implicit class ListOfBoxes[T](val theListOfBoxes: List[Box[T]]) extends AnyVal {
+  implicit class ListOfBoxes[T](private val theListOfBoxes: List[Box[T]]) extends AnyVal {
 
     /** Convert a `List` of `Box`es into a single `Box` containing a `List[T]`, where `T` is the parameterized type of
       * the `Box`es.
@@ -70,7 +70,7 @@ object Box extends Tryo {
           theListOfBoxes
         )
       } else {
-        Full(theListOfBoxes.flatten)
+        Full(theListOfBoxes.flatMap(_.toOption))
       }
   }
 
@@ -135,15 +135,7 @@ object Box extends Tryo {
     *   A `Full` containing the transformed value if `pf.isDefinedAt(value)` and `Empty` otherwise.
     */
   def apply[InType, OutType](value: InType)(pf: PartialFunction[InType, OutType]): Box[OutType] =
-    pf.andThen(Full.apply(_)).applyOrElse(value, (_: InType) => Empty)
-
-  /** This implicit transformation allows one to use a `Box` as an `Iterable` of zero or one elements.
-    *
-    * @return
-    *   A single-element `List` with the contents if the box is `Full` and `[[scala.collection.immutable.Nil Nil]]`
-    *   otherwise.
-    */
-  implicit def box2Iterable[T](in: Box[T]): Iterable[T] = in.toList
+    pf.andThen(Full.apply).applyOrElse(value, (_: InType) => Empty)
 
   /** This method allows one to encapsulate any object in a Box in a null-safe manner, converting `null` values to
     * `Empty`.
@@ -249,7 +241,7 @@ object Box extends Tryo {
   *    (loggedInUser === mockUser) must beTrue
   *     }}}
   */
-sealed abstract class Box[+A] extends Product with Serializable {
+sealed abstract class Box[+A] extends IterableOnce[A] with Product with Serializable {
   self =>
 
   /** Returns `true` if this `Box` contains no value (i.e., it is `Empty` or `Failure` or `ParamFailure`).
@@ -780,7 +772,7 @@ final class ParamFailure[T](
     val param: T
 ) extends Failure(msg, exception, chain)
     with Serializable {
-  override def toString(): String =
+  override def toString: String =
     "ParamFailure(" + msg + ", " + exception +
       ", " + chain + ", " + param + ")"
 

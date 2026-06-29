@@ -7,7 +7,8 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, SegmentationLayer, UsableDataSource}
 import com.scalableminds.webknossos.datastore.models.requests.Cuboid
@@ -49,7 +50,6 @@ class DSFullMeshService @Inject() (
     adHocMeshServiceHolder: AdHocMeshServiceHolder
 ) extends LazyLogging
     with FullMeshHelper
-    with FoxImplicits
     with MeshMappingHelper {
 
   val binaryDataService: BinaryDataService = binaryDataServiceHolder.binaryDataService

@@ -2,14 +2,15 @@ package com.scalableminds.webknossos.datastore.services.segmentindex
 
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class Hdf5SegmentIndexFileService @Inject() () extends FoxImplicits with SegmentIndexFileUtils {
+class Hdf5SegmentIndexFileService @Inject() () extends SegmentIndexFileUtils {
 
   private lazy val fileHandleCache = new Hdf5FileCache(100)
 

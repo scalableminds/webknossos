@@ -3,7 +3,8 @@ package models.annotation
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
 import com.scalableminds.webknossos.schema.Tables.{
   AnnotationLayersRow,
@@ -52,7 +53,7 @@ case class Annotation(
     created: Instant = Instant.now,
     modified: Instant = Instant.now,
     isDeleted: Boolean = false
-) extends FoxImplicits {
+) {
 
   def nameOpt: Option[String] = if (name.isEmpty) None else Some(name)
 

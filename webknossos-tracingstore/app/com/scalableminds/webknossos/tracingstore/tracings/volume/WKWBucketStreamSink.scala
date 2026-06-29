@@ -5,7 +5,8 @@ import com.scalableminds.util.io.{NamedFunctionStream, NamedStream}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{ChunkType, WKWDataFormatHelper, WKWFile, WKWHeader}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
-import com.scalableminds.util.tools.{ByteUtils, Fox, FoxImplicits}
+import com.scalableminds.util.tools.{ByteUtils, Fox}
+import com.scalableminds.util.tools.Fox.toFox
 
 import java.io.DataOutputStream
 import scala.concurrent.ExecutionContext
@@ -13,7 +14,6 @@ import scala.concurrent.ExecutionContext
 class WKWBucketStreamSink(val layer: DataLayer, tracingHasFallbackLayer: Boolean)
     extends WKWDataFormatHelper
     with ReversionHelper
-    with FoxImplicits
     with ByteUtils {
 
   def apply(bucketStream: Iterator[(BucketPosition, Array[Byte])], mags: Seq[Vec3Int])(implicit

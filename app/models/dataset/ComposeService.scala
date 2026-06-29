@@ -4,7 +4,8 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.explore.ExploreLayerUtils
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType.LayerAttachmentType
@@ -64,8 +65,7 @@ object ComposeAddAttachmentRequest {
 
 class ComposeService @Inject() (datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDAO, datasetService: DatasetService)(
     implicit ec: ExecutionContext
-) extends ExploreLayerUtils
-    with FoxImplicits {
+) extends ExploreLayerUtils {
 
   def composeDataset(composeRequest: ComposeRequest, user: User)(using
       ctx: DBAccessContext

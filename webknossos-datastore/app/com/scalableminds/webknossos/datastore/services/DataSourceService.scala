@@ -263,7 +263,7 @@ class DataSourceService @Inject() (
           val rootPaths = dataSources.flatMap(_.rootPath).mkString(", ")
           logger.warn(
             s"Found ${dataSources.length} datasets with conflicting id $dataSourceId at root paths: $rootPaths. " +
-              s"Using the first one and ignoring the others."
+              "Using the first one and ignoring the others."
           )
         case _ => ()
       }

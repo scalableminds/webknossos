@@ -15,7 +15,7 @@ export type RecommendedConfiguration = Partial<
 
 export const settings: Partial<Record<keyof RecommendedConfiguration, string>> = {
   clippingDistance: "Clipping Distance",
-  clipSkeletonToCurrentSection: "Only Show Skeleton on Current Section",
+  clipSkeletonToCurrentSection: "Only Show Nodes of Current Section",
   displayCrosshair: "Show Crosshairs",
   displayScalebars: "Show Scalebars",
   dynamicSpaceDirection: "d/f-Switching",

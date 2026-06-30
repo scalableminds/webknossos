@@ -37,7 +37,7 @@ class DataSourceMirrorService @Inject() (
   def writeMirror(dataSource: UsableDataSource, datasetId: ObjectId)(implicit
       ec: ExecutionContext
   ): Fox[Option[String]] =
-    if (dataSource.allExplicitPaths.forall(_.isLocal)) {
+    if (dataSource.allExplicitPaths.forall(p => p.isLocal && !p.toZipEntryUPath.isDefined)) {
       val mirrorDir = getMirrorDir(dataSource)
       val tempMirrorDir = mirrorDir.resolveSibling(mirrorDir.getFileName.toString + ".new")
       logger.info(s"Writing dataset mirror for $datasetId at $mirrorDir...")

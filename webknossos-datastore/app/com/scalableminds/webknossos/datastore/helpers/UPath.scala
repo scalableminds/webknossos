@@ -28,6 +28,8 @@ trait UPath {
 
   def toAbsolute: UPath
 
+  def toReal: Box[UPath]
+
   def toLocalPath: Box[Path]
 
   def isAbsolute: Boolean
@@ -70,6 +72,7 @@ case class ZipEntryUPath(outerPath: UPath, innerPath: String) extends UPath {
   override def toRemoteUri: Box[URI] = outerPath.toRemoteUri
   override def toZipEntryUPath: Box[ZipEntryUPath] = Full(this)
   override def toAbsolute: UPath = ZipEntryUPath(outerPath.toAbsolute, innerPath)
+  override def toReal: Box[UPath] = outerPath.toReal.map(ZipEntryUPath(_, innerPath))
   override def relativizedIn(p: UPath): UPath = this
   override def basename: String = innerPath.split("/").filter(_.nonEmpty).lastOption.getOrElse("")
   override def parent: UPath = {
@@ -80,7 +83,7 @@ case class ZipEntryUPath(outerPath: UPath, innerPath: String) extends UPath {
   override def /(other: String): UPath =
     ZipEntryUPath(outerPath, s"$innerPath/$other".replaceAll("//+", "/").stripPrefix("/"))
   override def startsWith(other: UPath): Boolean = other match {
-    case ZipEntryUPath(op, ip) => outerPath == op && innerPath.startsWith(ip)
+    case ZipEntryUPath(op, ip) => outerPath == op && (ip.isEmpty || innerPath == ip || innerPath.startsWith(ip + "/"))
     case _                     => outerPath.startsWith(other)
   }
   private lazy val hashCodeCached = new HashCodeBuilder(23, 37).append(outerPath).append(innerPath).toHashCode
@@ -101,6 +104,7 @@ object UPath {
 
   // Warning: throws! Prefer fromString (returns Box) for user-supplied input
   def fromStringUnsafe(literal: String): UPath = {
+    // TODO simplify or extract
     // Detect "|zip:path" (entry) or "|zip" at end (root reference, inner path = "").
     // Per spec, two or more leading slashes in the inner path are an error.
     val withColonIdx = literal.indexOf(ZipEntryUPath.separatorWithPath)
@@ -118,23 +122,24 @@ object UPath {
         throw new Exception(
           s"Invalid zip inner path '$innerPath': multiple leading slashes are not allowed (per zip: URL spec)"
         )
-      return ZipEntryUPath(fromStringUnsafe(outerLiteral), innerPath.stripPrefix("/"))
-    }
-    val schemeOpt = if (literal.contains(schemeSeparator)) literal.split(schemeSeparator).headOption else None
-    schemeOpt match {
-      case None                                                    => fromLocalPath(Path.of(literal))
-      case Some(scheme) if scheme.contains(PathSchemes.schemeFile) =>
-        val nioPath = Path.of(literal.drop(s"$scheme$schemeSeparator".length))
-        if (!nioPath.isAbsolute)
-          throw new Exception(
-            s"Trying to construct relative UPath $nioPath. Must either be absolute or have no scheme."
-          )
-        fromLocalPath(nioPath)
-      case Some(scheme) =>
-        RemoteUPath(
-          scheme,
-          segments = literal.drop(s"$scheme$schemeSeparator".length).split(separator, splitKeepLastIfEmpty).toSeq
-        ).normalize
+      ZipEntryUPath(fromStringUnsafe(outerLiteral), innerPath.stripPrefix("/"))
+    } else {
+      val schemeOpt = if (literal.contains(schemeSeparator)) literal.split(schemeSeparator).headOption else None
+      schemeOpt match {
+        case None                                                    => fromLocalPath(Path.of(literal))
+        case Some(scheme) if scheme.contains(PathSchemes.schemeFile) =>
+          val nioPath = Path.of(literal.drop(s"$scheme$schemeSeparator".length))
+          if (!nioPath.isAbsolute)
+            throw new Exception(
+              s"Trying to construct relative UPath $nioPath. Must either be absolute or have no scheme."
+            )
+          fromLocalPath(nioPath)
+        case Some(scheme) =>
+          RemoteUPath(
+            scheme,
+            segments = literal.drop(s"$scheme$schemeSeparator".length).split(separator, splitKeepLastIfEmpty).toSeq
+          ).normalize
+      }
     }
   }
 
@@ -196,6 +201,8 @@ private case class LocalUPath(nioPath: Path) extends UPath {
 
   override def toAbsolute: UPath = UPath.fromLocalPath(nioPath.toAbsolutePath)
 
+  override def toReal: Box[UPath] = tryo(nioPath.toRealPath()).map(UPath.fromLocalPath)
+
   override def startsWith(other: UPath): Boolean = other match {
     case otherLocal: LocalUPath =>
       this.nioPath.normalize.toAbsolutePath.startsWith(otherLocal.nioPath.normalize.toAbsolutePath)
@@ -255,6 +262,8 @@ private case class RemoteUPath(scheme: String, segments: Seq[String]) extends UP
   override def hashCode(): Int = hashCodeCached
 
   override def toAbsolute: UPath = this
+
+  override def toReal: Box[UPath] = Full(this)
 
   def startsWith(other: UPath): Boolean = other match {
     case otherRemote: RemoteUPath =>

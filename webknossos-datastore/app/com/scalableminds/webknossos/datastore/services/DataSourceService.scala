@@ -161,11 +161,10 @@ class DataSourceService @Inject() (
       Full(RealPathInfo(resolvedMagPath, resolvedMagPath, hasLocalData = false))
     } else {
       for {
-        magPath <- resolvedMagPath.toLocalPath
-        realMagPath <- tryo(magPath.toRealPath())
+        realMagPath <- resolvedMagPath.toReal
         // Does this dataset have local data, i.e. the data that is referenced by the mag path is within the dataset directory
-        isDatasetLocal = realMagPath.startsWith(datasetPath.toAbsolutePath)
-      } yield RealPathInfo(resolvedMagPath, UPath.fromLocalPath(realMagPath), hasLocalData = isDatasetLocal)
+        isDatasetLocal = realMagPath.startsWith(UPath.fromLocalPath(datasetPath.toAbsolutePath))
+      } yield RealPathInfo(resolvedMagPath, realMagPath, hasLocalData = isDatasetLocal)
     }
   }
 
@@ -175,11 +174,10 @@ class DataSourceService @Inject() (
     } else {
       for {
         _ <- Box.fromBool(attachment.path.isAbsolute) ?~ "Attachment path as stored in db must be absolute"
-        attachmentPath <- attachment.path.toLocalPath
-        realAttachmentPath <- tryo(attachmentPath.toRealPath())
+        realAttachmentPath <- attachment.path.toReal
         // Does this dataset have local data, i.e. the data that is referenced by the mag path is within the dataset directory
-        isDatasetLocal = realAttachmentPath.startsWith(datasetPath.toAbsolutePath)
-      } yield RealPathInfo(attachment.path, UPath.fromLocalPath(realAttachmentPath), hasLocalData = isDatasetLocal)
+        isDatasetLocal = realAttachmentPath.startsWith(UPath.fromLocalPath(datasetPath.toAbsolutePath))
+      } yield RealPathInfo(attachment.path, realAttachmentPath, hasLocalData = isDatasetLocal)
     }
 
   private def logFoundDatasources(
@@ -364,6 +362,8 @@ class DataSourceService @Inject() (
     } yield removedEntriesList.sum
 
   def deleteLocalPathsFromDisk(paths: Seq[UPath]): Box[Unit] = {
+    // Note that zipEntryPaths are skipped here (they Fail on toLocalPath).
+    // This is accepted since we cannot know if the full zip should be deleted.
     val localPaths = paths.filter(_.isLocal).flatMap(_.toLocalPath).filter(_.toAbsolutePath.startsWith(dataBaseDir))
     for {
       _ <- localPaths.map(PathUtils.deleteDirectoryRecursively).toList.toSingleBox("Failed to delete local paths")

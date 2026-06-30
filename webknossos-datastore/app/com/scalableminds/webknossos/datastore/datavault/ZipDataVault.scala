@@ -65,7 +65,7 @@ class ZipDataVault(outerVaultPath: VaultPath) extends DataVault with LazyLogging
   override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
     for {
       normalizedInnerPath <- normalizeInnerPath(path).toFox
-      dirPrefix = normalizedInnerPath + "/"
+      dirPrefix = if (normalizedInnerPath.isEmpty) "" else normalizedInnerPath + "/"
       centralDirectory <- getCentralDirectory(using ec, TokenContext(None))
       directChildren = centralDirectory.keys
         .filter(_.startsWith(dirPrefix))
@@ -80,12 +80,9 @@ class ZipDataVault(outerVaultPath: VaultPath) extends DataVault with LazyLogging
   override def getUsedStorageBytes(path: VaultPath)(using ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     for {
       normalizedInnerPath <- normalizeInnerPath(path).toFox
-      prefix = normalizedInnerPath + "/"
+      prefix = if (normalizedInnerPath.isEmpty) "" else normalizedInnerPath + "/"
       centralDirectory <- getCentralDirectory
-      total = centralDirectory.values
-        .filter(e => normalizeInnerPath(e.fileName).startsWith(prefix))
-        .map(_.compressedSize)
-        .sum
+      total = centralDirectory.filter(_._1.startsWith(prefix)).values.map(_.compressedSize).sum
     } yield total
 
   private def readCentralDirectory(using ec: ExecutionContext, tc: TokenContext): Fox[Map[String, ZipCentralDirEntry]] =
@@ -147,11 +144,11 @@ class ZipDataVault(outerVaultPath: VaultPath) extends DataVault with LazyLogging
   // §4.3.14
   private def parseZip64Eocd(bytes: Array[Byte]): Box[(Long, Long)] =
     for {
-      _ <- Box.fromBool(bytes.length < zip64EocdSize) ?~! s"ZIP64 EOCD record too short: ${bytes.length} bytes"
+      _ <- Box.fromBool(bytes.length >= zip64EocdSize) ?~! s"ZIP64 EOCD record too short: ${bytes.length} bytes"
       buffer = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
       signature = buffer.getInt(0)
       _ <- Box.fromBool(
-        signature != zip64EocdSignature
+        signature == zip64EocdSignature
       ) ?~! s"Expected ZIP64 EOCD signature 0x${zip64EocdSignature.toHexString}, got 0x${signature.toHexString}"
       centralDirectoryOffset = buffer.getLong(48)
       centralDirectorySize = buffer.getLong(40)
@@ -196,7 +193,7 @@ class ZipDataVault(outerVaultPath: VaultPath) extends DataVault with LazyLogging
             case Full(entry) =>
               loopThroughEntriesRecursive(pos + 46 + fileNameLength + extraLength + commentLength, entry :: acc)
             case f: Failure => f
-            case _          => Failure("Unexpected Empty from parseZip64ExtraInCd")
+            case _          => Failure("Unexpected Empty from extendEntryWithExtraFields")
           }
         }
       }
@@ -230,31 +227,35 @@ class ZipDataVault(outerVaultPath: VaultPath) extends DataVault with LazyLogging
       for {
         zip64DataStart <- Box(
           findZip64Tag(extraStart)
-        ) ?~! s"ZIP64 extra field (tag 0x0001) not found in extra data field"
+        ) ?~! "ZIP64 extra field (tag 0x0001) not found in extra data field"
         needUncompressedSize = entryRaw.uncompressedSize == 0xffffffffL
         needCompressedSize = entryRaw.compressedSize == 0xffffffffL
         needLocalHeaderOffset = entryRaw.localHeaderOffset == 0xffffffffL
         uncompressedSizePos = zip64DataStart
         compressedSizePos = uncompressedSizePos + (if (needUncompressedSize) 8 else 0)
         localHeaderOffsetPos = compressedSizePos + (if (needCompressedSize) 8 else 0)
+        _ <- Box.fromBool(
+          !needUncompressedSize || uncompressedSizePos + 8 <= end
+        ) ?~! "ZIP64 extra field truncated: missing uncompressedSize"
+        _ <- Box.fromBool(
+          !needCompressedSize || compressedSizePos + 8 <= end
+        ) ?~! "ZIP64 extra field truncated: missing compressedSize"
+        _ <- Box.fromBool(
+          !needLocalHeaderOffset || localHeaderOffsetPos + 8 <= end
+        ) ?~! "ZIP64 extra field truncated: missing localHeaderOffset"
         entryFilled = entryRaw.copy(
           uncompressedSize =
-            if (needUncompressedSize && uncompressedSizePos + 8 <= end) buffer.getLong(uncompressedSizePos)
-            else entryRaw.uncompressedSize,
-          compressedSize =
-            if (needCompressedSize && compressedSizePos + 8 <= end) buffer.getLong(compressedSizePos)
-            else entryRaw.compressedSize,
+            if (needUncompressedSize) buffer.getLong(uncompressedSizePos) else entryRaw.uncompressedSize,
+          compressedSize = if (needCompressedSize) buffer.getLong(compressedSizePos) else entryRaw.compressedSize,
           localHeaderOffset =
-            if (needLocalHeaderOffset && localHeaderOffsetPos + 8 <= end) buffer.getLong(localHeaderOffsetPos)
-            else entryRaw.localHeaderOffset
+            if (needLocalHeaderOffset) buffer.getLong(localHeaderOffsetPos) else entryRaw.localHeaderOffset
         )
       } yield entryFilled
     }
 
   private def normalizeInnerPath(vaultPath: VaultPath): Box[String] =
     for {
-      zipEntryUPath <- vaultPath.toUPath.toZipEntryUPath ?~! s"ZipDataVault received path with non-ZipEntryUPath"
-      innerPath = zipEntryUPath.innerPath
+      zipEntryUPath <- vaultPath.toUPath.toZipEntryUPath ?~! "ZipDataVault received path with non-ZipEntryUPath"
       normalizedInnerPath = normalizeInnerPath(zipEntryUPath.innerPath)
     } yield normalizedInnerPath
 

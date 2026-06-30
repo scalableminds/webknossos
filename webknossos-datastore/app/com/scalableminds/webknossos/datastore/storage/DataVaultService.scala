@@ -138,13 +138,11 @@ class DataVaultService @Inject() (
       !managedS3Service.pathIsInManagedS3(path)
 
   private def pathIsDataSourceLocal(path: UPath): Boolean =
-    path.toLocalPath match {
-      case Full(localPath) =>
-        val workingDir = Path.of(".").toAbsolutePath.normalize
-        val inWorkingDir = workingDir.resolve(localPath).toAbsolutePath.normalize
-        !localPath.isAbsolute && inWorkingDir.startsWith(workingDir)
-      case _ => false
-    }
+    if (path.isLocal) {
+      val workingDir = UPath.fromLocalPath(Path.of(".").toAbsolutePath.normalize)
+      val inWorkingDir = (workingDir / path).toAbsolute
+      !path.isAbsolute && inWorkingDir.startsWith(workingDir)
+    } else false
 
   private def pathIsInLocalDirectoryWhitelist(path: UPath): Boolean =
     path.isLocal &&
@@ -155,7 +153,7 @@ class DataVaultService @Inject() (
       case zipPath: ZipEntryUPath =>
         val outerCredPath = CredentializedUPath(zipPath.outerPath, credentializedUpath.credential)
         for {
-          zipVault <- zipVaultCache.getOrLoad(outerCredPath, createZipVault(_))
+          zipVault <- zipVaultCache.getOrLoad(outerCredPath, createZipVault(_)) ?~> Msg.DataVault.setupFailed
         } yield new VaultPath(credentializedUpath.upath, zipVault)
       case _ =>
         for {
@@ -165,11 +163,21 @@ class DataVaultService @Inject() (
 
   private def createZipVault(outerCredPath: CredentializedUPath)(implicit ec: ExecutionContext): Fox[ZipDataVault] =
     for {
+      _ <- Fox.fromBool(!outerCredPath.upath.isInstanceOf[ZipEntryUPath]) ?~> "Nested zip references are not supported"
       outerVaultPath <- vaultPathFor(outerCredPath)
     } yield new ZipDataVault(outerVaultPath)
 
-  private def removeVaultFromCache(credentializedUpath: CredentializedUPath)(implicit ec: ExecutionContext): Fox[Unit] =
-    Fox.successful(vaultCache.remove(credentializedUpath))
+  private def removeVaultFromCache(
+      credentializedUpath: CredentializedUPath
+  )(implicit ec: ExecutionContext): Fox[Unit] = {
+    credentializedUpath.upath match {
+      case zipPath: ZipEntryUPath =>
+        zipVaultCache.remove(CredentializedUPath(zipPath.outerPath, credentializedUpath.credential))
+      case _ =>
+        vaultCache.remove(credentializedUpath)
+    }
+    Fox.successful(())
+  }
 
   private def createVault(credentializedUpath: CredentializedUPath)(implicit ec: ExecutionContext): Box[DataVault] = {
     val scheme = credentializedUpath.upath.getScheme

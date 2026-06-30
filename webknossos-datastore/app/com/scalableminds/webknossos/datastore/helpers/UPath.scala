@@ -10,7 +10,7 @@ import java.net.URI
 import java.nio.file.Path
 
 trait UPath {
-  def toRemoteUriUnsafe: URI
+  def toRemoteUri: Box[URI]
 
   def /(other: String): UPath
 
@@ -31,8 +31,6 @@ trait UPath {
   def isRemote: Boolean
 
   def isLocal: Boolean = !isRemote
-
-  def toLocalPathUnsafe: Path
 
   def resolvedIn(parentIfRelative: UPath): UPath =
     if (isRelative) {
@@ -62,22 +60,23 @@ object UPath {
 
   def fromString(literal: String): Box[UPath] = tryo(fromStringUnsafe(literal))
 
+  // Warning: throws! Prefer fromString (returns Box) for user-supplied input
   def fromStringUnsafe(literal: String): UPath = {
     val schemeOpt = if (literal.contains(schemeSeparator)) literal.split(schemeSeparator).headOption else None
     schemeOpt match {
-      case None => fromLocalPath(Path.of(literal))
+      case None                                                    => fromLocalPath(Path.of(literal))
       case Some(scheme) if scheme.contains(PathSchemes.schemeFile) =>
         val nioPath = Path.of(literal.drop(s"$scheme$schemeSeparator".length))
         if (!nioPath.isAbsolute)
           throw new Exception(
-            s"Trying to construct relative UPath $nioPath. Must either be absolute or have no scheme.")
+            s"Trying to construct relative UPath $nioPath. Must either be absolute or have no scheme."
+          )
         fromLocalPath(nioPath)
       case Some(scheme) =>
-        RemoteUPath(scheme,
-                    segments = literal
-                      .drop(s"$scheme$schemeSeparator".length)
-                      .split(separator, splitKeepLastIfEmpty)
-                      .toSeq).normalize
+        RemoteUPath(
+          scheme,
+          segments = literal.drop(s"$scheme$schemeSeparator".length).split(separator, splitKeepLastIfEmpty).toSeq
+        ).normalize
     }
   }
 
@@ -90,7 +89,7 @@ object UPath {
         upath <- fromString(asString) match {
           case Full(parsed) => JsSuccess(parsed)
           case f: Failure   => JsError(f"Invalid UPath: $f")
-          case Empty        => JsError(f"Invalid UPath")
+          case Empty        => JsError("Invalid UPath")
         }
       } yield upath
 
@@ -101,8 +100,6 @@ object UPath {
 
 private case class LocalUPath(nioPath: Path) extends UPath {
   override def isAbsolute: Boolean = nioPath.isAbsolute
-
-  def toLocalPathUnsafe: Path = nioPath
 
   override def /(other: String): UPath =
     UPath.fromLocalPath(nioPath.resolve(other))
@@ -122,7 +119,7 @@ private case class LocalUPath(nioPath: Path) extends UPath {
 
   override def getScheme: Option[String] = None
 
-  override def toRemoteUriUnsafe: URI = throw new Exception(s"Called toUriUnsafe on LocalUPath $toString")
+  override def toRemoteUri: Box[URI] = Failure(s"Called toRemoteUri on LocalUPath $toString")
 
   override def relativizedIn(potentialAncestor: UPath): UPath =
     potentialAncestor match {
@@ -173,8 +170,6 @@ private case class RemoteUPath(scheme: String, segments: Seq[String]) extends UP
     RemoteUPath(scheme, collectedSegmentsMutable.toSeq)
   }
 
-  override def toLocalPathUnsafe: Path = throw new Exception(s"Called toLocalPathUnsafe on RemotePath $this")
-
   override def toString: String = scheme + UPath.schemeSeparator + segments.mkString(UPath.separator)
 
   override def toLocalPath: Box[Path] = Failure(s"Accessed toLocalPath on RemotePath $this")
@@ -189,7 +184,7 @@ private case class RemoteUPath(scheme: String, segments: Seq[String]) extends UP
 
   override def getScheme: Option[String] = Some(scheme)
 
-  override def toRemoteUriUnsafe: URI = new URI(toString)
+  override def toRemoteUri: Box[URI] = tryo(new URI(toString))
 
   override def relativizedIn(potentialAncestor: UPath): UPath = this
 
@@ -200,14 +195,13 @@ private case class RemoteUPath(scheme: String, segments: Seq[String]) extends UP
   override def toAbsolute: UPath = this
 
   def startsWith(other: UPath): Boolean = other match {
-    case otherRemote: RemoteUPath => {
+    case otherRemote: RemoteUPath =>
       val thisNormalized = this.normalize
       val otherNormalized = otherRemote.normalize
       val otherSegments =
         if (otherNormalized.segments.lastOption.contains("")) otherNormalized.segments.dropRight(1)
         else otherNormalized.segments
       thisNormalized.scheme == otherNormalized.scheme && thisNormalized.segments.startsWith(otherSegments)
-    }
     case _ => false
   }
 

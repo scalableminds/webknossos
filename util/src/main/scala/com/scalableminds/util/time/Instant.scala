@@ -1,7 +1,8 @@
 package com.scalableminds.util.time
 
 import com.scalableminds.util.mvc.Formatter
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.typesafe.scalalogging.{LazyLogging, Logger}
 import com.scalableminds.util.tools.Box.tryo
 import play.api.libs.json._
@@ -44,7 +45,7 @@ case class Instant(epochMillis: Long) extends Ordered[Instant] {
   def weekyear: Int = toZonedDateTime.get(java.time.temporal.IsoFields.WEEK_BASED_YEAR)
 }
 
-object Instant extends FoxImplicits with LazyLogging with Formatter {
+object Instant extends LazyLogging with Formatter {
   def now: Instant = Instant(System.currentTimeMillis())
 
   def max: Instant = Instant(253370761200000L)

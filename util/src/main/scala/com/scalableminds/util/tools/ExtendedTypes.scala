@@ -24,23 +24,21 @@ object ExtendedTypes {
       }
   }
 
-  implicit class ExtendedDouble(val d: Double) extends AnyVal {
+  implicit class ExtendedDouble(private val d: Double) extends AnyVal {
 
-    /**
-      * Tests if the value is near zero
+    /** Tests if the value is near zero
       */
     def isNearZero: Boolean =
       d <= EPSILON && d >= -EPSILON
 
-    /**
-      * Makes sure the double is in the given interval.
+    /** Makes sure the double is in the given interval.
       */
     def clamp(low: Double, high: Double): Double =
       math.min(high, math.max(low, d))
 
   }
 
-  implicit class ExtendedString(val s: String) extends AnyVal {
+  implicit class ExtendedString(private val s: String) extends AnyVal {
 
     def toFloatOpt: Option[Float] = StringToFloat.convert(s)
 

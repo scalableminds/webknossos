@@ -3,52 +3,68 @@ package controllers
 import com.scalableminds.util.Msg
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import models.annotation.AnnotationSettings
 import models.task._
 import models.user.UserService
-import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
 import play.api.libs.json._
 import com.scalableminds.util.objectid.ObjectId
 
 import javax.inject.Inject
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.WkEnv
 
 import scala.concurrent.ExecutionContext
 
-class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO,
-                                   taskDAO: TaskDAO,
-                                   taskTypeService: TaskTypeService,
-                                   userService: UserService,
-                                   sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
-    extends Controller
-    with FoxImplicits {
+case class TaskTypeParameters(
+    summary: String,
+    description: String,
+    teamId: ObjectId,
+    settings: AnnotationSettings,
+    recommendedConfiguration: Option[JsValue],
+    tracingType: TracingType.Value
+)
+object TaskTypeParameters {
+  implicit val jsonFormat: OFormat[TaskTypeParameters] = Json.format[TaskTypeParameters]
+}
 
-  private val taskTypePublicReads =
-    ((__ \ "summary").read[String](minLength[String](2) or maxLength[String](50)) and
-      (__ \ "description").read[String] and
-      (__ \ "teamId").read[ObjectId] and
-      (__ \ "settings").read[AnnotationSettings] and
-      (__ \ "recommendedConfiguration").readNullable[JsValue] and
-      (__ \ "tracingType").read[TracingType.Value])(taskTypeService.fromForm _)
+class TaskTypeController @Inject() (
+    taskTypeDAO: TaskTypeDAO,
+    taskDAO: TaskDAO,
+    taskTypeService: TaskTypeService,
+    userService: UserService,
+    sil: Silhouette[WkEnv]
+)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
+    extends Controller {
 
-  def create: Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
-    withJsonBodyUsing(taskTypePublicReads) { taskType =>
-      for {
-        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, taskType._team)) ?~> Msg.notAllowed ~> FORBIDDEN
-        _ <- taskTypeDAO
-          .findOneBySummaryAndOrganization(taskType.summary, request.identity._organization)(GlobalAccessContext)
-          .reverse ?~> Msg.TaskType.summaryTaken(taskType.summary)
-        _ <- taskTypeDAO.insertOne(taskType, request.identity._organization)
-        js <- taskTypeService.publicWrites(taskType)
-      } yield Ok(js)
-    }
+  def create: Action[TaskTypeParameters] = sil.SecuredAction.fox(validateJson[TaskTypeParameters]) { implicit request =>
+    for {
+      _ <- Fox.assertTrue(
+        userService.isTeamManagerOrAdminOf(request.identity, request.body.teamId)
+      ) ?~> Msg.notAllowed ~> FORBIDDEN
+      _ <- taskTypeDAO
+        .findOneBySummaryAndOrganization(request.body.summary, request.identity._organization)(using
+          GlobalAccessContext
+        )
+        .reverse ?~> Msg.TaskType.summaryTaken(request.body.summary)
+      _ <- taskTypeService.assertValidTaskTypeSummary(request.body.summary)
+      taskType = TaskType(
+        _id = ObjectId.generate,
+        summary = request.body.summary,
+        _team = request.body.teamId,
+        description = request.body.description,
+        settings = request.body.settings,
+        recommendedConfiguration = request.body.recommendedConfiguration,
+        tracingType = request.body.tracingType
+      )
+      _ <- taskTypeDAO.insertOne(taskType, request.identity._organization)
+      js <- taskTypeService.publicWrites(taskType)
+    } yield Ok(js)
   }
 
-  def get(taskTypeId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def get(taskTypeId: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       taskType <- taskTypeDAO.findOne(taskTypeId) ?~> Msg.TaskType.notFound(taskTypeId) ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, taskType._team))
@@ -56,41 +72,53 @@ class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO,
     } yield Ok(js)
   }
 
-  def list: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def list: Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       taskTypes <- taskTypeDAO.findAll
       js <- Fox.serialCombined(taskTypes)(t => taskTypeService.publicWrites(t))
     } yield Ok(Json.toJson(js))
   }
 
-  def update(taskTypeId: ObjectId): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
-    withJsonBodyUsing(taskTypePublicReads) { taskTypeFromForm =>
+  def update(taskTypeId: ObjectId): Action[TaskTypeParameters] =
+    sil.SecuredAction.fox(validateJson[TaskTypeParameters]) { implicit request =>
       for {
-        taskType <- taskTypeDAO.findOne(taskTypeId) ?~> Msg.TaskType.notFound(taskTypeId) ~> NOT_FOUND
-        _ <- Fox.fromBool(taskTypeFromForm.tracingType == taskType.tracingType) ?~> Msg.TaskType.tracingTypeImmutable
-        _ <- Fox
-          .fromBool(taskTypeFromForm.settings.magRestrictions == taskType.settings.magRestrictions) ?~> Msg.TaskType.magRestrictionsImmutable
-        updatedTaskType = taskTypeFromForm.copy(_id = taskType._id)
-        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, taskType._team)) ?~> Msg.notAllowed ~> FORBIDDEN
-        _ <- Fox
-          .assertTrue(userService.isTeamManagerOrAdminOf(request.identity, updatedTaskType._team)) ?~> Msg.notAllowed ~> FORBIDDEN
-        _ <- Fox.runIf(taskTypeFromForm.summary != taskType.summary) {
+        existing <- taskTypeDAO.findOne(taskTypeId) ?~> Msg.TaskType.notFound(taskTypeId) ~> NOT_FOUND
+        _ <- Fox.fromBool(request.body.tracingType == existing.tracingType) ?~> Msg.TaskType.tracingTypeImmutable
+        _ <- Fox.fromBool(
+          request.body.settings.magRestrictions == existing.settings.magRestrictions
+        ) ?~> Msg.TaskType.magRestrictionsImmutable
+        _ <- Fox.assertTrue(
+          userService.isTeamManagerOrAdminOf(request.identity, existing._team)
+        ) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- Fox.assertTrue(
+          userService.isTeamManagerOrAdminOf(request.identity, request.body.teamId)
+        ) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- taskTypeService.assertValidTaskTypeSummary(request.body.summary)
+        updated = existing.copy(
+          summary = request.body.summary,
+          _team = request.body.teamId,
+          description = request.body.description,
+          settings = request.body.settings,
+          recommendedConfiguration = request.body.recommendedConfiguration
+        )
+        _ <- Fox.runIf(request.body.summary != existing.summary) {
           taskTypeDAO
-            .findOneBySummaryAndOrganization(taskTypeFromForm.summary, request.identity._organization)(
-              GlobalAccessContext)
-            .reverse ?~> Msg.TaskType.summaryTaken(taskTypeFromForm.summary)
+            .findOneBySummaryAndOrganization(request.body.summary, request.identity._organization)(using
+              GlobalAccessContext
+            )
+            .reverse ?~> Msg.TaskType.summaryTaken(request.body.summary)
         }
-        _ <- taskTypeDAO.updateOne(updatedTaskType)
-        js <- taskTypeService.publicWrites(updatedTaskType)
+        _ <- taskTypeDAO.updateOne(updated)
+        js <- taskTypeService.publicWrites(updated)
       } yield JsonOk(js, Msg.TaskType.editSuccess)
     }
-  }
 
-  def delete(taskTypeId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def delete(taskTypeId: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       taskType <- taskTypeDAO.findOne(taskTypeId) ?~> Msg.TaskType.notFound(taskTypeId) ~> NOT_FOUND
-      _ <- Fox
-        .assertTrue(userService.isTeamManagerOrAdminOf(request.identity, taskType._team)) ?~> Msg.notAllowed ~> FORBIDDEN
+      _ <- Fox.assertTrue(
+        userService.isTeamManagerOrAdminOf(request.identity, taskType._team)
+      ) ?~> Msg.notAllowed ~> FORBIDDEN
       _ <- taskTypeDAO.deleteOne(taskTypeId) ?~> Msg.TaskType.deleteFailed(taskType.summary)
       _ <- taskDAO.removeAllWithTaskTypeAndItsAnnotations(taskTypeId) ?~> Msg.TaskType.deleteFailed(taskType.summary)
       _ = logger.info(s"TaskType $taskTypeId was deleted.")

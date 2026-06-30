@@ -64,29 +64,36 @@ class AnnotationUserStateTestSuite extends AsyncWordSpec with AnnotationUserStat
           .copy(
             segmentVisibilities = Seq(Id64WithBool(1L, true)),
             segmentGroupExpandedStates = Seq(Id32WithBool(1, true))
-          ))
+          )
+      )
       val tracingBUserStates = Seq(
         VolumeTracingDefaults
           .emptyUserState(userAId)
           .copy(
             segmentVisibilities = Seq(Id64WithBool(1L, false)),
             segmentGroupExpandedStates = Seq(Id32WithBool(1, false))
-          ))
+          )
+      )
 
       val segmentIdMapB = Map((1L, 2L))
-      val mergedUserStates = mergeVolumeUserStates(tracingAUserStates,
-                                                   tracingBUserStates,
-                                                   groupMappingA = (groupId: Int) => groupId + 5,
-                                                   segmentIdMapB,
-                                                   Map.empty,
-                                                   Map.empty)
+      val mergedUserStates = mergeVolumeUserStates(
+        tracingAUserStates,
+        tracingBUserStates,
+        groupMappingA = (groupId: Int) => groupId + 5,
+        segmentIdMapB,
+        Map.empty,
+        Map.empty
+      )
       assert(
         mergedUserStates == Seq(
           VolumeTracingDefaults
             .emptyUserState(userAId)
-            .copy(segmentVisibilities = Seq(Id64WithBool(1, true), Id64WithBool(2L, false)),
-                  segmentGroupExpandedStates = Seq(Id32WithBool(6, true), Id32WithBool(1, false)))
-        ))
+            .copy(
+              segmentVisibilities = Seq(Id64WithBool(1, true), Id64WithBool(2L, false)),
+              segmentGroupExpandedStates = Seq(Id32WithBool(6, true), Id32WithBool(1, false))
+            )
+        )
+      )
     }
   }
 }

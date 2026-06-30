@@ -145,6 +145,9 @@ object Msg {
     object Mutex {
       val acquireFailed: String = "Could not acquire annotation editing mutex."
       val releaseFailed: String = "Could not release annotation editing mutex."
+      val acquireOrGetFailed: String = "Trying to acquire or find current annotation mutex failed."
+      val upsertingMutexInfoFailedWithMultipleAttempts: String =
+        "Could not find mutex for annotation after multiple retries."
     }
     object CollaborationMode {
       val onlyExplorationalOrTask: String =
@@ -155,6 +158,15 @@ object Msg {
       val success: String = "Successfully updated the annotation."
       val accessingTeamFailed: String = "Could not access a team during annotation shared team update."
       val notAllowed: String = "You do not have permission to edit this annotation."
+      val viewConfigurationFailed: String = "Could not update the view configuration for this annotation."
+      val noPermissionsToUpdateName: String =
+        "Could not update the name of the annotation due missing update permissions."
+      val noPermissionsToUpdateVisibility: String =
+        "Could not update the visibility of the annotation due missing update permissions."
+      val noPermissionsToUpdateDescription: String =
+        "Could not update the description of the annotation due missing update permissions."
+      val noPermissionsToUpdateTags: String =
+        "Could not update the tags of the annotation due missing update permissions."
     }
     object ApplyUpdate {
       val updateGroupVersionsNotSortedDesc: String =
@@ -200,6 +212,10 @@ object Msg {
         "Could not split flat fallback layer bucket data from data store into buckets."
       val fallbackDataLengthMismatch: String =
         "Length mismatch when unpacking bucket data from data store for fallback layer."
+      val fallbackDataLoadingFailed: String =
+        "Could not load data from fallback segmentation layer."
+      val emptyBucketIndicesHeaderParsingFailed: String = "Could not parse empty bucket indices header."
+      val failureBucketIndicesHeaderParsingFailed: String = "Could not parse failure bucket indices header."
       val mergedVolumeStatsNotFound: String =
         "Could not find merged volume stats from previous merge steps."
       val invalidLargestSegmentId: String =
@@ -208,8 +224,8 @@ object Msg {
         "Mag restrictions are too tight, resulting annotation has no magnifications."
       val mergeLargestSegmentIdUnset: String =
         "Cannot merge volume annotation: largest segment id is not set."
-      val magsDoNotMatch: String =
-        "Cannot merge volume annotation: mag sets do not match."
+      val magsDoNotMatch: String = "Cannot merge volume annotation: Mag sets of volume annotations do not match."
+      val importVersionMismatch: String = "Cannot merge volume annotation: Version mismatch."
       val noEditableMapping: String =
         "This volume tracing does not have an editable mapping (is not a “proofreading” annotation layer)."
       object SegmentIndex {
@@ -270,7 +286,7 @@ object Msg {
     val usersUserLimitReached: String =
       "Cannot add new user to this organization because it would exceed the organization’s user limit. Please ask the organization owner to upgrade."
     val notEmpty: String =
-      "There are already organizations present in the database. Please refresh the db schema and try again."
+      "There are already organizations present in the database. To reset initial data, please refresh the database schema and try again."
     object TermsOfService {
       def versionMismatch(requiredVersion: Int, version: Int): String =
         s"Terms of service version mismatch. Current version is $requiredVersion, received acceptance for $version."
@@ -326,6 +342,8 @@ object Msg {
     val updateTeamsFailed: String = "Could not update the folder’s allowed teams."
   }
   object Job {
+    val alreadyRetried: String =
+      "This job has already been retried once and failed again. This is likely a persistent failure. Please contact an administrator for help."
     val cleanupFailed: String = "Could not clean up failed job."
     val notEnabled: String = "Long-running jobs are not enabled for this WEBKNOSSOS instance."
     val edgeLengthExceeded: String = "An edge length of the selected bounding box is too large."
@@ -506,10 +524,10 @@ object Msg {
         "Dataset name is invalid. Please use a name that does not start with a dot."
     }
     object Upload {
-      def finishFailed(datasetId: ObjectId): String =
-        s"Could not finalize upload for dataset “$datasetId”."
-      def noSuchUpload(uploadId: String): String =
-        s"Could not find running upload with upload id “$uploadId”."
+      def finishFailed(datasetId: ObjectId, domain: String): String =
+        s"Could not finalize upload for $domain “$datasetId”."
+      def noSuchUpload(uploadId: String, domain: String): String =
+        s"Could not find running $domain upload with upload id “$uploadId”."
       val allChunksUploadedCheckFailed: String =
         "Could not verify that all chunks have been uploaded."
       val couldNotLoadUnfinishedUploads: String = "Could not load unfinished uploads of user."
@@ -535,9 +553,20 @@ object Msg {
       val setUploaderForbidden: String = "No permission to set uploader for this dataset."
       val validationFailed: String = "Could not validate dataset information for upload."
       val magUploadOnlyVirtual: String = "Adding mags to existing datasets is only allowed for virtual datasets."
-      val uploadToPathsNoMatchingPrefix: String =
-        "Could not determine a configured path prefix that matches the request."
       val magAlreadyPending: String = "This mag is already pending."
+      val magNotPending: String = "This mag is not marked as pending."
+      val attachmentNotPending: String = "This attachment is not marked as pending."
+      val magPathNotSet: String = "Mag path is required in upload."
+      val reserveAttachmentUploadNotVirtual: String =
+        "Attachment upload to existing dataset is only supported for virtual datasets."
+      val reserveMagUploadNotVirtual: String =
+        "Mag upload to existing dataset is only supported for virtual datasets."
+      object ToPaths {
+        val noMatchingPrefix = "Could not determine a configured path prefix that matches the request."
+        val magAlreadyPending: String = "Conflict with existing pending mag. Pass overwritePending to overwrite."
+        val magNotPending: String = "This mag is not marked as pending upload to path."
+        val attachmentNotPending: String = "This attachment is not marked as pending (upload to path)."
+      }
     }
     object Chunk {
       val decompressFailed: String = "Could not decompress data chunk."
@@ -599,9 +628,10 @@ object Msg {
   object Project {
     def notFound(id: ObjectId): String = s"Project “$id” could not be found or accessed."
     def notFound(name: String): String = s"Project with name “$name” could not be found or accessed."
-    val deleteSuccess: String = s"Project was successfully deleted."
+    val deleteSuccess: String = "Project was successfully deleted."
     def nameTaken(name: String): String =
       s"A project named “$name” already exists. Please choose a different name."
+    def nameTooShort: String = "Project name must be at least three characters long."
     def nameInvalidChars(name: String): String =
       s"Project name “$name” contains invalid characters. Please use only letters and numbers."
     val createFailed: String = "Could not create project."
@@ -616,6 +646,8 @@ object Msg {
     def notFound(id: ObjectId): String = s"Script “$id” could not be found or accessed."
     def nameInvalidChars(name: String): String =
       s"Script name “$name” is invalid. Please use only letters, digits, dots, space, underscores, hyphens."
+    def nameTooShort: String = "Script name must be at least two characters long."
+    def nameTooLong: String = "Script name must be at most 50 characters long."
     val updateOnlyOwner: String = "You do not have permission to update this script. Please ask the script owner."
     val deleteOnlyOwner: String = "You do not have permission to delete this script. Please ask the script owner."
     val deleteFailed: String = "Could not delete script."
@@ -652,6 +684,8 @@ object Msg {
     def notFound(id: ObjectId): String = s"Task type “$id” could not be found or accessed."
     def summaryTaken(summary: String): String =
       s"A task type with summary “$summary” already exists. Please choose a different name."
+    val summaryTooShort: String = "Task type summary must be at least two characters long."
+    val summaryTooLong: String = "Task type summary must be at most 50 characters long."
     val editSuccess: String = "Task type was successfully updated."
     def deleteSuccess(summary: String): String = s"Task type “$summary” was successfully deleted."
     def deleteFailed(summary: String): String = s"Could not delete task type “$summary”."
@@ -670,11 +704,10 @@ object Msg {
       "You are not authorized to view this resource. Please log in."
     val passwordsDontMatch: String = "The two passwords do not match."
     val isDeactivated: String =
-      s"Your account has not been activated by an admin yet. Please contact your organization’s admin for help."
+      "Your account has not been activated by an admin yet. Please contact your organization’s admin for help."
     val noUserWithThisEmail: String = "There is no user registered with this email."
     val invalidCredentials: String = "Incorrect email or password. Please try again."
     val createFailed: String = "Could not create user."
-    val idNotFound: String = "Could not find a user id in the request."
     val lastAdmin: String =
       "This user is the last remaining admin in your organization. Cannot remove admin privileges from this account."
     val lastOwner: String =
@@ -685,17 +718,17 @@ object Msg {
     val needsInvite: String =
       "Registration without invite is not enabled for this WEBKNOSSOS instance."
     val invalidInviteToken: String = "This invite token is invalid."
+    val inviteTeamMembershipsFailed: String = "Could not retrieve team memberships for invite."
     val invalidFirstName: String = "Please check your first name for any special characters."
     val invalidLastName: String = "Please check your last name for any special characters."
     object Token {
       val deleted: String = "Token was deleted."
-      val invalid: String = "The supplied token is invalid."
+      val invalid: String = "The supplied token is invalid or expired."
     }
     object Configuration {
       val updateSuccess: String = "Your configuration was successfully updated."
       val updateSuccessForDataset: String = "Dataset configuration was successfully updated."
-      val invalid: String = "Could not parse configuration."
-      val invalidForDataset: String = "Could not parse dataset configuration."
+      val updatedKeyboardShortcutsConfig = "Keyboard shortcuts configuration was successfully updated."
     }
     object Email {
       val taken: String =

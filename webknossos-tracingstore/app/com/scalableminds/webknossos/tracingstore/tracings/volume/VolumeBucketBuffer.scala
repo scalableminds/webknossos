@@ -1,8 +1,8 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
-import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.util.tools.Fox.toFox
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.tracingstore.tracings.{FossilDBClient, TemporaryTracingService}
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
@@ -10,15 +10,15 @@ import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 
-class VolumeBucketBuffer(version: Long,
-                         volumeLayer: VolumeTracingLayer,
-                         val volumeDataStore: FossilDBClient,
-                         val temporaryTracingService: TemporaryTracingService,
-                         toTemporaryStore: Boolean,
-                         implicit val tc: TokenContext,
-                         implicit val ec: ExecutionContext)
+class VolumeBucketBuffer(
+    version: Long,
+    volumeLayer: VolumeTracingLayer,
+    val volumeDataStore: FossilDBClient,
+    val temporaryTracingService: TemporaryTracingService,
+    toTemporaryStore: Boolean
+)(using ec: ExecutionContext)
     extends VolumeTracingBucketHelper
-    with ProtoGeometryImplicits {
+    with ProtoGeometryConversions {
 
   // bucketPos → (bucketData, isChanged)
   private lazy val bucketDataBuffer: mutable.Map[BucketPosition, (Box[Array[Byte]], Boolean)] =
@@ -47,13 +47,12 @@ class VolumeBucketBuffer(version: Long,
       bucketDataBoxes <- loadBuckets(volumeLayer, bucketPositions, Some(version))
       _ <- Fox.fromBool(bucketDataBoxes.length == bucketPositions.length)
       _ <- Fox.assertNoFailure(bucketDataBoxes)
-      _ = bucketDataBoxes.zip(bucketPositions).foreach {
-        case (bucketDataBox, bucketPosition) =>
-          bucketDataBox match {
-            case Full(_)    => bucketDataBuffer.put(bucketPosition, (bucketDataBox, false))
-            case Empty      => bucketDataBuffer.put(bucketPosition, (Empty, false))
-            case _: Failure => () // we asserted no failures above
-          }
+      _ = bucketDataBoxes.zip(bucketPositions).foreach { case (bucketDataBox, bucketPosition) =>
+        bucketDataBox match {
+          case Full(_)    => bucketDataBuffer.put(bucketPosition, (bucketDataBox, false))
+          case Empty      => bucketDataBuffer.put(bucketPosition, (Empty, false))
+          case _: Failure => () // we asserted no failures above
+        }
       }
     } yield bucketDataBoxes
 

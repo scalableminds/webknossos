@@ -2,6 +2,7 @@ import update from "immutability-helper";
 import Date from "libs/date";
 import chunk from "lodash-es/chunk";
 import isEqual from "lodash-es/isEqual";
+import mapValues from "lodash-es/mapValues";
 import sumBy from "lodash-es/sumBy";
 import { getStats, type TracingStats } from "viewer/model/accessors/annotation_accessor";
 import type { Action } from "viewer/model/actions/actions";
@@ -163,16 +164,6 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
-    case "SET_SAVE_BUSY": {
-      return update(state, {
-        save: {
-          isBusy: {
-            $set: action.isBusy,
-          },
-        },
-      });
-    }
-
     case "SET_LAST_SAVE_TIMESTAMP": {
       return updateKey(state, "save", { lastSaveTimestamp: action.timestamp });
     }
@@ -189,8 +180,9 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
         return state;
       }
 
-      return updateKey2(state, "annotation", "restrictions", {
-        allowSave: false,
+      return update(state, {
+        annotation: { restrictions: { allowSave: { $set: false } } },
+        save: { isSavingDisabled: { $set: true } },
       });
     }
 
@@ -202,14 +194,25 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
     }
 
     case "SET_USER_HOLDING_MUTEX": {
-      const { blockedByUser } = action;
+      const { blockedByUser, blockedBySessionId } = action;
       return updateKey2(state, "save", "mutexState", {
         blockedByUser,
+        blockedBySessionId: blockedBySessionId ?? null,
       });
     }
 
-    case "PREPARE_REBASING": {
+    case "REWIND_FOR_REBASE": {
       const rebaseInfo = state.save.rebaseRelevantServerAnnotationState;
+      // Only the mapping data is part of the rebase baseline. All other ActiveMappingInfo
+      // fields are local view state that no update action carries, so we keep their live
+      // values and only replace the mapping data for the layers that have a snapshot entry (see #9559).
+      const restoredMappingByLayer = mapValues(
+        state.temporaryConfiguration.activeMappingByLayer,
+        (liveMappingInfo, layerName) =>
+          layerName in rebaseInfo.mappingDataByLayer
+            ? { ...liveMappingInfo, mapping: rebaseInfo.mappingDataByLayer[layerName] }
+            : liveMappingInfo,
+      );
       return update(state, {
         annotation: {
           version: {
@@ -225,22 +228,12 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
         },
         temporaryConfiguration: {
           activeMappingByLayer: {
-            $set: rebaseInfo.activeMappingByLayer,
+            $set: restoredMappingByLayer,
           },
         },
         save: {
           rebaseRelevantServerAnnotationState: {
             isRebasingOrForwarding: { $set: true },
-          },
-        },
-      });
-    }
-
-    case "FINISHED_REBASING": {
-      return update(state, {
-        save: {
-          rebaseRelevantServerAnnotationState: {
-            isRebasingOrForwarding: { $set: false },
           },
         },
       });
@@ -256,6 +249,7 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
+    case "FINISHED_REBASING":
     case "FINISH_FORWARDING_UPDATE_ACTIONS": {
       return update(state, {
         save: {
@@ -272,9 +266,9 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
       return update(state, {
         save: {
           rebaseRelevantServerAnnotationState: {
-            activeMappingByLayer: {
+            mappingDataByLayer: {
               [action.volumeLayerIdToUpdate]: {
-                $set: mappingInfoOfLayer,
+                $set: mappingInfoOfLayer?.mapping,
               },
             },
           },
@@ -293,8 +287,11 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
             annotationVersion: {
               $set: state.annotation.version,
             },
-            activeMappingByLayer: {
-              $set: state.temporaryConfiguration.activeMappingByLayer,
+            mappingDataByLayer: {
+              $set: mapValues(
+                state.temporaryConfiguration.activeMappingByLayer,
+                (mappingInfo) => mappingInfo.mapping,
+              ),
             },
             skeleton: {
               $set: state.annotation.skeleton,

@@ -12,10 +12,7 @@ import {
   setCollaborationModeAction,
   setIsUpdatingAnnotationCurrentlyAllowedAction,
 } from "viewer/model/actions/annotation_actions";
-import {
-  disableSavingAction,
-  dispatchEnsureHasNewestVersionAsync,
-} from "viewer/model/actions/save_actions";
+import { dispatchEnsureHasNewestVersionAsync } from "viewer/model/actions/save_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import {
   setActiveCellAction,
@@ -73,7 +70,6 @@ describe.each(
     };
     yield put(setActiveUserAction(differentUser));
     yield put(setCollaborationModeAction(collabMode));
-    yield put(disableSavingAction());
     yield put(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
   }
 
@@ -87,7 +83,9 @@ describe.each(
   });
 
   it("should update the mapping when the server has a new update action with a merge operation", async (context: WebknossosTestContext) => {
-    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState(), {
+      grantMutex: false,
+    });
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -143,6 +141,7 @@ describe.each(
         [4, 1338],
       ],
       Store.getState(),
+      { grantMutex: false },
     );
     // Initial Mapping
     // 1-2-3
@@ -265,7 +264,9 @@ describe.each(
 
   it("should update the mapping when the server has a new update action with a split operation", async (context: WebknossosTestContext) => {
     const { api } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState(), {
+      grantMutex: false,
+    });
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -381,7 +382,9 @@ describe.each(
 
   it("should update the mapping correctly when the server has a new update action with a merge and split operation with segments unknown to the client", async (context: WebknossosTestContext) => {
     const { api } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState(), {
+      grantMutex: false,
+    });
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -451,13 +454,15 @@ describe.each(
 
   it("should not perform a rebase when there are no local changes", async (context: WebknossosTestContext) => {
     const { api } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState(), {
+      grantMutex: false,
+    });
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* () {
-      const rebaseActionChannel = yield actionChannel(["PREPARE_REBASING", "FINISHED_REBASING"]);
+      const rebaseActionChannel = yield actionChannel(["REWIND_FOR_REBASE", "FINISHED_REBASING"]);
       yield initializePollOnlyAnnotation(context, tracingId);
 
       const foreignMergeAction = {
@@ -504,7 +509,9 @@ describe.each(
 
   it("should poll updates for a simple merge", async (context: WebknossosTestContext) => {
     const { api } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState(), {
+      grantMutex: false,
+    });
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -552,7 +559,9 @@ describe.each(
   });
 
   it("should simply forward received update actions like agglomerate tree update actions without putting these changes to its own save queue or sending them to the backend", async (context: WebknossosTestContext) => {
-    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState(), {
+      grantMutex: false,
+    });
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];

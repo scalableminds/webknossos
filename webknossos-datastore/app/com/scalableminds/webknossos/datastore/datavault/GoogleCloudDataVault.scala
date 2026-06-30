@@ -4,7 +4,8 @@ import com.google.auth.oauth2.ServiceAccountCredentials
 import com.google.cloud.storage.Storage.BlobSourceOption
 import com.google.cloud.storage.{BlobId, BlobInfo, Storage, StorageException, StorageOptions}
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Box, Fox}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.storage.{CredentializedUPath, GoogleServiceAccountCredential}
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.webknossos.datastore.helpers.UPath
@@ -16,16 +17,15 @@ import java.nio.ByteBuffer
 import scala.concurrent.ExecutionContext
 import scala.jdk.CollectionConverters.{IterableHasAsScala, IteratorHasAsScala}
 
-class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCredential])
-    extends DataVault
-    with FoxImplicits {
+class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCredential]) extends DataVault {
 
   private lazy val storageOptions: StorageOptions = credential match {
     case Some(credential: GoogleServiceAccountCredential) =>
       StorageOptions
         .newBuilder()
         .setCredentials(
-          ServiceAccountCredentials.fromStream(new ByteArrayInputStream(credential.secretJson.toString.getBytes)))
+          ServiceAccountCredentials.fromStream(new ByteArrayInputStream(credential.secretJson.toString.getBytes))
+        )
         .build()
     case _ => StorageOptions.newBuilder().build()
   }
@@ -37,79 +37,84 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
   // dashes, excluding chars that may be part of the bucket name (e.g. underscore).
   private lazy val bucket: String = uri.getAuthority
 
-  override def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[(Array[Byte], Encoding.Value, Option[String])] = {
-
-    val objName = path.toRemoteUriUnsafe.getPath.tail
-    val blobId = BlobId.of(bucket, objName)
+  override def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[(Array[Byte], Encoding.Value, Option[String])] =
     for {
-      bytes <- try {
-        range match {
-          case r: StartEndExclusiveByteRange =>
-            val blobReader = storage.reader(blobId)
-            blobReader.seek(r.start)
-            blobReader.limit(r.end)
-            val bb = ByteBuffer.allocateDirect(r.length)
-            blobReader.read(bb)
-            val arr = new Array[Byte](r.length)
-            bb.position(0)
-            bb.get(arr)
-            Fox.successful(arr)
-          case SuffixLengthByteRange(l) =>
-            val blobReader = storage.reader(blobId)
-            blobReader.seek(-l)
-            val bb = ByteBuffer.allocateDirect(l)
-            blobReader.read(bb)
-            val arr = new Array[Byte](l)
-            bb.position(0)
-            bb.get(arr)
-            Fox.successful(arr)
-          case CompleteByteRange() =>
-            Fox.successful(storage.readAllBytes(bucket, objName, BlobSourceOption.shouldReturnRawInputStream(true)))
+      objName <- getObjectName(path).toFox
+      blobId = BlobId.of(bucket, objName)
+      bytes <-
+        try
+          range match {
+            case r: StartEndExclusiveByteRange =>
+              val blobReader = storage.reader(blobId)
+              blobReader.seek(r.start)
+              blobReader.limit(r.end)
+              val bb = ByteBuffer.allocateDirect(r.length)
+              blobReader.read(bb)
+              val arr = new Array[Byte](r.length)
+              bb.position(0)
+              bb.get(arr)
+              Fox.successful(arr)
+            case SuffixLengthByteRange(l) =>
+              val blobReader = storage.reader(blobId)
+              blobReader.seek(-l)
+              val bb = ByteBuffer.allocateDirect(l)
+              blobReader.read(bb)
+              val arr = new Array[Byte](l)
+              bb.position(0)
+              bb.get(arr)
+              Fox.successful(arr)
+            case CompleteByteRange() =>
+              Fox.successful(storage.readAllBytes(bucket, objName, BlobSourceOption.shouldReturnRawInputStream(true)))
+          }
+        catch {
+          case s: StorageException =>
+            if (s.getCode == 404)
+              Fox.empty
+            else Fox.failure(s.getMessage)
+          case t: Throwable => Fox.failure(t.getMessage)
         }
-      } catch {
-        case s: StorageException =>
-          if (s.getCode == 404)
-            Fox.empty
-          else Fox.failure(s.getMessage)
-        case t: Throwable => Fox.failure(t.getMessage)
-      }
       blobInfo: BlobInfo <- tryo(
         storage.get(
           blobId,
           Storage.BlobGetOption
-            .fields(Storage.BlobField.SIZE, Storage.BlobField.CONTENT_TYPE, Storage.BlobField.CONTENT_ENCODING),
-        )).toFox ?~> "could not get blobInfo"
+            .fields(Storage.BlobField.SIZE, Storage.BlobField.CONTENT_TYPE, Storage.BlobField.CONTENT_ENCODING)
+        )
+      ).toFox ?~> "could not get blobInfo"
       encoding <- Encoding
         .fromRfc7231String(Option(blobInfo.getContentEncoding).getOrElse(""))
         .toFox ?~> "could not get encoding"
     } yield (bytes, encoding, Option(blobInfo.getSize).flatMap(size => range.toContentRangeHeaderWithLength(size)))
-  }
 
   override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
-    tryo({
-      val objName = path.toRemoteUriUnsafe.getPath.tail
-      val blobs =
+    (for {
+      objName <- getObjectName(path)
+      blobs <- tryo(
         storage.list(bucket, Storage.BlobListOption.prefix(objName), Storage.BlobListOption.currentDirectory())
-      val subDirectories = blobs.getValues.asScala.toList.filter(_.isDirectory).take(maxItems)
-      val paths = subDirectories.map(dirBlob =>
-        new VaultPath(UPath.fromStringUnsafe(s"${uri.getScheme}://$bucket/${dirBlob.getBlobId.getName}"), this))
-      paths
-    }).toFox
+      )
+      subDirectories <- tryo(blobs.getValues.asScala.toList.filter(_.isDirectory).take(maxItems))
+      paths <- subDirectories.map { dirBlob =>
+        UPath.fromString(s"${uri.getScheme}://$bucket/${dirBlob.getBlobId.getName}").map(new VaultPath(_, this))
+      }.toSingleBox("Invalid UPath")
+    } yield paths).toFox
 
-  override def getUsedStorageBytes(path: VaultPath)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
-    tryo({
-      val objName = path.toRemoteUriUnsafe.getPath.tail
-      val blobs =
-        storage.list(bucket,
-                     Storage.BlobListOption.prefix(objName) /* no currentDirectory(); Do deep recursive listing */ )
-      val totalSize = blobs.iterateAll().iterator().asScala.map(_.getSize).foldLeft(0L)(_ + _)
-      totalSize
-    }).toFox
+  override def getUsedStorageBytes(path: VaultPath)(using ec: ExecutionContext, tc: TokenContext): Fox[Long] =
+    (for {
+      objName <- getObjectName(path)
+      blobs <- tryo(
+        storage.list(bucket, Storage.BlobListOption.prefix(objName))
+      ) // no currentDirectory(); Do deep recursive listing
+      totalSize <- tryo(blobs.iterateAll().iterator().asScala.map(_.getSize).foldLeft(0L)(_ + _))
+    } yield totalSize).toFox
 
   private def getUri = uri
   private def getCredential = credential
+  private def getObjectName(path: VaultPath): Box[String] =
+    for {
+      remoteUri <- path.toRemoteUri
+    } yield remoteUri.getPath.tail
 
   override def equals(obj: Any): Boolean = obj match {
     case other: GoogleCloudDataVault => other.getUri == uri && other.getCredential == credential
@@ -123,8 +128,9 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
 }
 
 object GoogleCloudDataVault {
-  def create(credentializedUpath: CredentializedUPath): GoogleCloudDataVault = {
-    val credential = credentializedUpath.credential.map(f => f.asInstanceOf[GoogleServiceAccountCredential])
-    new GoogleCloudDataVault(credentializedUpath.upath.toRemoteUriUnsafe, credential)
-  }
+  def create(credentializedUpath: CredentializedUPath): Box[GoogleCloudDataVault] =
+    for {
+      credential <- tryo(credentializedUpath.credential.map(f => f.asInstanceOf[GoogleServiceAccountCredential]))
+      remoteUri <- credentializedUpath.upath.toRemoteUri
+    } yield new GoogleCloudDataVault(remoteUri, credential)
 }

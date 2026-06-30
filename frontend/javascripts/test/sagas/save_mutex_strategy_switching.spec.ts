@@ -7,7 +7,7 @@ import { delay } from "typed-redux-saga";
 import { restartSagaAction } from "viewer/model/actions/actions";
 import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
 import type { SetIsMutexAcquiredAction } from "viewer/model/actions/save_actions";
-import type { Saga } from "viewer/model/sagas/effect_generators";
+import { type Saga, select } from "viewer/model/sagas/effect_generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import {
   clearAllSubscriptions,
@@ -53,6 +53,11 @@ describe("Save Mutex Saga collaboration mode switching", () => {
   function* assertSetIsMutexAcquiredAction(expectedIsAcquired: boolean) {
     const action = (yield take("SET_IS_MUTEX_ACQUIRED")) as SetIsMutexAcquiredAction;
     expect(action.isMutexAcquired).toEqual(expectedIsAcquired);
+  }
+
+  function* assertIsMutexAcquired() {
+    const hasMutex = yield* select((state) => state.save.mutexState.hasAnnotationMutex);
+    expect(hasMutex).toBeTruthy();
   }
 
   /*
@@ -105,7 +110,7 @@ describe("Save Mutex Saga collaboration mode switching", () => {
 
   /*
    * Tests for:
-   *   Exclusive -> {Concurrent, OnwerOnly}
+   *   Exclusive -> {Concurrent, OwnerOnly}
    */
   it<WebknossosTestContext>("Switching from Exclusive to Concurrent should cancel the continuous mutex saga and start the ad-hoc saga.", async (context: WebknossosTestContext) => {
     await setupWebknossosForTestingWithRestrictions(context, "Exclusive", true);
@@ -172,7 +177,11 @@ describe("Save Mutex Saga collaboration mode switching", () => {
       yield* assertMutexSagaState({ continuousIsRunning: false, adHocIsRunning: true });
 
       yield put(setCollaborationModeAction("Exclusive"));
-      yield* assertSetIsMutexAcquiredAction(true);
+      // The mutex was already acquired and should still be acquired. Therefore, we don't
+      // use assertSetIsMutexAcquiredAction (which waits for an action), but access the store directly.
+      // To be extra safe, we wait a bit to give possibly wrong actions/sagas time to do change the store.
+      yield* delay(50);
+      yield* assertIsMutexAcquired();
 
       yield* assertMutexSagaState({ continuousIsRunning: true, adHocIsRunning: false });
     });

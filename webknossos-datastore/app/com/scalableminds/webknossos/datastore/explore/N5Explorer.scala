@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.explore
 
 import com.scalableminds.util.geometry.Vec3Double
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.{
@@ -62,20 +63,25 @@ trait N5Explorer extends RemoteLayerExplorer {
   protected def extractVoxelSizeInAxisUnits(scale: List[Double], axisOrder: AxisOrder): Fox[Vec3Double] =
     tryo(Vec3Double(scale(axisOrder.x), scale(axisOrder.y), scale(axisOrder.zWithFallback))).toFox
 
-  protected def layerFromMagsWithAttributes(magsWithAttributes: List[MagWithAttributes],
-                                            remotePath: VaultPath): Fox[StaticLayer] =
+  protected def layerFromMagsWithAttributes(
+      magsWithAttributes: List[MagWithAttributes],
+      remotePath: VaultPath
+  ): Fox[StaticLayer] =
     for {
       _ <- Fox.fromBool(magsWithAttributes.nonEmpty) ?~> "zero mags in layer"
       elementClass <- elementClassFromMags(magsWithAttributes) ?~> "Could not extract element class from mags"
       boundingBox = boundingBoxFromMags(magsWithAttributes)
       name = guessNameFromPath(remotePath)
-      layer: StaticLayer = if (looksLikeSegmentationLayer(name, elementClass)) {
-        StaticSegmentationLayer(name,
-                                DataFormat.n5,
-                                boundingBox,
-                                elementClass,
-                                magsWithAttributes.map(_.mag),
-                                largestSegmentId = None)
-      } else StaticColorLayer(name, DataFormat.n5, boundingBox, elementClass, magsWithAttributes.map(_.mag))
+      layer: StaticLayer =
+        if (looksLikeSegmentationLayer(name, elementClass)) {
+          StaticSegmentationLayer(
+            name,
+            DataFormat.n5,
+            boundingBox,
+            elementClass,
+            magsWithAttributes.map(_.mag),
+            largestSegmentId = None
+          )
+        } else StaticColorLayer(name, DataFormat.n5, boundingBox, elementClass, magsWithAttributes.map(_.mag))
     } yield layer
 }

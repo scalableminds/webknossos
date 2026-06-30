@@ -56,6 +56,7 @@ import {
   initializeMappingAndTool,
   makeMappingEditableForTest,
   mockInitialBucketAndAgglomerateData,
+  operationFinished,
 } from "./proofreading_test_utils";
 
 const ACTION_TYPES_BLACKLIST = ["updateCamera", "updateMappingName", "updateActiveSegmentId"];
@@ -129,8 +130,7 @@ describe("Proofreading should generate correct update actions", () => {
       // Execute the actual merge and wait for the finished mapping.
       yield put(proofreadMergeAction(targetPosition, targetSegmentId));
       // Wait till proofreading action is finished; including refreshing agglomerate trees.
-      yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
-      yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
+      yield take(operationFinished("PROOFREADING"));
     });
     await task.toPromise();
   }
@@ -191,8 +191,7 @@ describe("Proofreading should generate correct update actions", () => {
         minCutAgglomerateWithPositionAction(targetPosition, targetSegmentId, sourceAgglomerateId),
       );
       // Wait till proofreading action is finished; including refreshing agglomerate trees.
-      yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
-      yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
+      yield take(operationFinished("PROOFREADING"));
     });
     await task.toPromise();
   }

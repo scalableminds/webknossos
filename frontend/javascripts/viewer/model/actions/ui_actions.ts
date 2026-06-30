@@ -1,10 +1,11 @@
-import type { OrthoView, SagaIdentifier, Vector3 } from "viewer/constants";
+import type { OrthoView, Vector3 } from "viewer/constants";
 import type { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import type { BorderOpenStatus, Theme, WebknossosState } from "viewer/store";
 import type { StartAiJobDrawerState } from "viewer/view/ai_jobs/constants";
 
 type SetDropzoneModalVisibilityAction = ReturnType<typeof setDropzoneModalVisibilityAction>;
 type SetVersionRestoreVisibilityAction = ReturnType<typeof setVersionRestoreVisibilityAction>;
+type SetIsRestoringVersionAction = ReturnType<typeof setIsRestoringVersionAction>;
 type SetStoredLayoutsAction = ReturnType<typeof setStoredLayoutsAction>;
 type SetBorderOpenStatusAction = ReturnType<typeof setBorderOpenStatusAction>;
 type SetImportingMeshStateAction = ReturnType<typeof setImportingMeshStateAction>;
@@ -16,9 +17,6 @@ type SetThemeAction = ReturnType<typeof setThemeAction>;
 type SetDownloadModalVisibilityAction = ReturnType<typeof setDownloadModalVisibilityAction>;
 type SetShareModalVisibilityAction = ReturnType<typeof setShareModalVisibilityAction>;
 type SetIsWkInitializedAction = ReturnType<typeof setIsWkInitializedAction>;
-export type SetBusyBlockingInfoAction = ReturnType<typeof setBusyBlockingInfoAction>;
-type AllowSagaWhileBusyAction = ReturnType<typeof allowSagaWhileBusyAction>;
-type DisallowSagaWhileBusyAction = ReturnType<typeof disallowSagaWhileBusyAction>;
 type SetPythonClientModalVisibilityAction = ReturnType<typeof setPythonClientModalVisibilityAction>;
 type SetaIJobDrawerStateAction = ReturnType<typeof setAIJobDrawerStateAction>;
 export type EnterAction = ReturnType<typeof enterAction>;
@@ -42,6 +40,9 @@ type SetRenderAnimationModalVisibilityAction = ReturnType<
 >;
 type SetUserScriptsModalVisibilityAction = ReturnType<typeof setUserScriptsModalVisibilityAction>;
 type SetZarrLinksModalVisibilityAction = ReturnType<typeof setZarrLinksModalVisibilityAction>;
+type SetKeyboardShortcutConfigModalVisibilityAction = ReturnType<
+  typeof setKeyboardShortcutConfigModalVisibilityAction
+>;
 type SetMergeModalVisibilityAction = ReturnType<typeof setMergeModalVisibilityAction>;
 type SetDuplicateAnnotationModalVisibilityAction = ReturnType<
   typeof setDuplicateAnnotationModalVisibilityAction
@@ -50,6 +51,7 @@ type SetDuplicateAnnotationModalVisibilityAction = ReturnType<
 export type UiAction =
   | SetDropzoneModalVisibilityAction
   | SetVersionRestoreVisibilityAction
+  | SetIsRestoringVersionAction
   | SetImportingMeshStateAction
   | SetBorderOpenStatusAction
   | SetStoredLayoutsAction
@@ -66,10 +68,8 @@ export type UiAction =
   | SetMergeModalVisibilityAction
   | SetUserScriptsModalVisibilityAction
   | SetZarrLinksModalVisibilityAction
+  | SetKeyboardShortcutConfigModalVisibilityAction
   | SetDuplicateAnnotationModalVisibilityAction
-  | SetBusyBlockingInfoAction
-  | AllowSagaWhileBusyAction
-  | DisallowSagaWhileBusyAction
   | SetIsWkInitializedAction
   | EnterAction
   | EscapeAction
@@ -94,6 +94,11 @@ export const setVersionRestoreVisibilityAction = (active: boolean) =>
   ({
     type: "SET_VERSION_RESTORE_VISIBILITY",
     active,
+  }) as const;
+export const setIsRestoringVersionAction = (isRestoring: boolean) =>
+  ({
+    type: "SET_IS_RESTORING_VERSION",
+    isRestoring,
   }) as const;
 export const setStoredLayoutsAction = (storedLayouts: Record<string, any>) =>
   ({
@@ -170,33 +175,15 @@ export const setZarrLinksModalVisibilityAction = (visible: boolean) =>
     type: "SET_ZARR_LINKS_MODAL_VISIBILITY",
     visible,
   }) as const;
+export const setKeyboardShortcutConfigModalVisibilityAction = (visible: boolean) =>
+  ({
+    type: "SET_KEYBOARD_SHORTCUT_CONFIG_MODAL_VISIBILITY",
+    visible,
+  }) as const;
 export const setDuplicateAnnotationModalVisibilityAction = (visible: boolean) =>
   ({
     type: "SET_DUPLICATE_ANNOTATION_MODAL_VISIBILITY",
     visible,
-  }) as const;
-export const setBusyBlockingInfoAction = (isBusy: boolean, reason?: string) =>
-  ({
-    type: "SET_BUSY_BLOCKING_INFO_ACTION",
-    value: {
-      isBusy,
-      reason,
-    },
-  }) as const;
-export const allowSagaWhileBusyAction = (allowedSaga: SagaIdentifier) =>
-  ({
-    type: "ALLOW_SAGA_WHILE_BUSY_ACTION",
-    value: {
-      allowedSaga,
-    },
-  }) as const;
-
-export const disallowSagaWhileBusyAction = (allowedSaga: SagaIdentifier) =>
-  ({
-    type: "DISALLOW_SAGA_WHILE_BUSY_ACTION",
-    value: {
-      allowedSaga,
-    },
   }) as const;
 export const setIsWkInitializedAction = (isInitialized: boolean) =>
   ({

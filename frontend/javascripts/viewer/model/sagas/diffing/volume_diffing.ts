@@ -27,6 +27,7 @@ import {
   updateSegmentGroupsExpandedState,
   updateSegmentPartialVolumeAction,
   updateSegmentVisibilityVolumeAction,
+  updateVolumeBucketDataHasChanged,
   upsertSegmentGroupUpdateAction,
 } from "viewer/model/sagas/volume/update_actions";
 import {
@@ -51,6 +52,12 @@ export function* diffVolumeTracing(
   }
   if (prevVolumeTracing.largestSegmentId !== volumeTracing.largestSegmentId) {
     yield updateLargestSegmentId(volumeTracing.largestSegmentId, volumeTracing.tracingId);
+  }
+  if (prevVolumeTracing.volumeBucketDataHasChanged !== volumeTracing.volumeBucketDataHasChanged) {
+    yield updateVolumeBucketDataHasChanged(
+      volumeTracing.volumeBucketDataHasChanged ?? true,
+      volumeTracing.tracingId,
+    );
   }
 
   yield* diffBoundingBoxes(

@@ -58,8 +58,8 @@ import DatasetSettingsDataTab from "dashboard/dataset/dataset_settings_data_tab"
 import DatasetSettingsDeleteTab from "dashboard/dataset/dataset_settings_delete_tab";
 import DatasetSettingsMetadataTab from "dashboard/dataset/dataset_settings_metadata_tab";
 import DatasetSettingsSharingTab from "dashboard/dataset/dataset_settings_sharing_tab";
+import DatasetSettingsStorageTab from "dashboard/dataset/dataset_settings_storage_tab";
 import DatasetSettingsViewConfigTab from "dashboard/dataset/dataset_settings_viewconfig_tab";
-import { useWkSelector } from "libs/react_hooks";
 import { PageNotFoundView } from "./page_not_found_view";
 import {
   AnnotationsRouteWrapper,
@@ -84,12 +84,10 @@ const AsyncWorkflowListView = loadable<EmptyObject>(
 );
 
 function RootLayout() {
-  const isAuthenticated = useWkSelector((state) => state.activeUser != null);
-
   return (
     <Layout>
       <CommandPalette />
-      <Navbar isAuthenticated={isAuthenticated} />
+      <Navbar />
       <Content>
         <ErrorBoundary>
           <Outlet />
@@ -281,6 +279,7 @@ const routes = createRoutesFromElements(
       <Route path="sharing" element={<DatasetSettingsSharingTab />} />
       <Route path="metadata" element={<DatasetSettingsMetadataTab />} />
       <Route path="defaultConfig" element={<DatasetSettingsViewConfigTab />} />
+      <Route path="storage" element={<DatasetSettingsStorageTab />} />
       <Route path="delete" element={<DatasetSettingsDeleteTab />} />
     </Route>
     <Route

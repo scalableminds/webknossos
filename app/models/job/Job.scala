@@ -3,7 +3,8 @@ package models.job
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, JsonHelper}
-import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.util.tools.Fox.toFox
+import com.scalableminds.webknossos.schema.Tables.{Jobs, JobsRow, GetResultJobsRow}
 import models.job.JobState.JobState
 import models.job.JobCommand.JobCommand
 import play.api.libs.json.{JsObject, Json, OFormat}
@@ -81,6 +82,7 @@ case class JobCompactInfo(
     created: Instant,
     started: Option[Instant],
     ended: Option[Instant],
+    lastRetry: Option[Instant],
     costInMilliCredits: Option[Int]
 ) extends JobResultLinks {
 
@@ -97,7 +99,7 @@ object JobCompactInfo {
   implicit val jsonFormat: OFormat[JobCompactInfo] = Json.format[JobCompactInfo]
 }
 
-class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class JobDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Job, JobsRow, Jobs](sqlClient) {
   protected val collection = Jobs
   protected def resultConverter = GetResultJobsRow
@@ -108,29 +110,27 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       state <- JobState.fromString(r.state).toFox
       command <- JobCommand.fromString(r.command).toFox
       commandArgs <- JsonHelper.parseAs[JsObject](r.commandargs).toFox
-    } yield {
-      Job(
-        ObjectId(r._Id),
-        ObjectId(r._Owner),
-        r._Datastore.trim,
-        command,
-        commandArgs,
-        state,
-        manualStateOpt,
-        r._Worker.map(ObjectId(_)),
-        r._VoxelyticsWorkflowhash,
-        r.latestrunid,
-        r.returnvalue,
-        r.retriedbysuperuser,
-        r.started.map(Instant.fromSql),
-        r.ended.map(Instant.fromSql),
-        r.lastretry.map(Instant.fromSql),
-        Instant.fromSql(r.created),
-        r.isdeleted
-      )
-    }
+    } yield Job(
+      ObjectId(r._id),
+      ObjectId(r._owner),
+      r._datastore.trim,
+      command,
+      commandArgs,
+      state,
+      manualStateOpt,
+      r._worker.map(ObjectId(_)),
+      r._voxelytics_workflowhash,
+      r.latestrunid,
+      r.returnvalue,
+      r.retriedbysuperuser,
+      r.started.map(Instant.fromSql),
+      r.ended.map(Instant.fromSql),
+      r.lastretry.map(Instant.fromSql),
+      Instant.fromSql(r.created),
+      r.isdeleted
+    )
 
-  override protected def readAccessQ(requestingUserId: ObjectId) =
+  override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     q"""
       _owner = $requestingUserId
       OR
@@ -152,19 +152,21 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
          ((SELECT u._organization FROM webknossos.users_ u WHERE u._id = ${prefix}_owner) IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin))
        """
 
-  def findAllCompact(commandOpt: Option[JobCommand], skipForDeletedDatasets: Boolean)(
-      implicit ctx: DBAccessContext): Fox[Seq[JobCompactInfo]] =
+  def findAllCompact(commandOpt: Option[JobCommand], skipForDeletedDatasets: Boolean)(using
+      ctx: DBAccessContext
+  ): Fox[Seq[JobCompactInfo]] =
     for {
       accessQuery <- accessQueryFromAccessQWithPrefix(listAccessQ, q"j.")
       commandQuery = commandOpt.map(command => q"j.command = $command").getOrElse(q"TRUE")
-      skipForDeletedQuery = if (skipForDeletedDatasets)
-        q"(j.commandargs->>'dataset_id')::text IN (SELECT _id FROM webknossos.datasets WHERE status NOT IN ${SqlToken
-          .tupleFromList(DataSourceStatus.unreportedStatusList)})"
-      else q"TRUE"
+      skipForDeletedQuery =
+        if (skipForDeletedDatasets)
+          q"(j.commandargs->>'dataset_id')::text IN (SELECT _id FROM webknossos.datasets WHERE status NOT IN ${SqlToken
+              .tupleFromList(DataSourceStatus.unreportedStatusList)})"
+        else q"TRUE"
       rows <- run(
         q"""
           SELECT j._id, j.command, u._organization, mu.firstName, mu.lastName, mu.email, j.commandArgs, COALESCE(j.manualState, j.state),
-                 j.returnValue, j._voxelytics_workflowHash, j.created, j.started, j.ended, ct.milli_credit_delta
+                 j.returnValue, j._voxelytics_workflowHash, j.created, j.started, j.ended, j.lastRetry, ct.milli_credit_delta
           FROM webknossos.jobs_ j
           JOIN webknossos.users_ u on j._owner = u._id
           JOIN webknossos.multiusers_ mu on u._multiUser = mu._id
@@ -173,43 +175,49 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           LEFT JOIN LATERAL (SELECT milli_credit_delta FROM webknossos.credit_transactions_ WHERE _paid_job = j._id LIMIT 1) ct ON TRUE
           WHERE $commandQuery AND $accessQuery AND $skipForDeletedQuery
           ORDER BY j.created DESC -- list newest first
-         """.as[(ObjectId,
-                 String,
-                 String,
-                 String,
-                 String,
-                 String,
-                 String,
-                 String,
-                 Option[String],
-                 Option[String],
-                 Instant,
-                 Option[Instant],
-                 Option[Instant],
-                 Option[Int])])
+         """.as[
+          (
+              ObjectId,
+              String,
+              String,
+              String,
+              String,
+              String,
+              String,
+              String,
+              Option[String],
+              Option[String],
+              Instant,
+              Option[Instant],
+              Option[Instant],
+              Option[Instant],
+              Option[Int]
+          )
+        ]
+      )
       parsed <- Fox.serialCombined(rows) { row =>
         for {
           command <- JobCommand.fromString(row._2).toFox
           effectiveState <- JobState.fromString(row._8).toFox
           commandArgs <- JsonHelper.parseAs[JsObject](row._7).toFox
-        } yield
-          JobCompactInfo(
-            id = row._1,
-            command = command,
-            organizationId = row._3,
-            ownerFirstName = row._4,
-            ownerLastName = row._5,
-            ownerEmail = row._6,
-            args = commandArgs,
-            state = effectiveState,
-            returnValue = row._9,
-            resultLink = None, // To be filled by calling “enrich”
-            voxelyticsWorkflowHash = row._10,
-            created = row._11,
-            started = row._12,
-            ended = row._13,
-            costInMilliCredits = row._14.map(_ * -1) // delta is negative, so cost should be positive.
-          )
+        } yield JobCompactInfo(
+          id = row._1,
+          command = command,
+          organizationId = row._3,
+          ownerFirstName = row._4,
+          ownerLastName = row._5,
+          ownerEmail = row._6,
+          args = commandArgs,
+          state = effectiveState,
+          returnValue = row._9,
+          resultLink = None, // To be filled by calling “enrich”
+          voxelyticsWorkflowHash = row._10,
+          created = row._11,
+          started = row._12,
+          ended = row._13,
+          lastRetry = row._14,
+          costInMilliCredits = row._15.map(_ * -1) // delta is negative, so cost should be positive.
+        )
       }
     } yield parsed
 
@@ -255,7 +263,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       r <- run(q"""SELECT $columns from $existingCollectionName
                    WHERE _worker = $workerId AND state IN ${SqlToken
-        .tupleFromValues(JobState.PENDING, JobState.STARTED)}
+          .tupleFromValues(JobState.PENDING, JobState.STARTED)}
                    AND manualState IS NULL
                    ORDER BY created""".as[JobsRow])
       parsed <- parseAll(r)
@@ -301,19 +309,19 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                     ${j.created}, ${j.isDeleted})""".asUpdate)
     } yield ()
 
-  def updateManualState(id: ObjectId, manualState: JobState)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateManualState(id: ObjectId, manualState: JobState)(using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
       _ <- run(q"""UPDATE webknossos.jobs SET manualState = $manualState WHERE _id = $id""".asUpdate)
     } yield ()
 
-  def retryOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def retryOne(id: ObjectId, retriedBySuperUser: Boolean)(using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
       _ <- run(q"""UPDATE webknossos.jobs
              SET state = ${JobState.PENDING},
                  manualState = NULL,
-                 retriedBySuperUser = true,
+                 retriedBySuperUser = $retriedBySuperUser,
                  lastRetry = ${Instant.now}
              WHERE _id = $id
              AND (

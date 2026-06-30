@@ -14,8 +14,8 @@ function getSkeletonTracingForConnectome(
   state: WebknossosState,
   layerName: string,
 ): SkeletonTracing | null {
-  if (state.localSegmentationData[layerName].connectomeData.skeleton != null) {
-    return state.localSegmentationData[layerName].connectomeData.skeleton;
+  if (state.localSegmentationStateByLayer[layerName].connectomeData.skeleton != null) {
+    return state.localSegmentationStateByLayer[layerName].connectomeData.skeleton;
   }
 
   return null;
@@ -36,7 +36,7 @@ function setConnectomeTreesVisibilityReducer(
   }
 
   return update(state, {
-    localSegmentationData: {
+    localSegmentationStateByLayer: {
       [layerName]: {
         connectomeData: {
           skeleton: {
@@ -87,7 +87,7 @@ function ConnectomeReducer(state: WebknossosState, action: Action): WebknossosSt
       };
 
       return update(state, {
-        localSegmentationData: {
+        localSegmentationStateByLayer: {
           [layerName]: {
             connectomeData: {
               skeleton: {
@@ -117,7 +117,7 @@ function ConnectomeReducer(state: WebknossosState, action: Action): WebknossosSt
 
       const [updatedTrees, _treeGroups, newMaxNodeId] = treesAndGroups;
       return update(state, {
-        localSegmentationData: {
+        localSegmentationStateByLayer: {
           [layerName]: {
             connectomeData: {
               skeleton: {
@@ -147,7 +147,7 @@ function ConnectomeReducer(state: WebknossosState, action: Action): WebknossosSt
       }
       const [trees, newMaxNodeId] = treesAndmaxNodeId;
       return update(state, {
-        localSegmentationData: {
+        localSegmentationStateByLayer: {
           [layerName]: {
             connectomeData: {
               skeleton: {
@@ -175,7 +175,7 @@ function ConnectomeReducer(state: WebknossosState, action: Action): WebknossosSt
 
     case "UPDATE_CONNECTOME_FILE_LIST": {
       const { layerName, connectomeFiles } = action;
-      return updateKey3(state, "localSegmentationData", layerName, "connectomeData", {
+      return updateKey3(state, "localSegmentationStateByLayer", layerName, "connectomeData", {
         availableConnectomeFiles: connectomeFiles,
       });
     }
@@ -183,12 +183,12 @@ function ConnectomeReducer(state: WebknossosState, action: Action): WebknossosSt
     case "UPDATE_CURRENT_CONNECTOME_FILE": {
       const { layerName, connectomeFileName } = action;
       const availableConnectomeFiles =
-        state.localSegmentationData[layerName].connectomeData.availableConnectomeFiles;
+        state.localSegmentationStateByLayer[layerName].connectomeData.availableConnectomeFiles;
 
       if (availableConnectomeFiles == null) {
         // Connectome files have not been fetched yet, temporarily save the connectome file name
         // so it can be activated once the files have been fetched
-        return updateKey3(state, "localSegmentationData", layerName, "connectomeData", {
+        return updateKey3(state, "localSegmentationStateByLayer", layerName, "connectomeData", {
           pendingConnectomeFileName: connectomeFileName,
         });
       }
@@ -196,7 +196,7 @@ function ConnectomeReducer(state: WebknossosState, action: Action): WebknossosSt
       const connectomeFile = availableConnectomeFiles.find(
         (el) => el.connectomeFileName === connectomeFileName,
       );
-      return updateKey3(state, "localSegmentationData", layerName, "connectomeData", {
+      return updateKey3(state, "localSegmentationStateByLayer", layerName, "connectomeData", {
         currentConnectomeFile: connectomeFile,
         pendingConnectomeFileName: null,
       });
@@ -204,14 +204,14 @@ function ConnectomeReducer(state: WebknossosState, action: Action): WebknossosSt
 
     case "SET_ACTIVE_CONNECTOME_AGGLOMERATE_IDS": {
       const { layerName, agglomerateIds } = action;
-      return updateKey3(state, "localSegmentationData", layerName, "connectomeData", {
+      return updateKey3(state, "localSegmentationStateByLayer", layerName, "connectomeData", {
         activeAgglomerateIds: agglomerateIds,
       });
     }
 
     case "REMOVE_CONNECTOME_TRACING": {
       const { layerName } = action;
-      return updateKey3(state, "localSegmentationData", layerName, "connectomeData", {
+      return updateKey3(state, "localSegmentationStateByLayer", layerName, "connectomeData", {
         skeleton: null,
       });
     }

@@ -20,8 +20,8 @@ object JsonHelper extends LazyLogging {
 
   def parseAs[T: Reads](s: String): Box[T] =
     for {
-      jsValue <- tryo(Json.parse(s)) ~> "Failed to parse json"
-      validated <- as[T](jsValue) ~> "Failed to validate json against schema"
+      jsValue <- tryo(Json.parse(s)) ?~ "Failed to parse json"
+      validated <- as[T](jsValue) ?~ "Failed to validate json against schema"
     } yield validated
 
   def as[T: Reads](jsReadable: JsReadable): Box[T] =
@@ -44,14 +44,13 @@ object JsonHelper extends LazyLogging {
           Failure(s"An EOF exception occurred during json read. File: ${rootPath.relativize(path).toString}")
         case _: AccessDeniedException | _: FileNotFoundException =>
           logger.warn(
-            s"File access exception in JsonHelper while trying to extract json from file. File: ${rootPath.toString}")
+            s"File access exception in JsonHelper while trying to extract json from file. File: ${rootPath.toString}"
+          )
           Failure(s"Failed to parse Json in '${rootPath.relativize(path).toString}'. Access denied.")
         case e: Exception =>
           logger.warn(s"Json mapping issue in '${rootPath.toString}': $e")
           Failure(s"Failed to parse Json in '${rootPath.relativize(path).toString}': $e")
-      } finally {
-        if (buffer != null) buffer.close()
-      }
+      } finally if (buffer != null) buffer.close()
     } else Failure("Invalid path for json parsing.")
 
   def parseFromFileAs[T: Reads](path: Path, rootPath: Path): Box[T] =
@@ -101,7 +100,7 @@ object JsonHelper extends LazyLogging {
     jsValue match {
       case JsObject(fields) =>
         val processedAsMap = fields.filter { case (k, _) => !keysToRemove.contains(k) }.view.mapValues {
-          value: JsValue =>
+          (value: JsValue) =>
             removeKeyRecursively(value, keysToRemove)
         }.toMap
         Json.toJson(processedAsMap)

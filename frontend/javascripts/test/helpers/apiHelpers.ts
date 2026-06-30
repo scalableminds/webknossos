@@ -96,6 +96,7 @@ import { createUnitCubeBufferGeometry } from "./geometry_helpers";
 const TOKEN = "secure-token";
 const ANNOTATION_TYPE = "annotationTypeValue";
 const ANNOTATION_ID = "annotationIdValue";
+const MUTEX_GRANTED = { canEdit: true, blockedByUser: null, blockedBySessionId: null };
 
 // Define extended test context
 export interface WebknossosTestContext extends BaseTestContext {
@@ -207,7 +208,7 @@ vi.mock("admin/rest_api.ts", async () => {
       _mappingId: string,
       segmentIds: Array<NumberLike>,
     ) => {
-      return getAgglomeratesForSegmentsImpl(segmentIds);
+      return getAgglomeratesForSegmentsImpl(segmentIds, 0);
     },
   );
 
@@ -248,7 +249,7 @@ vi.mock("admin/rest_api.ts", async () => {
         throw new Error("No test has mocked the return value yet here.");
       },
     ),
-    acquireAnnotationMutex: vi.fn(() => ({ canEdit: true, blockedByUser: null })),
+    acquireAnnotationMutex: vi.fn(() => MUTEX_GRANTED),
     releaseAnnotationMutex: vi.fn(() => {}),
     getNeighborsForAgglomerateNode: vi.fn(
       (_tracingStoreUrl: string, _tracingId: string, _segmentInfo: ArbitraryObject) => {
@@ -487,6 +488,9 @@ export function createBucketResponseFunction(
     return {
       buffer: new Uint8Array(typedArray.buffer).buffer,
       headers: {
+        "empty-bucket-indices": "[]",
+        "failure-bucket-indices": "[]",
+        // Legacy header, kept until the backend stops sending it.
         "missing-buckets": "[]",
       },
     };
@@ -555,6 +559,8 @@ export async function setupWebknossosForTesting(
   /*
    * This will execute model.fetch(...) and initialize the store with the tracing, etc.
    */
+  // Reset to the default so stale implementations from previous tests don't affect saga startup.
+  vi.mocked(acquireAnnotationMutex).mockResolvedValue(MUTEX_GRANTED);
   Store.dispatch(restartSagaAction());
   Store.dispatch(resetStoreAction());
   Store.dispatch(setActiveUserAction(dummyUser));

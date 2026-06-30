@@ -252,8 +252,7 @@ function SettingsReducer(state: WebknossosState, action: Action): WebknossosStat
     }
 
     case "SET_MAPPING": {
-      const { mappingName, mapping, mappingColors, mappingType, layerName, isMergerModeMapping } =
-        action;
+      const { mappingName, mappingType, layerName, isMergerModeMapping } = action;
 
       // Editable mappings cannot be disabled or switched for now
       if (!isMappingActivationAllowed(state, mappingName, layerName, !!isMergerModeMapping))
@@ -268,9 +267,40 @@ function SettingsReducer(state: WebknossosState, action: Action): WebknossosStat
         state,
         {
           mappingName,
+          mapping: undefined,
+          mappingColors: undefined,
+          mappingType,
+          hideUnmappedIds,
+          mappingStatus:
+            mappingName != null ? MappingStatusEnum.ACTIVATING : MappingStatusEnum.DISABLED,
+          isMergerModeMapping,
+        },
+        layerName,
+      );
+    }
+
+    case "SET_MAPPING_DATA": {
+      // This action only updates the mapping data. The mapping's name and type were configured by
+      // the preceding SET_MAPPING (phase 1) or belong to an already-active mapping, so we read
+      // them from the current active mapping rather than from the action.
+      const { mapping, mappingColors, layerName, isMergerModeMapping } = action;
+      const activeMappingInfo = getMappingInfo(
+        state.temporaryConfiguration.activeMappingByLayer,
+        layerName,
+      );
+      const { mappingName } = activeMappingInfo;
+
+      // Editable mappings cannot be disabled or switched for now
+      if (!isMappingActivationAllowed(state, mappingName, layerName, !!isMergerModeMapping))
+        return state;
+
+      const hideUnmappedIds =
+        action.hideUnmappedIds != null ? action.hideUnmappedIds : activeMappingInfo.hideUnmappedIds;
+      return updateActiveMapping(
+        state,
+        {
           mapping,
           mappingColors,
-          mappingType,
           hideUnmappedIds,
           mappingStatus:
             mappingName != null ? MappingStatusEnum.ACTIVATING : MappingStatusEnum.DISABLED,
@@ -299,6 +329,38 @@ function SettingsReducer(state: WebknossosState, action: Action): WebknossosStat
       if (!isMappingActivationAllowed(state, mappingName, layerName)) return state;
 
       return updateActiveMapping(state, { mappingName }, layerName);
+    }
+
+    case "SET_KEYBOARD_SHORTCUTS_CONFIG": {
+      return {
+        ...state,
+        keyboardConfiguration: {
+          ...state.keyboardConfiguration,
+          shortcutsConfig: action.shortcuts,
+        },
+      };
+    }
+
+    case "SET_KEYBOARD_LAYOUT_MAP": {
+      return {
+        ...state,
+        keyboardConfiguration: {
+          ...state.keyboardConfiguration,
+          unmodifiedLayoutMap: action.map,
+        },
+      };
+    }
+
+    case "SET_KEYBOARD_LAYOUT_MAP_ENTRY": {
+      const copy = new Map(state.keyboardConfiguration.unmodifiedLayoutMap.entries());
+      const copyWithNewEntry = copy.set(action.code, action.key);
+      return {
+        ...state,
+        keyboardConfiguration: {
+          ...state.keyboardConfiguration,
+          unmodifiedLayoutMap: copyWithNewEntry,
+        },
+      };
     }
 
     default: // pass;

@@ -2,19 +2,21 @@ package com.scalableminds.util.requestlogging
 
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.time.Instant
+import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import play.api.http.{HttpEntity, Status}
 import play.api.mvc.{Request, Result}
 
-import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration.*
 
 trait AbstractRequestLogging extends LazyLogging with Formatter {
 
-  def logRequestFormatted(request: Request[_],
-                          result: Result,
-                          notifier: Option[String => Unit],
-                          requesterId: Option[String] = None): Unit =
+  def logRequestFormatted(
+      request: Request[?],
+      result: Result,
+      notifier: Option[String => Unit],
+      requesterId: Option[String] = None
+  ): Unit =
     if (!Status.isSuccessful(result.header.status)) {
       val userIdMsg = requesterId.map(id => s" for user $id").getOrElse("")
       val resultMsg = s": `${resultBody(result)}`"
@@ -30,11 +32,14 @@ trait AbstractRequestLogging extends LazyLogging with Formatter {
     }
 
   def logTime(notifier: String => Unit, durationThreshold: FiniteDuration = 2 minutes)(
-      block: => Future[Result])(implicit request: Request[_], ec: ExecutionContext): Future[Result] = {
-    def logTimeFormatted(executionTime: FiniteDuration, request: Request[_], result: Result): Unit = {
+      block: => Fox[Result]
+  )(implicit request: Request[?]): Fox[Result] = {
+    def logTimeFormatted(executionTime: FiniteDuration, request: Request[?], result: Result): Unit = {
       val debugString =
-        s"Request `${request.method}` `${request.uri}` took ${formatDuration(executionTime)} and was${if (result.header.status != 200) " not "
-        else " "}successful"
+        s"Request `${request.method}` `${request.uri}` took ${formatDuration(executionTime)} and was${
+            if (result.header.status != 200) " not "
+            else " "
+          }successful"
       logger.info(debugString)
       notifier(debugString)
     }
@@ -52,8 +57,9 @@ trait AbstractRequestLogging extends LazyLogging with Formatter {
 trait RequestLogging extends AbstractRequestLogging {
   // Hint: within webknossos itself, UserAwareRequestLogging is available, which additionally logs the requester user id
 
-  def log(notifier: Option[String => Unit] = None)(block: => Future[Result])(implicit request: Request[_],
-                                                                             ec: ExecutionContext): Future[Result] =
+  def log(
+      notifier: Option[String => Unit] = None
+  )(block: => Fox[Result])(implicit request: Request[?]): Fox[Result] =
     for {
       result: Result <- block
       _ = logRequestFormatted(request, result, notifier)

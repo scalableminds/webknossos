@@ -23,7 +23,7 @@ trait IntervalScheduler {
 
   protected def tickerInitialDelay: FiniteDuration = 10 seconds
 
-  protected def tick(): Fox[_]
+  protected def tick(): Fox[?]
 
   private val innerTickerInterval: FiniteDuration = 100 milliseconds
   private val lastCompletionTimeMillis = new AtomicLong(0)
@@ -55,12 +55,13 @@ trait IntervalScheduler {
 
   private var scheduled: Option[Cancellable] = None
 
-  lifecycle.addStopHook(stop _)
+  lifecycle.addStopHook(() => stop())
 
   if (tickerEnabled) {
     if (tickerInterval < innerTickerInterval) {
       throw new IllegalArgumentException(
-        s"IntervalScheduler was initialized with interval $tickerInterval. Only intervals larger than the inner ticker interval $innerTickerInterval are supported.")
+        s"IntervalScheduler was initialized with interval $tickerInterval. Only intervals larger than the inner ticker interval $innerTickerInterval are supported."
+      )
     }
     scheduled = Some(actorSystem.scheduler.scheduleWithFixedDelay(tickerInitialDelay, innerTickerInterval)(innerTick))
   }

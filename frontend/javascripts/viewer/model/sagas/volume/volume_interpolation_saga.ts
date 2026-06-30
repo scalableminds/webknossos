@@ -12,6 +12,7 @@ import {
   type Vector3,
 } from "viewer/constants";
 import { reuseInstanceOnEquality } from "viewer/model/accessors/accessor_helpers";
+import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import {
   getActiveMagIndexForLayer,
@@ -59,7 +60,7 @@ function _getInterpolationInfo(state: WebknossosState, explanationPrefix: string
       directionFactor,
     };
   }
-  const mostRecentLabelAction = getLastLabelAction(volumeTracing);
+  const mostRecentLabelAction = getLastLabelAction(state, volumeTracing);
 
   const activeViewport = mostRecentLabelAction?.plane || OrthoViews.PLANE_XY;
   const thirdDim = Dimensions.thirdDimensionForPlane(activeViewport);
@@ -254,7 +255,7 @@ function signedDist(arr: ndarray.NdArray) {
 }
 
 export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
-  const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
+  const allowUpdate = yield* select(mayEditAnnotation);
   if (!allowUpdate) return;
 
   const activeTool = yield* select((state) => state.uiInformation.activeTool);

@@ -15,6 +15,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
   TracingDataStore
 }
 import org.apache.pekko.actor.ActorSystem
+import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
 
 class TracingStoreModule extends AbstractModule {
 
@@ -37,6 +38,7 @@ class TracingStoreModule extends AbstractModule {
     bind(classOf[TsTempFileService]).asEagerSingleton()
     bind(classOf[TSCleanUpService]).asEagerSingleton()
     bind(classOf[TemporaryMergedVolumeStatsStore]).asEagerSingleton()
+    bind(classOf[TracingStoreRedisStore]).asEagerSingleton()
   }
 
 }

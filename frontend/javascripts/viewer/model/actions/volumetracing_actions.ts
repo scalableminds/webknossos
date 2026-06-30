@@ -147,8 +147,9 @@ export const VolumeTracingSaveRelevantActions: Action["type"][] = [
   "MERGE_SEGMENTS_ITEMS",
   "SET_SEGMENTS",
   ...AllUserBoundingBoxActions,
-  // Note that the following three actions are defined in settings_actions.ts
+  // Note that the following four actions are defined in settings_actions.ts
   "SET_MAPPING",
+  "SET_MAPPING_DATA",
   "SET_MAPPING_ENABLED",
   "FINISH_MAPPING_INITIALIZATION",
   "BATCH_UPDATE_GROUPS_AND_SEGMENTS",
@@ -156,7 +157,7 @@ export const VolumeTracingSaveRelevantActions: Action["type"][] = [
   "SET_MAPPING_IS_LOCKED",
   "TOGGLE_SEGMENT_GROUP",
   "TOGGLE_ALL_SEGMENTS",
-  "SET_HIDE_UNREGISTERED_SEGMENTS",
+  "SET_VOLUME_BUCKET_DATA_HAS_CHANGED",
 ];
 
 export const initializeVolumeTracingAction = (tracing: ServerVolumeTracing) =>
@@ -261,7 +262,7 @@ export const clickSegmentAction = (
 
 export const updateProofreadingMarkerPositionAction = (
   position: Vector3 | undefined,
-  layerName?: string,
+  layerName: string,
 ) =>
   ({
     type: "UPDATE_PROOFREADING_MARKER_POSITION",

@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(164);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(172);
 COMMIT TRANSACTION;
 
 
@@ -33,13 +33,11 @@ CREATE TABLE webknossos.annotations(
   _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
   _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
   _task TEXT CONSTRAINT _task_objectId CHECK (_task ~ '^[0-9a-f]{24}$'),
-  _team TEXT CONSTRAINT _team_objectId CHECK (_team ~ '^[0-9a-f]{24}$') NOT NULL,
   _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
   _publication TEXT,
   description TEXT NOT NULL DEFAULT '',
   visibility webknossos.ANNOTATION_VISIBILITY NOT NULL DEFAULT 'Internal',
   name TEXT NOT NULL DEFAULT '',
-  viewConfiguration JSONB,
   state webknossos.ANNOTATION_STATE NOT NULL DEFAULT 'Active',
   isLockedByOwner BOOLEAN NOT NULL DEFAULT FALSE,
   tags TEXT[] NOT NULL DEFAULT '{}',
@@ -80,6 +78,7 @@ CREATE TABLE webknossos.annotation_contributors(
 CREATE TABLE webknossos.annotation_mutexes(
   _annotation TEXT CONSTRAINT _annotation_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$') PRIMARY KEY,
   _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
+  sessionId TEXT NOT NULL,
   expiry TIMESTAMP NOT NULL
 );
 
@@ -131,6 +130,9 @@ CREATE TABLE webknossos.datasets(
   tags TEXT[] NOT NULL DEFAULT '{}',
   creationType webknossos.DATASET_CREATION_TYPE,
   importURL TEXT,
+  rootPath TEXT,
+  rootRealPath TEXT,
+  mirrorPath TEXT,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
   UNIQUE (directoryName, _organization),
@@ -189,6 +191,7 @@ CREATE TABLE webknossos.dataset_layer_attachments(
   type webknossos.LAYER_ATTACHMENT_TYPE NOT NULL,
   dataFormat webknossos.LAYER_ATTACHMENT_DATAFORMAT NOT NULL,
   uploadToPathIsPending BOOLEAN NOT NULL DEFAULT FALSE,
+  uploadIsPending BOOLEAN NOT NULL DEFAULT FALSE,
   PRIMARY KEY(_dataset, layerName, name, type)
 );
 
@@ -209,6 +212,7 @@ CREATE TABLE webknossos.dataset_mags(
   channelIndex INT,
   credentialId TEXT,
   uploadToPathIsPending BOOLEAN NOT NULL DEFAULT FALSE,
+  uploadIsPending BOOLEAN NOT NULL DEFAULT FALSE,
   PRIMARY KEY (_dataset, dataLayerName, mag)
 );
 
@@ -505,7 +509,20 @@ CREATE TABLE webknossos.user_datasetLayerConfigurations(
   CONSTRAINT viewConfigurationIsJsonObject CHECK(jsonb_typeof(viewConfiguration) = 'object')
 );
 
+CREATE TABLE webknossos.user_annotationViewConfigurations(
+  _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
+  _annotation TEXT CONSTRAINT _annotation_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$') NOT NULL,
+  viewConfiguration JSONB NOT NULL,
+  PRIMARY KEY (_user, _annotation),
+  CONSTRAINT viewConfigurationIsJsonObject CHECK(jsonb_typeof(viewConfiguration) = 'object')
+);
 
+CREATE TABLE webknossos.multiUser_keyboardShortcutsConfigs(
+  _multiUser TEXT CONSTRAINT _multiUser_objectId CHECK (_multiUser ~ '^[0-9a-f]{24}$') NOT NULL,
+  shortcutsConfig JSONB NOT NULL DEFAULT '{}'::json,
+  PRIMARY KEY (_multiUser),
+  CONSTRAINT shortcutsConfigIsJsonObject CHECK(jsonb_typeof(shortcutsConfig) = 'object')
+);
 CREATE TYPE webknossos.THEME AS ENUM ('light', 'dark', 'auto');
 CREATE TABLE webknossos.multiUsers(
   _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
@@ -910,7 +927,6 @@ CREATE INDEX ON webknossos.organization_usedStorage_attachments(_organization);
 
 ALTER TABLE webknossos.annotations
   ADD CONSTRAINT task_ref FOREIGN KEY(_task) REFERENCES webknossos.tasks(_id) ON DELETE SET NULL DEFERRABLE,
-  ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) DEFERRABLE,
   ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) DEFERRABLE,
   ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) DEFERRABLE,
   ADD CONSTRAINT publication_ref FOREIGN KEY(_publication) REFERENCES webknossos.publications(_id) DEFERRABLE;
@@ -973,6 +989,11 @@ ALTER TABLE webknossos.credit_transactions
 ALTER TABLE webknossos.user_datasetLayerConfigurations
   ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE,
   ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) ON DELETE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.user_annotationViewConfigurations
+    ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE,
+    ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) ON DELETE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.multiUser_keyboardShortcutsConfigs
+    ADD CONSTRAINT multiUser_ref FOREIGN KEY(_multiUser) REFERENCES webknossos.multiUsers(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.multiUsers
   ADD CONSTRAINT lastLoggedInIdentity_ref FOREIGN KEY(_lastLoggedInIdentity) REFERENCES webknossos.users(_id) ON DELETE SET NULL;
 ALTER TABLE webknossos.experienceDomains
@@ -1135,21 +1156,17 @@ CREATE SEQUENCE webknossos.objectid_sequence;
 CREATE FUNCTION webknossos.generate_object_id() RETURNS TEXT AS $$
 DECLARE
   time_component TEXT;
-  machine_id TEXT;
-  process_id TEXT;
+  random_component TEXT;
   counter TEXT;
   result TEXT;
 BEGIN
-  -- Extract the current timestamp in seconds since the Unix epoch (4 bytes, 8 hex chars)
+  -- 4 bytes (8 hex chars): seconds since Unix epoch
   SELECT LPAD(TO_HEX(FLOOR(EXTRACT(EPOCH FROM clock_timestamp()))::BIGINT), 8, '0') INTO time_component;
-  -- Generate a machine identifier using the hash of the server IP (3 bytes, 6 hex chars)
-  SELECT SUBSTRING(md5(CAST(inet_server_addr() AS TEXT)) FROM 1 FOR 6) INTO machine_id;
-  -- Retrieve the current backend process ID, limited to 2 bytes (4 hex chars)
-  SELECT LPAD(TO_HEX(pg_backend_pid() % 65536), 4, '0') INTO process_id;
-  -- Generate a counter using a sequence, ensuring it's 3 bytes (6 hex chars)
+  -- 5 bytes (10 hex chars): random value. Spec says should be random per process. This is not easily available in postgres, we do random per call instead.
+  SELECT LEFT(REPLACE(gen_random_uuid()::TEXT, '-', ''), 10) INTO random_component;
+  -- 3 bytes (6 hex chars): incrementing counter. Spec says should get randomized start, but we are certain to have just one postgres process running, so the conflict scenario is not plausible.
   SELECT LPAD(TO_HEX(nextval('webknossos.objectid_sequence')::BIGINT % 16777216), 6, '0') INTO counter;
-  -- Concatenate all parts to form a 24-character ObjectId
-  result := time_component || machine_id || process_id || counter;
+  result := time_component || random_component || counter;
 
   RETURN result;
 END;

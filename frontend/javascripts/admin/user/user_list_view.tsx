@@ -38,9 +38,9 @@ import {
 import LinkButton from "components/link_button";
 import dayjs from "dayjs";
 import features from "features";
+import { copyToClipboard } from "libs/clipboard";
 import Persistence from "libs/persistence";
 import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
-import Toast from "libs/toast";
 import { filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
 import { location } from "libs/window";
 import keyBy from "lodash-es/keyBy";
@@ -403,6 +403,15 @@ function UserListView() {
             sorter={localeCompareBy<APIUser>((user) => user.email)}
           />
           <Column
+            title="Teams - Role"
+            dataIndex="teams"
+            key="teams_"
+            width={250}
+            render={(_teams: APITeamMembership[], user: APIUser) =>
+              renderTeamRolesAndPermissionsForUser(user)
+            }
+          />
+          <Column
             title="Experiences"
             dataIndex="experiences"
             key="experiences"
@@ -427,25 +436,15 @@ function UserListView() {
                       style={{
                         margin: "0 0 0 5px",
                       }}
-                      onClick={async (evt) => {
+                      onClick={(evt) => {
                         evt.stopPropagation();
-                        await navigator.clipboard.writeText(domain);
-                        Toast.success(`"${domain}" copied to clipboard`);
+                        copyToClipboard(domain, "experience domain", true);
                       }}
                     />
                   </Tag>
                 ))}
               </Space>
             )}
-          />
-          <Column
-            title="Teams - Role"
-            dataIndex="teams"
-            key="teams_"
-            width={250}
-            render={(_teams: APITeamMembership[], user: APIUser) =>
-              renderTeamRolesAndPermissionsForUser(user)
-            }
           />
           <Column
             title="Status"

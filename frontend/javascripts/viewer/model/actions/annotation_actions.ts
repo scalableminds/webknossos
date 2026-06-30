@@ -328,6 +328,7 @@ export const addAdHocMeshAction = (
   mappingName: string | null | undefined,
   mappingType: MappingType | null | undefined,
   opacity: number | undefined,
+  isVisible: boolean | undefined,
 ) =>
   ({
     type: "ADD_AD_HOC_MESH",
@@ -338,6 +339,7 @@ export const addAdHocMeshAction = (
     mappingName,
     mappingType,
     opacity: opacity ?? Constants.DEFAULT_MESH_OPACITY,
+    isVisible: isVisible ?? true,
   }) as const;
 
 export const addPrecomputedMeshAction = (
@@ -348,6 +350,7 @@ export const addPrecomputedMeshAction = (
   meshFileName: string,
   mappingName: string | null | undefined,
   opacity: number | undefined,
+  isVisible: boolean | undefined,
 ) =>
   ({
     type: "ADD_PRECOMPUTED_MESH",
@@ -358,6 +361,7 @@ export const addPrecomputedMeshAction = (
     meshFileName,
     mappingName,
     opacity: opacity ?? Constants.DEFAULT_MESH_OPACITY,
+    isVisible: isVisible ?? true,
   }) as const;
 
 export const setCollaborationModeAction = (collaborationMode: AnnotationCollaborationMode) =>

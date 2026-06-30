@@ -2,13 +2,14 @@ package com.scalableminds.webknossos.datastore.dataformats.zarr
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 
 import scala.concurrent.ExecutionContext
 
-object ZarrCoordinatesParser extends FoxImplicits {
+object ZarrCoordinatesParser {
 
   def parseNDimensionalDotCoordinates(
       coordinates: String,
@@ -24,11 +25,11 @@ object ZarrCoordinatesParser extends FoxImplicits {
       reorderedAdditionalAxes = reorderedAdditionalAxesOpt.getOrElse(List.empty)
       _ <- Fox.fromBool(reorderedAdditionalAxes.length == ints.length - 4) ?~> Msg.Zarr.invalidAdditionalCoordinates
       requestContainsAdditionalCoordinates = ints.length > 4
-      additionalCoordinates = if (requestContainsAdditionalCoordinates)
-        Some(ints.slice(1, ints.length - 3).zipWithIndex.map {
-          case (coordinate, index) =>
+      additionalCoordinates =
+        if (requestContainsAdditionalCoordinates)
+          Some(ints.slice(1, ints.length - 3).zipWithIndex.map { case (coordinate, index) =>
             new AdditionalCoordinate(name = reorderedAdditionalAxes(index).name, value = coordinate)
-        })
-      else None
+          })
+        else None
     } yield (x, y, z, additionalCoordinates)
 }

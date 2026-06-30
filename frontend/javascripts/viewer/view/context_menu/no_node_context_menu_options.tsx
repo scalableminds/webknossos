@@ -18,6 +18,7 @@ import {
   getUnmappedSegmentIdForPosition,
   handleFloodFillFromGlobalPosition,
 } from "viewer/controller/combinations/volume_handlers";
+import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import {
   getMappingInfo,
   getVisibleSegmentationLayer,
@@ -81,12 +82,12 @@ export function useNoNodeContextMenuOptions(
 
   const currentMeshFile = useWkSelector((state) =>
     visibleSegmentationLayer != null
-      ? state.localSegmentationData[visibleSegmentationLayer.name].currentMeshFile
+      ? state.localSegmentationStateByLayer[visibleSegmentationLayer.name].currentMeshFile
       : null,
   );
   const currentConnectomeFile = useWkSelector((state) =>
     visibleSegmentationLayer != null
-      ? state.localSegmentationData[visibleSegmentationLayer.name].connectomeData
+      ? state.localSegmentationStateByLayer[visibleSegmentationLayer.name].connectomeData
           .currentConnectomeFile
       : null,
   );
@@ -99,7 +100,7 @@ export function useNoNodeContextMenuOptions(
     visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null,
   );
 
-  const allowUpdate = useWkSelector((state) => state.annotation.isUpdatingCurrentlyAllowed);
+  const allowUpdate = useWkSelector(mayEditAnnotation);
 
   const maybeUnmappedSegmentId =
     globalPosition != null ? getUnmappedSegmentIdForPosition(globalPosition) : null;
@@ -130,7 +131,9 @@ export function useNoNodeContextMenuOptions(
   const isConnectomeMappingEnabled = useWkSelector(hasConnectomeFile);
   const isMultiSplitActive = useWkSelector((state) => state.userConfiguration.isMultiSplitActive);
   const maybeMinCutPartitions = useWkSelector((state) =>
-    volumeTracing ? state.localSegmentationData[volumeTracing.tracingId]?.minCutPartitions : null,
+    volumeTracing
+      ? state.localSegmentationStateByLayer[volumeTracing.tracingId]?.minCutPartitions
+      : null,
   );
   const areSkeletonGeometriesTransformed = useWkSelector(areGeometriesTransformed);
 
@@ -174,6 +177,7 @@ export function useNoNodeContextMenuOptions(
         positionInLayerSpace,
         additionalCoordinates,
         currentMeshFile.name,
+        undefined,
         undefined,
         undefined,
       ),

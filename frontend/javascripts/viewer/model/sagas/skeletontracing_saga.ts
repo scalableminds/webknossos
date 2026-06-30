@@ -33,6 +33,7 @@ import {
   type Vector3,
 } from "viewer/constants";
 import { getSegmentIdForPositionAsync } from "viewer/controller/combinations/volume_handlers";
+import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import { getLayerByName } from "viewer/model/accessors/dataset_accessor";
 import {
   enforceSkeletonTracing,
@@ -403,7 +404,7 @@ function handleAgglomerateLoadingError(
 function* loadAgglomerateTreeWithAtPosition(
   action: LoadAgglomerateTreeFromIdAction | LoadAgglomerateTreeAtPositionAction,
 ): Saga<void> {
-  const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
+  const allowUpdate = yield* select(mayEditAnnotation);
   if (!allowUpdate) return;
   const { layerName, mappingName } = action;
 
@@ -550,7 +551,7 @@ function* removeConnectomeAgglomerateTreeWithId(
   const { layerName, mappingName, agglomerateId } = action;
   const treeName = getTreeNameForAgglomerateTree(agglomerateId, mappingName);
   const skeleton = yield* select(
-    (state) => state.localSegmentationData[layerName].connectomeData.skeleton,
+    (state) => state.localSegmentationStateByLayer[layerName].connectomeData.skeleton,
   );
   if (skeleton == null) return;
   const { trees } = skeleton;

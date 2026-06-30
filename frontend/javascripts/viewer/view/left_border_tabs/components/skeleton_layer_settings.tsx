@@ -259,18 +259,28 @@ export default function SkeletonLayerSettings() {
               defaultValue={defaultState.userConfiguration.clippingDistanceArbitrary}
             />
           ) : (
-            <LogSliderSetting
-              label={settings.clippingDistance + ` (${unit})`}
-              roundToDigit={3}
-              min={userSettings.clippingDistance.minimum}
-              max={userSettings.clippingDistance.maximum}
-              value={userConfiguration.clippingDistance}
-              onChange={onChangeClippingDistance}
-              defaultValue={defaultState.userConfiguration.clippingDistance}
-              disabled={
+            <FastTooltip
+              title={
                 userConfiguration.clipSkeletonToCurrentSection && isSectionClippingAvailable
+                  ? 'Disabled because "Only Show Nodes of Current Section" is active.'
+                  : null
               }
-            />
+            >
+              <div>
+                <LogSliderSetting
+                  label={settings.clippingDistance + ` (${unit})`}
+                  roundToDigit={3}
+                  min={userSettings.clippingDistance.minimum}
+                  max={userSettings.clippingDistance.maximum}
+                  value={userConfiguration.clippingDistance}
+                  onChange={onChangeClippingDistance}
+                  defaultValue={defaultState.userConfiguration.clippingDistance}
+                  disabled={
+                    userConfiguration.clipSkeletonToCurrentSection && isSectionClippingAvailable
+                  }
+                />
+              </div>
+            </FastTooltip>
           )}
           {!isArbitraryMode ? (
             <SwitchSetting

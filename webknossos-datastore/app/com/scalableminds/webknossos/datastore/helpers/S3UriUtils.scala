@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.helpers
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.tools.{Box, Failure, Full}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 
@@ -9,7 +10,7 @@ object S3UriUtils {
 
   def hostBucketFromUPath(upath: UPath): Box[String] = for {
     uri <- upath.toRemoteUri
-    _ <- Box.fromBool(uri.getScheme == PathSchemes.schemeS3)
+    _ <- checkSchemeIsS3(uri)
     bucket <- Box(hostBucketFromUri(uri))
   } yield bucket
 
@@ -43,7 +44,7 @@ object S3UriUtils {
 
   def objectKeyFromUPath(upath: UPath): Box[String] = for {
     uri <- upath.toRemoteUri
-    _ <- Box.fromBool(uri.getScheme == PathSchemes.schemeS3)
+    _ <- checkSchemeIsS3(uri)
     objectKey <- objectKeyFromUri(uri)
   } yield objectKey
 
@@ -75,4 +76,7 @@ object S3UriUtils {
   def isNonAmazonHost(uri: URI): Boolean =
     (isPathStyle(uri) && !uri.getHost.endsWith(".amazonaws.com")) || uri.getHost == "localhost"
 
+  private def checkSchemeIsS3(uri: URI): Box[Unit] =
+    Box
+      .fromBool(uri.getScheme == PathSchemes.schemeS3) ?~! Msg.UPath.schemaMismatch(uri.getScheme, PathSchemes.schemeS3)
 }

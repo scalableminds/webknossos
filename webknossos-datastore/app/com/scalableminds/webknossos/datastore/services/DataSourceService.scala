@@ -102,7 +102,7 @@ class DataSourceService @Inject() (
             .toList
             .toSingleBox("Listdir failed")
             .map(_.flatten)
-        } yield (orgaBaseDirsDirect ++ orgaDirsInAgnostic).map((_, selectedOrganizationId))
+        } yield (orgaBaseDirsDirect ++ orgaDirsInAgnostic).map((_, selectedOrganizationId)).distinct
       case None =>
         def orgaIdFromOrgaDirPath(path: Path) = path.getFileName.toString
         val orgaBaseDirsDirectWithIds = baseDirService.allOrgaSpecificLocalBaseDirs(requireDoScan = true)
@@ -113,7 +113,7 @@ class DataSourceService @Inject() (
             .toSingleBox("Listdir failed")
             .map(_.flatten)
           orgaDirsInAgnosticWithIds = orgaDirsInAgnostic.map(orgaDir => (orgaDir, orgaIdFromOrgaDirPath(orgaDir)))
-        } yield orgaBaseDirsDirectWithIds ++ orgaDirsInAgnosticWithIds
+        } yield (orgaBaseDirsDirectWithIds ++ orgaDirsInAgnosticWithIds).distinct
     }
   }
 

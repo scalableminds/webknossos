@@ -840,4 +840,8 @@ object Msg {
     val invalidAnnotationType: String = "Invalid annotation type."
     val unsupportedAnnotationType: String = "One of the selected annotation types is not supported for time tracking."
   }
+  object UPath {
+    def schemaMismatch(seen: String, expected: String): String =
+      s"Remote path has wrong schema for this feature. Expected $expected, got $seen."
+  }
 }

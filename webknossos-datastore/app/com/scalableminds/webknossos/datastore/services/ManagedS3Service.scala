@@ -58,7 +58,7 @@ class ManagedS3Service @Inject() (
   }
 
   def isS3UploadEnabled(organizationId: String): Boolean =
-    baseDirService.getOneForOrga(organizationId, requireS3 = true, requireAllowsUpload = true).isDefined
+    s3UploadBaseDir(organizationId).isDefined
 
   def s3UploadBaseDir(organizationId: String): Box[UPath] =
     baseDirService.getOneForOrga(organizationId, requireS3 = true, requireAllowsUpload = true)

@@ -28,6 +28,12 @@ class BaseDirConfigReader {
       "datastore.baseDirectories",
       s"Configured path ${a.path} is a subpath of ${b.path}. Configured base directories must not be nested."
     )
+    if (baseDirConfigs.isEmpty) {
+      throw new ConfigException.BadValue(
+        "datastore.baseDirectories",
+        "The config does not contain any baseDirectory entries. At least one is required."
+      )
+    }
     baseDirConfigs
   }
 

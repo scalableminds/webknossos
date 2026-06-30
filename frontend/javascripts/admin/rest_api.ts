@@ -1921,9 +1921,7 @@ export function getExistingExperienceDomains(): Promise<ExperienceDomainList> {
 }
 
 export async function isInMaintenance(): Promise<boolean> {
-  const allMaintenances: Array<MaintenanceInfo> = await Request.receiveJSON(
-    "/api/maintenances/listCurrentAndUpcoming",
-  );
+  const allMaintenances: Array<MaintenanceInfo> = await listCurrentAndUpcomingMaintenances();
   const currentEpoch = Date.now();
   const currentMaintenance = allMaintenances.find(
     (maintenance) => maintenance.startTime < currentEpoch,

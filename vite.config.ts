@@ -2,7 +2,6 @@ import { defineConfig } from "vite";
 import babel from "@rolldown/plugin-babel";
 import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import svgr from "vite-plugin-svgr";
-import wasm from "vite-plugin-wasm";
 import viteProtobufPlugin from "./frontend/vite/vite-plugin-protobuf";
 import replaceSvgColorWithCurrentColor from "./frontend/vite/vite-plugin-replace-svg-color";
 
@@ -40,7 +39,6 @@ export const viteConfig = {
         },
       },
     }),
-    wasm(),
     viteProtobufPlugin({
       protoDir: "webknossos-datastore/proto",
     }),
@@ -58,7 +56,6 @@ export const viteConfig = {
   },
   worker: {
     format: "es",
-    plugins: () => [wasm()],
   },
   server: {
     port: 9000,

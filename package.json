@@ -62,7 +62,6 @@
     "typescript-coverage-report": "^1.1.0",
     "vite": "^8.1.0",
     "vite-plugin-svgr": "^4.5.0",
-    "vite-plugin-wasm": "^3.6.0",
     "vitest": "^4.1.9"
   },
   "scripts": {

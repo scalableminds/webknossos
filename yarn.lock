@@ -13367,15 +13367,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vite-plugin-wasm@npm:^3.6.0":
-  version: 3.6.0
-  resolution: "vite-plugin-wasm@npm:3.6.0"
-  peerDependencies:
-    vite: ^2 || ^3 || ^4 || ^5 || ^6 || ^7 || ^8
-  checksum: 10c0/7b18a7effc0341fb307feaeaaddea43c3886065227c416abc19ef3711c4c4dfef6f0a660241cbe9f84b9c69e3460e04b495c2740241cba0d15c4633a583920a2
-  languageName: node
-  linkType: hard
-
 "vite@npm:^6.0.0 || ^7.0.0 || ^8.0.0":
   version: 8.0.16
   resolution: "vite@npm:8.0.16"
@@ -13792,7 +13783,6 @@ __metadata:
     url-join: "npm:^4.0.0"
     vite: "npm:^8.1.0"
     vite-plugin-svgr: "npm:^4.5.0"
-    vite-plugin-wasm: "npm:^3.6.0"
     vitest: "npm:^4.1.9"
   dependenciesMeta:
     esbuild:

@@ -7,7 +7,7 @@ import type {
   VolumeUserState,
 } from "types/api_types";
 import type { EmptyObject } from "types/type_utils";
-import { type TreeType, TreeTypeEnum } from "viewer/constants";
+import { TreeTypeEnum } from "viewer/constants";
 import type { Tree } from "viewer/model/types/tree_types";
 import type { StoreAnnotation, WebknossosState } from "viewer/store";
 import { sum } from "../helpers/iterator_utils";

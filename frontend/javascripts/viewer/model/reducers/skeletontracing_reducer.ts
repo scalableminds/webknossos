@@ -9,7 +9,7 @@ import orderBy from "lodash-es/orderBy";
 import uniqBy from "lodash-es/uniqBy";
 import type { MetadataEntryProto } from "types/api_types";
 import { userSettings } from "types/schemas/user_settings.schema";
-import { type TreeType, TreeTypeEnum } from "viewer/constants";
+import { TreeTypeEnum } from "viewer/constants";
 import {
   areGeometriesTransformed,
   enforceSkeletonTracing,

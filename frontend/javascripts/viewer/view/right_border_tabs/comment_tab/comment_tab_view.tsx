@@ -441,9 +441,7 @@ function CommentTabView(props: Props) {
       : null;
   const isActiveTreeAgglomerate = isAgglomerateTree(activeTree);
   const isEditingDisabled =
-    activeNode == null ||
-    !allowUpdate ||
-    (isConcurrentCollabMode && !isActiveTreeAgglomerate);
+    activeNode == null || !allowUpdate || (isConcurrentCollabMode && !isActiveTreeAgglomerate);
 
   const isEditingDisabledMessage = !allowUpdate
     ? messages["tracing.read_only_mode_notification"](isAnnotationLockedByUser, isOwner)
@@ -519,7 +517,9 @@ function CommentTabView(props: Props) {
                 <ButtonComponent
                   onClick={() => setMarkdownModalVisibility(true)}
                   disabled={isEditingDisabled}
-                  title={isEditingDisabledMessage ?? "Open dialog to edit comment in multi-line mode"}
+                  title={
+                    isEditingDisabledMessage ?? "Open dialog to edit comment in multi-line mode"
+                  }
                   type={isMultilineComment ? "primary" : "default"}
                   icon={<EditOutlined />}
                   variant="text"

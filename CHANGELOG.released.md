@@ -11,7 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/26.07.0...26.07.2)
 
 ### Fixed
-- Fixed that WEBKNOSSOS wouldn't loaded without https (or in very old browsers) by shimming crypto.randomUUID. [#9735](https://github.com/scalableminds/webknossos/pull/9735)
+- Fixed that WEBKNOSSOS wouldn't load without https (or in very old browsers) by shimming crypto.randomUUID. [#9735](https://github.com/scalableminds/webknossos/pull/9735)
 
 ## [26.07.1]
 This release was skipped for technical reasons.

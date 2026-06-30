@@ -190,6 +190,7 @@ describe("UrlManager", () => {
     const mode = Constants.MODE_ARBITRARY;
     const urlState = {
       position: [0, 0, 0] as Vector3,
+      clippingDistance: 50,
       additionalCoordinates: [],
       mode,
       nativelyRenderedLayerName: null,

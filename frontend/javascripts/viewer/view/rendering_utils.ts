@@ -1,5 +1,4 @@
 import logoScreenshot from "@images/logo-screenshot.svg";
-import { BlobReader, BlobWriter, ZipWriter } from "@zip.js/zip.js";
 import { saveAs } from "file-saver";
 import importWithRetry from "libs/import_with_retry";
 import { convertBufferToImage } from "libs/utils";
@@ -217,6 +216,11 @@ export async function downloadScreenshotsAsZip(
   screenshots: ScreenshotBlob[],
   zipName = "screenshots",
 ) {
+  // @zip.js is a fairly large module
+  // Dynamically import it to avoid loading it on Dashboard/admin pages.
+  const { BlobReader, ZipWriter, BlobWriter } = await importWithRetry(
+    () => import("@zip.js/zip.js"),
+  );
   const zipBlob = new BlobWriter("application/zip");
   const zipWriter = new ZipWriter(zipBlob);
   for (const { name, blob } of screenshots) {

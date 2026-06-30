@@ -55,7 +55,7 @@ export const viteConfig = {
     sourcemap: true,
   },
   worker: {
-    format: "es",
+    format: "es" as const,
   },
   server: {
     port: 9000,

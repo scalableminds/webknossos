@@ -199,6 +199,12 @@ export default {
         nativelyRenderedLayerName: {
           type: ["string", "null"],
         },
+        clippingDistance: {
+          type: "number",
+        },
+        clipSkeletonToCurrentSection: {
+          type: "boolean",
+        },
       },
       additionalProperties: false,
     },

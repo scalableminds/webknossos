@@ -97,6 +97,7 @@ import {
   setViewModeAction,
   updateDatasetSettingAction,
   updateLayerSettingAction,
+  updateUserSettingAction,
 } from "viewer/model/actions/settings_actions";
 import {
   initializeSkeletonTracingAction,
@@ -873,6 +874,16 @@ export function applyState(
         ),
       );
     }
+  }
+
+  if (state.clippingDistance != null) {
+    Store.dispatch(updateUserSettingAction("clippingDistance", state.clippingDistance));
+  }
+
+  if (state.clipSkeletonToCurrentSection != null) {
+    Store.dispatch(
+      updateUserSettingAction("clipSkeletonToCurrentSection", state.clipSkeletonToCurrentSection),
+    );
   }
 }
 

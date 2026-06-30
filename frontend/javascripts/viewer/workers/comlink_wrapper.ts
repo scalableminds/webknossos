@@ -43,8 +43,7 @@ export function createWorker<TExposed extends UseCreateWorkerToUseMe<AnyFn> | An
     eager: true,
   });
 
-  const workerConstructor: WorkerConstructor | undefined =
-    workerConstructors[`./${pathToWorker}`];
+  const workerConstructor: WorkerConstructor | undefined = workerConstructors[`./${pathToWorker}`];
 
   if (workerConstructor == null) {
     throw new Error(`Worker not found: ${pathToWorker}`);

@@ -55,11 +55,11 @@ export default function LayerTransformationIcon({
     affine: AffineTransformationIcon,
   };
 
-  // Cannot toggle transforms for a layer that cannot have no transforms or turn them on in case the layer has no transforms.
-  // Layers that cannot have transformations like skeleton layer and volume tracing layers without fallback
-  // automatically copy to the dataset transformation if all other layers have the same transformation.
-  const isDisabled =
-    !canLayerHaveTransforms || (isRenderedNatively && !hasLayerTransformsConfigured);
+  // Cannot turn transforms on for a layer that has no transforms configured. (Layers that cannot
+  // have transformations at all, like skeleton or fallback-less volume tracing layers, already
+  // returned null above; they automatically copy the dataset transformation when all other layers
+  // share the same transformation.)
+  const isDisabled = isRenderedNatively && !hasLayerTransformsConfigured;
 
   const toggleLayerTransforms = () => {
     const state = Store.getState();

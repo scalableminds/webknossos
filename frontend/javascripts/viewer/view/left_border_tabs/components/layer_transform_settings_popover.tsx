@@ -17,6 +17,21 @@ import {
 } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { setLayerTransformsAction } from "viewer/model/actions/dataset_actions";
 
+// Fetches the dataset from the backend and extracts the stored SRT values for a single layer.
+// isValid is false when the layer has no transforms or transforms incompatible with this editor.
+async function fetchStoredSRTForLayer(
+  datasetId: string,
+  layerName: string,
+): Promise<{ srt: SRTValues; isValid: boolean }> {
+  const backendDataset = await getDataset(datasetId);
+  const backendLayer = backendDataset.dataSource.dataLayers.find((l) => l.name === layerName);
+  const stored = backendLayer?.coordinateTransformations ?? null;
+  if (stored != null && isLiveTransformCompatible(stored)) {
+    return { srt: extractSRTFromTransforms(stored), isValid: true };
+  }
+  return { srt: DEFAULT_SRT, isValid: false };
+}
+
 function SectionLabel({ children }: { children: ReactNode }) {
   return (
     <Typography.Title level={5} style={{ marginBottom: 4 }}>
@@ -34,6 +49,7 @@ function AxisSliderRow({
   step,
   onChange,
   resetDisabled,
+  onReset,
   onFlip,
   isFlipped,
 }: {
@@ -45,6 +61,9 @@ function AxisSliderRow({
   step: number;
   onChange: (v: number) => void;
   resetDisabled: boolean;
+  // Custom reset handler. Defaults to onChange(storedValue); used when resetting the row needs to
+  // restore more than the displayed value (e.g. the rotation row also restores the flip sign).
+  onReset?: () => void;
   onFlip?: () => void;
   isFlipped?: boolean;
 }) {
@@ -93,7 +112,7 @@ function AxisSliderRow({
           type="text"
           size="small"
           icon={<ReloadOutlined />}
-          onClick={() => onChange(storedValue)}
+          onClick={onReset ?? (() => onChange(storedValue))}
           disabled={resetDisabled}
           style={{ flexShrink: 0, padding: "0 4px" }}
         />
@@ -138,16 +157,8 @@ export function LayerTransformSettingsContent({
     const fetchStoredSRT = async () => {
       setIsFetchingStored(true);
       try {
-        const backendDataset = await getDataset(dataset.id);
-        const backendLayer = backendDataset.dataSource.dataLayers.find(
-          (l) => l.name === layer.name,
-        );
-        const stored = backendLayer?.coordinateTransformations ?? null;
-        setStoredSRT(
-          stored && isLiveTransformCompatible(stored)
-            ? extractSRTFromTransforms(stored)
-            : DEFAULT_SRT,
-        );
+        const { srt } = await fetchStoredSRTForLayer(dataset.id, layer.name);
+        setStoredSRT(srt);
       } catch {
         setStoredSRT(DEFAULT_SRT);
       } finally {
@@ -178,16 +189,10 @@ export function LayerTransformSettingsContent({
   const handleResetToStored = useCallback(async () => {
     setIsFetchingStored(true);
     try {
-      const backendDataset = await getDataset(dataset.id);
-      const backendLayer = backendDataset.dataSource.dataLayers.find((l) => l.name === layer.name);
-      const backendStored = backendLayer?.coordinateTransformations ?? null;
-      const isValidSRTTransform = backendStored && isLiveTransformCompatible(backendStored);
-      const restoredSRT = isValidSRTTransform
-        ? extractSRTFromTransforms(backendStored)
-        : DEFAULT_SRT;
+      const { srt: restoredSRT, isValid } = await fetchStoredSRTForLayer(dataset.id, layer.name);
       setStoredSRT(restoredSRT);
       handleChange(restoredSRT);
-      if (!isValidSRTTransform) {
+      if (!isValid) {
         Toast.info(
           "Restored to default transforms as transforms in the backend are incompatible with the Live Transforms editor.",
         );
@@ -265,6 +270,18 @@ export function LayerTransformSettingsContent({
     handleChange({ scale, rotation, translation: newTranslation });
   };
 
+  // Resets the rotation row for an axis. Since the flip toggle lives in the rotation row, this also
+  // restores the stored flip orientation (the sign of the scale) while keeping the current
+  // magnitude, which is controlled by the scale row.
+  const resetRotationAndFlip = (axis: 0 | 1 | 2) => {
+    const newRotation = [...rotation] as [number, number, number];
+    newRotation[axis] = storedSRT.rotation[axis];
+    const newScale = [...scale] as [number, number, number];
+    const storedSign = storedSRT.scale[axis] < 0 ? -1 : 1;
+    newScale[axis] = Math.abs(scale[axis]) * storedSign;
+    handleChange({ scale: newScale, rotation: newRotation, translation });
+  };
+
   return (
     <Flex vertical style={{ width: 250 }}>
       <SectionLabel>Translation</SectionLabel>
@@ -293,6 +310,7 @@ export function LayerTransformSettingsContent({
           step={0.1}
           onChange={(v) => updateRotation(i as 0 | 1 | 2, v)}
           resetDisabled={isFetchingStored}
+          onReset={() => resetRotationAndFlip(i as 0 | 1 | 2)}
           onFlip={() => updateScale(i as 0 | 1 | 2, -scale[i])}
           isFlipped={scale[i] < 0}
         />
@@ -307,6 +325,8 @@ export function LayerTransformSettingsContent({
           min={0.0001}
           max={10}
           step={0.1}
+          // The slider shows only the magnitude; keep the current flip orientation here. Resetting
+          // the flip is handled by the rotation row, where the flip toggle lives.
           onChange={(v) => updateScale(i as 0 | 1 | 2, v * (scale[i] < 0 ? -1 : 1))}
           resetDisabled={isFetchingStored}
         />

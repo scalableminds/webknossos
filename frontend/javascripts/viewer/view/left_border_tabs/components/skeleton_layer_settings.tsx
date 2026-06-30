@@ -100,7 +100,7 @@ export default function SkeletonLayerSettings() {
     [onChangeUser],
   );
 
-  const onChangeClippingDistanceArbitrary = useCallback(
+  const onChangeClippingDistanceFlight = useCallback(
     (value: number) => onChangeUser("clippingDistanceFlight", value),
     [onChangeUser],
   );
@@ -244,7 +244,7 @@ export default function SkeletonLayerSettings() {
               min={userSettings.clippingDistanceFlight.minimum}
               max={userSettings.clippingDistanceFlight.maximum}
               value={userConfiguration.clippingDistanceFlight}
-              onChange={onChangeClippingDistanceArbitrary}
+              onChange={onChangeClippingDistanceFlight}
               defaultValue={defaultState.userConfiguration.clippingDistanceFlight}
             />
           ) : (

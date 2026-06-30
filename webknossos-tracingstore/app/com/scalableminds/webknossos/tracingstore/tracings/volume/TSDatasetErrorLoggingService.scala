@@ -8,9 +8,10 @@ import play.api.inject.ApplicationLifecycle
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class TSDatasetErrorLoggingService @Inject()(
+class TSDatasetErrorLoggingService @Inject() (
     val lifecycle: ApplicationLifecycle,
-    @Named("webknossos-tracingstore") val actorSystem: ActorSystem)(implicit val ec: ExecutionContext)
+    @Named("webknossos-tracingstore") val actorSystem: ActorSystem
+)(implicit val ec: ExecutionContext)
     extends DatasetErrorLoggingService {
   protected val applicationHealthService: Option[Nothing] = None
 }

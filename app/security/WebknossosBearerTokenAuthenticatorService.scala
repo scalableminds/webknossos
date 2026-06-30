@@ -11,7 +11,7 @@ import play.silhouette.impl.authenticators.{
   BearerTokenAuthenticatorSettings
 }
 import com.scalableminds.util.accesscontext.GlobalAccessContext
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import models.user.{User, UserService}
 import TokenType.TokenType
 import com.scalableminds.util.Msg
@@ -22,14 +22,15 @@ import utils.WkConf
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
-class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticatorSettings,
-                                                repository: BearerTokenAuthenticatorRepository,
-                                                idGenerator: IDGenerator,
-                                                clock: Clock,
-                                                userService: UserService,
-                                                conf: WkConf)(implicit override val executionContext: ExecutionContext)
-    extends BearerTokenAuthenticatorService(settings, repository, idGenerator, clock)
-    with FoxImplicits {
+class WebknossosBearerTokenAuthenticatorService(
+    settings: BearerTokenAuthenticatorSettings,
+    repository: BearerTokenAuthenticatorRepository,
+    idGenerator: IDGenerator,
+    clock: Clock,
+    userService: UserService,
+    conf: WkConf
+)(implicit override val executionContext: ExecutionContext)
+    extends BearerTokenAuthenticatorService(settings, repository, idGenerator, clock) {
 
   private val resetPasswordExpiry: FiniteDuration =
     conf.Silhouette.TokenAuthenticator.resetPasswordExpiry.toMillis millis
@@ -50,8 +51,8 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
         expirationDateTime = Instant.in(expiry).toZonedDateTime,
         idleTimeout = settings.authenticatorIdleTimeout
       )
-    }.recover {
-      case e => throw new AuthenticatorCreationException(CreateError.format(ID, loginInfo), Some(e))
+    }.recover { case e =>
+      throw new AuthenticatorCreationException(CreateError.format(ID, loginInfo), Some(e))
     }
   }
 
@@ -61,8 +62,8 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
       .map { a =>
         a.id
       }
-      .recover {
-        case e => throw new AuthenticatorInitializationException(InitError.format(ID, authenticator), Some(e))
+      .recover { case e =>
+        throw new AuthenticatorInitializationException(InitError.format(ID, authenticator), Some(e))
       }
 
   def createAndInitDataStoreTokenForUser(user: User): Fox[String] =
@@ -79,7 +80,7 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
       tokenAuthenticator <- repository.findOneByValue(tokenValue) ?~> Msg.User.Token.invalid
       _ <- Fox.fromBool(tokenAuthenticator.isValid) ?~> Msg.User.Token.invalid
       idValidated <- ObjectId.fromString(tokenAuthenticator.loginInfo.providerKey) ?~> Msg.User.Token.invalid
-      user <- userService.findOneCached(idValidated)(GlobalAccessContext)
+      user <- userService.findOneCached(idValidated)(using GlobalAccessContext)
     } yield user
 
   def userForTokenOpt(tokenOpt: Option[String]): Fox[User] = tokenOpt match {

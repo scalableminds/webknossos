@@ -5,11 +5,12 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import com.scalableminds.util.tools.{Fox, TextUtils}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 import com.scalableminds.webknossos.datastore.models.annotation.{
   AnnotationLayer,
   AnnotationLayerStatistics,
@@ -78,8 +79,7 @@ class AnnotationIOController @Inject() (
     annotationUploadService: AnnotationUploadService
 )(implicit ec: ExecutionContext, val materializer: Materializer)
     extends Controller
-    with FoxImplicits
-    with ProtoGeometryImplicits
+    with ProtoGeometryConversions
     with AnnotationLayerPrecedence
     with LazyLogging {
   implicit val actorSystem: ActorSystem = ActorSystem()
@@ -100,7 +100,7 @@ class AnnotationIOController @Inject() (
      Returns:
         JSON object containing annotation information about the newly created annotation, including the assigned id
    */
-  def upload: Action[MultipartFormData[TemporaryFile]] = sil.SecuredAction.async(parse.multipartFormData) {
+  def upload: Action[MultipartFormData[TemporaryFile]] = sil.SecuredAction.fox(parse.multipartFormData) {
     implicit request =>
       log() {
         val shouldCreateGroupForEachFile: Boolean =
@@ -287,17 +287,17 @@ class AnnotationIOController @Inject() (
       volumeTracings: List[UploadedVolumeLayer],
       datasetIds: List[ObjectId],
       wkUrl: String
-  )(implicit ctx: DBAccessContext): Fox[Dataset] =
+  )(using ctx: DBAccessContext): Fox[Dataset] =
     for {
       datasetId <- SequenceUtils.findUniqueElement(datasetIds).toFox ?~> Msg.Nml.differentDatasets
       organizationIdOpt <- assertAllOnSameOrganization(skeletonTracings, volumeTracings) ?~> Msg.Nml.differentDatasets
       organizationIdOpt <- Fox.runOptional(organizationIdOpt) {
-        organizationDAO.findOne(_)(GlobalAccessContext).map(_._id)
+        organizationDAO.findOne(_)(using GlobalAccessContext).map(_._id)
       } ?~> (if (wkUrl.nonEmpty && conf.Http.uri != wkUrl) {
                Msg.Organization.notFoundWrongHost(organizationIdOpt.getOrElse(""), wkUrl, conf.Http.uri)
              } else Msg.Organization.notFound(organizationIdOpt.getOrElse(""))) ~> NOT_FOUND
       organizationId <- Fox.fillOption(organizationIdOpt) {
-        organizationDAO.findOrganizationIdForDataset(datasetId)(GlobalAccessContext)
+        organizationDAO.findOrganizationIdForDataset(datasetId)(using GlobalAccessContext)
       } ?~> Msg.Dataset.notFound(datasetId) ~> FORBIDDEN
       dataset <- datasetDAO.findOne(datasetId) ?~> (if (wkUrl.nonEmpty && conf.Http.uri != wkUrl) {
                                                       Msg.Dataset.notFoundWrongHost(datasetId, wkUrl, conf.Http.uri)
@@ -353,7 +353,7 @@ class AnnotationIOController @Inject() (
       dataSource: UsableDataSource
   ): Fox[List[List[UploadedVolumeLayer]]] =
     for {
-      dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim)(
+      dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim)(using
         GlobalAccessContext
       ) ?~> Msg.DataStore.notFoundForDataset
       remoteDataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
@@ -383,7 +383,7 @@ class AnnotationIOController @Inject() (
       case _                                                                                 => None
     }.headOption
     val bbox =
-      if (volumeTracing.boundingBox.isEmpty)
+      if (boundingBoxFromProto(volumeTracing.boundingBox).isEmpty)
         boundingBoxToProto(fallbackLayerOpt.map(_.boundingBox).getOrElse(dataSource.boundingBox))
       else volumeTracing.boundingBox
 
@@ -428,7 +428,7 @@ class AnnotationIOController @Inject() (
       skipVolumeData: Option[Boolean],
       volumeDataZipFormat: Option[String]
   ): Action[AnyContent] =
-    sil.UserAwareAction.async { implicit request =>
+    sil.UserAwareAction.fox { implicit request =>
       logger.trace(s"Requested download for annotation: $typ/$id")
       for {
         identifier <- AnnotationIdentifier.parse(typ, id)
@@ -459,7 +459,7 @@ class AnnotationIOController @Inject() (
       skipVolumeData: Option[Boolean],
       volumeDataZipFormat: Option[String]
   ): Action[AnyContent] =
-    sil.UserAwareAction.async { implicit request =>
+    sil.UserAwareAction.fox { implicit request =>
       for {
         annotation <- provider.provideAnnotation(id, request.identity) ?~> Msg.Annotation.notFound ~> NOT_FOUND
         result <- Fox.fromFuture(
@@ -475,7 +475,7 @@ class AnnotationIOController @Inject() (
       version: Option[Long],
       skipVolumeData: Boolean,
       volumeDataZipFormat: VolumeDataZipFormat
-  )(implicit ctx: DBAccessContext): Fox[Result] = {
+  )(using ctx: DBAccessContext): Fox[Result] = {
 
     // Note: volumeVersion cannot currently be supplied per layer, see https://github.com/scalableminds/webknossos/issues/5925
 
@@ -486,8 +486,8 @@ class AnnotationIOController @Inject() (
           tracingStoreClient.getSkeletonTracing(annotation._id, _, version)
         )
         annotationProto <- tracingStoreClient.getAnnotationProto(annotation._id, version)
-        annotationOwner <- userService.findOneCached(annotation._user)(GlobalAccessContext)
-        ownerMultiUser <- multiUserDAO.findOne(annotationOwner._multiUser)(GlobalAccessContext)
+        annotationOwner <- userService.findOneCached(annotation._user)(using GlobalAccessContext)
+        ownerMultiUser <- multiUserDAO.findOne(annotationOwner._multiUser)(using GlobalAccessContext)
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
         nmlStream = nmlWriter.toNmlStream(
           "temp",
@@ -536,11 +536,13 @@ class AnnotationIOController @Inject() (
           skeletonAnnotationLayer =>
             tracingStoreClient.getSkeletonTracing(annotation._id, skeletonAnnotationLayer, version)
         } ?~> Msg.Annotation.Download.fetchSkeletonLayerFailed
-        annotationOwner <- userService.findOneCached(annotation._user)(
+        annotationOwner <- userService.findOneCached(annotation._user)(using
           GlobalAccessContext
         ) ?~> Msg.Annotation.Download.findUserFailed
-        ownerMultiUser <- multiUserDAO.findOne(annotationOwner._multiUser)(GlobalAccessContext)
-        taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne(_)(GlobalAccessContext)) ?~> Msg.Task.notFound
+        ownerMultiUser <- multiUserDAO.findOne(annotationOwner._multiUser)(using GlobalAccessContext)
+        taskOpt <- Fox.runOptional(annotation._task)(
+          taskDAO.findOne(_)(using GlobalAccessContext)
+        ) ?~> Msg.Task.notFound
         annotationProto <- tracingStoreClient.getAnnotationProto(annotation._id, version)
         nmlStream = nmlWriter.toNmlStream(
           name,
@@ -614,11 +616,12 @@ class AnnotationIOController @Inject() (
       fileName = URLEncoder.encode(name + fileExtension, "UTF-8").replace("+", "%20")
       mimeType = exportMimeTypeForAnnotation(annotation)
       _ <- restrictions.allowDownload(requestingUser) ?~> Msg.Annotation.Download.notAllowed ~> FORBIDDEN
-      dataset <- datasetDAO.findOne(annotation._dataset)(GlobalAccessContext) ?~> Msg.Dataset
+      dataset <- datasetDAO.findOne(annotation._dataset)(using GlobalAccessContext) ?~> Msg.Dataset
         .notFoundForAnnotation(annotation._dataset, annotation._id) ~> NOT_FOUND
-      organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Msg.Organization.notFound(
-        dataset._organization
-      ) ~> NOT_FOUND
+      organization <- organizationDAO.findOne(dataset._organization)(using GlobalAccessContext) ?~> Msg.Organization
+        .notFound(
+          dataset._organization
+        ) ~> NOT_FOUND
       temporaryFile <- annotationToTemporaryFile(
         dataset,
         annotation,

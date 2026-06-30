@@ -27,8 +27,8 @@ trait CompressedSegmentation[T <: AnyVal] extends ByteUtils {
     val output = initializeArray(numElements)
 
     val gridSize: Array[Int] = volumeSize.zip(blockSize.toList).map { case (v, b) => (v + b - 1) / b }
-    for (block2 <- 0 until gridSize(2)) {
-      for (block1 <- 0 until gridSize(1)) {
+    for (block2 <- 0 until gridSize(2))
+      for (block1 <- 0 until gridSize(1))
         for (block0 <- 0 until gridSize(0)) {
           val blockOffset = block0 + gridSize(0) * (block1 + gridSize(1) * block2)
           val tableOffset = input(blockOffset * kBlockHeaderSize) & 0xffffff
@@ -46,7 +46,7 @@ trait CompressedSegmentation[T <: AnyVal] extends ByteUtils {
           val zmax = (zmin + blockSize.z).min(volumeSize(2))
 
           val bitmask = (1 << encodedBits) - 1
-          for (z <- zmin until zmax) {
+          for (z <- zmin until zmax)
             for (y <- ymin until ymax) {
               var outindex = (z * volumeSize(1) + y) * volumeSize(0) + xmin
               var bitpos = blockSize.x * ((z - zmin) * blockSize.y + (y - ymin)) * encodedBits
@@ -63,23 +63,22 @@ trait CompressedSegmentation[T <: AnyVal] extends ByteUtils {
                 outindex += 1
               }
             }
-          }
         }
-      }
-    }
     output
   }
 
-  private def decompressChannels(input: Array[Int], volumeSize: Array[Int], blockSize: Vec3Int)(
-      implicit c: ClassTag[T]): Array[T] =
+  private def decompressChannels(input: Array[Int], volumeSize: Array[Int], blockSize: Vec3Int)(implicit
+      c: ClassTag[T]
+  ): Array[T] =
     (0 until volumeSize(3))
       .flatMap(channel => decompressChannel(input.drop(input(channel)), volumeSize, blockSize))
       .toArray
 
   def valueToBytes(v: T): Array[Byte]
 
-  def decompress(encodedBytes: Array[Byte], volumeSize: Array[Int], blockSize: Vec3Int)(
-      implicit c: ClassTag[T]): Array[Byte] = {
+  def decompress(encodedBytes: Array[Byte], volumeSize: Array[Int], blockSize: Vec3Int)(implicit
+      c: ClassTag[T]
+  ): Array[Byte] = {
     val vs = if (volumeSize.length == 3) {
       volumeSize :+ 1
     } else {

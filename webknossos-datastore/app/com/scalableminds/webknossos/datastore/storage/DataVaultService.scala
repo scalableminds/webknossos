@@ -4,7 +4,8 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Failure, Fox, FoxImplicits, Full, Empty}
+import com.scalableminds.util.tools.{Box, Failure, Fox, Full, Empty}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.datavault.{
   DataVault,
@@ -27,14 +28,14 @@ import scala.concurrent.ExecutionContext
 
 case class CredentializedUPath(upath: UPath, credential: Option[DataVaultCredential])
 
-class DataVaultService @Inject()(ws: WSClient,
-                                 config: DataStoreConfig,
-                                 remoteWebknossosClient: DSRemoteWebknossosClient,
-                                 managedS3Service: ManagedS3Service,
-                                 s3ClientPoolHolder: S3ClientPoolHolder)
-    extends LazyLogging
-    with Formatter
-    with FoxImplicits {
+class DataVaultService @Inject() (
+    ws: WSClient,
+    config: DataStoreConfig,
+    remoteWebknossosClient: DSRemoteWebknossosClient,
+    managedS3Service: ManagedS3Service,
+    s3ClientPoolHolder: S3ClientPoolHolder
+) extends LazyLogging
+    with Formatter {
 
   private val vaultCache: AlfuCache[CredentializedUPath, DataVault] =
     AlfuCache(maxCapacity = 100)
@@ -47,8 +48,9 @@ class DataVaultService @Inject()(ws: WSClient,
   def vaultPathFor(localPath: Path)(implicit ec: ExecutionContext): Fox[VaultPath] =
     vaultPathFor(UPath.fromLocalPath(localPath))
 
-  def vaultPathFor(magLocator: MagLocator, dataSourceId: DataSourceId, layerName: String)(
-      implicit ec: ExecutionContext): Fox[VaultPath] =
+  def vaultPathFor(magLocator: MagLocator, dataSourceId: DataSourceId, layerName: String)(implicit
+      ec: ExecutionContext
+  ): Fox[VaultPath] =
     for {
       credentializedUpath <- credentializedUPathForMag(dataSourceId, layerName, magLocator)
       vaultPath <- vaultPathFor(credentializedUpath)
@@ -61,8 +63,9 @@ class DataVaultService @Inject()(ws: WSClient,
       vaultPath <- vaultPathFor(CredentializedUPath(attachment.path, credentialBox.toOption))
     } yield vaultPath
 
-  def removeVaultFromCache(magLocator: MagLocator, datasetId: DataSourceId, layerName: String)(
-      implicit ec: ExecutionContext): Fox[Unit] =
+  def removeVaultFromCache(magLocator: MagLocator, datasetId: DataSourceId, layerName: String)(implicit
+      ec: ExecutionContext
+  ): Fox[Unit] =
     for {
       credentializedUpath <- credentializedUPathForMag(datasetId, layerName, magLocator)
       _ = removeVaultFromCache(credentializedUpath)
@@ -74,8 +77,9 @@ class DataVaultService @Inject()(ws: WSClient,
       _ = removeVaultFromCache(CredentializedUPath(attachment.path, credentialBox.toOption))
     } yield ()
 
-  private def credentializedUPathForMag(datasetId: DataSourceId, layerName: String, magLocator: MagLocator)(
-      implicit ec: ExecutionContext): Fox[CredentializedUPath] =
+  private def credentializedUPathForMag(datasetId: DataSourceId, layerName: String, magLocator: MagLocator)(implicit
+      ec: ExecutionContext
+  ): Fox[CredentializedUPath] =
     for {
       credentialBox <- credentialFor(magLocator: MagLocator).shiftBox
       resolvedMagPath <- resolveMagPath(datasetId, layerName, magLocator).toFox
@@ -171,7 +175,7 @@ class DataVaultService @Inject()(ws: WSClient,
       case _    => Failure(s"Unknown file system scheme $scheme")
     }
     vaultBox match {
-      case Full(_) => logger.info(s"Created data vault for ${credentializedUpath.upath.toString}.")
+      case Full(_)    => logger.info(s"Created data vault for ${credentializedUpath.upath.toString}.")
       case f: Failure =>
         logger.warn(s"Failed to create DataVault for ${credentializedUpath.upath.toString}: ${formatFailureChain(f)}")
       case Empty =>

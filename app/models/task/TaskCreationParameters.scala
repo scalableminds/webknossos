@@ -6,21 +6,23 @@ import controllers.LegacyTaskParameters
 import models.user.Experience
 import play.api.libs.json.{Format, Json}
 
-case class TaskParameters(taskTypeId: ObjectId,
-                          neededExperience: Experience,
-                          pendingInstances: Int,
-                          projectName: String,
-                          scriptId: Option[ObjectId],
-                          boundingBox: Option[BoundingBox],
-                          datasetId: ObjectId,
-                          editPosition: Vec3Int,
-                          editRotation: Vec3Double,
-                          creationInfo: Option[String],
-                          description: Option[String],
-                          baseAnnotation: Option[BaseAnnotation],
-                          newSkeletonTracingId: Option[String],
-                          newVolumeTracingId: Option[String],
-                          newAnnotationId: Option[ObjectId])
+case class TaskParameters(
+    taskTypeId: ObjectId,
+    neededExperience: Experience,
+    pendingInstances: Int,
+    projectName: String,
+    scriptId: Option[ObjectId],
+    boundingBox: Option[BoundingBox],
+    datasetId: ObjectId,
+    editPosition: Vec3Int,
+    editRotation: Vec3Double,
+    creationInfo: Option[String],
+    description: Option[String],
+    baseAnnotation: Option[BaseAnnotation],
+    newSkeletonTracingId: Option[String],
+    newVolumeTracingId: Option[String],
+    newAnnotationId: Option[ObjectId]
+)
 
 object TaskParameters {
   implicit val taskParametersWithDatasetIdFormat: Format[TaskParameters] =
@@ -45,12 +47,14 @@ object TaskParameters {
   )
 }
 
-case class NmlTaskParameters(taskTypeId: ObjectId,
-                             neededExperience: Experience,
-                             pendingInstances: Int,
-                             projectName: String,
-                             scriptId: Option[ObjectId],
-                             boundingBox: Option[BoundingBox])
+case class NmlTaskParameters(
+    taskTypeId: ObjectId,
+    neededExperience: Experience,
+    pendingInstances: Int,
+    projectName: String,
+    scriptId: Option[ObjectId],
+    boundingBox: Option[BoundingBox]
+)
 
 object NmlTaskParameters {
   implicit val nmlTaskParametersFormat: Format[NmlTaskParameters] = Json.format[NmlTaskParameters]

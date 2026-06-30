@@ -39,7 +39,7 @@ class DataVaultService @Inject() (
     with Formatter {
 
   private val vaultCache: AlfuCache[CredentializedUPath, DataVault] =
-    AlfuCache(maxCapacity = 120)
+    AlfuCache(maxCapacity = 200)
 
   def vaultPathFor(upath: UPath)(implicit ec: ExecutionContext): Fox[VaultPath] = {
     val credentialOpt = managedS3Service.findGlobalCredentialFor(Some(upath))

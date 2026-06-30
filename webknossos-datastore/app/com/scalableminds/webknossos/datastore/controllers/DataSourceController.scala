@@ -46,7 +46,6 @@ import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
 import java.io.File
-import java.net.URI
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext
@@ -586,7 +585,8 @@ class DataSourceController @Inject() (
       ) {
         val reportMutable = ListBuffer[String]()
         val hasLocalFilesystemRequest =
-          request.body.layerParameters.exists(param => new URI(param.remoteUri).getScheme == PathSchemes.schemeFile)
+          request.body.layerParameters.exists(param =>
+            param.remoteUri.startsWith(s"${PathSchemes.schemeFile}${UPath.schemeSeparator}"))
         for {
           dataSourceBox: Box[UsableDataSource] <- exploreRemoteLayerService
             .exploreRemoteDatasource(request.body.layerParameters, reportMutable)

@@ -460,6 +460,7 @@ const createMenuForTreeGroup = (
       },
       {
         key: "shuffleTreeGroupColors",
+        disabled: isEditingDisabled,
         onClick: () => {
           if (id === MISSING_GROUP_ID) shuffleAllTreeColors();
           else shuffleTreeGroupColors(id);

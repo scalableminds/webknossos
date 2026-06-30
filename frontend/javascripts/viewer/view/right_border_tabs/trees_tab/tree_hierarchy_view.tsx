@@ -440,6 +440,7 @@ const DetailsForSelection = memo(
               value={
                 <InputWithUpdateOnBlur
                   value={tree.name || ""}
+                  disabled={readOnly}
                   onChange={(newValue) => dispatch(setTreeNameAction(newValue, tree.treeId))}
                 />
               }
@@ -474,6 +475,7 @@ const DetailsForSelection = memo(
               value={
                 <InputWithUpdateOnBlur
                   value={activeGroup.name || ""}
+                  disabled={readOnly}
                   onChange={(newValue) => api.tracing.renameSkeletonGroup(activeGroupId, newValue)}
                 />
               }

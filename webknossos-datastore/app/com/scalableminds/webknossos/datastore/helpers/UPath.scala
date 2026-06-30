@@ -12,6 +12,8 @@ import java.nio.file.Path
 trait UPath {
   def toRemoteUri: Box[URI]
 
+  def toZipEntryUPath: Box[ZipEntryUPath]
+
   def /(other: String): UPath
 
   def /(other: ObjectId): UPath =
@@ -66,6 +68,7 @@ case class ZipEntryUPath(outerPath: UPath, innerPath: String) extends UPath {
   override def isRemote: Boolean = outerPath.isRemote
   override def toLocalPath: Box[Path] = Failure(s"ZipEntryUPath cannot be accessed as a local path: $this")
   override def toRemoteUri: Box[URI] = outerPath.toRemoteUri
+  override def toZipEntryUPath: Box[ZipEntryUPath] = Full(this)
   override def toAbsolute: UPath = ZipEntryUPath(outerPath.toAbsolute, innerPath)
   override def relativizedIn(p: UPath): UPath = this
   override def basename: String = innerPath.split("/").filter(_.nonEmpty).lastOption.getOrElse("")
@@ -176,6 +179,8 @@ private case class LocalUPath(nioPath: Path) extends UPath {
 
   override def toRemoteUri: Box[URI] = Failure(s"Called toRemoteUri on LocalUPath $toString")
 
+  override def toZipEntryUPath: Box[ZipEntryUPath] = Failure(s"Called toZipEntryUPath on LocalUPath $toString")
+
   override def relativizedIn(potentialAncestor: UPath): UPath =
     potentialAncestor match {
       case LocalUPath(potentialAncestorNioPath) =>
@@ -240,6 +245,8 @@ private case class RemoteUPath(scheme: String, segments: Seq[String]) extends UP
   override def getScheme: Option[String] = Some(scheme)
 
   override def toRemoteUri: Box[URI] = tryo(new URI(toString))
+
+  override def toZipEntryUPath: Box[ZipEntryUPath] = Failure(s"Called toZipEntryUPath on RemotePath $toString")
 
   override def relativizedIn(potentialAncestor: UPath): UPath = this
 

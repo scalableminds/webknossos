@@ -18,11 +18,14 @@ private case class ZipCentralDirEntry(
     uncompressedSize: Long,
     compressionMethod: Int,
     fileName: String
-)
+) {
+  def needsExtraAttributes: Boolean =
+    compressedSize == 0xffffffffL || uncompressedSize == 0xffffffffL || localHeaderOffset == 0xffffffffL
+}
 
 class ZipDataVault(outerVaultPath: VaultPath) extends DataVault with LazyLogging {
 
-  // ZIP Application Note (APPNOTE.TXT): https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT
+  // See comments below for relevant paragraphs of zip spec https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT
   private val eocdSignature: Int = 0x06054b50 // §4.3.16
   private val zip64EocdLocatorSignature: Int = 0x07064b50 // §4.3.15
   private val zip64EocdSignature: Int = 0x06064b50 // §4.3.14
@@ -35,120 +38,99 @@ class ZipDataVault(outerVaultPath: VaultPath) extends DataVault with LazyLogging
   private val centralDirectoryCache: AlfuCache[Unit, Map[String, ZipCentralDirEntry]] = AlfuCache(maxCapacity = 1)
 
   private def getCentralDirectory(using ec: ExecutionContext, tc: TokenContext): Fox[Map[String, ZipCentralDirEntry]] =
-    centralDirectoryCache.getOrLoad((), _ => readCentralDirectory())
+    centralDirectoryCache.getOrLoad((), _ => readCentralDirectory)
 
   override def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(using
       ec: ExecutionContext,
       tc: TokenContext
-  ): Fox[(Array[Byte], Encoding.Value, Option[String])] =
-    path.toUPath match {
-      case ZipEntryUPath(_, innerPath) =>
-        val normalizedPath = normalizeInnerPath(innerPath)
-        for {
-          cd <- getCentralDirectory
-          entry <- cd.get(normalizedPath) match {
-            case Some(e) => Fox.successful(e)
-            case None    => Fox.empty
-          }
-          _ <-
-            if (entry.compressionMethod == ZipEntry.STORED) Fox.successful(())
-            else
-              Fox.failure(
-                s"Only STORED (uncompressed) zip entries are supported, but entry '$normalizedPath' uses compression method ${entry.compressionMethod}"
-              )
-          // §4.3.7: read the 30 fixed bytes of the local file header to find the variable-length offsets
-          localHeaderBytes <- outerVaultPath.readBytes(
-            ByteRange.startEndExclusive(entry.localHeaderOffset, entry.localHeaderOffset + 30)
-          )
-          localHeaderBb = ByteBuffer.wrap(localHeaderBytes).order(ByteOrder.LITTLE_ENDIAN)
-          fileNameLen = localHeaderBb.getShort(26).toInt & 0xffff
-          extraLen = localHeaderBb.getShort(28).toInt & 0xffff
-          dataStart = entry.localHeaderOffset + 30L + fileNameLen + extraLen
-          finalRange = toAbsoluteRange(dataStart, entry.compressedSize, range)
-          (bytes, _, rangeHeader) <- outerVaultPath.readBytesEncodingAndRangeHeader(finalRange)
-        } yield (bytes, Encoding.identity, rangeHeader)
-      case other =>
-        Fox.failure(s"ZipDataVault received path with non-ZipEntryUPath: ${other.getClass.getSimpleName}")
-    }
+  ): Fox[(Array[Byte], Encoding.Value, Option[String])] = for {
+    normalizedInnerPath <- normalizeInnerPath(path).toFox
+    centralDirectory <- getCentralDirectory
+    entry <- centralDirectory.get(normalizedInnerPath).toFox
+    _ <- Fox.fromBool(
+      entry.compressionMethod == ZipEntry.STORED
+    ) ?~> s"Only uncompressed zip entries are supported, but entry “$normalizedInnerPath” uses compression method ${entry.compressionMethod}"
+    // §4.3.7: read the 30 fixed bytes of the local file header to find the variable-length offsets
+    localHeaderBytes <- outerVaultPath.readBytes(
+      ByteRange.startEndExclusive(entry.localHeaderOffset, entry.localHeaderOffset + 30)
+    )
+    localHeaderBuffer = ByteBuffer.wrap(localHeaderBytes).order(ByteOrder.LITTLE_ENDIAN)
+    fileNameLength = localHeaderBuffer.getShort(26).toInt & 0xffff
+    extraLength = localHeaderBuffer.getShort(28).toInt & 0xffff
+    dataStart = entry.localHeaderOffset + 30L + fileNameLength + extraLength
+    rangeInZip = rangeInEntryToRangeInZip(dataStart, entry.compressedSize, range)
+    (bytes, _, rangeHeader) <- outerVaultPath.readBytesEncodingAndRangeHeader(rangeInZip)
+  } yield (bytes, Encoding.identity, rangeHeader)
 
-  override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] = {
-    implicit val tc: TokenContext = TokenContext(None)
-    val dirPrefix = path.toUPath match {
-      case ZipEntryUPath(_, ip) => normalizeInnerPath(ip) + "/"
-      case _                    => ""
-    }
+  override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
     for {
-      cd <- getCentralDirectory
-      directChildren = cd.keys
+      normalizedInnerPath <- normalizeInnerPath(path).toFox
+      dirPrefix = normalizedInnerPath + "/"
+      centralDirectory <- getCentralDirectory(using ec, TokenContext(None))
+      directChildren = centralDirectory.keys
         .filter(_.startsWith(dirPrefix))
         .map(_.drop(dirPrefix.length))
         .filter(remainder => remainder.nonEmpty && !remainder.dropRight(1).contains("/"))
         .take(maxItems)
-        .toList
       vaultPaths = directChildren.map { name =>
         new VaultPath(ZipEntryUPath(outerVaultPath.toUPath, dirPrefix + name), this)
-      }
+      }.toList
     } yield vaultPaths
-  }
 
-  override def getUsedStorageBytes(path: VaultPath)(using ec: ExecutionContext, tc: TokenContext): Fox[Long] = {
-    val prefix = path.toUPath match {
-      case ZipEntryUPath(_, ip) => normalizeInnerPath(ip) + "/"
-      case _                    => ""
-    }
+  override def getUsedStorageBytes(path: VaultPath)(using ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     for {
-      cd <- getCentralDirectory
-      total = cd.values.filter(e => normalizeInnerPath(e.fileName).startsWith(prefix)).map(_.compressedSize).sum
+      normalizedInnerPath <- normalizeInnerPath(path).toFox
+      prefix = normalizedInnerPath + "/"
+      centralDirectory <- getCentralDirectory
+      total = centralDirectory.values
+        .filter(e => normalizeInnerPath(e.fileName).startsWith(prefix))
+        .map(_.compressedSize)
+        .sum
     } yield total
-  }
 
-  private def readCentralDirectory()(using
-      ec: ExecutionContext,
-      tc: TokenContext
-  ): Fox[Map[String, ZipCentralDirEntry]] =
+  private def readCentralDirectory(using ec: ExecutionContext, tc: TokenContext): Fox[Map[String, ZipCentralDirEntry]] =
     for {
       suffixBytes <- outerVaultPath.readLastBytes(eocdSearchSize)
-      eocdInfo <- findEocd(suffixBytes).toFox
-      (cdOffset, cdSize) <- resolveCentrylDirectoryBounds(eocdInfo)
-      cdBytes <- outerVaultPath.readBytes(ByteRange.startEndExclusive(cdOffset, cdOffset + cdSize))
-      entries <- parseCentralDirectory(cdBytes).toFox
+      eocdInfo <- findEocdInfo(suffixBytes).toFox
+      (cdOffset, cdSize) <- resolveCentralDirectoryBounds(eocdInfo)
+      centralDirectoryBytes <- outerVaultPath.readBytes(ByteRange.startEndExclusive(cdOffset, cdOffset + cdSize))
+      entries <- parseCentralDirectory(centralDirectoryBytes).toFox
     } yield entries.map(e => normalizeInnerPath(e.fileName) -> e).toMap
 
   // §4.3.16 (EOCD), §4.3.15 (ZIP64 locator): returns (cdOffset, cdSize), or (zip64EocdOffset, -1) if ZIP64.
-  private def findEocd(buf: Array[Byte]): Box[(Long, Long)] = {
-    val sigBytes = eocdSignature
-    val bb = ByteBuffer.wrap(buf).order(ByteOrder.LITTLE_ENDIAN)
-    (buf.length - eocdFixedSize to 0 by -1).find { pos =>
-      (buf(pos).toInt & 0xff) == (sigBytes & 0xff) &&
-      (buf(pos + 1).toInt & 0xff) == ((sigBytes >> 8) & 0xff) &&
-      (buf(pos + 2).toInt & 0xff) == ((sigBytes >> 16) & 0xff) &&
-      (buf(pos + 3).toInt & 0xff) == ((sigBytes >> 24) & 0xff)
+  private def findEocdInfo(bytes: Array[Byte]): Box[(Long, Long)] = {
+    val buffer = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
+    (bytes.length - eocdFixedSize to 0 by -1).find { pos =>
+      (bytes(pos).toInt & 0xff) == (eocdSignature & 0xff) &&
+      (bytes(pos + 1).toInt & 0xff) == ((eocdSignature >> 8) & 0xff) &&
+      (bytes(pos + 2).toInt & 0xff) == ((eocdSignature >> 16) & 0xff) &&
+      (bytes(pos + 3).toInt & 0xff) == ((eocdSignature >> 24) & 0xff)
     } match {
-      case None => Failure("Could not find End of Central Directory (EOCD) record in zip file")
+      case None      => Failure("Could not find End of Central Directory (EOCD) record in zip file")
       case Some(pos) =>
-        val totalEntries = bb.getShort(pos + 10).toInt & 0xffff
-        val cdSize = bb.getInt(pos + 12).toLong & 0xffffffffL
-        val cdOffset = bb.getInt(pos + 16).toLong & 0xffffffffL
-        if (totalEntries == 0xffff || cdSize == 0xffffffffL || cdOffset == 0xffffffffL) {
+        val totalEntries = buffer.getShort(pos + 10).toInt & 0xffff
+        val centralDirectorySize = buffer.getInt(pos + 12).toLong & 0xffffffffL
+        val centralDirectoryOffset = buffer.getInt(pos + 16).toLong & 0xffffffffL
+        if (totalEntries == 0xffff || centralDirectorySize == 0xffffffffL || centralDirectoryOffset == 0xffffffffL) {
           // ZIP64: find locator immediately before EOCD in this suffix buffer
           val locatorPos = pos - zip64LocatorSize
           if (locatorPos < 0)
             Failure("ZIP64 EOCD locator not found in suffix buffer (too close to file start)")
           else {
-            val locatorSig = bb.getInt(locatorPos)
+            val locatorSig = buffer.getInt(locatorPos)
             if (locatorSig != zip64EocdLocatorSignature)
               Failure(
                 s"Expected ZIP64 EOCD locator signature at offset $locatorPos, got 0x${locatorSig.toHexString}"
               )
             else
-              Full((bb.getLong(locatorPos + 8), -1L))
+              Full((buffer.getLong(locatorPos + 8), -1L))
           }
         } else
-          Full((cdOffset, cdSize))
+          Full((centralDirectoryOffset, centralDirectorySize))
     }
   }
 
-  private def resolveCentrylDirectoryBounds(
+  private def resolveCentralDirectoryBounds(
       eocdInfo: (Long, Long)
   )(using ec: ExecutionContext, tc: TokenContext): Fox[(Long, Long)] =
     eocdInfo match {
@@ -176,112 +158,117 @@ class ZipDataVault(outerVaultPath: VaultPath) extends DataVault with LazyLogging
     } yield (centralDirectoryOffset, centralDirectorySize)
 
   // §4.3.12
-  private def parseCentralDirectory(cdBytes: Array[Byte]): Box[List[ZipCentralDirEntry]] = {
-    val bb = ByteBuffer.wrap(cdBytes).order(ByteOrder.LITTLE_ENDIAN)
+  private def parseCentralDirectory(centralDirectoryBytes: Array[Byte]): Box[List[ZipCentralDirEntry]] = {
+    val buffer = ByteBuffer.wrap(centralDirectoryBytes).order(ByteOrder.LITTLE_ENDIAN)
 
     @annotation.tailrec
-    def loop(pos: Int, acc: List[ZipCentralDirEntry]): Box[List[ZipCentralDirEntry]] =
-      if (pos > cdBytes.length - 46) Full(acc.reverse)
+    def loopThroughEntriesRecursive(pos: Int, acc: List[ZipCentralDirEntry]): Box[List[ZipCentralDirEntry]] =
+      if (pos > centralDirectoryBytes.length - 46) Full(acc.reverse)
       else {
-        val sig = bb.getInt(pos)
-        if (sig != centralDirEntrySignature)
+        val entrySignature = buffer.getInt(pos)
+        if (entrySignature != centralDirEntrySignature)
           Failure(
-            s"Expected central directory entry signature 0x${centralDirEntrySignature.toHexString} at offset $pos, got 0x${sig.toHexString}"
+            s"Expected zip central directory entry signature 0x${centralDirEntrySignature.toHexString} at offset $pos, got 0x${entrySignature.toHexString}"
           )
         else {
-          val compressionMethod = bb.getShort(pos + 10).toInt & 0xffff
-          val compressedSizeRaw = bb.getInt(pos + 20).toLong & 0xffffffffL
-          val uncompressedSizeRaw = bb.getInt(pos + 24).toLong & 0xffffffffL
-          val fileNameLen = bb.getShort(pos + 28).toInt & 0xffff
-          val extraLen = bb.getShort(pos + 30).toInt & 0xffff
-          val commentLen = bb.getShort(pos + 32).toInt & 0xffff
-          val localHeaderOffsetRaw = bb.getInt(pos + 42).toLong & 0xffffffffL
-          val fileName = new String(cdBytes, pos + 46, fileNameLen, StandardCharsets.UTF_8)
-          val entryBox: Box[ZipCentralDirEntry] =
-            if (compressedSizeRaw == 0xffffffffL || uncompressedSizeRaw == 0xffffffffL || localHeaderOffsetRaw == 0xffffffffL)
-              parseZip64ExtraInCd(
-                cdBytes,
-                extraStart = pos + 46 + fileNameLen,
-                extraLen = extraLen,
-                needUncompressedSize = uncompressedSizeRaw == 0xffffffffL,
-                needCompressedSize = compressedSizeRaw == 0xffffffffL,
-                needLocalHeaderOffset = localHeaderOffsetRaw == 0xffffffffL
-              ).map { case (cs, us, lho) =>
-                ZipCentralDirEntry(
-                  localHeaderOffset = if (localHeaderOffsetRaw == 0xffffffffL) lho else localHeaderOffsetRaw,
-                  compressedSize = if (compressedSizeRaw == 0xffffffffL) cs else compressedSizeRaw,
-                  uncompressedSize = if (uncompressedSizeRaw == 0xffffffffL) us else uncompressedSizeRaw,
-                  compressionMethod = compressionMethod,
-                  fileName = fileName
-                )
-              }
-            else
-              Full(ZipCentralDirEntry(localHeaderOffsetRaw, compressedSizeRaw, uncompressedSizeRaw, compressionMethod, fileName))
-          entryBox match {
-            case Full(entry) => loop(pos + 46 + fileNameLen + extraLen + commentLen, entry :: acc)
-            case f: Failure  => f
-            case _           => Failure("Unexpected Empty from parseZip64ExtraInCd")
+          val compressionMethod = buffer.getShort(pos + 10).toInt & 0xffff
+          val compressedSizeRaw = buffer.getInt(pos + 20).toLong & 0xffffffffL
+          val uncompressedSizeRaw = buffer.getInt(pos + 24).toLong & 0xffffffffL
+          val fileNameLength = buffer.getShort(pos + 28).toInt & 0xffff
+          val extraLength = buffer.getShort(pos + 30).toInt & 0xffff
+          val commentLength = buffer.getShort(pos + 32).toInt & 0xffff
+          val localHeaderOffsetRaw = buffer.getInt(pos + 42).toLong & 0xffffffffL
+          val fileName = new String(centralDirectoryBytes, pos + 46, fileNameLength, StandardCharsets.UTF_8)
+          val entryRaw = ZipCentralDirEntry(
+            localHeaderOffsetRaw,
+            compressedSizeRaw,
+            uncompressedSizeRaw,
+            compressionMethod,
+            fileName
+          )
+          val entryExtendedBox = extendEntryWithExtraFields(
+            entryRaw,
+            centralDirectoryBytes,
+            extraStart = pos + 46 + fileNameLength,
+            extraLength = extraLength
+          )
+          entryExtendedBox match {
+            case Full(entry) =>
+              loopThroughEntriesRecursive(pos + 46 + fileNameLength + extraLength + commentLength, entry :: acc)
+            case f: Failure => f
+            case _          => Failure("Unexpected Empty from parseZip64ExtraInCd")
           }
         }
       }
 
-    loop(0, Nil)
+    loopThroughEntriesRecursive(0, List.empty)
   }
 
   // §4.5.3: ZIP64 extended information extra field (header ID 0x0001).
-  // Returns (compressedSize, uncompressedSize, localHeaderOffset); fields not needed are returned as -1.
   // Fields appear in this order (only when the corresponding CD field was 0xFFFFFFFF):
   //   uncompressedSize (8), compressedSize (8), localHeaderOffset (8), diskNumber (4)
-  private def parseZip64ExtraInCd(
-      cdBytes: Array[Byte],
+  private def extendEntryWithExtraFields(
+      entryRaw: ZipCentralDirEntry,
+      centralDirectoryBytes: Array[Byte],
       extraStart: Int,
-      extraLen: Int,
-      needUncompressedSize: Boolean,
-      needCompressedSize: Boolean,
-      needLocalHeaderOffset: Boolean
-  ): Box[(Long, Long, Long)] = {
-    val bb = ByteBuffer.wrap(cdBytes).order(ByteOrder.LITTLE_ENDIAN)
-    val end = extraStart + extraLen
+      extraLength: Int
+  ): Box[ZipCentralDirEntry] =
+    if (!entryRaw.needsExtraAttributes) Full(entryRaw)
+    else {
+      val buffer = ByteBuffer.wrap(centralDirectoryBytes).order(ByteOrder.LITTLE_ENDIAN)
+      val end = extraStart + extraLength
 
-    @annotation.tailrec
-    def loop(pos: Int): Box[(Long, Long, Long)] =
-      if (pos + 4 > end)
-        Failure(s"ZIP64 extra field (tag 0x0001) not found in extra data of length $extraLen")
-      else {
-        val tag = bb.getShort(pos).toInt & 0xffff
-        val fieldSize = bb.getShort(pos + 2).toInt & 0xffff
-        if (tag == 0x0001) {
-          var fieldPos = pos + 4
-          var uncompressedSize = -1L
-          var compressedSize = -1L
-          var localHeaderOffset = -1L
-          if (needUncompressedSize && fieldPos + 8 <= end) {
-            uncompressedSize = bb.getLong(fieldPos); fieldPos += 8
-          }
-          if (needCompressedSize && fieldPos + 8 <= end) {
-            compressedSize = bb.getLong(fieldPos); fieldPos += 8
-          }
-          if (needLocalHeaderOffset && fieldPos + 8 <= end) {
-            localHeaderOffset = bb.getLong(fieldPos)
-          }
-          Full((compressedSize, uncompressedSize, localHeaderOffset))
-        } else
-          loop(pos + 4 + fieldSize)
-      }
+      @annotation.tailrec
+      def findZip64Tag(pos: Int): Option[Int] =
+        if (pos + 4 > end) None
+        else {
+          val tag = buffer.getShort(pos).toInt & 0xffff
+          val fieldSize = buffer.getShort(pos + 2).toInt & 0xffff
+          if (tag == 0x0001) Some(pos + 4) else findZip64Tag(pos + 4 + fieldSize)
+        }
 
-    loop(extraStart)
-  }
+      for {
+        zip64DataStart <- Box(
+          findZip64Tag(extraStart)
+        ) ?~! s"ZIP64 extra field (tag 0x0001) not found in extra data field"
+        needUncompressedSize = entryRaw.uncompressedSize == 0xffffffffL
+        needCompressedSize = entryRaw.compressedSize == 0xffffffffL
+        needLocalHeaderOffset = entryRaw.localHeaderOffset == 0xffffffffL
+        uncompressedSizePos = zip64DataStart
+        compressedSizePos = uncompressedSizePos + (if (needUncompressedSize) 8 else 0)
+        localHeaderOffsetPos = compressedSizePos + (if (needCompressedSize) 8 else 0)
+        entryFilled = entryRaw.copy(
+          uncompressedSize =
+            if (needUncompressedSize && uncompressedSizePos + 8 <= end) buffer.getLong(uncompressedSizePos)
+            else entryRaw.uncompressedSize,
+          compressedSize =
+            if (needCompressedSize && compressedSizePos + 8 <= end) buffer.getLong(compressedSizePos)
+            else entryRaw.compressedSize,
+          localHeaderOffset =
+            if (needLocalHeaderOffset && localHeaderOffsetPos + 8 <= end) buffer.getLong(localHeaderOffsetPos)
+            else entryRaw.localHeaderOffset
+        )
+      } yield entryFilled
+    }
+
+  private def normalizeInnerPath(vaultPath: VaultPath): Box[String] =
+    for {
+      zipEntryUPath <- vaultPath.toUPath.toZipEntryUPath ?~! s"ZipDataVault received path with non-ZipEntryUPath"
+      innerPath = zipEntryUPath.innerPath
+      normalizedInnerPath = normalizeInnerPath(zipEntryUPath.innerPath)
+    } yield normalizedInnerPath
 
   private def normalizeInnerPath(name: String): String =
     name.stripPrefix("/").stripSuffix("/")
 
-  private def toAbsoluteRange(dataStart: Long, entrySize: Long, range: ByteRange): ByteRange =
+  private def rangeInEntryToRangeInZip(entryStart: Long, entrySize: Long, range: ByteRange): ByteRange =
     range match {
       case CompleteByteRange() =>
-        ByteRange.startEndExclusive(dataStart, dataStart + entrySize)
+        ByteRange.startEndExclusive(entryStart, entryStart + entrySize)
       case StartEndExclusiveByteRange(s, e) =>
-        ByteRange.startEndExclusive(dataStart + s, dataStart + e)
+        ByteRange.startEndExclusive(entryStart + s, entryStart + e)
       case SuffixLengthByteRange(n) =>
-        ByteRange.startEndExclusive(dataStart + entrySize - n, dataStart + entrySize)
+        ByteRange.startEndExclusive(entryStart + entrySize - n, entryStart + entrySize)
     }
+
 }

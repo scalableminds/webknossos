@@ -49,12 +49,12 @@ import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import type { Edge, Node, Tree } from "viewer/model/types/tree_types";
 import { api } from "viewer/singletons";
 import Store from "viewer/store";
-import type ArbitraryView from "viewer/view/arbitrary_view";
+import type FlightModeView from "viewer/view/arbitrary_view";
 import type PlaneView from "viewer/view/plane_view";
 import { renderToTexture } from "viewer/view/rendering_utils";
 
 export function handleMergeTrees(
-  view: PlaneView | ArbitraryView,
+  view: PlaneView | FlightModeView,
   position: Point2,
   plane: Viewport,
   isTouch: boolean,
@@ -71,7 +71,7 @@ export function handleMergeTrees(
   }
 }
 export function handleDeleteEdge(
-  view: PlaneView | ArbitraryView,
+  view: PlaneView | FlightModeView,
   position: Point2,
   plane: Viewport,
   isTouch: boolean,
@@ -88,7 +88,7 @@ export function handleDeleteEdge(
   }
 }
 export function handleSelectNode(
-  view: PlaneView | ArbitraryView,
+  view: PlaneView | FlightModeView,
   position: Point2,
   plane: Viewport,
   isTouch: boolean,
@@ -408,7 +408,7 @@ export function moveAlongDirection(reverse: boolean = false): void {
   api.tracing.centerPositionAnimated(newPosition, false);
 }
 export function maybeGetNodeIdFromPosition(
-  planeView: PlaneView | ArbitraryView,
+  planeView: PlaneView | FlightModeView,
   position: Point2,
   plane: Viewport,
   isTouch: boolean,

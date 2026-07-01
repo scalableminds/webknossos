@@ -16,7 +16,7 @@ jobs:
       - name: Calculate branch environment name
         id: get_env
         run: |
-          # Replicate the exact same sanitization logic you used to create it
+          # Replicate the exact same sanitization logic as done during creation
           SANITIZED=$(echo "$HEAD_REF" | tr -cd '[:alnum:]' | tr '[:upper:]' '[:lower:]' | sed 's/^[0-9]*//')
           echo "dynamic_env=dev-${SANITIZED}" >> "$GITHUB_OUTPUT"
         env:
@@ -49,7 +49,7 @@ jobs:
           fi
           SANITIZED=$(echo "$HEAD_REF" | tr -cd '[:alnum:]' | tr '[:upper:]' '[:lower:]' | sed 's/^[0-9]*//')
           echo "env_url=https://${SANITIZED}.webknossos.xyz" >> "$GITHUB_OUTPUT"
-          
+
           # Create a unique environment name based on the sanitized branch
           echo "dynamic_env=dev-${SANITIZED}" >> "$GITHUB_OUTPUT"
         env:

@@ -13,7 +13,7 @@ import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import { getAntdTheme } from "theme";
 import type { BorderTabType, OrthoView } from "viewer/constants";
-import { ArbitraryViews, BorderTabs, OrthoViews } from "viewer/constants";
+import { BorderTabs, FlightViews, OrthoViews } from "viewer/constants";
 import {
   isUserInterfaceBlocked,
   mayEditAnnotation,
@@ -390,9 +390,9 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
         );
       }
 
-      case ArbitraryViews.arbitraryViewport: {
+      case FlightViews.flightViewport: {
         return (
-          <InputCatcher isBlocked={isBlocked} viewportID={ArbitraryViews.arbitraryViewport}>
+          <InputCatcher isBlocked={isBlocked} viewportID={FlightViews.flightViewport}>
             {isUpdateTracingAllowed ? <RecordingSwitch /> : null}
           </InputCatcher>
         );

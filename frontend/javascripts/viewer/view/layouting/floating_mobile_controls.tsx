@@ -27,22 +27,22 @@ export function FloatingMobileControls() {
   const dispatch = useDispatch();
   const viewMode = useWkSelector((state) => state.temporaryConfiguration.viewMode);
 
-  const moveForwardArbitrary = useCallback(
+  const moveForwardFlightMode = useCallback(
     (timeFactor: number) =>
       dispatch(moveFlycamAction([0, 0, getMoveOffset3d(Store.getState(), timeFactor)])),
     [dispatch],
   );
-  const moveBackwardArbitrary = useCallback(
+  const moveBackwardFlightMode = useCallback(
     (timeFactor: number) =>
       dispatch(moveFlycamAction([0, 0, -getMoveOffset3d(Store.getState(), timeFactor)])),
     [dispatch],
   );
 
   const moveForwardProps = useRepeatedButtonTrigger(
-    viewMode === "orthogonal" ? moveForward : moveForwardArbitrary,
+    viewMode === "orthogonal" ? moveForward : moveForwardFlightMode,
   );
   const moveBackwardProps = useRepeatedButtonTrigger(
-    viewMode === "orthogonal" ? moveBackward : moveBackwardArbitrary,
+    viewMode === "orthogonal" ? moveBackward : moveBackwardFlightMode,
   );
   const activeViewport = useWkSelector((state) => state.viewModeData.plane.activeViewport);
   const handleContextMenu = (event: React.SyntheticEvent) => {

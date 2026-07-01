@@ -3,7 +3,8 @@ package models.organization
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Empty, Failure, Fox, FoxImplicits, Full}
+import com.scalableminds.util.tools.{Empty, Failure, Fox, Full}
+import com.scalableminds.util.tools.Fox.toFox
 import com.typesafe.scalalogging.LazyLogging
 import models.job.{JobDAO, JobService}
 import play.api.libs.json.{JsObject, Json}
@@ -12,8 +13,7 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 class CreditTransactionService @Inject() (creditTransactionDAO: CreditTransactionDAO)(implicit val ec: ExecutionContext)
-    extends FoxImplicits
-    with LazyLogging {
+    extends LazyLogging {
 
   def hasEnoughCredits(organizationId: String, milliCreditsToSpend: Int)(using ctx: DBAccessContext): Fox[Boolean] =
     creditTransactionDAO.getMilliCreditBalance(organizationId).map(balance => balance >= milliCreditsToSpend)

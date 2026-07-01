@@ -28,7 +28,7 @@ export default {
       ],
     },
     "types::ViewMode": {
-      enum: ["orthogonal", "oblique", "flight", "volume"],
+      enum: ["orthogonal", "flight", "volume"],
     },
     "types::MappingType": {
       type: ["string", "null"],

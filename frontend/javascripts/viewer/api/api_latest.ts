@@ -1414,7 +1414,7 @@ class TracingApi {
    *        When true, this lets the user still manipulate the "third dimension"
    *        during the animation (important because otherwise the user cannot continue to trace until
    *        the animation is over).
-   * @param rotation - Vector3 (optional) - Will only be noticeable in flight or oblique mode.
+   * @param rotation - Vector3 (optional) - Will only be noticeable in flight mode.
    * @example
    * api.tracing.centerPositionAnimated([0, 0, 0])
    */
@@ -2683,6 +2683,7 @@ class DataApi {
         seedAdditionalCoordinates,
         meshFileName,
         undefined,
+        undefined,
         effectiveLayerName,
       ),
     );
@@ -2997,7 +2998,7 @@ class UserApi {
     - crosshairSize
     - mouseRotateValue
     - clippingDistance
-    - clippingDistanceArbitrary
+    - clippingDistanceFlight
     - dynamicSpaceDirection
     - displayCrosshair
     - displayScalebars

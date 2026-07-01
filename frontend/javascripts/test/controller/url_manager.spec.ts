@@ -97,7 +97,7 @@ describe("UrlManager", () => {
   });
 
   it("should build csv url hash and parse it again", () => {
-    const mode = Constants.MODE_ARBITRARY;
+    const mode = Constants.MODE_FLIGHT;
     const urlState = {
       position: [0, 0, 0] as Vector3,
       mode,
@@ -117,7 +117,7 @@ describe("UrlManager", () => {
   });
 
   it("should build csv url hash with additional coordinates and parse it again", () => {
-    const mode = Constants.MODE_ARBITRARY;
+    const mode = Constants.MODE_FLIGHT;
     const urlState = {
       position: [0, 0, 0] as Vector3,
       mode,
@@ -187,7 +187,7 @@ describe("UrlManager", () => {
   });
 
   it("should build json url hash and parse it again", () => {
-    const mode = Constants.MODE_ARBITRARY;
+    const mode = Constants.MODE_FLIGHT;
     const urlState = {
       position: [0, 0, 0] as Vector3,
       clippingDistance: 50,

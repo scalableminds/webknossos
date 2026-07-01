@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.tracingstore
 
 import com.google.inject.Inject
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
@@ -12,7 +13,7 @@ import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{
   GetMultipleSegmentIndexParameters,
   MissingBucketHeaders,
-  ProtoGeometryImplicits,
+  ProtoGeometryConversions,
   SegmentIndexData
 }
 import com.scalableminds.webknossos.datastore.models.WebknossosDataRequest
@@ -32,7 +33,7 @@ class TSRemoteDatastoreClient @Inject() (
     val lifecycle: ApplicationLifecycle
 )(implicit ec: ExecutionContext)
     extends LazyLogging
-    with ProtoGeometryImplicits
+    with ProtoGeometryConversions
     with MissingBucketHeaders {
 
   private lazy val dataStoreUriCache: AlfuCache[ObjectId, String] = AlfuCache()
@@ -51,16 +52,19 @@ class TSRemoteDatastoreClient @Inject() (
 
   def getData(remoteFallbackLayer: RemoteFallbackLayer, dataRequests: Seq[WebknossosDataRequest])(using
       tc: TokenContext
-  ): Fox[(Array[Byte], List[Int])] =
+  ): Fox[(Array[Byte], Seq[Int], Seq[Int])] =
     for {
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
       response <- rpc(s"$remoteLayerUri/data").withTokenFromContext.silent.postJson(dataRequests)
-      _ <- Fox.fromBool(Status.isSuccessful(response.status))
+      _ <- Fox.fromBool(Status.isSuccessful(response.status)) ?~> Msg.Annotation.Volume.fallbackDataLoadingFailed
       bytes = response.bodyAsBytes.toArray
-      indices <- parseMissingBucketHeader(
-        response.header(missingBucketsHeader)
-      ) ?~> "failed to parse missing bucket header"
-    } yield (bytes, indices)
+      emptyIndices <- parseMissingBucketHeader(
+        response.header(emptyBucketIndicesHeader)
+      ) ?~> Msg.Annotation.Volume.emptyBucketIndicesHeaderParsingFailed
+      failureIndices <- parseMissingBucketHeader(
+        response.header(failureBucketIndicesHeader)
+      ) ?~> Msg.Annotation.Volume.failureBucketIndicesHeaderParsingFailed
+    } yield (bytes, emptyIndices, failureIndices)
 
   def getVoxelAtPosition(remoteFallbackLayer: RemoteFallbackLayer, pos: Vec3Int, mag: Vec3Int)(using
       tc: TokenContext

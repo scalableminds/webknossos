@@ -4,7 +4,8 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.mvc.Formatter
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
@@ -49,7 +50,6 @@ class ExploreRemoteLayerService @Inject() (
     remoteWebknossosClient: DSRemoteWebknossosClient,
     dataStoreConfig: DataStoreConfig
 ) extends ExploreLayerUtils
-    with FoxImplicits
     with Formatter
     with LazyLogging {
 

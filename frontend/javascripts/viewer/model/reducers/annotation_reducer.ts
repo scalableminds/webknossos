@@ -374,13 +374,14 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         mappingName,
         mappingType,
         opacity,
+        isVisible,
       } = action;
       const meshInfo: MeshInformation = {
         segmentId: segmentId,
         seedPosition,
         seedAdditionalCoordinates,
         isLoading: false,
-        isVisible: true,
+        isVisible,
         isPrecomputed: false,
         opacity,
         mappingName,
@@ -420,13 +421,14 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         meshFileName,
         mappingName,
         opacity,
+        isVisible,
       } = action;
       const meshInfo: MeshInformation = {
         segmentId: segmentId,
         seedPosition,
         seedAdditionalCoordinates,
         isLoading: false,
-        isVisible: true,
+        isVisible,
         isPrecomputed: true,
         opacity,
         meshFileName,

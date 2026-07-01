@@ -3,7 +3,7 @@ package models.dataset
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables.{Datastores, DatastoresRow, GetResultDatastoresRow}
 import models.job.JobService
 
@@ -13,7 +13,7 @@ import play.api.mvc.{Result, Results}
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import utils.WkConf
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 case class DataStore(
     name: String,
@@ -34,8 +34,7 @@ object DataStore {
 
 class DataStoreService @Inject() (dataStoreDAO: DataStoreDAO, jobService: JobService, conf: WkConf)(implicit
     ec: ExecutionContext
-) extends FoxImplicits
-    with Results {
+) extends Results {
 
   def publicWrites(dataStore: DataStore): Fox[JsObject] =
     for {
@@ -51,11 +50,11 @@ class DataStoreService @Inject() (dataStoreDAO: DataStoreDAO, jobService: JobSer
       "jobsEnabled" -> jobsEnabled
     )
 
-  def validateAccess(name: String, key: String)(block: DataStore => Future[Result]): Fox[Result] =
+  def validateAccess(name: String, key: String)(block: DataStore => Fox[Result]): Fox[Result] =
     Fox.fromFuture((for {
       dataStore <- dataStoreDAO.findOneByName(name)(using GlobalAccessContext)
       _ <- Fox.fromBool(key == dataStore.key)
-      result <- Fox.fromFuture(block(dataStore))
+      result <- block(dataStore)
     } yield result).getOrElse(Forbidden(Json.obj("granted" -> false, "msg" -> Msg.DataStore.notFound))))
 
 }

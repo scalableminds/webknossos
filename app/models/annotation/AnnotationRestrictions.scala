@@ -1,7 +1,8 @@
 package models.annotation
 
 import com.scalableminds.util.accesscontext.GlobalAccessContext
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 
 import javax.inject.Inject
 import models.user.{User, UserService}
@@ -35,7 +36,7 @@ class AnnotationRestrictions(implicit ec: ExecutionContext) {
   def allowDownload(user: User): Fox[Boolean] = allowDownload(Some(user))
 }
 
-object AnnotationRestrictions extends FoxImplicits {
+object AnnotationRestrictions {
   def writeAsJson(ar: AnnotationRestrictions, u: Option[User]): Fox[JsObject] =
     for {
       allowAccess <- ar.allowAccess(u)
@@ -52,7 +53,7 @@ object AnnotationRestrictions extends FoxImplicits {
 
 class AnnotationRestrictionDefaults @Inject() (userService: UserService, annotationMutexDAO: AnnotationMutexDAO)(
     implicit ec: ExecutionContext
-) extends FoxImplicits {
+) {
 
   def defaultsFor(annotation: Annotation): AnnotationRestrictions =
     new AnnotationRestrictions {

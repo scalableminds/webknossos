@@ -345,7 +345,7 @@ export type UserConfiguration = {
   readonly isMultiSplitActive: boolean;
   readonly brushSize: number;
   readonly clippingDistance: number;
-  readonly clippingDistanceArbitrary: number;
+  readonly clippingDistanceFlight: number;
   readonly clipSkeletonToCurrentSection: boolean;
   readonly crosshairSize: number;
   readonly displayCrosshair: boolean;
@@ -555,12 +555,12 @@ type PlaneModeData = {
   readonly tdCamera: CameraData;
   readonly inputCatcherRects: PlaneRects;
 };
-type ArbitraryModeData = {
+type FlightModeData = {
   readonly inputCatcherRect: Rect;
 };
 export type ViewModeData = {
   readonly plane: PlaneModeData;
-  readonly arbitrary: ArbitraryModeData;
+  readonly flight: FlightModeData;
 };
 export type BorderOpenStatus = {
   left: boolean;
@@ -639,8 +639,7 @@ type ConnectomeData = {
 };
 export type MinCutPartitions = { 1: number[]; 2: number[]; agglomerateId: number | null };
 export type LocalMeshesInfo =
-  | Record<string, Record<number, MeshInformation> | undefined>
-  | undefined;
+  Record<string, Record<number, MeshInformation> | undefined> | undefined;
 
 // LocalSegmentationState holds per-layer segmentation state that is not
 // persisted on the server (in contrast to the VolumeTracing which must only

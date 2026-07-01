@@ -26,9 +26,11 @@ class NMLUnitTestSuite extends AsyncWordSpec {
   implicit private val ctx: DBAccessContext = GlobalAccessContext
 
   private val mockDatasetDAO = new DatasetDAOLike {
-    override def findOneByIdOrNameAndOrganization(datasetIdOpt: Option[ObjectId],
-                                                  datasetName: String,
-                                                  organizationId: String)(using ctx: DBAccessContext): Fox[Dataset] =
+    override def findOneByIdOrNameAndOrganization(
+        datasetIdOpt: Option[ObjectId],
+        datasetName: String,
+        organizationId: String
+    )(using ctx: DBAccessContext): Fox[Dataset] =
       Fox.successful(
         Dataset(
           _id = ObjectId.dummyId,
@@ -47,19 +49,23 @@ class NMLUnitTestSuite extends AsyncWordSpec {
           sharingToken = None,
           status = "",
           logoUrl = None
-        ))(scala.concurrent.ExecutionContext.global)
+        )
+      )
   }
 
   private val nmlParser = new NmlParser(mockDatasetDAO)
 
   def writeAndParseTracing(skeletonTracing: SkeletonTracing): Fox[NmlParseSuccessWithoutFile] = {
     val annotationLayers = List(
-      FetchedAnnotationLayer("dummySkeletonTracingId",
-                             AnnotationLayer.defaultSkeletonLayerName,
-                             Left(skeletonTracing),
-                             None))
+      FetchedAnnotationLayer(
+        "dummySkeletonTracingId",
+        AnnotationLayer.defaultSkeletonLayerName,
+        Left(skeletonTracing),
+        None
+      )
+    )
     val nmlFunctionStream =
-      new NmlWriter()(scala.concurrent.ExecutionContext.global).toNmlStream(
+      new NmlWriter().toNmlStream(
         "",
         AnnotationProto("", 0L, Seq.empty, 0L),
         annotationLayers,
@@ -81,10 +87,12 @@ class NMLUnitTestSuite extends AsyncWordSpec {
       _ <- nmlFunctionStream.writeTo(os)
       array = os.toByteArray
       is = new ByteArrayInputStream(array)
-      parsingParams = SharedParsingParameters(useZipName = false,
-                                              overwritingDatasetId = None,
-                                              userOrganizationId = "testOrganization",
-                                              isTaskUpload = true)
+      parsingParams = SharedParsingParameters(
+        useZipName = false,
+        overwritingDatasetId = None,
+        userOrganizationId = "testOrganization",
+        isTaskUpload = true
+      )
       parsed <- nmlParser.parse("", is, parsingParams, basePath = None)
     } yield parsed
   }
@@ -100,27 +108,27 @@ class NMLUnitTestSuite extends AsyncWordSpec {
   private val dummyTracing = Dummies.skeletonTracing
 
   "NML writing and parsing" should {
-    "yield the same state" in {
+    "yield the same state" in
       writeAndParseTracing(dummyTracing).futureBox.map {
         case Full(tuple) =>
           tuple match {
             case NmlParseSuccessWithoutFile(tracing, _, _, _, _) =>
               assert(tracing == dummyTracing)
-            case _ => fail()
           }
         case _ => fail()
       }
-    }
   }
 
   "NML writing and parsing" should {
     "add missing isExpanded props with a default of true" in {
-      val treeGroupsWithOmittedIsExpanded = dummyTracing.treeGroups.map(
-        treeGroup =>
-          new TreeGroup(name = treeGroup.name,
-                        groupId = treeGroup.groupId,
-                        children = treeGroup.children,
-                        isExpanded = if (treeGroup.isExpanded.getOrElse(true)) None else Some(false)))
+      val treeGroupsWithOmittedIsExpanded = dummyTracing.treeGroups.map(treeGroup =>
+        new TreeGroup(
+          name = treeGroup.name,
+          groupId = treeGroup.groupId,
+          children = treeGroup.children,
+          isExpanded = if (treeGroup.isExpanded.getOrElse(true)) None else Some(false)
+        )
+      )
       val dummyTracingWithOmittedIsExpandedTreeGroupProp =
         dummyTracing.copy(treeGroups = treeGroupsWithOmittedIsExpanded)
       writeAndParseTracing(dummyTracingWithOmittedIsExpandedTreeGroupProp).futureBox.map {
@@ -128,7 +136,6 @@ class NMLUnitTestSuite extends AsyncWordSpec {
           tuple match {
             case NmlParseSuccessWithoutFile(tracing, _, _, _, _) =>
               assert(tracing == dummyTracing)
-            case _ => fail()
           }
         case _ => fail()
       }
@@ -200,8 +207,11 @@ class NMLUnitTestSuite extends AsyncWordSpec {
 
     "throw an error for multiple additional coordinates of the same name" in {
       val newTracing = dummyTracing.copy(
-        additionalAxes = Seq(new AdditionalAxisProto("t", 0, Vec2IntProto(0, 10)),
-                             new AdditionalAxisProto("t", 1, Vec2IntProto(10, 20))))
+        additionalAxes = Seq(
+          new AdditionalAxisProto("t", 0, Vec2IntProto(0, 10)),
+          new AdditionalAxisProto("t", 1, Vec2IntProto(10, 20))
+        )
+      )
 
       assertParsingFailed(writeAndParseTracing(newTracing))
     }

@@ -5,7 +5,8 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.ExtendedTypes.{ExtendedDouble, ExtendedString}
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
@@ -18,7 +19,7 @@ import com.scalableminds.webknossos.datastore.geometry.{
   Vec2IntProto,
   Vec3IntProto
 }
-import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
+import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryConversions, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.tracingstore.tracings.ColorGenerator
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.TreeType
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{MultiComponentTreeSplitter, TreeValidator}
@@ -36,9 +37,8 @@ import scala.xml.{Attribute, NodeSeq, XML, Node => XMLNode}
 
 class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
     extends LazyLogging
-    with ProtoGeometryImplicits
-    with ColorGenerator
-    with FoxImplicits {
+    with ProtoGeometryConversions
+    with ColorGenerator {
 
   private val DEFAULT_TIME = 0L
   private val DEFAULT_VIEWPORT = 0
@@ -79,8 +79,8 @@ class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
             ), // Note: this property may be adapted later in adaptPropertiesToFallbackLayer
             createdTimestamp = nmlParams.timestamp,
             datasetName = dataset.name,
-            editPosition = nmlParams.editPosition,
-            editRotation = nmlParams.editRotation,
+            editPosition = vec3IntToProto(nmlParams.editPosition),
+            editRotation = vec3DoubleToProto(nmlParams.editRotation),
             elementClass =
               ElementClassProto.uint32, // Note: this property may be adapted later in adaptPropertiesToFallbackLayer
             fallbackLayer = v.fallbackLayerName,
@@ -109,10 +109,10 @@ class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
         dataset.name,
         nmlParams.treesSplit,
         nmlParams.timestamp,
-        nmlParams.taskBoundingBox,
+        boundingBoxOptToProto(nmlParams.taskBoundingBox),
         nmlParams.activeNodeId,
-        nmlParams.editPosition,
-        nmlParams.editRotation,
+        vec3IntToProto(nmlParams.editPosition),
+        vec3DoubleToProto(nmlParams.editRotation),
         nmlParams.zoomLevel,
         version = 0,
         None,
@@ -321,7 +321,9 @@ class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
   @SuppressWarnings(Array("TraversableHead")) // We check that size == 1 before accessing head
   private def parseBoundingBoxes(boundingBoxNodes: NodeSeq): Seq[NamedBoundingBoxProto] =
     if (boundingBoxNodes.size == 1 && getSingleAttribute(boundingBoxNodes.head, "id").isEmpty) {
-      Seq.empty ++ parseBoundingBox(boundingBoxNodes.head).map(NamedBoundingBoxProto(0, None, None, None, _))
+      Seq.empty ++ parseBoundingBox(boundingBoxNodes.head)
+        .map(boundingBoxToProto)
+        .map(NamedBoundingBoxProto(0, None, None, None, _))
     } else {
       boundingBoxNodes.flatMap { node =>
         val idText = getSingleAttribute(node, "id")
@@ -332,7 +334,7 @@ class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
           color = parseColorOpt(node)
           boundingBox <- Box(parseBoundingBox(node))
           nameOpt = if (name.isEmpty) None else Some(name)
-        } yield NamedBoundingBoxProto(id, nameOpt, isVisible, color, boundingBox)).toOption
+        } yield NamedBoundingBoxProto(id, nameOpt, isVisible, color, boundingBoxToProto(boundingBox))).toOption
       }
     }
 
@@ -345,7 +347,7 @@ class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
   ): Option[NamedBoundingBoxProto] =
     nodes.headOption.flatMap(node => parseBoundingBox(node)).map { bb =>
       val newId = if (userBoundingBoxes.isEmpty) 0 else userBoundingBoxes.map(_.id).max + 1
-      NamedBoundingBoxProto(newId, Some("task bounding box"), None, Some(getRandomColor), bb)
+      NamedBoundingBoxProto(newId, Some("task bounding box"), None, Some(getRandomColor), boundingBoxToProto(bb))
     }
 
   private def parseBoundingBox(node: XMLNode) =
@@ -596,7 +598,18 @@ class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
       val bitDepth = parseBitDepth(node)
       val interpolation = parseInterpolation(node)
       val rotation = parseRotationForNode(node).getOrElse(NodeDefaults.rotation)
-      Node(id, position, rotation, radius, viewport, mag, bitDepth, interpolation, timestamp, additionalCoordinates)
+      Node(
+        id,
+        vec3IntToProto(position),
+        vec3DoubleToProto(rotation),
+        radius,
+        viewport,
+        mag,
+        bitDepth,
+        interpolation,
+        timestamp,
+        additionalCoordinates
+      )
     }
   }
 

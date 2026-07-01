@@ -11,7 +11,7 @@ import play.api.mvc.Result
 import play.api.mvc.Results.Forbidden
 
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 object AccessMode extends ExtendedEnumeration {
   type AccessMode = Value
@@ -75,18 +75,18 @@ trait AccessTokenService {
       accessRequest: UserAccessRequest
   )(block: => Result)(using ec: ExecutionContext, tc: TokenContext): Fox[Result] =
     validateAccessFromTokenContext(accessRequest) {
-      Future.successful(block)
+      Fox.successful(block)
     }
 
   def validateAccessFromTokenContext(accessRequest: UserAccessRequest, useCaching: Boolean = true)(
-      block: => Future[Result]
+      block: => Fox[Result]
   )(using ec: ExecutionContext, tc: TokenContext): Fox[Result] =
     for {
       userAccessAnswer <- hasUserAccess(
         accessRequest,
         useCaching
       ) ?~> "Failed to check data access, token may be expired, consider reloading."
-      result <- Fox.fromFuture(executeBlockOnPositiveAnswer(userAccessAnswer, block))
+      result <- executeBlockOnPositiveAnswer(userAccessAnswer, block)
     } yield result
 
   private def hasUserAccess(accessRequest: UserAccessRequest, useCaching: Boolean)(using
@@ -102,17 +102,17 @@ trait AccessTokenService {
 
   private def executeBlockOnPositiveAnswer(
       userAccessAnswer: UserAccessAnswer,
-      block: => Future[Result]
-  ): Future[Result] =
+      block: => Fox[Result]
+  )(implicit ec: ExecutionContext): Fox[Result] =
     userAccessAnswer match {
       case UserAccessAnswer(true, _) =>
         block
       case UserAccessAnswer(false, Some(msg)) =>
         // Note that this should be kept in sync with DSLegacyApiController.withResolvedDatasetId
         // to make the errors indistinguishable.
-        Future.successful(Forbidden("Token may be expired, consider reloading. Access forbidden: " + msg))
+        Fox.successful(Forbidden("Token may be expired, consider reloading. Access forbidden: " + msg))
       case _ =>
-        Future.successful(Forbidden("Token may be expired, consider reloading. Token authentication failed."))
+        Fox.successful(Forbidden("Token may be expired, consider reloading. Token authentication failed."))
     }
 }
 

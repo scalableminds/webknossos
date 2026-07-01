@@ -249,8 +249,9 @@ export async function initialize(
     dataset,
     initialDatasetSettings,
   );
+  const migratedUserSettings = migrateUserConfiguration(initialUserSettings);
   const enforcedInitialUserSettings =
-    enforcePricingRestrictionsOnUserConfiguration(initialUserSettings);
+    enforcePricingRestrictionsOnUserConfiguration(migratedUserSettings);
   initializeSettings(
     enforcedInitialUserSettings,
     annotationSpecificDatasetSettings,
@@ -293,7 +294,7 @@ export async function initialize(
     );
   }
 
-  // There is no need to initialize the tracing if there is no tracing (View mode).
+  // There is no need to initialize the annotation if there is no annotation (View mode).
   if (annotation != null) {
     const editableMappings = await fetchEditableMappings(
       annotation.tracingStore.url,
@@ -309,7 +310,7 @@ export async function initialize(
       editableMappings,
     );
   } else {
-    // In view only tracings we need to set the view mode too.
+    // In dataset view mode (no annotation) we need to set the view mode too.
     const { allowedModes } = determineAllowedModes();
     const mode = UrlManager.initialState.mode || allowedModes[0];
     Store.dispatch(setViewModeAction(mode));
@@ -464,14 +465,13 @@ function initializeAnnotation(
     Store.dispatch(setVersionNumberAction(version));
   }
 
-  // Initialize 'flight', 'oblique' or 'orthogonal' mode
+  // Initialize 'orthogonal' or 'flight' mode
   if (allowedModes.length === 0) {
-    Toast.error(messages["tracing.no_allowed_mode"]);
-  } else {
-    const maybeUrlViewMode = UrlManager.initialState.mode;
-    const mode = preferredMode || maybeUrlViewMode || allowedModes[0];
-    Store.dispatch(setViewModeAction(mode));
+    Toast.warning(messages["tracing.no_allowed_mode"]);
   }
+  const maybeUrlViewMode = UrlManager.initialState.mode;
+  const mode = preferredMode || maybeUrlViewMode || allowedModes[0] || "orthogonal";
+  Store.dispatch(setViewModeAction(mode));
 }
 
 function setInitialTool() {
@@ -991,6 +991,7 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
               seedAdditionalCoordinates,
               meshFileName,
               undefined,
+              undefined,
               effectiveLayerName,
             ),
           );
@@ -1023,6 +1024,17 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
       }
     }
   }
+}
+
+function migrateUserConfiguration(userConfiguration: UserConfiguration): UserConfiguration {
+  // clippingDistanceArbitrary was renamed to clippingDistanceFlight. Carry over the stored
+  // value so users don't silently lose their saved setting after the upgrade.
+  const { clippingDistanceArbitrary, clippingDistanceFlight, ...remainingConfig } =
+    userConfiguration as UserConfiguration & { clippingDistanceArbitrary?: number };
+  if (clippingDistanceArbitrary != null && clippingDistanceFlight == null) {
+    return { ...remainingConfig, clippingDistanceFlight: clippingDistanceArbitrary as number };
+  }
+  return userConfiguration;
 }
 
 function enforcePricingRestrictionsOnUserConfiguration(

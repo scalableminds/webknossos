@@ -2,7 +2,8 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer}
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition, WebknossosDataRequest}
@@ -175,7 +176,6 @@ trait BucketKeys extends WKWDataFormatHelper with AdditionalCoordinateKey {
 
 trait VolumeTracingBucketHelper
     extends KeyValueStoreConversions
-    with FoxImplicits
     with VolumeBucketCompression
     with BucketKeys
     with ReversionHelper {
@@ -235,12 +235,13 @@ trait VolumeTracingBucketHelper
             additionalCoordinates = None
           )
         }
-        (flatDataFromDataStore, datastoreMissingBucketIndices) <- volumeLayer.volumeTracingService
+        (fallbackDataFlat, fallbackEmptyBucketIndices, fallbackFailureBucketIndices) <- volumeLayer.volumeTracingService
           .getFallbackBucketsFromDataStore(remoteFallbackLayer, dataRequests)(using volumeLayer.tokenContext)
+        _ <- Fox.fromBool(fallbackFailureBucketIndices.isEmpty) ?~> Msg.Annotation.Volume.fallbackDataLoadingFailed
         bucketBoxesFromDataStore <- splitIntoBuckets(
           dataRequests.length,
-          flatDataFromDataStore,
-          datastoreMissingBucketIndices.toSet,
+          fallbackDataFlat,
+          fallbackEmptyBucketIndices.toSet,
           volumeLayer.expectedUncompressedBucketSize
         ).toFox ?~> Msg.Annotation.Volume.fallbackDataSplitFailed
         _ <- Fox.fromBool(
@@ -258,18 +259,18 @@ trait VolumeTracingBucketHelper
   private def splitIntoBuckets(
       expectedBucketCount: Int,
       flatDataFromDataStore: Array[Byte],
-      datastoreMissingBucketIndices: Set[Int],
+      datastoreEmptyBucketIndices: Set[Int],
       bytesPerBucket: Int
   ): Box[Seq[Box[Array[Byte]]]] = tryo {
-    if ((expectedBucketCount - datastoreMissingBucketIndices.size) * bytesPerBucket != flatDataFromDataStore.length) {
+    if ((expectedBucketCount - datastoreEmptyBucketIndices.size) * bytesPerBucket != flatDataFromDataStore.length) {
       throw new IllegalStateException(
-        s"bucket data array from datastore does not have expected length to be split into ${expectedBucketCount - datastoreMissingBucketIndices.size} buckets."
+        s"bucket data array from datastore does not have expected length to be split into ${expectedBucketCount - datastoreEmptyBucketIndices.size} buckets."
       )
     }
     var currentPosition = 0
     val bucketsMutable = ListBuffer[Box[Array[Byte]]]()
     for (currentBucketIdx <- 0 until expectedBucketCount)
-      if (datastoreMissingBucketIndices.contains(currentBucketIdx)) {
+      if (datastoreEmptyBucketIndices.contains(currentBucketIdx)) {
         bucketsMutable.append(Empty)
       } else {
         bucketsMutable.append(Full(flatDataFromDataStore.slice(currentPosition, currentPosition + bytesPerBucket)))
@@ -441,7 +442,6 @@ class VersionedBucketIterator(
     with KeyValueStoreConversions
     with VolumeBucketCompression
     with BucketKeys
-    with FoxImplicits
     with ReversionHelper {
   private val batchSize = 100
 

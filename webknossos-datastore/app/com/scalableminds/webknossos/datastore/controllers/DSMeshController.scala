@@ -32,7 +32,7 @@ class DSMeshController @Inject() (
   override def allowRemoteOrigin: Boolean = true
 
   def listMeshFiles(datasetId: ObjectId, dataLayerName: String): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
@@ -53,7 +53,7 @@ class DSMeshController @Inject() (
       targetMappingName: Option[String],
       editableMappingTracingId: Option[String]
   ): Action[ListMeshChunksRequest] =
-    Action.async(validateJson[ListMeshChunksRequest]) { implicit request =>
+    Action.fox(validateJson[ListMeshChunksRequest]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
@@ -75,7 +75,7 @@ class DSMeshController @Inject() (
     }
 
   def readMeshChunk(datasetId: ObjectId, dataLayerName: String): Action[MeshChunkDataRequestList] =
-    Action.async(validateJson[MeshChunkDataRequestList]) { implicit request =>
+    Action.fox(validateJson[MeshChunkDataRequestList]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
@@ -92,7 +92,7 @@ class DSMeshController @Inject() (
     }
 
   def loadFullMeshStl(datasetId: ObjectId, dataLayerName: String): Action[FullMeshRequest] =
-    Action.async(validateJson[FullMeshRequest]) { implicit request =>
+    Action.fox(validateJson[FullMeshRequest]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND

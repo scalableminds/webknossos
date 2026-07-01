@@ -89,7 +89,7 @@ object UPath {
         upath <- fromString(asString) match {
           case Full(parsed) => JsSuccess(parsed)
           case f: Failure   => JsError(f"Invalid UPath: $f")
-          case Empty        => JsError(f"Invalid UPath")
+          case Empty        => JsError("Invalid UPath")
         }
       } yield upath
 

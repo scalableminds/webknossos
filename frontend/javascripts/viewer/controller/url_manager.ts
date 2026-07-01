@@ -206,7 +206,9 @@ class UrlManager {
     // State json format:
     // { "position": Vector3, "mode": number, "zoomStep": number, ...}
     try {
-      return validateUrlStateJSON(urlHash);
+      // Oblique mode was removed; migrate old URLs that reference it to orthogonal.
+      const migratedHash = urlHash.replace(/"mode"\s*:\s*"oblique"/, '"mode":"orthogonal"');
+      return validateUrlStateJSON(migratedHash);
     } catch (e) {
       Toast.error(messages["tracing.invalid_json_url_hash"]);
       console.error(e);

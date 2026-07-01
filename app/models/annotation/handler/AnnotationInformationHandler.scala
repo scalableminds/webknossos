@@ -2,7 +2,7 @@ package models.annotation.handler
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 
 import javax.inject.Inject
 import models.annotation.AnnotationType.AnnotationType
@@ -27,7 +27,7 @@ class AnnotationInformationHandlerSelector @Inject() (
   ).withDefaultValue(savedTracingInformationHandler)
 }
 
-trait AnnotationInformationHandler extends FoxImplicits {
+trait AnnotationInformationHandler {
 
   def datasetDAO: DatasetDAO
   def datasetService: DatasetService

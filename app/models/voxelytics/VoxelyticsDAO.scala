@@ -2,6 +2,7 @@ package models.voxelytics
 
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import models.user.User
 import play.api.libs.json._
 import com.scalableminds.util.objectid.ObjectId

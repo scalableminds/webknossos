@@ -4,7 +4,7 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.io.NamedFunctionStream
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.xml.Xml
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
@@ -43,8 +43,7 @@ case class NmlParameters(
 )
 
 class NmlWriter @Inject() (implicit ec: ExecutionContext)
-    extends FoxImplicits
-    with AnnotationLayerPrecedence
+    extends AnnotationLayerPrecedence
     with AnnotationUserStateUtils {
   private lazy val outputService = XMLOutputFactory.newInstance()
 
@@ -310,7 +309,7 @@ class NmlWriter @Inject() (implicit ec: ExecutionContext)
             writer.writeAttribute("editedMappingBaseMappingName", _)
           }
           if (skipVolumeData) {
-            writer.writeComment(f"Note that volume data was omitted when downloading this annotation.")
+            writer.writeComment("Note that volume data was omitted when downloading this annotation.")
           }
           writeVolumeSegmentInfos(volumeTracing.segments)
           Xml.withinElementSync("groups")(writeSegmentGroupsAsXml(volumeTracing.segmentGroups))

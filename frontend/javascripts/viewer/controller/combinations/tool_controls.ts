@@ -105,7 +105,7 @@ import {
 import { api } from "viewer/singletons";
 import Store, { type UserConfiguration } from "viewer/store";
 import { getDefaultBrushSizes } from "viewer/view/action_bar/tools/brush_presets";
-import type ArbitraryView from "viewer/view/arbitrary_view";
+import type FlightModeView from "viewer/view/arbitrary_view";
 import type { KeyboardShortcutHandlerMap } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
 import { showToastWarningForLargestSegmentIdMissing } from "viewer/view/largest_segment_id_modal";
 import type PlaneView from "viewer/view/plane_view";
@@ -413,7 +413,7 @@ export class SkeletonToolController extends ToolController {
   }
 
   static onLeftClick(
-    planeView: PlaneView | ArbitraryView,
+    planeView: PlaneView | FlightModeView,
     position: Point2,
     shiftPressed: boolean,
     altPressed: boolean,

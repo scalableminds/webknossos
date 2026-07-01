@@ -14,6 +14,7 @@ import {
 import TWEEN from "tween.js";
 import type { OrthoViewMap, Vector2, Vector3, Viewport } from "viewer/constants";
 import Constants, {
+  FlightViewport,
   OrthoViewColors,
   OrthoViews,
   OrthoViewValues,
@@ -445,8 +446,8 @@ class PlaneView {
   }
 
   getCameraForPlane(plane: Viewport) {
-    if (plane === "arbitraryViewport") {
-      throw new Error("Cannot access camera for arbitrary viewport.");
+    if (plane === FlightViewport) {
+      throw new Error("Cannot access camera for flight viewport.");
     }
     return this.getCameras()[plane];
   }

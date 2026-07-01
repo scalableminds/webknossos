@@ -352,10 +352,6 @@ function TaskTypeCreateView() {
                       label: "Orthogonal",
                     },
                     {
-                      value: "oblique",
-                      label: "Oblique",
-                    },
-                    {
                       value: "flight",
                       label: "Flight",
                     },

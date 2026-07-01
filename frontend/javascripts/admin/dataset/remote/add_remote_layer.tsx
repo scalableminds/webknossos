@@ -191,7 +191,7 @@ export const AddRemoteLayer: React.FC<AddRemoteLayerProps> = ({
     }
 
     return {
-      url: datasourceUrl,
+      url: encodeURI(datasourceUrl),
       datastoreName: datastoreToUse.name,
       credentials,
       preferredVoxelSize,

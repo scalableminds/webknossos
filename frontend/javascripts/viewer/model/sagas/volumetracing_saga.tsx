@@ -75,6 +75,7 @@ import { pushSaveQueueTransaction } from "../actions/save_actions";
 import { ensureWkInitialized } from "./ready_sagas";
 import { floodFill } from "./volume/floodfill_saga";
 import { type BooleanBox, createSectionLabeler, labelWithVoxelBuffer2D } from "./volume/helpers";
+import watchNavigateToSegment from "./volume/navigate_to_segment_saga";
 import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
 
 const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
@@ -624,4 +625,5 @@ export default [
   maintainVolumeTransactionEnds,
   ensureValidBrushSize,
   warnAboutInvalidSegmentId,
+  watchNavigateToSegment,
 ];

@@ -64,7 +64,11 @@ import {
   GroupTypeEnum,
   getNodeKey,
 } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
-import { getUserStateForTracing, isAgglomerateTree } from "../accessors/annotation_accessor";
+import {
+  getUserStateForTracing,
+  isAgglomerateTree,
+  isConcurrentCollaborationMode,
+} from "../accessors/annotation_accessor";
 import { max, maxBy } from "../helpers/iterator_utils";
 import { applySkeletonUpdateActionsFromServer } from "./update_action_application/skeleton";
 
@@ -249,7 +253,7 @@ function SkeletonTracingReducer(
     // which checks that only agglomerate trees may be mutated (because proofreading is
     // currently the only mode that supports live collaboration).
     if (
-      state.annotation.collaborationMode === "Concurrent" &&
+      isConcurrentCollaborationMode(state) &&
       !isCollabModeMutationAllowed(policy.collab, action, skeletonTracing)
     ) {
       return state;

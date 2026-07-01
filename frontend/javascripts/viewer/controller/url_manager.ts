@@ -204,7 +204,9 @@ class UrlManager {
     // State json format:
     // { "position": Vector3, "mode": number, "zoomStep": number, ...}
     try {
-      return validateUrlStateJSON(urlHash);
+      // Oblique mode was removed; migrate old URLs that reference it to orthogonal.
+      const migratedHash = urlHash.replace(/"mode"\s*:\s*"oblique"/, '"mode":"orthogonal"');
+      return validateUrlStateJSON(migratedHash);
     } catch (e) {
       Toast.error(messages["tracing.invalid_json_url_hash"]);
       console.error(e);
@@ -319,8 +321,8 @@ class UrlManager {
       }
     }
 
-    for (const layerName of Object.keys(state.localSegmentationData)) {
-      const { currentMeshFile } = state.localSegmentationData[layerName];
+    for (const layerName of Object.keys(state.localSegmentationStateByLayer)) {
+      const { currentMeshFile } = state.localSegmentationStateByLayer[layerName];
       const currentMeshFileName = currentMeshFile?.name;
       const localMeshes = getMeshesForCurrentAdditionalCoordinates(state, layerName);
       const meshes =

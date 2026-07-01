@@ -2,7 +2,8 @@ package com.scalableminds.util.objectid
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.tools.TextUtils.parseCommaSeparated
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import play.api.libs.json.{Format, JsError, JsResult, JsString, JsSuccess, JsValue}
 import play.api.mvc.{PathBindable, QueryStringBindable}
 
@@ -16,7 +17,7 @@ case class ObjectId(id: String) {
   override def toString: String = id
 }
 
-object ObjectId extends FoxImplicits {
+object ObjectId {
   private lazy val atomicCounter = new AtomicInteger(Random.nextInt(0x1000000))
   private lazy val HEX_CHARS: Array[Char] = "0123456789abcdef".toCharArray
 
@@ -44,10 +45,10 @@ object ObjectId extends FoxImplicits {
     id(8) = processRandomBytes(4)
 
     // 3 bytes (6 hex chars): incrementing counter with randomized start. Big endian
-    val c = atomicCounter.getAndIncrement() & 0xFFFFFF
-    id(9) = (c >> 16 & 0xFF).toByte
-    id(10) = (c >> 8 & 0xFF).toByte
-    id(11) = (c & 0xFF).toByte
+    val c = atomicCounter.getAndIncrement() & 0xffffff
+    id(9) = (c >> 16 & 0xff).toByte
+    id(10) = (c >> 8 & 0xff).toByte
+    id(11) = (c & 0xff).toByte
 
     ObjectId(hex2Str(id))
   }
@@ -92,7 +93,8 @@ object ObjectId extends FoxImplicits {
     new PathBindable[ObjectId] {
       override def bind(key: String, value: String): Either[String, ObjectId] =
         fromStringWithPrefixSync(value).toRight(
-          s"Cannot parse URI path parameter $key with value “$value” as ObjectId.")
+          s"Cannot parse URI path parameter $key with value “$value” as ObjectId."
+        )
 
       override def unbind(key: String, value: ObjectId): String = value.id
     }
@@ -114,8 +116,8 @@ object ObjectId extends FoxImplicits {
     while (inputIndex < len) {
       val b = bytes(inputIndex)
       val outputIndex = 2 * inputIndex
-      hex(outputIndex) = HEX_CHARS((b & 0xF0) >>> 4)
-      hex(outputIndex + 1) = HEX_CHARS(b & 0x0F)
+      hex(outputIndex) = HEX_CHARS((b & 0xf0) >>> 4)
+      hex(outputIndex + 1) = HEX_CHARS(b & 0x0f)
       inputIndex = inputIndex + 1
     }
     new String(hex)

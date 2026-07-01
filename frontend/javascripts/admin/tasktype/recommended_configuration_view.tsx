@@ -53,7 +53,7 @@ function getRecommendedConfigByCategory() {
       loadingStrategy: "BEST_QUALITY_FIRST",
     },
     flight: {
-      clippingDistanceArbitrary: 60,
+      clippingDistanceFlight: 60,
       moveValue3d: 600,
       mouseRotateValue: 0.001,
       rotateValue: 0.01,
@@ -81,8 +81,8 @@ export function getDefaultRecommendedConfiguration(): RecommendedConfiguration {
 export const settingComments: Partial<Record<keyof RecommendedConfiguration, string>> = {
   clippingDistance: "orthogonal mode",
   moveValue: "orthogonal mode",
-  clippingDistanceArbitrary: "flight/oblique mode",
-  moveValue3d: "flight/oblique mode",
+  clippingDistanceFlight: "flight mode",
+  moveValue3d: "flight mode",
   loadingStrategy: "BEST_QUALITY_FIRST or PROGRESSIVE_QUALITY",
   tdViewDisplayPlanes: Object.values(TDViewDisplayModeEnum).join(" or "),
 };
@@ -180,9 +180,7 @@ export default function RecommendedConfigurationView({
           <Button onClick={() => removeSettings(form, "orthogonal")}>
             Remove Orthogonal-only Settings
           </Button>
-          <Button onClick={() => removeSettings(form, "flight")}>
-            Remove Flight/Oblique-only Settings
-          </Button>
+          <Button onClick={() => removeSettings(form, "flight")}>Remove Flight Settings</Button>
           <Button onClick={() => removeSettings(form, "volume")}>
             Remove Volume-only Settings
           </Button>

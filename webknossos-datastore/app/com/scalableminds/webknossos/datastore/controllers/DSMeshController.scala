@@ -17,7 +17,7 @@ import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
 import scala.concurrent.ExecutionContext
 
-class DSMeshController @Inject()(
+class DSMeshController @Inject() (
     accessTokenService: DataStoreAccessTokenService,
     meshFileService: MeshFileService,
     fullMeshService: DSFullMeshService,
@@ -32,7 +32,7 @@ class DSMeshController @Inject()(
   override def allowRemoteOrigin: Boolean = true
 
   def listMeshFiles(datasetId: ObjectId, dataLayerName: String): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
@@ -41,17 +41,19 @@ class DSMeshController @Inject()(
       }
     }
 
-  def listMeshChunksForSegment(datasetId: ObjectId,
-                               dataLayerName: String,
-                               /* If targetMappingName is set, assume that meshFile contains meshes for
+  def listMeshChunksForSegment(
+      datasetId: ObjectId,
+      dataLayerName: String,
+      /* If targetMappingName is set, assume that meshFile contains meshes for
                                             the oversegmentation. Collect mesh chunks of all *unmapped* segment ids
                                             belonging to the supplied agglomerate id.
                                             If it is not set, use meshFile as is, assume passed id is present in meshFile
                                    Note: in case of an editable mapping, targetMappingName is its baseMapping name.
-                                */
-                               targetMappingName: Option[String],
-                               editableMappingTracingId: Option[String]): Action[ListMeshChunksRequest] =
-    Action.async(validateJson[ListMeshChunksRequest]) { implicit request =>
+       */
+      targetMappingName: Option[String],
+      editableMappingTracingId: Option[String]
+  ): Action[ListMeshChunksRequest] =
+    Action.fox(validateJson[ListMeshChunksRequest]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
@@ -73,26 +75,33 @@ class DSMeshController @Inject()(
     }
 
   def readMeshChunk(datasetId: ObjectId, dataLayerName: String): Action[MeshChunkDataRequestList] =
-    Action.async(validateJson[MeshChunkDataRequestList]) { implicit request =>
+    Action.fox(validateJson[MeshChunkDataRequestList]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
           meshFileKey <- meshFileService.lookUpMeshFileKey(dataSource.id, dataLayer, request.body.meshFileName)
-          (data, encoding) <- meshFileService.readMeshChunk(meshFileKey, request.body.requests) ?~> Msg.Mesh.File.loadChunkFailed
-        } yield {
+          (data, encoding) <- meshFileService.readMeshChunk(
+            meshFileKey,
+            request.body.requests
+          ) ?~> Msg.Mesh.File.loadChunkFailed
+        } yield
           if (encoding.contains("gzip")) {
             Ok(data).withHeaders("Content-Encoding" -> "gzip")
           } else Ok(data)
-        }
       }
     }
 
   def loadFullMeshStl(datasetId: ObjectId, dataLayerName: String): Action[FullMeshRequest] =
-    Action.async(validateJson[FullMeshRequest]) { implicit request =>
+    Action.fox(validateJson[FullMeshRequest]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
-          data: Array[Byte] <- fullMeshService.loadFor(datasetId, dataSource, dataLayer, request.body) ?~> Msg.Mesh.File.loadChunkFailed
+          data: Array[Byte] <- fullMeshService.loadFor(
+            datasetId,
+            dataSource,
+            dataLayer,
+            request.body
+          ) ?~> Msg.Mesh.File.loadChunkFailed
 
         } yield Ok(data)
       }

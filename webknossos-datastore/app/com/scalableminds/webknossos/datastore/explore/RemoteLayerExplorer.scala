@@ -3,7 +3,8 @@ package com.scalableminds.webknossos.datastore.explore
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.collections.SequenceUtils
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
@@ -11,23 +12,27 @@ import com.scalableminds.webknossos.datastore.models.datasource.{ElementClass, S
 
 import scala.concurrent.ExecutionContext
 
-case class MagWithAttributes(mag: MagLocator,
-                             remotePath: VaultPath,
-                             elementClass: ElementClass.Value,
-                             boundingBox: BoundingBox)
+case class MagWithAttributes(
+    mag: MagLocator,
+    remotePath: VaultPath,
+    elementClass: ElementClass.Value,
+    boundingBox: BoundingBox
+)
 
-trait RemoteLayerExplorer extends FoxImplicits {
+trait RemoteLayerExplorer {
 
   implicit def ec: ExecutionContext
 
-  def explore(remotePath: VaultPath, credentialId: Option[String])(
-      using tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]]
+  def explore(remotePath: VaultPath, credentialId: Option[String])(using
+      tc: TokenContext
+  ): Fox[List[(StaticLayer, VoxelSize)]]
 
   def name: String
 
   protected def looksLikeSegmentationLayer(layerName: String, elementClass: ElementClass.Value): Boolean =
     Set("segmentation", "labels").contains(layerName.toLowerCase) && ElementClass.segmentationElementClasses.contains(
-      elementClass)
+      elementClass
+    )
 
   protected def guessNameFromPath(path: VaultPath): String =
     path.basename

@@ -3,7 +3,8 @@ package models.task
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 
 import javax.inject.Inject
 import models.annotation.{Annotation, AnnotationDAO, AnnotationIdentifier, AnnotationStore, AnnotationType}
@@ -16,19 +17,20 @@ import utils.WkConf
 
 import scala.concurrent.ExecutionContext
 
-class TaskService @Inject()(conf: WkConf,
-                            datasetDAO: DatasetDAO,
-                            scriptDAO: ScriptDAO,
-                            annotationStore: AnnotationStore,
-                            userService: UserService,
-                            annotationDAO: AnnotationDAO,
-                            taskTypeDAO: TaskTypeDAO,
-                            teamDAO: TeamDAO,
-                            taskDAO: TaskDAO,
-                            scriptService: ScriptService,
-                            taskTypeService: TaskTypeService,
-                            projectDAO: ProjectDAO)(implicit ec: ExecutionContext)
-    extends FoxImplicits {
+class TaskService @Inject() (
+    conf: WkConf,
+    datasetDAO: DatasetDAO,
+    scriptDAO: ScriptDAO,
+    annotationStore: AnnotationStore,
+    userService: UserService,
+    annotationDAO: AnnotationDAO,
+    taskTypeDAO: TaskTypeDAO,
+    teamDAO: TeamDAO,
+    taskDAO: TaskDAO,
+    scriptService: ScriptService,
+    taskTypeService: TaskTypeService,
+    projectDAO: ProjectDAO
+)(implicit ec: ExecutionContext) {
 
   def publicWrites(task: Task)(using ctx: DBAccessContext): Fox[JsObject] =
     for {
@@ -41,26 +43,24 @@ class TaskService @Inject()(conf: WkConf,
       scriptJsBox <- scriptInfoBox.toFox.flatMap(s => scriptService.publicWrites(s)).shiftBox
       project <- projectDAO.findOne(task._project)
       team <- teamDAO.findOne(project._team)(using GlobalAccessContext)
-    } yield {
-      Json.obj(
-        "id" -> task._id.toString,
-        "projectId" -> project._id.id,
-        "projectName" -> project.name,
-        "team" -> team.name,
-        "type" -> taskTypeJs,
-        "datasetName" -> dataset.name,
-        "datasetId" -> dataset._id, // Only used for csv serialization in frontend.
-        "neededExperience" -> task.neededExperience,
-        "created" -> task.created,
-        "status" -> status,
-        "script" -> scriptJsBox.toOption,
-        "tracingTime" -> task.tracingTime,
-        "creationInfo" -> task.creationInfo,
-        "boundingBox" -> task.boundingBox,
-        "editPosition" -> task.editPosition,
-        "editRotation" -> task.editRotation
-      )
-    }
+    } yield Json.obj(
+      "id" -> task._id.toString,
+      "projectId" -> project._id.id,
+      "projectName" -> project.name,
+      "team" -> team.name,
+      "type" -> taskTypeJs,
+      "datasetName" -> dataset.name,
+      "datasetId" -> dataset._id, // Only used for csv serialization in frontend.
+      "neededExperience" -> task.neededExperience,
+      "created" -> task.created,
+      "status" -> status,
+      "script" -> scriptJsBox.toOption,
+      "tracingTime" -> task.tracingTime,
+      "creationInfo" -> task.creationInfo,
+      "boundingBox" -> task.boundingBox,
+      "editPosition" -> task.editPosition,
+      "editRotation" -> task.editRotation
+    )
 
   def getAllowedTeamsForNextTask(user: User)(using ctx: DBAccessContext): Fox[List[ObjectId]] =
     if (user.isAdmin)
@@ -68,8 +68,9 @@ class TaskService @Inject()(conf: WkConf,
     else {
       for {
         numberOfOpen <- countOpenNonAdminTasks(user)
-        teams <- if (numberOfOpen < conf.WebKnossos.Tasks.maxOpenPerUser) userService.teamIdsFor(user._id)
-        else userService.teamManagerTeamIdsFor(user._id)
+        teams <-
+          if (numberOfOpen < conf.WebKnossos.Tasks.maxOpenPerUser) userService.teamIdsFor(user._id)
+          else userService.teamManagerTeamIdsFor(user._id)
         _ <- Fox.fromBool(teams.nonEmpty) ?~> Msg.Task.tooManyOpenOnes
       } yield teams
     }

@@ -6,7 +6,7 @@ import { mergeGeometries } from "libs/BufferGeometryUtils";
 import { computeBvhAsync } from "libs/compute_bvh_async";
 import { getDracoLoader } from "libs/draco";
 import Toast from "libs/toast";
-import { chunkDynamically } from "libs/utils";
+import { chunkDynamically, sleep } from "libs/utils";
 import sortBy from "lodash-es/sortBy";
 import zip from "lodash-es/zip";
 import messages from "messages";
@@ -55,6 +55,7 @@ import Store from "viewer/store";
 import { getBaseSegmentationName } from "viewer/view/right_border_tabs/segments_tab/segments_view_helper";
 import { ensureSceneControllerInitialized, ensureWkInitialized } from "../ready_sagas";
 import { getMeshExtraInfo } from "./ad_hoc_mesh_saga";
+import { acquireMeshWorker, releaseMeshWorker } from "./common_mesh_saga";
 
 const MIN_BATCH_SIZE_IN_BYTES = 2 ** 16;
 
@@ -74,7 +75,7 @@ function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
 
   function* maybeActivateMeshFile(availableMeshFiles: APIMeshFileInfo[]) {
     const currentMeshFile = yield* select(
-      (state) => state.localSegmentationData[layerName].currentMeshFile,
+      (state) => state.localSegmentationStateByLayer[layerName].currentMeshFile,
     );
     if (!currentMeshFile && availableMeshFiles.length > 0 && autoActivate) {
       yield* put(updateCurrentMeshFileAction(layerName, availableMeshFiles[0].name));
@@ -113,8 +114,15 @@ function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
 }
 
 function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
-  const { segmentId, seedPosition, seedAdditionalCoordinates, meshFileName, layerName, opacity } =
-    action;
+  const {
+    segmentId,
+    seedPosition,
+    seedAdditionalCoordinates,
+    meshFileName,
+    layerName,
+    opacity,
+    isVisible,
+  } = action;
   const layer = yield* select((state) =>
     layerName != null
       ? getSegmentationLayerByName(state.dataset, layerName)
@@ -139,6 +147,7 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
       meshFileName,
       layer,
       opacity,
+      isVisible,
     ),
     cancel: take(
       ((otherAction: Action) =>
@@ -163,6 +172,7 @@ function* loadPrecomputedMeshForSegmentId(
   meshFileName: string,
   segmentationLayer: APISegmentationLayer,
   opacity: number | undefined,
+  isVisible: boolean | undefined,
 ): Saga<void> {
   const layerName = segmentationLayer.name;
   const annotationVersion = yield* select((state) => state.annotation.version);
@@ -176,6 +186,7 @@ function* loadPrecomputedMeshForSegmentId(
       meshFileName,
       mappingName,
       opacity,
+      isVisible,
     ),
   );
   yield* put(startedLoadingMeshAction(layerName, segmentId));
@@ -201,51 +212,62 @@ function* loadPrecomputedMeshForSegmentId(
     return;
   }
 
-  let availableChunksMap: ChunksMap = {};
-  let chunkScale: Vector3 | null = null;
-  let loadingOrder: number[] | null = null;
-  let lods: MeshLodInfo[] | null = null;
+  // Limit the number of segments that are meshed at the same time. This way,
+  // the first meshes are fully visible earlier and the memory pressure of
+  // in-flight chunk buffers stays bounded. Note that the loading state for
+  // this segment was already set above so that the UI reflects the pending load.
+  yield call(acquireMeshWorker);
   try {
-    const chunkDescriptors = yield* call(
-      _getChunkLoadingDescriptors,
-      segmentId,
-      dataset,
-      segmentationLayer,
-      meshFile,
-      annotationVersion,
-    );
-    lods = chunkDescriptors.segmentInfo.lods;
-    availableChunksMap = chunkDescriptors.availableChunksMap;
-    chunkScale = chunkDescriptors.segmentInfo.chunkScale;
-    loadingOrder = chunkDescriptors.loadingOrder;
-  } catch (exception) {
-    Toast.warning(messages["tracing.mesh_listing_failed"](segmentId));
-    console.warn(
-      `Mesh chunks for segment ${segmentId} couldn't be loaded due to`,
-      exception,
-      "\nOne possible explanation could be that the segment was not included in the mesh file because it's smaller than the dust threshold that was specified for the mesh computation.",
-    );
-    yield* put(finishedLoadingMeshAction(layerName, segmentId));
-    yield* put(removeMeshAction(layerName, segmentId));
-    return;
-  }
+    let availableChunksMap: ChunksMap = {};
+    let chunkScale: Vector3 | null = null;
+    let loadingOrder: number[] | null = null;
+    let lods: MeshLodInfo[] | null = null;
+    try {
+      const chunkDescriptors = yield* call(
+        _getChunkLoadingDescriptors,
+        segmentId,
+        dataset,
+        segmentationLayer,
+        meshFile,
+        annotationVersion,
+      );
+      lods = chunkDescriptors.segmentInfo.lods;
+      availableChunksMap = chunkDescriptors.availableChunksMap;
+      chunkScale = chunkDescriptors.segmentInfo.chunkScale;
+      loadingOrder = chunkDescriptors.loadingOrder;
+    } catch (exception) {
+      Toast.warning(messages["tracing.mesh_listing_failed"](segmentId));
+      console.warn(
+        `Mesh chunks for segment ${segmentId} couldn't be loaded due to`,
+        exception,
+        "\nOne possible explanation could be that the segment was not included in the mesh file because it's smaller than the dust threshold that was specified for the mesh computation.",
+      );
+      yield* put(finishedLoadingMeshAction(layerName, segmentId));
+      yield* put(removeMeshAction(layerName, segmentId));
+      return;
+    }
 
-  for (const lod of loadingOrder) {
-    yield* call(
-      loadPrecomputedMeshesInChunksForLod,
-      dataset,
-      layerName,
-      meshFile,
-      segmentationLayer,
-      segmentId,
-      seedPosition,
-      availableChunksMap,
-      lod,
-      (lod: number) => extractScaleFromMatrix(lods[lod].transform),
-      chunkScale,
-      additionalCoordinates,
-      opacity,
-    );
+    for (const lod of loadingOrder) {
+      yield* call(
+        loadPrecomputedMeshesInChunksForLod,
+        dataset,
+        layerName,
+        meshFile,
+        segmentationLayer,
+        segmentId,
+        seedPosition,
+        availableChunksMap,
+        lod,
+        (lod: number) => extractScaleFromMatrix(lods[lod].transform),
+        chunkScale,
+        additionalCoordinates,
+        opacity,
+      );
+    }
+  } finally {
+    // Also release worker token even when cancelled by a REMOVE_MESH
+    // action (see loadPrecomputedMesh).
+    yield* call(releaseMeshWorker);
   }
 
   yield* put(finishedLoadingMeshAction(layerName, segmentId));
@@ -439,6 +461,12 @@ function* loadPrecomputedMeshesInChunksForLod(
           } catch (error) {
             errorsWithDetails.push({ error, chunk });
           }
+
+          // Yield to the event loop after each chunk. Decoding and adding the
+          // geometries is mostly synchronous and would otherwise form a tight
+          // loop that starves rendering and can even stop the saga middleware
+          // silently (see https://github.com/redux-saga/redux-saga/issues/1592).
+          yield* call(sleep, 0);
         }
 
         if (errorsWithDetails.length > 0) {
@@ -463,17 +491,33 @@ function* loadPrecomputedMeshesInChunksForLod(
   );
 
   // mergeGeometries will crash if the array is empty. Even if it's not empty,
-  // the function might return null in case of another error.
-  const mergedGeometry = (
-    sortedBufferGeometries.length > 0 ? mergeGeometries(sortedBufferGeometries, false) : null
-  ) as BufferGeometryWithInfo | null;
+  // the function might return null or throw (e.g., when the necessary buffers
+  // cannot be allocated because of memory pressure).
+  let mergedGeometry: BufferGeometryWithInfo | null = null;
+  try {
+    mergedGeometry = (
+      sortedBufferGeometries.length > 0 ? mergeGeometries(sortedBufferGeometries, false) : null
+    ) as BufferGeometryWithInfo | null;
+    if (mergedGeometry != null) {
+      mergedGeometry.vertexSegmentMapping = new VertexSegmentMapping(sortedBufferGeometries);
+      mergedGeometry.boundsTree = yield* call(computeBvhAsync, mergedGeometry);
+    }
+  } catch (exception) {
+    mergedGeometry?.dispose();
+    mergedGeometry = null;
+    console.error(`Failed to merge mesh chunks for segment ${segmentId}:`, exception);
+  }
 
   if (mergedGeometry == null) {
-    console.error("Merged geometry is null. Look at error above.");
+    // Don't fail hard. Instead, keep the eagerly added chunk meshes (see above)
+    // so that the mesh is still rendered. Only features that require the merged
+    // geometry (e.g., highlighting of unmapped segments during proofreading)
+    // won't work for this mesh.
+    console.warn(
+      `Falling back to the unmerged mesh chunks for segment ${segmentId}. See errors above for details.`,
+    );
     return;
   }
-  mergedGeometry.vertexSegmentMapping = new VertexSegmentMapping(sortedBufferGeometries);
-  mergedGeometry.boundsTree = yield* call(computeBvhAsync, mergedGeometry);
 
   // Remove the eagerly added chunks (see above).
   yield* call(

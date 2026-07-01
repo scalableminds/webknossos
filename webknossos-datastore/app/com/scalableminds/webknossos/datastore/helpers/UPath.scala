@@ -64,19 +64,19 @@ object UPath {
   def fromStringUnsafe(literal: String): UPath = {
     val schemeOpt = if (literal.contains(schemeSeparator)) literal.split(schemeSeparator).headOption else None
     schemeOpt match {
-      case None => fromLocalPath(Path.of(literal))
+      case None                                                    => fromLocalPath(Path.of(literal))
       case Some(scheme) if scheme.contains(PathSchemes.schemeFile) =>
         val nioPath = Path.of(literal.drop(s"$scheme$schemeSeparator".length))
         if (!nioPath.isAbsolute)
           throw new Exception(
-            s"Trying to construct relative UPath $nioPath. Must either be absolute or have no scheme.")
+            s"Trying to construct relative UPath $nioPath. Must either be absolute or have no scheme."
+          )
         fromLocalPath(nioPath)
       case Some(scheme) =>
-        RemoteUPath(scheme,
-                    segments = literal
-                      .drop(s"$scheme$schemeSeparator".length)
-                      .split(separator, splitKeepLastIfEmpty)
-                      .toSeq).normalize
+        RemoteUPath(
+          scheme,
+          segments = literal.drop(s"$scheme$schemeSeparator".length).split(separator, splitKeepLastIfEmpty).toSeq
+        ).normalize
     }
   }
 
@@ -89,7 +89,7 @@ object UPath {
         upath <- fromString(asString) match {
           case Full(parsed) => JsSuccess(parsed)
           case f: Failure   => JsError(f"Invalid UPath: $f")
-          case Empty        => JsError(f"Invalid UPath")
+          case Empty        => JsError("Invalid UPath")
         }
       } yield upath
 
@@ -195,14 +195,13 @@ private case class RemoteUPath(scheme: String, segments: Seq[String]) extends UP
   override def toAbsolute: UPath = this
 
   def startsWith(other: UPath): Boolean = other match {
-    case otherRemote: RemoteUPath => {
+    case otherRemote: RemoteUPath =>
       val thisNormalized = this.normalize
       val otherNormalized = otherRemote.normalize
       val otherSegments =
         if (otherNormalized.segments.lastOption.contains("")) otherNormalized.segments.dropRight(1)
         else otherNormalized.segments
       thisNormalized.scheme == otherNormalized.scheme && thisNormalized.segments.startsWith(otherSegments)
-    }
     case _ => false
   }
 

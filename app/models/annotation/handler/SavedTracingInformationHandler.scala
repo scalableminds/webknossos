@@ -4,7 +4,8 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.TextUtils._
-import com.scalableminds.util.tools.{Empty, Failure, Fox, FoxImplicits, Full}
+import com.scalableminds.util.tools.{Empty, Failure, Fox, Full}
+import com.scalableminds.util.tools.Fox.toFox
 
 import javax.inject.Inject
 import models.annotation._
@@ -14,17 +15,17 @@ import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.ExecutionContext
 
-class SavedTracingInformationHandler @Inject()(
+class SavedTracingInformationHandler @Inject() (
     annotationDAO: AnnotationDAO,
     annotationRestrictionDefults: AnnotationRestrictionDefaults,
     userService: UserService,
     multiUserDAO: MultiUserDAO,
     val datasetService: DatasetService,
     val datasetDAO: DatasetDAO,
-    val annotationDataSourceTemporaryStore: AnnotationDataSourceTemporaryStore)(implicit val ec: ExecutionContext)
+    val annotationDataSourceTemporaryStore: AnnotationDataSourceTemporaryStore
+)(implicit val ec: ExecutionContext)
     extends AnnotationInformationHandler
-    with Formatter
-    with FoxImplicits {
+    with Formatter {
 
   override val useCache = false
 

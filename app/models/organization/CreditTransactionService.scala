@@ -3,7 +3,8 @@ package models.organization
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Empty, Failure, Fox, FoxImplicits, Full}
+import com.scalableminds.util.tools.{Empty, Failure, Fox, Full}
+import com.scalableminds.util.tools.Fox.toFox
 import com.typesafe.scalalogging.LazyLogging
 import models.job.{JobDAO, JobService}
 import play.api.libs.json.{JsObject, Json}
@@ -11,23 +12,25 @@ import play.api.libs.json.{JsObject, Json}
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransactionDAO)(implicit val ec: ExecutionContext)
-    extends FoxImplicits
-    with LazyLogging {
+class CreditTransactionService @Inject() (creditTransactionDAO: CreditTransactionDAO)(implicit val ec: ExecutionContext)
+    extends LazyLogging {
 
   def hasEnoughCredits(organizationId: String, milliCreditsToSpend: Int)(using ctx: DBAccessContext): Fox[Boolean] =
     creditTransactionDAO.getMilliCreditBalance(organizationId).map(balance => balance >= milliCreditsToSpend)
 
-  def reserveCredits(organizationId: String, milliCreditsToSpend: Int, comment: String)(
-      using ctx: DBAccessContext): Fox[CreditTransaction] = {
-    val pendingCreditTransaction = CreditTransaction(ObjectId.generate,
-                                                     organizationId,
-                                                     None,
-                                                     None,
-                                                     -milliCreditsToSpend,
-                                                     comment,
-                                                     CreditTransactionState.Pending,
-                                                     CreditState.Pending)
+  def reserveCredits(organizationId: String, milliCreditsToSpend: Int, comment: String)(using
+      ctx: DBAccessContext
+  ): Fox[CreditTransaction] = {
+    val pendingCreditTransaction = CreditTransaction(
+      ObjectId.generate,
+      organizationId,
+      None,
+      None,
+      -milliCreditsToSpend,
+      comment,
+      CreditTransactionState.Pending,
+      CreditState.Pending
+    )
     for {
       _ <- creditTransactionDAO.insertNewPendingTransaction(pendingCreditTransaction)
     } yield pendingCreditTransaction
@@ -67,7 +70,9 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
         case Full(existingTransaction) =>
           val milliCreditsToSpend = -existingTransaction.milliCreditDelta
           for {
-            _ <- Fox.assertTrue(hasEnoughCredits(existingTransaction._organization, milliCreditsToSpend)) ?~> Msg.Job.Credits.notEnoughCredits
+            _ <- Fox.assertTrue(
+              hasEnoughCredits(existingTransaction._organization, milliCreditsToSpend)
+            ) ?~> Msg.Job.Credits.notEnoughCredits
             newTransaction = CreditTransaction(
               ObjectId.generate,
               existingTransaction._organization,
@@ -87,11 +92,13 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
 
   // This method is explicitly named this way to warn that this method should only be called when starting a job has failed.
   // Else refunding should be done via jobId.
-  def refundTransactionWhenStartingJobFailed(creditTransaction: CreditTransaction)(
-      using ctx: DBAccessContext): Fox[Unit] = creditTransactionDAO.refundTransaction(creditTransaction._id)
+  def refundTransactionWhenStartingJobFailed(creditTransaction: CreditTransaction)(using
+      ctx: DBAccessContext
+  ): Fox[Unit] = creditTransactionDAO.refundTransaction(creditTransaction._id)
 
-  def addJobIdToTransaction(creditTransaction: CreditTransaction, jobId: ObjectId)(
-      using ctx: DBAccessContext): Fox[Unit] =
+  def addJobIdToTransaction(creditTransaction: CreditTransaction, jobId: ObjectId)(using
+      ctx: DBAccessContext
+  ): Fox[Unit] =
     creditTransactionDAO.addJobIdToTransaction(creditTransaction, jobId)
 
   def findTransactionOfJob(jobId: ObjectId)(using ctx: DBAccessContext): Fox[CreditTransaction] =
@@ -114,30 +121,30 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
               comment = s"${t.comment}: ${(t.milliCreditDelta + revocation.milliCreditDelta) / 1000.0} used"
             )
           case None => t
-      })
+        }
+      )
   }
 
 }
 
-class CreditTransactionPublicWritesService @Inject()(jobDAO: JobDAO, jobService: JobService) {
+class CreditTransactionPublicWritesService @Inject() (jobDAO: JobDAO, jobService: JobService) {
 
   def publicWrites(transaction: CreditTransaction)(using ctx: DBAccessContext, ec: ExecutionContext): Fox[JsObject] =
     for {
       jobOpt <- Fox.runOptional(transaction._paidJob)(jobDAO.findOne)
       jobJsOpt <- Fox.runOptional(jobOpt)(jobService.publicWrites)
-    } yield
-      Json.obj(
-        "id" -> transaction._id,
-        "organization_id" -> transaction._organization,
-        "relatedTransaction" -> transaction._relatedTransaction,
-        "paidJob" -> jobJsOpt,
-        "creditChange" -> transaction.milliCreditDelta,
-        "comment" -> transaction.comment,
-        "transactionState" -> transaction.transactionState,
-        "creditState" -> transaction.creditState,
-        "expirationDate" -> transaction.expirationDate,
-        "createdAt" -> transaction.createdAt,
-        "updatedAt" -> transaction.updatedAt
-      )
+    } yield Json.obj(
+      "id" -> transaction._id,
+      "organization_id" -> transaction._organization,
+      "relatedTransaction" -> transaction._relatedTransaction,
+      "paidJob" -> jobJsOpt,
+      "creditChange" -> transaction.milliCreditDelta,
+      "comment" -> transaction.comment,
+      "transactionState" -> transaction.transactionState,
+      "creditState" -> transaction.creditState,
+      "expirationDate" -> transaction.expirationDate,
+      "createdAt" -> transaction.createdAt,
+      "updatedAt" -> transaction.updatedAt
+    )
 
 }

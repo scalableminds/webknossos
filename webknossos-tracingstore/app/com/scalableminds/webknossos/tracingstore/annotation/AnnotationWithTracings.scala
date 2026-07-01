@@ -5,11 +5,12 @@ import com.scalableminds.webknossos.datastore.Annotation.{
   AnnotationProto,
   AnnotationUserStateProto
 }
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
@@ -27,10 +28,9 @@ import scala.concurrent.ExecutionContext
 case class AnnotationWithTracings(
     annotation: AnnotationProto,
     tracingsById: Map[String, Either[SkeletonTracingWithUpdatedTreeIds, VolumeTracing]],
-    editableMappingsByTracingId: Map[String, (EditableMappingInfo, EditableMappingUpdater)])
-    extends LazyLogging
-    with FoxImplicits
-    with ProtoGeometryImplicits {
+    editableMappingsByTracingId: Map[String, (EditableMappingInfo, EditableMappingUpdater)]
+) extends LazyLogging
+    with ProtoGeometryConversions {
 
   // Assumes that there is at most one skeleton layer per annotation. This is true as of this writing
   def getSkeletonId: Option[String] =
@@ -41,7 +41,7 @@ case class AnnotationWithTracings(
       tracingEither <- Box(tracingsById.get(tracingId))
       skeletonTracing <- tracingEither match {
         case Left(SkeletonTracingWithUpdatedTreeIds(skeletonTracing, _)) => Full(skeletonTracing)
-        case _                                                           => Failure(f"Tried to access tracing $tracingId as skeleton, but is volume")
+        case _ => Failure(f"Tried to access tracing $tracingId as skeleton, but is volume")
       }
     } yield skeletonTracing
 
@@ -56,7 +56,7 @@ case class AnnotationWithTracings(
       tracingEither <- Box(tracingsById.get(tracingId))
       updatedTreeIds <- tracingEither match {
         case Left(SkeletonTracingWithUpdatedTreeIds(_, updatedTreeIds)) => Full(updatedTreeIds)
-        case _                                                          => Failure(f"Tried to access tracing $tracingId as skeleton to access updated tree ids, but is volume")
+        case _ => Failure(f"Tried to access tracing $tracingId as skeleton to access updated tree ids, but is volume")
       }
     } yield updatedTreeIds
 
@@ -84,8 +84,8 @@ case class AnnotationWithTracings(
   def getEditableMappingTracingIds: List[String] = editableMappingsByTracingId.keys.toList
 
   def getEditableMappingsInfo: List[(String, EditableMappingInfo)] =
-    editableMappingsByTracingId.view.map {
-      case (id, (info, _)) => (id, info)
+    editableMappingsByTracingId.view.map { case (id, (info, _)) =>
+      (id, info)
     }.toList
 
   def getEditableMappingInfo(tracingId: String): Option[EditableMappingInfo] =
@@ -100,16 +100,19 @@ case class AnnotationWithTracings(
 
   def version: Long = annotation.version
 
-  def addLayer(a: AddLayerAnnotationAction,
-               tracingId: String,
-               tracing: Either[SkeletonTracingWithUpdatedTreeIds, VolumeTracing]): AnnotationWithTracings =
+  def addLayer(
+      a: AddLayerAnnotationAction,
+      tracingId: String,
+      tracing: Either[SkeletonTracingWithUpdatedTreeIds, VolumeTracing]
+  ): AnnotationWithTracings =
     this.copy(
       annotation = annotation.copy(
         annotationLayers = annotation.annotationLayers :+ AnnotationLayerProto(
           tracingId,
           a.layerParameters.name.getOrElse(AnnotationLayer.defaultNameForType(a.layerParameters.typ)),
           typ = AnnotationLayerType.toProto(a.layerParameters.typ)
-        )),
+        )
+      ),
       tracingsById = tracingsById.updated(tracingId, tracing)
     )
 
@@ -121,8 +124,11 @@ case class AnnotationWithTracings(
     )
 
   def updateLayerMetadata(a: UpdateLayerMetadataAnnotationAction): AnnotationWithTracings =
-    this.copy(annotation = annotation.copy(annotationLayers = annotation.annotationLayers.map(l =>
-      if (l.tracingId == a.tracingId) l.copy(name = a.layerName) else l)))
+    this.copy(annotation =
+      annotation.copy(annotationLayers =
+        annotation.annotationLayers.map(l => if (l.tracingId == a.tracingId) l.copy(name = a.layerName) else l)
+      )
+    )
 
   def updateMetadata(a: UpdateMetadataAnnotationAction): AnnotationWithTracings =
     a.description.map { newDescription =>
@@ -131,7 +137,7 @@ case class AnnotationWithTracings(
 
   def updateCamera(a: UpdateCameraAnnotationAction): AnnotationWithTracings =
     a.actionAuthorId match {
-      case None => this
+      case None               => this
       case Some(actionUserId) =>
         val userStateAlreadyPresent = annotation.userStates.exists(state => actionUserId.toString == state.userId)
         if (userStateAlreadyPresent) {
@@ -139,22 +145,25 @@ case class AnnotationWithTracings(
             if (actionUserId.toString == userState.userId)
               userState.copy(
                 userId = actionUserId.toString,
-                editPosition = a.editPosition,
-                editRotation = a.editRotation,
+                editPosition = vec3IntToProto(a.editPosition),
+                editRotation = vec3DoubleToProto(a.editRotation),
                 zoomLevel = a.zoomLevel,
-                editPositionAdditionalCoordinates = AdditionalCoordinate.toProto(a.editPositionAdditionalCoordinates),
+                editPositionAdditionalCoordinates = AdditionalCoordinate.toProto(a.editPositionAdditionalCoordinates)
               )
             else userState
           }))
         } else
           this.copy(
-            annotation = annotation.copy(userStates = annotation.userStates :+ AnnotationUserStateProto(
-              userId = actionUserId.toString,
-              editPosition = a.editPosition,
-              editRotation = a.editRotation,
-              zoomLevel = a.zoomLevel,
-              editPositionAdditionalCoordinates = AdditionalCoordinate.toProto(a.editPositionAdditionalCoordinates),
-            )))
+            annotation = annotation.copy(userStates =
+              annotation.userStates :+ AnnotationUserStateProto(
+                userId = actionUserId.toString,
+                editPosition = vec3IntToProto(a.editPosition),
+                editRotation = vec3DoubleToProto(a.editRotation),
+                zoomLevel = a.zoomLevel,
+                editPositionAdditionalCoordinates = AdditionalCoordinate.toProto(a.editPositionAdditionalCoordinates)
+              )
+            )
+          )
     }
 
   def withVersion(newVersion: Long): AnnotationWithTracings = {
@@ -164,25 +173,27 @@ case class AnnotationWithTracings(
       case Right(t: VolumeTracing) => Right(t.withVersion(newVersion))
     }
     this.copy(
-      annotation = annotation.copy(version = newVersion,
-                                   skeletonMayHavePendingUpdates = None,
-                                   editableMappingsMayHavePendingUpdates = None),
+      annotation = annotation
+        .copy(version = newVersion, skeletonMayHavePendingUpdates = None, editableMappingsMayHavePendingUpdates = None),
       tracingsById = tracingsUpdated.toMap
     )
   }
 
   def withNewUpdaters(materializedVersion: Long, targetVersion: Long): AnnotationWithTracings = {
-    val editableMappingsUpdated = editableMappingsByTracingId.view.mapValues {
-      case (mapping, updater) => (mapping, updater.newWithTargetVersion(materializedVersion, targetVersion))
+    val editableMappingsUpdated = editableMappingsByTracingId.view.mapValues { case (mapping, updater) =>
+      (mapping, updater.newWithTargetVersion(materializedVersion, targetVersion))
     }
     this.copy(editableMappingsByTracingId = editableMappingsUpdated.toMap)
   }
 
-  def addEditableMapping(volumeTracingId: String,
-                         editableMappingInfo: EditableMappingInfo,
-                         updater: EditableMappingUpdater): AnnotationWithTracings =
+  def addEditableMapping(
+      volumeTracingId: String,
+      editableMappingInfo: EditableMappingInfo,
+      updater: EditableMappingUpdater
+  ): AnnotationWithTracings =
     this.copy(editableMappingsByTracingId =
-      editableMappingsByTracingId.updated(volumeTracingId, (editableMappingInfo, updater)))
+      editableMappingsByTracingId.updated(volumeTracingId, (editableMappingInfo, updater))
+    )
 
   def applySkeletonAction(a: SkeletonUpdateAction): Box[AnnotationWithTracings] =
     for {
@@ -190,10 +201,10 @@ case class AnnotationWithTracings(
       previousUpdatedTreeIds <- getUpdatedTreeBodyIdsForSkeleton(a.actionTracingId)
       updated = a.applyOn(skeletonTracing)
       newUpdatedTreeIds = previousUpdatedTreeIds.concat(a.updatedTreeBodyIds)
-    } yield
-      this.copy(
-        tracingsById =
-          tracingsById.updated(a.actionTracingId, Left(SkeletonTracingWithUpdatedTreeIds(updated, newUpdatedTreeIds))))
+    } yield this.copy(
+      tracingsById =
+        tracingsById.updated(a.actionTracingId, Left(SkeletonTracingWithUpdatedTreeIds(updated, newUpdatedTreeIds)))
+    )
 
   def applyVolumeAction(a: ApplyableVolumeUpdateAction): Box[AnnotationWithTracings] =
     for {
@@ -201,15 +212,16 @@ case class AnnotationWithTracings(
       updated = a.applyOn(volumeTracing)
     } yield this.copy(tracingsById = tracingsById.updated(a.actionTracingId, Right(updated)))
 
-  def applyEditableMappingAction(a: EditableMappingUpdateAction)(
-      implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
+  def applyEditableMappingAction(
+      a: EditableMappingUpdateAction
+  )(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
     for {
       updater: EditableMappingUpdater <- getEditableMappingUpdater(a.actionTracingId).toFox
       info <- getEditableMappingInfo(a.actionTracingId).toFox
       updated <- updater.applyOneUpdate(info, a)
-    } yield
-      this.copy(
-        editableMappingsByTracingId = editableMappingsByTracingId.updated(a.actionTracingId, (updated, updater)))
+    } yield this.copy(
+      editableMappingsByTracingId = editableMappingsByTracingId.updated(a.actionTracingId, (updated, updater))
+    )
 
   def flushEditableMappingUpdaterBuffers()(implicit ec: ExecutionContext): Fox[Unit] = {
     val updaters = editableMappingsByTracingId.values.map(_._2).toList

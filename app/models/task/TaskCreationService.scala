@@ -6,7 +6,8 @@ import java.io.File
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{
   SkeletonTracing,
   SkeletonTracingOpt,
@@ -14,7 +15,7 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing.{
   StringOpt
 }
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingId, TracingType}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.MagRestrictions
 
@@ -50,8 +51,7 @@ class TaskCreationService @Inject() (
     datasetService: DatasetService,
     tracingStoreService: TracingStoreService
 )(implicit ec: ExecutionContext)
-    extends FoxImplicits
-    with ProtoGeometryImplicits {
+    extends ProtoGeometryConversions {
 
   def assertBatchLimit(batchSize: Int, taskType: TaskType): Fox[Unit] = {
     val batchLimit =
@@ -286,11 +286,11 @@ class TaskCreationService @Inject() (
 
   // Used in createFromFiles. Called once per requested task if volume tracing is passed
   private def addVolumeFallbackBoundingBox(volume: UploadedVolumeLayer, datasetId: ObjectId): Fox[UploadedVolumeLayer] =
-    if (volume.tracing.boundingBox.isEmpty) {
+    if (boundingBoxFromProto(volume.tracing.boundingBox).isEmpty) {
       for {
         dataset <- datasetDAO.findOne(datasetId)(using GlobalAccessContext)
         dataSource <- datasetService.usableDataSourceFor(dataset)
-      } yield volume.copy(tracing = volume.tracing.copy(boundingBox = dataSource.boundingBox))
+      } yield volume.copy(tracing = volume.tracing.copy(boundingBox = boundingBoxToProto(dataSource.boundingBox)))
     } else Fox.successful(volume)
 
   // Used in createFromFiles. Called once per requested task
@@ -305,21 +305,35 @@ class TaskCreationService @Inject() (
     val paramBox: Box[(Option[BoundingBox], ObjectId, Vec3Int, Vec3Double)] =
       (skeletonTracing, datasetIdBox) match {
         case (Full(tracing), Full(datasetId)) =>
-          Full((tracing.boundingBox, datasetId, tracing.editPosition, tracing.editRotation))
+          Full(
+            (
+              boundingBoxOptFromProto(tracing.boundingBox),
+              datasetId,
+              vec3IntFromProto(tracing.editPosition),
+              vec3DoubleFromProto(tracing.editRotation)
+            )
+          )
         case (f: Failure, _) => f
         case (_, f: Failure) => f
         case (_, Empty)      => Failure("Could not find dataset for task creation.")
         case (Empty, _)      =>
           (uploadedVolumeLayer, datasetIdBox) match {
             case (Full(layer), Full(datasetId)) =>
-              Full((Some(layer.tracing.boundingBox), datasetId, layer.tracing.editPosition, layer.tracing.editRotation))
+              Full(
+                (
+                  Some(boundingBoxFromProto(layer.tracing.boundingBox)),
+                  datasetId,
+                  vec3IntFromProto(layer.tracing.editPosition),
+                  vec3DoubleFromProto(layer.tracing.editRotation)
+                )
+              )
             case (f: Failure, _) => f
             case (_, f: Failure) => f
             case _               => Failure(Msg.Task.Create.needsEitherSkeletonOrVolume)
           }
       }
 
-    paramBox map { params =>
+    paramBox.map { params =>
       val parsedNmlTracingBoundingBox = params._1.map(b => BoundingBox(b.topLeft, b.width, b.height, b.depth))
       val bbox = if (nmlFormParams.boundingBox.isDefined) nmlFormParams.boundingBox else parsedNmlTracingBoundingBox
       TaskParameters(
@@ -533,8 +547,8 @@ class TaskCreationService @Inject() (
       case _          => Fox.empty
     }
 
-  private def warnIfTeamHasNoAccess(requestedTasks: List[TaskParameters], dataset: Dataset, requestingUser: User)(
-      using ctx: DBAccessContext
+  private def warnIfTeamHasNoAccess(requestedTasks: List[TaskParameters], dataset: Dataset, requestingUser: User)(using
+      ctx: DBAccessContext
   ): Fox[List[String]] = {
     val projectNames = requestedTasks.map(_.projectName).distinct
     for {

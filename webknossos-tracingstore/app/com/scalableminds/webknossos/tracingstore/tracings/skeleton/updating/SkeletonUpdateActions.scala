@@ -15,7 +15,7 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing.{
 }
 import com.scalableminds.webknossos.datastore.helpers.{
   NodeDefaults,
-  ProtoGeometryImplicits,
+  ProtoGeometryConversions,
   SkeletonTracingDefaults,
   TreeAgglomerateInfo
 }
@@ -33,12 +33,14 @@ trait SkeletonUpdateAction extends LayerUpdateAction {
 trait UserStateSkeletonUpdateAction extends SkeletonUpdateAction with UserStateUpdateAction {
 
   def actionAuthorId: Option[ObjectId]
-  def applyOnUserState(tracing: SkeletonTracing,
-                       actionUserId: ObjectId,
-                       existingUserStateOpt: Option[SkeletonUserStateProto]): SkeletonUserStateProto
+  def applyOnUserState(
+      tracing: SkeletonTracing,
+      actionUserId: ObjectId,
+      existingUserStateOpt: Option[SkeletonUserStateProto]
+  ): SkeletonUserStateProto
 
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing = actionAuthorId match {
-    case None => tracing
+    case None               => tracing
     case Some(actionUserId) =>
       val userStateAlreadyExists = tracing.userStates.exists(state => actionUserId.toString == state.userId)
       if (userStateAlreadyExists) {
@@ -52,23 +54,24 @@ trait UserStateSkeletonUpdateAction extends SkeletonUpdateAction with UserStateU
   }
 }
 
-case class CreateTreeSkeletonAction(id: Int,
-                                    color: Option[com.scalableminds.util.image.Color],
-                                    name: String,
-                                    branchPoints: List[UpdateActionBranchPoint],
-                                    timestamp: Long,
-                                    comments: List[UpdateActionComment],
-                                    groupId: Option[Int],
-                                    isVisible: Option[Boolean],
-                                    `type`: Option[TreeType] = None,
-                                    edgesAreVisible: Option[Boolean],
-                                    metadata: Option[Seq[MetadataEntry]] = None,
-                                    agglomerateInfo: Option[TreeAgglomerateInfo],
-                                    actionTracingId: String,
-                                    actionTimestamp: Option[Long] = None,
-                                    actionAuthorId: Option[ObjectId] = None,
-                                    info: Option[String] = None)
-    extends SkeletonUpdateAction
+case class CreateTreeSkeletonAction(
+    id: Int,
+    color: Option[com.scalableminds.util.image.Color],
+    name: String,
+    branchPoints: List[UpdateActionBranchPoint],
+    timestamp: Long,
+    comments: List[UpdateActionComment],
+    groupId: Option[Int],
+    isVisible: Option[Boolean],
+    `type`: Option[TreeType] = None,
+    edgesAreVisible: Option[Boolean],
+    metadata: Option[Seq[MetadataEntry]] = None,
+    agglomerateInfo: Option[TreeAgglomerateInfo],
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
     val newTree = Tree(
@@ -85,7 +88,7 @@ case class CreateTreeSkeletonAction(id: Int,
       `type`.map(TreeType.toProto),
       edgesAreVisible,
       metadata = MetadataEntry.toProtoMultiple(MetadataEntry.deduplicate(metadata)),
-      agglomerateInfo.map(_.toProto),
+      agglomerateInfo.map(_.toProto)
     )
     tracing.withTrees(newTree +: tracing.trees)
   }
@@ -101,12 +104,13 @@ case class CreateTreeSkeletonAction(id: Int,
   override def updatedTreeBodyIds: Set[Int] = Set(id)
 }
 
-case class DeleteTreeSkeletonAction(id: Int,
-                                    actionTracingId: String,
-                                    actionTimestamp: Option[Long] = None,
-                                    actionAuthorId: Option[ObjectId] = None,
-                                    info: Option[String] = None)
-    extends SkeletonUpdateAction {
+case class DeleteTreeSkeletonAction(
+    id: Int,
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends SkeletonUpdateAction {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing =
     tracing.withTrees(tracing.trees.filter(_.treeId != id))
 
@@ -121,21 +125,22 @@ case class DeleteTreeSkeletonAction(id: Int,
   override def updatedTreeBodyIds: Set[Int] = Set(id)
 }
 
-case class UpdateTreeSkeletonAction(id: Int,
-                                    updatedId: Option[Int],
-                                    color: Option[com.scalableminds.util.image.Color],
-                                    name: String,
-                                    branchPoints: List[UpdateActionBranchPoint],
-                                    comments: List[UpdateActionComment],
-                                    groupId: Option[Int],
-                                    `type`: Option[TreeType] = None,
-                                    metadata: Option[Seq[MetadataEntry]] = None,
-                                    agglomerateInfo: Option[TreeAgglomerateInfo],
-                                    actionTracingId: String,
-                                    actionTimestamp: Option[Long] = None,
-                                    actionAuthorId: Option[ObjectId] = None,
-                                    info: Option[String] = None)
-    extends SkeletonUpdateAction
+case class UpdateTreeSkeletonAction(
+    id: Int,
+    updatedId: Option[Int],
+    color: Option[com.scalableminds.util.image.Color],
+    name: String,
+    branchPoints: List[UpdateActionBranchPoint],
+    comments: List[UpdateActionComment],
+    groupId: Option[Int],
+    `type`: Option[TreeType] = None,
+    metadata: Option[Seq[MetadataEntry]] = None,
+    agglomerateInfo: Option[TreeAgglomerateInfo],
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
     def treeTransform(tree: Tree) =
@@ -148,7 +153,7 @@ case class UpdateTreeSkeletonAction(id: Int,
         groupId = groupId,
         `type` = `type`.map(TreeType.toProto),
         metadata = MetadataEntry.toProtoMultiple(MetadataEntry.deduplicate(metadata)),
-        agglomerateInfo = agglomerateInfo.map(_.toProto),
+        agglomerateInfo = agglomerateInfo.map(_.toProto)
       )
 
     tracing.withTrees(mapTrees(tracing, id, treeTransform))
@@ -163,13 +168,14 @@ case class UpdateTreeSkeletonAction(id: Int,
     this.copy(actionTracingId = newTracingId)
 }
 
-case class MergeTreeSkeletonAction(sourceId: Int,
-                                   targetId: Int,
-                                   actionTracingId: String,
-                                   actionTimestamp: Option[Long] = None,
-                                   actionAuthorId: Option[ObjectId] = None,
-                                   info: Option[String] = None)
-    extends SkeletonUpdateAction
+case class MergeTreeSkeletonAction(
+    sourceId: Int,
+    targetId: Int,
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
 
   // only nodes and edges are merged here,
@@ -197,14 +203,15 @@ case class MergeTreeSkeletonAction(sourceId: Int,
   override def updatedTreeBodyIds: Set[Int] = Set(sourceId, targetId)
 }
 
-case class MoveTreeComponentSkeletonAction(nodeIds: List[Int],
-                                           sourceId: Int,
-                                           targetId: Int,
-                                           actionTracingId: String,
-                                           actionTimestamp: Option[Long] = None,
-                                           actionAuthorId: Option[ObjectId] = None,
-                                           info: Option[String] = None)
-    extends SkeletonUpdateAction
+case class MoveTreeComponentSkeletonAction(
+    nodeIds: List[Int],
+    sourceId: Int,
+    targetId: Int,
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
 
   private lazy val nodeIdsSet = nodeIds.toSet
@@ -243,14 +250,15 @@ case class MoveTreeComponentSkeletonAction(nodeIds: List[Int],
   override def updatedTreeBodyIds: Set[Int] = Set(sourceId, targetId)
 }
 
-case class CreateEdgeSkeletonAction(source: Int,
-                                    target: Int,
-                                    treeId: Int,
-                                    actionTracingId: String,
-                                    actionTimestamp: Option[Long] = None,
-                                    actionAuthorId: Option[ObjectId] = None,
-                                    info: Option[String] = None)
-    extends SkeletonUpdateAction
+case class CreateEdgeSkeletonAction(
+    source: Int,
+    target: Int,
+    treeId: Int,
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
     def treeTransform(tree: Tree) = tree.withEdges(Edge(source, target) +: tree.edges)
@@ -268,14 +276,15 @@ case class CreateEdgeSkeletonAction(source: Int,
   override def updatedTreeBodyIds: Set[Int] = Set(treeId)
 }
 
-case class DeleteEdgeSkeletonAction(source: Int,
-                                    target: Int,
-                                    treeId: Int,
-                                    actionTracingId: String,
-                                    actionTimestamp: Option[Long] = None,
-                                    actionAuthorId: Option[ObjectId] = None,
-                                    info: Option[String] = None)
-    extends SkeletonUpdateAction
+case class DeleteEdgeSkeletonAction(
+    source: Int,
+    target: Int,
+    treeId: Int,
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
     def treeTransform(tree: Tree) = tree.copy(edges = tree.edges.filter(_ != Edge(source, target)))
@@ -293,30 +302,31 @@ case class DeleteEdgeSkeletonAction(source: Int,
   override def updatedTreeBodyIds: Set[Int] = Set(treeId)
 }
 
-case class CreateNodeSkeletonAction(id: Int,
-                                    position: Vec3Int,
-                                    rotation: Option[Vec3Double],
-                                    radius: Option[Float],
-                                    viewport: Option[Int],
-                                    resolution: Option[Int],
-                                    bitDepth: Option[Int],
-                                    interpolation: Option[Boolean],
-                                    treeId: Int,
-                                    timestamp: Long,
-                                    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
-                                    actionTracingId: String,
-                                    actionTimestamp: Option[Long] = None,
-                                    actionAuthorId: Option[ObjectId] = None,
-                                    info: Option[String] = None)
-    extends SkeletonUpdateAction
+case class CreateNodeSkeletonAction(
+    id: Int,
+    position: Vec3Int,
+    rotation: Option[Vec3Double],
+    radius: Option[Float],
+    viewport: Option[Int],
+    resolution: Option[Int],
+    bitDepth: Option[Int],
+    interpolation: Option[Boolean],
+    treeId: Int,
+    timestamp: Long,
+    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends SkeletonUpdateAction
     with SkeletonUpdateActionHelper
-    with ProtoGeometryImplicits {
+    with ProtoGeometryConversions {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
     val rotationOrDefault = rotation getOrElse NodeDefaults.rotation
     val newNode = Node(
       id,
-      position,
-      rotationOrDefault,
+      vec3IntToProto(position),
+      vec3DoubleToProto(rotationOrDefault),
       radius getOrElse NodeDefaults.radius,
       viewport getOrElse NodeDefaults.viewport,
       resolution getOrElse NodeDefaults.mag,
@@ -342,31 +352,32 @@ case class CreateNodeSkeletonAction(id: Int,
   override def updatedTreeBodyIds: Set[Int] = Set(treeId)
 }
 
-case class UpdateNodeSkeletonAction(id: Int,
-                                    position: Vec3Int,
-                                    rotation: Option[Vec3Double],
-                                    radius: Option[Float],
-                                    viewport: Option[Int],
-                                    resolution: Option[Int],
-                                    bitDepth: Option[Int],
-                                    interpolation: Option[Boolean],
-                                    treeId: Int,
-                                    timestamp: Long,
-                                    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
-                                    actionTracingId: String,
-                                    actionTimestamp: Option[Long] = None,
-                                    actionAuthorId: Option[ObjectId] = None,
-                                    info: Option[String] = None)
-    extends SkeletonUpdateAction
+case class UpdateNodeSkeletonAction(
+    id: Int,
+    position: Vec3Int,
+    rotation: Option[Vec3Double],
+    radius: Option[Float],
+    viewport: Option[Int],
+    resolution: Option[Int],
+    bitDepth: Option[Int],
+    interpolation: Option[Boolean],
+    treeId: Int,
+    timestamp: Long,
+    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends SkeletonUpdateAction
     with SkeletonUpdateActionHelper
-    with ProtoGeometryImplicits {
+    with ProtoGeometryConversions {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
 
     val rotationOrDefault = rotation getOrElse NodeDefaults.rotation
     val newNode = Node(
       id,
-      position,
-      rotationOrDefault,
+      vec3IntToProto(position),
+      vec3DoubleToProto(rotationOrDefault),
       radius getOrElse NodeDefaults.radius,
       viewport getOrElse NodeDefaults.viewport,
       resolution getOrElse NodeDefaults.mag,
@@ -393,13 +404,14 @@ case class UpdateNodeSkeletonAction(id: Int,
   override def updatedTreeBodyIds: Set[Int] = Set(treeId)
 }
 
-case class DeleteNodeSkeletonAction(nodeId: Int,
-                                    treeId: Int,
-                                    actionTracingId: String,
-                                    actionTimestamp: Option[Long] = None,
-                                    actionAuthorId: Option[ObjectId] = None,
-                                    info: Option[String] = None)
-    extends SkeletonUpdateAction
+case class DeleteNodeSkeletonAction(
+    nodeId: Int,
+    treeId: Int,
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
 
@@ -420,12 +432,13 @@ case class DeleteNodeSkeletonAction(nodeId: Int,
   override def updatedTreeBodyIds: Set[Int] = Set(treeId)
 }
 
-case class UpdateTreeGroupsSkeletonAction(treeGroups: List[UpdateActionTreeGroup],
-                                          actionTracingId: String,
-                                          actionTimestamp: Option[Long] = None,
-                                          actionAuthorId: Option[ObjectId] = None,
-                                          info: Option[String] = None)
-    extends SkeletonUpdateAction
+case class UpdateTreeGroupsSkeletonAction(
+    treeGroups: List[UpdateActionTreeGroup],
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing =
     tracing.withTreeGroups(treeGroups.map(convertTreeGroup))
@@ -439,13 +452,14 @@ case class UpdateTreeGroupsSkeletonAction(treeGroups: List[UpdateActionTreeGroup
     this.copy(actionTracingId = newTracingId)
 }
 
-case class UpdateTreeGroupsExpandedStateSkeletonAction(groupIds: List[Int],
-                                                       areExpanded: Boolean,
-                                                       actionTracingId: String,
-                                                       actionTimestamp: Option[Long] = None,
-                                                       actionAuthorId: Option[ObjectId] = None,
-                                                       info: Option[String] = None)
-    extends UserStateSkeletonUpdateAction {
+case class UpdateTreeGroupsExpandedStateSkeletonAction(
+    groupIds: List[Int],
+    areExpanded: Boolean,
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends UserStateSkeletonUpdateAction {
   override def addTimestamp(timestamp: Long): SkeletonUpdateAction = this.copy(actionTimestamp = Some(timestamp))
 
   override def addAuthorId(authorId: Option[ObjectId]): SkeletonUpdateAction =
@@ -456,9 +470,11 @@ case class UpdateTreeGroupsExpandedStateSkeletonAction(groupIds: List[Int],
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
 
-  def applyOnUserState(tracing: SkeletonTracing,
-                       actionUserId: ObjectId,
-                       existingUserStateOpt: Option[SkeletonUserStateProto]): SkeletonUserStateProto =
+  def applyOnUserState(
+      tracing: SkeletonTracing,
+      actionUserId: ObjectId,
+      existingUserStateOpt: Option[SkeletonUserStateProto]
+  ): SkeletonUserStateProto =
     existingUserStateOpt.map { existingUserState =>
       val expandedStateMapMutable = id32WithBoolsToMutableMap(existingUserState.treeGroupExpandedStates)
       groupIds.foreach(expandedStateMapMutable(_) = areExpanded)
@@ -474,24 +490,25 @@ case class UpdateTreeGroupsExpandedStateSkeletonAction(groupIds: List[Int],
     )
 }
 
-case class UpdateTracingSkeletonAction(activeNode: Option[Int],
-                                       editPosition: com.scalableminds.util.geometry.Vec3Int,
-                                       editRotation: com.scalableminds.util.geometry.Vec3Double,
-                                       zoomLevel: Double,
-                                       userBoundingBox: Option[com.scalableminds.util.geometry.BoundingBox],
-                                       actionTracingId: String,
-                                       actionTimestamp: Option[Long] = None,
-                                       actionAuthorId: Option[ObjectId] = None,
-                                       info: Option[String] = None,
-                                       editPositionAdditionalCoordinates: Option[Seq[AdditionalCoordinate]] = None)
-    extends SkeletonUpdateAction
-    with ProtoGeometryImplicits {
+case class UpdateTracingSkeletonAction(
+    activeNode: Option[Int],
+    editPosition: com.scalableminds.util.geometry.Vec3Int,
+    editRotation: com.scalableminds.util.geometry.Vec3Double,
+    zoomLevel: Double,
+    userBoundingBox: Option[com.scalableminds.util.geometry.BoundingBox],
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None,
+    editPositionAdditionalCoordinates: Option[Seq[AdditionalCoordinate]] = None
+) extends SkeletonUpdateAction
+    with ProtoGeometryConversions {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing =
     tracing.copy(
-      editPosition = editPosition,
-      editRotation = editRotation,
+      editPosition = vec3IntToProto(editPosition),
+      editRotation = vec3DoubleToProto(editRotation),
       zoomLevel = zoomLevel,
-      userBoundingBox = userBoundingBox,
+      userBoundingBox = boundingBoxOptToProto(userBoundingBox),
       activeNodeId = activeNode,
       editPositionAdditionalCoordinates = AdditionalCoordinate.toProto(editPositionAdditionalCoordinates)
     )
@@ -507,15 +524,18 @@ case class UpdateTracingSkeletonAction(activeNode: Option[Int],
   override def isViewOnlyChange: Boolean = true
 }
 
-case class UpdateActiveNodeSkeletonAction(activeNode: Option[Int],
-                                          actionTracingId: String,
-                                          actionTimestamp: Option[Long] = None,
-                                          actionAuthorId: Option[ObjectId] = None,
-                                          info: Option[String] = None)
-    extends UserStateSkeletonUpdateAction {
-  override def applyOnUserState(tracing: SkeletonTracing,
-                                actionUserId: ObjectId,
-                                existingUserStateOpt: Option[SkeletonUserStateProto]): SkeletonUserStateProto =
+case class UpdateActiveNodeSkeletonAction(
+    activeNode: Option[Int],
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends UserStateSkeletonUpdateAction {
+  override def applyOnUserState(
+      tracing: SkeletonTracing,
+      actionUserId: ObjectId,
+      existingUserStateOpt: Option[SkeletonUserStateProto]
+  ): SkeletonUserStateProto =
     existingUserStateOpt.getOrElse(SkeletonTracingDefaults.emptyUserState(actionUserId)).copy(activeNodeId = activeNode)
 
   override def addTimestamp(timestamp: Long): UpdateAction =
@@ -529,17 +549,20 @@ case class UpdateActiveNodeSkeletonAction(activeNode: Option[Int],
   override def isViewOnlyChange: Boolean = true
 }
 
-case class UpdateTreeVisibilitySkeletonAction(treeId: Int,
-                                              isVisible: Boolean,
-                                              actionTracingId: String,
-                                              actionTimestamp: Option[Long] = None,
-                                              actionAuthorId: Option[ObjectId] = None,
-                                              info: Option[String] = None)
-    extends UserStateSkeletonUpdateAction
+case class UpdateTreeVisibilitySkeletonAction(
+    treeId: Int,
+    isVisible: Boolean,
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends UserStateSkeletonUpdateAction
     with SkeletonUpdateActionHelper {
-  override def applyOnUserState(tracing: SkeletonTracing,
-                                actionUserId: ObjectId,
-                                existingUserStateOpt: Option[SkeletonUserStateProto]): SkeletonUserStateProto =
+  override def applyOnUserState(
+      tracing: SkeletonTracing,
+      actionUserId: ObjectId,
+      existingUserStateOpt: Option[SkeletonUserStateProto]
+  ): SkeletonUserStateProto =
     existingUserStateOpt.map { existingUserState =>
       val visibilityMap = id32WithBoolsToMutableMap(existingUserState.treeVisibilities)
       visibilityMap(treeId) = isVisible
@@ -565,20 +588,23 @@ case class UpdateTreeVisibilitySkeletonAction(treeId: Int,
   override def isViewOnlyChange: Boolean = true
 }
 
-case class UpdateTreeGroupVisibilitySkeletonAction(treeGroupId: Option[Int], // No group id → update all trees!
-                                                   isVisible: Boolean,
-                                                   actionTracingId: String,
-                                                   actionTimestamp: Option[Long] = None,
-                                                   actionAuthorId: Option[ObjectId] = None,
-                                                   info: Option[String] = None)
-    extends UserStateSkeletonUpdateAction
+case class UpdateTreeGroupVisibilitySkeletonAction(
+    treeGroupId: Option[Int], // No group id → update all trees!
+    isVisible: Boolean,
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends UserStateSkeletonUpdateAction
     with SkeletonUpdateActionHelper {
 
-  override def applyOnUserState(tracing: SkeletonTracing,
-                                actionUserId: ObjectId,
-                                existingUserStateOpt: Option[SkeletonUserStateProto]): SkeletonUserStateProto = {
+  override def applyOnUserState(
+      tracing: SkeletonTracing,
+      actionUserId: ObjectId,
+      existingUserStateOpt: Option[SkeletonUserStateProto]
+  ): SkeletonUserStateProto = {
     val treeIdsToUpdate: Seq[Int] = treeGroupId match {
-      case None => tracing.trees.map(tree => tree.treeId)
+      case None          => tracing.trees.map(tree => tree.treeId)
       case Some(groupId) =>
         (for {
           treeGroup <- tracing.treeGroups.find(_.groupId == groupId)
@@ -612,13 +638,14 @@ case class UpdateTreeGroupVisibilitySkeletonAction(treeGroupId: Option[Int], // 
   override def isViewOnlyChange: Boolean = true
 }
 
-case class UpdateTreeEdgesVisibilitySkeletonAction(treeId: Int,
-                                                   edgesAreVisible: Boolean,
-                                                   actionTracingId: String,
-                                                   actionTimestamp: Option[Long] = None,
-                                                   actionAuthorId: Option[ObjectId] = None,
-                                                   info: Option[String] = None)
-    extends SkeletonUpdateAction
+case class UpdateTreeEdgesVisibilitySkeletonAction(
+    treeId: Int,
+    edgesAreVisible: Boolean,
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
 
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
@@ -638,12 +665,13 @@ case class UpdateTreeEdgesVisibilitySkeletonAction(treeId: Int,
   override def isViewOnlyChange: Boolean = true
 }
 
-case class UpdateUserBoundingBoxesSkeletonAction(boundingBoxes: List[NamedBoundingBox],
-                                                 actionTracingId: String,
-                                                 actionTimestamp: Option[Long] = None,
-                                                 actionAuthorId: Option[ObjectId] = None,
-                                                 info: Option[String] = None)
-    extends SkeletonUpdateAction {
+case class UpdateUserBoundingBoxesSkeletonAction(
+    boundingBoxes: List[NamedBoundingBox],
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends SkeletonUpdateAction {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing =
     tracing.withUserBoundingBoxes(boundingBoxes.map(_.toProto))
 
@@ -656,12 +684,13 @@ case class UpdateUserBoundingBoxesSkeletonAction(boundingBoxes: List[NamedBoundi
     this.copy(actionTracingId = newTracingId)
 }
 
-case class AddUserBoundingBoxSkeletonAction(boundingBox: NamedBoundingBox,
-                                            actionTracingId: String,
-                                            actionTimestamp: Option[Long] = None,
-                                            actionAuthorId: Option[ObjectId] = None,
-                                            info: Option[String] = None)
-    extends SkeletonUpdateAction {
+case class AddUserBoundingBoxSkeletonAction(
+    boundingBox: NamedBoundingBox,
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends SkeletonUpdateAction {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing =
     tracing.withUserBoundingBoxes(tracing.userBoundingBoxes :+ boundingBox.toProto)
 
@@ -674,12 +703,13 @@ case class AddUserBoundingBoxSkeletonAction(boundingBox: NamedBoundingBox,
     this.copy(actionTracingId = newTracingId)
 }
 
-case class DeleteUserBoundingBoxSkeletonAction(boundingBoxId: Int,
-                                               actionTracingId: String,
-                                               actionTimestamp: Option[Long] = None,
-                                               actionAuthorId: Option[ObjectId] = None,
-                                               info: Option[String] = None)
-    extends SkeletonUpdateAction {
+case class DeleteUserBoundingBoxSkeletonAction(
+    boundingBoxId: Int,
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends SkeletonUpdateAction {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing =
     tracing.withUserBoundingBoxes(tracing.userBoundingBoxes.filter(_.id != boundingBoxId))
 
@@ -692,16 +722,17 @@ case class DeleteUserBoundingBoxSkeletonAction(boundingBoxId: Int,
     this.copy(actionTracingId = newTracingId)
 }
 
-case class UpdateUserBoundingBoxSkeletonAction(boundingBoxId: Int,
-                                               name: Option[Option[String]],
-                                               color: Option[Option[Color]],
-                                               boundingBox: Option[Option[BoundingBox]],
-                                               actionTracingId: String,
-                                               actionTimestamp: Option[Long] = None,
-                                               actionAuthorId: Option[ObjectId] = None,
-                                               info: Option[String] = None)
-    extends SkeletonUpdateAction
-    with ProtoGeometryImplicits {
+case class UpdateUserBoundingBoxSkeletonAction(
+    boundingBoxId: Int,
+    name: Option[Option[String]],
+    color: Option[Option[Color]],
+    boundingBox: Option[Option[BoundingBox]],
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends SkeletonUpdateAction
+    with ProtoGeometryConversions {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
     def updateUserBoundingBoxes() =
       tracing.userBoundingBoxes.map { currentBoundingBox =>
@@ -729,17 +760,20 @@ case class UpdateUserBoundingBoxSkeletonAction(boundingBoxId: Int,
     this.copy(actionTracingId = newTracingId)
 }
 
-case class UpdateUserBoundingBoxVisibilitySkeletonAction(boundingBoxId: Option[Int], // No bbox id → update all bboxes!
-                                                         isVisible: Boolean,
-                                                         actionTracingId: String,
-                                                         actionTimestamp: Option[Long] = None,
-                                                         actionAuthorId: Option[ObjectId] = None,
-                                                         info: Option[String] = None)
-    extends UserStateSkeletonUpdateAction {
+case class UpdateUserBoundingBoxVisibilitySkeletonAction(
+    boundingBoxId: Option[Int], // No bbox id → update all bboxes!
+    isVisible: Boolean,
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends UserStateSkeletonUpdateAction {
 
-  override def applyOnUserState(tracing: SkeletonTracing,
-                                actionUserId: ObjectId,
-                                existingUserStateOpt: Option[SkeletonUserStateProto]): SkeletonUserStateProto = {
+  override def applyOnUserState(
+      tracing: SkeletonTracing,
+      actionUserId: ObjectId,
+      existingUserStateOpt: Option[SkeletonUserStateProto]
+  ): SkeletonUserStateProto = {
     val bboxIdsToUpdate = boundingBoxId.map(Seq(_)).getOrElse(tracing.userBoundingBoxes.map(_.id))
     existingUserStateOpt.map { existingUserState =>
       val visibilityMapMutable = id32WithBoolsToMutableMap(existingUserState.boundingBoxVisibilities)
@@ -750,7 +784,8 @@ case class UpdateUserBoundingBoxVisibilitySkeletonAction(boundingBoxId: Option[I
     }.getOrElse(
       SkeletonTracingDefaults
         .emptyUserState(actionUserId)
-        .copy(boundingBoxVisibilities = bboxIdsToUpdate.map(id => Id32WithBool(id, isVisible))))
+        .copy(boundingBoxVisibilities = bboxIdsToUpdate.map(id => Id32WithBool(id, isVisible)))
+    )
   }
 
   override def addTimestamp(timestamp: Long): UpdateAction =

@@ -3,7 +3,8 @@ package controllers
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper, TextUtils}
+import com.scalableminds.util.tools.{Fox, JsonHelper, TextUtils}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.webauthn4j.data.attestation.statement.COSEAlgorithmIdentifier
 import com.webauthn4j.data.client.Origin
@@ -33,7 +34,6 @@ import play.api.data.validation.Constraints._
 import play.api.libs.json._
 import play.api.mvc._
 import play.silhouette.api.actions.SecuredRequest
-import play.silhouette.api.exceptions.ProviderException
 import play.silhouette.api.services.AuthenticatorResult
 import play.silhouette.api.util.{Credentials, PasswordInfo}
 import play.silhouette.api.{LoginInfo, Silhouette}
@@ -128,7 +128,7 @@ object WebAuthnCreationOptionsRelyingParty {
 }
 
 case class WebAuthnChallenge(data: Array[Byte]) extends Challenge {
-  def getValue() = data
+  def getValue: Array[Byte] = data
 }
 
 /** Object reference: https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions#user
@@ -215,40 +215,34 @@ class AuthenticationController @Inject() (
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
-    with AuthForms
-    with FoxImplicits {
+    with AuthForms {
 
-  private val combinedAuthenticatorService = wkSilhouetteEnvironment.combinedAuthenticatorService
-  private val bearerTokenAuthenticatorService = combinedAuthenticatorService.tokenAuthenticatorService
-
-  private val secureRandom = new SecureRandom()
-
-  private lazy val Mailer =
-    actorSystem.actorSelection("/user/mailActor")
-
-  private lazy val ssoKey =
-    conf.WebKnossos.User.ssoKey
+  private lazy val combinedAuthenticatorService = wkSilhouetteEnvironment.combinedAuthenticatorService
+  private lazy val bearerTokenAuthenticatorService = combinedAuthenticatorService.tokenAuthenticatorService
+  private lazy val secureRandom = new SecureRandom()
+  private lazy val Mailer = actorSystem.actorSelection("/user/mailActor")
+  private lazy val ssoKey = conf.WebKnossos.User.ssoKey
 
   private lazy val origin = new Origin(conf.Http.uri)
   private lazy val usesHttps = conf.Http.uri.startsWith("https://")
   private lazy val webAuthnPubKeyParams = Array(
     // COSE Algorithm: EdDSA
-    WebAuthnCreationOptionsPubKeyParam(-8, "public-key"),
+    WebAuthnCreationOptionsPubKeyParam(-8),
     // COSE Algorithm: ES256
-    WebAuthnCreationOptionsPubKeyParam(-7, "public-key"),
+    WebAuthnCreationOptionsPubKeyParam(-7),
     // COSE Algorithm: RS256
-    WebAuthnCreationOptionsPubKeyParam(-257, "public-key")
+    WebAuthnCreationOptionsPubKeyParam(-257)
   )
   private lazy val webAuthnManager = WebAuthnManager.createNonStrictWebAuthnManager()
   private val webauthnTimeout = 2 minutes
 
   private lazy val isOIDCEnabled = conf.Features.openIdConnectEnabled
 
-  def register: Action[AnyContent] = Action.async { implicit request =>
+  def register: Action[AnyContent] = Action.fox { implicit request =>
     signUpForm
       .bindFromRequest()
       .fold(
-        bogusForm => Future.successful(BadRequest(bogusForm.toString)),
+        bogusForm => Fox.successful(BadRequest(bogusForm.toString)),
         signUpData =>
           for {
             (firstName, lastName, email, errors) <- validateNameAndEmail(
@@ -265,8 +259,10 @@ class AuthenticationController @Inject() (
                   _ <- Fox.fromBool(
                     inviteBox.isDefined || conf.Features.registerToDefaultOrgaEnabled
                   ) ?~> Msg.User.needsInvite
-                  organization <- organizationService.findOneByInviteOrDefault(inviteBox.toOption)(using GlobalAccessContext)
-                  _ <- organizationService.assertUsersCanBeAdded(organization._id)(using GlobalAccessContext,
+                  organization <- organizationService
+                    .findOneByInviteOrDefault(inviteBox.toOption)(using GlobalAccessContext)
+                  _ <- organizationService.assertUsersCanBeAdded(organization._id)(using
+                    GlobalAccessContext,
                     ec
                   ) ?~> Msg.Organization.usersUserLimitReached
                   autoActivate = inviteBox.toOption.map(_.autoActivate).getOrElse(organization.enableAutoVerify)
@@ -294,9 +290,9 @@ class AuthenticationController @Inject() (
       password: Option[String],
       inviteBox: Box[Invite] = Empty,
       isEmailVerified: Boolean = false
-  ): Fox[User] = {
-    val passwordInfo: PasswordInfo = userService.getPasswordInfo(password)
+  ): Fox[User] =
     for {
+      passwordInfo: PasswordInfo = userService.getPasswordInfo(password)
       teamMemberships <- userService.initialTeamMemberships(
         organization._id,
         inviteIdOpt = inviteBox.map(_._id).toOption
@@ -331,55 +327,43 @@ class AuthenticationController @Inject() (
           .registerAdminNotifierMail(multiUser.fullName, email, organization, autoActivate, newUserEmailRecipient)
       )
     } yield user
-  }
 
-  private def authenticateInner(loginInfo: LoginInfo)(implicit header: RequestHeader): Future[Result] =
+  private def authenticateInner(loginInfo: LoginInfo)(implicit header: RequestHeader): Fox[Result] =
     for {
-      result <- userService.retrieve(loginInfo).flatMap {
-        case Some(user) if !user.isDeactivated =>
-          for {
-            authenticator <- combinedAuthenticatorService.create(loginInfo)
-            value <- combinedAuthenticatorService.init(authenticator)
-            result <- combinedAuthenticatorService.embed(value, Ok)
-            _ <- Fox.runIf(conf.WebKnossos.User.EmailVerification.activated)(
-              emailVerificationService.assertEmailVerifiedOrResendVerificationMail(user)(using GlobalAccessContext, ec)
-            )
-            _ <- multiUserDAO.updateLastLoggedInIdentity(user._multiUser, user._id)(using GlobalAccessContext)
-            _ = userDAO.updateLastActivity(user._id)(using GlobalAccessContext)
-            _ = logger.info(f"User ${user._id} authenticated.")
-          } yield result
-        case None =>
-          Future.successful(BadRequest(Msg.User.invalidCredentials))
-        case Some(_) => Future.successful(BadRequest(Msg.User.isDeactivated))
-      }
-    } yield result
+      userOpt <- Fox.fromFuture(userService.retrieve(loginInfo)) ??~> Msg.User.invalidCredentials
+      user <- userOpt.toFox ??~> Msg.User.invalidCredentials
+      _ <- Fox.fromBool(!user.isDeactivated) ?~> Msg.User.isDeactivated
+      authenticator <- Fox.fromFuture(combinedAuthenticatorService.create(loginInfo))
+      value <- Fox.fromFuture(combinedAuthenticatorService.init(authenticator))
+      resultWithCookie <- Fox.fromFuture(combinedAuthenticatorService.embed(value, Ok))
+      _ <- Fox.runIf(conf.WebKnossos.User.EmailVerification.activated)(
+        emailVerificationService.assertEmailVerifiedOrResendVerificationMail(user)(using GlobalAccessContext, ec)
+      )
+      _ <- multiUserDAO.updateLastLoggedInIdentity(user._multiUser, user._id)(using GlobalAccessContext)
+      _ = userDAO.updateLastActivity(user._id)(using GlobalAccessContext)
+      _ = logger.info(f"User ${user._id} authenticated.")
+    } yield resultWithCookie
 
-  def authenticate: Action[AnyContent] = Action.async { implicit request =>
+  def authenticate: Action[AnyContent] = Action.fox { implicit request =>
     signInForm
       .bindFromRequest()
       .fold(
-        bogusForm => Future.successful(BadRequest(bogusForm.toString)),
-        signInData => {
-          val email = signInData.email.toLowerCase
-          val userFopt: Future[Option[User]] =
-            userService.userFromMultiUserEmail(email)(using GlobalAccessContext).futureBox.map(_.toOption)
-          val idF = userFopt.map(userOpt =>
-            userOpt.map(_._id.id).getOrElse("")
-          ) // do not fail here if there is no user for email. Fail below.
-          idF
-            .map(id => Credentials(id, signInData.password))
-            .flatMap(credentials => credentialsProvider.authenticate(credentials))
-            .flatMap { loginInfo =>
-              authenticateInner(loginInfo)
-            }
-            .recover { case _: ProviderException =>
-              BadRequest(Msg.User.invalidCredentials)
-            }
-        }
+        bogusForm => Fox.failure(bogusForm.toString),
+        formValues =>
+          for {
+            email = formValues.email.toLowerCase
+            user <- userService.userFromMultiUserEmail(email)(using
+              GlobalAccessContext
+            ) ??~> Msg.User.invalidCredentials
+            loginInfo <- Fox.fromFuture(
+              credentialsProvider.authenticate(Credentials(user._id.toString, formValues.password))
+            ) ??~> Msg.User.invalidCredentials
+            resultWithCookie <- authenticateInner(loginInfo)
+          } yield resultWithCookie
       )
   }
 
-  def switchMultiUser(email: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def switchMultiUser(email: String): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     implicit val ctx: GlobalAccessContext.type = GlobalAccessContext
     for {
       requestingMultiUser <- multiUserDAO.findOne(request.identity._multiUser)
@@ -389,11 +373,12 @@ class AuthenticationController @Inject() (
     } yield result
   }
 
-  def switchOrganization(organizationId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def switchOrganization(organizationId: String): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       organization <- organizationDAO.findOne(organizationId) ?~> Msg.Organization.notFound(organizationId) ~> NOT_FOUND
       _ <- userService.fillSuperUserIdentity(request.identity, organization._id)
-      targetUser <- userDAO.findOneByOrgaAndMultiUser(organization._id, request.identity._multiUser)(using GlobalAccessContext
+      targetUser <- userDAO.findOneByOrgaAndMultiUser(organization._id, request.identity._multiUser)(using
+        GlobalAccessContext
       ) ?~> Msg.User.notFound ~> NOT_FOUND
       _ <- Fox.fromBool(!targetUser.isDeactivated) ?~> Msg.User.isDeactivated
       result <- Fox.fromFuture(switchToUser(targetUser._id))
@@ -416,7 +401,7 @@ class AuthenticationController @Inject() (
       datasetId: Option[ObjectId],
       annotationId: Option[ObjectId],
       workflowHash: Option[String]
-  ): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  ): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       selectedOrganization <- authenticationService.getOrganizationToSwitchTo(
         request.identity,
@@ -428,10 +413,12 @@ class AuthenticationController @Inject() (
     } yield Ok(selectedOrganizationJs)
   }
 
-  def joinOrganization(inviteToken: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def joinOrganization(inviteToken: String): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       invite <- inviteDAO.findOneByTokenValue(inviteToken) ?~> Msg.User.invalidInviteToken
-      organization <- organizationDAO.findOne(invite._organization)(using GlobalAccessContext) ?~> Msg.User.invalidInviteToken
+      organization <- organizationDAO.findOne(invite._organization)(using
+        GlobalAccessContext
+      ) ?~> Msg.User.invalidInviteToken
       _ <- userService.assertNotInOrgaYet(request.identity._multiUser, organization._id)
       requestingMultiUser <- multiUserDAO.findOne(request.identity._multiUser)
       alreadyPayingOrgaForMultiUser <- userDAO.findPayingOrgaIdForMultiUser(requestingMultiUser._id)
@@ -463,25 +450,24 @@ class AuthenticationController @Inject() (
     } yield Ok
   }
 
-  def sendInvites: Action[InviteParameters] = sil.SecuredAction.async(validateJson[InviteParameters]) {
-    implicit request =>
-      for {
-        _ <- validateInvitePermissions(request.identity, request.body)
-        senderMultiUser <- multiUserDAO.findOne(request.identity._multiUser)
-        _ <- Fox.serialCombined(request.body.recipients)(recipient =>
-          inviteService.inviteOneRecipient(
-            recipient,
-            request.identity,
-            senderMultiUser,
-            request.body.autoActivate,
-            request.body.isAdmin,
-            request.body.isDatasetManager,
-            request.body.teamMemberships
-          )
+  def sendInvites: Action[InviteParameters] = sil.SecuredAction.fox(validateJson[InviteParameters]) { implicit request =>
+    for {
+      _ <- validateInvitePermissions(request.identity, request.body)
+      senderMultiUser <- multiUserDAO.findOne(request.identity._multiUser)
+      _ <- Fox.serialCombined(request.body.recipients)(recipient =>
+        inviteService.inviteOneRecipient(
+          recipient,
+          request.identity,
+          senderMultiUser,
+          request.body.autoActivate,
+          request.body.isAdmin,
+          request.body.isDatasetManager,
+          request.body.teamMemberships
         )
-        _ = analyticsService.track(InviteEvent(request.identity, request.body.recipients.length))
-        _ = mailchimpClient.tagUser(request.identity, MailchimpTag.HasInvitedTeam)
-      } yield Ok
+      )
+      _ = analyticsService.track(InviteEvent(request.identity, request.body.recipients.length))
+      _ = mailchimpClient.tagUser(request.identity, MailchimpTag.HasInvitedTeam)
+    } yield Ok
   }
 
   private def validateInvitePermissions(requestingUser: User, inviteParameters: InviteParameters): Fox[Unit] =
@@ -494,119 +480,101 @@ class AuthenticationController @Inject() (
       ) ?~> "Only admins can send invites that promote new users to admin or dataset manager."
     } yield ()
 
-  // If a user has forgotten their password
-  def handleStartResetPassword: Action[AnyContent] = Action.async { implicit request =>
+  // User has forgotten their password and wants a reset link email
+  def handleStartResetPassword: Action[AnyContent] = Action.fox { implicit request =>
     emailForm
       .bindFromRequest()
       .fold(
-        bogusForm => Future.successful(BadRequest(bogusForm.toString)),
-        email => {
-          val userFopt: Future[Option[User]] =
-            userService.userFromMultiUserEmail(email.toLowerCase)(using GlobalAccessContext).futureBox.map(_.toOption)
-          val idF = userFopt.map(userOpt =>
-            userOpt.map(_._id.id).getOrElse("")
-          ) // do not fail here if there is no user for email. Fail below to unify error handling.
-          idF.flatMap(id => userService.retrieve(LoginInfo(CredentialsProvider.ID, id))).flatMap {
-            case None => Future.successful(Ok) // No email sent, but same reply, in order not to leak list of accounts.
-            case Some(user) =>
-              for {
-                multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
-                token <- Fox.fromFuture(
-                  bearerTokenAuthenticatorService
-                    .createAndInit(user.loginInfo, TokenType.ResetPassword, deleteOld = true)
-                )
-              } yield {
-                Mailer ! Send(defaultMails.resetPasswordMail(multiUser.fullName, email.toLowerCase, token))
-                Ok
-              }
-          }
-        }
+        bogusForm => Fox.failure(bogusForm.toString),
+        formEmail =>
+          for {
+            resultBox <- sendResetPasswordMail(formEmail.toLowerCase).shiftBox
+            // We send Ok even if the Box is not Full! This is not to leak existing account info via this route.
+          } yield Ok
       )
   }
 
-  // If a user has forgotten their password
-  def handleResetPassword: Action[AnyContent] = Action.async { implicit request =>
+  private def sendResetPasswordMail(email: String): Fox[Unit] =
+    for {
+      user <- userService.userFromMultiUserEmail(email)(using GlobalAccessContext)
+      multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
+      resetPasswordToken <- Fox.fromFuture(
+        bearerTokenAuthenticatorService.createAndInit(user.loginInfo, TokenType.ResetPassword, deleteOld = true)
+      )
+      _ = Mailer ! Send(defaultMails.resetPasswordMail(multiUser.fullName, email, resetPasswordToken))
+    } yield ()
+
+  // User has forgotten their password and clicked the reset link in the email
+  def handleResetPassword: Action[AnyContent] = Action.fox { implicit request =>
     resetPasswordForm
       .bindFromRequest()
       .fold(
-        bogusForm => Future.successful(BadRequest(bogusForm.toString)),
-        passwords =>
-          bearerTokenAuthenticatorService.userForToken(passwords.token.trim).futureBox.flatMap {
-            case Full(user) =>
-              for {
-                _ <- Fox.successful(logger.info(s"Multiuser ${user._multiUser} reset their password."))
-                _ <- multiUserDAO
-                  .updatePasswordInfo(user._multiUser, passwordHasher.hash(passwords.password1))(using GlobalAccessContext)
-                _ <- bearerTokenAuthenticatorService.remove(passwords.token.trim)
-              } yield Ok
-            case _ =>
-              Future.successful(BadRequest(Msg.User.Token.invalid))
-          }
+        bogusForm => Fox.failure(bogusForm.toString),
+        formValues =>
+          for {
+            user <- bearerTokenAuthenticatorService.userForToken(formValues.token.trim) ?~> Msg.User.Token.invalid
+            _ <- multiUserDAO.updatePasswordInfo(
+              user._multiUser,
+              passwordHasher.hash(formValues.password1)
+            )(using GlobalAccessContext)
+            _ <- bearerTokenAuthenticatorService.remove(formValues.token.trim)
+            _ = logger.info(s"Multiuser ${user._multiUser} reset their password.")
+          } yield Ok
       )
   }
 
   // Users who are logged in can change their password. The old password has to be validated again.
-  def changePassword: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def changePassword: Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     changePasswordForm
       .bindFromRequest()
       .fold(
-        bogusForm => Future.successful(BadRequest(bogusForm.toString)),
-        passwords => {
-          val credentials = Credentials(request.identity._id.id, passwords.oldPassword)
-          credentialsProvider
-            .authenticate(credentials)
-            .flatMap { loginInfo =>
-              userService.retrieve(loginInfo).flatMap {
-                case None =>
-                  Future.successful(NotFound(Msg.User.invalidCredentials))
-                case Some(user) =>
-                  for {
-                    multiUser <- multiUserDAO.findOne(user._multiUser)
-                    _ <- Fox.successful(logger.info(s"Multiuser ${multiUser._id} changed their password."))
-                    _ <- multiUserDAO.updatePasswordInfo(user._multiUser, passwordHasher.hash(passwords.password1))
-                    _ <- Fox.fromFuture(combinedAuthenticatorService.discard(request.authenticator, Ok))
-                  } yield {
-                    Mailer ! Send(defaultMails.changePasswordMail(multiUser.fullName, multiUser.email))
-                    Ok
-                  }
-              }
-            }
-            .recover { case _: ProviderException =>
-              BadRequest(Msg.User.invalidCredentials)
-            }
-        }
+        bogusForm => Fox.failure(bogusForm.toString),
+        formValues =>
+          for {
+            credentials = Credentials(request.identity._id.id, formValues.oldPassword)
+            loginInfo <- Fox.fromFuture(credentialsProvider.authenticate(credentials)) ?~> Msg.User.invalidCredentials
+            userOpt <- Fox.fromFuture(userService.retrieve(loginInfo)) ?~> Msg.User.invalidCredentials
+            user <- userOpt.toFox ?~> Msg.User.invalidCredentials
+            multiUser <- multiUserDAO.findOne(user._multiUser)
+            _ = logger.info(s"Multiuser ${multiUser._id} changed their password.")
+            _ <- multiUserDAO.updatePasswordInfo(user._multiUser, passwordHasher.hash(formValues.password1))
+            _ <- Fox.fromFuture(combinedAuthenticatorService.discard(request.authenticator, Ok))
+            _ = Mailer ! Send(defaultMails.changePasswordMail(multiUser.fullName, multiUser.email))
+          } yield Ok
       )
   }
 
-  def getToken: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def getToken: Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
-      token <- combinedAuthenticatorService.findOrCreateToken(request.identity.loginInfo)
+      token <- Fox.fromFuture(combinedAuthenticatorService.findOrCreateToken(request.identity.loginInfo))
     } yield Ok(Json.obj("token" -> token.id))
   }
 
-  def deleteToken(): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    combinedAuthenticatorService.findTokenByLoginInfo(request.identity.loginInfo).flatMap {
+  def deleteToken(): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
+    Fox.fromFuture(combinedAuthenticatorService.findTokenByLoginInfo(request.identity.loginInfo)).flatMap {
       case Some(token) =>
-        combinedAuthenticatorService.discard(token, Ok(Json.obj("messages" -> Msg.User.Token.deleted)))
-      case _ => Future.successful(Ok)
+        Fox.fromFuture(combinedAuthenticatorService.discard(token, Ok(Json.obj("messages" -> Msg.User.Token.deleted))))
+      case _ => Fox.successful(Ok)
     }
   }
 
-  def logout: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+  def logout: Action[AnyContent] = sil.UserAwareAction.fox { implicit request =>
     val redirectUrlStr: String = conf.SingleSignOn.OpenIdConnect.logoutRedirectUrl.getOrElse("/")
     val rawResultWithRedirect = Ok(Json.toJson(redirectUrlStr))
     request.authenticator match {
       case Some(authenticator) =>
         for {
-          authenticatorResult <- combinedAuthenticatorService.discard(authenticator, rawResultWithRedirect)
+          authenticatorResult <- Fox.fromFuture(
+            combinedAuthenticatorService.discard(authenticator, rawResultWithRedirect)
+          )
           _ = logger.info(f"User ${request.identity.map(_._id).getOrElse("id unknown")} logged out.")
         } yield authenticatorResult
       case _ =>
-        Future.successful(rawResultWithRedirect)
+        Fox.successful(rawResultWithRedirect)
     }
   }
 
-  def singleSignOn(sso: String, sig: String): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+  def singleSignOn(sso: String, sig: String): Action[AnyContent] = sil.UserAwareAction.fox { implicit request =>
     if (ssoKey == "")
       logger.warn("No SSO key configured! To use single-sign-on a sso key needs to be defined in the configuration.")
 
@@ -644,7 +612,7 @@ class AuthenticationController @Inject() (
     }
   }
 
-  def webauthnAuthStart(): Action[AnyContent] = Action.async { _ =>
+  def webauthnAuthStart(): Action[AnyContent] = Action.fox { _ =>
     for {
       _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> Msg.Passkeys.notEnabled
       _ <- Fox.fromBool(usesHttps) ?~> Msg.Passkeys.requiresHttps
@@ -670,7 +638,7 @@ class AuthenticationController @Inject() (
     } yield Ok(Json.toJson(assertion)).withCookies(cookie)
   }
 
-  def webauthnAuthFinalize(): Action[WebAuthnAuthentication] = Action.async(validateJson[WebAuthnAuthentication]) {
+  def webauthnAuthFinalize(): Action[WebAuthnAuthentication] = Action.fox(validateJson[WebAuthnAuthentication]) {
     implicit request =>
       for {
         _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> Msg.Passkeys.notEnabled
@@ -687,7 +655,9 @@ class AuthenticationController @Inject() (
           Msg.Passkeys.unauthorized ~> UNAUTHORIZED
         multiUser <- multiUserDAO.findOneById(multiUserId)(using GlobalAccessContext) ??~>
           Msg.Passkeys.unauthorized ~> UNAUTHORIZED
-        credential <- webAuthnCredentialDAO.findByCredentialId(multiUser._id, credentialId)(using GlobalAccessContext) ??~>
+        credential <- webAuthnCredentialDAO.findByCredentialId(multiUser._id, credentialId)(using
+          GlobalAccessContext
+        ) ??~>
           Msg.Passkeys.unauthorized ~> UNAUTHORIZED
         serverProperty = new ServerProperty(origin, origin.getHost, challenge)
 
@@ -709,11 +679,11 @@ class AuthenticationController @Inject() (
           Msg.Passkeys.unauthorized ~> UNAUTHORIZED
         userId <- multiUser._lastLoggedInIdentity.toFox
         loginInfo = LoginInfo("credentials", userId.toString)
-        result <- Fox.fromFuture(authenticateInner(loginInfo))
-      } yield result
+        resultWithCookie <- authenticateInner(loginInfo)
+      } yield resultWithCookie
   }
 
-  def webauthnRegisterStart(): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def webauthnRegisterStart(): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> Msg.Passkeys.notEnabled
       _ <- Fox.fromBool(usesHttps) ?~> Msg.Passkeys.requiresHttps
@@ -762,7 +732,7 @@ class AuthenticationController @Inject() (
   }
 
   def webauthnRegisterFinalize(): Action[WebAuthnRegistration] =
-    sil.SecuredAction.async(validateJson[WebAuthnRegistration]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[WebAuthnRegistration]) { implicit request =>
       for {
         _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> Msg.Passkeys.notEnabled
         _ <- Fox.fromBool(usesHttps) ?~> Msg.Passkeys.requiresHttps
@@ -797,7 +767,7 @@ class AuthenticationController @Inject() (
       } yield Ok(Json.obj("message" -> "Key registered successfully"))
     }
 
-  def webauthnListKeys: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def webauthnListKeys: Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> Msg.Passkeys.notEnabled
       _ <- Fox.fromBool(usesHttps) ?~> Msg.Passkeys.requiresHttps
@@ -806,7 +776,7 @@ class AuthenticationController @Inject() (
     } yield Ok(Json.toJson(reducedKeys))
   }
 
-  def webauthnRemoveKey(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def webauthnRemoveKey(id: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> Msg.Passkeys.notEnabled
       _ <- Fox.fromBool(usesHttps) ?~> Msg.Passkeys.requiresHttps
@@ -816,7 +786,7 @@ class AuthenticationController @Inject() (
 
   private lazy val absoluteOpenIdConnectCallbackURL = s"${conf.Http.uri}/api/auth/oidc/callback"
 
-  def loginViaOpenIdConnect(): Action[AnyContent] = sil.UserAwareAction.async { _ =>
+  def loginViaOpenIdConnect(): Action[AnyContent] = sil.UserAwareAction.fox { _ =>
     if (!isOIDCEnabled) {
       Fox.successful(BadRequest("SSO is not enabled"))
     } else {
@@ -826,27 +796,29 @@ class AuthenticationController @Inject() (
     }
   }
 
-  private def loginUser(loginInfo: LoginInfo)(implicit request: Request[AnyContent]): Future[Result] =
-    userService.retrieve(loginInfo).flatMap {
+  private def loginUser(loginInfo: LoginInfo)(implicit request: Request[AnyContent]): Fox[Result] =
+    Fox.fromFuture(userService.retrieve(loginInfo)).flatMap {
       case Some(user) if !user.isDeactivated =>
         for {
-          authenticator: CombinedAuthenticator <- combinedAuthenticatorService.create(loginInfo)
-          value: Cookie <- combinedAuthenticatorService.init(authenticator)
-          result: AuthenticatorResult <- combinedAuthenticatorService.embed(value, Redirect("/dashboard"))
+          authenticator: CombinedAuthenticator <- Fox.fromFuture(combinedAuthenticatorService.create(loginInfo))
+          value: Cookie <- Fox.fromFuture(combinedAuthenticatorService.init(authenticator))
+          result: AuthenticatorResult <- Fox.fromFuture(
+            combinedAuthenticatorService.embed(value, Redirect("/dashboard"))
+          )
           _ <- multiUserDAO.updateLastLoggedInIdentity(user._multiUser, user._id)(using GlobalAccessContext)
           _ = logger.info(f"User ${user._id} logged in.")
           _ = userDAO.updateLastActivity(user._id)(using GlobalAccessContext)
         } yield result
       case None =>
-        Future.successful(BadRequest(Msg.User.invalidCredentials))
-      case Some(_) => Future.successful(BadRequest(Msg.User.isDeactivated))
+        Fox.successful(BadRequest(Msg.User.invalidCredentials))
+      case Some(_) => Fox.successful(BadRequest(Msg.User.isDeactivated))
     }
 
   // Is called after user was successfully authenticated
   private def loginOrSignupViaOidc(
       openIdConnectUserInfo: OpenIdConnectUserInfo
-  ): Request[AnyContent] => Future[Result] = { implicit request: Request[AnyContent] =>
-    userService.userFromMultiUserEmail(openIdConnectUserInfo.email)(using GlobalAccessContext).futureBox.flatMap {
+  ): Request[AnyContent] => Fox[Result] = { implicit request: Request[AnyContent] =>
+    userService.userFromMultiUserEmail(openIdConnectUserInfo.email)(using GlobalAccessContext).shiftBox.flatMap {
       case Full(user) =>
         val loginInfo = LoginInfo("credentials", user._id.toString)
         loginUser(loginInfo)
@@ -864,13 +836,13 @@ class AuthenticationController @Inject() (
           ) // Assuming email verification was done by OIDC provider
           // After registering, also login
           loginInfo = LoginInfo("credentials", user._id.toString)
-          loginResult <- Fox.fromFuture(loginUser(loginInfo))
+          loginResult <- loginUser(loginInfo)
         } yield loginResult
-      case _ => Future.successful(InternalServerError)
+      case _ => Fox.successful(InternalServerError)
     }
   }
 
-  def openIdCallback(): Action[AnyContent] = Action.async { implicit request =>
+  def openIdCallback(): Action[AnyContent] = Action.fox { implicit request =>
     for {
       _ <- Fox.fromBool(isOIDCEnabled) ?~> "SSO is not enabled"
       (accessToken: JsObject, idToken: Option[JsObject]) <- openIdConnectClient.getAndValidateTokens(
@@ -878,7 +850,7 @@ class AuthenticationController @Inject() (
         request.queryString.get("code").flatMap(_.headOption).getOrElse("missing code")
       ) ?~> Msg.Oidc.getTokenFailed ?~> Msg.Oidc.authenticationFailed
       userInfoFromTokens <- extractUserInfoFromTokenResponses(accessToken, idToken)
-      userResult <- Fox.fromFuture(loginOrSignupViaOidc(userInfoFromTokens)(request))
+      userResult <- loginOrSignupViaOidc(userInfoFromTokens)(request)
     } yield userResult
   }
 
@@ -894,7 +866,7 @@ class AuthenticationController @Inject() (
     new HmacUtils(HmacAlgorithms.HMAC_SHA_256, key).hmacHex(valueToDigest)
 
   def createOrganizationWithExistingUser: Action[CreateOrganizationWithExistingUserParams] =
-    sil.SecuredAction.async(validateJson[CreateOrganizationWithExistingUserParams]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[CreateOrganizationWithExistingUserParams]) { implicit request =>
       for {
         _ <- userService.assertIsSuperUser(request.identity)
         user <- userDAO.findOne(request.body.userId)(using GlobalAccessContext)
@@ -920,13 +892,13 @@ class AuthenticationController @Inject() (
       } yield Ok(Json.toJson(organization._id))
     }
 
-  def createOrganizationWithAdmin: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+  def createOrganizationWithAdmin: Action[AnyContent] = sil.UserAwareAction.fox { implicit request =>
     signUpForm
       .bindFromRequest()
       .fold(
-        bogusForm => Future.successful(BadRequest(bogusForm.toString)),
+        bogusForm => Fox.successful(BadRequest(bogusForm.toString)),
         signUpData =>
-          organizationService.assertMayCreateOrganization(request.identity).futureBox.flatMap {
+          organizationService.assertMayCreateOrganization(request.identity).shiftBox.flatMap {
             case Full(_) =>
               for {
                 (firstName, lastName, email, errors) <- validateNameAndEmail(
@@ -985,7 +957,9 @@ class AuthenticationController @Inject() (
   private def acceptTermsOfServiceForUser(user: User, termsOfServiceVersion: Option[Int]): Fox[Unit] =
     for {
       acceptedVersion <- termsOfServiceVersion.toFox ?~> "Terms of service must be accepted."
-      _ <- organizationService.acceptTermsOfService(user._organization, acceptedVersion)(using DBAccessContext(Some(user)))
+      _ <- organizationService.acceptTermsOfService(user._organization, acceptedVersion)(using
+        DBAccessContext(Some(user))
+      )
     } yield ()
 
   case class CreateUserInOrganizationParameters(
@@ -1002,7 +976,7 @@ class AuthenticationController @Inject() (
   }
 
   def createUserInOrganization(organizationId: String): Action[CreateUserInOrganizationParameters] =
-    sil.SecuredAction.async(validateJson[CreateUserInOrganizationParameters]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[CreateUserInOrganizationParameters]) { implicit request =>
       for {
         _ <- userService.assertIsSuperUser(request.identity._multiUser) ?~> Msg.notAllowed ~> FORBIDDEN
         organization <- organizationDAO.findOne(organizationId) ?~> Msg.Organization.notFound(organizationId)
@@ -1066,7 +1040,7 @@ class AuthenticationController @Inject() (
     (errors, fN, lN)
   }
 
-  def logoutEverywhere: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def logoutEverywhere: Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       _ <- userDAO.logOutEverywhereByMultiUserId(request.identity._multiUser)
       userIds <- userDAO.findIdsByMultiUserId(request.identity._multiUser)

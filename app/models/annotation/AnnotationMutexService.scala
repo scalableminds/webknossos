@@ -5,7 +5,8 @@ import org.apache.pekko.actor.ActorSystem
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.schema.Tables.AnnotationMutexesRow
 import com.typesafe.scalalogging.LazyLogging
@@ -23,14 +24,15 @@ case class AnnotationMutex(annotationId: ObjectId, userId: ObjectId, sessionId: 
 
 case class MutexResult(canEdit: Boolean, blockedByUser: Option[ObjectId], blockedBySessionId: Option[String])
 
-class AnnotationMutexService @Inject()(val lifecycle: ApplicationLifecycle,
-                                       val actorSystem: ActorSystem,
-                                       wkConf: WkConf,
-                                       userDAO: UserDAO,
-                                       userService: UserService,
-                                       annotationMutexDAO: AnnotationMutexDAO)(implicit val ec: ExecutionContext)
+class AnnotationMutexService @Inject() (
+    val lifecycle: ApplicationLifecycle,
+    val actorSystem: ActorSystem,
+    wkConf: WkConf,
+    userDAO: UserDAO,
+    userService: UserService,
+    annotationMutexDAO: AnnotationMutexDAO
+)(implicit val ec: ExecutionContext)
     extends IntervalScheduler
-    with FoxImplicits
     with LazyLogging {
 
   override protected def tickerInterval: FiniteDuration = 1 hour
@@ -44,11 +46,17 @@ class AnnotationMutexService @Inject()(val lifecycle: ApplicationLifecycle,
 
   def tryAcquiringAnnotationMutex(annotationId: ObjectId, userId: ObjectId, sessionId: String): Fox[MutexResult] =
     for {
-      mutex <- annotationMutexDAO.tryAcquire(annotationId, userId, sessionId, Instant.in(defaultExpiryTime)) ?~> Msg.Annotation.Mutex.acquireOrGetFailed
-      result = if (mutex.userId == userId && mutex.sessionId == sessionId)
-        MutexResult(canEdit = true, None, None)
-      else
-        MutexResult(canEdit = false, blockedByUser = Some(mutex.userId), blockedBySessionId = Some(mutex.sessionId))
+      mutex <- annotationMutexDAO.tryAcquire(
+        annotationId,
+        userId,
+        sessionId,
+        Instant.in(defaultExpiryTime)
+      ) ?~> Msg.Annotation.Mutex.acquireOrGetFailed
+      result =
+        if (mutex.userId == userId && mutex.sessionId == sessionId)
+          MutexResult(canEdit = true, None, None)
+        else
+          MutexResult(canEdit = false, blockedByUser = Some(mutex.userId), blockedBySessionId = Some(mutex.sessionId))
     } yield result
 
   def release(annotationId: ObjectId, userId: ObjectId, sessionId: String): Fox[Unit] =
@@ -58,22 +66,21 @@ class AnnotationMutexService @Inject()(val lifecycle: ApplicationLifecycle,
     for {
       userOpt <- Fox.runOptional(mutexResult.blockedByUser)(user => userDAO.findOne(user)(using GlobalAccessContext))
       userJsonOpt <- Fox.runOptional(userOpt)(user => userService.compactWrites(user))
-    } yield
-      Json.obj(
-        "canEdit" -> mutexResult.canEdit,
-        "blockedByUser" -> userJsonOpt,
-        "blockedBySessionId" -> mutexResult.blockedBySessionId
-      )
+    } yield Json.obj(
+      "canEdit" -> mutexResult.canEdit,
+      "blockedByUser" -> userJsonOpt,
+      "blockedBySessionId" -> mutexResult.blockedBySessionId
+    )
 
 }
 
-class AnnotationMutexDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class AnnotationMutexDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
   private def parse(r: AnnotationMutexesRow): AnnotationMutex =
     AnnotationMutex(
-      ObjectId(r._Annotation),
-      ObjectId(r._User),
+      ObjectId(r._annotation),
+      ObjectId(r._user),
       r.sessionid,
       Instant.fromSql(r.expiry)
     )
@@ -95,7 +102,8 @@ class AnnotationMutexDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionC
         //   - If another user holds a valid (non-expired) mutex, the DO UPDATE's WHERE is false, the
         //     update is skipped, and RETURNING yields nothing. The UNION ALL fallback then selects the
         //     current owner of the mutex.
-        rows <- run(q"""WITH attempt AS (
+        rows <- run(
+          q"""WITH attempt AS (
                           INSERT INTO webknossos.annotation_mutexes(_annotation, _user, sessionId, expiry)
                           VALUES($annotationId, $userId, $sessionId, $expiry)
                           ON CONFLICT (_annotation)
@@ -116,11 +124,12 @@ class AnnotationMutexDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionC
                         FROM webknossos.annotation_mutexes
                         WHERE _annotation = $annotationId
                           AND expiry >= NOW()
-                          AND NOT EXISTS (SELECT 1 FROM attempt)""".as[AnnotationMutexesRow]) ?~> "Upserting annotation mutex failed."
+                          AND NOT EXISTS (SELECT 1 FROM attempt)""".as[AnnotationMutexesRow]
+        ) ?~> "Upserting annotation mutex failed."
         result <- rows.headOption match {
           case Some(first)                   => Fox.successful(parse(first))
           case None if remainingAttempts > 1 => attempt(remainingAttempts - 1)
-          case None                          => Fox.failure(Msg.Annotation.Mutex.upsertingMutexInfoFailedWithMultipleAttempts)
+          case None => Fox.failure(Msg.Annotation.Mutex.upsertingMutexInfoFailedWithMultipleAttempts)
         }
       } yield result
 
@@ -133,7 +142,8 @@ class AnnotationMutexDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionC
   def deleteForUser(annotationId: ObjectId, userId: ObjectId, sessionId: String): Fox[Unit] =
     for {
       _ <- run(
-        q"DELETE FROM webknossos.annotation_mutexes WHERE _annotation = $annotationId AND _user = $userId AND sessionid = $sessionId".asUpdate)
+        q"DELETE FROM webknossos.annotation_mutexes WHERE _annotation = $annotationId AND _user = $userId AND sessionid = $sessionId".asUpdate
+      )
     } yield ()
 
   def hasMutex(userId: ObjectId, annotationId: ObjectId): Fox[Boolean] =

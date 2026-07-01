@@ -2,7 +2,8 @@ package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.tools.{Box, Fox, FoxImplicits, Full}
+import com.scalableminds.util.tools.{Box, Fox, Full}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.storage.{
   DataVaultCredential,
   HttpBasicAuthCredential,
@@ -20,8 +21,7 @@ import scala.concurrent.ExecutionContext
 
 class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, dataStoreHost: String)
     extends DataVault
-    with LazyLogging
-    with FoxImplicits {
+    with LazyLogging {
 
   private val readTimeout = 10 minutes
 
@@ -30,9 +30,10 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
 
   private lazy val dataStoreAuthority = new URI(dataStoreHost).getAuthority
 
-  override def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(
-      using ec: ExecutionContext,
-      tc: TokenContext): Fox[(Array[Byte], Encoding.Value, Option[String])] =
+  override def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[(Array[Byte], Encoding.Value, Option[String])] =
     for {
       uri <- path.toRemoteUri.toFox
       response <- range match {
@@ -42,10 +43,11 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
       }
       encoding <- Encoding.fromRfc7231String(response.header("Content-Encoding").getOrElse("")).toFox
       rangeHeader = response.header("Content-Range")
-      result <- if (Status.isSuccessful(response.status)) {
-        Fox.successful((response.bodyAsBytes.toArray, encoding, rangeHeader))
-      } else if (response.status == 404) Fox.empty
-      else Fox.failure(s"Https read failed for uri $uri: ${response.status} ${response.statusText}")
+      result <-
+        if (Status.isSuccessful(response.status)) {
+          Fox.successful((response.bodyAsBytes.toArray, encoding, rangeHeader))
+        } else if (response.status == 404) Fox.empty
+        else Fox.failure(s"Https read failed for uri $uri: ${response.status} ${response.statusText}")
     } yield result
 
   override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
@@ -60,25 +62,29 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
 
   private def getHeaderInformation(uri: URI)(implicit ec: ExecutionContext): Fox[(Boolean, Long)] =
     headerInfoCache.getOrLoad(
-      uri, { uri =>
+      uri,
+      uri =>
         for {
           response <- Fox.fromFuture(ws.url(uri.toString).withRequestTimeout(readTimeout).head())
           acceptsPartialRequests = response.headerValues("Accept-Ranges").contains("bytes")
           dataSize = response.header("Content-Length").map(_.toLong).getOrElse(0L)
         } yield (acceptsPartialRequests, dataSize)
-      }
     )
 
-  private def getWithRange(uri: URI, range: StartEndExclusiveByteRange)(using ec: ExecutionContext,
-                                                                        tc: TokenContext): Fox[WSResponse] =
+  private def getWithRange(uri: URI, range: StartEndExclusiveByteRange)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[WSResponse] =
     for {
       _ <- ensureRangeRequestsSupported(uri)
       response <- Fox.fromFuture(buildRequest(uri).withHttpHeaders("Range" -> range.toRangeHeader).get())
       _ = updateRangeRequestsSupportedForResponse(response)
     } yield response
 
-  private def getWithSuffixRange(uri: URI, range: SuffixLengthByteRange)(using ec: ExecutionContext,
-                                                                         tc: TokenContext): Fox[WSResponse] =
+  private def getWithSuffixRange(uri: URI, range: SuffixLengthByteRange)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[WSResponse] =
     for {
       _ <- ensureRangeRequestsSupported(uri)
       response <- Fox.fromFuture(buildRequest(uri).withHttpHeaders("Range" -> range.toRangeHeader).get())
@@ -92,10 +98,10 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
     for {
       supported <- supportsRangeRequests match {
         case Some(supports) => Fox.successful(supports)
-        case None =>
+        case None           =>
           for {
             headerInfos <- getHeaderInformation(uri)
-          } yield {
+          } yield
             if (!headerInfos._1) {
               // Head is not conclusive, do the range request and check the response afterwards (see updateRangeRequestsSupportedForResponse)
               true
@@ -103,7 +109,6 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
               supportsRangeRequests = Some(true)
               true
             }
-          }
       }
       _ <- Fox.fromBool(supported) ?~> s"Range requests are not supported for this data vault at $uri"
     } yield ()
@@ -153,11 +158,12 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
 
 object HttpsDataVault {
 
-  /**
-    * Factory method to create a new HttpsDataVault instance.
+  /** Factory method to create a new HttpsDataVault instance.
     * @param credentializedUpath
     * @param ws
-    * @param dataStoreHost The host of the local data store that this vault is accessing. This is used to determine if a user token should be applied in requests.
+    * @param dataStoreHost
+    *   The host of the local data store that this vault is accessing. This is used to determine if a user token should
+    *   be applied in requests.
     * @return
     */
   def create(credentializedUpath: CredentializedUPath, ws: WSClient, dataStoreHost: String): Box[HttpsDataVault] =

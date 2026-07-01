@@ -11,14 +11,13 @@ import isEqual from "lodash-es/isEqual";
 import type * as React from "react";
 import { useRef } from "react";
 import type { Rect, Viewport, ViewportRects } from "viewer/constants";
-import { ArbitraryViewport, ArbitraryViews, OrthoViews } from "viewer/constants";
+import { FlightViewport, FlightViews, OrthoViews } from "viewer/constants";
 import {
   AnnotationTool,
   type AnnotationToolId,
   adaptActiveToolToShortcuts,
 } from "viewer/model/accessors/tool_accessor";
 import { setInputCatcherRects } from "viewer/model/actions/view_mode_actions";
-import type { BusyBlockingInfo } from "viewer/store";
 import Store from "viewer/store";
 import makeRectRelativeToCanvas from "viewer/view/layouting/layout_canvas_adapter";
 import Scalebar from "viewer/view/scalebar";
@@ -104,7 +103,7 @@ export function recalculateInputCatcherSizes() {
   };
 
   for (const [viewportID, inputCatcher] of renderedInputCatchers.entries()) {
-    const makeQuadratic = viewportID === ArbitraryViewport;
+    const makeQuadratic = viewportID === FlightViewport;
     const rect = adaptInputCatcher(inputCatcher, makeQuadratic);
     viewportRects[viewportID] = rect;
   }
@@ -140,12 +139,12 @@ function InputCatcher({
   viewportID,
   children,
   displayScalebars,
-  busyBlockingInfo,
+  isBlocked,
 }: {
   viewportID: Viewport;
   children?: React.ReactNode;
   displayScalebars?: boolean;
-  busyBlockingInfo: BusyBlockingInfo;
+  isBlocked: boolean;
 }) {
   const domElementRef = useRef<HTMLElement | null>(null);
   useEffectOnlyOnce(() => {
@@ -164,7 +163,7 @@ function InputCatcher({
   const isAltPressed = useKeyPress("Alt");
 
   const adaptedTool =
-    viewportID === ArbitraryViews.arbitraryViewport
+    viewportID === FlightViews.flightViewport
       ? AnnotationTool.SKELETON
       : viewportID === OrthoViews.TDView
         ? AnnotationTool.MOVE
@@ -183,7 +182,7 @@ function InputCatcher({
       <div
         className="flexlayout-dont-overflow"
         onContextMenu={ignoreContextMenu}
-        style={{ cursor: busyBlockingInfo.isBusy ? "wait" : cursorForTool[adaptedTool.id] }}
+        style={{ cursor: isBlocked ? "wait" : cursorForTool[adaptedTool.id] }}
       >
         <div
           id={`inputcatcher_${viewportID}`}
@@ -197,13 +196,13 @@ function InputCatcher({
             // Disable inputs while WK is busy. However, keep the custom cursor and the ignoreContextMenu handler
             // which is why those are defined at the outer element.
             // Note that due to race conditions a pointer event might still get through even
-            // though WK is busy. Especially sagas should use takeEveryUnlessBusy or should
-            // explicitly check for the busy state.
-            pointerEvents: busyBlockingInfo.isBusy ? "none" : "auto",
+            // though an operation is in progress. Sagas should use takeEveryInOperationContext
+            // or createOperationContext to guard against this.
+            pointerEvents: isBlocked ? "none" : "auto",
           }}
         >
           <ViewportStatusIndicator />
-          {displayScalebars && viewportID !== "arbitraryViewport" ? (
+          {displayScalebars && viewportID !== FlightViewport ? (
             <Scalebar viewportID={viewportID} />
           ) : null}
           {children}

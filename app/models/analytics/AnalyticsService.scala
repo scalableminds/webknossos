@@ -3,7 +3,8 @@ package models.analytics
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import models.user.{MultiUserDAO, UserDAO}
@@ -19,18 +20,19 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-class AnalyticsService @Inject()(rpc: RPC,
-                                 wkConf: WkConf,
-                                 analyticsLookUpService: AnalyticsLookUpService,
-                                 analyticsSessionService: AnalyticsSessionService,
-                                 analyticsDAO: AnalyticsDAO,
-                                 userDAO: UserDAO,
-                                 buildInfoService: BuildInfoService,
-                                 val actorSystem: ActorSystem,
-                                 val lifecycle: ApplicationLifecycle)(implicit val ec: ExecutionContext)
+class AnalyticsService @Inject() (
+    rpc: RPC,
+    wkConf: WkConf,
+    analyticsLookUpService: AnalyticsLookUpService,
+    analyticsSessionService: AnalyticsSessionService,
+    analyticsDAO: AnalyticsDAO,
+    userDAO: UserDAO,
+    buildInfoService: BuildInfoService,
+    val actorSystem: ActorSystem,
+    val lifecycle: ApplicationLifecycle
+)(implicit val ec: ExecutionContext)
     extends LazyLogging
-    with IntervalScheduler
-    with FoxImplicits {
+    with IntervalScheduler {
 
   private lazy val conf = wkConf.BackendAnalytics
   private lazy val wellKnownUris = tryo(conf.wellKnownUris.map(_.split("\\|")).map(parts => (parts(0), parts(1))).toMap)
@@ -48,9 +50,13 @@ class AnalyticsService @Inject()(rpc: RPC,
   def ingest(jsonEvents: List[AnalyticsEventJson], apiKey: String): Fox[Unit] =
     for {
       resolvedWellKnownUris <- wellKnownUris.toFox ?~> "wellKnownUris configuration is incorrect"
-      _ <- Fox.fromBool(jsonEvents.forall(ev => {
-        resolvedWellKnownUris.get(ev.userProperties.webknossosUri).forall(wellKnownApiKey => wellKnownApiKey == apiKey)
-      })) ?~> "Provided API key is not correct for provided webknossosUri" ~> UNAUTHORIZED
+      _ <- Fox.fromBool(
+        jsonEvents.forall(ev =>
+          resolvedWellKnownUris
+            .get(ev.userProperties.webknossosUri)
+            .forall(wellKnownApiKey => wellKnownApiKey == apiKey)
+        )
+      ) ?~> "Provided API key is not correct for provided webknossosUri" ~> UNAUTHORIZED
       _ <- analyticsDAO.insertMany(jsonEvents)
     } yield ()
 
@@ -96,7 +102,7 @@ class AnalyticsService @Inject()(rpc: RPC,
 
 }
 
-class AnalyticsLookUpService @Inject()(userDAO: UserDAO, multiUserDAO: MultiUserDAO, wkConf: WkConf)
+class AnalyticsLookUpService @Inject() (userDAO: UserDAO, multiUserDAO: MultiUserDAO, wkConf: WkConf)
     extends LazyLogging {
   implicit val ctx: DBAccessContext = GlobalAccessContext
 
@@ -113,7 +119,7 @@ class AnalyticsLookUpService @Inject()(userDAO: UserDAO, multiUserDAO: MultiUser
   def webknossos_uri: String = wkConf.Http.uri
 }
 
-class AnalyticsSessionService @Inject()(wkConf: WkConf) extends LazyLogging {
+class AnalyticsSessionService @Inject() (wkConf: WkConf) extends LazyLogging {
   // Maintains session IDs per multiUser. The value is the start time of the session.
   // After an inactivity pause a new session id is assigned.
 

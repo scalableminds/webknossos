@@ -5,7 +5,8 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Float
 import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.datareaders.DatasetArray
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3Array
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
@@ -45,30 +46,29 @@ object MeshFileAttributes extends MeshFileUtils with VoxelyticsZarrArtifactUtils
         hashFunction <- (meshFileAttrs \ attrKeyHashFunction).validate[String]
         nBuckets <- (meshFileAttrs \ attrKeyNBuckets).validate[Long]
         mappingName <- (meshFileAttrs \ attrKeyMappingName).validateOpt[String]
-      } yield
-        MeshFileAttributes(
-          formatVersion,
-          meshFormat,
-          lodScaleMultiplier,
-          transform,
-          hashFunction,
-          nBuckets,
-          mappingName,
-        )
+      } yield MeshFileAttributes(
+        formatVersion,
+        meshFormat,
+        lodScaleMultiplier,
+        transform,
+        hashFunction,
+        nBuckets,
+        mappingName
+      )
     }
   }
 }
 
-class ZarrMeshFileService @Inject()(chunkCacheService: DSChunkCacheService, dataVaultService: DataVaultService)
-    extends FoxImplicits
-    with MeshFileUtils
+class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dataVaultService: DataVaultService)
+    extends MeshFileUtils
     with NeuroglancerMeshHelper {
 
   private lazy val openArraysCache = AlfuCache[(MeshFileKey, String), DatasetArray]()
   private lazy val attributesCache = AlfuCache[MeshFileKey, MeshFileAttributes]()
 
-  private def readMeshFileAttributesImpl(meshFileKey: MeshFileKey)(using ec: ExecutionContext,
-                                                                   tc: TokenContext): Fox[MeshFileAttributes] =
+  private def readMeshFileAttributesImpl(
+      meshFileKey: MeshFileKey
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[MeshFileAttributes] =
     for {
       groupVaultPath <- dataVaultService.vaultPathFor(meshFileKey.attachment)
       groupHeaderBytes <- (groupVaultPath / MeshFileAttributes.FILENAME_ZARR_JSON)
@@ -78,12 +78,14 @@ class ZarrMeshFileService @Inject()(chunkCacheService: DSChunkCacheService, data
         .toFox ?~> "Could not parse meshFile attributes from zarr group file."
     } yield meshFileAttributes
 
-  private def readMeshFileAttributes(meshFileKey: MeshFileKey)(using ec: ExecutionContext,
-                                                               tc: TokenContext): Fox[MeshFileAttributes] =
+  private def readMeshFileAttributes(
+      meshFileKey: MeshFileKey
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[MeshFileAttributes] =
     attributesCache.getOrLoad(meshFileKey, key => readMeshFileAttributesImpl(key))
 
-  def readMeshFileMetadata(meshFileKey: MeshFileKey)(using ec: ExecutionContext,
-                                                     tc: TokenContext): Fox[(String, Double, Array[Array[Double]])] =
+  def readMeshFileMetadata(
+      meshFileKey: MeshFileKey
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[(String, Double, Array[Array[Double]])] =
     for {
       meshFileAttributes <- readMeshFileAttributes(meshFileKey)
     } yield (meshFileAttributes.meshFormat, meshFileAttributes.lodScaleMultiplier, meshFileAttributes.transform)
@@ -93,36 +95,44 @@ class ZarrMeshFileService @Inject()(chunkCacheService: DSChunkCacheService, data
       meshFileAttributes <- readMeshFileAttributes(meshFileKey)
     } yield meshFileAttributes.formatVersion
 
-  def mappingNameForMeshFile(meshFileKey: MeshFileKey)(using ec: ExecutionContext,
-                                                       tc: TokenContext): Fox[Option[String]] =
+  def mappingNameForMeshFile(
+      meshFileKey: MeshFileKey
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Option[String]] =
     for {
       meshFileAttributes <- readMeshFileAttributes(meshFileKey)
     } yield meshFileAttributes.mappingName
 
-  def listMeshChunksForSegment(meshFileKey: MeshFileKey, segmentId: Long, meshFileAttributes: MeshFileAttributes)(
-      using ec: ExecutionContext,
-      tc: TokenContext): Fox[List[MeshLodInfo]] =
+  def listMeshChunksForSegment(meshFileKey: MeshFileKey, segmentId: Long, meshFileAttributes: MeshFileAttributes)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[List[MeshLodInfo]] =
     for {
       (neuroglancerSegmentManifestStart, neuroglancerSegmentManifestEnd) <- getNeuroglancerSegmentManifestOffsets(
         meshFileKey,
         meshFileAttributes,
-        segmentId)
+        segmentId
+      )
       neuroglancerArray <- openZarrArray(meshFileKey, keyNeuroglancer)
       manifestBytes <- neuroglancerArray.readAsMultiArray(
         offset = neuroglancerSegmentManifestStart,
-        shape = (neuroglancerSegmentManifestEnd - neuroglancerSegmentManifestStart).toInt)
-      segmentManifest <- tryo(NeuroglancerSegmentManifest.fromBytes(manifestBytes.getStorage.asInstanceOf[Array[Byte]])).toFox
-    } yield
-      enrichSegmentInfo(segmentManifest,
-                        meshFileAttributes.lodScaleMultiplier,
-                        meshFileAttributes.transform,
-                        neuroglancerSegmentManifestStart,
-                        segmentId)
+        shape = (neuroglancerSegmentManifestEnd - neuroglancerSegmentManifestStart).toInt
+      )
+      segmentManifest <- tryo(
+        NeuroglancerSegmentManifest.fromBytes(manifestBytes.getStorage.asInstanceOf[Array[Byte]])
+      ).toFox
+    } yield enrichSegmentInfo(
+      segmentManifest,
+      meshFileAttributes.lodScaleMultiplier,
+      meshFileAttributes.transform,
+      neuroglancerSegmentManifestStart,
+      segmentId
+    )
 
   private def getNeuroglancerSegmentManifestOffsets(
       meshFileKey: MeshFileKey,
       meshFileAttributes: MeshFileAttributes,
-      segmentId: Long)(using ec: ExecutionContext, tc: TokenContext): Fox[(Long, Long)] = {
+      segmentId: Long
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[(Long, Long)] = {
     val bucketIndex = meshFileAttributes.applyHashFunction(segmentId) % meshFileAttributes.nBuckets
     for {
       bucketOffsetsArray <- openZarrArray(meshFileKey, keyBucketOffsets)
@@ -133,7 +143,10 @@ class ZarrMeshFileService @Inject()(chunkCacheService: DSChunkCacheService, data
       _ <- Fox.fromBool(bucketSize > 0) ?~> s"No entry for segment $segmentId"
       bucketsArray <- openZarrArray(meshFileKey, keyBuckets)
       bucket <- bucketsArray.readAsMultiArray(offset = Array(bucketStart, 0), shape = Array(bucketSize + 1, 3))
-      bucketLocalOffset <- findLocalOffsetInBucket(bucket, segmentId).toFox ?~> s"SegmentId $segmentId not in bucket list"
+      bucketLocalOffset <- findLocalOffsetInBucket(
+        bucket,
+        segmentId
+      ).toFox ?~> s"SegmentId $segmentId not in bucket list"
       neuroglancerStart = bucket.getLong(bucket.getIndex.set(Array(bucketLocalOffset, 1)))
       neuroglancerEnd = bucket.getLong(bucket.getIndex.set(Array(bucketLocalOffset, 2)))
     } yield (neuroglancerStart, neuroglancerEnd)
@@ -142,44 +155,56 @@ class ZarrMeshFileService @Inject()(chunkCacheService: DSChunkCacheService, data
   private def findLocalOffsetInBucket(bucket: MultiArray, segmentId: Long): Option[Int] =
     (0 until bucket.getShape()(0)).find(idx => bucket.getLong(bucket.getIndex.set(Array(idx, 0))) == segmentId)
 
-  private def openZarrArray(meshFileKey: MeshFileKey, zarrArrayName: String)(using ec: ExecutionContext,
-                                                                             tc: TokenContext): Fox[DatasetArray] =
+  private def openZarrArray(meshFileKey: MeshFileKey, zarrArrayName: String)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[DatasetArray] =
     openArraysCache.getOrLoad((meshFileKey, zarrArrayName), _ => openZarrArrayImpl(meshFileKey, zarrArrayName))
 
-  private def openZarrArrayImpl(meshFileKey: MeshFileKey, zarrArrayName: String)(using ec: ExecutionContext,
-                                                                                 tc: TokenContext): Fox[DatasetArray] =
+  private def openZarrArrayImpl(meshFileKey: MeshFileKey, zarrArrayName: String)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[DatasetArray] =
     for {
       groupVaultPath <- dataVaultService.vaultPathFor(meshFileKey.attachment)
-      zarrArray <- Zarr3Array.open(groupVaultPath / zarrArrayName,
-                                   DataSourceId("dummy", "unused"),
-                                   "layer",
-                                   None,
-                                   None,
-                                   None,
-                                   chunkCacheService.sharedChunkContentsCache)
+      zarrArray <- Zarr3Array.open(
+        groupVaultPath / zarrArrayName,
+        DataSourceId("dummy", "unused"),
+        "layer",
+        None,
+        None,
+        None,
+        chunkCacheService.sharedChunkContentsCache
+      )
     } yield zarrArray
 
-  override def computeGlobalPosition(segmentInfo: NeuroglancerSegmentManifest,
-                                     lod: Int,
-                                     lodScaleMultiplier: Double,
-                                     currentChunk: Int): Vec3Float =
+  override def computeGlobalPosition(
+      segmentInfo: NeuroglancerSegmentManifest,
+      lod: Int,
+      lodScaleMultiplier: Double,
+      currentChunk: Int
+  ): Vec3Float =
     segmentInfo.gridOrigin + segmentInfo.chunkPositions(lod)(currentChunk).toVec3Float * segmentInfo.chunkShape * Math
       .pow(2, lod) * segmentInfo.lodScales(lod) * lodScaleMultiplier
 
-  override def getLodTransform(segmentInfo: NeuroglancerSegmentManifest,
-                               lodScaleMultiplier: Double,
-                               transform: Array[Array[Double]],
-                               lod: Int): Array[Array[Double]] = transform
+  override def getLodTransform(
+      segmentInfo: NeuroglancerSegmentManifest,
+      lodScaleMultiplier: Double,
+      transform: Array[Array[Double]],
+      lod: Int
+  ): Array[Array[Double]] = transform
 
-  def listMeshChunksForMultipleSegments(meshFileKey: MeshFileKey, segmentIds: Seq[Long])(
-      using ec: ExecutionContext,
-      tc: TokenContext): Fox[WebknossosSegmentInfo] =
+  def listMeshChunksForMultipleSegments(meshFileKey: MeshFileKey, segmentIds: Seq[Long])(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[WebknossosSegmentInfo] =
     for {
       meshFileAttributes <- readMeshFileAttributes(meshFileKey)
       meshChunksForUnmappedSegments: List[List[MeshLodInfo]] <- listMeshChunksForSegmentsNested(
         meshFileKey,
         segmentIds,
-        meshFileAttributes) ?~> Msg.Mesh.File.listChunksFailed(segmentIds.mkString(","), meshFileKey.attachment.name)
+        meshFileAttributes
+      ) ?~> Msg.Mesh.File.listChunksFailed(segmentIds.mkString(","), meshFileKey.attachment.name)
       _ <- Fox.fromBool(meshChunksForUnmappedSegments.nonEmpty) ?~> Msg.Mesh.File
         .zeroChunks(segmentIds.mkString(","), meshFileKey.attachment.name)
       wkChunkInfos <- WebknossosSegmentInfo
@@ -187,11 +212,11 @@ class ZarrMeshFileService @Inject()(chunkCacheService: DSChunkCacheService, data
         .toFox
     } yield wkChunkInfos
 
-  private def listMeshChunksForSegmentsNested(meshFileKey: MeshFileKey,
-                                              segmentIds: Seq[Long],
-                                              meshFileAttributes: MeshFileAttributes)(
-      using ec: ExecutionContext,
-      tc: TokenContext): Fox[List[List[MeshLodInfo]]] = {
+  private def listMeshChunksForSegmentsNested(
+      meshFileKey: MeshFileKey,
+      segmentIds: Seq[Long],
+      meshFileAttributes: MeshFileAttributes
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[List[List[MeshLodInfo]]] = {
     def lookupOne(segmentId: Long): Fox[Option[List[MeshLodInfo]]] =
       listMeshChunksForSegment(meshFileKey, segmentId, meshFileAttributes).map(Some(_)).orElse(Fox.successful(None))
     if (meshFileKey.attachment.path.isRemote)
@@ -200,9 +225,10 @@ class ZarrMeshFileService @Inject()(chunkCacheService: DSChunkCacheService, data
       Fox.serialCombined(segmentIds)(lookupOne).map(_.flatten)
   }
 
-  def readMeshChunk(meshFileKey: MeshFileKey, meshChunkDataRequests: Seq[MeshChunkDataRequest])(
-      using ec: ExecutionContext,
-      tc: TokenContext): Fox[(Array[Byte], String)] =
+  def readMeshChunk(meshFileKey: MeshFileKey, meshChunkDataRequests: Seq[MeshChunkDataRequest])(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[(Array[Byte], String)] =
     for {
       meshFileAttributes <- readMeshFileAttributes(meshFileKey)
 
@@ -214,8 +240,10 @@ class ZarrMeshFileService @Inject()(chunkCacheService: DSChunkCacheService, data
       data: List[(Array[Byte], Int)] <- Fox.serialCombined(requestsReordered) { requestAndIndex =>
         val meshChunkDataRequest = requestAndIndex._1
         for {
-          dataAsMultiArray <- neuroglancerArray.readAsMultiArray(offset = meshChunkDataRequest.byteOffset,
-                                                                 meshChunkDataRequest.byteSize)
+          dataAsMultiArray <- neuroglancerArray.readAsMultiArray(
+            offset = meshChunkDataRequest.byteOffset,
+            meshChunkDataRequest.byteSize
+          )
         } yield (dataAsMultiArray.getStorage.asInstanceOf[Array[Byte]], requestAndIndex._2)
       }
       dataSorted = data.sortBy(d => d._2)
@@ -227,9 +255,8 @@ class ZarrMeshFileService @Inject()(chunkCacheService: DSChunkCacheService, data
       meshFileKey.dataSourceId == dataSourceId && layerNameOpt.forall(meshFileKey.layerName == _)
     }
 
-    openArraysCache.clear {
-      case (meshFileKey, _) =>
-        meshFileKey.dataSourceId == dataSourceId && layerNameOpt.forall(meshFileKey.layerName == _)
+    openArraysCache.clear { case (meshFileKey, _) =>
+      meshFileKey.dataSourceId == dataSourceId && layerNameOpt.forall(meshFileKey.layerName == _)
     }
   }
 }

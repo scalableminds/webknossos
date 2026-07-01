@@ -5,7 +5,8 @@ import play.silhouette.api.Silhouette
 import play.silhouette.api.actions.UserAwareRequest
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.mvc.CspHeaders
-import com.scalableminds.util.tools.{Box, Fox, FoxImplicits, TextUtils}
+import com.scalableminds.util.tools.{Box, Fox, TextUtils}
+import com.scalableminds.util.tools.Fox.toFox
 import models.user.{MultiUser, MultiUserDAO, Theme}
 import opengraph.{OpenGraphService, OpenGraphTags}
 import play.api.mvc.{Action, AnyContent}
@@ -19,36 +20,45 @@ import scala.io.Source
 import scala.concurrent.ExecutionContext
 import scala.util.matching.Regex
 
-class AboutPageRedirectController @Inject()(conf: WkConf,
-                                            sil: Silhouette[WkEnv],
-                                            val cspConfig: CSPConfig,
-                                            multiUserDAO: MultiUserDAO,
-                                            openGraphService: OpenGraphService,
-                                            environment: Environment)(implicit ec: ExecutionContext)
+class AboutPageRedirectController @Inject() (
+    conf: WkConf,
+    sil: Silhouette[WkEnv],
+    val cspConfig: CSPConfig,
+    multiUserDAO: MultiUserDAO,
+    openGraphService: OpenGraphService,
+    environment: Environment
+)(implicit ec: ExecutionContext)
     extends Controller
-    with FoxImplicits
     with CspHeaders {
 
-  def redirectToAboutPageOrSendMainView: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+  def redirectToAboutPageOrSendMainView: Action[AnyContent] = sil.UserAwareAction.fox { implicit request =>
     if (matchesRedirectRoute(request)) {
       val status = if (request.uri == "/") SEE_OTHER else MOVED_PERMANENTLY
       Fox.successful(Redirect(conf.AboutPageRedirect.prefix + request.uri, status = status))
     } else {
       for {
         multiUserOpt <- Fox.runOptional(request.identity)(user =>
-          multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext))
+          multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
+        )
         openGraphTags <- openGraphService.getOpenGraphTags(
           request.path,
-          request.getQueryString("sharingToken").orElse(request.getQueryString("token")))
+          request.getQueryString("sharingToken").orElse(request.getQueryString("token"))
+        )
         mainViewTemplate <- mainViewTemplateOpt.toFox ?~> "Could not load main view template"
-        mainView <- renderMainViewFromTemplate(mainViewTemplate, multiUserOpt, openGraphTags).toFox ?~> "Could not render main view template"
+        mainView <- renderMainViewFromTemplate(
+          mainViewTemplate,
+          multiUserOpt,
+          openGraphTags
+        ).toFox ?~> "Could not render main view template"
       } yield addCspHeader(Ok(mainView).as("text/html"))
     }
   }
 
-  private def renderMainViewFromTemplate(mainViewTemplate: String,
-                                         multiUserOpt: Option[MultiUser],
-                                         openGraphTags: OpenGraphTags): Box[String] = {
+  private def renderMainViewFromTemplate(
+      mainViewTemplate: String,
+      multiUserOpt: Option[MultiUser],
+      openGraphTags: OpenGraphTags
+  ): Box[String] = {
     val themeName = multiUserOpt.map(_.selectedTheme).getOrElse(Theme.auto).toString
     TextUtils.renderTemplateReplacements(
       mainViewTemplate,
@@ -67,7 +77,7 @@ class AboutPageRedirectController @Inject()(conf: WkConf,
     multiUserOpt.map(_.selectedTheme) match {
       case Some(Theme.dark)  => "<style>html { background: black }</style>"
       case Some(Theme.light) => ""
-      case _ =>
+      case _                 =>
         "<style>@media (prefers-color-scheme: dark) { html { background: black } }</style>"
     }
 
@@ -102,7 +112,8 @@ class AboutPageRedirectController @Inject()(conf: WkConf,
 
   private def matchesRedirectRoute(request: UserAwareRequest[WkEnv, AnyContent]): Boolean =
     conf.Features.isWkorgInstance && conf.AboutPageRedirect.routes.exists(route =>
-      matchesRouteWithWildcard(route, request.path)) && (request.identity.isEmpty || request.uri != "/")
+      matchesRouteWithWildcard(route, request.path)
+    ) && (request.identity.isEmpty || request.uri != "/")
 
   private def matchesRouteWithWildcard(routeWithWildcard: String, actualRequest: String): Boolean = {
     val wildcardRegex = "^" + Regex.quote(routeWithWildcard).replace("*", "\\E.*\\Q") + "$"

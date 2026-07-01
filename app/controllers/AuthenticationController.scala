@@ -244,40 +244,46 @@ class AuthenticationController @Inject() (
       .fold(
         bogusForm => Fox.successful(BadRequest(bogusForm.toString)),
         signUpData =>
-          for {
-            (firstName, lastName, email, errors) <- validateNameAndEmail(
-              signUpData.firstName,
-              signUpData.lastName,
-              signUpData.email
-            )
-            result <-
-              if (errors.nonEmpty) {
-                Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
-              } else {
-                for {
-                  inviteBox <- inviteService.findInviteByTokenOpt(signUpData.inviteToken).shiftBox
-                  _ <- Fox.fromBool(
-                    inviteBox.isDefined || conf.Features.registerToDefaultOrgaEnabled
-                  ) ?~> Msg.User.needsInvite
-                  organization <- organizationService
-                    .findOneByInviteOrDefault(inviteBox.toOption)(using GlobalAccessContext)
-                  _ <- organizationService.assertUsersCanBeAdded(organization._id)(using
-                    GlobalAccessContext,
-                    ec
-                  ) ?~> Msg.Organization.usersUserLimitReached
-                  autoActivate = inviteBox.toOption.map(_.autoActivate).getOrElse(organization.enableAutoVerify)
-                  _ <- createUser(
-                    organization,
-                    email,
-                    firstName,
-                    lastName,
-                    autoActivate,
-                    Option(signUpData.password),
-                    inviteBox
+          if (signUpData.honeypot.exists(_.nonEmpty)) {
+            Fox.successful(BadRequest)
+          } else {
+            for {
+              (firstName, lastName, email, errors) <- validateNameAndEmail(
+                signUpData.firstName,
+                signUpData.lastName,
+                signUpData.email
+              )
+              result <-
+                if (errors.nonEmpty) {
+                  Fox.successful(
+                    BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t)))))
                   )
-                } yield Ok
-              }
-          } yield result
+                } else {
+                  for {
+                    inviteBox <- inviteService.findInviteByTokenOpt(signUpData.inviteToken).shiftBox
+                    _ <- Fox.fromBool(
+                      inviteBox.isDefined || conf.Features.registerToDefaultOrgaEnabled
+                    ) ?~> Msg.User.needsInvite
+                    organization <- organizationService
+                      .findOneByInviteOrDefault(inviteBox.toOption)(using GlobalAccessContext)
+                    _ <- organizationService.assertUsersCanBeAdded(organization._id)(using
+                      GlobalAccessContext,
+                      ec
+                    ) ?~> Msg.Organization.usersUserLimitReached
+                    autoActivate = inviteBox.toOption.map(_.autoActivate).getOrElse(organization.enableAutoVerify)
+                    _ <- createUser(
+                      organization,
+                      email,
+                      firstName,
+                      lastName,
+                      autoActivate,
+                      Option(signUpData.password),
+                      inviteBox
+                    )
+                  } yield Ok
+                }
+            } yield result
+          }
       )
   }
 
@@ -898,58 +904,63 @@ class AuthenticationController @Inject() (
       .fold(
         bogusForm => Fox.successful(BadRequest(bogusForm.toString)),
         signUpData =>
-          organizationService.assertMayCreateOrganization(request.identity).shiftBox.flatMap {
-            case Full(_) =>
-              for {
-                (firstName, lastName, email, errors) <- validateNameAndEmail(
-                  signUpData.firstName,
-                  signUpData.lastName,
-                  signUpData.email
-                )
-                result <-
-                  if (errors.nonEmpty) {
-                    Fox.successful(
-                      BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t)))))
-                    )
-                  } else {
-                    for {
-                      _ <- initialDataService.insertLocalDataStoreIfEnabled()
-                      organization <- organizationService.createOrganization(
-                        Option(signUpData.organization).filter(_.trim.nonEmpty),
-                        signUpData.organizationName
-                      ) ?~> Msg.Organization.Create.failed
-                      teamMemberships <- userService.initialTeamMemberships(organization._id, inviteIdOpt = None)
-                      user <- userService.insert(
-                        organization._id,
-                        email,
-                        firstName,
-                        lastName,
-                        isActive = true,
-                        passwordHasher.hash(signUpData.password),
-                        isAdmin = true,
-                        isDatasetManager = false,
-                        isOrganizationOwner = true,
-                        isEmailVerified = false,
-                        teamMemberships = teamMemberships
-                      ) ?~> Msg.User.createFailed
-                      _ = analyticsService.track(SignupEvent(user, hadInvite = false))
-                      multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
-                      _ <- organizationService
-                        .createOrganizationDirectory(organization._id) ?~> Msg.Organization.Create.directoryCreateFailed
-                      _ <- Fox.runIf(conf.WebKnossos.TermsOfService.enabled)(
-                        acceptTermsOfServiceForUser(user, signUpData.acceptedTermsOfService)
+          if (signUpData.honeypot.exists(_.nonEmpty)) {
+            Fox.successful(BadRequest)
+          } else {
+            organizationService.assertMayCreateOrganization(request.identity).shiftBox.flatMap {
+              case Full(_) =>
+                for {
+                  (firstName, lastName, email, errors) <- validateNameAndEmail(
+                    signUpData.firstName,
+                    signUpData.lastName,
+                    signUpData.email
+                  )
+                  result <-
+                    if (errors.nonEmpty) {
+                      Fox.successful(
+                        BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t)))))
                       )
-                      _ = Mailer ! Send(
-                        defaultMails
-                          .newOrganizationMail(organization.name, email, request.headers.get("Host").getOrElse(""))
-                      )
-                      _ = if (conf.Features.isWkorgInstance) {
-                        mailchimpClient.registerUser(user, multiUser, MailchimpTag.RegisteredAsAdmin)
-                      }
-                    } yield Ok
-                  }
-              } yield result
-            case _ => Fox.failure(Msg.Organization.Create.forbidden)
+                    } else {
+                      for {
+                        _ <- initialDataService.insertLocalDataStoreIfEnabled()
+                        organization <- organizationService.createOrganization(
+                          Option(signUpData.organization).filter(_.trim.nonEmpty),
+                          signUpData.organizationName
+                        ) ?~> Msg.Organization.Create.failed
+                        teamMemberships <- userService.initialTeamMemberships(organization._id, inviteIdOpt = None)
+                        user <- userService.insert(
+                          organization._id,
+                          email,
+                          firstName,
+                          lastName,
+                          isActive = true,
+                          passwordHasher.hash(signUpData.password),
+                          isAdmin = true,
+                          isDatasetManager = false,
+                          isOrganizationOwner = true,
+                          isEmailVerified = false,
+                          teamMemberships = teamMemberships
+                        ) ?~> Msg.User.createFailed
+                        _ = analyticsService.track(SignupEvent(user, hadInvite = false))
+                        multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
+                        _ <- organizationService.createOrganizationDirectory(
+                          organization._id
+                        ) ?~> Msg.Organization.Create.directoryCreateFailed
+                        _ <- Fox.runIf(conf.WebKnossos.TermsOfService.enabled)(
+                          acceptTermsOfServiceForUser(user, signUpData.acceptedTermsOfService)
+                        )
+                        _ = Mailer ! Send(
+                          defaultMails
+                            .newOrganizationMail(organization.name, email, request.headers.get("Host").getOrElse(""))
+                        )
+                        _ = if (conf.Features.isWkorgInstance) {
+                          mailchimpClient.registerUser(user, multiUser, MailchimpTag.RegisteredAsAdmin)
+                        }
+                      } yield Ok
+                    }
+                } yield result
+              case _ => Fox.failure(Msg.Organization.Create.forbidden)
+            }
           }
       )
   }
@@ -1075,7 +1086,8 @@ trait AuthForms {
       lastName: String,
       password: String,
       inviteToken: Option[String],
-      acceptedTermsOfService: Option[Int]
+      acceptedTermsOfService: Option[Int],
+      honeypot: Option[String]
   )
 
   def signUpForm: Form[SignUpData] =
@@ -1091,9 +1103,20 @@ trait AuthForms {
         "firstName" -> nonEmptyText,
         "lastName" -> nonEmptyText,
         "inviteToken" -> optional(nonEmptyText),
-        "acceptedTermsOfService" -> optional(number)
-      )((organization, organizationName, email, password, firstName, lastName, inviteToken, acceptTos) =>
-        SignUpData(organization, organizationName, email, firstName, lastName, password._1, inviteToken, acceptTos)
+        "acceptedTermsOfService" -> optional(number),
+        "phone" -> optional(text) // honeypot field
+      )((organization, organizationName, email, password, firstName, lastName, inviteToken, acceptTos, honeypot) =>
+        SignUpData(
+          organization,
+          organizationName,
+          email,
+          firstName,
+          lastName,
+          password._1,
+          inviteToken,
+          acceptTos,
+          honeypot
+        )
       )(signUpData =>
         Some(
           (
@@ -1104,7 +1127,8 @@ trait AuthForms {
             signUpData.firstName,
             signUpData.lastName,
             signUpData.inviteToken,
-            signUpData.acceptedTermsOfService
+            signUpData.acceptedTermsOfService,
+            signUpData.honeypot
           )
         )
       )

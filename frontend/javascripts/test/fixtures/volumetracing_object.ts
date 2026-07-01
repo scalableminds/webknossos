@@ -101,7 +101,7 @@ const stateWithoutDatasetInitialization = update(defaultState, {
         },
       },
     },
-    arbitrary: {
+    flight: {
       $set: {
         inputCatcherRect: notEmptyViewportRect,
       },

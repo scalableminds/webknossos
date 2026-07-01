@@ -10,8 +10,8 @@ import {
   WebGLRenderTarget,
 } from "three";
 import constants, {
-  ARBITRARY_CAM_DISTANCE,
-  ArbitraryViewport,
+  FLIGHT_CAM_DISTANCE,
+  FlightViewport,
   type OrthoView,
   OrthoViewColors,
   OrthoViews,
@@ -46,7 +46,7 @@ export const clearCanvas = (renderer: WebGLRenderer) => {
   renderer.clear();
 };
 export function renderToTexture(
-  plane: OrthoView | typeof ArbitraryViewport,
+  plane: OrthoView | typeof FlightViewport,
   scene?: Scene,
   camera?: OrthographicCamera | PerspectiveCamera,
   // When withFarClipping is true, the user-specified clipping distance is used.
@@ -70,15 +70,13 @@ export function renderToTexture(
     function adaptCameraToCurrentClippingDistance<T extends OrthographicCamera | PerspectiveCamera>(
       camera: T,
     ): T {
-      const isArbitraryMode = constants.MODES_ARBITRARY.includes(
-        state.temporaryConfiguration.viewMode,
-      );
+      const isFlightMode = state.temporaryConfiguration.viewMode === constants.MODE_FLIGHT;
       const adaptedCamera = camera.clone() as T;
-      // The near value is already set in the camera (done in the CameraController/ArbitraryView).
-      if (isArbitraryMode) {
+      // The near value is already set in the camera (done in the CameraController/FlightModeView).
+      if (isFlightMode) {
         // The far value has to be set, since in normal rendering the far clipping is
         // achieved by the data plane which is not rendered during node picking
-        adaptedCamera.far = ARBITRARY_CAM_DISTANCE;
+        adaptedCamera.far = FLIGHT_CAM_DISTANCE;
       } else {
         // The far value has to be set, since in normal rendering the far clipping is
         // achieved by offsetting the plane instead of setting the far property.
@@ -103,7 +101,7 @@ export function renderToTexture(
   if (enableAntialiasing) renderTarget.samples = 4;
   const buffer = new Uint8Array(width * height * 4);
 
-  if (plane !== ArbitraryViewport) {
+  if (plane !== FlightViewport) {
     SceneController.updateSceneForCam(plane);
   }
 
@@ -132,8 +130,8 @@ export async function captureScreenshots(prefix?: string): Promise<ScreenshotBlo
   const [x, y, z] = getFlooredPosition(flycam);
   const positionSuffix = `${datasetName}__${x}_${y}_${z}`;
   const baseName = prefix != null ? `${prefix}__${positionSuffix}` : positionSuffix;
-  const planeIds: Array<OrthoView | typeof ArbitraryViewport> =
-    viewMode === constants.MODE_PLANE_TRACING ? OrthoViewValues : [ArbitraryViewport];
+  const planeIds: Array<OrthoView | typeof FlightViewport> =
+    viewMode === constants.MODE_PLANE_TRACING ? OrthoViewValues : [FlightViewport];
   const logo = renderWatermark ? await getScreenshotLogoImage() : null;
 
   const results: ScreenshotBlob[] = [];
@@ -141,7 +139,7 @@ export async function captureScreenshots(prefix?: string): Promise<ScreenshotBlo
   for (const planeId of planeIds) {
     const { width, height } = getInputCatcherRect(Store.getState(), planeId);
     if (width === 0 || height === 0) continue;
-    const clearColor = planeId !== "arbitraryViewport" ? OrthoViewColors[planeId] : 0xffffff;
+    const clearColor = planeId !== FlightViewport ? OrthoViewColors[planeId] : 0xffffff;
 
     // Always anti-alias when creating screenshots since it looks better and performance is mostly irrelevant
     const buffer = renderToTexture(planeId, undefined, undefined, false, clearColor, true);

@@ -88,7 +88,7 @@ export function isConcurrentCollaborationMode(state: WebknossosState) {
   // annotation at the same time. In this mode, normal skeleton editing is forbidden
   // because it would interfere with concurrent edits/rebasing. Only proofreading
   // (which operates on agglomerate trees) is allowed.
-  return isConcurrentCollaborationMode(state);
+  return state.annotation.collaborationMode === "Concurrent";
 }
 
 export function isAgglomerateTree(tree: Tree | null | undefined): boolean {

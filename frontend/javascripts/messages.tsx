@@ -34,7 +34,7 @@ export const settings: Partial<Record<keyof RecommendedConfiguration, string>> =
   segmentationOpacity: "Segmentation Opacity",
   zoom: "Zoom",
   renderMissingDataBlack: "Render Missing Data Black",
-  clippingDistanceArbitrary: "Clipping Distance",
+  clippingDistanceFlight: "Clipping Distance",
   mouseRotateValue: "Mouse Rotation",
   rotateValue: "Keyboard Rotation",
   sphericalCapRadius: "Sphere Radius",
@@ -203,7 +203,8 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.no_access": "You are not allowed to access this annotation.",
   "tracing.compound_project_not_found":
     "It looks like this project does not have a single task completed. Make sure that at least one task of this project is finished to view it.",
-  "tracing.no_allowed_mode": "There was no valid allowed annotation mode specified.",
+  "tracing.no_allowed_mode":
+    "There was no valid allowed annotation mode specified. Defaulting to orthogonal mode.",
   "tracing.read_only_mode_notification": (isAnnotationLockedByUser: boolean, isOwner: boolean) =>
     isAnnotationLockedByUser
       ? `This annotation is in read-only mode and cannot be updated. It is currently locked by ${

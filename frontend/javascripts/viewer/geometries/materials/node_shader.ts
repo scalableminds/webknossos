@@ -330,7 +330,7 @@ void main() {
         : v_innerPointSize * 1.5;
       gl_PointSize = v_outerPointSize;
 
-      // Shift hue to further highlight active node in arbitrary mode.
+      // Shift hue to further highlight active node in flight mode.
       color = shiftHue(color, isOrthogonalMode ? 0. : 0.15);
     }
 

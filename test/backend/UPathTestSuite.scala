@@ -195,6 +195,9 @@ class UPathTestSuite extends AsyncWordSpec {
     "reject double leading slash in zip inner path" in
       assert(UPath.fromString("s3://bucket/archive.zip|zip://inner/file.bin").isEmpty)
 
+    "reject nested zip paths" in
+      assert(UPath.fromString("s3://bucket/outer.zip|zip:inner.zip|zip:deep/file.bin").isEmpty)
+
     "round-trip ZipEntryUPath through JSON" in {
       import play.api.libs.json.Json
       val upath = UPath.fromStringUnsafe("s3://bucket/archive.zip|zip:inner/file.bin")
@@ -208,6 +211,25 @@ class UPathTestSuite extends AsyncWordSpec {
       assert(upath.toString == "/local/data.zip|zip:subdir/entry.txt")
       assert(upath.isLocal)
       assert(upath.basename == "entry.txt")
+    }
+
+    "navigate ZipEntryUPath parent for empty and single-segment inner paths" in {
+      // root reference: parent should be the outer path itself
+      val zipRoot = UPath.fromStringUnsafe("s3://bucket/archive.zip|zip")
+      assert(zipRoot.parent.toString == "s3://bucket/archive.zip")
+      // single-segment inner path: parent should also be the outer path
+      val zipSingle = UPath.fromStringUnsafe("s3://bucket/archive.zip|zip:file.txt")
+      assert(zipSingle.parent.toString == "s3://bucket/archive.zip")
+    }
+
+    "correctly answer startsWith for ZipEntryUPath" in {
+      checkStartsWith("s3://bucket/a.zip|zip:inner/file.bin", "s3://bucket/a.zip|zip:inner")
+      checkStartsWith("s3://bucket/a.zip|zip:inner/file.bin", "s3://bucket/a.zip|zip")
+      checkStartsWith("s3://bucket/a.zip|zip:inner", "s3://bucket/a.zip")
+      checkStartsWith("s3://bucket/a.zip|zip:inner", "s3://bucket")
+      checkStartsNotWith("s3://bucket/a.zip|zip:inner/file.bin", "s3://bucket/b.zip|zip:inner")
+      checkStartsNotWith("s3://bucket/a.zip|zip:inner", "s3://bucket/a.zip|zip:other")
+      checkStartsNotWith("s3://bucket/a.zip|zip:inner", "s3://bucket/a.zip|zip:in")
     }
   }
 

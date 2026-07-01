@@ -42,8 +42,10 @@ class FileSystemDataVault extends DataVault {
           } yield (bytes, r.toContentRangeHeaderWithLength(fileSize))
         case r: SuffixLengthByteRange =>
           val fileSize = Files.size(localPath)
+          val start = Math.max(0L, fileSize - r.length)
+          val length = Math.toIntExact(fileSize - start)
           for {
-            bytes <- readAsync(localPath, fileSize - r.length, r.length)
+            bytes <- readAsync(localPath, start, length)
           } yield (bytes, r.toContentRangeHeaderWithLength(fileSize))
       }
     } else {

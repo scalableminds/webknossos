@@ -19,7 +19,6 @@ trait UPath {
   def /(other: ObjectId): UPath =
     this / other.toString
 
-  // TODO consider allowing this only in well-defined cases
   def /(other: UPath): UPath =
     other match {
       case ZipEntryUPath(outerPath, innerPath) => ZipEntryUPath(this / outerPath, innerPath)
@@ -104,44 +103,52 @@ object UPath {
   def fromString(literal: String): Box[UPath] = tryo(fromStringUnsafe(literal))
 
   // Warning: throws! Prefer fromString (returns Box) for user-supplied input
-  def fromStringUnsafe(literal: String): UPath = {
-    // TODO simplify or extract
-    // Detect "|zip:path" (entry) or "|zip" at end (root reference, inner path = "").
-    // Per spec, two or more leading slashes in the inner path are an error.
-    val withColonIdx = literal.indexOf(ZipEntryUPath.separatorWithPath)
-    val rootRefIdx =
-      if (literal.endsWith(ZipEntryUPath.separatorRoot) && withColonIdx < 0)
+  def fromStringUnsafe(literal: String): UPath =
+    parseZipSeparator(literal) match {
+      case Some((outerLiteral, innerPath)) => ZipEntryUPath(fromStringUnsafe(outerLiteral), innerPath)
+      case None                            =>
+        val schemeOpt = if (literal.contains(schemeSeparator)) literal.split(schemeSeparator).headOption else None
+        schemeOpt match {
+          case None                                                    => fromLocalPath(Path.of(literal))
+          case Some(scheme) if scheme.contains(PathSchemes.schemeFile) =>
+            val nioPath = Path.of(literal.drop(s"$scheme$schemeSeparator".length))
+            if (!nioPath.isAbsolute)
+              throw new Exception(
+                s"Trying to construct relative UPath $nioPath. Must either be absolute or have no scheme."
+              )
+            fromLocalPath(nioPath)
+          case Some(scheme) =>
+            RemoteUPath(
+              scheme,
+              segments = literal.drop(s"$scheme$schemeSeparator".length).split(separator, splitKeepLastIfEmpty).toSeq
+            ).normalize
+        }
+    }
+
+  // Detect "|zip:path" (entry) or "|zip" at end (root reference, inner path = "").
+  private def parseZipSeparator(literal: String): Option[(String, String)] = {
+    val separatorWithPathIdx = literal.indexOf(ZipEntryUPath.separatorWithPath)
+    val separatorRootIdx =
+      if (literal.endsWith(ZipEntryUPath.separatorRoot) && separatorWithPathIdx < 0)
         literal.length - ZipEntryUPath.separatorRoot.length
       else -1
-    if (withColonIdx >= 0 || rootRefIdx >= 0) {
+    if (separatorWithPathIdx >= 0 || separatorRootIdx >= 0) {
       val (outerLiteral, innerPath) =
-        if (withColonIdx >= 0)
-          (literal.substring(0, withColonIdx), literal.substring(withColonIdx + ZipEntryUPath.separatorWithPath.length))
+        if (separatorWithPathIdx >= 0)
+          (
+            literal.substring(0, separatorWithPathIdx),
+            literal.substring(separatorWithPathIdx + ZipEntryUPath.separatorWithPath.length)
+          )
         else
-          (literal.substring(0, rootRefIdx), "")
+          (literal.substring(0, separatorRootIdx), "")
+      if (outerLiteral.contains(ZipEntryUPath.separatorWithPath) || outerLiteral.endsWith(ZipEntryUPath.separatorRoot))
+        throw new Exception(s"Nested zip paths are not supported: $literal")
       if (innerPath.startsWith("//"))
         throw new Exception(
-          s"Invalid zip inner path '$innerPath': multiple leading slashes are not allowed (per zip: URL spec)"
+          s"Invalid zip inner path “$innerPath”: multiple leading slashes are not allowed"
         )
-      ZipEntryUPath(fromStringUnsafe(outerLiteral), innerPath.stripPrefix("/"))
-    } else {
-      val schemeOpt = if (literal.contains(schemeSeparator)) literal.split(schemeSeparator).headOption else None
-      schemeOpt match {
-        case None                                                    => fromLocalPath(Path.of(literal))
-        case Some(scheme) if scheme.contains(PathSchemes.schemeFile) =>
-          val nioPath = Path.of(literal.drop(s"$scheme$schemeSeparator".length))
-          if (!nioPath.isAbsolute)
-            throw new Exception(
-              s"Trying to construct relative UPath $nioPath. Must either be absolute or have no scheme."
-            )
-          fromLocalPath(nioPath)
-        case Some(scheme) =>
-          RemoteUPath(
-            scheme,
-            segments = literal.drop(s"$scheme$schemeSeparator".length).split(separator, splitKeepLastIfEmpty).toSeq
-          ).normalize
-      }
-    }
+      Some((outerLiteral, innerPath.stripPrefix("/")))
+    } else None
   }
 
   def fromLocalPath(localPath: Path): UPath = LocalUPath(localPath.normalize())

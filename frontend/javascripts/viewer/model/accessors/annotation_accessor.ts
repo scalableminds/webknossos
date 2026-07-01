@@ -1,4 +1,5 @@
 import size from "lodash-es/size";
+import messages from "messages";
 import type {
   APIAnnotationInfo,
   APIAnnotationUserState,
@@ -105,6 +106,26 @@ export function mayEditSkeletonTree(state: WebknossosState, tree: Tree | null | 
     return true;
   }
   return isAgglomerateTree(tree);
+}
+
+export function getReasonForCantEditSkeletonTree(
+  state: WebknossosState,
+  tree: Tree | null | undefined,
+): string | null {
+  // If mayEditSkeletonTree is false, getReasonForCantEditSkeletonTree will provide a human-readable reason for that. Otherwise, null will be returned.
+  const isConcurrentCollabMode = isConcurrentCollaborationMode(state);
+  const isActiveTreeAgglomerate = isAgglomerateTree(tree);
+
+  if (!mayEditAnnotation(state)) {
+    const isAnnotationLockedByUser = state.annotation.isLockedByOwner;
+    const isOwner = isAnnotationOwner(state);
+    return messages["tracing.read_only_mode_notification"](isAnnotationLockedByUser, isOwner);
+  }
+  if (isConcurrentCollabMode && !isActiveTreeAgglomerate) {
+    return messages["tracing.skeleton_editing_disabled_in_live_collab"];
+  }
+
+  return null;
 }
 
 export function mayEditAnnotationViewConfig(state: WebknossosState) {

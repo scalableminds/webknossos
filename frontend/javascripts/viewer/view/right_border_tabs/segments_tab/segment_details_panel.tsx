@@ -31,6 +31,7 @@ export const SegmentDetailsPanel: React.FC<SegmentDetailsPanelProps> = ({
   allowUpdate,
 }) => {
   const dispatch = useDispatch();
+  const readOnly = !allowUpdate;
 
   const setMetadata = useCallback(
     (segment: Segment, newProperties: MetadataEntryProto[]) => {
@@ -52,7 +53,7 @@ export const SegmentDetailsPanel: React.FC<SegmentDetailsPanelProps> = ({
 
   const renameActiveSegment = useCallback(
     (newName: string) => {
-      if (visibleSegmentationLayer == null) {
+      if (visibleSegmentationLayer == null || readOnly) {
         return;
       }
       const { segments: activeSegments } = selectedIds;
@@ -74,11 +75,10 @@ export const SegmentDetailsPanel: React.FC<SegmentDetailsPanelProps> = ({
         ),
       );
     },
-    [dispatch, selectedIds, segments, visibleSegmentationLayer],
+    [dispatch, selectedIds, segments, visibleSegmentationLayer, readOnly],
   );
 
   const { segments: selectedSegmentIds, group: selectedGroupId } = selectedIds;
-  const readOnly = !allowUpdate;
 
   if (selectedSegmentIds.length === 1) {
     const segment = segments?.getNullable(selectedSegmentIds[0]);
@@ -127,7 +127,7 @@ export const SegmentDetailsPanel: React.FC<SegmentDetailsPanelProps> = ({
                 value={activeGroup.name || ""}
                 disabled={readOnly}
                 onChange={(newName) => {
-                  if (visibleSegmentationLayer == null) {
+                  if (visibleSegmentationLayer == null || readOnly) {
                     return;
                   }
                   api.tracing.renameSegmentGroup(

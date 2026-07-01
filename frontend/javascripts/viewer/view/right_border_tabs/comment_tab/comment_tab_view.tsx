@@ -34,12 +34,14 @@ import { useDispatch } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
 import type { Comparator } from "types/type_utils";
 import {
-  isAgglomerateTree,
-  isAnnotationOwner,
-  isConcurrentCollaborationMode,
-  mayEditAnnotation,
+  getReasonForCantEditSkeletonTree,
+  mayEditSkeletonTree,
 } from "viewer/model/accessors/annotation_accessor";
-import { getActiveNode, getSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
+import {
+  getActiveNode,
+  getActiveTree,
+  getSkeletonTracing,
+} from "viewer/model/accessors/skeletontracing_accessor";
 import {
   createCommentAction,
   deleteCommentAction,
@@ -137,10 +139,6 @@ function CommentTabView(props: Props) {
   const keyboardShortcutsConfig = useWkSelector(
     (state) => state.keyboardConfiguration.shortcutsConfig,
   );
-  const allowUpdate = useWkSelector(mayEditAnnotation);
-  const isConcurrentCollabMode = useWkSelector(isConcurrentCollaborationMode);
-  const isAnnotationLockedByUser = useWkSelector((state) => state.annotation.isLockedByOwner);
-  const isOwner = useWkSelector((state) => isAnnotationOwner(state));
 
   const activeComment = getActiveComment();
 
@@ -435,19 +433,13 @@ function CommentTabView(props: Props) {
   const activeCommentContent = activeComment?.content.replace(/\r?\n/g, "\\n");
   const isMultilineComment = activeCommentContent?.indexOf("\\n") !== -1;
   const activeNode = getActiveNode(props.skeletonTracing);
-  const activeTree =
-    props.skeletonTracing.activeTreeId != null
-      ? props.skeletonTracing.trees.getNullable(props.skeletonTracing.activeTreeId)
-      : null;
-  const isActiveTreeAgglomerate = isAgglomerateTree(activeTree);
-  const isEditingDisabled =
-    activeNode == null || !allowUpdate || (isConcurrentCollabMode && !isActiveTreeAgglomerate);
-
-  const isEditingDisabledMessage = !allowUpdate
-    ? messages["tracing.read_only_mode_notification"](isAnnotationLockedByUser, isOwner)
-    : isConcurrentCollabMode && !isActiveTreeAgglomerate
-      ? messages["tracing.skeleton_editing_disabled_in_live_collab"]
-      : undefined;
+  const activeTree = getActiveTree(props.skeletonTracing);
+  const isEditingDisabled = useWkSelector(
+    (state) => activeNode == null || !mayEditSkeletonTree(state, activeTree),
+  );
+  const isEditingDisabledMessage = useWkSelector((state) =>
+    getReasonForCantEditSkeletonTree(state, activeTree),
+  );
 
   return (
     <div

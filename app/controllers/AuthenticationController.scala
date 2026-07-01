@@ -1056,7 +1056,7 @@ class AuthenticationController @Inject() (
   }
 
   private def notifyOnSuspiciousNames(organizationId: String, firstName: String, lastName: String): Unit = {
-    val suspiciousNameEntropyThreshold = 3.5
+    val suspiciousNameEntropyThreshold = 3.0
     val suspiciousNameMinLength = 6
 
     def shannonEntropy(s: String): Double =
@@ -1072,7 +1072,7 @@ class AuthenticationController @Inject() (
 
     if (isSuspicious) {
       val msg =
-        s"High-entropy name detected during registration: firstName: $firstName, lastName: $lastName, organizationId: $organizationId"
+        s"High-entropy name detected during registration: $firstName $lastName (organizationId $organizationId)"
       logger.warn(msg)
       slackNotificationService.warn("Registration with suspicious name", msg)
     }

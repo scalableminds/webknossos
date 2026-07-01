@@ -4,7 +4,8 @@ import org.apache.pekko.actor.ActorSystem
 import com.google.inject.name.Named
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.typesafe.scalalogging.LazyLogging
@@ -15,7 +16,7 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-trait DatasetErrorLoggingService extends IntervalScheduler with Formatter with LazyLogging with FoxImplicits {
+trait DatasetErrorLoggingService extends IntervalScheduler with Formatter with LazyLogging {
 
   protected def applicationHealthService: Option[ApplicationHealthService]
 

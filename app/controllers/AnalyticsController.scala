@@ -16,7 +16,7 @@ class AnalyticsController @Inject() (analyticsService: AnalyticsService, conf: W
     bodyParsers: PlayBodyParsers
 ) extends Controller {
 
-  def ingestAnalyticsEvents: Action[AnalyticsEventsIngestJson] = Action.async(validateJson[AnalyticsEventsIngestJson]) {
+  def ingestAnalyticsEvents: Action[AnalyticsEventsIngestJson] = Action.fox(validateJson[AnalyticsEventsIngestJson]) {
     implicit request =>
       for {
         _ <- Fox.fromBool(conf.BackendAnalytics.saveToDatabaseEnabled) ?~> "Database logging of events is not enabled"

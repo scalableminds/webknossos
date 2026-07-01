@@ -12,10 +12,12 @@ class BucketScannerTestSuite extends AsyncWordSpec {
       // little endian uint16 representation of 2, 4, 500, 500
       val array = Array[Byte](2, 0, 4, 0, 244.toByte, 1, 244.toByte, 1)
       val scanner = new NativeBucketScanner()
-      val segmentIds = scanner.collectSegmentIds(array,
-                                                 ElementClass.bytesPerElement(elementClass),
-                                                 ElementClass.isSigned(elementClass),
-                                                 skipZeroes = false)
+      val segmentIds = scanner.collectSegmentIds(
+        array,
+        ElementClass.bytesPerElement(elementClass),
+        ElementClass.isSigned(elementClass),
+        skipZeroes = false
+      )
       assert(segmentIds.sorted.sameElements(Array[Long](2, 4, 500)))
     }
 
@@ -24,10 +26,12 @@ class BucketScannerTestSuite extends AsyncWordSpec {
       // little endian uint32 representation of 2, 4, 500, 500
       val array = Array[Byte](2, 0, 0, 0, 4, 0, 0, 0, 244.toByte, 1, 0, 0, 244.toByte, 1, 0, 0)
       val scanner = new NativeBucketScanner()
-      val segmentIds = scanner.collectSegmentIds(array,
-                                                 ElementClass.bytesPerElement(elementClass),
-                                                 ElementClass.isSigned(elementClass),
-                                                 skipZeroes = false)
+      val segmentIds = scanner.collectSegmentIds(
+        array,
+        ElementClass.bytesPerElement(elementClass),
+        ElementClass.isSigned(elementClass),
+        skipZeroes = false
+      )
       assert(segmentIds.sorted.sameElements(Array[Long](2, 4, 500)))
     }
 
@@ -36,16 +40,20 @@ class BucketScannerTestSuite extends AsyncWordSpec {
       // little endian uint16 representation of 2, 4, 500, 500, 0
       val array = Array[Byte](2, 0, 4, 0, 244.toByte, 1, 244.toByte, 1, 0, 0)
       val scanner = new NativeBucketScanner()
-      val segmentIds = scanner.collectSegmentIds(array,
-                                                 ElementClass.bytesPerElement(elementClass),
-                                                 ElementClass.isSigned(elementClass),
-                                                 skipZeroes = false)
+      val segmentIds = scanner.collectSegmentIds(
+        array,
+        ElementClass.bytesPerElement(elementClass),
+        ElementClass.isSigned(elementClass),
+        skipZeroes = false
+      )
       assert(segmentIds.sorted.sameElements(Array[Long](0, 2, 4, 500)))
 
-      val segmentIds2 = scanner.collectSegmentIds(array,
-                                                  ElementClass.bytesPerElement(elementClass),
-                                                  ElementClass.isSigned(elementClass),
-                                                  skipZeroes = true)
+      val segmentIds2 = scanner.collectSegmentIds(
+        array,
+        ElementClass.bytesPerElement(elementClass),
+        ElementClass.isSigned(elementClass),
+        skipZeroes = true
+      )
       assert(segmentIds2.sorted.sameElements(Array[Long](2, 4, 500)))
     }
 
@@ -54,23 +62,26 @@ class BucketScannerTestSuite extends AsyncWordSpec {
       // little endian uint32 representation of 2, 4, 500, 500
       val array = Array[Byte](2, 0, 0, 0, 4, 0, 0, 0, 244.toByte, 1, 0, 0, 244.toByte, 1, 0, 0)
       val scanner = new NativeBucketScanner()
-      val voxelCount = scanner.countSegmentVoxels(array,
-                                                  ElementClass.bytesPerElement(elementClass),
-                                                  ElementClass.isSigned(elementClass),
-                                                  segmentId = 500)
+      val voxelCount = scanner.countSegmentVoxels(
+        array,
+        ElementClass.bytesPerElement(elementClass),
+        ElementClass.isSigned(elementClass),
+        segmentId = 500
+      )
       assert(voxelCount == 2)
-      val voxelCount2 = scanner.countSegmentVoxels(array,
-                                                   ElementClass.bytesPerElement(elementClass),
-                                                   ElementClass.isSigned(elementClass),
-                                                   segmentId = 501)
+      val voxelCount2 = scanner.countSegmentVoxels(
+        array,
+        ElementClass.bytesPerElement(elementClass),
+        ElementClass.isSigned(elementClass),
+        segmentId = 501
+      )
       assert(voxelCount2 == 0)
     }
 
     "find bounding box of segment correctly in a byte array with ElementClass uint16" in {
       val elementClass = ElementClass.uint16
-      val bytesPerBucket = ElementClass.bytesPerElement(elementClass) * scala.math
-        .pow(DataLayer.bucketLength, 3)
-        .intValue
+      val bytesPerBucket =
+        ElementClass.bytesPerElement(elementClass) * scala.math.pow(DataLayer.bucketLength, 3).intValue
       val array = Array.fill[Byte](bytesPerBucket)(0)
       array(ElementClass.bytesPerElement(elementClass) * (DataLayer.bucketLength + 5)) = 1
       array(ElementClass.bytesPerElement(elementClass) * (DataLayer.bucketLength + 8)) = 1

@@ -1,7 +1,7 @@
 package models.voxelytics
 
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import models.user.User
 import models.voxelytics.VoxelyticsRunState.VoxelyticsRunState
 import play.api.libs.json.{JsArray, JsObject, Json, OFormat}
@@ -161,7 +161,7 @@ object ArtifactChecksumEntry {
   implicit val jsonFormat: OFormat[ArtifactChecksumEntry] = Json.format[ArtifactChecksumEntry]
 }
 
-class VoxelyticsService @Inject() (voxelyticsDAO: VoxelyticsDAO)(implicit ec: ExecutionContext) extends FoxImplicits {
+class VoxelyticsService @Inject() (voxelyticsDAO: VoxelyticsDAO)(implicit ec: ExecutionContext) {
 
   def checkAuth(runId: ObjectId, user: User): Fox[Unit] =
     for {

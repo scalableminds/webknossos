@@ -2,7 +2,8 @@ package models.folder
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.DBAccessContext
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.schema.Tables.{Folders, FoldersRow, GetResultFoldersRow}
 import com.typesafe.scalalogging.LazyLogging
 import models.organization.{Organization, OrganizationDAO}
@@ -33,8 +34,7 @@ class FolderService @Inject() (
     folderDAO: FolderDAO,
     organizationDAO: OrganizationDAO
 )(implicit ec: ExecutionContext)
-    extends LazyLogging
-    with FoxImplicits {
+    extends LazyLogging {
 
   val defaultRootName: String = "Datasets"
 

@@ -6,7 +6,8 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.{NamedFunctionStream, ZipIO}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.datareaders.zarr3._
 import com.scalableminds.webknossos.datastore.datavault.{FileSystemDataVault, VaultPath}
 import com.scalableminds.webknossos.datastore.helpers.UPath
@@ -32,7 +33,6 @@ class EditableMappingIOService @Inject() (
     chunkCacheService: TSChunkCacheService,
     editableMappingService: EditableMappingService
 ) extends LazyLogging
-    with FoxImplicits
     with KeyValueStoreConversions {
 
   // 10000 edges per chunk (an edge is two Longs in edges and one bool in edgeIsAddition)

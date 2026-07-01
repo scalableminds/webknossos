@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.services.mesh
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Float, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, ElementClass, SegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.requests.{
@@ -67,8 +67,7 @@ class AdHocMeshService(
     adHocMeshTimeout: FiniteDuration,
     adHocMeshActorPoolSize: Int
 )(implicit ec: ExecutionContext)
-    extends FoxImplicits
-    with LazyLogging {
+    extends LazyLogging {
 
   implicit val timeout: Timeout = Timeout(adHocMeshTimeout)
 

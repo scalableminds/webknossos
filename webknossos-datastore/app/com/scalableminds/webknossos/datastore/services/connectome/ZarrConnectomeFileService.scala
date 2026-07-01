@@ -4,7 +4,8 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.datareaders.DatasetArray
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3Array
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
@@ -41,8 +42,7 @@ object ConnectomeFileAttributes extends VoxelyticsZarrArtifactUtils with Connect
 }
 
 class ZarrConnectomeFileService @Inject() (dataVaultService: DataVaultService, chunkCacheService: DSChunkCacheService)
-    extends FoxImplicits
-    with ConnectomeFileUtils {
+    extends ConnectomeFileUtils {
   private lazy val openArraysCache = AlfuCache[(ConnectomeFileKey, String), DatasetArray]()
   private lazy val attributesCache = AlfuCache[ConnectomeFileKey, ConnectomeFileAttributes]()
 

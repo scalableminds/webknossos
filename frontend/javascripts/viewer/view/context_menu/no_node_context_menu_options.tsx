@@ -185,6 +185,7 @@ export function useNoNodeContextMenuOptions(
         currentMeshFile.name,
         undefined,
         undefined,
+        undefined,
       ),
     );
   };

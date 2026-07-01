@@ -53,6 +53,7 @@ import {
   getMeshInfoForSegment,
   getSegmentsForLayer,
   getVolumeTracingById,
+  isMeshLoaded,
 } from "viewer/model/accessors/volumetracing_accessor";
 import {
   dispatchMaybeFetchMeshFilesAsync,
@@ -294,13 +295,19 @@ function* subscribeToAnnotationMutexInLiveCollab(proofreadingSagaId: string) {
   return null;
 }
 
-function* ensureSegmentItemAndLoadCoarseMesh(
+function* ensureSegmentItemAndMaybeLoadCoarseMesh(
   layerName: string,
   segmentId: number,
   position: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | undefined,
 ): Saga<void> {
   yield* call(ensureSegmentItem, layerName, segmentId, position, additionalCoordinates);
+  const autoRenderMeshInProofreading = yield* select(
+    (state) => state.userConfiguration.autoRenderMeshInProofreading,
+  );
+  if (!autoRenderMeshInProofreading) {
+    return;
+  }
   yield* call(loadCoarseMesh, layerName, segmentId, position, additionalCoordinates);
 }
 
@@ -319,13 +326,8 @@ function* loadCoarseMesh(
   position: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | undefined,
   opacity?: number,
+  isVisible?: boolean,
 ): Saga<void> {
-  const autoRenderMeshInProofreading = yield* select(
-    (state) => state.userConfiguration.autoRenderMeshInProofreading,
-  );
-  if (!autoRenderMeshInProofreading) {
-    return;
-  }
   const dataset = yield* select((state) => state.dataset);
   const layer = getLayerByName(dataset, layerName);
 
@@ -360,6 +362,7 @@ function* loadCoarseMesh(
         additionalCoordinates,
         currentMeshFile.name,
         opacity,
+        isVisible,
         undefined,
       ),
     );
@@ -377,6 +380,7 @@ function* loadCoarseMesh(
         mappingType,
         preferredQuality,
         opacity,
+        isVisible,
       }),
     );
   }
@@ -462,7 +466,7 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
 
   /* Load a coarse mesh of the agglomerate at the click position */
   yield* call(
-    ensureSegmentItemAndLoadCoarseMesh,
+    ensureSegmentItemAndMaybeLoadCoarseMesh,
     layerName,
     segmentId,
     position,
@@ -788,8 +792,9 @@ function* handleMergeViaTree(action: MergeTreesAction, ctx: OperationContext): S
     yield* call(refreshAffectedSegmentItems, volumeTracingId, refreshInfos);
     // Now that the segment items are up-to-date we can sync with the back-end and release the mutex.
     yield* call(syncWithBackend, ctx);
+
     // Refreshing the meshes might take a while and won't block the saga here.
-    yield* spawnUntilCanceled(refreshAffectedMeshes, volumeTracingId, refreshInfos);
+    yield* spawnUntilCanceled(maybeRefreshAffectedMeshes, volumeTracingId, refreshInfos);
   } finally {
     if (unsubscribeFromAnnotationMutex) {
       yield* call(unsubscribeFromAnnotationMutex);
@@ -1003,8 +1008,9 @@ function* handleSplitViaTree(
     yield* call(refreshAffectedSegmentItems, volumeTracingId, refreshInfos);
     // Now that the segment items are up-to-date we can sync with the back-end and release the mutex.
     yield* call(syncWithBackend, ctx);
+
     // Refreshing the meshes might take a while and won't block the saga here.
-    yield* spawnUntilCanceled(refreshAffectedMeshes, volumeTracingId, refreshInfos);
+    yield* spawnUntilCanceled(maybeRefreshAffectedMeshes, volumeTracingId, refreshInfos);
   } finally {
     if (unsubscribeFromAnnotationMutex) {
       yield* call(unsubscribeFromAnnotationMutex);
@@ -1270,7 +1276,7 @@ function* performPartitionedMinCut(
 
     // Refreshing the meshes might take a while and won't block the saga
     // here.
-    yield* spawnUntilCanceled(refreshAffectedMeshes, volumeTracingId, refreshInfos);
+    yield* spawnUntilCanceled(maybeRefreshAffectedMeshes, volumeTracingId, refreshInfos);
   } finally {
     if (unsubscribeFromAnnotationMutex) {
       yield* call(unsubscribeFromAnnotationMutex);
@@ -1441,8 +1447,9 @@ function* refreshProofreadingSegmentsAndMeshes(
   ];
   yield* call(refreshAffectedSegmentItems, volumeTracingId, refreshInfos);
   yield* call(syncWithBackend, ctx);
+
   // Refreshing the meshes might take a while and won't block the saga here.
-  yield* spawnUntilCanceled(refreshAffectedMeshes, volumeTracingId, refreshInfos);
+  yield* spawnUntilCanceled(maybeRefreshAffectedMeshes, volumeTracingId, refreshInfos);
 }
 
 function* handleProofreadMerge(action: ProofreadMergeAction, ctx: OperationContext) {
@@ -1869,7 +1876,7 @@ function* handleProofreadCutFromNeighbors(action: Action, ctx: OperationContext)
 
     // Refreshing the meshes might take a while and won't block the saga
     // here.
-    yield* spawnUntilCanceled(refreshAffectedMeshes, volumeTracingId, refreshInfos);
+    yield* spawnUntilCanceled(maybeRefreshAffectedMeshes, volumeTracingId, refreshInfos);
   } finally {
     if (unsubscribeFromAnnotationMutex) {
       yield* call(unsubscribeFromAnnotationMutex);
@@ -2137,33 +2144,78 @@ export function* refreshAffectedSegmentItems(
   yield* all(ensureSegmentItemEffects);
 }
 
-// Capture the current opacities of the given old agglomerates' meshes, keyed by agglomerate id, so
-// that reloaded meshes can keep the user-chosen opacity. Duplicate and nullish ids are ignored, so
-// callers can pass the raw oldAgglomerateId of every item even when several share the same id (e.g.
-// a split produces two pieces from the same original agglomerate). Callers must invoke this before
-// any old mesh is removed, otherwise the original opacity can no longer be read.
-export function* getOpacityByOldAgglomerateId(
+export function* shouldReloadMeshesAfterProofreadAction(
+  layerName: string,
+  oldAgglomerateIds: number[],
+): Saga<boolean> {
+  const autoRenderMeshInProofreading = yield* select(
+    (state) => state.userConfiguration.autoRenderMeshInProofreading,
+  );
+  if (autoRenderMeshInProofreading) {
+    return true;
+  }
+  const hasAnyInvolvedMeshLoaded = yield* select((state) =>
+    oldAgglomerateIds.some((id) => isMeshLoaded(state, id, layerName)),
+  );
+  return hasAnyInvolvedMeshLoaded;
+}
+
+// Display properties of a mesh that should survive a reload.
+export type PreservedMeshDisplayProps = {
+  opacity?: number;
+  isVisible?: boolean;
+};
+
+// Capture the current opacity and visibility of the given old agglomerates' meshes, keyed by
+// agglomerate id, so that reloaded meshes can keep the user-chosen opacity and visibility.
+// Duplicate and nullish ids are ignored, so callers can pass the raw oldAgglomerateId of every
+// item even when several share the same id (e.g. a split produces two pieces from the same
+// original agglomerate). Callers must invoke this before any old mesh is removed, otherwise the
+// original mesh display properties can no longer be read.
+export function* getMeshDisplayPropsByOldAgglomerateId(
   layerName: string,
   oldAgglomerateIds: Iterable<number | null | undefined>,
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
-): Saga<Map<number, number>> {
+): Saga<Map<number, PreservedMeshDisplayProps>> {
   return yield* select((state) => {
-    const opacities = new Map<number, number>();
+    const displayPropsByAgglomerateId = new Map<number, PreservedMeshDisplayProps>();
     for (const oldAgglomerateId of oldAgglomerateIds) {
-      if (oldAgglomerateId != null && !opacities.has(oldAgglomerateId)) {
-        const opacity = getMeshInfoForSegment(
+      if (oldAgglomerateId != null && !displayPropsByAgglomerateId.has(oldAgglomerateId)) {
+        const meshInfo = getMeshInfoForSegment(
           state,
           additionalCoordinates || null,
           layerName,
           Number(oldAgglomerateId),
-        )?.opacity;
-        if (opacity != null) {
-          opacities.set(oldAgglomerateId, opacity);
+        );
+        if (meshInfo != null) {
+          displayPropsByAgglomerateId.set(oldAgglomerateId, {
+            opacity: meshInfo.opacity,
+            isVisible: meshInfo.isVisible,
+          });
         }
       }
     }
-    return opacities;
+    return displayPropsByAgglomerateId;
   });
+}
+
+function* maybeRefreshAffectedMeshes(
+  layerName: string,
+  items: Array<{
+    oldAgglomerateId?: number;
+    newAgglomerateId: number;
+    nodePosition: Vector3;
+    opacity?: number; // see refreshAffectedMeshes below.
+  }>,
+) {
+  const shouldDoMeshRefreshing = yield* call(shouldReloadMeshesAfterProofreadAction, layerName, [
+    ...items.map((i) => i.oldAgglomerateId).filter((id) => id != null),
+  ]);
+  if (shouldDoMeshRefreshing) {
+    // Refreshing the meshes might take a while and won't block the saga
+    // here.
+    yield* spawnUntilCanceled(refreshAffectedMeshes, layerName, items);
+  }
 }
 
 export function* refreshAffectedMeshes(
@@ -2172,9 +2224,10 @@ export function* refreshAffectedMeshes(
     oldAgglomerateId?: number;
     newAgglomerateId: number;
     nodePosition: Vector3;
-    // Opacity to apply to the reloaded mesh. If unset, the opacity of the old
-    // mesh (oldAgglomerateId) is used before its removal (see below).
+    // Opacity and visibility to apply to the reloaded mesh. If unset, the values of the old
+    // mesh (oldAgglomerateId) are used before its removal (see below).
     opacity?: number;
+    isVisible?: boolean;
   }>,
 ) {
   // ATTENTION: This saga should usually be called with `spawnUntilCanceled` to avoid that the user
@@ -2185,12 +2238,12 @@ export function* refreshAffectedMeshes(
   // adapted.
   const additionalCoordinates = undefined;
 
-  // Capture the opacities of all old meshes up front, i.e. before any of them are removed below,
-  // so that reloaded meshes keep the user-chosen opacity. This must happen before the removal
-  // loop because removing one item's old mesh must not prevent another item from reading the
-  // original opacity.
-  const opacityByOldAgglomerateId = yield* call(
-    getOpacityByOldAgglomerateId,
+  // Capture the opacity and visibility of all old meshes up front, i.e. before any of them are
+  // removed below, so that reloaded meshes keep the user-chosen opacity and visibility. This must
+  // happen before the removal loop because removing one item's old mesh must not prevent another
+  // item from reading the original properties.
+  const displayPropsByOldAgglomerateId = yield* call(
+    getMeshDisplayPropsByOldAgglomerateId,
     layerName,
     items.map((item) => item.oldAgglomerateId),
     additionalCoordinates,
@@ -2202,13 +2255,14 @@ export function* refreshAffectedMeshes(
   const newlyLoadedIds = new Set();
   const meshLoadingEffects = [];
   for (const item of items) {
-    // The opacity is either passed in explicitly (e.g. by the rebasing saga, which removes the
-    // old mesh before this saga runs) or taken from the old mesh that was captured above.
-    const opacity =
-      item.opacity ??
-      (item.oldAgglomerateId != null
-        ? opacityByOldAgglomerateId.get(item.oldAgglomerateId)
-        : undefined);
+    // Opacity and visibility are either passed in explicitly (e.g. by the rebasing saga, which
+    // removes the old mesh before this saga runs) or taken from the old mesh captured above.
+    const oldDisplayProps =
+      item.oldAgglomerateId != null
+        ? displayPropsByOldAgglomerateId.get(item.oldAgglomerateId)
+        : undefined;
+    const opacity = item.opacity ?? oldDisplayProps?.opacity;
+    const isVisible = item.isVisible ?? oldDisplayProps?.isVisible;
     // Remove old agglomerate mesh(es) and load updated agglomerate mesh(es)
     if (item.oldAgglomerateId && !removedIds.has(item.oldAgglomerateId)) {
       yield* put(removeMeshAction(layerName, Number(item.oldAgglomerateId)));
@@ -2223,6 +2277,7 @@ export function* refreshAffectedMeshes(
           item.nodePosition,
           additionalCoordinates,
           opacity,
+          isVisible,
         );
       });
       newlyLoadedIds.add(item.newAgglomerateId);

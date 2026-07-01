@@ -2,7 +2,7 @@ package controllers
 
 import com.scalableminds.util.Msg
 import play.silhouette.api.Silhouette
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.storage.{
   GoogleServiceAccountCredential,
   HttpBasicAuthCredential,
@@ -39,11 +39,10 @@ object GoogleServiceAccountCredentialParameters {
 class CredentialController @Inject() (credentialDAO: CredentialDAO, sil: Silhouette[WkEnv])(implicit
     ec: ExecutionContext,
     val bodyParsers: PlayBodyParsers
-) extends Controller
-    with FoxImplicits {
+) extends Controller {
 
   def createHttpBasicAuthCredential: Action[HttpBasicAuthCredentialParameters] =
-    sil.SecuredAction.async(validateJson[HttpBasicAuthCredentialParameters]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[HttpBasicAuthCredentialParameters]) { implicit request =>
       val _id = ObjectId.generate
       for {
         _ <- Fox.fromBool(request.identity.isAdmin) ?~> Msg.notAllowed ~> FORBIDDEN
@@ -61,7 +60,7 @@ class CredentialController @Inject() (credentialDAO: CredentialDAO, sil: Silhoue
     }
 
   def createS3AccessKeyCredential: Action[S3AccessKeyCredentialParameters] =
-    sil.SecuredAction.async(validateJson[S3AccessKeyCredentialParameters]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[S3AccessKeyCredentialParameters]) { implicit request =>
       val _id = ObjectId.generate
       for {
         _ <- Fox.fromBool(request.identity.isAdmin) ?~> Msg.notAllowed ~> FORBIDDEN
@@ -79,7 +78,7 @@ class CredentialController @Inject() (credentialDAO: CredentialDAO, sil: Silhoue
     }
 
   def createGoogleServiceAccountCredential: Action[GoogleServiceAccountCredentialParameters] =
-    sil.SecuredAction.async(validateJson[GoogleServiceAccountCredentialParameters]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[GoogleServiceAccountCredentialParameters]) { implicit request =>
       val _id = ObjectId.generate
       for {
         _ <- Fox.fromBool(request.identity.isAdmin) ?~> Msg.notAllowed ~> FORBIDDEN

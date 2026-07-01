@@ -1,7 +1,7 @@
 package models.organization
 
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.typesafe.scalalogging.LazyLogging
 import controllers.Controller
@@ -18,7 +18,6 @@ class FreeCreditTransactionService @Inject() (
     val actorSystem: ActorSystem
 )(implicit val ec: ExecutionContext)
     extends Controller
-    with FoxImplicits
     with LazyLogging
     with IntervalScheduler {
 

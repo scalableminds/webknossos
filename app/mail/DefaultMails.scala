@@ -217,7 +217,7 @@ class DefaultMails @Inject() (conf: WkConf) {
   def jobSuccessfulNeuronSegmentationMail(multiUser: MultiUser, datasetName: String, jobLink: String): Mail =
     Mail(
       from = defaultSender,
-      subject = s"Your segmentation is ready",
+      subject = "Your segmentation is ready",
       bodyHtml =
         html.mail.jobSuccessfulNeuronSegmentation(multiUser.fullName, datasetName, jobLink, additionalFooter).body,
       recipients = List(multiUser.email)
@@ -226,7 +226,7 @@ class DefaultMails @Inject() (conf: WkConf) {
   def jobSuccessfulMitoSegmentationMail(multiUser: MultiUser, datasetName: String, jobLink: String): Mail =
     Mail(
       from = defaultSender,
-      subject = s"Your mitochondria segmentation is ready",
+      subject = "Your mitochondria segmentation is ready",
       bodyHtml =
         html.mail.jobSuccessfulMitoSegmentation(multiUser.fullName, datasetName, jobLink, additionalFooter).body,
       recipients = List(multiUser.email)
@@ -235,7 +235,7 @@ class DefaultMails @Inject() (conf: WkConf) {
   def jobSuccessfulAlignmentMail(multiUser: MultiUser, datasetName: String, jobLink: String): Mail =
     Mail(
       from = defaultSender,
-      subject = s"Your alignment is ready",
+      subject = "Your alignment is ready",
       bodyHtml = html.mail.jobSuccessfulAlignment(multiUser.fullName, datasetName, jobLink, additionalFooter).body,
       recipients = List(multiUser.email)
     )
@@ -243,7 +243,7 @@ class DefaultMails @Inject() (conf: WkConf) {
   def jobSuccessfulModelTrainingMail(multiUser: MultiUser, jobLink: String): Mail =
     Mail(
       from = defaultSender,
-      subject = s"Your model training is ready",
+      subject = "Your model training is ready",
       bodyHtml = html.mail.jobSuccessfulModelTraining(multiUser.fullName, jobLink, additionalFooter).body,
       recipients = List(multiUser.email)
     )

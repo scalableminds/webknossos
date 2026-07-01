@@ -1,7 +1,8 @@
 package com.scalableminds.webknossos.datastore.services
 
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.tools.{Fox, FoxImplicits, Full}
+import com.scalableminds.util.tools.{Fox, Full}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.typesafe.scalalogging.LazyLogging
@@ -35,8 +36,7 @@ class DSUsedStorageService @Inject() (
     config: DataStoreConfig,
     dataVaultService: DataVaultService,
     managedS3Service: ManagedS3Service
-) extends FoxImplicits
-    with LazyLogging {
+) extends LazyLogging {
 
   def measureStorageForPaths(paths: List[String], organizationId: String)(implicit
       ec: ExecutionContext,

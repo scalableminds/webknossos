@@ -191,7 +191,7 @@ export const AddRemoteLayer: React.FC<AddRemoteLayerProps> = ({
     }
 
     return {
-      url: encodeURI(datasourceUrl),
+      url: datasourceUrl,
       datastoreName: datastoreToUse.name,
       credentials,
       preferredVoxelSize,
@@ -218,7 +218,7 @@ export const AddRemoteLayer: React.FC<AddRemoteLayerProps> = ({
       const { url, datastoreName, credentials, preferredVoxelSize } = await buildExploreParams();
 
       const { dataSource: newDataSourceConfig, report } = await exploreRemoteDataset(
-        [url],
+        [encodeURI(url)],
         datastoreName,
         credentials,
         preferredVoxelSize?.factor,

@@ -218,7 +218,7 @@ class EditableMappingService @Inject() (
 
   def volumeData(editableMappingLayer: EditableMappingLayer, dataRequests: List[AbstractDataRequest])(using
       tc: TokenContext
-  ): Fox[(Array[Byte], List[Int])] = {
+  ): Fox[(Array[Byte], Seq[Int], Seq[Int])] = {
     val requests = dataRequests.map(r =>
       DataServiceDataRequest(
         None,

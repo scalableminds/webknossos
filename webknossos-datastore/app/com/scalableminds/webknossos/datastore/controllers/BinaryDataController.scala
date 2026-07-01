@@ -62,7 +62,7 @@ class BinaryDataController @Inject() (
               datasetId,
               dataLayerName
             ) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND
-            (data, indices) <- requestData(datasetId, dataSource.id, dataLayer, request.body)
+            (data, emptyIndices, failureIndices) <- requestData(datasetId, dataSource.id, dataLayer, request.body)
             duration = Instant.since(t)
             _ = if (duration > (10 seconds))
               logger.info(
@@ -71,7 +71,7 @@ class BinaryDataController @Inject() (
                     .map(firstReq => s" First of ${request.body.size} requests was $firstReq")
                     .getOrElse("")
               )
-          } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices)*)
+          } yield Ok(data).withHeaders(createMissingBucketsHeaders(emptyIndices, failureIndices)*)
         }
       }
     }
@@ -106,8 +106,8 @@ class BinaryDataController @Inject() (
           depth,
           DataServiceRequestSettings(halfByte = halfByte, appliedAgglomerate = mappingName)
         )
-        (data, indices) <- requestData(datasetId, dataSource.id, dataLayer, List(dataRequest))
-      } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices)*)
+        (data, emptyIndices, failureIndices) <- requestData(datasetId, dataSource.id, dataLayer, List(dataRequest))
+      } yield Ok(data).withHeaders(createMissingBucketsHeaders(emptyIndices, failureIndices)*)
     }
   }
 
@@ -116,8 +116,8 @@ class BinaryDataController @Inject() (
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
-          (data, indices) <- requestData(datasetId, dataSource.id, dataLayer, List(request.body))
-        } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices)*)
+          (data, emptyIndices, failureIndices) <- requestData(datasetId, dataSource.id, dataLayer, List(request.body))
+        } yield Ok(data).withHeaders(createMissingBucketsHeaders(emptyIndices, failureIndices)*)
       }
     }
 
@@ -144,8 +144,8 @@ class BinaryDataController @Inject() (
           cubeSize,
           cubeSize
         )
-        (data, indices) <- requestData(datasetId, dataSource.id, dataLayer, List(dataRequest))
-      } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices)*)
+        (data, emptyIndices, failureIndices) <- requestData(datasetId, dataSource.id, dataLayer, List(dataRequest))
+      } yield Ok(data).withHeaders(createMissingBucketsHeaders(emptyIndices, failureIndices)*)
     }
   }
 
@@ -178,7 +178,7 @@ class BinaryDataController @Inject() (
           depth = 1,
           DataServiceRequestSettings(appliedAgglomerate = mappingName)
         )
-        (data, _) <- requestData(datasetId, dataSource.id, dataLayer, List(dataRequest))
+        (data, _, _) <- requestData(datasetId, dataSource.id, dataLayer, List(dataRequest))
         intensityRange: Option[(Double, Double)] = intensityMin.flatMap(min => intensityMax.map(max => (min, max)))
         layerColor = color.flatMap(Color.fromHTML)
         params = ImageCreatorParameters(
@@ -300,7 +300,7 @@ class BinaryDataController @Inject() (
       dataSourceId: DataSourceId,
       dataLayer: DataLayer,
       dataRequests: List[AbstractDataRequest]
-  )(using tc: TokenContext): Fox[(Array[Byte], List[Int])] = {
+  )(using tc: TokenContext): Fox[(Array[Byte], Seq[Int], Seq[Int])] = {
     val requests =
       dataRequests.map(r =>
         DataServiceDataRequest(Some(datasetId), Some(dataSourceId), dataLayer, r.cuboid(dataLayer), r.settings)

@@ -7,7 +7,6 @@ import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.util.tools.{Fox, Full}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.zarr.Zarr3OutputHelper
-import com.scalableminds.webknossos.datastore.helpers.MissingBucketHeaders
 import com.scalableminds.webknossos.datastore.models.{
   RawCuboidRequest,
   WebknossosAdHocMeshRequest,
@@ -128,8 +127,7 @@ class DSLegacyApiController @Inject() (
     uploadController: UploadController
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
-    with Zarr3OutputHelper
-    with MissingBucketHeaders {
+    with Zarr3OutputHelper {
 
   override def allowRemoteOrigin: Boolean = true
 

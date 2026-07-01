@@ -2,12 +2,7 @@ package backend
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.{Empty, Failure, Full}
-import com.scalableminds.webknossos.datastore.datavault.{
-  ByteRange,
-  FileSystemDataVault,
-  VaultPath,
-  ZipDataVault
-}
+import com.scalableminds.webknossos.datastore.datavault.{ByteRange, FileSystemDataVault, VaultPath, ZipDataVault}
 import com.scalableminds.webknossos.datastore.helpers.{UPath, ZipEntryUPath}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AsyncWordSpec
@@ -24,8 +19,8 @@ class ZipDataVaultTestSuite extends AsyncWordSpec with BeforeAndAfterAll {
   private val testZipPath: Path = Files.createTempFile("wk-zip-vault-test", ".zip")
 
   // Known content for entries
-  private val dirFileContent: Array[Byte] = "hello world".getBytes("UTF-8")       // 11 bytes
-  private val deepFileContent: Array[Byte] = "deep content".getBytes("UTF-8")     // 12 bytes
+  private val dirFileContent: Array[Byte] = "hello world".getBytes("UTF-8") // 11 bytes
+  private val deepFileContent: Array[Byte] = "deep content".getBytes("UTF-8") // 12 bytes
   private val rootFileContent: Array[Byte] = "root file content!!".getBytes("UTF-8") // 19 bytes
 
   override def beforeAll(): Unit = {
@@ -85,12 +80,15 @@ class ZipDataVaultTestSuite extends AsyncWordSpec with BeforeAndAfterAll {
       "read a stored entry with a start-end range" in {
         val (vault, outerUPath) = makeZipVault()
         val path = new VaultPath(ZipEntryUPath(outerUPath, "root.txt"), vault)
-        path.readBytes(ByteRange.startEndExclusive(0, 4))(using globalExecutionContext, emptyTokenContext).futureBox.map {
-          case Full(bytes) =>
-            assert(bytes.length == 4)
-            assert(new String(bytes, "UTF-8") == "root")
-          case other => fail(s"Expected Full, got $other")
-        }
+        path
+          .readBytes(ByteRange.startEndExclusive(0, 4))(using globalExecutionContext, emptyTokenContext)
+          .futureBox
+          .map {
+            case Full(bytes) =>
+              assert(bytes.length == 4)
+              assert(new String(bytes, "UTF-8") == "root")
+            case other => fail(s"Expected Full, got $other")
+          }
       }
 
       "read a stored entry with a suffix range" in {
@@ -130,10 +128,12 @@ class ZipDataVaultTestSuite extends AsyncWordSpec with BeforeAndAfterAll {
         val path = new VaultPath(ZipEntryUPath(outerUPath, ""), vault)
         path.listDirectory(maxItems = 20)(using globalExecutionContext).futureBox.map {
           case Full(children) =>
-            val innerPaths = children.map(_.toUPath match {
-              case ZipEntryUPath(_, ip) => ip
-              case _                    => fail("Expected ZipEntryUPath")
-            }).toSet
+            val innerPaths = children
+              .map(_.toUPath match {
+                case ZipEntryUPath(_, ip) => ip
+                case _                    => fail("Expected ZipEntryUPath")
+              })
+              .toSet
             assert(innerPaths.contains("dir"))
             assert(innerPaths.contains("root.txt"))
             assert(innerPaths.contains("compressed.txt"))
@@ -149,10 +149,12 @@ class ZipDataVaultTestSuite extends AsyncWordSpec with BeforeAndAfterAll {
         val path = new VaultPath(ZipEntryUPath(outerUPath, "dir"), vault)
         path.listDirectory(maxItems = 20)(using globalExecutionContext).futureBox.map {
           case Full(children) =>
-            val innerPaths = children.map(_.toUPath match {
-              case ZipEntryUPath(_, ip) => ip
-              case _                    => fail("Expected ZipEntryUPath")
-            }).toSet
+            val innerPaths = children
+              .map(_.toUPath match {
+                case ZipEntryUPath(_, ip) => ip
+                case _                    => fail("Expected ZipEntryUPath")
+              })
+              .toSet
             assert(innerPaths.contains("dir/file.txt"))
             assert(innerPaths.contains("dir/subdir"))
             // deeply nested entry must not appear as direct child of dir

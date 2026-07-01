@@ -17,11 +17,11 @@ import com.webauthn4j.data.{
 }
 import com.webauthn4j.server.ServerProperty
 import com.webauthn4j.WebAuthnManager
-import com.webauthn4j.credential.{CredentialRecordImpl => WebAuthnCredentialRecord}
+import com.webauthn4j.credential.CredentialRecordImpl as WebAuthnCredentialRecord
 import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
 import models.analytics.{AnalyticsService, InviteEvent, JoinOrganizationEvent, SignupEvent}
 import models.organization.{Organization, OrganizationDAO, OrganizationService}
-import models.user._
+import models.user.*
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import com.scalableminds.util.tools.Box.tryo
 import models.team.TeamMembership
@@ -29,16 +29,17 @@ import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.digest.{HmacAlgorithms, HmacUtils}
 import org.apache.pekko.actor.ActorSystem
 import play.api.data.Form
-import play.api.data.Forms._
-import play.api.data.validation.Constraints._
-import play.api.libs.json._
-import play.api.mvc._
+import play.api.data.Forms.*
+import play.api.data.validation.Constraints.*
+import play.api.libs.json.*
+import play.api.mvc.*
 import play.silhouette.api.actions.SecuredRequest
 import play.silhouette.api.services.AuthenticatorResult
 import play.silhouette.api.util.{Credentials, PasswordInfo}
 import play.silhouette.api.{LoginInfo, Silhouette}
 import play.silhouette.impl.providers.CredentialsProvider
-import security._
+import security.*
+import telemetry.SlackNotificationService
 import utils.WkConf
 
 import java.net.URLEncoder
@@ -47,9 +48,9 @@ import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.UUID
 import javax.inject.Inject
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.concurrent.{ExecutionContext, Future}
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 /** Object reference: https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions
   *
@@ -201,6 +202,7 @@ class AuthenticationController @Inject() (
     organizationDAO: OrganizationDAO,
     analyticsService: AnalyticsService,
     userDAO: UserDAO,
+    slackNotificationService: SlackNotificationService,
     tokenDAO: TokenDAO,
     multiUserDAO: MultiUserDAO,
     defaultMails: DefaultMails,
@@ -271,6 +273,7 @@ class AuthenticationController @Inject() (
                       ec
                     ) ?~> Msg.Organization.usersUserLimitReached
                     autoActivate = inviteBox.toOption.map(_.autoActivate).getOrElse(organization.enableAutoVerify)
+                    _ = notifyOnSuspiciousNames(organization._id, firstName, lastName)
                     _ <- createUser(
                       organization,
                       email,
@@ -928,6 +931,7 @@ class AuthenticationController @Inject() (
                           signUpData.organizationName
                         ) ?~> Msg.Organization.Create.failed
                         teamMemberships <- userService.initialTeamMemberships(organization._id, inviteIdOpt = None)
+                        _ = notifyOnSuspiciousNames(organization._id, firstName, lastName)
                         user <- userService.insert(
                           organization._id,
                           email,
@@ -1049,6 +1053,29 @@ class AuthenticationController @Inject() (
       ""
     }
     (errors, fN, lN)
+  }
+
+  private def notifyOnSuspiciousNames(organizationId: String, firstName: String, lastName: String): Unit = {
+    val suspiciousNameEntropyThreshold = 3.5
+    val suspiciousNameMinLength = 6
+
+    def shannonEntropy(s: String): Double =
+      if (s.isEmpty) 0.0
+      else {
+        val frequencies = s.groupBy(identity).values.map(_.length.toDouble / s.length)
+        -frequencies.map(p => p * (math.log(p) / math.log(2))).sum
+      }
+
+    val isSuspicious = List(firstName, lastName).exists(name =>
+      name.length >= suspiciousNameMinLength && shannonEntropy(name) >= suspiciousNameEntropyThreshold
+    )
+
+    if (isSuspicious) {
+      val msg =
+        s"High-entropy name detected during registration: firstName: $firstName, lastName: $lastName, organizationId: $organizationId"
+      logger.warn(msg)
+      slackNotificationService.warn("Registration with suspicious name", msg)
+    }
   }
 
   def logoutEverywhere: Action[AnyContent] = sil.SecuredAction.fox { implicit request =>

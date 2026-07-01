@@ -638,8 +638,7 @@ type ConnectomeData = {
 };
 export type MinCutPartitions = { 1: number[]; 2: number[]; agglomerateId: number | null };
 export type LocalMeshesInfo =
-  | Record<string, Record<number, MeshInformation> | undefined>
-  | undefined;
+  Record<string, Record<number, MeshInformation> | undefined> | undefined;
 
 // LocalSegmentationState holds per-layer segmentation state that is not
 // persisted on the server (in contrast to the VolumeTracing which must only
@@ -724,6 +723,7 @@ export type WebknossosState = {
   readonly save: SaveState;
   readonly flycam: Flycam;
   readonly flycamInfoCache: {
+    // Maps from layerName to the zoom thresholds for each mag.
     readonly maximumZoomForAllMags: Record<string, number[]>;
   };
   readonly viewModeData: ViewModeData;

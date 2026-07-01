@@ -35,6 +35,7 @@ import {
   getActiveMagIndexForLayer,
   getAdditionalCoordinatesAsString,
   getFlooredPosition,
+  getRawActiveMagIndexForLayer,
 } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import { MAX_ZOOM_STEP_DIFF } from "viewer/model/bucket_data_handling/loading_strategy_logic";
@@ -270,6 +271,16 @@ export function isVolumeAnnotationDisallowedForZoom(tool: AnnotationTool, state:
 
   const volumeMags = getMagInfoOfActiveSegmentationTracingLayer(state);
   const finestExistingMagIndex = volumeMags.getFinestMagIndex();
+
+  const rawMagIndex = getRawActiveMagIndexForLayer(state, activeSegmentation.tracingId);
+  if (!volumeMags.hasIndex(rawMagIndex)) {
+    // The current zoom corresponds to a mag that was excluded for this volume layer
+    // (e.g., to avoid performance issues when annotating large structures in a coarse
+    // mag). Annotating in such a mag doesn't make sense, since it is not actually
+    // rendered/labeled, so the tool is disabled.
+    return true;
+  }
+
   // The current mag is too high for the tool
   // because too many voxels could be annotated at the same time.
   const isZoomStepTooHigh =

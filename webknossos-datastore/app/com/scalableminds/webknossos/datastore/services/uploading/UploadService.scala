@@ -1011,12 +1011,14 @@ class UploadService @Inject() (
       _ <- PathUtils.ensureDirectoryBox(unpackToDir.getParent).toFox ?~> "dataset.import.fileAccessDenied"
       shallowFileList <- PathUtils.listFiles(uploadDir, silent = false).toFox
       excludeFromPrefix = LayerCategory.values.map(_.toString).toList
-      firstFile = shallowFileList.headOption
+      isSingleZip = shallowFileList.length == 1 && shallowFileList.headOption.exists(f =>
+        ZipEntryUPath.relevantFileExtensions.exists(f.toString.toLowerCase.endsWith)
+      )
       _ <-
-        if (shallowFileList.length == 1 && shallowFileList.headOption.exists(_.toString.toLowerCase.endsWith(".zip"))) {
+        if (isSingleZip) {
           for {
-            zipFile <- firstFile.toFox
             _ = logger.info(s"finishUpload for $datasetId: Unzipping $uploadDomain to $unpackToDir...")
+            zipFile <- shallowFileList.headOption.toFox
             _ <- ZipIO
               .unzipToDirectory(
                 zipFile.toFile,

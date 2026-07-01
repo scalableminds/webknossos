@@ -10,7 +10,7 @@ import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, StaticLayer, UsableDataSource}
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.webknossos.datastore.helpers.UPath
+import com.scalableminds.webknossos.datastore.helpers.{UPath, ZipEntryUPath}
 import play.api.libs.json.Json
 
 import java.nio.charset.StandardCharsets
@@ -163,7 +163,13 @@ class ExploreLocalLayerService @Inject() (dataVaultService: DataVaultService) ex
           val subdirs = Files.list(path).iterator().asScala.toList
           if (subdirs.size == 1) subdirs.head.getFileName.toString else layerDirectory
         } else layerDirectory
-      vaultPath <- dataVaultService.vaultPathFor(path.resolve(layer)) ?~> Msg.DataVault.setupFailed
+      resolvedPath = path.resolve(layer)
+      upath =
+        if (ZipEntryUPath.relevantFileExtensions.exists(resolvedPath.toString.endsWith))
+          ZipEntryUPath(UPath.fromLocalPath(resolvedPath), "")
+        else
+          UPath.fromLocalPath(resolvedPath)
+      vaultPath <- dataVaultService.vaultPathFor(upath) ?~> Msg.DataVault.setupFailed
       layersWithVoxelSizes <- explorer.explore(vaultPath, None)(using TokenContext(None))
       (layers, voxelSize) <- adaptLayersAndVoxelSize(layersWithVoxelSizes, None)
       relativeLayers = makeLayersRelative(layers)

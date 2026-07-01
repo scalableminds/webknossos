@@ -586,7 +586,8 @@ class DataSourceController @Inject() (
         val reportMutable = ListBuffer[String]()
         val hasLocalFilesystemRequest =
           request.body.layerParameters.exists(param =>
-            param.remoteUri.startsWith(s"${PathSchemes.schemeFile}${UPath.schemeSeparator}"))
+            param.remoteUri.startsWith(s"${PathSchemes.schemeFile}${UPath.schemeSeparator}")
+          )
         for {
           dataSourceBox: Box[UsableDataSource] <- exploreRemoteLayerService
             .exploreRemoteDatasource(request.body.layerParameters, reportMutable)

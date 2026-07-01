@@ -39,7 +39,8 @@ class PathDeletionService @Inject() (pathDeletionDAO: PathDeletionDAO) {
 
   def deletePaths(datastoreClient: WKRemoteDataStoreClient, pathsToDelete: Seq[UPath]): Fox[Unit] =
     for {
-      pathsToDeleteExternally <- datastoreClient.deletePaths(pathsToDelete)
+      filtered = pathsToDelete.filter(_.toZipEntryUPath.isEmpty) // Cannot delete paths that reference ZipEntries
+      pathsToDeleteExternally <- datastoreClient.deletePaths(filtered)
       _ <- pathDeletionDAO.insertMultiple(pathsToDeleteExternally)
     } yield ()
 

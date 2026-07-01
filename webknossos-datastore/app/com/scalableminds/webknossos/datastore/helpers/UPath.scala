@@ -93,6 +93,7 @@ case class ZipEntryUPath(outerPath: UPath, innerPath: String) extends UPath {
 object ZipEntryUPath {
   val separatorWithPath: String = "|zip:"
   val separatorRoot: String = "|zip"
+  val relevantFileExtensions: Seq[String] = Seq(".zip", ".ozx")
 }
 
 object UPath {

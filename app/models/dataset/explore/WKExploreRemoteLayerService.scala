@@ -107,7 +107,9 @@ class WKExploreRemoteLayerService @Inject() (
   )(implicit ec: ExecutionContext): Fox[Option[ObjectId]] =
     for {
       // For zip entry paths (e.g. s3://…/archive.zip|zip:inner/path), credentials apply to the whole zip file.
-      uri <- tryo(new URI(removeHeaderFileNamesFromUriSuffix(layerUri.takeWhile(_ != '|')))).toFox ?~> s"Received invalid URI: $layerUri"
+      uri <- tryo(
+        new URI(removeHeaderFileNamesFromUriSuffix(layerUri.takeWhile(_ != '|')))
+      ).toFox ?~> s"Received invalid URI: $layerUri"
       credentialOpt = credentialService.createCredentialOpt(
         uri,
         credentialIdentifier,

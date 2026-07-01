@@ -1,10 +1,11 @@
 import { CloseOutlined, ReloadOutlined } from "@ant-design/icons";
 import FlipIcon from "@images/icons/icon-flip.svg?react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getDataset, updateDatasetPartial } from "admin/rest_api";
 import { Button, Divider, Flex, InputNumber, Popover, Slider, Tooltip, Typography } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import type { APIDataLayer, APISkeletonLayer } from "types/api_types";
 import { getDatasetBoundingBox } from "viewer/model/accessors/dataset_accessor";
@@ -12,7 +13,7 @@ import {
   buildLiveTransforms,
   DEFAULT_SRT,
   extractSRTFromTransforms,
-  isLiveTransformCompatible,
+  hasValidLiveTransformationPattern,
   type SRTValues,
 } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { setLayerTransformsAction } from "viewer/model/actions/dataset_actions";
@@ -26,7 +27,7 @@ async function fetchStoredSRTForLayer(
   const backendDataset = await getDataset(datasetId);
   const backendLayer = backendDataset.dataSource.dataLayers.find((l) => l.name === layerName);
   const stored = backendLayer?.coordinateTransformations ?? null;
-  if (stored != null && isLiveTransformCompatible(stored)) {
+  if (stored != null && hasValidLiveTransformationPattern(stored)) {
     return { srt: extractSRTFromTransforms(stored), isValid: true };
   }
   return { srt: DEFAULT_SRT, isValid: false };
@@ -129,9 +130,8 @@ export function LayerTransformSettingsContent({
   isVisible: boolean;
 }) {
   const dispatch = useDispatch();
+  const queryClient = useQueryClient();
   const [isSaving, setIsSaving] = useState(false);
-  const [storedSRT, setStoredSRT] = useState<SRTValues>(DEFAULT_SRT);
-  const [isFetchingStored, setIsFetchingStored] = useState(false);
   const dataset = useWkSelector((state) => state.dataset);
   const datasetBbox = useMemo(() => getDatasetBoundingBox(dataset), [dataset]);
   const translationSettingLimits = useMemo<[number, number, number]>(
@@ -150,23 +150,20 @@ export function LayerTransformSettingsContent({
     (state) => state.datasetConfiguration.nativelyRenderedLayerName === layer.name,
   );
 
-  const isCompatible = useMemo(() => isLiveTransformCompatible(transforms), [transforms]);
+  const isCompatible = useMemo(() => hasValidLiveTransformationPattern(transforms), [transforms]);
 
-  useEffect(() => {
-    if (!isVisible) return;
-    const fetchStoredSRT = async () => {
-      setIsFetchingStored(true);
-      try {
-        const { srt } = await fetchStoredSRTForLayer(dataset.id, layer.name);
-        setStoredSRT(srt);
-      } catch {
-        setStoredSRT(DEFAULT_SRT);
-      } finally {
-        setIsFetchingStored(false);
-      }
-    };
-    fetchStoredSRT();
-  }, [isVisible, dataset.id, layer.name]);
+  // The stored SRT values are the "default" baseline saved in the backend that the reset buttons
+  // restore to. They are fetched lazily once the popover becomes visible.
+  const {
+    data: storedSRTResult,
+    isFetching: isFetchingStored,
+    refetch: refetchStoredSRT,
+  } = useQuery({
+    queryKey: ["storedLayerSRT", dataset.id, layer.name],
+    queryFn: () => fetchStoredSRTForLayer(dataset.id, layer.name),
+    enabled: isVisible,
+  });
+  const storedSRT = storedSRTResult?.srt ?? DEFAULT_SRT;
 
   const srtFromStore = useMemo((): SRTValues => {
     if (!transforms || transforms.length === 0) return DEFAULT_SRT;
@@ -187,29 +184,24 @@ export function LayerTransformSettingsContent({
   );
 
   const handleResetToStored = useCallback(async () => {
-    setIsFetchingStored(true);
-    try {
-      const { srt: restoredSRT, isValid } = await fetchStoredSRTForLayer(dataset.id, layer.name);
-      setStoredSRT(restoredSRT);
-      handleChange(restoredSRT);
-      if (!isValid) {
-        Toast.info(
-          "Restored to default transforms as transforms in the backend are incompatible with the Live Transforms editor.",
-        );
-      }
-    } catch (e) {
-      console.error("Failed to fetch stored transforms:", e);
+    const { data, error } = await refetchStoredSRT();
+    if (error != null || data == null) {
+      console.error("Failed to fetch stored transforms:", error);
       Toast.error("Failed to fetch stored transforms. Please try again.");
-    } finally {
-      setIsFetchingStored(false);
+      return;
     }
-  }, [dataset.id, layer.name, handleChange]);
+    handleChange(data.srt);
+    if (!data.isValid) {
+      Toast.info(
+        "Restored to default transforms as transforms in the backend are incompatible with the Live Transforms editor.",
+      );
+    }
+  }, [refetchStoredSRT, handleChange]);
 
   const handleSaveForAllUsers = useCallback(async () => {
     setIsSaving(true);
     try {
-      const currentTransforms = transforms;
-      const areValidTransforms = currentTransforms && isLiveTransformCompatible(currentTransforms);
+      const areValidTransforms = transforms && hasValidLiveTransformationPattern(transforms);
       if (!areValidTransforms) {
         return;
       }
@@ -217,11 +209,14 @@ export function LayerTransformSettingsContent({
       const dataSource = {
         ...backendDataset.dataSource,
         dataLayers: backendDataset.dataSource.dataLayers.map((l) =>
-          l.name === layer.name ? { ...l, coordinateTransformations: currentTransforms } : l,
+          l.name === layer.name ? { ...l, coordinateTransformations: transforms } : l,
         ),
       };
       await updateDatasetPartial(dataset.id, { dataSource });
-      setStoredSRT(extractSRTFromTransforms(currentTransforms));
+      queryClient.setQueryData(["storedLayerSRT", dataset.id, layer.name], {
+        srt: extractSRTFromTransforms(transforms),
+        isValid: true,
+      });
       Toast.success("Layer transforms saved for all users.");
     } catch (e) {
       console.error("Failed to save layer transforms:", e);
@@ -229,7 +224,7 @@ export function LayerTransformSettingsContent({
     } finally {
       setIsSaving(false);
     }
-  }, [dataset.id, layer.name, transforms]);
+  }, [dataset.id, layer.name, transforms, queryClient]);
 
   if (!isCompatible) {
     return (

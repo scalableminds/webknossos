@@ -445,11 +445,11 @@ function isScaleOnly(transformation?: AffineTransformation) {
   );
 }
 
-function hasValidTransformationCount(dataLayers: Array<APIDataLayer>): boolean {
+function hasValidSettingsTransformationCount(dataLayers: Array<APIDataLayer>): boolean {
   return dataLayers.every((layer) => layer.coordinateTransformations?.length === 5);
 }
 
-function hasOnlyAffineTransformations(dataLayers: Array<APIDataLayer>): boolean {
+function hasOnlySettingsAffineTransformations(dataLayers: Array<APIDataLayer>): boolean {
   return dataLayers.every((layer) =>
     layer.coordinateTransformations?.every((transformation) => transformation.type === "affine"),
   );
@@ -461,11 +461,13 @@ function hasOnlyAffineTransformations(dataLayers: Array<APIDataLayer>): boolean 
 // 3. Rotation around y-axis (potentially mirrored)
 // 4. Rotation around z-axis (potentially mirrored)
 // 5. Translation back to original position
-export const EXPECTED_TRANSFORMATION_LENGTH = 5;
+export const EXPECTED_SETTINGS_TRANSFORMATION_LENGTH = 5;
 
-function hasValidTransformationPattern(transformations: CoordinateTransformation[]): boolean {
+function hasValidSettingsTransformationPattern(
+  transformations: CoordinateTransformation[],
+): boolean {
   return (
-    transformations.length === EXPECTED_TRANSFORMATION_LENGTH &&
+    transformations.length === EXPECTED_SETTINGS_TRANSFORMATION_LENGTH &&
     isTranslationOnly(transformations[0] as AffineTransformation) &&
     isOnlyRotatedOrMirrored(transformations[1] as AffineTransformation) &&
     isOnlyRotatedOrMirrored(transformations[2] as AffineTransformation) &&
@@ -488,11 +490,14 @@ function _doAllLayersHaveTheSameRotation(dataLayers: Array<APIDataLayer>): boole
     );
   }
   // There should be a translation to the origin, one transformation for each axis and one translation back. => A total of 5 affine transformations.
-  if (!hasValidTransformationCount(dataLayers) || !hasOnlyAffineTransformations(dataLayers)) {
+  if (
+    !hasValidSettingsTransformationCount(dataLayers) ||
+    !hasOnlySettingsAffineTransformations(dataLayers)
+  ) {
     return false;
   }
 
-  if (!hasValidTransformationPattern(firstDataLayerTransformations)) {
+  if (!hasValidSettingsTransformationPattern(firstDataLayerTransformations)) {
     return false;
   }
   for (let i = 1; i < dataLayers.length; i++) {
@@ -513,10 +518,11 @@ function _doAllLayersHaveTheSameRotation(dataLayers: Array<APIDataLayer>): boole
 
 export const doAllLayersHaveTheSameRotation = memoize(_doAllLayersHaveTheSameRotation);
 
-export function transformationEqualsAffineIdentityTransform(
+export function settingsTransformationEqualsAffineIdentityTransform(
   transformations: CoordinateTransformation[],
 ): boolean {
-  const hasValidTransformationCount = transformations.length === EXPECTED_TRANSFORMATION_LENGTH;
+  const hasValidTransformationCount =
+    transformations.length === EXPECTED_SETTINGS_TRANSFORMATION_LENGTH;
   const hasOnlyAffineTransformations = transformations.every(
     (transformation) => transformation.type === "affine",
   );
@@ -581,7 +587,7 @@ export function layerToGlobalTransformedPosition(
 // [5] user translation, [6] origin → center dataset translation.
 // They are stored separately to keep the extracted value consistent between reloads.
 // Else e.g. some rotations might be shown differently as euler angles are not deterministic.
-export const LIVE_TRANSFORM_LENGTH = 7;
+export const EXPECTED_LIVE_TRANSFORMATION_LENGTH = 7;
 export type SRTValues = {
   scale: [number, number, number];
   rotation: [number, number, number];
@@ -597,11 +603,11 @@ export const DEFAULT_SRT: SRTValues = {
 // Returns true when the transform list is in a format editable by the live SRT editor:
 // null/empty (no transforms) or exactly the 7-affine pattern: translation, scale,
 // rotX, rotY, rotZ, translation, translation.
-export function isLiveTransformCompatible(
+export function hasValidLiveTransformationPattern(
   transforms: CoordinateTransformation[] | null | undefined,
 ): boolean {
   if (transforms == null || transforms.length === 0) return true;
-  if (transforms.length !== LIVE_TRANSFORM_LENGTH) return false;
+  if (transforms.length !== EXPECTED_LIVE_TRANSFORMATION_LENGTH) return false;
   if (!transforms.every((t) => t.type === "affine")) return false;
   const t = transforms as AffineTransformation[];
   return (
@@ -654,7 +660,7 @@ export function extractEulerAngleDegreesFromMatrix(
 // Extracts the SRTValues (scale, rotation, translation) from a 7 matrix coordinate transformation of a layer.
 // Make sure this is only called with a compatible CoordinateTransformations.
 export function extractSRTFromTransforms(transforms: CoordinateTransformation[]): SRTValues {
-  if (transforms.length !== LIVE_TRANSFORM_LENGTH) return DEFAULT_SRT;
+  if (transforms.length !== EXPECTED_LIVE_TRANSFORMATION_LENGTH) return DEFAULT_SRT;
   return {
     scale: extractScaleFromMatrix(transforms[1] as AffineTransformation),
     rotation: [

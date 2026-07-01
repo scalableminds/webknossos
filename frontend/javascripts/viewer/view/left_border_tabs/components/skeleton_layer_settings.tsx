@@ -151,6 +151,8 @@ export default function SkeletonLayerSettings() {
   const { showSkeletons, tracingId } = skeletonTracing;
   const activeNodeRadius = getActiveNode(skeletonTracing)?.radius ?? 0;
   const unit = LongUnitToShortUnitMap[dataset.dataSource.scale.unit];
+  const isClippingDistanceDisabled =
+    userConfiguration.clipSkeletonToCurrentSection && isSectionClippingAvailable;
 
   return (
     <React.Fragment>
@@ -261,7 +263,7 @@ export default function SkeletonLayerSettings() {
           ) : (
             <FastTooltip
               title={
-                userConfiguration.clipSkeletonToCurrentSection && isSectionClippingAvailable
+                isClippingDistanceDisabled
                   ? 'Disabled because "Only Show Nodes of Current Section" is active.'
                   : null
               }
@@ -275,9 +277,7 @@ export default function SkeletonLayerSettings() {
                   value={userConfiguration.clippingDistance}
                   onChange={onChangeClippingDistance}
                   defaultValue={defaultState.userConfiguration.clippingDistance}
-                  disabled={
-                    userConfiguration.clipSkeletonToCurrentSection && isSectionClippingAvailable
-                  }
+                  disabled={isClippingDistanceDisabled}
                 />
               </div>
             </FastTooltip>

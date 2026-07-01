@@ -447,7 +447,7 @@ export function maybeGetNodeIdFromPosition(
   pickingScene.add(pickingNode);
   const camera = planeView.getCameraForPlane(plane);
 
-  let { width, height } = getInputCatcherRect(Store.getState(), plane);
+  let { width, height } = getInputCatcherRect(pickingState, plane);
   width = Math.round(width);
   height = Math.round(height);
   const buffer = renderToTexture(plane, pickingScene, camera, true);

@@ -111,8 +111,8 @@ export function mayEditSkeletonTree(state: WebknossosState, tree: Tree | null | 
 export function getReasonForCantEditSkeletonTree(
   state: WebknossosState,
   tree: Tree | null | undefined,
-): string | null {
-  // If mayEditSkeletonTree is false, getReasonForCantEditSkeletonTree will provide a human-readable reason for that. Otherwise, null will be returned.
+): string | undefined {
+  // If mayEditSkeletonTree is false, getReasonForCantEditSkeletonTree will provide a human-readable reason for that. Otherwise, undefined will be returned.
   const isConcurrentCollabMode = isConcurrentCollaborationMode(state);
   const isActiveTreeAgglomerate = isAgglomerateTree(tree);
 
@@ -125,7 +125,7 @@ export function getReasonForCantEditSkeletonTree(
     return messages["tracing.skeleton_editing_disabled_in_live_collab"];
   }
 
-  return null;
+  return undefined;
 }
 
 export function mayEditAnnotationViewConfig(state: WebknossosState) {

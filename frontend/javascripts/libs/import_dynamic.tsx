@@ -1,27 +1,27 @@
 import { Button } from "antd";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
-import { retryAsyncFunction } from "libs/utils";
 import window from "libs/window";
 
 // Dynamically imported modules can fail to load, for example, because
 // - a new WEBKNOSSOS version was deployed and the URLs of the old chunks
 //   the client knows about are no longer valid, or
 // - the network or the server is flaky.
-// This module makes dynamic import() calls resilient against such errors
-// by retrying the import and by informing the user about the problem
-// (instead of crashing). See https://github.com/scalableminds/webknossos/issues/9540
-
-const RETRY_COUNT = 2; // 2 retries == 3 attempts in total
-const RETRY_DELAY_FACTOR_MS = 500; // leads to delays of 1s and 2s between the attempts
+// This module makes dynamic import() calls resilient against such errors by
+// informing the user about the problem (instead of crashing) and offering a
+// page reload. See https://github.com/scalableminds/webknossos/issues/9540
+//
+// Note: we deliberately do NOT retry the import as browsers cache the failed 
+// import upon network problems. When the module is outdated reloading is the
+// only solution anyway.
 
 const FAILED_IMPORT_TOAST_KEY = "failed-dynamic-import";
 
 export type DynamicImportFailureReason = "new-version-available" | "network";
 
-// Thrown by importWithRetry when all retries are exhausted. The `reason` field
-// tells call sites whether the failure was due to a new deployment (stale chunk
-// URLs) or a network/server problem — so they can show appropriate feedback.
+// Thrown by importDynamic when the import fails. The `reason` field tells call
+// sites whether the failure was due to a new deployment (stale chunk URLs) or a
+// network/server problem — so they can show appropriate feedback.
 export class DynamicImportError extends Error {
   readonly reason: DynamicImportFailureReason;
 
@@ -74,12 +74,12 @@ async function notifyUserAboutFailedDynamicImport(reason: DynamicImportFailureRe
   });
 }
 
-export default async function importWithRetry<T>(
+export default async function importDynamic<T>(
   importFn: () => Promise<T>,
   { showErrorToast = true }: { showErrorToast?: boolean } = {},
 ): Promise<T> {
   try {
-    return await retryAsyncFunction(importFn, RETRY_COUNT, RETRY_DELAY_FACTOR_MS);
+    return await importFn();
   } catch (originalError) {
     console.error("Failed to load dynamically imported module.", originalError);
     // Determine the reason before throwing so callers can read it off the error.

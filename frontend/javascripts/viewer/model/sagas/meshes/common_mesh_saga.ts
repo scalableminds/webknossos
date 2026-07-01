@@ -1,6 +1,6 @@
 import { saveAs } from "file-saver";
 import ErrorHandling from "libs/error_handling";
-import importWithRetry from "libs/import_with_retry";
+import importDynamic from "libs/import_dynamic";
 import exportToStl from "libs/stl_exporter";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -93,7 +93,7 @@ function* downloadMeshCellsAsZIP(
     // Load the import within the try block so that a failed import
     // is also handled gracefully by the catch below.
     const { BlobReader, BlobWriter, ZipWriter } = yield* call(() =>
-      importWithRetry(() => import("@zip.js/zip.js")),
+      importDynamic(() => import("@zip.js/zip.js")),
     );
     const zipWriter = new ZipWriter(new BlobWriter("application/zip"));
     const addFileToZipWriterPromises = segments.map((element) => {

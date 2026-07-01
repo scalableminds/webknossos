@@ -2,7 +2,7 @@ import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import type { JsonPrimitive } from "admin/api/jobs";
 import { AutoComplete, Button, Flex, Form, Input } from "antd";
 import useDidMount from "beautiful-react-hooks/useDidMount";
-import importWithRetry, { DynamicImportError } from "libs/import_with_retry";
+import importDynamic, { DynamicImportError } from "libs/import_dynamic";
 import Toast from "libs/toast";
 import { useId, useState } from "react";
 import type { WorkflowConfigKey } from "viewer/view/ai_jobs/workflow_config_keys";
@@ -54,7 +54,7 @@ export function KeyValuePairsInput({
 
   useDidMount(async () => {
     try {
-      const WORKFLOW_CONFIG_KEYS: WorkflowConfigKey[] = (await importWithRetry(
+      const WORKFLOW_CONFIG_KEYS: WorkflowConfigKey[] = (await importDynamic(
         () => import("viewer/view/ai_jobs/workflow_config_keys"),
         {
           showErrorToast: false,

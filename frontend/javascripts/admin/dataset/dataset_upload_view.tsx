@@ -49,7 +49,7 @@ import FolderSelection from "dashboard/folders/folder_selection";
 import dayjs from "dayjs";
 import features from "features";
 import ErrorHandling from "libs/error_handling";
-import importWithRetry from "libs/import_with_retry";
+import importDynamic from "libs/import_dynamic";
 import type { ResumableUploadEvent } from "libs/resumable_upload/resumable_upload";
 import Toast from "libs/toast";
 import { getFileExtension, isFileExtensionEqualTo, isUserAdminOrDatasetManager } from "libs/utils";
@@ -561,10 +561,10 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       if (fileExtension === "zip") {
         // @zip.js is a fairly large module
         // Dynamically import it to avoid loading it on Dashboard/admin pages.
-        const zipJs = await importWithRetry(() => import("@zip.js/zip.js")).catch(() => null);
+        const zipJs = await importDynamic(() => import("@zip.js/zip.js")).catch(() => null);
 
         if (zipJs == null) {
-          // The user was already notified about the failed import by importWithRetry.
+          // The user was already notified about the failed import by importDynamic.
           this.formRef.current?.setFieldsValue({
             zipFile: [],
           });

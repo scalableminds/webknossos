@@ -1,6 +1,6 @@
 import logoScreenshot from "@images/logo-screenshot.svg";
 import { saveAs } from "file-saver";
-import importWithRetry from "libs/import_with_retry";
+import importDynamic from "libs/import_dynamic";
 import { convertBufferToImage } from "libs/utils";
 import {
   type OrthographicCamera,
@@ -164,7 +164,7 @@ export async function captureScreenshots(prefix?: string): Promise<ScreenshotBlo
         : null;
     const canvas =
       inputCatcherElement != null
-        ? await importWithRetry(() => import("html2canvas"))
+        ? await importDynamic(() => import("html2canvas"))
             .then((html2canvas) =>
               html2canvas.default(inputCatcherElement as HTMLElement, {
                 backgroundColor: null,
@@ -216,9 +216,7 @@ export async function downloadScreenshotsAsZip(
 ) {
   // @zip.js is a fairly large module
   // Dynamically import it to avoid loading it on Dashboard/admin pages.
-  const { BlobReader, ZipWriter, BlobWriter } = await importWithRetry(
-    () => import("@zip.js/zip.js"),
-  );
+  const { BlobReader, ZipWriter, BlobWriter } = await importDynamic(() => import("@zip.js/zip.js"));
   const zipBlob = new BlobWriter("application/zip");
   const zipWriter = new ZipWriter(zipBlob);
   for (const { name, blob } of screenshots) {

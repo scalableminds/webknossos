@@ -1,5 +1,5 @@
 import { Button, Result } from "antd";
-import importWithRetry from "libs/import_with_retry";
+import importDynamic from "libs/import_dynamic";
 import window from "libs/window";
 import type React from "react";
 import { lazy, Suspense } from "react";
@@ -28,7 +28,7 @@ export default function loadable<Props>(
   const InternalComponent = lazy(() =>
     // Don't show the error toast since the rendered ErrorComponent
     // already informs the user about the problem.
-    importWithRetry(loader, { showErrorToast: false }).catch(() => ({
+    importDynamic(loader, { showErrorToast: false }).catch(() => ({
       default: ErrorComponent,
     })),
   ) as any;

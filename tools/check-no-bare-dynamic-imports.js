@@ -7,21 +7,21 @@ const ROOT = path.resolve(".");
 
 // Relative paths from repo root that are allowed to use bare dynamic import().
 const WHITELIST = [
-  // Benchmark-only dev API. Wrapping in importWithRetry would reintroduce a
+  // Benchmark-only dev API. Wrapping in importDynamic would reintroduce a
   // cyclic dependency and a failed import is acceptable here.
   "frontend/javascripts/viewer/api/wk_dev.ts",
   // Web workers are eagerly bundled by Vite; this import() is only reached in
-  // Vitest/Node, where importWithRetry's stale-chunk protection does not apply.
+  // Vitest/Node, where importDynamic's stale-chunk protection does not apply.
   "frontend/javascripts/viewer/workers/comlink_wrapper.ts",
 ];
 
-// A dynamic import() call that is wrapped by importWithRetry(() => …) or
+// A dynamic import() call that is wrapped by importDynamic(() => …) or
 // loadable(() => …) / loadable<T>(() => …). loadable() is allowed because it
-// calls importWithRetry() internally. The pattern tolerates whitespace and
+// calls importDynamic() internally. The pattern tolerates whitespace and
 // newlines between the wrapper and the import() call. Capturing group 1 is the
 // `import(` token so its offset can be marked as allowed.
 const WRAPPED_IMPORT =
-  /\b(?:importWithRetry|loadable)\s*(?:<[^>]*>)?\s*\(\s*(?:async\s*)?\(\s*\)\s*=>\s*(import\s*\()/gs;
+  /\b(?:importDynamic|loadable)\s*(?:<[^>]*>)?\s*\(\s*(?:async\s*)?\(\s*\)\s*=>\s*(import\s*\()/gs;
 
 // A dynamic import() call expression with an actual argument. The non-empty
 // argument requirement skips mentions of `import()` in comments.
@@ -58,10 +58,10 @@ if (violations.length > 0) {
     console.error("  -", violation);
   }
   console.error(
-    "\n👉 Wrap dynamic imports in `importWithRetry(() => import(...))` (or `loadable`) so that",
+    "\n👉 Wrap dynamic imports in `importDynamic(() => import(...))` (or `loadable`) so that",
   );
   console.error(
-    "   failed chunk loads are retried and surfaced gracefully. See libs/import_with_retry.tsx.",
+    "   failed chunk loads are surfaced gracefully. See libs/import_dynamic.tsx.",
   );
   process.exit(1);
 } else {

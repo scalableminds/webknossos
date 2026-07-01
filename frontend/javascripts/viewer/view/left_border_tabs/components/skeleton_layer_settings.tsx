@@ -282,7 +282,7 @@ export default function SkeletonLayerSettings() {
               </div>
             </FastTooltip>
           )}
-          {!isArbitraryMode ? (
+          {!isFlightMode ? (
             <SwitchSetting
               label={settings.clipSkeletonToCurrentSection}
               value={userConfiguration.clipSkeletonToCurrentSection}

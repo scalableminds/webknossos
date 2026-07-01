@@ -439,7 +439,7 @@ export function maybeGetNodeIdFromPosition(
   const clippingAxis =
     isSkeletonSectionClippingActive(pickingState) &&
     plane !== OrthoViews.TDView &&
-    plane !== "arbitraryViewport"
+    plane !== "flightViewport"
       ? Dimensions.getIndices(plane)[2]
       : -1;
   skeleton.setSectionClippingUniforms(clippingAxis, getPosition(pickingState.flycam));

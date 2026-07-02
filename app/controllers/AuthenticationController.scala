@@ -659,7 +659,7 @@ class AuthenticationController @Inject() (
           GlobalAccessContext
         ) ??~>
           Msg.Passkeys.unauthorized ~> UNAUTHORIZED
-        serverProperty = new ServerProperty(origin, origin.getHost, challenge)
+        serverProperty = ServerProperty.builder().origin(origin).rpId(origin.getHost).challenge(challenge).build()
 
         params = new AuthenticationParameters(
           serverProperty,
@@ -742,7 +742,7 @@ class AuthenticationController @Inject() (
         challenge <- temporaryRegistrationStore
           .pop(sessionId)
           .toFox ?~> "Timeout during registration. Please try again." ~> UNAUTHORIZED
-        serverProperty = new ServerProperty(origin, origin.getHost, challenge)
+        serverProperty = ServerProperty.builder().origin(origin).rpId(origin.getHost).challenge(challenge).build()
         publicKeyParams = webAuthnPubKeyParams.map(k =>
           new PublicKeyCredentialParameters(PublicKeyCredentialType.PUBLIC_KEY, COSEAlgorithmIdentifier.create(k.alg))
         )

@@ -574,8 +574,7 @@ function* setupTreeProofreadingAction(
     // Replay the current action with the proofreading saga as the initiator.
     // The reducer ignores the current action as the initiator is marked as "USER".
     const actionWithSagaAsInitiator = { ...action, initiator: "PROOFREADING" } as
-      | DeleteEdgeAction
-      | MergeTreesAction;
+      DeleteEdgeAction | MergeTreesAction;
     yield* put(actionWithSagaAsInitiator);
 
     const { sourceNodeId, targetNodeId } = action;
@@ -2359,15 +2358,21 @@ type SplitAgglomeratesInMappingResult = {
  * Re-builds the local mapping to reflect one or more server-side agglomerate splits by re-requesting the
  * affected segments' new agglomerate ids and returning the updated mapping plus the involved old/new ids.
  *
+ * Affected segment IDs are found by scanning the local mapping for ids that map to the provided agglomerate
+ * IDs. Additionally, all keys of the `segmentIdToOldAgglomerateId` parameter are also considered to be
+ * "affected". `segmentIdToOldAgglomerateId` doesn't need to contain *all* segment ids that map to a common
+ * agglomerate ID. Instead, a segment ID only needs to be contained if the caller needs the ID to be part of
+ * the returned mapping (`addAdditionalSegmentsToMapping` needs to be set to true, too).
+ *
  * This is the general (plural) implementation which can split several agglomerates at once. For the common
  * case of splitting a single agglomerate, prefer the {@link splitAgglomerateInMapping} wrapper.
  *
  * @param activeMapping - Current mapping info which is copied and mutated to reflect the reassigned segments
  *   before returning the new mapping as splitMapping.
- * @param segmentIdToOldAgglomerateId - Every segment involved in the split action, mapped to its pre-split
- *   agglomerate id. All explicitly marked segments by the split action should be present. Must contain at
- *   least one segment of the split agglomerate. Segments may be passed even if they are not in the local
- *   mapping (e.g. while forwarded foreign splits during rebasing).
+ * @param segmentIdToOldAgglomerateId - (Some¹) segment IDs involved in the split action, mapped to its pre-split
+ *   agglomerate id. Must contain at least one segment of the split agglomerate. Segments may be passed even if
+ *   they are not in the local mapping (e.g. while forwarded foreign splits during rebasing).
+ *   ¹ See paragraph about "affected segment ids" above for more details about the impact of passed IDs.
  * @param volumeTracingId - Id of the volume tracing whose (editable) mapping is updated.
  * @param version - Annotation version at which to look up the post-split agglomerate ids.
  * @param syncAgglomerateTrees - If true, sync the skeleton trees to the split.
@@ -2487,6 +2492,9 @@ export function* splitAgglomeratesInMapping(
  *   At least one must be provided so the split can be resolved even when the agglomerate has no
  *   segments in the local mapping. Segments that are not part of the local mapping are only written
  *   into the returned mapping when `addAdditionalSegmentsToMapping` is set.
+ *   The parameter doesn't need to contain *all* segment ids that map to a common agglomerate ID
+ *  (see referenced function below for more information).
+ *
  * @see splitAgglomeratesInMapping for the remaining parameters and the return value.
  */
 export function* splitAgglomerateInMapping(

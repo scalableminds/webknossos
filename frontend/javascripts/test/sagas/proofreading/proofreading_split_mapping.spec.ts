@@ -2,15 +2,15 @@
 import { type WebknossosTestContext, setupWebknossosForTesting } from "test/helpers/apiHelpers";
 import { MappingStatusEnum } from "viewer/constants";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
-import { splitAgglomerateInMapping } from "viewer/model/sagas/volume/proofreading/proofread_saga";
+import { splitAgglomeratesInMapping } from "viewer/model/sagas/volume/proofreading/proofread_saga";
 import { type ActiveMappingInfo, startSaga } from "viewer/store";
 import { Store } from "viewer/singletons";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /*
- * Focused unit tests for `splitAgglomerateInMapping`.
+ * Focused unit tests for `splitAgglomeratesInMapping`.
  *
- * Ensures that `splitAgglomerateInMapping` queries the backend using segment ids, not agglomerate ids.
+ * Ensures that `splitAgglomeratesInMapping` queries the backend using segment ids, not agglomerate ids.
  * Prior to the fix, the code queried by agglomerate id, which always returned nothing because
  * agglomerate ids are not segment ids.
  *
@@ -21,7 +21,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  * This is a regression test for the bug explained here: https://github.com/scalableminds/webknossos/issues/9559#issuecomment-4739369932
  */
 
-describe("splitAgglomerateInMapping", () => {
+describe("splitAgglomeratesInMapping", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
     await setupWebknossosForTesting(context, "hybrid");
   });
@@ -45,8 +45,7 @@ describe("splitAgglomerateInMapping", () => {
   function runSplit(
     context: WebknossosTestContext,
     activeMapping: ActiveMappingInfo,
-    sourceAgglomerateId: number,
-    additionalSegmentIdToOldAgglomerateId: Map<number, number>,
+    segmentIdToOldAgglomerateId: Map<number, number>,
     addAdditionalSegmentsToMapping: boolean,
     // The full mapping the (mocked) tracingstore returns after the split.
     mappingAfterSplit: Array<[number, number]>,
@@ -55,13 +54,12 @@ describe("splitAgglomerateInMapping", () => {
     const { tracingId } = Store.getState().annotation.volumes[0];
     const version = Store.getState().annotation.version;
     return startSaga(function* () {
-      return yield* splitAgglomerateInMapping(
+      return yield* splitAgglomeratesInMapping(
         activeMapping,
-        sourceAgglomerateId,
+        segmentIdToOldAgglomerateId,
         tracingId,
         version,
         false,
-        additionalSegmentIdToOldAgglomerateId,
         addAdditionalSegmentsToMapping,
       );
     }).toPromise();
@@ -83,7 +81,7 @@ describe("splitAgglomerateInMapping", () => {
         ]),
       );
       // Segment info extracted from the foreign update action: Agglomerate 100 = {segment 1, segment 2} was split.
-      const additionalSegmentIdToOldAgglomerateId = new Map([
+      const segmentIdToOldAgglomerateId = new Map([
         [1, 100],
         [2, 100],
       ]);
@@ -99,8 +97,7 @@ describe("splitAgglomerateInMapping", () => {
       const result = await runSplit(
         context,
         activeMapping,
-        100,
-        additionalSegmentIdToOldAgglomerateId,
+        segmentIdToOldAgglomerateId,
         addAdditionalSegmentsToMapping,
         mappingAfterSplit,
       );
@@ -139,7 +136,7 @@ describe("splitAgglomerateInMapping", () => {
     ]);
     const activeMapping = buildActiveMapping(segmentIdToOldAgglomerateId);
 
-    const result = await runSplit(context, activeMapping, 100, segmentIdToOldAgglomerateId, false, [
+    const result = await runSplit(context, activeMapping, segmentIdToOldAgglomerateId, false, [
       [1, 100],
       [2, 300],
       [3, 200],

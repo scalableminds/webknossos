@@ -1209,37 +1209,34 @@ function* performPartitionedMinCut(
       console.error("Failed to split mapping in partitioned min cut. Aborting...");
       return;
     }
-    const { splitMapping } = splitMappingInfo;
+    const { splitMapping: mappingWithSplitChanges } = splitMappingInfo;
 
     yield* put(
       setMappingDataAction(
         volumeTracingId,
-        splitMapping,
+        mappingWithSplitChanges,
         // As these split actions were already sent to the server, splitMapping is stored on the server already.
         true,
       ),
     );
 
     /* Reload meshes */
-    const newMapping = yield* select(
-      (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracingId].mapping,
-    );
     const newAgglomerateIdFromPartition1 = yield* call(
       preparation.mapSegmentId,
       partitions[1][0],
-      newMapping,
+      mappingWithSplitChanges,
     );
     const newAgglomerateIdFromPartition2 = yield* call(
       preparation.mapSegmentId,
       partitions[2][0],
-      newMapping,
+      mappingWithSplitChanges,
     );
 
     // Get positions of new meshes from first split edge information.
     const firstEdgeFirstSegmentNewAgglomerate = yield* call(
       preparation.mapSegmentId,
       edgesToRemove[0].segmentId1,
-      newMapping,
+      mappingWithSplitChanges,
     );
     const meshLoadingPositionForPartition1 =
       firstEdgeFirstSegmentNewAgglomerate === newAgglomerateIdFromPartition1

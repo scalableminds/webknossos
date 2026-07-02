@@ -121,6 +121,8 @@ The information is JSON-encoded in the URL fragment and has the following format
     stateByLayer?: UrlStateByLayer,
     additionalCoordinates?: AdditionalCoordinate[];
     nativelyRenderedLayerName?: string | null;
+    clippingDistance?: number;
+    clipSkeletonToCurrentSection?: boolean;
   |};
 
   ```

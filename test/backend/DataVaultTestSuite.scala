@@ -213,7 +213,7 @@ class DataVaultTestSuite extends AsyncWordSpec {
       "using HTTP Vault" should {
         "return correct response" in
           WsTestClient.withClient { ws =>
-            val upath = UPath.fromStringUnsafe("https://storage.googleapis.com/")
+            val upath = UPath.fromStringUnsafe("http://storage.googleapis.com/")
             val vaultPath =
               new VaultPath(
                 upath,

@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.tools.{Box, Failure, Fox, Full}
+import com.scalableminds.util.tools.{Box, Failure, Fox, Full, Math}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.helpers.ZipEntryUPath
 import com.typesafe.scalalogging.LazyLogging
@@ -12,7 +12,7 @@ import java.nio.charset.StandardCharsets
 import java.util.zip.ZipEntry
 import scala.concurrent.ExecutionContext
 
-private case class ZipCentralDirEntry(
+case class ZipCentralDirEntry(
     localHeaderOffset: Long,
     compressedSize: Long,
     uncompressedSize: Long,
@@ -59,8 +59,8 @@ class ZipDataVault(outerVaultPath: VaultPath) extends DataVault with LazyLogging
     extraLength = localHeaderBuffer.getShort(28).toInt & 0xffff
     dataStart = entry.localHeaderOffset + 30L + fileNameLength + extraLength
     rangeInZip = rangeInEntryToRangeInZip(dataStart, entry.compressedSize, range)
-    (bytes, _, rangeHeader) <- outerVaultPath.readBytesEncodingAndRangeHeader(rangeInZip)
-  } yield (bytes, Encoding.identity, rangeHeader)
+    (bytes, _, _) <- outerVaultPath.readBytesEncodingAndRangeHeader(rangeInZip)
+  } yield (bytes, Encoding.identity, range.toContentRangeHeaderWithLength(entry.uncompressedSize))
 
   override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
     for {
@@ -82,7 +82,9 @@ class ZipDataVault(outerVaultPath: VaultPath) extends DataVault with LazyLogging
       normalizedInnerPath <- normalizeInnerPath(path).toFox
       prefix = if (normalizedInnerPath.isEmpty) "" else normalizedInnerPath + "/"
       centralDirectory <- getCentralDirectory
-      total = centralDirectory.filter(_._1.startsWith(prefix)).values.map(_.compressedSize).sum
+      total = centralDirectory.collect {
+        case (name, entry) if name == normalizedInnerPath || name.startsWith(prefix) => entry.compressedSize
+      }.sum
     } yield total
 
   private def readCentralDirectory(using ec: ExecutionContext, tc: TokenContext): Fox[Map[String, ZipCentralDirEntry]] =
@@ -262,14 +264,15 @@ class ZipDataVault(outerVaultPath: VaultPath) extends DataVault with LazyLogging
   private def normalizeInnerPath(name: String): String =
     name.stripPrefix("/").stripSuffix("/")
 
-  private def rangeInEntryToRangeInZip(entryStart: Long, entrySize: Long, range: ByteRange): ByteRange =
-    range match {
-      case CompleteByteRange() =>
-        ByteRange.startEndExclusive(entryStart, entryStart + entrySize)
-      case StartEndExclusiveByteRange(s, e) =>
-        ByteRange.startEndExclusive(entryStart + s, entryStart + e)
-      case SuffixLengthByteRange(n) =>
-        ByteRange.startEndExclusive(entryStart + entrySize - n, entryStart + entrySize)
+  private def rangeInEntryToRangeInZip(entryStart: Long, entrySize: Long, range: ByteRange): ByteRange = {
+    val (start, end) = range match {
+      case CompleteByteRange()             => (0L, entrySize)
+      case StartEndExclusiveByteRange(s, e) => (s, e)
+      case SuffixLengthByteRange(n)         => (entrySize - n, entrySize)
     }
+    val clampedStart = Math.clamp(start, 0L, entrySize)
+    val clampedEnd = Math.clamp(end, 0L, entrySize)
+    ByteRange.startEndExclusive(entryStart + clampedStart, entryStart + clampedEnd)
+  }
 
 }

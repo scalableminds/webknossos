@@ -11,7 +11,7 @@ import window from "libs/window";
 // informing the user about the problem (instead of crashing) and offering a
 // page reload. See https://github.com/scalableminds/webknossos/issues/9540
 //
-// Note: we deliberately do NOT retry the import as browsers cache the failed 
+// Note: we deliberately do NOT retry the import as browsers cache the failed
 // import upon network problems. When the module is outdated reloading is the
 // only solution anyway.
 

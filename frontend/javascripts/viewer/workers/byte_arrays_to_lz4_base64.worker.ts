@@ -1,4 +1,5 @@
 import Base64 from "base64-js";
+import importDynamic from "libs/import_dynamic";
 import { expose } from "./comlink_core";
 
 // Load lz4-wasm lazily instead of via a static top-level import. Since Vite 8, the
@@ -8,7 +9,7 @@ import { expose } from "./comlink_core";
 // before the listener is registered and is lost forever. Kicking off the dynamic import
 // here (without awaiting) keeps module evaluation synchronous so `expose()` registers
 // the handler immediately, while the wasm still starts loading eagerly in the background.
-const lz4Import = import("lz4-wasm");
+const lz4Import = importDynamic(() => import("lz4-wasm"));
 
 async function compressLz4Block(data: Uint8Array): Promise<Uint8Array> {
   const { compress } = await lz4Import;

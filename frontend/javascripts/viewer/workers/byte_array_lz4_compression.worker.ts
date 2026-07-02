@@ -1,3 +1,4 @@
+import importDynamic from "libs/import_dynamic";
 import { expose } from "./comlink_core";
 
 // Load lz4-wasm lazily instead of via a static top-level import. Since Vite 8, the
@@ -6,7 +7,7 @@ import { expose } from "./comlink_core";
 // the first message from the main thread to be dropped. Kicking off the dynamic import
 // here (without awaiting) keeps module evaluation synchronous so the Comlink handler is
 // registered immediately, while the wasm still starts loading eagerly in the background.
-const lz4Import = import("lz4-wasm");
+const lz4Import = importDynamic(() => import("lz4-wasm"));
 
 async function compressLz4Block(
   data: Uint8Array<ArrayBuffer>,

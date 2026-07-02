@@ -361,8 +361,9 @@ class DataVaultTestSuite extends AsyncWordSpec {
             tc: TokenContext
         ): Fox[(Array[Byte], Encoding.Value, Option[String])] = ???
 
-        override def listDirectory(path: VaultPath, maxItems: Int)(implicit
-            ec: ExecutionContext
+        override def listDirectory(path: VaultPath, maxItems: Int)(using
+            ec: ExecutionContext,
+            tc: TokenContext
         ): Fox[List[VaultPath]] = ???
 
         override def getUsedStorageBytes(path: VaultPath)(using ec: ExecutionContext, tc: TokenContext): Fox[Long] =

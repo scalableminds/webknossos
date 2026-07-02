@@ -266,7 +266,7 @@ class ZipDataVault(outerVaultPath: VaultPath) extends DataVault with LazyLogging
 
   private def rangeInEntryToRangeInZip(entryStart: Long, entrySize: Long, range: ByteRange): ByteRange = {
     val (start, end) = range match {
-      case CompleteByteRange()             => (0L, entrySize)
+      case CompleteByteRange()              => (0L, entrySize)
       case StartEndExclusiveByteRange(s, e) => (s, e)
       case SuffixLengthByteRange(n)         => (entrySize - n, entrySize)
     }

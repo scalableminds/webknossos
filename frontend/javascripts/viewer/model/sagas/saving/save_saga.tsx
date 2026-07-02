@@ -80,7 +80,7 @@ import {
   getMeshDisplayPropsByOldAgglomerateId,
   type PreservedMeshDisplayProps,
   refreshAffectedMeshes,
-  splitAgglomerateInMapping,
+  splitAgglomeratesInMapping,
   updateMappingWithMerge,
 } from "../volume/proofreading/proofread_saga";
 import {
@@ -932,7 +932,7 @@ export function* tryToIncorporateActions(
         const activeMapping = yield* select(
           (store) => store.temporaryConfiguration.activeMappingByLayer[tracingId],
         );
-        const splitMappingInfo = yield* splitAgglomerateInMapping(
+        const splitMappingInfo = yield* splitAgglomeratesInMapping(
           activeMapping,
           splitSegmentIdToOldAgglomerate,
           tracingId,

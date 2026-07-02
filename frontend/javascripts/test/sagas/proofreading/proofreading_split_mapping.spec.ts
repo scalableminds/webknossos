@@ -2,15 +2,15 @@
 import { type WebknossosTestContext, setupWebknossosForTesting } from "test/helpers/apiHelpers";
 import { MappingStatusEnum } from "viewer/constants";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
-import { splitAgglomerateInMapping } from "viewer/model/sagas/volume/proofreading/proofread_saga";
+import { splitAgglomeratesInMapping } from "viewer/model/sagas/volume/proofreading/proofread_saga";
 import { type ActiveMappingInfo, startSaga } from "viewer/store";
 import { Store } from "viewer/singletons";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /*
- * Focused unit tests for `splitAgglomerateInMapping`.
+ * Focused unit tests for `splitAgglomeratesInMapping`.
  *
- * Ensures that `splitAgglomerateInMapping` queries the backend using segment ids, not agglomerate ids.
+ * Ensures that `splitAgglomeratesInMapping` queries the backend using segment ids, not agglomerate ids.
  * Prior to the fix, the code queried by agglomerate id, which always returned nothing because
  * agglomerate ids are not segment ids.
  *
@@ -21,7 +21,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  * This is a regression test for the bug explained here: https://github.com/scalableminds/webknossos/issues/9559#issuecomment-4739369932
  */
 
-describe("splitAgglomerateInMapping", () => {
+describe("splitAgglomeratesInMapping", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
     await setupWebknossosForTesting(context, "hybrid");
   });
@@ -54,7 +54,7 @@ describe("splitAgglomerateInMapping", () => {
     const { tracingId } = Store.getState().annotation.volumes[0];
     const version = Store.getState().annotation.version;
     return startSaga(function* () {
-      return yield* splitAgglomerateInMapping(
+      return yield* splitAgglomeratesInMapping(
         activeMapping,
         segmentIdToOldAgglomerateId,
         tracingId,

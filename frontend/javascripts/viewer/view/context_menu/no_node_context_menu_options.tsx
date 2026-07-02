@@ -19,6 +19,7 @@ import {
   handleFloodFillFromGlobalPosition,
 } from "viewer/controller/combinations/volume_handlers";
 import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
+import { hasConnectomeFile } from "viewer/model/accessors/connectome_accessor";
 import {
   getMappingInfo,
   getVisibleSegmentationLayer,
@@ -31,7 +32,6 @@ import {
   getActiveCellId,
   getActiveSegmentationTracing,
   hasAgglomerateMapping,
-  hasConnectomeFile,
 } from "viewer/model/accessors/volumetracing_accessor";
 import { maybeFetchMeshFilesAction } from "viewer/model/actions/annotation_actions";
 import { ensureLayerMappingsAreLoadedAction } from "viewer/model/actions/dataset_actions";

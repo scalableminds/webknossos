@@ -19,7 +19,8 @@ import com.scalableminds.webknossos.datastore.helpers.{
   NativeBucketScanner,
   NodeDefaults,
   ProtoGeometryConversions,
-  SkeletonTracingDefaults
+  SkeletonTracingDefaults,
+  UnsignedLongJson
 }
 import com.scalableminds.webknossos.datastore.models._
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
@@ -65,13 +66,26 @@ case class MinCutParameters(
 )
 
 object MinCutParameters {
-  implicit val jsonFormat: OFormat[MinCutParameters] = Json.format[MinCutParameters]
+  private val baseFormat: OFormat[MinCutParameters] = Json.format[MinCutParameters]
+  implicit val jsonFormat: OFormat[MinCutParameters] =
+    UnsignedLongJson.patchRequiredField(
+      UnsignedLongJson.patchListField(
+        UnsignedLongJson.patchListField(baseFormat, "partition1")(_.partition1, (a, v) => a.copy(partition1 = v)),
+        "partition2"
+      )(_.partition2, (a, v) => a.copy(partition2 = v)),
+      "agglomerateId"
+    )(_.agglomerateId, (a, v) => a.copy(agglomerateId = v))
 }
 
 case class NeighborsParameters(segmentId: Long, mag: Vec3Int, agglomerateId: Long, version: Long)
 
 object NeighborsParameters {
-  implicit val jsonFormat: OFormat[NeighborsParameters] = Json.format[NeighborsParameters]
+  private val baseFormat: OFormat[NeighborsParameters] = Json.format[NeighborsParameters]
+  implicit val jsonFormat: OFormat[NeighborsParameters] =
+    UnsignedLongJson.patchRequiredField(
+      UnsignedLongJson.patchRequiredField(baseFormat, "segmentId")(_.segmentId, (a, v) => a.copy(segmentId = v)),
+      "agglomerateId"
+    )(_.agglomerateId, (a, v) => a.copy(agglomerateId = v))
 }
 
 case class EdgeWithPositions(
@@ -82,7 +96,12 @@ case class EdgeWithPositions(
 )
 
 object EdgeWithPositions {
-  implicit val jsonFormat: OFormat[EdgeWithPositions] = Json.format[EdgeWithPositions]
+  private val baseFormat: OFormat[EdgeWithPositions] = Json.format[EdgeWithPositions]
+  implicit val jsonFormat: OFormat[EdgeWithPositions] =
+    UnsignedLongJson.patchRequiredField(
+      UnsignedLongJson.patchRequiredField(baseFormat, "segmentId1")(_.segmentId1, (a, v) => a.copy(segmentId1 = v)),
+      "segmentId2"
+    )(_.segmentId2, (a, v) => a.copy(segmentId2 = v))
 }
 
 case class NodeWithPosition(
@@ -91,7 +110,9 @@ case class NodeWithPosition(
 )
 
 object NodeWithPosition {
-  implicit val jsonFormat: OFormat[NodeWithPosition] = Json.format[NodeWithPosition]
+  private val baseFormat: OFormat[NodeWithPosition] = Json.format[NodeWithPosition]
+  implicit val jsonFormat: OFormat[NodeWithPosition] =
+    UnsignedLongJson.patchRequiredField(baseFormat, "segmentId")(_.segmentId, (a, v) => a.copy(segmentId = v))
 }
 
 class EditableMappingService @Inject() (

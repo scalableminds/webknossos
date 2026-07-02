@@ -22,6 +22,7 @@ import com.scalableminds.webknossos.datastore.helpers.{
   SegmentIndexData,
   SegmentStatisticsParameters,
   SegmentStatisticsParametersMeshBased,
+  UnsignedLongJson,
   UPath
 }
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, UsableDataSource}
@@ -42,7 +43,7 @@ import com.scalableminds.webknossos.datastore.services.connectome.{
 import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateService
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.{Json, OFormat, Writes}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
 import java.io.File
@@ -204,7 +205,7 @@ class DataSourceController @Inject() (
         (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
         agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, mappingName)
         largestAgglomerateId: Long <- agglomerateService.largestAgglomerateId(agglomerateFileKey)
-      } yield Ok(Json.toJson(largestAgglomerateId))
+      } yield Ok(Json.toJson(largestAgglomerateId)(using UnsignedLongJson.writes))
     }
   }
 
@@ -373,7 +374,7 @@ class DataSourceController @Inject() (
             request.body.synapseIds,
             directionValidated
           )
-        } yield Ok(Json.toJson(agglomerateIds))
+        } yield Ok(Json.toJson(agglomerateIds)(using Writes.list(using UnsignedLongJson.writes)))
       }
     }
 

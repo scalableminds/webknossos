@@ -126,7 +126,7 @@ class ZipDataVaultTestSuite extends AsyncWordSpec with BeforeAndAfterAll {
       "list direct children of the zip root" in {
         val (vault, outerUPath) = makeZipVault()
         val path = new VaultPath(ZipEntryUPath(outerUPath, ""), vault)
-        path.listDirectory(maxItems = 20)(using globalExecutionContext).futureBox.map {
+        path.listDirectory(maxItems = 20)(using globalExecutionContext, emptyTokenContext).futureBox.map {
           case Full(children) =>
             val innerPaths = children
               .map(_.toUPath match {
@@ -147,7 +147,7 @@ class ZipDataVaultTestSuite extends AsyncWordSpec with BeforeAndAfterAll {
       "list direct children of a subdirectory" in {
         val (vault, outerUPath) = makeZipVault()
         val path = new VaultPath(ZipEntryUPath(outerUPath, "dir"), vault)
-        path.listDirectory(maxItems = 20)(using globalExecutionContext).futureBox.map {
+        path.listDirectory(maxItems = 20)(using globalExecutionContext, emptyTokenContext).futureBox.map {
           case Full(children) =>
             val innerPaths = children
               .map(_.toUPath match {

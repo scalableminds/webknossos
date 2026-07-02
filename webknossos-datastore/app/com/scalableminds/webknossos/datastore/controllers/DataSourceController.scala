@@ -7,6 +7,7 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Box, Empty, Failure, Fox, Full}
+import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
@@ -46,6 +47,7 @@ import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
 import java.io.File
+import java.net.URI
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext
@@ -585,9 +587,9 @@ class DataSourceController @Inject() (
       ) {
         val reportMutable = ListBuffer[String]()
         val hasLocalFilesystemRequest =
-          request.body.layerParameters.exists(param =>
-            param.remoteUri.startsWith(s"${PathSchemes.schemeFile}${UPath.schemeSeparator}")
-          )
+          request.body.layerParameters.exists { params =>
+            new URI(params.remoteUri.takeWhile(_ != '|')).getScheme == PathSchemes.schemeFile
+          }
         for {
           dataSourceBox: Box[UsableDataSource] <- exploreRemoteLayerService
             .exploreRemoteDatasource(request.body.layerParameters, reportMutable)

@@ -91,7 +91,10 @@ class FileSystemDataVault extends DataVault {
     } yield result
   }
 
-  override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
+  override def listDirectory(path: VaultPath, maxItems: Int)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[List[VaultPath]] =
     for {
       localPath <- vaultPathToLocalPath(path)
       listing =

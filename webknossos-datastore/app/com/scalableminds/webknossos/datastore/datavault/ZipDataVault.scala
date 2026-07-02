@@ -58,15 +58,20 @@ class ZipDataVault(outerVaultPath: VaultPath) extends DataVault with LazyLogging
     fileNameLength = localHeaderBuffer.getShort(26).toInt & 0xffff
     extraLength = localHeaderBuffer.getShort(28).toInt & 0xffff
     dataStart = entry.localHeaderOffset + 30L + fileNameLength + extraLength
-    rangeInZip = rangeInEntryToRangeInZip(dataStart, entry.compressedSize, range)
+    clampedEntryRange = clampRangeToEntry(range, entry.uncompressedSize)
+    rangeInZip = ByteRange.startEndExclusive(dataStart + clampedEntryRange.start, dataStart + clampedEntryRange.end)
     (bytes, _, _) <- outerVaultPath.readBytesEncodingAndRangeHeader(rangeInZip)
-  } yield (bytes, Encoding.identity, range.toContentRangeHeaderWithLength(entry.uncompressedSize))
+    rangeHeaderInEntry = clampedEntryRange.toContentRangeHeaderWithLength(entry.uncompressedSize)
+  } yield (bytes, Encoding.identity, rangeHeaderInEntry)
 
-  override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
+  override def listDirectory(path: VaultPath, maxItems: Int)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[List[VaultPath]] =
     for {
       normalizedInnerPath <- normalizeInnerPath(path).toFox
       dirPrefix = if (normalizedInnerPath.isEmpty) "" else normalizedInnerPath + "/"
-      centralDirectory <- getCentralDirectory(using ec, TokenContext(None))
+      centralDirectory <- getCentralDirectory
       directChildren = centralDirectory.keys
         .filter(_.startsWith(dirPrefix))
         .map(_.drop(dirPrefix.length))
@@ -264,15 +269,13 @@ class ZipDataVault(outerVaultPath: VaultPath) extends DataVault with LazyLogging
   private def normalizeInnerPath(name: String): String =
     name.stripPrefix("/").stripSuffix("/")
 
-  private def rangeInEntryToRangeInZip(entryStart: Long, entrySize: Long, range: ByteRange): ByteRange = {
+  private def clampRangeToEntry(range: ByteRange, entrySize: Long): StartEndExclusiveByteRange = {
     val (start, end) = range match {
       case CompleteByteRange()              => (0L, entrySize)
       case StartEndExclusiveByteRange(s, e) => (s, e)
       case SuffixLengthByteRange(n)         => (entrySize - n, entrySize)
     }
-    val clampedStart = Math.clamp(start, 0L, entrySize)
-    val clampedEnd = Math.clamp(end, 0L, entrySize)
-    ByteRange.startEndExclusive(entryStart + clampedStart, entryStart + clampedEnd)
+    StartEndExclusiveByteRange(Math.clamp(start, 0L, entrySize), Math.clamp(end, 0L, entrySize))
   }
 
 }

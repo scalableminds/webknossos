@@ -50,7 +50,10 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
         else Fox.failure(s"Https read failed for uri $uri: ${response.status} ${response.statusText}")
     } yield result
 
-  override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
+  override def listDirectory(path: VaultPath, maxItems: Int)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[List[VaultPath]] =
     // HTTP file listing is currently not supported.
     Fox.successful(List.empty)
 
@@ -135,12 +138,10 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
   }
 
   private def getBasicAuthCredential: Option[HttpBasicAuthCredential] =
-    credential.flatMap { c =>
-      c match {
-        case h: HttpBasicAuthCredential   => Some(h)
-        case l: LegacyDataVaultCredential => Some(l.toBasicAuth)
-        case _                            => None
-      }
+    credential.flatMap {
+      case h: HttpBasicAuthCredential   => Some(h)
+      case l: LegacyDataVaultCredential => Some(l.toBasicAuth)
+      case _                            => None
     }
 
   private def getCredential = credential

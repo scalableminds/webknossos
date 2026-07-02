@@ -121,7 +121,7 @@
     "check-cyclic-dependencies": "node ./tools/check-cyclic-dependencies.js",
     "startf": "yarn rm-fossil-lock; yarn kill-listeners; rm -r webknossos-jni/target; yarn start",
     "beautify-front": "yarn fix-frontend && yarn typecheck",
-    "beautify": "yarn format-backend && yarn beautify-front",
+    "beautify": "yarn fix-backend && yarn beautify-front",
     "knip": "knip"
   },
   "dependencies": {

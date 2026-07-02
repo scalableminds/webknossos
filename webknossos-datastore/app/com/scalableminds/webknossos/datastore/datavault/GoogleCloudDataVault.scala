@@ -88,7 +88,10 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
         .toFox ?~> "could not get encoding"
     } yield (bytes, encoding, Option(blobInfo.getSize).flatMap(size => range.toContentRangeHeaderWithLength(size)))
 
-  override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
+  override def listDirectory(path: VaultPath, maxItems: Int)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[List[VaultPath]] =
     (for {
       objName <- getObjectName(path)
       blobs <- tryo(

@@ -383,9 +383,6 @@ class UrlManager {
           }
         : {};
     const { clippingDistance, clipSkeletonToCurrentSection } = state.userConfiguration;
-    const clipSkeletonOptional = clipSkeletonToCurrentSection
-      ? { clipSkeletonToCurrentSection }
-      : {};
 
     return {
       position,
@@ -394,10 +391,10 @@ class UrlManager {
       additionalCoordinates: state.flycam.additionalCoordinates,
       nativelyRenderedLayerName: state.datasetConfiguration.nativelyRenderedLayerName,
       clippingDistance,
+      clipSkeletonToCurrentSection,
       ...rotation,
       ...activeNodeOptional,
       ...stateByLayerOptional,
-      ...clipSkeletonOptional,
     };
   }
 

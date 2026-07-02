@@ -27,6 +27,7 @@ import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import { ControlModeEnum, type Vector3, type Vector6 } from "viewer/constants";
 import { isAnnotationOwner } from "viewer/model/accessors/annotation_accessor";
 import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
+import { dispatchGetNewIdAsync } from "viewer/model/actions/actions";
 import {
   addUserBoundingBoxAction,
   changeUserBoundingBoxAction,
@@ -74,7 +75,14 @@ export default function BoundingBoxTab() {
     [dispatch],
   );
 
-  const addNewBoundingBox = useCallback(() => dispatch(addUserBoundingBoxAction()), [dispatch]);
+  const addNewBoundingBox = useCallback(async () => {
+    const id = await dispatchGetNewIdAsync(
+      dispatch,
+      getSomeTracing(annotation).tracingId,
+      "BoundingBox",
+    );
+    dispatch(addUserBoundingBoxAction(null, undefined, id));
+  }, [dispatch, annotation]);
 
   const setPosition = useCallback(
     (position: Vector3) => dispatch(setPositionAction(position)),

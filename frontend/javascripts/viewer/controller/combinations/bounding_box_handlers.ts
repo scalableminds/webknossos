@@ -10,6 +10,7 @@ import {
   calculateGlobalPos,
   calculateMaybeGlobalPos,
 } from "viewer/model/accessors/view_mode_accessor";
+import { dispatchGetNewIdAsync } from "viewer/model/actions/actions";
 import {
   addUserBoundingBoxAction,
   changeUserBoundingBoxAction,
@@ -230,23 +231,30 @@ export function getClosestHoveredBoundingBox(
   return [primaryEdge, secondaryEdge];
 }
 
-export function createBoundingBoxAndGetEdges(
+export async function createBoundingBoxAndGetEdges(
   pos: Point2,
   plane: OrthoView,
-): [SelectedEdge, SelectedEdge | null | undefined] | null {
+): Promise<[SelectedEdge, SelectedEdge | null | undefined] | null> {
   const state = Store.getState();
   const globalPosition = calculateMaybeGlobalPos(state, pos, plane);
   if (globalPosition == null || globalPosition.rounded == null) return null;
 
+  const tracingId = getSomeTracing(state.annotation).tracingId;
+  const id = await dispatchGetNewIdAsync(Store.dispatch, tracingId, "BoundingBox");
+
   Store.dispatch(
-    addUserBoundingBoxAction({
-      boundingBox: {
-        min: globalPosition.rounded,
-        // The last argument ensures that a Vector3 is used and not a
-        // Float32Array.
-        max: V3.add(globalPosition.rounded, [1, 1, 1], [0, 0, 0]),
+    addUserBoundingBoxAction(
+      {
+        boundingBox: {
+          min: globalPosition.rounded,
+          // The last argument ensures that a Vector3 is used and not a
+          // Float32Array.
+          max: V3.add(globalPosition.rounded, [1, 1, 1], [0, 0, 0]),
+        },
       },
-    }),
+      undefined,
+      id,
+    ),
   );
   const { userBoundingBoxes } = getSomeTracing(Store.getState().annotation);
 

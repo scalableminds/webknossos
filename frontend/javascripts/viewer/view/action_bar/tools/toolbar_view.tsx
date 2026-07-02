@@ -15,8 +15,11 @@ import {
   Toolkits,
   VolumeTools,
 } from "viewer/model/accessors/tool_accessor";
+import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
+import { dispatchGetNewIdAsync } from "viewer/model/actions/actions";
 import { addUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
 import { setToolAction } from "viewer/model/actions/ui_actions";
+import Store from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
 import { ToolDropdown } from "../tool_dropdown";
 import { ChangeBrushSizePopover } from "./brush_presets";
@@ -35,8 +38,10 @@ import {
 function CreateNewBoundingBoxButton() {
   const dispatch = useDispatch();
 
-  const handleAddNewUserBoundingBox = useCallback(() => {
-    dispatch(addUserBoundingBoxAction());
+  const handleAddNewUserBoundingBox = useCallback(async () => {
+    const tracingId = getSomeTracing(Store.getState().annotation).tracingId;
+    const id = await dispatchGetNewIdAsync(dispatch, tracingId, "BoundingBox");
+    dispatch(addUserBoundingBoxAction(null, undefined, id));
   }, [dispatch]);
 
   return (

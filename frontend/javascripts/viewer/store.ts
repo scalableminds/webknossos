@@ -735,6 +735,10 @@ export type WebknossosState = {
     string, // layerName
     LocalSegmentationState
   >;
+  // Bounding boxes are shared/mirrored across all tracings of an annotation (see
+  // updateUserBoundingBoxes in annotation_reducer.ts), so their id reservations are
+  // tracked here on the annotation level instead of per segmentation layer.
+  readonly idReservationsForBoundingBoxes: { id: number; used: boolean }[];
   readonly operationContext: OperationContextState;
 };
 const sagaMiddleware = createSagaMiddleware();

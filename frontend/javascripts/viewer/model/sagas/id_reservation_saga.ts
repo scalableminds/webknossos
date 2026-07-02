@@ -2,10 +2,16 @@ import { reserveIdsForAnnotation } from "admin/rest_api";
 import { sleep } from "libs/utils";
 import without from "lodash-es/without";
 import { actionChannel, call, fork, put } from "typed-redux-saga";
+import type { AnnotationIdDomain } from "types/api_types";
 import Constants from "viewer/constants";
 import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
-import type { LocalSegmentationState, VolumeTracing } from "viewer/store";
-import { getTracingById } from "../accessors/tracing_accessor";
+import type {
+  EditableMapping,
+  SkeletonTracing,
+  VolumeTracing,
+  WebknossosState,
+} from "viewer/store";
+import { getIdReservationsForBoundingBoxes, getTracingById } from "../accessors/tracing_accessor";
 import { getIdReservationsForSegmentationLayer } from "../accessors/volumetracing_accessor";
 import type { GetNewIdAction } from "../actions/actions";
 import {
@@ -26,16 +32,64 @@ const { IDEAL_ID_BUFFER_SIZE } = Constants;
 const RESERVE_IDS_MAX_RETRIES = 3;
 const RETRY_DELAY_MULTIPLIER = import.meta.env.MODE === "test" ? 0.1 : 2;
 
+// Domains for which the reservation machinery below is actually wired up. "Segment" is
+// declared in ReservableIdDomain/AnnotationIdDomain for future use but not implemented, yet.
+type SupportedDomain = "SegmentGroup" | "BoundingBox";
+type SupportedTracing = VolumeTracing | SkeletonTracing;
+
+function isSupportedDomain(domain: AnnotationIdDomain): domain is SupportedDomain {
+  return domain === "SegmentGroup" || domain === "BoundingBox";
+}
+
+// SegmentGroup reservations only make sense for volume tracings (segment groups don't exist
+// on skeleton tracings). BoundingBox reservations are valid for both, since user bounding boxes
+// are mirrored across all tracings of an annotation (see updateUserBoundingBoxes in
+// annotation_reducer.ts).
+function isTracingSupportedForDomain(
+  tracing: SkeletonTracing | VolumeTracing | EditableMapping,
+  domain: SupportedDomain,
+): tracing is SupportedTracing {
+  if (domain === "SegmentGroup") {
+    return tracing.type === "volume";
+  }
+  return tracing.type === "volume" || tracing.type === "skeleton";
+}
+
+function getExistingIdSet(tracing: SupportedTracing, domain: SupportedDomain): Set<number> {
+  if (domain === "SegmentGroup") {
+    return getGroupIdSet((tracing as VolumeTracing).segmentGroups);
+  }
+  return new Set(tracing.userBoundingBoxes.map((bbox) => bbox.id));
+}
+
+function getMaxExistingId(tracing: SupportedTracing, domain: SupportedDomain): number {
+  if (domain === "SegmentGroup") {
+    return getMaximumGroupId((tracing as VolumeTracing).segmentGroups);
+  }
+  return Math.max(0, ...tracing.userBoundingBoxes.map((bbox) => bbox.id));
+}
+
+function getReservationsForDomain(
+  state: WebknossosState,
+  tracingId: string,
+  domain: SupportedDomain,
+): { id: number; used: boolean }[] {
+  if (domain === "BoundingBox") {
+    return getIdReservationsForBoundingBoxes(state);
+  }
+  return getIdReservationsForSegmentationLayer(state, tracingId)[domain];
+}
+
 export default function* idReservationSaga(): Saga<void> {
   yield* call(ensureWkInitialized);
 
   const getNewIdActionChannel = yield* actionChannel<GetNewIdAction>("GET_NEW_ID");
 
-  // Currently, there is one replenishmentLoop per supported domain type (which is only
-  // SegmentGroup, currently). In theory, one could have a replenishmentLoop per
-  // supported domain x tracing. This approach would allow parallel replenishment requests
-  // for multiple tracings. However, this is probably overkill right now.
+  // One replenishmentLoop runs per supported domain. In theory, one could have a
+  // replenishmentLoop per supported domain x tracing. This approach would allow parallel
+  // replenishment requests for multiple tracings. However, this is probably overkill right now.
   yield* fork(replenishmentLoop, "SegmentGroup");
+  yield* fork(replenishmentLoop, "BoundingBox");
 
   while (true) {
     const action = (yield* take(getNewIdActionChannel)) as GetNewIdAction;
@@ -44,9 +98,9 @@ export default function* idReservationSaga(): Saga<void> {
 }
 
 function getUsableReservations(
-  tracing: VolumeTracing,
-  idReservations: LocalSegmentationState["idReservations"],
-  domain: "SegmentGroup",
+  tracing: SupportedTracing,
+  reservations: { id: number; used: boolean }[],
+  domain: SupportedDomain,
 ) {
   /*
    * ID reservations are guaranteed to each user and don't expire as long as the id
@@ -59,13 +113,12 @@ function getUsableReservations(
    * we can simply compare the maximum known ID against the current reservations and
    * clean up by that.
    */
-  const unfilteredReservations = idReservations[domain];
-  const existingIdSet = getGroupIdSet(tracing.segmentGroups);
+  const existingIdSet = getExistingIdSet(tracing, domain);
 
-  return unfilteredReservations.filter(({ used, id }) => !used && !existingIdSet.has(id));
+  return reservations.filter(({ used, id }) => !used && !existingIdSet.has(id));
 }
 
-function* replenishmentLoop(domain: "SegmentGroup"): Saga<void> {
+function* replenishmentLoop(domain: SupportedDomain): Saga<void> {
   const replenishChannel = yield* actionChannel<RequestIdReplenishmentAction>(
     (action: { type: string }) =>
       action.type === "REQUEST_ID_REPLENISHMENT" &&
@@ -76,14 +129,14 @@ function* replenishmentLoop(domain: "SegmentGroup"): Saga<void> {
     const action = (yield* take(replenishChannel)) as RequestIdReplenishmentAction;
 
     const tracing = yield* select((state) => getTracingById(state, action.tracingId));
-    if (tracing.type !== "volume") {
+    if (!isTracingSupportedForDomain(tracing, domain)) {
       continue;
     }
 
-    const idReservations = yield* select((state) =>
-      getIdReservationsForSegmentationLayer(state, action.tracingId),
+    const reservations = yield* select((state) =>
+      getReservationsForDomain(state, action.tracingId, domain),
     );
-    const usableReservations = getUsableReservations(tracing, idReservations, domain);
+    const usableReservations = getUsableReservations(tracing, reservations, domain);
     if (usableReservations.length < IDEAL_ID_BUFFER_SIZE / 2) {
       // This will block until new reservations were fetched.
       try {
@@ -101,29 +154,33 @@ function* replenishmentLoop(domain: "SegmentGroup"): Saga<void> {
 
 function* handleReservationRequest(action: GetNewIdAction): Saga<void> {
   const { domain, tracingId } = action;
-  const tracing = yield* select((state) => getTracingById(state, tracingId));
 
-  if (tracing.type !== "volume" || domain !== "SegmentGroup") {
+  if (!isSupportedDomain(domain)) {
     console.warn(
-      "Ignored getNewId action because it's not implemented for non-volume tracings and non-segment domains, yet.",
+      `Ignored getNewId action because it's not implemented for domain "${domain}", yet.`,
     );
     return;
   }
 
-  const idReservations = yield* select((state) =>
-    getIdReservationsForSegmentationLayer(state, action.tracingId),
-  );
-  const usableReservations = getUsableReservations(tracing, idReservations, domain);
+  const tracing = yield* select((state) => getTracingById(state, tracingId));
+  if (!isTracingSupportedForDomain(tracing, domain)) {
+    console.warn(
+      `Ignored getNewId action because domain "${domain}" is not supported for tracing type "${tracing.type}".`,
+    );
+    return;
+  }
+
+  const reservations = yield* select((state) => getReservationsForDomain(state, tracingId, domain));
+  const usableReservations = getUsableReservations(tracing, reservations, domain);
 
   if (usableReservations.length > 0) {
-    const allReservations = idReservations[domain];
     // Mark the first usable reservation as used, preserving all other entries (including
     // already-used ones) so they can be included in idsToRelease in the next replenishment.
     yield* put(
       setIdReservationsAction(
         tracingId,
         domain,
-        allReservations.map((reservation) =>
+        reservations.map((reservation) =>
           reservation.id === usableReservations[0].id
             ? { ...reservation, used: true }
             : reservation,
@@ -166,18 +223,17 @@ function* handleReservationRequest(action: GetNewIdAction): Saga<void> {
   yield* call(handleReservationRequest, action);
 }
 
-function* fetchNewReservations(tracingId: string, domain: "SegmentGroup"): Saga<void> {
+function* fetchNewReservations(tracingId: string, domain: SupportedDomain): Saga<void> {
   const tracing = yield* select((state) => getTracingById(state, tracingId));
 
-  if (tracing.type !== "volume") {
+  if (!isTracingSupportedForDomain(tracing, domain)) {
     return;
   }
 
-  const idReservations = yield* select((state) =>
-    getIdReservationsForSegmentationLayer(state, tracingId),
+  const unfilteredReservations = yield* select((state) =>
+    getReservationsForDomain(state, tracingId, domain),
   );
-  const unfilteredReservations = idReservations[domain];
-  const usableReservations = getUsableReservations(tracing, idReservations, domain);
+  const usableReservations = getUsableReservations(tracing, unfilteredReservations, domain);
   const numberOfIdsToReserve = Math.max(1, IDEAL_ID_BUFFER_SIZE - usableReservations.length);
 
   const collaborationMode = yield* select((state) => state.annotation.collaborationMode);
@@ -207,25 +263,22 @@ function* fetchNewReservations(tracingId: string, domain: "SegmentGroup"): Saga<
       }
     }
   } else {
-    const maxGroupId = getMaximumGroupId(tracing.segmentGroups);
+    const maxExistingId = getMaxExistingId(tracing, domain);
     const maxReservationId =
       unfilteredReservations.length > 0 ? Math.max(...unfilteredReservations.map((r) => r.id)) : 0;
-    const startId = Math.max(maxGroupId, maxReservationId) + 1;
+    const startId = Math.max(maxExistingId, maxReservationId) + 1;
     newIds = Array.from({ length: numberOfIdsToReserve }, (_, i) => startId + i);
   }
 
   // Re-read fresh state: the async call above may have suspended this saga long enough for
   // another request to mark some reservations as used in the meantime.
   const freshTracing = yield* select((state) => getTracingById(state, tracingId));
-  const freshIdReservations = yield* select((state) =>
-    getIdReservationsForSegmentationLayer(state, tracingId),
-  );
-  const freshUnfilteredReservations =
-    freshTracing.type === "volume" ? freshIdReservations[domain] : [];
-  const freshUsableReservations =
-    freshTracing.type === "volume"
-      ? getUsableReservations(freshTracing, freshIdReservations, domain)
-      : [];
+  const freshUnfilteredReservations = isTracingSupportedForDomain(freshTracing, domain)
+    ? yield* select((state) => getReservationsForDomain(state, tracingId, domain))
+    : [];
+  const freshUsableReservations = isTracingSupportedForDomain(freshTracing, domain)
+    ? getUsableReservations(freshTracing, freshUnfilteredReservations, domain)
+    : [];
   // Preserve IDs that were marked used during the async call (not already sent in releasedIds),
   // so they can be included in idsToRelease on the next replenishment.
   const usedDuringCall = freshUnfilteredReservations.filter(

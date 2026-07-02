@@ -317,6 +317,7 @@ const defaultState: WebknossosState = {
     },
   },
   localSegmentationStateByLayer: {},
+  idReservationsForBoundingBoxes: [],
   operationContext: {
     activeOperations: [],
     childOperations: [],

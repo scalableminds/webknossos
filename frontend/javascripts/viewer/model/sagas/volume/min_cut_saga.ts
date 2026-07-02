@@ -15,6 +15,7 @@ import {
   enforceActiveVolumeTracing,
   getActiveSegmentationTracingLayer,
 } from "viewer/model/accessors/volumetracing_accessor";
+import { dispatchGetNewIdAsync } from "viewer/model/actions/actions";
 import { addUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
 import {
   finishAnnotationStrokeAction,
@@ -26,7 +27,7 @@ import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import { takeEveryInOperationContext } from "viewer/model/sagas/saga_helpers";
 import type { MutableNode, Node } from "viewer/model/types/tree_types";
-import { api } from "viewer/singletons";
+import { api, Store } from "viewer/singletons";
 
 // By default, a new bounding box is created around
 // the seed nodes with a padding. Within the bounding box
@@ -253,15 +254,25 @@ function* performMinCut(action: PerformMinCutAction): Saga<void> {
         ),
       ),
     };
+    const newBBoxId = yield* call(
+      dispatchGetNewIdAsync,
+      Store.dispatch,
+      skeleton.tracingId,
+      "BoundingBox",
+    );
     yield* put(
-      addUserBoundingBoxAction({
-        boundingBox: newBBox,
-        name: `Bounding box used for splitting cell (seedA=(${nodes[0].untransformedPosition.join(
-          ",",
-        )}), seedB=(${nodes[1].untransformedPosition.join(",")}), timestamp=${Date.now()})`,
-        color: getRandomColor(),
-        isVisible: true,
-      }),
+      addUserBoundingBoxAction(
+        {
+          boundingBox: newBBox,
+          name: `Bounding box used for splitting cell (seedA=(${nodes[0].untransformedPosition.join(
+            ",",
+          )}), seedB=(${nodes[1].untransformedPosition.join(",")}), timestamp=${Date.now()})`,
+          color: getRandomColor(),
+          isVisible: true,
+        },
+        undefined,
+        newBBoxId,
+      ),
     );
     boundingBoxObj = newBBox;
   }

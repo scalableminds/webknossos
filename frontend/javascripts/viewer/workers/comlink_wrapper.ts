@@ -25,7 +25,11 @@ export function createWorker<TExposed extends UseCreateWorkerToUseMe<AnyFn> | An
     return async (...params: Parameters<UnwrapExposedWorkerFn<TExposed>>) => {
       const pathToWorkerWithoutExtension = pathToWorker.replace(/\.worker\.ts$/, "");
       // This import statement requires a file extension for proper static analysis by Vite during build step.
-      const workerModule = await import(`./${pathToWorkerWithoutExtension}.worker.ts`);
+      // @vite-ignore keeps Rolldown from emitting every worker module a second time as a lazy
+      // main-thread chunk for this Vitest-only import (Vitest resolves it at runtime instead).
+      const workerModule = await import(
+        /* @vite-ignore */ `./${pathToWorkerWithoutExtension}.worker.ts`
+      );
       return workerModule.default(...params);
     };
   }

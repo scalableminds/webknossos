@@ -42,6 +42,7 @@ import { createOperationContext } from "viewer/model/sagas/operation_context_sag
 import { UNDO_HISTORY_SIZE } from "viewer/model/sagas/saving/save_saga_constants";
 import { Model } from "viewer/singletons";
 import type { SegmentGroup, SegmentMap, SkeletonTracing, UserBoundingBox } from "viewer/store";
+import { isConcurrentCollaborationMode } from "../accessors/annotation_accessor";
 import type BucketSnapshot from "../bucket_data_handling/bucket_snapshot";
 import { ensureWkInitialized } from "./ready_sagas";
 
@@ -573,12 +574,15 @@ function* applyStateOfStack(
   }
 
   const activeTool = yield* select((state) => state.uiInformation.activeTool);
-  if (activeTool === AnnotationTool.PROOFREAD) {
-    const warningMessage =
-      direction === "undo"
-        ? messages["undo.no_undo_during_proofread"]
-        : messages["undo.no_redo_during_proofread"];
-    Toast.warning(warningMessage);
+  const isLiveCollaboration = yield* select(isConcurrentCollaborationMode);
+  const notSupportedWarning =
+    activeTool === AnnotationTool.PROOFREAD
+      ? messages["undo.no_undo_during_proofread"]
+      : isLiveCollaboration
+        ? messages["undo.no_undo_in_live_collab"]
+        : null;
+  if (notSupportedWarning) {
+    Toast.warning(notSupportedWarning);
     return;
   }
 

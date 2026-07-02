@@ -27,7 +27,9 @@ import Constants, {
 import { getSegmentIdForPositionAsync } from "viewer/controller/combinations/volume_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import {
+  isAgglomerateTree,
   isAnnotationEditableByNonOwners,
+  isConcurrentCollaborationMode,
   mayEditAnnotation,
 } from "viewer/model/accessors/annotation_accessor";
 import {
@@ -285,9 +287,7 @@ function* pollNewestBackendVersion(ctx: OperationContext): Saga<void> {
 }
 
 function* subscribeToAnnotationMutexInLiveCollab(proofreadingSagaId: string) {
-  const isConcurrentCollab = yield* select(
-    (state) => state.annotation.collaborationMode === "Concurrent",
-  );
+  const isConcurrentCollab = yield* select(isConcurrentCollaborationMode);
   if (isConcurrentCollab) {
     return yield* call(subscribeToAnnotationMutex, proofreadingSagaId);
   }
@@ -561,9 +561,7 @@ function* setupTreeProofreadingAction(
 
   let successfulReturn = false;
   try {
-    const isLiveCollabActive = yield* select(
-      (state) => state.annotation.collaborationMode === "Concurrent",
-    );
+    const isLiveCollabActive = yield* select(isConcurrentCollaborationMode);
     if (isLiveCollabActive) {
       // If live collab is active and the user did a proofreading merge via edge creation / merge trees,
       // the affected agglomerate tree(s) may not be in sync with the backend yet. So poll the latest updates.
@@ -589,9 +587,9 @@ function* setupTreeProofreadingAction(
     }
 
     const isModifyingOnlyAgglomerateTrees =
-      sourceTree.type === TreeTypeEnum.AGGLOMERATE && targetTree.type === TreeTypeEnum.AGGLOMERATE;
+      isAgglomerateTree(sourceTree) && isAgglomerateTree(targetTree);
     const isModifyingAnyAgglomerateTrees =
-      sourceTree.type === TreeTypeEnum.AGGLOMERATE || targetTree.type === TreeTypeEnum.AGGLOMERATE;
+      isAgglomerateTree(sourceTree) || isAgglomerateTree(targetTree);
     const isProofreadingToolActive = yield* select(
       (state) => state.uiInformation.activeTool === AnnotationTool.PROOFREAD,
     );

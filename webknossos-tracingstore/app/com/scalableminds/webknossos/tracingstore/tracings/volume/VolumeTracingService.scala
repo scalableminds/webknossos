@@ -556,7 +556,7 @@ class VolumeTracingService @Inject() (
       tracing: VolumeTracing,
       dataRequests: List[AbstractDataRequest],
       includeFallbackDataIfAvailable: Boolean = false
-  )(using tc: TokenContext): Fox[(Array[Byte], List[Int])] =
+  )(using tc: TokenContext): Fox[(Array[Byte], Seq[Int], Seq[Int])] =
     for {
       isTemporaryTracing <- temporaryTracingService.isTemporaryTracing(tracingId)
       volumeLayer = volumeTracingLayer(

@@ -212,6 +212,10 @@ object Msg {
         "Could not split flat fallback layer bucket data from data store into buckets."
       val fallbackDataLengthMismatch: String =
         "Length mismatch when unpacking bucket data from data store for fallback layer."
+      val fallbackDataLoadingFailed: String =
+        "Could not load data from fallback segmentation layer."
+      val emptyBucketIndicesHeaderParsingFailed: String = "Could not parse empty bucket indices header."
+      val failureBucketIndicesHeaderParsingFailed: String = "Could not parse failure bucket indices header."
       val mergedVolumeStatsNotFound: String =
         "Could not find merged volume stats from previous merge steps."
       val invalidLargestSegmentId: String =

@@ -7,10 +7,10 @@ import { clamp, waitForElementWithId } from "libs/utils";
 import messages from "messages";
 import React from "react";
 import type { Point2, Vector3, ViewMode, Viewport } from "viewer/constants";
-import constants, { ArbitraryViewport } from "viewer/constants";
+import constants, { FlightViewport } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import TDController from "viewer/controller/td_controller";
-import ArbitraryPlane from "viewer/geometries/arbitrary_plane";
+import FlightModePlane from "viewer/geometries/arbitrary_plane";
 import Crosshair from "viewer/geometries/crosshair";
 import {
   getMoveOffset3d,
@@ -23,7 +23,6 @@ import {
   getNodePosition,
   untransformNodePosition,
 } from "viewer/model/accessors/skeletontracing_accessor";
-import { getViewportScale } from "viewer/model/accessors/view_mode_accessor";
 import {
   moveFlycamAction,
   pitchFlycamAction,
@@ -46,7 +45,7 @@ import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_act
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import { api } from "viewer/singletons";
 import Store from "viewer/store";
-import ArbitraryView from "viewer/view/arbitrary_view";
+import FlightModeView from "viewer/view/arbitrary_view";
 import type {
   KeyboardShortcutHandlerMap,
   KeyboardShortcutsMap,
@@ -55,27 +54,18 @@ import { buildKeyBindingsFromConfig } from "viewer/view/keyboard_shortcuts/keybo
 import { downloadScreenshot } from "viewer/view/rendering_utils";
 import { SkeletonToolController } from "../combinations/tool_controls";
 
-const arbitraryViewportId = "inputcatcher_arbitraryViewport";
+const flightViewportId = "inputcatcher_flightViewport";
 type Props = {
   viewMode: ViewMode;
 };
 
-class ArbitraryController extends React.PureComponent<Props> {
-  // See comment in Controller class on general controller architecture.
-  //
-  // Arbitrary Controller: Responsible for Arbitrary Modes
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'arbitraryView' has no initializer and is... Remove this comment to see the full error message
-  arbitraryView: ArbitraryView;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'isStarted' has no initializer and is not... Remove this comment to see the full error message
-  isStarted: boolean;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'plane' has no initializer and is not def... Remove this comment to see the full error message
-  plane: ArbitraryPlane;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'crosshair' has no initializer and is not... Remove this comment to see the full error message
-  crosshair: Crosshair;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'lastNodeMatrix' has no initializer and i... Remove this comment to see the full error message
-  lastNodeMatrix: Matrix4x4;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'input' has no initializer and is not def... Remove this comment to see the full error message
-  input: {
+class FlightModeController extends React.PureComponent<Props> {
+  flightModeView!: FlightModeView;
+  isStarted!: boolean;
+  plane!: FlightModePlane;
+  crosshair!: Crosshair;
+  lastNodeMatrix!: Matrix4x4;
+  input!: {
     mouseController: InputMouse | null | undefined;
     keyboard?: InputKeyboard;
   };
@@ -96,13 +86,13 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   initMouse(): void {
-    waitForElementWithId(arbitraryViewportId).then(() => {
+    waitForElementWithId(flightViewportId).then(() => {
       this.input.mouseController = new InputMouse(
-        arbitraryViewportId,
+        flightViewportId,
         {
           leftClick: (pos: Point2, viewport: string, event: MouseEvent, isTouch: boolean) => {
             SkeletonToolController.onLeftClick(
-              this.arbitraryView,
+              this.flightModeView,
               pos,
               event.shiftKey,
               event.altKey,
@@ -113,25 +103,15 @@ class ArbitraryController extends React.PureComponent<Props> {
             );
           },
           leftDownMove: (delta: Point2) => {
-            if (this.props.viewMode === constants.MODE_ARBITRARY) {
-              Store.dispatch(
-                yawFlycamAction(
-                  delta.x * Store.getState().userConfiguration.mouseRotateValue,
-                  true,
-                ),
-              );
-              Store.dispatch(
-                pitchFlycamAction(
-                  delta.y * -1 * Store.getState().userConfiguration.mouseRotateValue,
-                  true,
-                ),
-              );
-            } else if (this.props.viewMode === constants.MODE_ARBITRARY_PLANE) {
-              const [scaleX, scaleY] = getViewportScale(Store.getState(), ArbitraryViewport);
-              const fx = Store.getState().flycam.zoomStep / scaleX;
-              const fy = Store.getState().flycam.zoomStep / scaleY;
-              Store.dispatch(moveFlycamAction([delta.x * fx, delta.y * fy, 0]));
-            }
+            Store.dispatch(
+              yawFlycamAction(delta.x * Store.getState().userConfiguration.mouseRotateValue, true),
+            );
+            Store.dispatch(
+              pitchFlycamAction(
+                delta.y * -1 * Store.getState().userConfiguration.mouseRotateValue,
+                true,
+              ),
+            );
           },
           scroll: this.scroll,
           pinch: (delta: number) => {
@@ -142,14 +122,13 @@ class ArbitraryController extends React.PureComponent<Props> {
             }
           },
         },
-        ArbitraryViewport,
+        FlightViewport,
       );
     });
   }
 
   getHandlerMap(): Partial<KeyboardShortcutHandlerMap> {
     const getRotateValue = () => Store.getState().userConfiguration.rotateValue;
-    const isArbitrary = () => this.props.viewMode === constants.MODE_ARBITRARY;
     return {
       // Looped navigation (no delay)
       MOVE_FORWARD_WITH_RECORDING: {
@@ -198,22 +177,22 @@ class ArbitraryController extends React.PureComponent<Props> {
       },
       YAW_FLYCAM_POSITIVE_IN_DISTANCE: {
         onPressedWithRepeat: (timeFactor: number) => {
-          Store.dispatch(yawFlycamAction(getRotateValue() * timeFactor, isArbitrary()));
+          Store.dispatch(yawFlycamAction(getRotateValue() * timeFactor, true));
         },
       },
       YAW_FLYCAM_INVERTED_IN_DISTANCE: {
         onPressedWithRepeat: (timeFactor: number) => {
-          Store.dispatch(yawFlycamAction(-getRotateValue() * timeFactor, isArbitrary()));
+          Store.dispatch(yawFlycamAction(-getRotateValue() * timeFactor, true));
         },
       },
       PITCH_FLYCAM_POSITIVE_IN_DISTANCE: {
         onPressedWithRepeat: (timeFactor: number) => {
-          Store.dispatch(pitchFlycamAction(-getRotateValue() * timeFactor, isArbitrary()));
+          Store.dispatch(pitchFlycamAction(-getRotateValue() * timeFactor, true));
         },
       },
       PITCH_FLYCAM_INVERTED_IN_DISTANCE: {
         onPressedWithRepeat: (timeFactor: number) => {
-          Store.dispatch(pitchFlycamAction(getRotateValue() * timeFactor, isArbitrary()));
+          Store.dispatch(pitchFlycamAction(getRotateValue() * timeFactor, true));
         },
       },
       ZOOM_IN_FLIGHT: {
@@ -350,8 +329,8 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   init(): void {
-    const { clippingDistanceArbitrary } = Store.getState().userConfiguration;
-    this.setClippingDistance(clippingDistanceArbitrary);
+    const { clippingDistanceFlight } = Store.getState().userConfiguration;
+    this.setClippingDistance(clippingDistanceFlight);
   }
 
   bindToEvents(): void {
@@ -359,11 +338,11 @@ class ArbitraryController extends React.PureComponent<Props> {
       listenToStoreProperty(
         (state) => state.userConfiguration,
         (userConfiguration) => {
-          const { clippingDistanceArbitrary, displayCrosshair, crosshairSize } = userConfiguration;
-          this.setClippingDistance(clippingDistanceArbitrary);
+          const { clippingDistanceFlight, displayCrosshair, crosshairSize } = userConfiguration;
+          this.setClippingDistance(clippingDistanceFlight);
           this.crosshair.setScale(crosshairSize);
           this.crosshair.setVisibility(displayCrosshair);
-          this.arbitraryView.resizeThrottled();
+          this.flightModeView.resizeThrottled();
         },
       ),
       listenToStoreProperty(
@@ -384,23 +363,23 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   start(): void {
-    this.arbitraryView = new ArbitraryView();
-    this.arbitraryView.start();
-    this.plane = new ArbitraryPlane();
+    this.flightModeView = new FlightModeView();
+    this.flightModeView.start();
+    this.plane = new FlightModePlane();
     this.crosshair = new Crosshair(Store.getState().userConfiguration.crosshairSize);
     this.crosshair.setVisibility(Store.getState().userConfiguration.displayCrosshair);
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'ArbitraryPlane' is not assignabl... Remove this comment to see the full error message
-    this.arbitraryView.addGeometry(this.plane);
-    this.arbitraryView.setArbitraryPlane(this.plane);
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'FlightModePlane' is not assignabl... Remove this comment to see the full error message
+    this.flightModeView.addGeometry(this.plane);
+    this.flightModeView.setFlightModePlane(this.plane);
     // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Crosshair' is not assignable to ... Remove this comment to see the full error message
-    this.arbitraryView.addGeometry(this.crosshair);
+    this.flightModeView.addGeometry(this.crosshair);
     this.bindToEvents();
     this.initKeyboard();
     this.initMouse();
     this.init();
     const { clippingDistance } = Store.getState().userConfiguration;
     getSceneController().setClippingDistance(clippingDistance);
-    this.arbitraryView.draw();
+    this.flightModeView.draw();
     this.isStarted = true;
     this.forceUpdate();
   }
@@ -419,7 +398,7 @@ class ArbitraryController extends React.PureComponent<Props> {
       this.destroyInput();
     }
 
-    this.arbitraryView.stop();
+    this.flightModeView.stop();
     this.plane.stop();
     this.isStarted = false;
   }
@@ -448,7 +427,7 @@ class ArbitraryController extends React.PureComponent<Props> {
         untransformNodePosition(position, state),
         additionalCoordinates,
         rotation,
-        constants.ARBITRARY_VIEW,
+        constants.FLIGHT_VIEW,
         0,
       ),
     );
@@ -465,7 +444,7 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   setClippingDistance(value: number): void {
-    this.arbitraryView.setClippingDistance(value);
+    this.flightModeView.setClippingDistance(value);
   }
 
   pushBranch(): void {
@@ -501,12 +480,12 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   render() {
-    if (!this.arbitraryView) {
+    if (!this.flightModeView) {
       return null;
     }
 
-    return <TDController cameras={this.arbitraryView.getCameras()} />;
+    return <TDController cameras={this.flightModeView.getCameras()} />;
   }
 }
 
-export default ArbitraryController;
+export default FlightModeController;

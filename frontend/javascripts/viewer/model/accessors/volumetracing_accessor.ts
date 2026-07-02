@@ -861,6 +861,10 @@ const CONNECTOME_STATES = {
   },
 };
 
+export function getConnectomeDataForLayer(state: WebknossosState, layerName: string) {
+  return state.localSegmentationStateByLayer[layerName].connectomeData;
+}
+
 export function hasConnectomeFile(state: WebknossosState) {
   const segmentationLayer = getVisibleOrLastSegmentationLayer(state);
 
@@ -868,8 +872,7 @@ export function hasConnectomeFile(state: WebknossosState) {
     return CONNECTOME_STATES.NO_SEGMENTATION;
   }
 
-  const { currentConnectomeFile } =
-    state.localSegmentationStateByLayer[segmentationLayer.name].connectomeData;
+  const { currentConnectomeFile } = getConnectomeDataForLayer(state, segmentationLayer.name);
 
   if (currentConnectomeFile == null) {
     return CONNECTOME_STATES.NO_CONNECTOME_FILE;

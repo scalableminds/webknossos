@@ -18,11 +18,9 @@ import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateService
 import com.scalableminds.webknossos.datastore.storage.{BucketProviderCache, DataVaultService}
 
-import java.nio.file.Path
 import scala.concurrent.ExecutionContext
 
 class BinaryDataService(
-    val dataBaseDir: Path,
     val agglomerateServiceOpt: Option[AgglomerateService],
     dataVaultServiceOpt: Option[DataVaultService],
     sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]],
@@ -80,7 +78,6 @@ class BinaryDataService(
         }
         readInstructions = requestsSelected.map(r =>
           DataReadInstruction(
-            dataBaseDir,
             dataSourceId,
             dataLayer,
             r.cuboid.topLeft.toBucket.copy(additionalCoordinates = r.settings.additionalCoordinates),
@@ -206,13 +203,7 @@ class BinaryDataService(
   ): Fox[Array[Byte]] =
     if (request.dataLayer.containsMag(bucket.mag)) {
       val readInstruction =
-        DataReadInstruction(
-          dataBaseDir,
-          request.dataSourceIdOrVolumeDummy,
-          request.dataLayer,
-          bucket,
-          request.settings.version
-        )
+        DataReadInstruction(request.dataSourceIdOrVolumeDummy, request.dataLayer, bucket, request.settings.version)
       val dataSourceId = request.dataSourceIdOrVolumeDummy
       val bucketProvider =
         bucketProviderCache.getOrLoadAndPut((dataSourceId, request.dataLayer.bucketProviderCacheKey))(_ =>

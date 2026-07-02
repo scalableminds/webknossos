@@ -7,12 +7,10 @@ import {
 import {
   Button,
   Checkbox,
-  Col,
   Divider,
   Flex,
   Input,
   Modal,
-  Row,
   Segmented,
   Select,
   Spin,
@@ -222,7 +220,7 @@ function _MergeModalView({ isOpen, onOk }: Props) {
       title="Merge Annotations"
       open={isOpen}
       onCancel={onOk}
-      width={700}
+      width={500}
       footer={
         <Flex justify="flex-end" align="center" gap={12}>
           <Tooltip title="Imports skeleton trees (but no volume data) directly into the currently opened annotation.">
@@ -239,91 +237,85 @@ function _MergeModalView({ isOpen, onOk }: Props) {
       }
     >
       <Spin spinning={isUploading}>
-        <Row gutter={32} style={{ marginBottom: 12 }}>
-          <Col span={12}>
-            <Flex vertical gap={12}>
-              <Typography.Text type="secondary">
-                <p>
-                  Merge another annotation into this one, either from a single annotation or all
-                  annotations of a project.
-                </p>
-                <p>
-                  <b>Segment Ids:</b> For annotations with volume layers, non-zero segmentation
-                  voxels of the merged-in annotation overwrite those of the current annotation.
-                </p>
-              </Typography.Text>
-              <Typography.Text type="secondary">
-                <b>Tip:</b> NML files can simply be dragged and dropped into the annotation view to
-                import them.
-              </Typography.Text>
-            </Flex>
-          </Col>
-          <Col span={12}>
-            <Flex vertical gap={16}>
-              <Divider titlePlacement="left" style={{ margin: 0 }}>
-                Source
-              </Divider>
-              <Segmented
-                block
-                value={sourceType}
-                onChange={(value) => setSourceType(value as SourceType)}
-                options={[
-                  { value: "annotation", label: "Annotation" },
-                  { value: "project", label: "Project" },
-                ]}
+        <Flex vertical gap={16} style={{ marginBottom: 12 }}>
+          <Typography.Text type="secondary">
+            <p style={{ marginTop: 0 }}>
+              Merge another annotation into this one, either from a single annotation or all
+              annotations of a project.
+            </p>
+            <b>Tip:</b> NML files can simply be dragged and dropped into the annotation view to
+            import them.
+          </Typography.Text>
+          <Divider titlePlacement="left" style={{ margin: 0 }}>
+            Source
+          </Divider>
+          <Segmented
+            block
+            style={{ width: "350px" }}
+            value={sourceType}
+            onChange={(value) => setSourceType(value as SourceType)}
+            options={[
+              { value: "annotation", label: "Annotation" },
+              { value: "project", label: "Project" },
+            ]}
+          />
+          {sourceType === "project" ? (
+            <div>
+              {fieldLabel("Project")}
+              <Select
+                value={selectedProject}
+                style={{ width: "100%" }}
+                placeholder="Select a project…"
+                onChange={setSelectedProject}
+                loading={isFetchingData}
+                options={projects.map((project) => ({
+                  value: project.id,
+                  label: project.label,
+                }))}
               />
-              {sourceType === "project" ? (
-                <div>
-                  {fieldLabel("Project")}
-                  <Select
-                    value={selectedProject}
-                    style={{ width: "100%" }}
-                    placeholder="Select a project…"
-                    onChange={setSelectedProject}
-                    loading={isFetchingData}
-                    options={projects.map((project) => ({
-                      value: project.id,
-                      label: project.label,
-                    }))}
-                  />
-                </div>
-              ) : (
-                <div>
-                  {fieldLabel("Annotation")}
-                  <Input
-                    value={annotationInput}
-                    placeholder="Paste an annotation link or ID…"
-                    onChange={(event) => setAnnotationInput(event.target.value)}
-                    suffix={annotationInputSuffix}
-                  />
-                  {annotationInputHint != null ? (
-                    <Typography.Text
-                      type="secondary"
-                      style={{ display: "block", fontSize: 12, marginTop: 7 }}
-                    >
-                      {annotationInputHint}
-                    </Typography.Text>
-                  ) : null}
-                </div>
-              )}
-              <Divider titlePlacement="left" style={{ margin: 0 }}>
-                Settings
-              </Divider>
-              <Checkbox
-                checked={shouldRemapSegmentIds}
-                onChange={(ev) => setShouldRemapSegmentIds(ev.target.checked)}
-              >
-                Remap segment IDs
-                <Tooltip
-                  title="Remap the segment ids of the merged-in annotation to keep all segment ids unique. Deselect it to keep all ids as they are. Deselecting this is recommended for annotations based on fallback segmentation layers. This option has no effect on “Import trees here”, which copies skeleton data only."
-                  placement="top"
+            </div>
+          ) : (
+            <div>
+              {fieldLabel("Annotation")}
+              <Input
+                value={annotationInput}
+                placeholder="Paste an annotation link or ID…"
+                onChange={(event) => setAnnotationInput(event.target.value)}
+                suffix={annotationInputSuffix}
+              />
+              {annotationInputHint != null ? (
+                <Typography.Text
+                  type="secondary"
+                  style={{ display: "block", fontSize: 12, marginTop: 7 }}
                 >
-                  <InfoCircleOutlined className="icon-margin-left" />
-                </Tooltip>
-              </Checkbox>
-            </Flex>
-          </Col>
-        </Row>
+                  {annotationInputHint}
+                </Typography.Text>
+              ) : null}
+            </div>
+          )}
+          <Divider titlePlacement="left" style={{ margin: 0 }}>
+            Segment ID Settings
+          </Divider>
+          <div>
+            <Typography.Text type="secondary" style={{ display: "block", marginBottom: 7 }}>
+              For annotations with volume layers, non-zero segmentation voxels of the merged-in
+              annotation overwrite those of the current annotation. If both annotations use the
+              same segment IDs, the IDs can be remapped:
+            </Typography.Text>
+            <Checkbox
+              checked={shouldRemapSegmentIds}
+              onChange={(ev) => setShouldRemapSegmentIds(ev.target.checked)}
+            >
+              Remap segment IDs
+              <Tooltip
+                title="Remap the segment ids of the merged-in annotation to keep all segment ids unique. Deselect it to keep all ids as they are. Deselecting this is recommended for annotations based on fallback segmentation layers. This option has no effect on “Import trees here”, which copies skeleton data only."
+                placement="top"
+              >
+                <InfoCircleOutlined className="icon-margin-left" />
+              </Tooltip>
+            </Checkbox>
+          </div>
+        </Flex>
       </Spin>
     </Modal>
   );

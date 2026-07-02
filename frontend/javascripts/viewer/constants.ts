@@ -2,15 +2,14 @@ import type { Matrix4x4 } from "mjs";
 import { Euler, Matrix4 } from "three";
 export type AdditionalCoordinate = { name: string; value: number };
 
-export const ViewModeValues = ["orthogonal", "flight", "oblique"] as ViewMode[];
+export const ViewModeValues = ["orthogonal", "flight"] as ViewMode[];
 
 export const ViewModeValuesIndices = {
   Orthogonal: 0,
   Flight: 1,
-  Oblique: 2,
   Volume: 3,
 };
-export type ViewMode = "orthogonal" | "oblique" | "flight";
+export type ViewMode = "orthogonal" | "flight";
 export type Vector2 = [number, number];
 export type Vector3 = [number, number, number];
 export type Vector4 = [number, number, number, number];
@@ -68,16 +67,16 @@ export type OrthoViewMap<T> = Record<OrthoView, T>;
 export type OrthoViewWithoutTDMap<T> = Record<OrthoViewWithoutTD, T>;
 export type OrthoViewExtents = Readonly<OrthoViewMap<Vector2>>;
 export type OrthoViewRects = Readonly<OrthoViewMap<Rect>>;
-export const ArbitraryViewport = "arbitraryViewport";
-export const ArbitraryViews = {
-  arbitraryViewport: "arbitraryViewport",
+export const FlightViewport = "flightViewport";
+export const FlightViews = {
+  flightViewport: "flightViewport",
   TDView: "TDView",
 } as const;
-export const ArbitraryViewsToName = {
-  arbitraryViewport: "Arbitrary View",
+export const FlightViewsToName = {
+  flightViewport: "Flight View",
   TDView: "3D",
 };
-export type Viewport = OrthoView | typeof ArbitraryViewport;
+export type Viewport = OrthoView | typeof FlightViewport;
 export type ViewportMap<T> = Record<Viewport, T>;
 export type ViewportRects = Readonly<ViewportMap<Rect>>;
 export const OrthoViewValues = Object.keys(OrthoViews) as OrthoView[];
@@ -105,7 +104,7 @@ export const NumberToOrthoView: Record<number, OrthoView> = {
   1: OrthoViews.PLANE_YZ,
   2: OrthoViews.PLANE_XZ,
   3: OrthoViews.TDView,
-  4: OrthoViews.PLANE_XY, // Arbitrary view is equal to the XY plane.
+  4: OrthoViews.PLANE_XY, // Flight view is equal to the XY plane.
 };
 
 const PINK = 0xeb4b98;
@@ -261,10 +260,10 @@ export const NODE_ID_REF_REGEX = /#([0-9]+)/g;
 export const POSITION_REF_REGEX = /#\(([0-9]+,[0-9]+,[0-9]+)\)/g;
 const VIEWPORT_WIDTH = 376;
 
-// ARBITRARY_CAM_DISTANCE has to be calculated such that with cam
+// FLIGHT_CAM_DISTANCE has to be calculated such that with cam
 // angle 45°, the plane of width Constants.VIEWPORT_WIDTH fits exactly in the
 // viewport.
-export const ARBITRARY_CAM_DISTANCE = VIEWPORT_WIDTH / 2 / Math.tan(((Math.PI / 180) * 45) / 2);
+export const FLIGHT_CAM_DISTANCE = VIEWPORT_WIDTH / 2 / Math.tan(((Math.PI / 180) * 45) / 2);
 
 export const Unicode = {
   ThinSpace: "\u202f",
@@ -284,16 +283,14 @@ export type LabeledVoxelsMap = Map<BucketAddress, Uint8Array>;
 export type LabelMasksByBucketAndW = Map<BucketAddress, Map<number, Uint8Array>>;
 
 const Constants = {
-  ARBITRARY_VIEW: 4,
+  FLIGHT_VIEW: 4,
   DEFAULT_BORDER_WIDTH: 400,
   DEFAULT_BORDER_WIDTH_IN_IFRAME: 200,
   MODE_PLANE_TRACING: "orthogonal" as ViewMode,
-  MODE_ARBITRARY: "flight" as ViewMode,
-  MODE_ARBITRARY_PLANE: "oblique" as ViewMode,
+  MODE_FLIGHT: "flight" as ViewMode,
   MODE_VOLUME: "volume" as ViewMode,
   MODES_PLANE: ["orthogonal", "volume"] as ViewMode[],
-  MODES_ARBITRARY: ["flight", "oblique"] as ViewMode[],
-  MODES_SKELETON: ["orthogonal", "flight", "oblique"] as ViewMode[],
+  MODES_SKELETON: ["orthogonal", "flight"] as ViewMode[],
   BUCKET_WIDTH: 32,
   BUCKET_SIZE: 32 ** 3,
   BUCKET_SHAPE: [32, 32, 32] as Vector3,

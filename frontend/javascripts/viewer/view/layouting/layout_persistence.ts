@@ -59,7 +59,7 @@ function readStoredLayoutConfigs() {
     if (
       layouts.OrthoLayoutView &&
       layouts.VolumeTracingView &&
-      layouts.ArbitraryLayout &&
+      layouts.FlightModeLayout &&
       layouts.OrthoLayout &&
       layouts.OrthoLayout2d &&
       layouts.VolumeTracingView2d &&
@@ -194,7 +194,7 @@ export function setActiveLayout(layoutKey: LayoutKeys, activeLayout: string) {
     persistLayoutConfigsDebounced();
   } else {
     throw new Error(
-      `Active layout could not be set. The given layout ${layoutKey} with name 
+      `Active layout could not be set. The given layout ${layoutKey} with name
       ${activeLayout} was not found in layouts for ${mapLayoutKeysToLanguage[layoutKey]}.`,
     );
   }

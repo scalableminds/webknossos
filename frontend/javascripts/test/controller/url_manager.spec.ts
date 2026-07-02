@@ -191,6 +191,7 @@ describe("UrlManager", () => {
     const urlState = {
       position: [0, 0, 0] as Vector3,
       clippingDistance: 50,
+      clipSkeletonToCurrentSection: false,
       additionalCoordinates: [],
       mode,
       nativelyRenderedLayerName: null,

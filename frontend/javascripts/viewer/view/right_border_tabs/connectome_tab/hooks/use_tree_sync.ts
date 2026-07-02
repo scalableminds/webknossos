@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
+import { getConnectomeDataForLayer } from "viewer/model/accessors/connectome_accessor";
 import { getTreeNameForAgglomerateTree } from "viewer/model/accessors/skeletontracing_accessor";
-import { getConnectomeDataForLayer } from "viewer/model/accessors/volumetracing_accessor";
 import {
   addConnectomeTreesAction,
   deleteConnectomeTreesAction,

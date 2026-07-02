@@ -8,10 +8,8 @@ import { useDispatch } from "react-redux";
 import type { APISegmentationLayer } from "types/api_types";
 import { userSettings } from "types/schemas/user_settings.schema";
 import defaultState from "viewer/default_state";
-import {
-  getConnectomeDataForLayer,
-  isTracingLayerWithoutFallback,
-} from "viewer/model/accessors/volumetracing_accessor";
+import { getConnectomeDataForLayer } from "viewer/model/accessors/connectome_accessor";
+import { isTracingLayerWithoutFallback } from "viewer/model/accessors/volumetracing_accessor";
 import {
   updateConnectomeFileListAction,
   updateCurrentConnectomeFileAction,

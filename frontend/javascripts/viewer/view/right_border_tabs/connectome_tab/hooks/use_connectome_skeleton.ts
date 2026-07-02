@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import getSceneController from "viewer/controller/scene_controller_provider";
-import { getConnectomeDataForLayer } from "viewer/model/accessors/volumetracing_accessor";
+import { getConnectomeDataForLayer } from "viewer/model/accessors/connectome_accessor";
 import {
   initializeConnectomeTracingAction,
   removeConnectomeTracingAction,

@@ -2,7 +2,7 @@ import { keepPreviousData } from "@tanstack/react-query";
 import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
 import { useCallback, useState } from "react";
 import type { APISegmentationLayer } from "types/api_types";
-import { getConnectomeDataForLayer } from "viewer/model/accessors/volumetracing_accessor";
+import { getConnectomeDataForLayer } from "viewer/model/accessors/connectome_accessor";
 import { fetchConnectomeData } from "viewer/view/right_border_tabs/connectome_tab/connectome_data_utils";
 
 const NO_ACTIVE_AGGLOMERATE_IDS: Array<number> = [];

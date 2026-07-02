@@ -3,7 +3,7 @@ import { Flex, Switch } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
 import { location } from "libs/window";
-import { settings } from "messages";
+import { settings, settingsTooltips } from "messages";
 import React, { useCallback } from "react";
 import { useDispatch } from "react-redux";
 import type { AnnotationLayerType } from "types/api_types";
@@ -11,7 +11,9 @@ import { AnnotationLayerEnum } from "types/api_types";
 import { userSettings } from "types/schemas/user_settings.schema";
 import Constants, { ControlModeEnum, LongUnitToShortUnitMap } from "viewer/constants";
 import defaultState from "viewer/default_state";
+import { isRotated } from "viewer/model/accessors/flycam_accessor";
 import {
+  areGeometriesTransformed,
   enforceSkeletonTracing,
   getActiveNode,
 } from "viewer/model/accessors/skeletontracing_accessor";
@@ -37,8 +39,12 @@ export default function SkeletonLayerSettings() {
   const userConfiguration = useWkSelector((state) => state.userConfiguration);
   const dataset = useWkSelector((state) => state.dataset);
   const controlMode = useWkSelector((state) => state.temporaryConfiguration.controlMode);
-  const isArbitraryMode = useWkSelector((state) =>
-    Constants.MODES_ARBITRARY.includes(state.temporaryConfiguration.viewMode),
+  const isFlightMode = useWkSelector(
+    (state) => state.temporaryConfiguration.viewMode === Constants.MODE_FLIGHT,
+  );
+  // Section clipping requires an axis-aligned, untransformed scene.
+  const isSectionClippingAvailable = useWkSelector(
+    (state) => !isRotated(state.flycam) && !areGeometriesTransformed(state),
   );
 
   const isPublicViewMode = controlMode === ControlModeEnum.VIEW;
@@ -100,8 +106,8 @@ export default function SkeletonLayerSettings() {
     [onChangeUser],
   );
 
-  const onChangeClippingDistanceArbitrary = useCallback(
-    (value: number) => onChangeUser("clippingDistanceArbitrary", value),
+  const onChangeClippingDistanceFlight = useCallback(
+    (value: number) => onChangeUser("clippingDistanceFlight", value),
     [onChangeUser],
   );
 
@@ -130,6 +136,11 @@ export default function SkeletonLayerSettings() {
     [onChangeUser],
   );
 
+  const onChangeClipSkeletonToCurrentSection = useCallback(
+    (value: boolean) => onChangeUser("clipSkeletonToCurrentSection", value),
+    [onChangeUser],
+  );
+
   if (isPublicViewMode || annotation.skeleton == null) {
     return null;
   }
@@ -140,6 +151,8 @@ export default function SkeletonLayerSettings() {
   const { showSkeletons, tracingId } = skeletonTracing;
   const activeNodeRadius = getActiveNode(skeletonTracing)?.radius ?? 0;
   const unit = LongUnitToShortUnitMap[dataset.dataSource.scale.unit];
+  const isClippingDistanceDisabled =
+    userConfiguration.clipSkeletonToCurrentSection && isSectionClippingAvailable;
 
   return (
     <React.Fragment>
@@ -238,26 +251,51 @@ export default function SkeletonLayerSettings() {
             onChange={onChangeParticleSize}
             defaultValue={defaultState.userConfiguration.particleSize}
           />
-          {isArbitraryMode ? (
+          {isFlightMode ? (
             <NumberSliderSetting
-              label={settings.clippingDistanceArbitrary}
-              min={userSettings.clippingDistanceArbitrary.minimum}
-              max={userSettings.clippingDistanceArbitrary.maximum}
-              value={userConfiguration.clippingDistanceArbitrary}
-              onChange={onChangeClippingDistanceArbitrary}
-              defaultValue={defaultState.userConfiguration.clippingDistanceArbitrary}
+              label={settings.clippingDistanceFlight}
+              min={userSettings.clippingDistanceFlight.minimum}
+              max={userSettings.clippingDistanceFlight.maximum}
+              value={userConfiguration.clippingDistanceFlight}
+              onChange={onChangeClippingDistanceFlight}
+              defaultValue={defaultState.userConfiguration.clippingDistanceFlight}
             />
           ) : (
-            <LogSliderSetting
-              label={settings.clippingDistance + ` (${unit})`}
-              roundToDigit={3}
-              min={userSettings.clippingDistance.minimum}
-              max={userSettings.clippingDistance.maximum}
-              value={userConfiguration.clippingDistance}
-              onChange={onChangeClippingDistance}
-              defaultValue={defaultState.userConfiguration.clippingDistance}
-            />
+            <FastTooltip
+              title={
+                isClippingDistanceDisabled
+                  ? 'Disabled because "Only Show Nodes of Current Section" is active.'
+                  : null
+              }
+            >
+              <div>
+                <LogSliderSetting
+                  label={settings.clippingDistance + ` (${unit})`}
+                  roundToDigit={3}
+                  min={userSettings.clippingDistance.minimum}
+                  max={userSettings.clippingDistance.maximum}
+                  value={userConfiguration.clippingDistance}
+                  onChange={onChangeClippingDistance}
+                  defaultValue={defaultState.userConfiguration.clippingDistance}
+                  disabled={isClippingDistanceDisabled}
+                />
+              </div>
+            </FastTooltip>
           )}
+          {!isFlightMode ? (
+            <SwitchSetting
+              label={settings.clipSkeletonToCurrentSection}
+              value={userConfiguration.clipSkeletonToCurrentSection}
+              onChange={onChangeClipSkeletonToCurrentSection}
+              disabled={!isSectionClippingAvailable}
+              tooltipText={settingsTooltips.clipSkeletonToCurrentSection}
+              disabledReason={
+                isSectionClippingAvailable
+                  ? null
+                  : "Only available when neither the camera nor the dataset is rotated or transformed."
+              }
+            />
+          ) : null}
           <SwitchSetting
             label={settings.overrideNodeRadius}
             value={userConfiguration.overrideNodeRadius}

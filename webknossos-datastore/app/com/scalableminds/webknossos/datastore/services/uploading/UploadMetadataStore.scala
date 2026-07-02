@@ -19,7 +19,8 @@ trait UploadMetadataStore {
   protected def domain: UploadDomain
   protected def store: DataStoreRedisStore
 
-  protected val uploadIdleExpiration: FiniteDuration = 14 days
+  // Expiry for all metadata keys. It is refreshed when receiving chunks, effectively making it an idle expiry
+  protected val uploadIdleExpiry: FiniteDuration = 14 days
 
   protected def keyPrefix: String = s"upload___${domain}___"
 
@@ -88,43 +89,43 @@ trait UploadMetadataStore {
     store.isContainedInSet(redisKeyForFileChunkSet(uploadId, filePath), String.valueOf(chunkNumber))
 
   def insertTotalFileCount(uploadId: String, totalFileCount: Long): Fox[Unit] =
-    store.insert(redisKeyForFileCount(uploadId), String.valueOf(totalFileCount), Some(uploadIdleExpiration))
+    store.insert(redisKeyForFileCount(uploadId), String.valueOf(totalFileCount), Some(uploadIdleExpiry))
 
   def insertTotalFileSizeInBytes(uploadId: String, totalFileSizeInBytes: Option[Long])(implicit
       ec: ExecutionContext
   ): Fox[Option[Unit]] =
     Fox.runOptional(totalFileSizeInBytes) {
-      store.insertLong(redisKeyForTotalFileSizeInBytes(uploadId), _, Some(uploadIdleExpiration))
+      store.insertLong(redisKeyForTotalFileSizeInBytes(uploadId), _, Some(uploadIdleExpiry))
     }
 
   def insertFilePathIntoSet(uploadId: String, filePath: String): Fox[Boolean] =
-    store.insertIntoSet(redisKeyForFileNameSet(uploadId), filePath, Some(uploadIdleExpiration))
+    store.insertIntoSet(redisKeyForFileNameSet(uploadId), filePath, Some(uploadIdleExpiry))
 
   def insertFileChunkCount(uploadId: String, filePath: String, totalChunkCount: Long): Fox[Unit] =
     store.insert(
       redisKeyForFileChunkCount(uploadId, filePath),
       String.valueOf(totalChunkCount),
-      Some(uploadIdleExpiration)
+      Some(uploadIdleExpiry)
     )
 
   def insertFileChunkIntoSet(uploadId: String, filePath: String, chunkNumber: Long): Fox[Boolean] =
     store.insertIntoSet(
       redisKeyForFileChunkSet(uploadId, filePath),
       String.valueOf(chunkNumber),
-      Some(uploadIdleExpiration)
+      Some(uploadIdleExpiry)
     )
 
   def removeFileChunkFromSet(uploadId: String, filePath: String, chunkNumber: Long): Fox[Boolean] =
     store.removeFromSet(redisKeyForFileChunkSet(uploadId, filePath), String.valueOf(chunkNumber))
 
   def insertDatasetId(uploadId: String, datasetId: ObjectId): Fox[Unit] =
-    store.insertSerialized(redisKeyForDatasetId(uploadId), datasetId, Some(uploadIdleExpiration))
+    store.insertSerialized(redisKeyForDatasetId(uploadId), datasetId, Some(uploadIdleExpiry))
 
   def insertDataSourceId(uploadId: String, dataSourceId: DataSourceId): Fox[Unit] =
-    store.insertSerialized(redisKeyForDataSourceId(uploadId), dataSourceId, Some(uploadIdleExpiration))
+    store.insertSerialized(redisKeyForDataSourceId(uploadId), dataSourceId, Some(uploadIdleExpiry))
 
   def insertFilePaths(uploadId: String, filePaths: Option[Seq[String]]): Fox[Unit] =
-    store.insertSerialized(redisKeyForFilePaths(uploadId), filePaths.getOrElse(Seq.empty), Some(uploadIdleExpiration))
+    store.insertSerialized(redisKeyForFilePaths(uploadId), filePaths.getOrElse(Seq.empty), Some(uploadIdleExpiry))
 
   def cleanUp(uploadId: String)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
@@ -149,20 +150,20 @@ trait UploadMetadataStore {
       // Only refresh expiration in redis if a significant portion of it is already past
       refreshThreshold = 1.day
       refreshNeeded =
-        remainingTtlSeconds >= 0 && remainingTtlSeconds < (uploadIdleExpiration - refreshThreshold).toSeconds
+        remainingTtlSeconds >= 0 && remainingTtlSeconds < (uploadIdleExpiry - refreshThreshold).toSeconds
       _ <- Fox.runIf(refreshNeeded) {
         for {
-          _ <- store.expire(redisKeyForFileCount(uploadId), uploadIdleExpiration)
-          _ <- store.expire(redisKeyForTotalFileSizeInBytes(uploadId), uploadIdleExpiration)
-          _ <- store.expire(redisKeyForFileNameSet(uploadId), uploadIdleExpiration)
-          _ <- store.expire(redisKeyForDataSourceId(uploadId), uploadIdleExpiration)
-          _ <- store.expire(redisKeyForDatasetId(uploadId), uploadIdleExpiration)
-          _ <- store.expire(redisKeyForFilePaths(uploadId), uploadIdleExpiration)
+          _ <- store.expire(redisKeyForFileCount(uploadId), uploadIdleExpiry)
+          _ <- store.expire(redisKeyForTotalFileSizeInBytes(uploadId), uploadIdleExpiry)
+          _ <- store.expire(redisKeyForFileNameSet(uploadId), uploadIdleExpiry)
+          _ <- store.expire(redisKeyForDataSourceId(uploadId), uploadIdleExpiry)
+          _ <- store.expire(redisKeyForDatasetId(uploadId), uploadIdleExpiry)
+          _ <- store.expire(redisKeyForFilePaths(uploadId), uploadIdleExpiry)
           fileNames <- store.findSet(redisKeyForFileNameSet(uploadId))
           _ <- Fox.serialCombined(fileNames.toList) { fileName =>
             for {
-              _ <- store.expire(redisKeyForFileChunkCount(uploadId, fileName), uploadIdleExpiration)
-              _ <- store.expire(redisKeyForFileChunkSet(uploadId, fileName), uploadIdleExpiration)
+              _ <- store.expire(redisKeyForFileChunkCount(uploadId, fileName), uploadIdleExpiry)
+              _ <- store.expire(redisKeyForFileChunkSet(uploadId, fileName), uploadIdleExpiry)
             } yield ()
           }
         } yield ()
@@ -200,7 +201,7 @@ class DatasetUploadMetadataStore @Inject() (protected val store: DataStoreRedisS
 
   // Only here the uploadId is not key but value. This is used to re-connect to unfinished uploads.
   def insertUploadIdByDataSourceId(dataSourceId: DataSourceId, uploadId: String): Fox[Unit] =
-    store.insertSerialized(redisKeyForUploadIdByDataSourceId(dataSourceId), uploadId, Some(uploadIdleExpiration))
+    store.insertSerialized(redisKeyForUploadIdByDataSourceId(dataSourceId), uploadId, Some(uploadIdleExpiry))
 
   def insertLinkedLayerIdentifiers(
       uploadId: String,
@@ -209,14 +210,14 @@ class DatasetUploadMetadataStore @Inject() (protected val store: DataStoreRedisS
     store.insertSerialized(
       redisKeyForLinkedLayerIdentifier(uploadId),
       linkedLayerIdentifiers.getOrElse(Seq.empty),
-      Some(uploadIdleExpiration)
+      Some(uploadIdleExpiry)
     )
 
   def insertNeedsConversion(uploadId: String, needsConversion: Boolean): Fox[Unit] =
-    store.insertSerialized(redisKeyForNeedsConversion(uploadId), needsConversion, Some(uploadIdleExpiration))
+    store.insertSerialized(redisKeyForNeedsConversion(uploadId), needsConversion, Some(uploadIdleExpiry))
 
   def insertVoxelSize(uploadId: String, voxelSize: VoxelSize): Fox[Unit] =
-    store.insertSerialized(redisKeyForVoxelSize(uploadId), voxelSize, Some(uploadIdleExpiration))
+    store.insertSerialized(redisKeyForVoxelSize(uploadId), voxelSize, Some(uploadIdleExpiry))
 
   override def cleanUp(uploadId: String)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
@@ -230,10 +231,10 @@ class DatasetUploadMetadataStore @Inject() (protected val store: DataStoreRedisS
   override def refreshExpiration(uploadId: String)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       dataSourceId <- findDataSourceId(uploadId)
-      _ <- store.expire(redisKeyForLinkedLayerIdentifier(uploadId), uploadIdleExpiration)
-      _ <- store.expire(redisKeyForNeedsConversion(uploadId), uploadIdleExpiration)
-      _ <- store.expire(redisKeyForVoxelSize(uploadId), uploadIdleExpiration)
-      _ <- store.expire(redisKeyForUploadIdByDataSourceId(dataSourceId), uploadIdleExpiration)
+      _ <- store.expire(redisKeyForLinkedLayerIdentifier(uploadId), uploadIdleExpiry)
+      _ <- store.expire(redisKeyForNeedsConversion(uploadId), uploadIdleExpiry)
+      _ <- store.expire(redisKeyForVoxelSize(uploadId), uploadIdleExpiry)
+      _ <- store.expire(redisKeyForUploadIdByDataSourceId(dataSourceId), uploadIdleExpiry)
       _ <- super.refreshExpiration(uploadId)
     } yield ()
 
@@ -249,10 +250,10 @@ class MagUploadMetadataStore @Inject() (protected val store: DataStoreRedisStore
     s"$keyPrefix${uploadId}___layerName"
 
   def insertMag(uploadId: String, mag: MagLocator): Fox[Unit] =
-    store.insertSerialized[MagLocator](redisKeyForMag(uploadId), mag, Some(uploadIdleExpiration))
+    store.insertSerialized[MagLocator](redisKeyForMag(uploadId), mag, Some(uploadIdleExpiry))
 
   def insertLayerName(uploadId: String, layerName: String): Fox[Unit] =
-    store.insert(redisKeyForLayerName(uploadId), layerName, Some(uploadIdleExpiration))
+    store.insert(redisKeyForLayerName(uploadId), layerName, Some(uploadIdleExpiry))
 
   def findMag(uploadId: String)(implicit ec: ExecutionContext): Fox[MagLocator] =
     store.findParsed[MagLocator](redisKeyForMag(uploadId))
@@ -269,8 +270,8 @@ class MagUploadMetadataStore @Inject() (protected val store: DataStoreRedisStore
 
   override def refreshExpiration(uploadId: String)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      _ <- store.expire(redisKeyForMag(uploadId), uploadIdleExpiration)
-      _ <- store.expire(redisKeyForLayerName(uploadId), uploadIdleExpiration)
+      _ <- store.expire(redisKeyForMag(uploadId), uploadIdleExpiry)
+      _ <- store.expire(redisKeyForLayerName(uploadId), uploadIdleExpiry)
       _ <- super.refreshExpiration(uploadId)
     } yield ()
 }
@@ -288,17 +289,17 @@ class AttachmentUploadMetadataStore @Inject() (protected val store: DataStoreRed
     s"$keyPrefix${uploadId}___layerName"
 
   def insertAttachment(uploadId: String, attachment: LayerAttachment): Fox[Unit] =
-    store.insertSerialized[LayerAttachment](redisKeyForAttachment(uploadId), attachment, Some(uploadIdleExpiration))
+    store.insertSerialized[LayerAttachment](redisKeyForAttachment(uploadId), attachment, Some(uploadIdleExpiry))
 
   def insertAttachmentType(uploadId: String, attachmentType: LayerAttachmentType): Fox[Unit] =
     store.insertSerialized[LayerAttachmentType](
       redisKeyForAttachmentType(uploadId),
       attachmentType,
-      Some(uploadIdleExpiration)
+      Some(uploadIdleExpiry)
     )
 
   def insertLayerName(uploadId: String, layerName: String): Fox[Unit] =
-    store.insert(redisKeyForLayerName(uploadId), layerName, Some(uploadIdleExpiration))
+    store.insert(redisKeyForLayerName(uploadId), layerName, Some(uploadIdleExpiry))
 
   def findAttachment(uploadId: String)(implicit ec: ExecutionContext): Fox[LayerAttachment] =
     store.findParsed[LayerAttachment](redisKeyForAttachment(uploadId))
@@ -319,9 +320,9 @@ class AttachmentUploadMetadataStore @Inject() (protected val store: DataStoreRed
 
   override def refreshExpiration(uploadId: String)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      _ <- store.expire(redisKeyForAttachmentType(uploadId), uploadIdleExpiration)
-      _ <- store.expire(redisKeyForAttachment(uploadId), uploadIdleExpiration)
-      _ <- store.expire(redisKeyForLayerName(uploadId), uploadIdleExpiration)
+      _ <- store.expire(redisKeyForAttachmentType(uploadId), uploadIdleExpiry)
+      _ <- store.expire(redisKeyForAttachment(uploadId), uploadIdleExpiry)
+      _ <- store.expire(redisKeyForLayerName(uploadId), uploadIdleExpiry)
       _ <- super.refreshExpiration(uploadId)
     } yield ()
 }

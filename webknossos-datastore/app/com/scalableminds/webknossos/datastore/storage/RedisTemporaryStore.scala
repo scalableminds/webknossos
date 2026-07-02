@@ -133,6 +133,13 @@ trait RedisTemporaryStore extends LazyLogging {
   def remove(id: String): Fox[Unit] =
     withCommands(cmd => Fox.fromFuture(cmd.del(id).asScala.map(_ => ())))
 
+  def expire(id: String, expiration: FiniteDuration): Fox[Unit] =
+    withCommands(cmd => Fox.fromFuture(cmd.expire(id, expiration.toSeconds).asScala.map(_ => ())))
+
+  // Seconds until id expires. -1 if id has no expiration, -2 if id does not exist.
+  def ttlSeconds(id: String): Fox[Long] =
+    withCommands(cmd => Fox.fromFuture(cmd.ttl(id).asScala.map(_.longValue)))
+
   def checkHealth: Fox[Unit] =
     withCommands { cmd =>
       Fox
@@ -144,8 +151,13 @@ trait RedisTemporaryStore extends LazyLogging {
         }
     } ?-> "Redis health check failed."
 
-  def insertIntoSet(id: String, value: String): Fox[Boolean] =
-    withCommands(cmd => Fox.fromFuture(cmd.sadd(id, value).asScala.map(_.longValue > 0)))
+  def insertIntoSet(id: String, value: String, expirationOpt: Option[FiniteDuration] = None): Fox[Boolean] =
+    withCommands { cmd =>
+      for {
+        wasAdded <- Fox.fromFuture(cmd.sadd(id, value).asScala.map(_.longValue > 0))
+        _ <- Fox.runOptional(expirationOpt)(expiration => Fox.fromFuture(cmd.expire(id, expiration.toSeconds).asScala))
+      } yield wasAdded
+    }
 
   def isContainedInSet(id: String, value: String): Fox[Boolean] =
     withCommands(cmd => Fox.fromFuture(cmd.sismember(id, value).asScala.map(_.booleanValue)))
@@ -162,9 +174,9 @@ trait RedisTemporaryStore extends LazyLogging {
       parsed <- JsonHelper.parseAs[T](objectString).toFox
     } yield parsed
 
-  def insertSerialized[T: Writes](key: String, value: T): Fox[Unit] = {
+  def insertSerialized[T: Writes](key: String, value: T, expirationOpt: Option[FiniteDuration] = None): Fox[Unit] = {
     val serialized = Json.stringify(Json.toJson(value))
-    insert(key, serialized)
+    insert(key, serialized, expirationOpt)
   }
 
 }

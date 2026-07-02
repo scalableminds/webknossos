@@ -334,6 +334,7 @@ class UploadService @Inject() (
       datasetId <- uploadMetadataStore.findDatasetId(uploadId)
       dataSourceId <- uploadMetadataStore.findDataSourceId(uploadId)
       (filePath, uploadDir) <- getFilePathAndDirForUploadFileId(uploadFileId, uploadDomain)
+      _ <- uploadMetadataStore.refreshExpiration(uploadId)
       isFileKnown <- uploadMetadataStore.isFileKnown(uploadId, filePath)
       _ <- Fox.runIf(!isFileKnown) {
         for {

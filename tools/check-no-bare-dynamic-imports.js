@@ -13,6 +13,12 @@ const WHITELIST = [
   // Web workers are eagerly bundled by Vite; this import() is only reached in
   // Vitest/Node, where importDynamic's stale-chunk protection does not apply.
   "frontend/javascripts/viewer/workers/comlink_wrapper.ts",
+  // Worker modules must not use importDynamic: it pulls main-thread UI (antd,
+  // Toast) into every worker bundle and its failure toast cannot render inside
+  // a worker anyway. A failed import rejects the pending promise, which Comlink
+  // propagates to the main-thread caller.
+  "frontend/javascripts/viewer/workers/byte_array_lz4_compression.worker.ts",
+  "frontend/javascripts/viewer/workers/byte_arrays_to_lz4_base64.worker.ts",
 ];
 
 // A dynamic import() call that is wrapped by importDynamic(() => …) or

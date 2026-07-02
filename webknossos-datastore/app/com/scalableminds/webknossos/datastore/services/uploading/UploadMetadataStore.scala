@@ -144,7 +144,7 @@ trait UploadMetadataStore {
       _ <- store.remove(redisKeyForFilePaths(uploadId))
     } yield ()
 
-  def refreshExpiration(uploadId: String)(implicit ec: ExecutionContext): Fox[Unit] =
+  def refreshExpiry(uploadId: String)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       remainingTtlSeconds <- store.ttlSeconds(redisKeyForFileCount(uploadId))
       // Only refresh expiration in redis if a significant portion of it is already past
@@ -228,14 +228,14 @@ class DatasetUploadMetadataStore @Inject() (protected val store: DataStoreRedisS
       _ <- super.cleanUp(uploadId)
     } yield ()
 
-  override def refreshExpiration(uploadId: String)(implicit ec: ExecutionContext): Fox[Unit] =
+  override def refreshExpiry(uploadId: String)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       dataSourceId <- findDataSourceId(uploadId)
       _ <- store.expire(redisKeyForLinkedLayerIdentifier(uploadId), uploadIdleExpiry)
       _ <- store.expire(redisKeyForNeedsConversion(uploadId), uploadIdleExpiry)
       _ <- store.expire(redisKeyForVoxelSize(uploadId), uploadIdleExpiry)
       _ <- store.expire(redisKeyForUploadIdByDataSourceId(dataSourceId), uploadIdleExpiry)
-      _ <- super.refreshExpiration(uploadId)
+      _ <- super.refreshExpiry(uploadId)
     } yield ()
 
 }
@@ -268,11 +268,11 @@ class MagUploadMetadataStore @Inject() (protected val store: DataStoreRedisStore
       _ <- super.cleanUp(uploadId)
     } yield ()
 
-  override def refreshExpiration(uploadId: String)(implicit ec: ExecutionContext): Fox[Unit] =
+  override def refreshExpiry(uploadId: String)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       _ <- store.expire(redisKeyForMag(uploadId), uploadIdleExpiry)
       _ <- store.expire(redisKeyForLayerName(uploadId), uploadIdleExpiry)
-      _ <- super.refreshExpiration(uploadId)
+      _ <- super.refreshExpiry(uploadId)
     } yield ()
 }
 
@@ -318,11 +318,11 @@ class AttachmentUploadMetadataStore @Inject() (protected val store: DataStoreRed
       _ <- super.cleanUp(uploadId)
     } yield ()
 
-  override def refreshExpiration(uploadId: String)(implicit ec: ExecutionContext): Fox[Unit] =
+  override def refreshExpiry(uploadId: String)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       _ <- store.expire(redisKeyForAttachmentType(uploadId), uploadIdleExpiry)
       _ <- store.expire(redisKeyForAttachment(uploadId), uploadIdleExpiry)
       _ <- store.expire(redisKeyForLayerName(uploadId), uploadIdleExpiry)
-      _ <- super.refreshExpiration(uploadId)
+      _ <- super.refreshExpiry(uploadId)
     } yield ()
 }

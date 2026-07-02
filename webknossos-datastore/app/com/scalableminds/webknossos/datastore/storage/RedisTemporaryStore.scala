@@ -133,8 +133,9 @@ trait RedisTemporaryStore extends LazyLogging {
   def remove(id: String): Fox[Unit] =
     withCommands(cmd => Fox.fromFuture(cmd.del(id).asScala.map(_ => ())))
 
-  def expire(id: String, expiration: FiniteDuration): Fox[Unit] =
-    withCommands(cmd => Fox.fromFuture(cmd.expire(id, expiration.toSeconds).asScala.map(_ => ())))
+  // Set or update expiry duration for an existing key
+  def expire(id: String, expiry: FiniteDuration): Fox[Unit] =
+    withCommands(cmd => Fox.fromFuture(cmd.expire(id, expiry.toSeconds).asScala.map(_ => ())))
 
   // Seconds until id expires. -1 if id has no expiration, -2 if id does not exist.
   def ttlSeconds(id: String): Fox[Long] =

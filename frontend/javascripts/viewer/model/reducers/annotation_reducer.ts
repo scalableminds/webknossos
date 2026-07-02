@@ -193,7 +193,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
 
       const { userBoundingBoxes } = tracing;
       const highestBoundingBoxId = Math.max(0, ...userBoundingBoxes.map((bb) => bb.id));
-      const boundingBoxId = highestBoundingBoxId + 1;
+      const boundingBoxId = action.id ?? highestBoundingBoxId + 1;
 
       const { min, max, halfBoxExtent } = getDisplayedDataExtentInPlaneMode(state);
       const newBoundingBoxTemplate: UserBoundingBox = {
@@ -532,6 +532,17 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
       return updateKey(state, "annotation", {
         collaborationMode: action.collaborationMode,
       });
+    }
+
+    case "SET_ID_RESERVATIONS": {
+      // BoundingBox reservations are annotation-wide (bounding boxes are mirrored across all
+      // tracings, see updateUserBoundingBoxes above), unlike SegmentGroup/Segment reservations
+      // which are handled per segmentation layer in volumetracing_reducer.ts.
+      if (action.domain !== "BoundingBox") return state;
+      return {
+        ...state,
+        idReservationsForBoundingBoxes: action.reservations,
+      };
     }
 
     default:

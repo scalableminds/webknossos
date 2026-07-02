@@ -9,7 +9,7 @@ import type { WebknossosState } from "viewer/store";
 
 export function updateKey<Key1 extends keyof WebknossosState>(
   state: WebknossosState,
-  key: keyof WebknossosState,
+  key: Key1,
   shape: Partial<WebknossosState[Key1]>,
 ): WebknossosState {
   return { ...state, [key]: { ...state[key], ...shape } };

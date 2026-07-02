@@ -115,7 +115,7 @@ export const getNewIdAction = (
 export const dispatchGetNewIdAsync = async (
   dispatch: Dispatch<any>,
   tracingId: string,
-  domain: "SegmentGroup",
+  domain: "SegmentGroup" | "BoundingBox",
 ): Promise<number> => {
   const readyDeferred = new Deferred<number, unknown>();
   const action = getNewIdAction(
@@ -128,9 +128,13 @@ export const dispatchGetNewIdAsync = async (
   return await readyDeferred.promise();
 };
 
+// Domains for which id reservations are actually persisted in the store (as opposed to
+// AnnotationIdDomain, which lists all domains the back-end knows about).
+export type ReservableIdDomain = "SegmentGroup" | "Segment" | "BoundingBox";
+
 export const setIdReservationsAction = (
   tracingId: string,
-  domain: "SegmentGroup" | "Segment",
+  domain: ReservableIdDomain,
   reservations: { id: number; used: boolean }[],
 ) =>
   ({
@@ -140,17 +144,14 @@ export const setIdReservationsAction = (
     reservations,
   }) as const;
 
-export const requestIdReplenishmentAction = (
-  tracingId: string,
-  domain: "SegmentGroup" | "Segment",
-) =>
+export const requestIdReplenishmentAction = (tracingId: string, domain: ReservableIdDomain) =>
   ({
     type: "REQUEST_ID_REPLENISHMENT",
     tracingId,
     domain,
   }) as const;
 
-export const idsReplenishedAction = (tracingId: string, domain: "SegmentGroup" | "Segment") =>
+export const idsReplenishedAction = (tracingId: string, domain: ReservableIdDomain) =>
   ({
     type: "IDS_REPLENISHED",
     tracingId,
@@ -159,7 +160,7 @@ export const idsReplenishedAction = (tracingId: string, domain: "SegmentGroup" |
 
 export const idsReplenishmentFailedAction = (
   tracingId: string,
-  domain: "SegmentGroup" | "Segment",
+  domain: ReservableIdDomain,
   error: unknown,
 ) =>
   ({

@@ -61,6 +61,7 @@ import {
   type AnnotationToolId,
   isBrushTool,
 } from "viewer/model/accessors/tool_accessor";
+import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import { calculateGlobalPos } from "viewer/model/accessors/view_mode_accessor";
 import {
   enforceActiveVolumeTracing,
@@ -69,6 +70,7 @@ import {
   getMaximumBrushSize,
   getSegmentColorAsHSLA,
 } from "viewer/model/accessors/volumetracing_accessor";
+import { dispatchGetNewIdAsync } from "viewer/model/actions/actions";
 import {
   addUserBoundingBoxAction,
   finishedResizingUserBoundingBoxAction,
@@ -892,13 +894,13 @@ export class BoundingBoxToolController extends ToolController {
           handleResizingBoundingBox(pos, planeId, primarySelectedEdge, secondarySelectedEdge);
         }
       },
-      leftMouseDown: (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
+      leftMouseDown: async (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
         let hoveredEdgesInfo = getClosestHoveredBoundingBox(pos, planeId);
 
         if (hoveredEdgesInfo) {
           [primarySelectedEdge, secondarySelectedEdge] = hoveredEdgesInfo;
         } else {
-          hoveredEdgesInfo = createBoundingBoxAndGetEdges(pos, planeId);
+          hoveredEdgesInfo = await createBoundingBoxAndGetEdges(pos, planeId);
           if (hoveredEdgesInfo) {
             [primarySelectedEdge, secondarySelectedEdge] = hoveredEdgesInfo;
           }
@@ -947,8 +949,10 @@ export class BoundingBoxToolController extends ToolController {
     };
     return {
       CREATE_BOUNDING_BOX: {
-        onPressed: () => {
-          Store.dispatch(addUserBoundingBoxAction());
+        onPressed: async () => {
+          const tracingId = getSomeTracing(Store.getState().annotation).tracingId;
+          const id = await dispatchGetNewIdAsync(Store.dispatch, tracingId, "BoundingBox");
+          Store.dispatch(addUserBoundingBoxAction(null, undefined, id));
         },
       },
       TOGGLE_CURSOR_STATE_FOR_MOVING: {

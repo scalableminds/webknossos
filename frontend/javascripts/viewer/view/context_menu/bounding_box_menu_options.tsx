@@ -9,10 +9,12 @@ import type { Vector3 } from "viewer/constants";
 import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import { isRotated } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
-import { maybeGetSomeTracing } from "viewer/model/accessors/tracing_accessor";
+import { getSomeTracing, maybeGetSomeTracing } from "viewer/model/accessors/tracing_accessor";
+import { dispatchGetNewIdAsync } from "viewer/model/actions/actions";
 import { addUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
 import { setActiveUserBoundingBoxId } from "viewer/model/actions/ui_actions";
 import type { ContextMenuInfo } from "viewer/store";
+import Store from "viewer/store";
 import { shortcutBuilder } from "./helpers";
 import { hideContextMenu, useContextMenuActions } from "./use_context_menu_actions";
 
@@ -35,8 +37,10 @@ export function useBoundingBoxMenuOptions(contextInfo: ContextMenuInfo): ItemTyp
   const isBoundingBoxToolActive = activeTool === AnnotationTool.BOUNDING_BOX;
   const newBoundingBoxMenuItem: ItemType = {
     key: "add-new-bounding-box",
-    onClick: () => {
-      dispatch(addUserBoundingBoxAction(null, globalPosition));
+    onClick: async () => {
+      const tracingId = getSomeTracing(Store.getState().annotation).tracingId;
+      const id = await dispatchGetNewIdAsync(dispatch, tracingId, "BoundingBox");
+      dispatch(addUserBoundingBoxAction(null, globalPosition, id));
     },
     label: (
       <>

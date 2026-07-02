@@ -136,3 +136,9 @@ export const getUserBoundingBoxesThatContainPosition = (
 
   return bboxes.filter((el) => new BoundingBox(el.boundingBox).containsPoint(position));
 };
+
+export function getIdReservationsForBoundingBoxes(
+  state: WebknossosState,
+): { id: number; used: boolean }[] {
+  return state.idReservationsForBoundingBoxes;
+}

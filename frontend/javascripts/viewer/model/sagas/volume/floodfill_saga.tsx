@@ -15,6 +15,7 @@ import { getDisabledInfoForTools } from "viewer/model/accessors/disabled_tool_ac
 import { getActiveMagIndexForLayer } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool, Toolkit } from "viewer/model/accessors/tool_accessor";
 import { enforceActiveVolumeTracing } from "viewer/model/accessors/volumetracing_accessor";
+import { dispatchGetNewIdAsync } from "viewer/model/actions/actions";
 import { addUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
 import {
   type FloodFillAction,
@@ -27,7 +28,7 @@ import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import { createOperationContext } from "viewer/model/sagas/operation_context_saga";
 import { requestBucketModificationInVolumeTracing } from "viewer/model/sagas/saga_helpers";
-import { Model } from "viewer/singletons";
+import { Model, Store } from "viewer/singletons";
 import { getUserBoundingBoxesThatContainPosition } from "../../accessors/tracing_accessor";
 import { applyLabeledVoxelMapToAllMissingMags } from "./helpers";
 
@@ -393,15 +394,26 @@ function* notifyUserAboutResult(
         },
       );
       if (createNewBoundingBox) {
+        const volumeTracing = yield* select(enforceActiveVolumeTracing);
+        const id = yield* call(
+          dispatchGetNewIdAsync,
+          Store.dispatch,
+          volumeTracing.tracingId,
+          "BoundingBox",
+        );
         yield* put(
-          addUserBoundingBoxAction({
-            boundingBox: coveredBoundingBox,
-            name: `Limits of flood-fill (source_id=${oldSegmentIdAtSeed}, target_id=${activeCellId}, seed=${seedPosition.join(
-              ",",
-            )}, timestamp=${Date.now()})`,
-            color: getRandomColor(),
-            isVisible: true,
-          }),
+          addUserBoundingBoxAction(
+            {
+              boundingBox: coveredBoundingBox,
+              name: `Limits of flood-fill (source_id=${oldSegmentIdAtSeed}, target_id=${activeCellId}, seed=${seedPosition.join(
+                ",",
+              )}, timestamp=${Date.now()})`,
+              color: getRandomColor(),
+              isVisible: true,
+            },
+            undefined,
+            id,
+          ),
         );
       }
     } else {

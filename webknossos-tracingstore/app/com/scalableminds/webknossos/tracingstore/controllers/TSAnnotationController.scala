@@ -285,7 +285,8 @@ class TSAnnotationController @Inject() (
   def mergedFromIds(
       toTemporaryStore: Boolean,
       newAnnotationId: ObjectId,
-      requestingUserId: ObjectId
+      requestingUserId: ObjectId,
+      remapSegmentIds: Boolean
   ): Action[MergedFromIdsRequest] =
     Action.fox(validateJson[MergedFromIdsRequest]) { implicit request =>
       log() {
@@ -340,7 +341,8 @@ class TSAnnotationController @Inject() (
               volumeTracings,
               newVolumeId,
               newVersion = newTargetVersion,
-              toTemporaryStore
+              toTemporaryStore,
+              remapSegmentIds
             ) ?~> Msg.Annotation.Merge.mergeVolumeDataFailed
             mergedVolumeOpt <- Fox.runIf(volumeTracings.nonEmpty)(
               volumeTracingService

@@ -165,7 +165,7 @@ class ExploreLocalLayerService @Inject() (dataVaultService: DataVaultService) ex
         } else layerDirectory
       resolvedPath = path.resolve(layer)
       upath =
-        if (ZipEntryUPath.relevantFileExtensions.exists(resolvedPath.toString.endsWith))
+        if (ZipEntryUPath.relevantFileExtensions.exists(resolvedPath.toString.toLowerCase.endsWith))
           ZipEntryUPath(UPath.fromLocalPath(resolvedPath), "")
         else
           UPath.fromLocalPath(resolvedPath)

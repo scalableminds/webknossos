@@ -134,7 +134,7 @@ object UPath {
       else -1
     if (separatorWithPathIdx >= 0 || separatorRootIdx >= 0) {
       if (literal.indexOf(ZipEntryUPath.separatorRoot) != literal.lastIndexOf(ZipEntryUPath.separatorRoot))
-        throw new Exception(s"Nested zip paths are not supported: $literal")
+        throw new Exception(s"Invalid zip path “$literal”: Nested zip paths are not supported.")
       val (outerLiteral, innerPath) =
         if (separatorWithPathIdx >= 0)
           (
@@ -143,9 +143,11 @@ object UPath {
           )
         else
           (literal.substring(0, separatorRootIdx), "")
+      if (outerLiteral.isEmpty)
+        throw new Exception(s"Invalid zip path “$literal”: Outer path must not be empty.")
       if (innerPath.startsWith("//"))
         throw new Exception(
-          s"Invalid zip inner path “$innerPath”: multiple leading slashes are not allowed"
+          s"Invalid zip path “$literal”: Multiple leading slashes for inner path are not allowed."
         )
       Some((outerLiteral, innerPath.stripPrefix("/")))
     } else None

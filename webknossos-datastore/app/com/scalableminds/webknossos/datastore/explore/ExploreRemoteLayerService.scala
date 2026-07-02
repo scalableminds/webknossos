@@ -86,9 +86,10 @@ class ExploreRemoteLayerService @Inject() (
         .fromString(removeNeuroglancerPrefixesFromUri(removeHeaderFileNamesFromUriSuffix(layerUri)))
         .toFox ?~> s"Received invalid URI: $layerUri"
       upathForExplore = upath match {
-        case _: ZipEntryUPath                                                          => upath
-        case _ if ZipEntryUPath.relevantFileExtensions.exists(upath.toString.endsWith) => ZipEntryUPath(upath, "")
-        case _                                                                         => upath
+        case _: ZipEntryUPath                                                                      => upath
+        case _ if ZipEntryUPath.relevantFileExtensions.exists(upath.toString.toLowerCase.endsWith) =>
+          ZipEntryUPath(upath, "")
+        case _ => upath
       }
       _ <- assertLocalPathInWhitelist(upathForExplore)
       credentialOpt: Option[DataVaultCredential] <- Fox.runOptional(credentialId)(remoteWebknossosClient.getCredential)

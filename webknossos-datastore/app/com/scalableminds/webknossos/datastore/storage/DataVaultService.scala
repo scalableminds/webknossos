@@ -142,7 +142,10 @@ class DataVaultService @Inject() (
 
   private def pathIsInLocalDirectoryWhitelist(path: UPath): Boolean =
     path.isLocal &&
-      config.Datastore.localDirectoryWhitelist.exists(whitelistEntry => path.toString.startsWith(whitelistEntry))
+      config.Datastore.localDirectoryWhitelist.exists { whitelistEntry =>
+        val whitelistPath = UPath.fromLocalPath(Path.of(whitelistEntry).toAbsolutePath.normalize)
+        path.toAbsolute.startsWith(whitelistPath)
+      }
 
   // Zip vaults are keyed by the root zip reference (ZipEntryUPath with empty inner path) to distinguish
   // them from the underlying vault for the same outer path (e.g. the S3DataVault for the zip file itself).

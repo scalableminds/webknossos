@@ -137,6 +137,30 @@ class UPathTestSuite extends AsyncWordSpec {
       )
     }
 
+    "correctly relativize ZipEntryUPath, preserving the inner path" in {
+      // local outer path inside the given parent: outer path gets relativized, inner path is untouched
+      assert(
+        UPath
+          .fromStringUnsafe("/absolute/data.zip|zip:inner/file.bin")
+          .relativizedIn(UPath.fromStringUnsafe("/absolute"))
+          .toString == "./data.zip|zip:inner/file.bin"
+      )
+      // local outer path not inside the given parent: falls back to the unchanged outer path
+      assert(
+        UPath
+          .fromStringUnsafe("/absolute/data.zip|zip:inner/file.bin")
+          .relativizedIn(UPath.fromStringUnsafe("/elsewhere"))
+          .toString == "/absolute/data.zip|zip:inner/file.bin"
+      )
+      // remote outer paths are never relativized, regardless of the given parent
+      assert(
+        UPath
+          .fromStringUnsafe("s3://bucket/prefix/archive.zip|zip:inner/file.bin")
+          .relativizedIn(UPath.fromStringUnsafe("s3://bucket/prefix"))
+          .toString == "s3://bucket/prefix/archive.zip|zip:inner/file.bin"
+      )
+    }
+
     "correctly answer startsWith" in {
       checkStartsWith("relative/somewhere", "relative")
       checkStartsNotWith("relative/somewhere", "elsewhere")

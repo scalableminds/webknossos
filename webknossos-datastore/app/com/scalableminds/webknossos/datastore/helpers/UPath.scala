@@ -72,7 +72,8 @@ case class ZipEntryUPath(outerPath: UPath, innerPath: String) extends UPath {
   override def toZipEntryUPath: Box[ZipEntryUPath] = Full(this)
   override def toAbsolute: UPath = ZipEntryUPath(outerPath.toAbsolute, innerPath)
   override def toReal: Box[UPath] = outerPath.toReal.map(ZipEntryUPath(_, innerPath))
-  override def relativizedIn(p: UPath): UPath = this
+  override def relativizedIn(potentialParent: UPath): UPath =
+    ZipEntryUPath(outerPath.relativizedIn(potentialParent), innerPath)
   override def basename: String = innerPath.split("/").filter(_.nonEmpty).lastOption.getOrElse("")
   override def parent: UPath = {
     val parts = innerPath.split("/").filter(_.nonEmpty)

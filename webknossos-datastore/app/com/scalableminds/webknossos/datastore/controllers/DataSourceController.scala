@@ -7,6 +7,7 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Box, Empty, Failure, Fox, Full}
+import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
@@ -586,7 +587,9 @@ class DataSourceController @Inject() (
       ) {
         val reportMutable = ListBuffer[String]()
         val hasLocalFilesystemRequest =
-          request.body.layerParameters.exists(param => new URI(param.remoteUri).getScheme == PathSchemes.schemeFile)
+          request.body.layerParameters.exists { params =>
+            tryo(new URI(params.remoteUri.takeWhile(_ != '|')).getScheme).toOption.contains(PathSchemes.schemeFile)
+          }
         for {
           dataSourceBox: Box[UsableDataSource] <- exploreRemoteLayerService
             .exploreRemoteDatasource(request.body.layerParameters, reportMutable)

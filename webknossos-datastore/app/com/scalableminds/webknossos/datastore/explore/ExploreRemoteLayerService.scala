@@ -14,7 +14,7 @@ import com.scalableminds.webknossos.datastore.services.DSRemoteWebknossosClient
 import com.scalableminds.webknossos.datastore.storage.{CredentializedUPath, DataVaultCredential, DataVaultService}
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
-import com.scalableminds.webknossos.datastore.helpers.UPath
+import com.scalableminds.webknossos.datastore.helpers.{UPath, ZipEntryUPath}
 import play.api.libs.json.{Json, OFormat}
 
 import java.nio.file.Path
@@ -85,10 +85,16 @@ class ExploreRemoteLayerService @Inject() (
       upath <- UPath
         .fromString(removeNeuroglancerPrefixesFromUri(removeHeaderFileNamesFromUriSuffix(layerUri)))
         .toFox ?~> s"Received invalid URI: $layerUri"
-      _ <- assertLocalPathInWhitelist(upath)
+      upathForExplore = upath match {
+        case _: ZipEntryUPath                                                                      => upath
+        case _ if ZipEntryUPath.relevantFileExtensions.exists(upath.toString.toLowerCase.endsWith) =>
+          ZipEntryUPath(upath, "")
+        case _ => upath
+      }
+      _ <- assertLocalPathInWhitelist(upathForExplore)
       credentialOpt: Option[DataVaultCredential] <- Fox.runOptional(credentialId)(remoteWebknossosClient.getCredential)
       remotePath <- dataVaultService.vaultPathFor(
-        CredentializedUPath(upath, credentialOpt)
+        CredentializedUPath(upathForExplore, credentialOpt)
       ) ?~> Msg.DataVault.setupFailed
       layersWithVoxelSizes <- recursivelyExploreRemoteLayerAtPaths(
         List((remotePath, 0)),

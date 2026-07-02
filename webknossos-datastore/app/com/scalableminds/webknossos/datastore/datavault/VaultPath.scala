@@ -53,7 +53,7 @@ class VaultPath(upath: UPath, dataVault: DataVault) extends LazyLogging {
       case Encoding.`identity` => Fox.successful(bytes)
     }
 
-  def listDirectory(maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
+  def listDirectory(maxItems: Int)(using ec: ExecutionContext, tc: TokenContext): Fox[List[VaultPath]] =
     dataVault.listDirectory(this, maxItems)
 
   private def decodeBrotli(bytes: Array[Byte]) = {

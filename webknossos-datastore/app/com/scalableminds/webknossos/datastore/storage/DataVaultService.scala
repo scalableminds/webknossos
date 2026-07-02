@@ -13,11 +13,12 @@ import com.scalableminds.webknossos.datastore.datavault.{
   GoogleCloudDataVault,
   HttpsDataVault,
   S3DataVault,
-  VaultPath
+  VaultPath,
+  ZipDataVault
 }
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.helpers.{PathSchemes, UPath}
+import com.scalableminds.webknossos.datastore.helpers.{PathSchemes, UPath, ZipEntryUPath}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, LayerAttachment}
 import com.scalableminds.webknossos.datastore.services.{DSRemoteWebknossosClient, ManagedS3Service}
 import play.api.libs.ws.WSClient
@@ -38,7 +39,7 @@ class DataVaultService @Inject() (
     with Formatter {
 
   private val vaultCache: AlfuCache[CredentializedUPath, DataVault] =
-    AlfuCache(maxCapacity = 100)
+    AlfuCache(maxCapacity = 200)
 
   def vaultPathFor(upath: UPath)(implicit ec: ExecutionContext): Fox[VaultPath] = {
     val credentialOpt = managedS3Service.findGlobalCredentialFor(Some(upath))
@@ -88,18 +89,7 @@ class DataVaultService @Inject() (
   def resolveMagPath(magLocator: MagLocator, localDatasetDir: Path, layerDir: Path): UPath =
     magLocator.path match {
       case Some(magLocatorPath) =>
-        magLocatorPath.toLocalPath match {
-          case Full(localPath) =>
-            if (localPath.isAbsolute) {
-              // absolute local path, keep unchanged
-              magLocatorPath
-            } else {
-              // relative local path, resolve in dataset dir
-              UPath.fromLocalPath(localDatasetDir.resolve(localPath).normalize)
-            }
-          case _ => // remote path, keep unchanged
-            magLocatorPath
-        }
+        magLocatorPath.resolvedIn(UPath.fromLocalPath(localDatasetDir))
 
       case _ =>
         val localDirWithScalarMag = layerDir.resolve(magLocator.mag.toMagLiteral(allowScalar = true))
@@ -144,45 +134,65 @@ class DataVaultService @Inject() (
       !managedS3Service.pathIsInManagedS3(path)
 
   private def pathIsDataSourceLocal(path: UPath): Boolean =
-    path.toLocalPath match {
-      case Full(localPath) =>
-        val workingDir = Path.of(".").toAbsolutePath.normalize
-        val inWorkingDir = workingDir.resolve(localPath).toAbsolutePath.normalize
-        !localPath.isAbsolute && inWorkingDir.startsWith(workingDir)
-      case _ => false
-    }
+    if (path.isLocal) {
+      val workingDir = UPath.fromLocalPath(Path.of(".").toAbsolutePath.normalize)
+      val inWorkingDir = (workingDir / path).toAbsolute
+      !path.isAbsolute && inWorkingDir.startsWith(workingDir)
+    } else false
 
   private def pathIsInLocalDirectoryWhitelist(path: UPath): Boolean =
     path.isLocal &&
-      config.Datastore.localDirectoryWhitelist.exists(whitelistEntry => path.toString.startsWith(whitelistEntry))
+      config.Datastore.localDirectoryWhitelist.exists { whitelistEntry =>
+        val whitelistPath = UPath.fromLocalPath(Path.of(whitelistEntry).toAbsolutePath.normalize)
+        path.toAbsolute.startsWith(whitelistPath)
+      }
+
+  // Zip vaults are keyed by the root zip reference (ZipEntryUPath with empty inner path) to distinguish
+  // them from the underlying vault for the same outer path (e.g. the S3DataVault for the zip file itself).
+  private def vaultCacheKeyFor(credentializedUpath: CredentializedUPath): CredentializedUPath =
+    credentializedUpath.upath match {
+      case zipPath: ZipEntryUPath => credentializedUpath.copy(upath = ZipEntryUPath(zipPath.outerPath, ""))
+      case _                      => credentializedUpath
+    }
 
   def vaultPathFor(credentializedUpath: CredentializedUPath)(implicit ec: ExecutionContext): Fox[VaultPath] =
     for {
-      vault <- vaultCache.getOrLoad(credentializedUpath, createVault(_).toFox) ?~> Msg.DataVault.setupFailed
+      vault <- vaultCache.getOrLoad(vaultCacheKeyFor(credentializedUpath), createVault(_)) ?~> Msg.DataVault.setupFailed
     } yield new VaultPath(credentializedUpath.upath, vault)
 
-  private def removeVaultFromCache(credentializedUpath: CredentializedUPath)(implicit ec: ExecutionContext): Fox[Unit] =
-    Fox.successful(vaultCache.remove(credentializedUpath))
-
-  private def createVault(credentializedUpath: CredentializedUPath)(implicit ec: ExecutionContext): Box[DataVault] = {
-    val scheme = credentializedUpath.upath.getScheme
-    val vaultBox = scheme match {
-      case Some(PathSchemes.schemeGS) => GoogleCloudDataVault.create(credentializedUpath)
-      case Some(PathSchemes.schemeS3) => S3DataVault.create(credentializedUpath, s3ClientPoolHolder.s3ClientPool)
-      case Some(PathSchemes.schemeHttps) | Some(PathSchemes.schemeHttp) =>
-        HttpsDataVault.create(credentializedUpath, ws, config.Http.uri)
-      case None => Full(FileSystemDataVault.create)
-      case _    => Failure(s"Unknown file system scheme $scheme")
-    }
-    vaultBox match {
-      case Full(_)    => logger.info(s"Created data vault for ${credentializedUpath.upath.toString}.")
-      case f: Failure =>
-        logger.warn(s"Failed to create DataVault for ${credentializedUpath.upath.toString}: ${formatFailureChain(f)}")
-      case Empty =>
-        logger.warn(s"Failed to create DataVault for ${credentializedUpath.upath.toString}.")
-    }
-
-    vaultBox
+  private def removeVaultFromCache(
+      credentializedUpath: CredentializedUPath
+  )(implicit ec: ExecutionContext): Fox[Unit] = {
+    vaultCache.remove(vaultCacheKeyFor(credentializedUpath))
+    Fox.successful(())
   }
+
+  private def createVault(credentializedUPath: CredentializedUPath)(implicit ec: ExecutionContext): Fox[DataVault] =
+    credentializedUPath.upath match {
+      case ZipEntryUPath(outerPath, _) =>
+        val credentializedOuterPath = credentializedUPath.copy(upath = outerPath)
+        for {
+          _ <- Fox.fromBool(!outerPath.isInstanceOf[ZipEntryUPath]) ?~> "Nested zip paths are not supported."
+          outerVaultPath <- vaultPathFor(credentializedOuterPath)
+        } yield new ZipDataVault(outerVaultPath)
+      case _ =>
+        val vaultBox = credentializedUPath.upath.getScheme match {
+          case Some(PathSchemes.schemeGS) => GoogleCloudDataVault.create(credentializedUPath)
+          case Some(PathSchemes.schemeS3) => S3DataVault.create(credentializedUPath, s3ClientPoolHolder.s3ClientPool)
+          case Some(PathSchemes.schemeHttps) | Some(PathSchemes.schemeHttp) =>
+            HttpsDataVault.create(credentializedUPath, ws, config.Http.uri)
+          case None => Full(FileSystemDataVault.create)
+          case _    => Failure(s"Unknown file system scheme ${credentializedUPath.upath.getScheme}")
+        }
+        vaultBox match {
+          case Full(_)    => logger.info(s"Created data vault for ${credentializedUPath.upath.toString}.")
+          case f: Failure =>
+            logger.warn(
+              s"Failed to create DataVault for ${credentializedUPath.upath.toString}: ${formatFailureChain(f)}"
+            )
+          case Empty => logger.warn(s"Failed to create DataVault for ${credentializedUPath.upath.toString}.")
+        }
+        vaultBox.toFox
+    }
 
 }

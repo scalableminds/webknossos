@@ -12,15 +12,22 @@ import java.nio.file.Path
 trait UPath {
   def toRemoteUri: Box[URI]
 
+  def toZipEntryUPath: Box[ZipEntryUPath]
+
   def /(other: String): UPath
 
   def /(other: ObjectId): UPath =
     this / other.toString
 
   def /(other: UPath): UPath =
-    this / other.toString
+    other match {
+      case ZipEntryUPath(outerPath, innerPath) => ZipEntryUPath(this / outerPath, innerPath)
+      case _                                   => this / other.toString
+    }
 
   def toAbsolute: UPath
+
+  def toReal: Box[UPath]
 
   def toLocalPath: Box[Path]
 
@@ -53,6 +60,42 @@ trait UPath {
   }
 }
 
+case class ZipEntryUPath(outerPath: UPath, innerPath: String) extends UPath {
+  override def toString: String =
+    if (innerPath.isEmpty) s"$outerPath${ZipEntryUPath.separatorRoot}"
+    else s"$outerPath${ZipEntryUPath.separatorWithPath}$innerPath"
+  override def getScheme: Option[String] = outerPath.getScheme
+  override def isAbsolute: Boolean = outerPath.isAbsolute
+  override def isRemote: Boolean = outerPath.isRemote
+  override def toLocalPath: Box[Path] = Failure(s"ZipEntryUPath cannot be accessed as a local path: $this")
+  override def toRemoteUri: Box[URI] = outerPath.toRemoteUri
+  override def toZipEntryUPath: Box[ZipEntryUPath] = Full(this)
+  override def toAbsolute: UPath = ZipEntryUPath(outerPath.toAbsolute, innerPath)
+  override def toReal: Box[UPath] = outerPath.toReal.map(ZipEntryUPath(_, innerPath))
+  override def relativizedIn(potentialParent: UPath): UPath =
+    ZipEntryUPath(outerPath.relativizedIn(potentialParent), innerPath)
+  override def basename: String = innerPath.split("/").filter(_.nonEmpty).lastOption.getOrElse("")
+  override def parent: UPath = {
+    val parts = innerPath.split("/").filter(_.nonEmpty)
+    if (parts.length <= 1) outerPath
+    else ZipEntryUPath(outerPath, parts.dropRight(1).mkString("/"))
+  }
+  override def /(other: String): UPath =
+    ZipEntryUPath(outerPath, s"$innerPath/$other".replaceAll("//+", "/").stripPrefix("/"))
+  override def startsWith(other: UPath): Boolean = other match {
+    case ZipEntryUPath(op, ip) => outerPath == op && (ip.isEmpty || innerPath == ip || innerPath.startsWith(ip + "/"))
+    case _                     => outerPath.startsWith(other)
+  }
+  private lazy val hashCodeCached = new HashCodeBuilder(23, 37).append(outerPath).append(innerPath).toHashCode
+  override def hashCode(): Int = hashCodeCached
+}
+
+object ZipEntryUPath {
+  val separatorWithPath: String = "|zip:"
+  val separatorRoot: String = "|zip"
+  val relevantFileExtensions: Seq[String] = Seq(".zip", ".ozx")
+}
+
 object UPath {
   def separator: String = "/"
   def schemeSeparator: String = "://"
@@ -61,23 +104,54 @@ object UPath {
   def fromString(literal: String): Box[UPath] = tryo(fromStringUnsafe(literal))
 
   // Warning: throws! Prefer fromString (returns Box) for user-supplied input
-  def fromStringUnsafe(literal: String): UPath = {
-    val schemeOpt = if (literal.contains(schemeSeparator)) literal.split(schemeSeparator).headOption else None
-    schemeOpt match {
-      case None                                                    => fromLocalPath(Path.of(literal))
-      case Some(scheme) if scheme.contains(PathSchemes.schemeFile) =>
-        val nioPath = Path.of(literal.drop(s"$scheme$schemeSeparator".length))
-        if (!nioPath.isAbsolute)
-          throw new Exception(
-            s"Trying to construct relative UPath $nioPath. Must either be absolute or have no scheme."
-          )
-        fromLocalPath(nioPath)
-      case Some(scheme) =>
-        RemoteUPath(
-          scheme,
-          segments = literal.drop(s"$scheme$schemeSeparator".length).split(separator, splitKeepLastIfEmpty).toSeq
-        ).normalize
+  def fromStringUnsafe(literal: String): UPath =
+    parseZipSeparator(literal) match {
+      case Some((outerLiteral, innerPath)) => ZipEntryUPath(fromStringUnsafe(outerLiteral), innerPath)
+      case None                            =>
+        val schemeOpt = if (literal.contains(schemeSeparator)) literal.split(schemeSeparator).headOption else None
+        schemeOpt match {
+          case None                                                    => fromLocalPath(Path.of(literal))
+          case Some(scheme) if scheme.contains(PathSchemes.schemeFile) =>
+            val nioPath = Path.of(literal.drop(s"$scheme$schemeSeparator".length))
+            if (!nioPath.isAbsolute)
+              throw new Exception(
+                s"Trying to construct relative UPath $nioPath. Must either be absolute or have no scheme."
+              )
+            fromLocalPath(nioPath)
+          case Some(scheme) =>
+            RemoteUPath(
+              scheme,
+              segments = literal.drop(s"$scheme$schemeSeparator".length).split(separator, splitKeepLastIfEmpty).toSeq
+            ).normalize
+        }
     }
+
+  // Detect "|zip:path" (entry) or "|zip" at end (root reference, inner path = "").
+  private def parseZipSeparator(literal: String): Option[(String, String)] = {
+    val separatorWithPathIdx = literal.indexOf(ZipEntryUPath.separatorWithPath)
+    val separatorRootIdx =
+      if (literal.endsWith(ZipEntryUPath.separatorRoot) && separatorWithPathIdx < 0)
+        literal.length - ZipEntryUPath.separatorRoot.length
+      else -1
+    if (separatorWithPathIdx >= 0 || separatorRootIdx >= 0) {
+      if (literal.indexOf(ZipEntryUPath.separatorRoot) != literal.lastIndexOf(ZipEntryUPath.separatorRoot))
+        throw new Exception(s"Invalid zip path “$literal”: Nested zip paths are not supported.")
+      val (outerLiteral, innerPath) =
+        if (separatorWithPathIdx >= 0)
+          (
+            literal.substring(0, separatorWithPathIdx),
+            literal.substring(separatorWithPathIdx + ZipEntryUPath.separatorWithPath.length)
+          )
+        else
+          (literal.substring(0, separatorRootIdx), "")
+      if (outerLiteral.isEmpty)
+        throw new Exception(s"Invalid zip path “$literal”: Outer path must not be empty.")
+      if (innerPath.startsWith("//"))
+        throw new Exception(
+          s"Invalid zip path “$literal”: Multiple leading slashes for inner path are not allowed."
+        )
+      Some((outerLiteral, innerPath.stripPrefix("/")))
+    } else None
   }
 
   def fromLocalPath(localPath: Path): UPath = LocalUPath(localPath.normalize())
@@ -121,6 +195,8 @@ private case class LocalUPath(nioPath: Path) extends UPath {
 
   override def toRemoteUri: Box[URI] = Failure(s"Called toRemoteUri on LocalUPath $toString")
 
+  override def toZipEntryUPath: Box[ZipEntryUPath] = Failure(s"Called toZipEntryUPath on LocalUPath $toString")
+
   override def relativizedIn(potentialAncestor: UPath): UPath =
     potentialAncestor match {
       case LocalUPath(potentialAncestorNioPath) =>
@@ -135,6 +211,8 @@ private case class LocalUPath(nioPath: Path) extends UPath {
   override def hashCode(): Int = hashCodeCached
 
   override def toAbsolute: UPath = UPath.fromLocalPath(nioPath.toAbsolutePath)
+
+  override def toReal: Box[UPath] = tryo(nioPath.toRealPath()).map(UPath.fromLocalPath)
 
   override def startsWith(other: UPath): Boolean = other match {
     case otherLocal: LocalUPath =>
@@ -186,6 +264,8 @@ private case class RemoteUPath(scheme: String, segments: Seq[String]) extends UP
 
   override def toRemoteUri: Box[URI] = tryo(new URI(toString))
 
+  override def toZipEntryUPath: Box[ZipEntryUPath] = Failure(s"Called toZipEntryUPath on RemotePath $toString")
+
   override def relativizedIn(potentialAncestor: UPath): UPath = this
 
   private lazy val hashCodeCached = new HashCodeBuilder(19, 29).append(scheme).append(segments).toHashCode
@@ -193,6 +273,8 @@ private case class RemoteUPath(scheme: String, segments: Seq[String]) extends UP
   override def hashCode(): Int = hashCodeCached
 
   override def toAbsolute: UPath = this
+
+  override def toReal: Box[UPath] = Full(this)
 
   def startsWith(other: UPath): Boolean = other match {
     case otherRemote: RemoteUPath =>

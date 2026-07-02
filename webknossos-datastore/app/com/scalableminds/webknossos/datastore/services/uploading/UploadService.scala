@@ -23,7 +23,7 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr.NgffMetadata.FILE
 import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrHeader.FILENAME_DOT_ZARRAY
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader.FILENAME_ZARR_JSON
 import com.scalableminds.webknossos.datastore.explore.ExploreLocalLayerService
-import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, DirectoryConstants, UPath}
+import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, DirectoryConstants, UPath, ZipEntryUPath}
 import com.scalableminds.webknossos.datastore.models.LengthUnit.LengthUnit
 import com.scalableminds.webknossos.datastore.models.{UnfinishedUpload, VoxelSize}
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType.LayerAttachmentType
@@ -761,7 +761,12 @@ class UploadService @Inject() (
 
   private def findNonReferencedFiles(unpackedDir: Path, dataSource: UsableDataSource): Fox[List[Path]] = {
     val explicitPaths: Set[Path] = dataSource.dataLayers
-      .flatMap(layer => layer.allExplicitPaths.flatMap(_.toLocalPath))
+      .flatMap(layer =>
+        layer.allExplicitPaths.map {
+          case ZipEntryUPath(outerPath, _) => outerPath // The whole zip of each ZipEntryUPath is considered referenced.
+          case path                        => path
+        }.flatMap(_.toLocalPath)
+      )
       .map(unpackedDir.resolve)
       .toSet
     val additionalMagPaths: Set[Path] = dataSource.dataLayers
@@ -1006,12 +1011,14 @@ class UploadService @Inject() (
       _ <- PathUtils.ensureDirectoryBox(unpackToDir.getParent).toFox ?~> "dataset.import.fileAccessDenied"
       shallowFileList <- PathUtils.listFiles(uploadDir, silent = false).toFox
       excludeFromPrefix = LayerCategory.values.map(_.toString).toList
-      firstFile = shallowFileList.headOption
+      isSingleZip = shallowFileList.length == 1 && shallowFileList.headOption.exists(f =>
+        ZipEntryUPath.relevantFileExtensions.exists(f.toString.toLowerCase.endsWith)
+      )
       _ <-
-        if (shallowFileList.length == 1 && shallowFileList.headOption.exists(_.toString.toLowerCase.endsWith(".zip"))) {
+        if (isSingleZip) {
           for {
-            zipFile <- firstFile.toFox
             _ = logger.info(s"finishUpload for $datasetId: Unzipping $uploadDomain to $unpackToDir...")
+            zipFile <- shallowFileList.headOption.toFox
             _ <- ZipIO
               .unzipToDirectory(
                 zipFile.toFile,

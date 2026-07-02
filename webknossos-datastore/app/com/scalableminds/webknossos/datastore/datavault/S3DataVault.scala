@@ -128,7 +128,10 @@ class S3DataVault(
       encoding <- Encoding.fromRfc7231String(encodingString).toFox
     } yield (bytes, encoding, rangeHeader)
 
-  override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
+  override def listDirectory(path: VaultPath, maxItems: Int)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[List[VaultPath]] =
     for {
       prefixKey <- S3UriUtils.objectKeyFromVaultPath(path).toFox
       s3SubPrefixKeys <- getObjectSummaries(bucketName, prefixKey, maxItems)

@@ -318,7 +318,7 @@ class DataVaultTestSuite extends AsyncWordSpec {
                   .create(CredentializedUPath(upath, None), clientPool)(using globalExecutionContext)
                   .getOrElse(fail("Failed to create S3DataVault"))
               )
-            vaultPath.listDirectory(maxItems = 3)(using globalExecutionContext).futureBox.map {
+            vaultPath.listDirectory(maxItems = 3)(using globalExecutionContext, emptyTokenContext).futureBox.map {
               case Full(result) =>
                 assert(result.length == 3)
                 assert(
@@ -343,7 +343,10 @@ class DataVaultTestSuite extends AsyncWordSpec {
                   .create(CredentializedUPath(nonExistentUpath, None), clientPool)(using globalExecutionContext)
                   .getOrElse(fail("Failed to create S3DataVault"))
               val vaultPath = new VaultPath(nonExistentUpath, s3DataVault)
-              vaultPath.listDirectory(maxItems = 5)(using globalExecutionContext).futureBox.map(assertBoxFailure)
+              vaultPath
+                .listDirectory(maxItems = 5)(using globalExecutionContext, emptyTokenContext)
+                .futureBox
+                .map(assertBoxFailure)
             }
           }
         }
@@ -358,8 +361,9 @@ class DataVaultTestSuite extends AsyncWordSpec {
             tc: TokenContext
         ): Fox[(Array[Byte], Encoding.Value, Option[String])] = ???
 
-        override def listDirectory(path: VaultPath, maxItems: Int)(implicit
-            ec: ExecutionContext
+        override def listDirectory(path: VaultPath, maxItems: Int)(using
+            ec: ExecutionContext,
+            tc: TokenContext
         ): Fox[List[VaultPath]] = ???
 
         override def getUsedStorageBytes(path: VaultPath)(using ec: ExecutionContext, tc: TokenContext): Fox[Long] =

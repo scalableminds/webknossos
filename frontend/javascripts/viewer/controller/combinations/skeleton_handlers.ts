@@ -24,6 +24,7 @@ import {
   getSkeletonTracing,
   getTreeAndNode,
   getTreeAndNodeOrNull,
+  isSkeletonSectionClippingActive,
   untransformNodePosition,
 } from "viewer/model/accessors/skeletontracing_accessor";
 import {
@@ -431,11 +432,22 @@ export function maybeGetNodeIdFromPosition(
   // render the clicked viewport with picking enabled
   // we need a dedicated pickingScene, since we only want to render all nodes and no planes / bounding box / edges etc.
   const pickingNode = skeleton.startPicking(isTouch);
+  // Replicate the section clipping used during normal rendering so that nodes which
+  // are culled to the current section cannot be picked (the dedicated picking scene
+  // does not go through SceneController.updateSceneForCam).
+  const pickingState = Store.getState();
+  const clippingAxis =
+    isSkeletonSectionClippingActive(pickingState) &&
+    plane !== OrthoViews.TDView &&
+    plane !== "flightViewport"
+      ? Dimensions.getIndices(plane)[2]
+      : -1;
+  skeleton.setSectionClippingUniforms(clippingAxis, getPosition(pickingState.flycam));
   const pickingScene = new Scene();
   pickingScene.add(pickingNode);
   const camera = planeView.getCameraForPlane(plane);
 
-  let { width, height } = getInputCatcherRect(Store.getState(), plane);
+  let { width, height } = getInputCatcherRect(pickingState, plane);
   width = Math.round(width);
   height = Math.round(height);
   const buffer = renderToTexture(plane, pickingScene, camera, true);

@@ -245,6 +245,10 @@ export enum TDViewDisplayModeEnum {
   DATA = "DATA",
 }
 export type TDViewDisplayMode = keyof typeof TDViewDisplayModeEnum;
+// This name can be used to retrieve the perspective camera of the 3D viewport
+// from the scene (the orthographic camera is named after the viewport itself).
+export const TDViewPerspectiveCameraName = "TDView_perspective";
+export const TDViewPerspectiveFov = 45;
 export enum MappingStatusEnum {
   DISABLED = "DISABLED",
   ACTIVATING = "ACTIVATING",

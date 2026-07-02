@@ -102,6 +102,9 @@ export const userSettings = {
   tdViewDisplayLayerBorders: {
     type: "boolean",
   },
+  tdViewUsePerspectiveCamera: {
+    type: "boolean",
+  },
   hideTreeRemovalWarning: {
     type: "boolean",
   },

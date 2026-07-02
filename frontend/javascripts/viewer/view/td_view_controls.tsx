@@ -29,18 +29,22 @@ type Props = {
   tdViewDisplayPlanes: TDViewDisplayMode;
   tdViewDisplayDatasetBorders: boolean;
   tdViewDisplayLayerBorders: boolean;
+  tdViewUsePerspectiveCamera: boolean;
   onChangeTdViewDisplayPlanes: (arg0: RadioChangeEvent) => void;
   onChangeTdViewDisplayDatasetBorders: SwitchChangeEventHandler;
   onChangeTdViewDisplayLayerBorders: SwitchChangeEventHandler;
+  onChangeTdViewUsePerspectiveCamera: SwitchChangeEventHandler;
 };
 
 function TDViewControls({
   tdViewDisplayPlanes,
   tdViewDisplayDatasetBorders,
   tdViewDisplayLayerBorders,
+  tdViewUsePerspectiveCamera,
   onChangeTdViewDisplayPlanes,
   onChangeTdViewDisplayDatasetBorders,
   onChangeTdViewDisplayLayerBorders,
+  onChangeTdViewUsePerspectiveCamera,
 }: Props) {
   const settingsMenu: MenuProps = {
     style: {
@@ -112,6 +116,22 @@ function TDViewControls({
           </Row>
         ),
       },
+      {
+        key: "usePerspectiveCamera",
+        label: (
+          <Row>
+            <Col span={14}>
+              <label className="setting-label">Perspective Projection</label>
+            </Col>
+            <Col span={10}>
+              <Switch
+                checked={tdViewUsePerspectiveCamera}
+                onChange={onChangeTdViewUsePerspectiveCamera}
+              />
+            </Col>
+          </Row>
+        ),
+      },
     ],
   };
 
@@ -146,6 +166,7 @@ function mapStateToProps(state: WebknossosState) {
     tdViewDisplayPlanes: state.userConfiguration.tdViewDisplayPlanes,
     tdViewDisplayDatasetBorders: state.userConfiguration.tdViewDisplayDatasetBorders,
     tdViewDisplayLayerBorders: state.userConfiguration.tdViewDisplayLayerBorders,
+    tdViewUsePerspectiveCamera: state.userConfiguration.tdViewUsePerspectiveCamera,
   };
 }
 
@@ -162,6 +183,10 @@ function mapDispatchToProps(dispatch: Dispatch<any>) {
 
     onChangeTdViewDisplayLayerBorders(tdViewDisplayLayerBorders: boolean) {
       dispatch(updateUserSettingAction("tdViewDisplayLayerBorders", tdViewDisplayLayerBorders));
+    },
+
+    onChangeTdViewUsePerspectiveCamera(tdViewUsePerspectiveCamera: boolean) {
+      dispatch(updateUserSettingAction("tdViewUsePerspectiveCamera", tdViewUsePerspectiveCamera));
     },
   };
 }

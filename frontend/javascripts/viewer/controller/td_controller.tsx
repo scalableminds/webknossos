@@ -14,7 +14,9 @@ import {
   type Point2,
   type Vector3,
 } from "viewer/constants";
-import CameraController from "viewer/controller/camera_controller";
+import CameraController, {
+  updatePerspectiveCameraFromOrthographic,
+} from "viewer/controller/camera_controller";
 import { handleOpenContextMenu } from "viewer/controller/combinations/skeleton_handlers";
 import {
   ProofreadToolController,
@@ -185,6 +187,24 @@ class TDController extends PureComponent<Props> {
     }
 
     this.controls.update(true);
+    this.updateTDViewPerspectiveCamera();
+  };
+
+  updateTDViewPerspectiveCamera = () => {
+    // The perspective camera is derived from the orthographic camera which is the
+    // single source of truth for the 3D viewport. This needs to happen after
+    // this.controls.update() since only then the orthographic camera has its
+    // final orientation (via lookAt(target)).
+    // In flight mode, no planeView exists and the 3D viewport stays orthographic.
+    const perspectiveCamera = this.props.planeView?.getTDViewPerspectiveCamera();
+    if (perspectiveCamera == null || this.controls == null) {
+      return;
+    }
+    updatePerspectiveCameraFromOrthographic(
+      this.props.cameras[OrthoViews.TDView],
+      perspectiveCamera,
+      this.controls.target,
+    );
   };
 
   getTDViewMouseControls(): Record<string, any> {
@@ -335,6 +355,13 @@ class TDController extends PureComponent<Props> {
       controls.update();
     }
 
+    if (this.oldUnitPos == null) {
+      // This method can be called (via CameraController's store listeners) before
+      // componentDidMount has initialized oldUnitPos.
+      this.oldUnitPos = nmPosition;
+      return;
+    }
+
     // The following code is a dirty hack. If someone figures out
     // how the trackball control's target can be set without affecting
     // the camera position, go ahead.
@@ -384,6 +411,9 @@ class TDController extends PureComponent<Props> {
       : setTDCameraWithoutTimeTrackingAction;
     // Write threeJS camera into store
     Store.dispatch(setCameraAction(threeCameraToCameraData(tdCamera)));
+    // Keep the derived perspective camera in sync within the same frame
+    // (e.g. during trackball rotations).
+    this.updateTDViewPerspectiveCamera();
   };
 
   render() {

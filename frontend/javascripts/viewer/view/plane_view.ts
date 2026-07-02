@@ -8,6 +8,7 @@ import throttle from "lodash-es/throttle";
 import {
   DirectionalLight,
   OrthographicCamera,
+  PerspectiveCamera,
   Vector2 as ThreeVector2,
   Vector3 as ThreeVector3,
 } from "three";
@@ -19,6 +20,8 @@ import Constants, {
   OrthoViews,
   OrthoViewValues,
   PerformanceMarkEnum,
+  TDViewPerspectiveCameraName,
+  TDViewPerspectiveFov,
 } from "viewer/constants";
 import type { VertexSegmentMapping } from "viewer/controller/mesh_helpers";
 import { getWebGlAnalyticsInformation } from "viewer/controller/renderer";
@@ -71,6 +74,7 @@ let oldRaycasterHit: RaycasterHit = null;
 
 class PlaneView {
   cameras: OrthoViewMap<OrthographicCamera>;
+  tdPerspectiveCamera: PerspectiveCamera;
   isRunning: boolean = false;
   needsRerender: boolean;
   unsubscribeFunctions: Array<() => void> = [];
@@ -89,6 +93,13 @@ class PlaneView {
       scene.add(cameras[plane]);
     }
     this.cameras = cameras;
+
+    // The perspective camera for the 3D viewport is derived from the orthographic
+    // TDView camera (see updatePerspectiveCameraFromOrthographic) and is used for
+    // rendering and raycasting when the tdViewUsePerspectiveCamera setting is active.
+    this.tdPerspectiveCamera = new PerspectiveCamera(TDViewPerspectiveFov, 1, 1, 8000000);
+    this.tdPerspectiveCamera.name = TDViewPerspectiveCameraName;
+    scene.add(this.tdPerspectiveCamera);
 
     createDirLight([10, 10, 10], [0, 0, 10], LIGHT_INTENSITY, this.cameras[OrthoViews.TDView]);
     createDirLight([-10, 10, 10], [0, 0, 10], LIGHT_INTENSITY, this.cameras[OrthoViews.TDView]);
@@ -146,7 +157,9 @@ class PlaneView {
 
         if (width > 0 && height > 0) {
           setupRenderArea(renderer, left, top, width, height, OrthoViewColors[plane]);
-          renderer.render(scene, this.cameras[plane]);
+          const camera =
+            plane === OrthoViews.TDView ? this.getActiveTDViewCamera() : this.cameras[plane];
+          renderer.render(scene, camera);
 
           if (!window.measuredTimeToFirstRender) {
             this.measureTimeToFirstRender();
@@ -184,7 +197,7 @@ class PlaneView {
         (mousePosition[0] / tdViewport.width) * 2 - 1,
         ((mousePosition[1] / tdViewport.height) * 2 - 1) * -1,
       );
-      raycaster.setFromCamera(mouse, this.cameras[OrthoViews.TDView]);
+      raycaster.setFromCamera(mouse, this.getActiveTDViewCamera());
       const intersectableObjects = meshesLayerLODRootGroup.children;
       // The second parameter of intersectObjects is set to true to ensure that
       // the groups which contain the actual meshes are traversed.
@@ -305,6 +318,22 @@ class PlaneView {
     return this.cameras;
   }
 
+  getTDViewPerspectiveCamera(): PerspectiveCamera {
+    return this.tdPerspectiveCamera;
+  }
+
+  getActiveTDViewCamera(): OrthographicCamera | PerspectiveCamera {
+    // Fall back to the orthographic camera as long as the perspective camera
+    // has not been derived from it yet (see updatePerspectiveCameraFromOrthographic).
+    if (
+      Store.getState().userConfiguration.tdViewUsePerspectiveCamera &&
+      this.tdPerspectiveCamera.userData.isDerived
+    ) {
+      return this.tdPerspectiveCamera;
+    }
+    return this.cameras[OrthoViews.TDView];
+  }
+
   stop(): void {
     this.isRunning = false;
 
@@ -313,6 +342,7 @@ class PlaneView {
       for (const plane of OrthoViewValues) {
         sceneController.scene.remove(this.cameras[plane]);
       }
+      sceneController.scene.remove(this.tdPerspectiveCamera);
     }
     this.resizeThrottled.cancel();
     window.removeEventListener("resize", this.resizeThrottled);
@@ -445,9 +475,12 @@ class PlaneView {
     window.measuredTimeToFirstRender = true;
   }
 
-  getCameraForPlane(plane: Viewport) {
+  getCameraForPlane(plane: Viewport): OrthographicCamera | PerspectiveCamera {
     if (plane === FlightViewport) {
       throw new Error("Cannot access camera for flight viewport.");
+    }
+    if (plane === OrthoViews.TDView) {
+      return this.getActiveTDViewCamera();
     }
     return this.getCameras()[plane];
   }

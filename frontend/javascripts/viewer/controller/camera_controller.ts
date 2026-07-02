@@ -3,8 +3,10 @@ import { waitForElementWithId } from "libs/utils";
 import { PureComponent } from "react";
 import {
   Euler,
+  MathUtils,
   Matrix4,
   type OrthographicCamera,
+  type PerspectiveCamera,
   Quaternion,
   Vector3 as ThreeVector3,
 } from "three";
@@ -14,6 +16,7 @@ import {
   OrthoCamerasBaseRotations,
   OrthoViews,
   OrthoViewValuesWithoutTDView,
+  TDViewPerspectiveFov,
 } from "viewer/constants";
 import { getDatasetExtentInUnit } from "viewer/model/accessors/dataset_accessor";
 import { getPosition, getRotationInRadian } from "viewer/model/accessors/flycam_accessor";
@@ -81,6 +84,53 @@ function getCameraFromQuaternion(quat: { x: number; y: number; z: number; w: num
     up,
     forward,
   };
+}
+
+// The orthographic camera's frustum (left/right/top/bottom) defines which rectangle
+// of the plane through the trackball target (perpendicular to the viewing direction)
+// is visible. This function positions the perspective camera along the same viewing
+// direction so that it sees exactly that rectangle at the target's distance. As a
+// consequence, all orthographic camera logic (zooming by shrinking the frustum,
+// panning by shifting it, trackball rotation around the target) translates naturally
+// to the perspective camera (dollying, trucking, orbiting).
+export function updatePerspectiveCameraFromOrthographic(
+  orthoCamera: OrthographicCamera,
+  perspectiveCamera: PerspectiveCamera,
+  target: ThreeVector3,
+): void {
+  const width = orthoCamera.right - orthoCamera.left;
+  const height = orthoCamera.top - orthoCamera.bottom;
+  if (!(width > 0) || !(height > 0) || !Number.isFinite(width + height)) {
+    // The orthographic camera is not (fully) initialized yet.
+    return;
+  }
+  const middleX = (orthoCamera.left + orthoCamera.right) / 2;
+  const middleY = (orthoCamera.top + orthoCamera.bottom) / 2;
+  orthoCamera.updateMatrixWorld();
+  // Camera-space basis vectors in world coordinates. The camera looks down its
+  // negative z-axis, so "back" is the third column of the world matrix.
+  const rightVec = new ThreeVector3().setFromMatrixColumn(orthoCamera.matrixWorld, 0);
+  const upVec = new ThreeVector3().setFromMatrixColumn(orthoCamera.matrixWorld, 1);
+  const backVec = new ThreeVector3().setFromMatrixColumn(orthoCamera.matrixWorld, 2);
+  // Distance at which the perspective camera sees exactly `height` at the target plane.
+  const distance = height / 2 / Math.tan(MathUtils.degToRad(TDViewPerspectiveFov) / 2);
+  perspectiveCamera.position
+    .copy(target)
+    .addScaledVector(rightVec, middleX)
+    .addScaledVector(upVec, middleY)
+    .addScaledVector(backVec, distance);
+  perspectiveCamera.quaternion.copy(orthoCamera.quaternion);
+  perspectiveCamera.up.copy(orthoCamera.up);
+  perspectiveCamera.fov = TDViewPerspectiveFov;
+  perspectiveCamera.aspect = width / height;
+  // Scale the near plane with the distance so that zooming in very closely
+  // does not clip meshes; keep the far plane at least as far as the orthographic
+  // camera's to never clip the dataset when zooming out.
+  perspectiveCamera.near = distance / 100;
+  perspectiveCamera.far = Math.max(orthoCamera.far, 4 * distance);
+  perspectiveCamera.updateProjectionMatrix();
+  perspectiveCamera.updateMatrixWorld();
+  perspectiveCamera.userData.isDerived = true;
 }
 
 class CameraController extends PureComponent<Props> {
@@ -218,6 +268,15 @@ class CameraController extends PureComponent<Props> {
         (storeState) => storeState.flycam.currentMatrix,
         () => this.update(),
         true,
+      ),
+      listenToStoreProperty(
+        (storeState) => storeState.flycam.currentMatrix,
+        // Keep the trackball target of the 3D viewport in sync with the flycam.
+        // For the orthographic camera this has no visible effect (which is why it
+        // used to happen only lazily when hovering the 3D viewport), but the derived
+        // perspective camera is anchored at the target, so it would lag behind
+        // flycam movements otherwise.
+        () => this.props.setTargetAndFixPosition(),
       ),
       listenToStoreProperty(
         (storeState) => storeState.viewModeData.plane.tdCamera,

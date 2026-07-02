@@ -16,6 +16,7 @@ Each dataset consists of one or more data and annotation layers. A dataset typic
       - `Clip histogram`: Automatically adjust the histogram for best contrast and brightness. Contrast estimation is based on the data currently available in your viewport. This is especially useful for light microscopy datasets saved as `float` values.
       - `Reload from server`: Reload the layer data from server. Useful if the raw data has been changed on disk and you want to refresh your current session.
       - `Jump to data`: Navigates the WEBKNOSSOS camera to the center position within the dataset where there is data available for the respective layer. This is especially useful for working with smaller layers - likely segmentations - that might not cover the whole dataset and are hard to find manually.
+      - `Edit layer transforms`: Opens the live transform editor for the layer. See [Live Layer Transform Editor](#live-layer-transform-editor) below.
 
 - `Opacity`: Increase / Decrease the opacity of a layer. 0% opacity makes a layer invisible. 100% opacity makes it totally opaque. Useful for overlaying several layers above one another.
 - `Gamma Correction`: Increase / Decrease the luminance, brightness and contrast of a layer through a non-linear gamma correction. Low values darken the image, high values increase the perceived brightness. (Color layers only.)
@@ -46,6 +47,27 @@ The skeleton annotation layer contains any trees that you add to your dataset. Y
 - `Override Node Radius`: When toggled, globally overrides all individual node sizes. This allows to uniformly adjust the size of all nodes simultaneously. Used together with the `Particle Size` setting.
 - `Auto-center Nodes`: Per default, each time you place a node in a skeleton annotation, the WEBKNOSSOS viewport will center on this node. Disable, if you do not want the viewport to move/reposition while clicking nodes.
 - `Highlight Commented Nodes`: When active, nodes that have a comment associated with them will be rendered with a slight border around them. This is useful for quickly identifying (important) nodes.
+
+### Live Layer Transform Editor
+
+The live transform editor lets you interactively adjust the spatial alignment of any color or segmentation layer without leaving the viewer. Open it via `··· menu -> Edit layer transforms` in the layer header.
+
+The editor exposes three groups of controls, each with a slider, a numeric input, and a per-axis reset button:
+
+- **Translation** – shifts the layer along X, Y, or Z. The slider range is bounded by the dataset extent for each axis.
+- **Rotation** – rotates the layer around each axis independently (0 – 359.9°). Each rotation row also has a **flip** button that mirrors the layer along that axis. An axis that is currently flipped is highlighted by the flip button begin in the primary color.
+- **Scaling** – uniform or non-uniform scale per axis. The displayed value is always positive; flip state (sign) is controlled via the rotation-row flip buttons.
+
+Every per-axis reset button restores that single value to the **stored default** — the transform that is saved on the server for this layer.
+
+Two actions at the bottom of the popover apply to all three transform groups at once:
+
+- **Reset to Stored Default** – reverts all three components (translation, rotation, scale) to the server-side values.
+- **Store as Default** – persists the current live transform as the new server-side default, making it visible to all users of the dataset.
+
+Changes made in the editor are applied immediately in the viewer but are not automatically saved. Use **Store as Default** to make them permanent.
+
+The editor is only available for layers whose transform is in the compatible 7-matrix SRT format (translation, scale, rotX, rotY, rotZ, translation, translation). Layers with other transform formats (e.g. thin-plate spline or arbitrary affine JSON) will show an informational message instead, with instructions to clear the transforms in the [dataset settings](../datasets/settings.md#transformations) to unlock editing. The editor is also disabled while a layer is in native (untransformed) rendering mode — disable native rendering for that layer first.
 
 ## Settings Tab
 

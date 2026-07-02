@@ -16,7 +16,7 @@ export function HoneypotFormItem() {
         overflow: "hidden",
       }}
     >
-      <FormItem name="phone" initialValue="">
+      <FormItem name="referral" initialValue="">
         <Input type="text" tabIndex={-1} autoComplete="off" />
       </FormItem>
     </div>

@@ -1131,7 +1131,7 @@ trait AuthForms {
         "lastName" -> nonEmptyText,
         "inviteToken" -> optional(nonEmptyText),
         "acceptedTermsOfService" -> optional(number),
-        "phone" -> optional(text) // honeypot field
+        "referral" -> optional(text) // honeypot field
       )((organization, organizationName, email, password, firstName, lastName, inviteToken, acceptTos, honeypot) =>
         SignUpData(
           organization,

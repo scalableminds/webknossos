@@ -687,6 +687,17 @@ export type LocalSegmentationState = {
   readonly proofreadingMarkerPosition: Vector3 | undefined;
 };
 
+// LocalAnnotationState holds local, non-persisted state that applies to the whole annotation
+// (in contrast to LocalSegmentationState, which is scoped to a single segmentation layer, and
+// in contrast to StoreAnnotation, which mirrors the persisted/synced annotation and is stashed
+// and restored during rebasing, see save_saga.tsx).
+export type LocalAnnotationState = {
+  // Bounding boxes are shared/mirrored across all tracings of an annotation (see
+  // updateUserBoundingBoxes in annotation_reducer.ts), so their id reservations are
+  // tracked here on the annotation level instead of per segmentation layer.
+  readonly idReservationsForBoundingBoxes: { id: number; used: boolean }[];
+};
+
 export type StoreDataset = APIDataset & {
   // The backend serves an APIDataset object. The frontend
   // adds/merges volume tracing objects into that dataset. The
@@ -735,10 +746,7 @@ export type WebknossosState = {
     string, // layerName
     LocalSegmentationState
   >;
-  // Bounding boxes are shared/mirrored across all tracings of an annotation (see
-  // updateUserBoundingBoxes in annotation_reducer.ts), so their id reservations are
-  // tracked here on the annotation level instead of per segmentation layer.
-  readonly idReservationsForBoundingBoxes: { id: number; used: boolean }[];
+  readonly localAnnotationState: LocalAnnotationState;
   readonly operationContext: OperationContextState;
 };
 const sagaMiddleware = createSagaMiddleware();

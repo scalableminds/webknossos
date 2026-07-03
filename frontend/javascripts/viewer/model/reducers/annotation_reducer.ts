@@ -539,10 +539,9 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
       // tracings, see updateUserBoundingBoxes above), unlike SegmentGroup/Segment reservations
       // which are handled per segmentation layer in volumetracing_reducer.ts.
       if (action.domain !== "BoundingBox") return state;
-      return {
-        ...state,
+      return updateKey(state, "localAnnotationState", {
         idReservationsForBoundingBoxes: action.reservations,
-      };
+      });
     }
 
     default:

@@ -140,5 +140,5 @@ export const getUserBoundingBoxesThatContainPosition = (
 export function getIdReservationsForBoundingBoxes(
   state: WebknossosState,
 ): { id: number; used: boolean }[] {
-  return state.idReservationsForBoundingBoxes;
+  return state.localAnnotationState.idReservationsForBoundingBoxes;
 }

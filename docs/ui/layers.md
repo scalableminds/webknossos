@@ -54,7 +54,7 @@ The live transform editor lets you interactively adjust the spatial alignment of
 The editor exposes three groups of controls, each with a slider, a numeric input, and a per-axis reset button:
 
 - **Translation** – shifts the layer along X, Y, or Z. The slider range is bounded by the dataset extent for each axis.
-- **Rotation** – rotates the layer around each axis independently (0 – 359.9°). Each rotation row also has a **flip** button that mirrors the layer along that axis. An axis that is currently flipped is highlighted by the flip button begin in the primary color.
+- **Rotation** – rotates the layer around each axis independently (0 – 359.9°). Each rotation row also has a **flip** button that mirrors the layer along that axis. An axis that is currently flipped is highlighted by the flip button being shown in the primary color.
 - **Scaling** – uniform or non-uniform scale per axis. The displayed value is always positive; flip state (sign) is controlled via the rotation-row flip buttons.
 
 Every per-axis reset button restores that single value to the **stored default** — the transform that is saved on the server for this layer.
@@ -66,7 +66,7 @@ Two actions at the bottom of the popover apply to all three transform groups at 
 
 Changes made in the editor are applied immediately in the viewer but are not automatically saved. Use **Store as Default** to make them permanent.
 
-The editor is only available for layers whose transform is in the compatible 7-matrix SRT format (translation, scale, rotX, rotY, rotZ, translation, translation). Layers with other transform formats (e.g. thin-plate spline or arbitrary affine JSON) will show an informational message instead, with instructions to clear the transforms in the [dataset settings](../datasets/settings.md#transformations) to unlock editing. The editor is also disabled while a layer is in native (untransformed) rendering mode — disable native rendering for that layer first.
+The editor is only available for layers whose transform is in the compatible 7-matrix SRT format (translation, scale, rotX, rotY, rotZ, translation, translation). Layers with other transform formats (e.g. thin-plate spline or arbitrary affine JSON) will show an informational message instead, with instructions to clear the transforms in the [dataset settings](../datasets/settings.md#transformations) to unlock editing. The editor is also disabled while a layer is in native (untransformed) rendering mode — disable native rendering first by clicking the transform icon button to the left of the layer's `···` menu.
 
 ## Settings Tab
 

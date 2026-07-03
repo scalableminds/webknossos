@@ -239,8 +239,8 @@ export function LayerTransformSettingsContent({
     return (
       <Typography.Text type="secondary" style={{ maxWidth: 240, display: "block" }}>
         This layer is currently rendered natively (without its transforms applied). Editing is
-        disabled to avoid confusion. To edit the transforms, disable native rendering for this layer
-        first.
+        disabled to avoid confusion. To edit the transforms, disable native rendering first by
+        clicking the transform icon to the left of this layer&apos;s ··· menu.
       </Typography.Text>
     );
   }

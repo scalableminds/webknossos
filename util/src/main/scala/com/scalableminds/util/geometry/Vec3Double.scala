@@ -35,8 +35,7 @@ case class Vec3Double(x: Double, y: Double, z: Double) {
   // Element-wise division
   def /(o: Vec3Double): Vec3Double = Vec3Double(x / o.x, y / o.y, z / o.z)
 
-  /**
-    * Transforms this vector using a transformation matrix
+  /** Transforms this vector using a transformation matrix
     */
   def transformAffine(matrix: Array[Float]): Vec3Double = {
     // see rotation matrix and helmert-transformation for more details
@@ -70,7 +69,7 @@ case class Vec3Double(x: Double, y: Double, z: Double) {
 
   def isStrictlyPositive: Boolean = x > 0 && y > 0 && z > 0
 
-  override def toString = s"($x, $y, $z)"
+  override def toString: String = s"($x, $y, $z)"
 
   def toUriLiteral: String = s"$x,$y,$z"
 }
@@ -95,9 +94,9 @@ object Vec3Double {
     fromArray(l.toArray)
 
   def fromUriLiteral(s: String): Option[Vec3Double] =
-    try {
+    try
       fromArray(s.trim.split(",").map(java.lang.Double.parseDouble))
-    } catch {
+    catch {
       case _: NumberFormatException => None
     }
 

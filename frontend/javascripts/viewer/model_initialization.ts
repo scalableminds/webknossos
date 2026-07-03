@@ -39,6 +39,7 @@ import type {
   ServerTracing,
   ServerVolumeTracing,
 } from "types/api_types";
+import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 import type { Mutable } from "types/type_utils";
 import constants, { ControlModeEnum, type Vector3 } from "viewer/constants";
 import type {
@@ -96,6 +97,7 @@ import {
   setViewModeAction,
   updateDatasetSettingAction,
   updateLayerSettingAction,
+  updateUserSettingAction,
 } from "viewer/model/actions/settings_actions";
 import {
   initializeSkeletonTracingAction,
@@ -238,13 +240,18 @@ export async function initialize(
     serverVolumeTracingIds,
     getSharingTokenFromUrlParameters(),
   );
+  if (annotation?.viewConfiguration) {
+    const isPartial = true;
+    enforceValidatedDatasetViewConfiguration(annotation?.viewConfiguration, dataset, isPartial);
+  }
   const annotationSpecificDatasetSettings = applyAnnotationSpecificViewConfiguration(
     annotation,
     dataset,
     initialDatasetSettings,
   );
+  const migratedUserSettings = migrateUserConfiguration(initialUserSettings);
   const enforcedInitialUserSettings =
-    enforcePricingRestrictionsOnUserConfiguration(initialUserSettings);
+    enforcePricingRestrictionsOnUserConfiguration(migratedUserSettings);
   initializeSettings(
     enforcedInitialUserSettings,
     annotationSpecificDatasetSettings,
@@ -287,7 +294,7 @@ export async function initialize(
     );
   }
 
-  // There is no need to initialize the tracing if there is no tracing (View mode).
+  // There is no need to initialize the annotation if there is no annotation (View mode).
   if (annotation != null) {
     const editableMappings = await fetchEditableMappings(
       annotation.tracingStore.url,
@@ -303,7 +310,7 @@ export async function initialize(
       editableMappings,
     );
   } else {
-    // In view only tracings we need to set the view mode too.
+    // In dataset view mode (no annotation) we need to set the view mode too.
     const { allowedModes } = determineAllowedModes();
     const mode = UrlManager.initialState.mode || allowedModes[0];
     Store.dispatch(setViewModeAction(mode));
@@ -458,14 +465,13 @@ function initializeAnnotation(
     Store.dispatch(setVersionNumberAction(version));
   }
 
-  // Initialize 'flight', 'oblique' or 'orthogonal' mode
+  // Initialize 'orthogonal' or 'flight' mode
   if (allowedModes.length === 0) {
-    Toast.error(messages["tracing.no_allowed_mode"]);
-  } else {
-    const maybeUrlViewMode = UrlManager.initialState.mode;
-    const mode = preferredMode || maybeUrlViewMode || allowedModes[0];
-    Store.dispatch(setViewModeAction(mode));
+    Toast.warning(messages["tracing.no_allowed_mode"]);
   }
+  const maybeUrlViewMode = UrlManager.initialState.mode;
+  const mode = preferredMode || maybeUrlViewMode || allowedModes[0] || "orthogonal";
+  Store.dispatch(setViewModeAction(mode));
 }
 
 function setInitialTool() {
@@ -869,6 +875,16 @@ export function applyState(
       );
     }
   }
+
+  if (state.clippingDistance != null) {
+    Store.dispatch(updateUserSettingAction("clippingDistance", state.clippingDistance));
+  }
+
+  if (state.clipSkeletonToCurrentSection != null) {
+    Store.dispatch(
+      updateUserSettingAction("clipSkeletonToCurrentSection", state.clipSkeletonToCurrentSection),
+    );
+  }
 }
 
 async function applyLayerState(stateByLayer: UrlStateByLayer) {
@@ -975,6 +991,7 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
               seedAdditionalCoordinates,
               meshFileName,
               undefined,
+              undefined,
               effectiveLayerName,
             ),
           );
@@ -1007,6 +1024,17 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
       }
     }
   }
+}
+
+function migrateUserConfiguration(userConfiguration: UserConfiguration): UserConfiguration {
+  // clippingDistanceArbitrary was renamed to clippingDistanceFlight. Carry over the stored
+  // value so users don't silently lose their saved setting after the upgrade.
+  const { clippingDistanceArbitrary, clippingDistanceFlight, ...remainingConfig } =
+    userConfiguration as UserConfiguration & { clippingDistanceArbitrary?: number };
+  if (clippingDistanceArbitrary != null && clippingDistanceFlight == null) {
+    return { ...remainingConfig, clippingDistanceFlight: clippingDistanceArbitrary as number };
+  }
+  return userConfiguration;
 }
 
 function enforcePricingRestrictionsOnUserConfiguration(
@@ -1051,11 +1079,21 @@ function applyAnnotationSpecificViewConfiguration(
    */
 
   const initialDatasetSettings: Mutable<DatasetConfiguration> = cloneDeep(originalDatasetSettings);
+  if (!annotation) {
+    return initialDatasetSettings;
+  }
 
-  if (originalDatasetSettings.nativelyRenderedLayerName) {
+  if (annotation.viewConfiguration) {
+    // The annotation already contains a user specific viewConfiguration. Merge that into the
+    // dataset settings.
+    merge(initialDatasetSettings, annotation.viewConfiguration);
+  }
+
+  // Ensure configured nativelyRenderedLayerName is actually present in the dataset.
+  if (initialDatasetSettings.nativelyRenderedLayerName) {
     const isNativelyRenderedNamePresent = getIsNativelyRenderedNamePresent(
       dataset,
-      originalDatasetSettings.nativelyRenderedLayerName,
+      initialDatasetSettings.nativelyRenderedLayerName,
       annotation,
     );
     if (!isNativelyRenderedNamePresent) {
@@ -1063,19 +1101,8 @@ function applyAnnotationSpecificViewConfiguration(
     }
   }
 
-  if (!annotation) {
-    return initialDatasetSettings;
-  }
-
   if (annotation.viewConfiguration) {
-    // The annotation already contains a viewConfiguration. Merge that into the
-    // dataset settings.
-    for (const layerName of Object.keys(annotation.viewConfiguration.layers)) {
-      merge(
-        initialDatasetSettings.layers[layerName],
-        annotation.viewConfiguration.layers[layerName],
-      );
-    }
+    // If the annotation had a view configuration it is now applied and nativelyRenderedLayerName has a correct value.
     return initialDatasetSettings;
   }
 

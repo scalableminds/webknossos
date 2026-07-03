@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(168);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(173);
 COMMIT TRANSACTION;
 
 
@@ -38,7 +38,6 @@ CREATE TABLE webknossos.annotations(
   description TEXT NOT NULL DEFAULT '',
   visibility webknossos.ANNOTATION_VISIBILITY NOT NULL DEFAULT 'Internal',
   name TEXT NOT NULL DEFAULT '',
-  viewConfiguration JSONB,
   state webknossos.ANNOTATION_STATE NOT NULL DEFAULT 'Active',
   isLockedByOwner BOOLEAN NOT NULL DEFAULT FALSE,
   tags TEXT[] NOT NULL DEFAULT '{}',
@@ -131,6 +130,9 @@ CREATE TABLE webknossos.datasets(
   tags TEXT[] NOT NULL DEFAULT '{}',
   creationType webknossos.DATASET_CREATION_TYPE,
   importURL TEXT,
+  rootPath TEXT,
+  rootRealPath TEXT,
+  mirrorPath TEXT,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
   UNIQUE (directoryName, _organization),
@@ -285,7 +287,7 @@ CREATE TABLE webknossos.scripts(
   CHECK (gist ~* '^https?://[a-z0-9\-_\.]+.*$')
 );
 
-CREATE TYPE webknossos.TASKTYPE_MODES AS ENUM ('orthogonal', 'flight', 'oblique', 'volume');
+CREATE TYPE webknossos.TASKTYPE_MODES AS ENUM ('orthogonal', 'flight', 'volume');
 CREATE TYPE webknossos.TASKTYPE_TRACINGTYPES AS ENUM ('skeleton', 'volume', 'hybrid');
 CREATE TABLE webknossos.taskTypes(
   _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
@@ -293,7 +295,7 @@ CREATE TABLE webknossos.taskTypes(
   _team TEXT CONSTRAINT _team_objectId CHECK (_team ~ '^[0-9a-f]{24}$') NOT NULL,
   summary TEXT NOT NULL,
   description TEXT NOT NULL,
-  settings_allowedModes webknossos.TASKTYPE_MODES[] NOT NULL DEFAULT '{orthogonal, flight, oblique}',
+  settings_allowedModes webknossos.TASKTYPE_MODES[] NOT NULL DEFAULT '{orthogonal, flight}',
   settings_preferredMode webknossos.TASKTYPE_MODES DEFAULT 'orthogonal',
   settings_branchPointsAllowed BOOLEAN NOT NULL,
   settings_somaClickingAllowed BOOLEAN NOT NULL,
@@ -504,6 +506,14 @@ CREATE TABLE webknossos.user_datasetLayerConfigurations(
   layerName TEXT NOT NULL,
   viewConfiguration JSONB NOT NULL,
   PRIMARY KEY (_user, _dataset, layerName),
+  CONSTRAINT viewConfigurationIsJsonObject CHECK(jsonb_typeof(viewConfiguration) = 'object')
+);
+
+CREATE TABLE webknossos.user_annotationViewConfigurations(
+  _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
+  _annotation TEXT CONSTRAINT _annotation_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$') NOT NULL,
+  viewConfiguration JSONB NOT NULL,
+  PRIMARY KEY (_user, _annotation),
   CONSTRAINT viewConfigurationIsJsonObject CHECK(jsonb_typeof(viewConfiguration) = 'object')
 );
 
@@ -979,6 +989,9 @@ ALTER TABLE webknossos.credit_transactions
 ALTER TABLE webknossos.user_datasetLayerConfigurations
   ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE,
   ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) ON DELETE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.user_annotationViewConfigurations
+    ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE,
+    ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.multiUser_keyboardShortcutsConfigs
     ADD CONSTRAINT multiUser_ref FOREIGN KEY(_multiUser) REFERENCES webknossos.multiUsers(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.multiUsers
@@ -1143,21 +1156,17 @@ CREATE SEQUENCE webknossos.objectid_sequence;
 CREATE FUNCTION webknossos.generate_object_id() RETURNS TEXT AS $$
 DECLARE
   time_component TEXT;
-  machine_id TEXT;
-  process_id TEXT;
+  random_component TEXT;
   counter TEXT;
   result TEXT;
 BEGIN
-  -- Extract the current timestamp in seconds since the Unix epoch (4 bytes, 8 hex chars)
+  -- 4 bytes (8 hex chars): seconds since Unix epoch
   SELECT LPAD(TO_HEX(FLOOR(EXTRACT(EPOCH FROM clock_timestamp()))::BIGINT), 8, '0') INTO time_component;
-  -- Generate a machine identifier using the hash of the server IP (3 bytes, 6 hex chars)
-  SELECT SUBSTRING(md5(CAST(inet_server_addr() AS TEXT)) FROM 1 FOR 6) INTO machine_id;
-  -- Retrieve the current backend process ID, limited to 2 bytes (4 hex chars)
-  SELECT LPAD(TO_HEX(pg_backend_pid() % 65536), 4, '0') INTO process_id;
-  -- Generate a counter using a sequence, ensuring it's 3 bytes (6 hex chars)
+  -- 5 bytes (10 hex chars): random value. Spec says should be random per process. This is not easily available in postgres, we do random per call instead.
+  SELECT LEFT(REPLACE(gen_random_uuid()::TEXT, '-', ''), 10) INTO random_component;
+  -- 3 bytes (6 hex chars): incrementing counter. Spec says should get randomized start, but we are certain to have just one postgres process running, so the conflict scenario is not plausible.
   SELECT LPAD(TO_HEX(nextval('webknossos.objectid_sequence')::BIGINT % 16777216), 6, '0') INTO counter;
-  -- Concatenate all parts to form a 24-character ObjectId
-  result := time_component || machine_id || process_id || counter;
+  result := time_component || random_component || counter;
 
   RETURN result;
 END;

@@ -160,7 +160,7 @@ uniform uint hoveredUnmappedSegmentIdLow;
 uniform uint hoveredUnmappedSegmentIdHigh;
 
 // For some reason, taking the dataset scale from the uniform results in imprecise
-// rendering of the brush circle (and issues in the arbitrary modes). That's why it
+// rendering of the brush circle (and issues in flight mode). That's why it
 // is directly inserted into the source via templating.
 const vec3 voxelSizeFactor = <%= formatVector3AsVec3(voxelSizeFactor) %>;
 const vec3 voxelSizeFactorInverted = <%= formatVector3AsVec3(voxelSizeFactorInverted) %>;

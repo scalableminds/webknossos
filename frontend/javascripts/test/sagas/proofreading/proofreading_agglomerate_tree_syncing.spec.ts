@@ -43,6 +43,7 @@ import {
   loadAgglomerateMeshes,
   makeMappingEditableForTest,
   mockInitialBucketAndAgglomerateData,
+  operationFinished,
 } from "./proofreading_test_utils";
 
 describe("Proofreading agglomerate tree syncing", () => {
@@ -89,7 +90,7 @@ describe("Proofreading agglomerate tree syncing", () => {
       // Test whether
       // 1. action to load agglomerate tree is dispatched.
       // 2. the annotation mutex is properly fetched and kept.
-      // 3. The latest changes including the loading of thee agglomerate tree are stored in the backend.
+      // 3. The latest changes including the loading of the agglomerate tree are stored in the backend.
       // Check whether the actions are dispatched via action channels to avoid race condition.
       yield take(loadAgglomerateChannel);
       yield take("SUBSCRIBE_TO_ANNOTATION_MUTEX");
@@ -150,8 +151,7 @@ describe("Proofreading agglomerate tree syncing", () => {
         // Execute the actual merge and wait for the finished mapping.
         yield put(proofreadMergeAction(getPositionForSegmentId(4), 4));
         // Wait till proofreading action is finished; including refreshing agglomerate trees.
-        yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
-        yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
+        yield take(operationFinished("PROOFREADING"));
 
         const updatedAgglomerateTrees = yield* select((state) =>
           getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
@@ -210,8 +210,7 @@ describe("Proofreading agglomerate tree syncing", () => {
         // Execute the actual merge and wait for the finished mapping.
         yield put(proofreadMergeAction(getPositionForSegmentId(4), 4));
         // Wait till proofreading action is finished; including refreshing agglomerate trees.
-        yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
-        yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
+        yield take(operationFinished("PROOFREADING"));
 
         const updatedAgglomerateTrees = yield* select((state) =>
           getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
@@ -285,8 +284,7 @@ describe("Proofreading agglomerate tree syncing", () => {
         // Execute the split and wait for the finished mapping.
         yield put(minCutAgglomerateWithPositionAction(getPositionForSegmentId(2), 2, 1));
         // Wait till proofreading action is finished; including refreshing agglomerate trees.
-        yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
-        yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
+        yield take(operationFinished("PROOFREADING"));
 
         const updatedAgglomerateTrees = yield* select((state) =>
           getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
@@ -351,8 +349,7 @@ describe("Proofreading agglomerate tree syncing", () => {
         // Execute the split and wait for the finished mapping.
         yield put(minCutAgglomerateWithPositionAction(getPositionForSegmentId(2), 2, 1));
         // Wait till proofreading action is finished; including refreshing agglomerate trees.
-        yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
-        yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
+        yield take(operationFinished("PROOFREADING"));
 
         const updatedAgglomerateTrees = yield* select((state) =>
           getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
@@ -417,11 +414,7 @@ describe("Proofreading agglomerate tree syncing", () => {
             6,
           ),
         );
-        yield take(
-          ((action: Action) =>
-            action.type === "SET_BUSY_BLOCKING_INFO_ACTION" &&
-            !action.value.isBusy) as ActionPattern,
-        );
+        yield take(operationFinished("PROOFREADING")); // operation finished
 
         const agglomerateTrees = yield* select((state) =>
           getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
@@ -483,11 +476,7 @@ describe("Proofreading agglomerate tree syncing", () => {
             1,
           ),
         );
-        yield take(
-          ((action: Action) =>
-            action.type === "SET_BUSY_BLOCKING_INFO_ACTION" &&
-            !action.value.isBusy) as ActionPattern,
-        );
+        yield take(operationFinished("PROOFREADING")); // operation finished
 
         const agglomerateTrees = yield* select((state) =>
           getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
@@ -567,11 +556,7 @@ describe("Proofreading agglomerate tree syncing", () => {
             getPositionForSegmentId(2), // unmappedId=2 / mappedId=1 at this position
           ),
         );
-        yield take(
-          ((action: Action) =>
-            action.type === "SET_BUSY_BLOCKING_INFO_ACTION" &&
-            !action.value.isBusy) as ActionPattern,
-        );
+        yield take(operationFinished("PROOFREADING")); // operation finished
 
         const agglomerateTrees = yield* select((state) =>
           getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
@@ -637,8 +622,7 @@ describe("Proofreading agglomerate tree syncing", () => {
       // Execute the actual merge and wait for the finished mapping.
       yield put(proofreadMergeAction(getPositionForSegmentId(6), 6));
       // Wait till proofreading action is finished; including refreshing agglomerate trees.
-      yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
-      yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
+      yield take(operationFinished("PROOFREADING"));
 
       const updatedAgglomerateTrees = yield* select((state) =>
         getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
@@ -697,8 +681,7 @@ describe("Proofreading agglomerate tree syncing", () => {
       // Execute the actual merge and wait for the finished mapping.
       yield put(proofreadMergeAction(getPositionForSegmentId(1), 1));
       // Wait till proofreading action is finished; including refreshing agglomerate trees.
-      yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
-      yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
+      yield take(operationFinished("PROOFREADING"));
 
       const updatedAgglomerateTrees = yield* select((state) =>
         getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
@@ -771,10 +754,7 @@ describe("Proofreading agglomerate tree syncing", () => {
       // Execute the split and wait for the finished mapping.
       yield put(minCutAgglomerateWithPositionAction(getPositionForSegmentId(2), 2, 1));
       // Wait till proofreading action is finished; including refreshing agglomerate trees..
-      yield take(
-        ((action: Action) =>
-          action.type === "SET_BUSY_BLOCKING_INFO_ACTION" && !action.value.isBusy) as ActionPattern,
-      );
+      yield take(operationFinished("PROOFREADING")); // operation finished
 
       const agglomerateTrees = yield* select((state) =>
         getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
@@ -846,10 +826,7 @@ describe("Proofreading agglomerate tree syncing", () => {
       // Execute the split and wait for the finished mapping.
       yield put(minCutAgglomerateWithPositionAction(getPositionForSegmentId(3), 3, 1));
       // Wait till proofreading action is finished; including refreshing agglomerate trees..
-      yield take(
-        ((action: Action) =>
-          action.type === "SET_BUSY_BLOCKING_INFO_ACTION" && !action.value.isBusy) as ActionPattern,
-      );
+      yield take(operationFinished("PROOFREADING")); // operation finished
 
       const agglomerateTrees = yield* select((state) =>
         getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
@@ -939,10 +916,7 @@ describe("Proofreading agglomerate tree syncing", () => {
           getPositionForSegmentId(2), // unmappedId=2 / mappedId=2 at this position
         ),
       );
-      yield take(
-        ((action: Action) =>
-          action.type === "SET_BUSY_BLOCKING_INFO_ACTION" && !action.value.isBusy) as ActionPattern,
-      );
+      yield take(operationFinished("PROOFREADING")); // operation finished
 
       const agglomerateTrees = yield* select((state) =>
         getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
@@ -1063,10 +1037,7 @@ describe("Proofreading agglomerate tree syncing", () => {
       yield put(toggleSegmentInPartitionAction(3, 2, 1));
       // Execute the actual merge and wait for the finished mapping.
       yield put(minCutPartitionsAction());
-      yield take(
-        ((action: Action) =>
-          action.type === "SET_BUSY_BLOCKING_INFO_ACTION" && !action.value.isBusy) as ActionPattern,
-      );
+      yield take(operationFinished("PROOFREADING")); // operation finished
 
       const agglomerateTrees = yield* select((state) =>
         getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
@@ -1138,8 +1109,7 @@ describe("Proofreading agglomerate tree syncing", () => {
       // Execute the actual merge and wait for the finished mapping.
       yield put(proofreadMergeAction(getPositionForSegmentId(4), 4));
       // Wait till proofreading action is finished; including refreshing agglomerate trees.
-      yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
-      yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
+      yield take(operationFinished("PROOFREADING"));
 
       const updatedAgglomerateTrees = yield* select((state) =>
         getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
@@ -1207,8 +1177,7 @@ describe("Proofreading agglomerate tree syncing", () => {
       // Execute the split and wait for the finished mapping.
       yield put(minCutAgglomerateWithPositionAction(getPositionForSegmentId(2), 2, 1));
       // Wait till proofreading action is finished; including refreshing agglomerate trees.
-      yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
-      yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
+      yield take(operationFinished("PROOFREADING"));
 
       const updatedAgglomerateTrees = yield* select((state) =>
         getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),

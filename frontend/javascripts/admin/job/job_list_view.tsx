@@ -13,12 +13,13 @@ import { PropTypes } from "@scalableminds/prop-types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import AdminPage from "admin/admin_page";
 import { cancelJob, getJobs, retryJob } from "admin/rest_api";
-import { App, Input, Spin, Table, Tooltip } from "antd";
+import { App, Input, Space, Spin, Table, Tooltip } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
 import { confirmAsync } from "dashboard/dataset/helper_components";
+import features from "features";
 import { formatMilliCreditsString, formatWkLibsNdBBox } from "libs/format_utils";
 import Persistence from "libs/persistence";
 import { useWkSelector } from "libs/react_hooks";
@@ -133,8 +134,10 @@ export function JobState({ job }: { job: APIJob }) {
 
   return (
     <Tooltip title={tooltip}>
-      <span>{icon}</span>
-      {jobStateNormalized}
+      <Space size={2}>
+        {icon}
+        {jobStateNormalized}
+      </Space>
     </Tooltip>
   );
 }
@@ -381,26 +384,45 @@ function JobListView() {
           Cancel
         </AsyncLink>
       );
-    } else if ((job.state === "FAILURE" || job.state === "CANCELLED") && isCurrentUserSuperUser) {
-      return (
-        <Tooltip title="Restarts the workflow from the failed task, skipping and reusing artifacts from preceding tasks that were already successful.">
-          <AsyncLink
-            onClick={async () => {
-              try {
-                await retryJob(job.id);
-                await queryClient.invalidateQueries({ queryKey: ["jobs"] });
-                Toast.success("Job is being retried");
-              } catch (e) {
-                console.error("Could not retry job", e);
-                Toast.error("Failed to start retrying the job");
-              }
-            }}
-            icon={<PlayCircleOutlined className="icon-margin-right" />}
-          >
-            Retry
-          </AsyncLink>
-        </Tooltip>
-      );
+    } else if (job.state === "FAILURE" || job.state === "CANCELLED") {
+      // Regular users may retry a job once. Super users may always retry.
+      const canRetry = isCurrentUserSuperUser || job.lastRetry == null;
+      if (canRetry) {
+        return (
+          <Tooltip title="Restarts the workflow from the failed task, skipping and reusing artifacts from preceding tasks that were already successful.">
+            <AsyncLink
+              onClick={async () => {
+                try {
+                  await retryJob(job.id);
+                  await queryClient.invalidateQueries({ queryKey: ["jobs"] });
+                  Toast.success("Job is being retried");
+                } catch (e) {
+                  console.error("Could not retry job", e);
+                  Toast.error("Failed to start retrying the job");
+                }
+              }}
+              icon={<PlayCircleOutlined className="icon-margin-right" />}
+            >
+              Retry
+            </AsyncLink>
+          </Tooltip>
+        );
+      }
+      if (job.state === "FAILURE") {
+        const failureMessage = features().isWkorgInstance ? (
+          <>
+            Please contact our <a href="mailto:support@webknossos.org">support team</a> for help.
+          </>
+        ) : (
+          "Please contact an administrator for help."
+        );
+        return (
+          <Tooltip title="This job has already been retried once and failed again. This is likely a persistent failure.">
+            <span>{failureMessage}</span>
+          </Tooltip>
+        );
+      }
+      return null;
     } else if (
       job.command === APIJobCommand.CONVERT_TO_WKW ||
       job.command === APIJobCommand.COMPUTE_SEGMENT_INDEX_FILE ||

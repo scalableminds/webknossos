@@ -3,8 +3,10 @@ import ErrorHandling from "libs/error_handling";
 import exportToStl from "libs/stl_exporter";
 import Toast from "libs/toast";
 import messages from "messages";
+import { buffers, type Channel, channel } from "redux-saga";
 import type { Group } from "three";
 import { all, call, put, take, takeEvery } from "typed-redux-saga";
+import Constants from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import {
   removeMeshAction,
@@ -30,6 +32,29 @@ import type {
 import { ensureSceneControllerInitialized, ensureWkInitialized } from "../ready_sagas";
 
 export const NO_LOD_MESH_INDEX = -1;
+
+// Semaphore that limits how many segments are meshed at the same time.
+// Each saga that loads a mesh has to take a token from this channel first
+// and puts it back when it is done.
+// The channel is initialized in commonMeshSaga below.
+let meshLoadingTokenChannel: Channel<"token">;
+
+export function initializeMeshLoadingTokenChannel() {
+  meshLoadingTokenChannel = channel<"token">(
+    buffers.fixed(Constants.PARALLEL_MESH_LOADING_SEGMENT_COUNT),
+  );
+  for (let i = 0; i < Constants.PARALLEL_MESH_LOADING_SEGMENT_COUNT; i++) {
+    meshLoadingTokenChannel.put("token");
+  }
+}
+
+export function* acquireMeshWorker() {
+  yield* take(meshLoadingTokenChannel);
+}
+
+export function* releaseMeshWorker() {
+  yield put(meshLoadingTokenChannel, "token");
+}
 
 function* downloadMeshCellById(cellName: string, segmentId: number, layerName: string): Saga<void> {
   const { segmentMeshController } = getSceneController();
@@ -235,6 +260,7 @@ function* handleBatchSegmentColorChange(
 }
 
 export default function* commonMeshSaga(): Saga<void> {
+  yield* call(initializeMeshLoadingTokenChannel);
   yield* call(ensureSceneControllerInitialized);
   yield* call(ensureWkInitialized);
   yield* takeEvery("TRIGGER_MESH_DOWNLOAD", downloadMeshCell);

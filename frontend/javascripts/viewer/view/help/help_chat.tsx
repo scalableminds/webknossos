@@ -1,10 +1,13 @@
-import { Flex, Input, Spin, Typography } from "antd";
+import { Flex, Input, Skeleton, Typography } from "antd";
 import features from "features";
+
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
+import { getUid } from "libs/uid_generator";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { ColorWKBlue } from "theme";
 import type { APIUser } from "types/api_types";
+import { HelpChatMarkdown } from "./help_chat_markdown";
 
 const STORAGE_MESSAGES_KEY = "wk_help_chat_messages";
 const STORAGE_SESSION_KEY = "wk_help_chat_session_id";
@@ -32,7 +35,7 @@ function loadSessionId(): string {
   const stored = sessionStorage.getItem(STORAGE_SESSION_KEY);
   if (stored) return stored;
 
-  const id = crypto.randomUUID();
+  const id = getUid();
   sessionStorage.setItem(STORAGE_SESSION_KEY, id);
 
   return id;
@@ -80,14 +83,24 @@ function ChatMessageBubble({
     lineHeight: 1.4,
     background: message.role === "user" ? ColorWKBlue : "var(--ant-color-bg-layout)",
     color: message.role === "user" ? "#fff" : "var(--ant-color-text)",
-    whiteSpace: "pre-line",
+    whiteSpace: message.role === "user" ? "pre-line" : "normal",
     borderBottomRightRadius: message.role === "user" ? 2 : 12,
     borderBottomLeftRadius: message.role === "assistant" ? 2 : 12,
   };
 
   return (
     <Flex justify={message.role === "user" ? "end" : "start"}>
-      <div style={bubbleStyle}>{isLoading ? <Spin size="small" /> : message.content}</div>
+      <div style={bubbleStyle}>
+        {isLoading ? (
+          <div style={{ width: 200 }}>
+            <Skeleton title={false} paragraph={{ rows: 2, width: ["100%", "65%"] }} active />
+          </div>
+        ) : message.role === "assistant" ? (
+          <HelpChatMarkdown text={message.content} />
+        ) : (
+          message.content
+        )}
+      </div>
     </Flex>
   );
 }

@@ -2,11 +2,15 @@
 const { spawnSync } = require("node:child_process");
 const path = require("node:path");
 const fs = require("node:fs");
+const crypto = require("node:crypto");
 const { Command } = require("commander");
 
 const repoRootPath = path.resolve(path.join(__dirname, "..", ".."));
 const schemaPath = path.join(repoRootPath, "schema", "schema.sql");
 const evolutionsPath = path.join(repoRootPath, "schema", "evolutions");
+const refreshStampPath = path.join(repoRootPath, "schema", "refreshStamp", "stamp");
+const SCHEMA_DUMP_CACHE_DIR = path.join(repoRootPath, "target", "db-schema-dump");
+const SCHEMA_DUMP_CACHE_HASH_FILE = path.join(SCHEMA_DUMP_CACHE_DIR, ".schema-hash");
 
 const PG_CONFIG = (() => {
   let rawUrl = process.env.POSTGRES_URL || "postgres://postgres:postgres@127.0.0.1:5432/webknossos";
@@ -183,6 +187,12 @@ function prepareTestDbWithoutSchemaRefresh() {
 
 function refreshSchema() {
   console.log(safePsqlSpawn([PG_CONFIG.url, "-v", "ON_ERROR_STOP=ON", "-f", schemaPath]));
+  updateRefreshStamp();
+}
+
+function updateRefreshStamp() {
+  fs.mkdirSync(path.dirname(refreshStampPath), { recursive: true });
+  fs.writeFileSync(refreshStampPath, `Last schema changes by dbtool.js applied at ${new Date().toISOString()}.\n`);
 }
 
 function dumpCurrentSchema(databaseUrl, schemaDir, silent = false) {
@@ -229,7 +239,8 @@ function cleanSchemaDump(dumpDir) {
         .replace(/\\r/gm, "  ")
         .split("\n")
         .sort()
-        .join("\n"),
+        .join("\n")
+        .replace(/\n*$/, "\n"),
     );
   }
 }
@@ -244,6 +255,7 @@ function dumpExpectedSchema(sqlFilePaths) {
 
     const urlWithDatabase = new URL(PG_CONFIG.urlWithDefaultDatabase);
     urlWithDatabase.pathname = "/" + tmpDbName;
+
     // Load schema into tmp database
     safePsqlSpawn([
       urlWithDatabase.toString(),
@@ -261,27 +273,48 @@ function dumpExpectedSchema(sqlFilePaths) {
   }
 }
 
+function getCachedExpectedSchemaDump() {
+  const currentHash = crypto.createHash("md5").update(fs.readFileSync(schemaPath)).digest("hex");
+
+  if (fs.existsSync(SCHEMA_DUMP_CACHE_HASH_FILE)) {
+    const cachedHash = fs.readFileSync(SCHEMA_DUMP_CACHE_HASH_FILE, { encoding: "utf-8" }).trim();
+    if (cachedHash === currentHash) {
+      return SCHEMA_DUMP_CACHE_DIR;
+    }
+  }
+
+  const tmpDir = dumpExpectedSchema([schemaPath]);
+  cleanSchemaDump(tmpDir);
+
+  if (fs.existsSync(SCHEMA_DUMP_CACHE_DIR)) {
+    fs.rmSync(SCHEMA_DUMP_CACHE_DIR, { recursive: true, force: true });
+  }
+  fs.mkdirSync(SCHEMA_DUMP_CACHE_DIR, { recursive: true });
+  for (const filename of fs.readdirSync(tmpDir)) {
+    fs.copyFileSync(path.join(tmpDir, filename), path.join(SCHEMA_DUMP_CACHE_DIR, filename));
+  }
+  fs.writeFileSync(SCHEMA_DUMP_CACHE_HASH_FILE, currentHash);
+  fs.rmSync(tmpDir, { recursive: true, force: true });
+
+  return SCHEMA_DUMP_CACHE_DIR;
+}
+
 function checkDbSchema() {
   const dbDumpDir = fs.mkdtempSync("temp-webknossos-schema-");
-  let schemaDumpDir = null;
   try {
     dumpCurrentSchema(PG_CONFIG.url, dbDumpDir, true);
-    schemaDumpDir = dumpExpectedSchema([schemaPath]);
-
     cleanSchemaDump(dbDumpDir);
-    cleanSchemaDump(schemaDumpDir);
+
+    const schemaDumpDir = getCachedExpectedSchemaDump();
 
     try {
-      safeSpawn("diff", ["--strip-trailing-cr", "-r", dbDumpDir, schemaDumpDir]);
+      safeSpawn("diff", ["--strip-trailing-cr", "-r", "--exclude=.schema-hash", dbDumpDir, schemaDumpDir]);
     } catch (err) {
       throw new Error(`Database schema is not up-to-date:\n${err.stdout}`);
     }
   } finally {
     if (fs.existsSync(dbDumpDir)) {
       fs.rmSync(dbDumpDir, { recursive: true, force: true });
-    }
-    if (fs.existsSync(schemaDumpDir)) {
-      fs.rmSync(schemaDumpDir, { recursive: true, force: true });
     }
   }
   console.log("✨✨ Database schema is up-to-date");
@@ -357,6 +390,7 @@ function applyEvolutions() {
       ]);
     }
     console.log("✨✨ Successfully applied the evolutions");
+    updateRefreshStamp();
   } else {
     console.log("There are no evolutions that can be applied.");
   }

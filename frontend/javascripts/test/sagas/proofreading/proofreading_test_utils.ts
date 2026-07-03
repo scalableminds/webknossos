@@ -34,7 +34,7 @@ import {
 } from "viewer/model/actions/proofread_actions";
 import { setMappingAction, updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import { applySkeletonUpdateActionsFromServerAction } from "viewer/model/actions/skeletontracing_actions";
-import { setBusyBlockingInfoAction, setToolAction } from "viewer/model/actions/ui_actions";
+import { setToolAction } from "viewer/model/actions/ui_actions";
 import {
   applyVolumeUpdateActionsFromServerAction,
   setActiveCellAction,
@@ -54,6 +54,15 @@ import type { NumberLike, SaveQueueEntry, Segment, WebknossosState } from "viewe
 import { combinedReducer } from "viewer/store";
 import { expect, vi } from "vitest";
 import { edgesForInitialMapping, initialMapping } from "./proofreading_fixtures";
+
+export function operationStarted(id: string) {
+  return (action: any) => action.type === "REGISTER_OPERATION" && action.id === id;
+}
+
+export function operationFinished(id: string) {
+  return (action: any) => action.type === "UNREGISTER_OPERATION" && action.id === id;
+}
+
 import {
   createSkeletonTracingFromAdjacency,
   encodeServerTracing,
@@ -117,6 +126,7 @@ export class BackendMock {
     public overrides: BucketOverride[],
     additionalEdges: Vector2[] = [],
     private initialState: WebknossosState | undefined = undefined,
+    public canGrantMutex: boolean = true,
   ) {
     this.agglomerateMapping = new AgglomerateMapping(
       edgesForInitialMapping.concat(additionalEdges),
@@ -192,7 +202,7 @@ export class BackendMock {
   };
 
   acquireAnnotationMutex = async (_annotationId: string, _sessionId: string) => {
-    return { canEdit: true, blockedByUser: null, blockedBySessionId: null };
+    return { canEdit: this.canGrantMutex, blockedByUser: null, blockedBySessionId: null };
   };
   releaseAnnotationMutex = async (_annotationId: string, _sessionId: string) => {};
 
@@ -420,10 +430,16 @@ export function mockInitialBucketAndAgglomerateData(
   context: WebknossosTestContext,
   additionalEdges: Vector2[] = [],
   initialState: WebknossosState | undefined = undefined,
+  options?: { grantMutex?: boolean },
 ) {
   const { mocks } = context;
 
-  const backendMock = new BackendMock(initialBucketOverrides, additionalEdges, initialState);
+  const backendMock = new BackendMock(
+    initialBucketOverrides,
+    additionalEdges,
+    initialState,
+    options?.grantMutex ?? true,
+  );
 
   vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
     createBucketResponseFunction(
@@ -453,11 +469,9 @@ export function mockInitialBucketAndAgglomerateData(
 
 export function* makeMappingEditableForTest(): Saga<void> {
   // Usually the user creates an editable mapping via the first proofreading action.
-  // Therefore the context is busy blocked by the proofreading saga.
-  // As we do this manually here, we need to mock that wk is busy.
-  yield put(setBusyBlockingInfoAction(true, "Blocking in test for making mapping editable"));
+  // Therefore the operation context is active (proofreading operation running).
+  // As we do this manually here, we dispatch the operation actions to simulate that.
   yield call(createEditableMapping);
-  yield put(setBusyBlockingInfoAction(false));
   // Delay is needed to avoid the auto mapping data reloading of mapping saga to interfere with tests.
   // Some tests check whether the missing agglomerate ids not present in the partial mapping in the frontend
   // are actually loaded during rebasing. Such a scenario might happen when doing proofreading via meshes.
@@ -577,7 +591,7 @@ export function* performCutFromAllNeighbours(
     ),
   );
   yield take("SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE");
-  yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Wait till full merge operation is done.
+  yield take(operationFinished("PROOFREADING")); // Wait till full proofreading operation is done.
 }
 
 // All usages of this function should have an initial mapping with a agglomerate id 1 = 1-2-3-1337-1338-1.
@@ -639,7 +653,7 @@ export function* simulatePartitionedSplitAgglomeratesViaMeshes(
   yield put(minCutPartitionsAction());
   yield take("FINISH_MAPPING_INITIALIZATION");
   // Checking optimistic merge is not necessary as no "foreign" update was injected.
-  yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Wait till full merge operation is done.
+  yield take(operationFinished("PROOFREADING")); // Wait till full proofreading operation is done.
 }
 
 export const mockEdgesForPartitionedAgglomerateMinCut = (

@@ -6,6 +6,31 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [26.07.2](https://github.com/scalableminds/webknossos/releases/tag/26.07.2) - 2026-06-29
+[Commits](https://github.com/scalableminds/webknossos/compare/26.07.0...26.07.2)
+
+### Postgres Evolutions
+None.
+
+## [26.07.1]
+This release was skipped for technical reasons.
+
+## [26.07.0](https://github.com/scalableminds/webknossos/releases/tag/26.07.0) - 2026-06-23
+[Commits](https://github.com/scalableminds/webknossos/compare/26.06.0...26.07.0)
+
+
+### Postgres Evolutions
+- [162-pretrained-ai-models.sql](schema/evolutions/162-pretrained-ai-models.sql)
+- [163-aimodel-nullable-user-and-organization.sql](schema/evolutions/163-aimodel-nullable-user-and-organization.sql)
+- [164-import-url.sql](schema/evolutions/164-import-url.sql)
+- [165-annotation-mutex-sessionid.sql](schema/evolutions/165-annotation-mutex-sessionid.sql)
+- [166-keyboard-shortcuts.sql](schema/evolutions/166-keyboard-shortcuts.sql)
+- [167-upload-mags-attachments.sql](schema/evolutions/167-upload-mags-attachments.sql)
+- [168-remove-annotation-team.sql](schema/evolutions/168-remove-annotation-team.sql)
+- [169-per-user-annotation-view-config.sql](schema/evolutions/169-per-user-annotation-view-config.sql)
+- [170-dataset-storage-paths.sql](schema/evolutions/170-dataset-storage-paths.sql)
+- [171-remove-hasDiscardedHelpButton.sql](schema/evolutions/171-remove-hasDiscardedHelpButton.sql)
+
 ## [26.06.0](https://github.com/scalableminds/webknossos/releases/tag/26.06.0) - 2026-05-27
 [Commits](https://github.com/scalableminds/webknossos/compare/26.05.2...26.06.0)
 

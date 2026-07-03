@@ -1,8 +1,7 @@
 import { M4x4 } from "libs/mjs";
 import range from "lodash-es/range";
 import type { Matrix4x4 } from "mjs";
-import type { OrthoViewWithoutTD, Vector2, Vector3, Vector4, ViewMode } from "viewer/constants";
-import constants from "viewer/constants";
+import type { OrthoViewWithoutTD, Vector2, Vector3, Vector4 } from "viewer/constants";
 import traverse from "viewer/model/bucket_data_handling/bucket_traversals";
 import type { EnqueueFunction } from "viewer/model/bucket_data_handling/layer_rendering_manager";
 import { chunk2 } from "viewer/model/helpers/chunk";
@@ -29,11 +28,10 @@ const ROTATIONS = {
     0, Math.cos(ALPHA), -Math.sin(ALPHA), 0,
     0, Math.sin(ALPHA), Math.cos(ALPHA), 0,
     0, 0, 0, 1,
-  ] as Matrix4x4
-}
+  ] as Matrix4x4,
+};
 
-export default function determineBucketsForOblique(
-  viewMode: ViewMode,
+export default function determineBucketsForPlane(
   loadingStrategy: LoadingStrategy,
   denseMags: Array<Vector3>,
   position: Vector3,
@@ -46,9 +44,8 @@ export default function determineBucketsForOblique(
   let zoomStepDiff = 0;
 
   while (logZoomStep + zoomStepDiff < denseMags.length && zoomStepDiff <= MAX_ZOOM_STEP_DIFF) {
-    addNecessaryBucketsToPriorityQueueOblique(
+    addNecessaryBucketsToPriorityQueuePlane(
       loadingStrategy,
-      viewMode,
       denseMags,
       position,
       enqueueFunction,
@@ -62,9 +59,8 @@ export default function determineBucketsForOblique(
   }
 }
 
-function addNecessaryBucketsToPriorityQueueOblique(
+function addNecessaryBucketsToPriorityQueuePlane(
   loadingStrategy: LoadingStrategy,
-  viewMode: ViewMode,
   denseMags: Array<Vector3>,
   position: Vector3,
   enqueueFunction: EnqueueFunction,
@@ -76,8 +72,7 @@ function addNecessaryBucketsToPriorityQueueOblique(
 ): void {
   const logZoomStep = nonFallbackLogZoomStep + zoomStepDiff;
 
-  const planeIds: Array<OrthoViewWithoutTD> =
-    viewMode === "orthogonal" ? ["PLANE_XY", "PLANE_XZ", "PLANE_YZ"] : ["PLANE_XY"];
+  const planeIds: Array<OrthoViewWithoutTD> = ["PLANE_XY", "PLANE_XZ", "PLANE_YZ"];
   const seenBucketHashes = new Set<number>();
 
   // null is passed as additionalCoordinates, since the bucket picker doesn't care about the
@@ -92,25 +87,13 @@ function addNecessaryBucketsToPriorityQueueOblique(
     let enlargedHalfExtent: Vector2;
     const queryMatrix = [...matrix] as Matrix4x4;
 
-    if (viewMode === "orthogonal") {
-      extent = [rects[planeId].width, rects[planeId].height];
-      enlargedHalfExtent = [Math.ceil(extent[0] / 2), Math.ceil(extent[1] / 2)] as Vector2;
-      enlargedExtent = [enlargedHalfExtent[0] * 2, enlargedHalfExtent[1] * 2];
-      if (planeId === "PLANE_YZ") {
-        M4x4.mul(matrix, ROTATIONS.YZ, queryMatrix);
-      } else if (planeId === "PLANE_XZ") {
-        M4x4.mul(matrix, ROTATIONS.XZ, queryMatrix);
-      }
-    } else {
-      // Buckets adjacent to the current viewport are also loaded so that these
-      // buckets are already on the GPU when the user moves a little.
-      extent = [constants.VIEWPORT_WIDTH, constants.VIEWPORT_WIDTH];
-      const enlargementFactor = 1.1;
-      enlargedExtent = [
-        constants.VIEWPORT_WIDTH * enlargementFactor,
-        constants.VIEWPORT_WIDTH * enlargementFactor,
-      ];
-      enlargedHalfExtent = [enlargedExtent[0] / 2, enlargedExtent[1] / 2] as Vector2;
+    extent = [rects[planeId].width, rects[planeId].height];
+    enlargedHalfExtent = [Math.ceil(extent[0] / 2), Math.ceil(extent[1] / 2)] as Vector2;
+    enlargedExtent = [enlargedHalfExtent[0] * 2, enlargedHalfExtent[1] * 2];
+    if (planeId === "PLANE_YZ") {
+      M4x4.mul(matrix, ROTATIONS.YZ, queryMatrix);
+    } else if (planeId === "PLANE_XZ") {
+      M4x4.mul(matrix, ROTATIONS.XZ, queryMatrix);
     }
 
     // Cast a vertical "scan line" and check how many buckets are intersected.

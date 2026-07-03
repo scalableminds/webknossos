@@ -61,7 +61,7 @@ export function WorkerInfo() {
       <Divider />
       <Typography.Paragraph type="warning">
         {messages["annotation.export_no_worker"]}
-        <a href="mailto:hello@webknossos.org">hello@webknossos.org.</a>
+        <a href="mailto:support@webknossos.org">support@webknossos.org.</a>
       </Typography.Paragraph>
     </Row>
   );

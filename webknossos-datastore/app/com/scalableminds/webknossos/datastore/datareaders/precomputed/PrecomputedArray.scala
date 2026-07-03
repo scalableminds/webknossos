@@ -2,7 +2,8 @@ package com.scalableminds.webknossos.datastore.datareaders.precomputed
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, DatasetArray}
 import com.scalableminds.webknossos.datastore.datavault.{StartEndExclusiveByteRange, VaultPath}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
@@ -13,15 +14,16 @@ import com.scalableminds.util.tools.Box.tryo
 import scala.concurrent.ExecutionContext
 import ucar.ma2.{Array => MultiArray}
 
-object PrecomputedArray extends LazyLogging with FoxImplicits {
-  def open(magPath: VaultPath,
-           dataSourceId: DataSourceId,
-           layerName: String,
-           axisOrderOpt: Option[AxisOrder],
-           channelIndex: Option[Int],
-           additionalAxes: Option[Seq[AdditionalAxis]],
-           sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext,
-                                                                    tc: TokenContext): Fox[PrecomputedArray] =
+object PrecomputedArray extends LazyLogging {
+  def open(
+      magPath: VaultPath,
+      dataSourceId: DataSourceId,
+      layerName: String,
+      axisOrderOpt: Option[AxisOrder],
+      channelIndex: Option[Int],
+      additionalAxes: Option[Seq[AdditionalAxis]],
+      sharedChunkContentsCache: AlfuCache[String, MultiArray]
+  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[PrecomputedArray] =
     for {
       headerBytes <- (magPath.parent / PrecomputedHeader.FILENAME_INFO)
         .readBytes() ?~> s"Could not read header at ${PrecomputedHeader.FILENAME_INFO}"
@@ -39,26 +41,30 @@ object PrecomputedArray extends LazyLogging with FoxImplicits {
           channelIndex,
           additionalAxes,
           sharedChunkContentsCache
-        )).toFox ?~> "Could not open neuroglancerPrecomputed array"
+        )
+      ).toFox ?~> "Could not open neuroglancerPrecomputed array"
     } yield array
 }
 
-class PrecomputedArray(vaultPath: VaultPath,
-                       dataSourceId: DataSourceId,
-                       layerName: String,
-                       header: PrecomputedScaleHeader,
-                       axisOrder: AxisOrder,
-                       channelIndex: Option[Int],
-                       additionalAxes: Option[Seq[AdditionalAxis]],
-                       sharedChunkContentsCache: AlfuCache[String, MultiArray])
-    extends DatasetArray(vaultPath,
-                         dataSourceId,
-                         layerName,
-                         header,
-                         axisOrder,
-                         channelIndex,
-                         additionalAxes,
-                         sharedChunkContentsCache)
+class PrecomputedArray(
+    vaultPath: VaultPath,
+    dataSourceId: DataSourceId,
+    layerName: String,
+    header: PrecomputedScaleHeader,
+    axisOrder: AxisOrder,
+    channelIndex: Option[Int],
+    additionalAxes: Option[Seq[AdditionalAxis]],
+    sharedChunkContentsCache: AlfuCache[String, MultiArray]
+) extends DatasetArray(
+      vaultPath,
+      dataSourceId,
+      layerName,
+      header,
+      axisOrder,
+      channelIndex,
+      additionalAxes,
+      sharedChunkContentsCache
+    )
     with LazyLogging
     with NeuroglancerPrecomputedShardingUtils {
 
@@ -66,11 +72,7 @@ class PrecomputedArray(vaultPath: VaultPath,
   override protected def getChunkFilename(chunkIndex: Array[Int]): String = {
 
     val bbox = header.chunkIndexToNDimensionalBoundingBox(chunkIndex)
-    bbox
-      .map(dim => {
-        s"${dim._1}-${dim._2}"
-      })
-      .mkString(header.dimension_separator.toString)
+    bbox.map(dim => s"${dim._1}-${dim._2}").mkString(header.dimension_separator.toString)
   }
 
   val shardingSpecification: ShardingSpecification =
@@ -79,18 +81,23 @@ class PrecomputedArray(vaultPath: VaultPath,
   private def getHashForChunk(chunkIndex: Array[Int]): Long =
     CompressedMortonCode.encode(chunkIndex, header.gridSize)
 
-  override def getShardedChunkPathAndRange(chunkIndex: Array[Int])(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[(VaultPath, StartEndExclusiveByteRange)] = {
+  override def getShardedChunkPathAndRange(
+      chunkIndex: Array[Int]
+  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[(VaultPath, StartEndExclusiveByteRange)] = {
     val chunkIdentifier = getHashForChunk(chunkIndex)
     val minishardInfo = shardingSpecification.getMinishardInfo(chunkIdentifier)
     val shardPath = shardingSpecification.getPathForShard(vaultPath, minishardInfo._1)
     for {
       _ <- Fox.fromBool(minishardInfo._2 <= Int.MaxValue) ?~> "Minishard number is too large"
-      minishardIndex <- getMinishardIndex(shardPath, minishardInfo._2.toInt) ?=> f"Could not get minishard index for chunkIndex ${chunkIndex
-        .mkString(",")}"
-      chunkRange <- getChunkRange(chunkIdentifier, minishardIndex) ?~> s"Could not get chunk range for chunkIndex ${chunkIndex
-        .mkString(",")}  with chunkIdentifier $chunkIdentifier in minishard index."
+      minishardIndex <- getMinishardIndex(
+        shardPath,
+        minishardInfo._2.toInt
+      ) ?-> f"Could not get minishard index for chunkIndex ${chunkIndex.mkString(",")}"
+      chunkRange <- getChunkRange(
+        chunkIdentifier,
+        minishardIndex
+      ) ?~> s"Could not get chunk range for chunkIndex ${chunkIndex
+          .mkString(",")}  with chunkIdentifier $chunkIdentifier in minishard index."
     } yield (shardPath, chunkRange)
   }
 

@@ -437,8 +437,8 @@ export function isUserAdmin(user: APIUser): boolean {
   return user.isAdmin;
 }
 
-export function isUserAdminOrTeamManager(user: APIUser): boolean {
-  return isUserAdmin(user) || isUserTeamManager(user);
+export function isUserAdminOrTeamManager(user: APIUser | null | undefined): boolean {
+  return user != null && (isUserAdmin(user) || isUserTeamManager(user));
 }
 
 function isUserDatasetManager(user: APIUser): boolean {
@@ -1392,6 +1392,32 @@ export function areSetsEqual<T>(setA: Set<T>, setB: Set<T>) {
     if (!setB.has(val)) return false;
   }
   return true;
+}
+
+// Adds a value to the Set stored under `key`, creating the Set if it does not exist yet.
+export function addToSetMap<K, V>(map: Map<K, Set<V>>, key: K, value: V) {
+  let set = map.get(key);
+  if (set == null) {
+    set = new Set();
+    map.set(key, set);
+  }
+  set.add(value);
+}
+
+// Sets `innerKey -> innerValue` in the inner Map stored under `key`, creating the inner Map if it
+// does not exist yet.
+export function addToNestedMap<K, IK, IV>(
+  map: Map<K, Map<IK, IV>>,
+  key: K,
+  innerKey: IK,
+  innerValue: IV,
+) {
+  let innerMap = map.get(key);
+  if (innerMap == null) {
+    innerMap = new Map();
+    map.set(key, innerMap);
+  }
+  innerMap.set(innerKey, innerValue);
 }
 
 // ColoredLogger can be used to make certain log outputs easier to find (especially useful

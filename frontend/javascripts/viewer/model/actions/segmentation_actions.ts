@@ -8,6 +8,7 @@ export type AdHocMeshInfo = {
   useDataStore?: boolean | null | undefined;
   preferredQuality?: number | null | undefined;
   opacity?: number | undefined;
+  isVisible?: boolean | undefined;
 };
 export type LoadAdHocMeshAction = ReturnType<typeof loadAdHocMeshAction>;
 export type LoadPrecomputedMeshAction = ReturnType<typeof loadPrecomputedMeshAction>;
@@ -36,6 +37,7 @@ export const loadPrecomputedMeshAction = (
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   meshFileName: string,
   opacity: number | undefined,
+  isVisible: boolean | undefined,
   layerName?: string | undefined,
 ) =>
   ({
@@ -45,5 +47,6 @@ export const loadPrecomputedMeshAction = (
     seedAdditionalCoordinates,
     meshFileName,
     opacity,
+    isVisible,
     layerName,
   }) as const;

@@ -7,13 +7,10 @@ import org.apache.commons.mail._
 
 case class Send(mail: Mail)
 
-/**
-  * Wrapper for sending email in Play Framework.
-  * based on the Mailer Actor by Justin Long
-  * based on the EmailNotifier trait by Aishwarya Singhal
+/** Wrapper for sending email in Play Framework. based on the Mailer Actor by Justin Long based on the EmailNotifier
+  * trait by Aishwarya Singhal
   *
-  * make sure to include Apache Commons Mail in dependencies
-  * "org.apache.commons" % "commons-mail" % "1.2"
+  * make sure to include Apache Commons Mail in dependencies "org.apache.commons" % "commons-mail" % "1.2"
   */
 case class MailerConfig(
     logToStdout: Boolean,
@@ -22,7 +19,7 @@ case class MailerConfig(
     smtpTls: Boolean,
     smtpAuth: Boolean,
     smtpUser: String,
-    smtpPass: String,
+    smtpPass: String
 )
 
 class Mailer(conf: MailerConfig) extends Actor with LazyLogging {
@@ -42,11 +39,11 @@ class Mailer(conf: MailerConfig) extends Actor with LazyLogging {
 
       val multiPartMail: MultiPartEmail = createEmail(mail)
 
-      setAddress(mail.from)(multiPartMail.setFrom _)
-      mail.replyTo.foreach(setAddress(_)(multiPartMail.addReplyTo _))
-      mail.recipients.foreach(setAddress(_)(multiPartMail.addTo _))
-      mail.ccRecipients.foreach(setAddress(_)(multiPartMail.addCc _))
-      mail.bccRecipients.foreach(setAddress(_)(multiPartMail.addBcc _))
+      setAddress(mail.from)(multiPartMail.setFrom)
+      mail.replyTo.foreach(setAddress(_)(multiPartMail.addReplyTo))
+      mail.recipients.foreach(setAddress(_)(multiPartMail.addTo))
+      mail.ccRecipients.foreach(setAddress(_)(multiPartMail.addCc))
+      mail.bccRecipients.foreach(setAddress(_)(multiPartMail.addBcc))
 
       multiPartMail.setSubject(mail.subject)
       mail.headers foreach { case (key, value) => multiPartMail.addHeader(key, value) }
@@ -69,10 +66,9 @@ class Mailer(conf: MailerConfig) extends Actor with LazyLogging {
       }
     }
 
-  /**
-    * Extracts an email address from the given string and passes to the enclosed method.
+  /** Extracts an email address from the given string and passes to the enclosed method.
     */
-  private def setAddress(emailAddress: String)(setter: (String, String) => _): Unit =
+  private def setAddress(emailAddress: String)(setter: (String, String) => ?): Unit =
     try {
       val iAddress = new InternetAddress(emailAddress)
       val address = iAddress.getAddress
@@ -83,8 +79,7 @@ class Mailer(conf: MailerConfig) extends Actor with LazyLogging {
       case e: Exception => logger.warn(s"Failed to set email address: $e")
     }
 
-  /**
-    * Creates an appropriate email object based on the content type.
+  /** Creates an appropriate email object based on the content type.
     */
   private def createEmail(mail: Mail): MultiPartEmail =
     if (mail.bodyHtml == "") {

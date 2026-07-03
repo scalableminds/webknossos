@@ -873,6 +873,18 @@ export class BoundingBoxToolController extends ToolController {
     let secondarySelectedEdge: SelectedEdge | null | undefined = null;
     // Accumulator for fractional movement that gets lost to rounding
     let movementAccumulator: Vector3 = [0, 0, 0];
+    // True while a new bounding box's id is being reserved asynchronously (see
+    // createBoundingBoxAndGetEdges). Without this, leftDownMove would fall through to
+    // panning the view for the duration of the reservation, since primarySelectedEdge
+    // is not set yet at that point.
+    let isCreatingBoundingBox = false;
+    // Tracks the mouse position while isCreatingBoundingBox is true, so the box can be
+    // resized to reflect any dragging that happened while its id was still being reserved
+    // (otherwise it would be stuck at its initial 1x1x1 size).
+    let latestPosDuringCreation: Point2 | null = null;
+    // Whether the left mouse button is still held down. A quick click can release it
+    // before the async id reservation resolves.
+    let isMouseStillDown = false;
     return {
       leftDownMove: (
         delta: Point2,
@@ -880,6 +892,10 @@ export class BoundingBoxToolController extends ToolController {
         _id: string | null | undefined,
         event: MouseEvent,
       ) => {
+        if (isCreatingBoundingBox) {
+          latestPosDuringCreation = pos;
+          return;
+        }
         if (primarySelectedEdge == null) {
           handleMovePlane(delta);
           return;
@@ -896,14 +912,38 @@ export class BoundingBoxToolController extends ToolController {
         }
       },
       leftMouseDown: async (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
+        isMouseStillDown = true;
         let hoveredEdgesInfo = getClosestHoveredBoundingBox(pos, planeId);
 
         if (hoveredEdgesInfo) {
           [primarySelectedEdge, secondarySelectedEdge] = hoveredEdgesInfo;
         } else {
-          hoveredEdgesInfo = await createBoundingBoxAndGetEdges(pos, planeId);
+          isCreatingBoundingBox = true;
+          latestPosDuringCreation = pos;
+          try {
+            hoveredEdgesInfo = await createBoundingBoxAndGetEdges(pos, planeId);
+          } finally {
+            isCreatingBoundingBox = false;
+          }
           if (hoveredEdgesInfo) {
             [primarySelectedEdge, secondarySelectedEdge] = hoveredEdgesInfo;
+            if (latestPosDuringCreation != null) {
+              // Catch up on any dragging that happened while the id was being reserved.
+              handleResizingBoundingBox(
+                latestPosDuringCreation,
+                planeId,
+                primarySelectedEdge,
+                secondarySelectedEdge,
+              );
+            }
+            if (!isMouseStillDown) {
+              // The mouse was already released before the box was created (e.g. a quick
+              // click). Finish the resize immediately instead of leaving it in an
+              // active-drag state that would only be cleaned up on the next mouse-up.
+              Store.dispatch(finishedResizingUserBoundingBoxAction(primarySelectedEdge.boxId));
+              primarySelectedEdge = null;
+              secondarySelectedEdge = null;
+            }
           }
         }
         if (primarySelectedEdge) {
@@ -911,6 +951,7 @@ export class BoundingBoxToolController extends ToolController {
         }
       },
       leftMouseUp: () => {
+        isMouseStillDown = false;
         if (primarySelectedEdge) {
           Store.dispatch(finishedResizingUserBoundingBoxAction(primarySelectedEdge.boxId));
         }

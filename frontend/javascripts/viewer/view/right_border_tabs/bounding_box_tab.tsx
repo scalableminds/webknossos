@@ -14,6 +14,7 @@ import {
   type TableProps,
   Typography,
 } from "antd";
+import { handleGenericError } from "libs/error_handling";
 import { useWkSelector } from "libs/react_hooks";
 import { computeArrayFromBoundingBox, computeBoundingBoxFromArray } from "libs/utils";
 import noop from "lodash-es/noop";
@@ -76,12 +77,16 @@ export default function BoundingBoxTab() {
   );
 
   const addNewBoundingBox = useCallback(async () => {
-    const id = await dispatchGetNewIdAsync(
-      dispatch,
-      getSomeTracing(annotation).tracingId,
-      "BoundingBox",
-    );
-    dispatch(addUserBoundingBoxAction(null, undefined, id));
+    try {
+      const id = await dispatchGetNewIdAsync(
+        dispatch,
+        getSomeTracing(annotation).tracingId,
+        "BoundingBox",
+      );
+      dispatch(addUserBoundingBoxAction(null, undefined, id));
+    } catch (error) {
+      handleGenericError(error as Error, "Could not create a new bounding box.");
+    }
   }, [dispatch, annotation]);
 
   const setPosition = useCallback(

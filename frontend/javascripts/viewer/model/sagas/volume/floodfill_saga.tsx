@@ -1,4 +1,5 @@
 import LinkButton from "components/link_button";
+import { handleGenericError } from "libs/error_handling";
 import { V2, V3 } from "libs/mjs";
 import createProgressCallback, { type ProgressCallback } from "libs/progress_callback";
 import Toast from "libs/toast";
@@ -394,27 +395,31 @@ function* notifyUserAboutResult(
         },
       );
       if (createNewBoundingBox) {
-        const volumeTracing = yield* select(enforceActiveVolumeTracing);
-        const id = yield* call(
-          dispatchGetNewIdAsync,
-          Store.dispatch,
-          volumeTracing.tracingId,
-          "BoundingBox",
-        );
-        yield* put(
-          addUserBoundingBoxAction(
-            {
-              boundingBox: coveredBoundingBox,
-              name: `Limits of flood-fill (source_id=${oldSegmentIdAtSeed}, target_id=${activeCellId}, seed=${seedPosition.join(
-                ",",
-              )}, timestamp=${Date.now()})`,
-              color: getRandomColor(),
-              isVisible: true,
-            },
-            undefined,
-            id,
-          ),
-        );
+        try {
+          const volumeTracing = yield* select(enforceActiveVolumeTracing);
+          const id = yield* call(
+            dispatchGetNewIdAsync,
+            Store.dispatch,
+            volumeTracing.tracingId,
+            "BoundingBox",
+          );
+          yield* put(
+            addUserBoundingBoxAction(
+              {
+                boundingBox: coveredBoundingBox,
+                name: `Limits of flood-fill (source_id=${oldSegmentIdAtSeed}, target_id=${activeCellId}, seed=${seedPosition.join(
+                  ",",
+                )}, timestamp=${Date.now()})`,
+                color: getRandomColor(),
+                isVisible: true,
+              },
+              undefined,
+              id,
+            ),
+          );
+        } catch (error) {
+          handleGenericError(error as Error, "Could not create a bounding box for the flood-fill.");
+        }
       }
     } else {
       showSuccessMsg = true;

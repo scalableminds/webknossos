@@ -1,4 +1,5 @@
 import { Checkbox, Form, InputNumber, Modal, Select, Space, Typography } from "antd";
+import { handleGenericError } from "libs/error_handling";
 import { V3 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
@@ -232,6 +233,8 @@ function GenerateBoundingBoxesModalInner({ isOpen, onClose, magnification, jobTy
         }
 
         onClose();
+      } catch (error) {
+        handleGenericError(error as Error, "Could not generate the bounding boxes.");
       } finally {
         setIsGenerating(false);
       }

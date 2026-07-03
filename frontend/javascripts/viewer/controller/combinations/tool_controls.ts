@@ -1,4 +1,5 @@
 import features from "features";
+import { handleGenericError } from "libs/error_handling";
 import type { ModifierKeys, MouseBindingMap } from "libs/input";
 import { V3 } from "libs/mjs";
 import { clamp } from "libs/utils";
@@ -950,9 +951,13 @@ export class BoundingBoxToolController extends ToolController {
     return {
       CREATE_BOUNDING_BOX: {
         onPressed: async () => {
-          const tracingId = getSomeTracing(Store.getState().annotation).tracingId;
-          const id = await dispatchGetNewIdAsync(Store.dispatch, tracingId, "BoundingBox");
-          Store.dispatch(addUserBoundingBoxAction(null, undefined, id));
+          try {
+            const tracingId = getSomeTracing(Store.getState().annotation).tracingId;
+            const id = await dispatchGetNewIdAsync(Store.dispatch, tracingId, "BoundingBox");
+            Store.dispatch(addUserBoundingBoxAction(null, undefined, id));
+          } catch (error) {
+            handleGenericError(error as Error, "Could not create a new bounding box.");
+          }
         },
       },
       TOGGLE_CURSOR_STATE_FOR_MOVING: {

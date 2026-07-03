@@ -1,3 +1,4 @@
+import { handleGenericError } from "libs/error_handling";
 import { V3 } from "libs/mjs";
 import createProgressCallback from "libs/progress_callback";
 import Toast from "libs/toast";
@@ -254,12 +255,21 @@ function* performMinCut(action: PerformMinCutAction): Saga<void> {
         ),
       ),
     };
-    const newBBoxId = yield* call(
-      dispatchGetNewIdAsync,
-      Store.dispatch,
-      skeleton.tracingId,
-      "BoundingBox",
-    );
+    let newBBoxId: number;
+    try {
+      newBBoxId = yield* call(
+        dispatchGetNewIdAsync,
+        Store.dispatch,
+        skeleton.tracingId,
+        "BoundingBox",
+      );
+    } catch (error) {
+      handleGenericError(
+        error as Error,
+        "Could not create a bounding box for the min-cut operation.",
+      );
+      return;
+    }
     yield* put(
       addUserBoundingBoxAction(
         {

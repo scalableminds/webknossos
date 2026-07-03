@@ -1,3 +1,4 @@
+import { handleGenericError } from "libs/error_handling";
 import { V3 } from "libs/mjs";
 import { document } from "libs/window";
 import throttle from "lodash-es/throttle";
@@ -240,7 +241,13 @@ export async function createBoundingBoxAndGetEdges(
   if (globalPosition == null || globalPosition.rounded == null) return null;
 
   const tracingId = getSomeTracing(state.annotation).tracingId;
-  const id = await dispatchGetNewIdAsync(Store.dispatch, tracingId, "BoundingBox");
+  let id: number;
+  try {
+    id = await dispatchGetNewIdAsync(Store.dispatch, tracingId, "BoundingBox");
+  } catch (error) {
+    handleGenericError(error as Error, "Could not create a new bounding box.");
+    return null;
+  }
 
   Store.dispatch(
     addUserBoundingBoxAction(

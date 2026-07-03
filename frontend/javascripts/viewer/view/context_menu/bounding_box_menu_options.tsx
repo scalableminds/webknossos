@@ -1,5 +1,6 @@
 import { Input, Popover } from "antd";
 import type { ItemType, MenuItemType } from "antd/es/menu/interface";
+import { handleGenericError } from "libs/error_handling";
 import { useWkSelector } from "libs/react_hooks";
 import { hexToRgb, rgbToHex } from "libs/utils";
 import type React from "react";
@@ -38,9 +39,13 @@ export function useBoundingBoxMenuOptions(contextInfo: ContextMenuInfo): ItemTyp
   const newBoundingBoxMenuItem: ItemType = {
     key: "add-new-bounding-box",
     onClick: async () => {
-      const tracingId = getSomeTracing(Store.getState().annotation).tracingId;
-      const id = await dispatchGetNewIdAsync(dispatch, tracingId, "BoundingBox");
-      dispatch(addUserBoundingBoxAction(null, globalPosition, id));
+      try {
+        const tracingId = getSomeTracing(Store.getState().annotation).tracingId;
+        const id = await dispatchGetNewIdAsync(dispatch, tracingId, "BoundingBox");
+        dispatch(addUserBoundingBoxAction(null, globalPosition, id));
+      } catch (error) {
+        handleGenericError(error as Error, "Could not create a new bounding box.");
+      }
     },
     label: (
       <>

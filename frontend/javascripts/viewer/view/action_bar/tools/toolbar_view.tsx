@@ -3,6 +3,7 @@ import NewBoundingBoxIcon from "@images/icons/icon-bounding-box-new.svg?react";
 import { Radio, type RadioChangeEvent, Space, Tag } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
+import { handleGenericError } from "libs/error_handling";
 import { useKeyPress, useWindowWidth, useWkSelector } from "libs/react_hooks";
 import { useCallback, useMemo } from "react";
 import { useDispatch } from "react-redux";
@@ -39,9 +40,13 @@ function CreateNewBoundingBoxButton() {
   const dispatch = useDispatch();
 
   const handleAddNewUserBoundingBox = useCallback(async () => {
-    const tracingId = getSomeTracing(Store.getState().annotation).tracingId;
-    const id = await dispatchGetNewIdAsync(dispatch, tracingId, "BoundingBox");
-    dispatch(addUserBoundingBoxAction(null, undefined, id));
+    try {
+      const tracingId = getSomeTracing(Store.getState().annotation).tracingId;
+      const id = await dispatchGetNewIdAsync(dispatch, tracingId, "BoundingBox");
+      dispatch(addUserBoundingBoxAction(null, undefined, id));
+    } catch (error) {
+      handleGenericError(error as Error, "Could not create a new bounding box.");
+    }
   }, [dispatch]);
 
   return (

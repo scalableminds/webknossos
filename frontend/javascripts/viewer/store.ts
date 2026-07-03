@@ -674,7 +674,7 @@ export type LocalSegmentationState = {
   readonly contourTracingMode: ContourMode;
   // Stores points of the currently drawn region in layer-space coordinates.
   readonly contourList: Array<Vector3>;
-  readonly idReservations: Record<"SegmentGroup" | "Segment", { id: number; used: boolean }[]>;
+  readonly idReservations: Record<"SegmentGroup", { id: number; used: boolean }[]>;
   // The position of the "proofreading marker" (a cross) is stored separately.
   // In earlier versions, the anchor position of the current segment was simply used.
   // However, the anchor position can be updated by another user (in collab mode) which

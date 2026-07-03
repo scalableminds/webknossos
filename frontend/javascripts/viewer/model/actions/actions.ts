@@ -112,10 +112,15 @@ export const getNewIdAction = (
     domain,
   }) as const;
 
+// Domains for which the id reservation mechanism is actually implemented (as opposed to
+// AnnotationIdDomain, which lists all domains the back-end knows about, including ones that
+// aren't wired up on the frontend, yet).
+export type ReservableIdDomain = "SegmentGroup" | "BoundingBox";
+
 export const dispatchGetNewIdAsync = async (
   dispatch: Dispatch<any>,
   tracingId: string,
-  domain: "SegmentGroup" | "BoundingBox",
+  domain: ReservableIdDomain,
 ): Promise<number> => {
   const readyDeferred = new Deferred<number, unknown>();
   const action = getNewIdAction(
@@ -127,10 +132,6 @@ export const dispatchGetNewIdAsync = async (
   dispatch(action);
   return await readyDeferred.promise();
 };
-
-// Domains for which id reservations are actually persisted in the store (as opposed to
-// AnnotationIdDomain, which lists all domains the back-end knows about).
-export type ReservableIdDomain = "SegmentGroup" | "Segment" | "BoundingBox";
 
 export const setIdReservationsAction = (
   tracingId: string,

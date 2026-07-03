@@ -13,7 +13,7 @@ import type {
 } from "viewer/store";
 import { getIdReservationsForBoundingBoxes, getTracingById } from "../accessors/tracing_accessor";
 import { getIdReservationsForSegmentationLayer } from "../accessors/volumetracing_accessor";
-import type { GetNewIdAction } from "../actions/actions";
+import type { GetNewIdAction, ReservableIdDomain } from "../actions/actions";
 import {
   type IdsReplenishedAction,
   type IdsReplenishmentFailedAction,
@@ -32,12 +32,9 @@ const { IDEAL_ID_BUFFER_SIZE } = Constants;
 const RESERVE_IDS_MAX_RETRIES = 3;
 const RETRY_DELAY_MULTIPLIER = import.meta.env.MODE === "test" ? 0.1 : 2;
 
-// Domains for which the reservation machinery below is actually wired up. "Segment" is
-// declared in ReservableIdDomain/AnnotationIdDomain for future use but not implemented, yet.
-type SupportedDomain = "SegmentGroup" | "BoundingBox";
 type SupportedTracing = VolumeTracing | SkeletonTracing;
 
-function isSupportedDomain(domain: AnnotationIdDomain): domain is SupportedDomain {
+function isSupportedDomain(domain: AnnotationIdDomain): domain is ReservableIdDomain {
   return domain === "SegmentGroup" || domain === "BoundingBox";
 }
 
@@ -47,7 +44,7 @@ function isSupportedDomain(domain: AnnotationIdDomain): domain is SupportedDomai
 // annotation_reducer.ts).
 function isTracingSupportedForDomain(
   tracing: SkeletonTracing | VolumeTracing | EditableMapping,
-  domain: SupportedDomain,
+  domain: ReservableIdDomain,
 ): tracing is SupportedTracing {
   if (domain === "SegmentGroup") {
     return tracing.type === "volume";
@@ -55,14 +52,14 @@ function isTracingSupportedForDomain(
   return tracing.type === "volume" || tracing.type === "skeleton";
 }
 
-function getExistingIdSet(tracing: SupportedTracing, domain: SupportedDomain): Set<number> {
+function getExistingIdSet(tracing: SupportedTracing, domain: ReservableIdDomain): Set<number> {
   if (domain === "SegmentGroup") {
     return getGroupIdSet((tracing as VolumeTracing).segmentGroups);
   }
   return new Set(tracing.userBoundingBoxes.map((bbox) => bbox.id));
 }
 
-function getMaxExistingId(tracing: SupportedTracing, domain: SupportedDomain): number {
+function getMaxExistingId(tracing: SupportedTracing, domain: ReservableIdDomain): number {
   if (domain === "SegmentGroup") {
     return getMaximumGroupId((tracing as VolumeTracing).segmentGroups);
   }
@@ -72,7 +69,7 @@ function getMaxExistingId(tracing: SupportedTracing, domain: SupportedDomain): n
 function getReservationsForDomain(
   state: WebknossosState,
   tracingId: string,
-  domain: SupportedDomain,
+  domain: ReservableIdDomain,
 ): { id: number; used: boolean }[] {
   if (domain === "BoundingBox") {
     return getIdReservationsForBoundingBoxes(state);
@@ -100,7 +97,7 @@ export default function* idReservationSaga(): Saga<void> {
 function getUsableReservations(
   tracing: SupportedTracing,
   reservations: { id: number; used: boolean }[],
-  domain: SupportedDomain,
+  domain: ReservableIdDomain,
 ) {
   /*
    * ID reservations are guaranteed to each user and don't expire as long as the id
@@ -118,7 +115,7 @@ function getUsableReservations(
   return reservations.filter(({ used, id }) => !used && !existingIdSet.has(id));
 }
 
-function* replenishmentLoop(domain: SupportedDomain): Saga<void> {
+function* replenishmentLoop(domain: ReservableIdDomain): Saga<void> {
   const replenishChannel = yield* actionChannel<RequestIdReplenishmentAction>(
     (action: { type: string }) =>
       action.type === "REQUEST_ID_REPLENISHMENT" &&
@@ -225,7 +222,7 @@ function* handleReservationRequest(action: GetNewIdAction): Saga<void> {
   yield* call(handleReservationRequest, action);
 }
 
-function* fetchNewReservations(tracingId: string, domain: SupportedDomain): Saga<void> {
+function* fetchNewReservations(tracingId: string, domain: ReservableIdDomain): Saga<void> {
   const tracing = yield* select((state) => getTracingById(state, tracingId));
 
   if (!isTracingSupportedForDomain(tracing, domain)) {

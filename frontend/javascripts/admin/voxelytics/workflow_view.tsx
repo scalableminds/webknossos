@@ -335,7 +335,7 @@ export default function WorkflowView() {
 
   const {
     data: report,
-    isLoading,
+    isFetching: isLoading,
     isError,
     refetch,
   } = useQuery({

@@ -1,6 +1,6 @@
 import Icon, { CaretDownOutlined, CaretUpOutlined, ExpandAltOutlined } from "@ant-design/icons";
-import IconSidebarHideLeft from "@images/icons/icon-sidebar-hide-left.svg?react";
-import IconSidebarHideRight from "@images/icons/icon-sidebar-hide-right.svg?react";
+import IconSidebarLeft from "@images/icons/icon-sidebar-left.svg?react";
+import IconSidebarRight from "@images/icons/icon-sidebar-right.svg?react";
 import { ConfigProvider, Space, Tooltip } from "antd";
 import { useRepeatedButtonTrigger, useWkSelector } from "libs/react_hooks";
 import type * as React from "react";
@@ -27,22 +27,22 @@ export function FloatingMobileControls() {
   const dispatch = useDispatch();
   const viewMode = useWkSelector((state) => state.temporaryConfiguration.viewMode);
 
-  const moveForwardArbitrary = useCallback(
+  const moveForwardFlightMode = useCallback(
     (timeFactor: number) =>
       dispatch(moveFlycamAction([0, 0, getMoveOffset3d(Store.getState(), timeFactor)])),
     [dispatch],
   );
-  const moveBackwardArbitrary = useCallback(
+  const moveBackwardFlightMode = useCallback(
     (timeFactor: number) =>
       dispatch(moveFlycamAction([0, 0, -getMoveOffset3d(Store.getState(), timeFactor)])),
     [dispatch],
   );
 
   const moveForwardProps = useRepeatedButtonTrigger(
-    viewMode === "orthogonal" ? moveForward : moveForwardArbitrary,
+    viewMode === "orthogonal" ? moveForward : moveForwardFlightMode,
   );
   const moveBackwardProps = useRepeatedButtonTrigger(
-    viewMode === "orthogonal" ? moveBackward : moveBackwardArbitrary,
+    viewMode === "orthogonal" ? moveBackward : moveBackwardFlightMode,
   );
   const activeViewport = useWkSelector((state) => state.viewModeData.plane.activeViewport);
   const handleContextMenu = (event: React.SyntheticEvent) => {
@@ -65,7 +65,7 @@ export function FloatingMobileControls() {
             onClick={() => layoutEmitter.emit(LayoutEvents.toggleBorder, "left")}
             icon={
               <Icon
-                component={IconSidebarHideLeft}
+                component={IconSidebarLeft}
                 aria-label="Toggle left sidebar"
                 style={{ filter: "brightness(10)" }}
               />
@@ -79,7 +79,7 @@ export function FloatingMobileControls() {
             onClick={() => layoutEmitter.emit(LayoutEvents.toggleBorder, "right")}
             icon={
               <Icon
-                component={IconSidebarHideRight}
+                component={IconSidebarRight}
                 aria-label="Toggle right sidebar"
                 style={{ filter: "brightness(10)" }}
               />

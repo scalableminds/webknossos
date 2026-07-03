@@ -1,9 +1,8 @@
 package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
-import com.scalableminds.util.tools.FoxImplicits
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FossilDBClient,
-  KeyValueStoreImplicits,
+  KeyValueStoreConversions,
   VersionedKeyValuePair
 }
 import com.typesafe.scalalogging.LazyLogging
@@ -12,9 +11,8 @@ import scala.annotation.tailrec
 
 class VersionedFossilDbIterator(prefix: String, fossilDbClient: FossilDBClient, version: Option[Long] = None)
     extends Iterator[VersionedKeyValuePair[Array[Byte]]]
-    with KeyValueStoreImplicits
-    with LazyLogging
-    with FoxImplicits {
+    with KeyValueStoreConversions
+    with LazyLogging {
   private val batchSize = 64
 
   private var currentStartAfterKey: Option[String] = None
@@ -22,7 +20,7 @@ class VersionedFossilDbIterator(prefix: String, fossilDbClient: FossilDBClient, 
   private var nextKeyValuePair: Option[VersionedKeyValuePair[Array[Byte]]] = None
 
   private def fetchNext() =
-    fossilDbClient.getMultipleKeys(currentStartAfterKey, Some(prefix), version, Some(batchSize)).iterator
+    fossilDbClient.getMultipleKeys(currentStartAfterKey, Some(prefix), version, Some(batchSize))(wrapInBox).iterator
 
   private def fetchNextAndSave = {
     currentBatchIterator = fetchNext()

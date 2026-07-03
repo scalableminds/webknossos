@@ -7,7 +7,7 @@ import com.scalableminds.util.tools.TristateOptionJsonHelper
 import com.scalableminds.webknossos.datastore.IdWithBool.{Id32WithBool, Id64WithBool}
 import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing, VolumeUserStateProto}
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition}
 import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, UpdateAction, UserStateUpdateAction}
 import com.scalableminds.webknossos.tracingstore.tracings.{GroupUtils, MetadataEntry, NamedBoundingBox}
@@ -15,17 +15,22 @@ import play.api.libs.json._
 
 trait VolumeUpdateActionHelper {
 
-  protected def mapSegments(tracing: VolumeTracing,
-                            segmentId: Long,
-                            transformSegment: Segment => Segment): Seq[Segment] =
+  protected def mapSegments(
+      tracing: VolumeTracing,
+      segmentId: Long,
+      transformSegment: Segment => Segment
+  ): Seq[Segment] =
     tracing.segments.map((segment: Segment) =>
-      if (segment.segmentId == segmentId) transformSegment(segment) else segment)
+      if (segment.segmentId == segmentId) transformSegment(segment) else segment
+    )
 
   protected def convertSegmentGroup(aSegmentGroup: UpdateActionSegmentGroup): SegmentGroup =
-    SegmentGroup(aSegmentGroup.name,
-                 aSegmentGroup.groupId,
-                 aSegmentGroup.children.map(convertSegmentGroup),
-                 aSegmentGroup.isExpanded)
+    SegmentGroup(
+      aSegmentGroup.name,
+      aSegmentGroup.groupId,
+      aSegmentGroup.children.map(convertSegmentGroup),
+      aSegmentGroup.isExpanded
+    )
 
 }
 
@@ -36,18 +41,22 @@ trait ApplyableVolumeUpdateAction extends VolumeUpdateAction {
 }
 
 trait BucketMutatingVolumeUpdateAction extends ApplyableVolumeUpdateAction {
-  override def applyOn(tracing: VolumeTracing): VolumeTracing =
-    if (tracing.getVolumeBucketDataHasChanged) tracing else tracing.copy(volumeBucketDataHasChanged = Some(true))
+  // Upon the first Bucket-mutating action the volumeBucketDataHasChanged flag of the
+  // volume tracing proto should be set to true. This is done by the  action
+  // UpdateVolumeBucketDataHasChangedVolumeAction which needs to be sent by the frontend.
+  override def applyOn(tracing: VolumeTracing): VolumeTracing = tracing
 }
 
 trait UserStateVolumeUpdateAction extends ApplyableVolumeUpdateAction with UserStateUpdateAction {
   def actionAuthorId: Option[ObjectId]
-  def applyOnUserState(tracing: VolumeTracing,
-                       actionUserId: ObjectId,
-                       existingUserStateOpt: Option[VolumeUserStateProto]): VolumeUserStateProto
+  def applyOnUserState(
+      tracing: VolumeTracing,
+      actionUserId: ObjectId,
+      existingUserStateOpt: Option[VolumeUserStateProto]
+  ): VolumeUserStateProto
 
   override def applyOn(tracing: VolumeTracing): VolumeTracing = actionAuthorId match {
-    case None => tracing
+    case None               => tracing
     case Some(actionUserId) =>
       val userStateAlreadyExists = tracing.userStates.exists(state => actionUserId.toString == state.userId)
       if (userStateAlreadyExists) {
@@ -62,16 +71,17 @@ trait UserStateVolumeUpdateAction extends ApplyableVolumeUpdateAction with UserS
   }
 }
 
-case class UpdateBucketVolumeAction(position: Vec3Int,
-                                    cubeSize: Int,
-                                    mag: Vec3Int,
-                                    base64Data: Option[String],
-                                    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
-                                    actionTracingId: String,
-                                    actionTimestamp: Option[Long] = None,
-                                    actionAuthorId: Option[ObjectId] = None,
-                                    info: Option[String] = None)
-    extends BucketMutatingVolumeUpdateAction {
+case class UpdateBucketVolumeAction(
+    position: Vec3Int,
+    cubeSize: Int,
+    mag: Vec3Int,
+    base64Data: Option[String],
+    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends BucketMutatingVolumeUpdateAction {
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
@@ -105,7 +115,7 @@ case class UpdateTracingVolumeAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends ApplyableVolumeUpdateAction
-    with ProtoGeometryImplicits {
+    with ProtoGeometryConversions {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
@@ -118,21 +128,21 @@ case class UpdateTracingVolumeAction(
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
     tracing.copy(
       activeSegmentId = Some(activeSegmentId),
-      editPosition = editPosition,
-      editRotation = editRotation,
+      editPosition = vec3IntToProto(editPosition),
+      editRotation = vec3DoubleToProto(editRotation),
       largestSegmentId = largestSegmentId,
       zoomLevel = zoomLevel,
-      editPositionAdditionalCoordinates = AdditionalCoordinate.toProto(editPositionAdditionalCoordinates),
-      hideUnregisteredSegments = hideUnregisteredSegments
+      editPositionAdditionalCoordinates = AdditionalCoordinate.toProto(editPositionAdditionalCoordinates)
     )
 }
 
-case class UpdateActiveSegmentIdVolumeAction(activeSegmentId: Long,
-                                             actionTracingId: String,
-                                             actionTimestamp: Option[Long] = None,
-                                             actionAuthorId: Option[ObjectId] = None,
-                                             info: Option[String] = None)
-    extends UserStateVolumeUpdateAction {
+case class UpdateActiveSegmentIdVolumeAction(
+    activeSegmentId: Long,
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends UserStateVolumeUpdateAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
@@ -142,20 +152,23 @@ case class UpdateActiveSegmentIdVolumeAction(activeSegmentId: Long,
 
   override def isViewOnlyChange: Boolean = true
 
-  override def applyOnUserState(tracing: VolumeTracing,
-                                actionUserId: ObjectId,
-                                existingUserStateOpt: Option[VolumeUserStateProto]): VolumeUserStateProto =
+  override def applyOnUserState(
+      tracing: VolumeTracing,
+      actionUserId: ObjectId,
+      existingUserStateOpt: Option[VolumeUserStateProto]
+  ): VolumeUserStateProto =
     existingUserStateOpt
       .getOrElse(VolumeTracingDefaults.emptyUserState(actionUserId))
       .copy(activeSegmentId = Some(activeSegmentId))
 }
 
-case class UpdateLargestSegmentIdVolumeAction(largestSegmentId: Long,
-                                              actionTracingId: String,
-                                              actionTimestamp: Option[Long] = None,
-                                              actionAuthorId: Option[ObjectId] = None,
-                                              info: Option[String] = None)
-    extends ApplyableVolumeUpdateAction {
+case class UpdateLargestSegmentIdVolumeAction(
+    largestSegmentId: Long,
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends ApplyableVolumeUpdateAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
@@ -167,12 +180,31 @@ case class UpdateLargestSegmentIdVolumeAction(largestSegmentId: Long,
     tracing.copy(largestSegmentId = Some(largestSegmentId))
 }
 
-case class UpdateUserBoundingBoxesVolumeAction(boundingBoxes: List[NamedBoundingBox],
-                                               actionTracingId: String,
-                                               actionTimestamp: Option[Long] = None,
-                                               actionAuthorId: Option[ObjectId] = None,
-                                               info: Option[String] = None)
-    extends ApplyableVolumeUpdateAction {
+case class UpdateVolumeBucketDataHasChangedVolumeAction(
+    volumeBucketDataHasChanged: Boolean,
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends ApplyableVolumeUpdateAction {
+  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
+    this.copy(actionAuthorId = authorId)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
+
+  override def applyOn(tracing: VolumeTracing): VolumeTracing =
+    tracing.copy(volumeBucketDataHasChanged = Some(volumeBucketDataHasChanged))
+}
+
+case class UpdateUserBoundingBoxesVolumeAction(
+    boundingBoxes: List[NamedBoundingBox],
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends ApplyableVolumeUpdateAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
@@ -185,12 +217,13 @@ case class UpdateUserBoundingBoxesVolumeAction(boundingBoxes: List[NamedBounding
     tracing.withUserBoundingBoxes(boundingBoxes.map(_.toProto))
 }
 
-case class AddUserBoundingBoxVolumeAction(boundingBox: NamedBoundingBox,
-                                          actionTracingId: String,
-                                          actionTimestamp: Option[Long] = None,
-                                          actionAuthorId: Option[ObjectId] = None,
-                                          info: Option[String] = None)
-    extends ApplyableVolumeUpdateAction {
+case class AddUserBoundingBoxVolumeAction(
+    boundingBox: NamedBoundingBox,
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends ApplyableVolumeUpdateAction {
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
     tracing.withUserBoundingBoxes(tracing.userBoundingBoxes :+ boundingBox.toProto)
 
@@ -203,12 +236,13 @@ case class AddUserBoundingBoxVolumeAction(boundingBox: NamedBoundingBox,
     this.copy(actionTracingId = newTracingId)
 }
 
-case class DeleteUserBoundingBoxVolumeAction(boundingBoxId: Int,
-                                             actionTracingId: String,
-                                             actionTimestamp: Option[Long] = None,
-                                             actionAuthorId: Option[ObjectId] = None,
-                                             info: Option[String] = None)
-    extends ApplyableVolumeUpdateAction {
+case class DeleteUserBoundingBoxVolumeAction(
+    boundingBoxId: Int,
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends ApplyableVolumeUpdateAction {
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
     tracing.withUserBoundingBoxes(tracing.userBoundingBoxes.filter(_.id != boundingBoxId))
 
@@ -221,16 +255,17 @@ case class DeleteUserBoundingBoxVolumeAction(boundingBoxId: Int,
     this.copy(actionTracingId = newTracingId)
 }
 
-case class UpdateUserBoundingBoxVolumeAction(boundingBoxId: Int,
-                                             name: Option[Option[String]],
-                                             color: Option[Option[Color]],
-                                             boundingBox: Option[Option[BoundingBox]],
-                                             actionTracingId: String,
-                                             actionTimestamp: Option[Long] = None,
-                                             actionAuthorId: Option[ObjectId] = None,
-                                             info: Option[String] = None)
-    extends ApplyableVolumeUpdateAction
-    with ProtoGeometryImplicits {
+case class UpdateUserBoundingBoxVolumeAction(
+    boundingBoxId: Int,
+    name: Option[Option[String]],
+    color: Option[Option[Color]],
+    boundingBox: Option[Option[BoundingBox]],
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends ApplyableVolumeUpdateAction
+    with ProtoGeometryConversions {
   override def applyOn(tracing: VolumeTracing): VolumeTracing = {
     def updateUserBoundingBoxes() =
       tracing.userBoundingBoxes.map { currentBoundingBox =>
@@ -258,13 +293,14 @@ case class UpdateUserBoundingBoxVolumeAction(boundingBoxId: Int,
     this.copy(actionTracingId = newTracingId)
 }
 
-case class UpdateUserBoundingBoxVisibilityVolumeAction(boundingBoxId: Option[Int], // No bbox id → update all bboxes!
-                                                       isVisible: Boolean,
-                                                       actionTracingId: String,
-                                                       actionTimestamp: Option[Long] = None,
-                                                       actionAuthorId: Option[ObjectId] = None,
-                                                       info: Option[String] = None)
-    extends UserStateVolumeUpdateAction {
+case class UpdateUserBoundingBoxVisibilityVolumeAction(
+    boundingBoxId: Option[Int], // No bbox id → update all bboxes!
+    isVisible: Boolean,
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends UserStateVolumeUpdateAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
@@ -272,9 +308,11 @@ case class UpdateUserBoundingBoxVisibilityVolumeAction(boundingBoxId: Option[Int
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
 
-  override def applyOnUserState(tracing: VolumeTracing,
-                                actionUserId: ObjectId,
-                                existingUserStateOpt: Option[VolumeUserStateProto]): VolumeUserStateProto = {
+  override def applyOnUserState(
+      tracing: VolumeTracing,
+      actionUserId: ObjectId,
+      existingUserStateOpt: Option[VolumeUserStateProto]
+  ): VolumeUserStateProto = {
     val bboxIdsToUpdate = boundingBoxId.map(Seq(_)).getOrElse(tracing.userBoundingBoxes.map(_.id))
     existingUserStateOpt.map { existingUserState =>
       val visibilityMapMutable = id32WithBoolsToMutableMap(existingUserState.boundingBoxVisibilities)
@@ -285,17 +323,19 @@ case class UpdateUserBoundingBoxVisibilityVolumeAction(boundingBoxId: Option[Int
     }.getOrElse(
       VolumeTracingDefaults
         .emptyUserState(actionUserId)
-        .copy(boundingBoxVisibilities = bboxIdsToUpdate.map(bboxId => Id32WithBool(bboxId, isVisible))))
+        .copy(boundingBoxVisibilities = bboxIdsToUpdate.map(bboxId => Id32WithBool(bboxId, isVisible)))
+    )
   }
 
   override def isViewOnlyChange: Boolean = true
 }
 
-case class RemoveFallbackLayerVolumeAction(actionTracingId: String,
-                                           actionTimestamp: Option[Long] = None,
-                                           actionAuthorId: Option[ObjectId] = None,
-                                           info: Option[String] = None)
-    extends ApplyableVolumeUpdateAction {
+case class RemoveFallbackLayerVolumeAction(
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends ApplyableVolumeUpdateAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
@@ -307,12 +347,13 @@ case class RemoveFallbackLayerVolumeAction(actionTracingId: String,
     tracing.clearFallbackLayer
 }
 
-case class ImportVolumeDataVolumeAction(actionTracingId: String,
-                                        largestSegmentId: Option[Long],
-                                        actionTimestamp: Option[Long] = None,
-                                        actionAuthorId: Option[ObjectId] = None,
-                                        info: Option[String] = None)
-    extends ApplyableVolumeUpdateAction {
+case class ImportVolumeDataVolumeAction(
+    actionTracingId: String,
+    largestSegmentId: Option[Long],
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends ApplyableVolumeUpdateAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
@@ -325,11 +366,12 @@ case class ImportVolumeDataVolumeAction(actionTracingId: String,
 }
 
 // The current code no longer creates these actions, but they are in the history of some volume annotations.
-case class AddSegmentIndexVolumeAction(actionTracingId: String,
-                                       actionTimestamp: Option[Long] = None,
-                                       actionAuthorId: Option[ObjectId] = None,
-                                       info: Option[String] = None)
-    extends ApplyableVolumeUpdateAction {
+case class AddSegmentIndexVolumeAction(
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends ApplyableVolumeUpdateAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
@@ -342,20 +384,21 @@ case class AddSegmentIndexVolumeAction(actionTracingId: String,
 
 }
 
-case class CreateSegmentVolumeAction(id: Long,
-                                     anchorPosition: Option[Vec3Int],
-                                     name: Option[String],
-                                     color: Option[com.scalableminds.util.image.Color],
-                                     groupId: Option[Int],
-                                     creationTime: Option[Long],
-                                     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
-                                     metadata: Option[Seq[MetadataEntry]] = None,
-                                     actionTracingId: String,
-                                     actionTimestamp: Option[Long] = None,
-                                     actionAuthorId: Option[ObjectId] = None,
-                                     info: Option[String] = None)
-    extends ApplyableVolumeUpdateAction
-    with ProtoGeometryImplicits {
+case class CreateSegmentVolumeAction(
+    id: Long,
+    anchorPosition: Option[Vec3Int],
+    name: Option[String],
+    color: Option[com.scalableminds.util.image.Color],
+    groupId: Option[Int],
+    creationTime: Option[Long],
+    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
+    metadata: Option[Seq[MetadataEntry]] = None,
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends ApplyableVolumeUpdateAction
+    with ProtoGeometryConversions {
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
@@ -381,20 +424,21 @@ case class CreateSegmentVolumeAction(id: Long,
   }
 }
 
-case class LegacyUpdateSegmentVolumeAction(id: Long,
-                                           anchorPosition: Option[Vec3Int],
-                                           name: Option[String],
-                                           color: Option[com.scalableminds.util.image.Color],
-                                           creationTime: Option[Long],
-                                           groupId: Option[Int],
-                                           additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
-                                           metadata: Option[Seq[MetadataEntry]] = None,
-                                           actionTracingId: String,
-                                           actionTimestamp: Option[Long] = None,
-                                           actionAuthorId: Option[ObjectId] = None,
-                                           info: Option[String] = None)
-    extends ApplyableVolumeUpdateAction
-    with ProtoGeometryImplicits
+case class LegacyUpdateSegmentVolumeAction(
+    id: Long,
+    anchorPosition: Option[Vec3Int],
+    name: Option[String],
+    color: Option[com.scalableminds.util.image.Color],
+    creationTime: Option[Long],
+    groupId: Option[Int],
+    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
+    metadata: Option[Seq[MetadataEntry]] = None,
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends ApplyableVolumeUpdateAction
+    with ProtoGeometryConversions
     with VolumeUpdateActionHelper {
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction =
@@ -420,19 +464,20 @@ case class LegacyUpdateSegmentVolumeAction(id: Long,
   }
 }
 
-case class UpdateSegmentPartialVolumeAction(id: Long,
-                                            anchorPosition: Option[Option[Vec3Int]],
-                                            name: Option[Option[String]],
-                                            color: Option[Option[com.scalableminds.util.image.Color]],
-                                            creationTime: Option[Option[Long]],
-                                            groupId: Option[Option[Int]],
-                                            additionalCoordinates: Option[Option[Seq[AdditionalCoordinate]]] = None,
-                                            actionTracingId: String,
-                                            actionTimestamp: Option[Long] = None,
-                                            actionAuthorId: Option[ObjectId] = None,
-                                            info: Option[String] = None)
-    extends ApplyableVolumeUpdateAction
-    with ProtoGeometryImplicits
+case class UpdateSegmentPartialVolumeAction(
+    id: Long,
+    anchorPosition: Option[Option[Vec3Int]],
+    name: Option[Option[String]],
+    color: Option[Option[com.scalableminds.util.image.Color]],
+    creationTime: Option[Option[Long]],
+    groupId: Option[Option[Int]],
+    additionalCoordinates: Option[Option[Seq[AdditionalCoordinate]]] = None,
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends ApplyableVolumeUpdateAction
+    with ProtoGeometryConversions
     with VolumeUpdateActionHelper {
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction =
@@ -452,23 +497,23 @@ case class UpdateSegmentPartialVolumeAction(id: Long,
         creationTime = creationTime.getOrElse(segment.creationTime),
         color = if (color.isDefined) color.flatMap(colorOptToProto) else segment.color,
         groupId = groupId.getOrElse(segment.groupId),
-        anchorPositionAdditionalCoordinates = additionalCoordinates
-          .map(AdditionalCoordinate.toProto)
-          .getOrElse(segment.anchorPositionAdditionalCoordinates),
+        anchorPositionAdditionalCoordinates =
+          additionalCoordinates.map(AdditionalCoordinate.toProto).getOrElse(segment.anchorPositionAdditionalCoordinates)
       )
 
     tracing.withSegments(mapSegments(tracing, id, segmentTransform))
   }
 }
 
-case class UpdateMetadataOfSegmentVolumeAction(id: Long,
-                                               upsertEntriesByKey: Seq[MetadataEntry],
-                                               removeEntriesByKey: Seq[String],
-                                               actionTracingId: String,
-                                               actionTimestamp: Option[Long] = None,
-                                               actionAuthorId: Option[ObjectId] = None,
-                                               info: Option[String] = None)
-    extends ApplyableVolumeUpdateAction
+case class UpdateMetadataOfSegmentVolumeAction(
+    id: Long,
+    upsertEntriesByKey: Seq[MetadataEntry],
+    removeEntriesByKey: Seq[String],
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends ApplyableVolumeUpdateAction
     with VolumeUpdateActionHelper {
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction =
@@ -485,7 +530,8 @@ case class UpdateMetadataOfSegmentVolumeAction(id: Long,
       val metadataWithoutDeletedEntries = segmentMetadata.filter(m => !removeEntriesByKey.contains(m.key))
       val newEntries = upsertEntriesByKey.filter(m => !metadataWithoutDeletedEntries.exists(m.key == _.key))
       val metadataWithUpdatedEntries = metadataWithoutDeletedEntries.map(entry =>
-        upsertEntriesByKey.find(entry.key == _.key).map(entry.update).getOrElse(entry))
+        upsertEntriesByKey.find(entry.key == _.key).map(entry.update).getOrElse(entry)
+      )
       val metadataWithNewEntries = metadataWithUpdatedEntries ++ newEntries
       segment.copy(
         metadata = MetadataEntry.toProtoMultiple(MetadataEntry.deduplicate(Some(metadataWithNewEntries)))
@@ -496,12 +542,13 @@ case class UpdateMetadataOfSegmentVolumeAction(id: Long,
   }
 }
 
-case class DeleteSegmentVolumeAction(id: Long,
-                                     actionTracingId: String,
-                                     actionTimestamp: Option[Long] = None,
-                                     actionAuthorId: Option[ObjectId] = None,
-                                     info: Option[String] = None)
-    extends ApplyableVolumeUpdateAction {
+case class DeleteSegmentVolumeAction(
+    id: Long,
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends ApplyableVolumeUpdateAction {
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
@@ -516,12 +563,13 @@ case class DeleteSegmentVolumeAction(id: Long,
 
 }
 
-case class DeleteSegmentDataVolumeAction(id: Long,
-                                         actionTracingId: String,
-                                         actionTimestamp: Option[Long] = None,
-                                         actionAuthorId: Option[ObjectId] = None,
-                                         info: Option[String] = None)
-    extends BucketMutatingVolumeUpdateAction {
+case class DeleteSegmentDataVolumeAction(
+    id: Long,
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends BucketMutatingVolumeUpdateAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
@@ -530,14 +578,15 @@ case class DeleteSegmentDataVolumeAction(id: Long,
     this.copy(actionTracingId = newTracingId)
 }
 
-case class UpdateMappingNameVolumeAction(mappingName: Option[String],
-                                         isEditable: Option[Boolean],
-                                         isLocked: Option[Boolean],
-                                         actionTracingId: String,
-                                         actionTimestamp: Option[Long],
-                                         actionAuthorId: Option[ObjectId] = None,
-                                         info: Option[String] = None)
-    extends ApplyableVolumeUpdateAction {
+case class UpdateMappingNameVolumeAction(
+    mappingName: Option[String],
+    isEditable: Option[Boolean],
+    isLocked: Option[Boolean],
+    actionTracingId: String,
+    actionTimestamp: Option[Long],
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends ApplyableVolumeUpdateAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
@@ -548,17 +597,20 @@ case class UpdateMappingNameVolumeAction(mappingName: Option[String],
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
     if (tracing.mappingIsLocked.getOrElse(false)) tracing // cannot change mapping name if it is locked
     else
-      tracing.copy(mappingName = mappingName,
-                   hasEditableMapping = Some(isEditable.getOrElse(false)),
-                   mappingIsLocked = Some(isLocked.getOrElse(false)))
+      tracing.copy(
+        mappingName = mappingName,
+        hasEditableMapping = Some(isEditable.getOrElse(false)),
+        mappingIsLocked = Some(isLocked.getOrElse(false))
+      )
 }
 
-case class LegacyUpdateSegmentGroupsVolumeAction(segmentGroups: List[UpdateActionSegmentGroup],
-                                                 actionTracingId: String,
-                                                 actionTimestamp: Option[Long] = None,
-                                                 actionAuthorId: Option[ObjectId] = None,
-                                                 info: Option[String] = None)
-    extends ApplyableVolumeUpdateAction
+case class LegacyUpdateSegmentGroupsVolumeAction(
+    segmentGroups: List[UpdateActionSegmentGroup],
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends ApplyableVolumeUpdateAction
     with VolumeUpdateActionHelper {
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
     tracing.withSegmentGroups(segmentGroups.map(convertSegmentGroup))
@@ -571,22 +623,23 @@ case class LegacyUpdateSegmentGroupsVolumeAction(segmentGroups: List[UpdateActio
     this.copy(actionTracingId = newTracingId)
 }
 
-case class MergeSegmentItemsVolumeAction(agglomerateId1: Long, // merged into
-                                         agglomerateId2: Long, // is "swallowed" by source
-                                         segmentId1: Long, // only used by frontend to resolve live collab conflicts
-                                         segmentId2: Long, // only used by frontend to resolve live collab conflicts
-                                         actionTracingId: String,
-                                         actionTimestamp: Option[Long] = None,
-                                         actionAuthorId: Option[ObjectId] = None,
-                                         info: Option[String] = None)
-    extends ApplyableVolumeUpdateAction
+case class MergeSegmentItemsVolumeAction(
+    agglomerateId1: Long, // merged into
+    agglomerateId2: Long, // is "swallowed" by source
+    segmentId1: Long, // only used by frontend to resolve live collab conflicts
+    segmentId2: Long, // only used by frontend to resolve live collab conflicts
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends ApplyableVolumeUpdateAction
     with VolumeUpdateActionHelper {
   override def applyOn(tracing: VolumeTracing): VolumeTracing = {
     val sourceSegmentOpt = tracing.segments.find(_.segmentId == agglomerateId1)
     val targetSegmentOpt = tracing.segments.find(_.segmentId == agglomerateId2)
 
     val resultSegment = (sourceSegmentOpt, targetSegmentOpt) match {
-      case (None, None)                => Segment(segmentId = agglomerateId1, creationTime = actionTimestamp, isVisible = Some(true))
+      case (None, None) => Segment(segmentId = agglomerateId1, creationTime = actionTimestamp, isVisible = Some(true))
       case (Some(sourceSegment), None) => sourceSegment
       case (None, Some(targetSegment)) =>
         Segment(
@@ -611,15 +664,18 @@ case class MergeSegmentItemsVolumeAction(agglomerateId1: Long, // merged into
     }
 
     val withResultSegment =
-      if (sourceSegmentOpt.isDefined) tracing.segments.map { segment: Segment =>
+      if (sourceSegmentOpt.isDefined) tracing.segments.map { (segment: Segment) =>
         if (segment.segmentId == agglomerateId1) resultSegment else segment
-      } else tracing.segments :+ resultSegment
+      }
+      else tracing.segments :+ resultSegment
 
     tracing.withSegments(withResultSegment.filter(_.segmentId != agglomerateId2))
   }
 
-  private def mergeSegmentNames(sourceSegmentNameOpt: Option[String],
-                                targetSegmentNameOpt: Option[String]): Option[String] =
+  private def mergeSegmentNames(
+      sourceSegmentNameOpt: Option[String],
+      targetSegmentNameOpt: Option[String]
+  ): Option[String] =
     (sourceSegmentNameOpt, targetSegmentNameOpt) match {
       case (None, None)                                       => None
       case (Some(sourceSegmentName), None)                    => Some(sourceSegmentName)
@@ -631,14 +687,13 @@ case class MergeSegmentItemsVolumeAction(agglomerateId1: Long, // merged into
     val concat = sourceSegment.metadata ++ targetSegment.metadata
     val byKey: Map[String, Seq[MetadataEntryProto]] = concat.groupBy(_.key)
     val pivotIndex = sourceSegment.metadata.length
-    concat.zipWithIndex.map {
-      case (entry, index) =>
-        if (byKey(entry.key).distinct.length == 1) {
-          entry
-        } else {
-          val originalSegmentId = if (index < pivotIndex) agglomerateId1 else agglomerateId2
-          entry.copy(key = s"${entry.key}-$originalSegmentId")
-        }
+    concat.zipWithIndex.map { case (entry, index) =>
+      if (byKey(entry.key).distinct.length == 1) {
+        entry
+      } else {
+        val originalSegmentId = if (index < pivotIndex) agglomerateId1 else agglomerateId2
+        entry.copy(key = s"${entry.key}-$originalSegmentId")
+      }
     }.distinctBy(_.key)
   }
 
@@ -650,45 +705,46 @@ case class MergeSegmentItemsVolumeAction(agglomerateId1: Long, // merged into
     this.copy(actionTracingId = newTracingId)
 }
 
-case class UpsertSegmentGroupVolumeAction(groupId: Int,
-                                          // If not set, the name is not updated. A group must always have a name.
-                                          name: Option[String],
-                                          // Includes moving the group's current subgroups.
-                                          newParentId: Option[Int],
-                                          actionTracingId: String,
-                                          actionTimestamp: Option[Long] = None,
-                                          actionAuthorId: Option[ObjectId] = None,
-                                          info: Option[String] = None)
-    extends ApplyableVolumeUpdateAction
+case class UpsertSegmentGroupVolumeAction(
+    groupId: Int,
+    // If not set, the name is not updated. A group must always have a name.
+    name: Option[String],
+    // Includes moving the group's current subgroups.
+    newParentId: Option[Int],
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends ApplyableVolumeUpdateAction
     with VolumeUpdateActionHelper {
   override def applyOn(tracing: VolumeTracing): VolumeTracing = {
-    val newGroup = SegmentGroup(name = name.getOrElse(s"Group $groupId"),
-                                groupId = groupId,
-                                children = Seq(),
-                                isExpanded = Some(true))
-    val updatedGroups = newParentId
-      .map(parentId => {
-        val (groupsWithoutMovee, moveeOpt) = removeGroup(tracing.segmentGroups)
-        val movee = moveeOpt.getOrElse(newGroup)
-        // If parentId is -1, the group should be inserted at root level.
-        if (parentId == -1)
-          groupsWithoutMovee :+ movee
-        else {
-          val (updatedGroups, didInsert) = insertUnderParent(groupsWithoutMovee, parentId, movee)
-          if (didInsert) updatedGroups else updatedGroups :+ movee
-        }
-      })
-      .getOrElse {
-        val (maybeUpdatedGroups, didRename) = renameInGroups(tracing.segmentGroups)
-        if (didRename) maybeUpdatedGroups else maybeUpdatedGroups :+ newGroup
-
+    val newGroup = SegmentGroup(
+      name = name.getOrElse(s"Group $groupId"),
+      groupId = groupId,
+      children = Seq(),
+      isExpanded = Some(true)
+    )
+    val updatedGroups = newParentId.map { parentId =>
+      val (groupsWithoutMovee, moveeOpt) = removeGroup(tracing.segmentGroups)
+      val movee = moveeOpt.getOrElse(newGroup)
+      // If parentId is -1, the group should be inserted at root level.
+      if (parentId == -1)
+        groupsWithoutMovee :+ movee
+      else {
+        val (updatedGroups, didInsert) = insertUnderParent(groupsWithoutMovee, parentId, movee)
+        if (didInsert) updatedGroups else updatedGroups :+ movee
       }
+    }.getOrElse {
+      val (maybeUpdatedGroups, didRename) = renameInGroups(tracing.segmentGroups)
+      if (didRename) maybeUpdatedGroups else maybeUpdatedGroups :+ newGroup
+
+    }
     tracing.withSegmentGroups(updatedGroups)
   }
 
   private def renameInGroups(groups: Seq[SegmentGroup]): (Seq[SegmentGroup], Boolean) = {
     // To avoid traversing into the subbranch of the group which should be renamed, we pass the second argument to fold left.
-    // It keeps track of whether the renaming was already done and then earlies out instead of traversing deeper.
+    // It keeps track of whether the renaming was already done and then stops early instead of traversing deeper.
     val updated = groups.foldLeft((Vector.empty[SegmentGroup], false)) {
       // Pass as already renamed.
       case ((acc, true), g) =>
@@ -745,12 +801,13 @@ case class UpsertSegmentGroupVolumeAction(groupId: Int,
     this.copy(actionTracingId = newTracingId)
 }
 
-case class DeleteSegmentGroupVolumeAction(groupId: Int,
-                                          actionTracingId: String,
-                                          actionTimestamp: Option[Long] = None,
-                                          actionAuthorId: Option[ObjectId] = None,
-                                          info: Option[String] = None)
-    extends ApplyableVolumeUpdateAction
+case class DeleteSegmentGroupVolumeAction(
+    groupId: Int,
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends ApplyableVolumeUpdateAction
     with VolumeUpdateActionHelper {
   override def applyOn(tracing: VolumeTracing): VolumeTracing = {
     def removeFromGroupHierarchy(groups: Seq[SegmentGroup]): Seq[SegmentGroup] =
@@ -771,13 +828,14 @@ case class DeleteSegmentGroupVolumeAction(groupId: Int,
     this.copy(actionTracingId = newTracingId)
 }
 
-case class UpdateSegmentGroupsExpandedStateVolumeAction(groupIds: List[Int],
-                                                        areExpanded: Boolean,
-                                                        actionTracingId: String,
-                                                        actionTimestamp: Option[Long] = None,
-                                                        actionAuthorId: Option[ObjectId] = None,
-                                                        info: Option[String] = None)
-    extends UserStateVolumeUpdateAction {
+case class UpdateSegmentGroupsExpandedStateVolumeAction(
+    groupIds: List[Int],
+    areExpanded: Boolean,
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends UserStateVolumeUpdateAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
@@ -785,9 +843,11 @@ case class UpdateSegmentGroupsExpandedStateVolumeAction(groupIds: List[Int],
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
 
-  override def applyOnUserState(tracing: VolumeTracing,
-                                actionUserId: ObjectId,
-                                existingUserStateOpt: Option[VolumeUserStateProto]): VolumeUserStateProto =
+  override def applyOnUserState(
+      tracing: VolumeTracing,
+      actionUserId: ObjectId,
+      existingUserStateOpt: Option[VolumeUserStateProto]
+  ): VolumeUserStateProto =
     existingUserStateOpt.map { existingUserState =>
       val expandedStateMapMutable = id32WithBoolsToMutableMap(existingUserState.segmentGroupExpandedStates)
       groupIds.foreach(expandedStateMapMutable(_) = areExpanded)
@@ -801,18 +861,21 @@ case class UpdateSegmentGroupsExpandedStateVolumeAction(groupIds: List[Int],
     )
 }
 
-case class UpdateSegmentVisibilityVolumeAction(id: Long,
-                                               isVisible: Boolean,
-                                               actionTracingId: String,
-                                               actionTimestamp: Option[Long] = None,
-                                               actionAuthorId: Option[ObjectId] = None,
-                                               info: Option[String] = None)
-    extends UserStateVolumeUpdateAction
+case class UpdateSegmentVisibilityVolumeAction(
+    id: Long,
+    isVisible: Boolean,
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends UserStateVolumeUpdateAction
     with VolumeUpdateActionHelper {
 
-  def applyOnUserState(tracing: VolumeTracing,
-                       actionUserId: ObjectId,
-                       existingUserStateOpt: Option[VolumeUserStateProto]): VolumeUserStateProto =
+  def applyOnUserState(
+      tracing: VolumeTracing,
+      actionUserId: ObjectId,
+      existingUserStateOpt: Option[VolumeUserStateProto]
+  ): VolumeUserStateProto =
     existingUserStateOpt.map { existingUserState =>
       val visibilityMap = id64WithBoolsToMutableMap(existingUserState.segmentVisibilities)
       visibilityMap(id) = isVisible
@@ -823,7 +886,7 @@ case class UpdateSegmentVisibilityVolumeAction(id: Long,
       VolumeTracingDefaults
         .emptyUserState(actionUserId)
         .copy(
-          segmentVisibilities = Seq(Id64WithBool(id, isVisible)),
+          segmentVisibilities = Seq(Id64WithBool(id, isVisible))
         )
     )
 
@@ -835,20 +898,23 @@ case class UpdateSegmentVisibilityVolumeAction(id: Long,
     this.copy(actionTracingId = newTracingId)
 }
 
-case class UpdateSegmentGroupVisibilityVolumeAction(groupId: Option[Long], // No group id → update all segments!
-                                                    isVisible: Boolean,
-                                                    actionTracingId: String,
-                                                    actionTimestamp: Option[Long] = None,
-                                                    actionAuthorId: Option[ObjectId] = None,
-                                                    info: Option[String] = None)
-    extends UserStateVolumeUpdateAction
+case class UpdateSegmentGroupVisibilityVolumeAction(
+    groupId: Option[Long], // No group id → update all segments!
+    isVisible: Boolean,
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends UserStateVolumeUpdateAction
     with VolumeUpdateActionHelper {
 
-  override def applyOnUserState(tracing: VolumeTracing,
-                                actionUserId: ObjectId,
-                                existingUserStateOpt: Option[VolumeUserStateProto]): VolumeUserStateProto = {
+  override def applyOnUserState(
+      tracing: VolumeTracing,
+      actionUserId: ObjectId,
+      existingUserStateOpt: Option[VolumeUserStateProto]
+  ): VolumeUserStateProto = {
     val segmentIdsToUpdate: Seq[Long] = groupId match {
-      case None => tracing.segments.map(segment => segment.segmentId)
+      case None          => tracing.segments.map(segment => segment.segmentId)
       case Some(groupId) =>
         (for {
           segmentGroup <- tracing.segmentGroups.find(_.groupId == groupId)
@@ -882,12 +948,13 @@ case class UpdateSegmentGroupVisibilityVolumeAction(groupId: Option[Long], // No
 // Only used to represent legacy update actions from the db where not all fields are set
 // This is from a time when volume actions were not applied lazily
 // (Before https://github.com/scalableminds/webknossos/pull/7917)
-case class CompactVolumeUpdateAction(name: String,
-                                     actionTracingId: String,
-                                     actionTimestamp: Option[Long],
-                                     actionAuthorId: Option[ObjectId] = None,
-                                     value: JsObject)
-    extends VolumeUpdateAction {
+case class CompactVolumeUpdateAction(
+    name: String,
+    actionTracingId: String,
+    actionTimestamp: Option[Long],
+    actionAuthorId: Option[ObjectId] = None,
+    value: JsObject
+) extends VolumeUpdateAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
@@ -910,9 +977,11 @@ object CompactVolumeUpdateAction {
     override def writes(o: CompactVolumeUpdateAction): JsValue =
       Json.obj(
         "name" -> o.name,
-        "value" -> (Json.obj("actionTracingId" -> o.actionTracingId,
-                             "actionTimestamp" -> o.actionTimestamp,
-                             "actionAuthorId" -> o.actionAuthorId) ++ o.value),
+        "value" -> (Json.obj(
+          "actionTracingId" -> o.actionTracingId,
+          "actionTimestamp" -> o.actionTimestamp,
+          "actionAuthorId" -> o.actionAuthorId
+        ) ++ o.value),
         "isCompacted" -> true
       )
   }
@@ -930,6 +999,10 @@ object UpdateActiveSegmentIdVolumeAction {
 object UpdateLargestSegmentIdVolumeAction {
   implicit val jsonFormat: OFormat[UpdateLargestSegmentIdVolumeAction] = Json.format[UpdateLargestSegmentIdVolumeAction]
 }
+object UpdateVolumeBucketDataHasChangedVolumeAction {
+  implicit val jsonFormat: OFormat[UpdateVolumeBucketDataHasChangedVolumeAction] =
+    Json.format[UpdateVolumeBucketDataHasChangedVolumeAction]
+}
 object UpdateUserBoundingBoxesVolumeAction {
   implicit val jsonFormat: OFormat[UpdateUserBoundingBoxesVolumeAction] =
     Json.format[UpdateUserBoundingBoxesVolumeAction]
@@ -944,7 +1017,7 @@ object DeleteUserBoundingBoxVolumeAction {
 }
 object UpdateUserBoundingBoxVolumeAction extends TristateOptionJsonHelper {
   implicit val jsonFormat: OFormat[UpdateUserBoundingBoxVolumeAction] =
-    Json.configured(tristateOptionParsing).format[UpdateUserBoundingBoxVolumeAction]
+    Json.configured(using tristateOptionParsing).format[UpdateUserBoundingBoxVolumeAction]
 }
 object UpdateUserBoundingBoxVisibilityVolumeAction {
   implicit val jsonFormat: OFormat[UpdateUserBoundingBoxVisibilityVolumeAction] =
@@ -967,7 +1040,7 @@ object LegacyUpdateSegmentVolumeAction {
 }
 object UpdateSegmentPartialVolumeAction extends TristateOptionJsonHelper {
   implicit val jsonFormat: OFormat[UpdateSegmentPartialVolumeAction] =
-    Json.configured(tristateOptionParsing).format[UpdateSegmentPartialVolumeAction]
+    Json.configured(using tristateOptionParsing).format[UpdateSegmentPartialVolumeAction]
 }
 object UpdateMetadataOfSegmentVolumeAction {
   implicit val jsonFormat: OFormat[UpdateMetadataOfSegmentVolumeAction] =

@@ -20,19 +20,21 @@ class UPathTestSuite extends AsyncWordSpec {
       assert(UPath.fromString("s3:somewhere").exists(_.toString == "./s3:somewhere"))
     }
 
-    "Not be constructable from malformed string" in {
+    "Not be constructable from malformed string" in
       assert(UPath.fromString("file://somewhere").isEmpty)
-    }
 
     "resolve strings correctly (local)" in {
       assert(
-        (UPath.fromStringUnsafe("relative/elsewhere") / "subdirectory").toString == "./relative/elsewhere/subdirectory")
+        (UPath.fromStringUnsafe("relative/elsewhere") / "subdirectory").toString == "./relative/elsewhere/subdirectory"
+      )
       assert(
-        (UPath
-          .fromStringUnsafe("relative/elsewhere/") / "subdirectory").toString == "./relative/elsewhere/subdirectory")
+        (UPath.fromStringUnsafe("relative/elsewhere/") / "subdirectory").toString == "./relative/elsewhere/subdirectory"
+      )
       assert(
-        (UPath
-          .fromStringUnsafe("relative/elsewhere/") / "subdirectory/").toString == "./relative/elsewhere/subdirectory")
+        (UPath.fromStringUnsafe(
+          "relative/elsewhere/"
+        ) / "subdirectory/").toString == "./relative/elsewhere/subdirectory"
+      )
       assert((UPath.fromStringUnsafe("relative/elsewhere/") / "..").toString == "./relative")
       assert((UPath.fromStringUnsafe("relative/elsewhere/") / ".." / "..").toString == "./")
     }
@@ -48,7 +50,9 @@ class UPathTestSuite extends AsyncWordSpec {
         (UPath.fromStringUnsafe("https://example.com/key") / "subkey/").toString == "https://example.com/key/subkey/"
       )
       assert(
-        (UPath.fromStringUnsafe("https://example.com/key") / "subkey/" / "subsub").toString == "https://example.com/key/subkey/subsub"
+        (UPath.fromStringUnsafe(
+          "https://example.com/key"
+        ) / "subkey/" / "subsub").toString == "https://example.com/key/subkey/subsub"
       )
       assert(
         (UPath.fromStringUnsafe("https://example.com/key") / "..").toString == "https://example.com"
@@ -96,17 +100,20 @@ class UPathTestSuite extends AsyncWordSpec {
         UPath
           .fromStringUnsafe("relative/elsewhere")
           .resolvedIn(UPath.fromStringUnsafe("/somewhere"))
-          .toString == "/somewhere/relative/elsewhere")
+          .toString == "/somewhere/relative/elsewhere"
+      )
       assert(
         UPath
           .fromStringUnsafe("/absolute/elsewhere")
           .resolvedIn(UPath.fromStringUnsafe("/somewhere"))
-          .toString == "/absolute/elsewhere")
+          .toString == "/absolute/elsewhere"
+      )
       assert(
         UPath
           .fromStringUnsafe("s3://remote/elsewhere")
           .resolvedIn(UPath.fromStringUnsafe("/somewhere"))
-          .toString == "s3://remote/elsewhere")
+          .toString == "s3://remote/elsewhere"
+      )
     }
 
     "be correctly relativizedIn" in {
@@ -114,17 +121,20 @@ class UPathTestSuite extends AsyncWordSpec {
         UPath
           .fromStringUnsafe("relative/elsewhere")
           .relativizedIn(UPath.fromStringUnsafe("/somewhere"))
-          .toString == "./relative/elsewhere")
+          .toString == "./relative/elsewhere"
+      )
       assert(
         UPath
           .fromStringUnsafe("/absolute/elsewhere")
           .relativizedIn(UPath.fromStringUnsafe("/absolute"))
-          .toString == "./elsewhere")
+          .toString == "./elsewhere"
+      )
       assert(
         UPath
           .fromStringUnsafe("s3://remote/elsewhere")
           .relativizedIn(UPath.fromStringUnsafe("/somewhere"))
-          .toString == "s3://remote/elsewhere")
+          .toString == "s3://remote/elsewhere"
+      )
     }
 
     "correctly answer startsWith" in {

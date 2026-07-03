@@ -5,7 +5,8 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.ExtendedTypes.{ExtendedDouble, ExtendedString}
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
@@ -18,7 +19,7 @@ import com.scalableminds.webknossos.datastore.geometry.{
   Vec2IntProto,
   Vec3IntProto
 }
-import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
+import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryConversions, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.tracingstore.tracings.ColorGenerator
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.TreeType
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{MultiComponentTreeSplitter, TreeValidator}
@@ -34,11 +35,10 @@ import scala.collection.{immutable, mutable}
 import scala.concurrent.ExecutionContext
 import scala.xml.{Attribute, NodeSeq, XML, Node => XMLNode}
 
-class NmlParser @Inject()(datasetDAO: DatasetDAOLike)
+class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
     extends LazyLogging
-    with ProtoGeometryImplicits
-    with ColorGenerator
-    with FoxImplicits {
+    with ProtoGeometryConversions
+    with ColorGenerator {
 
   private val DEFAULT_TIME = 0L
   private val DEFAULT_VIEWPORT = 0
@@ -48,34 +48,41 @@ class NmlParser @Inject()(datasetDAO: DatasetDAOLike)
   private val DEFAULT_INTERPOLATION = false
   private val DEFAULT_TIMESTAMP = 0L
 
-  def parse(name: String,
-            nmlInputStream: InputStream,
-            sharedParsingParameters: SharedParsingParameters,
-            basePath: Option[String] = None)(implicit ec: ExecutionContext,
-                                             ctx: DBAccessContext): Fox[NmlParseSuccessWithoutFile] =
+  def parse(
+      name: String,
+      nmlInputStream: InputStream,
+      sharedParsingParameters: SharedParsingParameters,
+      basePath: Option[String] = None
+  )(using ec: ExecutionContext, ctx: DBAccessContext): Fox[NmlParseSuccessWithoutFile] =
     for {
       nmlParsedParameters <- getParametersFromNML(nmlInputStream, name, sharedParsingParameters).toFox
       parsedResult <- nmlParametersToResult(nmlParsedParameters, basePath)
     } yield parsedResult
 
-  private def nmlParametersToResult(nmlParams: NmlParsedParameters, basePath: Option[String])(
-      implicit ec: ExecutionContext,
-      ctx: DBAccessContext): Fox[NmlParseSuccessWithoutFile] =
+  private def nmlParametersToResult(nmlParams: NmlParsedParameters, basePath: Option[String])(using
+      ec: ExecutionContext,
+      ctx: DBAccessContext
+  ): Fox[NmlParseSuccessWithoutFile] =
     for {
       datasetIdValidatedOpt <- Fox.runOptional(nmlParams.datasetIdOpt)(ObjectId.fromString)
-      dataset <- datasetDAO.findOneByIdOrNameAndOrganization(datasetIdValidatedOpt,
-                                                             nmlParams.datasetName,
-                                                             nmlParams.organizationId)
+      dataset <- datasetDAO.findOneByIdOrNameAndOrganization(
+        datasetIdValidatedOpt,
+        nmlParams.datasetName,
+        nmlParams.organizationId
+      )
       volumeLayers: List[UploadedVolumeLayer] = nmlParams.volumes.toList.map { v =>
         UploadedVolumeLayer(
           VolumeTracing(
             activeSegmentId = None,
-            boundingBox = boundingBoxToProto(nmlParams.taskBoundingBox.getOrElse(BoundingBox.empty)), // Note: this property may be adapted later in adaptPropertiesToFallbackLayer
+            boundingBox = boundingBoxToProto(
+              nmlParams.taskBoundingBox.getOrElse(BoundingBox.empty)
+            ), // Note: this property may be adapted later in adaptPropertiesToFallbackLayer
             createdTimestamp = nmlParams.timestamp,
             datasetName = dataset.name,
-            editPosition = nmlParams.editPosition,
-            editRotation = nmlParams.editRotation,
-            elementClass = ElementClassProto.uint32, // Note: this property may be adapted later in adaptPropertiesToFallbackLayer
+            editPosition = vec3IntToProto(nmlParams.editPosition),
+            editRotation = vec3DoubleToProto(nmlParams.editRotation),
+            elementClass =
+              ElementClassProto.uint32, // Note: this property may be adapted later in adaptPropertiesToFallbackLayer
             fallbackLayer = v.fallbackLayerName,
             largestSegmentId = v.largestSegmentId,
             version = 0,
@@ -102,10 +109,10 @@ class NmlParser @Inject()(datasetDAO: DatasetDAOLike)
         dataset.name,
         nmlParams.treesSplit,
         nmlParams.timestamp,
-        nmlParams.taskBoundingBox,
+        boundingBoxOptToProto(nmlParams.taskBoundingBox),
         nmlParams.activeNodeId,
-        nmlParams.editPosition,
-        nmlParams.editRotation,
+        vec3IntToProto(nmlParams.editPosition),
+        vec3DoubleToProto(nmlParams.editRotation),
         nmlParams.zoomLevel,
         version = 0,
         None,
@@ -115,12 +122,19 @@ class NmlParser @Inject()(datasetDAO: DatasetDAOLike)
         nmlParams.editPositionAdditionalCoordinates,
         additionalAxes = nmlParams.additionalAxisProtos
       )
-    } yield
-      NmlParseSuccessWithoutFile(skeletonTracing, volumeLayers, dataset._id, nmlParams.description, nmlParams.wkUrl)
+    } yield NmlParseSuccessWithoutFile(
+      skeletonTracing,
+      volumeLayers,
+      dataset._id,
+      nmlParams.description,
+      nmlParams.wkUrl
+    )
 
-  private def getParametersFromNML(nmlInputStream: InputStream,
-                                   name: String,
-                                   sharedParsingParameters: SharedParsingParameters): Box[NmlParsedParameters] =
+  private def getParametersFromNML(
+      nmlInputStream: InputStream,
+      name: String,
+      sharedParsingParameters: SharedParsingParameters
+  ): Box[NmlParsedParameters] =
     try {
       val nmlData = XML.load(nmlInputStream)
       for {
@@ -138,9 +152,10 @@ class NmlParser @Inject()(datasetDAO: DatasetDAOLike)
         _ <- TreeValidator.validateTrees(treesSplit, treeGroupsAfterSplit, branchPoints, comments)
         additionalAxisProtos <- parseAdditionalAxes(parameters \ "additionalAxes")
         datasetName = parseDatasetName(parameters \ "experiment")
-        datasetIdOpt = if (sharedParsingParameters.overwritingDatasetId.isDefined)
-          sharedParsingParameters.overwritingDatasetId
-        else parseDatasetId(parameters \ "experiment")
+        datasetIdOpt =
+          if (sharedParsingParameters.overwritingDatasetId.isDefined)
+            sharedParsingParameters.overwritingDatasetId
+          else parseDatasetId(parameters \ "experiment")
         organizationId = parseOrganizationId(parameters \ "experiment", sharedParsingParameters.userOrganizationId)
         description = parseDescription(parameters \ "experiment")
         wkUrl = parseWkUrl(parameters \ "experiment")
@@ -149,14 +164,16 @@ class NmlParser @Inject()(datasetDAO: DatasetDAOLike)
           .getOrElse((SkeletonTracingDefaults.editPosition, Seq()))
         editRotation = parseEditRotation(parameters \ "editRotation").getOrElse(SkeletonTracingDefaults.editRotation)
         zoomLevel = parseZoomLevel(parameters \ "zoomLevel").getOrElse(SkeletonTracingDefaults.zoomLevel)
-        taskBoundingBox: Option[BoundingBox] = if (sharedParsingParameters.isTaskUpload)
-          parseTaskBoundingBox(parameters \ "taskBoundingBox")
-        else None
+        taskBoundingBox: Option[BoundingBox] =
+          if (sharedParsingParameters.isTaskUpload)
+            parseTaskBoundingBox(parameters \ "taskBoundingBox")
+          else None
       } yield {
         var userBoundingBoxes = parseBoundingBoxes(parameters \ "userBoundingBox")
         if (!sharedParsingParameters.isTaskUpload) {
-          parseTaskBoundingBoxAsUserBoundingBox(parameters \ "taskBoundingBox", userBoundingBoxes)
-            .foreach(asUserBoundingBox => userBoundingBoxes = userBoundingBoxes :+ asUserBoundingBox)
+          parseTaskBoundingBoxAsUserBoundingBox(parameters \ "taskBoundingBox", userBoundingBoxes).foreach(
+            asUserBoundingBox => userBoundingBoxes = userBoundingBoxes :+ asUserBoundingBox
+          )
         }
         NmlParsedParameters(
           datasetIdOpt,
@@ -186,7 +203,8 @@ class NmlParser @Inject()(datasetDAO: DatasetDAOLike)
         logger.info(s"Failed to parse NML $name due to " + e)
         Failure(
           s"Failed to parse NML '$name'. Error in Line ${e.getLineNumber} " +
-            s"(column ${e.getColumnNumber}): ${e.getMessage}")
+            s"(column ${e.getColumnNumber}): ${e.getMessage}"
+        )
       case e: Exception =>
         logger.error(s"Failed to parse NML $name due to " + e)
         Failure(s"Failed to parse NML '$name': " + e.toString)
@@ -208,21 +226,19 @@ class NmlParser @Inject()(datasetDAO: DatasetDAOLike)
   }
 
   private def extractVolumes(volumeNodes: NodeSeq): immutable.Seq[NmlVolumeTag] =
-    volumeNodes.map(
-      node => {
-        NmlVolumeTag(
-          getSingleAttribute(node, "location"),
-          getSingleAttributeOpt(node, "fallbackLayer"),
-          getSingleAttributeOpt(node, "mappingName"),
-          getSingleAttributeOpt(node, "mappingIsLocked").flatMap(_.toBooleanOpt),
-          getSingleAttributeOpt(node, "name"),
-          parseVolumeSegmentMetadata(node \ "segments" \ "segment"),
-          getSingleAttributeOpt(node, "largestSegmentId").flatMap(_.toLongOpt),
-          extractSegmentGroups(node \ "groups").getOrElse(List()),
-          getSingleAttributeOpt(node, "editedMappingEdgesLocation"),
-          getSingleAttributeOpt(node, "editedMappingBaseMappingName")
-        )
-      }
+    volumeNodes.map(node =>
+      NmlVolumeTag(
+        getSingleAttribute(node, "location"),
+        getSingleAttributeOpt(node, "fallbackLayer"),
+        getSingleAttributeOpt(node, "mappingName"),
+        getSingleAttributeOpt(node, "mappingIsLocked").flatMap(_.toBooleanOpt),
+        getSingleAttributeOpt(node, "name"),
+        parseVolumeSegmentMetadata(node \ "segments" \ "segment"),
+        getSingleAttributeOpt(node, "largestSegmentId").flatMap(_.toLongOpt),
+        extractSegmentGroups(node \ "groups").getOrElse(List()),
+        getSingleAttributeOpt(node, "editedMappingEdgesLocation"),
+        getSingleAttributeOpt(node, "editedMappingBaseMappingName")
+      )
     )
 
   private def extractSegmentGroups(segmentGroupContainerNodes: NodeSeq): Box[List[SegmentGroup]] = {
@@ -240,7 +256,7 @@ class NmlParser @Inject()(datasetDAO: DatasetDAOLike)
   }
 
   private def parseVolumeSegmentMetadata(segmentNodes: NodeSeq): Seq[Segment] =
-    segmentNodes.map(node => {
+    segmentNodes.map { node =>
       val anchorPositionX = getSingleAttributeOpt(node, "anchorPositionX")
       val anchorPositionY = getSingleAttributeOpt(node, "anchorPositionY")
       val anchorPositionZ = getSingleAttributeOpt(node, "anchorPositionZ")
@@ -263,10 +279,10 @@ class NmlParser @Inject()(datasetDAO: DatasetDAOLike)
         metadata = metadata,
         isVisible = isVisible
       )
-    })
+    }
 
   private def parseMetadata(metadataEntryNodes: NodeSeq): Seq[MetadataEntryProto] =
-    metadataEntryNodes.map(node => {
+    metadataEntryNodes.map(node =>
       MetadataEntryProto(
         getSingleAttribute(node, "key"),
         getSingleAttributeOpt(node, "stringValue"),
@@ -274,7 +290,7 @@ class NmlParser @Inject()(datasetDAO: DatasetDAOLike)
         getSingleAttributeOpt(node, "numberValue").flatMap(_.toDoubleOpt),
         parseStringListValue(node)
       )
-    })
+    )
 
   private def parseStringListValue(node: XMLNode): Seq[String] = {
     val regex = "^stringListValue-(\\d+)".r
@@ -292,9 +308,11 @@ class NmlParser @Inject()(datasetDAO: DatasetDAOLike)
     valuesWithIndex.sortBy(_._1).map(_._2)
   }
 
-  private def parseTrees(treeNodes: NodeSeq,
-                         branchPoints: Map[Int, List[BranchPoint]],
-                         comments: Map[Int, List[Comment]]) =
+  private def parseTrees(
+      treeNodes: NodeSeq,
+      branchPoints: Map[Int, List[BranchPoint]],
+      comments: Map[Int, List[Comment]]
+  ) =
     treeNodes
       .map(treeNode => parseTree(treeNode, branchPoints, comments))
       .toList
@@ -303,19 +321,21 @@ class NmlParser @Inject()(datasetDAO: DatasetDAOLike)
   @SuppressWarnings(Array("TraversableHead")) // We check that size == 1 before accessing head
   private def parseBoundingBoxes(boundingBoxNodes: NodeSeq): Seq[NamedBoundingBoxProto] =
     if (boundingBoxNodes.size == 1 && getSingleAttribute(boundingBoxNodes.head, "id").isEmpty) {
-      Seq.empty ++ parseBoundingBox(boundingBoxNodes.head).map(NamedBoundingBoxProto(0, None, None, None, _))
+      Seq.empty ++ parseBoundingBox(boundingBoxNodes.head)
+        .map(boundingBoxToProto)
+        .map(NamedBoundingBoxProto(0, None, None, None, _))
     } else {
-      boundingBoxNodes.flatMap(node => {
+      boundingBoxNodes.flatMap { node =>
         val idText = getSingleAttribute(node, "id")
-        for {
+        (for {
           id <- Box(idText.toIntOpt) ?~ Msg.Nml.invalidUserBboxId(idText)
           name = getSingleAttribute(node, "name")
           isVisible = getSingleAttribute(node, "isVisible").toBooleanOpt
           color = parseColorOpt(node)
           boundingBox <- Box(parseBoundingBox(node))
           nameOpt = if (name.isEmpty) None else Some(name)
-        } yield NamedBoundingBoxProto(id, nameOpt, isVisible, color, boundingBox)
-      })
+        } yield NamedBoundingBoxProto(id, nameOpt, isVisible, color, boundingBoxToProto(boundingBox))).toOption
+      }
     }
 
   private def parseTaskBoundingBox(nodes: NodeSeq): Option[BoundingBox] =
@@ -323,10 +343,11 @@ class NmlParser @Inject()(datasetDAO: DatasetDAOLike)
 
   private def parseTaskBoundingBoxAsUserBoundingBox(
       nodes: NodeSeq,
-      userBoundingBoxes: Seq[NamedBoundingBoxProto]): Option[NamedBoundingBoxProto] =
+      userBoundingBoxes: Seq[NamedBoundingBoxProto]
+  ): Option[NamedBoundingBoxProto] =
     nodes.headOption.flatMap(node => parseBoundingBox(node)).map { bb =>
       val newId = if (userBoundingBoxes.isEmpty) 0 else userBoundingBoxes.map(_.id).max + 1
-      NamedBoundingBoxProto(newId, Some("task bounding box"), None, Some(getRandomColor), bb)
+      NamedBoundingBoxProto(newId, Some("task bounding box"), None, Some(getRandomColor), boundingBoxToProto(bb))
     }
 
   private def parseBoundingBox(node: XMLNode) =
@@ -341,18 +362,16 @@ class NmlParser @Inject()(datasetDAO: DatasetDAOLike)
 
   private def parseAdditionalAxes(nodes: NodeSeq): Box[Seq[AdditionalAxisProto]] = {
     val additionalAxes: Option[collection.Seq[AdditionalAxisProto]] = nodes.headOption.map(
-      _.child.flatMap(
-        additionalAxisNode => {
-          for {
-            name <- getSingleAttributeOpt(additionalAxisNode, "name")
-            indexStr <- getSingleAttributeOpt(additionalAxisNode, "index")
-            index <- indexStr.toIntOpt
-            startStr <- getSingleAttributeOpt(additionalAxisNode, "start")
-            start <- startStr.toIntOpt
-            endStr <- getSingleAttributeOpt(additionalAxisNode, "end")
-            end <- endStr.toIntOpt
-          } yield new AdditionalAxisProto(name, index, Vec2IntProto(start, end))
-        }
+      _.child.flatMap(additionalAxisNode =>
+        for {
+          name <- getSingleAttributeOpt(additionalAxisNode, "name")
+          indexStr <- getSingleAttributeOpt(additionalAxisNode, "index")
+          index <- indexStr.toIntOpt
+          startStr <- getSingleAttributeOpt(additionalAxisNode, "start")
+          start <- startStr.toIntOpt
+          endStr <- getSingleAttributeOpt(additionalAxisNode, "end")
+          end <- endStr.toIntOpt
+        } yield new AdditionalAxisProto(name, index, Vec2IntProto(start, end))
       )
     )
     additionalAxes match {
@@ -387,11 +406,11 @@ class NmlParser @Inject()(datasetDAO: DatasetDAOLike)
     nodes.headOption.flatMap(node => getSingleAttribute(node, "ms").toLongOpt).getOrElse(DEFAULT_TIME)
 
   private def parseEditPosition(nodes: NodeSeq): Option[(Vec3Int, Seq[AdditionalCoordinateProto])] =
-    nodes.headOption.flatMap(n => {
+    nodes.headOption.flatMap { n =>
       val xyz = parseVec3Int(n)
       val additionalCoordinates = parseAdditionalCoordinateValues(n)
       xyz.map(value => (value, additionalCoordinates))
-    })
+    }
 
   private def parseEditRotation(nodes: NodeSeq): Option[Vec3Double] =
     nodes.headOption.flatMap(parseRotationForParams)
@@ -400,13 +419,12 @@ class NmlParser @Inject()(datasetDAO: DatasetDAOLike)
     nodes.headOption.flatMap(node => getSingleAttribute(node, "zoom").toDoubleOpt)
 
   private def parseBranchPoints(branchPoints: NodeSeq, defaultTimestamp: Long): Box[List[BranchPoint]] =
-    (branchPoints \ "branchpoint").zipWithIndex.map {
-      case (branchPoint, index) =>
-        Box(getSingleAttribute(branchPoint, "id").toIntOpt).map { nodeId =>
-          val parsedTimestamp = getSingleAttribute(branchPoint, "time").toLongOpt
-          val timestamp = parsedTimestamp.getOrElse(defaultTimestamp - index)
-          BranchPoint(nodeId, timestamp)
-        } ?~ Msg.Nml.invalidNodeId(" branchpoint", getSingleAttribute(branchPoint, "id"))
+    (branchPoints \ "branchpoint").zipWithIndex.map { case (branchPoint, index) =>
+      Box(getSingleAttribute(branchPoint, "id").toIntOpt).map { nodeId =>
+        val parsedTimestamp = getSingleAttribute(branchPoint, "time").toLongOpt
+        val timestamp = parsedTimestamp.getOrElse(defaultTimestamp - index)
+        BranchPoint(nodeId, timestamp)
+      } ?~ Msg.Nml.invalidNodeId(" branchpoint", getSingleAttribute(branchPoint, "id"))
     }.toList.toSingleBox(Msg.Nml.invalidElements("branchpoint"))
 
   private def parseVec3Int(node: XMLNode) = {
@@ -440,9 +458,7 @@ class NmlParser @Inject()(datasetDAO: DatasetDAOLike)
       colorBlue <- getSingleAttribute(node, "color.g").toFloatOpt
       colorGreen <- getSingleAttribute(node, "color.b").toFloatOpt
       colorAlpha <- getSingleAttribute(node, "color.a").toFloatOpt
-    } yield {
-      ColorProto(colorRed, colorBlue, colorGreen, colorAlpha)
-    }
+    } yield ColorProto(colorRed, colorBlue, colorGreen, colorAlpha)
 
   private def parseName(node: XMLNode) =
     getSingleAttribute(node, "name")
@@ -463,9 +479,11 @@ class NmlParser @Inject()(datasetDAO: DatasetDAOLike)
       case None            => color.map(c => !c.a.isNearZero)
     }
 
-  private def parseTree(tree: XMLNode,
-                        branchPoints: Map[Int, List[BranchPoint]],
-                        comments: Map[Int, List[Comment]]): Box[Tree] = {
+  private def parseTree(
+      tree: XMLNode,
+      branchPoints: Map[Int, List[BranchPoint]],
+      comments: Map[Int, List[Comment]]
+  ): Box[Tree] = {
     val treeIdText = getSingleAttribute(tree, "id")
     for {
       id <- Box(treeIdText.toIntOpt) ?~ Msg.Nml.invalidTreeId(treeIdText)
@@ -480,35 +498,37 @@ class NmlParser @Inject()(datasetDAO: DatasetDAOLike)
       treeBranchPoints = nodeIds.flatMap(nodeId => branchPoints.getOrElse(nodeId, List()))
       treeComments = nodeIds.flatMap(nodeId => comments.getOrElse(nodeId, List()))
       metadata = parseMetadata(tree \ "metadata" \ "metadataEntry")
-      createdTimestamp = if (nodes.isEmpty) System.currentTimeMillis()
-      else nodes.minBy(_.createdTimestamp).createdTimestamp
-    } yield
-      Tree(id,
-           nodes,
-           edges,
-           color,
-           treeBranchPoints,
-           treeComments,
-           name,
-           createdTimestamp,
-           groupId,
-           isVisible,
-           treeType,
-           metadata = metadata)
+      createdTimestamp =
+        if (nodes.isEmpty) System.currentTimeMillis()
+        else nodes.minBy(_.createdTimestamp).createdTimestamp
+    } yield Tree(
+      id,
+      nodes,
+      edges,
+      color,
+      treeBranchPoints,
+      treeComments,
+      name,
+      createdTimestamp,
+      groupId,
+      isVisible,
+      treeType,
+      metadata = metadata
+    )
   }
 
   private def parseComments(comments: NodeSeq): Box[List[Comment]] =
     (for {
       commentNode <- comments \ "comment"
-    } yield {
+    } yield
       for {
         nodeId <- Box(getSingleAttribute(commentNode, "node").toIntOpt) ?~ Msg.Nml.invalidNodeIdInComment(
-          getSingleAttribute(commentNode, "node"))
+          getSingleAttribute(commentNode, "node")
+        )
       } yield {
         val content = getSingleAttribute(commentNode, "content")
         Comment(nodeId, content)
-      }
-    }).toList.toSingleBox(Msg.Nml.invalidElements("comment"))
+      }).toList.toSingleBox(Msg.Nml.invalidElements("comment"))
 
   private def buildCommentMap(comments: List[Comment]): Map[Int, List[Comment]] = {
     val commentMap = new mutable.HashMap[Int, List[Comment]]()
@@ -578,7 +598,18 @@ class NmlParser @Inject()(datasetDAO: DatasetDAOLike)
       val bitDepth = parseBitDepth(node)
       val interpolation = parseInterpolation(node)
       val rotation = parseRotationForNode(node).getOrElse(NodeDefaults.rotation)
-      Node(id, position, rotation, radius, viewport, mag, bitDepth, interpolation, timestamp, additionalCoordinates)
+      Node(
+        id,
+        vec3IntToProto(position),
+        vec3DoubleToProto(rotation),
+        radius,
+        viewport,
+        mag,
+        bitDepth,
+        interpolation,
+        timestamp,
+        additionalCoordinates
+      )
     }
   }
 

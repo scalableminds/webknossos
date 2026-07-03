@@ -12,11 +12,11 @@ import {
 } from "three";
 import TWEEN from "tween.js";
 import type { OrthoViewMap, Vector3, Viewport } from "viewer/constants";
-import Constants, { ARBITRARY_CAM_DISTANCE, ArbitraryViewport, OrthoViews } from "viewer/constants";
+import Constants, { FLIGHT_CAM_DISTANCE, FlightViewport, OrthoViews } from "viewer/constants";
 import getSceneController, {
   getSceneControllerOrNull,
 } from "viewer/controller/scene_controller_provider";
-import type ArbitraryPlane from "viewer/geometries/arbitrary_plane";
+import type FlightModePlane from "viewer/geometries/arbitrary_plane";
 import { getZoomedMatrix } from "viewer/model/accessors/flycam_accessor";
 import { getInputCatcherRect } from "viewer/model/accessors/view_mode_accessor";
 import { uiReadyAction } from "viewer/model/actions/actions";
@@ -24,7 +24,7 @@ import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import Store from "viewer/store";
 import {
   getGroundTruthLayoutRect,
-  show3DViewportInArbitrary,
+  show3DViewportInFlightMode,
 } from "viewer/view/layouting/default_layout_configs";
 import { clearCanvas, renderToTexture, setupRenderArea } from "viewer/view/rendering_utils";
 
@@ -34,10 +34,10 @@ type GeometryLike = {
 
 const flipYRotationMatrix = new Matrix4().makeRotationY(Math.PI);
 
-class ArbitraryView {
+class FlightModeView {
   cameras: OrthoViewMap<OrthographicCamera>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'plane' has no initializer and is not def... Remove this comment to see the full error message
-  plane: ArbitraryPlane;
+  plane: FlightModePlane;
   setClippingDistance: (value: number) => void;
   needsRerender: boolean;
   additionalInfo: string = "";
@@ -60,7 +60,7 @@ class ArbitraryView {
     // Initialize main js components
     this.camera = new PerspectiveCamera(45, 1, 50, 1000);
     // This name can be used to retrieve the camera from the scene
-    this.camera.name = ArbitraryViewport;
+    this.camera.name = FlightViewport;
     this.camera.matrixAutoUpdate = false;
     scene.add(this.camera);
     const tdCamera = new OrthographicCamera(0, 0, 0, 0);
@@ -75,7 +75,7 @@ class ArbitraryView {
       PLANE_YZ: dummyCamera,
       PLANE_XZ: dummyCamera,
     };
-    this.cameraPosition = [0, 0, ARBITRARY_CAM_DISTANCE];
+    this.cameraPosition = [0, 0, FLIGHT_CAM_DISTANCE];
     this.needsRerender = true;
   }
 
@@ -88,8 +88,8 @@ class ArbitraryView {
       this.isRunning = true;
 
       // We only measure the time to first render in orthogonal
-      // mode. If the flight or oblique modes are active during page
-      // load, the navigation timings are no longer accurate and should not be used.
+      // mode. If flight mode is active during page load, the navigation
+      // timings are no longer accurate and should not be used.
       window.measuredTimeToFirstRender = true;
 
       this.unsubscribeFunctions.push(
@@ -216,9 +216,9 @@ class ArbitraryView {
         this.plane.meshes.debuggerPlane.visible = false;
       }
 
-      renderViewport(ArbitraryViewport, camera);
+      renderViewport(FlightViewport, camera);
 
-      if (show3DViewportInArbitrary) {
+      if (show3DViewportInFlightMode) {
         if (this.plane.meshes.debuggerPlane != null) {
           this.plane.meshes.debuggerPlane.visible = true;
         }
@@ -263,7 +263,7 @@ class ArbitraryView {
     // }
     // diff(traversedBuckets, getRenderedBucketsDebug());
     this.plane.materialFactory.uniforms.renderBucketIndices.value = true;
-    const buffer = renderToTexture(ArbitraryViewport);
+    const buffer = renderToTexture(FlightViewport);
     this.plane.materialFactory.uniforms.renderBucketIndices.value = false;
     let index = 0;
     const usedBucketSet = new Set();
@@ -290,7 +290,7 @@ class ArbitraryView {
     geometry.addToScene(this.group);
   }
 
-  setArbitraryPlane(p: ArbitraryPlane) {
+  setFlightModePlane(p: FlightModePlane) {
     this.plane = p;
   }
 
@@ -311,7 +311,7 @@ class ArbitraryView {
   resizeThrottled = throttle(this.resizeImpl, Constants.RESIZE_THROTTLE_TIME);
 
   setClippingDistanceImpl(value: number): void {
-    this.camera.near = ARBITRARY_CAM_DISTANCE - value;
+    this.camera.near = FLIGHT_CAM_DISTANCE - value;
     this.camera.updateProjectionMatrix();
   }
 
@@ -324,4 +324,4 @@ class ArbitraryView {
   }
 }
 
-export default ArbitraryView;
+export default FlightModeView;

@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.services.uploading
 
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType.LayerAttachmentType
@@ -13,12 +13,12 @@ import play.api.libs.json.Json
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-trait UploadMetadataStore extends FoxImplicits {
+trait UploadMetadataStore {
 
   protected def domain: UploadDomain
   protected def store: DataStoreRedisStore
 
-  protected def keyPrefix = s"upload___${domain}___"
+  protected def keyPrefix: String = s"upload___${domain}___"
 
   /*
    * Redis stores different information for each running upload, with different prefixes in the keys.
@@ -87,8 +87,9 @@ trait UploadMetadataStore extends FoxImplicits {
   def insertTotalFileCount(uploadId: String, totalFileCount: Long): Fox[Unit] =
     store.insert(redisKeyForFileCount(uploadId), String.valueOf(totalFileCount))
 
-  def insertTotalFileSizeInBytes(uploadId: String, totalFileSizeInBytes: Option[Long])(
-      implicit ec: ExecutionContext): Fox[Option[Unit]] =
+  def insertTotalFileSizeInBytes(uploadId: String, totalFileSizeInBytes: Option[Long])(implicit
+      ec: ExecutionContext
+  ): Fox[Option[Unit]] =
     Fox.runOptional(totalFileSizeInBytes) {
       store.insertLong(redisKeyForTotalFileSizeInBytes(uploadId), _)
     }
@@ -133,7 +134,7 @@ trait UploadMetadataStore extends FoxImplicits {
 
 }
 
-class DatasetUploadMetadataStore @Inject()(protected val store: DataStoreRedisStore) extends UploadMetadataStore {
+class DatasetUploadMetadataStore @Inject() (protected val store: DataStoreRedisStore) extends UploadMetadataStore {
   protected val domain: UploadDomain = UploadDomain.dataset
 
   private def redisKeyForUploadIdByDataSourceId(datasourceId: DataSourceId): String =
@@ -164,14 +165,16 @@ class DatasetUploadMetadataStore @Inject()(protected val store: DataStoreRedisSt
   def insertUploadIdByDataSourceId(dataSourceId: DataSourceId, uploadId: String): Fox[Unit] =
     store.insertSerialized(redisKeyForUploadIdByDataSourceId(dataSourceId), uploadId)
 
-  def insertLinkedLayerIdentifiers(uploadId: String,
-                                   linkedLayerIdentifiers: Option[Seq[LinkedLayerIdentifier]]): Fox[_] =
+  def insertLinkedLayerIdentifiers(
+      uploadId: String,
+      linkedLayerIdentifiers: Option[Seq[LinkedLayerIdentifier]]
+  ): Fox[Unit] =
     store.insertSerialized(redisKeyForLinkedLayerIdentifier(uploadId), linkedLayerIdentifiers.getOrElse(Seq.empty))
 
-  def insertNeedsConversion(uploadId: String, needsConversion: Boolean): Fox[_] =
+  def insertNeedsConversion(uploadId: String, needsConversion: Boolean): Fox[Unit] =
     store.insertSerialized(redisKeyForNeedsConversion(uploadId), needsConversion)
 
-  def insertVoxelSize(uploadId: String, voxelSize: VoxelSize): Fox[_] =
+  def insertVoxelSize(uploadId: String, voxelSize: VoxelSize): Fox[Unit] =
     store.insertSerialized(redisKeyForVoxelSize(uploadId), voxelSize)
 
   override def cleanUp(uploadId: String)(implicit ec: ExecutionContext): Fox[Unit] =
@@ -185,7 +188,7 @@ class DatasetUploadMetadataStore @Inject()(protected val store: DataStoreRedisSt
 
 }
 
-class MagUploadMetadataStore @Inject()(protected val store: DataStoreRedisStore) extends UploadMetadataStore {
+class MagUploadMetadataStore @Inject() (protected val store: DataStoreRedisStore) extends UploadMetadataStore {
   protected val domain: UploadDomain = UploadDomain.mag
 
   private def redisKeyForMag(uploadId: String): String =
@@ -214,7 +217,7 @@ class MagUploadMetadataStore @Inject()(protected val store: DataStoreRedisStore)
     } yield ()
 }
 
-class AttachmentUploadMetadataStore @Inject()(protected val store: DataStoreRedisStore) extends UploadMetadataStore {
+class AttachmentUploadMetadataStore @Inject() (protected val store: DataStoreRedisStore) extends UploadMetadataStore {
   protected val domain: UploadDomain = UploadDomain.attachment
 
   private def redisKeyForAttachment(uploadId: String): String =

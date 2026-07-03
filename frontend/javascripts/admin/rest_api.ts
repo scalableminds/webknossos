@@ -54,6 +54,7 @@ import {
   type APIScript,
   type APIScriptCreator,
   type APIScriptUpdater,
+  type APIStorageDetailEntry,
   type APITaskType,
   type APITeam,
   type APITimeInterval,
@@ -181,8 +182,8 @@ export async function logoutUserEverywhere(): Promise<void> {
   await Request.receiveJSON("/api/auth/logoutEverywhere", { method: "POST" });
 }
 
-export async function getUsers(): Promise<Array<APIUser>> {
-  const users = await Request.receiveJSON("/api/users");
+export async function getUsers(options: RequestOptions = {}): Promise<Array<APIUser>> {
+  const users = await Request.receiveJSON("/api/users", options);
   assertResponseLimit(users);
   return users;
 }
@@ -340,10 +341,13 @@ export function updateTaskType(taskTypeId: string, taskType: APITaskType): Promi
 }
 
 // ### Teams
-export async function getTeams(): Promise<Array<APITeam>> {
-  const teams = await Request.receiveJSON("/api/teams", {
-    doNotInvestigate: true,
-  });
+export async function getTeams(options?: RequestOptions): Promise<Array<APITeam>> {
+  const teams = await Request.receiveJSON(
+    "/api/teams",
+    options ?? {
+      doNotInvestigate: true,
+    },
+  );
   assertResponseLimit(teams);
   return teams;
 }
@@ -560,11 +564,13 @@ export function setCollaborationModeForAnnotation(
   annotationId: string,
   annotationType: APIAnnotationType,
   collaborationMode: AnnotationCollaborationMode,
+  options?: RequestOptions,
 ): Promise<void> {
   return Request.receiveJSON(
     `/api/annotations/${annotationType}/${annotationId}/collaborationMode?collaborationMode=${collaborationMode}`,
     {
       method: "PATCH",
+      ...options,
     },
   );
 }
@@ -634,6 +640,8 @@ export function duplicateAnnotation(
   });
 }
 
+// Note: The returned annotation object contains viewConfiguration. An arbitrary object which should be schema checked before used.
+// Currently, the only location where this is needed is during initialization.
 export async function getUnversionedAnnotationInformation(
   annotationId: string,
   options: RequestOptions = {},
@@ -1193,11 +1201,13 @@ export type DatasetUpdater = {
 
 export function updateDatasetPartial(
   datasetId: string,
-  updater: DatasetUpdater,
+  updater: Partial<DatasetUpdater>,
+  options: RequestOptions = {},
 ): Promise<APIDataset> {
   return Request.sendJSONReceiveJSON(`/api/datasets/${datasetId}/updatePartial`, {
     method: "PATCH",
     data: updater,
+    ...options,
   });
 }
 
@@ -1520,11 +1530,17 @@ export async function isDatasetNameValid(datasetName: string): Promise<string | 
 export function updateDatasetTeams(
   datasetId: string,
   newTeams: Array<string>,
+  options: RequestOptions = {},
 ): Promise<APIDataset> {
   return Request.sendJSONReceiveJSON(`/api/datasets/${datasetId}/teams`, {
     method: "PATCH",
     data: newTeams,
+    ...options,
   });
+}
+
+export function getDatasetUsedStorageDetails(datasetId: string): Promise<APIStorageDetailEntry[]> {
+  return Request.receiveJSON(`/api/datasets/${datasetId}/usedStorageDetails`);
 }
 
 export async function triggerDatasetCheck(
@@ -1916,9 +1932,7 @@ export function getExistingExperienceDomains(): Promise<ExperienceDomainList> {
 }
 
 export async function isInMaintenance(): Promise<boolean> {
-  const allMaintenances: Array<MaintenanceInfo> = await Request.receiveJSON(
-    "/api/maintenances/listCurrentAndUpcoming",
-  );
+  const allMaintenances: Array<MaintenanceInfo> = await listCurrentAndUpcomingMaintenances();
   const currentEpoch = Date.now();
   const currentMaintenance = allMaintenances.find(
     (maintenance) => maintenance.startTime < currentEpoch,
@@ -2055,80 +2069,76 @@ export function getAgglomerateTreeAsSkeletonTracing(
   );
 }
 
-export async function getAgglomeratesForSegmentsFromDatastore<T extends number | bigint>(
-  dataStoreUrl: string,
-  dataset: APIDataset,
-  layerName: string,
-  mappingId: string,
-  segmentIds: Array<T>,
+async function _getAgglomeratesForSegmentsHelper<T extends number | bigint>(
+  segmentIds: Set<T>,
+  url: string,
+  extraParams: URLSearchParams,
 ): Promise<Mapping> {
-  if (segmentIds.length === 0) {
+  if (segmentIds.size === 0) {
     return new Map();
   }
-  const segmentIdBuffer = serializeProtoListOfLong<T>(segmentIds);
-  const listArrayBuffer: ArrayBuffer = await doWithToken((token) => {
-    const params = new URLSearchParams({ token });
+  const sortedSegmentIdArray = [...segmentIds].sort(<T extends NumberLike>(a: T, b: T) =>
+    Number(a - b),
+  );
+  const segmentIdBuffer = serializeProtoListOfLong<T>(sortedSegmentIdArray);
+  const listArrayBuffer = await doWithToken((token) => {
+    const params = new URLSearchParams(extraParams);
+    params.set("token", token);
     return retryAsyncFunction(() =>
-      Request.receiveArraybuffer(
-        `${dataStoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments?${params}`,
-        {
-          method: "POST",
-          body: segmentIdBuffer,
-          headers: {
-            "Content-Type": "application/octet-stream",
-          },
-        },
-      ),
+      Request.receiveArraybuffer(`${url}?${params}`, {
+        method: "POST",
+        body: segmentIdBuffer,
+        headers: { "Content-Type": "application/octet-stream" },
+        showErrorToast: false,
+      }),
     );
   });
+
   // Ensure that the values are bigint if the keys are bigint
-  const adaptToType = getAdaptToTypeFunctionFromList(segmentIds);
-  const keyValues = zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType));
+  const adaptToType = getAdaptToTypeFunctionFromList(sortedSegmentIdArray);
+  const mappedIds = parseProtoListOfLong(listArrayBuffer).map(adaptToType);
+
+  if (sortedSegmentIdArray.length !== mappedIds.length) {
+    throw new Error(
+      "Unexpected mismatch of keys and values while mapping segment ids using tracing store.",
+    );
+  }
+
+  const keyValues = zip(sortedSegmentIdArray, mappedIds);
   // @ts-expect-error
   return new Map(keyValues);
 }
 
-export async function getAgglomeratesForSegmentsFromTracingstore<T extends number | bigint>(
+export function getAgglomeratesForSegmentsFromDatastore<T extends number | bigint>(
+  dataStoreUrl: string,
+  dataset: APIDataset,
+  layerName: string,
+  mappingId: string,
+  segmentIds: Set<T>,
+): Promise<Mapping> {
+  return _getAgglomeratesForSegmentsHelper(
+    segmentIds,
+    `${dataStoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments`,
+    new URLSearchParams(),
+  );
+}
+
+export function getAgglomeratesForSegmentsFromTracingstore<T extends number | bigint>(
   tracingStoreUrl: string,
   tracingId: string,
-  segmentIds: Array<T>,
+  segmentIds: Set<T>,
   annotationId: string,
   version: number,
 ): Promise<Mapping> {
-  if (segmentIds.length === 0) {
-    return new Map();
-  }
-  const params = new URLSearchParams({ annotationId });
+  const extraParams = new URLSearchParams({ annotationId });
   if (version != null) {
-    params.set("version", version.toString());
+    extraParams.set("version", version.toString());
   }
-  const segmentIdBuffer = serializeProtoListOfLong<T>(
-    // The tracing store expects the ids to be sorted
-    segmentIds.sort(<T extends NumberLike>(a: T, b: T) => Number(a - b)),
+  return _getAgglomeratesForSegmentsHelper(
+    segmentIds,
+    `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments`,
+    extraParams,
   );
-  const listArrayBuffer: ArrayBuffer = await doWithToken((token) => {
-    params.set("token", token);
-    return retryAsyncFunction(() =>
-      Request.receiveArraybuffer(
-        `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments?${params}`,
-        {
-          method: "POST",
-          body: segmentIdBuffer,
-          headers: {
-            "Content-Type": "application/octet-stream",
-          },
-          showErrorToast: false,
-        },
-      ),
-    );
-  });
-
-  // Ensure that the values are bigint if the keys are bigint
-  const adaptToType = getAdaptToTypeFunctionFromList(segmentIds);
-
-  const keyValues = zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType));
-  // @ts-expect-error
-  return new Map(keyValues);
 }
 
 export function getEditableAgglomerateTreeAsSkeletonTracing(

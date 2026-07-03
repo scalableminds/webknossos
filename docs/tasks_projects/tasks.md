@@ -6,7 +6,7 @@ The task system is designed for automated task distribution to a (large) group o
 
 First, a _Task Type_ needs to be created:
 
-1. Open the `Task Types` page of the administration section and click on `Add Task Type`.
+1. Open `Task Management > Task Types` and click on `Add Task Type`.
 2. Fill out the form to create the Task Type:
    - Note that the `Description` field supports Markdown formatting.
    - If you don't have a sophisticated team structure, select the [default Team](../users/organizations.md).
@@ -16,6 +16,7 @@ First, a _Task Type_ needs to be created:
       | Display Name                              | Key                        | Default Value           | Comment                                 |
       |--------------------------------------------|----------------------------|------------------------|-----------------------------------------|
       | Clipping Distance                         | `clippingDistance`           | 80                     | orthogonal mode                         |
+      | Only Show Nodes of Current Section        | `clipSkeletonToCurrentSection` | false                | orthogonal mode; always false when camera or dataset is rotated/transformed |
       | Move Value (nm/s)                         | `moveValue`                  | 500                    | orthogonal mode                         |
       | Show Scalebars                            | `displayScalebars`           | false                  |                                         |
       | Single-node-tree mode (Soma clicking)      | `newNodeNewTree`             | false                  |                                         |
@@ -37,8 +38,8 @@ First, a _Task Type_ needs to be created:
       | Zoom                                       | `zoom`                       | 0.8                    |                                         |
       | Render Missing Data Black                  | `renderMissingDataBlack`     | false                  |                                         |
       | Loading Strategy                           | `loadingStrategy`            | BEST_QUALITY_FIRST     | BEST_QUALITY_FIRST or PROGRESSIVE_QUALITY|
-      | Clipping Distance                          | `clippingDistanceArbitrary`  | 60                     | flight/oblique mode                     |
-      | Move Value (nm/s)                          | `moveValue3d`                | 600                    | flight/oblique mode                     |
+      | Clipping Distance                          | `clippingDistanceFlight`     | 60                     | flight mode                             |
+      | Move Value (nm/s)                          | `moveValue3d`                | 600                    | flight mode                             |
       | Mouse Rotation                             | `mouseRotateValue`           | 0.001                  |                                         |
       | Keyboard Rotation                          | `rotateValue`                | 0.01                   |                                         |
       | Sphere Radius                              | `sphericalCapRadius`         | 500                    |                                         |
@@ -53,7 +54,7 @@ Next, you need to set up a [Project](../tasks_projects/projects.md). Once you ha
 
 ## Creating a Task
 
-1. Open the `Tasks` page of the administration section and click on `Add Task`.
+1. Open `Task Management > Tasks` and click on `Add Task`.
 2. Fill out the form to create the Task.
    - Enter the starting positions in the lower part of the form.
    - Alternatively, you can upload an NML file that contains nodes that will be used as starting positions.

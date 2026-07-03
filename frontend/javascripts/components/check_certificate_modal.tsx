@@ -49,7 +49,7 @@ export function CheckCertificateModal() {
                 <a
                   target="_blank"
                   rel="noreferrer"
-                  href="mailto:hello@webknossos.org"
+                  href="mailto:support@webknossos.org"
                   style={{ color: "inherit", textDecoration: "underline" }}
                 >
                   contact us

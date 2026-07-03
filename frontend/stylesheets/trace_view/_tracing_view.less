@@ -308,8 +308,12 @@ img.keyboard-mouse-icon:first-child {
   @dark-bg: #383d48;
   @dark-fg: #f1f1f1;
   @dark-border: #585868;
+  // Basically, redefines var(--ant-color-text-secondary) because
+  // that variable turns black-ish in light mode (in spite of
+  // ConfigProvider around the status bar).
+  @color-text-secondary: rgba(255, 255, 255, 0.67);
 
-  color: rgba(255, 255, 255, 0.67);
+  color: @color-text-secondary;
   z-index: 1000;
 
   &.statusbar-footer {
@@ -388,7 +392,11 @@ img.keyboard-mouse-icon:first-child {
     top: 0px;
     bottom: 0px;
     height: auto;
-    color: @dark-fg;
+    line-height: 10px;
+    // Match the gray of the other statusbar icons. The footer's
+    // `.ant-btn { color: @dark-fg !important }` rule would otherwise force the
+    // icon (which uses fill: currentColor) to near-white, so override it here.
+    color: @color-text-secondary !important;
     background-color: inherit;
   }
 

@@ -54,9 +54,8 @@ case class ZarrHeader(
 object ZarrHeader extends JsonImplicits {
   val FILENAME_DOT_ZARRAY = ".zarray"
 
-  /***
-    * This function is used for exposing webknossos layers as zarr layers via the API.
-    * It therefore defaults to the necessary defaults for webknossos data layers.
+  /** * This function is used for exposing webknossos layers as zarr layers via the API. It therefore defaults to the
+    * necessary defaults for webknossos data layers.
     */
   def fromLayer(dataLayer: DataLayer, mag: Vec3Int): ZarrHeader = {
     val cubeLength = DataLayer.bucketLength
@@ -65,9 +64,9 @@ object ZarrHeader extends JsonImplicits {
     val compressor = None
 
     val additionalAxesShapeEntries =
-      dataLayer.additionalAxes.map(axes => axes.map(_.bounds(1)).toArray).getOrElse(Array.empty)
+      dataLayer.additionalAxes.map(axes => axes.map(_.bounds(1)).toArray).getOrElse(Array.empty[Int])
     val additionalAxesChunksEntries =
-      dataLayer.additionalAxes.map(axes => axes.map(_ => 1).toArray).getOrElse(Array.empty)
+      dataLayer.additionalAxes.map(axes => axes.map(_ => 1).toArray).getOrElse(Array.empty[Int])
 
     val shape = Array(channels) ++ additionalAxesShapeEntries ++ Array(
       // Zarr can't handle data sets that don't start at 0, so we extend the shape to include "true" coords
@@ -78,12 +77,14 @@ object ZarrHeader extends JsonImplicits {
 
     val chunks = Array(channels) ++ additionalAxesChunksEntries ++ Array(cubeLength, cubeLength, cubeLength)
 
-    ZarrHeader(zarr_format = 2,
-               shape = shape.map(_.toLong),
-               chunks = chunks,
-               compressor = compressor,
-               dtype = dtype,
-               order = ArrayOrder.F)
+    ZarrHeader(
+      zarr_format = 2,
+      shape = shape.map(_.toLong),
+      chunks = chunks,
+      compressor = compressor,
+      dtype = dtype,
+      order = ArrayOrder.F
+    )
   }
 
   implicit object ZarrHeaderFormat extends Format[ZarrHeader] {

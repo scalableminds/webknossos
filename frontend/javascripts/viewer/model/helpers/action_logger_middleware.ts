@@ -48,9 +48,9 @@ export default (function actionLoggerMiddleware(_store: MiddlewareAPI) {
         const overflowCount = Math.max(actionLog.length - MAX_ACTION_LOG_LENGTH, 0);
         actionLog = drop(actionLog, overflowCount);
 
-        if (WkDevFlags.logActions) {
+        if (WkDevFlags.logActions || WkDevFlags.logFullActionObjects) {
           console.group(action.type);
-          console.info("dispatching", action);
+          console.info("dispatching", WkDevFlags.logFullActionObjects ? action : action.type);
           let result = next(action);
           console.groupEnd();
           return result;

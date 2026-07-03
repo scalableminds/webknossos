@@ -55,6 +55,6 @@ To share your dataset publicly, i.e. without requiring a WEBKNOSSOS account or l
 
 ![type:video](https://static.webknossos.org/assets/docs/tutorial-data-sharing/10_making_DS_public.mp4){: autoplay loop muted}
 
-If you would like your dataset to be featured on the WEBKNOSSOS publications page, just send us an email at [hello@webknossos.org](mailto:hello@webknossos.org), and we will be happy to upload your data!
+If you would like your dataset to be featured on the WEBKNOSSOS publications page, just send us an email at [support@webknossos.org](mailto:support@webknossos.org), and we will be happy to upload your data!
 
 ![type:video](https://static.webknossos.org/assets/docs/tutorial-data-sharing/11_open_public_DS.mp4){: autoplay loop muted}

@@ -5,10 +5,11 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.{
   BucketPosition,
@@ -26,44 +27,48 @@ import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
-                                  editableMappingService: EditableMappingService,
-                                  annotationService: TSAnnotationService,
-                                  volumeSegmentIndexService: VolumeSegmentIndexService,
-                                  val remoteDatastoreClient: TSRemoteDatastoreClient,
-                                  val remoteWebknossosClient: TSRemoteWebknossosClient)
-    extends FallbackDataHelper
-    with ProtoGeometryImplicits
+class TSFullMeshService @Inject() (
+    volumeTracingService: VolumeTracingService,
+    editableMappingService: EditableMappingService,
+    annotationService: TSAnnotationService,
+    volumeSegmentIndexService: VolumeSegmentIndexService,
+    val remoteDatastoreClient: TSRemoteDatastoreClient,
+    val remoteWebknossosClient: TSRemoteWebknossosClient
+) extends FallbackDataHelper
+    with ProtoGeometryConversions
     with FullMeshHelper
-    with FoxImplicits
     with LazyLogging {
 
-  def loadFor(annotationId: ObjectId, tracingId: String, fullMeshRequest: FullMeshRequest, version: Option[Long])(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[Array[Byte]] =
+  def loadFor(annotationId: ObjectId, tracingId: String, fullMeshRequest: FullMeshRequest, version: Option[Long])(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Array[Byte]] =
     for {
       tracing <- annotationService.findVolume(annotationId, tracingId, version) ?~> Msg.Annotation.notFound
-      data <- if (fullMeshRequest.meshFileName.isDefined)
-        loadFullMeshFromMeshFile(annotationId, tracingId, tracing, fullMeshRequest)
-      else loadFullMeshFromAdHoc(annotationId, tracingId, tracing, fullMeshRequest)
+      data <-
+        if (fullMeshRequest.meshFileName.isDefined)
+          loadFullMeshFromMeshFile(annotationId, tracingId, tracing, fullMeshRequest)
+        else loadFullMeshFromAdHoc(annotationId, tracingId, tracing, fullMeshRequest)
     } yield data
 
   private def loadFullMeshFromMeshFile(
       annotationId: ObjectId,
       tracingId: String,
       tracing: VolumeTracing,
-      fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
+      fullMeshRequest: FullMeshRequest
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
       remoteFallbackLayer <- remoteFallbackLayerForVolumeTracing(tracing, annotationId)
       baseMappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)
-      fullMeshRequestAdapted = if (tracing.getHasEditableMapping)
-        fullMeshRequest.copy(
-          mappingName = baseMappingName,
-          editableMappingTracingId = Some(tracingId),
-          annotationVersion = fullMeshRequest.annotationVersion.orElse(Some(tracing.version)),
-          mappingType = Some("HDF5")
-        )
-      else fullMeshRequest
+      fullMeshRequestAdapted =
+        if (tracing.getHasEditableMapping)
+          fullMeshRequest.copy(
+            mappingName = baseMappingName,
+            editableMappingTracingId = Some(tracingId),
+            annotationVersion = fullMeshRequest.annotationVersion.orElse(Some(tracing.version)),
+            mappingType = Some("HDF5")
+          )
+        else fullMeshRequest
       array <- remoteDatastoreClient.loadFullMeshStl(remoteFallbackLayer, fullMeshRequestAdapted)
     } yield array
 
@@ -71,26 +76,30 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       annotationId: ObjectId,
       tracingId: String,
       tracing: VolumeTracing,
-      fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
+      fullMeshRequest: FullMeshRequest
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
       mag <- fullMeshRequest.mag.toFox ?~> Msg.Mesh.magNeededForAdHoc
       _ <- Fox.fromBool(tracing.mags.contains(vec3IntToProto(mag))) ?~> Msg.Annotation.Volume
         .wrongMag(tracingId, mag.toMagLiteral(allowScalar = true))
       before = Instant.now
-      voxelSize <- remoteWebknossosClient.voxelSizeForAnnotationWithCache(annotationId) ?~> Msg.Dataset.voxelSizeFailedToFetch
-      verticesForChunks <- if (tracing.hasSegmentIndex.getOrElse(false))
-        getAllAdHocChunksWithSegmentIndex(annotationId, tracingId, tracing, mag, voxelSize, fullMeshRequest)
-      else
-        getAllAdHocChunksWithNeighborLogic(
-          annotationId,
-          tracingId,
-          tracing,
-          mag,
-          voxelSize,
-          fullMeshRequest,
-          fullMeshRequest.seedPosition.map(sp => VoxelPosition(sp.x, sp.y, sp.z, mag)),
-          adHocChunkSize
-        )
+      voxelSize <- remoteWebknossosClient.voxelSizeForAnnotationWithCache(
+        annotationId
+      ) ?~> Msg.Dataset.voxelSizeFailedToFetch
+      verticesForChunks <-
+        if (tracing.hasSegmentIndex.getOrElse(false))
+          getAllAdHocChunksWithSegmentIndex(annotationId, tracingId, tracing, mag, voxelSize, fullMeshRequest)
+        else
+          getAllAdHocChunksWithNeighborLogic(
+            annotationId,
+            tracingId,
+            tracing,
+            mag,
+            voxelSize,
+            fullMeshRequest,
+            fullMeshRequest.seedPosition.map(sp => VoxelPosition(sp.x, sp.y, sp.z, mag)),
+            adHocChunkSize
+          )
       encoded = verticesForChunks.map(adHocMeshToStl)
       array = combineEncodedChunksToStl(encoded)
       _ = logMeshingDuration(before, "ad-hoc meshing (tracingstore)", array.length)
@@ -102,7 +111,8 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       tracing: VolumeTracing,
       mag: Vec3Int,
       voxelSize: VoxelSize,
-      fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[List[Array[Float]]] =
+      fullMeshRequest: FullMeshRequest
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[List[Array[Float]]] =
     for {
       fallbackLayer <- volumeTracingService.getFallbackLayer(annotationId, tracing)
       mappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)
@@ -149,7 +159,8 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       voxelSize: VoxelSize,
       fullMeshRequest: FullMeshRequest,
       topLeftOpt: Option[VoxelPosition],
-      chunkSize: Vec3Int)(implicit ec: ExecutionContext, tc: TokenContext): Fox[List[Array[Float]]] = {
+      chunkSize: Vec3Int
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[List[Array[Float]]] = {
     // visited does not need to be thread-safe: it is mutated only at the start of each
     // processFrontier call (before any concurrent work begins); Fox.combined only reads it
     // (via generateNextTopLeftsFromNeighbors.filterNot), and waves execute sequentially
@@ -173,7 +184,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
                 fullMeshRequest.mappingName,
                 fullMeshRequest.mappingType,
                 fullMeshRequest.additionalCoordinates,
-                fullMeshRequest.annotationVersion,
+                fullMeshRequest.annotationVersion
               )
               loadMeshChunkFromAdHoc(annotationId, tracingId, tracing, adHocMeshRequest).map {
                 case (vertices, neighborIds) =>
@@ -200,7 +211,8 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       annotationId: ObjectId,
       tracingId: String,
       tracing: VolumeTracing,
-      adHocMeshRequest: WebknossosAdHocMeshRequest)(implicit tc: TokenContext): Fox[(Array[Float], List[Int])] =
+      adHocMeshRequest: WebknossosAdHocMeshRequest
+  )(using tc: TokenContext): Fox[(Array[Float], List[Int])] =
     if (tracing.getHasEditableMapping) {
       val mappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
       editableMappingService.createAdHocMesh(mappingLayer, adHocMeshRequest)

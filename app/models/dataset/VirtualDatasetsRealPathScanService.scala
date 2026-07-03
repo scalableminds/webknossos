@@ -1,7 +1,8 @@
 package models.dataset
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.typesafe.scalalogging.LazyLogging
 import jakarta.inject.Inject
@@ -11,20 +12,20 @@ import play.api.inject.ApplicationLifecycle
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext
 
-class VirtualDatasetsRealPathScanService @Inject()(
+class VirtualDatasetsRealPathScanService @Inject() (
     datasetService: DatasetService,
     datasetDAO: DatasetDAO,
     val actorSystem: ActorSystem,
-    val lifecycle: ApplicationLifecycle)(implicit val ec: ExecutionContext)
+    val lifecycle: ApplicationLifecycle
+)(implicit val ec: ExecutionContext)
     extends IntervalScheduler
-    with LazyLogging
-    with FoxImplicits {
+    with LazyLogging {
 
   implicit private val ctx: DBAccessContext = GlobalAccessContext
 
   override protected def tickerInterval: FiniteDuration = 1 hour
 
-  override protected def tick(): Fox[_] = {
+  override protected def tick(): Fox[?] = {
     logger.info("Scanning realpaths for all virtual datasets...")
     for {
       datasets <- datasetDAO.findAll
@@ -42,7 +43,8 @@ class VirtualDatasetsRealPathScanService @Inject()(
         firstDataset <- datasets.headOption.toFox
         // we skip unusable datasets
         dataSourceBoxes <- Fox.fromFuture(
-          Fox.serialSequence(datasets)(datasetService.usableDataSourceFor(_, useRealPaths = false)))
+          Fox.serialSequence(datasets)(datasetService.usableDataSourceFor(_, useRealPaths = false))
+        )
         dataSources = dataSourceBoxes.flatten
         client <- datasetService.clientFor(firstDataset)
         _ <- client.scanRealPathsForVirtual(dataSources)

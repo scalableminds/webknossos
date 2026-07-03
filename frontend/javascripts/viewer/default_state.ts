@@ -57,7 +57,8 @@ const defaultState: WebknossosState = {
     isMultiSplitActive: false,
     brushSize: 50,
     clippingDistance: 50,
-    clippingDistanceArbitrary: 64,
+    clippingDistanceFlight: 64,
+    clipSkeletonToCurrentSection: false,
     crosshairSize: 0.1,
     displayCrosshair: true,
     displayScalebars: true,
@@ -174,6 +175,7 @@ const defaultState: WebknossosState = {
     owningOrganization: "",
     description: null,
     directoryName: "Loading",
+    isVirtual: false,
     allowedTeams: [],
     allowedTeamsCumulative: [],
     logoUrl: null,
@@ -208,7 +210,6 @@ const defaultState: WebknossosState = {
   },
   save: {
     queue: [],
-    isBusy: false,
     isSavingDisabled: false,
     lastSaveTimestamp: 0,
     progressInfo: {
@@ -221,7 +222,7 @@ const defaultState: WebknossosState = {
       annotationVersion: 1,
       skeleton: undefined,
       volumes: [],
-      activeMappingByLayer: {},
+      mappingDataByLayer: {},
       isRebasingOrForwarding: false,
     },
     proofreadingPostProcessingInfo: null,
@@ -260,7 +261,7 @@ const defaultState: WebknossosState = {
         TDView: defaultViewportRect,
       },
     },
-    arbitrary: {
+    flight: {
       inputCatcherRect: defaultViewportRect,
     },
   },
@@ -292,10 +293,6 @@ const defaultState: WebknossosState = {
       left: false,
     },
     theme: getSystemColorTheme(),
-    busyBlockingInfo: {
-      isBusy: false,
-      allowedSagas: [],
-    },
     isWkInitialized: false,
     isUiReady: false,
     quickSelectState: "inactive",
@@ -319,6 +316,10 @@ const defaultState: WebknossosState = {
       unmappedSegmentId: null,
     },
   },
-  localSegmentationData: {},
+  localSegmentationStateByLayer: {},
+  operationContext: {
+    activeOperations: [],
+    childOperations: [],
+  },
 };
 export default defaultState;

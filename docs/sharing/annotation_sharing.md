@@ -70,7 +70,7 @@ The information is JSON-encoded in the URL fragment and has the following format
   
   ```javascript
   type MappingType = "JSON" | "HDF5";
-  type ViewMode = "orthogonal" | "oblique" | "flight" | "volume";
+  type ViewMode = "orthogonal" | "flight";
   type Vector3 = [number, number, number];
   // For datasets with more than 3 dimensions
   type AdditionalCoordinate = { name: string; value: number };
@@ -121,6 +121,8 @@ The information is JSON-encoded in the URL fragment and has the following format
     stateByLayer?: UrlStateByLayer,
     additionalCoordinates?: AdditionalCoordinate[];
     nativelyRenderedLayerName?: string | null;
+    clippingDistance?: number;
+    clipSkeletonToCurrentSection?: boolean;
   |};
 
   ```
@@ -148,6 +150,8 @@ To collaboratively work on the same annotation with multiple users from your tea
 Note that while WEBKNOSSOS allows several people to make modifications to a single annotation, it is strongly advised that only one person works on an annotation at once.
 WEBKNOSSOS does not yet resolve changes made by multiple people annotating simultaneously and this may lead to data loss or inconsistencies.
 Please coordinate accordingly with your collaborators. We aim to improve this aspect in the future.
+
+Each collaborator's view configuration — including layer visibility, opacity, colors, and other display settings — is stored independently per user. Changing which layers are visible or adjusting rendering settings in a shared annotation only affects your own view and does not change what other collaborators see. When a user opens a shared annotation for the first time, the annotation owner's view configuration is used as the initial default.
 
 !!! info
     In addition to the integrated Sharing features, you can also [download annotations](../volume_annotation/import_export.md) and send them via email to collaborators.

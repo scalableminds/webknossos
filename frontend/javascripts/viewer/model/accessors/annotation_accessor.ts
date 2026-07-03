@@ -47,7 +47,7 @@ export function mayAddToSaveQueue(state: WebknossosState): boolean {
    * with update actions.
    */
   return (
-    // allowSave is initialized with allowUpdate and may be overriden when
+    // allowSave is initialized with allowUpdate and may be overridden when
     // saving is disabled (via DISABLE_SAVING action).
     Boolean(state.annotation.restrictions.allowSave) &&
     !state.uiInformation.showVersionRestore &&
@@ -79,6 +79,13 @@ export function maySendSaveRequest(state: WebknossosState) {
       // (and for sending save requests, we also manipulate the save queue).
       !state.save.rebaseRelevantServerAnnotationState.isRebasingOrForwarding,
   );
+}
+
+export function mayEditAnnotationViewConfig(state: WebknossosState) {
+  // All users that are allowed to update the annotation have their own view
+  // config and can thus update it. This is independent of the collaboration
+  // mode and annotation mutexes.
+  return state.annotation.restrictions.allowUpdate;
 }
 
 export function isAnnotationOwner(state: WebknossosState) {
@@ -179,4 +186,39 @@ export function getUserStateForTracing<
   }
 
   return undefined;
+}
+
+export function isSaving(state: WebknossosState): boolean {
+  return state.operationContext.activeOperations
+    .concat(state.operationContext.childOperations)
+    .some((op) => op.id === "SAVE");
+}
+
+export function isSavingOrRebasing(state: WebknossosState): boolean {
+  return isSaving(state) || state.save.rebaseRelevantServerAnnotationState.isRebasingOrForwarding;
+}
+
+export function isUserInterfaceBlocked(state: WebknossosState): boolean {
+  if (!mayEditAnnotation(state)) {
+    // The user is not allowed to edit the annotation, anyway. No need to block the UI
+    // (would also be annoying because it would turn the cursor into a spinner when the
+    // annotation is updating to remote changes).
+    return false;
+  }
+
+  const { activeOperations } = state.operationContext;
+  if (activeOperations.length === 0) {
+    // No operation is going on anyway.
+    return false;
+  }
+  if (state.annotation.collaborationMode !== "Concurrent") {
+    // The current user is the only one that is allowed to edit the annotation currently.
+    // If the only active operation is a save operation, the UI should not be blocked.
+    // Reminder: in concurrent collab mode, we forbid users from editing during saving
+    // because editing would interfere with rebase operations.
+    const isOnlySaveOperation = activeOperations.length === 1 && activeOperations[0].id === "SAVE";
+    return !isOnlySaveOperation;
+  }
+  // At least one operation is ongoing and should block the user.
+  return true;
 }

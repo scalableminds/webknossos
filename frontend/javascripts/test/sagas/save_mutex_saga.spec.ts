@@ -34,6 +34,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   getPositionForSegmentId,
   mockInitialBucketAndAgglomerateData,
+  operationFinished,
+  operationStarted,
 } from "./proofreading/proofreading_test_utils";
 
 const blockingUser: APIUserCompact = { firstName: "Sample", lastName: "User", id: "1111" };
@@ -56,18 +58,20 @@ async function makeProofreadMerge(
     // is only maintained for loaded buckets). => Forces loading of mapping.
     const valueAt444 = yield call(() => context.api.data.getDataValue(tracingId, [4, 4, 4], 0));
     expect(valueAt444).toBe(4);
-    yield take("SET_MAPPING");
+    // The local HDF5 mapping data is loaded and dispatched via SET_MAPPING_DATA (phase 2 of
+    // mapping activation).
+    yield take("SET_MAPPING_DATA");
     // Set up the merge-related segment partners. Normally, this would happen
     // due to the user's interactions.
     yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
     yield put(setActiveCellAction(1));
     // Execute the actual merge and wait for the finished mapping.
     yield put(proofreadMergeAction(getPositionForSegmentId(4), 4));
-    yield take("SET_BUSY_BLOCKING_INFO_ACTION");
+    yield take(operationStarted("PROOFREADING"));
     if (waitTillFinished) {
-      // Wait for UI made busy and back to idle again to ensure saving of the whole sagas is done.
+      // Wait for proofreading operation to start and then finish to ensure saving of the whole saga is done.
       yield take("SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE");
-      yield take("SET_BUSY_BLOCKING_INFO_ACTION");
+      yield take(operationFinished("PROOFREADING"));
     }
   });
   await task.toPromise();

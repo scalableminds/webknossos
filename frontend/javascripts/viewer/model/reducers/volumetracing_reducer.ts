@@ -336,21 +336,6 @@ function VolumeTracingReducer(
       });
     }
 
-    case "SET_ID_RESERVATIONS": {
-      // BoundingBox reservations are handled in annotation_reducer.ts, as they are not
-      // scoped to a single segmentation layer (and action.tracingId might not even refer
-      // to a volume tracing in that case, e.g. for skeleton-only annotations).
-      if (action.domain === "BoundingBox") return state;
-
-      const { idReservations } = state.localSegmentationStateByLayer[action.tracingId];
-      return updateLocalSegmentationState(state, action.tracingId, {
-        idReservations: {
-          ...idReservations,
-          [action.domain]: action.reservations,
-        },
-      });
-    }
-
     default: // pass
   }
 
@@ -468,6 +453,20 @@ function VolumeTracingReducer(
 
       return updateVolumeTracing(state, volumeTracing.tracingId, {
         mappingIsLocked: true,
+      });
+    }
+
+    case "SET_ID_RESERVATIONS": {
+      // BoundingBox reservations are handled in annotation_reducer.ts, as they are not
+      // scoped to a single segmentation layer.
+      if (action.domain === "BoundingBox") return state;
+
+      const { idReservations } = state.localSegmentationStateByLayer[action.tracingId];
+      return updateLocalSegmentationState(state, action.tracingId, {
+        idReservations: {
+          ...idReservations,
+          [action.domain]: action.reservations,
+        },
       });
     }
 

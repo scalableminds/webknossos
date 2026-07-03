@@ -156,17 +156,19 @@ function* handleReservationRequest(action: GetNewIdAction): Saga<void> {
   const { domain, tracingId } = action;
 
   if (!isSupportedDomain(domain)) {
-    console.warn(
-      `Ignored getNewId action because it's not implemented for domain "${domain}", yet.`,
-    );
+    const error = new Error(`getNewId is not implemented for domain "${domain}", yet.`);
+    console.warn(error.message);
+    action.errorCallback(error);
     return;
   }
 
   const tracing = yield* select((state) => getTracingById(state, tracingId));
   if (!isTracingSupportedForDomain(tracing, domain)) {
-    console.warn(
-      `Ignored getNewId action because domain "${domain}" is not supported for tracing type "${tracing.type}".`,
+    const error = new Error(
+      `Domain "${domain}" is not supported for tracing type "${tracing.type}".`,
     );
+    console.warn(error.message);
+    action.errorCallback(error);
     return;
   }
 

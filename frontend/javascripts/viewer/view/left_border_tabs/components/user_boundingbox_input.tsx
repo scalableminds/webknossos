@@ -4,6 +4,7 @@ import {
   DownloadOutlined,
   EllipsisOutlined,
   InfoCircleOutlined,
+  LockOutlined,
   ScanOutlined,
 } from "@ant-design/icons";
 import { Flex, Input, type MenuProps, Switch } from "antd";
@@ -23,36 +24,42 @@ type UserBoundingBoxInputProps = {
   bboxId: number;
   value: Vector6;
   name: string;
-  color: Vector3;
-  isVisible: boolean;
   isExportEnabled: boolean;
-  onBoundingChange: (arg0: Vector6) => void;
-  onDelete: () => void;
   onExport: () => void;
   onGoToBoundingBox: () => void;
-  onVisibilityChange: (arg0: boolean) => void;
-  onNameChange: (arg0: string) => void;
-  onColorChange: (arg0: Vector3) => void;
-  disabled: boolean;
-  isLockedByOwner: boolean;
-  isOwner: boolean;
   onOpenContextMenu: (
     menu: MenuProps,
     event: React.MouseEvent<HTMLDivElement>,
     bboxId: number,
   ) => void;
   onHideContextMenu?: () => void;
+  // When isReadOnly is set (e.g. for a dataset layer's bounding box), the color, visibility,
+  // name, bounds and delete controls are hidden/read-only. Only navigating, registering segments
+  // and exporting remain available via the context menu.
+  isReadOnly?: boolean;
+  color?: Vector3;
+  isVisible?: boolean;
+  onBoundingChange?: (arg0: Vector6) => void;
+  onDelete?: () => void;
+  onVisibilityChange?: (arg0: boolean) => void;
+  onNameChange?: (arg0: string) => void;
+  onColorChange?: (arg0: Vector3) => void;
+  disabled?: boolean;
+  isLockedByOwner?: boolean;
+  isOwner?: boolean;
 };
 
 const FORMAT_TOOLTIP = "Format: minX, minY, minZ, width, height, depth";
+const READ_ONLY_TOOLTIP = "This is a read-only bounding box of a dataset layer.";
+const DEFAULT_READ_ONLY_COLOR: Vector3 = [0.5, 0.5, 0.5];
 
 export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
   const {
     bboxId,
     value: propValue,
     name: propName,
-    color,
-    isVisible,
+    color = DEFAULT_READ_ONLY_COLOR,
+    isVisible = true,
     onDelete,
     onExport,
     isExportEnabled,
@@ -61,8 +68,9 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
     onNameChange,
     onColorChange,
     disabled,
-    isLockedByOwner,
-    isOwner,
+    isLockedByOwner = false,
+    isOwner = false,
+    isReadOnly = false,
     onBoundingChange,
     onOpenContextMenu,
     onHideContextMenu,
@@ -113,7 +121,7 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
     const isValid = isValidInput && isValidLength;
 
     if (isValid) {
-      onBoundingChange(numberArrayToVector6(value));
+      onBoundingChange?.(numberArrayToVector6(value));
     }
 
     setText(newText);
@@ -122,7 +130,7 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
 
   const handleColorChange = (newColor: Vector3) => {
     const mappedColor = newColor.map((colorPart) => colorPart / 255) as any as Vector3;
-    onColorChange(mappedColor);
+    onColorChange?.(mappedColor);
   };
 
   const handleNameChanged = (evt: React.SyntheticEvent) => {
@@ -130,7 +138,7 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
     const currentEnteredName = evt.target.value;
 
     if (currentEnteredName !== propName) {
-      onNameChange(currentEnteredName);
+      onNameChange?.(currentEnteredName);
     }
   };
 
@@ -223,15 +231,20 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
             // the click events are stopped from propagating to the parent div.
             onClick={(_value, e) => e.stopPropagation()}
           />
-          <FastTooltip title={disabled ? editingDisallowedExplanation : null}>
+          <FastTooltip title={!isReadOnly && disabled ? editingDisallowedExplanation : null}>
             <ColorSetting
               value={rgbToHex(upscaledColor)}
               onChange={handleColorChange}
-              disabled={disabled}
+              // The color of a read-only layer bounding box is a client-side display setting and
+              // therefore stays editable even when the annotation cannot be updated.
+              disabled={!isReadOnly && disabled}
             />
           </FastTooltip>
         </Flex>
-        <FastTooltip title={disabled ? editingDisallowedExplanation : null} style={{ flexGrow: 1 }}>
+        <FastTooltip
+          title={isReadOnly ? READ_ONLY_TOOLTIP : disabled ? editingDisallowedExplanation : null}
+          style={{ flexGrow: 1 }}
+        >
           <Input
             defaultValue={name}
             placeholder="Bounding Box Name"
@@ -242,21 +255,34 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
             }}
             onPressEnter={handleNameChanged}
             onBlur={handleNameChanged}
-            disabled={disabled}
+            disabled={!isReadOnly && disabled}
+            readOnly={isReadOnly}
             onClick={(e) => e.stopPropagation()}
           />
         </FastTooltip>
-        <ButtonComponent
-          title={disabled ? editingDisallowedExplanation : "Delete Bounding Box"}
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete();
-          }}
-          disabled={disabled}
-          icon={<DeleteOutlined />}
-          type="text"
-          size="small"
-        />
+        {isReadOnly ? (
+          <FastTooltip title={READ_ONLY_TOOLTIP}>
+            <ButtonComponent
+              icon={<LockOutlined style={{ color: "var(--ant-color-text-tertiary)" }} />}
+              type="text"
+              size="small"
+              // The button is only a visual read-only indicator and should not react to clicks.
+              onClick={(e) => e.stopPropagation()}
+            />
+          </FastTooltip>
+        ) : (
+          <ButtonComponent
+            title={disabled ? editingDisallowedExplanation : "Delete Bounding Box"}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete?.();
+            }}
+            disabled={disabled}
+            icon={<DeleteOutlined />}
+            type="text"
+            size="small"
+          />
+        )}
       </Flex>
       <Flex
         style={{
@@ -273,7 +299,13 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
           <label> Bounds: </label>
         </FastTooltip>
         <FastTooltip
-          title={disabled ? editingDisallowedExplanation : FORMAT_TOOLTIP}
+          title={
+            isReadOnly
+              ? READ_ONLY_TOOLTIP
+              : disabled
+                ? editingDisallowedExplanation
+                : FORMAT_TOOLTIP
+          }
           placement="top-start"
           style={{ flexGrow: 1 }}
         >
@@ -285,7 +317,8 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
             value={text}
             placeholder="0, 0, 0, 512, 512, 512"
             size="small"
-            disabled={disabled}
+            disabled={!isReadOnly && disabled}
+            readOnly={isReadOnly}
             onClick={(e) => e.stopPropagation()}
           />
         </FastTooltip>

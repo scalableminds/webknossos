@@ -378,6 +378,10 @@ export type TypedArrayWithoutBigInt = Exclude<TypedArray, BigUint64Array | BigIn
 
 export const PRIMARY_COLOR: Vector3 = [86, 96, 255];
 
+// Default color (normalized 0-1 RGB) for the read-only bounding boxes of the dataset's layers.
+// Corresponds to the hex color 0xffff99.
+export const DEFAULT_LAYER_BOUNDING_BOX_COLOR: Vector3 = [1, 1, 0.6];
+
 export enum LOG_LEVELS {
   NOTSET = "NOTSET",
   DEBUG = "DEBUG",

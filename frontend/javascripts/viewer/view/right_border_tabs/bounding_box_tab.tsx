@@ -14,18 +14,25 @@ import {
   type TableProps,
   Typography,
 } from "antd";
+import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
 import { computeArrayFromBoundingBox, computeBoundingBoxFromArray } from "libs/utils";
 import noop from "lodash-es/noop";
 import partial from "lodash-es/partial";
 import type React from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { APIJobCommand } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
-import { ControlModeEnum, type Vector3, type Vector6 } from "viewer/constants";
+import {
+  ControlModeEnum,
+  DEFAULT_LAYER_BOUNDING_BOX_COLOR,
+  type Vector3,
+  type Vector6,
+} from "viewer/constants";
 import { isAnnotationOwner } from "viewer/model/accessors/annotation_accessor";
+import { getDataLayers, getLayerBoundingBox } from "viewer/model/accessors/dataset_accessor";
 import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import {
   addUserBoundingBoxAction,
@@ -33,6 +40,10 @@ import {
   deleteUserBoundingBoxAction,
 } from "viewer/model/actions/annotation_actions";
 import { setPositionAction } from "viewer/model/actions/flycam_actions";
+import {
+  setLayerBoundingBoxColorAction,
+  setLayerBoundingBoxVisibilityAction,
+} from "viewer/model/actions/settings_actions";
 import { setActiveUserBoundingBoxId } from "viewer/model/actions/ui_actions";
 import type { UserBoundingBox } from "viewer/store";
 import DownloadModalView from "../action_bar/download_modal/download_modal_view";
@@ -47,17 +58,68 @@ const BBOX_BUTTONS_HEADER_HEIGHT = 40;
 const CONTEXT_MENU_CLASS = "bbox-list-context-menu-overlay";
 const BOUNDING_BOX_TAB_ID = "bounding-box-tab";
 
+type LayerBoundingBox = {
+  name: string;
+  value: Vector6;
+  center: Vector3;
+};
+
+// The bounding box table shows the editable user bounding boxes first, followed by the read-only
+// bounding boxes of the dataset's layers (separated by a divider).
+type BoundingBoxTableRow =
+  | { key: number; kind: "user"; userBoundingBox: UserBoundingBox }
+  | { key: string; kind: "layer"; layerBoundingBox: LayerBoundingBox };
+
 export default function BoundingBoxTab() {
   const bboxTableRef: Parameters<typeof Table>[0]["ref"] = useRef(null);
   const [selectedBoundingBoxForExport, setSelectedBoundingBoxForExport] =
     useState<UserBoundingBox | null>(null);
+  const [selectedLayerForExport, setSelectedLayerForExport] = useState<string | null>(null);
   const annotation = useWkSelector((state) => state.annotation);
   const allowUpdate = annotation.isUpdatingCurrentlyAllowed;
   const isLockedByOwner = annotation.isLockedByOwner;
   const isOwner = useWkSelector((state) => isAnnotationOwner(state));
   const dataset = useWkSelector((state) => state.dataset);
   const activeBoundingBoxId = useWkSelector((state) => state.uiInformation.activeUserBoundingBoxId);
+  const layerBoundingBoxVisibility = useWkSelector(
+    (state) => state.temporaryConfiguration.layerBoundingBoxVisibility,
+  );
+  const layerBoundingBoxColor = useWkSelector(
+    (state) => state.temporaryConfiguration.layerBoundingBoxColor,
+  );
   const { userBoundingBoxes } = getSomeTracing(annotation);
+  const layerBoundingBoxes = useMemo<LayerBoundingBox[]>(
+    () =>
+      getDataLayers(dataset).map((layer) => {
+        const boundingBox = getLayerBoundingBox(dataset, layer.name);
+        return {
+          name: layer.name,
+          value: computeArrayFromBoundingBox(boundingBox),
+          center: boundingBox.getCenter(),
+        };
+      }),
+    [dataset],
+  );
+  const tableData = useMemo<BoundingBoxTableRow[]>(
+    () => [
+      ...userBoundingBoxes.map(
+        (userBoundingBox): BoundingBoxTableRow => ({
+          key: userBoundingBox.id,
+          kind: "user",
+          userBoundingBox,
+        }),
+      ),
+      ...layerBoundingBoxes.map(
+        (layerBoundingBox): BoundingBoxTableRow => ({
+          key: `layer-${layerBoundingBox.name}`,
+          kind: "layer",
+          layerBoundingBox,
+        }),
+      ),
+    ],
+    [userBoundingBoxes, layerBoundingBoxes],
+  );
+  const firstLayerRowIndex = userBoundingBoxes.length;
   const [contextMenuPosition, setContextMenuPosition] = useState<[number, number] | null>(null);
   const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([]);
   const [menu, setMenu] = useState<MenuProps | null>(null);
@@ -146,6 +208,34 @@ export default function BoundingBoxTab() {
     [hideContextMenu],
   );
 
+  const handleGoToLayerBoundingBox = useCallback(
+    (center: Vector3) => {
+      setPosition(center);
+      hideContextMenu();
+    },
+    [setPosition, hideContextMenu],
+  );
+
+  const handleExportLayerBoundingBox = useCallback(
+    (layerName: string) => {
+      setSelectedLayerForExport(layerName);
+      hideContextMenu();
+    },
+    [hideContextMenu],
+  );
+
+  const setLayerBoundingBoxVisibility = useCallback(
+    (layerName: string, isVisible: boolean) =>
+      dispatch(setLayerBoundingBoxVisibilityAction(layerName, isVisible)),
+    [dispatch],
+  );
+
+  const setLayerBoundingBoxColor = useCallback(
+    (layerName: string, color: Vector3) =>
+      dispatch(setLayerBoundingBoxColorAction(layerName, color)),
+    [dispatch],
+  );
+
   const handleGoToBoundingBox = useCallback(
     (id: number) => {
       const boundingBoxEntry = userBoundingBoxes.find((bbox) => bbox.id === id);
@@ -204,52 +294,98 @@ export default function BoundingBoxTab() {
     }
   }, [activeBoundingBoxId]);
 
-  const boundingBoxWrapperTableColumns = [
+  const boundingBoxWrapperTableColumns: NonNullable<TableProps<BoundingBoxTableRow>["columns"]> = [
     {
       title: "Bounding Boxes",
       key: "id",
-      render: (_id: number, bb: UserBoundingBox) => (
-        <UserBoundingBoxInput
-          key={bb.id}
-          bboxId={bb.id}
-          value={computeArrayFromBoundingBox(bb.boundingBox)}
-          color={bb.color}
-          name={bb.name}
-          isExportEnabled={isExportEnabled}
-          isVisible={bb.isVisible}
-          onBoundingChange={partial(handleBoundingBoxBoundingChange, bb.id)}
-          onDelete={partial(deleteBoundingBox, bb.id)}
-          onExport={isExportEnabled ? () => handleExportBoundingBox(bb) : noop}
-          onGoToBoundingBox={partial(handleGoToBoundingBox, bb.id)}
-          onVisibilityChange={partial(setBoundingBoxVisibility, bb.id)}
-          onNameChange={partial(setBoundingBoxName, bb.id)}
-          onColorChange={partial(setBoundingBoxColor, bb.id)}
-          disabled={!allowUpdate}
-          isLockedByOwner={isLockedByOwner}
-          isOwner={isOwner}
-          onOpenContextMenu={(menu, event) => onOpenContextMenu(menu, event)}
-          onHideContextMenu={hideContextMenu}
-        />
-      ),
+      render: (_key: unknown, row: BoundingBoxTableRow, index: number) => {
+        if (row.kind === "user") {
+          const bb = row.userBoundingBox;
+          return (
+            <UserBoundingBoxInput
+              key={bb.id}
+              bboxId={bb.id}
+              value={computeArrayFromBoundingBox(bb.boundingBox)}
+              color={bb.color}
+              name={bb.name}
+              isExportEnabled={isExportEnabled}
+              isVisible={bb.isVisible}
+              onBoundingChange={partial(handleBoundingBoxBoundingChange, bb.id)}
+              onDelete={partial(deleteBoundingBox, bb.id)}
+              onExport={isExportEnabled ? () => handleExportBoundingBox(bb) : noop}
+              onGoToBoundingBox={partial(handleGoToBoundingBox, bb.id)}
+              onVisibilityChange={partial(setBoundingBoxVisibility, bb.id)}
+              onNameChange={partial(setBoundingBoxName, bb.id)}
+              onColorChange={partial(setBoundingBoxColor, bb.id)}
+              disabled={!allowUpdate}
+              isLockedByOwner={isLockedByOwner}
+              isOwner={isOwner}
+              onOpenContextMenu={(menu, event) => onOpenContextMenu(menu, event)}
+              onHideContextMenu={hideContextMenu}
+            />
+          );
+        }
+
+        const layerBoundingBox = row.layerBoundingBox;
+        return (
+          <>
+            {index === firstLayerRowIndex ? (
+              <Divider size="small" titlePlacement="left" style={{ margin: "4px 0" }}>
+                <FastTooltip title="These are the read-only bounding boxes of the dataset's layers.">
+                  Layer Bounding Boxes
+                </FastTooltip>
+              </Divider>
+            ) : null}
+            <UserBoundingBoxInput
+              key={layerBoundingBox.name}
+              bboxId={-1}
+              value={layerBoundingBox.value}
+              name={layerBoundingBox.name}
+              color={
+                layerBoundingBoxColor[layerBoundingBox.name] ?? DEFAULT_LAYER_BOUNDING_BOX_COLOR
+              }
+              isVisible={layerBoundingBoxVisibility[layerBoundingBox.name] ?? true}
+              isExportEnabled={isExportEnabled}
+              isReadOnly
+              // Registering segments modifies the annotation, so it is only possible when updating is allowed.
+              disabled={!allowUpdate}
+              onExport={
+                isExportEnabled ? () => handleExportLayerBoundingBox(layerBoundingBox.name) : noop
+              }
+              onGoToBoundingBox={() => handleGoToLayerBoundingBox(layerBoundingBox.center)}
+              onVisibilityChange={partial(setLayerBoundingBoxVisibility, layerBoundingBox.name)}
+              onColorChange={partial(setLayerBoundingBoxColor, layerBoundingBox.name)}
+              onOpenContextMenu={(menu, event) => onOpenContextMenu(menu, event)}
+              onHideContextMenu={hideContextMenu}
+            />
+          </>
+        );
+      },
     },
   ];
 
-  const getPropsForRow = useCallback<NonNullable<TableProps<UserBoundingBox>["onRow"]>>(
-    (bb: UserBoundingBox) => ({
+  const getPropsForRow = useCallback<NonNullable<TableProps<BoundingBoxTableRow>["onRow"]>>(
+    (row: BoundingBoxTableRow) => ({
       onClick: (event) => {
         hideContextMenu();
+        if (row.kind === "layer") {
+          // Read-only layer bounding boxes cannot be selected, but clicking still navigates to them.
+          handleGoToLayerBoundingBox(row.layerBoundingBox.center);
+          return;
+        }
+        const bboxId = row.userBoundingBox.id;
         if (event.ctrlKey || event.metaKey) {
           setSelectedRowKeys((prev) =>
-            prev.includes(bb.id) ? prev.filter((key) => key !== bb.id) : [...prev, bb.id],
+            prev.includes(bboxId) ? prev.filter((key) => key !== bboxId) : [...prev, bboxId],
           );
         } else {
-          handleGoToBoundingBox(bb.id);
-          setSelectedRowKeys([bb.id]);
-          dispatch(setActiveUserBoundingBoxId(bb.id));
+          handleGoToBoundingBox(bboxId);
+          setSelectedRowKeys([bboxId]);
+          dispatch(setActiveUserBoundingBoxId(bboxId));
         }
       },
     }),
-    [hideContextMenu, dispatch, handleGoToBoundingBox],
+    [hideContextMenu, dispatch, handleGoToBoundingBox, handleGoToLayerBoundingBox],
   );
 
   const onOpenContextMenu = (menu: MenuProps, event: React.MouseEvent<HTMLDivElement>) => {
@@ -337,46 +473,43 @@ export default function BoundingBoxTab() {
         menu={menu}
         className={CONTEXT_MENU_CLASS}
       />
-      {/* Don't render a table in view mode. */}
-      {isViewMode ? null : (
-        <AutoSizer defaultHeight={500}>
-          {({ height, width }) => (
-            <div
-              style={{
-                height,
-                width,
-              }}
-            >
-              {userBoundingBoxes.length === 0 ? (
-                <Flex justify="center">
-                  <Empty
-                    image={Empty.PRESENTED_IMAGE_SIMPLE}
-                    description="There are no bounding boxes yet. Add one with the + button, draw one with the bounding box tool, or generate several at once."
-                  />
-                </Flex>
-              ) : (
-                <Table
-                  ref={bboxTableRef}
-                  columns={boundingBoxWrapperTableColumns}
-                  dataSource={userBoundingBoxes}
-                  pagination={false}
-                  rowKey="id"
-                  showHeader={false}
-                  className="bounding-box-table"
-                  rowSelection={{
-                    selectedRowKeys,
-                    getCheckboxProps: () => ({ disabled: true }),
-                  }}
-                  virtual
-                  scroll={{ y: height - BBOX_BUTTONS_HEADER_HEIGHT }} // If the scroll height is exactly
-                  // the height of the diff, the AutoSizer will always rerender the table and toggle an additional scrollbar.
-                  onRow={getPropsForRow}
+      <AutoSizer defaultHeight={500}>
+        {({ height, width }) => (
+          <div
+            style={{
+              height,
+              width,
+            }}
+          >
+            {tableData.length === 0 ? (
+              <Flex justify="center">
+                <Empty
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  description="There are no bounding boxes yet. Add one with the + button, draw one with the bounding box tool, or generate several at once."
                 />
-              )}
-            </div>
-          )}
-        </AutoSizer>
-      )}
+              </Flex>
+            ) : (
+              <Table
+                ref={bboxTableRef}
+                columns={boundingBoxWrapperTableColumns}
+                dataSource={tableData}
+                pagination={false}
+                rowKey="key"
+                showHeader={false}
+                className="bounding-box-table"
+                rowSelection={{
+                  selectedRowKeys,
+                  getCheckboxProps: () => ({ disabled: true }),
+                }}
+                virtual
+                scroll={{ y: height - BBOX_BUTTONS_HEADER_HEIGHT }} // If the scroll height is exactly
+                // the height of the diff, the AutoSizer will always rerender the table and toggle an additional scrollbar.
+                onRow={getPropsForRow}
+              />
+            )}
+          </div>
+        )}
+      </AutoSizer>
       <Typography.Text type="secondary">{maybeUneditableExplanation}</Typography.Text>
       {isGenerateModalOpen ? (
         <GenerateBoundingBoxesModal
@@ -392,6 +525,17 @@ export default function BoundingBoxTab() {
           isAnnotation
           onClose={() => setSelectedBoundingBoxForExport(null)}
           initialBoundingBoxId={selectedBoundingBoxForExport.id}
+          initialTab="export"
+        />
+      ) : null}
+      {selectedLayerForExport != null ? (
+        <DownloadModalView
+          isOpen
+          isAnnotation={!isViewMode}
+          onClose={() => setSelectedLayerForExport(null)}
+          initialLayerName={selectedLayerForExport}
+          // -1 selects the "Full layer" bounding box in the export tab.
+          initialBoundingBoxId={-1}
           initialTab="export"
         />
       ) : null}

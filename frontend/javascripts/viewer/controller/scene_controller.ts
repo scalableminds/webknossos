@@ -653,19 +653,24 @@ class SceneController {
     const state = Store.getState();
     const dataset = state.dataset;
     const layers = getDataLayers(dataset);
+    const { layerBoundingBoxVisibility, layerBoundingBoxColor } = state.temporaryConfiguration;
 
     const newLayerBoundingBoxGroup = new Group();
     this.layerBoundingBoxes = Object.fromEntries(
       layers.map((layer) => {
         const boundingBox = getLayerBoundingBox(dataset, layer.name);
         const { min, max } = boundingBox;
+        const color = layerBoundingBoxColor[layer.name];
         const bbCube = new Cube({
           min,
           max,
-          color: LAYER_CUBE_COLOR,
+          color: color
+            ? rgbToInt([color[0] * 255, color[1] * 255, color[2] * 255])
+            : LAYER_CUBE_COLOR,
           showCrossSections: false,
           isHighlighted: false,
         });
+        bbCube.setVisibility(layerBoundingBoxVisibility[layer.name] ?? true);
         bbCube.getMeshes().forEach((mesh) => {
           const transformMatrix = getTransformsForLayerOrNull(
             dataset,
@@ -805,6 +810,14 @@ class SceneController {
       ),
       listenToStoreProperty(
         (storeState) => getDataLayers(storeState.dataset),
+        () => this.updateLayerBoundingBoxes(),
+      ),
+      listenToStoreProperty(
+        (storeState) => storeState.temporaryConfiguration.layerBoundingBoxVisibility,
+        () => this.updateLayerBoundingBoxes(),
+      ),
+      listenToStoreProperty(
+        (storeState) => storeState.temporaryConfiguration.layerBoundingBoxColor,
         () => this.updateLayerBoundingBoxes(),
       ),
       listenToStoreProperty(

@@ -15,6 +15,7 @@ type Props = {
   isAnnotation: boolean;
   initialTab?: TabKeys;
   initialBoundingBoxId?: number;
+  initialLayerName?: string;
 };
 
 function _DownloadModalView({
@@ -23,6 +24,7 @@ function _DownloadModalView({
   isAnnotation,
   initialTab,
   initialBoundingBoxId,
+  initialLayerName,
 }: Props): ReactElement {
   const typeName = isAnnotation ? "annotation" : "dataset";
 
@@ -42,6 +44,7 @@ function _DownloadModalView({
         <DownloadTiffTab
           isAnnotation={isAnnotation}
           initialBoundingBoxId={initialBoundingBoxId}
+          initialLayerName={initialLayerName}
           onClose={onClose}
         />
       ),

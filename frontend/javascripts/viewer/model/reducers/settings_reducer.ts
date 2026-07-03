@@ -159,6 +159,18 @@ function SettingsReducer(state: WebknossosState, action: Action): WebknossosStat
       });
     }
 
+    case "SET_LAYER_BOUNDING_BOX_VISIBILITY": {
+      return updateKey2(state, "temporaryConfiguration", "layerBoundingBoxVisibility", {
+        [action.layerName]: action.isVisible,
+      });
+    }
+
+    case "SET_LAYER_BOUNDING_BOX_COLOR": {
+      return updateKey2(state, "temporaryConfiguration", "layerBoundingBoxColor", {
+        [action.layerName]: action.color,
+      });
+    }
+
     case "SET_MOUSE_POSITION": {
       return updateTemporaryConfig(state, {
         mousePosition: action.position,

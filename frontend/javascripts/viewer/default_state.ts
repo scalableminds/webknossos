@@ -143,6 +143,8 @@ const defaultState: WebknossosState = {
     preferredQualityForMeshPrecomputation: 2,
     preferredQualityForMeshAdHocComputation: 2,
     lastVisibleSegmentationLayerName: null,
+    layerBoundingBoxVisibility: {},
+    layerBoundingBoxColor: {},
   },
   task: null,
   dataset: {

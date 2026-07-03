@@ -53,9 +53,10 @@ function collect(buffer: ActionLogEntry[], action: Action): void {
 export default function* reduxActionLoggingSaga(): Saga<void> {
   yield* call(ensureWkInitialized);
 
-  // The backend endpoint is a SecuredAction, so only log for authenticated users.
+  // Test balloon: only ship action logs for super users for now, to avoid sending too much
+  // data over the wire before the volume/usefulness tradeoff has been evaluated.
   const activeUser = yield* select((state) => state.activeUser);
-  if (activeUser == null) {
+  if (activeUser == null || !activeUser.isSuperUser) {
     return;
   }
 

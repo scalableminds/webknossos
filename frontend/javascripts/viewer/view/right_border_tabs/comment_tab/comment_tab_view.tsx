@@ -7,16 +7,13 @@ import { setActiveNodeAction } from "viewer/model/actions/skeletontracing_action
 import type { CommentType } from "viewer/model/types/tree_types";
 import DomVisibilityObserver from "viewer/view/components/dom_visibility_observer";
 import { MarkdownModal } from "viewer/view/components/markdown_modal";
-import {
-  useActiveCommentEditing,
-  useCommentKeyboardShortcuts,
-  useCommentNavigation,
-  useCommentSorting,
-  useCommentTabData,
-  useExpandedTreeKeys,
-} from "./comment_tab_hooks";
 import { CommentTabToolbar } from "./comment_tab_toolbar";
 import { CommentTreeView } from "./comment_tree_view";
+import { useActiveCommentEditing } from "./hooks/use_comment_editing";
+import { useCommentKeyboardShortcuts, useCommentNavigation } from "./hooks/use_comment_navigation";
+import { useCommentSorting } from "./hooks/use_comment_sorting";
+import { useCommentTabData } from "./hooks/use_comment_tab_data";
+import { useExpandedTreeKeys } from "./hooks/use_expanded_tree_keys";
 
 const commentTabId = "commentTabId";
 

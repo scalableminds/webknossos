@@ -9,8 +9,8 @@ import type { Tree } from "viewer/model/types/tree_types";
 import { ColoredDotIcon } from "../segments_tab/segment_list_item";
 import { TreeSwitcherIcon } from "../trees_tab/tree_switcher_icon";
 import Comment, { commentListId } from "./comment";
-import { useActiveRowKey } from "./comment_tab_hooks";
 import type { CommentTabNode, TreeRowNode } from "./comment_tab_types";
+import { useActiveRowKey } from "./hooks/use_active_comment";
 
 function TreeHeader({ tree }: { tree: Tree }) {
   return (

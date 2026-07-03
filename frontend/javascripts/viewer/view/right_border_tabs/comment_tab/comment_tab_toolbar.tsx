@@ -15,8 +15,8 @@ import type { CommentType } from "viewer/model/types/tree_types";
 import ButtonComponent from "viewer/view/components/button_component";
 import InputComponent from "viewer/view/components/input_component";
 import AdvancedSearchPopover from "../advanced_search_popover";
-import type { CommentEditing } from "./comment_tab_hooks";
 import { type CommentSorting, CommentSortMode } from "./comment_tab_types";
+import type { CommentEditing } from "./hooks/use_comment_editing";
 
 type CommentTabToolbarProps = {
   targetId: string;

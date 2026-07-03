@@ -18,6 +18,7 @@ import type { UiAction } from "viewer/model/actions/ui_actions";
 import type { UserAction } from "viewer/model/actions/user_actions";
 import type { ViewModeAction } from "viewer/model/actions/view_mode_actions";
 import type { VolumeTracingAction } from "viewer/model/actions/volumetracing_actions";
+import type { IdReservation } from "viewer/store";
 
 export type EscalateErrorAction = ReturnType<typeof escalateErrorAction>;
 export type GetNewIdAction = ReturnType<typeof getNewIdAction>;
@@ -136,7 +137,7 @@ export const dispatchGetNewIdAsync = async (
 export const setIdReservationsAction = (
   tracingId: string,
   domain: ReservableIdDomain,
-  reservations: { id: number; used: boolean }[],
+  reservations: IdReservation[],
 ) =>
   ({
     type: "SET_ID_RESERVATIONS",

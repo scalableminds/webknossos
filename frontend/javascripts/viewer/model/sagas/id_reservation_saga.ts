@@ -7,6 +7,7 @@ import Constants from "viewer/constants";
 import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
 import type {
   EditableMapping,
+  IdReservation,
   SkeletonTracing,
   VolumeTracing,
   WebknossosState,
@@ -70,7 +71,7 @@ function getReservationsForDomain(
   state: WebknossosState,
   tracingId: string,
   domain: ReservableIdDomain,
-): { id: number; used: boolean }[] {
+): IdReservation[] {
   if (domain === "BoundingBox") {
     return getIdReservationsForBoundingBoxes(state);
   }
@@ -96,7 +97,7 @@ export default function* idReservationSaga(): Saga<void> {
 
 function getUsableReservations(
   tracing: SupportedTracing,
-  reservations: { id: number; used: boolean }[],
+  reservations: IdReservation[],
   domain: ReservableIdDomain,
 ) {
   /*

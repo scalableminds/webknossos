@@ -16,7 +16,7 @@ import {
   TreeMap,
 } from "viewer/model/types/tree_types";
 import type { NumberLike, SkeletonTracing, StoreAnnotation, WebknossosState } from "viewer/store";
-import { findGroup } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
+import { findGroup } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import { max } from "../helpers/iterator_utils";
 import { invertTransform, transformPointUnscaled } from "../helpers/transformation_helpers";
 import {

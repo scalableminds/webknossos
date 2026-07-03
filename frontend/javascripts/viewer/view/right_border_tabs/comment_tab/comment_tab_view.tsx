@@ -52,7 +52,7 @@ import { buildKeyBindingsFromConfig } from "viewer/view/keyboard_shortcuts/keybo
 import Comment, { commentListId } from "viewer/view/right_border_tabs/comment_tab/comment";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import { ColoredDotIcon } from "../segments_tab/segment_list_item";
-import { TreeSwitcherIcon } from "../trees_tab/tree_switcher_icon";
+import { TreeSwitcherIcon } from "../shared/tree_switcher_icon";
 
 const commentTabId = "commentTabId";
 enum SortByEnum {

@@ -121,7 +121,6 @@ import AdvancedSearchPopover from "../advanced_search_popover";
 import DeleteGroupModalView from "../delete_group_modal_view";
 import { ResizableSplitPane } from "../resizable_split_pane";
 import ScrollableVirtualizedTree from "../scrollable_virtualized_tree";
-import { ContextMenuContainer } from "../sidebar_context_menu";
 import {
   createGroupToSegmentsMap,
   deepFlatFilter,
@@ -129,8 +128,9 @@ import {
   getGroupByIdWithSubgroups,
   getGroupNodeKey,
   MISSING_GROUP_ID,
-} from "../trees_tab/tree_hierarchy_view_helpers";
-import { TreeSwitcherIcon } from "../trees_tab/tree_switcher_icon";
+} from "../shared/tree_hierarchy_view_helpers";
+import { TreeSwitcherIcon } from "../shared/tree_switcher_icon";
+import { ContextMenuContainer } from "../sidebar_context_menu";
 import { PrecomputeMeshesPopover } from "./precompute_meshes_popover";
 import { SegmentDetailsPanel } from "./segment_details_panel";
 import { SegmentStatisticsModal } from "./segment_statistics_modal";

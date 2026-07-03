@@ -191,12 +191,11 @@ export const finishedResizingUserBoundingBoxAction = (id: number) =>
   }) as const;
 
 export const addUserBoundingBoxAction = (
-  newBoundingBox?: Partial<UserBoundingBoxWithoutId> | null | undefined,
-  center?: Vector3,
-  // Callers that can reserve an id up front (e.g., via dispatchGetNewIdAsync with the
-  // "BoundingBox" domain) should pass it here to avoid id collisions in collaborative
-  // annotations. If omitted, the reducer falls back to computing the next free id locally.
-  id?: number,
+  newBoundingBox: Partial<UserBoundingBoxWithoutId> | null | undefined,
+  center: Vector3 | undefined,
+  // Callers must reserve an id up front (e.g., via dispatchGetNewIdAsync with the
+  // "BoundingBox" domain) to avoid id collisions in collaborative annotations.
+  id: number,
 ) =>
   ({
     type: "ADD_NEW_USER_BOUNDING_BOX",

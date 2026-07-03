@@ -192,8 +192,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
       }
 
       const { userBoundingBoxes } = tracing;
-      const highestBoundingBoxId = Math.max(0, ...userBoundingBoxes.map((bb) => bb.id));
-      const boundingBoxId = action.id ?? highestBoundingBoxId + 1;
+      const boundingBoxId = action.id;
 
       const { min, max, halfBoxExtent } = getDisplayedDataExtentInPlaneMode(state);
       const newBoundingBoxTemplate: UserBoundingBox = {
@@ -247,6 +246,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         return state;
       }
 
+      // TODO (#9758): For live collaboration, the following ID mechanism must be reworked.
       const highestBoundingBoxId = Math.max(0, ...tracing.userBoundingBoxes.map((bb) => bb.id));
       const additionalUserBoundingBoxes = action.userBoundingBoxes.map((bb, index) => ({
         ...bb,

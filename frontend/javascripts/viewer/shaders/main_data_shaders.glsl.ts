@@ -6,8 +6,11 @@ import template from "lodash-es/template";
 import type { ElementClass } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import Constants from "viewer/constants";
-import constants, { OrthoViewIndices, ViewModeValuesIndices } from "viewer/constants";
-import { PLANE_SUBDIVISION } from "viewer/geometries/plane";
+import constants, {
+  OrthoViewIndices,
+  PLANE_SUBDIVISION,
+  ViewModeValuesIndices,
+} from "viewer/constants";
 import { MAX_ZOOM_STEP_DIFF } from "viewer/model/bucket_data_handling/loading_strategy_logic";
 import { MAPPING_TEXTURE_WIDTH } from "viewer/model/bucket_data_handling/mappings";
 import {

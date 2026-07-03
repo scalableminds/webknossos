@@ -31,7 +31,6 @@ import {
   getMagInfo,
   getMaxZoomStep,
 } from "viewer/model/accessors/dataset_accessor";
-import { getViewportRects } from "viewer/model/accessors/view_mode_accessor";
 import determineBucketsForFlight from "viewer/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
 import determineBucketsForPlane from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
 import { MAX_ZOOM_STEP_DIFF } from "viewer/model/bucket_data_handling/loading_strategy_logic";
@@ -621,7 +620,9 @@ function getAreas(
 
 export function getAreasFromState(state: WebknossosState): OrthoViewMap<Area> {
   const position = getPosition(state.flycam);
-  const rects = getViewportRects(state);
+  // Note: This is inlined from view_mode_accessor's getViewportRects to avoid
+  // a cyclic dependency between flycam_accessor and view_mode_accessor.
+  const rects = state.viewModeData.plane.inputCatcherRects;
   const { zoomStep } = state.flycam;
   const voxelSize = state.dataset.dataSource.scale;
   return getAreas(rects, position, zoomStep, voxelSize);

@@ -18,7 +18,7 @@ const FLUSH_INTERVAL_MS = 10000;
 const MAX_BATCH_SIZE = 100;
 // A single action whose serialized form exceeds this size is logged as type-only to avoid
 // bloating a batch (e.g. actions carrying large data payloads).
-const MAX_ACTION_SERIALIZED_LENGTH = 10000;
+const MAX_ACTION_SERIALIZED_LENGTH = 1000;
 
 // Explicit allowlist of action types that are shipped to Loki, rather than a blacklist of ones
 // that aren't. This is deliberately opt-out-by-default: a newly added action type is NOT logged

@@ -206,6 +206,9 @@ function GenerateBoundingBoxesModalInner({ isOpen, onClose, magnification, jobTy
           placedBoxes.push(candidate);
           // Reserved sequentially so every generated box gets a collision-free id, even in
           // collaborative annotations where other users might be creating bounding boxes too.
+          // If this turns out to become a bottleneck, we can batch-allocate ID before this
+          // loop. This will only be relevant when generating bounding boxes in a collaborative
+          // context, though.
           const id = await dispatchGetNewIdAsync(dispatch, tracingId, "BoundingBox");
           actions.push(
             addUserBoundingBoxAction(

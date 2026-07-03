@@ -106,6 +106,7 @@ export default function WelcomeToast() {
   const [api, contextHolder] = notification.useNotification();
 
   useEffectOnlyOnce(() => {
+    showWelcomeToast(api);
     if (!features().isWkorgInstance) {
       return;
     }

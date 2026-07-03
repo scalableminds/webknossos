@@ -947,13 +947,17 @@ export function* tryToIncorporateActions(
           Toast.error(message);
           return FailedIncorporateActionsReturnValue;
         }
-        const { splitMapping, oldAgglomerateIds, newAgglomerateIds, newToOldAgglomerateIds } =
-          splitMappingInfo;
+        const {
+          mappingWithSplitApplied,
+          oldAgglomerateIds,
+          newAgglomerateIds,
+          newToOldAgglomerateIds,
+        } = splitMappingInfo;
 
         yield* put(
           setMappingDataAction(
             tracingId,
-            splitMapping,
+            mappingWithSplitApplied,
             false, // Upon finishing the forwarding of missing backend actions the
             // finishedApplyingMissingUpdatesAction action takes care of storing the
             // newest info in RebaseRelevantAnnotationState after the backend updates are applied.

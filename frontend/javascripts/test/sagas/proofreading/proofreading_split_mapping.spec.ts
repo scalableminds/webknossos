@@ -119,7 +119,7 @@ describe("splitAgglomeratesInMapping", () => {
       const maybeAdditionalEntry: [number, number][] = addAdditionalSegmentsToMapping
         ? [[2, 300]]
         : [];
-      expect(result?.splitMapping).toEqual(
+      expect(result?.mappingWithSplitApplied).toEqual(
         new Map([[1, 100], [3, 200], [4, 200], ...maybeAdditionalEntry]),
       );
     });
@@ -155,7 +155,7 @@ describe("splitAgglomeratesInMapping", () => {
       ]),
     );
     // The interior segments of both agglomerates are re-mapped (they were present locally).
-    expect(result?.splitMapping).toEqual(
+    expect(result?.mappingWithSplitApplied).toEqual(
       new Map([
         [1, 100],
         [2, 300],

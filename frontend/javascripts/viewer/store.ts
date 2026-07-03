@@ -346,6 +346,7 @@ export type UserConfiguration = {
   readonly brushSize: number;
   readonly clippingDistance: number;
   readonly clippingDistanceFlight: number;
+  readonly clipSkeletonToCurrentSection: boolean;
   readonly crosshairSize: number;
   readonly displayCrosshair: boolean;
   readonly displayScalebars: boolean;

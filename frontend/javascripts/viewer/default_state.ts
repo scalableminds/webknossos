@@ -58,6 +58,7 @@ const defaultState: WebknossosState = {
     brushSize: 50,
     clippingDistance: 50,
     clippingDistanceFlight: 64,
+    clipSkeletonToCurrentSection: false,
     crosshairSize: 0.1,
     displayCrosshair: true,
     displayScalebars: true,

@@ -2,6 +2,7 @@ import { WarningOutlined } from "@ant-design/icons";
 import { Divider, Empty, Modal, Spin, Tooltip } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import messages from "messages";
+import { useRef } from "react";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import DomVisibilityObserver from "viewer/view/components/dom_visibility_observer";
 import DeleteGroupModalView from "../delete_group_modal_view";
@@ -31,10 +32,17 @@ function SkeletonsHiddenWarning() {
 }
 
 function ExportProgressModal({ pendingExport }: { pendingExport: "nml" | "csv" | null }) {
+  // Remember the last shown title so it doesn't switch to the other export
+  // type's title during the fade-out of the modal.
+  const lastExportRef = useRef<"nml" | "csv">("nml");
+  if (pendingExport != null) {
+    lastExportRef.current = pendingExport;
+  }
+
   return (
     <Modal
       open={pendingExport != null}
-      title={pendingExport === "csv" ? "Preparing CSV" : "Preparing NML"}
+      title={lastExportRef.current === "csv" ? "Preparing CSV" : "Preparing NML"}
       closable={false}
       footer={null}
       width={200}

@@ -28,7 +28,6 @@ import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import {
   createTreeAction,
   deleteTreesAction,
-  deselectActiveTreeGroupAction,
   expandParentGroupsOfTreeAction,
   selectNextTreeAction,
   setActiveTreeAction,
@@ -118,7 +117,6 @@ export function SkeletonToolbar({ hierarchy, selection, groupOperations, skeleto
   };
 
   const onSelectAllMatchingTrees = (matchingNodes: SkeletonUiNode[]) => {
-    dispatch(deselectActiveTreeGroupAction());
     const treeIds = matchingNodes.flatMap((node) => {
       if (node.type !== "tree") {
         return [];
@@ -126,6 +124,7 @@ export function SkeletonToolbar({ hierarchy, selection, groupOperations, skeleto
       expandParentGroupsOf(node);
       return [node.tree.treeId];
     });
+    // selectTrees also deselects the active group.
     selection.selectTrees(treeIds);
   };
 

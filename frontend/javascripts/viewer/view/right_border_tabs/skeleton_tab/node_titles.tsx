@@ -53,7 +53,8 @@ export function TreeNodeTitle({
         onChange={(newName) => dispatch(setTreeNameAction(newName, tree.treeId))}
         hideEditIcon
       />
-      {tree.metadata.length > 0 ? (
+      {/* The type claims metadata is always set, but e.g. proto-imported trees can lack it at runtime. */}
+      {(tree.metadata ?? []).length > 0 ? (
         <FastTooltip className="deemphasized" title="This tree has assigned metadata properties.">
           <TagsOutlined />
         </FastTooltip>

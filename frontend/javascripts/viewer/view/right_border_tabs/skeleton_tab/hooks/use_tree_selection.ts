@@ -12,9 +12,8 @@ import {
 
 export type TreeSelection = {
   selectedTreeIds: number[];
-  selectSingleTree: (treeId: number, dispatchSetActiveTree: boolean) => void;
+  selectSingleTree: (treeId: number) => void;
   multiSelectTree: (treeId: number) => void;
-  rangeSelectTrees: (treeIds: number[]) => void;
   selectTrees: (treeIds: number[]) => void;
   selectGroup: (groupId: number) => void;
   deselectAllTrees: () => void;
@@ -47,11 +46,9 @@ export function useTreeSelection(): TreeSelection {
   }, [activeTreeId]);
 
   const selectSingleTree = useCallback(
-    (treeId: number, dispatchSetActiveTree: boolean) => {
+    (treeId: number) => {
       setSelectedTreeIds([treeId]);
-      if (dispatchSetActiveTree) {
-        dispatch(setActiveTreeAction(treeId));
-      }
+      dispatch(setActiveTreeAction(treeId));
     },
     [dispatch],
   );
@@ -85,10 +82,6 @@ export function useTreeSelection(): TreeSelection {
     },
     [dispatch, selectedTreeIds, activeTreeId],
   );
-
-  const rangeSelectTrees = useCallback((treeIds: number[]) => {
-    setSelectedTreeIds(treeIds);
-  }, []);
 
   const selectTrees = useCallback(
     (treeIds: number[]) => {
@@ -128,7 +121,6 @@ export function useTreeSelection(): TreeSelection {
     selectedTreeIds,
     selectSingleTree,
     multiSelectTree,
-    rangeSelectTrees,
     selectTrees,
     selectGroup,
     deselectAllTrees,

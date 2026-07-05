@@ -33,11 +33,13 @@ export type GroupUiNode = BasicDataNode & {
 
 export type SkeletonUiNode = TreeUiNode | GroupUiNode;
 
-export function getTreeNodeKey(treeId: number): string {
+// Deliberately named differently from getNodeKey/getGroupNodeKey in
+// shared/tree_hierarchy_view_helpers.ts, which produce a different key format.
+export function getTreeUiNodeKey(treeId: number): string {
   return `tree-${treeId}`;
 }
 
-export function getGroupNodeKey(groupId: number): string {
+export function getGroupUiNodeKey(groupId: number): string {
   return `group-${groupId}`;
 }
 
@@ -59,7 +61,6 @@ export type SkeletonHierarchy = {
   checkedKeys: string[];
   // Keys of expanded groups (derived from TreeGroup.isExpanded).
   expandedKeys: string[];
-  treeNodesById: Map<number, TreeUiNode>;
   groupNodesById: Map<number, GroupUiNode>;
   nodesByKey: Map<string, SkeletonUiNode>;
 };
@@ -79,7 +80,6 @@ export function buildSkeletonHierarchy(
   sortBy: TreeSortBy,
 ): SkeletonHierarchy {
   const groupToTreesMap = createGroupToTreesMap(trees);
-  const treeNodesById = new Map<number, TreeUiNode>();
   const groupNodesById = new Map<number, GroupUiNode>();
   const nodesByKey = new Map<string, SkeletonUiNode>();
   const checkedKeySet = new Set<string>();
@@ -88,11 +88,10 @@ export function buildSkeletonHierarchy(
   const buildTreeNode = (tree: Tree): TreeUiNode => {
     const node: TreeUiNode = {
       type: "tree",
-      key: getTreeNodeKey(tree.treeId),
+      key: getTreeUiNodeKey(tree.treeId),
       tree,
       isLeaf: true,
     };
-    treeNodesById.set(tree.treeId, node);
     nodesByKey.set(node.key, node);
     if (tree.isVisible) {
       checkedKeySet.add(node.key);
@@ -111,7 +110,7 @@ export function buildSkeletonHierarchy(
 
     const node: GroupUiNode = {
       type: "group",
-      key: getGroupNodeKey(group.groupId),
+      key: getGroupUiNodeKey(group.groupId),
       group,
       children,
       containsTrees:
@@ -160,7 +159,6 @@ export function buildSkeletonHierarchy(
     flatNodes,
     checkedKeys: Array.from(checkedKeySet),
     expandedKeys,
-    treeNodesById,
     groupNodesById,
     nodesByKey,
   };

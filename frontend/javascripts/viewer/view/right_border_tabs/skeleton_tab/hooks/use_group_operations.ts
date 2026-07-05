@@ -11,6 +11,7 @@ import {
   batchUpdateGroupsAndTreesAction,
   deleteTreesAction,
   setActiveTreeGroupAction,
+  setExpandedTreeGroupsByIdsAction,
   setTreeGroupAction,
   setTreeGroupsAction,
 } from "viewer/model/actions/skeletontracing_actions";
@@ -19,10 +20,10 @@ import type { TreeGroup } from "viewer/model/types/tree_types";
 import Store from "viewer/store";
 import {
   callDeep,
+  createGroupHelper,
   createGroupToTreesMap,
+  getExpandedGroups,
   MISSING_GROUP_ID,
-  makeBasicGroupObject,
-  mapGroups,
   moveGroupsHelper,
 } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 
@@ -57,7 +58,6 @@ export type GroupOperations = {
   cancelGroupDeletion: () => void;
   moveTreesToGroup: (treeIds: number[], targetGroupId: number) => void;
   moveGroupToGroup: (groupId: number, targetGroupId: number) => void;
-  expandGroup: (groupId: number) => void;
 };
 
 export function useGroupOperations(deselectAllTrees: () => void): GroupOperations {
@@ -68,17 +68,13 @@ export function useGroupOperations(deselectAllTrees: () => void): GroupOperation
 
   const createGroup = useCallback(
     (parentGroupId: number) => {
-      const newTreeGroups = cloneDeep(treeGroups);
-      const newGroupId = getMaximumGroupId(newTreeGroups) + 1;
-      const newGroup = makeBasicGroupObject(newGroupId, `Group ${newGroupId}`);
-
-      if (parentGroupId === MISSING_GROUP_ID) {
-        newTreeGroups.push(newGroup);
-      } else {
-        callDeep(newTreeGroups, parentGroupId, (group) => {
-          group.children.push(newGroup);
-        });
-      }
+      const newGroupId = getMaximumGroupId(treeGroups) + 1;
+      const newTreeGroups = createGroupHelper(
+        treeGroups,
+        `Group ${newGroupId}`,
+        newGroupId,
+        parentGroupId,
+      );
 
       dispatch(setTreeGroupsAction(newTreeGroups));
       deselectAllTrees();
@@ -185,12 +181,17 @@ export function useGroupOperations(deselectAllTrees: () => void): GroupOperation
     setGroupIdPendingDeletion(null);
   }, []);
 
+  // Uses the same action as all other expansion flows (tree switcher, context
+  // menus) so that expansion state changes go through a single mechanism.
   const expandGroup = useCallback(
     (groupId: number) => {
-      const newGroups = mapGroups(treeGroups, (group) =>
-        group.groupId === groupId && !group.isExpanded ? { ...group, isExpanded: true } : group,
-      );
-      dispatch(setTreeGroupsAction(newGroups));
+      if (groupId === MISSING_GROUP_ID) {
+        // The virtual root group is always expanded.
+        return;
+      }
+      const expandedGroupIds = new Set(getExpandedGroups(treeGroups).map((group) => group.groupId));
+      expandedGroupIds.add(groupId);
+      dispatch(setExpandedTreeGroupsByIdsAction(expandedGroupIds));
     },
     [dispatch, treeGroups],
   );
@@ -208,15 +209,10 @@ export function useGroupOperations(deselectAllTrees: () => void): GroupOperation
 
   const moveGroupToGroup = useCallback(
     (groupId: number, targetGroupId: number) => {
-      const updatedTreeGroups = moveGroupsHelper(treeGroups, groupId, targetGroupId);
-      const newGroups = mapGroups(updatedTreeGroups, (group) =>
-        group.groupId === targetGroupId && !group.isExpanded
-          ? { ...group, isExpanded: true }
-          : group,
-      );
-      dispatch(setTreeGroupsAction(newGroups));
+      dispatch(setTreeGroupsAction(moveGroupsHelper(treeGroups, groupId, targetGroupId)));
+      expandGroup(targetGroupId);
     },
-    [dispatch, treeGroups],
+    [dispatch, treeGroups, expandGroup],
   );
 
   return {
@@ -227,6 +223,5 @@ export function useGroupOperations(deselectAllTrees: () => void): GroupOperation
     cancelGroupDeletion,
     moveTreesToGroup,
     moveGroupToGroup,
-    expandGroup,
   };
 }

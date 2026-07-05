@@ -14,7 +14,10 @@ import {
 } from "viewer/model/actions/skeletontracing_actions";
 import { useReduxActionListener } from "viewer/model/helpers/listener_helpers";
 import { getContextMenuPositionFromEvent } from "viewer/view/context_menu/helpers";
-import { MISSING_GROUP_ID } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
+import {
+  getGroupByIdWithSubgroups,
+  MISSING_GROUP_ID,
+} from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import { ResizableSplitPane } from "../resizable_split_pane";
 import ScrollableVirtualizedTree from "../scrollable_virtualized_tree";
 import { TreeSwitcherIcon } from "../shared/tree_switcher_icon";
@@ -22,8 +25,9 @@ import { ContextMenuContainer } from "../sidebar_context_menu";
 import { useGroupContextMenuBuilder, useTreeContextMenuBuilder } from "./context_menus";
 import {
   type GroupUiNode,
-  getGroupNodeKey,
-  getTreeNodeKey,
+  getGroupUiNodeKey,
+  getTreeUiNodeKey,
+  isRootGroupNode,
   type SkeletonHierarchy,
   type SkeletonUiNode,
   type TreeUiNode,
@@ -34,16 +38,6 @@ import { GroupNodeTitle, TreeNodeTitle } from "./node_titles";
 import { SelectionDetails } from "./selection_details";
 
 const CONTEXT_MENU_CLASS = "tree-list-context-menu-overlay";
-
-function collectSubgroupKeys(node: GroupUiNode): string[] {
-  const keys = [node.key];
-  for (const child of node.children) {
-    if (child.type === "group") {
-      keys.push(...collectSubgroupKeys(child));
-    }
-  }
-  return keys;
-}
 
 type Props = {
   hierarchy: SkeletonHierarchy;
@@ -117,19 +111,19 @@ export function SkeletonTreeView({ hierarchy, selection, groupOperations }: Prop
 
   const scrollToActiveTree = useCallback(() => {
     if (activeTreeId != null && treeRef.current) {
-      treeRef.current.scrollTo({ key: getTreeNodeKey(activeTreeId), align: "auto" });
+      treeRef.current.scrollTo({ key: getTreeUiNodeKey(activeTreeId), align: "auto" });
     }
   }, [activeTreeId]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Only react to active tree changes; the other dependencies change too often.
   useEffect(() => {
-    // Scroll to and select the active tree whenever it changes (it can be
-    // changed by actions outside of this component, too).
+    // Scroll to the active tree whenever it changes (it can be changed by
+    // actions outside of this component, too). The selection itself follows
+    // the active tree inside useTreeSelection.
     if (activeTreeId != null) {
       // The target element might not be rendered yet, which would mess with
       // calculating the offsets for scrolling. Hence, delay this a bit.
       setTimeout(scrollToActiveTree, 50);
-      selection.selectSingleTree(activeTreeId, false);
       // Ensure the active tree is not hidden inside collapsed parent groups.
       const activeTree = trees.getNullable(activeTreeId);
       if (activeTree?.groupId != null) {
@@ -141,7 +135,7 @@ export function SkeletonTreeView({ hierarchy, selection, groupOperations }: Prop
   useEffect(() => {
     // Scroll to the active group if it changes.
     if (treeRef.current && activeGroupId != null) {
-      treeRef.current.scrollTo({ key: getGroupNodeKey(activeGroupId), align: "auto" });
+      treeRef.current.scrollTo({ key: getGroupUiNodeKey(activeGroupId), align: "auto" });
     }
   }, [activeGroupId]);
 
@@ -159,8 +153,9 @@ export function SkeletonTreeView({ hierarchy, selection, groupOperations }: Prop
 
     if (info.node.type === "group" && !info.expanded) {
       // When collapsing a group, also collapse all its subgroups.
-      for (const key of collectSubgroupKeys(info.node)) {
-        expandedKeySet.delete(key);
+      const collapsedGroup = info.node.group;
+      for (const groupId of getGroupByIdWithSubgroups([collapsedGroup], collapsedGroup.groupId)) {
+        expandedKeySet.delete(getGroupUiNodeKey(groupId));
       }
     }
 
@@ -216,10 +211,10 @@ export function SkeletonTreeView({ hierarchy, selection, groupOperations }: Prop
         .slice(start, end + 1)
         .filter((sibling) => sibling.type === "tree")
         .map((sibling) => sibling.tree.treeId);
-      selection.rangeSelectTrees(treeIdsInRange);
+      selection.selectTrees(treeIdsInRange);
     } else {
       // Regular click on a single tree without any multi-selection stuff.
-      selection.selectSingleTree(selectedTreeId, true);
+      selection.selectSingleTree(selectedTreeId);
     }
   };
 
@@ -252,15 +247,13 @@ export function SkeletonTreeView({ hierarchy, selection, groupOperations }: Prop
   };
 
   const isNodeDraggable = (node: SkeletonUiNode): boolean =>
-    allowUpdate &&
-    renamingCounter.current === 0 &&
-    !(node.type === "group" && node.group.groupId === MISSING_GROUP_ID);
+    allowUpdate && renamingCounter.current === 0 && !isRootGroupNode(node);
 
   // selectedKeys is mainly used for highlighting, i.e. blueish background color.
   const selectedKeys =
     activeGroupId != null
-      ? [getGroupNodeKey(activeGroupId)]
-      : selection.selectedTreeIds.map(getTreeNodeKey);
+      ? [getGroupUiNodeKey(activeGroupId)]
+      : selection.selectedTreeIds.map(getTreeUiNodeKey);
 
   return (
     <>

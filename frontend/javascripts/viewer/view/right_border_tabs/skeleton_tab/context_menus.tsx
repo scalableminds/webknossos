@@ -37,7 +37,6 @@ import {
   toggleInactiveTreesAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import { TreeMap } from "viewer/model/types/tree_types";
-import { api } from "viewer/singletons";
 import {
   createGroupToTreesMap,
   getExpandedGroups,
@@ -267,10 +266,7 @@ export function useGroupContextMenuBuilder(
         } else if (labelForActiveItems === "trees") {
           groupOperations.moveTreesToGroup(selection.selectedTreeIds, groupId);
         } else if (labelForActiveItems === "group" && activeGroupId != null) {
-          api.tracing.moveSkeletonGroup(
-            activeGroupId,
-            groupId === MISSING_GROUP_ID ? null : groupId,
-          );
+          groupOperations.moveGroupToGroup(activeGroupId, groupId);
         }
       };
 

@@ -20,7 +20,7 @@ import {
 import { withoutServerSpecificFields } from "viewer/model/reducers/update_action_application/shared_update_helper";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
-import { stlMeshConstants } from "viewer/view/right_border_tabs/segments_tab/segments_view";
+import { stlMeshConstants } from "viewer/view/right_border_tabs/segments_tab/segments_view_helper";
 import { getAdditionalCoordinatesAsString } from "../../accessors/flycam_accessor";
 import type { FlycamAction } from "../../actions/flycam_actions";
 import type {

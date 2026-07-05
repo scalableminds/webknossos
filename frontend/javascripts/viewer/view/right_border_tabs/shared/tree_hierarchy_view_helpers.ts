@@ -5,7 +5,6 @@ import orderBy from "lodash-es/orderBy";
 import memoizeOne from "memoize-one";
 import type { Tree, TreeGroup, TreeMap } from "viewer/model/types/tree_types";
 import type { Segment, SegmentGroup, SegmentMap } from "viewer/store";
-import type { SegmentHierarchyNode } from "../segments_tab/segments_view_helper";
 
 export const MISSING_GROUP_ID = -1;
 
@@ -311,7 +310,7 @@ export function createGroupHelper(
   return newSegmentGroups;
 }
 
-export function deepFilter<T extends TreeNode | TreeGroup | SegmentHierarchyNode>(
+export function deepFilter<T extends { children?: T[] }>(
   nodes: T[],
   predicate: (node: T) => boolean,
 ): T[] {
@@ -327,7 +326,7 @@ export function deepFilter<T extends TreeNode | TreeGroup | SegmentHierarchyNode
   }, []);
 }
 
-export function deepFlatFilter<T extends TreeNode | TreeGroup | SegmentHierarchyNode>(
+export function deepFlatFilter<T extends { children?: T[] }>(
   nodes: T[],
   predicate: (node: T) => boolean,
 ): T[] {

@@ -620,8 +620,6 @@ function getAreas(
 
 export function getAreasFromState(state: WebknossosState): OrthoViewMap<Area> {
   const position = getPosition(state.flycam);
-  // Note: This is inlined from view_mode_accessor's getViewportRects to avoid
-  // a cyclic dependency between flycam_accessor and view_mode_accessor.
   const rects = state.viewModeData.plane.inputCatcherRects;
   const { zoomStep } = state.flycam;
   const voxelSize = state.dataset.dataSource.scale;

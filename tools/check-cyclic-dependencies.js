@@ -10,12 +10,9 @@ const KNOWN_CYCLES = [];
 // cycles in worker dependency graphs are caught, too (cycles there are
 // especially problematic since they can break the worker bundles).
 const WORKER_DIR = "frontend/javascripts/viewer/workers";
-const workerEntries = fs
-  .readdirSync(WORKER_DIR)
-  .filter((fileName) => fileName.endsWith(".worker.ts"))
-  .map((fileName) => path.join(WORKER_DIR, fileName));
+const WORKER_GLOB = "frontend/javascripts/viewer/workers/**/*.worker.ts";
 
-parseDependencyTree(["frontend/javascripts/main.tsx", ...workerEntries], {
+parseDependencyTree(["frontend/javascripts/main.tsx", WORKER_GLOB], {
   /* options, see below */
   extensions: [".ts", ".tsx"],
   transform: true,

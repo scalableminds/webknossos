@@ -61,7 +61,6 @@ export type SegmentsHierarchy = {
   checkedKeys: string[];
   // Keys of expanded groups (derived from SegmentGroup.isExpanded).
   expandedKeys: string[];
-  groupNodesById: Map<number, SegmentGroupUiNode>;
   nodesByKey: Map<string, SegmentsUiNode>;
 };
 
@@ -70,7 +69,6 @@ export function buildSegmentHierarchy(
   segmentGroups: SegmentGroup[],
 ): SegmentsHierarchy {
   const groupToSegmentsMap = segments != null ? createGroupToSegmentsMap(segments) : {};
-  const groupNodesById = new Map<number, SegmentGroupUiNode>();
   const nodesByKey = new Map<string, SegmentsUiNode>();
   const checkedKeys: string[] = [];
   const expandedKeys: string[] = [];
@@ -103,7 +101,6 @@ export function buildSegmentHierarchy(
       group,
       children: [...childGroupNodes, ...segmentNodes],
     };
-    groupNodesById.set(group.groupId, node);
     nodesByKey.set(node.key, node);
 
     if (group.isExpanded ?? true) {
@@ -134,7 +131,6 @@ export function buildSegmentHierarchy(
     flatNodes,
     checkedKeys,
     expandedKeys,
-    groupNodesById,
     nodesByKey,
   };
 }

@@ -26,7 +26,6 @@ export type SegmentSelection = {
   setSelection: (segmentIds: number[], groupId: number | null) => void;
   // Selects a single segment and moves the camera to its anchor position.
   selectSegmentAndJumpToPosition: (segment: Segment) => void;
-  deselectAll: () => void;
 };
 
 /*
@@ -57,8 +56,6 @@ export function useSegmentSelection(): SegmentSelection {
     },
     [dispatch, visibleSegmentationLayer],
   );
-
-  const deselectAll = useCallback(() => setSelection([], null), [setSelection]);
 
   const selectSegmentAndJumpToPosition = useCallback(
     (segment: Segment) => {
@@ -109,6 +106,5 @@ export function useSegmentSelection(): SegmentSelection {
     selectedKeys,
     setSelection,
     selectSegmentAndJumpToPosition,
-    deselectAll,
   };
 }

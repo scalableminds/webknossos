@@ -1,6 +1,6 @@
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useDispatch } from "react-redux";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
 import { layerToGlobalTransformedPosition } from "viewer/model/accessors/dataset_layer_transformation_accessor";
@@ -89,15 +89,25 @@ export function useSegmentSelection(): SegmentSelection {
     [dispatch, visibleSegmentationLayer, setSelection],
   );
 
-  const selectedSegments =
-    segments != null
-      ? selectedIds.segments.flatMap((segmentId) => segments.getNullable(segmentId) ?? [])
-      : [];
+  // Memoize the derived arrays so their identities stay stable while the
+  // selection is unchanged. Consumers feed these into React.memo children
+  // (segment rows) and useCallback dependency arrays (the context-menu
+  // builders), which would otherwise be invalidated on every render.
+  const selectedSegments = useMemo(
+    () =>
+      segments != null
+        ? selectedIds.segments.flatMap((segmentId) => segments.getNullable(segmentId) ?? [])
+        : [],
+    [segments, selectedIds.segments],
+  );
 
-  const selectedKeys = selectedIds.segments.map(getSegmentUiNodeKey);
-  if (selectedIds.group != null) {
-    selectedKeys.push(getGroupUiNodeKey(selectedIds.group));
-  }
+  const selectedKeys = useMemo(() => {
+    const keys = selectedIds.segments.map(getSegmentUiNodeKey);
+    if (selectedIds.group != null) {
+      keys.push(getGroupUiNodeKey(selectedIds.group));
+    }
+    return keys;
+  }, [selectedIds.segments, selectedIds.group]);
 
   return {
     selectedSegmentIds: selectedIds.segments,

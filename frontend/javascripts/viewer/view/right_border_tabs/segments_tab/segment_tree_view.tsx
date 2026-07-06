@@ -13,7 +13,6 @@ import {
   toggleAllSegmentsAction,
   toggleSegmentGroupAction,
 } from "viewer/model/actions/volumetracing_actions";
-import type { Segment } from "viewer/store";
 import Store from "viewer/store";
 import { getContextMenuPositionFromEvent } from "viewer/view/context_menu/helpers";
 import {
@@ -158,9 +157,12 @@ export function SegmentTreeView(props: Props) {
         return;
       }
       if (
-        selectedSegmentIds.length === 1 &&
+        selectedSegmentIds.length > 0 &&
         previous.selectedSegmentIds[0] !== selectedSegmentIds[0]
       ) {
+        // Scroll to the first selected segment. This also covers "select all
+        // matches" from the search, where several segments become selected at
+        // once and the first one should be brought into view.
         treeRef.current.scrollTo({ key: getSegmentUiNodeKey(selectedSegmentIds[0]) });
       } else if (selectedGroupId != null && previous.selectedGroupId !== selectedGroupId) {
         treeRef.current.scrollTo({ key: getGroupUiNodeKey(selectedGroupId) });
@@ -285,11 +287,6 @@ export function SegmentTreeView(props: Props) {
   const isNodeDraggable = (node: SegmentsUiNode): boolean =>
     allowUpdate && renamingCounter.current === 0 && !isRootGroupNode(node);
 
-  const onSelectSegment = useCallback(
-    (segment: Segment) => selection.selectSegmentAndJumpToPosition(segment),
-    [selection],
-  );
-
   return (
     <>
       <ContextMenuContainer
@@ -319,7 +316,7 @@ export function SegmentTreeView(props: Props) {
                         onContextMenu={onSegmentNodeContextMenu}
                         onRenameStart={onRenameStart}
                         onRenameEnd={onRenameEnd}
-                        onSelectSegment={onSelectSegment}
+                        onSelectSegment={selection.selectSegmentAndJumpToPosition}
                       />
                     ) : (
                       <GroupNodeTitle

@@ -620,6 +620,8 @@ type UiInformation = {
   readonly voxelPipetteToolInfo: { pinnedPosition: Vector3 | null };
   readonly navbarHeight: number;
   readonly contextInfo: ContextMenuInfo;
+  // Frontend-only, not persisted to server
+  readonly mipBBoxSettings: Record<number, MipLayerConfig[]>;
 };
 type BaseMeshInformation = {
   readonly segmentId: number;
@@ -744,8 +746,6 @@ export type WebknossosState = {
     string, // layerName
     LocalSegmentationState
   >;
-  // Frontend-only, not persisted to server
-  readonly mipBBoxSettings: Record<number, MipLayerConfig[]>;
   readonly operationContext: OperationContextState;
 };
 const sagaMiddleware = createSagaMiddleware();

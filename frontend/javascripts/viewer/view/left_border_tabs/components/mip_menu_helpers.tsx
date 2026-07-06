@@ -30,7 +30,7 @@ export function useMipContextMenuItems(
   const dispatch = useDispatch();
   const colorLayers = useWkSelector((state) => getColorLayers(state.dataset));
   const magInfoByLayer = useWkSelector((state) => getMagInfoByLayer(state.dataset));
-  const mipLayers = useWkSelector((state) => state.mipBBoxSettings[bboxId] ?? null);
+  const mipLayers = useWkSelector((state) => state.uiInformation.mipBBoxSettings[bboxId] ?? null);
 
   const activeMipLayerNames = new Set(mipLayers?.map((l) => l.layerName) ?? []);
   const availableColorLayers = colorLayers.filter((l) => !activeMipLayerNames.has(l.name));
@@ -130,7 +130,7 @@ export function useMipContextMenuItems(
 // Inline dropdown button showing active MIP layers. Renders nothing when no layers are active.
 export function MipInlineButton({ bboxId }: { bboxId: number }) {
   const dispatch = useDispatch();
-  const mipLayers = useWkSelector((state) => state.mipBBoxSettings[bboxId] ?? null);
+  const mipLayers = useWkSelector((state) => state.uiInformation.mipBBoxSettings[bboxId] ?? null);
   const isMipLoading = mipLayers?.some((l) => l.isLoading) ?? false;
 
   if (mipLayers == null || mipLayers.length === 0) return null;

@@ -317,12 +317,12 @@ const defaultState: WebknossosState = {
       viewport: null,
       unmappedSegmentId: null,
     },
+    mipBBoxSettings: {},
   },
   localSegmentationStateByLayer: {},
   operationContext: {
     activeOperations: [],
     childOperations: [],
   },
-  mipBBoxSettings: {},
 };
 export default defaultState;

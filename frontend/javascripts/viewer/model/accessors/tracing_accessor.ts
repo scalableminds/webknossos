@@ -144,7 +144,7 @@ export const getMipEnabledBBoxes = reuseInstanceOnEquality(
   (state: WebknossosState): MipEnabledBBox[] => {
     const bboxes = getUserBoundingBoxesFromState(state);
     return bboxes.flatMap((bbox) => {
-      const configs = state.mipBBoxSettings[bbox.id];
+      const configs = state.uiInformation.mipBBoxSettings[bbox.id];
       return configs != null && configs.length > 0 ? [{ bbox, configs }] : [];
     });
   },

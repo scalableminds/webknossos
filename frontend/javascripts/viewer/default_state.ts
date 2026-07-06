@@ -323,6 +323,6 @@ const defaultState: WebknossosState = {
     activeOperations: [],
     childOperations: [],
   },
-  mipBboxSettings: {},
+  mipBBoxSettings: {},
 };
 export default defaultState;

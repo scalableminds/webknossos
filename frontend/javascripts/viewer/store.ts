@@ -72,7 +72,7 @@ import type { Toolkit } from "./model/accessors/tool_accessor";
 import type { OperationId } from "./model/actions/operation_context_actions";
 import { eventEmitterMiddleware } from "./model/helpers/event_emitter_middleware";
 import FlycamInfoCacheReducer from "./model/reducers/flycam_info_cache_reducer";
-import MipBboxReducer from "./model/reducers/mip_bbox_reducer";
+import MipBBoxReducer from "./model/reducers/mip_bbox_reducer";
 import OperationContextReducer from "./model/reducers/operation_context_reducer";
 import OrganizationReducer from "./model/reducers/organization_reducer";
 import ProofreadingReducer from "./model/reducers/proofreading_reducer";
@@ -106,8 +106,6 @@ export type MipLayerConfig = {
   zoomStep: number;
   isLoading: boolean;
 };
-/** @deprecated Use MipLayerConfig */
-export type MipBboxSettings = MipLayerConfig;
 export type UserBoundingBox = UserBoundingBoxWithoutId & {
   id: number;
 };
@@ -650,7 +648,8 @@ type ConnectomeData = {
 };
 export type MinCutPartitions = { 1: number[]; 2: number[]; agglomerateId: number | null };
 export type LocalMeshesInfo =
-  Record<string, Record<number, MeshInformation> | undefined> | undefined;
+  | Record<string, Record<number, MeshInformation> | undefined>
+  | undefined;
 
 // LocalSegmentationState holds per-layer segmentation state that is not
 // persisted on the server (in contrast to the VolumeTracing which must only
@@ -746,7 +745,7 @@ export type WebknossosState = {
     LocalSegmentationState
   >;
   // Frontend-only, not persisted to server
-  readonly mipBboxSettings: Record<number, MipLayerConfig[]>;
+  readonly mipBBoxSettings: Record<number, MipLayerConfig[]>;
   readonly operationContext: OperationContextState;
 };
 const sagaMiddleware = createSagaMiddleware();
@@ -767,7 +766,7 @@ export const combinedReducer = reduceReducers(
   UiReducer,
   ConnectomeReducer,
   OrganizationReducer,
-  MipBboxReducer,
+  MipBBoxReducer,
   OperationContextReducer,
 ) as Reducer;
 

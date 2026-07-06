@@ -65,15 +65,15 @@ import {
   getRotationInRadian,
 } from "viewer/model/accessors/flycam_accessor";
 import {
-  getMipEnabledBboxes,
-  getSomeTracing,
-  getTaskBoundingBoxes,
-  type MipEnabledBbox,
-} from "viewer/model/accessors/tracing_accessor";
-import {
   getSkeletonTracing,
   isSkeletonSectionClippingActive,
 } from "viewer/model/accessors/skeletontracing_accessor";
+import {
+  getMipEnabledBBoxes,
+  getSomeTracing,
+  getTaskBoundingBoxes,
+  type MipEnabledBBox,
+} from "viewer/model/accessors/tracing_accessor";
 import { getPlaneScalingFactor } from "viewer/model/accessors/view_mode_accessor";
 import { sceneControllerInitializedAction } from "viewer/model/actions/actions";
 import { scheduleMipLoadAction } from "viewer/model/actions/annotation_actions";
@@ -131,6 +131,10 @@ class SceneController {
     number,
     { volume: MipVolume; configs: MipLayerConfig[]; bbox: UserBoundingBox }
   >();
+  private debouncedUpdateMipVolumes = debounce(
+    (entries: MipEnabledBBox[]) => this.updateMipVolumes(entries),
+    300,
+  );
 
   // Created as instance properties to avoid creating objects in each update call.
   private rotatedPositionOffsetVector = new ThreeVector3();
@@ -354,7 +358,7 @@ class SceneController {
     return this.splitBoundaryMesh;
   }
 
-  private updateMipVolumes(entries: MipEnabledBbox[]): void {
+  private updateMipVolumes(entries: MipEnabledBBox[]): void {
     const entryMap = new Map(entries.map((e) => [e.bbox.id, e]));
 
     // Remove volumes whose bbox changed (need full recreation)
@@ -378,8 +382,11 @@ class SceneController {
       if (!this.mipVolumes.has(bbox.id)) {
         // New bbox: create volume and add all layers
         const volume = new MipVolume(mag1Bbox);
+        const { mipRaymarchingSteps, mipDepthWrite } = Store.getState().userConfiguration;
+        volume.setNumSteps(mipRaymarchingSteps);
+        volume.setDepthWrite(mipDepthWrite);
         this.rootNode.add(volume.mesh);
-        this.mipVolumes.set(bbox.id, { volume, configs: [], bbox });
+        this.mipVolumes.set(bbox.id, { volume, configs, bbox });
       }
 
       const entry = this.mipVolumes.get(bbox.id)!;
@@ -389,31 +396,21 @@ class SceneController {
 
       // Remove layers that are no longer in the new configs
       const newLayerNames = new Set(configs.map((c) => c.layerName));
-      for (const oldConfig of oldConfigs) {
-        if (!newLayerNames.has(oldConfig.layerName)) {
-          volume.removeLayer(oldConfig.layerName);
-        }
+      const oldLayerNames = new Set(oldConfigs.map((c) => c.layerName));
+      const removedLayerNames = oldLayerNames.difference(newLayerNames);
+      for (const layerName of removedLayerNames) {
+        volume.removeLayer(layerName);
       }
 
       // Add layers that are new
-      const oldLayerNames = new Set(oldConfigs.map((c) => c.layerName));
       for (const config of configs) {
-        if (!oldLayerNames.has(config.layerName) && !volume.hasLayer(config.layerName)) {
+        if (!volume.hasLayer(config.layerName)) {
           volume.addLayer(config);
           Store.dispatch(scheduleMipLoadAction(bbox.id, bbox, config));
         }
       }
 
       entry.configs = configs;
-    }
-
-    // Remove volumes no longer in any entry
-    for (const [bboxId, { volume }] of this.mipVolumes) {
-      if (!entryMap.has(bboxId)) {
-        this.rootNode.remove(volume.mesh);
-        volume.dispose();
-        this.mipVolumes.delete(bboxId);
-      }
     }
   }
 
@@ -863,6 +860,13 @@ class SceneController {
     }
     this.storePropertyUnsubscribers = [];
 
+    this.debouncedUpdateMipVolumes.cancel();
+    for (const { volume } of this.mipVolumes.values()) {
+      this.rootNode.remove(volume.mesh);
+      volume.dispose();
+    }
+    this.mipVolumes.clear();
+
     destroyRenderer();
     // @ts-expect-error
     this.renderer = null;
@@ -928,11 +932,7 @@ class SceneController {
         (showSkeletons) => this.setSkeletonGroupVisibility(showSkeletons),
         true,
       ),
-      listenToStoreProperty(
-        getMipEnabledBboxes,
-        debounce((entries) => this.updateMipVolumes(entries), 300),
-        true,
-      ),
+      listenToStoreProperty(getMipEnabledBBoxes, this.debouncedUpdateMipVolumes, true),
       listenToStoreProperty(
         (state) => state.userConfiguration.mipRaymarchingSteps,
         (numSteps) => {

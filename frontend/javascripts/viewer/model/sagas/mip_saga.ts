@@ -4,10 +4,10 @@ import { cancel, cancelled, fork, put, take, takeEvery } from "typed-redux-saga"
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { resolveMipLayerSource } from "viewer/geometries/mip_volume";
 import {
-  type RemoveMipForBboxAction,
-  type RemoveMipLayerForBboxAction,
+  type RemoveMipForBBoxAction,
+  type RemoveMipLayerForBBoxAction,
   type ScheduleMipLoadAction,
-  setMipForBboxAction,
+  setMipForBBoxAction,
 } from "viewer/model/actions/annotation_actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { call } from "viewer/model/sagas/effect_generators";
@@ -32,7 +32,7 @@ function* runMipDownload(
     yield* take(workerFlagChannel);
     acquiredWorkerFlag = true;
 
-    yield* put(setMipForBboxAction(bboxId, { ...config, isLoading: true }));
+    yield* put(setMipForBBoxAction(bboxId, { ...config, isLoading: true }));
 
     const mag1Bbox = { min: bbox.boundingBox.min, max: bbox.boundingBox.max };
     const { actualZoomStep, textureDims, elementClass } = resolveMipLayerSource(
@@ -55,14 +55,14 @@ function* runMipDownload(
 
     const entry = getSceneController().getMipVolumeEntry(bboxId);
     if (entry != null) {
-      entry.volume.receiveLayerData(config.layerName, rawData, textureDims, elementClass);
+      entry.volume.setLayerData(config.layerName, rawData, textureDims, elementClass);
     }
 
-    yield* put(setMipForBboxAction(bboxId, { ...config, isLoading: false }));
+    yield* put(setMipForBBoxAction(bboxId, { ...config, isLoading: false }));
   } catch (err: unknown) {
     if (!(yield* cancelled())) {
       console.error(`MIP: failed to load layer "${config.layerName}" for bbox ${bboxId}:`, err);
-      yield* put(setMipForBboxAction(bboxId, { ...config, isLoading: false }));
+      yield* put(setMipForBBoxAction(bboxId, { ...config, isLoading: false }));
     }
   } finally {
     if (yield* cancelled()) {
@@ -113,7 +113,7 @@ export default function* mipSaga(): Saga<void> {
   });
 
   // Single layer removed from a bbox: cancel its download if in flight
-  yield* takeEvery("REMOVE_MIP_LAYER_FOR_BBOX", function* (action: RemoveMipLayerForBboxAction) {
+  yield* takeEvery("REMOVE_MIP_LAYER_FOR_BBOX", function* (action: RemoveMipLayerForBBoxAction) {
     const key = taskKey(action.id, action.layerName);
     const existing = activeTasks.get(key);
     if (existing != null) {
@@ -123,7 +123,7 @@ export default function* mipSaga(): Saga<void> {
   });
 
   // All layers removed from a bbox: cancel every in-flight download for it
-  yield* takeEvery("REMOVE_MIP_FOR_BBOX", function* (action: RemoveMipForBboxAction) {
+  yield* takeEvery("REMOVE_MIP_FOR_BBOX", function* (action: RemoveMipForBBoxAction) {
     yield* cancelAllForBbox(action.id, activeTasks);
   });
 

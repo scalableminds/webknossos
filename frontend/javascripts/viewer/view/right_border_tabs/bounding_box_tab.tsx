@@ -1,10 +1,11 @@
 import {
   AppstoreAddOutlined,
   DeleteOutlined,
+  InfoCircleOutlined,
   PlusOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
-import MipIcon from "@images/icons/icon-MIP.svg?react";
+import MipIcon from "@images/icons/icon-mip.svg?react";
 import {
   Divider,
   Empty,
@@ -18,6 +19,7 @@ import {
   type TableProps,
   Typography,
 } from "antd";
+import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
 import { computeArrayFromBoundingBox, computeBoundingBoxFromArray } from "libs/utils";
 import noop from "lodash-es/noop";
@@ -341,7 +343,12 @@ export default function BoundingBoxTab() {
           trigger="click"
           content={
             <div style={{ width: 260 }}>
-              <div style={{ marginBottom: 4 }}>Ray marching steps</div>
+              <div style={{ marginBottom: 4 }}>
+                Ray marching steps{" "}
+                <FastTooltip title="Number of samples taken along each ray. Higher values produce a smoother, more accurate projection at the cost of GPU performance.">
+                  <InfoCircleOutlined />
+                </FastTooltip>
+              </div>
               <Flex gap="small" align="center">
                 <Slider
                   style={{ flex: 1 }}
@@ -360,6 +367,9 @@ export default function BoundingBoxTab() {
                   onChange={(v) => dispatch(updateUserSettingAction("mipDepthWrite", v))}
                 />
                 <span>Depth-correct rendering</span>
+                <FastTooltip title="Lets MIP volumes occlude and be occluded by meshes correctly. Disable for better performance if depth sorting with meshes is not needed.">
+                  <InfoCircleOutlined />
+                </FastTooltip>
               </Flex>
             </div>
           }

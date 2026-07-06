@@ -138,13 +138,13 @@ export const getUserBoundingBoxesThatContainPosition = (
   return bboxes.filter((el) => new BoundingBox(el.boundingBox).containsPoint(position));
 };
 
-export type MipEnabledBbox = { bbox: UserBoundingBox; configs: MipLayerConfig[] };
+export type MipEnabledBBox = { bbox: UserBoundingBox; configs: MipLayerConfig[] };
 
-export const getMipEnabledBboxes = reuseInstanceOnEquality(
-  (state: WebknossosState): MipEnabledBbox[] => {
+export const getMipEnabledBBoxes = reuseInstanceOnEquality(
+  (state: WebknossosState): MipEnabledBBox[] => {
     const bboxes = getUserBoundingBoxesFromState(state);
     return bboxes.flatMap((bbox) => {
-      const configs = state.mipBboxSettings[bbox.id];
+      const configs = state.mipBBoxSettings[bbox.id];
       return configs != null && configs.length > 0 ? [{ bbox, configs }] : [];
     });
   },

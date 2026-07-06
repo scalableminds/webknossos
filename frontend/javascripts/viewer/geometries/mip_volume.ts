@@ -34,14 +34,14 @@ type MipTextureConfig = {
 function getMipTextureConfig(elementClass: SupportedMipElementClass): MipTextureConfig {
   switch (elementClass) {
     case "uint8":
-      return { textureType: UnsignedByteType, normalizationFactor: 255 };
+      return { textureType: UnsignedByteType, normalizationFactor: 2 ** 8 - 1 };
     case "uint16":
-      // WebGL2 has no GL_R16 (normalized 16-bit red) — only OpenGL core does.
+      // WebGL2 has no GL_R16 (normalized 16-bit stored in a red channel) — only OpenGL core does.
       // Convert Uint16Array → Float32 at load time so we can use GL_R32F.
-      return { textureType: FloatType, normalizationFactor: 65535 };
+      return { textureType: FloatType, normalizationFactor: 2 ** 16 - 1 };
     case "uint32":
       // No normalized R32 format in WebGL2 — convert to float at load time
-      return { textureType: FloatType, normalizationFactor: 4294967295 };
+      return { textureType: FloatType, normalizationFactor: 2 ** 32 - 1 };
     case "float":
       // Raw float — no normalization; uMin/uMax uniforms stay in data units
       return { textureType: FloatType, normalizationFactor: 1 };
@@ -264,11 +264,9 @@ export class MipVolume {
   private material: ShaderMaterial;
   private layers: LayerState[] = [];
   private placeholderTexture: Data3DTexture;
-  private mag1Bbox: BoundingBoxMinMaxType;
   private depthWriteEnabled = false;
 
   constructor(mag1Bbox: BoundingBoxMinMaxType) {
-    this.mag1Bbox = mag1Bbox;
     this.placeholderTexture = createPlaceholderTexture();
 
     const { min, max } = mag1Bbox;
@@ -434,7 +432,7 @@ export class MipVolume {
 
   // Called by the MIP saga once the raw voxel data has been downloaded.
   // Converts the typed array to a Data3DTexture and uploads it to the GPU.
-  receiveLayerData(
+  setLayerData(
     layerName: string,
     rawData: Uint8Array | Uint16Array | Uint32Array | Float32Array,
     dims: [number, number, number],
@@ -444,28 +442,28 @@ export class MipVolume {
     if (index === -1) return; // layer was removed while loading
     const layerState = this.layers[index];
     const texConfig = getMipTextureConfig(elementClass);
-    const [tw, th, td] = dims;
+    const [width, height, depth] = dims;
 
     let textureData: Uint8Array | Float32Array;
     if (elementClass === "uint32") {
       // No normalized R32 format in WebGL2 — normalize to [0, 1] as float
       const src = rawData as Uint32Array;
       const dst = new Float32Array(src.length);
-      for (let i = 0; i < src.length; i++) dst[i] = src[i] / 4294967295;
+      for (let i = 0; i < src.length; i++) dst[i] = src[i] / texConfig.normalizationFactor;
       textureData = dst;
     } else if (elementClass === "uint16") {
       const src = rawData as Uint16Array;
       const dst = new Float32Array(src.length);
-      for (let i = 0; i < src.length; i++) dst[i] = src[i] / 65535;
+      for (let i = 0; i < src.length; i++) dst[i] = src[i] / texConfig.normalizationFactor;
       textureData = dst;
     } else if (elementClass === "float") {
       textureData = rawData as Float32Array;
     } else {
-      textureData = new Uint8Array(rawData.buffer);
+      textureData = rawData as Uint8Array;
     }
 
     // @ts-expect-error — Uint8Array<ArrayBufferLike> vs ArrayBufferView<ArrayBuffer> in TS 5.9
-    const realTexture = new Data3DTexture(textureData, tw, th, td);
+    const realTexture = new Data3DTexture(textureData, width, height, depth);
     realTexture.format = RedFormat;
     realTexture.type = texConfig.textureType;
     realTexture.needsUpdate = true;

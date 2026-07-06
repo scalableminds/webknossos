@@ -1,5 +1,5 @@
 import { DeleteOutlined, LoadingOutlined } from "@ant-design/icons";
-import MipIcon from "@images/icons/icon-MIP.svg?react";
+import MipIcon from "@images/icons/icon-mip.svg?react";
 import { Dropdown, type MenuProps } from "antd";
 import { formatBytes } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
@@ -11,9 +11,9 @@ import {
   getMagInfoByLayer,
 } from "viewer/model/accessors/dataset_accessor";
 import {
-  removeMipForBboxAction,
-  removeMipLayerForBboxAction,
-  setMipForBboxAction,
+  removeMipForBBoxAction,
+  removeMipLayerForBBoxAction,
+  setMipForBBoxAction,
 } from "viewer/model/actions/annotation_actions";
 import ButtonComponent from "../../components/button_component";
 
@@ -30,7 +30,7 @@ export function useMipContextMenuItems(
   const dispatch = useDispatch();
   const colorLayers = useWkSelector((state) => getColorLayers(state.dataset));
   const magInfoByLayer = useWkSelector((state) => getMagInfoByLayer(state.dataset));
-  const mipLayers = useWkSelector((state) => state.mipBboxSettings[bboxId] ?? null);
+  const mipLayers = useWkSelector((state) => state.mipBBoxSettings[bboxId] ?? null);
 
   const activeMipLayerNames = new Set(mipLayers?.map((l) => l.layerName) ?? []);
   const availableColorLayers = colorLayers.filter((l) => !activeMipLayerNames.has(l.name));
@@ -59,7 +59,7 @@ export function useMipContextMenuItems(
       }
       const zoomStep = bestZoomStep ?? fallbackZoomStep;
       if (zoomStep != null) {
-        dispatch(setMipForBboxAction(bboxId, { layerName: layer.name, zoomStep, isLoading: true }));
+        dispatch(setMipForBBoxAction(bboxId, { layerName: layer.name, zoomStep, isLoading: true }));
       }
     }
     onClose?.();
@@ -85,7 +85,7 @@ export function useMipContextMenuItems(
             label: `Mag ${mag.join("-")} (${formatBytes(voxels * bytesPerVoxel, 0)})`,
             onClick: () => {
               dispatch(
-                setMipForBboxAction(bboxId, { layerName: layer.name, zoomStep, isLoading: true }),
+                setMipForBBoxAction(bboxId, { layerName: layer.name, zoomStep, isLoading: true }),
               );
               onClose?.();
             },
@@ -107,7 +107,7 @@ export function useMipContextMenuItems(
               label: l.layerName,
               icon: <DeleteOutlined />,
               onClick: () => {
-                dispatch(removeMipLayerForBboxAction(bboxId, l.layerName));
+                dispatch(removeMipLayerForBBoxAction(bboxId, l.layerName));
                 onClose?.();
               },
             })),
@@ -116,7 +116,7 @@ export function useMipContextMenuItems(
               label: "Remove all",
               icon: <DeleteOutlined />,
               onClick: () => {
-                dispatch(removeMipForBboxAction(bboxId));
+                dispatch(removeMipForBBoxAction(bboxId));
                 onClose?.();
               },
             },
@@ -130,7 +130,7 @@ export function useMipContextMenuItems(
 // Inline dropdown button showing active MIP layers. Renders nothing when no layers are active.
 export function MipInlineButton({ bboxId }: { bboxId: number }) {
   const dispatch = useDispatch();
-  const mipLayers = useWkSelector((state) => state.mipBboxSettings[bboxId] ?? null);
+  const mipLayers = useWkSelector((state) => state.mipBBoxSettings[bboxId] ?? null);
   const isMipLoading = mipLayers?.some((l) => l.isLoading) ?? false;
 
   if (mipLayers == null || mipLayers.length === 0) return null;
@@ -143,13 +143,13 @@ export function MipInlineButton({ bboxId }: { bboxId: number }) {
             key: `removeMipLayer-${l.layerName}`,
             label: l.layerName,
             icon: <DeleteOutlined />,
-            onClick: () => dispatch(removeMipLayerForBboxAction(bboxId, l.layerName)),
+            onClick: () => dispatch(removeMipLayerForBBoxAction(bboxId, l.layerName)),
           })),
           {
             key: "removeAllMip",
             label: "Remove all MIP layers",
             icon: <DeleteOutlined />,
-            onClick: () => dispatch(removeMipForBboxAction(bboxId)),
+            onClick: () => dispatch(removeMipForBBoxAction(bboxId)),
           },
         ],
       }}
@@ -161,9 +161,9 @@ export function MipInlineButton({ bboxId }: { bboxId: number }) {
         title={`MIP: ${mipLayers.map((l) => l.layerName).join(", ")}`}
         icon={
           isMipLoading ? (
-            <LoadingOutlined style={{ color: "#1677ff" }} />
+            <LoadingOutlined style={{ color: "var(--ant-color-primary)" }} />
           ) : (
-            <MipIcon style={{ color: "#1677ff" }} />
+            <MipIcon style={{ color: "var(--ant-color-primary)" }} />
           )
         }
         onClick={(e) => e.stopPropagation()}

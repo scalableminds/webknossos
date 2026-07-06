@@ -63,9 +63,9 @@ type AddUserBoundingBoxesAction = ReturnType<typeof addUserBoundingBoxesAction>;
 export type AddNewUserBoundingBox = ReturnType<typeof addUserBoundingBoxAction>;
 export type ChangeUserBoundingBoxAction = ReturnType<typeof changeUserBoundingBoxAction>;
 type DeleteUserBoundingBox = ReturnType<typeof deleteUserBoundingBoxAction>;
-export type SetMipForBboxAction = ReturnType<typeof setMipForBboxAction>;
-export type RemoveMipForBboxAction = ReturnType<typeof removeMipForBboxAction>;
-export type RemoveMipLayerForBboxAction = ReturnType<typeof removeMipLayerForBboxAction>;
+export type SetMipForBBoxAction = ReturnType<typeof setMipForBBoxAction>;
+export type RemoveMipForBBoxAction = ReturnType<typeof removeMipForBBoxAction>;
+export type RemoveMipLayerForBBoxAction = ReturnType<typeof removeMipLayerForBBoxAction>;
 export type ScheduleMipLoadAction = ReturnType<typeof scheduleMipLoadAction>;
 export type UpdateMeshVisibilityAction = ReturnType<typeof updateMeshVisibilityAction>;
 export type UpdateMeshOpacityAction = ReturnType<typeof updateMeshOpacityAction>;
@@ -112,9 +112,9 @@ export type AnnotationActionTypes =
   | AddAdHocMeshAction
   | AddPrecomputedMeshAction
   | SetCollaborationModeAction
-  | SetMipForBboxAction
-  | RemoveMipForBboxAction
-  | RemoveMipLayerForBboxAction
+  | SetMipForBBoxAction
+  | RemoveMipForBBoxAction
+  | RemoveMipLayerForBBoxAction
   | ScheduleMipLoadAction;
 
 export type UserBoundingBoxAction =
@@ -215,20 +215,20 @@ export const deleteUserBoundingBoxAction = (id: number) =>
     id,
   }) as const;
 
-export const setMipForBboxAction = (id: number, config: MipLayerConfig) =>
+export const setMipForBBoxAction = (id: number, config: MipLayerConfig) =>
   ({
     type: "SET_MIP_FOR_BBOX",
     id,
     config,
   }) as const;
 
-export const removeMipForBboxAction = (id: number) =>
+export const removeMipForBBoxAction = (id: number) =>
   ({
     type: "REMOVE_MIP_FOR_BBOX",
     id,
   }) as const;
 
-export const removeMipLayerForBboxAction = (id: number, layerName: string) =>
+export const removeMipLayerForBBoxAction = (id: number, layerName: string) =>
   ({
     type: "REMOVE_MIP_LAYER_FOR_BBOX",
     id,

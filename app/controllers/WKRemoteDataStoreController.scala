@@ -16,7 +16,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   LayerAttachmentType,
   UnusableDataSource
 }
-import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataSourceWithPathInfo, DataStoreStatus}
+import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataSourceWithRootPathInfo, DataStoreStatus}
 import com.scalableminds.webknossos.datastore.services.uploading.{
   AttachmentUploadAdditionalInfo,
   AttachmentUploadInfo,
@@ -258,7 +258,13 @@ class WKRemoteDataStoreController @Inject() (
           _ <- Fox.runIf(request.body.needsConversion) {
             for {
               voxelSize <- request.body.voxelSize.toFox ?~> Msg.Dataset.Upload.needsConversionMissingVoxelSize
-              _ <- jobService.submitConvertToWkwJob(updated, user, voxelSize)
+              dataStoreClient <- datasetService.clientFor(dataset)(using GlobalAccessContext)
+              organizationBaseDirectory <- dataStoreClient.getOrganizationBaseDirectory(
+                dataset._organization,
+                requireAllowsUpload = true,
+                requireLocal = true
+              )
+              _ <- jobService.submitConvertToWkwJob(updated, user, voxelSize, organizationBaseDirectory)
             } yield ()
           }
         } yield Ok
@@ -323,8 +329,8 @@ class WKRemoteDataStoreController @Inject() (
       }
   }
 
-  def updateAll(name: String, key: String, organizationId: Option[String]): Action[List[DataSourceWithPathInfo]] =
-    Action.fox(validateJson[List[DataSourceWithPathInfo]]) { implicit request =>
+  def updateAll(name: String, key: String, organizationId: Option[String]): Action[List[DataSourceWithRootPathInfo]] =
+    Action.fox(validateJson[List[DataSourceWithRootPathInfo]]) { implicit request =>
       dataStoreService.validateAccess(name, key) { dataStore =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
         val dataSourcesWithPathInfo = request.body
@@ -352,7 +358,8 @@ class WKRemoteDataStoreController @Inject() (
       dataStoreService.validateAccess(name, key) { dataStore =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
         for {
-          _ <- datasetService.updateDataSources(dataStore, List(DataSourceWithPathInfo(request.body, None, None)))
+          // Note that root path info None will not overwrite a set value in the db.
+          _ <- datasetService.updateDataSources(dataStore, List(DataSourceWithRootPathInfo(request.body, None, None)))
         } yield Ok
       }
     }
@@ -392,6 +399,17 @@ class WKRemoteDataStoreController @Inject() (
             GlobalAccessContext
           ) ?~> Msg.Dataset.notFound(datasetDirectoryName)
         } yield Ok(Json.toJson(dataset._id))
+      }
+    }
+
+  def findDatasetLocalRootPath(name: String, key: String, datasetId: ObjectId): Action[AnyContent] =
+    Action.fox { _ =>
+      dataStoreService.validateAccess(name, key) { dataStore =>
+        for {
+          dataset <- datasetDAO.findOne(datasetId)(using GlobalAccessContext) ?~> Msg.Dataset.notFound(datasetId)
+          _ <- Fox.fromBool(dataset._dataStore == dataStore.name) ?~> Msg.notAllowed ~> FORBIDDEN
+          localRootPathOpt = dataset.rootPath.filter(UPath.fromString(_).map(_.isLocal).getOrElse(false))
+        } yield Ok(Json.toJson(localRootPathOpt.getOrElse(""))) // Empty string means no local rootpath
       }
     }
 

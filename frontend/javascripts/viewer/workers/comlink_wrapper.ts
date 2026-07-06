@@ -32,7 +32,13 @@ export function createWorker<TExposed extends UseCreateWorkerToUseMe<AnyFn> | An
     // This import() is only reached in Vitest/Node where wrap is null and web workers don't
     // exist, so importDynamic's "stale chunk URL after deployment" protection does not apply.
     // Bare import is allowed here (whitelisted in tools/check-no-bare-dynamic-imports.js).
-    const workerModulePromise = import(`./${pathToWorkerWithoutExtension}.worker.ts`);
+    //
+    // This import statement requires a file extension for proper static analysis by Vite during build step.
+    // @vite-ignore keeps Rolldown from emitting every worker module a second time as a lazy
+    // main-thread chunk for this Vitest-only import (Vitest resolves it at runtime instead).
+    const workerModulePromise = import(
+      /* @vite-ignore */ `./${pathToWorkerWithoutExtension}.worker.ts`
+    );
     return async (...params: Parameters<UnwrapExposedWorkerFn<TExposed>>) => {
       const workerModule = await workerModulePromise;
       return workerModule.default(...params);

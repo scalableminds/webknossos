@@ -7,7 +7,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.image.Color
 import com.scalableminds.util.mvc.MimeTypes
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.{Fox, JsonHelper, MathUtils}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.{StaticLayer, UsableDataSource}
@@ -20,7 +20,7 @@ import utils.sql.{SimpleSQLDAO, SqlClient}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 class ThumbnailService @Inject() (
     datasetService: DatasetService,
@@ -43,8 +43,9 @@ class ThumbnailService @Inject() (
       h: Option[Int],
       mappingName: Option[String]
   )(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
-    val width = com.scalableminds.util.tools.Math.clamp(w.getOrElse(DefaultThumbnailWidth), 1, MaxThumbnailWidth)
-    val height = com.scalableminds.util.tools.Math.clamp(h.getOrElse(DefaultThumbnailHeight), 1, MaxThumbnailHeight)
+    val width = MathUtils.clamp(w.getOrElse(DefaultThumbnailWidth), 1, MaxThumbnailWidth)
+    val height =
+      MathUtils.clamp(h.getOrElse(DefaultThumbnailHeight), 1, MaxThumbnailHeight)
     for {
       dataset <- datasetDAO.findOne(datasetIdValidated)(using GlobalAccessContext)
       image <- thumbnailCachingService.getOrLoad(

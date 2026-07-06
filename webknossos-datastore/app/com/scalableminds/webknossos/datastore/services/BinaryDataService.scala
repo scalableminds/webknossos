@@ -6,7 +6,6 @@ import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.BucketPosition
@@ -193,7 +192,7 @@ class BinaryDataService(
         val byteArrays = boxes.collect { case Full(byteArray) => byteArray }
         val emptyIndices = boxes.zipWithIndex.collect { case (Empty, i) => i }
         val failureIndices = boxes.zipWithIndex.collect { case (_: Failure, i) => i }
-        (byteArrays.appendArrays, emptyIndices, failureIndices)
+        (SequenceUtils.concatArrays(byteArrays), emptyIndices, failureIndices)
       }
     }
   }

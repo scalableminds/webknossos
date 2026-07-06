@@ -293,7 +293,7 @@ function Infos() {
   const dispatch = useDispatch();
 
   const onChangeActiveCellId = useCallback(
-    (id: number) => dispatch(setActiveCellAction(id)),
+    (id: number) => dispatch(setActiveCellAction(BigInt(id))),
     [dispatch],
   );
   const onChangeActiveNodeId = useCallback(
@@ -327,7 +327,7 @@ function Infos() {
       {activeVolumeTracing != null && validSegmentIdRange != null ? (
         <span className="info-element">
           <NumberInputPopoverSetting
-            value={activeCellId}
+            value={activeCellId != null ? Number(activeCellId) : null}
             label={maybeLabelWithSegmentationWarning(isUint64SegmentationVisible, "Active Segment")}
             min={validSegmentIdRange[0]}
             max={validSegmentIdRange[1]}

@@ -55,7 +55,7 @@ describe("Volume Tracing", () => {
 
     const paintCenter = [0, 0, 43] as Vector3;
     const brushSize = 10;
-    const newCellId = 2;
+    const newCellId = 2n;
 
     Store.dispatch(updateUserSettingAction("brushSize", brushSize));
     Store.dispatch(setPositionAction([0, 0, 43]));
@@ -67,64 +67,36 @@ describe("Volume Tracing", () => {
     const volumeTracingLayerName = api.data.getVolumeTracingLayerIds()[0];
 
     for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
-      expect(await api.data.getDataValue(volumeTracingLayerName, paintCenter, zoomStep)).toBe(
-        newCellId,
-      );
-      expect(await api.data.getDataValue(volumeTracingLayerName, [1, 0, 43], zoomStep)).toBe(
-        newCellId,
-      );
-      expect(await api.data.getDataValue(volumeTracingLayerName, [0, 1, 43], zoomStep)).toBe(
-        newCellId,
-      );
-      expect(await api.data.getDataValue(volumeTracingLayerName, [1, 1, 43], zoomStep)).toBe(
-        newCellId,
-      );
+      expect(await api.data.getDataValue(volumeTracingLayerName, paintCenter, zoomStep)).toBe(Number(newCellId));
+      expect(await api.data.getDataValue(volumeTracingLayerName, [1, 0, 43], zoomStep)).toBe(Number(newCellId));
+      expect(await api.data.getDataValue(volumeTracingLayerName, [0, 1, 43], zoomStep)).toBe(Number(newCellId));
+      expect(await api.data.getDataValue(volumeTracingLayerName, [1, 1, 43], zoomStep)).toBe(Number(newCellId));
       // A brush size of 10 means a radius of 5 (so, from 0 to 4).
-      expect(await api.data.getDataValue(volumeTracingLayerName, [4, 0, 43], zoomStep)).toBe(
-        newCellId,
-      );
-      expect(await api.data.getDataValue(volumeTracingLayerName, [0, 4, 43], zoomStep)).toBe(
-        newCellId,
-      );
+      expect(await api.data.getDataValue(volumeTracingLayerName, [4, 0, 43], zoomStep)).toBe(Number(newCellId));
+      expect(await api.data.getDataValue(volumeTracingLayerName, [0, 4, 43], zoomStep)).toBe(Number(newCellId));
       // Since the brush is circle-like, the right-bottom point is only brushed at 3,3
       // (and not at 4,4)
-      expect(await api.data.getDataValue(volumeTracingLayerName, [3, 3, 43], zoomStep)).toBe(
-        newCellId,
-      );
+      expect(await api.data.getDataValue(volumeTracingLayerName, [3, 3, 43], zoomStep)).toBe(Number(newCellId));
     }
 
     await api.tracing.save();
-    const floodingCellId = 3;
+    const floodingCellId = 3n;
 
     Store.dispatch(setActiveCellAction(floodingCellId));
     Store.dispatch(updateUserSettingAction("fillMode", FillModeEnum._3D));
     await dispatchFloodfillAsync(Store.dispatch, [0, 0, 43], OrthoViews.PLANE_XY);
 
     for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
-      expect(await api.data.getDataValue(volumeTracingLayerName, paintCenter, zoomStep)).toBe(
-        floodingCellId,
-      );
-      expect(await api.data.getDataValue(volumeTracingLayerName, [1, 0, 43], zoomStep)).toBe(
-        floodingCellId,
-      );
-      expect(await api.data.getDataValue(volumeTracingLayerName, [0, 1, 43], zoomStep)).toBe(
-        floodingCellId,
-      );
-      expect(await api.data.getDataValue(volumeTracingLayerName, [1, 1, 43], zoomStep)).toBe(
-        floodingCellId,
-      );
+      expect(await api.data.getDataValue(volumeTracingLayerName, paintCenter, zoomStep)).toBe(Number(floodingCellId));
+      expect(await api.data.getDataValue(volumeTracingLayerName, [1, 0, 43], zoomStep)).toBe(Number(floodingCellId));
+      expect(await api.data.getDataValue(volumeTracingLayerName, [0, 1, 43], zoomStep)).toBe(Number(floodingCellId));
+      expect(await api.data.getDataValue(volumeTracingLayerName, [1, 1, 43], zoomStep)).toBe(Number(floodingCellId));
       // A brush size of 10 means a radius of 5 (so, from 0 to 4).
-      expect(await api.data.getDataValue(volumeTracingLayerName, [4, 0, 43], zoomStep)).toBe(
-        floodingCellId,
-      );
-      expect(await api.data.getDataValue(volumeTracingLayerName, [0, 4, 43], zoomStep)).toBe(
-        floodingCellId,
-      );
+      expect(await api.data.getDataValue(volumeTracingLayerName, [4, 0, 43], zoomStep)).toBe(Number(floodingCellId));
+      expect(await api.data.getDataValue(volumeTracingLayerName, [0, 4, 43], zoomStep)).toBe(Number(floodingCellId));
       // Since the brush is circle-like, the right-bottom point is only brushed at 3,3
       // (and not at 4,4)
-      expect(await api.data.getDataValue(volumeTracingLayerName, [3, 3, 43], zoomStep)).toBe(
-        floodingCellId,
-      );
+      expect(await api.data.getDataValue(volumeTracingLayerName, [3, 3, 43], zoomStep)).toBe(Number(floodingCellId));
       expect(
         await api.data.getDataForBoundingBox(volumeTracingLayerName, {
           min: [32, 32, 32],
@@ -145,7 +117,7 @@ describe("Volume Tracing", () => {
 
     const paintCenter = [0, 0, 43] as Vector3;
     const brushSize = 10;
-    const newCellId = 2;
+    const newCellId = 2n;
 
     Store.dispatch(updateUserSettingAction("brushSize", brushSize));
     Store.dispatch(setPositionAction([0, 0, 43]));
@@ -157,64 +129,36 @@ describe("Volume Tracing", () => {
     const volumeTracingLayerName = api.data.getVolumeTracingLayerIds()[0];
 
     for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
-      expect(await api.data.getDataValue(volumeTracingLayerName, paintCenter, zoomStep)).toBe(
-        newCellId,
-      );
-      expect(await api.data.getDataValue(volumeTracingLayerName, [1, 0, 43], zoomStep)).toBe(
-        newCellId,
-      );
-      expect(await api.data.getDataValue(volumeTracingLayerName, [0, 1, 43], zoomStep)).toBe(
-        newCellId,
-      );
-      expect(await api.data.getDataValue(volumeTracingLayerName, [1, 1, 43], zoomStep)).toBe(
-        newCellId,
-      );
+      expect(await api.data.getDataValue(volumeTracingLayerName, paintCenter, zoomStep)).toBe(Number(newCellId));
+      expect(await api.data.getDataValue(volumeTracingLayerName, [1, 0, 43], zoomStep)).toBe(Number(newCellId));
+      expect(await api.data.getDataValue(volumeTracingLayerName, [0, 1, 43], zoomStep)).toBe(Number(newCellId));
+      expect(await api.data.getDataValue(volumeTracingLayerName, [1, 1, 43], zoomStep)).toBe(Number(newCellId));
       // A brush size of 10 means a radius of 5 (so, from 0 to 4).
-      expect(await api.data.getDataValue(volumeTracingLayerName, [4, 0, 43], zoomStep)).toBe(
-        newCellId,
-      );
-      expect(await api.data.getDataValue(volumeTracingLayerName, [0, 4, 43], zoomStep)).toBe(
-        newCellId,
-      );
+      expect(await api.data.getDataValue(volumeTracingLayerName, [4, 0, 43], zoomStep)).toBe(Number(newCellId));
+      expect(await api.data.getDataValue(volumeTracingLayerName, [0, 4, 43], zoomStep)).toBe(Number(newCellId));
       // Since the brush is circle-like, the right-bottom point is only brushed at 3,3
       // (and not at 4,4)
-      expect(await api.data.getDataValue(volumeTracingLayerName, [3, 3, 43], zoomStep)).toBe(
-        newCellId,
-      );
+      expect(await api.data.getDataValue(volumeTracingLayerName, [3, 3, 43], zoomStep)).toBe(Number(newCellId));
     }
 
     await api.tracing.save();
-    const floodingCellId = 3;
+    const floodingCellId = 3n;
     Store.dispatch(setActiveCellAction(floodingCellId));
     Store.dispatch(setZoomStepAction(2));
     Store.dispatch(updateUserSettingAction("fillMode", FillModeEnum._3D));
     await dispatchFloodfillAsync(Store.dispatch, [0, 0, 43], OrthoViews.PLANE_XY);
 
     for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
-      expect(await api.data.getDataValue(volumeTracingLayerName, paintCenter, zoomStep)).toBe(
-        floodingCellId,
-      );
-      expect(await api.data.getDataValue(volumeTracingLayerName, [1, 0, 43], zoomStep)).toBe(
-        floodingCellId,
-      );
-      expect(await api.data.getDataValue(volumeTracingLayerName, [0, 1, 43], zoomStep)).toBe(
-        floodingCellId,
-      );
-      expect(await api.data.getDataValue(volumeTracingLayerName, [1, 1, 43], zoomStep)).toBe(
-        floodingCellId,
-      );
+      expect(await api.data.getDataValue(volumeTracingLayerName, paintCenter, zoomStep)).toBe(Number(floodingCellId));
+      expect(await api.data.getDataValue(volumeTracingLayerName, [1, 0, 43], zoomStep)).toBe(Number(floodingCellId));
+      expect(await api.data.getDataValue(volumeTracingLayerName, [0, 1, 43], zoomStep)).toBe(Number(floodingCellId));
+      expect(await api.data.getDataValue(volumeTracingLayerName, [1, 1, 43], zoomStep)).toBe(Number(floodingCellId));
       // A brush size of 10 means a radius of 5 (so, from 0 to 4).
-      expect(await api.data.getDataValue(volumeTracingLayerName, [4, 0, 43], zoomStep)).toBe(
-        floodingCellId,
-      );
-      expect(await api.data.getDataValue(volumeTracingLayerName, [0, 4, 43], zoomStep)).toBe(
-        floodingCellId,
-      );
+      expect(await api.data.getDataValue(volumeTracingLayerName, [4, 0, 43], zoomStep)).toBe(Number(floodingCellId));
+      expect(await api.data.getDataValue(volumeTracingLayerName, [0, 4, 43], zoomStep)).toBe(Number(floodingCellId));
       // Since the brush is circle-like, the right-bottom point is only brushed at 3,3
       // (and not at 4,4)
-      expect(await api.data.getDataValue(volumeTracingLayerName, [3, 3, 43], zoomStep)).toBe(
-        floodingCellId,
-      );
+      expect(await api.data.getDataValue(volumeTracingLayerName, [3, 3, 43], zoomStep)).toBe(Number(floodingCellId));
     }
   });
 
@@ -236,7 +180,7 @@ describe("Volume Tracing", () => {
     const volumeTracingLayerName = api.data.getVolumeTracingLayerIds()[0];
     expect(await api.data.getDataValue(volumeTracingLayerName, paintCenter, 0)).toBe(0);
 
-    const floodingCellId = 3;
+    const floodingCellId = 3n;
     Store.dispatch(setActiveCellAction(floodingCellId));
     Store.dispatch(updateUserSettingAction("fillMode", FillModeEnum._3D));
     await dispatchFloodfillAsync(Store.dispatch, paintCenter, OrthoViews.PLANE_XY);
@@ -244,9 +188,7 @@ describe("Volume Tracing", () => {
     const EXPECTED_HALF_EXTENT = V3.scale(Constants.FLOOD_FILL_EXTENTS[FillModeEnum._3D], 0.5);
 
     async function assertFloodFilledState() {
-      expect(await api.data.getDataValue(volumeTracingLayerName, paintCenter, 0)).toBe(
-        floodingCellId,
-      );
+      expect(await api.data.getDataValue(volumeTracingLayerName, paintCenter, 0)).toBe(Number(floodingCellId));
       expect(hasRootSagaCrashed()).toBe(false);
 
       const cuboidData = await api.data.getDataForBoundingBox(volumeTracingLayerName, {
@@ -255,7 +197,7 @@ describe("Volume Tracing", () => {
       });
 
       // There should be no item which does not equal floodingCellId
-      expect(cuboidData.findIndex((el) => el !== floodingCellId)).toBe(-1);
+      expect(cuboidData.findIndex((el) => el !== Number(floodingCellId))).toBe(-1);
     }
 
     async function assertInitialState() {
@@ -308,7 +250,7 @@ describe("Volume Tracing", () => {
 
     const paintCenter = [0, 0, 0] as Vector3;
     const brushSize = 10;
-    const newCellId = 2;
+    const newCellId = 2n;
     const volumeTracingLayerName = api.data.getVolumeTracingLayerIds()[0];
 
     Store.dispatch(updateUserSettingAction("brushSize", brushSize));
@@ -320,39 +262,25 @@ describe("Volume Tracing", () => {
     Store.dispatch(finishEditingAction());
 
     for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
-      expect(await api.data.getDataValue(volumeTracingLayerName, paintCenter, zoomStep)).toBe(
-        newCellId,
-      );
-      expect(await api.data.getDataValue(volumeTracingLayerName, [1, 0, 0], zoomStep)).toBe(
-        newCellId,
-      );
-      expect(await api.data.getDataValue(volumeTracingLayerName, [0, 1, 0], zoomStep)).toBe(
-        newCellId,
-      );
-      expect(await api.data.getDataValue(volumeTracingLayerName, [1, 1, 0], zoomStep)).toBe(
-        newCellId,
-      );
+      expect(await api.data.getDataValue(volumeTracingLayerName, paintCenter, zoomStep)).toBe(Number(newCellId));
+      expect(await api.data.getDataValue(volumeTracingLayerName, [1, 0, 0], zoomStep)).toBe(Number(newCellId));
+      expect(await api.data.getDataValue(volumeTracingLayerName, [0, 1, 0], zoomStep)).toBe(Number(newCellId));
+      expect(await api.data.getDataValue(volumeTracingLayerName, [1, 1, 0], zoomStep)).toBe(Number(newCellId));
       // A brush size of 10 means a radius of 5 (so, from 0 to 4).
-      expect(await api.data.getDataValue(volumeTracingLayerName, [4, 0, 0], zoomStep)).toBe(
-        newCellId,
-      );
-      expect(await api.data.getDataValue(volumeTracingLayerName, [0, 4, 0], zoomStep)).toBe(
-        newCellId,
-      );
+      expect(await api.data.getDataValue(volumeTracingLayerName, [4, 0, 0], zoomStep)).toBe(Number(newCellId));
+      expect(await api.data.getDataValue(volumeTracingLayerName, [0, 4, 0], zoomStep)).toBe(Number(newCellId));
       // Since the brush is circle-like, the right-bottom point is only brushed at 3,3
       // (and not at 4,4)
-      expect(await api.data.getDataValue(volumeTracingLayerName, [3, 3, 0], zoomStep)).toBe(
-        newCellId,
-      );
+      expect(await api.data.getDataValue(volumeTracingLayerName, [3, 3, 0], zoomStep)).toBe(Number(newCellId));
       // In mag 1 and mag 2,
       expect(await api.data.getDataValue(volumeTracingLayerName, [5, 0, 0], zoomStep)).toBe(
-        zoomStep === 0 ? 0 : newCellId,
+        zoomStep === 0 ? 0 : Number(newCellId),
       );
       expect(await api.data.getDataValue(volumeTracingLayerName, [0, 5, 0], zoomStep)).toBe(
-        zoomStep === 0 ? 0 : newCellId,
+        zoomStep === 0 ? 0 : Number(newCellId),
       );
       expect(await api.data.getDataValue(volumeTracingLayerName, [0, 0, 1], zoomStep)).toBe(
-        zoomStep === 0 ? 0 : newCellId,
+        zoomStep === 0 ? 0 : Number(newCellId),
       );
     }
 
@@ -370,7 +298,7 @@ describe("Volume Tracing", () => {
   }) => {
     const paintCenter = [0, 0, 0] as Vector3;
     const brushSize = 10;
-    const newCellId = 2;
+    const newCellId = 2n;
     const oldCellId = 11;
 
     vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
@@ -392,16 +320,16 @@ describe("Volume Tracing", () => {
     Store.dispatch(addToContourListAction(paintCenter));
     Store.dispatch(finishEditingAction());
 
-    expect(await api.data.getDataValue(volumeTracingLayerName, paintCenter)).toBe(newCellId);
-    expect(await api.data.getDataValue(volumeTracingLayerName, [1, 0, 0])).toBe(newCellId);
-    expect(await api.data.getDataValue(volumeTracingLayerName, [0, 1, 0])).toBe(newCellId);
-    expect(await api.data.getDataValue(volumeTracingLayerName, [1, 1, 0])).toBe(newCellId);
+    expect(await api.data.getDataValue(volumeTracingLayerName, paintCenter)).toBe(Number(newCellId));
+    expect(await api.data.getDataValue(volumeTracingLayerName, [1, 0, 0])).toBe(Number(newCellId));
+    expect(await api.data.getDataValue(volumeTracingLayerName, [0, 1, 0])).toBe(Number(newCellId));
+    expect(await api.data.getDataValue(volumeTracingLayerName, [1, 1, 0])).toBe(Number(newCellId));
     // A brush size of 10 means a radius of 5 (so, from 0 to 4).
-    expect(await api.data.getDataValue(volumeTracingLayerName, [4, 0, 0])).toBe(newCellId);
-    expect(await api.data.getDataValue(volumeTracingLayerName, [0, 4, 0])).toBe(newCellId);
+    expect(await api.data.getDataValue(volumeTracingLayerName, [4, 0, 0])).toBe(Number(newCellId));
+    expect(await api.data.getDataValue(volumeTracingLayerName, [0, 4, 0])).toBe(Number(newCellId));
     // Since the brush is circle-like, the right-bottom point is only brushed at 3,3
     // (and not at 4,4)
-    expect(await api.data.getDataValue(volumeTracingLayerName, [3, 3, 0])).toBe(newCellId);
+    expect(await api.data.getDataValue(volumeTracingLayerName, [3, 3, 0])).toBe(Number(newCellId));
     expect(await api.data.getDataValue(volumeTracingLayerName, [5, 0, 0])).toBe(oldCellId);
     expect(await api.data.getDataValue(volumeTracingLayerName, [0, 5, 0])).toBe(oldCellId);
     expect(await api.data.getDataValue(volumeTracingLayerName, [0, 0, 1])).toBe(oldCellId);
@@ -455,7 +383,7 @@ describe("Volume Tracing", () => {
 
     const paintCenter = [0, 0, 0] as Vector3;
     const brushSize = 10;
-    const newCellId = 2;
+    const newCellId = 2n;
     const volumeTracingLayerName = api.data.getVolumeTracingLayerIds()[0];
 
     Store.dispatch(updateUserSettingAction("brushSize", brushSize));
@@ -467,7 +395,7 @@ describe("Volume Tracing", () => {
     Store.dispatch(addToContourListAction(paintCenter));
     Store.dispatch(finishEditingAction());
     // Brush with ${newCellId + 1}
-    Store.dispatch(setActiveCellAction(newCellId + 1));
+    Store.dispatch(setActiveCellAction(newCellId + 1n));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
     Store.dispatch(addToContourListAction(paintCenter));
     Store.dispatch(finishEditingAction());
@@ -476,11 +404,11 @@ describe("Volume Tracing", () => {
       expect(
         await api.data.getDataValue(volumeTracingLayerName, paintCenter),
         "Before undo, there should be newCellId + 1",
-      ).toBe(newCellId + 1);
+      ).toBe(Number(newCellId) + 1);
       expect(
         await api.data.getDataValue(volumeTracingLayerName, [1, 0, 0]),
         "Before undo, there should be newCellId + 1",
-      ).toBe(newCellId + 1);
+      ).toBe(Number(newCellId) + 1);
       expect(
         await api.data.getDataValue(volumeTracingLayerName, [5, 0, 0]),
         "Before undo, there should be oldCellId",
@@ -490,14 +418,14 @@ describe("Volume Tracing", () => {
     await dispatchUndoAsync(Store.dispatch);
 
     if (assertAfterUndo) {
-      expect(await api.data.getDataValue(volumeTracingLayerName, paintCenter)).toBe(newCellId);
-      expect(await api.data.getDataValue(volumeTracingLayerName, [1, 0, 0])).toBe(newCellId);
+      expect(await api.data.getDataValue(volumeTracingLayerName, paintCenter)).toBe(Number(newCellId));
+      expect(await api.data.getDataValue(volumeTracingLayerName, [1, 0, 0])).toBe(Number(newCellId));
       expect(await api.data.getDataValue(volumeTracingLayerName, [5, 0, 0])).toBe(oldCellId);
     }
 
     await dispatchRedoAsync(Store.dispatch);
-    expect(await api.data.getDataValue(volumeTracingLayerName, paintCenter)).toBe(newCellId + 1);
-    expect(await api.data.getDataValue(volumeTracingLayerName, [1, 0, 0])).toBe(newCellId + 1);
+    expect(await api.data.getDataValue(volumeTracingLayerName, paintCenter)).toBe(Number(newCellId) + 1);
+    expect(await api.data.getDataValue(volumeTracingLayerName, [1, 0, 0])).toBe(Number(newCellId) + 1);
     expect(await api.data.getDataValue(volumeTracingLayerName, [5, 0, 0])).toBe(oldCellId);
   }
 
@@ -515,7 +443,7 @@ describe("Volume Tracing", () => {
 
     const paintCenter = [3000, 0, 0] as Vector3;
     const brushSize = 10;
-    const newCellId = 2;
+    const newCellId = 2n;
     const volumeTracingLayerName = api.data.getVolumeTracingLayerIds()[0];
 
     Store.dispatch(updateUserSettingAction("overwriteMode", OverwriteModeEnum.OVERWRITE_ALL));
@@ -528,7 +456,7 @@ describe("Volume Tracing", () => {
     Store.dispatch(addToContourListAction(paintCenter));
     Store.dispatch(finishEditingAction());
     // Brush with ${newCellId + 1}
-    Store.dispatch(setActiveCellAction(newCellId + 1));
+    Store.dispatch(setActiveCellAction(newCellId + 1n));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
     Store.dispatch(addToContourListAction(paintCenter));
     Store.dispatch(finishEditingAction());
@@ -549,11 +477,11 @@ describe("Volume Tracing", () => {
       expect(
         await api.data.getDataValue(volumeTracingLayerName, paintCenter),
         "After erase + undo",
-      ).toBe(newCellId + 1);
+      ).toBe(Number(newCellId) + 1);
       expect(
         await api.data.getDataValue(volumeTracingLayerName, V3.add(paintCenter, [1, 0, 0])),
         "After erase + undo",
-      ).toBe(newCellId + 1);
+      ).toBe(Number(newCellId) + 1);
       expect(
         await api.data.getDataValue(volumeTracingLayerName, V3.add(paintCenter, [5, 0, 0])),
         "After erase + undo",
@@ -596,7 +524,7 @@ describe("Volume Tracing", () => {
 
     const paintCenter = [0, 0, 0] as Vector3;
     const brushSize = 10;
-    const newCellId = 2;
+    const newCellId = 2n;
 
     Store.dispatch(updateUserSettingAction("brushSize", brushSize));
     Store.dispatch(setPositionAction([0, 0, 0]));
@@ -605,11 +533,11 @@ describe("Volume Tracing", () => {
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
     Store.dispatch(addToContourListAction(paintCenter));
     Store.dispatch(finishEditingAction());
-    Store.dispatch(setActiveCellAction(newCellId + 1));
+    Store.dispatch(setActiveCellAction(newCellId + 1n));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
     Store.dispatch(addToContourListAction(paintCenter));
     Store.dispatch(finishEditingAction());
-    Store.dispatch(setActiveCellAction(newCellId + 2));
+    Store.dispatch(setActiveCellAction(newCellId + 2n));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
     Store.dispatch(addToContourListAction(paintCenter));
     Store.dispatch(finishEditingAction());
@@ -617,8 +545,8 @@ describe("Volume Tracing", () => {
     await dispatchUndoAsync(Store.dispatch);
     const volumeTracingLayerName = api.data.getVolumeTracingLayerIds()[0];
 
-    expect(await api.data.getDataValue(volumeTracingLayerName, paintCenter)).toBe(newCellId + 1);
-    expect(await api.data.getDataValue(volumeTracingLayerName, [1, 0, 0])).toBe(newCellId + 1);
+    expect(await api.data.getDataValue(volumeTracingLayerName, paintCenter)).toBe(Number(newCellId) + 1);
+    expect(await api.data.getDataValue(volumeTracingLayerName, [1, 0, 0])).toBe(Number(newCellId) + 1);
     expect(await api.data.getDataValue(volumeTracingLayerName, [5, 0, 0])).toBe(oldCellId);
   });
 });

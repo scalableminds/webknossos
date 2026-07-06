@@ -61,7 +61,7 @@ export type MeshSceneNode = Mesh<BufferGeometryWithInfo, MeshMaterial> & {
   parent: SceneGroupForMeshes;
   isMerged: boolean;
 };
-export type SceneGroupForMeshes = Group & { segmentId: number; children: MeshSceneNode[] };
+export type SceneGroupForMeshes = Group & { segmentId: bigint; children: MeshSceneNode[] };
 
 const setRangeToColor = (
   geometry: BufferGeometryWithInfo,
@@ -96,12 +96,14 @@ export default class SegmentMeshController {
   //      - meshes
   meshesLayerLODRootGroup: Group;
 
+  // segmentId level is keyed by segmentId.toString(), since bigint cannot be used as an
+  // object/Record index type.
   meshesGroupsPerSegmentId: Record<
     string, // additionalCoordinatesString
     Record<
       string, // layerName
       Record<
-        number, // segmentId
+        string, // segmentId.toString()
         Record<
           number, // level of detail (LOD)
           GroupForLOD
@@ -117,7 +119,7 @@ export default class SegmentMeshController {
   }
 
   hasMesh(
-    id: number,
+    id: bigint,
     layerName: string,
     additionalCoordinates?: AdditionalCoordinate[] | null,
   ): boolean {
@@ -129,7 +131,7 @@ export default class SegmentMeshController {
 
   async addMeshFromVerticesAsync(
     vertices: Float32Array,
-    segmentId: number,
+    segmentId: bigint,
     layerName: string,
     opacity: number | undefined,
     additionalCoordinates?: AdditionalCoordinate[] | undefined | null,
@@ -157,7 +159,7 @@ export default class SegmentMeshController {
   }
 
   constructMesh(
-    segmentId: number,
+    segmentId: bigint,
     layerName: string,
     geometry: BufferGeometryWithInfo,
     opacity: number | undefined,
@@ -208,7 +210,7 @@ export default class SegmentMeshController {
 
   addMeshFromGeometry(
     geometry: BufferGeometryWithInfo,
-    segmentId: number,
+    segmentId: bigint,
     scale: Vector3 | null = null,
     lod: number,
     layerName: string,
@@ -217,7 +219,7 @@ export default class SegmentMeshController {
     isMerged: boolean,
   ): void {
     const additionalCoordinatesString = getAdditionalCoordinatesAsString(additionalCoordinates);
-    const keys = [additionalCoordinatesString, layerName, segmentId, lod];
+    const keys = [additionalCoordinatesString, layerName, segmentId.toString(), lod];
     const isNewlyAddedMesh = get(this.meshesGroupsPerSegmentId, keys) == null;
     const targetGroup: SceneGroupForMeshes = get(this.meshesGroupsPerSegmentId, keys, new Group());
     setWith(this.meshesGroupsPerSegmentId, keys, targetGroup, Object);
@@ -265,7 +267,7 @@ export default class SegmentMeshController {
     if (isNewlyAddedMesh) {
       const isVisible =
         state.localSegmentationStateByLayer?.[layerName]?.meshes?.[additionalCoordinatesString]?.[
-          segmentId
+          segmentId.toString()
         ].isVisible ?? true;
       this.setMeshVisibility(segmentId, isVisible, layerName, additionalCoordinates);
     }
@@ -280,7 +282,7 @@ export default class SegmentMeshController {
     }
   }
 
-  removeMeshById(segmentId: number, layerName: string, options?: { lod: number }): void {
+  removeMeshById(segmentId: bigint, layerName: string, options?: { lod: number }): void {
     const additionalCoordinates = Store.getState().flycam.additionalCoordinates;
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
     const meshGroups = this.getMeshGroups(additionalCoordKey, layerName, segmentId);
@@ -330,7 +332,7 @@ export default class SegmentMeshController {
   }
 
   getMeshGeometryInBestLOD(
-    segmentId: number,
+    segmentId: bigint,
     layerName: string,
     additionalCoordinates?: AdditionalCoordinate[] | null,
   ): Group | null {
@@ -347,7 +349,7 @@ export default class SegmentMeshController {
   }
 
   setMeshVisibility(
-    id: number,
+    id: bigint,
     visibility: boolean,
     layerName: string,
     additionalCoordinates?: AdditionalCoordinate[] | null,
@@ -373,11 +375,11 @@ export default class SegmentMeshController {
 
   applyOnMeshGroupChildren = (
     layerName: string,
-    segmentId: number,
+    segmentId: bigint,
     functionToApply: (child: MeshSceneNode) => void,
   ) => {
     for (const recordsOfLayers of Object.values(this.meshesGroupsPerSegmentId)) {
-      const meshDataForOneSegment = recordsOfLayers[layerName][segmentId];
+      const meshDataForOneSegment = recordsOfLayers[layerName][segmentId.toString()];
       if (meshDataForOneSegment != null) {
         for (const lodGroup of Object.values(meshDataForOneSegment)) {
           for (const meshGroup of lodGroup.children) {
@@ -388,7 +390,7 @@ export default class SegmentMeshController {
     }
   };
 
-  setMeshColor(id: number, layerName: string, opacity?: number): void {
+  setMeshColor(id: bigint, layerName: string, opacity?: number): void {
     const color = this.getColorObjectForSegment(id, layerName);
     const colorArray = color.toArray() as Vector3;
     // If in nd-dataset, set the color for all additional coordinates
@@ -405,14 +407,14 @@ export default class SegmentMeshController {
     });
   }
 
-  setMeshOpacity(id: number, layerName: string, opacity: number): void {
+  setMeshOpacity(id: bigint, layerName: string, opacity: number): void {
     // If in nd-dataset, set the opacity for all additional coordinates
     this.applyOnMeshGroupChildren(layerName, id, (child: MeshSceneNode) => {
       child.material.opacity = opacity;
     });
   }
 
-  getColorObjectForSegment(segmentId: number, layerName: string) {
+  getColorObjectForSegment(segmentId: bigint, layerName: string) {
     const [hue, saturation, light] = getSegmentColorAsHSLA(Store.getState(), segmentId, layerName);
     const color = new Color().setHSL(hue, saturation, light);
     color.convertSRGBToLinear();
@@ -466,11 +468,11 @@ export default class SegmentMeshController {
   private getMeshGroupsByLOD(
     additionalCoordinates: AdditionalCoordinate[] | null | undefined,
     layerName: string,
-    segmentId: number,
+    segmentId: bigint,
     lod: number,
   ): Group | null {
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
-    const keys = [additionalCoordKey, layerName, segmentId, lod];
+    const keys = [additionalCoordKey, layerName, segmentId.toString(), lod];
 
     return get(this.meshesGroupsPerSegmentId, keys, null);
   }
@@ -478,38 +480,38 @@ export default class SegmentMeshController {
   private getMeshGroups(
     additionalCoordKey: string,
     layerName: string,
-    segmentId: number,
+    segmentId: bigint,
   ): Record<number, Group> | null {
-    const keys = [additionalCoordKey, layerName, segmentId];
+    const keys = [additionalCoordKey, layerName, segmentId.toString()];
     return get(this.meshesGroupsPerSegmentId, keys, null);
   }
 
   private addMeshToMeshGroups(
     additionalCoordKey: string,
     layerName: string,
-    segmentId: number,
+    segmentId: bigint,
     lod: number,
     mesh: SceneGroupForMeshes,
   ) {
-    const group = this.meshesGroupsPerSegmentId[additionalCoordKey][layerName][segmentId][lod];
+    const group = this.meshesGroupsPerSegmentId[additionalCoordKey][layerName][segmentId.toString()][lod];
     group.add(mesh);
   }
 
   private removeMeshFromMeshGroups(
     additionalCoordinateKey: string,
     layerName: string,
-    segmentId: number,
+    segmentId: bigint,
   ) {
-    delete this.meshesGroupsPerSegmentId[additionalCoordinateKey][layerName][segmentId];
+    delete this.meshesGroupsPerSegmentId[additionalCoordinateKey][layerName][segmentId.toString()];
   }
 
   private removeMeshLODFromMeshGroups(
     additionalCoordinateKey: string,
     layerName: string,
-    segmentId: number,
+    segmentId: bigint,
     lod: number,
   ) {
-    delete this.meshesGroupsPerSegmentId[additionalCoordinateKey][layerName][segmentId][lod];
+    delete this.meshesGroupsPerSegmentId[additionalCoordinateKey][layerName][segmentId.toString()][lod];
   }
 
   updateMeshAppearance(
@@ -646,7 +648,7 @@ export default class SegmentMeshController {
   }
 
   updateActiveUnmappedSegmentIdHighlighting = (
-    activeUnmappedSegmentId: number | null | undefined,
+    activeUnmappedSegmentId: bigint | null | undefined,
   ) => {
     this.meshesLayerLODRootGroup.traverse((_obj) => {
       if (!("geometry" in _obj)) {

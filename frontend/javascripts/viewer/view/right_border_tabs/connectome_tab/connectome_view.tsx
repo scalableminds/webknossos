@@ -58,7 +58,7 @@ type StateProps = {
   // the segmentation layer while browsing a connectome.
   segmentationLayer: APISegmentationLayer | null | undefined;
   currentConnectomeFile: APIConnectomeFile | null | undefined;
-  activeAgglomerateIds: Array<number>;
+  activeAgglomerateIds: Array<bigint>;
   mappingInfo: ActiveMappingInfo | null | undefined;
 };
 
@@ -104,16 +104,18 @@ const getSynapseIdsFromConnectomeData = (connectomeData: ConnectomeData): Array<
   ).filter((synapseId) => synapses[synapseId]);
 };
 
-const getAgglomerateIdsFromConnectomeData = (connectomeData: ConnectomeData): Array<number> => {
+const getAgglomerateIdsFromConnectomeData = (connectomeData: ConnectomeData): Array<bigint> => {
   // In order to find all existing agglomerate ids, the top level agglomerate ids (Object.keys(agglomerates)) need to be merged
   // with the synaptic partner agglomerate ids. The synaptic partner agglomerate ids can be found by looking at the
   // filtered set of all synapses and picking the src/dst key, depending on whether the partner is pre- or postsynaptic
   // (the other key will usually be undefined). For synapses that occur for both directions it doesn't matter, because that
   // implicates that the associated agglomerated ids both need to be top level agglomerate ids as well.
   const { synapses, agglomerates } = connectomeData;
-  const topLevelAgglomerateIds = Object.keys(agglomerates).map((agglomerateId) => +agglomerateId);
+  const topLevelAgglomerateIds = Object.keys(agglomerates).map((agglomerateId) =>
+    BigInt(agglomerateId),
+  );
   const filteredSynapseIds = getSynapseIdsFromConnectomeData(connectomeData);
-  const partnerAgglomerateIds = filteredSynapseIds.map((synapseId): number => {
+  const partnerAgglomerateIds = filteredSynapseIds.map((synapseId): bigint => {
     const synapse = synapses[synapseId];
     if (synapse.src != null) {
       return synapse.src;
@@ -129,8 +131,8 @@ const getAgglomerateIdsFromConnectomeData = (connectomeData: ConnectomeData): Ar
 
 const getTreeNameForSynapse = (synapseId: number): string => `synapse-${synapseId}`;
 
-const getAgglomerateIdsFromKeys = (keys: Array<string>): Array<number> =>
-  unique(keys.map((key) => +key.split(";")[1])); // The id identifying the respective agglomerate is at the second position (pattern is segment;xxx;[...])
+const getAgglomerateIdsFromKeys = (keys: Array<string>): Array<bigint> =>
+  unique(keys.map((key) => BigInt(key.split(";")[1]))); // The id identifying the respective agglomerate is at the second position (pattern is segment;xxx;[...])
 
 const synapseTreeCreator = (synapseId: number, synapseType: string): MutableTree => ({
   name: getTreeNameForSynapse(synapseId),
@@ -394,7 +396,10 @@ class ConnectomeView extends React.Component<Props, State> {
       // Since it's easy to forget to create the json file, this code exists to act as a fail-safe.
       const { synapseTypes, typeToString } = ensureTypeToString(synapseTypesAndNames);
 
-      const agglomerates = safeZipObject(activeAgglomerateIds, synapsesOfAgglomerates);
+      const agglomerates = safeZipObject(
+        activeAgglomerateIds.map((id) => id.toString()),
+        synapsesOfAgglomerates,
+      );
       const synapseIdToSource = safeZipObject(allInSynapseIds, synapseSources);
       const synapseIdToDestination = safeZipObject(allOutSynapseIds, synapseDestinations);
       const synapseIdToPosition = safeZipObject(allSynapseIds, synapsePositions);
@@ -534,10 +539,10 @@ class ConnectomeView extends React.Component<Props, State> {
     const { segmentationLayer } = this.props;
     const { connectomeData, filteredConnectomeData, checkedKeys } = this.state;
     if (segmentationLayer == null) return;
-    let prevFilteredAgglomerateIds: Array<number> = [];
-    let filteredAgglomerateIds: Array<number> = [];
-    let prevUnfilteredAgglomerateIds: Array<number> = [];
-    let unfilteredAgglomerateIds: Array<number> = [];
+    let prevFilteredAgglomerateIds: Array<bigint> = [];
+    let filteredAgglomerateIds: Array<bigint> = [];
+    let prevUnfilteredAgglomerateIds: Array<bigint> = [];
+    let unfilteredAgglomerateIds: Array<bigint> = [];
 
     if (prevFilteredConnectomeData != null) {
       prevFilteredAgglomerateIds = getAgglomerateIdsFromConnectomeData(prevFilteredConnectomeData);
@@ -560,7 +565,7 @@ class ConnectomeView extends React.Component<Props, State> {
       filteredAgglomerateIds.includes(agglomerateId),
     );
     let deletedAgglomerateIds;
-    let hiddenAgglomerateIds: number[];
+    let hiddenAgglomerateIds: bigint[];
     let addedAgglomerateIds;
 
     if (connectomeFileMappingChanged) {
@@ -664,16 +669,17 @@ class ConnectomeView extends React.Component<Props, State> {
 
   handleChangeActiveSegment = (evt: React.SyntheticEvent) => {
     // @ts-expect-error
-    const agglomerateIds = evt.target.value
+    const agglomerateIds: Array<bigint> = evt.target.value
       .split(",")
-      .map((part: string) => Number.parseInt(part, 10))
-      .filter((id: number) => !Number.isNaN(id));
+      .map((part: string) => part.trim())
+      .filter((part: string) => /^\d+$/.test(part))
+      .map((part: string) => BigInt(part));
     this.setActiveConnectomeAgglomerateIds(agglomerateIds);
     // @ts-expect-error
     evt.target.blur();
   };
 
-  setActiveConnectomeAgglomerateIds = (agglomerateIds: Array<number>) => {
+  setActiveConnectomeAgglomerateIds = (agglomerateIds: Array<bigint>) => {
     const { segmentationLayer } = this.props;
     if (segmentationLayer == null) return;
     Store.dispatch(setActiveConnectomeAgglomerateIdsAction(segmentationLayer.name, agglomerateIds));

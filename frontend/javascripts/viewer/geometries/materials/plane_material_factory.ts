@@ -742,9 +742,7 @@ class PlaneMaterialFactory {
         listenToStoreProperty(
           (storeState) => storeState.temporaryConfiguration.hoveredSegmentId,
           (hoveredSegmentId) => {
-            const [high, low] = convertNumberTo64BitTuple(
-              hoveredSegmentId != null ? Math.abs(hoveredSegmentId) : null,
-            );
+            const [high, low] = convertNumberTo64BitTuple(hoveredSegmentId);
 
             this.uniforms.hoveredSegmentIdLow.value = low;
             this.uniforms.hoveredSegmentIdHigh.value = high;
@@ -753,9 +751,7 @@ class PlaneMaterialFactory {
         listenToStoreProperty(
           (storeState) => storeState.temporaryConfiguration.hoveredUnmappedSegmentId,
           (hoveredUnmappedSegmentId) => {
-            const [high, low] = convertNumberTo64BitTuple(
-              hoveredUnmappedSegmentId != null ? Math.abs(hoveredUnmappedSegmentId) : null,
-            );
+            const [high, low] = convertNumberTo64BitTuple(hoveredUnmappedSegmentId);
 
             this.uniforms.hoveredUnmappedSegmentIdLow.value = low;
             this.uniforms.hoveredUnmappedSegmentIdHigh.value = high;
@@ -764,7 +760,7 @@ class PlaneMaterialFactory {
         listenToStoreProperty(
           (storeState) => {
             const activeSegmentationTracing = getActiveSegmentationTracing(storeState);
-            return activeSegmentationTracing ? getActiveCellId(activeSegmentationTracing) : 0;
+            return activeSegmentationTracing ? getActiveCellId(activeSegmentationTracing) : 0n;
           },
           () => this.updateActiveCellId(),
           true,
@@ -968,13 +964,15 @@ class PlaneMaterialFactory {
 
   updateActiveCellId() {
     const activeSegmentationTracing = getActiveSegmentationTracing(Store.getState());
-    const activeCellId = activeSegmentationTracing ? getActiveCellId(activeSegmentationTracing) : 0;
+    const activeCellId = activeSegmentationTracing
+      ? getActiveCellId(activeSegmentationTracing)
+      : 0n;
 
     if (activeSegmentationTracing == null) {
       return;
     }
 
-    const [high, low] = convertNumberTo64BitTuple(Math.abs(activeCellId));
+    const [high, low] = convertNumberTo64BitTuple(activeCellId);
 
     this.uniforms.activeCellIdLow.value = low;
     this.uniforms.activeCellIdHigh.value = high;

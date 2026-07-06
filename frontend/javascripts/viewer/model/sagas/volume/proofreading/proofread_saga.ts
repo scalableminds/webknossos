@@ -7,10 +7,10 @@ import {
   type NeighborInfo,
 } from "admin/rest_api";
 import processTaskWithPool from "libs/async/task_pool";
+import { toBigInt } from "libs/bigint_helpers";
 import { V3 } from "libs/mjs";
-import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
 import Toast from "libs/toast";
-import { getAdaptToTypeFunction, isEditableEventTarget, isNumberMap, SoftError } from "libs/utils";
+import { isEditableEventTarget, isNumberMap, SoftError } from "libs/utils";
 import window from "libs/window";
 import { uniq } from "lodash-es";
 import isEqual from "lodash-es/isEqual";
@@ -243,7 +243,7 @@ function* clearActiveSegmentIfTdViewportIsActive(): Saga<void> {
     activeTool === AnnotationTool.PROOFREAD &&
     activeViewport === OrthoViews.TDView
   ) {
-    yield* put(setActiveCellAction(activeVolumeTracing?.activeCellId, undefined, undefined, null));
+    yield* put(setActiveCellAction(activeVolumeTracing!.activeCellId, undefined, undefined, null));
   }
 }
 
@@ -262,7 +262,7 @@ function* showToastIfSegmentOfOtherAgglomerateWasSelected(
   const minCutPartitions = layerData.minCutPartitions;
   if (
     minCutPartitions.agglomerateId != null &&
-    minCutPartitions.agglomerateId !== action.agglomerateId
+    minCutPartitions.agglomerateId !== BigInt(action.agglomerateId)
   ) {
     Toast.info(messages["proofreading.multi_cut.different_agglomerate_selected"]);
   }
@@ -296,7 +296,7 @@ function* subscribeToAnnotationMutexInLiveCollab(proofreadingSagaId: string) {
 
 function* ensureSegmentItemAndMaybeLoadCoarseMesh(
   layerName: string,
-  segmentId: number,
+  segmentId: bigint,
   position: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | undefined,
 ): Saga<void> {
@@ -312,7 +312,7 @@ function* ensureSegmentItemAndMaybeLoadCoarseMesh(
 
 function* ensureSegmentItem(
   layerName: string,
-  segmentId: number,
+  segmentId: bigint,
   position: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | undefined,
 ): Saga<void> {
@@ -321,7 +321,7 @@ function* ensureSegmentItem(
 
 function* loadCoarseMesh(
   layerName: string,
-  segmentId: number,
+  segmentId: bigint,
   position: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | undefined,
   opacity?: number,
@@ -528,13 +528,22 @@ function* ensureHdf5MappingIsEnabled(layerName: string): Saga<boolean> {
   return true;
 }
 
+// Looks up `key` (a segment/agglomerate id) in a Mapping (which is either number- or
+// BigInt-keyed/valued, depending on whether the dataset is uint32- or uint64-backed) and
+// returns the mapped value as a bigint. This avoids the lossy Number()-based
+// NumberLikeMapWrapper#getAsNumber for scalar id lookups (see #6921).
+function getMappedIdAsBigInt(mapping: Mapping, key: bigint): bigint | undefined {
+  const mapped = isNumberMap(mapping) ? mapping.get(Number(key)) : mapping.get(key);
+  return mapped == null ? undefined : BigInt(mapped);
+}
+
 function lookupAgglomerateId(
   activeMapping: ActiveMappingInfo,
-  unmappedId: number,
-  fallback: number,
-): number {
+  unmappedId: bigint,
+  fallback: bigint,
+): bigint {
   if (activeMapping.mapping == null) return fallback;
-  return new NumberLikeMapWrapper(activeMapping.mapping).getAsNumber(unmappedId) ?? fallback;
+  return getMappedIdAsBigInt(activeMapping.mapping, unmappedId) ?? fallback;
 }
 
 // Shared setup for tree-based proofreading handlers. Returns null if the action should not proceed.
@@ -984,11 +993,7 @@ function* handleSplitViaTree(
           )?.name,
       )) ?? `Agglomerate ${newTargetAgglomerateId}`;
     yield* put(
-      updateSegmentAction(
-        Number(newTargetAgglomerateId),
-        { name: newSegmentName },
-        volumeTracingId,
-      ),
+      updateSegmentAction(newTargetAgglomerateId, { name: newSegmentName }, volumeTracingId),
     );
 
     /* Ensure segment items exist for affected segments and reload affected meshes */
@@ -1019,10 +1024,10 @@ function* handleSplitViaTree(
 
 // Returns a tuple of whether the min cut failed and if successful a list of edges removed by the min cut.
 function* performMinCut(
-  sourceAgglomerateId: number,
-  targetAgglomerateId: number,
-  sourceSegmentIds: number[],
-  targetSegmentIds: number[],
+  sourceAgglomerateId: bigint,
+  targetAgglomerateId: bigint,
+  sourceSegmentIds: bigint[],
+  targetSegmentIds: bigint[],
   agglomerateFileMag: Vector3,
   volumeTracingId: string,
   sourceTree: Tree | null,
@@ -1284,8 +1289,8 @@ function* performPartitionedMinCut(
 }
 
 function* performCutFromNeighbors(
-  agglomerateId: number,
-  segmentId: number,
+  agglomerateId: bigint,
+  segmentId: bigint,
   segmentPosition: Vector3 | null,
   agglomerateFileMag: Vector3,
   volumeTracingId: string,
@@ -1322,14 +1327,14 @@ function* performCutFromNeighbors(
     | {
         position1: Vector3;
         position2: Vector3;
-        segmentId1: number;
-        segmentId2: number;
+        segmentId1: bigint;
+        segmentId2: bigint;
       }
     | {
         position1: null;
         position2: Vector3;
-        segmentId1: number;
-        segmentId2: number;
+        segmentId1: bigint;
+        segmentId2: bigint;
       }
   > = neighborInfo.neighbors.map(
     (neighbor) =>
@@ -1422,8 +1427,8 @@ function* refreshProofreadingSegmentsAndMeshes(
   volumeTracingId: string,
   sourceInfo: IdInfo,
   targetInfo: IdInfoOpt,
-  sourceAgglomerateId: number,
-  targetAgglomerateId: number,
+  sourceAgglomerateId: bigint,
+  targetAgglomerateId: bigint,
   ctx: OperationContext,
 ): Saga<void> {
   /* Ensure segment items exist for affected segments and reload affected meshes */
@@ -1887,9 +1892,9 @@ function* handleProofreadCutFromNeighbors(action: Action, ctx: OperationContext)
 
 type Preparation = {
   agglomerateFileMag: Vector3;
-  getDataValue: (position: Vector3, overrideMapping?: Mapping | null) => Promise<number>;
-  mapSegmentId: (segmentId: number, overrideMapping?: Mapping | null) => number;
-  getMappedAndUnmapped: (position: Vector3) => Saga<{ agglomerateId: number; unmappedId: number }>;
+  getDataValue: (position: Vector3, overrideMapping?: Mapping | null) => Promise<bigint>;
+  mapSegmentId: (segmentId: bigint, overrideMapping?: Mapping | null) => bigint;
+  getMappedAndUnmapped: (position: Vector3) => Saga<{ agglomerateId: bigint; unmappedId: bigint }>;
   activeMapping: ActiveMappingInfo;
   volumeTracing: VolumeTracing & { mappingName: string };
   annotationVersion: number;
@@ -1936,14 +1941,15 @@ export function* prepareSplitOrMerge(
   }
   const agglomerateFileZoomstep = magInfo.getIndexByMag(agglomerateFileMag);
 
-  const getUnmappedDataValue = (position: Vector3): Promise<number> => {
+  const getUnmappedDataValue = async (position: Vector3): Promise<bigint> => {
     const { additionalCoordinates } = Store.getState().flycam;
-    return api.data.getDataValue(
+    const rawId = await api.data.getDataValue(
       volumeTracing.tracingId,
       position,
       agglomerateFileZoomstep,
       additionalCoordinates,
     );
+    return toBigInt(rawId);
   };
 
   console.log("Accessing mapping for proofreading");
@@ -1961,15 +1967,14 @@ export function* prepareSplitOrMerge(
   const getDataValue = async (
     position: Vector3,
     overrideMapping: Mapping | null = null,
-  ): Promise<number> => {
+  ): Promise<bigint> => {
     const unmappedId = await getUnmappedDataValue(position);
     return mapSegmentId(unmappedId, overrideMapping);
   };
 
-  const mapSegmentId = (segmentId: number, overrideMapping: Mapping | null = null): number => {
+  const mapSegmentId = (segmentId: bigint, overrideMapping: Mapping | null = null): bigint => {
     const mappingToAccess = overrideMapping ?? mapping;
-    const mappingWrapper = new NumberLikeMapWrapper(mappingToAccess);
-    const mappedId = mappingWrapper.getAsNumber(segmentId);
+    const mappedId = getMappedIdAsBigInt(mappingToAccess, segmentId);
     if (mappedId == null) {
       // It could happen that the user tries to perform a proofreading operation
       // that involves an id for which the mapped id wasn't fetched yet.
@@ -1985,10 +1990,7 @@ export function* prepareSplitOrMerge(
 
   const getMappedAndUnmapped = function* (position: Vector3) {
     const unmappedId = yield* call(getUnmappedDataValue, position);
-    let agglomerateId = isNumberMap(mapping)
-      ? mapping.get(unmappedId)
-      : // TODO: Proper 64 bit support (#6921)
-        Number(mapping.get(BigInt(unmappedId)));
+    let agglomerateId = getMappedIdAsBigInt(mapping, unmappedId);
 
     if (agglomerateId == null) {
       const fetchedEntries = yield* call(
@@ -1998,7 +2000,7 @@ export function* prepareSplitOrMerge(
         mappingName,
         new Set([unmappedId]),
       );
-      agglomerateId = new NumberLikeMapWrapper(fetchedEntries).getAsNumber(unmappedId);
+      agglomerateId = getMappedIdAsBigInt(fetchedEntries, unmappedId);
       if (agglomerateId == null) {
         throw new SoftError(
           `Could not map id ${unmappedId} at position ${position}. The mapped partner might not be known yet. Please retry.`,
@@ -2033,18 +2035,16 @@ export function* prepareSplitOrMerge(
 
 function* reloadMappingAndAggloIds(
   tracingId: string,
-  unmappedSourceId: number,
-  unmappedTargetId: number,
+  unmappedSourceId: bigint,
+  unmappedTargetId: bigint,
 ) {
   const activeMapping = yield* select(
     (store) => store.temporaryConfiguration.activeMappingByLayer[tracingId],
   );
 
   if (activeMapping.mapping != null) {
-    const mappingWrapper = new NumberLikeMapWrapper(activeMapping.mapping);
-
-    const maybeSourceAgglomerateId = mappingWrapper.getAsNumber(unmappedSourceId);
-    const maybeTargetAgglomerateId = mappingWrapper.getAsNumber(unmappedTargetId);
+    const maybeSourceAgglomerateId = getMappedIdAsBigInt(activeMapping.mapping, unmappedSourceId);
+    const maybeTargetAgglomerateId = getMappedIdAsBigInt(activeMapping.mapping, unmappedTargetId);
 
     if (maybeSourceAgglomerateId != null && maybeTargetAgglomerateId != null) {
       return {
@@ -2069,11 +2069,14 @@ function* reloadMappingAndAggloIds(
       annotationId,
       annotationVersion,
     );
-    const missingMappingInfoWrapper = new NumberLikeMapWrapper(missingMappingInfo);
-    const maybeSourceAgglomerateIdFromServer =
-      missingMappingInfoWrapper.getAsNumber(unmappedSourceId);
-    const maybeTargetAgglomerateIdFromServer =
-      missingMappingInfoWrapper.getAsNumber(unmappedTargetId);
+    const maybeSourceAgglomerateIdFromServer = getMappedIdAsBigInt(
+      missingMappingInfo,
+      unmappedSourceId,
+    );
+    const maybeTargetAgglomerateIdFromServer = getMappedIdAsBigInt(
+      missingMappingInfo,
+      unmappedTargetId,
+    );
     if (maybeSourceAgglomerateIdFromServer == null || maybeTargetAgglomerateIdFromServer == null) {
       throw new SoftError(
         `Could not look up agglomerate id for unmapped segment id ${unmappedSourceId} or ${unmappedTargetId}.`,
@@ -2088,12 +2091,12 @@ function* reloadMappingAndAggloIds(
 }
 
 function* getAgglomerateInfos(
-  getMappedAndUnmapped: (position: Vector3) => Saga<{ agglomerateId: number; unmappedId: number }>,
+  getMappedAndUnmapped: (position: Vector3) => Saga<{ agglomerateId: bigint; unmappedId: bigint }>,
   positions: Vector3[],
 ): Saga<Array<IdInfoWithoutPosition> | null> {
   try {
     const idInfos = yield* all(positions.map((pos) => call(getMappedAndUnmapped, pos)));
-    if (idInfos.find((idInfo) => idInfo.agglomerateId === 0 || idInfo.unmappedId === 0) != null) {
+    if (idInfos.find((idInfo) => idInfo.agglomerateId === 0n || idInfo.unmappedId === 0n) != null) {
       Toast.warning(
         "One of the selected segments has the id 0 which is the background. Cannot merge/split.",
       );
@@ -2111,8 +2114,8 @@ function* getAgglomerateInfos(
 export function* refreshAffectedSegmentItems(
   layerName: string,
   items: Array<{
-    oldAgglomerateId?: number;
-    newAgglomerateId: number;
+    oldAgglomerateId?: bigint;
+    newAgglomerateId: bigint;
     nodePosition: Vector3;
   }>,
 ) {
@@ -2133,7 +2136,7 @@ export function* refreshAffectedSegmentItems(
     call(
       ensureSegmentItem,
       layerName,
-      Number(item.newAgglomerateId),
+      item.newAgglomerateId,
       item.nodePosition,
       additionalCoordinates,
     ),
@@ -2145,7 +2148,7 @@ export function* refreshAffectedSegmentItems(
 
 export function* shouldReloadMeshesAfterProofreadAction(
   layerName: string,
-  oldAgglomerateIds: number[],
+  oldAgglomerateIds: bigint[],
 ): Saga<boolean> {
   const autoRenderMeshInProofreading = yield* select(
     (state) => state.userConfiguration.autoRenderMeshInProofreading,
@@ -2173,18 +2176,18 @@ export type PreservedMeshDisplayProps = {
 // original mesh display properties can no longer be read.
 export function* getMeshDisplayPropsByOldAgglomerateId(
   layerName: string,
-  oldAgglomerateIds: Iterable<number | null | undefined>,
+  oldAgglomerateIds: Iterable<bigint | null | undefined>,
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
-): Saga<Map<number, PreservedMeshDisplayProps>> {
+): Saga<Map<bigint, PreservedMeshDisplayProps>> {
   return yield* select((state) => {
-    const displayPropsByAgglomerateId = new Map<number, PreservedMeshDisplayProps>();
+    const displayPropsByAgglomerateId = new Map<bigint, PreservedMeshDisplayProps>();
     for (const oldAgglomerateId of oldAgglomerateIds) {
       if (oldAgglomerateId != null && !displayPropsByAgglomerateId.has(oldAgglomerateId)) {
         const meshInfo = getMeshInfoForSegment(
           state,
           additionalCoordinates || null,
           layerName,
-          Number(oldAgglomerateId),
+          oldAgglomerateId,
         );
         if (meshInfo != null) {
           displayPropsByAgglomerateId.set(oldAgglomerateId, {
@@ -2201,8 +2204,8 @@ export function* getMeshDisplayPropsByOldAgglomerateId(
 function* maybeRefreshAffectedMeshes(
   layerName: string,
   items: Array<{
-    oldAgglomerateId?: number;
-    newAgglomerateId: number;
+    oldAgglomerateId?: bigint;
+    newAgglomerateId: bigint;
     nodePosition: Vector3;
     opacity?: number; // see refreshAffectedMeshes below.
   }>,
@@ -2220,8 +2223,8 @@ function* maybeRefreshAffectedMeshes(
 export function* refreshAffectedMeshes(
   layerName: string,
   items: Array<{
-    oldAgglomerateId?: number;
-    newAgglomerateId: number;
+    oldAgglomerateId?: bigint;
+    newAgglomerateId: bigint;
     nodePosition: Vector3;
     // Opacity and visibility to apply to the reloaded mesh. If unset, the values of the old
     // mesh (oldAgglomerateId) are used before its removal (see below).
@@ -2264,7 +2267,7 @@ export function* refreshAffectedMeshes(
     const isVisible = item.isVisible ?? oldDisplayProps?.isVisible;
     // Remove old agglomerate mesh(es) and load updated agglomerate mesh(es)
     if (item.oldAgglomerateId && !removedIds.has(item.oldAgglomerateId)) {
-      yield* put(removeMeshAction(layerName, Number(item.oldAgglomerateId)));
+      yield* put(removeMeshAction(layerName, item.oldAgglomerateId));
       removedIds.add(item.oldAgglomerateId);
     }
     if (!newlyLoadedIds.has(item.newAgglomerateId)) {
@@ -2272,7 +2275,7 @@ export function* refreshAffectedMeshes(
         yield* call(
           loadCoarseMesh,
           layerName,
-          Number(item.newAgglomerateId),
+          item.newAgglomerateId,
           item.nodePosition,
           additionalCoordinates,
           opacity,
@@ -2318,7 +2321,7 @@ function getDeleteEdgeActionForEdgePositions(
   return { firstNodeId, secondNodeId };
 }
 
-function* getPositionForSegmentId(volumeTracing: VolumeTracing, segmentId: number): Saga<Vector3> {
+function* getPositionForSegmentId(volumeTracing: VolumeTracing, segmentId: bigint): Saga<Vector3> {
   const dataset = yield* select((state) => state.dataset);
   const dataStoreUrl = yield* select((state) => state.dataset.dataStore.url);
   const editableMapping = yield* select((state) =>
@@ -2341,15 +2344,18 @@ function* getPositionForSegmentId(volumeTracing: VolumeTracing, segmentId: numbe
 
 function getSegmentIdsThatMapToAgglomerate(
   activeMapping: ActiveMappingInfo,
-  sourceAgglomerateId: number,
+  sourceAgglomerateId: bigint,
 ) {
   // Obtain all segment ids that map to sourceAgglomerateId
   const mappingEntries = Array.from(activeMapping.mapping as NumberLikeMap);
 
-  const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
-
-  // If the mapping contains BigInts, we need a BigInt for the filtering
-  const comparableSourceAgglomerateId = adaptToType(sourceAgglomerateId);
+  // If the mapping contains numbers (uint32-backed dataset) rather than BigInts, we need a
+  // plain number for the filtering. This is safe because such mappings never contain ids
+  // that exceed the safe integer range.
+  const comparableSourceAgglomerateId =
+    activeMapping.mapping != null && isNumberMap(activeMapping.mapping)
+      ? Number(sourceAgglomerateId)
+      : sourceAgglomerateId;
   return mappingEntries
     .filter(([_segmentId, agglomerateId]) => agglomerateId === comparableSourceAgglomerateId)
     .map(([segmentId, _agglomerateId]) => segmentId);
@@ -2377,24 +2383,25 @@ function getSegmentIdsThatMapToAgglomerate(
  */
 export function* splitAgglomerateInMapping(
   activeMapping: ActiveMappingInfo,
-  sourceAgglomerateId: number,
+  sourceAgglomerateIdArg: bigint,
   volumeTracingId: string,
   version: number,
   syncAgglomerateTrees: boolean,
-  additionalSegmentIdToOldAgglomerateId: Map<number, number> = new Map(),
+  additionalSegmentIdToOldAgglomerateId: Map<bigint, bigint> = new Map(),
   addAdditionalSegmentsToMapping = false,
 ): Saga<
   | {
       splitMapping: Mapping;
-      oldAgglomerateIds: Set<number>;
-      newAgglomerateIds: Set<number>;
-      newToOldAgglomerateIds: Map<number, number>;
+      oldAgglomerateIds: Set<bigint>;
+      newAgglomerateIds: Set<bigint>;
+      newToOldAgglomerateIds: Map<bigint, bigint>;
     }
   | undefined
 > {
+  const sourceAgglomerateId = sourceAgglomerateIdArg;
   // The old agglomerate ids are the source agglomerate plus every agglomerate an additionally
   // requested segment belonged to before the split (passed explicitly by the caller).
-  const oldAgglomerateIds = new Set<number>([
+  const oldAgglomerateIds = new Set<bigint>([
     sourceAgglomerateId,
     ...additionalSegmentIdToOldAgglomerateId.values(),
   ]);
@@ -2431,7 +2438,7 @@ export function* splitAgglomerateInMapping(
     annotationId,
     version,
   );
-  const newToOldAgglomerateIds = new Map<number, number>();
+  const newToOldAgglomerateIds = new Map<bigint, bigint>();
 
   // Create a new mapping which is equal to the old one with the difference that
   // ids from splitSegmentIds are mapped to their new target agglomerate ids.
@@ -2440,10 +2447,9 @@ export function* splitAgglomerateInMapping(
       // @ts-expect-error get() is expected to accept the type that segmentId has.
       const mappedId = mappingAfterSplit.get(segmentId);
       if (mappedId != null) {
-        const mappedIdNumber = Number(mappedId);
         // A split never merges two old agglomerates into one new one, so every segment that maps to
         // a given newId shares the same prevAgglomerateId — overwriting an existing entry is a no-op.
-        newToOldAgglomerateIds.set(mappedIdNumber, Number(prevAgglomerateId));
+        newToOldAgglomerateIds.set(BigInt(mappedId), BigInt(prevAgglomerateId));
         return [segmentId, mappedId];
       } else if (splitSegmentIds.has(segmentId)) {
         console.error(
@@ -2463,8 +2469,7 @@ export function* splitAgglomerateInMapping(
     // @ts-expect-error get() is expected to accept the type that segmentId has.
     const mappedId = mappingAfterSplit.get(segmentId);
     if (mappedId != null) {
-      const newId = Number(mappedId);
-      newToOldAgglomerateIds.set(newId, oldAgglomerateId);
+      newToOldAgglomerateIds.set(BigInt(mappedId), oldAgglomerateId);
       if (addAdditionalSegmentsToMapping) {
         splitMapping.set(segmentId, mappedId);
       }
@@ -2496,13 +2501,20 @@ export function* splitAgglomerateInMapping(
 
 function* mergeAgglomeratesInMapping(
   activeMapping: ActiveMappingInfo,
-  sourceAgglomerateId: number,
-  targetAgglomerateId: number,
+  sourceAgglomerateId: bigint,
+  targetAgglomerateId: bigint,
 ): Saga<Mapping> {
-  const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
-
-  const typedTargetAgglomerateId = adaptToType(targetAgglomerateId);
-  const typedSourceAgglomerateId = adaptToType(sourceAgglomerateId);
+  // The mapping is either number- or BigInt-keyed/valued (uint32- vs. uint64-backed dataset).
+  // Number-keyed mappings never contain ids exceeding the safe integer range, so the
+  // round-trip through Number() below is safe.
+  const isNumberBackedMapping =
+    activeMapping.mapping != null && isNumberMap(activeMapping.mapping);
+  const typedTargetAgglomerateId = isNumberBackedMapping
+    ? Number(targetAgglomerateId)
+    : targetAgglomerateId;
+  const typedSourceAgglomerateId = isNumberBackedMapping
+    ? Number(sourceAgglomerateId)
+    : sourceAgglomerateId;
   return new Map(
     Array.from(activeMapping.mapping as NumberLikeMap, ([key, value]) =>
       value === typedTargetAgglomerateId ? [key, typedSourceAgglomerateId] : [key, value],
@@ -2513,8 +2525,8 @@ function* mergeAgglomeratesInMapping(
 export function* updateMappingWithMerge(
   volumeTracingId: string,
   activeMapping: ActiveMappingInfo,
-  sourceAgglomerateId: number,
-  targetAgglomerateId: number,
+  sourceAgglomerateId: bigint,
+  targetAgglomerateId: bigint,
   // Must be true if we know that the updated mapping info was already saved on the server.
   isVersionStoredOnServer: boolean,
 ) {
@@ -2528,9 +2540,9 @@ export function* updateMappingWithMerge(
   yield* put(setMappingDataAction(volumeTracingId, mergedMapping, isVersionStoredOnServer));
 }
 
-type IdInfo = { agglomerateId: number; unmappedId: number; position: Vector3 };
-type IdInfoOpt = { agglomerateId: number; unmappedId: number; position: Vector3 | undefined };
-type IdInfoWithoutPosition = { agglomerateId: number; unmappedId: number };
+type IdInfo = { agglomerateId: bigint; unmappedId: bigint; position: Vector3 };
+type IdInfoOpt = { agglomerateId: bigint; unmappedId: bigint; position: Vector3 | undefined };
+type IdInfoWithoutPosition = { agglomerateId: bigint; unmappedId: bigint };
 
 type GatheredInfos =
   | {
@@ -2551,7 +2563,7 @@ function* gatherInfoForOperation(
   const activeUnmappedSegmentId = yield* select((state) =>
     getActiveUnmappedSegmentId(state, volumeTracing),
   );
-  if (activeCellId === 0) {
+  if (activeCellId === 0n) {
     console.warn("[Proofreading] Cannot execute operation because active segment id is 0");
     return null;
   }

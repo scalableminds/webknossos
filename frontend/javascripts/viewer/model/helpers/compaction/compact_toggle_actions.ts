@@ -95,13 +95,12 @@ function findCommonAncestor(
 
   let commonPath: number[] | null = null;
 
-  const getAncestor = (itemId: number) => itemIdMap.getNullable(itemId);
   for (const toggleAction of toggleActions) {
-    const ancestorPath = getAncestorPath(
-      getAncestor(
-        "treeId" in toggleAction.value ? toggleAction.value.treeId : toggleAction.value.id,
-      )?.groupId,
-    );
+    const ancestor =
+      "treeId" in toggleAction.value
+        ? (itemIdMap as TreeMap).getNullable(toggleAction.value.treeId)
+        : (itemIdMap as SegmentMap).getNullable(BigInt(toggleAction.value.id));
+    const ancestorPath = getAncestorPath(ancestor?.groupId);
 
     if (commonPath == null) {
       commonPath = ancestorPath;

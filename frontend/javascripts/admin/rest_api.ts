@@ -1,5 +1,6 @@
 import dayjs from "dayjs";
 import update from "immutability-helper";
+import { toBigInt } from "libs/bigint_helpers";
 import type { RequestOptions, RequestOptionsWithData } from "libs/request";
 import Request from "libs/request";
 import ResumableUpload from "libs/resumable_upload/resumable_upload";
@@ -913,7 +914,7 @@ export const hasSegmentIndexInDataStoreCached = memoize(hasSegmentIndexInDataSto
 export function getSegmentVolumes(
   layerSourceInfo: LayerSourceInfo,
   mag: Vector3,
-  segmentIds: Array<number>,
+  segmentIds: Array<bigint>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
   annotationVersion: number | undefined,
@@ -929,7 +930,7 @@ export function getSegmentVolumes(
 
 type SegmentStatisticsParametersMeshBased = {
   mag: Vector3;
-  segmentIds: number[];
+  segmentIds: bigint[];
   mappingName?: string | null;
   additionalCoordinates?: AdditionalCoordinate[] | null;
   meshFileName?: string | null;
@@ -940,7 +941,7 @@ export function getSegmentSurfaceArea(
   layerSourceInfo: LayerSourceInfo,
   mag: Vector3,
   meshFileName: string | undefined | null,
-  segmentIds: Array<number>,
+  segmentIds: Array<bigint>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
   annotationVersion: number | undefined,
@@ -968,7 +969,7 @@ export function getSegmentSurfaceArea(
 export function getSegmentBoundingBoxes(
   layerSourceInfo: LayerSourceInfo,
   mag: Vector3,
-  segmentIds: Array<number>,
+  segmentIds: Array<bigint>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
   annotationVersion: number | undefined,
@@ -987,8 +988,8 @@ export async function importVolumeTracing(
   volumeTracing: VolumeTracing,
   dataFile: File,
   version: number,
-): Promise<number> {
-  return doWithToken((token) =>
+): Promise<bigint> {
+  const largestSegmentId: string | number = await doWithToken((token) =>
     Request.sendMultipartFormReceiveJSON(
       `${annotation.tracingStore.url}/tracings/volume/${volumeTracing.tracingId}/importVolumeData?token=${token}`,
       {
@@ -999,6 +1000,7 @@ export async function importVolumeTracing(
       },
     ),
   );
+  return toBigInt(largestSegmentId);
 }
 
 export async function downloadWithFilename(downloadUrl: string) {
@@ -1703,7 +1705,7 @@ export function getPositionForSegmentInAgglomerate(
   datasetId: string,
   layerName: string,
   mappingName: string,
-  segmentId: number,
+  segmentId: bigint,
 ): Promise<Vector3> {
   return doWithToken(async (token) => {
     const params = new URLSearchParams({
@@ -1950,7 +1952,7 @@ type MeshRequest = {
   positionWithPadding: Vector3;
   additionalCoordinates: AdditionalCoordinate[] | undefined;
   mag: Vector3;
-  segmentId: number; // Segment to build mesh for
+  segmentId: bigint; // Segment to build mesh for
   // The cubeSize is in voxels in mag <mag>
   cubeSize: Vector3;
   scaleFactor: Vector3;
@@ -2010,7 +2012,7 @@ export function computeAdHocMesh(
 
 export function getBucketPositionsForAdHocMesh(
   layerSourceInfo: LayerSourceInfo,
-  segmentId: number,
+  segmentId: bigint,
   cubeSize: Vector3,
   mag: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
@@ -2043,7 +2045,7 @@ export function getAgglomerateTreeAsSkeletonTracing(
   dataset: APIDataset,
   layerName: string,
   mappingId: string,
-  agglomerateId: number,
+  agglomerateId: bigint,
 ): Promise<ArrayBuffer> {
   return doWithToken((token) =>
     Request.receiveArraybuffer(
@@ -2066,10 +2068,8 @@ async function _getAgglomeratesForSegmentsHelper<T extends number | bigint>(
   if (segmentIds.size === 0) {
     return new Map();
   }
-  const sortedSegmentIdArray = [...segmentIds].sort(<T extends NumberLike>(a: T, b: T) =>
-    Number(a - b),
-  );
-  const segmentIdBuffer = serializeProtoListOfLong<T>(sortedSegmentIdArray);
+  const sortedSegmentIdArray = [...segmentIds].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  const segmentIdBuffer = serializeProtoListOfLong(sortedSegmentIdArray.map(toBigInt));
   const listArrayBuffer = await doWithToken((token) => {
     const params = new URLSearchParams(extraParams);
     params.set("token", token);
@@ -2133,7 +2133,7 @@ export function getAgglomeratesForSegmentsFromTracingstore<T extends number | bi
 export function getEditableAgglomerateTreeAsSkeletonTracing(
   tracingStoreUrl: string,
   tracingId: string,
-  agglomerateId: number,
+  agglomerateId: bigint,
   version: number,
 ): Promise<ArrayBuffer> {
   return doWithToken((token) => {
@@ -2188,7 +2188,7 @@ export function getSynapsesOfAgglomerates(
   dataset: APIDataset,
   layerName: string,
   connectomeFile: string,
-  agglomerateIds: Array<number>,
+  agglomerateIds: Array<bigint>,
 ): Promise<
   Array<{
     in: Array<number>;
@@ -2208,15 +2208,17 @@ export function getSynapsesOfAgglomerates(
   );
 }
 
-function getSynapseSourcesOrDestinations(
+async function getSynapseSourcesOrDestinations(
   dataStoreUrl: string,
   dataset: APIDataset,
   layerName: string,
   connectomeFile: string,
   synapseIds: Array<number>,
   srcOrDst: "src" | "dst",
-): Promise<Array<number>> {
-  return doWithToken((token) =>
+): Promise<Array<bigint>> {
+  // The response contains the synaptic partners' agglomerate ids, encoded as unsigned-decimal
+  // strings (see UnsignedLongJson on the backend), since they can exceed Number.MAX_SAFE_INTEGER.
+  const agglomerateIds: Array<string | number> = await doWithToken((token) =>
     Request.sendJSONReceiveJSON(
       `${dataStoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/connectomes/synapses/${srcOrDst}?token=${token}`,
       {
@@ -2227,14 +2229,15 @@ function getSynapseSourcesOrDestinations(
       },
     ),
   );
+  return agglomerateIds.map(toBigInt);
 }
 
-export function getSynapseSources(...args: any): Promise<Array<number>> {
+export function getSynapseSources(...args: any): Promise<Array<bigint>> {
   // @ts-expect-error ts-migrate(2556) FIXME: Expected 6 arguments, but got 1 or more.
   return getSynapseSourcesOrDestinations(...args, "src");
 }
 
-export function getSynapseDestinations(...args: any): Promise<Array<number>> {
+export function getSynapseDestinations(...args: any): Promise<Array<bigint>> {
   // @ts-expect-error ts-migrate(2556) FIXME: Expected 6 arguments, but got 1 or more.
   return getSynapseSourcesOrDestinations(...args, "dst");
 }
@@ -2285,46 +2288,48 @@ export function getSynapseTypes(
 export type MinCutTargetEdge = {
   position1: Vector3;
   position2: Vector3;
-  segmentId1: number;
-  segmentId2: number;
+  segmentId1: bigint;
+  segmentId2: bigint;
 };
 export async function getEdgesForAgglomerateMinCut(
   tracingStoreUrl: string,
   tracingId: string,
   version: number,
   segmentsInfo: {
-    partition1: NumberLike[];
-    partition2: NumberLike[];
+    partition1: bigint[];
+    partition2: bigint[];
     mag: Vector3;
-    agglomerateId: NumberLike;
+    agglomerateId: bigint;
     editableMappingId: string;
   },
 ): Promise<Array<MinCutTargetEdge>> {
-  return doWithToken((token) =>
-    retryAsyncFunction(() =>
-      Request.sendJSONReceiveJSON(
-        `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphMinCut?token=${token}`,
-        {
-          data: {
-            ...segmentsInfo,
-            // TODO: Proper 64 bit support (#6921)
-            // For a normal min-cut, the id at which the proofreading marker is at
-            // will be put into partition1. The right-clicked segment/mesh will be
-            // in partition2.
-            partition1: segmentsInfo.partition1.map(Number),
-            partition2: segmentsInfo.partition2.map(Number),
-            agglomerateId: Number(segmentsInfo.agglomerateId),
-            version,
+  const edges: Array<{ segmentId1: string; segmentId2: string; position1: Vector3; position2: Vector3 }> =
+    await doWithToken((token) =>
+      retryAsyncFunction(() =>
+        Request.sendJSONReceiveJSON(
+          `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphMinCut?token=${token}`,
+          {
+            data: {
+              // For a normal min-cut, the id at which the proofreading marker is at
+              // will be put into partition1. The right-clicked segment/mesh will be
+              // in partition2.
+              ...segmentsInfo,
+              version,
+            },
           },
-        },
+        ),
       ),
-    ),
-  );
+    );
+  return edges.map((edge) => ({
+    ...edge,
+    segmentId1: toBigInt(edge.segmentId1),
+    segmentId2: toBigInt(edge.segmentId2),
+  }));
 }
 
 export type NeighborInfo = {
-  segmentId: number;
-  neighbors: Array<{ segmentId: number; position: Vector3 }>;
+  segmentId: bigint;
+  neighbors: Array<{ segmentId: bigint; position: Vector3 }>;
 };
 
 export async function getNeighborsForAgglomerateNode(
@@ -2332,13 +2337,16 @@ export async function getNeighborsForAgglomerateNode(
   tracingId: string,
   version: number,
   segmentInfo: {
-    segmentId: NumberLike;
+    segmentId: bigint;
     mag: Vector3;
-    agglomerateId: NumberLike;
+    agglomerateId: bigint;
     editableMappingId: string;
   },
 ): Promise<NeighborInfo> {
-  return doWithToken((token) =>
+  const result: {
+    segmentId: string;
+    neighbors: Array<{ segmentId: string; position: Vector3 }>;
+  } = await doWithToken((token) =>
     retryAsyncFunction(() =>
       Request.sendJSONReceiveJSON(
         `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphNeighbors?token=${token}`,
@@ -2346,14 +2354,18 @@ export async function getNeighborsForAgglomerateNode(
           data: {
             version,
             ...segmentInfo,
-            // TODO: Proper 64 bit support (#6921)
-            segmentId: Number(segmentInfo.segmentId),
-            agglomerateId: Number(segmentInfo.agglomerateId),
           },
         },
       ),
     ),
   );
+  return {
+    segmentId: toBigInt(result.segmentId),
+    neighbors: result.neighbors.map((neighbor) => ({
+      ...neighbor,
+      segmentId: toBigInt(neighbor.segmentId),
+    })),
+  };
 }
 
 // ### Smart Select

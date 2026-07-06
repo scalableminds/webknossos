@@ -10,7 +10,7 @@ import type {
 import type { ContourMode, OrthoView, Vector2, Vector3 } from "viewer/constants";
 import type { QuickSelectGeometry } from "viewer/geometries/helper_geometries";
 import { AllUserBoundingBoxActions } from "viewer/model/actions/annotation_actions";
-import type { NumberLike, Segment, SegmentGroup, SegmentMap } from "viewer/store";
+import type { Segment, SegmentGroup, SegmentMap } from "viewer/store";
 import type BucketSnapshot from "../bucket_data_handling/bucket_snapshot";
 import type { ApplicableVolumeServerUpdateAction } from "../sagas/volume/update_actions";
 import type { Action } from "./actions";
@@ -175,11 +175,13 @@ export const initializeEditableMappingAction = (mapping: ServerEditableMapping) 
  * has dealt with the case where the maximum segment id is not set. In that case,
  * the create cell action should not be exposed via the UI.
  */
-export const createCellAction = (activeCellId: number, largestSegmentId: number) => {
+export const createCellAction = (activeCellId: bigint, largestSegmentId: bigint) => {
   // The largestSegmentId is only updated if a voxel using that id was annotated. Therefore, it can happen
   // that the activeCellId is larger than the largestSegmentId. Choose the larger of the two ids increased by one.
   const newSegmentId =
-    largestSegmentId && largestSegmentId > activeCellId ? largestSegmentId + 1 : activeCellId + 1;
+    largestSegmentId && largestSegmentId > activeCellId
+      ? largestSegmentId + 1n
+      : activeCellId + 1n;
   return {
     type: "CREATE_CELL",
     newSegmentId,
@@ -224,10 +226,10 @@ export const finishEditingAction = () =>
   }) as const;
 
 export const setActiveCellAction = (
-  segmentId: number,
+  segmentId: bigint,
   anchorPosition?: Vector3 | null, // in layer space
   additionalCoordinates?: AdditionalCoordinate[] | null,
-  activeUnmappedSegmentId?: number | null,
+  activeUnmappedSegmentId?: bigint | null,
 ) =>
   ({
     type: "SET_ACTIVE_CELL",
@@ -245,7 +247,7 @@ export const setHideUnregisteredSegmentsAction = (value: boolean, layerName?: st
   }) as const;
 
 export const clickSegmentAction = (
-  segmentId: number,
+  segmentId: bigint,
   anchorPosition: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   layerName?: string,
@@ -269,7 +271,7 @@ export const updateProofreadingMarkerPositionAction = (
   }) as const;
 
 export const setSelectedSegmentsOrGroupAction = (
-  selectedSegments: number[],
+  selectedSegments: bigint[],
   selectedGroup: number | null,
   layerName: string,
 ) =>
@@ -288,7 +290,7 @@ export const setSegmentsAction = (segments: SegmentMap, layerName: string) =>
   }) as const;
 
 export const updateSegmentAction = (
-  segmentId: NumberLike,
+  segmentId: bigint,
   segment: Partial<Segment>,
   layerName: string,
   timestamp: number = Date.now(),
@@ -304,8 +306,7 @@ export const updateSegmentAction = (
   }
   return {
     type: "UPDATE_SEGMENT",
-    // TODO: Proper 64 bit support (#6921)
-    segmentId: Number(segmentId),
+    segmentId,
     segment,
     layerName,
     timestamp,
@@ -314,39 +315,37 @@ export const updateSegmentAction = (
 };
 
 export const mergeSegmentItemsAction = (
-  sourceAgglomerateId: NumberLike,
-  targetAgglomerateId: NumberLike,
-  sourceSegmentId: NumberLike,
-  targetSegmentId: NumberLike,
+  sourceAgglomerateId: bigint,
+  targetAgglomerateId: bigint,
+  sourceSegmentId: bigint,
+  targetSegmentId: bigint,
   layerName: string,
   timestamp: number = Date.now(),
 ) =>
   ({
     type: "MERGE_SEGMENTS_ITEMS",
-    // TODO: Proper 64 bit support (#6921)
-    sourceAgglomerateId: Number(sourceAgglomerateId),
-    targetAgglomerateId: Number(targetAgglomerateId),
-    sourceSegmentId: Number(sourceSegmentId),
-    targetSegmentId: Number(targetSegmentId),
+    sourceAgglomerateId,
+    targetAgglomerateId,
+    sourceSegmentId,
+    targetSegmentId,
     layerName,
     timestamp,
   }) as const;
 
 export const removeSegmentAction = (
-  segmentId: NumberLike,
+  segmentId: bigint,
   layerName: string,
   timestamp: number = Date.now(),
 ) =>
   ({
     type: "REMOVE_SEGMENT",
-    // TODO: Proper 64 bit support (#6921)
-    segmentId: Number(segmentId),
+    segmentId,
     layerName,
     timestamp,
   }) as const;
 
 export const deleteSegmentDataAction = (
-  segmentId: number,
+  segmentId: bigint,
   layerName: string,
   callback?: () => void,
   timestamp: number = Date.now(),
@@ -459,7 +458,7 @@ export const importVolumeTracingAction = () =>
     type: "IMPORT_VOLUMETRACING",
   }) as const;
 
-export const setLargestSegmentIdAction = (segmentId: number) =>
+export const setLargestSegmentIdAction = (segmentId: bigint) =>
   ({
     type: "SET_LARGEST_SEGMENT_ID",
     segmentId,

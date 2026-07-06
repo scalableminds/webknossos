@@ -13,6 +13,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   LayerAttachment,
   LayerAttachmentDataformat
 }
+import com.scalableminds.webknossos.datastore.helpers.UnsignedLongJson
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{Json, OFormat}
 
@@ -26,7 +27,9 @@ case class ListMeshChunksRequest(
 )
 
 object ListMeshChunksRequest {
-  implicit val jsonFormat: OFormat[ListMeshChunksRequest] = Json.format[ListMeshChunksRequest]
+  implicit val jsonFormat: OFormat[ListMeshChunksRequest] =
+    UnsignedLongJson.patchRequiredField(Json.format[ListMeshChunksRequest], "segmentId")(_.segmentId,
+                                                                                           (a, v) => a.copy(segmentId = v))
 }
 
 case class MeshChunkDataRequest(
@@ -41,7 +44,9 @@ case class MeshChunkDataRequestList(
 )
 
 object MeshChunkDataRequest {
-  implicit val jsonFormat: OFormat[MeshChunkDataRequest] = Json.format[MeshChunkDataRequest]
+  implicit val jsonFormat: OFormat[MeshChunkDataRequest] =
+    UnsignedLongJson.patchOptionalField(Json.format[MeshChunkDataRequest], "segmentId")(_.segmentId,
+                                                                                         (a, v) => a.copy(segmentId = v))
 }
 
 object MeshChunkDataRequestList {

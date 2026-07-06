@@ -59,7 +59,7 @@ function EnterLargestSegmentIdModal({
     useWkSelector(
       (state) =>
         getVolumeTracingByLayerName(state.annotation, segmentationLayer.name)?.activeCellId,
-    ) || 0;
+    ) || 0n;
 
   const dispatch = useDispatch();
   const handleOk = () => {
@@ -67,8 +67,9 @@ function EnterLargestSegmentIdModal({
       Toast.warning("Please enter a segment id greater than 0.");
       return;
     }
-    dispatch(setLargestSegmentIdAction(largestSegmentId));
-    dispatch(createCellAction(activeCellId, largestSegmentId));
+    const largestSegmentIdAsBigInt = BigInt(largestSegmentId);
+    dispatch(setLargestSegmentIdAction(largestSegmentIdAsBigInt));
+    dispatch(createCellAction(activeCellId, largestSegmentIdAsBigInt));
     Toast.close(TOAST_KEY);
     destroy();
   };

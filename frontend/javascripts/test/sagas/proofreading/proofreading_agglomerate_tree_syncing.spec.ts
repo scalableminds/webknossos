@@ -68,8 +68,10 @@ describe("Proofreading agglomerate tree syncing", () => {
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
-      yield put(setActiveCellAction(1));
+      yield put(
+        updateSegmentAction(1n, { anchorPosition: getPositionForSegmentId(1) }, tracingId),
+      );
+      yield put(setActiveCellAction(1n));
       yield makeMappingEditableForTest();
       yield put(setCollaborationModeAction("Concurrent"));
 
@@ -116,7 +118,7 @@ describe("Proofreading agglomerate tree syncing", () => {
       );
       yield expectSegmentList(tracingId, [
         {
-          id: 1,
+          id: 1n,
           anchorPosition: getPositionForSegmentId(1),
         },
       ]);
@@ -138,18 +140,18 @@ describe("Proofreading agglomerate tree syncing", () => {
         // Set up the merge-related segment partners. Normally, this would happen
         // due to the user's interactions.
         yield put(
-          updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId),
+          updateSegmentAction(1n, { anchorPosition: getPositionForSegmentId(1) }, tracingId),
         );
-        yield put(setActiveCellAction(1));
+        yield put(setActiveCellAction(1n));
         yield makeMappingEditableForTest();
         if (othersMayEdit) {
           yield put(setCollaborationModeAction("Concurrent"));
         }
 
-        yield loadAgglomerateTrees(context, [1, 4, 6], false, othersMayEdit);
+        yield loadAgglomerateTrees(context, [1n, 4n, 6n], false, othersMayEdit);
 
         // Execute the actual merge and wait for the finished mapping.
-        yield put(proofreadMergeAction(getPositionForSegmentId(4), 4));
+        yield put(proofreadMergeAction(getPositionForSegmentId(4), 4n));
         // Wait till proofreading action is finished; including refreshing agglomerate trees.
         yield take(operationFinished("PROOFREADING"));
 
@@ -176,7 +178,7 @@ describe("Proofreading agglomerate tree syncing", () => {
         );
         yield expectSegmentList(tracingId, [
           {
-            id: 1,
+            id: 1n,
             anchorPosition: getPositionForSegmentId(1),
           },
         ]);
@@ -197,18 +199,18 @@ describe("Proofreading agglomerate tree syncing", () => {
         // Set up the merge-related segment partners. Normally, this would happen
         // due to the user's interactions.
         yield put(
-          updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId),
+          updateSegmentAction(1n, { anchorPosition: getPositionForSegmentId(1) }, tracingId),
         );
-        yield put(setActiveCellAction(1));
+        yield put(setActiveCellAction(1n));
         yield makeMappingEditableForTest();
         if (othersMayEdit) {
           yield put(setCollaborationModeAction("Concurrent"));
         }
 
-        yield loadAgglomerateTrees(context, [6], true, othersMayEdit);
+        yield loadAgglomerateTrees(context, [6n], true, othersMayEdit);
 
         // Execute the actual merge and wait for the finished mapping.
-        yield put(proofreadMergeAction(getPositionForSegmentId(4), 4));
+        yield put(proofreadMergeAction(getPositionForSegmentId(4), 4n));
         // Wait till proofreading action is finished; including refreshing agglomerate trees.
         yield take(operationFinished("PROOFREADING"));
 
@@ -238,7 +240,7 @@ describe("Proofreading agglomerate tree syncing", () => {
         expect(agglomerateTreeUpdateActions.length).toBe(0);
         yield expectSegmentList(tracingId, [
           {
-            id: 1,
+            id: 1n,
             anchorPosition: [1, 1, 1],
           },
         ]);
@@ -259,15 +261,15 @@ describe("Proofreading agglomerate tree syncing", () => {
         // Set up the split-related segment partners. Normally, this would happen
         // due to the user's interactions.
         yield put(
-          updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId),
+          updateSegmentAction(1n, { anchorPosition: getPositionForSegmentId(1) }, tracingId),
         );
-        yield put(setActiveCellAction(1));
+        yield put(setActiveCellAction(1n));
         yield makeMappingEditableForTest();
         if (othersMayEdit) {
           yield put(setCollaborationModeAction("Concurrent"));
         }
 
-        yield* loadAgglomerateTrees(context, [1], false, othersMayEdit);
+        yield* loadAgglomerateTrees(context, [1n], false, othersMayEdit);
 
         // Prepare the server's reply for the upcoming split.
         vi.mocked(context.mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
@@ -275,14 +277,14 @@ describe("Proofreading agglomerate tree syncing", () => {
             {
               position1: getPositionForSegmentId(1),
               position2: getPositionForSegmentId(2),
-              segmentId1: 1,
-              segmentId2: 2,
+              segmentId1: 1n,
+              segmentId2: 2n,
             },
           ]),
         );
 
         // Execute the split and wait for the finished mapping.
-        yield put(minCutAgglomerateWithPositionAction(getPositionForSegmentId(2), 2, 1));
+        yield put(minCutAgglomerateWithPositionAction(getPositionForSegmentId(2), 2n, 1n));
         // Wait till proofreading action is finished; including refreshing agglomerate trees.
         yield take(operationFinished("PROOFREADING"));
 
@@ -299,11 +301,11 @@ describe("Proofreading agglomerate tree syncing", () => {
         );
         yield expectSegmentList(tracingId, [
           {
-            id: 1,
+            id: 1n,
             anchorPosition: [1, 1, 1],
           },
           {
-            id: 1339,
+            id: 1339n,
             anchorPosition: [2, 2, 2],
           },
         ]);
@@ -324,15 +326,15 @@ describe("Proofreading agglomerate tree syncing", () => {
         // Set up the split-related segment partners. Normally, this would happen
         // due to the user's interactions.
         yield put(
-          updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId),
+          updateSegmentAction(1n, { anchorPosition: getPositionForSegmentId(1) }, tracingId),
         );
-        yield put(setActiveCellAction(1));
+        yield put(setActiveCellAction(1n));
         yield makeMappingEditableForTest();
         if (othersMayEdit) {
           yield put(setCollaborationModeAction("Concurrent"));
         }
 
-        yield* loadAgglomerateTrees(context, [4], false, othersMayEdit);
+        yield* loadAgglomerateTrees(context, [4n], false, othersMayEdit);
 
         // Prepare the server's reply for the upcoming split.
         vi.mocked(context.mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
@@ -340,14 +342,14 @@ describe("Proofreading agglomerate tree syncing", () => {
             {
               position1: getPositionForSegmentId(1),
               position2: getPositionForSegmentId(2),
-              segmentId1: 1,
-              segmentId2: 2,
+              segmentId1: 1n,
+              segmentId2: 2n,
             },
           ]),
         );
 
         // Execute the split and wait for the finished mapping.
-        yield put(minCutAgglomerateWithPositionAction(getPositionForSegmentId(2), 2, 1));
+        yield put(minCutAgglomerateWithPositionAction(getPositionForSegmentId(2), 2n, 1n));
         // Wait till proofreading action is finished; including refreshing agglomerate trees.
         yield take(operationFinished("PROOFREADING"));
 
@@ -371,11 +373,11 @@ describe("Proofreading agglomerate tree syncing", () => {
         );
         yield expectSegmentList(tracingId, [
           {
-            id: 1,
+            id: 1n,
             anchorPosition: [1, 1, 1],
           },
           {
-            id: 1339,
+            id: 1339n,
             anchorPosition: [2, 2, 2],
           },
         ]);
@@ -400,18 +402,18 @@ describe("Proofreading agglomerate tree syncing", () => {
           yield put(setCollaborationModeAction("Concurrent"));
         }
 
-        yield* loadAgglomerateTrees(context, [1, 6], false, othersMayEdit);
+        yield* loadAgglomerateTrees(context, [1n, 6n], false, othersMayEdit);
         yield put(
-          updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId),
+          updateSegmentAction(1n, { anchorPosition: getPositionForSegmentId(1) }, tracingId),
         );
-        yield put(setActiveCellAction(1, undefined, null, 1));
+        yield put(setActiveCellAction(1n, undefined, null, 1n));
 
         // Execute the actual merge via meshes merging segment 1 with segment 6.
         yield put(
           proofreadMergeAction(
             null, // mesh actions do not have a usable source position.
-            6,
-            6,
+            6n,
+            6n,
           ),
         );
         yield take(operationFinished("PROOFREADING")); // operation finished
@@ -426,7 +428,7 @@ describe("Proofreading agglomerate tree syncing", () => {
         );
         yield expectSegmentList(tracingId, [
           {
-            id: 1,
+            id: 1n,
             anchorPosition: [1, 1, 1],
           },
         ]);
@@ -450,11 +452,11 @@ describe("Proofreading agglomerate tree syncing", () => {
           yield put(setCollaborationModeAction("Concurrent"));
         }
 
-        yield* loadAgglomerateTrees(context, [1, 6], false, othersMayEdit);
+        yield* loadAgglomerateTrees(context, [1n, 6n], false, othersMayEdit);
         yield put(
-          updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId),
+          updateSegmentAction(1n, { anchorPosition: getPositionForSegmentId(1) }, tracingId),
         );
-        yield put(setActiveCellAction(1, undefined, null, 1));
+        yield put(setActiveCellAction(1n, undefined, null, 1n));
 
         // Prepare the server's reply for the upcoming split.
         vi.mocked(context.mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
@@ -462,8 +464,8 @@ describe("Proofreading agglomerate tree syncing", () => {
             {
               position1: getPositionForSegmentId(1),
               position2: getPositionForSegmentId(2),
-              segmentId1: 1,
-              segmentId2: 2,
+              segmentId1: 1n,
+              segmentId2: 2n,
             },
           ]),
         );
@@ -472,8 +474,8 @@ describe("Proofreading agglomerate tree syncing", () => {
         yield put(
           minCutAgglomerateWithPositionAction(
             null, // mesh actions do not have a usable source position.
-            2,
-            1,
+            2n,
+            1n,
           ),
         );
         yield take(operationFinished("PROOFREADING")); // operation finished
@@ -496,15 +498,15 @@ describe("Proofreading agglomerate tree syncing", () => {
         );
         yield expectSegmentList(tracingId, [
           {
-            id: 1,
+            id: 1n,
             anchorPosition: [1, 1, 1],
           },
           {
-            id: 1339,
+            id: 1339n,
             anchorPosition: [2, 2, 2],
           },
           {
-            id: 6,
+            id: 6n,
             anchorPosition: [6, 6, 6],
           },
         ]);
@@ -518,14 +520,14 @@ describe("Proofreading agglomerate tree syncing", () => {
       // Prepare the server's reply for the upcoming split.
       vi.mocked(context.mocks.getNeighborsForAgglomerateNode).mockReturnValue(
         Promise.resolve({
-          segmentId: 2,
+          segmentId: 2n,
           neighbors: [
             {
-              segmentId: 1,
+              segmentId: 1n,
               position: getPositionForSegmentId(1) as Vector3,
             },
             {
-              segmentId: 3,
+              segmentId: 3n,
               position: getPositionForSegmentId(3) as Vector3,
             },
           ],
@@ -544,11 +546,11 @@ describe("Proofreading agglomerate tree syncing", () => {
           yield put(setCollaborationModeAction("Concurrent"));
         }
 
-        yield* loadAgglomerateTrees(context, [1, 6], false, othersMayEdit);
+        yield* loadAgglomerateTrees(context, [1n, 6n], false, othersMayEdit);
         yield put(
-          updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(2) }, tracingId),
+          updateSegmentAction(1n, { anchorPosition: getPositionForSegmentId(2) }, tracingId),
         );
-        yield put(setActiveCellAction(1));
+        yield put(setActiveCellAction(1n));
 
         // Execute the actual merge and wait for the finished mapping.
         yield put(
@@ -580,15 +582,15 @@ describe("Proofreading agglomerate tree syncing", () => {
         );
         yield expectSegmentList(tracingId, [
           {
-            id: 1,
+            id: 1n,
             anchorPosition: [2, 2, 2],
           },
           {
-            id: 1339,
+            id: 1339n,
             anchorPosition: [1, 1, 1],
           },
           {
-            id: 1340,
+            id: 1340n,
             anchorPosition: [3, 3, 3],
           },
         ]);
@@ -612,15 +614,15 @@ describe("Proofreading agglomerate tree syncing", () => {
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(4, { anchorPosition: getPositionForSegmentId(4) }, tracingId));
-      yield put(setActiveCellAction(4));
+      yield put(updateSegmentAction(4n, { anchorPosition: getPositionForSegmentId(4) }, tracingId));
+      yield put(setActiveCellAction(4n));
       yield makeMappingEditableForTest();
       const othersMayEdit = true;
       yield put(setCollaborationModeAction("Concurrent"));
 
-      yield* loadAgglomerateTrees(context, [1, 4, 6], false, othersMayEdit);
+      yield* loadAgglomerateTrees(context, [1n, 4n, 6n], false, othersMayEdit);
       // Execute the actual merge and wait for the finished mapping.
-      yield put(proofreadMergeAction(getPositionForSegmentId(6), 6));
+      yield put(proofreadMergeAction(getPositionForSegmentId(6), 6n));
       // Wait till proofreading action is finished; including refreshing agglomerate trees.
       yield take(operationFinished("PROOFREADING"));
 
@@ -649,7 +651,7 @@ describe("Proofreading agglomerate tree syncing", () => {
       );
       yield expectSegmentList(tracingId, [
         {
-          id: 1,
+          id: 1n,
           anchorPosition: [4, 4, 4],
         },
       ]);
@@ -671,15 +673,15 @@ describe("Proofreading agglomerate tree syncing", () => {
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(4) }, tracingId));
-      yield put(setActiveCellAction(1));
+      yield put(updateSegmentAction(1n, { anchorPosition: getPositionForSegmentId(4) }, tracingId));
+      yield put(setActiveCellAction(1n));
       yield makeMappingEditableForTest();
       const othersMayEdit = true;
       yield put(setCollaborationModeAction("Concurrent"));
 
-      yield* loadAgglomerateTrees(context, [1, 6, 4], false, othersMayEdit);
+      yield* loadAgglomerateTrees(context, [1n, 6n, 4n], false, othersMayEdit);
       // Execute the actual merge and wait for the finished mapping.
-      yield put(proofreadMergeAction(getPositionForSegmentId(1), 1));
+      yield put(proofreadMergeAction(getPositionForSegmentId(1), 1n));
       // Wait till proofreading action is finished; including refreshing agglomerate trees.
       yield take(operationFinished("PROOFREADING"));
 
@@ -706,11 +708,11 @@ describe("Proofreading agglomerate tree syncing", () => {
       );
       yield expectSegmentList(tracingId, [
         {
-          id: 4,
+          id: 4n,
           anchorPosition: [4, 4, 4],
         },
         {
-          id: 1339,
+          id: 1339n,
           anchorPosition: [2, 2, 2],
         },
       ]);
@@ -732,12 +734,12 @@ describe("Proofreading agglomerate tree syncing", () => {
 
       // Set up the split-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
-      yield put(setActiveCellAction(1));
+      yield put(updateSegmentAction(1n, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
+      yield put(setActiveCellAction(1n));
       yield makeMappingEditableForTest();
       yield put(setCollaborationModeAction("Concurrent"));
 
-      yield* loadAgglomerateTrees(context, [1, 4, 6], false, true);
+      yield* loadAgglomerateTrees(context, [1n, 4n, 6n], false, true);
 
       // Prepare the server's reply for the upcoming split.
       vi.mocked(context.mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
@@ -745,14 +747,14 @@ describe("Proofreading agglomerate tree syncing", () => {
           {
             position1: getPositionForSegmentId(1),
             position2: getPositionForSegmentId(2),
-            segmentId1: 1,
-            segmentId2: 2,
+            segmentId1: 1n,
+            segmentId2: 2n,
           },
         ]),
       );
 
       // Execute the split and wait for the finished mapping.
-      yield put(minCutAgglomerateWithPositionAction(getPositionForSegmentId(2), 2, 1));
+      yield put(minCutAgglomerateWithPositionAction(getPositionForSegmentId(2), 2n, 1n));
       // Wait till proofreading action is finished; including refreshing agglomerate trees..
       yield take(operationFinished("PROOFREADING")); // operation finished
 
@@ -779,11 +781,11 @@ describe("Proofreading agglomerate tree syncing", () => {
       );
       yield expectSegmentList(tracingId, [
         {
-          id: 1,
+          id: 1n,
           anchorPosition: [1, 1, 1],
         },
         {
-          id: 1339,
+          id: 1339n,
           anchorPosition: [2, 2, 2],
         },
       ]);
@@ -804,12 +806,12 @@ describe("Proofreading agglomerate tree syncing", () => {
 
       // Set up the split-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(2) }, tracingId));
-      yield put(setActiveCellAction(1));
+      yield put(updateSegmentAction(1n, { anchorPosition: getPositionForSegmentId(2) }, tracingId));
+      yield put(setActiveCellAction(1n));
       yield makeMappingEditableForTest();
       yield put(setCollaborationModeAction("Concurrent"));
 
-      yield* loadAgglomerateTrees(context, [1, 4, 6], false, true);
+      yield* loadAgglomerateTrees(context, [1n, 4n, 6n], false, true);
 
       // Prepare the server's reply for the upcoming split.
       vi.mocked(context.mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
@@ -817,14 +819,14 @@ describe("Proofreading agglomerate tree syncing", () => {
           {
             position1: getPositionForSegmentId(2),
             position2: getPositionForSegmentId(3),
-            segmentId1: 2,
-            segmentId2: 3,
+            segmentId1: 2n,
+            segmentId2: 3n,
           },
         ]),
       );
 
       // Execute the split and wait for the finished mapping.
-      yield put(minCutAgglomerateWithPositionAction(getPositionForSegmentId(3), 3, 1));
+      yield put(minCutAgglomerateWithPositionAction(getPositionForSegmentId(3), 3n, 1n));
       // Wait till proofreading action is finished; including refreshing agglomerate trees..
       yield take(operationFinished("PROOFREADING")); // operation finished
 
@@ -859,15 +861,15 @@ describe("Proofreading agglomerate tree syncing", () => {
       );
       yield expectSegmentList(tracingId, [
         {
-          id: 1,
+          id: 1n,
           anchorPosition: [1, 1, 1],
         },
         {
-          id: 1339,
+          id: 1339n,
           anchorPosition: [2, 2, 2],
         },
         {
-          id: 1340,
+          id: 1340n,
           anchorPosition: [3, 3, 3],
         },
       ]);
@@ -884,14 +886,14 @@ describe("Proofreading agglomerate tree syncing", () => {
     // Prepare the server's reply for the upcoming split from all neighbors request.
     vi.mocked(context.mocks.getNeighborsForAgglomerateNode).mockReturnValue(
       Promise.resolve({
-        segmentId: 2,
+        segmentId: 2n,
         neighbors: [
           {
-            segmentId: 1,
+            segmentId: 1n,
             position: getPositionForSegmentId(1) as Vector3,
           },
           {
-            segmentId: 3,
+            segmentId: 3n,
             position: getPositionForSegmentId(3) as Vector3,
           },
         ],
@@ -903,12 +905,12 @@ describe("Proofreading agglomerate tree syncing", () => {
       yield call(initializeMappingAndTool, context, tracingId);
 
       // Activate segment 2, setup editable mapping, make it shared and load agglomerate trees.
-      yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(2) }, tracingId));
-      yield put(setActiveCellAction(1));
+      yield put(updateSegmentAction(1n, { anchorPosition: getPositionForSegmentId(2) }, tracingId));
+      yield put(setActiveCellAction(1n));
       yield makeMappingEditableForTest();
       yield put(setCollaborationModeAction("Concurrent"));
 
-      yield* loadAgglomerateTrees(context, [1, 4, 6], false, true);
+      yield* loadAgglomerateTrees(context, [1n, 4n, 6n], false, true);
 
       // Execute the actual merge and wait for the finished mapping.
       yield put(
@@ -945,15 +947,15 @@ describe("Proofreading agglomerate tree syncing", () => {
       );
       yield expectSegmentList(tracingId, [
         {
-          id: 1,
+          id: 1n,
           anchorPosition: [2, 2, 2],
         },
         {
-          id: 1339,
+          id: 1339n,
           anchorPosition: [1, 1, 1],
         },
         {
-          id: 1340,
+          id: 1340n,
           anchorPosition: [3, 3, 3],
         },
       ]);
@@ -976,8 +978,8 @@ describe("Proofreading agglomerate tree syncing", () => {
     const backendMock = mockInitialBucketAndAgglomerateData(
       context,
       [
-        [1, 1338],
-        [3, 1337],
+        [1n, 1338n],
+        [3n, 1337n],
       ],
       Store.getState(),
     );
@@ -1003,8 +1005,8 @@ describe("Proofreading agglomerate tree syncing", () => {
         {
           position1: getPositionForSegmentId(1337),
           position2: getPositionForSegmentId(1338),
-          segmentId1: 1337,
-          segmentId2: 1338,
+          segmentId1: 1337n,
+          segmentId2: 1338n,
         },
       ]),
     );
@@ -1018,23 +1020,23 @@ describe("Proofreading agglomerate tree syncing", () => {
       // Set up the split-related segment partners. Normally, this would happen
       // due to the user's interactions.
       yield put(
-        updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1337) }, tracingId),
+        updateSegmentAction(1n, { anchorPosition: getPositionForSegmentId(1337) }, tracingId),
       );
-      yield put(setActiveCellAction(1, undefined, null, 1337));
+      yield put(setActiveCellAction(1n, undefined, null, 1337n));
 
       yield makeMappingEditableForTest();
       yield put(setCollaborationModeAction("Concurrent"));
 
-      yield* loadAgglomerateTrees(context, [1, 4, 6], false, true);
+      yield* loadAgglomerateTrees(context, [1n, 4n, 6n], false, true);
 
       //Activate Multi-split tool
       yield put(updateUserSettingAction("isMultiSplitActive", true));
       // Select partition 1
-      yield put(toggleSegmentInPartitionAction(1, 1, 1));
-      yield put(toggleSegmentInPartitionAction(1338, 1, 1));
+      yield put(toggleSegmentInPartitionAction(1n, 1, 1n));
+      yield put(toggleSegmentInPartitionAction(1338n, 1, 1n));
       // Select partition 2
-      yield put(toggleSegmentInPartitionAction(1337, 2, 1));
-      yield put(toggleSegmentInPartitionAction(3, 2, 1));
+      yield put(toggleSegmentInPartitionAction(1337n, 2, 1n));
+      yield put(toggleSegmentInPartitionAction(3n, 2, 1n));
       // Execute the actual merge and wait for the finished mapping.
       yield put(minCutPartitionsAction());
       yield take(operationFinished("PROOFREADING")); // operation finished
@@ -1070,15 +1072,15 @@ describe("Proofreading agglomerate tree syncing", () => {
       );
       yield expectSegmentList(tracingId, [
         {
-          id: 1,
+          id: 1n,
           anchorPosition: [2, 2, 2],
         },
         {
-          id: 1339,
+          id: 1339n,
           anchorPosition: [100, 100, 100],
         },
         {
-          id: 1340,
+          id: 1340n,
           anchorPosition: [101, 101, 101],
         },
       ]);
@@ -1101,13 +1103,13 @@ describe("Proofreading agglomerate tree syncing", () => {
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
-      yield put(setActiveCellAction(1));
+      yield put(updateSegmentAction(1n, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
+      yield put(setActiveCellAction(1n));
       yield makeMappingEditableForTest();
       yield put(setCollaborationModeAction("Concurrent"));
 
       // Execute the actual merge and wait for the finished mapping.
-      yield put(proofreadMergeAction(getPositionForSegmentId(4), 4));
+      yield put(proofreadMergeAction(getPositionForSegmentId(4), 4n));
       // Wait till proofreading action is finished; including refreshing agglomerate trees.
       yield take(operationFinished("PROOFREADING"));
 
@@ -1134,7 +1136,7 @@ describe("Proofreading agglomerate tree syncing", () => {
       );
       yield expectSegmentList(tracingId, [
         {
-          id: 1,
+          id: 1n,
           anchorPosition: [1, 1, 1],
         },
       ]);
@@ -1157,8 +1159,8 @@ describe("Proofreading agglomerate tree syncing", () => {
 
       // Set up the split-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
-      yield put(setActiveCellAction(1));
+      yield put(updateSegmentAction(1n, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
+      yield put(setActiveCellAction(1n));
       yield makeMappingEditableForTest();
       yield put(setCollaborationModeAction("Concurrent"));
 
@@ -1168,14 +1170,14 @@ describe("Proofreading agglomerate tree syncing", () => {
           {
             position1: getPositionForSegmentId(1),
             position2: getPositionForSegmentId(2),
-            segmentId1: 1,
-            segmentId2: 2,
+            segmentId1: 1n,
+            segmentId2: 2n,
           },
         ]),
       );
 
       // Execute the split and wait for the finished mapping.
-      yield put(minCutAgglomerateWithPositionAction(getPositionForSegmentId(2), 2, 1));
+      yield put(minCutAgglomerateWithPositionAction(getPositionForSegmentId(2), 2n, 1n));
       // Wait till proofreading action is finished; including refreshing agglomerate trees.
       yield take(operationFinished("PROOFREADING"));
 
@@ -1191,11 +1193,11 @@ describe("Proofreading agglomerate tree syncing", () => {
       );
       yield expectSegmentList(tracingId, [
         {
-          id: 1,
+          id: 1n,
           anchorPosition: [1, 1, 1],
         },
         {
-          id: 1339,
+          id: 1339n,
           anchorPosition: [2, 2, 2],
         },
       ]);

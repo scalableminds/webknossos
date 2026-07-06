@@ -1,4 +1,5 @@
 import LinkButton from "components/link_button";
+import { toBigInt } from "libs/bigint_helpers";
 import { V2, V3 } from "libs/mjs";
 import createProgressCallback, { type ProgressCallback } from "libs/progress_callback";
 import Toast from "libs/toast";
@@ -179,11 +180,8 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
   const magInfo = yield* call(getMagInfo, segmentationLayer.mags);
   const labeledZoomStep = magInfo.getClosestExistingIndex(requestedZoomStep);
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
-  const oldSegmentIdAtSeed = cube.getDataValue(
-    seedPosition,
-    additionalCoordinates,
-    null,
-    labeledZoomStep,
+  const oldSegmentIdAtSeed = toBigInt(
+    cube.getDataValue(seedPosition, additionalCoordinates, null, labeledZoomStep),
   );
 
   if (activeCellId === oldSegmentIdAtSeed) {
@@ -349,8 +347,8 @@ function* notifyUserAboutResult(
   progressCallback: ProgressCallback,
   fillMode: FillMode,
   coveredBoundingBox: BoundingBoxMinMaxType,
-  oldSegmentIdAtSeed: number,
-  activeCellId: number,
+  oldSegmentIdAtSeed: bigint,
+  activeCellId: bigint,
   seedPosition: Vector3,
 ) {
   let showSuccessMsg = false;

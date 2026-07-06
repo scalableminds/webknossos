@@ -20,7 +20,11 @@ import {
   setActiveCellAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
-import { PROTO_FILES, PROTO_TYPES } from "viewer/model/helpers/proto_helpers";
+import {
+  bigIntToProtoLong,
+  PROTO_FILES,
+  PROTO_TYPES,
+} from "viewer/model/helpers/proto_helpers";
 import { type Saga, select } from "viewer/model/sagas/effect_generators";
 import type { Edge, TreeMap } from "viewer/model/types/tree_types";
 import type { NumberLike, WebknossosState } from "viewer/store";
@@ -36,6 +40,24 @@ import {
   operationFinished,
 } from "./proofreading_test_utils";
 
+// protobufjs' verify()/create() don't accept native bigint values (nor plain decimal strings)
+// for int64/uint64 fields -- they require a Long-like {low, high, unsigned} object instead.
+// Mirrors the same conversion applied in serializeProtoListOfLong (see proto_helpers.ts).
+function replaceBigIntsWithLong(value: unknown): unknown {
+  if (typeof value === "bigint") {
+    return bigIntToProtoLong(value);
+  }
+  if (Array.isArray(value)) {
+    return value.map(replaceBigIntsWithLong);
+  }
+  if (value != null && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, v]) => [key, replaceBigIntsWithLong(v)]),
+    );
+  }
+  return value;
+}
+
 export function encodeServerTracing(
   tracing: ServerTracing,
   annotationType: "skeleton" | "volume",
@@ -43,12 +65,14 @@ export function encodeServerTracing(
   const protoRoot = Root.fromJSON(PROTO_FILES[annotationType]);
   const messageType = protoRoot.lookupType(PROTO_TYPES[annotationType]);
 
+  const tracingWithLongIds = replaceBigIntsWithLong(tracing) as { [k: string]: any };
+
   // Verify that the object really matches the proto schema
-  const err = messageType.verify(tracing);
+  const err = messageType.verify(tracingWithLongIds);
   if (err) throw new Error(`Invalid ServerTracing: ${err}`);
 
   // Create an internal protobufjs message and encode
-  const message = messageType.create(tracing);
+  const message = messageType.create(tracingWithLongIds);
   const u8 = new Uint8Array(messageType.encode(message).finish()); // Uint8Array
 
   // Vitest/fetch mocks often like ArrayBuffer
@@ -63,13 +87,23 @@ export function encodeServerTracing(
  * @param tracingId id for the resulting tracing
  */
 export function createSkeletonTracingFromAdjacency(
-  adjacencyList: Map<number, Set<number>>,
-  startNode: number,
-  agglomerateId: number,
+  adjacencyListAsBigInt: Map<bigint, Set<bigint>>,
+  startNodeAsBigInt: bigint,
+  agglomerateId: bigint,
   editableMappingId: string,
   tracingId: string,
   version: number,
 ): ServerSkeletonTracing {
+  // Node ids of the fabricated skeleton tree reuse the (small, test-only) segment ids as
+  // plain numbers, since ServerNode.id is a regular JS number (unrelated to the uint64
+  // segmentation id concern this mock otherwise deals with).
+  const adjacencyList = new Map(
+    Array.from(adjacencyListAsBigInt, ([key, value]) => [
+      Number(key),
+      new Set(Array.from(value, Number)),
+    ]),
+  );
+  const startNode = Number(startNodeAsBigInt);
   // BFS to find component containing startNode
   const visited = new Set<number>();
   const queue: number[] = [startNode];
@@ -183,7 +217,7 @@ export function createSkeletonTracingFromAdjacency(
 // Should be the case initially for all proofreading tests.
 export function* loadAgglomerateTrees(
   context: WebknossosTestContext,
-  agglomerateIdsToLoad: number[],
+  agglomerateIdsToLoad: bigint[],
   shouldSaveAfterLoadingTrees: boolean,
   isInLiveCollabMode: boolean,
 ): Saga<TreeMap> {
@@ -212,7 +246,7 @@ function* loadInitialMeshes(context: WebknossosTestContext, tracingId: string) {
   yield loadAgglomerateMeshes([4, 6, 1]);
 
   const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context, tracingId);
-  expect(sortBy([...loadedMeshIds])).toEqual([1, 4, 6]);
+  expect(sortBy([...loadedMeshIds])).toEqual([1n, 4n, 6n]);
 }
 
 export function* performMergeTreesProofreading(
@@ -229,8 +263,8 @@ export function* performMergeTreesProofreading(
 
   // Set up the merge-related segment partners. Normally, this would happen
   // due to the user's interactions.
-  yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
-  yield put(setActiveCellAction(1));
+  yield put(updateSegmentAction(1n, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
+  yield put(setActiveCellAction(1n));
   yield makeMappingEditableForTest();
 
   // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
@@ -238,7 +272,7 @@ export function* performMergeTreesProofreading(
   yield put(setCollaborationModeAction("Concurrent"));
   const agglomerateTrees = yield loadAgglomerateTrees(
     context,
-    [1, 4],
+    [1n, 4n],
     shouldSaveAfterLoadingTrees,
     true,
   );
@@ -263,8 +297,8 @@ export function* performSplitTreesProofreading(
 
   // Set up the merge-related segment partners. Normally, this would happen
   // due to the user's interactions.
-  yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
-  yield put(setActiveCellAction(1));
+  yield put(updateSegmentAction(1n, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
+  yield put(setActiveCellAction(1n));
 
   yield makeMappingEditableForTest();
 
@@ -272,7 +306,7 @@ export function* performSplitTreesProofreading(
   yield* expectMapping(tracingId, initialMapping);
   yield put(setCollaborationModeAction("Concurrent"));
 
-  const agglomerateTrees = yield loadAgglomerateTrees(context, [1], true, true);
+  const agglomerateTrees = yield loadAgglomerateTrees(context, [1n], true, true);
   const sourceNode = agglomerateTrees.getOrThrow(3).nodes.getOrThrow(5);
   const targetNode = agglomerateTrees.getOrThrow(3).nodes.getOrThrow(6);
   yield put(deleteEdgeAction(sourceNode.id, targetNode.id));
@@ -295,8 +329,8 @@ export function* performMinCutWithNodesProofreading(
 
   // Set up the merge-related segment partners. Normally, this would happen
   // due to the user's interactions.
-  yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
-  yield put(setActiveCellAction(1));
+  yield put(updateSegmentAction(1n, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
+  yield put(setActiveCellAction(1n));
 
   yield makeMappingEditableForTest();
 
@@ -304,7 +338,7 @@ export function* performMinCutWithNodesProofreading(
   yield* expectMapping(tracingId, initialMapping);
   yield put(setCollaborationModeAction("Concurrent"));
   // Load agglomerate tree for agglomerate id 1.
-  yield call(loadAgglomerateTrees, context, [1], true, true);
+  yield call(loadAgglomerateTrees, context, [1n], true, true);
   yield call(() => api.tracing.save()); // Also pulls newest version from backend.
   const skeletonWithAgglomerateTrees = yield* select(
     (state: WebknossosState) => state.annotation.skeleton,
@@ -353,17 +387,17 @@ export const mockEdgesForAgglomerateMinCut = (
       }
       const { agglomerateId, partition1, partition2 } = segmentsInfo;
       if (
-        agglomerateId === 1 &&
-        (isEqual(partition1.concat(partition2), [2, 3]) ||
-          isEqual(partition1.concat(partition2), [3, 2]))
+        agglomerateId === 1n &&
+        (isEqual(partition1.concat(partition2), [2n, 3n]) ||
+          isEqual(partition1.concat(partition2), [3n, 2n]))
       ) {
         return [
           {
             position1: getPositionForSegmentId(3),
             position2: getPositionForSegmentId(2),
-            segmentId1: 3,
-            segmentId2: 2,
-          } as MinCutTargetEdge,
+            segmentId1: 3n,
+            segmentId2: 2n,
+          } satisfies MinCutTargetEdge,
         ].concat(additionalEdges);
       }
       throw new Error("Unexpected min cut request");

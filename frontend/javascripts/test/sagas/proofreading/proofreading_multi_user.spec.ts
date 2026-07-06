@@ -41,7 +41,6 @@ import {
   prepareGetNeighborsForAgglomerateNode,
   getPositionForSegmentId,
 } from "./proofreading_test_utils";
-import { publishDebuggingState } from "test/helpers/debugging_state_serializer";
 import {
   mergeSegment1337And5,
   mergeSegment1And4,
@@ -56,9 +55,9 @@ import { waitUntilNoActiveOperations } from "viewer/model/sagas/saga_helpers";
 function* prepareEditableMapping(
   context: WebknossosTestContext,
   tracingId: string,
-  activeSegmentId: number,
+  activeSegmentId: bigint,
   anchorPosition: Vector3,
-  initialExpectedMapping?: Map<number, number>,
+  initialExpectedMapping?: Map<bigint, bigint>,
 ): Saga<void> {
   initialExpectedMapping = initialExpectedMapping ?? initialMapping;
   yield call(initializeMappingAndTool, context, tracingId);
@@ -117,7 +116,7 @@ describe("Proofreading (Multi User)", () => {
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* task() {
-      yield* prepareEditableMapping(context, tracingId, 1, getPositionForSegmentId(1));
+      yield* prepareEditableMapping(context, tracingId, 1n, getPositionForSegmentId(1));
       // Execute the actual merge and wait for the finished mapping.
       yield put(
         proofreadMergeAction(
@@ -138,20 +137,20 @@ describe("Proofreading (Multi User)", () => {
           name: "mergeAgglomerate",
           value: {
             actionTracingId: VOLUME_TRACING_ID,
-            segmentId1: 1,
-            segmentId2: 4,
-            agglomerateId1: 1,
-            agglomerateId2: 4,
+            segmentId1: 1n,
+            segmentId2: 4n,
+            agglomerateId1: 1n,
+            agglomerateId2: 4n,
           },
         },
         {
           name: "mergeSegmentItems",
           value: {
             actionTracingId: "volumeTracingId",
-            segmentId1: 1,
-            segmentId2: 4,
-            agglomerateId1: 1,
-            agglomerateId2: 4,
+            segmentId1: 1n,
+            segmentId2: 4n,
+            agglomerateId1: 1n,
+            agglomerateId2: 4n,
           },
         },
       ]);
@@ -159,7 +158,7 @@ describe("Proofreading (Multi User)", () => {
 
       yield expectSegmentList(tracingId, [
         {
-          id: 1,
+          id: 1n,
           anchorPosition: [1, 1, 1],
         },
       ]);
@@ -167,7 +166,7 @@ describe("Proofreading (Multi User)", () => {
       const currentSegments = Store.getState().annotation.volumes[0].segments;
       expect(currentSegments.size()).toEqual(1);
 
-      const segment1AfterSaving = currentSegments.getNullable(1);
+      const segment1AfterSaving = currentSegments.getNullable(1n);
       expect(segment1AfterSaving).toMatchObject({
         name: "Segment 1",
         anchorPosition: getPositionForSegmentId(1),
@@ -199,27 +198,27 @@ describe("Proofreading (Multi User)", () => {
       ...mergeSegment1And4.slice(0, 1), // creates segment 1
       [
         {
-          name: "updateSegmentPartial",
+          name: "updateSegmentPartial" as const,
           value: {
             actionTracingId: VOLUME_TRACING_ID,
-            id: 1,
-            anchorPosition: getPositionForSegmentId(1),
+            id: 1n,
+            anchorPosition: getPositionForSegmentId(1n),
             additionalCoordinates: undefined,
             name: "Custom Name 1",
-            color: [1, 2, 3],
+            color: [1, 2, 3] as Vector3,
             groupId: null,
             creationTime: 0,
           },
         },
         {
-          name: "createSegment",
+          name: "createSegment" as const,
           value: {
             actionTracingId: VOLUME_TRACING_ID,
-            id: 4,
-            anchorPosition: getPositionForSegmentId(4),
+            id: 4n,
+            anchorPosition: getPositionForSegmentId(4n),
             additionalCoordinates: undefined,
             name: "Custom Name 4",
-            color: [1, 2, 3],
+            color: [1, 2, 3] as Vector3,
             groupId: null,
             creationTime: 0,
             metadata: [],
@@ -233,7 +232,7 @@ describe("Proofreading (Multi User)", () => {
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* task() {
-      yield* prepareEditableMapping(context, tracingId, 4, getPositionForSegmentId(4));
+      yield* prepareEditableMapping(context, tracingId, 4n, getPositionForSegmentId(4));
 
       // Execute the actual merge and wait for the finished mapping.
       yield put(
@@ -253,20 +252,20 @@ describe("Proofreading (Multi User)", () => {
           name: "mergeAgglomerate",
           value: {
             actionTracingId: VOLUME_TRACING_ID,
-            segmentId1: 4,
-            segmentId2: 6,
-            agglomerateId1: 1,
-            agglomerateId2: 6,
+            segmentId1: 4n,
+            segmentId2: 6n,
+            agglomerateId1: 1n,
+            agglomerateId2: 6n,
           },
         },
         {
           name: "mergeSegmentItems",
           value: {
             actionTracingId: "volumeTracingId",
-            segmentId1: 4,
-            segmentId2: 6,
-            agglomerateId1: 1,
-            agglomerateId2: 6,
+            segmentId1: 4n,
+            segmentId2: 6n,
+            agglomerateId1: 1n,
+            agglomerateId2: 6n,
           },
         },
         {
@@ -274,7 +273,7 @@ describe("Proofreading (Multi User)", () => {
           value: {
             actionTracingId: "volumeTracingId",
             anchorPosition: getPositionForSegmentId(4),
-            id: 1,
+            id: 1n,
           },
         },
       ]);
@@ -283,18 +282,18 @@ describe("Proofreading (Multi User)", () => {
 
       yield expectSegmentList(tracingId, [
         {
-          id: 1,
+          id: 1n,
           anchorPosition: [4, 4, 4],
         },
       ]);
 
-      const segment1AfterSaving = Store.getState().annotation.volumes[0].segments.getNullable(1);
+      const segment1AfterSaving = Store.getState().annotation.volumes[0].segments.getNullable(1n);
       expect(segment1AfterSaving).toBeTruthy();
 
-      const segment4AfterSaving = Store.getState().annotation.volumes[0].segments.getNullable(4);
+      const segment4AfterSaving = Store.getState().annotation.volumes[0].segments.getNullable(4n);
       expect(segment4AfterSaving).toBeUndefined();
 
-      const segment6AfterSaving = Store.getState().annotation.volumes[0].segments.getNullable(6);
+      const segment6AfterSaving = Store.getState().annotation.volumes[0].segments.getNullable(6n);
       expect(segment6AfterSaving).toBeUndefined();
     });
 
@@ -330,7 +329,7 @@ describe("Proofreading (Multi User)", () => {
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* task() {
-      yield* prepareEditableMapping(context, tracingId, 1, getPositionForSegmentId(1));
+      yield* prepareEditableMapping(context, tracingId, 1n, getPositionForSegmentId(1));
 
       // Execute the actual merge and wait for the finished mapping.
       yield put(
@@ -351,20 +350,20 @@ describe("Proofreading (Multi User)", () => {
         name: "mergeAgglomerate",
         value: {
           actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 1,
-          segmentId2: 4,
-          agglomerateId1: 1339,
-          agglomerateId2: 4,
+          segmentId1: 1n,
+          segmentId2: 4n,
+          agglomerateId1: 1339n,
+          agglomerateId2: 4n,
         },
       });
       expect(receivedUpdateActions.at(-2)).toEqual({
         name: "mergeSegmentItems",
         value: {
           actionTracingId: "volumeTracingId",
-          segmentId1: 1,
-          segmentId2: 4,
-          agglomerateId1: 1339,
-          agglomerateId2: 4,
+          segmentId1: 1n,
+          segmentId2: 4n,
+          agglomerateId1: 1339n,
+          agglomerateId2: 4n,
         },
       });
 
@@ -372,7 +371,7 @@ describe("Proofreading (Multi User)", () => {
         name: "updateSegmentPartial",
         value: {
           actionTracingId: VOLUME_TRACING_ID,
-          id: 1339,
+          id: 1339n,
           anchorPosition: getPositionForSegmentId(1),
         },
       });
@@ -380,23 +379,23 @@ describe("Proofreading (Multi User)", () => {
       yield* expectMapping(
         tracingId,
         new Map([
-          [1, 1339],
-          [2, 1339],
-          [3, 1],
-          [4, 1339],
-          [5, 1339],
-          [6, 6],
-          [7, 6],
+          [1n, 1339n],
+          [2n, 1339n],
+          [3n, 1n],
+          [4n, 1339n],
+          [5n, 1339n],
+          [6n, 6n],
+          [7n, 6n],
         ]),
       );
 
       yield expectSegmentList(tracingId, [
         {
-          id: 1,
+          id: 1n,
           anchorPosition: [3, 3, 3],
         },
         {
-          id: 1339,
+          id: 1339n,
           anchorPosition: [1, 1, 1],
         },
       ]);
@@ -435,7 +434,7 @@ describe("Proofreading (Multi User)", () => {
             color: null,
             creationTime: 1494695001688,
             groupId: null,
-            id: 1339,
+            id: 1339n,
             metadata: [],
             name: null,
           },
@@ -444,9 +443,9 @@ describe("Proofreading (Multi User)", () => {
           name: "splitAgglomerate",
           value: {
             actionTracingId: VOLUME_TRACING_ID,
-            segmentId1: 2,
-            segmentId2: 3,
-            agglomerateId: 1339,
+            segmentId1: 2n,
+            segmentId2: 3n,
+            agglomerateId: 1339n,
           },
         },
         {
@@ -458,7 +457,7 @@ describe("Proofreading (Multi User)", () => {
             color: null,
             creationTime: 1494695001688,
             groupId: null,
-            id: 1340,
+            id: 1340n,
             metadata: [],
             name: null,
           },
@@ -467,13 +466,13 @@ describe("Proofreading (Multi User)", () => {
       yield* expectMapping(
         tracingId,
         new Map([
-          [1, 1],
-          [2, 1339],
-          [3, 1340],
-          [4, 4],
-          [5, 4],
-          [6, 6],
-          [7, 6],
+          [1n, 1n],
+          [2n, 1339n],
+          [3n, 1340n],
+          [4n, 4n],
+          [5n, 4n],
+          [6n, 6n],
+          [7n, 6n],
         ]),
       );
 
@@ -481,15 +480,15 @@ describe("Proofreading (Multi User)", () => {
         tracingId,
         [
           {
-            id: 1,
+            id: 1n,
             anchorPosition: [1, 1, 1],
           },
           {
-            id: 1339,
+            id: 1339n,
             anchorPosition: [2, 2, 2],
           },
           {
-            id: 1340,
+            id: 1340n,
             anchorPosition: [3, 3, 3],
           },
         ],
@@ -526,9 +525,9 @@ describe("Proofreading (Multi User)", () => {
           name: "splitAgglomerate",
           value: {
             actionTracingId: VOLUME_TRACING_ID,
-            segmentId1: 2,
-            segmentId2: 3,
-            agglomerateId: 1,
+            segmentId1: 2n,
+            segmentId2: 3n,
+            agglomerateId: 1n,
           },
         },
         {
@@ -540,7 +539,7 @@ describe("Proofreading (Multi User)", () => {
             color: null,
             creationTime: 1494695001688,
             groupId: null,
-            id: 1339,
+            id: 1339n,
             metadata: [],
             name: null,
           },
@@ -553,23 +552,23 @@ describe("Proofreading (Multi User)", () => {
         // But as answer to the edges to remove was on version before the merge, the newly added edge afterwards is not included in the edges that need to be removed to completely isolate the segment 2.
         // Thus, only 3 was cut off from segment 2.
         new Map([
-          [1, 1],
-          [2, 1],
-          [3, 1339],
-          [5, 1],
-          [4, 1],
-          [6, 6],
-          [7, 6],
+          [1n, 1n],
+          [2n, 1n],
+          [3n, 1339n],
+          [5n, 1n],
+          [4n, 1n],
+          [6n, 6n],
+          [7n, 6n],
         ]),
       );
 
       yield expectSegmentList(tracingId, [
         {
-          id: 1,
+          id: 1n,
           anchorPosition: [2, 2, 2],
         },
         {
-          id: 1339,
+          id: 1339n,
           anchorPosition: [3, 3, 3],
         },
       ]);
@@ -593,7 +592,7 @@ describe("Proofreading (Multi User)", () => {
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* task() {
-      yield* prepareEditableMapping(context, tracingId, 1, getPositionForSegmentId(2));
+      yield* prepareEditableMapping(context, tracingId, 1n, getPositionForSegmentId(2));
 
       // Execute the actual merge and wait for the finished mapping.
       yield put(
@@ -610,43 +609,43 @@ describe("Proofreading (Multi User)", () => {
           name: "mergeAgglomerate",
           value: {
             actionTracingId: VOLUME_TRACING_ID,
-            segmentId1: 2,
-            segmentId2: 4,
-            agglomerateId1: 1339,
-            agglomerateId2: 4,
+            segmentId1: 2n,
+            segmentId2: 4n,
+            agglomerateId1: 1339n,
+            agglomerateId2: 4n,
           },
         },
         {
           name: "mergeSegmentItems",
           value: {
             actionTracingId: "volumeTracingId",
-            segmentId1: 2,
-            segmentId2: 4,
-            agglomerateId1: 1339,
-            agglomerateId2: 4,
+            segmentId1: 2n,
+            segmentId2: 4n,
+            agglomerateId1: 1339n,
+            agglomerateId2: 4n,
           },
         },
       ]);
       yield* expectMapping(
         tracingId,
         new Map([
-          [1, 1],
-          [2, 1339],
-          [3, 1339],
-          [4, 1339],
-          [5, 1339],
-          [6, 6],
-          [7, 6],
+          [1n, 1n],
+          [2n, 1339n],
+          [3n, 1339n],
+          [4n, 1339n],
+          [5n, 1339n],
+          [6n, 6n],
+          [7n, 6n],
         ]),
       );
 
       yield expectSegmentList(tracingId, [
         {
-          id: 1,
+          id: 1n,
           anchorPosition: [1, 1, 1],
         },
         {
-          id: 1339,
+          id: 1339n,
           anchorPosition: [2, 2, 2],
         },
       ]);
@@ -682,7 +681,7 @@ describe("Proofreading (Multi User)", () => {
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* task() {
-      yield* prepareEditableMapping(context, tracingId, 4, getPositionForSegmentId(4));
+      yield* prepareEditableMapping(context, tracingId, 4n, getPositionForSegmentId(4));
 
       // Execute the actual merge and wait for the finished mapping.
       yield put(
@@ -695,13 +694,13 @@ describe("Proofreading (Multi User)", () => {
       yield* expectMapping(
         tracingId,
         new Map([
-          [1, 4],
-          [2, 4],
-          [3, 4],
-          [4, 4],
-          [5, 4],
-          [6, 6],
-          [7, 6],
+          [1n, 4n],
+          [2n, 4n],
+          [3n, 4n],
+          [4n, 4n],
+          [5n, 4n],
+          [6n, 6n],
+          [7n, 6n],
         ]),
       );
 
@@ -715,20 +714,20 @@ describe("Proofreading (Multi User)", () => {
           name: "mergeAgglomerate",
           value: {
             actionTracingId: VOLUME_TRACING_ID,
-            segmentId1: 4,
-            segmentId2: 1,
-            agglomerateId1: 1337,
-            agglomerateId2: 1,
+            segmentId1: 4n,
+            segmentId2: 1n,
+            agglomerateId1: 1337n,
+            agglomerateId2: 1n,
           },
         },
         {
           name: "mergeSegmentItems",
           value: {
             actionTracingId: VOLUME_TRACING_ID,
-            segmentId1: 4,
-            segmentId2: 1,
-            agglomerateId1: 1337,
-            agglomerateId2: 1,
+            segmentId1: 4n,
+            segmentId2: 1n,
+            agglomerateId1: 1337n,
+            agglomerateId2: 1n,
           },
         },
         {
@@ -736,28 +735,28 @@ describe("Proofreading (Multi User)", () => {
           value: {
             actionTracingId: "volumeTracingId",
             anchorPosition: getPositionForSegmentId(4),
-            id: 1337,
+            id: 1337n,
           },
         },
       ]);
       yield* expectMapping(
         tracingId,
         new Map([
-          [1, 1337],
-          [2, 1337],
-          [3, 1337],
-          [4, 1337],
-          [5, 1337],
-          [6, 6],
-          [7, 6],
-          // [1337, 1337], not loaded
-          // [1338, 1337], not loaded
+          [1n, 1337n],
+          [2n, 1337n],
+          [3n, 1337n],
+          [4n, 1337n],
+          [5n, 1337n],
+          [6n, 6n],
+          [7n, 6n],
+          // [1337n, 1337n], not loaded
+          // [1338n, 1337n], not loaded
         ]),
       );
 
       yield expectSegmentList(tracingId, [
         {
-          id: 1337,
+          id: 1337n,
           anchorPosition: [4, 4, 4],
         },
       ]);
@@ -775,7 +774,11 @@ describe("Proofreading (Multi User)", () => {
       The resulting mapping correctly incorporates all backend split and merge actions, including those involving initially not-loaded segments.
      */
 
-    const backendMock = mockInitialBucketAndAgglomerateData(context, [[1337, 7]], Store.getState());
+    const backendMock = mockInitialBucketAndAgglomerateData(
+      context,
+      [[1337n, 7n]],
+      Store.getState(),
+    );
 
     backendMock.planMultipleVersionInjections(7, [
       ...splitSegment7And1337AndMerge1337And5,
@@ -784,7 +787,7 @@ describe("Proofreading (Multi User)", () => {
           name: "updateSegmentPartial",
           value: {
             actionTracingId: VOLUME_TRACING_ID,
-            id: 1339,
+            id: 1339n,
             name: "Custom Name for 1339",
           },
         },
@@ -792,7 +795,7 @@ describe("Proofreading (Multi User)", () => {
           name: "updateMetadataOfSegment",
           value: {
             actionTracingId: VOLUME_TRACING_ID,
-            id: 1339,
+            id: 1339n,
             removeEntriesByKey: [],
             upsertEntriesByKey: [{ key: "key1", stringValue: "value for 1339" }],
           },
@@ -801,7 +804,7 @@ describe("Proofreading (Multi User)", () => {
           name: "updateSegmentPartial",
           value: {
             actionTracingId: VOLUME_TRACING_ID,
-            id: 1,
+            id: 1n,
             name: "Custom Name for 1",
           },
         },
@@ -809,7 +812,7 @@ describe("Proofreading (Multi User)", () => {
           name: "updateMetadataOfSegment",
           value: {
             actionTracingId: VOLUME_TRACING_ID,
-            id: 1,
+            id: 1n,
             removeEntriesByKey: [],
             upsertEntriesByKey: [{ key: "key1", stringValue: "value for 1" }],
           },
@@ -822,19 +825,19 @@ describe("Proofreading (Multi User)", () => {
 
     const task = startSaga(function* task() {
       const initialExpectedMapping = new Map([
-        [1, 1],
-        [2, 1],
-        [3, 1],
-        [4, 4],
-        [5, 4],
-        [6, 1337],
-        [7, 1337],
-        // [1337, 1337], not loaded
+        [1n, 1n],
+        [2n, 1n],
+        [3n, 1n],
+        [4n, 4n],
+        [5n, 4n],
+        [6n, 1337n],
+        [7n, 1337n],
+        // [1337n, 1337n], not loaded
       ]);
       yield* prepareEditableMapping(
         context,
         tracingId,
-        4,
+        4n,
         getPositionForSegmentId(4),
         initialExpectedMapping,
       );
@@ -850,14 +853,14 @@ describe("Proofreading (Multi User)", () => {
       yield* expectMapping(
         tracingId,
         new Map([
-          [1, 4],
-          [2, 4],
-          [3, 4],
-          [4, 4],
-          [5, 4],
-          [6, 1337],
-          [7, 1337],
-          // [1337, 1337], not loaded
+          [1n, 4n],
+          [2n, 4n],
+          [3n, 4n],
+          [4n, 4n],
+          [5n, 4n],
+          [6n, 1337n],
+          [7n, 1337n],
+          // [1337n, 1337n], not loaded
         ]),
       );
 
@@ -871,13 +874,13 @@ describe("Proofreading (Multi User)", () => {
         const currentSegments = state.annotation.volumes[0].segments;
         expect(currentSegments.size()).toEqual(2);
 
-        const segment1337AfterSaving = currentSegments.getNullable(1337);
+        const segment1337AfterSaving = currentSegments.getNullable(1337n);
         expect(segment1337AfterSaving).toMatchObject({
           name: null,
           anchorPosition: getPositionForSegmentId(7),
         });
 
-        const segment1339AfterSaving = currentSegments.getNullable(1339);
+        const segment1339AfterSaving = currentSegments.getNullable(1339n);
         expect(segment1339AfterSaving).toMatchObject({
           name: "Custom Name for 1339 and Custom Name for 1",
           metadata: [
@@ -895,27 +898,27 @@ describe("Proofreading (Multi User)", () => {
           name: "mergeAgglomerate",
           value: {
             actionTracingId: VOLUME_TRACING_ID,
-            segmentId1: 4,
-            segmentId2: 1,
-            agglomerateId1: 1339,
-            agglomerateId2: 1,
+            segmentId1: 4n,
+            segmentId2: 1n,
+            agglomerateId1: 1339n,
+            agglomerateId2: 1n,
           },
         },
         {
           name: "mergeSegmentItems",
           value: {
             actionTracingId: VOLUME_TRACING_ID,
-            segmentId1: 4,
-            segmentId2: 1,
-            agglomerateId1: 1339,
-            agglomerateId2: 1,
+            segmentId1: 4n,
+            segmentId2: 1n,
+            agglomerateId1: 1339n,
+            agglomerateId2: 1n,
           },
         },
         {
           name: "updateSegmentPartial",
           value: {
             actionTracingId: "volumeTracingId",
-            id: 1339,
+            id: 1339n,
             anchorPosition: getPositionForSegmentId(4),
           },
         },
@@ -924,15 +927,15 @@ describe("Proofreading (Multi User)", () => {
       yield* expectMapping(
         tracingId,
         new Map([
-          [1, 1339],
-          [2, 1339],
-          [3, 1339],
-          [4, 1339],
-          [5, 1339],
-          [6, 1337],
-          [7, 1337],
-          // [1337, 1339], not loaded
-          // [1338, 1339], not loaded
+          [1n, 1339n],
+          [2n, 1339n],
+          [3n, 1339n],
+          [4n, 1339n],
+          [5n, 1339n],
+          [6n, 1337n],
+          [7n, 1337n],
+          // [1337n, 1339n], not loaded
+          // [1338n, 1339n], not loaded
         ]),
       );
     });
@@ -962,7 +965,7 @@ describe("Proofreading (Multi User)", () => {
     const task = startSaga(function* task() {
       const rebaseActionChannel = yield actionChannel(["REWIND_FOR_REBASE", "FINISHED_REBASING"]);
 
-      yield* prepareEditableMapping(context, tracingId, 1, getPositionForSegmentId(1));
+      yield* prepareEditableMapping(context, tracingId, 1n, getPositionForSegmentId(1));
 
       // Execute the actual merge and wait for the finished mapping.
       yield put(
@@ -981,42 +984,41 @@ describe("Proofreading (Multi User)", () => {
           name: "mergeAgglomerate",
           value: {
             actionTracingId: VOLUME_TRACING_ID,
-            segmentId1: 1,
-            segmentId2: 4,
-            agglomerateId1: 1,
-            agglomerateId2: 4,
+            segmentId1: 1n,
+            segmentId2: 4n,
+            agglomerateId1: 1n,
+            agglomerateId2: 4n,
           },
         },
         {
           name: "mergeSegmentItems",
           value: {
             actionTracingId: VOLUME_TRACING_ID,
-            segmentId1: 1,
-            segmentId2: 4,
-            agglomerateId1: 1,
-            agglomerateId2: 4,
+            segmentId1: 1n,
+            segmentId2: 4n,
+            agglomerateId1: 1n,
+            agglomerateId2: 4n,
           },
         },
       ]);
       yield* expectMapping(
         tracingId,
         new Map([
-          [1, 1],
-          [2, 1],
-          [3, 1],
-          [4, 1],
-          [5, 1],
-          [6, 6],
-          [7, 6],
-          // [1337, 1337], not loaded
-          // [1338, 1337], not loaded
+          [1n, 1n],
+          [2n, 1n],
+          [3n, 1n],
+          [4n, 1n],
+          [5n, 1n],
+          [6n, 6n],
+          [7n, 6n],
+          // [1337n, 1337n], not loaded
+          // [1338n, 1337n], not loaded
         ]),
       );
 
-      yield call(publishDebuggingState, _backendMock);
       yield expectSegmentList(tracingId, [
         {
-          id: 1,
+          id: 1n,
           anchorPosition: [1, 1, 1],
         },
       ]);
@@ -1037,7 +1039,7 @@ describe("Proofreading (Multi User)", () => {
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* task() {
-      yield* prepareEditableMapping(context, tracingId, 1, getPositionForSegmentId(1));
+      yield* prepareEditableMapping(context, tracingId, 1n, getPositionForSegmentId(1));
       yield call(() => context.api.tracing.save());
       context.mocks.acquireAnnotationMutex.mockImplementation(async () => ({
         canEdit: false,
@@ -1048,7 +1050,7 @@ describe("Proofreading (Multi User)", () => {
       yield put(
         proofreadMergeAction(
           getPositionForSegmentId(4), // unmappedId=4 / mappedId=4 at this position
-          4, // unmappedId=4 maps to 4
+          4n, // unmappedId=4 maps to 4
         ),
       );
       const waitingTimeTillPollingTimeoutWasTriggered = VERSION_POLL_INTERVAL_COLLAB * 2 + 100;
@@ -1067,7 +1069,7 @@ describe("Proofreading (Multi User)", () => {
 
   it("should not create a segment item after splitting when another user performed a merge that swallows that item", async (context: WebknossosTestContext) => {
     const { api, mocks } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context, [[1337, 7]], Store.getState());
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [[1337n, 7n]], Store.getState());
 
     backendMock.planMultipleVersionInjections(7, mergeSegment1337And5);
 
@@ -1076,19 +1078,19 @@ describe("Proofreading (Multi User)", () => {
 
     const task = startSaga(function* task() {
       const initialExpectedMapping = new Map([
-        [1, 1],
-        [2, 1],
-        [3, 1],
-        [4, 4],
-        [5, 4],
-        [6, 1337],
-        [7, 1337],
-        // [1337, 1337], not loaded
+        [1n, 1n],
+        [2n, 1n],
+        [3n, 1n],
+        [4n, 4n],
+        [5n, 4n],
+        [6n, 1337n],
+        [7n, 1337n],
+        // [1337n, 1337n], not loaded
       ]);
       yield* prepareEditableMapping(
         context,
         tracingId,
-        4,
+        4n,
         getPositionForSegmentId(4),
         initialExpectedMapping,
       );
@@ -1099,8 +1101,8 @@ describe("Proofreading (Multi User)", () => {
           {
             position1: getPositionForSegmentId(4),
             position2: getPositionForSegmentId(5),
-            segmentId1: 4,
-            segmentId2: 5,
+            segmentId1: 4n,
+            segmentId2: 5n,
           },
         ]),
       );
@@ -1119,21 +1121,21 @@ describe("Proofreading (Multi User)", () => {
       yield* expectMapping(
         tracingId,
         new Map([
-          [1, 1],
-          [2, 1],
-          [3, 1],
-          [4, 1337],
-          [5, 1339],
-          [6, 1339],
-          [7, 1339],
-          // [1337, 1339], not loaded
-          // [1338, 1339], not loaded
+          [1n, 1n],
+          [2n, 1n],
+          [3n, 1n],
+          [4n, 1337n],
+          [5n, 1339n],
+          [6n, 1339n],
+          [7n, 1339n],
+          // [1337n, 1339n], not loaded
+          // [1338n, 1339n], not loaded
         ]),
       );
 
       yield take(
         ((action: Action) =>
-          action.type === "FINISHED_LOADING_MESH" && action.segmentId === 1339) as ActionPattern,
+          action.type === "FINISHED_LOADING_MESH" && action.segmentId === 1339n) as ActionPattern,
       );
       yield call(waitUntilNoActiveOperations);
       yield call(() => api.tracing.save());
@@ -1145,13 +1147,13 @@ describe("Proofreading (Multi User)", () => {
         const currentSegments = state.annotation.volumes[0].segments;
         expect(currentSegments.size()).toEqual(2);
 
-        const segment1337AfterSaving = currentSegments.getNullable(1337);
+        const segment1337AfterSaving = currentSegments.getNullable(1337n);
         expect(segment1337AfterSaving).toMatchObject({
           name: "Segment 1337 and Segment 4",
           anchorPosition: getPositionForSegmentId(4),
         });
 
-        const segment1339AfterSaving = currentSegments.getNullable(1339);
+        const segment1339AfterSaving = currentSegments.getNullable(1339n);
         expect(segment1339AfterSaving).toMatchObject({
           name: null,
           anchorPosition: getPositionForSegmentId(5),
@@ -1164,9 +1166,9 @@ describe("Proofreading (Multi User)", () => {
         name: "splitAgglomerate",
         value: {
           actionTracingId: "volumeTracingId",
-          segmentId1: 4,
-          segmentId2: 5,
-          agglomerateId: 1337,
+          segmentId1: 4n,
+          segmentId2: 5n,
+          agglomerateId: 1337n,
         },
       });
     });
@@ -1181,7 +1183,7 @@ describe("Proofreading (Multi User)", () => {
      * so that they are applied to segment 1337.
      */
     const { api } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context, [[1337, 7]], Store.getState());
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [[1337n, 7n]], Store.getState());
 
     backendMock.planMultipleVersionInjections(7, mergeSegment1337And5);
 
@@ -1190,19 +1192,19 @@ describe("Proofreading (Multi User)", () => {
 
     const task = startSaga(function* task() {
       const initialExpectedMapping = new Map([
-        [1, 1],
-        [2, 1],
-        [3, 1],
-        [4, 4],
-        [5, 4],
-        [6, 1337],
-        [7, 1337],
-        // [1337, 1337], not loaded
+        [1n, 1n],
+        [2n, 1n],
+        [3n, 1n],
+        [4n, 4n],
+        [5n, 4n],
+        [6n, 1337n],
+        [7n, 1337n],
+        // [1337n, 1337n], not loaded
       ]);
       yield* prepareEditableMapping(
         context,
         tracingId,
-        5,
+        5n,
         getPositionForSegmentId(5),
         initialExpectedMapping,
       );
@@ -1216,7 +1218,7 @@ describe("Proofreading (Multi User)", () => {
         // because segment 1337 (to which that anchorPosition will
         // refer to) already exists).
         updateSegmentAction(
-          4,
+          4n,
           {
             name,
             anchorPosition,
@@ -1231,7 +1233,7 @@ describe("Proofreading (Multi User)", () => {
         // - updateMetadataOfSegment action
         // - updateSegmentVisibility action
         updateSegmentAction(
-          4,
+          4n,
           {
             name,
             metadata,
@@ -1250,7 +1252,7 @@ describe("Proofreading (Multi User)", () => {
         const currentSegments = state.annotation.volumes[0].segments;
         expect(currentSegments.size()).toEqual(2);
 
-        const segment1337AfterSaving = currentSegments.getNullable(1337);
+        const segment1337AfterSaving = currentSegments.getNullable(1337n);
         expect(segment1337AfterSaving).toMatchObject({
           name,
           anchorPosition,
@@ -1274,7 +1276,7 @@ describe("Proofreading (Multi User)", () => {
      * However, the segment item doesn't exist locally anymore (because it was removed by the user).
      */
     const { api } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context, [[1337, 7]], Store.getState());
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [[1337n, 7n]], Store.getState());
 
     backendMock.planMultipleVersionInjections(7, mergeSegment1337And5);
 
@@ -1283,24 +1285,24 @@ describe("Proofreading (Multi User)", () => {
 
     const task = startSaga(function* task() {
       const initialExpectedMapping = new Map([
-        [1, 1],
-        [2, 1],
-        [3, 1],
-        [4, 4],
-        [5, 4],
-        [6, 1337],
-        [7, 1337],
-        // [1337, 1337], not loaded
+        [1n, 1n],
+        [2n, 1n],
+        [3n, 1n],
+        [4n, 4n],
+        [5n, 4n],
+        [6n, 1337n],
+        [7n, 1337n],
+        // [1337n, 1337n], not loaded
       ]);
       yield* prepareEditableMapping(
         context,
         tracingId,
-        4,
+        4n,
         getPositionForSegmentId(4),
         initialExpectedMapping,
       );
 
-      yield put(removeSegmentAction(4, tracingId));
+      yield put(removeSegmentAction(4n, tracingId));
 
       yield call(() => api.tracing.save());
 
@@ -1311,7 +1313,7 @@ describe("Proofreading (Multi User)", () => {
         const currentSegments = state.annotation.volumes[0].segments;
         expect(currentSegments.size()).toEqual(1);
 
-        const segment1337AfterSaving = currentSegments.getNullable(1337);
+        const segment1337AfterSaving = currentSegments.getNullable(1337n);
         expect(segment1337AfterSaving).toMatchObject({
           name: "Segment 1337 and Segment 4",
           anchorPosition: getPositionForSegmentId(1337),

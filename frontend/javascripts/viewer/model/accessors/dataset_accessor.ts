@@ -350,14 +350,24 @@ export function getMaximumSegmentIdForLayer(dataset: APIDataset, layerName: stri
   return getDefaultValueRangeOfLayer(dataset, layerName)[1];
 }
 
+// Used for validating segment/cell ids, which are always bigint. uint64 and int64 ids can
+// exceed Number.MAX_SAFE_INTEGER, so this deliberately doesn't reuse
+// getSupportedValueRangeForElementClass's (JS-number-based) range for those element classes.
 export function isInSupportedValueRangeForLayer(
   dataset: APIDataset,
   layerName: string,
-  value: number,
+  value: bigint,
 ): boolean {
   const elementClass = getElementClass(dataset, layerName);
+  if (elementClass === "uint64") {
+    // Every 64-bit pattern is a valid unsigned segment id.
+    return true;
+  }
+  if (elementClass === "int64") {
+    return value >= 0n && value <= 2n ** 63n - 1n;
+  }
   const [min, max] = getSupportedValueRangeForElementClass(elementClass);
-  return value >= min && value <= max;
+  return value >= BigInt(min) && value <= BigInt(max);
 }
 
 export function getBitDepth(layerInfo: DataLayer | DataLayerType): number {

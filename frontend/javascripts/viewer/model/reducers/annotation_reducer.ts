@@ -290,7 +290,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
           [layerName]: {
             meshes: {
               [additionalCoordKey]: {
-                [id]: {
+                [id.toString()]: {
                   isVisible: {
                     $set: visibility,
                   },
@@ -315,7 +315,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
           return {
             ...updatedMeshesDict,
             [additionalCoordKey]: update(meshes, {
-              [id]: {
+              [id.toString()]: {
                 opacity: {
                   $set: opacity,
                 },
@@ -338,7 +338,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
 
     case "REMOVE_MESH": {
       const { layerName, segmentId } = action;
-      const newMeshes: Record<string, Record<number, MeshInformation>> = {};
+      const newMeshes: Record<string, Record<string, MeshInformation>> = {};
       const additionalCoordinates = state.flycam.additionalCoordinates;
       const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
       const maybeMeshes = getMeshesForAdditionalCoordinates(
@@ -346,12 +346,15 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         additionalCoordinates,
         layerName,
       );
-      if (maybeMeshes == null || maybeMeshes[segmentId] == null) {
+      if (maybeMeshes == null || maybeMeshes[segmentId.toString()] == null) {
         // No meshes exist for the segment id. No need to do anything.
         console.log("Could not find mesh", segmentId, "which was requested to be removed");
         return state;
       }
-      const { [segmentId]: _, ...remainingMeshes } = maybeMeshes as Record<number, MeshInformation>;
+      const { [segmentId.toString()]: _, ...remainingMeshes } = maybeMeshes as Record<
+        string,
+        MeshInformation
+      >;
       newMeshes[additionalCoordKey] = remainingMeshes;
       return update(state, {
         localSegmentationStateByLayer: {
@@ -401,7 +404,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
           [layerName]: {
             meshes: {
               [additionalCoordKey]: {
-                [segmentId]: {
+                [segmentId.toString()]: {
                   $set: meshInfo,
                 },
               },
@@ -447,7 +450,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
           [layerName]: {
             meshes: {
               [additionalCoordKey]: {
-                [segmentId]: {
+                [segmentId.toString()]: {
                   $set: meshInfo,
                 },
               },
@@ -468,7 +471,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
           [layerName]: {
             meshes: {
               [additionalCoordKey]: {
-                [segmentId]: {
+                [segmentId.toString()]: {
                   isLoading: {
                     $set: true,
                   },
@@ -491,7 +494,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
           [layerName]: {
             meshes: {
               [additionalCoordKey]: {
-                [segmentId]: {
+                [segmentId.toString()]: {
                   isLoading: {
                     $set: false,
                   },

@@ -1,63 +1,61 @@
-import type { Vector2 } from "viewer/constants";
-
 export const initialMapping = new Map([
-  [1, 1],
-  [2, 1],
-  [3, 1],
-  [4, 4],
-  [5, 4],
-  [6, 6],
-  [7, 6],
+  [1n, 1n],
+  [2n, 1n],
+  [3n, 1n],
+  [4n, 4n],
+  [5n, 4n],
+  [6n, 6n],
+  [7n, 6n],
 ]);
 
-export const edgesForInitialMapping: Vector2[] = [
-  [1, 2], // read as: 1 swallows 2
-  [2, 3],
-  [4, 5],
-  [6, 7],
-  [1337, 1338],
+export const edgesForInitialMapping: Array<[bigint, bigint]> = [
+  [1n, 2n], // read as: 1 swallows 2
+  [2n, 3n],
+  [4n, 5n],
+  [6n, 7n],
+  [1337n, 1338n],
 ];
 
 export const expectedMappingAfterMerge = new Map([
-  [1, 1],
-  [2, 1],
-  [3, 1],
-  [4, 1],
-  [5, 1],
-  [6, 6],
-  [7, 6],
-  // [1337, 1337],
+  [1n, 1n],
+  [2n, 1n],
+  [3n, 1n],
+  [4n, 1n],
+  [5n, 1n],
+  [6n, 6n],
+  [7n, 6n],
+  // [1337n, 1337n],
 ]);
 
 export const expectedMappingAfterMerge2 = new Map([
-  [1, 1],
-  [2, 1],
-  [3, 1],
-  [4, 4],
-  [5, 4],
-  [6, 4],
-  [7, 4],
-  // [1337, 1337],
+  [1n, 1n],
+  [2n, 1n],
+  [3n, 1n],
+  [4n, 4n],
+  [5n, 4n],
+  [6n, 4n],
+  [7n, 4n],
+  // [1337n, 1337n],
 ]);
 
 export const expectedMappingAfterMergeRebase = new Map([
-  [1, 1],
-  [2, 1],
-  [3, 1],
-  [4, 1],
-  [5, 1],
-  [6, 1],
-  [7, 1],
-  // [1337, 1337],
+  [1n, 1n],
+  [2n, 1n],
+  [3n, 1n],
+  [4n, 1n],
+  [5n, 1n],
+  [6n, 1n],
+  [7n, 1n],
+  // [1337n, 1337n],
 ]);
 
 export const expectedMappingAfterSplit = new Map([
-  [1, 1],
-  [2, 1339],
-  [3, 1339],
-  [4, 4],
-  [5, 4],
-  [6, 6],
-  [7, 6],
-  // [1337, 1338], -- not loaded by FE during test scenario, but exists in backend mock
+  [1n, 1n],
+  [2n, 1339n],
+  [3n, 1339n],
+  [4n, 4n],
+  [5n, 4n],
+  [6n, 6n],
+  [7n, 6n],
+  // [1337n, 1338n], -- not loaded by FE during test scenario, but exists in backend mock
 ]);

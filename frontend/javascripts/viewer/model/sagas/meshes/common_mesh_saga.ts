@@ -56,7 +56,7 @@ export function* releaseMeshWorker() {
   yield put(meshLoadingTokenChannel, "token");
 }
 
-function* downloadMeshCellById(cellName: string, segmentId: number, layerName: string): Saga<void> {
+function* downloadMeshCellById(cellName: string, segmentId: bigint, layerName: string): Saga<void> {
   const { segmentMeshController } = getSceneController();
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   const geometry = segmentMeshController.getMeshGeometryInBestLOD(
@@ -84,7 +84,7 @@ function* downloadMeshCellById(cellName: string, segmentId: number, layerName: s
 }
 
 function* downloadMeshCellsAsZIP(
-  segments: Array<{ segmentName: string; segmentId: number; layerName: string }>,
+  segments: Array<{ segmentName: string; segmentId: bigint; layerName: string }>,
 ): Saga<void> {
   const { segmentMeshController } = getSceneController();
   const { BlobReader, BlobWriter, ZipWriter } = yield* call(() => import("@zip.js/zip.js"));
@@ -118,14 +118,16 @@ function* downloadMeshCellsAsZIP(
   }
 }
 
-const getSTLBlob = (geometry: Group, segmentId: number): Blob => {
+const getSTLBlob = (geometry: Group, segmentId: bigint): Blob => {
   const stlDataViews = exportToStl(geometry);
   // Encode mesh and cell id property
   const { meshMarker, segmentIdIndex } = stlMeshConstants;
   meshMarker.forEach((marker, index) => {
     stlDataViews[0].setUint8(index, marker);
   });
-  stlDataViews[0].setUint32(segmentIdIndex, segmentId, true);
+  // The STL format field is a fixed 32-bit width, so ids beyond 2^32 are truncated to
+  // their low 32 bits here. This is a genuine binary-format limit, not a JS-precision issue.
+  stlDataViews[0].setUint32(segmentIdIndex, Number(BigInt.asUintN(32, segmentId)), true);
   return new Blob(stlDataViews);
 };
 
@@ -184,7 +186,7 @@ export function* handleAdditionalCoordinateUpdate(): Saga<never> {
       for (const [layerName, recordsForOneLayer] of Object.entries(recordsOfLayers)) {
         const segmentIds = Object.keys(recordsForOneLayer);
         for (const segmentIdAsString of segmentIds) {
-          const segmentId = Number.parseInt(segmentIdAsString, 10);
+          const segmentId = BigInt(segmentIdAsString);
           yield* put(
             updateMeshVisibilityAction(
               layerName,

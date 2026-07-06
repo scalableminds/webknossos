@@ -4,6 +4,7 @@ import com.google.common.io.LittleEndianDataInputStream
 import com.scalableminds.util.geometry.{Vec3Float, Vec3Int}
 import com.scalableminds.util.tools.Box
 import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.webknossos.datastore.helpers.UnsignedLongJson
 import play.api.libs.json.{Json, OFormat}
 
 import java.io.ByteArrayInputStream
@@ -90,7 +91,10 @@ object NeuroglancerSegmentManifest {
 case class MeshChunk(position: Vec3Float, byteOffset: Long, byteSize: Int, unmappedSegmentId: Option[Long] = None)
 
 object MeshChunk {
-  implicit val jsonFormat: OFormat[MeshChunk] = Json.format[MeshChunk]
+  implicit val jsonFormat: OFormat[MeshChunk] =
+    UnsignedLongJson.patchOptionalField(Json.format[MeshChunk], "unmappedSegmentId")(
+      _.unmappedSegmentId,
+      (a, v) => a.copy(unmappedSegmentId = v))
 }
 case class MeshLodInfo(chunks: List[MeshChunk], transform: Array[Array[Double]])
 

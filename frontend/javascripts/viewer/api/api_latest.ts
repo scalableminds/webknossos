@@ -6,6 +6,7 @@ import {
   sendAnalyticsEvent,
 } from "admin/rest_api";
 import PriorityQueue from "js-priority-queue";
+import { toBigInt } from "libs/bigint_helpers";
 import { InputKeyboard, type KeyboardNoLoopHandler } from "libs/input";
 import { M4x4, type Matrix4x4, V3 } from "libs/mjs";
 import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
@@ -188,6 +189,7 @@ import type {
   DatasetConfiguration,
   Mapping,
   MappingType,
+  NumberLike,
   Segment,
   SegmentGroup,
   SkeletonTracing,
@@ -669,7 +671,7 @@ class TracingApi {
    * );
    */
   registerSegment(
-    segmentId: number,
+    segmentId: bigint,
     anchorPosition: Vector3,
     additionalCoordinates: AdditionalCoordinate[] | undefined = undefined,
     layerName?: string,
@@ -808,7 +810,7 @@ class TracingApi {
    * );
    * console.log(segment.groupId)
    */
-  getSegment(segmentId: number, layerName: string): Segment {
+  getSegment(segmentId: bigint, layerName: string): Segment {
     const segment = getSegmentsForLayer(Store.getState(), layerName).getOrThrow(segmentId);
     // Return a copy to avoid mutations by third-party code.
     return { ...segment };
@@ -831,7 +833,7 @@ class TracingApi {
    *   "volume-layer-id"
    * );
    */
-  updateSegment(segmentId: number, segment: Partial<Segment>, layerName: string) {
+  updateSegment(segmentId: bigint, segment: Partial<Segment>, layerName: string) {
     Store.dispatch(updateSegmentAction(segmentId, { ...segment, id: segmentId }, layerName));
   }
 
@@ -844,7 +846,7 @@ class TracingApi {
    *   "volume-layer-id"
    * );
    */
-  removeSegment(segmentId: number, layerName: string) {
+  removeSegment(segmentId: bigint, layerName: string) {
     Store.dispatch(removeSegmentAction(segmentId, layerName));
   }
 
@@ -950,7 +952,7 @@ class TracingApi {
     let newSegmentGroups = cloneDeep(segmentGroups);
 
     const groupToSegmentsMap = createGroupToSegmentsMap(segments);
-    let segmentIdsToDelete: number[] = [];
+    let segmentIdsToDelete: bigint[] = [];
 
     if (groupId === MISSING_GROUP_ID) {
       // special case: delete Root group and all children (aka everything)
@@ -1068,7 +1070,7 @@ class TracingApi {
    * @example
    * api.tracing.loadAgglomerateSkeletonForSegmentId(3);
    */
-  loadAgglomerateSkeletonForSegmentId(segmentId: number) {
+  loadAgglomerateSkeletonForSegmentId(segmentId: bigint) {
     loadAgglomerateTreeFromId(segmentId);
   }
 
@@ -1524,7 +1526,7 @@ class TracingApi {
    * Returns the id of the current active segment.
    * _Volume tracing only!_
    */
-  getActiveCellId(): number | null | undefined {
+  getActiveCellId(): bigint | null | undefined {
     const tracing = assertVolume(Store.getState());
     return getActiveCellId(tracing);
   }
@@ -1534,7 +1536,7 @@ class TracingApi {
    * If a segment with the given id doesn't exist, it is created.
    * _Volume tracing only!_
    */
-  setActiveCell(id: number) {
+  setActiveCell(id: bigint) {
     assertVolume(Store.getState());
     assertExists(id, "Segment id is missing.");
     Store.dispatch(setActiveCellAction(id));
@@ -1899,7 +1901,7 @@ class DataApi {
     additionalCoordinates: AdditionalCoordinate[] | null = null,
     respectMapping: boolean = false,
     channelIndex: number = 0,
-  ): Promise<number> {
+  ): Promise<NumberLike> {
     let zoomStep;
     const state = Store.getState();
 
@@ -1951,18 +1953,17 @@ class DataApi {
     position: Vector3,
     zoomStep: number | null | undefined = null,
     additionalCoordinates: AdditionalCoordinate[] | null = null,
-  ): Promise<number> {
+  ): Promise<bigint> {
     const state = Store.getState();
 
     if (!needsLocalHdf5Mapping(state, layerName)) {
-      return this.getDataValue(layerName, position, zoomStep, additionalCoordinates, true);
+      return toBigInt(
+        await this.getDataValue(layerName, position, zoomStep, additionalCoordinates, true),
+      );
     }
 
-    const unmappedId = await this.getDataValue(
-      layerName,
-      position,
-      zoomStep,
-      additionalCoordinates,
+    const unmappedId = toBigInt(
+      await this.getDataValue(layerName, position, zoomStep, additionalCoordinates),
     );
 
     const activeMappingInfo = getMappingInfo(
@@ -1971,9 +1972,9 @@ class DataApi {
     );
 
     if (activeMappingInfo.mapping != null) {
-      const mappedId = new NumberLikeMapWrapper(activeMappingInfo.mapping).getAsNumber(unmappedId);
+      const mappedId = new NumberLikeMapWrapper(activeMappingInfo.mapping).get(unmappedId);
       if (mappedId != null) {
-        return mappedId;
+        return toBigInt(mappedId);
       }
     }
 
@@ -1992,11 +1993,11 @@ class DataApi {
       new Set([unmappedId]),
     );
 
-    const agglomerateId = new NumberLikeMapWrapper(fetchedEntries).getAsNumber(unmappedId);
+    const agglomerateId = new NumberLikeMapWrapper(fetchedEntries).get(unmappedId);
     if (agglomerateId == null) {
       throw new Error(`Could not map id ${unmappedId} at position ${position}`);
     }
-    return agglomerateId;
+    return toBigInt(agglomerateId);
   }
 
   /**
@@ -2343,7 +2344,7 @@ class DataApi {
    */
   labelVoxels(
     globalPositionsMag1: Vector3[],
-    segmentId: number,
+    segmentId: bigint,
     optAdditionalCoordinates?: AdditionalCoordinate[] | null,
   ) {
     const state = Store.getState();
@@ -2409,7 +2410,7 @@ class DataApi {
         numberOfSlices,
         thirdDim,
         true,
-        0,
+        0n,
       );
 
       const thirdDimensionOfSlice = w * labeledMag[thirdDim];
@@ -2423,7 +2424,7 @@ class DataApi {
         segmentId,
         thirdDimensionOfSlice,
         true,
-        0,
+        0n,
       );
     }
 
@@ -2633,7 +2634,7 @@ class DataApi {
    * api.data.loadPrecomputedMesh(segmentId, currentPosition);
    */
   loadPrecomputedMesh(
-    segmentId: number,
+    segmentId: bigint,
     seedPosition: Vector3,
     layerName: string | null | undefined,
     seedAdditionalCoordinates?: AdditionalCoordinate[],
@@ -2698,7 +2699,7 @@ class DataApi {
    * api.data.computeMeshOnDemand(segmentId, currentPosition);
    */
   computeMeshOnDemand(
-    segmentId: number,
+    segmentId: bigint,
     seedPosition: Vector3,
     seedAdditionalCoordinates?: AdditionalCoordinate[],
   ) {
@@ -2712,7 +2713,7 @@ class DataApi {
    * @example
    * api.data.setMeshVisibility(segmentId, false);
    */
-  setMeshVisibility(segmentId: number, isVisible: boolean, layerName?: string) {
+  setMeshVisibility(segmentId: bigint, isVisible: boolean, layerName?: string) {
     const state = Store.getState();
     const effectiveLayerName = getRequestedOrVisibleSegmentationLayerEnforced(
       state,
@@ -2723,7 +2724,7 @@ class DataApi {
 
     if (
       state.localSegmentationStateByLayer[effectiveLayerName]?.meshes?.[additionalCoordKey]?.[
-        segmentId
+        segmentId.toString()
       ] != null
     ) {
       Store.dispatch(updateMeshVisibilityAction(effectiveLayerName, segmentId, isVisible));
@@ -2741,7 +2742,7 @@ class DataApi {
    * @example
    * api.data.removeMesh(segmentId, layerName);
    */
-  removeMesh(segmentId: number, layerName?: string): void {
+  removeMesh(segmentId: bigint, layerName?: string): void {
     const state = Store.getState();
     const effectiveLayerName = getRequestedOrVisibleSegmentationLayerEnforced(
       state,
@@ -2752,7 +2753,7 @@ class DataApi {
 
     if (
       state.localSegmentationStateByLayer[effectiveLayerName]?.meshes?.[additionalCoordKey]?.[
-        segmentId
+        segmentId.toString()
       ] != null
     ) {
       Store.dispatch(removeMeshAction(effectiveLayerName, segmentId));
@@ -2785,7 +2786,7 @@ class DataApi {
     );
 
     for (const segmentId of segmentIds) {
-      Store.dispatch(removeMeshAction(effectiveLayerName, Number(segmentId)));
+      Store.dispatch(removeMeshAction(effectiveLayerName, BigInt(segmentId)));
     }
   }
 
@@ -2884,7 +2885,7 @@ class DataApi {
    * @example
    * api.data.getSegmentColor(3);
    */
-  getSegmentColor(segmentId: number, layerName?: string): Vector3 {
+  getSegmentColor(segmentId: bigint, layerName?: string): Vector3 {
     const effectiveLayerName = getRequestedOrVisibleSegmentationLayerEnforced(
       Store.getState(),
       layerName,
@@ -2901,7 +2902,7 @@ class DataApi {
    * @example
    * api.data.setSegmentColor(3, [0, 1, 1], "segmentation", 0.5);
    */
-  setSegmentColor(segmentId: number, rgbColor: Vector3, layerName?: string, meshOpacity?: number) {
+  setSegmentColor(segmentId: bigint, rgbColor: Vector3, layerName?: string, meshOpacity?: number) {
     const state = Store.getState();
     const additionalCoordinates = state.flycam.additionalCoordinates;
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
@@ -2928,7 +2929,7 @@ class DataApi {
       }
       if (
         state.localSegmentationStateByLayer[effectiveLayerName]?.meshes?.[additionalCoordKey]?.[
-          segmentId
+          segmentId.toString()
         ] != null
       ) {
         Store.dispatch(updateMeshOpacityAction(effectiveLayerName, segmentId, meshOpacity));

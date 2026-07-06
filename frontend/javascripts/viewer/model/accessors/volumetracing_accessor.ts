@@ -217,7 +217,7 @@ export function getServerVolumeTracings(
   return volumeTracings;
 }
 
-export function getActiveCellId(volumeTracing: VolumeTracing): number {
+export function getActiveCellId(volumeTracing: VolumeTracing): bigint {
   const { activeCellId } = volumeTracing;
   return activeCellId;
 }
@@ -225,7 +225,7 @@ export function getActiveCellId(volumeTracing: VolumeTracing): number {
 export function getActiveUnmappedSegmentId(
   state: WebknossosState,
   volumeTracing: VolumeTracing | null | undefined,
-): number | null | undefined {
+): bigint | null | undefined {
   if (volumeTracing == null) {
     return null;
   }
@@ -471,7 +471,7 @@ export function getSegmentJournalForLayer(
 // there that are not visible in the segments view tab.
 // The returned segment and group ids are all visible in the segments view tab.
 function _getSelectedIds(state: WebknossosState): {
-  segments: number[];
+  segments: bigint[];
   group: number | null;
   maybeUpdateStoreAction: (() => void) | null;
 } {
@@ -733,7 +733,7 @@ export function getLabelActionFromPreviousSlice(
 }
 
 export function getSegmentName(
-  segment: { id: number; name?: string | undefined | null },
+  segment: { id: bigint; name?: string | undefined | null },
   fallbackToIdOnly: boolean = false,
 ): string {
   const fallback = fallbackToIdOnly ? `${segment.id}` : `Segment ${segment.id}`;
@@ -743,7 +743,7 @@ export function getSegmentName(
 
 function getMeshOpacity(
   state: WebknossosState,
-  segmentId: number,
+  segmentId: bigint,
   layerName: string,
 ): number | undefined {
   const additionalCoords = state.flycam.additionalCoordinates;
@@ -751,13 +751,13 @@ function getMeshOpacity(
   const localSegmentationState = state.localSegmentationStateByLayer[layerName];
   if (localSegmentationState?.meshes == null) return undefined;
   const meshData = localSegmentationState.meshes[additionalCoordinateKey];
-  if (meshData == null || meshData[segmentId] == null) return undefined;
-  return meshData[segmentId].opacity;
+  if (meshData == null || meshData[segmentId.toString()] == null) return undefined;
+  return meshData[segmentId.toString()].opacity;
 }
 
 export function isMeshLoaded(
   state: WebknossosState,
-  segmentId: number,
+  segmentId: bigint,
   layerName: string,
 ): boolean {
   const additionalCoords = state.flycam.additionalCoordinates;
@@ -765,12 +765,12 @@ export function isMeshLoaded(
   const localSegmentationState = state.localSegmentationStateByLayer[layerName];
   if (localSegmentationState?.meshes == null) return false;
   const meshData = localSegmentationState.meshes[additionalCoordinateKey];
-  if (meshData == null || meshData[segmentId] == null) return false;
-  return meshData[segmentId] != null;
+  if (meshData == null || meshData[segmentId.toString()] == null) return false;
+  return meshData[segmentId.toString()] != null;
 }
 
-export function getAllLoadedMeshes(state: WebknossosState, layerName: string): Set<number> {
-  const loadedMeshIds = new Set<number>();
+export function getAllLoadedMeshes(state: WebknossosState, layerName: string): Set<bigint> {
+  const loadedMeshIds = new Set<bigint>();
   const additionalCoords = state.flycam.additionalCoordinates;
   const additionalCoordinateKey = getAdditionalCoordinatesAsString(additionalCoords);
   const localSegmentationState = state.localSegmentationStateByLayer[layerName];
@@ -786,7 +786,7 @@ export function getAllLoadedMeshes(state: WebknossosState, layerName: string): S
 // Output is in [0,1] for R, G, B, and A
 export function getSegmentColorAsRGBA(
   state: WebknossosState,
-  mappedId: number,
+  mappedId: bigint,
   layerName?: string | null | undefined,
 ): Vector4 {
   const segmentationLayer = getRequestedOrVisibleSegmentationLayer(state, layerName);
@@ -805,13 +805,13 @@ export function getSegmentColorAsRGBA(
     }
   }
 
-  return jsConvertCellIdToRGBA(mappedId);
+  return jsConvertCellIdToRGBA(Number(mappedId));
 }
 
 // Output is in [0,1] for H, S, L, and A
 export function getSegmentColorAsHSLA(
   state: WebknossosState,
-  mappedId: number,
+  mappedId: bigint,
   layerName?: string | null | undefined,
 ): Vector4 {
   const [r, g, b, a] = getSegmentColorAsRGBA(state, mappedId, layerName);
@@ -945,7 +945,7 @@ export function getMeshInfoForSegment(
   state: WebknossosState,
   additionalCoordinates: AdditionalCoordinate[] | null,
   layerName: string,
-  segmentId: number,
+  segmentId: bigint,
 ) {
   const meshesForAddCoords = getMeshesForAdditionalCoordinates(
     state,
@@ -953,7 +953,7 @@ export function getMeshInfoForSegment(
     layerName,
   );
   if (meshesForAddCoords == null) return null;
-  return meshesForAddCoords[segmentId];
+  return meshesForAddCoords[segmentId.toString()];
 }
 
 export function needsLocalHdf5Mapping(state: WebknossosState, layerName: string) {

@@ -38,8 +38,11 @@ export default {
     "types::Mesh": {
       type: "object",
       properties: {
+        // A number is the legacy encoding (kept for permanent backward-compatibility with old
+        // shared URLs); a string is the unsigned-decimal encoding used for ids that may exceed
+        // the JS Number safe-integer range.
         segmentId: {
-          type: "number",
+          type: ["number", "string"],
         },
         seedPosition: {
           $ref: "#/definitions/types::Vector3",
@@ -112,7 +115,7 @@ export default {
                 type: "array",
                 items: [
                   {
-                    type: "number",
+                    type: ["number", "string"],
                   },
                 ],
               },
@@ -153,7 +156,7 @@ export default {
                 type: "array",
                 items: [
                   {
-                    type: "number",
+                    type: ["number", "string"],
                   },
                 ],
               },

@@ -231,12 +231,12 @@ const SAVING_CONFLICT_TOAST_KEY = "save_conflicts_warning";
 
 type ApplyingUpdateArtifacts = {
   // All properties having the layer name / tracing id as a key.
-  meshIdsToRemovePerLayer: ReadonlyMap<string, ReadonlySet<number>>;
+  meshIdsToRemovePerLayer: ReadonlyMap<string, ReadonlySet<bigint>>;
   // Maps for each layer from agglomerate ids whose meshes should be (re)loaded to the display
   // properties (opacity and visibility) the reloaded mesh should inherit from the agglomerate it
   // originated from (empty if nothing was stored for the original mesh). The key set defines which
   // meshes to load.
-  meshesToLoadPerLayer: ReadonlyMap<string, ReadonlyMap<number, PreservedMeshDisplayProps>>;
+  meshesToLoadPerLayer: ReadonlyMap<string, ReadonlyMap<bigint, PreservedMeshDisplayProps>>;
 };
 
 type ApplyingUpdateResults = { success: boolean; artifactInfos: ApplyingUpdateArtifacts };
@@ -274,14 +274,16 @@ function* updatePendingProofreadingOperationInfoAction() {
     (store) => store.temporaryConfiguration.activeMappingByLayer[tracingId],
   );
 
-  let sourceAgglomerateId: number | undefined;
-  let targetAgglomerateId: number | undefined;
+  let sourceAgglomerateId: bigint | undefined;
+  let targetAgglomerateId: bigint | undefined;
 
   if (activeMapping.mapping != null) {
     const mappingWrapper = new NumberLikeMapWrapper(activeMapping.mapping);
-    sourceAgglomerateId = mappingWrapper.getAsNumber(sourceInfo.unmappedId);
+    const sourceVal = mappingWrapper.get(sourceInfo.unmappedId);
+    sourceAgglomerateId = sourceVal != null ? BigInt(sourceVal) : undefined;
     if (targetInfo) {
-      targetAgglomerateId = mappingWrapper.getAsNumber(targetInfo.unmappedId);
+      const targetVal = mappingWrapper.get(targetInfo.unmappedId);
+      targetAgglomerateId = targetVal != null ? BigInt(targetVal) : undefined;
     }
   }
 
@@ -296,7 +298,7 @@ function* updatePendingProofreadingOperationInfoAction() {
               agglomerateId:
                 // If targetInfo != null, targetAgglomerateId will be != null, too
                 // (we ensure this in the if-condition).
-                targetAgglomerateId as number,
+                targetAgglomerateId as bigint,
             }
           : null,
       }),
@@ -329,12 +331,12 @@ function* updatePendingProofreadingOperationInfoAction() {
         tracingId,
         sourceInfo: {
           ...sourceInfo,
-          agglomerateId: Number(sourceAgglomerateIdFromServer ?? sourceInfo.agglomerateId),
+          agglomerateId: BigInt(sourceAgglomerateIdFromServer ?? sourceInfo.agglomerateId),
         },
         targetInfo: targetInfo
           ? {
               ...targetInfo,
-              agglomerateId: Number(targetAgglomerateIdFromServer ?? targetInfo.agglomerateId),
+              agglomerateId: BigInt(targetAgglomerateIdFromServer ?? targetInfo.agglomerateId),
             }
           : null,
       }),
@@ -616,15 +618,15 @@ export function* tryToIncorporateActions(
   // Tracks which agglomerate ids were changed of which the frontend has loaded meshes to assist proofreading.
   // Maps from the old agglomerate id to a potentially new one.
   // Duplicates are later ignored when refreshing the meshes.
-  const meshIdsToRemovePerLayer: Map<string, Set<number>> = new Map();
+  const meshIdsToRemovePerLayer: Map<string, Set<bigint>> = new Map();
   // Maps each layer's agglomerate ids whose meshes should be (re)loaded to the display properties
   // (opacity and visibility) the reloaded mesh should inherit from the agglomerate it originated
   // from (empty if nothing was stored). These must be gathered here while the original meshes still
   // exist; the meshes are only removed later in resolveApplyingUpdateArtifacts.
-  const meshesToLoadPerLayer: Map<string, Map<number, PreservedMeshDisplayProps>> = new Map();
+  const meshesToLoadPerLayer: Map<string, Map<bigint, PreservedMeshDisplayProps>> = new Map();
   function recordMeshToLoad(
     tracingId: string,
-    agglomerateId: number,
+    agglomerateId: bigint,
     displayProps: PreservedMeshDisplayProps,
   ) {
     if (!meshesToLoadPerLayer.has(tracingId)) {
@@ -636,7 +638,7 @@ export function* tryToIncorporateActions(
   for (const actionBatch of newerActions) {
     // Per layer: maps each split segment id (segmentId1/segmentId2 of splitAgglomerate actions)
     // to the agglomerate id it belonged to before the split.
-    const splitSegmentIdToOldAgglomeratePerLayer: Map<string, Map<number, number>> = new Map();
+    const splitSegmentIdToOldAgglomeratePerLayer: Map<string, Map<bigint, bigint>> = new Map();
     for (const action of actionBatch.value) {
       switch (action.name) {
         /////////////
@@ -931,7 +933,7 @@ export function* tryToIncorporateActions(
       if (splitSegmentIdToOldAgglomerate && splitSegmentIdToOldAgglomerate.size > 0) {
         // Any involved old agglomerate id works as sourceAgglomerateId; the function re-maps the
         // local segments of every old agglomerate referenced in the passed map anyway.
-        const sourceAgglomerateId = splitSegmentIdToOldAgglomerate.values().next().value as number;
+        const sourceAgglomerateId = splitSegmentIdToOldAgglomerate.values().next().value as bigint;
         const activeMapping = yield* select(
           (store) => store.temporaryConfiguration.activeMappingByLayer[tracingId],
         );
@@ -1018,7 +1020,7 @@ function* removeOutdatedMeshes(
   // Remove all outdated meshes.
   for (const [tracingId, meshIdsToRemove] of meshIdsToRemovePerLayer.entries()) {
     for (const aggloId of meshIdsToRemove) {
-      yield* put(removeMeshAction(tracingId, Number(aggloId)));
+      yield* put(removeMeshAction(tracingId, aggloId));
     }
   }
 }
@@ -1030,7 +1032,7 @@ function* reloadMeshes(meshesToReloadPerLayer: ApplyingUpdateArtifacts["meshesTo
   const refreshAffectedMeshesEffects = [];
   for (const [tracingId, displayPropsByAgglomerateId] of meshesToReloadPerLayer.entries()) {
     const refreshList: Array<{
-      newAgglomerateId: number;
+      newAgglomerateId: bigint;
       nodePosition: Vector3;
       opacity?: number;
       isVisible?: boolean;

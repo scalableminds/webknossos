@@ -83,14 +83,16 @@ describe("Proofreading (With Agglomerate Tree interactions)", () => {
       yield call(initializeMappingAndTool, context, tracingId);
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
-      yield put(setActiveCellAction(1));
+      yield put(
+        updateSegmentAction(1n, { anchorPosition: getPositionForSegmentId(1) }, tracingId),
+      );
+      yield put(setActiveCellAction(1n));
 
       yield makeMappingEditableForTest();
 
       // Restore original parsing of tracings to make the mocked agglomerate tree implementation work.
       // Load agglomerate tree for agglomerate id 1.
-      yield call(loadAgglomerateTrees, context, [1, 4], false, false);
+      yield call(loadAgglomerateTrees, context, [1n, 4n], false, false);
       const skeletonWithAgglomerateTrees = yield* select(
         (state: WebknossosState) => state.annotation.skeleton,
       );
@@ -119,8 +121,10 @@ describe("Proofreading (With Agglomerate Tree interactions)", () => {
       yield call(initializeMappingAndTool, context, tracingId);
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
-      yield put(setActiveCellAction(1));
+      yield put(
+        updateSegmentAction(1n, { anchorPosition: getPositionForSegmentId(1) }, tracingId),
+      );
+      yield put(setActiveCellAction(1n));
 
       let trees = new DiffableMap<number, Tree>();
       const simulatedAgglomerateTree = yield* select((state) => createTree(state, Date.now()));
@@ -133,7 +137,7 @@ describe("Proofreading (With Agglomerate Tree interactions)", () => {
         name: "agglomerate 1 (volumeTracingId)",
         type: TreeTypeEnum.AGGLOMERATE,
         agglomerateInfo: {
-          agglomerateId: 1,
+          agglomerateId: 1n,
           mappingName: sampleHdf5AgglomerateName,
         },
       };
@@ -191,7 +195,8 @@ describe("Proofreading (With Agglomerate Tree interactions)", () => {
 
         yield expectSegmentList(tracingId, [
           {
-            id: 1,
+            id: 1n,
+
             anchorPosition: [3, 3, 3],
           },
         ]);
@@ -203,13 +208,13 @@ describe("Proofreading (With Agglomerate Tree interactions)", () => {
 
         expect(finalMapping).toEqual(
           new Map([
-            [1, 1],
-            [2, 1],
-            [3, 1],
-            [4, 1],
-            [5, 1],
-            [6, 1],
-            [7, 1],
+            [1n, 1n],
+            [2n, 1n],
+            [3n, 1n],
+            [4n, 1n],
+            [5n, 1n],
+            [6n, 1n],
+            [7n, 1n],
           ]),
         );
       });
@@ -243,7 +248,8 @@ describe("Proofreading (With Agglomerate Tree interactions)", () => {
 
       yield expectSegmentList(tracingId, [
         {
-          id: 1,
+          id: 1n,
+
           anchorPosition: [3, 3, 3],
         },
       ]);
@@ -255,13 +261,13 @@ describe("Proofreading (With Agglomerate Tree interactions)", () => {
 
       expect(finalMapping).toEqual(
         new Map([
-          [1, 1],
-          [2, 1],
-          [3, 1],
-          [4, 1],
-          [5, 1],
-          [6, 6],
-          [7, 6],
+          [1n, 1n],
+          [2n, 1n],
+          [3n, 1n],
+          [4n, 1n],
+          [5n, 1n],
+          [6n, 6n],
+          [7n, 6n],
         ]),
       );
     });
@@ -292,15 +298,18 @@ describe("Proofreading (With Agglomerate Tree interactions)", () => {
 
       yield expectSegmentList(tracingId, [
         {
-          id: 1,
+          id: 1n,
+
           anchorPosition: [1, 1, 1],
         },
         {
-          id: 1339,
+          id: 1339n,
+
           anchorPosition: [2, 2, 2],
         },
         {
-          id: 1340,
+          id: 1340n,
+
           anchorPosition: [3, 3, 3],
         },
       ]);
@@ -312,13 +321,13 @@ describe("Proofreading (With Agglomerate Tree interactions)", () => {
 
       expect(finalMapping).toEqual(
         new Map([
-          [1, 1],
-          [2, 1339],
-          [3, 1340],
-          [4, 4],
-          [5, 4],
-          [6, 6],
-          [7, 6],
+          [1n, 1n],
+          [2n, 1339n],
+          [3n, 1340n],
+          [4n, 4n],
+          [5n, 4n],
+          [6n, 6n],
+          [7n, 6n],
         ]),
       );
     });
@@ -350,11 +359,13 @@ describe("Proofreading (With Agglomerate Tree interactions)", () => {
 
       yield expectSegmentList(tracingId, [
         {
-          id: 1,
+          id: 1n,
+
           anchorPosition: [2, 2, 2],
         },
         {
-          id: 1339,
+          id: 1339n,
+
           anchorPosition: [3, 3, 3],
         },
       ]);
@@ -367,13 +378,13 @@ describe("Proofreading (With Agglomerate Tree interactions)", () => {
       // Agglomerate 1 and 6 were merged and then split between segment 2 and 3.
       expect(finalMapping).toEqual(
         new Map([
-          [1, 1],
-          [2, 1],
-          [3, 1339],
-          [4, 4],
-          [5, 4],
-          [6, 1339],
-          [7, 1339],
+          [1n, 1n],
+          [2n, 1n],
+          [3n, 1339n],
+          [4n, 4n],
+          [5n, 4n],
+          [6n, 1339n],
+          [7n, 1339n],
         ]),
       );
     });
@@ -410,11 +421,13 @@ describe("Proofreading (With Agglomerate Tree interactions)", () => {
 
       yield expectSegmentList(tracingId, [
         {
-          id: 1,
+          id: 1n,
+
           anchorPosition: [3, 3, 3],
         },
         {
-          id: 1339,
+          id: 1339n,
+
           anchorPosition: [2, 2, 2],
         },
       ]);
@@ -427,13 +440,13 @@ describe("Proofreading (With Agglomerate Tree interactions)", () => {
       // Agglomerate 1 was split twice between 2 and 3.
       expect(finalMapping).toEqual(
         new Map([
-          [1, 1339],
-          [2, 1339],
-          [3, 1],
-          [4, 4],
-          [5, 4],
-          [6, 6],
-          [7, 6],
+          [1n, 1339n],
+          [2n, 1339n],
+          [3n, 1n],
+          [4n, 4n],
+          [5n, 4n],
+          [6n, 6n],
+          [7n, 6n],
         ]),
       );
     });
@@ -443,14 +456,14 @@ describe("Proofreading (With Agglomerate Tree interactions)", () => {
 
   it("should min cut agglomerate via node ids and incorporate a new merge action from backend", async (context: WebknossosTestContext) => {
     // Additional edge to create agglomerate 1 with edges 1-2,2-3,1-3 to enforce cut with multiple edges.
-    const backendMock = mockInitialBucketAndAgglomerateData(context, [[1, 3]], Store.getState());
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [[1n, 3n]], Store.getState());
     // Mock backend answer telling saga to split edges 3-2 and 3-1.
     mockEdgesForAgglomerateMinCut(context.mocks, 10, [
       {
         position1: getPositionForSegmentId(3),
         position2: getPositionForSegmentId(1),
-        segmentId1: 3,
-        segmentId2: 1,
+        segmentId1: 3n,
+        segmentId2: 1n,
       } as MinCutTargetEdge,
     ]);
 
@@ -475,15 +488,18 @@ describe("Proofreading (With Agglomerate Tree interactions)", () => {
 
       yield expectSegmentList(tracingId, [
         {
-          id: 1,
+          id: 1n,
+
           anchorPosition: [3, 3, 3],
         },
         {
-          id: 4,
+          id: 4n,
+
           anchorPosition: [5, 5, 5],
         },
         {
-          id: 1339,
+          id: 1339n,
+
           anchorPosition: [2, 2, 2],
         },
       ]);
@@ -496,13 +512,13 @@ describe("Proofreading (With Agglomerate Tree interactions)", () => {
       // Agglomerate 4 and 6 were merged and then agglomerate 1 was split between segment 2 and 3.
       expect(finalMapping).toEqual(
         new Map([
-          [1, 1339],
-          [2, 1339],
-          [3, 1],
-          [4, 4],
-          [5, 4],
-          [6, 4],
-          [7, 4],
+          [1n, 1339n],
+          [2n, 1339n],
+          [3n, 1n],
+          [4n, 4n],
+          [5n, 4n],
+          [6n, 4n],
+          [7n, 4n],
         ]),
       );
     });
@@ -512,7 +528,7 @@ describe("Proofreading (With Agglomerate Tree interactions)", () => {
 
   it("should try to min cut agglomerate via node ids but interfering merge adds new edge. Resulting mapping should be correct.", async (context: WebknossosTestContext) => {
     // Additional edge to create agglomerate 1 with edges 1-2,2-3,1-3 to enforce cut with multiple edges.
-    const backendMock = mockInitialBucketAndAgglomerateData(context, [[1, 3]], Store.getState());
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [[1n, 3n]], Store.getState());
 
     // Directly after saving that the agglomerate trees were loaded, inject a version which adds a new edge to agglomerate 1.
     backendMock.planMultipleVersionInjections(8, mergeSegment3And4WithAgglomerateTree1);
@@ -522,8 +538,8 @@ describe("Proofreading (With Agglomerate Tree interactions)", () => {
       {
         position1: getPositionForSegmentId(3),
         position2: getPositionForSegmentId(1),
-        segmentId1: 3,
-        segmentId2: 1,
+        segmentId1: 3n,
+        segmentId2: 1n,
       } as MinCutTargetEdge,
     ]);
 
@@ -548,11 +564,13 @@ describe("Proofreading (With Agglomerate Tree interactions)", () => {
 
       yield expectSegmentList(tracingId, [
         {
-          id: 1,
+          id: 1n,
+
           anchorPosition: [3, 3, 3],
         },
         {
-          id: 1339,
+          id: 1339n,
+
           anchorPosition: [2, 2, 2],
         },
       ]);
@@ -565,13 +583,13 @@ describe("Proofreading (With Agglomerate Tree interactions)", () => {
       // Agglomerate 1 and 6 were merged and then split between segment 2 and 3.
       expect(finalMapping).toEqual(
         new Map([
-          [1, 1339],
-          [2, 1339],
-          [3, 1],
-          [4, 1],
-          [5, 1],
-          [6, 6],
-          [7, 6],
+          [1n, 1339n],
+          [2n, 1339n],
+          [3n, 1n],
+          [4n, 1n],
+          [5n, 1n],
+          [6n, 6n],
+          [7n, 6n],
         ]),
       );
     });
@@ -595,10 +613,10 @@ describe("Proofreading (With Agglomerate Tree interactions)", () => {
           name: "mergeAgglomerate" as const,
           value: {
             actionTracingId: VOLUME_TRACING_ID,
-            segmentId1: 1,
-            segmentId2: 3,
-            agglomerateId1: 1,
-            agglomerateId2: 1,
+            segmentId1: 1n,
+            segmentId2: 3n,
+            agglomerateId1: 1n,
+            agglomerateId2: 1n,
           },
         },
       ],
@@ -607,10 +625,10 @@ describe("Proofreading (With Agglomerate Tree interactions)", () => {
           name: "mergeSegmentItems" as const,
           value: {
             actionTracingId: VOLUME_TRACING_ID,
-            agglomerateId1: 1,
-            agglomerateId2: 1,
-            segmentId1: 1,
-            segmentId2: 3,
+            agglomerateId1: 1n,
+            agglomerateId2: 1n,
+            segmentId1: 1n,
+            segmentId2: 3n,
           },
         },
       ],
@@ -631,7 +649,7 @@ describe("Proofreading (With Agglomerate Tree interactions)", () => {
           value: {
             actionTimestamp: 0,
             actionTracingId: VOLUME_TRACING_ID,
-            id: 1,
+            id: 1n,
             anchorPosition: getPositionForSegmentId(3) as Vector3,
           },
         },
@@ -660,7 +678,8 @@ describe("Proofreading (With Agglomerate Tree interactions)", () => {
 
       yield expectSegmentList(tracingId, [
         {
-          id: 1,
+          id: 1n,
+
           anchorPosition: [3, 3, 3],
         },
       ]);
@@ -673,13 +692,13 @@ describe("Proofreading (With Agglomerate Tree interactions)", () => {
       // Agglomerate 1 and 6 were merged and then split between segment 2 and 3.
       expect(finalMapping).toEqual(
         new Map([
-          [1, 1],
-          [2, 1],
-          [3, 1],
-          [4, 4],
-          [5, 4],
-          [6, 6],
-          [7, 6],
+          [1n, 1n],
+          [2n, 1n],
+          [3n, 1n],
+          [4n, 4n],
+          [5n, 4n],
+          [6n, 6n],
+          [7n, 6n],
         ]),
       );
     });

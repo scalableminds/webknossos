@@ -1,3 +1,4 @@
+import { toBigInt } from "libs/bigint_helpers";
 import Request from "libs/request";
 import { retryAsyncFunction } from "libs/utils";
 import type { APIMeshFileInfo } from "types/api_types";
@@ -8,7 +9,7 @@ export type MeshChunk = {
   position: Vector3;
   byteOffset: number;
   byteSize: number;
-  unmappedSegmentId: number;
+  unmappedSegmentId: bigint;
 };
 
 export type MeshLodInfo = {
@@ -22,9 +23,17 @@ export type MeshSegmentInfo = {
   chunkScale: Vector3;
 };
 
+// The raw shapes mirror the JSON as it comes over the wire, before unmappedSegmentId
+// (an unsigned-decimal string or, for legacy payloads, a plain number) is normalized to bigint.
+type RawMeshChunk = Omit<MeshChunk, "unmappedSegmentId"> & {
+  unmappedSegmentId?: string | number | null;
+};
+type RawMeshLodInfo = Omit<MeshLodInfo, "chunks"> & { chunks: Array<RawMeshChunk> };
+type RawMeshSegmentInfo = Omit<MeshSegmentInfo, "lods"> & { lods: Array<RawMeshLodInfo> };
+
 type ListMeshChunksRequest = {
   meshFileName: string;
-  segmentId: number;
+  segmentId: bigint;
   annotationVersion: number | undefined | null;
 };
 
@@ -33,7 +42,7 @@ export function getMeshFileChunksForSegment(
   datasetId: string,
   layerName: string,
   meshFile: APIMeshFileInfo,
-  segmentId: number,
+  segmentId: bigint,
   // targetMappingName is the on-disk mapping name.
   // In case of an editable mapping, this should still be the on-disk base
   // mapping name (so that agglomerates that are untouched by the editable
@@ -45,8 +54,8 @@ export function getMeshFileChunksForSegment(
   editableMappingTracingId: string | null | undefined,
   annotationVersion: number | undefined | null,
 ): Promise<MeshSegmentInfo> {
-  return retryAsyncFunction(() =>
-    doWithToken((token) => {
+  return retryAsyncFunction(async () => {
+    const rawSegmentInfo = await doWithToken<RawMeshSegmentInfo>((token) => {
       const params = new URLSearchParams();
       params.append("token", token);
       if (targetMappingName != null) {
@@ -67,14 +76,24 @@ export function getMeshFileChunksForSegment(
           showErrorToast: false,
         },
       );
-    }),
-  );
+    });
+    return {
+      ...rawSegmentInfo,
+      lods: rawSegmentInfo.lods.map((lod) => ({
+        ...lod,
+        chunks: lod.chunks.map((chunk) => ({
+          ...chunk,
+          unmappedSegmentId: chunk.unmappedSegmentId != null ? toBigInt(chunk.unmappedSegmentId) : 0n,
+        })),
+      })),
+    };
+  });
 }
 
 type MeshChunkDataRequest = {
   byteOffset: number;
   byteSize: number;
-  segmentId: number | null; // Only relevant for neuroglancer precomputed meshes
+  segmentId: bigint | null; // Only relevant for neuroglancer precomputed meshes
 };
 
 export type MeshChunkDataRequestList = {

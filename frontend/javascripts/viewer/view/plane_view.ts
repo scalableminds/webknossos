@@ -40,7 +40,11 @@ import { updateTemporarySettingAction } from "viewer/model/actions/settings_acti
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import Store from "viewer/store";
 import { getGroundTruthLayoutRect } from "viewer/view/layouting/default_layout_configs";
-import { clearCanvas, setupRenderArea } from "viewer/view/rendering_utils";
+import {
+  clearCanvas,
+  getActiveTDViewCameraName,
+  setupRenderArea,
+} from "viewer/view/rendering_utils";
 
 const LIGHT_INTENSITY = 10;
 
@@ -325,13 +329,13 @@ class PlaneView {
   getActiveTDViewCamera(): OrthographicCamera | PerspectiveCamera {
     // Fall back to the orthographic camera as long as the perspective camera
     // has not been derived from it yet (see updatePerspectiveCameraFromOrthographic).
-    if (
-      Store.getState().userConfiguration.tdViewUsePerspectiveCamera &&
-      this.tdPerspectiveCamera.userData.isDerived
-    ) {
-      return this.tdPerspectiveCamera;
-    }
-    return this.cameras[OrthoViews.TDView];
+    const cameraName = getActiveTDViewCameraName(
+      Store.getState().userConfiguration.tdViewUsePerspectiveCamera,
+      this.tdPerspectiveCamera.userData.isDerived,
+    );
+    return cameraName === TDViewPerspectiveCameraName
+      ? this.tdPerspectiveCamera
+      : this.cameras[OrthoViews.TDView];
   }
 
   stop(): void {

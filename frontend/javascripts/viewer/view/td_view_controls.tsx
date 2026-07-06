@@ -1,8 +1,10 @@
 import {
   BorderInnerOutlined,
   BorderOuterOutlined,
+  BorderOutlined,
   SettingOutlined,
   StopOutlined,
+  VideoCameraOutlined,
 } from "@ant-design/icons";
 import {
   Button,
@@ -33,7 +35,7 @@ type Props = {
   onChangeTdViewDisplayPlanes: (arg0: RadioChangeEvent) => void;
   onChangeTdViewDisplayDatasetBorders: SwitchChangeEventHandler;
   onChangeTdViewDisplayLayerBorders: SwitchChangeEventHandler;
-  onChangeTdViewUsePerspectiveCamera: SwitchChangeEventHandler;
+  onChangeTdViewUsePerspectiveCamera: (arg0: RadioChangeEvent) => void;
 };
 
 function TDViewControls({
@@ -121,13 +123,25 @@ function TDViewControls({
         label: (
           <Row>
             <Col span={14}>
-              <label className="setting-label">Perspective Projection</label>
+              <label className="setting-label">Camera Projection</label>
             </Col>
             <Col span={10}>
-              <Switch
-                checked={tdViewUsePerspectiveCamera}
+              <Radio.Group
+                value={tdViewUsePerspectiveCamera}
                 onChange={onChangeTdViewUsePerspectiveCamera}
-              />
+                size="small"
+              >
+                <Tooltip title="Orthographic Camera">
+                  <Radio.Button value={false}>
+                    <BorderOutlined />
+                  </Radio.Button>
+                </Tooltip>
+                <Tooltip title="Perspective Camera">
+                  <Radio.Button value={true}>
+                    <VideoCameraOutlined />
+                  </Radio.Button>
+                </Tooltip>
+              </Radio.Group>
             </Col>
           </Row>
         ),
@@ -185,7 +199,8 @@ function mapDispatchToProps(dispatch: Dispatch<any>) {
       dispatch(updateUserSettingAction("tdViewDisplayLayerBorders", tdViewDisplayLayerBorders));
     },
 
-    onChangeTdViewUsePerspectiveCamera(tdViewUsePerspectiveCamera: boolean) {
+    onChangeTdViewUsePerspectiveCamera(evt: RadioChangeEvent) {
+      const tdViewUsePerspectiveCamera: boolean = evt.target.value;
       dispatch(updateUserSettingAction("tdViewUsePerspectiveCamera", tdViewUsePerspectiveCamera));
     },
   };

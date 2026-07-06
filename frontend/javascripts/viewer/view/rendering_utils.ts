@@ -26,6 +26,16 @@ import Store from "viewer/store";
 const getBackgroundColor = (): number =>
   Store.getState().uiInformation.theme === "dark" ? 0x000000 : 0xffffff;
 
+// Shared with PlaneView.getActiveTDViewCamera so both places agree on which
+// camera is actually active for the TD viewport.
+export const getActiveTDViewCameraName = (
+  tdViewUsePerspectiveCamera: boolean,
+  tdPerspectiveCameraIsDerived: boolean,
+): OrthoView | typeof TDViewPerspectiveCameraName =>
+  tdViewUsePerspectiveCamera && tdPerspectiveCameraIsDerived
+    ? TDViewPerspectiveCameraName
+    : OrthoViews.TDView;
+
 export const setupRenderArea = (
   renderer: WebGLRenderer,
   x: number,
@@ -63,11 +73,13 @@ export function renderToTexture(
   const { renderer, scene: defaultScene } = SceneController;
   const state = Store.getState();
   scene = scene || defaultScene;
-  // The 3D viewport is rendered with its perspective camera if the corresponding
-  // setting is active (matching PlaneView.getActiveTDViewCamera).
+  const tdPerspectiveCamera = scene.getObjectByName(TDViewPerspectiveCameraName);
   const cameraName =
-    plane === OrthoViews.TDView && state.userConfiguration.tdViewUsePerspectiveCamera
-      ? TDViewPerspectiveCameraName
+    plane === OrthoViews.TDView
+      ? getActiveTDViewCameraName(
+          state.userConfiguration.tdViewUsePerspectiveCamera,
+          Boolean(tdPerspectiveCamera?.userData.isDerived),
+        )
       : plane;
   camera = (camera || scene.getObjectByName(cameraName) || scene.getObjectByName(plane)) as
     | OrthographicCamera

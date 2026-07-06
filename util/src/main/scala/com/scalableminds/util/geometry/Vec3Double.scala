@@ -1,6 +1,6 @@
 package com.scalableminds.util.geometry
 
-import com.scalableminds.util.tools.Math._
+import com.scalableminds.util.tools.MathUtils._
 import play.api.libs.json.Json._
 import play.api.libs.json._
 

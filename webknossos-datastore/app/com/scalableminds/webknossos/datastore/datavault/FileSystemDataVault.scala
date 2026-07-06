@@ -1,8 +1,9 @@
 package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Fox, Full}
+import com.scalableminds.util.box.{Box, Full}
+import com.scalableminds.util.box.Box.tryo
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import org.apache.commons.io.FileUtils
@@ -89,7 +90,7 @@ class FileSystemDataVault extends DataVault {
     } yield result
   }
 
-  override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
+  override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[Seq[VaultPath]] =
     for {
       localPath <- vaultPathToLocalPath(path)
       listing =
@@ -99,10 +100,10 @@ class FileSystemDataVault extends DataVault {
             .filter(file => Files.isDirectory(file))
             .collect(Collectors.toList())
             .asScala
-            .toList
+            .toSeq
             .map(dir => new VaultPath(UPath.fromLocalPath(dir), this))
             .take(maxItems)
-        } else List.empty
+        } else Seq.empty
     } yield listing
 
   override def getUsedStorageBytes(path: VaultPath)(using ec: ExecutionContext, tc: TokenContext): Fox[Long] =

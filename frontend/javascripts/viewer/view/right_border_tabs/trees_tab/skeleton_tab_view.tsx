@@ -31,6 +31,7 @@ import {
 } from "antd";
 import { saveAs } from "file-saver";
 import { formatLengthAsVx, formatNumberToLength } from "libs/format_utils";
+import importDynamic from "libs/import_dynamic";
 import { readFileAsArrayBuffer, readFileAsText } from "libs/read_file";
 import Toast from "libs/toast";
 import { isFileExtensionEqualTo, promiseAllWithErrors, sleep } from "libs/utils";
@@ -222,7 +223,9 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
       try {
         // @zip.js is a fairly large module
         // Dynamically import it to avoid loading it on Dashboard/admin pages.
-        const { BlobReader, ZipReader, BlobWriter } = await import("@zip.js/zip.js");
+        const { BlobReader, ZipReader, BlobWriter } = await importDynamic(
+          () => import("@zip.js/zip.js"),
+        );
 
         const reader = new ZipReader(new BlobReader(file));
         const entries = await reader.getEntries();
@@ -619,7 +622,9 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     try {
       // @zip.js is a fairly large module
       // Dynamically import it to avoid loading it on Dashboard/admin pages.
-      const { BlobWriter, ZipWriter, TextReader } = await import("@zip.js/zip.js");
+      const { BlobWriter, ZipWriter, TextReader } = await importDynamic(
+        () => import("@zip.js/zip.js"),
+      );
 
       const treesCsv = getTreesAsCSV(annotationId, skeletonTracing, datasetUnit);
       const nodesCsv = getTreeNodesAsCSV(

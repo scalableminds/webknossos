@@ -1,6 +1,6 @@
 package com.scalableminds.util.geometry
 
-import com.scalableminds.util.tools.Math.ceilDiv
+import com.scalableminds.util.tools.MathUtils.ceilDiv
 import play.api.libs.json.{JsObject, Json}
 
 case class BoundingBox(topLeft: Vec3Int, width: Int, height: Int, depth: Int) {

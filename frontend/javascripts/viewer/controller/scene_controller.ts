@@ -76,7 +76,7 @@ import {
 } from "viewer/model/accessors/tracing_accessor";
 import { getPlaneScalingFactor } from "viewer/model/accessors/view_mode_accessor";
 import { sceneControllerInitializedAction } from "viewer/model/actions/actions";
-import { scheduleMipLoadAction } from "viewer/model/actions/annotation_actions";
+import { loadMipAction } from "viewer/model/actions/annotation_actions";
 import Dimensions from "viewer/model/dimensions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import type { Transform } from "viewer/model/helpers/transformation_helpers";
@@ -408,7 +408,7 @@ class SceneController {
       for (const config of configs) {
         if (!volume.hasLayer(config.layerName)) {
           volume.addLayer(config);
-          Store.dispatch(scheduleMipLoadAction(bbox.id, bbox, config));
+          Store.dispatch(loadMipAction(bbox.id, bbox, config));
         }
       }
 

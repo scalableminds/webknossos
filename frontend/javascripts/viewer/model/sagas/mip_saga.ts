@@ -4,9 +4,9 @@ import { cancel, cancelled, fork, put, take, takeEvery } from "typed-redux-saga"
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { resolveMipLayerSource } from "viewer/geometries/mip_volume";
 import {
+  type LoadMipAction,
   type RemoveMipForBBoxAction,
   type RemoveMipLayerForBBoxAction,
-  type ScheduleMipLoadAction,
   setMipForBBoxAction,
 } from "viewer/model/actions/annotation_actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
@@ -94,8 +94,8 @@ export default function* mipSaga(): Saga<void> {
 
   // New layer scheduled for download: cancel any prior task for the same (bbox, layer) pair,
   // then fork a fresh download. This handles the case where bbox bounds changed, which causes
-  // scene_controller to recreate the volume and re-dispatch SCHEDULE_MIP_LOAD for all layers.
-  yield* takeEvery("SCHEDULE_MIP_LOAD", function* (action: ScheduleMipLoadAction) {
+  // scene_controller to recreate the volume and re-dispatch LOAD_MIP for all layers.
+  yield* takeEvery("LOAD_MIP", function* (action: LoadMipAction) {
     const key = taskKey(action.bboxId, action.config.layerName);
     const existing = activeTasks.get(key);
     if (existing != null) {

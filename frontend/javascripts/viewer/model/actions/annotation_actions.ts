@@ -66,7 +66,7 @@ type DeleteUserBoundingBox = ReturnType<typeof deleteUserBoundingBoxAction>;
 export type SetMipForBBoxAction = ReturnType<typeof setMipForBBoxAction>;
 export type RemoveMipForBBoxAction = ReturnType<typeof removeMipForBBoxAction>;
 export type RemoveMipLayerForBBoxAction = ReturnType<typeof removeMipLayerForBBoxAction>;
-export type ScheduleMipLoadAction = ReturnType<typeof scheduleMipLoadAction>;
+export type LoadMipAction = ReturnType<typeof loadMipAction>;
 export type UpdateMeshVisibilityAction = ReturnType<typeof updateMeshVisibilityAction>;
 export type UpdateMeshOpacityAction = ReturnType<typeof updateMeshOpacityAction>;
 export type MaybeFetchMeshFilesAction = ReturnType<typeof maybeFetchMeshFilesAction>;
@@ -115,7 +115,7 @@ export type AnnotationActionTypes =
   | SetMipForBBoxAction
   | RemoveMipForBBoxAction
   | RemoveMipLayerForBBoxAction
-  | ScheduleMipLoadAction;
+  | LoadMipAction;
 
 export type UserBoundingBoxAction =
   | SetUserBoundingBoxesAction
@@ -237,13 +237,9 @@ export const removeMipLayerForBBoxAction = (id: number, layerName: string) =>
 
 // Dispatched by scene_controller when a new MIP layer slot is ready for data download.
 // The MIP saga picks this up, downloads the data, and calls volume.receiveLayerData.
-export const scheduleMipLoadAction = (
-  bboxId: number,
-  bbox: UserBoundingBox,
-  config: MipLayerConfig,
-) =>
+export const loadMipAction = (bboxId: number, bbox: UserBoundingBox, config: MipLayerConfig) =>
   ({
-    type: "SCHEDULE_MIP_LOAD",
+    type: "LOAD_MIP",
     bboxId,
     bbox,
     config,

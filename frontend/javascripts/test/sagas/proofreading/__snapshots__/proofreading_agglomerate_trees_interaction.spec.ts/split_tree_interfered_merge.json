@@ -5,7 +5,7 @@
       "value": {
         "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
         "agglomerateInfo": {
-          "agglomerateId": 1,
+          "agglomerateId": 1n,
           "tracingId": "volumeTracingId",
         },
         "branchPoints": [],
@@ -54,9 +54,9 @@
       "name": "splitAgglomerate",
       "value": {
         "actionTracingId": "volumeTracingId",
-        "agglomerateId": 1,
-        "segmentId1": 2,
-        "segmentId2": 3,
+        "agglomerateId": 1n,
+        "segmentId1": 2n,
+        "segmentId2": 3n,
       },
     },
   ],
@@ -66,7 +66,7 @@
       "value": {
         "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
         "agglomerateInfo": {
-          "agglomerateId": 1339,
+          "agglomerateId": 1339n,
           "tracingId": "volumeTracingId",
         },
         "branchPoints": [],
@@ -98,7 +98,7 @@
         "color": null,
         "creationTime": 1494695001688,
         "groupId": null,
-        "id": 1339,
+        "id": 1339n,
         "metadata": [],
         "name": "Agglomerate 1339",
       },
@@ -114,7 +114,7 @@
           2,
           2,
         ],
-        "id": 1,
+        "id": 1n,
       },
     },
   ],
@@ -128,7 +128,7 @@
           3,
           3,
         ],
-        "id": 1339,
+        "id": 1339n,
       },
     },
   ],

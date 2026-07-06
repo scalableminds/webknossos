@@ -509,7 +509,7 @@ export const setTreeMetadataAction = (
     treeId,
   }) as const;
 
-export const setTreeAgglomerateInfoIdAction = (agglomerateId: number, treeId: number) =>
+export const setTreeAgglomerateInfoIdAction = (agglomerateId: bigint, treeId: number) =>
   ({
     type: "SET_TREE_AGGLOMERATE_INFO_ID",
     agglomerateId,
@@ -650,7 +650,7 @@ export const loadAgglomerateTreeAtPositionAction = (
 export const loadAgglomerateTreeFromIdAction = (
   layerName: string,
   mappingName: string,
-  agglomerateId: number,
+  agglomerateId: bigint,
 ) =>
   ({
     type: "LOAD_AGGLOMERATE_TREE_FROM_ID",

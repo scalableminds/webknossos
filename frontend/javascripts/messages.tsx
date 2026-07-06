@@ -181,7 +181,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   ),
   "tracing.copy_cell_id": "Hit CTRL + I to copy the currently hovered segment id",
   "tracing.segment_id_out_of_bounds": (
-    requestedId: number,
+    requestedId: bigint,
     validRange: readonly [number, number],
   ) =>
     `Cannot create a segment with id=${requestedId} because it is not between ${validRange[0]} and ${validRange[1]}.`,
@@ -245,7 +245,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     "You cannot place nodes outside of a segment in merger mode.",
   "tracing.not_mesh_available_to_download":
     "There is no mesh for the active segment id available to download.",
-  "tracing.mesh_listing_failed": (segmentId: number) =>
+  "tracing.mesh_listing_failed": (segmentId: bigint) =>
     `A precomputed mesh could not be loaded for segment ${segmentId}. You may want to use ad-hoc meshing instead. More information was printed to the browser's console.`,
   "tracing.area_to_fill_is_too_big":
     "The area you want to fill is too big. Please annotate the area in multiple strokes.",

@@ -61,7 +61,7 @@ export function loadAgglomerateTreeAtPosition(position: Vector3): void {
 
 // loadAgglomerateTreeAtPosition should be preferred as it allows to use the up-to-date agglomerate id at the given position.
 // Is needed in live-collab scenario.
-export function loadAgglomerateTreeFromId(agglomerateId: number): void {
+export function loadAgglomerateTreeFromId(agglomerateId: bigint): void {
   const agglomerateTreeLoadingInfo = getAgglomerateTreeLoadingInfo();
 
   if (agglomerateTreeLoadingInfo) {

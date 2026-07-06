@@ -133,9 +133,9 @@ export function handleOpenContextMenu(
   plane: OrthoView,
   isTouch: boolean,
   event: MouseEvent,
-  meshId?: number | null | undefined,
+  meshId?: bigint | null | undefined,
   meshIntersectionPosition?: Vector3 | null | undefined,
-  unmappedSegmentId?: number | null | undefined,
+  unmappedSegmentId?: bigint | null | undefined,
 ) {
   const state = Store.getState();
   const { activeViewport } = state.viewModeData.plane;

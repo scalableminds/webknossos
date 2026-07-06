@@ -28,7 +28,7 @@ import {
 } from "./segment_group_fixtures";
 
 const createSegment = (
-  id: number,
+  id: bigint,
   groupId: number | null,
   metadata: MetadataEntryProto[],
 ): Segment => ({
@@ -47,7 +47,7 @@ const tracingId = "someTracingId";
 
 describe("diffMetadataOfSegments for volume tracings", () => {
   it("diffMetadataOfSegments should detect added, changed and removed metadata", () => {
-    const segment1 = createSegment(1, 0, [
+    const segment1 = createSegment(1n, 0, [
       { key: "keyToDelete", stringValue: "string 0" },
       {
         key: "keyToChange1",
@@ -296,7 +296,7 @@ describe("uncachedDiffSegmentLists should diff segment lists", () => {
         name: "updateMetadataOfSegment",
         value: {
           actionTracingId: VOLUME_TRACING_ID,
-          id: 1,
+          id: 1n,
           removeEntriesByKey: ["someKey2"],
           upsertEntriesByKey: [
             { key: "someKey1-1", stringValue: "someStringValue - segment 1 - changed" },

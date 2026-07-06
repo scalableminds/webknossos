@@ -186,7 +186,7 @@ export function VolumeInterpolationButton() {
   );
 }
 
-const mapId = (volumeTracingId: string | null | undefined, id: number) => {
+const mapId = (volumeTracingId: string | null | undefined, id: bigint) => {
   // Note that the return value can be an unmapped id even when
   // a mapping is active, if it is a HDF5 mapping that is partially loaded
   // and no entry exists yet for the input id.
@@ -201,7 +201,7 @@ const mapId = (volumeTracingId: string | null | undefined, id: number) => {
 export function CreateSegmentButton() {
   const volumeTracingId = useWkSelector((state) => getActiveSegmentationTracing(state)?.tracingId);
   const unmappedActiveCellId = useWkSelector(
-    (state) => getActiveSegmentationTracing(state)?.activeCellId || 0,
+    (state) => getActiveSegmentationTracing(state)?.activeCellId || 0n,
   );
   const { mappingStatus } = useWkSelector((state) =>
     getMappingInfoForVolumeTracing(state, volumeTracingId),

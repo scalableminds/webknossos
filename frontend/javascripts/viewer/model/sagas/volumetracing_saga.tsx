@@ -211,7 +211,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
       continue;
     }
 
-    if (isDrawing && activeCellId === 0) {
+    if (isDrawing && activeCellId === 0n) {
       yield* call(
         [Toast, Toast.warning],
         "The current segment ID is 0. Please change the active segment ID via the status bar, by creating a new segment from the toolbar or by selecting an existing one via context menu.",
@@ -417,7 +417,7 @@ function* ensureSegmentExists(
   const layerName = layer.name;
   const segmentId = action.segmentId;
 
-  if (segmentId === 0 || segmentId == null) {
+  if (segmentId === 0n || segmentId == null) {
     return;
   }
 
@@ -489,7 +489,7 @@ function* updateHoveredSegmentId(): Saga<void> {
   const { mapped: id, unmapped: unmappedId } =
     globalMousePosition != null
       ? getSegmentIdInfoForPosition(globalMousePosition)
-      : { mapped: 0, unmapped: 0 };
+      : { mapped: 0n, unmapped: 0n };
 
   const oldHoveredSegmentId = yield* select(
     (store) => store.temporaryConfiguration.hoveredSegmentId,

@@ -129,8 +129,8 @@ const defaultState: WebknossosState = {
     flightmodeRecording: false,
     controlMode: ControlModeEnum.VIEW,
     mousePosition: null,
-    hoveredSegmentId: 0,
-    hoveredUnmappedSegmentId: 0,
+    hoveredSegmentId: 0n,
+    hoveredUnmappedSegmentId: 0n,
     activeMappingByLayer: {},
     isMergerModeEnabled: false,
     gpuSetup: {

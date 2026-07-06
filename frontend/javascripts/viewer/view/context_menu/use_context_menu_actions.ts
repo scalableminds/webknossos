@@ -26,10 +26,10 @@ export function useContextMenuActions() {
       },
 
       setActiveCell: (
-        segmentId: number,
+        segmentId: bigint,
         anchorPosition?: Vector3,
         additionalCoordinates?: AdditionalCoordinate[],
-        maybeUnmappedSegmentId?: number,
+        maybeUnmappedSegmentId?: bigint,
       ) => {
         dispatch(
           setActiveCellAction(
@@ -69,11 +69,11 @@ export function useContextMenuActions() {
         );
       },
 
-      removeMesh: (layerName: string, meshId: number) => {
+      removeMesh: (layerName: string, meshId: bigint) => {
         dispatch(removeMeshAction(layerName, meshId));
       },
 
-      hideMesh: (layerName: string, meshId: number) => {
+      hideMesh: (layerName: string, meshId: bigint) => {
         dispatch(
           updateMeshVisibilityAction(
             layerName,
@@ -88,7 +88,7 @@ export function useContextMenuActions() {
         dispatch(setPositionAction(position));
       },
 
-      refreshMesh: (layerName: string, segmentId: number) => {
+      refreshMesh: (layerName: string, segmentId: bigint) => {
         dispatch(refreshMeshAction(layerName, segmentId));
       },
 

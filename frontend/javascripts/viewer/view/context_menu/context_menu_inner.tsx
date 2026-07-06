@@ -24,7 +24,7 @@ export function ContextMenuInner() {
   const segmentIdAtPosition =
     globalPosition != null && contextMenuPosition != null
       ? getSegmentIdForPosition(globalPosition)
-      : 0;
+      : 0n;
 
   const { infoRows } = useContextMenuInfoRows(contextInfo, segmentIdAtPosition);
 

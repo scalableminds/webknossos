@@ -71,8 +71,8 @@ describe("Proofreading (with mesh actions)", () => {
 
     // Set up the merge-related segment partners. Normally, this would happen
     // due to the user's interactions.
-    yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
-    yield put(setActiveCellAction(1, undefined, null, 1));
+    yield put(updateSegmentAction(1n, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
+    yield put(setActiveCellAction(1n, undefined, null, 1n));
 
     yield call(makeMappingEditableForTest);
 
@@ -98,8 +98,8 @@ describe("Proofreading (with mesh actions)", () => {
     yield put(
       proofreadMergeAction(
         null, // mesh actions do not have a usable source position.
-        1337,
-        1337,
+        1337n,
+        1337n,
       ),
     );
     yield take(finishMappingInitializationChannel);
@@ -113,20 +113,20 @@ describe("Proofreading (with mesh actions)", () => {
         name: "mergeAgglomerate",
         value: {
           actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 1,
-          segmentId2: 1337,
-          agglomerateId1: 1,
-          agglomerateId2: 1337,
+          segmentId1: 1n,
+          segmentId2: 1337n,
+          agglomerateId1: 1n,
+          agglomerateId2: 1337n,
         },
       },
       {
         name: "mergeSegmentItems",
         value: {
           actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 1,
-          segmentId2: 1337,
-          agglomerateId1: 1,
-          agglomerateId2: 1337,
+          segmentId1: 1n,
+          segmentId2: 1337n,
+          agglomerateId1: 1n,
+          agglomerateId2: 1337n,
         },
       },
     ]);
@@ -152,17 +152,17 @@ describe("Proofreading (with mesh actions)", () => {
 
         expect(finalMapping).toEqual(
           new Map([
-            [1, 1],
-            [2, 1],
-            [3, 1],
-            [4, 4],
-            [5, 4],
-            [6, 6],
-            [7, 6],
-            // [1337, 1], not loaded due to no rebasing performed as this test has no injected updated actions.
+            [1n, 1n],
+            [2n, 1n],
+            [3n, 1n],
+            [4n, 4n],
+            [5n, 4n],
+            [6n, 6n],
+            [7n, 6n],
+            // [1337n, 1n], not loaded due to no rebasing performed as this test has no injected updated actions.
             // If there would be injected updates (simulating other users' changes) the segment id 1337 would
             // been looked up for rebasing and thus added to the loaded mapping.
-            // [1338, 1], not loaded
+            // [1338n, 1n], not loaded
           ]),
         );
         yield call(() => context.api.tracing.save());
@@ -171,7 +171,7 @@ describe("Proofreading (with mesh actions)", () => {
           tracingId,
           [
             {
-              id: 1,
+              id: 1n,
               anchorPosition: [1, 1, 1],
             },
           ],
@@ -201,23 +201,23 @@ describe("Proofreading (with mesh actions)", () => {
 
       expect(finalMapping).toEqual(
         new Map([
-          [1, 1],
-          [2, 1],
-          [3, 1],
-          [4, 4],
-          [5, 4],
-          [6, 4],
-          [7, 4],
-          [1337, 1], // loaded due to rebasing was necessary due to injected update action.
-          // [1338, 1], not loaded
+          [1n, 1n],
+          [2n, 1n],
+          [3n, 1n],
+          [4n, 4n],
+          [5n, 4n],
+          [6n, 4n],
+          [7n, 4n],
+          [1337n, 1n], // loaded due to rebasing was necessary due to injected update action.
+          // [1338n, 1n], not loaded
         ]),
       );
 
       yield* expectSegmentList(
         tracingId,
         [
-          { id: 1, anchorPosition: getPositionForSegmentId(1) },
-          { id: 4, anchorPosition: getPositionForSegmentId(5) }, // 5 is contained in agglomerate 4
+          { id: 1n, anchorPosition: getPositionForSegmentId(1) },
+          { id: 4n, anchorPosition: getPositionForSegmentId(5) }, // 5 is contained in agglomerate 4
         ],
         backendMock,
       );
@@ -243,13 +243,13 @@ describe("Proofreading (with mesh actions)", () => {
           throw new Error("Unexpected version of min cut request:" + version);
         }
         const { agglomerateId, partition1, partition2 } = segmentsInfo;
-        if (agglomerateId === 6 && isEqual(partition1, [1337]) && isEqual(partition2, [1338])) {
+        if (agglomerateId === 6n && isEqual(partition1, [1337n]) && isEqual(partition2, [1338n])) {
           return [
             {
               position1: getPositionForSegmentId(1337),
               position2: getPositionForSegmentId(1338),
-              segmentId1: 1337,
-              segmentId2: 1338,
+              segmentId1: 1337n,
+              segmentId2: 1338n,
             },
           ];
         }
@@ -265,13 +265,13 @@ describe("Proofreading (with mesh actions)", () => {
     const { api } = context;
     const { tracingId } = yield* select((state: WebknossosState) => state.annotation.volumes[0]);
     const expectedInitialMapping = new Map([
-      [1, 6],
-      [2, 6],
-      [3, 6],
-      [4, 4],
-      [5, 4],
-      [6, 6],
-      [7, 6],
+      [1n, 6n],
+      [2n, 6n],
+      [3n, 6n],
+      [4n, 4n],
+      [5n, 4n],
+      [6n, 6n],
+      [7n, 6n],
     ]);
 
     yield call(initializeMappingAndTool, context, tracingId);
@@ -283,8 +283,8 @@ describe("Proofreading (with mesh actions)", () => {
 
     // Set up the merge-related segment partners. Normally, this would happen
     // due to the user's interactions.
-    yield put(updateSegmentAction(6, { anchorPosition: getPositionForSegmentId(1337) }, tracingId));
-    yield put(setActiveCellAction(6, undefined, null, 1337));
+    yield put(updateSegmentAction(6n, { anchorPosition: getPositionForSegmentId(1337) }, tracingId));
+    yield put(setActiveCellAction(6n, undefined, null, 1337n));
 
     yield call(makeMappingEditableForTest);
 
@@ -304,8 +304,8 @@ describe("Proofreading (with mesh actions)", () => {
     yield put(
       minCutAgglomerateWithPositionAction(
         null, // mesh actions do not have a usable source position.
-        1338,
-        6,
+        1338n,
+        6n,
       ),
     );
     yield take("FINISH_MAPPING_INITIALIZATION");
@@ -330,8 +330,8 @@ describe("Proofreading (with mesh actions)", () => {
     const backendMock = mockInitialBucketAndAgglomerateData(
       context,
       [
-        [7, 1337],
-        [1338, 1],
+        [7n, 1337n],
+        [1338n, 1n],
       ],
       Store.getState(),
     );
@@ -351,16 +351,16 @@ describe("Proofreading (with mesh actions)", () => {
           name: "splitAgglomerate",
           value: {
             actionTracingId: VOLUME_TRACING_ID,
-            agglomerateId: 6,
-            segmentId1: 1337,
-            segmentId2: 1338,
+            agglomerateId: 6n,
+            segmentId1: 1337n,
+            segmentId2: 1338n,
           },
         },
         {
           name: "createSegment",
           value: {
             actionTracingId: VOLUME_TRACING_ID,
-            id: 1339,
+            id: 1339n,
             anchorPosition: getPositionForSegmentId(1338),
             name: null,
             color: null,
@@ -377,17 +377,17 @@ describe("Proofreading (with mesh actions)", () => {
 
       expect(finalMapping).toEqual(
         new Map([
-          [1, 1339],
-          [2, 1339],
-          [3, 1339],
-          [4, 4],
-          [5, 4],
-          [6, 6],
-          [7, 6],
-          // [1337, 6], not loaded due to no rebasing performed as this test has no injected updated actions.
+          [1n, 1339n],
+          [2n, 1339n],
+          [3n, 1339n],
+          [4n, 4n],
+          [5n, 4n],
+          [6n, 6n],
+          [7n, 6n],
+          // [1337n, 6n], not loaded due to no rebasing performed as this test has no injected updated actions.
           // If there would be injected updates (simulating other users' changes) the segment id 1337 would
           // been looked up for rebasing and thus added to the loaded mapping.
-          // [1338, 1339], also not loaded. see above.
+          // [1338n, 1339n], also not loaded. see above.
         ]),
       );
 
@@ -395,11 +395,11 @@ describe("Proofreading (with mesh actions)", () => {
         tracingId,
         [
           {
-            id: 6,
+            id: 6n,
             anchorPosition: getPositionForSegmentId(1337), // 1337 is contained in agglomerate 6
           },
           {
-            id: 1339,
+            id: 1339n,
             anchorPosition: getPositionForSegmentId(1338), // was split off
           },
         ],
@@ -425,8 +425,8 @@ describe("Proofreading (with mesh actions)", () => {
     const backendMock = mockInitialBucketAndAgglomerateData(
       context,
       [
-        [7, 1337],
-        [1338, 1],
+        [7n, 1337n],
+        [1338n, 1n],
       ],
       Store.getState(),
     );
@@ -449,17 +449,17 @@ describe("Proofreading (with mesh actions)", () => {
           value: {
             actionTracingId: VOLUME_TRACING_ID,
             // Different to test above:
-            agglomerateId: 4, // !Changed! due to interfered merge update action version 7. Would be aggloId 6,
+            agglomerateId: 4n, // !Changed! due to interfered merge update action version 7. Would be aggloId 6,
             // but the merge made it a 4, because the split operation is after the injected version 7.
-            segmentId1: 1337,
-            segmentId2: 1338,
+            segmentId1: 1337n,
+            segmentId2: 1338n,
           },
         },
         {
           name: "updateSegmentPartial",
           value: {
             actionTracingId: "volumeTracingId",
-            id: 4,
+            id: 4n,
             anchorPosition: getPositionForSegmentId(1337),
           },
         },
@@ -472,7 +472,7 @@ describe("Proofreading (with mesh actions)", () => {
             color: null,
             creationTime: 1494695001688,
             groupId: null,
-            id: 1339,
+            id: 1339n,
             metadata: [],
             name: null,
           },
@@ -486,24 +486,24 @@ describe("Proofreading (with mesh actions)", () => {
 
       expect(finalMapping).toEqual(
         new Map([
-          [1, 1339],
-          [2, 1339],
-          [3, 1339],
-          [4, 4],
-          [5, 4],
-          [6, 4],
-          [7, 4],
+          [1n, 1339n],
+          [2n, 1339n],
+          [3n, 1339n],
+          [4n, 4n],
+          [5n, 4n],
+          [6n, 4n],
+          [7n, 4n],
           // Same here not loaded due to no rebasing
-          [1337, 4], // loaded due to split mesh operation
-          [1338, 1339], // loaded due to split mesh operation
+          [1337n, 4n], // loaded due to split mesh operation
+          [1338n, 1339n], // loaded due to split mesh operation
         ]),
       );
 
       yield* expectSegmentList(
         tracingId,
         [
-          { id: 4, anchorPosition: [100, 100, 100] },
-          { id: 1339, anchorPosition: [101, 101, 101] },
+          { id: 4n, anchorPosition: [100, 100, 100] },
+          { id: 1339n, anchorPosition: [101, 101, 101] },
         ],
         backendMock,
       );
@@ -528,8 +528,8 @@ describe("Proofreading (with mesh actions)", () => {
     const backendMock = mockInitialBucketAndAgglomerateData(
       context,
       [
-        [1, 1338],
-        [3, 1337],
+        [1n, 1338n],
+        [3n, 1337n],
       ],
       Store.getState(),
     );
@@ -548,18 +548,18 @@ describe("Proofreading (with mesh actions)", () => {
           name: "splitAgglomerate",
           value: {
             actionTracingId: VOLUME_TRACING_ID,
-            agglomerateId: 1,
-            segmentId1: 1,
-            segmentId2: 1338,
+            agglomerateId: 1n,
+            segmentId1: 1n,
+            segmentId2: 1338n,
           },
         },
         {
           name: "splitAgglomerate",
           value: {
             actionTracingId: VOLUME_TRACING_ID,
-            agglomerateId: 1,
-            segmentId1: 3,
-            segmentId2: 1337,
+            agglomerateId: 1n,
+            segmentId1: 3n,
+            segmentId2: 1337n,
           },
         },
         {
@@ -571,7 +571,7 @@ describe("Proofreading (with mesh actions)", () => {
             color: null,
             creationTime: 1494695001688,
             groupId: null,
-            id: 1339,
+            id: 1339n,
             metadata: [],
             name: null,
           },
@@ -584,15 +584,15 @@ describe("Proofreading (with mesh actions)", () => {
 
       expect(finalMapping).toEqual(
         new Map([
-          [1, 1],
-          [2, 1],
-          [3, 1],
-          [4, 4],
-          [5, 4],
-          [6, 6],
-          [7, 6],
-          [1337, 1339], // Loaded as this segment is part of a split proofreading action done in this test.
-          [1338, 1339], // Loaded as this segment is part of a split proofreading action done in this test.
+          [1n, 1n],
+          [2n, 1n],
+          [3n, 1n],
+          [4n, 4n],
+          [5n, 4n],
+          [6n, 6n],
+          [7n, 6n],
+          [1337n, 1339n], // Loaded as this segment is part of a split proofreading action done in this test.
+          [1338n, 1339n], // Loaded as this segment is part of a split proofreading action done in this test.
         ]),
       );
 
@@ -600,11 +600,11 @@ describe("Proofreading (with mesh actions)", () => {
         tracingId,
         [
           {
-            id: 1,
+            id: 1n,
             anchorPosition: getPositionForSegmentId(1),
           },
           {
-            id: 1339,
+            id: 1339n,
             anchorPosition: getPositionForSegmentId(1338), // segment 1338 is in agglomerate 1339
           },
         ],
@@ -631,8 +631,8 @@ describe("Proofreading (with mesh actions)", () => {
     const backendMock = mockInitialBucketAndAgglomerateData(
       context,
       [
-        [1, 1338],
-        [3, 1337],
+        [1n, 1338n],
+        [3n, 1337n],
       ],
       Store.getState(),
     );
@@ -663,10 +663,10 @@ describe("Proofreading (with mesh actions)", () => {
               name: "mergeAgglomerate",
               value: {
                 actionTracingId: VOLUME_TRACING_ID,
-                segmentId1: 5,
-                segmentId2: 1337,
-                agglomerateId1: 1,
-                agglomerateId2: 1,
+                segmentId1: 5n,
+                segmentId2: 1337n,
+                agglomerateId1: 1n,
+                agglomerateId2: 1n,
               },
             },
           ],
@@ -688,18 +688,18 @@ describe("Proofreading (with mesh actions)", () => {
           name: "splitAgglomerate",
           value: {
             actionTracingId: VOLUME_TRACING_ID,
-            agglomerateId: 1,
-            segmentId1: 1,
-            segmentId2: 1338,
+            agglomerateId: 1n,
+            segmentId1: 1n,
+            segmentId2: 1338n,
           },
         },
         {
           name: "splitAgglomerate",
           value: {
             actionTracingId: VOLUME_TRACING_ID,
-            agglomerateId: 1,
-            segmentId1: 3,
-            segmentId2: 1337,
+            agglomerateId: 1n,
+            segmentId1: 3n,
+            segmentId2: 1337n,
           },
         },
       ]);
@@ -710,15 +710,15 @@ describe("Proofreading (with mesh actions)", () => {
 
       expect(finalMapping).toEqual(
         new Map([
-          [1, 1],
-          [2, 1],
-          [3, 1],
-          [4, 1],
-          [5, 1],
-          [6, 6],
-          [7, 6],
-          [1337, 1], // Loaded as this segment is part of a split proofreading action done in this test.
-          [1338, 1], // Loaded as this segment is part of a split proofreading action done in this test.
+          [1n, 1n],
+          [2n, 1n],
+          [3n, 1n],
+          [4n, 1n],
+          [5n, 1n],
+          [6n, 6n],
+          [7n, 6n],
+          [1337n, 1n], // Loaded as this segment is part of a split proofreading action done in this test.
+          [1338n, 1n], // Loaded as this segment is part of a split proofreading action done in this test.
         ]),
       );
 
@@ -726,7 +726,7 @@ describe("Proofreading (with mesh actions)", () => {
         tracingId,
         [
           {
-            id: 1,
+            id: 1n,
             anchorPosition: getPositionForSegmentId(1),
           },
         ],

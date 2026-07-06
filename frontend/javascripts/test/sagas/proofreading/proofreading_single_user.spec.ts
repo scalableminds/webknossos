@@ -60,11 +60,11 @@ describe("Proofreading (Single User)", () => {
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
-      yield put(setActiveCellAction(1));
+      yield put(updateSegmentAction(1n, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
+      yield put(setActiveCellAction(1n));
 
       // Execute the actual merge and wait for the finished mapping.
-      yield put(proofreadMergeAction(getPositionForSegmentId(4), 4));
+      yield put(proofreadMergeAction(getPositionForSegmentId(4), 4n));
       yield take("FINISH_MAPPING_INITIALIZATION");
 
       const mapping = yield* select(
@@ -78,7 +78,7 @@ describe("Proofreading (Single User)", () => {
 
       yield expectSegmentList(tracingId, [
         {
-          id: 1,
+          id: 1n,
           anchorPosition: [1, 1, 1],
         },
       ]);
@@ -90,20 +90,20 @@ describe("Proofreading (Single User)", () => {
           name: "mergeAgglomerate",
           value: {
             actionTracingId: "volumeTracingId",
-            agglomerateId1: 1,
-            agglomerateId2: 4,
-            segmentId1: 1,
-            segmentId2: 4,
+            agglomerateId1: 1n,
+            agglomerateId2: 4n,
+            segmentId1: 1n,
+            segmentId2: 4n,
           },
         },
         {
           name: "mergeSegmentItems",
           value: {
             actionTracingId: "volumeTracingId",
-            agglomerateId1: 1,
-            agglomerateId2: 4,
-            segmentId1: 1,
-            segmentId2: 4,
+            agglomerateId1: 1n,
+            agglomerateId2: 4n,
+            segmentId1: 1n,
+            segmentId2: 4n,
           },
         },
       ]);
@@ -130,8 +130,8 @@ describe("Proofreading (Single User)", () => {
 
       // Set up the split-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
-      yield put(setActiveCellAction(1));
+      yield put(updateSegmentAction(1n, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
+      yield put(setActiveCellAction(1n));
 
       // Prepare the server's reply for the upcoming split.
       vi.mocked(mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
@@ -139,14 +139,14 @@ describe("Proofreading (Single User)", () => {
           {
             position1: getPositionForSegmentId(1),
             position2: getPositionForSegmentId(2),
-            segmentId1: 1,
-            segmentId2: 2,
+            segmentId1: 1n,
+            segmentId2: 2n,
           },
         ]),
       );
 
       // Execute the split and wait for the finished mapping.
-      yield put(minCutAgglomerateWithPositionAction(getPositionForSegmentId(2), 2, 1));
+      yield put(minCutAgglomerateWithPositionAction(getPositionForSegmentId(2), 2n, 1n));
       yield take("FINISH_MAPPING_INITIALIZATION");
 
       const mapping1 = yield* select(
@@ -162,11 +162,11 @@ describe("Proofreading (Single User)", () => {
 
       yield expectSegmentList(tracingId, [
         {
-          id: 1,
+          id: 1n,
           anchorPosition: [1, 1, 1],
         },
         {
-          id: 1339,
+          id: 1339n,
           anchorPosition: [2, 2, 2],
         },
       ]);
@@ -178,9 +178,9 @@ describe("Proofreading (Single User)", () => {
           name: "splitAgglomerate",
           value: {
             actionTracingId: "volumeTracingId",
-            agglomerateId: 1,
-            segmentId1: 1,
-            segmentId2: 2,
+            agglomerateId: 1n,
+            segmentId1: 1n,
+            segmentId2: 2n,
           },
         },
         {
@@ -192,7 +192,7 @@ describe("Proofreading (Single User)", () => {
             color: null,
             creationTime: 1494695001688,
             groupId: null,
-            id: 1339,
+            id: 1339n,
             metadata: [],
             name: null,
           },

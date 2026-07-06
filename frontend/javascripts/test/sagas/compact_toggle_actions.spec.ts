@@ -32,7 +32,7 @@ const createTree = (id: number, groupId: number | null, isVisible: boolean): Tre
   type: "DEFAULT",
 });
 
-const createSegment = (id: number, groupId: number | null, isVisible: boolean): Segment => ({
+const createSegment = (id: bigint, groupId: number | null, isVisible: boolean): Segment => ({
   id,
   name: "TestSegment",
   color: [23, 23, 23],
@@ -114,8 +114,8 @@ const createStateWithSegments = (
         boundingBox: { min: [0, 0, 0], max: [10, 10, 10] },
         additionalAxes: [],
         type: "volume",
-        activeCellId: 1,
-        largestSegmentId: 0,
+        activeCellId: 1n,
+        largestSegmentId: 0n,
         tracingId,
         segmentGroups,
         segments: new DiffableMap(segments.map((s) => [s.id, s])),
@@ -140,12 +140,12 @@ const allVisibleTrees = createStateWithTrees(
 
 const allVisibleSegments = createStateWithSegments(
   [
-    createSegment(1, null, true),
-    createSegment(2, 1, true),
-    createSegment(3, 2, true),
-    createSegment(4, 3, true),
-    createSegment(5, 3, true),
-    createSegment(6, 4, true),
+    createSegment(1n, null, true),
+    createSegment(2n, 1, true),
+    createSegment(3n, 2, true),
+    createSegment(4n, 3, true),
+    createSegment(5n, 3, true),
+    createSegment(6n, 4, true),
   ],
   genericGroups,
 );
@@ -275,12 +275,12 @@ describe("Compact Toggle Actions for volume tracings", () => {
   it("compactUpdateActions shouldn't compact a single action", () => {
     const testState = createStateWithSegments(
       [
-        createSegment(1, null, true),
-        createSegment(2, 1, true),
-        createSegment(3, 2, true),
-        createSegment(4, 3, false),
-        createSegment(5, 3, true),
-        createSegment(6, 4, true),
+        createSegment(1n, null, true),
+        createSegment(2n, 1, true),
+        createSegment(3n, 2, true),
+        createSegment(4n, 3, false),
+        createSegment(5n, 3, true),
+        createSegment(6n, 4, true),
       ],
       genericGroups,
     );
@@ -291,12 +291,12 @@ describe("Compact Toggle Actions for volume tracings", () => {
   it("compactUpdateActions should compact when toggling all trees", () => {
     const testState = createStateWithSegments(
       [
-        createSegment(1, null, false),
-        createSegment(2, 1, false),
-        createSegment(3, 2, false),
-        createSegment(4, 3, false),
-        createSegment(5, 3, false),
-        createSegment(6, 4, false),
+        createSegment(1n, null, false),
+        createSegment(2n, 1, false),
+        createSegment(3n, 2, false),
+        createSegment(4n, 3, false),
+        createSegment(5n, 3, false),
+        createSegment(6n, 4, false),
       ],
       genericGroups,
     );
@@ -312,12 +312,12 @@ describe("Compact Toggle Actions for volume tracings", () => {
     // Let's toggle group 3 (which contains group 4)
     const testState = createStateWithSegments(
       [
-        createSegment(1, null, true),
-        createSegment(2, 1, true),
-        createSegment(3, 2, true),
-        createSegment(4, 3, false),
-        createSegment(5, 3, false),
-        createSegment(6, 4, false),
+        createSegment(1n, null, true),
+        createSegment(2n, 1, true),
+        createSegment(3n, 2, true),
+        createSegment(4n, 3, false),
+        createSegment(5n, 3, false),
+        createSegment(6n, 4, false),
       ],
       genericGroups,
     );
@@ -332,12 +332,12 @@ describe("Compact Toggle Actions for volume tracings", () => {
     // Let's make all trees invisible except for tree 3. Compaction should yield a toggle-root and toggle 3 action
     const testState = createStateWithSegments(
       [
-        createSegment(1, null, false),
-        createSegment(2, 1, false),
-        createSegment(3, 2, true),
-        createSegment(4, 3, false),
-        createSegment(5, 3, false),
-        createSegment(6, 4, false),
+        createSegment(1n, null, false),
+        createSegment(2n, 1, false),
+        createSegment(3n, 2, true),
+        createSegment(4n, 3, false),
+        createSegment(5n, 3, false),
+        createSegment(6n, 4, false),
       ],
       genericGroups,
     );
@@ -345,7 +345,7 @@ describe("Compact Toggle Actions for volume tracings", () => {
 
     expect(compactedActions).toEqual([
       updateSegmentGroupVisibilityVolumeAction(null, false, tracingId),
-      updateSegmentVisibilityVolumeAction(3, true, tracingId),
+      updateSegmentVisibilityVolumeAction(3n, true, tracingId),
     ]);
   });
 });

@@ -125,7 +125,7 @@ export function findTreeByName(trees: TreeMap, treeName: string): Tree | undefin
 
 export function findTreeByAgglomerateId(
   trees: TreeMap,
-  agglomerateId: number,
+  agglomerateId: bigint,
   editableMappingId: string,
   mappingName: string,
 ): Tree | undefined {

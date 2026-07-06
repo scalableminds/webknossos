@@ -19,7 +19,7 @@ import { voxelToVolumeInUnit } from "viewer/model/scaleinfo";
 import Store from "viewer/store";
 
 export function useSegmentStatistics(
-  clickedSegmentOrMeshId: number,
+  clickedSegmentOrMeshId: bigint,
   segmentStatsTriggerDate: Date | null,
   contextMenuPosition: Readonly<[number, number]> | null | undefined,
   wasSegmentOrMeshClicked: boolean,

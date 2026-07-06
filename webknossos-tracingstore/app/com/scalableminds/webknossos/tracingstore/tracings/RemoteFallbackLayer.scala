@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.tracingstore.tracings
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.Box
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
@@ -13,7 +14,6 @@ import com.scalableminds.webknossos.datastore.models.WebknossosDataRequest
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.FallbackDataKey
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient}
-import com.scalableminds.util.tools.Box
 
 import scala.concurrent.ExecutionContext
 

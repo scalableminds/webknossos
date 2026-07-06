@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.storage
 
+import com.scalableminds.util.box.{Box, Failure}
 import com.scalableminds.util.cache.LRUConcurrentCache
-import com.scalableminds.util.tools.{Box, Failure}
 import com.scalableminds.webknossos.datastore.models.datasource.AbstractDataLayerMapping
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceMappingRequest
 

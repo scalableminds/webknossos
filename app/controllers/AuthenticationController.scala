@@ -2,6 +2,7 @@ package controllers
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, JsonHelper, TextUtils}
 import com.scalableminds.util.tools.Fox.toFox
@@ -22,8 +23,7 @@ import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
 import models.analytics.{AnalyticsService, InviteEvent, JoinOrganizationEvent, SignupEvent}
 import models.organization.{Organization, OrganizationDAO, OrganizationService}
 import models.user.*
-import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
-import com.scalableminds.util.tools.Box.tryo
+import Box.tryo
 import models.team.TeamMembership
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.digest.{HmacAlgorithms, HmacUtils}

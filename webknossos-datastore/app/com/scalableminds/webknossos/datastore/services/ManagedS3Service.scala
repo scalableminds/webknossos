@@ -1,7 +1,8 @@
 package com.scalableminds.webknossos.datastore.services
 
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.tools.{Box, Fox}
+import com.scalableminds.util.box.Box
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.helpers.{PathSchemes, S3UriUtils, UPath}

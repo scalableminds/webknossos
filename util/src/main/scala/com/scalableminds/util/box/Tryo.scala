@@ -1,4 +1,4 @@
-package com.scalableminds.util.tools
+package com.scalableminds.util.box
 
 // Adapted from https://github.com/lift/framework/blob/main/core/common/src/main/scala/net/liftweb/common/Tryo.scala
 

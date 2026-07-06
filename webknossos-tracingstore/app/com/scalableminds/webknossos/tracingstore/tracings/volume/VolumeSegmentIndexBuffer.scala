@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
@@ -16,7 +17,6 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
   TemporaryTracingService
 }
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext

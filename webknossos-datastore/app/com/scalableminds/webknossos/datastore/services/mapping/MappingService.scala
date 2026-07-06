@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.services.mapping
 
 import com.scalableminds.util.io.{FileIO, PathUtils}
-import com.scalableminds.util.tools.Box
+import com.scalableminds.util.box.Box
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.datasource.{AbstractDataLayerMapping, DataLayerMapping}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceMappingRequest
@@ -23,7 +23,7 @@ class MappingService @Inject() (config: DataStoreConfig, baseDirService: BaseDir
 
   def loadMappingBytes(request: DataServiceMappingRequest): Box[Array[Byte]] =
     for {
-      dataSourceId <- Box(request.dataSourceId)
+      dataSourceId <- Box.fromOption(request.dataSourceId)
       orgaDir <- baseDirService.getOneLocalForOrga(dataSourceId.organizationId)
       mappingFilePath = orgaDir
         .resolve(dataSourceId.directoryName)

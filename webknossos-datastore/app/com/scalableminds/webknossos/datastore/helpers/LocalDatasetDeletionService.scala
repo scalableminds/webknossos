@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.helpers
 import com.google.inject.Inject
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
+import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.typesafe.scalalogging.LazyLogging
 
 import java.nio.file.{Files, Path}

@@ -2,9 +2,10 @@ package models.aimodels
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.box.Full
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, Full}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.schema.Tables.{Aimodels, AimodelsRow, GetResultAimodelsRow}
 import models.aimodels.AiModelCategory.AiModelCategory

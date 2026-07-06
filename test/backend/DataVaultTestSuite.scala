@@ -1,6 +1,7 @@
 package backend
 
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.{Box, Empty, EmptyBox, Failure, Full}
 import com.scalableminds.util.tools.Fox
 import org.scalatest.wordspec.AsyncWordSpec
 
@@ -21,7 +22,6 @@ import com.scalableminds.webknossos.datastore.storage.{
   GoogleServiceAccountCredential,
   S3ClientPool
 }
-import com.scalableminds.util.tools.{Box, Empty, EmptyBox, Failure, Full}
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import org.scalatest.Assertion
 import play.api.libs.json.JsString
@@ -360,7 +360,7 @@ class DataVaultTestSuite extends AsyncWordSpec {
 
         override def listDirectory(path: VaultPath, maxItems: Int)(implicit
             ec: ExecutionContext
-        ): Fox[List[VaultPath]] = ???
+        ): Fox[Seq[VaultPath]] = ???
 
         override def getUsedStorageBytes(path: VaultPath)(using ec: ExecutionContext, tc: TokenContext): Fox[Long] =
           ???

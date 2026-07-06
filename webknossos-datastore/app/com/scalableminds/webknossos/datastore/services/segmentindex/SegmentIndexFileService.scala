@@ -2,10 +2,11 @@ package com.scalableminds.webknossos.datastore.services.segmentindex
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.Box
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Box, Fox}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
@@ -67,8 +68,8 @@ class SegmentIndexFileService @Inject() (
       dataLayer: DataLayer
   ): Box[SegmentIndexFileKey] =
     for {
-      attachment <- Box(dataLayer.attachments.flatMap(_.segmentIndex))
-      _ <- Box.fromBool(attachment.path.isAbsolute) ~> Msg.SegmentIndexFile.pathNotAbsolute
+      attachment <- Box.fromOption(dataLayer.attachments.flatMap(_.segmentIndex))
+      _ <- Box.fromBool(attachment.path.isAbsolute) ?~> Msg.SegmentIndexFile.pathNotAbsolute
     } yield SegmentIndexFileKey(
       dataSourceId,
       dataLayer.name,

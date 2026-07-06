@@ -1,8 +1,8 @@
 package com.scalableminds.webknossos.datastore.services
 
 import com.scalableminds.util.Msg
-import com.scalableminds.util.tools.{Box, Full}
-import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.box.{Box, Full}
+import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.helpers.{PathSchemes, UPath}
 import com.typesafe.scalalogging.LazyLogging
@@ -36,9 +36,9 @@ class BaseDirService @Inject() (config: DataStoreConfig) extends LazyLogging {
         .find(d => !requireAllowsUpload || d.allowsUpload)
         .map(_.path / organizationId)
 
-    Box(
+    Box.fromOption(
       orgaSpecificPath.orElse(orgaAgnosticPath)
-    ) ?~! s"No matching base directory configured for organization $organizationId."
+    ) ?~> s"No matching base directory configured for organization $organizationId."
   }
 
   def getOneLocalForOrga(
@@ -63,7 +63,7 @@ class BaseDirService @Inject() (config: DataStoreConfig) extends LazyLogging {
     filtered.flatMap(entry =>
       for {
         path <- entry.path.toLocalPath
-        orgId <- Box(entry.organizationId)
+        orgId <- Box.fromOption(entry.organizationId)
       } yield (path, orgId)
     )
   }
@@ -85,19 +85,19 @@ class BaseDirService @Inject() (config: DataStoreConfig) extends LazyLogging {
     else
       tryo {
         Files.createDirectories(orgaPath)
-      }.map(_ => ()) ?~! Msg.Organization.Create.directoryCreateFailed
+      }.map(_ => ()) ?~> Msg.Organization.Create.directoryCreateFailed
 
   private def checkWritable(orgaPath: Path): Box[Unit] =
     for {
       _ <- Box.fromBool(
         Files.exists(orgaPath)
-      ) ?~! "Datastore cannot write to organization data directory, it does not exist."
+      ) ?~> "Datastore cannot write to organization data directory, it does not exist."
       _ <- Box.fromBool(
         Files.isDirectory(orgaPath)
-      ) ?~! "Datastore cannot write to organization data directory, it exists but is no directory."
+      ) ?~> "Datastore cannot write to organization data directory, it exists but is no directory."
       _ <- Box.fromBool(
         Files.isWritable(orgaPath)
-      ) ?~! "Datastore cannot write to organization data directory. No write access."
+      ) ?~> "Datastore cannot write to organization data directory. No write access."
     } yield ()
 
 }

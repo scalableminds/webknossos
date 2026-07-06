@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.helpers
 
 import com.scalableminds.util.Msg
-import com.scalableminds.util.tools.{Box, Failure, Full}
+import com.scalableminds.util.box.{Box, Failure, Full}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 
 import java.net.URI
@@ -11,7 +11,7 @@ object S3UriUtils {
   def hostBucketFromUPath(upath: UPath): Box[String] = for {
     uri <- upath.toRemoteUri
     _ <- checkSchemeIsS3(uri)
-    bucket <- Box(hostBucketFromUri(uri))
+    bucket <- Box.fromOption(hostBucketFromUri(uri))
   } yield bucket
 
   def hostBucketFromUri(uri: URI): Option[String] = {
@@ -78,5 +78,5 @@ object S3UriUtils {
 
   private def checkSchemeIsS3(uri: URI): Box[Unit] =
     Box
-      .fromBool(uri.getScheme == PathSchemes.schemeS3) ?~! Msg.UPath.schemaMismatch(uri.getScheme, PathSchemes.schemeS3)
+      .fromBool(uri.getScheme == PathSchemes.schemeS3) ?~> Msg.UPath.schemaMismatch(uri.getScheme, PathSchemes.schemeS3)
 }

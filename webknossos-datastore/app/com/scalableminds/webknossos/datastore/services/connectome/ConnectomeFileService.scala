@@ -4,7 +4,6 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.box.{Box, Empty}
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
@@ -15,6 +14,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   LayerAttachmentDataformat
 }
 import com.scalableminds.webknossos.datastore.services.connectome.SynapticPartnerDirection.SynapticPartnerDirection
+import com.scalableminds.webknossos.datastore.storage.AttachmentKey
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{Json, OFormat}
 
@@ -79,6 +79,7 @@ object ConnectomeFileNameWithMappingName {
 }
 
 case class ConnectomeFileKey(dataSourceId: DataSourceId, layerName: String, attachment: LayerAttachment)
+    extends AttachmentKey
 
 class ConnectomeFileService @Inject() (
     hdf5ConnectomeFileService: Hdf5ConnectomeFileService,
@@ -107,11 +108,11 @@ class ConnectomeFileService @Inject() (
         case Some(attachments) => Box.fromOption(attachments.connectomes.find(_.name == connectomeFileName))
         case None              => Empty
       }
-      resolvedPath <- tryo(attachment.resolvedPath(config.Datastore.baseDirectory, dataSourceId))
+      _ <- Box.fromBool(attachment.path.isAbsolute) ?~> Msg.ConnectomeFile.pathNotAbsolute
     } yield ConnectomeFileKey(
       dataSourceId,
       dataLayer.name,
-      attachment.copy(path = resolvedPath)
+      attachment
     )
 
   def listConnectomeFiles(dataSourceId: DataSourceId, dataLayer: DataLayer)(using

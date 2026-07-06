@@ -5,7 +5,7 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.box.Full
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.webknossos.datastore.models.VoxelSize
-import models.dataset.Dataset
+import models.dataset.{Dataset, DatasetDAO}
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
@@ -13,10 +13,10 @@ import com.scalableminds.util.tools.Fox.toFox
 import com.typesafe.scalalogging.LazyLogging
 import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
 import models.analytics.{AnalyticsService, FailedJobEvent, RunJobEvent}
-import models.dataset.DatasetDAO
 import models.job.JobCommand.JobCommand
 import models.organization.{CreditTransactionService, OrganizationDAO}
 import models.user.{MultiUserDAO, User, UserDAO, UserService}
+import com.scalableminds.webknossos.datastore.helpers.UPath
 import org.apache.pekko.actor.ActorSystem
 import play.api.libs.json.{JsObject, JsValue, Json}
 import security.WkSilhouetteEnvironment
@@ -244,12 +244,18 @@ class JobService @Inject() (
       _ = analyticsService.track(RunJobEvent(owner, command))
     } yield job
 
-  def submitConvertToWkwJob(dataset: Dataset, user: User, voxelSize: VoxelSize): Fox[Unit] =
+  def submitConvertToWkwJob(
+      dataset: Dataset,
+      user: User,
+      voxelSize: VoxelSize,
+      organizationBaseDirectory: UPath
+  ): Fox[Unit] =
     for {
       organization <- organizationDAO.findOne(dataset._organization)(using GlobalAccessContext) ?~> Msg.Organization
         .notFound(dataset._organization)
       commandArgs = Json.obj(
         "organization_id" -> organization._id,
+        "organization_base_directory" -> organizationBaseDirectory,
         "organization_display_name" -> organization.name,
         "dataset_name" -> dataset.name,
         "dataset_id" -> dataset._id,

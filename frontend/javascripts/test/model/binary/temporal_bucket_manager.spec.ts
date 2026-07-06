@@ -1,4 +1,4 @@
-import runAsync from "test/helpers/run_async";
+import { sleep } from "libs/utils";
 import { DataBucket } from "viewer/model/bucket_data_handling/bucket";
 import TemporalBucketManager from "viewer/model/bucket_data_handling/temporal_bucket_manager";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -118,11 +118,7 @@ describe("TemporalBucketManager", () => {
       resolved = true;
     });
 
-    return runAsync([
-      () => {
-        expect(resolved).toBe(false);
-      },
-    ]);
+    expect(resolved).toBe(false);
   });
 
   it<TestContext>("Make Loaded Promise should be unresolved when only one bucket is loaded", async ({
@@ -136,11 +132,7 @@ describe("TemporalBucketManager", () => {
     });
     bucket1.receiveData(new Uint8Array(1 << 15));
 
-    return runAsync([
-      () => {
-        expect(resolved).toBe(false);
-      },
-    ]);
+    expect(resolved).toBe(false);
   });
 
   it<TestContext>("Make Loaded Promise should be resolved when both buckets are loaded", async ({
@@ -155,10 +147,7 @@ describe("TemporalBucketManager", () => {
     bucket1.receiveData(new Uint8Array(1 << 15));
     bucket2.receiveData(new Uint8Array(1 << 15));
 
-    return runAsync([
-      () => {
-        expect(resolved).toBe(true);
-      },
-    ]);
+    await sleep(0); // sleep a bit so that the event loop can process the `then` from above
+    expect(resolved).toBe(true);
   });
 });

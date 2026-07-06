@@ -4,7 +4,6 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.box.{Box, Empty}
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
@@ -14,6 +13,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   LayerAttachment,
   LayerAttachmentDataformat
 }
+import com.scalableminds.webknossos.datastore.storage.AttachmentKey
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{Json, OFormat}
 
@@ -49,7 +49,7 @@ object MeshChunkDataRequestList {
   implicit val jsonFormat: OFormat[MeshChunkDataRequestList] = Json.format[MeshChunkDataRequestList]
 }
 
-case class MeshFileKey(dataSourceId: DataSourceId, layerName: String, attachment: LayerAttachment)
+case class MeshFileKey(dataSourceId: DataSourceId, layerName: String, attachment: LayerAttachment) extends AttachmentKey
 
 // Sent to wk frontend
 case class MeshFileInfo(
@@ -90,11 +90,11 @@ class MeshFileService @Inject() (
         case Some(attachments) => Box.fromOption(attachments.meshes.find(_.name == meshFileName))
         case None              => Empty
       }
-      resolvedPath <- tryo(attachment.resolvedPath(config.Datastore.baseDirectory, dataSourceId))
+      _ <- Box.fromBool(attachment.path.isAbsolute) ?~> Msg.Mesh.File.pathNotAbsolute
     } yield MeshFileKey(
       dataSourceId,
       dataLayer.name,
-      attachment.copy(path = resolvedPath)
+      attachment
     )
 
   def listMeshFiles(dataSourceId: DataSourceId, dataLayer: DataLayer)(using

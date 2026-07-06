@@ -8,20 +8,28 @@ import scala.concurrent.ExecutionContext
 
 trait MissingBucketHeaders {
 
-  protected lazy val missingBucketsHeader: String = "MISSING-BUCKETS"
+  protected lazy val failureBucketIndicesHeader: String = "failure-bucket-indices"
+  protected lazy val emptyBucketIndicesHeader: String = "empty-bucket-indices"
+  protected lazy val legacyMissingBucketsHeader: String = "MISSING-BUCKETS"
 
-  protected def createMissingBucketsHeaders(indices: List[Int]): Seq[(String, String)] =
-    List(
-      missingBucketsHeader -> formatMissingBucketList(indices),
-      "Access-Control-Expose-Headers" -> missingBucketsHeader
+  protected def createMissingBucketsHeaders(
+      emptyBucketIndices: Seq[Int],
+      failureBucketIndices: Seq[Int]
+  ): Seq[(String, String)] =
+    Seq(
+      emptyBucketIndicesHeader -> formatIndices(emptyBucketIndices),
+      failureBucketIndicesHeader -> formatIndices(failureBucketIndices),
+      // Kept for the moment in order not to break existing sessions. Remove after 2026-09.
+      legacyMissingBucketsHeader -> formatIndices((emptyBucketIndices ++ failureBucketIndices).sorted),
+      "Access-Control-Expose-Headers" -> s"$failureBucketIndicesHeader, $emptyBucketIndicesHeader, $legacyMissingBucketsHeader"
     )
 
-  private def formatMissingBucketList(indices: List[Int]): String =
+  private def formatIndices(indices: Seq[Int]): String =
     "[" + indices.mkString(", ") + "]"
 
   protected def parseMissingBucketHeader(
       headerLiteralOpt: Option[String]
-  )(implicit ec: ExecutionContext): Fox[List[Int]] =
+  )(implicit ec: ExecutionContext): Fox[Seq[Int]] =
     for {
       headerLiteral: String <- headerLiteralOpt.toFox
       headerLiteralTrim = headerLiteral.trim

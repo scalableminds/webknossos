@@ -154,10 +154,9 @@ class AiModelService @Inject() (
           organizationId <- aiModel._organization.toFox ?~> "aiModel.noOrganization"
           dataStore <- dataStoreDAO.findOneByName(aiModel._dataStore)(using GlobalAccessContext)
           dataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
-          dataStoreBaseDir <- dataStoreClient.getBaseDirAbsolute
-          baseDirUPath <- UPath.fromString(dataStoreBaseDir).toFox
+          organizationDirOnDatastore <- dataStoreClient.getOneBaseDirForOrgaAbsolute(organizationId)
           // No custom path, use legacy path schema:
-          fallbackPath = baseDirUPath / organizationId / ".aiModels" / aiModel._id.toString
+          fallbackPath = organizationDirOnDatastore / ".aiModels" / aiModel._id.toString
         } yield fallbackPath
     }
 

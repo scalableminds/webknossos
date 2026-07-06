@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.box.Box
 import com.scalableminds.util.cache.AlfuCache
@@ -28,7 +29,7 @@ trait FallbackDataHelper {
   def remoteDatastoreClient: TSRemoteDatastoreClient
   def remoteWebknossosClient: TSRemoteWebknossosClient
 
-  private lazy val fallbackBucketDataCache: AlfuCache[FallbackDataKey, (Array[Byte], List[Int])] =
+  private lazy val fallbackBucketDataCache: AlfuCache[FallbackDataKey, (Array[Byte], Seq[Int])] =
     AlfuCache(maxCapacity = 3000)
 
   def remoteFallbackLayerForVolumeTracing(tracing: VolumeTracing, annotationId: ObjectId)(implicit
@@ -45,17 +46,24 @@ trait FallbackDataHelper {
       tc: TokenContext
   ): Fox[Array[Byte]] =
     for {
-      (data, missingBucketIndices) <- fallbackBucketDataCache.getOrLoad(
+      (data, emptyBucketIndices) <- fallbackBucketDataCache.getOrLoad(
         FallbackDataKey(remoteFallbackLayer, dataRequest, tc.userTokenOpt),
-        k => remoteDatastoreClient.getData(k.remoteFallbackLayer, Seq(k.dataRequest))
+        k =>
+          for {
+            (dataInner, emptyIndices, failureIndices) <- remoteDatastoreClient
+              .getData(k.remoteFallbackLayer, Seq(k.dataRequest))
+            // failures are rejected *inside* of the load function to avoid caching them.
+            // empties are rejected *outside* because they are permanent errors and can be cached.
+            _ <- Fox.fromBool(failureIndices.isEmpty) ?~> Msg.Annotation.Volume.fallbackDataLoadingFailed
+          } yield (dataInner, emptyIndices)
       )
-      dataOrEmpty <- if (missingBucketIndices.isEmpty) Fox.successful(data) else Fox.empty
+      dataOrEmpty <- if (emptyBucketIndices.isEmpty) Fox.successful(data) else Fox.empty
     } yield dataOrEmpty
 
   // Get multiple buckets at once: pro: fewer requests, con: no tracingstore-side caching
   def getFallbackBucketsFromDataStore(
       remoteFallbackLayer: RemoteFallbackLayer,
       dataRequests: Seq[WebknossosDataRequest]
-  )(using tc: TokenContext): Fox[(Array[Byte], List[Int])] =
+  )(using tc: TokenContext): Fox[(Array[Byte], Seq[Int], Seq[Int])] =
     remoteDatastoreClient.getData(remoteFallbackLayer, dataRequests)
 }

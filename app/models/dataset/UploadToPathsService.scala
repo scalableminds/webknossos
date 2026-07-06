@@ -23,7 +23,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   StaticSegmentationLayer,
   UsableDataSource
 }
-import com.scalableminds.webknossos.datastore.services.DataSourceValidation
+import com.scalableminds.webknossos.datastore.services.{BaseDirConfig, BaseDirConfigReader, DataSourceValidation}
 import com.scalableminds.webknossos.datastore.services.uploading.LinkedLayerIdentifier
 import controllers.{
   PathDeletionService,
@@ -161,10 +161,11 @@ class UploadToPathsService @Inject() (
   }
 
   private lazy val configuredUploadToPathsPrefixes: Box[Seq[UPath]] = {
+    val datastoreBaseDirConfigs: Seq[BaseDirConfig] = new BaseDirConfigReader().read(conf.Datastore.baseDirectories)
     val fallbackFromBaseFolder = for {
-      datastoreBaseFolder <- Box.fromOption(conf.Datastore.baseDirectory)
-      fromDatastoreBaseFolder <- UPath.fromString(datastoreBaseFolder)
-    } yield Seq(fromDatastoreBaseFolder.toAbsolute)
+      selected <- Box.fromOption(
+        datastoreBaseDirConfigs.find(c => c.path.isLocal && c.allowsUpload && c.organizationId.isEmpty))
+    } yield Seq(selected.path)
     conf.WebKnossos.Datasets.UploadToPaths.prefixes match {
       case None                                           => fallbackFromBaseFolder
       case Some(fromConfigStrs) if fromConfigStrs.isEmpty =>

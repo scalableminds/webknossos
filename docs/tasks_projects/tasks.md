@@ -16,6 +16,7 @@ First, a _Task Type_ needs to be created:
       | Display Name                              | Key                        | Default Value           | Comment                                 |
       |--------------------------------------------|----------------------------|------------------------|-----------------------------------------|
       | Clipping Distance                         | `clippingDistance`           | 80                     | orthogonal mode                         |
+      | Only Show Nodes of Current Section        | `clipSkeletonToCurrentSection` | false                | orthogonal mode; always false when camera or dataset is rotated/transformed |
       | Move Value (nm/s)                         | `moveValue`                  | 500                    | orthogonal mode                         |
       | Show Scalebars                            | `displayScalebars`           | false                  |                                         |
       | Single-node-tree mode (Soma clicking)      | `newNodeNewTree`             | false                  |                                         |
@@ -37,8 +38,8 @@ First, a _Task Type_ needs to be created:
       | Zoom                                       | `zoom`                       | 0.8                    |                                         |
       | Render Missing Data Black                  | `renderMissingDataBlack`     | false                  |                                         |
       | Loading Strategy                           | `loadingStrategy`            | BEST_QUALITY_FIRST     | BEST_QUALITY_FIRST or PROGRESSIVE_QUALITY|
-      | Clipping Distance                          | `clippingDistanceArbitrary`  | 60                     | flight/oblique mode                     |
-      | Move Value (nm/s)                          | `moveValue3d`                | 600                    | flight/oblique mode                     |
+      | Clipping Distance                          | `clippingDistanceFlight`     | 60                     | flight mode                             |
+      | Move Value (nm/s)                          | `moveValue3d`                | 600                    | flight mode                             |
       | Mouse Rotation                             | `mouseRotateValue`           | 0.001                  |                                         |
       | Keyboard Rotation                          | `rotateValue`                | 0.01                   |                                         |
       | Sphere Radius                              | `sphericalCapRadius`         | 500                    |                                         |

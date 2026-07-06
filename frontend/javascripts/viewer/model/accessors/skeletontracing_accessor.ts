@@ -23,6 +23,7 @@ import {
   getTransformsForLayerThatDoesNotSupportTransformationConfigOrNull,
   getTransformsForSkeletonLayer,
 } from "./dataset_layer_transformation_accessor";
+import { isRotated } from "./flycam_accessor";
 
 export function getSkeletonTracing(annotation: StoreAnnotation): SkeletonTracing | null {
   if (annotation.skeleton != null) {
@@ -258,6 +259,18 @@ export function areGeometriesTransformed(state: WebknossosState) {
     state.datasetConfiguration.nativelyRenderedLayerName,
   );
   return transformation != null && transformation !== IdentityTransform;
+}
+
+// Whether skeleton nodes/edges should be clipped to the currently visible section
+// (instead of the distance-based clipping). This is only possible when neither the
+// camera nor the skeleton layer is rotated/transformed, because the section clipping
+// in the shaders operates in axis-aligned voxel space.
+export function isSkeletonSectionClippingActive(state: WebknossosState): boolean {
+  return (
+    state.userConfiguration.clipSkeletonToCurrentSection &&
+    !isRotated(state.flycam) &&
+    !areGeometriesTransformed(state)
+  );
 }
 
 export function isSkeletonLayerVisible(annotation: StoreAnnotation) {

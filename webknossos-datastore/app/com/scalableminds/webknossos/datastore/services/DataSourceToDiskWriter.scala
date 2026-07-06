@@ -2,7 +2,6 @@ package com.scalableminds.webknossos.datastore.services
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.box.{Box, Failure, Full}
-import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
@@ -20,24 +19,13 @@ trait DataSourceToDiskWriter extends DataSourceValidation {
   private val propertiesFileName = Path.of(UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
   private val logFileName = Path.of("datasource-properties-backups.log")
 
-  protected def dataBaseDir: Path
-
-  def updateDataSourceOnDisk(dataSource: UsableDataSource, expectExisting: Boolean, validate: Boolean)(implicit
+  def updateDataSourceOnDisk(dataSourcePath: Path, dataSource: UsableDataSource)(implicit
       ec: ExecutionContext
-  ): Fox[Unit] = {
-    val organizationDir = dataBaseDir.resolve(dataSource.id.organizationId)
-    val dataSourcePath = organizationDir.resolve(dataSource.id.directoryName)
-
+  ): Fox[Unit] =
     for {
-      _ <- Fox.runIf(validate)(assertValidDataSource(dataSource).toFox)
+      _ <- assertValidDataSource(dataSource).toFox
       propertiesFile = dataSourcePath.resolve(propertiesFileName)
-      _ <- Fox.runIf(!expectExisting)(PathUtils.ensureDirectoryBox(dataSourcePath).toFox)
-      _ <- Fox.runIf(!expectExisting)(
-        Fox.fromBool(!Files.exists(propertiesFile))
-      ) ?~> Msg.Dataset.DataSource.alreadyPresent
-      _ <- Fox.runIf(expectExisting)(
-        backupPreviousProperties(dataSourcePath).toFox
-      ) ?~> Msg.Dataset.DataSource.updateFileFailed
+      _ <- backupPreviousProperties(dataSourcePath).toFox ?~> Msg.Dataset.DataSource.updateFileFailed
       dataSourceWithRelativizedPaths = relativizePathsOfDataSource(dataSourcePath, dataSource)
       _ <- JsonHelper
         .writeToFile(
@@ -46,7 +34,6 @@ trait DataSourceToDiskWriter extends DataSourceValidation {
         )
         .toFox ?~> Msg.Dataset.DataSource.updateFileFailed
     } yield ()
-  }
 
   private def relativizePathsOfDataSource(dataSourcePath: Path, dataSource: UsableDataSource): UsableDataSource =
     dataSource.copy(

@@ -131,7 +131,8 @@ class WKRemoteTracingStoreClient(
       isFromTask: Boolean,
       datasetBoundingBox: Option[BoundingBox]
   ): Fox[AnnotationProto] = {
-    logger.info(s"Called to duplicate annotation $annotationId to new id $newAnnotationId." + baseInfo)
+    val versionLabel = version.map(v => s" v$v").getOrElse("")
+    logger.info(s"Called to duplicate annotation $annotationId$versionLabel to new id $newAnnotationId." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/annotation/$annotationId/duplicate").withLongTimeout
       .addQueryParam("token", RpcTokenHolder.webknossosToken)
       .addQueryParam("newAnnotationId", newAnnotationId)

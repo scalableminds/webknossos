@@ -44,7 +44,6 @@ import org.jgrapht.alg.flow.PushRelabelMFImpl
 import org.jgrapht.graph.{DefaultWeightedEdge, SimpleWeightedGraph}
 import play.api.libs.json.{JsObject, Json, OFormat}
 
-import java.nio.file.Path
 import java.util
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -111,7 +110,7 @@ class EditableMappingService @Inject() (
 
   val defaultSegmentToAgglomerateChunkSize: Int = 64 * 1024 // max. 1 MiB chunks (two 8-byte numbers per element)
 
-  private val binaryDataService = new BinaryDataService(Path.of(""), None, None, None, datasetErrorLoggingService)
+  private val binaryDataService = new BinaryDataService(None, None, None, datasetErrorLoggingService)
 
   adHocMeshServiceHolder.tracingStoreAdHocMeshConfig = (binaryDataService, 30 seconds, 1)
   private val adHocMeshService: AdHocMeshService = adHocMeshServiceHolder.tracingStoreAdHocMeshService
@@ -219,7 +218,7 @@ class EditableMappingService @Inject() (
 
   def volumeData(editableMappingLayer: EditableMappingLayer, dataRequests: List[AbstractDataRequest])(using
       tc: TokenContext
-  ): Fox[(Array[Byte], List[Int])] = {
+  ): Fox[(Array[Byte], Seq[Int], Seq[Int])] = {
     val requests = dataRequests.map(r =>
       DataServiceDataRequest(
         None,

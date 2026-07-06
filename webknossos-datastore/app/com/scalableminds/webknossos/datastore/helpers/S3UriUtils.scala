@@ -1,11 +1,18 @@
 package com.scalableminds.webknossos.datastore.helpers
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.box.{Box, Failure, Full}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 
 import java.net.URI
 
 object S3UriUtils {
+
+  def hostBucketFromUPath(upath: UPath): Box[String] = for {
+    uri <- upath.toRemoteUri
+    _ <- checkSchemeIsS3(uri)
+    bucket <- Box.fromOption(hostBucketFromUri(uri))
+  } yield bucket
 
   def hostBucketFromUri(uri: URI): Option[String] = {
     val host = uri.getHost
@@ -35,6 +42,12 @@ object S3UriUtils {
   private def isShortStyle(uri: URI): Boolean =
     !uri.getHost.contains(".")
 
+  def objectKeyFromUPath(upath: UPath): Box[String] = for {
+    uri <- upath.toRemoteUri
+    _ <- checkSchemeIsS3(uri)
+    objectKey <- objectKeyFromUri(uri)
+  } yield objectKey
+
   def objectKeyFromUri(uri: URI): Box[String] =
     if (isVirtualHostedStyle(uri)) {
       Full(uri.getPath)
@@ -45,12 +58,25 @@ object S3UriUtils {
     } else Failure(s"Not a valid s3 uri: $uri")
 
   def objectKeyFromVaultPath(vaultPath: VaultPath): Box[String] =
+    objectKeyFromUPath(vaultPath.toUPath)
+
+  def endpointFromUPath(s3UploadBaseDir: UPath): Box[URI] =
     for {
-      uri <- vaultPath.toRemoteUri
-      objectKey <- objectKeyFromUri(uri)
-    } yield objectKey
+      uri <- s3UploadBaseDir.toRemoteUri
+    } yield new URI(
+      "https",
+      null,
+      uri.getHost,
+      uri.getPort,
+      null,
+      null,
+      null
+    )
 
   def isNonAmazonHost(uri: URI): Boolean =
     (isPathStyle(uri) && !uri.getHost.endsWith(".amazonaws.com")) || uri.getHost == "localhost"
 
+  private def checkSchemeIsS3(uri: URI): Box[Unit] =
+    Box
+      .fromBool(uri.getScheme == PathSchemes.schemeS3) ?~> Msg.UPath.schemaMismatch(uri.getScheme, PathSchemes.schemeS3)
 }

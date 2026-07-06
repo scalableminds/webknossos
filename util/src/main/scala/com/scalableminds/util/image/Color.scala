@@ -1,9 +1,9 @@
 package com.scalableminds.util.image
 
-import com.scalableminds.util.tools.ExtendedTypes._
 import com.scalableminds.util.tools.Box.tryo
-import play.api.libs.json.Json._
-import play.api.libs.json.{Format, JsValue, _}
+import com.scalableminds.util.tools.MathUtils
+import play.api.libs.json.Json.*
+import play.api.libs.json.*
 
 case class Color(r: Double, g: Double, b: Double, a: Double) {
   def toHtml: String = "#%02x%02x%02x".format((r * 255).toInt, (g * 255).toInt, (b * 255).toInt)
@@ -16,9 +16,9 @@ object Color {
   def jet(value: Float): Color = {
     val fourValue = value / 64.0
     Color(
-      math.min(fourValue - 1.5, -fourValue + 4.5).clamp(0, 1),
-      math.min(fourValue - 0.5, -fourValue + 3.5).clamp(0, 1),
-      math.min(fourValue + 0.5, -fourValue + 2.5).clamp(0, 1),
+      MathUtils.clamp(math.min(fourValue - 1.5, -fourValue + 4.5), 0, 1),
+      MathUtils.clamp(math.min(fourValue - 0.5, -fourValue + 3.5), 0, 1),
+      MathUtils.clamp(math.min(fourValue + 0.5, -fourValue + 2.5), 0, 1),
       1
     )
   }

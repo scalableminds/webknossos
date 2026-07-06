@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.services
 
 import org.apache.pekko.actor.ActorSystem
 import com.google.inject.name.Named
+import com.scalableminds.util.box.{Box, Failure, Full}
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
@@ -9,7 +10,6 @@ import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.{Box, Failure, Full}
 import play.api.inject.ApplicationLifecycle
 
 import javax.inject.Inject

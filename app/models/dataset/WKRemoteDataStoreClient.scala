@@ -11,10 +11,14 @@ import com.scalableminds.webknossos.datastore.explore.{
   ExploreRemoteLayerParameters
 }
 import com.scalableminds.webknossos.datastore.helpers.UPath
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, UsableDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.UsableDataSource
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, RawCuboidRequest, VoxelSize}
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.datastore.services.{PathStorageUsageRequest, PathStorageUsageResponse}
+import com.scalableminds.webknossos.datastore.services.{
+  DataSourceWithRootPathInfo,
+  PathStorageUsageRequest,
+  PathStorageUsageResponse
+}
 import com.typesafe.scalalogging.LazyLogging
 import controllers.RpcTokenHolder
 import play.api.libs.json.JsObject
@@ -122,24 +126,27 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
         .delete()
     } yield ()
 
-  def updateDataSourceOnDisk(datasetId: ObjectId, dataSource: UsableDataSource): Fox[Unit] =
+  def updateDataSourceOnDisk(datasetId: ObjectId, dataSource: UsableDataSource, rootPath: String): Fox[Unit] =
     for {
       _ <- rpc(s"${dataStore.url}/data/datasets/$datasetId")
         .addQueryParam("token", RpcTokenHolder.webknossosToken)
+        .addQueryParam("rootPath", rootPath)
         .putJson(dataSource)
     } yield ()
 
-  def deleteOnDisk(datasetId: ObjectId): Fox[Unit] =
+  def deleteOnDisk(datasetId: ObjectId, rootPath: String): Fox[Unit] =
     for {
       _ <- rpc(s"${dataStore.url}/data/datasets/$datasetId/deleteOnDisk")
         .addQueryParam("token", RpcTokenHolder.webknossosToken)
+        .addQueryParam("rootPath", rootPath)
         .delete()
     } yield ()
 
-  lazy val getBaseDirAbsolute: Fox[String] =
-    rpc(s"${dataStore.url}/data/datasets/baseDirAbsolute")
+  def getOneBaseDirForOrgaAbsolute(organizationId: String): Fox[UPath] =
+    rpc(s"${dataStore.url}/data/datasets/getOneBaseDirForOrgaAbsolute")
+      .addQueryParam("organizationId", organizationId)
       .addQueryParam("token", RpcTokenHolder.webknossosToken)
-      .getWithJsonResponse[String]
+      .getWithJsonResponse[UPath]
 
   // Datastore deletes local paths and returns list of paths to be deleted externally.
   // Should not be called directly, go via PathDeletionService
@@ -167,15 +174,29 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
       .addQueryParam("token", RpcTokenHolder.webknossosToken)
       .postJsonWithJsonResponse[Seq[ObjectId], Seq[(ObjectId, String)]](datasetIds)
 
-  def scanRealPathsForVirtual(dataSources: Seq[DataSource])(implicit ec: ExecutionContext): Fox[Unit] = {
-    val dataSourcesThatCanHaveRealpaths = dataSources.flatMap(_.toUsable).filter(_.allExplicitPaths.exists(_.isLocal))
+  def scanRealPathsForVirtual(
+      dataSourcesWithRootPathInfo: Seq[DataSourceWithRootPathInfo]
+  )(implicit ec: ExecutionContext): Fox[Unit] = {
+    val dataSourcesThatCanHaveRealpaths =
+      dataSourcesWithRootPathInfo.filter(_.dataSource.toUsable.exists(_.allExplicitPaths.exists(_.isLocal)))
     if (dataSourcesThatCanHaveRealpaths.nonEmpty) {
       for {
         _ <- rpc(s"${dataStore.url}/data/triggers/scanRealPathsForVirtual")
           .addQueryParam("token", RpcTokenHolder.webknossosToken)
-          .postJson[Seq[DataSource]](dataSourcesThatCanHaveRealpaths)
+          .postJson[Seq[DataSourceWithRootPathInfo]](dataSourcesThatCanHaveRealpaths)
       } yield ()
     } else Fox.successful(())
   }
 
+  def getOrganizationBaseDirectory(
+      organizationId: String,
+      requireAllowsUpload: Boolean = false,
+      requireLocal: Boolean = false
+  ): Fox[UPath] =
+    rpc(s"${dataStore.url}/data/getOrganizationBaseDirectory")
+      .addQueryParam("organizationId", organizationId)
+      .addQueryParam("requireLocal", requireLocal)
+      .addQueryParam("requireAllowsUpload", requireAllowsUpload)
+      .addQueryParam("token", RpcTokenHolder.webknossosToken)
+      .getWithJsonResponse[UPath]
 }

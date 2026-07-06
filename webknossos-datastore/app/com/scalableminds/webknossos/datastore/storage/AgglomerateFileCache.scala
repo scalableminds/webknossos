@@ -2,8 +2,8 @@ package com.scalableminds.webknossos.datastore.storage
 
 import java.util
 import ch.systemsx.cisd.hdf5.{HDF5DataSet, IHDF5Reader}
+import com.scalableminds.util.box.{Box, Full}
 import com.scalableminds.util.cache.LRUConcurrentCache
-import com.scalableminds.util.tools.{Box, Full}
 import com.scalableminds.webknossos.datastore.dataformats.SafeCacheable
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, LayerAttachment}
 import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceDataRequest}
@@ -12,6 +12,7 @@ import com.typesafe.scalalogging.LazyLogging
 import scala.collection.mutable
 
 case class AgglomerateFileKey(dataSourceId: DataSourceId, layerName: String, attachment: LayerAttachment)
+    extends AttachmentKey
 
 case class CachedAgglomerateFile(
     reader: IHDF5Reader,

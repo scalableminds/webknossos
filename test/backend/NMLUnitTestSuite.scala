@@ -13,7 +13,8 @@ import models.annotation.SharedParsingParameters
 import models.annotation.nml.{NmlParseSuccessWithoutFile, NmlParser, NmlWriter}
 import models.dataset.{Dataset, DatasetDAOLike}
 import com.scalableminds.util.accesscontext.DBAccessContext
-import com.scalableminds.util.tools.{Empty, Failure, Fox, Full}
+import com.scalableminds.util.box.{Empty, Failure, Full}
+import com.scalableminds.util.tools.Fox
 import org.apache.commons.io.output.ByteArrayOutputStream
 import org.scalatest.Assertion
 import org.scalatest.wordspec.AsyncWordSpec

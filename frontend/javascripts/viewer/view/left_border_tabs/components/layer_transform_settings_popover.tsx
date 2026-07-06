@@ -20,6 +20,8 @@ import { setLayerTransformsAction } from "viewer/model/actions/dataset_actions";
 
 // Fetches the dataset from the backend and extracts the stored SRT values for a single layer.
 // isValid is false when the layer has no transforms or transforms incompatible with this editor.
+// The dataset is fetched from the backend rather than read from the store, because the store's
+// dataSource may already contain unsaved, locally mutated transforms.
 async function fetchStoredSRTForLayer(
   datasetId: string,
   layerName: string,

@@ -258,9 +258,11 @@ jobs:
         uses: ./.github/actions/retry
         with:
           run: |
+            set -o pipefail
             pids=()
             for image in webknossos webknossos-datastore webknossos-tracingstore; do
-              docker push "scalableminds/$image:${{ env.DOCKER_TAG }}" &
+              # with sed, prepend image name for clean logging despite concurrency
+              docker push "scalableminds/$image:${{ env.DOCKER_TAG }}" 2>&1 | sed -u "s/^/[$image] /" &
               pids+=($!)
             done
             fail=0
@@ -273,9 +275,11 @@ jobs:
         uses: ./.github/actions/retry
         with:
           run: |
+            set -o pipefail
             pids=()
             for image in webknossos webknossos-datastore webknossos-tracingstore; do
-              docker push "scalableminds/$image:${{ env.NORMALIZED_BRANCH }}" &
+              # with sed, prepend image name for clean logging despite concurrency
+              docker push "scalableminds/$image:${{ env.NORMALIZED_BRANCH }}" 2>&1 | sed -u "s/^/[$image] /" &
               pids+=($!)
             done
             fail=0

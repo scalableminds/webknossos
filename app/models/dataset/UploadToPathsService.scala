@@ -164,7 +164,8 @@ class UploadToPathsService @Inject() (
     val datastoreBaseDirConfigs: Seq[BaseDirConfig] = new BaseDirConfigReader().read(conf.Datastore.baseDirectories)
     val fallbackFromBaseFolder = for {
       selected <- Box.fromOption(
-        datastoreBaseDirConfigs.find(c => c.path.isLocal && c.allowsUpload && c.organizationId.isEmpty))
+        datastoreBaseDirConfigs.find(c => c.path.isLocal && c.allowsUpload && c.organizationId.isEmpty)
+      )
     } yield Seq(selected.path)
     conf.WebKnossos.Datasets.UploadToPaths.prefixes match {
       case None                                           => fallbackFromBaseFolder

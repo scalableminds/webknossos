@@ -99,7 +99,8 @@ class DataSourceService @Inject() (
         for {
           orgaDirsInAgnostic: Seq[Path] <- Box
             .combined(orgaAgnosticBaseDirs)(
-              PathUtils.listDirectories(_, silent = false, filters = orgaFilterFn(selectedOrganizationId)))
+              PathUtils.listDirectories(_, silent = false, filters = orgaFilterFn(selectedOrganizationId))
+            )
             .map(_.flatten)
         } yield (orgaBaseDirsDirect ++ orgaDirsInAgnostic).map((_, selectedOrganizationId)).distinct
       case None =>

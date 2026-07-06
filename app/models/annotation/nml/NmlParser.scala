@@ -26,7 +26,6 @@ import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{MultiCompone
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.{SharedParsingParameters, UploadedVolumeLayer}
 import models.dataset.DatasetDAOLike
-import com.scalableminds.util.tools.Box.*
 
 import java.io.InputStream
 import javax.inject.Inject

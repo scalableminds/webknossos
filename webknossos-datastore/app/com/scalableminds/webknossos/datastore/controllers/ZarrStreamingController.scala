@@ -288,8 +288,10 @@ class ZarrStreamingController @Inject() (
         ),
         DataServiceRequestSettings(halfByte = false, additionalCoordinates = additionalCoordinates)
       )
-      (data, notFoundIndices) <- binaryDataService.handleDataRequests(List(request))
-      _ <- Fox.fromBool(notFoundIndices.isEmpty) ?~> Msg.Zarr.chunkLoadingError ~> INTERNAL_SERVER_ERROR
+      (data, emptyIndices, failureIndices) <- binaryDataService.handleDataRequests(List(request))
+      _ <- Fox.fromBool(
+        emptyIndices.isEmpty && failureIndices.isEmpty
+      ) ?~> Msg.Zarr.chunkLoadingError ~> INTERNAL_SERVER_ERROR
     } yield Ok(data)
 
   def requestZArray(

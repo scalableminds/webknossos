@@ -1,12 +1,7 @@
 package com.scalableminds.webknossos.datastore.models.datasource
 
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.webknossos.datastore.dataformats.{
-  BucketProvider,
-  DatasetArrayBucketProvider,
-  MagLocator,
-  MappingProvider
-}
+import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DatasetArrayBucketProvider, MagLocator}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.helpers.UPath
@@ -183,7 +178,6 @@ trait SegmentationLayer extends DataLayer {
   def mappings: Option[Set[String]]
 
   def category: LayerCategory.Value = LayerCategory.segmentation
-  lazy val mappingProvider: MappingProvider = new MappingProvider(this)
 }
 
 case class StaticColorLayer(

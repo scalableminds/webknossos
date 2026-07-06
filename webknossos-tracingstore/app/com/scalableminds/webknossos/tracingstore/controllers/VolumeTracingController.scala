@@ -276,12 +276,12 @@ class VolumeTracingController @Inject() (
               tracingId,
               requestedVersion
             ) ?~> Msg.Annotation.notFound
-            (data, indices) <-
+            (data, emptyIndices, failureIndices) <-
               if (tracing.getHasEditableMapping) {
                 val mappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
                 editableMappingService.volumeData(mappingLayer, request.body)
               } else volumeTracingService.data(annotationId, tracingId, tracing, request.body)
-          } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices)*)
+          } yield Ok(data).withHeaders(createMissingBucketsHeaders(emptyIndices, failureIndices)*)
         }
       }
     }

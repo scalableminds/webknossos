@@ -1,7 +1,7 @@
 package backend
 
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.tools.{Empty, Failure, Full}
+import com.scalableminds.util.box.{Empty, Failure, Full}
 import com.scalableminds.webknossos.datastore.datavault.{ByteRange, FileSystemDataVault, VaultPath, ZipDataVault}
 import com.scalableminds.webknossos.datastore.helpers.{UPath, ZipEntryUPath}
 import org.scalatest.BeforeAndAfterAll

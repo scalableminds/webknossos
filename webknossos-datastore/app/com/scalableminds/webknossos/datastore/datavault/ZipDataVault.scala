@@ -1,8 +1,9 @@
 package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.{Box, Failure, Full}
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.tools.{Box, Failure, Fox, Full, Math}
+import com.scalableminds.util.tools.{Fox, MathUtils}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.helpers.ZipEntryUPath
 import com.typesafe.scalalogging.LazyLogging
@@ -67,7 +68,7 @@ class ZipDataVault(outerVaultPath: VaultPath) extends DataVault with LazyLogging
   override def listDirectory(path: VaultPath, maxItems: Int)(using
       ec: ExecutionContext,
       tc: TokenContext
-  ): Fox[List[VaultPath]] =
+  ): Fox[Seq[VaultPath]] =
     for {
       normalizedInnerPath <- normalizeInnerPath(path).toFox
       dirPrefix = if (normalizedInnerPath.isEmpty) "" else normalizedInnerPath + "/"
@@ -151,12 +152,12 @@ class ZipDataVault(outerVaultPath: VaultPath) extends DataVault with LazyLogging
   // §4.3.14
   private def parseZip64Eocd(bytes: Array[Byte]): Box[(Long, Long)] =
     for {
-      _ <- Box.fromBool(bytes.length >= zip64EocdSize) ?~! s"ZIP64 EOCD record too short: ${bytes.length} bytes"
+      _ <- Box.fromBool(bytes.length >= zip64EocdSize) ?~> s"ZIP64 EOCD record too short: ${bytes.length} bytes"
       buffer = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
       signature = buffer.getInt(0)
       _ <- Box.fromBool(
         signature == zip64EocdSignature
-      ) ?~! s"Expected ZIP64 EOCD signature 0x${zip64EocdSignature.toHexString}, got 0x${signature.toHexString}"
+      ) ?~> s"Expected ZIP64 EOCD signature 0x${zip64EocdSignature.toHexString}, got 0x${signature.toHexString}"
       centralDirectoryOffset = buffer.getLong(48)
       centralDirectorySize = buffer.getLong(40)
     } yield (centralDirectoryOffset, centralDirectorySize)
@@ -232,9 +233,9 @@ class ZipDataVault(outerVaultPath: VaultPath) extends DataVault with LazyLogging
         }
 
       for {
-        zip64DataStart <- Box(
+        zip64DataStart <- Box.fromOption(
           findZip64Tag(extraStart)
-        ) ?~! "ZIP64 extra field (tag 0x0001) not found in extra data field"
+        ) ?~> "ZIP64 extra field (tag 0x0001) not found in extra data field"
         needUncompressedSize = entryRaw.uncompressedSize == 0xffffffffL
         needCompressedSize = entryRaw.compressedSize == 0xffffffffL
         needLocalHeaderOffset = entryRaw.localHeaderOffset == 0xffffffffL
@@ -243,13 +244,13 @@ class ZipDataVault(outerVaultPath: VaultPath) extends DataVault with LazyLogging
         localHeaderOffsetPos = compressedSizePos + (if (needCompressedSize) 8 else 0)
         _ <- Box.fromBool(
           !needUncompressedSize || uncompressedSizePos + 8 <= end
-        ) ?~! "ZIP64 extra field truncated: missing uncompressedSize"
+        ) ?~> "ZIP64 extra field truncated: missing uncompressedSize"
         _ <- Box.fromBool(
           !needCompressedSize || compressedSizePos + 8 <= end
-        ) ?~! "ZIP64 extra field truncated: missing compressedSize"
+        ) ?~> "ZIP64 extra field truncated: missing compressedSize"
         _ <- Box.fromBool(
           !needLocalHeaderOffset || localHeaderOffsetPos + 8 <= end
-        ) ?~! "ZIP64 extra field truncated: missing localHeaderOffset"
+        ) ?~> "ZIP64 extra field truncated: missing localHeaderOffset"
         entryFilled = entryRaw.copy(
           uncompressedSize =
             if (needUncompressedSize) buffer.getLong(uncompressedSizePos) else entryRaw.uncompressedSize,
@@ -262,7 +263,7 @@ class ZipDataVault(outerVaultPath: VaultPath) extends DataVault with LazyLogging
 
   private def normalizeInnerPath(vaultPath: VaultPath): Box[String] =
     for {
-      zipEntryUPath <- vaultPath.toUPath.toZipEntryUPath ?~! "ZipDataVault received path with non-ZipEntryUPath"
+      zipEntryUPath <- vaultPath.toUPath.toZipEntryUPath ?~> "ZipDataVault received path with non-ZipEntryUPath"
       normalizedInnerPath = normalizeInnerPath(zipEntryUPath.innerPath)
     } yield normalizedInnerPath
 
@@ -275,7 +276,7 @@ class ZipDataVault(outerVaultPath: VaultPath) extends DataVault with LazyLogging
       case StartEndExclusiveByteRange(s, e) => (s, e)
       case SuffixLengthByteRange(n)         => (entrySize - n, entrySize)
     }
-    StartEndExclusiveByteRange(Math.clamp(start, 0L, entrySize), Math.clamp(end, 0L, entrySize))
+    StartEndExclusiveByteRange(MathUtils.clamp(start, 0L, entrySize), MathUtils.clamp(end, 0L, entrySize))
   }
 
 }

@@ -17,7 +17,7 @@ import models.dataset.{DataStore, DataStoreDAO, WKRemoteDataStoreClient}
 import models.dataset.credential.CredentialService
 import models.organization.OrganizationDAO
 import models.user.User
-import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.box.Box.tryo
 import play.api.libs.json.{Json, OFormat}
 import security.WkSilhouetteEnvironment
 import com.scalableminds.util.objectid.ObjectId

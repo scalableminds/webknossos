@@ -4,10 +4,11 @@ import com.google.auth.oauth2.ServiceAccountCredentials
 import com.google.cloud.storage.Storage.BlobSourceOption
 import com.google.cloud.storage.{BlobId, BlobInfo, Storage, StorageException, StorageOptions}
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.tools.{Box, Fox}
+import com.scalableminds.util.box.Box
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.storage.{CredentializedUPath, GoogleServiceAccountCredential}
-import com.scalableminds.util.tools.Box.tryo
+import Box.tryo
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import org.apache.commons.lang3.builder.HashCodeBuilder
 
@@ -91,16 +92,16 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
   override def listDirectory(path: VaultPath, maxItems: Int)(using
       ec: ExecutionContext,
       tc: TokenContext
-  ): Fox[List[VaultPath]] =
+  ): Fox[Seq[VaultPath]] =
     (for {
       objName <- getObjectName(path)
       blobs <- tryo(
         storage.list(bucket, Storage.BlobListOption.prefix(objName), Storage.BlobListOption.currentDirectory())
       )
       subDirectories <- tryo(blobs.getValues.asScala.toList.filter(_.isDirectory).take(maxItems))
-      paths <- subDirectories.map { dirBlob =>
+      paths <- Box.combined(subDirectories) { dirBlob =>
         UPath.fromString(s"${uri.getScheme}://$bucket/${dirBlob.getBlobId.getName}").map(new VaultPath(_, this))
-      }.toSingleBox("Invalid UPath")
+      }
     } yield paths).toFox
 
   override def getUsedStorageBytes(path: VaultPath)(using ec: ExecutionContext, tc: TokenContext): Fox[Long] =

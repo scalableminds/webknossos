@@ -1,6 +1,7 @@
 package models.user.time
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.box.{Box, Full}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
@@ -13,7 +14,6 @@ import models.annotation._
 import models.project.ProjectDAO
 import models.task.TaskDAO
 import models.user.{MultiUserDAO, User, UserService}
-import com.scalableminds.util.tools.{Box, Full}
 import org.apache.pekko.actor.{ActorSelection, ActorSystem}
 import utils.WkConf
 

@@ -1,6 +1,6 @@
 package backend
 
-import com.scalableminds.util.tools.Math.ceilDiv
+import com.scalableminds.util.tools.MathUtils.ceilDiv
 import org.scalatest.wordspec.AsyncWordSpec
 
 class MathTestSuite extends AsyncWordSpec {

@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.explore
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.Fox
@@ -13,7 +14,6 @@ import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, S
 import com.scalableminds.webknossos.datastore.services.DSRemoteWebknossosClient
 import com.scalableminds.webknossos.datastore.storage.{CredentializedUPath, DataVaultCredential, DataVaultService}
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import com.scalableminds.webknossos.datastore.helpers.{UPath, ZipEntryUPath}
 import play.api.libs.json.{Json, OFormat}
 
@@ -127,7 +127,7 @@ class ExploreRemoteLayerService @Inject() (
   private val MAX_EXPLORED_ITEMS_PER_LEVEL = 10
 
   private def recursivelyExploreRemoteLayerAtPaths(
-      remotePathsWithDepth: List[(VaultPath, Int)],
+      remotePathsWithDepth: Seq[(VaultPath, Int)],
       credentialId: Option[String],
       explorers: List[RemoteLayerExplorer],
       reportMutable: ListBuffer[String]

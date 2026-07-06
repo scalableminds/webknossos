@@ -1,9 +1,9 @@
 package com.scalableminds.webknossos.datastore.services.mesh
 
+import com.scalableminds.util.box.Box
 import com.scalableminds.util.geometry.{Vec3Float, Vec3Int}
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Box
-import com.scalableminds.util.tools.Box.tryo
+import Box.tryo
 import com.scalableminds.webknossos.datastore.draco.NativeDracoToStlConverter
 import com.scalableminds.webknossos.datastore.models.VoxelPosition
 import com.typesafe.scalalogging.LazyLogging

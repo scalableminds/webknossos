@@ -2256,7 +2256,6 @@ exports[`Annotation API (E2E) > finishAnnotation() and reOpenAnnotation() for ta
   "settings": {
     "allowedModes": [
       "orthogonal",
-      "oblique",
       "flight",
     ],
     "branchPointsAllowed": true,
@@ -2309,7 +2308,6 @@ exports[`Annotation API (E2E) > finishAnnotation() and reOpenAnnotation() for ta
       "settings": {
         "allowedModes": [
           "orthogonal",
-          "oblique",
           "flight",
         ],
         "branchPointsAllowed": true,
@@ -2429,7 +2427,6 @@ exports[`Annotation API (E2E) > finishAnnotation() and reOpenAnnotation() for ta
   "settings": {
     "allowedModes": [
       "orthogonal",
-      "oblique",
       "flight",
     ],
     "branchPointsAllowed": true,
@@ -2482,7 +2479,6 @@ exports[`Annotation API (E2E) > finishAnnotation() and reOpenAnnotation() for ta
       "settings": {
         "allowedModes": [
           "orthogonal",
-          "oblique",
           "flight",
         ],
         "branchPointsAllowed": true,

@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.explore
 
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.Box
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.image.Color
 import com.scalableminds.util.tools.TextUtils.normalizeStrong
@@ -29,7 +30,6 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   LayerViewConfiguration,
   StaticLayer
 }
-import com.scalableminds.util.tools.Box
 import play.api.libs.json.{JsArray, JsBoolean, JsNumber, Json}
 
 import scala.concurrent.ExecutionContext
@@ -207,8 +207,8 @@ trait NgffExplorationUtils {
 
   private def createAdditionalAxis(name: String, index: Int, bounds: Seq[Int]): Box[AdditionalAxis] =
     for {
-      normalizedName <- Box(normalizeStrong(name)) ?~ s"Axis name '$name' would be empty if sanitized"
-      _ <- Box(Option(bounds.length == 2).collect { case true => () })
+      normalizedName <- Box.fromOption(normalizeStrong(name)) ?~> s"Axis name '$name' would be empty if sanitized"
+      _ <- Box.fromOption(Option(bounds.length == 2).collect { case true => () })
     } yield AdditionalAxis(normalizedName, bounds, index)
 
   protected def getAdditionalAxes(multiscale: NgffMultiscalesItem, remotePath: VaultPath)(using

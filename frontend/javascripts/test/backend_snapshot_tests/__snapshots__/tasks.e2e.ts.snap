@@ -39,7 +39,6 @@ exports[`Task API  (E2E) > createTasks() and deleteTask() 1`] = `
     "settings": {
       "allowedModes": [
         "orthogonal",
-        "oblique",
         "flight",
       ],
       "branchPointsAllowed": true,
@@ -119,7 +118,6 @@ exports[`Task API  (E2E) > getAnnotationsForTask() 1`] = `
     "settings": {
       "allowedModes": [
         "orthogonal",
-        "oblique",
         "flight",
       ],
       "branchPointsAllowed": true,
@@ -172,7 +170,6 @@ exports[`Task API  (E2E) > getAnnotationsForTask() 1`] = `
         "settings": {
           "allowedModes": [
             "orthogonal",
-            "oblique",
             "flight",
           ],
           "branchPointsAllowed": true,
@@ -266,7 +263,6 @@ exports[`Task API  (E2E) > getTask() 1`] = `
     "settings": {
       "allowedModes": [
         "orthogonal",
-        "oblique",
         "flight",
       ],
       "branchPointsAllowed": true,
@@ -324,7 +320,6 @@ exports[`Task API  (E2E) > getTasks() 1`] = `
       "settings": {
         "allowedModes": [
           "orthogonal",
-          "oblique",
           "flight",
         ],
         "branchPointsAllowed": true,
@@ -378,7 +373,6 @@ exports[`Task API  (E2E) > getTasks() 1`] = `
       "settings": {
         "allowedModes": [
           "orthogonal",
-          "oblique",
           "flight",
         ],
         "branchPointsAllowed": true,
@@ -432,7 +426,6 @@ exports[`Task API  (E2E) > getTasks() 1`] = `
       "settings": {
         "allowedModes": [
           "orthogonal",
-          "oblique",
           "flight",
         ],
         "branchPointsAllowed": true,
@@ -491,7 +484,6 @@ exports[`Task API  (E2E) > getTasks() 2`] = `
       "settings": {
         "allowedModes": [
           "orthogonal",
-          "oblique",
           "flight",
         ],
         "branchPointsAllowed": true,
@@ -545,7 +537,6 @@ exports[`Task API  (E2E) > getTasks() 2`] = `
       "settings": {
         "allowedModes": [
           "orthogonal",
-          "oblique",
           "flight",
         ],
         "branchPointsAllowed": true,
@@ -602,7 +593,6 @@ exports[`Task API  (E2E) > peekNextTasks() 1`] = `
     "settings": {
       "allowedModes": [
         "orthogonal",
-        "oblique",
         "flight",
       ],
       "branchPointsAllowed": true,
@@ -681,7 +671,6 @@ exports[`Task API  (E2E) > requestTask() 1`] = `
   "settings": {
     "allowedModes": [
       "orthogonal",
-      "oblique",
       "flight",
     ],
     "branchPointsAllowed": true,
@@ -734,7 +723,6 @@ exports[`Task API  (E2E) > requestTask() 1`] = `
       "settings": {
         "allowedModes": [
           "orthogonal",
-          "oblique",
           "flight",
         ],
         "branchPointsAllowed": true,
@@ -832,7 +820,6 @@ exports[`Task API  (E2E) > updateTask() 1`] = `
     "settings": {
       "allowedModes": [
         "orthogonal",
-        "oblique",
         "flight",
       ],
       "branchPointsAllowed": true,

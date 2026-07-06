@@ -1,8 +1,8 @@
 package com.scalableminds.webknossos.datastore.helpers
 
+import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
-import com.scalableminds.util.tools.Box.tryo
+import Box.tryo
 import org.apache.commons.lang3.builder.HashCodeBuilder
 import play.api.libs.json.{Format, JsError, JsResult, JsString, JsSuccess, JsValue}
 

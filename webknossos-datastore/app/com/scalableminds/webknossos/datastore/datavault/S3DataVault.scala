@@ -1,8 +1,9 @@
 package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.{Box, Empty, Full, Failure as BoxFailure}
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Box, Empty, Fox, Full, Failure => BoxFailure}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.storage.{
   CredentializedUPath,
@@ -131,7 +132,7 @@ class S3DataVault(
   override def listDirectory(path: VaultPath, maxItems: Int)(using
       ec: ExecutionContext,
       tc: TokenContext
-  ): Fox[List[VaultPath]] =
+  ): Fox[Seq[VaultPath]] =
     for {
       prefixKey <- S3UriUtils.objectKeyFromVaultPath(path).toFox
       s3SubPrefixKeys <- getObjectSummaries(bucketName, prefixKey, maxItems)

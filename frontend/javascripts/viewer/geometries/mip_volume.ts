@@ -98,7 +98,7 @@ export function resolveMipLayerSource(
   };
 }
 
-const VERTEX_SHADER = /* glsl */ `
+const VERTEX_SHADER = `
 uniform vec3 uVolumeSize;
 out vec3 vLocalPos;
 
@@ -109,7 +109,7 @@ void main() {
 }
 `;
 
-const FRAGMENT_SHADER_COMMON_HEAD = /* glsl */ `
+const FRAGMENT_SHADER_COMMON_HEAD = `
 precision highp float;
 precision highp sampler3D;
 
@@ -155,7 +155,7 @@ float sampleVolume(int j, vec3 uvw) {
 function buildFragmentShader(writeDepth: boolean): string {
   return (
     FRAGMENT_SHADER_COMMON_HEAD +
-    /* glsl */ `
+    `
 void main() {
   if (uNumLayers == 0) discard;
 

@@ -20,13 +20,13 @@ import {
   theme,
 } from "antd";
 import { makeComponentLazy } from "libs/react_helpers";
-import { useWkSelector } from "libs/react_hooks";
+import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import { animationFrame, sleep } from "libs/utils";
 import { location } from "libs/window";
 import messages from "messages";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { type APIAnnotation, APIAnnotationTypeEnum } from "types/api_types";
 import { getSkeletonDescriptor } from "viewer/model/accessors/skeletontracing_accessor";
@@ -35,10 +35,6 @@ import { createMutableTreeMapFromTreeArray } from "viewer/model/reducers/skeleto
 import { api } from "viewer/singletons";
 import Store from "viewer/store";
 
-type ProjectInfo = {
-  id: string;
-  label: string;
-};
 type Props = {
   isOpen: boolean;
   onOk: () => void;
@@ -68,66 +64,64 @@ function _MergeModalView({ isOpen, onOk }: Props) {
   const dispatch = useDispatch();
   const { token } = theme.useToken();
 
-  const [projects, setProjects] = useState<ProjectInfo[]>([]);
   const [sourceType, setSourceType] = useState<SourceType>("annotation");
   const [targetType, setTargetType] = useState<TargetType>("newAnnotation");
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [annotationInput, setAnnotationInput] = useState("");
-  const [fetchedAnnotation, setFetchedAnnotation] = useState<APIAnnotation | null>(null);
-  const [annotationFetchStatus, setAnnotationFetchStatus] = useState<AnnotationFetchStatus>("idle");
   const [shouldRemapSegmentIds, setShouldRemapSegmentIds] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
-  const [isFetchingData, setIsFetchingData] = useState(false);
 
-  useEffect(() => {
-    async function fetchProjects() {
-      setIsFetchingData(true);
-      try {
-        const projectsResponse: Array<{ id: string; name: string }> = await Request.receiveJSON(
-          "/api/projects",
-          {
-            showErrorToast: false,
-          },
-        );
-        setProjects(
-          projectsResponse.map((project) => ({
-            id: project.id,
-            label: project.name,
-          })),
-        );
-      } finally {
-        setIsFetchingData(false);
-      }
-    }
-    fetchProjects();
-  }, []);
+  const { data: projects = [], isFetching: isFetchingProjects } = useQueryWithErrorHandling({
+    queryKey: ["projects"],
+    queryFn: async () => {
+      const projectsResponse: Array<{ id: string; name: string }> = await Request.receiveJSON(
+        "/api/projects",
+        {
+          showErrorToast: false,
+        },
+      );
+      return projectsResponse.map((project) => ({
+        id: project.id,
+        label: project.name,
+      }));
+    },
+    enabled: isOpen,
+    refetchOnWindowFocus: false,
+  });
 
   const extractedAnnotationId = extractAnnotationId(annotationInput);
-  const latestRequestedAnnotationIdRef = useRef<string | null>(null);
 
-  useEffect(() => {
-    latestRequestedAnnotationIdRef.current = extractedAnnotationId;
+  const {
+    data: fetchedAnnotationData,
+    isFetching: isFetchingAnnotation,
+    status: annotationQueryStatus,
+  } = useQueryWithErrorHandling({
+    queryKey: ["unversionedAnnotation", extractedAnnotationId],
+    queryFn: () =>
+      getUnversionedAnnotationInformation(extractedAnnotationId!, {
+        showErrorToast: false,
+      }),
+    enabled: isOpen && extractedAnnotationId != null,
+    refetchOnWindowFocus: false,
+  });
+
+  const fetchedAnnotation = extractedAnnotationId != null ? (fetchedAnnotationData ?? null) : null;
+
+  const annotationFetchStatus: AnnotationFetchStatus = (() => {
     if (extractedAnnotationId == null) {
-      setFetchedAnnotation(null);
-      setAnnotationFetchStatus("idle");
-      return;
+      return "idle";
     }
-    setAnnotationFetchStatus("fetching");
-    (async () => {
-      try {
-        const annotation = await getUnversionedAnnotationInformation(extractedAnnotationId, {
-          showErrorToast: false,
-        });
-        if (latestRequestedAnnotationIdRef.current !== extractedAnnotationId) return;
-        setFetchedAnnotation(annotation);
-        setAnnotationFetchStatus("success");
-      } catch (_exception) {
-        if (latestRequestedAnnotationIdRef.current !== extractedAnnotationId) return;
-        setFetchedAnnotation(null);
-        setAnnotationFetchStatus("error");
-      }
-    })();
-  }, [extractedAnnotationId]);
+    if (isFetchingAnnotation) {
+      return "fetching";
+    }
+    if (annotationQueryStatus === "success") {
+      return "success";
+    }
+    if (annotationQueryStatus === "error") {
+      return "error";
+    }
+    return "idle";
+  })();
 
   const isSourceValid =
     sourceType === "project" ? selectedProject != null : fetchedAnnotation != null;
@@ -283,7 +277,7 @@ function _MergeModalView({ isOpen, onOk }: Props) {
                 style={{ width: "100%" }}
                 placeholder="Select a project…"
                 onChange={setSelectedProject}
-                loading={isFetchingData}
+                loading={isFetchingProjects}
                 options={projects.map((project) => ({
                   value: project.id,
                   label: project.label,
@@ -340,7 +334,7 @@ function _MergeModalView({ isOpen, onOk }: Props) {
                   Remap segment IDs
                 </Checkbox>
                 <Tooltip
-                  title="Remap the segment ids of the merged-in annotation to keep all segment ids unique. Deselect it to keep all ids as they are. Deselecting this is recommended for annotations based on fallback segmentation layers."
+                  title="Remap the segment IDs of the merged-in annotation to keep all segment IDs unique. Deselect it to keep all IDs as they are. Deselecting this is recommended for annotations based on fallback segmentation layers."
                   placement="top"
                 >
                   <InfoCircleOutlined className="icon-margin-left" />

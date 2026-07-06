@@ -19,11 +19,11 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   UsableDataSource
 }
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataSourceWithPathInfo}
+import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataSourceWithRootPathInfo}
 import com.typesafe.scalalogging.LazyLogging
 import models.folder.FolderDAO
 import models.organization.{Organization, OrganizationDAO}
-import models.team._
+import models.team.*
 import models.user.{MultiUserDAO, User, UserService}
 import com.scalableminds.webknossos.datastore.controllers.PathValidationResult
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
@@ -42,7 +42,7 @@ import telemetry.SlackNotificationService
 import utils.WkConf
 
 import javax.inject.Inject
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.concurrent.ExecutionContext
 
 class DatasetService @Inject() (
@@ -197,12 +197,13 @@ class DatasetService @Inject() (
     } yield dataset
   }
 
-  def updateDataSources(dataStore: DataStore, dataSourcesWithPathInfo: List[DataSourceWithPathInfo])(using
+  def updateDataSources(dataStore: DataStore, dataSourcesWithPathInfo: List[DataSourceWithRootPathInfo])(using
       ctx: DBAccessContext
   ): Fox[List[ObjectId]] = {
+
     val groupedByOrga = dataSourcesWithPathInfo.groupBy(_.dataSource.id.organizationId).toList
     Fox
-      .serialCombined(groupedByOrga) { (orgaTuple: (String, List[DataSourceWithPathInfo])) =>
+      .serialCombined(groupedByOrga) { (orgaTuple: (String, List[DataSourceWithRootPathInfo])) =>
         organizationDAO.findOne(orgaTuple._1).shiftBox.flatMap {
           case Full(organization) if dataStore.onlyAllowedOrganization.exists(_ != organization._id) =>
             logger.info(
@@ -232,12 +233,12 @@ class DatasetService @Inject() (
 
   private def updateDataSourceFromDataStore(
       dataStore: DataStore,
-      dataSourceWithPathInfo: DataSourceWithPathInfo,
+      dataSourceWithRootPathInfo: DataSourceWithRootPathInfo,
       foundDatasetsByDirectoryName: Map[String, List[Dataset]]
   )(using ctx: DBAccessContext): Fox[Option[ObjectId]] = {
-    val dataSource = dataSourceWithPathInfo.dataSource
-    val rootPath = dataSourceWithPathInfo.rootPath
-    val rootRealPath = dataSourceWithPathInfo.rootRealPath
+    val dataSource = dataSourceWithRootPathInfo.dataSource
+    val rootPath = dataSourceWithRootPathInfo.rootPath
+    val rootRealPath = dataSourceWithRootPathInfo.rootRealPath
     val foundDatasetOpt = foundDatasetsByDirectoryName.get(dataSource.id.directoryName).flatMap(_.headOption)
     val isVirtual = foundDatasetOpt.exists(_.isVirtual)
     if (isVirtual) { // Virtual datasets should not be updated from the datastore, as we do not expect them to exist as data source properties on the datastore.
@@ -347,7 +348,11 @@ class DatasetService @Inject() (
         if (isChanged) {
           logger.info(s"Updating dataSource of $datasetId")
           for {
-            _ <- Fox.runIf(!dataset.isVirtual)(dataStoreClient.updateDataSourceOnDisk(datasetId, updatedDataSource))
+            _ <- Fox.runIf(!dataset.isVirtual)(
+              Fox.runOptional(dataset.rootPath)(r =>
+                dataStoreClient.updateDataSourceOnDisk(datasetId, updatedDataSource, r)
+              )
+            )
             datastoreClient <- clientFor(dataset)
             removedPaths = existingDataSource.allExplicitPaths.diff(updatedDataSource.allExplicitPaths)
             pathsUsedOnlyByThisDataset <-
@@ -705,18 +710,23 @@ class DatasetService @Inject() (
             _ <- pathDeletionService.deletePaths(datastoreClient, pathsUsedOnlyByThisDataset)
           } yield ()
         } else {
-          for {
-            datastoreBaseDirStr <- datastoreClient.getBaseDirAbsolute
-            datastoreBaseDir <- UPath.fromString(datastoreBaseDirStr).toFox
-            datasetDir = datastoreBaseDir / dataset._organization / dataset.directoryName
-            datastore <- dataStoreFor(dataset)
-            datasetsUsingDataFromThisDir <- findDatasetsUsingDataFromDir(datasetDir, datastore, dataset._id)
-            _ <- Fox.fromBool(
-              datasetsUsingDataFromThisDir.isEmpty
-            ) ?~> s"Cannot delete dataset because ${datasetsUsingDataFromThisDir.length} other datasets reference its data: ${datasetsUsingDataFromThisDir
-                .mkString(",")}"
-            _ <- datastoreClient.deleteOnDisk(dataset._id) ?~> Msg.Dataset.Delete.failed
-          } yield ()
+          dataset.rootPath.orElse(dataset.rootRealPath).match {
+            case Some(rootPath) =>
+              for {
+                datastore <- dataStoreFor(dataset)
+                rootPathValidated <- UPath.fromString(rootPath).toFox
+                _ <- Fox.fromBool(rootPathValidated.isLocal)
+                datasetsUsingDataFromThisDir <- findDatasetsUsingDataFromDir(rootPathValidated, datastore, dataset._id)
+                _ <- Fox.fromBool(
+                  datasetsUsingDataFromThisDir.isEmpty
+                ) ?~> s"Cannot delete dataset because ${datasetsUsingDataFromThisDir.length} other datasets reference its data: ${datasetsUsingDataFromThisDir
+                    .mkString(",")}"
+                _ <- datastoreClient.deleteOnDisk(dataset._id, rootPath) ?~> Msg.Dataset.Delete.failed
+              } yield ()
+            case None =>
+              // Non-Virtual datasets should all have root paths. In case no root path is set, we skip deleting it.
+              Fox.successful(())
+          }
         }
       _ <- Fox.runIf(
         conf.Features.jobsEnabled && (dataset.status == DataSourceStatus.notYetUploadedToPaths || dataset.status == DataSourceStatus.notYetUploaded)
@@ -803,7 +813,9 @@ class DatasetService @Inject() (
       for {
         dataSource <- usableDataSourceFor(dataset, useRealPaths = false)
         client <- clientFor(dataset)
-        _ <- client.scanRealPathsForVirtual(Seq(dataSource))
+        _ <- client.scanRealPathsForVirtual(
+          Seq(DataSourceWithRootPathInfo(dataSource, dataset.rootPath, dataset.rootRealPath))
+        )
       } yield ()
     } else Fox.successful(())
 

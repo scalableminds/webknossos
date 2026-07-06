@@ -30,17 +30,20 @@ export function createWorker<TExposed extends UseCreateWorkerToUseMe<AnyFn> | An
     };
   }
 
+  type WorkerConstructor = new (options?: WorkerOptions) => Worker;
+
   // this URL is relative to <root>/frontend/javascripts/viewer/workers
-  const workerConstructors = import.meta.glob("./*.worker.ts", {
+  // Since Vite 8, `?worker` glob imports are typed as `Worker` instances rather than
+  // worker constructors. We provide the generic type argument to import.meta.glob
+  // to avoid type-casting later. At runtime the value is Vite's `WorkerWrapper`
+  // function, which must be invoked with `new`.
+  const workerConstructors = import.meta.glob<WorkerConstructor>("./*.worker.ts", {
     query: "?worker",
     import: "default",
     eager: true,
   });
-  const workerConstructor = workerConstructors[`./${pathToWorker}`] as
-    | (new (
-        options?: WorkerOptions,
-      ) => Worker)
-    | undefined;
+
+  const workerConstructor: WorkerConstructor | undefined = workerConstructors[`./${pathToWorker}`];
 
   if (workerConstructor == null) {
     throw new Error(`Worker not found: ${pathToWorker}`);

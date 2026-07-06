@@ -114,7 +114,7 @@ export function getUpdatedPathnameWithNewDatasetName(
 }
 
 // If the type of UrlManagerState changes, the following files need to be updated:
-// docs/sharing.md#sharing-link-format
+// docs/sharing/annotation_sharing.md#sharing-link-format
 // frontend/javascripts/types/schemas/url_state.schema.ts
 export type UrlManagerState = {
   position?: Vector3;
@@ -125,6 +125,8 @@ export type UrlManagerState = {
   stateByLayer?: UrlStateByLayer;
   additionalCoordinates?: AdditionalCoordinate[] | null;
   nativelyRenderedLayerName?: string | null;
+  clippingDistance?: number;
+  clipSkeletonToCurrentSection?: boolean;
 };
 export type PartialUrlManagerState = Partial<UrlManagerState>;
 
@@ -380,12 +382,16 @@ class UrlManager {
             stateByLayer,
           }
         : {};
+    const { clippingDistance, clipSkeletonToCurrentSection } = state.userConfiguration;
+
     return {
       position,
       mode,
       zoomStep,
       additionalCoordinates: state.flycam.additionalCoordinates,
       nativelyRenderedLayerName: state.datasetConfiguration.nativelyRenderedLayerName,
+      clippingDistance,
+      clipSkeletonToCurrentSection,
       ...rotation,
       ...activeNodeOptional,
       ...stateByLayerOptional,

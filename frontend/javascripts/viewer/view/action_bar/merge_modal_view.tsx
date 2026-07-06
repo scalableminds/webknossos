@@ -82,19 +82,22 @@ function _MergeModalView({ isOpen, onOk }: Props) {
   useEffect(() => {
     async function fetchProjects() {
       setIsFetchingData(true);
-      const projectsResponse: Array<{ id: string; name: string }> = await Request.receiveJSON(
-        "/api/projects",
-        {
-          showErrorToast: false,
-        },
-      );
-      setProjects(
-        projectsResponse.map((project) => ({
-          id: project.id,
-          label: project.name,
-        })),
-      );
-      setIsFetchingData(false);
+      try {
+        const projectsResponse: Array<{ id: string; name: string }> = await Request.receiveJSON(
+          "/api/projects",
+          {
+            showErrorToast: false,
+          },
+        );
+        setProjects(
+          projectsResponse.map((project) => ({
+            id: project.id,
+            label: project.name,
+          })),
+        );
+      } finally {
+        setIsFetchingData(false);
+      }
     }
     fetchProjects();
   }, []);
@@ -163,17 +166,15 @@ function _MergeModalView({ isOpen, onOk }: Props) {
 
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'trees' does not exist on type 'ServerTra... Remove this comment to see the full error message
     const { trees, treeGroups } = tracing;
-    setIsUploading(true);
     // Wait for an animation frame (but not longer than a second) so that the loading
     // animation is kicked off
     await animationFrame(1000);
     dispatch(addTreesAndGroupsAction(createMutableTreeMapFromTreeArray(trees), treeGroups));
-    setIsUploading(false);
     Toast.success(messages["tracing.merged"]);
     onOk();
   }
 
-  const handleMerge = () => {
+  const handleMerge = async () => {
     const mergeSourcePath =
       sourceType === "project"
         ? `CompoundProject/${selectedProject}`
@@ -181,7 +182,7 @@ function _MergeModalView({ isOpen, onOk }: Props) {
     const url =
       `/api/annotations/${mergeSourcePath}/merge/${annotationType}/${annotationId}` +
       `?remapSegmentIds=${shouldRemapSegmentIds}`;
-    createMergedAnnotation(url);
+    await createMergedAnnotation(url);
   };
 
   const handleImportTrees = async () => {
@@ -191,14 +192,25 @@ function _MergeModalView({ isOpen, onOk }: Props) {
         selectedProject,
         APIAnnotationTypeEnum.CompoundProject,
       );
-      mergeAnnotationIntoActiveTracing(annotation);
+      await mergeAnnotationIntoActiveTracing(annotation);
     } else {
       if (fetchedAnnotation == null) return;
-      mergeAnnotationIntoActiveTracing(fetchedAnnotation);
+      await mergeAnnotationIntoActiveTracing(fetchedAnnotation);
     }
   };
 
-  const handleAction = targetType === "importHere" ? handleImportTrees : handleMerge;
+  const handleAction = async () => {
+    setIsUploading(true);
+    try {
+      if (targetType === "importHere") {
+        await handleImportTrees();
+      } else {
+        await handleMerge();
+      }
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const annotationInputSuffix =
     annotationFetchStatus === "fetching" ? (
@@ -231,7 +243,12 @@ function _MergeModalView({ isOpen, onOk }: Props) {
                   : "Creates a new annotation in your account with all merged contents of the current and selected annotations, including volume layers."
             }
           >
-            <Button type="primary" disabled={!isSourceValid} onClick={handleAction}>
+            <Button
+              type="primary"
+              disabled={!isSourceValid}
+              loading={isUploading}
+              onClick={handleAction}
+            >
               {targetType === "importHere" ? "Import Skeleton Trees" : "Merge"}
             </Button>
           </Tooltip>
@@ -321,13 +338,13 @@ function _MergeModalView({ isOpen, onOk }: Props) {
                   onChange={(ev) => setShouldRemapSegmentIds(ev.target.checked)}
                 >
                   Remap segment IDs
-                  <Tooltip
-                    title="Remap the segment ids of the merged-in annotation to keep all segment ids unique. Deselect it to keep all ids as they are. Deselecting this is recommended for annotations based on fallback segmentation layers."
-                    placement="top"
-                  >
-                    <InfoCircleOutlined className="icon-margin-left" />
-                  </Tooltip>
                 </Checkbox>
+                <Tooltip
+                  title="Remap the segment ids of the merged-in annotation to keep all segment ids unique. Deselect it to keep all ids as they are. Deselecting this is recommended for annotations based on fallback segmentation layers."
+                  placement="top"
+                >
+                  <InfoCircleOutlined className="icon-margin-left" />
+                </Tooltip>
               </div>
             </>
           ) : null}

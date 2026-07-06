@@ -99,8 +99,10 @@ jobs:
         run: tools/assert-complete-migrations.sh
       - name: Assert no 'SELECT *'  are present in scala files
         run: tools/assert-no-select-asterisk-present.sh
-      - name: Check backend formatting/lint and run backend unit tests
-        run: sbt -v "scalafmtCheck; Test/scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck; scalafix --check; Test/scalafix --check; util/scalafix --check; webknossosTracingstore/scalafix --check; webknossosDatastore/scalafix --check; testOnly backend.*"
+      - name: Check backend formatting and lint
+        run: sbt "scalafmtCheck; Test/scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck; scalafix --check; Test/scalafix --check; util/scalafix --check; webknossosTracingstore/scalafix --check; webknossosDatastore/scalafix --check"
+      - name: Run backend unit tests
+        run: sbt -v "testOnly backend.*"
 
       - name: Start Fossildb for e2e tests
         run: docker compose --file .github/docker-compose.yml up -d fossildb
@@ -170,24 +172,16 @@ jobs:
         env:
           PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
 
-      - name: Build webknossos frontend (vite, docs) and compile backend (sbt) in parallel
-        # sbt stage needs the vite output (it is packaged into the assets jar),
-        # but sbt compile does not, so the frontend build runs concurrently with it.
-        run: |
-          (yarn build && yarn run docs --project-version "$WK_VERSION") > frontend-build.log 2>&1 &
-          frontend_pid=$!
-          sbt -DfailOnWarning compile
-          if ! wait "$frontend_pid"; then
-            echo "Frontend build failed:"
-            cat frontend-build.log
-            exit 1
-          fi
-          cat frontend-build.log
+      - name: Build webknossos (vite)
+        run: yarn build
+
+      - name: Build frontend documentation
+        run: yarn run docs --project-version "$WK_VERSION"
         env:
           WK_VERSION: ${{ github.run_id }}
 
-      - name: Stage webknossos, datastore and tracingstore (sbt)
-        run: sbt -DfailOnWarning "stage; webknossosDatastore/stage; webknossosTracingstore/stage"
+      - name: Compile and stage webknossos, datastore and tracingstore (sbt)
+        run: sbt -DfailOnWarning "compile; stage; webknossosDatastore/stage; webknossosTracingstore/stage"
       - name: Checksum App Dirs
         run: find app webknossos-datastore/app webknossos-tracingstore/app -type f -exec md5sum {} \; | sort -k 2 | md5sum > app_checksum.txt
 

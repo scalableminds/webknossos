@@ -52,6 +52,13 @@ type UserBoundingBoxInputProps = {
 const FORMAT_TOOLTIP = "Format: minX, minY, minZ, width, height, depth";
 const READ_ONLY_TOOLTIP = "This is a read-only bounding box of a dataset layer.";
 const DEFAULT_READ_ONLY_COLOR: Vector3 = [0.5, 0.5, 0.5];
+// Mimics the disabled look of an antd input while keeping the field selectable, so the coordinates
+// of a read-only layer bounding box can still be copied.
+const READ_ONLY_INPUT_STYLE: React.CSSProperties = {
+  color: "var(--ant-color-text-disabled)",
+  backgroundColor: "var(--ant-color-bg-container-disabled)",
+  cursor: "text",
+};
 
 export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
   const {
@@ -257,19 +264,19 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
             onBlur={handleNameChanged}
             disabled={!isReadOnly && disabled}
             readOnly={isReadOnly}
+            style={isReadOnly ? READ_ONLY_INPUT_STYLE : undefined}
             onClick={(e) => e.stopPropagation()}
           />
         </FastTooltip>
         {isReadOnly ? (
-          <FastTooltip title={READ_ONLY_TOOLTIP}>
-            <ButtonComponent
-              icon={<LockOutlined style={{ color: "var(--ant-color-text-tertiary)" }} />}
-              type="text"
-              size="small"
-              // The button is only a visual read-only indicator and should not react to clicks.
-              onClick={(e) => e.stopPropagation()}
-            />
-          </FastTooltip>
+          <ButtonComponent
+            title={READ_ONLY_TOOLTIP}
+            icon={<LockOutlined style={{ color: "var(--ant-color-text-tertiary)" }} />}
+            type="text"
+            size="small"
+            // The button is only a visual read-only indicator and should not react to clicks.
+            onClick={(e) => e.stopPropagation()}
+          />
         ) : (
           <ButtonComponent
             title={disabled ? editingDisallowedExplanation : "Delete Bounding Box"}
@@ -319,6 +326,7 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
             size="small"
             disabled={!isReadOnly && disabled}
             readOnly={isReadOnly}
+            style={isReadOnly ? READ_ONLY_INPUT_STYLE : undefined}
             onClick={(e) => e.stopPropagation()}
           />
         </FastTooltip>

@@ -1,6 +1,6 @@
 import app from "app";
 import Toast from "libs/toast";
-import { rgbToInt } from "libs/utils";
+import { rgbToInt, stringToColor } from "libs/utils";
 import window from "libs/window";
 import {
   BoxGeometry,
@@ -82,7 +82,6 @@ BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
 Mesh.prototype.raycast = acceleratedRaycast;
 
 const CUBE_COLOR = 0x999999;
-const LAYER_CUBE_COLOR = 0xffff99;
 
 const getVisibleSegmentationLayerNames = reuseInstanceOnEquality((storeState: WebknossosState) =>
   getVisibleSegmentationLayers(storeState).map((l) => l.name),
@@ -660,13 +659,11 @@ class SceneController {
       layers.map((layer) => {
         const boundingBox = getLayerBoundingBox(dataset, layer.name);
         const { min, max } = boundingBox;
-        const color = layerBoundingBoxColor[layer.name];
+        const color = layerBoundingBoxColor[layer.name] ?? stringToColor(layer.name);
         const bbCube = new Cube({
           min,
           max,
-          color: color
-            ? rgbToInt([color[0] * 255, color[1] * 255, color[2] * 255])
-            : LAYER_CUBE_COLOR,
+          color: rgbToInt([color[0] * 255, color[1] * 255, color[2] * 255]),
           showCrossSections: false,
           isHighlighted: false,
         });

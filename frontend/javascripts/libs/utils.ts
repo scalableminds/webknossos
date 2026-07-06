@@ -237,6 +237,19 @@ export function getRandomColor(): Vector3 {
   return randomColor as any as Vector3;
 }
 
+// Derives a stable, well-saturated color (normalized 0-1 RGB) from a string, so that e.g. two
+// layers with different names get distinct but deterministic colors.
+export function stringToColor(str: string): Vector3 {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0; // Convert to 32bit integer
+  }
+  const hue = (Math.abs(hash) % 360) / 360;
+  const [r, g, b] = _hslaToRgba([hue, 0.7, 0.6, 1]);
+  return [r, g, b];
+}
+
 export function computeBoundingBoxFromArray(bb: Vector6): BoundingBoxMinMaxType {
   const [x, y, z, width, height, depth] = bb;
   return {

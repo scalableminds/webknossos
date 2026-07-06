@@ -167,12 +167,10 @@ function formatSelectedScale(dataset: APIDataset, mag: Vector3) {
 export function DownloadTiffTab({
   isAnnotation,
   initialBoundingBoxId,
-  initialLayerName,
   onClose,
 }: {
   isAnnotation: boolean;
   initialBoundingBoxId?: number;
-  initialLayerName?: string;
   onClose: () => void;
 }) {
   const annotation = useWkSelector((state) => state.annotation);
@@ -185,7 +183,7 @@ export function DownloadTiffTab({
 
   const [keepWindowOpen, setKeepWindowOpen] = useState(true);
   const [selectedLayerName, setSelectedLayerName] = useState<string>(
-    initialLayerName ?? dataset.dataSource.dataLayers[0].name,
+    dataset.dataSource.dataLayers[0].name,
   );
   const [exportFormat, setExportFormat] = useState<ExportFormat>(ExportFormat.OME_TIFF);
 

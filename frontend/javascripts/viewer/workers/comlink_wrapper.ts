@@ -21,11 +21,20 @@ export function createWorker<TExposed extends UseCreateWorkerToUseMe<AnyFn> | An
 ) => Promise<Awaited<ReturnType<UnwrapExposedWorkerFn<TExposed>>>> {
   if (wrap == null) {
     // In a node context (e.g., when executing tests), we don't create web workers.
-    // Instead, we dynamically import the worker and return its default export.
+    // Instead, we dynamically import the worker and call its default export directly.
+    const pathToWorkerWithoutExtension = pathToWorker.replace(/\.worker\.ts$/, "");
+    // The import is kicked off eagerly (at createWorker() time) instead of on the first
+    // call: worker functions are often invoked fire-and-forget (e.g. bucket compression),
+    // so a first call late in a test could otherwise trigger the module load after Vitest
+    // has torn down the test environment (EnvironmentTeardownError).
+    // In the browser, workers are loaded via import.meta.glob with eager: true (see below),
+    // which Vite resolves statically at build time — no runtime dynamic import() occurs there.
+    // This import() is only reached in Vitest/Node where wrap is null and web workers don't
+    // exist, so importDynamic's "stale chunk URL after deployment" protection does not apply.
+    // Bare import is allowed here (whitelisted in tools/check-no-bare-dynamic-imports.js).
+    const workerModulePromise = import(`./${pathToWorkerWithoutExtension}.worker.ts`);
     return async (...params: Parameters<UnwrapExposedWorkerFn<TExposed>>) => {
-      const pathToWorkerWithoutExtension = pathToWorker.replace(/\.worker\.ts$/, "");
-      // This import statement requires a file extension for proper static analysis by Vite during build step.
-      const workerModule = await import(`./${pathToWorkerWithoutExtension}.worker.ts`);
+      const workerModule = await workerModulePromise;
       return workerModule.default(...params);
     };
   }

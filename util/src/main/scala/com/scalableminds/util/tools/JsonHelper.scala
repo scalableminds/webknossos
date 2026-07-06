@@ -1,16 +1,18 @@
 package com.scalableminds.util.tools
 
+import com.scalableminds.util.box.{Box, Empty, Failure, Full}
+
 import java.io.FileNotFoundException
-import java.nio.file._
+import java.nio.file.*
 import com.scalableminds.util.io.FileIO
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.Box.tryo
-import play.api.libs.json._
-import play.api.libs.json.Reads._
-import play.api.libs.json.Writes._
+import com.scalableminds.util.box.Box.tryo
+import play.api.libs.json.*
+import play.api.libs.json.Reads.*
+import play.api.libs.json.Writes.*
 
 import java.nio.charset.StandardCharsets
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.io.{BufferedSource, Source}
 
 object JsonHelper extends LazyLogging {
@@ -20,8 +22,8 @@ object JsonHelper extends LazyLogging {
 
   def parseAs[T: Reads](s: String): Box[T] =
     for {
-      jsValue <- tryo(Json.parse(s)) ?~ "Failed to parse json"
-      validated <- as[T](jsValue) ?~ "Failed to validate json against schema"
+      jsValue <- tryo(Json.parse(s)) ?~> "Failed to parse json"
+      validated <- as[T](jsValue) ?~> "Failed to validate json against schema"
     } yield validated
 
   def as[T: Reads](jsReadable: JsReadable): Box[T] =

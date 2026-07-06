@@ -1,8 +1,9 @@
 package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.{Box, Full}
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.tools.{Box, Fox, Full}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.storage.{
   DataVaultCredential,
@@ -50,9 +51,9 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
         else Fox.failure(s"Https read failed for uri $uri: ${response.status} ${response.statusText}")
     } yield result
 
-  override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
+  override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[Seq[VaultPath]] =
     // HTTP file listing is currently not supported.
-    Fox.successful(List.empty)
+    Fox.successful(Seq.empty)
 
   override def getUsedStorageBytes(path: VaultPath)(using ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     // paid HTTP file storage is not supported.

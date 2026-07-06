@@ -99,10 +99,8 @@ jobs:
         run: tools/assert-complete-migrations.sh
       - name: Assert no 'SELECT *'  are present in scala files
         run: tools/assert-no-select-asterisk-present.sh
-      - name: Check backend formatting and lint
-        run: sbt "scalafmtCheck; Test/scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck; scalafix --check; Test/scalafix --check; util/scalafix --check; webknossosTracingstore/scalafix --check; webknossosDatastore/scalafix --check"
-      - name: Run backend unit tests
-        run: sbt -v "testOnly backend.*"
+      - name: Check backend formatting/lint and run backend unit tests
+        run: sbt -v "scalafmtCheck; Test/scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck; scalafix --check; Test/scalafix --check; util/scalafix --check; webknossosTracingstore/scalafix --check; webknossosDatastore/scalafix --check; testOnly backend.*"
 
       - name: Start Fossildb for e2e tests
         run: docker compose --file .github/docker-compose.yml up -d fossildb
@@ -172,20 +170,24 @@ jobs:
         env:
           PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
 
-      - name: Build webknossos (vite)
-        run: yarn build
-
-      - name: Build frontend documentation
-        run: yarn run docs --project-version "$WK_VERSION"
+      - name: Build webknossos frontend (vite, docs) and compile backend (sbt) in parallel
+        # sbt stage needs the vite output (it is packaged into the assets jar),
+        # but sbt compile does not, so the frontend build runs concurrently with it.
+        run: |
+          (yarn build && yarn run docs --project-version "$WK_VERSION") > frontend-build.log 2>&1 &
+          frontend_pid=$!
+          sbt -DfailOnWarning compile
+          if ! wait "$frontend_pid"; then
+            echo "Frontend build failed:"
+            cat frontend-build.log
+            exit 1
+          fi
+          cat frontend-build.log
         env:
           WK_VERSION: ${{ github.run_id }}
 
-      - name: Build webknossos (sbt)
-        run: sbt -DfailOnWarning compile stage
-      - name: Build webknossos-datastore (sbt)
-        run: sbt -DfailOnWarning "project webknossosDatastore" compile stage
-      - name: Build webknossos-tracingstore (sbt)
-        run: sbt -DfailOnWarning "project webknossosTracingstore" compile stage
+      - name: Stage webknossos, datastore and tracingstore (sbt)
+        run: sbt -DfailOnWarning "stage; webknossosDatastore/stage; webknossosTracingstore/stage"
       - name: Checksum App Dirs
         run: find app webknossos-datastore/app webknossos-tracingstore/app -type f -exec md5sum {} \; | sort -k 2 | md5sum > app_checksum.txt
 
@@ -257,46 +259,34 @@ jobs:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PASS }}
 
-      - name: Push webknossos image
+      - name: Push webknossos, datastore and tracingstore images
         if: ${{ ! startsWith(github.ref, 'refs/tags/') && github.actor != 'dependabot[bot]' }}
         uses: ./.github/actions/retry
         with:
-          run: docker push "scalableminds/webknossos:${{ env.DOCKER_TAG }}"
+          run: |
+            pids=()
+            for image in webknossos webknossos-datastore webknossos-tracingstore; do
+              docker push "scalableminds/$image:${{ env.DOCKER_TAG }}" &
+              pids+=($!)
+            done
+            fail=0
+            for pid in "${pids[@]}"; do wait "$pid" || fail=1; done
+            exit $fail
           retries: 5
           retry_delay_seconds: 10
-      - name: Push normalized webknossos image
+      - name: Push normalized webknossos, datastore and tracingstore images
         if: ${{ github.actor != 'dependabot[bot]' }}
         uses: ./.github/actions/retry
         with:
-          run: docker push "scalableminds/webknossos:${{ env.NORMALIZED_BRANCH }}"
-          retries: 5
-          retry_delay_seconds: 10
-      - name: Push webknossos-datastore image
-        if: ${{ ! startsWith(github.ref, 'refs/tags/') && github.actor != 'dependabot[bot]' }}
-        uses: ./.github/actions/retry
-        with:
-          run: docker push "scalableminds/webknossos-datastore:${{ env.DOCKER_TAG }}"
-          retries: 5
-          retry_delay_seconds: 10
-      - name: Push normalized webknossos-datastore image
-        if: ${{ github.actor != 'dependabot[bot]' }}
-        uses: ./.github/actions/retry
-        with:
-          run: docker push "scalableminds/webknossos-datastore:${{ env.NORMALIZED_BRANCH }}"
-          retries: 5
-          retry_delay_seconds: 10
-      - name: Push webknossos-tracingstore image
-        if: ${{ ! startsWith(github.ref, 'refs/tags/') && github.actor != 'dependabot[bot]' }}
-        uses: ./.github/actions/retry
-        with:
-          run: docker push "scalableminds/webknossos-tracingstore:${{ env.DOCKER_TAG }}"
-          retries: 5
-          retry_delay_seconds: 10
-      - name: Push normalized webknossos-tracingstore image
-        if: ${{ github.actor != 'dependabot[bot]' }}
-        uses: ./.github/actions/retry
-        with:
-          run: docker push "scalableminds/webknossos-tracingstore:${{ env.NORMALIZED_BRANCH }}"
+          run: |
+            pids=()
+            for image in webknossos webknossos-datastore webknossos-tracingstore; do
+              docker push "scalableminds/$image:${{ env.NORMALIZED_BRANCH }}" &
+              pids+=($!)
+            done
+            fail=0
+            for pid in "${pids[@]}"; do wait "$pid" || fail=1; done
+            exit $fail
           retries: 5
           retry_delay_seconds: 10
       - name: Check autodeploy label

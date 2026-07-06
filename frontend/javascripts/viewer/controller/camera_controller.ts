@@ -284,17 +284,16 @@ class CameraController extends PureComponent<Props> {
       ),
       listenToStoreProperty(
         (storeState) => storeState.flycam.currentMatrix,
-        () => this.update(),
+        () => {
+          this.update();
+          // Keep the trackball target of the 3D viewport in sync with the flycam.
+          // For the orthographic camera this has no visible effect (which is why it
+          // used to happen only lazily when hovering the 3D viewport), but the derived
+          // perspective camera is anchored at the target, so it would lag behind
+          // flycam movements otherwise.
+          this.props.setTargetAndFixPosition();
+        },
         true,
-      ),
-      listenToStoreProperty(
-        (storeState) => storeState.flycam.currentMatrix,
-        // Keep the trackball target of the 3D viewport in sync with the flycam.
-        // For the orthographic camera this has no visible effect (which is why it
-        // used to happen only lazily when hovering the 3D viewport), but the derived
-        // perspective camera is anchored at the target, so it would lag behind
-        // flycam movements otherwise.
-        () => this.props.setTargetAndFixPosition(),
       ),
       listenToStoreProperty(
         (storeState) => storeState.viewModeData.plane.tdCamera,

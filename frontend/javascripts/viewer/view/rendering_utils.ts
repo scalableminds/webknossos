@@ -73,17 +73,20 @@ export function renderToTexture(
   const { renderer, scene: defaultScene } = SceneController;
   const state = Store.getState();
   scene = scene || defaultScene;
-  const tdPerspectiveCamera = scene.getObjectByName(TDViewPerspectiveCameraName);
-  const cameraName =
-    plane === OrthoViews.TDView
-      ? getActiveTDViewCameraName(
-          state.userConfiguration.tdViewUsePerspectiveCamera,
-          Boolean(tdPerspectiveCamera?.userData.isDerived),
-        )
-      : plane;
-  camera = (camera || scene.getObjectByName(cameraName) || scene.getObjectByName(plane)) as
-    | OrthographicCamera
-    | PerspectiveCamera;
+  let tdPerspectiveCamera: ReturnType<Scene["getObjectByName"]>;
+  let cameraName: OrthoView | typeof TDViewPerspectiveCameraName | typeof FlightViewport = plane;
+  if (plane === OrthoViews.TDView) {
+    tdPerspectiveCamera = scene.getObjectByName(TDViewPerspectiveCameraName);
+    cameraName = getActiveTDViewCameraName(
+      state.userConfiguration.tdViewUsePerspectiveCamera,
+      Boolean(tdPerspectiveCamera?.userData.isDerived),
+    );
+  }
+  camera = (camera ||
+    (cameraName === TDViewPerspectiveCameraName
+      ? tdPerspectiveCamera
+      : scene.getObjectByName(cameraName)) ||
+    scene.getObjectByName(plane)) as OrthographicCamera | PerspectiveCamera;
 
   // Don't respect withFarClipping for the TDViewport as we don't do any clipping for
   // nodes there.

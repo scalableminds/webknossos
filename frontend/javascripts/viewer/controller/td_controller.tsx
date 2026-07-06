@@ -109,12 +109,16 @@ function maybeGetActiveNodeFromProps(props: Props) {
 class TDController extends PureComponent<Props> {
   controls!: typeof TrackballControls;
   mouseController!: InputMouse;
-  oldUnitPos!: Vector3;
+  // Initialized eagerly (rather than in componentDidMount) since CameraController,
+  // a child component that mounts before TDController's componentDidMount runs, can
+  // call setTargetAndFixPosition() via its own store listeners as soon as it mounts.
+  oldUnitPos: Vector3 = voxelToUnit(
+    Store.getState().dataset.dataSource.scale,
+    getPosition(Store.getState().flycam),
+  );
   isStarted: boolean = false;
 
   componentDidMount() {
-    const { dataset, flycam } = Store.getState();
-    this.oldUnitPos = voxelToUnit(dataset.dataSource.scale, getPosition(flycam));
     this.isStarted = true;
     this.initMouse();
   }
@@ -355,13 +359,6 @@ class TDController extends PureComponent<Props> {
       controls.update();
     }
 
-    if (this.oldUnitPos == null) {
-      // This method can be called (via CameraController's store listeners) before
-      // componentDidMount has initialized oldUnitPos.
-      this.oldUnitPos = nmPosition;
-      return;
-    }
-
     // The following code is a dirty hack. If someone figures out
     // how the trackball control's target can be set without affecting
     // the camera position, go ahead.
@@ -409,11 +406,10 @@ class TDController extends PureComponent<Props> {
     const setCameraAction = userTriggered
       ? setTDCameraAction
       : setTDCameraWithoutTimeTrackingAction;
-    // Write threeJS camera into store
+    // Write threeJS camera into store. This dispatch is handled synchronously and routes
+    // back through CameraController.updateTDCamera -> onCameraPositionChanged (updateControls),
+    // which also calls updateTDViewPerspectiveCamera(), so no separate call is needed here.
     Store.dispatch(setCameraAction(threeCameraToCameraData(tdCamera)));
-    // Keep the derived perspective camera in sync within the same frame
-    // (e.g. during trackball rotations).
-    this.updateTDViewPerspectiveCamera();
   };
 
   render() {

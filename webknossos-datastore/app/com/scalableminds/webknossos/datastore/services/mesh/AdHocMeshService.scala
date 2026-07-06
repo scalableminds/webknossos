@@ -3,7 +3,8 @@ package com.scalableminds.webknossos.datastore.services.mesh
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Float, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Box, Failure, Fox, Full}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, ElementClass, SegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.requests.{
@@ -15,7 +16,6 @@ import com.scalableminds.webknossos.datastore.models.requests.{
 import com.scalableminds.webknossos.datastore.services.mcubes.MarchingCubes
 import com.scalableminds.webknossos.datastore.services.BinaryDataService
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.{Box, Failure}
 import com.scalableminds.webknossos.datastore.services.mapping.MappingService
 import org.apache.pekko.actor.{Actor, ActorRef, ActorSystem, Props}
 import org.apache.pekko.pattern.ask
@@ -114,7 +114,7 @@ class AdHocMeshService(
       dataTypeFunctors: DataTypeFunctors[T, B]
   )(using tc: TokenContext): Fox[(Array[Float], List[Int])] = {
 
-    def applyJsonMappingIfNeeded(data: Array[T]): Fox[Array[T]] =
+    def applyJsonMappingIfNeeded(data: Array[T]): Box[Array[T]] =
       request.mapping match {
         case Some(mappingName) =>
           request.mappingType match {
@@ -124,10 +124,10 @@ class AdHocMeshService(
                 data,
                 dataTypeFunctors.fromLong
               )
-            case _ => Fox.successful(data)
+            case _ => Full(data)
           }
         case _ =>
-          Fox.successful(data)
+          Full(data)
       }
 
     def applyAgglomerate(data: Array[Byte]): Fox[Array[Byte]] =
@@ -200,8 +200,10 @@ class AdHocMeshService(
       request.dataSourceId,
       request.dataLayer,
       cuboid,
-      DataServiceRequestSettings.default
-        .copy(additionalCoordinates = request.additionalCoordinates, version = request.annotationVersion)
+      DataServiceRequestSettings(
+        additionalCoordinates = request.additionalCoordinates,
+        version = request.annotationVersion
+      )
     )
 
     val dataDimensions = Vec3Int(cuboid.width, cuboid.height, cuboid.depth)
@@ -220,8 +222,8 @@ class AdHocMeshService(
       data <- binaryDataService.handleDataRequest(dataRequest)
       agglomerateMappedData <- applyAgglomerate(data) ?~> "failed to apply agglomerate for ad-hoc meshing"
       typedData = convertData(agglomerateMappedData)
-      mappedData <- applyJsonMappingIfNeeded(typedData)
-      mappedSegmentId <- applyJsonMappingIfNeeded(Array(typedSegmentId)).map(_.head)
+      mappedData <- applyJsonMappingIfNeeded(typedData).toFox
+      mappedSegmentId <- applyJsonMappingIfNeeded(Array(typedSegmentId)).map(_.head).toFox
       neighbors =
         if (request.findNeighbors) { findNeighbors(mappedData, dataDimensions, mappedSegmentId) }
         else {

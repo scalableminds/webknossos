@@ -157,7 +157,7 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
       );
       Store.dispatch(setMappingEnabledAction(effectiveLayerName, true));
       // Store initial changes of setMappingAction and setMappingEnabledAction in RebaseRelevantAnnotationState.
-      Store.dispatch(snapshotMappingDataForNextRebaseAction(layerName));
+      Store.dispatch(snapshotMappingDataForNextRebaseAction(effectiveLayerName));
 
       if (agglomerateIdsToImport != null) {
         const { annotation } = Store.getState();

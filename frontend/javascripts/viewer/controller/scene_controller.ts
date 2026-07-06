@@ -358,17 +358,19 @@ class SceneController {
     return this.splitBoundaryMesh;
   }
 
-  private updateMipVolumes(entries: MipEnabledBBox[]): void {
-    const entryMap = new Map(entries.map((e) => [e.bbox.id, e]));
+  private updateMipVolumes(storeMipEntries: MipEnabledBBox[]): void {
+    // storeMipEntries are the MIP entries that are stored in the redux store.
+    // These need to be synced with the MIPs held by the SceneController.
+    const storeMipMap = new Map(storeMipEntries.map((e) => [e.bbox.id, e]));
 
     // Remove volumes whose bbox changed (need full recreation)
     for (const [bboxId, { volume, bbox: storedBbox }] of this.mipVolumes) {
-      const entry = entryMap.get(bboxId);
+      const storeMip = storeMipMap.get(bboxId);
       const bb = storedBbox.boundingBox;
       const bboxChanged =
-        entry == null ||
-        !V3.equals(entry.bbox.boundingBox.min, bb.min) ||
-        !V3.equals(entry.bbox.boundingBox.max, bb.max);
+        storeMip == null ||
+        !V3.equals(storeMip.bbox.boundingBox.min, bb.min) ||
+        !V3.equals(storeMip.bbox.boundingBox.max, bb.max);
       if (bboxChanged) {
         this.rootNode.remove(volume.mesh);
         volume.dispose();
@@ -376,7 +378,7 @@ class SceneController {
       }
     }
 
-    for (const { bbox, configs } of entries) {
+    for (const { bbox, configs } of storeMipEntries) {
       const mag1Bbox = { min: bbox.boundingBox.min, max: bbox.boundingBox.max };
 
       if (!this.mipVolumes.has(bbox.id)) {
@@ -389,10 +391,10 @@ class SceneController {
         this.mipVolumes.set(bbox.id, { volume, configs, bbox });
       }
 
-      const entry = this.mipVolumes.get(bbox.id)!;
-      entry.bbox = bbox; // keep bbox reference current (e.g. isVisible changes)
-      const { volume } = entry;
-      const oldConfigs = entry.configs;
+      const sceneMip = this.mipVolumes.get(bbox.id)!;
+      sceneMip.bbox = bbox; // keep bbox reference current (e.g. isVisible changes)
+      const { volume } = sceneMip;
+      const oldConfigs = sceneMip.configs;
 
       // Remove layers that are no longer in the new configs
       const newLayerNames = new Set(configs.map((c) => c.layerName));
@@ -410,7 +412,7 @@ class SceneController {
         }
       }
 
-      entry.configs = configs;
+      sceneMip.configs = configs;
     }
   }
 

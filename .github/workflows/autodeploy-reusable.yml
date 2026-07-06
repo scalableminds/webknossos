@@ -1,0 +1,57 @@
+name: Autodeploy Branch (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      branch:
+        description: "Branch name to deploy"
+        required: true
+        type: string
+      dynamic_env:
+        description: "Dynamic GitHub deployment environment name"
+        required: true
+        type: string
+      env_url:
+        description: "URL of the deployed environment"
+        required: true
+        type: string
+
+jobs:
+  autodeploy:
+    runs-on: ubuntu-22.04
+    permissions:
+      deployments: write
+    steps:
+      - name: Start deployment
+        uses: bobheadxi/deployments@v1.5.0
+        id: gh_deployment
+        with:
+          step: start
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: ${{ inputs.dynamic_env }}
+
+      - name: Trigger autodeployment hook
+        id: trigger_hook
+        run: |
+          curl -X POST https://kubernetix.scm.io/hooks/onBranchImagePushed \
+            -H "Content-Type: application/json" \
+            -H "X-Auth-Token: $AUTO_DEV_DEPLOY_TOKEN" \
+            -d "{\"branch\": \"$BRANCH\"}"
+        env:
+          AUTO_DEV_DEPLOY_TOKEN: ${{ secrets.AUTO_DEV_DEPLOY_TOKEN }}
+          BRANCH: ${{ inputs.branch }}
+
+      - name: Finish deployment
+        if: always() && steps.gh_deployment.outputs.deployment_id != ''
+        uses: bobheadxi/deployments@v1.5.0
+        with:
+          step: finish
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # A reusable workflow's job has its own `job` context (reflecting only this
+          # job's steps), so this is equivalent to `job.status` here — but is kept
+          # explicit since "Start deployment" already gates whether this step runs at all.
+          status: ${{ steps.trigger_hook.outcome == 'success' && 'success' || 'failure' }}
+          env: ${{ steps.gh_deployment.outputs.env }}
+          deployment_id: ${{ steps.gh_deployment.outputs.deployment_id }}
+          env_url: ${{ inputs.env_url }}
+          override: true

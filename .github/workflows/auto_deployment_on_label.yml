@@ -33,11 +33,13 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           env: ${{ steps.get_env.outputs.dynamic_env }}
 
-  trigger-autodeployment-on-label:
+  check-autodeploy-label:
     runs-on: ubuntu-22.04
     if: ${{ github.event.label.name == 'autodeploy' }}
-    permissions:
-      deployments: write
+    outputs:
+      skip: ${{ steps.check_build.outputs.skip }}
+      dynamic_env: ${{ steps.check_build.outputs.dynamic_env }}
+      env_url: ${{ steps.check_build.outputs.env_url }}
     steps:
       - name: Check for in-progress CI build on this branch
         id: check_build
@@ -61,23 +63,27 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HEAD_REF: ${{ github.head_ref }}
 
-      - name: Trigger autodeploy
-        if: steps.check_build.outputs.skip != 'true'
-        uses: ./.github/actions/autodeploy
-        with:
-          branch: ${{ github.head_ref }}
-          dynamic_env: ${{ steps.check_build.outputs.dynamic_env }}
-          env_url: ${{ steps.check_build.outputs.env_url }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          autodeploy_token: ${{ secrets.AUTO_DEV_DEPLOY_TOKEN }}
+  trigger-autodeployment-on-label:
+    needs: check-autodeploy-label
+    if: ${{ needs.check-autodeploy-label.outputs.skip != 'true' }}
+    uses: ./.github/workflows/autodeploy-reusable.yml
+    with:
+      branch: ${{ github.head_ref }}
+      dynamic_env: ${{ needs.check-autodeploy-label.outputs.dynamic_env }}
+      env_url: ${{ needs.check-autodeploy-label.outputs.env_url }}
+    secrets: inherit
 
-  trigger-autodeployment-on-ci-success:
+  check-build-smoketest-push-result:
     runs-on: ubuntu-22.04
     # workflow_run only reports one conclusion for the whole run, but we only want to depend
     # on the build-smoketest-push job (which pushed the images), not on backend/frontend-tests.
     if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.event == 'push' }}
     permissions:
-      deployments: write
+      actions: read
+    outputs:
+      enabled: ${{ steps.check_build.outputs.enabled }}
+      dynamic_env: ${{ steps.check_build.outputs.dynamic_env }}
+      env_url: ${{ steps.check_build.outputs.env_url }}
     steps:
       - name: Check build-smoketest-push result and autodeploy label
         id: check_build
@@ -98,12 +104,12 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
 
-      - name: Trigger autodeploy
-        if: steps.check_build.outputs.enabled == 'true'
-        uses: ./.github/actions/autodeploy
-        with:
-          branch: ${{ github.event.workflow_run.head_branch }}
-          dynamic_env: ${{ steps.check_build.outputs.dynamic_env }}
-          env_url: ${{ steps.check_build.outputs.env_url }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          autodeploy_token: ${{ secrets.AUTO_DEV_DEPLOY_TOKEN }}
+  trigger-autodeployment-on-ci-success:
+    needs: check-build-smoketest-push-result
+    if: ${{ needs.check-build-smoketest-push-result.outputs.enabled == 'true' }}
+    uses: ./.github/workflows/autodeploy-reusable.yml
+    with:
+      branch: ${{ github.event.workflow_run.head_branch }}
+      dynamic_env: ${{ needs.check-build-smoketest-push-result.outputs.dynamic_env }}
+      env_url: ${{ needs.check-build-smoketest-push-result.outputs.env_url }}
+    secrets: inherit

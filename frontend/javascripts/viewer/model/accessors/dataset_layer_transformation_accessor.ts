@@ -105,20 +105,26 @@ export function getRotationSettingsFromTransformationIn90DegreeSteps(
   return { rotationInDegrees: roundedRotation, isMirrored };
 }
 
-export function fromCenterToOrigin(bbox: BoundingBox): AffineTransformation {
-  const center = bbox.getCenter();
-  const translationMatrix = new Matrix4()
-    .makeTranslation(-center[0], -center[1], -center[2])
-    .transpose(); // Column-major to row-major
-  return { type: "affine", matrix: flatToNestedMatrix(translationMatrix.toArray()) };
+export function threeMatrix4ToAffine(m: Matrix4): AffineTransformation {
+  return { type: "affine", matrix: flatToNestedMatrix(m.clone().transpose().toArray()) };
 }
 
-export function fromOriginToCenter(bbox: BoundingBox): AffineTransformation {
+export function fromCenterToOrigin(bbox: BoundingBox): Matrix4 {
   const center = bbox.getCenter();
-  const translationMatrix = new Matrix4()
-    .makeTranslation(center[0], center[1], center[2])
-    .transpose(); // Column-major to row-major
-  return { type: "affine", matrix: flatToNestedMatrix(translationMatrix.toArray()) };
+  return new Matrix4().makeTranslation(-center[0], -center[1], -center[2]);
+}
+
+export function fromOriginToCenter(bbox: BoundingBox): Matrix4 {
+  const center = bbox.getCenter();
+  return new Matrix4().makeTranslation(center[0], center[1], center[2]);
+}
+
+export function fromCenterToOriginAsAffine(bbox: BoundingBox): AffineTransformation {
+  return threeMatrix4ToAffine(fromCenterToOrigin(bbox));
+}
+
+export function fromOriginToCenterAsAffine(bbox: BoundingBox): AffineTransformation {
+  return threeMatrix4ToAffine(fromOriginToCenter(bbox));
 }
 
 export function getRotationMatrixAroundAxis(
@@ -380,6 +386,7 @@ const quaternion = new Quaternion();
 const IDENTITY_QUATERNION = new Quaternion();
 
 const NON_SCALED_VECTOR = new ThreeVector3(1, 1, 1);
+const EPSILON = 0.0001;
 
 function isTranslationOnly(transformation?: AffineTransformation) {
   if (!transformation) {
@@ -389,7 +396,7 @@ function isTranslationOnly(transformation?: AffineTransformation) {
     .fromArray(nestedToFlatMatrix(transformation.matrix))
     .transpose();
   threeMatrix.decompose(translation, quaternion, scale);
-  return scale.equals(NON_SCALED_VECTOR) && quaternion.equals(IDENTITY_QUATERNION);
+  return scale.equals(NON_SCALED_VECTOR) && quaternion.angleTo(IDENTITY_QUATERNION) < EPSILON;
 }
 
 function isOnlyRotatedOrMirrored(transformation?: AffineTransformation) {
@@ -406,11 +413,43 @@ function isOnlyRotatedOrMirrored(transformation?: AffineTransformation) {
   );
 }
 
-function hasValidTransformationCount(dataLayers: Array<APIDataLayer>): boolean {
+function isRotationOnly(transformation?: AffineTransformation) {
+  if (!transformation) {
+    return false;
+  }
+  const threeMatrix = new Matrix4()
+    .fromArray(nestedToFlatMatrix(transformation.matrix))
+    .transpose();
+  threeMatrix.decompose(translation, quaternion, scale);
+  return translation.length() <= EPSILON && scale.distanceTo(NON_SCALED_VECTOR) < EPSILON;
+}
+
+function isScaleOnly(transformation?: AffineTransformation) {
+  if (!transformation) {
+    return false;
+  }
+  // decompose() cannot handle negative scales (det < 0 causes improper rotation extraction),
+  // so inspect the matrix directly: a pure scale matrix is diagonal with no translation.
+  const m = transformation.matrix;
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 3; j++) {
+      if (i !== j && Math.abs(m[i][j]) > EPSILON) return false;
+    }
+    if (Math.abs(m[i][3]) > EPSILON) return false; // Checks translation component to be 0.
+  }
+  return (
+    Math.abs(m[3][0]) <= EPSILON && // checks projection component
+    Math.abs(m[3][1]) <= EPSILON && // checks projection component
+    Math.abs(m[3][2]) <= EPSILON && // checks projection component
+    Math.abs(m[3][3] - 1) <= EPSILON // checks w component
+  );
+}
+
+function hasValidSettingsTransformationCount(dataLayers: Array<APIDataLayer>): boolean {
   return dataLayers.every((layer) => layer.coordinateTransformations?.length === 5);
 }
 
-function hasOnlyAffineTransformations(dataLayers: Array<APIDataLayer>): boolean {
+function hasOnlySettingsAffineTransformations(dataLayers: Array<APIDataLayer>): boolean {
   return dataLayers.every((layer) =>
     layer.coordinateTransformations?.every((transformation) => transformation.type === "affine"),
   );
@@ -422,11 +461,13 @@ function hasOnlyAffineTransformations(dataLayers: Array<APIDataLayer>): boolean 
 // 3. Rotation around y-axis (potentially mirrored)
 // 4. Rotation around z-axis (potentially mirrored)
 // 5. Translation back to original position
-export const EXPECTED_TRANSFORMATION_LENGTH = 5;
+export const EXPECTED_SETTINGS_TRANSFORMATION_LENGTH = 5;
 
-function hasValidTransformationPattern(transformations: CoordinateTransformation[]): boolean {
+function hasValidSettingsTransformationPattern(
+  transformations: CoordinateTransformation[],
+): boolean {
   return (
-    transformations.length === EXPECTED_TRANSFORMATION_LENGTH &&
+    transformations.length === EXPECTED_SETTINGS_TRANSFORMATION_LENGTH &&
     isTranslationOnly(transformations[0] as AffineTransformation) &&
     isOnlyRotatedOrMirrored(transformations[1] as AffineTransformation) &&
     isOnlyRotatedOrMirrored(transformations[2] as AffineTransformation) &&
@@ -449,11 +490,14 @@ function _doAllLayersHaveTheSameRotation(dataLayers: Array<APIDataLayer>): boole
     );
   }
   // There should be a translation to the origin, one transformation for each axis and one translation back. => A total of 5 affine transformations.
-  if (!hasValidTransformationCount(dataLayers) || !hasOnlyAffineTransformations(dataLayers)) {
+  if (
+    !hasValidSettingsTransformationCount(dataLayers) ||
+    !hasOnlySettingsAffineTransformations(dataLayers)
+  ) {
     return false;
   }
 
-  if (!hasValidTransformationPattern(firstDataLayerTransformations)) {
+  if (!hasValidSettingsTransformationPattern(firstDataLayerTransformations)) {
     return false;
   }
   for (let i = 1; i < dataLayers.length; i++) {
@@ -474,10 +518,11 @@ function _doAllLayersHaveTheSameRotation(dataLayers: Array<APIDataLayer>): boole
 
 export const doAllLayersHaveTheSameRotation = memoize(_doAllLayersHaveTheSameRotation);
 
-export function transformationEqualsAffineIdentityTransform(
+export function settingsTransformationEqualsAffineIdentityTransform(
   transformations: CoordinateTransformation[],
 ): boolean {
-  const hasValidTransformationCount = transformations.length === EXPECTED_TRANSFORMATION_LENGTH;
+  const hasValidTransformationCount =
+    transformations.length === EXPECTED_SETTINGS_TRANSFORMATION_LENGTH;
   const hasOnlyAffineTransformations = transformations.every(
     (transformation) => transformation.type === "affine",
   );
@@ -535,4 +580,113 @@ export function layerToGlobalTransformedPosition(
     return transformPointUnscaled(layerTransforms)(layerPos);
   }
   return layerPos;
+}
+
+// The live SRT transform format uses exactly 7 affine matrices in this order:
+// [0]  dataset center → origin translation, [1] scale, [2] rotX, [3] rotY, [4] rotZ,
+// [5] user translation, [6] origin → center dataset translation.
+// They are stored separately to keep the extracted value consistent between reloads.
+// Else e.g. some rotations might be shown differently as euler angles are not deterministic.
+export const EXPECTED_LIVE_TRANSFORMATION_LENGTH = 7;
+export type SRTValues = {
+  scale: [number, number, number];
+  rotation: [number, number, number];
+  translation: [number, number, number];
+};
+
+export const DEFAULT_SRT: SRTValues = {
+  scale: [1, 1, 1],
+  rotation: [0, 0, 0],
+  translation: [0, 0, 0],
+};
+
+// Returns true when the transform list is in a format editable by the live SRT editor:
+// null/empty (no transforms) or exactly the 7-affine pattern: translation, scale,
+// rotX, rotY, rotZ, translation, translation.
+export function hasValidLiveTransformationPattern(
+  transforms: CoordinateTransformation[] | null | undefined,
+): boolean {
+  if (transforms == null || transforms.length === 0) return true;
+  if (transforms.length !== EXPECTED_LIVE_TRANSFORMATION_LENGTH) return false;
+  if (!transforms.every((t) => t.type === "affine")) return false;
+  const t = transforms as AffineTransformation[];
+  return (
+    isTranslationOnly(t[0]) &&
+    isScaleOnly(t[1]) &&
+    isRotationOnly(t[2]) &&
+    isRotationOnly(t[3]) &&
+    isRotationOnly(t[4]) &&
+    isTranslationOnly(t[5]) &&
+    isTranslationOnly(t[6])
+  );
+}
+
+// Row-major scale matrix: diagonal [sx, sy, sz, 1]
+export function makeScaleMatrix(sx: number, sy: number, sz: number): AffineTransformation {
+  const m = new Matrix4().makeScale(sx, sy, sz).transpose(); // column-major to row-major
+  return { type: "affine", matrix: flatToNestedMatrix(m.toArray()) };
+}
+
+// Row-major translation matrix: last column = [tx, ty, tz]
+export function makeTranslationMatrix(tx: number, ty: number, tz: number): AffineTransformation {
+  const m = new Matrix4().makeTranslation(tx, ty, tz).transpose(); // column-major to row-major
+  return { type: "affine", matrix: flatToNestedMatrix(m.toArray()) };
+}
+
+// Extract [sx, sy, sz] from the diagonal of a scale matrix.
+export function extractScaleFromMatrix(t: AffineTransformation): [number, number, number] {
+  return [t.matrix[0][0], t.matrix[1][1], t.matrix[2][2]];
+}
+
+// Extract [tx, ty, tz] from the last column of a translation matrix.
+export function extractTranslationFromMatrix(t: AffineTransformation): [number, number, number] {
+  return [t.matrix[0][3], t.matrix[1][3], t.matrix[2][3]];
+}
+
+// Extract the Euler angle in degrees from a single-axis rotation matrix
+// (stored in row-major format, no 90° rounding).
+export function extractEulerAngleDegreesFromMatrix(
+  t: AffineTransformation,
+  axis: "x" | "y" | "z",
+): number {
+  const sinLoc = sinusLocationOfRotationInMatrix[axis];
+  const cosLoc = cosineLocationOfRotationInMatrix[axis];
+  const sinVal = t.matrix[sinLoc[0]][sinLoc[1]];
+  const cosVal = t.matrix[cosLoc[0]][cosLoc[1]];
+  const radians = Math.atan2(sinVal, cosVal);
+  return ((radians * 180) / Math.PI + 360) % 360;
+}
+
+// Extracts the SRTValues (scale, rotation, translation) from a 7 matrix coordinate transformation of a layer.
+// Make sure this is only called with a compatible CoordinateTransformations.
+export function extractSRTFromTransforms(transforms: CoordinateTransformation[]): SRTValues {
+  if (transforms.length !== EXPECTED_LIVE_TRANSFORMATION_LENGTH) return DEFAULT_SRT;
+  return {
+    scale: extractScaleFromMatrix(transforms[1] as AffineTransformation),
+    rotation: [
+      extractEulerAngleDegreesFromMatrix(transforms[2] as AffineTransformation, "x"),
+      extractEulerAngleDegreesFromMatrix(transforms[3] as AffineTransformation, "y"),
+      extractEulerAngleDegreesFromMatrix(transforms[4] as AffineTransformation, "z"),
+    ],
+    translation: extractTranslationFromMatrix(transforms[5] as AffineTransformation),
+  };
+}
+
+// Build the 7-matrix SRT transform array for a layer.
+// Order: center→origin, scale, rotX, rotY, rotZ, translation, origin→center
+export function buildLiveTransforms(
+  scale: [number, number, number],
+  rotation: [number, number, number],
+  translation: [number, number, number],
+  datasetBbox: BoundingBox,
+): AffineTransformation[] {
+  return [
+    fromCenterToOriginAsAffine(datasetBbox),
+    makeScaleMatrix(...scale),
+    getRotationMatrixAroundAxis("x", { rotationInDegrees: rotation[0], isMirrored: false }),
+    getRotationMatrixAroundAxis("y", { rotationInDegrees: rotation[1], isMirrored: false }),
+    getRotationMatrixAroundAxis("z", { rotationInDegrees: rotation[2], isMirrored: false }),
+    makeTranslationMatrix(...translation),
+    fromOriginToCenterAsAffine(datasetBbox),
+  ];
 }

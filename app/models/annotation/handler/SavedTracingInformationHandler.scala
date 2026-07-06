@@ -2,9 +2,10 @@ package models.annotation.handler
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.box.{Empty, Failure, Full}
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.TextUtils._
-import com.scalableminds.util.tools.{Empty, Failure, Fox, Full}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 
 import javax.inject.Inject

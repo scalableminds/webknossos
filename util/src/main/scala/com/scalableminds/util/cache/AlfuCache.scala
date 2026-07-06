@@ -1,9 +1,9 @@
 package com.scalableminds.util.cache
 
 import com.github.benmanes.caffeine.cache.{AsyncCache, Caffeine, RemovalCause, RemovalListener, Weigher}
+import com.scalableminds.util.box.{Box, Failure}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
-import com.scalableminds.util.tools.{Box, Failure}
 
 import java.util.concurrent.{CompletableFuture, Executor, TimeUnit}
 import java.util.function.BiFunction

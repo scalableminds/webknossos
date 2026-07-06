@@ -1,6 +1,7 @@
 package models.annotation
 
 import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.box.{Empty, Failure, Full}
 
 import java.io.{File, FileInputStream, InputStream}
 import java.nio.file.{Files, Path, StandardCopyOption}
@@ -15,8 +16,7 @@ import files.WkTempFileService
 import javax.inject.Inject
 import models.annotation.nml.NmlResults._
 import models.annotation.nml.{NmlParseSuccessWithoutFile, NmlParser, NmlResults}
-import com.scalableminds.util.tools.{Empty, Failure, Full}
-import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.webknossos.tracingstore.tracings.GroupUtils
 
 import scala.concurrent.{ExecutionContext, Future}

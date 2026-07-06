@@ -1,6 +1,7 @@
 import Icon, {
   DatabaseOutlined,
   DeleteOutlined,
+  DragOutlined,
   EditOutlined,
   EllipsisOutlined,
   LockOutlined,
@@ -31,7 +32,7 @@ import { isUserAdminOrManager } from "libs/utils";
 import differenceWith from "lodash-es/differenceWith";
 import isEqual from "lodash-es/isEqual";
 import minBy from "lodash-es/minBy";
-import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import { useDispatch } from "react-redux";
 import {
   AnnotationLayerEnum,
@@ -45,7 +46,10 @@ import {
   getLayerByName,
   getWidestMags,
 } from "viewer/model/accessors/dataset_accessor";
-import { getTransformsForLayerOrNull } from "viewer/model/accessors/dataset_layer_transformation_accessor";
+import {
+  getTransformsForLayerOrNull,
+  isLayerWithoutTransformationConfigSupport,
+} from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getMaxZoomValueForMag } from "viewer/model/accessors/flycam_accessor";
 import {
   getAllReadableLayerNames,
@@ -70,7 +74,8 @@ import EditableTextLabel from "viewer/view/components/editable_text_label";
 import { validateReadableLayerName } from "../modals/add_volume_layer_modal";
 import { DragHandle, DummyDragHandle } from "./drag_handle";
 import LayerInfoIconWithTooltip from "./layer_info_icon_with_tooltip";
-import LayerTransformationIcon from "./layer_transformation_icon";
+import { LayerTransformSettingsPopover } from "./layer_transform_settings_popover";
+import LayerTransformationIcons from "./layer_transformation_icon";
 
 function EnableDisableLayerSwitch({
   isDisabled,
@@ -126,6 +131,8 @@ export default function LayerSettingsHeader({
   const histogramData = useWkSelector((state) => state.temporaryConfiguration.histogramData);
   const datasetConfiguration = useWkSelector((state) => state.datasetConfiguration);
   const task = useWkSelector((state) => state.task);
+
+  const [isTransformPopoverOpen, setIsTransformPopoverOpen] = useState(false);
 
   const { intensityRange } = layerSettings;
   const layer = getLayerByName(dataset, layerName);
@@ -453,6 +460,13 @@ export default function LayerSettingsHeader({
     };
   };
 
+  const getEditLayerTransformsItem = (): ItemType => ({
+    key: "editLayerTransforms",
+    icon: <DragOutlined />,
+    label: "Edit layer transforms",
+    onClick: () => setIsTransformPopoverOpen(true),
+  });
+
   // --- Visibility logic ---
 
   const setSingleLayerVisibility = useCallback(
@@ -511,6 +525,7 @@ export default function LayerSettingsHeader({
     isAnnotationLayer && !isOnlyAnnotationLayer ? getDeleteAnnotationLayerItem() : null,
     isHistogramAvailable && !isDisabled ? getEditMinMaxItem() : null,
     hasHistogram && !isDisabled ? getClipItem() : null,
+    !isLayerWithoutTransformationConfigSupport(layer) ? getEditLayerTransformsItem() : null,
     dataset.dataStore.jobsEnabled &&
     dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
       APIJobCommand.COMPUTE_SEGMENT_INDEX_FILE,
@@ -609,7 +624,14 @@ export default function LayerSettingsHeader({
             />
           </FastTooltip>
         ) : null}
-        <LayerTransformationIcon layer={layer} />
+        <LayerTransformationIcons layer={layer} />
+        {!isLayerWithoutTransformationConfigSupport(layer) && (
+          <LayerTransformSettingsPopover
+            layer={layer}
+            open={isTransformPopoverOpen}
+            onClose={() => setIsTransformPopoverOpen(false)}
+          />
+        )}
         {isVolumeTracing ? (
           <ButtonComponent
             variant="text"

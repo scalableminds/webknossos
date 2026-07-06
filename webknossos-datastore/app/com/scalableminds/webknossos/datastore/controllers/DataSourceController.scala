@@ -18,6 +18,7 @@ import com.scalableminds.webknossos.datastore.explore.{
 import com.scalableminds.webknossos.datastore.helpers.{
   GetMultipleSegmentIndexParameters,
   GetSegmentIndexParameters,
+  LocalDatasetDeletionService,
   PathSchemes,
   SegmentIndexData,
   SegmentStatisticsParameters,
@@ -39,14 +40,14 @@ import com.scalableminds.webknossos.datastore.services.connectome.{
   BySynapseIdsRequest,
   SynapticPartnerDirection
 }
-import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateService
+import com.scalableminds.webknossos.datastore.services.mapping.{AgglomerateService, MappingService}
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
-
 import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
-import java.io.File
 import java.net.URI
+import java.nio.file.Path
+import java.nio.file.Files
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext
@@ -64,6 +65,7 @@ class DataSourceController @Inject() (
     dataSourceService: DataSourceService,
     dataSourceMirrorService: DataSourceMirrorService,
     datasetCache: DatasetCache,
+    mappingService: MappingService,
     dataStoreConfig: DataStoreConfig,
     accessTokenService: DataStoreAccessTokenService,
     val binaryDataServiceHolder: BinaryDataServiceHolder,
@@ -74,8 +76,10 @@ class DataSourceController @Inject() (
     datasetErrorLoggingService: DSDatasetErrorLoggingService,
     exploreRemoteLayerService: ExploreRemoteLayerService,
     fullMeshService: DSFullMeshService,
+    baseDirService: BaseDirService,
     managedS3Service: ManagedS3Service,
     meshFileService: MeshFileService,
+    localDatasetDeletionService: LocalDatasetDeletionService,
     dataVaultService: DataVaultService,
     val dsRemoteWebknossosClient: DSRemoteWebknossosClient,
     val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient
@@ -85,32 +89,34 @@ class DataSourceController @Inject() (
 
   override def allowRemoteOrigin: Boolean = true
 
-  def baseDirAbsolute: Action[AnyContent] = Action.fox { implicit request =>
+  def getOneBaseDirForOrgaAbsolute(organizationId: String): Action[AnyContent] = Action.fox { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
-      Fox.successful(Ok(Json.toJson(dataSourceService.dataBaseDir.toAbsolutePath.toString)))
+      for {
+        orgaBaseDir <- baseDirService.getOneLocalForOrga(organizationId).toFox
+      } yield Ok(Json.toJson(UPath.fromLocalPath(orgaBaseDir)))
     }
   }
 
-  def triggerInboxCheckBlocking(organizationId: Option[String]): Action[AnyContent] = Action.fox { implicit request =>
+  def scanBaseDirectories(organizationId: Option[String]): Action[AnyContent] = Action.fox { implicit request =>
     accessTokenService.validateAccessFromTokenContext(
       organizationId
         .map(id => UserAccessRequest.administrateDatasets(id))
         .getOrElse(UserAccessRequest.administrateDatasets)
     ) {
       for {
-        _ <- dataSourceService.checkInbox(verbose = true, organizationId = organizationId)
+        _ <- dataSourceService.scanBaseDirectories(verbose = true, organizationId = organizationId)
       } yield Ok
     }
   }
 
-  def scanRealPathsForVirtual(): Action[Seq[DataSource]] = Action.fox(validateJson[Seq[DataSource]]) {
-    implicit request =>
+  def scanRealPathsForVirtual(): Action[Seq[DataSourceWithRootPathInfo]] =
+    Action.fox(validateJson[Seq[DataSourceWithRootPathInfo]]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
         for {
           _ <- dataSourceService.scanRealPathsForVirtual(request.body)
         } yield Ok
       }
-  }
+    }
 
   def listMappings(
       datasetId: ObjectId,
@@ -119,13 +125,14 @@ class DataSourceController @Inject() (
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
         dataSource <- datasetCache.getById(datasetId)
-        dataSourceId =
-          dataSource.id // We would ideally want to use datasetId here as well, but mappings are not accessed by datasetId yet.
-        exploredMappings = dataSourceService.exploreMappings(
-          dataSourceId.organizationId,
-          dataSourceId.directoryName,
-          dataLayerName
-        )
+        _ <- dataSource.getDataLayer(dataLayerName).toFox ?~> Msg.Dataset.Layer.notFound(dataLayerName)
+        rootPathBox <- dsRemoteWebknossosClient.getLocalRootPathOrEmpty(datasetId).shiftBox
+        exploredMappings <- rootPathBox match {
+          case Full(localRootPath) =>
+            Fox.successful(mappingService.exploreMappings(localRootPath.resolve(dataLayerName)))
+          case Empty      => Fox.successful(Seq.empty)
+          case f: Failure => f.toFox
+        }
       } yield addNoCacheHeaderFallback(Ok(Json.toJson(exploredMappings)))
     }
   }
@@ -225,26 +232,23 @@ class DataSourceController @Inject() (
     }
   }
 
-  def updateOnDisk(datasetId: ObjectId): Action[UsableDataSource] =
+  def updateOnDisk(datasetId: ObjectId, rootPath: String): Action[UsableDataSource] =
     Action.fox(validateJson[UsableDataSource]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
         for {
-          _ <- dataSourceService.updateDataSourceOnDisk(request.body, expectExisting = true, validate = true)
+          _ <- dataSourceService.updateDataSourceOnDisk(Path.of(rootPath), request.body)
           _ = datasetCache.invalidateCache(datasetId)
         } yield Ok
       }
     }
 
   def createOrganizationDirectory(organizationId: String): Action[AnyContent] = Action.fox { implicit request =>
-    accessTokenService.validateAccessFromTokenContextForSyncBlock(
+    accessTokenService.validateAccessFromTokenContext(
       UserAccessRequest.administrateDatasets(organizationId)
     ) {
-      val newOrganizationDirectory = new File(f"${dataSourceService.dataBaseDir}/$organizationId")
-      newOrganizationDirectory.mkdirs()
-      if (newOrganizationDirectory.isDirectory)
-        Ok
-      else
-        BadRequest
+      for {
+        _ <- baseDirService.getOneLocalForOrga(organizationId, createIfMissing = true, checkWritable = true).toFox
+      } yield Ok
     }
   }
 
@@ -300,18 +304,21 @@ class DataSourceController @Inject() (
       }
     }
 
-  def deleteOnDisk(datasetId: ObjectId): Action[AnyContent] =
+  def deleteOnDisk(datasetId: ObjectId, rootPath: String): Action[AnyContent] =
     Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
         for {
           dataSource <- dsRemoteWebknossosClient.getDataSource(datasetId) ~> NOT_FOUND
           dataSourceId = dataSource.id
-          _ <- dataSourceService.deleteOnDisk(
-            datasetId,
-            dataSourceId.organizationId,
-            dataSourceId.directoryName,
-            reason = Some("the user wants to delete the dataset")
-          ) ?~> Msg.Dataset.Delete.failed
+          _ <- localDatasetDeletionService
+            .deleteOnDisk(
+              datasetId,
+              Path.of(rootPath),
+              dataSourceId.organizationId,
+              dataSourceId.directoryName,
+              reason = Some("the user wants to delete the dataset")
+            )
+            .toFox ?~> Msg.Dataset.Delete.failed
         } yield Ok
       }
     }
@@ -672,16 +679,21 @@ class DataSourceController @Inject() (
     for {
       dataSourceFromDB <- dsRemoteWebknossosClient.getDataSource(datasetId) ~> NOT_FOUND
       dataSourceId = dataSourceFromDB.id
-      dataSourceFromDirOpt =
-        if (dataSourceService.existsOnDisk(dataSourceId)) {
-          Some(
-            dataSourceService.dataSourceFromDir(
-              dataSourceService.dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName),
-              dataSourceId.organizationId,
-              resolvePaths = true
+      rootPathBox <- dsRemoteWebknossosClient.getLocalRootPathOrEmpty(datasetId).shiftBox
+      dataSourceFromDirOpt <- rootPathBox match {
+        case Full(rootPath) if Files.exists(rootPath) =>
+          Fox.successful(
+            Some(
+              dataSourceService.dataSourceFromDir(
+                rootPath,
+                dataSourceId.organizationId,
+                resolvePaths = true
+              )
             )
           )
-        } else None
+        case f: Failure => f.toFox
+        case _          => Fox.successful(None)
+      }
       _ <- Fox.runOptional(dataSourceFromDirOpt)(ds => dsRemoteWebknossosClient.updateDataSource(ds, datasetId))
       _ = datasetCache.invalidateCache(datasetId)
       newUsableFromDBBox <- datasetCache.getById(datasetId).shiftBox
@@ -691,5 +703,23 @@ class DataSourceController @Inject() (
         case _                            => Fox.failure("DataSource not found") ~> NOT_FOUND
       }
     } yield dataSourceToReturn
+
+  def getOrganizationBaseDirectory(
+      organizationId: String,
+      requireAllowsUpload: Boolean,
+      requireLocal: Boolean
+  ): Action[AnyContent] = Action.fox { implicit request =>
+    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
+      for {
+        baseDirectory <- baseDirService
+          .getOneForOrga(
+            organizationId,
+            requireAllowsUpload = requireAllowsUpload,
+            requireLocal = requireLocal
+          )
+          .toFox
+      } yield Ok(Json.toJson(baseDirectory))
+    }
+  }
 
 }

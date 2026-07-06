@@ -1,8 +1,9 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
+import com.scalableminds.util.box.{Box, Full}
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Full, JsonHelper}
+import com.scalableminds.util.box.Box.tryo
+import com.scalableminds.util.tools.JsonHelper
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
@@ -63,12 +64,12 @@ case class Zarr3ArrayHeader(
 
   def assertValid: Box[Unit] =
     for {
-      _ <- Box.fromBool(zarr_format == 3) ?~! s"Expected zarr_format 3, got $zarr_format"
-      _ <- Box.fromBool(node_type == "array") ?~! s"Expected node_type 'array', got $node_type"
-      _ <- tryo(resolvedDataType) ?~! "Data type is not supported"
+      _ <- Box.fromBool(zarr_format == 3) ?~> s"Expected zarr_format 3, got $zarr_format"
+      _ <- Box.fromBool(node_type == "array") ?~> s"Expected node_type 'array', got $node_type"
+      _ <- tryo(resolvedDataType) ?~> "Data type is not supported"
       _ <- shardingCodecConfiguration
         .map(_.isSupported)
-        .getOrElse(Full(())) ?~! "Sharding codec configuration is not supported"
+        .getOrElse(Full(())) ?~> "Sharding codec configuration is not supported"
     } yield ()
 
   def outerChunkShape: Array[Int] = chunk_grid match {

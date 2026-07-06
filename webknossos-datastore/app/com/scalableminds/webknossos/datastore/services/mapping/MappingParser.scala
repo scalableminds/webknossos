@@ -2,8 +2,8 @@ package com.scalableminds.webknossos.datastore.services.mapping
 
 import com.google.gson.JsonParseException
 import com.google.gson.stream.JsonReader
+import com.scalableminds.util.box.{Box, Failure}
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Box, Failure}
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayerMapping
 import com.typesafe.scalalogging.LazyLogging
 
@@ -15,7 +15,7 @@ object MappingParser extends LazyLogging {
 
   def parse[T](r: Reader, fromLongFn: Long => T): Box[DataLayerMapping[T]] =
     try
-      Box(parseImpl(r, fromLongFn))
+      Box.fromOption(parseImpl(r, fromLongFn))
     catch {
       case e: JsonParseException =>
         logger.error(s"Parse exception while parsing mapping: ${e.getMessage}.")

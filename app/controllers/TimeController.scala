@@ -1,6 +1,7 @@
 package controllers
 
 import com.scalableminds.util.Msg
+import com.scalableminds.util.box.Box
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
@@ -10,7 +11,6 @@ import scala.collection.immutable.ListMap
 import javax.inject.Inject
 import models.user._
 import models.user.time.{Month, TimeSpan, TimeSpanDAO, TimeSpanService}
-import com.scalableminds.util.tools.Box
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 import security.WkEnv

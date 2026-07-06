@@ -2,11 +2,12 @@ package controllers
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.box.{Empty, Failure, Full}
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Empty, Failure, Fox, Full, TristateOptionJsonHelper}
+import com.scalableminds.util.tools.{Fox, TristateOptionJsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.helpers.UPath
@@ -854,7 +855,9 @@ class DatasetController @Inject() (
         _ <- Fox.runIf(!dataset.isVirtual) {
           for {
             updatedDataSource <- datasetService.usableDataSourceFor(dataset)
-            _ <- dataStoreClient.updateDataSourceOnDisk(datasetId, updatedDataSource)
+            _ <- Fox.runOptional(dataset.rootPath)(r =>
+              dataStoreClient.updateDataSourceOnDisk(datasetId, updatedDataSource, r)
+            )
           } yield ()
         }
         _ <- usedStorageService.refreshStorageReportForDataset(dataset)
@@ -897,7 +900,9 @@ class DatasetController @Inject() (
         _ <- Fox.runIf(!dataset.isVirtual) {
           for {
             updatedDataSource <- datasetService.usableDataSourceFor(dataset)
-            _ <- dataStoreClient.updateDataSourceOnDisk(datasetId, updatedDataSource)
+            _ <- Fox.runOptional(dataset.rootPath)(r =>
+              dataStoreClient.updateDataSourceOnDisk(datasetId, updatedDataSource, r)
+            )
           } yield ()
         }
         _ <- usedStorageService.refreshStorageReportForDataset(dataset)

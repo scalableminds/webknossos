@@ -118,18 +118,20 @@ POST          /datasets/upload/:uploadDomain/finishUpload                       
 POST          /datasets/upload/:uploadDomain/cancelUpload                                                             @com.scalableminds.webknossos.datastore.controllers.UploadController.cancelUpload(uploadDomain: String, uploadId: String)
 
 # DataSource management
-GET           /datasets/baseDirAbsolute                                                                               @com.scalableminds.webknossos.datastore.controllers.DataSourceController.baseDirAbsolute
+GET           /datasets/getOneBaseDirForOrgaAbsolute                                                                  @com.scalableminds.webknossos.datastore.controllers.DataSourceController.getOneBaseDirForOrgaAbsolute(organizationId: String)
 POST          /datasets/measureUsedStorage/:organizationId                                                            @com.scalableminds.webknossos.datastore.controllers.DataSourceController.measureUsedStorage(organizationId: String)
-PUT           /datasets/:datasetId                                                                                    @com.scalableminds.webknossos.datastore.controllers.DataSourceController.updateOnDisk(datasetId: ObjectId)
-DELETE        /datasets/:datasetId/deleteOnDisk                                                                       @com.scalableminds.webknossos.datastore.controllers.DataSourceController.deleteOnDisk(datasetId: ObjectId)
+PUT           /datasets/:datasetId                                                                                    @com.scalableminds.webknossos.datastore.controllers.DataSourceController.updateOnDisk(datasetId: ObjectId, rootPath: String)
+DELETE        /datasets/:datasetId/deleteOnDisk                                                                       @com.scalableminds.webknossos.datastore.controllers.DataSourceController.deleteOnDisk(datasetId: ObjectId, rootPath: String)
 DELETE        /datasets/deletePaths                                                                                   @com.scalableminds.webknossos.datastore.controllers.DataSourceController.deletePaths()
 POST          /datasets/exploreRemote                                                                                 @com.scalableminds.webknossos.datastore.controllers.DataSourceController.exploreRemoteDataset()
 POST          /datasets/validatePaths                                                                                 @com.scalableminds.webknossos.datastore.controllers.DataSourceController.validatePaths()
 POST          /datasets/writeMirrors                                                                                  @com.scalableminds.webknossos.datastore.controllers.DataSourceController.writeMirrors(failOnError: Boolean)
 DELETE        /datasets/:datasetId                                                                                    @com.scalableminds.webknossos.datastore.controllers.DataSourceController.invalidateCache(datasetId: ObjectId)
 
+GET           /getOrganizationBaseDirectory                                                                           @com.scalableminds.webknossos.datastore.controllers.DataSourceController.getOrganizationBaseDirectory(organizationId: String, requireAllowsUpload: Boolean, requireLocal: Boolean)
+
 # Actions
-POST          /triggers/checkInboxBlocking                                                                            @com.scalableminds.webknossos.datastore.controllers.DataSourceController.triggerInboxCheckBlocking(organizationId: Option[String])
+POST          /triggers/checkInboxBlocking                                                                            @com.scalableminds.webknossos.datastore.controllers.DataSourceController.scanBaseDirectories(organizationId: Option[String])
 POST          /triggers/createOrganizationDirectory                                                                   @com.scalableminds.webknossos.datastore.controllers.DataSourceController.createOrganizationDirectory(organizationId: String)
 POST          /triggers/reload/:organizationId/:datasetId                                                             @com.scalableminds.webknossos.datastore.controllers.DataSourceController.reload(organizationId: String, datasetId: ObjectId, layerName: Option[String])
 POST          /triggers/scanRealPathsForVirtual                                                                       @com.scalableminds.webknossos.datastore.controllers.DataSourceController.scanRealPathsForVirtual()

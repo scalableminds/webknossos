@@ -2,9 +2,10 @@ package models.dataset
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.box.{Box, Failure, Full}
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Box, Failure, Fox, Full, TextUtils}
+import com.scalableminds.util.tools.{Fox, TextUtils}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.helpers.UPath
@@ -22,7 +23,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   StaticSegmentationLayer,
   UsableDataSource
 }
-import com.scalableminds.webknossos.datastore.services.DataSourceValidation
+import com.scalableminds.webknossos.datastore.services.{BaseDirConfig, BaseDirConfigReader, DataSourceValidation}
 import com.scalableminds.webknossos.datastore.services.uploading.LinkedLayerIdentifier
 import controllers.{
   PathDeletionService,
@@ -160,18 +161,21 @@ class UploadToPathsService @Inject() (
   }
 
   private lazy val configuredUploadToPathsPrefixes: Box[Seq[UPath]] = {
+    val datastoreBaseDirConfigs: Seq[BaseDirConfig] = new BaseDirConfigReader().read(conf.Datastore.baseDirectories)
     val fallbackFromBaseFolder = for {
-      datastoreBaseFolder <- Box(conf.Datastore.baseDirectory)
-      fromDatastoreBaseFolder <- UPath.fromString(datastoreBaseFolder)
-    } yield Seq(fromDatastoreBaseFolder.toAbsolute)
+      selected <- Box.fromOption(
+        datastoreBaseDirConfigs.find(c => c.path.isLocal && c.allowsUpload && c.organizationId.isEmpty)
+      )
+    } yield Seq(selected.path)
     conf.WebKnossos.Datasets.UploadToPaths.prefixes match {
       case None                                           => fallbackFromBaseFolder
       case Some(fromConfigStrs) if fromConfigStrs.isEmpty =>
         fallbackFromBaseFolder
       case Some(fromConfigStrs) =>
         (for {
-          fromConfig <- fromConfigStrs.map(UPath.fromString)
-        } yield fromConfig.map(_.toAbsolute)).toList.toSingleBox("Could not parse config uploadToPaths.prefixes")
+          fromConfigUPaths <- Box.combined(fromConfigStrs)(UPath.fromString)
+          fromConfigAbsolute = fromConfigUPaths.map(_.toAbsolute)
+        } yield fromConfigAbsolute) ?~> "Could not parse config uploadToPaths.prefixes"
     }
   }
 
@@ -182,7 +186,7 @@ class UploadToPathsService @Inject() (
         case Some(requested) =>
           if (configuredPrefixes.contains(requested)) Full(requested)
           else Failure("Requested path prefix is not in list of configured ones.")
-        case None => Box(configuredPrefixes.headOption)
+        case None => Box.fromOption(configuredPrefixes.headOption)
       }
     } yield selectedPrefix
 

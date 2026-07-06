@@ -2,6 +2,7 @@ package controllers
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, JsonHelper, TextUtils}
 import com.scalableminds.util.tools.Fox.toFox
@@ -17,28 +18,28 @@ import com.webauthn4j.data.{
 }
 import com.webauthn4j.server.ServerProperty
 import com.webauthn4j.WebAuthnManager
-import com.webauthn4j.credential.{CredentialRecordImpl => WebAuthnCredentialRecord}
+import com.webauthn4j.credential.CredentialRecordImpl as WebAuthnCredentialRecord
 import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
 import models.analytics.{AnalyticsService, InviteEvent, JoinOrganizationEvent, SignupEvent}
 import models.organization.{Organization, OrganizationDAO, OrganizationService}
-import models.user._
-import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
-import com.scalableminds.util.tools.Box.tryo
+import models.user.*
+import Box.tryo
 import models.team.TeamMembership
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.digest.{HmacAlgorithms, HmacUtils}
 import org.apache.pekko.actor.ActorSystem
 import play.api.data.Form
-import play.api.data.Forms._
-import play.api.data.validation.Constraints._
-import play.api.libs.json._
-import play.api.mvc._
+import play.api.data.Forms.*
+import play.api.data.validation.Constraints.*
+import play.api.libs.json.*
+import play.api.mvc.*
 import play.silhouette.api.actions.SecuredRequest
 import play.silhouette.api.services.AuthenticatorResult
 import play.silhouette.api.util.{Credentials, PasswordInfo}
 import play.silhouette.api.{LoginInfo, Silhouette}
 import play.silhouette.impl.providers.CredentialsProvider
-import security._
+import security.*
+import telemetry.SlackNotificationService
 import utils.WkConf
 
 import java.net.URLEncoder
@@ -47,9 +48,9 @@ import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.UUID
 import javax.inject.Inject
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.concurrent.{ExecutionContext, Future}
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 /** Object reference: https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions
   *
@@ -201,6 +202,7 @@ class AuthenticationController @Inject() (
     organizationDAO: OrganizationDAO,
     analyticsService: AnalyticsService,
     userDAO: UserDAO,
+    slackNotificationService: SlackNotificationService,
     tokenDAO: TokenDAO,
     multiUserDAO: MultiUserDAO,
     defaultMails: DefaultMails,
@@ -244,40 +246,47 @@ class AuthenticationController @Inject() (
       .fold(
         bogusForm => Fox.successful(BadRequest(bogusForm.toString)),
         signUpData =>
-          for {
-            (firstName, lastName, email, errors) <- validateNameAndEmail(
-              signUpData.firstName,
-              signUpData.lastName,
-              signUpData.email
-            )
-            result <-
-              if (errors.nonEmpty) {
-                Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
-              } else {
-                for {
-                  inviteBox <- inviteService.findInviteByTokenOpt(signUpData.inviteToken).shiftBox
-                  _ <- Fox.fromBool(
-                    inviteBox.isDefined || conf.Features.registerToDefaultOrgaEnabled
-                  ) ?~> Msg.User.needsInvite
-                  organization <- organizationService
-                    .findOneByInviteOrDefault(inviteBox.toOption)(using GlobalAccessContext)
-                  _ <- organizationService.assertUsersCanBeAdded(organization._id)(using
-                    GlobalAccessContext,
-                    ec
-                  ) ?~> Msg.Organization.usersUserLimitReached
-                  autoActivate = inviteBox.toOption.map(_.autoActivate).getOrElse(organization.enableAutoVerify)
-                  _ <- createUser(
-                    organization,
-                    email,
-                    firstName,
-                    lastName,
-                    autoActivate,
-                    Option(signUpData.password),
-                    inviteBox
+          if (signUpData.honeypot.exists(_.nonEmpty)) {
+            Fox.successful(BadRequest)
+          } else {
+            for {
+              (firstName, lastName, email, errors) <- validateNameAndEmail(
+                signUpData.firstName,
+                signUpData.lastName,
+                signUpData.email
+              )
+              result <-
+                if (errors.nonEmpty) {
+                  Fox.successful(
+                    BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t)))))
                   )
-                } yield Ok
-              }
-          } yield result
+                } else {
+                  for {
+                    inviteBox <- inviteService.findInviteByTokenOpt(signUpData.inviteToken).shiftBox
+                    _ <- Fox.fromBool(
+                      inviteBox.isDefined || conf.Features.registerToDefaultOrgaEnabled
+                    ) ?~> Msg.User.needsInvite
+                    organization <- organizationService
+                      .findOneByInviteOrDefault(inviteBox.toOption)(using GlobalAccessContext)
+                    _ <- organizationService.assertUsersCanBeAdded(organization._id)(using
+                      GlobalAccessContext,
+                      ec
+                    ) ?~> Msg.Organization.usersUserLimitReached
+                    autoActivate = inviteBox.toOption.map(_.autoActivate).getOrElse(organization.enableAutoVerify)
+                    _ = notifyOnSuspiciousNames(organization._id, firstName, lastName)
+                    _ <- createUser(
+                      organization,
+                      email,
+                      firstName,
+                      lastName,
+                      autoActivate,
+                      Option(signUpData.password),
+                      inviteBox
+                    )
+                  } yield Ok
+                }
+            } yield result
+          }
       )
   }
 
@@ -659,7 +668,7 @@ class AuthenticationController @Inject() (
           GlobalAccessContext
         ) ??~>
           Msg.Passkeys.unauthorized ~> UNAUTHORIZED
-        serverProperty = new ServerProperty(origin, origin.getHost, challenge)
+        serverProperty = ServerProperty.builder().origin(origin).rpId(origin.getHost).challenge(challenge).build()
 
         params = new AuthenticationParameters(
           serverProperty,
@@ -742,7 +751,7 @@ class AuthenticationController @Inject() (
         challenge <- temporaryRegistrationStore
           .pop(sessionId)
           .toFox ?~> "Timeout during registration. Please try again." ~> UNAUTHORIZED
-        serverProperty = new ServerProperty(origin, origin.getHost, challenge)
+        serverProperty = ServerProperty.builder().origin(origin).rpId(origin.getHost).challenge(challenge).build()
         publicKeyParams = webAuthnPubKeyParams.map(k =>
           new PublicKeyCredentialParameters(PublicKeyCredentialType.PUBLIC_KEY, COSEAlgorithmIdentifier.create(k.alg))
         )
@@ -898,58 +907,64 @@ class AuthenticationController @Inject() (
       .fold(
         bogusForm => Fox.successful(BadRequest(bogusForm.toString)),
         signUpData =>
-          organizationService.assertMayCreateOrganization(request.identity).shiftBox.flatMap {
-            case Full(_) =>
-              for {
-                (firstName, lastName, email, errors) <- validateNameAndEmail(
-                  signUpData.firstName,
-                  signUpData.lastName,
-                  signUpData.email
-                )
-                result <-
-                  if (errors.nonEmpty) {
-                    Fox.successful(
-                      BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t)))))
-                    )
-                  } else {
-                    for {
-                      _ <- initialDataService.insertLocalDataStoreIfEnabled()
-                      organization <- organizationService.createOrganization(
-                        Option(signUpData.organization).filter(_.trim.nonEmpty),
-                        signUpData.organizationName
-                      ) ?~> Msg.Organization.Create.failed
-                      teamMemberships <- userService.initialTeamMemberships(organization._id, inviteIdOpt = None)
-                      user <- userService.insert(
-                        organization._id,
-                        email,
-                        firstName,
-                        lastName,
-                        isActive = true,
-                        passwordHasher.hash(signUpData.password),
-                        isAdmin = true,
-                        isDatasetManager = false,
-                        isOrganizationOwner = true,
-                        isEmailVerified = false,
-                        teamMemberships = teamMemberships
-                      ) ?~> Msg.User.createFailed
-                      _ = analyticsService.track(SignupEvent(user, hadInvite = false))
-                      multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
-                      _ <- organizationService
-                        .createOrganizationDirectory(organization._id) ?~> Msg.Organization.Create.directoryCreateFailed
-                      _ <- Fox.runIf(conf.WebKnossos.TermsOfService.enabled)(
-                        acceptTermsOfServiceForUser(user, signUpData.acceptedTermsOfService)
+          if (signUpData.honeypot.exists(_.nonEmpty)) {
+            Fox.successful(BadRequest)
+          } else {
+            organizationService.assertMayCreateOrganization(request.identity).shiftBox.flatMap {
+              case Full(_) =>
+                for {
+                  (firstName, lastName, email, errors) <- validateNameAndEmail(
+                    signUpData.firstName,
+                    signUpData.lastName,
+                    signUpData.email
+                  )
+                  result <-
+                    if (errors.nonEmpty) {
+                      Fox.successful(
+                        BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t)))))
                       )
-                      _ = Mailer ! Send(
-                        defaultMails
-                          .newOrganizationMail(organization.name, email, request.headers.get("Host").getOrElse(""))
-                      )
-                      _ = if (conf.Features.isWkorgInstance) {
-                        mailchimpClient.registerUser(user, multiUser, MailchimpTag.RegisteredAsAdmin)
-                      }
-                    } yield Ok
-                  }
-              } yield result
-            case _ => Fox.failure(Msg.Organization.Create.forbidden)
+                    } else {
+                      for {
+                        _ <- initialDataService.insertLocalDataStoreIfEnabled()
+                        organization <- organizationService.createOrganization(
+                          Option(signUpData.organization).filter(_.trim.nonEmpty),
+                          signUpData.organizationName
+                        ) ?~> Msg.Organization.Create.failed
+                        teamMemberships <- userService.initialTeamMemberships(organization._id, inviteIdOpt = None)
+                        _ = notifyOnSuspiciousNames(organization._id, firstName, lastName)
+                        user <- userService.insert(
+                          organization._id,
+                          email,
+                          firstName,
+                          lastName,
+                          isActive = true,
+                          passwordHasher.hash(signUpData.password),
+                          isAdmin = true,
+                          isDatasetManager = false,
+                          isOrganizationOwner = true,
+                          isEmailVerified = false,
+                          teamMemberships = teamMemberships
+                        ) ?~> Msg.User.createFailed
+                        _ = analyticsService.track(SignupEvent(user, hadInvite = false))
+                        multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
+                        _ <- organizationService.createOrganizationDirectory(
+                          organization._id
+                        ) ?~> Msg.Organization.Create.directoryCreateFailed
+                        _ <- Fox.runIf(conf.WebKnossos.TermsOfService.enabled)(
+                          acceptTermsOfServiceForUser(user, signUpData.acceptedTermsOfService)
+                        )
+                        _ = Mailer ! Send(
+                          defaultMails
+                            .newOrganizationMail(organization.name, email, request.headers.get("Host").getOrElse(""))
+                        )
+                        _ = if (conf.Features.isWkorgInstance) {
+                          mailchimpClient.registerUser(user, multiUser, MailchimpTag.RegisteredAsAdmin)
+                        }
+                      } yield Ok
+                    }
+                } yield result
+              case _ => Fox.failure(Msg.Organization.Create.forbidden)
+            }
           }
       )
   }
@@ -1040,6 +1055,29 @@ class AuthenticationController @Inject() (
     (errors, fN, lN)
   }
 
+  private def notifyOnSuspiciousNames(organizationId: String, firstName: String, lastName: String): Unit = {
+    val suspiciousNameEntropyThreshold = 3.0
+    val suspiciousNameMinLength = 6
+
+    def shannonEntropy(s: String): Double =
+      if (s.isEmpty) 0.0
+      else {
+        val frequencies = s.groupBy(identity).values.map(_.length.toDouble / s.length)
+        -frequencies.map(p => p * (math.log(p) / math.log(2))).sum
+      }
+
+    val isSuspicious = List(firstName, lastName).exists(name =>
+      name.length >= suspiciousNameMinLength && shannonEntropy(name) >= suspiciousNameEntropyThreshold
+    )
+
+    if (isSuspicious) {
+      val msg =
+        s"High-entropy name detected during registration: $firstName $lastName (organizationId $organizationId)"
+      logger.warn(msg)
+      slackNotificationService.warn("Registration with suspicious name", msg)
+    }
+  }
+
   def logoutEverywhere: Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       _ <- userDAO.logOutEverywhereByMultiUserId(request.identity._multiUser)
@@ -1075,7 +1113,8 @@ trait AuthForms {
       lastName: String,
       password: String,
       inviteToken: Option[String],
-      acceptedTermsOfService: Option[Int]
+      acceptedTermsOfService: Option[Int],
+      honeypot: Option[String]
   )
 
   def signUpForm: Form[SignUpData] =
@@ -1091,9 +1130,20 @@ trait AuthForms {
         "firstName" -> nonEmptyText,
         "lastName" -> nonEmptyText,
         "inviteToken" -> optional(nonEmptyText),
-        "acceptedTermsOfService" -> optional(number)
-      )((organization, organizationName, email, password, firstName, lastName, inviteToken, acceptTos) =>
-        SignUpData(organization, organizationName, email, firstName, lastName, password._1, inviteToken, acceptTos)
+        "acceptedTermsOfService" -> optional(number),
+        "referral" -> optional(text) // honeypot field
+      )((organization, organizationName, email, password, firstName, lastName, inviteToken, acceptTos, honeypot) =>
+        SignUpData(
+          organization,
+          organizationName,
+          email,
+          firstName,
+          lastName,
+          password._1,
+          inviteToken,
+          acceptTos,
+          honeypot
+        )
       )(signUpData =>
         Some(
           (
@@ -1104,7 +1154,8 @@ trait AuthForms {
             signUpData.firstName,
             signUpData.lastName,
             signUpData.inviteToken,
-            signUpData.acceptedTermsOfService
+            signUpData.acceptedTermsOfService,
+            signUpData.honeypot
           )
         )
       )

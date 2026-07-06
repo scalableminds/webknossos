@@ -15,6 +15,7 @@ export type RecommendedConfiguration = Partial<
 
 export const settings: Partial<Record<keyof RecommendedConfiguration, string>> = {
   clippingDistance: "Clipping Distance",
+  clipSkeletonToCurrentSection: "Only Show Nodes of Current Section",
   displayCrosshair: "Show Crosshairs",
   displayScalebars: "Show Scalebars",
   dynamicSpaceDirection: "d/f-Switching",
@@ -34,7 +35,7 @@ export const settings: Partial<Record<keyof RecommendedConfiguration, string>> =
   segmentationOpacity: "Segmentation Opacity",
   zoom: "Zoom",
   renderMissingDataBlack: "Render Missing Data Black",
-  clippingDistanceArbitrary: "Clipping Distance",
+  clippingDistanceFlight: "Clipping Distance",
   mouseRotateValue: "Mouse Rotation",
   rotateValue: "Keyboard Rotation",
   sphericalCapRadius: "Sphere Radius",
@@ -51,6 +52,8 @@ export const settings: Partial<Record<keyof RecommendedConfiguration, string>> =
   colorLayerOrder: "Color Layer Order",
 };
 export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, string>> = {
+  clipSkeletonToCurrentSection:
+    "When enabled, only skeleton nodes and edges that lie on the currently visible section are shown, ignoring the clipping distance. Only available when neither the camera nor the dataset is rotated or transformed.",
   segmentationPatternOpacity:
     "The opacity of the pattern overlaid on any segmentation layer for improved contrast.",
   loadingStrategy: `You can choose between loading the best quality first
@@ -203,7 +206,8 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.no_access": "You are not allowed to access this annotation.",
   "tracing.compound_project_not_found":
     "It looks like this project does not have a single task completed. Make sure that at least one task of this project is finished to view it.",
-  "tracing.no_allowed_mode": "There was no valid allowed annotation mode specified.",
+  "tracing.no_allowed_mode":
+    "There was no valid allowed annotation mode specified. Defaulting to orthogonal mode.",
   "tracing.read_only_mode_notification": (isAnnotationLockedByUser: boolean, isOwner: boolean) =>
     isAnnotationLockedByUser
       ? `This annotation is in read-only mode and cannot be updated. It is currently locked by ${

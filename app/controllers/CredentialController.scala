@@ -2,7 +2,7 @@ package controllers
 
 import com.scalableminds.util.Msg
 import play.silhouette.api.Silhouette
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.storage.{
   GoogleServiceAccountCredential,
   HttpBasicAuthCredential,
@@ -36,55 +36,60 @@ object GoogleServiceAccountCredentialParameters {
     Json.format[GoogleServiceAccountCredentialParameters]
 }
 
-class CredentialController @Inject()(credentialDAO: CredentialDAO, sil: Silhouette[WkEnv])(
-    implicit ec: ExecutionContext,
-    val bodyParsers: PlayBodyParsers)
-    extends Controller
-    with FoxImplicits {
+class CredentialController @Inject() (credentialDAO: CredentialDAO, sil: Silhouette[WkEnv])(implicit
+    ec: ExecutionContext,
+    val bodyParsers: PlayBodyParsers
+) extends Controller {
 
   def createHttpBasicAuthCredential: Action[HttpBasicAuthCredentialParameters] =
-    sil.SecuredAction.async(validateJson[HttpBasicAuthCredentialParameters]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[HttpBasicAuthCredentialParameters]) { implicit request =>
       val _id = ObjectId.generate
       for {
         _ <- Fox.fromBool(request.identity.isAdmin) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- credentialDAO.insertOne(
           _id,
-          HttpBasicAuthCredential(request.body.name,
-                                  request.body.username,
-                                  request.body.password,
-                                  Some(request.identity._id.toString),
-                                  Some(request.identity._organization))
+          HttpBasicAuthCredential(
+            request.body.name,
+            request.body.username,
+            request.body.password,
+            Some(request.identity._id.toString),
+            Some(request.identity._organization)
+          )
         ) ?~> Msg.DataVault.createCredentialFailed
       } yield Ok(Json.toJson(_id))
     }
 
   def createS3AccessKeyCredential: Action[S3AccessKeyCredentialParameters] =
-    sil.SecuredAction.async(validateJson[S3AccessKeyCredentialParameters]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[S3AccessKeyCredentialParameters]) { implicit request =>
       val _id = ObjectId.generate
       for {
         _ <- Fox.fromBool(request.identity.isAdmin) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- credentialDAO.insertOne(
           _id,
-          S3AccessKeyCredential(request.body.name,
-                                request.body.accessKeyId,
-                                request.body.secretAccessKey,
-                                Some(request.identity._id.toString),
-                                Some(request.identity._organization))
+          S3AccessKeyCredential(
+            request.body.name,
+            request.body.accessKeyId,
+            request.body.secretAccessKey,
+            Some(request.identity._id.toString),
+            Some(request.identity._organization)
+          )
         ) ?~> Msg.DataVault.createCredentialFailed
       } yield Ok(Json.toJson(_id))
     }
 
   def createGoogleServiceAccountCredential: Action[GoogleServiceAccountCredentialParameters] =
-    sil.SecuredAction.async(validateJson[GoogleServiceAccountCredentialParameters]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[GoogleServiceAccountCredentialParameters]) { implicit request =>
       val _id = ObjectId.generate
       for {
         _ <- Fox.fromBool(request.identity.isAdmin) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- credentialDAO.insertOne(
           _id,
-          GoogleServiceAccountCredential(request.body.name,
-                                         request.body.secretJson,
-                                         Some(request.identity._id.toString),
-                                         Some(request.identity._organization))
+          GoogleServiceAccountCredential(
+            request.body.name,
+            request.body.secretJson,
+            Some(request.identity._id.toString),
+            Some(request.identity._organization)
+          )
         ) ?~> Msg.DataVault.createCredentialFailed
       } yield Ok(Json.toJson(_id))
     }

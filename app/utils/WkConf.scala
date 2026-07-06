@@ -2,28 +2,28 @@ package utils
 
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.ConfigReader
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.LazyLogging
 import play.api.Configuration
 import security.CertificateValidationService
 
 import javax.inject.Inject
-import scala.concurrent.duration._
-import scala.jdk.CollectionConverters._
+import scala.concurrent.duration.*
+import scala.jdk.CollectionConverters.*
 
-class WkConf @Inject()(configuration: Configuration, certificateValidationService: CertificateValidationService)
+class WkConf @Inject() (configuration: Configuration, certificateValidationService: CertificateValidationService)
     extends ConfigReader
     with LazyLogging {
   lazy val featureOverrides: Map[String, Boolean] = certificateValidationService.getFeatureOverrides
-  override val raw: Configuration = {
+  override val raw: Configuration =
     // Applying feature overwrites to the configuration.
     Configuration(
       ConfigFactory
-        .parseMap(featureOverrides.map {
-          case (k, v) => s"features.$k" -> Boolean.box(v && configuration.underlying.getBoolean(s"features.$k"))
+        .parseMap(featureOverrides.map { case (k, v) =>
+          s"features.$k" -> Boolean.box(v && configuration.underlying.getBoolean(s"features.$k"))
         }.asJava)
-        .withFallback(configuration.underlying))
-  }
+        .withFallback(configuration.underlying)
+    )
 
   object Http {
     val uri: String = get[String]("http.uri")
@@ -123,7 +123,8 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
       }
       val children: List[UploadToPaths.type] = List(UploadToPaths)
     }
-    val children: List[Object] = List(User, Tasks, Cache, SampleOrganization, FetchUsedStorage, TermsOfService, Datasets)
+    val children: List[Object] =
+      List(User, Tasks, Cache, SampleOrganization, FetchUsedStorage, TermsOfService, Datasets)
   }
 
   object SingleSignOn {
@@ -164,7 +165,7 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
     val key: String = get[String]("datastore.key")
     val name: String = get[String]("datastore.name")
     val publicUri: Option[String] = getOptional[String]("datastore.publicUri")
-    val baseDirectory: Option[String] = getOptional[String]("datastore.baseDirectory")
+    val baseDirectories: List[Config] = getList[Config]("datastore.baseDirectories")
   }
 
   object Tracingstore {

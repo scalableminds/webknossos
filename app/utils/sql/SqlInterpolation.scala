@@ -16,31 +16,28 @@ import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration
 import scala.concurrent.duration.FiniteDuration
 
-class SqlInterpolator(val s: StringContext) extends AnyVal {
-  def q(param: SqlToken*): SqlToken = {
-    val parts = s.parts.toList
-    val tokens = param.toList
+trait SqlInterpolationSyntax {
+  extension (s: StringContext)
+    def q(param: SqlToken*): SqlToken = {
+      val parts = s.parts.toList
+      val tokens = param.toList
 
-    val outputSql = new mutable.StringBuilder()
-    val outputValues = ListBuffer[SqlValue]()
+      val outputSql = new mutable.StringBuilder()
+      val outputValues = ListBuffer[SqlValue]()
 
-    assert(parts.length == tokens.length + 1)
-    for (i <- parts.indices) {
-      outputSql ++= parts(i)
+      assert(parts.length == tokens.length + 1)
+      for (i <- parts.indices) {
+        outputSql ++= parts(i)
 
-      if (i < tokens.length) {
-        val token = tokens(i)
-        outputSql ++= token.sql
-        outputValues ++= token.values
+        if (i < tokens.length) {
+          val token = tokens(i)
+          outputSql ++= token.sql
+          outputValues ++= token.values
+        }
       }
+
+      SqlToken(sql = outputSql.toString, values = outputValues.toList)
     }
-
-    SqlToken(sql = outputSql.toString, values = outputValues.toList)
-  }
-}
-
-object SqlInterpolation {
-  implicit def sqlInterpolation(s: StringContext): SqlInterpolator = new SqlInterpolator(s)
 }
 
 case class SqlToken(sql: String, values: List[SqlValue] = List()) {
@@ -51,7 +48,7 @@ case class SqlToken(sql: String, values: List[SqlValue] = List()) {
     parts.tail.zip(values).foldLeft(parts.head)((acc, x) => acc + x._2.debugInfo + x._1)
   }
 
-  def as[R](implicit resultConverter: GetResult[R]): SqlStreamingAction[Vector[R], R, Effect] =
+  def as[R](using resultConverter: GetResult[R]): SqlStreamingAction[Vector[R], R, Effect] =
     new StreamingInvokerAction[Vector[R], R, Effect] {
       def statements: List[String] = List(sql)
 
@@ -66,12 +63,12 @@ case class SqlToken(sql: String, values: List[SqlValue] = List()) {
         protected def extractValue(rs: PositionedResult): R = resultConverter(rs)
       }
 
-      override def getDumpInfo = DumpInfo(DumpInfo.simpleNameFor(getClass), mainInfo = s"[$debugInfo]")
+      override def getDumpInfo: DumpInfo = DumpInfo(DumpInfo.simpleNameFor(getClass), mainInfo = s"[$debugInfo]")
 
       protected def createBuilder: mutable.Builder[R, Vector[R]] = Vector.newBuilder[R]
     }
 
-  def asUpdate: SqlAction[Int, NoStream, Effect] = as[Int](GetUpdateValue).head
+  def asUpdate: SqlAction[Int, NoStream, Effect] = as[Int](using GetUpdateValue).head
 }
 
 object SqlToken {
@@ -228,12 +225,14 @@ case class BoundingBoxValue(v: BoundingBox) extends SqlValue with SqlEscaping {
     override def toString: String = s"($x,$y,$z,$width,$height,$depth)"
   }
 
-  private val bboxSql = BoundingBoxSql(v.topLeft.x.toDouble,
-                                       v.topLeft.y.toDouble,
-                                       v.topLeft.z.toDouble,
-                                       v.width.toDouble,
-                                       v.height.toDouble,
-                                       v.depth.toDouble)
+  private val bboxSql = BoundingBoxSql(
+    v.topLeft.x.toDouble,
+    v.topLeft.y.toDouble,
+    v.topLeft.z.toDouble,
+    v.width.toDouble,
+    v.height.toDouble,
+    v.depth.toDouble
+  )
 
   override def setParameter(pp: PositionedParameters): Unit =
     pp.setObject(bboxSql, Types.OTHER)

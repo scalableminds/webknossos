@@ -215,7 +215,6 @@ function _ShareModalView(props: Props) {
   const [isChangingInProgress, setIsChangingInProgress] = useState(false);
   const [sharedTeams, setSharedTeams] = useState<APITeam[]>([]);
   const sharingToken = useDatasetSharingToken(dataset);
-  const isCurrentUserSuperUser = useWkSelector((state) => state.activeUser?.isSuperUser);
 
   const othersMayEdit = isAnnotationEditableByNonOwners(annotation);
   const allowConcurrentEditing = annotation.collaborationMode === "Concurrent";
@@ -347,7 +346,7 @@ function _ShareModalView(props: Props) {
 
   const handleConcurrentEditingCheckboxChange = async (event: CheckboxChangeEvent) => {
     const value = event.target.checked;
-    if (value && (!hasEditableMapping(Store.getState()) || !isCurrentUserSuperUser)) {
+    if (value && !hasEditableMapping(Store.getState())) {
       Toast.warning(
         "Concurrent editing is currently only supported for proofreading annotations. Please select a mapping and perform one proofreading action. Afterwards, you may select the Concurrent mode.",
       );
@@ -592,48 +591,43 @@ function _ShareModalView(props: Props) {
             </RadioGroup>
           </Col>
         </Row>
-        {/*
-          Concurrent Editing can only be enabled by super users for now.
-        */}
-        {isCurrentUserSuperUser ? (
-          <Row>
-            <Col span={6} style={LEFT_COL_STYLE}>
-              Can users edit simultaneously?
-            </Col>
-            <Col span={18}>
-              <FastTooltip title={concurrentDisabledReason ?? null}>
-                <Checkbox
-                  checked={newAllowConcurrentEditing}
-                  onChange={handleConcurrentEditingCheckboxChange}
-                  disabled={concurrentDisabledReason != null}
-                >
-                  Yes, allow simultaneous editing
-                  <FastTooltip title="Currently not recommended for production use. Requires at least one saved proofreading action.">
-                    <Tag
-                      style={{ marginLeft: 4 }}
-                      color="warning"
-                      icon={<ExclamationCircleOutlined />}
-                      variant="outlined"
-                    >
-                      Experimental
-                    </Tag>
-                  </FastTooltip>
-                </Checkbox>
-              </FastTooltip>
-              <Hint
-                style={{
-                  marginLeft: 24,
-                }}
+        <Row>
+          <Col span={6} style={LEFT_COL_STYLE}>
+            Can users edit simultaneously?
+          </Col>
+          <Col span={18}>
+            <FastTooltip title={concurrentDisabledReason ?? null}>
+              <Checkbox
+                checked={newAllowConcurrentEditing}
+                onChange={handleConcurrentEditingCheckboxChange}
+                disabled={concurrentDisabledReason != null}
               >
-                When enabled, users can edit the annotation in parallel. This feature is
-                experimental and is currently limited to the proofreading tool (
-                <b>skeleton and brushing will be disabled</b>). When disabled, only one user can
-                edit at the same time. We recommend to coordinate the collaboration with your peers
-                to avoid being blocked.
-              </Hint>
-            </Col>
-          </Row>
-        ) : null}
+                Yes, allow simultaneous editing
+                <FastTooltip title="Currently not recommended for production use. Requires at least one saved proofreading action.">
+                  <Tag
+                    style={{ marginLeft: 4 }}
+                    color="warning"
+                    icon={<ExclamationCircleOutlined />}
+                    variant="outlined"
+                  >
+                    Experimental
+                  </Tag>
+                </FastTooltip>
+              </Checkbox>
+            </FastTooltip>
+            <Hint
+              style={{
+                marginLeft: 24,
+              }}
+            >
+              When enabled, users can edit the annotation in parallel. This feature is experimental
+              and is currently limited to the proofreading tool (
+              <b>skeleton and brushing will be disabled</b>). When disabled, only one user can edit
+              at the same time. We recommend to coordinate the collaboration with your peers to
+              avoid being blocked.
+            </Hint>
+          </Col>
+        </Row>
       </PricingEnforcedBlur>
     </Modal>
   );

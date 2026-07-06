@@ -29,13 +29,16 @@ class SkeletonUpdateActionsUnitTestSuite extends AsyncWordSpec {
         timestamp = Dummies.timestamp,
         comments = List[UpdateActionComment](),
         groupId = None,
-        isVisible = Option(true),
-        edgesAreVisible = Option(true),
+        isVisible = Some(true),
+        edgesAreVisible = Some(true),
         actionTracingId = Dummies.tracingId,
         `type` = Some(TreeType.AGGLOMERATE),
         metadata = Some(
-          List(MetadataEntry("myKey", numberValue = Some(5.0)),
-               MetadataEntry("anotherKey", stringListValue = Some(Seq("hello", "there"))))),
+          List(
+            MetadataEntry("myKey", numberValue = Some(5.0)),
+            MetadataEntry("anotherKey", stringListValue = Some(Seq("hello", "there")))
+          )
+        ),
         agglomerateInfo = Some(TreeAgglomerateInfo(1, Some(Dummies.tracingId), None))
       )
       val result = applyUpdateAction(createTreeAction)
@@ -76,8 +79,11 @@ class SkeletonUpdateActionsUnitTestSuite extends AsyncWordSpec {
         groupId = None,
         `type` = Some(TreeType.AGGLOMERATE),
         metadata = Some(
-          List(MetadataEntry("myKey", numberValue = Some(5.0)),
-               MetadataEntry("anotherKey", stringListValue = Some(Seq("hello", "there"))))),
+          List(
+            MetadataEntry("myKey", numberValue = Some(5.0)),
+            MetadataEntry("anotherKey", stringListValue = Some(Seq("hello", "there")))
+          )
+        ),
         actionTracingId = Dummies.tracingId,
         agglomerateInfo = Some(TreeAgglomerateInfo(1, Some(Dummies.tracingId), None))
       )
@@ -118,10 +124,12 @@ class SkeletonUpdateActionsUnitTestSuite extends AsyncWordSpec {
   "MoveTreeComponentSkeletonAction" should {
     "move the specified (separate) nodes" in {
       val moveTreeComponentSkeletonAction =
-        new MoveTreeComponentSkeletonAction(Dummies.comp1Nodes.map(_.id).toList,
-                                            sourceId = 3,
-                                            targetId = 4,
-                                            actionTracingId = Dummies.tracingId)
+        new MoveTreeComponentSkeletonAction(
+          Dummies.comp1Nodes.map(_.id).toList,
+          sourceId = 3,
+          targetId = 4,
+          actionTracingId = Dummies.tracingId
+        )
       val result = moveTreeComponentSkeletonAction.applyOn(Dummies.componentSkeletonTracing)
 
       assert(result.trees.length == Dummies.componentSkeletonTracing.trees.length)
@@ -168,12 +176,12 @@ class SkeletonUpdateActionsUnitTestSuite extends AsyncWordSpec {
       val createNodeSkeletonAction = new CreateNodeSkeletonAction(
         newNode.id,
         Vec3Int(newNode.position.x, newNode.position.y, newNode.position.z),
-        Option(Vec3Double(newNode.rotation.x, newNode.rotation.y, newNode.rotation.z)),
-        Option(newNode.radius),
-        Option(newNode.viewport),
-        Option(newNode.mag),
-        Option(newNode.bitDepth),
-        Option(newNode.interpolation),
+        Some(Vec3Double(newNode.rotation.x, newNode.rotation.y, newNode.rotation.z)),
+        Some(newNode.radius),
+        Some(newNode.viewport),
+        Some(newNode.mag),
+        Some(newNode.bitDepth),
+        Some(newNode.interpolation),
         treeId = 1,
         Dummies.timestamp,
         None,
@@ -194,12 +202,12 @@ class SkeletonUpdateActionsUnitTestSuite extends AsyncWordSpec {
       val updateNodeSkeletonAction = new UpdateNodeSkeletonAction(
         newNode.id,
         Vec3Int(newNode.position.x, newNode.position.y, newNode.position.z),
-        Option(Vec3Double(newNode.rotation.x, newNode.rotation.y, newNode.rotation.z)),
-        Option(newNode.radius),
-        Option(newNode.viewport),
-        Option(newNode.mag),
-        Option(newNode.bitDepth),
-        Option(newNode.interpolation),
+        Some(Vec3Double(newNode.rotation.x, newNode.rotation.y, newNode.rotation.z)),
+        Some(newNode.radius),
+        Some(newNode.viewport),
+        Some(newNode.mag),
+        Some(newNode.bitDepth),
+        Some(newNode.interpolation),
         treeId = 1,
         Dummies.timestamp,
         actionTracingId = Dummies.tracingId
@@ -219,12 +227,12 @@ class SkeletonUpdateActionsUnitTestSuite extends AsyncWordSpec {
       val createNodeSkeletonAction = new CreateNodeSkeletonAction(
         newNode.id,
         Vec3Int(newNode.position.x, newNode.position.y, newNode.position.z),
-        Option(Vec3Double(newNode.rotation.x, newNode.rotation.y, newNode.rotation.z)),
-        Option(newNode.radius),
-        Option(newNode.viewport),
-        Option(newNode.mag),
-        Option(newNode.bitDepth),
-        Option(newNode.interpolation),
+        Some(Vec3Double(newNode.rotation.x, newNode.rotation.y, newNode.rotation.z)),
+        Some(newNode.radius),
+        Some(newNode.viewport),
+        Some(newNode.mag),
+        Some(newNode.bitDepth),
+        Some(newNode.interpolation),
         treeId = 1,
         Dummies.timestamp,
         actionTracingId = Dummies.tracingId
@@ -253,10 +261,13 @@ class SkeletonUpdateActionsUnitTestSuite extends AsyncWordSpec {
       val updatedNameNested = "Axon 3 updated"
       val updateTreeGroupsSkeletonAction = new UpdateTreeGroupsSkeletonAction(
         List(
-          UpdateActionTreeGroup(updatedNameTop,
-                                1,
-                                Some(true),
-                                List(UpdateActionTreeGroup(updatedNameNested, 3, Some(false), List())))),
+          UpdateActionTreeGroup(
+            updatedNameTop,
+            1,
+            Some(true),
+            List(UpdateActionTreeGroup(updatedNameNested, 3, Some(false), List()))
+          )
+        ),
         actionTracingId = Dummies.tracingId
       )
       val result = applyUpdateAction(updateTreeGroupsSkeletonAction)

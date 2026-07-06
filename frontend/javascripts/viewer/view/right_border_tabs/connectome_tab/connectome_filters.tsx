@@ -1,9 +1,9 @@
 import { FilterOutlined } from "@ant-design/icons";
-import { Checkbox, Divider, Popover, Tooltip } from "antd";
+import { Button, Checkbox, Divider, Flex, Popover, Tooltip, Typography } from "antd";
 import mapValues from "lodash-es/mapValues";
 import pick from "lodash-es/pick";
 import pickBy from "lodash-es/pickBy";
-import React from "react";
+import { useEffect, useState } from "react";
 import ButtonComponent from "viewer/view/components/button_component";
 import type {
   ConnectomeData,
@@ -54,166 +54,166 @@ const defaultFilters: ConnectomeFiltersType = {
   synapseTypes: [],
   synapseDirections: ["in", "out"],
 };
+
 type Props = {
   connectomeData: ConnectomeData | null | undefined;
   availableSynapseTypes: Array<string>;
   onUpdateFilteredConnectomeData: (arg0: ConnectomeData | null | undefined) => void;
   disabled: boolean;
 };
-type State = {
+
+// Presentational popover content for editing the filters. All state lives in the
+// parent ConnectomeFilters component.
+function FilterSettings({
+  filters,
+  availableSynapseTypes,
+  isAnyFilterActive,
+  onChangeFilters,
+  onReset,
+}: {
   filters: ConnectomeFiltersType;
-};
-
-class ConnectomeFilters extends React.Component<Props, State> {
-  state: State = {
-    filters: defaultFilters,
-  };
-
-  componentDidUpdate(prevProps: Props, prevState: State) {
-    let { filters } = this.state;
-
-    if (prevProps.availableSynapseTypes !== this.props.availableSynapseTypes) {
-      // Avoid using outdated filters in the call to updateFilteredConnectomeData
-      filters = this.updateFilters(prevProps.availableSynapseTypes);
-    }
-
-    if (
-      prevProps.connectomeData !== this.props.connectomeData ||
-      prevState.filters !== this.state.filters
-    ) {
-      this.updateFilteredConnectomeData(filters);
-    }
-  }
-
-  resetFilters = () => {
-    this.setState({
-      filters: { ...defaultFilters, synapseTypes: this.props.availableSynapseTypes },
-    });
-  };
-
-  updateFilters(prevAvailableSynapseTypes: Array<string>) {
-    const { availableSynapseTypes } = this.props;
-    const { filters } = this.state;
-    // Remove filters for synapse types that are no longer valid
-    const validOldSynapseTypes = filters.synapseTypes.filter((synapseType) =>
-      availableSynapseTypes.includes(synapseType),
-    );
-    // Add positive filters for synapse types that are new
-    const newlyAddedSynapseTypes = availableSynapseTypes.filter(
-      (synapseType) => !prevAvailableSynapseTypes.includes(synapseType),
-    );
-    const newFilters = {
-      ...filters,
-      synapseTypes: [...validOldSynapseTypes, ...newlyAddedSynapseTypes],
-    };
-    this.setState({
-      filters: newFilters,
-    });
-    return newFilters;
-  }
-
-  updateFilteredConnectomeData(filters: ConnectomeFiltersType) {
-    const { connectomeData, availableSynapseTypes } = this.props;
-    const filteredConnectomeData = getFilteredConnectomeData(
-      connectomeData,
-      filters,
-      availableSynapseTypes.length,
-    );
-    this.props.onUpdateFilteredConnectomeData(filteredConnectomeData);
-  }
-
-  onChangeSynapseDirectionFilter = (synapseDirections: Array<SynapseDirection>) => {
-    this.setState((oldState) => ({
-      filters: { ...oldState.filters, synapseDirections },
-    }));
-  };
-
-  onChangeSynapseTypeFilter = (synapseTypes: Array<string>) => {
-    this.setState((oldState) => ({
-      filters: { ...oldState.filters, synapseTypes },
-    }));
-  };
-
-  getFilterSettings = () => {
-    const { availableSynapseTypes } = this.props;
-    const { filters } = this.state;
-    const synapseDirectionOptions = Object.keys(directionCaptions).map(
-      // @ts-expect-error
-      (direction: DirectionCaptionsKeys) => ({
-        label: directionCaptions[direction],
-        value: direction,
-      }),
-    );
-    const synapseTypeOptions = availableSynapseTypes.map((synapseType) => ({
-      label: synapseType,
-      value: synapseType,
-    }));
-    return (
-      <div>
-        <h4
-          style={{
-            display: "inline-block",
-          }}
-        >
-          Filters
-        </h4>
-        <ButtonComponent
-          style={{
-            float: "right",
-          }}
-          onClick={this.resetFilters}
+  availableSynapseTypes: Array<string>;
+  isAnyFilterActive: boolean;
+  onChangeFilters: (update: Partial<ConnectomeFiltersType>) => void;
+  onReset: () => void;
+}) {
+  const synapseDirectionOptions = Object.keys(directionCaptions).map(
+    // @ts-expect-error
+    (direction: DirectionCaptionsKeys) => ({
+      label: directionCaptions[direction],
+      value: direction,
+    }),
+  );
+  const synapseTypeOptions = availableSynapseTypes.map((synapseType) => ({
+    label: synapseType,
+    value: synapseType,
+  }));
+  return (
+    <Flex vertical gap="small" style={{ width: 220 }}>
+      <Flex justify="space-between" align="center">
+        <Typography.Text strong>Filters</Typography.Text>
+        <Button
+          type="link"
+          size="small"
+          onClick={onReset}
+          disabled={!isAnyFilterActive}
+          style={{ padding: 0 }}
         >
           Reset
-        </ButtonComponent>
-        <Divider size="small" />
-        <h4>by Synapse Direction</h4>
+        </Button>
+      </Flex>
+      <Divider size="small" style={{ margin: 0 }} />
+      <Flex vertical gap={4}>
+        <Typography.Text type="secondary">Synapse Direction</Typography.Text>
         <Checkbox.Group
           options={synapseDirectionOptions}
           value={filters.synapseDirections}
-          onChange={this.onChangeSynapseDirectionFilter}
+          onChange={(synapseDirections: Array<SynapseDirection>) =>
+            onChangeFilters({ synapseDirections })
+          }
         />
-        <h4>by Synapse Type</h4>
+      </Flex>
+      <Flex vertical gap={4}>
+        <Typography.Text type="secondary">Synapse Type</Typography.Text>
         <Checkbox.Group
           options={synapseTypeOptions}
           value={filters.synapseTypes}
-          onChange={this.onChangeSynapseTypeFilter}
+          onChange={(synapseTypes: Array<string>) => onChangeFilters({ synapseTypes })}
+          // Stack the (potentially many) type options vertically and let long lists scroll.
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 4,
+            maxHeight: 160,
+            overflowY: "auto",
+          }}
         />
-      </div>
+      </Flex>
+    </Flex>
+  );
+}
+
+function ConnectomeFilters({
+  connectomeData,
+  availableSynapseTypes,
+  onUpdateFilteredConnectomeData,
+  disabled,
+}: Props) {
+  const [filters, setFilters] = useState<ConnectomeFiltersType>(defaultFilters);
+
+  // Keep the synapse type selection in sync with the available synapse types by
+  // adjusting state during render rather than in an effect.
+  // See https://react.dev/learn/you-might-not-need-an-effect.
+  const [prevAvailableSynapseTypes, setPrevAvailableSynapseTypes] = useState(availableSynapseTypes);
+  if (prevAvailableSynapseTypes !== availableSynapseTypes) {
+    setPrevAvailableSynapseTypes(availableSynapseTypes);
+    setFilters((oldFilters) => ({
+      ...oldFilters,
+      synapseTypes: [
+        // Keep the previously selected types that are still valid ...
+        ...oldFilters.synapseTypes.filter((type) => availableSynapseTypes.includes(type)),
+        // ... and select any newly added types.
+        ...availableSynapseTypes.filter((type) => !prevAvailableSynapseTypes.includes(type)),
+      ],
+    }));
+  }
+
+  // Push the derived, filtered connectome data up to the parent whenever the
+  // source data or the filters change.
+  useEffect(() => {
+    onUpdateFilteredConnectomeData(
+      getFilteredConnectomeData(connectomeData, filters, availableSynapseTypes.length),
     );
+  }, [connectomeData, filters, availableSynapseTypes.length, onUpdateFilteredConnectomeData]);
+
+  const resetFilters = () => {
+    setFilters({ ...defaultFilters, synapseTypes: availableSynapseTypes });
   };
 
-  render() {
-    const { availableSynapseTypes, disabled } = this.props;
-    const { filters } = this.state;
-    const isSynapseTypeFilterAvailable = availableSynapseTypes.length;
-    const isSynapseTypeFiltered = filters.synapseTypes.length !== availableSynapseTypes.length;
-    const isSynapseDirectionFiltered =
-      filters.synapseDirections.length !== defaultFilters.synapseDirections.length;
-    const isAnyFilterActive = isSynapseTypeFiltered || isSynapseDirectionFiltered;
-    return (
-      <Tooltip title="Configure Filters">
-        <Popover content={this.getFilterSettings} trigger="click">
-          <ButtonComponent
-            disabled={disabled || !isSynapseTypeFilterAvailable}
-            icon={
-              <FilterOutlined
-                style={
-                  isAnyFilterActive
-                    ? {
-                        color: "red",
-                      }
-                    : {}
-                }
-              />
-            }
-            title="Configure Filters"
-            variant="text"
-            color="default"
+  const changeFilters = (update: Partial<ConnectomeFiltersType>) => {
+    setFilters((oldFilters) => ({ ...oldFilters, ...update }));
+  };
+
+  const isSynapseTypeFilterAvailable = availableSynapseTypes.length;
+  const isSynapseTypeFiltered = filters.synapseTypes.length !== availableSynapseTypes.length;
+  const isSynapseDirectionFiltered =
+    filters.synapseDirections.length !== defaultFilters.synapseDirections.length;
+  const isAnyFilterActive = isSynapseTypeFiltered || isSynapseDirectionFiltered;
+
+  return (
+    <Tooltip title="Configure Filters">
+      <Popover
+        content={() => (
+          <FilterSettings
+            filters={filters}
+            availableSynapseTypes={availableSynapseTypes}
+            isAnyFilterActive={isAnyFilterActive}
+            onChangeFilters={changeFilters}
+            onReset={resetFilters}
           />
-        </Popover>
-      </Tooltip>
-    );
-  }
+        )}
+        trigger="click"
+      >
+        <ButtonComponent
+          disabled={disabled || !isSynapseTypeFilterAvailable}
+          icon={
+            <FilterOutlined
+              style={
+                isAnyFilterActive
+                  ? {
+                      color: "red",
+                    }
+                  : {}
+              }
+            />
+          }
+          title="Configure Filters"
+          variant="text"
+          color="default"
+        />
+      </Popover>
+    </Tooltip>
+  );
 }
 
 export default ConnectomeFilters;

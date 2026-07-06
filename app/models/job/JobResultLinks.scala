@@ -33,9 +33,9 @@ trait JobResultLinks {
         case JobCommand.export_tiff | JobCommand.render_animation =>
           Some(s"/api/jobs/${this.id}/export")
         case JobCommand.infer_neurons
-            if (this
+            if this
               .argAsBooleanOpt("do_split_merger_evaluation")
-              .getOrElse(false) || this.argAsBooleanOpt("do_evaluation").getOrElse(false)) =>
+              .getOrElse(false) || this.argAsBooleanOpt("do_evaluation").getOrElse(false) =>
           returnValue.map { resultAnnotationLink =>
             resultAnnotationLink
           }
@@ -59,7 +59,8 @@ trait JobResultLinks {
   def resultLinkPublic(organizationId: String, webknossosPublicUrl: String): Option[String] =
     for {
       resultLink <- constructResultLink(organizationId)
-      resultLinkPublic = if (resultLink.startsWith("/")) s"$webknossosPublicUrl$resultLink"
-      else s"$resultLink"
+      resultLinkPublic =
+        if (resultLink.startsWith("/")) s"$webknossosPublicUrl$resultLink"
+        else s"$resultLink"
     } yield resultLinkPublic
 }

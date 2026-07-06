@@ -3,10 +3,11 @@ package com.scalableminds.webknossos.datastore.dataformats.wkw
 import java.io._
 import org.apache.commons.io.IOUtils
 import com.google.common.io.LittleEndianDataInputStream
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.box.{Box, Failure, Full}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import net.jpountz.lz4.LZ4Factory
-import com.scalableminds.util.tools.{Box, Failure, Full}
-import com.scalableminds.util.tools.Box.tryo
+import Box.tryo
 
 import scala.concurrent.ExecutionContext
 
@@ -42,19 +43,19 @@ trait WKWCompressionHelper {
   }
 
   protected def decompressChunk(sourceChunkType: ChunkType.Value, numBytesPerChunk: Int)(
-      compressedChunk: Array[Byte]): Box[Array[Byte]] = {
+      compressedChunk: Array[Byte]
+  ): Box[Array[Byte]] = {
     val result = sourceChunkType match {
       case ChunkType.LZ4 | ChunkType.LZ4HC =>
         val rawChunk: Array[Byte] = Array.ofDim[Byte](numBytesPerChunk)
         for {
           bytesDecompressed <- tryo(lz4Decompressor.decompress(compressedChunk, rawChunk, numBytesPerChunk))
-          _ <- Box.fromBool(bytesDecompressed == compressedChunk.length) ?~! error(
+          _ <- Box.fromBool(bytesDecompressed == compressedChunk.length) ?~> error(
             "Decompressed unexpected number of bytes",
             compressedChunk.length,
-            bytesDecompressed)
-        } yield {
-          rawChunk
-        }
+            bytesDecompressed
+          )
+        } yield rawChunk
       case ChunkType.Raw =>
         Full(compressedChunk)
       case _ =>
@@ -64,10 +65,11 @@ trait WKWCompressionHelper {
   }
 }
 
-object WKWFile extends WKWCompressionHelper with FoxImplicits {
+object WKWFile extends WKWCompressionHelper {
 
-  def read[T](is: InputStream)(f: (WKWHeader, Iterator[Array[Byte]]) => Fox[T])(
-      implicit ec: ExecutionContext): Fox[T] = {
+  def read[T](
+      is: InputStream
+  )(f: (WKWHeader, Iterator[Array[Byte]]) => Fox[T])(implicit ec: ExecutionContext): Fox[T] = {
     val dataStream = new LittleEndianDataInputStream(is)
     for {
       header <- WKWHeader(dataStream, readJumpTable = true).toFox
@@ -87,14 +89,14 @@ object WKWFile extends WKWCompressionHelper with FoxImplicits {
           if (blocks.hasNext) {
             val data = blocks.next()
             for {
-              _ <- Box.fromBool(data.length == header.numBytesPerChunk) ?~! error("Unexpected chunk size",
-                                                                                  header.numBytesPerChunk,
-                                                                                  data.length)
+              _ <- Box.fromBool(data.length == header.numBytesPerChunk) ?~> error(
+                "Unexpected chunk size",
+                header.numBytesPerChunk,
+                data.length
+              )
               compressedChunk <- if (header.isCompressed) compressChunk(header.blockType)(data) else Full(data)
               _ <- tryo(dataBuffer.write(compressedChunk))
-            } yield {
-              chunkLengths :+ compressedChunk.length
-            }
+            } yield chunkLengths :+ compressedChunk.length
           } else {
             Failure("No more chunks in iterator.")
           }

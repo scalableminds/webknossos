@@ -385,7 +385,7 @@ export type APIRestrictions = {
   // allowSave might be false even though allowUpdate and isUpdatingCurrentlyAllowed are true (e.g., see sandbox annotations)
   readonly allowSave?: boolean;
 };
-export type APIAllowedMode = "orthogonal" | "oblique" | "flight";
+export type APIAllowedMode = "orthogonal" | "flight";
 export type APIMagRestrictions = {
   min?: number;
   max?: number;
@@ -1052,9 +1052,10 @@ export type ServerVolumeTracing = ServerTracingBase & {
   hasEditableMapping?: boolean;
   mappingIsLocked?: boolean;
   hasSegmentIndex?: boolean;
-  // volumeBucketDataHasChanged is automatically set to true by the back-end
-  // once a bucket was mutated. There is no need to send an explicit UpdateAction
-  // for that.
+  // volumeBucketDataHasChanged is set to true once a bucket was mutated. The
+  // frontend tracks this and syncs it via the updateVolumeBucketDataHasChanged
+  // update action (so that it survives rebasing in live collab mode and
+  // collaborators notice it).
   volumeBucketDataHasChanged?: boolean;
   userStates: VolumeUserState[];
   hideUnregisteredSegments?: boolean;
@@ -1359,6 +1360,12 @@ export enum MOVIE_RESOLUTIONS {
   HD = "HD",
 }
 
+export enum MOVIE_DURATIONS {
+  SHORT = "SHORT",
+  STANDARD = "STANDARD",
+  LONG = "LONG",
+}
+
 export type RenderAnimationOptions = {
   layerName: string;
   meshes: ({
@@ -1370,9 +1377,11 @@ export type RenderAnimationOptions = {
   includeWatermark: boolean;
   magForTextures: Vector3;
   movieResolution: MOVIE_RESOLUTIONS;
+  movieDuration: MOVIE_DURATIONS;
   cameraPosition: CAMERA_POSITIONS;
   annotationId: string | null;
   includeSkeletons: boolean;
+  hideImageData: boolean;
   saveBlenderFile: boolean;
 };
 

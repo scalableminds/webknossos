@@ -31,9 +31,9 @@ object CompressionSetting {
     override def reads(json: JsValue): JsResult[CompressionSetting] =
       json
         .validate[String]
-        .map(StringCompressionSetting)
-        .orElse(json.validate[Int].map(IntCompressionSetting))
-        .orElse(json.validate[Boolean].map(BoolCompressionSetting))
+        .map(StringCompressionSetting(_))
+        .orElse(json.validate[Int].map(IntCompressionSetting(_)))
+        .orElse(json.validate[Boolean].map(BoolCompressionSetting(_)))
 
     override def writes(compressionSetting: CompressionSetting): JsValue =
       compressionSetting match {
@@ -60,9 +60,7 @@ abstract class Compressor {
   protected def passThrough(is: InputStream, os: OutputStream): Unit = {
     val bytes = new Array[Byte](4096)
     var read = is.read(bytes)
-    while ({
-      read >= 0
-    }) {
+    while (read >= 0) {
       if (read > 0)
         os.write(bytes, 0, read)
       read = is.read(bytes)
@@ -106,10 +104,10 @@ class Lz4Compressor extends Compressor {
 
 class ZlibCompressor(val properties: Map[String, CompressionSetting]) extends Compressor {
   val level: Int = properties.get("level") match {
-    case None                                        => 1 //default value
+    case None                                        => 1 // default value
     case Some(IntCompressionSetting(levelInt))       => validateLevel(levelInt)
     case Some(StringCompressionSetting(levelString)) => validateLevel(levelString.toInt)
-    case _                                           => throw new IllegalArgumentException("Invalid compression level: " + level)
+    case _ => throw new IllegalArgumentException("Invalid compression level: " + level)
   }
 
   override def toString: String = "compressor=" + getId + "/level=" + level
@@ -145,10 +143,10 @@ class ZlibCompressor(val properties: Map[String, CompressionSetting]) extends Co
 
 class GzipCompressor(val properties: Map[String, CompressionSetting]) extends Compressor {
   val level: Int = properties.get("level") match {
-    case None                                        => 1 //default value
+    case None                                        => 1 // default value
     case Some(IntCompressionSetting(levelInt))       => validateLevel(levelInt)
     case Some(StringCompressionSetting(levelString)) => validateLevel(levelString.toInt)
-    case _                                           => throw new IllegalArgumentException("Invalid compression level: " + level)
+    case _ => throw new IllegalArgumentException("Invalid compression level: " + level)
   }
 
   override def toString: String = "compressor=" + getId + "/level=" + level
@@ -209,7 +207,8 @@ class BloscCompressor(val properties: Map[String, CompressionSetting]) extends C
     if (validatedCname == null)
       throw new IllegalArgumentException(
         "blosc: compressor not supported: '" + cname + "'; expected one of " +
-          BloscCompressor.supportedCnames.mkString(","))
+          BloscCompressor.supportedCnames.mkString(",")
+      )
     validatedCname
   }
 
@@ -217,7 +216,7 @@ class BloscCompressor(val properties: Map[String, CompressionSetting]) extends C
     case None                                         => BloscCompressor.defaultCLevel
     case Some(StringCompressionSetting(clevelString)) => validateClevel(clevelString.toInt)
     case Some(IntCompressionSetting(clevelInt))       => validateClevel(clevelInt)
-    case _                                            => throw new IllegalArgumentException("Blosc clevel must be int or string")
+    case _ => throw new IllegalArgumentException("Blosc clevel must be int or string")
   }
 
   private def validateClevel(clevel: Int): Int = {
@@ -230,14 +229,14 @@ class BloscCompressor(val properties: Map[String, CompressionSetting]) extends C
     case None                                           => BloscCompressor.defaultTypesize
     case Some(StringCompressionSetting(typeSizeString)) => typeSizeString.toInt
     case Some(IntCompressionSetting(typeSizeInt))       => typeSizeInt
-    case _                                              => throw new IllegalArgumentException("Blosc typesize must be int or string")
+    case _ => throw new IllegalArgumentException("Blosc typesize must be int or string")
   }
 
   val shuffle: Blosc.Shuffle = properties.get(BloscCompressor.keyShuffle) match {
     case None                                          => BloscCompressor.defaultShuffle
     case Some(StringCompressionSetting(shuffleString)) => validateShuffleStr(shuffleString)
     case Some(IntCompressionSetting(shuffleInt))       => validateShuffleInt(shuffleInt)
-    case _                                             => throw new IllegalArgumentException("Blosc shuffle must be int or string")
+    case _ => throw new IllegalArgumentException("Blosc shuffle must be int or string")
   }
 
   private def validateShuffleStr(shuffle: String): Blosc.Shuffle = {
@@ -247,7 +246,8 @@ class BloscCompressor(val properties: Map[String, CompressionSetting]) extends C
     val validatedShuffle = Blosc.Shuffle.fromString(shuffle)
     if (validatedShuffle == null)
       throw new IllegalArgumentException(
-        f"blosc: shuffle type '$shuffle' not supported. Expected one of ${supportedShuffleNames.mkString(",")}")
+        f"blosc: shuffle type '$shuffle' not supported. Expected one of ${supportedShuffleNames.mkString(",")}"
+      )
     validatedShuffle
   }
 
@@ -265,7 +265,8 @@ class BloscCompressor(val properties: Map[String, CompressionSetting]) extends C
     val validatedShuffle = Blosc.Shuffle.fromInt(newShuffle)
     if (validatedShuffle == null)
       throw new IllegalArgumentException(
-        f"blosc: shuffle type '$shuffle' not supported. Expected one of ${supportedShuffleNames.mkString(",")}")
+        f"blosc: shuffle type '$shuffle' not supported. Expected one of ${supportedShuffleNames.mkString(",")}"
+      )
     validatedShuffle
   }
 
@@ -273,7 +274,7 @@ class BloscCompressor(val properties: Map[String, CompressionSetting]) extends C
     case None                                            => BloscCompressor.defaultBlocksize
     case Some(StringCompressionSetting(blockSizeString)) => blockSizeString.toInt
     case Some(IntCompressionSetting(blockSizeInt))       => blockSizeInt
-    case _                                               => throw new IllegalArgumentException("Blosc blocksize must be int or string")
+    case _ => throw new IllegalArgumentException("Blosc blocksize must be int or string")
   }
 
   override def getId = "blosc"

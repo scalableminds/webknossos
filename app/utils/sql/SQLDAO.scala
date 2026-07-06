@@ -4,6 +4,7 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import slick.jdbc.GetResult
 import slick.lifted.{AbstractTable, TableQuery}
 
@@ -36,27 +37,29 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject() (sqlClient: SqlClie
   protected def parseAll(rowSeq: Seq[R]): Fox[List[C]] =
     Fox.combined(rowSeq.map(parse)) ?~> s"Parsing failed for a row in $collectionName during list query"
 
-  def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[C] =
+  def findOne(id: ObjectId)(using ctx: DBAccessContext): Fox[C] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $id AND $accessQuery".as[R](resultConverter))
+      r <- run(
+        q"SELECT $columns FROM $existingCollectionName WHERE _id = $id AND $accessQuery".as[R](using resultConverter)
+      )
       parsed <- parseFirst(r, id)
     } yield parsed
 
-  def findAll(implicit ctx: DBAccessContext): Fox[List[C]] =
+  def findAll(using ctx: DBAccessContext): Fox[List[C]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery".as[R](resultConverter))
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery".as[R](using resultConverter))
       parsed <- parseAll(r)
     } yield parsed
 
-  def deleteOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def deleteOne(id: ObjectId)(using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertDeleteAccess(id)
       _ <- run(q"UPDATE $collectionName SET isDeleted = TRUE WHERE _id = $id".asUpdate)
     } yield ()
 
-  def deleteOneWithNameSuffix(id: ObjectId, nameColumn: String = "name")(implicit ctx: DBAccessContext): Fox[Unit] =
+  def deleteOneWithNameSuffix(id: ObjectId, nameColumn: String = "name")(using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertDeleteAccess(id)
       deletedSuffix = s".deleted.at.${Instant.now.epochMillis}"

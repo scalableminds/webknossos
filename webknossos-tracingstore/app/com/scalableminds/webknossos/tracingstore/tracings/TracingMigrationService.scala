@@ -1,11 +1,12 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
 import com.google.inject.Inject
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.box.Full
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.geometry.{ColorProto, NamedBoundingBoxProto => ProtoBox}
-import com.scalableminds.util.tools.Full
 import scalapb.GeneratedMessage
 
 import scala.concurrent.ExecutionContext
@@ -18,7 +19,7 @@ trait ColorGenerator {
     ColorProto(getRandomComponent, getRandomComponent, getRandomComponent, 1.0)
 }
 
-trait TracingMigrationService[T <: GeneratedMessage] extends FoxImplicits {
+trait TracingMigrationService[T <: GeneratedMessage] {
   implicit protected def ec: ExecutionContext
 
   protected def migrations: List[T => Fox[T]]
@@ -26,7 +27,7 @@ trait TracingMigrationService[T <: GeneratedMessage] extends FoxImplicits {
   def migrateTracing(tracing: T): Fox[T] = {
     def migrateIter(tracingFox: Fox[T], migrations: List[T => Fox[T]]): Fox[T] =
       migrations match {
-        case List() => tracingFox
+        case List()       => tracingFox
         case head :: tail =>
           tracingFox.shiftBox.flatMap {
             case Full(tracing) =>
@@ -39,7 +40,7 @@ trait TracingMigrationService[T <: GeneratedMessage] extends FoxImplicits {
   }
 }
 
-class SkeletonTracingMigrationService @Inject()()(implicit val ec: ExecutionContext)
+class SkeletonTracingMigrationService @Inject() ()(implicit val ec: ExecutionContext)
     extends TracingMigrationService[SkeletonTracing]
     with ColorGenerator {
   override protected val migrations: List[SkeletonTracing => Fox[SkeletonTracing]] = List(removeSingleUserBoundingBox)
@@ -53,7 +54,7 @@ class SkeletonTracingMigrationService @Inject()()(implicit val ec: ExecutionCont
   }
 }
 
-class VolumeTracingMigrationService @Inject()()(implicit val ec: ExecutionContext)
+class VolumeTracingMigrationService @Inject() ()(implicit val ec: ExecutionContext)
     extends TracingMigrationService[VolumeTracing]
     with ColorGenerator {
   override protected val migrations: List[VolumeTracing => Fox[VolumeTracing]] = List(removeSingleUserBoundingBox)

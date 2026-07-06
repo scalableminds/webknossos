@@ -28,7 +28,7 @@ export default {
       ],
     },
     "types::ViewMode": {
-      enum: ["orthogonal", "oblique", "flight", "volume"],
+      enum: ["orthogonal", "flight", "volume"],
     },
     "types::MappingType": {
       type: ["string", "null"],
@@ -198,6 +198,12 @@ export default {
         },
         nativelyRenderedLayerName: {
           type: ["string", "null"],
+        },
+        clippingDistance: {
+          type: "number",
+        },
+        clipSkeletonToCurrentSection: {
+          type: "boolean",
         },
       },
       additionalProperties: false,

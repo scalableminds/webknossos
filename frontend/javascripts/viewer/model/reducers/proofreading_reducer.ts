@@ -11,7 +11,7 @@ function ProofreadingReducer(state: WebknossosState, action: ProofreadAction): W
   }
   switch (action.type) {
     case "TOGGLE_SEGMENT_IN_PARTITION": {
-      const layerData = state.localSegmentationData[layerName];
+      const layerData = state.localSegmentationStateByLayer[layerName];
       if (!layerData || !layerData.minCutPartitions) {
         return state;
       }
@@ -26,7 +26,7 @@ function ProofreadingReducer(state: WebknossosState, action: ProofreadAction): W
         return state;
       } else if (minCutPartitions.agglomerateId == null) {
         return update(state, {
-          localSegmentationData: {
+          localSegmentationStateByLayer: {
             [layerName]: {
               minCutPartitions: {
                 [action.partition]: {
@@ -52,7 +52,7 @@ function ProofreadingReducer(state: WebknossosState, action: ProofreadAction): W
       );
 
       return update(state, {
-        localSegmentationData: {
+        localSegmentationStateByLayer: {
           [layerName]: {
             minCutPartitions: {
               [action.partition]: {
@@ -69,7 +69,7 @@ function ProofreadingReducer(state: WebknossosState, action: ProofreadAction): W
 
     case "RESET_MULTI_CUT_TOOL_PARTITIONS": {
       return update(state, {
-        localSegmentationData: {
+        localSegmentationStateByLayer: {
           [layerName]: {
             minCutPartitions: {
               [1]: {

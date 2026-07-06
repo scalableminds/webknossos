@@ -8,10 +8,13 @@ export const userSettings = {
     minimum: 1,
     maximum: 12000,
   },
-  clippingDistanceArbitrary: {
+  clippingDistanceFlight: {
     type: "number",
     minimum: 1,
     maximum: 127,
+  },
+  clipSkeletonToCurrentSection: {
+    type: "boolean",
   },
   crosshairSize: {
     type: "number",

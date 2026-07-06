@@ -1,8 +1,9 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
+import com.scalableminds.util.box.{Box, Full}
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Full, JsonHelper}
+import com.scalableminds.util.box.Box.tryo
+import com.scalableminds.util.tools.JsonHelper
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
@@ -36,11 +37,14 @@ case class Zarr3ArrayHeader(
 
   override lazy val order: ArrayOrder = getOrder
 
-  override lazy val byteOrder: ByteOrder = if (codecs.exists {
-                                                 case BytesCodecConfiguration(endian) if endian.contains("big") => true
-                                                 case _                                                         => false
-                                               }) ByteOrder.BIG_ENDIAN
-  else ByteOrder.LITTLE_ENDIAN
+  override lazy val byteOrder: ByteOrder =
+    if (
+      codecs.exists {
+        case BytesCodecConfiguration(endian) if endian.contains("big") => true
+        case _                                                         => false
+      }
+    ) ByteOrder.BIG_ENDIAN
+    else ByteOrder.LITTLE_ENDIAN
 
   private def zarr3DataType: Zarr3DataType =
     Zarr3DataType.fromString(data_type.left.getOrElse("extension")).getOrElse(raw)
@@ -54,18 +58,18 @@ case class Zarr3ArrayHeader(
   override def isSharded: Boolean =
     shardingCodecConfiguration.isDefined
 
-  private def shardingCodecConfiguration = codecs.collectFirst {
-    case s: ShardingCodecConfiguration => s
+  private def shardingCodecConfiguration = codecs.collectFirst { case s: ShardingCodecConfiguration =>
+    s
   }
 
   def assertValid: Box[Unit] =
     for {
-      _ <- Box.fromBool(zarr_format == 3) ?~! s"Expected zarr_format 3, got $zarr_format"
-      _ <- Box.fromBool(node_type == "array") ?~! s"Expected node_type 'array', got $node_type"
-      _ <- tryo(resolvedDataType) ?~! "Data type is not supported"
+      _ <- Box.fromBool(zarr_format == 3) ?~> s"Expected zarr_format 3, got $zarr_format"
+      _ <- Box.fromBool(node_type == "array") ?~> s"Expected node_type 'array', got $node_type"
+      _ <- tryo(resolvedDataType) ?~> "Data type is not supported"
       _ <- shardingCodecConfiguration
         .map(_.isSupported)
-        .getOrElse(Full(())) ?~! "Sharding codec configuration is not supported"
+        .getOrElse(Full(())) ?~> "Sharding codec configuration is not supported"
     } yield ()
 
   def outerChunkShape: Array[Int] = chunk_grid match {
@@ -86,7 +90,7 @@ case class Zarr3ArrayHeader(
   // compare https://github.com/scalableminds/webknossos/issues/7116
   private def getOrder: ArrayOrder.Value =
     CodecTreeExplorer.findOne {
-      case TransposeCodecConfiguration(StringTransposeSetting(order)) => order == "F"
+      case TransposeCodecConfiguration(StringTransposeSetting(order))   => order == "F"
       case TransposeCodecConfiguration(IntArrayTransposeSetting(order)) =>
         order.sameElements(TransposeSetting.fOrderFromRank(rank).order)
       case _ => false
@@ -169,35 +173,36 @@ object Zarr3ArrayHeader extends JsonImplicits {
         chunk_grid <- (json \ "chunk_grid").validate[ChunkGridSpecification]
         chunk_key_encoding <- (json \ "chunk_key_encoding").validate[ChunkKeyEncoding]
         fill_value_raw = json \ "fill_value"
-        fill_value <- (fill_value_raw.validate[String],
-                       fill_value_raw.validate[Number],
-                       fill_value_raw.validate[Boolean]) match {
-          case (asStr: JsSuccess[String], _, _) =>
-            asStr.flatMap(value => JsSuccess[Either[String, Number]](Left(value)))
-          case (_, asNum: JsSuccess[Number], _) =>
-            asNum.flatMap(value => JsSuccess[Either[String, Number]](Right(value)))
-          case (_, _, asBool: JsSuccess[Boolean]) =>
-            asBool.flatMap(value => JsSuccess[Either[String, Number]](Left(value.toString)))
+        fill_value <- (
+          fill_value_raw.validate[String],
+          fill_value_raw.validate[Number],
+          fill_value_raw.validate[Boolean]
+        ) match {
+          case (JsSuccess(value, _), _, _) =>
+            JsSuccess[Either[String, Number]](Left(value))
+          case (_, JsSuccess(value, _), _) =>
+            JsSuccess[Either[String, Number]](Right(value))
+          case (_, _, JsSuccess(value, _)) =>
+            JsSuccess[Either[String, Number]](Left(value.toString))
           case _ => JsError("Could not parse fill_value as string, number or boolean value.")
         }
         attributes = (json \ "attributes").validate[JsObject].asOpt
         codecsJsValue <- (json \ "codecs").validate[JsValue]
         codecs = readCodecs(codecsJsValue)
         dimension_names <- (json \ "dimension_names").validate[Array[String]].orElse(JsSuccess(Array[String]()))
-      } yield
-        Zarr3ArrayHeader(
-          zarr_format,
-          node_type,
-          shape,
-          Left(data_type),
-          Left(chunk_grid),
-          chunk_key_encoding,
-          fill_value,
-          attributes,
-          codecs,
-          storage_transformers = None, // No storage transformers are currently defined
-          Some(dimension_names)
-        )
+      } yield Zarr3ArrayHeader(
+        zarr_format,
+        node_type,
+        shape,
+        Left(data_type),
+        Left(chunk_grid),
+        chunk_key_encoding,
+        fill_value,
+        attributes,
+        codecs,
+        storage_transformers = None, // No storage transformers are currently defined
+        Some(dimension_names)
+      )
 
     private def readShardingCodecConfiguration(config: JsValue): JsResult[ShardingCodecConfiguration] =
       for {
@@ -215,7 +220,7 @@ object Zarr3ArrayHeader extends JsonImplicits {
         case _            => Seq()
       }
       val configurationKey = "configuration"
-      val codecSpecs = rawCodecSpecs.map(c => {
+      val codecSpecs = rawCodecSpecs.map(c =>
         for {
           spec: CodecConfiguration <- c("name") match {
             // BytesCodec may have no "configuration" key
@@ -231,16 +236,17 @@ object Zarr3ArrayHeader extends JsonImplicits {
             case JsString(GzipCodecConfiguration.name)      => c(configurationKey).validate[GzipCodecConfiguration]
             case JsString(BloscCodecConfiguration.name)     => c(configurationKey).validate[BloscCodecConfiguration]
             case JsString(ZstdCodecConfiguration.name)      => c(configurationKey).validate[ZstdCodecConfiguration]
-            case JsString(Crc32CCodecConfiguration.name) =>
+            case JsString(Crc32CCodecConfiguration.name)    =>
               JsSuccess(Crc32CCodecConfiguration) // Crc32 codec has no configuration
             case JsString(ShardingCodecConfiguration.name) => readShardingCodecConfiguration(c(configurationKey))
-            case JsString(name)                            => throw new UnsupportedOperationException(s"Codec $name is not supported.")
-            case _                                         => throw new IllegalArgumentException()
+            case JsString(name) => throw new UnsupportedOperationException(s"Codec $name is not supported.")
+            case _              => throw new IllegalArgumentException()
           }
         } yield spec
-      })
+      )
       codecSpecs.flatMap(possibleCodecSpec =>
-        possibleCodecSpec.map((s: CodecConfiguration) => Seq(s)).getOrElse(Seq[CodecConfiguration]()))
+        possibleCodecSpec.map((s: CodecConfiguration) => Seq(s)).getOrElse(Seq[CodecConfiguration]())
+      )
     }
 
     override def writes(zarrArrayHeader: Zarr3ArrayHeader): JsValue = {
@@ -251,12 +257,13 @@ object Zarr3ArrayHeader extends JsonImplicits {
         "zarr_format" -> zarrArrayHeader.zarr_format,
         "node_type" -> zarrArrayHeader.node_type,
         "shape" -> zarrArrayHeader.shape,
-        "data_type" -> Json
-          .toJsFieldJsValueWrapper(zarrArrayHeader.data_type.left.getOrElse("extension")), // Extension not supported for now
+        "data_type" -> Json.toJsFieldJsValueWrapper(
+          zarrArrayHeader.data_type.left.getOrElse("extension")
+        ), // Extension not supported for now
         "chunk_grid" -> Json.toJsFieldJsValueWrapper(
-          zarrArrayHeader.chunk_grid.left.getOrElse(ChunkGridSpecification(
-            "regular",
-            ChunkGridConfiguration(Array(1, 1, 1))))), // Extension not supported for now
+          zarrArrayHeader.chunk_grid.left
+            .getOrElse(ChunkGridSpecification("regular", ChunkGridConfiguration(Array(1, 1, 1))))
+        ), // Extension not supported for now
         "chunk_key_encoding" -> zarrArrayHeader.chunk_key_encoding,
         "fill_value" -> fillValue,
         "attributes" -> Json.toJsFieldJsValueWrapper(zarrArrayHeader.attributes.getOrElse(JsObject.empty)),
@@ -272,9 +279,11 @@ object Zarr3ArrayHeader extends JsonImplicits {
     }
   }
 
-  def fromDataLayer(dataLayer: DataLayer,
-                    mag: Vec3Int,
-                    additionalCodecs: Seq[CodecConfiguration] = Seq.empty): Zarr3ArrayHeader = {
+  def fromDataLayer(
+      dataLayer: DataLayer,
+      mag: Vec3Int,
+      additionalCodecs: Seq[CodecConfiguration] = Seq.empty
+  ): Zarr3ArrayHeader = {
     val additionalAxes = reorderAdditionalAxes(dataLayer.additionalAxes.getOrElse(Seq.empty))
     val (channels, dtype) = ElementClass.toChannelAndZarr3String(dataLayer.elementClass)
     val xyzBBounds = Array(
@@ -293,17 +302,21 @@ object Zarr3ArrayHeader extends JsonImplicits {
         ChunkGridSpecification(
           "regular",
           ChunkGridConfiguration(
-            chunk_shape = Array(channels) ++ Array.fill(additionalAxes.length)(1) ++ Array(DataLayer.bucketLength,
-                                                                                           DataLayer.bucketLength,
-                                                                                           DataLayer.bucketLength))
-        )),
+            chunk_shape = Array(channels) ++ Array.fill(additionalAxes.length)(1) ++ Array(
+              DataLayer.bucketLength,
+              DataLayer.bucketLength,
+              DataLayer.bucketLength
+            )
+          )
+        )
+      ),
       chunk_key_encoding =
         ChunkKeyEncoding("v2", configuration = Some(ChunkKeyEncodingConfiguration(separator = Some(".")))),
       fill_value = Right(0),
       attributes = None,
       codecs = Seq(
         TransposeCodecConfiguration(TransposeSetting.fOrderFromRank(additionalAxes.length + 4)),
-        BytesCodecConfiguration(Some("little")),
+        BytesCodecConfiguration(Some("little"))
       ) ++ additionalCodecs,
       storage_transformers = None,
       dimension_names = Some(Array("c") ++ additionalAxes.map(_.name).toArray ++ Seq("x", "y", "z"))
@@ -312,8 +325,8 @@ object Zarr3ArrayHeader extends JsonImplicits {
   private def reorderAdditionalAxes(additionalAxes: Seq[AdditionalAxis]): Seq[AdditionalAxis] = {
     val additionalAxesStartIndex = 1 // channel comes first
     val sorted = additionalAxes.sortBy(_.index)
-    sorted.zipWithIndex.map {
-      case (axis, index) => axis.copy(index = index + additionalAxesStartIndex)
+    sorted.zipWithIndex.map { case (axis, index) =>
+      axis.copy(index = index + additionalAxesStartIndex)
     }
   }
 

@@ -1,7 +1,9 @@
 package models.annotation
 
+import com.scalableminds.util.box.{Empty, Failure, Full}
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Empty, Failure, Fox, FoxImplicits, Full}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationIdDomain.AnnotationIdDomain
 import com.typesafe.scalalogging.LazyLogging
 import slick.dbio.{DBIO, Effect, NoStream}
@@ -13,10 +15,10 @@ import java.util.concurrent.Semaphore
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class AnnotationReservedIdsService @Inject()(annotationReservedIdsDAO: AnnotationReservedIdsDAO,
-                                             tracingStoreService: TracingStoreService)
-    extends FoxImplicits
-    with LazyLogging {
+class AnnotationReservedIdsService @Inject() (
+    annotationReservedIdsDAO: AnnotationReservedIdsDAO,
+    tracingStoreService: TracingStoreService
+) extends LazyLogging {
 
   private val mutexes = new scala.collection.concurrent.TrieMap[ObjectId, Semaphore]()
 
@@ -28,8 +30,9 @@ class AnnotationReservedIdsService @Inject()(annotationReservedIdsDAO: Annotatio
     } yield result
   }
 
-  def reservedIds(annotationId: ObjectId, tracingId: String, domain: AnnotationIdDomain, userId: ObjectId)(
-      implicit ec: ExecutionContext): Fox[Seq[Long]] =
+  def reservedIds(annotationId: ObjectId, tracingId: String, domain: AnnotationIdDomain, userId: ObjectId)(implicit
+      ec: ExecutionContext
+  ): Fox[Seq[Long]] =
     withMutex(annotationId) {
       annotationReservedIdsDAO.findReservedIdsForUser(annotationId, tracingId, domain, userId)
     }
@@ -39,12 +42,14 @@ class AnnotationReservedIdsService @Inject()(annotationReservedIdsDAO: Annotatio
       annotationReservedIdsDAO.releaseAllForAnnotation(annotationId)
     }
 
-  def reserveIds(annotationId: ObjectId,
-                 tracingId: String,
-                 domain: AnnotationIdDomain,
-                 userId: ObjectId,
-                 numberOfIdsToReserve: Int,
-                 idsToRelease: Seq[Long])(implicit ec: ExecutionContext): Fox[Seq[Long]] =
+  def reserveIds(
+      annotationId: ObjectId,
+      tracingId: String,
+      domain: AnnotationIdDomain,
+      userId: ObjectId,
+      numberOfIdsToReserve: Int,
+      idsToRelease: Seq[Long]
+  )(implicit ec: ExecutionContext): Fox[Seq[Long]] =
     withMutex(annotationId) {
       for {
         largestExistingIdFromDatabaseBox <- annotationReservedIdsDAO
@@ -52,7 +57,7 @@ class AnnotationReservedIdsService @Inject()(annotationReservedIdsDAO: Annotatio
           .shiftBox
         largestExistingId <- largestExistingIdFromDatabaseBox match {
           case Full(largestFromDatabase) => Fox.successful(largestFromDatabase)
-          case Empty =>
+          case Empty                     =>
             for {
               tracingStoreClient <- tracingStoreService.client
               idFromTracingStore <- tracingStoreClient.getLargestIdOfDomainOrZero(annotationId, tracingId, domain)
@@ -67,13 +72,15 @@ class AnnotationReservedIdsService @Inject()(annotationReservedIdsDAO: Annotatio
 
 }
 
-class AnnotationReservedIdsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class AnnotationReservedIdsDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
-  def findReservedIdsForUser(annotationId: ObjectId,
-                             tracingId: String,
-                             domain: AnnotationIdDomain,
-                             userId: ObjectId): Fox[Seq[Long]] =
+  def findReservedIdsForUser(
+      annotationId: ObjectId,
+      tracingId: String,
+      domain: AnnotationIdDomain,
+      userId: ObjectId
+  ): Fox[Seq[Long]] =
     run(q"""SELECT id FROM webknossos.annotation_reserved_ids
           WHERE _annotation = $annotationId
           AND tracingId = $tracingId
@@ -97,11 +104,13 @@ class AnnotationReservedIdsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Exec
       first <- rows.headOption.toFox
     } yield first
 
-  def reserveIdsFor(annotationId: ObjectId,
-                    tracingId: String,
-                    domain: AnnotationIdDomain,
-                    userId: ObjectId,
-                    ids: Seq[Long]): Fox[Unit] = {
+  def reserveIdsFor(
+      annotationId: ObjectId,
+      tracingId: String,
+      domain: AnnotationIdDomain,
+      userId: ObjectId,
+      ids: Seq[Long]
+  ): Fox[Unit] = {
     val insertQueries: Seq[SqlAction[Int, NoStream, Effect]] =
       ids.map(id => q"""INSERT INTO webknossos.annotation_reserved_ids (_annotation, tracingId, domain, _user, id)
                         VALUES ($annotationId, $tracingId, $domain, $userId, $id)""".asUpdate)
@@ -110,11 +119,13 @@ class AnnotationReservedIdsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Exec
     } yield ()
   }
 
-  def releaseIdsFor(annotationId: ObjectId,
-                    tracingId: String,
-                    domain: AnnotationIdDomain,
-                    userId: ObjectId,
-                    ids: Seq[Long]): Fox[Unit] =
+  def releaseIdsFor(
+      annotationId: ObjectId,
+      tracingId: String,
+      domain: AnnotationIdDomain,
+      userId: ObjectId,
+      ids: Seq[Long]
+  ): Fox[Unit] =
     if (ids.isEmpty) Fox.successful(())
     else
       for {

@@ -1,9 +1,9 @@
 package com.scalableminds.util.io
 
+import com.scalableminds.util.box.{Box, Failure, Full}
 import java.io._
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.{Box, Failure, Full}
-import com.scalableminds.util.tools.Box.tryo
+import Box.tryo
 import org.apache.commons.io.IOUtils
 import play.api.libs.json.{Json, Writes}
 
@@ -31,9 +31,10 @@ object NamedFunctionStream {
   def fromString(name: String, str: String)(implicit ec: ExecutionContext): NamedFunctionStream =
     fromBytes(name, str.getBytes(Charset.forName("UTF-8")))
 
-  def fromJsonSerializable[T](name: String, o: T, prettyPrint: Boolean = true)(
-      implicit w: Writes[T],
-      ec: ExecutionContext): NamedFunctionStream = {
+  def fromJsonSerializable[T](name: String, o: T, prettyPrint: Boolean = true)(implicit
+      w: Writes[T],
+      ec: ExecutionContext
+  ): NamedFunctionStream = {
     val jsValue = w.writes(o)
     val str = if (prettyPrint) Json.prettyPrint(jsValue) else jsValue.toString
     fromString(name, str)
@@ -58,9 +59,7 @@ object FileIO {
       } catch {
         case ex: Exception =>
           Failure(ex.getMessage)
-      } finally {
-        p.close()
-      }
+      } finally p.close()
     } catch {
       case ex: Exception =>
         Failure(ex.getMessage)

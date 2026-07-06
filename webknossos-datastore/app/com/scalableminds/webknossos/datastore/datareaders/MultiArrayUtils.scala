@@ -1,9 +1,9 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
 import ArrayDataType.ArrayDataType
+import com.scalableminds.util.box.{Box, Failure, Full}
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.{Box, Failure, Full}
-import com.scalableminds.util.tools.Box.tryo
+import Box.tryo
 import ucar.ma2.{IndexIterator, InvalidRangeException, Range, Array => MultiArray, DataType => MADataType}
 
 import java.util
@@ -29,21 +29,23 @@ object MultiArrayUtils extends LazyLogging {
     MultiArray.factory(MADataType.getType(aClass.getComponentType, false), shape, storage)
   }
 
-  def createFilledArray(dataType: MADataType,
-                        shape: Array[Int],
-                        fillNum: Number,
-                        fillBool: Boolean): Box[MultiArray] = {
+  def createFilledArray(
+      dataType: MADataType,
+      shape: Array[Int],
+      fillNum: Number,
+      fillBool: Boolean
+  ): Box[MultiArray] = {
     val array = MultiArray.factory(dataType, shape)
     val iter = array.getIndexIterator
     tryo {
       if (fillNum != null) {
-        if (MADataType.DOUBLE == dataType) while ({ iter.hasNext }) iter.setDoubleNext(fillNum.doubleValue)
-        else if (MADataType.FLOAT == dataType) while ({ iter.hasNext }) iter.setFloatNext(fillNum.floatValue)
-        else if (MADataType.LONG == dataType) while ({ iter.hasNext }) iter.setLongNext(fillNum.longValue)
-        else if (MADataType.INT == dataType) while ({ iter.hasNext }) iter.setIntNext(fillNum.intValue)
-        else if (MADataType.SHORT == dataType) while ({ iter.hasNext }) iter.setShortNext(fillNum.shortValue)
-        else if (MADataType.BYTE == dataType) while ({ iter.hasNext }) iter.setByteNext(fillNum.byteValue)
-        else if (MADataType.BOOLEAN == dataType) while ({ iter.hasNext }) iter.setBooleanNext(fillBool)
+        if (MADataType.DOUBLE == dataType) while (iter.hasNext) iter.setDoubleNext(fillNum.doubleValue)
+        else if (MADataType.FLOAT == dataType) while (iter.hasNext) iter.setFloatNext(fillNum.floatValue)
+        else if (MADataType.LONG == dataType) while (iter.hasNext) iter.setLongNext(fillNum.longValue)
+        else if (MADataType.INT == dataType) while (iter.hasNext) iter.setIntNext(fillNum.intValue)
+        else if (MADataType.SHORT == dataType) while (iter.hasNext) iter.setShortNext(fillNum.shortValue)
+        else if (MADataType.BYTE == dataType) while (iter.hasNext) iter.setByteNext(fillNum.byteValue)
+        else if (MADataType.BOOLEAN == dataType) while (iter.hasNext) iter.setBooleanNext(fillBool)
         else throw new IllegalStateException
       }
       array
@@ -76,8 +78,7 @@ object MultiArrayUtils extends LazyLogging {
         Failure("Cannot convert MultiArray to LongArray: unsupported data type.")
     }
 
-  /**
-    * Offset describes the displacement between source and target array.<br/>
+  /** Offset describes the displacement between source and target array.<br/>
     * <br/>
     * For example in the case of one dimensional arrays:<br/>
     * <pre>
@@ -128,22 +129,28 @@ object MultiArrayUtils extends LazyLogging {
     val targetRangeIterator = target.getRangeIterator(targetRanges)
     val elementType = source.getElementType
     val setter = createValueSetter(elementType)
-    while ({ sourceRangeIterator.hasNext }) setter.set(sourceRangeIterator, targetRangeIterator)
+    while (sourceRangeIterator.hasNext) setter.set(sourceRangeIterator, targetRangeIterator)
   }
 
   private def createValueSetter(elementType: Class[?]): MultiArrayUtils.ValueSetter =
-    if (elementType eq classOf[Double])(sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
-      targetIterator.setDoubleNext(sourceIterator.getDoubleNext)
-    else if (elementType eq classOf[Float])(sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
-      targetIterator.setFloatNext(sourceIterator.getFloatNext)
-    else if (elementType eq classOf[Long])(sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
-      targetIterator.setLongNext(sourceIterator.getLongNext)
-    else if (elementType eq classOf[Int])(sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
-      targetIterator.setIntNext(sourceIterator.getIntNext)
-    else if (elementType eq classOf[Short])(sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
-      targetIterator.setShortNext(sourceIterator.getShortNext)
-    else if (elementType eq classOf[Byte])(sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
-      targetIterator.setByteNext(sourceIterator.getByteNext)
+    if (elementType eq classOf[Double])
+      (sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
+        targetIterator.setDoubleNext(sourceIterator.getDoubleNext)
+    else if (elementType eq classOf[Float])
+      (sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
+        targetIterator.setFloatNext(sourceIterator.getFloatNext)
+    else if (elementType eq classOf[Long])
+      (sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
+        targetIterator.setLongNext(sourceIterator.getLongNext)
+    else if (elementType eq classOf[Int])
+      (sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
+        targetIterator.setIntNext(sourceIterator.getIntNext)
+    else if (elementType eq classOf[Short])
+      (sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
+        targetIterator.setShortNext(sourceIterator.getShortNext)
+    else if (elementType eq classOf[Byte])
+      (sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
+        targetIterator.setByteNext(sourceIterator.getByteNext)
     else
       (sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
         targetIterator.setObjectNext(sourceIterator.getObjectNext)

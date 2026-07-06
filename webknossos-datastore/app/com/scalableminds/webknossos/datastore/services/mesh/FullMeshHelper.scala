@@ -1,9 +1,9 @@
 package com.scalableminds.webknossos.datastore.services.mesh
 
+import com.scalableminds.util.box.Box
 import com.scalableminds.util.geometry.{Vec3Float, Vec3Int}
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Box
-import com.scalableminds.util.tools.Box.tryo
+import Box.tryo
 import com.scalableminds.webknossos.datastore.draco.NativeDracoToStlConverter
 import com.scalableminds.webknossos.datastore.models.VoxelPosition
 import com.typesafe.scalalogging.LazyLogging
@@ -20,7 +20,8 @@ trait FullMeshHelper extends LazyLogging {
       oldTopLeft: VoxelPosition,
       neighborIds: List[Int],
       chunkSize: Vec3Int,
-      visited: collection.mutable.Set[VoxelPosition]): List[VoxelPosition] = {
+      visited: collection.mutable.Set[VoxelPosition]
+  ): List[VoxelPosition] = {
     // front_xy, front_xz, front_yz, back_xy, back_xz, back_yz
     val neighborLookup = Seq(
       Vec3Int(0, 0, -1),
@@ -28,13 +29,15 @@ trait FullMeshHelper extends LazyLogging {
       Vec3Int(-1, 0, 0),
       Vec3Int(0, 0, 1),
       Vec3Int(0, 1, 0),
-      Vec3Int(1, 0, 0),
+      Vec3Int(1, 0, 0)
     )
     val neighborPositions = neighborIds.map { neighborId =>
       val neighborMultiplier = neighborLookup(neighborId)
-      oldTopLeft.move(neighborMultiplier.x * chunkSize.x * oldTopLeft.mag.x,
-                      neighborMultiplier.y * chunkSize.y * oldTopLeft.mag.y,
-                      neighborMultiplier.z * chunkSize.z * oldTopLeft.mag.z)
+      oldTopLeft.move(
+        neighborMultiplier.x * chunkSize.x * oldTopLeft.mag.x,
+        neighborMultiplier.y * chunkSize.y * oldTopLeft.mag.y,
+        neighborMultiplier.z * chunkSize.z * oldTopLeft.mag.z
+      )
     }
     neighborPositions.filterNot(visited.contains)
   }
@@ -44,7 +47,8 @@ trait FullMeshHelper extends LazyLogging {
     val outputNumBytesLong = numFaces.toLong * 50L
     if (outputNumBytesLong > Int.MaxValue)
       throw new IllegalStateException(
-        s"Single mesh chunk is too large to encode as STL: $outputNumBytesLong bytes ($numFaces faces)")
+        s"Single mesh chunk is too large to encode as STL: $outputNumBytesLong bytes ($numFaces faces)"
+      )
     val output = ByteBuffer.allocate(outputNumBytesLong.toInt).order(ByteOrder.LITTLE_ENDIAN)
     val unused = Array.fill[Byte](2)(0)
     for (faceIndex <- 0 until numFaces) {
@@ -55,24 +59,24 @@ trait FullMeshHelper extends LazyLogging {
       output.putFloat(norm.x)
       output.putFloat(norm.y)
       output.putFloat(norm.z)
-      for (vertexIndex <- 0 until 3) {
-        for (dimIndex <- 0 until 3) {
+      for (vertexIndex <- 0 until 3)
+        for (dimIndex <- 0 until 3)
           output.putFloat(vertexBuffer(9 * faceIndex + 3 * vertexIndex + dimIndex))
-        }
-      }
       output.put(unused)
     }
     output.array()
   }
 
   protected def combineEncodedChunksToStl(stlEncodedChunks: Seq[Array[Byte]]): Array[Byte] = {
-    val numFacesLong = stlEncodedChunks.map(_.length.toLong / 50L).sum // our stl implementation writes exactly 50 bytes per face
+    val numFacesLong =
+      stlEncodedChunks.map(_.length.toLong / 50L).sum // our stl implementation writes exactly 50 bytes per face
     val chunkBytesTotal = stlEncodedChunks.map(_.length.toLong).sum
     val outputNumBytesLong = 80L + 4L + chunkBytesTotal
     if (outputNumBytesLong > Int.MaxValue)
       throw new IllegalStateException(
         s"Mesh is too large to combine into a single STL buffer: $outputNumBytesLong bytes (${numFacesLong} faces). " +
-          "Use per-chunk surface area computation instead.")
+          "Use per-chunk surface area computation instead."
+      )
     val constantStlHeader = Array.fill[Byte](80)(0)
     val output = ByteBuffer.allocate(outputNumBytesLong.toInt).order(ByteOrder.LITTLE_ENDIAN)
     output.put(constantStlHeader)

@@ -212,6 +212,10 @@ object Msg {
         "Could not split flat fallback layer bucket data from data store into buckets."
       val fallbackDataLengthMismatch: String =
         "Length mismatch when unpacking bucket data from data store for fallback layer."
+      val fallbackDataLoadingFailed: String =
+        "Could not load data from fallback segmentation layer."
+      val emptyBucketIndicesHeaderParsingFailed: String = "Could not parse empty bucket indices header."
+      val failureBucketIndicesHeaderParsingFailed: String = "Could not parse failure bucket indices header."
       val mergedVolumeStatsNotFound: String =
         "Could not find merged volume stats from previous merge steps."
       val invalidLargestSegmentId: String =
@@ -291,7 +295,7 @@ object Msg {
     }
     object Create {
       val forbidden: String = "You do not have permission to create a new organization."
-      val directoryCreateFailed: String = "Could not create organization directory on disk."
+      val directoryCreateFailed: String = "Could not create organization directory on disk on the data store server."
       val failed: String = "Could not create a new organization."
     }
   }
@@ -305,6 +309,7 @@ object Msg {
     val deleteFailed: String = "Could not delete data store."
     val uploadToPathsNotAllowed: String =
       "The data store that holds the layers requested to be linked does not support dataset upload to paths."
+    val getBaseDirsToScanFailed = "Could not determine base directories to scan from config."
   }
   object TracingStore {
     val notFound: String = "Tracing store could not be found or accessed."
@@ -488,6 +493,7 @@ object Msg {
     }
     object Mag {
       def invalid(literal: String): String = s"Invalid mag “$literal”. Please use “x-y-z”."
+      def pathNotAbsolute: String = "The mag path is ambiguous, must be absolute."
     }
     object List {
       val failed: String = "Could not retrieve list of datasets."
@@ -624,7 +630,7 @@ object Msg {
   object Project {
     def notFound(id: ObjectId): String = s"Project “$id” could not be found or accessed."
     def notFound(name: String): String = s"Project with name “$name” could not be found or accessed."
-    val deleteSuccess: String = s"Project was successfully deleted."
+    val deleteSuccess: String = "Project was successfully deleted."
     def nameTaken(name: String): String =
       s"A project named “$name” already exists. Please choose a different name."
     def nameTooShort: String = "Project name must be at least three characters long."
@@ -700,7 +706,7 @@ object Msg {
       "You are not authorized to view this resource. Please log in."
     val passwordsDontMatch: String = "The two passwords do not match."
     val isDeactivated: String =
-      s"Your account has not been activated by an admin yet. Please contact your organization’s admin for help."
+      "Your account has not been activated by an admin yet. Please contact your organization’s admin for help."
     val noUserWithThisEmail: String = "There is no user registered with this email."
     val invalidCredentials: String = "Incorrect email or password. Please try again."
     val createFailed: String = "Could not create user."
@@ -719,7 +725,7 @@ object Msg {
     val invalidLastName: String = "Please check your last name for any special characters."
     object Token {
       val deleted: String = "Token was deleted."
-      val invalid: String = "The supplied token is invalid."
+      val invalid: String = "The supplied token is invalid or expired."
     }
     object Configuration {
       val updateSuccess: String = "Your configuration was successfully updated."
@@ -775,6 +781,7 @@ object Msg {
       def zeroChunks(segmentIds: String, name: String): String =
         s"Zero mesh chunks for segment $segmentIds in mesh file “$name”."
       val loadChunkFailed: String = "Could not load mesh chunk for segment."
+      val pathNotAbsolute = "Path of mesh file is ambiguous, must be absolute."
     }
   }
   object ConnectomeFile {
@@ -784,10 +791,15 @@ object Msg {
     def readEncodingFailed(name: String): String =
       s"Could not read encoding from connectome file “$name”."
     val openFailed: String = "Could not open connectome file for reading."
+    val pathNotAbsolute = "Path of connectome file is ambiguous, must be absolute."
   }
   object AgglomerateFile {
     def getSegmentPositionFailed(fileName: String): String =
       s"Could not read segment position from agglomerate file “$fileName”."
+    val pathNotAbsolute = "Path of agglomerate file is ambiguous, must be absolute."
+  }
+  object SegmentIndexFile {
+    val pathNotAbsolute = "Path of segment index file is ambiguous, must be absolute."
   }
   object Zarr {
     def invalidChunkCoordinates(coordinates: String): String =
@@ -831,5 +843,9 @@ object Msg {
     val invalidAnnotationState: String = "Invalid annotation state."
     val invalidAnnotationType: String = "Invalid annotation type."
     val unsupportedAnnotationType: String = "One of the selected annotation types is not supported for time tracking."
+  }
+  object UPath {
+    def schemaMismatch(seen: String, expected: String): String =
+      s"Remote path has wrong schema for this feature. Expected $expected, got $seen."
   }
 }

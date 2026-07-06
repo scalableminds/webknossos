@@ -1,8 +1,10 @@
 package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.{Box, Empty, Full, Failure as BoxFailure}
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Box, Empty, Fox, FoxImplicits, Full, Failure => BoxFailure}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.storage.{
   CredentializedUPath,
   LegacyDataVaultCredential,
@@ -33,13 +35,13 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters.CollectionHasAsScala
 import scala.jdk.FutureConverters._
 
-class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
-                  uri: URI,
-                  s3ClientPool: S3ClientPool,
-                  implicit val ec: ExecutionContext)
-    extends DataVault
-    with LazyLogging
-    with FoxImplicits {
+class S3DataVault(
+    s3AccessKeyCredential: Option[S3AccessKeyCredential],
+    uri: URI,
+    s3ClientPool: S3ClientPool,
+    implicit val ec: ExecutionContext
+) extends DataVault
+    with LazyLogging {
   private lazy val bucketName = S3UriUtils.hostBucketFromUri(uri) match {
     case Some(value) => value
     case None        => throw new Exception(s"Could not parse S3 bucket for ${uri.toString}")
@@ -57,14 +59,16 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
   private def getRequest(bucketName: String, key: String): GetObjectRequest =
     GetObjectRequest.builder.bucket(bucketName).key(key).build()
 
-  private def performGetObjectRequest(request: GetObjectRequest)(
-      implicit ec: ExecutionContext): Fox[(Array[Byte], String, Option[String])] = {
+  private def performGetObjectRequest(
+      request: GetObjectRequest
+  )(implicit ec: ExecutionContext): Fox[(Array[Byte], String, Option[String])] = {
     val responseTransformer: AsyncResponseTransformer[GetObjectResponse, ResponseBytes[GetObjectResponse]] =
       AsyncResponseTransformer.toBytes
     for {
       client <- clientFox
       responseBytesObject: ResponseBytes[GetObjectResponse] <- notFoundToEmpty(
-        client.getObject(request, responseTransformer).asScala)
+        client.getObject(request, responseTransformer).asScala
+      )
       encoding = responseBytesObject.response().contentEncoding()
       contentRangeHeader = Option(responseBytesObject.response().contentRange())
       // "aws-chunked" encoding is an artifact of the upload, does not make sense for retrieval, can be ignored.
@@ -74,14 +78,14 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
 
   private def notFoundToEmpty[T](resultFuture: Future[T])(implicit ec: ExecutionContext): Fox[T] =
     Fox.fromFutureBox(resultFuture.transformWith {
-      case TrySuccess(value) => Fox.successful(value).futureBox
+      case TrySuccess(value)     => Fox.successful(value).futureBox
       case TryFailure(exception) =>
         val box = exception match {
           case ce: CompletionException =>
             ce.getCause match {
               case _: NoSuchBucketException => Empty
               case _: NoSuchKeyException    => Empty
-              case e: Exception =>
+              case e: Exception             =>
                 BoxFailure(e.getMessage, Full(e), Empty)
             }
           case e: Exception =>
@@ -92,14 +96,15 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
 
   private def notFoundToFailure[T](resultFuture: Future[T])(implicit ec: ExecutionContext): Fox[T] =
     Fox.fromFutureBox(resultFuture.transformWith {
-      case TrySuccess(value) => Fox.successful(value).futureBox
+      case TrySuccess(value)     => Fox.successful(value).futureBox
       case TryFailure(exception) =>
         Future.successful(BoxFailure(exception.getMessage, Full(exception), Empty))
     })
 
-  override def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[(Array[Byte], Encoding.Value, Option[String])] =
+  override def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[(Array[Byte], Encoding.Value, Option[String])] =
     for {
       objectKey <- S3UriUtils.objectKeyFromVaultPath(path).toFox
       request = range match {
@@ -113,7 +118,8 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
         before,
         s"S3 getObject request for s3://${uri.getAuthority}/$bucketName/$objectKey with range $range",
         logger,
-        includeRawMillis = true)
+        includeRawMillis = true
+      )
       _ = resultBox match {
         case f: BoxFailure =>
           logger.warn(s"Got failure $f for S3 getObject request s3://${uri.getAuthority}/$bucketName/$objectKey")
@@ -123,7 +129,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
       encoding <- Encoding.fromRfc7231String(encodingString).toFox
     } yield (bytes, encoding, rangeHeader)
 
-  override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
+  override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[Seq[VaultPath]] =
     for {
       prefixKey <- S3UriUtils.objectKeyFromVaultPath(path).toFox
       s3SubPrefixKeys <- getObjectSummaries(bucketName, prefixKey, maxItems)
@@ -132,8 +138,9 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
       }
     } yield vaultPaths
 
-  private def getObjectSummaries(bucketName: String, keyPrefix: String, maxItems: Int)(
-      implicit ec: ExecutionContext): Fox[List[String]] = {
+  private def getObjectSummaries(bucketName: String, keyPrefix: String, maxItems: Int)(implicit
+      ec: ExecutionContext
+  ): Fox[List[String]] = {
     val maxKeys = maxItems + 5 // since commonPrefixes will may out some results, we request a few more first
     val listObjectsRequest =
       ListObjectsV2Request.builder().bucket(bucketName).prefix(keyPrefix).delimiter("/").maxKeys(maxKeys).build()
@@ -144,11 +151,13 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
     } yield s3SubPrefixes.map(_.prefix())
   }
 
-  override def getUsedStorageBytes(path: VaultPath)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] = {
-    def fetchBatchRecursive(prefixKey: String,
-                            client: S3AsyncClient,
-                            continuationToken: Option[String],
-                            alreadyMeasuredSize: Long): Fox[Long] = {
+  override def getUsedStorageBytes(path: VaultPath)(using ec: ExecutionContext, tc: TokenContext): Fox[Long] = {
+    def fetchBatchRecursive(
+        prefixKey: String,
+        client: S3AsyncClient,
+        continuationToken: Option[String],
+        alreadyMeasuredSize: Long
+    ): Fox[Long] = {
       val builder = ListObjectsV2Request.builder().bucket(bucketName).prefix(prefixKey).maxKeys(1000)
       continuationToken.foreach(builder.continuationToken)
       val request = builder.build()
@@ -156,10 +165,11 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
       for {
         objectListing <- notFoundToFailure(client.listObjectsV2(request).asScala)
         totalCurrentSize = objectListing.contents().asScala.map(_.size()).foldLeft(alreadyMeasuredSize)(_ + _)
-        result <- if (objectListing.isTruncated)
-          fetchBatchRecursive(prefixKey, client, Option(objectListing.nextContinuationToken()), totalCurrentSize)
-        else
-          Fox.successful(totalCurrentSize)
+        result <-
+          if (objectListing.isTruncated)
+            fetchBatchRecursive(prefixKey, client, Option(objectListing.nextContinuationToken()), totalCurrentSize)
+          else
+            Fox.successful(totalCurrentSize)
       } yield result
     }
 
@@ -187,8 +197,9 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
 }
 
 object S3DataVault {
-  def create(credentializedUpath: CredentializedUPath, s3ClientPool: S3ClientPool)(
-      implicit ec: ExecutionContext): Box[S3DataVault] = {
+  def create(credentializedUpath: CredentializedUPath, s3ClientPool: S3ClientPool)(implicit
+      ec: ExecutionContext
+  ): Box[S3DataVault] = {
     val credential = credentializedUpath.credential.flatMap {
       case f: S3AccessKeyCredential     => Some(f)
       case f: LegacyDataVaultCredential => Some(f.toS3AccessKey)

@@ -41,9 +41,15 @@ class DataSourceTestSuite extends AsyncWordSpec {
             additionalAxes = Some(Seq(AdditionalAxis("time", bounds = Seq(0, 5), 3))),
             attachments = Some(
               DataLayerAttachments(
-                meshes = Seq(LayerAttachment("meshfile",
-                                             UPath.fromStringUnsafe("./meshes/meshfile"),
-                                             LayerAttachmentDataformat.zarr3))))
+                meshes = Seq(
+                  LayerAttachment(
+                    "meshfile",
+                    UPath.fromStringUnsafe("./meshes/meshfile"),
+                    LayerAttachmentDataformat.zarr3
+                  )
+                )
+              )
+            )
           )
         ),
         VoxelSize(Vec3Double(1, 3, 5.3), LengthUnit.micrometer)
@@ -66,9 +72,15 @@ class DataSourceTestSuite extends AsyncWordSpec {
             additionalAxes = Some(Seq(AdditionalAxis("time", bounds = Seq(0, 5), 3))),
             attachments = Some(
               DataLayerAttachments(
-                meshes = Seq(LayerAttachment("meshfile",
-                                             UPath.fromStringUnsafe("./meshes/meshfile"),
-                                             LayerAttachmentDataformat.zarr3))))
+                meshes = Seq(
+                  LayerAttachment(
+                    "meshfile",
+                    UPath.fromStringUnsafe("./meshes/meshfile"),
+                    LayerAttachmentDataformat.zarr3
+                  )
+                )
+              )
+            )
           )
         ),
         VoxelSize(Vec3Double(1, 3, 5.3), LengthUnit.micrometer)
@@ -76,7 +88,8 @@ class DataSourceTestSuite extends AsyncWordSpec {
       assert(dataSource.hashCode() == dataSourceCopyPastedFromAbove.hashCode())
 
       val notEqualDataSource = dataSourceCopyPastedFromAbove.copy(
-        id = dataSourceCopyPastedFromAbove.id.copy(directoryName = "testLayerChanged"))
+        id = dataSourceCopyPastedFromAbove.id.copy(directoryName = "testLayerChanged")
+      )
       assert(dataSource.hashCode() != notEqualDataSource.hashCode())
     }
   }

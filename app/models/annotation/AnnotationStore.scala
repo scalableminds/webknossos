@@ -1,26 +1,27 @@
 package models.annotation
 
 import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.box.{Box, Empty, Full}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.handler.AnnotationInformationHandlerSelector
 import models.user.User
-import com.scalableminds.util.tools.{Box, Empty, Full}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-class AnnotationStore @Inject()(
+class AnnotationStore @Inject() (
     annotationInformationHandlerSelector: AnnotationInformationHandlerSelector,
-    temporaryAnnotationStore: TemporaryStore[String, Annotation])(implicit ec: ExecutionContext)
+    temporaryAnnotationStore: TemporaryStore[String, Annotation]
+)(implicit ec: ExecutionContext)
     extends LazyLogging {
 
   private val cacheTimeout = 60 minutes
 
-  def requestAnnotation(id: AnnotationIdentifier, user: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
+  def requestAnnotation(id: AnnotationIdentifier, user: Option[User])(using ctx: DBAccessContext): Fox[Annotation] =
     requestFromCache(id).getOrElse(requestFromHandler(id, user))
 
   private def requestFromCache(id: AnnotationIdentifier): Option[Fox[Annotation]] = {
@@ -32,7 +33,7 @@ class AnnotationStore @Inject()(
       None
   }
 
-  private def requestFromHandler(id: AnnotationIdentifier, user: Option[User])(implicit ctx: DBAccessContext) = {
+  private def requestFromHandler(id: AnnotationIdentifier, user: Option[User])(using ctx: DBAccessContext) = {
     val handler = annotationInformationHandlerSelector.informationHandlers(id.annotationType)
     for {
       annotation <- handler.provideAnnotation(id.identifier, user)

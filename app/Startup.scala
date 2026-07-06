@@ -1,3 +1,4 @@
+import com.scalableminds.util.box.{Failure, Full}
 import org.apache.pekko.actor.{ActorSystem, Props}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.webknossos.tracingstore.cleanup.WkCleanUpService
@@ -8,7 +9,6 @@ import mail.{Mailer, MailerConfig}
 import models.annotation.AnnotationDAO
 import models.dataset.ThumbnailCachingService
 import models.user.InviteService
-import com.scalableminds.util.tools.{Failure, Full}
 import org.apache.http.client.utils.URIBuilder
 import play.api.inject.ApplicationLifecycle
 import security.WkSilhouetteEnvironment
@@ -22,23 +22,25 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.sys.process._
 
-class Startup @Inject()(actorSystem: ActorSystem,
-                        conf: WkConf,
-                        initialDataService: InitialDataService,
-                        cleanUpService: WkCleanUpService,
-                        annotationDAO: AnnotationDAO,
-                        wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-                        lifecycle: ApplicationLifecycle,
-                        tempFileService: WkTempFileService,
-                        inviteService: InviteService,
-                        thumbnailCachingService: ThumbnailCachingService,
-                        sqlClient: SqlClient,
-                        slackNotificationService: SlackNotificationService)(implicit ec: ExecutionContext)
+class Startup @Inject() (
+    actorSystem: ActorSystem,
+    conf: WkConf,
+    initialDataService: InitialDataService,
+    cleanUpService: WkCleanUpService,
+    annotationDAO: AnnotationDAO,
+    wkSilhouetteEnvironment: WkSilhouetteEnvironment,
+    lifecycle: ApplicationLifecycle,
+    tempFileService: WkTempFileService,
+    inviteService: InviteService,
+    thumbnailCachingService: ThumbnailCachingService,
+    sqlClient: SqlClient,
+    slackNotificationService: SlackNotificationService
+)(implicit ec: ExecutionContext)
     extends LazyLogging {
 
   private val beforeStartup = Instant.now
 
-  logger.info(s"Executing Startup: Start actors, register cleanup services and stop hooks...")
+  logger.info("Executing Startup: Start actors, register cleanup services and stop hooks...")
 
   startActors(actorSystem)
 
@@ -86,7 +88,7 @@ class Startup @Inject()(actorSystem: ActorSystem,
 
   if (conf.Slick.checkSchemaOnStartup) {
     ensurePostgresDatabase()
-    Future { checkPostgresSchema() }
+    Future(checkPostgresSchema())
   }
 
   initialDataService.insert.futureBox.map {
@@ -107,7 +109,11 @@ class Startup @Inject()(actorSystem: ActorSystem,
     val capturingProcessLogger =
       ProcessLogger((o: String) => errorMessageBuilder.append(o), (e: String) => errorMessageBuilder.append(e))
 
-    val result = Process("./tools/postgres/dbtool.js check-db-schema", None, "POSTGRES_URL" -> postgresUrl) ! capturingProcessLogger
+    val result = Process(
+      "./tools/postgres/dbtool.js check-db-schema",
+      None,
+      "POSTGRES_URL" -> postgresUrl
+    ) ! capturingProcessLogger
     if (result == 0) {
       logger.info("Database schema is up to date.")
     } else {
@@ -118,7 +124,7 @@ class Startup @Inject()(actorSystem: ActorSystem,
   }
 
   private def ensurePostgresDatabase(): Unit = {
-    logger.info(s"Ensuring Postgres database...")
+    logger.info("Ensuring Postgres database...")
     val processLogger =
       ProcessLogger((o: String) => logger.info(s"dbtool: $o"), (e: String) => logger.error(s"dbtool: $e"))
 
@@ -136,7 +142,7 @@ class Startup @Inject()(actorSystem: ActorSystem,
       conf.Mail.Smtp.tls,
       conf.Mail.Smtp.auth,
       conf.Mail.Smtp.user,
-      conf.Mail.Smtp.pass,
+      conf.Mail.Smtp.pass
     )
     actorSystem.actorOf(Props(new Mailer(mailerConf)), name = "mailActor")
   }

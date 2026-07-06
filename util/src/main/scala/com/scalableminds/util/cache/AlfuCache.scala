@@ -1,8 +1,9 @@
 package com.scalableminds.util.cache
 
 import com.github.benmanes.caffeine.cache.{AsyncCache, Caffeine, RemovalCause, RemovalListener, Weigher}
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.util.tools.{Box, Failure}
+import com.scalableminds.util.box.{Box, Failure}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 
 import java.util.concurrent.{CompletableFuture, Executor, TimeUnit}
 import java.util.function.BiFunction
@@ -12,7 +13,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.jdk.CollectionConverters._
 
-class AlfuCache[K, V](store: AsyncCache[K, Box[V]]) extends FoxImplicits {
+class AlfuCache[K, V](store: AsyncCache[K, Box[V]]) {
 
   def getOrLoad(key: K, loadFn: K => Fox[V])(implicit ec: ExecutionContext): Fox[V] =
     for {
@@ -43,11 +44,13 @@ class AlfuCache[K, V](store: AsyncCache[K, Box[V]]) extends FoxImplicits {
 
 object AlfuCache {
 
-  def apply[K, V](maxCapacity: Int = 1000,
-                  timeToLive: FiniteDuration = 2 hours,
-                  timeToIdle: FiniteDuration = 1 hour,
-                  weighFn: Option[(K, Box[V]) => Int] = None,
-                  onRemovalFn: Option[(K, Box[V]) => Unit] = None): AlfuCache[K, V] = {
+  def apply[K, V](
+      maxCapacity: Int = 1000,
+      timeToLive: FiniteDuration = 2 hours,
+      timeToIdle: FiniteDuration = 1 hour,
+      weighFn: Option[(K, Box[V]) => Int] = None,
+      onRemovalFn: Option[(K, Box[V]) => Unit] = None
+  ): AlfuCache[K, V] = {
     val weigher = weighFn.map { weigh =>
       new CacheItemWeigher(weigh)
     }.getOrElse(Weigher.singletonWeigher[K, Box[V]])

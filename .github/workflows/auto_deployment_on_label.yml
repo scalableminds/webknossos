@@ -61,40 +61,15 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HEAD_REF: ${{ github.head_ref }}
 
-      - name: Start deployment
+      - name: Trigger autodeploy
         if: steps.check_build.outputs.skip != 'true'
-        uses: bobheadxi/deployments@v1.5.0
-        id: gh_deployment
+        uses: ./.github/actions/autodeploy
         with:
-          step: start
-          token: ${{ secrets.GITHUB_TOKEN }}
-          # Use the dynamic environment name
-          env: ${{ steps.check_build.outputs.dynamic_env }}
-
-      - name: Trigger autodeployment hook
-        if: steps.check_build.outputs.skip != 'true'
-        run: |
-          curl -X POST https://kubernetix.scm.io/hooks/onBranchImagePushed \
-            -H "Content-Type: application/json" \
-            -H "X-Auth-Token: $AUTO_DEV_DEPLOY_TOKEN" \
-            -d "{\"branch\": \"$HEAD_REF\"}"
-        env:
-          AUTO_DEV_DEPLOY_TOKEN: ${{ secrets.AUTO_DEV_DEPLOY_TOKEN }}
-          HEAD_REF: ${{ github.head_ref }}
-
-      - name: Finish deployment
-        if: always() && steps.gh_deployment.outputs.deployment_id != ''
-        uses: bobheadxi/deployments@v1.5.0
-        with:
-          step: finish
-          token: ${{ secrets.GITHUB_TOKEN }}
-          status: ${{ job.status }}
-          env: ${{ steps.gh_deployment.outputs.env }}
-          deployment_id: ${{ steps.gh_deployment.outputs.deployment_id }}
+          branch: ${{ github.head_ref }}
+          dynamic_env: ${{ steps.check_build.outputs.dynamic_env }}
           env_url: ${{ steps.check_build.outputs.env_url }}
-          # Set to true so this specific branch's old deployments are cleaned up,
-          # without touching other PR deployments.
-          override: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          autodeploy_token: ${{ secrets.AUTO_DEV_DEPLOY_TOKEN }}
 
   trigger-autodeployment-on-ci-success:
     runs-on: ubuntu-22.04
@@ -123,34 +98,12 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
 
-      - name: Start deployment
+      - name: Trigger autodeploy
         if: steps.check_build.outputs.enabled == 'true'
-        uses: bobheadxi/deployments@v1.5.0
-        id: gh_deployment
+        uses: ./.github/actions/autodeploy
         with:
-          step: start
-          token: ${{ secrets.GITHUB_TOKEN }}
-          env: ${{ steps.check_build.outputs.dynamic_env }}
-
-      - name: Trigger autodeployment hook
-        if: steps.check_build.outputs.enabled == 'true'
-        run: |
-          curl -X POST https://kubernetix.scm.io/hooks/onBranchImagePushed \
-            -H "Content-Type: application/json" \
-            -H "X-Auth-Token: $AUTO_DEV_DEPLOY_TOKEN" \
-            -d "{\"branch\": \"$HEAD_BRANCH\"}"
-        env:
-          AUTO_DEV_DEPLOY_TOKEN: ${{ secrets.AUTO_DEV_DEPLOY_TOKEN }}
-          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
-
-      - name: Finish deployment
-        if: always() && steps.gh_deployment.outputs.deployment_id != ''
-        uses: bobheadxi/deployments@v1.5.0
-        with:
-          step: finish
-          token: ${{ secrets.GITHUB_TOKEN }}
-          status: ${{ job.status }}
-          env: ${{ steps.gh_deployment.outputs.env }}
-          deployment_id: ${{ steps.gh_deployment.outputs.deployment_id }}
+          branch: ${{ github.event.workflow_run.head_branch }}
+          dynamic_env: ${{ steps.check_build.outputs.dynamic_env }}
           env_url: ${{ steps.check_build.outputs.env_url }}
-          override: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          autodeploy_token: ${{ secrets.AUTO_DEV_DEPLOY_TOKEN }}

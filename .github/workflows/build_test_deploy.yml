@@ -121,8 +121,6 @@ jobs:
 
   build-smoketest-push:
     runs-on: ubuntu-22.04
-    permissions:
-      deployments: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -287,46 +285,6 @@ jobs:
             exit $fail
           retries: 5
           retry_delay_seconds: 10
-      - name: Check autodeploy label
-        id: autodeploy
-        run: |
-          LABELS=$(gh pr list --head "$GITHUB_REF_NAME" --json labels --jq '.[0].labels[].name' 2>/dev/null || echo "")
-          if echo "$LABELS" | grep -qx "autodeploy"; then
-            echo "enabled=true" >> "$GITHUB_OUTPUT"
-            SANITIZED=$(echo "$GITHUB_REF_NAME" | tr -cd '[:alnum:]' | tr '[:upper:]' '[:lower:]' | sed 's/^[0-9]*//')
-            echo "env_url=https://${SANITIZED}.webknossos.xyz" >> "$GITHUB_OUTPUT"
-            echo "dynamic_env=dev-${SANITIZED}" >> "$GITHUB_OUTPUT"
-          fi
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Start deployment
-        if: steps.autodeploy.outputs.enabled == 'true'
-        uses: bobheadxi/deployments@v1.5.0
-        id: gh_deployment
-        with:
-          step: start
-          token: ${{ secrets.GITHUB_TOKEN }}
-          env: ${{ steps.autodeploy.outputs.dynamic_env }}
-      - name: Trigger autodeployment hook
-        if: steps.autodeploy.outputs.enabled == 'true'
-        run: |
-          curl -X POST https://kubernetix.scm.io/hooks/onBranchImagePushed \
-            -H "Content-Type: application/json" \
-            -H "X-Auth-Token: $AUTO_DEV_DEPLOY_TOKEN" \
-            -d "{\"branch\": \"$GITHUB_REF_NAME\"}"
-        env:
-          AUTO_DEV_DEPLOY_TOKEN: ${{ secrets.AUTO_DEV_DEPLOY_TOKEN }}
-      - name: Finish deployment
-        if: always() && steps.gh_deployment.outputs.deployment_id != ''
-        uses: bobheadxi/deployments@v1.5.0
-        with:
-          step: finish
-          token: ${{ secrets.GITHUB_TOKEN }}
-          status: ${{ job.status }}
-          env: ${{ steps.gh_deployment.outputs.env }}
-          deployment_id: ${{ steps.gh_deployment.outputs.deployment_id }}
-          env_url: ${{ steps.autodeploy.outputs.env_url }}
-          override: true
       - name: Slack Notification
         if: github.ref == 'refs/heads/master'
         run: .github/slack-notification.sh

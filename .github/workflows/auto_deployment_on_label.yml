@@ -5,6 +5,11 @@ on:
     types:
       - labeled
       - closed
+  workflow_run:
+    workflows:
+      - "CI Pipeline"
+    types:
+      - completed
 
 jobs:
   cleanup-deployment-on-close:
@@ -89,4 +94,63 @@ jobs:
           env_url: ${{ steps.check_build.outputs.env_url }}
           # Set to true so this specific branch's old deployments are cleaned up,
           # without touching other PR deployments.
+          override: true
+
+  trigger-autodeployment-on-ci-success:
+    runs-on: ubuntu-22.04
+    # workflow_run only reports one conclusion for the whole run, but we only want to depend
+    # on the build-smoketest-push job (which pushed the images), not on backend/frontend-tests.
+    if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.event == 'push' }}
+    permissions:
+      deployments: write
+    steps:
+      - name: Check build-smoketest-push result and autodeploy label
+        id: check_build
+        run: |
+          JOB_CONCLUSION=$(gh api "repos/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}/jobs" --jq '.jobs[] | select(.name=="build-smoketest-push") | .conclusion')
+          if [ "$JOB_CONCLUSION" != "success" ]; then
+            echo "build-smoketest-push job did not succeed (conclusion: $JOB_CONCLUSION) — skipping autodeploy."
+            exit 0
+          fi
+          LABELS=$(gh pr list --repo "${{ github.repository }}" --head "$HEAD_BRANCH" --json labels --jq '.[0].labels[].name' 2>/dev/null || echo "")
+          if echo "$LABELS" | grep -qx "autodeploy"; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+            SANITIZED=$(echo "$HEAD_BRANCH" | tr -cd '[:alnum:]' | tr '[:upper:]' '[:lower:]' | sed 's/^[0-9]*//')
+            echo "env_url=https://${SANITIZED}.webknossos.xyz" >> "$GITHUB_OUTPUT"
+            echo "dynamic_env=dev-${SANITIZED}" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+
+      - name: Start deployment
+        if: steps.check_build.outputs.enabled == 'true'
+        uses: bobheadxi/deployments@v1.5.0
+        id: gh_deployment
+        with:
+          step: start
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: ${{ steps.check_build.outputs.dynamic_env }}
+
+      - name: Trigger autodeployment hook
+        if: steps.check_build.outputs.enabled == 'true'
+        run: |
+          curl -X POST https://kubernetix.scm.io/hooks/onBranchImagePushed \
+            -H "Content-Type: application/json" \
+            -H "X-Auth-Token: $AUTO_DEV_DEPLOY_TOKEN" \
+            -d "{\"branch\": \"$HEAD_BRANCH\"}"
+        env:
+          AUTO_DEV_DEPLOY_TOKEN: ${{ secrets.AUTO_DEV_DEPLOY_TOKEN }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+
+      - name: Finish deployment
+        if: always() && steps.gh_deployment.outputs.deployment_id != ''
+        uses: bobheadxi/deployments@v1.5.0
+        with:
+          step: finish
+          token: ${{ secrets.GITHUB_TOKEN }}
+          status: ${{ job.status }}
+          env: ${{ steps.gh_deployment.outputs.env }}
+          deployment_id: ${{ steps.gh_deployment.outputs.deployment_id }}
+          env_url: ${{ steps.check_build.outputs.env_url }}
           override: true

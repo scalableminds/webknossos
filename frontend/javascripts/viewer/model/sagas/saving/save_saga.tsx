@@ -80,7 +80,7 @@ import {
   getMeshDisplayPropsByOldAgglomerateId,
   type PreservedMeshDisplayProps,
   refreshAffectedMeshes,
-  splitAgglomerateInMapping,
+  splitAgglomeratesInMapping,
   updateMappingWithMerge,
 } from "../volume/proofreading/proofread_saga";
 import {
@@ -929,19 +929,15 @@ export function* tryToIncorporateActions(
       splitSegmentIdToOldAgglomerate,
     ] of splitSegmentIdToOldAgglomeratePerLayer.entries()) {
       if (splitSegmentIdToOldAgglomerate && splitSegmentIdToOldAgglomerate.size > 0) {
-        // Any involved old agglomerate id works as sourceAgglomerateId; the function re-maps the
-        // local segments of every old agglomerate referenced in the passed map anyway.
-        const sourceAgglomerateId = splitSegmentIdToOldAgglomerate.values().next().value as number;
         const activeMapping = yield* select(
           (store) => store.temporaryConfiguration.activeMappingByLayer[tracingId],
         );
-        const splitMappingInfo = yield* splitAgglomerateInMapping(
+        const splitMappingInfo = yield* splitAgglomeratesInMapping(
           activeMapping,
-          sourceAgglomerateId,
+          splitSegmentIdToOldAgglomerate,
           tracingId,
           actionBatch.version,
           false,
-          splitSegmentIdToOldAgglomerate,
         );
 
         if (splitMappingInfo == null) {
@@ -951,13 +947,17 @@ export function* tryToIncorporateActions(
           Toast.error(message);
           return FailedIncorporateActionsReturnValue;
         }
-        const { splitMapping, oldAgglomerateIds, newAgglomerateIds, newToOldAgglomerateIds } =
-          splitMappingInfo;
+        const {
+          mappingWithSplitApplied,
+          oldAgglomerateIds,
+          newAgglomerateIds,
+          newToOldAgglomerateIds,
+        } = splitMappingInfo;
 
         yield* put(
           setMappingDataAction(
             tracingId,
-            splitMapping,
+            mappingWithSplitApplied,
             false, // Upon finishing the forwarding of missing backend actions the
             // finishedApplyingMissingUpdatesAction action takes care of storing the
             // newest info in RebaseRelevantAnnotationState after the backend updates are applied.

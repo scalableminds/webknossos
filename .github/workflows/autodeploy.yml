@@ -1,4 +1,6 @@
-name: Autodeploy Branch (reusable)
+name: Autodeploy Branch
+
+# reusable workflow called by trigger workflows
 
 on:
   workflow_call:
@@ -37,7 +39,7 @@ jobs:
       - name: Trigger autodeployment hook
         id: trigger_hook
         run: |
-          curl --fail-with-body --max-time 120 -X POST https://kubernetix.scm.io/hooks/onBranchImagePushed \
+          curl --fail-with-body --max-time 300 -X POST https://kubernetix.scm.io/hooks/onBranchImagePushed \
             -H "Content-Type: application/json" \
             -H "X-Auth-Token: $AUTO_DEV_DEPLOY_TOKEN" \
             -d "{\"branch\": \"$BRANCH\"}"

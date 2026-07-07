@@ -12,27 +12,6 @@ on:
       - completed
 
 jobs:
-  cleanup-deployment-on-close:
-    runs-on: ubuntu-22.04
-    if: ${{ github.event.action == 'closed' && contains(github.event.pull_request.labels.*.name, 'autodeploy') }}
-    permissions:
-      deployments: write
-    steps:
-      - name: Calculate branch environment name
-        id: get_env
-        run: |
-          # Replicate the exact same sanitization logic as done during creation
-          SANITIZED=$(echo "$HEAD_REF" | tr -cd '[:alnum:]' | tr '[:upper:]' '[:lower:]' | sed 's/^[0-9]*//')
-          echo "dynamic_env=dev-${SANITIZED}" >> "$GITHUB_OUTPUT"
-        env:
-          HEAD_REF: ${{ github.head_ref }}
-      - name: Delete deployment environment
-        uses: bobheadxi/deployments@v1.5.0
-        with:
-          step: delete-env
-          token: ${{ secrets.GITHUB_TOKEN }}
-          env: ${{ steps.get_env.outputs.dynamic_env }}
-
   check-autodeploy-label:
     runs-on: ubuntu-22.04
     if: ${{ github.event.label.name == 'autodeploy' }}
@@ -68,7 +47,7 @@ jobs:
   trigger-autodeployment-on-label:
     needs: check-autodeploy-label
     if: ${{ needs.check-autodeploy-label.outputs.skip != 'true' }}
-    uses: ./.github/workflows/autodeploy-reusable.yml
+    uses: ./.github/workflows/autodeploy.yml
     permissions:
       deployments: write
     with:
@@ -80,8 +59,6 @@ jobs:
 
   check-build-smoketest-push-result:
     runs-on: ubuntu-22.04
-    # workflow_run only reports one conclusion for the whole run, but we only want to depend
-    # on the build-smoketest-push job (which pushed the images), not on backend/frontend-tests.
     if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.event == 'push' }}
     permissions:
       actions: read
@@ -95,7 +72,7 @@ jobs:
         run: |
           JOB_CONCLUSION=$(gh api "repos/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}/jobs" --jq '.jobs[] | select(.name=="build-smoketest-push") | .conclusion')
           if [ "$JOB_CONCLUSION" != "success" ]; then
-            echo "build-smoketest-push job did not succeed (conclusion: $JOB_CONCLUSION) — skipping autodeploy."
+            echo "build-smoketest-push job did not succeed (conclusion: $JOB_CONCLUSION). Skipping autodeploy."
             exit 0
           fi
           LABELS=$(gh pr list --repo "${{ github.repository }}" --head "$HEAD_BRANCH" --json labels --jq '.[0].labels[].name' 2>/dev/null || echo "")
@@ -112,7 +89,7 @@ jobs:
   trigger-autodeployment-on-ci-success:
     needs: check-build-smoketest-push-result
     if: ${{ needs.check-build-smoketest-push-result.outputs.enabled == 'true' }}
-    uses: ./.github/workflows/autodeploy-reusable.yml
+    uses: ./.github/workflows/autodeploy.yml
     permissions:
       deployments: write
     with:
@@ -121,3 +98,24 @@ jobs:
       env_url: ${{ needs.check-build-smoketest-push-result.outputs.env_url }}
     secrets:
       autodeploy_token: ${{ secrets.AUTO_DEV_DEPLOY_TOKEN }}
+
+  cleanup-deployment-on-close:
+    runs-on: ubuntu-22.04
+    if: ${{ github.event.action == 'closed' && contains(github.event.pull_request.labels.*.name, 'autodeploy') }}
+    permissions:
+      deployments: write
+    steps:
+      - name: Calculate branch environment name
+        id: get_env
+        run: |
+          # Replicate the exact same sanitization logic as done during creation
+          SANITIZED=$(echo "$HEAD_REF" | tr -cd '[:alnum:]' | tr '[:upper:]' '[:lower:]' | sed 's/^[0-9]*//')
+          echo "dynamic_env=dev-${SANITIZED}" >> "$GITHUB_OUTPUT"
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+      - name: Delete deployment environment
+        uses: bobheadxi/deployments@v1.5.0
+        with:
+          step: delete-env
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: ${{ steps.get_env.outputs.dynamic_env }}

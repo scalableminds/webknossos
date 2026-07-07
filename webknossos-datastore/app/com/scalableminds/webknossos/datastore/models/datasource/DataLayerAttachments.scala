@@ -1,8 +1,8 @@
 package com.scalableminds.webknossos.datastore.models.datasource
 
+import com.scalableminds.util.box.{Box, Full}
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.io.PathUtils
-import com.scalableminds.util.tools.{Box, Full}
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType.LayerAttachmentType
 import org.apache.commons.io.FilenameUtils

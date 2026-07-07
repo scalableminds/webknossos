@@ -1,31 +1,18 @@
+const fs = require("node:fs");
+const path = require("node:path");
 const dpdm = require("dpdm");
 const { parseDependencyTree, parseCircular } = dpdm;
 
-const KNOWN_CYCLES =[
- [
-  "frontend/javascripts/viewer/model/accessors/flycam_accessor.ts",
-  "frontend/javascripts/viewer/model/accessors/view_mode_accessor.ts"
- ],
- [
-  "frontend/javascripts/viewer/controller/url_manager.ts",
-  "frontend/javascripts/viewer/model_initialization.ts"
- ],
- [
-  "frontend/javascripts/admin/organization/upgrade_plan_modal.tsx",
-  "frontend/javascripts/admin/organization/organization_cards.tsx"
- ],
- [
-  "frontend/javascripts/dashboard/advanced_dataset/dataset_table.tsx",
-  "frontend/javascripts/dashboard/folders/folder_tree.tsx"
- ],
- [
-  "frontend/javascripts/viewer/geometries/plane.ts",
-  "frontend/javascripts/viewer/geometries/materials/plane_material_factory.ts",
-  "frontend/javascripts/viewer/shaders/main_data_shaders.glsl.ts"
- ]
-];
+const KNOWN_CYCLES = [];
 
-parseDependencyTree("frontend/javascripts/main.tsx", {
+// Web workers are loaded via import.meta.glob / dynamic imports which dpdm
+// does not follow from main.tsx. Add them as explicit entry points so that
+// cycles in worker dependency graphs are caught, too (cycles there are
+// especially problematic since they can break the worker bundles).
+const WORKER_DIR = "frontend/javascripts/viewer/workers";
+const WORKER_GLOB = "frontend/javascripts/viewer/workers/**/*.worker.ts";
+
+parseDependencyTree(["frontend/javascripts/main.tsx", WORKER_GLOB], {
   /* options, see below */
   extensions: [".ts", ".tsx"],
   transform: true,

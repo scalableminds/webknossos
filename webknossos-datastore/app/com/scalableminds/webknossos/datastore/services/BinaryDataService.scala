@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.services
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.geometry.Vec3Int
@@ -11,9 +12,8 @@ import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, LayerCategory}
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
-import ucar.ma2.Array as MultiArray
-import com.scalableminds.util.tools.Box.tryo
+import ucar.ma2.{Array => MultiArray}
+import Box.tryo
 import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateService
 import com.scalableminds.webknossos.datastore.storage.{BucketProviderCache, DataVaultService}
 

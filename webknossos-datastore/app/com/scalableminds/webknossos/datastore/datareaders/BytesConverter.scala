@@ -1,8 +1,8 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
+import com.scalableminds.util.box.Box
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
-import com.scalableminds.util.tools.Box
-import com.scalableminds.util.tools.Box.tryo
+import Box.tryo
 import ucar.ma2.{Array => MultiArray}
 
 import java.nio.{ByteBuffer, ByteOrder}

@@ -1,11 +1,11 @@
 package com.scalableminds.webknossos.datastore.rpc
 
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.{Empty, Failure, Full}
 import com.scalableminds.util.mvc.{Formatter, MimeTypes}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.{Empty, Failure, Full}
 import play.api.http.{HeaderNames, Status}
 import play.api.libs.json._
 import play.api.libs.ws._

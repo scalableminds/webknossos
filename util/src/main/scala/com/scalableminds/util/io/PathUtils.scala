@@ -1,9 +1,9 @@
 package com.scalableminds.util.io
 
+import com.scalableminds.util.box.{Box, Failure, Full}
 import java.io.File
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Failure, Full}
+import com.scalableminds.util.box.Box.tryo
 import org.apache.commons.io.FileUtils
 
 import scala.jdk.CollectionConverters.IteratorHasAsScala

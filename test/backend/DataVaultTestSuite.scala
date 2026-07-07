@@ -334,15 +334,15 @@ class DataVaultTestSuite extends AsyncWordSpec {
 
         "return failure" when {
           "requesting directory listing on non-existent bucket" in {
-            val nonExistentUpath =
+            val nonExistentUPath =
               UPath.fromStringUnsafe(f"s3://non-existent-bucket${UUID.randomUUID}/non-existent-object/")
             WsTestClient.withClient { ws =>
               val clientPool = new S3ClientPool(ws)
               val s3DataVault =
                 S3DataVault
-                  .create(CredentializedUPath(nonExistentUpath, None), clientPool)(using globalExecutionContext)
+                  .create(CredentializedUPath(nonExistentUPath, None), clientPool)(using globalExecutionContext)
                   .getOrElse(fail("Failed to create S3DataVault"))
-              val vaultPath = new VaultPath(nonExistentUpath, s3DataVault)
+              val vaultPath = new VaultPath(nonExistentUPath, s3DataVault)
               vaultPath
                 .listDirectory(maxItems = 5)(using globalExecutionContext, emptyTokenContext)
                 .futureBox
@@ -356,7 +356,7 @@ class DataVaultTestSuite extends AsyncWordSpec {
 
     "using vault path" when {
       class MockDataVault extends DataVault {
-        override def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(using
+        override def readBytesPlusEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(using
             ec: ExecutionContext,
             tc: TokenContext
         ): Fox[(Array[Byte], Encoding.Value, Option[String])] = ???
@@ -371,19 +371,19 @@ class DataVaultTestSuite extends AsyncWordSpec {
       }
 
       "Uri has no trailing slash" should {
-        val someUpath = UPath.fromStringUnsafe("protocol://host/a/b")
-        val somePath = new VaultPath(someUpath, new MockDataVault)
+        val someUPath = UPath.fromStringUnsafe("protocol://host/a/b")
+        val somePath = new VaultPath(someUPath, new MockDataVault)
 
         "resolve child" in {
           val childPath = somePath / "c"
-          assert(childPath.toRemoteUri.map(_.toString) == Full(s"${someUpath.toString}/c"))
+          assert(childPath.toRemoteUri.map(_.toString) == Full(s"${someUPath.toString}/c"))
         }
 
         "get parent" in
           assert((somePath / "..").toString == "protocol://host/a")
 
         "get directory" in
-          assert((somePath / ".").toString == someUpath.toString)
+          assert((somePath / ".").toString == someUPath.toString)
 
         "handle sequential parameters" in
           assert((somePath / "c" / "d" / "e").toString == "protocol://host/a/b/c/d/e")
@@ -394,18 +394,18 @@ class DataVaultTestSuite extends AsyncWordSpec {
         }
       }
       "Uri has trailing slash" should {
-        val trailingSlashUpath = UPath.fromStringUnsafe("protocol://host/a/b/")
-        val trailingSlashPath = new VaultPath(trailingSlashUpath, new MockDataVault)
+        val trailingSlashUPath = UPath.fromStringUnsafe("protocol://host/a/b/")
+        val trailingSlashPath = new VaultPath(trailingSlashUPath, new MockDataVault)
         "resolve child" in {
           val childPath = trailingSlashPath / "c"
-          assert(childPath.toRemoteUri.map(_.toString) == Full(s"${trailingSlashUpath.toString}c"))
+          assert(childPath.toRemoteUri.map(_.toString) == Full(s"${trailingSlashUPath.toString}c"))
         }
 
         "get parent" in
           assert((trailingSlashPath / "..").toString == "protocol://host/a")
 
         "get directory" in
-          assert((trailingSlashPath / ".").toString == trailingSlashUpath.toString.dropRight(1))
+          assert((trailingSlashPath / ".").toString == trailingSlashUPath.toString.dropRight(1))
       }
 
       "comparing two" should {

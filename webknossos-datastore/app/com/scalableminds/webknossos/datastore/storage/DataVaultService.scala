@@ -51,8 +51,8 @@ class DataVaultService @Inject() (
 
   def vaultPathFor(magLocator: MagLocator)(implicit ec: ExecutionContext): Fox[VaultPath] =
     for {
-      credentializedUpath <- credentializedUPathForMag(magLocator)
-      vaultPath <- vaultPathFor(credentializedUpath)
+      credentializedUPath <- credentializedUPathForMag(magLocator)
+      vaultPath <- vaultPathFor(credentializedUPath)
     } yield vaultPath
 
   // Note that attachment paths are already resolved with baseDir in local case so we don’t need to do it here.
@@ -64,8 +64,8 @@ class DataVaultService @Inject() (
 
   def removeVaultFromCache(magLocator: MagLocator)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      credentializedUpath <- credentializedUPathForMag(magLocator)
-      _ = removeVaultFromCache(credentializedUpath)
+      credentializedUPath <- credentializedUPathForMag(magLocator)
+      _ = removeVaultFromCache(credentializedUPath)
     } yield ()
 
   def removeVaultFromCache(attachment: LayerAttachment)(implicit ec: ExecutionContext): Fox[Unit] =
@@ -139,21 +139,21 @@ class DataVaultService @Inject() (
 
   // Zip vaults are keyed by the root zip reference (ZipEntryUPath with empty inner path) to distinguish
   // them from the underlying vault for the same outer path (e.g. the S3DataVault for the zip file itself).
-  private def vaultCacheKeyFor(credentializedUpath: CredentializedUPath): CredentializedUPath =
-    credentializedUpath.upath match {
-      case zipPath: ZipEntryUPath => credentializedUpath.copy(upath = ZipEntryUPath(zipPath.outerPath, ""))
-      case _                      => credentializedUpath
+  private def vaultCacheKeyFor(credentializedUPath: CredentializedUPath): CredentializedUPath =
+    credentializedUPath.upath match {
+      case zipPath: ZipEntryUPath => credentializedUPath.copy(upath = ZipEntryUPath(zipPath.outerPath, ""))
+      case _                      => credentializedUPath
     }
 
-  def vaultPathFor(credentializedUpath: CredentializedUPath)(implicit ec: ExecutionContext): Fox[VaultPath] =
+  def vaultPathFor(credentializedUPath: CredentializedUPath)(implicit ec: ExecutionContext): Fox[VaultPath] =
     for {
-      vault <- vaultCache.getOrLoad(vaultCacheKeyFor(credentializedUpath), createVault(_)) ?~> Msg.DataVault.setupFailed
-    } yield new VaultPath(credentializedUpath.upath, vault)
+      vault <- vaultCache.getOrLoad(vaultCacheKeyFor(credentializedUPath), createVault(_)) ?~> Msg.DataVault.setupFailed
+    } yield new VaultPath(credentializedUPath.upath, vault)
 
   private def removeVaultFromCache(
-      credentializedUpath: CredentializedUPath
+      credentializedUPath: CredentializedUPath
   )(implicit ec: ExecutionContext): Fox[Unit] = {
-    vaultCache.remove(vaultCacheKeyFor(credentializedUpath))
+    vaultCache.remove(vaultCacheKeyFor(credentializedUPath))
     Fox.successful(())
   }
 

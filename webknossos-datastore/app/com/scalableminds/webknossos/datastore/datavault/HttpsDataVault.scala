@@ -31,7 +31,7 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
 
   private lazy val dataStoreAuthority = new URI(dataStoreHost).getAuthority
 
-  override def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(using
+  override def readBytesPlusEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[(Array[Byte], Encoding.Value, Option[String])] =
@@ -161,13 +161,13 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
 object HttpsDataVault {
 
   /** Factory method to create a new HttpsDataVault instance.
-    * @param credentializedUpath
+    * @param credentializedUPath
     * @param ws
     * @param dataStoreHost
     *   The host of the local data store that this vault is accessing. This is used to determine if a user token should
     *   be applied in requests.
     * @return
     */
-  def create(credentializedUpath: CredentializedUPath, ws: WSClient, dataStoreHost: String): Box[HttpsDataVault] =
-    Full(new HttpsDataVault(credentializedUpath.credential, ws, dataStoreHost))
+  def create(credentializedUPath: CredentializedUPath, ws: WSClient, dataStoreHost: String): Box[HttpsDataVault] =
+    Full(new HttpsDataVault(credentializedUPath.credential, ws, dataStoreHost))
 }

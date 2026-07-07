@@ -61,32 +61,48 @@ trait UPath {
 }
 
 case class ZipEntryUPath(outerPath: UPath, innerPath: String) extends UPath {
+
   override def toString: String =
     if (innerPath.isEmpty) s"$outerPath${ZipEntryUPath.separatorRoot}"
     else s"$outerPath${ZipEntryUPath.separatorWithPath}$innerPath"
+
   override def getScheme: Option[String] = outerPath.getScheme
+
   override def isAbsolute: Boolean = outerPath.isAbsolute
+
   override def isRemote: Boolean = outerPath.isRemote
+
   override def toLocalPath: Box[Path] = Failure(s"ZipEntryUPath cannot be accessed as a local path: $this")
+
   override def toRemoteUri: Box[URI] = outerPath.toRemoteUri
+
   override def toZipEntryUPath: Box[ZipEntryUPath] = Full(this)
+
   override def toAbsolute: UPath = ZipEntryUPath(outerPath.toAbsolute, innerPath)
+
   override def toReal: Box[UPath] = outerPath.toReal.map(ZipEntryUPath(_, innerPath))
+
   override def relativizedIn(potentialParent: UPath): UPath =
     ZipEntryUPath(outerPath.relativizedIn(potentialParent), innerPath)
+
   override def basename: String = innerPath.split("/").filter(_.nonEmpty).lastOption.getOrElse("")
+
   override def parent: UPath = {
     val parts = innerPath.split("/").filter(_.nonEmpty)
     if (parts.length <= 1) outerPath
     else ZipEntryUPath(outerPath, parts.dropRight(1).mkString("/"))
   }
+
   override def /(other: String): UPath =
     ZipEntryUPath(outerPath, s"$innerPath/$other".replaceAll("//+", "/").stripPrefix("/"))
+
   override def startsWith(other: UPath): Boolean = other match {
     case ZipEntryUPath(op, ip) => outerPath == op && (ip.isEmpty || innerPath == ip || innerPath.startsWith(ip + "/"))
     case _                     => outerPath.startsWith(other)
   }
+
   private lazy val hashCodeCached = new HashCodeBuilder(23, 37).append(outerPath).append(innerPath).toHashCode
+
   override def hashCode(): Int = hashCodeCached
 }
 
@@ -97,9 +113,9 @@ object ZipEntryUPath {
 }
 
 object UPath {
-  def separator: String = "/"
-  def schemeSeparator: String = "://"
-  def splitKeepLastIfEmpty: Int = -1
+  val separator: String = "/"
+  val schemeSeparator: String = "://"
+  val splitKeepLastIfEmpty: Int = -1
 
   def fromString(literal: String): Box[UPath] = tryo(fromStringUnsafe(literal))
 

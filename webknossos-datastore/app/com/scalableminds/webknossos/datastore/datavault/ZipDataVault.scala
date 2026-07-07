@@ -15,6 +15,8 @@ import scala.concurrent.ExecutionContext
 
 case class ZipCentralDirEntry(
     localHeaderOffset: Long,
+    // We allow only entries without compression (STORED) so compressedSize will equal uncompressedSize.
+    // However, we still access each where it semantically makes sense, as if they could differ.
     compressedSize: Long,
     uncompressedSize: Long,
     compressionMethod: Int,
@@ -36,12 +38,13 @@ class ZipDataVault(outerVaultPath: VaultPath) extends DataVault with LazyLogging
   private val zip64EocdSize: Int = 56
   private val eocdSearchSize: Int = 65 * 1024 + 22
 
+  // Using AlfuCache with capacity 1 instead of lazy val avoids caching failures.
   private val centralDirectoryCache: AlfuCache[Unit, Map[String, ZipCentralDirEntry]] = AlfuCache(maxCapacity = 1)
 
   private def getCentralDirectory(using ec: ExecutionContext, tc: TokenContext): Fox[Map[String, ZipCentralDirEntry]] =
     centralDirectoryCache.getOrLoad((), _ => readCentralDirectory)
 
-  override def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(using
+  override def readBytesPlusEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[(Array[Byte], Encoding.Value, Option[String])] = for {
@@ -209,9 +212,8 @@ class ZipDataVault(outerVaultPath: VaultPath) extends DataVault with LazyLogging
     loopThroughEntriesRecursive(0, List.empty)
   }
 
-  // §4.5.3: ZIP64 extended information extra field (header ID 0x0001).
-  // Fields appear in this order (only when the corresponding CD field was 0xFFFFFFFF):
-  //   uncompressedSize (8), compressedSize (8), localHeaderOffset (8), diskNumber (4)
+  // §4.5.3: ZIP64 extended information extra fields (header ID 0x0001).
+  // Allowing file sizes larger than 4 GiB
   private def extendEntryWithExtraFields(
       entryRaw: ZipCentralDirEntry,
       centralDirectoryBytes: Array[Byte],

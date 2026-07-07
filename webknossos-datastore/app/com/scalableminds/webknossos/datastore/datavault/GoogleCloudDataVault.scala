@@ -38,7 +38,7 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
   // dashes, excluding chars that may be part of the bucket name (e.g. underscore).
   private lazy val bucket: String = uri.getAuthority
 
-  override def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(using
+  override def readBytesPlusEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[(Array[Byte], Encoding.Value, Option[String])] =
@@ -132,9 +132,9 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
 }
 
 object GoogleCloudDataVault {
-  def create(credentializedUpath: CredentializedUPath): Box[GoogleCloudDataVault] =
+  def create(credentializedUPath: CredentializedUPath): Box[GoogleCloudDataVault] =
     for {
-      credential <- tryo(credentializedUpath.credential.map(f => f.asInstanceOf[GoogleServiceAccountCredential]))
-      remoteUri <- credentializedUpath.upath.toRemoteUri
+      credential <- tryo(credentializedUPath.credential.map(f => f.asInstanceOf[GoogleServiceAccountCredential]))
+      remoteUri <- credentializedUPath.upath.toRemoteUri
     } yield new GoogleCloudDataVault(remoteUri, credential)
 }

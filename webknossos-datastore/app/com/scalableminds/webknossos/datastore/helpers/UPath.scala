@@ -88,9 +88,8 @@ case class ZipEntryUPath(outerPath: UPath, innerPath: String) extends UPath {
   override def basename: String = innerPath.split("/").filter(_.nonEmpty).lastOption.getOrElse("")
 
   override def parent: UPath = {
-    val parts = innerPath.split("/").filter(_.nonEmpty)
-    if (parts.length <= 1) outerPath
-    else ZipEntryUPath(outerPath, parts.dropRight(1).mkString("/"))
+    val innerPathParts = innerPath.split("/").filter(_.nonEmpty)
+    ZipEntryUPath(outerPath, innerPathParts.dropRight(1).mkString("/"))
   }
 
   override def /(other: String): UPath =
@@ -121,7 +120,7 @@ object UPath {
 
   // Warning: throws! Prefer fromString (returns Box) for user-supplied input
   def fromStringUnsafe(literal: String): UPath =
-    parseZipSeparator(literal) match {
+    parseZipSeparatorUnsafe(literal) match {
       case Some((outerLiteral, innerPath)) => ZipEntryUPath(fromStringUnsafe(outerLiteral), innerPath)
       case None                            =>
         val schemeOpt = if (literal.contains(schemeSeparator)) literal.split(schemeSeparator).headOption else None
@@ -143,7 +142,7 @@ object UPath {
     }
 
   // Detect "|zip:path" (entry) or "|zip" at end (root reference, inner path = "").
-  private def parseZipSeparator(literal: String): Option[(String, String)] = {
+  private def parseZipSeparatorUnsafe(literal: String): Option[(String, String)] = {
     val separatorWithPathIdx = literal.indexOf(ZipEntryUPath.separatorWithPath)
     val separatorRootIdx =
       if (literal.endsWith(ZipEntryUPath.separatorRoot) && separatorWithPathIdx < 0)

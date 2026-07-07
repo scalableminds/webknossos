@@ -200,7 +200,7 @@ class UPathTestSuite extends AsyncWordSpec {
       assert(upath.isAbsolute)
       assert(upath.basename == "file.bin")
       assert(upath.parent.toString == "s3://bucket/archive.zip|zip:inner")
-      assert(upath.parent.parent.toString == "s3://bucket/archive.zip")
+      assert(upath.parent.parent.toString == "s3://bucket/archive.zip|zip")
       assert((upath / "extra").toString == "s3://bucket/archive.zip|zip:inner/file.bin/extra")
     }
 
@@ -238,12 +238,12 @@ class UPathTestSuite extends AsyncWordSpec {
     }
 
     "navigate ZipEntryUPath parent for empty and single-segment inner paths" in {
-      // root reference: parent should be the outer path itself
+      // root reference: parent should be the path itself (never leave the zip)
       val zipRoot = UPath.fromStringUnsafe("s3://bucket/archive.zip|zip")
-      assert(zipRoot.parent.toString == "s3://bucket/archive.zip")
+      assert(zipRoot.parent.toString == "s3://bucket/archive.zip|zip")
       // single-segment inner path: parent should also be the outer path
       val zipSingle = UPath.fromStringUnsafe("s3://bucket/archive.zip|zip:file.txt")
-      assert(zipSingle.parent.toString == "s3://bucket/archive.zip")
+      assert(zipSingle.parent.toString == "s3://bucket/archive.zip|zip")
     }
 
     "correctly answer startsWith for ZipEntryUPath" in {

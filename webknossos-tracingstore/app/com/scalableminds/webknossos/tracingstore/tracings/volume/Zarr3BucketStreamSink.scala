@@ -5,7 +5,7 @@ import com.scalableminds.util.io.{NamedFunctionStream, NamedStream}
 import com.scalableminds.util.tools.{ByteUtils, Fox}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.zarr.Zarr3OutputHelper
-import com.scalableminds.webknossos.datastore.datareaders.zarr3._
+import com.scalableminds.webknossos.datastore.datareaders.zarr3.*
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryConversions, UPath}
 import com.scalableminds.webknossos.datastore.models.datasource.{

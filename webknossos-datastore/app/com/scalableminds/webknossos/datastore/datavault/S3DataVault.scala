@@ -15,7 +15,7 @@ import com.scalableminds.webknossos.datastore.helpers.{S3UriUtils, UPath}
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.lang3.builder.HashCodeBuilder
 
-import scala.util.{Failure => TryFailure, Success => TrySuccess}
+import scala.util.{Failure as TryFailure, Success as TrySuccess}
 import software.amazon.awssdk.core.ResponseBytes
 import software.amazon.awssdk.core.async.AsyncResponseTransformer
 import software.amazon.awssdk.services.s3.S3AsyncClient
@@ -33,7 +33,7 @@ import java.net.URI
 import java.util.concurrent.CompletionException
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters.CollectionHasAsScala
-import scala.jdk.FutureConverters._
+import scala.jdk.FutureConverters.*
 
 class S3DataVault(
     s3AccessKeyCredential: Option[S3AccessKeyCredential],

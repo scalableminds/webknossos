@@ -16,11 +16,11 @@ import telemetry.SlackNotificationService
 import utils.WkConf
 import utils.sql.SqlClient
 
-import javax.inject._
+import javax.inject.*
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration._
-import scala.sys.process._
+import scala.concurrent.duration.*
+import scala.sys.process.*
 
 class Startup @Inject() (
     actorSystem: ActorSystem,

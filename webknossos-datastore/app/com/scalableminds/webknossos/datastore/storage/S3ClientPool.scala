@@ -24,7 +24,7 @@ import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.DurationConverters.ScalaDurationOps
 import scala.jdk.OptionConverters.RichOptional
-import scala.util.{Failure => TryFailure, Success => TrySuccess}
+import scala.util.{Failure as TryFailure, Success as TrySuccess}
 
 class S3ClientPool(ws: WSClient) {
 

@@ -9,7 +9,7 @@ import models.annotation.{AnnotationState, AnnotationType}
 
 import scala.collection.immutable.ListMap
 import javax.inject.Inject
-import models.user._
+import models.user.*
 import models.user.time.{Month, TimeSpan, TimeSpanDAO, TimeSpanService}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}

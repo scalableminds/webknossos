@@ -1,6 +1,6 @@
 package utils
 
-import javax.inject._
+import javax.inject.*
 
 class StoreModules @Inject() (conf: WkConf) {
   def localTracingStoreEnabled: Boolean = {

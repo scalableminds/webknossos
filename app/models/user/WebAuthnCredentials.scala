@@ -1,7 +1,7 @@
 package models.user
 
 import tools.jackson.core.`type`.TypeReference
-import com.fasterxml.jackson.annotation._
+import com.fasterxml.jackson.annotation.*
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{JsonHelper, Fox}
@@ -13,15 +13,15 @@ import com.scalableminds.webknossos.schema.Tables.{
 }
 import com.webauthn4j.converter.AttestedCredentialDataConverter
 import com.webauthn4j.converter.util.ObjectConverter
-import com.webauthn4j.credential.{CredentialRecordImpl => WebAuthnCredentialRecord}
-import com.webauthn4j.data.attestation.statement._
+import com.webauthn4j.credential.CredentialRecordImpl as WebAuthnCredentialRecord
+import com.webauthn4j.data.attestation.statement.*
 import com.webauthn4j.data.extension.authenticator.{
   AuthenticationExtensionsAuthenticatorOutputs,
   RegistrationExtensionAuthenticatorOutput
 }
 import com.scalableminds.util.box.Box.tryo
 import utils.sql.{SQLDAO, SqlClient}
-import play.api.libs.json._
+import play.api.libs.json.*
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext

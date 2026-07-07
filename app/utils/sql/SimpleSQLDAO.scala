@@ -3,7 +3,7 @@ package utils.sql
 import com.scalableminds.util.tools.{Fox, TextUtils}
 import com.typesafe.scalalogging.LazyLogging
 import slick.dbio.{DBIO, DBIOAction, Effect, NoStream}
-import slick.jdbc.PostgresProfile.api._
+import slick.jdbc.PostgresProfile.api.*
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.sql.SqlAction
 import slick.util.{Dumpable, TreePrinter}

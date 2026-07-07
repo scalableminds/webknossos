@@ -20,7 +20,7 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, 
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType
-import com.scalableminds.webknossos.tracingstore.tracings._
+import com.scalableminds.webknossos.tracingstore.tracings.*
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   EditableMappingLayer,
   EditableMappingService,
@@ -32,7 +32,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{
   SkeletonTracingWithUpdatedTreeIds
 }
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.SkeletonUpdateAction
-import com.scalableminds.webknossos.tracingstore.tracings.volume._
+import com.scalableminds.webknossos.tracingstore.tracings.volume.*
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient}
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{JsObject, JsValue, Json}

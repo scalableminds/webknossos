@@ -7,10 +7,10 @@ import com.scalableminds.util.box.{Failure, Full}
 import com.scalableminds.util.tools.Fox
 import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
 import models.organization.OrganizationService
-import models.team._
-import models.user._
-import play.api.libs.json._
-import play.api.mvc._
+import models.team.*
+import models.user.*
+import play.api.libs.json.*
+import play.api.mvc.*
 import com.scalableminds.util.objectid.ObjectId
 
 import javax.inject.Inject

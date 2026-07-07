@@ -14,7 +14,7 @@ import com.typesafe.scalalogging.LazyLogging
 import files.WkTempFileService
 
 import javax.inject.Inject
-import models.annotation.nml.NmlResults._
+import models.annotation.nml.NmlResults.*
 import models.annotation.nml.{NmlParseSuccessWithoutFile, NmlParser, NmlResults}
 import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.webknossos.tracingstore.tracings.GroupUtils

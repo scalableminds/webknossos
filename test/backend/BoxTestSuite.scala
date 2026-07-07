@@ -3,7 +3,7 @@ package backend
 import com.scalableminds.util.box.{Box, Empty, Failure, Full, ParamFailure}
 import org.scalatest.wordspec.AsyncWordSpec
 
-import scala.util.{Success, Failure => TryFailure}
+import scala.util.{Success, Failure as TryFailure}
 
 class BoxTestSuite extends AsyncWordSpec {
 

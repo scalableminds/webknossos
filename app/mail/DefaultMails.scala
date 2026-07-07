@@ -3,7 +3,7 @@ package mail
 import models.organization.Organization
 import models.user.MultiUser
 import utils.WkConf
-import views._
+import views.*
 
 import java.net.URI
 import javax.inject.Inject

@@ -1,9 +1,9 @@
 package com.scalableminds.util.io
 
 import com.scalableminds.util.box.{Box, Empty, Failure, Full}
-import java.io._
+import java.io.*
 import java.nio.file.{Files, Path}
-import java.util.zip.{GZIPOutputStream => DefaultGZIPOutputStream, _}
+import java.util.zip.{GZIPOutputStream as DefaultGZIPOutputStream, *}
 import com.scalableminds.util.tools.{Fox, TextUtils}
 import com.scalableminds.util.tools.Fox.toFox
 import com.typesafe.scalalogging.LazyLogging

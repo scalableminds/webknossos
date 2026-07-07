@@ -36,6 +36,8 @@ jobs:
   check-autodeploy-label:
     runs-on: ubuntu-22.04
     if: ${{ github.event.label.name == 'autodeploy' }}
+    permissions:
+      actions: read
     outputs:
       skip: ${{ steps.check_build.outputs.skip }}
       dynamic_env: ${{ steps.check_build.outputs.dynamic_env }}
@@ -67,11 +69,14 @@ jobs:
     needs: check-autodeploy-label
     if: ${{ needs.check-autodeploy-label.outputs.skip != 'true' }}
     uses: ./.github/workflows/autodeploy-reusable.yml
+    permissions:
+      deployments: write
     with:
       branch: ${{ github.head_ref }}
       dynamic_env: ${{ needs.check-autodeploy-label.outputs.dynamic_env }}
       env_url: ${{ needs.check-autodeploy-label.outputs.env_url }}
-    secrets: inherit
+    secrets:
+      autodeploy_token: ${{ secrets.AUTO_DEV_DEPLOY_TOKEN }}
 
   check-build-smoketest-push-result:
     runs-on: ubuntu-22.04
@@ -108,8 +113,11 @@ jobs:
     needs: check-build-smoketest-push-result
     if: ${{ needs.check-build-smoketest-push-result.outputs.enabled == 'true' }}
     uses: ./.github/workflows/autodeploy-reusable.yml
+    permissions:
+      deployments: write
     with:
       branch: ${{ github.event.workflow_run.head_branch }}
       dynamic_env: ${{ needs.check-build-smoketest-push-result.outputs.dynamic_env }}
       env_url: ${{ needs.check-build-smoketest-push-result.outputs.env_url }}
-    secrets: inherit
+    secrets:
+      autodeploy_token: ${{ secrets.AUTO_DEV_DEPLOY_TOKEN }}

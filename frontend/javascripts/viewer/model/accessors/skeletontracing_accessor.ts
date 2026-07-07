@@ -91,10 +91,11 @@ export function getActiveTree(skeletonTracing: SkeletonTracing | null | undefine
   return null;
 }
 
-export function getActiveTreeGroup(skeletonTracing: SkeletonTracing): TreeGroup | null {
-  const { activeGroupId } = skeletonTracing;
+export function getActiveTreeGroup(state: WebknossosState): TreeGroup | null {
+  const skeletonTracing = getSkeletonTracing(state.annotation);
+  const { activeGroupId } = state.localSkeletonState;
 
-  if (activeGroupId != null) {
+  if (skeletonTracing != null && activeGroupId != null) {
     const group = findGroup(skeletonTracing.treeGroups, activeGroupId);
     return group;
   }
@@ -273,9 +274,9 @@ export function isSkeletonSectionClippingActive(state: WebknossosState): boolean
   );
 }
 
-export function isSkeletonLayerVisible(annotation: StoreAnnotation) {
-  const skeletonLayer = getSkeletonTracing(annotation);
-  return skeletonLayer == null ? false : skeletonLayer.showSkeletons;
+export function isSkeletonLayerVisible(state: WebknossosState) {
+  const skeletonLayer = getSkeletonTracing(state.annotation);
+  return skeletonLayer == null ? false : state.localSkeletonState.showSkeletons;
 }
 
 export function getNodePosition(

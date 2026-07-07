@@ -72,17 +72,11 @@ function ConnectomeReducer(state: WebknossosState, action: Action): WebknossosSt
         activeNodeId: null,
         cachedMaxNodeId: Constants.MIN_NODE_ID - 1,
         activeTreeId: null,
-        activeGroupId: null,
         trees: new TreeMap(),
         treeGroups: [],
         tracingId: "connectome-tracing-data",
         boundingBox: null,
         userBoundingBoxes: [],
-        navigationList: {
-          list: [],
-          activeIndex: -1,
-        },
-        showSkeletons: true,
         additionalAxes: [],
       };
 

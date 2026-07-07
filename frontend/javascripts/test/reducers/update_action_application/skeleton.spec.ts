@@ -17,22 +17,30 @@ import {
   deleteUserBoundingBoxAction,
 } from "viewer/model/actions/annotation_actions";
 import {
+  rewindForRebaseAction,
+  snapshotAnnotationStateForNextRebaseAction,
+} from "viewer/model/actions/save_actions";
+import {
   applySkeletonUpdateActionsFromServerAction,
   createNodeAction,
   createTreeAction,
   deleteEdgeAction,
   deleteNodeAction,
   deleteTreeAction,
+  deselectActiveTreeGroupAction,
   mergeTreesAction,
   setActiveNodeAction,
   setActiveTreeAction,
+  setActiveTreeGroupAction,
   setNodePositionAction,
+  setShowSkeletonsAction,
   setTreeEdgeVisibilityAction,
   setTreeGroupAction,
   setTreeGroupsAction,
   setTreeNameAction,
   setTreeVisibilityAction,
   toggleTreeGroupAction,
+  updateNavigationListAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import { setActiveUserBoundingBoxId } from "viewer/model/actions/ui_actions";
 import compactUpdateActions from "viewer/model/helpers/compaction/compact_update_actions";
@@ -145,6 +153,8 @@ describe("Update Action Application for SkeletonTracing", () => {
     toggleTreeGroupAction(3),
     toggleTreeGroupAction(3),
     setTreeGroupAction(7, 2),
+    setActiveTreeGroupAction(3), // also clears the active node and tree
+    setActiveNodeAction(11), // also clears the active group
     setTreeEdgeVisibilityAction(2, false),
   ];
 
@@ -178,14 +188,22 @@ describe("Update Action Application for SkeletonTracing", () => {
           userActions.slice(0, beforeVersionIndex),
         );
 
-        const state2WithoutActiveBoundingBox = applyActions(state2WithActiveTree, [
+        // The active user bounding box and the active group are user-local state
+        // that is not tracked via update actions. Reset them in both state
+        // variants so that the whole-state comparison below is not affected.
+        const normalizationActions = [
           setActiveUserBoundingBoxId(null),
-        ]);
+          deselectActiveTreeGroupAction(),
+        ];
+        const state2WithoutActiveBoundingBox = applyActions(
+          state2WithActiveTree,
+          normalizationActions,
+        );
 
         const actionsToApply = userActions.slice(beforeVersionIndex, afterVersionIndex + 1);
         const state3 = applyActions(
           state2WithActiveTree,
-          actionsToApply.concat([setActiveUserBoundingBoxId(null)]),
+          actionsToApply.concat(normalizationActions),
         );
         expect(state2WithoutActiveBoundingBox !== state3).toBeTruthy();
 
@@ -287,6 +305,38 @@ describe("Update Action Application for SkeletonTracing", () => {
 
     expect(activeNodeId).toBe(1);
     expect(activeTreeId).toBe(1);
+  });
+
+  it("should keep user-local skeleton state when rewinding for a rebase", () => {
+    // activeGroupId, navigationList and showSkeletons live outside of
+    // state.annotation.skeleton (namely, in state.localSkeletonState) so that
+    // the rewinding done during a rebase cannot reset them (see #9559).
+    const snapshottedState = applyActions(initialState, [
+      snapshotAnnotationStateForNextRebaseAction(),
+    ]);
+    const modifiedState = applyActions(snapshottedState, [
+      setShowSkeletonsAction(false),
+      updateNavigationListAction([1, 2, 3], 1),
+      // Also modify the skeleton itself so that the rewinding restores something.
+      // Note that this needs to happen before the group is activated, because
+      // creating a node clears the active group.
+      createNodeAction(position, null, rotation, viewport, mag),
+      setTreeGroupsAction([makeBasicGroupObject(1, "group 1")]),
+      setActiveTreeGroupAction(1),
+    ]);
+    expect(modifiedState.localSkeletonState.activeGroupId).toBe(1);
+
+    const rewoundState = applyActions(modifiedState, [rewindForRebaseAction()]);
+
+    // The annotation was rewound to the snapshot...
+    expect(rewoundState.annotation.skeleton).toBe(snapshottedState.annotation.skeleton);
+    // ...but the user-local skeleton state kept its live values.
+    expect(rewoundState.localSkeletonState.activeGroupId).toBe(1);
+    expect(rewoundState.localSkeletonState.showSkeletons).toBe(false);
+    expect(rewoundState.localSkeletonState.navigationList).toEqual({
+      list: [1, 2, 3],
+      activeIndex: 1,
+    });
   });
 
   afterAll(() => {

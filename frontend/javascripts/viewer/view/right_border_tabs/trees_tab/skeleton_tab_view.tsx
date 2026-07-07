@@ -558,7 +558,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 
     // If there is an active group, ask the user whether to delete it or not
     if (this.props.skeletonTracing) {
-      const { activeGroupId } = this.props.skeletonTracing;
+      const { activeGroupId } = this.props;
 
       if (activeGroupId != null) {
         this.showDeleteGroupModal(activeGroupId);
@@ -796,7 +796,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         trees={this.props.skeletonTracing.trees}
         treeGroups={this.props.skeletonTracing.treeGroups}
         activeTreeId={this.props.skeletonTracing.activeTreeId}
-        activeGroupId={this.props.skeletonTracing.activeGroupId}
+        activeGroupId={this.props.activeGroupId}
         allowUpdate={this.props.allowUpdate}
         sortBy={sortBy}
         selectedTreeIds={this.state.selectedTreeIds}
@@ -943,7 +943,8 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       );
     }
 
-    const { showSkeletons, trees, treeGroups } = skeletonTracing;
+    const { showSkeletons } = this.props;
+    const { trees, treeGroups } = skeletonTracing;
     const noTreesAndGroups = trees.size() === 0 && size(treeGroups) === 0;
     const orderAttribute = this.props.userConfiguration.sortTreesByName ? "name" : "timestamp";
     // Avoid that the title switches to the other title during the fadeout of the Modal
@@ -1118,6 +1119,8 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 const mapStateToProps = (state: WebknossosState) => ({
   allowUpdate: mayEditAnnotation(state),
   skeletonTracing: state.annotation.skeleton,
+  showSkeletons: state.localSkeletonState.showSkeletons,
+  activeGroupId: state.localSkeletonState.activeGroupId,
   annotationId: state.annotation.annotationId,
   userConfiguration: state.userConfiguration,
   isSkeletonLayerTransformed: areGeometriesTransformed(state),

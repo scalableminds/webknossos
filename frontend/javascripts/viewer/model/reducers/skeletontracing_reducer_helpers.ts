@@ -513,7 +513,7 @@ export function createTree(
 
   if (addToActiveGroup) {
     const groupIdOfActiveTree = getActiveTree(skeletonTracing)?.groupId;
-    const groupIdOfActiveGroup = getActiveTreeGroup(skeletonTracing)?.groupId;
+    const groupIdOfActiveGroup = getActiveTreeGroup(state)?.groupId;
     groupId = groupIdOfActiveTree ?? groupIdOfActiveGroup;
   }
 

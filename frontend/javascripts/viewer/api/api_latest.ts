@@ -295,8 +295,9 @@ class TracingApi {
    * Returns the id of the current active group.
    */
   getActiveTreeGroupId(): number | null | undefined {
-    const tracing = assertSkeleton(Store.getState().annotation);
-    return getActiveTreeGroup(tracing)?.groupId ?? null;
+    const state = Store.getState();
+    assertSkeleton(state.annotation);
+    return getActiveTreeGroup(state)?.groupId ?? null;
   }
 
   /**

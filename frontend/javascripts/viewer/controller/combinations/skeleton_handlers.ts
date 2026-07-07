@@ -495,11 +495,13 @@ function getPrecedingNodeFromTree(
 }
 
 export function toSubsequentNode(): void {
-  const tracing = getSkeletonTracing(Store.getState().annotation);
+  const state = Store.getState();
+  const tracing = getSkeletonTracing(state.annotation);
   if (!tracing) {
     return;
   }
-  const { navigationList, activeNodeId, activeTreeId } = tracing;
+  const { navigationList } = state.localSkeletonState;
+  const { activeNodeId, activeTreeId } = tracing;
   if (activeNodeId == null) return;
   const isValidList =
     activeNodeId === navigationList.list[navigationList.activeIndex] && navigationList.list.length;
@@ -534,11 +536,13 @@ export function toSubsequentNode(): void {
   }
 }
 export function toPrecedingNode(): void {
-  const tracing = getSkeletonTracing(Store.getState().annotation);
+  const state = Store.getState();
+  const tracing = getSkeletonTracing(state.annotation);
   if (!tracing) {
     return;
   }
-  const { navigationList, activeNodeId, activeTreeId } = tracing;
+  const { navigationList } = state.localSkeletonState;
+  const { activeNodeId, activeTreeId } = tracing;
   if (activeNodeId == null) return;
   const isValidList =
     activeNodeId === navigationList.list[navigationList.activeIndex] && navigationList.list.length;

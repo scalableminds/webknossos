@@ -88,12 +88,6 @@ const createStateWithTrees = (trees: Tree[], genericGroups: TreeGroup[]): Webkno
       activeTreeId: 1,
       activeNodeId: null,
       cachedMaxNodeId: 0,
-      activeGroupId: null,
-      navigationList: {
-        list: [],
-        activeIndex: -1,
-      },
-      showSkeletons: true,
     },
     volumes: [],
   },

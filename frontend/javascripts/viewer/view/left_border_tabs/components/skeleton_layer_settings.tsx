@@ -36,6 +36,7 @@ import SwitchSetting from "./switch_setting";
 export default function SkeletonLayerSettings() {
   const dispatch = useDispatch();
   const annotation = useWkSelector((state) => state.annotation);
+  const showSkeletons = useWkSelector((state) => state.localSkeletonState.showSkeletons);
   const userConfiguration = useWkSelector((state) => state.userConfiguration);
   const dataset = useWkSelector((state) => state.dataset);
   const controlMode = useWkSelector((state) => state.temporaryConfiguration.controlMode);
@@ -148,7 +149,7 @@ export default function SkeletonLayerSettings() {
   const readableName = "Skeleton";
   const skeletonTracing = enforceSkeletonTracing(annotation);
   const isOnlyAnnotationLayer = annotation.annotationLayers.length === 1;
-  const { showSkeletons, tracingId } = skeletonTracing;
+  const { tracingId } = skeletonTracing;
   const activeNodeRadius = getActiveNode(skeletonTracing)?.radius ?? 0;
   const unit = LongUnitToShortUnitMap[dataset.dataSource.scale.unit];
   const isClippingDistanceDisabled =

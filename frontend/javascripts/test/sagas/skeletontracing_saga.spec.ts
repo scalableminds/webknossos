@@ -83,17 +83,11 @@ const skeletonTracing: SkeletonTracing = {
   tracingId: "skeletonTracingId",
   trees: new TreeMap([[1, skeletonTreeOne]]),
   treeGroups: [],
-  activeGroupId: null,
   activeTreeId: 1,
   activeNodeId: null,
   cachedMaxNodeId: 0,
   boundingBox: null,
   userBoundingBoxes: [],
-  navigationList: {
-    list: [],
-    activeIndex: -1,
-  },
-  showSkeletons: true,
   additionalAxes: [],
 };
 

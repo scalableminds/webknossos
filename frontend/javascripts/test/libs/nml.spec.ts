@@ -142,7 +142,6 @@ const initialSkeletonTracing: SkeletonTracing = {
   ],
   activeTreeId: 1,
   activeNodeId: 1,
-  activeGroupId: null,
   boundingBox: {
     min: [0, 0, 0],
     max: [500, 500, 500],
@@ -159,11 +158,6 @@ const initialSkeletonTracing: SkeletonTracing = {
       isVisible: true,
     },
   ],
-  navigationList: {
-    list: [],
-    activeIndex: -1,
-  },
-  showSkeletons: true,
   additionalAxes: [],
 };
 

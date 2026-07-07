@@ -124,17 +124,11 @@ function SkeletonTracingReducer(
       activeNodeId,
       cachedMaxNodeId,
       activeTreeId,
-      activeGroupId: null,
       trees,
       treeGroups,
       tracingId: action.tracing.id,
       boundingBox: convertServerBoundingBoxToFrontend(action.tracing.boundingBox),
       userBoundingBoxes,
-      navigationList: {
-        list: [],
-        activeIndex: -1,
-      },
-      showSkeletons: true,
       additionalAxes: convertServerAdditionalAxesToFrontEnd(action.tracing.additionalAxes),
     };
 
@@ -152,6 +146,16 @@ function SkeletonTracingReducer(
           skeleton: {
             $set: skeletonTracing,
           },
+        },
+      },
+      localSkeletonState: {
+        $set: {
+          activeGroupId: null,
+          navigationList: {
+            list: [],
+            activeIndex: -1,
+          },
+          showSkeletons: true,
         },
       },
     });
@@ -180,9 +184,11 @@ function SkeletonTracingReducer(
               activeTreeId: {
                 $set: null,
               },
-              activeGroupId: {
-                $set: null,
-              },
+            },
+          },
+          localSkeletonState: {
+            activeGroupId: {
+              $set: null,
             },
           },
         });
@@ -199,9 +205,11 @@ function SkeletonTracingReducer(
               activeTreeId: {
                 $set: tree.treeId,
               },
-              activeGroupId: {
-                $set: null,
-              },
+            },
+          },
+          localSkeletonState: {
+            activeGroupId: {
+              $set: null,
             },
           },
         });
@@ -251,11 +259,9 @@ function SkeletonTracingReducer(
     case "SET_SHOW_SKELETONS": {
       const { showSkeletons } = action;
       return update(state, {
-        annotation: {
-          skeleton: {
-            showSkeletons: {
-              $set: showSkeletons,
-            },
+        localSkeletonState: {
+          showSkeletons: {
+            $set: showSkeletons,
           },
         },
       });
@@ -278,9 +284,11 @@ function SkeletonTracingReducer(
             activeTreeId: {
               $set: tree.treeId,
             },
-            activeGroupId: {
-              $set: null,
-            },
+          },
+        },
+        localSkeletonState: {
+          activeGroupId: {
+            $set: null,
           },
         },
       });
@@ -306,9 +314,11 @@ function SkeletonTracingReducer(
             activeTreeId: {
               $set: treeWithMatchingName.treeId,
             },
-            activeGroupId: {
-              $set: null,
-            },
+          },
+        },
+        localSkeletonState: {
+          activeGroupId: {
+            $set: null,
           },
         },
       });
@@ -339,9 +349,11 @@ function SkeletonTracingReducer(
             activeTreeId: {
               $set: null,
             },
-            activeGroupId: {
-              $set: action.groupId,
-            },
+          },
+        },
+        localSkeletonState: {
+          activeGroupId: {
+            $set: action.groupId,
           },
         },
       });
@@ -349,11 +361,9 @@ function SkeletonTracingReducer(
 
     case "DESELECT_ACTIVE_TREE_GROUP": {
       return update(state, {
-        annotation: {
-          skeleton: {
-            activeGroupId: {
-              $set: null,
-            },
+        localSkeletonState: {
+          activeGroupId: {
+            $set: null,
           },
         },
       });
@@ -385,9 +395,11 @@ function SkeletonTracingReducer(
             activeNodeId: {
               $set: newActiveNodeId,
             },
-            activeGroupId: {
-              $set: null,
-            },
+          },
+        },
+        localSkeletonState: {
+          activeGroupId: {
+            $set: null,
           },
         },
       });
@@ -590,7 +602,7 @@ function SkeletonTracingReducer(
     }
 
     case "TOGGLE_INACTIVE_TREES": {
-      const { activeGroupId } = skeletonTracing;
+      const { activeGroupId } = state.localSkeletonState;
 
       if (activeGroupId != null) {
         // Toggle all trees
@@ -641,15 +653,13 @@ function SkeletonTracingReducer(
     case "UPDATE_NAVIGATION_LIST": {
       const { list, activeIndex } = action;
       return update(state, {
-        annotation: {
-          skeleton: {
-            navigationList: {
-              list: {
-                $set: list,
-              },
-              activeIndex: {
-                $set: activeIndex,
-              },
+        localSkeletonState: {
+          navigationList: {
+            list: {
+              $set: list,
+            },
+            activeIndex: {
+              $set: activeIndex,
             },
           },
         },
@@ -744,15 +754,17 @@ function SkeletonTracingReducer(
             activeNodeId: {
               $set: activeNodeId,
             },
-            activeGroupId: {
-              $set: null,
-            },
             cachedMaxNodeId: {
               $set: node.id,
             },
             activeTreeId: {
               $set: activeTreeId,
             },
+          },
+        },
+        localSkeletonState: {
+          activeGroupId: {
+            $set: null,
           },
         },
       });
@@ -784,12 +796,14 @@ function SkeletonTracingReducer(
             activeTreeId: {
               $set: newActiveTreeId,
             },
-            activeGroupId: {
-              $set: null,
-            },
             cachedMaxNodeId: {
               $set: newMaxNodeId,
             },
+          },
+        },
+        localSkeletonState: {
+          activeGroupId: {
+            $set: null,
           },
         },
       });
@@ -940,9 +954,11 @@ function SkeletonTracingReducer(
             activeTreeId: {
               $set: treeId,
             },
-            activeGroupId: {
-              $set: null,
-            },
+          },
+        },
+        localSkeletonState: {
+          activeGroupId: {
+            $set: null,
           },
         },
       });
@@ -995,9 +1011,11 @@ function SkeletonTracingReducer(
             activeTreeId: {
               $set: tree.treeId,
             },
-            activeGroupId: {
-              $set: null,
-            },
+          },
+        },
+        localSkeletonState: {
+          activeGroupId: {
+            $set: null,
           },
         },
       });
@@ -1077,12 +1095,14 @@ function SkeletonTracingReducer(
             activeNodeId: {
               $set: newActiveNodeId,
             },
-            activeGroupId: {
-              $set: null,
-            },
             cachedMaxNodeId: {
               $set: newMaxNodeId,
             },
+          },
+        },
+        localSkeletonState: {
+          activeGroupId: {
+            $set: null,
           },
         },
       });
@@ -1108,12 +1128,14 @@ function SkeletonTracingReducer(
             activeNodeId: {
               $set: null,
             },
-            activeGroupId: {
-              $set: null,
-            },
             treeGroups: {
               $set: [],
             },
+          },
+        },
+        localSkeletonState: {
+          activeGroupId: {
+            $set: null,
           },
         },
       });
@@ -1150,9 +1172,11 @@ function SkeletonTracingReducer(
             activeTreeId: {
               $set: newActiveTreeId,
             },
-            activeGroupId: {
-              $set: null,
-            },
+          },
+        },
+        localSkeletonState: {
+          activeGroupId: {
+            $set: null,
           },
         },
       });

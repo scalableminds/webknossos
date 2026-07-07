@@ -62,6 +62,7 @@ import {
 } from "viewer/model/accessors/flycam_accessor";
 import {
   getSkeletonTracing,
+  isSkeletonLayerVisible,
   isSkeletonSectionClippingActive,
 } from "viewer/model/accessors/skeletontracing_accessor";
 import { getSomeTracing, getTaskBoundingBoxes } from "viewer/model/accessors/tracing_accessor";
@@ -823,8 +824,7 @@ class SceneController {
         true,
       ),
       listenToStoreProperty(
-        (storeState) =>
-          storeState.annotation.skeleton ? storeState.annotation.skeleton.showSkeletons : false,
+        (storeState) => isSkeletonLayerVisible(storeState),
         (showSkeletons) => this.setSkeletonGroupVisibility(showSkeletons),
         true,
       ),

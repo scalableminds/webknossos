@@ -317,6 +317,14 @@ const defaultState: WebknossosState = {
     },
   },
   localSegmentationStateByLayer: {},
+  localSkeletonState: {
+    activeGroupId: null,
+    navigationList: {
+      list: [],
+      activeIndex: -1,
+    },
+    showSkeletons: true,
+  },
   operationContext: {
     activeOperations: [],
     childOperations: [],

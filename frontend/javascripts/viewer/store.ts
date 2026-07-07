@@ -157,8 +157,16 @@ export type SkeletonTracing = TracingBase & {
   readonly treeGroups: Array<TreeGroup>;
   readonly activeTreeId: number | null | undefined;
   readonly activeNodeId: number | null | undefined;
-  readonly activeGroupId: number | null | undefined;
   readonly cachedMaxNodeId: number;
+};
+// LocalSkeletonState holds user-local skeleton state that is not persisted
+// on the server. It deliberately lives outside of state.annotation.skeleton
+// so that it is not affected by the snapshot/restore machinery used while
+// rebasing in live collaboration mode (compare with LocalSegmentationState).
+// Note that activeGroupId lives here (unlike its siblings activeTreeId and
+// activeNodeId) because it is not persisted on the server.
+export type LocalSkeletonState = {
+  readonly activeGroupId: number | null | undefined;
   readonly navigationList: NavigationList;
   readonly showSkeletons: boolean;
 };
@@ -735,6 +743,8 @@ export type WebknossosState = {
     string, // layerName
     LocalSegmentationState
   >;
+  // question to reviewer: Maybe put this somewhere else in the store :thinking:?
+  readonly localSkeletonState: LocalSkeletonState;
   readonly operationContext: OperationContextState;
 };
 const sagaMiddleware = createSagaMiddleware();

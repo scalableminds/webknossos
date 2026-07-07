@@ -32,7 +32,6 @@ function getRecommendedConfigByCategory() {
       centerNewNode: true,
       tdViewDisplayPlanes: TDViewDisplayModeEnum.WIREFRAME,
       tdViewDisplayDatasetBorders: true,
-      tdViewDisplayLayerBorders: false,
     },
     all: {
       dynamicSpaceDirection: true,

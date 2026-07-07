@@ -46,7 +46,6 @@ import {
   getDatasetBoundingBox,
   getLayerBoundingBox,
   getLayerByName,
-  getLayerNameToIsDisabled,
   getSegmentationLayers,
   getVisibleSegmentationLayers,
 } from "viewer/model/accessors/dataset_accessor";
@@ -413,9 +412,9 @@ class SceneController {
     // though they are all looking at the same scene, some
     // things have to be changed for each cam.
     const state = Store.getState();
-    const { dataset, datasetConfiguration, userConfiguration, flycam } = state;
-    const { tdViewDisplayPlanes, tdViewDisplayDatasetBorders, tdViewDisplayLayerBorders } =
-      userConfiguration;
+    const { dataset, userConfiguration, flycam } = state;
+    const { tdViewDisplayPlanes, tdViewDisplayDatasetBorders } = userConfiguration;
+    const { layerBoundingBoxVisibility } = state.temporaryConfiguration;
 
     // Section clipping renders only the skeleton on the currently visible section.
     // It is performed in the node/edge shaders (in voxel/section space) and is only
@@ -430,12 +429,11 @@ class SceneController {
     this.userBoundingBoxes.forEach((bbCube) => {
       bbCube.updateForCam(id);
     });
-    const layerNameToIsDisabled = getLayerNameToIsDisabled(datasetConfiguration);
     Object.keys(this.layerBoundingBoxes).forEach((layerName) => {
       const bbCube = this.layerBoundingBoxes[layerName];
-      const visible =
-        id === OrthoViews.TDView && tdViewDisplayLayerBorders && !layerNameToIsDisabled[layerName];
-      bbCube.setVisibility(visible);
+      // Layer bounding boxes are shown/hidden per layer via the bounding box tab (hidden by default)
+      // and, like user bounding boxes, are rendered in both the 2D planes and the 3D viewport.
+      bbCube.setVisibility(layerBoundingBoxVisibility[layerName] ?? false);
       bbCube.updateForCam(id);
     });
 
@@ -664,10 +662,12 @@ class SceneController {
           min,
           max,
           color: rgbToInt([color[0] * 255, color[1] * 255, color[2] * 255]),
-          showCrossSections: false,
+          // Show the bounding box in the 2D plane viewports as well (not just the 3D viewport), so it
+          // is visible where users usually work and the visibility/color controls have a visible effect.
+          showCrossSections: true,
           isHighlighted: false,
         });
-        bbCube.setVisibility(layerBoundingBoxVisibility[layer.name] ?? true);
+        bbCube.setVisibility(layerBoundingBoxVisibility[layer.name] ?? false);
         bbCube.getMeshes().forEach((mesh) => {
           const transformMatrix = getTransformsForLayerOrNull(
             dataset,
@@ -809,10 +809,8 @@ class SceneController {
         (storeState) => getDataLayers(storeState.dataset),
         () => this.updateLayerBoundingBoxes(),
       ),
-      listenToStoreProperty(
-        (storeState) => storeState.temporaryConfiguration.layerBoundingBoxVisibility,
-        () => this.updateLayerBoundingBoxes(),
-      ),
+      // Visibility is read live in updateSceneForCam (and any store change schedules a rerender), so
+      // only color changes require rebuilding the cubes here (the color is baked in at construction).
       listenToStoreProperty(
         (storeState) => storeState.temporaryConfiguration.layerBoundingBoxColor,
         () => this.updateLayerBoundingBoxes(),

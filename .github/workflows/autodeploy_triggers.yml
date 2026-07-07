@@ -62,6 +62,7 @@ jobs:
     if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.event == 'push' }}
     permissions:
       actions: read
+      pull-requests: read
     outputs:
       enabled: ${{ steps.check_build.outputs.enabled }}
       dynamic_env: ${{ steps.check_build.outputs.dynamic_env }}

@@ -120,7 +120,7 @@ object UPath {
 
   // Warning: throws! Prefer fromString (returns Box) for user-supplied input
   def fromStringUnsafe(literal: String): UPath =
-    parseZipSeparatorUnsafe(literal) match {
+    detectAndSplitZipEntryPath(literal) match {
       case Some((outerLiteral, innerPath)) => ZipEntryUPath(fromStringUnsafe(outerLiteral), innerPath)
       case None                            =>
         val schemeOpt = if (literal.contains(schemeSeparator)) literal.split(schemeSeparator).headOption else None
@@ -141,32 +141,42 @@ object UPath {
         }
     }
 
-  // Detect "|zip:path" (entry) or "|zip" at end (root reference, inner path = "").
-  private def parseZipSeparatorUnsafe(literal: String): Option[(String, String)] = {
+  /*
+   * UPaths support zip entry paths with a separator.
+   * Zip entries are referenced by paths like /outer/path.zip|zip:inner/file or just /outer/path.zip|zip for the zip root.
+   * This functions returns outer path literal and inner path for such paths, or None otherwise.
+   */
+  private def detectAndSplitZipEntryPath(literal: String): Option[(String, String)] = {
     val separatorWithPathIdx = literal.indexOf(ZipEntryUPath.separatorWithPath)
-    val separatorRootIdx =
-      if (literal.endsWith(ZipEntryUPath.separatorRoot) && separatorWithPathIdx < 0)
-        literal.length - ZipEntryUPath.separatorRoot.length
-      else -1
-    if (separatorWithPathIdx >= 0 || separatorRootIdx >= 0) {
-      if (literal.indexOf(ZipEntryUPath.separatorRoot) != literal.lastIndexOf(ZipEntryUPath.separatorRoot))
-        throw new Exception(s"Invalid zip path “$literal”: Nested zip paths are not supported.")
-      val (outerLiteral, innerPath) =
-        if (separatorWithPathIdx >= 0)
-          (
-            literal.substring(0, separatorWithPathIdx),
-            literal.substring(separatorWithPathIdx + ZipEntryUPath.separatorWithPath.length)
-          )
-        else
-          (literal.substring(0, separatorRootIdx), "")
-      if (outerLiteral.isEmpty)
-        throw new Exception(s"Invalid zip path “$literal”: Outer path must not be empty.")
-      if (innerPath.startsWith("//"))
-        throw new Exception(
-          s"Invalid zip path “$literal”: Multiple leading slashes for inner path are not allowed."
+    val isRootReference = separatorWithPathIdx < 0 && literal.endsWith(ZipEntryUPath.separatorRoot)
+    if (separatorWithPathIdx >= 0 || isRootReference)
+      Some(splitZipLiteralUnsafe(literal, separatorWithPathIdx))
+    else
+      None
+  }
+
+  // Given literal that has been detected to be a zip path, split outer and inner path literal.
+  private def splitZipLiteralUnsafe(literal: String, separatorWithPathIdx: Int): (String, String) = {
+    if (literal.indexOf(ZipEntryUPath.separatorRoot) != literal.lastIndexOf(ZipEntryUPath.separatorRoot))
+      throw new Exception(s"Invalid zip path “$literal”: Nested zip paths are not supported.")
+
+    val (outerLiteral, innerPath) =
+      if (separatorWithPathIdx >= 0)
+        (
+          literal.take(separatorWithPathIdx),
+          literal.drop(separatorWithPathIdx + ZipEntryUPath.separatorWithPath.length)
         )
-      Some((outerLiteral, innerPath.stripPrefix("/")))
-    } else None
+      else
+        (literal.dropRight(ZipEntryUPath.separatorRoot.length), "")
+
+    if (outerLiteral.isEmpty)
+      throw new Exception(s"Invalid zip path “$literal”: Outer path must not be empty.")
+    if (innerPath.startsWith("//"))
+      throw new Exception(
+        s"Invalid zip path “$literal”: Multiple leading slashes for inner path are not allowed."
+      )
+
+    (outerLiteral, innerPath.stripPrefix("/"))
   }
 
   def fromLocalPath(localPath: Path): UPath = LocalUPath(localPath.normalize())

@@ -311,8 +311,9 @@ export function computeAgglomerateTreeDiff(
     connectomeData != null ? getAgglomerateIdsFromConnectomeData(connectomeData) : [];
 
   const checkedAgglomerateIds = getAgglomerateIdsFromKeys(checkedKeys);
+  const filteredAgglomerateIdSet = new Set(filteredAgglomerateIds);
   const visibleAgglomerateIds = checkedAgglomerateIds.filter((agglomerateId) =>
-    filteredAgglomerateIds.includes(agglomerateId),
+    filteredAgglomerateIdSet.has(agglomerateId),
   );
 
   const connectomeFileMappingChanged =
@@ -340,8 +341,9 @@ export function computeAgglomerateTreeDiff(
     prevUnfilteredAgglomerateIds,
     unfilteredAgglomerateIds,
   );
+  const prevFilteredAgglomerateIdSet = new Set(prevFilteredAgglomerateIds);
   const prevVisibleAgglomerateIds = prevCheckedAgglomerateIds.filter((agglomerateId) =>
-    prevFilteredAgglomerateIds.includes(agglomerateId),
+    prevFilteredAgglomerateIdSet.has(agglomerateId),
   );
   // Find out which agglomerates were hidden or added by filtering/checking
   const { onlyA: hiddenAgglomerateIds, onlyB: addedAgglomerateIds } = diffArrays(

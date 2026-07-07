@@ -53,6 +53,9 @@ export default function useConnectomeData(
       // the tree sync only needs to apply a minimal diff once the new data arrives.
       placeholderData: keepPreviousData,
       refetchOnWindowFocus: false,
+      // The synapse data of a selection can be large. Override the app-wide
+      // gcTime of Infinity so that inactive selections are evicted from memory.
+      gcTime: 5 * 60 * 1000,
       // Don't persist the potentially large synapse data to localStorage
       meta: { persist: false },
     },

@@ -136,19 +136,22 @@ export function useAgglomerateTreeSync(
     if (hiddenAgglomerateIds.length) {
       const mappingName = getMappingNameFromConnectomeData(prev.connectomeData);
 
-      for (const agglomerateId of hiddenAgglomerateIds) {
-        // Hide agglomerates that are no longer visible
-        const treeName = getTreeNameForAgglomerateTree(agglomerateId, mappingName);
-        const tree = treeNameToTree[treeName];
+      // Hide agglomerates that are no longer visible, in a single batched action
+      const treeIdsToHide = hiddenAgglomerateIds
+        .map(
+          (agglomerateId) =>
+            treeNameToTree[getTreeNameForAgglomerateTree(agglomerateId, mappingName)]?.treeId,
+        )
+        .filter((treeId) => treeId != null);
 
-        if (tree != null) {
-          Store.dispatch(setConnectomeTreesVisibilityAction([tree.treeId], false, layerName));
-        }
+      if (treeIdsToHide.length) {
+        Store.dispatch(setConnectomeTreesVisibilityAction(treeIdsToHide, false, layerName));
       }
     }
 
     if (addedAgglomerateIds.length) {
       const mappingName = getMappingNameFromConnectomeData(connectomeData);
+      const treeIdsToShow: number[] = [];
 
       for (const agglomerateId of addedAgglomerateIds) {
         // Show agglomerates that were made visible
@@ -157,12 +160,16 @@ export function useAgglomerateTreeSync(
 
         // If the tree was already loaded, make it visible, otherwise load it
         if (tree != null) {
-          Store.dispatch(setConnectomeTreesVisibilityAction([tree.treeId], true, layerName));
+          treeIdsToShow.push(tree.treeId);
         } else {
           Store.dispatch(
             loadConnectomeAgglomerateTreeAction(layerName, mappingName, agglomerateId),
           );
         }
+      }
+
+      if (treeIdsToShow.length) {
+        Store.dispatch(setConnectomeTreesVisibilityAction(treeIdsToShow, true, layerName));
       }
     }
   }, [connectomeData, filteredConnectomeData, checkedKeys, layerName]);

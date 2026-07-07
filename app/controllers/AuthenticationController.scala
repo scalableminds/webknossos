@@ -1056,23 +1056,17 @@ class AuthenticationController @Inject() (
   }
 
   private def notifyOnSuspiciousNames(organizationId: String, firstName: String, lastName: String): Unit = {
-    val suspiciousNameEntropyThreshold = 3.0
-    val suspiciousNameMinLength = 6
+    val suspiciousNameCaseSwitchThreshold = 4
 
-    def shannonEntropy(s: String): Double =
-      if (s.isEmpty) 0.0
-      else {
-        val frequencies = s.groupBy(identity).values.map(_.length.toDouble / s.length)
-        -frequencies.map(p => p * (math.log(p) / math.log(2))).sum
-      }
+    def countCaseSwitches(s: String): Int =
+      s.zip(s.drop(1)).count { case (a, b) => (a.isLower && b.isUpper) || (a.isUpper && b.isLower) }
 
-    val isSuspicious = List(firstName, lastName).exists(name =>
-      name.length >= suspiciousNameMinLength && shannonEntropy(name) >= suspiciousNameEntropyThreshold
-    )
+    val isSuspicious =
+      List(firstName, lastName).exists(name => countCaseSwitches(name) >= suspiciousNameCaseSwitchThreshold)
 
     if (isSuspicious) {
       val msg =
-        s"High-entropy name detected during registration: $firstName $lastName (organizationId $organizationId)"
+        s"Name with >=$suspiciousNameCaseSwitchThreshold case switches detected during registration: $firstName $lastName (organizationId $organizationId)"
       logger.warn(msg)
       slackNotificationService.warn("Registration with suspicious name", msg)
     }

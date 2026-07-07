@@ -6,6 +6,10 @@ import { expose } from "./comlink_core";
 // the first message from the main thread to be dropped. Kicking off the dynamic import
 // here (without awaiting) keeps module evaluation synchronous so the Comlink handler is
 // registered immediately, while the wasm still starts loading eagerly in the background.
+// Deliberately NOT wrapped in importDynamic(): that module pulls main-thread UI (antd,
+// Toast) into the worker bundle, and its failure toast could not render inside a worker
+// anyway. If this import fails, awaiting lz4Import rejects and Comlink propagates the
+// error to the main-thread caller. (Whitelisted in tools/check-no-bare-dynamic-imports.js.)
 const lz4Import = import("lz4-wasm");
 
 async function compressLz4Block(

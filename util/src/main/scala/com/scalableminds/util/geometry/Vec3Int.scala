@@ -1,6 +1,6 @@
 package com.scalableminds.util.geometry
 
-import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
+import com.scalableminds.util.tools.StringNumberConversions.toIntOpt
 import play.api.libs.json.Json._
 import play.api.libs.json._
 

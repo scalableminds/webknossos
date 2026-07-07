@@ -1,8 +1,8 @@
 package backend
 
+import com.scalableminds.util.box.Failure
 import com.scalableminds.webknossos.tracingstore.annotation.{RevertToVersionAnnotationAction, UpdateGroupHandling}
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.MergeTreeSkeletonAction
-import com.scalableminds.util.tools.Failure
 import org.scalatest.wordspec.AsyncWordSpec
 
 class UpdateGroupHandlingUnitTestSuite extends AsyncWordSpec with UpdateGroupHandling {
@@ -39,7 +39,7 @@ class UpdateGroupHandlingUnitTestSuite extends AsyncWordSpec with UpdateGroupHan
           )
         )
       )
-      val res = reorderAndRegroupByIsolationSensitiveActions(updateGroupsBefore).getOrThrow("test context")
+      val res = reorderAndRegroupByIsolationSensitiveActions(updateGroupsBefore).get("test context")
       // Expect 5 to be untouched
       assert(res(0)._2.length == 2)
       assert(res(0)._1 == 5L)
@@ -88,7 +88,7 @@ class UpdateGroupHandlingUnitTestSuite extends AsyncWordSpec with UpdateGroupHan
           )
         )
       )
-      val res = reorderAndRegroupByIsolationSensitiveActions(updateGroupsBefore).getOrThrow("test context")
+      val res = reorderAndRegroupByIsolationSensitiveActions(updateGroupsBefore).get("test context")
       assert(res.length == 4)
       assert(res(0)._2.length == 2)
       assert(res(0)._1 == 3L)
@@ -109,7 +109,7 @@ class UpdateGroupHandlingUnitTestSuite extends AsyncWordSpec with UpdateGroupHan
           )
         )
       )
-      val res = reorderAndRegroupByIsolationSensitiveActions(updateGroupsBefore).getOrThrow("test context")
+      val res = reorderAndRegroupByIsolationSensitiveActions(updateGroupsBefore).get("test context")
       assert(res.length == 1)
       assert(res(0)._2.length == 1)
       assert(res(0)._1 == 7L)

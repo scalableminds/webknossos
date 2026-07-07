@@ -1,93 +1,18 @@
-import {
-  CrownOutlined,
-  FieldTimeOutlined,
-  PlusCircleOutlined,
-  RobotOutlined,
-} from "@ant-design/icons";
+import { FieldTimeOutlined, PlusCircleOutlined, RobotOutlined } from "@ant-design/icons";
 import { Alert, Button, Card, Col, Row, Space } from "antd";
 import FormattedDate from "components/formatted_date";
 import dayjs from "dayjs";
 import { useWkSelector } from "libs/react_hooks";
 import type { APIOrganization } from "types/api_types";
 import Constants from "viewer/constants";
+import { PowerPlanUpgradeCard, TeamPlanUpgradeCard } from "./plan_upgrade_cards";
 import {
   aiAddonFeatures,
   hasPricingPlanExpired,
   isUserAllowedToRequestUpgrades,
   PricingPlanEnum,
-  powerPlanFeatures,
-  teamPlanFeatures,
 } from "./pricing_plan_utils";
 import UpgradePricingPlanModal from "./upgrade_plan_modal";
-
-export function TeamPlanUpgradeCard({ teamUpgradeCallback }: { teamUpgradeCallback: () => void }) {
-  return (
-    <Card
-      title={
-        <Space size="small">
-          <CrownOutlined style={{ color: "var(--ant-color-primary)" }} />
-          {PricingPlanEnum.Team} Plan
-        </Space>
-      }
-      styles={{ body: { minHeight: 220 } }}
-      actions={[
-        <Button
-          type="primary"
-          onClick={teamUpgradeCallback}
-          key="buy-teamupgrade-button"
-          icon={<PlusCircleOutlined />}
-        >
-          Buy Upgrade
-        </Button>,
-      ]}
-    >
-      <ul>
-        {teamPlanFeatures.map((feature) => (
-          <li key={feature.slice(0, 10)}>{feature}</li>
-        ))}
-      </ul>
-    </Card>
-  );
-}
-
-export function PowerPlanUpgradeCard({
-  powerUpgradeCallback,
-  description,
-}: {
-  powerUpgradeCallback: () => void;
-  description?: string;
-}) {
-  return (
-    <Card
-      title={
-        <Space size="small">
-          <CrownOutlined style={{ color: "var(--ant-color-primary)" }} />
-          {PricingPlanEnum.Power} Plan
-        </Space>
-      }
-      styles={{ body: { minHeight: 220 } }}
-      actions={[
-        <Button
-          type="primary"
-          onClick={powerUpgradeCallback}
-          key="buy-power-upgrade-button"
-          icon={<PlusCircleOutlined />}
-        >
-          Buy Upgrade
-        </Button>,
-      ]}
-    >
-      <div>
-        {description ? <p>{description}</p> : null}
-        <ul>
-          {powerPlanFeatures.map((feature) => (
-            <li key={feature.slice(0, 10)}>{feature}</li>
-          ))}
-        </ul>
-      </div>
-    </Card>
-  );
-}
 
 export function AiAddonUpgradeCard() {
   return (

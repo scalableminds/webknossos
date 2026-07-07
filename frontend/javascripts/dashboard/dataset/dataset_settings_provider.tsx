@@ -23,7 +23,7 @@ import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_
 import type { DataLayerWithTransformations } from "types/schemas/datasource.types";
 import {
   doAllLayersHaveTheSameRotation,
-  EXPECTED_TRANSFORMATION_LENGTH,
+  EXPECTED_SETTINGS_TRANSFORMATION_LENGTH,
   getRotationSettingsFromTransformationIn90DegreeSteps,
 } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import type { DatasetConfiguration } from "viewer/store";
@@ -60,7 +60,7 @@ export function getRotationFromCoordinateTransformations(
     let initialDatasetRotationSettings: DatasetRotationAndMirroringSettings;
     if (
       !firstLayerTransformations ||
-      firstLayerTransformations.length !== EXPECTED_TRANSFORMATION_LENGTH
+      firstLayerTransformations.length !== EXPECTED_SETTINGS_TRANSFORMATION_LENGTH
     ) {
       initialDatasetRotationSettings = NULLED_DS_ROTATION_SETTINGS;
     } else {

@@ -1,9 +1,9 @@
 package com.scalableminds.webknossos.tracingstore.tracings.skeleton
 
+import com.scalableminds.util.box.{Box, Failure, Full}
 import com.scalableminds.util.datastructures.UnionFind
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.tracingstore.tracings.GroupUtils
-import com.scalableminds.util.tools.{Box, Failure, Full}
 
 import scala.collection.mutable
 

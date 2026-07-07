@@ -1,5 +1,7 @@
 import {
   AppstoreAddOutlined,
+  CaretDownOutlined,
+  CaretRightOutlined,
   DeleteOutlined,
   PlusOutlined,
   SearchOutlined,
@@ -57,6 +59,9 @@ import { ContextMenuContainer } from "./sidebar_context_menu";
 const BBOX_BUTTONS_HEADER_HEIGHT = 40;
 const CONTEXT_MENU_CLASS = "bbox-list-context-menu-overlay";
 const BOUNDING_BOX_TAB_ID = "bounding-box-tab";
+// If there are at least this many user bounding boxes, the layer bounding box section is collapsed by
+// default (unless the user manually toggled it) to avoid pushing the user bounding boxes out of view.
+const COLLAPSE_LAYER_SECTION_BBOX_THRESHOLD = 10;
 
 type LayerBoundingBox = {
   // The technical layer name, used as a stable key for display state (color/visibility) and rendering.
@@ -103,7 +108,15 @@ export default function BoundingBoxTab() {
   const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([]);
   const [menu, setMenu] = useState<MenuProps | null>(null);
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
+  // null => automatic (collapsed once there are many user bounding boxes); a boolean is a manual override.
+  const [isLayerSectionCollapsedOverride, setIsLayerSectionCollapsedOverride] = useState<
+    boolean | null
+  >(null);
   const dispatch = useDispatch();
+
+  const isLayerSectionCollapsed =
+    isLayerSectionCollapsedOverride ??
+    userBoundingBoxes.length >= COLLAPSE_LAYER_SECTION_BBOX_THRESHOLD;
 
   const setChangeBoundingBoxBounds = useCallback(
     (id: number, boundingBox: BoundingBoxMinMaxType) =>
@@ -314,7 +327,7 @@ export default function BoundingBoxTab() {
           color={
             layerBoundingBoxColor[layerBoundingBox.name] ?? stringToColor(layerBoundingBox.name)
           }
-          isVisible={layerBoundingBoxVisibility[layerBoundingBox.name] ?? true}
+          isVisible={layerBoundingBoxVisibility[layerBoundingBox.name] ?? false}
           isExportEnabled={isExportEnabled}
           isReadOnly
           // Registering segments modifies the annotation, so it is only possible when updating is allowed.
@@ -487,26 +500,42 @@ export default function BoundingBoxTab() {
       ) : null}
       {/* Read-only bounding boxes of the dataset's layers. */}
       {layerBoundingBoxes.length > 0 ? (
-        <div style={{ flexShrink: 0, marginTop: 8 }}>
-          <FastTooltip title="These are the read-only bounding boxes of the dataset's layers.">
-            <Divider size="small" titlePlacement="left" style={{ margin: "4px 0" }}>
-              Layer Bounding Boxes
-            </Divider>
-          </FastTooltip>
-          <div style={{ maxHeight: 240, overflowY: "auto" }}>
-            <Table
-              columns={layerBoundingBoxColumns}
-              dataSource={layerBoundingBoxes}
-              pagination={false}
-              rowKey="name"
-              showHeader={false}
-              className="bounding-box-table"
-              // The shared .bounding-box-table styling hides the (selection) first column and expects
-              // the content in the second one, so the layer table needs the same disabled selection column.
-              rowSelection={{ getCheckboxProps: () => ({ disabled: true }) }}
-              onRow={getPropsForLayerRow}
-            />
-          </div>
+        <div
+          style={{
+            flexShrink: 0,
+            marginTop: 8,
+            minHeight: 0,
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <Divider size="small" titlePlacement="left" style={{ margin: "4px 0" }}>
+            <FastTooltip title="These are the read-only bounding boxes of the dataset's layers. Click to collapse or expand.">
+              <span
+                onClick={() => setIsLayerSectionCollapsedOverride(!isLayerSectionCollapsed)}
+                style={{ cursor: "pointer", userSelect: "none" }}
+              >
+                {isLayerSectionCollapsed ? <CaretRightOutlined /> : <CaretDownOutlined />} Layer
+                Bounding Boxes
+              </span>
+            </FastTooltip>
+          </Divider>
+          {isLayerSectionCollapsed ? null : (
+            <div style={{ maxHeight: 240, overflowY: "auto" }}>
+              <Table
+                columns={layerBoundingBoxColumns}
+                dataSource={layerBoundingBoxes}
+                pagination={false}
+                rowKey="name"
+                showHeader={false}
+                className="bounding-box-table"
+                // The shared .bounding-box-table styling hides the (selection) first column and expects
+                // the content in the second one, so the layer table needs the same disabled selection column.
+                rowSelection={{ getCheckboxProps: () => ({ disabled: true }) }}
+                onRow={getPropsForLayerRow}
+              />
+            </div>
+          )}
         </div>
       ) : null}
       <Typography.Text type="secondary">{maybeUneditableExplanation}</Typography.Text>

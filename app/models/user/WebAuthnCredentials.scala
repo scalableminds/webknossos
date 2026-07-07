@@ -147,8 +147,8 @@ class WebAuthnCredentialDAO @Inject() (sqlClient: SqlClient)(implicit ec: Execut
       _ <- run(
         q"""INSERT INTO $existingCollectionName (_id, _multiUser, credentialId, name, userVerified, backupEligible, backupState,
                                                  serializedAttestationStatement, serializedAttestedCredential, serializedExtensions, signatureCount)
-                       VALUES(${c._id}, ${c._multiUser}, ${credentialId}, ${c.name}, ${userVerified}, ${backupEligible}, ${backupState}, ${serializedAttestationStatement},
-                         ${serializedAttestedCredential}, ${serializedAuthenticatorExtensions}, ${c.credentialRecord.getCounter.toInt})""".asUpdate
+                       VALUES(${c._id}, ${c._multiUser}, $credentialId, ${c.name}, $userVerified, $backupEligible, $backupState, $serializedAttestationStatement,
+                         $serializedAttestedCredential, $serializedAuthenticatorExtensions, ${c.credentialRecord.getCounter.toInt})""".asUpdate
       )
     } yield ()
   }
@@ -163,7 +163,7 @@ class WebAuthnCredentialDAO @Inject() (sqlClient: SqlClient)(implicit ec: Execut
   def removeById(id: ObjectId, multiUser: ObjectId): Fox[Unit] =
     for {
       _ <- run(
-        q"""UPDATE $existingCollectionName SET isDeleted = true WHERE _id = ${id} AND _multiUser=${multiUser}""".asUpdate
+        q"""UPDATE $existingCollectionName SET isDeleted = true WHERE _id = $id AND _multiUser=$multiUser""".asUpdate
       )
     } yield ()
 

@@ -145,6 +145,7 @@ object UPath {
    * UPaths support zip entry paths with a separator.
    * Zip entries are referenced by paths like /outer/path.zip|zip:inner/file or just /outer/path.zip|zip for the zip root.
    * This functions returns outer path literal and inner path for such paths, or None otherwise.
+   * Throws for invalid zip entry paths.
    */
   private def detectAndSplitZipEntryPath(literal: String): Option[(String, String)] = {
     val separatorWithPathIdx = literal.indexOf(ZipEntryUPath.separatorWithPath)

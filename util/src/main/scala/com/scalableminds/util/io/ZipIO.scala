@@ -1,13 +1,13 @@
 package com.scalableminds.util.io
 
+import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import java.io._
 import java.nio.file.{Files, Path}
 import java.util.zip.{GZIPOutputStream => DefaultGZIPOutputStream, _}
 import com.scalableminds.util.tools.{Fox, TextUtils}
 import com.scalableminds.util.tools.Fox.toFox
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
-import com.scalableminds.util.tools.Box.tryo
+import Box.tryo
 import org.apache.commons.io.IOUtils
 
 import scala.concurrent.ExecutionContext

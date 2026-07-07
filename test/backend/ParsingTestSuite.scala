@@ -1,7 +1,7 @@
 package backend
 
+import com.scalableminds.util.box.Full
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.Full
 import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrCoordinatesParser
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition}

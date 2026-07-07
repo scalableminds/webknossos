@@ -1,3 +1,4 @@
+import com.scalableminds.util.box.{Failure, Full}
 import org.apache.pekko.actor.{ActorSystem, Props}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.webknossos.tracingstore.cleanup.WkCleanUpService
@@ -8,7 +9,6 @@ import mail.{Mailer, MailerConfig}
 import models.annotation.AnnotationDAO
 import models.dataset.ThumbnailCachingService
 import models.user.InviteService
-import com.scalableminds.util.tools.{Failure, Full}
 import org.apache.http.client.utils.URIBuilder
 import play.api.inject.ApplicationLifecycle
 import security.WkSilhouetteEnvironment

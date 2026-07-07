@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.{Empty, Failure, Full}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
@@ -20,8 +21,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
   TracingDataStore
 }
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.{Empty, Failure, Full}
-import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.box.Box.tryo
 import org.jgrapht.alg.connectivity.ConnectivityInspector
 import org.jgrapht.graph.{DefaultEdge, DefaultUndirectedGraph}
 

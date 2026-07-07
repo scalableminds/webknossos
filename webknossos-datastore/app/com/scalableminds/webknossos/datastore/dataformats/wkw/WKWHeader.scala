@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.dataformats.wkw
 
 import com.google.common.io.{LittleEndianDataInputStream => DataInputStream}
+import com.scalableminds.util.box.Box
 import com.scalableminds.webknossos.datastore.dataformats.wkw.util.ResourceBox
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
@@ -18,8 +19,7 @@ import org.apache.commons.io.IOUtils
 
 import java.io._
 import java.nio.{ByteBuffer, ByteOrder}
-import com.scalableminds.util.tools.Box
-import com.scalableminds.util.tools.Box.tryo
+import Box.tryo
 
 object ChunkType extends Enumeration(1) {
   val Raw, LZ4, LZ4HC = Value
@@ -133,26 +133,26 @@ object WKWHeader {
     val numBytesPerVoxel = dataStream.readUnsignedByte() // voxel-size
 
     for {
-      _ <- Box.fromBool(magicByteBuffer.sameElements(magicBytes)) ?~! error(
+      _ <- Box.fromBool(magicByteBuffer.sameElements(magicBytes)) ?~> error(
         "Invalid magic bytes",
         magicBytes,
         magicByteBuffer
       )
-      _ <- Box.fromBool(version == currentVersion) ?~! error("Unknown version", currentVersion, version)
+      _ <- Box.fromBool(version == currentVersion) ?~> error("Unknown version", currentVersion, version)
       // We only support fileSideLengths < 1024, so that the total number of blocks per file fits in an Int.
-      _ <- Box.fromBool(numChunksPerShardDimension < 1024) ?~! error(
+      _ <- Box.fromBool(numChunksPerShardDimension < 1024) ?~> error(
         "Specified fileSideLength not supported",
         numChunksPerShardDimension,
         "[0, 1024)"
       )
       // We only support blockSideLengths < 1024, so that the total number of voxels per block fits in an Int.
-      _ <- Box.fromBool(numChunksPerShardDimension < 1024) ?~! error(
+      _ <- Box.fromBool(numChunksPerShardDimension < 1024) ?~> error(
         "Specified blockSideLength not supported",
         numVoxelsPerChunkDimension,
         "[0, 1024)"
       )
-      blockType <- tryo(ChunkType(blockTypeId)) ?~! error("Specified blockType is not supported")
-      voxelType <- tryo(ArrayDataType.fromWKWTypeId(voxelTypeId)) ?~! error("Specified voxelType is not supported")
+      blockType <- tryo(ChunkType(blockTypeId)) ?~> error("Specified blockType is not supported")
+      voxelType <- tryo(ArrayDataType.fromWKWTypeId(voxelTypeId)) ?~> error("Specified voxelType is not supported")
       numChannels = numBytesPerVoxel / ArrayDataType.bytesPerElement(voxelType)
     } yield {
       val jumpTable = if (ChunkType.isCompressed(blockType) && readJumpTable) {

@@ -155,7 +155,6 @@ export type SkeletonTracing = TracingBase & {
   readonly type: "skeleton";
   readonly trees: TreeMap;
   readonly treeGroups: Array<TreeGroup>;
-  readonly activeTreeId: number | null | undefined;
   readonly activeNodeId: number | null | undefined;
   readonly cachedMaxNodeId: number;
 };
@@ -163,9 +162,12 @@ export type SkeletonTracing = TracingBase & {
 // on the server. It deliberately lives outside of state.annotation.skeleton
 // so that it is not affected by the snapshot/restore machinery used while
 // rebasing in live collaboration mode (compare with LocalSegmentationState).
-// Note that activeGroupId lives here (unlike its siblings activeTreeId and
-// activeNodeId) because it is not persisted on the server.
+// Note that activeTreeId and activeGroupId live here (unlike their sibling
+// activeNodeId) because they are not persisted on the server. The
+// activeTreeId is kept consistent with the activeNodeId (the active node,
+// if set, is always part of the active tree).
 export type LocalSkeletonState = {
+  readonly activeTreeId: number | null | undefined;
   readonly activeGroupId: number | null | undefined;
   readonly navigationList: NavigationList;
   readonly showSkeletons: boolean;

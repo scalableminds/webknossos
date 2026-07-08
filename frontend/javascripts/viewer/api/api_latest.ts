@@ -279,16 +279,18 @@ class TracingApi {
    * Returns the id of the current active node.
    */
   getActiveNodeId(): number | null | undefined {
-    const tracing = assertSkeleton(Store.getState().annotation);
-    return getActiveNode(tracing)?.id ?? null;
+    const state = Store.getState();
+    const tracing = assertSkeleton(state.annotation);
+    return getActiveNode(tracing, state.localSkeletonState.activeTreeId)?.id ?? null;
   }
 
   /**
    * Returns the id of the current active tree.
    */
   getActiveTreeId(): number | null | undefined {
-    const tracing = assertSkeleton(Store.getState().annotation);
-    return getActiveTree(tracing)?.treeId ?? null;
+    const state = Store.getState();
+    assertSkeleton(state.annotation);
+    return getActiveTree(state)?.treeId ?? null;
   }
 
   /**
@@ -488,10 +490,11 @@ class TracingApi {
    * api.tracing.setTreeName("Special tree", 1);
    */
   setTreeName(name: string, treeId?: number | null | undefined) {
-    const skeletonTracing = assertSkeleton(Store.getState().annotation);
+    const state = Store.getState();
+    assertSkeleton(state.annotation);
 
     if (treeId == null) {
-      treeId = skeletonTracing.activeTreeId;
+      treeId = state.localSkeletonState.activeTreeId;
     }
 
     Store.dispatch(setTreeNameAction(name, treeId));
@@ -504,10 +507,11 @@ class TracingApi {
    * api.tracing.setTreeEdgeVisibility(false, 1);
    */
   setTreeEdgeVisibility(edgesAreVisible: boolean, treeId: number | null | undefined) {
-    const skeletonTracing = assertSkeleton(Store.getState().annotation);
+    const state = Store.getState();
+    assertSkeleton(state.annotation);
 
     if (treeId == null) {
-      treeId = skeletonTracing.activeTreeId;
+      treeId = state.localSkeletonState.activeTreeId;
     }
 
     Store.dispatch(setTreeEdgeVisibilityAction(treeId, edgesAreVisible));
@@ -1031,8 +1035,9 @@ class TracingApi {
    * api.tracing.getTreeName();
    */
   getTreeName(treeId?: number) {
-    const tracing = assertSkeleton(Store.getState().annotation);
-    const treeName = getTree(tracing, treeId)?.name;
+    const state = Store.getState();
+    assertSkeleton(state.annotation);
+    const treeName = getTree(state, treeId)?.name;
 
     if (!treeName) {
       throw new Error(`Tree with id ${treeId} does not exist.`);
@@ -1214,8 +1219,14 @@ class TracingApi {
    * api.tracing.setNodeRadius(1)
    */
   setNodeRadius(delta: number, nodeId?: number, treeId?: number): void {
-    const skeletonTracing = assertSkeleton(Store.getState().annotation);
-    const treeAndNode = getTreeAndNode(skeletonTracing, nodeId, treeId);
+    const state = Store.getState();
+    const tracing = assertSkeleton(state.annotation);
+    const treeAndNode = getTreeAndNode(
+      tracing,
+      state.localSkeletonState.activeTreeId,
+      nodeId,
+      treeId,
+    );
     if (!treeAndNode) return;
 
     const [_activeTree, node] = treeAndNode;
@@ -1229,11 +1240,16 @@ class TracingApi {
    * api.tracing.centerNode()
    */
   centerNode = (nodeId?: number): void => {
-    const skeletonTracing = getSkeletonTracing(Store.getState().annotation);
+    const state = Store.getState();
+    const skeletonTracing = getSkeletonTracing(state.annotation);
     if (!skeletonTracing) {
       return;
     }
-    const treeAndNode = getTreeAndNode(skeletonTracing, nodeId);
+    const treeAndNode = getTreeAndNode(
+      skeletonTracing,
+      state.localSkeletonState.activeTreeId,
+      nodeId,
+    );
     if (!treeAndNode) return;
 
     const [_activeTree, node] = treeAndNode;
@@ -1315,15 +1331,10 @@ class TracingApi {
     lengthInVx: number;
     shortestPath: number[];
   } {
-    const skeletonTracing = assertSkeleton(Store.getState().annotation);
-    const { node: sourceNode, tree: sourceTree } = getTreeAndNodeOrNull(
-      skeletonTracing,
-      sourceNodeId,
-    );
-    const { node: targetNode, tree: targetTree } = getTreeAndNodeOrNull(
-      skeletonTracing,
-      targetNodeId,
-    );
+    const state = Store.getState();
+    assertSkeleton(state.annotation);
+    const { node: sourceNode, tree: sourceTree } = getTreeAndNodeOrNull(state, sourceNodeId);
+    const { node: targetNode, tree: targetTree } = getTreeAndNodeOrNull(state, targetNodeId);
 
     if (sourceNode == null || targetNode == null) {
       throw new Error(`The node with id ${sourceNodeId} or ${targetNodeId} does not exist.`);
@@ -1357,7 +1368,6 @@ class TracingApi {
     });
     priorityQueue.queue([sourceNodeId, 0]);
 
-    const state = Store.getState();
     const getPos = (node: Readonly<MutableNode>) => getNodePosition(node, state);
 
     while (priorityQueue.length > 0) {

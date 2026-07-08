@@ -234,7 +234,26 @@ describe("Update Action Application for SkeletonTracing", () => {
             ]),
         );
 
-        expect(reappliedNewState).toEqual(state3);
+        if (skeletonTracing3.activeNodeId != null) {
+          // If an active node exists, the user-local activeTreeId must be
+          // consistent with it (it is re-derived from the active node while
+          // applying an updateActiveNode action).
+          expect(reappliedNewState.localSkeletonState.activeTreeId).toBe(
+            state3.localSkeletonState.activeTreeId,
+          );
+        }
+
+        // The activeTreeId is user-local state that is not tracked via update
+        // actions. During a real rebase it is not rewound (localSkeletonState is
+        // not part of the snapshot), so it is masked in the comparison below.
+        // Without an active node that anchors it, the replay cannot (and does
+        // not need to) restore it.
+        const stateWithRevertedActiveTreeChange = update(state3, {
+          localSkeletonState: {
+            activeTreeId: { $set: reappliedNewState.localSkeletonState.activeTreeId },
+          },
+        });
+        expect(reappliedNewState).toEqual(stateWithRevertedActiveTreeChange);
       });
     });
   });
@@ -246,7 +265,9 @@ describe("Update Action Application for SkeletonTracing", () => {
       createNode, // nodeId=2
       setActiveNodeAction(2),
     ]);
-    expect(getActiveNode(enforceSkeletonTracing(newState.annotation))?.id).toBe(2);
+    expect(
+      getActiveNode(newState.annotation.skeleton, newState.localSkeletonState.activeTreeId)?.id,
+    ).toBe(2);
 
     const newState2 = applyActions(newState, [deleteNodeAction(2)]);
 
@@ -286,7 +307,7 @@ describe("Update Action Application for SkeletonTracing", () => {
       createNode, // nodeId=2
       setActiveTreeAction(2),
     ]); // active tree: 2, active node: null
-    expect(getActiveTree(enforceSkeletonTracing(newState.annotation))?.treeId).toBe(2);
+    expect(getActiveTree(newState)?.treeId).toBe(2);
 
     // newState2 has active tree: 2, active node: null
     const newState2 = applyActions(newState, [deleteTreeAction(2)]);
@@ -301,15 +322,16 @@ describe("Update Action Application for SkeletonTracing", () => {
       applyActions(state, [applySkeletonUpdateActionsFromServerAction(updateActions)]),
     );
 
-    const { activeTreeId, activeNodeId } = enforceSkeletonTracing(newState3.annotation);
+    const { activeNodeId } = enforceSkeletonTracing(newState3.annotation);
+    const { activeTreeId } = newState3.localSkeletonState;
 
     expect(activeNodeId).toBe(1);
     expect(activeTreeId).toBe(1);
   });
 
   it("should keep user-local skeleton state when rewinding for a rebase", () => {
-    // activeGroupId, navigationList and showSkeletons live outside of
-    // state.annotation.skeleton (namely, in state.localSkeletonState) so that
+    // activeTreeId, activeGroupId, navigationList and showSkeletons live outside
+    // of state.annotation.skeleton (namely, in state.localSkeletonState) so that
     // the rewinding done during a rebase cannot reset them (see #9559).
     const snapshottedState = applyActions(initialState, [
       snapshotAnnotationStateForNextRebaseAction(),
@@ -331,6 +353,7 @@ describe("Update Action Application for SkeletonTracing", () => {
     // The annotation was rewound to the snapshot...
     expect(rewoundState.annotation.skeleton).toBe(snapshottedState.annotation.skeleton);
     // ...but the user-local skeleton state kept its live values.
+    expect(rewoundState.localSkeletonState).toBe(modifiedState.localSkeletonState);
     expect(rewoundState.localSkeletonState.activeGroupId).toBe(1);
     expect(rewoundState.localSkeletonState.showSkeletons).toBe(false);
     expect(rewoundState.localSkeletonState.navigationList).toEqual({

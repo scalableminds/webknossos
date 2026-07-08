@@ -121,7 +121,7 @@ export function SkeletonSpecificButtons() {
 
 function CreateTreeButton() {
   const dispatch = useDispatch();
-  const activeTree = useWkSelector((state) => getActiveTree(state.annotation.skeleton));
+  const activeTree = useWkSelector((state) => getActiveTree(state));
   const rgbColorString =
     activeTree != null
       ? `rgb(${activeTree.color.map((c) => Math.round(c * 255)).join(",")})`

@@ -179,7 +179,8 @@ describe("Skeleton", () => {
   it("should update node radius", async () => {
     const skeleton = skeletonCreator();
     const skeletonTracing = enforceSkeletonTracing(Store.getState().annotation);
-    const { activeNodeId, activeTreeId } = skeletonTracing;
+    const { activeNodeId } = skeletonTracing;
+    const { activeTreeId } = Store.getState().localSkeletonState;
 
     Store.dispatch(setNodeRadiusAction(2));
     await sleep(50);
@@ -193,7 +194,8 @@ describe("Skeleton", () => {
     const skeleton = skeletonCreator();
     Store.dispatch(createTreeAction());
     const skeletonTracing = enforceSkeletonTracing(Store.getState().annotation);
-    const { activeTreeId, trees } = skeletonTracing;
+    const { trees } = skeletonTracing;
+    const { activeTreeId } = Store.getState().localSkeletonState;
 
     if (activeTreeId != null) {
       const activeTree = trees.getOrThrow(activeTreeId);

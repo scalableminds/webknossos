@@ -37,6 +37,10 @@ export default function SkeletonLayerSettings() {
   const dispatch = useDispatch();
   const annotation = useWkSelector((state) => state.annotation);
   const showSkeletons = useWkSelector((state) => state.localSkeletonState.showSkeletons);
+  const activeNodeRadius = useWkSelector(
+    (state) =>
+      getActiveNode(state.annotation.skeleton, state.localSkeletonState.activeTreeId)?.radius ?? 0,
+  );
   const userConfiguration = useWkSelector((state) => state.userConfiguration);
   const dataset = useWkSelector((state) => state.dataset);
   const controlMode = useWkSelector((state) => state.temporaryConfiguration.controlMode);
@@ -150,7 +154,6 @@ export default function SkeletonLayerSettings() {
   const skeletonTracing = enforceSkeletonTracing(annotation);
   const isOnlyAnnotationLayer = annotation.annotationLayers.length === 1;
   const { tracingId } = skeletonTracing;
-  const activeNodeRadius = getActiveNode(skeletonTracing)?.radius ?? 0;
   const unit = LongUnitToShortUnitMap[dataset.dataSource.scale.unit];
   const isClippingDistanceDisabled =
     userConfiguration.clipSkeletonToCurrentSection && isSectionClippingAvailable;

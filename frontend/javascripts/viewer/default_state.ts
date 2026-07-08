@@ -318,6 +318,7 @@ const defaultState: WebknossosState = {
   },
   localSegmentationStateByLayer: {},
   localSkeletonState: {
+    activeTreeId: null,
     activeGroupId: null,
     navigationList: {
       list: [],

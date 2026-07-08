@@ -288,7 +288,7 @@ function Infos() {
     state.annotation.skeleton ? state.annotation.skeleton.activeNodeId : null,
   );
   const activeTreeId = useWkSelector((state) =>
-    state.annotation.skeleton ? state.annotation.skeleton.activeTreeId : null,
+    state.annotation.skeleton ? state.localSkeletonState.activeTreeId : null,
   );
   const dispatch = useDispatch();
 

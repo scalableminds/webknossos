@@ -7,8 +7,8 @@ object Dependencies {
     Seq(
       Resolver.typesafeRepo("releases"),
       "Unidata UCAR" at "https://artifacts.unidata.ucar.edu/content/repositories/unidata-releases/", // ucar deps
-      "SciJava Public" at "https://maven.scijava.org/content/repositories/public/", // cisd deps
-      "webknossos-maven" at "https://static.webknossos.org/maven/",  // backup to fetch cisd deps in case SciJava is down
+      // "SciJava Public" at "https://maven.scijava.org/content/repositories/public/", // cisd deps
+      "webknossos-maven" at "https://static.webknossos.org/maven/" // backup to fetch cisd deps in case SciJava is down
     )
 
   private val silhouetteVersion = "10.0.4"
@@ -39,7 +39,7 @@ object Dependencies {
     // password hashing with bcrypt. import at.favre.lib.crypto.bcrypt
     "at.favre.lib" % "bcrypt" % "0.10.2",
     // Play http filters. Not imported.
-    filters,
+    filters
   )
 
   val slickCodegenDependencies: Seq[ModuleID] = Seq(
@@ -52,7 +52,7 @@ object Dependencies {
     // SQL Queries postgres specifics. not imported.
     "org.postgresql" % "postgresql" % postgresVersion,
     // Logging. import org.slf4j
-    "org.slf4j" % "slf4j-simple" % "2.0.18",
+    "org.slf4j" % "slf4j-simple" % "2.0.18"
   )
 
   val webknossosDatastoreDependencies: Seq[ModuleID] = Seq(
@@ -73,7 +73,7 @@ object Dependencies {
     // Read hdf5 files. import ch.systemsx.cisd.hdf5
     "cisd" % "jhdf5" % "19.04.1",
     // MultiArray (ndarray) handles. import ucar
-    "edu.ucar" % "cdm-core" % "5.5.3",
+    "edu.ucar" % "cdm-core" % "5.4.2",
     // Amazon S3 cloud storage client. import software.amazon.awssdk
     "software.amazon.awssdk" % "s3" % awsVersion,
     // AWS Transfer Manager for multipart uploads. import software.amazon.awssdk.transfer.s3
@@ -127,7 +127,7 @@ object Dependencies {
     // SQL Queries postgres specifics. not imported.
     "org.postgresql" % "postgresql" % postgresVersion,
     /// WebAuthn for passkey authentication. import com.webauthn4j
-    "com.webauthn4j" % "webauthn4j-core" % "0.31.7.RELEASE" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
+    "com.webauthn4j" % "webauthn4j-core" % "0.31.7.RELEASE" exclude ("com.fasterxml.jackson.core", "jackson-databind")
   )
 
   val dependencyOverrides: Seq[ModuleID] = Seq(

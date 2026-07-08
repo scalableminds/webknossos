@@ -23,7 +23,7 @@ import com.scalableminds.webknossos.datastore.storage.{
   S3ClientPool
 }
 import com.scalableminds.webknossos.datastore.helpers.UPath
-import org.scalatest.Assertion
+import org.scalatest.{Assertion, ParallelTestExecution}
 import play.api.libs.json.JsString
 import play.api.test.WsTestClient
 
@@ -32,7 +32,7 @@ import java.util.UUID
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.global as globalExecutionContext
 
-class DataVaultTestSuite extends AsyncWordSpec {
+class DataVaultTestSuite extends AsyncWordSpec with ParallelTestExecution {
 
   val emptyTokenContext: TokenContext = TokenContext(None)
   val dummyDataStoreHost = "example.com"

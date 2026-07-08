@@ -1,10 +1,10 @@
 package com.scalableminds.util.image
 
 import java.awt.image.{BufferedImage, DataBufferByte}
-import java.io._
-import javax.imageio._
-import javax.imageio.stream._
-import java.{util => ju}
+import java.io.*
+import javax.imageio.*
+import javax.imageio.stream.*
+import java.util as ju
 import javax.imageio
 
 class ImageWriter(imageType: String, imageExt: String) {

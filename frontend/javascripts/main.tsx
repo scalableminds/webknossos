@@ -102,6 +102,7 @@ async function initApp() {
   ErrorHandling.initialize({
     throwAssertions: false,
   });
+
   message.config({ top: 30 });
   checkBrowserFeatures();
   const containerElement = document.getElementById("main-container");

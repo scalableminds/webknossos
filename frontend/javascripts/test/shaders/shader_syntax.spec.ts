@@ -166,7 +166,7 @@ describe.for<ShaderFunction>([
     expect(warningEmittedCount).toBe(0);
   });
 
-  it<TestContext>("Arbitrary Mode (no segmentation available)", ({ warningEmittedCount }) => {
+  it<TestContext>("Flight Mode (no segmentation available)", ({ warningEmittedCount }) => {
     const code = getShader({
       globalLayerCount: 2,
       colorLayerNames: ["color_layer_1", "color_layer_2"],
@@ -204,7 +204,7 @@ describe.for<ShaderFunction>([
     expect(warningEmittedCount).toBe(0);
   });
 
-  it<TestContext>("Arbitrary Mode (segmentation available)", ({ warningEmittedCount }) => {
+  it<TestContext>("Flight Mode (segmentation available)", ({ warningEmittedCount }) => {
     const code = getShader({
       globalLayerCount: 2,
       colorLayerNames: ["color_layer_1", "color_layer_2"],

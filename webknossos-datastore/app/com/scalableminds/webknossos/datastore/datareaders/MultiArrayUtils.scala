@@ -1,10 +1,10 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
 import ArrayDataType.ArrayDataType
+import com.scalableminds.util.box.{Box, Failure, Full}
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.{Box, Failure, Full}
-import com.scalableminds.util.tools.Box.tryo
-import ucar.ma2.{IndexIterator, InvalidRangeException, Range, Array => MultiArray, DataType => MADataType}
+import Box.tryo
+import ucar.ma2.{IndexIterator, InvalidRangeException, Range, Array as MultiArray, DataType as MADataType}
 
 import java.util
 

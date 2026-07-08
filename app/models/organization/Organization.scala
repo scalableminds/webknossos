@@ -17,7 +17,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentT
 import models.organization.AiPlan.AiPlan
 import slick.dbio.DBIO
 import slick.jdbc.GetResult
-import slick.jdbc.PostgresProfile.api._
+import slick.jdbc.PostgresProfile.api.*
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 
 import javax.inject.Inject

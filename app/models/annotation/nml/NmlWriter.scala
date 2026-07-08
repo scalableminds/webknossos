@@ -7,10 +7,10 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.xml.Xml
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
-import com.scalableminds.webknossos.datastore.SkeletonTracing._
+import com.scalableminds.webknossos.datastore.SkeletonTracing.*
 import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup}
-import com.scalableminds.webknossos.datastore.geometry._
+import com.scalableminds.webknossos.datastore.geometry.*
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayerType, FetchedAnnotationLayer}
 import com.scalableminds.webknossos.tracingstore.tracings.AnnotationUserStateUtils

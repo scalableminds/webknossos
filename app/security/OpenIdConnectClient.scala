@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{JsObject, Json, OFormat}
 import pdi.jwt.JwtJson
-import play.api.libs.ws._
+import play.api.libs.ws.*
 import utils.WkConf
 
 import java.math.BigInteger

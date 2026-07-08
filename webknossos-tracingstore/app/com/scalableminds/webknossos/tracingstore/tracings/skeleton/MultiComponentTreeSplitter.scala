@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.skeleton
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Tree, TreeGroup}
 import com.scalableminds.webknossos.tracingstore.tracings.GroupUtils
 import org.jgrapht.alg.connectivity.ConnectivityInspector
-import org.jgrapht.graph.{Multigraph, _}
+import org.jgrapht.graph.{Multigraph, *}
 
 import scala.jdk.CollectionConverters.ListHasAsScala
 

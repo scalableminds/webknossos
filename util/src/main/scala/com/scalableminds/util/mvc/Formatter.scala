@@ -1,8 +1,8 @@
 package com.scalableminds.util.mvc
 
+import com.scalableminds.util.box.{Box, Failure, Full, ParamFailure}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.TextUtils
-import com.scalableminds.util.tools.{Box, Failure, Full, ParamFailure}
 
 import java.text.SimpleDateFormat
 import java.util.Date

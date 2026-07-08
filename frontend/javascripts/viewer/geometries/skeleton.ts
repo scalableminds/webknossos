@@ -514,6 +514,17 @@ class Skeleton {
     return this.nodes.buffers.map((buffer) => buffer.mesh);
   }
 
+  // Updates the section-clipping uniforms on the node and edge shaders. This is
+  // called once per render pass (per viewport), see SceneController.updateSceneForCam.
+  // clippingAxis is the perpendicular axis of the rendered viewport (0/1/2), or
+  // -1 to disable section clipping for this pass.
+  setSectionClippingUniforms(clippingAxis: number, flycamPosition: Vector3): void {
+    for (const uniforms of [this.nodes.material.uniforms, this.edges.material.uniforms]) {
+      uniforms.clippingAxis.value = clippingAxis;
+      uniforms.currentSectionFlycamPosition.value = flycamPosition;
+    }
+  }
+
   getRootGroup(): Object3D {
     return this.rootGroup;
   }

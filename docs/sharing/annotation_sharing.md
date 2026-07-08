@@ -70,7 +70,7 @@ The information is JSON-encoded in the URL fragment and has the following format
   
   ```javascript
   type MappingType = "JSON" | "HDF5";
-  type ViewMode = "orthogonal" | "oblique" | "flight" | "volume";
+  type ViewMode = "orthogonal" | "flight";
   type Vector3 = [number, number, number];
   // For datasets with more than 3 dimensions
   type AdditionalCoordinate = { name: string; value: number };
@@ -121,6 +121,8 @@ The information is JSON-encoded in the URL fragment and has the following format
     stateByLayer?: UrlStateByLayer,
     additionalCoordinates?: AdditionalCoordinate[];
     nativelyRenderedLayerName?: string | null;
+    clippingDistance?: number;
+    clipSkeletonToCurrentSection?: boolean;
   |};
 
   ```

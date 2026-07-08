@@ -1,9 +1,9 @@
 package com.scalableminds.util.io
 
-import java.io._
+import com.scalableminds.util.box.{Box, Failure, Full}
+import java.io.*
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.{Box, Failure, Full}
-import com.scalableminds.util.tools.Box.tryo
+import Box.tryo
 import org.apache.commons.io.IOUtils
 import play.api.libs.json.{Json, Writes}
 

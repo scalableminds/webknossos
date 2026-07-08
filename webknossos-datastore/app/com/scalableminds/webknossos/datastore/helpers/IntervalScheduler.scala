@@ -6,7 +6,7 @@ import play.api.inject.ApplicationLifecycle
 
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
 import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import com.scalableminds.util.time.Instant
 
 trait IntervalScheduler {

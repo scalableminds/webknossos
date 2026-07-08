@@ -54,6 +54,12 @@ Yes, you can. WEBKNOSSOS allows the download and export of skeleton annotations 
 
 Use our free [Python library](https://docs.webknossos.org/webknossos-py/) to work with the WEBKNOSSOS standard formats.
 
+## How do I change the theme (e.g., dark mode)?
+
+WEBKNOSSOS lets you switch between Light Mode, Dark Mode, and a System Default that follows your operating system's theme.
+
+To change the theme, click on your user avatar in the top-right corner of the navigation bar, select `Account Settings`, and choose your preferred option under `Theme` on the `Profile` tab. See [Account Settings](./users/password.md#theme) for details.
+
 ## Newly registered users don't show up
 
 New user registrations need to be approved by the respective admin of your WEBKNOSSOS instance.

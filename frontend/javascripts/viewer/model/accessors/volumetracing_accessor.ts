@@ -253,14 +253,17 @@ const MAG_THRESHOLDS_FOR_ZOOM: Partial<Record<AnnotationToolId, number>> = {
 
 export type VolumeAnnotationZoomState =
   | { isDisabled: false }
-  | { isDisabled: true; reason: "needs_zoom_in" | "needs_zoom_out" | "needs_zoom" };
+  | { isDisabled: true; reason: "needs_zoom_in" | "needs_zoom_out" };
 
 export function isVolumeAnnotationDisallowedForZoom(
   tool: AnnotationTool,
   state: WebknossosState,
 ): VolumeAnnotationZoomState {
   if (state.annotation.volumes.length === 0) {
-    return { isDisabled: true, reason: "needs_zoom" };
+    // Volume annotation is not possible, but that's not because of an invalid
+    // zoom state. The call site should handle such cases differently (e.g.,
+    // the toolbar has more disabled-rules for this in place.)
+    return { isDisabled: false };
   }
 
   const threshold = MAG_THRESHOLDS_FOR_ZOOM[tool.id];
@@ -273,7 +276,9 @@ export function isVolumeAnnotationDisallowedForZoom(
 
   const activeSegmentation = getActiveSegmentationTracing(state);
   if (!activeSegmentation) {
-    return { isDisabled: true, reason: "needs_zoom" };
+    // Volume annotation is not possible, but that's not because of an invalid
+    // zoom state. Also see volumes.length === 0 for the same reasoning.
+    return { isDisabled: false };
   }
 
   const volumeMags = getMagInfoOfActiveSegmentationTracingLayer(state);

@@ -170,8 +170,6 @@ function getZoomExplanation(zoomState: VolumeAnnotationZoomState): string | null
       return DISABLED_EXPLANATION.ZOOM_IN_TO_USE_TOOL;
     case "needs_zoom_out":
       return DISABLED_EXPLANATION.ZOOM_OUT_TO_USE_TOOL;
-    case "needs_zoom":
-      return DISABLED_EXPLANATION.ZOOM_TO_USE_TOOL;
     default:
       return null;
   }

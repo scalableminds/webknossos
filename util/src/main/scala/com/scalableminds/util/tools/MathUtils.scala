@@ -1,22 +1,18 @@
 package com.scalableminds.util.tools
 
-import scala.Numeric.Implicits._
+import scala.Numeric.Implicits.*
 
-object Math {
-  val RotationMatrixSize3D = 16
-
-  val EPSILON = 1e-10
+object MathUtils {
+  private val EPSILON = 1e-10
 
   def square(x: Int): Int = x * x
 
   def square(d: Double): Double = d * d
 
-  val lnOf2: Double = scala.math.log(2) // natural log of 2
-
-  def log2(x: Double): Double = scala.math.log(x) / lnOf2
+  def isNearZero(d: Double): Boolean = d <= EPSILON && d >= -EPSILON
 
   def clamp[T](x: T, lower: T, upper: T)(implicit num: Numeric[T]): T = {
-    import num._
+    import num.*
     lower.max(x).min(upper)
   }
 

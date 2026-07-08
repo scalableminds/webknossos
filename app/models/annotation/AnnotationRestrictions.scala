@@ -6,10 +6,10 @@ import com.scalableminds.util.tools.Fox.toFox
 
 import javax.inject.Inject
 import models.user.{User, UserService}
-import play.api.libs.json._
-import models.annotation.AnnotationState._
+import play.api.libs.json.*
+import models.annotation.AnnotationState.*
 
-import scala.concurrent._
+import scala.concurrent.*
 
 class AnnotationRestrictions(implicit ec: ExecutionContext) {
   def allowAccess(user: Option[User]): Fox[Boolean] = Fox.successful(false)

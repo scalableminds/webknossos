@@ -1,16 +1,17 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.{Empty, Failure, Full}
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.{Empty, Failure, Fox, Full}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.datavault.{ByteRange, StartEndExclusiveByteRange, VaultPath}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
-import com.scalableminds.util.tools.Box.tryo
-import ucar.ma2.{Array => MultiArray}
+import com.scalableminds.util.box.Box.tryo
+import ucar.ma2.Array as MultiArray
 
 import java.nio.ByteOrder
 import java.util

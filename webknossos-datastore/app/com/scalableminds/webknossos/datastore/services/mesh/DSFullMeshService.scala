@@ -13,9 +13,9 @@ import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, SegmentationLayer, UsableDataSource}
 import com.scalableminds.webknossos.datastore.models.requests.Cuboid
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, VoxelPosition}
-import com.scalableminds.webknossos.datastore.services._
+import com.scalableminds.webknossos.datastore.services.*
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.webknossos.datastore.services.mapping.MappingService
 import com.scalableminds.webknossos.datastore.services.segmentindex.SegmentIndexFileService
 import play.api.libs.json.{Json, OFormat}

@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.services.segmentindex
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.datareaders.DatasetArray
@@ -14,7 +14,7 @@ import com.scalableminds.webknossos.datastore.services.{
   DSChunkCacheService,
   VoxelyticsZarrArtifactUtils
 }
-import ucar.ma2.{Array => MultiArray}
+import ucar.ma2.Array as MultiArray
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import play.api.libs.json.{JsResult, JsValue, Reads}
 

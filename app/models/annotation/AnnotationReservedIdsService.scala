@@ -1,14 +1,15 @@
 package models.annotation
 
+import com.scalableminds.util.box.{Empty, Failure, Full}
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Empty, Failure, Fox, Full}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationIdDomain.AnnotationIdDomain
 import com.typesafe.scalalogging.LazyLogging
 import slick.dbio.{DBIO, Effect, NoStream}
 import slick.sql.SqlAction
 import utils.sql.{SimpleSQLDAO, SqlClient, SqlToken}
-import slick.jdbc.PostgresProfile.api._
+import slick.jdbc.PostgresProfile.api.*
 
 import java.util.concurrent.Semaphore
 import javax.inject.Inject

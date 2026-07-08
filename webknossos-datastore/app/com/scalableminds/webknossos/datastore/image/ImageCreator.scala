@@ -284,8 +284,8 @@ object ImageCreator extends LazyLogging {
   private def normalizeIntensityImpl(value: Double, intensityRange: (Double, Double)): Int =
     Math
       .round(
-        com.scalableminds.util.tools.Math.clamp(
-          (com.scalableminds.util.tools.Math.clamp(
+        com.scalableminds.util.tools.MathUtils.clamp(
+          (com.scalableminds.util.tools.MathUtils.clamp(
             value,
             intensityRange._1,
             intensityRange._2

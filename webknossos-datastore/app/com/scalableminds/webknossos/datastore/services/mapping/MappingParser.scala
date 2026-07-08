@@ -7,7 +7,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayerMapping
 import com.typesafe.scalalogging.LazyLogging
 
-import java.io._
+import java.io.*
 import java.nio.file.Path
 import scala.collection.mutable
 

@@ -23,7 +23,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, E
 import com.scalableminds.webknossos.datastore.services.DSChunkCacheService
 import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, DataVaultService}
 import com.typesafe.scalalogging.LazyLogging
-import ucar.ma2.{Array => MultiArray}
+import ucar.ma2.Array as MultiArray
 
 import javax.inject.Inject
 import scala.collection.compat.immutable.ArraySeq

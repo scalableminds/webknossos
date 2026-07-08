@@ -10,7 +10,7 @@ import com.scalableminds.webknossos.datastore.datavault.{ByteRange, StartEndExcl
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataSourceId}
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.box.Box.tryo
-import ucar.ma2.{Array => MultiArray}
+import ucar.ma2.Array as MultiArray
 
 import scala.concurrent.ExecutionContext
 

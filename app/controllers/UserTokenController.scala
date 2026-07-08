@@ -14,7 +14,7 @@ import com.scalableminds.webknossos.datastore.services.{
   UserAccessRequest
 }
 import com.scalableminds.webknossos.tracingstore.tracings.TracingId
-import models.annotation._
+import models.annotation.*
 import models.dataset.{DataStoreService, DatasetDAO, DatasetService}
 import models.job.JobDAO
 import models.user.{User, UserService}

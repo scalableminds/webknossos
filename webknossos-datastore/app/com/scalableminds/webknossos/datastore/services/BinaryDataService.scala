@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, LayerCategory}
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
 import com.typesafe.scalalogging.LazyLogging
-import ucar.ma2.{Array => MultiArray}
+import ucar.ma2.Array as MultiArray
 import Box.tryo
 import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateService
 import com.scalableminds.webknossos.datastore.storage.{BucketProviderCache, DataVaultService}

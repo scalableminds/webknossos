@@ -18,15 +18,15 @@ import com.scalableminds.webknossos.tracingstore.tracings.{TracingId, TracingTyp
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, CreateAnnotationEvent, OpenAnnotationEvent}
 import models.annotation.AnnotationState.Cancelled
-import models.annotation._
+import models.annotation.*
 import models.dataset.{DatasetDAO, DatasetService}
 import models.project.ProjectDAO
 import models.task.{TaskDAO, TaskService}
 import models.team.{TeamDAO, TeamService}
-import models.user.time._
+import models.user.time.*
 import models.user.{User, UserDAO, UserService}
 import org.apache.pekko.util.Timeout
-import play.api.libs.json._
+import play.api.libs.json.*
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import play.silhouette.api.Silhouette
 import security.{URLSharing, UserAwareRequestLogging, WkEnv}
@@ -35,7 +35,7 @@ import utils.WkConf
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 case class ReserveIdParameters(
     domain: AnnotationIdDomain,

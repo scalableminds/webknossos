@@ -6,10 +6,10 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.box.Full
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
-import play.api.libs.json._
+import play.api.libs.json.*
 
 import javax.inject.Inject
-import models.annotation._
+import models.annotation.*
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.{WkEnv, WkSilhouetteEnvironment}
 import com.scalableminds.util.objectid.ObjectId

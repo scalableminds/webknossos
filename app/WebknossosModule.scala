@@ -20,7 +20,7 @@ import models.job.{JobService, WorkerLivenessService}
 import models.organization.FreeCreditTransactionService
 import models.storage.UsedStorageService
 import models.task.TaskService
-import models.user._
+import models.user.*
 import models.user.time.TimeSpanService
 import models.voxelytics.LokiClient
 import security.CertificateValidationService

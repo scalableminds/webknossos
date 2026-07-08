@@ -4,7 +4,7 @@ import com.scalableminds.util.box.{Box, Empty, Failure, Full, ParamFailure}
 import com.scalableminds.util.mvc.JsonResultAttributes
 import com.scalableminds.util.tools.Fox
 import play.api.http.Status
-import play.api.libs.json._
+import play.api.libs.json.*
 
 import scala.concurrent.{ExecutionContext, Future}
 

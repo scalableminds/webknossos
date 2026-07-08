@@ -112,6 +112,7 @@ const memoizedDeriveData = memoizeOne(
 
 type Props = {
   skeletonTracing: SkeletonTracing;
+  activeTreeId: number | null | undefined;
 };
 
 function CommentTabView(props: Props) {
@@ -168,9 +169,9 @@ function CommentTabView(props: Props) {
     // If the activeNode has a comment, scroll to it,
     // otherwise scroll to the activeTree
     if (isVisibleInDom) {
-      scrollToActiveCommentOrTree(activeComment, props.skeletonTracing.activeTreeId);
+      scrollToActiveCommentOrTree(activeComment, props.activeTreeId);
     }
-  }, [activeComment, props.skeletonTracing.activeTreeId, isVisibleInDom]);
+  }, [activeComment, props.activeTreeId, isVisibleInDom]);
 
   function scrollToActiveCommentOrTree(
     activeComment: MutableCommentType | undefined,
@@ -201,7 +202,7 @@ function CommentTabView(props: Props) {
   }
 
   function nextComment(forward: boolean = true) {
-    const activeNode = getActiveNode(props.skeletonTracing);
+    const activeNode = getActiveNode(props.skeletonTracing, props.activeTreeId);
     if (activeNode != null) {
       const sortAscending = forward ? isSortedAscending : !isSortedAscending;
       const { trees } = props.skeletonTracing;
@@ -248,8 +249,8 @@ function CommentTabView(props: Props) {
       createComment(insertLineBreaks ? commentText.replace(/\\n/g, "\n") : commentText);
 
       // make sure that the skeleton tree node is expanded
-      if (props.skeletonTracing.activeTreeId)
-        setExpandedTreeIds([...expandedTreeIds, props.skeletonTracing.activeTreeId.toString()]);
+      if (props.activeTreeId)
+        setExpandedTreeIds([...expandedTreeIds, props.activeTreeId.toString()]);
     } else {
       deleteComment();
     }
@@ -285,7 +286,8 @@ function CommentTabView(props: Props) {
   }
 
   function getActiveComment(): MutableCommentType | undefined {
-    const { activeTreeId, activeNodeId } = props.skeletonTracing;
+    const { activeNodeId } = props.skeletonTracing;
+    const { activeTreeId } = props;
 
     if (activeTreeId && activeNodeId) {
       const activeComment = props.skeletonTracing.trees
@@ -428,7 +430,7 @@ function CommentTabView(props: Props) {
   // Replace line breaks as they will otherwise be stripped when shown in an input field
   const activeCommentContent = activeComment?.content.replace(/\r?\n/g, "\\n");
   const isMultilineComment = activeCommentContent?.indexOf("\\n") !== -1;
-  const activeNode = getActiveNode(props.skeletonTracing);
+  const activeNode = getActiveNode(props.skeletonTracing, props.activeTreeId);
   const isEditingDisabled = activeNode == null || !allowUpdate;
 
   const isEditingDisabledMessage = messages["tracing.read_only_mode_notification"](
@@ -564,7 +566,7 @@ const CommentTabViewMemo = React.memo(
       return false;
     }
 
-    if (prevPops.skeletonTracing.activeTreeId !== nextProps.skeletonTracing.activeTreeId) {
+    if (prevPops.activeTreeId !== nextProps.activeTreeId) {
       return false;
     }
 
@@ -591,8 +593,10 @@ function CommentTabViewWrapper() {
   // 2. Safe-guard that a skeleton tracing is available
 
   const skeletonTracing = useWkSelector((state) => getSkeletonTracing(state.annotation));
+  const activeTreeId = useWkSelector((state) => state.localSkeletonState.activeTreeId);
 
-  if (skeletonTracing) return <CommentTabViewMemo skeletonTracing={skeletonTracing} />;
+  if (skeletonTracing)
+    return <CommentTabViewMemo skeletonTracing={skeletonTracing} activeTreeId={activeTreeId} />;
 
   return null;
 }

@@ -46,11 +46,7 @@ import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import { LongUnitToShortUnitMap } from "viewer/constants";
 import { isAnnotationOwner, mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
-import {
-  areGeometriesTransformed,
-  enforceSkeletonTracing,
-  getTree,
-} from "viewer/model/accessors/skeletontracing_accessor";
+import { areGeometriesTransformed, getTree } from "viewer/model/accessors/skeletontracing_accessor";
 import { getActiveSegmentationTracing } from "viewer/model/accessors/volumetracing_accessor";
 import { addUserBoundingBoxesAction } from "viewer/model/actions/annotation_actions";
 import { setVersionNumberAction } from "viewer/model/actions/save_actions";
@@ -344,9 +340,8 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
 // Let the user confirm the deletion of the initial node (node with id 1) of a task
 function checkAndConfirmDeletingInitialNode(treeIds: number[]) {
   const state = Store.getState();
-  const skeletonTracing = enforceSkeletonTracing(state.annotation);
 
-  const hasNodeWithIdOne = (id: number) => getTree(skeletonTracing, id)?.nodes.has(1);
+  const hasNodeWithIdOne = (id: number) => getTree(state, id)?.nodes.has(1);
 
   const needsCheck = state.task != null && treeIds.find(hasNodeWithIdOne) != null;
   return new Promise<void>((resolve, reject) => {
@@ -369,8 +364,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       isUploading: false,
       isDownloadingNML: false,
       isDownloadingCSV: false,
-      selectedTreeIds:
-        props.skeletonTracing?.activeTreeId != null ? [props.skeletonTracing.activeTreeId] : [],
+      selectedTreeIds: props.activeTreeId != null ? [props.activeTreeId] : [],
       groupToDelete: null,
     };
   }
@@ -558,7 +552,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 
     // If there is an active group, ask the user whether to delete it or not
     if (this.props.skeletonTracing) {
-      const { activeGroupId } = this.props.skeletonTracing;
+      const { activeGroupId } = this.props;
 
       if (activeGroupId != null) {
         this.showDeleteGroupModal(activeGroupId);
@@ -718,7 +712,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         }));
       }
     } else {
-      const { activeTreeId } = tracing;
+      const { activeTreeId } = this.props;
 
       this.props.onDeselectActiveGroup();
 
@@ -795,8 +789,8 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       <TreeHierarchyView
         trees={this.props.skeletonTracing.trees}
         treeGroups={this.props.skeletonTracing.treeGroups}
-        activeTreeId={this.props.skeletonTracing.activeTreeId}
-        activeGroupId={this.props.skeletonTracing.activeGroupId}
+        activeTreeId={this.props.activeTreeId}
+        activeGroupId={this.props.activeGroupId}
         allowUpdate={this.props.allowUpdate}
         sortBy={sortBy}
         selectedTreeIds={this.state.selectedTreeIds}
@@ -916,10 +910,10 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
   };
 
   componentDidUpdate(prevProps: Props) {
-    if (this.props.skeletonTracing?.activeTreeId !== prevProps.skeletonTracing?.activeTreeId) {
-      if (this.props.skeletonTracing?.activeTreeId != null) {
+    if (this.props.activeTreeId !== prevProps.activeTreeId) {
+      if (this.props.activeTreeId != null) {
         this.setState({
-          selectedTreeIds: [this.props.skeletonTracing.activeTreeId],
+          selectedTreeIds: [this.props.activeTreeId],
         });
       } else {
         this.setState({
@@ -943,7 +937,8 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       );
     }
 
-    const { showSkeletons, trees, treeGroups } = skeletonTracing;
+    const { showSkeletons } = this.props;
+    const { trees, treeGroups } = skeletonTracing;
     const noTreesAndGroups = trees.size() === 0 && size(treeGroups) === 0;
     const orderAttribute = this.props.userConfiguration.sortTreesByName ? "name" : "timestamp";
     // Avoid that the title switches to the other title during the fadeout of the Modal
@@ -1118,6 +1113,9 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 const mapStateToProps = (state: WebknossosState) => ({
   allowUpdate: mayEditAnnotation(state),
   skeletonTracing: state.annotation.skeleton,
+  showSkeletons: state.localSkeletonState.showSkeletons,
+  activeTreeId: state.localSkeletonState.activeTreeId,
+  activeGroupId: state.localSkeletonState.activeGroupId,
   annotationId: state.annotation.annotationId,
   userConfiguration: state.userConfiguration,
   isSkeletonLayerTransformed: areGeometriesTransformed(state),

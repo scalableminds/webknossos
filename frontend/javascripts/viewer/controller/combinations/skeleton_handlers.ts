@@ -61,11 +61,14 @@ export function handleMergeTrees(
   isTouch: boolean,
 ) {
   const nodeId = maybeGetNodeIdFromPosition(view, position, plane, isTouch);
-  const skeletonTracing = enforceSkeletonTracing(Store.getState().annotation);
 
   // otherwise we have hit the background and do nothing
   if (nodeId != null && nodeId > 0) {
-    const activeNode = getActiveNode(skeletonTracing);
+    const state = Store.getState();
+    const activeNode = getActiveNode(
+      state.annotation.skeleton,
+      state.localSkeletonState.activeTreeId,
+    );
     if (activeNode) {
       Store.dispatch(mergeTreesAction(activeNode.id, nodeId));
     }
@@ -78,11 +81,14 @@ export function handleDeleteEdge(
   isTouch: boolean,
 ) {
   const nodeId = maybeGetNodeIdFromPosition(view, position, plane, isTouch);
-  const skeletonTracing = enforceSkeletonTracing(Store.getState().annotation);
 
   // otherwise we have hit the background and do nothing
   if (nodeId != null && nodeId > 0) {
-    const activeNode = getActiveNode(skeletonTracing);
+    const state = Store.getState();
+    const activeNode = getActiveNode(
+      state.annotation.skeleton,
+      state.localSkeletonState.activeTreeId,
+    );
     if (activeNode) {
       Store.dispatch(deleteEdgeAction(activeNode.id, nodeId));
     }
@@ -191,7 +197,11 @@ export function moveNode(
   const skeletonTracing = getSkeletonTracing(state.annotation);
   if (!skeletonTracing) return;
 
-  const treeAndNode = getTreeAndNode(skeletonTracing, nodeId);
+  const treeAndNode = getTreeAndNode(
+    skeletonTracing,
+    state.localSkeletonState.activeTreeId,
+    nodeId,
+  );
   if (!treeAndNode) return;
 
   const [activeTree, activeNode] = treeAndNode;
@@ -240,10 +250,15 @@ export function moveNode(
 }
 
 export function finishNodeMovement(nodeId: number) {
-  const skeletonTracing = getSkeletonTracing(Store.getState().annotation);
+  const state = Store.getState();
+  const skeletonTracing = getSkeletonTracing(state.annotation);
   if (!skeletonTracing) return;
 
-  const treeAndNode = getTreeAndNode(skeletonTracing, nodeId);
+  const treeAndNode = getTreeAndNode(
+    skeletonTracing,
+    state.localSkeletonState.activeTreeId,
+    nodeId,
+  );
   if (!treeAndNode) return;
 
   const [activeTree, node] = treeAndNode;
@@ -295,8 +310,10 @@ export function getOptionsForCreateSkeletonNode(
 ) {
   const state = Store.getState();
   const additionalCoordinates = state.flycam.additionalCoordinates;
-  const skeletonTracing = enforceSkeletonTracing(state.annotation);
-  const activeNode = getActiveNode(skeletonTracing);
+  const activeNode = getActiveNode(
+    state.annotation.skeleton,
+    state.localSkeletonState.activeTreeId,
+  );
   const initialViewportRotation =
     OrthoBaseRotations[activeViewport || state.viewModeData.plane.activeViewport];
   const rotationInDegree = getFlycamRotationWithAppendedRotation(
@@ -371,7 +388,12 @@ export function createSkeletonNode(
     // Note that the new node isn't necessarily active
     const newNodeId = newSkeleton.cachedMaxNodeId;
 
-    const treeAndNode = getTreeAndNode(newSkeleton, newNodeId, newSkeleton.activeTreeId);
+    const treeAndNode = getTreeAndNode(
+      newSkeleton,
+      state.localSkeletonState.activeTreeId,
+      newNodeId,
+      state.localSkeletonState.activeTreeId,
+    );
     if (!treeAndNode) return;
 
     api.tracing.centerPositionAnimated(
@@ -388,8 +410,11 @@ export function createSkeletonNode(
 }
 
 function updateTraceDirection(position: Vector3) {
-  const skeletonTracing = enforceSkeletonTracing(Store.getState().annotation);
-  const activeNode = getActiveNode(skeletonTracing);
+  const state = Store.getState();
+  const activeNode = getActiveNode(
+    state.annotation.skeleton,
+    state.localSkeletonState.activeTreeId,
+  );
   if (activeNode != null) {
     const activeNodePosition = getNodePosition(activeNode, Store.getState());
     return Store.dispatch(
@@ -495,11 +520,13 @@ function getPrecedingNodeFromTree(
 }
 
 export function toSubsequentNode(): void {
-  const tracing = getSkeletonTracing(Store.getState().annotation);
+  const state = Store.getState();
+  const tracing = getSkeletonTracing(state.annotation);
   if (!tracing) {
     return;
   }
-  const { navigationList, activeNodeId, activeTreeId } = tracing;
+  const { navigationList, activeTreeId } = state.localSkeletonState;
+  const { activeNodeId } = tracing;
   if (activeNodeId == null) return;
   const isValidList =
     activeNodeId === navigationList.list[navigationList.activeIndex] && navigationList.list.length;
@@ -516,7 +543,7 @@ export function toSubsequentNode(): void {
     Store.dispatch(updateNavigationListAction(navigationList.list, navigationList.activeIndex + 1));
   } else {
     // search for subsequent node in tree
-    const { tree, node } = getTreeAndNodeOrNull(tracing, activeNodeId, activeTreeId);
+    const { tree, node } = getTreeAndNodeOrNull(state, activeNodeId, activeTreeId);
     if (!tree || !node) return;
     const nextNodeId = getSubsequentNodeFromTree(
       tree,
@@ -534,11 +561,13 @@ export function toSubsequentNode(): void {
   }
 }
 export function toPrecedingNode(): void {
-  const tracing = getSkeletonTracing(Store.getState().annotation);
+  const state = Store.getState();
+  const tracing = getSkeletonTracing(state.annotation);
   if (!tracing) {
     return;
   }
-  const { navigationList, activeNodeId, activeTreeId } = tracing;
+  const { navigationList, activeTreeId } = state.localSkeletonState;
+  const { activeNodeId } = tracing;
   if (activeNodeId == null) return;
   const isValidList =
     activeNodeId === navigationList.list[navigationList.activeIndex] && navigationList.list.length;
@@ -549,7 +578,7 @@ export function toPrecedingNode(): void {
     Store.dispatch(updateNavigationListAction(navigationList.list, navigationList.activeIndex - 1));
   } else {
     // search for preceding node in tree
-    const { tree, node } = getTreeAndNodeOrNull(tracing, activeNodeId, activeTreeId);
+    const { tree, node } = getTreeAndNodeOrNull(state, activeNodeId, activeTreeId);
     if (!tree || !node) return;
     const nextNodeId = getPrecedingNodeFromTree(
       tree,

@@ -355,7 +355,7 @@ describe("API Skeleton", () => {
       const skeletonTracing = enforceSkeletonTracing(Store.getState().annotation);
       // Throw error if no node / tree is active by passing -1 as id.
       const newNode = skeletonTracing.trees
-        .getOrThrow(skeletonTracing.activeTreeId || -1)
+        .getOrThrow(Store.getState().localSkeletonState.activeTreeId || -1)
         .nodes.getOrThrow(skeletonTracing.activeNodeId || -1);
       const propsToCheck = {
         untransformedPosition: newNode.untransformedPosition,
@@ -396,7 +396,7 @@ describe("API Skeleton", () => {
         const skeletonTracing = enforceSkeletonTracing(Store.getState().annotation);
         // Throw error if no node / tree is active by passing -1 as id.
         const newNode = skeletonTracing.trees
-          .getOrThrow(skeletonTracing.activeTreeId || -1)
+          .getOrThrow(Store.getState().localSkeletonState.activeTreeId || -1)
           .nodes.getOrThrow(skeletonTracing.activeNodeId || -1);
         const newNodeQuaternion = new Quaternion().setFromEuler(
           new Euler(...toRadian(newNode.rotation)),

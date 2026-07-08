@@ -20,7 +20,7 @@ import {
   setActiveNodeAction,
   setTreeVisibilityAction,
 } from "viewer/model/actions/skeletontracing_actions";
-import type { ContextMenuInfo } from "viewer/store";
+import Store, { type ContextMenuInfo } from "viewer/store";
 import { LayoutEvents, layoutEmitter } from "../layouting/layout_persistence";
 import {
   extractShortestPathAsNewTree,
@@ -39,6 +39,7 @@ export function useNodeContextMenuOptions(
   const { clickedNodeId } = contextInfo;
 
   const skeletonTracing = useWkSelector((state) => state.annotation.skeleton);
+  const activeTreeId = useWkSelector((state) => state.localSkeletonState.activeTreeId);
   const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
   const useLegacyBindings = useWkSelector((state) => state.userConfiguration.useLegacyBindings);
   const allowUpdate = useWkSelector(mayEditAnnotation);
@@ -51,7 +52,7 @@ export function useNodeContextMenuOptions(
 
   const { node: clickedNode, tree: clickedTree } =
     skeletonTracing && clickedNodeId != null
-      ? getTreeAndNodeOrNull(skeletonTracing, clickedNodeId)
+      ? getTreeAndNodeOrNull(Store.getState(), clickedNodeId)
       : { node: null, tree: null };
 
   const minCutItem = useMaybeMinCutItem(clickedTree);
@@ -65,7 +66,7 @@ export function useNodeContextMenuOptions(
     return [{ key: "disabled-error", disabled: true, label: "Error: Could not find clicked node" }];
   }
 
-  const { activeTreeId, activeNodeId } = skeletonTracing;
+  const { activeNodeId } = skeletonTracing;
 
   const areInSameTree = activeTreeId === clickedTree.treeId;
   const isBranchpoint = clickedTree.branchPoints.find((bp) => bp.nodeId === clickedNodeId) != null;

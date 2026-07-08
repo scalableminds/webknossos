@@ -396,9 +396,17 @@ function* checkForAgglomerateTreeModification(
     ({ nodeId, treeId } = action);
   }
 
-  const skeletonTracing = yield* select((state) => enforceSkeletonTracing(state.annotation));
+  const state = yield* select((_state) => _state);
 
-  if (getTreeAndNode(skeletonTracing, nodeId, treeId, TreeTypeEnum.AGGLOMERATE)) {
+  if (
+    getTreeAndNode(
+      state.annotation.skeleton,
+      state.localSkeletonState.activeTreeId,
+      nodeId,
+      treeId,
+      TreeTypeEnum.AGGLOMERATE,
+    )
+  ) {
     Toast.warning(
       "Agglomerate trees can only be modified when using the proofreading tool to add or delete edges. Consider switching to the proofreading tool or converting the agglomerate tree to a normal tree via right-click in the Skeleton tab.",
       { timeout: 10000 },

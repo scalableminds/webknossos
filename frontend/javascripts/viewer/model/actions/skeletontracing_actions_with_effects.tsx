@@ -1,11 +1,7 @@
 import { Modal } from "antd";
 import renderIndependently from "libs/render_independently";
 import messages from "messages";
-import {
-  enforceSkeletonTracing,
-  getTree,
-  getTreeAndNode,
-} from "viewer/model/accessors/skeletontracing_accessor";
+import { getTree, getTreeAndNode } from "viewer/model/accessors/skeletontracing_accessor";
 import type { WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import RemoveTreeModal from "viewer/view/remove_tree_modal";
@@ -30,11 +26,15 @@ export const deleteNodeAsUserAction = (
   nodeId?: number,
   treeId?: number,
 ): DeleteNodeAction | NoAction | DeleteTreeAction => {
-  const skeletonTracing = enforceSkeletonTracing(state.annotation);
-  const treeAndNode = getTreeAndNode(skeletonTracing, nodeId, treeId);
+  const treeAndNode = getTreeAndNode(
+    state.annotation.skeleton,
+    state.localSkeletonState.activeTreeId,
+    nodeId,
+    treeId,
+  );
 
   if (!treeAndNode) {
-    const tree = getTree(skeletonTracing, treeId);
+    const tree = getTree(state, treeId);
     if (!tree) return noAction();
 
     // If the tree is empty, it will be deleted
@@ -71,8 +71,7 @@ function confirmDeletingInitialNode(treeId: number) {
 
 export const handleDeleteTreeByUser = (treeId?: number) => {
   const state = Store.getState();
-  const skeletonTracing = enforceSkeletonTracing(state.annotation);
-  const tree = getTree(skeletonTracing, treeId);
+  const tree = getTree(state, treeId);
   if (!tree) return;
 
   if (state.task != null && tree.nodes.has(1)) {

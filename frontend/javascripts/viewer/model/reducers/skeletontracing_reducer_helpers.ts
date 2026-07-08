@@ -512,8 +512,8 @@ export function createTree(
   let groupId = null;
 
   if (addToActiveGroup) {
-    const groupIdOfActiveTree = getActiveTree(skeletonTracing)?.groupId;
-    const groupIdOfActiveGroup = getActiveTreeGroup(skeletonTracing)?.groupId;
+    const groupIdOfActiveTree = getActiveTree(state)?.groupId;
+    const groupIdOfActiveGroup = getActiveTreeGroup(state)?.groupId;
     groupId = groupIdOfActiveTree ?? groupIdOfActiveGroup;
   }
 
@@ -544,7 +544,7 @@ export function getOrCreateTree(
   timestamp: number,
   type?: TreeType | null | undefined,
 ): Tree | null {
-  const tree = getTree(skeletonTracing, treeId, type);
+  const tree = getTree(state, treeId, type);
   if (tree != null) {
     return tree;
   }

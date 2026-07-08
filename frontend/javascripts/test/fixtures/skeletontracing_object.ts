@@ -11,6 +11,11 @@ export const initialState = update(defaultState, {
       $set: null,
     },
   },
+  localSkeletonState: {
+    activeTreeId: {
+      $set: 1,
+    },
+  },
   dataset: {
     dataSource: {
       dataLayers: {

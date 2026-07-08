@@ -494,7 +494,7 @@ class Skeleton {
     let { activeNodeId } = skeletonTracing;
     activeNodeId = activeNodeId == null ? -1 : activeNodeId;
 
-    let { activeTreeId } = skeletonTracing;
+    let { activeTreeId } = state.localSkeletonState;
     activeTreeId = activeTreeId == null ? -1 : activeTreeId;
 
     const nodeUniforms = this.nodes.material.uniforms;

@@ -270,14 +270,20 @@ const rules = [
   requiresAllowUpdateRule,
   proofreadRule,
   // Volume tool rules
-  noVisibleSegmentationTracingRule,
   rotationVolumeRule,
-  zoomInvalidForTracingVolumeRule,
   mergerModeVolumeRule,
-  noSegmentationForMagRule,
   editableMappingActiveRule,
   segmentationTransformedRule,
   jsonMappingActiveRule,
+  // The volume tool rules can distinguish between zoom-in and zoom-out
+  // which is why they come before the more generic noSegmentation et. al.
+  // rules.
+  brushZoomRule,
+  traceZoomRule,
+  fillZoomRule,
+  noSegmentationForMagRule,
+  noVisibleSegmentationTracingRule,
+  zoomInvalidForTracingVolumeRule,
   // Skeleton rules
   noSkeletonRule,
   skeletonNotVisibleRule,
@@ -288,10 +294,6 @@ const rules = [
   boundingBoxTransformedRule,
   // Area measurement rules
   areaMeasurementRotationRule,
-  // Per-tool zoom rules (only reached when volume is not globally disabled)
-  brushZoomRule,
-  traceZoomRule,
-  fillZoomRule,
 ];
 
 function getToolDisabledReason(tool: AnnotationTool, params: Params): DisabledInfo {

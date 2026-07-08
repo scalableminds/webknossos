@@ -10,7 +10,7 @@ import org.scalatest.wordspec.AsyncWordSpec
 import java.io.FileOutputStream
 import java.nio.file.{Files, Path}
 import java.util.zip.{CRC32, ZipEntry, ZipOutputStream}
-import scala.concurrent.ExecutionContext.{global => globalExecutionContext}
+import scala.concurrent.ExecutionContext.global as globalExecutionContext
 
 class ZipDataVaultTestSuite extends AsyncWordSpec with BeforeAndAfterAll {
 

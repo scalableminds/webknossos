@@ -63,7 +63,7 @@ trait UPath {
 case class ZipEntryUPath(outerPath: UPath, innerPath: String) extends UPath {
 
   override def toString: String =
-    if (innerPath.isEmpty) s"$outerPath${ZipEntryUPath.separatorRoot}"
+    if (innerPath.isEmpty) s"$outerPath${ZipEntryUPath.separatorRootOnly}"
     else s"$outerPath${ZipEntryUPath.separatorWithPath}$innerPath"
 
   override def getScheme: Option[String] = outerPath.getScheme
@@ -107,7 +107,7 @@ case class ZipEntryUPath(outerPath: UPath, innerPath: String) extends UPath {
 
 object ZipEntryUPath {
   val separatorWithPath: String = "|zip:"
-  val separatorRoot: String = "|zip"
+  val separatorRootOnly: String = "|zip"
   val relevantFileExtensions: Seq[String] = Seq(".zip", ".ozx")
 }
 
@@ -149,7 +149,7 @@ object UPath {
    */
   private def detectAndSplitZipEntryPath(literal: String): Option[(String, String)] = {
     val separatorWithPathIdx = literal.indexOf(ZipEntryUPath.separatorWithPath)
-    val isRootReference = separatorWithPathIdx < 0 && literal.endsWith(ZipEntryUPath.separatorRoot)
+    val isRootReference = separatorWithPathIdx < 0 && literal.endsWith(ZipEntryUPath.separatorRootOnly)
     if (separatorWithPathIdx >= 0 || isRootReference)
       Some(splitZipLiteralUnsafe(literal, separatorWithPathIdx))
     else
@@ -158,7 +158,7 @@ object UPath {
 
   // Given literal that has been detected to be a zip path, split outer and inner path literal.
   private def splitZipLiteralUnsafe(literal: String, separatorWithPathIdx: Int): (String, String) = {
-    if (literal.indexOf(ZipEntryUPath.separatorRoot) != literal.lastIndexOf(ZipEntryUPath.separatorRoot))
+    if (literal.indexOf(ZipEntryUPath.separatorRootOnly) != literal.lastIndexOf(ZipEntryUPath.separatorRootOnly))
       throw new Exception(s"Invalid zip path “$literal”: Nested zip paths are not supported.")
 
     val (outerLiteral, innerPath) =
@@ -168,7 +168,7 @@ object UPath {
           literal.drop(separatorWithPathIdx + ZipEntryUPath.separatorWithPath.length)
         )
       else
-        (literal.dropRight(ZipEntryUPath.separatorRoot.length), "")
+        (literal.dropRight(ZipEntryUPath.separatorRootOnly.length), "")
 
     if (outerLiteral.isEmpty)
       throw new Exception(s"Invalid zip path “$literal”: Outer path must not be empty.")

@@ -6,10 +6,9 @@ import { getSkeletonTracing } from "viewer/model/accessors/skeletontracing_acces
 import { setActiveNodeAction } from "viewer/model/actions/skeletontracing_actions";
 import type { CommentType } from "viewer/model/types/tree_types";
 import DomVisibilityObserver from "viewer/view/components/dom_visibility_observer";
-import { MarkdownModal } from "viewer/view/components/markdown_modal";
+import { CommentEditor } from "./comment_editor";
 import { CommentTabToolbar } from "./comment_tab_toolbar";
 import { CommentTreeView } from "./comment_tree_view";
-import { useActiveCommentEditing } from "./hooks/use_comment_editing";
 import { useCommentKeyboardShortcuts, useCommentNavigation } from "./hooks/use_comment_navigation";
 import { useCommentSorting } from "./hooks/use_comment_sorting";
 import { useCommentTabData } from "./hooks/use_comment_tab_data";
@@ -26,7 +25,6 @@ function CommentTab() {
     useExpandedTreeKeys(treeNodes);
   const { nextComment, previousComment } = useCommentNavigation(sortedComments);
   useCommentKeyboardShortcuts(nextComment, previousComment);
-  const editing = useActiveCommentEditing();
 
   const activeTreeId = useWkSelector(
     (state) => getSkeletonTracing(state.annotation)?.activeTreeId ?? null,
@@ -34,30 +32,11 @@ function CommentTab() {
   const [isMarkdownModalOpen, setIsMarkdownModalOpen] = useState(false);
 
   // When a comment is created, make sure its tree is expanded so the comment is visible.
-  const expandActiveTreeFor = useCallback(
-    (newContent: string) => {
-      if (newContent !== "" && activeTreeId != null) {
-        expandTree(activeTreeId);
-      }
-    },
-    [activeTreeId, expandTree],
-  );
-
-  const saveCommentFromInput = useCallback(
-    (inputValue: string) => {
-      editing.saveCommentFromInput(inputValue);
-      expandActiveTreeFor(inputValue);
-    },
-    [editing.saveCommentFromInput, expandActiveTreeFor],
-  );
-
-  const saveCommentFromModal = useCallback(
-    (content: string) => {
-      editing.saveComment(content);
-      expandActiveTreeFor(content);
-    },
-    [editing.saveComment, expandActiveTreeFor],
-  );
+  const expandActiveTree = useCallback(() => {
+    if (activeTreeId != null) {
+      expandTree(activeTreeId);
+    }
+  }, [activeTreeId, expandTree]);
 
   const selectComment = useCallback(
     (comment: CommentType) => {
@@ -72,18 +51,6 @@ function CommentTab() {
     [dispatch, treeNodes, expandTree],
   );
 
-  const markdownModal =
-    !editing.isDisabled && editing.activeNodeId != null ? (
-      <MarkdownModal
-        key={editing.activeNodeId}
-        source={editing.activeComment?.content ?? ""}
-        isOpen={isMarkdownModalOpen}
-        onChange={saveCommentFromModal}
-        onOk={() => setIsMarkdownModalOpen(false)}
-        label="Comment"
-      />
-    ) : null;
-
   return (
     <div id={commentTabId} className="flex-column padded-tab-content" style={{ height: "inherit" }}>
       <DomVisibilityObserver targetId={commentTabId}>
@@ -96,20 +63,24 @@ function CommentTab() {
 
           return (
             <React.Fragment>
-              {markdownModal}
               <CommentTabToolbar
                 targetId={commentTabId}
                 sorting={sorting}
                 sortedComments={sortedComments}
-                editing={editing}
+                editor={
+                  <CommentEditor
+                    isMarkdownModalOpen={isMarkdownModalOpen}
+                    onOpenMarkdownModal={() => setIsMarkdownModalOpen(true)}
+                    onCloseMarkdownModal={() => setIsMarkdownModalOpen(false)}
+                    onCommentCreated={expandActiveTree}
+                  />
+                }
                 onChangeSortMode={setSortMode}
                 onToggleSortDirection={toggleSortDirection}
                 onPreviousComment={previousComment}
                 onNextComment={nextComment}
                 onToggleExpandAll={toggleExpandAll}
                 onSelectComment={selectComment}
-                onSaveCommentInput={saveCommentFromInput}
-                onOpenMarkdownModal={() => setIsMarkdownModalOpen(true)}
               />
               <Divider size="small" />
               <div style={{ flex: "1 1 auto" }}>

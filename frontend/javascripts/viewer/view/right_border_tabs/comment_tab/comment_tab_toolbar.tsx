@@ -1,7 +1,6 @@
 import {
   ArrowLeftOutlined,
   ArrowRightOutlined,
-  EditOutlined,
   InfoCircleOutlined,
   SearchOutlined,
   ShrinkOutlined,
@@ -13,24 +12,21 @@ import messages from "messages";
 import type React from "react";
 import type { CommentType } from "viewer/model/types/tree_types";
 import ButtonComponent from "viewer/view/components/button_component";
-import InputComponent from "viewer/view/components/input_component";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import { type CommentSorting, CommentSortMode } from "./comment_tab_types";
-import type { CommentEditing } from "./hooks/use_comment_editing";
 
 type CommentTabToolbarProps = {
   targetId: string;
   sorting: CommentSorting;
   sortedComments: CommentType[];
-  editing: CommentEditing;
+  // The comment editor (input + markdown button), rendered between the navigation buttons.
+  editor: React.ReactNode;
   onChangeSortMode: (mode: CommentSortMode) => void;
   onToggleSortDirection: () => void;
   onPreviousComment: () => void;
   onNextComment: () => void;
   onToggleExpandAll: () => void;
   onSelectComment: (comment: CommentType) => void;
-  onSaveCommentInput: (inputValue: string) => void;
-  onOpenMarkdownModal: () => void;
 };
 
 function buildSortMenu(
@@ -60,7 +56,7 @@ function buildSortMenu(
 }
 
 export function CommentTabToolbar(props: CommentTabToolbarProps) {
-  const { editing, sorting } = props;
+  const { sorting } = props;
 
   return (
     <Space>
@@ -85,27 +81,7 @@ export function CommentTabToolbar(props: CommentTabToolbarProps) {
         variant="text"
         color="default"
       />
-      <InputComponent
-        value={editing.inputValue}
-        disabled={editing.isDisabled}
-        title={editing.disabledReason ?? undefined}
-        onChange={(evt: React.ChangeEvent<HTMLInputElement>) =>
-          props.onSaveCommentInput(evt.target.value)
-        }
-        onPressEnter={(evt: React.KeyboardEvent<HTMLInputElement>) =>
-          (evt.target as HTMLElement).blur()
-        }
-        placeholder="Add comment"
-      />
-      <ButtonComponent
-        onClick={props.onOpenMarkdownModal}
-        disabled={editing.isDisabled}
-        title={editing.disabledReason ?? "Open dialog to edit comment in multi-line mode"}
-        type={editing.isMultiline ? "primary" : "default"}
-        icon={<EditOutlined />}
-        variant="text"
-        color="default"
-      />
+      {props.editor}
       <ButtonComponent
         title="Jump to next comment"
         onClick={props.onNextComment}

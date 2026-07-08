@@ -1,4 +1,5 @@
 import { EditOutlined } from "@ant-design/icons";
+import { Space } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import type React from "react";
 import { getSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
@@ -52,7 +53,7 @@ export function CommentEditor({
   };
 
   return (
-    <>
+    <Space>
       <InputComponent
         value={inputValue}
         disabled={isDisabled}
@@ -64,6 +65,7 @@ export function CommentEditor({
           (evt.target as HTMLElement).blur()
         }
         placeholder="Add comment"
+        size="small"
       />
       <ButtonComponent
         onClick={onOpenMarkdownModal}
@@ -85,6 +87,6 @@ export function CommentEditor({
           label="Comment"
         />
       ) : null}
-    </>
+    </Space>
   );
 }

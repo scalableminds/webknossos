@@ -6,9 +6,9 @@ object Dependencies {
   val dependencyResolvers: Seq[MavenRepository] =
     Seq(
       Resolver.typesafeRepo("releases"),
-      "Unidata UCAR" at "https://artifacts.unidata.ucar.edu/content/repositories/unidata-releases/", // ucar deps
+      // "Unidata UCAR" at "https://artifacts.unidata.ucar.edu/content/repositories/unidata-releases/", // ucar deps
       // "SciJava Public" at "https://maven.scijava.org/content/repositories/public/", // cisd deps
-      "webknossos-maven" at "https://static.webknossos.org/maven/" // backup to fetch cisd deps in case SciJava is down
+      "webknossos-maven" at "https://static.webknossos.org/maven/" // backup to fetch cisd/ucar deps in case the above are down
     )
 
   private val silhouetteVersion = "10.0.4"
@@ -73,7 +73,7 @@ object Dependencies {
     // Read hdf5 files. import ch.systemsx.cisd.hdf5
     "cisd" % "jhdf5" % "19.04.1",
     // MultiArray (ndarray) handles. import ucar
-    "edu.ucar" % "cdm-core" % "5.4.2",
+    "edu.ucar" % "cdm-core" % "5.5.3",
     // Amazon S3 cloud storage client. import software.amazon.awssdk
     "software.amazon.awssdk" % "s3" % awsVersion,
     // AWS Transfer Manager for multipart uploads. import software.amazon.awssdk.transfer.s3

@@ -674,13 +674,13 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
       count <- countList.headOption.toFox
     } yield count
 
-  def countAllByDataset(datasetId: ObjectId)(using ctx: DBAccessContext): Fox[Int] =
+  // Counts all annotations in the db that reference this dataset. Independent of isDeleted or user read access
+  // This is used during dataset deletion to prevent foreign key constraints blocking the deletion.
+  def countAllByDatasetIncludingDeleted(datasetId: ObjectId): Fox[Int] =
     for {
-      accessQuery <- readAccessQuery
       countList <- run(q"""SELECT COUNT(*)
-                           FROM $existingCollectionName
-                           WHERE _dataset = $datasetId
-                           AND $accessQuery""".as[Int])
+                           FROM webknossos.annotations
+                           WHERE _dataset = $datasetId""".as[Int])
       count <- countList.headOption.toFox
     } yield count
 

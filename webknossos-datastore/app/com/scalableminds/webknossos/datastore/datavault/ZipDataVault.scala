@@ -38,7 +38,7 @@ class ZipDataVault(outerVaultPath: VaultPath) extends DataVault with LazyLogging
   private val zip64EocdSize: Int = 56
   private val eocdSearchSize: Int = 65 * 1024 + 22
 
-  // Using AlfuCache with capacity 1 instead of lazy val avoids caching failures.
+  // Using AlfuCache with capacity 1 instead of lazy val avoids Failures being cached (a retry upon another access is done).
   private val centralDirectoryCache: AlfuCache[Unit, Map[String, ZipCentralDirEntry]] = AlfuCache(maxCapacity = 1)
 
   private def getCentralDirectory(using ec: ExecutionContext, tc: TokenContext): Fox[Map[String, ZipCentralDirEntry]] =

@@ -1055,7 +1055,6 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                   <ButtonComponent
                     onClick={this.toggleAllTrees}
                     title="Toggle Visibility of All Trees (1)"
-                    disabled={!this.props.allowUpdate}
                     icon={<Icon component={ToggleOnIcon} />}
                     variant="text"
                     color="default"
@@ -1063,7 +1062,6 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                   <ButtonComponent
                     onClick={this.toggleInactiveTrees}
                     title="Toggle Visibility of Inactive Trees (2)"
-                    disabled={!this.props.allowUpdate}
                     icon={<Icon component={ToggleOffIcon} />}
                     variant="text"
                     color="default"

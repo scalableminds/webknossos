@@ -225,13 +225,11 @@ export function useNodeContextMenuOptions(
         measureAndShowFullTreeLength(clickedTree.treeId, clickedTree.name, voxelSize.unit),
       label: "Path Length of this Tree",
     },
-    mayEditClickedTree
-      ? {
-          key: "hide-tree",
-          onClick: () => dispatch(setTreeVisibilityAction(clickedTree.treeId, false)),
-          label: "Hide this Tree",
-        }
-      : null,
+    {
+      key: "hide-tree",
+      onClick: () => dispatch(setTreeVisibilityAction(clickedTree.treeId, false)),
+      label: "Hide this Tree",
+    },
     ...infoRows,
   ];
 

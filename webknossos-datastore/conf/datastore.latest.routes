@@ -101,6 +101,7 @@ POST          /datasets/:datasetId/layers/:dataLayerName/adHocMesh              
 
 # Segment-Index files
 GET           /datasets/:datasetId/layers/:dataLayerName/hasSegmentIndex                                              @com.scalableminds.webknossos.datastore.controllers.DataSourceController.checkSegmentIndexFile(datasetId: ObjectId, dataLayerName: String)
+GET           /datasets/:datasetId/layers/:dataLayerName/hasSegmentStatisticsFile                                     @com.scalableminds.webknossos.datastore.controllers.DataSourceController.checkSegmentStatisticsFile(datasetId: ObjectId, dataLayerName: String)
 POST          /datasets/:datasetId/layers/:dataLayerName/segmentIndex                                                 @com.scalableminds.webknossos.datastore.controllers.DataSourceController.querySegmentIndex(datasetId: ObjectId, dataLayerName: String)
 POST          /datasets/:datasetId/layers/:dataLayerName/segmentIndex/:segmentId                                      @com.scalableminds.webknossos.datastore.controllers.DataSourceController.getSegmentIndex(datasetId: ObjectId, dataLayerName: String, segmentId: String)
 POST          /datasets/:datasetId/layers/:dataLayerName/segmentStatistics/volume                                     @com.scalableminds.webknossos.datastore.controllers.DataSourceController.getSegmentVolume(datasetId: ObjectId, dataLayerName: String)

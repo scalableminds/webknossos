@@ -10,7 +10,7 @@ name: Autodeployment
 #       - it fetches relevant information and then sets an enabled boolean
 #       - trigger-autodeployment-on-ci-success depends on it and in case enabled is true then calls autodeploy.
 #   - trigger path 3: when PR is merged or closed
-#       - cleanup-deployment-on-close is called when a PR is closed (that’s its if condition)
+#       - cleanup-deployment-on-close is called when a PR with autodeploy label is closed (that’s its if condition)
 #       - it deletes the github deployment if necessary
 
 on:

@@ -43,7 +43,6 @@ import {
   updateTemporarySettingAction,
   updateUserSettingAction,
 } from "viewer/model/actions/settings_actions";
-import { setToolAction } from "viewer/model/actions/ui_actions";
 import type {
   ClickSegmentAction,
   CreateCellAction,

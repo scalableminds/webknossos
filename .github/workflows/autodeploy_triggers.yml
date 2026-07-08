@@ -1,5 +1,18 @@
 name: Autodeployment
 
+# triggers the auto dev deployment flow defined in autodeploy.yml and cleans up after PR is closed
+#   - trigger path 1: when autodeploy label is added to PR
+#       - check-autodeploy-label is called when the label is added. (that’s its if condition)
+#       - it fetches relevant information and then sets a skip boolean
+#       - trigger-autodeployment-on-label depends on it and in case skip is false then calls autodeploy.
+#   - trigger path 2: when CI pipeline completes on push
+#       - check-build-smoketest-push-result is called when the CI after a push completes (that’s its if condition)
+#       - it fetches relevant information and then sets an enabled boolean
+#       - trigger-autodeployment-on-ci-success depends on it and in case enabled is true then calls autodeploy.
+#   - trigger path 3: when PR is merged or closed
+#       - cleanup-deployment-on-close is called when a PR is closed (that’s its if condition)
+#       - it deletes the github deployment if necessary
+
 on:
   pull_request:
     types:

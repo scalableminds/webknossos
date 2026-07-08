@@ -255,6 +255,7 @@ jobs:
         if: ${{ ! startsWith(github.ref, 'refs/tags/') && github.actor != 'dependabot[bot]' }}
         uses: ./.github/actions/retry
         with:
+          # Push all images in parallel. Retry wraps all, so successes may be retried too if one fails. That’s ok, it’s idempotent.
           run: |
             set -o pipefail
             pids=()
@@ -272,6 +273,7 @@ jobs:
         if: ${{ github.actor != 'dependabot[bot]' }}
         uses: ./.github/actions/retry
         with:
+          # Push all images in parallel. Retry wraps all, so successes may be retried too if one fails. That’s ok, it’s idempotent.
           run: |
             set -o pipefail
             pids=()

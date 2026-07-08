@@ -93,7 +93,10 @@ function resolveAffectedTrees(
     case "MERGE_TREES":
       // Proofreading dispatches these with initiator "PROOFREADING" on agglomerate trees. The
       // user-initiated variants during proofreading return early in the respective case bodies.
-      return [findTreeByNodeId(skeletonTracing.trees, action.sourceNodeId)];
+      return [
+        findTreeByNodeId(skeletonTracing.trees, action.sourceNodeId),
+        findTreeByNodeId(skeletonTracing.trees, action.targetNodeId),
+      ];
     case "ADD_TREES_AND_GROUPS":
       // Allowed only when importing agglomerate trees (e.g. the proofreading agglomerate import).
       return Array.from(action.trees.values());

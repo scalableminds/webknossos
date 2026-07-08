@@ -801,6 +801,9 @@ object Msg {
   object SegmentIndexFile {
     val pathNotAbsolute = "Path of segment index file is ambiguous, must be absolute."
   }
+  object SegmentStatisticsFile {
+    val pathNotAbsolute = "Path of segment statistics file is ambiguous, must be absolute."
+  }
   object Zarr {
     def invalidChunkCoordinates(coordinates: String): String =
       s"Invalid chunk coordinates $coordinates. Expected dot-separated coordinates like “c.<additional_axes.>x.y.z”."

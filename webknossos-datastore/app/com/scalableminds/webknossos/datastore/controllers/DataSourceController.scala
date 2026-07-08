@@ -36,6 +36,7 @@ import com.scalableminds.webknossos.datastore.services.mesh.{
   MeshMappingHelper
 }
 import com.scalableminds.webknossos.datastore.services.segmentindex.SegmentIndexFileService
+import com.scalableminds.webknossos.datastore.services.segmentstatistics.SegmentStatisticsFileService
 import com.scalableminds.webknossos.datastore.services.connectome.{
   ByAgglomerateIdsRequest,
   BySynapseIdsRequest,
@@ -72,6 +73,7 @@ class DataSourceController @Inject() (
     val binaryDataServiceHolder: BinaryDataServiceHolder,
     connectomeFileService: ConnectomeFileService,
     segmentIndexFileService: SegmentIndexFileService,
+    segmentStatisticsFileService: SegmentStatisticsFileService,
     agglomerateService: AgglomerateService,
     storageUsageService: DSUsedStorageService,
     datasetErrorLoggingService: DSDatasetErrorLoggingService,
@@ -284,12 +286,14 @@ class DataSourceController @Inject() (
       segmentIndexFileService.clearCache(dataSourceId, layerName)
     val closedConnectomeFileHandleCount =
       connectomeFileService.clearCache(dataSourceId, layerName)
+    val closedSegmentStatisticsFileHandleCount =
+      segmentStatisticsFileService.clearCache(dataSourceId, layerName)
     datasetErrorLoggingService.clearForDataset(organizationId, datasetDirectoryName)
     fullMeshService.clearCache(datasetId, layerName)
     val clearedVaultCacheEntriesOpt = dataSourceService.invalidateVaultCache(dataSource, layerName)
     clearedVaultCacheEntriesOpt.foreach { clearedVaultCacheEntries =>
       logger.info(
-        s"Cleared caches for ${layerName.map(l => s"layer '$l' of ").getOrElse("")}dataset $organizationId/$datasetDirectoryName: closed $closedAgglomerateFileHandleCount agglomerate file handles, $closedMeshFileHandleCount mesh file handles, $closedSegmentIndexFileHandleCount segment index file handles, $closedConnectomeFileHandleCount connectome file handles, removed $clearedBucketProviderCount bucketProviders, $clearedVaultCacheEntries vault cache entries and $removedChunksCount image chunk cache entries."
+        s"Cleared caches for ${layerName.map(l => s"layer '$l' of ").getOrElse("")}dataset $organizationId/$datasetDirectoryName: closed $closedAgglomerateFileHandleCount agglomerate file handles, $closedMeshFileHandleCount mesh file handles, $closedSegmentIndexFileHandleCount segment index file handles, $closedConnectomeFileHandleCount connectome file handles, $closedSegmentStatisticsFileHandleCount segment statistics file handles, removed $clearedBucketProviderCount bucketProviders, $clearedVaultCacheEntries vault cache entries and $removedChunksCount image chunk cache entries."
       )
     }
   }

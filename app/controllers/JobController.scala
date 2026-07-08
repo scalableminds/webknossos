@@ -7,7 +7,7 @@ import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
 import models.dataset.{DataStoreDAO, DatasetDAO, DatasetLayerAdditionalAxesDAO, DatasetService}
-import models.job._
+import models.job.*
 import models.organization.{CreditTransactionDAO, CreditTransactionService, OrganizationDAO, PricingPlan}
 import models.user.{MultiUserDAO, UserService}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}

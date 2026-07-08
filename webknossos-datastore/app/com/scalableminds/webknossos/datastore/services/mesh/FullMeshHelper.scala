@@ -74,7 +74,7 @@ trait FullMeshHelper extends LazyLogging {
     val outputNumBytesLong = 80L + 4L + chunkBytesTotal
     if (outputNumBytesLong > Int.MaxValue)
       throw new IllegalStateException(
-        s"Mesh is too large to combine into a single STL buffer: $outputNumBytesLong bytes (${numFacesLong} faces). " +
+        s"Mesh is too large to combine into a single STL buffer: $outputNumBytesLong bytes ($numFacesLong faces). " +
           "Use per-chunk surface area computation instead."
       )
     val constantStlHeader = Array.fill[Byte](80)(0)

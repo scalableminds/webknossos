@@ -1,7 +1,7 @@
 package models.user
 
 import play.silhouette.api.{Identity, LoginInfo}
-import com.scalableminds.util.accesscontext._
+import com.scalableminds.util.accesscontext.*
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
@@ -16,10 +16,10 @@ import com.scalableminds.webknossos.schema.Tables.{
 }
 
 import javax.inject.Inject
-import models.team._
-import play.api.libs.json._
+import models.team.*
+import play.api.libs.json.*
 import slick.jdbc.GetResult
-import slick.jdbc.PostgresProfile.api._
+import slick.jdbc.PostgresProfile.api.*
 import slick.jdbc.TransactionIsolation.Serializable
 import utils.sql.{SQLDAO, SimpleSQLDAO, SqlClient, SqlToken}
 import com.scalableminds.util.objectid.ObjectId
@@ -205,7 +205,7 @@ class UserDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
   // Necessary since a tuple can only have 22 elements
   implicit def GetResultUserCompactInfo: GetResult[UserCompactInfo] =
     prs => {
-      import prs._
+      import prs.*
       UserCompactInfo(
         _id = <<[ObjectId],
         _multiUserId = <<[ObjectId],

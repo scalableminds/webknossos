@@ -12,7 +12,7 @@ import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.box.Box.tryo
 
 import scala.concurrent.ExecutionContext
-import ucar.ma2.{Array => MultiArray}
+import ucar.ma2.Array as MultiArray
 
 object PrecomputedArray extends LazyLogging {
   def open(

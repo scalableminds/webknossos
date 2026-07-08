@@ -1,10 +1,10 @@
 package backend
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
-import com.scalableminds.webknossos.datastore.SkeletonTracing._
+import com.scalableminds.webknossos.datastore.SkeletonTracing.*
 import com.scalableminds.webknossos.datastore.helpers.TreeAgglomerateInfo
-import com.scalableminds.webknossos.tracingstore.tracings._
-import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating._
+import com.scalableminds.webknossos.tracingstore.tracings.*
+import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.*
 import org.scalatest.wordspec.AsyncWordSpec
 
 class SkeletonUpdateActionsUnitTestSuite extends AsyncWordSpec {

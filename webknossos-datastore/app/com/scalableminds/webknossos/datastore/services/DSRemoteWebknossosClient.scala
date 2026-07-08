@@ -32,7 +32,7 @@ import play.api.libs.json.{Json, OFormat}
 
 import java.nio.file.Path
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 case class DataStoreStatus(ok: Boolean, url: String)
 object DataStoreStatus {

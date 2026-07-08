@@ -16,7 +16,7 @@ import play.api.libs.json.{JsArray, JsObject, JsValue, Json}
 import utils.WkConf
 
 import javax.inject.Inject
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.concurrent.{ExecutionContext, Future}
 import scala.math.Ordering.Implicits.infixOrderingOps
 

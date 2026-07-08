@@ -4,7 +4,7 @@ import com.scalableminds.util.box.{Box, Failure as BoxFailure}
 import Box.tryo
 
 import scala.util.Using.Releasable
-import scala.util.{Success, Using, Failure => TryFailure}
+import scala.util.{Success, Using, Failure as TryFailure}
 
 object ResourceBox {
   def apply[R](resource: => R): Box[R] =

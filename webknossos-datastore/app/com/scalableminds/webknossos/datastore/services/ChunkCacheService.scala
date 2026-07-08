@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.services
 import com.scalableminds.util.box.{Box, Full}
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import ucar.ma2.{Array => MultiArray}
+import ucar.ma2.Array as MultiArray
 import jakarta.inject.Inject
 
 trait ChunkCacheService {

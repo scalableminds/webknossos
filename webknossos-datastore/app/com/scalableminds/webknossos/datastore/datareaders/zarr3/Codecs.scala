@@ -16,7 +16,7 @@ import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{Format, JsObject, JsResult, JsString, JsSuccess, JsValue, Json, OFormat, Reads, Writes}
 import play.api.libs.json.Json.WithDefaultValues
-import ucar.ma2.{Array => MultiArray}
+import ucar.ma2.Array as MultiArray
 
 import java.util.zip.CRC32C
 

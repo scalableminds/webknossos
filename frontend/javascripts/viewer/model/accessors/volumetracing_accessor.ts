@@ -251,9 +251,16 @@ const MAG_THRESHOLDS_FOR_ZOOM: Partial<Record<AnnotationToolId, number>> = {
   [AnnotationTool.FILL_CELL.id]: 1,
 };
 
-export function isVolumeAnnotationDisallowedForZoom(tool: AnnotationTool, state: WebknossosState) {
+export type VolumeAnnotationZoomState =
+  | { isDisabled: false }
+  | { isDisabled: true; reason: "needs_zoom_in" | "needs_zoom_out" | "needs_zoom" };
+
+export function isVolumeAnnotationDisallowedForZoom(
+  tool: AnnotationTool,
+  state: WebknossosState,
+): VolumeAnnotationZoomState {
   if (state.annotation.volumes.length === 0) {
-    return true;
+    return { isDisabled: true, reason: "needs_zoom" };
   }
 
   const threshold = MAG_THRESHOLDS_FOR_ZOOM[tool.id];
@@ -261,12 +268,12 @@ export function isVolumeAnnotationDisallowedForZoom(tool: AnnotationTool, state:
   if (threshold == null) {
     // If there is no threshold for the provided tool, it doesn't need to be
     // disabled.
-    return false;
+    return { isDisabled: false };
   }
 
   const activeSegmentation = getActiveSegmentationTracing(state);
   if (!activeSegmentation) {
-    return true;
+    return { isDisabled: true, reason: "needs_zoom" };
   }
 
   const volumeMags = getMagInfoOfActiveSegmentationTracingLayer(state);
@@ -278,7 +285,10 @@ export function isVolumeAnnotationDisallowedForZoom(tool: AnnotationTool, state:
     // (e.g., to avoid performance issues when annotating large structures in a coarse
     // mag). Annotating in such a mag doesn't make sense, since it is not actually
     // rendered/labeled, so the tool is disabled.
-    return true;
+    return {
+      isDisabled: true,
+      reason: finestExistingMagIndex < rawMagIndex ? "needs_zoom_in" : "needs_zoom_out",
+    };
   }
 
   // The current mag is too high for the tool
@@ -286,7 +296,7 @@ export function isVolumeAnnotationDisallowedForZoom(tool: AnnotationTool, state:
   const isZoomStepTooHigh =
     getActiveMagIndexForLayer(state, activeSegmentation.tracingId) >
     threshold + finestExistingMagIndex;
-  return isZoomStepTooHigh;
+  return isZoomStepTooHigh ? { isDisabled: true, reason: "needs_zoom_in" } : { isDisabled: false };
 }
 
 const MAX_BRUSH_SIZE_FOR_MAG1 = 300;

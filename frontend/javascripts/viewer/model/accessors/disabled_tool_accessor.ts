@@ -14,6 +14,7 @@ import {
   getRenderableMagForSegmentationTracing,
   hasAgglomerateMapping,
   isVolumeAnnotationDisallowedForZoom,
+  type VolumeAnnotationZoomState,
 } from "viewer/model/accessors/volumetracing_accessor";
 import type { WebknossosState } from "viewer/store";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
@@ -37,6 +38,10 @@ const DISABLED_EXPLANATION = {
   NO_UPDATE_ALLOWED: "Editing is disabled currently.",
   ZOOM_IN_TO_USE_TOOL:
     "Please zoom in further to use this tool. If you want to edit volume data on this zoom level, create an annotation with restricted magnifications from the extended annotation menu in the dashboard.",
+  ZOOM_OUT_TO_USE_TOOL:
+    "Please zoom out further to use this tool. If you want to edit volume data on this zoom level, create an annotation with restricted magnifications from the extended annotation menu in the dashboard.",
+  ZOOM_TO_USE_TOOL:
+    "Please adjust the zoom to use this tool. If you want to edit volume data on this zoom level, create an annotation with restricted magnifications from the extended annotation menu in the dashboard.",
   ZOOM_INVALID_FOR_TRACING:
     "Volume annotation is disabled since the current zoom value is not in the required range. Please adjust the zoom level.",
   NO_SKELETONS:
@@ -80,9 +85,9 @@ type Params = {
   hasSkeleton: boolean;
   areSkeletonsVisible: boolean;
   areGeometriesTransformed: boolean;
-  isZoomStepTooHighForBrushing: boolean;
-  isZoomStepTooHighForTracing: boolean;
-  isZoomStepTooHighForFilling: boolean;
+  zoomStateForBrushing: VolumeAnnotationZoomState;
+  zoomStateForTracing: VolumeAnnotationZoomState;
+  zoomStateForFilling: VolumeAnnotationZoomState;
   agglomerateState: AgglomerateState;
   isUneditableMappingLocked: boolean;
   activeOrganization: APIOrganization | null;
@@ -156,24 +161,37 @@ const jsonMappingActiveRule = new DisableRule(
     isJSONMappingActive ? DISABLED_EXPLANATION.JSON_MAPPING_ACTIVE : null,
 );
 
+function getZoomExplanation(zoomState: VolumeAnnotationZoomState): string | null {
+  if (!zoomState.isDisabled) {
+    return null;
+  }
+  switch (zoomState.reason) {
+    case "needs_zoom_in":
+      return DISABLED_EXPLANATION.ZOOM_IN_TO_USE_TOOL;
+    case "needs_zoom_out":
+      return DISABLED_EXPLANATION.ZOOM_OUT_TO_USE_TOOL;
+    case "needs_zoom":
+      return DISABLED_EXPLANATION.ZOOM_TO_USE_TOOL;
+    default:
+      return null;
+  }
+}
+
 // Zoom-based rules that only apply per individual tool type when volume is not globally disabled.
 // Ordered according to _getVolumeDisabledWhenVolumeIsEnabled.
 const brushZoomRule = new DisableRule(
   [AnnotationTool.BRUSH, AnnotationTool.ERASE_BRUSH],
-  ({ isZoomStepTooHighForBrushing }) =>
-    isZoomStepTooHighForBrushing ? DISABLED_EXPLANATION.ZOOM_IN_TO_USE_TOOL : null,
+  ({ zoomStateForBrushing }) => getZoomExplanation(zoomStateForBrushing),
 );
 
 const traceZoomRule = new DisableRule(
   [AnnotationTool.TRACE, AnnotationTool.ERASE_TRACE],
-  ({ isZoomStepTooHighForTracing }) =>
-    isZoomStepTooHighForTracing ? DISABLED_EXPLANATION.ZOOM_IN_TO_USE_TOOL : null,
+  ({ zoomStateForTracing }) => getZoomExplanation(zoomStateForTracing),
 );
 
 const fillZoomRule = new DisableRule(
   [AnnotationTool.FILL_CELL, AnnotationTool.QUICK_SELECT],
-  ({ isZoomStepTooHighForFilling }) =>
-    isZoomStepTooHighForFilling ? DISABLED_EXPLANATION.ZOOM_IN_TO_USE_TOOL : null,
+  ({ zoomStateForFilling }) => getZoomExplanation(zoomStateForFilling),
 );
 
 const proofreadRule = new DisableRule([AnnotationTool.PROOFREAD], (params) => {
@@ -333,12 +351,9 @@ const _getDisabledInfoForTools = (
     hasSkeleton,
     areSkeletonsVisible: isSkeletonLayerVisible(annotation),
     areGeometriesTransformed: areGeometriesTransformed(state),
-    isZoomStepTooHighForBrushing: isVolumeAnnotationDisallowedForZoom(AnnotationTool.BRUSH, state),
-    isZoomStepTooHighForTracing: isVolumeAnnotationDisallowedForZoom(AnnotationTool.TRACE, state),
-    isZoomStepTooHighForFilling: isVolumeAnnotationDisallowedForZoom(
-      AnnotationTool.FILL_CELL,
-      state,
-    ),
+    zoomStateForBrushing: isVolumeAnnotationDisallowedForZoom(AnnotationTool.BRUSH, state),
+    zoomStateForTracing: isVolumeAnnotationDisallowedForZoom(AnnotationTool.TRACE, state),
+    zoomStateForFilling: isVolumeAnnotationDisallowedForZoom(AnnotationTool.FILL_CELL, state),
     agglomerateState: hasAgglomerateMapping(state),
     isUneditableMappingLocked,
     activeOrganization: state.activeOrganization,

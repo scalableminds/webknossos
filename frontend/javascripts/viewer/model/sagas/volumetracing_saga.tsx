@@ -178,11 +178,11 @@ export function* editVolumeLayerAsync(): Saga<never> {
     const isDrawing = contourTracingMode === ContourModeEnum.DRAW;
     const activeTool = yield* select((state) => state.uiInformation.activeTool);
     // Depending on the tool, annotation in higher zoom steps might be disallowed.
-    const isZoomStepTooHighForAnnotating = yield* select((state) =>
+    const zoomStateForAnnotating = yield* select((state) =>
       isVolumeAnnotationDisallowedForZoom(activeTool, state),
     );
 
-    if (isZoomStepTooHighForAnnotating) {
+    if (zoomStateForAnnotating.isDisabled) {
       continue;
     }
 
@@ -392,12 +392,12 @@ function* ensureToolIsAllowedInMag(): Saga<void> {
 
   while (true) {
     yield* take(["ZOOM_IN", "ZOOM_OUT", "ZOOM_BY_DELTA", "SET_ZOOM_STEP"]);
-    const isMagTooLow = yield* select((state) => {
+    const zoomState = yield* select((state) => {
       const { activeTool } = state.uiInformation;
       return isVolumeAnnotationDisallowedForZoom(activeTool, state);
     });
 
-    if (isMagTooLow) {
+    if (zoomState.isDisabled) {
       yield* put(setToolAction(AnnotationTool.MOVE));
     }
   }

@@ -11,7 +11,7 @@ import models.dataset.DatasetDAO
 import models.job.JobCommand.JobCommand
 
 import javax.inject.Inject
-import models.job._
+import models.job.*
 import models.organization.CreditTransactionService
 import models.voxelytics.VoxelyticsDAO
 import play.api.libs.json.Json

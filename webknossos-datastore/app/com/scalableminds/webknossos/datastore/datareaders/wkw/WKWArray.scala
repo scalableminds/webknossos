@@ -11,7 +11,7 @@ import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkUtils
 import com.scalableminds.webknossos.datastore.datavault.{ByteRange, StartEndExclusiveByteRange, VaultPath}
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataSourceId}
 import Box.tryo
-import ucar.ma2.{Array => MultiArray}
+import ucar.ma2.Array as MultiArray
 
 import java.io.ByteArrayInputStream
 import scala.concurrent.ExecutionContext

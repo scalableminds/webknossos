@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore
 import org.apache.pekko.actor.ActorSystem
 import com.google.inject.AbstractModule
 import com.google.inject.name.Names
-import com.scalableminds.webknossos.datastore.services._
+import com.scalableminds.webknossos.datastore.services.*
 import com.scalableminds.webknossos.datastore.services.connectome.{
   ConnectomeFileService,
   Hdf5ConnectomeFileService,

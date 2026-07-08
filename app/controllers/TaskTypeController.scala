@@ -6,10 +6,10 @@ import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import models.annotation.AnnotationSettings
-import models.task._
+import models.task.*
 import models.user.UserService
-import play.api.libs.json.Reads._
-import play.api.libs.json._
+import play.api.libs.json.Reads.*
+import play.api.libs.json.*
 import com.scalableminds.util.objectid.ObjectId
 
 import javax.inject.Inject

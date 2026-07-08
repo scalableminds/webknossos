@@ -86,7 +86,7 @@ case class BoundingBox(topLeft: Vec3Int, width: Int, height: Int, depth: Int) {
 
 object BoundingBox {
 
-  import play.api.libs.json._
+  import play.api.libs.json.*
 
   private val literalPattern =
     "\\s*((?:\\-)?[0-9]+),\\s*((?:\\-)?[0-9]+),\\s*((?:\\-)?[0-9]+)\\s*,\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*".r

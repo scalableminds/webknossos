@@ -29,7 +29,7 @@ import utils.sql.SqlEscaping
 import java.nio.file.Paths
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 class UsedStorageService @Inject() (
     val actorSystem: ActorSystem,

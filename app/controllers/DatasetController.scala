@@ -25,7 +25,7 @@ import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.uploading.LinkedLayerIdentifier
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatasetEvent}
-import models.dataset._
+import models.dataset.*
 import models.dataset.explore.{
   ExploreAndAddRemoteDatasetParameters,
   WKExploreRemoteLayerParameters,
@@ -36,7 +36,7 @@ import models.organization.OrganizationDAO
 import models.storage.UsedStorageService
 import models.team.{TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserService}
-import play.api.libs.json._
+import play.api.libs.json.*
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import play.silhouette.api.Silhouette
 import security.{AccessibleBySwitchingService, URLSharing, WkEnv}

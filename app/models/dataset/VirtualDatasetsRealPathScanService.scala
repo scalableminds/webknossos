@@ -10,7 +10,7 @@ import jakarta.inject.Inject
 import org.apache.pekko.actor.ActorSystem
 import play.api.inject.ApplicationLifecycle
 
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.concurrent.ExecutionContext
 
 class VirtualDatasetsRealPathScanService @Inject() (

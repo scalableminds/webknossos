@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.dataformats.wkw
 
-import java.io._
+import java.io.*
 import org.apache.commons.io.IOUtils
 import com.google.common.io.LittleEndianDataInputStream
 import com.scalableminds.util.box.{Box, Failure, Full}

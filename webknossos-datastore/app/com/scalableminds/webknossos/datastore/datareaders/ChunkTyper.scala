@@ -9,7 +9,7 @@ import Box.tryo
 import java.io.ByteArrayInputStream
 import javax.imageio.stream.MemoryCacheImageInputStream
 import scala.util.Using
-import ucar.ma2.{Array => MultiArray, DataType => MADataType}
+import ucar.ma2.{Array as MultiArray, DataType as MADataType}
 
 import scala.concurrent.ExecutionContext
 

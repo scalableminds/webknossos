@@ -1,7 +1,7 @@
 package com.scalableminds.util.io
 
 import com.scalableminds.util.box.{Box, Failure, Full}
-import java.io._
+import java.io.*
 import com.scalableminds.util.tools.Fox
 import Box.tryo
 import org.apache.commons.io.IOUtils

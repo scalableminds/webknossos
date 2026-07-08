@@ -14,7 +14,7 @@ import java.nio.channels.{AsynchronousFileChannel, CompletionHandler}
 import java.nio.file.{Files, Path, StandardOpenOption}
 import java.util.stream.Collectors
 import scala.concurrent.{ExecutionContext, Promise}
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 class FileSystemDataVault extends DataVault {
 

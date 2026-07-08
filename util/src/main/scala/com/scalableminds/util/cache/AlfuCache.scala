@@ -11,7 +11,7 @@ import scala.jdk.FunctionWrappers.AsJavaBiFunction
 import scala.jdk.FutureConverters.{CompletionStageOps, FutureOps}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 class AlfuCache[K, V](store: AsyncCache[K, Box[V]]) {
 

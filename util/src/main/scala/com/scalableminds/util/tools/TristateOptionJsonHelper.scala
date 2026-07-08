@@ -2,7 +2,7 @@ package com.scalableminds.util.tools
 
 import play.api.libs.json.Json.WithDefaultValues
 import play.api.libs.json.JsonConfiguration.Aux
-import play.api.libs.json._
+import play.api.libs.json.*
 
 // Allows a case class json format that distinguishes between absent keys and keys with the value null
 // See TristateJsonTestSuite for a usage example. The Some(None) default must by set for the case class

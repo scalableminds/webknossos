@@ -14,8 +14,8 @@ import org.apache.commons.compress.compressors.zstandard.{ZstdCompressorInputStr
 import play.api.libs.json.{Format, JsResult, JsValue, Json}
 
 import java.awt.image.{BufferedImage, DataBufferByte}
-import java.io._
-import java.util.zip._
+import java.io.*
+import java.util.zip.*
 import javax.imageio.ImageIO
 import javax.imageio.ImageIO.createImageInputStream
 import javax.imageio.stream.ImageInputStream

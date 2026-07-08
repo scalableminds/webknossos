@@ -14,7 +14,7 @@ import com.scalableminds.webknossos.datastore.services.{
   DSChunkCacheService,
   VoxelyticsZarrArtifactUtils
 }
-import ucar.ma2.{Array => MultiArray}
+import ucar.ma2.Array as MultiArray
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import play.api.libs.json.{JsResult, JsValue, Reads}
 

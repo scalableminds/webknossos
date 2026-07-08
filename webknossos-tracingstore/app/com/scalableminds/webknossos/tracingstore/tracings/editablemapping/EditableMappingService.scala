@@ -22,7 +22,7 @@ import com.scalableminds.webknossos.datastore.helpers.{
   ProtoGeometryConversions,
   SkeletonTracingDefaults
 }
-import com.scalableminds.webknossos.datastore.models._
+import com.scalableminds.webknossos.datastore.models.*
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.services.mesh.{AdHocMeshRequest, AdHocMeshService, AdHocMeshServiceHolder}
@@ -46,7 +46,7 @@ import play.api.libs.json.{JsObject, Json, OFormat}
 
 import java.util
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.jdk.CollectionConverters.CollectionHasAsScala
 
 case class FallbackDataKey(

@@ -28,7 +28,7 @@ import com.scalableminds.webknossos.datastore.helpers.{
   UPath
 }
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, UsableDataSource}
-import com.scalableminds.webknossos.datastore.services._
+import com.scalableminds.webknossos.datastore.services.*
 import com.scalableminds.webknossos.datastore.services.connectome.ConnectomeFileService
 import com.scalableminds.webknossos.datastore.services.mesh.{
   DSFullMeshService,
@@ -51,7 +51,7 @@ import java.net.URI
 import java.nio.file.Path
 import java.nio.file.Files
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.concurrent.ExecutionContext
 
 case class PathValidationResult(

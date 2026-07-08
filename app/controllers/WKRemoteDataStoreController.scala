@@ -29,7 +29,7 @@ import com.scalableminds.webknossos.datastore.services.uploading.{
   ReportMagUploadParameters
 }
 import com.typesafe.scalalogging.LazyLogging
-import models.dataset._
+import models.dataset.*
 import models.dataset.credential.CredentialDAO
 import models.job.{JobDAO, JobService}
 import models.organization.{OrganizationDAO, OrganizationService}

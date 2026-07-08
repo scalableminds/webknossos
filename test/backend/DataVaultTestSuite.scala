@@ -30,7 +30,7 @@ import play.api.test.WsTestClient
 import java.nio.charset.StandardCharsets
 import java.util.UUID
 import scala.concurrent.ExecutionContext
-import scala.concurrent.ExecutionContext.{global => globalExecutionContext}
+import scala.concurrent.ExecutionContext.global as globalExecutionContext
 
 class DataVaultTestSuite extends AsyncWordSpec {
 

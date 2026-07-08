@@ -13,7 +13,7 @@ import models.organization.{Organization, OrganizationDAO}
 import models.project.ProjectDAO
 import models.task.TaskTypeDAO
 import models.user.User
-import play.api.libs.json._
+import play.api.libs.json.*
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import com.scalableminds.util.objectid.ObjectId
 

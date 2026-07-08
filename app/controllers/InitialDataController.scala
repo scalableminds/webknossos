@@ -11,12 +11,12 @@ import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import models.aimodels.{AiModel, AiModelCategory, AiModelDAO, AiModelService}
 import models.annotation.{TracingStore, TracingStoreDAO}
-import models.dataset._
+import models.dataset.*
 import models.folder.{Folder, FolderDAO, FolderService}
 import models.project.{Project, ProjectDAO}
 import models.task.{TaskType, TaskTypeDAO}
-import models.team._
-import models.user._
+import models.team.*
+import models.user.*
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.helpers.UPath

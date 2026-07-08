@@ -5,7 +5,7 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 
 import java.io.ByteArrayInputStream
-import com.scalableminds.webknossos.datastore.SkeletonTracing._
+import com.scalableminds.webknossos.datastore.SkeletonTracing.*
 import com.scalableminds.webknossos.datastore.geometry.{AdditionalAxisProto, Vec2IntProto}
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, FetchedAnnotationLayer}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat
@@ -13,7 +13,8 @@ import models.annotation.SharedParsingParameters
 import models.annotation.nml.{NmlParseSuccessWithoutFile, NmlParser, NmlWriter}
 import models.dataset.{Dataset, DatasetDAOLike}
 import com.scalableminds.util.accesscontext.DBAccessContext
-import com.scalableminds.util.tools.{Empty, Failure, Fox, Full}
+import com.scalableminds.util.box.{Empty, Failure, Full}
+import com.scalableminds.util.tools.Fox
 import org.apache.commons.io.output.ByteArrayOutputStream
 import org.scalatest.Assertion
 import org.scalatest.wordspec.AsyncWordSpec

@@ -18,8 +18,8 @@ import com.scalableminds.webknossos.datastore.models.requests.DataReadInstructio
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
 
-import scala.concurrent.duration._
-import ucar.ma2.{Array => MultiArray}
+import scala.concurrent.duration.*
+import ucar.ma2.Array as MultiArray
 
 import scala.concurrent.ExecutionContext
 
@@ -79,11 +79,7 @@ class DatasetArrayBucketProvider(
         dataVaultServiceOpt match {
           case Some(dataVaultServiceOpt: DataVaultService) =>
             for {
-              magPath: VaultPath <- dataVaultServiceOpt.vaultPathFor(
-                magLocator,
-                readInstruction.dataSourceId,
-                readInstruction.dataLayer.name
-              )
+              magPath: VaultPath <- dataVaultServiceOpt.vaultPathFor(magLocator)
               chunkContentsCache <- sharedChunkContentsCacheOpt.toFox
               datasetArray <- dataLayer.dataFormat match {
                 case DataFormat.zarr =>

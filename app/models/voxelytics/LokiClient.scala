@@ -7,8 +7,8 @@ import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import models.voxelytics.VoxelyticsLogLevel.VoxelyticsLogLevel
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Failure, Full}
+import com.scalableminds.util.box.Box.tryo
+import com.scalableminds.util.box.{Failure, Full}
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.pattern.after
 import play.api.http.{HeaderNames, Status}
@@ -16,7 +16,7 @@ import play.api.libs.json.{JsArray, JsObject, JsValue, Json}
 import utils.WkConf
 
 import javax.inject.Inject
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.concurrent.{ExecutionContext, Future}
 import scala.math.Ordering.Implicits.infixOrderingOps
 

@@ -323,8 +323,9 @@ class AiModelController @Inject() (
           "seed_generator_distance_threshold" -> request.body.seedGeneratorDistanceThreshold,
           "custom_configuration" -> request.body.customConfiguration
         )
+        modelLabel = request.body.aiModelId.map(m => s" with model $m").getOrElse("")
         creditTransactionComment =
-          s"AI custom instance segmentation with model ${request.body.aiModelId} for dataset ${dataset.name}"
+          s"AI custom instance segmentation$modelLabel for dataset ${dataset.name}"
         targetMagBoundingBox <- aiModelService.inferenceBBoxToTargetMag(
           mag1BoundingBox,
           layer,
@@ -399,8 +400,8 @@ class AiModelController @Inject() (
           "eval_min_merger_path_length_nm" -> request.body.evalMinMergerPathLengthNm,
           "custom_configuration" -> request.body.customConfiguration
         )
-        creditTransactionComment =
-          s"AI custom neuron segmentation with model ${request.body.aiModelId} for dataset ${dataset.name}"
+        modelLabel = request.body.aiModelId.map(m => s" with model $m").getOrElse("")
+        creditTransactionComment = s"AI custom neuron segmentation$modelLabel for dataset ${dataset.name}"
         newInferenceJob <- jobService.submitPaidJob(
           jobCommand,
           commandArgs,

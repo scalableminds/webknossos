@@ -10,7 +10,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.StaticLayer
 import javax.inject.Inject
 import models.dataset.{Dataset, DatasetDAO, DatasetLayerDAO, DatasetService, ThumbnailCachingService}
 import models.user.{User, UserDatasetConfigurationDAO, UserDatasetLayerConfigurationDAO}
-import play.api.libs.json._
+import play.api.libs.json.*
 
 import scala.concurrent.ExecutionContext
 

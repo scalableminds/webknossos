@@ -116,7 +116,7 @@ object ZipIO extends LazyLogging {
           len = source.read(buffer)
           if (len > 0)
             gout.write(buffer, 0, len)
-        };
+        }
         len > 0
       }) ()
     } finally {
@@ -136,7 +136,7 @@ object ZipIO extends LazyLogging {
           len = is.read(buffer)
           if (len > 0)
             os.write(buffer, 0, len)
-        };
+        }
         len > 0
       }) ()
       os.toByteArray
@@ -259,24 +259,35 @@ object ZipIO extends LazyLogging {
     val result = zipEntries.foldLeft[Box[List[A]]](Full(Nil)) { (results, entry) =>
       results match {
         case Full(rs) =>
-          var input: InputStream = null
-          try {
-            input = zip.getInputStream(entry)
-            val path = commonPrefix.relativize(Path.of(entry.getName))
-            val r = f(path, input) match {
-              case Full(result) =>
-                Full(rs :+ result)
-              case Empty =>
-                Empty
-              case f: Failure =>
-                f
-            }
-            input.close()
-            r
-          } catch {
-            case e: Exception =>
-              Failure(e.getMessage)
-          } finally if (input != null) input.close()
+          val rawEntryPath = Path.of(entry.getName)
+          if (rawEntryPath.isAbsolute) {
+            Failure(s"Zip entry has an absolute path and was rejected as a potential zip slip attack: ${entry.getName}")
+          } else {
+            var input: InputStream = null
+            try {
+              input = zip.getInputStream(entry)
+              val path = commonPrefix.relativize(rawEntryPath).normalize()
+              if (path.startsWith("..")) {
+                Failure(
+                  s"Zip entry path escapes the target directory and was rejected as a potential zip slip attack: ${entry.getName}"
+                )
+              } else {
+                val r = f(path, input) match {
+                  case Full(result) =>
+                    Full(rs :+ result)
+                  case Empty =>
+                    Empty
+                  case f: Failure =>
+                    f
+                }
+                input.close()
+                r
+              }
+            } catch {
+              case e: Exception =>
+                Failure(e.getMessage)
+            } finally if (input != null) input.close()
+          }
         case e =>
           e
       }
@@ -307,18 +318,24 @@ object ZipIO extends LazyLogging {
       excludeFromPrefix: Option[List[String]]
   ): Box[List[Path]] =
     withUnziped(zip, includeHiddenFiles, hiddenFilesWhitelist, truncateCommonPrefix, excludeFromPrefix) { (name, in) =>
-      val path = targetDir.resolve(name)
-      if (path.getParent != null) {
-        PathUtils.ensureDirectory(path.getParent)
+      val path = targetDir.resolve(name).normalize()
+      if (!path.startsWith(targetDir.normalize())) {
+        Failure(
+          s"Zip entry resolves outside of the target directory and was rejected as a potential zip slip attack: $name"
+        )
+      } else {
+        if (path.getParent != null) {
+          PathUtils.ensureDirectory(path.getParent)
+        }
+        var out: FileOutputStream = null
+        try {
+          out = new FileOutputStream(path.toFile)
+          IOUtils.copy(in, out)
+          Full(name)
+        } catch {
+          case e: Exception =>
+            Failure(e.getMessage)
+        } finally if (out != null) out.close()
       }
-      var out: FileOutputStream = null
-      try {
-        out = new FileOutputStream(path.toFile)
-        IOUtils.copy(in, out)
-        Full(name)
-      } catch {
-        case e: Exception =>
-          Failure(e.getMessage)
-      } finally if (out != null) out.close()
     }
 }

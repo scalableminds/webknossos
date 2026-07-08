@@ -92,7 +92,7 @@ class AnnotationUploadService @Inject() (tempFileService: WkTempFileService, nml
         } yield if (sharedParsingParameters.useZipName) result.withName(name) else result
         pendingResults ::= parsedResult
       } else {
-        val tempFile: Path = tempFileService.create(file.getPath.replaceAll("/", "_") + filename.toString)
+        val tempFile: Path = tempFileService.create(file.getPath + "_" + filename.toString)
         Files.copy(inputStream, tempFile, StandardCopyOption.REPLACE_EXISTING)
         otherFiles += (file.getPath + filename.toString -> tempFile.toFile)
       }

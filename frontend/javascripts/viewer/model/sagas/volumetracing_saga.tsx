@@ -387,22 +387,6 @@ export function* finishSectionLabeler(
   yield* put(registerLabelPointAction(sectionLabeler.getUnzoomedCentroid()));
 }
 
-function* ensureToolIsAllowedInMag(): Saga<void> {
-  yield* takeWithBatchActionSupport("INITIALIZE_VOLUMETRACING");
-
-  while (true) {
-    yield* take(["ZOOM_IN", "ZOOM_OUT", "ZOOM_BY_DELTA", "SET_ZOOM_STEP"]);
-    const zoomState = yield* select((state) => {
-      const { activeTool } = state.uiInformation;
-      return isVolumeAnnotationDisallowedForZoom(activeTool, state);
-    });
-
-    if (zoomState.isDisabled) {
-      yield* put(setToolAction(AnnotationTool.MOVE));
-    }
-  }
-}
-
 function* ensureSegmentExists(
   action: AddAdHocMeshAction | AddPrecomputedMeshAction | SetActiveCellAction | ClickSegmentAction,
 ): Saga<void> {
@@ -613,7 +597,6 @@ function* handleDeleteSegmentData(
 
 export default [
   editVolumeLayerAsync,
-  ensureToolIsAllowedInMag,
   floodFill,
   watchVolumeTracingAsync,
   maintainSegmentsMap,

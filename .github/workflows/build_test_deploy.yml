@@ -179,7 +179,7 @@ jobs:
           WK_VERSION: ${{ github.run_id }}
 
       - name: Compile and stage webknossos, datastore and tracingstore (sbt)
-        run: sbt --client -DfailOnWarning "compile; stage; webknossosDatastore/stage; webknossosTracingstore/stage"
+        run: sbt -DfailOnWarning "compile; stage; webknossosDatastore/stage; webknossosTracingstore/stage"
       - name: Checksum App Dirs
         run: find app webknossos-datastore/app webknossos-tracingstore/app -type f -exec md5sum {} \; | sort -k 2 | md5sum > app_checksum.txt
 

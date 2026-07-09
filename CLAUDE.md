@@ -15,7 +15,7 @@ Code Verification:
 - the backend uses Scala, sbt and the Play framework
 
 Code Verification: 
-- Scala type-checking: `sbt compile`
+- Scala type-checking: `sbt --client compile`
 - Unit tests: `yarn test-backend`
 - Formatting: `yarn format-backend`
 

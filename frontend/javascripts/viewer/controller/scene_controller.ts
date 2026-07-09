@@ -421,6 +421,7 @@ class SceneController {
 
       sceneMip.configs = configs;
     }
+    app.vent.emit("rerender");
   }
 
   getMipHitPosition(ray: Ray): ThreeVector3 | null {

@@ -1540,3 +1540,51 @@ describe("SkeletonTracing", () => {
     expect(state.annotation.skeleton?.trees.getNullable(8_000_000)).toBeUndefined();
   });
 });
+
+describe("SkeletonTracing - concurrent collaboration mode", () => {
+  // Tree 1 is a default tree (and the active tree); tree 2 is an agglomerate tree.
+  const concurrentState = update(initialState, {
+    annotation: { collaborationMode: { $set: "Concurrent" } },
+  });
+
+  it("should not mutate a default (non-agglomerate) tree", () => {
+    const newState = SkeletonTracingReducer(concurrentState, setTreeNameAction("new name", 1));
+    expect(newState).toBe(concurrentState);
+  });
+
+  it("should not create a new tree", () => {
+    const newState = SkeletonTracingReducer(concurrentState, createTreeAction());
+    expect(newState).toBe(concurrentState);
+  });
+
+  it("should not create a node in a default tree", () => {
+    const newState = SkeletonTracingReducer(
+      concurrentState,
+      createNodeAction(position, null, rotation, viewport, mag),
+    );
+    expect(newState).toBe(concurrentState);
+  });
+
+  it("should not delete a default tree", () => {
+    const newState = SkeletonTracingReducer(concurrentState, deleteTreeAction(1));
+    expect(newState).toBe(concurrentState);
+  });
+
+  it("should allow renaming an agglomerate tree", () => {
+    const newState = SkeletonTracingReducer(concurrentState, setTreeNameAction("new name", 2));
+    expect(newState).not.toBe(concurrentState);
+    expect(enforceSkeletonTracing(newState.annotation).trees.getOrThrow(2).name).toBe("new name");
+  });
+
+  it("should allow deleting an agglomerate tree", () => {
+    const newState = SkeletonTracingReducer(concurrentState, deleteTreeAction(2));
+    expect(newState).not.toBe(concurrentState);
+    expect(enforceSkeletonTracing(newState.annotation).trees.getNullable(2)).toBeUndefined();
+  });
+
+  it("should still allow editing a default tree in non-concurrent mode (regression)", () => {
+    const newState = SkeletonTracingReducer(initialState, setTreeNameAction("new name", 1));
+    expect(newState).not.toBe(initialState);
+    expect(enforceSkeletonTracing(newState.annotation).trees.getOrThrow(1).name).toBe("new name");
+  });
+});

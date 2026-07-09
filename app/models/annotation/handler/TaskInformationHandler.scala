@@ -6,10 +6,10 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 
 import javax.inject.Inject
-import models.annotation._
+import models.annotation.*
 import models.task.TaskDAO
 import models.user.{User, UserService}
-import models.annotation.AnnotationState._
+import models.annotation.AnnotationState.*
 import models.project.ProjectDAO
 import com.scalableminds.util.objectid.ObjectId
 import models.dataset.{DatasetDAO, DatasetService}

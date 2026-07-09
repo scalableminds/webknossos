@@ -7,12 +7,13 @@ import org.apache.pekko.actor.ActorSystem
 
 import scala.concurrent.duration.*
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.util.geometry.Vec3Double
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.*
+import com.scalableminds.util.box.Box.tryo
+import com.scalableminds.util.tools.{Fox, JsonHelper, TextUtils}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
@@ -835,7 +836,7 @@ class UploadService @Inject() (
           remoteWebknossosClient.deleteDataset(datasetId)
         }
         for {
-          _ <- result ?~! s"Error while $label"
+          _ <- result ?~> s"Error while $label"
         } yield ()
     }
 

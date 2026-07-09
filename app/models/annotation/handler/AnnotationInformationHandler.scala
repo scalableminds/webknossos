@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.Fox
 
 import javax.inject.Inject
 import models.annotation.AnnotationType.AnnotationType
-import models.annotation._
+import models.annotation.*
 import models.user.User
 import com.scalableminds.util.objectid.ObjectId
 import models.dataset.{DatasetDAO, DatasetService}

@@ -3,8 +3,8 @@ import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.helpers.MissingBucketHeaders
 import com.typesafe.scalalogging.LazyLogging
 import play.api.OptionalDevContext
-import play.api.http._
-import play.api.mvc.Results._
+import play.api.http.*
+import play.api.mvc.Results.*
 import play.api.mvc.{Handler, InjectedController, RequestHeader, Result}
 import play.api.routing.Router
 import play.core.WebCommands

@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating
 
-import com.scalableminds.webknossos.tracingstore.tracings._
+import com.scalableminds.webknossos.tracingstore.tracings.*
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.image.Color
 import com.scalableminds.util.objectid.ObjectId
@@ -22,7 +22,7 @@ import com.scalableminds.webknossos.datastore.helpers.{
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, UpdateAction, UserStateUpdateAction}
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.TreeType.TreeType
-import play.api.libs.json._
+import play.api.libs.json.*
 
 trait SkeletonUpdateAction extends LayerUpdateAction {
   def applyOn(tracing: SkeletonTracing): SkeletonTracing

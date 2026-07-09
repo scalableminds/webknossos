@@ -76,7 +76,10 @@ import {
 } from "viewer/model/accessors/tracing_accessor";
 import { getPlaneScalingFactor } from "viewer/model/accessors/view_mode_accessor";
 import { sceneControllerInitializedAction } from "viewer/model/actions/actions";
-import { loadMipAction } from "viewer/model/actions/annotation_actions";
+import {
+  loadMipAction,
+  removeMipLayerForBBoxAction,
+} from "viewer/model/actions/annotation_actions";
 import Dimensions from "viewer/model/dimensions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import type { Transform } from "viewer/model/helpers/transformation_helpers";
@@ -406,8 +409,13 @@ class SceneController {
 
       // Add layers that are new
       for (const config of configs) {
-        if (!volume.hasLayer(config.layerName) && volume.addLayer(config)) {
+        if (volume.hasLayer(config.layerName)) continue;
+        if (volume.addLayer(config)) {
           Store.dispatch(loadMipAction(bbox.id, bbox, config));
+        } else {
+          // addLayer already showed an error toast (e.g. unsupported element class).
+          // Remove the entry so it doesn't stay stuck in isLoading forever.
+          Store.dispatch(removeMipLayerForBBoxAction(bbox.id, config.layerName));
         }
       }
 

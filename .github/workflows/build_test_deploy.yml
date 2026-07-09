@@ -100,9 +100,9 @@ jobs:
       - name: Assert no 'SELECT *'  are present in scala files
         run: tools/assert-no-select-asterisk-present.sh
       - name: Check backend formatting and lint
-        run: sbt "scalafmtCheck; Test/scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck; scalafix --check; Test/scalafix --check; util/scalafix --check; webknossosTracingstore/scalafix --check; webknossosDatastore/scalafix --check"
+        run: sbt --client "scalafmtCheck; Test/scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck; scalafix --check; Test/scalafix --check; util/scalafix --check; webknossosTracingstore/scalafix --check; webknossosDatastore/scalafix --check"
       - name: Run backend unit tests
-        run: sbt -v "testOnly backend.*"
+        run: sbt --client -v "testOnly backend.*"
 
       - name: Start Fossildb for e2e tests
         run: docker compose --file .github/docker-compose.yml up -d fossildb
@@ -112,7 +112,7 @@ jobs:
         uses: ./.github/actions/retry
         with:
           run: |
-            sbt "testOnly e2e.* -- -Dtracingstore.fossildb.address=localhost -Dtracingstore.redis.address=localhost -Ddatastore.redis.address=localhost -Ddatastore.watchFileSystem.enabled=false"
+            sbt --client "testOnly e2e.* -- -Dtracingstore.fossildb.address=localhost -Dtracingstore.redis.address=localhost -Ddatastore.redis.address=localhost -Ddatastore.watchFileSystem.enabled=false"
           retries: 3
       - name: Assert non-empty e2e files
         run: bash -c '[ $(ls -1 frontend/javascripts/test/snapshots/type_check | wc -l) -gt 0 ]'
@@ -179,7 +179,7 @@ jobs:
           WK_VERSION: ${{ github.run_id }}
 
       - name: Compile and stage webknossos, datastore and tracingstore (sbt)
-        run: sbt -DfailOnWarning "compile; stage; webknossosDatastore/stage; webknossosTracingstore/stage"
+        run: sbt --client -DfailOnWarning "compile; stage; webknossosDatastore/stage; webknossosTracingstore/stage"
       - name: Checksum App Dirs
         run: find app webknossos-datastore/app webknossos-tracingstore/app -type f -exec md5sum {} \; | sort -k 2 | md5sum > app_checksum.txt
 
@@ -217,7 +217,7 @@ jobs:
           outputs: |
             type=image
 
-      - name: Start webknossos, datastore and tracingstore for smoke test
+      - name: Start webknossos, datastore and tracingstore via docker for smoke test
         run: |
           set -e
           docker compose --file .github/docker-compose.yml up -d \

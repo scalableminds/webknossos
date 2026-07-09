@@ -308,6 +308,7 @@ export class MipVolume {
     this.mesh.position.copy(meshCenter);
     this.mesh.onBeforeRender = (_renderer, _scene, camera) => {
       this.material.uniforms.uInvModelMatrix.value.copy(this.mesh.matrixWorld).invert();
+      // Store the world direction into uCameraForward
       camera.getWorldDirection(this.material.uniforms.uCameraForward.value);
       this.material.uniforms.uModelViewMatrix.value.multiplyMatrices(
         camera.matrixWorldInverse,

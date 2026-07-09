@@ -17,7 +17,7 @@ import {
 } from "viewer/model/actions/annotation_actions";
 import ButtonComponent from "../../components/button_component";
 
-const MAX_MIP_BYTES = 50 * 1024 * 1024;
+const RECOMMENDED_MIP_THRESHOLD_IN_BYTES = 50 * 1024 * 1024; // 50 MB
 
 // Returns the MIP-related context menu items:
 // - "Render as MIP" submenu (per layer → per mag, with byte-size labels)
@@ -48,7 +48,7 @@ export function useMipContextMenuItems(
         const voxels =
           Math.ceil(bboxW / mag[0]) * Math.ceil(bboxH / mag[1]) * Math.ceil(bboxD / mag[2]);
         const size = voxels * bytesPerVoxel;
-        if (size <= MAX_MIP_BYTES && size > bestSize) {
+        if (size <= RECOMMENDED_MIP_THRESHOLD_IN_BYTES && size > bestSize) {
           bestSize = size;
           bestZoomStep = zoomStep;
         }

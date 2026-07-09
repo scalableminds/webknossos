@@ -1,3 +1,4 @@
+import Toast from "libs/toast";
 import {
   BackSide,
   BoxGeometry,
@@ -12,11 +13,11 @@ import {
   Vector3 as ThreeVector3,
   UnsignedByteType,
 } from "three";
-import type { ElementClass } from "types/api_types";
+import type { APIDataset, ElementClass } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import { getLayerByName, getMagInfo } from "viewer/model/accessors/dataset_accessor";
+import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
-import { scaleGlobalPositionWithMagnification } from "viewer/model/helpers/position_converter";
 import { Store } from "viewer/singletons";
 import type { DatasetLayerConfiguration, MipLayerConfig } from "viewer/store";
 
@@ -73,27 +74,23 @@ function createPlaceholderTexture(): Data3DTexture {
 // Resolves the actual zoom step, texture dimensions, and element class for a layer.
 // Called by the MIP saga before downloading so it knows what to request.
 export function resolveMipLayerSource(
+  dataset: APIDataset,
   layerName: string,
   mag1Bbox: BoundingBoxMinMaxType,
-  zoomStep?: number,
+  zoomStep: number,
 ): {
   actualZoomStep: number;
   textureDims: [number, number, number];
   elementClass: SupportedMipElementClass;
 } {
-  const layer = getLayerByName(Store.getState().dataset, layerName);
+  const layer = getLayerByName(dataset, layerName);
   const magInfo = getMagInfo(layer.mags);
-  const actualZoomStep = magInfo.getClosestExistingIndex(zoomStep ?? 0);
+  const actualZoomStep = magInfo.getClosestExistingIndex(zoomStep);
   const mag = magInfo.getMagByIndexOrThrow(actualZoomStep);
-  const topLeft = scaleGlobalPositionWithMagnification(mag1Bbox.min, mag);
-  const bottomRight = scaleGlobalPositionWithMagnification(mag1Bbox.max, mag, true);
+  const bboxInMag = new BoundingBox(mag1Bbox).fromMag1ToMag(mag);
   return {
     actualZoomStep,
-    textureDims: [
-      bottomRight[0] - topLeft[0],
-      bottomRight[1] - topLeft[1],
-      bottomRight[2] - topLeft[2],
-    ],
+    textureDims: bboxInMag.getSize(),
     elementClass: assertSupportedElementClass(layer.elementClass),
   };
 }
@@ -389,23 +386,33 @@ export class MipVolume {
   }
 
   // Registers a new layer slot with a placeholder texture and subscribes to display settings.
-  // The actual data must be supplied separately via receiveLayerData once downloaded.
-  addLayer(config: MipLayerConfig): void {
+  // The actual data must be supplied separately via setLayerData once downloaded.
+  // Returns false (and shows a toast, without throwing) if the layer cannot be added — e.g.
+  // because its element class is unsupported by MIP rendering — so callers can skip it
+  // instead of crashing the store-subscription callback this runs in.
+  addLayer(config: MipLayerConfig): boolean {
     if (this.layers.length >= MAX_LAYERS) {
       console.warn("MipVolume: max layers reached, ignoring addLayer for", config.layerName);
-      return;
+      return false;
     }
     if (this.hasLayer(config.layerName)) {
-      return;
+      return false;
+    }
+
+    let texConfig: MipTextureConfig;
+    try {
+      texConfig = getMipTextureConfig(
+        assertSupportedElementClass(
+          getLayerByName(Store.getState().dataset, config.layerName).elementClass,
+        ),
+      );
+    } catch (error) {
+      Toast.error(`MIP rendering does not support the data type of layer "${config.layerName}".`);
+      console.error(error);
+      return false;
     }
 
     const index = this.layers.length;
-    const texConfig = getMipTextureConfig(
-      assertSupportedElementClass(
-        getLayerByName(Store.getState().dataset, config.layerName).elementClass,
-      ),
-    );
-
     const layerState: LayerState = {
       layerName: config.layerName,
       texture: this.placeholderTexture,
@@ -428,6 +435,7 @@ export class MipVolume {
       },
       true,
     );
+    return true;
   }
 
   // Called by the MIP saga once the raw voxel data has been downloaded.

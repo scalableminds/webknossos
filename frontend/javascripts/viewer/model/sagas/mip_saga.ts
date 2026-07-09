@@ -10,7 +10,7 @@ import {
   setMipForBBoxAction,
 } from "viewer/model/actions/annotation_actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
-import { call } from "viewer/model/sagas/effect_generators";
+import { call, select } from "viewer/model/sagas/effect_generators";
 import { api } from "viewer/singletons";
 import type { MipLayerConfig, UserBoundingBox } from "viewer/store";
 import { ensureSceneControllerInitialized } from "./ready_sagas";
@@ -33,9 +33,11 @@ function* runMipDownload(
     acquiredWorkerFlag = true;
 
     yield* put(setMipForBBoxAction(bboxId, { ...config, isLoading: true }));
+    const dataset = yield* select((state) => state.dataset);
 
     const mag1Bbox = { min: bbox.boundingBox.min, max: bbox.boundingBox.max };
     const { actualZoomStep, textureDims, elementClass } = resolveMipLayerSource(
+      dataset,
       config.layerName,
       mag1Bbox,
       config.zoomStep,

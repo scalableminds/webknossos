@@ -406,8 +406,7 @@ class SceneController {
 
       // Add layers that are new
       for (const config of configs) {
-        if (!volume.hasLayer(config.layerName)) {
-          volume.addLayer(config);
+        if (!volume.hasLayer(config.layerName) && volume.addLayer(config)) {
           Store.dispatch(loadMipAction(bbox.id, bbox, config));
         }
       }

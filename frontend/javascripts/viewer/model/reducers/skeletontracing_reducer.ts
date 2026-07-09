@@ -22,6 +22,12 @@ import {
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import {
+  type SkeletonActionPolicy,
+  type SkeletonCollabPolicy,
+  type SkeletonTracingAction,
+  skeletonActionPolicies,
+} from "viewer/model/actions/skeletontracing_actions";
+import {
   applyUserStateToGroups,
   convertServerAdditionalAxesToFrontEnd,
   convertServerBoundingBoxToFrontend,
@@ -58,15 +64,85 @@ import {
   GroupTypeEnum,
   getNodeKey,
 } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
-import { getUserStateForTracing } from "../accessors/annotation_accessor";
+import {
+  getUserStateForTracing,
+  isAgglomerateTree,
+  isConcurrentCollaborationMode,
+} from "../accessors/annotation_accessor";
 import { max, maxBy } from "../helpers/iterator_utils";
 import { applySkeletonUpdateActionsFromServer } from "./update_action_application/skeleton";
+
+// Resolves the existing tree(s) that the given mutation would affect. Only actions classified as
+// `collab: "onlyAgglomerateTree"` in `skeletonActionPolicies` are handled here; for those, the
+// collab guard allows the mutation only if all affected trees are agglomerate trees.
+function resolveAffectedTrees(
+  action: Action,
+  skeletonTracing: SkeletonTracing,
+): Array<Tree | null | undefined> {
+  switch (action.type) {
+    case "SET_TREE_NAME":
+    case "SET_TREE_METADATA":
+    case "SET_TREE_AGGLOMERATE_INFO_ID":
+    case "SET_EDGES_ARE_VISIBLE":
+    case "SET_TREE_GROUP":
+    case "DELETE_TREE":
+      return [getTree(skeletonTracing, action.treeId)];
+    case "DELETE_TREES":
+      return action.treeIds.map((treeId) => getTree(skeletonTracing, treeId));
+    case "DELETE_EDGE":
+    case "MERGE_TREES":
+      // Proofreading dispatches these with initiator "PROOFREADING" on agglomerate trees. The
+      // user-initiated variants during proofreading return early in the respective case bodies.
+      return [
+        findTreeByNodeId(skeletonTracing.trees, action.sourceNodeId),
+        findTreeByNodeId(skeletonTracing.trees, action.targetNodeId),
+      ];
+    case "ADD_TREES_AND_GROUPS":
+      // Allowed only when importing agglomerate trees (e.g. the proofreading agglomerate import).
+      return Array.from(action.trees.values());
+    default:
+      // An action not classified as "onlyAgglomerateTree" should never reach this helper.
+      return [];
+  }
+}
+
+// In concurrent collaboration ("live collaboration") mode, normal skeleton editing must be
+// forbidden because it would interfere with concurrent edits/rebasing. Only proofreading, which
+// operates on agglomerate trees, is allowed. The collab policy comes from `skeletonActionPolicies`.
+function isCollabModeMutationAllowed(
+  collab: SkeletonCollabPolicy,
+  action: Action,
+  skeletonTracing: SkeletonTracing,
+): boolean {
+  switch (collab) {
+    case "allow":
+      return true;
+    case "block":
+      return false;
+    case "onlyAgglomerateTree": {
+      const affectedTrees = resolveAffectedTrees(action, skeletonTracing);
+      return affectedTrees.length > 0 && affectedTrees.every(isAgglomerateTree);
+    }
+    default: {
+      const _exhaustiveCheck: never = collab;
+      return false;
+    }
+  }
+}
 
 function SkeletonTracingReducer(
   state: WebknossosState,
   action: Action,
   ignoreAllowUpdate: boolean = false,
 ): WebknossosState {
+  /**
+   * INITIALIZE_SKELETONTRACING is handled as a special case here without any
+   * permission checks. The action should always be handled and is also the only one
+   * that can deal with a not pre-existing skeleton tracing which is why
+   * it is not part of the big switch-block below.
+   * After that, a permission + collaboration gate guards the mutations in the second switch.
+   * Whether an action needs update permission is declared centrally in `skeletonActionPolicies`.
+   */
   if (action.type === "INITIALIZE_SKELETONTRACING") {
     const userState = getUserStateForTracing(
       action.tracing,
@@ -162,10 +238,32 @@ function SkeletonTracingReducer(
     return state;
   }
 
-  /**
-   * ATTENTION: The actions that should be executed regardless of whether allowUpdate is true or false
-   * should be added here!
-   */
+  // Permission + collaboration gate, driven by the action's policy in `skeletonActionPolicies`.
+  // Actions without a policy (non-skeleton/saga-only) or without `needsUpdatePermission` skip the
+  // gate and are handled below (or ignored via the switch's default).
+  const policy: SkeletonActionPolicy | undefined =
+    skeletonActionPolicies[action.type as SkeletonTracingAction["type"]];
+  // Updates that originate from the server (ignoreAllowUpdate) must still be applied.
+  if (!ignoreAllowUpdate && policy?.needsUpdatePermission) {
+    // The current action does not originate from the server and needs a permission check.
+    const { isUpdatingCurrentlyAllowed } = state.annotation;
+    if (!isUpdatingCurrentlyAllowed) {
+      // Since editing is not allowed currently (e.g., opened in read-only mode), ignore the action.
+      return state;
+    }
+    // Now, the action may be handled except for when the concurrent collaboration mode
+    // is active. In that case, we delegate the check to isCollabModeMutationAllowed
+    // which checks that only agglomerate trees may be mutated (because proofreading is
+    // currently the only mode that supports live collaboration).
+    if (
+      isConcurrentCollaborationMode(state) &&
+      !isCollabModeMutationAllowed(policy.collab, action, skeletonTracing)
+    ) {
+      return state;
+    }
+  }
+
+  const { restrictions } = state.annotation;
   switch (action.type) {
     case "SET_ACTIVE_NODE": {
       const { nodeId } = action;
@@ -679,18 +777,6 @@ function SkeletonTracingReducer(
       );
     }
 
-    default: // pass
-  }
-
-  /**
-   * ATTENTION: The following actions are only executed if isUpdatingCurrentlyAllowed is true!
-   */
-  const { restrictions, isUpdatingCurrentlyAllowed } = state.annotation;
-  if (!(isUpdatingCurrentlyAllowed || ignoreAllowUpdate)) {
-    return state;
-  }
-
-  switch (action.type) {
     case "CREATE_NODE": {
       if (areGeometriesTransformed(state)) {
         // Don't create nodes if the skeleton layer is rendered with transforms.

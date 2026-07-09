@@ -725,6 +725,7 @@ export type WebknossosState = {
   readonly save: SaveState;
   readonly flycam: Flycam;
   readonly flycamInfoCache: {
+    // Maps from layerName to the zoom thresholds for each mag.
     readonly maximumZoomForAllMags: Record<string, number[]>;
   };
   readonly viewModeData: ViewModeData;

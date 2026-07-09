@@ -363,7 +363,7 @@ class SceneController {
 
   private updateMipVolumes(storeMipEntries: MipEnabledBBox[]): void {
     // storeMipEntries are the MIP entries that are stored in the redux store.
-    // These need to be synced with the MIPs held by the SceneController.
+    // These are synced with the MIPs held by the SceneController in this function.
     const storeMipMap = new Map(storeMipEntries.map((e) => [e.bbox.id, e]));
 
     // Remove volumes whose bbox changed (need full recreation)

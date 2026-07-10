@@ -43,6 +43,7 @@ import { ensureWkInitialized } from "../ready_sagas";
 
 const MUTEX_NOT_ACQUIRED_KEY = "MutexCouldNotBeAcquired";
 const MUTEX_ACQUIRED_KEY = "AnnotationMutexAcquired";
+const MUTEX_BLOCKED_FOR_TOO_LONG_KEY = "MutexBlockedForTooLong";
 const ACQUIRE_MUTEX_INTERVAL = import.meta.env.MODE === "test" ? 1 * 1000 : 60 * 1000;
 const DELAY_AFTER_FAILED_MUTEX_FETCH = import.meta.env.MODE === "test" ? 1 * 1000 : 10 * 1000;
 const RETRY_COUNT = 20; // 12 retries with 60/12=5 seconds backup delay
@@ -375,6 +376,7 @@ function* acquireMutexInitiallyForAdHocStrategy(annotationId: string): Saga<void
       yield* put(setUserHoldingMutexAction(blockedByUser, mutexResult.blockedBySessionId));
       yield* put(setIsMutexAcquiredAction(canEdit));
       if (canEdit) {
+        Toast.close(MUTEX_BLOCKED_FOR_TOO_LONG_KEY);
         return;
       }
     } catch (error) {
@@ -395,7 +397,7 @@ function* acquireMutexInitiallyForAdHocStrategy(annotationId: string): Saga<void
         `Could not get the annotations write-lock for more than ${MAX_AD_HOC_RETRY_TIME / 1000} seconds.
         User ${blockingUserName} is currently blocking the annotation.
         Retrying...`,
-        { sticky: true },
+        { sticky: true, key: MUTEX_BLOCKED_FOR_TOO_LONG_KEY },
       );
       showingToast = true;
     }

@@ -170,11 +170,25 @@ function getUnsubscribeFromAnnotationMutexSaga(
 
 const MUTEX_SUBSCRIPTION_TIMEOUT = 5 * 60 * 1000;
 function* autoTimeoutSubscription(action: SubscribeToAnnotationMutexAction): Saga<void> {
+  yield* call(waitUntilMutexIsAcquiredOrUnneeded);
   yield delay(MUTEX_SUBSCRIPTION_TIMEOUT);
   const warnIfAlreadyUnsubscribed = false;
   yield call(
     getUnsubscribeFromAnnotationMutexSaga(action.subscriptionId, warnIfAlreadyUnsubscribed),
   );
+}
+
+function* waitUntilMutexIsAcquiredOrUnneeded(): Saga<void> {
+  while (true) {
+    const doesHaveMutex = yield* call(getDoesHaveMutex);
+    const othersMayEdit = yield* select((state) =>
+      isAnnotationEditableByNonOwners(state.annotation),
+    );
+    if (doesHaveMutex || !othersMayEdit) {
+      return;
+    }
+    yield* take("SET_IS_MUTEX_ACQUIRED");
+  }
 }
 
 export function* subscribeToAnnotationMutex(callerId: string): Saga<() => Saga<void>> {
@@ -195,16 +209,8 @@ export function* subscribeToAnnotationMutex(callerId: string): Saga<() => Saga<v
 
   yield* call(ensureCorrectMutexAcquiringSagaIsRunning, state);
 
-  while (true) {
-    const doesHaveMutex = yield* call(getDoesHaveMutex);
-    const othersMayEdit = yield* select((state) =>
-      isAnnotationEditableByNonOwners(state.annotation),
-    );
-    if (doesHaveMutex || !othersMayEdit) {
-      return getUnsubscribeFromAnnotationMutexSaga(newId);
-    }
-    yield* take("SET_IS_MUTEX_ACQUIRED");
-  }
+  yield* call(waitUntilMutexIsAcquiredOrUnneeded);
+  return getUnsubscribeFromAnnotationMutexSaga(newId);
 }
 
 // Needed for tests

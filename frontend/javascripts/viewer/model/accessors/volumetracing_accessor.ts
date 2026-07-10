@@ -25,6 +25,7 @@ import {
   getDataLayers,
   getLayerByName,
   getMagInfo,
+  getMagInfoByLayer,
   getMappingInfo,
   getSegmentationLayerByName,
   getSegmentationLayers,
@@ -285,14 +286,24 @@ export function isVolumeAnnotationDisallowedForZoom(
   const finestExistingMagIndex = volumeMags.getFinestMagIndex();
 
   const rawMagIndex = getRawActiveMagIndexForLayer(state, activeSegmentation.tracingId);
-  if (!volumeMags.hasIndex(rawMagIndex)) {
+  // If the zoom step corresponds to a mag that is finer than every mag of the dataset,
+  // no layer renders that mag. Instead, the finest dataset-wide mag is rendered
+  // (e.g., a dataset whose finest mag is 2-2-1 renders 2-2-1 even when the zoom
+  // would theoretically allow mag 1-1-1). Use the effectively rendered mag index
+  // for the check below so that editing is only disabled when another layer actually
+  // renders a mag that is missing in the volume layer (e.g., due to mag restrictions).
+  const finestDatasetMagIndex = Math.min(
+    ...Object.values(getMagInfoByLayer(state.dataset)).map((info) => info.getFinestMagIndex()),
+  );
+  const effectiveMagIndex = Math.max(rawMagIndex, finestDatasetMagIndex);
+  if (!volumeMags.hasIndex(effectiveMagIndex)) {
     // The current zoom corresponds to a mag that was excluded for this volume layer
     // (e.g., to avoid performance issues when annotating large structures in a coarse
     // mag). Annotating in such a mag doesn't make sense, since it is not actually
     // rendered/labeled, so the tool is disabled.
     return {
       isDisabled: true,
-      reason: finestExistingMagIndex < rawMagIndex ? "needs_zoom_in" : "needs_zoom_out",
+      reason: finestExistingMagIndex < effectiveMagIndex ? "needs_zoom_in" : "needs_zoom_out",
     };
   }
 

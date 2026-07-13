@@ -125,12 +125,6 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
         {selectedDataset.name}
       </h4>
       {renderOrganization()}
-      {fullDataset?.uploaderFullName != null && (
-        <div style={{ marginBottom: 4 }}>
-          <div className="sidebar-label">Uploaded By</div>
-          <div>{fullDataset.uploaderFullName}</div>
-        </div>
-      )}
       <Spin spinning={fullDataset == null}>
         {selectedDataset.isActive && (
           <div>
@@ -169,6 +163,13 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
           <div className="sidebar-label">Layers</div>
           {fullDataset && <DatasetLayerTags dataset={fullDataset} />}
         </div>
+
+        {fullDataset?.uploaderFullName != null && (
+          <div style={{ marginBottom: 4 }}>
+            <div className="sidebar-label">Uploaded By</div>
+            <div>{fullDataset.uploaderFullName}</div>
+          </div>
+        )}
 
         <div style={{ marginBottom: 4 }}>
           <div className="sidebar-label">Datastore</div>

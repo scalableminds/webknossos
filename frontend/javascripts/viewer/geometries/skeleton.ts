@@ -159,6 +159,20 @@ class Skeleton {
 
     this.nodeShader?.destroy();
     this.edgeShader?.destroy();
+
+    // Delete the actual GPU buffers. Otherwise, they would leak as three.js
+    // only frees them on an explicit dispose() call.
+    if (this.nodes != null) {
+      for (const nodes of this.nodes.buffers) {
+        nodes.geometry.dispose();
+      }
+    }
+
+    if (this.edges != null) {
+      for (const edges of this.edges.buffers) {
+        edges.geometry.dispose();
+      }
+    }
   }
 
   reset(skeletonTracing: SkeletonTracing) {

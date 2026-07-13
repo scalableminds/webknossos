@@ -28,7 +28,7 @@ import {
   getMappingInfo,
   getSegmentationLayerByName,
   getSegmentationLayers,
-  getVisibleOrLastSegmentationLayer,
+  getSomeMagInfoForDataset,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
 import {
@@ -285,14 +285,22 @@ export function isVolumeAnnotationDisallowedForZoom(
   const finestExistingMagIndex = volumeMags.getFinestMagIndex();
 
   const rawMagIndex = getRawActiveMagIndexForLayer(state, activeSegmentation.tracingId);
-  if (!volumeMags.hasIndex(rawMagIndex)) {
+  // If the zoom step corresponds to a mag that is finer than every mag of the dataset,
+  // no layer renders that mag. Instead, the finest dataset-wide mag is rendered
+  // (e.g., a dataset whose finest mag is 2-2-1 renders 2-2-1 even when the zoom
+  // would theoretically allow mag 1-1-1). Use the effectively rendered mag index
+  // for the check below so that editing is only disabled when another layer actually
+  // renders a mag that is missing in the volume layer (e.g., due to mag restrictions).
+  const finestDatasetMagIndex = getSomeMagInfoForDataset(state.dataset).getFinestMagIndex();
+  const effectiveMagIndex = Math.max(rawMagIndex, finestDatasetMagIndex);
+  if (!volumeMags.hasIndex(effectiveMagIndex)) {
     // The current zoom corresponds to a mag that was excluded for this volume layer
     // (e.g., to avoid performance issues when annotating large structures in a coarse
     // mag). Annotating in such a mag doesn't make sense, since it is not actually
     // rendered/labeled, so the tool is disabled.
     return {
       isDisabled: true,
-      reason: finestExistingMagIndex < rawMagIndex ? "needs_zoom_in" : "needs_zoom_out",
+      reason: finestExistingMagIndex < effectiveMagIndex ? "needs_zoom_in" : "needs_zoom_out",
     };
   }
 
@@ -871,38 +879,6 @@ const AGGLOMERATE_STATES = {
     reason: "",
   },
 };
-
-const CONNECTOME_STATES = {
-  NO_SEGMENTATION: {
-    value: false,
-    reason: "A segmentation layer needs to be visible to load the synapses of a segment.",
-  },
-  NO_CONNECTOME_FILE: {
-    value: false,
-    reason: "A connectome file needs to be available to load the synapses of a segment.",
-  },
-  YES: {
-    value: true,
-    reason: "",
-  },
-};
-
-export function hasConnectomeFile(state: WebknossosState) {
-  const segmentationLayer = getVisibleOrLastSegmentationLayer(state);
-
-  if (segmentationLayer == null) {
-    return CONNECTOME_STATES.NO_SEGMENTATION;
-  }
-
-  const { currentConnectomeFile } =
-    state.localSegmentationStateByLayer[segmentationLayer.name].connectomeData;
-
-  if (currentConnectomeFile == null) {
-    return CONNECTOME_STATES.NO_CONNECTOME_FILE;
-  }
-
-  return CONNECTOME_STATES.YES;
-}
 
 export type AgglomerateState = (typeof AGGLOMERATE_STATES)[keyof typeof AGGLOMERATE_STATES];
 

@@ -3167,7 +3167,7 @@ class UtilsApi {
     key: string,
     handler: KeyboardNoLoopHandler | (() => void),
   ): UnregisterHandler {
-    if (handler instanceof Function) {
+    if (typeof handler === "function") {
       handler = { onPressed: handler, onReleased: () => {} };
     }
     const keyboard = new InputKeyboard({

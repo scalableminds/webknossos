@@ -59,7 +59,7 @@ export default function BoundingBoxTab() {
   const isOwner = useWkSelector((state) => isAnnotationOwner(state));
   const dataset = useWkSelector((state) => state.dataset);
   const activeBoundingBoxId = useWkSelector((state) => state.uiInformation.activeUserBoundingBoxId);
-  const { userBoundingBoxes } = getSomeTracing(annotation);
+  const { userBoundingBoxes, tracingId: idOfTracingWithBBoxes } = getSomeTracing(annotation);
   const [contextMenuPosition, setContextMenuPosition] = useState<[number, number] | null>(null);
   const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([]);
   const [menu, setMenu] = useState<MenuProps | null>(null);
@@ -78,16 +78,12 @@ export default function BoundingBoxTab() {
 
   const addNewBoundingBox = useCallback(async () => {
     try {
-      const id = await dispatchGetNewIdAsync(
-        dispatch,
-        getSomeTracing(annotation).tracingId,
-        "BoundingBox",
-      );
+      const id = await dispatchGetNewIdAsync(dispatch, idOfTracingWithBBoxes, "BoundingBox");
       dispatch(addUserBoundingBoxAction(null, undefined, id));
     } catch (error) {
       handleGenericError(error as Error, "Could not create a new bounding box.");
     }
-  }, [dispatch, annotation]);
+  }, [dispatch, idOfTracingWithBBoxes]);
 
   const setPosition = useCallback(
     (position: Vector3) => dispatch(setPositionAction(position)),

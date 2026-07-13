@@ -12,6 +12,7 @@ import type { AdditionalCoordinate, APISegmentationLayer } from "types/api_types
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { TypedArray, Vector3 } from "viewer/constants";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
+import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import {
   enforceActiveVolumeTracing,
   getActiveSegmentationTracingLayer,
@@ -257,10 +258,11 @@ function* performMinCut(action: PerformMinCutAction): Saga<void> {
     };
     let newBBoxId: number;
     try {
+      const tracingStoringBBoxes = yield* select((state) => getSomeTracing(state.annotation));
       newBBoxId = yield* call(
         dispatchGetNewIdAsync,
         Store.dispatch,
-        skeleton.tracingId,
+        tracingStoringBBoxes.tracingId,
         "BoundingBox",
       );
     } catch (error) {

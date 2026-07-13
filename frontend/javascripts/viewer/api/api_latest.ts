@@ -83,6 +83,7 @@ import {
   getTreeGroupsMap,
 } from "viewer/model/accessors/skeletontracing_accessor";
 import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/tool_accessor";
+import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import {
   enforceActiveVolumeTracing,
   getActiveCellId,
@@ -883,9 +884,10 @@ class TracingApi {
     if (volumeTracing == null) {
       throw new Error(`Could not find volume tracing layer with name ${volumeLayerName}`);
     }
+    const tracingStoringBBoxes = getSomeTracing(Store.getState().annotation);
     const newGroupId = await dispatchGetNewIdAsync(
       Store.dispatch,
-      volumeTracing.tracingId,
+      tracingStoringBBoxes.tracingId,
       "SegmentGroup",
     );
 

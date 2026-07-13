@@ -30,7 +30,10 @@ import { select } from "viewer/model/sagas/effect_generators";
 import { createOperationContext } from "viewer/model/sagas/operation_context_saga";
 import { requestBucketModificationInVolumeTracing } from "viewer/model/sagas/saga_helpers";
 import { Model, Store } from "viewer/singletons";
-import { getUserBoundingBoxesThatContainPosition } from "../../accessors/tracing_accessor";
+import {
+  getSomeTracing,
+  getUserBoundingBoxesThatContainPosition,
+} from "../../accessors/tracing_accessor";
 import { applyLabeledVoxelMapToAllMissingMags } from "./helpers";
 
 const NO_FLOODFILL_BBOX_TOAST_KEY = "NO_FLOODFILL_BBOX";
@@ -396,11 +399,11 @@ function* notifyUserAboutResult(
       );
       if (createNewBoundingBox) {
         try {
-          const volumeTracing = yield* select(enforceActiveVolumeTracing);
+          const tracingStoringBBoxes = yield* select((state) => getSomeTracing(state.annotation));
           const id = yield* call(
             dispatchGetNewIdAsync,
             Store.dispatch,
-            volumeTracing.tracingId,
+            tracingStoringBBoxes.tracingId,
             "BoundingBox",
           );
           yield* put(

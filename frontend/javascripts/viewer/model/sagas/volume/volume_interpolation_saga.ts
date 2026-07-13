@@ -60,7 +60,7 @@ function _getInterpolationInfo(state: WebknossosState, explanationPrefix: string
       directionFactor,
     };
   }
-  const mostRecentLabelAction = getLastLabelAction(volumeTracing);
+  const mostRecentLabelAction = getLastLabelAction(state, volumeTracing);
 
   const activeViewport = mostRecentLabelAction?.plane || OrthoViews.PLANE_XY;
   const thirdDim = Dimensions.thirdDimensionForPlane(activeViewport);
@@ -274,13 +274,17 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
   const overwriteMode = yield* select((state) => state.userConfiguration.overwriteMode);
 
   // Disable copy-segmentation for the same zoom steps where the brush/trace tool is forbidden, too.
-  const isMagTooLow = yield* select((state) =>
+  const zoomState = yield* select((state) =>
     isVolumeAnnotationDisallowedForZoom(activeTool, state),
   );
 
-  if (isMagTooLow) {
+  if (zoomState.isDisabled) {
+    const hint =
+      zoomState.reason === "needs_zoom_out"
+        ? "Please zoom out further."
+        : "Please zoom in further.";
     Toast.warning(
-      'The "interpolate segmentation"-feature is not supported at this zoom level. Please zoom in further.',
+      `The "interpolate segmentation"-feature is not supported at this zoom level. ${hint}`,
     );
     return;
   }

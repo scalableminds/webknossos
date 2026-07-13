@@ -3,13 +3,13 @@ package mail
 import models.organization.Organization
 import models.user.MultiUser
 import utils.WkConf
-import views._
+import views.*
 
 import java.net.URI
 import javax.inject.Inject
 import scala.util.Try
 
-class DefaultMails @Inject()(conf: WkConf) {
+class DefaultMails @Inject() (conf: WkConf) {
 
   private val uri = conf.Http.uri
   private val defaultSender = conf.Mail.defaultSender
@@ -17,11 +17,13 @@ class DefaultMails @Inject()(conf: WkConf) {
   private val newOrganizationMailingList = conf.WebKnossos.newOrganizationMailingList
   private val additionalFooter = conf.Mail.additionalFooter
 
-  def registerAdminNotifierMail(name: String,
-                                email: String,
-                                organization: Organization,
-                                autoActivate: Boolean,
-                                recipient: String): Mail =
+  def registerAdminNotifierMail(
+      name: String,
+      email: String,
+      organization: Organization,
+      autoActivate: Boolean,
+      recipient: String
+  ): Mail =
     Mail(
       from = defaultSender,
       subject =
@@ -30,11 +32,13 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(recipient)
     )
 
-  def overLimitMail(multiUser: MultiUser,
-                    projectName: String,
-                    taskId: String,
-                    annotationId: String,
-                    projectOwner: String): Mail =
+  def overLimitMail(
+      multiUser: MultiUser,
+      projectName: String,
+      taskId: String,
+      annotationId: String,
+      projectOwner: String
+  ): Mail =
     Mail(
       from = defaultSender,
       subject = s"WEBKNOSSOS | Time limit reached. ${multiUser.abbreviatedName} in $projectName",
@@ -84,12 +88,14 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(newOrganizationMailingList)
     )
 
-  def inviteMail(recipient: String,
-                 inviteTokenValue: String,
-                 autoVerify: Boolean,
-                 organizationName: String,
-                 senderName: String): Mail = {
-    val host = Try { new URI(uri) }.toOption.getOrElse(uri)
+  def inviteMail(
+      recipient: String,
+      inviteTokenValue: String,
+      autoVerify: Boolean,
+      organizationName: String,
+      senderName: String
+  ): Mail = {
+    val host = Try(new URI(uri)).toOption.getOrElse(uri)
     Mail(
       from = defaultSender,
       subject = s"$senderName invited you to join their WEBKNOSSOS organization at $host",
@@ -184,11 +190,13 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(supportEmail)
     )
 
-  def jobSuccessfulGenericMail(multiUser: MultiUser,
-                               datasetName: String,
-                               jobLink: String,
-                               jobTitle: String,
-                               jobDescription: String): Mail =
+  def jobSuccessfulGenericMail(
+      multiUser: MultiUser,
+      datasetName: String,
+      jobLink: String,
+      jobTitle: String,
+      jobDescription: String
+  ): Mail =
     Mail(
       from = defaultSender,
       subject = s"$jobTitle is ready",
@@ -209,7 +217,7 @@ class DefaultMails @Inject()(conf: WkConf) {
   def jobSuccessfulNeuronSegmentationMail(multiUser: MultiUser, datasetName: String, jobLink: String): Mail =
     Mail(
       from = defaultSender,
-      subject = s"Your segmentation is ready",
+      subject = "Your segmentation is ready",
       bodyHtml =
         html.mail.jobSuccessfulNeuronSegmentation(multiUser.fullName, datasetName, jobLink, additionalFooter).body,
       recipients = List(multiUser.email)
@@ -218,7 +226,7 @@ class DefaultMails @Inject()(conf: WkConf) {
   def jobSuccessfulMitoSegmentationMail(multiUser: MultiUser, datasetName: String, jobLink: String): Mail =
     Mail(
       from = defaultSender,
-      subject = s"Your mitochondria segmentation is ready",
+      subject = "Your mitochondria segmentation is ready",
       bodyHtml =
         html.mail.jobSuccessfulMitoSegmentation(multiUser.fullName, datasetName, jobLink, additionalFooter).body,
       recipients = List(multiUser.email)
@@ -227,7 +235,7 @@ class DefaultMails @Inject()(conf: WkConf) {
   def jobSuccessfulAlignmentMail(multiUser: MultiUser, datasetName: String, jobLink: String): Mail =
     Mail(
       from = defaultSender,
-      subject = s"Your alignment is ready",
+      subject = "Your alignment is ready",
       bodyHtml = html.mail.jobSuccessfulAlignment(multiUser.fullName, datasetName, jobLink, additionalFooter).body,
       recipients = List(multiUser.email)
     )
@@ -235,7 +243,7 @@ class DefaultMails @Inject()(conf: WkConf) {
   def jobSuccessfulModelTrainingMail(multiUser: MultiUser, jobLink: String): Mail =
     Mail(
       from = defaultSender,
-      subject = s"Your model training is ready",
+      subject = "Your model training is ready",
       bodyHtml = html.mail.jobSuccessfulModelTraining(multiUser.fullName, jobLink, additionalFooter).body,
       recipients = List(multiUser.email)
     )

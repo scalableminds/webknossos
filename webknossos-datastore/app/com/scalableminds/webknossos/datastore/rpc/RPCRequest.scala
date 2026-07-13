@@ -1,20 +1,20 @@
 package com.scalableminds.webknossos.datastore.rpc
 
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.{Empty, Failure, Full}
 import com.scalableminds.util.mvc.{Formatter, MimeTypes}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.{Empty, Failure, Full}
 import play.api.http.{HeaderNames, Status}
-import play.api.libs.json._
-import play.api.libs.ws._
+import play.api.libs.json.*
+import play.api.libs.ws.*
 import com.scalableminds.util.time.Instant
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
 import java.io.File
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: ExecutionContext)
     extends LazyLogging
@@ -49,7 +49,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
     this
   }
 
-  def withTokenFromContext(implicit tc: TokenContext): RPCRequest =
+  def withTokenFromContext(using tc: TokenContext): RPCRequest =
     addQueryParam("token", tc.userTokenOpt)
 
   def addHttpHeader(headerName: String, headerValue: String): RPCRequest = {
@@ -316,7 +316,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
         body.bytes.take(100).utf8String + (if (body.bytes.size > 100) s"... <omitted ${body.bytes.size - 100} bytes>"
                                            else "")
       case _: SourceBody =>
-        s"<streaming source>"
+        "<streaming source>"
       case _ =>
         ""
     }

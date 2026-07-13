@@ -51,10 +51,13 @@ trait DatasetHeader {
       else {
         if (axisOrder.hasZAxis) {
           Some(
-            BoundingBox(Vec3Int.zeros,
-                        shape(axisOrder.x).toInt,
-                        shape(axisOrder.y).toInt,
-                        shape(axisOrder.zWithFallback).toInt))
+            BoundingBox(
+              Vec3Int.zeros,
+              shape(axisOrder.x).toInt,
+              shape(axisOrder.y).toInt,
+              shape(axisOrder.zWithFallback).toInt
+            )
+          )
         } else {
           Some(BoundingBox(Vec3Int.zeros, shape(axisOrder.x).toInt, shape(axisOrder.y).toInt, 1))
         }

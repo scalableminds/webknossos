@@ -1,4 +1,3 @@
-import { DownOutlined } from "@ant-design/icons";
 import { type Tree as AntdTree, type GetRef, type MenuProps, Modal, type TreeProps } from "antd";
 import { SimpleRow } from "dashboard/folders/metadata_table";
 import { pluralize } from "libs/utils";
@@ -48,6 +47,7 @@ import {
   setExpandedGroups,
   setUpdateTreeGroups,
 } from "./tree_hierarchy_renderers";
+import { TreeSwitcherIcon } from "./tree_switcher_icon";
 
 function TreeHierarchyView(props: Props) {
   const dispatch = useDispatch();
@@ -267,7 +267,13 @@ function TreeHierarchyView(props: Props) {
   }
 
   function isNodeDraggable(node: TreeNode): boolean {
-    return props.allowUpdate && node.id !== MISSING_GROUP_ID && renamingCounter.current === 0;
+    // Dragging restructures groups (a global edit) and is disabled in concurrent collaboration mode.
+    return (
+      props.allowUpdate &&
+      !props.isConcurrentCollabMode &&
+      node.id !== MISSING_GROUP_ID &&
+      renamingCounter.current === 0
+    );
   }
 
   // checkedKeys includes all nodes with a "selected" checkbox
@@ -353,7 +359,7 @@ function TreeHierarchyView(props: Props) {
                           decreaseRenamingCounter,
                         )
                   }
-                  switcherIcon={<DownOutlined />}
+                  switcherIcon={({ expanded }) => <TreeSwitcherIcon expanded={expanded} />}
                   onSelect={(_selectedKeys, info: { node: TreeNode; nativeEvent: MouseEvent }) =>
                     info.node.type === GroupTypeEnum.TREE
                       ? onSelectTreeNode(info.node, info.nativeEvent)
@@ -385,7 +391,7 @@ function TreeHierarchyView(props: Props) {
             treeGroups={props.treeGroups}
             selectedTreeIds={props.selectedTreeIds}
             activeGroupId={props.activeGroupId}
-            readOnly={!props.allowUpdate}
+            readOnly={!props.allowUpdate || props.isConcurrentCollabMode}
           />
         }
       />
@@ -434,6 +440,7 @@ const DetailsForSelection = memo(
               value={
                 <InputWithUpdateOnBlur
                   value={tree.name || ""}
+                  disabled={readOnly}
                   onChange={(newValue) => dispatch(setTreeNameAction(newValue, tree.treeId))}
                 />
               }
@@ -468,6 +475,7 @@ const DetailsForSelection = memo(
               value={
                 <InputWithUpdateOnBlur
                   value={activeGroup.name || ""}
+                  disabled={readOnly}
                   onChange={(newValue) => api.tracing.renameSkeletonGroup(activeGroupId, newValue)}
                 />
               }

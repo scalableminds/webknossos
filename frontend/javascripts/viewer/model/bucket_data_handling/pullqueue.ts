@@ -87,7 +87,7 @@ class PullQueue {
     let hasErrored = false;
     let failedBucketAddresses = [];
     try {
-      const bucketBuffers = await asAbortable(
+      const bucketResults = await asAbortable(
         requestWithFallback(layerInfo, batch),
         this.abortController.signal,
         PULL_ABORTION_ERROR,
@@ -95,17 +95,33 @@ class PullQueue {
 
       for (const [index, bucketAddress] of batch.entries()) {
         try {
-          const bucketBuffer = bucketBuffers[index];
+          const bucketResult = bucketResults[index];
           const bucket = this.cube.getOrCreateBucket(bucketAddress);
 
           if (bucket.type !== "data") {
             continue;
           }
 
-          if (bucketBuffer == null && !renderMissingDataBlack) {
-            bucket.markAsFailed(true);
-          } else {
-            this.handleBucket(bucket, bucketBuffer);
+          switch (bucketResult.type) {
+            case "data": {
+              this.handleBucket(bucket, bucketResult.data);
+              break;
+            }
+            case "empty": {
+              if (renderMissingDataBlack) {
+                // Render empty buckets as black (zeroed) data.
+                this.handleBucket(bucket, null);
+              } else {
+                bucket.markAsFailed(true);
+              }
+              break;
+            }
+            case "failure": {
+              // The bucket could not be read. Schedule it for a retry via the
+              // batch-level error handling below.
+              failedBucketAddresses.push(bucketAddress);
+              break;
+            }
           }
         } catch {
           failedBucketAddresses.push(bucketAddress);

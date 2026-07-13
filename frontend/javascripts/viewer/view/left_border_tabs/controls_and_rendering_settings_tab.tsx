@@ -76,10 +76,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
   }
 
   getViewportOptions = (): ArrayElement<CollapseProps["items"]> => {
-    if (
-      this.props.viewMode === Constants.MODE_ARBITRARY ||
-      this.props.viewMode === Constants.MODE_ARBITRARY_PLANE
-    ) {
+    if (this.props.viewMode === Constants.MODE_FLIGHT) {
       return {
         label: "Flight Options",
         key: "2",
@@ -238,27 +235,28 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
   render() {
     const datasetScaleUnit = LongUnitToShortUnitMap[this.props.dataset.dataSource.scale.unit];
     const moveValueString = `${settingsLabels.moveValue} (${datasetScaleUnit}/s)`;
-    const moveValueSetting = Constants.MODES_ARBITRARY.includes(this.props.viewMode) ? (
-      <NumberSliderSetting
-        label={<FastTooltip title={settingsTooltips.moveValue}>{moveValueString}</FastTooltip>}
-        min={userSettings.moveValue3d.minimum}
-        max={userSettings.moveValue3d.maximum}
-        step={10}
-        value={this.props.userConfiguration.moveValue3d}
-        onChange={this.onChangeUser.moveValue3d}
-        defaultValue={defaultState.userConfiguration.moveValue3d}
-      />
-    ) : (
-      <NumberSliderSetting
-        label={<FastTooltip title={settingsTooltips.moveValue}>{moveValueString}</FastTooltip>}
-        min={userSettings.moveValue.minimum}
-        max={userSettings.moveValue.maximum}
-        step={10}
-        value={this.props.userConfiguration.moveValue}
-        onChange={this.onChangeUser.moveValue}
-        defaultValue={defaultState.userConfiguration.moveValue}
-      />
-    );
+    const moveValueSetting =
+      this.props.viewMode === Constants.MODE_FLIGHT ? (
+        <NumberSliderSetting
+          label={<FastTooltip title={settingsTooltips.moveValue}>{moveValueString}</FastTooltip>}
+          min={userSettings.moveValue3d.minimum}
+          max={userSettings.moveValue3d.maximum}
+          step={10}
+          value={this.props.userConfiguration.moveValue3d}
+          onChange={this.onChangeUser.moveValue3d}
+          defaultValue={defaultState.userConfiguration.moveValue3d}
+        />
+      ) : (
+        <NumberSliderSetting
+          label={<FastTooltip title={settingsTooltips.moveValue}>{moveValueString}</FastTooltip>}
+          min={userSettings.moveValue.minimum}
+          max={userSettings.moveValue.maximum}
+          step={10}
+          value={this.props.userConfiguration.moveValue}
+          onChange={this.onChangeUser.moveValue}
+          defaultValue={defaultState.userConfiguration.moveValue}
+        />
+      );
 
     const collapseItems: CollapseProps["items"] = [
       {

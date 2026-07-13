@@ -42,7 +42,6 @@ import type {
   OrthoViewWithoutTD,
   OverwriteMode,
   Rect,
-  SagaIdentifier,
   TDViewDisplayMode,
   Vector2,
   Vector3,
@@ -70,8 +69,10 @@ import VolumeTracingReducer from "viewer/model/reducers/volumetracing_reducer";
 import type { UpdateAction } from "viewer/model/sagas/volume/update_actions";
 import type { KeyboardConfiguration } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
 import type { Toolkit } from "./model/accessors/tool_accessor";
+import type { OperationId } from "./model/actions/operation_context_actions";
 import { eventEmitterMiddleware } from "./model/helpers/event_emitter_middleware";
 import FlycamInfoCacheReducer from "./model/reducers/flycam_info_cache_reducer";
+import OperationContextReducer from "./model/reducers/operation_context_reducer";
 import OrganizationReducer from "./model/reducers/organization_reducer";
 import ProofreadingReducer from "./model/reducers/proofreading_reducer";
 import type { TreeGroup, TreeMap } from "./model/types/tree_types";
@@ -201,32 +202,32 @@ export type SegmentJournalEntry = {
   segmentId2: number; // the unmapped ID (supervoxel) that belongs to agglomerateId2
 };
 
+// Note that VolumeTracing should only contain state that is persisted on the
+// server (i.e., state that is synced via the save queue). This is important
+// because the VolumeTracing objects are stashed and restored from
+// RebaseRelevantAnnotationState during rebasing (see save_saga.tsx). Any
+// state that is not synced would be reset to the last synced version on
+// every rewinding rebase (see #9559). Local-only state belongs into
+// `state.localSegmentationStateByLayer` instead.
+// The segmentJournal is an exception to this and reasoned below.
 export type VolumeTracing = TracingBase & {
   readonly type: "volume";
-  // Note that there are also SegmentMaps in `state.localSegmentationData`
+  // Note that there are also SegmentMaps in `state.localSegmentationStateByLayer`
   // for non-annotation volume layers.
   readonly segments: SegmentMap;
   readonly segmentGroups: Array<SegmentGroup>;
   readonly largestSegmentId: number | null;
   readonly activeCellId: number;
-  // The position of the "proofreading marker" (a cross) is stored separately.
-  // In earlier versions, the anchor position of the current segment was simply used.
-  // However, the anchor position can be updated by another user (in collab mode) which
-  // leads to unexpected jumping of the marker.
-  readonly proofreadingMarkerPosition: Vector3 | undefined;
-  readonly activeUnmappedSegmentId?: number | null; // not persisted
-  // lastLabelActions[0] is the most recent one
-  readonly lastLabelActions: Array<LabelAction>;
-  readonly contourTracingMode: ContourMode;
-  // Stores points of the currently drawn region in layer-space coordinates.
-  readonly contourList: Array<Vector3>;
   readonly fallbackLayer?: string;
   readonly mappingName?: string | null | undefined;
   readonly hasEditableMapping?: boolean;
   readonly mappingIsLocked?: boolean;
   readonly hasSegmentIndex: boolean;
-  readonly volumeBucketDataHasChanged?: boolean;
-  readonly hideUnregisteredSegments: boolean;
+  // Whether the bucket data of the layer was mutated (e.g., by brushing).
+  // This is synced to the server (via the updateVolumeBucketDataHasChanged update
+  // action) so that collaborators notice the change and so that it survives rebasing.
+  // Can be undefined for older annotations (also see LoadMeshMenuItemLabel).
+  readonly volumeBucketDataHasChanged: boolean | undefined;
   // The segmentJournal keeps track of how segments were edited. Currently,
   // this only includes mergeSegments actions which can be created during
   // proofreading.
@@ -235,13 +236,15 @@ export type VolumeTracing = TracingBase & {
   //
   // Note the following:
   //  - These entries should always be stored with ascending entryIndex.
+  //  - Although the journal itself is not persisted, it survives rebasing
+  //    because the merge actions are replayed during rebasing (see
+  //    handleMergeSegments). Therefore, it may live in the VolumeTracing.
   //  - This list only grows right now which should be alright. Even
   //    when we assume 150 B per entry (which is very pessimistic as
   //    it's simply the JSON-encoded length) and 10,000 merge requests
   //    per session (which is also quite far fetched), we are in the
   //    realm of 1.5 MB of RAM.
   readonly segmentJournal: Array<SegmentJournalEntry>;
-  readonly idReservations: Record<"SegmentGroup" | "Segment", { id: number; used: boolean }[]>;
 };
 export type ReadOnlyTracing = TracingBase & {
   readonly type: "readonly";
@@ -342,7 +345,8 @@ export type UserConfiguration = {
   readonly isMultiSplitActive: boolean;
   readonly brushSize: number;
   readonly clippingDistance: number;
-  readonly clippingDistanceArbitrary: number;
+  readonly clippingDistanceFlight: number;
+  readonly clipSkeletonToCurrentSection: boolean;
   readonly crosshairSize: number;
   readonly displayCrosshair: boolean;
   readonly displayScalebars: boolean;
@@ -459,6 +463,7 @@ export type AnnotationMutexInformation = {
 //
 // This state should always reflect the most recent annotation version stored,
 // on the server that is known to the user.
+// It should only contain information which can be updated via update actions.
 // After successfully pulling and applying the latest updates from the server,
 // it must be updated to match that version.
 // Moreover, after successfully saving, it should also be updated.
@@ -478,7 +483,9 @@ export type AnnotationMutexInformation = {
 export type RebaseRelevantAnnotationState = {
   readonly annotationVersion: number;
   readonly annotationDescription: string;
-  readonly activeMappingByLayer: Record<string, ActiveMappingInfo>;
+  // Only the mapping data per layer is part of the rebase baseline. The other ActiveMappingInfo
+  // fields don't have update actions updating this info.
+  readonly mappingDataByLayer: Record<string, Mapping | null | undefined>;
   readonly skeleton: SkeletonTracing | null | undefined;
   readonly volumes: Array<VolumeTracing>;
   readonly isRebasingOrForwarding: boolean;
@@ -501,7 +508,6 @@ export type ProofreadingPostProcessingInfo = {
   readonly tracingId: string;
 };
 export type SaveState = {
-  readonly isBusy: boolean;
   readonly isSavingDisabled: boolean; // true when the user explicitly disabled saving in the WK menu dropdown
   readonly queue: Array<SaveQueueEntry>;
   readonly lastSaveTimestamp: number;
@@ -549,23 +555,18 @@ type PlaneModeData = {
   readonly tdCamera: CameraData;
   readonly inputCatcherRects: PlaneRects;
 };
-type ArbitraryModeData = {
+type FlightModeData = {
   readonly inputCatcherRect: Rect;
 };
 export type ViewModeData = {
   readonly plane: PlaneModeData;
-  readonly arbitrary: ArbitraryModeData;
+  readonly flight: FlightModeData;
 };
 export type BorderOpenStatus = {
   left: boolean;
   right: boolean;
 };
 export type Theme = "light" | "dark";
-export type BusyBlockingInfo = {
-  isBusy: boolean;
-  reason?: string;
-  allowedSagas: SagaIdentifier[];
-};
 export type ContextMenuInfo = {
   readonly contextMenuPosition: Readonly<[number, number]> | null | undefined;
   readonly clickedNodeId: number | null | undefined;
@@ -601,7 +602,6 @@ type UiInformation = {
   readonly theme: Theme;
   readonly isWkInitialized: boolean;
   readonly isUiReady: boolean;
-  readonly busyBlockingInfo: BusyBlockingInfo;
   readonly quickSelectState:
     | "inactive"
     | "drawing" // the user is currently drawing a bounding box
@@ -641,7 +641,11 @@ export type MinCutPartitions = { 1: number[]; 2: number[]; agglomerateId: number
 export type LocalMeshesInfo =
   | Record<string, Record<number, MeshInformation> | undefined>
   | undefined;
-export type LocalSegmentationData = {
+
+// LocalSegmentationState holds per-layer segmentation state that is not
+// persisted on the server (in contrast to the VolumeTracing which must only
+// contain synced state, see its comment).
+export type LocalSegmentationState = {
   // For meshes, the string represents additional coordinates, number is the segment ID.
   // The undefined types were added to enforce null checks when using this structure.
   readonly meshes: LocalMeshesInfo;
@@ -657,8 +661,30 @@ export type LocalSegmentationData = {
   // To get only available segments or group, use getSelectedIds() in volumetracing_accessor.
   readonly selectedIds: { segments: number[]; group: number | null };
   readonly connectomeData: ConnectomeData;
+  // Whether unregistered segments are not rendered needs to be in LocalSegmentationState
+  // as the server provides an initial value (see INITIALIZE_VOLUMETRACING),
+  // but changes to it are not persisted.
   readonly hideUnregisteredSegments: boolean;
   readonly minCutPartitions: MinCutPartitions;
+  // The fields below are only relevant for volume tracing layers
+  // (i.e., the layerName key of this state is a tracingId).
+  readonly activeUnmappedSegmentId: number | null | undefined;
+  // lastLabelActions[0] is the most recent one
+  readonly lastLabelActions: Array<LabelAction>;
+  readonly contourTracingMode: ContourMode;
+  // Stores points of the currently drawn region in layer-space coordinates.
+  readonly contourList: Array<Vector3>;
+  readonly idReservations: Record<"SegmentGroup" | "Segment", { id: number; used: boolean }[]>;
+  // The position of the "proofreading marker" (a cross) is stored separately.
+  // In earlier versions, the anchor position of the current segment was simply used.
+  // However, the anchor position can be updated by another user (in collab mode) which
+  // leads to unexpected jumping of the marker.
+  // Note, that it is intentional that the marker position is stored here (in the
+  // user-local, per-layer state) instead of within the VolumeTracing. The VolumeTracing
+  // objects are stashed and restored from RebaseRelevantAnnotationState during rebasing
+  // (see save_saga.tsx). Storing the marker position there would reset it to the position
+  // of the last synced version on every rewinding rebase (see #9559).
+  readonly proofreadingMarkerPosition: Vector3 | undefined;
 };
 
 export type StoreDataset = APIDataset & {
@@ -668,6 +694,24 @@ export type StoreDataset = APIDataset & {
   // one cannot accidentally use the APIDataset during store
   // initialization (which would be incorrect).
   areLayersPreprocessed: true;
+};
+
+// Tracks which named operations are currently running and how they relate to each other.
+// `activeOperations` is the stack of top-level operations (e.g. "PROOFREADING", "FLOODFILL").
+// An operation blocks concurrent starts of the same ID and all other operations, by default.
+// `childOperations` lists sub-operations that a parent has explicitly pre-authorized to run
+// inside it (e.g. "SAVE" inside "PROOFREADING") so they bypass the normal exclusion check.
+// While operations are ongoing, the UI is typically blocked for the user (except when saving
+// in non-live-collab mode).
+export type OperationContextState = {
+  readonly activeOperations: ReadonlyArray<{
+    readonly id: OperationId;
+    readonly description?: string;
+  }>;
+  readonly childOperations: ReadonlyArray<{
+    readonly id: OperationId;
+    readonly parentId: OperationId;
+  }>;
 };
 
 export type WebknossosState = {
@@ -681,16 +725,18 @@ export type WebknossosState = {
   readonly save: SaveState;
   readonly flycam: Flycam;
   readonly flycamInfoCache: {
+    // Maps from layerName to the zoom thresholds for each mag.
     readonly maximumZoomForAllMags: Record<string, number[]>;
   };
   readonly viewModeData: ViewModeData;
   readonly activeUser: APIUser | null | undefined;
   readonly activeOrganization: APIOrganization | null;
   readonly uiInformation: UiInformation;
-  readonly localSegmentationData: Record<
+  readonly localSegmentationStateByLayer: Record<
     string, // layerName
-    LocalSegmentationData
+    LocalSegmentationState
   >;
+  readonly operationContext: OperationContextState;
 };
 const sagaMiddleware = createSagaMiddleware();
 export type Reducer = (state: WebknossosState, action: Action) => WebknossosState;
@@ -710,6 +756,7 @@ export const combinedReducer = reduceReducers(
   UiReducer,
   ConnectomeReducer,
   OrganizationReducer,
+  OperationContextReducer,
 ) as Reducer;
 
 const store = createStore<WebknossosState, Action>(

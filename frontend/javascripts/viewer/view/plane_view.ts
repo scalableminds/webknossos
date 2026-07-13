@@ -14,6 +14,7 @@ import {
 import TWEEN from "tween.js";
 import type { OrthoViewMap, Vector2, Vector3, Viewport } from "viewer/constants";
 import Constants, {
+  FlightViewport,
   OrthoViewColors,
   OrthoViews,
   OrthoViewValues,
@@ -27,7 +28,10 @@ import getSceneController, {
 import type { MeshSceneNode, SceneGroupForMeshes } from "viewer/controller/segment_mesh_controller";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { getInputCatcherRect } from "viewer/model/accessors/view_mode_accessor";
-import { getActiveSegmentationTracing } from "viewer/model/accessors/volumetracing_accessor";
+import {
+  getActiveSegmentationTracing,
+  getActiveUnmappedSegmentId,
+} from "viewer/model/accessors/volumetracing_accessor";
 import { uiReadyAction } from "viewer/model/actions/actions";
 import { updateTemporarySettingAction } from "viewer/model/actions/settings_actions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
@@ -383,7 +387,7 @@ class PlaneView {
           // activeUnmappedSegmentId is null so that no supervoxel
           // is highlighted.
           return storeState.uiInformation.activeTool === AnnotationTool.PROOFREAD
-            ? segmentationTracing.activeUnmappedSegmentId
+            ? getActiveUnmappedSegmentId(storeState, segmentationTracing)
             : null;
         },
         (activeUnmappedSegmentId) =>
@@ -401,7 +405,8 @@ class PlaneView {
             return null;
           }
           return storeState.uiInformation.activeTool === AnnotationTool.PROOFREAD
-            ? storeState.localSegmentationData[segmentationTracing.tracingId].minCutPartitions
+            ? storeState.localSegmentationStateByLayer[segmentationTracing.tracingId]
+                .minCutPartitions
             : null;
         },
         (minCutPartitions) =>
@@ -441,8 +446,8 @@ class PlaneView {
   }
 
   getCameraForPlane(plane: Viewport) {
-    if (plane === "arbitraryViewport") {
-      throw new Error("Cannot access camera for arbitrary viewport.");
+    if (plane === FlightViewport) {
+      throw new Error("Cannot access camera for flight viewport.");
     }
     return this.getCameras()[plane];
   }

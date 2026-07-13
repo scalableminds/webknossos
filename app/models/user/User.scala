@@ -1,18 +1,25 @@
 package models.user
 
 import play.silhouette.api.{Identity, LoginInfo}
-import com.scalableminds.util.accesscontext._
+import com.scalableminds.util.accesscontext.*
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
-import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.webknossos.schema.Tables.{
+  UserExperiencesRow,
+  Users,
+  UsersRow,
+  GetResultUsersRow,
+  UserTeamRolesRow
+}
 
 import javax.inject.Inject
-import models.team._
-import play.api.libs.json._
+import models.team.*
+import play.api.libs.json.*
 import slick.jdbc.GetResult
-import slick.jdbc.PostgresProfile.api._
+import slick.jdbc.PostgresProfile.api.*
 import slick.jdbc.TransactionIsolation.Serializable
 import utils.sql.{SQLDAO, SimpleSQLDAO, SqlClient, SqlToken}
 import com.scalableminds.util.objectid.ObjectId
@@ -41,8 +48,7 @@ case class User(
     loggedOutEverywhereTime: Option[Instant] = None,
     isDeleted: Boolean = false
 ) extends DBAccessContextPayload
-    with Identity
-    with FoxImplicits {
+    with Identity {
 
   def toStringAnonymous: String = s"User ${_id}"
 
@@ -83,7 +89,7 @@ case class UserCompactInfo(
     isUnlisted: Boolean
 )
 
-class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class UserDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[User, UsersRow, Users](sqlClient) {
   protected val collection = Users
   protected def resultConverter = GetResultUsersRow
@@ -94,25 +100,23 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected def parse(r: UsersRow): Fox[User] =
     for {
       userConfiguration <- JsonHelper.parseAs[JsObject](r.userconfiguration).toFox
-    } yield {
-      User(
-        ObjectId(r._Id),
-        ObjectId(r._Multiuser),
-        r._Organization,
-        Instant.fromSql(r.lastactivity),
-        userConfiguration,
-        LoginInfo(User.default_login_provider_id, r._Id),
-        r.isadmin,
-        r.isorganizationowner,
-        r.isdatasetmanager,
-        r.isdeactivated,
-        r.isunlisted,
-        Instant.fromSql(r.created),
-        r.lasttasktypeid.map(ObjectId(_)),
-        r.loggedouteverywheretime.map(Instant.fromSql),
-        r.isdeleted
-      )
-    }
+    } yield User(
+      ObjectId(r._id),
+      ObjectId(r._multiuser),
+      r._organization,
+      Instant.fromSql(r.lastactivity),
+      userConfiguration,
+      LoginInfo(User.default_login_provider_id, r._id),
+      r.isadmin,
+      r.isorganizationowner,
+      r.isdatasetmanager,
+      r.isdeactivated,
+      r.isunlisted,
+      Instant.fromSql(r.created),
+      r.lasttasktypeid.map(ObjectId(_)),
+      r.loggedouteverywheretime.map(Instant.fromSql),
+      r.isdeleted
+    )
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     readAccessQWithPrefix(requestingUserId, SqlToken.raw(""))
@@ -141,7 +145,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           )
         )"""
 
-  override def findAll(implicit ctx: DBAccessContext): Fox[List[User]] =
+  override def findAll(using ctx: DBAccessContext): Fox[List[User]] =
     for {
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
       r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery".as[UsersRow])
@@ -154,15 +158,18 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def findOldestActive: Fox[User] =
     for {
       r <- run(
-        q"SELECT $columns FROM $existingCollectionName WHERE NOT isDeactivated ORDER BY created LIMIT 1".as[UsersRow])
+        q"SELECT $columns FROM $existingCollectionName WHERE NOT isDeactivated ORDER BY created LIMIT 1".as[UsersRow]
+      )
       parsed <- parseFirst(r, "oldestActive")
     } yield parsed
 
-  def buildSelectionPredicates(isEditableOpt: Option[Boolean],
-                               isTeamManagerOrAdminOpt: Option[Boolean],
-                               isAdminOpt: Option[Boolean],
-                               requestingUser: User,
-                               userPrefix: SqlToken)(implicit ctx: DBAccessContext): Fox[SqlToken] =
+  def buildSelectionPredicates(
+      isEditableOpt: Option[Boolean],
+      isTeamManagerOrAdminOpt: Option[Boolean],
+      isAdminOpt: Option[Boolean],
+      requestingUser: User,
+      userPrefix: SqlToken
+  )(using ctx: DBAccessContext): Fox[SqlToken] =
     for {
       accessQuery <- accessQueryFromAccessQWithPrefix(listAccessQWithPrefix, userPrefix)
       editablePredicate = isEditableOpt match {
@@ -196,15 +203,38 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
        """
 
   // Necessary since a tuple can only have 22 elements
-  implicit def GetResultUserCompactInfo: GetResult[UserCompactInfo] = GetResult { prs =>
-    import prs._
-    // format: off
-    UserCompactInfo(<<[ObjectId],<<[ObjectId],<<[String],<<[String],<<[String],<<[String],<<[Boolean],<<[Boolean],
-      <<[Boolean],<<[Boolean],<<[String],<<[String],<<[String],<<[String], <<[String],<<[Instant],<<[String],
-      <<[String],<<[String],<<[Instant],<<?[String],<<[Boolean],<<[Boolean],<<[Boolean],<<[Boolean],<<[Boolean]
-    )
-    // format: on
-  }
+  implicit def GetResultUserCompactInfo: GetResult[UserCompactInfo] =
+    prs => {
+      import prs.*
+      UserCompactInfo(
+        _id = <<[ObjectId],
+        _multiUserId = <<[ObjectId],
+        email = <<[String],
+        firstName = <<[String],
+        lastName = <<[String],
+        userConfiguration = <<[String],
+        isAdmin = <<[Boolean],
+        isOrganizationOwner = <<[Boolean],
+        isDatasetManager = <<[Boolean],
+        isDeactivated = <<[Boolean],
+        teamIdsAsArrayLiteral = <<[String],
+        teamNamesAsArrayLiteral = <<[String],
+        teamManagersAsArrayLiteral = <<[String],
+        experienceValuesAsArrayLiteral = <<[String],
+        experienceDomainsAsArrayLiteral = <<[String],
+        lastActivity = <<[Instant],
+        organizationId = <<[String],
+        novelUserExperienceInfos = <<[String],
+        selectedTheme = <<[String],
+        created = <<[Instant],
+        lastTaskTypeId = <<?[String],
+        isSuperUser = <<[Boolean],
+        isEmailVerified = <<[Boolean],
+        isEditable = <<[Boolean],
+        isGuest = <<[Boolean],
+        isUnlisted = <<[Boolean]
+      )
+    }
 
   private def payingOrganizationInfoSubquery =
     q"""(
@@ -220,16 +250,20 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
          )
      """
 
-  def findAllCompactWithFilters(isEditable: Option[Boolean],
-                                isTeamManagerOrAdmin: Option[Boolean],
-                                isAdmin: Option[Boolean],
-                                requestingUser: User)(implicit ctx: DBAccessContext): Fox[List[UserCompactInfo]] =
+  def findAllCompactWithFilters(
+      isEditable: Option[Boolean],
+      isTeamManagerOrAdmin: Option[Boolean],
+      isAdmin: Option[Boolean],
+      requestingUser: User
+  )(using ctx: DBAccessContext): Fox[List[UserCompactInfo]] =
     for {
-      selectionPredicates <- buildSelectionPredicates(isEditable,
-                                                      isTeamManagerOrAdmin,
-                                                      isAdmin,
-                                                      requestingUser,
-                                                      SqlToken.raw("u."))
+      selectionPredicates <- buildSelectionPredicates(
+        isEditable,
+        isTeamManagerOrAdmin,
+        isAdmin,
+        requestingUser,
+        SqlToken.raw("u.")
+      )
       isEditableAttribute = q"""
         (u._id IN
           (SELECT _id AS editableUsers FROM webknossos.users WHERE _organization IN
@@ -314,12 +348,13 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         q"""SELECT (payingOrganization._organization IS NOT NULL AND u._organization != payingOrganization._organization) AS isGuest
             FROM webknossos.users as u
             LEFT JOIN $payingOrganizationInfoSubquery AS payingOrganization ON payingOrganization._multiUser = u._multiUser
-            WHERE _id = $userId""".as[Boolean])
+            WHERE _id = $userId""".as[Boolean]
+      )
       result <- rows.headOption.toFox
     } yield result
 
   // NOTE: This will not return admins. They have “access to all teams”. Consider fetching those too when you use this
-  def findAllByTeams(teamIds: List[ObjectId])(implicit ctx: DBAccessContext): Fox[List[User]] =
+  def findAllByTeams(teamIds: List[ObjectId])(using ctx: DBAccessContext): Fox[List[User]] =
     if (teamIds.isEmpty) Fox.successful(List())
     else
       for {
@@ -340,7 +375,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(r)
     } yield parsed
 
-  def findAdminsAndDatasetManagersByOrg(organizationId: String)(implicit ctx: DBAccessContext): Fox[List[User]] =
+  def findAdminsAndDatasetManagersByOrg(organizationId: String)(using ctx: DBAccessContext): Fox[List[User]] =
     for {
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
       r <- run(q"""SELECT $columns
@@ -353,7 +388,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
-  def findAdminsByOrg(organizationId: String)(implicit ctx: DBAccessContext): Fox[List[User]] =
+  def findAdminsByOrg(organizationId: String)(using ctx: DBAccessContext): Fox[List[User]] =
     for {
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
       r <- run(q"""SELECT $columns
@@ -366,8 +401,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
-  def findOneByOrgaAndMultiUser(organizationId: String, multiUserId: ObjectId)(
-      implicit ctx: DBAccessContext): Fox[User] =
+  def findOneByOrgaAndMultiUser(organizationId: String, multiUserId: ObjectId)(using ctx: DBAccessContext): Fox[User] =
     for {
       accessQuery <- readAccessQuery
       resultList <- run(q"""SELECT $columns
@@ -394,7 +428,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                       LIMIT 1""".as[ObjectId])
     } yield rows.headOption
 
-  def findFirstByMultiUser(multiUserId: ObjectId)(implicit ctx: DBAccessContext): Fox[User] =
+  def findFirstByMultiUser(multiUserId: ObjectId)(using ctx: DBAccessContext): Fox[User] =
     for {
       accessQuery <- readAccessQuery
       resultList <- run(q"""SELECT $columns
@@ -407,7 +441,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parse(result)
     } yield parsed
 
-  def findContributorsForAnnotation(annotationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[User]] =
+  def findContributorsForAnnotation(annotationId: ObjectId)(using ctx: DBAccessContext): Fox[List[User]] =
     for {
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
       result <- run(q"""SELECT $columns
@@ -436,7 +470,8 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       resultList <- run(
         q"SELECT COUNT(*) from $existingCollectionName WHERE _organization = $organizationId AND isAdmin AND NOT isUnlisted"
-          .as[Int])
+          .as[Int]
+      )
       result <- resultList.headOption.toFox
     } yield result
 
@@ -444,7 +479,8 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       resultList <- run(
         q"SELECT COUNT(*) FROM $existingCollectionName WHERE _organization = $organizationId AND isOrganizationOwner AND NOT isUnlisted"
-          .as[Int])
+          .as[Int]
+      )
       result <- resultList.headOption.toFox
     } yield result
 
@@ -468,14 +504,13 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                              )""".asUpdate)
     } yield ()
 
-  def updateLastActivity(userId: ObjectId, lastActivity: Instant = Instant.now)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateLastActivity(userId: ObjectId, lastActivity: Instant = Instant.now)(using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(userId)
       _ <- run(q"UPDATE webknossos.users SET lastActivity = $lastActivity WHERE _id = $userId".asUpdate)
     } yield ()
 
-  def updateUserConfiguration(userId: ObjectId, userConfiguration: JsObject)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateUserConfiguration(userId: ObjectId, userConfiguration: JsObject)(using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(userId)
       _ <- run(q"""UPDATE webknossos.users
@@ -483,11 +518,13 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                WHERE _id = $userId""".asUpdate)
     } yield ()
 
-  def updateValues(userId: ObjectId,
-                   isAdmin: Boolean,
-                   isDatasetManager: Boolean,
-                   isDeactivated: Boolean,
-                   lastTaskTypeId: Option[ObjectId])(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateValues(
+      userId: ObjectId,
+      isAdmin: Boolean,
+      isDatasetManager: Boolean,
+      isDeactivated: Boolean,
+      lastTaskTypeId: Option[ObjectId]
+  )(using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(userId)
       _ <- run(q"""UPDATE webknossos.users
@@ -498,8 +535,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
               WHERE _id = $userId""".asUpdate)
     } yield ()
 
-  def updateLastTaskTypeId(userId: ObjectId, lastTaskTypeId: Option[ObjectId])(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateLastTaskTypeId(userId: ObjectId, lastTaskTypeId: Option[ObjectId])(using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(userId)
       _ <- run(q"""UPDATE webknossos.users
@@ -516,18 +552,19 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def findTeamMembershipsForUser(userId: ObjectId): Fox[List[TeamMembership]] =
     for {
       rows <- run(
-        q"SELECT _user, _team, isTeamManager FROM webknossos.user_team_roles WHERE _user = $userId"
-          .as[UserTeamRolesRow])
+        q"SELECT _user, _team, isTeamManager FROM webknossos.user_team_roles WHERE _user = $userId".as[UserTeamRolesRow]
+      )
       teamMemberships <- Fox.combined(rows.map { r =>
-        ObjectId.fromString(r._Team).map(teamIdValidated => TeamMembership(teamIdValidated, r.isteammanager))
+        ObjectId.fromString(r._team).map(teamIdValidated => TeamMembership(teamIdValidated, r.isteammanager))
       })
     } yield teamMemberships
 
   private def insertTeamMembershipQuery(userId: ObjectId, teamMembership: TeamMembership) =
     q"INSERT INTO webknossos.user_team_roles(_user, _team, isTeamManager) VALUES($userId, ${teamMembership.teamId}, ${teamMembership.isTeamManager})".asUpdate
 
-  def updateTeamMembershipsForUser(userId: ObjectId, teamMemberships: Seq[TeamMembership])(
-      implicit ctx: DBAccessContext): Fox[Unit] = {
+  def updateTeamMembershipsForUser(userId: ObjectId, teamMemberships: Seq[TeamMembership])(using
+      ctx: DBAccessContext
+  ): Fox[Unit] = {
     val clearQuery = q"DELETE FROM webknossos.user_team_roles WHERE _user = $userId".asUpdate
     val insertQueries = teamMemberships.map(insertTeamMembershipQuery(userId, _))
     for {
@@ -536,7 +573,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     } yield ()
   }
 
-  def insertTeamMembership(userId: ObjectId, teamMembership: TeamMembership)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def insertTeamMembership(userId: ObjectId, teamMembership: TeamMembership)(using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(userId)
       _ <- run(insertTeamMembershipQuery(userId, teamMembership))
@@ -565,30 +602,32 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def logOutEverywhereByMultiUserId(multiUserId: ObjectId): Fox[Unit] =
     for {
       _ <- run(
-        q"""UPDATE webknossos.users SET loggedOutEverywhereTime = ${Instant.now} WHERE _multiUser = $multiUserId""".asUpdate)
+        q"""UPDATE webknossos.users SET loggedOutEverywhereTime = ${Instant.now} WHERE _multiUser = $multiUserId""".asUpdate
+      )
     } yield ()
 }
 
-class UserExperiencesDAO @Inject()(sqlClient: SqlClient, userDAO: UserDAO)(implicit ec: ExecutionContext)
+class UserExperiencesDAO @Inject() (sqlClient: SqlClient, userDAO: UserDAO)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
   def findAllExperiencesForUser(userId: ObjectId): Fox[Map[String, Int]] =
     for {
       rows <- run(
-        q"SELECT _user, domain, value FROM webknossos.user_experiences WHERE _user = $userId".as[UserExperiencesRow])
+        q"SELECT _user, domain, value FROM webknossos.user_experiences WHERE _user = $userId".as[UserExperiencesRow]
+      )
     } yield rows.map(r => (r.domain, r.value)).toMap
 
-  def updateExperiencesForUser(user: User, experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[Unit] = {
+  def updateExperiencesForUser(user: User, experiences: Map[String, Int])(using ctx: DBAccessContext): Fox[Unit] = {
     val clearQuery = q"DELETE FROM webknossos.user_experiences WHERE _user = ${user._id}".asUpdate
-    val insertQueries = experiences.map {
-      case (domain, value) =>
-        q"INSERT INTO webknossos.user_experiences(_user, domain, value) VALUES(${user._id}, $domain, $value)".asUpdate
+    val insertQueries = experiences.map { case (domain, value) =>
+      q"INSERT INTO webknossos.user_experiences(_user, domain, value) VALUES(${user._id}, $domain, $value)".asUpdate
     }
     for {
       _ <- userDAO.assertUpdateAccess(user._id)
       _ <- run(DBIO.sequence(List(clearQuery) ++ insertQueries).transactionally)
       _ <- Fox.serialCombined(experiences.keySet.toList)(domain =>
-        insertExperienceToListing(domain, user._organization))
+        insertExperienceToListing(domain, user._organization)
+      )
     } yield ()
   }
 
@@ -600,7 +639,7 @@ class UserExperiencesDAO @Inject()(sqlClient: SqlClient, userDAO: UserDAO)(impli
 
 }
 
-class UserDatasetConfigurationDAO @Inject()(sqlClient: SqlClient, userDAO: UserDAO)(implicit ec: ExecutionContext)
+class UserDatasetConfigurationDAO @Inject() (sqlClient: SqlClient, userDAO: UserDAO)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
   def findOneForUserAndDataset(userId: ObjectId, datasetId: ObjectId): Fox[DatasetViewConfiguration] =
@@ -615,7 +654,8 @@ class UserDatasetConfigurationDAO @Inject()(sqlClient: SqlClient, userDAO: UserD
   def updateDatasetConfigurationForUserAndDataset(
       userId: ObjectId,
       datasetId: ObjectId,
-      configuration: DatasetViewConfiguration)(implicit ctx: DBAccessContext): Fox[Unit] =
+      configuration: DatasetViewConfiguration
+  )(using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- userDAO.assertUpdateAccess(userId)
       deleteQuery = q"""DELETE FROM webknossos.user_datasetConfigurations
@@ -631,12 +671,14 @@ class UserDatasetConfigurationDAO @Inject()(sqlClient: SqlClient, userDAO: UserD
     } yield ()
 }
 
-class UserDatasetLayerConfigurationDAO @Inject()(sqlClient: SqlClient, userDAO: UserDAO)(implicit ec: ExecutionContext)
+class UserDatasetLayerConfigurationDAO @Inject() (sqlClient: SqlClient, userDAO: UserDAO)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
-  def findAllByLayerNameForUserAndDataset(layerNames: List[String],
-                                          userId: ObjectId,
-                                          datasetId: ObjectId): Fox[Map[String, LayerViewConfiguration]] =
+  def findAllByLayerNameForUserAndDataset(
+      layerNames: List[String],
+      userId: ObjectId,
+      datasetId: ObjectId
+  ): Fox[Map[String, LayerViewConfiguration]] =
     if (layerNames.isEmpty) {
       Fox.successful(Map.empty[String, LayerViewConfiguration])
     } else {
@@ -654,14 +696,16 @@ class UserDatasetLayerConfigurationDAO @Inject()(sqlClient: SqlClient, userDAO: 
       userId: ObjectId,
       datasetId: ObjectId,
       layerName: String,
-      viewConfiguration: LayerViewConfiguration)(implicit ctx: DBAccessContext): Fox[Unit] =
+      viewConfiguration: LayerViewConfiguration
+  )(using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- userDAO.assertUpdateAccess(userId)
       deleteQuery = q"""DELETE FROM webknossos.user_datasetLayerConfigurations
                         WHERE _user = $userId
                         AND _dataset = $datasetId
                         AND layerName = $layerName""".asUpdate
-      insertQuery = q"""INSERT INTO webknossos.user_datasetLayerConfigurations(_user, _dataset, layerName, viewConfiguration)
+      insertQuery =
+        q"""INSERT INTO webknossos.user_datasetLayerConfigurations(_user, _dataset, layerName, viewConfiguration)
                         VALUES($userId, $datasetId, $layerName, ${Json.toJson(viewConfiguration)})""".asUpdate
       _ <- run(
         DBIO.sequence(List(deleteQuery, insertQuery)).transactionally.withTransactionIsolation(Serializable),

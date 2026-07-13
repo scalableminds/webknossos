@@ -377,7 +377,7 @@ This release was skipped for technical reasons.
 - Clicking `Focus Tree in Skeleton Tab` or `Focus in Segment List` will not only focus the clicked tree/segment, but also open the right tab if it was not open already. [#8917](https://github.com/scalableminds/webknossos/pull/8917)
 - Renamed Basic plan to Personal plan. [#8951](https://github.com/scalableminds/webknossos/pull/8951)
 - Improved the error message when loading an unusable dataset or an annotation for an unusable dataset [#8956](https://github.com/scalableminds/webknossos/pull/8956)
-- Changed the pre-selected default format for volume annotation downloads from WKW to Zarr. [#8970](https://github.com/scalableminds/webknossos/pull/8970)
+- Changed the preselected default format for volume annotation downloads from WKW to Zarr. [#8970](https://github.com/scalableminds/webknossos/pull/8970)
 - The tracingstore route `/mapping/:tracingId/agglomerateGraph/:agglomerateId` used by the python client now returns the static fallback agglomerate graph from the datastore in case of volume annotation layers with no editable mapping. [#9013](https://github.com/scalableminds/webknossos/pull/9013)
 
 ### Fixed
@@ -464,7 +464,7 @@ This release was skipped for technical reasons.
 - Changed that the d/f switching setting no longer affects movements other than moving via the d/f keyboard shortcuts. [#8786](https://github.com/scalableminds/webknossos/pull/8786)
 - Explicitly scanning datasets on disk is now faster for multi-organization setups. [#8791](https://github.com/scalableminds/webknossos/pull/8791)
 - Integrated "Change Email" functionality into Account Settings [#8840](https://github.com/scalableminds/webknossos/pull/8840)
-- When adding a new dataset from UI modal, the organization's default team is now automatically pre-selected for dataset access permissions. [#8847](https://github.com/scalableminds/webknossos/pull/8847)
+- When adding a new dataset from UI modal, the organization's default team is now automatically preselected for dataset access permissions. [#8847](https://github.com/scalableminds/webknossos/pull/8847)
 - Zarr streaming a volume annotation will now respond with errors (500) if the underlying data encountered errors. [#8853](https://github.com/scalableminds/webknossos/pull/8853)
 - datasource-properties.jsons with wkwResolutions now do not need the cubeLength parameter anymore. [#8854](https://github.com/scalableminds/webknossos/pull/8854)
 - Added protection against server outages by limiting the number of update actions in an annotation update transaction to 1000000. [#8866](https://github.com/scalableminds/webknossos/pull/8866)
@@ -1217,7 +1217,7 @@ This release was skipped for technical reasons.
 - Added the option to convert agglomerate skeletons to freely modifiable skeletons in the context menu of the Skeleton tab. [#7537](https://github.com/scalableminds/webknossos/pull/7537)
 - The annotation list in the dashboard now also shows segment counts of volume annotations (after they have been edited). [#7548](https://github.com/scalableminds/webknossos/pull/7548)
 - The buildinfo route now reports the supported HTTP API versions. [#7581](https://github.com/scalableminds/webknossos/pull/7581)
-- After deleting specific teams, projects and task types, their names can now be re-used when creating new ones. [#7573](https://github.com/scalableminds/webknossos/pull/7573)
+- After deleting specific teams, projects and task types, their names can now be reused when creating new ones. [#7573](https://github.com/scalableminds/webknossos/pull/7573)
 
 ### Changed
 - Improved loading speed of the annotation list. [#7410](https://github.com/scalableminds/webknossos/pull/7410)

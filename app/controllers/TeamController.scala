@@ -3,9 +3,9 @@ package controllers
 import com.scalableminds.util.Msg
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.Fox
-import models.team._
+import models.team.*
 import models.user.UserDAO
-import play.api.libs.json._
+import play.api.libs.json.*
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.WkEnv
 import com.scalableminds.util.objectid.ObjectId
@@ -18,12 +18,13 @@ object TeamParameters {
   implicit val jsonFormat: Format[TeamParameters] = Json.format[TeamParameters]
 }
 
-class TeamController @Inject()(teamDAO: TeamDAO, userDAO: UserDAO, teamService: TeamService, sil: Silhouette[WkEnv])(
-    implicit ec: ExecutionContext,
-    playBodyParsers: PlayBodyParsers)
-    extends Controller {
+class TeamController @Inject() (teamDAO: TeamDAO, userDAO: UserDAO, teamService: TeamService, sil: Silhouette[WkEnv])(
+    implicit
+    ec: ExecutionContext,
+    playBodyParsers: PlayBodyParsers
+) extends Controller {
 
-  def list(isEditable: Option[Boolean]): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def list(isEditable: Option[Boolean]): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     val onlyEditableTeams = isEditable.getOrElse(false)
     for {
       allTeams <- if (onlyEditableTeams) teamDAO.findAllEditable else teamDAO.findAll
@@ -31,7 +32,7 @@ class TeamController @Inject()(teamDAO: TeamDAO, userDAO: UserDAO, teamService: 
     } yield Ok(Json.toJson(js))
   }
 
-  def delete(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def delete(id: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       _ <- Fox.fromBool(request.identity.isAdmin) ?~> Msg.Team.deleteOnlyAdmin ~> FORBIDDEN
       team <- teamDAO.findOne(id) ?~> Msg.Team.notFound(id) ~> NOT_FOUND
@@ -43,7 +44,7 @@ class TeamController @Inject()(teamDAO: TeamDAO, userDAO: UserDAO, teamService: 
     } yield JsonOk(Msg.Team.deleteSuccess)
   }
 
-  def create: Action[TeamParameters] = sil.SecuredAction.async(validateJson[TeamParameters]) { implicit request =>
+  def create: Action[TeamParameters] = sil.SecuredAction.fox(validateJson[TeamParameters]) { implicit request =>
     for {
       _ <- Fox.fromBool(request.identity.isAdmin) ?~> Msg.Team.createOnlyAdmin ~> FORBIDDEN
       teamName = request.body.name

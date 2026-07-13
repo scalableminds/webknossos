@@ -2,20 +2,21 @@ package com.scalableminds.webknossos.datastore.services
 
 import org.apache.pekko.actor.ActorSystem
 import com.google.inject.name.Named
+import com.scalableminds.util.box.{Box, Failure, Full}
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.{Box, Failure, Full}
 import play.api.inject.ApplicationLifecycle
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
-trait DatasetErrorLoggingService extends IntervalScheduler with Formatter with LazyLogging with FoxImplicits {
+trait DatasetErrorLoggingService extends IntervalScheduler with Formatter with LazyLogging {
 
   protected def applicationHealthService: Option[ApplicationHealthService]
 
@@ -35,7 +36,8 @@ trait DatasetErrorLoggingService extends IntervalScheduler with Formatter with L
     val previousErrorCount = recentErrors.getOrElse((organizationId, datasetName), 0)
     if (previousErrorCount >= errorCountThresholdPerDataset - 1) {
       logger.info(
-        s"Got >= $errorCountThresholdPerDataset bucket loading errors for dataset $organizationId/$datasetName, muting them until next reset (interval = $tickerInterval) or dataset reload")
+        s"Got >= $errorCountThresholdPerDataset bucket loading errors for dataset $organizationId/$datasetName, muting them until next reset (interval = $tickerInterval) or dataset reload"
+      )
     }
     recentErrors((organizationId, datasetName)) = previousErrorCount + 1
   }
@@ -45,10 +47,12 @@ trait DatasetErrorLoggingService extends IntervalScheduler with Formatter with L
 
   override protected def tick(): Fox[Unit] = Fox.successful(recentErrors.clear())
 
-  def withErrorLoggingMultiple(datasetId: Option[ObjectId],
-                               dataSourceId: DataSourceId,
-                               label: String,
-                               resultFox: Fox[Seq[Box[Array[Byte]]]]): Fox[Seq[Box[Array[Byte]]]] =
+  def withErrorLoggingMultiple(
+      datasetId: Option[ObjectId],
+      dataSourceId: DataSourceId,
+      label: String,
+      resultFox: Fox[Seq[Box[Array[Byte]]]]
+  ): Fox[Seq[Box[Array[Byte]]]] =
     resultFox.shiftBox.flatMap {
       case Full(boxes) =>
         boxes.foreach(box => withErrorLogging(datasetId, dataSourceId, label, box.toFox))
@@ -58,10 +62,12 @@ trait DatasetErrorLoggingService extends IntervalScheduler with Formatter with L
         other.toFox
     }
 
-  def withErrorLogging(datasetId: Option[ObjectId],
-                       dataSourceId: DataSourceId,
-                       label: String,
-                       resultFox: Fox[Array[Byte]]): Fox[Array[Byte]] =
+  def withErrorLogging(
+      datasetId: Option[ObjectId],
+      dataSourceId: DataSourceId,
+      label: String,
+      resultFox: Fox[Array[Byte]]
+  ): Fox[Array[Byte]] =
     resultFox.shiftBox.flatMap {
       case Full(data) =>
         if (data.length == 0) {
@@ -81,7 +87,8 @@ trait DatasetErrorLoggingService extends IntervalScheduler with Formatter with L
       case f: Failure =>
         if (shouldLog(dataSourceId.organizationId, dataSourceId.directoryName)) {
           logger.error(
-            s"Error while $label for $datasetId ($dataSourceId): ${formatFailureChain(f, includeStackTraces = true)}")
+            s"Error while $label for $datasetId ($dataSourceId): ${formatFailureChain(f, includeStackTraces = true)}"
+          )
           registerLogged(dataSourceId.organizationId, dataSourceId.directoryName)
         }
         f.toFox
@@ -90,10 +97,11 @@ trait DatasetErrorLoggingService extends IntervalScheduler with Formatter with L
 
 }
 
-class DSDatasetErrorLoggingService @Inject()(
+class DSDatasetErrorLoggingService @Inject() (
     val lifecycle: ApplicationLifecycle,
     dsApplicationHealthService: ApplicationHealthService,
-    @Named("webknossos-datastore") val actorSystem: ActorSystem)(implicit val ec: ExecutionContext)
+    @Named("webknossos-datastore") val actorSystem: ActorSystem
+)(implicit val ec: ExecutionContext)
     extends DatasetErrorLoggingService {
   protected def applicationHealthService: Option[ApplicationHealthService] = Some(dsApplicationHealthService)
 }

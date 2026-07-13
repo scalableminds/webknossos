@@ -1,7 +1,9 @@
 package com.scalableminds.webknossos.datastore.explore
 
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.tools.{Box, Failure, Fox, Full}
+import com.scalableminds.util.box.{Box, Failure, Full}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrHeader
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader
@@ -16,8 +18,9 @@ class WebknossosZarrExplorer(implicit val ec: ExecutionContext) extends RemoteLa
 
   override def name: String = "WEBKNOSSOS-based Zarr"
 
-  override def explore(remotePath: VaultPath, credentialId: Option[String])(
-      implicit tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
+  override def explore(remotePath: VaultPath, credentialId: Option[String])(using
+      tc: TokenContext
+  ): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
       dataSourcePropertiesPath <- Fox.successful(remotePath / UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
       dataSource <- dataSourcePropertiesPath.parseAsJson[UsableDataSource]
@@ -34,23 +37,28 @@ class WebknossosZarrExplorer(implicit val ec: ExecutionContext) extends RemoteLa
     layer.dataFormat match {
       case DataFormat.zarr  => Full(ZarrHeader.FILENAME_DOT_ZARRAY)
       case DataFormat.zarr3 => Full(Zarr3ArrayHeader.FILENAME_ZARR_JSON)
-      case _                => Failure(s"Invalid layer dataformat ${layer.dataFormat}, can only explore zarr, zarr3 as WebknossosZarr")
+      case _ => Failure(s"Invalid layer dataformat ${layer.dataFormat}, can only explore zarr, zarr3 as WebknossosZarr")
     }
 
-  private def adaptMags(mags: Seq[MagLocator],
-                        remoteDatasetPath: VaultPath,
-                        layerName: String,
-                        headerFilename: String,
-                        credentialId: Option[String])(implicit tc: TokenContext): Fox[Seq[MagLocator]] =
+  private def adaptMags(
+      mags: Seq[MagLocator],
+      remoteDatasetPath: VaultPath,
+      layerName: String,
+      headerFilename: String,
+      credentialId: Option[String]
+  )(using tc: TokenContext): Fox[Seq[MagLocator]] =
     Fox.serialCombined(mags)(m =>
       for {
         magPath <- fixRemoteMagPath(m, remoteDatasetPath, layerName, headerFilename)
-      } yield m.copy(path = magPath, credentialId = credentialId))
+      } yield m.copy(path = magPath, credentialId = credentialId)
+    )
 
-  private def fixRemoteMagPath(mag: MagLocator,
-                               remoteDatasetPath: VaultPath,
-                               layerName: String,
-                               headerFilename: String)(implicit tc: TokenContext): Fox[Option[UPath]] =
+  private def fixRemoteMagPath(
+      mag: MagLocator,
+      remoteDatasetPath: VaultPath,
+      layerName: String,
+      headerFilename: String
+  )(using tc: TokenContext): Fox[Option[UPath]] =
     mag.path match {
       case Some(path) => Fox.successful(Some(path.resolvedIn(remoteDatasetPath.toUPath)))
       case None       =>

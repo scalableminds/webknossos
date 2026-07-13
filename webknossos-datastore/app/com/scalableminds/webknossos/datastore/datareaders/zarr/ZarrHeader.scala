@@ -17,7 +17,7 @@ import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDat
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 import play.api.libs.json.Json.WithDefaultValues
-import play.api.libs.json._
+import play.api.libs.json.*
 
 case class ZarrHeader(
     zarr_format: Int, // format version number
@@ -54,9 +54,8 @@ case class ZarrHeader(
 object ZarrHeader extends JsonImplicits {
   val FILENAME_DOT_ZARRAY = ".zarray"
 
-  /***
-    * This function is used for exposing webknossos layers as zarr layers via the API.
-    * It therefore defaults to the necessary defaults for webknossos data layers.
+  /** * This function is used for exposing webknossos layers as zarr layers via the API. It therefore defaults to the
+    * necessary defaults for webknossos data layers.
     */
   def fromLayer(dataLayer: DataLayer, mag: Vec3Int): ZarrHeader = {
     val cubeLength = DataLayer.bucketLength
@@ -78,12 +77,14 @@ object ZarrHeader extends JsonImplicits {
 
     val chunks = Array(channels) ++ additionalAxesChunksEntries ++ Array(cubeLength, cubeLength, cubeLength)
 
-    ZarrHeader(zarr_format = 2,
-               shape = shape.map(_.toLong),
-               chunks = chunks,
-               compressor = compressor,
-               dtype = dtype,
-               order = ArrayOrder.F)
+    ZarrHeader(
+      zarr_format = 2,
+      shape = shape.map(_.toLong),
+      chunks = chunks,
+      compressor = compressor,
+      dtype = dtype,
+      order = ArrayOrder.F
+    )
   }
 
   implicit object ZarrHeaderFormat extends Format[ZarrHeader] {

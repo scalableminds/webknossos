@@ -58,6 +58,7 @@ import { calculateGlobalPos, getViewportExtents } from "viewer/model/accessors/v
 import {
   getActiveCellId,
   getActiveSegmentationTracing,
+  getActiveUnmappedSegmentId,
   getBucketRetrievalSourceFn,
   getHideUnregisteredSegmentsForLayer,
   getProofreadingMarkerPosition,
@@ -784,7 +785,8 @@ class PlaneMaterialFactory {
           true,
         ),
         listenToStoreProperty(
-          (storeState) => getActiveSegmentationTracing(storeState)?.activeUnmappedSegmentId,
+          (storeState) =>
+            getActiveUnmappedSegmentId(storeState, getActiveSegmentationTracing(storeState)),
           (activeUnmappedSegmentId) =>
             (this.uniforms.isUnmappedSegmentHighlighted.value = activeUnmappedSegmentId != null),
           true,

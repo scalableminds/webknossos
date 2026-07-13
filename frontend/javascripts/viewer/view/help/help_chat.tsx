@@ -1,4 +1,4 @@
-import { Flex, Input, Spin, Typography } from "antd";
+import { Flex, Input, Skeleton, Typography } from "antd";
 import features from "features";
 
 import { useWkSelector } from "libs/react_hooks";
@@ -92,7 +92,9 @@ function ChatMessageBubble({
     <Flex justify={message.role === "user" ? "end" : "start"}>
       <div style={bubbleStyle}>
         {isLoading ? (
-          <Spin size="small" />
+          <div style={{ width: 200 }}>
+            <Skeleton title={false} paragraph={{ rows: 2, width: ["100%", "65%"] }} active />
+          </div>
         ) : message.role === "assistant" ? (
           <HelpChatMarkdown text={message.content} />
         ) : (

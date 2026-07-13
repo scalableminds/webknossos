@@ -1,13 +1,15 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr
 
+import com.scalableminds.util.box.{Box, Failure, Full}
 import com.scalableminds.webknossos.datastore.models
 import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
-import com.scalableminds.util.tools.{Box, Failure, Full}
 import play.api.libs.json.{Json, OFormat}
 
-case class NgffCoordinateTransformation(`type`: String = "scale",
-                                        scale: Option[List[Double]],
-                                        translation: Option[List[Double]])
+case class NgffCoordinateTransformation(
+    `type`: String = "scale",
+    scale: Option[List[Double]],
+    translation: Option[List[Double]]
+)
 
 object NgffCoordinateTransformation {
   implicit val jsonFormat: OFormat[NgffCoordinateTransformation] = Json.format[NgffCoordinateTransformation]
@@ -27,7 +29,7 @@ case class NgffAxis(name: String, `type`: String, unit: Option[String] = None) {
     else {
       unit match {
         case None | Some("") => Full(VoxelSize.DEFAULT_UNIT)
-        case Some(someUnit)  => Box(LengthUnit.fromString(someUnit))
+        case Some(someUnit)  => Box.fromOption(LengthUnit.fromString(someUnit))
       }
     }
 }
@@ -46,11 +48,13 @@ object NgffChannelWindow {
   implicit val jsonFormat: OFormat[NgffChannelWindow] = Json.format[NgffChannelWindow]
 }
 
-case class NgffChannelAttributes(color: Option[String],
-                                 label: Option[String],
-                                 window: Option[NgffChannelWindow],
-                                 inverted: Option[Boolean],
-                                 active: Option[Boolean])
+case class NgffChannelAttributes(
+    color: Option[String],
+    label: Option[String],
+    window: Option[NgffChannelWindow],
+    inverted: Option[Boolean],
+    active: Option[Boolean]
+)
 object NgffChannelAttributes {
   implicit val jsonFormat: OFormat[NgffChannelAttributes] = Json.format[NgffChannelAttributes]
 }

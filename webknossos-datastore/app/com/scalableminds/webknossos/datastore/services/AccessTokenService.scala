@@ -10,8 +10,8 @@ import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.Result
 import play.api.mvc.Results.Forbidden
 
-import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration.*
+import scala.concurrent.ExecutionContext
 
 object AccessMode extends ExtendedEnumeration {
   type AccessMode = Value
@@ -71,40 +71,50 @@ trait AccessTokenService {
   private lazy val accessAnswersCache: AlfuCache[(UserAccessRequest, Option[String]), UserAccessAnswer] =
     AlfuCache(timeToLive = AccessExpiration, timeToIdle = AccessExpiration)
 
-  def validateAccessFromTokenContextForSyncBlock(accessRequest: UserAccessRequest)(
-      block: => Result)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Result] =
+  def validateAccessFromTokenContextForSyncBlock(
+      accessRequest: UserAccessRequest
+  )(block: => Result)(using ec: ExecutionContext, tc: TokenContext): Fox[Result] =
     validateAccessFromTokenContext(accessRequest) {
-      Future.successful(block)
+      Fox.successful(block)
     }
 
   def validateAccessFromTokenContext(accessRequest: UserAccessRequest, useCaching: Boolean = true)(
-      block: => Future[Result])(implicit ec: ExecutionContext, tc: TokenContext): Fox[Result] =
+      block: => Fox[Result]
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Result] =
     for {
-      userAccessAnswer <- hasUserAccess(accessRequest, useCaching) ?~> "Failed to check data access, token may be expired, consider reloading."
-      result <- Fox.fromFuture(executeBlockOnPositiveAnswer(userAccessAnswer, block))
+      userAccessAnswer <- hasUserAccess(
+        accessRequest,
+        useCaching
+      ) ?~> "Failed to check data access, token may be expired, consider reloading."
+      result <- executeBlockOnPositiveAnswer(userAccessAnswer, block)
     } yield result
 
-  private def hasUserAccess(accessRequest: UserAccessRequest, useCaching: Boolean)(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[UserAccessAnswer] =
+  private def hasUserAccess(accessRequest: UserAccessRequest, useCaching: Boolean)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[UserAccessAnswer] =
     if (useCaching) {
-      accessAnswersCache.getOrLoad((accessRequest, tc.userTokenOpt),
-                                   _ => remoteWebknossosClient.requestUserAccess(accessRequest))
+      accessAnswersCache.getOrLoad(
+        (accessRequest, tc.userTokenOpt),
+        _ => remoteWebknossosClient.requestUserAccess(accessRequest)
+      )
     } else remoteWebknossosClient.requestUserAccess(accessRequest)
 
-  private def executeBlockOnPositiveAnswer(userAccessAnswer: UserAccessAnswer,
-                                           block: => Future[Result]): Future[Result] =
+  private def executeBlockOnPositiveAnswer(
+      userAccessAnswer: UserAccessAnswer,
+      block: => Fox[Result]
+  )(implicit ec: ExecutionContext): Fox[Result] =
     userAccessAnswer match {
       case UserAccessAnswer(true, _) =>
         block
       case UserAccessAnswer(false, Some(msg)) =>
         // Note that this should be kept in sync with DSLegacyApiController.withResolvedDatasetId
         // to make the errors indistinguishable.
-        Future.successful(Forbidden("Token may be expired, consider reloading. Access forbidden: " + msg))
+        Fox.successful(Forbidden("Token may be expired, consider reloading. Access forbidden: " + msg))
       case _ =>
-        Future.successful(Forbidden("Token may be expired, consider reloading. Token authentication failed."))
+        Fox.successful(Forbidden("Token may be expired, consider reloading. Token authentication failed."))
     }
 }
 
-class DataStoreAccessTokenService @Inject()(val remoteWebknossosClient: DSRemoteWebknossosClient)
+class DataStoreAccessTokenService @Inject() (val remoteWebknossosClient: DSRemoteWebknossosClient)
     extends AccessTokenService

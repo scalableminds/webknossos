@@ -2,7 +2,7 @@ package controllers
 
 import com.scalableminds.util.Msg
 import play.silhouette.api.Silhouette
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import models.annotation.{TracingStoreDAO, TracingStoreService}
 import play.api.libs.json.{Json, OFormat}
 
@@ -17,14 +17,14 @@ object TracingStoreParameters {
   implicit val jsonFormat: OFormat[TracingStoreParameters] = Json.format[TracingStoreParameters]
 }
 
-class TracingStoreController @Inject()(
+class TracingStoreController @Inject() (
     tracingStoreService: TracingStoreService,
     tracingStoreDAO: TracingStoreDAO,
-    sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
-    extends Controller
-    with FoxImplicits {
+    sil: Silhouette[WkEnv]
+)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
+    extends Controller {
 
-  def listOne: Action[AnyContent] = sil.UserAwareAction.async {
+  def listOne: Action[AnyContent] = sil.UserAwareAction.fox { _ =>
     for {
       tracingStore <- tracingStoreDAO.findFirst ?~> Msg.TracingStore.listFailed
       js <- tracingStoreService.publicWrites(tracingStore)
@@ -32,7 +32,7 @@ class TracingStoreController @Inject()(
   }
 
   def update(name: String): Action[TracingStoreParameters] =
-    sil.SecuredAction.async(validateJson[TracingStoreParameters]) { implicit request =>
+    sil.SecuredAction.fox(validateJson[TracingStoreParameters]) { implicit request =>
       for {
         _ <- Fox.fromBool(request.identity.isAdmin)
         existing <- tracingStoreDAO.findOneByName(name) ?~> Msg.TracingStore.notFound ~> NOT_FOUND

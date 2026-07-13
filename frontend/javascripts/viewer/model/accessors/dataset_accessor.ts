@@ -623,9 +623,9 @@ export function isLayerVisible(
     return false;
   }
 
-  const isArbitraryMode = constants.MODES_ARBITRARY.includes(viewMode);
-  const isHiddenBecauseOfArbitraryMode = isArbitraryMode && isSegmentationLayer(dataset, layerName);
-  return !layerConfig.isDisabled && layerConfig.alpha > 0 && !isHiddenBecauseOfArbitraryMode;
+  const isFlightMode = viewMode === constants.MODE_FLIGHT;
+  const isHiddenInFlightMode = isFlightMode && isSegmentationLayer(dataset, layerName);
+  return !layerConfig.isDisabled && layerConfig.alpha > 0 && !isHiddenInFlightMode;
 }
 
 function _hasFallbackLayer(layer: APIDataLayer) {

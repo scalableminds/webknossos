@@ -32,20 +32,6 @@
   ],
   [
     {
-      "name": "updateSegmentPartial",
-      "value": {
-        "actionTracingId": "volumeTracingId",
-        "anchorPosition": [
-          100,
-          100,
-          100,
-        ],
-        "id": 1339,
-      },
-    },
-  ],
-  [
-    {
       "name": "createTree",
       "value": {
         "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
@@ -90,6 +76,20 @@
         "source": 7,
         "target": 8,
         "treeId": 6,
+      },
+    },
+  ],
+  [
+    {
+      "name": "updateSegmentPartial",
+      "value": {
+        "actionTracingId": "volumeTracingId",
+        "anchorPosition": [
+          100,
+          100,
+          100,
+        ],
+        "id": 1339,
       },
     },
   ],

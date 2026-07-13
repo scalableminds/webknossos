@@ -2,15 +2,14 @@ import type { Matrix4x4 } from "mjs";
 import { Euler, Matrix4 } from "three";
 export type AdditionalCoordinate = { name: string; value: number };
 
-export const ViewModeValues = ["orthogonal", "flight", "oblique"] as ViewMode[];
+export const ViewModeValues = ["orthogonal", "flight"] as ViewMode[];
 
 export const ViewModeValuesIndices = {
   Orthogonal: 0,
   Flight: 1,
-  Oblique: 2,
   Volume: 3,
 };
-export type ViewMode = "orthogonal" | "oblique" | "flight";
+export type ViewMode = "orthogonal" | "flight";
 export type Vector2 = [number, number];
 export type Vector3 = [number, number, number];
 export type Vector4 = [number, number, number, number];
@@ -68,16 +67,16 @@ export type OrthoViewMap<T> = Record<OrthoView, T>;
 export type OrthoViewWithoutTDMap<T> = Record<OrthoViewWithoutTD, T>;
 export type OrthoViewExtents = Readonly<OrthoViewMap<Vector2>>;
 export type OrthoViewRects = Readonly<OrthoViewMap<Rect>>;
-export const ArbitraryViewport = "arbitraryViewport";
-export const ArbitraryViews = {
-  arbitraryViewport: "arbitraryViewport",
+export const FlightViewport = "flightViewport";
+export const FlightViews = {
+  flightViewport: "flightViewport",
   TDView: "TDView",
 } as const;
-export const ArbitraryViewsToName = {
-  arbitraryViewport: "Arbitrary View",
+export const FlightViewsToName = {
+  flightViewport: "Flight View",
   TDView: "3D",
 };
-export type Viewport = OrthoView | typeof ArbitraryViewport;
+export type Viewport = OrthoView | typeof FlightViewport;
 export type ViewportMap<T> = Record<Viewport, T>;
 export type ViewportRects = Readonly<ViewportMap<Rect>>;
 export const OrthoViewValues = Object.keys(OrthoViews) as OrthoView[];
@@ -105,7 +104,7 @@ export const NumberToOrthoView: Record<number, OrthoView> = {
   1: OrthoViews.PLANE_YZ,
   2: OrthoViews.PLANE_XZ,
   3: OrthoViews.TDView,
-  4: OrthoViews.PLANE_XY, // Arbitrary view is equal to the XY plane.
+  4: OrthoViews.PLANE_XY, // Flight view is equal to the XY plane.
 };
 
 const PINK = 0xeb4b98;
@@ -261,10 +260,25 @@ export const NODE_ID_REF_REGEX = /#([0-9]+)/g;
 export const POSITION_REF_REGEX = /#\(([0-9]+,[0-9]+,[0-9]+)\)/g;
 const VIEWPORT_WIDTH = 376;
 
-// ARBITRARY_CAM_DISTANCE has to be calculated such that with cam
+// FLIGHT_CAM_DISTANCE has to be calculated such that with cam
 // angle 45°, the plane of width Constants.VIEWPORT_WIDTH fits exactly in the
 // viewport.
-export const ARBITRARY_CAM_DISTANCE = VIEWPORT_WIDTH / 2 / Math.tan(((Math.PI / 180) * 45) / 2);
+export const FLIGHT_CAM_DISTANCE = VIEWPORT_WIDTH / 2 / Math.tan(((Math.PI / 180) * 45) / 2);
+
+// A subdivision of 100 means that there will be 100 segments per axis
+// and thus 101 vertices per axis (i.e., the vertex shader is executed 101**2).
+// In an extreme scenario, these vertices would have a distance to each other
+// of 32 voxels. Thus, each square (two triangles) would render one bucket.
+// 100**2 == 10,000 buckets per plane are currently unrealistic and therefore
+// a valid upper bound.
+// However, note that in case of anisotropic datasets, the above calculation
+// needs to be adapted a bit. For example, consider a dataset with mag 8-8-1.
+// The XZ plane could render 100 buckets along the X coordinate (as above), but
+// only ~13 buckets along the Z coordinate. This would require 1300 which is not
+// unrealistic. PLANE_SUBDIVISION values of 80 showed rare problems which is why
+// a value of 100 is now used. If this should become problematic, too, a dynamic
+// subdivision would probably be the next step.
+export const PLANE_SUBDIVISION = 100;
 
 export const Unicode = {
   ThinSpace: "\u202f",
@@ -284,16 +298,14 @@ export type LabeledVoxelsMap = Map<BucketAddress, Uint8Array>;
 export type LabelMasksByBucketAndW = Map<BucketAddress, Map<number, Uint8Array>>;
 
 const Constants = {
-  ARBITRARY_VIEW: 4,
+  FLIGHT_VIEW: 4,
   DEFAULT_BORDER_WIDTH: 400,
   DEFAULT_BORDER_WIDTH_IN_IFRAME: 200,
   MODE_PLANE_TRACING: "orthogonal" as ViewMode,
-  MODE_ARBITRARY: "flight" as ViewMode,
-  MODE_ARBITRARY_PLANE: "oblique" as ViewMode,
+  MODE_FLIGHT: "flight" as ViewMode,
   MODE_VOLUME: "volume" as ViewMode,
   MODES_PLANE: ["orthogonal", "volume"] as ViewMode[],
-  MODES_ARBITRARY: ["flight", "oblique"] as ViewMode[],
-  MODES_SKELETON: ["orthogonal", "flight", "oblique"] as ViewMode[],
+  MODES_SKELETON: ["orthogonal", "flight"] as ViewMode[],
   BUCKET_WIDTH: 32,
   BUCKET_SIZE: 32 ** 3,
   BUCKET_SHAPE: [32, 32, 32] as Vector3,
@@ -341,6 +353,11 @@ const Constants = {
   REGISTER_SEGMENTS_BB_MAX_SEGMENT_COUNT: 5000,
   DEFAULT_MESH_OPACITY: 1,
   PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT: 32,
+  // Maximum number of segments for which precomputed meshes are loaded simultaneously.
+  // This way, the first meshes are fully loaded (and visible) early and the
+  // memory pressure of in-flight chunk buffers stays bounded when meshes are
+  // requested for many segments at once (e.g., for a whole segment group).
+  PARALLEL_MESH_LOADING_SEGMENT_COUNT: 4,
   NARROW_SCREEN_WIDTH: 1400,
   VERY_NARROW_SCREEN_WIDTH: 1200,
   NUMBER_OF_TOOLS_IN_TOOLBAR: 5,
@@ -521,8 +538,4 @@ export enum AnnotationStateFilterEnum {
 export enum PerformanceMarkEnum {
   TRACING_VIEW_LOAD = "tracing_view_load_start",
   SHADER_COMPILE = "shader_compile_start",
-}
-
-export enum SagaIdentifier {
-  SAVE_SAGA = "save_saga",
 }

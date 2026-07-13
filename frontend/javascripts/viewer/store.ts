@@ -642,6 +642,10 @@ export type LocalMeshesInfo =
   | Record<string, Record<number, MeshInformation> | undefined>
   | undefined;
 
+// A single entry of the id reservation mechanism (see id_reservation_saga.ts). `used`
+// marks whether the id has already been assigned to a newly created item.
+export type IdReservation = { id: number; used: boolean };
+
 // LocalSegmentationState holds per-layer segmentation state that is not
 // persisted on the server (in contrast to the VolumeTracing which must only
 // contain synced state, see its comment).
@@ -674,7 +678,7 @@ export type LocalSegmentationState = {
   readonly contourTracingMode: ContourMode;
   // Stores points of the currently drawn region in layer-space coordinates.
   readonly contourList: Array<Vector3>;
-  readonly idReservations: Record<"SegmentGroup", { id: number; used: boolean }[]>;
+  readonly idReservations: Record<"SegmentGroup", IdReservation[]>;
   // The position of the "proofreading marker" (a cross) is stored separately.
   // In earlier versions, the anchor position of the current segment was simply used.
   // However, the anchor position can be updated by another user (in collab mode) which
@@ -695,7 +699,7 @@ export type LocalAnnotationState = {
   // Bounding boxes are shared/mirrored across all tracings of an annotation (see
   // updateUserBoundingBoxes in annotation_reducer.ts), so their id reservations are
   // tracked here on the annotation level instead of per segmentation layer.
-  readonly idReservationsForBoundingBoxes: { id: number; used: boolean }[];
+  readonly idReservationsForBoundingBoxes: IdReservation[];
 };
 
 export type StoreDataset = APIDataset & {

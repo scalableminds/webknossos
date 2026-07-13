@@ -5,6 +5,7 @@ import type { Vector3 } from "viewer/constants";
 import type { SaveQueueType } from "viewer/model/actions/save_actions";
 import type {
   EditableMapping,
+  IdReservation,
   ReadOnlyTracing,
   SkeletonTracing,
   StoreAnnotation,
@@ -137,8 +138,6 @@ export const getUserBoundingBoxesThatContainPosition = (
   return bboxes.filter((el) => new BoundingBox(el.boundingBox).containsPoint(position));
 };
 
-export function getIdReservationsForBoundingBoxes(
-  state: WebknossosState,
-): { id: number; used: boolean }[] {
+export function getIdReservationsForBoundingBoxes(state: WebknossosState): IdReservation[] {
   return state.localAnnotationState.idReservationsForBoundingBoxes;
 }

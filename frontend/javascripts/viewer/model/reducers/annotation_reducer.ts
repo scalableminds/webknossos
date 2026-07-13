@@ -5,6 +5,7 @@ import isEqual from "lodash-es/isEqual";
 import reduce from "lodash-es/reduce";
 import uniqWith from "lodash-es/uniqWith";
 import type { AdditionalCoordinate } from "types/api_types";
+import defaultState from "viewer/default_state";
 import { maybeGetSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import { getDisplayedDataExtentInPlaneMode } from "viewer/model/accessors/view_mode_accessor";
 import type { Action } from "viewer/model/actions/actions";
@@ -103,11 +104,11 @@ const maybeAddAdditionalCoordinatesToMeshState = (
 function AnnotationReducer(state: WebknossosState, action: Action): WebknossosState {
   switch (action.type) {
     case "INITIALIZE_ANNOTATION": {
-      // rebaseRelevantServerAnnotationState stores rebasing relevant information of the annotation.
-      // It always is in sync with the latest known version on the server. After initializing it is the current version.
-      // mappingDataByLayer entries are initialized automatically when the mappings are loaded by the saga.
-      const stateWithAnnotationRebaseInformation = update(state, {
+      const resetStoreState = update(state, {
         save: {
+          // rebaseRelevantServerAnnotationState stores rebasing relevant information of the annotation.
+          // It always is in sync with the latest known version on the server. After initializing it is the current version.
+          // mappingDataByLayer entries are initialized automatically when the mappings are loaded by the saga.
           rebaseRelevantServerAnnotationState: {
             annotationVersion: {
               $set: action.annotation.version,
@@ -120,9 +121,14 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
             },
           },
         },
+        // Also reset localAnnotationState. Note that localSegmentationStateByLayer is reset in the reducer
+        // that handles SET_DATASET.
+        localAnnotationState: {
+          $set: defaultState.localAnnotationState,
+        },
       });
 
-      return updateAnnotation(stateWithAnnotationRebaseInformation, {
+      return updateAnnotation(resetStoreState, {
         // Clear all tracings. These will be initialized in corresponding
         // initialization actions.
         mappings: [],

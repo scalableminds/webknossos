@@ -25,10 +25,10 @@ import {
   getDataLayers,
   getLayerByName,
   getMagInfo,
-  getMagInfoByLayer,
   getMappingInfo,
   getSegmentationLayerByName,
   getSegmentationLayers,
+  getSomeMagInfoForDataset,
   getVisibleOrLastSegmentationLayer,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
@@ -292,9 +292,7 @@ export function isVolumeAnnotationDisallowedForZoom(
   // would theoretically allow mag 1-1-1). Use the effectively rendered mag index
   // for the check below so that editing is only disabled when another layer actually
   // renders a mag that is missing in the volume layer (e.g., due to mag restrictions).
-  const finestDatasetMagIndex = Math.min(
-    ...Object.values(getMagInfoByLayer(state.dataset)).map((info) => info.getFinestMagIndex()),
-  );
+  const finestDatasetMagIndex = getSomeMagInfoForDataset(state.dataset).getFinestMagIndex();
   const effectiveMagIndex = Math.max(rawMagIndex, finestDatasetMagIndex);
   if (!volumeMags.hasIndex(effectiveMagIndex)) {
     // The current zoom corresponds to a mag that was excluded for this volume layer

@@ -17,7 +17,7 @@ Code Verification:
 Code Verification: 
 - Scala type-checking: `sbt compile`
 - Unit tests: `yarn test-backend`
-- Formatting: `yarn format-backend`
+- Formatting: `yarn fix-backend`
 
 
 ## Pull Requests

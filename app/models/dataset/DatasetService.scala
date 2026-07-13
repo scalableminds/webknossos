@@ -758,7 +758,7 @@ class DatasetService @Inject() (
       _ <- existingDatasetBox match {
         case Full(dataset) =>
           for {
-            annotationCount <- annotationDAO.countAllByDataset(dataset._id)(using GlobalAccessContext)
+            annotationCount <- annotationDAO.countAllByDatasetIncludingDeleted(dataset._id)
             _ <- datasetDAO.deleteDataset(dataset._id, onlyMarkAsDeleted = annotationCount > 0)
             _ <- usedStorageService.refreshStorageReportForDataset(dataset)
           } yield ()

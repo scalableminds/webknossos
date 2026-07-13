@@ -1,4 +1,5 @@
 import size from "lodash-es/size";
+import messages from "messages";
 import type {
   APIAnnotationInfo,
   APIAnnotationUserState,
@@ -7,6 +8,8 @@ import type {
   VolumeUserState,
 } from "types/api_types";
 import type { EmptyObject } from "types/type_utils";
+import { TreeTypeEnum } from "viewer/constants";
+import type { Tree } from "viewer/model/types/tree_types";
 import type { StoreAnnotation, WebknossosState } from "viewer/store";
 import { sum } from "../helpers/iterator_utils";
 
@@ -79,6 +82,50 @@ export function maySendSaveRequest(state: WebknossosState) {
       // (and for sending save requests, we also manipulate the save queue).
       !state.save.rebaseRelevantServerAnnotationState.isRebasingOrForwarding,
   );
+}
+
+export function isConcurrentCollaborationMode(state: WebknossosState) {
+  // "Live collaboration" / "simultaneous editing": multiple users edit the same
+  // annotation at the same time. In this mode, normal skeleton editing is forbidden
+  // because it would interfere with concurrent edits/rebasing. Only proofreading
+  // (which operates on agglomerate trees) is allowed.
+  return state.annotation.collaborationMode === "Concurrent";
+}
+
+export function isAgglomerateTree(tree: Tree | null | undefined): boolean {
+  return tree?.type === TreeTypeEnum.AGGLOMERATE;
+}
+
+export function mayEditSkeletonTree(state: WebknossosState, tree: Tree | null | undefined) {
+  // Whether the given existing tree may be mutated. In concurrent collaboration
+  // mode, only agglomerate trees (i.e. proofreading) may be edited.
+  if (!mayEditAnnotation(state)) {
+    return false;
+  }
+  if (!isConcurrentCollaborationMode(state)) {
+    return true;
+  }
+  return isAgglomerateTree(tree);
+}
+
+export function getReasonForCantEditSkeletonTree(
+  state: WebknossosState,
+  tree: Tree | null | undefined,
+): string | undefined {
+  // If mayEditSkeletonTree is false, getReasonForCantEditSkeletonTree will provide a human-readable reason for that. Otherwise, undefined will be returned.
+  const isConcurrentCollabMode = isConcurrentCollaborationMode(state);
+  const isActiveTreeAgglomerate = isAgglomerateTree(tree);
+
+  if (!mayEditAnnotation(state)) {
+    const isAnnotationLockedByUser = state.annotation.isLockedByOwner;
+    const isOwner = isAnnotationOwner(state);
+    return messages["tracing.read_only_mode_notification"](isAnnotationLockedByUser, isOwner);
+  }
+  if (isConcurrentCollabMode && !isActiveTreeAgglomerate) {
+    return messages["tracing.skeleton_editing_disabled_in_live_collab"];
+  }
+
+  return undefined;
 }
 
 export function mayEditAnnotationViewConfig(state: WebknossosState) {

@@ -29,7 +29,6 @@ import {
   getSegmentationLayerByName,
   getSegmentationLayers,
   getSomeMagInfoForDataset,
-  getVisibleOrLastSegmentationLayer,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
 import {
@@ -880,38 +879,6 @@ const AGGLOMERATE_STATES = {
     reason: "",
   },
 };
-
-const CONNECTOME_STATES = {
-  NO_SEGMENTATION: {
-    value: false,
-    reason: "A segmentation layer needs to be visible to load the synapses of a segment.",
-  },
-  NO_CONNECTOME_FILE: {
-    value: false,
-    reason: "A connectome file needs to be available to load the synapses of a segment.",
-  },
-  YES: {
-    value: true,
-    reason: "",
-  },
-};
-
-export function hasConnectomeFile(state: WebknossosState) {
-  const segmentationLayer = getVisibleOrLastSegmentationLayer(state);
-
-  if (segmentationLayer == null) {
-    return CONNECTOME_STATES.NO_SEGMENTATION;
-  }
-
-  const { currentConnectomeFile } =
-    state.localSegmentationStateByLayer[segmentationLayer.name].connectomeData;
-
-  if (currentConnectomeFile == null) {
-    return CONNECTOME_STATES.NO_CONNECTOME_FILE;
-  }
-
-  return CONNECTOME_STATES.YES;
-}
 
 export type AgglomerateState = (typeof AGGLOMERATE_STATES)[keyof typeof AGGLOMERATE_STATES];
 

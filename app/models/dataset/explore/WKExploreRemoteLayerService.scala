@@ -40,6 +40,8 @@ object WKExploreRemoteLayerParameters {
 
 case class ExploreAndAddRemoteDatasetParameters(
     remoteUri: String,
+    credentialIdentifier: Option[String],
+    credentialSecret: Option[String],
     datasetName: String,
     folderId: Option[ObjectId],
     folderPath: Option[String],

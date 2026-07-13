@@ -125,6 +125,12 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
         {selectedDataset.name}
       </h4>
       {renderOrganization()}
+      {fullDataset?.uploaderFullName != null && (
+        <div style={{ marginBottom: 4 }}>
+          <div className="sidebar-label">Uploaded By</div>
+          <div>{fullDataset.uploaderFullName}</div>
+        </div>
+      )}
       <Spin spinning={fullDataset == null}>
         {selectedDataset.isActive && (
           <div>

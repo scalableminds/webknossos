@@ -11,7 +11,6 @@ import models.organization.{Organization, OrganizationDAO}
 import models.team.{TeamDAO, TeamService}
 import models.user.User
 import play.api.libs.json.{JsArray, JsObject, Json, OFormat}
-import slick.jdbc.GetResult
 import slick.jdbc.PostgresProfile.api.*
 import slick.sql.SqlAction
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
@@ -23,11 +22,13 @@ import scala.concurrent.ExecutionContext
 
 case class Folder(_id: ObjectId, name: String, metadata: JsArray, created: Option[Instant] = Some(Instant.now))
 
-case class FolderWithParent(_id: ObjectId,
-                             name: String,
-                             metadata: JsArray,
-                             _parent: Option[ObjectId],
-                             created: Option[Instant] = Some(Instant.now))
+case class FolderWithParent(
+    _id: ObjectId,
+    name: String,
+    metadata: JsArray,
+    _parent: Option[ObjectId],
+    created: Option[Instant] = Some(Instant.now)
+)
 
 case class FolderParameters(name: String, allowedTeams: List[ObjectId], metadata: JsArray)
 object FolderParameters {
@@ -294,9 +295,7 @@ class FolderDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
       result <- rows.headOption.toFox
     } yield result
 
-  def findTreeOf(folderId: ObjectId)(using ctx: DBAccessContext): Fox[List[FolderWithParent]] = {
-    implicit val gr: GetResult[(String, String, String, Option[String], Option[Instant])] =
-      r => (r.nextString(), r.nextString(), r.nextString(), r.nextStringOption(), GetInstantOpt(r))
+  def findTreeOf(folderId: ObjectId)(using ctx: DBAccessContext): Fox[List[FolderWithParent]] =
     for {
       accessQueryWithPrefix <- accessQueryFromAccessQWithPrefix(readAccessQWithPrefix, prefix = q"f.")
       accessQuery <- readAccessQuery
@@ -316,7 +315,6 @@ class FolderDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
               """.as[(String, String, String, Option[String], Option[Instant])])
       parsed <- Fox.combined(rows.toList.map(parseWithParent))
     } yield parsed
-  }
 
   def insertAsChild(parentId: ObjectId, f: Folder)(using ctx: DBAccessContext): Fox[Unit] = {
     val insertPathQuery =

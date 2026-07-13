@@ -29,7 +29,8 @@ import com.scalableminds.webknossos.datastore.helpers.{
   DirectoryConstants,
   LocalDatasetDeletionService,
   S3UriUtils,
-  UPath
+  UPath,
+  ZipEntryUPath
 }
 import com.scalableminds.webknossos.datastore.models.LengthUnit.LengthUnit
 import com.scalableminds.webknossos.datastore.models.{UnfinishedUpload, VoxelSize}
@@ -781,7 +782,12 @@ class UploadService @Inject() (
 
   private def findNonReferencedFiles(unpackedDir: Path, dataSource: UsableDataSource): Fox[List[Path]] = {
     val explicitPaths: Set[Path] = dataSource.dataLayers
-      .flatMap(layer => layer.allExplicitPaths.flatMap(_.toLocalPath))
+      .flatMap(layer =>
+        layer.allExplicitPaths.map {
+          case ZipEntryUPath(outerPath, _) => outerPath // The whole zip of each ZipEntryUPath is considered referenced.
+          case path                        => path
+        }.flatMap(_.toLocalPath)
+      )
       .map(unpackedDir.resolve)
       .toSet
     val additionalMagPaths: Set[Path] = dataSource.dataLayers
@@ -1030,12 +1036,14 @@ class UploadService @Inject() (
       _ <- PathUtils.ensureDirectoryBox(unpackToDir.getParent).toFox ?~> "dataset.import.fileAccessDenied"
       shallowFileList <- PathUtils.listFiles(uploadDir, silent = false).toFox
       excludeFromPrefix = LayerCategory.values.map(_.toString).toList
-      firstFile = shallowFileList.headOption
+      isSingleZip = shallowFileList.length == 1 && shallowFileList.headOption.exists(f =>
+        ZipEntryUPath.relevantFileExtensions.exists(f.toString.toLowerCase.endsWith)
+      )
       _ <-
-        if (shallowFileList.length == 1 && shallowFileList.headOption.exists(_.toString.toLowerCase.endsWith(".zip"))) {
+        if (isSingleZip) {
           for {
-            zipFile <- firstFile.toFox
             _ = logger.info(s"finishUpload for $datasetId: Unzipping $uploadDomain to $unpackToDir...")
+            zipFile <- shallowFileList.headOption.toFox
             _ <- ZipIO
               .unzipToDirectory(
                 zipFile.toFile,

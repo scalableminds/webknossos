@@ -50,7 +50,7 @@ import type { ArbitraryObject } from "types/type_utils";
 import type { ApiInterface } from "viewer/api/api_latest";
 import WebknossosApi from "viewer/api/api_loader";
 import { setupApi } from "viewer/api/internal_api";
-import Constants, { ControlModeEnum, type Vector2, type Vector3 } from "viewer/constants";
+import Constants, { ControlModeEnum, type Vector3 } from "viewer/constants";
 import { setSceneController } from "viewer/controller/scene_controller_provider";
 import SegmentMeshController from "viewer/controller/segment_mesh_controller";
 import UrlManager from "viewer/controller/url_manager";

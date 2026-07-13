@@ -4,8 +4,9 @@ import com.google.inject.Inject
 import play.silhouette.api.Silhouette
 import play.silhouette.api.actions.UserAwareRequest
 import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.box.Box
 import com.scalableminds.util.mvc.CspHeaders
-import com.scalableminds.util.tools.{Box, Fox, TextUtils}
+import com.scalableminds.util.tools.{Fox, TextUtils}
 import com.scalableminds.util.tools.Fox.toFox
 import models.user.{MultiUser, MultiUserDAO, Theme}
 import opengraph.{OpenGraphService, OpenGraphTags}

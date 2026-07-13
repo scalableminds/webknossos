@@ -15,6 +15,7 @@ export type RecommendedConfiguration = Partial<
 
 export const settings: Partial<Record<keyof RecommendedConfiguration, string>> = {
   clippingDistance: "Clipping Distance",
+  clipSkeletonToCurrentSection: "Only Show Nodes of Current Section",
   displayCrosshair: "Show Crosshairs",
   displayScalebars: "Show Scalebars",
   dynamicSpaceDirection: "d/f-Switching",
@@ -28,13 +29,12 @@ export const settings: Partial<Record<keyof RecommendedConfiguration, string>> =
   particleSize: "Particle Size",
   tdViewDisplayPlanes: "Plane Display Mode in 3D View",
   tdViewDisplayDatasetBorders: "Display Dataset Borders in 3D View",
-  tdViewDisplayLayerBorders: "Display Layer Borders in 3D View",
   fourBit: "4 Bit",
   interpolation: "Interpolation",
   segmentationOpacity: "Segmentation Opacity",
   zoom: "Zoom",
   renderMissingDataBlack: "Render Missing Data Black",
-  clippingDistanceArbitrary: "Clipping Distance",
+  clippingDistanceFlight: "Clipping Distance",
   mouseRotateValue: "Mouse Rotation",
   rotateValue: "Keyboard Rotation",
   sphericalCapRadius: "Sphere Radius",
@@ -51,6 +51,8 @@ export const settings: Partial<Record<keyof RecommendedConfiguration, string>> =
   colorLayerOrder: "Color Layer Order",
 };
 export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, string>> = {
+  clipSkeletonToCurrentSection:
+    "When enabled, only skeleton nodes and edges that lie on the currently visible section are shown, ignoring the clipping distance. Only available when neither the camera nor the dataset is rotated or transformed.",
   segmentationPatternOpacity:
     "The opacity of the pattern overlaid on any segmentation layer for improved contrast.",
   loadingStrategy: `You can choose between loading the best quality first
@@ -134,9 +136,9 @@ A reload is necessary to return to a valid state.`,
     "There is no action that could be undone. However, if you want to restore an earlier version of this annotation, use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
   "undo.no_redo": "There is no action that could be redone.",
   "undo.no_undo_during_proofread":
-    "Undo is not supported during proofreading yet. Please use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
-  "undo.no_redo_during_proofread":
-    "Redo is not supported during proofreading yet. Please use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
+    "Undo/redo is not supported during proofreading yet. Please use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
+  "undo.no_undo_in_live_collab":
+    "Undo/redo is not supported when live collaboration ('simultaneous editing') is enabled. Please use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button. Note that this discards pending changes from collaborators of this annotation and forces them to reload the page.",
   "undo.import_volume_tracing":
     "Importing a volume annotation cannot be undone. However, if you want to restore an earlier version of this annotation, use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
   "download.wait": "Please wait...",
@@ -203,13 +205,16 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.no_access": "You are not allowed to access this annotation.",
   "tracing.compound_project_not_found":
     "It looks like this project does not have a single task completed. Make sure that at least one task of this project is finished to view it.",
-  "tracing.no_allowed_mode": "There was no valid allowed annotation mode specified.",
+  "tracing.no_allowed_mode":
+    "There was no valid allowed annotation mode specified. Defaulting to orthogonal mode.",
   "tracing.read_only_mode_notification": (isAnnotationLockedByUser: boolean, isOwner: boolean) =>
     isAnnotationLockedByUser
       ? `This annotation is in read-only mode and cannot be updated. It is currently locked by ${
           isOwner ? "you" : "the owner"
         }.`
       : "This annotation is in read-only mode and cannot be updated.",
+  "tracing.skeleton_editing_disabled_in_live_collab":
+    "Skeleton editing is disabled because simultaneous editing is enabled in the sharing settings. Currently, only agglomerate trees (created in proofreading mode) may be edited.",
   "tracing.volume_missing_segmentation": "Volume is allowed, but segmentation does not exist.",
   "tracing.volume_layer_name_duplication":
     "This layer name already exists! Please change it to resolve duplicates.",

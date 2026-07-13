@@ -29,7 +29,7 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import Store from "viewer/store";
-import { MISSING_GROUP_ID } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
+import { MISSING_GROUP_ID } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 describe("Volume Tracing", () => {
@@ -97,10 +97,14 @@ describe("Volume Tracing", () => {
 
     await dispatchUndoAsync(Store.dispatch);
 
-    expect(await api.data.getDataValue(volumeTracingLayerName, paintCenter)).toBe(Number(newCellId));
+    expect(await api.data.getDataValue(volumeTracingLayerName, paintCenter)).toBe(
+      Number(newCellId),
+    );
 
     await dispatchRedoAsync(Store.dispatch);
-    expect(await api.data.getDataValue(volumeTracingLayerName, paintCenter)).toBe(Number(newCellId) + 1);
+    expect(await api.data.getDataValue(volumeTracingLayerName, paintCenter)).toBe(
+      Number(newCellId) + 1,
+    );
   });
 
   it<WebknossosTestContext>("Brushing/Tracing with upsampling to unloaded data", async ({

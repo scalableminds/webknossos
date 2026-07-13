@@ -47,7 +47,7 @@ import type { EditableMapping, Segment, VolumeTracing, WebknossosState } from "v
 import {
   getGroupNodeKey,
   mapGroups,
-} from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
+} from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import { getUserStateForTracing } from "../accessors/annotation_accessor";
 import { applyVolumeUpdateActionsFromServer } from "./update_action_application/volume";
 
@@ -87,7 +87,8 @@ export function serverVolumeToClientVolumeTracing(
             : undefined,
           additionalCoordinates: segment.additionalCoordinates,
           color: segment.color != null ? colorObjectToRGBArray(segment.color) : null,
-          isVisible: segmentVisibilityMap[segment.segmentId.toString()] ?? segment.isVisible ?? true,
+          isVisible:
+            segmentVisibilityMap[segment.segmentId.toString()] ?? segment.isVisible ?? true,
           groupId: segment.groupId ?? null,
         };
         return [segment.segmentId, clientSegment];

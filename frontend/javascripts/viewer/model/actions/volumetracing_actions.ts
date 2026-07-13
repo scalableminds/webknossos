@@ -179,9 +179,7 @@ export const createCellAction = (activeCellId: bigint, largestSegmentId: bigint)
   // The largestSegmentId is only updated if a voxel using that id was annotated. Therefore, it can happen
   // that the activeCellId is larger than the largestSegmentId. Choose the larger of the two ids increased by one.
   const newSegmentId =
-    largestSegmentId && largestSegmentId > activeCellId
-      ? largestSegmentId + 1n
-      : activeCellId + 1n;
+    largestSegmentId && largestSegmentId > activeCellId ? largestSegmentId + 1n : activeCellId + 1n;
   return {
     type: "CREATE_CELL",
     newSegmentId,

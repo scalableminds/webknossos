@@ -1069,7 +1069,11 @@ describe("Proofreading (Multi User)", () => {
 
   it("should not create a segment item after splitting when another user performed a merge that swallows that item", async (context: WebknossosTestContext) => {
     const { api, mocks } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context, [[1337n, 7n]], Store.getState());
+    const backendMock = mockInitialBucketAndAgglomerateData(
+      context,
+      [[1337n, 7n]],
+      Store.getState(),
+    );
 
     backendMock.planMultipleVersionInjections(7, mergeSegment1337And5);
 
@@ -1183,7 +1187,11 @@ describe("Proofreading (Multi User)", () => {
      * so that they are applied to segment 1337.
      */
     const { api } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context, [[1337n, 7n]], Store.getState());
+    const backendMock = mockInitialBucketAndAgglomerateData(
+      context,
+      [[1337n, 7n]],
+      Store.getState(),
+    );
 
     backendMock.planMultipleVersionInjections(7, mergeSegment1337And5);
 
@@ -1276,7 +1284,11 @@ describe("Proofreading (Multi User)", () => {
      * However, the segment item doesn't exist locally anymore (because it was removed by the user).
      */
     const { api } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context, [[1337n, 7n]], Store.getState());
+    const backendMock = mockInitialBucketAndAgglomerateData(
+      context,
+      [[1337n, 7n]],
+      Store.getState(),
+    );
 
     backendMock.planMultipleVersionInjections(7, mergeSegment1337And5);
 

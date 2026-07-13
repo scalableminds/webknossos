@@ -1,4 +1,3 @@
-import { toBigInt } from "libs/bigint_helpers";
 import Icon, {
   ArrowRightOutlined,
   BarChartOutlined,
@@ -40,6 +39,7 @@ import type { DataNode } from "antd/lib/tree";
 import app from "app";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import FastTooltip from "components/fast_tooltip";
+import { toBigInt } from "libs/bigint_helpers";
 import Toast from "libs/toast";
 import { pluralize, sleep } from "libs/utils";
 import difference from "lodash-es/difference";
@@ -122,7 +122,6 @@ import AdvancedSearchPopover from "../advanced_search_popover";
 import DeleteGroupModalView from "../delete_group_modal_view";
 import { ResizableSplitPane } from "../resizable_split_pane";
 import ScrollableVirtualizedTree from "../scrollable_virtualized_tree";
-import { ContextMenuContainer } from "../sidebar_context_menu";
 import {
   createGroupToSegmentsMap,
   deepFlatFilter,
@@ -130,8 +129,9 @@ import {
   getGroupByIdWithSubgroups,
   getGroupNodeKey,
   MISSING_GROUP_ID,
-} from "../trees_tab/tree_hierarchy_view_helpers";
-import { TreeSwitcherIcon } from "../trees_tab/tree_switcher_icon";
+} from "../shared/tree_hierarchy_view_helpers";
+import { TreeSwitcherIcon } from "../shared/tree_switcher_icon";
+import { ContextMenuContainer } from "../sidebar_context_menu";
 import { PrecomputeMeshesPopover } from "./precompute_meshes_popover";
 import { SegmentDetailsPanel } from "./segment_details_panel";
 import { SegmentStatisticsModal } from "./segment_statistics_modal";

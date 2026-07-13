@@ -11,7 +11,7 @@ import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryConversions,
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition}
 import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, UpdateAction, UserStateUpdateAction}
 import com.scalableminds.webknossos.tracingstore.tracings.{GroupUtils, MetadataEntry, NamedBoundingBox}
-import play.api.libs.json._
+import play.api.libs.json.*
 
 trait VolumeUpdateActionHelper {
 
@@ -994,9 +994,8 @@ object UpdateTracingVolumeAction {
   private val baseFormat: OFormat[UpdateTracingVolumeAction] = Json.format[UpdateTracingVolumeAction]
   implicit val jsonFormat: OFormat[UpdateTracingVolumeAction] =
     UnsignedLongJson.patchOptionalField(
-      UnsignedLongJson.patchRequiredField(baseFormat, "activeSegmentId")(
-        _.activeSegmentId,
-        (a, v) => a.copy(activeSegmentId = v)),
+      UnsignedLongJson
+        .patchRequiredField(baseFormat, "activeSegmentId")(_.activeSegmentId, (a, v) => a.copy(activeSegmentId = v)),
       "largestSegmentId"
     )(_.largestSegmentId, (a, v) => a.copy(largestSegmentId = v))
 }
@@ -1005,7 +1004,8 @@ object UpdateActiveSegmentIdVolumeAction {
   implicit val jsonFormat: OFormat[UpdateActiveSegmentIdVolumeAction] =
     UnsignedLongJson.patchRequiredField(baseFormat, "activeSegmentId")(
       _.activeSegmentId,
-      (a, v) => a.copy(activeSegmentId = v))
+      (a, v) => a.copy(activeSegmentId = v)
+    )
 }
 object UpdateLargestSegmentIdVolumeAction {
   private val baseFormat: OFormat[UpdateLargestSegmentIdVolumeAction] =
@@ -1013,7 +1013,8 @@ object UpdateLargestSegmentIdVolumeAction {
   implicit val jsonFormat: OFormat[UpdateLargestSegmentIdVolumeAction] =
     UnsignedLongJson.patchRequiredField(baseFormat, "largestSegmentId")(
       _.largestSegmentId,
-      (a, v) => a.copy(largestSegmentId = v))
+      (a, v) => a.copy(largestSegmentId = v)
+    )
 }
 object UpdateVolumeBucketDataHasChangedVolumeAction {
   implicit val jsonFormat: OFormat[UpdateVolumeBucketDataHasChangedVolumeAction] =
@@ -1047,7 +1048,8 @@ object ImportVolumeDataVolumeAction {
   implicit val jsonFormat: OFormat[ImportVolumeDataVolumeAction] =
     UnsignedLongJson.patchOptionalField(baseFormat, "largestSegmentId")(
       _.largestSegmentId,
-      (a, v) => a.copy(largestSegmentId = v))
+      (a, v) => a.copy(largestSegmentId = v)
+    )
 }
 object AddSegmentIndexVolumeAction {
   implicit val jsonFormat: OFormat[AddSegmentIndexVolumeAction] = Json.format[AddSegmentIndexVolumeAction]
@@ -1080,9 +1082,8 @@ object MergeSegmentItemsVolumeAction {
     UnsignedLongJson.patchRequiredField(
       UnsignedLongJson.patchRequiredField(
         UnsignedLongJson.patchRequiredField(
-          UnsignedLongJson.patchRequiredField(baseFormat, "agglomerateId1")(
-            _.agglomerateId1,
-            (a, v) => a.copy(agglomerateId1 = v)),
+          UnsignedLongJson
+            .patchRequiredField(baseFormat, "agglomerateId1")(_.agglomerateId1, (a, v) => a.copy(agglomerateId1 = v)),
           "agglomerateId2"
         )(_.agglomerateId2, (a, v) => a.copy(agglomerateId2 = v)),
         "segmentId1"

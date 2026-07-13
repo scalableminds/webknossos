@@ -2,6 +2,7 @@ package mail
 
 import org.apache.pekko.actor.ActorSystem
 import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.box.{Empty, Failure, Full}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
@@ -9,11 +10,10 @@ import com.typesafe.scalalogging.LazyLogging
 
 import javax.inject.Inject
 import models.user.{MultiUser, MultiUserDAO}
-import com.scalableminds.util.tools.{Empty, Failure, Full}
 import play.api.inject.ApplicationLifecycle
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 class MailchimpTicker @Inject() (
     val lifecycle: ApplicationLifecycle,

@@ -2,27 +2,25 @@ package com.scalableminds.webknossos.datastore.services
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
+import com.scalableminds.webknossos.datastore.dataformats.BucketProvider
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, LayerCategory}
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import ucar.ma2.Array as MultiArray
-import com.scalableminds.util.tools.Box.tryo
+import Box.tryo
 import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateService
-import com.scalableminds.webknossos.datastore.storage.{BucketProviderCache, DataVaultService}
+import com.scalableminds.webknossos.datastore.storage.DataVaultService
 
-import java.nio.file.Path
 import scala.concurrent.ExecutionContext
 
 class BinaryDataService(
-    val dataBaseDir: Path,
     val agglomerateServiceOpt: Option[AgglomerateService],
     dataVaultServiceOpt: Option[DataVaultService],
     sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]],
@@ -34,7 +32,8 @@ class BinaryDataService(
      compare https://github.com/scalableminds/webknossos/issues/5223 */
   private val MaxMagForAgglomerateMapping = 16
 
-  private lazy val bucketProviderCache = new BucketProviderCache(maxEntries = 5000)
+  private lazy val bucketProviderCache: AlfuCache[(DataSourceId, String), BucketProvider] =
+    AlfuCache(maxCapacity = 5000)
 
   def handleDataRequest(request: DataServiceDataRequest)(using tc: TokenContext): Fox[Array[Byte]] = {
     val bucketQueue = request.cuboid.allBucketsInCuboid
@@ -80,15 +79,15 @@ class BinaryDataService(
         }
         readInstructions = requestsSelected.map(r =>
           DataReadInstruction(
-            dataBaseDir,
             dataSourceId,
             dataLayer,
             r.cuboid.topLeft.toBucket.copy(additionalCoordinates = r.settings.additionalCoordinates),
             r.settings.version
           )
         )
-        bucketProvider = bucketProviderCache.getOrLoadAndPut((dataSourceId, dataLayer.bucketProviderCacheKey))(_ =>
-          dataLayer.bucketProvider(dataVaultServiceOpt, dataSourceId, sharedChunkContentsCache)
+        bucketProvider <- bucketProviderCache.getOrLoad(
+          (dataSourceId, dataLayer.bucketProviderCacheKey),
+          _ => Fox.successful(dataLayer.bucketProvider(dataVaultServiceOpt, dataSourceId, sharedChunkContentsCache))
         )
         bucketBoxes <- datasetErrorLoggingService.withErrorLoggingMultiple(
           firstRequest.datasetId,
@@ -196,7 +195,7 @@ class BinaryDataService(
         val byteArrays = boxes.collect { case Full(byteArray) => byteArray }
         val emptyIndices = boxes.zipWithIndex.collect { case (Empty, i) => i }
         val failureIndices = boxes.zipWithIndex.collect { case (_: Failure, i) => i }
-        (byteArrays.appendArrays, emptyIndices, failureIndices)
+        (SequenceUtils.concatArrays(byteArrays), emptyIndices, failureIndices)
       }
     }
   }
@@ -206,24 +205,23 @@ class BinaryDataService(
   ): Fox[Array[Byte]] =
     if (request.dataLayer.containsMag(bucket.mag)) {
       val readInstruction =
-        DataReadInstruction(
-          dataBaseDir,
-          request.dataSourceIdOrVolumeDummy,
-          request.dataLayer,
-          bucket,
-          request.settings.version
-        )
+        DataReadInstruction(request.dataSourceIdOrVolumeDummy, request.dataLayer, bucket, request.settings.version)
       val dataSourceId = request.dataSourceIdOrVolumeDummy
-      val bucketProvider =
-        bucketProviderCache.getOrLoadAndPut((dataSourceId, request.dataLayer.bucketProviderCacheKey))(_ =>
-          request.dataLayer.bucketProvider(dataVaultServiceOpt, dataSourceId, sharedChunkContentsCache)
+      for {
+        bucketProvider <- bucketProviderCache.getOrLoad(
+          (dataSourceId, request.dataLayer.bucketProviderCacheKey),
+          _ =>
+            Fox.successful(
+              request.dataLayer.bucketProvider(dataVaultServiceOpt, dataSourceId, sharedChunkContentsCache)
+            )
         )
-      datasetErrorLoggingService.withErrorLogging(
-        request.datasetId,
-        dataSourceId,
-        s"loading bucket for ${request.datasetId} (${request.dataSourceId}) layer ${request.dataLayer.name} at ${readInstruction.bucket}, cuboid: ${request.cuboid}",
-        bucketProvider.load(readInstruction)
-      )
+        result <- datasetErrorLoggingService.withErrorLogging(
+          request.datasetId,
+          dataSourceId,
+          s"loading bucket for ${request.datasetId} (${request.dataSourceId}) layer ${request.dataLayer.name} at ${readInstruction.bucket}, cuboid: ${request.cuboid}",
+          bucketProvider.load(readInstruction)
+        )
+      } yield result
     } else Fox.empty
 
   /** Given a list of loaded buckets, cut out the data of the cuboid

@@ -493,7 +493,8 @@ export default class SegmentMeshController {
     lod: number,
     mesh: SceneGroupForMeshes,
   ) {
-    const group = this.meshesGroupsPerSegmentId[additionalCoordKey][layerName][segmentId.toString()][lod];
+    const group =
+      this.meshesGroupsPerSegmentId[additionalCoordKey][layerName][segmentId.toString()][lod];
     group.add(mesh);
   }
 
@@ -511,7 +512,9 @@ export default class SegmentMeshController {
     segmentId: bigint,
     lod: number,
   ) {
-    delete this.meshesGroupsPerSegmentId[additionalCoordinateKey][layerName][segmentId.toString()][lod];
+    delete this.meshesGroupsPerSegmentId[additionalCoordinateKey][layerName][segmentId.toString()][
+      lod
+    ];
   }
 
   updateMeshAppearance(

@@ -1,9 +1,9 @@
 package com.scalableminds.webknossos.datastore.services.mesh
 
 import com.google.common.io.LittleEndianDataInputStream
+import com.scalableminds.util.box.Box
 import com.scalableminds.util.geometry.{Vec3Float, Vec3Int}
-import com.scalableminds.util.tools.Box
-import com.scalableminds.util.tools.Box.tryo
+import Box.tryo
 import com.scalableminds.webknossos.datastore.helpers.UnsignedLongJson
 import play.api.libs.json.{Json, OFormat}
 
@@ -94,7 +94,8 @@ object MeshChunk {
   implicit val jsonFormat: OFormat[MeshChunk] =
     UnsignedLongJson.patchOptionalField(Json.format[MeshChunk], "unmappedSegmentId")(
       _.unmappedSegmentId,
-      (a, v) => a.copy(unmappedSegmentId = v))
+      (a, v) => a.copy(unmappedSegmentId = v)
+    )
 }
 case class MeshLodInfo(chunks: List[MeshChunk], transform: Array[Array[Double]])
 
@@ -116,7 +117,7 @@ object WebknossosSegmentInfo {
       meshFormat: String,
       chunkScale: Array[Double] = Array(1.0, 1.0, 1.0)
   ): Box[WebknossosSegmentInfo] =
-    Box(chunkInfos.headOption).flatMap { firstChunkInfo =>
+    Box.fromOption(chunkInfos.headOption).flatMap { firstChunkInfo =>
       tryo {
         WebknossosSegmentInfo(
           meshFormat = meshFormat,

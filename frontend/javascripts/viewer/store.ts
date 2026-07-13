@@ -72,6 +72,7 @@ import type { Toolkit } from "./model/accessors/tool_accessor";
 import type { OperationId } from "./model/actions/operation_context_actions";
 import { eventEmitterMiddleware } from "./model/helpers/event_emitter_middleware";
 import FlycamInfoCacheReducer from "./model/reducers/flycam_info_cache_reducer";
+import MipBBoxReducer from "./model/reducers/mip_bbox_reducer";
 import OperationContextReducer from "./model/reducers/operation_context_reducer";
 import OrganizationReducer from "./model/reducers/organization_reducer";
 import ProofreadingReducer from "./model/reducers/proofreading_reducer";
@@ -98,6 +99,12 @@ export type UserBoundingBoxWithoutId = {
   name: string;
   color: Vector3;
   isVisible: boolean;
+};
+
+export type MipLayerConfig = {
+  layerName: string;
+  zoomStep: number;
+  isLoading: boolean;
 };
 export type UserBoundingBox = UserBoundingBoxWithoutId & {
   id: number;
@@ -345,7 +352,8 @@ export type UserConfiguration = {
   readonly isMultiSplitActive: boolean;
   readonly brushSize: number;
   readonly clippingDistance: number;
-  readonly clippingDistanceArbitrary: number;
+  readonly clippingDistanceFlight: number;
+  readonly clipSkeletonToCurrentSection: boolean;
   readonly crosshairSize: number;
   readonly displayCrosshair: boolean;
   readonly displayScalebars: boolean;
@@ -369,7 +377,6 @@ export type UserConfiguration = {
   readonly sphericalCapRadius: number;
   readonly tdViewDisplayPlanes: TDViewDisplayMode;
   readonly tdViewDisplayDatasetBorders: boolean;
-  readonly tdViewDisplayLayerBorders: boolean;
   readonly gpuMemoryFactor: number;
   // For volume (and hybrid) annotations, this mode specifies
   // how volume annotations overwrite existing voxels.
@@ -385,6 +392,8 @@ export type UserConfiguration = {
   readonly erasePreference: "ERASE_BRUSH" | "ERASE_TRACE";
   readonly writePreference: "BRUSH" | "TRACE";
   readonly measurementPreference: "LINE_MEASUREMENT" | "AREA_MEASUREMENT";
+  readonly mipRaymarchingSteps: number;
+  readonly mipDepthWrite: boolean;
 };
 export type RecommendedConfiguration = Partial<
   UserConfiguration &
@@ -432,6 +441,10 @@ export type TemporaryConfiguration = {
   readonly preferredQualityForMeshPrecomputation: number;
   readonly preferredQualityForMeshAdHocComputation: number;
   readonly lastVisibleSegmentationLayerName: string | null | undefined;
+  // Display state for the read-only bounding boxes of the dataset's layers, keyed by layer name (one
+  // entry per layer). These are client-only (not persisted) and fall back to visible/derived color.
+  readonly layerBoundingBoxVisibilities: Record<string, boolean>;
+  readonly layerBoundingBoxColors: Record<string, Vector3>;
 };
 export type Script = APIScript;
 export type Task = APITask;
@@ -554,12 +567,12 @@ type PlaneModeData = {
   readonly tdCamera: CameraData;
   readonly inputCatcherRects: PlaneRects;
 };
-type ArbitraryModeData = {
+type FlightModeData = {
   readonly inputCatcherRect: Rect;
 };
 export type ViewModeData = {
   readonly plane: PlaneModeData;
-  readonly arbitrary: ArbitraryModeData;
+  readonly flight: FlightModeData;
 };
 export type BorderOpenStatus = {
   left: boolean;
@@ -610,6 +623,8 @@ type UiInformation = {
   readonly voxelPipetteToolInfo: { pinnedPosition: Vector3 | null };
   readonly navbarHeight: number;
   readonly contextInfo: ContextMenuInfo;
+  // Frontend-only, not persisted to server
+  readonly mipBBoxSettings: Record<number, MipLayerConfig[]>;
 };
 type BaseMeshInformation = {
   readonly segmentId: bigint;
@@ -726,6 +741,7 @@ export type WebknossosState = {
   readonly save: SaveState;
   readonly flycam: Flycam;
   readonly flycamInfoCache: {
+    // Maps from layerName to the zoom thresholds for each mag.
     readonly maximumZoomForAllMags: Record<string, number[]>;
   };
   readonly viewModeData: ViewModeData;
@@ -756,6 +772,7 @@ export const combinedReducer = reduceReducers(
   UiReducer,
   ConnectomeReducer,
   OrganizationReducer,
+  MipBBoxReducer,
   OperationContextReducer,
 ) as Reducer;
 

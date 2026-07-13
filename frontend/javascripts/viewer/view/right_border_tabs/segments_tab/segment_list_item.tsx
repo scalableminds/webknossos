@@ -248,14 +248,7 @@ function _MeshInfoItem(props: {
   const additionalCoordinates = useWkSelector((state) => state.flycam.additionalCoordinates);
   const dispatch = useDispatch();
   const onChangeMeshVisibility = (layerName: string, id: bigint, isVisible: boolean) => {
-    dispatch(
-      updateMeshVisibilityAction(
-        layerName,
-        id,
-        isVisible,
-        mesh?.seedAdditionalCoordinates,
-      ),
-    );
+    dispatch(updateMeshVisibilityAction(layerName, id, isVisible, mesh?.seedAdditionalCoordinates));
   };
 
   const { segment, isSelectedInList, isHovered, mesh } = props;
@@ -566,7 +559,8 @@ function _SegmentListItem({
 
                 Toast.info(
                   <span>
-                    The data of segment {getSegmentName({ id: segment.id, name: segment.name }, true)} was deleted.{" "}
+                    The data of segment{" "}
+                    {getSegmentName({ id: segment.id, name: segment.name }, true)} was deleted.{" "}
                     <a
                       href="#"
                       onClick={() => {

@@ -312,7 +312,11 @@ describe.each(
 
   it("should update the mapping correctly when the server has a new update action with a split operation with segments unknown to the client", async (context: WebknossosTestContext) => {
     const { api } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context, [[7n, 1337n]], Store.getState());
+    const backendMock = mockInitialBucketAndAgglomerateData(
+      context,
+      [[7n, 1337n]],
+      Store.getState(),
+    );
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];

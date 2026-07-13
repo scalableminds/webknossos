@@ -13,7 +13,7 @@ import {
   createGroupToSegmentsMap,
   findGroup,
   getGroupByIdWithSubgroups,
-} from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
+} from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 
 export interface SegmentDetailsPanelProps {
   selectedIds: { segments: bigint[]; group: number | null };
@@ -31,6 +31,7 @@ export const SegmentDetailsPanel: React.FC<SegmentDetailsPanelProps> = ({
   allowUpdate,
 }) => {
   const dispatch = useDispatch();
+  const readOnly = !allowUpdate;
 
   const setMetadata = useCallback(
     (segment: Segment, newProperties: MetadataEntryProto[]) => {
@@ -52,7 +53,7 @@ export const SegmentDetailsPanel: React.FC<SegmentDetailsPanelProps> = ({
 
   const renameActiveSegment = useCallback(
     (newName: string) => {
-      if (visibleSegmentationLayer == null) {
+      if (visibleSegmentationLayer == null || readOnly) {
         return;
       }
       const { segments: activeSegments } = selectedIds;
@@ -74,13 +75,12 @@ export const SegmentDetailsPanel: React.FC<SegmentDetailsPanelProps> = ({
         ),
       );
     },
-    [dispatch, selectedIds, segments, visibleSegmentationLayer],
+    [dispatch, selectedIds, segments, visibleSegmentationLayer, readOnly],
   );
 
   const { segments: selectedSegmentIds, group: selectedGroupId } = selectedIds;
 
   if (selectedSegmentIds.length === 1) {
-    const readOnly = !allowUpdate;
     const segment = segments?.getNullable(BigInt(selectedSegmentIds[0]));
     if (segment == null) {
       return <>Cannot find details for selected segment.</>;
@@ -94,7 +94,11 @@ export const SegmentDetailsPanel: React.FC<SegmentDetailsPanelProps> = ({
           <SimpleRow
             label="Name"
             value={
-              <InputWithUpdateOnBlur value={segment.name || ""} onChange={renameActiveSegment} />
+              <InputWithUpdateOnBlur
+                value={segment.name || ""}
+                disabled={readOnly}
+                onChange={renameActiveSegment}
+              />
             }
           />
           <MetadataEntryTableRows item={segment} setMetadata={setMetadata} readOnly={readOnly} />
@@ -121,8 +125,9 @@ export const SegmentDetailsPanel: React.FC<SegmentDetailsPanelProps> = ({
             value={
               <InputWithUpdateOnBlur
                 value={activeGroup.name || ""}
+                disabled={readOnly}
                 onChange={(newName) => {
-                  if (visibleSegmentationLayer == null) {
+                  if (visibleSegmentationLayer == null || readOnly) {
                     return;
                   }
                   api.tracing.renameSegmentGroup(

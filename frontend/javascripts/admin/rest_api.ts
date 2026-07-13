@@ -103,7 +103,6 @@ import type {
   DatasetConfiguration,
   Mapping,
   MappingType,
-  NumberLike,
   PartialDatasetConfiguration,
   SaveQueueEntry,
   StoreAnnotation,
@@ -1007,6 +1006,10 @@ export async function downloadWithFilename(downloadUrl: string) {
   const link = document.createElement("a");
   link.href = downloadUrl;
   link.rel = "noopener";
+  // Without this, the browser treats the click as a top-level navigation until the
+  // Content-Disposition header arrives, firing beforeunload and releasing the annotation
+  // mutex. The download attribute marks it as a forced download upfront.
+  link.download = "";
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -2303,23 +2306,27 @@ export async function getEdgesForAgglomerateMinCut(
     editableMappingId: string;
   },
 ): Promise<Array<MinCutTargetEdge>> {
-  const edges: Array<{ segmentId1: string; segmentId2: string; position1: Vector3; position2: Vector3 }> =
-    await doWithToken((token) =>
-      retryAsyncFunction(() =>
-        Request.sendJSONReceiveJSON(
-          `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphMinCut?token=${token}`,
-          {
-            data: {
-              // For a normal min-cut, the id at which the proofreading marker is at
-              // will be put into partition1. The right-clicked segment/mesh will be
-              // in partition2.
-              ...segmentsInfo,
-              version,
-            },
+  const edges: Array<{
+    segmentId1: string;
+    segmentId2: string;
+    position1: Vector3;
+    position2: Vector3;
+  }> = await doWithToken((token) =>
+    retryAsyncFunction(() =>
+      Request.sendJSONReceiveJSON(
+        `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphMinCut?token=${token}`,
+        {
+          data: {
+            // For a normal min-cut, the id at which the proofreading marker is at
+            // will be put into partition1. The right-clicked segment/mesh will be
+            // in partition2.
+            ...segmentsInfo,
+            version,
           },
-        ),
+        },
       ),
-    );
+    ),
+  );
   return edges.map((edge) => ({
     ...edge,
     segmentId1: toBigInt(edge.segmentId1),

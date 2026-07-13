@@ -233,6 +233,16 @@ class TDController extends PureComponent<Props> {
         }
 
         const intersection = this.getMeshIntersection(pos);
+
+        // Shift-click on MIP volume: navigate to max-intensity voxel along the click ray
+        if (event.shiftKey && !ctrlOrMetaPressed && intersection == null) {
+          const mipHit = this.props.planeView.performMipHitTest([pos.x, pos.y]);
+          if (mipHit != null) {
+            Store.dispatch(setPositionAction(V3.divide3(mipHit, this.props.voxelSize.factor)));
+          }
+          return;
+        }
+
         if (intersection == null) {
           return;
         }

@@ -42,8 +42,10 @@ export function parseProtoTracing(
   tracing.createdTimestamp = Number(tracing.createdTimestamp);
 
   if (annotationType === "volume") {
-    if (tracing.activeSegmentId != null) tracing.activeSegmentId = toBigInt(tracing.activeSegmentId);
-    if (tracing.largestSegmentId != null) tracing.largestSegmentId = toBigInt(tracing.largestSegmentId);
+    if (tracing.activeSegmentId != null)
+      tracing.activeSegmentId = toBigInt(tracing.activeSegmentId);
+    if (tracing.largestSegmentId != null)
+      tracing.largestSegmentId = toBigInt(tracing.largestSegmentId);
     for (const segment of tracing.segments ?? []) {
       segment.segmentId = toBigInt(segment.segmentId);
       if (segment.creationTime != null) segment.creationTime = Number(segment.creationTime);

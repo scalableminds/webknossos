@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
-import com.scalableminds.util.tools.{Box, Full, ParamFailure}
+import com.scalableminds.util.box.{Box, Full, ParamFailure}
 import com.scalableminds.webknossos.datastore.models.datasource.{ElementClass, UsableDataSource}
 import play.api.libs.json.Json
 

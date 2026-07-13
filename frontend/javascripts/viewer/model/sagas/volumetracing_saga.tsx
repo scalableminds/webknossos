@@ -43,7 +43,6 @@ import {
   updateTemporarySettingAction,
   updateUserSettingAction,
 } from "viewer/model/actions/settings_actions";
-import { setToolAction } from "viewer/model/actions/ui_actions";
 import type {
   ClickSegmentAction,
   CreateCellAction,
@@ -178,11 +177,11 @@ export function* editVolumeLayerAsync(): Saga<never> {
     const isDrawing = contourTracingMode === ContourModeEnum.DRAW;
     const activeTool = yield* select((state) => state.uiInformation.activeTool);
     // Depending on the tool, annotation in higher zoom steps might be disallowed.
-    const isZoomStepTooHighForAnnotating = yield* select((state) =>
+    const zoomStateForAnnotating = yield* select((state) =>
       isVolumeAnnotationDisallowedForZoom(activeTool, state),
     );
 
-    if (isZoomStepTooHighForAnnotating) {
+    if (zoomStateForAnnotating.isDisabled) {
       continue;
     }
 
@@ -385,22 +384,6 @@ export function* finishSectionLabeler(
   }
 
   yield* put(registerLabelPointAction(sectionLabeler.getUnzoomedCentroid()));
-}
-
-function* ensureToolIsAllowedInMag(): Saga<void> {
-  yield* takeWithBatchActionSupport("INITIALIZE_VOLUMETRACING");
-
-  while (true) {
-    yield* take(["ZOOM_IN", "ZOOM_OUT", "ZOOM_BY_DELTA", "SET_ZOOM_STEP"]);
-    const isMagTooLow = yield* select((state) => {
-      const { activeTool } = state.uiInformation;
-      return isVolumeAnnotationDisallowedForZoom(activeTool, state);
-    });
-
-    if (isMagTooLow) {
-      yield* put(setToolAction(AnnotationTool.MOVE));
-    }
-  }
 }
 
 function* ensureSegmentExists(
@@ -613,7 +596,6 @@ function* handleDeleteSegmentData(
 
 export default [
   editVolumeLayerAsync,
-  ensureToolIsAllowedInMag,
   floodFill,
   watchVolumeTracingAsync,
   maintainSegmentsMap,

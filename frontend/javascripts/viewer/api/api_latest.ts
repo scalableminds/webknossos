@@ -211,7 +211,7 @@ import {
   MISSING_GROUP_ID,
   mapGroups,
   moveGroupsHelper,
-} from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
+} from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 
 type TransformSpec =
   | { type: "scale"; args: [Vector3, Vector3] }
@@ -1416,7 +1416,7 @@ class TracingApi {
    *        When true, this lets the user still manipulate the "third dimension"
    *        during the animation (important because otherwise the user cannot continue to trace until
    *        the animation is over).
-   * @param rotation - Vector3 (optional) - Will only be noticeable in flight or oblique mode.
+   * @param rotation - Vector3 (optional) - Will only be noticeable in flight mode.
    * @example
    * api.tracing.centerPositionAnimated([0, 0, 0])
    */
@@ -2065,6 +2065,7 @@ class DataApi {
     mag1Bbox: BoundingBoxMinMaxType,
     _zoomStep: number | null | undefined = null,
     additionalCoordinates: AdditionalCoordinate[] | null = null,
+    signal?: AbortSignal,
   ) {
     const layer = getLayerByName(Store.getState().dataset, layerName);
     const magInfo = getMagInfo(layer.mags);
@@ -2077,11 +2078,15 @@ class DataApi {
     }
 
     const mags = magInfo.getDenseMags();
+    // Restrict the requested buckets to the layer's bounding box so that buckets
+    // outside the layer are never requested. Data outside the layer bounds does
+    // not exist, so the returned cuboid is unchanged (those regions stay zero).
     const bucketAddresses = this.getBucketAddressesInCuboid(
       mag1Bbox,
       mags,
       zoomStep,
       additionalCoordinates,
+      BoundingBox.fromBoundBoxObject(layer.boundingBox).toBoundingBoxMinMaxType(),
     );
 
     if (bucketAddresses.length > 15000) {
@@ -2090,9 +2095,25 @@ class DataApi {
       );
     }
 
-    const buckets = await Promise.all(
-      bucketAddresses.map((addr) => this.getLoadedBucket(layerName, addr)),
-    );
+    // Fetch buckets via a worker pool so that
+    // - in case of cancellation, we don't need to await all bucket requests
+    // - a slow request never blocks a free slot (which would happen when fetching
+    //   batch-by-batch).
+    // Note: the abort signal is not forwarded to individual fetches because other parts
+    // of the app may need those same buckets and we don't want to abort their requests.
+    const BUCKET_POOL_SIZE = 10;
+    const buckets = new Array(bucketAddresses.length);
+    let nextIndex = 0;
+    const worker = async () => {
+      while (nextIndex < bucketAddresses.length) {
+        signal?.throwIfAborted();
+        // Claim the next index before any await so no two workers pick the same one.
+        const i = nextIndex++;
+        buckets[i] = await this.getLoadedBucket(layerName, bucketAddresses[i]);
+      }
+    };
+    await Promise.all(Array.from({ length: BUCKET_POOL_SIZE }, worker));
+
     const { elementClass } = getLayerByName(Store.getState().dataset, layerName);
     return this.cutOutCuboid(buckets, mag1Bbox, elementClass, mags, zoomStep);
   }
@@ -2155,11 +2176,23 @@ class DataApi {
     magnifications: Array<Vector3>,
     zoomStep: number,
     additionalCoordinates: AdditionalCoordinate[] | null,
+    // When provided, the iteration is restricted to buckets that intersect this
+    // bounding box.
+    restrictToBoundingBox?: BoundingBoxMinMaxType | null,
   ): Array<BucketAddress> {
-    const buckets = [];
-    const bottomRight = bbox.max;
+    const buckets: Array<BucketAddress> = [];
+    const effectiveBbox =
+      restrictToBoundingBox != null
+        ? new BoundingBox(bbox).intersectedWith(new BoundingBox(restrictToBoundingBox))
+        : new BoundingBox(bbox);
+
+    if (effectiveBbox.getVolume() === 0) {
+      return buckets;
+    }
+
+    const bottomRight = effectiveBbox.max;
     const minBucket = globalPositionToBucketPosition(
-      bbox.min,
+      effectiveBbox.min,
       magnifications,
       zoomStep,
       additionalCoordinates,
@@ -2999,14 +3032,13 @@ class UserApi {
     - crosshairSize
     - mouseRotateValue
     - clippingDistance
-    - clippingDistanceArbitrary
+    - clippingDistanceFlight
     - dynamicSpaceDirection
     - displayCrosshair
     - displayScalebars
     - scale
     - tdViewDisplayPlanes
     - tdViewDisplayDatasetBorders
-    - tdViewDisplayLayerBorders
     - newNodeNewTree
     - centerNewNode
     - highlightCommentedNodes
@@ -3146,8 +3178,31 @@ class UtilsApi {
 
   /**
    * Sets a custom handler function for a keyboard shortcut.
+   *
+   * @param key - The key combo to bind, using the `@rwh/keystrokes` syntax
+   *   (e.g. `"a"`, `"shift + a"`, `"control > y, r"`). See the keystrokes
+   *   docs/InputKeyboard usages in this codebase for more syntax examples.
+   * @param handler - Either a plain function, which is invoked once when the
+   *   key combo is pressed (there is no release callback in that case), or a
+   *   `{ onPressed, onReleased? }` object if you also need to react when the
+   *   key combo is released.
+   * @returns An object with an `unregister()` method that removes the handler
+   *   again.
+   *
+   * @example
+   * const handler = api.utils.registerKeyHandler("g", () => {
+   *   console.log("g was pressed");
+   * });
+   * // later
+   * handler.unregister();
    */
-  registerKeyHandler(key: string, handler: KeyboardNoLoopHandler): UnregisterHandler {
+  registerKeyHandler(
+    key: string,
+    handler: KeyboardNoLoopHandler | (() => void),
+  ): UnregisterHandler {
+    if (typeof handler === "function") {
+      handler = { onPressed: handler, onReleased: () => {} };
+    }
     const keyboard = new InputKeyboard({
       [key]: handler,
     });

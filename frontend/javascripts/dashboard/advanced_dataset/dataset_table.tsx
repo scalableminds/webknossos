@@ -23,6 +23,7 @@ import FormattedDate from "components/formatted_date";
 import DatasetActionView, {
   getDatasetActionContextMenu,
 } from "dashboard/advanced_dataset/dataset_action_view";
+import { DraggableDatasetType } from "dashboard/advanced_dataset/dnd_types";
 import type { DatasetCollectionContextValue } from "dashboard/dataset/dataset_collection_context";
 import { MINIMUM_SEARCH_QUERY_LENGTH } from "dashboard/dataset/queries";
 import type { DatasetFilteringMode } from "dashboard/dataset_view";
@@ -36,7 +37,7 @@ import { diceCoefficient as dice } from "dice-coefficient";
 import { formatCountToDataAmountUnit, stringToColor } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import Shortcut from "libs/shortcut_component";
-import { compareBy, localeCompareBy } from "libs/utils";
+import { compareBy, localeCompareBy, scrollContainerToTop } from "libs/utils";
 import difference from "lodash-es/difference";
 import keyBy from "lodash-es/keyBy";
 import minBy from "lodash-es/minBy";
@@ -82,6 +83,10 @@ type Props = {
   onSelectFolder: (folder: FolderItem | null) => void;
   selectedDatasets: APIDatasetCompact[];
   context: DatasetCollectionContextValue;
+  // The table is rendered inside a scrolling container that isn't the window
+  // (see dataset_folder_view.tsx). Passed through so pagination changes can
+  // scroll that container back to the top instead of the (non-scrolling) window.
+  scrollContainerRef?: React.RefObject<HTMLElement | null>;
 };
 
 type State = {
@@ -168,7 +173,6 @@ interface DraggableDatasetRowProps extends React.HTMLAttributes<HTMLTableRowElem
   isADataset: boolean;
   rowKey: string;
 }
-export const DraggableDatasetType = "DraggableDatasetRow";
 
 function isRecordADataset(record: DatasetOrFolder): record is APIDatasetCompact {
   return (record as APIDatasetCompact).folderId !== undefined;
@@ -430,7 +434,7 @@ class FolderRenderer {
     return null;
   }
   renderCreationDateColumn(): React.ReactNode {
-    return null;
+    return this.data.created != null ? <FormattedDate timestamp={this.data.created} /> : null;
   }
   renderActionsColumn(): React.ReactNode {
     return this.datasetTable.getFolderSettingsActions(this.data);
@@ -691,6 +695,7 @@ class DatasetTable extends PureComponent<Props, State> {
           components={components}
           pagination={{
             defaultPageSize: 50,
+            onChange: () => scrollContainerToTop(this.props.scrollContainerRef?.current),
           }}
           styles={{
             // hide/offset the first column containing the checkbox for row selection

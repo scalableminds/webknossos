@@ -115,16 +115,13 @@ export function getWidestMags(dataset: APIDataset): Vector3[] {
   return maxBy(allLayerMags, (mags) => mags.length) || [];
 }
 
-export const getSomeMagInfoForDataset = memoizeOne((dataset: APIDataset): MagInfo => {
-  const magUnion = getMagnificationUnion(dataset);
-  const areMagsDistinct = magUnion.every((mags) => mags.length <= 1);
-
-  if (areMagsDistinct) {
-    return new MagInfo(magUnion.map((mags) => mags[0]));
-  } else {
-    return new MagInfo(getWidestMags(dataset));
-  }
-});
+export const getSomeMagInfoForDataset = memoizeOne(
+  (dataset: APIDataset): MagInfo =>
+    // Use one representative (real) mag per existing mag level. This never
+    // synthesizes non-existent mags (unlike dense mags), so index queries such
+    // as getFinestMagIndex reflect the actually available mags of the dataset.
+    new MagInfo(getMagnificationUnion(dataset).map((mags) => mags[0])),
+);
 
 function _getMaxZoomStep(dataset: APIDataset | null | undefined): number {
   const minimumZoomStepCount = 1;
@@ -234,6 +231,15 @@ export function getLayerBoundingBox(dataset: APIDataset, layerName: string): Bou
     min,
     max,
   });
+}
+
+// Layer bounding boxes are not stored as user bounding boxes and therefore have no id of their
+// own. Real user bounding box ids are always >= 1 and -1 is already used as the "Full layer"
+// sentinel id in the TIFF export tab, so layer bounding boxes are assigned stable negative ids
+// starting at -2 (based on their index in getDataLayers) wherever an id is needed, e.g. to key
+// per-bbox MIP settings.
+export function getLayerBoundingBoxId(layerIndex: number): number {
+  return -2 - layerIndex;
 }
 
 export function getDatasetBoundingBox(dataset: APIDataset): BoundingBox {
@@ -633,9 +639,9 @@ export function isLayerVisible(
     return false;
   }
 
-  const isArbitraryMode = constants.MODES_ARBITRARY.includes(viewMode);
-  const isHiddenBecauseOfArbitraryMode = isArbitraryMode && isSegmentationLayer(dataset, layerName);
-  return !layerConfig.isDisabled && layerConfig.alpha > 0 && !isHiddenBecauseOfArbitraryMode;
+  const isFlightMode = viewMode === constants.MODE_FLIGHT;
+  const isHiddenInFlightMode = isFlightMode && isSegmentationLayer(dataset, layerName);
+  return !layerConfig.isDisabled && layerConfig.alpha > 0 && !isHiddenInFlightMode;
 }
 
 function _hasFallbackLayer(layer: APIDataLayer) {

@@ -1,9 +1,9 @@
 package com.scalableminds.webknossos.datastore.services.mapping
 
 import ch.systemsx.cisd.hdf5.{HDF5DataSet, HDF5FactoryProvider, IHDF5Reader}
+import com.scalableminds.util.box.{Box, Failure, Full}
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Failure, Full}
+import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{
@@ -18,7 +18,7 @@ import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, SkeletonTra
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.services.DataConverter
-import com.scalableminds.webknossos.datastore.storage._
+import com.scalableminds.webknossos.datastore.storage.*
 
 import java.nio.file.Files
 import java.nio.{ByteBuffer, ByteOrder, LongBuffer}

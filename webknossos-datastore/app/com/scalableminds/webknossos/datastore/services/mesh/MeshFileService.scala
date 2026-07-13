@@ -2,9 +2,9 @@ package com.scalableminds.webknossos.datastore.services.mesh
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.{Box, Empty}
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Fox}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.datasource.{
@@ -14,6 +14,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   LayerAttachmentDataformat
 }
 import com.scalableminds.webknossos.datastore.helpers.UnsignedLongJson
+import com.scalableminds.webknossos.datastore.storage.AttachmentKey
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{Json, OFormat}
 
@@ -28,8 +29,8 @@ case class ListMeshChunksRequest(
 
 object ListMeshChunksRequest {
   implicit val jsonFormat: OFormat[ListMeshChunksRequest] =
-    UnsignedLongJson.patchRequiredField(Json.format[ListMeshChunksRequest], "segmentId")(_.segmentId,
-                                                                                           (a, v) => a.copy(segmentId = v))
+    UnsignedLongJson
+      .patchRequiredField(Json.format[ListMeshChunksRequest], "segmentId")(_.segmentId, (a, v) => a.copy(segmentId = v))
 }
 
 case class MeshChunkDataRequest(
@@ -45,15 +46,15 @@ case class MeshChunkDataRequestList(
 
 object MeshChunkDataRequest {
   implicit val jsonFormat: OFormat[MeshChunkDataRequest] =
-    UnsignedLongJson.patchOptionalField(Json.format[MeshChunkDataRequest], "segmentId")(_.segmentId,
-                                                                                         (a, v) => a.copy(segmentId = v))
+    UnsignedLongJson
+      .patchOptionalField(Json.format[MeshChunkDataRequest], "segmentId")(_.segmentId, (a, v) => a.copy(segmentId = v))
 }
 
 object MeshChunkDataRequestList {
   implicit val jsonFormat: OFormat[MeshChunkDataRequestList] = Json.format[MeshChunkDataRequestList]
 }
 
-case class MeshFileKey(dataSourceId: DataSourceId, layerName: String, attachment: LayerAttachment)
+case class MeshFileKey(dataSourceId: DataSourceId, layerName: String, attachment: LayerAttachment) extends AttachmentKey
 
 // Sent to wk frontend
 case class MeshFileInfo(
@@ -90,15 +91,15 @@ class MeshFileService @Inject() (
       meshFileName: String
   ): Box[MeshFileKey] =
     for {
-      attachment <- Box(dataLayer.attachments match {
-        case Some(attachments) => attachments.meshes.find(_.name == meshFileName)
-        case None              => None
-      })
-      resolvedPath <- tryo(attachment.resolvedPath(config.Datastore.baseDirectory, dataSourceId))
+      attachment <- dataLayer.attachments match {
+        case Some(attachments) => Box.fromOption(attachments.meshes.find(_.name == meshFileName))
+        case None              => Empty
+      }
+      _ <- Box.fromBool(attachment.path.isAbsolute) ?~> Msg.Mesh.File.pathNotAbsolute
     } yield MeshFileKey(
       dataSourceId,
       dataLayer.name,
-      attachment.copy(path = resolvedPath)
+      attachment
     )
 
   def listMeshFiles(dataSourceId: DataSourceId, dataLayer: DataLayer)(using

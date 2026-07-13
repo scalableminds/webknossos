@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 
 import javax.inject.Inject
-import models.annotation._
+import models.annotation.*
 import models.project.ProjectDAO
 import models.user.{User, UserService}
 import com.scalableminds.util.objectid.ObjectId
@@ -47,7 +47,8 @@ class ProjectInformationHandler @Inject() (
         datasetId,
         AnnotationType.CompoundProject,
         annotations,
-        taskBoundingBoxes
+        taskBoundingBoxes,
+        remapSegmentIds = true
       ) ?~> Msg.Annotation.Merge.failedCompound
     } yield mergedAnnotation
 

@@ -19,7 +19,7 @@ case class DataRequest(
     width: Int,
     height: Int,
     depth: Int,
-    settings: DataServiceRequestSettings = DataServiceRequestSettings.default
+    settings: DataServiceRequestSettings = DataServiceRequestSettings()
 ) extends AbstractDataRequest {
 
   def cuboid(dataLayer: DataLayer): Cuboid = Cuboid(position, width, height, depth)
@@ -66,7 +66,8 @@ object WebknossosAdHocMeshRequest {
   implicit val jsonFormat: OFormat[WebknossosAdHocMeshRequest] =
     UnsignedLongJson.patchRequiredField(Json.format[WebknossosAdHocMeshRequest], "segmentId")(
       _.segmentId,
-      (a, v) => a.copy(segmentId = v))
+      (a, v) => a.copy(segmentId = v)
+    )
 }
 
 case class RawCuboidRequest(

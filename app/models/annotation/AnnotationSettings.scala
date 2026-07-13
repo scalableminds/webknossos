@@ -4,11 +4,11 @@ import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.volume.MagRestrictions
-import play.api.libs.json._
+import play.api.libs.json.*
 
 object TracingMode extends ExtendedEnumeration {
   type TracingMode = Value
-  val orthogonal, oblique, flight = Value
+  val orthogonal, flight = Value
 }
 
 case class AnnotationSettings(

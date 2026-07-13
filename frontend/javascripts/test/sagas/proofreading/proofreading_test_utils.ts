@@ -16,7 +16,7 @@ import {
 import { createSaveQueueFromUpdateActions } from "test/helpers/saveHelpers";
 import { delay } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
-import type { Vector2, Vector3 } from "viewer/constants";
+import type { Vector3 } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { getCurrentMag } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
@@ -43,7 +43,7 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
-import { createEditableMapping } from "viewer/model/sagas/volume/proofreading/proofread_saga";
+import { createEditableMapping } from "viewer/model/sagas/volume/proofreading/preparation_sagas";
 import type {
   ApplicableSkeletonServerUpdateAction,
   ApplicableVolumeServerUpdateAction,

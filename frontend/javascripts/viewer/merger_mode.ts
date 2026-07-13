@@ -1,5 +1,5 @@
-import cloneDeep from "lodash-es/cloneDeep";
 import { toBigInt } from "libs/bigint_helpers";
+import cloneDeep from "lodash-es/cloneDeep";
 import messages from "messages";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { UnregisterHandler } from "viewer/api/api_latest";

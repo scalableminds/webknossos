@@ -227,9 +227,7 @@ class DataCube {
     const mapping = this.getMapping();
 
     if (mapping != null && this.isMappingEnabled()) {
-      mappedId = isNumberMap(mapping)
-        ? mapping.get(Number(unmappedId))
-        : mapping.get(unmappedId);
+      mappedId = isNumberMap(mapping) ? mapping.get(Number(unmappedId)) : mapping.get(unmappedId);
     }
     if (mappedId == null || (typeof mappedId === "number" && Number.isNaN(mappedId))) {
       // The id couldn't be mapped.

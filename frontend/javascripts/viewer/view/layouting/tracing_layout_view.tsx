@@ -16,6 +16,7 @@ import CrossOriginApi from "viewer/api/cross_origin_api";
 import Constants, { type Vector3 } from "viewer/constants";
 import type { ControllerStatus } from "viewer/controller";
 import WebKnossosController from "viewer/controller";
+import { applyState } from "viewer/controller/apply_url_state";
 import MergerModeController from "viewer/controller/merger_mode_controller";
 import { destroySceneController } from "viewer/controller/scene_controller_provider";
 import UrlManager from "viewer/controller/url_manager";
@@ -25,7 +26,6 @@ import { AnnotationTool, MeasurementTools } from "viewer/model/accessors/tool_ac
 import { cancelSagaAction, resetStoreAction } from "viewer/model/actions/actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import rootSaga from "viewer/model/sagas/root_saga";
-import { applyState } from "viewer/model_initialization";
 import { Model, Store } from "viewer/singletons";
 import { startSaga, type Theme, type TraceOrViewCommand, type WebknossosState } from "viewer/store";
 import ActionBarView from "viewer/view/action_bar_view";
@@ -47,7 +47,7 @@ import {
 import { RenderToPortal } from "viewer/view/layouting/portal_utils";
 import NmlUploadZoneContainer from "viewer/view/nml_upload_zone_container";
 import WelcomeToast from "viewer/view/novel_user_experiences/welcome_toast";
-import { importTracingFiles } from "viewer/view/right_border_tabs/trees_tab/skeleton_tab_view";
+import { importTracingFiles } from "viewer/view/right_border_tabs/skeleton_tab/import_tracing_files";
 import TracingView from "viewer/view/tracing_view";
 import VersionView from "viewer/view/version_view";
 import TabTitle from "../components/tab_title_component";

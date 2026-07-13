@@ -1,5 +1,6 @@
 package models.annotation.nml
 
+import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, Tree, TreeGroup}
@@ -10,7 +11,6 @@ import com.scalableminds.webknossos.datastore.geometry.{
 }
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.UploadedVolumeLayer
-import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 
 import java.io.File
 

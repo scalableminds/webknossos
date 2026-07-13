@@ -244,6 +244,7 @@ type MutableAPIDatasetBase = MutableAPIDataSourceId & {
   publication: null | undefined;
   tags: Array<string>;
   usedStorageBytes: number;
+  uploaderFullName: string | null | undefined;
 };
 type APIDatasetBase = Readonly<MutableAPIDatasetBase>;
 export type MutableAPIDataset = MutableAPIDatasetBase & {
@@ -385,7 +386,7 @@ export type APIRestrictions = {
   // allowSave might be false even though allowUpdate and isUpdatingCurrentlyAllowed are true (e.g., see sandbox annotations)
   readonly allowSave?: boolean;
 };
-export type APIAllowedMode = "orthogonal" | "oblique" | "flight";
+export type APIAllowedMode = "orthogonal" | "flight";
 export type APIMagRestrictions = {
   min?: number;
   max?: number;
@@ -1316,6 +1317,7 @@ export type FlatFolderTreeItem = {
   parent: string | null;
   metadata: APIMetadataEntry[];
   isEditable: boolean;
+  created?: number | null;
 };
 
 // Frontend type of FlatFolderTreeItem with inferred nested structure.
@@ -1326,6 +1328,7 @@ export type FolderItem = {
   children: FolderItem[];
   isEditable: boolean;
   metadata: APIMetadataEntry[];
+  created?: number | null;
   // Can be set so that the antd tree component can disable
   // individual folder items.
   disabled?: boolean;
@@ -1338,6 +1341,7 @@ export type Folder = {
   allowedTeamsCumulative: APITeam[];
   metadata: APIMetadataEntry[];
   isEditable: boolean;
+  created?: number | null;
 };
 
 export type FolderUpdater = {

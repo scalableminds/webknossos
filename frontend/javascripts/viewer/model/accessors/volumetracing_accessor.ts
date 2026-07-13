@@ -28,13 +28,14 @@ import {
   getMappingInfo,
   getSegmentationLayerByName,
   getSegmentationLayers,
-  getVisibleOrLastSegmentationLayer,
+  getSomeMagInfoForDataset,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
 import {
   getActiveMagIndexForLayer,
   getAdditionalCoordinatesAsString,
   getFlooredPosition,
+  getRawActiveMagIndexForLayer,
 } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import { MAX_ZOOM_STEP_DIFF } from "viewer/model/bucket_data_handling/loading_strategy_logic";
@@ -54,7 +55,7 @@ import type {
 import {
   getGroupByIdWithSubgroups,
   MISSING_GROUP_ID,
-} from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
+} from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import { setSelectedSegmentsOrGroupAction } from "../actions/volumetracing_actions";
 import { MagInfo } from "../helpers/mag_info";
 
@@ -250,9 +251,19 @@ const MAG_THRESHOLDS_FOR_ZOOM: Partial<Record<AnnotationToolId, number>> = {
   [AnnotationTool.FILL_CELL.id]: 1,
 };
 
-export function isVolumeAnnotationDisallowedForZoom(tool: AnnotationTool, state: WebknossosState) {
+export type VolumeAnnotationZoomState =
+  | { isDisabled: false }
+  | { isDisabled: true; reason: "needs_zoom_in" | "needs_zoom_out" };
+
+export function isVolumeAnnotationDisallowedForZoom(
+  tool: AnnotationTool,
+  state: WebknossosState,
+): VolumeAnnotationZoomState {
   if (state.annotation.volumes.length === 0) {
-    return true;
+    // Volume annotation is not possible, but that's not because of an invalid
+    // zoom state. The call site should handle such cases differently (e.g.,
+    // the toolbar has more disabled-rules for this in place.)
+    return { isDisabled: false };
   }
 
   const threshold = MAG_THRESHOLDS_FOR_ZOOM[tool.id];
@@ -260,22 +271,45 @@ export function isVolumeAnnotationDisallowedForZoom(tool: AnnotationTool, state:
   if (threshold == null) {
     // If there is no threshold for the provided tool, it doesn't need to be
     // disabled.
-    return false;
+    return { isDisabled: false };
   }
 
   const activeSegmentation = getActiveSegmentationTracing(state);
   if (!activeSegmentation) {
-    return true;
+    // Volume annotation is not possible, but that's not because of an invalid
+    // zoom state. Also see volumes.length === 0 for the same reasoning.
+    return { isDisabled: false };
   }
 
   const volumeMags = getMagInfoOfActiveSegmentationTracingLayer(state);
   const finestExistingMagIndex = volumeMags.getFinestMagIndex();
+
+  const rawMagIndex = getRawActiveMagIndexForLayer(state, activeSegmentation.tracingId);
+  // If the zoom step corresponds to a mag that is finer than every mag of the dataset,
+  // no layer renders that mag. Instead, the finest dataset-wide mag is rendered
+  // (e.g., a dataset whose finest mag is 2-2-1 renders 2-2-1 even when the zoom
+  // would theoretically allow mag 1-1-1). Use the effectively rendered mag index
+  // for the check below so that editing is only disabled when another layer actually
+  // renders a mag that is missing in the volume layer (e.g., due to mag restrictions).
+  const finestDatasetMagIndex = getSomeMagInfoForDataset(state.dataset).getFinestMagIndex();
+  const effectiveMagIndex = Math.max(rawMagIndex, finestDatasetMagIndex);
+  if (!volumeMags.hasIndex(effectiveMagIndex)) {
+    // The current zoom corresponds to a mag that was excluded for this volume layer
+    // (e.g., to avoid performance issues when annotating large structures in a coarse
+    // mag). Annotating in such a mag doesn't make sense, since it is not actually
+    // rendered/labeled, so the tool is disabled.
+    return {
+      isDisabled: true,
+      reason: finestExistingMagIndex < effectiveMagIndex ? "needs_zoom_in" : "needs_zoom_out",
+    };
+  }
+
   // The current mag is too high for the tool
   // because too many voxels could be annotated at the same time.
   const isZoomStepTooHigh =
     getActiveMagIndexForLayer(state, activeSegmentation.tracingId) >
     threshold + finestExistingMagIndex;
-  return isZoomStepTooHigh;
+  return isZoomStepTooHigh ? { isDisabled: true, reason: "needs_zoom_in" } : { isDisabled: false };
 }
 
 const MAX_BRUSH_SIZE_FOR_MAG1 = 300;
@@ -845,38 +879,6 @@ const AGGLOMERATE_STATES = {
     reason: "",
   },
 };
-
-const CONNECTOME_STATES = {
-  NO_SEGMENTATION: {
-    value: false,
-    reason: "A segmentation layer needs to be visible to load the synapses of a segment.",
-  },
-  NO_CONNECTOME_FILE: {
-    value: false,
-    reason: "A connectome file needs to be available to load the synapses of a segment.",
-  },
-  YES: {
-    value: true,
-    reason: "",
-  },
-};
-
-export function hasConnectomeFile(state: WebknossosState) {
-  const segmentationLayer = getVisibleOrLastSegmentationLayer(state);
-
-  if (segmentationLayer == null) {
-    return CONNECTOME_STATES.NO_SEGMENTATION;
-  }
-
-  const { currentConnectomeFile } =
-    state.localSegmentationStateByLayer[segmentationLayer.name].connectomeData;
-
-  if (currentConnectomeFile == null) {
-    return CONNECTOME_STATES.NO_CONNECTOME_FILE;
-  }
-
-  return CONNECTOME_STATES.YES;
-}
 
 export type AgglomerateState = (typeof AGGLOMERATE_STATES)[keyof typeof AGGLOMERATE_STATES];
 

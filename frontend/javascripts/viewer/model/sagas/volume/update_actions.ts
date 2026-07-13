@@ -17,7 +17,6 @@ import type {
 } from "viewer/model/types/tree_types";
 import type {
   BoundingBoxObject,
-  NumberLike,
   SegmentGroup,
   UserBoundingBox,
   UserBoundingBoxWithOptIsVisible,

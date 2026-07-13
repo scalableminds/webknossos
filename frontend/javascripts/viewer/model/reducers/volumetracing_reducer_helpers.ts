@@ -38,7 +38,7 @@ import {
   findParentIdForGroupId,
   MISSING_GROUP_ID,
   mapGroups,
-} from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
+} from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import {
   getLayerByName,
   getVisibleSegmentationLayer,
@@ -168,7 +168,7 @@ export function addToContourListReducer(
 
   if (
     !isUpdatingCurrentlyAllowed ||
-    isVolumeAnnotationDisallowedForZoom(state.uiInformation.activeTool, state)
+    isVolumeAnnotationDisallowedForZoom(state.uiInformation.activeTool, state).isDisabled
   ) {
     return state;
   }

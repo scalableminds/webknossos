@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.tracingstore.controllers
 
 import com.scalableminds.util.Msg
 import com.google.inject.Inject
+import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
@@ -24,7 +25,6 @@ import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   NeighborsParameters
 }
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
-import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import com.scalableminds.webknossos.tracingstore.tracings.KeyValueStoreConversions
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
@@ -144,7 +144,8 @@ class EditableMappingController @Inject() (
               remoteFallbackLayer
             )
           } yield Ok(
-            Json.obj("segmentId" -> UnsignedLongJson.writes.writes(segmentId), "neighbors" -> Json.toJson(edges)))
+            Json.obj("segmentId" -> UnsignedLongJson.writes.writes(segmentId), "neighbors" -> Json.toJson(edges))
+          )
         }
       }
     }

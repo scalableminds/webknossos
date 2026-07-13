@@ -14,6 +14,7 @@ import {
 import TWEEN from "tween.js";
 import type { OrthoViewMap, Vector2, Vector3, Viewport } from "viewer/constants";
 import Constants, {
+  FlightViewport,
   OrthoViewColors,
   OrthoViews,
   OrthoViewValues,
@@ -157,13 +158,23 @@ class PlaneView {
     }
   }
 
+  // Converts a TDView mouse position to NDC coordinates and points the shared
+  // raycaster at it. Used by both mesh and MIP hit testing.
+  private setRaycasterFromTDMouse(mousePosition: [number, number]): void {
+    const tdViewport = getInputCatcherRect(Store.getState(), "TDView");
+    const mouse = new ThreeVector2(
+      (mousePosition[0] / tdViewport.width) * 2 - 1,
+      ((mousePosition[1] / tdViewport.height) * 2 - 1) * -1,
+    );
+    raycaster.setFromCamera(mouse, this.cameras[OrthoViews.TDView]);
+  }
+
   performMeshHitTest = throttle(
     (mousePosition: [number, number], allowMeshReuseOptimization: boolean = true): RaycasterHit => {
       const storeState = Store.getState();
       const sceneController = getSceneController();
       const { segmentMeshController } = sceneController;
       const { meshesLayerLODRootGroup } = segmentMeshController;
-      const tdViewport = getInputCatcherRect(storeState, "TDView");
       const { hoveredSegmentId } = storeState.temporaryConfiguration;
 
       // Outside of the 3D viewport, we don't do mesh hit tests
@@ -179,11 +190,7 @@ class PlaneView {
       }
 
       // Perform ray casting
-      const mouse = new ThreeVector2(
-        (mousePosition[0] / tdViewport.width) * 2 - 1,
-        ((mousePosition[1] / tdViewport.height) * 2 - 1) * -1,
-      );
-      raycaster.setFromCamera(mouse, this.cameras[OrthoViews.TDView]);
+      this.setRaycasterFromTDMouse(mousePosition);
       const intersectableObjects = meshesLayerLODRootGroup.children;
       // The second parameter of intersectObjects is set to true to ensure that
       // the groups which contain the actual meshes are traversed.
@@ -263,6 +270,14 @@ class PlaneView {
     },
     MESH_HOVER_THROTTLING_DELAY,
   );
+
+  performMipHitTest(mousePosition: [number, number]): Vector3 | null {
+    const storeState = Store.getState();
+    if (storeState.viewModeData.plane.activeViewport !== OrthoViews.TDView) return null;
+    this.setRaycasterFromTDMouse(mousePosition);
+    const worldPos = getSceneController().getMipHitPosition(raycaster.ray);
+    return worldPos != null ? (worldPos.toArray() as Vector3) : null;
+  }
 
   clearLastMeshHitTest = () => {
     if (oldRaycasterHit?.node.parent != null) {
@@ -445,8 +460,8 @@ class PlaneView {
   }
 
   getCameraForPlane(plane: Viewport) {
-    if (plane === "arbitraryViewport") {
-      throw new Error("Cannot access camera for arbitrary viewport.");
+    if (plane === FlightViewport) {
+      throw new Error("Cannot access camera for flight viewport.");
     }
     return this.getCameras()[plane];
   }

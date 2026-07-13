@@ -83,7 +83,8 @@ export function getMeshFileChunksForSegment(
         ...lod,
         chunks: lod.chunks.map((chunk) => ({
           ...chunk,
-          unmappedSegmentId: chunk.unmappedSegmentId != null ? toBigInt(chunk.unmappedSegmentId) : 0n,
+          unmappedSegmentId:
+            chunk.unmappedSegmentId != null ? toBigInt(chunk.unmappedSegmentId) : 0n,
         })),
       })),
     };

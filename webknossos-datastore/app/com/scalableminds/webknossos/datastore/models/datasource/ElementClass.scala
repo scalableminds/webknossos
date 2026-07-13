@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.models.datasource
 
+import com.scalableminds.util.box.{Box, Failure, Full}
 import com.scalableminds.util.enumeration.ExtendedEnumeration
-import com.scalableminds.util.tools.{Box, Failure, Full}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType

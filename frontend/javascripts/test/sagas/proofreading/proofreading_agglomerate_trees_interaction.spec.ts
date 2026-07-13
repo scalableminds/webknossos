@@ -83,9 +83,7 @@ describe("Proofreading (With Agglomerate Tree interactions)", () => {
       yield call(initializeMappingAndTool, context, tracingId);
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(
-        updateSegmentAction(1n, { anchorPosition: getPositionForSegmentId(1) }, tracingId),
-      );
+      yield put(updateSegmentAction(1n, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
       yield put(setActiveCellAction(1n));
 
       yield makeMappingEditableForTest();
@@ -121,9 +119,7 @@ describe("Proofreading (With Agglomerate Tree interactions)", () => {
       yield call(initializeMappingAndTool, context, tracingId);
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(
-        updateSegmentAction(1n, { anchorPosition: getPositionForSegmentId(1) }, tracingId),
-      );
+      yield put(updateSegmentAction(1n, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
       yield put(setActiveCellAction(1n));
 
       let trees = new DiffableMap<number, Tree>();

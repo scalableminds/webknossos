@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(172);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(174);
 COMMIT TRANSACTION;
 
 
@@ -287,7 +287,7 @@ CREATE TABLE webknossos.scripts(
   CHECK (gist ~* '^https?://[a-z0-9\-_\.]+.*$')
 );
 
-CREATE TYPE webknossos.TASKTYPE_MODES AS ENUM ('orthogonal', 'flight', 'oblique', 'volume');
+CREATE TYPE webknossos.TASKTYPE_MODES AS ENUM ('orthogonal', 'flight', 'volume');
 CREATE TYPE webknossos.TASKTYPE_TRACINGTYPES AS ENUM ('skeleton', 'volume', 'hybrid');
 CREATE TABLE webknossos.taskTypes(
   _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
@@ -295,7 +295,7 @@ CREATE TABLE webknossos.taskTypes(
   _team TEXT CONSTRAINT _team_objectId CHECK (_team ~ '^[0-9a-f]{24}$') NOT NULL,
   summary TEXT NOT NULL,
   description TEXT NOT NULL,
-  settings_allowedModes webknossos.TASKTYPE_MODES[] NOT NULL DEFAULT '{orthogonal, flight, oblique}',
+  settings_allowedModes webknossos.TASKTYPE_MODES[] NOT NULL DEFAULT '{orthogonal, flight}',
   settings_preferredMode webknossos.TASKTYPE_MODES DEFAULT 'orthogonal',
   settings_branchPointsAllowed BOOLEAN NOT NULL,
   settings_somaClickingAllowed BOOLEAN NOT NULL,
@@ -664,8 +664,9 @@ CREATE TABLE webknossos.credentials(
 CREATE TABLE webknossos.folders(
     _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
     name TEXT NOT NULL CHECK (name !~ '/'),
-    isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
     metadata JSONB  NOT NULL DEFAULT '[]',
+    created TIMESTAMPTZ DEFAULT NOW(),
+    isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
     CONSTRAINT metadataIsJsonArray CHECK(jsonb_typeof(metadata) = 'array')
 );
 

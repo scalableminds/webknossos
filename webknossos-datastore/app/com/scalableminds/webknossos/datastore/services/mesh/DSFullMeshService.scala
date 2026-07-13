@@ -14,9 +14,9 @@ import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, Segm
 import com.scalableminds.webknossos.datastore.models.requests.Cuboid
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, VoxelPosition}
 import com.scalableminds.webknossos.datastore.helpers.UnsignedLongJson
-import com.scalableminds.webknossos.datastore.services._
+import com.scalableminds.webknossos.datastore.services.*
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.webknossos.datastore.services.mapping.MappingService
 import com.scalableminds.webknossos.datastore.services.segmentindex.SegmentIndexFileService
 import play.api.libs.json.{Json, OFormat}
@@ -38,8 +38,8 @@ case class FullMeshRequest(
 
 object FullMeshRequest {
   implicit val jsonFormat: OFormat[FullMeshRequest] =
-    UnsignedLongJson.patchRequiredField(Json.format[FullMeshRequest], "segmentId")(_.segmentId,
-                                                                                    (a, v) => a.copy(segmentId = v))
+    UnsignedLongJson
+      .patchRequiredField(Json.format[FullMeshRequest], "segmentId")(_.segmentId, (a, v) => a.copy(segmentId = v))
 }
 
 class DSFullMeshService @Inject() (

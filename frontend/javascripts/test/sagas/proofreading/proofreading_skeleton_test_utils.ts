@@ -20,11 +20,7 @@ import {
   setActiveCellAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
-import {
-  bigIntToProtoLong,
-  PROTO_FILES,
-  PROTO_TYPES,
-} from "viewer/model/helpers/proto_helpers";
+import { bigIntToProtoLong, PROTO_FILES, PROTO_TYPES } from "viewer/model/helpers/proto_helpers";
 import { type Saga, select } from "viewer/model/sagas/effect_generators";
 import type { Edge, TreeMap } from "viewer/model/types/tree_types";
 import type { NumberLike, WebknossosState } from "viewer/store";

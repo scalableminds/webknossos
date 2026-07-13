@@ -35,7 +35,8 @@ import {
  * trees in sync.
  *
  * When a split operation is done, the agglomerate mapping is always refresh via
- * calling `splitAgglomerateInMapping`. This function automatically takes care of
+ * calling `splitAgglomeratesInMapping` (or its single-agglomerate wrapper
+ * `splitAgglomerateInMapping`). This function automatically takes care of
  * updating the agglomerate trees when its syncAgglomerateTrees parameter is set to true.
  * So no extra special care needed.
  *
@@ -290,7 +291,7 @@ export function* syncAgglomerateTreesAfterMergeAction(
 
 // This function should be called after a successful split proofreading interaction to update
 // the potentially loaded agglomerate tree.
-// This is automatically done correct when reloading the mapping after a split via splitAgglomerateInMapping.
+// This is automatically done correct when reloading the mapping after a split via splitAgglomeratesInMapping.
 // But the callee needs to tell the function to update the trees via the syncAgglomerateTrees parameter.
 export function* syncAgglomerateTreesAfterSplitAction(
   newAgglomerateIds: bigint[],

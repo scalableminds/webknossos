@@ -7,6 +7,21 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
+## [26.07.03](https://github.com/scalableminds/webknossos/releases/tag/26.07.03) - 2026-07-13
+[Commits](https://github.com/scalableminds/webknossos/compare/26.07.2...26.07.03)
+
+### Fixed
+- Fixed a bug where old registerKeyHandler frontend api calls failed due to lacking backwards compatibility to the old interface. The old format is now supported again. [#9783](https://github.com/scalableminds/webknossos/pull/9783)
+
+## [26.07.2](https://github.com/scalableminds/webknossos/releases/tag/26.07.2) - 2026-06-29
+[Commits](https://github.com/scalableminds/webknossos/compare/26.07.0...26.07.2)
+
+### Fixed
+- Fixed that WEBKNOSSOS wouldn't load without https (or in very old browsers) by shimming crypto.randomUUID. [#9735](https://github.com/scalableminds/webknossos/pull/9735)
+
+## [26.07.1]
+This release was skipped for technical reasons.
+
 ## [26.07.0](https://github.com/scalableminds/webknossos/releases/tag/26.07.0) - 2026-06-23
 [Commits](https://github.com/scalableminds/webknossos/compare/26.06.0...26.07.0)
 

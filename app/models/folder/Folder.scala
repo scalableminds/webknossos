@@ -2,6 +2,7 @@ package models.folder
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.schema.Tables.{Folders, FoldersRow, GetResultFoldersRow}
@@ -10,6 +11,7 @@ import models.organization.{Organization, OrganizationDAO}
 import models.team.{TeamDAO, TeamService}
 import models.user.User
 import play.api.libs.json.{JsArray, JsObject, Json, OFormat}
+import slick.jdbc.GetResult
 import slick.jdbc.PostgresProfile.api.*
 import slick.sql.SqlAction
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
@@ -19,9 +21,13 @@ import javax.inject.Inject
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 
-case class Folder(_id: ObjectId, name: String, metadata: JsArray)
+case class Folder(_id: ObjectId, name: String, metadata: JsArray, created: Option[Instant] = Some(Instant.now))
 
-case class FolderWithParent(_id: ObjectId, name: String, metadata: JsArray, _parent: Option[ObjectId])
+case class FolderWithParent(_id: ObjectId,
+                             name: String,
+                             metadata: JsArray,
+                             _parent: Option[ObjectId],
+                             created: Option[Instant] = Some(Instant.now))
 
 case class FolderParameters(name: String, allowedTeams: List[ObjectId], metadata: JsArray)
 object FolderParameters {
@@ -57,6 +63,7 @@ class FolderService @Inject() (
       "id" -> folder._id,
       "name" -> folder.name,
       "metadata" -> folder.metadata,
+      "created" -> folder.created,
       "allowedTeams" -> teamsJs,
       "allowedTeamsCumulative" -> teamsCumulativeJs,
       "isEditable" -> isEditable
@@ -68,6 +75,7 @@ class FolderService @Inject() (
       "name" -> folderWithParent.name,
       "parent" -> folderWithParent._parent,
       "metadata" -> folderWithParent.metadata,
+      "created" -> folderWithParent.created,
       "isEditable" -> allEditableIds.contains(folderWithParent._id)
     )
 
@@ -149,12 +157,12 @@ class FolderDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected def parse(r: FoldersRow): Fox[Folder] =
     for {
       metadata <- parseMetadata(r.metadata)
-    } yield Folder(ObjectId(r._id), r.name, metadata)
+    } yield Folder(ObjectId(r._id), r.name, metadata, r.created.map(Instant.fromSql))
 
-  private def parseWithParent(t: (String, String, String, Option[String])): Fox[FolderWithParent] =
+  private def parseWithParent(t: (String, String, String, Option[String], Option[Instant])): Fox[FolderWithParent] =
     for {
       metadata <- parseMetadata(t._3)
-      folderWithParent = FolderWithParent(ObjectId(t._1), t._2, metadata, t._4.map(ObjectId(_)))
+      folderWithParent = FolderWithParent(ObjectId(t._1), t._2, metadata, t._4.map(ObjectId(_)), t._5)
     } yield folderWithParent
 
   private def parseMetadata(literal: String): Fox[JsArray] =
@@ -286,11 +294,13 @@ class FolderDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
       result <- rows.headOption.toFox
     } yield result
 
-  def findTreeOf(folderId: ObjectId)(using ctx: DBAccessContext): Fox[List[FolderWithParent]] =
+  def findTreeOf(folderId: ObjectId)(using ctx: DBAccessContext): Fox[List[FolderWithParent]] = {
+    implicit val gr: GetResult[(String, String, String, Option[String], Option[Instant])] =
+      r => (r.nextString(), r.nextString(), r.nextString(), r.nextStringOption(), GetInstantOpt(r))
     for {
       accessQueryWithPrefix <- accessQueryFromAccessQWithPrefix(readAccessQWithPrefix, prefix = q"f.")
       accessQuery <- readAccessQuery
-      rows <- run(q"""SELECT f._id, f.name, f.metadata, fp._ancestor
+      rows <- run(q"""SELECT f._id, f.name, f.metadata, fp._ancestor, f.created
               FROM webknossos.folders_ f
               JOIN webknossos.folder_paths fp -- join to find immediate parent, this will also kick out self
               ON f._id = fp._descendant
@@ -299,13 +309,14 @@ class FolderDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
               FROM webknossos.folder_paths
               WHERE _ancestor = $folderId)
               AND $accessQueryWithPrefix
-              UNION ALL SELECT _id, name, metadata, NULL -- find self again, with no parent
+              UNION ALL SELECT _id, name, metadata, NULL, created -- find self again, with no parent
               FROM webknossos.folders_
               WHERE _id = $folderId
               AND $accessQuery
-              """.as[(String, String, String, Option[String])])
+              """.as[(String, String, String, Option[String], Option[Instant])])
       parsed <- Fox.combined(rows.toList.map(parseWithParent))
     } yield parsed
+  }
 
   def insertAsChild(parentId: ObjectId, f: Folder)(using ctx: DBAccessContext): Fox[Unit] = {
     val insertPathQuery =
@@ -354,6 +365,6 @@ class FolderDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
   }
 
   private def insertFolderQuery(f: Folder): SqlAction[Int, NoStream, Effect] =
-    q"INSERT INTO webknossos.folders(_id, name) VALUES (${f._id}, ${f.name})".asUpdate
+    q"INSERT INTO webknossos.folders(_id, name, created) VALUES (${f._id}, ${f.name}, ${f.created})".asUpdate
 
 }

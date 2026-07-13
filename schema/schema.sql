@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(173);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(174);
 COMMIT TRANSACTION;
 
 
@@ -664,6 +664,7 @@ CREATE TABLE webknossos.credentials(
 CREATE TABLE webknossos.folders(
     _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
     name TEXT NOT NULL CHECK (name !~ '/'),
+    created TIMESTAMPTZ DEFAULT NOW(),
     isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
     metadata JSONB  NOT NULL DEFAULT '[]',
     CONSTRAINT metadataIsJsonArray CHECK(jsonb_typeof(metadata) = 'array')

@@ -101,7 +101,6 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
   const taskBoundingBoxes = useWkSelector(getTaskBoundingBoxes);
   const dataset = useWkSelector((state) => state.dataset);
   const annotationId = useWkSelector((state) => state.annotation.annotationId);
-  const datasetConfiguration = useWkSelector((state) => state.datasetConfiguration);
   const isViewMode = useWkSelector(
     (state) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   );
@@ -244,7 +243,6 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
     userBoundingBoxCount,
     taskBoundingBoxes,
     skeletonAnnotation,
-    datasetConfiguration,
     dispatch,
   ]);
 

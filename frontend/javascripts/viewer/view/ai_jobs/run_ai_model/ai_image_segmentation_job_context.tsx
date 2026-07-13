@@ -240,6 +240,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
     seedGeneratorDistanceThreshold,
     isEvaluationActive,
     splitMergerEvaluationSettings,
+    customConfiguration,
     userBoundingBoxCount,
     taskBoundingBoxes,
     skeletonAnnotation,

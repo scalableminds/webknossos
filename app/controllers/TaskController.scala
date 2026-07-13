@@ -5,6 +5,7 @@ import com.scalableminds.util.Msg
 import java.io.File
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.box.{Box, Full}
 import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
@@ -13,13 +14,12 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 
 import javax.inject.Inject
-import models.annotation._
+import models.annotation.*
 import models.annotation.nml.NmlResults.TracingBoxContainer
 import models.project.ProjectDAO
-import models.task._
-import models.user._
-import com.scalableminds.util.tools.{Box, Full}
-import play.api.libs.json._
+import models.task.*
+import models.user.*
+import play.api.libs.json.*
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.WkEnv
 import com.scalableminds.util.objectid.ObjectId

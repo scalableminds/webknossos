@@ -4,12 +4,13 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
+import com.scalableminds.webknossos.datastore.services.DataSourceWithRootPathInfo
 import com.typesafe.scalalogging.LazyLogging
 import jakarta.inject.Inject
 import org.apache.pekko.actor.ActorSystem
 import play.api.inject.ApplicationLifecycle
 
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.concurrent.ExecutionContext
 
 class VirtualDatasetsRealPathScanService @Inject() (
@@ -42,12 +43,17 @@ class VirtualDatasetsRealPathScanService @Inject() (
       for {
         firstDataset <- datasets.headOption.toFox
         // we skip unusable datasets
-        dataSourceBoxes <- Fox.fromFuture(
-          Fox.serialSequence(datasets)(datasetService.usableDataSourceFor(_, useRealPaths = false))
+        dataSourceWithRootPathInfoBoxes <- Fox.fromFuture(
+          Fox.serialSequence(datasets)(d =>
+            datasetService
+              .usableDataSourceFor(d, useRealPaths = false)
+              .map(ds => DataSourceWithRootPathInfo(ds, d.rootPath, d.rootRealPath))
+          )
         )
-        dataSources = dataSourceBoxes.flatten
+        dataSourcesWithRootPathInfo = dataSourceWithRootPathInfoBoxes.flatten
         client <- datasetService.clientFor(firstDataset)
-        _ <- client.scanRealPathsForVirtual(dataSources)
+        _ <- client.scanRealPathsForVirtual(dataSourcesWithRootPathInfo)
       } yield ()
     }
+
 }

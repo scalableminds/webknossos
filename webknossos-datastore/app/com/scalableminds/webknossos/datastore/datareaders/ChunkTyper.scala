@@ -1,15 +1,15 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
+import com.scalableminds.util.box.Box
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
-import com.scalableminds.util.tools.Box
-import com.scalableminds.util.tools.Box.tryo
+import Box.tryo
 
 import java.io.ByteArrayInputStream
 import javax.imageio.stream.MemoryCacheImageInputStream
 import scala.util.Using
-import ucar.ma2.{Array => MultiArray, DataType => MADataType}
+import ucar.ma2.{Array as MultiArray, DataType as MADataType}
 
 import scala.concurrent.ExecutionContext
 
@@ -64,7 +64,7 @@ class DoubleChunkTyper(val header: DatasetHeader) extends ChunkTyper {
   val ma2DataType: MADataType = MADataType.DOUBLE
 
   def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): Box[MultiArray] =
-    Box(Using.Manager { use =>
+    Box.fromTry(Using.Manager { use =>
       val typedStorage = new Array[Double](chunkShape.product)
       val byteArrayInputStream = use(new ByteArrayInputStream(bytes))
       val imageInputStream = use(new MemoryCacheImageInputStream(byteArrayInputStream))
@@ -79,7 +79,7 @@ class ShortChunkTyper(val header: DatasetHeader) extends ChunkTyper {
   val ma2DataType: MADataType = MADataType.SHORT
 
   def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): Box[MultiArray] =
-    Box(Using.Manager { use =>
+    Box.fromTry(Using.Manager { use =>
       val typedStorage = new Array[Short](chunkShape.product)
       val byteArrayInputStream = use(new ByteArrayInputStream(bytes))
       val imageInputStream = use(new MemoryCacheImageInputStream(byteArrayInputStream))
@@ -94,7 +94,7 @@ class IntChunkTyper(val header: DatasetHeader) extends ChunkTyper {
   val ma2DataType: MADataType = MADataType.INT
 
   def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): Box[MultiArray] =
-    Box(Using.Manager { use =>
+    Box.fromTry(Using.Manager { use =>
       val typedStorage = new Array[Int](chunkShape.product)
       val byteArrayInputStream = use(new ByteArrayInputStream(bytes))
       val imageInputStream = use(new MemoryCacheImageInputStream(byteArrayInputStream))
@@ -109,7 +109,7 @@ class LongChunkTyper(val header: DatasetHeader) extends ChunkTyper {
   val ma2DataType: MADataType = MADataType.LONG
 
   def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): Box[MultiArray] =
-    Box(Using.Manager { use =>
+    Box.fromTry(Using.Manager { use =>
       val typedStorage = new Array[Long](chunkShape.product)
       val byteArrayInputStream = use(new ByteArrayInputStream(bytes))
       val imageInputStream = use(new MemoryCacheImageInputStream(byteArrayInputStream))
@@ -125,7 +125,7 @@ class FloatChunkTyper(val header: DatasetHeader) extends ChunkTyper {
   val ma2DataType: MADataType = MADataType.FLOAT
 
   def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): Box[MultiArray] =
-    Box(Using.Manager { use =>
+    Box.fromTry(Using.Manager { use =>
       val typedStorage = new Array[Float](chunkShape.product)
       val byteArrayInputStream = use(new ByteArrayInputStream(bytes))
       val imageInputStream = use(new MemoryCacheImageInputStream(byteArrayInputStream))

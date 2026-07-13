@@ -18,8 +18,8 @@ import {
   PlanExceededAlert,
   PlanExpirationCard,
   PlanUpgradeCard,
-  PowerPlanUpgradeCard,
 } from "./organization_cards";
+import { PowerPlanUpgradeCard } from "./plan_upgrade_cards";
 import {
   formatAiPlanLabel,
   getActiveUserCount,

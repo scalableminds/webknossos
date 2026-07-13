@@ -31,6 +31,7 @@ import {
 } from "antd";
 import { saveAs } from "file-saver";
 import { formatLengthAsVx, formatNumberToLength } from "libs/format_utils";
+import importDynamic from "libs/import_dynamic";
 import { readFileAsArrayBuffer, readFileAsText } from "libs/read_file";
 import Toast from "libs/toast";
 import { isFileExtensionEqualTo, promiseAllWithErrors, sleep } from "libs/utils";
@@ -44,7 +45,12 @@ import React from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import { LongUnitToShortUnitMap } from "viewer/constants";
-import { isAnnotationOwner, mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
+import {
+  isAgglomerateTree,
+  isAnnotationOwner,
+  isConcurrentCollaborationMode,
+  mayEditAnnotation,
+} from "viewer/model/accessors/annotation_accessor";
 import {
   areGeometriesTransformed,
   enforceSkeletonTracing,
@@ -222,7 +228,9 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
       try {
         // @zip.js is a fairly large module
         // Dynamically import it to avoid loading it on Dashboard/admin pages.
-        const { BlobReader, ZipReader, BlobWriter } = await import("@zip.js/zip.js");
+        const { BlobReader, ZipReader, BlobWriter } = await importDynamic(
+          () => import("@zip.js/zip.js"),
+        );
 
         const reader = new ZipReader(new BlobReader(file));
         const entries = await reader.getEntries();
@@ -563,6 +571,30 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     }
   };
 
+  isDeleteOnlyAffectingAgglomerateTrees(): boolean {
+    // Mirrors handleDelete's deletion target (selected trees if more than one is selected,
+    // otherwise the active tree) and reports whether every affected tree is an agglomerate tree.
+    // Used to keep the delete button enabled in concurrent collaboration mode when the deletion is
+    // actually permitted (only agglomerate trees, i.e. proofreading).
+    const { skeletonTracing } = this.props;
+    if (skeletonTracing == null) {
+      return false;
+    }
+    const { selectedTreeIds } = this.state;
+    const treeIdsToDelete =
+      selectedTreeIds.length > 1
+        ? selectedTreeIds
+        : skeletonTracing.activeTreeId != null
+          ? [skeletonTracing.activeTreeId]
+          : [];
+    return (
+      treeIdsToDelete.length > 0 &&
+      treeIdsToDelete.every((treeId) =>
+        isAgglomerateTree(skeletonTracing.trees.getNullable(treeId)),
+      )
+    );
+  }
+
   shuffleAllTreeColors = () => {
     this.props.onShuffleAllTreeColors();
   };
@@ -619,7 +651,9 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     try {
       // @zip.js is a fairly large module
       // Dynamically import it to avoid loading it on Dashboard/admin pages.
-      const { BlobWriter, ZipWriter, TextReader } = await import("@zip.js/zip.js");
+      const { BlobWriter, ZipWriter, TextReader } = await importDynamic(
+        () => import("@zip.js/zip.js"),
+      );
 
       const treesCsv = getTreesAsCSV(annotationId, skeletonTracing, datasetUnit);
       const nodesCsv = getTreeNodesAsCSV(
@@ -793,6 +827,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         activeTreeId={this.props.skeletonTracing.activeTreeId}
         activeGroupId={this.props.skeletonTracing.activeGroupId}
         allowUpdate={this.props.allowUpdate}
+        isConcurrentCollabMode={this.props.isConcurrentCollabMode}
         sortBy={sortBy}
         selectedTreeIds={this.state.selectedTreeIds}
         onSingleSelectTree={this.onSingleSelectTree}
@@ -821,7 +856,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
   }
 
   getActionsDropdown(): MenuProps {
-    const isEditingDisabled = !this.props.allowUpdate;
+    const isEditingDisabled = !this.props.allowUpdate || this.props.isConcurrentCollabMode;
     const activeMenuKey = this.props.userConfiguration.sortTreesByName
       ? "sortByName"
       : "sortByTime";
@@ -952,12 +987,16 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       title = "Importing NML";
     }
     const { groupToDelete } = this.state;
-    const isEditingDisabled = !this.props.allowUpdate;
-    const { isAnnotationLockedByUser, isOwner } = this.props;
-    const isEditingDisabledMessage = messages["tracing.read_only_mode_notification"](
-      isAnnotationLockedByUser,
-      isOwner,
-    );
+    const { isAnnotationLockedByUser, isOwner, isConcurrentCollabMode } = this.props;
+    const isEditingDisabled = !this.props.allowUpdate || isConcurrentCollabMode;
+    // In concurrent collaboration mode, deleting is still allowed if every affected tree is an
+    // agglomerate tree (the reducer permits that, as proofreading mutates agglomerate trees).
+    const isDeleteDisabled =
+      !this.props.allowUpdate ||
+      (isConcurrentCollabMode && !this.isDeleteOnlyAffectingAgglomerateTrees());
+    const isEditingDisabledMessage = isConcurrentCollabMode
+      ? messages["tracing.skeleton_editing_disabled_in_live_collab"]
+      : messages["tracing.read_only_mode_notification"](isAnnotationLockedByUser, isOwner);
     const isDownloading = this.state.isDownloadingCSV || this.state.isDownloadingNML;
 
     return (
@@ -1012,8 +1051,8 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                   />
                   <ButtonComponent
                     onClick={this.handleDelete}
-                    title={isEditingDisabled ? isEditingDisabledMessage : "Delete Selected Trees"}
-                    disabled={isEditingDisabled}
+                    title={isDeleteDisabled ? isEditingDisabledMessage : "Delete Selected Trees"}
+                    disabled={isDeleteDisabled}
                     icon={<DeleteOutlined />}
                     variant="text"
                     color="default"
@@ -1021,7 +1060,6 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                   <ButtonComponent
                     onClick={this.toggleAllTrees}
                     title="Toggle Visibility of All Trees (1)"
-                    disabled={isEditingDisabled}
                     icon={<Icon component={ToggleOnIcon} />}
                     variant="text"
                     color="default"
@@ -1029,7 +1067,6 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                   <ButtonComponent
                     onClick={this.toggleInactiveTrees}
                     title="Toggle Visibility of Inactive Trees (2)"
-                    disabled={isEditingDisabled}
                     icon={<Icon component={ToggleOffIcon} />}
                     variant="text"
                     color="default"
@@ -1112,6 +1149,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 
 const mapStateToProps = (state: WebknossosState) => ({
   allowUpdate: mayEditAnnotation(state),
+  isConcurrentCollabMode: isConcurrentCollaborationMode(state),
   skeletonTracing: state.annotation.skeleton,
   annotationId: state.annotation.annotationId,
   userConfiguration: state.userConfiguration,

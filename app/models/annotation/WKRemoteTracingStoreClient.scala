@@ -1,11 +1,12 @@
 package models.annotation
 
 import com.scalableminds.util.Msg
+import com.scalableminds.util.box.Box
 import java.io.File
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Box, Fox, JsonHelper}
+import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.util.tools.JsonHelper.{boxFormat, optionFormat}
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
@@ -200,7 +201,8 @@ class WKRemoteTracingStoreClient(
       newAnnotationId: ObjectId,
       toTemporaryStore: Boolean,
       requestingUserId: ObjectId,
-      additionalBoundingBoxes: Seq[NamedBoundingBox]
+      additionalBoundingBoxes: Seq[NamedBoundingBox],
+      remapSegmentIds: Boolean
   ): Fox[AnnotationProto] = {
     logger.info(s"Called to merge ${annotationIds.length} annotations by ids." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/annotation/mergedFromIds").withLongTimeout
@@ -208,6 +210,7 @@ class WKRemoteTracingStoreClient(
       .addQueryParam("toTemporaryStore", toTemporaryStore)
       .addQueryParam("newAnnotationId", newAnnotationId)
       .addQueryParam("requestingUserId", requestingUserId)
+      .addQueryParam("remapSegmentIds", remapSegmentIds)
       .postJsonWithProtoResponse[MergedFromIdsRequest, AnnotationProto](
         MergedFromIdsRequest(annotationIds, ownerIds, additionalBoundingBoxes)
       )(AnnotationProto)

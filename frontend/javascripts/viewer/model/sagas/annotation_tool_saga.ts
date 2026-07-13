@@ -39,10 +39,12 @@ function* switchAwayFromDisabledTool(): Saga<never> {
   let disabledInfosForTools = yield* select(getDisabledInfoForTools);
   let activeTool = yield* select((state) => state.uiInformation.activeTool);
   while (true) {
-    // Ensure that no volume-tool is selected when being in merger mode.
-    // Even though the volume toolbar is disabled, the user can still cycle through
-    // the tools via the w shortcut. In that case, the effect-hook is re-executed
-    // and the tool is switched to MOVE.
+    // Check the active tool and the disabled info object to decide
+    // whether
+    // - to switch to MOVE tool(because the current tool is disabled) or
+    // - to switch back to a previous tool which got available again
+    // - to forget about the previous tool (when the user changed the tool
+    //   on their own) to avoid unexpected tool switching.
     const disabledInfoForCurrentTool = disabledInfosForTools[activeTool.id];
     const isLastForcefullyDisabledToolAvailable =
       lastForcefullyDisabledTool != null &&
@@ -81,6 +83,7 @@ function* switchAwayFromDisabledTool(): Saga<never> {
         continueWaiting = false;
       }
     }
+    // The active tool or the disabled info changed. Start from the beginning.
   }
 }
 

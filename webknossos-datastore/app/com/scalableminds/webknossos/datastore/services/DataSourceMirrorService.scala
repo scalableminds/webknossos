@@ -3,7 +3,8 @@ package com.scalableminds.webknossos.datastore.services
 import com.scalableminds.util.Msg
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.box.Box
+import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
@@ -27,21 +28,27 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 class DataSourceMirrorService @Inject() (
-    config: DataStoreConfig
+    config: DataStoreConfig,
+    baseDirService: BaseDirService
 ) extends LazyLogging {
-  private val dataBaseDir: Path = config.Datastore.baseDirectory
 
-  private def getMirrorDir(dataSource: UsableDataSource) =
-    dataBaseDir.resolve(dataSource.id.organizationId).resolve(".mirror").resolve(dataSource.id.directoryName)
+  private def getMirrorDir(dataSource: UsableDataSource, createIfMissing: Boolean): Box[Path] =
+    for {
+      orgaDir <- baseDirService.getOneLocalForOrga(
+        dataSource.id.organizationId,
+        createIfMissing = createIfMissing,
+        checkWritable = true
+      )
+    } yield orgaDir.resolve(".mirror").resolve(dataSource.id.directoryName)
 
   def writeMirror(dataSource: UsableDataSource, datasetId: ObjectId)(implicit
       ec: ExecutionContext
   ): Fox[Option[String]] =
-    if (dataSource.allExplicitPaths.forall(_.isLocal)) {
-      val mirrorDir = getMirrorDir(dataSource)
-      val tempMirrorDir = mirrorDir.resolveSibling(mirrorDir.getFileName.toString + ".new")
-      logger.info(s"Writing dataset mirror for $datasetId at $mirrorDir...")
+    if (dataSource.allExplicitPaths.forall(p => p.isLocal && !p.toZipEntryUPath.isDefined)) {
       for {
+        mirrorDir <- getMirrorDir(dataSource, createIfMissing = true).toFox
+        tempMirrorDir = mirrorDir.resolveSibling(mirrorDir.getFileName.toString + ".new")
+        _ = logger.info(s"Writing dataset mirror for $datasetId at $mirrorDir...")
         _ <- ensureMirrorParent(mirrorDir)
         _ <- Fox.runIf(Files.exists(tempMirrorDir)) {
           tryo(FileUtils.deleteDirectory(tempMirrorDir.toFile)).toFox

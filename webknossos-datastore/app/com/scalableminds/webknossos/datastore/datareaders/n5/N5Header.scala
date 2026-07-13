@@ -3,10 +3,10 @@ package com.scalableminds.webknossos.datastore.datareaders.n5
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
-import com.scalableminds.webknossos.datastore.datareaders._
+import com.scalableminds.webknossos.datastore.datareaders.*
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
 import play.api.libs.json.Json.WithDefaultValues
-import play.api.libs.json._
+import play.api.libs.json.*
 
 import java.nio.ByteOrder
 

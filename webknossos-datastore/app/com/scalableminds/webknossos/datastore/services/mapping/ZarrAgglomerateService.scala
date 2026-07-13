@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.services.mapping
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
@@ -23,7 +23,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, E
 import com.scalableminds.webknossos.datastore.services.DSChunkCacheService
 import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, DataVaultService}
 import com.typesafe.scalalogging.LazyLogging
-import ucar.ma2.{Array => MultiArray}
+import ucar.ma2.Array as MultiArray
 
 import javax.inject.Inject
 import scala.collection.compat.immutable.ArraySeq

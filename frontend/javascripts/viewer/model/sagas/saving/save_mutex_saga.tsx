@@ -43,13 +43,14 @@ import { ensureWkInitialized } from "../ready_sagas";
 
 const MUTEX_NOT_ACQUIRED_KEY = "MutexCouldNotBeAcquired";
 const MUTEX_ACQUIRED_KEY = "AnnotationMutexAcquired";
+const MUTEX_BLOCKED_FOR_TOO_LONG_KEY = "MutexBlockedForTooLong";
 const ACQUIRE_MUTEX_INTERVAL = import.meta.env.MODE === "test" ? 1 * 1000 : 60 * 1000;
 const DELAY_AFTER_FAILED_MUTEX_FETCH = import.meta.env.MODE === "test" ? 1 * 1000 : 10 * 1000;
 const RETRY_COUNT = 20; // 12 retries with 60/12=5 seconds backup delay
 const INITIAL_BACKOFF_TIME = 750;
 const BACKOFF_TIME_MULTIPLIER = 1.2;
 const BACKOFF_JITTER_LOWER_PERCENT = 0.0;
-const MAX_AD_HOC_RETRY_TIME = 10 * 1000;
+const MAX_AD_HOC_RETRY_TIME = 30 * 1000;
 const BACKOFF_JITTER_UPPER_PERCENT = 0.15;
 const MAX_RELEASE_RETRY_INTERVAL = 30 * 1000;
 
@@ -171,11 +172,25 @@ function getUnsubscribeFromAnnotationMutexSaga(
 
 const MUTEX_SUBSCRIPTION_TIMEOUT = 5 * 60 * 1000;
 function* autoTimeoutSubscription(action: SubscribeToAnnotationMutexAction): Saga<void> {
+  yield* call(waitUntilMutexIsAcquiredOrUnneeded);
   yield delay(MUTEX_SUBSCRIPTION_TIMEOUT);
   const warnIfAlreadyUnsubscribed = false;
   yield call(
     getUnsubscribeFromAnnotationMutexSaga(action.subscriptionId, warnIfAlreadyUnsubscribed),
   );
+}
+
+function* waitUntilMutexIsAcquiredOrUnneeded(): Saga<void> {
+  while (true) {
+    const doesHaveMutex = yield* call(getDoesHaveMutex);
+    const othersMayEdit = yield* select((state) =>
+      isAnnotationEditableByNonOwners(state.annotation),
+    );
+    if (doesHaveMutex || !othersMayEdit) {
+      return;
+    }
+    yield* take("SET_IS_MUTEX_ACQUIRED");
+  }
 }
 
 export function* subscribeToAnnotationMutex(callerId: string): Saga<() => Saga<void>> {
@@ -197,16 +212,8 @@ export function* subscribeToAnnotationMutex(callerId: string): Saga<() => Saga<v
 
   yield* call(ensureCorrectMutexAcquiringSagaIsRunning, state);
 
-  while (true) {
-    const doesHaveMutex = yield* call(getDoesHaveMutex);
-    const othersMayEdit = yield* select((state) =>
-      isAnnotationEditableByNonOwners(state.annotation),
-    );
-    if (doesHaveMutex || !othersMayEdit) {
-      return getUnsubscribeFromAnnotationMutexSaga(newId);
-    }
-    yield* take("SET_IS_MUTEX_ACQUIRED");
-  }
+  yield* call(waitUntilMutexIsAcquiredOrUnneeded);
+  return getUnsubscribeFromAnnotationMutexSaga(newId);
 }
 
 // Needed for tests
@@ -371,6 +378,7 @@ function* acquireMutexInitiallyForAdHocStrategy(annotationId: string): Saga<void
       yield* put(setUserHoldingMutexAction(blockedByUser, mutexResult.blockedBySessionId));
       yield* put(setIsMutexAcquiredAction(canEdit));
       if (canEdit) {
+        Toast.close(MUTEX_BLOCKED_FOR_TOO_LONG_KEY);
         return;
       }
     } catch (error) {
@@ -391,7 +399,7 @@ function* acquireMutexInitiallyForAdHocStrategy(annotationId: string): Saga<void
         `Could not get the annotations write-lock for more than ${MAX_AD_HOC_RETRY_TIME / 1000} seconds.
         User ${blockingUserName} is currently blocking the annotation.
         Retrying...`,
-        { sticky: true },
+        { sticky: true, key: MUTEX_BLOCKED_FOR_TOO_LONG_KEY },
       );
       showingToast = true;
     }

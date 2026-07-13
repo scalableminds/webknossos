@@ -23,7 +23,7 @@ import messages from "messages";
 import type React from "react";
 import { useRef, useState } from "react";
 import type { APIOrganization } from "types/api_types";
-import { PowerPlanUpgradeCard, TeamPlanUpgradeCard } from "./organization_cards";
+import { PowerPlanUpgradeCard, TeamPlanUpgradeCard } from "./plan_upgrade_cards";
 import {
   aiAddonFeatures,
   PricingPlanEnum,

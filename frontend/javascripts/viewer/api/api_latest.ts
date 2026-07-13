@@ -3145,8 +3145,31 @@ class UtilsApi {
 
   /**
    * Sets a custom handler function for a keyboard shortcut.
+   *
+   * @param key - The key combo to bind, using the `@rwh/keystrokes` syntax
+   *   (e.g. `"a"`, `"shift + a"`, `"control > y, r"`). See the keystrokes
+   *   docs/InputKeyboard usages in this codebase for more syntax examples.
+   * @param handler - Either a plain function, which is invoked once when the
+   *   key combo is pressed (there is no release callback in that case), or a
+   *   `{ onPressed, onReleased? }` object if you also need to react when the
+   *   key combo is released.
+   * @returns An object with an `unregister()` method that removes the handler
+   *   again.
+   *
+   * @example
+   * const handler = api.utils.registerKeyHandler("g", () => {
+   *   console.log("g was pressed");
+   * });
+   * // later
+   * handler.unregister();
    */
-  registerKeyHandler(key: string, handler: KeyboardNoLoopHandler): UnregisterHandler {
+  registerKeyHandler(
+    key: string,
+    handler: KeyboardNoLoopHandler | (() => void),
+  ): UnregisterHandler {
+    if (typeof handler === "function") {
+      handler = { onPressed: handler, onReleased: () => {} };
+    }
     const keyboard = new InputKeyboard({
       [key]: handler,
     });

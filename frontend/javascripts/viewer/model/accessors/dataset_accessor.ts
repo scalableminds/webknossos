@@ -115,16 +115,13 @@ export function getWidestMags(dataset: APIDataset): Vector3[] {
   return maxBy(allLayerMags, (mags) => mags.length) || [];
 }
 
-export const getSomeMagInfoForDataset = memoizeOne((dataset: APIDataset): MagInfo => {
-  const magUnion = getMagnificationUnion(dataset);
-  const areMagsDistinct = magUnion.every((mags) => mags.length <= 1);
-
-  if (areMagsDistinct) {
-    return new MagInfo(magUnion.map((mags) => mags[0]));
-  } else {
-    return new MagInfo(getWidestMags(dataset));
-  }
-});
+export const getSomeMagInfoForDataset = memoizeOne(
+  (dataset: APIDataset): MagInfo =>
+    // Use one representative (real) mag per existing mag level. This never
+    // synthesizes non-existent mags (unlike dense mags), so index queries such
+    // as getFinestMagIndex reflect the actually available mags of the dataset.
+    new MagInfo(getMagnificationUnion(dataset).map((mags) => mags[0])),
+);
 
 function _getMaxZoomStep(dataset: APIDataset | null | undefined): number {
   const minimumZoomStepCount = 1;

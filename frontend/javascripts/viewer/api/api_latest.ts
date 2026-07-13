@@ -3146,7 +3146,13 @@ class UtilsApi {
   /**
    * Sets a custom handler function for a keyboard shortcut.
    */
-  registerKeyHandler(key: string, handler: KeyboardNoLoopHandler): UnregisterHandler {
+  registerKeyHandler(
+    key: string,
+    handler: KeyboardNoLoopHandler | (() => void),
+  ): UnregisterHandler {
+    if (handler instanceof Function) {
+      handler = { onPressed: handler, onReleased: () => {} };
+    }
     const keyboard = new InputKeyboard({
       [key]: handler,
     });

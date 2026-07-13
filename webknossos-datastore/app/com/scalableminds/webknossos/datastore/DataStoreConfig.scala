@@ -5,7 +5,7 @@ import com.scalableminds.util.tools.ConfigReader
 import com.typesafe.config.Config
 import play.api.Configuration
 
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 class DataStoreConfig @Inject() (configuration: Configuration) extends ConfigReader {
   override val raw: Configuration = configuration

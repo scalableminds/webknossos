@@ -18,7 +18,7 @@ import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, SkeletonTra
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.services.DataConverter
-import com.scalableminds.webknossos.datastore.storage._
+import com.scalableminds.webknossos.datastore.storage.*
 
 import java.nio.file.Files
 import java.nio.{ByteBuffer, ByteOrder, LongBuffer}

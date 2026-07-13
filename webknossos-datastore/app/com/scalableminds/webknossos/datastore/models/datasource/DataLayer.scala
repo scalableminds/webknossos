@@ -5,10 +5,10 @@ import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, Datas
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.helpers.UPath
-import ucar.ma2.{Array => MultiArray}
+import ucar.ma2.Array as MultiArray
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
-import play.api.libs.json._
+import play.api.libs.json.*
 
 trait DataLayer {
   def name: String

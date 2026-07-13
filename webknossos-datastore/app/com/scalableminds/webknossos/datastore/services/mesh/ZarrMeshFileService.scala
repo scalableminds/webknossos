@@ -17,7 +17,7 @@ import com.scalableminds.webknossos.datastore.services.{
 }
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import play.api.libs.json.{JsResult, JsValue, Reads}
-import ucar.ma2.{Array => MultiArray}
+import ucar.ma2.Array as MultiArray
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext

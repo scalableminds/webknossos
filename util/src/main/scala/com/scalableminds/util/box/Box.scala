@@ -154,7 +154,7 @@ sealed case class Failure(msg: String, exception: Box[Throwable], chain: Box[Fai
   override def ?->(msg: String): Box[Nothing] = ?~>(msg)
 
   override def equals(other: Any): Boolean = (this, other) match {
-    case (_, _: ParamFailure[_])                 => false
+    case (_, _: ParamFailure[?])                 => false
     case (Failure(x, y, z), Failure(x1, y1, z1)) => (x, y, z) == (x1, y1, z1)
     case (x, y: AnyRef)                          => x eq y
     case _                                       => false
@@ -172,7 +172,7 @@ object ParamFailure {
   def apply[T](msg: String, param: T) = new ParamFailure(msg, Empty, Empty, param)
 
   def unapply(in: Box[?]): Option[(String, Box[Throwable], Box[Failure], Any)] = in match {
-    case pf: ParamFailure[_] => Some((pf.msg, pf.exception, pf.chain, pf.param))
+    case pf: ParamFailure[?] => Some((pf.msg, pf.exception, pf.chain, pf.param))
     case _                   => None
   }
 }

@@ -17,7 +17,7 @@ Code Verification:
 Code Verification: 
 - Scala type-checking: `sbt --client compile`. This will also compile the subprojects it depends on.
 - Unit tests: `yarn test-backend`
-- Formatting: `yarn format-backend`
+- Formatting: `yarn fix-backend`
 
 
 ## Pull Requests

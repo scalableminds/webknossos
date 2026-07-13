@@ -558,7 +558,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       const fileExtension = getFileExtension(file.name);
       fileExtensions.push(fileExtension);
 
-      if (fileExtension === "zip") {
+      if (fileExtension === "zip" || fileExtension === "ozx") {
         // @zip.js is a fairly large module
         // Dynamically import it to avoid loading it on Dashboard/admin pages.
         const zipJs = await importDynamic(() => import("@zip.js/zip.js")).catch(() => null);

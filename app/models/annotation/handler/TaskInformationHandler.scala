@@ -47,7 +47,8 @@ class TaskInformationHandler @Inject() (
         datasetId,
         AnnotationType.CompoundTask,
         finishedAnnotations,
-        taskBoundingBoxes
+        taskBoundingBoxes,
+        remapSegmentIds = true
       ) ?~> Msg.Annotation.Merge.failedCompound
     } yield mergedAnnotation
 

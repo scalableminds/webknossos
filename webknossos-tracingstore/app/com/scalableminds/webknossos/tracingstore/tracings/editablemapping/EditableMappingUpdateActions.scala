@@ -37,9 +37,8 @@ object SplitAgglomerateUpdateAction {
   implicit val jsonFormat: OFormat[SplitAgglomerateUpdateAction] =
     UnsignedLongJson.patchOptionalField(
       UnsignedLongJson.patchOptionalField(
-        UnsignedLongJson.patchOptionalField(baseFormat, "agglomerateId")(
-          _.agglomerateId,
-          (a, v) => a.copy(agglomerateId = v)),
+        UnsignedLongJson
+          .patchOptionalField(baseFormat, "agglomerateId")(_.agglomerateId, (a, v) => a.copy(agglomerateId = v)),
         "segmentId1"
       )(_.segmentId1, (a, v) => a.copy(segmentId1 = v)),
       "segmentId2"
@@ -75,9 +74,8 @@ object MergeAgglomerateUpdateAction {
     UnsignedLongJson.patchOptionalField(
       UnsignedLongJson.patchOptionalField(
         UnsignedLongJson.patchOptionalField(
-          UnsignedLongJson.patchOptionalField(baseFormat, "agglomerateId1")(
-            _.agglomerateId1,
-            (a, v) => a.copy(agglomerateId1 = v)),
+          UnsignedLongJson
+            .patchOptionalField(baseFormat, "agglomerateId1")(_.agglomerateId1, (a, v) => a.copy(agglomerateId1 = v)),
           "agglomerateId2"
         )(_.agglomerateId2, (a, v) => a.copy(agglomerateId2 = v)),
         "segmentId1"

@@ -144,7 +144,8 @@ class EditableMappingController @Inject() (
               remoteFallbackLayer
             )
           } yield Ok(
-            Json.obj("segmentId" -> UnsignedLongJson.writes.writes(segmentId), "neighbors" -> Json.toJson(edges)))
+            Json.obj("segmentId" -> UnsignedLongJson.writes.writes(segmentId), "neighbors" -> Json.toJson(edges))
+          )
         }
       }
     }

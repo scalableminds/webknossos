@@ -94,7 +94,8 @@ object MeshChunk {
   implicit val jsonFormat: OFormat[MeshChunk] =
     UnsignedLongJson.patchOptionalField(Json.format[MeshChunk], "unmappedSegmentId")(
       _.unmappedSegmentId,
-      (a, v) => a.copy(unmappedSegmentId = v))
+      (a, v) => a.copy(unmappedSegmentId = v)
+    )
 }
 case class MeshLodInfo(chunks: List[MeshChunk], transform: Array[Array[Double]])
 

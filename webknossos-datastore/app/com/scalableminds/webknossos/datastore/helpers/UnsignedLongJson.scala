@@ -33,9 +33,7 @@ object UnsignedLongJson {
 
   val reads: Reads[Long] = Reads {
     case JsString(s) =>
-      Try(java.lang.Long.parseUnsignedLong(s))
-        .map(JsSuccess(_))
-        .getOrElse(JsError("error.expected.unsignedLongString"))
+      Try(java.lang.Long.parseUnsignedLong(s)).map(JsSuccess(_)).getOrElse(JsError("error.expected.unsignedLongString"))
     case JsNumber(n) => JsSuccess(n.toLong)
     case _           => JsError("error.expected.jsstringOrJsnumber")
   }
@@ -52,7 +50,8 @@ object UnsignedLongJson {
    */
   def patchRequiredField[A](base: OFormat[A], field: String)(get: A => Long, set: (A, Long) => A): OFormat[A] =
     new OFormat[A] {
-      override def writes(a: A): JsObject = base.writes(a) ++ JsObject(Seq(field -> UnsignedLongJson.writes.writes(get(a))))
+      override def writes(a: A): JsObject =
+        base.writes(a) ++ JsObject(Seq(field -> UnsignedLongJson.writes.writes(get(a))))
       override def reads(json: JsValue): JsResult[A] =
         for {
           value <- (json \ field).validate[Long](using UnsignedLongJson.reads)
@@ -62,8 +61,10 @@ object UnsignedLongJson {
     }
 
   /* Same as patchRequiredField, but for an optional Long field (e.g. largestSegmentId). */
-  def patchOptionalField[A](base: OFormat[A],
-                             field: String)(get: A => Option[Long], set: (A, Option[Long]) => A): OFormat[A] =
+  def patchOptionalField[A](
+      base: OFormat[A],
+      field: String
+  )(get: A => Option[Long], set: (A, Option[Long]) => A): OFormat[A] =
     new OFormat[A] {
       override def writes(a: A): JsObject =
         base.writes(a) ++ get(a)
@@ -81,8 +82,7 @@ object UnsignedLongJson {
     }
 
   /* Same as patchRequiredField, but for a required List[Long] field (e.g. a list of segment ids). */
-  def patchListField[A](base: OFormat[A],
-                         field: String)(get: A => List[Long], set: (A, List[Long]) => A): OFormat[A] =
+  def patchListField[A](base: OFormat[A], field: String)(get: A => List[Long], set: (A, List[Long]) => A): OFormat[A] =
     new OFormat[A] {
       override def writes(a: A): JsObject =
         base.writes(a) ++ JsObject(Seq(field -> JsArray(get(a).map(UnsignedLongJson.writes.writes))))

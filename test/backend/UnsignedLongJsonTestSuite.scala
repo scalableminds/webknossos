@@ -12,9 +12,8 @@ import play.api.libs.json.{JsNumber, JsString, JsSuccess, Json}
 class UnsignedLongJsonTestSuite extends AsyncWordSpec {
 
   "UnsignedLongJson.writes" should {
-    "encode values within the legacy safe-integer range as an unsigned-decimal string" in {
+    "encode values within the legacy safe-integer range as an unsigned-decimal string" in
       assert(UnsignedLongJson.writes.writes(12345L) == JsString("12345"))
-    }
     "encode values above Long.MaxValue's bit pattern as the correct large unsigned string" in {
       // -1L is the bit pattern for 2^64 - 1 when interpreted as unsigned
       assert(UnsignedLongJson.writes.writes(-1L) == JsString("18446744073709551615"))
@@ -86,7 +85,9 @@ class UnsignedLongJsonTestSuite extends AsyncWordSpec {
             segmentId1 = 333L,
             segmentId2 = 444L,
             actionTracingId = "someTracingId"
-          )))
+          )
+        )
+      )
     }
 
     "reject a segment id field that is neither a JsString nor a JsNumber" in {

@@ -296,9 +296,7 @@ object StaticSegmentationLayer {
 
     def writes(layer: StaticSegmentationLayer): JsValue = {
       val base = Json.writes[StaticSegmentationLayer].writes(layer).as[JsObject] - "largestSegmentId"
-      layer.largestSegmentId
-        .map(v => base + ("largestSegmentId" -> UnsignedLongJson.writes.writes(v)))
-        .getOrElse(base)
+      layer.largestSegmentId.map(v => base + ("largestSegmentId" -> UnsignedLongJson.writes.writes(v))).getOrElse(base)
     }
   }
 }

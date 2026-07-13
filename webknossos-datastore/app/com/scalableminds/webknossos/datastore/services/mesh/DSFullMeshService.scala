@@ -38,8 +38,8 @@ case class FullMeshRequest(
 
 object FullMeshRequest {
   implicit val jsonFormat: OFormat[FullMeshRequest] =
-    UnsignedLongJson.patchRequiredField(Json.format[FullMeshRequest], "segmentId")(_.segmentId,
-                                                                                    (a, v) => a.copy(segmentId = v))
+    UnsignedLongJson
+      .patchRequiredField(Json.format[FullMeshRequest], "segmentId")(_.segmentId, (a, v) => a.copy(segmentId = v))
 }
 
 class DSFullMeshService @Inject() (

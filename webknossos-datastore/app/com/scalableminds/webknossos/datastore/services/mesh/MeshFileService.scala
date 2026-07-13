@@ -28,8 +28,8 @@ case class ListMeshChunksRequest(
 
 object ListMeshChunksRequest {
   implicit val jsonFormat: OFormat[ListMeshChunksRequest] =
-    UnsignedLongJson.patchRequiredField(Json.format[ListMeshChunksRequest], "segmentId")(_.segmentId,
-                                                                                           (a, v) => a.copy(segmentId = v))
+    UnsignedLongJson
+      .patchRequiredField(Json.format[ListMeshChunksRequest], "segmentId")(_.segmentId, (a, v) => a.copy(segmentId = v))
 }
 
 case class MeshChunkDataRequest(
@@ -45,8 +45,8 @@ case class MeshChunkDataRequestList(
 
 object MeshChunkDataRequest {
   implicit val jsonFormat: OFormat[MeshChunkDataRequest] =
-    UnsignedLongJson.patchOptionalField(Json.format[MeshChunkDataRequest], "segmentId")(_.segmentId,
-                                                                                         (a, v) => a.copy(segmentId = v))
+    UnsignedLongJson
+      .patchOptionalField(Json.format[MeshChunkDataRequest], "segmentId")(_.segmentId, (a, v) => a.copy(segmentId = v))
 }
 
 object MeshChunkDataRequestList {

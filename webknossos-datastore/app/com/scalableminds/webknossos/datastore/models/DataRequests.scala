@@ -66,7 +66,8 @@ object WebknossosAdHocMeshRequest {
   implicit val jsonFormat: OFormat[WebknossosAdHocMeshRequest] =
     UnsignedLongJson.patchRequiredField(Json.format[WebknossosAdHocMeshRequest], "segmentId")(
       _.segmentId,
-      (a, v) => a.copy(segmentId = v))
+      (a, v) => a.copy(segmentId = v)
+    )
 }
 
 case class RawCuboidRequest(

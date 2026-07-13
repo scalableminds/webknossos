@@ -900,9 +900,11 @@ class VolumeTracingService @Inject() (
     )
   }
 
-  private def combineLargestSegmentIdsByMaxDefined(aOpt: Option[Long],
-                                                    bOpt: Option[Long],
-                                                    elementClassProto: ElementClassProto): Option[Long] = {
+  private def combineLargestSegmentIdsByMaxDefined(
+      aOpt: Option[Long],
+      bOpt: Option[Long],
+      elementClassProto: ElementClassProto
+  ): Option[Long] = {
     // uint64 ids >= 2^63 are negative as a signed Long, so Math.max would pick the wrong one.
     def max(a: Long, b: Long): Long =
       if (elementClassFromProto(elementClassProto) == ElementClass.uint64) {

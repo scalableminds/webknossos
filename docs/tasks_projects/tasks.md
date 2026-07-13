@@ -16,6 +16,7 @@ First, a _Task Type_ needs to be created:
       | Display Name                              | Key                        | Default Value           | Comment                                 |
       |--------------------------------------------|----------------------------|------------------------|-----------------------------------------|
       | Clipping Distance                         | `clippingDistance`           | 80                     | orthogonal mode                         |
+      | Only Show Nodes of Current Section        | `clipSkeletonToCurrentSection` | false                | orthogonal mode; always false when camera or dataset is rotated/transformed |
       | Move Value (nm/s)                         | `moveValue`                  | 500                    | orthogonal mode                         |
       | Show Scalebars                            | `displayScalebars`           | false                  |                                         |
       | Single-node-tree mode (Soma clicking)      | `newNodeNewTree`             | false                  |                                         |

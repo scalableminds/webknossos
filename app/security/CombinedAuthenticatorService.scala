@@ -1,14 +1,14 @@
 package security
 
 import com.scalableminds.util.time.Instant
-import play.silhouette.api._
+import play.silhouette.api.*
 import play.silhouette.api.crypto.Base64AuthenticatorEncoder
 import play.silhouette.api.services.{AuthenticatorResult, AuthenticatorService}
 import play.silhouette.api.util.{Clock, ExtractableRequest, FingerprintGenerator, IDGenerator}
 import play.silhouette.crypto.{JcaSigner, JcaSignerSettings}
-import play.silhouette.impl.authenticators.{CookieAuthenticator, _}
+import play.silhouette.impl.authenticators.{CookieAuthenticator, *}
 import models.user.UserService
-import play.api.mvc._
+import play.api.mvc.*
 import utils.WkConf
 
 import scala.concurrent.{ExecutionContext, Future}

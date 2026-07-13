@@ -1,5 +1,6 @@
 import { saveAs } from "file-saver";
 import ErrorHandling from "libs/error_handling";
+import importDynamic from "libs/import_dynamic";
 import exportToStl from "libs/stl_exporter";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -87,10 +88,14 @@ function* downloadMeshCellsAsZIP(
   segments: Array<{ segmentName: string; segmentId: number; layerName: string }>,
 ): Saga<void> {
   const { segmentMeshController } = getSceneController();
-  const { BlobReader, BlobWriter, ZipWriter } = yield* call(() => import("@zip.js/zip.js"));
-  const zipWriter = new ZipWriter(new BlobWriter("application/zip"));
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   try {
+    // Load the import within the try block so that a failed import
+    // is also handled gracefully by the catch below.
+    const { BlobReader, BlobWriter, ZipWriter } = yield* call(() =>
+      importDynamic(() => import("@zip.js/zip.js")),
+    );
+    const zipWriter = new ZipWriter(new BlobWriter("application/zip"));
     const addFileToZipWriterPromises = segments.map((element) => {
       const geometry = segmentMeshController.getMeshGeometryInBestLOD(
         element.segmentId,

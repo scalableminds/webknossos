@@ -1,8 +1,21 @@
 import Base64 from "base64-js";
-import { compress } from "lz4-wasm";
 import { expose } from "./comlink_core";
 
-function compressLz4Block(data: Uint8Array): Uint8Array {
+// Load lz4-wasm lazily instead of via a static top-level import. Since Vite 8, the
+// native `.wasm` import uses top-level await, which would turn this worker into an
+// async module. That delays Comlink's `expose()` (called at the bottom of this module)
+// until the wasm has instantiated, so the first message from the main thread arrives
+// before the listener is registered and is lost forever. Kicking off the dynamic import
+// here (without awaiting) keeps module evaluation synchronous so `expose()` registers
+// the handler immediately, while the wasm still starts loading eagerly in the background.
+// Deliberately NOT wrapped in importDynamic(): that module pulls main-thread UI (antd,
+// Toast) into the worker bundle, and its failure toast could not render inside a worker
+// anyway. If this import fails, awaiting lz4Import rejects and Comlink propagates the
+// error to the main-thread caller. (Whitelisted in tools/check-no-bare-dynamic-imports.js.)
+const lz4Import = import("lz4-wasm");
+
+async function compressLz4Block(data: Uint8Array): Promise<Uint8Array> {
+  const { compress } = await lz4Import;
   // The backend expects the block (frame-less) version of lz4.
   // lz4-wasm uses the block version, but prepends the size of the
   // compressed data. Therefore, we strip the first 4 bytes.
@@ -10,10 +23,10 @@ function compressLz4Block(data: Uint8Array): Uint8Array {
   return newCompressed.slice(4);
 }
 
-export function byteArraysToLz4Base64(byteArrays: Uint8Array[]): string[] {
+export async function byteArraysToLz4Base64(byteArrays: Uint8Array[]): Promise<string[]> {
   const base64Strings: string[] = [];
   for (const byteArray of byteArrays) {
-    const compressed = compressLz4Block(byteArray);
+    const compressed = await compressLz4Block(byteArray);
     base64Strings.push(Base64.fromByteArray(compressed));
   }
 

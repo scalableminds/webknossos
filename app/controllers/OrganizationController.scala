@@ -23,7 +23,7 @@ import play.api.libs.json.{JsNull, Json, OFormat}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import utils.WkConf
 
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import security.{WkEnv, WkSilhouetteEnvironment}
 
 import scala.concurrent.ExecutionContext

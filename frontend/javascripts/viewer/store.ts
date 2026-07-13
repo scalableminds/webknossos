@@ -346,6 +346,7 @@ export type UserConfiguration = {
   readonly brushSize: number;
   readonly clippingDistance: number;
   readonly clippingDistanceFlight: number;
+  readonly clipSkeletonToCurrentSection: boolean;
   readonly crosshairSize: number;
   readonly displayCrosshair: boolean;
   readonly displayScalebars: boolean;
@@ -724,6 +725,7 @@ export type WebknossosState = {
   readonly save: SaveState;
   readonly flycam: Flycam;
   readonly flycamInfoCache: {
+    // Maps from layerName to the zoom thresholds for each mag.
     readonly maximumZoomForAllMags: Record<string, number[]>;
   };
   readonly viewModeData: ViewModeData;

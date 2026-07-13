@@ -1,6 +1,7 @@
 package models.annotation
 
 import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.box.{Empty, Failure, Full}
 
 import java.io.{File, FileInputStream, InputStream}
 import java.nio.file.{Files, Path, StandardCopyOption}
@@ -13,10 +14,9 @@ import com.typesafe.scalalogging.LazyLogging
 import files.WkTempFileService
 
 import javax.inject.Inject
-import models.annotation.nml.NmlResults._
+import models.annotation.nml.NmlResults.*
 import models.annotation.nml.{NmlParseSuccessWithoutFile, NmlParser, NmlResults}
-import com.scalableminds.util.tools.{Empty, Failure, Full}
-import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.webknossos.tracingstore.tracings.GroupUtils
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -92,7 +92,7 @@ class AnnotationUploadService @Inject() (tempFileService: WkTempFileService, nml
         } yield if (sharedParsingParameters.useZipName) result.withName(name) else result
         pendingResults ::= parsedResult
       } else {
-        val tempFile: Path = tempFileService.create(file.getPath.replaceAll("/", "_") + filename.toString)
+        val tempFile: Path = tempFileService.create(file.getPath + "_" + filename.toString)
         Files.copy(inputStream, tempFile, StandardCopyOption.REPLACE_EXISTING)
         otherFiles += (file.getPath + filename.toString -> tempFile.toFile)
       }

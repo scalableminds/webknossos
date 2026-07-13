@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, UpdateAction}
-import play.api.libs.json._
+import play.api.libs.json.*
 
 trait EditableMappingUpdateAction extends LayerUpdateAction {
   override def withActionTracingId(newTracingId: String): EditableMappingUpdateAction

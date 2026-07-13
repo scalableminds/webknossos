@@ -14,6 +14,7 @@ import type { Mutable } from "types/type_utils";
 import { validateUrlStateJSON } from "types/validation";
 import type { Vector3, ViewMode } from "viewer/constants";
 import constants, { MappingStatusEnum, ViewModeValues } from "viewer/constants";
+import { applyState } from "viewer/controller/apply_url_state";
 import { getPosition } from "viewer/model/accessors/flycam_accessor";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { getMeshesForCurrentAdditionalCoordinates } from "viewer/model/accessors/volumetracing_accessor";
@@ -21,7 +22,6 @@ import {
   additionalCoordinateToKeyValue,
   parseAdditionalCoordinateKey,
 } from "viewer/model/helpers/nml_helpers";
-import { applyState } from "viewer/model_initialization";
 import type {
   DatasetLayerConfiguration,
   MappingType,
@@ -114,7 +114,7 @@ export function getUpdatedPathnameWithNewDatasetName(
 }
 
 // If the type of UrlManagerState changes, the following files need to be updated:
-// docs/sharing.md#sharing-link-format
+// docs/sharing/annotation_sharing.md#sharing-link-format
 // frontend/javascripts/types/schemas/url_state.schema.ts
 export type UrlManagerState = {
   position?: Vector3;
@@ -125,6 +125,8 @@ export type UrlManagerState = {
   stateByLayer?: UrlStateByLayer;
   additionalCoordinates?: AdditionalCoordinate[] | null;
   nativelyRenderedLayerName?: string | null;
+  clippingDistance?: number;
+  clipSkeletonToCurrentSection?: boolean;
 };
 export type PartialUrlManagerState = Partial<UrlManagerState>;
 
@@ -380,12 +382,16 @@ class UrlManager {
             stateByLayer,
           }
         : {};
+    const { clippingDistance, clipSkeletonToCurrentSection } = state.userConfiguration;
+
     return {
       position,
       mode,
       zoomStep,
       additionalCoordinates: state.flycam.additionalCoordinates,
       nativelyRenderedLayerName: state.datasetConfiguration.nativelyRenderedLayerName,
+      clippingDistance,
+      clipSkeletonToCurrentSection,
       ...rotation,
       ...activeNodeOptional,
       ...stateByLayerOptional,

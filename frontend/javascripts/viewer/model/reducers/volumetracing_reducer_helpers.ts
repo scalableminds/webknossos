@@ -168,7 +168,7 @@ export function addToContourListReducer(
 
   if (
     !isUpdatingCurrentlyAllowed ||
-    isVolumeAnnotationDisallowedForZoom(state.uiInformation.activeTool, state)
+    isVolumeAnnotationDisallowedForZoom(state.uiInformation.activeTool, state).isDisabled
   ) {
     return state;
   }

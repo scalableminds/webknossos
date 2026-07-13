@@ -1,25 +1,33 @@
 import { useWkSelector } from "libs/react_hooks";
-import messages from "messages";
-import { isAnnotationOwner, mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
-import { getSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
+import {
+  getReasonForCantEditSkeletonTree,
+  mayEditSkeletonTree,
+} from "viewer/model/accessors/annotation_accessor";
+import {
+  getActiveNode,
+  getActiveTree,
+  getSkeletonTracing,
+} from "viewer/model/accessors/skeletontracing_accessor";
 
 /*
  * Whether the active node's comment may currently be edited, and — if not — the
- * reason to surface in a tooltip. Editing requires an active node and an
- * annotation the user is allowed to update.
+ * reason to surface in a tooltip. Editing requires an active node and an active
+ * skeleton tree the user is allowed to mutate (in concurrent collaboration mode
+ * only agglomerate/proofreading trees qualify).
  */
 export function useCommentEditPermission(): { isDisabled: boolean; disabledReason: string | null } {
-  const activeNodeId = useWkSelector(
-    (state) => getSkeletonTracing(state.annotation)?.activeNodeId ?? null,
-  );
-  const allowUpdate = useWkSelector(mayEditAnnotation);
-  const isLockedByOwner = useWkSelector((state) => state.annotation.isLockedByOwner);
-  const isOwner = useWkSelector(isAnnotationOwner);
+  const isDisabled = useWkSelector((state) => {
+    const skeletonTracing = getSkeletonTracing(state.annotation);
+    if (skeletonTracing == null) {
+      return true;
+    }
+    const activeTree = getActiveTree(skeletonTracing);
+    return getActiveNode(skeletonTracing) == null || !mayEditSkeletonTree(state, activeTree);
+  });
+  const disabledReason = useWkSelector((state) => {
+    const activeTree = getActiveTree(getSkeletonTracing(state.annotation));
+    return getReasonForCantEditSkeletonTree(state, activeTree) ?? null;
+  });
 
-  return {
-    isDisabled: activeNodeId == null || !allowUpdate,
-    disabledReason: allowUpdate
-      ? null
-      : messages["tracing.read_only_mode_notification"](isLockedByOwner, isOwner),
-  };
+  return { isDisabled, disabledReason };
 }

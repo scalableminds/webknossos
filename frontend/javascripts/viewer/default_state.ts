@@ -183,6 +183,7 @@ const defaultState: WebknossosState = {
     sortingKey: 123,
     publication: null,
     usedStorageBytes: 0,
+    uploaderFullName: null,
   },
   annotation: {
     ...initialAnnotationInfo,

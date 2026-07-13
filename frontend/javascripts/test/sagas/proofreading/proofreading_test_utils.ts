@@ -42,7 +42,7 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
-import { createEditableMapping } from "viewer/model/sagas/volume/proofreading/proofread_saga";
+import { createEditableMapping } from "viewer/model/sagas/volume/proofreading/preparation_sagas";
 import type {
   ApplicableSkeletonServerUpdateAction,
   ApplicableVolumeServerUpdateAction,

@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{LayerViewConfig
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.webknossos.datastore.helpers.UPath
-import play.api.libs.json._
+import play.api.libs.json.*
 
 import java.net.URI
 import scala.concurrent.ExecutionContext

@@ -23,9 +23,9 @@ import org.apache.pekko.pattern.ask
 import org.apache.pekko.routing.RoundRobinPool
 import org.apache.pekko.util.Timeout
 
-import java.nio._
+import java.nio.*
 import scala.collection.mutable
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.concurrent.{Await, ExecutionContext}
 import scala.reflect.ClassTag
 

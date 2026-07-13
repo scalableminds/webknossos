@@ -6,7 +6,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables.{Scripts, ScriptsRow, GetResultScriptsRow}
 import models.user.{UserDAO, UserService}
-import play.api.libs.json._
+import play.api.libs.json.*
 import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 

@@ -14,12 +14,12 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 
 import javax.inject.Inject
-import models.annotation._
+import models.annotation.*
 import models.annotation.nml.NmlResults.TracingBoxContainer
 import models.project.ProjectDAO
-import models.task._
-import models.user._
-import play.api.libs.json._
+import models.task.*
+import models.user.*
+import play.api.libs.json.*
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.WkEnv
 import com.scalableminds.util.objectid.ObjectId

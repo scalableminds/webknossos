@@ -29,9 +29,14 @@ trait TempFileService extends LazyLogging {
   private def ensureParent(): Path =
     Files.createDirectories(tmpDir)
 
+  private def sanitizePrefix(prefix: String): String =
+    prefix.replaceAll("/", "_")
+
   def create(prefix: String = "tmpFile", lifeTime: FiniteDuration = 2 hours, isDirectory: Boolean = false): Path = {
     ensureParent()
-    val path = tmpDir.resolve(f"$prefix-${Random.alphanumeric.take(15).mkString("")}")
+    val path = tmpDir.resolve(f"${sanitizePrefix(prefix)}-${Random.alphanumeric.take(15).mkString("")}").normalize()
+    if (!path.startsWith(tmpDir))
+      throw new IllegalArgumentException(s"Refusing to create temp file/dir outside of $tmpDir for prefix '$prefix'")
     logger.info(f"Creating temp ${if (isDirectory) "dir" else "file"} at $path")
     if (isDirectory)
       Files.createDirectory(path)

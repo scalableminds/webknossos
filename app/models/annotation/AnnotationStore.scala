@@ -11,7 +11,7 @@ import models.user.User
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 class AnnotationStore @Inject() (
     annotationInformationHandlerSelector: AnnotationInformationHandlerSelector,

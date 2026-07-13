@@ -12,11 +12,11 @@ import com.scalableminds.webknossos.datastore.dataformats.BucketProvider
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
-import com.scalableminds.webknossos.datastore.models.datasource._
+import com.scalableminds.webknossos.datastore.models.datasource.*
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.scalableminds.webknossos.tracingstore.tracings.{FossilDBClient, TemporaryTracingService}
-import ucar.ma2.{Array => MultiArray}
+import ucar.ma2.Array as MultiArray
 
 import scala.concurrent.ExecutionContext
 

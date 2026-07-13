@@ -10,7 +10,7 @@ import models.organization.{Organization, OrganizationDAO}
 import models.team.{TeamDAO, TeamService}
 import models.user.User
 import play.api.libs.json.{JsArray, JsObject, Json, OFormat}
-import slick.jdbc.PostgresProfile.api._
+import slick.jdbc.PostgresProfile.api.*
 import slick.sql.SqlAction
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import com.scalableminds.util.objectid.ObjectId

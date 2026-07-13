@@ -33,8 +33,15 @@ import React, { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
 import type { Comparator } from "types/type_utils";
-import { isAnnotationOwner, mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
-import { getActiveNode, getSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
+import {
+  getReasonForCantEditSkeletonTree,
+  mayEditSkeletonTree,
+} from "viewer/model/accessors/annotation_accessor";
+import {
+  getActiveNode,
+  getActiveTree,
+  getSkeletonTracing,
+} from "viewer/model/accessors/skeletontracing_accessor";
 import {
   createCommentAction,
   deleteCommentAction,
@@ -132,9 +139,6 @@ function CommentTabView(props: Props) {
   const keyboardShortcutsConfig = useWkSelector(
     (state) => state.keyboardConfiguration.shortcutsConfig,
   );
-  const allowUpdate = useWkSelector(mayEditAnnotation);
-  const isAnnotationLockedByUser = useWkSelector((state) => state.annotation.isLockedByOwner);
-  const isOwner = useWkSelector((state) => isAnnotationOwner(state));
 
   const activeComment = getActiveComment();
 
@@ -302,7 +306,7 @@ function CommentTabView(props: Props) {
   }
 
   function renderMarkdownModal() {
-    if (!allowUpdate || !props.skeletonTracing.activeNodeId) {
+    if (isEditingDisabled || !props.skeletonTracing.activeNodeId) {
       return null;
     }
 
@@ -429,11 +433,12 @@ function CommentTabView(props: Props) {
   const activeCommentContent = activeComment?.content.replace(/\r?\n/g, "\\n");
   const isMultilineComment = activeCommentContent?.indexOf("\\n") !== -1;
   const activeNode = getActiveNode(props.skeletonTracing);
-  const isEditingDisabled = activeNode == null || !allowUpdate;
-
-  const isEditingDisabledMessage = messages["tracing.read_only_mode_notification"](
-    isAnnotationLockedByUser,
-    isOwner,
+  const activeTree = getActiveTree(props.skeletonTracing);
+  const isEditingDisabled = useWkSelector(
+    (state) => activeNode == null || !mayEditSkeletonTree(state, activeTree),
+  );
+  const isEditingDisabledMessage = useWkSelector((state) =>
+    getReasonForCantEditSkeletonTree(state, activeTree),
   );
 
   return (
@@ -492,7 +497,7 @@ function CommentTabView(props: Props) {
                 <InputComponent
                   value={activeCommentContent}
                   disabled={isEditingDisabled}
-                  title={allowUpdate ? undefined : isEditingDisabledMessage}
+                  title={isEditingDisabledMessage}
                   onChange={(evt: React.ChangeEvent<HTMLInputElement>) =>
                     handleChangeInput(evt.target.value, true)
                   }
@@ -505,9 +510,7 @@ function CommentTabView(props: Props) {
                   onClick={() => setMarkdownModalVisibility(true)}
                   disabled={isEditingDisabled}
                   title={
-                    allowUpdate
-                      ? "Open dialog to edit comment in multi-line mode"
-                      : isEditingDisabledMessage
+                    isEditingDisabledMessage ?? "Open dialog to edit comment in multi-line mode"
                   }
                   type={isMultilineComment ? "primary" : "default"}
                   icon={<EditOutlined />}

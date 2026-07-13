@@ -10,9 +10,9 @@ import com.scalableminds.webknossos.schema.Tables.{Tasks, TasksRow, GetResultTas
 import com.scalableminds.webknossos.tracingstore.tracings.NamedBoundingBox
 
 import javax.inject.Inject
-import models.annotation._
+import models.annotation.*
 import models.user.Experience
-import slick.jdbc.PostgresProfile.api._
+import slick.jdbc.PostgresProfile.api.*
 import slick.jdbc.TransactionIsolation.Serializable
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 

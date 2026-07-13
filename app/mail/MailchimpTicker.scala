@@ -13,7 +13,7 @@ import models.user.{MultiUser, MultiUserDAO}
 import play.api.inject.ApplicationLifecycle
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 class MailchimpTicker @Inject() (
     val lifecycle: ApplicationLifecycle,

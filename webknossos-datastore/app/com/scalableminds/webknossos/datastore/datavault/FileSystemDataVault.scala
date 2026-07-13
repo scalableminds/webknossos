@@ -14,11 +14,11 @@ import java.nio.channels.{AsynchronousFileChannel, CompletionHandler}
 import java.nio.file.{Files, Path, StandardOpenOption}
 import java.util.stream.Collectors
 import scala.concurrent.{ExecutionContext, Promise}
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 class FileSystemDataVault extends DataVault {
 
-  override def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(using
+  override def readBytesPlusEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[(Array[Byte], Encoding.Value, Option[String])] =
@@ -43,8 +43,10 @@ class FileSystemDataVault extends DataVault {
           } yield (bytes, r.toContentRangeHeaderWithLength(fileSize))
         case r: SuffixLengthByteRange =>
           val fileSize = Files.size(localPath)
+          val start = Math.max(0L, fileSize - r.length)
+          val length = Math.toIntExact(fileSize - start)
           for {
-            bytes <- readAsync(localPath, fileSize - r.length, r.length)
+            bytes <- readAsync(localPath, start, length)
           } yield (bytes, r.toContentRangeHeaderWithLength(fileSize))
       }
     } else {
@@ -90,7 +92,10 @@ class FileSystemDataVault extends DataVault {
     } yield result
   }
 
-  override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[Seq[VaultPath]] =
+  override def listDirectory(path: VaultPath, maxItems: Int)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Seq[VaultPath]] =
     for {
       localPath <- vaultPathToLocalPath(path)
       listing =

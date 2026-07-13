@@ -262,7 +262,6 @@ function _MergeModalView({ isOpen, onOk }: Props) {
           {sectionDivider("Source")}
           <Segmented
             block
-            style={{ width: "350px" }}
             value={sourceType}
             onChange={(value) => setSourceType(value as SourceType)}
             options={[
@@ -304,7 +303,6 @@ function _MergeModalView({ isOpen, onOk }: Props) {
           <div>
             <Segmented
               block
-              style={{ width: "350px" }}
               value={targetType}
               onChange={(value) => setTargetType(value as TargetType)}
               options={[

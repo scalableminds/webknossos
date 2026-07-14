@@ -430,15 +430,13 @@ class DataSourceController @Inject() (
       }
     }
 
-  def checkSegmentStatisticsFile(datasetId: ObjectId, dataLayerName: String): Action[AnyContent] =
+  def segmentStatisticsFileInfo(datasetId: ObjectId, dataLayerName: String): Action[AnyContent] =
     Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
-          segmentStatisticsFileKeyBox <- segmentStatisticsFileService
-            .lookUpSegmentStatisticsFileKey(dataSource.id, dataLayer)
-            .shiftBox
-        } yield Ok(Json.toJson(segmentStatisticsFileKeyBox.isDefined))
+          segmentStatisticsFileInfosBox <- segmentStatisticsFileService.getInfos(dataSource.id, dataLayer).shiftBox
+        } yield Ok(Json.toJson(Seq(segmentStatisticsFileInfosBox).flatten))
       }
     }
 

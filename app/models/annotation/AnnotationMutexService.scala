@@ -52,7 +52,6 @@ class AnnotationMutexService @Inject() (
         sessionId,
         Instant.in(defaultExpiryTime)
       ) ?~> Msg.Annotation.Mutex.acquireOrGetFailed
-      _ = logger.info(s"User $userId tried to get mutex and user ${mutex.userId} has it.")
       result =
         if (mutex.userId == userId && mutex.sessionId == sessionId)
           MutexResult(canEdit = true, None, None)
@@ -60,10 +59,8 @@ class AnnotationMutexService @Inject() (
           MutexResult(canEdit = false, blockedByUser = Some(mutex.userId), blockedBySessionId = Some(mutex.sessionId))
     } yield result
 
-  def release(annotationId: ObjectId, userId: ObjectId, sessionId: String): Fox[Unit] = {
-    logger.info(s"User $userId is releasing mutex.")
+  def release(annotationId: ObjectId, userId: ObjectId, sessionId: String): Fox[Unit] =
     annotationMutexDAO.deleteForUser(annotationId, userId, sessionId)
-  }
 
   def publicWrites(mutexResult: MutexResult): Fox[JsObject] =
     for {

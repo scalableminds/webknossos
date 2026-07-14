@@ -884,10 +884,9 @@ class TracingApi {
     if (volumeTracing == null) {
       throw new Error(`Could not find volume tracing layer with name ${volumeLayerName}`);
     }
-    const tracingStoringBBoxes = getSomeTracing(Store.getState().annotation);
     const newGroupId = await dispatchGetNewIdAsync(
       Store.dispatch,
-      tracingStoringBBoxes.tracingId,
+      volumeTracing.tracingId,
       "SegmentGroup",
     );
 

@@ -913,6 +913,13 @@ export class BoundingBoxToolController extends ToolController {
       },
       leftMouseDown: async (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
         isMouseStillDown = true;
+        if (isCreatingBoundingBox) {
+          // A previous leftMouseDown is still awaiting its id reservation. Since mouse
+          // events aren't serialized by the input framework, ignore this reentrant call
+          // instead of starting a second, concurrent bounding box creation.
+          latestPosDuringCreation = pos;
+          return;
+        }
         let hoveredEdgesInfo = getClosestHoveredBoundingBox(pos, planeId);
 
         if (hoveredEdgesInfo) {

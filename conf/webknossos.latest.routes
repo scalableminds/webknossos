@@ -153,6 +153,7 @@ POST          /datastores/:name/reportMagUpload                                 
 POST          /datastores/:name/reportAttachmentUpload                                          controllers.WKRemoteDataStoreController.reportAttachmentUpload(name: String, key: String)
 POST          /datastores/:name/deleteDataset                                                   controllers.WKRemoteDataStoreController.deleteDataset(name: String, key: String)
 GET           /datastores/:name/findDatasetId                                                   controllers.WKRemoteDataStoreController.findDatasetId(name: String, key: String, datasetDirectoryName: String, organizationId: String)
+GET           /datastores/:name/findDatasetLocalRootPath                                        controllers.WKRemoteDataStoreController.findDatasetLocalRootPath(name: String, key: String, datasetId: ObjectId)
 GET           /datastores/:name/jobExportProperties                                             controllers.WKRemoteDataStoreController.jobExportProperties(name: String, key: String, jobId: ObjectId)
 GET           /datastores/:name/findCredential                                                  controllers.WKRemoteDataStoreController.findCredential(name: String, key: String, credentialId: ObjectId)
 POST          /datastores/:name/validateUserAccess                                              controllers.UserTokenController.validateAccessViaDatastore(name: String, key: String, token: Option[String])
@@ -189,7 +190,7 @@ PATCH         /annotations/:typ/:id/editLockedState                             
 
 GET           /annotations/:id/info                                                             controllers.AnnotationController.infoWithoutType(id: ObjectId, timestamp: Option[Long])
 DELETE        /annotations/:id                                                                  controllers.AnnotationController.cancelWithoutType(id: ObjectId)
-POST          /annotations/:id/merge/:mergedTyp/:mergedId                                       controllers.AnnotationController.mergeWithoutType(id: ObjectId, mergedTyp: String, mergedId: ObjectId)
+POST          /annotations/:id/merge/:mergedTyp/:mergedId                                       controllers.AnnotationController.mergeWithoutType(id: ObjectId, mergedTyp: String, mergedId: ObjectId, remapSegmentIds: Option[Boolean])
 GET           /annotations/:id/download                                                         controllers.AnnotationIOController.downloadWithoutType(id: ObjectId, version: Option[Long], skipVolumeData: Option[Boolean], volumeDataZipFormat: Option[String])
 POST          /annotations/:id/acquireMutex                                                     controllers.AnnotationController.tryAcquiringAnnotationMutex(id: ObjectId, sessionId: String)
 POST          /annotations/:id/releaseMutex                                                     controllers.AnnotationController.releaseMutex(id: ObjectId, sessionId: String)
@@ -198,7 +199,7 @@ POST          /annotations/:id/reserveIds                                       
 
 GET           /annotations/:typ/:id/info                                                        controllers.AnnotationController.info(typ: String, id: ObjectId, timestamp: Option[Long])
 DELETE        /annotations/:typ/:id                                                             controllers.AnnotationController.cancel(typ: String, id: ObjectId)
-POST          /annotations/:typ/:id/merge/:mergedTyp/:mergedId                                  controllers.AnnotationController.merge(typ: String, id: ObjectId, mergedTyp: String, mergedId: ObjectId)
+POST          /annotations/:typ/:id/merge/:mergedTyp/:mergedId                                  controllers.AnnotationController.merge(typ: String, id: ObjectId, mergedTyp: String, mergedId: ObjectId, remapSegmentIds: Option[Boolean])
 GET           /annotations/:typ/:id/download                                                    controllers.AnnotationIOController.download(typ: String, id: ObjectId, version: Option[Long], skipVolumeData: Option[Boolean], volumeDataZipFormat: Option[String])
 
 GET           /annotations/source/:accessTokenOrId                                              controllers.AnnotationPrivateLinkController.annotationSource(accessTokenOrId: String, userToken: Option[String])

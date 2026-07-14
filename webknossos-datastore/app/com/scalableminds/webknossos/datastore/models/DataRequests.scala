@@ -18,7 +18,7 @@ case class DataRequest(
     width: Int,
     height: Int,
     depth: Int,
-    settings: DataServiceRequestSettings = DataServiceRequestSettings.default
+    settings: DataServiceRequestSettings = DataServiceRequestSettings()
 ) extends AbstractDataRequest {
 
   def cuboid(dataLayer: DataLayer): Cuboid = Cuboid(position, width, height, depth)

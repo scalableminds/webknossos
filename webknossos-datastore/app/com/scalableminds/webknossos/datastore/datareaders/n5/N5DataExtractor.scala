@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.datareaders.n5
 
-import com.scalableminds.util.tools.Box
-import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.box.Box
+import Box.tryo
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, DataInputStream, InputStream}
 

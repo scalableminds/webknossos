@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.storage
 
-import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
 import com.typesafe.scalalogging.LazyLogging
@@ -112,26 +112,34 @@ trait RedisTemporaryStore extends LazyLogging {
   def keys(pattern: String): Fox[Seq[String]] =
     withCommands(cmd => Fox.fromFuture(cmd.keys(pattern).asScala.map(_.asScala.toSeq)))
 
-  def insertKey(id: String, expirationOpt: Option[FiniteDuration] = None): Fox[Unit] =
-    insert(id, "", expirationOpt)
+  def insertKey(id: String, expiryOpt: Option[FiniteDuration] = None): Fox[Unit] =
+    insert(id, "", expiryOpt)
 
-  def insert(id: String, value: String, expirationOpt: Option[FiniteDuration] = None): Fox[Unit] =
+  def insert(id: String, value: String, expiryOpt: Option[FiniteDuration] = None): Fox[Unit] =
     withCommands { cmd =>
-      val stage = expirationOpt match {
-        case Some(expiration) => cmd.setex(id, expiration.toSeconds, value)
-        case None             => cmd.set(id, value)
+      val stage = expiryOpt match {
+        case Some(expiry) => cmd.setex(id, expiry.toSeconds, value)
+        case None         => cmd.set(id, value)
       }
       Fox.fromFuture(stage.asScala.map(_ => ()))
     }
 
-  def insertLong(id: String, value: Long, expirationOpt: Option[FiniteDuration] = None): Fox[Unit] =
-    insert(id, value.toString, expirationOpt)
+  def insertLong(id: String, value: Long, expiryOpt: Option[FiniteDuration] = None): Fox[Unit] =
+    insert(id, value.toString, expiryOpt)
 
   def contains(id: String): Fox[Boolean] =
     withCommands(cmd => Fox.fromFuture(cmd.exists(id).asScala.map(_.longValue > 0)))
 
   def remove(id: String): Fox[Unit] =
     withCommands(cmd => Fox.fromFuture(cmd.del(id).asScala.map(_ => ())))
+
+  // Set or update expiry duration for an existing key
+  def expire(id: String, expiry: FiniteDuration): Fox[Unit] =
+    withCommands(cmd => Fox.fromFuture(cmd.expire(id, expiry.toSeconds).asScala.map(_ => ())))
+
+  // Seconds until id expires. -1 if id has no expiry, -2 if id does not exist.
+  def ttlSeconds(id: String): Fox[Long] =
+    withCommands(cmd => Fox.fromFuture(cmd.ttl(id).asScala.map(_.longValue)))
 
   def checkHealth: Fox[Unit] =
     withCommands { cmd =>
@@ -144,8 +152,13 @@ trait RedisTemporaryStore extends LazyLogging {
         }
     } ?-> "Redis health check failed."
 
-  def insertIntoSet(id: String, value: String): Fox[Boolean] =
-    withCommands(cmd => Fox.fromFuture(cmd.sadd(id, value).asScala.map(_.longValue > 0)))
+  def insertIntoSet(id: String, value: String, expiryOpt: Option[FiniteDuration] = None): Fox[Boolean] =
+    withCommands { cmd =>
+      for {
+        wasAdded <- Fox.fromFuture(cmd.sadd(id, value).asScala.map(_.longValue > 0))
+        _ <- Fox.runOptional(expiryOpt)(expiry => Fox.fromFuture(cmd.expire(id, expiry.toSeconds).asScala))
+      } yield wasAdded
+    }
 
   def isContainedInSet(id: String, value: String): Fox[Boolean] =
     withCommands(cmd => Fox.fromFuture(cmd.sismember(id, value).asScala.map(_.booleanValue)))
@@ -162,9 +175,9 @@ trait RedisTemporaryStore extends LazyLogging {
       parsed <- JsonHelper.parseAs[T](objectString).toFox
     } yield parsed
 
-  def insertSerialized[T: Writes](key: String, value: T): Fox[Unit] = {
+  def insertSerialized[T: Writes](key: String, value: T, expiryOpt: Option[FiniteDuration] = None): Fox[Unit] = {
     val serialized = Json.stringify(Json.toJson(value))
-    insert(key, serialized)
+    insert(key, serialized, expiryOpt)
   }
 
 }

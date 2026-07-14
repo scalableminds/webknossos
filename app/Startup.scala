@@ -1,3 +1,4 @@
+import com.scalableminds.util.box.{Failure, Full}
 import org.apache.pekko.actor.{ActorSystem, Props}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.webknossos.tracingstore.cleanup.WkCleanUpService
@@ -8,7 +9,6 @@ import mail.{Mailer, MailerConfig}
 import models.annotation.AnnotationDAO
 import models.dataset.ThumbnailCachingService
 import models.user.InviteService
-import com.scalableminds.util.tools.{Failure, Full}
 import org.apache.http.client.utils.URIBuilder
 import play.api.inject.ApplicationLifecycle
 import security.WkSilhouetteEnvironment
@@ -16,11 +16,11 @@ import telemetry.SlackNotificationService
 import utils.WkConf
 import utils.sql.SqlClient
 
-import javax.inject._
+import javax.inject.*
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration._
-import scala.sys.process._
+import scala.concurrent.duration.*
+import scala.sys.process.*
 
 class Startup @Inject() (
     actorSystem: ActorSystem,

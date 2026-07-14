@@ -5,7 +5,7 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
+import com.scalableminds.util.tools.StringNumberConversions.toIntOpt
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.util.tools.JsonHelper.optionFormat
@@ -32,7 +32,7 @@ import com.scalableminds.webknossos.datastore.services.mesh.FullMeshRequest
 import com.scalableminds.webknossos.tracingstore.annotation.{AnnotationTransactionService, TSAnnotationService}
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
-import com.scalableminds.webknossos.tracingstore.tracings.volume._
+import com.scalableminds.webknossos.tracingstore.tracings.volume.*
 import com.scalableminds.webknossos.tracingstore.tracings.{
   KeyValueStoreConversions,
   TemporaryMergedVolumeStatsStore,

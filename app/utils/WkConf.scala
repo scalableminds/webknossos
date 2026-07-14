@@ -2,14 +2,14 @@ package utils
 
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.ConfigReader
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.LazyLogging
 import play.api.Configuration
 import security.CertificateValidationService
 
 import javax.inject.Inject
-import scala.concurrent.duration._
-import scala.jdk.CollectionConverters._
+import scala.concurrent.duration.*
+import scala.jdk.CollectionConverters.*
 
 class WkConf @Inject() (configuration: Configuration, certificateValidationService: CertificateValidationService)
     extends ConfigReader
@@ -165,7 +165,7 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
     val key: String = get[String]("datastore.key")
     val name: String = get[String]("datastore.name")
     val publicUri: Option[String] = getOptional[String]("datastore.publicUri")
-    val baseDirectory: Option[String] = getOptional[String]("datastore.baseDirectory")
+    val baseDirectories: List[Config] = getList[Config]("datastore.baseDirectories")
   }
 
   object Tracingstore {

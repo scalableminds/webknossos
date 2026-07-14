@@ -19,27 +19,13 @@ import constants, {
   OrthoViewCrosshairColors,
   OrthoViewGrayCrosshairColor,
   OrthoViewValues,
+  PLANE_SUBDIVISION,
 } from "viewer/constants";
 import PlaneMaterialFactory, {
   type PlaneShaderMaterial,
 } from "viewer/geometries/materials/plane_material_factory";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import { getBaseVoxelInUnit } from "viewer/model/scaleinfo";
-
-// A subdivision of 100 means that there will be 100 segments per axis
-// and thus 101 vertices per axis (i.e., the vertex shader is executed 101**2).
-// In an extreme scenario, these vertices would have a distance to each other
-// of 32 voxels. Thus, each square (two triangles) would render one bucket.
-// 100**2 == 10,000 buckets per plane are currently unrealistic and therefore
-// a valid upper bound.
-// However, note that in case of anisotropic datasets, the above calculation
-// needs to be adapted a bit. For example, consider a dataset with mag 8-8-1.
-// The XZ plane could render 100 buckets along the X coordinate (as above), but
-// only ~13 buckets along the Z coordinate. This would require 1300 which is not
-// unrealistic. PLANE_SUBDIVISION values of 80 showed rare problems which is why
-// a value of 100 is now used. If this should become problematic, too, a dynamic
-// subdivision would probably be the next step.
-export const PLANE_SUBDIVISION = 100;
 
 const DEFAULT_POSITION_OFFSET = [0, 0, 0] as Vector3;
 

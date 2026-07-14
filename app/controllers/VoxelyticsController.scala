@@ -7,9 +7,9 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import models.organization.OrganizationDAO
 import models.user.UserService
-import models.voxelytics._
-import play.api.libs.json._
-import play.api.mvc._
+import models.voxelytics.*
+import play.api.libs.json.*
+import play.api.mvc.*
 import play.silhouette.api.Silhouette
 import play.silhouette.api.actions.SecuredRequest
 import security.WkEnv

@@ -5,6 +5,7 @@ import throttle from "lodash-es/throttle";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { OrthoView, Point2, Vector2, Vector3 } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
+import { getIsRebasingOrForwarding } from "viewer/model/accessors/annotation_accessor";
 import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import {
   calculateGlobalDelta,
@@ -237,6 +238,9 @@ export async function createBoundingBoxAndGetEdges(
   plane: OrthoView,
 ): Promise<[SelectedEdge, SelectedEdge | null | undefined] | null> {
   const state = Store.getState();
+  // A drag-created box cannot be meaningfully deferred, so we simply don't start one while a
+  // rebase/forwarding is active (the add would be dropped by the rebase edit guard anyway).
+  if (getIsRebasingOrForwarding(state)) return null;
   const globalPosition = calculateMaybeGlobalPos(state, pos, plane);
   if (globalPosition == null || globalPosition.rounded == null) return null;
 

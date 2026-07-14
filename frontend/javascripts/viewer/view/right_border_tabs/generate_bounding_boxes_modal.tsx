@@ -18,6 +18,7 @@ import type { Action } from "viewer/model/actions/actions";
 import { dispatchGetNewIdAsync } from "viewer/model/actions/actions";
 import { addUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
+import { waitUntilRebaseFinished } from "viewer/model/helpers/bounding_box_creation_helpers";
 
 // These values should be kept in sync with the documentation:
 // docs/automation/choosing_mags_and_bboxes.md
@@ -226,6 +227,10 @@ function GenerateBoundingBoxesModalInner({ isOpen, onClose, magnification, jobTy
         }
 
         if (actions.length > 0) {
+          // Wait out any active rebase so the batch is not dropped by the rebase edit guard
+          // (see rebase_edit_guard.ts), then dispatch synchronously. Ids were already reserved
+          // above and stay valid across the rebase.
+          await waitUntilRebaseFinished();
           dispatch(batchActions(actions, "ADD_NEW_USER_BOUNDING_BOX") as unknown as Action);
         }
 

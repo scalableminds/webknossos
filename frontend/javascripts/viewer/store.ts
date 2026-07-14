@@ -58,6 +58,7 @@ import AnnotationReducer from "viewer/model/reducers/annotation_reducer";
 import ConnectomeReducer from "viewer/model/reducers/connectome_reducer";
 import DatasetReducer from "viewer/model/reducers/dataset_reducer";
 import FlycamReducer from "viewer/model/reducers/flycam_reducer";
+import { withRebaseEditGuard } from "viewer/model/reducers/rebase_edit_guard";
 import SaveReducer from "viewer/model/reducers/save_reducer";
 import SettingsReducer from "viewer/model/reducers/settings_reducer";
 import SkeletonTracingReducer from "viewer/model/reducers/skeletontracing_reducer";
@@ -776,7 +777,7 @@ export const combinedReducer = reduceReducers(
 ) as Reducer;
 
 const store = createStore<WebknossosState, Action>(
-  enableBatching(combinedReducer as any),
+  enableBatching(withRebaseEditGuard(combinedReducer) as any),
   defaultState,
   applyMiddleware(
     actionLoggerMiddleware,

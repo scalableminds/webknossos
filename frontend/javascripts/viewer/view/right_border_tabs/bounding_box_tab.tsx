@@ -28,14 +28,13 @@ import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import { ControlModeEnum, type Vector3, type Vector6 } from "viewer/constants";
 import { isAnnotationOwner } from "viewer/model/accessors/annotation_accessor";
 import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
-import { dispatchGetNewIdAsync } from "viewer/model/actions/actions";
 import {
-  addUserBoundingBoxAction,
   changeUserBoundingBoxAction,
   deleteUserBoundingBoxAction,
 } from "viewer/model/actions/annotation_actions";
 import { setPositionAction } from "viewer/model/actions/flycam_actions";
 import { setActiveUserBoundingBoxId } from "viewer/model/actions/ui_actions";
+import { reserveIdAndAddBoundingBox } from "viewer/model/helpers/bounding_box_creation_helpers";
 import type { UserBoundingBox } from "viewer/store";
 import DownloadModalView from "../action_bar/download_modal/download_modal_view";
 import ButtonComponent from "../components/button_component";
@@ -64,6 +63,7 @@ export default function BoundingBoxTab() {
   const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([]);
   const [menu, setMenu] = useState<MenuProps | null>(null);
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
+  const [isCreatingBoundingBox, setIsCreatingBoundingBox] = useState(false);
   const dispatch = useDispatch();
 
   const setChangeBoundingBoxBounds = useCallback(
@@ -77,11 +77,13 @@ export default function BoundingBoxTab() {
   );
 
   const addNewBoundingBox = useCallback(async () => {
+    setIsCreatingBoundingBox(true);
     try {
-      const id = await dispatchGetNewIdAsync(dispatch, idOfTracingWithBBoxes, "BoundingBox");
-      dispatch(addUserBoundingBoxAction(null, undefined, id));
+      await reserveIdAndAddBoundingBox(dispatch, idOfTracingWithBBoxes);
     } catch (error) {
       handleGenericError(error as Error, "Could not create a new bounding box.");
+    } finally {
+      setIsCreatingBoundingBox(false);
     }
   }, [dispatch, idOfTracingWithBBoxes]);
 
@@ -312,6 +314,7 @@ export default function BoundingBoxTab() {
         </AdvancedSearchPopover>
         <ButtonComponent
           disabled={!allowUpdate}
+          loading={isCreatingBoundingBox}
           variant="text"
           color="default"
           title="Click to add another bounding box."

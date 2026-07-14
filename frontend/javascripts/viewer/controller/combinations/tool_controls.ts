@@ -71,11 +71,7 @@ import {
   getMaximumBrushSize,
   getSegmentColorAsHSLA,
 } from "viewer/model/accessors/volumetracing_accessor";
-import { dispatchGetNewIdAsync } from "viewer/model/actions/actions";
-import {
-  addUserBoundingBoxAction,
-  finishedResizingUserBoundingBoxAction,
-} from "viewer/model/actions/annotation_actions";
+import { finishedResizingUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
 import {
   minCutAgglomerateWithPositionAction,
   proofreadAtPosition,
@@ -105,6 +101,7 @@ import {
   hideBrushAction,
   interpolateSegmentationLayerAction,
 } from "viewer/model/actions/volumetracing_actions";
+import { reserveIdAndAddBoundingBox } from "viewer/model/helpers/bounding_box_creation_helpers";
 import { api } from "viewer/singletons";
 import Store, { type UserConfiguration } from "viewer/store";
 import { getDefaultBrushSizes } from "viewer/view/action_bar/tools/brush_presets";
@@ -914,6 +911,7 @@ export class BoundingBoxToolController extends ToolController {
       leftMouseDown: async (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
         isMouseStillDown = true;
         if (isCreatingBoundingBox) {
+          // TODOM isCreatingBoundingBox needs to be set to false again some time
           // A previous leftMouseDown is still awaiting its id reservation. Since mouse
           // events aren't serialized by the input framework, ignore this reentrant call
           // instead of starting a second, concurrent bounding box creation.
@@ -951,6 +949,8 @@ export class BoundingBoxToolController extends ToolController {
               primarySelectedEdge = null;
               secondarySelectedEdge = null;
             }
+          } else {
+            isCreatingBoundingBox = false;
           }
         }
         if (primarySelectedEdge) {
@@ -1001,8 +1001,8 @@ export class BoundingBoxToolController extends ToolController {
         onPressed: async () => {
           try {
             const tracingId = getSomeTracing(Store.getState().annotation).tracingId;
-            const id = await dispatchGetNewIdAsync(Store.dispatch, tracingId, "BoundingBox");
-            Store.dispatch(addUserBoundingBoxAction(null, undefined, id));
+            // Queued behind any active rebase (see reserveIdAndAddBoundingBox).
+            await reserveIdAndAddBoundingBox(Store.dispatch, tracingId);
           } catch (error) {
             handleGenericError(error as Error, "Could not create a new bounding box.");
           }

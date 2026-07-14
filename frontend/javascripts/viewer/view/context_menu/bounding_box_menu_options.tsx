@@ -11,9 +11,8 @@ import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import { isRotated } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { getSomeTracing, maybeGetSomeTracing } from "viewer/model/accessors/tracing_accessor";
-import { dispatchGetNewIdAsync } from "viewer/model/actions/actions";
-import { addUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
 import { setActiveUserBoundingBoxId } from "viewer/model/actions/ui_actions";
+import { reserveIdAndAddBoundingBox } from "viewer/model/helpers/bounding_box_creation_helpers";
 import type { ContextMenuInfo } from "viewer/store";
 import Store from "viewer/store";
 import { shortcutBuilder } from "./helpers";
@@ -41,8 +40,7 @@ export function useBoundingBoxMenuOptions(contextInfo: ContextMenuInfo): ItemTyp
     onClick: async () => {
       try {
         const tracingId = getSomeTracing(Store.getState().annotation).tracingId;
-        const id = await dispatchGetNewIdAsync(dispatch, tracingId, "BoundingBox");
-        dispatch(addUserBoundingBoxAction(null, globalPosition, id));
+        await reserveIdAndAddBoundingBox(dispatch, tracingId, null, globalPosition);
       } catch (error) {
         handleGenericError(error as Error, "Could not create a new bounding box.");
       }

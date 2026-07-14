@@ -137,9 +137,9 @@ A reload is necessary to return to a valid state.`,
     "There is no action that could be undone. However, if you want to restore an earlier version of this annotation, use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
   "undo.no_redo": "There is no action that could be redone.",
   "undo.no_undo_during_proofread":
-    "Undo is not supported during proofreading yet. Please use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
-  "undo.no_redo_during_proofread":
-    "Redo is not supported during proofreading yet. Please use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
+    "Undo/redo is not supported during proofreading yet. Please use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
+  "undo.no_undo_in_live_collab":
+    "Undo/redo is not supported when live collaboration ('simultaneous editing') is enabled. Please use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button. Note that this discards pending changes from collaborators of this annotation and forces them to reload the page.",
   "undo.import_volume_tracing":
     "Importing a volume annotation cannot be undone. However, if you want to restore an earlier version of this annotation, use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
   "download.wait": "Please wait...",
@@ -214,6 +214,8 @@ instead. Only enable this option if you understand its effect. All layers will n
           isOwner ? "you" : "the owner"
         }.`
       : "This annotation is in read-only mode and cannot be updated.",
+  "tracing.skeleton_editing_disabled_in_live_collab":
+    "Skeleton editing is disabled because simultaneous editing is enabled in the sharing settings. Currently, only agglomerate trees (created in proofreading mode) may be edited.",
   "tracing.volume_missing_segmentation": "Volume is allowed, but segmentation does not exist.",
   "tracing.volume_layer_name_duplication":
     "This layer name already exists! Please change it to resolve duplicates.",

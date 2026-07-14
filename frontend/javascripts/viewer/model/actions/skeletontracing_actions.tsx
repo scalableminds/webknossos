@@ -147,6 +147,93 @@ export type SkeletonTracingAction =
   | ApplySkeletonUpdateActionsFromServerAction
   | AddNewUserBoundingBox;
 
+// Declarative policy for each skeleton action, used as the single source of truth for the skeleton
+// reducer's permission handling. See `skeletonActionPolicies` below.
+// - `needsUpdatePermission: false` => the action is applied regardless of update permissions
+//   (view/selection state, initialization, server-applied updates). The collaboration mode is
+//   irrelevant for these, hence no `collab` field.
+// - `needsUpdatePermission: true` => the action mutates the annotation and is only applied when
+//   updating is currently allowed. The `collab` field additionally decides whether it may run in
+//   concurrent collaboration ("live collaboration") mode:
+//     - "block": never allowed in concurrent mode.
+//     - "allow": always allowed (only ever touches agglomerate trees anyway).
+//     - "onlyAgglomerateTree": allowed only if the affected tree(s) are agglomerate trees
+//       (i.e. proofreading). The affected trees are resolved at runtime in the reducer.
+// Whether a mutation may run in concurrent collaboration mode: never ("block"), always ("allow",
+// only ever touches agglomerate trees), or only if the affected tree(s) are agglomerate trees
+// ("onlyAgglomerateTree", resolved at runtime in the reducer).
+export type SkeletonCollabPolicy = "block" | "allow" | "onlyAgglomerateTree";
+
+export type SkeletonActionPolicy =
+  | { needsUpdatePermission: false }
+  | { needsUpdatePermission: true; collab: SkeletonCollabPolicy };
+
+export const skeletonActionPolicies: Record<SkeletonTracingAction["type"], SkeletonActionPolicy> = {
+  // Initialization / server-applied updates / view & selection state. Applied unconditionally.
+  INITIALIZE_SKELETONTRACING: { needsUpdatePermission: false },
+  APPLY_SKELETON_UPDATE_ACTIONS_FROM_SERVER: { needsUpdatePermission: false },
+  SET_ACTIVE_NODE: { needsUpdatePermission: false },
+  CENTER_ACTIVE_NODE: { needsUpdatePermission: false },
+  REQUEST_DELETE_BRANCHPOINT: { needsUpdatePermission: false },
+  SET_ACTIVE_TREE: { needsUpdatePermission: false },
+  SET_ACTIVE_TREE_BY_NAME: { needsUpdatePermission: false },
+  DESELECT_ACTIVE_TREE: { needsUpdatePermission: false },
+  SET_TREE_ACTIVE_GROUP: { needsUpdatePermission: false },
+  DESELECT_ACTIVE_TREE_GROUP: { needsUpdatePermission: false },
+  SELECT_NEXT_TREE: { needsUpdatePermission: false },
+  SET_TREE_TYPE: { needsUpdatePermission: false },
+  TOGGLE_TREE: { needsUpdatePermission: false },
+  TOGGLE_ALL_TREES: { needsUpdatePermission: false },
+  TOGGLE_INACTIVE_TREES: { needsUpdatePermission: false },
+  TOGGLE_TREE_GROUP: { needsUpdatePermission: false },
+  SET_TREE_VISIBILITY: { needsUpdatePermission: false },
+  SET_EXPANDED_TREE_GROUPS_BY_KEYS: { needsUpdatePermission: false },
+  SET_EXPANDED_TREE_GROUPS_BY_IDS: { needsUpdatePermission: false },
+  EXPAND_PARENT_GROUPS_OF_TREE: { needsUpdatePermission: false },
+  FOCUS_TREE: { needsUpdatePermission: false },
+  SET_SKELETON_TRACING: { needsUpdatePermission: false },
+  SET_SHOW_SKELETONS: { needsUpdatePermission: false },
+  UPDATE_NAVIGATION_LIST: { needsUpdatePermission: false },
+  LOAD_AGGLOMERATE_TREE_FROM_ID: { needsUpdatePermission: false },
+  LOAD_AGGLOMERATE_TREE_AT_POSITION: { needsUpdatePermission: false },
+  ADD_NEW_USER_BOUNDING_BOX: { needsUpdatePermission: false },
+  NONE: { needsUpdatePermission: false },
+
+  // Mutations that are never allowed in concurrent collaboration mode.
+  CREATE_NODE: { needsUpdatePermission: true, collab: "block" },
+  DELETE_NODE: { needsUpdatePermission: true, collab: "block" },
+  SET_NODE_POSITION: { needsUpdatePermission: true, collab: "block" },
+  CREATE_BRANCHPOINT: { needsUpdatePermission: true, collab: "block" },
+  DELETE_BRANCHPOINT: { needsUpdatePermission: true, collab: "block" },
+  DELETE_BRANCHPOINT_BY_ID: { needsUpdatePermission: true, collab: "block" },
+  CREATE_COMMENT: { needsUpdatePermission: true, collab: "block" },
+  DELETE_COMMENT: { needsUpdatePermission: true, collab: "block" },
+  CREATE_TREE: { needsUpdatePermission: true, collab: "block" },
+  RESET_SKELETON_TRACING: { needsUpdatePermission: true, collab: "block" },
+  SET_TREE_GROUPS: { needsUpdatePermission: true, collab: "block" },
+  SET_MERGER_MODE_ENABLED: { needsUpdatePermission: true, collab: "block" },
+  SET_NODE_RADIUS: { needsUpdatePermission: true, collab: "block" },
+
+  // Only ever touches agglomerate trees, so it is safe in concurrent collaboration mode.
+  SET_TREES_AGGLOMERATE_INFO_TRACING_ID: { needsUpdatePermission: true, collab: "allow" },
+
+  // Mutations allowed in concurrent collaboration mode only when the affected tree is agglomerate.
+  DELETE_EDGE: { needsUpdatePermission: true, collab: "onlyAgglomerateTree" },
+  MERGE_TREES: { needsUpdatePermission: true, collab: "onlyAgglomerateTree" },
+  ADD_TREES_AND_GROUPS: { needsUpdatePermission: true, collab: "onlyAgglomerateTree" },
+  DELETE_TREE: { needsUpdatePermission: true, collab: "onlyAgglomerateTree" },
+  DELETE_TREES: { needsUpdatePermission: true, collab: "onlyAgglomerateTree" },
+  SET_TREE_NAME: { needsUpdatePermission: true, collab: "onlyAgglomerateTree" },
+  SET_TREE_METADATA: { needsUpdatePermission: true, collab: "onlyAgglomerateTree" },
+  SET_TREE_AGGLOMERATE_INFO_ID: { needsUpdatePermission: true, collab: "onlyAgglomerateTree" },
+  SET_EDGES_ARE_VISIBLE: { needsUpdatePermission: true, collab: "onlyAgglomerateTree" },
+  SET_TREE_GROUP: { needsUpdatePermission: true, collab: "onlyAgglomerateTree" },
+  SET_TREE_COLOR: { needsUpdatePermission: true, collab: "onlyAgglomerateTree" },
+  SET_TREE_COLOR_INDEX: { needsUpdatePermission: true, collab: "onlyAgglomerateTree" },
+  SHUFFLE_TREE_COLOR: { needsUpdatePermission: true, collab: "onlyAgglomerateTree" },
+  SHUFFLE_ALL_TREE_COLORS: { needsUpdatePermission: true, collab: "onlyAgglomerateTree" },
+};
+
 export const SkeletonTracingSaveRelevantActions = [
   "INITIALIZE_SKELETONTRACING",
   "INITIALIZE_ANNOTATION_WITH_TRACINGS",

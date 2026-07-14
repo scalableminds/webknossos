@@ -135,6 +135,17 @@ export function sendAnalyticsEvent(
     showErrorToast: false,
   });
 }
+export function sendReduxActionLog(
+  sessionId: string,
+  entries: Array<{ timestamp: number; action: unknown }>,
+): Promise<void> {
+  // Fire-and-forget: failures to ship redux action logs must not impact application logic.
+  return Request.sendJSONReceiveJSON("/api/analytics/reduxActions", {
+    method: "POST",
+    data: { sessionId, entries },
+    showErrorToast: false,
+  });
+}
 export function sendFailedRequestAnalyticsEvent(
   requestType: string,
   error: Record<string, any>,

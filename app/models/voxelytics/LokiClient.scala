@@ -13,8 +13,10 @@ import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.pattern.after
 import play.api.http.{HeaderNames, Status}
 import play.api.libs.json.{JsArray, JsObject, JsValue, Json}
+import play.api.libs.ws.WSResponse
 import utils.WkConf
 
+import java.util.concurrent.atomic.{AtomicInteger, AtomicReference}
 import javax.inject.Inject
 import scala.concurrent.duration.*
 import scala.concurrent.{ExecutionContext, Future}
@@ -25,12 +27,26 @@ class LokiClient @Inject() (wkConf: WkConf, rpc: RPC, val actorSystem: ActorSyst
     with MimeTypes {
 
   private lazy val conf = wkConf.Voxelytics.Loki
-  private lazy val enabled = wkConf.Features.voxelyticsEnabled && conf.uri.nonEmpty
+  // Loki availability is independent of the voxelytics feature: it is used both for voxelytics worker logs
+  // (those endpoints additionally gate on Features.voxelyticsEnabled) and for frontend redux action logs.
+  private lazy val enabled = conf.uri.nonEmpty
 
   private val POLLING_INTERVAL = 1 second
   private val LOG_TIME_BATCH_INTERVAL = 1 days
   private val LOG_ENTRY_QUERY_BATCH_SIZE = 5000
   private val LOG_ENTRY_INSERT_BATCH_SIZE = 1000
+  private val READY_CHECK_TIMEOUT = 5 seconds
+  private val PUSH_REQUEST_TIMEOUT = 10 seconds
+  private val MAX_CONSECUTIVE_PUSH_FAILURES = 5
+  private val CIRCUIT_BREAKER_COOLDOWN = 30 seconds
+
+  // Loki push calls (bulkInsert, bulkInsertActionLog) go through the app-wide WSClient connection
+  // pool, shared with other RPCs (e.g. to datastores). If Loki becomes slow or unresponsive after
+  // having started up successfully, unbounded in-flight pushes could starve that shared pool.
+  // This breaker fails pushes fast (without hitting the network) after repeated failures, and
+  // PUSH_REQUEST_TIMEOUT bounds how long any single push call may occupy a connection.
+  private val consecutivePushFailures = new AtomicInteger(0)
+  private val circuitOpenUntil = new AtomicReference[Option[Instant]](None)
 
   private lazy val serverStartupFox: Fox[Unit] =
     for {
@@ -48,7 +64,10 @@ class LokiClient @Inject() (wkConf: WkConf, rpc: RPC, val actorSystem: ActorSyst
       } yield ()
 
     for {
-      responseBox <- Fox.fromFuture(rpc(s"${conf.uri}/ready").request.withMethod("GET").execute()).shiftBox
+      responseBox <- Fox
+        .fromFuture(
+          rpc(s"${conf.uri}/ready").request.withMethod("GET").withRequestTimeout(READY_CHECK_TIMEOUT).execute())
+        .shiftBox
       isServerAvailable <- responseBox match {
         case Full(response) if Status.isSuccessful(response.status) =>
           Fox.successful(true)
@@ -72,6 +91,24 @@ class LokiClient @Inject() (wkConf: WkConf, rpc: RPC, val actorSystem: ActorSyst
         }
     } yield ()
   }
+
+  private def withPushCircuitBreaker(push: => Fox[WSResponse]): Fox[WSResponse] =
+    circuitOpenUntil.get() match {
+      case Some(openUntil) if !openUntil.isPast =>
+        Fox.failure("Loki push circuit breaker is open, skipping request to avoid piling up on an unresponsive Loki.")
+      case _ =>
+        for {
+          resultBox <- push.shiftBox
+          _ = if (resultBox.isDefined) {
+            consecutivePushFailures.set(0)
+            circuitOpenUntil.set(None)
+          } else if (consecutivePushFailures.incrementAndGet() >= MAX_CONSECUTIVE_PUSH_FAILURES) {
+            logger.warn(s"Loki push circuit breaker opening for $CIRCUIT_BREAKER_COOLDOWN after repeated failures.")
+            circuitOpenUntil.set(Some(Instant.in(CIRCUIT_BREAKER_COOLDOWN)))
+          }
+          result <- resultBox.toFox
+        } yield result
+    }
 
   def queryLogsBatched(
       runName: String,
@@ -253,9 +290,46 @@ class LokiClient @Inject() (wkConf: WkConf, rpc: RPC, val actorSystem: ActorSyst
             "values" -> JsArray(values)
           )
         )
-        _ <- rpc(s"${conf.uri}/loki/api/v1/push").silent
-          .addHttpHeader(HeaderNames.CONTENT_TYPE, jsonMimeType)
-          .postJson[JsValue](Json.obj("streams" -> streams))
+        _ <- withPushCircuitBreaker(
+          rpc(s"${conf.uri}/loki/api/v1/push").silent
+            .withTimeout(PUSH_REQUEST_TIMEOUT)
+            .addHttpHeader(HeaderNames.CONTENT_TYPE, jsonMimeType)
+            .postJson[JsValue](Json.obj("streams" -> streams)))
+      } yield ()
+    } else {
+      Fox.successful(())
+    }
+
+  // Pushes frontend redux action log entries to Loki. Each entry is expected to be of the form
+  // {"timestamp": <epochMillis>, "action": {"type": ..., ...properties}}.
+  // All entries are pushed as a single stream with low-cardinality labels; high-cardinality data
+  // (user id, session id, action type, properties) lives in the log line so it does not explode the
+  // label index. wk_user and wk_session are added to every action so logs can be filtered by them.
+  def bulkInsertActionLog(entries: List[JsObject], organizationId: String, userId: String, sessionId: String)(
+      implicit ec: ExecutionContext): Fox[Unit] =
+    if (entries.nonEmpty) {
+      for {
+        _ <- serverStartupFox
+        valueTuples <- Fox.serialCombined(entries)(entry =>
+          for {
+            timestampMillis <- tryo((entry \ "timestamp").as[Long]).toFox
+            action <- tryo((entry \ "action").as[JsObject]).toFox
+            line = Json.stringify(action ++ Json.obj("wk_user" -> userId, "wk_session" -> sessionId))
+          } yield (timestampMillis, line))
+        values = valueTuples.sortBy(_._1).map(tuple => Json.arr(Instant(tuple._1).toNanosecondsString, tuple._2))
+        stream = Json.obj(
+          "stream" -> Json.obj(
+            "source" -> "frontend",
+            "wk_url" -> wkConf.Http.uri,
+            "wk_org" -> organizationId
+          ),
+          "values" -> JsArray(values)
+        )
+        _ <- withPushCircuitBreaker(
+          rpc(s"${conf.uri}/loki/api/v1/push").silent
+            .withTimeout(PUSH_REQUEST_TIMEOUT)
+            .addHttpHeader(HeaderNames.CONTENT_TYPE, jsonMimeType)
+            .postJson[JsValue](Json.obj("streams" -> Json.arr(stream))))
       } yield ()
     } else {
       Fox.successful(())

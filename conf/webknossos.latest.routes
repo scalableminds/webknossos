@@ -5,6 +5,7 @@ GET           /features                                                         
 GET           /health                                                                           controllers.Application.health()
 GET           /checkCertificate                                                                 controllers.Application.checkCertificate()
 POST          /analytics/ingest                                                                 controllers.AnalyticsController.ingestAnalyticsEvents
+POST          /analytics/reduxActions                                                           controllers.AnalyticsController.logReduxActions()
 POST          /analytics/:eventType                                                             controllers.AnalyticsController.trackAnalyticsEvent(eventType)
 POST          /helpEmail                                                                        controllers.Application.helpEmail()
 POST          /triggers/initialData                                                             controllers.InitialDataController.triggerInsert()

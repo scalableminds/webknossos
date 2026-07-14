@@ -8,6 +8,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.typesafe.scalalogging.LazyLogging
 import models.aimodels.{AiModel, AiModelCategory, AiModelDAO, AiModelService}
 import models.annotation.{TracingStore, TracingStoreDAO}
@@ -34,7 +35,7 @@ import play.api.libs.json.{JsArray, Json}
 import utils.{StoreModules, WkConf}
 
 import javax.inject.Inject
-import models.organization.{Organization, OrganizationDAO, OrganizationService, PricingPlan, AiPlan}
+import models.organization.{AiPlan, Organization, OrganizationDAO, OrganizationService, PricingPlan}
 import play.api.mvc.{Action, AnyContent}
 import security.{Token, TokenDAO, TokenType, WkEnv}
 
@@ -164,6 +165,7 @@ Samplecountry
   )
   private val defaultDataStore =
     DataStore(conf.Datastore.name, conf.Http.uri, conf.Datastore.publicUri.getOrElse(conf.Http.uri), conf.Datastore.key)
+
   private val defaultAiModel = AiModel(
     _id = ObjectId("66544a56d20000af0e42ba0f"),
     _organization = Some(defaultOrganization._id),
@@ -426,7 +428,7 @@ Samplecountry
       _ <- insertPublication()
       _ <- insertDataset()
       _ <- insertRemoteNDDataset()
-      _ <- insertAiModel()
+      _ <- insertCustomAiModel()
 
     } yield ()
 
@@ -553,20 +555,26 @@ Samplecountry
       } else Fox.successful(())
     }
 
-  private def insertModelIfAbsent(model: AiModel): Fox[Unit] =
-    aiModelDAO.findOne(model._id).shiftBox.flatMap {
-      case Full(_) => Fox.successful(())
-      case _       => aiModelDAO.insertOne(model)
+  private def insertAiModelIfAbsent(model: AiModel): Fox[Unit] =
+    if (storeModules.localDataStoreEnabled) {
+      aiModelDAO.findOne(model._id).shiftBox.flatMap {
+        case Full(_) => Fox.successful(())
+        case _       => aiModelDAO.insertOne(model)
+      }
+    } else {
+      // For custom instances with no local datastore the default ai models must be inserted into the DB manually.
+      // Give them the datastore that the worker also has access to.
+      Fox.successful(())
     }
 
-  private def insertAiModel(): Fox[Unit] = insertModelIfAbsent(defaultAiModel)
+  private def insertCustomAiModel(): Fox[Unit] = insertAiModelIfAbsent(defaultAiModel)
 
   private def insertPretrainedAiModels(): Fox[Unit] =
     for {
-      _ <- insertModelIfAbsent(pretrainedNeuronModel)
-      _ <- insertModelIfAbsent(pretrainedMitochondriaModel)
-      _ <- insertModelIfAbsent(pretrainedNucleiModel)
-      _ <- insertModelIfAbsent(pretrainedSomaModel)
+      _ <- insertAiModelIfAbsent(pretrainedNeuronModel)
+      _ <- insertAiModelIfAbsent(pretrainedMitochondriaModel)
+      _ <- insertAiModelIfAbsent(pretrainedNucleiModel)
+      _ <- insertAiModelIfAbsent(pretrainedSomaModel)
     } yield ()
 
   def insertLocalDataStoreIfEnabled(): Fox[Unit] =

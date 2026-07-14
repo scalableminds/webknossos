@@ -145,7 +145,6 @@ function getUnsubscribeFromAnnotationMutexSaga(
   function* unsubscribe(): Saga<void> {
     const state = getMutexLogicState();
     const callerId = state.subscribersToMutex[id];
-    console.log("unsubscribing to mutex as", callerId);
     if (!callerId) {
       if (warnIfAlreadyUnsubscribed) {
         console.warn(
@@ -202,7 +201,6 @@ export function* subscribeToAnnotationMutex(callerId: string): Saga<() => Saga<v
    * Note: There is default timeout on a subscription after which it will be invalid.
    * The idea is in case an operation is stuck to not block other users infinitely.
    */
-  console.log("subscribing to mutex as", callerId);
   const state = getMutexLogicState();
   let newId = Math.round(Math.random() * 10000);
   while (newId in state.subscribersToMutex) {

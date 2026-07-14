@@ -210,10 +210,14 @@ export const deleteUserBoundingBoxAction = (id: number) =>
     id,
   }) as const;
 
-export const addUserBoundingBoxesAction = (userBoundingBoxes: Array<UserBoundingBox>) =>
+export const addUserBoundingBoxesAction = (
+  userBoundingBoxes: Array<UserBoundingBox>,
+  boundingBoxIds: number[],
+) =>
   ({
     type: "ADD_USER_BOUNDING_BOXES",
     userBoundingBoxes,
+    boundingBoxIds,
   }) as const;
 
 export const updateMeshVisibilityAction = (

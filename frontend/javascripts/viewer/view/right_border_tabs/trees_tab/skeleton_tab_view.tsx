@@ -101,7 +101,11 @@ import { parseProtoTracing } from "viewer/model/helpers/proto_helpers";
 import { createMutableTreeMapFromTreeArray } from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import type { MutableTreeMap, Tree, TreeGroup, TreeMap } from "viewer/model/types/tree_types";
 import { api, Model } from "viewer/singletons";
-import Store, { type UserBoundingBox, type WebknossosState } from "viewer/store";
+import Store, {
+  type StoreAnnotation,
+  type UserBoundingBox,
+  type WebknossosState,
+} from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
 import DomVisibilityObserver from "viewer/view/components/dom_visibility_observer";
 import { createGroup } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_renderers";
@@ -116,6 +120,8 @@ import {
 } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import DeleteGroupModalView from "../delete_group_modal_view";
+import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
+import { dispatchGetNewIdAsync } from "viewer/model/actions/actions";
 
 const { confirm } = Modal;
 const treeTabId = "tree-list";
@@ -144,24 +150,41 @@ class VolumeImportError extends Error {
   name = "VolumeImportError";
 }
 
-export async function importTracingFiles(files: Array<File>, createGroupForEachFile: boolean) {
+export async function importTracingFiles(
+  files: Array<File>,
+  createGroupForEachFile: boolean,
+  annotation: StoreAnnotation,
+) {
   try {
-    const wrappedAddTreesAndGroupsAction = (
+    const wrappedAddTreesAndGroupsAction = async (
       trees: MutableTreeMap,
       treeGroups: TreeGroup[],
       groupName: string,
       userBoundingBoxes?: UserBoundingBox[],
     ) => {
-      const actions =
-        userBoundingBoxes && userBoundingBoxes.length > 0
-          ? [addUserBoundingBoxesAction(userBoundingBoxes)]
-          : [];
-
+      let addTreesAction = null;
       if (createGroupForEachFile) {
         const [wrappedTrees, wrappedTreeGroups] = wrapInNewGroup(trees, treeGroups, groupName);
-        return [...actions, addTreesAndGroupsAction(wrappedTrees, wrappedTreeGroups)];
+        addTreesAction = addTreesAndGroupsAction(wrappedTrees, wrappedTreeGroups);
       } else {
-        return [...actions, addTreesAndGroupsAction(trees, treeGroups)];
+        addTreesAction = addTreesAndGroupsAction(trees, treeGroups);
+      }
+      if (userBoundingBoxes == null || userBoundingBoxes.length === 0) {
+        return [addTreesAction];
+      }
+      try {
+        const tracingId = getSomeTracing(annotation).tracingId;
+        const ids = await Promise.all(
+          userBoundingBoxes.map(() =>
+            dispatchGetNewIdAsync(Store.dispatch, tracingId, "BoundingBox"),
+          ),
+        );
+        return [addUserBoundingBoxesAction(userBoundingBoxes, ids), addTreesAction];
+      } catch (error) {
+        const warnText = "Failed to add Bounding Boxes of Tracing.";
+        Toast.warning(warnText);
+        console.error(error, warnText);
+        return [addTreesAction];
       }
     };
 
@@ -176,7 +199,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
           );
         }
         return {
-          importActions: wrappedAddTreesAndGroupsAction(
+          importActions: await wrappedAddTreesAndGroupsAction(
             trees,
             treeGroups,
             file.name,
@@ -210,7 +233,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
         }
 
         return {
-          importActions: wrappedAddTreesAndGroupsAction(
+          importActions: await wrappedAddTreesAndGroupsAction(
             createMutableTreeMapFromTreeArray(parsedTracing.trees),
             // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'TreeGroup[] | null | undefined' ... Remove this comment to see the full error message
             parsedTracing.treeGroups,

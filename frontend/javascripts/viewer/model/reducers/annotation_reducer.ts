@@ -246,17 +246,16 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
     }
 
     case "ADD_USER_BOUNDING_BOXES": {
+      const { userBoundingBoxes, boundingBoxIds } = action;
       const tracing = maybeGetSomeTracing(state.annotation);
-
-      if (tracing == null) {
+      const hasEqualAmountOfIds = userBoundingBoxes.length === boundingBoxIds.length;
+      if (tracing == null || !hasEqualAmountOfIds) {
         return state;
       }
 
-      // TODO (#9758): For live collaboration, the following ID mechanism must be reworked.
-      const highestBoundingBoxId = Math.max(0, ...tracing.userBoundingBoxes.map((bb) => bb.id));
-      const additionalUserBoundingBoxes = action.userBoundingBoxes.map((bb, index) => ({
+      const additionalUserBoundingBoxes = userBoundingBoxes.map((bb, index) => ({
         ...bb,
-        id: highestBoundingBoxId + index + 1,
+        id: boundingBoxIds[index],
       }));
       const mergedUserBoundingBoxes = uniqWith(
         [...tracing.userBoundingBoxes, ...additionalUserBoundingBoxes],

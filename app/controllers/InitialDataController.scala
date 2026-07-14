@@ -81,7 +81,8 @@ class InitialDataService @Inject() (
   private val defaultUserEmail2 = conf.WebKnossos.SampleOrganization.User.email2
   private val defaultUserPassword = conf.WebKnossos.SampleOrganization.User.password
   private val defaultUserToken = conf.WebKnossos.SampleOrganization.User.token
-  private val additionalInformation = """**Sample Organization**
+  private val additionalInformation =
+    """**Sample Organization**
 
 Sample Street 123
 Sampletown
@@ -535,38 +536,41 @@ Samplecountry
     } else Fox.successful(())
   }
 
-  private def insertDataset(): Fox[Unit] = datasetDAO.findOne(defaultDataset._id).shiftBox.flatMap { maybeDataset =>
-    if (maybeDataset.isEmpty) {
-      for {
-        _ <- datasetDAO.insertOne(defaultDataset)
-        _ <- datasetLayerDAO.updateLayers(defaultDataset._id, defaultDataSource)
-      } yield ()
-    } else Fox.successful(())
-  }
-
-  private def insertRemoteNDDataset(): Fox[Unit] =
-    datasetDAO.findOne(remoteNDZarrDataset._id).shiftBox.flatMap { maybeDataset =>
-      if (maybeDataset.isEmpty) {
-        for {
-          _ <- datasetDAO.insertOne(remoteNDZarrDataset)
-          _ <- datasetLayerDAO.updateLayers(remoteNDZarrDataset._id, remoteNDZarrDataSource)
-        } yield ()
-      } else Fox.successful(())
+  private def insertDataset(): Fox[?] =
+    Fox.runIf(storeModules.localDataStoreEnabled) {
+      datasetDAO.findOne(defaultDataset._id).shiftBox.flatMap { maybeDataset =>
+        if (maybeDataset.isEmpty) {
+          for {
+            _ <- datasetDAO.insertOne(defaultDataset)
+            _ <- datasetLayerDAO.updateLayers(defaultDataset._id, defaultDataSource)
+          } yield ()
+        } else Fox.successful(())
+      }
     }
 
-  private def insertAiModelIfAbsent(model: AiModel): Fox[Unit] =
-    if (storeModules.localDataStoreEnabled) {
+  private def insertRemoteNDDataset(): Fox[?] =
+    Fox.runIf(storeModules.localDataStoreEnabled) {
+      datasetDAO.findOne(remoteNDZarrDataset._id).shiftBox.flatMap { maybeDataset =>
+        if (maybeDataset.isEmpty) {
+          for {
+            _ <- datasetDAO.insertOne(remoteNDZarrDataset)
+            _ <- datasetLayerDAO.updateLayers(remoteNDZarrDataset._id, remoteNDZarrDataSource)
+          } yield ()
+        } else Fox.successful(())
+      }
+    }
+
+  private def insertAiModelIfAbsent(model: AiModel): Fox[?] =
+    // For custom instances with no local datastore the default ai models must be inserted into the DB manually.
+    // Give them the datastore that the worker also has access to.
+    Fox.runIf(storeModules.localDataStoreEnabled) {
       aiModelDAO.findOne(model._id).shiftBox.flatMap {
         case Full(_) => Fox.successful(())
         case _       => aiModelDAO.insertOne(model)
       }
-    } else {
-      // For custom instances with no local datastore the default ai models must be inserted into the DB manually.
-      // Give them the datastore that the worker also has access to.
-      Fox.successful(())
     }
 
-  private def insertCustomAiModel(): Fox[Unit] = insertAiModelIfAbsent(defaultAiModel)
+  private def insertCustomAiModel(): Fox[?] = insertAiModelIfAbsent(defaultAiModel)
 
   private def insertPretrainedAiModels(): Fox[Unit] =
     for {

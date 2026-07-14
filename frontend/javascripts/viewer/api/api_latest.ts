@@ -83,7 +83,6 @@ import {
   getTreeGroupsMap,
 } from "viewer/model/accessors/skeletontracing_accessor";
 import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/tool_accessor";
-import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import {
   enforceActiveVolumeTracing,
   getActiveCellId,

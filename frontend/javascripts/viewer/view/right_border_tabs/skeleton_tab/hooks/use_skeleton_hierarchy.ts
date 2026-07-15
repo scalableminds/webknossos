@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { buildSkeletonHierarchy, type SkeletonHierarchy, type TreeSortBy } from "../hierarchy";
 
-export function useTreeSortBy(): TreeSortBy {
+function useTreeSortBy(): TreeSortBy {
   return useWkSelector((state) => (state.userConfiguration.sortTreesByName ? "name" : "timestamp"));
 }
 

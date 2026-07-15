@@ -197,24 +197,15 @@ export function useGroupContextMenuBuilder(
     [dispatch, trees],
   );
 
-  const setColorOfGroupTrees = useCallback(
-    (groupId: number, color: Vector3) => {
+  // Dispatches one action per tree in the group and all its subgroups, batched into a
+  // single undo step.
+  const dispatchForGroupTrees = useCallback(
+    (groupId: number, makeAction: (treeId: number) => Action, batchName: string) => {
       const groupToTreesMap = createGroupToTreesMap(trees);
-      const setColorActions = getGroupByIdWithSubgroups(treeGroups, groupId).flatMap((subGroupId) =>
-        (groupToTreesMap[subGroupId] ?? []).map((tree) => setTreeColorAction(tree.treeId, color)),
+      const actions = getGroupByIdWithSubgroups(treeGroups, groupId).flatMap((subGroupId) =>
+        (groupToTreesMap[subGroupId] ?? []).map((tree) => makeAction(tree.treeId)),
       );
-      dispatch(batchTreeColorActions(setColorActions, "SET_TREE_COLOR"));
-    },
-    [dispatch, trees, treeGroups],
-  );
-
-  const shuffleColorsOfGroupTrees = useCallback(
-    (groupId: number) => {
-      const groupToTreesMap = createGroupToTreesMap(trees);
-      const shuffleActions = getGroupByIdWithSubgroups(treeGroups, groupId).flatMap((subGroupId) =>
-        (groupToTreesMap[subGroupId] ?? []).map((tree) => shuffleTreeColorAction(tree.treeId)),
-      );
-      dispatch(batchTreeColorActions(shuffleActions, "SHUFFLE_TREE_COLOR"));
+      dispatch(batchTreeColorActions(actions, batchName));
     },
     [dispatch, trees, treeGroups],
   );
@@ -342,7 +333,7 @@ export function useGroupContextMenuBuilder(
               if (groupId === MISSING_GROUP_ID) {
                 dispatch(shuffleAllTreeColorsAction());
               } else {
-                shuffleColorsOfGroupTrees(groupId);
+                dispatchForGroupTrees(groupId, shuffleTreeColorAction, "SHUFFLE_TREE_COLOR");
               }
             },
             icon: <Icon component={InvertIcon} />,
@@ -361,7 +352,11 @@ export function useGroupContextMenuBuilder(
                   if (groupId === MISSING_GROUP_ID) {
                     setColorOfAllTrees(color);
                   } else {
-                    setColorOfGroupTrees(groupId, color);
+                    dispatchForGroupTrees(
+                      groupId,
+                      (treeId) => setTreeColorAction(treeId, color),
+                      "SET_TREE_COLOR",
+                    );
                   }
                 }}
                 rgb={[0.5, 0.5, 0.5]}
@@ -380,8 +375,7 @@ export function useGroupContextMenuBuilder(
       groupOperations,
       hideContextMenu,
       setColorOfAllTrees,
-      setColorOfGroupTrees,
-      shuffleColorsOfGroupTrees,
+      dispatchForGroupTrees,
       setExpansionOfSubgroups,
     ],
   );

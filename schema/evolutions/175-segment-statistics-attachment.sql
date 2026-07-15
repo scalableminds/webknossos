@@ -1,6 +1,6 @@
 START TRANSACTION;
 
-do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 173, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
+do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 174 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
 
 ALTER TYPE webknossos.LAYER_ATTACHMENT_TYPE ADD VALUE 'segmentStatistics';
 

@@ -4,6 +4,6 @@ do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 1
 
 ALTER TYPE webknossos.LAYER_ATTACHMENT_TYPE ADD VALUE 'segmentStatistics';
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 174;
+UPDATE webknossos.releaseInformation SET schemaVersion = 175;
 
 COMMIT TRANSACTION;

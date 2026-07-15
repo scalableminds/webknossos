@@ -56,6 +56,9 @@ export function useSkeletonExport(): SkeletonExport {
           type: "text/plain;charset=utf-8",
         });
         saveAs(blob, getNmlName(state));
+      } catch (error) {
+        Toast.error("Could not export the annotation. See the console for details.");
+        console.error(error);
       } finally {
         setPendingExport(null);
       }

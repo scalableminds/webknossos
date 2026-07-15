@@ -138,8 +138,17 @@ class PlaneView {
     this.nonTdCameras[OrthoViews.PLANE_YZ].up = new ThreeVector3(0, -1, 0);
     this.nonTdCameras[OrthoViews.PLANE_XZ].up = new ThreeVector3(0, 0, -1);
     tdOrthographicCamera.up = new ThreeVector3(0, 0, -1);
+    // Give the perspective camera a valid initial transform (matching the orthographic
+    // TDView camera) so that it can be rendered even before its projection has been
+    // derived from a real orthographic frustum (see updatePerspectiveCameraFromOrthographic).
+    tdPerspectiveCamera.position.copy(tdOrthographicCamera.position);
+    tdPerspectiveCamera.up.copy(tdOrthographicCamera.up);
 
-    for (const camera of [...Object.values(this.nonTdCameras), tdOrthographicCamera]) {
+    for (const camera of [
+      ...Object.values(this.nonTdCameras),
+      tdOrthographicCamera,
+      tdPerspectiveCamera,
+    ]) {
       camera.lookAt(new ThreeVector3(0, 0, 0));
     }
 
@@ -362,11 +371,8 @@ class PlaneView {
   }
 
   getActiveTDViewCamera(): OrthographicCamera | PerspectiveCamera {
-    // Fall back to the orthographic camera as long as the perspective camera
-    // has not been initialized from it yet (see updatePerspectiveCameraFromOrthographic).
     const cameraName = getActiveTDViewCameraName(
       Store.getState().userConfiguration.tdViewUsePerspectiveCamera,
-      this.tdCameras.PERSPECTIVE.userData.isInitialized,
     );
     return cameraName === TDViewPerspectiveCameraName
       ? this.tdCameras.PERSPECTIVE

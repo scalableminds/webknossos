@@ -138,9 +138,6 @@ export function updatePerspectiveCameraFromOrthographic(
   perspectiveCamera.far = Math.max(orthoCamera.far, 4 * distance);
   perspectiveCamera.updateProjectionMatrix();
   perspectiveCamera.updateMatrixWorld();
-  // Mark the perspective camera as initialized so consumers can stop falling back
-  // to the orthographic camera (see PlaneView.getActiveTDViewCamera).
-  perspectiveCamera.userData.isInitialized = true;
 }
 
 class CameraController extends PureComponent<Props> {

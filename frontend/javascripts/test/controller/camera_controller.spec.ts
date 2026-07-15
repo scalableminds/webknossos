@@ -45,7 +45,6 @@ describe("updatePerspectiveCameraFromOrthographic", () => {
     const orthoCamera = createOrthoCamera(position, target, frustum);
     const perspectiveCamera = new PerspectiveCamera();
     updatePerspectiveCameraFromOrthographic(orthoCamera, perspectiveCamera, target);
-    expect(perspectiveCamera.userData.isInitialized).toBe(true);
 
     const middleX = (frustum.left + frustum.right) / 2;
     const middleY = (frustum.top + frustum.bottom) / 2;
@@ -101,7 +100,6 @@ describe("updatePerspectiveCameraFromOrthographic", () => {
     const perspectiveCamera = new PerspectiveCamera();
     const originalPosition = perspectiveCamera.position.clone();
     updatePerspectiveCameraFromOrthographic(orthoCamera, perspectiveCamera, target);
-    expect(perspectiveCamera.userData.isInitialized).toBeUndefined();
     expect(perspectiveCamera.position.equals(originalPosition)).toBe(true);
   });
 

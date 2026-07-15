@@ -30,11 +30,8 @@ const getBackgroundColor = (): number =>
 // camera is actually active for the TD viewport.
 export const getActiveTDViewCameraName = (
   tdViewUsePerspectiveCamera: boolean,
-  tdPerspectiveCameraIsDerived: boolean,
 ): OrthoView | typeof TDViewPerspectiveCameraName =>
-  tdViewUsePerspectiveCamera && tdPerspectiveCameraIsDerived
-    ? TDViewPerspectiveCameraName
-    : OrthoViews.TDView;
+  tdViewUsePerspectiveCamera ? TDViewPerspectiveCameraName : OrthoViews.TDView;
 
 export const setupRenderArea = (
   renderer: WebGLRenderer,
@@ -74,16 +71,11 @@ export function renderToTexture(
   const state = Store.getState();
   scene = scene || defaultScene;
   if (camera == null) {
-    if (plane === OrthoViews.TDView) {
-      const tdPerspectiveCamera = scene.getObjectByName(TDViewPerspectiveCameraName);
-      const cameraName = getActiveTDViewCameraName(
-        state.userConfiguration.tdViewUsePerspectiveCamera,
-        Boolean(tdPerspectiveCamera?.userData.isInitialized),
-      );
-      camera = scene.getObjectByName(cameraName) as OrthographicCamera | PerspectiveCamera;
-    } else {
-      camera = scene.getObjectByName(plane) as OrthographicCamera | PerspectiveCamera;
-    }
+    const cameraName =
+      plane === OrthoViews.TDView
+        ? getActiveTDViewCameraName(state.userConfiguration.tdViewUsePerspectiveCamera)
+        : plane;
+    camera = scene.getObjectByName(cameraName) as OrthographicCamera | PerspectiveCamera;
   }
 
   // Don't respect withFarClipping for the TDViewport as we don't do any clipping for

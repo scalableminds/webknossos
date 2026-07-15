@@ -7,8 +7,10 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
+import com.scalableminds.webknossos.datastore.datareaders.DatasetArray
+import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3Array
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, LayerAttachment}
-import com.scalableminds.webknossos.datastore.services.VoxelyticsZarrArtifactUtils
+import com.scalableminds.webknossos.datastore.services.{DSChunkCacheService, VoxelyticsZarrArtifactUtils}
 import com.scalableminds.webknossos.datastore.storage.{AttachmentKey, DataVaultService}
 import play.api.libs.json.{Json, JsResult, JsValue, OFormat, Reads}
 
@@ -41,12 +43,23 @@ object SegmentStatisticsFileAttributes extends VoxelyticsZarrArtifactUtils {
   }
 }
 
-class SegmentStatisticsFileService @Inject() (dataVaultService: DataVaultService) {
+object SegmentStatisticsFileService {
+  val possibleMetrics: Seq[String] =
+    Seq("positions", "max_distances", "volumes", "center_of_mass", "covariance_matrix", "surfaces", "sphericities")
+}
+
+class SegmentStatisticsFileService @Inject() (
+    dataVaultService: DataVaultService,
+    chunkCacheService: DSChunkCacheService
+) {
 
   private val segmentStatisticsFileKeyCache: AlfuCache[(DataSourceId, String), SegmentStatisticsFileKey] =
     AlfuCache() // dataSourceId, layerName → SegmentStatisticsFileKey
 
   private val attributesCache: AlfuCache[SegmentStatisticsFileKey, SegmentStatisticsFileAttributes] =
+    AlfuCache()
+
+  private val openArraysCache: AlfuCache[(SegmentStatisticsFileKey, String), DatasetArray] =
     AlfuCache()
 
   def lookUpSegmentStatisticsFileKey(dataSourceId: DataSourceId, dataLayer: DataLayer)(implicit
@@ -87,6 +100,43 @@ class SegmentStatisticsFileService @Inject() (dataVaultService: DataVaultService
   )(using ec: ExecutionContext, tc: TokenContext): Fox[SegmentStatisticsFileAttributes] =
     attributesCache.getOrLoad(segmentStatisticsFileKey, key => readSegmentStatisticsFileAttributesImpl(key))
 
+  private def openZarrArray(segmentStatisticsFileKey: SegmentStatisticsFileKey, zarrArrayName: String)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[DatasetArray] =
+    openArraysCache.getOrLoad(
+      (segmentStatisticsFileKey, zarrArrayName),
+      _ => openZarrArrayImpl(segmentStatisticsFileKey, zarrArrayName)
+    )
+
+  private def openZarrArrayImpl(segmentStatisticsFileKey: SegmentStatisticsFileKey, zarrArrayName: String)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[DatasetArray] =
+    for {
+      groupVaultPath <- dataVaultService.vaultPathFor(segmentStatisticsFileKey.attachment)
+      zarrArray <- Zarr3Array.open(
+        groupVaultPath / zarrArrayName,
+        DataSourceId("dummy", "unused"),
+        "layer",
+        None,
+        None,
+        None,
+        chunkCacheService.sharedChunkContentsCache
+      )
+    } yield zarrArray
+
+  private def availableMetrics(
+      segmentStatisticsFileKey: SegmentStatisticsFileKey
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Seq[String]] =
+    for {
+      existsPerMetric <- Fox.serialCombined(SegmentStatisticsFileService.possibleMetrics) { metric =>
+        openZarrArray(segmentStatisticsFileKey, metric).shiftBox.map(_.isDefined)
+      }
+    } yield SegmentStatisticsFileService.possibleMetrics.zip(existsPerMetric).collect { case (metric, true) =>
+      metric
+    }
+
   def getInfos(dataSourceId: DataSourceId, dataLayer: DataLayer)(using
       ec: ExecutionContext,
       tc: TokenContext
@@ -96,10 +146,15 @@ class SegmentStatisticsFileService @Inject() (dataVaultService: DataVaultService
     mag <- attributes.mag
       .orElse(dataLayer.finestMag)
       .toFox ?~> "Could not determine mag for segment statistics file, layer has no mags"
-  } yield SegmentStatisticsFileInfos(mag, Seq.empty, attributes.mappingName)
+    metrics <- availableMetrics(key)
+  } yield SegmentStatisticsFileInfos(mag, metrics, attributes.mappingName)
 
   def clearCache(dataSourceId: DataSourceId, layerNameOpt: Option[String]): Int = {
     attributesCache.clear { key =>
+      key.dataSourceId == dataSourceId && layerNameOpt.forall(_ == key.layerName)
+    }
+
+    openArraysCache.clear { case (key, _) =>
       key.dataSourceId == dataSourceId && layerNameOpt.forall(_ == key.layerName)
     }
 

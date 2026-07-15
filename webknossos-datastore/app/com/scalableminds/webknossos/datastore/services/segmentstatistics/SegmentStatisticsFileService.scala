@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.services.segmentstatistics
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.box.Box
+import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, JsonHelper}
@@ -44,15 +45,17 @@ object SegmentStatisticsFileAttributes extends VoxelyticsZarrArtifactUtils {
 }
 
 object SegmentStatisticsFileService {
+  val keyCovarianceMatrix = "covariance_matrix"
+
   val possibleMetrics: Seq[String] =
-    Seq("positions", "max_distances", "volumes", "center_of_mass", "covariance_matrix", "surfaces", "sphericities")
+    Seq("positions", "max_distances", "volumes", "center_of_mass", keyCovarianceMatrix, "surfaces", "sphericities")
 }
 
 class SegmentStatisticsFileService @Inject() (
     dataVaultService: DataVaultService,
     chunkCacheService: DSChunkCacheService
 ) {
-  
+
   // dataSourceId, layerName → SegmentStatisticsFileKey
   private val segmentStatisticsFileKeyCache: AlfuCache[(DataSourceId, String), SegmentStatisticsFileKey] = AlfuCache()
 
@@ -136,17 +139,57 @@ class SegmentStatisticsFileService @Inject() (
       }
     } yield collected
 
+  private def resolveMagAndMappingName(segmentStatisticsFileKey: SegmentStatisticsFileKey, dataLayer: DataLayer)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[(Vec3Int, Option[String])] =
+    for {
+      attributes <- readSegmentStatisticsFileAttributes(segmentStatisticsFileKey)
+      mag <- attributes.mag
+        .orElse(dataLayer.finestMag)
+        .toFox ?~> "Could not determine mag for segment statistics file, layer has no mags"
+    } yield (mag, attributes.mappingName)
+
+  def checkMagAndMappingNameMatch(
+      segmentStatisticsFileKey: SegmentStatisticsFileKey,
+      dataLayer: DataLayer,
+      requestedMag: Vec3Int,
+      requestedMappingName: Option[String]
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Unit] =
+    for {
+      (fileMag, fileMappingName) <- resolveMagAndMappingName(segmentStatisticsFileKey, dataLayer)
+      _ <- Fox.fromBool(fileMag == requestedMag) ?~> Msg.SegmentStatisticsFile
+        .magMismatch(requestedMag.toMagLiteral(true), fileMag.toMagLiteral(true))
+      _ <- Fox.fromBool(fileMappingName == requestedMappingName) ?~> Msg.SegmentStatisticsFile
+        .mappingNameMismatch(requestedMappingName.getOrElse(""), fileMappingName.getOrElse(""))
+    } yield ()
+
+  private def readCovarianceMatrix(segmentStatisticsFileKey: SegmentStatisticsFileKey, segmentId: Long)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Array[Array[Float]]] =
+    for {
+      covarianceMatrixArray <- openZarrArray(segmentStatisticsFileKey, SegmentStatisticsFileService.keyCovarianceMatrix)
+      multiArray <- covarianceMatrixArray.readAsMultiArray(offset = Array(segmentId, 0L, 0L), shape = Array(1, 3, 3))
+      matrix <- tryo(
+        Array.tabulate(3, 3)((i, j) => multiArray.getFloat(multiArray.getIndex.set(Array(0, i, j))))
+      ).toFox
+    } yield matrix
+
+  def getCovarianceMatrices(segmentStatisticsFileKey: SegmentStatisticsFileKey, segmentIds: Seq[Long])(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Seq[Array[Array[Float]]]] =
+    Fox.serialCombined(segmentIds)(readCovarianceMatrix(segmentStatisticsFileKey, _))
+
   def getInfos(dataSourceId: DataSourceId, dataLayer: DataLayer)(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[SegmentStatisticsFileInfos] = for {
     key <- lookUpSegmentStatisticsFileKey(dataSourceId, dataLayer)
-    attributes <- readSegmentStatisticsFileAttributes(key)
-    mag <- attributes.mag
-      .orElse(dataLayer.finestMag)
-      .toFox ?~> "Could not determine mag for segment statistics file, layer has no mags"
+    (mag, mappingName) <- resolveMagAndMappingName(key, dataLayer)
     metrics <- availableMetrics(key)
-  } yield SegmentStatisticsFileInfos(mag, metrics, attributes.mappingName)
+  } yield SegmentStatisticsFileInfos(mag, metrics, mappingName)
 
   def clearCache(dataSourceId: DataSourceId, layerNameOpt: Option[String]): Int = {
     attributesCache.clear { key =>

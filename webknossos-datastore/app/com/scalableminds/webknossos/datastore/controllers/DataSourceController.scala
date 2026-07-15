@@ -602,6 +602,29 @@ class DataSourceController @Inject() (
       }
     }
 
+  def getSegmentCovarianceMatrix(datasetId: ObjectId, dataLayerName: String): Action[SegmentStatisticsParameters] =
+    Action.fox(validateJson[SegmentStatisticsParameters]) { implicit request =>
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
+        for {
+          (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
+          segmentStatisticsFileKey <- segmentStatisticsFileService.lookUpSegmentStatisticsFileKey(
+            dataSource.id,
+            dataLayer
+          )
+          _ <- segmentStatisticsFileService.checkMagAndMappingNameMatch(
+            segmentStatisticsFileKey,
+            dataLayer,
+            request.body.mag,
+            request.body.mappingName
+          )
+          covarianceMatrices <- segmentStatisticsFileService.getCovarianceMatrices(
+            segmentStatisticsFileKey,
+            request.body.segmentIds
+          )
+        } yield Ok(Json.toJson(covarianceMatrices))
+      }
+    }
+
   // Called directly by wk side
   def exploreRemoteDataset(): Action[ExploreRemoteDatasetRequest] =
     Action.fox(validateJson[ExploreRemoteDatasetRequest]) { implicit request =>

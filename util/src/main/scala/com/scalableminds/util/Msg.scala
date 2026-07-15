@@ -803,6 +803,10 @@ object Msg {
   }
   object SegmentStatisticsFile {
     val pathNotAbsolute = "Path of segment statistics file is ambiguous, must be absolute."
+    def magMismatch(requestedMag: String, fileMag: String): String =
+      s"Requested mag $requestedMag does not match mag $fileMag of segment statistics file."
+    def mappingNameMismatch(requestedMappingName: String, fileMappingName: String): String =
+      s"Requested mapping name “$requestedMappingName” does not match mapping name “$fileMappingName” of segment statistics file."
   }
   object Zarr {
     def invalidChunkCoordinates(coordinates: String): String =

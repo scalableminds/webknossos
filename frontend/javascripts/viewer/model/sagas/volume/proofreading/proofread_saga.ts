@@ -38,7 +38,7 @@ import { select } from "viewer/model/sagas/effect_generators";
 import { getAdditionalCoordinatesAsString } from "../../../accessors/flycam_accessor";
 import { ensureWkInitialized } from "../../ready_sagas";
 import { takeEveryInOperationContext, takeWithBatchActionSupport } from "../../saga_helpers";
-import { keepAgglomerateIdOfMultiCutSelectionUpdated } from "./multi_split_selection_sagas";
+import { syncOrClearMultiCutSelectionAfterMeshReload } from "./multi_split_selection_sagas";
 import { ensureHdf5MappingIsEnabled } from "./preparation_sagas";
 import {
   handleMinCutAgglomerate,
@@ -116,7 +116,7 @@ export default function* proofreadRootSaga(): Saga<void> {
   yield* takeEvery(["UPDATE_USER_SETTING", "ESCAPE"], clearMinCutPartitionsOnMultiCutDeselect);
   yield* takeEvery(["ESCAPE"], clearActiveSegmentIfTdViewportIsActive);
   yield* takeEvery("TOGGLE_SEGMENT_IN_PARTITION", showToastIfSegmentOfOtherAgglomerateWasSelected);
-  yield* takeEvery("FINISHED_LOADING_MESH", keepAgglomerateIdOfMultiCutSelectionUpdated);
+  yield* takeEvery("FINISHED_LOADING_MESH", syncOrClearMultiCutSelectionAfterMeshReload);
 }
 
 function* clearMinCutPartitionsOnMultiCutDeselect(

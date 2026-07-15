@@ -51,7 +51,7 @@ export function resolveMultiCutSelectionFromMeshData(
 // be split. The agglomerate ids are derived purely from the loaded mesh data (no backend lookup).
 // Note: this only manages the agglomerate-id bookkeeping. The visual partition highlight is
 // re-applied independently in SegmentMeshController.addMeshFromGeometry as each mesh chunk arrives.
-export function* keepAgglomerateIdOfMultiCutSelectionUpdated(
+export function* syncOrClearMultiCutSelectionAfterMeshReload(
   action: FinishedLoadingMeshAction,
 ): Saga<void> {
   const isMultiSplitActive = yield* select((state) => state.userConfiguration.isMultiSplitActive);

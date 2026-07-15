@@ -104,6 +104,8 @@ const defaultState: WebknossosState = {
     erasePreference: "ERASE_BRUSH",
     writePreference: "BRUSH",
     measurementPreference: "LINE_MEASUREMENT",
+    mipRaymarchingSteps: 128,
+    mipDepthWrite: false,
     timestampsForTools: {
       [AnnotationTool.MOVE.id]: 0,
       [AnnotationTool.BRUSH.id]: 0,
@@ -315,6 +317,7 @@ const defaultState: WebknossosState = {
       viewport: null,
       unmappedSegmentId: null,
     },
+    mipBBoxSettings: {},
   },
   localSegmentationStateByLayer: {},
   localAnnotationState: {

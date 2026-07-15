@@ -430,7 +430,7 @@ class FolderRenderer {
     return null;
   }
   renderCreationDateColumn(): React.ReactNode {
-    return null;
+    return this.data.created != null ? <FormattedDate timestamp={this.data.created} /> : null;
   }
   renderActionsColumn(): React.ReactNode {
     return this.datasetTable.getFolderSettingsActions(this.data);

@@ -6,6 +6,7 @@ import type { SaveQueueType } from "viewer/model/actions/save_actions";
 import type {
   EditableMapping,
   IdReservation,
+  MipLayerConfig,
   ReadOnlyTracing,
   SkeletonTracing,
   StoreAnnotation,
@@ -141,3 +142,15 @@ export const getUserBoundingBoxesThatContainPosition = (
 export function getIdReservationsForBoundingBoxes(state: WebknossosState): IdReservation[] {
   return state.localAnnotationState.idReservationsForBoundingBoxes;
 }
+
+export type MipEnabledBBox = { bbox: UserBoundingBox; configs: MipLayerConfig[] };
+
+export const getMipEnabledBBoxes = reuseInstanceOnEquality(
+  (state: WebknossosState): MipEnabledBBox[] => {
+    const bboxes = getUserBoundingBoxesFromState(state);
+    return bboxes.flatMap((bbox) => {
+      const configs = state.uiInformation.mipBBoxSettings[bbox.id];
+      return configs != null && configs.length > 0 ? [{ bbox, configs }] : [];
+    });
+  },
+);

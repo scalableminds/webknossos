@@ -31,7 +31,6 @@ import {
   getMagInfo,
   getMaxZoomStep,
 } from "viewer/model/accessors/dataset_accessor";
-import { getViewportRects } from "viewer/model/accessors/view_mode_accessor";
 import determineBucketsForFlight from "viewer/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
 import determineBucketsForPlane from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
 import { MAX_ZOOM_STEP_DIFF } from "viewer/model/bucket_data_handling/loading_strategy_logic";
@@ -366,6 +365,25 @@ export const getFlycamRotationWithAppendedRotation = memoizeOne(
 export const isRotated = memoizeOne(_isRotated);
 export const getZoomedMatrix = memoizeOne(_getZoomedMatrix);
 
+/*
+  Returns the mag index that is requested for the given layer purely based on the current
+  zoomStep and the GPU bucket capacity. In contrast to getActiveMagIndexForLayer, this ignores
+  which mags actually exist for the layer. This means the returned mag index might not exist
+  for the given layer (e.g., because it was excluded via mag restrictions).
+ */
+export function getRawActiveMagIndexForLayer(state: WebknossosState, layerName: string): number {
+  const maximumZoomSteps = getMaximumZoomForAllMagsFromStore(state, layerName);
+  const maxLogZoomStep = Math.log2(getMaxZoomStep(state.dataset));
+
+  // Linearly search for the mag index, for which the zoomFactor
+  // is acceptable.
+  const zoomStep = maximumZoomSteps.findIndex(
+    (maximumZoomStep) => state.flycam.zoomStep <= maximumZoomStep,
+  );
+
+  return zoomStep === -1 ? maxLogZoomStep : zoomStep;
+}
+
 function _getActiveMagIndicesForLayers(state: WebknossosState): { [layerName: string]: number } {
   /*
    * For each layer, this function returns the index of the active mag.
@@ -376,23 +394,13 @@ function _getActiveMagIndicesForLayers(state: WebknossosState): { [layerName: st
   const magIndices: { [layerName: string]: number } = {};
 
   for (const layer of getDataLayers(state.dataset)) {
-    const maximumZoomSteps = getMaximumZoomForAllMagsFromStore(state, layer.name);
     const maxLogZoomStep = Math.log2(getMaxZoomStep(state.dataset));
     const magInfo = getMagInfo(getLayerByName(state.dataset, layer.name).mags);
+    const zoomStep = getRawActiveMagIndexForLayer(state, layer.name);
 
-    // Linearly search for the mag index, for which the zoomFactor
-    // is acceptable.
-    const zoomStep = maximumZoomSteps.findIndex(
-      (maximumZoomStep) => state.flycam.zoomStep <= maximumZoomStep,
-    );
-
-    if (zoomStep === -1) {
-      magIndices[layer.name] = maxLogZoomStep;
-    } else {
-      const closestExistingZoomStep =
-        magInfo.getIndexOrClosestHigherIndex(zoomStep) ?? maxLogZoomStep;
-      magIndices[layer.name] = Math.min(closestExistingZoomStep, maxLogZoomStep);
-    }
+    const closestExistingZoomStep =
+      magInfo.getIndexOrClosestHigherIndex(zoomStep) ?? maxLogZoomStep;
+    magIndices[layer.name] = Math.min(closestExistingZoomStep, maxLogZoomStep);
   }
 
   return magIndices;
@@ -621,7 +629,7 @@ function getAreas(
 
 export function getAreasFromState(state: WebknossosState): OrthoViewMap<Area> {
   const position = getPosition(state.flycam);
-  const rects = getViewportRects(state);
+  const rects = state.viewModeData.plane.inputCatcherRects;
   const { zoomStep } = state.flycam;
   const voxelSize = state.dataset.dataSource.scale;
   return getAreas(rects, position, zoomStep, voxelSize);

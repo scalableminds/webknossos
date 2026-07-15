@@ -15,8 +15,8 @@ import com.scalableminds.webknossos.datastore.helpers.{IntervalScheduler, UPath}
 import com.scalableminds.webknossos.datastore.models.datasource.*
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.*
+import com.scalableminds.util.box.Box.tryo
+import com.scalableminds.util.box.{Box, Failure, Full}
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.Json
 
@@ -97,20 +97,18 @@ class DataSourceService @Inject() (
           (path: Path) => path.getFileName.toString == organizationId
         val orgaBaseDirsDirect = baseDirService.allLocalBaseDirsForOrga(selectedOrganizationId, requireDoScan = true)
         for {
-          orgaDirsInAgnostic: Seq[Path] <- orgaAgnosticBaseDirs
-            .map(PathUtils.listDirectories(_, silent = false, filters = orgaFilterFn(selectedOrganizationId)))
-            .toList
-            .toSingleBox("Listdir failed")
+          orgaDirsInAgnostic: Seq[Path] <- Box
+            .combined(orgaAgnosticBaseDirs)(
+              PathUtils.listDirectories(_, silent = false, filters = orgaFilterFn(selectedOrganizationId))
+            )
             .map(_.flatten)
         } yield (orgaBaseDirsDirect ++ orgaDirsInAgnostic).map((_, selectedOrganizationId)).distinct
       case None =>
         def orgaIdFromOrgaDirPath(path: Path) = path.getFileName.toString
         val orgaBaseDirsDirectWithIds = baseDirService.allOrgaSpecificLocalBaseDirs(requireDoScan = true)
         for {
-          orgaDirsInAgnostic: Seq[Path] <- orgaAgnosticBaseDirs
-            .map(PathUtils.listDirectories(_, silent = false))
-            .toList
-            .toSingleBox("Listdir failed")
+          orgaDirsInAgnostic: Seq[Path] <- Box
+            .combined(orgaAgnosticBaseDirs)(PathUtils.listDirectories(_, silent = false))
             .map(_.flatten)
           orgaDirsInAgnosticWithIds = orgaDirsInAgnostic.map(orgaDir => (orgaDir, orgaIdFromOrgaDirPath(orgaDir)))
         } yield (orgaBaseDirsDirectWithIds ++ orgaDirsInAgnosticWithIds).distinct
@@ -173,17 +171,17 @@ class DataSourceService @Inject() (
 
   private def getMagPathInfo(datasetPathOpt: Option[Path], mag: MagLocator): Box[RealPathInfo] =
     for {
-      magPath <- Box(mag.path)
+      magPath <- Box.fromOption(mag.path)
       result <-
         if (magPath.isRemote) {
           Full(RealPathInfo(magPath, magPath, hasLocalData = false))
         } else {
           for {
-            magPathLocal <- magPath.toLocalPath
-            realMagPath <- tryo(magPathLocal.toRealPath())
+            realMagPath <- magPath.toReal
             // Does this dataset have local data, i.e. the data that is referenced by the mag path is within the dataset directory
-            isDatasetLocal = datasetPathOpt.exists(datasetPath => realMagPath.startsWith(datasetPath))
-          } yield RealPathInfo(magPath, UPath.fromLocalPath(realMagPath), hasLocalData = isDatasetLocal)
+            isDatasetLocal = datasetPathOpt
+              .exists(datasetPath => realMagPath.startsWith(UPath.fromLocalPath(datasetPath.toAbsolutePath)))
+          } yield RealPathInfo(magPath, realMagPath, hasLocalData = isDatasetLocal)
         }
     } yield result
 
@@ -192,12 +190,13 @@ class DataSourceService @Inject() (
       Full(RealPathInfo(attachment.path, attachment.path, hasLocalData = false))
     } else {
       for {
-        _ <- Box.fromBool(attachment.path.isAbsolute) ?~ "Attachment path as stored in db must be absolute"
-        attachmentPath <- attachment.path.toLocalPath
-        realAttachmentPath <- tryo(attachmentPath.toRealPath())
+        _ <- Box.fromBool(attachment.path.isAbsolute) ?~> "Attachment path as stored in db must be absolute"
+        realAttachmentPath <- attachment.path.toReal
         // Does this dataset have local data, i.e. the data that is referenced by the mag path is within the dataset directory
-        isDatasetLocal = datasetPathOpt.exists(datasetPath => realAttachmentPath.startsWith(datasetPath))
-      } yield RealPathInfo(attachment.path, UPath.fromLocalPath(realAttachmentPath), hasLocalData = isDatasetLocal)
+        isDatasetLocal = datasetPathOpt.exists(datasetPath =>
+          realAttachmentPath.startsWith(UPath.fromLocalPath(datasetPath.toAbsolutePath))
+        )
+      } yield RealPathInfo(attachment.path, realAttachmentPath, hasLocalData = isDatasetLocal)
     }
 
   private def logFoundDatasources(
@@ -395,11 +394,13 @@ class DataSourceService @Inject() (
     } yield removedEntriesList.sum
 
   def deleteLocalPathsFromDisk(paths: Seq[UPath]): Box[Unit] = {
+    // Note that zipEntryPaths are skipped here (they Fail on toLocalPath).
+    // This is accepted since we cannot know if the full zip should be deleted.
     val localBaseDirs = baseDirService.allLocalBaseDirs
     val localPaths =
       paths.filter(_.isLocal).flatMap(_.toLocalPath).filter(p => localBaseDirs.exists(p.toAbsolutePath.startsWith(_)))
     for {
-      _ <- localPaths.map(PathUtils.deleteDirectoryRecursively).toList.toSingleBox("Failed to delete local paths")
+      _ <- Box.combined(localPaths)(PathUtils.deleteDirectoryRecursively)
     } yield ()
   }
 

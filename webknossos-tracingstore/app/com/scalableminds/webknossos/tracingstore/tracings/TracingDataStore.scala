@@ -6,7 +6,7 @@ import com.scalableminds.webknossos.tracingstore.TracingStoreConfig
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 import scala.concurrent.{ExecutionContext, Future}
 

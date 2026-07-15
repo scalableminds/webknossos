@@ -18,8 +18,8 @@ import com.scalableminds.webknossos.datastore.models.requests.DataReadInstructio
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
 
-import scala.concurrent.duration._
-import ucar.ma2.{Array => MultiArray}
+import scala.concurrent.duration.*
+import ucar.ma2.Array as MultiArray
 
 import scala.concurrent.ExecutionContext
 

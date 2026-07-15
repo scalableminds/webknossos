@@ -1,12 +1,11 @@
-import { ApiType } from "viewer/api/api_loader"
+import { ApiType } from "viewer/api/api_loader";
 import WkDev from "viewer/api/wk_dev";
 
 declare global {
   interface Window {
-    needsRerender: boolean;
     webknossos: {
       DEV: WkDev;
-      apiReady: ApiType["apiReady"]
+      apiReady: ApiType["apiReady"];
     };
   }
 
@@ -22,5 +21,4 @@ declare global {
     values<T extends NotEnumerableByObject>(obj: T): never;
     entries<T extends NotEnumerableByObject>(obj: T): never;
   }
-
 }

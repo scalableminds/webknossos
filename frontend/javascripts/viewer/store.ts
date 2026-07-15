@@ -72,6 +72,7 @@ import type { Toolkit } from "./model/accessors/tool_accessor";
 import type { OperationId } from "./model/actions/operation_context_actions";
 import { eventEmitterMiddleware } from "./model/helpers/event_emitter_middleware";
 import FlycamInfoCacheReducer from "./model/reducers/flycam_info_cache_reducer";
+import MipBBoxReducer from "./model/reducers/mip_bbox_reducer";
 import OperationContextReducer from "./model/reducers/operation_context_reducer";
 import OrganizationReducer from "./model/reducers/organization_reducer";
 import ProofreadingReducer from "./model/reducers/proofreading_reducer";
@@ -98,6 +99,12 @@ export type UserBoundingBoxWithoutId = {
   name: string;
   color: Vector3;
   isVisible: boolean;
+};
+
+export type MipLayerConfig = {
+  layerName: string;
+  zoomStep: number;
+  isLoading: boolean;
 };
 export type UserBoundingBox = UserBoundingBoxWithoutId & {
   id: number;
@@ -386,6 +393,8 @@ export type UserConfiguration = {
   readonly erasePreference: "ERASE_BRUSH" | "ERASE_TRACE";
   readonly writePreference: "BRUSH" | "TRACE";
   readonly measurementPreference: "LINE_MEASUREMENT" | "AREA_MEASUREMENT";
+  readonly mipRaymarchingSteps: number;
+  readonly mipDepthWrite: boolean;
 };
 export type RecommendedConfiguration = Partial<
   UserConfiguration &
@@ -611,6 +620,8 @@ type UiInformation = {
   readonly voxelPipetteToolInfo: { pinnedPosition: Vector3 | null };
   readonly navbarHeight: number;
   readonly contextInfo: ContextMenuInfo;
+  // Frontend-only, not persisted to server
+  readonly mipBBoxSettings: Record<number, MipLayerConfig[]>;
 };
 type BaseMeshInformation = {
   readonly segmentId: number;
@@ -725,6 +736,7 @@ export type WebknossosState = {
   readonly save: SaveState;
   readonly flycam: Flycam;
   readonly flycamInfoCache: {
+    // Maps from layerName to the zoom thresholds for each mag.
     readonly maximumZoomForAllMags: Record<string, number[]>;
   };
   readonly viewModeData: ViewModeData;
@@ -755,6 +767,7 @@ export const combinedReducer = reduceReducers(
   UiReducer,
   ConnectomeReducer,
   OrganizationReducer,
+  MipBBoxReducer,
   OperationContextReducer,
 ) as Reducer;
 

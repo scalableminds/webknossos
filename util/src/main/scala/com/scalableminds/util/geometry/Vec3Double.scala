@@ -1,10 +1,10 @@
 package com.scalableminds.util.geometry
 
-import com.scalableminds.util.tools.MathUtils._
-import play.api.libs.json.Json._
-import play.api.libs.json._
+import com.scalableminds.util.tools.MathUtils.*
+import play.api.libs.json.Json.*
+import play.api.libs.json.*
 
-import scala.math._
+import scala.math.*
 
 case class Vec3Double(x: Double, y: Double, z: Double) {
 

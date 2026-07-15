@@ -2,9 +2,10 @@ package models.dataset
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.box.{Box, Empty, EmptyBox, Full}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Box, Empty, EmptyBox, Fox, Full, JsonHelper, TextUtils}
+import com.scalableminds.util.tools.{Fox, JsonHelper, TextUtils}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.datasource.{
@@ -386,10 +387,10 @@ class DatasetService @Inject() (
         existingDataSourceWithRenamedAttachments.dataLayers.length == existingDataSourceWithRenamedAttachments.dataLayers
           .distinctBy(_.name)
           .length
-      ) ?~ "Layer renamings create name collisions."
+      ) ?~> "Layer renamings create name collisions."
       _ <- Box.fromBool(
         existingDataSourceWithRenamedAttachments.dataLayers.forall(_.attachments.forall(!_.containsDuplicateNames))
-      ) ?~ "Attachment renamings create name collisions."
+      ) ?~> "Attachment renamings create name collisions."
       updatedLayers = existingDataSourceWithRenamedAttachments.dataLayers.flatMap { existingLayer =>
         val layerUpdatesOpt = updates.dataLayers.find(_.name == existingLayer.name)
         layerUpdatesOpt match {
@@ -409,10 +410,10 @@ class DatasetService @Inject() (
     val noneHaveMags = newLayers.forall(_.mags.isEmpty)
     val noneHaveAttachments = newLayers.forall(_.attachments.forall(_.isEmpty))
     for {
-      _ <- Box.fromBool(noneHaveMags) ?~ "New layers may not have mags. Add empty layers instead and then add mags."
+      _ <- Box.fromBool(noneHaveMags) ?~> "New layers may not have mags. Add empty layers instead and then add mags."
       _ <- Box.fromBool(
         noneHaveAttachments
-      ) ?~ "New layers may not have attachments. Add empty layers instead and then add attachments."
+      ) ?~> "New layers may not have attachments. Add empty layers instead and then add attachments."
     } yield newLayers
   }
 
@@ -757,7 +758,7 @@ class DatasetService @Inject() (
       _ <- existingDatasetBox match {
         case Full(dataset) =>
           for {
-            annotationCount <- annotationDAO.countAllByDataset(dataset._id)(using GlobalAccessContext)
+            annotationCount <- annotationDAO.countAllByDatasetIncludingDeleted(dataset._id)
             _ <- datasetDAO.deleteDataset(dataset._id, onlyMarkAsDeleted = annotationCount > 0)
             _ <- usedStorageService.refreshStorageReportForDataset(dataset)
           } yield ()

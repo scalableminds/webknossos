@@ -3,13 +3,13 @@ package controllers
 import com.scalableminds.util.Msg
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.box.Full
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
-import play.api.libs.json._
+import play.api.libs.json.*
 
 import javax.inject.Inject
-import models.annotation._
-import com.scalableminds.util.tools.Full
+import models.annotation.*
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.{WkEnv, WkSilhouetteEnvironment}
 import com.scalableminds.util.objectid.ObjectId

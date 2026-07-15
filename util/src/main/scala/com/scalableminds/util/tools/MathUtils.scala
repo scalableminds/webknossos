@@ -1,6 +1,6 @@
 package com.scalableminds.util.tools
 
-import scala.Numeric.Implicits._
+import scala.Numeric.Implicits.*
 
 object MathUtils {
   private val EPSILON = 1e-10
@@ -12,7 +12,7 @@ object MathUtils {
   def isNearZero(d: Double): Boolean = d <= EPSILON && d >= -EPSILON
 
   def clamp[T](x: T, lower: T, upper: T)(implicit num: Numeric[T]): T = {
-    import num._
+    import num.*
     lower.max(x).min(upper)
   }
 

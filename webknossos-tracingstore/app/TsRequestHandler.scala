@@ -2,7 +2,7 @@ import com.scalableminds.util.mvc.{ApiVersioning, ExtendedController}
 import com.scalableminds.webknossos.tracingstore.TracingStoreConfig
 import com.typesafe.scalalogging.LazyLogging
 import play.api.OptionalDevContext
-import play.api.http._
+import play.api.http.*
 import play.api.mvc.{Handler, InjectedController, RequestHeader}
 import play.api.routing.Router
 import play.core.WebCommands

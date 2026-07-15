@@ -6,9 +6,9 @@ import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   MergeAgglomerateUpdateAction,
   SplitAgglomerateUpdateAction
 }
-import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating._
-import com.scalableminds.webknossos.tracingstore.tracings.volume._
-import play.api.libs.json._
+import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.*
+import com.scalableminds.webknossos.tracingstore.tracings.volume.*
+import play.api.libs.json.*
 
 trait UpdateAction {
   def actionTimestamp: Option[Long]

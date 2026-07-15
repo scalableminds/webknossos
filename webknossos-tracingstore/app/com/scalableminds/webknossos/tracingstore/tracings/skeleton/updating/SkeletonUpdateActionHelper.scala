@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating
 
-import com.scalableminds.webknossos.datastore.SkeletonTracing._
+import com.scalableminds.webknossos.datastore.SkeletonTracing.*
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 
 trait SkeletonUpdateActionHelper extends ProtoGeometryConversions {

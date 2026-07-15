@@ -2,6 +2,7 @@ package controllers
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, JsonHelper, TextUtils}
 import com.scalableminds.util.tools.Fox.toFox
@@ -22,8 +23,7 @@ import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
 import models.analytics.{AnalyticsService, InviteEvent, JoinOrganizationEvent, SignupEvent}
 import models.organization.{Organization, OrganizationDAO, OrganizationService}
 import models.user.*
-import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
-import com.scalableminds.util.tools.Box.tryo
+import Box.tryo
 import models.team.TeamMembership
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.digest.{HmacAlgorithms, HmacUtils}
@@ -1056,23 +1056,17 @@ class AuthenticationController @Inject() (
   }
 
   private def notifyOnSuspiciousNames(organizationId: String, firstName: String, lastName: String): Unit = {
-    val suspiciousNameEntropyThreshold = 3.0
-    val suspiciousNameMinLength = 6
+    val suspiciousNameCaseSwitchThreshold = 4
 
-    def shannonEntropy(s: String): Double =
-      if (s.isEmpty) 0.0
-      else {
-        val frequencies = s.groupBy(identity).values.map(_.length.toDouble / s.length)
-        -frequencies.map(p => p * (math.log(p) / math.log(2))).sum
-      }
+    def countCaseSwitches(s: String): Int =
+      s.zip(s.drop(1)).count { case (a, b) => (a.isLower && b.isUpper) || (a.isUpper && b.isLower) }
 
-    val isSuspicious = List(firstName, lastName).exists(name =>
-      name.length >= suspiciousNameMinLength && shannonEntropy(name) >= suspiciousNameEntropyThreshold
-    )
+    val isSuspicious =
+      List(firstName, lastName).exists(name => countCaseSwitches(name) >= suspiciousNameCaseSwitchThreshold)
 
     if (isSuspicious) {
       val msg =
-        s"High-entropy name detected during registration: $firstName $lastName (organizationId $organizationId)"
+        s"Name with >=$suspiciousNameCaseSwitchThreshold case switches detected during registration: $firstName $lastName (organizationId $organizationId)"
       logger.warn(msg)
       slackNotificationService.warn("Registration with suspicious name", msg)
     }

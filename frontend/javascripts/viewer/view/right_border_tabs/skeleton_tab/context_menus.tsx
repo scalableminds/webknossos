@@ -297,7 +297,10 @@ export function useGroupContextMenuBuilder(
           {
             key: "delete",
             disabled: isEditingDisabled,
-            onClick: () => groupOperations.requestGroupDeletion(groupId),
+            onClick: () => {
+              groupOperations.requestGroupDeletion(groupId);
+              hideContextMenu();
+            },
             icon: <DeleteOutlined />,
             label: "Delete group",
           },

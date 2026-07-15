@@ -6,6 +6,12 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [26.07.03](https://github.com/scalableminds/webknossos/releases/tag/26.07.03) - 2026-07-13
+[Commits](https://github.com/scalableminds/webknossos/compare/26.07.2...26.07.03)
+
+### Postgres Evolutions
+None.
+
 ## [26.07.2](https://github.com/scalableminds/webknossos/releases/tag/26.07.2) - 2026-06-29
 [Commits](https://github.com/scalableminds/webknossos/compare/26.07.0...26.07.2)
 
@@ -17,7 +23,6 @@ This release was skipped for technical reasons.
 
 ## [26.07.0](https://github.com/scalableminds/webknossos/releases/tag/26.07.0) - 2026-06-23
 [Commits](https://github.com/scalableminds/webknossos/compare/26.06.0...26.07.0)
-
 
 ### Postgres Evolutions
 - [162-pretrained-ai-models.sql](schema/evolutions/162-pretrained-ai-models.sql)

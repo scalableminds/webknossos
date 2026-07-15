@@ -1,19 +1,25 @@
 import {
   AppstoreAddOutlined,
   DeleteOutlined,
+  InfoCircleOutlined,
   PlusOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
+import MipIcon from "@images/icons/icon-mip.svg?react";
 import {
   Divider,
   Empty,
   Flex,
   type MenuProps,
+  Popover,
+  Slider,
   Space,
+  Switch,
   Table,
   type TableProps,
   Typography,
 } from "antd";
+import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
 import { computeArrayFromBoundingBox, computeBoundingBoxFromArray } from "libs/utils";
 import noop from "lodash-es/noop";
@@ -33,6 +39,7 @@ import {
   deleteUserBoundingBoxAction,
 } from "viewer/model/actions/annotation_actions";
 import { setPositionAction } from "viewer/model/actions/flycam_actions";
+import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import { setActiveUserBoundingBoxId } from "viewer/model/actions/ui_actions";
 import type { UserBoundingBox } from "viewer/store";
 import DownloadModalView from "../action_bar/download_modal/download_modal_view";
@@ -58,6 +65,8 @@ export default function BoundingBoxTab() {
   const dataset = useWkSelector((state) => state.dataset);
   const activeBoundingBoxId = useWkSelector((state) => state.uiInformation.activeUserBoundingBoxId);
   const { userBoundingBoxes } = getSomeTracing(annotation);
+  const mipRaymarchingSteps = useWkSelector((state) => state.userConfiguration.mipRaymarchingSteps);
+  const mipDepthWrite = useWkSelector((state) => state.userConfiguration.mipDepthWrite);
   const [contextMenuPosition, setContextMenuPosition] = useState<[number, number] | null>(null);
   const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([]);
   const [menu, setMenu] = useState<MenuProps | null>(null);
@@ -329,6 +338,49 @@ export default function BoundingBoxTab() {
           onClick={deleteSelectedBoundingBoxes}
           icon={<DeleteOutlined />}
         />
+        <Popover
+          title="Maximum Intensity Projection (MIP) Settings"
+          trigger="click"
+          content={
+            <div style={{ width: 260 }}>
+              <div style={{ marginBottom: 4 }}>
+                Ray marching steps{" "}
+                <FastTooltip title="Number of samples taken along each ray. Higher values produce a smoother, more accurate projection at the cost of GPU performance.">
+                  <InfoCircleOutlined />
+                </FastTooltip>
+              </div>
+              <Flex gap="small" align="center">
+                <Slider
+                  style={{ flex: 1 }}
+                  min={16}
+                  max={512}
+                  step={16}
+                  value={mipRaymarchingSteps}
+                  onChange={(v) => dispatch(updateUserSettingAction("mipRaymarchingSteps", v))}
+                />
+                <span style={{ width: 30, textAlign: "right" }}>{mipRaymarchingSteps}</span>
+              </Flex>
+              <Flex gap="small" align="center" style={{ marginTop: 8 }}>
+                <Switch
+                  size="small"
+                  checked={mipDepthWrite}
+                  onChange={(v) => dispatch(updateUserSettingAction("mipDepthWrite", v))}
+                />
+                <span>Depth-correct rendering</span>
+                <FastTooltip title="Lets MIP volumes occlude and be occluded by meshes correctly. Disable for better performance if depth sorting with meshes is not needed.">
+                  <InfoCircleOutlined />
+                </FastTooltip>
+              </Flex>
+            </div>
+          }
+        >
+          <ButtonComponent
+            variant="text"
+            color="default"
+            title="Maximum Intensity Projection (MIP) rendering settings"
+            icon={<MipIcon />}
+          />
+        </Popover>
       </Space>
       <Divider size="small" />
       <ContextMenuContainer

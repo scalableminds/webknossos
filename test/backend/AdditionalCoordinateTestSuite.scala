@@ -51,7 +51,7 @@ class AdditionalCoordinateTestSuite extends AsyncWordSpec with ProtoGeometryConv
         "succeed when coordinates are the same" in {
           val merged = AdditionalAxis.mergeAndAssertSameAdditionalAxes(Seq(Some(Seq(axisT)), Some(Seq(axisT2))))
           assert(!merged.isEmpty)
-          assert(merged.getOrThrow("test").get.head.name == "t")
+          assert(merged.get("test").get.head.name == "t")
         }
       }
 

@@ -1,8 +1,9 @@
 package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Fox, Full}
+import com.scalableminds.util.box.{Box, Full}
+import com.scalableminds.util.box.Box.tryo
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import org.apache.commons.io.FileUtils
@@ -13,11 +14,11 @@ import java.nio.channels.{AsynchronousFileChannel, CompletionHandler}
 import java.nio.file.{Files, Path, StandardOpenOption}
 import java.util.stream.Collectors
 import scala.concurrent.{ExecutionContext, Promise}
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 class FileSystemDataVault extends DataVault {
 
-  override def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(using
+  override def readBytesPlusEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[(Array[Byte], Encoding.Value, Option[String])] =
@@ -42,8 +43,10 @@ class FileSystemDataVault extends DataVault {
           } yield (bytes, r.toContentRangeHeaderWithLength(fileSize))
         case r: SuffixLengthByteRange =>
           val fileSize = Files.size(localPath)
+          val start = Math.max(0L, fileSize - r.length)
+          val length = Math.toIntExact(fileSize - start)
           for {
-            bytes <- readAsync(localPath, fileSize - r.length, r.length)
+            bytes <- readAsync(localPath, start, length)
           } yield (bytes, r.toContentRangeHeaderWithLength(fileSize))
       }
     } else {
@@ -89,7 +92,10 @@ class FileSystemDataVault extends DataVault {
     } yield result
   }
 
-  override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
+  override def listDirectory(path: VaultPath, maxItems: Int)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Seq[VaultPath]] =
     for {
       localPath <- vaultPathToLocalPath(path)
       listing =
@@ -99,10 +105,10 @@ class FileSystemDataVault extends DataVault {
             .filter(file => Files.isDirectory(file))
             .collect(Collectors.toList())
             .asScala
-            .toList
+            .toSeq
             .map(dir => new VaultPath(UPath.fromLocalPath(dir), this))
             .take(maxItems)
-        } else List.empty
+        } else Seq.empty
     } yield listing
 
   override def getUsedStorageBytes(path: VaultPath)(using ec: ExecutionContext, tc: TokenContext): Fox[Long] =

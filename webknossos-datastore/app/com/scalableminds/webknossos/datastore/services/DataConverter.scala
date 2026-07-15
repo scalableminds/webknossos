@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.services
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.datastore.services.mesh.DataTypeFunctors
 
-import java.nio._
+import java.nio.*
 import scala.reflect.ClassTag
 
 trait DataConverter {

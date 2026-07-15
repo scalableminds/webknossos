@@ -2,8 +2,9 @@ package com.scalableminds.webknossos.datastore.services.mesh
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.{Box, Empty}
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.tools.{Box, Fox}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.datasource.{
@@ -85,11 +86,11 @@ class MeshFileService @Inject() (
       meshFileName: String
   ): Box[MeshFileKey] =
     for {
-      attachment <- Box(dataLayer.attachments match {
-        case Some(attachments) => attachments.meshes.find(_.name == meshFileName)
-        case None              => None
-      })
-      _ <- Box.fromBool(attachment.path.isAbsolute) ~> Msg.Mesh.File.pathNotAbsolute
+      attachment <- dataLayer.attachments match {
+        case Some(attachments) => Box.fromOption(attachments.meshes.find(_.name == meshFileName))
+        case None              => Empty
+      }
+      _ <- Box.fromBool(attachment.path.isAbsolute) ?~> Msg.Mesh.File.pathNotAbsolute
     } yield MeshFileKey(
       dataSourceId,
       dataLayer.name,

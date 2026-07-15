@@ -3,8 +3,9 @@ package com.scalableminds.webknossos.datastore.services
 import com.scalableminds.util.Msg
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Fox, JsonHelper}
+import com.scalableminds.util.box.Box
+import com.scalableminds.util.box.Box.tryo
+import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
@@ -43,7 +44,7 @@ class DataSourceMirrorService @Inject() (
   def writeMirror(dataSource: UsableDataSource, datasetId: ObjectId)(implicit
       ec: ExecutionContext
   ): Fox[Option[String]] =
-    if (dataSource.allExplicitPaths.forall(_.isLocal)) {
+    if (dataSource.allExplicitPaths.forall(p => p.isLocal && !p.toZipEntryUPath.isDefined)) {
       for {
         mirrorDir <- getMirrorDir(dataSource, createIfMissing = true).toFox
         tempMirrorDir = mirrorDir.resolveSibling(mirrorDir.getFileName.toString + ".new")

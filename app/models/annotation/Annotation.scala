@@ -16,10 +16,10 @@ import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import models.annotation.AnnotationState.AnnotationState
 import models.annotation.CollaborationMode.CollaborationMode
 import models.annotation.AnnotationType.AnnotationType
-import play.api.libs.json._
+import play.api.libs.json.*
 import slick.jdbc.GetResult
-import slick.jdbc.GetResult._
-import slick.jdbc.PostgresProfile.api._
+import slick.jdbc.GetResult.*
+import slick.jdbc.PostgresProfile.api.*
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.sql.SqlAction
 import com.scalableminds.util.objectid.ObjectId
@@ -336,7 +336,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
   // Necessary since a tuple can only have 22 elements
   implicit def GetResultAnnotationCompactInfo: GetResult[AnnotationCompactInfo] =
     prs => {
-      import prs._
+      import prs.*
 
       val id = <<[ObjectId]
       val name = <<[String]
@@ -674,13 +674,13 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
       count <- countList.headOption.toFox
     } yield count
 
-  def countAllByDataset(datasetId: ObjectId)(using ctx: DBAccessContext): Fox[Int] =
+  // Counts all annotations in the db that reference this dataset. Independent of isDeleted or user read access
+  // This is used during dataset deletion to prevent foreign key constraints blocking the deletion.
+  def countAllByDatasetIncludingDeleted(datasetId: ObjectId): Fox[Int] =
     for {
-      accessQuery <- readAccessQuery
       countList <- run(q"""SELECT COUNT(*)
-                           FROM $existingCollectionName
-                           WHERE _dataset = $datasetId
-                           AND $accessQuery""".as[Int])
+                           FROM webknossos.annotations
+                           WHERE _dataset = $datasetId""".as[Int])
       count <- countList.headOption.toFox
     } yield count
 

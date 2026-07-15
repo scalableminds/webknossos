@@ -1,12 +1,13 @@
 package models.dataset
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.box.Full
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.image.Color
 import com.scalableminds.util.mvc.MimeTypes
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, Full, JsonHelper, MathUtils}
+import com.scalableminds.util.tools.{Fox, JsonHelper, MathUtils}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.{StaticLayer, UsableDataSource}

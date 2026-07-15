@@ -22,7 +22,9 @@ import {
   callDeep,
   createGroupHelper,
   createGroupToTreesMap,
+  findGroup,
   getExpandedGroups,
+  getGroupByIdWithSubgroups,
   MISSING_GROUP_ID,
   moveGroupsHelper,
 } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
@@ -127,16 +129,19 @@ export function useGroupOperations(deselectAllTrees: () => void): GroupOperation
         collectTreeIdsRecursively(group);
       });
 
-      checkAndConfirmDeletingInitialNode(treeIdsToDelete).then(() => {
-        dispatch(
-          batchUpdateGroupsAndTreesAction(
-            updateTreeActions.concat([
-              deleteTreesAction(treeIdsToDelete),
-              setTreeGroupsAction(newTreeGroups),
-            ]),
-          ),
-        );
-      });
+      checkAndConfirmDeletingInitialNode(treeIdsToDelete)
+        .then(() => {
+          dispatch(
+            batchUpdateGroupsAndTreesAction(
+              updateTreeActions.concat([
+                deleteTreesAction(treeIdsToDelete),
+                setTreeGroupsAction(newTreeGroups),
+              ]),
+            ),
+          );
+        })
+        // The user cancelled the initial-node confirmation; keep everything as is.
+        .catch(() => {});
     },
     [dispatch, trees, treeGroups],
   );
@@ -144,7 +149,8 @@ export function useGroupOperations(deselectAllTrees: () => void): GroupOperation
   const requestGroupDeletion = useCallback(
     (groupId: number) => {
       const groupToTreesMap = createGroupToTreesMap(trees);
-      const group = treeGroups.find((currentGroup) => currentGroup.groupId === groupId);
+      // findGroup searches recursively so nested groups are found, too.
+      const group = findGroup(treeGroups, groupId);
 
       if (group != null && group.children.length === 0 && groupToTreesMap[groupId] == null) {
         // The group is empty, delete it without asking.
@@ -209,6 +215,13 @@ export function useGroupOperations(deselectAllTrees: () => void): GroupOperation
 
   const moveGroupToGroup = useCallback(
     (groupId: number, targetGroupId: number) => {
+      if (
+        groupId === targetGroupId ||
+        getGroupByIdWithSubgroups(treeGroups, groupId).includes(targetGroupId)
+      ) {
+        // Moving a group into itself or one of its descendants would create a cycle.
+        return;
+      }
       dispatch(setTreeGroupsAction(moveGroupsHelper(treeGroups, groupId, targetGroupId)));
       expandGroup(targetGroupId);
     },

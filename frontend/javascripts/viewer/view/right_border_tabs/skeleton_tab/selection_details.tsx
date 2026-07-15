@@ -44,6 +44,7 @@ function TreeDetails({ tree }: { tree: Tree }) {
             <InputWithUpdateOnBlur
               value={tree.name || ""}
               onChange={(newName) => dispatch(setTreeNameAction(newName, tree.treeId))}
+              disabled={readOnly}
             />
           }
         />
@@ -56,6 +57,7 @@ function TreeDetails({ tree }: { tree: Tree }) {
 function GroupDetails({ groupId }: { groupId: number }) {
   const trees = useWkSelector((state) => enforceSkeletonTracing(state.annotation).trees);
   const treeGroups = useWkSelector((state) => enforceSkeletonTracing(state.annotation).treeGroups);
+  const readOnly = !useWkSelector(mayEditAnnotation);
 
   const group = findGroup(treeGroups, groupId);
   if (group == null) {
@@ -78,6 +80,7 @@ function GroupDetails({ groupId }: { groupId: number }) {
             <InputWithUpdateOnBlur
               value={group.name || ""}
               onChange={(newName) => api.tracing.renameSkeletonGroup(groupId, newName)}
+              disabled={readOnly}
             />
           }
         />

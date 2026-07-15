@@ -64,7 +64,13 @@ export function useTreeSelection(): TreeSelection {
           }
           setSelectedTreeIds([]);
         } else {
-          setSelectedTreeIds(selectedTreeIds.filter((id) => id !== treeId));
+          const remainingTreeIds = selectedTreeIds.filter((id) => id !== treeId);
+          setSelectedTreeIds(remainingTreeIds);
+          if (remainingTreeIds.length === 0 && treeId === activeTreeId) {
+            // Deselecting the sole, active tree -> also clear it in the store so the
+            // tab and the rest of the app stay in sync.
+            dispatch(deselectActiveTreeAction());
+          }
         }
         return;
       }

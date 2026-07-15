@@ -2,9 +2,11 @@ import Icon, { FolderOutlined, TagsOutlined } from "@ant-design/icons";
 import ProofreadingIcon from "@images/icons/icon-proofreading.svg?react";
 import { Space } from "antd";
 import FastTooltip from "components/fast_tooltip";
+import { useWkSelector } from "libs/react_hooks";
 import type React from "react";
 import { useDispatch } from "react-redux";
 import { TreeTypeEnum } from "viewer/constants";
+import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import { setTreeNameAction } from "viewer/model/actions/skeletontracing_actions";
 import { api } from "viewer/singletons";
 import EditableTextLabel from "viewer/view/components/editable_text_label";
@@ -25,6 +27,7 @@ export function TreeNodeTitle({
   onRenameEnd,
 }: TitleProps<TreeUiNode>) {
   const dispatch = useDispatch();
+  const allowUpdate = useWkSelector(mayEditAnnotation);
   const { tree } = node;
 
   const maybeProofreadingIcon =
@@ -51,6 +54,7 @@ export function TreeNodeTitle({
         onRenameStart={onRenameStart}
         onRenameEnd={onRenameEnd}
         onChange={(newName) => dispatch(setTreeNameAction(newName, tree.treeId))}
+        disableEditing={!allowUpdate}
         hideEditIcon
       />
       {/* The type claims metadata is always set, but e.g. proto-imported trees can lack it at runtime. */}
@@ -69,6 +73,7 @@ export function GroupNodeTitle({
   onRenameStart,
   onRenameEnd,
 }: TitleProps<GroupUiNode>) {
+  const allowUpdate = useWkSelector(mayEditAnnotation);
   const { group } = node;
   // Make sure the displayed name is not empty
   const displayableName = group.name.trim() || "<Unnamed Group>";
@@ -84,6 +89,7 @@ export function GroupNodeTitle({
         value={displayableName}
         label="Group Name"
         onChange={(newName) => api.tracing.renameSkeletonGroup(group.groupId, newName)}
+        disableEditing={!allowUpdate}
         hideEditIcon
         onRenameStart={onRenameStart}
         onRenameEnd={onRenameEnd}

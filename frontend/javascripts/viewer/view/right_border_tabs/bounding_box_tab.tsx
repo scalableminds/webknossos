@@ -19,8 +19,8 @@ import {
   type TableProps,
   Typography,
 } from "antd";
-import { handleGenericError } from "libs/error_handling";
 import FastTooltip from "components/fast_tooltip";
+import { handleGenericError } from "libs/error_handling";
 import { useWkSelector } from "libs/react_hooks";
 import { computeArrayFromBoundingBox, computeBoundingBoxFromArray } from "libs/utils";
 import noop from "lodash-es/noop";

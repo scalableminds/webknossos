@@ -11,7 +11,13 @@ import {
   Vector3 as ThreeVector3,
 } from "three";
 import TWEEN from "tween.js";
-import type { OrthoView, OrthoViewMap, OrthoViewRects, Vector3 } from "viewer/constants";
+import type {
+  OrthoView,
+  OrthoViewMap,
+  OrthoViewRects,
+  Vector3,
+  ViewportCameras,
+} from "viewer/constants";
 import {
   OrthoCamerasBaseRotations,
   OrthoViews,
@@ -34,7 +40,7 @@ import type { CameraData } from "viewer/store";
 import Store from "viewer/store";
 
 type Props = {
-  cameras: OrthoViewMap<OrthographicCamera>;
+  cameras: ViewportCameras;
   onCameraPositionChanged: () => void;
   onTDCameraChanged: (userTriggered?: boolean) => void;
   setTargetAndFixPosition: () => void;
@@ -132,7 +138,9 @@ export function updatePerspectiveCameraFromOrthographic(
   perspectiveCamera.far = Math.max(orthoCamera.far, 4 * distance);
   perspectiveCamera.updateProjectionMatrix();
   perspectiveCamera.updateMatrixWorld();
-  perspectiveCamera.userData.isDerived = true;
+  // Mark the perspective camera as initialized so consumers can stop falling back
+  // to the orthographic camera (see PlaneView.getActiveTDViewCamera).
+  perspectiveCamera.userData.isInitialized = true;
 }
 
 class CameraController extends PureComponent<Props> {
@@ -154,7 +162,10 @@ class CameraController extends PureComponent<Props> {
     );
     const far = Math.max(8000000, diagonalDatasetExtent * 2);
 
-    for (const cam of Object.values(this.props.cameras)) {
+    for (const cam of [
+      ...Object.values(this.props.cameras.nonTdCameras),
+      this.props.cameras.tdCamera,
+    ]) {
       cam.near = 0;
       cam.far = far;
     }
@@ -197,10 +208,10 @@ class CameraController extends PureComponent<Props> {
         state.flycam.zoomStep,
         planeId,
       ).map((x) => x * scaleFactor);
-      this.props.cameras[planeId].left = -width / 2;
-      this.props.cameras[planeId].right = width / 2;
-      this.props.cameras[planeId].bottom = -height / 2;
-      this.props.cameras[planeId].top = height / 2;
+      this.props.cameras.nonTdCameras[planeId].left = -width / 2;
+      this.props.cameras.nonTdCameras[planeId].right = width / 2;
+      this.props.cameras.nonTdCameras[planeId].bottom = -height / 2;
+      this.props.cameras.nonTdCameras[planeId].top = height / 2;
       const effectiveClippingDistance = isSectionClippingActive
         ? Math.max(
             clippingDistance,
@@ -212,13 +223,13 @@ class CameraController extends PureComponent<Props> {
       // of clippingDistance. Theoretically, `far` could be set here too, however,
       // this leads to imprecision related bugs which cause the planes to not render
       // for certain clippingDistance values.
-      this.props.cameras[planeId].near = -effectiveClippingDistance;
-      this.props.cameras[planeId].updateProjectionMatrix();
+      this.props.cameras.nonTdCameras[planeId].near = -effectiveClippingDistance;
+      this.props.cameras.nonTdCameras[planeId].updateProjectionMatrix();
     }
 
     if (inputCatcherRects != null) {
       // Update td camera's aspect ratio
-      const tdCamera = this.props.cameras[OrthoViews.TDView];
+      const tdCamera = this.props.cameras.tdCamera;
       const oldMid = (tdCamera.right + tdCamera.left) / 2;
       const oldWidth = tdCamera.right - tdCamera.left;
       const oldHeight = tdCamera.top - tdCamera.bottom;
@@ -245,20 +256,27 @@ class CameraController extends PureComponent<Props> {
     this.flycamRotationEuler.set(globalRotation[0], globalRotation[1], globalRotation[2], "ZYX");
     this.flycamRotationMatrix.makeRotationFromEuler(this.flycamRotationEuler);
     for (const viewport of OrthoViewValuesWithoutTDView) {
-      this.props.cameras[viewport].position.set(
+      this.props.cameras.nonTdCameras[viewport].position.set(
         cameraPosition[0],
         cameraPosition[1],
         cameraPosition[2],
       );
       this.baseRotationMatrix.makeRotationFromEuler(OrthoCamerasBaseRotations[viewport]);
-      this.props.cameras[viewport].setRotationFromMatrix(
+      this.props.cameras.nonTdCameras[viewport].setRotationFromMatrix(
         this.totalRotationMatrix
           .identity()
           .multiply(this.flycamRotationMatrix)
           .multiply(this.baseRotationMatrix),
       );
-      this.props.cameras[viewport].updateProjectionMatrix();
+      this.props.cameras.nonTdCameras[viewport].updateProjectionMatrix();
     }
+
+    // Keep the trackball target of the 3D viewport in sync with the flycam.
+    // For the orthographic camera this has no visible effect (which is why it
+    // used to happen only lazily when hovering the 3D viewport), but the derived
+    // perspective camera is anchored at the target, so it would lag behind
+    // flycam movements otherwise.
+    this.props.setTargetAndFixPosition();
   }
 
   bindToEvents() {
@@ -284,15 +302,7 @@ class CameraController extends PureComponent<Props> {
       ),
       listenToStoreProperty(
         (storeState) => storeState.flycam.currentMatrix,
-        () => {
-          this.update();
-          // Keep the trackball target of the 3D viewport in sync with the flycam.
-          // For the orthographic camera this has no visible effect (which is why it
-          // used to happen only lazily when hovering the 3D viewport), but the derived
-          // perspective camera is anchored at the target, so it would lag behind
-          // flycam movements otherwise.
-          this.props.setTargetAndFixPosition();
-        },
+        () => this.update(),
         true,
       ),
       listenToStoreProperty(
@@ -305,7 +315,7 @@ class CameraController extends PureComponent<Props> {
 
   // TD-View methods
   updateTDCamera(cameraData: CameraData): void {
-    const tdCamera = this.props.cameras[OrthoViews.TDView];
+    const tdCamera = this.props.cameras.tdCamera;
     tdCamera.position.set(...cameraData.position);
     tdCamera.left = cameraData.left;
     tdCamera.right = cameraData.right;

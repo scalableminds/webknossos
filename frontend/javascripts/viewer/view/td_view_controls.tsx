@@ -1,11 +1,11 @@
-import {
+import Icon, {
   BorderInnerOutlined,
   BorderOuterOutlined,
-  BorderOutlined,
   SettingOutlined,
   StopOutlined,
-  VideoCameraOutlined,
 } from "@ant-design/icons";
+import OrthographicCameraIcon from "@images/icons/icon-orthographic.svg?react";
+import PerspectiveCameraIcon from "@images/icons/icon-perspective.svg?react";
 import {
   Button,
   Col,
@@ -133,12 +133,12 @@ function TDViewControls({
               >
                 <Tooltip title="Orthographic Camera">
                   <Radio.Button value={false}>
-                    <BorderOutlined />
+                    <Icon component={OrthographicCameraIcon} />
                   </Radio.Button>
                 </Tooltip>
                 <Tooltip title="Perspective Camera">
                   <Radio.Button value={true}>
-                    <VideoCameraOutlined />
+                    <Icon component={PerspectiveCameraIcon} />
                   </Radio.Button>
                 </Tooltip>
               </Radio.Group>

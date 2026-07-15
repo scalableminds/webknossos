@@ -9,10 +9,10 @@ import { type OrthographicCamera, Vector3 as ThreeVector3 } from "three";
 import type { VoxelSize } from "types/api_types";
 import {
   type OrthoView,
-  type OrthoViewMap,
   OrthoViews,
   type Point2,
   type Vector3,
+  type ViewportCameras,
 } from "viewer/constants";
 import CameraController, {
   updatePerspectiveCameraFromOrthographic,
@@ -90,7 +90,7 @@ function getTDViewMouseControlsSkeleton(planeView: PlaneView): Record<string, an
 
 const INVALID_ACTIVE_NODE_ID = -1;
 type OwnProps = {
-  cameras: OrthoViewMap<OrthographicCamera>;
+  cameras: ViewportCameras;
   planeView?: PlaneView;
   annotation?: StoreAnnotation;
 };
@@ -109,16 +109,15 @@ function maybeGetActiveNodeFromProps(props: Props) {
 class TDController extends PureComponent<Props> {
   controls!: typeof TrackballControls;
   mouseController!: InputMouse;
-  // Initialized eagerly (rather than in componentDidMount) since CameraController,
-  // a child component that mounts before TDController's componentDidMount runs, can
-  // call setTargetAndFixPosition() via its own store listeners as soon as it mounts.
-  oldUnitPos: Vector3 = voxelToUnit(
-    Store.getState().dataset.dataSource.scale,
-    getPosition(Store.getState().flycam),
-  );
+  // Set in componentDidMount. Until then it is null, and setTargetAndFixPosition is a
+  // no-op, because CameraController (a child that mounts first) may already call
+  // setTargetAndFixPosition() via its store listeners before this is initialized.
+  oldUnitPos: Vector3 | null = null;
   isStarted: boolean = false;
 
   componentDidMount() {
+    const { dataset, flycam } = Store.getState();
+    this.oldUnitPos = voxelToUnit(dataset.dataSource.scale, getPosition(flycam));
     this.isStarted = true;
     this.initMouse();
   }
@@ -169,7 +168,7 @@ class TDController extends PureComponent<Props> {
     const { flycam } = Store.getState();
 
     const pos = voxelToUnit(this.props.voxelSize, getPosition(flycam));
-    const tdCamera = this.props.cameras[OrthoViews.TDView];
+    const tdCamera = this.props.cameras.tdCamera;
     this.controls = new TrackballControls(
       tdCamera,
       view,
@@ -205,7 +204,7 @@ class TDController extends PureComponent<Props> {
       return;
     }
     updatePerspectiveCameraFromOrthographic(
-      this.props.cameras[OrthoViews.TDView],
+      this.props.cameras.tdCamera,
       perspectiveCamera,
       this.controls.target,
     );
@@ -359,6 +358,11 @@ class TDController extends PureComponent<Props> {
   }
 
   setTargetAndFixPosition = (position?: Vector3): void => {
+    if (this.oldUnitPos == null) {
+      // Not mounted yet (see the field declaration). Skip until componentDidMount
+      // has initialized oldUnitPos.
+      return;
+    }
     const { flycam } = Store.getState();
     const { controls } = this;
     position = position || getPosition(flycam);
@@ -384,7 +388,7 @@ class TDController extends PureComponent<Props> {
     this.oldUnitPos = nmPosition;
     const nmVector = new ThreeVector3(...invertedDiff);
     // moves camera by the nm vector
-    const camera = this.props.cameras[OrthoViews.TDView];
+    const camera = this.props.cameras.tdCamera;
     const rotation = ThreeVector3.prototype.multiplyScalar.call(camera.rotation.clone(), -1);
     // reverse euler order
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'order' does not exist on type 'Vector3'.
@@ -412,7 +416,7 @@ class TDController extends PureComponent<Props> {
   }
 
   onTDCameraChanged = (userTriggered: boolean = true) => {
-    const tdCamera = this.props.cameras[OrthoViews.TDView];
+    const tdCamera = this.props.cameras.tdCamera;
     const setCameraAction = userTriggered
       ? setTDCameraAction
       : setTDCameraWithoutTimeTrackingAction;

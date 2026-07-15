@@ -37,6 +37,7 @@ import {
 } from "./backend_sync_helper_sagas";
 import { performCutFromNeighbors, performMinCut } from "./cut_operation_helper_sagas";
 import { splitAgglomerateInMapping, updateMappingWithMerge } from "./local_mapping_update_sagas";
+import { resolveMultiCutSelectionFromMeshData } from "./multi_split_selection_sagas";
 import {
   gatherInfoForOperation,
   getAgglomerateInfos,
@@ -82,6 +83,29 @@ export function* performPartitionedMinCut(
     Toast.error(messages["proofreading.multi_cut.no_valid_agglomerate"]);
     return;
   }
+
+  // Backstop for the live-collab race where the user commits (Enter) before the reload's
+  // FINISHED_LOADING_MESH reconcile ran (see reconcileMultiCutSelectionSaga). Re-derive the
+  // agglomerate id from the loaded mesh data (no backend lookup). If the selection now spans
+  // multiple agglomerates it can no longer be split: clear it and warn. If it resolves to a single
+  // agglomerate, use that (fresher than the stored id). If no meshes are loaded (e.g. the selection
+  // was made via the data viewports), keep the stored id and rely on the existing performMinCut
+  // failure path below.
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
+  const resolution = resolveMultiCutSelectionFromMeshData(
+    preparation.volumeTracing.tracingId,
+    additionalCoordinates,
+    partitions,
+  );
+  if (resolution.type === "scattered") {
+    yield* put(resetMultiCutToolPartitionsAction());
+    Toast.warning(messages["proofreading.multi_cut.selection_invalidated_by_other_user"]);
+    return;
+  }
+  if (resolution.type === "single") {
+    agglomerateId = resolution.agglomerateId;
+  }
+
   const volumeTracingId = preparation.volumeTracing.tracingId;
   const { agglomerateFileMag, annotationVersion } = preparation;
 

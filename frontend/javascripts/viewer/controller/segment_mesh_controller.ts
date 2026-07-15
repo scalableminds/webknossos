@@ -277,6 +277,14 @@ export default class SegmentMeshController {
       this.throttledUpdateActiveUnmappedSegmentIdHighlighting(
         getActiveUnmappedSegmentId(state, segmentationTracing),
       );
+      // Re-apply the multi-split partition highlighting for the (re)created mesh.
+      // Needed in case the mesh is reloaded due to e.g. incorporating foreign update actions.
+      if (state.uiInformation.activeTool === AnnotationTool.PROOFREAD) {
+        this.throttledUpdateMinCutPartitionHighlighting(
+          state.localSegmentationStateByLayer[segmentationTracing.tracingId]?.minCutPartitions ??
+            null,
+        );
+      }
     }
   }
 
@@ -716,8 +724,68 @@ export default class SegmentMeshController {
     });
   };
 
+  // Determine, purely from the currently loaded mesh data (no mapping / backend lookup), which
+  // agglomerate(s) the given unmapped supervoxel ids currently belong to. A mesh is stored under
+  // its agglomerate id (the segmentId key) and its geometry knows which unmapped supervoxels it
+  // contains (vertexSegmentMapping), so this reflects the latest reloaded state. Used to keep the
+  // multi-split selection's agglomerate id in sync after a foreign proofreading edit and to detect
+  // when the selection no longer belongs to a single agglomerate (see reconcileMultiCutSelectionSaga).
+  // Returns the distinct agglomerate ids that contain at least one of the given ids, plus the ids
+  // that are not present in any loaded mesh (chunk not loaded yet, or supervoxel removed).
+  getAgglomerateIdsForUnmappedSegmentIds(
+    unmappedSegmentIds: number[],
+    layerName: string,
+    additionalCoordinates?: AdditionalCoordinate[] | null,
+  ): { agglomerateIds: Set<number>; unresolvedIds: number[] } {
+    const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
+    const agglomerateIds = new Set<number>();
+    const resolvedIds = new Set<number>();
+
+    // meshesGroupsPerSegmentId is keyed by the agglomerate id, so we iterate exactly the mesh nodes
+    // of this layer (agglomerateId -> lod -> group -> mesh) instead of walking the whole scene subtree.
+    const lodGroupsPerAgglomerateId =
+      this.meshesGroupsPerSegmentId[additionalCoordKey]?.[layerName];
+    // Only consider meshes whose agglomerate id is still present in the store's mesh map. The
+    // REMOVE_MESH reducer deletes that entry synchronously (ahead of the forked scene-disposal
+    // saga), so this filters out geometry that is being removed during a reload and prevents a
+    // stale pre-split mesh from producing a spurious "spans multiple agglomerates" result.
+    const storeMeshes =
+      Store.getState().localSegmentationStateByLayer[layerName]?.meshes?.[additionalCoordKey];
+
+    for (const [segmentIdStr, lodGroups] of Object.entries(lodGroupsPerAgglomerateId ?? {})) {
+      const agglomerateId = Number(segmentIdStr);
+      if (storeMeshes?.[agglomerateId] == null) {
+        continue;
+      }
+      for (const lodGroup of Object.values(lodGroups)) {
+        for (const meshGroup of lodGroup.children) {
+          for (const meshNode of meshGroup.children) {
+            const vertexSegmentMapping = meshNode.geometry.vertexSegmentMapping;
+            if (vertexSegmentMapping == null) {
+              continue;
+            }
+            for (const unmappedSegmentId of unmappedSegmentIds) {
+              if (vertexSegmentMapping.containsSegmentId(unmappedSegmentId)) {
+                agglomerateIds.add(agglomerateId);
+                resolvedIds.add(unmappedSegmentId);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    const unresolvedIds = unmappedSegmentIds.filter((id) => !resolvedIds.has(id));
+    return { agglomerateIds, unresolvedIds };
+  }
+
   throttledUpdateActiveUnmappedSegmentIdHighlighting = throttle(
     this.updateActiveUnmappedSegmentIdHighlighting,
+    150,
+  );
+
+  throttledUpdateMinCutPartitionHighlighting = throttle(
+    this.updateMinCutPartitionHighlighting,
     150,
   );
 }

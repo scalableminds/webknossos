@@ -15,6 +15,7 @@ export type CutAgglomerateFromNeighborsAction = ReturnType<
 >;
 type ResetMultiCutToolPartitionsAction = ReturnType<typeof resetMultiCutToolPartitionsAction>;
 export type MinCutPartitionsAction = ReturnType<typeof minCutPartitionsAction>;
+export type SetMultiCutAgglomerateIdAction = ReturnType<typeof setMultiCutAgglomerateIdAction>;
 
 export type ProofreadAction =
   | ProofreadAtPositionAction
@@ -25,7 +26,8 @@ export type ProofreadAction =
   | CutAgglomerateFromNeighborsAction
   | ToggleSegmentInPartitionAction
   | ResetMultiCutToolPartitionsAction
-  | MinCutPartitionsAction;
+  | MinCutPartitionsAction
+  | SetMultiCutAgglomerateIdAction;
 
 export const proofreadAtPosition = (
   position: Vector3,
@@ -112,4 +114,10 @@ export const resetMultiCutToolPartitionsAction = () =>
 export const minCutPartitionsAction = () =>
   ({
     type: "MIN_CUT_PARTITIONS",
+  }) as const;
+
+export const setMultiCutAgglomerateIdAction = (agglomerateId: number) =>
+  ({
+    type: "SET_MULTI_CUT_AGGLOMERATE_ID",
+    agglomerateId,
   }) as const;

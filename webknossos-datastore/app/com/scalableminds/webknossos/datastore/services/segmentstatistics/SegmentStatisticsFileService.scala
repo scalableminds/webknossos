@@ -52,15 +52,13 @@ class SegmentStatisticsFileService @Inject() (
     dataVaultService: DataVaultService,
     chunkCacheService: DSChunkCacheService
 ) {
+  
+  // dataSourceId, layerName → SegmentStatisticsFileKey
+  private val segmentStatisticsFileKeyCache: AlfuCache[(DataSourceId, String), SegmentStatisticsFileKey] = AlfuCache()
 
-  private val segmentStatisticsFileKeyCache: AlfuCache[(DataSourceId, String), SegmentStatisticsFileKey] =
-    AlfuCache() // dataSourceId, layerName → SegmentStatisticsFileKey
+  private val attributesCache: AlfuCache[SegmentStatisticsFileKey, SegmentStatisticsFileAttributes] = AlfuCache()
 
-  private val attributesCache: AlfuCache[SegmentStatisticsFileKey, SegmentStatisticsFileAttributes] =
-    AlfuCache()
-
-  private val openArraysCache: AlfuCache[(SegmentStatisticsFileKey, String), DatasetArray] =
-    AlfuCache()
+  private val openArraysCache: AlfuCache[(SegmentStatisticsFileKey, String), DatasetArray] = AlfuCache()
 
   def lookUpSegmentStatisticsFileKey(dataSourceId: DataSourceId, dataLayer: DataLayer)(implicit
       ec: ExecutionContext
@@ -133,9 +131,10 @@ class SegmentStatisticsFileService @Inject() (
       existsPerMetric <- Fox.serialCombined(SegmentStatisticsFileService.possibleMetrics) { metric =>
         openZarrArray(segmentStatisticsFileKey, metric).shiftBox.map(_.isDefined)
       }
-    } yield SegmentStatisticsFileService.possibleMetrics.zip(existsPerMetric).collect { case (metric, true) =>
-      metric
-    }
+      collected = SegmentStatisticsFileService.possibleMetrics.zip(existsPerMetric).collect { case (metric, true) =>
+        metric
+      }
+    } yield collected
 
   def getInfos(dataSourceId: DataSourceId, dataLayer: DataLayer)(using
       ec: ExecutionContext,

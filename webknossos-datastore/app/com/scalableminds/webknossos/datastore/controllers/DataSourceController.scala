@@ -435,8 +435,9 @@ class DataSourceController @Inject() (
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
-          segmentStatisticsFileInfosBox <- segmentStatisticsFileService.getInfos(dataSource.id, dataLayer).shiftBox
-        } yield Ok(Json.toJson(Seq(segmentStatisticsFileInfosBox).flatten))
+          segmentStatisticsFileInfosBox <- segmentStatisticsFileService.getInfos(dataSource.id, dataLayer)
+          // TODO shift box, drop empty (fail on failure, though?)
+        } yield Ok(Json.toJson(Seq(segmentStatisticsFileInfosBox)))
       }
     }
 

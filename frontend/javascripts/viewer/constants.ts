@@ -1,5 +1,5 @@
 import type { Matrix4x4 } from "mjs";
-import { Euler, Matrix4 } from "three";
+import { Euler, Matrix4, type OrthographicCamera } from "three";
 export type AdditionalCoordinate = { name: string; value: number };
 
 export const ViewModeValues = ["orthogonal", "flight"] as ViewMode[];
@@ -65,6 +65,15 @@ export type OrthoViewWithoutTD = Exclude<keyof typeof OrthoViews, "TDView">;
 
 export type OrthoViewMap<T> = Record<OrthoView, T>;
 export type OrthoViewWithoutTDMap<T> = Record<OrthoViewWithoutTD, T>;
+// The orthographic cameras for the four viewports. The 3D viewport's camera is kept
+// separate from the plane-viewport cameras so that TD-view access is always explicit
+// (i.e. one cannot accidentally index a plane-viewport map with "TDView"). Note that
+// the 3D viewport's perspective camera is not part of this structure since it is
+// derived from `tdCamera` and only used within PlaneView (see getTDViewPerspectiveCamera).
+export type ViewportCameras = {
+  nonTdCameras: OrthoViewWithoutTDMap<OrthographicCamera>;
+  tdCamera: OrthographicCamera;
+};
 export type OrthoViewExtents = Readonly<OrthoViewMap<Vector2>>;
 export type OrthoViewRects = Readonly<OrthoViewMap<Rect>>;
 export const FlightViewport = "flightViewport";
@@ -245,6 +254,10 @@ export enum TDViewDisplayModeEnum {
   DATA = "DATA",
 }
 export type TDViewDisplayMode = keyof typeof TDViewDisplayModeEnum;
+// This name can be used to retrieve the perspective camera of the 3D viewport
+// from the scene (the orthographic camera is named after the viewport itself).
+export const TDViewPerspectiveCameraName = "TDView_perspective";
+export const TDViewPerspectiveFov = 45;
 export enum MappingStatusEnum {
   DISABLED = "DISABLED",
   ACTIVATING = "ACTIVATING",

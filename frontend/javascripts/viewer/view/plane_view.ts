@@ -8,17 +8,27 @@ import throttle from "lodash-es/throttle";
 import {
   DirectionalLight,
   OrthographicCamera,
+  PerspectiveCamera,
   Vector2 as ThreeVector2,
   Vector3 as ThreeVector3,
 } from "three";
 import TWEEN from "tween.js";
-import type { OrthoViewMap, Vector2, Vector3, Viewport } from "viewer/constants";
+import type {
+  OrthoViewWithoutTDMap,
+  Vector2,
+  Vector3,
+  Viewport,
+  ViewportCameras,
+} from "viewer/constants";
 import Constants, {
   FlightViewport,
   OrthoViewColors,
   OrthoViews,
   OrthoViewValues,
+  OrthoViewValuesWithoutTDView,
   PerformanceMarkEnum,
+  TDViewPerspectiveCameraName,
+  TDViewPerspectiveFov,
 } from "viewer/constants";
 import type { VertexSegmentMapping } from "viewer/controller/mesh_helpers";
 import { getWebGlAnalyticsInformation } from "viewer/controller/renderer";
@@ -37,7 +47,11 @@ import { updateTemporarySettingAction } from "viewer/model/actions/settings_acti
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import Store from "viewer/store";
 import { getGroundTruthLayoutRect } from "viewer/view/layouting/default_layout_configs";
-import { clearCanvas, setupRenderArea } from "viewer/view/rendering_utils";
+import {
+  clearCanvas,
+  getActiveTDViewCameraName,
+  setupRenderArea,
+} from "viewer/view/rendering_utils";
 
 const LIGHT_INTENSITY = 10;
 
@@ -70,7 +84,18 @@ const MESH_HOVER_THROTTLING_DELAY = 50;
 let oldRaycasterHit: RaycasterHit = null;
 
 class PlaneView {
-  cameras: OrthoViewMap<OrthographicCamera>;
+  // Orthographic cameras of the three plane viewports.
+  nonTdCameras: OrthoViewWithoutTDMap<OrthographicCamera>;
+  // The 3D viewport can be rendered with either an orthographic or a perspective
+  // camera. The orthographic camera is the source of truth; the perspective camera
+  // is derived from it (see updatePerspectiveCameraFromOrthographic).
+  tdCameras: {
+    ORTHOGRAPHIC: OrthographicCamera;
+    PERSPECTIVE: PerspectiveCamera;
+  };
+  // Combined view of the orthographic cameras, handed to the camera controllers as a
+  // prop. Kept as a stable reference so the PureComponents don't re-render each frame.
+  private cameras: ViewportCameras;
   isRunning: boolean = false;
   needsRerender: boolean;
   unsubscribeFunctions: Array<() => void> = [];
@@ -78,31 +103,53 @@ class PlaneView {
   constructor() {
     const { scene } = getSceneController();
     // Initialize main js components
-    const cameras = {} as OrthoViewMap<OrthographicCamera>;
+    const nonTdCameras = {} as OrthoViewWithoutTDMap<OrthographicCamera>;
 
-    for (const plane of OrthoViewValues) {
+    for (const plane of OrthoViewValuesWithoutTDView) {
       // Let's set up cameras
       // No need to set any properties, because the cameras controller will deal with that
-      cameras[plane] = new OrthographicCamera(0, 0, 0, 0);
+      nonTdCameras[plane] = new OrthographicCamera(0, 0, 0, 0);
       // This name can be used to retrieve the camera from the scene
-      cameras[plane].name = plane;
-      scene.add(cameras[plane]);
+      nonTdCameras[plane].name = plane;
+      scene.add(nonTdCameras[plane]);
     }
-    this.cameras = cameras;
+    this.nonTdCameras = nonTdCameras;
 
-    createDirLight([10, 10, 10], [0, 0, 10], LIGHT_INTENSITY, this.cameras[OrthoViews.TDView]);
-    createDirLight([-10, 10, 10], [0, 0, 10], LIGHT_INTENSITY, this.cameras[OrthoViews.TDView]);
-    this.cameras[OrthoViews.PLANE_XY].position.z = -1;
-    this.cameras[OrthoViews.PLANE_YZ].position.x = 1;
-    this.cameras[OrthoViews.PLANE_XZ].position.y = 1;
-    this.cameras[OrthoViews.TDView].position.copy(new ThreeVector3(10, 10, -10));
-    this.cameras[OrthoViews.PLANE_XY].up = new ThreeVector3(0, -1, 0);
-    this.cameras[OrthoViews.PLANE_YZ].up = new ThreeVector3(0, -1, 0);
-    this.cameras[OrthoViews.PLANE_XZ].up = new ThreeVector3(0, 0, -1);
-    this.cameras[OrthoViews.TDView].up = new ThreeVector3(0, 0, -1);
+    const tdOrthographicCamera = new OrthographicCamera(0, 0, 0, 0);
+    tdOrthographicCamera.name = OrthoViews.TDView;
+    scene.add(tdOrthographicCamera);
+    // The perspective camera for the 3D viewport is derived from the orthographic
+    // TDView camera (see updatePerspectiveCameraFromOrthographic) and is used for
+    // rendering and raycasting when the tdViewUsePerspectiveCamera setting is active.
+    const tdPerspectiveCamera = new PerspectiveCamera(TDViewPerspectiveFov, 1, 1, 8000000);
+    tdPerspectiveCamera.name = TDViewPerspectiveCameraName;
+    scene.add(tdPerspectiveCamera);
+    this.tdCameras = { ORTHOGRAPHIC: tdOrthographicCamera, PERSPECTIVE: tdPerspectiveCamera };
 
-    for (const plane of OrthoViewValues) {
-      this.cameras[plane].lookAt(new ThreeVector3(0, 0, 0));
+    this.cameras = { nonTdCameras: this.nonTdCameras, tdCamera: this.tdCameras.ORTHOGRAPHIC };
+
+    createDirLight([10, 10, 10], [0, 0, 10], LIGHT_INTENSITY, tdOrthographicCamera);
+    createDirLight([-10, 10, 10], [0, 0, 10], LIGHT_INTENSITY, tdOrthographicCamera);
+    this.nonTdCameras[OrthoViews.PLANE_XY].position.z = -1;
+    this.nonTdCameras[OrthoViews.PLANE_YZ].position.x = 1;
+    this.nonTdCameras[OrthoViews.PLANE_XZ].position.y = 1;
+    tdOrthographicCamera.position.copy(new ThreeVector3(10, 10, -10));
+    this.nonTdCameras[OrthoViews.PLANE_XY].up = new ThreeVector3(0, -1, 0);
+    this.nonTdCameras[OrthoViews.PLANE_YZ].up = new ThreeVector3(0, -1, 0);
+    this.nonTdCameras[OrthoViews.PLANE_XZ].up = new ThreeVector3(0, 0, -1);
+    tdOrthographicCamera.up = new ThreeVector3(0, 0, -1);
+    // Give the perspective camera a valid initial transform (matching the orthographic
+    // TDView camera) so that it can be rendered even before its projection has been
+    // derived from a real orthographic frustum (see updatePerspectiveCameraFromOrthographic).
+    tdPerspectiveCamera.position.copy(tdOrthographicCamera.position);
+    tdPerspectiveCamera.up.copy(tdOrthographicCamera.up);
+
+    for (const camera of [
+      ...Object.values(this.nonTdCameras),
+      tdOrthographicCamera,
+      tdPerspectiveCamera,
+    ]) {
+      camera.lookAt(new ThreeVector3(0, 0, 0));
     }
 
     this.needsRerender = true;
@@ -146,7 +193,7 @@ class PlaneView {
 
         if (width > 0 && height > 0) {
           setupRenderArea(renderer, left, top, width, height, OrthoViewColors[plane]);
-          renderer.render(scene, this.cameras[plane]);
+          renderer.render(scene, this.getCameraForPlane(plane));
 
           if (!window.measuredTimeToFirstRender) {
             this.measureTimeToFirstRender();
@@ -166,7 +213,7 @@ class PlaneView {
       (mousePosition[0] / tdViewport.width) * 2 - 1,
       ((mousePosition[1] / tdViewport.height) * 2 - 1) * -1,
     );
-    raycaster.setFromCamera(mouse, this.cameras[OrthoViews.TDView]);
+    raycaster.setFromCamera(mouse, this.getActiveTDViewCamera());
   }
 
   performMeshHitTest = throttle(
@@ -315,8 +362,21 @@ class PlaneView {
     }
   };
 
-  getCameras(): OrthoViewMap<OrthographicCamera> {
+  getCameras(): ViewportCameras {
     return this.cameras;
+  }
+
+  getTDViewPerspectiveCamera(): PerspectiveCamera {
+    return this.tdCameras.PERSPECTIVE;
+  }
+
+  getActiveTDViewCamera(): OrthographicCamera | PerspectiveCamera {
+    const cameraName = getActiveTDViewCameraName(
+      Store.getState().userConfiguration.tdViewUsePerspectiveCamera,
+    );
+    return cameraName === TDViewPerspectiveCameraName
+      ? this.tdCameras.PERSPECTIVE
+      : this.tdCameras.ORTHOGRAPHIC;
   }
 
   stop(): void {
@@ -324,8 +384,12 @@ class PlaneView {
 
     const sceneController = getSceneControllerOrNull();
     if (sceneController != null) {
-      for (const plane of OrthoViewValues) {
-        sceneController.scene.remove(this.cameras[plane]);
+      for (const camera of [
+        ...Object.values(this.nonTdCameras),
+        this.tdCameras.ORTHOGRAPHIC,
+        this.tdCameras.PERSPECTIVE,
+      ]) {
+        sceneController.scene.remove(camera);
       }
     }
     this.resizeThrottled.cancel();
@@ -368,7 +432,7 @@ class PlaneView {
     performance.mark(PerformanceMarkEnum.SHADER_COMPILE);
     // The shader is the same for all three viewports, so it doesn't matter which camera is used.
     renderer
-      .compileAsync(scene, this.cameras[OrthoViews.PLANE_XY])
+      .compileAsync(scene, this.nonTdCameras[OrthoViews.PLANE_XY])
       .then(() => {
         // Counter-intuitively this is not the moment where the webgl program is fully compiled.
         // There is another stall once render or getProgramInfoLog is called, since not all work is done yet.
@@ -459,11 +523,14 @@ class PlaneView {
     window.measuredTimeToFirstRender = true;
   }
 
-  getCameraForPlane(plane: Viewport) {
+  getCameraForPlane(plane: Viewport): OrthographicCamera | PerspectiveCamera {
     if (plane === FlightViewport) {
       throw new Error("Cannot access camera for flight viewport.");
     }
-    return this.getCameras()[plane];
+    if (plane === OrthoViews.TDView) {
+      return this.getActiveTDViewCamera();
+    }
+    return this.nonTdCameras[plane];
   }
 }
 

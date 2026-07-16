@@ -378,6 +378,7 @@ export type UserConfiguration = {
   readonly tdViewDisplayPlanes: TDViewDisplayMode;
   readonly tdViewDisplayDatasetBorders: boolean;
   readonly tdViewDisplayLayerBorders: boolean;
+  readonly tdViewUsePerspectiveCamera: boolean;
   readonly gpuMemoryFactor: number;
   // For volume (and hybrid) annotations, this mode specifies
   // how volume annotations overwrite existing voxels.

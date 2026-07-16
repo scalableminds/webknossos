@@ -1,9 +1,11 @@
-import {
+import Icon, {
   BorderInnerOutlined,
   BorderOuterOutlined,
   SettingOutlined,
   StopOutlined,
 } from "@ant-design/icons";
+import OrthographicCameraIcon from "@images/icons/icon-orthographic.svg?react";
+import PerspectiveCameraIcon from "@images/icons/icon-perspective.svg?react";
 import {
   Button,
   Col,
@@ -29,18 +31,22 @@ type Props = {
   tdViewDisplayPlanes: TDViewDisplayMode;
   tdViewDisplayDatasetBorders: boolean;
   tdViewDisplayLayerBorders: boolean;
+  tdViewUsePerspectiveCamera: boolean;
   onChangeTdViewDisplayPlanes: (arg0: RadioChangeEvent) => void;
   onChangeTdViewDisplayDatasetBorders: SwitchChangeEventHandler;
   onChangeTdViewDisplayLayerBorders: SwitchChangeEventHandler;
+  onChangeTdViewUsePerspectiveCamera: (arg0: RadioChangeEvent) => void;
 };
 
 function TDViewControls({
   tdViewDisplayPlanes,
   tdViewDisplayDatasetBorders,
   tdViewDisplayLayerBorders,
+  tdViewUsePerspectiveCamera,
   onChangeTdViewDisplayPlanes,
   onChangeTdViewDisplayDatasetBorders,
   onChangeTdViewDisplayLayerBorders,
+  onChangeTdViewUsePerspectiveCamera,
 }: Props) {
   const settingsMenu: MenuProps = {
     style: {
@@ -112,6 +118,34 @@ function TDViewControls({
           </Row>
         ),
       },
+      {
+        key: "usePerspectiveCamera",
+        label: (
+          <Row>
+            <Col span={14}>
+              <label className="setting-label">Camera Projection</label>
+            </Col>
+            <Col span={10}>
+              <Radio.Group
+                value={tdViewUsePerspectiveCamera}
+                onChange={onChangeTdViewUsePerspectiveCamera}
+                size="small"
+              >
+                <Tooltip title="Orthographic Camera">
+                  <Radio.Button value={false}>
+                    <Icon component={OrthographicCameraIcon} />
+                  </Radio.Button>
+                </Tooltip>
+                <Tooltip title="Perspective Camera">
+                  <Radio.Button value={true}>
+                    <Icon component={PerspectiveCameraIcon} />
+                  </Radio.Button>
+                </Tooltip>
+              </Radio.Group>
+            </Col>
+          </Row>
+        ),
+      },
     ],
   };
 
@@ -146,6 +180,7 @@ function mapStateToProps(state: WebknossosState) {
     tdViewDisplayPlanes: state.userConfiguration.tdViewDisplayPlanes,
     tdViewDisplayDatasetBorders: state.userConfiguration.tdViewDisplayDatasetBorders,
     tdViewDisplayLayerBorders: state.userConfiguration.tdViewDisplayLayerBorders,
+    tdViewUsePerspectiveCamera: state.userConfiguration.tdViewUsePerspectiveCamera,
   };
 }
 
@@ -162,6 +197,11 @@ function mapDispatchToProps(dispatch: Dispatch<any>) {
 
     onChangeTdViewDisplayLayerBorders(tdViewDisplayLayerBorders: boolean) {
       dispatch(updateUserSettingAction("tdViewDisplayLayerBorders", tdViewDisplayLayerBorders));
+    },
+
+    onChangeTdViewUsePerspectiveCamera(evt: RadioChangeEvent) {
+      const tdViewUsePerspectiveCamera: boolean = evt.target.value;
+      dispatch(updateUserSettingAction("tdViewUsePerspectiveCamera", tdViewUsePerspectiveCamera));
     },
   };
 }

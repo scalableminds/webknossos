@@ -9,12 +9,14 @@ import { type OrthographicCamera, Vector3 as ThreeVector3 } from "three";
 import type { VoxelSize } from "types/api_types";
 import {
   type OrthoView,
-  type OrthoViewMap,
   OrthoViews,
   type Point2,
   type Vector3,
+  type ViewportCameras,
 } from "viewer/constants";
-import CameraController from "viewer/controller/camera_controller";
+import CameraController, {
+  updatePerspectiveCameraFromOrthographic,
+} from "viewer/controller/camera_controller";
 import { handleOpenContextMenu } from "viewer/controller/combinations/skeleton_handlers";
 import {
   ProofreadToolController,
@@ -88,7 +90,7 @@ function getTDViewMouseControlsSkeleton(planeView: PlaneView): Record<string, an
 
 const INVALID_ACTIVE_NODE_ID = -1;
 type OwnProps = {
-  cameras: OrthoViewMap<OrthographicCamera>;
+  cameras: ViewportCameras;
   planeView?: PlaneView;
   annotation?: StoreAnnotation;
 };
@@ -107,7 +109,10 @@ function maybeGetActiveNodeFromProps(props: Props) {
 class TDController extends PureComponent<Props> {
   controls!: typeof TrackballControls;
   mouseController!: InputMouse;
-  oldUnitPos!: Vector3;
+  // Set in componentDidMount. Until then it is null, and setTargetAndFixPosition is a
+  // no-op, because CameraController (a child that mounts first) may already call
+  // setTargetAndFixPosition() via its store listeners before this is initialized.
+  oldUnitPos: Vector3 | null = null;
   isStarted: boolean = false;
 
   componentDidMount() {
@@ -163,7 +168,7 @@ class TDController extends PureComponent<Props> {
     const { flycam } = Store.getState();
 
     const pos = voxelToUnit(this.props.voxelSize, getPosition(flycam));
-    const tdCamera = this.props.cameras[OrthoViews.TDView];
+    const tdCamera = this.props.cameras.tdCamera;
     this.controls = new TrackballControls(
       tdCamera,
       view,
@@ -185,6 +190,24 @@ class TDController extends PureComponent<Props> {
     }
 
     this.controls.update(true);
+    this.updateTDViewPerspectiveCamera();
+  };
+
+  updateTDViewPerspectiveCamera = () => {
+    // The perspective camera is derived from the orthographic camera which is the
+    // single source of truth for the 3D viewport. This needs to happen after
+    // this.controls.update() since only then the orthographic camera has its
+    // final orientation (via lookAt(target)).
+    // In flight mode, no planeView exists and the 3D viewport stays orthographic.
+    const perspectiveCamera = this.props.planeView?.getTDViewPerspectiveCamera();
+    if (perspectiveCamera == null || this.controls == null) {
+      return;
+    }
+    updatePerspectiveCameraFromOrthographic(
+      this.props.cameras.tdCamera,
+      perspectiveCamera,
+      this.controls.target,
+    );
   };
 
   getTDViewMouseControls(): Record<string, any> {
@@ -335,6 +358,11 @@ class TDController extends PureComponent<Props> {
   }
 
   setTargetAndFixPosition = (position?: Vector3): void => {
+    if (this.oldUnitPos == null) {
+      // Not mounted yet (see the field declaration). Skip until componentDidMount
+      // has initialized oldUnitPos.
+      return;
+    }
     const { flycam } = Store.getState();
     const { controls } = this;
     position = position || getPosition(flycam);
@@ -360,7 +388,7 @@ class TDController extends PureComponent<Props> {
     this.oldUnitPos = nmPosition;
     const nmVector = new ThreeVector3(...invertedDiff);
     // moves camera by the nm vector
-    const camera = this.props.cameras[OrthoViews.TDView];
+    const camera = this.props.cameras.tdCamera;
     const rotation = ThreeVector3.prototype.multiplyScalar.call(camera.rotation.clone(), -1);
     // reverse euler order
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'order' does not exist on type 'Vector3'.
@@ -388,11 +416,13 @@ class TDController extends PureComponent<Props> {
   }
 
   onTDCameraChanged = (userTriggered: boolean = true) => {
-    const tdCamera = this.props.cameras[OrthoViews.TDView];
+    const tdCamera = this.props.cameras.tdCamera;
     const setCameraAction = userTriggered
       ? setTDCameraAction
       : setTDCameraWithoutTimeTrackingAction;
-    // Write threeJS camera into store
+    // Write threeJS camera into store. This dispatch is handled synchronously and routes
+    // back through CameraController.updateTDCamera -> onCameraPositionChanged (updateControls),
+    // which also calls updateTDViewPerspectiveCamera(), so no separate call is needed here.
     Store.dispatch(setCameraAction(threeCameraToCameraData(tdCamera)));
   };
 

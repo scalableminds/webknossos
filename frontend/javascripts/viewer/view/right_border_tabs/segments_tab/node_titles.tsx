@@ -121,6 +121,7 @@ export const SegmentNodeTitle = memo(
               }}
               iconClassName="deemphasized"
               disableEditing={!allowUpdate}
+              placeholder="<Unnamed Segment>"
             />
             {(segment.metadata ?? []).length > 0 ? (
               <FastTooltip

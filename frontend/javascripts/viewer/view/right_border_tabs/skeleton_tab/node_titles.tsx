@@ -6,7 +6,10 @@ import { useWkSelector } from "libs/react_hooks";
 import type React from "react";
 import { useDispatch } from "react-redux";
 import { TreeTypeEnum } from "viewer/constants";
-import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
+import {
+  isConcurrentCollaborationMode,
+  mayEditAnnotation,
+} from "viewer/model/accessors/annotation_accessor";
 import { setTreeNameAction } from "viewer/model/actions/skeletontracing_actions";
 import { api } from "viewer/singletons";
 import EditableTextLabel from "viewer/view/components/editable_text_label";
@@ -28,7 +31,10 @@ export function TreeNodeTitle({
 }: TitleProps<TreeUiNode>) {
   const dispatch = useDispatch();
   const allowUpdate = useWkSelector(mayEditAnnotation);
+  const isConcurrentCollabMode = useWkSelector(isConcurrentCollaborationMode);
   const { tree } = node;
+  const isAgglomerateTree = tree.type === TreeTypeEnum.AGGLOMERATE;
+  const disableEditing = !allowUpdate || (isConcurrentCollabMode && !isAgglomerateTree);
 
   const maybeProofreadingIcon =
     tree.type === TreeTypeEnum.AGGLOMERATE ? (
@@ -54,7 +60,7 @@ export function TreeNodeTitle({
         onRenameStart={onRenameStart}
         onRenameEnd={onRenameEnd}
         onChange={(newName) => dispatch(setTreeNameAction(newName, tree.treeId))}
-        disableEditing={!allowUpdate}
+        disableEditing={disableEditing}
         hideEditIcon
       />
       {/* The type claims metadata is always set, but e.g. proto-imported trees can lack it at runtime. */}
@@ -74,6 +80,8 @@ export function GroupNodeTitle({
   onRenameEnd,
 }: TitleProps<GroupUiNode>) {
   const allowUpdate = useWkSelector(mayEditAnnotation);
+  const isConcurrentCollabMode = useWkSelector(isConcurrentCollaborationMode);
+  const disableEditing = !allowUpdate || isConcurrentCollabMode;
   const { group } = node;
   // Make sure the displayed name is not empty
   const displayableName = group.name.trim() || "<Unnamed Group>";
@@ -89,7 +97,7 @@ export function GroupNodeTitle({
         value={displayableName}
         label="Group Name"
         onChange={(newName) => api.tracing.renameSkeletonGroup(group.groupId, newName)}
-        disableEditing={!allowUpdate}
+        disableEditing={disableEditing}
         hideEditIcon
         onRenameStart={onRenameStart}
         onRenameEnd={onRenameEnd}

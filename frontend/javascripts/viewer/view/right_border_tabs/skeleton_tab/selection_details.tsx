@@ -5,7 +5,10 @@ import sum from "lodash-es/sum";
 import { memo, useCallback } from "react";
 import { useDispatch } from "react-redux";
 import type { MetadataEntryProto } from "types/api_types";
-import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
+import {
+  isConcurrentCollaborationMode,
+  mayEditAnnotation,
+} from "viewer/model/accessors/annotation_accessor";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import {
   setTreeMetadataAction,
@@ -23,7 +26,9 @@ import { MetadataEntryTableRows } from "../metadata_table";
 
 function TreeDetails({ tree }: { tree: Tree }) {
   const dispatch = useDispatch();
-  const readOnly = !useWkSelector(mayEditAnnotation);
+  const allowUpdate = useWkSelector(mayEditAnnotation);
+  const isConcurrentCollabMode = useWkSelector(isConcurrentCollaborationMode);
+  const readOnly = !allowUpdate || isConcurrentCollabMode;
 
   const setMetadata = useCallback(
     (updatedTree: Tree, newProperties: MetadataEntryProto[]) => {
@@ -57,7 +62,9 @@ function TreeDetails({ tree }: { tree: Tree }) {
 function GroupDetails({ groupId }: { groupId: number }) {
   const trees = useWkSelector((state) => enforceSkeletonTracing(state.annotation).trees);
   const treeGroups = useWkSelector((state) => enforceSkeletonTracing(state.annotation).treeGroups);
-  const readOnly = !useWkSelector(mayEditAnnotation);
+  const allowUpdate = useWkSelector(mayEditAnnotation);
+  const isConcurrentCollabMode = useWkSelector(isConcurrentCollaborationMode);
+  const readOnly = !allowUpdate || isConcurrentCollabMode;
 
   const group = findGroup(treeGroups, groupId);
   if (group == null) {

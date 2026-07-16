@@ -20,7 +20,10 @@ import { useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { batchActions } from "redux-batched-actions";
 import { TreeTypeEnum, type Vector3 } from "viewer/constants";
-import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
+import {
+  isConcurrentCollaborationMode,
+  mayEditAnnotation,
+} from "viewer/model/accessors/annotation_accessor";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import {
@@ -63,12 +66,14 @@ export function useTreeContextMenuBuilder(
 ): TreeContextMenuBuilder {
   const dispatch = useDispatch();
   const allowUpdate = useWkSelector(mayEditAnnotation);
+  const isConcurrentCollabMode = useWkSelector(isConcurrentCollaborationMode);
 
   return useCallback(
     (node: TreeUiNode): MenuProps => {
       const { tree } = node;
-      const isEditingDisabled = !allowUpdate;
       const isAgglomerateTree = tree.type === TreeTypeEnum.AGGLOMERATE;
+      // In concurrent collaboration mode, only agglomerate trees (proofreading) may be edited.
+      const isEditingDisabled = !allowUpdate || (isConcurrentCollabMode && !isAgglomerateTree);
 
       return {
         items: [
@@ -154,6 +159,9 @@ export function useTreeContextMenuBuilder(
           isAgglomerateTree
             ? {
                 key: "convertToNormalTree",
+                // Converting to a normal tree would change the tree's type, which is not
+                // allowed in concurrent collaboration mode.
+                disabled: !allowUpdate || isConcurrentCollabMode,
                 onClick: () => {
                   dispatch(setTreeTypeAction(tree.treeId, TreeTypeEnum.DEFAULT));
                   hideContextMenu();
@@ -166,7 +174,7 @@ export function useTreeContextMenuBuilder(
         ],
       };
     },
-    [dispatch, allowUpdate, selection, hideContextMenu],
+    [dispatch, allowUpdate, isConcurrentCollabMode, selection, hideContextMenu],
   );
 }
 
@@ -177,6 +185,7 @@ export function useGroupContextMenuBuilder(
 ): GroupContextMenuBuilder {
   const dispatch = useDispatch();
   const allowUpdate = useWkSelector(mayEditAnnotation);
+  const isConcurrentCollabMode = useWkSelector(isConcurrentCollaborationMode);
   const trees = useWkSelector((state) => enforceSkeletonTracing(state.annotation).trees);
   const treeGroups = useWkSelector((state) => enforceSkeletonTracing(state.annotation).treeGroups);
   const activeTreeId = useWkSelector(
@@ -238,7 +247,9 @@ export function useGroupContextMenuBuilder(
   return useCallback(
     (node: GroupUiNode): MenuProps => {
       const groupId = node.group.groupId;
-      const isEditingDisabled = !allowUpdate;
+      // Group operations restructure the tree hierarchy and are not tied to a single
+      // agglomerate tree, so they are disabled in concurrent collaboration mode.
+      const isEditingDisabled = !allowUpdate || isConcurrentCollabMode;
       const hasSubgroups = node.children.some((child) => child.type === "group");
 
       // Only one type of component can be active/selected at a time.
@@ -369,6 +380,7 @@ export function useGroupContextMenuBuilder(
     [
       dispatch,
       allowUpdate,
+      isConcurrentCollabMode,
       selection.selectedTreeIds,
       activeTreeId,
       activeGroupId,

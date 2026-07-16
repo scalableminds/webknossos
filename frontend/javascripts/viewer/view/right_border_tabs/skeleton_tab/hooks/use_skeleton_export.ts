@@ -1,5 +1,6 @@
 import { getBuildInfo } from "admin/rest_api";
 import { saveAs } from "file-saver";
+import importDynamic from "libs/import_dynamic";
 import { useQueryWithErrorHandling } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { sleep } from "libs/utils";
@@ -72,7 +73,9 @@ export function useSkeletonExport(): SkeletonExport {
     try {
       // @zip.js is a fairly large module.
       // Dynamically import it to avoid loading it on Dashboard/admin pages.
-      const { BlobWriter, ZipWriter, TextReader } = await import("@zip.js/zip.js");
+      const { BlobWriter, ZipWriter, TextReader } = await importDynamic(
+        () => import("@zip.js/zip.js"),
+      );
 
       const state = Store.getState();
       const skeletonTracing = state.annotation.skeleton;

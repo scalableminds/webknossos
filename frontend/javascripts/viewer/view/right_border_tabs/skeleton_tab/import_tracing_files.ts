@@ -1,5 +1,6 @@
 import type { Entry } from "@zip.js/zip.js";
 import { clearCache, importVolumeTracing } from "admin/rest_api";
+import importDynamic from "libs/import_dynamic";
 import { readFileAsArrayBuffer, readFileAsText } from "libs/read_file";
 import Toast from "libs/toast";
 import { isFileExtensionEqualTo, promiseAllWithErrors } from "libs/utils";
@@ -111,7 +112,9 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
       try {
         // @zip.js is a fairly large module
         // Dynamically import it to avoid loading it on Dashboard/admin pages.
-        const { BlobReader, ZipReader, BlobWriter } = await import("@zip.js/zip.js");
+        const { BlobReader, ZipReader, BlobWriter } = await importDynamic(
+          () => import("@zip.js/zip.js"),
+        );
 
         const reader = new ZipReader(new BlobReader(file));
         const entries = await reader.getEntries();

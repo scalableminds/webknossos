@@ -112,7 +112,7 @@ class PullQueue {
                 // Render empty buckets as black (zeroed) data.
                 this.handleBucket(bucket, null);
               } else {
-                bucket.markAsFailed(true);
+                bucket.markAsMissing();
               }
               break;
             }
@@ -140,7 +140,7 @@ class PullQueue {
         const bucket = this.cube.getBucket(bucketAddress);
 
         if (bucket.type === "data") {
-          bucket.markAsFailed(false);
+          bucket.markAsFailed();
 
           if (bucket.dirty) {
             bucket.addToPullQueueWithHighestPriority();

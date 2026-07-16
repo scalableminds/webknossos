@@ -145,7 +145,7 @@ describe("DataCube", () => {
     // falls back to UNREQUESTED and, when it is not dirty, is never re-requested. It used
     // to leave ensureLoaded() hanging forever; now it must settle. If this regresses, the
     // await below never resolves and the test fails with a timeout.
-    bucket.markAsFailed(false);
+    bucket.markAsFailed();
     await ensureLoadedPromise;
 
     // The failed bucket is treated like an empty bucket: it holds no data.

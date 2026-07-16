@@ -83,8 +83,6 @@ export function GroupNodeTitle({
   const isConcurrentCollabMode = useWkSelector(isConcurrentCollaborationMode);
   const disableEditing = !allowUpdate || isConcurrentCollabMode;
   const { group } = node;
-  // Make sure the displayed name is not empty
-  const displayableName = group.name.trim() || "<Unnamed Group>";
 
   return (
     <Space
@@ -93,8 +91,10 @@ export function GroupNodeTitle({
       style={{ wordBreak: "break-word", width: "100%" }}
     >
       <FolderOutlined />
+      {/* Pass the real name as value so blank names show the placeholder without persisting it. */}
       <EditableTextLabel
-        value={displayableName}
+        value={group.name}
+        placeholder="<Unnamed Group>"
         label="Group Name"
         onChange={(newName) => api.tracing.renameSkeletonGroup(group.groupId, newName)}
         disableEditing={disableEditing}

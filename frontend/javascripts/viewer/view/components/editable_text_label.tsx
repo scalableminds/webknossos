@@ -22,6 +22,9 @@ export type EditableTextLabelProp = {
   rows?: number;
   markdown?: boolean;
   label: string;
+  // Shown (as display text and input placeholder) when `value` is empty. It is
+  // never persisted through `onChange` — only user-entered text is.
+  placeholder?: string;
   margin?: number | string;
   onClick?: () => void;
   disableEditing?: boolean;
@@ -43,6 +46,7 @@ function EditableTextLabel(props: EditableTextLabelProp) {
     rows = 1,
     markdown,
     label,
+    placeholder,
     onClick,
     disableEditing,
     hideEditIcon,
@@ -139,6 +143,7 @@ function EditableTextLabel(props: EditableTextLabelProp) {
       <Space.Compact block size="small">
         <Input
           value={value}
+          placeholder={placeholder}
           onChange={handleInputChangeFromEvent}
           onPressEnter={handleOnChange}
           style={{
@@ -178,7 +183,7 @@ function EditableTextLabel(props: EditableTextLabelProp) {
           <Markdown>{value}</Markdown>
         </span>
       ) : (
-        <span style={isInvalidStyleMaybe}>{value}</span>
+        <span style={isInvalidStyleMaybe}>{value.trim() ? value : placeholder}</span>
       )}
       {disableEditing || hideEditIcon ? null : (
         <FastTooltip key="edit" title={`Edit ${label}`} placement="bottom">

@@ -117,64 +117,67 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
         );
 
         const reader = new ZipReader(new BlobReader(file));
-        const entries = await reader.getEntries();
-        const nmlFileEntry = entries.find((entry: Entry) =>
-          isFileExtensionEqualTo(entry.filename, "nml"),
-        );
-
-        if (nmlFileEntry == null) {
-          await reader.close();
-          throw Error("Zip file doesn't contain an NML file.");
-        }
-
-        // The type definitions for getData are inaccurate. It is defined for entries obtained through calling ZipReader.getEntries, see https://github.com/gildas-lormeau/zip.js/issues/371#issuecomment-1272316813
-        const nmlBlob = await nmlFileEntry.getData!(new BlobWriter());
-        const nmlFile = new File([nmlBlob], nmlFileEntry.filename);
-
-        const nmlImportActions = await tryParsingFileAsNml(nmlFile, false);
-
-        const dataFileEntry = entries.find((entry: Entry) =>
-          isFileExtensionEqualTo(entry.filename, "zip"),
-        );
-
-        if (dataFileEntry) {
-          // The type definitions for getData are inaccurate. It is defined for entries obtained through calling ZipReader.getEntries, see https://github.com/gildas-lormeau/zip.js/issues/371#issuecomment-1272316813
-          const dataBlob = await dataFileEntry.getData!(new BlobWriter());
-          const dataFile = new File([dataBlob], dataFileEntry.filename);
-          await Model.ensureSavedState();
-          const storeState = Store.getState();
-          const { annotation, dataset } = storeState;
-
-          if (annotation.volumes.length === 0) {
-            throw new VolumeImportError(
-              "The volume data could not be imported because this annotation does not contain an editable volume layer. To import an annotation that contains volume data, upload it via the dashboard to create a new annotation, or add a volume layer to this annotation first.",
-            );
-          }
-
-          const oldVolumeTracing = getActiveSegmentationTracing(storeState);
-
-          if (oldVolumeTracing == null) {
-            throw new VolumeImportError(
-              "The volume data could not be imported because no editable volume layer is active. Please make sure that an editable volume layer is visible and try again.",
-            );
-          }
-
-          const newLargestSegmentId = await importVolumeTracing(
-            annotation,
-            oldVolumeTracing,
-            dataFile,
-            annotation.version,
+        try {
+          const entries = await reader.getEntries();
+          const nmlFileEntry = entries.find((entry: Entry) =>
+            isFileExtensionEqualTo(entry.filename, "nml"),
           );
 
-          Store.dispatch(importVolumeTracingAction());
-          Store.dispatch(setVersionNumberAction(annotation.version + 1));
-          Store.dispatch(setLargestSegmentIdAction(newLargestSegmentId));
-          await clearCache(dataset, oldVolumeTracing.tracingId);
-          await api.data.reloadBuckets(oldVolumeTracing.tracingId);
-        }
+          if (nmlFileEntry == null) {
+            throw Error("Zip file doesn't contain an NML file.");
+          }
 
-        await reader.close();
-        return nmlImportActions;
+          // The type definitions for getData are inaccurate. It is defined for entries obtained through calling ZipReader.getEntries, see https://github.com/gildas-lormeau/zip.js/issues/371#issuecomment-1272316813
+          const nmlBlob = await nmlFileEntry.getData!(new BlobWriter());
+          const nmlFile = new File([nmlBlob], nmlFileEntry.filename);
+
+          const nmlImportActions = await tryParsingFileAsNml(nmlFile, false);
+
+          const dataFileEntry = entries.find((entry: Entry) =>
+            isFileExtensionEqualTo(entry.filename, "zip"),
+          );
+
+          if (dataFileEntry) {
+            // The type definitions for getData are inaccurate. It is defined for entries obtained through calling ZipReader.getEntries, see https://github.com/gildas-lormeau/zip.js/issues/371#issuecomment-1272316813
+            const dataBlob = await dataFileEntry.getData!(new BlobWriter());
+            const dataFile = new File([dataBlob], dataFileEntry.filename);
+            await Model.ensureSavedState();
+            const storeState = Store.getState();
+            const { annotation, dataset } = storeState;
+
+            if (annotation.volumes.length === 0) {
+              throw new VolumeImportError(
+                "The volume data could not be imported because this annotation does not contain an editable volume layer. To import an annotation that contains volume data, upload it via the dashboard to create a new annotation, or add a volume layer to this annotation first.",
+              );
+            }
+
+            const oldVolumeTracing = getActiveSegmentationTracing(storeState);
+
+            if (oldVolumeTracing == null) {
+              throw new VolumeImportError(
+                "The volume data could not be imported because no editable volume layer is active. Please make sure that an editable volume layer is visible and try again.",
+              );
+            }
+
+            const newLargestSegmentId = await importVolumeTracing(
+              annotation,
+              oldVolumeTracing,
+              dataFile,
+              annotation.version,
+            );
+
+            Store.dispatch(importVolumeTracingAction());
+            Store.dispatch(setVersionNumberAction(annotation.version + 1));
+            Store.dispatch(setLargestSegmentIdAction(newLargestSegmentId));
+            await clearCache(dataset, oldVolumeTracing.tracingId);
+            await api.data.reloadBuckets(oldVolumeTracing.tracingId);
+          }
+
+          return nmlImportActions;
+        } finally {
+          // Always release the reader, even if parsing or the volume import throws.
+          await reader.close();
+        }
       } catch (error) {
         if (error instanceof NmlParseError || error instanceof VolumeImportError) {
           // These errors carry a helpful, user-facing message and should be shown to the

@@ -130,6 +130,28 @@ describe("DataCube", () => {
     expect(cube.buckets.length).toBe(1);
   });
 
+  it<TestContext>("ensureLoaded() should terminate when a bucket request fails", async ({
+    cube,
+  }) => {
+    const bucket = cube.getOrCreateBucket([0, 0, 0, 0, []]);
+    assertNonNullBucket(bucket);
+
+    // Simulate the pull queue having requested the bucket...
+    bucket.markAsRequested();
+    const ensureLoadedPromise = bucket.ensureLoaded();
+
+    // ...and the request failing in a non-missing way (e.g. the datastore reported the
+    // bucket via the failure-bucket-indices header, or the request threw). Such a bucket
+    // falls back to UNREQUESTED and, when it is not dirty, is never re-requested. It used
+    // to leave ensureLoaded() hanging forever; now it must settle. If this regresses, the
+    // await below never resolves and the test fails with a timeout.
+    bucket.markAsFailed(false);
+    await ensureLoadedPromise;
+
+    // The failed bucket is treated like an empty bucket: it holds no data.
+    expect(bucket.hasData()).toBe(false);
+  });
+
   it<TestContext>("Voxel Labeling should request buckets when temporal buckets are created", async ({
     cube,
     pullQueue,

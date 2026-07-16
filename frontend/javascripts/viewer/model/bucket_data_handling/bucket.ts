@@ -608,9 +608,7 @@ export class DataBucket {
       case BucketStateEnum.REQUESTED: {
         this.state = isMissing ? BucketStateEnum.MISSING : BucketStateEnum.UNREQUESTED;
 
-        if (isMissing) {
-          this.trigger("bucketMissing");
-        }
+        this.trigger(isMissing ? "bucketMissing" : "bucketRequestFailed");
 
         break;
       }
@@ -830,6 +828,9 @@ export class DataBucket {
       await new Promise((resolve) => {
         this.once("bucketLoaded", resolve);
         this.once("bucketMissing", resolve);
+        // Treat failure like missing to not block callers waiting for ensureLoaded to resolve
+        // as a failure not necessarily auto re-requests the bucket from the backend.
+        this.once("bucketRequestFailed", resolve);
       });
     }
 

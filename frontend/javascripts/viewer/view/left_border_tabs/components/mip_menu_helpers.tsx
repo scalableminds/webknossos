@@ -16,6 +16,9 @@ import {
   setMipForBBoxAction,
 } from "viewer/model/actions/annotation_actions";
 import ButtonComponent from "../../components/button_component";
+import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
+import { computeBoundingBoxFromArray } from "libs/utils";
+import { useMemo } from "react";
 
 const RECOMMENDED_MIP_THRESHOLD_IN_BYTES = 50 * 1024 * 1024; // 50 MB
 
@@ -34,17 +37,32 @@ export function useMipContextMenuItems(
 
   const activeMipLayerNames = new Set(mipLayers?.map((l) => l.layerName) ?? []);
   const availableColorLayers = colorLayers.filter((l) => !activeMipLayerNames.has(l.name));
-  const [, , , bboxW, bboxH, bboxD] = propValue;
+  const bboxFromProps = useMemo(
+    () => new BoundingBox(computeBoundingBoxFromArray(propValue)),
+    [propValue],
+  );
+  const bBoxClampedToLayerBounds = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(colorLayers).map(([layerName, layer]) => [
+          layerName,
+          BoundingBox.fromBoundBoxObject(layer.boundingBox).intersectedWith(bboxFromProps),
+        ]),
+      ),
+    [bboxFromProps, colorLayers],
+  );
 
   const buildAutoSelectHandler = (layers: typeof colorLayers) => () => {
     for (const layer of layers) {
       const mags = magInfoByLayer[layer.name]?.getMagsWithIndices() ?? [];
       const bytesPerVoxel = getByteCountFromLayer(layer);
+
       let bestZoomStep: number | null = null;
       let bestSize = -1;
       let fallbackZoomStep: number | null = null;
       let fallbackSize = Number.MAX_SAFE_INTEGER;
       for (const [zoomStep, mag] of mags) {
+        const [bboxW, bboxH, bboxD] = bBoxClampedToLayerBounds[layer.name].getSize();
         const voxels =
           Math.ceil(bboxW / mag[0]) * Math.ceil(bboxH / mag[1]) * Math.ceil(bboxD / mag[2]);
         const size = voxels * bytesPerVoxel;
@@ -78,6 +96,7 @@ export function useMipContextMenuItems(
         key: `mip-${layer.name}`,
         label: layer.name,
         children: mags.map(([zoomStep, mag]) => {
+          const [bboxW, bboxH, bboxD] = bBoxClampedToLayerBounds[layer.name].getSize();
           const voxels =
             Math.ceil(bboxW / mag[0]) * Math.ceil(bboxH / mag[1]) * Math.ceil(bboxD / mag[2]);
           return {

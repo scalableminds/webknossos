@@ -44,8 +44,8 @@ export function useMipContextMenuItems(
   const bBoxClampedToLayerBounds = useMemo(
     () =>
       Object.fromEntries(
-        Object.entries(colorLayers).map(([layerName, layer]) => [
-          layerName,
+        colorLayers.map((layer) => [
+          layer.name,
           BoundingBox.fromBoundBoxObject(layer.boundingBox).intersectedWith(bboxFromProps),
         ]),
       ),

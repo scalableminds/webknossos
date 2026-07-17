@@ -96,11 +96,11 @@ export default function BoundingBoxTab() {
   const isOwner = useWkSelector((state) => isAnnotationOwner(state));
   const dataset = useWkSelector((state) => state.dataset);
   const activeBoundingBoxId = useWkSelector((state) => state.uiInformation.activeUserBoundingBoxId);
-  const layerBoundingBoxVisibility = useWkSelector(
-    (state) => state.temporaryConfiguration.layerBoundingBoxVisibility,
+  const layerBoundingBoxVisibilities = useWkSelector(
+    (state) => state.temporaryConfiguration.layerBoundingBoxVisibilities,
   );
-  const layerBoundingBoxColor = useWkSelector(
-    (state) => state.temporaryConfiguration.layerBoundingBoxColor,
+  const layerBoundingBoxColors = useWkSelector(
+    (state) => state.temporaryConfiguration.layerBoundingBoxColors,
   );
   const { userBoundingBoxes } = getSomeTracing(annotation);
   const layerBoundingBoxes = useMemo<LayerBoundingBox[]>(
@@ -124,6 +124,10 @@ export default function BoundingBoxTab() {
   const [menu, setMenu] = useState<MenuProps | null>(null);
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
   // null => automatic (collapsed once there are many user bounding boxes); a boolean is a manual override.
+  // Keeping the default as null (instead of eagerly computing the collapsed state once) means the
+  // section keeps following the bbox count until the user explicitly toggles it: e.g. if the user
+  // never touches it and then keeps adding bounding boxes, the section auto-collapses as soon as the
+  // threshold is crossed — behaviour a fixed initial boolean could not provide.
   const [isLayerSectionCollapsedOverride, setIsLayerSectionCollapsedOverride] = useState<
     boolean | null
   >(null);
@@ -340,9 +344,9 @@ export default function BoundingBoxTab() {
           value={layerBoundingBox.value}
           name={layerBoundingBox.displayName}
           color={
-            layerBoundingBoxColor[layerBoundingBox.name] ?? stringToColor(layerBoundingBox.name)
+            layerBoundingBoxColors[layerBoundingBox.name] ?? stringToColor(layerBoundingBox.name)
           }
-          isVisible={layerBoundingBoxVisibility[layerBoundingBox.name] ?? false}
+          isVisible={layerBoundingBoxVisibilities[layerBoundingBox.name] ?? false}
           isExportEnabled={isExportEnabled}
           isReadOnly
           // Registering segments modifies the annotation, so it is only possible when updating is allowed.
@@ -558,13 +562,12 @@ export default function BoundingBoxTab() {
       ) : null}
       {/* Read-only bounding boxes of the dataset's layers. */}
       {layerBoundingBoxes.length > 0 ? (
-        <div
+        <Flex
+          vertical
           style={{
             flexShrink: 0,
             marginTop: 8,
             minHeight: 0,
-            display: "flex",
-            flexDirection: "column",
           }}
         >
           <Divider size="small" titlePlacement="left" style={{ margin: "4px 0" }}>
@@ -594,7 +597,7 @@ export default function BoundingBoxTab() {
               />
             </div>
           )}
-        </div>
+        </Flex>
       ) : null}
       <Typography.Text type="secondary">{maybeUneditableExplanation}</Typography.Text>
       {isGenerateModalOpen ? (

@@ -151,8 +151,8 @@ function getLayerBoundingBoxesAsUserBoundingBoxes(state: WebknossosState): UserB
     name: layer.name,
     boundingBox: getLayerBoundingBox(state.dataset, layer.name),
     color:
-      state.temporaryConfiguration.layerBoundingBoxColor[layer.name] ?? stringToColor(layer.name),
-    isVisible: state.temporaryConfiguration.layerBoundingBoxVisibility[layer.name] ?? false,
+      state.temporaryConfiguration.layerBoundingBoxColors[layer.name] ?? stringToColor(layer.name),
+    isVisible: state.temporaryConfiguration.layerBoundingBoxVisibilities[layer.name] ?? false,
   }));
 }
 

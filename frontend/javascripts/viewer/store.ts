@@ -441,10 +441,10 @@ export type TemporaryConfiguration = {
   readonly preferredQualityForMeshPrecomputation: number;
   readonly preferredQualityForMeshAdHocComputation: number;
   readonly lastVisibleSegmentationLayerName: string | null | undefined;
-  // Display state for the read-only bounding boxes of the dataset's layers, keyed by layer name.
-  // These are client-only (not persisted) and fall back to visible/DEFAULT_LAYER_BOUNDING_BOX_COLOR.
-  readonly layerBoundingBoxVisibility: Record<string, boolean>;
-  readonly layerBoundingBoxColor: Record<string, Vector3>;
+  // Display state for the read-only bounding boxes of the dataset's layers, keyed by layer name (one
+  // entry per layer). These are client-only (not persisted) and fall back to visible/derived color.
+  readonly layerBoundingBoxVisibilities: Record<string, boolean>;
+  readonly layerBoundingBoxColors: Record<string, Vector3>;
 };
 export type Script = APIScript;
 export type Task = APITask;

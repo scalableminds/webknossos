@@ -160,13 +160,13 @@ function SettingsReducer(state: WebknossosState, action: Action): WebknossosStat
     }
 
     case "SET_LAYER_BOUNDING_BOX_VISIBILITY": {
-      return updateKey2(state, "temporaryConfiguration", "layerBoundingBoxVisibility", {
+      return updateKey2(state, "temporaryConfiguration", "layerBoundingBoxVisibilities", {
         [action.layerName]: action.isVisible,
       });
     }
 
     case "SET_LAYER_BOUNDING_BOX_COLOR": {
-      return updateKey2(state, "temporaryConfiguration", "layerBoundingBoxColor", {
+      return updateKey2(state, "temporaryConfiguration", "layerBoundingBoxColors", {
         [action.layerName]: action.color,
       });
     }

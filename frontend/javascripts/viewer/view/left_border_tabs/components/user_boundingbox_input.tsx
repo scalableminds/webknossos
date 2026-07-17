@@ -19,6 +19,7 @@ import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_acce
 import { api } from "viewer/singletons";
 import ButtonComponent from "../../components/button_component";
 import ColorSetting from "./color_setting";
+import { MipInlineButton, useMipContextMenuItems } from "./mip_menu_helpers";
 
 type UserBoundingBoxInputProps = {
   bboxId: number;
@@ -89,6 +90,7 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
   const [name, setName] = useState(propName);
 
   const visibleSegmentationLayer = useWkSelector((state) => getVisibleSegmentationLayer(state));
+  const mipContextMenuItems = useMipContextMenuItems(bboxId, propValue, onHideContextMenu);
 
   useEffect(() => {
     if (!isEditing && propValue !== undefined) {
@@ -149,26 +151,18 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
     }
   };
 
-  const maybeCloseContextMenu = () => {
-    if (onHideContextMenu) {
-      onHideContextMenu();
-    }
-  };
-
   const onRegisterSegmentsForBB = async (value: Vector6, name: string): Promise<void> => {
     const min: Vector3 = [value[0], value[1], value[2]];
     const max: Vector3 = [value[0] + value[3], value[1] + value[4], value[2] + value[5]];
     // Close before the async call to avoid that the user can easily click twice.
-    maybeCloseContextMenu();
+    onHideContextMenu?.();
     await api.tracing
       .registerSegmentsForBoundingBox(min, max, name)
       .catch((error) => Toast.error(error.message));
   };
 
   const upscaledColor = color.map((colorPart) => colorPart * 255) as any as Vector3;
-  const marginLeftStyle = {
-    marginLeft: 6,
-  };
+  const marginLeftStyle = { marginLeft: 6 };
 
   const editingDisallowedExplanation = messages["tracing.read_only_mode_notification"](
     isLockedByOwner,
@@ -180,6 +174,7 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
 
   const getContextMenu = () => {
     const items: MenuProps["items"] = [
+      ...mipContextMenuItems,
       {
         key: "registerSegments",
         label: (
@@ -268,6 +263,7 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
             onClick={(e) => e.stopPropagation()}
           />
         </FastTooltip>
+        <MipInlineButton bboxId={bboxId} />
         {isReadOnly ? (
           <ButtonComponent
             title={READ_ONLY_TOOLTIP}

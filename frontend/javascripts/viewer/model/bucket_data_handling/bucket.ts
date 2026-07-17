@@ -603,14 +603,30 @@ export class DataBucket {
     }
   }
 
-  markAsFailed(isMissing: boolean): void {
+  // The bucket is not present on the datastore. It transitions to MISSING and stays there.
+  markAsMissing(): void {
+    this.markAsUnavailable(BucketStateEnum.MISSING, "bucketMissing");
+  }
+
+  // The bucket's request could not be read (e.g. transient error or a failure bucket). It
+  // transitions back to UNREQUESTED so that it may be requested again later.
+  markAsFailed(): void {
+    this.markAsUnavailable(BucketStateEnum.UNREQUESTED, "bucketRequestFailed");
+  }
+
+  private markAsUnavailable(
+    nextState: BucketStateEnum.MISSING | BucketStateEnum.UNREQUESTED,
+    event: "bucketMissing" | "bucketRequestFailed",
+  ): void {
     switch (this.state) {
       case BucketStateEnum.REQUESTED: {
-        this.state = isMissing ? BucketStateEnum.MISSING : BucketStateEnum.UNREQUESTED;
+        this.state = nextState;
 
-        if (isMissing) {
-          this.trigger("bucketMissing");
-        }
+        // Notify awaiters (see ensureLoaded). Emitting an event on both outcomes is
+        // important because a failure bucket falls back to UNREQUESTED and is only
+        // re-requested when it is dirty. Without it, a caller awaiting a non-dirty failure
+        // bucket (e.g. getDataForBoundingBox) would hang forever.
+        this.trigger(event);
 
         break;
       }
@@ -830,6 +846,9 @@ export class DataBucket {
       await new Promise((resolve) => {
         this.once("bucketLoaded", resolve);
         this.once("bucketMissing", resolve);
+        // Treat failure like missing to not block callers waiting for ensureLoaded to resolve
+        // as a failure not necessarily auto re-requests the bucket from the backend.
+        this.once("bucketRequestFailed", resolve);
       });
     }
 

@@ -1,7 +1,9 @@
 import app from "app";
+import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import { rgbToInt, stringToColor } from "libs/utils";
 import window from "libs/window";
+import debounce from "lodash-es/debounce";
 import {
   BoxGeometry,
   BufferGeometry,
@@ -15,6 +17,7 @@ import {
   Mesh,
   MeshBasicMaterial,
   type Object3D,
+  type Ray,
   Scene,
   Vector3 as ThreeVector3,
   type WebGLRenderer,
@@ -38,6 +41,7 @@ import {
   LineMeasurementGeometry,
   QuickSelectGeometry,
 } from "viewer/geometries/helper_geometries";
+import { MipVolume } from "viewer/geometries/mip_volume";
 import Plane from "viewer/geometries/plane";
 import Skeleton from "viewer/geometries/skeleton";
 import { reuseInstanceOnEquality } from "viewer/model/accessors/accessor_helpers";
@@ -63,14 +67,28 @@ import {
   getSkeletonTracing,
   isSkeletonSectionClippingActive,
 } from "viewer/model/accessors/skeletontracing_accessor";
-import { getSomeTracing, getTaskBoundingBoxes } from "viewer/model/accessors/tracing_accessor";
+import {
+  getMipEnabledBBoxes,
+  getSomeTracing,
+  getTaskBoundingBoxes,
+  type MipEnabledBBox,
+} from "viewer/model/accessors/tracing_accessor";
 import { getPlaneScalingFactor } from "viewer/model/accessors/view_mode_accessor";
 import { sceneControllerInitializedAction } from "viewer/model/actions/actions";
+import {
+  loadMipAction,
+  removeMipLayerForBBoxAction,
+} from "viewer/model/actions/annotation_actions";
 import Dimensions from "viewer/model/dimensions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import type { Transform } from "viewer/model/helpers/transformation_helpers";
 import { Model } from "viewer/singletons";
-import type { SkeletonTracing, UserBoundingBox, WebknossosState } from "viewer/store";
+import type {
+  MipLayerConfig,
+  SkeletonTracing,
+  UserBoundingBox,
+  WebknossosState,
+} from "viewer/store";
 import Store from "viewer/store";
 import type CustomLOD from "./custom_lod";
 import SegmentMeshController from "./segment_mesh_controller";
@@ -110,6 +128,14 @@ class SceneController {
   public segmentMeshController: SegmentMeshController;
   private storePropertyUnsubscribers: Array<() => void>;
   private splitBoundaryMesh: Mesh | null = null;
+  private mipVolumes = new Map<
+    number,
+    { volume: MipVolume; configs: MipLayerConfig[]; bbox: UserBoundingBox }
+  >();
+  private debouncedUpdateMipVolumes = debounce(
+    (entries: MipEnabledBBox[]) => this.updateMipVolumes(entries),
+    300,
+  );
 
   // Created as instance properties to avoid creating objects in each update call.
   private rotatedPositionOffsetVector = new ThreeVector3();
@@ -333,6 +359,84 @@ class SceneController {
     return this.splitBoundaryMesh;
   }
 
+  private updateMipVolumes(storeMipEntries: MipEnabledBBox[]): void {
+    // storeMipEntries are the MIP entries that are stored in the redux store.
+    // These are synced with the MIPs held by the SceneController in this function.
+    const storeMipsById = new Map(storeMipEntries.map((e) => [e.bbox.id, e]));
+
+    // Remove volumes whose bbox changed (need full recreation)
+    for (const [bboxId, { volume, bbox: storedBbox }] of this.mipVolumes) {
+      const storeMip = storeMipsById.get(bboxId);
+      const bb = storedBbox.boundingBox;
+      const bboxChanged =
+        storeMip == null ||
+        !V3.equals(storeMip.bbox.boundingBox.min, bb.min) ||
+        !V3.equals(storeMip.bbox.boundingBox.max, bb.max);
+      if (bboxChanged) {
+        this.rootNode.remove(volume.mesh);
+        volume.dispose();
+        this.mipVolumes.delete(bboxId);
+      }
+    }
+
+    for (const { bbox, configs } of storeMipEntries) {
+      const mag1Bbox = { min: bbox.boundingBox.min, max: bbox.boundingBox.max };
+
+      if (!this.mipVolumes.has(bbox.id)) {
+        // New bbox: create volume and add all layers
+        const volume = new MipVolume(mag1Bbox);
+        const { mipRaymarchingSteps, mipDepthWrite } = Store.getState().userConfiguration;
+        volume.setNumSteps(mipRaymarchingSteps);
+        volume.setDepthWrite(mipDepthWrite);
+        this.rootNode.add(volume.mesh);
+        this.mipVolumes.set(bbox.id, { volume, configs, bbox });
+      }
+
+      const sceneMip = this.mipVolumes.get(bbox.id)!;
+      sceneMip.bbox = bbox; // keep bbox reference current (e.g. isVisible changes)
+      const { volume } = sceneMip;
+      const oldConfigs = sceneMip.configs;
+
+      // Remove layers that are no longer in the new configs
+      const newLayerNames = new Set(configs.map((c) => c.layerName));
+      const oldLayerNames = new Set(oldConfigs.map((c) => c.layerName));
+      const removedLayerNames = oldLayerNames.difference(newLayerNames);
+      for (const layerName of removedLayerNames) {
+        volume.removeLayer(layerName);
+      }
+
+      // Add layers that are new
+      for (const config of configs) {
+        if (volume.hasLayer(config.layerName)) continue;
+        if (volume.addLayer(config)) {
+          Store.dispatch(loadMipAction(bbox.id, bbox, config));
+        } else {
+          // addLayer already showed an error toast (e.g. unsupported element class).
+          // Remove the entry so it doesn't stay stuck in isLoading forever.
+          Store.dispatch(removeMipLayerForBBoxAction(bbox.id, config.layerName));
+        }
+      }
+
+      sceneMip.configs = configs;
+    }
+    app.vent.emit("rerender");
+  }
+
+  getMipHitPosition(ray: Ray): ThreeVector3 | null {
+    for (const { volume, bbox } of this.mipVolumes.values()) {
+      if (!bbox.isVisible) continue;
+      const pos = volume.findMaxIntensityPosition(ray);
+      if (pos != null) return pos;
+    }
+    return null;
+  }
+
+  getMipVolumeEntry(
+    bboxId: number,
+  ): { volume: MipVolume; configs: MipLayerConfig[]; bbox: UserBoundingBox } | undefined {
+    return this.mipVolumes.get(bboxId);
+  }
+
   addSkeleton(
     skeletonTracingSelector: (arg0: WebknossosState) => SkeletonTracing | null,
     supportsPicking: boolean,
@@ -442,6 +546,9 @@ class SceneController {
     this.segmentMeshController.meshesLayerLODRootGroup.visible = id === OrthoViews.TDView;
     if (this.splitBoundaryMesh != null) {
       this.splitBoundaryMesh.visible = id === OrthoViews.TDView;
+    }
+    for (const { volume, bbox } of this.mipVolumes.values()) {
+      volume.mesh.visible = id === OrthoViews.TDView && bbox.isVisible;
     }
     this.annotationToolsGeometryGroup.visible = id !== OrthoViews.TDView;
     this.lineMeasurementGeometry.updateForCam(id);
@@ -765,6 +872,13 @@ class SceneController {
     }
     this.storePropertyUnsubscribers = [];
 
+    this.debouncedUpdateMipVolumes.cancel();
+    for (const { volume } of this.mipVolumes.values()) {
+      this.rootNode.remove(volume.mesh);
+      volume.dispose();
+    }
+    this.mipVolumes.clear();
+
     destroyRenderer();
     // @ts-expect-error
     this.renderer = null;
@@ -834,6 +948,25 @@ class SceneController {
         (storeState) =>
           storeState.annotation.skeleton ? storeState.annotation.skeleton.showSkeletons : false,
         (showSkeletons) => this.setSkeletonGroupVisibility(showSkeletons),
+        true,
+      ),
+      listenToStoreProperty(getMipEnabledBBoxes, this.debouncedUpdateMipVolumes, true),
+      listenToStoreProperty(
+        (state) => state.userConfiguration.mipRaymarchingSteps,
+        (numSteps) => {
+          for (const { volume } of this.mipVolumes.values()) {
+            volume.setNumSteps(numSteps);
+          }
+        },
+        true,
+      ),
+      listenToStoreProperty(
+        (state) => state.userConfiguration.mipDepthWrite,
+        (enabled) => {
+          for (const { volume } of this.mipVolumes.values()) {
+            volume.setDepthWrite(enabled);
+          }
+        },
         true,
       ),
     ];

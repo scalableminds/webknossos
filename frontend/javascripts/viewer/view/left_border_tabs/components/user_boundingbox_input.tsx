@@ -35,7 +35,7 @@ type UserBoundingBoxInputProps = {
   ) => void;
   onHideContextMenu?: () => void;
   // When isReadOnly is set (e.g. for a dataset layer's bounding box), the color, visibility,
-  // name, bounds and delete controls are hidden/read-only. Only navigating, registering segments, MIP, 
+  // name, bounds and delete controls are hidden/read-only. Only navigating, registering segments, MIP,
   // and exporting remain available via the context menu.
   isReadOnly?: boolean;
   color?: Vector3;

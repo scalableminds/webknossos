@@ -139,7 +139,11 @@ class PullQueue {
       for (const bucketAddress of failedBucketAddresses) {
         const bucket = this.cube.getBucket(bucketAddress);
 
-        if (bucket.type === "data") {
+        // Only mark the bucket as failed if it is still in the REQUESTED state.
+        // A bucket might have already transitioned to another state (e.g. LOADED
+        // via an earlier result in the same batch), in which case markAsFailed()
+        // would throw. Skipping it lets the loop safely handle the remaining buckets.
+        if (bucket.type === "data" && bucket.isRequested()) {
           bucket.markAsFailed();
 
           if (bucket.dirty) {

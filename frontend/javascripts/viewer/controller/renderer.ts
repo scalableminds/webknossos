@@ -5,12 +5,30 @@ import { Store } from "viewer/singletons";
 import type { WebknossosState } from "viewer/store";
 
 let renderer: WebGLRenderer | null = null;
+let forcedContextLossCount = 0;
+
+// Returns whether a pending webglcontextlost event was caused intentionally
+// by destroyRenderer (in contrast to an actual GPU crash). Consuming resets
+// the state.
+export function consumeForcedContextLoss(): boolean {
+  if (forcedContextLossCount > 0) {
+    forcedContextLossCount--;
+    return true;
+  }
+  return false;
+}
 
 export function destroyRenderer(): void {
   if (renderer == null) {
     return;
   }
   renderer.dispose();
+  // Force a context loss so that the GPU memory is released deterministically.
+  // Otherwise, freeing the VRAM would depend on the GC collecting the
+  // unmounted canvas element. The canvas is not reused after teardown, so the
+  // context is not needed anymore.
+  forcedContextLossCount++;
+  renderer.forceContextLoss();
   renderer = null;
   notifyAboutDisposedRenderer();
 }

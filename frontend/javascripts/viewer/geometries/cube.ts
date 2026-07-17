@@ -222,6 +222,13 @@ class Cube {
       fn();
     }
     this.storePropertyUnsubscribers = [];
+
+    // Dispose the geometries and materials as three.js keeps the GPU buffers
+    // alive otherwise, even when the meshes are removed from the scene graph.
+    for (const mesh of this.getMeshes()) {
+      mesh.geometry.dispose();
+      (mesh.material as LineBasicMaterial).dispose();
+    }
   }
 }
 

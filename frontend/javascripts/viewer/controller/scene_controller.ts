@@ -476,6 +476,9 @@ class SceneController {
         taskCube.getMeshes().forEach((mesh) => {
           this.rootNode.remove(mesh);
         });
+        // Destroy the old cube to free its geometries/materials and to
+        // unsubscribe its store listeners.
+        taskCube.destroy();
       }
       this.taskCubeByTracingId[tracingId] = null;
     }
@@ -671,6 +674,12 @@ class SceneController {
   }
 
   setUserBoundingBoxes(bboxes: Array<UserBoundingBox>): void {
+    // Destroy the old cubes to free their geometries/materials and to
+    // unsubscribe their store listeners. Otherwise, each update (e.g., every
+    // store change while dragging a bounding box) would leak all previous cubes.
+    for (const cube of this.userBoundingBoxes) {
+      cube.destroy();
+    }
     const newUserBoundingBoxGroup = new Group();
     this.userBoundingBoxes = bboxes.map(({ boundingBox, isVisible, color, id }) => {
       const { min, max } = boundingBox;
@@ -761,6 +770,12 @@ class SceneController {
     const dataset = state.dataset;
     const layers = getDataLayers(dataset);
 
+    // Destroy the old cubes to free their geometries/materials (see setUserBoundingBoxes).
+    if (this.layerBoundingBoxes != null) {
+      for (const cube of Object.values(this.layerBoundingBoxes)) {
+        cube.destroy();
+      }
+    }
     const newLayerBoundingBoxGroup = new Group();
     this.layerBoundingBoxes = Object.fromEntries(
       layers.map((layer) => {
@@ -876,6 +891,15 @@ class SceneController {
       volume.dispose();
     }
     this.mipVolumes.clear();
+
+    // Dispose all loaded segment meshes. Otherwise, their geometries and
+    // materials would stay on the GPU after the annotation was closed.
+    this.segmentMeshController.destroy();
+
+    this.contour.destroy();
+    this.quickSelectGeometry.destroy();
+    this.lineMeasurementGeometry.destroy();
+    this.areaMeasurementGeometry.destroy();
 
     destroyRenderer();
     // @ts-expect-error

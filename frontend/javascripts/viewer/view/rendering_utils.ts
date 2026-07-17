@@ -109,6 +109,10 @@ export function renderToTexture(
   renderer.render(scene, camera);
   renderer.readRenderTargetPixels(renderTarget, 0, 0, width, height, buffer);
   renderer.setRenderTarget(null);
+  // Dispose the render target as three.js does not free the underlying
+  // GPU texture and depth buffer automatically. Otherwise, each call
+  // (e.g., every node-picking click) would leak a viewport-sized texture.
+  renderTarget.dispose();
   return buffer;
 }
 

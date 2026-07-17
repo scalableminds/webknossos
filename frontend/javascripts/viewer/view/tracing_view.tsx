@@ -6,7 +6,7 @@ import { sleep } from "libs/utils";
 import messages from "messages";
 import type * as React from "react";
 import Constants from "viewer/constants";
-import { getWebGlAnalyticsInformation } from "viewer/controller/renderer";
+import { consumeForcedContextLoss, getWebGlAnalyticsInformation } from "viewer/controller/renderer";
 import {
   setViewModeAction,
   updateDatasetSettingAction,
@@ -28,6 +28,12 @@ const registerWebGlCrashHandler = (canvas) => {
     "webglcontextlost",
     (e: MessageEvent) => {
       e.preventDefault();
+      if (consumeForcedContextLoss()) {
+        // The context loss was triggered intentionally during teardown (see
+        // destroyRenderer) to release the GPU memory deterministically.
+        // Don't treat it as a crash.
+        return;
+      }
       console.error("Webgl context lost", e);
       ErrorHandling.notify(new Error("WebGLContextLost"));
       sendAnalyticsEvent("webgl_context_lost", getWebGlAnalyticsInformation(Store.getState()));

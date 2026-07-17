@@ -48,7 +48,17 @@ export function AnnotationsCsvInput({ onClose }: { onClose: () => void }) {
 
   const validator = useCallback((_rule: RuleObject, value?: string) => {
     const text = value ?? "";
-    const isValidLine = (line: string) => line.trim() === "" || URL.canParse(line);
+    // A line is either a bare annotation/task ID (no # or , allowed) or a full URL. URLs are
+    // allowed to contain a # (e.g. when copied from the browser address bar, or after a short
+    // link is resolved), since they are parsed with the URL API rather than split on characters.
+    const isValidLine = (line: string) => {
+      const trimmed = line.trim();
+      return (
+        trimmed === "" ||
+        URL.canParse(trimmed) ||
+        (!trimmed.includes("#") && !trimmed.includes(","))
+      );
+    };
     const valid = text.split("\n").every(isValidLine);
 
     return valid

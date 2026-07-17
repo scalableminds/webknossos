@@ -44,7 +44,7 @@ const hslToSRGB = (hsl: Vector3) => new Color().setHSL(...hsl).convertSRGBToLine
 const WHITE = new Color(1, 1, 1);
 const ACTIVATED_COLOR = hslToSRGB([0.7, 0.9, 0.75]);
 const HOVERED_COLOR = hslToSRGB([0.65, 0.9, 0.75]);
-const PARTITION_COLORS = {
+export const PARTITION_COLORS = {
   1: [0.2, 0.2, 0.2] as Vector3,
   2: [0.7, 0.7, 0.7] as Vector3,
 };

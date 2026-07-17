@@ -1317,6 +1317,7 @@ export type FlatFolderTreeItem = {
   parent: string | null;
   metadata: APIMetadataEntry[];
   isEditable: boolean;
+  created?: number | null;
 };
 
 // Frontend type of FlatFolderTreeItem with inferred nested structure.
@@ -1327,6 +1328,7 @@ export type FolderItem = {
   children: FolderItem[];
   isEditable: boolean;
   metadata: APIMetadataEntry[];
+  created?: number | null;
   // Can be set so that the antd tree component can disable
   // individual folder items.
   disabled?: boolean;
@@ -1339,6 +1341,7 @@ export type Folder = {
   allowedTeamsCumulative: APITeam[];
   metadata: APIMetadataEntry[];
   isEditable: boolean;
+  created?: number | null;
 };
 
 export type FolderUpdater = {

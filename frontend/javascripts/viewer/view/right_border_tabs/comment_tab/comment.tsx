@@ -2,34 +2,34 @@ import { CommentOutlined } from "@ant-design/icons";
 import { Popover } from "antd";
 import classNames from "classnames";
 import { document } from "libs/window";
-import type * as React from "react";
-import { useCallback } from "react";
+import type React from "react";
+import { memo, useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { NODE_ID_REF_REGEX, POSITION_REF_REGEX } from "viewer/constants";
 import { setActiveNodeAction } from "viewer/model/actions/skeletontracing_actions";
 import type { CommentType } from "viewer/model/types/tree_types";
 import { MarkdownWrapper } from "viewer/view/components/markdown_modal";
 
-function linkify(comment: string) {
-  return comment // Replace linked nodes (#<nodeid>) with a proper link
-    .replace(NODE_ID_REF_REGEX, (__, p1) => `[#${p1}](#activeNode=${p1})`) // Replace linked positions (#(<x,y,z>)) with a proper link
-    .replace(POSITION_REF_REGEX, (__, p1) => `[#(${p1})](#position=${p1})`);
-}
-
-type CommentProps = {
-  isActive: boolean;
-  comment: CommentType;
-};
+// The comment list container element. The popover for multi-line comments is
+// mounted into it so that it moves together with the tab content.
 export const commentListId = "commentList";
 
-function ActiveCommentPopover({
+// Turns #<nodeId> and #(<x>,<y>,<z>) references into markdown links which are
+// handled by the application's URL hash handling.
+function linkifyReferences(content: string): string {
+  return content
+    .replace(NODE_ID_REF_REGEX, (_match, nodeId) => `[#${nodeId}](#activeNode=${nodeId})`)
+    .replace(POSITION_REF_REGEX, (_match, position) => `[#(${position})](#position=${position})`);
+}
+
+function MultilineCommentPopover({
   comment,
-  children,
   isActive,
+  children,
 }: {
   comment: CommentType;
-  children: React.ReactNode;
   isActive: boolean;
+  children: React.ReactNode;
 }) {
   if (!isActive) {
     return <>{children}</>;
@@ -37,13 +37,12 @@ function ActiveCommentPopover({
 
   return (
     <Popover
-      content={<MarkdownWrapper source={linkify(comment.content)} />}
+      content={<MarkdownWrapper source={linkifyReferences(comment.content)} />}
       defaultOpen
       open
       autoAdjustOverflow={false}
       placement="rightTop"
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '() => HTMLElement | null' is not assignable ... Remove this comment to see the full error message
-      getPopupContainer={() => document.getElementById(commentListId)}
+      getPopupContainer={() => document.getElementById(commentListId) ?? document.body}
       style={{
         maxHeight: 200,
         overflowY: "auto",
@@ -54,44 +53,40 @@ function ActiveCommentPopover({
   );
 }
 
-function Comment({ comment, isActive }: CommentProps) {
+type CommentProps = {
+  comment: CommentType;
+  isActive: boolean;
+};
+
+const Comment = memo(function Comment({ comment, isActive }: CommentProps) {
   const dispatch = useDispatch();
 
-  const handleClick = useCallback(() => {
+  const activateNode = useCallback(() => {
     dispatch(setActiveNodeAction(comment.nodeId));
   }, [comment.nodeId, dispatch]);
 
-  const liClassName = classNames("markdown", "markdown-small", "nowrap");
-
-  const isMultiLine = comment.content.indexOf("\n") !== -1;
+  const isMultiline = comment.content.includes("\n");
 
   return (
-    <div className={liClassName}>
+    <div className={classNames("markdown", "markdown-small", "nowrap")}>
       <span>
-        <a onClick={handleClick}>{comment.nodeId}</a>
+        <a onClick={activateNode}>{comment.nodeId}</a>
         {" - "}
       </span>
-      <span
-        style={{
-          display: "inline-block",
-        }}
-      >
-        <MarkdownWrapper source={linkify(comment.content)} singleLine />
+      <span style={{ display: "inline-block" }}>
+        <MarkdownWrapper source={linkifyReferences(comment.content)} singleLine />
       </span>
-      {isMultiLine ? (
-        <ActiveCommentPopover comment={comment} isActive={isActive}>
-          <span
-            style={{
-              marginLeft: 5,
-            }}
-          >
-            <a onClick={handleClick}>
+      {isMultiline ? (
+        <MultilineCommentPopover comment={comment} isActive={isActive}>
+          <span style={{ marginLeft: 5 }}>
+            <a onClick={activateNode}>
               <CommentOutlined />
             </a>
           </span>
-        </ActiveCommentPopover>
+        </MultilineCommentPopover>
       ) : null}
     </div>
   );
-}
+});
+
 export default Comment;

@@ -3,6 +3,8 @@ import MipIcon from "@images/icons/icon-mip.svg?react";
 import { Dropdown, type MenuProps } from "antd";
 import { formatBytes } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
+import { computeBoundingBoxFromArray } from "libs/utils";
+import { useMemo } from "react";
 import { useDispatch } from "react-redux";
 import type { Vector6 } from "viewer/constants";
 import {
@@ -15,10 +17,8 @@ import {
   removeMipLayerForBBoxAction,
   setMipForBBoxAction,
 } from "viewer/model/actions/annotation_actions";
-import ButtonComponent from "../../components/button_component";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
-import { computeBoundingBoxFromArray } from "libs/utils";
-import { useMemo } from "react";
+import ButtonComponent from "../../components/button_component";
 
 const RECOMMENDED_MIP_THRESHOLD_IN_BYTES = 50 * 1024 * 1024; // 50 MB
 

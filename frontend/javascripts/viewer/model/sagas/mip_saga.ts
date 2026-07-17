@@ -13,9 +13,9 @@ import type { Saga } from "viewer/model/sagas/effect_generators";
 import { call, select } from "viewer/model/sagas/effect_generators";
 import { api } from "viewer/singletons";
 import type { MipLayerConfig, UserBoundingBox } from "viewer/store";
-import { ensureSceneControllerInitialized } from "./ready_sagas";
-import BoundingBox from "../bucket_data_handling/bounding_box";
 import { getLayerByName } from "../accessors/dataset_accessor";
+import BoundingBox from "../bucket_data_handling/bounding_box";
+import { ensureSceneControllerInitialized } from "./ready_sagas";
 
 // Maximum number of MIP layer downloads that run concurrently.
 // Queued requests wait for a slot before starting their HTTP fetch.

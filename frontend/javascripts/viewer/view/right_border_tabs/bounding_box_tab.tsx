@@ -38,7 +38,11 @@ import { APIJobCommand } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import { ControlModeEnum, type Vector3, type Vector6 } from "viewer/constants";
 import { isAnnotationOwner } from "viewer/model/accessors/annotation_accessor";
-import { getDataLayers, getLayerBoundingBox } from "viewer/model/accessors/dataset_accessor";
+import {
+  getDataLayers,
+  getLayerBoundingBox,
+  getLayerBoundingBoxId,
+} from "viewer/model/accessors/dataset_accessor";
 import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import { getReadableNameForLayerName } from "viewer/model/accessors/volumetracing_accessor";
 import {
@@ -77,6 +81,8 @@ type LayerBoundingBox = {
   displayName: string;
   value: Vector6;
   center: Vector3;
+  // Stable per-layer id (see getLayerBoundingBoxId), used to key per-bbox settings such as MIP.
+  id: number;
 };
 
 export default function BoundingBoxTab() {
@@ -99,13 +105,14 @@ export default function BoundingBoxTab() {
   const { userBoundingBoxes } = getSomeTracing(annotation);
   const layerBoundingBoxes = useMemo<LayerBoundingBox[]>(
     () =>
-      getDataLayers(dataset).map((layer) => {
+      getDataLayers(dataset).map((layer, index) => {
         const boundingBox = getLayerBoundingBox(dataset, layer.name);
         return {
           name: layer.name,
           displayName: getReadableNameForLayerName(dataset, annotation, layer.name),
           value: computeArrayFromBoundingBox(boundingBox),
           center: boundingBox.getCenter(),
+          id: getLayerBoundingBoxId(index),
         };
       }),
     [dataset, annotation],
@@ -329,7 +336,7 @@ export default function BoundingBoxTab() {
       key: "name",
       render: (_key: unknown, layerBoundingBox: LayerBoundingBox) => (
         <UserBoundingBoxInput
-          bboxId={-1}
+          bboxId={layerBoundingBox.id}
           value={layerBoundingBox.value}
           name={layerBoundingBox.displayName}
           color={

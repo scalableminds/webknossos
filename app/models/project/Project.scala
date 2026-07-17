@@ -12,7 +12,7 @@ import models.annotation.{AnnotationState, AnnotationType}
 import models.task.TaskDAO
 import models.team.TeamDAO
 import models.user.{User, UserService}
-import play.api.libs.json._
+import play.api.libs.json.*
 import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient}
 

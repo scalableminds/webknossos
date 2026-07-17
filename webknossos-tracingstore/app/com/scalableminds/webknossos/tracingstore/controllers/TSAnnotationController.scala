@@ -27,7 +27,7 @@ import com.scalableminds.webknossos.tracingstore.annotation.{
   UpdateActionGroup
 }
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
-import com.scalableminds.webknossos.tracingstore.tracings._
+import com.scalableminds.webknossos.tracingstore.tracings.*
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingMergeService
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.SkeletonTracingService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
@@ -285,7 +285,8 @@ class TSAnnotationController @Inject() (
   def mergedFromIds(
       toTemporaryStore: Boolean,
       newAnnotationId: ObjectId,
-      requestingUserId: ObjectId
+      requestingUserId: ObjectId,
+      remapSegmentIds: Boolean
   ): Action[MergedFromIdsRequest] =
     Action.fox(validateJson[MergedFromIdsRequest]) { implicit request =>
       log() {
@@ -340,7 +341,8 @@ class TSAnnotationController @Inject() (
               volumeTracings,
               newVolumeId,
               newVersion = newTargetVersion,
-              toTemporaryStore
+              toTemporaryStore,
+              remapSegmentIds
             ) ?~> Msg.Annotation.Merge.mergeVolumeDataFailed
             mergedVolumeOpt <- Fox.runIf(volumeTracings.nonEmpty)(
               volumeTracingService

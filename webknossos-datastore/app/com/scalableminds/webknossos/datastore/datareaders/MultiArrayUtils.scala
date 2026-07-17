@@ -4,7 +4,7 @@ import ArrayDataType.ArrayDataType
 import com.scalableminds.util.box.{Box, Failure, Full}
 import com.typesafe.scalalogging.LazyLogging
 import Box.tryo
-import ucar.ma2.{IndexIterator, InvalidRangeException, Range, Array => MultiArray, DataType => MADataType}
+import ucar.ma2.{IndexIterator, InvalidRangeException, Range, Array as MultiArray, DataType as MADataType}
 
 import java.util
 

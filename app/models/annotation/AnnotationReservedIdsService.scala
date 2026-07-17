@@ -9,7 +9,7 @@ import com.typesafe.scalalogging.LazyLogging
 import slick.dbio.{DBIO, Effect, NoStream}
 import slick.sql.SqlAction
 import utils.sql.{SimpleSQLDAO, SqlClient, SqlToken}
-import slick.jdbc.PostgresProfile.api._
+import slick.jdbc.PostgresProfile.api.*
 
 import java.util.concurrent.Semaphore
 import javax.inject.Inject

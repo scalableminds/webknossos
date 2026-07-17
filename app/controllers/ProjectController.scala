@@ -4,8 +4,8 @@ import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
-import models.project._
-import models.task._
+import models.project.*
+import models.task.*
 import models.user.UserService
 import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}

@@ -25,7 +25,7 @@ import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.uploading.LinkedLayerIdentifier
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatasetEvent}
-import models.dataset._
+import models.dataset.*
 import models.dataset.explore.{
   ExploreAndAddRemoteDatasetParameters,
   WKExploreRemoteLayerParameters,
@@ -36,7 +36,7 @@ import models.organization.OrganizationDAO
 import models.storage.UsedStorageService
 import models.team.{TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserService}
-import play.api.libs.json._
+import play.api.libs.json.*
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import play.silhouette.api.Silhouette
 import security.{AccessibleBySwitchingService, URLSharing, WkEnv}
@@ -257,7 +257,13 @@ class DatasetController @Inject() (
   def exploreAndAddRemoteDataset(): Action[ExploreAndAddRemoteDatasetParameters] =
     sil.SecuredAction.fox(validateJson[ExploreAndAddRemoteDatasetParameters]) { implicit request =>
       val adaptedParameters =
-        WKExploreRemoteLayerParameters(request.body.remoteUri, None, None, None, request.body.dataStoreName)
+        WKExploreRemoteLayerParameters(
+          request.body.remoteUri,
+          request.body.credentialIdentifier,
+          request.body.credentialSecret,
+          None,
+          request.body.dataStoreName
+        )
       for {
         exploreResponse <- wkExploreRemoteLayerService.exploreRemoteDatasource(
           List(adaptedParameters),

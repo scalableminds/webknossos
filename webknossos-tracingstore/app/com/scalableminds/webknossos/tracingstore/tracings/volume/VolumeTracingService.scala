@@ -18,25 +18,25 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.Elemen
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, ProtoGeometryConversions}
-import com.scalableminds.webknossos.datastore.models._
+import com.scalableminds.webknossos.datastore.models.*
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
-import com.scalableminds.webknossos.datastore.services._
+import com.scalableminds.webknossos.datastore.services.*
 import com.scalableminds.webknossos.datastore.services.mesh.{AdHocMeshRequest, AdHocMeshService, AdHocMeshServiceHolder}
 import com.scalableminds.webknossos.tracingstore.files.TsTempFileService
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
-import com.scalableminds.webknossos.tracingstore.tracings._
+import com.scalableminds.webknossos.tracingstore.tracings.*
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient}
 import com.typesafe.scalalogging.LazyLogging
 
-import java.io._
+import java.io.*
 import java.nio.file.Path
 import java.util.Base64
 import java.util.zip.Deflater
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 class VolumeTracingService @Inject() (
     tracingDataStore: TracingDataStore,
@@ -398,7 +398,7 @@ class VolumeTracingService @Inject() (
             if (!magsDoMatch)
               Fox.failure(Msg.Annotation.Volume.magsDoNotMatch)
             else {
-              val mergedVolume = new MergedVolume(tracing.elementClass)
+              val mergedVolume = new MergedVolume(tracing.elementClass, remapSegmentIds = true)
               for {
                 _ <- withZipsFromMultiZipAsync(initialData)((_, dataZip) => mergedVolume.addIdSetFromDataZip(dataZip))
                 _ <- withZipsFromMultiZipAsync(initialData)((index, dataZip) =>
@@ -913,7 +913,8 @@ class VolumeTracingService @Inject() (
       volumeTracings: Seq[VolumeTracing],
       newVolumeTracingId: String,
       newVersion: Long,
-      toTemporaryStore: Boolean
+      toTemporaryStore: Boolean,
+      remapSegmentIds: Boolean
   )(using tc: TokenContext): Fox[MergedVolumeStats] = {
     val before = Instant.now
     val volumeLayers = volumeTracingIds.zip(volumeTracings).map { case (tracingId, tracing) =>
@@ -946,7 +947,7 @@ class VolumeTracingService @Inject() (
         }
       }.getOrElse(Set.empty)
 
-      val mergedVolume = new MergedVolume(elementClassProto)
+      val mergedVolume = new MergedVolume(elementClassProto, remapSegmentIds)
 
       volumeLayers.foreach { volumeLayer =>
         mergedVolume.addIdSetFromBucketStream(volumeLayer.bucketStream, magsIntersection)
@@ -1031,7 +1032,7 @@ class VolumeTracingService @Inject() (
         val volumeLayer = volumeTracingLayer(annotationId, tracingId, tracing)
         for {
           largestSegmentId <- tracing.largestSegmentId.toFox ?~> Msg.Annotation.Volume.mergeLargestSegmentIdUnset
-          mergedVolume = new MergedVolume(tracing.elementClass, largestSegmentId)
+          mergedVolume = new MergedVolume(tracing.elementClass, remapSegmentIds = true, largestSegmentId)
           _ <- mergedVolume.addIdSetFromDataZip(zipFile)
           _ = mergedVolume.addFromBucketStream(sourceVolumeIndex = 0, volumeLayer.bucketProvider.bucketStream())
           _ <- mergedVolume.addFromDataZip(sourceVolumeIndex = 1, zipFile)

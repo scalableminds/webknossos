@@ -15,7 +15,7 @@ import models.task.{BaseAnnotation, TaskParameters}
 import models.user.{Experience, User}
 import com.scalableminds.util.box.Box.tryo
 import play.api.http.HttpEntity
-import play.api.libs.json._
+import play.api.libs.json.*
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
 import security.WkEnv
 import com.scalableminds.util.objectid.ObjectId

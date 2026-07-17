@@ -7,7 +7,7 @@ import com.scalableminds.util.tools.Fox
 import javax.inject.Inject
 import models.dataset.{DataStore, DataStoreDAO, DataStoreService}
 import models.user.{MultiUserDAO, UserService}
-import play.api.libs.json._
+import play.api.libs.json.*
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.WkEnv
 

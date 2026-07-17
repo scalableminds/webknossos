@@ -1,88 +1,132 @@
+import { CheckCircleOutlined, InfoCircleOutlined, LoadingOutlined } from "@ant-design/icons";
 import {
   getAnnotationCompoundInformation,
   getTracingForAnnotationType,
   getUnversionedAnnotationInformation,
 } from "admin/rest_api";
-import { Alert, Button, Form, Modal, Select, Spin, Tooltip } from "antd";
+import {
+  Button,
+  Checkbox,
+  Divider,
+  Flex,
+  Form,
+  Input,
+  Modal,
+  Segmented,
+  Select,
+  Spin,
+  Tooltip,
+  Typography,
+  theme,
+} from "antd";
 import { makeComponentLazy } from "libs/react_helpers";
+import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import { animationFrame, sleep } from "libs/utils";
 import { location } from "libs/window";
 import messages from "messages";
-import type React from "react";
-import { PureComponent } from "react";
-import { connect } from "react-redux";
-import type { Dispatch } from "redux";
+import { useState } from "react";
+import { useDispatch } from "react-redux";
 import { type APIAnnotation, APIAnnotationTypeEnum } from "types/api_types";
-import Constants from "viewer/constants";
 import { getSkeletonDescriptor } from "viewer/model/accessors/skeletontracing_accessor";
 import { addTreesAndGroupsAction } from "viewer/model/actions/skeletontracing_actions";
 import { createMutableTreeMapFromTreeArray } from "viewer/model/reducers/skeletontracing_reducer_helpers";
-import type { MutableTreeMap, TreeGroup } from "viewer/model/types/tree_types";
 import { api } from "viewer/singletons";
-import type { WebknossosState } from "viewer/store";
 import Store from "viewer/store";
-import InputComponent from "viewer/view/components/input_component";
 
-type ProjectInfo = {
-  id: string;
-  label: string;
-};
-type OwnProps = {
+type Props = {
   isOpen: boolean;
   onOk: () => void;
 };
-type StateProps = {
-  annotationId: string;
-  annotationType: string;
-};
-type DispatchProps = {
-  addTreesAndGroupsAction: (
-    arg0: MutableTreeMap,
-    arg1: Array<TreeGroup> | null | undefined,
-  ) => void;
-};
-type Props = OwnProps & StateProps & DispatchProps;
-type MergeModalViewState = {
-  projects: Array<ProjectInfo>;
-  selectedProject: string | null | undefined;
-  selectedExplorativeAnnotation: string;
-  isUploading: boolean;
-  isFetchingData: boolean;
-};
+type SourceType = "project" | "annotation";
+type TargetType = "newAnnotation" | "importHere";
+type AnnotationFetchStatus = "idle" | "fetching" | "success" | "error";
 
-class _MergeModalView extends PureComponent<Props, MergeModalViewState> {
-  state: MergeModalViewState = {
-    projects: [],
-    selectedProject: null,
-    selectedExplorativeAnnotation: "",
-    isUploading: false,
-    isFetchingData: false,
-  };
+function extractAnnotationId(input: string): string | null {
+  // Accepts a plain 24-char hex id or any annotation URL containing one,
+  // e.g. https://host/annotations/<id> or /annotations/Explorational/<id>
+  const fromUrl = input.match(/annotations\/(?:\w+\/)?([0-9a-f]{24})/i);
+  if (fromUrl) return fromUrl[1];
+  const bare = input.trim().match(/^[0-9a-f]{24}$/i);
+  return bare ? bare[0] : null;
+}
 
-  componentDidMount() {
-    this.fetchData();
-  }
+const sectionDivider = (title: string) => (
+  <Divider titlePlacement="left" style={{ margin: 0 }}>
+    {title}
+  </Divider>
+);
 
-  async fetchData() {
-    this.setState({
-      isFetchingData: true,
-    });
-    const projects = await Request.receiveJSON("/api/projects", {
-      showErrorToast: false,
-    });
-    this.setState({
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'project' implicitly has an 'any' type.
-      projects: projects.map((project) => ({
+function _MergeModalView({ isOpen, onOk }: Props) {
+  const annotationId = useWkSelector((state) => state.annotation.annotationId);
+  const annotationType = useWkSelector((state) => state.annotation.annotationType);
+  const dispatch = useDispatch();
+  const { token } = theme.useToken();
+
+  const [sourceType, setSourceType] = useState<SourceType>("annotation");
+  const [targetType, setTargetType] = useState<TargetType>("newAnnotation");
+  const [selectedProject, setSelectedProject] = useState<string | null>(null);
+  const [annotationInput, setAnnotationInput] = useState("");
+  const [shouldRemapSegmentIds, setShouldRemapSegmentIds] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const { data: projects = [], isFetching: isFetchingProjects } = useQueryWithErrorHandling({
+    queryKey: ["projects"],
+    queryFn: async () => {
+      const projectsResponse: Array<{ id: string; name: string }> = await Request.receiveJSON(
+        "/api/projects",
+        {
+          showErrorToast: false,
+        },
+      );
+      return projectsResponse.map((project) => ({
         id: project.id,
         label: project.name,
-      })),
-      isFetchingData: false,
-    });
-  }
+      }));
+    },
+    enabled: isOpen,
+    refetchOnWindowFocus: false,
+  });
 
-  async createMergedAnnotation(url: string) {
+  const extractedAnnotationId = extractAnnotationId(annotationInput);
+
+  const {
+    data: fetchedAnnotationData,
+    isFetching: isFetchingAnnotation,
+    status: annotationQueryStatus,
+  } = useQueryWithErrorHandling({
+    queryKey: ["unversionedAnnotation", extractedAnnotationId],
+    queryFn: () =>
+      getUnversionedAnnotationInformation(extractedAnnotationId!, {
+        showErrorToast: false,
+      }),
+    enabled: isOpen && extractedAnnotationId != null,
+    refetchOnWindowFocus: false,
+  });
+
+  const fetchedAnnotation = extractedAnnotationId != null ? (fetchedAnnotationData ?? null) : null;
+
+  const annotationFetchStatus: AnnotationFetchStatus = (() => {
+    if (extractedAnnotationId == null) {
+      return "idle";
+    }
+    if (isFetchingAnnotation) {
+      return "fetching";
+    }
+    if (annotationQueryStatus === "success") {
+      return "success";
+    }
+    if (annotationQueryStatus === "error") {
+      return "error";
+    }
+    return "idle";
+  })();
+
+  const isSourceValid =
+    sourceType === "project" ? selectedProject != null : fetchedAnnotation != null;
+
+  async function createMergedAnnotation(url: string) {
     await api.tracing.save();
     const annotation = await Request.receiveJSON(url, {
       method: "POST",
@@ -93,66 +137,7 @@ class _MergeModalView extends PureComponent<Props, MergeModalViewState> {
     location.href = redirectUrl;
   }
 
-  handleChangeMergeProject = (project: string) => {
-    this.setState({
-      selectedProject: project,
-    });
-  };
-
-  handleChangeMergeExplorativeAnnotation = (event: React.ChangeEvent<HTMLInputElement>) => {
-    this.setState({
-      selectedExplorativeAnnotation: event.target.value,
-    });
-  };
-
-  handleMergeProject = async (event: React.SyntheticEvent) => {
-    event.preventDefault();
-    const { selectedProject } = this.state;
-
-    if (selectedProject != null) {
-      const url =
-        `/api/annotations/CompoundProject/${selectedProject}/merge/` +
-        `${this.props.annotationType}/${this.props.annotationId}`;
-      this.createMergedAnnotation(url);
-    }
-  };
-
-  handleImportProject = async (event: React.SyntheticEvent) => {
-    event.preventDefault();
-    const { selectedProject } = this.state;
-
-    if (selectedProject != null) {
-      const annotation = await getAnnotationCompoundInformation(
-        selectedProject,
-        APIAnnotationTypeEnum.CompoundProject,
-      );
-      this.mergeAnnotationIntoActiveTracing(annotation);
-    }
-  };
-
-  handleMergeExplorativeAnnotation = async (event: React.SyntheticEvent) => {
-    event.preventDefault();
-    const { selectedExplorativeAnnotation } = this.state;
-
-    if (selectedExplorativeAnnotation != null) {
-      const url =
-        `/api/annotations/Explorational/${selectedExplorativeAnnotation}/merge/` +
-        `${this.props.annotationType}/${this.props.annotationId}`;
-      this.createMergedAnnotation(url);
-    }
-  };
-
-  handleImportExplorativeAnnotation = async (event: React.SyntheticEvent) => {
-    event.preventDefault();
-    const { selectedExplorativeAnnotation } = this.state;
-
-    if (selectedExplorativeAnnotation != null) {
-      const annotation = await getUnversionedAnnotationInformation(selectedExplorativeAnnotation);
-      this.mergeAnnotationIntoActiveTracing(annotation);
-    }
-  };
-
-  async mergeAnnotationIntoActiveTracing(annotation: APIAnnotation): Promise<void> {
+  async function mergeAnnotationIntoActiveTracing(annotation: APIAnnotation): Promise<void> {
     if (annotation.dataSetName !== Store.getState().dataset.name) {
       Toast.error(messages["merge.different_dataset"]);
       return;
@@ -175,141 +160,192 @@ class _MergeModalView extends PureComponent<Props, MergeModalViewState> {
 
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'trees' does not exist on type 'ServerTra... Remove this comment to see the full error message
     const { trees, treeGroups } = tracing;
-    this.setState({
-      isUploading: true,
-    });
     // Wait for an animation frame (but not longer than a second) so that the loading
     // animation is kicked off
     await animationFrame(1000);
-    this.props.addTreesAndGroupsAction(createMutableTreeMapFromTreeArray(trees), treeGroups);
-    this.setState({
-      isUploading: false,
-    });
+    dispatch(addTreesAndGroupsAction(createMutableTreeMapFromTreeArray(trees), treeGroups));
     Toast.success(messages["tracing.merged"]);
-    this.props.onOk();
+    onOk();
   }
 
-  render() {
-    return (
-      <Modal
-        title="Merge"
-        open={this.props.isOpen}
-        onCancel={this.props.onOk}
-        className="merge-modal"
-        width={700}
-        footer={null}
-      >
-        <Spin spinning={this.state.isUploading}>
-          <Alert
-            type="info"
-            style={{
-              marginBottom: 12,
-            }}
-            title="If you would like to import NML files, please drag and drop them into the annotation view."
-          />
+  const handleMerge = async () => {
+    const mergeSourcePath =
+      sourceType === "project"
+        ? `CompoundProject/${selectedProject}`
+        : `Explorational/${extractedAnnotationId}`;
+    const url =
+      `/api/annotations/${mergeSourcePath}/merge/${annotationType}/${annotationId}` +
+      `?remapSegmentIds=${shouldRemapSegmentIds}`;
+    await createMergedAnnotation(url);
+  };
 
-          <Form
-            layout="inline"
-            style={{
-              marginBottom: 8,
-            }}
+  const handleImportTrees = async () => {
+    if (sourceType === "project") {
+      if (selectedProject == null) return;
+      const annotation = await getAnnotationCompoundInformation(
+        selectedProject,
+        APIAnnotationTypeEnum.CompoundProject,
+      );
+      await mergeAnnotationIntoActiveTracing(annotation);
+    } else {
+      if (fetchedAnnotation == null) return;
+      await mergeAnnotationIntoActiveTracing(fetchedAnnotation);
+    }
+  };
+
+  const handleAction = async () => {
+    setIsUploading(true);
+    try {
+      if (targetType === "importHere") {
+        await handleImportTrees();
+      } else {
+        await handleMerge();
+      }
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const annotationInputSuffix =
+    annotationFetchStatus === "fetching" ? (
+      <LoadingOutlined />
+    ) : annotationFetchStatus === "success" ? (
+      <CheckCircleOutlined style={{ color: token.colorSuccess }} />
+    ) : undefined;
+
+  const annotationInputHint =
+    annotationInput !== "" && extractedAnnotationId == null
+      ? "No valid annotation ID recognized."
+      : annotationFetchStatus === "error"
+        ? "Annotation not found or not accessible."
+        : null;
+
+  return (
+    <Modal
+      title="Merge Annotations"
+      open={isOpen}
+      onCancel={onOk}
+      width={500}
+      footer={
+        <Flex justify="flex-end" align="center" gap={12}>
+          <Tooltip
+            title={
+              !isSourceValid
+                ? "Please select an annotation or project as the source."
+                : targetType === "importHere"
+                  ? "Imports skeleton trees (but no volume data) directly into the currently opened annotation."
+                  : "Creates a new annotation in your account with all merged contents of the current and selected annotations, including volume layers."
+            }
           >
-            <Form.Item label="Project">
+            <Button
+              type="primary"
+              disabled={!isSourceValid}
+              loading={isUploading}
+              onClick={handleAction}
+            >
+              {targetType === "importHere" ? "Import Skeleton Trees" : "Merge"}
+            </Button>
+          </Tooltip>
+        </Flex>
+      }
+    >
+      <Spin spinning={isUploading}>
+        <Flex vertical gap={16} style={{ marginBottom: 12 }}>
+          <Typography.Text type="secondary">
+            <p style={{ marginTop: 0 }}>
+              Merge another annotation into this one, either from a single annotation or all
+              annotations of a project.
+            </p>
+            <b>Tip:</b> NML files can simply be dragged and dropped into the annotation view to
+            import them.
+          </Typography.Text>
+          {sectionDivider("Source")}
+          <Segmented
+            block
+            value={sourceType}
+            onChange={(value) => setSourceType(value as SourceType)}
+            options={[
+              { value: "annotation", label: "Annotation" },
+              { value: "project", label: "Project" },
+            ]}
+          />
+          {sourceType === "project" ? (
+            <div>
               <Select
-                // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | never[]' is not assignable to type ... Remove this comment to see the full error message
-                value={this.state.selectedProject || []}
-                style={{
-                  width: 200,
-                }}
-                onChange={this.handleChangeMergeProject}
-                loading={this.state.isFetchingData}
-                options={this.state.projects.map((project) => ({
+                value={selectedProject}
+                style={{ width: "100%" }}
+                placeholder="Select a project…"
+                onChange={setSelectedProject}
+                loading={isFetchingProjects}
+                options={projects.map((project) => ({
                   value: project.id,
                   label: project.label,
                 }))}
               />
-            </Form.Item>
-            <Form.Item>
-              <Tooltip title="Imports trees and tree groups (but no volume data) directly into the currently opened annotation.">
-                <Button
-                  disabled={this.state.selectedProject == null}
-                  onClick={this.handleImportProject}
+            </div>
+          ) : (
+            <Form component={false}>
+              <Form.Item
+                validateStatus={annotationInputHint != null ? "error" : undefined}
+                help={annotationInputHint}
+                style={{ marginBottom: 0 }}
+              >
+                <Input
+                  value={annotationInput}
+                  placeholder="Paste an annotation link or ID…"
+                  onChange={(event) => setAnnotationInput(event.target.value)}
+                  suffix={annotationInputSuffix}
+                />
+              </Form.Item>
+            </Form>
+          )}
+          {sectionDivider("Target")}
+          <div>
+            <Segmented
+              block
+              value={targetType}
+              onChange={(value) => setTargetType(value as TargetType)}
+              options={[
+                { value: "newAnnotation", label: "New Annotation" },
+                { value: "importHere", label: "Import Here" },
+              ]}
+            />
+            {targetType === "importHere" ? (
+              <Typography.Text type="secondary" style={{ display: "block", marginTop: 7 }}>
+                For technical reasons, importing into the currently open annotation only supports
+                skeleton trees. Volume annotation layers will be omitted.
+              </Typography.Text>
+            ) : null}
+          </div>
+          {targetType === "newAnnotation" ? (
+            <>
+              {sectionDivider("Segment ID Settings")}
+              <div>
+                <Typography.Text type="secondary" style={{ display: "block", marginBottom: 7 }}>
+                  When merging volume layers, non-zero voxels from the imported annotation take
+                  precedence. If both annotations use the same segment IDs, the IDs can be remapped:
+                </Typography.Text>
+                <Checkbox
+                  checked={shouldRemapSegmentIds}
+                  onChange={(ev) => setShouldRemapSegmentIds(ev.target.checked)}
                 >
-                  Import trees here
-                </Button>
-              </Tooltip>
-            </Form.Item>
-            <Form.Item>
-              <Tooltip title="Creates a new explorative annotation in your account with all merged contents of the current and selected annotations.">
-                <Button
-                  type="primary"
-                  disabled={this.state.selectedProject == null}
-                  onClick={this.handleMergeProject}
+                  Remap segment IDs
+                </Checkbox>
+                <Tooltip
+                  title="Remap the segment IDs of the merged-in annotation to keep all segment IDs unique. Deselect it to keep all IDs as they are. Deselecting this is recommended for annotations based on fallback segmentation layers."
+                  placement="top"
                 >
-                  Merge
-                </Button>
-              </Tooltip>
-            </Form.Item>
-          </Form>
-
-          <Form layout="inline">
-            <Form.Item label="Explorative Annotation">
-              <InputComponent
-                value={this.state.selectedExplorativeAnnotation}
-                style={{
-                  width: 200,
-                }}
-                onChange={this.handleChangeMergeExplorativeAnnotation}
-              />
-            </Form.Item>
-            <Form.Item>
-              <Tooltip title="Imports trees and tree groups (but no volume data) directly into the currently opened annotation.">
-                <Button
-                  disabled={
-                    this.state.selectedExplorativeAnnotation.length !==
-                    Constants.OBJECT_ID_STRING_LENGTH
-                  }
-                  onClick={this.handleImportExplorativeAnnotation}
-                >
-                  Import trees here
-                </Button>
-              </Tooltip>
-            </Form.Item>
-            <Form.Item>
-              <Tooltip title="Creates a new explorative annotation in your account with all merged contents of the current and selected annotations.">
-                <Button
-                  type="primary"
-                  disabled={
-                    this.state.selectedExplorativeAnnotation.length !==
-                    Constants.OBJECT_ID_STRING_LENGTH
-                  }
-                  onClick={this.handleMergeExplorativeAnnotation}
-                >
-                  Merge
-                </Button>
-              </Tooltip>
-            </Form.Item>
-          </Form>
-        </Spin>
-      </Modal>
-    );
-  }
+                  <InfoCircleOutlined className="icon-margin-left" />
+                </Tooltip>
+              </div>
+            </>
+          ) : null}
+        </Flex>
+      </Spin>
+    </Modal>
+  );
 }
 
 const MergeModalView = makeComponentLazy(_MergeModalView);
 
-function mapStateToProps(state: WebknossosState): StateProps {
-  return {
-    annotationId: state.annotation.annotationId,
-    annotationType: state.annotation.annotationType,
-  };
-}
-
-const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
-  addTreesAndGroupsAction(trees: MutableTreeMap, treeGroups: Array<TreeGroup> | null | undefined) {
-    dispatch(addTreesAndGroupsAction(trees, treeGroups));
-  },
-});
-
-const connector = connect(mapStateToProps, mapDispatchToProps);
-export default connector(MergeModalView);
+export default MergeModalView;

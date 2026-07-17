@@ -5,7 +5,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.typesafe.scalalogging.{LazyLogging, Logger}
 import com.scalableminds.util.box.Box.tryo
-import play.api.libs.json._
+import play.api.libs.json.*
 
 import java.time.{ZoneId, ZonedDateTime}
 import java.time.format.DateTimeFormatter

@@ -78,6 +78,7 @@ import type {
   UpdateUserBoundingBoxInVolumeTracingAction,
   UpdateUserBoundingBoxVisibilityInSkeletonTracingAction,
   UpdateUserBoundingBoxVisibilityInVolumeTracingAction,
+  UpdateVolumeBucketDataHasChangedUpdateAction,
   UpsertSegmentGroupUpdateAction,
 } from "viewer/model/sagas/volume/update_actions";
 import type { StoreAnnotation } from "viewer/store";
@@ -525,6 +526,16 @@ const descriptionFns: Record<
     return {
       description: `Set largest segment id to ${action.value.largestSegmentId}`,
       icon: <NumberOutlined />,
+    };
+  },
+  updateVolumeBucketDataHasChanged: (
+    action: AsServerAction<UpdateVolumeBucketDataHasChangedUpdateAction>,
+  ): Description => {
+    return {
+      description: action.value.volumeBucketDataHasChanged
+        ? "Edited the volume data."
+        : "Reset volume data to an unmodified state.",
+      icon: <EditOutlined />,
     };
   },
   updateSegmentGroupsExpandedState: (

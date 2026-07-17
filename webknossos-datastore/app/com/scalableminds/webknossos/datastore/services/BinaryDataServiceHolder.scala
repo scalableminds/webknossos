@@ -15,14 +15,15 @@ import scala.concurrent.ExecutionContext
  * Also, this allows giving the datastore-only sharedChunkContentsCache to the DataStore one, while passing None to the TracingStore one.
  */
 
-class BinaryDataServiceHolder @Inject()(config: DataStoreConfig,
-                                        dataVaultService: DataVaultService,
-                                        datasetErrorLoggingService: DSDatasetErrorLoggingService,
-                                        chunkCacheService: DSChunkCacheService,
-                                        agglomerateService: AgglomerateService)(implicit ec: ExecutionContext) {
+class BinaryDataServiceHolder @Inject() (
+    config: DataStoreConfig,
+    dataVaultService: DataVaultService,
+    datasetErrorLoggingService: DSDatasetErrorLoggingService,
+    chunkCacheService: DSChunkCacheService,
+    agglomerateService: AgglomerateService
+)(implicit ec: ExecutionContext) {
 
   val binaryDataService: BinaryDataService = new BinaryDataService(
-    config.Datastore.baseDirectory,
     Some(agglomerateService),
     Some(dataVaultService),
     Some(chunkCacheService.sharedChunkContentsCache),

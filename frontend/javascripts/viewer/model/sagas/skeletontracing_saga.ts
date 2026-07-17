@@ -33,7 +33,10 @@ import {
   type Vector3,
 } from "viewer/constants";
 import { getSegmentIdForPositionAsync } from "viewer/controller/combinations/volume_handlers";
-import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
+import {
+  isConcurrentCollaborationMode,
+  mayEditAnnotation,
+} from "viewer/model/accessors/annotation_accessor";
 import { getLayerByName } from "viewer/model/accessors/dataset_accessor";
 import {
   enforceSkeletonTracing,
@@ -417,9 +420,7 @@ function* loadAgglomerateTreeWithAtPosition(
     successMessageDelay: 2000,
   });
 
-  const shouldGuardWithAnnotationMutex = yield* select(
-    (state) => state.annotation.collaborationMode === "Concurrent",
-  );
+  const shouldGuardWithAnnotationMutex = yield* select(isConcurrentCollaborationMode);
   let unsubscribeFromAnnotationMutex = null;
   let hideFn: HideFn | undefined;
   if (shouldGuardWithAnnotationMutex) {
@@ -551,7 +552,7 @@ function* removeConnectomeAgglomerateTreeWithId(
   const { layerName, mappingName, agglomerateId } = action;
   const treeName = getTreeNameForAgglomerateTree(agglomerateId, mappingName);
   const skeleton = yield* select(
-    (state) => state.localSegmentationData[layerName].connectomeData.skeleton,
+    (state) => state.localSegmentationStateByLayer[layerName].connectomeData.skeleton,
   );
   if (skeleton == null) return;
   const { trees } = skeleton;

@@ -1,14 +1,15 @@
 package models.annotation
 
 import com.scalableminds.util.accesscontext.GlobalAccessContext
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 
 import javax.inject.Inject
 import models.user.{User, UserService}
-import play.api.libs.json._
-import models.annotation.AnnotationState._
+import play.api.libs.json.*
+import models.annotation.AnnotationState.*
 
-import scala.concurrent._
+import scala.concurrent.*
 
 class AnnotationRestrictions(implicit ec: ExecutionContext) {
   def allowAccess(user: Option[User]): Fox[Boolean] = Fox.successful(false)
@@ -35,24 +36,24 @@ class AnnotationRestrictions(implicit ec: ExecutionContext) {
   def allowDownload(user: User): Fox[Boolean] = allowDownload(Some(user))
 }
 
-object AnnotationRestrictions extends FoxImplicits {
+object AnnotationRestrictions {
   def writeAsJson(ar: AnnotationRestrictions, u: Option[User]): Fox[JsObject] =
     for {
       allowAccess <- ar.allowAccess(u)
       allowUpdate <- ar.allowUpdate(u)
       allowFinish <- ar.allowFinish(u)
       allowDownload <- ar.allowDownload(u)
-    } yield {
-      Json.obj("allowAccess" -> allowAccess,
-               "allowUpdate" -> allowUpdate,
-               "allowFinish" -> allowFinish,
-               "allowDownload" -> allowDownload)
-    }
+    } yield Json.obj(
+      "allowAccess" -> allowAccess,
+      "allowUpdate" -> allowUpdate,
+      "allowFinish" -> allowFinish,
+      "allowDownload" -> allowDownload
+    )
 }
 
-class AnnotationRestrictionDefaults @Inject()(userService: UserService, annotationMutexDAO: AnnotationMutexDAO)(
-    implicit ec: ExecutionContext)
-    extends FoxImplicits {
+class AnnotationRestrictionDefaults @Inject() (userService: UserService, annotationMutexDAO: AnnotationMutexDAO)(
+    implicit ec: ExecutionContext
+) {
 
   def defaultsFor(annotation: Annotation): AnnotationRestrictions =
     new AnnotationRestrictions {
@@ -61,15 +62,17 @@ class AnnotationRestrictionDefaults @Inject()(userService: UserService, annotati
         else if (annotation.visibility == AnnotationVisibility.Internal) {
           (for {
             user <- userOption.toFox
-            owner <- userService.findOneCached(annotation._user)(GlobalAccessContext)
+            owner <- userService.findOneCached(annotation._user)(using GlobalAccessContext)
           } yield owner._organization == user._organization).orElse(Fox.successful(false))
         } else {
           (for {
             user <- userOption.toFox
-            owner <- userService.findOneCached(annotation._user)(GlobalAccessContext)
-            isTeamManagerOrAdminOfTeam <- userService.isTeamManagerOrAdminOf(user,
-                                                                             owner._organization,
-                                                                             annotation._task)
+            owner <- userService.findOneCached(annotation._user)(using GlobalAccessContext)
+            isTeamManagerOrAdminOfTeam <- userService.isTeamManagerOrAdminOf(
+              user,
+              owner._organization,
+              annotation._task
+            )
           } yield annotation._user == user._id || isTeamManagerOrAdminOfTeam).orElse(Fox.successful(false))
         }
 
@@ -87,35 +90,32 @@ class AnnotationRestrictionDefaults @Inject()(userService: UserService, annotati
         for {
           readAccessAllowed <- allowAccess(userOpt)
           annotationOwnerBox <- userService
-            .findOneCached(annotation._user)(GlobalAccessContext)
+            .findOneCached(annotation._user)(using GlobalAccessContext)
             .shiftBox // sandbox annotations have no owner
           annotationIsMutable = !(annotation.state == Finished) && !annotation.isLockedByOwner
-        } yield
-          userOpt.exists { user =>
-            if (annotation.othersMayEdit) {
-              val isInSameOrga = annotationOwnerBox.exists(_._organization == user._organization)
-              annotationIsMutable && isInSameOrga && readAccessAllowed
-            } else annotationIsMutable && annotation._user == user._id
-          }
+        } yield userOpt.exists { user =>
+          if (annotation.othersMayEdit) {
+            val isInSameOrga = annotationOwnerBox.exists(_._organization == user._organization)
+            annotationIsMutable && isInSameOrga && readAccessAllowed
+          } else annotationIsMutable && annotation._user == user._id
+        }
 
       override def allowFinish(userOption: Option[User]): Fox[Boolean] =
         (for {
           user <- userOption.toFox
-          owner <- userService.findOneCached(annotation._user)(GlobalAccessContext)
+          owner <- userService.findOneCached(annotation._user)(using GlobalAccessContext)
           isTeamManagerOrAdminOfTeam <- userService.isTeamManagerOrAdminOf(user, owner._organization, annotation._task)
-        } yield {
-          (annotation._user == user._id || isTeamManagerOrAdminOfTeam) && !(annotation.state == Finished) && !annotation.isLockedByOwner
-        }).orElse(Fox.successful(false))
+        } yield (annotation._user == user._id || isTeamManagerOrAdminOfTeam) && !(annotation.state == Finished) && !annotation.isLockedByOwner)
+          .orElse(Fox.successful(false))
 
       /* used in backend only to allow repeatable finish calls */
       override def allowFinishSoft(userOption: Option[User]): Fox[Boolean] =
         (for {
           user <- userOption.toFox
-          owner <- userService.findOneCached(annotation._user)(GlobalAccessContext)
+          owner <- userService.findOneCached(annotation._user)(using GlobalAccessContext)
           isTeamManagerOrAdminOfTeam <- userService.isTeamManagerOrAdminOf(user, owner._organization, annotation._task)
-        } yield {
-          (annotation._user == user._id || isTeamManagerOrAdminOfTeam) && !annotation.isLockedByOwner
-        }).orElse(Fox.successful(false))
+        } yield (annotation._user == user._id || isTeamManagerOrAdminOfTeam) && !annotation.isLockedByOwner)
+          .orElse(Fox.successful(false))
     }
 
 }

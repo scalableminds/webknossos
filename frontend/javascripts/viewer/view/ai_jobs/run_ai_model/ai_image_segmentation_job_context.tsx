@@ -101,7 +101,6 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
   const taskBoundingBoxes = useWkSelector(getTaskBoundingBoxes);
   const dataset = useWkSelector((state) => state.dataset);
   const annotationId = useWkSelector((state) => state.annotation.annotationId);
-  const datasetConfiguration = useWkSelector((state) => state.datasetConfiguration);
   const isViewMode = useWkSelector(
     (state) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   );
@@ -174,7 +173,6 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
       }
     }
 
-    const isColorLayerInverted = datasetConfiguration.layers[selectedLayer.name].isInverted;
     const aiModelId = selectedModel.id;
 
     try {
@@ -187,7 +185,6 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
             colorLayerName: selectedLayer.name,
             boundingBox: boundingBox.join(","),
             newDatasetName,
-            invertColorLayer: isColorLayerInverted,
             doSplitMergerEvaluation: isEvaluationActive,
             ...(isEvaluationActive
               ? {
@@ -208,7 +205,6 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
             colorLayerName: selectedLayer.name,
             boundingBox: boundingBox.join(","),
             newDatasetName,
-            invertColorLayer: isColorLayerInverted,
             seedGeneratorDistanceThreshold,
             customConfiguration,
           });
@@ -243,10 +239,10 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
     seedGeneratorDistanceThreshold,
     isEvaluationActive,
     splitMergerEvaluationSettings,
+    customConfiguration,
     userBoundingBoxCount,
     taskBoundingBoxes,
     skeletonAnnotation,
-    datasetConfiguration,
     dispatch,
   ]);
 

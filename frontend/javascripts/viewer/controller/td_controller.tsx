@@ -24,7 +24,10 @@ import { getPosition } from "viewer/model/accessors/flycam_accessor";
 import { getActiveNode, getNodePosition } from "viewer/model/accessors/skeletontracing_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { getInputCatcherRect, getViewportScale } from "viewer/model/accessors/view_mode_accessor";
-import { getActiveSegmentationTracing } from "viewer/model/accessors/volumetracing_accessor";
+import {
+  getActiveSegmentationTracing,
+  getActiveUnmappedSegmentId,
+} from "viewer/model/accessors/volumetracing_accessor";
 import { setPositionAction } from "viewer/model/actions/flycam_actions";
 import { toggleSegmentInPartitionAction } from "viewer/model/actions/proofread_actions";
 import {
@@ -230,6 +233,16 @@ class TDController extends PureComponent<Props> {
         }
 
         const intersection = this.getMeshIntersection(pos);
+
+        // Shift-click on MIP volume: navigate to max-intensity voxel along the click ray
+        if (event.shiftKey && !ctrlOrMetaPressed && intersection == null) {
+          const mipHit = this.props.planeView.performMipHitTest([pos.x, pos.y]);
+          if (mipHit != null) {
+            Store.dispatch(setPositionAction(V3.divide3(mipHit, this.props.voxelSize.factor)));
+          }
+          return;
+        }
+
         if (intersection == null) {
           return;
         }
@@ -275,9 +288,10 @@ class TDController extends PureComponent<Props> {
             );
           } else {
             const volumeTracing = getActiveSegmentationTracing(state);
+            const activeUnmappedSegmentId = getActiveUnmappedSegmentId(state, volumeTracing);
             const deselect =
-              volumeTracing?.activeUnmappedSegmentId != null &&
-              volumeTracing?.activeUnmappedSegmentId === intersection.unmappedSegmentId;
+              activeUnmappedSegmentId != null &&
+              activeUnmappedSegmentId === intersection.unmappedSegmentId;
 
             Store.dispatch(
               setActiveCellAction(

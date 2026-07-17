@@ -23,6 +23,7 @@ import FormattedDate from "components/formatted_date";
 import DatasetActionView, {
   getDatasetActionContextMenu,
 } from "dashboard/advanced_dataset/dataset_action_view";
+import { DraggableDatasetType } from "dashboard/advanced_dataset/dnd_types";
 import type { DatasetCollectionContextValue } from "dashboard/dataset/dataset_collection_context";
 import { MINIMUM_SEARCH_QUERY_LENGTH } from "dashboard/dataset/queries";
 import type { DatasetFilteringMode } from "dashboard/dataset_view";
@@ -168,7 +169,6 @@ interface DraggableDatasetRowProps extends React.HTMLAttributes<HTMLTableRowElem
   isADataset: boolean;
   rowKey: string;
 }
-export const DraggableDatasetType = "DraggableDatasetRow";
 
 function isRecordADataset(record: DatasetOrFolder): record is APIDatasetCompact {
   return (record as APIDatasetCompact).folderId !== undefined;
@@ -430,7 +430,7 @@ class FolderRenderer {
     return null;
   }
   renderCreationDateColumn(): React.ReactNode {
-    return null;
+    return this.data.created != null ? <FormattedDate timestamp={this.data.created} /> : null;
   }
   renderActionsColumn(): React.ReactNode {
     return this.datasetTable.getFolderSettingsActions(this.data);

@@ -20,19 +20,21 @@ class UPathTestSuite extends AsyncWordSpec {
       assert(UPath.fromString("s3:somewhere").exists(_.toString == "./s3:somewhere"))
     }
 
-    "Not be constructable from malformed string" in {
+    "Not be constructable from malformed string" in
       assert(UPath.fromString("file://somewhere").isEmpty)
-    }
 
     "resolve strings correctly (local)" in {
       assert(
-        (UPath.fromStringUnsafe("relative/elsewhere") / "subdirectory").toString == "./relative/elsewhere/subdirectory")
+        (UPath.fromStringUnsafe("relative/elsewhere") / "subdirectory").toString == "./relative/elsewhere/subdirectory"
+      )
       assert(
-        (UPath
-          .fromStringUnsafe("relative/elsewhere/") / "subdirectory").toString == "./relative/elsewhere/subdirectory")
+        (UPath.fromStringUnsafe("relative/elsewhere/") / "subdirectory").toString == "./relative/elsewhere/subdirectory"
+      )
       assert(
-        (UPath
-          .fromStringUnsafe("relative/elsewhere/") / "subdirectory/").toString == "./relative/elsewhere/subdirectory")
+        (UPath.fromStringUnsafe(
+          "relative/elsewhere/"
+        ) / "subdirectory/").toString == "./relative/elsewhere/subdirectory"
+      )
       assert((UPath.fromStringUnsafe("relative/elsewhere/") / "..").toString == "./relative")
       assert((UPath.fromStringUnsafe("relative/elsewhere/") / ".." / "..").toString == "./")
     }
@@ -48,7 +50,9 @@ class UPathTestSuite extends AsyncWordSpec {
         (UPath.fromStringUnsafe("https://example.com/key") / "subkey/").toString == "https://example.com/key/subkey/"
       )
       assert(
-        (UPath.fromStringUnsafe("https://example.com/key") / "subkey/" / "subsub").toString == "https://example.com/key/subkey/subsub"
+        (UPath.fromStringUnsafe(
+          "https://example.com/key"
+        ) / "subkey/" / "subsub").toString == "https://example.com/key/subkey/subsub"
       )
       assert(
         (UPath.fromStringUnsafe("https://example.com/key") / "..").toString == "https://example.com"
@@ -96,17 +100,20 @@ class UPathTestSuite extends AsyncWordSpec {
         UPath
           .fromStringUnsafe("relative/elsewhere")
           .resolvedIn(UPath.fromStringUnsafe("/somewhere"))
-          .toString == "/somewhere/relative/elsewhere")
+          .toString == "/somewhere/relative/elsewhere"
+      )
       assert(
         UPath
           .fromStringUnsafe("/absolute/elsewhere")
           .resolvedIn(UPath.fromStringUnsafe("/somewhere"))
-          .toString == "/absolute/elsewhere")
+          .toString == "/absolute/elsewhere"
+      )
       assert(
         UPath
           .fromStringUnsafe("s3://remote/elsewhere")
           .resolvedIn(UPath.fromStringUnsafe("/somewhere"))
-          .toString == "s3://remote/elsewhere")
+          .toString == "s3://remote/elsewhere"
+      )
     }
 
     "be correctly relativizedIn" in {
@@ -114,17 +121,44 @@ class UPathTestSuite extends AsyncWordSpec {
         UPath
           .fromStringUnsafe("relative/elsewhere")
           .relativizedIn(UPath.fromStringUnsafe("/somewhere"))
-          .toString == "./relative/elsewhere")
+          .toString == "./relative/elsewhere"
+      )
       assert(
         UPath
           .fromStringUnsafe("/absolute/elsewhere")
           .relativizedIn(UPath.fromStringUnsafe("/absolute"))
-          .toString == "./elsewhere")
+          .toString == "./elsewhere"
+      )
       assert(
         UPath
           .fromStringUnsafe("s3://remote/elsewhere")
           .relativizedIn(UPath.fromStringUnsafe("/somewhere"))
-          .toString == "s3://remote/elsewhere")
+          .toString == "s3://remote/elsewhere"
+      )
+    }
+
+    "correctly relativize ZipEntryUPath, preserving the inner path" in {
+      // local outer path inside the given parent: outer path gets relativized, inner path is untouched
+      assert(
+        UPath
+          .fromStringUnsafe("/absolute/data.zip|zip:inner/file.bin")
+          .relativizedIn(UPath.fromStringUnsafe("/absolute"))
+          .toString == "./data.zip|zip:inner/file.bin"
+      )
+      // local outer path not inside the given parent: falls back to the unchanged outer path
+      assert(
+        UPath
+          .fromStringUnsafe("/absolute/data.zip|zip:inner/file.bin")
+          .relativizedIn(UPath.fromStringUnsafe("/elsewhere"))
+          .toString == "/absolute/data.zip|zip:inner/file.bin"
+      )
+      // remote outer paths are never relativized, regardless of the given parent
+      assert(
+        UPath
+          .fromStringUnsafe("s3://bucket/prefix/archive.zip|zip:inner/file.bin")
+          .relativizedIn(UPath.fromStringUnsafe("s3://bucket/prefix"))
+          .toString == "s3://bucket/prefix/archive.zip|zip:inner/file.bin"
+      )
     }
 
     "correctly answer startsWith" in {
@@ -148,6 +182,78 @@ class UPathTestSuite extends AsyncWordSpec {
       checkStartsWith("https://example.com/path/", "https://example.com/path")
       // startsWith compares actual parents, not string prefix!
       checkStartsNotWith("https://example.com/pathSomewhereElse", "https://example.com/path")
+    }
+
+    "preserve zip inner path when appending ZipEntryUPath to local or remote path" in {
+      val zipPath = UPath.fromStringUnsafe("archive.zip|zip:inner/file.bin")
+      val localBase = UPath.fromStringUnsafe("/data/dir")
+      val remoteBase = UPath.fromStringUnsafe("s3://bucket/prefix")
+      assert((localBase / zipPath).toString == "/data/dir/archive.zip|zip:inner/file.bin")
+      assert((remoteBase / zipPath).toString == "s3://bucket/prefix/archive.zip|zip:inner/file.bin")
+    }
+
+    "parse ZipEntryUPath correctly" in {
+      val upath = UPath.fromStringUnsafe("s3://bucket/archive.zip|zip:inner/file.bin")
+      assert(upath.toString == "s3://bucket/archive.zip|zip:inner/file.bin")
+      assert(upath.isRemote)
+      assert(!upath.isLocal)
+      assert(upath.isAbsolute)
+      assert(upath.basename == "file.bin")
+      assert(upath.parent.toString == "s3://bucket/archive.zip|zip:inner")
+      assert(upath.parent.parent.toString == "s3://bucket/archive.zip|zip")
+      assert((upath / "extra").toString == "s3://bucket/archive.zip|zip:inner/file.bin/extra")
+    }
+
+    "parse ZipEntryUPath root reference (no colon)" in {
+      val upath = UPath.fromStringUnsafe("s3://bucket/archive.zip|zip")
+      assert(upath.toString == "s3://bucket/archive.zip|zip")
+      assert(upath.isRemote)
+      assert(upath.isAbsolute)
+    }
+
+    "strip single leading slash from zip inner path" in {
+      val upath = UPath.fromStringUnsafe("s3://bucket/archive.zip|zip:/inner/file.bin")
+      assert(upath.toString == "s3://bucket/archive.zip|zip:inner/file.bin")
+    }
+
+    "reject double leading slash in zip inner path" in
+      assert(UPath.fromString("s3://bucket/archive.zip|zip://inner/file.bin").isEmpty)
+
+    "reject nested zip paths" in
+      assert(UPath.fromString("s3://bucket/outer.zip|zip:inner.zip|zip:deep/file.bin").isEmpty)
+
+    "round-trip ZipEntryUPath through JSON" in {
+      import play.api.libs.json.Json
+      val upath = UPath.fromStringUnsafe("s3://bucket/archive.zip|zip:inner/file.bin")
+      val json = Json.toJson(upath)
+      val parsed = json.as[UPath]
+      assert(parsed.toString == upath.toString)
+    }
+
+    "construct ZipEntryUPath from local outer path" in {
+      val upath = UPath.fromStringUnsafe("/local/data.zip|zip:subdir/entry.txt")
+      assert(upath.toString == "/local/data.zip|zip:subdir/entry.txt")
+      assert(upath.isLocal)
+      assert(upath.basename == "entry.txt")
+    }
+
+    "navigate ZipEntryUPath parent for empty and single-segment inner paths" in {
+      // root reference: parent should be the path itself (never leave the zip)
+      val zipRoot = UPath.fromStringUnsafe("s3://bucket/archive.zip|zip")
+      assert(zipRoot.parent.toString == "s3://bucket/archive.zip|zip")
+      // single-segment inner path: parent should also be the outer path
+      val zipSingle = UPath.fromStringUnsafe("s3://bucket/archive.zip|zip:file.txt")
+      assert(zipSingle.parent.toString == "s3://bucket/archive.zip|zip")
+    }
+
+    "correctly answer startsWith for ZipEntryUPath" in {
+      checkStartsWith("s3://bucket/a.zip|zip:inner/file.bin", "s3://bucket/a.zip|zip:inner")
+      checkStartsWith("s3://bucket/a.zip|zip:inner/file.bin", "s3://bucket/a.zip|zip")
+      checkStartsWith("s3://bucket/a.zip|zip:inner", "s3://bucket/a.zip")
+      checkStartsWith("s3://bucket/a.zip|zip:inner", "s3://bucket")
+      checkStartsNotWith("s3://bucket/a.zip|zip:inner/file.bin", "s3://bucket/b.zip|zip:inner")
+      checkStartsNotWith("s3://bucket/a.zip|zip:inner", "s3://bucket/a.zip|zip:other")
+      checkStartsNotWith("s3://bucket/a.zip|zip:inner", "s3://bucket/a.zip|zip:in")
     }
   }
 

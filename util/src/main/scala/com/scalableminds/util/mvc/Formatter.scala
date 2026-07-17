@@ -1,8 +1,8 @@
 package com.scalableminds.util.mvc
 
+import com.scalableminds.util.box.{Box, Failure, Full, ParamFailure}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.TextUtils
-import com.scalableminds.util.tools.{Box, Failure, Full, ParamFailure}
 
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -44,7 +44,9 @@ trait Formatter {
       val labelElements: ListBuffer[String] = new ListBuffer[String]
 
       var days = Math.floor(millisAbs.toDouble / 1000 / 3600 / 24).toLong
-      if (millisAbs - days * 24 * 3600 * 1000 > 23 * 3600 * 1000 + 59 * 60 * 1000 + minuteRoundingThresholdMillisForRenderingSeconds) { // extra day to avoid 24h/60m/60s
+      if (
+        millisAbs - days * 24 * 3600 * 1000 > 23 * 3600 * 1000 + 59 * 60 * 1000 + minuteRoundingThresholdMillisForRenderingSeconds
+      ) { // extra day to avoid 24h/60m/60s
         days += 1
       }
       val includeSeconds = days == 0
@@ -80,9 +82,11 @@ trait Formatter {
     }
   }
 
-  protected def formatFailureChain(failure: Failure,
-                                   includeStackTraces: Boolean = false,
-                                   includeTime: Boolean = false): String = {
+  protected def formatFailureChain(
+      failure: Failure,
+      includeStackTraces: Boolean = false,
+      includeTime: Boolean = false
+  ): String = {
 
     def formatStackTrace(failure: Failure) =
       failure.exception match {

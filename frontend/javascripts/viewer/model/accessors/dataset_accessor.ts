@@ -115,16 +115,13 @@ export function getWidestMags(dataset: APIDataset): Vector3[] {
   return maxBy(allLayerMags, (mags) => mags.length) || [];
 }
 
-export const getSomeMagInfoForDataset = memoizeOne((dataset: APIDataset): MagInfo => {
-  const magUnion = getMagnificationUnion(dataset);
-  const areMagsDistinct = magUnion.every((mags) => mags.length <= 1);
-
-  if (areMagsDistinct) {
-    return new MagInfo(magUnion.map((mags) => mags[0]));
-  } else {
-    return new MagInfo(getWidestMags(dataset));
-  }
-});
+export const getSomeMagInfoForDataset = memoizeOne(
+  (dataset: APIDataset): MagInfo =>
+    // Use one representative (real) mag per existing mag level. This never
+    // synthesizes non-existent mags (unlike dense mags), so index queries such
+    // as getFinestMagIndex reflect the actually available mags of the dataset.
+    new MagInfo(getMagnificationUnion(dataset).map((mags) => mags[0])),
+);
 
 function _getMaxZoomStep(dataset: APIDataset | null | undefined): number {
   const minimumZoomStepCount = 1;
@@ -623,9 +620,9 @@ export function isLayerVisible(
     return false;
   }
 
-  const isArbitraryMode = constants.MODES_ARBITRARY.includes(viewMode);
-  const isHiddenBecauseOfArbitraryMode = isArbitraryMode && isSegmentationLayer(dataset, layerName);
-  return !layerConfig.isDisabled && layerConfig.alpha > 0 && !isHiddenBecauseOfArbitraryMode;
+  const isFlightMode = viewMode === constants.MODE_FLIGHT;
+  const isHiddenInFlightMode = isFlightMode && isSegmentationLayer(dataset, layerName);
+  return !layerConfig.isDisabled && layerConfig.alpha > 0 && !isHiddenInFlightMode;
 }
 
 function _hasFallbackLayer(layer: APIDataLayer) {
@@ -714,17 +711,6 @@ export function getMappingInfoForSupportedLayer(state: WebknossosState): ActiveM
     state.temporaryConfiguration.activeMappingByLayer,
     layer ? layer.name : null,
   );
-}
-
-export function getEffectiveIntensityRange(
-  dataset: APIDataset,
-  layerName: string,
-  datasetConfiguration: DatasetConfiguration,
-): readonly [number, number] {
-  const defaultIntensityRange = getDefaultValueRangeOfLayer(dataset, layerName);
-  const layerConfiguration = datasetConfiguration.layers[layerName];
-
-  return layerConfiguration.intensityRange || defaultIntensityRange;
 }
 
 /** Returns whether the segment index is available for the given layer. Requires `hasSegmentIndex` to be loaded first — dispatch `ensureSegmentIndexIsLoadedAction` before calling this. */

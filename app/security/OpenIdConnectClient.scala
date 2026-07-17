@@ -1,12 +1,13 @@
 package security
 
 import com.scalableminds.util.Msg
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{JsObject, Json, OFormat}
 import pdi.jwt.JwtJson
-import play.api.libs.ws._
+import play.api.libs.ws.*
 import utils.WkConf
 
 import java.math.BigInteger
@@ -18,9 +19,7 @@ import java.util.Base64
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: ExecutionContext)
-    extends FoxImplicits
-    with LazyLogging {
+class OpenIdConnectClient @Inject() (rpc: RPC, conf: WkConf)(implicit ec: ExecutionContext) extends LazyLogging {
 
   private val keyTypeRsa = "RSA"
 
@@ -30,7 +29,7 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
       conf.SingleSignOn.OpenIdConnect.clientId,
       if (conf.SingleSignOn.OpenIdConnect.clientSecret.nonEmpty) Some(conf.SingleSignOn.OpenIdConnect.clientSecret)
       else None,
-      conf.SingleSignOn.OpenIdConnect.scope,
+      conf.SingleSignOn.OpenIdConnect.scope
     )
 
   /*
@@ -45,7 +44,7 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
           "client_id" -> oidcConfig.clientId,
           "redirect_uri" -> callbackUrl,
           "scope" -> oidcConfig.scope,
-          "response_type" -> "code",
+          "response_type" -> "code"
         )
         serverInfos.authorization_endpoint + "?" +
           queryParams.map(v => v._1 + "=" + URLEncoder.encode(v._2, StandardCharsets.UTF_8.toString)).mkString("&")
@@ -72,9 +71,11 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
             "redirect_uri" -> redirectUrl,
             "code" -> code,
             "scope" -> oidcConfig.scope
-          ))
+          )
+        )
       _ = logDebug(
-        s"Fetched oidc token for scope '${oidcConfig.scope}', response scope: ${tokenResponse.scope}. Decoding...")
+        s"Fetched oidc token for scope '${oidcConfig.scope}', response scope: ${tokenResponse.scope}. Decoding..."
+      )
       (accessToken, idToken) <- validateOpenIdConnectTokenResponse(tokenResponse, serverInfos) ?~> "failed to parse JWT"
       _ = logDebug(s"Got id token $idToken and access token $accessToken.")
     } yield (accessToken, idToken)
@@ -92,12 +93,14 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
 
   private def validateOpenIdConnectTokenResponse(
       tokenResponse: OpenIdConnectTokenResponse,
-      serverInfos: OpenIdConnectProviderInfo): Fox[(JsObject, Option[JsObject])] =
+      serverInfos: OpenIdConnectProviderInfo
+  ): Fox[(JsObject, Option[JsObject])] =
     for {
       publicKey <- fetchServerPublicKey(serverInfos)
       decdoedAccessToken <- JwtJson.decodeJson(tokenResponse.access_token, publicKey).toFox
       decodedIdToken: Option[JsObject] <- Fox.runOptional(tokenResponse.id_token)(idToken =>
-        JwtJson.decodeJson(idToken, publicKey).toFox)
+        JwtJson.decodeJson(idToken, publicKey).toFox
+      )
     } yield (decdoedAccessToken, decodedIdToken)
 
   private def fetchServerPublicKey(serverInfos: OpenIdConnectProviderInfo): Fox[PublicKey] =

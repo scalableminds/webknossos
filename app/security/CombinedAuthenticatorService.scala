@@ -1,14 +1,14 @@
 package security
 
 import com.scalableminds.util.time.Instant
-import play.silhouette.api._
+import play.silhouette.api.*
 import play.silhouette.api.crypto.Base64AuthenticatorEncoder
 import play.silhouette.api.services.{AuthenticatorResult, AuthenticatorService}
 import play.silhouette.api.util.{Clock, ExtractableRequest, FingerprintGenerator, IDGenerator}
 import play.silhouette.crypto.{JcaSigner, JcaSignerSettings}
-import play.silhouette.impl.authenticators.{CookieAuthenticator, _}
+import play.silhouette.impl.authenticators.{CookieAuthenticator, *}
 import models.user.UserService
-import play.api.mvc._
+import play.api.mvc.*
 import utils.WkConf
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -26,33 +26,37 @@ case class CombinedAuthenticator(actualAuthenticator: StorableAuthenticator) ext
   override def isValid: Boolean = actualAuthenticator.isValid
 }
 
-case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSettings,
-                                        tokenSettings: BearerTokenAuthenticatorSettings,
-                                        tokenDao: BearerTokenAuthenticatorRepository,
-                                        fingerprintGenerator: FingerprintGenerator,
-                                        cookieHeaderEncoding: CookieHeaderEncoding,
-                                        idGenerator: IDGenerator,
-                                        clock: Clock,
-                                        userService: UserService,
-                                        conf: WkConf)(implicit val executionContext: ExecutionContext)
+case class CombinedAuthenticatorService(
+    cookieSettings: CookieAuthenticatorSettings,
+    tokenSettings: BearerTokenAuthenticatorSettings,
+    tokenDao: BearerTokenAuthenticatorRepository,
+    fingerprintGenerator: FingerprintGenerator,
+    cookieHeaderEncoding: CookieHeaderEncoding,
+    idGenerator: IDGenerator,
+    clock: Clock,
+    userService: UserService,
+    conf: WkConf
+)(implicit val executionContext: ExecutionContext)
     extends AuthenticatorService[CombinedAuthenticator]
     with Logger {
 
   private val cookieSigner = new JcaSigner(JcaSignerSettings(conf.Silhouette.CookieAuthenticator.signerSecret))
 
-  private val cookieAuthenticatorService = new CookieAuthenticatorService(cookieSettings,
-                                                                          None,
-                                                                          cookieSigner,
-                                                                          cookieHeaderEncoding,
-                                                                          new Base64AuthenticatorEncoder,
-                                                                          fingerprintGenerator,
-                                                                          idGenerator,
-                                                                          clock)
+  private val cookieAuthenticatorService = new CookieAuthenticatorService(
+    cookieSettings,
+    None,
+    cookieSigner,
+    cookieHeaderEncoding,
+    new Base64AuthenticatorEncoder,
+    fingerprintGenerator,
+    idGenerator,
+    clock
+  )
 
   val tokenAuthenticatorService =
     new WebknossosBearerTokenAuthenticatorService(tokenSettings, tokenDao, idGenerator, clock, userService, conf)
 
-  //is actually createCookie, called as "create" because it is the default
+  // is actually createCookie, called as "create" because it is the default
   override def create(loginInfo: LoginInfo)(implicit request: RequestHeader): Future[CombinedAuthenticator] =
     cookieAuthenticatorService.create(loginInfo).map(CombinedAuthenticator(_))
 
@@ -65,25 +69,24 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
   def findOrCreateToken(loginInfo: LoginInfo): Future[CombinedAuthenticator] =
     findTokenByLoginInfo(loginInfo).flatMap {
       case Some(token) => Future.successful(token)
-      case _ =>
+      case _           =>
         createToken(loginInfo)
     }
 
   override def retrieve[B](implicit request: ExtractableRequest[B]): Future[Option[CombinedAuthenticator]] =
     for {
-      optionCookie <- cookieAuthenticatorService.retrieve(request)
+      optionCookie <- cookieAuthenticatorService.retrieve(using request)
       optionCookieUnlessSignedOutEverywhere <- cookieUnlessSignedOutEverywhere(optionCookie)
-      optionToken <- tokenAuthenticatorService.retrieve(request)
-    } yield {
-      optionCookieUnlessSignedOutEverywhere.map(CombinedAuthenticator(_)).orElse {
-        optionToken.map(CombinedAuthenticator(_))
-      }
+      optionToken <- tokenAuthenticatorService.retrieve(using request)
+    } yield optionCookieUnlessSignedOutEverywhere.map(CombinedAuthenticator(_)).orElse {
+      optionToken.map(CombinedAuthenticator(_))
     }
 
   private def cookieUnlessSignedOutEverywhere(
-      optionCookie: Option[CookieAuthenticator]): Future[Option[CookieAuthenticator]] =
+      optionCookie: Option[CookieAuthenticator]
+  ): Future[Option[CookieAuthenticator]] =
     optionCookie match {
-      case None => Future.successful(None)
+      case None         => Future.successful(None)
       case Some(cookie) =>
         for {
           userOpt <- userService.retrieve(cookie.loginInfo)
@@ -119,8 +122,9 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
     }
   }
 
-  override def update(authenticator: CombinedAuthenticator, result: Result)(
-      implicit request: RequestHeader): Future[AuthenticatorResult] = authenticator.actualAuthenticator match {
+  override def update(authenticator: CombinedAuthenticator, result: Result)(implicit
+      request: RequestHeader
+  ): Future[AuthenticatorResult] = authenticator.actualAuthenticator match {
     case a: CookieAuthenticator      => cookieAuthenticatorService.update(a, result)
     case a: BearerTokenAuthenticator => tokenAuthenticatorService.update(a, result)
   }
@@ -130,12 +134,14 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
     cookieAuthenticatorService.renew(authenticator.actualAuthenticator.asInstanceOf[CookieAuthenticator])
 
   // only called in the cookie case
-  override def renew(authenticator: CombinedAuthenticator, result: Result)(
-      implicit request: RequestHeader): Future[AuthenticatorResult] =
+  override def renew(authenticator: CombinedAuthenticator, result: Result)(implicit
+      request: RequestHeader
+  ): Future[AuthenticatorResult] =
     cookieAuthenticatorService.renew(authenticator.actualAuthenticator.asInstanceOf[CookieAuthenticator], result)
 
-  override def discard(authenticator: CombinedAuthenticator, result: Result)(
-      implicit request: RequestHeader): Future[AuthenticatorResult] =
+  override def discard(authenticator: CombinedAuthenticator, result: Result)(implicit
+      request: RequestHeader
+  ): Future[AuthenticatorResult] =
     authenticator.actualAuthenticator match {
       case a: CookieAuthenticator      => cookieAuthenticatorService.discard(a, result)
       case a: BearerTokenAuthenticator => tokenAuthenticatorService.discard(a, result)

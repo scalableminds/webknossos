@@ -18,7 +18,7 @@ import type { ViewMode } from "viewer/constants";
 import constants, { ControlModeEnum } from "viewer/constants";
 import { initializeSceneController } from "viewer/controller/scene_controller";
 import UrlManager from "viewer/controller/url_manager";
-import ArbitraryController from "viewer/controller/viewmodes/arbitrary_controller";
+import FlightModeController from "viewer/controller/viewmodes/arbitrary_controller";
 import PlaneController from "viewer/controller/viewmodes/plane_controller";
 import { wkInitializedAction } from "viewer/model/actions/actions";
 import {
@@ -83,7 +83,7 @@ class Controller extends PureComponent<PropsWithRouter, State> {
   //
   // We have a matrix of modes like this:
   //
-  //   Annotation Mode \ View mode       Plane       Arbitrary
+  //   Annotation Mode \ View mode       Plane        Flight
   //              Skeleton annotation      X             X
   //                Volume annotation      X             /
   //
@@ -308,7 +308,7 @@ class Controller extends PureComponent<PropsWithRouter, State> {
       },
       SWITCH_VIEWMODE_FLIGHT: {
         onPressed: () => {
-          Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY));
+          Store.dispatch(setViewModeAction(constants.MODE_FLIGHT));
         },
       },
       CYCLE_VIEWMODE: {
@@ -415,23 +415,14 @@ class Controller extends PureComponent<PropsWithRouter, State> {
       return cover;
     }
 
-    const { allowedModes } = Store.getState().annotation.restrictions;
-
-    if (!allowedModes.includes(viewMode)) {
-      // Since this mode is not allowed, render nothing. A warning about this will be
-      // triggered in the model. Don't throw an error since the store might change so that
-      // the render function can succeed.
-      return null;
-    }
-
-    const isArbitrary = constants.MODES_ARBITRARY.includes(viewMode);
+    const isFlight = viewMode === constants.MODE_FLIGHT;
     const isPlane = constants.MODES_PLANE.includes(viewMode);
 
-    if (isArbitrary) {
+    if (isFlight) {
       return (
         <>
           {cover != null ? cover : null}
-          <ArbitraryController viewMode={viewMode} />
+          <FlightModeController viewMode={viewMode} />
         </>
       );
     } else if (isPlane) {
@@ -442,9 +433,7 @@ class Controller extends PureComponent<PropsWithRouter, State> {
         </>
       );
     } else {
-      // At the moment, all possible view modes consist of the union of MODES_ARBITRARY and MODES_PLANE
-      // In case we add new viewmodes, the following error will be thrown.
-      throw new Error("The current mode is none of the four known mode types");
+      throw new Error("The current view mode is unknown");
     }
   }
 }

@@ -7,6 +7,66 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
+## [26.07.03](https://github.com/scalableminds/webknossos/releases/tag/26.07.03) - 2026-07-13
+[Commits](https://github.com/scalableminds/webknossos/compare/26.07.2...26.07.03)
+
+### Fixed
+- Fixed a bug where old registerKeyHandler frontend api calls failed due to lacking backwards compatibility to the old interface. The old format is now supported again. [#9783](https://github.com/scalableminds/webknossos/pull/9783)
+
+## [26.07.2](https://github.com/scalableminds/webknossos/releases/tag/26.07.2) - 2026-06-29
+[Commits](https://github.com/scalableminds/webknossos/compare/26.07.0...26.07.2)
+
+### Fixed
+- Fixed that WEBKNOSSOS wouldn't load without https (or in very old browsers) by shimming crypto.randomUUID. [#9735](https://github.com/scalableminds/webknossos/pull/9735)
+
+## [26.07.1]
+This release was skipped for technical reasons.
+
+## [26.07.0](https://github.com/scalableminds/webknossos/releases/tag/26.07.0) - 2026-06-23
+[Commits](https://github.com/scalableminds/webknossos/compare/26.06.0...26.07.0)
+
+### Highlights
+- Keyboard shortcuts are configurable now. They are displayed in a new shortcuts dialog (together with mouse shortcuts which are not editable). [#9081](https://github.com/scalableminds/webknossos/pull/9081)
+- Team members are now managed directly in the team list: expanding a team row shows its members with inline remove buttons and an "Add user" typeahead, replacing the previous "Add / Remove Users" modal. The team table also shows a sortable member count column. [#9687](https://github.com/scalableminds/webknossos/pull/9687)
+- Added a storage details page to the dataset settings, listing technical details about the dataset storage location, as well as a breakdown of used storage by layer (if storage scanning is enabled). [#9650](https://github.com/scalableminds/webknossos/pull/9650)
+
+
+### Added
+- Added routes for uploading attachments and mags to existing datasets via the python libs client. [#9402](https://github.com/scalableminds/webknossos/pull/9402)
+- Added the option to write on-disk mirrors for virtual datasets. Enable this in the datastore config `datastore.writeVirtualDatasetsMirror=true` [#9512](https://github.com/scalableminds/webknossos/pull/9512)
+- Annotation Mutex mechanism now prevents editing the same annotation in multiple tabs as the same user. This avoids update conflicts. [#9561](https://github.com/scalableminds/webknossos/pull/9561)
+- Upgraded the server code to Scala 3 for improved stability and performance. [#9583](https://github.com/scalableminds/webknossos/pull/9583)
+- Dataset voxel size and extent can now be clicked to copy the value to the clipboard in csv-friendly format. [#9596](https://github.com/scalableminds/webknossos/pull/9596)
+- The "Generate Bounding Boxes" tool can now optionally restrict the sampling space to an existing bounding box. [#9656](https://github.com/scalableminds/webknossos/pull/9656)
+- Added support for the gzip compression for zarr2 datasets. [#9667](https://github.com/scalableminds/webknossos/pull/9667)
+
+### Changed
+- Unified that nuclei and soma AI models use the same code/API for instance inference. [#9477](https://github.com/scalableminds/webknossos/pull/9477)
+- Remote datasets opened via the /import route are now automatically deduplicated. If there is already an imported dataset with the URL, this dataset is opened automatically. [#9516](https://github.com/scalableminds/webknossos/pull/9516)
+- Dates in admin tables are now formatted in a human-friendly way, e.g. hiding the year if it is the current one. [#9596](https://github.com/scalableminds/webknossos/pull/9596)
+- Users joining an organization by invite no longer automatically join the organization’s default team, instead they get exactly the team memberships specified in the invite. [#9618](https://github.com/scalableminds/webknossos/pull/9618)
+- Upgraded typescript to version 6.0.3 [#9623](https://github.com/scalableminds/webknossos/pull/9623)
+- The view configuration of an annotation is now stored per user (instead of per annotation). Thus, if the owner disables a layer in a shared editable annotation, this does not transfer over to other users who have already seen the annotation. [#9626](https://github.com/scalableminds/webknossos/pull/9626)
+- Changed that Team managers are allowed to start AI jobs. [#9657](https://github.com/scalableminds/webknossos/pull/9657)
+- Updated the sidebar hide/show icons. [#9681](https://github.com/scalableminds/webknossos/pull/9681)
+- Failed or cancelled jobs can now be retried once by all users (previously only by super users). If a job fails again after a retry, users are hinted to contact an administrator for help. [#9685](https://github.com/scalableminds/webknossos/pull/9685)
+- Consolidated the task system in the navbar under a new "Task Management" menu, grouping Annotation Projects, Tasks, Task Types, Scripts, Project Progress, Available Task Assignments and Time Tracking. The "Administration" menu now only covers Users, Teams and Organization, and "Projects" was renamed to "Annotation Projects" to reduce ambiguity. [#9686](https://github.com/scalableminds/webknossos/pull/9686)
+- The help chat button can no longer be permanently dismissed. Users who had previously dismissed it will see it again after the database migration (170-remove-hasDiscardedHelpButton). [#9694](https://github.com/scalableminds/webknossos/pull/9694)
+- Creating a folder on the dashboard now opens a modal that also allows setting the allowed teams up front. Admins and managers can create a new team inline without leaving the dialog. [#9695](https://github.com/scalableminds/webknossos/pull/9695)
+
+### Fixed
+- Fixed that "Disable Saving" wasn't always respected correctly. [#9550](https://github.com/scalableminds/webknossos/pull/9550)
+- Fixed various issues with experimental collaborative proofreading. [#9573](https://github.com/scalableminds/webknossos/pull/9573)
+- Fixed a bug where the organization’s default team was not preselected in the invite modal if it was not named “Default”. [#9618](https://github.com/scalableminds/webknossos/pull/9618)
+- Fixed regression which disallowed editing for annotations that enabled collaborative editing. [#9627](https://github.com/scalableminds/webknossos/pull/9627)
+- Make the datastore healthcheck more robust. [#9634](https://github.com/scalableminds/webknossos/pull/9634)
+- Fixed a regression which caused navigation-related shortcuts to only be available in the skeleton tool. [#9638](https://github.com/scalableminds/webknossos/pull/9638)
+- Fixed an issue where edges could be stored redundantly, which could lead to missing edges in rare circumstances. [#9648](https://github.com/scalableminds/webknossos/pull/9648)
+- Fixed rare race condition in collaboratively used annotations which could lead to undefined behavior. [#9653](https://github.com/scalableminds/webknossos/pull/9653)
+- Fixed that route /api/v1/aiModels/:id/voxelSize is available for all users [#9658](https://github.com/scalableminds/webknossos/pull/9658)
+- Fixed that a user's session mutex could theoretically by released from another session of the same user. [#9661](https://github.com/scalableminds/webknossos/pull/9661)
+- Fixed description of keyboard shortcut "j". It did not include that the deletion of the branch point includes jumping to the branch point. [#9680](https://github.com/scalableminds/webknossos/pull/9680)
+
 ## [26.06.0](https://github.com/scalableminds/webknossos/releases/tag/26.06.0) - 2026-05-27
 [Commits](https://github.com/scalableminds/webknossos/compare/26.05.2...26.06.0)
 
@@ -317,7 +377,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Clicking `Focus Tree in Skeleton Tab` or `Focus in Segment List` will not only focus the clicked tree/segment, but also open the right tab if it was not open already. [#8917](https://github.com/scalableminds/webknossos/pull/8917)
 - Renamed Basic plan to Personal plan. [#8951](https://github.com/scalableminds/webknossos/pull/8951)
 - Improved the error message when loading an unusable dataset or an annotation for an unusable dataset [#8956](https://github.com/scalableminds/webknossos/pull/8956)
-- Changed the pre-selected default format for volume annotation downloads from WKW to Zarr. [#8970](https://github.com/scalableminds/webknossos/pull/8970)
+- Changed the preselected default format for volume annotation downloads from WKW to Zarr. [#8970](https://github.com/scalableminds/webknossos/pull/8970)
 - The tracingstore route `/mapping/:tracingId/agglomerateGraph/:agglomerateId` used by the python client now returns the static fallback agglomerate graph from the datastore in case of volume annotation layers with no editable mapping. [#9013](https://github.com/scalableminds/webknossos/pull/9013)
 
 ### Fixed
@@ -404,7 +464,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Changed that the d/f switching setting no longer affects movements other than moving via the d/f keyboard shortcuts. [#8786](https://github.com/scalableminds/webknossos/pull/8786)
 - Explicitly scanning datasets on disk is now faster for multi-organization setups. [#8791](https://github.com/scalableminds/webknossos/pull/8791)
 - Integrated "Change Email" functionality into Account Settings [#8840](https://github.com/scalableminds/webknossos/pull/8840)
-- When adding a new dataset from UI modal, the organization's default team is now automatically pre-selected for dataset access permissions. [#8847](https://github.com/scalableminds/webknossos/pull/8847)
+- When adding a new dataset from UI modal, the organization's default team is now automatically preselected for dataset access permissions. [#8847](https://github.com/scalableminds/webknossos/pull/8847)
 - Zarr streaming a volume annotation will now respond with errors (500) if the underlying data encountered errors. [#8853](https://github.com/scalableminds/webknossos/pull/8853)
 - datasource-properties.jsons with wkwResolutions now do not need the cubeLength parameter anymore. [#8854](https://github.com/scalableminds/webknossos/pull/8854)
 - Added protection against server outages by limiting the number of update actions in an annotation update transaction to 1000000. [#8866](https://github.com/scalableminds/webknossos/pull/8866)
@@ -1157,7 +1217,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added the option to convert agglomerate skeletons to freely modifiable skeletons in the context menu of the Skeleton tab. [#7537](https://github.com/scalableminds/webknossos/pull/7537)
 - The annotation list in the dashboard now also shows segment counts of volume annotations (after they have been edited). [#7548](https://github.com/scalableminds/webknossos/pull/7548)
 - The buildinfo route now reports the supported HTTP API versions. [#7581](https://github.com/scalableminds/webknossos/pull/7581)
-- After deleting specific teams, projects and task types, their names can now be re-used when creating new ones. [#7573](https://github.com/scalableminds/webknossos/pull/7573)
+- After deleting specific teams, projects and task types, their names can now be reused when creating new ones. [#7573](https://github.com/scalableminds/webknossos/pull/7573)
 
 ### Changed
 - Improved loading speed of the annotation list. [#7410](https://github.com/scalableminds/webknossos/pull/7410)

@@ -3,8 +3,9 @@ package com.scalableminds.webknossos.datastore.services.connectome
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.collections.SequenceUtils
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.util.box.Box.tryo
+import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.datareaders.DatasetArray
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3Array
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
@@ -31,25 +32,23 @@ object ConnectomeFileAttributes extends VoxelyticsZarrArtifactUtils with Connect
         formatVersion <- readArtifactSchemaVersion(json)
         mappingName <- (connectomeFileAttrs \ attrKeyMappingName).validate[String]
         synapseTypeNames <- (connectomeFileAttrs \ attrKeySynapseTypeNames).validate[Seq[String]]
-      } yield
-        ConnectomeFileAttributes(
-          formatVersion,
-          mappingName,
-          synapseTypeNames
-        )
+      } yield ConnectomeFileAttributes(
+        formatVersion,
+        mappingName,
+        synapseTypeNames
+      )
     }
   }
 }
 
-class ZarrConnectomeFileService @Inject()(dataVaultService: DataVaultService, chunkCacheService: DSChunkCacheService)
-    extends FoxImplicits
-    with ConnectomeFileUtils {
+class ZarrConnectomeFileService @Inject() (dataVaultService: DataVaultService, chunkCacheService: DSChunkCacheService)
+    extends ConnectomeFileUtils {
   private lazy val openArraysCache = AlfuCache[(ConnectomeFileKey, String), DatasetArray]()
   private lazy val attributesCache = AlfuCache[ConnectomeFileKey, ConnectomeFileAttributes]()
 
-  private def readConnectomeFileAttributes(connectomeFileKey: ConnectomeFileKey)(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[ConnectomeFileAttributes] =
+  private def readConnectomeFileAttributes(
+      connectomeFileKey: ConnectomeFileKey
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[ConnectomeFileAttributes] =
     attributesCache.getOrLoad(
       connectomeFileKey,
       _ =>
@@ -63,8 +62,9 @@ class ZarrConnectomeFileService @Inject()(dataVaultService: DataVaultService, ch
         } yield connectomeFileAttributes
     )
 
-  def mappingNameForConnectomeFile(connectomeFileKey: ConnectomeFileKey)(implicit ec: ExecutionContext,
-                                                                         tc: TokenContext): Fox[String] =
+  def mappingNameForConnectomeFile(
+      connectomeFileKey: ConnectomeFileKey
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[String] =
     for {
       attributes <- readConnectomeFileAttributes(connectomeFileKey)
     } yield attributes.mappingName
@@ -72,7 +72,8 @@ class ZarrConnectomeFileService @Inject()(dataVaultService: DataVaultService, ch
   def synapticPartnerForSynapses(
       connectomeFileKey: ConnectomeFileKey,
       synapseIds: List[Long],
-      direction: SynapticPartnerDirection)(implicit ec: ExecutionContext, tc: TokenContext): Fox[List[Long]] =
+      direction: SynapticPartnerDirection
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[List[Long]] =
     for {
       synapseToPartnerAgglomerateArray <- openZarrArray(connectomeFileKey, synapticPartnerKey(direction))
       agglomerateIds <- Fox.serialCombined(synapseIds) { (synapseId: Long) =>
@@ -83,23 +84,26 @@ class ZarrConnectomeFileService @Inject()(dataVaultService: DataVaultService, ch
       }
     } yield agglomerateIds
 
-  def positionsForSynapses(connectomeFileKey: ConnectomeFileKey, synapseIds: List[Long])(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[Seq[Seq[Long]]] =
+  def positionsForSynapses(connectomeFileKey: ConnectomeFileKey, synapseIds: List[Long])(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Seq[Seq[Long]]] =
     for {
       arraySynapsePositions <- openZarrArray(connectomeFileKey, keySynapsePositions)
       synapsePositions <- Fox.serialCombined(synapseIds) { (synapseId: Long) =>
         for {
           synapsePositionMA <- arraySynapsePositions.readAsMultiArray(offset = Array(synapseId, 0), shape = Array(1, 3))
           synapsePosition <- tryo(
-            Seq(synapsePositionMA.getLong(0), synapsePositionMA.getLong(1), synapsePositionMA.getLong(2))).toFox
+            Seq(synapsePositionMA.getLong(0), synapsePositionMA.getLong(1), synapsePositionMA.getLong(2))
+          ).toFox
         } yield synapsePosition
       }
     } yield synapsePositions
 
-  def typesForSynapses(connectomeFileKey: ConnectomeFileKey, synapseIds: List[Long])(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[SynapseTypesWithLegend] =
+  def typesForSynapses(connectomeFileKey: ConnectomeFileKey, synapseIds: List[Long])(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[SynapseTypesWithLegend] =
     for {
       arraySynapseTypes <- openZarrArray(connectomeFileKey, keySynapseTypes)
       attributes <- readConnectomeFileAttributes(connectomeFileKey)
@@ -111,9 +115,10 @@ class ZarrConnectomeFileService @Inject()(dataVaultService: DataVaultService, ch
       }
     } yield SynapseTypesWithLegend(synapseTypes, attributes.synapseTypeNames)
 
-  def ingoingSynapsesForAgglomerate(connectomeFileKey: ConnectomeFileKey, agglomerateId: Long)(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[List[Long]] =
+  def ingoingSynapsesForAgglomerate(connectomeFileKey: ConnectomeFileKey, agglomerateId: Long)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[List[Long]] =
     for {
       (fromPtr, toPtr) <- getToAndFromPtr(connectomeFileKey, agglomerateId, keyCscIndptr)
       agglomeratePairOffsetsArray <- openZarrArray(connectomeFileKey, keyAgglomeratePairOffsets)
@@ -130,9 +135,10 @@ class ZarrConnectomeFileService @Inject()(dataVaultService: DataVaultService, ch
       }
     } yield synapseIdsNested.flatten
 
-  private def getToAndFromPtr(connectomeFileKey: ConnectomeFileKey, agglomerateId: Long, arrayKey: String)(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[(Long, Long)] =
+  private def getToAndFromPtr(connectomeFileKey: ConnectomeFileKey, agglomerateId: Long, arrayKey: String)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[(Long, Long)] =
     for {
       csrIndptrArray <- openZarrArray(connectomeFileKey, arrayKey)
       fromAndToPtr <- csrIndptrArray.readAsMultiArray(offset = agglomerateId, shape = 2)
@@ -140,9 +146,10 @@ class ZarrConnectomeFileService @Inject()(dataVaultService: DataVaultService, ch
       toPtr <- tryo(fromAndToPtr.getLong(1)).toFox
     } yield (fromPtr, toPtr)
 
-  def outgoingSynapsesForAgglomerate(connectomeFileKey: ConnectomeFileKey, agglomerateId: Long)(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[Seq[Long]] =
+  def outgoingSynapsesForAgglomerate(connectomeFileKey: ConnectomeFileKey, agglomerateId: Long)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Seq[Long]] =
     for {
       (fromPtr, toPtr) <- getToAndFromPtr(connectomeFileKey, agglomerateId, keyCsrIndptr)
       agglomeratePairOffsetsArray <- openZarrArray(connectomeFileKey, keyAgglomeratePairOffsets)
@@ -152,9 +159,11 @@ class ZarrConnectomeFileService @Inject()(dataVaultService: DataVaultService, ch
       to <- tryo(toMA.getLong(0)).toFox
     } yield Seq.range(from, to)
 
-  def synapseIdsForDirectedPair(connectomeFileKey: ConnectomeFileKey, srcAgglomerateId: Long, dstAgglomerateId: Long)(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[Seq[Long]] =
+  def synapseIdsForDirectedPair(
+      connectomeFileKey: ConnectomeFileKey,
+      srcAgglomerateId: Long,
+      dstAgglomerateId: Long
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Seq[Long]] =
     for {
       csrIndicesArray <- openZarrArray(connectomeFileKey, keyCsrIndices)
       (fromPtr, toPtr) <- getToAndFromPtr(connectomeFileKey, srcAgglomerateId, keyCsrIndptr)
@@ -162,31 +171,36 @@ class ZarrConnectomeFileService @Inject()(dataVaultService: DataVaultService, ch
       columnValues: Array[Long] <- tryo(columnValuesMA.getStorage.asInstanceOf[Array[Long]]).toFox
       columnOffset = SequenceUtils.searchSorted(columnValues, dstAgglomerateId)
       pairIndex = fromPtr + columnOffset
-      synapses <- if ((columnOffset >= columnValues.length) || (columnValues(columnOffset) != dstAgglomerateId))
-        Fox.successful(List.empty)
-      else
-        for {
-          agglomeratePairOffsetsArray <- openZarrArray(connectomeFileKey, keyAgglomeratePairOffsets)
-          fromAndTo <- agglomeratePairOffsetsArray.readAsMultiArray(offset = pairIndex, shape = 2)
-          from <- tryo(fromAndTo.getLong(0)).toFox
-          to <- tryo(fromAndTo.getLong(1)).toFox
-        } yield Seq.range(from, to)
+      synapses <-
+        if ((columnOffset >= columnValues.length) || (columnValues(columnOffset) != dstAgglomerateId))
+          Fox.successful(List.empty)
+        else
+          for {
+            agglomeratePairOffsetsArray <- openZarrArray(connectomeFileKey, keyAgglomeratePairOffsets)
+            fromAndTo <- agglomeratePairOffsetsArray.readAsMultiArray(offset = pairIndex, shape = 2)
+            from <- tryo(fromAndTo.getLong(0)).toFox
+            to <- tryo(fromAndTo.getLong(1)).toFox
+          } yield Seq.range(from, to)
     } yield synapses
 
-  private def openZarrArray(connectomeFileKey: ConnectomeFileKey,
-                            zarrArrayName: String)(implicit ec: ExecutionContext, tc: TokenContext): Fox[DatasetArray] =
+  private def openZarrArray(connectomeFileKey: ConnectomeFileKey, zarrArrayName: String)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[DatasetArray] =
     openArraysCache.getOrLoad(
       (connectomeFileKey, zarrArrayName),
       _ =>
         for {
           groupVaultPath <- dataVaultService.vaultPathFor(connectomeFileKey.attachment)
-          zarrArray <- Zarr3Array.open(groupVaultPath / zarrArrayName,
-                                       DataSourceId("dummy", "unused"),
-                                       "layer",
-                                       None,
-                                       None,
-                                       None,
-                                       chunkCacheService.sharedChunkContentsCache)
+          zarrArray <- Zarr3Array.open(
+            groupVaultPath / zarrArrayName,
+            DataSourceId("dummy", "unused"),
+            "layer",
+            None,
+            None,
+            None,
+            chunkCacheService.sharedChunkContentsCache
+          )
         } yield zarrArray
     )
 
@@ -195,9 +209,8 @@ class ZarrConnectomeFileService @Inject()(dataVaultService: DataVaultService, ch
       meshFileKey.dataSourceId == dataSourceId && layerNameOpt.forall(meshFileKey.layerName == _)
     }
 
-    openArraysCache.clear {
-      case (meshFileKey, _) =>
-        meshFileKey.dataSourceId == dataSourceId && layerNameOpt.forall(meshFileKey.layerName == _)
+    openArraysCache.clear { case (meshFileKey, _) =>
+      meshFileKey.dataSourceId == dataSourceId && layerNameOpt.forall(meshFileKey.layerName == _)
     }
   }
 }

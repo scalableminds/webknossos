@@ -24,7 +24,7 @@ import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.DurationConverters.ScalaDurationOps
 import scala.jdk.OptionConverters.RichOptional
-import scala.util.{Failure => TryFailure, Success => TrySuccess}
+import scala.util.{Failure as TryFailure, Success as TrySuccess}
 
 class S3ClientPool(ws: WSClient) {
 
@@ -36,8 +36,9 @@ class S3ClientPool(ws: WSClient) {
   private lazy val uploadPool: AlfuCache[(Option[String], Option[String], Option[String]), S3AsyncClient] =
     AlfuCache(timeToLive = 100 days, timeToIdle = 100 days)
 
-  def getS3Client(credentialOpt: Option[S3AccessKeyCredential], uri: URI, isForUpload: Boolean)(
-      implicit ec: ExecutionContext): Fox[S3AsyncClient] = {
+  def getS3Client(credentialOpt: Option[S3AccessKeyCredential], uri: URI, isForUpload: Boolean)(implicit
+      ec: ExecutionContext
+  ): Fox[S3AsyncClient] = {
     val credentialsProvider = getCredentialsProvider(credentialOpt)
     for {
       customEndpointOpt <- Fox.runIf(S3UriUtils.isNonAmazonHost(uri)) {
@@ -45,12 +46,12 @@ class S3ClientPool(ws: WSClient) {
       }
       pool = if (isForUpload) uploadPool else defaultPool
       client <- pool.getOrLoad(
-        (credentialOpt.map(_.accessKeyId),
-         credentialOpt.map(c => SCrypt.sha256Hex(c.secretAccessKey)),
-         customEndpointOpt.map(_.toString)),
-        _ => {
-          Fox.successful(buildS3Client(credentialsProvider, customEndpointOpt, isForUpload))
-        }
+        (
+          credentialOpt.map(_.accessKeyId),
+          credentialOpt.map(c => SCrypt.sha256Hex(c.secretAccessKey)),
+          customEndpointOpt.map(_.toString)
+        ),
+        _ => Fox.successful(buildS3Client(credentialsProvider, customEndpointOpt, isForUpload))
       )
     } yield client
   }
@@ -58,9 +59,11 @@ class S3ClientPool(ws: WSClient) {
   private def isHetznerEndpoint(customEndpointOpt: Option[URI]): Boolean =
     customEndpointOpt.exists(_.getHost.endsWith(".your-objectstorage.com"))
 
-  private def buildS3Client(credentialsProvider: AwsCredentialsProvider,
-                            customEndpointOpt: Option[URI],
-                            isForUpload: Boolean): S3AsyncClient = {
+  private def buildS3Client(
+      credentialsProvider: AwsCredentialsProvider,
+      customEndpointOpt: Option[URI],
+      isForUpload: Boolean
+  ): S3AsyncClient = {
     // HTTP/2 multiplexes bucket fetches over fewer TCP connections, but AWS S3 does not support it.
     // Hetzner Object Storage (e.g. fsn1.your-objectstorage.com) does support HTTP/2.
     val protocol = if (isHetznerEndpoint(customEndpointOpt)) Protocol.HTTP2 else Protocol.HTTP1_1
@@ -77,14 +80,16 @@ class S3ClientPool(ws: WSClient) {
             .protocol(protocol)
             .maxConcurrency(64)
             .tcpKeepAlive(true)
-            .connectionAcquisitionTimeout((2 minutes).toJava))
+            .connectionAcquisitionTimeout((2 minutes).toJava)
+        )
     val withRetryStrategy =
       if (isForUpload)
         builder.overrideConfiguration(
           ClientOverrideConfiguration
             .builder()
             .retryStrategy(StandardRetryStrategy.builder().maxAttempts(10).build())
-            .build())
+            .build()
+        )
       else builder
     customEndpointOpt match {
       case Some(customEndpoint) =>
@@ -92,7 +97,8 @@ class S3ClientPool(ws: WSClient) {
           .forcePathStyle(true)
           .endpointOverride(customEndpoint)
           .region(
-            AwsHostNameUtils.parseSigningRegion(customEndpoint.getAuthority, "s3").toScala.getOrElse(Region.US_EAST_1))
+            AwsHostNameUtils.parseSigningRegion(customEndpoint.getAuthority, "s3").toScala.getOrElse(Region.US_EAST_1)
+          )
           .build()
       case None => withRetryStrategy.region(Region.US_EAST_1).build()
     }
@@ -112,10 +118,10 @@ class S3ClientPool(ws: WSClient) {
     val httpsUri = new URI("https", uri.getAuthority, "", "", "")
     val httpsFuture = ws.url(httpsUri.toString).get()
 
-    val protocolFuture = httpsFuture.transformWith({
+    val protocolFuture = httpsFuture.transformWith {
       case TrySuccess(_) => Future.successful("https")
       case TryFailure(_) => Future.successful("http")
-    })
+    }
     for {
       protocol <- Fox.fromFuture(protocolFuture)
     } yield protocol

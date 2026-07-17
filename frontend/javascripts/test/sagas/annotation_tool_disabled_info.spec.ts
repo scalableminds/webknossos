@@ -52,6 +52,44 @@ const zoomedOutState = update(initialState, {
   },
 });
 
+// No layer has mag 1-1-1. When zooming in far, the finest existing mag (2-2-1)
+// is rendered for all layers and should be annotatable.
+const zoomedInStateWithoutMag1 = update(zoomedInInitialState, {
+  dataset: {
+    dataSource: {
+      dataLayers: {
+        [0]: {
+          mags: {
+            $set: [{ mag: [2, 2, 1] }, { mag: [4, 4, 4] }],
+          },
+        },
+        [1]: {
+          mags: {
+            $set: [{ mag: [2, 2, 1] }, { mag: [4, 4, 1] }],
+          },
+        },
+      },
+    },
+  },
+});
+
+// Mag 1-1-1 is missing for the volume layer (e.g., due to mag restrictions),
+// but exists in the color layer. Annotating while that mag is rendered should
+// be disabled.
+const zoomedInStateWithRestrictedVolumeMags = update(zoomedInInitialState, {
+  dataset: {
+    dataSource: {
+      dataLayers: {
+        [0]: {
+          mags: {
+            $set: [{ mag: [2, 2, 1] }, { mag: [4, 4, 4] }],
+          },
+        },
+      },
+    },
+  },
+});
+
 const coordinateTransformations: CoordinateTransformation[] = [
   {
     type: "affine",
@@ -134,6 +172,33 @@ describe("Annotation Tool Disabled Info", () => {
 
   it("Volume tools should be disabled when zoomed out.", () => {
     const disabledInfo = getDisabledInfoForTools(zoomedOutState);
+
+    for (const tool of Object.values(AnnotationTool)) {
+      if (
+        tool === AnnotationTool.PROOFREAD ||
+        zoomSensitiveVolumeTools.includes(tool as AnnotationTool)
+      ) {
+        expect(disabledInfo[tool.id]?.isDisabled).toBe(true);
+      } else {
+        expect(disabledInfo[tool.id]?.isDisabled).toBe(false);
+      }
+    }
+  });
+
+  it("Volume tools should be enabled when zoomed in although mag 1-1-1 does not exist in any layer.", () => {
+    const disabledInfo = getDisabledInfoForTools(zoomedInStateWithoutMag1);
+
+    for (const tool of Object.values(AnnotationTool)) {
+      if (tool === AnnotationTool.PROOFREAD) {
+        expect(disabledInfo[tool.id]?.isDisabled).toBe(true);
+      } else {
+        expect(disabledInfo[tool.id]?.isDisabled).toBe(false);
+      }
+    }
+  });
+
+  it("Volume tools should be disabled when the zoomed-in mag is missing for the volume layer but exists in another layer.", () => {
+    const disabledInfo = getDisabledInfoForTools(zoomedInStateWithRestrictedVolumeMags);
 
     for (const tool of Object.values(AnnotationTool)) {
       if (

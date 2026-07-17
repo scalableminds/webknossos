@@ -88,7 +88,7 @@ const maybeAddAdditionalCoordinatesToMeshState = (
   if (getMeshesForAdditionalCoordinates(state, additionalCoordinates, layerName) == null) {
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
     return update(state, {
-      localSegmentationData: {
+      localSegmentationStateByLayer: {
         [layerName]: {
           meshes: {
             [additionalCoordKey]: { $set: {} },
@@ -105,7 +105,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
     case "INITIALIZE_ANNOTATION": {
       // rebaseRelevantServerAnnotationState stores rebasing relevant information of the annotation.
       // It always is in sync with the latest known version on the server. After initializing it is the current version.
-      // activeMappingByLayer are initialized automatically when they are being loaded by the saga.
+      // mappingDataByLayer entries are initialized automatically when the mappings are loaded by the saga.
       const stateWithAnnotationRebaseInformation = update(state, {
         save: {
           rebaseRelevantServerAnnotationState: {
@@ -115,7 +115,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
             annotationDescription: {
               $set: action.annotation.description,
             },
-            activeMappingByLayer: {
+            mappingDataByLayer: {
               $set: {},
             },
           },
@@ -286,7 +286,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
       const { layerName, id, visibility, additionalCoordinates } = action;
       const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
       return update(state, {
-        localSegmentationData: {
+        localSegmentationStateByLayer: {
           [layerName]: {
             meshes: {
               [additionalCoordKey]: {
@@ -304,7 +304,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
 
     case "UPDATE_MESH_OPACITY": {
       const { layerName, id, opacity } = action;
-      const meshDict = state.localSegmentationData[layerName].meshes;
+      const meshDict = state.localSegmentationStateByLayer[layerName].meshes;
       if (meshDict == null) return state;
       const currentAdditionalCoordinates = Object.keys(meshDict || {});
       const updatedMeshes = reduce(
@@ -326,7 +326,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         meshDict,
       );
       return update(state, {
-        localSegmentationData: {
+        localSegmentationStateByLayer: {
           [layerName]: {
             meshes: {
               $set: updatedMeshes,
@@ -354,7 +354,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
       const { [segmentId]: _, ...remainingMeshes } = maybeMeshes as Record<number, MeshInformation>;
       newMeshes[additionalCoordKey] = remainingMeshes;
       return update(state, {
-        localSegmentationData: {
+        localSegmentationStateByLayer: {
           [layerName]: {
             meshes: {
               $merge: newMeshes,
@@ -374,13 +374,14 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         mappingName,
         mappingType,
         opacity,
+        isVisible,
       } = action;
       const meshInfo: MeshInformation = {
         segmentId: segmentId,
         seedPosition,
         seedAdditionalCoordinates,
         isLoading: false,
-        isVisible: true,
+        isVisible,
         isPrecomputed: false,
         opacity,
         mappingName,
@@ -396,7 +397,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
       );
 
       const updatedKey = update(stateWithCurrentAddCoords, {
-        localSegmentationData: {
+        localSegmentationStateByLayer: {
           [layerName]: {
             meshes: {
               [additionalCoordKey]: {
@@ -420,13 +421,14 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         meshFileName,
         mappingName,
         opacity,
+        isVisible,
       } = action;
       const meshInfo: MeshInformation = {
         segmentId: segmentId,
         seedPosition,
         seedAdditionalCoordinates,
         isLoading: false,
-        isVisible: true,
+        isVisible,
         isPrecomputed: true,
         opacity,
         meshFileName,
@@ -441,7 +443,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         layerName,
       );
       const updatedKey = update(stateWithCurrentAddCoords, {
-        localSegmentationData: {
+        localSegmentationStateByLayer: {
           [layerName]: {
             meshes: {
               [additionalCoordKey]: {
@@ -462,7 +464,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         state.flycam.additionalCoordinates,
       );
       const updatedKey = update(state, {
-        localSegmentationData: {
+        localSegmentationStateByLayer: {
           [layerName]: {
             meshes: {
               [additionalCoordKey]: {
@@ -485,7 +487,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         state.flycam.additionalCoordinates,
       );
       const updatedKey = update(state, {
-        localSegmentationData: {
+        localSegmentationStateByLayer: {
           [layerName]: {
             meshes: {
               [additionalCoordKey]: {
@@ -504,24 +506,24 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
 
     case "UPDATE_MESH_FILE_LIST": {
       const { layerName, meshFiles } = action;
-      return updateKey2(state, "localSegmentationData", layerName, {
+      return updateKey2(state, "localSegmentationStateByLayer", layerName, {
         availableMeshFiles: meshFiles,
       });
     }
 
     case "UPDATE_CURRENT_MESH_FILE": {
       const { layerName, meshFileName } = action;
-      const availableMeshFiles = state.localSegmentationData[layerName].availableMeshFiles;
+      const availableMeshFiles = state.localSegmentationStateByLayer[layerName].availableMeshFiles;
       if (availableMeshFiles == null) return state;
       const meshFile = availableMeshFiles.find((el) => el.name === meshFileName);
-      return updateKey2(state, "localSegmentationData", layerName, {
+      return updateKey2(state, "localSegmentationStateByLayer", layerName, {
         currentMeshFile: meshFile,
       });
     }
 
     case "SET_SELECTED_SEGMENTS_OR_GROUP": {
       const { selectedSegments, selectedGroup, layerName } = action;
-      return updateKey2(state, "localSegmentationData", layerName, {
+      return updateKey2(state, "localSegmentationStateByLayer", layerName, {
         selectedIds: { segments: selectedSegments, group: selectedGroup },
       });
     }

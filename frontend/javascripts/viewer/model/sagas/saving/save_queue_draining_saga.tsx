@@ -10,14 +10,21 @@ import Toast from "libs/toast";
 import window, { alert, document, location } from "libs/window";
 import memoizeOne from "memoize-one";
 import messages from "messages";
-import { call, delay, put, race, take } from "typed-redux-saga";
+import { actionChannel, call, delay, flush, put, race, take } from "typed-redux-saga";
 import { ControlModeEnum } from "viewer/constants";
-import { maySendSaveRequest } from "viewer/model/accessors/annotation_accessor";
+import {
+  isConcurrentCollaborationMode,
+  maySendSaveRequest,
+} from "viewer/model/accessors/annotation_accessor";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import {
+  type OperationId,
+  SYNC_RELATED_OPERATION_IDS,
+} from "viewer/model/actions/operation_context_actions";
+import {
   dispatchEnsureHasNewestVersionAsync,
+  type SaveNowAction,
   setLastSaveTimestampAction,
-  setSaveBusyAction,
   setVersionNumberAction,
   shiftSaveQueueAction,
   snapshotAnnotationStateForNextRebaseAction,
@@ -26,6 +33,10 @@ import compactSaveQueue from "viewer/model/helpers/compaction/compact_save_queue
 import { globalPositionToBucketPosition } from "viewer/model/helpers/position_converter";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
+import {
+  getOrCreateOperationContext,
+  type OperationContext,
+} from "viewer/model/sagas/operation_context_saga";
 import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
 import {
   MAX_SAVE_RETRY_WAITING_TIME,
@@ -34,7 +45,7 @@ import {
   SAVE_RETRY_WAITING_TIME,
 } from "viewer/model/sagas/saving/save_saga_constants";
 import { Model, Store } from "viewer/singletons";
-import type { SaveQueueEntry } from "viewer/store";
+import type { SaveQueueEntry, WebknossosState } from "viewer/store";
 import { waitFor } from "../saga_helpers";
 import {
   getCurrentMutexFetchingStrategy,
@@ -51,6 +62,7 @@ export function* pushSaveQueueAsync(): Saga<never> {
   yield* call(ensureWkInitialized);
 
   yield* put(setLastSaveTimestampAction());
+  const saveNowChannel = yield* actionChannel<SaveNowAction>("SAVE_NOW");
   let loopCounter = 0;
 
   while (true) {
@@ -67,42 +79,75 @@ export function* pushSaveQueueAsync(): Saga<never> {
         yield* delay(0);
       }
 
-      // Save queue is empty, wait for push event
       yield* take("PUSH_SAVE_QUEUE_TRANSACTION");
+      // The save queue was empty and just got filled. Ignore any pre-existing saveNow actions from
+      // the buffer as we don't want to immediately save now (new SAVE_NOW actions are needed for that.
+      yield* flush(saveNowChannel);
     }
 
-    let { forcePush } = yield* race({
+    const { forcePush: firstForcePush } = yield* race({
       timeout: delay(PUSH_THROTTLE_TIME),
-      forcePush: take("SAVE_NOW"),
+      forcePush: take(saveNowChannel),
     });
+
+    let bestForcePush: SaveNowAction | undefined;
+    if (firstForcePush != null) {
+      const remainingActions = yield* flush(saveNowChannel);
+      const allActions = [firstForcePush, ...remainingActions];
+      bestForcePush = allActions.find((a) => a.operationContext != null) ?? allActions.at(-1)!;
+    }
 
     yield* waitFor(maySendSaveRequest);
 
-    yield* put(setSaveBusyAction(true));
-    const enforceEmptySaveQueue = forcePush != null;
-    let shouldRetryOnConflict = true;
-    let retryCount = 0;
-    while (shouldRetryOnConflict) {
-      shouldRetryOnConflict = (yield* call(synchronizeAnnotationWithBackend, enforceEmptySaveQueue))
-        .hadConflict;
-      ++retryCount;
-      if (retryCount > MAX_ON_CONFLICT_RETRIES) {
-        const annotation = yield* select((state) => state.annotation);
-        yield* call(
-          [ErrorHandling, ErrorHandling.notify],
-          new Error("Saving annotation repeatedly failed due to conflict '409' status code"),
-          { annotationVersion: annotation.version, annotationId: annotation.annotationId },
-        );
-        Toast.error(
-          "Saving your changes failed repeatedly due to conflict with other user's changes. Please consider reloading to resolve this. This will lose your latest unsaved changes.",
-        );
+    const enforceEmptySaveQueue = bestForcePush != null;
+    const operationContext: OperationContext | null = bestForcePush?.operationContext ?? null;
+
+    function* runSaveRetryLoop(ctx: OperationContext) {
+      let shouldRetryOnConflict = true;
+      let retryCount = 0;
+      while (shouldRetryOnConflict) {
+        shouldRetryOnConflict = (yield* call(
+          synchronizeAnnotationWithBackend,
+          enforceEmptySaveQueue,
+          ctx,
+        )).hadConflict;
+        ++retryCount;
+        if (retryCount > MAX_ON_CONFLICT_RETRIES) {
+          const annotation = yield* select((state) => state.annotation);
+          yield* call(
+            [ErrorHandling, ErrorHandling.notify],
+            new Error("Saving annotation repeatedly failed due to conflict '409' status code"),
+            { annotationVersion: annotation.version, annotationId: annotation.annotationId },
+          );
+          Toast.error(
+            "Saving your changes failed repeatedly due to conflict with other user's changes. Please consider reloading to resolve this. This will lose your latest unsaved changes.",
+          );
+        }
       }
+    }
+
+    const saveCtx = yield* getOrCreateOperationContext(
+      {
+        id: "SAVE",
+        description: "Saving annotation",
+        behaviorWhenDisallowed: "ignore",
+        allowAdditionalOperation,
+      },
+      operationContext,
+    );
+    if (saveCtx != null) {
+      yield* saveCtx.execute(() => runSaveRetryLoop(saveCtx));
+    } else {
+      console.warn(
+        "Ignoring request to save because an operation is ongoing. Waiting for new request.",
+      );
     }
   }
 }
 
 export function* synchronizeAnnotationWithBackend(
   enforceEmptySaveQueue: boolean,
+  operationContext?: OperationContext,
 ): Saga<{ hadConflict: boolean }> {
   let unsubscribeFromAnnotationMutexSaga = null;
   const collaborationMode = yield* select((state) => state.annotation.collaborationMode);
@@ -116,7 +161,7 @@ export function* synchronizeAnnotationWithBackend(
     // subscribeToAnnotationMutex, because otherwise there would be a
     // race condition where the frontend thinks that it knows about the newest
     // version when in fact somebody else saved a newer version in the meantime.
-    yield* call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
+    yield* call(dispatchEnsureHasNewestVersionAsync, Store.dispatch, operationContext);
   }
   // Send (parts of) the save queue to the server.
   // There are three main cases:
@@ -175,7 +220,6 @@ export function* synchronizeAnnotationWithBackend(
   if (saveQueue.length === 0) {
     yield* put(snapshotAnnotationStateForNextRebaseAction());
   }
-  yield* put(setSaveBusyAction(false));
   return { hadConflict: false };
 }
 
@@ -298,6 +342,26 @@ export function* sendSaveRequestToServer(
       retryCount++;
     }
   }
+}
+
+function allowAdditionalOperation(pendingId: OperationId, state: WebknossosState) {
+  if (isConcurrentCollaborationMode(state)) {
+    // In concurrent collab mode, we forbid users from editing during saving
+    // because editing would interfere with rebase operations. No new operations
+    // should be started.
+    return false;
+  }
+
+  if (SYNC_RELATED_OPERATION_IDS.includes(pendingId)) {
+    // We never want to allow starting concurrent sync related operations (saving + rebasing)
+    // as high-level operations (child operations are not checked here, since they are
+    // granted execution by passing around an existing operation context).
+    return false;
+  }
+  // The current user is the only one that is allowed to edit the annotation currently.
+  // The current save operation should not prohibit other operations that the user
+  // initiates.
+  return true;
 }
 
 function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>) {

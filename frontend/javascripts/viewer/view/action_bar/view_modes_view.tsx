@@ -1,5 +1,4 @@
-import Icon, { AppstoreFilled, GlobalOutlined } from "@ant-design/icons";
-import SquareFullIcon from "@images/icons/icon-square-full.svg?react";
+import { AppstoreFilled, GlobalOutlined } from "@ant-design/icons";
 import { Button, Dropdown, type MenuProps } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import capitalize from "lodash-es/capitalize";
@@ -14,10 +13,7 @@ import { NARROW_BUTTON_STYLE } from "./tools/tool_helpers";
 
 const VIEW_MODE_TO_ICON = {
   [constants.MODE_PLANE_TRACING]: <AppstoreFilled />,
-  [constants.MODE_ARBITRARY]: <GlobalOutlined />,
-  [constants.MODE_ARBITRARY_PLANE]: (
-    <Icon component={SquareFullIcon} style={{ transform: "scale(0.8, 1) rotate(-45deg)" }} />
-  ),
+  [constants.MODE_FLIGHT]: <GlobalOutlined />,
 };
 
 function ViewModesView() {
@@ -37,10 +33,10 @@ function ViewModesView() {
       return;
     }
     const mode = args.key as ViewMode;
-    // If we switch back from any arbitrary mode we stop recording.
-    // This prevents that when the user switches back to any arbitrary mode,
+    // If we switch back from flight mode we stop recording.
+    // This prevents that when the user switches back to flight mode,
     // a new node is instantly created at the screen's center.
-    if (constants.MODES_ARBITRARY.includes(viewMode) && mode === constants.MODE_PLANE_TRACING) {
+    if (viewMode === constants.MODE_FLIGHT && mode === constants.MODE_PLANE_TRACING) {
       onChangeFlightmodeRecording(false);
     }
 

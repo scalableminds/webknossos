@@ -17,11 +17,13 @@ import {
 } from "viewer/constants";
 import { getDatasetExtentInUnit } from "viewer/model/accessors/dataset_accessor";
 import { getPosition, getRotationInRadian } from "viewer/model/accessors/flycam_accessor";
+import { isSkeletonSectionClippingActive } from "viewer/model/accessors/skeletontracing_accessor";
 import {
   getInputCatcherAspectRatio,
   getPlaneExtentInVoxelFromStore,
 } from "viewer/model/accessors/view_mode_accessor";
 import { setTDCameraWithoutTimeTrackingAction } from "viewer/model/actions/view_mode_actions";
+import Dimensions from "viewer/model/dimensions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import { getBaseVoxelInUnit, voxelToUnit } from "viewer/model/scaleinfo";
 import { api } from "viewer/singletons";
@@ -134,6 +136,10 @@ class CameraController extends PureComponent<Props> {
     const state = Store.getState();
     const { clippingDistance } = state.userConfiguration;
     const scaleFactor = getBaseVoxelInUnit(state.dataset.dataSource.scale.factor);
+    // While section clipping is active, the skeleton shaders cull precisely to the
+    // current section. Make sure the camera's near plane never clips on-section
+    // skeleton by using at least one full perpendicular voxel as the near distance.
+    const isSectionClippingActive = isSkeletonSectionClippingActive(state);
 
     for (const planeId of OrthoViewValuesWithoutTDView) {
       const [width, height] = getPlaneExtentInVoxelFromStore(
@@ -145,12 +151,18 @@ class CameraController extends PureComponent<Props> {
       this.props.cameras[planeId].right = width / 2;
       this.props.cameras[planeId].bottom = -height / 2;
       this.props.cameras[planeId].top = height / 2;
+      const effectiveClippingDistance = isSectionClippingActive
+        ? Math.max(
+            clippingDistance,
+            state.dataset.dataSource.scale.factor[Dimensions.getIndices(planeId)[2]],
+          )
+        : clippingDistance;
       // We only set the `near` value here. The effect of far=clippingDistance is
       // achieved by offsetting the plane onto which is rendered by the amount
       // of clippingDistance. Theoretically, `far` could be set here too, however,
       // this leads to imprecision related bugs which cause the planes to not render
       // for certain clippingDistance values.
-      this.props.cameras[planeId].near = -clippingDistance;
+      this.props.cameras[planeId].near = -effectiveClippingDistance;
       this.props.cameras[planeId].updateProjectionMatrix();
     }
 
@@ -205,6 +217,12 @@ class CameraController extends PureComponent<Props> {
         (storeState) => storeState.userConfiguration.clippingDistance,
         () => this.updateCamViewport(),
         true,
+      ),
+      // Re-run when section clipping is (de)activated (toggle, rotation, transform),
+      // so that the near plane switches between distance- and section-based clipping.
+      listenToStoreProperty(
+        (storeState) => isSkeletonSectionClippingActive(storeState),
+        () => this.updateCamViewport(),
       ),
       listenToStoreProperty(
         (storeState) => storeState.flycam.zoomStep,

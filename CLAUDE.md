@@ -7,7 +7,7 @@
 Code Verification:
 - TypeScript type-checking: `yarn typecheck`
 - Unit tests (vitest): `yarn test`
-- Formatting (biome): `yarn fix-format` 
+- Formatting (biome): `yarn fix-frontend` 
 - Linting (biome): `yarn check-frontend`
 
 
@@ -15,9 +15,9 @@ Code Verification:
 - the backend uses Scala, sbt and the Play framework
 
 Code Verification: 
-- Scala type-checking: `sbt compile`
+- Scala type-checking: `sbt --client compile`. This will also compile the subprojects it depends on.
 - Unit tests: `yarn test-backend`
-- Formatting: `yarn format-backend`
+- Formatting: `yarn fix-backend`
 
 
 ## Pull Requests

@@ -8,10 +8,13 @@ export const userSettings = {
     minimum: 1,
     maximum: 12000,
   },
-  clippingDistanceArbitrary: {
+  clippingDistanceFlight: {
     type: "number",
     minimum: 1,
     maximum: 127,
+  },
+  clipSkeletonToCurrentSection: {
+    type: "boolean",
   },
   crosshairSize: {
     type: "number",
@@ -137,6 +140,14 @@ export const userSettings = {
     enum: Object.values(FillModeEnum),
   },
   useLegacyBindings: {
+    type: "boolean",
+  },
+  mipRaymarchingSteps: {
+    type: "number",
+    minimum: 16,
+    maximum: 512,
+  },
+  mipDepthWrite: {
     type: "boolean",
   },
   ...baseDatasetViewConfiguration,

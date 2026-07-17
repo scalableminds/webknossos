@@ -1,35 +1,52 @@
 ## Import Volume Annotations
 
-To import a volume annotation, ensure it is in the correct format (WKW or Zarr) and compressed in a zip folder. Next, navigate to your annotation dashboard and simply drag and drop the zip folder into the WEBKNOSSOS interface. The annotation will automatically open, allowing you to edit it as usual. It will also be added to your annotation list for future access.
+Any volume annotation exported from WEBKNOSSOS or the WEBKNOSSOS Python library in a ZIP archieve can be imported in one of two ways:
+
+- **From the dashboard** — drag and drop the ZIP file onto the annotation list to create a new annotation. It will open automatically and appear in your annotation list.
+- **From within an open annotation** — drop the ZIP file anywhere in the WEBKNOSSOS viewer to merge the imported data into the current annotation. The volume layer must already exist in the annotation before importing.
+
+For importing skeleton-only (NML) files without volume data, see [Import & Export in Skeleton Annotations](../skeleton_annotation/import_export.md).
 
 ## Export Volume Annotations
-To export (download) an annotation, go to **Menu > Download**. From there, select the data you want to download and choose the desired format (WKW, Zarr). Alternatively, you can open your annotation dashboard and click **Download** next to the annotation.
+
+To download an annotation, open **Menu > Download**, choose the data you want, and select a format (WKW or Zarr). You can also go to your annotation dashboard and click **Download** next to the annotation.
+
+For a full overview of all export and download options — including TIFF cutouts and Python library access — see [Data Export through the Web UI](../data/export_ui.md).
 
 ![youtube-video](https://www.youtube.com/embed/l8ZacNqvMzI)
 
+A volume annotation is exported as a `.zip` file containing two parts:
+
+- An [NML file](../data/concepts.md#nml-files) — carries the annotation metadata, segment information, and layer configuration.
+- A volume data `.zip` — holds the actual voxel label data in either WKW or Zarr format.
+
 ## Merging volume annotation with fallback data
 
-After finishing the annotation of a volume layer with a fallback layer, the combined state of these layers can be materialized into a new dataset. For this, go to the layer settings in the left border tab. On the top right of the volume layer is the following button:
+When annotating a volume layer, you can work on top of an existing segmentation from the dataset — known as a [fallback layer](../data/concepts.md#volume-element). Rather than copying the entire segmentation upfront, WEBKNOSSOS stores only your edits in the annotation layer and reads everything else directly from the original segmentation. This keeps annotations lightweight while still letting you see and build on the existing data.
+
+Once you are done annotating, you can permanently combine both layers into a single, self-contained segmentation in a new dataset. Your annotation edits take precedence wherever you made changes; the original fallback segmentation fills in the rest. This process is sometimes referred to as **materialization**.
+
+To start it, go to the layer settings in the left sidebar and click the following button on the top right of the volume layer:
 
 ![Icon to open the materialize volume annotation dialog](../images/materialize_volume_annotation_icon.jpg)
 /// caption
 Icon to open the materialize volume annotation dialog
 ///
 
-This button opens up a dialog that starts a long-running job which will materialize the volume annotation.
+This opens a dialog that submits a long-running job to materialize the volume annotation into a new dataset. Materializing a volume annotation may take a long time, depending on the size of the annotation and the dataset.
+
+!!! info
+    This feature is only available on webknossos.org or on managed instances that have the WEBKNOSSOS worker configured.
 
 ## Restricting magnifications
 
-WEBKNOSSOS allows data annotation in different magnifications.
-Restricting the available magnifications can greatly improve the performance when annotating large structures, such as nuclei, since the volume data does not need to be stored in all quality levels. 
-How to read: Mag 1 is the most detailed, 4-4-2 is downsampled by factor 4 in x and y, and by factor 2 in z.
-When annotating large structures, consider restricting the available magnifications in this specific annotation or in the volume annotation layer(s).
-The restriction can be defined when a new volume layer is created (either when an annotation is created or when a new volume layer is added to an annotation).
+Volume annotations can be stored at multiple [magnifications](../terminology.md) — `1-1-1` being full resolution, `4-4-2` meaning downsampled by 4× in x/y and 2× in z, and so on. By default, edits are stored at every available magnification, which can significantly increase annotation size when labeling large structures such as nuclei.
 
-### Restricting magnifications when creating an annotation
+Restricting the annotation to a coarser magnification reduces storage overhead and improves the responsiveness of annotation tools such as the brush — the browser has less data to update and upload with each stroke. Annotation quality is typically unaffected when the selected magnification matches your annotation granularity; choosing a too-coarse a magnification can reduce recoverable fine detail. The restriction is set when the volume layer is first created — either at annotation creation or when adding a new layer to an existing annotation.
+### When creating an annotation
 
-Go to the dataset dashboard. Click on the three dots next to `New Annotation` for the dataset you want to annotate. Use the slider to restrict the volume magnifications, e.g. by omitting the finest magnification, which is usually 1-1-1, or the two finest magnifications.
+On the dataset dashboard, click the three-dot menu next to **New Annotation** for the dataset you want to annotate. Use the magnification slider to exclude finer magnifications — for example, skipping `1-1-1` or the two finest magnifications is a common choice for large structures.
 
-### Restricting magnifications when adding a new volume annotation layer
+### When adding a new volume annotation layer
 
-Within an existing annotation, go to the `Layers` tab on the left. Click `Add Volume Annotation Layer` at the bottom of the list of all layers in this annotation. Restrict the magnifications as explained above.
+In an open annotation, go to the **Layers** tab on the left sidebar and click **Add Volume Annotation Layer** at the bottom of the layer list. The same magnification slider is available there.

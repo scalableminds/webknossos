@@ -5,13 +5,14 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, JsonHelper}
-import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.util.tools.Fox.toFox
+import com.scalableminds.webknossos.schema.Tables.{Tasktypes, TasktypesRow, GetResultTasktypesRow}
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.volume.MagRestrictions
 import models.annotation.{AnnotationSettings, TracingMode}
 import models.team.TeamDAO
-import play.api.libs.json._
+import play.api.libs.json.*
 import utils.sql.{EnumerationArrayValue, SQLDAO, SqlClient}
 
 import javax.inject.Inject
@@ -30,7 +31,7 @@ case class TaskType(
     isDeleted: Boolean = false
 )
 
-class TaskTypeService @Inject()(teamDAO: TeamDAO) {
+class TaskTypeService @Inject() (teamDAO: TeamDAO) {
 
   def assertValidTaskTypeSummary(taskTypeSummary: String)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
@@ -40,22 +41,21 @@ class TaskTypeService @Inject()(teamDAO: TeamDAO) {
 
   def publicWrites(taskType: TaskType): Fox[JsObject] =
     for {
-      team <- teamDAO.findOne(taskType._team)(GlobalAccessContext) ?~> Msg.Team.notFound(taskType._team)
-    } yield
-      Json.obj(
-        "id" -> taskType._id.toString,
-        "summary" -> taskType.summary,
-        "description" -> taskType.description,
-        "teamId" -> team._id.toString,
-        "teamName" -> team.name,
-        "settings" -> Json.toJson(taskType.settings),
-        "recommendedConfiguration" -> taskType.recommendedConfiguration,
-        "tracingType" -> taskType.tracingType
-      )
+      team <- teamDAO.findOne(taskType._team)(using GlobalAccessContext) ?~> Msg.Team.notFound(taskType._team)
+    } yield Json.obj(
+      "id" -> taskType._id.toString,
+      "summary" -> taskType.summary,
+      "description" -> taskType.description,
+      "teamId" -> team._id.toString,
+      "teamName" -> team.name,
+      "settings" -> Json.toJson(taskType.settings),
+      "recommendedConfiguration" -> taskType.recommendedConfiguration,
+      "tracingType" -> taskType.tracingType
+    )
 
 }
 
-class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class TaskTypeDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[TaskType, TasktypesRow, Tasktypes](sqlClient) {
   protected val collection = Tasktypes
 
@@ -65,31 +65,31 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       tracingType <- TracingType.fromString(r.tracingtype).toFox ?~> "failed to parse tracing type"
       settingsAllowedModes <- Fox.combined(
-        parseArrayLiteral(r.settingsAllowedmodes)
-          .map(TracingMode.fromString(_).toFox)) ?~> "failed to parse tracing mode"
-      settingsPreferredMode = r.settingsPreferredmode.flatMap(TracingMode.fromString)
+        parseArrayLiteral(r.settings_allowedmodes).map(TracingMode.fromString(_).toFox)
+      ) ?~> "failed to parse tracing mode"
+      settingsPreferredMode = r.settings_preferredmode.flatMap(TracingMode.fromString)
       recommendedConfiguration <- Fox.runOptional(r.recommendedconfiguration)(recCom =>
-        JsonHelper.parseAs[JsValue](recCom).toFox)
-    } yield
-      TaskType(
-        ObjectId(r._Id),
-        ObjectId(r._Team),
-        r.summary,
-        r.description,
-        AnnotationSettings(
-          settingsAllowedModes,
-          settingsPreferredMode,
-          r.settingsBranchpointsallowed,
-          r.settingsSomaclickingallowed,
-          r.settingsVolumeinterpolationallowed,
-          r.settingsMergermode,
-          MagRestrictions(r.settingsMagrestrictionsMin, r.settingsMagrestrictionsMax)
-        ),
-        recommendedConfiguration,
-        tracingType,
-        Instant.fromSql(r.created),
-        r.isdeleted
+        JsonHelper.parseAs[JsValue](recCom).toFox
       )
+    } yield TaskType(
+      ObjectId(r._id),
+      ObjectId(r._team),
+      r.summary,
+      r.description,
+      AnnotationSettings(
+        settingsAllowedModes,
+        settingsPreferredMode,
+        r.settings_branchpointsallowed,
+        r.settings_somaclickingallowed,
+        r.settings_volumeinterpolationallowed,
+        r.settings_mergermode,
+        MagRestrictions(r.settings_magrestrictions_min, r.settings_magrestrictions_max)
+      ),
+      recommendedConfiguration,
+      tracingType,
+      Instant.fromSql(r.created),
+      r.isdeleted
+    )
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     q"""(_team IN (SELECT _team FROM webknossos.user_team_roles WHERE _user = $requestingUserId)
@@ -99,8 +99,9 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     q"""(_team IN (SELECT _team FROM webknossos.user_team_roles WHERE isTeamManager AND _user = $requestingUserId)
        OR _organization = (SELECT _organization from webknossos.users_ WHERE _id = $requestingUserId AND isAdmin))"""
 
-  def findOneBySummaryAndOrganization(summary: String, organizationId: String)(
-      implicit ctx: DBAccessContext): Fox[TaskType] =
+  def findOneBySummaryAndOrganization(summary: String, organizationId: String)(using
+      ctx: DBAccessContext
+  ): Fox[TaskType] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"""SELECT $columns
@@ -133,7 +134,7 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                     """.asUpdate)
     } yield ()
 
-  def updateOne(t: TaskType)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateOne(t: TaskType)(using ctx: DBAccessContext): Fox[Unit] =
     for { // note that t.created is immutable, hence skipped here
       _ <- assertUpdateAccess(t._id)
       _ <- run(q"""UPDATE webknossos.taskTypes
@@ -141,8 +142,10 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                      _team = ${t._team},
                      summary = ${t.summary},
                      description = ${t.description},
-                     settings_allowedModes = ${EnumerationArrayValue(t.settings.allowedModes,
-                                                                     "webknossos.TASKTYPE_MODES")},
+                     settings_allowedModes = ${EnumerationArrayValue(
+          t.settings.allowedModes,
+          "webknossos.TASKTYPE_MODES"
+        )},
                      settings_preferredMode = ${t.settings.preferredMode},
                      settings_branchPointsAllowed = ${t.settings.branchPointsAllowed},
                      settings_somaClickingAllowed = ${t.settings.somaClickingAllowed},
@@ -161,6 +164,6 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       count <- countList.headOption.toFox
     } yield count
 
-  override def deleteOne(taskTypeId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+  override def deleteOne(taskTypeId: ObjectId)(using ctx: DBAccessContext): Fox[Unit] =
     deleteOneWithNameSuffix(taskTypeId, nameColumn = "summary")
 }

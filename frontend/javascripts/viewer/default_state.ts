@@ -57,7 +57,8 @@ const defaultState: WebknossosState = {
     isMultiSplitActive: false,
     brushSize: 50,
     clippingDistance: 50,
-    clippingDistanceArbitrary: 64,
+    clippingDistanceFlight: 64,
+    clipSkeletonToCurrentSection: false,
     crosshairSize: 0.1,
     displayCrosshair: true,
     displayScalebars: true,
@@ -103,6 +104,8 @@ const defaultState: WebknossosState = {
     erasePreference: "ERASE_BRUSH",
     writePreference: "BRUSH",
     measurementPreference: "LINE_MEASUREMENT",
+    mipRaymarchingSteps: 128,
+    mipDepthWrite: false,
     timestampsForTools: {
       [AnnotationTool.MOVE.id]: 0,
       [AnnotationTool.BRUSH.id]: 0,
@@ -209,7 +212,6 @@ const defaultState: WebknossosState = {
   },
   save: {
     queue: [],
-    isBusy: false,
     isSavingDisabled: false,
     lastSaveTimestamp: 0,
     progressInfo: {
@@ -222,7 +224,7 @@ const defaultState: WebknossosState = {
       annotationVersion: 1,
       skeleton: undefined,
       volumes: [],
-      activeMappingByLayer: {},
+      mappingDataByLayer: {},
       isRebasingOrForwarding: false,
     },
     proofreadingPostProcessingInfo: null,
@@ -261,7 +263,7 @@ const defaultState: WebknossosState = {
         TDView: defaultViewportRect,
       },
     },
-    arbitrary: {
+    flight: {
       inputCatcherRect: defaultViewportRect,
     },
   },
@@ -293,10 +295,6 @@ const defaultState: WebknossosState = {
       left: false,
     },
     theme: getSystemColorTheme(),
-    busyBlockingInfo: {
-      isBusy: false,
-      allowedSagas: [],
-    },
     isWkInitialized: false,
     isUiReady: false,
     quickSelectState: "inactive",
@@ -319,7 +317,12 @@ const defaultState: WebknossosState = {
       viewport: null,
       unmappedSegmentId: null,
     },
+    mipBBoxSettings: {},
   },
-  localSegmentationData: {},
+  localSegmentationStateByLayer: {},
+  operationContext: {
+    activeOperations: [],
+    childOperations: [],
+  },
 };
 export default defaultState;

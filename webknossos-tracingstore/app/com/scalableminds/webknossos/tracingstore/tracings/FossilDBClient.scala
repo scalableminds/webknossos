@@ -1,22 +1,23 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
 import com.google.protobuf.ByteString
-import com.scalableminds.fossildb.proto.fossildbapi._
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.fossildb.proto.fossildbapi.*
+import com.scalableminds.util.box.{Box, Empty, Full, Failure}
+import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.tracingstore.TracingStoreConfig
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.typesafe.scalalogging.LazyLogging
-import io.grpc.health.v1._
+import io.grpc.health.v1.*
 import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder
 import io.grpc.{Status, StatusRuntimeException}
-import com.scalableminds.util.tools.{Box, Empty, Full}
-import com.scalableminds.util.tools.Box.tryo
+import Box.tryo
 import play.api.libs.json.{Reads, Writes}
 import scalapb.grpc.Grpc
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success}
+import scala.util.{Failure as TryFailure, Success}
 
 trait KeyValueStoreConversions {
 
@@ -24,14 +25,14 @@ trait KeyValueStoreConversions {
 
   def wrapInBox[T](x: T): Box[T] = Full(x)
 
-  protected  def jsonToBytes[T](o: T)(implicit w: Writes[T]): Array[Byte] = w.writes(o).toString.getBytes("UTF-8")
+  protected def jsonToBytes[T](o: T)(implicit w: Writes[T]): Array[Byte] = w.writes(o).toString.getBytes("UTF-8")
 
-  protected  def jsonFromBytes[T](a: Array[Byte])(implicit r: Reads[T]): Box[T] =
+  protected def jsonFromBytes[T](a: Array[Byte])(implicit r: Reads[T]): Box[T] =
     JsonHelper.parseAs[T](a)
 
-  protected  def toProtoBytes[T <: GeneratedMessage](o: T): Array[Byte] = o.toByteArray
+  protected def toProtoBytes[T <: GeneratedMessage](o: T): Array[Byte] = o.toByteArray
 
-  protected  def fromProtoBytes[T <: GeneratedMessage](a: Array[Byte])(implicit
+  protected def fromProtoBytes[T <: GeneratedMessage](a: Array[Byte])(implicit
       companion: GeneratedMessageCompanion[T]
   ): Box[T] = tryo(companion.parseFrom(a))
 
@@ -49,8 +50,7 @@ class FossilDBClient(
     config: TracingStoreConfig,
     slackNotificationService: TSSlackNotificationService
 )(implicit ec: ExecutionContext)
-    extends FoxImplicits
-    with LazyLogging {
+    extends LazyLogging {
   private val address = config.Tracingstore.Fossildb.address
   private val port = config.Tracingstore.Fossildb.port
   private val channel =
@@ -73,9 +73,9 @@ class FossilDBClient(
     for {
       box <- resultFox.shiftBox
       _ <- box match {
-        case Full(())                                        => Fox.successful(())
-        case Empty                                           => Fox.empty
-        case com.scalableminds.util.tools.Failure(msg, _, _) =>
+        case Full(())           => Fox.successful(())
+        case Empty              => Fox.empty
+        case Failure(msg, _, _) =>
           val errorText = s"Failed to connect to FossilDB at $authority: $msg"
           logger.error(errorText)
           Fox.failure(errorText)
@@ -88,10 +88,10 @@ class FossilDBClient(
       future.transformWith {
         case Success(value) =>
           Future.successful(Full(value))
-        case Failure(exception) =>
+        case TryFailure(exception) =>
           val box = exception match {
             case e: StatusRuntimeException if e.getStatus == Status.UNAVAILABLE =>
-              new com.scalableminds.util.tools.Failure(s"FossilDB is unavailable", Full(e), Empty) ~> 500
+              new Failure("FossilDB is unavailable", Full(e), Empty) ~> 500
             case e: Exception =>
               val messageWithCauses = new StringBuilder
               messageWithCauses.append(e.toString)
@@ -101,7 +101,7 @@ class FossilDBClient(
                 messageWithCauses.append(cause.toString)
                 cause = cause.getCause
               }
-              new com.scalableminds.util.tools.Failure(
+              new Failure(
                 s"Request to FossilDB failed: $messageWithCauses",
                 Full(e),
                 Empty
@@ -119,7 +119,8 @@ class FossilDBClient(
     if (mayBeEmpty.getOrElse(false) && errorMessage.contains("No such element")) Fox.empty
     else Fox.fromBool(success) ?~> errorMessage.getOrElse("")
 
-  def get[T](key: String, version: Option[Long] = None, mayBeEmpty: Option[Boolean] = None)(fromByteArray: Array[Byte] => Box[T]
+  def get[T](key: String, version: Option[Long] = None, mayBeEmpty: Option[Boolean] = None)(
+      fromByteArray: Array[Byte] => Box[T]
   ): Fox[VersionedKeyValuePair[T]] =
     for {
       reply <- wrapException(stub.get(GetRequest(collection, key, version, mayBeEmpty)))
@@ -179,7 +180,8 @@ class FossilDBClient(
       )
     } yield batchedResults.flatten
 
-  private def getMultipleKeysByListImpl[T](keys: Seq[String], version: Option[Long])(fromByteArray: Array[Byte] => Box[T]
+  private def getMultipleKeysByListImpl[T](keys: Seq[String], version: Option[Long])(
+      fromByteArray: Array[Byte] => Box[T]
   ): Fox[Seq[Box[VersionedKeyValuePair[T]]]] =
     for {
       reply: GetMultipleKeysByListReply <- Fox.fromFuture(
@@ -194,11 +196,10 @@ class FossilDBClient(
                 parsed <- fromByteArray(versionValuePair.value.toByteArray)
               } yield VersionedKeyValuePair(VersionedKey(key, versionValuePair.actualVersion), parsed)
             case VersionValueBoxProto(None, Some(errorMessage), _) =>
-              com.scalableminds.util.tools.Failure(s"Failed to get entry from FossilDB: $errorMessage")
+              Failure(s"Failed to get entry from FossilDB: $errorMessage")
             case VersionValueBoxProto(None, None, _) => Empty
-            case _ => com.scalableminds.util.tools.Failure("Unexpected reply format in FossilDB getMultipleKeysByList")
+            case _ => Failure("Unexpected reply format in FossilDB getMultipleKeysByList")
           }
-        case _ => com.scalableminds.util.tools.Failure("Unexpected reply format in FossilDB getMultipleKeysByList")
       }
     } yield parsedValues
 
@@ -226,11 +227,11 @@ class FossilDBClient(
       _ <- assertSuccess(reply.success, reply.errorMessage)
     } yield ()
     for {
-      box <- putFox.shiftBox
-      _ <- box match {
-        case Full(())                                        => Fox.successful(())
-        case Empty                                           => Fox.empty
-        case com.scalableminds.util.tools.Failure(msg, _, _) =>
+      putBox <- putFox.shiftBox
+      _ <- putBox match {
+        case Full(())           => Fox.successful(())
+        case Empty              => Fox.empty
+        case Failure(msg, _, _) =>
           slackNotificationService.reportFossilWriteError("put", msg)
           Fox.failure("Could not save to FossilDB: " + msg)
       }
@@ -270,9 +271,9 @@ class FossilDBClient(
     for {
       box <- putFox.shiftBox
       _ <- box match {
-        case Full(())                                        => Fox.successful(())
-        case Empty                                           => Fox.empty
-        case com.scalableminds.util.tools.Failure(msg, _, _) =>
+        case Full(())           => Fox.successful(())
+        case Empty              => Fox.empty
+        case Failure(msg, _, _) =>
           slackNotificationService.reportFossilWriteError("multi-put", msg)
           Fox.failure("Could not multi-put to FossilDB: " + msg)
       }

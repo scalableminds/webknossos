@@ -6,14 +6,16 @@ import com.scalableminds.webknossos.tracingstore.TracingStoreConfig
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class TracingDataStore @Inject()(config: TracingStoreConfig,
-                                 lifecycle: ApplicationLifecycle,
-                                 slackNotificationService: TSSlackNotificationService,
-                                 val actorSystem: ActorSystem)(implicit ec: ExecutionContext)
+class TracingDataStore @Inject() (
+    config: TracingStoreConfig,
+    lifecycle: ApplicationLifecycle,
+    slackNotificationService: TSSlackNotificationService,
+    val actorSystem: ActorSystem
+)(implicit ec: ExecutionContext)
     extends LazyLogging {
 
   lazy val healthClient = new FossilDBClient("healthCheckOnly", config, slackNotificationService)

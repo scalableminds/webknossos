@@ -6,7 +6,7 @@ import play.api.inject.ApplicationLifecycle
 
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
 import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import com.scalableminds.util.time.Instant
 
 trait IntervalScheduler {
@@ -55,12 +55,13 @@ trait IntervalScheduler {
 
   private var scheduled: Option[Cancellable] = None
 
-  lifecycle.addStopHook((() => stop()))
+  lifecycle.addStopHook(() => stop())
 
   if (tickerEnabled) {
     if (tickerInterval < innerTickerInterval) {
       throw new IllegalArgumentException(
-        s"IntervalScheduler was initialized with interval $tickerInterval. Only intervals larger than the inner ticker interval $innerTickerInterval are supported.")
+        s"IntervalScheduler was initialized with interval $tickerInterval. Only intervals larger than the inner ticker interval $innerTickerInterval are supported."
+      )
     }
     scheduled = Some(actorSystem.scheduler.scheduleWithFixedDelay(tickerInitialDelay, innerTickerInterval)(innerTick))
   }

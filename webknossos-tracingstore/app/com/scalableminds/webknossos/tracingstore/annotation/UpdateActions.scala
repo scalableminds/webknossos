@@ -6,9 +6,9 @@ import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   MergeAgglomerateUpdateAction,
   SplitAgglomerateUpdateAction
 }
-import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating._
-import com.scalableminds.webknossos.tracingstore.tracings.volume._
-import play.api.libs.json._
+import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.*
+import com.scalableminds.webknossos.tracingstore.tracings.volume.*
+import play.api.libs.json.*
 
 trait UpdateAction {
   def actionTimestamp: Option[Long]
@@ -41,17 +41,17 @@ object UpdateAction {
       } else {
         (json \ "name").as[String] match {
           // Skeleton
-          case "createTree"                    => deserialize[CreateTreeSkeletonAction](jsonValue)
-          case "deleteTree"                    => deserialize[DeleteTreeSkeletonAction](jsonValue)
-          case "updateTree"                    => deserialize[UpdateTreeSkeletonAction](jsonValue)
-          case "mergeTree"                     => deserialize[MergeTreeSkeletonAction](jsonValue)
-          case "moveTreeComponent"             => deserialize[MoveTreeComponentSkeletonAction](jsonValue)
-          case "createNode"                    => deserialize[CreateNodeSkeletonAction](jsonValue, shouldTransformPositions = true)
-          case "deleteNode"                    => deserialize[DeleteNodeSkeletonAction](jsonValue)
-          case "updateNode"                    => deserialize[UpdateNodeSkeletonAction](jsonValue, shouldTransformPositions = true)
-          case "createEdge"                    => deserialize[CreateEdgeSkeletonAction](jsonValue)
-          case "deleteEdge"                    => deserialize[DeleteEdgeSkeletonAction](jsonValue)
-          case "updateTreeGroups"              => deserialize[UpdateTreeGroupsSkeletonAction](jsonValue)
+          case "createTree"        => deserialize[CreateTreeSkeletonAction](jsonValue)
+          case "deleteTree"        => deserialize[DeleteTreeSkeletonAction](jsonValue)
+          case "updateTree"        => deserialize[UpdateTreeSkeletonAction](jsonValue)
+          case "mergeTree"         => deserialize[MergeTreeSkeletonAction](jsonValue)
+          case "moveTreeComponent" => deserialize[MoveTreeComponentSkeletonAction](jsonValue)
+          case "createNode"        => deserialize[CreateNodeSkeletonAction](jsonValue, shouldTransformPositions = true)
+          case "deleteNode"        => deserialize[DeleteNodeSkeletonAction](jsonValue)
+          case "updateNode"        => deserialize[UpdateNodeSkeletonAction](jsonValue, shouldTransformPositions = true)
+          case "createEdge"        => deserialize[CreateEdgeSkeletonAction](jsonValue)
+          case "deleteEdge"        => deserialize[DeleteEdgeSkeletonAction](jsonValue)
+          case "updateTreeGroups"  => deserialize[UpdateTreeGroupsSkeletonAction](jsonValue)
           case "updateTreeGroupsExpandedState" => deserialize[UpdateTreeGroupsExpandedStateSkeletonAction](jsonValue)
           case "updateSkeletonTracing"         => deserialize[UpdateTracingSkeletonAction](jsonValue)
           case "updateTreeVisibility"          => deserialize[UpdateTreeVisibilitySkeletonAction](jsonValue)
@@ -68,9 +68,11 @@ object UpdateAction {
           case "updateActiveNode" => deserialize[UpdateActiveNodeSkeletonAction](jsonValue)
 
           // Volume
-          case "updateBucket"           => deserialize[UpdateBucketVolumeAction](jsonValue)
-          case "updateVolumeTracing"    => deserialize[UpdateTracingVolumeAction](jsonValue)
-          case "updateLargestSegmentId" => deserialize[UpdateLargestSegmentIdVolumeAction](jsonValue)
+          case "updateBucket"                     => deserialize[UpdateBucketVolumeAction](jsonValue)
+          case "updateVolumeTracing"              => deserialize[UpdateTracingVolumeAction](jsonValue)
+          case "updateLargestSegmentId"           => deserialize[UpdateLargestSegmentIdVolumeAction](jsonValue)
+          case "updateVolumeBucketDataHasChanged" =>
+            deserialize[UpdateVolumeBucketDataHasChangedVolumeAction](jsonValue)
           case "updateUserBoundingBoxesInVolumeTracing" =>
             deserialize[UpdateUserBoundingBoxesVolumeAction](jsonValue)
           case "addUserBoundingBoxInVolumeTracing"    => deserialize[AddUserBoundingBoxVolumeAction](jsonValue)
@@ -79,17 +81,17 @@ object UpdateAction {
             deserialize[UpdateUserBoundingBoxVolumeAction](jsonValue)
           case "updateUserBoundingBoxVisibilityInVolumeTracing" =>
             deserialize[UpdateUserBoundingBoxVisibilityVolumeAction](jsonValue)
-          case "removeFallbackLayer"          => deserialize[RemoveFallbackLayerVolumeAction](jsonValue)
-          case "importVolumeTracing"          => deserialize[ImportVolumeDataVolumeAction](jsonValue)
-          case "createSegment"                => deserialize[CreateSegmentVolumeAction](jsonValue)
-          case "updateSegment"                => deserialize[LegacyUpdateSegmentVolumeAction](jsonValue)
-          case "updateSegmentPartial"         => deserialize[UpdateSegmentPartialVolumeAction](jsonValue)
-          case "updateMetadataOfSegment"      => deserialize[UpdateMetadataOfSegmentVolumeAction](jsonValue)
-          case "updateSegmentGroups"          => deserialize[LegacyUpdateSegmentGroupsVolumeAction](jsonValue)
-          case "upsertSegmentGroup"           => deserialize[UpsertSegmentGroupVolumeAction](jsonValue)
-          case "deleteSegmentGroup"           => deserialize[DeleteSegmentGroupVolumeAction](jsonValue)
-          case "updateSegmentGroupVisibility" => deserialize[UpdateSegmentGroupVisibilityVolumeAction](jsonValue)
-          case "updateSegmentVisibility"      => deserialize[UpdateSegmentVisibilityVolumeAction](jsonValue)
+          case "removeFallbackLayer"              => deserialize[RemoveFallbackLayerVolumeAction](jsonValue)
+          case "importVolumeTracing"              => deserialize[ImportVolumeDataVolumeAction](jsonValue)
+          case "createSegment"                    => deserialize[CreateSegmentVolumeAction](jsonValue)
+          case "updateSegment"                    => deserialize[LegacyUpdateSegmentVolumeAction](jsonValue)
+          case "updateSegmentPartial"             => deserialize[UpdateSegmentPartialVolumeAction](jsonValue)
+          case "updateMetadataOfSegment"          => deserialize[UpdateMetadataOfSegmentVolumeAction](jsonValue)
+          case "updateSegmentGroups"              => deserialize[LegacyUpdateSegmentGroupsVolumeAction](jsonValue)
+          case "upsertSegmentGroup"               => deserialize[UpsertSegmentGroupVolumeAction](jsonValue)
+          case "deleteSegmentGroup"               => deserialize[DeleteSegmentGroupVolumeAction](jsonValue)
+          case "updateSegmentGroupVisibility"     => deserialize[UpdateSegmentGroupVisibilityVolumeAction](jsonValue)
+          case "updateSegmentVisibility"          => deserialize[UpdateSegmentVisibilityVolumeAction](jsonValue)
           case "updateSegmentGroupsExpandedState" =>
             deserialize[UpdateSegmentGroupsExpandedStateVolumeAction](jsonValue)
           case "mergeSegmentItems"     => deserialize[MergeSegmentItemsVolumeAction](jsonValue)
@@ -118,8 +120,9 @@ object UpdateAction {
       }
     }
 
-    private def deserialize[T](json: JsValue, shouldTransformPositions: Boolean = false)(
-        implicit tjs: Reads[T]): JsResult[T] =
+    private def deserialize[T](json: JsValue, shouldTransformPositions: Boolean = false)(implicit
+        tjs: Reads[T]
+    ): JsResult[T] =
       if (shouldTransformPositions)
         json.transform(positionTransform).get.validate[T]
       else
@@ -131,167 +134,260 @@ object UpdateAction {
     override def writes(a: UpdateAction): JsValue = a match {
       // Skeleton
       case s: CreateTreeSkeletonAction =>
-        Json.obj("name" -> "createTree", "value" -> Json.toJson(s)(CreateTreeSkeletonAction.jsonFormat))
+        Json.obj("name" -> "createTree", "value" -> Json.toJson(s)(using CreateTreeSkeletonAction.jsonFormat))
       case s: DeleteTreeSkeletonAction =>
-        Json.obj("name" -> "deleteTree", "value" -> Json.toJson(s)(DeleteTreeSkeletonAction.jsonFormat))
+        Json.obj("name" -> "deleteTree", "value" -> Json.toJson(s)(using DeleteTreeSkeletonAction.jsonFormat))
       case s: UpdateTreeSkeletonAction =>
-        Json.obj("name" -> "updateTree", "value" -> Json.toJson(s)(UpdateTreeSkeletonAction.jsonFormat))
+        Json.obj("name" -> "updateTree", "value" -> Json.toJson(s)(using UpdateTreeSkeletonAction.jsonFormat))
       case s: MergeTreeSkeletonAction =>
-        Json.obj("name" -> "mergeTree", "value" -> Json.toJson(s)(MergeTreeSkeletonAction.jsonFormat))
+        Json.obj("name" -> "mergeTree", "value" -> Json.toJson(s)(using MergeTreeSkeletonAction.jsonFormat))
       case s: MoveTreeComponentSkeletonAction =>
-        Json.obj("name" -> "moveTreeComponent", "value" -> Json.toJson(s)(MoveTreeComponentSkeletonAction.jsonFormat))
+        Json.obj(
+          "name" -> "moveTreeComponent",
+          "value" -> Json.toJson(s)(using MoveTreeComponentSkeletonAction.jsonFormat)
+        )
       case s: CreateNodeSkeletonAction =>
-        Json.obj("name" -> "createNode", "value" -> Json.toJson(s)(CreateNodeSkeletonAction.jsonFormat))
+        Json.obj("name" -> "createNode", "value" -> Json.toJson(s)(using CreateNodeSkeletonAction.jsonFormat))
       case s: DeleteNodeSkeletonAction =>
-        Json.obj("name" -> "deleteNode", "value" -> Json.toJson(s)(DeleteNodeSkeletonAction.jsonFormat))
+        Json.obj("name" -> "deleteNode", "value" -> Json.toJson(s)(using DeleteNodeSkeletonAction.jsonFormat))
       case s: UpdateNodeSkeletonAction =>
-        Json.obj("name" -> "updateNode", "value" -> Json.toJson(s)(UpdateNodeSkeletonAction.jsonFormat))
+        Json.obj("name" -> "updateNode", "value" -> Json.toJson(s)(using UpdateNodeSkeletonAction.jsonFormat))
       case s: CreateEdgeSkeletonAction =>
-        Json.obj("name" -> "createEdge", "value" -> Json.toJson(s)(CreateEdgeSkeletonAction.jsonFormat))
+        Json.obj("name" -> "createEdge", "value" -> Json.toJson(s)(using CreateEdgeSkeletonAction.jsonFormat))
       case s: DeleteEdgeSkeletonAction =>
-        Json.obj("name" -> "deleteEdge", "value" -> Json.toJson(s)(DeleteEdgeSkeletonAction.jsonFormat))
+        Json.obj("name" -> "deleteEdge", "value" -> Json.toJson(s)(using DeleteEdgeSkeletonAction.jsonFormat))
       case s: UpdateTreeGroupsSkeletonAction =>
-        Json.obj("name" -> "updateTreeGroups", "value" -> Json.toJson(s)(UpdateTreeGroupsSkeletonAction.jsonFormat))
+        Json.obj(
+          "name" -> "updateTreeGroups",
+          "value" -> Json.toJson(s)(using UpdateTreeGroupsSkeletonAction.jsonFormat)
+        )
       case s: UpdateTreeGroupsExpandedStateSkeletonAction =>
-        Json.obj("name" -> "updateTreeGroupsExpandedState",
-                 "value" -> Json.toJson(s)(UpdateTreeGroupsExpandedStateSkeletonAction.jsonFormat))
+        Json.obj(
+          "name" -> "updateTreeGroupsExpandedState",
+          "value" -> Json.toJson(s)(using UpdateTreeGroupsExpandedStateSkeletonAction.jsonFormat)
+        )
       case s: UpdateTracingSkeletonAction =>
-        Json.obj("name" -> "updateSkeletonTracing", "value" -> Json.toJson(s)(UpdateTracingSkeletonAction.jsonFormat))
+        Json.obj(
+          "name" -> "updateSkeletonTracing",
+          "value" -> Json.toJson(s)(using UpdateTracingSkeletonAction.jsonFormat)
+        )
       case s: UpdateActiveNodeSkeletonAction =>
-        Json.obj("name" -> "updateActiveNode", "value" -> Json.toJson(s)(UpdateActiveNodeSkeletonAction.jsonFormat))
+        Json.obj(
+          "name" -> "updateActiveNode",
+          "value" -> Json.toJson(s)(using UpdateActiveNodeSkeletonAction.jsonFormat)
+        )
       case s: UpdateTreeVisibilitySkeletonAction =>
-        Json.obj("name" -> "updateTreeVisibility",
-                 "value" -> Json.toJson(s)(UpdateTreeVisibilitySkeletonAction.jsonFormat))
+        Json.obj(
+          "name" -> "updateTreeVisibility",
+          "value" -> Json.toJson(s)(using UpdateTreeVisibilitySkeletonAction.jsonFormat)
+        )
       case s: UpdateTreeGroupVisibilitySkeletonAction =>
-        Json.obj("name" -> "updateTreeGroupVisibility",
-                 "value" -> Json.toJson(s)(UpdateTreeGroupVisibilitySkeletonAction.jsonFormat))
+        Json.obj(
+          "name" -> "updateTreeGroupVisibility",
+          "value" -> Json.toJson(s)(using UpdateTreeGroupVisibilitySkeletonAction.jsonFormat)
+        )
       case s: UpdateTreeEdgesVisibilitySkeletonAction =>
-        Json.obj("name" -> "updateTreeEdgesVisibility",
-                 "value" -> Json.toJson(s)(UpdateTreeEdgesVisibilitySkeletonAction.jsonFormat))
+        Json.obj(
+          "name" -> "updateTreeEdgesVisibility",
+          "value" -> Json.toJson(s)(using UpdateTreeEdgesVisibilitySkeletonAction.jsonFormat)
+        )
       case s: UpdateUserBoundingBoxesSkeletonAction =>
-        Json.obj("name" -> "updateUserBoundingBoxesInSkeletonTracing",
-                 "value" -> Json.toJson(s)(UpdateUserBoundingBoxesSkeletonAction.jsonFormat))
+        Json.obj(
+          "name" -> "updateUserBoundingBoxesInSkeletonTracing",
+          "value" -> Json.toJson(s)(using UpdateUserBoundingBoxesSkeletonAction.jsonFormat)
+        )
       case s: AddUserBoundingBoxSkeletonAction =>
-        Json.obj("name" -> "addUserBoundingBoxInSkeletonTracing",
-                 "value" -> Json.toJson(s)(AddUserBoundingBoxSkeletonAction.jsonFormat))
+        Json.obj(
+          "name" -> "addUserBoundingBoxInSkeletonTracing",
+          "value" -> Json.toJson(s)(using AddUserBoundingBoxSkeletonAction.jsonFormat)
+        )
       case s: DeleteUserBoundingBoxSkeletonAction =>
-        Json.obj("name" -> "deleteUserBoundingBoxInSkeletonTracing",
-                 "value" -> Json.toJson(s)(DeleteUserBoundingBoxSkeletonAction.jsonFormat))
+        Json.obj(
+          "name" -> "deleteUserBoundingBoxInSkeletonTracing",
+          "value" -> Json.toJson(s)(using DeleteUserBoundingBoxSkeletonAction.jsonFormat)
+        )
       case s: UpdateUserBoundingBoxSkeletonAction =>
-        Json.obj("name" -> "updateUserBoundingBoxInSkeletonTracing",
-                 "value" -> Json.toJson(s)(UpdateUserBoundingBoxSkeletonAction.jsonFormat))
+        Json.obj(
+          "name" -> "updateUserBoundingBoxInSkeletonTracing",
+          "value" -> Json.toJson(s)(using UpdateUserBoundingBoxSkeletonAction.jsonFormat)
+        )
       case s: UpdateUserBoundingBoxVisibilitySkeletonAction =>
-        Json.obj("name" -> "updateUserBoundingBoxVisibilityInSkeletonTracing",
-                 "value" -> Json.toJson(s)(UpdateUserBoundingBoxVisibilitySkeletonAction.jsonFormat))
+        Json.obj(
+          "name" -> "updateUserBoundingBoxVisibilityInSkeletonTracing",
+          "value" -> Json.toJson(s)(using UpdateUserBoundingBoxVisibilitySkeletonAction.jsonFormat)
+        )
 
       // Volume
       case s: UpdateBucketVolumeAction =>
-        Json.obj("name" -> "updateBucket", "value" -> Json.toJson(s)(UpdateBucketVolumeAction.jsonFormat))
+        Json.obj("name" -> "updateBucket", "value" -> Json.toJson(s)(using UpdateBucketVolumeAction.jsonFormat))
       case s: UpdateTracingVolumeAction =>
-        Json.obj("name" -> "updateVolumeTracing", "value" -> Json.toJson(s)(UpdateTracingVolumeAction.jsonFormat))
+        Json.obj("name" -> "updateVolumeTracing", "value" -> Json.toJson(s)(using UpdateTracingVolumeAction.jsonFormat))
       case s: UpdateLargestSegmentIdVolumeAction =>
-        Json.obj("name" -> "updateLargestSegmentId",
-                 "value" -> Json.toJson(s)(UpdateLargestSegmentIdVolumeAction.jsonFormat))
+        Json.obj(
+          "name" -> "updateLargestSegmentId",
+          "value" -> Json.toJson(s)(using UpdateLargestSegmentIdVolumeAction.jsonFormat)
+        )
+      case s: UpdateVolumeBucketDataHasChangedVolumeAction =>
+        Json.obj(
+          "name" -> "updateVolumeBucketDataHasChanged",
+          "value" -> Json.toJson(s)(using UpdateVolumeBucketDataHasChangedVolumeAction.jsonFormat)
+        )
       case s: UpdateActiveSegmentIdVolumeAction =>
-        Json.obj("name" -> "updateActiveSegmentId",
-                 "value" -> Json.toJson(s)(UpdateActiveSegmentIdVolumeAction.jsonFormat))
+        Json.obj(
+          "name" -> "updateActiveSegmentId",
+          "value" -> Json.toJson(s)(using UpdateActiveSegmentIdVolumeAction.jsonFormat)
+        )
       case s: UpdateUserBoundingBoxesVolumeAction =>
-        Json.obj("name" -> "updateUserBoundingBoxesInVolumeTracing",
-                 "value" -> Json.toJson(s)(UpdateUserBoundingBoxesVolumeAction.jsonFormat))
+        Json.obj(
+          "name" -> "updateUserBoundingBoxesInVolumeTracing",
+          "value" -> Json.toJson(s)(using UpdateUserBoundingBoxesVolumeAction.jsonFormat)
+        )
       case s: AddUserBoundingBoxVolumeAction =>
-        Json.obj("name" -> "addUserBoundingBoxInVolumeTracing",
-                 "value" -> Json.toJson(s)(AddUserBoundingBoxVolumeAction.jsonFormat))
+        Json.obj(
+          "name" -> "addUserBoundingBoxInVolumeTracing",
+          "value" -> Json.toJson(s)(using AddUserBoundingBoxVolumeAction.jsonFormat)
+        )
       case s: DeleteUserBoundingBoxVolumeAction =>
-        Json.obj("name" -> "deleteUserBoundingBoxInVolumeTracing",
-                 "value" -> Json.toJson(s)(DeleteUserBoundingBoxVolumeAction.jsonFormat))
+        Json.obj(
+          "name" -> "deleteUserBoundingBoxInVolumeTracing",
+          "value" -> Json.toJson(s)(using DeleteUserBoundingBoxVolumeAction.jsonFormat)
+        )
       case s: UpdateUserBoundingBoxVolumeAction =>
-        Json.obj("name" -> "updateUserBoundingBoxInVolumeTracing",
-                 "value" -> Json.toJson(s)(UpdateUserBoundingBoxVolumeAction.jsonFormat))
+        Json.obj(
+          "name" -> "updateUserBoundingBoxInVolumeTracing",
+          "value" -> Json.toJson(s)(using UpdateUserBoundingBoxVolumeAction.jsonFormat)
+        )
       case s: UpdateUserBoundingBoxVisibilityVolumeAction =>
-        Json.obj("name" -> "updateUserBoundingBoxVisibilityInVolumeTracing",
-                 "value" -> Json.toJson(s)(UpdateUserBoundingBoxVisibilityVolumeAction.jsonFormat))
+        Json.obj(
+          "name" -> "updateUserBoundingBoxVisibilityInVolumeTracing",
+          "value" -> Json.toJson(s)(using UpdateUserBoundingBoxVisibilityVolumeAction.jsonFormat)
+        )
       case s: RemoveFallbackLayerVolumeAction =>
-        Json.obj("name" -> "removeFallbackLayer", "value" -> Json.toJson(s)(RemoveFallbackLayerVolumeAction.jsonFormat))
+        Json.obj(
+          "name" -> "removeFallbackLayer",
+          "value" -> Json.toJson(s)(using RemoveFallbackLayerVolumeAction.jsonFormat)
+        )
       case s: ImportVolumeDataVolumeAction =>
-        Json.obj("name" -> "importVolumeTracing", "value" -> Json.toJson(s)(ImportVolumeDataVolumeAction.jsonFormat))
+        Json.obj(
+          "name" -> "importVolumeTracing",
+          "value" -> Json.toJson(s)(using ImportVolumeDataVolumeAction.jsonFormat)
+        )
       case s: CreateSegmentVolumeAction =>
-        Json.obj("name" -> "createSegment", "value" -> Json.toJson(s)(CreateSegmentVolumeAction.jsonFormat))
+        Json.obj("name" -> "createSegment", "value" -> Json.toJson(s)(using CreateSegmentVolumeAction.jsonFormat))
       case s: LegacyUpdateSegmentVolumeAction =>
-        Json.obj("name" -> "updateSegment", "value" -> Json.toJson(s)(LegacyUpdateSegmentVolumeAction.jsonFormat))
+        Json.obj("name" -> "updateSegment", "value" -> Json.toJson(s)(using LegacyUpdateSegmentVolumeAction.jsonFormat))
       case s: UpdateSegmentPartialVolumeAction =>
-        Json.obj("name" -> "updateSegmentPartial",
-                 "value" -> Json.toJson(s)(UpdateSegmentPartialVolumeAction.jsonFormat))
+        Json.obj(
+          "name" -> "updateSegmentPartial",
+          "value" -> Json.toJson(s)(using UpdateSegmentPartialVolumeAction.jsonFormat)
+        )
       case s: UpdateMetadataOfSegmentVolumeAction =>
-        Json.obj("name" -> "updateMetadataOfSegment",
-                 "value" -> Json.toJson(s)(UpdateMetadataOfSegmentVolumeAction.jsonFormat))
+        Json.obj(
+          "name" -> "updateMetadataOfSegment",
+          "value" -> Json.toJson(s)(using UpdateMetadataOfSegmentVolumeAction.jsonFormat)
+        )
       case s: MergeSegmentItemsVolumeAction =>
-        Json.obj("name" -> "mergeSegmentItems", "value" -> Json.toJson(s)(MergeSegmentItemsVolumeAction.jsonFormat))
+        Json.obj(
+          "name" -> "mergeSegmentItems",
+          "value" -> Json.toJson(s)(using MergeSegmentItemsVolumeAction.jsonFormat)
+        )
       case s: DeleteSegmentVolumeAction =>
-        Json.obj("name" -> "deleteSegment", "value" -> Json.toJson(s)(DeleteSegmentVolumeAction.jsonFormat))
+        Json.obj("name" -> "deleteSegment", "value" -> Json.toJson(s)(using DeleteSegmentVolumeAction.jsonFormat))
       case s: DeleteSegmentDataVolumeAction =>
-        Json.obj("name" -> "deleteSegmentData", "value" -> Json.toJson(s)(DeleteSegmentDataVolumeAction.jsonFormat))
+        Json.obj(
+          "name" -> "deleteSegmentData",
+          "value" -> Json.toJson(s)(using DeleteSegmentDataVolumeAction.jsonFormat)
+        )
       case s: LegacyUpdateSegmentGroupsVolumeAction =>
-        Json.obj("name" -> "updateSegmentGroups",
-                 "value" -> Json.toJson(s)(LegacyUpdateSegmentGroupsVolumeAction.jsonFormat))
+        Json.obj(
+          "name" -> "updateSegmentGroups",
+          "value" -> Json.toJson(s)(using LegacyUpdateSegmentGroupsVolumeAction.jsonFormat)
+        )
       case s: UpsertSegmentGroupVolumeAction =>
-        Json.obj("name" -> "upsertSegmentGroup", "value" -> Json.toJson(s)(UpsertSegmentGroupVolumeAction.jsonFormat))
+        Json.obj(
+          "name" -> "upsertSegmentGroup",
+          "value" -> Json.toJson(s)(using UpsertSegmentGroupVolumeAction.jsonFormat)
+        )
       case s: DeleteSegmentGroupVolumeAction =>
-        Json.obj("name" -> "deleteSegmentGroup", "value" -> Json.toJson(s)(DeleteSegmentGroupVolumeAction.jsonFormat))
+        Json.obj(
+          "name" -> "deleteSegmentGroup",
+          "value" -> Json.toJson(s)(using DeleteSegmentGroupVolumeAction.jsonFormat)
+        )
       case s: UpdateSegmentGroupsExpandedStateVolumeAction =>
-        Json.obj("name" -> "updateSegmentGroupsExpandedState",
-                 "value" -> Json.toJson(s)(UpdateSegmentGroupsExpandedStateVolumeAction.jsonFormat))
+        Json.obj(
+          "name" -> "updateSegmentGroupsExpandedState",
+          "value" -> Json.toJson(s)(using UpdateSegmentGroupsExpandedStateVolumeAction.jsonFormat)
+        )
       case s: UpdateSegmentVisibilityVolumeAction =>
-        Json.obj("name" -> "updateSegmentVisibility",
-                 "value" -> Json.toJson(s)(UpdateSegmentVisibilityVolumeAction.jsonFormat))
+        Json.obj(
+          "name" -> "updateSegmentVisibility",
+          "value" -> Json.toJson(s)(using UpdateSegmentVisibilityVolumeAction.jsonFormat)
+        )
       case s: UpdateSegmentGroupVisibilityVolumeAction =>
-        Json.obj("name" -> "updateSegmentGroupVisibility",
-                 "value" -> Json.toJson(s)(UpdateSegmentGroupVisibilityVolumeAction.jsonFormat))
+        Json.obj(
+          "name" -> "updateSegmentGroupVisibility",
+          "value" -> Json.toJson(s)(using UpdateSegmentGroupVisibilityVolumeAction.jsonFormat)
+        )
       case s: UpdateMappingNameVolumeAction =>
-        Json.obj("name" -> "updateMappingName", "value" -> Json.toJson(s)(UpdateMappingNameVolumeAction.jsonFormat))
+        Json.obj(
+          "name" -> "updateMappingName",
+          "value" -> Json.toJson(s)(using UpdateMappingNameVolumeAction.jsonFormat)
+        )
       case s: AddSegmentIndexVolumeAction =>
-        Json.obj("name" -> "addSegmentIndex", "value" -> Json.toJson(s)(AddSegmentIndexVolumeAction.jsonFormat))
+        Json.obj("name" -> "addSegmentIndex", "value" -> Json.toJson(s)(using AddSegmentIndexVolumeAction.jsonFormat))
       case s: CompactVolumeUpdateAction =>
         Json.toJson(s)
 
       // Editable Mapping
       case s: SplitAgglomerateUpdateAction =>
-        Json.obj("name" -> "splitAgglomerate", "value" -> Json.toJson(s)(SplitAgglomerateUpdateAction.jsonFormat))
+        Json.obj("name" -> "splitAgglomerate", "value" -> Json.toJson(s)(using SplitAgglomerateUpdateAction.jsonFormat))
       case s: MergeAgglomerateUpdateAction =>
-        Json.obj("name" -> "mergeAgglomerate", "value" -> Json.toJson(s)(MergeAgglomerateUpdateAction.jsonFormat))
+        Json.obj("name" -> "mergeAgglomerate", "value" -> Json.toJson(s)(using MergeAgglomerateUpdateAction.jsonFormat))
 
       // Annotation
       case s: AddLayerAnnotationAction =>
-        Json.obj("name" -> "addLayerToAnnotation", "value" -> Json.toJson(s)(AddLayerAnnotationAction.jsonFormat))
+        Json.obj("name" -> "addLayerToAnnotation", "value" -> Json.toJson(s)(using AddLayerAnnotationAction.jsonFormat))
       case s: DeleteLayerAnnotationAction =>
-        Json.obj("name" -> "deleteLayerFromAnnotation",
-                 "value" -> Json.toJson(s)(DeleteLayerAnnotationAction.jsonFormat))
+        Json.obj(
+          "name" -> "deleteLayerFromAnnotation",
+          "value" -> Json.toJson(s)(using DeleteLayerAnnotationAction.jsonFormat)
+        )
       case s: UpdateLayerMetadataAnnotationAction =>
-        Json.obj("name" -> "updateLayerMetadata",
-                 "value" -> Json.toJson(s)(UpdateLayerMetadataAnnotationAction.jsonFormat))
+        Json.obj(
+          "name" -> "updateLayerMetadata",
+          "value" -> Json.toJson(s)(using UpdateLayerMetadataAnnotationAction.jsonFormat)
+        )
       case s: UpdateMetadataAnnotationAction =>
-        Json.obj("name" -> "updateMetadataOfAnnotation",
-                 "value" -> Json.toJson(s)(UpdateMetadataAnnotationAction.jsonFormat))
+        Json.obj(
+          "name" -> "updateMetadataOfAnnotation",
+          "value" -> Json.toJson(s)(using UpdateMetadataAnnotationAction.jsonFormat)
+        )
       case s: RevertToVersionAnnotationAction =>
-        Json.obj("name" -> "revertToVersion", "value" -> Json.toJson(s)(RevertToVersionAnnotationAction.jsonFormat))
+        Json.obj(
+          "name" -> "revertToVersion",
+          "value" -> Json.toJson(s)(using RevertToVersionAnnotationAction.jsonFormat)
+        )
       case s: ResetToBaseAnnotationAction =>
-        Json.obj("name" -> "resetToBase", "value" -> Json.toJson(s)(ResetToBaseAnnotationAction.jsonFormat))
+        Json.obj("name" -> "resetToBase", "value" -> Json.toJson(s)(using ResetToBaseAnnotationAction.jsonFormat))
       case s: UpdateTdCameraAnnotationAction =>
-        Json.obj("name" -> "updateTdCamera", "value" -> Json.toJson(s)(UpdateTdCameraAnnotationAction.jsonFormat))
+        Json.obj("name" -> "updateTdCamera", "value" -> Json.toJson(s)(using UpdateTdCameraAnnotationAction.jsonFormat))
       case s: UpdateCameraAnnotationAction =>
-        Json.obj("name" -> "updateCamera", "value" -> Json.toJson(s)(UpdateCameraAnnotationAction.jsonFormat))
+        Json.obj("name" -> "updateCamera", "value" -> Json.toJson(s)(using UpdateCameraAnnotationAction.jsonFormat))
     }
   }
 }
 
-case class UpdateActionGroup(version: Long,
-                             timestamp: Long,
-                             authorId: Option[ObjectId],
-                             actions: List[UpdateAction],
-                             stats: Option[JsObject],
-                             info: Option[String],
-                             transactionId: String,
-                             transactionGroupCount: Int,
-                             transactionGroupIndex: Int) {
+case class UpdateActionGroup(
+    version: Long,
+    timestamp: Long,
+    authorId: Option[ObjectId],
+    actions: List[UpdateAction],
+    stats: Option[JsObject],
+    info: Option[String],
+    transactionId: String,
+    transactionGroupCount: Int,
+    transactionGroupIndex: Int
+) {
 
   def significantChangesCount: Int = actions.count(!_.isViewOnlyChange)
   def viewChangesCount: Int = actions.count(_.isViewOnlyChange)

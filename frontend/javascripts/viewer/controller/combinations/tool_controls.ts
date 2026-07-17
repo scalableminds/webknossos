@@ -105,7 +105,7 @@ import {
 import { api } from "viewer/singletons";
 import Store, { type UserConfiguration } from "viewer/store";
 import { getDefaultBrushSizes } from "viewer/view/action_bar/tools/brush_presets";
-import type ArbitraryView from "viewer/view/arbitrary_view";
+import type FlightModeView from "viewer/view/arbitrary_view";
 import type { KeyboardShortcutHandlerMap } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
 import { showToastWarningForLargestSegmentIdMissing } from "viewer/view/largest_segment_id_modal";
 import type PlaneView from "viewer/view/plane_view";
@@ -413,7 +413,7 @@ export class SkeletonToolController extends ToolController {
   }
 
   static onLeftClick(
-    planeView: PlaneView | ArbitraryView,
+    planeView: PlaneView | FlightModeView,
     position: Point2,
     shiftPressed: boolean,
     altPressed: boolean,
@@ -423,6 +423,11 @@ export class SkeletonToolController extends ToolController {
     allowNodeCreation: boolean = true,
   ): void {
     const { useLegacyBindings, continuousNodeCreation } = Store.getState().userConfiguration;
+    const showSkeleton = Store.getState().annotation.skeleton?.showSkeletons ?? false;
+    if (!showSkeleton) {
+      // Don't do anything in case the skeleton layer is disabled or does not exist.
+      return;
+    }
 
     if (continuousNodeCreation && allowNodeCreation && !useLegacyBindings) {
       handleCreateNodeFromEvent(position, ctrlPressed);
@@ -654,7 +659,7 @@ export class DrawToolController extends VolumeToolController {
 
         const state = Store.getState();
         const volumeTracing = enforceActiveVolumeTracing(state);
-        const contourTracingMode = getContourTracingMode(volumeTracing);
+        const contourTracingMode = getContourTracingMode(state, volumeTracing);
 
         if (contourTracingMode === ContourModeEnum.DELETE) {
           handleMoveForDrawOrErase(pos);
@@ -832,7 +837,7 @@ export class VoxelPipetteToolController extends ToolController {
     };
   }
 }
-export class FillCellToolController extends ToolController {
+export class FillCellToolController extends VolumeToolController {
   static getPlaneMouseControls(_planeId: OrthoView): MouseBindingMap {
     return {
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {

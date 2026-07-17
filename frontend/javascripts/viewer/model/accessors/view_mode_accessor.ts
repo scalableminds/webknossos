@@ -13,7 +13,7 @@ import type {
   Viewport,
 } from "viewer/constants";
 import constants, {
-  ArbitraryViewport,
+  FlightViewport,
   OrthoViews,
   OrthoViewValuesWithoutTDView,
 } from "viewer/constants";
@@ -36,8 +36,8 @@ export function getTDViewZoom(state: WebknossosState) {
   return scaleX;
 }
 export function getInputCatcherRect(state: WebknossosState, viewport: Viewport): Rect {
-  if (viewport === ArbitraryViewport) {
-    return state.viewModeData.arbitrary.inputCatcherRect;
+  if (viewport === FlightViewport) {
+    return state.viewModeData.flight.inputCatcherRect;
   } else {
     return state.viewModeData.plane.inputCatcherRects[viewport];
   }

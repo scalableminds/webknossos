@@ -18,7 +18,11 @@ import {
   getUnmappedSegmentIdForPosition,
   handleFloodFillFromGlobalPosition,
 } from "viewer/controller/combinations/volume_handlers";
-import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
+import {
+  isConcurrentCollaborationMode,
+  mayEditAnnotation,
+} from "viewer/model/accessors/annotation_accessor";
+import { hasConnectomeFile } from "viewer/model/accessors/connectome_accessor";
 import {
   getMappingInfo,
   getVisibleSegmentationLayer,
@@ -31,7 +35,6 @@ import {
   getActiveCellId,
   getActiveSegmentationTracing,
   hasAgglomerateMapping,
-  hasConnectomeFile,
 } from "viewer/model/accessors/volumetracing_accessor";
 import { maybeFetchMeshFilesAction } from "viewer/model/actions/annotation_actions";
 import { ensureLayerMappingsAreLoadedAction } from "viewer/model/actions/dataset_actions";
@@ -82,12 +85,12 @@ export function useNoNodeContextMenuOptions(
 
   const currentMeshFile = useWkSelector((state) =>
     visibleSegmentationLayer != null
-      ? state.localSegmentationData[visibleSegmentationLayer.name].currentMeshFile
+      ? state.localSegmentationStateByLayer[visibleSegmentationLayer.name].currentMeshFile
       : null,
   );
   const currentConnectomeFile = useWkSelector((state) =>
     visibleSegmentationLayer != null
-      ? state.localSegmentationData[visibleSegmentationLayer.name].connectomeData
+      ? state.localSegmentationStateByLayer[visibleSegmentationLayer.name].connectomeData
           .currentConnectomeFile
       : null,
   );
@@ -101,6 +104,9 @@ export function useNoNodeContextMenuOptions(
   );
 
   const allowUpdate = useWkSelector(mayEditAnnotation);
+  // In concurrent collaboration mode, creating new (default) trees/nodes is not allowed; only
+  // proofreading (agglomerate) operations remain available.
+  const isConcurrentCollabMode = useWkSelector(isConcurrentCollaborationMode);
 
   const maybeUnmappedSegmentId =
     globalPosition != null ? getUnmappedSegmentIdForPosition(globalPosition) : null;
@@ -131,7 +137,9 @@ export function useNoNodeContextMenuOptions(
   const isConnectomeMappingEnabled = useWkSelector(hasConnectomeFile);
   const isMultiSplitActive = useWkSelector((state) => state.userConfiguration.isMultiSplitActive);
   const maybeMinCutPartitions = useWkSelector((state) =>
-    volumeTracing ? state.localSegmentationData[volumeTracing.tracingId]?.minCutPartitions : null,
+    volumeTracing
+      ? state.localSegmentationStateByLayer[volumeTracing.tracingId]?.minCutPartitions
+      : null,
   );
   const areSkeletonGeometriesTransformed = useWkSelector(areGeometriesTransformed);
 
@@ -175,6 +183,7 @@ export function useNoNodeContextMenuOptions(
         positionInLayerSpace,
         additionalCoordinates,
         currentMeshFile.name,
+        undefined,
         undefined,
         undefined,
       ),
@@ -307,7 +316,7 @@ export function useNoNodeContextMenuOptions(
             onClick: () =>
               handleCreateNodeFromGlobalPosition(globalPositionForNode, viewport, false),
             label: "Create Node here",
-            disabled: areSkeletonGeometriesTransformed,
+            disabled: areSkeletonGeometriesTransformed || isConcurrentCollabMode,
           },
           {
             key: "create-node-with-tree",
@@ -323,7 +332,7 @@ export function useNoNodeContextMenuOptions(
                   : null}
               </>
             ),
-            disabled: areSkeletonGeometriesTransformed,
+            disabled: areSkeletonGeometriesTransformed || isConcurrentCollabMode,
           },
           {
             key: "load-agglomerate-tree",

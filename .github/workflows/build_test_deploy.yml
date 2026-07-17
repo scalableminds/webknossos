@@ -99,11 +99,10 @@ jobs:
         run: tools/assert-complete-migrations.sh
       - name: Assert no 'SELECT *'  are present in scala files
         run: tools/assert-no-select-asterisk-present.sh
-      # Backend format check is currently disabled after scala 3 upgrade, see https://github.com/scalableminds/webknossos/issues/9606
-      # - name: Check backend formatting
-      #   run: sbt "scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"
+      - name: Check backend formatting and lint
+        run: sbt --client "scalafmtCheck; Test/scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck; scalafix --check; Test/scalafix --check; util/scalafix --check; webknossosTracingstore/scalafix --check; webknossosDatastore/scalafix --check"
       - name: Run backend unit tests
-        run: sbt -v "testOnly backend.*"
+        run: sbt --client -v "testOnly backend.*"
 
       - name: Start Fossildb for e2e tests
         run: docker compose --file .github/docker-compose.yml up -d fossildb
@@ -113,7 +112,7 @@ jobs:
         uses: ./.github/actions/retry
         with:
           run: |
-            sbt "testOnly e2e.* -- -Dtracingstore.fossildb.address=localhost -Dtracingstore.redis.address=localhost -Ddatastore.redis.address=localhost -Ddatastore.watchFileSystem.enabled=false"
+            sbt --client "testOnly e2e.* -- -Dtracingstore.fossildb.address=localhost -Dtracingstore.redis.address=localhost -Ddatastore.redis.address=localhost -Ddatastore.watchFileSystem.enabled=false"
           retries: 3
       - name: Assert non-empty e2e files
         run: bash -c '[ $(ls -1 frontend/javascripts/test/snapshots/type_check | wc -l) -gt 0 ]'
@@ -122,8 +121,6 @@ jobs:
 
   build-smoketest-push:
     runs-on: ubuntu-22.04
-    permissions:
-      deployments: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -181,12 +178,8 @@ jobs:
         env:
           WK_VERSION: ${{ github.run_id }}
 
-      - name: Build webknossos (sbt)
-        run: sbt -DfailOnWarning compile stage
-      - name: Build webknossos-datastore (sbt)
-        run: sbt -DfailOnWarning "project webknossosDatastore" compile stage
-      - name: Build webknossos-tracingstore (sbt)
-        run: sbt -DfailOnWarning "project webknossosTracingstore" compile stage
+      - name: Compile and stage webknossos, datastore and tracingstore (sbt)
+        run: sbt -DfailOnWarning "compile; stage; webknossosDatastore/stage; webknossosTracingstore/stage"
       - name: Checksum App Dirs
         run: find app webknossos-datastore/app webknossos-tracingstore/app -type f -exec md5sum {} \; | sort -k 2 | md5sum > app_checksum.txt
 
@@ -224,7 +217,7 @@ jobs:
           outputs: |
             type=image
 
-      - name: Start webknossos, datastore and tracingstore for smoke test
+      - name: Start webknossos, datastore and tracingstore via docker for smoke test
         run: |
           set -e
           docker compose --file .github/docker-compose.yml up -d \
@@ -258,87 +251,42 @@ jobs:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PASS }}
 
-      - name: Push webknossos image
+      - name: Push webknossos, datastore and tracingstore images
         if: ${{ ! startsWith(github.ref, 'refs/tags/') && github.actor != 'dependabot[bot]' }}
         uses: ./.github/actions/retry
         with:
-          run: docker push "scalableminds/webknossos:${{ env.DOCKER_TAG }}"
+          # Push all images in parallel. Retry wraps all, so successes may be retried too if one fails. That’s ok, it’s idempotent.
+          run: |
+            set -o pipefail
+            pids=()
+            for image in webknossos webknossos-datastore webknossos-tracingstore; do
+              # with sed, prepend image name for clean logging despite concurrency
+              docker push "scalableminds/$image:${{ env.DOCKER_TAG }}" 2>&1 | sed -u "s/^/[$image] /" &
+              pids+=($!)
+            done
+            fail=0
+            for pid in "${pids[@]}"; do wait "$pid" || fail=1; done
+            exit $fail
           retries: 5
           retry_delay_seconds: 10
-      - name: Push normalized webknossos image
+      - name: Push normalized webknossos, datastore and tracingstore images
         if: ${{ github.actor != 'dependabot[bot]' }}
         uses: ./.github/actions/retry
         with:
-          run: docker push "scalableminds/webknossos:${{ env.NORMALIZED_BRANCH }}"
+          # Push all images in parallel. Retry wraps all, so successes may be retried too if one fails. That’s ok, it’s idempotent.
+          run: |
+            set -o pipefail
+            pids=()
+            for image in webknossos webknossos-datastore webknossos-tracingstore; do
+              # with sed, prepend image name for clean logging despite concurrency
+              docker push "scalableminds/$image:${{ env.NORMALIZED_BRANCH }}" 2>&1 | sed -u "s/^/[$image] /" &
+              pids+=($!)
+            done
+            fail=0
+            for pid in "${pids[@]}"; do wait "$pid" || fail=1; done
+            exit $fail
           retries: 5
           retry_delay_seconds: 10
-      - name: Push webknossos-datastore image
-        if: ${{ ! startsWith(github.ref, 'refs/tags/') && github.actor != 'dependabot[bot]' }}
-        uses: ./.github/actions/retry
-        with:
-          run: docker push "scalableminds/webknossos-datastore:${{ env.DOCKER_TAG }}"
-          retries: 5
-          retry_delay_seconds: 10
-      - name: Push normalized webknossos-datastore image
-        if: ${{ github.actor != 'dependabot[bot]' }}
-        uses: ./.github/actions/retry
-        with:
-          run: docker push "scalableminds/webknossos-datastore:${{ env.NORMALIZED_BRANCH }}"
-          retries: 5
-          retry_delay_seconds: 10
-      - name: Push webknossos-tracingstore image
-        if: ${{ ! startsWith(github.ref, 'refs/tags/') && github.actor != 'dependabot[bot]' }}
-        uses: ./.github/actions/retry
-        with:
-          run: docker push "scalableminds/webknossos-tracingstore:${{ env.DOCKER_TAG }}"
-          retries: 5
-          retry_delay_seconds: 10
-      - name: Push normalized webknossos-tracingstore image
-        if: ${{ github.actor != 'dependabot[bot]' }}
-        uses: ./.github/actions/retry
-        with:
-          run: docker push "scalableminds/webknossos-tracingstore:${{ env.NORMALIZED_BRANCH }}"
-          retries: 5
-          retry_delay_seconds: 10
-      - name: Check autodeploy label
-        id: autodeploy
-        run: |
-          LABELS=$(gh pr list --head "$GITHUB_REF_NAME" --json labels --jq '.[0].labels[].name' 2>/dev/null || echo "")
-          if echo "$LABELS" | grep -qx "autodeploy"; then
-            echo "enabled=true" >> "$GITHUB_OUTPUT"
-            SANITIZED=$(echo "$GITHUB_REF_NAME" | tr -cd '[:alnum:]' | tr '[:upper:]' '[:lower:]' | sed 's/^[0-9]*//')
-            echo "env_url=https://${SANITIZED}.webknossos.xyz" >> "$GITHUB_OUTPUT"
-          fi
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Start deployment
-        if: steps.autodeploy.outputs.enabled == 'true'
-        uses: bobheadxi/deployments@v1.5.0
-        id: gh_deployment
-        with:
-          step: start
-          token: ${{ secrets.GITHUB_TOKEN }}
-          env: dev
-      - name: Trigger autodeployment hook
-        if: steps.autodeploy.outputs.enabled == 'true'
-        run: |
-          curl -X POST https://kubernetix.scm.io/hooks/onBranchImagePushed \
-            -H "Content-Type: application/json" \
-            -H "X-Auth-Token: $AUTO_DEV_DEPLOY_TOKEN" \
-            -d "{\"branch\": \"$GITHUB_REF_NAME\"}"
-        env:
-          AUTO_DEV_DEPLOY_TOKEN: ${{ secrets.AUTO_DEV_DEPLOY_TOKEN }}
-      - name: Finish deployment
-        if: always() && steps.gh_deployment.outputs.deployment_id != ''
-        uses: bobheadxi/deployments@v1.5.0
-        with:
-          step: finish
-          token: ${{ secrets.GITHUB_TOKEN }}
-          status: ${{ job.status }}
-          env: ${{ steps.gh_deployment.outputs.env }}
-          deployment_id: ${{ steps.gh_deployment.outputs.deployment_id }}
-          env_url: ${{ steps.autodeploy.outputs.env_url }}
-          override: false
       - name: Slack Notification
         if: github.ref == 'refs/heads/master'
         run: .github/slack-notification.sh

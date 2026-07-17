@@ -3,17 +3,18 @@ package com.scalableminds.webknossos.datastore.datareaders.zarr3
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkReader, ChunkUtils, DatasetArray}
 import com.scalableminds.webknossos.datastore.datavault.{ByteRange, StartEndExclusiveByteRange, VaultPath}
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataSourceId}
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.Box.tryo
-import ucar.ma2.{Array => MultiArray}
+import com.scalableminds.util.box.Box.tryo
+import ucar.ma2.Array as MultiArray
 
 import scala.concurrent.ExecutionContext
 
-object Zarr3Array extends LazyLogging with FoxImplicits {
+object Zarr3Array extends LazyLogging {
 
   def open(
       path: VaultPath,
@@ -23,7 +24,7 @@ object Zarr3Array extends LazyLogging with FoxImplicits {
       channelIndex: Option[Int],
       additionalAxes: Option[Seq[AdditionalAxis]],
       sharedChunkContentsCache: AlfuCache[String, MultiArray]
-  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[Zarr3Array] =
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Zarr3Array] =
     for {
       headerBytes <- (path / Zarr3ArrayHeader.FILENAME_ZARR_JSON)
         .readBytes() ?~> s"Could not read header at ${Zarr3ArrayHeader.FILENAME_ZARR_JSON}"
@@ -129,7 +130,7 @@ class Zarr3Array(
 
   private def readAndParseShardIndex(
       shardPath: VaultPath
-  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[(Long, Long)]] =
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Array[(Long, Long)]] =
     for {
       shardIndexRaw <- readShardIndex(shardPath) ?-> Msg.Zarr.readShardIndexFailed
       parsed = parseShardIndex(shardIndexRaw)
@@ -144,7 +145,7 @@ class Zarr3Array(
     }
   private def getShardIndexSize = shardIndexEntryLength * chunksPerShard + shardIndexChecksumLength
 
-  private def readShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext, tc: TokenContext) =
+  private def readShardIndex(shardPath: VaultPath)(using ec: ExecutionContext, tc: TokenContext) =
     shardingCodec match {
       case Some(codec) if codec.index_location == IndexLocationSetting.start =>
         shardPath.readBytes(ByteRange.startEndExclusive(0, getShardIndexSize.toLong))
@@ -182,7 +183,7 @@ class Zarr3Array(
 
   override protected def getShardedChunkPathAndRange(
       chunkIndex: Array[Int]
-  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[(VaultPath, StartEndExclusiveByteRange)] =
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[(VaultPath, StartEndExclusiveByteRange)] =
     for {
       shardCoordinates <- chunkIndexToShardIndex(chunkIndex).headOption.toFox
       shardFilename = getChunkFilename(shardCoordinates)

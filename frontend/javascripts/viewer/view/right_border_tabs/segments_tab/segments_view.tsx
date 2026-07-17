@@ -4,7 +4,6 @@ import Icon, {
   CloseOutlined,
   DeleteOutlined,
   DownloadOutlined,
-  DownOutlined,
   ExclamationCircleOutlined,
   ExpandAltOutlined,
   EyeInvisibleOutlined,
@@ -131,6 +130,7 @@ import {
   getGroupNodeKey,
   MISSING_GROUP_ID,
 } from "../trees_tab/tree_hierarchy_view_helpers";
+import { TreeSwitcherIcon } from "../trees_tab/tree_switcher_icon";
 import { PrecomputeMeshesPopover } from "./precompute_meshes_popover";
 import { SegmentDetailsPanel } from "./segment_details_panel";
 import { SegmentStatisticsModal } from "./segment_statistics_modal";
@@ -195,11 +195,11 @@ const mapStateToProps = (state: WebknossosState) => {
     datasetName: state.dataset.name,
     availableMeshFiles:
       visibleSegmentationLayer != null
-        ? state.localSegmentationData[visibleSegmentationLayer.name].availableMeshFiles
+        ? state.localSegmentationStateByLayer[visibleSegmentationLayer.name].availableMeshFiles
         : null,
     currentMeshFile:
       visibleSegmentationLayer != null
-        ? state.localSegmentationData[visibleSegmentationLayer.name].currentMeshFile
+        ? state.localSegmentationStateByLayer[visibleSegmentationLayer.name].currentMeshFile
         : null,
     activeUser: state.activeUser,
     preferredQualityForMeshPrecomputation:
@@ -245,6 +245,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
         seedPosition,
         seedAdditionalCoordinates,
         meshFileName,
+        undefined,
         undefined,
       ),
     );
@@ -1629,7 +1630,9 @@ class SegmentsView extends React.Component<Props, State> {
                                 onCheck={this.onCheck}
                                 checkedKeys={checkedKeys}
                                 checkable={this.props.showCheckboxes}
-                                switcherIcon={<DownOutlined />}
+                                switcherIcon={({ expanded }) => (
+                                  <TreeSwitcherIcon expanded={expanded} />
+                                )}
                                 titleRender={this.titleRender}
                                 style={{
                                   marginLeft: -24, // hide switcherIcon for root group

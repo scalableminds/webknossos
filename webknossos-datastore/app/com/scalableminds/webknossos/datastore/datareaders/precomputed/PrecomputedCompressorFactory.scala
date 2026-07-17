@@ -30,9 +30,9 @@ object PrecomputedCompressorFactory {
 
   private def getCompressorForEncoding(header: PrecomputedScaleHeader) =
     header.precomputedScale.encoding.toLowerCase match {
-      case "raw"       => nullCompressor
-      case "jpeg"      => new JpegCompressor
-      case "compresso" => new CompressoCompressor
+      case "raw"                     => nullCompressor
+      case "jpeg"                    => new JpegCompressor
+      case "compresso"               => new CompressoCompressor
       case "compressed_segmentation" =>
         new CompressedSegmentationCompressor(
           header.resolvedDataType,

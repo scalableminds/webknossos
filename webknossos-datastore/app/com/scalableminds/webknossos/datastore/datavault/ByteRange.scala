@@ -40,14 +40,15 @@ object ByteRange extends HeaderNames {
 
   def fromRequest(request: Request[AnyContent])(implicit ec: ExecutionContext): Fox[ByteRange] =
     request.headers.get(RANGE) match {
-      case None => Fox.successful(ByteRange.complete)
+      case None              => Fox.successful(ByteRange.complete)
       case Some(rangeHeader) =>
         rangeHeader match {
           case byteRangeRegex(start, end) => Fox.successful(ByteRange.startEndInclusive(start.toLong, end.toLong))
           case suffixRangeRegex(length)   => Fox.successful(ByteRange.suffix(length.toInt))
-          case _ =>
+          case _                          =>
             Fox.failure(
-              s"Invalid range header “$rangeHeader”, only single start-end byte ranges and suffix-ranges are supported.")
+              s"Invalid range header “$rangeHeader”, only single start-end byte ranges and suffix-ranges are supported."
+            )
         }
     }
 }

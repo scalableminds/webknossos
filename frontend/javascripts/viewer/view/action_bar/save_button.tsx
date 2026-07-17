@@ -44,6 +44,11 @@ const handleSave = (event?: React.MouseEvent<HTMLElement>) => {
   Model.forceSave();
 };
 
+// Hoisted to module scope so that the "last result" cache survives across
+// polling iterations. Otherwise, setSaveInfo would receive a fresh object
+// on every poll which would re-render the button even when nothing changed.
+const getPushQueueStats = reuseInstanceOnEquality(Model.getPushQueueStats);
+
 function SaveButton() {
   const progressFraction = useWkSelector((state) => {
     // For a low action count, the progress info would show only for a very short amount of time.
@@ -78,8 +83,6 @@ function SaveButton() {
     if (showUnsavedWarning) {
       reportUnsavedDurationThresholdExceeded();
     }
-
-    const getPushQueueStats = reuseInstanceOnEquality(Model.getPushQueueStats);
 
     const newSaveInfo = getPushQueueStats();
     setIsStateSaved(isStateSaved);

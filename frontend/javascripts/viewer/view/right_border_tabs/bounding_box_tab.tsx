@@ -58,13 +58,16 @@ export default function BoundingBoxTab() {
   const bboxTableRef: Parameters<typeof Table>[0]["ref"] = useRef(null);
   const [selectedBoundingBoxForExport, setSelectedBoundingBoxForExport] =
     useState<UserBoundingBox | null>(null);
-  const annotation = useWkSelector((state) => state.annotation);
-  const allowUpdate = annotation.isUpdatingCurrentlyAllowed;
-  const isLockedByOwner = annotation.isLockedByOwner;
+  const allowUpdate = useWkSelector((state) => state.annotation.isUpdatingCurrentlyAllowed);
+  const isLockedByOwner = useWkSelector((state) => state.annotation.isLockedByOwner);
   const isOwner = useWkSelector((state) => isAnnotationOwner(state));
   const dataset = useWkSelector((state) => state.dataset);
   const activeBoundingBoxId = useWkSelector((state) => state.uiInformation.activeUserBoundingBoxId);
-  const { userBoundingBoxes } = getSomeTracing(annotation);
+  // Select the bounding boxes directly (instead of the whole annotation) so that
+  // this tab only re-renders when the boxes actually change.
+  const userBoundingBoxes = useWkSelector(
+    (state) => getSomeTracing(state.annotation).userBoundingBoxes,
+  );
   const mipRaymarchingSteps = useWkSelector((state) => state.userConfiguration.mipRaymarchingSteps);
   const mipDepthWrite = useWkSelector((state) => state.userConfiguration.mipDepthWrite);
   const [contextMenuPosition, setContextMenuPosition] = useState<[number, number] | null>(null);

@@ -24,15 +24,17 @@ import {
 import Markdown from "libs/markdown_adapter";
 import { useWkSelector } from "libs/react_hooks";
 import { mayUserEditDataset, pluralize, safeNumberToStr } from "libs/utils";
+import memoizeOne from "memoize-one";
 import messages from "messages";
 import React, { type CSSProperties } from "react";
 import { connect, useDispatch } from "react-redux";
 import { Link } from "react-router-dom";
 import type { Dispatch } from "redux";
-import type { APIDataset, APIUser } from "types/api_types";
+import type { APIDataset, APIUser, APIUserBase } from "types/api_types";
 import type { EmptyObject } from "types/type_utils";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import constants, { ControlModeEnum, LongUnitToShortUnitMap } from "viewer/constants";
+import { reuseInstanceOnEquality } from "viewer/model/accessors/accessor_helpers";
 import {
   getSkeletonStats,
   getStats,
@@ -57,7 +59,8 @@ import {
   setAnnotationNameAction,
 } from "viewer/model/actions/annotation_actions";
 import { ensureHasNewestVersionAction } from "viewer/model/actions/save_actions";
-import type { StoreAnnotation, Task, WebknossosState } from "viewer/store";
+import Store, { type Task, type WebknossosState } from "viewer/store";
+import DomVisibilityObserver from "viewer/view/components/dom_visibility_observer";
 import { KeyboardKeyIcon } from "../components/keyboard_key_icon";
 import { MarkdownModal } from "../components/markdown_modal";
 import type { KeyboardShortcutId } from "../keyboard_shortcuts/keyboard_shortcut_constants";
@@ -68,11 +71,13 @@ import type {
 import { keySequenceToUiElements } from "../keyboard_shortcuts/keyboard_shortcut_utils";
 
 type StateProps = {
-  annotation: StoreAnnotation;
+  annotationName: string;
+  annotationDescription: string;
+  annotationOwner: APIUserBase | null | undefined;
+  annotationContributors: APIUserBase[];
   dataset: APIDataset;
   task: Task | null | undefined;
   activeUser: APIUser | null | undefined;
-  activeMagInfo: ReturnType<typeof getActiveMagInfo>;
   isDatasetViewMode: boolean;
   isPlaneMode: boolean;
   mayEditAnnotation: boolean;
@@ -94,6 +99,14 @@ type ShortcutInfo = {
   keybinding: React.ReactNode[];
   action: string;
 };
+
+const datasetInfoTabId = "dataset-info-tab";
+
+// getStats iterates over all trees which can be expensive for large tracings.
+// memoizeOne avoids recomputing while the annotation is unchanged, and
+// reuseInstanceOnEquality keeps the result instance stable when a mutation
+// did not change any of the counts (to avoid unnecessary re-renders).
+const cachedGetStats = reuseInstanceOnEquality(memoizeOne(getStats));
 
 const getShortcuts = (
   keyboardShortcutsConfig: KeyboardShortcutsMap,
@@ -343,6 +356,70 @@ export function AnnotationStats({
   );
 }
 
+function AnnotationStatisticsSection() {
+  const stats = useWkSelector((state) => cachedGetStats(state.annotation));
+  return <AnnotationStats stats={stats} asInfoBlock />;
+}
+
+function MagInfoRow() {
+  const activeMagInfo = useWkSelector(getActiveMagInfo);
+  const dataset = useWkSelector((state) => state.dataset);
+  const { representativeMag, isActiveMagGlobal, activeMagOfEnabledLayers } = activeMagInfo;
+
+  const renderMagsTooltip = () => {
+    // The annotation is read lazily when the tooltip is actually rendered
+    // (i.e., on hover) so that this row doesn't need to subscribe to (and
+    // re-render on) every annotation mutation.
+    const { annotation } = Store.getState();
+    const magUnion = getMagnificationUnion(dataset);
+    return (
+      <div style={{ width: 200 }}>
+        Rendered magnification per layer:
+        <ul>
+          {Object.entries(activeMagOfEnabledLayers).map(([layerName, mag]) => {
+            const readableName = getReadableNameForLayerName(dataset, annotation, layerName);
+
+            return (
+              <li key={layerName}>
+                {readableName}: {mag ? mag.join("-") : "none"}
+              </li>
+            );
+          })}
+        </ul>
+        Available magnifications:
+        <ul>
+          {magUnion.map((mags) => (
+            <li key={mags[0].join()}>{mags.map((mag) => mag.join("-")).join(", ")}</li>
+          ))}
+        </ul>
+        {messages["dataset.mag_explanation"]}
+      </div>
+    );
+  };
+
+  return representativeMag != null ? (
+    <FastTooltip dynamicRenderer={renderMagsTooltip} placement="left" wrapper="tr">
+      <td
+        style={{
+          paddingRight: 4,
+          paddingTop: 8,
+        }}
+      >
+        <Icon component={IconDownsampling} className="info-tab-icon" aria-label="Magnification" />
+      </td>
+      <td
+        style={{
+          paddingRight: 4,
+          paddingTop: 8,
+        }}
+      >
+        {representativeMag.join("-")}
+        {isActiveMagGlobal ? "" : "*"}{" "}
+      </td>
+    </FastTooltip>
+  ) : null;
+}
+
 class DatasetInfoTabView extends React.PureComponent<Props, State> {
   state: State = {
     isMarkdownModalOpen: false,
@@ -367,7 +444,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
   getAnnotationStatistics() {
     if (this.props.isDatasetViewMode) return null;
 
-    return <AnnotationStats stats={getStats(this.props.annotation)} asInfoBlock />;
+    return <AnnotationStatisticsSection />;
   }
 
   getKeyboardShortcuts() {
@@ -471,7 +548,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
   getAnnotationName() {
     if (this.props.isDatasetViewMode) return null;
 
-    const annotationName = this.props.annotation.name || "[unnamed]";
+    const annotationName = this.props.annotationName || "[unnamed]";
 
     if (this.props.task != null) {
       // In case we have a task display its id
@@ -506,8 +583,8 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
   getAnnotationDescription() {
     if (this.props.isDatasetViewMode) return null;
 
-    const annotationDescription = this.props.annotation.description || "[no description]";
-    const isDescriptionEmpty = this.props.annotation.description === "";
+    const annotationDescription = this.props.annotationDescription || "[no description]";
+    const isDescriptionEmpty = this.props.annotationDescription === "";
     const description = isDescriptionEmpty ? (
       annotationDescription
     ) : (
@@ -552,7 +629,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
           <MarkdownModal
             label="Annotation Description"
             placeholder="[No description]"
-            source={this.props.annotation.description}
+            source={this.props.annotationDescription}
             isOpen={this.state.isMarkdownModalOpen}
             onOk={() => this.setState({ isMarkdownModalOpen: false })}
             onChange={this.props.setAnnotationDescription}
@@ -577,8 +654,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
   };
 
   maybePrintOwnerAndContributors() {
-    const { activeUser } = this.props;
-    const { owner, contributors } = this.props.annotation;
+    const { activeUser, annotationOwner: owner, annotationContributors: contributors } = this.props;
 
     if (!owner) {
       return null;
@@ -628,92 +704,50 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
     );
   }
 
-  renderMagsTooltip = () => {
-    const { dataset, annotation, activeMagInfo } = this.props;
-    const { activeMagOfEnabledLayers } = activeMagInfo;
-    const magUnion = getMagnificationUnion(dataset);
-    return (
-      <div style={{ width: 200 }}>
-        Rendered magnification per layer:
-        <ul>
-          {Object.entries(activeMagOfEnabledLayers).map(([layerName, mag]) => {
-            const readableName = getReadableNameForLayerName(dataset, annotation, layerName);
-
-            return (
-              <li key={layerName}>
-                {readableName}: {mag ? mag.join("-") : "none"}
-              </li>
-            );
-          })}
-        </ul>
-        Available magnifications:
-        <ul>
-          {magUnion.map((mags) => (
-            <li key={mags[0].join()}>{mags.map((mag) => mag.join("-")).join(", ")}</li>
-          ))}
-        </ul>
-        {messages["dataset.mag_explanation"]}
-      </div>
-    );
-  };
-
-  getMagInfo() {
-    const { activeMagInfo } = this.props;
-    const { representativeMag, isActiveMagGlobal } = activeMagInfo;
-
-    return representativeMag != null ? (
-      <FastTooltip dynamicRenderer={this.renderMagsTooltip} placement="left" wrapper="tr">
-        <td
-          style={{
-            paddingRight: 4,
-            paddingTop: 8,
-          }}
-        >
-          <Icon component={IconDownsampling} className="info-tab-icon" aria-label="Magnification" />
-        </td>
-        <td
-          style={{
-            paddingRight: 4,
-            paddingTop: 8,
-          }}
-        >
-          {representativeMag.join("-")}
-          {isActiveMagGlobal ? "" : "*"}{" "}
-        </td>
-      </FastTooltip>
-    ) : null;
-  }
-
   render() {
     const { dataset } = this.props;
 
     return (
-      <div className="flex-overflow padded-tab-content">
-        {WkDevFlags.debugging.showCurrentVersionInInfoTab && <DebugInfo />}
-        {this.getAnnotationName()}
-        {this.getAnnotationDescription()}
-        {this.getDatasetName()}
-        {this.maybePrintOrganization()}
-        {this.maybePrintOwnerAndContributors()}
+      <div id={datasetInfoTabId} className="flex-overflow padded-tab-content">
+        <DomVisibilityObserver targetId={datasetInfoTabId}>
+          {(isVisibleInDom) => {
+            // Skip rendering entirely while the tab is hidden, except when the
+            // markdown modal is open (it would disappear otherwise).
+            if (!isVisibleInDom && !this.state.isMarkdownModalOpen) {
+              return null;
+            }
 
-        <div className="info-tab-block">
-          <p className="sidebar-label">Dimensions</p>
-          <table
-            style={{
-              fontSize: 14,
-              marginLeft: 4,
-            }}
-          >
-            <tbody>
-              <VoxelSizeRow dataset={dataset} />
-              <DatasetExtentRow dataset={dataset} />
-              {this.getMagInfo()}
-            </tbody>
-          </table>
-        </div>
+            return (
+              <React.Fragment>
+                {WkDevFlags.debugging.showCurrentVersionInInfoTab && <DebugInfo />}
+                {this.getAnnotationName()}
+                {this.getAnnotationDescription()}
+                {this.getDatasetName()}
+                {this.maybePrintOrganization()}
+                {this.maybePrintOwnerAndContributors()}
 
-        {this.getAnnotationStatistics()}
-        {this.getKeyboardShortcuts()}
+                <div className="info-tab-block">
+                  <p className="sidebar-label">Dimensions</p>
+                  <table
+                    style={{
+                      fontSize: 14,
+                      marginLeft: 4,
+                    }}
+                  >
+                    <tbody>
+                      <VoxelSizeRow dataset={dataset} />
+                      <DatasetExtentRow dataset={dataset} />
+                      <MagInfoRow />
+                    </tbody>
+                  </table>
+                </div>
+
+                {this.getAnnotationStatistics()}
+                {this.getKeyboardShortcuts()}
+              </React.Fragment>
+            );
+          }}
+        </DomVisibilityObserver>
       </div>
     );
   }
@@ -733,7 +767,14 @@ function DebugInfo() {
 }
 
 const mapStateToProps = (state: WebknossosState): StateProps => ({
-  annotation: state.annotation,
+  // Select only the needed annotation fields (instead of the whole annotation)
+  // so that this PureComponent doesn't re-render on every node placement or
+  // brush stroke. Stats and mag info have their own narrowly-subscribed
+  // subcomponents (AnnotationStatisticsSection and MagInfoRow).
+  annotationName: state.annotation.name,
+  annotationDescription: state.annotation.description,
+  annotationOwner: state.annotation.owner,
+  annotationContributors: state.annotation.contributors,
   dataset: state.dataset,
   task: state.task,
   activeUser: state.activeUser,
@@ -741,7 +782,6 @@ const mapStateToProps = (state: WebknossosState): StateProps => ({
   isPlaneMode: constants.MODES_PLANE.includes(state.temporaryConfiguration.viewMode),
   keyboardShortcutsConfig: state.keyboardConfiguration.shortcutsConfig,
   unmodifiedLayoutMap: state.keyboardConfiguration.unmodifiedLayoutMap,
-  activeMagInfo: getActiveMagInfo(state),
   mayEditAnnotation: mayEditAnnotationProperties(state),
 });
 

@@ -61,8 +61,8 @@ export function useMipContextMenuItems(
       let bestSize = -1;
       let fallbackZoomStep: number | null = null;
       let fallbackSize = Number.MAX_SAFE_INTEGER;
+      const [bboxW, bboxH, bboxD] = bBoxClampedToLayerBounds[layer.name].getSize();
       for (const [zoomStep, mag] of mags) {
-        const [bboxW, bboxH, bboxD] = bBoxClampedToLayerBounds[layer.name].getSize();
         const voxels =
           Math.ceil(bboxW / mag[0]) * Math.ceil(bboxH / mag[1]) * Math.ceil(bboxD / mag[2]);
         const size = voxels * bytesPerVoxel;

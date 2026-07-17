@@ -48,12 +48,15 @@ export function AnnotationsCsvInput({ onClose }: { onClose: () => void }) {
 
   const validator = useCallback((_rule: RuleObject, value?: string) => {
     const text = value ?? "";
-    const valid = text.split("\n").every((line) => !line.includes("#") && !line.includes(","));
+    const isValidLine = (line: string) => line.trim() === "" || URL.canParse(line);
+    const valid = text.split("\n").every(isValidLine);
 
     return valid
       ? Promise.resolve()
       : Promise.reject(
-          new Error("Each line should only contain a single annotation ID or URL (without # or ,)"),
+          new Error(
+            "Each line should only contain a single annotation/task ID or a WEBKNOSSOS URL",
+          ),
         );
   }, []);
 

@@ -166,19 +166,19 @@ export function getTree(
   /**
    * Returns a specific tree by ID or the active tree, optionally filtered by type.
    */
-  const trees = getTreesWithType(skeletonTracing, type);
+  const effectiveTreeId = treeId ?? skeletonTracing.activeTreeId;
 
-  if (treeId != null) {
-    return trees.getNullable(treeId) || null;
+  if (effectiveTreeId == null) {
+    return null;
   }
 
-  const { activeTreeId } = skeletonTracing;
+  const tree = skeletonTracing.trees.getNullable(effectiveTreeId);
 
-  if (activeTreeId != null) {
-    return trees.getNullable(activeTreeId) || null;
+  if (tree == null || (type != null && tree.type !== type)) {
+    return null;
   }
 
-  return null;
+  return tree;
 }
 
 export function getTreeAndNode(
@@ -193,18 +193,25 @@ export function getTreeAndNode(
    */
   let tree: Tree | undefined;
 
-  const trees = getTreesWithType(skeletonTracing, type);
+  // Note that the tree is looked up directly (plus a type check) instead of
+  // building a type-filtered TreeMap first, as this function is called from
+  // hot code paths (e.g., on every mousemove while dragging a node).
+  const { trees } = skeletonTracing;
 
   if (treeId != null) {
     tree = trees.getNullable(treeId);
   } else if (nodeId != null) {
-    tree = trees.values().find((__) => __.nodes.has(nodeId));
+    tree = trees.values().find((__) => (type == null || __.type === type) && __.nodes.has(nodeId));
   } else {
     const { activeTreeId } = skeletonTracing;
 
     if (activeTreeId != null) {
       tree = trees.getNullable(activeTreeId);
     }
+  }
+
+  if (tree != null && type != null && tree.type !== type) {
+    tree = undefined;
   }
 
   if (tree != null) {

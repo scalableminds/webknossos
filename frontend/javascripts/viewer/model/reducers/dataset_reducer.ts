@@ -1,3 +1,4 @@
+import AppendOnlyChunkedList from "libs/append_only_chunked_list";
 import DiffableMap from "libs/diffable_map";
 import { deepIterate } from "libs/utils";
 import { ContourModeEnum, MappingStatusEnum } from "viewer/constants";
@@ -43,7 +44,7 @@ function DatasetReducer(state: WebknossosState, action: Action): WebknossosState
           activeUnmappedSegmentId: null,
           lastLabelActions: [],
           contourTracingMode: ContourModeEnum.DRAW,
-          contourList: [],
+          contourList: new AppendOnlyChunkedList(),
           idReservations: { SegmentGroup: [], Segment: [] },
         })),
         temporaryConfiguration: {

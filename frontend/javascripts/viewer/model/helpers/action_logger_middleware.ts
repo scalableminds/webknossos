@@ -1,16 +1,15 @@
-import drop from "lodash-es/drop";
 import type { Dispatch, Middleware, MiddlewareAPI } from "redux";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Action } from "viewer/model/actions/actions";
 
 const MAX_ACTION_LOG_LENGTH = 250;
-let actionLog: string[] = [];
+const actionLog: string[] = [];
 
 // For grouping consecutive action types
 let lastActionName: string | null = null;
 let lastActionCount: number = 0;
 
-const actionBlacklist = [
+const actionBlacklist = new Set([
   "ADD_TO_CONTOUR_LIST",
   "MOVE_FLYCAM",
   "MOVE_FLYCAM_ABSOLUTE",
@@ -26,27 +25,28 @@ const actionBlacklist = [
   "SET_VIEWPORT",
   "ZOOM_TD_VIEW",
   "UPDATE_TEMPORARY_SETTING",
-];
+]);
 export function getActionLog(): Array<string> {
   return actionLog;
 }
 export default (function actionLoggerMiddleware(_store: MiddlewareAPI) {
   return (next: Dispatch<Action>) =>
     (action: Action): Action => {
-      const isBlackListed = actionBlacklist.includes(action.type);
+      const isBlackListed = actionBlacklist.has(action.type);
 
       if (!isBlackListed) {
         if (lastActionName == null || lastActionName !== action.type) {
           actionLog.push(action.type);
           lastActionCount = 1;
+
+          if (actionLog.length > MAX_ACTION_LOG_LENGTH) {
+            actionLog.splice(0, actionLog.length - MAX_ACTION_LOG_LENGTH);
+          }
         } else {
           lastActionCount++;
           actionLog[actionLog.length - 1] = lastActionName + " * " + lastActionCount;
         }
         lastActionName = action.type;
-
-        const overflowCount = Math.max(actionLog.length - MAX_ACTION_LOG_LENGTH, 0);
-        actionLog = drop(actionLog, overflowCount);
 
         if (WkDevFlags.logActions || WkDevFlags.logFullActionObjects) {
           console.group(action.type);

@@ -357,7 +357,11 @@ export const getUp = memoizeOne(_getUp);
 export const getLeft = memoizeOne(_getLeft);
 export const getPosition = memoizeOne(_getPosition);
 export const getFlooredPosition = memoizeOne(_getFlooredPosition);
-export const getRotationInRadian = memoizeOne(_getRotationInRadian);
+// reuseInstanceOnEquality is used (instead of memoizeOne) so that the returned
+// rotation tuple keeps its instance when the flycam matrix changes due to a
+// translation only (the rotation values stay the same in that case). This way,
+// store listeners which select the rotation don't fire on every flycam movement.
+export const getRotationInRadian = reuseInstanceOnEquality(_getRotationInRadian);
 export const getRotationInDegrees = memoizeOne(_getRotationInDegrees);
 export const getFlycamRotationWithAppendedRotation = memoizeOne(
   _getFlycamRotationWithAppendedRotation,

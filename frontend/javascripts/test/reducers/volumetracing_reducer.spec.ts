@@ -235,7 +235,7 @@ describe("VolumeTracing", () => {
     const { newState, contourList } = prepareContourListTest(initialState);
     expect(newState).not.toBe(initialState);
 
-    expect(newState.localSegmentationStateByLayer[VOLUME_TRACING_ID].contourList).toEqual(
+    expect(newState.localSegmentationStateByLayer[VOLUME_TRACING_ID].contourList.toArray()).toEqual(
       contourList,
     );
   });
@@ -253,7 +253,7 @@ describe("VolumeTracing", () => {
     const { newState, contourList } = prepareContourListTest(alteredState);
     expect(newState).not.toBe(initialState);
 
-    expect(newState.localSegmentationStateByLayer[VOLUME_TRACING_ID].contourList).toEqual(
+    expect(newState.localSegmentationStateByLayer[VOLUME_TRACING_ID].contourList.toArray()).toEqual(
       contourList,
     );
   });
@@ -297,7 +297,9 @@ describe("VolumeTracing", () => {
     // And reset the list
     newState = VolumeTracingReducer(newState, resetContour);
     expect(newState).not.toBe(initialState);
-    expect(newState.localSegmentationStateByLayer[VOLUME_TRACING_ID].contourList).toEqual([]);
+    expect(newState.localSegmentationStateByLayer[VOLUME_TRACING_ID].contourList.toArray()).toEqual(
+      [],
+    );
   });
 
   describe("should merge segments", () => {

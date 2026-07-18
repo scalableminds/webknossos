@@ -1,3 +1,4 @@
+import type AppendOnlyChunkedList from "libs/append_only_chunked_list";
 import type DiffableMap from "libs/diffable_map";
 import type { Matrix4x4 } from "libs/mjs";
 import { applyMiddleware, createStore, type Middleware } from "redux";
@@ -684,7 +685,10 @@ export type LocalSegmentationState = {
   readonly lastLabelActions: Array<LabelAction>;
   readonly contourTracingMode: ContourMode;
   // Stores points of the currently drawn region in layer-space coordinates.
-  readonly contourList: Array<Vector3>;
+  // An AppendOnlyChunkedList is used since a point is appended on every
+  // mousemove event while drawing (copying a plain array on every append
+  // would make long strokes O(n²)).
+  readonly contourList: AppendOnlyChunkedList<Vector3>;
   readonly idReservations: Record<"SegmentGroup" | "Segment", { id: number; used: boolean }[]>;
   // The position of the "proofreading marker" (a cross) is stored separately.
   // In earlier versions, the anchor position of the current segment was simply used.

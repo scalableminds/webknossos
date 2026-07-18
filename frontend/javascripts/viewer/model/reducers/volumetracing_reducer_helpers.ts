@@ -1,4 +1,5 @@
 import update from "immutability-helper";
+import AppendOnlyChunkedList from "libs/append_only_chunked_list";
 import { floor3 } from "libs/utils";
 import groupBy from "lodash-es/groupBy";
 import isEqual from "lodash-es/isEqual";
@@ -174,14 +175,15 @@ export function addToContourListReducer(
   }
 
   const contourList =
-    state.localSegmentationStateByLayer[volumeTracing.tracingId]?.contourList ?? [];
+    state.localSegmentationStateByLayer[volumeTracing.tracingId]?.contourList ??
+    new AppendOnlyChunkedList<Vector3>();
   return updateLocalSegmentationState(state, volumeTracing.tracingId, {
-    contourList: [...contourList, positionInLayerSpace],
+    contourList: contourList.append(positionInLayerSpace),
   });
 }
 export function resetContourReducer(state: WebknossosState, volumeTracing: VolumeTracing) {
   return updateLocalSegmentationState(state, volumeTracing.tracingId, {
-    contourList: [],
+    contourList: new AppendOnlyChunkedList<Vector3>(),
   });
 }
 export function hideBrushReducer(state: WebknossosState) {

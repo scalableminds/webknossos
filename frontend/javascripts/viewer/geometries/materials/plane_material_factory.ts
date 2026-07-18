@@ -6,7 +6,6 @@ import {
   computeBoundingBoxFromBoundingBoxObject,
   convertNumberTo64BitTuple,
   isWindows,
-  map3,
 } from "libs/utils";
 import extend from "lodash-es/extend";
 import flattenDeep from "lodash-es/flattenDeep";
@@ -95,6 +94,12 @@ export type Uniforms = Record<
 >;
 
 const DEFAULT_COLOR = new ThreeVector3(255, 255, 255);
+
+// Preallocated scratch objects for computing the inverse flycam rotation matrix
+// (which happens on every flycam movement). Only used synchronously.
+const scratchEuler = new Euler();
+const scratchRotationMatrix = new Matrix4();
+const scratchTranslationMatrix = new Matrix4();
 
 function sanitizeName(name: string | null | undefined): string {
   if (WkDevFlags.bucketDebugging.disableLayerNameSanitization) {
@@ -511,10 +516,12 @@ class PlaneMaterialFactory {
         true,
       ),
       listenToStoreProperty(
-        (storeState) =>
-          getUnrenderableLayerInfosForCurrentZoom(storeState).map(({ layer }) => layer),
-        (unrenderableLayers) => {
-          const unrenderableLayerNames = unrenderableLayers.map((l) => l.name);
+        // Listen to the instance-stable UnrenderableLayersInfos[] value. Mapping to the
+        // layers within the selector would create a new array on every call which would
+        // cause the handler to run on every dispatched action.
+        (storeState) => getUnrenderableLayerInfosForCurrentZoom(storeState),
+        (unrenderableLayerInfos) => {
+          const unrenderableLayerNames = unrenderableLayerInfos.map(({ layer }) => layer.name);
 
           for (const dataLayer of Model.getAllLayers()) {
             const sanitizedName = sanitizeName(dataLayer.name);
@@ -614,20 +621,36 @@ class PlaneMaterialFactory {
         },
       ),
       listenToStoreProperty(
-        (storeState) => getRotationInRadian(storeState.flycam),
-        (rotation) => {
+        // The inverse flycam rotation matrix depends on the rotation *and* the position
+        // of the flycam. Therefore, listen to the flycam matrix (which changes whenever
+        // one of the two changes).
+        (storeState) => storeState.flycam.currentMatrix,
+        () => {
           const state = Store.getState();
+          const rotation = getRotationInRadian(state.flycam);
+          // The value instance of the uniform is mutated in place to avoid
+          // allocations, as this handler runs on every flycam movement.
+          const inverseFlycamRotationMatrix: Matrix4 =
+            this.uniforms.inverseFlycamRotationMatrix.value;
+
+          if (rotation[0] === 0 && rotation[1] === 0 && rotation[2] === 0) {
+            // Without a rotation, T(-position) * R⁻¹ * T(position) is always the
+            // identity, independent of the position.
+            inverseFlycamRotationMatrix.identity();
+            return;
+          }
+
           const position = getPosition(state.flycam);
 
-          const toOrigin = new Matrix4().makeTranslation(...map3((p) => -p, position));
-          const backToFlycamCenter = new Matrix4().makeTranslation(...position);
-          const invertRotation = new Matrix4()
-            .makeRotationFromEuler(new Euler(rotation[0], rotation[1], rotation[2], "ZYX"))
+          // Compute T(-position) * R⁻¹ * T(position) with preallocated scratch objects.
+          inverseFlycamRotationMatrix.makeTranslation(-position[0], -position[1], -position[2]);
+          scratchRotationMatrix
+            .makeRotationFromEuler(scratchEuler.set(rotation[0], rotation[1], rotation[2], "ZYX"))
             .invert();
-          const inverseFlycamRotationMatrix = toOrigin
-            .multiply(invertRotation)
-            .multiply(backToFlycamCenter);
-          this.uniforms.inverseFlycamRotationMatrix.value = inverseFlycamRotationMatrix;
+          scratchTranslationMatrix.makeTranslation(position[0], position[1], position[2]);
+          inverseFlycamRotationMatrix
+            .multiply(scratchRotationMatrix)
+            .multiply(scratchTranslationMatrix);
         },
       ),
     );

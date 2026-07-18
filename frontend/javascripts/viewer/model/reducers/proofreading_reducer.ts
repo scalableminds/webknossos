@@ -3,7 +3,17 @@ import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_acce
 import type { WebknossosState } from "viewer/store";
 import type { ProofreadAction } from "../actions/proofread_actions";
 
+const HANDLED_ACTION_TYPES = new Set([
+  "TOGGLE_SEGMENT_IN_PARTITION",
+  "RESET_MULTI_CUT_TOOL_PARTITIONS",
+]);
+
 function ProofreadingReducer(state: WebknossosState, action: ProofreadAction): WebknossosState {
+  if (!HANDLED_ACTION_TYPES.has(action.type)) {
+    // Check the action type before resolving the visible segmentation layer, as
+    // this reducer runs for every dispatched action.
+    return state;
+  }
   const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
   const layerName = visibleSegmentationLayer?.name;
   if (!layerName) {

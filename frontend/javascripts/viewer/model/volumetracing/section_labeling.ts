@@ -246,7 +246,7 @@ class SectionLabeler {
       Store.getState().localSegmentationStateByLayer[this.volumeTracingId].contourList;
 
     if (useActiveMag) {
-      return globalContourList;
+      return globalContourList.toArray();
     }
 
     return globalContourList.map<Vector3>((point) =>
@@ -255,7 +255,9 @@ class SectionLabeler {
   }
 
   isEmpty(): boolean {
-    return this.getContourList(true).length === 0;
+    return (
+      Store.getState().localSegmentationStateByLayer[this.volumeTracingId].contourList.length === 0
+    );
   }
 
   getFillingVoxelBuffer2D(mode: AnnotationTool): VoxelBuffer2D {

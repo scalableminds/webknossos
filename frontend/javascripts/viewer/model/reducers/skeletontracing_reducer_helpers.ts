@@ -87,6 +87,25 @@ export function getMaximumNodeId(trees: TreeMap | MutableTreeMap): number {
 
   return newMaxNodeId != null ? newMaxNodeId : Constants.MIN_NODE_ID - 1;
 }
+
+function findNewMaximumNodeId(trees: TreeMap, deletedMaxNodeId: number): number {
+  // Since node ids are assigned in ascending order, the new maximum node id after
+  // deleting the node with the (old) maximum id is usually close below the deleted id
+  // (typically, it's exactly deletedMaxNodeId - 1). Therefore, search downwards for a
+  // bounded number of candidate ids which is much cheaper than iterating over all
+  // nodes of all trees. Only fall back to the full scan if no candidate was found
+  // (e.g., because larger chunks of ids were deleted before).
+  const MAX_CANDIDATE_STEPS = 100;
+  const lowerSearchBound = Math.max(Constants.MIN_NODE_ID, deletedMaxNodeId - MAX_CANDIDATE_STEPS);
+
+  for (let candidateId = deletedMaxNodeId - 1; candidateId >= lowerSearchBound; candidateId--) {
+    if (trees.values().some((tree) => tree.nodes.has(candidateId))) {
+      return candidateId;
+    }
+  }
+
+  return getMaximumNodeId(trees);
+}
 export function getMaximumTreeId(trees: TreeMap | MutableTreeMap): number {
   const maxTreeId = max(trees.values().map((tree) => tree.treeId));
 
@@ -216,7 +235,7 @@ export function deleteNode(
   let newMaxNodeId = skeletonTracing.cachedMaxNodeId;
 
   if (node.id === newMaxNodeId) {
-    newMaxNodeId = getMaximumNodeId(newTrees);
+    newMaxNodeId = findNewMaximumNodeId(newTrees, node.id);
   }
 
   const newActiveNodeId = neighborIds.length > 0 ? Math.min(...neighborIds) : null;
@@ -290,6 +309,19 @@ function splitTreeByNodes(
     // As there are no new tree root ids, we are deleting the last node from a tree.
     // It suffices to simply update that tree within the tree collection
     return newTrees.set(activeTree.treeId, activeTree);
+  }
+
+  if (newTreeRootIds.length === 1) {
+    // Deleting a node with exactly one neighbor (i.e., a leaf) cannot split the tree
+    // into multiple components. Instead of traversing and rebuilding the whole tree,
+    // it suffices to remove the deleted edges from the tree.
+    let newEdges = activeTree.edges;
+
+    for (const deletedEdge of deletedEdges) {
+      newEdges = newEdges.removeEdge(deletedEdge);
+    }
+
+    return newTrees.set(activeTree.treeId, { ...activeTree, edges: newEdges });
   }
 
   // Traverse from each possible new root node in all directions (i.e., use each edge) and

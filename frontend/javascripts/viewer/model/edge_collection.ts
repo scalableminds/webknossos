@@ -83,6 +83,12 @@ export default class EdgeCollection implements NotEnumerableByObject {
   }
 
   removeEdge(edge: Edge): EdgeCollection {
+    if (this.edgeCount === 1) {
+      // Removing the last edge. Return a fresh, compact EdgeCollection so that its
+      // maps don't contain empty left-over chunks.
+      return new EdgeCollection();
+    }
+
     const outgoingEdges = this.outMap.getNullable(edge.source) || [];
     const ingoingEdges = this.inMap.getNullable(edge.target) || [];
     const newOutgoingEdges = outgoingEdges.filter((e) => e.target !== edge.target);

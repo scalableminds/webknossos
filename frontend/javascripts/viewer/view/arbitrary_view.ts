@@ -99,10 +99,11 @@ class FlightModeView {
       );
       this.unsubscribeFunctions.push(
         Store.subscribe(() => {
-          // Render in the next frame after the change propagated everywhere
-          window.requestAnimationFrame(() => {
-            this.needsRerender = true;
-          });
+          // Set the flag synchronously. The animation loop (which is driven by
+          // requestAnimationFrame itself) will pick it up in the next frame.
+          // Enqueuing a new requestAnimationFrame callback here would allocate a
+          // closure and a rAF queue entry on every dispatched action.
+          this.needsRerender = true;
         }),
       );
 

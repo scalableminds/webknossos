@@ -11,7 +11,6 @@ import type { Message } from "libs/toast";
 import Toast from "libs/toast";
 import { map3 } from "libs/utils";
 import isEqual from "lodash-es/isEqual";
-import memoizeOne from "memoize-one";
 import messages from "messages";
 import { MathUtils, Matrix4 } from "three";
 import {
@@ -724,10 +723,43 @@ export function* diffTrees(
   }
 }
 
-export const cachedDiffTrees = memoizeOne(
-  (tracingId: string, prevTrees: TreeMap, trees: TreeMap, useDeepEqualityCheck: boolean) =>
-    Array.from(diffTrees(tracingId, prevTrees, trees, useDeepEqualityCheck)),
-);
+// A small multi-slot cache is used (instead of memoizeOne) since cachedDiffTrees
+// is called from several consumers (the save saga, the skeleton geometry and the
+// merger mode) whose prevTrees instances can lag behind each other. With a
+// single-slot cache, interleaved calls with different arguments would constantly
+// evict each other and re-run the diff.
+const DIFF_TREES_CACHE_SIZE = 4;
+const diffTreesCache: Array<{
+  args: [string, TreeMap, TreeMap, boolean];
+  result: UpdateActionWithoutIsolationRequirement[];
+}> = [];
+
+export function cachedDiffTrees(
+  tracingId: string,
+  prevTrees: TreeMap,
+  trees: TreeMap,
+  useDeepEqualityCheck: boolean,
+): UpdateActionWithoutIsolationRequirement[] {
+  for (const entry of diffTreesCache) {
+    if (
+      entry.args[0] === tracingId &&
+      entry.args[1] === prevTrees &&
+      entry.args[2] === trees &&
+      entry.args[3] === useDeepEqualityCheck
+    ) {
+      return entry.result;
+    }
+  }
+
+  const result = Array.from(diffTrees(tracingId, prevTrees, trees, useDeepEqualityCheck));
+  diffTreesCache.unshift({ args: [tracingId, prevTrees, trees, useDeepEqualityCheck], result });
+
+  if (diffTreesCache.length > DIFF_TREES_CACHE_SIZE) {
+    diffTreesCache.pop();
+  }
+
+  return result;
+}
 
 export function* diffSkeletonTracing(
   prevSkeletonTracing: SkeletonTracing,

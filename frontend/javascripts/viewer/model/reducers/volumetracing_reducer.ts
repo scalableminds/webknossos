@@ -154,6 +154,28 @@ function toggleAllSegmentsReducer(
   return updateSegments(state, layerName, (_oldSegments) => newSegments);
 }
 
+// The action types which are handled by the second switch statement of the reducer
+// (i.e., the ones which operate on a specific volume tracing).
+const TRACING_SCOPED_ACTION_TYPES = new Set([
+  "SET_ACTIVE_CELL",
+  "CREATE_CELL",
+  "UPDATE_DIRECTION",
+  "ADD_TO_CONTOUR_LIST",
+  "RESET_CONTOUR",
+  "HIDE_BRUSH",
+  "SET_CONTOUR_TRACING_MODE",
+  "SET_LARGEST_SEGMENT_ID",
+  "FINISH_ANNOTATION_STROKE",
+  "SET_MAPPING",
+  "FINISH_MAPPING_INITIALIZATION",
+  "SET_MAPPING_ENABLED",
+  "SET_MAPPING_NAME",
+  "SET_HAS_EDITABLE_MAPPING",
+  "SET_MAPPING_IS_LOCKED",
+  "SET_ID_RESERVATIONS",
+  "APPLY_VOLUME_UPDATE_ACTIONS_FROM_SERVER",
+]);
+
 function VolumeTracingReducer(
   state: WebknossosState,
   action: VolumeTracingReducerAction,
@@ -339,6 +361,14 @@ function VolumeTracingReducer(
   if (state.annotation.volumes.length === 0) {
     // If no volume exists yet (i.e., it wasn't initialized, yet),
     // the following reducer code should not run.
+    return state;
+  }
+
+  if (!TRACING_SCOPED_ACTION_TYPES.has(action.type)) {
+    // Only resolve the volume tracing (which requires accessor work, e.g.
+    // getVisibleSegmentationLayer) if the action is actually handled by the
+    // switch statement below. Otherwise, this work would be done for every
+    // dispatched action.
     return state;
   }
 

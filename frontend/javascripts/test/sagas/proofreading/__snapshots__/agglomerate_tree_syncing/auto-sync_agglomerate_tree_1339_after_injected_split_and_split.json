@@ -15,17 +15,13 @@
     "edgeCount": 0,
     "inMap": DiffableMap {
       "__notEnumerableByObject": true,
-      "chunks": [
-        Map {},
-      ],
+      "chunks": [],
       "entryCount": 0,
       "itemsPerBatch": 1000,
     },
     "outMap": DiffableMap {
       "__notEnumerableByObject": true,
-      "chunks": [
-        Map {},
-      ],
+      "chunks": [],
       "entryCount": 0,
       "itemsPerBatch": 1000,
     },

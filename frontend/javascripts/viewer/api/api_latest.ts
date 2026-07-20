@@ -209,7 +209,7 @@ import {
   MISSING_GROUP_ID,
   mapGroups,
   moveGroupsHelper,
-} from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
+} from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 
 type TransformSpec =
   | { type: "scale"; args: [Vector3, Vector3] }
@@ -2077,11 +2077,15 @@ class DataApi {
     }
 
     const mags = magInfo.getDenseMags();
+    // Restrict the requested buckets to the layer's bounding box so that buckets
+    // outside the layer are never requested. Data outside the layer bounds does
+    // not exist, so the returned cuboid is unchanged (those regions stay zero).
     const bucketAddresses = this.getBucketAddressesInCuboid(
       mag1Bbox,
       mags,
       zoomStep,
       additionalCoordinates,
+      BoundingBox.fromBoundBoxObject(layer.boundingBox).toBoundingBoxMinMaxType(),
     );
 
     if (bucketAddresses.length > 15000) {
@@ -2171,11 +2175,23 @@ class DataApi {
     magnifications: Array<Vector3>,
     zoomStep: number,
     additionalCoordinates: AdditionalCoordinate[] | null,
+    // When provided, the iteration is restricted to buckets that intersect this
+    // bounding box.
+    restrictToBoundingBox?: BoundingBoxMinMaxType | null,
   ): Array<BucketAddress> {
-    const buckets = [];
-    const bottomRight = bbox.max;
+    const buckets: Array<BucketAddress> = [];
+    const effectiveBbox =
+      restrictToBoundingBox != null
+        ? new BoundingBox(bbox).intersectedWith(new BoundingBox(restrictToBoundingBox))
+        : new BoundingBox(bbox);
+
+    if (effectiveBbox.getVolume() === 0) {
+      return buckets;
+    }
+
+    const bottomRight = effectiveBbox.max;
     const minBucket = globalPositionToBucketPosition(
-      bbox.min,
+      effectiveBbox.min,
       magnifications,
       zoomStep,
       additionalCoordinates,
@@ -3022,7 +3038,6 @@ class UserApi {
     - scale
     - tdViewDisplayPlanes
     - tdViewDisplayDatasetBorders
-    - tdViewDisplayLayerBorders
     - newNodeNewTree
     - centerNewNode
     - highlightCommentedNodes

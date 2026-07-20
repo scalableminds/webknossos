@@ -211,11 +211,13 @@ export function SkeletonTreeView({ hierarchy, selection, groupOperations }: Prop
         : (dropTargetNode.tree.groupId ?? MISSING_GROUP_ID);
 
     if (draggedNode.type === "tree") {
-      // Dragged nodes are not considered clicked aka "properly selected".
-      // In the multi-select case, all selected trees are moved along.
+      // The whole multi-selection is only moved along when the dragged tree is
+      // part of it. Dragging a tree outside the selection moves just that tree
+      // (and never duplicates the dragged id within the selection).
       const treeIdsToMove =
-        selection.selectedTreeIds.length > 1
-          ? [...selection.selectedTreeIds, draggedNode.tree.treeId]
+        selection.selectedTreeIds.length > 1 &&
+        selection.selectedTreeIds.includes(draggedNode.tree.treeId)
+          ? selection.selectedTreeIds
           : [draggedNode.tree.treeId];
       groupOperations.moveTreesToGroup(treeIdsToMove, targetGroupId);
     } else {

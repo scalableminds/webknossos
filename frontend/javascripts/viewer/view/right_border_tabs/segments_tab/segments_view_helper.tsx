@@ -58,10 +58,10 @@ export function getBaseSegmentationName(segmentationLayer: APIDataLayer) {
  * even if the annotation itself is.
  */
 export function mayEditVisibleSegmentation(state: WebknossosState): boolean {
+  // Editing requires an actually visible, tracing-backed segmentation layer.
+  // A missing layer or a non-tracing (view-only) layer is not editable.
   const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
-  const isVisibleButUneditableLayerActive =
-    visibleSegmentationLayer != null && visibleSegmentationLayer.tracingId == null;
-  return mayEditAnnotation(state) && !isVisibleButUneditableLayerActive;
+  return mayEditAnnotation(state) && visibleSegmentationLayer?.tracingId != null;
 }
 
 export async function hasSegmentIndex(

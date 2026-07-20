@@ -16,7 +16,6 @@ import type { Segment } from "viewer/store";
 import {
   additionallyExpandGroup,
   createGroupToParentMap,
-  createGroupToSegmentsMap,
   getDescendantGroupIds,
   getExpandedGroups,
   MISSING_GROUP_ID,
@@ -71,10 +70,15 @@ export function useSegmentGroupOperations(): SegmentGroupOperations {
 
   const requestGroupDeletion = useCallback(
     (groupId: number) => {
-      const groupToSegmentsMap = segments != null ? createGroupToSegmentsMap(segments) : {};
-      const group = segmentGroups.find((currentGroup) => currentGroup.groupId === groupId);
+      // A group counts as empty when it has neither subgroups nor (recursively)
+      // any segments. getDescendantGroupIds/getSegmentsOfGroupRecursively work on
+      // the nested group tree, so this also applies to nested subgroups (a flat
+      // segmentGroups.find() would miss those).
+      const isEmptyGroup =
+        getDescendantGroupIds(segmentGroups, groupId).length === 0 &&
+        getSegmentsOfGroupRecursivelyHelper(groupId, segments, segmentGroups).length === 0;
 
-      if (group != null && group.children.length === 0 && groupToSegmentsMap[groupId] == null) {
+      if (groupId !== MISSING_GROUP_ID && isEmptyGroup) {
         // The group is empty, delete it without asking.
         deleteGroup(groupId, false);
       } else if (groupId === MISSING_GROUP_ID) {

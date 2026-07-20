@@ -242,12 +242,13 @@ export function SegmentTreeView(props: Props) {
     }
 
     if (draggedNode.type === "segment") {
-      // Dragged nodes are not considered clicked aka "properly selected".
-      // Only when a multi-selection exists are all selected segments moved
-      // along with the dragged one; otherwise just the dragged segment moves.
+      // The whole multi-selection is only moved along when the dragged segment
+      // is part of it. Dragging a segment outside the selection moves just that
+      // segment (and never duplicates the dragged id within the selection).
       const segmentIdsToMove =
-        selection.selectedSegmentIds.length > 1
-          ? [draggedNode.segment.id, ...selection.selectedSegmentIds]
+        selection.selectedSegmentIds.length > 1 &&
+        selection.selectedSegmentIds.includes(draggedNode.segment.id)
+          ? selection.selectedSegmentIds
           : [draggedNode.segment.id];
       groupOperations.moveSegmentsToGroup(segmentIdsToMove, targetGroupId);
     } else {

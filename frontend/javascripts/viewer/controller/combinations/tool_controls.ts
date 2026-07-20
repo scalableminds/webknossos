@@ -423,6 +423,11 @@ export class SkeletonToolController extends ToolController {
     allowNodeCreation: boolean = true,
   ): void {
     const { useLegacyBindings, continuousNodeCreation } = Store.getState().userConfiguration;
+    const showSkeleton = Store.getState().annotation.skeleton?.showSkeletons ?? false;
+    if (!showSkeleton) {
+      // Don't do anything in case the skeleton layer is disabled or does not exist.
+      return;
+    }
 
     if (continuousNodeCreation && allowNodeCreation && !useLegacyBindings) {
       handleCreateNodeFromEvent(position, ctrlPressed);

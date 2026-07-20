@@ -1,3 +1,4 @@
+import { stringToColor } from "libs/utils";
 import compact from "lodash-es/compact";
 import type { TracingType } from "types/api_types";
 import { TracingTypeEnum } from "types/api_types";
@@ -16,6 +17,7 @@ import type {
 } from "viewer/store";
 import BoundingBox from "../bucket_data_handling/bounding_box";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
+import { getDataLayers, getLayerBoundingBox, getLayerBoundingBoxId } from "./dataset_accessor";
 
 export function maybeGetSomeTracing(
   annotation: StoreAnnotation,
@@ -145,9 +147,26 @@ export function getIdReservationsForBoundingBoxes(state: WebknossosState): IdRes
 
 export type MipEnabledBBox = { bbox: UserBoundingBox; configs: MipLayerConfig[] };
 
+// Layer bounding boxes are read-only and not part of the annotation's user bounding boxes, so they
+// are represented here as synthetic UserBoundingBox-shaped entries (stable negative id, see
+// getLayerBoundingBoxId) purely to reuse the existing MIP wiring (mipBBoxSettings, scene_controller).
+function getLayerBoundingBoxesAsUserBoundingBoxes(state: WebknossosState): UserBoundingBox[] {
+  return getDataLayers(state.dataset).map((layer, index) => ({
+    id: getLayerBoundingBoxId(index),
+    name: layer.name,
+    boundingBox: getLayerBoundingBox(state.dataset, layer.name),
+    color:
+      state.temporaryConfiguration.layerBoundingBoxColors[layer.name] ?? stringToColor(layer.name),
+    isVisible: state.temporaryConfiguration.layerBoundingBoxVisibilities[layer.name] ?? false,
+  }));
+}
+
 export const getMipEnabledBBoxes = reuseInstanceOnEquality(
   (state: WebknossosState): MipEnabledBBox[] => {
-    const bboxes = getUserBoundingBoxesFromState(state);
+    const bboxes = [
+      ...getUserBoundingBoxesFromState(state),
+      ...getLayerBoundingBoxesAsUserBoundingBoxes(state),
+    ];
     return bboxes.flatMap((bbox) => {
       const configs = state.uiInformation.mipBBoxSettings[bbox.id];
       return configs != null && configs.length > 0 ? [{ bbox, configs }] : [];

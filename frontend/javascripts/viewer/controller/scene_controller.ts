@@ -1,7 +1,7 @@
 import app from "app";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
-import { rgbToInt } from "libs/utils";
+import { rgbToInt, stringToColor } from "libs/utils";
 import window from "libs/window";
 import debounce from "lodash-es/debounce";
 import {
@@ -50,7 +50,6 @@ import {
   getDatasetBoundingBox,
   getLayerBoundingBox,
   getLayerByName,
-  getLayerNameToIsDisabled,
   getSegmentationLayers,
   getVisibleSegmentationLayers,
 } from "viewer/model/accessors/dataset_accessor";
@@ -100,7 +99,6 @@ BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
 Mesh.prototype.raycast = acceleratedRaycast;
 
 const CUBE_COLOR = 0x999999;
-const LAYER_CUBE_COLOR = 0xffff99;
 
 const getVisibleSegmentationLayerNames = reuseInstanceOnEquality((storeState: WebknossosState) =>
   getVisibleSegmentationLayers(storeState).map((l) => l.name),
@@ -518,9 +516,8 @@ class SceneController {
     // though they are all looking at the same scene, some
     // things have to be changed for each cam.
     const state = Store.getState();
-    const { dataset, datasetConfiguration, userConfiguration, flycam } = state;
-    const { tdViewDisplayPlanes, tdViewDisplayDatasetBorders, tdViewDisplayLayerBorders } =
-      userConfiguration;
+    const { dataset, userConfiguration, flycam } = state;
+    const { tdViewDisplayPlanes, tdViewDisplayDatasetBorders } = userConfiguration;
 
     // Section clipping renders only the skeleton on the currently visible section.
     // It is performed in the node/edge shaders (in voxel/section space) and is only
@@ -535,12 +532,10 @@ class SceneController {
     this.userBoundingBoxes.forEach((bbCube) => {
       bbCube.updateForCam(id);
     });
-    const layerNameToIsDisabled = getLayerNameToIsDisabled(datasetConfiguration);
-    Object.keys(this.layerBoundingBoxes).forEach((layerName) => {
-      const bbCube = this.layerBoundingBoxes[layerName];
-      const visible =
-        id === OrthoViews.TDView && tdViewDisplayLayerBorders && !layerNameToIsDisabled[layerName];
-      bbCube.setVisibility(visible);
+    // Layer bounding box visibility is kept in sync via a store subscription (see
+    // updateLayerBoundingBoxVisibilities), so here we only refine the per-cam cross-section
+    // visibility, like for user bounding boxes.
+    Object.values(this.layerBoundingBoxes).forEach((bbCube) => {
       bbCube.updateForCam(id);
     });
 
@@ -760,19 +755,24 @@ class SceneController {
     const state = Store.getState();
     const dataset = state.dataset;
     const layers = getDataLayers(dataset);
+    const { layerBoundingBoxVisibilities, layerBoundingBoxColors } = state.temporaryConfiguration;
 
     const newLayerBoundingBoxGroup = new Group();
     this.layerBoundingBoxes = Object.fromEntries(
       layers.map((layer) => {
         const boundingBox = getLayerBoundingBox(dataset, layer.name);
         const { min, max } = boundingBox;
+        const color = layerBoundingBoxColors[layer.name] ?? stringToColor(layer.name);
         const bbCube = new Cube({
           min,
           max,
-          color: LAYER_CUBE_COLOR,
-          showCrossSections: false,
+          color: rgbToInt([color[0] * 255, color[1] * 255, color[2] * 255]),
+          // Show the bounding box in the 2D plane viewports as well (not just the 3D viewport), so it
+          // is visible where users usually work and the visibility/color controls have a visible effect.
+          showCrossSections: true,
           isHighlighted: false,
         });
+        bbCube.setVisibility(layerBoundingBoxVisibilities[layer.name] ?? false);
         bbCube.getMeshes().forEach((mesh) => {
           const transformMatrix = getTransformsForLayerOrNull(
             dataset,
@@ -792,6 +792,16 @@ class SceneController {
     this.rootNode.remove(this.layerBoundingBoxGroup);
     this.layerBoundingBoxGroup = newLayerBoundingBoxGroup;
     this.rootNode.add(this.layerBoundingBoxGroup);
+  }
+
+  // Visibility is a cheap per-cube flag (unlike the color, which is baked in at construction), so a
+  // visibility change only updates the existing cubes instead of rebuilding them. updateSceneForCam
+  // then refines the per-cam cross-section visibility on the next render.
+  updateLayerBoundingBoxVisibilities(visibilities: Record<string, boolean>): void {
+    for (const [layerName, bbCube] of Object.entries(this.layerBoundingBoxes)) {
+      bbCube.setVisibility(visibilities[layerName] ?? false);
+    }
+    app.vent.emit("rerender");
   }
 
   highlightUserBoundingBox(bboxId: number | null | undefined): void {
@@ -920,6 +930,16 @@ class SceneController {
       listenToStoreProperty(
         (storeState) => getDataLayers(storeState.dataset),
         () => this.updateLayerBoundingBoxes(),
+      ),
+      // The color is baked into the cubes at construction, so a color change requires rebuilding
+      // them, whereas a visibility change (below) only needs to flip a per-cube flag.
+      listenToStoreProperty(
+        (storeState) => storeState.temporaryConfiguration.layerBoundingBoxColors,
+        () => this.updateLayerBoundingBoxes(),
+      ),
+      listenToStoreProperty(
+        (storeState) => storeState.temporaryConfiguration.layerBoundingBoxVisibilities,
+        (visibilities) => this.updateLayerBoundingBoxVisibilities(visibilities),
       ),
       listenToStoreProperty(
         (storeState) => storeState.datasetConfiguration.nativelyRenderedLayerName,

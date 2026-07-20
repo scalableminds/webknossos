@@ -7,7 +7,7 @@ import { Button, Input, Progress, Spin, Table, Tooltip } from "antd";
 import { formatCountToDataAmountUnit, formatDateMedium, formatNumber } from "libs/format_utils";
 import Persistence from "libs/persistence";
 import Toast from "libs/toast";
-import { filterWithSearchQueryAND } from "libs/utils";
+import { filterWithSearchQueryAND, scrollToTop } from "libs/utils";
 import type React from "react";
 import { type Key, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
@@ -185,7 +185,7 @@ export default function WorkflowListView() {
         <Table
           bordered
           rowKey={(run: RenderRunInfo) => `${run.id}-${run.workflowHash}`}
-          pagination={{ pageSize: 100 }}
+          pagination={{ pageSize: 100, onChange: scrollToTop }}
           columns={[
             {
               title: "Workflow",

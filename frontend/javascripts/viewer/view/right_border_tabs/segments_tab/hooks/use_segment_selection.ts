@@ -1,6 +1,6 @@
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
 import { layerToGlobalTransformedPosition } from "viewer/model/accessors/dataset_layer_transformation_accessor";
@@ -24,6 +24,17 @@ export type SegmentSelection = {
   selectedKeys: string[];
   // Selects the given segments and/or group (they are mutually exclusive).
   setSelection: (segmentIds: number[], groupId: number | null) => void;
+  // Like setSelection, but also requests that the tree view scroll the
+  // selection into view, even if it is already selected (e.g., re-running a
+  // search that lands on the same segment/group again). Use this for
+  // explicit "jump to X" requests (search, select-all-matches); use plain
+  // setSelection for in-tree interactions (click, ctrl/shift-click), which
+  // are already visible and shouldn't cause a scroll jump.
+  focusSelection: (segmentIds: number[], groupId: number | null) => void;
+  // Bumped on every focusSelection call. selectedSegmentIds/selectedGroupId
+  // alone can't signal "please scroll", because getSelectedIds reuses its
+  // previous instance when a re-selection is deep-equal to the current one.
+  focusToken: number;
   // Selects a single segment and moves the camera to its anchor position.
   selectSegmentAndJumpToPosition: (segment: Segment) => void;
 };
@@ -57,13 +68,22 @@ export function useSegmentSelection(): SegmentSelection {
     [dispatch, visibleSegmentationLayer],
   );
 
+  const [focusToken, setFocusToken] = useState(0);
+  const focusSelection = useCallback(
+    (segmentIds: number[], groupId: number | null) => {
+      setSelection(segmentIds, groupId);
+      setFocusToken((token) => token + 1);
+    },
+    [setSelection],
+  );
+
   const selectSegmentAndJumpToPosition = useCallback(
     (segment: Segment) => {
       if (visibleSegmentationLayer == null) {
         Toast.info("Cannot select segment, because there is no visible segmentation layer.");
         return;
       }
-      setSelection([segment.id], null);
+      focusSelection([segment.id], null);
 
       if (!segment.anchorPosition) {
         Toast.info("Cannot go to this segment, because its position is unknown.");
@@ -86,7 +106,7 @@ export function useSegmentSelection(): SegmentSelection {
         dispatch(setAdditionalCoordinatesAction(additionalCoordinates));
       }
     },
-    [dispatch, visibleSegmentationLayer, setSelection],
+    [dispatch, visibleSegmentationLayer, focusSelection],
   );
 
   // Memoize the derived arrays so their identities stay stable while the
@@ -115,6 +135,8 @@ export function useSegmentSelection(): SegmentSelection {
     selectedSegments,
     selectedKeys,
     setSelection,
+    focusSelection,
+    focusToken,
     selectSegmentAndJumpToPosition,
   };
 }

@@ -37,7 +37,7 @@ export function SegmentsToolbar({ hierarchy, selection, groupOperations, meshFil
     if (node.type === "segment") {
       selection.selectSegmentAndJumpToPosition(node.segment);
     } else {
-      selection.setSelection([], node.group.groupId);
+      selection.focusSelection([], node.group.groupId);
     }
   };
 
@@ -49,7 +49,7 @@ export function SegmentsToolbar({ hierarchy, selection, groupOperations, meshFil
       groupOperations.expandParentsOfNode(node);
       return [node.segment.id];
     });
-    selection.setSelection(matchingSegmentIds, null);
+    selection.focusSelection(matchingSegmentIds, null);
   };
 
   return (

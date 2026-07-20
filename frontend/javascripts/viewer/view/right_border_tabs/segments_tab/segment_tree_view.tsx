@@ -120,12 +120,17 @@ export function SegmentTreeView(props: Props) {
 
   // Scroll to newly selected segments/groups (the selection can also change
   // through actions outside of this component, e.g. clicking a segment in a
-  // viewport or the search popover).
-  const { selectedSegmentIds, selectedGroupId } = selection;
-  const previousSelectionRef = useRef({ selectedSegmentIds, selectedGroupId });
+  // viewport or the search popover). `focusToken` additionally forces a
+  // scroll for explicit "jump to this" requests (search, select-all-matches)
+  // even when they re-select whatever is already selected: in that case
+  // selectedSegmentIds/selectedGroupId are otherwise unchanged, since
+  // getSelectedIds reuses its previous instance for a deep-equal selection.
+  const { selectedSegmentIds, selectedGroupId, focusToken } = selection;
+  const previousSelectionRef = useRef({ selectedSegmentIds, selectedGroupId, focusToken });
   useEffect(() => {
     const previous = previousSelectionRef.current;
-    previousSelectionRef.current = { selectedSegmentIds, selectedGroupId };
+    previousSelectionRef.current = { selectedSegmentIds, selectedGroupId, focusToken };
+    const didFocusChange = previous.focusToken !== focusToken;
 
     // A newly created segment might not be rendered by the tree yet.
     // Hence, delay the scrolling a bit.
@@ -135,17 +140,20 @@ export function SegmentTreeView(props: Props) {
       }
       if (
         selectedSegmentIds.length > 0 &&
-        previous.selectedSegmentIds[0] !== selectedSegmentIds[0]
+        (didFocusChange || previous.selectedSegmentIds[0] !== selectedSegmentIds[0])
       ) {
         // Scroll to the first selected segment. This also covers "select all
         // matches" from the search, where several segments become selected at
         // once and the first one should be brought into view.
         treeRef.current.scrollTo({ key: getSegmentUiNodeKey(selectedSegmentIds[0]) });
-      } else if (selectedGroupId != null && previous.selectedGroupId !== selectedGroupId) {
+      } else if (
+        selectedGroupId != null &&
+        (didFocusChange || previous.selectedGroupId !== selectedGroupId)
+      ) {
         treeRef.current.scrollTo({ key: getGroupUiNodeKey(selectedGroupId) });
       }
     }, SCROLL_DELAY_MS);
-  }, [selectedSegmentIds, selectedGroupId]);
+  }, [selectedSegmentIds, selectedGroupId, focusToken]);
 
   const onExpand: TreeProps<SegmentsUiNode>["onExpand"] = (expandedKeys) => {
     groupOperations.setExpandedGroups(new Set(expandedKeys as string[]));

@@ -233,6 +233,15 @@ export function getLayerBoundingBox(dataset: APIDataset, layerName: string): Bou
   });
 }
 
+// Layer bounding boxes are not stored as user bounding boxes and therefore have no id of their
+// own. Real user bounding box ids are always >= 1 and -1 is already used as the "Full layer"
+// sentinel id in the TIFF export tab, so layer bounding boxes are assigned stable negative ids
+// starting at -2 (based on their index in getDataLayers) wherever an id is needed, e.g. to key
+// per-bbox MIP settings.
+export function getLayerBoundingBoxId(layerIndex: number): number {
+  return -2 - layerIndex;
+}
+
 export function getDatasetBoundingBox(dataset: APIDataset): BoundingBox {
   const min: Vector3 = [
     Number.POSITIVE_INFINITY,

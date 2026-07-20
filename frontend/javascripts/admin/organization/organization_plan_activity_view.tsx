@@ -6,6 +6,7 @@ import type { ColumnsType } from "antd/lib/table";
 import FormattedDate from "components/formatted_date";
 import { formatCountToDataAmountUnit } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
+import { scrollToTop } from "libs/utils";
 import { useMemo } from "react";
 import type { APIOrganizationPricingPlanUpdate } from "types/api_types";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
@@ -126,7 +127,7 @@ export function OrganizationPlanActivityView() {
         loading={isFetching}
         dataSource={tableData}
         columns={columns}
-        pagination={{ pageSize: 10, hideOnSinglePage: true }}
+        pagination={{ pageSize: 10, hideOnSinglePage: true, onChange: scrollToTop }}
         locale={{
           emptyText: <Text type="secondary">No recent subscription changes found.</Text>,
         }}

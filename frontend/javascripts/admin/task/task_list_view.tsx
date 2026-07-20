@@ -43,6 +43,7 @@ import {
   getUrlParamValue,
   hasUrlParam,
   localeCompareBy,
+  scrollToTop,
 } from "libs/utils";
 import isEmpty from "lodash-es/isEmpty";
 import partial from "lodash-es/partial";
@@ -449,6 +450,7 @@ function TaskListView({ initialFieldValues }: Props) {
           columns={columns}
           pagination={{
             defaultPageSize: 50,
+            onChange: scrollToTop,
           }}
           expandable={{
             expandedRowRender: (task) => <TaskAnnotationView task={task} />,

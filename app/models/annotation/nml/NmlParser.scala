@@ -608,7 +608,7 @@ class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
     }
   }
 
-  private def parseAdditionalCoordinateValues(node: XMLNode): Seq[AdditionalCoordinateProto] = {
+  private def parseAdditionalCoordinateValues(node: XMLNode): Seq[AdditionalCoordinateProto] =
     node.attributes.flatMap {
       case attribute: Attribute =>
         attribute.key match {
@@ -618,6 +618,5 @@ class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
         }
       case _ => None
     }.toSeq
-  }
 
 }

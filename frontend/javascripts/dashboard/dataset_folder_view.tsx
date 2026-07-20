@@ -1,7 +1,7 @@
 import { Button, Card, Col, Flex, Row } from "antd";
 import features, { getDemoDatasetUrl } from "features";
 import { filterNullValues, isUserAdminOrDatasetManager, isUserTeamManager } from "libs/utils";
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import type { APIDatasetCompact, APIUser, FolderItem } from "types/api_types";
 import { RenderToPortal } from "viewer/view/layouting/portal_utils";
@@ -30,6 +30,7 @@ function DatasetFolderViewInner(props: Props) {
   const context = useDatasetCollectionContext();
   const { selectedDatasets, setSelectedDatasets, folderModalState, setFolderModalState } = context;
   const { data: hierarchy } = useFolderHierarchyQuery();
+  const mainRef = useRef<HTMLElement>(null);
 
   const setSelectedDataset = (ds: APIDatasetCompact | null, multiSelect?: boolean) => {
     if (!ds) {
@@ -217,13 +218,14 @@ function DatasetFolderViewInner(props: Props) {
       >
         <FolderTreeSidebar />
       </div>
-      <main style={{ gridColumn: "2 / 3", overflow: "auto", paddingRight: 4 }}>
+      <main ref={mainRef} style={{ gridColumn: "2 / 3", overflow: "auto", paddingRight: 4 }}>
         <DatasetView
           user={props.user}
           onSelectDataset={setSelectedDataset}
           onSelectFolder={setSelectedFolder}
           selectedDatasets={selectedDatasets}
           context={context}
+          scrollContainerRef={mainRef}
         />
       </main>
       <div

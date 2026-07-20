@@ -120,6 +120,7 @@ function createDataset(dataLayers: Array<APIColorLayer | APISegmentationLayer>):
     sortingKey: 1727252521746,
     publication: null,
     usedStorageBytes: 0,
+    uploaderFullName: null,
   };
 }
 

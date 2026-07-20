@@ -29,7 +29,7 @@ import {
   getGroupByIdWithSubgroups,
   getGroupNodeKey,
   MISSING_GROUP_ID,
-} from "../trees_tab/tree_hierarchy_view_helpers";
+} from "../shared/tree_hierarchy_view_helpers";
 
 const { confirm } = Modal;
 

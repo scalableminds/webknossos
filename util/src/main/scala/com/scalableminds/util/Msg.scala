@@ -807,6 +807,10 @@ object Msg {
       s"Requested mag $requestedMag does not match mag $fileMag of segment statistics file."
     def mappingNameMismatch(requestedMappingName: String, fileMappingName: String): String =
       s"Requested mapping name “$requestedMappingName” does not match mapping name “$fileMappingName” of segment statistics file."
+    def formatVersionTooOld(formatVersion: Long, minimumSupportedVersion: Long): String =
+      s"Segment statistics file has format version $formatVersion, but at least $minimumSupportedVersion is required."
+    def idsNotDense(first: Long, last: Long, length: Long): String =
+      s"Segment statistics file does not have dense ids: first id is $first (expected 0), last id is $last (expected ${length - 1}), for $length ids total. Only dense ids are supported."
   }
   object Zarr {
     def invalidChunkCoordinates(coordinates: String): String =

@@ -27,9 +27,11 @@ object SegmentStatisticsFileInfos {
   implicit val jsonFormat: OFormat[SegmentStatisticsFileInfos] = Json.format[SegmentStatisticsFileInfos]
 }
 
-case class SegmentStatisticsFileAttributes(mag: Option[Vec3Int], mappingName: Option[String])
+case class SegmentStatisticsFileAttributes(formatVersion: Long, mag: Option[Vec3Int], mappingName: Option[String])
 
 object SegmentStatisticsFileAttributes extends VoxelyticsZarrArtifactUtils {
+  val minSupportedFormatVersion = 11
+
   private val attrKeyMag = "mag"
   private val attrKeyMappingName = "mapping_name"
 
@@ -37,15 +39,17 @@ object SegmentStatisticsFileAttributes extends VoxelyticsZarrArtifactUtils {
     override def reads(json: JsValue): JsResult[SegmentStatisticsFileAttributes] = {
       val segmentStatisticsFileAttrs = lookUpArtifactAttributes(json)
       for {
+        formatVersion <- readArtifactSchemaVersion(json)
         mag <- (segmentStatisticsFileAttrs \ attrKeyMag).validateOpt[Vec3Int]
         mappingName <- (segmentStatisticsFileAttrs \ attrKeyMappingName).validateOpt[String]
-      } yield SegmentStatisticsFileAttributes(mag, mappingName)
+      } yield SegmentStatisticsFileAttributes(formatVersion, mag, mappingName)
     }
   }
 }
 
 object SegmentStatisticsFileService {
   val keyCovarianceMatrix = "covariance_matrix"
+  val keyIds = "ids"
 
   val possibleMetrics: Seq[String] =
     Seq("positions", "max_distances", "volumes", "center_of_mass", keyCovarianceMatrix, "surfaces", "sphericities")
@@ -94,6 +98,12 @@ class SegmentStatisticsFileService @Inject() (
       segmentStatisticsFileAttributes <- JsonHelper
         .parseAs[SegmentStatisticsFileAttributes](groupHeaderBytes)
         .toFox ?~> "Could not parse segment statistics file attributes from zarr group file."
+      _ <- Fox.fromBool(
+        segmentStatisticsFileAttributes.formatVersion >= SegmentStatisticsFileAttributes.minSupportedFormatVersion
+      ) ?~> Msg.SegmentStatisticsFile.formatVersionTooOld(
+        segmentStatisticsFileAttributes.formatVersion,
+        SegmentStatisticsFileAttributes.minSupportedFormatVersion
+      )
     } yield segmentStatisticsFileAttributes
 
   private def readSegmentStatisticsFileAttributes(
@@ -182,12 +192,28 @@ class SegmentStatisticsFileService @Inject() (
   ): Fox[Seq[Array[Array[Float]]]] =
     Fox.serialCombined(segmentIds)(readCovarianceMatrix(segmentStatisticsFileKey, _))
 
+  private def checkIdsAreDense(
+      segmentStatisticsFileKey: SegmentStatisticsFileKey
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Unit] =
+    for {
+      idsArray <- openZarrArray(segmentStatisticsFileKey, SegmentStatisticsFileService.keyIds)
+      length <- idsArray.datasetShape
+        .flatMap(_.headOption)
+        .toFox ?~> "Could not determine length of ids array in segment statistics file"
+      firstMultiArray <- idsArray.readAsMultiArray(offset = 0L, shape = 1)
+      lastMultiArray <- idsArray.readAsMultiArray(offset = length - 1, shape = 1)
+      first <- tryo(firstMultiArray.getLong(0)).toFox
+      last <- tryo(lastMultiArray.getLong(0)).toFox
+      _ <- Fox.fromBool(first == 0 && last == length - 1) ?~> Msg.SegmentStatisticsFile.idsNotDense(first, last, length)
+    } yield ()
+
   def getInfos(dataSourceId: DataSourceId, dataLayer: DataLayer)(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[SegmentStatisticsFileInfos] = for {
     key <- lookUpSegmentStatisticsFileKey(dataSourceId, dataLayer)
     (mag, mappingName) <- resolveMagAndMappingName(key, dataLayer)
+    _ <- checkIdsAreDense(key)
     metrics <- availableMetrics(key)
   } yield SegmentStatisticsFileInfos(mag, metrics, mappingName)
 

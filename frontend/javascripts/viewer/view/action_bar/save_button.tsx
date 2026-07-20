@@ -44,12 +44,13 @@ const handleSave = (event?: React.MouseEvent<HTMLElement>) => {
   Model.forceSave();
 };
 
-// Hoisted to module scope so that the "last result" cache survives across
-// polling iterations. Otherwise, setSaveInfo would receive a fresh object
-// on every poll which would re-render the button even when nothing changed.
-const getPushQueueStats = reuseInstanceOnEquality(Model.getPushQueueStats);
-
 function SaveButton() {
+  // Created once per mount (not at module scope, since the Model singleton is not yet
+  // set when this module is first imported). The stable wrapper lets the "last result"
+  // cache survive across polling iterations, so setSaveInfo doesn't receive a fresh
+  // object on every poll and re-render the button even when nothing changed.
+  const getPushQueueStats = useMemo(() => reuseInstanceOnEquality(Model.getPushQueueStats), []);
+
   const progressFraction = useWkSelector((state) => {
     // For a low action count, the progress info would show only for a very short amount of time.
     // Therefore, the progressFraction is set to null, if the count is low.
@@ -88,7 +89,7 @@ function SaveButton() {
     setIsStateSaved(isStateSaved);
     setShowUnsavedWarning(showUnsavedWarning);
     setSaveInfo(newSaveInfo);
-  }, []);
+  }, [getPushQueueStats]);
 
   useEffect(() => {
     // Polling can be removed once VolumeMode saving is reactive

@@ -57,7 +57,7 @@ import {
   updateUserSettingAction,
 } from "viewer/model/actions/settings_actions";
 import { setActiveUserBoundingBoxId } from "viewer/model/actions/ui_actions";
-import type { UserBoundingBox } from "viewer/store";
+import type { StoreAnnotation, UserBoundingBox } from "viewer/store";
 import DownloadModalView from "../action_bar/download_modal/download_modal_view";
 import ButtonComponent from "../components/button_component";
 import { getContextMenuPositionFromEvent } from "../context_menu/helpers";
@@ -90,7 +90,10 @@ export default function BoundingBoxTab() {
   const [selectedBoundingBoxForExport, setSelectedBoundingBoxForExport] =
     useState<UserBoundingBox | null>(null);
   const [selectedLayerForExport, setSelectedLayerForExport] = useState<string | null>(null);
-  const annotation = useWkSelector((state) => state.annotation);
+  // Only the annotation layers are needed here (to resolve readable layer names below).
+  // Subscribing to this slice instead of the whole annotation keeps the tab from
+  // re-rendering on every annotation change (e.g. while drawing or editing nodes).
+  const annotationLayers = useWkSelector((state) => state.annotation.annotationLayers);
   const allowUpdate = useWkSelector((state) => state.annotation.isUpdatingCurrentlyAllowed);
   const isLockedByOwner = useWkSelector((state) => state.annotation.isLockedByOwner);
   const isOwner = useWkSelector((state) => isAnnotationOwner(state));
@@ -113,13 +116,19 @@ export default function BoundingBoxTab() {
         const boundingBox = getLayerBoundingBox(dataset, layer.name);
         return {
           name: layer.name,
-          displayName: getReadableNameForLayerName(dataset, annotation, layer.name),
+          // getReadableNameForLayerName only reads annotationLayers, so passing this slice
+          // (rather than the whole annotation) is sufficient.
+          displayName: getReadableNameForLayerName(
+            dataset,
+            { annotationLayers } as StoreAnnotation,
+            layer.name,
+          ),
           value: computeArrayFromBoundingBox(boundingBox),
           center: boundingBox.getCenter(),
           id: getLayerBoundingBoxId(index),
         };
       }),
-    [dataset, annotation],
+    [dataset, annotationLayers],
   );
   const mipRaymarchingSteps = useWkSelector((state) => state.userConfiguration.mipRaymarchingSteps);
   const mipDepthWrite = useWkSelector((state) => state.userConfiguration.mipDepthWrite);

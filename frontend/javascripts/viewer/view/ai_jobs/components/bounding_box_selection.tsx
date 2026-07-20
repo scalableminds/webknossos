@@ -76,6 +76,7 @@ export function BoundingBoxSelection({
       onSelect={setSelectedBoundingBoxId}
       style={style}
       value={value}
+      popupMatchSelectWidth={false}
     />
   );
 }

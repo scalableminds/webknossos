@@ -244,6 +244,7 @@ type MutableAPIDatasetBase = MutableAPIDataSourceId & {
   publication: null | undefined;
   tags: Array<string>;
   usedStorageBytes: number;
+  uploaderFullName: string | null | undefined;
 };
 type APIDatasetBase = Readonly<MutableAPIDatasetBase>;
 export type MutableAPIDataset = MutableAPIDatasetBase & {

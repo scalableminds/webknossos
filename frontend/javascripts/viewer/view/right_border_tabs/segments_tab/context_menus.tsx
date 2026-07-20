@@ -531,7 +531,7 @@ export function useGroupContextMenuBuilder(
               groupOperations.moveSegmentsToGroup(selection.selectedSegmentIds, groupId);
               hideContextMenu();
             },
-            disabled: isEditingDisabled,
+            disabled: isEditingDisabled || selection.selectedSegmentIds.length === 0,
             icon: <ArrowRightOutlined />,
             label: `Move active ${pluralize("segment", selection.selectedSegmentIds.length)} here`,
           },

@@ -24,7 +24,13 @@ import { formatMilliCreditsString, formatWkLibsNdBBox } from "libs/format_utils"
 import Persistence from "libs/persistence";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { compareBy, filterWithSearchQueryAND, localeCompareBy, pluralize } from "libs/utils";
+import {
+  compareBy,
+  filterWithSearchQueryAND,
+  localeCompareBy,
+  pluralize,
+  scrollToTop,
+} from "libs/utils";
 import capitalize from "lodash-es/capitalize";
 import type * as React from "react";
 import { useEffect, useState } from "react";
@@ -544,6 +550,7 @@ function JobListView() {
           rowKey="id"
           pagination={{
             defaultPageSize: 50,
+            onChange: scrollToTop,
           }}
         >
           <Column

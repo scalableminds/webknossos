@@ -3038,7 +3038,6 @@ class UserApi {
     - scale
     - tdViewDisplayPlanes
     - tdViewDisplayDatasetBorders
-    - tdViewDisplayLayerBorders
     - newNodeNewTree
     - centerNewNode
     - highlightCommentedNodes

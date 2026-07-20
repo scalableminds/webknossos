@@ -152,6 +152,19 @@ export function jsonStringify(json: Record<string, any>) {
   return JSON.stringify(json, null, "  ");
 }
 
+export function scrollToTop(): void {
+  scrollContainerToTop(null);
+}
+
+/**
+ * Smoothly scrolls the given container to the top (falling back to the
+ * window if the ref isn't set yet). For pages whose content scrolls inside a
+ * fixed-height, `overflow: auto` container rather than the window.
+ */
+export function scrollContainerToTop(container: HTMLElement | null | undefined): void {
+  (container ?? window).scrollTo({ top: 0, behavior: "smooth" });
+}
+
 export function clamp(min: number, value: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }

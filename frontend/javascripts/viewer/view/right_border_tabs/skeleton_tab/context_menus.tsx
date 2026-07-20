@@ -54,10 +54,10 @@ import { showTreeLengthNotification } from "./measurements";
 export type TreeContextMenuBuilder = (node: TreeUiNode) => MenuProps;
 export type GroupContextMenuBuilder = (node: GroupUiNode) => MenuProps;
 
-// The color/shuffle actions are dispatched as one batch so that they end up as a
-// single undo step.
-function batchTreeColorActions(actions: Action[], actionName: string): Action {
-  return batchActions(actions, actionName) as unknown as Action;
+// Wraps multiple actions into a single dispatchable batch so that they end up as one
+// undo step. `batchName` groups the batch for the undo history.
+function batchTreeActions(actions: Action[], batchName: string): Action {
+  return batchActions(actions, batchName) as unknown as Action;
 }
 
 export function useTreeContextMenuBuilder(
@@ -201,7 +201,7 @@ export function useGroupContextMenuBuilder(
         .values()
         .map((tree) => setTreeColorAction(tree.treeId, color))
         .toArray();
-      dispatch(batchTreeColorActions(setColorActions, "SET_TREE_COLOR"));
+      dispatch(batchTreeActions(setColorActions, "SET_TREE_COLOR"));
     },
     [dispatch, trees],
   );
@@ -214,7 +214,7 @@ export function useGroupContextMenuBuilder(
       const actions = getGroupByIdWithSubgroups(treeGroups, groupId).flatMap((subGroupId) =>
         (groupToTreesMap[subGroupId] ?? []).map((tree) => makeAction(tree.treeId)),
       );
-      dispatch(batchTreeColorActions(actions, batchName));
+      dispatch(batchTreeActions(actions, batchName));
     },
     [dispatch, trees, treeGroups],
   );

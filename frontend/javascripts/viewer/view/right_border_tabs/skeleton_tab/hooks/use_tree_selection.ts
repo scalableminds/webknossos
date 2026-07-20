@@ -36,7 +36,6 @@ export function useTreeSelection(): TreeSelection {
   // of the multi selection instead). That store change must not clear the selection
   // it just created, so the next active-tree sync is suppressed.
   const suppressNextActiveTreeSync = useRef(false);
-
   useEffect(() => {
     if (suppressNextActiveTreeSync.current) {
       suppressNextActiveTreeSync.current = false;

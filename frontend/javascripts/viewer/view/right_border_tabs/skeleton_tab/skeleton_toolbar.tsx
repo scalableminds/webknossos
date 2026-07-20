@@ -101,9 +101,7 @@ export function SkeletonToolbar({ hierarchy, selection, groupOperations, skeleto
     ? messages["tracing.skeleton_editing_disabled_in_live_collab"]
     : messages["tracing.read_only_mode_notification"](isAnnotationLockedByUser, isOwner);
 
-  // Mirrors onDeleteSelection's deletion target (selected trees if more than one is
-  // selected, otherwise the active tree) and reports whether every affected tree is an
-  // agglomerate tree. Used to keep the delete button enabled in concurrent collaboration
+  // Used to keep the delete button enabled in concurrent collaboration
   // mode when the deletion is actually permitted (only agglomerate trees, i.e. proofreading).
   const isDeleteOnlyAffectingAgglomerateTrees = () => {
     const treeIdsToDelete = selection.selectedTreeIds;

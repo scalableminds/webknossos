@@ -152,6 +152,19 @@ export function jsonStringify(json: Record<string, any>) {
   return JSON.stringify(json, null, "  ");
 }
 
+export function scrollToTop(): void {
+  scrollContainerToTop(null);
+}
+
+/**
+ * Smoothly scrolls the given container to the top (falling back to the
+ * window if the ref isn't set yet). For pages whose content scrolls inside a
+ * fixed-height, `overflow: auto` container rather than the window.
+ */
+export function scrollContainerToTop(container: HTMLElement | null | undefined): void {
+  (container ?? window).scrollTo({ top: 0, behavior: "smooth" });
+}
+
 export function clamp(min: number, value: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
@@ -235,6 +248,19 @@ export function getRandomColor(): Vector3 {
   // Generate three values between 0 and 1 that multiplied with 255 will be integers.
   const randomColor = [0, 1, 2].map(() => Math.floor(Math.random() * 256) / 255);
   return randomColor as any as Vector3;
+}
+
+// Derives a stable, well-saturated color (normalized 0-1 RGB) from a string, so that e.g. two
+// layers with different names get distinct but deterministic colors.
+export function stringToColor(str: string): Vector3 {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0; // Convert to 32bit integer
+  }
+  const hue = (Math.abs(hash) % 360) / 360;
+  const [r, g, b] = _hslaToRgba([hue, 0.7, 0.6, 1]);
+  return [r, g, b];
 }
 
 export function computeBoundingBoxFromArray(bb: Vector6): BoundingBoxMinMaxType {

@@ -26,6 +26,7 @@ export function AnnotationsCsvInput({ onClose }: { onClose: () => void }) {
           annotation: item.annotation,
           dataset: item.dataset,
           userBoundingBoxes: item.userBoundingBoxes,
+          volumeTracings: item.volumeTracings,
           volumeTracingMags: item.volumeTracingMags,
         }),
       );

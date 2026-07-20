@@ -1,8 +1,8 @@
-import { type Tree as AntdTree, type GetRef, type MenuProps, Modal, type TreeProps } from "antd";
+import { type Tree as AntdTree, type GetRef, Modal, type TreeProps } from "antd";
 import app from "app";
 import { useWkSelector } from "libs/react_hooks";
 import { sleep } from "libs/utils";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useDispatch } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
@@ -14,7 +14,6 @@ import {
   toggleSegmentGroupAction,
 } from "viewer/model/actions/volumetracing_actions";
 import Store from "viewer/store";
-import { getContextMenuPositionFromEvent } from "viewer/view/context_menu/helpers";
 import {
   findParentIdForGroupId,
   MISSING_GROUP_ID,
@@ -22,6 +21,7 @@ import {
 import { ResizableSplitPane } from "../resizable_split_pane";
 import ScrollableVirtualizedTree from "../scrollable_virtualized_tree";
 import { TreeSwitcherIcon } from "../shared/tree_switcher_icon";
+import { useTreeContextMenu } from "../shared/use_tree_context_menu";
 import { ContextMenuContainer } from "../sidebar_context_menu";
 import {
   type ContextMenuDependencies,
@@ -90,44 +90,21 @@ export function SegmentTreeView(props: Props) {
   );
 
   const treeRef = useRef<GetRef<typeof AntdTree>>(null);
-  const [contextMenuPosition, setContextMenuPosition] = useState<[number, number] | null>(null);
-  const [contextMenu, setContextMenu] = useState<MenuProps | null>(null);
-  // While a segment/group is being renamed, dragging is disabled so that text
-  // selection inside the input doesn't start a drag operation.
-  const renamingCounter = useRef(0);
-  const onRenameStart = useCallback(() => {
-    renamingCounter.current += 1;
-  }, []);
-  const onRenameEnd = useCallback(() => {
-    renamingCounter.current = Math.max(renamingCounter.current - 1, 0);
-  }, []);
+  const {
+    contextMenuPosition,
+    contextMenu,
+    openContextMenu,
+    hideContextMenu,
+    onRenameStart,
+    onRenameEnd,
+    getIsRenaming,
+  } = useTreeContextMenu(CONTEXT_MENU_CLASS);
 
   useScrollBenchmark(treeRef);
-
-  const hideContextMenu = useCallback(() => {
-    setContextMenuPosition(null);
-    setContextMenu(null);
-  }, []);
 
   const contextMenuDependencies: ContextMenuDependencies = { ...props, hideContextMenu };
   const buildSegmentContextMenu = useSegmentContextMenuBuilder(contextMenuDependencies);
   const buildGroupContextMenu = useGroupContextMenuBuilder(contextMenuDependencies);
-
-  const openContextMenu = useCallback((menu: MenuProps, event: React.MouseEvent<HTMLElement>) => {
-    event.preventDefault();
-    const [x, y] = getContextMenuPositionFromEvent(
-      event as React.MouseEvent<HTMLDivElement>,
-      CONTEXT_MENU_CLASS,
-    );
-    // On Windows the right click to open the context menu is also triggered for the overlay
-    // of the context menu. This causes the context menu to instantly close after opening.
-    // Therefore delay the state update so that the context overlay does not get the right
-    // click as an event and therefore does not close.
-    setTimeout(() => {
-      setContextMenuPosition([x, y]);
-      setContextMenu(menu);
-    }, 0);
-  }, []);
 
   const onSegmentNodeContextMenu = useCallback(
     (node: SegmentUiNode, event: React.MouseEvent<HTMLElement>) =>
@@ -285,7 +262,7 @@ export function SegmentTreeView(props: Props) {
   };
 
   const isNodeDraggable = (node: SegmentsUiNode): boolean =>
-    allowUpdate && renamingCounter.current === 0 && !isRootGroupNode(node);
+    allowUpdate && !getIsRenaming() && !isRootGroupNode(node);
 
   return (
     <>

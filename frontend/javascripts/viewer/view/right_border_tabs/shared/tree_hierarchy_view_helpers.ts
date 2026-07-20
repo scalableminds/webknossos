@@ -254,6 +254,19 @@ export function getGroupByIdWithSubgroups(
   return groupWithSubgroups;
 }
 
+/*
+ * Returns the ids of all descendant groups of the given group, i.e. its
+ * subgroups WITHOUT the group itself. For the virtual root group
+ * (MISSING_GROUP_ID) this yields every group in the hierarchy.
+ * In contrast to getGroupByIdWithSubgroups, the group itself is excluded.
+ */
+export function getDescendantGroupIds(treeGroups: TreeGroup[], groupId: number): number[] {
+  if (groupId === MISSING_GROUP_ID) {
+    return treeGroups.flatMap((group) => getGroupByIdWithSubgroups(treeGroups, group.groupId));
+  }
+  return getGroupByIdWithSubgroups(treeGroups, groupId).filter((id) => id !== groupId);
+}
+
 export function moveGroupsHelper(
   groups: TreeGroup[] | SegmentGroup[],
   groupId: number,

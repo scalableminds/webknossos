@@ -1,6 +1,6 @@
-import type { Tree as AntdTree, GetRef, MenuProps, TreeProps } from "antd";
+import type { Tree as AntdTree, GetRef, TreeProps } from "antd";
 import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useDispatch } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
@@ -13,7 +13,6 @@ import {
   toggleTreeGroupAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import { useReduxActionListener } from "viewer/model/helpers/listener_helpers";
-import { getContextMenuPositionFromEvent } from "viewer/view/context_menu/helpers";
 import {
   getGroupByIdWithSubgroups,
   MISSING_GROUP_ID,
@@ -21,6 +20,7 @@ import {
 import { ResizableSplitPane } from "../resizable_split_pane";
 import ScrollableVirtualizedTree from "../scrollable_virtualized_tree";
 import { TreeSwitcherIcon } from "../shared/tree_switcher_icon";
+import { useTreeContextMenu } from "../shared/use_tree_context_menu";
 import { ContextMenuContainer } from "../sidebar_context_menu";
 import { useGroupContextMenuBuilder, useTreeContextMenuBuilder } from "./context_menus";
 import {
@@ -57,22 +57,15 @@ export function SkeletonTreeView({ hierarchy, selection, groupOperations }: Prop
   );
 
   const treeRef = useRef<GetRef<typeof AntdTree>>(null);
-  const [contextMenuPosition, setContextMenuPosition] = useState<[number, number] | null>(null);
-  const [contextMenu, setContextMenu] = useState<MenuProps | null>(null);
-  // While a tree/group is being renamed, dragging is disabled so that text
-  // selection inside the input doesn't start a drag operation.
-  const renamingCounter = useRef(0);
-  const onRenameStart = useCallback(() => {
-    renamingCounter.current += 1;
-  }, []);
-  const onRenameEnd = useCallback(() => {
-    renamingCounter.current = Math.max(renamingCounter.current - 1, 0);
-  }, []);
-
-  const hideContextMenu = useCallback(() => {
-    setContextMenuPosition(null);
-    setContextMenu(null);
-  }, []);
+  const {
+    contextMenuPosition,
+    contextMenu,
+    openContextMenu,
+    hideContextMenu,
+    onRenameStart,
+    onRenameEnd,
+    getIsRenaming,
+  } = useTreeContextMenu(CONTEXT_MENU_CLASS);
 
   const buildTreeContextMenu = useTreeContextMenuBuilder(selection, hideContextMenu);
   const buildGroupContextMenu = useGroupContextMenuBuilder(
@@ -81,30 +74,14 @@ export function SkeletonTreeView({ hierarchy, selection, groupOperations }: Prop
     hideContextMenu,
   );
 
-  const openContextMenu = useCallback(
-    (menu: MenuProps, event: React.MouseEvent<HTMLDivElement>) => {
-      event.preventDefault();
-      const [x, y] = getContextMenuPositionFromEvent(event, CONTEXT_MENU_CLASS);
-      // On Windows the right click to open the context menu is also triggered for the overlay
-      // of the context menu. This causes the context menu to instantly close after opening.
-      // Therefore delay the state update so that the context overlay does not get the right
-      // click as an event and therefore does not close.
-      setTimeout(() => {
-        setContextMenuPosition([x, y]);
-        setContextMenu(menu);
-      }, 0);
-    },
-    [],
-  );
-
   const onTreeNodeContextMenu = useCallback(
-    (node: TreeUiNode, event: React.MouseEvent<HTMLDivElement>) =>
+    (node: TreeUiNode, event: React.MouseEvent<HTMLElement>) =>
       openContextMenu(buildTreeContextMenu(node), event),
     [openContextMenu, buildTreeContextMenu],
   );
 
   const onGroupNodeContextMenu = useCallback(
-    (node: GroupUiNode, event: React.MouseEvent<HTMLDivElement>) =>
+    (node: GroupUiNode, event: React.MouseEvent<HTMLElement>) =>
       openContextMenu(buildGroupContextMenu(node), event),
     [openContextMenu, buildGroupContextMenu],
   );
@@ -247,7 +224,7 @@ export function SkeletonTreeView({ hierarchy, selection, groupOperations }: Prop
   };
 
   const isNodeDraggable = (node: SkeletonUiNode): boolean =>
-    allowUpdate && renamingCounter.current === 0 && !isRootGroupNode(node);
+    allowUpdate && !getIsRenaming() && !isRootGroupNode(node);
 
   // selectedKeys is mainly used for highlighting, i.e. blueish background color.
   const selectedKeys =

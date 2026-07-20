@@ -47,7 +47,7 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import type { Segment } from "viewer/store";
 import Store from "viewer/store";
-import { getGroupByIdWithSubgroups, MISSING_GROUP_ID } from "../shared/tree_hierarchy_view_helpers";
+import { getDescendantGroupIds } from "../shared/tree_hierarchy_view_helpers";
 import {
   getGroupUiNodeKey,
   type SegmentGroupUiNode,
@@ -470,13 +470,7 @@ export function useGroupContextMenuBuilder(
 
       // Expand/collapse are only offered when they would actually change something.
       const expandedKeySet = new Set(hierarchy.expandedKeys);
-      const subgroupKeys = (
-        groupId === MISSING_GROUP_ID
-          ? segmentGroups.flatMap((group) =>
-              getGroupByIdWithSubgroups(segmentGroups, group.groupId),
-            )
-          : getGroupByIdWithSubgroups(segmentGroups, groupId).filter((id) => id !== groupId)
-      ).map(getGroupUiNodeKey);
+      const subgroupKeys = getDescendantGroupIds(segmentGroups, groupId).map(getGroupUiNodeKey);
       const isGroupItselfExpanded = expandedKeySet.has(getGroupUiNodeKey(groupId));
       const areAllSubgroupsExpanded = subgroupKeys.every((key) => expandedKeySet.has(key));
       const areAllSubgroupsCollapsed = subgroupKeys.every((key) => !expandedKeySet.has(key));

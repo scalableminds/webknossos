@@ -17,8 +17,8 @@ import {
   additionallyExpandGroup,
   createGroupToParentMap,
   createGroupToSegmentsMap,
+  getDescendantGroupIds,
   getExpandedGroups,
-  getGroupByIdWithSubgroups,
   MISSING_GROUP_ID,
 } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import { getGroupUiNodeKey, type SegmentsUiNode } from "../hierarchy";
@@ -198,20 +198,16 @@ export function useSegmentGroupOperations(): SegmentGroupOperations {
       const expandedKeys = new Set(
         getExpandedGroups(segmentGroups).map((group) => getGroupUiNodeKey(group.groupId)),
       );
-      const subgroupIds =
-        groupId === MISSING_GROUP_ID
-          ? segmentGroups.flatMap((group) =>
-              getGroupByIdWithSubgroups(segmentGroups, group.groupId),
-            )
-          : getGroupByIdWithSubgroups(segmentGroups, groupId);
-
-      for (const subgroupId of subgroupIds) {
+      for (const subgroupId of getDescendantGroupIds(segmentGroups, groupId)) {
         if (expanded) {
           expandedKeys.add(getGroupUiNodeKey(subgroupId));
-        } else if (subgroupId !== groupId) {
-          // Do not collapse the group itself, only its subgroups.
+        } else {
           expandedKeys.delete(getGroupUiNodeKey(subgroupId));
         }
+      }
+      // Expanding subgroups also expands the group itself; collapsing leaves it as-is.
+      if (expanded && groupId !== MISSING_GROUP_ID) {
+        expandedKeys.add(getGroupUiNodeKey(groupId));
       }
       setExpandedGroups(expandedKeys);
     },

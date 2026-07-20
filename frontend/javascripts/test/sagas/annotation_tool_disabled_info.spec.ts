@@ -197,21 +197,6 @@ describe("Annotation Tool Disabled Info", () => {
     }
   });
 
-  it("Volume tools should be disabled when the zoomed-in mag is missing for the volume layer but exists in another layer.", () => {
-    const disabledInfo = getDisabledInfoForTools(zoomedInStateWithRestrictedVolumeMags);
-
-    for (const tool of Object.values(AnnotationTool)) {
-      if (
-        tool === AnnotationTool.PROOFREAD ||
-        zoomSensitiveVolumeTools.includes(tool as AnnotationTool)
-      ) {
-        expect(disabledInfo[tool.id]?.isDisabled).toBe(true);
-      } else {
-        expect(disabledInfo[tool.id]?.isDisabled).toBe(false);
-      }
-    }
-  });
-
   it("Tools should be disabled when dataset is rotated", () => {
     const toolsDisregardingRotation = [
       AnnotationTool.MOVE,

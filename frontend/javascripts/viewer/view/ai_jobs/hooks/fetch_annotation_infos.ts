@@ -1,6 +1,7 @@
 import { getAnnotationsForTask } from "admin/api/tasks";
 import {
   getDataset,
+  getShortLink,
   getTracingForAnnotationType,
   getUnversionedAnnotationInformation,
 } from "admin/rest_api";
@@ -14,18 +15,56 @@ import type { VolumeTracing } from "viewer/store";
 import type { AnnotationInfoForAITrainingJob } from "../utils";
 
 /**
- * Parses a list of task IDs, annotation IDs, or annotation URLs and sorts them into annotation IDs for training and unfinished tasks.
- * @returns An object containing the annotation IDs for training and a list of unfinished tasks.
+ * Extracts the key of a short link (e.g. https://webknossos.org/links/PXF4yaASqFQm3YIt) from a string,
+ * or returns null if the string is not a short link URL.
  */
-async function resolveAnnotationIds(
-  taskOrAnnotationIdsOrUrls: string[],
-): Promise<{ annotationIdsForTraining: string[]; unfinishedTasks: string[] }> {
+function extractShortLinkKey(taskOrAnnotationIdOrUrl: string): string | null {
+  try {
+    const url = new URL(taskOrAnnotationIdOrUrl);
+    const match = url.pathname.match(/^\/links\/([^/]+)\/?$/);
+    return match ? match[1] : null;
+  } catch (_e) {
+    return null;
+  }
+}
+
+/**
+ * Parses a list of task IDs, annotation IDs, or annotation URLs (including short links) and sorts
+ * them into annotation IDs for training and unfinished tasks.
+ * @returns An object containing the annotation IDs for training, a list of unfinished tasks and a list of short links that could not be resolved.
+ */
+async function resolveAnnotationIds(taskOrAnnotationIdsOrUrls: string[]): Promise<{
+  annotationIdsForTraining: string[];
+  unfinishedTasks: string[];
+  unresolvedShortLinks: string[];
+}> {
   const annotationIdsForTraining: string[] = [];
   const unfinishedTasks: string[] = [];
+  const unresolvedShortLinks: string[] = [];
 
-  for (const taskOrAnnotationIdOrUrl of taskOrAnnotationIdsOrUrls) {
+  for (const original of taskOrAnnotationIdsOrUrls) {
+    let taskOrAnnotationIdOrUrl = original;
+    const shortLinkKey = extractShortLinkKey(taskOrAnnotationIdOrUrl);
+    if (shortLinkKey != null) {
+      try {
+        const shortLink = await getShortLink(shortLinkKey);
+        taskOrAnnotationIdOrUrl = shortLink.longLink;
+      } catch (_e) {
+        unresolvedShortLinks.push(original);
+        continue;
+      }
+    }
+
     if (taskOrAnnotationIdOrUrl.includes("/")) {
-      const annotationId = taskOrAnnotationIdOrUrl.split("/").at(-1);
+      // Resolved short links may carry a #-prefixed URL fragment (encoding the view state),
+      // so the annotation ID is extracted from the pathname only, ignoring hash/query parts.
+      let pathname = taskOrAnnotationIdOrUrl;
+      try {
+        pathname = new URL(taskOrAnnotationIdOrUrl).pathname;
+      } catch (_e) {
+        // Not an absolute URL (e.g. a relative path) -- fall back to the raw string.
+      }
+      const annotationId = pathname.split("/").at(-1);
       if (annotationId) {
         annotationIdsForTraining.push(annotationId);
       }
@@ -49,7 +88,7 @@ async function resolveAnnotationIds(
       }
     }
   }
-  return { annotationIdsForTraining, unfinishedTasks };
+  return { annotationIdsForTraining, unfinishedTasks, unresolvedShortLinks };
 }
 
 /**
@@ -163,14 +202,14 @@ export async function fetchAnnotationInfo(
 /**
  * Fetches all necessary information for a list of tasks or annotations to be used in an AI training job.
  * It resolves task IDs to annotation IDs, fetches details for each annotation, and shows a warning for tasks with no finished annotations.
- * @param taskOrAnnotationIdsOrUrls - A list of task IDs, annotation IDs, or annotation URLs.
+ * @param taskOrAnnotationIdsOrUrls - A list of task IDs, annotation IDs, or annotation URLs (short links are resolved automatically).
  * @returns A promise that resolves to an array of objects, each containing all necessary annotation information.
  */
 export async function fetchAnnotationInfos(
   taskOrAnnotationIdsOrUrls: string[],
 ): Promise<AnnotationInfoForAITrainingJob<APIAnnotation>[]> {
   try {
-    const { annotationIdsForTraining, unfinishedTasks } =
+    const { annotationIdsForTraining, unfinishedTasks, unresolvedShortLinks } =
       await resolveAnnotationIds(taskOrAnnotationIdsOrUrls);
 
     const newAnnotationsWithDatasets = await Promise.all(
@@ -179,6 +218,11 @@ export async function fetchAnnotationInfos(
     if (unfinishedTasks.length > 0) {
       Toast.warning(
         `The following tasks have no finished annotations: ${unfinishedTasks.join(", ")}`,
+      );
+    }
+    if (unresolvedShortLinks.length > 0) {
+      Toast.error(
+        `The following short links could not be resolved: ${unresolvedShortLinks.join(", ")}`,
       );
     }
     return newAnnotationsWithDatasets;

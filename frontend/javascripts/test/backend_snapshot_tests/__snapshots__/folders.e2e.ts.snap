@@ -18,7 +18,7 @@ exports[`Folder API (E2E) > addAllowedTeamToFolder 1`] = `
       "organization": "Organization_X",
     },
   ],
-  "created": null,
+  "created": 1460379470000,
   "id": "570b9f4e4bb848d08880712a",
   "isEditable": true,
   "metadata": [
@@ -50,7 +50,7 @@ exports[`Folder API (E2E) > addAllowedTeamToFolder 2`] = `
       "organization": "Organization_X",
     },
   ],
-  "created": null,
+  "created": 1460379470000,
   "id": "570b9f4e4bb848d08880712a",
   "isEditable": false,
   "metadata": [
@@ -80,7 +80,7 @@ exports[`Folder API (E2E) > getFolder 1`] = `
 {
   "allowedTeams": [],
   "allowedTeamsCumulative": [],
-  "created": null,
+  "created": 1460379470000,
   "id": "570b9f4e4bb848d0885ea917",
   "isEditable": true,
   "metadata": [
@@ -97,7 +97,7 @@ exports[`Folder API (E2E) > getFolder 1`] = `
 exports[`Folder API (E2E) > getFolderTree 1`] = `
 [
   {
-    "created": null,
+    "created": 1460379470000,
     "id": "570b9f4e4bb848d08880712a",
     "isEditable": true,
     "metadata": [],
@@ -105,7 +105,7 @@ exports[`Folder API (E2E) > getFolderTree 1`] = `
     "parent": "570b9f4e4bb848d0885ea917",
   },
   {
-    "created": null,
+    "created": 1460379470000,
     "id": "570b9f4e4bb848d08880712b",
     "isEditable": true,
     "metadata": [],
@@ -113,7 +113,7 @@ exports[`Folder API (E2E) > getFolderTree 1`] = `
     "parent": "570b9f4e4bb848d0885ea917",
   },
   {
-    "created": null,
+    "created": 1460379470000,
     "id": "570b9f4e4bb848d0885ea917",
     "isEditable": true,
     "metadata": [
@@ -133,7 +133,7 @@ exports[`Folder API (E2E) > updateFolder 1`] = `
 {
   "allowedTeams": [],
   "allowedTeamsCumulative": [],
-  "created": null,
+  "created": 1460379470000,
   "id": "570b9f4e4bb848d0885ea917",
   "isEditable": true,
   "metadata": [],

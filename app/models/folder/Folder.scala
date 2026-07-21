@@ -20,14 +20,14 @@ import javax.inject.Inject
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 
-case class Folder(_id: ObjectId, name: String, metadata: JsArray, created: Option[Instant] = Some(Instant.now))
+case class Folder(_id: ObjectId, name: String, metadata: JsArray, created: Instant = Instant.now)
 
 case class FolderWithParent(
     _id: ObjectId,
     name: String,
     metadata: JsArray,
     _parent: Option[ObjectId],
-    created: Option[Instant] = Some(Instant.now)
+    created: Instant = Instant.now
 )
 
 case class FolderParameters(name: String, allowedTeams: List[ObjectId], metadata: JsArray)
@@ -158,9 +158,9 @@ class FolderDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected def parse(r: FoldersRow): Fox[Folder] =
     for {
       metadata <- parseMetadata(r.metadata)
-    } yield Folder(ObjectId(r._id), r.name, metadata, r.created.map(Instant.fromSql))
+    } yield Folder(ObjectId(r._id), r.name, metadata, Instant.fromSql(r.created))
 
-  private def parseWithParent(t: (String, String, String, Option[String], Option[Instant])): Fox[FolderWithParent] =
+  private def parseWithParent(t: (String, String, String, Option[String], Instant)): Fox[FolderWithParent] =
     for {
       metadata <- parseMetadata(t._3)
       folderWithParent = FolderWithParent(ObjectId(t._1), t._2, metadata, t._4.map(ObjectId(_)), t._5)
@@ -312,7 +312,7 @@ class FolderDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
               FROM webknossos.folders_
               WHERE _id = $folderId
               AND $accessQuery
-              """.as[(String, String, String, Option[String], Option[Instant])])
+              """.as[(String, String, String, Option[String], Instant)])
       parsed <- Fox.combined(rows.toList.map(parseWithParent))
     } yield parsed
 

@@ -377,7 +377,6 @@ export type UserConfiguration = {
   readonly sphericalCapRadius: number;
   readonly tdViewDisplayPlanes: TDViewDisplayMode;
   readonly tdViewDisplayDatasetBorders: boolean;
-  readonly tdViewDisplayLayerBorders: boolean;
   readonly gpuMemoryFactor: number;
   // For volume (and hybrid) annotations, this mode specifies
   // how volume annotations overwrite existing voxels.
@@ -442,6 +441,10 @@ export type TemporaryConfiguration = {
   readonly preferredQualityForMeshPrecomputation: number;
   readonly preferredQualityForMeshAdHocComputation: number;
   readonly lastVisibleSegmentationLayerName: string | null | undefined;
+  // Display state for the read-only bounding boxes of the dataset's layers, keyed by layer name (one
+  // entry per layer). These are client-only (not persisted) and fall back to visible/derived color.
+  readonly layerBoundingBoxVisibilities: Record<string, boolean>;
+  readonly layerBoundingBoxColors: Record<string, Vector3>;
 };
 export type Script = APIScript;
 export type Task = APITask;

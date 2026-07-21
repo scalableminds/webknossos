@@ -41,7 +41,6 @@ import models.organization.OrganizationDAO
 import models.project.ProjectDAO
 import models.task.*
 import models.user.*
-import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.Materializer
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.Json
@@ -82,7 +81,6 @@ class AnnotationIOController @Inject() (
     with ProtoGeometryConversions
     with AnnotationLayerPrecedence
     with LazyLogging {
-  implicit val actorSystem: ActorSystem = ActorSystem()
 
   private val volumeDataZipFormatForCompoundAnnotations = VolumeDataZipFormat.wkw
 
@@ -509,8 +507,7 @@ class AnnotationIOController @Inject() (
         )
         nmlTemporaryFile = tempFileService.create()
         temporaryFileStream = new BufferedOutputStream(new FileOutputStream(new File(nmlTemporaryFile.toString)))
-        _ <- nmlStream.writeTo(temporaryFileStream)
-        _ = temporaryFileStream.close()
+        _ <- nmlStream.writeTo(temporaryFileStream).andThen { case _ => temporaryFileStream.close() }
       } yield nmlTemporaryFile
 
     def volumeOrHybridToTemporaryFile(
@@ -564,20 +561,21 @@ class AnnotationIOController @Inject() (
         )
         temporaryFile = tempFileService.create()
         zipper = ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(new File(temporaryFile.toString))))
-        _ <- zipper.addFileFromNamedStream(nmlStream, suffix = ".nml") ?~> Msg.Annotation.Download.zipNmlFailed
-        _ = fetchedVolumeLayers.zipWithIndex.map { case (volumeLayer, index) =>
-          volumeLayer.volumeDataOpt.foreach { volumeData =>
-            val dataZipName = volumeLayer.volumeDataZipName(index, fetchedVolumeLayers.length == 1)
-            zipper.stream.setLevel(Deflater.BEST_SPEED)
-            zipper.addFileFromBytes(dataZipName, volumeData)
+        _ <- (for {
+          _ <- zipper.addFileFromNamedStream(nmlStream, suffix = ".nml") ?~> Msg.Annotation.Download.zipNmlFailed
+          _ = fetchedVolumeLayers.zipWithIndex.foreach { case (volumeLayer, index) =>
+            volumeLayer.volumeDataOpt.foreach { volumeData =>
+              val dataZipName = volumeLayer.volumeDataZipName(index, fetchedVolumeLayers.length == 1)
+              zipper.stream.setLevel(Deflater.BEST_SPEED)
+              zipper.addFileFromBytes(dataZipName, volumeData)
+            }
+            volumeLayer.editedMappingEdgesOpt.foreach { editedEdgesData =>
+              val editedEdgesZipName = volumeLayer.editedMappingEdgesZipName(index, fetchedVolumeLayers.length == 1)
+              zipper.stream.setLevel(Deflater.BEST_SPEED)
+              zipper.addFileFromBytes(editedEdgesZipName, editedEdgesData)
+            }
           }
-          volumeLayer.editedMappingEdgesOpt.foreach { editedEdgesData =>
-            val editedEdgesZipName = volumeLayer.editedMappingEdgesZipName(index, fetchedVolumeLayers.length == 1)
-            zipper.stream.setLevel(Deflater.BEST_SPEED)
-            zipper.addFileFromBytes(editedEdgesZipName, editedEdgesData)
-          }
-        }
-        _ = zipper.close()
+        } yield ()).andThen { case _ => zipper.close() }
       } yield temporaryFile
 
     def annotationToTemporaryFile(

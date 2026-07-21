@@ -136,11 +136,89 @@ object MultiArrayUtils extends LazyLogging {
       }
     }
     if (hasOverlap) {
-      val sourceRangeIterator = source.getRangeIterator(sourceRanges)
-      val targetRangeIterator = target.getRangeIterator(targetRanges)
-      val elementType = source.getElementType
-      val setter = createValueSetter(elementType)
-      while (sourceRangeIterator.hasNext) setter.set(sourceRangeIterator, targetRangeIterator)
+      if (canCopyViaContiguousRuns(source, target, sourceRanges)) {
+        copyRangeViaContiguousRuns(source, target, sourceRanges, targetRanges)
+      } else {
+        val sourceRangeIterator = source.getRangeIterator(sourceRanges)
+        val targetRangeIterator = target.getRangeIterator(targetRanges)
+        val elementType = source.getElementType
+        val setter = createValueSetter(elementType)
+        while (sourceRangeIterator.hasNext) setter.set(sourceRangeIterator, targetRangeIterator)
+      }
+    }
+  }
+
+  private def hasUnitStrideInLastDimension(array: MultiArray): Boolean = {
+    val rank = array.getRank
+    if (rank == 0) false
+    else if (array.getShape()(rank - 1) < 2) true
+    else {
+      val index = array.getIndex
+      val zero = new Array[Int](rank)
+      index.set(zero)
+      val offsetAtZero = index.currentElement()
+      val one = zero.clone()
+      one(rank - 1) = 1
+      index.set(one)
+      index.currentElement() - offsetAtZero == 1
+    }
+  }
+
+  private def canCopyViaContiguousRuns(
+      source: MultiArray,
+      target: MultiArray,
+      sourceRanges: util.ArrayList[Range]
+  ): Boolean =
+    sourceRanges.size > 0 && hasUnitStrideInLastDimension(source) && hasUnitStrideInLastDimension(target)
+
+  private def copyRangeViaContiguousRuns(
+      source: MultiArray,
+      target: MultiArray,
+      sourceRanges: util.ArrayList[Range],
+      targetRanges: util.ArrayList[Range]
+  ): Unit = {
+    val rank = sourceRanges.size
+    val sourceStorage = source.getStorage
+    val targetStorage = target.getStorage
+    val sourceIndex = source.getIndex
+    val targetIndex = target.getIndex
+    val runLength = sourceRanges.get(rank - 1).length
+    val outerDims = rank - 1
+
+    val sourceIdx = Array.tabulate(rank)(d => sourceRanges.get(d).first)
+    val targetIdx = Array.tabulate(rank)(d => targetRanges.get(d).first)
+
+    def copyRun(): Unit = {
+      sourceIndex.set(sourceIdx)
+      targetIndex.set(targetIdx)
+      System.arraycopy(
+        sourceStorage,
+        sourceIndex.currentElement(),
+        targetStorage,
+        targetIndex.currentElement(),
+        runLength
+      )
+    }
+
+    copyRun()
+    val leastSignificantOuterDim = outerDims - 1
+    var hasMore = leastSignificantOuterDim >= 0
+    while (hasMore) {
+      var d = leastSignificantOuterDim
+      var carry = true
+      while (carry && d >= 0) {
+        sourceIdx(d) += 1
+        targetIdx(d) += 1
+        if (sourceIdx(d) > sourceRanges.get(d).last) {
+          sourceIdx(d) = sourceRanges.get(d).first
+          targetIdx(d) = targetRanges.get(d).first
+          d -= 1
+        } else {
+          carry = false
+        }
+      }
+      if (carry) hasMore = false
+      else copyRun()
     }
   }
 

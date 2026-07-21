@@ -273,6 +273,9 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
 
     object Loki {
       val uri: String = get[String]("voxelytics.loki.uri")
+      val tenant: String = get[String]("voxelytics.loki.tenant")
+      val user: String = get[String]("voxelytics.loki.user")
+      val password: String = get[String]("voxelytics.loki.password")
       val startupTimeout: FiniteDuration = get[FiniteDuration]("voxelytics.loki.startupTimeout")
     }
 

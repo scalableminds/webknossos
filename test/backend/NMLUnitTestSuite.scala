@@ -143,6 +143,24 @@ class NMLUnitTestSuite extends AsyncWordSpec {
     }
   }
 
+  "NML writing and parsing" should {
+    "deduplicate nodes with the same id when writing, keeping the rest of the tree intact" in {
+      val duplicatedNode = dummyTracing.trees.head.nodes.head
+      val treeWithDuplicateNode =
+        dummyTracing.trees.head.copy(nodes = dummyTracing.trees.head.nodes :+ duplicatedNode)
+      val newTracing = dummyTracing.copy(trees = treeWithDuplicateNode +: dummyTracing.trees.tail)
+
+      writeAndParseTracing(newTracing).futureBox.map {
+        case Full(tuple) =>
+          tuple match {
+            case NmlParseSuccessWithoutFile(tracing, _, _, _, _) =>
+              assert(tracing == dummyTracing)
+          }
+        case _ => fail()
+      }
+    }
+  }
+
   "NML Parser" should {
     "throw an error for invalid comment with a non-existent nodeId" in {
       // the comment nodeId is referring to a non-existent node therefore invalid

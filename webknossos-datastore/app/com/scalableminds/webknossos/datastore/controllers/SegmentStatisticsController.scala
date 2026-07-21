@@ -297,10 +297,35 @@ class SegmentStatisticsController @Inject() (
             request.body.mappingName,
             allowRemapping = true
           )
-          centerOfMasses <- segmentStatisticsFileService.getCenterOfMasses(
+          remappingNeeded <- segmentStatisticsFileService.needsRemapping(
             segmentStatisticsFileKey,
-            request.body.segmentIds
+            request.body.mappingName
           )
+          centerOfMasses <-
+            if (remappingNeeded) {
+              Fox.serialCombined(request.body.segmentIds) { segmentOrAgglomerateId =>
+                for {
+                  oversegmentationIds <- segmentIdsForAgglomerateIdIfNeeded(
+                    dataSource.id,
+                    dataLayer,
+                    request.body.mappingName,
+                    None,
+                    request.body.annotationVersion,
+                    segmentOrAgglomerateId,
+                    mappingNameForMeshFile = None,
+                    omitMissing = false
+                  )
+                  centerOfMass <- segmentStatisticsFileService.getCombinedCenterOfMass(
+                    segmentStatisticsFileKey,
+                    oversegmentationIds
+                  )
+                } yield centerOfMass
+              }
+            } else {
+              // Shortcut: the file already holds stats for the requested mapping (or lack thereof), no need to
+              // combine oversegmentation values.
+              segmentStatisticsFileService.getCenterOfMasses(segmentStatisticsFileKey, request.body.segmentIds)
+            }
         } yield Ok(Json.toJson(centerOfMasses))
       }
     }

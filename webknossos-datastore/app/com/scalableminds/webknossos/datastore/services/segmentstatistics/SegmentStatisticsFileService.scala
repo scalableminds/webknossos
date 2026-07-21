@@ -52,10 +52,11 @@ object SegmentStatisticsFileService {
   val keyMaxDistances = "max_distances"
   val keyCenterOfMass = "center_of_mass"
   val keySphericities = "sphericities"
+  val keyVolumes = "volumes"
   val keyIds = "ids"
 
   val possibleMetrics: Seq[String] =
-    Seq("positions", keyMaxDistances, "volumes", keyCenterOfMass, keyCovarianceMatrix, "surfaces", keySphericities)
+    Seq("positions", keyMaxDistances, keyVolumes, keyCenterOfMass, keyCovarianceMatrix, "surfaces", keySphericities)
 }
 
 class SegmentStatisticsFileService @Inject() (
@@ -161,7 +162,14 @@ class SegmentStatisticsFileService @Inject() (
       _ <- Fox.fromBool(metrics.contains(metric)) ?~> Msg.SegmentStatisticsFile.metricNotAvailable(metric)
     } yield ()
 
-  private def resolveMagAndMappingName(segmentStatisticsFileKey: SegmentStatisticsFileKey, dataLayer: DataLayer)(using
+  private def resolveMappingName(
+      segmentStatisticsFileKey: SegmentStatisticsFileKey
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Option[String]] =
+    for {
+      attributes <- readSegmentStatisticsFileAttributes(segmentStatisticsFileKey)
+    } yield attributes.mappingName.filter(_.nonEmpty) // Emptystring to None
+
+  def resolveMagAndMappingName(segmentStatisticsFileKey: SegmentStatisticsFileKey, dataLayer: DataLayer)(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[(Vec3Int, Option[String])] =
@@ -170,8 +178,18 @@ class SegmentStatisticsFileService @Inject() (
       mag <- attributes.mag
         .orElse(dataLayer.finestMag)
         .toFox ?~> "Could not determine mag for segment statistics file, layer has no mags"
-      mappingName = attributes.mappingName.filter(_.nonEmpty) // Emptystring to None
+      mappingName <- resolveMappingName(segmentStatisticsFileKey)
     } yield (mag, mappingName)
+
+  // Whether serving requestedMappingName for this file would require recombining oversegmentation values,
+  // i.e. the file’s own mapping (if any) differs from the one being requested.
+  def needsRemapping(segmentStatisticsFileKey: SegmentStatisticsFileKey, requestedMappingName: Option[String])(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Boolean] =
+    for {
+      fileMappingName <- resolveMappingName(segmentStatisticsFileKey)
+    } yield fileMappingName != requestedMappingName.filter(_.nonEmpty)
 
   def checkMagAndMappingNameMatch(
       segmentStatisticsFileKey: SegmentStatisticsFileKey,
@@ -182,22 +200,20 @@ class SegmentStatisticsFileService @Inject() (
       allowRemapping: Boolean
   )(using ec: ExecutionContext, tc: TokenContext): Fox[Unit] =
     for {
-      // Emptystring to None
-      normalizedRequestedMappingName = requestedMappingName.filter(_.nonEmpty)
       (fileMag, fileMappingName) <- resolveMagAndMappingName(segmentStatisticsFileKey, dataLayer)
       _ <- Fox.fromBool(fileMag <= requestedMag) ?~> Msg.SegmentStatisticsFile
         .magTooFine(requestedMag.toMagLiteral(true), fileMag.toMagLiteral(true))
+      remappingNeeded <- needsRemapping(segmentStatisticsFileKey, requestedMappingName)
       _ <-
-        if (allowRemapping) {
-          Fox.fromBool(
-            fileMappingName.isEmpty || fileMappingName == normalizedRequestedMappingName
-          ) ?~> Msg.SegmentStatisticsFile.remappingRequiresUnmappedFile(fileMappingName.getOrElse("(none)"))
+        if (!remappingNeeded) Fox.successful(())
+        else if (allowRemapping) {
+          Fox.fromBool(fileMappingName.isEmpty) ?~> Msg.SegmentStatisticsFile
+            .remappingRequiresUnmappedFile(fileMappingName.getOrElse("(none)"))
         } else {
-          Fox.fromBool(fileMappingName == normalizedRequestedMappingName) ?~> Msg.SegmentStatisticsFile
-            .mappingNameMismatch(
-              normalizedRequestedMappingName.getOrElse("(none)"),
-              fileMappingName.getOrElse("(none)")
-            )
+          Fox.failure(
+            Msg.SegmentStatisticsFile
+              .mappingNameMismatch(requestedMappingName.filter(_.nonEmpty).getOrElse("(none)"), fileMappingName.getOrElse("(none)"))
+          )
         }
     } yield ()
 
@@ -250,6 +266,47 @@ class SegmentStatisticsFileService @Inject() (
       tc: TokenContext
   ): Fox[Seq[Array[Float]]] =
     Fox.serialCombined(segmentIds)(readCenterOfMass(segmentStatisticsFileKey, _))
+
+  private def readVolume(segmentStatisticsFileKey: SegmentStatisticsFileKey, segmentId: Long)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Long] =
+    for {
+      volumesArray <- openZarrArray(segmentStatisticsFileKey, SegmentStatisticsFileService.keyVolumes)
+      multiArray <- volumesArray.readAsMultiArray(offset = segmentId, shape = 1)
+      // the underlying dtype of volumes may vary, but getLong will auto-convert to long.
+      volume <- tryo(multiArray.getLong(0)).toFox
+    } yield volume
+
+  def getVolumes(segmentStatisticsFileKey: SegmentStatisticsFileKey, segmentIds: Seq[Long])(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Seq[Long]] =
+    Fox.serialCombined(segmentIds)(readVolume(segmentStatisticsFileKey, _))
+
+  /** Combines the centers of mass of several (oversegmentation) segments into the center of mass of their union,
+    * weighting each one by its volume. This is exact (not an approximation), as long as the given segments are disjoint
+    * (do not overlap). If a single segment id is given, this just returns its own center of mass.
+    */
+  def getCombinedCenterOfMass(segmentStatisticsFileKey: SegmentStatisticsFileKey, segmentIds: Seq[Long])(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Array[Float]] =
+    for {
+      centerOfMasses <- getCenterOfMasses(segmentStatisticsFileKey, segmentIds)
+      volumes <- getVolumes(segmentStatisticsFileKey, segmentIds)
+      totalVolume = volumes.sum
+      _ <- Fox.fromBool(totalVolume > 0) ?~> "Cannot compute combined center of mass, total volume of segments is zero"
+      combined = Array.tabulate(3) { dim =>
+        val weightedSum = centerOfMasses
+          .lazyZip(volumes)
+          .map { case (centerOfMass, volume) =>
+            centerOfMass(dim).toDouble * volume
+          }
+          .sum
+        (weightedSum / totalVolume).toFloat
+      }
+    } yield combined
 
   private def readSphericity(segmentStatisticsFileKey: SegmentStatisticsFileKey, segmentId: Long)(using
       ec: ExecutionContext,

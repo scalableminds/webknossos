@@ -121,6 +121,7 @@ export type UpdateAnnotationLayerNameUpdateAction = ReturnType<typeof updateAnno
 export type UpdateMetadataOfAnnotationUpdateAction = ReturnType<typeof updateMetadataOfAnnotation>;
 export type SplitAgglomerateUpdateAction = ReturnType<typeof splitAgglomerate>;
 export type MergeAgglomerateUpdateAction = ReturnType<typeof mergeAgglomerate>;
+export type SetAgglomerateMappingLevelUpdateAction = ReturnType<typeof setAgglomerateMappingLevel>;
 
 // There are two types of UpdateActions. The ones that *need* to be in a separate transaction
 // group. And the ones that don't have this requirement.
@@ -276,7 +277,8 @@ export type UpdateActionWithoutIsolationRequirement =
   | UpdateAnnotationLayerNameUpdateAction
   | UpdateMetadataOfAnnotationUpdateAction
   | SplitAgglomerateUpdateAction
-  | MergeAgglomerateUpdateAction;
+  | MergeAgglomerateUpdateAction
+  | SetAgglomerateMappingLevelUpdateAction;
 
 // This update action is only created in the frontend for display purposes
 type CreateTracingUpdateAction = {
@@ -1232,6 +1234,42 @@ export function mergeAgglomerate(
       segmentId2: Number(segmentId2),
       agglomerateId1: Number(agglomerateId1),
       agglomerateId2: Number(agglomerateId2),
+    },
+  } as const;
+}
+export function setAgglomerateMappingLevel(
+  // The anchor supervoxel whose agglomerate should be re-leveled, given by unmapped id or by position (+mag).
+  anchor: {
+    segmentId?: NumberLike | null;
+    segmentPosition?: Vector3 | null;
+    mag?: Vector3 | null;
+  },
+  targetMappingName: string,
+  actionTracingId: string,
+): {
+  /*
+   * Sets the mapping level of the agglomerate containing the anchor segment. The tracingstore expands this into the
+   * equivalent split/merge edge changes (respecting existing manual edits) as one atomic version.
+   * See SPIKE-per-agglomerate-mapping-level.md.
+   */
+  name: "setAgglomerateMappingLevel";
+  value: {
+    actionTracingId: string;
+    segmentId: number | undefined;
+    targetMappingName: string;
+    segmentPosition?: Vector3 | undefined;
+    mag?: Vector3 | undefined;
+  };
+} {
+  return {
+    name: "setAgglomerateMappingLevel",
+    value: {
+      actionTracingId,
+      // TODO: Proper 64 bit support (#6921)
+      segmentId: anchor.segmentId != null ? Number(anchor.segmentId) : undefined,
+      segmentPosition: anchor.segmentPosition ?? undefined,
+      mag: anchor.mag ?? undefined,
+      targetMappingName,
     },
   } as const;
 }

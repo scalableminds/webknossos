@@ -853,6 +853,13 @@ export function* tryToIncorporateActions(
           break;
         }
 
+        case "setAgglomerateMappingLevel": {
+          // The mapping-level commit refreshes the mapping itself (see level_preview_sagas). During rebase of the
+          // local user's own actions nothing extra is needed here. Cross-user incorporation (live collab) is a
+          // follow-up for v1 (see SPIKE-per-agglomerate-mapping-level.md).
+          break;
+        }
+
         case "updateMappingName": {
           const { actionTracingId, mappingName, isEditable, isLocked } = action.value;
           let mappingType;

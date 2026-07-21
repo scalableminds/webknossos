@@ -817,7 +817,12 @@ class Skeleton {
     edgesAreVisible: boolean = true,
   ) {
     const rgba = this.getTreeRGBA(color, isVisible, edgesAreVisible);
-    this.treeColorTexture.image.data.set(rgba, treeId * 4);
+    // The color texture is a fixed COLOR_TEXTURE_WIDTH² palette indexed by treeId. The shader wraps the index via
+    // mod(treeId, COLOR_TEXTURE_WIDTH²) (see node_shader.ts), so the CPU write must wrap identically — otherwise a
+    // large treeId (e.g. an agglomerate-id-derived tree from the mapping-level preview) overruns the buffer and throws.
+    // For regular sequential tree ids this modulo is a no-op.
+    const textureIndex = treeId % (COLOR_TEXTURE_WIDTH * COLOR_TEXTURE_WIDTH);
+    this.treeColorTexture.image.data.set(rgba, textureIndex * 4);
     this.treeColorTexture.needsUpdate = true;
   }
 

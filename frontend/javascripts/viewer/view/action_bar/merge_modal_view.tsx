@@ -41,7 +41,7 @@ type Props = {
 };
 type SourceType = "project" | "annotation";
 type TargetType = "newAnnotation" | "importHere";
-type AnnotationFetchStatus = "idle" | "fetching" | "success" | "error";
+type AnnotationFetchStatus = "IDLE" | "fetching" | "success" | "error";
 
 function extractAnnotationId(input: string): string | null {
   // Accepts a plain 24-char hex id or any annotation URL containing one,
@@ -109,7 +109,7 @@ function _MergeModalView({ isOpen, onOk }: Props) {
 
   const annotationFetchStatus: AnnotationFetchStatus = (() => {
     if (extractedAnnotationId == null) {
-      return "idle";
+      return "IDLE";
     }
     if (isFetchingAnnotation) {
       return "fetching";
@@ -120,7 +120,7 @@ function _MergeModalView({ isOpen, onOk }: Props) {
     if (annotationQueryStatus === "error") {
       return "error";
     }
-    return "idle";
+    return "IDLE";
   })();
 
   const isSourceValid =

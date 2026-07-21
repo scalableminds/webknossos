@@ -8,6 +8,7 @@ import Icon, {
   EyeOutlined,
   FolderOpenOutlined,
   NumberOutlined,
+  PartitionOutlined,
   PictureOutlined,
   PlusOutlined,
   RocketOutlined,
@@ -53,6 +54,7 @@ import type {
   MoveTreeComponentUpdateAction,
   RevertToVersionUpdateAction,
   ServerUpdateAction,
+  SetAgglomerateMappingLevelUpdateAction,
   SplitAgglomerateUpdateAction,
   UpdateActiveNodeUpdateAction,
   UpdateActiveSegmentIdUpdateAction,
@@ -195,6 +197,18 @@ const descriptionFns: Record<
     return {
       description,
       icon: <PlusOutlined />,
+    };
+  },
+  setAgglomerateMappingLevel: (
+    action: AsServerAction<SetAgglomerateMappingLevelUpdateAction>,
+  ): Description => {
+    const segmentDescription =
+      action.value.segmentPosition != null
+        ? `at position ${action.value.segmentPosition}`
+        : (action.value.segmentId ?? "unknown");
+    return {
+      description: `Set mapping level "${action.value.targetMappingName}" for the agglomerate of segment ${segmentDescription}.`,
+      icon: <PartitionOutlined />,
     };
   },
   deleteTree: (action: AsServerAction<DeleteTreeUpdateAction>, count: number): Description => ({

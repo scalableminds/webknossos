@@ -1,7 +1,7 @@
 import Toast from "libs/toast";
 import { SoftError } from "libs/utils";
 import messages from "messages";
-import { call, put, takeEvery } from "typed-redux-saga";
+import { call, debounce, put, takeEvery } from "typed-redux-saga";
 import { OrthoViews, TreeTypeEnum } from "viewer/constants";
 import { getSegmentIdForPositionAsync } from "viewer/controller/combinations/volume_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
@@ -38,6 +38,10 @@ import { select } from "viewer/model/sagas/effect_generators";
 import { getAdditionalCoordinatesAsString } from "../../../accessors/flycam_accessor";
 import { ensureWkInitialized } from "../../ready_sagas";
 import { takeEveryInOperationContext, takeWithBatchActionSupport } from "../../saga_helpers";
+import {
+  handleCommitMappingLevelPreview,
+  handleMappingLevelPreviewChange,
+} from "./level_preview_sagas";
 import { ensureHdf5MappingIsEnabled } from "./preparation_sagas";
 import {
   handleMinCutAgglomerate,
@@ -105,6 +109,18 @@ export default function* proofreadRootSaga(): Saga<void> {
   yield* takeEveryInOperationContext(
     ["CUT_AGGLOMERATE_FROM_NEIGHBORS"],
     runSagaAndCatchSoftError(handleProofreadCutFromNeighbors),
+    proofreadingOptions,
+  );
+  // Per-agglomerate mapping-level preview subtool (see SPIKE-per-agglomerate-mapping-level.md).
+  // The preview is debounced (read-only), the commit runs in the proofreading operation context.
+  yield* debounce(
+    200,
+    "SET_MAPPING_LEVEL_PREVIEW_TARGET",
+    runSagaAndCatchSoftError(handleMappingLevelPreviewChange),
+  );
+  yield* takeEveryInOperationContext(
+    "COMMIT_MAPPING_LEVEL_PREVIEW",
+    runSagaAndCatchSoftError(handleCommitMappingLevelPreview),
     proofreadingOptions,
   );
 

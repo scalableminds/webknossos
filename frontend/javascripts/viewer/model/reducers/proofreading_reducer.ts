@@ -1,5 +1,6 @@
 import update from "immutability-helper";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
+import { buildEmptyMappingLevelPreviewSkeleton } from "viewer/model/sagas/volume/proofreading/mapping_level_preview_helpers";
 import type { WebknossosState } from "viewer/store";
 import type { ProofreadAction } from "../actions/proofread_actions";
 
@@ -82,6 +83,77 @@ function ProofreadingReducer(state: WebknossosState, action: ProofreadAction): W
                 $set: null,
               },
             },
+          },
+        },
+      });
+    }
+
+    case "INITIALIZE_MAPPING_LEVEL_PREVIEW_SKELETON": {
+      // Seed an empty (non-null) ephemeral skeleton so the three.js Skeleton is initialized before any data arrives.
+      return update(state, {
+        localSegmentationStateByLayer: {
+          [layerName]: {
+            mappingLevelPreviewSkeleton: { $set: buildEmptyMappingLevelPreviewSkeleton() },
+          },
+        },
+      });
+    }
+
+    case "SET_MAPPING_LEVEL_PREVIEW_TARGET": {
+      // Keep any previously rendered skeleton visible while the new one loads.
+      return update(state, {
+        localSegmentationStateByLayer: {
+          [layerName]: {
+            mappingLevelPreview: {
+              $set: {
+                targetMappingName: action.targetMappingName,
+                status: "LOADING",
+              },
+            },
+          },
+        },
+      });
+    }
+
+    case "SET_MAPPING_LEVEL_PREVIEW_SKELETON": {
+      const preview = state.localSegmentationStateByLayer[layerName]?.mappingLevelPreview;
+      if (preview == null) {
+        return state;
+      }
+      return update(state, {
+        localSegmentationStateByLayer: {
+          [layerName]: {
+            mappingLevelPreview: {
+              status: { $set: action.skeleton != null ? "READY" : "IDLE" },
+            },
+            mappingLevelPreviewSkeleton: { $set: action.skeleton },
+          },
+        },
+      });
+    }
+
+    case "SET_MAPPING_LEVEL_PREVIEW_STATUS": {
+      const preview = state.localSegmentationStateByLayer[layerName]?.mappingLevelPreview;
+      if (preview == null) {
+        return state;
+      }
+      return update(state, {
+        localSegmentationStateByLayer: {
+          [layerName]: {
+            mappingLevelPreview: {
+              status: { $set: action.status },
+            },
+          },
+        },
+      });
+    }
+
+    case "CLEAR_MAPPING_LEVEL_PREVIEW": {
+      return update(state, {
+        localSegmentationStateByLayer: {
+          [layerName]: {
+            mappingLevelPreview: { $set: null },
+            mappingLevelPreviewSkeleton: { $set: null },
           },
         },
       });

@@ -649,6 +649,12 @@ type ConnectomeData = {
   readonly skeleton: SkeletonTracing | null | undefined;
 };
 export type MinCutPartitions = { 1: number[]; 2: number[]; agglomerateId: number | null };
+// Per-agglomerate mapping-level preview subtool state (see SPIKE-per-agglomerate-mapping-level.md).
+export type MappingLevelPreviewStatus = "IDLE" | "LOADING" | "READY" | "ERROR";
+export type MappingLevelPreviewState = {
+  targetMappingName: string;
+  status: MappingLevelPreviewStatus;
+};
 export type LocalMeshesInfo =
   | Record<string, Record<number, MeshInformation> | undefined>
   | undefined;
@@ -677,6 +683,10 @@ export type LocalSegmentationState = {
   // but changes to it are not persisted.
   readonly hideUnregisteredSegments: boolean;
   readonly minCutPartitions: MinCutPartitions;
+  // Per-agglomerate mapping-level preview subtool (see SPIKE-per-agglomerate-mapping-level.md).
+  readonly mappingLevelPreview: MappingLevelPreviewState | null;
+  // Ephemeral skeleton visualizing the preview; kept separate from annotation.skeleton (like connectomeData.skeleton).
+  readonly mappingLevelPreviewSkeleton: SkeletonTracing | null;
   // The fields below are only relevant for volume tracing layers
   // (i.e., the layerName key of this state is a tracingId).
   readonly activeUnmappedSegmentId: number | null | undefined;

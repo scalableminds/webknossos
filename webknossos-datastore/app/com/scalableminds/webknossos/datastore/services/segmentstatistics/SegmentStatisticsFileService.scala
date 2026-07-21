@@ -49,10 +49,11 @@ object SegmentStatisticsFileAttributes extends VoxelyticsZarrArtifactUtils {
 
 object SegmentStatisticsFileService {
   val keyCovarianceMatrix = "covariance_matrix"
+  val keyMaxDistances = "max_distances"
   val keyIds = "ids"
 
   val possibleMetrics: Seq[String] =
-    Seq("positions", "max_distances", "volumes", "center_of_mass", keyCovarianceMatrix, "surfaces", "sphericities")
+    Seq("positions", keyMaxDistances, "volumes", "center_of_mass", keyCovarianceMatrix, "surfaces", "sphericities")
 }
 
 class SegmentStatisticsFileService @Inject() (
@@ -170,7 +171,9 @@ class SegmentStatisticsFileService @Inject() (
       (fileMag, fileMappingName) <- resolveMagAndMappingName(segmentStatisticsFileKey, dataLayer)
       _ <- Fox.fromBool(fileMag == requestedMag) ?~> Msg.SegmentStatisticsFile
         .magMismatch(requestedMag.toMagLiteral(true), fileMag.toMagLiteral(true))
-      _ <- Fox.fromBool(fileMappingName == requestedMappingName) ?~> Msg.SegmentStatisticsFile
+      _ <- Fox.fromBool(
+        fileMappingName.getOrElse("") == requestedMappingName.getOrElse("")
+      ) ?~> Msg.SegmentStatisticsFile
         .mappingNameMismatch(requestedMappingName.getOrElse(""), fileMappingName.getOrElse(""))
     } yield ()
 
@@ -191,6 +194,22 @@ class SegmentStatisticsFileService @Inject() (
       tc: TokenContext
   ): Fox[Seq[Array[Array[Float]]]] =
     Fox.serialCombined(segmentIds)(readCovarianceMatrix(segmentStatisticsFileKey, _))
+
+  private def readMaxDistance(segmentStatisticsFileKey: SegmentStatisticsFileKey, segmentId: Long)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Float] =
+    for {
+      maxDistancesArray <- openZarrArray(segmentStatisticsFileKey, SegmentStatisticsFileService.keyMaxDistances)
+      multiArray <- maxDistancesArray.readAsMultiArray(offset = segmentId, shape = 1)
+      maxDistance <- tryo(multiArray.getFloat(0)).toFox
+    } yield maxDistance
+
+  def getMaxDistances(segmentStatisticsFileKey: SegmentStatisticsFileKey, segmentIds: Seq[Long])(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Seq[Float]] =
+    Fox.serialCombined(segmentIds)(readMaxDistance(segmentStatisticsFileKey, _))
 
   private def checkIdsAreDense(
       segmentStatisticsFileKey: SegmentStatisticsFileKey

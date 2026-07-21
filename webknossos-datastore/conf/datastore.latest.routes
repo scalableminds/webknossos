@@ -99,7 +99,7 @@ POST          /datasets/:datasetId/layers/:dataLayerName/connectomes/synapses   
 # Ad-Hoc Meshing
 POST          /datasets/:datasetId/layers/:dataLayerName/adHocMesh                                                    @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.requestAdHocMesh(datasetId: ObjectId, dataLayerName: String)
 
-# Segment-Index files
+# Segment Index and Segment Statistics files
 GET           /datasets/:datasetId/layers/:dataLayerName/hasSegmentIndex                                              @com.scalableminds.webknossos.datastore.controllers.DataSourceController.checkSegmentIndexFile(datasetId: ObjectId, dataLayerName: String)
 GET           /datasets/:datasetId/layers/:dataLayerName/segmentStatisticsFile                                        @com.scalableminds.webknossos.datastore.controllers.DataSourceController.segmentStatisticsFileInfo(datasetId: ObjectId, dataLayerName: String)
 POST          /datasets/:datasetId/layers/:dataLayerName/segmentIndex                                                 @com.scalableminds.webknossos.datastore.controllers.DataSourceController.querySegmentIndex(datasetId: ObjectId, dataLayerName: String)
@@ -108,6 +108,7 @@ POST          /datasets/:datasetId/layers/:dataLayerName/segmentStatistics/volum
 POST          /datasets/:datasetId/layers/:dataLayerName/segmentStatistics/boundingBox                                @com.scalableminds.webknossos.datastore.controllers.DataSourceController.getSegmentBoundingBox(datasetId: ObjectId, dataLayerName: String)
 POST          /datasets/:datasetId/layers/:dataLayerName/segmentStatistics/surfaceArea                                @com.scalableminds.webknossos.datastore.controllers.DataSourceController.getSegmentSurfaceArea(datasetId: ObjectId, dataLayerName: String)
 POST          /datasets/:datasetId/layers/:dataLayerName/segmentStatistics/covarianceMatrix                           @com.scalableminds.webknossos.datastore.controllers.DataSourceController.getSegmentCovarianceMatrix(datasetId: ObjectId, dataLayerName: String)
+POST          /datasets/:datasetId/layers/:dataLayerName/segmentStatistics/maxDistance                                @com.scalableminds.webknossos.datastore.controllers.DataSourceController.getSegmentMaxDistance(datasetId: ObjectId, dataLayerName: String)
 
 # Uploads: Datasets, mags, attachments
 GET           /datasets/upload/:uploadDomain                                                                          @com.scalableminds.webknossos.datastore.controllers.UploadController.testChunk(resumableChunkNumber: Int, resumableIdentifier: String, uploadDomain: String)

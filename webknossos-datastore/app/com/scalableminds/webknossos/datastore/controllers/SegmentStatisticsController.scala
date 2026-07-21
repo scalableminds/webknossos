@@ -249,10 +249,35 @@ class SegmentStatisticsController @Inject() (
             request.body.mappingName,
             allowRemapping = true
           )
-          covarianceMatrices <- segmentStatisticsFileService.getCovarianceMatrices(
+          remappingNeeded <- segmentStatisticsFileService.needsRemapping(
             segmentStatisticsFileKey,
-            request.body.segmentIds
+            request.body.mappingName
           )
+          covarianceMatrices <-
+            if (remappingNeeded) {
+              Fox.serialCombined(request.body.segmentIds) { segmentOrAgglomerateId =>
+                for {
+                  oversegmentationIds <- segmentIdsForAgglomerateIdIfNeeded(
+                    dataSource.id,
+                    dataLayer,
+                    request.body.mappingName,
+                    None,
+                    request.body.annotationVersion,
+                    segmentOrAgglomerateId,
+                    mappingNameForMeshFile = None,
+                    omitMissing = false
+                  )
+                  covarianceMatrix <- segmentStatisticsFileService.getCombinedCovarianceMatrix(
+                    segmentStatisticsFileKey,
+                    oversegmentationIds
+                  )
+                } yield covarianceMatrix
+              }
+            } else {
+              // Shortcut: the file already holds stats for the requested mapping (or lack thereof), no need to
+              // combine oversegmentation values.
+              segmentStatisticsFileService.getCovarianceMatrices(segmentStatisticsFileKey, request.body.segmentIds)
+            }
         } yield Ok(Json.toJson(covarianceMatrices))
       }
     }

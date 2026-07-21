@@ -48,14 +48,14 @@ object SegmentStatisticsFileAttributes extends VoxelyticsZarrArtifactUtils {
 }
 
 object SegmentStatisticsFileService {
-  val keyCovarianceMatrix = "covariance_matrix"
-  val keyMaxDistances = "max_distances"
-  val keyCenterOfMass = "center_of_mass"
-  val keySphericities = "sphericities"
-  val keyVolumes = "volumes"
-  val keyIds = "ids"
+  private val keyCovarianceMatrix = "covariance_matrix"
+  private val keyMaxDistances = "max_distances"
+  private val keyCenterOfMass = "center_of_mass"
+  private val keySphericities = "sphericities"
+  private val keyVolumes = "volumes"
+  private val keyIds = "ids"
 
-  val possibleMetrics: Seq[String] =
+  private val possibleMetrics: Seq[String] =
     Seq("positions", keyMaxDistances, keyVolumes, keyCenterOfMass, keyCovarianceMatrix, "surfaces", keySphericities)
 }
 
@@ -167,9 +167,10 @@ class SegmentStatisticsFileService @Inject() (
   )(using ec: ExecutionContext, tc: TokenContext): Fox[Option[String]] =
     for {
       attributes <- readSegmentStatisticsFileAttributes(segmentStatisticsFileKey)
-    } yield attributes.mappingName.filter(_.nonEmpty) // Emptystring to None
+      mappingName = attributes.mappingName.filter(_.nonEmpty) // Emptystring to None
+    } yield mappingName
 
-  def resolveMagAndMappingName(segmentStatisticsFileKey: SegmentStatisticsFileKey, dataLayer: DataLayer)(using
+  private def resolveMagAndMappingName(segmentStatisticsFileKey: SegmentStatisticsFileKey, dataLayer: DataLayer)(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[(Vec3Int, Option[String])] =
@@ -207,12 +208,15 @@ class SegmentStatisticsFileService @Inject() (
       _ <-
         if (!remappingNeeded) Fox.successful(())
         else if (allowRemapping) {
-          Fox.fromBool(fileMappingName.isEmpty) ?~> Msg.SegmentStatisticsFile
-            .remappingRequiresUnmappedFile(fileMappingName.getOrElse("(none)"))
+          Fox.fromBool(fileMappingName.isEmpty) ?~> Msg.SegmentStatisticsFile.remappingRequiresUnmappedFile(
+            fileMappingName.getOrElse("(none)")
+          )
         } else {
           Fox.failure(
-            Msg.SegmentStatisticsFile
-              .mappingNameMismatch(requestedMappingName.filter(_.nonEmpty).getOrElse("(none)"), fileMappingName.getOrElse("(none)"))
+            Msg.SegmentStatisticsFile.mappingNameMismatch(
+              requestedMappingName.filter(_.nonEmpty).getOrElse("(none)"),
+              fileMappingName.getOrElse("(none)")
+            )
           )
         }
     } yield ()
@@ -284,6 +288,22 @@ class SegmentStatisticsFileService @Inject() (
   ): Fox[Seq[Long]] =
     Fox.serialCombined(segmentIds)(readVolume(segmentStatisticsFileKey, _))
 
+  // The volume-weighted average of centerOfMasses, per dimension, as Double for precision. totalVolume must be > 0.
+  private def weightedCenterOfMass(
+      centerOfMasses: Seq[Array[Float]],
+      volumes: Seq[Long],
+      totalVolume: Long
+  ): Array[Double] =
+    Array.tabulate(3) { dim =>
+      val weightedSum = centerOfMasses
+        .lazyZip(volumes)
+        .map { case (centerOfMass, volume) =>
+          centerOfMass(dim).toDouble * volume
+        }
+        .sum
+      weightedSum / totalVolume
+    }
+
   /** Combines the centers of mass of several (oversegmentation) segments into the center of mass of their union,
     * weighting each one by its volume. This is exact (not an approximation), as long as the given segments are disjoint
     * (do not overlap). If a single segment id is given, this just returns its own center of mass.
@@ -297,13 +317,36 @@ class SegmentStatisticsFileService @Inject() (
       volumes <- getVolumes(segmentStatisticsFileKey, segmentIds)
       totalVolume = volumes.sum
       _ <- Fox.fromBool(totalVolume > 0) ?~> "Cannot compute combined center of mass, total volume of segments is zero"
-      combined = Array.tabulate(3) { dim =>
-        val weightedSum = centerOfMasses
-          .lazyZip(volumes)
-          .map { case (centerOfMass, volume) =>
-            centerOfMass(dim).toDouble * volume
-          }
-          .sum
+      combined = weightedCenterOfMass(centerOfMasses, volumes, totalVolume).map(_.toFloat)
+    } yield combined
+
+  /** Combines the covariance matrices of several (oversegmentation) segments into the covariance matrix of their union,
+    * via the parallel axis theorem: each segment’s covariance is shifted from its own center of mass to the combined
+    * center of mass (adding the outer product of that offset with itself), then volume-weighted-averaged. This is exact
+    * (not an approximation), as long as the given segments are disjoint (do not overlap). If a single segment id is
+    * given, this just returns its own covariance matrix.
+    */
+  def getCombinedCovarianceMatrix(segmentStatisticsFileKey: SegmentStatisticsFileKey, segmentIds: Seq[Long])(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Array[Array[Float]]] =
+    for {
+      covarianceMatrices <- getCovarianceMatrices(segmentStatisticsFileKey, segmentIds)
+      centerOfMasses <- getCenterOfMasses(segmentStatisticsFileKey, segmentIds)
+      volumes <- getVolumes(segmentStatisticsFileKey, segmentIds)
+      totalVolume = volumes.sum
+      _ <- Fox.fromBool(
+        totalVolume > 0
+      ) ?~> "Cannot compute combined covariance matrix, total volume of segments is zero"
+      combinedCenterOfMass = weightedCenterOfMass(centerOfMasses, volumes, totalVolume)
+      combined = Array.tabulate(3, 3) { (i, j) =>
+        val weightedSum = covarianceMatrices.indices.map { idx =>
+          val volume = volumes(idx)
+          val covariance = covarianceMatrices(idx)(i)(j).toDouble
+          val offsetI = centerOfMasses(idx)(i).toDouble - combinedCenterOfMass(i)
+          val offsetJ = centerOfMasses(idx)(j).toDouble - combinedCenterOfMass(j)
+          volume * (covariance + offsetI * offsetJ)
+        }.sum
         (weightedSum / totalVolume).toFloat
       }
     } yield combined

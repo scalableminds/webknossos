@@ -28,14 +28,12 @@ import {
   getMappingInfo,
   getSegmentationLayerByName,
   getSegmentationLayers,
-  getSomeMagInfoForDataset,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
 import {
   getActiveMagIndexForLayer,
   getAdditionalCoordinatesAsString,
   getFlooredPosition,
-  getRawActiveMagIndexForLayer,
 } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import { MAX_ZOOM_STEP_DIFF } from "viewer/model/bucket_data_handling/loading_strategy_logic";
@@ -284,31 +282,11 @@ export function isVolumeAnnotationDisallowedForZoom(
   const volumeMags = getMagInfoOfActiveSegmentationTracingLayer(state);
   const finestExistingMagIndex = volumeMags.getFinestMagIndex();
 
-  const rawMagIndex = getRawActiveMagIndexForLayer(state, activeSegmentation.tracingId);
-  // If the zoom step corresponds to a mag that is finer than every mag of the dataset,
-  // no layer renders that mag. Instead, the finest dataset-wide mag is rendered
-  // (e.g., a dataset whose finest mag is 2-2-1 renders 2-2-1 even when the zoom
-  // would theoretically allow mag 1-1-1). Use the effectively rendered mag index
-  // for the check below so that editing is only disabled when another layer actually
-  // renders a mag that is missing in the volume layer (e.g., due to mag restrictions).
-  const finestDatasetMagIndex = getSomeMagInfoForDataset(state.dataset).getFinestMagIndex();
-  const effectiveMagIndex = Math.max(rawMagIndex, finestDatasetMagIndex);
-  if (!volumeMags.hasIndex(effectiveMagIndex)) {
-    // The current zoom corresponds to a mag that was excluded for this volume layer
-    // (e.g., to avoid performance issues when annotating large structures in a coarse
-    // mag). Annotating in such a mag doesn't make sense, since it is not actually
-    // rendered/labeled, so the tool is disabled.
-    return {
-      isDisabled: true,
-      reason: finestExistingMagIndex < effectiveMagIndex ? "needs_zoom_in" : "needs_zoom_out",
-    };
-  }
-
-  // The current mag is too high for the tool
-  // because too many voxels could be annotated at the same time.
-  const isZoomStepTooHigh =
-    getActiveMagIndexForLayer(state, activeSegmentation.tracingId) >
-    threshold + finestExistingMagIndex;
+  // Simply check whether the mag currently rendered for the volume tracing layer may be
+  // annotated in given the tool's threshold. If it is too coarse, too many voxels would
+  // be labeled at once, so the user has to zoom in.
+  const renderedVolumeMagIndex = getActiveMagIndexForLayer(state, activeSegmentation.tracingId);
+  const isZoomStepTooHigh = renderedVolumeMagIndex > threshold + finestExistingMagIndex;
   return isZoomStepTooHigh ? { isDisabled: true, reason: "needs_zoom_in" } : { isDisabled: false };
 }
 

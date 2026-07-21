@@ -18,6 +18,7 @@ import type { UiAction } from "viewer/model/actions/ui_actions";
 import type { UserAction } from "viewer/model/actions/user_actions";
 import type { ViewModeAction } from "viewer/model/actions/view_mode_actions";
 import type { VolumeTracingAction } from "viewer/model/actions/volumetracing_actions";
+import type { IdReservation } from "viewer/store";
 
 export type EscalateErrorAction = ReturnType<typeof escalateErrorAction>;
 export type GetNewIdAction = ReturnType<typeof getNewIdAction>;
@@ -112,10 +113,15 @@ export const getNewIdAction = (
     domain,
   }) as const;
 
+// Domains for which the id reservation mechanism is actually implemented (as opposed to
+// AnnotationIdDomain, which lists all domains the back-end knows about, including ones that
+// aren't wired up on the frontend, yet).
+export type ReservableIdDomain = "SegmentGroup" | "BoundingBox";
+
 export const dispatchGetNewIdAsync = async (
   dispatch: Dispatch<any>,
   tracingId: string,
-  domain: "SegmentGroup",
+  domain: ReservableIdDomain,
 ): Promise<number> => {
   const readyDeferred = new Deferred<number, unknown>();
   const action = getNewIdAction(
@@ -130,8 +136,8 @@ export const dispatchGetNewIdAsync = async (
 
 export const setIdReservationsAction = (
   tracingId: string,
-  domain: "SegmentGroup" | "Segment",
-  reservations: { id: number; used: boolean }[],
+  domain: ReservableIdDomain,
+  reservations: IdReservation[],
 ) =>
   ({
     type: "SET_ID_RESERVATIONS",
@@ -140,17 +146,14 @@ export const setIdReservationsAction = (
     reservations,
   }) as const;
 
-export const requestIdReplenishmentAction = (
-  tracingId: string,
-  domain: "SegmentGroup" | "Segment",
-) =>
+export const requestIdReplenishmentAction = (tracingId: string, domain: ReservableIdDomain) =>
   ({
     type: "REQUEST_ID_REPLENISHMENT",
     tracingId,
     domain,
   }) as const;
 
-export const idsReplenishedAction = (tracingId: string, domain: "SegmentGroup" | "Segment") =>
+export const idsReplenishedAction = (tracingId: string, domain: ReservableIdDomain) =>
   ({
     type: "IDS_REPLENISHED",
     tracingId,
@@ -159,7 +162,7 @@ export const idsReplenishedAction = (tracingId: string, domain: "SegmentGroup" |
 
 export const idsReplenishmentFailedAction = (
   tracingId: string,
-  domain: "SegmentGroup" | "Segment",
+  domain: ReservableIdDomain,
   error: unknown,
 ) =>
   ({

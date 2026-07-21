@@ -1,7 +1,12 @@
 import { useWkSelector } from "libs/react_hooks";
 import { useMemo } from "react";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
-import { buildSkeletonHierarchy, type SkeletonHierarchy, type TreeSortBy } from "../hierarchy";
+import {
+  areTreeMapsEqualForHierarchy,
+  buildSkeletonHierarchy,
+  type SkeletonHierarchy,
+  type TreeSortBy,
+} from "../hierarchy";
 
 function useTreeSortBy(): TreeSortBy {
   return useWkSelector((state) => (state.userConfiguration.sortTreesByName ? "name" : "timestamp"));
@@ -13,7 +18,14 @@ function useTreeSortBy(): TreeSortBy {
  * Must only be used in components that are rendered when a skeleton tracing exists.
  */
 export function useSkeletonHierarchy(): SkeletonHierarchy {
-  const trees = useWkSelector((state) => enforceSkeletonTracing(state.annotation).trees);
+  // The TreeMap changes identity on every skeleton mutation. A custom equality
+  // (see areTreeMapsEqualForHierarchy) keeps the reference stable unless a field
+  // the hierarchy renders/sorts by actually changed, so the memoized rebuild
+  // below is skipped for mutations like node moves.
+  const trees = useWkSelector(
+    (state) => enforceSkeletonTracing(state.annotation).trees,
+    areTreeMapsEqualForHierarchy,
+  );
   const treeGroups = useWkSelector((state) => enforceSkeletonTracing(state.annotation).treeGroups);
   const sortBy = useTreeSortBy();
 

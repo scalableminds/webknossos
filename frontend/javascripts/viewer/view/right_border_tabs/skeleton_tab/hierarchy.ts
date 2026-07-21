@@ -74,6 +74,52 @@ function getSortValue(node: SkeletonUiNode, sortBy: TreeSortBy): string | number
   return sortBy === "name" ? node.group.name : 0;
 }
 
+/*
+ * Equality function for the trees selector that feeds buildSkeletonHierarchy.
+ * The skeleton's TreeMap changes its identity on every store mutation (e.g. each
+ * placed or moved node). This keeps the selected TreeMap referentially stable as
+ * long as none of the fields that the hierarchy (this file) or the tree titles
+ * (node_titles.tsx) render or sort by have changed. That lets the expensive
+ * hierarchy rebuild (recursive orderBy + full node allocation) be skipped for
+ * frequent mutations that don't affect what the tab shows, such as moving a node
+ * or changing a node radius.
+ *
+ * IMPORTANT: every field that the hierarchy or the tree titles render or sort by
+ * must be compared here, otherwise the tab would display stale data. Consumers
+ * that need the full (deep) tree data (nodes/edges) must read it fresh from the
+ * store rather than from the hierarchy node, because the node may carry a
+ * referentially-stabilized (older) tree object (see duplicateTree in
+ * context_menus.tsx).
+ */
+export function areTreeMapsEqualForHierarchy(treesA: TreeMap, treesB: TreeMap): boolean {
+  if (treesA === treesB) {
+    return true;
+  }
+  if (treesA.size() !== treesB.size()) {
+    return false;
+  }
+  for (const treeA of treesA.values()) {
+    const treeB = treesB.getNullable(treeA.treeId);
+    if (
+      treeB == null ||
+      treeA.name !== treeB.name ||
+      treeA.color !== treeB.color ||
+      treeA.isVisible !== treeB.isVisible ||
+      treeA.type !== treeB.type ||
+      treeA.groupId !== treeB.groupId ||
+      treeA.edgesAreVisible !== treeB.edgesAreVisible ||
+      treeA.timestamp !== treeB.timestamp ||
+      treeA.metadata !== treeB.metadata ||
+      // The node count is displayed in the tree title, so a change (e.g. a placed
+      // node) must invalidate. Deeper node changes (e.g. moves) do not.
+      treeA.nodes.size() !== treeB.nodes.size()
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
 export function buildSkeletonHierarchy(
   trees: TreeMap,
   treeGroups: TreeGroup[],

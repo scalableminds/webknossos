@@ -40,6 +40,7 @@ import {
   toggleInactiveTreesAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import { TreeMap } from "viewer/model/types/tree_types";
+import Store from "viewer/store";
 import {
   createGroupToTreesMap,
   getExpandedGroups,
@@ -102,8 +103,16 @@ export function useTreeContextMenuBuilder(
           {
             key: "duplicateTree",
             onClick: () => {
-              const copyOfTree = { ...cloneDeep(tree), name: `${tree.name} (copy)` };
-              const treeMap = new TreeMap([[tree.treeId, copyOfTree]]);
+              // Read the tree fresh from the store: the hierarchy node's tree may
+              // be referentially stabilized (see areTreeMapsEqualForHierarchy) and
+              // thus not reflect the latest deep edits (e.g. moved nodes), which
+              // must be included in the duplicate.
+              const freshTree =
+                enforceSkeletonTracing(Store.getState().annotation).trees.getNullable(
+                  tree.treeId,
+                ) ?? tree;
+              const copyOfTree = { ...cloneDeep(freshTree), name: `${freshTree.name} (copy)` };
+              const treeMap = new TreeMap([[freshTree.treeId, copyOfTree]]);
               dispatch(addTreesAndGroupsAction(treeMap, null, undefined, false));
               hideContextMenu();
             },

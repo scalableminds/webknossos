@@ -87,7 +87,7 @@ class FoxTestSuite extends AsyncWordSpec {
 
     "run andThen cleanup when the Fox succeeds" in {
       var cleanedUp = false
-      val fox = Fox.successful(5).andThen { case _ => cleanedUp = true }
+      val fox = Fox.successful(5).andThen { cleanedUp = true }
       fox.futureBox.map { result =>
         assert(cleanedUp)
         assert(result == Full(5))
@@ -96,7 +96,7 @@ class FoxTestSuite extends AsyncWordSpec {
 
     "run andThen cleanup when the Fox fails" in {
       var cleanedUp = false
-      val fox = Fox.failure("boom!").andThen { case _ => cleanedUp = true }
+      val fox = Fox.failure("boom!").andThen { cleanedUp = true }
       fox.futureBox.map { result =>
         assert(cleanedUp)
         assert(result.isInstanceOf[Failure])
@@ -108,7 +108,7 @@ class FoxTestSuite extends AsyncWordSpec {
       val fox = (for {
         _ <- Fox.successful(())
         _ = throw new Exception("boom!")
-      } yield ()).andThen { case _ => cleanedUp = true }
+      } yield ()).andThen { cleanedUp = true }
       // The synchronous throw rejects the underlying Future outright (Box.Full.map does not itself
       // catch exceptions), so normalize before asserting instead of chaining directly off futureBox.
       fox.futureBox.transform(_ => scala.util.Success(())).map { _ =>

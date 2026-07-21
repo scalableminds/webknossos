@@ -507,7 +507,7 @@ class AnnotationIOController @Inject() (
         )
         nmlTemporaryFile = tempFileService.create()
         temporaryFileStream = new BufferedOutputStream(new FileOutputStream(new File(nmlTemporaryFile.toString)))
-        _ <- nmlStream.writeTo(temporaryFileStream).andThen { case _ => temporaryFileStream.close() }
+        _ <- nmlStream.writeTo(temporaryFileStream).andThen(temporaryFileStream.close())
       } yield nmlTemporaryFile
 
     def volumeOrHybridToTemporaryFile(
@@ -575,7 +575,7 @@ class AnnotationIOController @Inject() (
               zipper.addFileFromBytes(editedEdgesZipName, editedEdgesData)
             }
           }
-        } yield ()).andThen { case _ => zipper.close() }
+        } yield ()).andThen(zipper.close())
       } yield temporaryFile
 
     def annotationToTemporaryFile(

@@ -803,10 +803,12 @@ object Msg {
   }
   object SegmentStatisticsFile {
     val pathNotAbsolute = "Path of segment statistics file is ambiguous, must be absolute."
-    def magMismatch(requestedMag: String, fileMag: String): String =
-      s"Requested mag $requestedMag does not match mag $fileMag of segment statistics file."
+    def magTooFine(requestedMag: String, fileMag: String): String =
+      s"Requested mag $requestedMag is finer than mag $fileMag of segment statistics file. Only the same mag or coarser mags are supported."
     def mappingNameMismatch(requestedMappingName: String, fileMappingName: String): String =
       s"Requested mapping name “$requestedMappingName” does not match mapping name “$fileMappingName” of segment statistics file."
+    def remappingRequiresUnmappedFile(fileMappingName: String): String =
+      s"Requesting a different mapping is only supported for segment statistics files without their own mapping, but this file was computed for mapping “$fileMappingName”."
     def formatVersionTooOld(formatVersion: Long, minimumSupportedVersion: Long): String =
       s"Segment statistics file has format version $formatVersion, but at least $minimumSupportedVersion is required."
     def idsNotDense(first: Long, last: Long, length: Long): String =

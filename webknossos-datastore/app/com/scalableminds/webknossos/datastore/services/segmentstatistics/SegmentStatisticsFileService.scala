@@ -170,22 +170,35 @@ class SegmentStatisticsFileService @Inject() (
       mag <- attributes.mag
         .orElse(dataLayer.finestMag)
         .toFox ?~> "Could not determine mag for segment statistics file, layer has no mags"
-    } yield (mag, attributes.mappingName)
+      mappingName = attributes.mappingName.filter(_.nonEmpty) // Emptystring to None
+    } yield (mag, mappingName)
 
   def checkMagAndMappingNameMatch(
       segmentStatisticsFileKey: SegmentStatisticsFileKey,
       dataLayer: DataLayer,
       requestedMag: Vec3Int,
-      requestedMappingName: Option[String]
+      requestedMappingName: Option[String],
+      // If true, mappings may be requested if the file was computed for the oversegmentation.
+      allowRemapping: Boolean
   )(using ec: ExecutionContext, tc: TokenContext): Fox[Unit] =
     for {
+      // Emptystring to None
+      normalizedRequestedMappingName = requestedMappingName.filter(_.nonEmpty)
       (fileMag, fileMappingName) <- resolveMagAndMappingName(segmentStatisticsFileKey, dataLayer)
-      _ <- Fox.fromBool(fileMag == requestedMag) ?~> Msg.SegmentStatisticsFile
-        .magMismatch(requestedMag.toMagLiteral(true), fileMag.toMagLiteral(true))
-      _ <- Fox.fromBool(
-        fileMappingName.getOrElse("") == requestedMappingName.getOrElse("")
-      ) ?~> Msg.SegmentStatisticsFile
-        .mappingNameMismatch(requestedMappingName.getOrElse(""), fileMappingName.getOrElse(""))
+      _ <- Fox.fromBool(fileMag <= requestedMag) ?~> Msg.SegmentStatisticsFile
+        .magTooFine(requestedMag.toMagLiteral(true), fileMag.toMagLiteral(true))
+      _ <-
+        if (allowRemapping) {
+          Fox.fromBool(
+            fileMappingName.isEmpty || fileMappingName == normalizedRequestedMappingName
+          ) ?~> Msg.SegmentStatisticsFile.remappingRequiresUnmappedFile(fileMappingName.getOrElse("(none)"))
+        } else {
+          Fox.fromBool(fileMappingName == normalizedRequestedMappingName) ?~> Msg.SegmentStatisticsFile
+            .mappingNameMismatch(
+              normalizedRequestedMappingName.getOrElse("(none)"),
+              fileMappingName.getOrElse("(none)")
+            )
+        }
     } yield ()
 
   private def readCovarianceMatrix(segmentStatisticsFileKey: SegmentStatisticsFileKey, segmentId: Long)(using

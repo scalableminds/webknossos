@@ -23,6 +23,8 @@ import com.scalableminds.webknossos.datastore.services.mesh.{
 import com.scalableminds.webknossos.datastore.services.segmentindex.SegmentIndexFileService
 import com.scalableminds.webknossos.datastore.services.segmentstatistics.SegmentStatisticsFileService
 import com.scalableminds.util.Msg
+import com.scalableminds.util.box.{Empty, Failure, Full}
+import com.scalableminds.util.tools.Fox.toFox
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
@@ -60,9 +62,13 @@ class SegmentStatisticsController @Inject() (
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
-          segmentStatisticsFileInfosBox <- segmentStatisticsFileService.getInfos(dataSource.id, dataLayer)
-          // TODO shift box, drop empty (fail on failure, though?)
-        } yield Ok(Json.toJson(Seq(segmentStatisticsFileInfosBox)))
+          segmentStatisticsFileInfosBox <- segmentStatisticsFileService.getInfos(dataSource.id, dataLayer).shiftBox
+          segmentStatisticsFileInfosSeq <- segmentStatisticsFileInfosBox match {
+            case Full(segmentStatisticsFileInfos) => Fox.successful(Seq(segmentStatisticsFileInfos))
+            case Empty                            => Fox.successful(Seq.empty)
+            case f: Failure                       => f.toFox
+          }
+        } yield Ok(Json.toJson(segmentStatisticsFileInfosSeq))
       }
     }
 
@@ -240,7 +246,8 @@ class SegmentStatisticsController @Inject() (
             segmentStatisticsFileKey,
             dataLayer,
             request.body.mag,
-            request.body.mappingName
+            request.body.mappingName,
+            allowRemapping = true
           )
           covarianceMatrices <- segmentStatisticsFileService.getCovarianceMatrices(
             segmentStatisticsFileKey,
@@ -263,7 +270,8 @@ class SegmentStatisticsController @Inject() (
             segmentStatisticsFileKey,
             dataLayer,
             request.body.mag,
-            request.body.mappingName
+            request.body.mappingName,
+            allowRemapping = false
           )
           maxDistances <- segmentStatisticsFileService.getMaxDistances(
             segmentStatisticsFileKey,
@@ -286,7 +294,8 @@ class SegmentStatisticsController @Inject() (
             segmentStatisticsFileKey,
             dataLayer,
             request.body.mag,
-            request.body.mappingName
+            request.body.mappingName,
+            allowRemapping = true
           )
           centerOfMasses <- segmentStatisticsFileService.getCenterOfMasses(
             segmentStatisticsFileKey,
@@ -309,7 +318,8 @@ class SegmentStatisticsController @Inject() (
             segmentStatisticsFileKey,
             dataLayer,
             request.body.mag,
-            request.body.mappingName
+            request.body.mappingName,
+            allowRemapping = false
           )
           sphericities <- segmentStatisticsFileService.getSphericities(
             segmentStatisticsFileKey,

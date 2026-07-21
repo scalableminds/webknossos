@@ -99,9 +99,6 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
     APIDataSource | null | undefined
   >(null);
 
-  onComplete = onComplete ? onComplete : () => navigate("/dashboard");
-  onCancel = onCancel ? onCancel : () => navigate("/dashboard");
-
   const fetchData = useCallback(async (): Promise<string | undefined> => {
     try {
       setIsLoading(true);
@@ -311,7 +308,11 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
       queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
     }
 
-    onComplete();
+    if (onComplete) {
+      onComplete();
+    } else {
+      navigate("/dashboard");
+    }
   }, [
     datasetId,
     datasetDefaultConfiguration,
@@ -321,6 +322,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
     isEditingMode,
     queryClient,
     onComplete,
+    navigate,
     form.getFieldsValue,
   ]);
 
@@ -362,8 +364,12 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
   }, []);
 
   const handleCancel = useCallback(() => {
-    onCancel();
-  }, [onCancel]);
+    if (onCancel) {
+      onCancel();
+    } else {
+      navigate("/dashboard");
+    }
+  }, [onCancel, navigate]);
 
   useBeforeUnload(hasUnsavedChanges, messages["dataset.leave_with_unsaved_changes"]);
 

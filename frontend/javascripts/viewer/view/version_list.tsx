@@ -39,7 +39,7 @@ import {
 import { api, Model } from "viewer/singletons";
 import type { StoreAnnotation } from "viewer/store";
 import Store from "viewer/store";
-import VersionEntryGroup from "viewer/view/version_entry_group";
+import VersionEntryGroup, { isActiveVersionInGroup } from "viewer/view/version_entry_group";
 
 // This used to be 5000 but we had logs where lots of UPDATE_BUCKET
 // update actions existed in one batch. The JSON payload exceeded a length
@@ -250,6 +250,12 @@ function InnerVersionList(props: Props & { newestVersion: number; initialAllowUp
   // true if another version is being restored or previewed
   const [isChangingVersion, setIsChangingVersion] = useState(false);
 
+  // The expansion state of the version groups is hoisted here (keyed by the
+  // group's newest version) so that it survives the virtualized list unmounting
+  // off-screen groups. A missing entry falls back to the default (expand the
+  // group that contains the active version).
+  const [expandedGroups, setExpandedGroups] = useState<Record<number, boolean>>({});
+
   function fetchPaginatedVersions({ pageParam }: { pageParam?: number }) {
     if (pageParam == null) {
       pageParam = Math.floor((newestVersion - initialVersion) / ENTRIES_PER_PAGE);
@@ -397,6 +403,14 @@ function InnerVersionList(props: Props & { newestVersion: number; initialAllowUp
                           initialAllowUpdate={props.initialAllowUpdate}
                           newestVersion={flattenedVersions[0].version}
                           activeVersion={activeVersion}
+                          expanded={
+                            expandedGroups[batchesOrDateString[0].version] ??
+                            isActiveVersionInGroup(batchesOrDateString, activeVersion)
+                          }
+                          onSetExpanded={(expanded) => {
+                            const groupKey = batchesOrDateString[0].version;
+                            setExpandedGroups((prev) => ({ ...prev, [groupKey]: expanded }));
+                          }}
                           onRestoreVersion={async (version) => {
                             executeUnlessSwitchingVersions(() =>
                               handleRestoreVersion(props, flattenedVersions, version),

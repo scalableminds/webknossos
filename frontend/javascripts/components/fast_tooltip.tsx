@@ -1,5 +1,5 @@
 import { generateRandomId } from "libs/utils";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Tooltip as ReactTooltip } from "react-tooltip";
 
 /*
@@ -85,18 +85,29 @@ export default function FastTooltip({
   const Tag = wrapper || "span";
   const [uniqueKeyForDynamic, setUniqueDynamicId] = useState<string | undefined>(undefined);
 
+  // Keep a ref to the latest dynamicRenderer so that the registered renderer
+  // always uses current props/closure values instead of the mount-time ones.
+  // The registry only invokes it when the tooltip is actually opened (on hover),
+  // so updating the ref in an effect (after commit) is sufficient.
+  const dynamicRendererRef = useRef(dynamicRenderer);
+  useEffect(() => {
+    dynamicRendererRef.current = dynamicRenderer;
+  });
+
   // biome-ignore lint/correctness/useExhaustiveDependencies: a new unique id should only be created on mount
   useEffect(() => {
     if (!dynamicRenderer) {
       return;
     }
     const uniqueKey = generateRandomId(16);
-    uniqueKeyToDynamicRenderer[uniqueKey] = dynamicRenderer;
+    // Register a stable wrapper that delegates to the latest renderer via the ref.
+    uniqueKeyToDynamicRenderer[uniqueKey] = () => dynamicRendererRef.current?.() ?? null;
     setUniqueDynamicId(uniqueKey);
     return () => {
-      if (uniqueKeyForDynamic) {
-        delete uniqueKeyToDynamicRenderer[uniqueKeyForDynamic];
-      }
+      // Clean up via the locally created key. Using the state value here would
+      // leak entries because it is still undefined when this cleanup closure is
+      // created on mount.
+      delete uniqueKeyToDynamicRenderer[uniqueKey];
     };
   }, []);
 

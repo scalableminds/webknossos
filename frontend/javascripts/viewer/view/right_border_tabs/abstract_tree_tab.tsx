@@ -38,7 +38,12 @@ const AbstractTreeTab: React.FC<EmptyObject> = () => {
   // drawTreeImpl via a ref. Otherwise, the throttling would not take effect
   // across renders (drawing may be slow for very large tracings).
   const drawTreeImplRef = useRef(drawTreeImpl);
-  drawTreeImplRef.current = drawTreeImpl;
+  // Keep the ref in sync in an effect (not during render) to keep the render
+  // phase pure. This effect is declared before the drawing effect below so the
+  // ref is updated first when drawTreeImpl changes.
+  useEffect(() => {
+    drawTreeImplRef.current = drawTreeImpl;
+  }, [drawTreeImpl]);
   const drawTree = useMemo(() => throttle(() => drawTreeImplRef.current(), 1000), []);
 
   useEffect(() => {

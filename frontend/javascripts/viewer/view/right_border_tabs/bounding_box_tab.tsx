@@ -43,7 +43,7 @@ import {
   getLayerBoundingBox,
   getLayerBoundingBoxId,
 } from "viewer/model/accessors/dataset_accessor";
-import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
+import { maybeGetSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import { getReadableNameForLayerName } from "viewer/model/accessors/volumetracing_accessor";
 import {
   addUserBoundingBoxAction,
@@ -100,9 +100,12 @@ export default function BoundingBoxTab() {
   const dataset = useWkSelector((state) => state.dataset);
   const activeBoundingBoxId = useWkSelector((state) => state.uiInformation.activeUserBoundingBoxId);
   // Select the bounding boxes directly (instead of the whole annotation) so that
-  // this tab only re-renders when the boxes actually change.
+  // this tab only re-renders when the boxes actually change. Use the safe
+  // maybeGetSomeTracing here because selectors run after every dispatched action
+  // (not just during render), and the annotation might briefly contain no
+  // tracing during transitions.
   const userBoundingBoxes = useWkSelector(
-    (state) => getSomeTracing(state.annotation).userBoundingBoxes,
+    (state) => maybeGetSomeTracing(state.annotation)?.userBoundingBoxes ?? [],
   );
   const layerBoundingBoxVisibilities = useWkSelector(
     (state) => state.temporaryConfiguration.layerBoundingBoxVisibilities,

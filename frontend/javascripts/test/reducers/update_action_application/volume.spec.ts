@@ -142,12 +142,16 @@ describe("Update Action Application for VolumeTracing", () => {
       },
       tracingId,
     ),
-    addUserBoundingBoxAction({
-      boundingBox: { min: [0, 0, 0], max: [10, 10, 10] },
-      name: "UserBBox",
-      color: [1, 2, 3],
-      isVisible: true,
-    }),
+    addUserBoundingBoxAction(
+      {
+        boundingBox: { min: [0, 0, 0], max: [10, 10, 10] },
+        name: "UserBBox",
+        color: [1, 2, 3],
+        isVisible: true,
+      },
+      undefined,
+      1,
+    ),
     changeUserBoundingBoxAction(1, { name: "Updated Name" }),
     deleteUserBoundingBoxAction(1),
     setSegmentGroupsAction(

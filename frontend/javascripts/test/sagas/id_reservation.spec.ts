@@ -4,8 +4,10 @@ import {
   setupWebknossosForTestingWithRestrictions,
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
+import { getIdReservationsForBoundingBoxes } from "viewer/model/accessors/tracing_accessor";
 import { getIdReservationsForSegmentationLayer } from "viewer/model/accessors/volumetracing_accessor";
 import { dispatchGetNewIdAsync, setIdReservationsAction } from "viewer/model/actions/actions";
+import { setUserBoundingBoxesAction } from "viewer/model/actions/annotation_actions";
 import { setSegmentGroupsAction } from "viewer/model/actions/volumetracing_actions";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { Store } from "viewer/singletons";
@@ -374,6 +376,67 @@ describe("ID reservation saga (concurrent collaboration mode)", () => {
 
     await task.toPromise();
   });
+
+  it("should fetch new IDs for the BoundingBox domain, using the skeleton tracing id", async (context: WebknossosTestContext) => {
+    const { mocks } = context;
+    // Bounding boxes are mirrored across all tracings of an annotation, so the skeleton
+    // tracing id should work just as well as a volume tracing id for this domain.
+    const { tracingId } = Store.getState().annotation.skeleton!;
+
+    mockReserveIdsEndpoint(mocks, [500, 501, 502, 503, 504]);
+
+    const task = startSaga(function* task() {
+      const id = yield call(() => dispatchGetNewIdAsync(Store.dispatch, tracingId, "BoundingBox"));
+
+      expect(id).toBe(500);
+
+      const reservations = getIdReservationsForBoundingBoxes(Store.getState());
+      expect(reservations).toEqual([
+        { id: 500, used: true },
+        { id: 501, used: false },
+        { id: 502, used: false },
+        { id: 503, used: false },
+        { id: 504, used: false },
+      ]);
+    });
+
+    await task.toPromise();
+  });
+
+  it("should skip 'unused' BoundingBox reservation IDs for which bounding boxes already exist", async () => {
+    const { tracingId } = Store.getState().annotation.skeleton!;
+
+    Store.dispatch(
+      setUserBoundingBoxesAction([
+        {
+          id: 5,
+          name: "Existing bbox",
+          color: [1, 1, 1],
+          isVisible: true,
+          boundingBox: { min: [0, 0, 0], max: [1, 1, 1] },
+        },
+      ]),
+    );
+
+    Store.dispatch(
+      setIdReservationsAction(tracingId, "BoundingBox", [
+        { id: 5, used: false },
+        { id: 15, used: false },
+        { id: 20, used: false },
+        { id: 25, used: false },
+        { id: 30, used: false },
+      ]),
+    );
+
+    const task = startSaga(function* task() {
+      const id = yield call(() => dispatchGetNewIdAsync(Store.dispatch, tracingId, "BoundingBox"));
+
+      // ID 5 is filtered because a bounding box with that id already exists.
+      expect(id).toBe(15);
+    });
+
+    await task.toPromise();
+  });
 });
 
 describe("ID reservation saga (exclusive collaboration mode)", () => {
@@ -447,6 +510,32 @@ describe("ID reservation saga (exclusive collaboration mode)", () => {
         dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
       );
       expect(id14).toBe(14);
+    });
+
+    await task.toPromise();
+  });
+
+  it("should assign new BoundingBox IDs, using the skeleton tracing id", async () => {
+    const { tracingId } = Store.getState().annotation.skeleton!;
+
+    const task = startSaga(function* task() {
+      Store.dispatch(
+        setUserBoundingBoxesAction([
+          {
+            id: 5,
+            name: "Existing bbox",
+            color: [1, 1, 1],
+            isVisible: true,
+            boundingBox: { min: [0, 0, 0], max: [1, 1, 1] },
+          },
+        ]),
+      );
+
+      const id6 = yield call(() => dispatchGetNewIdAsync(Store.dispatch, tracingId, "BoundingBox"));
+      expect(id6).toBe(6);
+
+      const id7 = yield call(() => dispatchGetNewIdAsync(Store.dispatch, tracingId, "BoundingBox"));
+      expect(id7).toBe(7);
     });
 
     await task.toPromise();

@@ -100,10 +100,7 @@ export default function BoundingBoxTab() {
   const dataset = useWkSelector((state) => state.dataset);
   const activeBoundingBoxId = useWkSelector((state) => state.uiInformation.activeUserBoundingBoxId);
   // Select the bounding boxes directly (instead of the whole annotation) so that
-  // this tab only re-renders when the boxes actually change. Use the safe
-  // maybeGetSomeTracing here because selectors run after every dispatched action
-  // (not just during render), and the annotation might briefly contain no
-  // tracing during transitions.
+  // this tab only re-renders when the boxes actually change. 
   const userBoundingBoxes = useWkSelector(
     (state) => maybeGetSomeTracing(state.annotation)?.userBoundingBoxes ?? [],
   );

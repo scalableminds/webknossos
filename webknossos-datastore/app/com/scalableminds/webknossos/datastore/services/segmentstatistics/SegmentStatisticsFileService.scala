@@ -162,6 +162,16 @@ class SegmentStatisticsFileService @Inject() (
       _ <- Fox.fromBool(metrics.contains(metric)) ?~> Msg.SegmentStatisticsFile.metricNotAvailable(metric)
     } yield ()
 
+  // Reads are batched (parallel) for remote storage, where per-read latency dominates, and serial for local
+  // storage, where parallel reads would only add contention without saving wall-clock time.
+  private def combinedOverSegmentIds[B](segmentStatisticsFileKey: SegmentStatisticsFileKey, segmentIds: Seq[Long])(
+      f: Long => Fox[B]
+  )(implicit ec: ExecutionContext): Fox[Seq[B]] =
+    if (segmentStatisticsFileKey.attachment.path.isRemote)
+      Fox.batchCombined(segmentIds, parallelity = 32)(f)
+    else
+      Fox.serialCombined(segmentIds)(f)
+
   private def resolveMappingName(
       segmentStatisticsFileKey: SegmentStatisticsFileKey
   )(using ec: ExecutionContext, tc: TokenContext): Fox[Option[String]] =
@@ -237,7 +247,7 @@ class SegmentStatisticsFileService @Inject() (
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[Seq[Array[Array[Float]]]] =
-    Fox.serialCombined(segmentIds)(readCovarianceMatrix(segmentStatisticsFileKey, _))
+    combinedOverSegmentIds(segmentStatisticsFileKey, segmentIds)(readCovarianceMatrix(segmentStatisticsFileKey, _))
 
   private def readMaxDistance(segmentStatisticsFileKey: SegmentStatisticsFileKey, segmentId: Long)(using
       ec: ExecutionContext,
@@ -253,7 +263,7 @@ class SegmentStatisticsFileService @Inject() (
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[Seq[Float]] =
-    Fox.serialCombined(segmentIds)(readMaxDistance(segmentStatisticsFileKey, _))
+    combinedOverSegmentIds(segmentStatisticsFileKey, segmentIds)(readMaxDistance(segmentStatisticsFileKey, _))
 
   private def readCenterOfMass(segmentStatisticsFileKey: SegmentStatisticsFileKey, segmentId: Long)(using
       ec: ExecutionContext,
@@ -269,7 +279,7 @@ class SegmentStatisticsFileService @Inject() (
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[Seq[Array[Float]]] =
-    Fox.serialCombined(segmentIds)(readCenterOfMass(segmentStatisticsFileKey, _))
+    combinedOverSegmentIds(segmentStatisticsFileKey, segmentIds)(readCenterOfMass(segmentStatisticsFileKey, _))
 
   private def readVolume(segmentStatisticsFileKey: SegmentStatisticsFileKey, segmentId: Long)(using
       ec: ExecutionContext,
@@ -286,7 +296,7 @@ class SegmentStatisticsFileService @Inject() (
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[Seq[Long]] =
-    Fox.serialCombined(segmentIds)(readVolume(segmentStatisticsFileKey, _))
+    combinedOverSegmentIds(segmentStatisticsFileKey, segmentIds)(readVolume(segmentStatisticsFileKey, _))
 
   // The volume-weighted average of centerOfMasses, per dimension, as Double for precision. totalVolume must be > 0.
   private def weightedCenterOfMass(
@@ -367,7 +377,9 @@ class SegmentStatisticsFileService @Inject() (
   ): Fox[Seq[Float]] =
     for {
       _ <- checkMetricAvailable(segmentStatisticsFileKey, SegmentStatisticsFileService.keySphericities)
-      sphericities <- Fox.serialCombined(segmentIds)(readSphericity(segmentStatisticsFileKey, _))
+      sphericities <- combinedOverSegmentIds(segmentStatisticsFileKey, segmentIds)(
+        readSphericity(segmentStatisticsFileKey, _)
+      )
     } yield sphericities
 
   private def checkIdsAreDense(

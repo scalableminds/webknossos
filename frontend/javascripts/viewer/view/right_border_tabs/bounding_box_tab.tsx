@@ -22,6 +22,7 @@ import {
   Typography,
 } from "antd";
 import FastTooltip from "components/fast_tooltip";
+import { handleGenericError } from "libs/error_handling";
 import { useWkSelector } from "libs/react_hooks";
 import {
   computeArrayFromBoundingBox,
@@ -46,7 +47,6 @@ import {
 import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import { getReadableNameForLayerName } from "viewer/model/accessors/volumetracing_accessor";
 import {
-  addUserBoundingBoxAction,
   changeUserBoundingBoxAction,
   deleteUserBoundingBoxAction,
 } from "viewer/model/actions/annotation_actions";
@@ -57,6 +57,7 @@ import {
   updateUserSettingAction,
 } from "viewer/model/actions/settings_actions";
 import { setActiveUserBoundingBoxId } from "viewer/model/actions/ui_actions";
+import { reserveIdAndAddBoundingBox } from "viewer/model/helpers/bounding_box_creation_helpers";
 import type { UserBoundingBox } from "viewer/store";
 import DownloadModalView from "../action_bar/download_modal/download_modal_view";
 import ButtonComponent from "../components/button_component";
@@ -96,13 +97,13 @@ export default function BoundingBoxTab() {
   const isOwner = useWkSelector((state) => isAnnotationOwner(state));
   const dataset = useWkSelector((state) => state.dataset);
   const activeBoundingBoxId = useWkSelector((state) => state.uiInformation.activeUserBoundingBoxId);
+  const { userBoundingBoxes, tracingId: idOfTracingWithBBoxes } = getSomeTracing(annotation);
   const layerBoundingBoxVisibilities = useWkSelector(
     (state) => state.temporaryConfiguration.layerBoundingBoxVisibilities,
   );
   const layerBoundingBoxColors = useWkSelector(
     (state) => state.temporaryConfiguration.layerBoundingBoxColors,
   );
-  const { userBoundingBoxes } = getSomeTracing(annotation);
   const layerBoundingBoxes = useMemo<LayerBoundingBox[]>(
     () =>
       getDataLayers(dataset).map((layer, index) => {
@@ -123,6 +124,7 @@ export default function BoundingBoxTab() {
   const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([]);
   const [menu, setMenu] = useState<MenuProps | null>(null);
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
+  const [isCreatingBoundingBox, setIsCreatingBoundingBox] = useState(false);
   // null => automatic (collapsed once there are many user bounding boxes); a boolean is a manual override.
   // Keeping the default as null (instead of eagerly computing the collapsed state once) means the
   // section keeps following the bbox count until the user explicitly toggles it: e.g. if the user
@@ -147,7 +149,16 @@ export default function BoundingBoxTab() {
     [dispatch],
   );
 
-  const addNewBoundingBox = useCallback(() => dispatch(addUserBoundingBoxAction()), [dispatch]);
+  const addNewBoundingBox = useCallback(async () => {
+    setIsCreatingBoundingBox(true);
+    try {
+      await reserveIdAndAddBoundingBox(dispatch, idOfTracingWithBBoxes);
+    } catch (error) {
+      handleGenericError(error as Error, "Could not create a new bounding box.");
+    } finally {
+      setIsCreatingBoundingBox(false);
+    }
+  }, [dispatch, idOfTracingWithBBoxes]);
 
   const setPosition = useCallback(
     (position: Vector3) => dispatch(setPositionAction(position)),
@@ -446,6 +457,7 @@ export default function BoundingBoxTab() {
         </AdvancedSearchPopover>
         <ButtonComponent
           disabled={!allowUpdate}
+          loading={isCreatingBoundingBox}
           variant="text"
           color="default"
           title="Click to add another bounding box."

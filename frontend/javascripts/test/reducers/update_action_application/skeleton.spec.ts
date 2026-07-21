@@ -129,12 +129,16 @@ describe("Update Action Application for SkeletonTracing", () => {
     createNode(), // nodeId=14, tree components == {1,2} {4,5} {6,7,8} {12,13,14}
     deleteTreeAction(3),
     setNodePositionAction([1, 2, 3], 6),
-    addUserBoundingBoxAction({
-      boundingBox: { min: [0, 0, 0], max: [10, 10, 10] },
-      name: "UserBBox",
-      color: [1, 2, 3],
-      isVisible: true,
-    }),
+    addUserBoundingBoxAction(
+      {
+        boundingBox: { min: [0, 0, 0], max: [10, 10, 10] },
+        name: "UserBBox",
+        color: [1, 2, 3],
+        isVisible: true,
+      },
+      undefined,
+      1,
+    ),
     changeUserBoundingBoxAction(1, { name: "Updated Name" }),
     deleteUserBoundingBoxAction(1),
     setTreeGroupsAction([makeBasicGroupObject(3, "group 3"), makeBasicGroupObject(7, "group 7")]),

@@ -73,23 +73,6 @@ const zoomedInStateWithoutMag1 = update(zoomedInInitialState, {
   },
 });
 
-// Mag 1-1-1 is missing for the volume layer (e.g., due to mag restrictions),
-// but exists in the color layer. Annotating while that mag is rendered should
-// be disabled.
-const zoomedInStateWithRestrictedVolumeMags = update(zoomedInInitialState, {
-  dataset: {
-    dataSource: {
-      dataLayers: {
-        [0]: {
-          mags: {
-            $set: [{ mag: [2, 2, 1] }, { mag: [4, 4, 4] }],
-          },
-        },
-      },
-    },
-  },
-});
-
 const coordinateTransformations: CoordinateTransformation[] = [
   {
     type: "affine",

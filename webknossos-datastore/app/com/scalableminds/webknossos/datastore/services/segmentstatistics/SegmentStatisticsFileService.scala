@@ -50,10 +50,12 @@ object SegmentStatisticsFileAttributes extends VoxelyticsZarrArtifactUtils {
 object SegmentStatisticsFileService {
   val keyCovarianceMatrix = "covariance_matrix"
   val keyMaxDistances = "max_distances"
+  val keyCenterOfMass = "center_of_mass"
+  val keySphericities = "sphericities"
   val keyIds = "ids"
 
   val possibleMetrics: Seq[String] =
-    Seq("positions", keyMaxDistances, "volumes", "center_of_mass", keyCovarianceMatrix, "surfaces", "sphericities")
+    Seq("positions", keyMaxDistances, "volumes", keyCenterOfMass, keyCovarianceMatrix, "surfaces", keySphericities)
 }
 
 class SegmentStatisticsFileService @Inject() (
@@ -150,6 +152,15 @@ class SegmentStatisticsFileService @Inject() (
       }
     } yield collected
 
+  private def checkMetricAvailable(segmentStatisticsFileKey: SegmentStatisticsFileKey, metric: String)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Unit] =
+    for {
+      metrics <- availableMetrics(segmentStatisticsFileKey)
+      _ <- Fox.fromBool(metrics.contains(metric)) ?~> Msg.SegmentStatisticsFile.metricNotAvailable(metric)
+    } yield ()
+
   private def resolveMagAndMappingName(segmentStatisticsFileKey: SegmentStatisticsFileKey, dataLayer: DataLayer)(using
       ec: ExecutionContext,
       tc: TokenContext
@@ -211,6 +222,41 @@ class SegmentStatisticsFileService @Inject() (
   ): Fox[Seq[Float]] =
     Fox.serialCombined(segmentIds)(readMaxDistance(segmentStatisticsFileKey, _))
 
+  private def readCenterOfMass(segmentStatisticsFileKey: SegmentStatisticsFileKey, segmentId: Long)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Array[Float]] =
+    for {
+      centerOfMassArray <- openZarrArray(segmentStatisticsFileKey, SegmentStatisticsFileService.keyCenterOfMass)
+      multiArray <- centerOfMassArray.readAsMultiArray(offset = Array(segmentId, 0L), shape = Array(1, 3))
+      centerOfMass <- tryo(Array.tabulate(3)(i => multiArray.getFloat(multiArray.getIndex.set(Array(0, i))))).toFox
+    } yield centerOfMass
+
+  def getCenterOfMasses(segmentStatisticsFileKey: SegmentStatisticsFileKey, segmentIds: Seq[Long])(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Seq[Array[Float]]] =
+    Fox.serialCombined(segmentIds)(readCenterOfMass(segmentStatisticsFileKey, _))
+
+  private def readSphericity(segmentStatisticsFileKey: SegmentStatisticsFileKey, segmentId: Long)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Float] =
+    for {
+      sphericitiesArray <- openZarrArray(segmentStatisticsFileKey, SegmentStatisticsFileService.keySphericities)
+      multiArray <- sphericitiesArray.readAsMultiArray(offset = segmentId, shape = 1)
+      sphericity <- tryo(multiArray.getFloat(0)).toFox
+    } yield sphericity
+
+  def getSphericities(segmentStatisticsFileKey: SegmentStatisticsFileKey, segmentIds: Seq[Long])(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Seq[Float]] =
+    for {
+      _ <- checkMetricAvailable(segmentStatisticsFileKey, SegmentStatisticsFileService.keySphericities)
+      sphericities <- Fox.serialCombined(segmentIds)(readSphericity(segmentStatisticsFileKey, _))
+    } yield sphericities
+
   private def checkIdsAreDense(
       segmentStatisticsFileKey: SegmentStatisticsFileKey
   )(using ec: ExecutionContext, tc: TokenContext): Fox[Unit] =
@@ -221,6 +267,7 @@ class SegmentStatisticsFileService @Inject() (
         .toFox ?~> "Could not determine length of ids array in segment statistics file"
       firstMultiArray <- idsArray.readAsMultiArray(offset = 0L, shape = 1)
       lastMultiArray <- idsArray.readAsMultiArray(offset = length - 1, shape = 1)
+      // the underlying dtype of ids may vary, but getLong will auto-convert to long.
       first <- tryo(firstMultiArray.getLong(0)).toFox
       last <- tryo(lastMultiArray.getLong(0)).toFox
       _ <- Fox.fromBool(first == 0 && last == length - 1) ?~> Msg.SegmentStatisticsFile.idsNotDense(first, last, length)

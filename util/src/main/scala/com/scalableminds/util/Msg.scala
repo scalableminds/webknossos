@@ -811,6 +811,8 @@ object Msg {
       s"Segment statistics file has format version $formatVersion, but at least $minimumSupportedVersion is required."
     def idsNotDense(first: Long, last: Long, length: Long): String =
       s"Segment statistics file does not have dense ids: first id is $first (expected 0), last id is $last (expected ${length - 1}), for $length ids total. Only dense ids are supported."
+    def metricNotAvailable(metric: String): String =
+      s"Segment statistics file does not contain the metric “$metric”."
   }
   object Zarr {
     def invalidChunkCoordinates(coordinates: String): String =

@@ -51,7 +51,9 @@ trait LRUConcurrentCache[K, V] {
     }
 
   def size(): Int =
-    cache.size()
+    cache.synchronized {
+      cache.size()
+    }
 
   def clear(predicate: K => Boolean): Int =
     cache.synchronized {
@@ -70,5 +72,7 @@ trait LRUConcurrentCache[K, V] {
     }
 
   def clear(): Unit =
-    cache.clear()
+    cache.synchronized {
+      cache.clear()
+    }
 }

@@ -100,7 +100,7 @@ class NMLUnitTestSuite extends AsyncWordSpec {
     nmlParser.parse("", is, parsingParams, basePath = None)
   }
 
-  def writeAndParseTracing(skeletonTracing: SkeletonTracing): Fox[NmlParseSuccessWithoutFile] =
+  private def writeAndParseTracing(skeletonTracing: SkeletonTracing): Fox[NmlParseSuccessWithoutFile] =
     for {
       xmlBytes <- writeToXmlBytes(skeletonTracing)
       parsed <- parseXmlBytes(xmlBytes)
@@ -211,11 +211,8 @@ class NMLUnitTestSuite extends AsyncWordSpec {
       assertParsingFailed(writeAndParseTracing(newTracing))
     }
 
-    // NmlWriter deduplicates nodes by id when writing (see NmlWriter.writeNodesAsXml), so a genuinely
-    // duplicated node id can only reach the parser via raw XML, not via writeAndParseTracing (which
-    // is why this bypasses it and edits the written XML directly). This exercises
-    // TreeValidator.checkNoDuplicateNodeIds, the actual check responsible for rejecting it.
     "throw an error for a raw NML with a duplicated node id" in {
+      // Mutates the XML directly because NmlWriter would deduplicate the nodes while writing.
       val nodeTagPattern = """<node[^>]*/>""".r
       writeToXmlBytes(dummyTracing).futureBox.flatMap {
         case Full(xmlBytes) =>

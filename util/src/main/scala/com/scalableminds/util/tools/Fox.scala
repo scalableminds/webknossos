@@ -57,12 +57,12 @@ object Fox {
   ): Fox[Nothing] =
     new Fox(Future.successful(ParamFailure(message, ex, chain, param)))
 
-  /** Runs `cleanup` once `fox` completes, whether it succeeds, fails, or throws synchronously while being
-    * constructed. Takes `fox` by name so that a synchronous exception is caught and does not skip `cleanup`,
-    * which a plain `fox.andThen(cleanup)` would do if `fox` itself throws before `andThen` can be attached.
+  /** Runs `cleanup` once `fox` completes, whether it succeeds, fails, or throws synchronously while being constructed.
+    * Takes `fox` by name so that a synchronous exception is caught and does not skip `cleanup`, which a plain
+    * `andThen(cleanup)` would do if `fox` itself throws before `andThen` can be attached.
     */
   def withCleanup[A](fox: => Fox[A])(cleanup: => Unit)(implicit ec: ExecutionContext): Fox[A] =
-    Fox.successful(()).flatMap(_ => fox).andThen(cleanup)
+    Fox.fromFutureBox(Fox.successful(()).flatMap(_ => fox).futureBox.andThen { case _ => cleanup })
 
   // run serially, return individual results in list of box
   def serialSequence[A, B](seq: Seq[A])(f: A => Fox[B])(implicit ec: ExecutionContext): Future[List[Box[B]]] = {
@@ -308,11 +308,6 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
         case scala.util.Failure(e) => f(Failure(e.toString, Full(e), Empty))
       }
     }
-
-  // Private: a synchronous exception while constructing the receiver Fox would skip `block` entirely,
-  // since `andThen` never gets attached. Use `Fox.withCleanup` instead, which defers that evaluation safely.
-  private def andThen[U](block: => U)(implicit ec: ExecutionContext): Fox[A] =
-    Fox.fromFutureBox(futureBox.andThen { case _ => block })
 
   /*
    * Returns new Fox[Box[A]] that is always successful, such that the original’s box is shifted “inwards”.

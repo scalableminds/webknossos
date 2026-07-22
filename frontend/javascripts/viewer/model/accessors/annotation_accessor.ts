@@ -242,7 +242,15 @@ export function isSaving(state: WebknossosState): boolean {
 }
 
 export function isSavingOrRebasing(state: WebknossosState): boolean {
-  return isSaving(state) || state.save.rebaseRelevantServerAnnotationState.isRebasingOrForwarding;
+  return isSaving(state) || getIsRebasingOrForwarding(state);
+}
+
+export function getIsRebasingOrForwarding(state: WebknossosState): boolean {
+  // True while the save saga is rewinding/forwarding the annotation to incorporate remote
+  // changes. During this window, user edits that would be diffed to the save queue must not
+  // touch the annotation state (see rebase_edit_guard.ts), because they would be silently
+  // dropped and never saved.
+  return state.save.rebaseRelevantServerAnnotationState.isRebasingOrForwarding;
 }
 
 export function isUserInterfaceBlocked(state: WebknossosState): boolean {

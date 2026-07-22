@@ -97,4 +97,7 @@ class WebknossosBearerTokenAuthenticatorService(
 
   def removeExpiredTokens(): Fox[Unit] =
     repository.deleteAllExpired()
+
+  def hardDeleteOldTokens(): Fox[Unit] =
+    repository.hardDeleteOldTokens()
 }

@@ -2,6 +2,10 @@ START TRANSACTION;
 
 do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 177 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
 
+DROP INDEX IF EXISTS webknossos.tokens_value_idx;
+DROP INDEX IF EXISTS webknossos.tokens_logininfo_providerid_logininfo_providerkey_tokentype_idx;
+DROP INDEX IF EXISTS webknossos.tokens_expirationdatetime_idx;
+
 -- Clear any rows using the new enum value before removing it
 DELETE FROM webknossos.tokens WHERE tokenType = 'Job';
 

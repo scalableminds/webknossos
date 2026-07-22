@@ -74,4 +74,7 @@ class BearerTokenAuthenticatorRepository(tokenDAO: TokenDAO)(implicit ec: Execut
   def deleteAllExpired(): Fox[Unit] =
     tokenDAO.deleteAllExpired()
 
+  def hardDeleteOldTokens(): Fox[Unit] =
+    tokenDAO.hardDeleteOldTokens()
+
 }

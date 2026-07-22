@@ -332,6 +332,18 @@ class SegmentStatisticsFileService @Inject() (
       (fileMag, _) <- resolveMagAndMappingName(segmentStatisticsFileKey, dataLayer)
     } yield rescaleVolumeToMag(volumes.sum, fileMag, requestedMag)
 
+  // Center of mass and covariance matrix are always stored in mag1 voxel units, regardless of the file’s own mag, so
+  // volumes must be rescaled to mag1 before being used as weights to combine those two metrics across oversegments.
+  private def volumesInMag1(
+      segmentStatisticsFileKey: SegmentStatisticsFileKey,
+      dataLayer: DataLayer,
+      segmentIds: Seq[Long]
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Seq[Long]] =
+    for {
+      volumes <- getVolumes(segmentStatisticsFileKey, segmentIds)
+      (fileMag, _) <- resolveMagAndMappingName(segmentStatisticsFileKey, dataLayer)
+    } yield volumes.map(rescaleVolumeToMag(_, fileMag, Vec3Int.ones))
+
   // The volume-weighted average of centerOfMasses, per dimension, as Double for precision. totalVolume must be > 0.
   private def weightedCenterOfMass(
       centerOfMasses: Seq[Array[Float]],
@@ -352,13 +364,14 @@ class SegmentStatisticsFileService @Inject() (
     * weighting each one by its volume. This is exact (not an approximation), as long as the given segments are disjoint
     * (do not overlap). If a single segment id is given, this just returns its own center of mass.
     */
-  def getCombinedCenterOfMass(segmentStatisticsFileKey: SegmentStatisticsFileKey, segmentIds: Seq[Long])(using
-      ec: ExecutionContext,
-      tc: TokenContext
-  ): Fox[Array[Float]] =
+  def getCombinedCenterOfMass(
+      segmentStatisticsFileKey: SegmentStatisticsFileKey,
+      dataLayer: DataLayer,
+      segmentIds: Seq[Long]
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Float]] =
     for {
       centerOfMasses <- getCenterOfMasses(segmentStatisticsFileKey, segmentIds)
-      volumes <- getVolumes(segmentStatisticsFileKey, segmentIds)
+      volumes <- volumesInMag1(segmentStatisticsFileKey, dataLayer, segmentIds)
       totalVolume = volumes.sum
       _ <- Fox.fromBool(totalVolume > 0) ?~> "Cannot compute combined center of mass, total volume of segments is zero"
       combined = weightedCenterOfMass(centerOfMasses, volumes, totalVolume).map(_.toFloat)
@@ -370,14 +383,15 @@ class SegmentStatisticsFileService @Inject() (
     * (not an approximation), as long as the given segments are disjoint (do not overlap). If a single segment id is
     * given, this just returns its own covariance matrix.
     */
-  def getCombinedCovarianceMatrix(segmentStatisticsFileKey: SegmentStatisticsFileKey, segmentIds: Seq[Long])(using
-      ec: ExecutionContext,
-      tc: TokenContext
-  ): Fox[Array[Array[Float]]] =
+  def getCombinedCovarianceMatrix(
+      segmentStatisticsFileKey: SegmentStatisticsFileKey,
+      dataLayer: DataLayer,
+      segmentIds: Seq[Long]
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Array[Float]]] =
     for {
       covarianceMatrices <- getCovarianceMatrices(segmentStatisticsFileKey, segmentIds)
       centerOfMasses <- getCenterOfMasses(segmentStatisticsFileKey, segmentIds)
-      volumes <- getVolumes(segmentStatisticsFileKey, segmentIds)
+      volumes <- volumesInMag1(segmentStatisticsFileKey, dataLayer, segmentIds)
       totalVolume = volumes.sum
       _ <- Fox.fromBool(
         totalVolume > 0

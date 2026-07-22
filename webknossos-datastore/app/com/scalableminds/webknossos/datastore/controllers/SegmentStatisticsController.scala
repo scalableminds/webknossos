@@ -342,6 +342,7 @@ class SegmentStatisticsController @Inject() (
                   )
                   covarianceMatrix <- segmentStatisticsFileService.getCombinedCovarianceMatrix(
                     segmentStatisticsFileKey,
+                    dataLayer,
                     oversegmentationIds
                   )
                 } yield covarianceMatrix
@@ -415,6 +416,7 @@ class SegmentStatisticsController @Inject() (
                   )
                   centerOfMass <- segmentStatisticsFileService.getCombinedCenterOfMass(
                     segmentStatisticsFileKey,
+                    dataLayer,
                     oversegmentationIds
                   )
                 } yield centerOfMass

@@ -174,6 +174,9 @@ object MultiArrayUtils extends LazyLogging {
       hasUnitStrideInLastDimension(source) &&
       hasUnitStrideInLastDimension(target)
 
+  // Copies one contiguous run (the full extent of the last dimension's range) per combination of the
+  // remaining ("outer") dimensions, using System.arraycopy for each run instead of a per-element iterator.
+  // Requires canCopyViaContiguousRuns to hold, so the last dimension is guaranteed stride-1 in both arrays.
   private def copyRangeViaContiguousRuns(
       source: MultiArray,
       target: MultiArray,
@@ -188,6 +191,8 @@ object MultiArrayUtils extends LazyLogging {
     val runLength = sourceRanges.get(rank - 1).length
     val outerDims = rank - 1
 
+    // Current position in each dimension, starting at the range's first index; the last dimension's
+    // index is left at its range start, since a whole run starting there is copied in one go.
     val sourceIdx = Array.tabulate(rank)(d => sourceRanges.get(d).first)
     val targetIdx = Array.tabulate(rank)(d => targetRanges.get(d).first)
 
@@ -204,6 +209,10 @@ object MultiArrayUtils extends LazyLogging {
     }
 
     copyRun()
+    // Enumerate every combination of the outer dimensions' indices:
+    // step the rightmost (least significant) outer dimension by one; once it exceeds its range, reset it
+    // and carry the increment into the next dimension to its left, and so on. One run is copied per
+    // combination, until incrementing would carry past the leftmost (most significant) dimension.
     val leastSignificantOuterDim = outerDims - 1
     var hasMore = leastSignificantOuterDim >= 0
     while (hasMore) {

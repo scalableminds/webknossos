@@ -2,6 +2,7 @@ package models.annotation
 
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.box.{Empty, Failure, Full}
+import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 
 import java.io.{File, FileInputStream, InputStream}
 import java.nio.file.{Files, Path, StandardCopyOption}
@@ -40,7 +41,9 @@ case class SharedParsingParameters(
     useZipName: Boolean,
     overwritingDatasetId: Option[String] = None,
     userOrganizationId: String,
-    isTaskUpload: Boolean = false
+    isTaskUpload: Boolean = false,
+    fallbackEditPosition: Option[Vec3Int] = None,
+    fallbackEditRotation: Option[Vec3Double] = None
 )
 
 class AnnotationUploadService @Inject() (tempFileService: WkTempFileService, nmlParser: NmlParser)

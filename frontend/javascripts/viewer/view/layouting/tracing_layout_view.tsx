@@ -22,6 +22,7 @@ import { destroySceneController } from "viewer/controller/scene_controller_provi
 import UrlManager from "viewer/controller/url_manager";
 import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import { is2dDataset } from "viewer/model/accessors/dataset_accessor";
+import { getPosition, getRotationInDegrees } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool, MeasurementTools } from "viewer/model/accessors/tool_accessor";
 import { cancelSagaAction, resetStoreAction } from "viewer/model/actions/actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
@@ -327,6 +328,8 @@ class TracingLayoutView extends PureComponent<PropsWithRouter, State> {
           nmlFile: files,
           createGroupForEachFile,
           datasetId: this.props.datasetId,
+          fallbackEditPosition: this.props.editPosition.join(","),
+          fallbackEditRotation: this.props.editRotation.join(","),
         },
       });
       this.props.navigate(`/annotations/${response.annotation.typ}/${response.annotation.id}`);
@@ -441,6 +444,8 @@ function mapStateToProps(state: WebknossosState) {
     showVersionRestore: state.uiInformation.showVersionRestore,
     storedLayouts: state.uiInformation.storedLayouts,
     datasetId: state.dataset.id,
+    editPosition: getPosition(state.flycam).map(Math.round) as Vector3,
+    editRotation: getRotationInDegrees(state.flycam),
     is2d: is2dDataset(state.dataset),
     displayName: state.annotation.name ? state.annotation.name : state.dataset.name,
     organization: state.dataset.owningOrganization,

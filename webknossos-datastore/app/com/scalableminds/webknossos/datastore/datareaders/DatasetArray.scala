@@ -253,6 +253,7 @@ class DatasetArray(
   private def chunkContentsCacheKey(chunkIndex: Array[Int]): String = {
     val builder = new java.lang.StringBuilder(chunkContentsCacheKeyPrefix.length + chunkIndex.length * 4)
     builder.append(chunkContentsCacheKeyPrefix)
+    // Builder + while loop is faster than mkString, and this is a very hot code path.
     var i = 0
     while (i < chunkIndex.length) {
       if (i > 0) builder.append(',')

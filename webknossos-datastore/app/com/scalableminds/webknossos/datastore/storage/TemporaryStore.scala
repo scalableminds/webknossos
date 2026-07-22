@@ -42,6 +42,7 @@ class TemporaryStore[K, V] @Inject() (system: ActorSystem) {
     to.foreach(system.scheduler.scheduleOnce(_)(remove(id)))
   }
 
+  // Not atomic across elements!
   def insertAll(elements: Seq[(K, V)], to: Option[FiniteDuration] = None)(implicit ec: ExecutionContext): Unit = {
     map ++= elements
     to.foreach(system.scheduler.scheduleOnce(_)(removeMultiple(elements.map(_._1))))
@@ -53,6 +54,7 @@ class TemporaryStore[K, V] @Inject() (system: ActorSystem) {
   def pop(id: K): Option[V] =
     map.remove(id)
 
+  // Not atomic across elements!
   private def removeMultiple(ids: Seq[K]): TrieMap[K, V] =
     map --= ids
 }

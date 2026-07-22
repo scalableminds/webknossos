@@ -101,12 +101,13 @@ trait RedisTemporaryStore extends LazyLogging {
   // while SCAN only does O(scanBatchSize) work per call and yields to other clients in between.
   private def scanKeys(cmd: RedisAsyncCommands[String, String], pattern: String): Fox[Seq[String]] = {
     val scanArgs = ScanArgs.Builder.matches(pattern).limit(scanBatchSize)
-    def go(cursor: ScanCursor, acc: Seq[String]): Fox[Seq[String]] =
+    val buffer = scala.collection.mutable.ArrayBuffer.empty[String]
+    def scanNextRecursive(cursor: ScanCursor): Fox[Seq[String]] =
       Fox.fromFuture(cmd.scan(cursor, scanArgs).asScala).flatMap { result =>
-        val accWithBatch = acc ++ result.getKeys.asScala
-        if (result.isFinished) Fox.successful(accWithBatch) else go(result, accWithBatch)
+        buffer ++= result.getKeys.asScala
+        if (result.isFinished) Fox.successful(buffer.toSeq) else scanNextRecursive(result)
       }
-    go(ScanCursor.INITIAL, Seq.empty)
+    scanNextRecursive(ScanCursor.INITIAL)
   }
 
   def removeAllConditional(pattern: String): Fox[Unit] =

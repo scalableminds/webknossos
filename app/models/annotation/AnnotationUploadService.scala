@@ -43,7 +43,8 @@ case class SharedParsingParameters(
     userOrganizationId: String,
     isTaskUpload: Boolean = false,
     fallbackEditPosition: Option[Vec3Int] = None,
-    fallbackEditRotation: Option[Vec3Double] = None
+    fallbackEditRotation: Option[Vec3Double] = None,
+    fallbackZoomLevel: Option[Double] = None
 )
 
 class AnnotationUploadService @Inject() (tempFileService: WkTempFileService, nmlParser: NmlParser)

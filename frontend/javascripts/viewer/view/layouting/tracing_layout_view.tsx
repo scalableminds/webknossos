@@ -330,6 +330,7 @@ class TracingLayoutView extends PureComponent<PropsWithRouter, State> {
           datasetId: this.props.datasetId,
           fallbackEditPosition: this.props.editPosition.join(","),
           fallbackEditRotation: this.props.editRotation.join(","),
+          fallbackZoomLevel: this.props.zoomLevel,
         },
       });
       this.props.navigate(`/annotations/${response.annotation.typ}/${response.annotation.id}`);
@@ -446,6 +447,7 @@ function mapStateToProps(state: WebknossosState) {
     datasetId: state.dataset.id,
     editPosition: getPosition(state.flycam).map(Math.round) as Vector3,
     editRotation: getRotationInDegrees(state.flycam),
+    zoomLevel: state.flycam.zoomStep,
     is2d: is2dDataset(state.dataset),
     displayName: state.annotation.name ? state.annotation.name : state.dataset.name,
     organization: state.dataset.owningOrganization,

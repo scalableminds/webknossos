@@ -9,6 +9,7 @@ import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, TextUtils}
 import com.scalableminds.util.tools.Fox.toFox
+import com.scalableminds.util.tools.StringNumberConversions.toDoubleOpt
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
@@ -102,6 +103,8 @@ class AnnotationIOController @Inject() (
         - If set, this will be used as the editPosition for annotations that do not specify their own.
       - As optional form parameter: fallbackEditRotation [String], e.g. "1,2,3"
         - If set, this will be used as the editRotation for annotations that do not specify their own.
+      - As optional form parameter: fallbackZoomLevel [String], e.g. "1.5"
+        - If set, this will be used as the zoomLevel for annotations that do not specify their own.
      Returns:
         JSON object containing annotation information about the newly created annotation, including the assigned id
    */
@@ -117,11 +120,14 @@ class AnnotationIOController @Inject() (
           request.body.dataParts.get("fallbackEditPosition").flatMap(_.headOption)
         val fallbackEditRotationRaw: Option[String] =
           request.body.dataParts.get("fallbackEditRotation").flatMap(_.headOption)
+        val fallbackZoomLevelRaw: Option[String] =
+          request.body.dataParts.get("fallbackZoomLevel").flatMap(_.headOption)
         val userOrganizationId = request.identity._organization
         val attachedFiles = request.body.files.map(f => (f.ref.path.toFile, f.filename))
         for {
           fallbackEditPosition <- Fox.runOptional(fallbackEditPositionRaw)(p => Vec3Int.fromUriLiteral(p).toFox)
           fallbackEditRotation <- Fox.runOptional(fallbackEditRotationRaw)(r => Vec3Double.fromUriLiteral(r).toFox)
+          fallbackZoomLevel <- Fox.runOptional(fallbackZoomLevelRaw)(z => z.toDoubleOpt.toFox)
           parsedFiles <- annotationUploadService.extractFromFiles(
             attachedFiles,
             SharedParsingParameters(
@@ -129,7 +135,8 @@ class AnnotationIOController @Inject() (
               overwritingDatasetId,
               userOrganizationId,
               fallbackEditPosition = fallbackEditPosition,
-              fallbackEditRotation = fallbackEditRotation
+              fallbackEditRotation = fallbackEditRotation,
+              fallbackZoomLevel = fallbackZoomLevel
             )
           )
           parsedFilesWrapped = annotationUploadService.wrapOrPrefixGroups(

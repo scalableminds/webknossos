@@ -434,7 +434,7 @@ class FolderRenderer {
     return null;
   }
   renderCreationDateColumn(): React.ReactNode {
-    return this.data.created != null ? <FormattedDate timestamp={this.data.created} /> : null;
+    return <FormattedDate timestamp={this.data.created} />;
   }
   renderActionsColumn(): React.ReactNode {
     return this.datasetTable.getFolderSettingsActions(this.data);
@@ -633,9 +633,7 @@ class DatasetTable extends PureComponent<Props, State> {
         title: "Creation Date",
         dataIndex: "created",
         key: "created",
-        sorter: compareBy<RowRenderer>((rowRenderer) =>
-          isRecordADataset(rowRenderer.data) ? rowRenderer.data.created : 0,
-        ),
+        sorter: compareBy<RowRenderer>((rowRenderer) => rowRenderer.data.created),
         sortOrder: sortedInfo.columnKey === "created" ? sortedInfo.order : undefined,
         render: (_created, rowRenderer: RowRenderer) => rowRenderer.renderCreationDateColumn(),
       },

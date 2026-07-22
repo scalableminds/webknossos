@@ -92,8 +92,9 @@ class TokenDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def findOneByLoginInfo(providerID: String, providerKey: String, tokenType: TokenType): Fox[Token] =
     for {
+      loginInfoProvider <- LoginInfoProvider.fromString(providerID).toFox
       r <- run(q"""SELECT $columns from $existingCollectionName
-            WHERE loginInfo_providerID::TEXT = $providerID
+            WHERE loginInfo_providerID = $loginInfoProvider
             AND loginInfo_providerKey = $providerKey
             AND tokenType = $tokenType""".as[TokensRow])
       parsed <- parseFirst(r, "loginInfo")

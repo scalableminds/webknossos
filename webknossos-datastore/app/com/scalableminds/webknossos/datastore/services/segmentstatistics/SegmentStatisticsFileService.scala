@@ -296,7 +296,41 @@ class SegmentStatisticsFileService @Inject() (
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[Seq[Long]] =
-    combinedOverSegmentIds(segmentStatisticsFileKey, segmentIds)(readVolume(segmentStatisticsFileKey, _))
+    for {
+      _ <- checkMetricAvailable(segmentStatisticsFileKey, SegmentStatisticsFileService.keyVolumes)
+      volumes <- combinedOverSegmentIds(segmentStatisticsFileKey, segmentIds)(readVolume(segmentStatisticsFileKey, _))
+    } yield volumes
+
+  // Volumes are stored as voxel counts in the segment statistics file’s own mag. A coarser requested mag has larger
+  // voxels, so the stored count must be scaled down (by the ratio of voxel sizes) to match the requested mag.
+  private def rescaleVolumeToMag(volume: Long, fileMag: Vec3Int, requestedMag: Vec3Int): Long =
+    if (fileMag == requestedMag) volume
+    else volume * fileMag.product / requestedMag.product
+
+  def getVolumesInRequestedMag(
+      segmentStatisticsFileKey: SegmentStatisticsFileKey,
+      dataLayer: DataLayer,
+      segmentIds: Seq[Long],
+      requestedMag: Vec3Int
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Seq[Long]] =
+    for {
+      volumes <- getVolumes(segmentStatisticsFileKey, segmentIds)
+      (fileMag, _) <- resolveMagAndMappingName(segmentStatisticsFileKey, dataLayer)
+    } yield volumes.map(rescaleVolumeToMag(_, fileMag, requestedMag))
+
+  /** Combines the volumes of several (oversegmentation) segments into the volume of their union (a plain sum, exact as
+    * long as the given segments are disjoint), then rescales the result from the file’s own mag to requestedMag.
+    */
+  def getCombinedVolumeInRequestedMag(
+      segmentStatisticsFileKey: SegmentStatisticsFileKey,
+      dataLayer: DataLayer,
+      segmentIds: Seq[Long],
+      requestedMag: Vec3Int
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Long] =
+    for {
+      volumes <- getVolumes(segmentStatisticsFileKey, segmentIds)
+      (fileMag, _) <- resolveMagAndMappingName(segmentStatisticsFileKey, dataLayer)
+    } yield rescaleVolumeToMag(volumes.sum, fileMag, requestedMag)
 
   // The volume-weighted average of centerOfMasses, per dimension, as Double for precision. totalVolume must be > 0.
   private def weightedCenterOfMass(

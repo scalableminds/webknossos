@@ -159,6 +159,35 @@ class ZipIOTestSuite extends AsyncWordSpec {
         assert(tracked.closed)
       }
     }
+
+    "close the output stream even when a duplicate entry name throws synchronously (later entry)" in {
+      val file = Files.createTempFile("zipio-zip-duplicate-test", ".zip").toFile
+      file.deleteOnExit()
+      val tracked = new CloseTrackingOutputStream(new FileOutputStream(file))
+      val sources = Iterator(
+        NamedFunctionStream.fromBytes("a.txt", "hello".getBytes),
+        NamedFunctionStream.fromBytes("a.txt", "duplicate name".getBytes)
+      )
+
+      // A duplicate entry name makes putNextEntry throw synchronously (rejecting the underlying Future
+      // outright, see FoxTestSuite), so normalize before asserting instead of chaining directly off futureBox.
+      ZipIO.zip(sources, tracked).futureBox.transform(_ => scala.util.Success(())).map { _ =>
+        assert(tracked.closed)
+      }
+    }
+
+    "close the output stream even when the very first source throws synchronously (not via Fox.failure)" in {
+      val file = Files.createTempFile("zipio-zip-throw-test", ".zip").toFile
+      file.deleteOnExit()
+      val tracked = new CloseTrackingOutputStream(new FileOutputStream(file))
+      val sources = Iterator(
+        NamedFunctionStream("a.txt", (_: OutputStream) => throw new RuntimeException("boom!"))
+      )
+
+      ZipIO.zip(sources, tracked).futureBox.transform(_ => scala.util.Success(())).map { _ =>
+        assert(tracked.closed)
+      }
+    }
   }
 
   "ZipIO.withUnziped" should {

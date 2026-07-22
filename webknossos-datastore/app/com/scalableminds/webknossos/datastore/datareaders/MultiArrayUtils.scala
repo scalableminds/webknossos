@@ -169,7 +169,10 @@ object MultiArrayUtils extends LazyLogging {
       target: MultiArray,
       sourceRanges: util.ArrayList[Range]
   ): Boolean =
-    sourceRanges.size > 0 && hasUnitStrideInLastDimension(source) && hasUnitStrideInLastDimension(target)
+    sourceRanges.size > 0 &&
+      source.getElementType == target.getElementType &&
+      hasUnitStrideInLastDimension(source) &&
+      hasUnitStrideInLastDimension(target)
 
   private def copyRangeViaContiguousRuns(
       source: MultiArray,

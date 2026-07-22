@@ -121,5 +121,19 @@ class MultiArrayUtilsTestSuite extends AsyncWordSpec {
         Array(13, 22, 16, 25, 14, 23, 17, 26),
         permuteSource = true
       )
+
+    "fall back to the iterator copy (instead of crashing) when source and target element types differ" in {
+      val source = sequentialSource(Array(2, 2, 2))
+      val target = MultiArray.factory(MADataType.LONG, Array(2, 2, 2))
+      val targetIt = target.getIndexIterator
+      while (targetIt.hasNext) targetIt.setLongNext(sentinel.toLong)
+
+      MultiArrayUtils.copyRange(Array(0, 0, 0), source, target)
+
+      val resultIt = target.getIndexIterator
+      val result = scala.collection.mutable.ArrayBuffer[Long]()
+      while (resultIt.hasNext) result += resultIt.getLongNext
+      assert(result.toArray.sameElements(Array(0L, 1L, 2L, 3L, 4L, 5L, 6L, 7L)))
+    }
   }
 }

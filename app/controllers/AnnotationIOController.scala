@@ -507,7 +507,7 @@ class AnnotationIOController @Inject() (
         )
         nmlTemporaryFile = tempFileService.create()
         temporaryFileStream = new BufferedOutputStream(new FileOutputStream(new File(nmlTemporaryFile.toString)))
-        _ <- nmlStream.writeTo(temporaryFileStream).andThen(temporaryFileStream.close())
+        _ <- Fox.withCleanup(nmlStream.writeTo(temporaryFileStream))(temporaryFileStream.close())
       } yield nmlTemporaryFile
 
     def volumeOrHybridToTemporaryFile(
@@ -561,7 +561,7 @@ class AnnotationIOController @Inject() (
         )
         temporaryFile = tempFileService.create()
         zipper = ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(new File(temporaryFile.toString))))
-        _ <- (for {
+        _ <- Fox.withCleanup(for {
           _ <- zipper.addFileFromNamedStream(nmlStream, suffix = ".nml") ?~> Msg.Annotation.Download.zipNmlFailed
           _ = fetchedVolumeLayers.zipWithIndex.foreach { case (volumeLayer, index) =>
             volumeLayer.volumeDataOpt.foreach { volumeData =>
@@ -575,7 +575,7 @@ class AnnotationIOController @Inject() (
               zipper.addFileFromBytes(editedEdgesZipName, editedEdgesData)
             }
           }
-        } yield ()).andThen(zipper.close())
+        } yield ())(zipper.close())
       } yield temporaryFile
 
     def annotationToTemporaryFile(

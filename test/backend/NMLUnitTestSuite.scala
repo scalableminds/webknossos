@@ -56,7 +56,7 @@ class NMLUnitTestSuite extends AsyncWordSpec {
 
   private val nmlParser = new NmlParser(mockDatasetDAO)
 
-  def writeAndParseTracing(skeletonTracing: SkeletonTracing): Fox[NmlParseSuccessWithoutFile] = {
+  private def writeToXmlBytes(skeletonTracing: SkeletonTracing): Fox[Array[Byte]] = {
     val annotationLayers = List(
       FetchedAnnotationLayer(
         "dummySkeletonTracingId",
@@ -86,17 +86,25 @@ class NMLUnitTestSuite extends AsyncWordSpec {
     val os = new ByteArrayOutputStream()
     for {
       _ <- nmlFunctionStream.writeTo(os)
-      array = os.toByteArray
-      is = new ByteArrayInputStream(array)
-      parsingParams = SharedParsingParameters(
-        useZipName = false,
-        overwritingDatasetId = None,
-        userOrganizationId = "testOrganization",
-        isTaskUpload = true
-      )
-      parsed <- nmlParser.parse("", is, parsingParams, basePath = None)
-    } yield parsed
+    } yield os.toByteArray
   }
+
+  private def parseXmlBytes(xmlBytes: Array[Byte]): Fox[NmlParseSuccessWithoutFile] = {
+    val is = new ByteArrayInputStream(xmlBytes)
+    val parsingParams = SharedParsingParameters(
+      useZipName = false,
+      overwritingDatasetId = None,
+      userOrganizationId = "testOrganization",
+      isTaskUpload = true
+    )
+    nmlParser.parse("", is, parsingParams, basePath = None)
+  }
+
+  def writeAndParseTracing(skeletonTracing: SkeletonTracing): Fox[NmlParseSuccessWithoutFile] =
+    for {
+      xmlBytes <- writeToXmlBytes(skeletonTracing)
+      parsed <- parseXmlBytes(xmlBytes)
+    } yield parsed
 
   def assertParsingFailed(parsedTracingFox: Fox[NmlParseSuccessWithoutFile]): Future[Assertion] =
     parsedTracingFox.futureBox.map {
@@ -203,12 +211,23 @@ class NMLUnitTestSuite extends AsyncWordSpec {
       assertParsingFailed(writeAndParseTracing(newTracing))
     }
 
-    "throw an error for duplicate node state" in {
-      val duplicatedNode = dummyTracing.trees(1).nodes.head
-      val wrongTree = dummyTracing.trees(1).copy(nodes = Seq(duplicatedNode, duplicatedNode))
-      val newTracing = dummyTracing.copy(trees = Seq(dummyTracing.trees.head, wrongTree))
-
-      assertParsingFailed(writeAndParseTracing(newTracing))
+    // NmlWriter deduplicates nodes by id when writing (see NmlWriter.writeNodesAsXml), so a genuinely
+    // duplicated node id can only reach the parser via raw XML, not via writeAndParseTracing (which
+    // is why this bypasses it and edits the written XML directly). This exercises
+    // TreeValidator.checkNoDuplicateNodeIds, the actual check responsible for rejecting it.
+    "throw an error for a raw NML with a duplicated node id" in {
+      val nodeTagPattern = """<node[^>]*/>""".r
+      writeToXmlBytes(dummyTracing).futureBox.flatMap {
+        case Full(xmlBytes) =>
+          val xml = new String(xmlBytes, "UTF-8")
+          val firstNodeTag = nodeTagPattern.findFirstIn(xml).getOrElse(fail("no <node> tag found in written NML"))
+          val xmlWithDuplicatedNode = xml.replaceFirst(
+            java.util.regex.Pattern.quote(firstNodeTag),
+            java.util.regex.Matcher.quoteReplacement(firstNodeTag + firstNodeTag)
+          )
+          assertParsingFailed(parseXmlBytes(xmlWithDuplicatedNode.getBytes("UTF-8")))
+        case _ => Future.successful(fail("failed to write dummy tracing to XML"))
+      }
     }
 
     "throw an error for missing groupId state" in {

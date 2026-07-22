@@ -77,7 +77,7 @@ object ZipIO extends LazyLogging {
       zip.stream.setLevel(level)
     }
     if (sources.nonEmpty) {
-      zipIterator(sources, zip).andThen {
+      Fox.withCleanup(zipIterator(sources, zip)) {
         zip.close()
         out.close()
       }

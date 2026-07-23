@@ -988,7 +988,7 @@ export async function importVolumeTracing(
   dataFile: File,
   version: number,
 ): Promise<bigint> {
-  const largestSegmentId: string | number = await doWithToken((token) =>
+  const largestSegmentId: string = await doWithToken((token) =>
     Request.sendMultipartFormReceiveJSON(
       `${annotation.tracingStore.url}/tracings/volume/${volumeTracing.tracingId}/importVolumeData?token=${token}`,
       {
@@ -999,7 +999,7 @@ export async function importVolumeTracing(
       },
     ),
   );
-  return toBigInt(largestSegmentId);
+  return BigInt(largestSegmentId);
 }
 
 export async function downloadWithFilename(downloadUrl: string) {
@@ -2221,7 +2221,7 @@ async function getSynapseSourcesOrDestinations(
 ): Promise<Array<bigint>> {
   // The response contains the synaptic partners' agglomerate ids, encoded as unsigned-decimal
   // strings (see UnsignedLongJson on the backend), since they can exceed Number.MAX_SAFE_INTEGER.
-  const agglomerateIds: Array<string | number> = await doWithToken((token) =>
+  const agglomerateIds: Array<string> = await doWithToken((token) =>
     Request.sendJSONReceiveJSON(
       `${dataStoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/connectomes/synapses/${srcOrDst}?token=${token}`,
       {
@@ -2232,7 +2232,7 @@ async function getSynapseSourcesOrDestinations(
       },
     ),
   );
-  return agglomerateIds.map(toBigInt);
+  return agglomerateIds.map((id) => BigInt(id));
 }
 
 export function getSynapseSources(...args: any): Promise<Array<bigint>> {
@@ -2329,8 +2329,8 @@ export async function getEdgesForAgglomerateMinCut(
   );
   return edges.map((edge) => ({
     ...edge,
-    segmentId1: toBigInt(edge.segmentId1),
-    segmentId2: toBigInt(edge.segmentId2),
+    segmentId1: BigInt(edge.segmentId1),
+    segmentId2: BigInt(edge.segmentId2),
   }));
 }
 
@@ -2367,10 +2367,10 @@ export async function getNeighborsForAgglomerateNode(
     ),
   );
   return {
-    segmentId: toBigInt(result.segmentId),
+    segmentId: BigInt(result.segmentId),
     neighbors: result.neighbors.map((neighbor) => ({
       ...neighbor,
-      segmentId: toBigInt(neighbor.segmentId),
+      segmentId: BigInt(neighbor.segmentId),
     })),
   };
 }

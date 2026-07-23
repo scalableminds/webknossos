@@ -364,6 +364,31 @@ export const getSupportedValueRangeForElementClass = memoize(
   _getSupportedValueRangeForElementClass,
 );
 
+function _getSegmentIdRangeForElementClass(elementClass: ElementClass): readonly [bigint, bigint] {
+  // The valid (inclusive) range of segment ids for a segmentation layer of the given element
+  // class. In contrast to getSupportedValueRangeForElementClass (which is JS-number-based and
+  // used for intensity/color ranges), this returns bigint bounds so that uint64/int64 segment
+  // ids beyond Number.MAX_SAFE_INTEGER are represented exactly (no 2**53 cap).
+  switch (elementClass) {
+    case "uint64":
+      return [0n, 2n ** 64n - 1n];
+    case "int64":
+      // Segment ids are non-negative; int64 segmentations use the positive half of the range.
+      return [0n, 2n ** 63n - 1n];
+    case "float":
+    case "double":
+      // Floating-point layers are never segmentation layers, so they have no segment-id range.
+      throw new Error(`elementClass ${elementClass} has no segment id range`);
+    default: {
+      const [min, max] = getSupportedValueRangeForElementClass(elementClass);
+      return [BigInt(min), BigInt(max)];
+    }
+  }
+}
+
+// Use memoization to ensure that the returned tuples always have the same identity.
+export const getSegmentIdRangeForElementClass = memoize(_getSegmentIdRangeForElementClass);
+
 export function getDtypeConfigForElementClass(elementClass: ElementClass): {
   textureType: TextureDataType;
   TypedArrayClass: TypedArrayConstructor;

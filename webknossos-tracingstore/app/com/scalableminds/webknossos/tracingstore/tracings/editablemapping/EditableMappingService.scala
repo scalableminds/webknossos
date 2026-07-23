@@ -148,7 +148,7 @@ class EditableMappingService @Inject() (
     Json.obj(
       "tracingId" -> tracingId,
       "baseMappingName" -> editableMappingInfo.baseMappingName,
-      "largestAgglomerateId" -> editableMappingInfo.largestAgglomerateId,
+      "largestAgglomerateId" -> UnsignedLongJson.writes.writes(editableMappingInfo.largestAgglomerateId),
       "createdTimestamp" -> editableMappingInfo.createdTimestamp
     )
 

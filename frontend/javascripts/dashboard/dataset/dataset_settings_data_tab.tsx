@@ -23,13 +23,13 @@ import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { BoundingBoxInput, Vector3Input } from "libs/vector_input";
 import type React from "react";
-import { cloneElement, useEffect } from "react";
+import { cloneElement, useCallback, useEffect } from "react";
 import { type APIDataLayer, type APIDataset, APIJobCommand } from "types/api_types";
 import type { DataLayer, DataLayerWithTransformations } from "types/schemas/datasource.types";
 import { syncValidator, validateTransformationsJSON } from "types/validation";
 import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
 import type { RotationAndMirroringSettings } from "viewer/model/accessors/dataset_layer_transformation_accessor";
-import { getSupportedValueRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
+import { getSegmentIdRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import type { BoundingBoxObject } from "viewer/store";
 import {
   AxisRotationSettingForDataset,
@@ -47,6 +47,19 @@ export default function DatasetSettingsDataTab() {
       <SimpleDatasetForm dataset={dataset} form={form} />
     </div>
   );
+}
+
+function parseAsBigInt(value: string) {
+  if (value == null || value === "") {
+    return { error: null, parsed: null };
+  }
+  let parsed: bigint;
+  try {
+    parsed = BigInt(value);
+  } catch {
+    return { error: true, parsed: null };
+  }
+  return { error: null, parsed };
 }
 
 function copyDatasetID(datasetId: string | null | undefined) {
@@ -400,7 +413,13 @@ function SimpleLayerForm({
   const layerCategorySavedOnServer = dataset?.dataSource.dataLayers[index]?.category;
   const isStoredAsSegmentationLayer = layerCategorySavedOnServer === "segmentation";
   const isSegmentation = category === "segmentation";
-  const valueRange = getSupportedValueRangeForElementClass(layer.elementClass);
+  // The (bigint) range of valid segment ids. Only integer element classes have one; float/double
+  // layers cannot be segmentation layers, so valueRange stays null for them.
+  const hasSegmentIdRange =
+    isSegmentation && layer.elementClass !== "float" && layer.elementClass !== "double";
+  const valueRange = hasSegmentIdRange
+    ? getSegmentIdRangeForElementClass(layer.elementClass)
+    : null;
 
   const mayLayerBeRemoved = dataLayers?.length > 1;
 
@@ -620,27 +639,40 @@ function SimpleLayerForm({
                   }
                   rules={[
                     {
-                      validator: (_rule, value) =>
-                        value == null ||
-                        value === "" ||
-                        (value >= valueRange[0] && value <= valueRange[1] && value !== 0)
+                      validator: (_rule, value) => {
+                        const { parsed, error } = parseAsBigInt(value);
+                        if (error) {
+                          return Promise.reject(
+                            new Error("The largest segmentation ID must be a whole number."),
+                          );
+                        }
+                        if (parsed == null || valueRange == null) {
+                          return Promise.resolve();
+                        }
+                        return parsed >= valueRange[0] && parsed <= valueRange[1] && parsed !== 0n
                           ? Promise.resolve()
                           : Promise.reject(
                               new Error(
                                 `The largest segmentation ID must be between ${valueRange[0]} and ${valueRange[1]} and not 0. You can also leave this field empty, but annotating this layer later will only be possible with manually chosen segment IDs.`,
                               ),
-                            ),
+                            );
+                      },
                     },
                     {
                       warningOnly: true,
-                      validator: (_rule, value) =>
-                        value != null && value === valueRange[1]
+                      validator: (_rule, value) => {
+                        const { parsed, error } = parseAsBigInt(value);
+                        if (error || parsed == null || valueRange == null) {
+                          return Promise.resolve();
+                        }
+                        return parsed === valueRange[1]
                           ? Promise.reject(
                               new Error(
                                 `The largest segmentation ID has already reached the maximum possible value of ${valueRange[1]}. Annotations of this dataset cannot create new segments.`,
                               ),
                             )
-                          : Promise.resolve(),
+                          : Promise.resolve();
+                      },
                     },
                     {
                       warningOnly: true,
@@ -656,15 +688,8 @@ function SimpleLayerForm({
                   ]}
                 >
                   <DelegatePropsToFirstChild>
-                    <InputNumber
-                      // @ts-expect-error returning undefined does work without problems
-                      parser={(value: string | undefined) => {
-                        if (value == null || value === "") {
-                          return undefined;
-                        }
-                        return Number.parseInt(value, 10);
-                      }}
-                    />
+                    {/* stringMode keeps full precision for uint64 segment ids (beyond 2**53). */}
+                    <InputNumber stringMode precision={0} />
                     {dataset?.dataStore.jobsSupportedByAvailableWorkers.includes(
                       APIJobCommand.FIND_LARGEST_SEGMENT_ID,
                     ) ? (

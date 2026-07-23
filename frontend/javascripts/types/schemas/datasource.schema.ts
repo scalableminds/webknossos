@@ -366,8 +366,12 @@ export default {
                   const: "segmentation",
                 },
                 largestSegmentId: {
-                  type: ["number", "null"],
-                  minimum: 1,
+                  // Unsigned-decimal string (see datasource.types.ts): uint64 ids can exceed the
+                  // JS safe-integer range, and jsonschema validates JSON.parse output which never
+                  // yields a bigint. The pattern preserves the former `minimum: 1` intent
+                  // (a positive integer, no leading zeros).
+                  type: ["string", "null"],
+                  pattern: "^[1-9][0-9]*$",
                 },
                 mappings: {
                   type: "array",

@@ -817,7 +817,7 @@ export function getSegmentColorAsRGBA(
     }
   }
 
-  return jsConvertCellIdToRGBA(Number(mappedId));
+  return jsConvertCellIdToRGBA(mappedId);
 }
 
 // Output is in [0,1] for H, S, L, and A

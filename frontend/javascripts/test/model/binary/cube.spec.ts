@@ -77,6 +77,12 @@ describe("DataCube", () => {
         this.queue.push(item);
       }
 
+      abortRequests() {
+        // Mirrors the real pull queue: aborting an in-flight request does *not*
+        // synchronously transition the affected bucket out of the REQUESTED state
+        // (that only happens later, once the aborted fetch rejects).
+      }
+
       async pull() {
         // If the pull happens synchronously, the bucketLoaded promise
         // in Bucket.ensureLoaded() is created too late. Therefore,
@@ -246,6 +252,46 @@ describe("DataCube", () => {
       [3, 3, 3, 0],
       [2, 2, 2, 0],
     ]);
+  });
+
+  it<TestContext>("removeAllBuckets() should collect a bucket whose in-flight request was just aborted", ({
+    cube,
+  }) => {
+    // Simulate a bucket that is mid-request (REQUESTED) at the moment a reload happens,
+    // e.g. a rendering-triggered prefetch that is still in flight.
+    const bucket = cube.getOrCreateBucket([0, 0, 0, 0, []]);
+    assertNonNullBucket(bucket);
+    bucket.markAsRequested();
+
+    // While REQUESTED, the bucket is normally protected from garbage collection...
+    expect(bucket.mayBeGarbageCollected(false)).toBe(false);
+
+    // ...but removeAllBuckets() aborts in-flight requests, so a REQUESTED bucket is
+    // guaranteed to be superseded and must not linger as a stale cache entry. Since the
+    // abort only fails the bucket asynchronously, removeBucketsIf() must fail it
+    // synchronously; otherwise this bucket would survive and a subsequent read would reuse
+    // its stale (empty) data instead of re-fetching the reloaded data.
+    cube.removeAllBuckets();
+
+    expect(cube.buckets.length).toBe(0);
+    expect(cube.getBucket([0, 0, 0, 0, []]).type).toBe("null");
+  });
+
+  it<TestContext>("removeAllBuckets() should keep a dirty bucket even while it is REQUESTED", ({
+    cube,
+  }) => {
+    // A dirty bucket holds unsaved data and must never be dropped by a reload, even if it
+    // happens to be REQUESTED. (Reload callers guarantee a saved state, so this is a
+    // defense-in-depth guarantee.)
+    const bucket = cube.getOrCreateBucket([0, 0, 0, 0, []]);
+    assertNonNullBucket(bucket);
+    bucket.markAsRequested();
+    bucket.dirty = true;
+
+    cube.removeAllBuckets();
+
+    expect(cube.buckets.length).toBe(1);
+    expect(cube.getBucket([0, 0, 0, 0, []])).toBe(bucket);
   });
 
   it<TestContext>("Garbage Collection should grow beyond soft limit if necessary", ({ cube }) => {

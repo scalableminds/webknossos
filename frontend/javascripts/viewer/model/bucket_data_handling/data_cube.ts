@@ -476,14 +476,33 @@ class DataCube {
 
     const notCollectedBuckets = [];
     for (const bucket of this.buckets) {
+      const matchesPredicate = predicateFn(bucket);
+
+      // We aborted any in-flight requests above (via pullQueue.abortRequests()). However,
+      // that only transitions a bucket out of the REQUESTED state *asynchronously*:
+      // markAsFailed() is not called until the aborted fetch's promise later rejects in
+      // pullQueue.pullBatch. If a bucket happened to be mid-request at this exact moment, it
+      // would therefore still be REQUESTED here and be excluded from garbage collection by
+      // mayBeGarbageCollected() below. It would then linger as a stale cache entry, and a
+      // subsequent read (e.g. getDataValue) would reuse this stale bucket instead of
+      // re-fetching the fresh data we are reloading.
+      // To close this race, we fail such buckets synchronously so they become collectible
+      // right now (which also notifies any ensureLoaded awaiters). We restrict this to
+      // buckets that would otherwise be collectible, i.e. non-dirty ones; dirty buckets keep
+      // their existing asynchronous handling in pullBatch (they get re-requested there), and
+      // reload callers guarantee a saved (non-dirty) state anyway.
+      if (matchesPredicate && bucket.isRequested() && !bucket.dirty && bucket.dirtyCount === 0) {
+        bucket.markAsFailed();
+      }
+
       if (
         // In addition to the given predicate...
-        predicateFn(bucket) &&
+        matchesPredicate &&
         // ...we also call mayBeGarbageCollected() to find out whether we can GC the bucket.
-        // The bucket should never be in the requested state, since we aborted the requests above
-        // which will mark the bucket as failed. Using mayBeGarbageCollected guards us against
-        // collecting unsaved buckets (that should never occur, though, because of the saved state
-        // as explained above).
+        // Thanks to the synchronous markAsFailed() above, a bucket whose request we aborted
+        // is no longer REQUESTED here. Using mayBeGarbageCollected guards us against
+        // collecting unsaved buckets (that should never occur, though, because of the saved
+        // state as explained above).
         bucket.mayBeGarbageCollected(
           // respectAccessedFlag=false because we don't care whether the bucket
           // was just used for rendering, as we reload data anyway.

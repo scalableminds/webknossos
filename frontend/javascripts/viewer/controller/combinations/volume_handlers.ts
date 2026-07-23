@@ -1,5 +1,3 @@
-import { V3 } from "libs/mjs";
-import memoizeOne from "memoize-one";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { OrthoView, Point2, Vector3 } from "viewer/constants";
 import { ContourModeEnum } from "viewer/constants";
@@ -135,11 +133,10 @@ const _getSegmentIdForPosition = (mapped: boolean) => (globalPos: Vector3) => {
 // even when the position stays the same e.g. due to a foreign proofreading action.
 export const getSegmentIdForPosition = _getSegmentIdForPosition(true);
 
-// The unmapped lookup is far less volatile, so memoizing it on the position is safe.
-export const getUnmappedSegmentIdForPosition = memoizeOne(
-  _getSegmentIdForPosition(false),
-  ([a], [b]) => V3.isEqual(a, b),
-);
+// This must not be memoized on the position either: the looked-up value still depends on live
+// state that is read inside the function (visible segmentation layer, additional coordinates,
+// rendered zoom step) and can change while the queried position stays the same.
+export const getUnmappedSegmentIdForPosition = _getSegmentIdForPosition(false);
 
 const _getSegmentIdInfoForPosition = (globalPos: Vector3) => {
   // This function will return the currently loaded segment ID for a given position.
@@ -180,9 +177,9 @@ const _getSegmentIdInfoForPosition = (globalPos: Vector3) => {
   };
 };
 
-export const getSegmentIdInfoForPosition = memoizeOne(_getSegmentIdInfoForPosition, ([a], [b]) =>
-  V3.isEqual(a, b),
-);
+// Not memoized for the same reasons as above: the returned mapped id can change due to foreign
+// proofreading actions and the lookup depends on live state, so caching on the position can go stale.
+export const getSegmentIdInfoForPosition = _getSegmentIdInfoForPosition;
 
 export async function getSegmentIdForPositionAsync(globalPos: Vector3) {
   // This function will return the segment ID for a given position, awaiting the loading

@@ -7,6 +7,81 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
+## [26.08.0](https://github.com/scalableminds/webknossos/releases/tag/26.08.0) - 2026-07-22
+[Commits](https://github.com/scalableminds/webknossos/compare/26.07.03...26.08.0)
+
+### Highlights
+- Added Maximum Intensity Projection (MIP) rendering for bounding boxes in the 3D viewport. Right-click any bounding box and choose "Render as MIP" to project a data layer through the volume, displaying the highest intensity value along each ray. [#9584](https://github.com/scalableminds/webknossos/pull/9584)
+- Added the option to edit the transforms of a layer live while viewing or annotating the data. [#9664](https://github.com/scalableminds/webknossos/pull/9664)
+- The bounding box tab now also lists the dataset layers' bounding boxes as read-only entries at the end of the list (below the editable user bounding boxes). Their name and bounds cannot be edited, but their visibility and color of the rendered outline can be toggled, and they can be navigated to, used to register their segments, and exported. They are shown even when only viewing a dataset (without an annotation). [#9276](https://github.com/scalableminds/webknossos/pull/9276)
+
+
+### Added
+- The bounding box tab now also lists the dataset layers' bounding boxes as read-only entries at the end of the list (below the editable user bounding boxes). Their name and bounds cannot be edited, but their visibility and color of the rendered outline can be toggled, and they can be navigated to, used to register their segments, and exported. They are shown even when only viewing a dataset (without an annotation). [#9276](https://github.com/scalableminds/webknossos/pull/9276)
+- Dataset layer bounding boxes can now also be rendered as a Maximum Intensity Projection (MIP), just like user-defined bounding boxes. [#9276](https://github.com/scalableminds/webknossos/pull/9276)
+- When merging annotations, users can now select to keep the segment IDs unchanged instead of remapping them. [#9537](https://github.com/scalableminds/webknossos/pull/9537)
+- Reworked the merge annotations modal, adding explanations and clearer UI flow. [#9537](https://github.com/scalableminds/webknossos/pull/9537)
+- Added Maximum Intensity Projection (MIP) rendering for bounding boxes in the 3D viewport. Right-click any bounding box and choose "Render as MIP" to project a data layer through the volume, displaying the highest intensity value along each ray. [#9584](https://github.com/scalableminds/webknossos/pull/9584)
+- Added support for per-organization base directory configuration. [#9663](https://github.com/scalableminds/webknossos/pull/9663)
+- Added the option to edit the transforms of a layer live while viewing or annotating the data. [#9664](https://github.com/scalableminds/webknossos/pull/9664)
+- Upgraded backend dependencies for added stability and performance (redis database client, objectId generation). [#9691](https://github.com/scalableminds/webknossos/pull/9691)
+- Added an experimental "live collaboration" mode that can be enabled in the "Share" dialog of an annotation. When enabled, multiple users can work in parallel on the same annotation. Note that this feature only allows to use the proofreading tool at the moment. [#9726](https://github.com/scalableminds/webknossos/pull/9726)
+- Added a "Only Show Nodes of Current Section" toggle for skeleton annotations. When enabled (and neither the camera nor the dataset is rotated or transformed), only skeleton nodes and edges on the currently visible section are rendered—without requiring any manual clipping distance tuning. Edges crossing a section boundary are rendered only for the portion within the current section. [#9736](https://github.com/scalableminds/webknossos/pull/9736)
+- Added support for supplying credentials in the `exploreAndAddRemote` route called by the python client. [#9749](https://github.com/scalableminds/webknossos/pull/9749)
+- Added protection against uploads of malformed zips. [#9769](https://github.com/scalableminds/webknossos/pull/9769)
+- Dataset uploader is now shown in the sidebar, to users in the same organization. [#9784](https://github.com/scalableminds/webknossos/pull/9784)
+- Folders now store their creation time. [#9789](https://github.com/scalableminds/webknossos/pull/9789)
+- When switching the page in paginated tables, the view now scrolls back to the top. [#9791](https://github.com/scalableminds/webknossos/pull/9791)
+- Added configuration for LokiClient (tenant, user, password). [#9805](https://github.com/scalableminds/webknossos/pull/9805)
+- Added creation date for existing folders. [#9808](https://github.com/scalableminds/webknossos/pull/9808)
+
+### Changed
+- Renamed the "arbitrary" mode concept to "flight mode" throughout the codebase. The `clippingDistanceArbitrary` user setting has been renamed to `clippingDistanceFlight`. [#9565](https://github.com/scalableminds/webknossos/pull/9565)
+- When loading meshes for many segments at once, at most 4 segment meshes are loaded simultaneously now. This makes the first meshes fully visible earlier and bounds the memory pressure of in-flight mesh chunk buffers. [#9684](https://github.com/scalableminds/webknossos/pull/9684)
+- Improved email template for "Help" emails by linkifying the current URL. [#9700](https://github.com/scalableminds/webknossos/pull/9700)
+- Redesigned the "Create Animation" modal with a two-column layout, a camera-position dropdown, segmented resolution control, and clearer option labels. Added a "Video duration" setting (Fast/Standard/Slow) and a "Hide image data" option to render only meshes and skeletons. [#9701](https://github.com/scalableminds/webknossos/pull/9701)
+- When using live collaboration for proofreading, restrictions to skeleton editing and undo functionality are now properly enforced. [#9732](https://github.com/scalableminds/webknossos/pull/9732)
+- Volume annotation will only work if the current magnification exists in the volume tracing. Mainly, this affects volume annotations that were created with the "Restrict magnifications" option. Magnifications which were excluded during creation cannot be annotated. This change prevents users from doing unneeded annotation work (because the current zoom level is too detailed for the actually existing magnifications). [#9747](https://github.com/scalableminds/webknossos/pull/9747)
+- Removed all known cyclic module dependencies in the frontend. The cyclic dependency check now also covers the web worker dependency graphs and fails on any newly introduced cycle. [#9760](https://github.com/scalableminds/webknossos/pull/9760)
+
+### Fixed
+- Fixed a bug in the (not-yet-released) live collaboration mode where the proofreading marker and other local volume tracing state was incorrectly reset when a rebase was triggered. [#9654](https://github.com/scalableminds/webknossos/pull/9654)
+- Failures while loading dynamically imported frontend modules (e.g., after a new WEBKNOSSOS version was deployed or due to network problems) are now handled more gracefully. Instead of crashing, the user is asked to reload the page. [#9662](https://github.com/scalableminds/webknossos/pull/9662)
+- Removed meshes now properly free their GPU memory. [#9684](https://github.com/scalableminds/webknossos/pull/9684)
+- If merging the chunks of a large mesh fails (e.g., due to memory pressure), the unmerged mesh chunks are kept and rendered instead of failing with an error. [#9684](https://github.com/scalableminds/webknossos/pull/9684)
+- Failed mesh chunk requests no longer show an error toast for each retried attempt. [#9684](https://github.com/scalableminds/webknossos/pull/9684)
+- Fixed that the opacity of agglomerate meshes was reset to the default when the meshes were reloaded after an agglomerate merge/split, including when such changes are synced from other users during live collaboration. [#9699](https://github.com/scalableminds/webknossos/pull/9699)
+- Fixed that agglomerate meshes were sometimes not refreshed when an agglomerate split performed by another user was applied during live collaboration (the newly split-off agglomerate's mesh was not loaded). [#9699](https://github.com/scalableminds/webknossos/pull/9699)
+- Fixed a bug where command palette could not toggle some config values in specific circumstances (e.g. show crosshairs). [#9702](https://github.com/scalableminds/webknossos/pull/9702)
+- When training an AI model, bounding boxes that lie (partially) outside of the ground-truth volume layer's bounding box are now flagged with an error and prevent the training from being started, as such boxes would otherwise cause the training to fail. [#9707](https://github.com/scalableminds/webknossos/pull/9707)
+- Improved the error messages shown when importing a volume annotation ZIP fails, e.g. because the annotation has no editable volume layer or because the mags of the imported data don't match. Previously, a generic "could not be parsed" message was shown instead of the actual reason. [#9708](https://github.com/scalableminds/webknossos/pull/9708)
+- Fixed the spinner on the refresh button in the voxelytics workflow task list. [#9712](https://github.com/scalableminds/webknossos/pull/9712)
+- Fixed a bug where the failed bucket loading could not be distinguished from black data, leading to wrong displayed data and wrong volume annotation data. [#9716](https://github.com/scalableminds/webknossos/pull/9716)
+- Reenabled volume tool keyboard shortcuts for the fill tool. For example, pressing `c` now creates a new segment again. [#9720](https://github.com/scalableminds/webknossos/pull/9720)
+- Fixed that auxiliary helping meshes during proofreading were removed upon a proofreading action if the option to auto reload them was turned off. They are now preserved and still auto updated. [#9730](https://github.com/scalableminds/webknossos/pull/9730)
+- Fixed that the visibility of agglomerate meshes was reset to the default (visible) when the meshes were reloaded after an agglomerate merge/split, including when such changes are synced from other users during live collaboration. See #9699 as a related PR. [#9731](https://github.com/scalableminds/webknossos/pull/9731)
+- Fixed a crash when the network request failed that checks whether WEBKNOSSOS is in maintenance mode. [#9739](https://github.com/scalableminds/webknossos/pull/9739)
+- Fixed an issue with importing remote datasets that have spaces in their URLs. [#9746](https://github.com/scalableminds/webknossos/pull/9746)
+- Fixed that a previously disabled tool wasn't automatically re-enabled if it became available again (e.g., because of adapting the zoom level). [#9747](https://github.com/scalableminds/webknossos/pull/9747)
+- Fixed that the collapsed tools in the tool bar only showed it dropdown menu when the icon was hovered. Now the dropdown shows when hovering any part of the button. [#9755](https://github.com/scalableminds/webknossos/pull/9755)
+- Fixed a concurrency bug when two users created a bounding box in the same annotation at the same time (only possible with the experimental live collaboration feature). [#9756](https://github.com/scalableminds/webknossos/pull/9756)
+- The bounding box tool can now be used in the experimental live collaboration mode. Bounding box creation is deferred while the annotation is synchronizing with remote changes (a spinner is shown) so that no changes are lost. [#9756](https://github.com/scalableminds/webknossos/pull/9756)
+- Fixed a bug where downloading an annotation would incorrectly trigger a "This annotation is currently being edited by someone else" toast for shared/collaborative annotations. [#9768](https://github.com/scalableminds/webknossos/pull/9768)
+- Fixed a bug where dataset deletion would fail if task annotations that were already marked as deleted still referenced it. [#9774](https://github.com/scalableminds/webknossos/pull/9774)
+- The toast informing the user that the annotation write-lock could not be acquired for more than 30 seconds in live collaboration mode now automatically closes once the write-lock has been acquired. [#9779](https://github.com/scalableminds/webknossos/pull/9779)
+- The timeout that limits how long a user may hold the annotation write-lock in live collaboration mode now starts only once the write-lock has actually been acquired. Previously, this timeout could start too early. [#9779](https://github.com/scalableminds/webknossos/pull/9779)
+- Fixed that volume annotation was disabled when zooming in beyond the finest magnification of the dataset. Now when the finest existing magnification is rendered and equals the dataset wide finest mag, the user can still annotate. [#9781](https://github.com/scalableminds/webknossos/pull/9781)
+- Fixed a bug where custom configuration settings for neuron/instance AI inferral jobs were not applied unless the Evaluation Settings option was toggled first. [#9787](https://github.com/scalableminds/webknossos/pull/9787)
+- Fixed a bug where clicking in the 3D viewport could jump the position to a skeleton node even though the skeleton layer was disabled and no nodes were visible. [#9792](https://github.com/scalableminds/webknossos/pull/9792)
+- Fixed a bug where requesting data for a bounding box (e.g. when rendering a bounding box as MIP) could hang indefinitely if the datastore reported one of the requested buckets as a failure. Such buckets are now treated as empty instead of leaving the request unresolved. [#9795](https://github.com/scalableminds/webknossos/pull/9795)
+- Fixed a bug in the Maximum Intensity Projection (MIP) feature where the projection and its estimated download size could extend beyond a layer's bounding box. MIP is now restricted to the layer's actual data extent. [#9796](https://github.com/scalableminds/webknossos/pull/9796)
+- Fixed that WEBKNOSSOS short links (e.g. `/links/:key`) could not be used to specify groundtruth annotations when training an AI model. Also fixed that the input validator for this field rejected plain annotation/task IDs. [#9797](https://github.com/scalableminds/webknossos/pull/9797)
+- Fixed a bug where webknossos would attempt to load some chunks outside of the dataset in rare cases, producing permanent errors there. [#9800](https://github.com/scalableminds/webknossos/pull/9800)
+- Fixed that volume annotation could be disabled at zoom levels where the volume tracing layer was actually rendered in an editable magnification (e.g. when the segmentation layer's finest magnification is coarser than another layer's, or when magnifications were restricted). Editing is now allowed whenever the magnification currently rendered for the volume tracing layer is fine enough for the active tool. Effectively reverts #9747. [#9804](https://github.com/scalableminds/webknossos/pull/9804)
+
+### Removed
+- Removed Oblique view mode. The orthogonal mode viewports can be rotated freely, making oblique mode redundant. [#9565](https://github.com/scalableminds/webknossos/pull/9565)
+
 ## [26.07.03](https://github.com/scalableminds/webknossos/releases/tag/26.07.03) - 2026-07-13
 [Commits](https://github.com/scalableminds/webknossos/compare/26.07.2...26.07.03)
 

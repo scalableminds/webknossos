@@ -248,8 +248,20 @@ class DatasetArray(
   )(using ec: ExecutionContext, tc: TokenContext): Fox[(VaultPath, StartEndExclusiveByteRange)] =
     ??? // Defined in subclass
 
-  private def chunkContentsCacheKey(chunkIndex: Array[Int]): String =
-    s"${dataSourceId}__${layerName}__${vaultPath}__chunk_${chunkIndex.mkString(",")}"
+  private val chunkContentsCacheKeyPrefix: String = s"${dataSourceId}__${layerName}__${vaultPath}__chunk_"
+
+  private def chunkContentsCacheKey(chunkIndex: Array[Int]): String = {
+    val builder = new java.lang.StringBuilder(chunkContentsCacheKeyPrefix.length + chunkIndex.length * 4)
+    builder.append(chunkContentsCacheKeyPrefix)
+    // Builder + while loop is faster than mkString, and this is a very hot code path.
+    var i = 0
+    while (i < chunkIndex.length) {
+      if (i > 0) builder.append(',')
+      builder.append(chunkIndex(i))
+      i += 1
+    }
+    builder.toString
+  }
 
   private def getSourceChunkDataWithCache(chunkIndex: Array[Int], useSkipTypingShortcut: Boolean = false)(using
       ec: ExecutionContext,

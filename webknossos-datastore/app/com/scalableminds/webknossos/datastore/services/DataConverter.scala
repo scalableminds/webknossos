@@ -73,11 +73,11 @@ trait DataConverter {
     val numBytes = ElementClass.bytesPerElement(elementClass)
     val byteBuffer = ByteBuffer.allocate(numBytes * typed.length).order(ByteOrder.LITTLE_ENDIAN)
     typed match {
-      case data: Array[Byte]  => data.foreach(el => byteBuffer.put(el))
-      case data: Array[Short] => data.foreach(el => byteBuffer.putShort(el))
-      case data: Array[Int]   => data.foreach(el => byteBuffer.putInt(el))
-      case data: Array[Long]  => data.foreach(el => byteBuffer.putLong(el))
-      case data: Array[Float] => data.foreach(el => byteBuffer.putFloat(el))
+      case data: Array[Byte]  => byteBuffer.put(data)
+      case data: Array[Short] => byteBuffer.asShortBuffer().put(data)
+      case data: Array[Int]   => byteBuffer.asIntBuffer().put(data)
+      case data: Array[Long]  => byteBuffer.asLongBuffer().put(data)
+      case data: Array[Float] => byteBuffer.asFloatBuffer().put(data)
     }
     byteBuffer.array()
   }

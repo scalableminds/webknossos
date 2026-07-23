@@ -22,6 +22,7 @@ import models.user.User
 
 import javax.inject.Inject
 import javax.xml.stream.{XMLOutputFactory, XMLStreamWriter}
+import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 
 case class NmlParameters(
@@ -385,9 +386,11 @@ class NmlWriter @Inject() (implicit ec: ExecutionContext)
       }
     }
 
-  private def writeNodesAsXml(nodes: Seq[Node])(implicit writer: XMLStreamWriter): Unit =
-    nodes.toSet.foreach {
-      (n: Node) => // toSet as workaround for some erroneously duplicate nodes in the db, this was not checked on upload until 2017
+  private def writeNodesAsXml(nodes: Seq[Node])(implicit writer: XMLStreamWriter): Unit = {
+    // seenIds as workaround for some erroneously duplicate nodes in the db, this was not checked on upload until 2017
+    val seenIds = new mutable.HashSet[Int]()
+    nodes.foreach { n =>
+      if (seenIds.add(n.id)) {
         Xml.withinElementSync("node") {
           writer.writeAttribute("id", n.id.toString)
           writer.writeAttribute("radius", n.radius.toString)
@@ -404,7 +407,9 @@ class NmlWriter @Inject() (implicit ec: ExecutionContext)
           writer.writeAttribute("time", n.createdTimestamp.toString)
           n.additionalCoordinates.foreach(writeAdditionalCoordinateValue)
         }
+      }
     }
+  }
 
   private def writeEdgesAsXml(edges: Seq[Edge])(implicit writer: XMLStreamWriter): Unit =
     edges.foreach { e =>

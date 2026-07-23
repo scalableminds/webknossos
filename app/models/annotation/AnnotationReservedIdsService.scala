@@ -26,7 +26,7 @@ class AnnotationReservedIdsService @Inject() (
     val semaphore = mutexes.getOrElseUpdate(annotationId, new Semaphore(1))
     for {
       _ <- Fox.successful(semaphore.acquire())
-      result <- block.andThen { case _ => semaphore.release() }
+      result <- Fox.withCleanup(block)(semaphore.release())
     } yield result
   }
 

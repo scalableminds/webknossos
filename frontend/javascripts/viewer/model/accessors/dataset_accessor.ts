@@ -139,6 +139,16 @@ function _getMaxZoomStep(dataset: APIDataset | null | undefined): number {
 }
 
 export const getMaxZoomStep = memoizeOne(_getMaxZoomStep);
+
+export function getDefaultZoomStep(dataset: APIDataset): number {
+  // View the finest existing mag at native resolution. The real, GPU/viewport-aware
+  // maximum zoom values (see _getMaximumZoomForAllMags) are not available yet at this
+  // point, so this is a best-effort, dataset-structure-only approximation. A factor
+  // of 1 keeps this safely below the real threshold as a hopefully good heuristic.
+  const finestExistingMag = getSomeMagInfoForDataset(dataset).getFinestMag();
+  return maxValue(finestExistingMag);
+}
+
 export function getDataLayers(dataset: APIDataset): DataLayerType[] {
   return dataset.dataSource.dataLayers;
 }

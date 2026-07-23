@@ -322,6 +322,9 @@ const defaultState: WebknossosState = {
     mipBBoxSettings: {},
   },
   localSegmentationStateByLayer: {},
+  localAnnotationState: {
+    idReservationsForBoundingBoxes: [],
+  },
   operationContext: {
     activeOperations: [],
     childOperations: [],

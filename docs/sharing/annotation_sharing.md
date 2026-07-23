@@ -132,6 +132,7 @@ The information is JSON-encoded in the URL fragment and has the following format
 To avoid having to create annotations in advance when programmatically crafting links, a sandbox annotation can be used. A sandbox annotation is always accessible through the same URL and offers all available annotation features, however, changes are not saved. At any point, users can decide to copy the current state to their account. The sandbox can be accessed at `<webknossos_host>/datasets/<organization>/<dataset>/sandbox/skeleton`.
 
 ## Team Sharing & Collaboration
+
 In addition to sharing your annotation via a link, you can also share your annotations with colleagues and make them available on their dashboard from the `Annotations` tab.
 This is the simplest way to share an annotation with a whole team both for review purposes (read-only) or collaborative work efforts on the same annotation by several people.
 
@@ -141,15 +142,42 @@ To share an annotation with a certain team, follow these steps:
 2. From the [toolbar](../ui/toolbar.md) select `Share` from the overflow menu next to the `Save` button.
 3. Under *Team Sharing*, select the teams from the dropdown menu.
 
-![Enable Team Sharing for your annotation](../images/sharing_modal_team.jpeg)
+![Enable Team Sharing for your annotation](../images/sharing_modal_team.png)
 
 Any annotation shared this way will be listed in your personal and any team member's [Annotations Dashboard Tab](../dashboard/annotations.md). By default team sharing is read-only, i.e. other team members can not make modifications to your annotation.
 
-To collaboratively work on the same annotation with multiple users from your team, you can share an annotation and allow modifications. Select "Yes, allow editing" from the sharing UI.
+To collaboratively work on the same annotation with multiple users from your team, you can share an annotation and allow modifications. Select "Everybody who can view" under "Who can edit this annotation?" from the sharing UI.
 
-Note that while WEBKNOSSOS allows several people to make modifications to a single annotation, it is strongly advised that only one person works on an annotation at once.
-WEBKNOSSOS does not yet resolve changes made by multiple people annotating simultaneously and this may lead to data loss or inconsistencies.
-Please coordinate accordingly with your collaborators. We aim to improve this aspect in the future.
+### Exclusive Editing (default)
+
+![Enable Team for others for your annotation](../images/sharing_modal_editing.png)
+
+By default, only one collaborator can actively make changes to a shared annotation at a time.
+While a collaborator is editing, WEBKNOSSOS locks the annotation to that person; everyone else sees the annotation as read-only along with the name of the person currently editing, so that collaborators can coordinate manually.
+Once the current editor stops working on the annotation (e.g., by closing the tab), the lock is released and another collaborator can take over.
+
+WEBKNOSSOS does not resolve changes made by multiple people annotating truly simultaneously in this mode, so please coordinate with your collaborators (e.g., by taking turns) to avoid data loss or inconsistencies.
+
+### Simultaneous Editing (Experimental)
+
+!!! warning "Experimental Feature"
+    Simultaneous editing (also called "live collaboration") is experimental, under active development. We cannot guarantee complete data / annotation consistency here. If you want to try it out, we are happy to hear about your feedback.
+
+In addition to exclusive editing, WEBKNOSSOS offers an experimental mode in which multiple collaborators can edit the same annotation at the same time, without waiting for a lock. Changes made by one collaborator are periodically synced to every other collaborator who currently has the annotation open.
+
+To enable simultaneous editing:
+
+1. Activate an [ID mapping](../proofreading/segmentation_mappings.md) and perform and save at least one [proofreading](../proofreading/proofreading_tool.md) action (merge or split). This is currently a prerequisite for enabling simultaneous editing.
+2. Open the sharing dialog and set "Who can edit this annotation?" to "Everybody who can view".
+3. Check "Yes, allow simultaneous editing", which is marked with an "Experimental" tag.
+
+Current limitations of simultaneous editing:
+
+- **Only the [proofreading tool](../proofreading/proofreading_tool.md) is supported.** While simultaneous editing is enabled, regular skeleton editing and volume brushing/tracing tools are disabled for all collaborators; only merging/splitting agglomerates via proofreading remains possible.
+- **Undo/redo is disabled.** Use "Restore Older Version" from the dropdown next to the `Save` button instead. Note that restoring an older version discards any pending changes of all collaborators and forces them to reload the annotation.
+- Support for further annotation types (e.g., bounding boxes, general skeleton and volume annotation) is planned but not yet available.
+
+Even with simultaneous editing enabled, we recommend coordinating with your collaborators (e.g., by working on separate areas of the dataset) to avoid confusing conflicts.
 
 Each collaborator's view configuration — including layer visibility, opacity, colors, and other display settings — is stored independently per user. Changing which layers are visible or adjusting rendering settings in a shared annotation only affects your own view and does not change what other collaborators see. When a user opens a shared annotation for the first time, the annotation owner's view configuration is used as the initial default.
 

@@ -732,60 +732,47 @@ class DSLegacyApiController @Inject() (
       }
   }
 
-  def requestDataSourceV14(datasetId: ObjectId, zarrVersion: Int): Action[AnyContent] = Action.fox {
-    implicit request =>
-      if (zarrVersion == 2)
-        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
-          for {
-            dataSource <- datasetCache.getById(datasetId) ~> NOT_FOUND
-            zarrLayers = dataSource.dataLayers.map(convertLayerToZarrLayer(_, zarrVersion))
-            zarrSource = UsableDataSource(dataSource.id, zarrLayers, dataSource.scale)
-          } yield Ok(Json.toJson(zarrSource))
-        }
-      else Fox.fromFuture(zarrStreamingController.requestDataSource(datasetId)(request))
+  def requestDataSourceV14(datasetId: ObjectId): Action[AnyContent] = Action.fox { implicit request =>
+    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
+      for {
+        dataSource <- datasetCache.getById(datasetId) ~> NOT_FOUND
+        zarrLayers = dataSource.dataLayers.map(convertLayerToZarrLayer(_, zarrVersion = 2))
+        zarrSource = UsableDataSource(dataSource.id, zarrLayers, dataSource.scale)
+      } yield Ok(Json.toJson(zarrSource))
+    }
   }
 
-  def requestDataLayerDirectoryContentsV14(
-      datasetId: ObjectId,
-      dataLayerName: String,
-      zarrVersion: Int
-  ): Action[AnyContent] = Action.fox { implicit request =>
-    if (zarrVersion == 2)
+  def requestDataLayerDirectoryContentsV14(datasetId: ObjectId, dataLayerName: String): Action[AnyContent] =
+    Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         dataLayerDirectoryContentsV2(datasetId, dataLayerName)
       }
-    else Fox.fromFuture(zarrStreamingController.requestDataLayerDirectoryContents(datasetId, dataLayerName)(request))
-  }
+    }
 
   def requestDataLayerMagDirectoryContentsV14(
       datasetId: ObjectId,
       dataLayerName: String,
-      mag: String,
-      zarrVersion: Int
+      mag: String
   ): Action[AnyContent] = Action.fox { implicit request =>
-    if (zarrVersion == 2)
-      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
-        dataLayerMagDirectoryContentsV2(datasetId, dataLayerName, mag)
-      }
-    else
-      Fox.fromFuture(zarrStreamingController.requestDataLayerMagDirectoryContents(datasetId, dataLayerName, mag)(request))
+    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
+      dataLayerMagDirectoryContentsV2(datasetId, dataLayerName, mag)
+    }
   }
 
-  def requestDataSourceDirectoryContentsV14(datasetId: ObjectId, zarrVersion: Int): Action[AnyContent] = Action.fox {
+  def requestDataSourceDirectoryContentsV14(datasetId: ObjectId): Action[AnyContent] = Action.fox {
     implicit request =>
-      if (zarrVersion == 2)
-        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
-          dataSourceDirectoryContentsV2(datasetId)
-        }
-      else Fox.fromFuture(zarrStreamingController.requestDataSourceDirectoryContents(datasetId)(request))
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
+        dataSourceDirectoryContentsV2(datasetId)
+      }
   }
 
   // --- Private-link (accessToken-keyed) zarr routes. These never had a versioned override before (their URL
   // shape never changed), so they are all new here. They are reused unchanged across all legacy API versions
   // that need them (v5-v9 and v14 below), matching the existing convention of reusing "V9"-suffixed methods
-  // across versions whose behavior didn't change again later. rawZarrCubePrivateLink is intentionally NOT
-  // wrapped: it is unchanged and still registered directly (not redirected) at the same path under latest, so
-  // old versions keep reaching it via the default fallthrough to datastore.latest.Routes. ---
+  // across versions whose behavior didn't change again later. Since zarr3_experimental now falls through to
+  // latest's alias unchanged, these only ever serve Zarr v2. rawZarrCubePrivateLink is intentionally NOT
+  // wrapped: it is unchanged and still registered directly at the same path under latest, so old versions keep
+  // reaching it via the default fallthrough to datastore.latest.Routes. ---
 
   def zGroupPrivateLinkV9(accessToken: String, dataLayerName: String = ""): Action[AnyContent] =
     Action.fox { implicit request =>
@@ -832,133 +819,104 @@ class DSLegacyApiController @Inject() (
       )
   }
 
-  def dataSourceWithAnnotationPrivateLinkV9(accessToken: String, zarrVersion: Int): Action[AnyContent] =
+  def dataSourceWithAnnotationPrivateLinkV9(accessToken: String): Action[AnyContent] =
     Action.fox { implicit request =>
-      if (zarrVersion == 2)
-        for {
-          annotationSource <- remoteWebknossosClient.getAnnotationSource(accessToken) ~> NOT_FOUND
-          relevantTokenContext =
-            if (annotationSource.accessViaPrivateLink) TokenContext(Some(accessToken))
-            else tokenContextForRequest
-          volumeAnnotationLayers = annotationSource.annotationLayers.filter(_.typ == AnnotationLayerType.Volume)
-          dataSource <- datasetCache.getById(annotationSource.datasetId) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND
-          dataSourceLayers = dataSource.dataLayers
-            .filter(dL => !volumeAnnotationLayers.exists(_.name == dL.name))
-            .map(convertLayerToZarrLayer(_, zarrVersion))
-          annotationLayers <- Fox.serialCombined(volumeAnnotationLayers)(l =>
-            remoteTracingstoreClient.getVolumeLayerAsZarrLayer(
-              l.tracingId,
-              Some(l.name),
-              annotationSource.tracingStoreUrl,
-              zarrVersion
-            )(using relevantTokenContext)
-          )
-          allLayer = dataSourceLayers ++ annotationLayers
-          zarrSource = UsableDataSource(dataSource.id, allLayer, dataSource.scale)
-        } yield Ok(Json.toJson(zarrSource))
-      else Fox.fromFuture(zarrStreamingController.dataSourceWithAnnotationPrivateLink(accessToken)(request))
+      for {
+        annotationSource <- remoteWebknossosClient.getAnnotationSource(accessToken) ~> NOT_FOUND
+        relevantTokenContext =
+          if (annotationSource.accessViaPrivateLink) TokenContext(Some(accessToken))
+          else tokenContextForRequest
+        volumeAnnotationLayers = annotationSource.annotationLayers.filter(_.typ == AnnotationLayerType.Volume)
+        dataSource <- datasetCache.getById(annotationSource.datasetId) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND
+        dataSourceLayers = dataSource.dataLayers
+          .filter(dL => !volumeAnnotationLayers.exists(_.name == dL.name))
+          .map(convertLayerToZarrLayer(_, zarrVersion = 2))
+        annotationLayers <- Fox.serialCombined(volumeAnnotationLayers)(l =>
+          remoteTracingstoreClient.getVolumeLayerAsZarrLayer(
+            l.tracingId,
+            Some(l.name),
+            annotationSource.tracingStoreUrl,
+            zarrVersion = 2
+          )(using relevantTokenContext)
+        )
+        allLayer = dataSourceLayers ++ annotationLayers
+        zarrSource = UsableDataSource(dataSource.id, allLayer, dataSource.scale)
+      } yield Ok(Json.toJson(zarrSource))
     }
 
-  def dataLayerDirectoryContentsPrivateLinkV9(
-      accessToken: String,
-      dataLayerName: String,
-      zarrVersion: Int
-  ): Action[AnyContent] =
+  def dataLayerDirectoryContentsPrivateLinkV9(accessToken: String, dataLayerName: String): Action[AnyContent] =
     Action.fox { implicit request =>
-      if (zarrVersion == 2)
-        ifIsAnnotationLayerOrElse(
-          accessToken,
-          dataLayerName,
-          ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantTokenContext) =>
-            remoteTracingstoreClient
-              .getDataLayerDirectoryContents(annotationLayer.tracingId, annotationSource.tracingStoreUrl, zarrVersion)(
-                using relevantTokenContext
-              )
-              .map(layers =>
-                Ok(
-                  views.html.datastoreZarrDatasourceDir(
-                    "Tracingstore",
-                    s"${annotationLayer.tracingId}",
-                    layers
-                  )
-                ).withHeaders()
-              ),
-          orElse = annotationSource => dataLayerDirectoryContentsV2(annotationSource.datasetId, dataLayerName)
-        )
-      else
-        Fox.fromFuture(zarrStreamingController.dataLayerDirectoryContentsPrivateLink(accessToken, dataLayerName)(request))
+      ifIsAnnotationLayerOrElse(
+        accessToken,
+        dataLayerName,
+        ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantTokenContext) =>
+          remoteTracingstoreClient
+            .getDataLayerDirectoryContents(annotationLayer.tracingId, annotationSource.tracingStoreUrl, zarrVersion = 2)(
+              using relevantTokenContext
+            )
+            .map(layers =>
+              Ok(
+                views.html.datastoreZarrDatasourceDir(
+                  "Tracingstore",
+                  s"${annotationLayer.tracingId}",
+                  layers
+                )
+              ).withHeaders()
+            ),
+        orElse = annotationSource => dataLayerDirectoryContentsV2(annotationSource.datasetId, dataLayerName)
+      )
     }
 
   def dataLayerMagDirectoryContentsPrivateLinkV9(
       accessToken: String,
       dataLayerName: String,
-      mag: String,
-      zarrVersion: Int
+      mag: String
   ): Action[AnyContent] =
     Action.fox { implicit request =>
-      if (zarrVersion == 2)
-        ifIsAnnotationLayerOrElse(
-          accessToken,
-          dataLayerName,
-          ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantTokenContext) =>
-            remoteTracingstoreClient
-              .getDataLayerMagDirectoryContents(
-                annotationLayer.tracingId,
-                mag,
-                annotationSource.tracingStoreUrl,
-                zarrVersion
-              )(using relevantTokenContext)
-              .map(layers =>
-                Ok(
-                  views.html.datastoreZarrDatasourceDir(
-                    "Combined Annotation Route",
-                    s"${annotationLayer.tracingId}",
-                    layers
-                  )
-                ).withHeaders()
-              ),
-          orElse =
-            annotationSource => dataLayerMagDirectoryContentsV2(annotationSource.datasetId, dataLayerName, mag)
-        )
-      else
-        Fox.fromFuture(
-          zarrStreamingController.dataLayerMagDirectoryContentsPrivateLink(accessToken, dataLayerName, mag)(request))
+      ifIsAnnotationLayerOrElse(
+        accessToken,
+        dataLayerName,
+        ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantTokenContext) =>
+          remoteTracingstoreClient
+            .getDataLayerMagDirectoryContents(
+              annotationLayer.tracingId,
+              mag,
+              annotationSource.tracingStoreUrl,
+              zarrVersion = 2
+            )(using relevantTokenContext)
+            .map(layers =>
+              Ok(
+                views.html.datastoreZarrDatasourceDir(
+                  "Combined Annotation Route",
+                  s"${annotationLayer.tracingId}",
+                  layers
+                )
+              ).withHeaders()
+            ),
+        orElse = annotationSource => dataLayerMagDirectoryContentsV2(annotationSource.datasetId, dataLayerName, mag)
+      )
     }
 
-  def dataSourceDirectoryContentsPrivateLinkV9(accessToken: String, zarrVersion: Int): Action[AnyContent] =
+  def dataSourceDirectoryContentsPrivateLinkV9(accessToken: String): Action[AnyContent] =
     Action.fox { implicit request =>
-      if (zarrVersion == 2)
-        for {
-          annotationSource <- remoteWebknossosClient.getAnnotationSource(accessToken) ~> NOT_FOUND
-          dataSource <- datasetCache.getById(annotationSource.datasetId) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND
-          annotationLayerNames = annotationSource.annotationLayers
-            .filter(_.typ == AnnotationLayerType.Volume)
-            .map(_.name)
-          dataSourceLayerNames = dataSource.dataLayers
-            .map((dataLayer: DataLayer) => dataLayer.name)
-            .filter(!annotationLayerNames.contains(_))
-          layerNames = annotationLayerNames ++ dataSourceLayerNames
-          additionalEntries = List(UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON, NgffGroupHeader.FILENAME_DOT_ZGROUP)
-        } yield Ok(
-          views.html.datastoreZarrDatasourceDir(
-            "Combined datastore and tracingstore directory",
-            s"$accessToken",
-            additionalEntries ++ layerNames
-          )
+      for {
+        annotationSource <- remoteWebknossosClient.getAnnotationSource(accessToken) ~> NOT_FOUND
+        dataSource <- datasetCache.getById(annotationSource.datasetId) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND
+        annotationLayerNames = annotationSource.annotationLayers
+          .filter(_.typ == AnnotationLayerType.Volume)
+          .map(_.name)
+        dataSourceLayerNames = dataSource.dataLayers
+          .map((dataLayer: DataLayer) => dataLayer.name)
+          .filter(!annotationLayerNames.contains(_))
+        layerNames = annotationLayerNames ++ dataSourceLayerNames
+        additionalEntries = List(UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON, NgffGroupHeader.FILENAME_DOT_ZGROUP)
+      } yield Ok(
+        views.html.datastoreZarrDatasourceDir(
+          "Combined datastore and tracingstore directory",
+          s"$accessToken",
+          additionalEntries ++ layerNames
         )
-      else Fox.fromFuture(zarrStreamingController.dataSourceDirectoryContentsPrivateLink(accessToken)(request))
-    }
-
-  // Unchanged/pure-delegate wrappers: needed only so old API versions don't inherit the new
-  // redirectAnnotationZarr3 fallthrough behavior at /vN/annotations/zarr3_experimental/... on latest.
-  def zarrJsonWithAnnotationPrivateLinkV9(accessToken: String, dataLayerName: String = ""): Action[AnyContent] =
-    Action.async { implicit request =>
-      zarrStreamingController.zarrJsonWithAnnotationPrivateLink(accessToken, dataLayerName)(request)
-    }
-
-  def zarrJsonPrivateLinkV9(accessToken: String, dataLayerName: String, mag: String): Action[AnyContent] =
-    Action.async { implicit request =>
-      zarrStreamingController.zarrJsonPrivateLink(accessToken, dataLayerName, mag)(request)
+      )
     }
 
   // MESH ROUTES

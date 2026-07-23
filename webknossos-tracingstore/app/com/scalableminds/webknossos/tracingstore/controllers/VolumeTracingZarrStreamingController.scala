@@ -261,14 +261,6 @@ class VolumeTracingZarrStreamingController @Inject() (
       }
     }
 
-  /** zarr3_experimental is deprecated: /volume/zarr now defaults to Zarr v3. Redirect old URLs to their new
-    * home, preserving the query string.
-    */
-  def redirectZarr3(tracingId: String, rest: String): Action[AnyContent] = Action { implicit request =>
-    val suffix = if (rest.isEmpty) "" else s"/$rest"
-    Redirect(s"/volume/zarr/$tracingId$suffix", request.queryString, MOVED_PERMANENTLY)
-  }
-
   private def getFallbackLayerDataIfEmpty(
       tracing: VolumeTracing,
       annotationId: ObjectId,

@@ -394,16 +394,4 @@ class ZarrStreamingController @Inject() (
       )
     }
 
-  /** zarr3_experimental is deprecated: /zarr now defaults to Zarr v3. Redirect old dataset-scoped URLs to their
-    * new home, preserving the query string (private-link tokens can travel as ?token=...).
-    */
-  def redirectZarr3(datasetId: ObjectId, rest: String): Action[AnyContent] = Action { implicit request =>
-    val suffix = if (rest.isEmpty) "" else s"/$rest"
-    Redirect(s"/zarr/$datasetId$suffix", request.queryString, MOVED_PERMANENTLY)
-  }
-
-  def redirectAnnotationZarr3(accessTokenOrId: String, rest: String): Action[AnyContent] = Action { implicit request =>
-    val suffix = if (rest.isEmpty) "" else s"/$rest"
-    Redirect(s"/annotations/zarr/$accessTokenOrId$suffix", request.queryString, MOVED_PERMANENTLY)
-  }
 }

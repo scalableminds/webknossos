@@ -19,7 +19,7 @@ GET           /datasets/:datasetId/proxy/datasource-properties.json             
 # Knossos compatible routes
 GET           /datasets/:datasetId/layers/:dataLayerName/mag:mag/x:x/y:y/z:z/bucket.raw                               @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.requestViaKnossos(datasetId: ObjectId, dataLayerName: String, mag: Int, x: Int, y: Int, z: Int, cubeSize: Int)
 
-# Zarr routes (Zarr v3 by default; zarr3_experimental is deprecated and redirects here)
+# Zarr routes (Zarr v3 by default; zarr3_experimental is deprecated, kept as an alias pointing at the same actions)
 GET           /zarr/:datasetId                                                                                        @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.requestDataSourceDirectoryContents(datasetId: ObjectId)
 GET           /zarr/:datasetId/                                                                                       @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.requestDataSourceDirectoryContents(datasetId: ObjectId)
 GET           /zarr/:datasetId/datasource-properties.json                                                             @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.requestDataSource(datasetId: ObjectId)
@@ -42,19 +42,28 @@ GET           /annotations/zarr/:accessTokenOrId/:dataLayerName/:mag/           
 GET           /annotations/zarr/:accessTokenOrId/:dataLayerName/:mag/zarr.json                                        @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.zarrJsonPrivateLink(accessTokenOrId: String, dataLayerName: String, mag: String)
 GET           /annotations/zarr/:accessTokenOrId/:dataLayerName/:mag/:coordinates                                     @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.rawZarrCubePrivateLink(accessTokenOrId: String, dataLayerName: String, mag: String, coordinates: String)
 
-# Zarr3_experimental (deprecated): chunk-data routes stay registered directly (byte-identical to /zarr, no
-# reason to redirect the hot bulk-data path); the routes below must come first so they win over the wildcard
-# redirect further down. Everything else under this prefix redirects to the new default under /zarr.
+# Zarr3_experimental (deprecated alias for zarr, which now also serves v3)
+GET           /zarr3_experimental/:datasetId                                                                          @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.requestDataSourceDirectoryContents(datasetId: ObjectId)
+GET           /zarr3_experimental/:datasetId/                                                                         @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.requestDataSourceDirectoryContents(datasetId: ObjectId)
+GET           /zarr3_experimental/:datasetId/datasource-properties.json                                               @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.requestDataSource(datasetId: ObjectId)
+GET           /zarr3_experimental/:datasetId/:dataLayerName                                                           @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.requestDataLayerDirectoryContents(datasetId: ObjectId, dataLayerName: String)
+GET           /zarr3_experimental/:datasetId/:dataLayerName/                                                          @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.requestDataLayerDirectoryContents(datasetId: ObjectId, dataLayerName: String)
+GET           /zarr3_experimental/:datasetId/:dataLayerName/zarr.json                                                 @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.requestZarrJson(datasetId: ObjectId, dataLayerName: String)
+GET           /zarr3_experimental/:datasetId/:dataLayerName/:mag                                                      @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.requestDataLayerMagDirectoryContents(datasetId: ObjectId, dataLayerName: String, mag: String)
+GET           /zarr3_experimental/:datasetId/:dataLayerName/:mag/                                                     @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.requestDataLayerMagDirectoryContents(datasetId: ObjectId, dataLayerName: String, mag: String)
+GET           /zarr3_experimental/:datasetId/:dataLayerName/:mag/zarr.json                                            @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.requestZarrJsonForMag(datasetId: ObjectId, dataLayerName: String, mag: String)
 GET           /zarr3_experimental/:datasetId/:dataLayerName/:mag/:coordinates                                         @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.requestRawZarrCube(datasetId: ObjectId, dataLayerName: String, mag: String, coordinates: String)
+
+GET           /annotations/zarr3_experimental/:accessTokenOrId                                                        @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.dataSourceDirectoryContentsPrivateLink(accessTokenOrId: String)
+GET           /annotations/zarr3_experimental/:accessTokenOrId/                                                       @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.dataSourceDirectoryContentsPrivateLink(accessTokenOrId: String)
+GET           /annotations/zarr3_experimental/:accessTokenOrId/datasource-properties.json                             @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.dataSourceWithAnnotationPrivateLink(accessTokenOrId: String)
+GET           /annotations/zarr3_experimental/:accessTokenOrId/:dataLayerName                                         @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.dataLayerDirectoryContentsPrivateLink(accessTokenOrId: String, dataLayerName: String)
+GET           /annotations/zarr3_experimental/:accessTokenOrId/:dataLayerName/                                        @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.dataLayerDirectoryContentsPrivateLink(accessTokenOrId: String, dataLayerName: String)
+GET           /annotations/zarr3_experimental/:accessTokenOrId/:dataLayerName/zarr.json                               @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.zarrJsonWithAnnotationPrivateLink(accessTokenOrId: String, dataLayerName: String)
+GET           /annotations/zarr3_experimental/:accessTokenOrId/:dataLayerName/:mag                                    @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.dataLayerMagDirectoryContentsPrivateLink(accessTokenOrId: String, dataLayerName: String, mag: String)
+GET           /annotations/zarr3_experimental/:accessTokenOrId/:dataLayerName/:mag/                                   @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.dataLayerMagDirectoryContentsPrivateLink(accessTokenOrId: String, dataLayerName: String, mag: String)
+GET           /annotations/zarr3_experimental/:accessTokenOrId/:dataLayerName/:mag/zarr.json                          @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.zarrJsonPrivateLink(accessTokenOrId: String, dataLayerName: String, mag: String)
 GET           /annotations/zarr3_experimental/:accessTokenOrId/:dataLayerName/:mag/:coordinates                       @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.rawZarrCubePrivateLink(accessTokenOrId: String, dataLayerName: String, mag: String, coordinates: String)
-
-GET           /zarr3_experimental/:datasetId                                                                          @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.redirectZarr3(datasetId: ObjectId, rest="")
-GET           /zarr3_experimental/:datasetId/                                                                         @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.redirectZarr3(datasetId: ObjectId, rest="")
-GET           /zarr3_experimental/:datasetId/*rest                                                                    @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.redirectZarr3(datasetId: ObjectId, rest: String)
-
-GET           /annotations/zarr3_experimental/:accessTokenOrId                                                        @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.redirectAnnotationZarr3(accessTokenOrId: String, rest="")
-GET           /annotations/zarr3_experimental/:accessTokenOrId/                                                       @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.redirectAnnotationZarr3(accessTokenOrId: String, rest="")
-GET           /annotations/zarr3_experimental/:accessTokenOrId/*rest                                                  @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.redirectAnnotationZarr3(accessTokenOrId: String, rest: String)
 
 # Segmentation mappings
 GET           /datasets/:datasetId/layers/:dataLayerName/mappings/:mappingName                                        @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.mappingJson(datasetId: ObjectId, dataLayerName: String, mappingName: String)

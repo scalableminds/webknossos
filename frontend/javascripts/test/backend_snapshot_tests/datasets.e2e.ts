@@ -177,16 +177,16 @@ describe("Dataset API (E2E)", () => {
     expect(base64).toMatchSnapshot();
   });
 
-  it("Zarr3_experimental redirects to the new default", async () => {
+  it("Zarr3_experimental is an alias of the new default (not a redirect)", async () => {
     const datasetId = await getTestDatasetId();
-    const response = await fetch(`/data/zarr3_experimental/${datasetId}/segmentation/zarr.json`, {
-      headers: new Headers(),
-      redirect: "manual",
-    });
-    expect(response.status).toBe(301);
-    expect(response.headers.get("Location")).toContain(
-      `/data/zarr/${datasetId}/segmentation/zarr.json`,
-    );
+    const [defaultResp, experimentalResp] = await Promise.all([
+      fetch(`/data/zarr/${datasetId}/segmentation/zarr.json`, { headers: new Headers() }),
+      fetch(`/data/zarr3_experimental/${datasetId}/segmentation/zarr.json`, {
+        headers: new Headers(),
+      }),
+    ]);
+    expect(experimentalResp.redirected).toBe(false);
+    expect(await experimentalResp.text()).toBe(await defaultResp.text());
   });
 
   /**

@@ -803,6 +803,8 @@ object Msg {
   }
   object SegmentStatisticsFile {
     val pathNotAbsolute = "Path of segment statistics file is ambiguous, must be absolute."
+    val readGroupHeaderFailed = "Could not read segment statistics file zarr group file."
+    val parseAttributesFailed = "Could not parse segment statistics file attributes from zarr group file."
     def magTooFine(requestedMag: String, fileMag: String): String =
       s"Requested mag $requestedMag is finer than mag $fileMag of segment statistics file. Only the same mag or coarser mags are supported."
     def mappingNameMismatch(requestedMappingName: String, fileMappingName: String): String =
@@ -813,6 +815,7 @@ object Msg {
       s"Segment statistics file has format version $formatVersion, but at least $minimumSupportedVersion is required."
     def idsNotDense(first: Long, last: Long, length: Long): String =
       s"Segment statistics file does not have dense ids: first id is $first (expected 0), last id is $last (expected ${length - 1}), for $length ids total. Only dense ids are supported."
+    val idsEmpty = "Segment statistics file has an empty ids array, expected at least one segment."
     def metricNotAvailable(metric: String): String =
       s"Segment statistics file does not contain the metric “$metric”."
   }

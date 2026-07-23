@@ -108,10 +108,10 @@ class SegmentStatisticsFileService @Inject() (
     for {
       groupVaultPath <- dataVaultService.vaultPathFor(segmentStatisticsFileKey.attachment)
       groupHeaderBytes <- (groupVaultPath / SegmentStatisticsFileAttributes.FILENAME_ZARR_JSON)
-        .readBytes() ?~> "Could not read segment statistics file zarr group file"
+        .readBytes() ?~> Msg.SegmentStatisticsFile.readGroupHeaderFailed
       segmentStatisticsFileAttributes <- JsonHelper
         .parseAs[SegmentStatisticsFileAttributes](groupHeaderBytes)
-        .toFox ?~> "Could not parse segment statistics file attributes from zarr group file."
+        .toFox ?~> Msg.SegmentStatisticsFile.parseAttributesFailed
       _ <- Fox.fromBool(
         segmentStatisticsFileAttributes.formatVersion >= SegmentStatisticsFileAttributes.minSupportedFormatVersion
       ) ?~> Msg.SegmentStatisticsFile.formatVersionTooOld(
@@ -469,6 +469,7 @@ class SegmentStatisticsFileService @Inject() (
       length <- idsArray.datasetShape
         .flatMap(_.headOption)
         .toFox ?~> "Could not determine length of ids array in segment statistics file"
+      _ <- Fox.fromBool(length > 0) ?~> Msg.SegmentStatisticsFile.idsEmpty
       firstMultiArray <- idsArray.readAsMultiArray(offset = 0L, shape = 1)
       lastMultiArray <- idsArray.readAsMultiArray(offset = length - 1, shape = 1)
       // the underlying dtype of ids may vary, but getLong will auto-convert to long.

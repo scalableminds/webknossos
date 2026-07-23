@@ -60,7 +60,6 @@ class DataStoreModule extends AbstractModule {
     bind(classOf[SegmentStatisticsFileService]).asEagerSingleton()
     bind(classOf[ZarrSegmentIndexFileService]).asEagerSingleton()
     bind(classOf[Hdf5SegmentIndexFileService]).asEagerSingleton()
-    bind(classOf[SegmentStatisticsFileService]).asEagerSingleton()
     bind(classOf[ConnectomeFileService]).asEagerSingleton()
     bind(classOf[ZarrConnectomeFileService]).asEagerSingleton()
     bind(classOf[Hdf5ConnectomeFileService]).asEagerSingleton()

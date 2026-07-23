@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.datastore.helpers.{
   SegmentStatisticsParameters,
   SegmentStatisticsParametersMeshBased
 }
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, UsableDataSource}
 import com.scalableminds.webknossos.datastore.services.*
 import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateService
 import com.scalableminds.webknossos.datastore.services.mesh.{
@@ -277,34 +277,68 @@ class SegmentStatisticsController @Inject() (
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
-          meshFileKeyOpt <- Fox.runOptional(request.body.meshFileName)(
-            meshFileService.lookUpMeshFileKey(dataSource.id, dataLayer, _)
-          )
-          mappingNameForMeshFile <- Fox.runOptional(meshFileKeyOpt)(meshFileService.mappingNameForMeshFile)
-          surfaceAreas <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
-            val fullMeshRequest = FullMeshRequest(
-              meshFileName =
-                if (mappingNameForMeshFile.contains(request.body.meshFileName)) request.body.meshFileName else None,
-              lod = None,
-              segmentId = segmentId,
-              mappingName = request.body.mappingName,
-              mappingType = request.body.mappingName.map(_ => "HDF5"),
-              editableMappingTracingId = None,
-              annotationVersion = None,
-              mag = Some(request.body.mag),
-              seedPosition = None,
-              additionalCoordinates = request.body.additionalCoordinates
-            )
-            fullMeshService.segmentSurfaceAreaCache.getOrLoad(
-              (datasetId, dataLayer.name, fullMeshRequest),
-              _ =>
-                fullMeshService
-                  .computeSurfaceArea(datasetId, dataSource, dataLayer, fullMeshRequest) ?~> Msg.Mesh.loadFullFailed
-            )
+          surfaceAreasFromStatisticsFileBox <- surfaceAreasFromSegmentStatisticsFile(
+            dataSource.id,
+            dataLayer,
+            request.body
+          ).shiftBox
+          surfaceAreas <- surfaceAreasFromStatisticsFileBox match {
+            case Full(surfaceAreas) => Fox.successful(surfaceAreas)
+            case _                  => surfaceAreasFromFullMeshService(datasetId, dataSource, dataLayer, request.body)
           }
         } yield Ok(Json.toJson(surfaceAreas))
       }
     }
+
+  private def surfaceAreasFromSegmentStatisticsFile(
+      dataSourceId: DataSourceId,
+      dataLayer: DataLayer,
+      params: SegmentStatisticsParametersMeshBased
+  )(using tc: TokenContext): Fox[Seq[Float]] =
+    for {
+      segmentStatisticsFileKey <- segmentStatisticsFileService.lookUpSegmentStatisticsFileKey(dataSourceId, dataLayer)
+      _ <- segmentStatisticsFileService.checkMagAndMappingNameMatch(
+        segmentStatisticsFileKey,
+        dataLayer,
+        params.mag,
+        params.mappingName,
+        allowRemapping = false
+      )
+      surfaceAreas <- segmentStatisticsFileService.getSurfaceAreas(segmentStatisticsFileKey, params.segmentIds)
+    } yield surfaceAreas
+
+  private def surfaceAreasFromFullMeshService(
+      datasetId: ObjectId,
+      dataSource: UsableDataSource,
+      dataLayer: DataLayer,
+      params: SegmentStatisticsParametersMeshBased
+  )(using tc: TokenContext): Fox[Seq[Float]] =
+    for {
+      meshFileKeyOpt <- Fox.runOptional(params.meshFileName)(
+        meshFileService.lookUpMeshFileKey(dataSource.id, dataLayer, _)
+      )
+      mappingNameForMeshFile <- Fox.runOptional(meshFileKeyOpt)(meshFileService.mappingNameForMeshFile)
+      surfaceAreas <- Fox.serialCombined(params.segmentIds) { segmentId =>
+        val fullMeshRequest = FullMeshRequest(
+          meshFileName = if (mappingNameForMeshFile.contains(params.meshFileName)) params.meshFileName else None,
+          lod = None,
+          segmentId = segmentId,
+          mappingName = params.mappingName,
+          mappingType = params.mappingName.map(_ => "HDF5"),
+          editableMappingTracingId = None,
+          annotationVersion = None,
+          mag = Some(params.mag),
+          seedPosition = None,
+          additionalCoordinates = params.additionalCoordinates
+        )
+        fullMeshService.segmentSurfaceAreaCache.getOrLoad(
+          (datasetId, dataLayer.name, fullMeshRequest),
+          _ =>
+            fullMeshService
+              .computeSurfaceArea(datasetId, dataSource, dataLayer, fullMeshRequest) ?~> Msg.Mesh.loadFullFailed
+        )
+      }
+    } yield surfaceAreas
 
   def getSegmentCovarianceMatrix(datasetId: ObjectId, dataLayerName: String): Action[SegmentStatisticsParameters] =
     Action.fox(validateJson[SegmentStatisticsParameters]) { implicit request =>

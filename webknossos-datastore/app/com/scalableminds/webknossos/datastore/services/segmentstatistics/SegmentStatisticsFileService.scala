@@ -48,15 +48,25 @@ object SegmentStatisticsFileAttributes extends VoxelyticsZarrArtifactUtils {
 }
 
 object SegmentStatisticsFileService {
+  private val keyPositions = "positions"
   private val keyCovarianceMatrix = "covariance_matrix"
   private val keyMaxDistances = "max_distances"
   private val keyCenterOfMass = "center_of_mass"
   private val keySphericities = "sphericities"
   private val keyVolumes = "volumes"
+  private val keySurfaceAreas = "surfaces"
   private val keyIds = "ids"
 
   private val possibleMetrics: Seq[String] =
-    Seq("positions", keyMaxDistances, keyVolumes, keyCenterOfMass, keyCovarianceMatrix, "surfaces", keySphericities)
+    Seq(
+      keyPositions,
+      keyMaxDistances,
+      keyVolumes,
+      keyCenterOfMass,
+      keyCovarianceMatrix,
+      keySurfaceAreas,
+      keySphericities
+    )
 }
 
 class SegmentStatisticsFileService @Inject() (
@@ -429,6 +439,27 @@ class SegmentStatisticsFileService @Inject() (
         readSphericity(segmentStatisticsFileKey, _)
       )
     } yield sphericities
+
+  private def readSurfaceArea(segmentStatisticsFileKey: SegmentStatisticsFileKey, segmentId: Long)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Float] =
+    for {
+      surfaceAreasArray <- openZarrArray(segmentStatisticsFileKey, SegmentStatisticsFileService.keySurfaceAreas)
+      multiArray <- surfaceAreasArray.readAsMultiArray(offset = segmentId, shape = 1)
+      surfaceArea <- tryo(multiArray.getFloat(0)).toFox
+    } yield surfaceArea
+
+  def getSurfaceAreas(segmentStatisticsFileKey: SegmentStatisticsFileKey, segmentIds: Seq[Long])(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Seq[Float]] =
+    for {
+      _ <- checkMetricAvailable(segmentStatisticsFileKey, SegmentStatisticsFileService.keySurfaceAreas)
+      surfaceAreas <- combinedOverSegmentIds(segmentStatisticsFileKey, segmentIds)(
+        readSurfaceArea(segmentStatisticsFileKey, _)
+      )
+    } yield surfaceAreas
 
   private def checkIdsAreDense(
       segmentStatisticsFileKey: SegmentStatisticsFileKey

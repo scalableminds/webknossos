@@ -20,11 +20,11 @@ import play.api.mvc.{Action, AnyContent}
 import java.nio.file.Path
 import scala.concurrent.ExecutionContext
 
-/** Zarr v2 output (.zgroup/.zattrs/.zarray) is no longer served by VolumeTracingZarrStreamingController (the
-  * "latest" controller) since Zarr v3 is now the default there. This controller is the sole remaining place
-  * that implements Zarr v2 output, reachable only through the old, version-pinned routes at API v14 and below -
-  * mirroring DSLegacyApiController's role for the datastore. Unlike DSLegacyApiController, no id resolution is
-  * needed here, since tracingId addressing hasn't changed across API versions.
+/** Zarr v2 output (.zgroup/.zattrs/.zarray) is no longer served by VolumeTracingZarrStreamingController (the "latest"
+  * controller) since Zarr v3 is now the default there. This controller is the sole remaining place that implements Zarr
+  * v2 output, reachable only through the old, version-pinned routes at API v14 and below - mirroring
+  * DSLegacyApiController's role for the datastore. Unlike DSLegacyApiController, no id resolution is needed here, since
+  * tracingId addressing hasn't changed across API versions.
   */
 class TSLegacyApiController @Inject() (
     accessTokenService: TracingStoreAccessTokenService,
@@ -130,8 +130,7 @@ class TSLegacyApiController @Inject() (
         annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
         tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Msg.Annotation.notFound ~> NOT_FOUND
         existingMags = tracing.mags.map(vec3IntFromProto)
-        magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> Msg.Dataset.Mag
-          .invalid(mag) ~> NOT_FOUND
+        magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> Msg.Dataset.Mag.invalid(mag) ~> NOT_FOUND
         _ <- Fox
           .fromBool(existingMags.contains(magParsed)) ?~> Msg.Annotation.Volume.wrongMag(tracingId, mag) ~> NOT_FOUND
         cubeLength = DataLayer.bucketLength

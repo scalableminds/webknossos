@@ -343,8 +343,12 @@ class ZarrStreamingController @Inject() (
         dataLayerName,
         ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantTokenContext) =>
           remoteTracingstoreClient
-            .getDataLayerDirectoryContents(annotationLayer.tracingId, annotationSource.tracingStoreUrl, zarrVersion = 3)(
-              using relevantTokenContext
+            .getDataLayerDirectoryContents(
+              annotationLayer.tracingId,
+              annotationSource.tracingStoreUrl,
+              zarrVersion = 3
+            )(using
+              relevantTokenContext
             )
             .map(layers =>
               Ok(

@@ -48,9 +48,9 @@ class DSRemoteTracingstoreClient @Inject() (
       tracingStoreUri: String,
       zarrVersion: Int
   )(using tc: TokenContext): Fox[StaticSegmentationLayer] =
-    rpc(s"$tracingStoreUri/tracings/${zarrVersionDependantSubPath(zarrVersion)}/$tracingId/zarrSource").withTokenFromContext
-      .addQueryParam("tracingName", tracingName)
-      .getWithJsonResponse[StaticSegmentationLayer]
+    rpc(
+      s"$tracingStoreUri/tracings/${zarrVersionDependantSubPath(zarrVersion)}/$tracingId/zarrSource"
+    ).withTokenFromContext.addQueryParam("tracingName", tracingName).getWithJsonResponse[StaticSegmentationLayer]
 
   def getOmeNgffHeader(tracingId: String, tracingStoreUri: String)(using tc: TokenContext): Fox[NgffMetadata] =
     rpc(s"$tracingStoreUri/tracings/v$legacyZarrApiVersion/volume/zarr/$tracingId/.zattrs").withTokenFromContext

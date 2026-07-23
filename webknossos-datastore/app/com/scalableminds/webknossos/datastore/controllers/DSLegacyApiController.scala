@@ -452,8 +452,10 @@ class DSLegacyApiController @Inject() (
   // target action's signature changed (dropped zarrVersion, now v3-only) so old versions must keep branching here.
 
   private def resolveDatasetIdFox(organizationId: String, datasetDirectoryName: String): Fox[ObjectId] =
-    remoteWebknossosClient
-      .getDatasetId(organizationId, datasetDirectoryName) ?~> "Token may be expired, consider reloading. Access forbidden: No read access on dataset" ~> FORBIDDEN
+    remoteWebknossosClient.getDatasetId(
+      organizationId,
+      datasetDirectoryName
+    ) ?~> "Token may be expired, consider reloading. Access forbidden: No read access on dataset" ~> FORBIDDEN
 
   private def ifIsAnnotationLayerOrElse(
       accessToken: String,
@@ -659,7 +661,8 @@ class DSLegacyApiController @Inject() (
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
             dataLayerDirectoryContentsV2(datasetId, dataLayerName)
           }
-        else Fox.fromFuture(zarrStreamingController.requestDataLayerDirectoryContents(datasetId, dataLayerName)(request))
+        else
+          Fox.fromFuture(zarrStreamingController.requestDataLayerDirectoryContents(datasetId, dataLayerName)(request))
     } yield result
   }
 
@@ -679,7 +682,8 @@ class DSLegacyApiController @Inject() (
           }
         else
           Fox.fromFuture(
-            zarrStreamingController.requestDataLayerMagDirectoryContents(datasetId, dataLayerName, mag)(request))
+            zarrStreamingController.requestDataLayerMagDirectoryContents(datasetId, dataLayerName, mag)(request)
+          )
     } yield result
   }
 
@@ -759,11 +763,10 @@ class DSLegacyApiController @Inject() (
     }
   }
 
-  def requestDataSourceDirectoryContentsV14(datasetId: ObjectId): Action[AnyContent] = Action.fox {
-    implicit request =>
-      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
-        dataSourceDirectoryContentsV2(datasetId)
-      }
+  def requestDataSourceDirectoryContentsV14(datasetId: ObjectId): Action[AnyContent] = Action.fox { implicit request =>
+    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
+      dataSourceDirectoryContentsV2(datasetId)
+    }
   }
 
   // --- Private-link (accessToken-keyed) zarr routes. These never had a versioned override before (their URL
@@ -851,8 +854,12 @@ class DSLegacyApiController @Inject() (
         dataLayerName,
         ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantTokenContext) =>
           remoteTracingstoreClient
-            .getDataLayerDirectoryContents(annotationLayer.tracingId, annotationSource.tracingStoreUrl, zarrVersion = 2)(
-              using relevantTokenContext
+            .getDataLayerDirectoryContents(
+              annotationLayer.tracingId,
+              annotationSource.tracingStoreUrl,
+              zarrVersion = 2
+            )(using
+              relevantTokenContext
             )
             .map(layers =>
               Ok(
@@ -902,14 +909,15 @@ class DSLegacyApiController @Inject() (
       for {
         annotationSource <- remoteWebknossosClient.getAnnotationSource(accessToken) ~> NOT_FOUND
         dataSource <- datasetCache.getById(annotationSource.datasetId) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND
-        annotationLayerNames = annotationSource.annotationLayers
-          .filter(_.typ == AnnotationLayerType.Volume)
-          .map(_.name)
+        annotationLayerNames = annotationSource.annotationLayers.filter(_.typ == AnnotationLayerType.Volume).map(_.name)
         dataSourceLayerNames = dataSource.dataLayers
           .map((dataLayer: DataLayer) => dataLayer.name)
           .filter(!annotationLayerNames.contains(_))
         layerNames = annotationLayerNames ++ dataSourceLayerNames
-        additionalEntries = List(UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON, NgffGroupHeader.FILENAME_DOT_ZGROUP)
+        additionalEntries = List(
+          UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON,
+          NgffGroupHeader.FILENAME_DOT_ZGROUP
+        )
       } yield Ok(
         views.html.datastoreZarrDatasourceDir(
           "Combined datastore and tracingstore directory",

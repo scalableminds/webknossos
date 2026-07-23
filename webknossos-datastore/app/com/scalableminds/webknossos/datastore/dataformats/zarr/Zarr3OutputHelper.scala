@@ -17,9 +17,9 @@ trait Zarr3OutputHelper {
     }
   }
 
-  /** Converts a data layer to a StaticLayer with an on-the-fly generated Zarr representation. Note that
-    * zarrVersion is only about the outbound (HTTP-served) representation here, it is independent of the
-    * layer's actual underlying storage format.
+  /** Converts a data layer to a StaticLayer with an on-the-fly generated Zarr representation. Note that zarrVersion is
+    * only about the outbound (HTTP-served) representation here, it is independent of the layer's actual underlying
+    * storage format.
     */
   protected def convertLayerToZarrLayer(layer: DataLayer, zarrVersion: Int): StaticLayer = {
     val dataFormat = if (zarrVersion == 2) DataFormat.zarr else DataFormat.zarr3

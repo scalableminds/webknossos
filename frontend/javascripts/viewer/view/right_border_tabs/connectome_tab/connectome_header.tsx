@@ -38,9 +38,15 @@ function ConnectomeMappingActivationAlert({
   const activateConnectomeMapping = () => {
     if (segmentationLayer == null || currentConnectomeFile == null) return;
     dispatch(
-      setMappingAction(segmentationLayer.name, currentConnectomeFile.mappingName, "HDF5", false, {
-        showLoadingIndicator: true,
-      }),
+      setMappingAction(
+        segmentationLayer.name,
+        currentConnectomeFile.mappingName,
+        "AGGLOMERATE",
+        false,
+        {
+          showLoadingIndicator: true,
+        },
+      ),
     );
   };
 

@@ -22,17 +22,14 @@ class SegmentStatisticsMathTestSuite extends AsyncWordSpec {
   private def toFloatMatrix(a: Array[Array[Double]]): Array[Array[Float]] = a.map(_.map(_.toFloat))
 
   "rescaleVolumeToMag" should {
-    "leave the volume unchanged when file and requested mag are the same" in {
+    "leave the volume unchanged when file and requested mag are the same" in
       assert(SegmentStatisticsMath.rescaleVolumeToMag(123L, Vec3Int(2, 2, 2), Vec3Int(2, 2, 2)) == 123L)
-    }
-    "scale down a voxel count for an isotropically coarser requested mag" in {
+    "scale down a voxel count for an isotropically coarser requested mag" in
       // requested mag is 2x coarser in every dimension, so voxels are 8x larger, i.e. 8x fewer of them
       assert(SegmentStatisticsMath.rescaleVolumeToMag(800L, Vec3Int(1, 1, 1), Vec3Int(2, 2, 2)) == 100L)
-    }
-    "scale down a voxel count for an anisotropically coarser requested mag" in {
+    "scale down a voxel count for an anisotropically coarser requested mag" in
       // requested mag is 2x coarser in x and y only, so voxels are 4x larger, i.e. 4x fewer of them
       assert(SegmentStatisticsMath.rescaleVolumeToMag(400L, Vec3Int(1, 1, 1), Vec3Int(2, 2, 1)) == 100L)
-    }
   }
 
   "weightedCenterOfMass" should {

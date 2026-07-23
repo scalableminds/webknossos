@@ -11,14 +11,9 @@ import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{Zarr3OutputHelper, ZarrCoordinatesParser}
-import com.scalableminds.webknossos.datastore.datareaders.zarr.{
-  NgffGroupHeader,
-  NgffMetadata,
-  NgffMetadataV0_5,
-  ZarrHeader
-}
+import com.scalableminds.webknossos.datastore.datareaders.zarr.NgffMetadataV0_5
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.*
-import com.scalableminds.webknossos.datastore.datareaders.{ArrayOrder, AxisOrder}
+import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryConversions, UPath}
 import com.scalableminds.webknossos.datastore.models.datasource.*
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, WebknossosDataRequest}
@@ -51,43 +46,35 @@ class VolumeTracingZarrStreamingController @Inject() (
 
   override def defaultErrorCode: Int = NOT_FOUND
 
-  def volumeTracingDirectoryContent(tracingId: String, zarrVersion: Int): Action[AnyContent] =
+  def volumeTracingDirectoryContent(tracingId: String): Action[AnyContent] =
     Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
           tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Msg.Annotation.notFound ~> NOT_FOUND
           existingMags = tracing.mags.map(vec3IntFromProto)
-          additionalFiles =
-            if (zarrVersion == 2)
-              List(NgffMetadata.FILENAME_DOT_ZATTRS, NgffGroupHeader.FILENAME_DOT_ZGROUP)
-            else List(Zarr3ArrayHeader.FILENAME_ZARR_JSON)
         } yield Ok(
           views.html.datastoreZarrDatasourceDir(
             "Tracingstore",
             "%s".format(tracingId),
-            additionalFiles ++ existingMags.map(_.toMagLiteral(allowScalar = true))
+            List(Zarr3ArrayHeader.FILENAME_ZARR_JSON) ++ existingMags.map(_.toMagLiteral(allowScalar = true))
           )
         ).withHeaders()
       }
     }
 
-  def volumeTracingDirectoryContentJson(tracingId: String, zarrVersion: Int): Action[AnyContent] =
+  def volumeTracingDirectoryContentJson(tracingId: String): Action[AnyContent] =
     Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
           tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Msg.Annotation.notFound ~> NOT_FOUND
           existingMags = tracing.mags.map(vec3IntFromProto(_).toMagLiteral(allowScalar = true))
-          additionalFiles =
-            if (zarrVersion == 2)
-              List(NgffMetadata.FILENAME_DOT_ZATTRS, NgffGroupHeader.FILENAME_DOT_ZGROUP)
-            else List(Zarr3ArrayHeader.FILENAME_ZARR_JSON)
-        } yield Ok(Json.toJson(additionalFiles ++ existingMags))
+        } yield Ok(Json.toJson(List(Zarr3ArrayHeader.FILENAME_ZARR_JSON) ++ existingMags))
       }
     }
 
-  def volumeTracingMagDirectoryContent(tracingId: String, mag: String, zarrVersion: Int): Action[AnyContent] =
+  def volumeTracingMagDirectoryContent(tracingId: String, mag: String): Action[AnyContent] =
     Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
@@ -98,18 +85,17 @@ class VolumeTracingZarrStreamingController @Inject() (
             .invalid(mag) ~> NOT_FOUND
           _ <- Fox
             .fromBool(existingMags.contains(magParsed)) ?~> Msg.Annotation.Volume.wrongMag(tracingId, mag) ~> NOT_FOUND
-          files = if (zarrVersion == 2) List(".zarray") else List(Zarr3ArrayHeader.FILENAME_ZARR_JSON)
         } yield Ok(
           views.html.datastoreZarrDatasourceDir(
             "Tracingstore",
             "%s".format(tracingId),
-            files
+            List(Zarr3ArrayHeader.FILENAME_ZARR_JSON)
           )
         ).withHeaders()
       }
     }
 
-  def volumeTracingMagDirectoryContentJson(tracingId: String, mag: String, zarrVersion: Int): Action[AnyContent] =
+  def volumeTracingMagDirectoryContentJson(tracingId: String, mag: String): Action[AnyContent] =
     Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
@@ -120,47 +106,7 @@ class VolumeTracingZarrStreamingController @Inject() (
             .invalid(mag) ~> NOT_FOUND
           _ <- Fox
             .fromBool(existingMags.contains(magParsed)) ?~> Msg.Annotation.Volume.wrongMag(tracingId, mag) ~> NOT_FOUND
-          files = if (zarrVersion == 2) List(".zarray") else List(Zarr3ArrayHeader.FILENAME_ZARR_JSON)
-        } yield Ok(Json.toJson(files))
-      }
-    }
-
-  def zArray(tracingId: String, mag: String): Action[AnyContent] =
-    Action.fox { implicit request =>
-      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
-        for {
-          annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-          tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Msg.Annotation.notFound ~> NOT_FOUND
-          existingMags = tracing.mags.map(vec3IntFromProto)
-          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> Msg.Dataset.Mag
-            .invalid(mag) ~> NOT_FOUND
-          _ <- Fox
-            .fromBool(existingMags.contains(magParsed)) ?~> Msg.Annotation.Volume.wrongMag(tracingId, mag) ~> NOT_FOUND
-
-          cubeLength = DataLayer.bucketLength
-          (channels, dtype) = ElementClass.toChannelAndZarrString(elementClassFromProto(tracing.elementClass))
-          // data request method always decompresses before sending
-          compressor = None
-
-          shape = Array(
-            channels,
-            // Zarr can't handle data sets that don't start at 0, so we extend shape to include "true" coords
-            (tracing.boundingBox.width + tracing.boundingBox.topLeft.x) / magParsed.x,
-            (tracing.boundingBox.height + tracing.boundingBox.topLeft.y) / magParsed.y,
-            (tracing.boundingBox.depth + tracing.boundingBox.topLeft.z) / magParsed.z
-          )
-
-          chunks = Array(channels, cubeLength, cubeLength, cubeLength)
-
-          zarrHeader = ZarrHeader(
-            zarr_format = 2,
-            shape = shape.map(_.toLong),
-            chunks = chunks,
-            compressor = compressor,
-            dtype = dtype,
-            order = ArrayOrder.F
-          )
-        } yield Ok(Json.toJson(zarrHeader))
+        } yield Ok(Json.toJson(List(Zarr3ArrayHeader.FILENAME_ZARR_JSON)))
       }
     }
 
@@ -217,33 +163,6 @@ class VolumeTracingZarrStreamingController @Inject() (
       }
     }
 
-  def zGroup(tracingId: String): Action[AnyContent] = Action.fox { implicit request =>
-    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
-      Fox.successful(Ok(Json.toJson(NgffGroupHeader(zarr_format = 2))))
-    }
-  }
-
-  /** Handles a request for .zattrs file for a Volume Tracing via a HTTP GET. Uses the OME-NGFF standard (see
-    * https://ngff.openmicroscopy.org/latest/) Used by zarr-streaming.
-    */
-  def zAttrs(
-      tracingId: String
-  ): Action[AnyContent] = Action.fox { implicit request =>
-    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
-      for {
-        annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-        tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Msg.Annotation.notFound ~> NOT_FOUND
-        existingMags = tracing.mags.map(vec3IntFromProto)
-        dataSource <- remoteWebknossosClient.getDataSourceForAnnotation(annotationId) ~> NOT_FOUND
-        omeNgffHeader = NgffMetadata.fromNameVoxelSizeAndMags(
-          tracingId,
-          dataSourceVoxelSize = dataSource.scale,
-          mags = existingMags.toList
-        )
-      } yield Ok(Json.toJson(omeNgffHeader))
-    }
-  }
-
   def zarrJson(
       tracingId: String
   ): Action[AnyContent] = Action.fox { implicit request =>
@@ -264,7 +183,7 @@ class VolumeTracingZarrStreamingController @Inject() (
     }
   }
 
-  def zarrSource(tracingId: String, tracingName: Option[String], zarrVersion: Int): Action[AnyContent] =
+  def zarrSource(tracingId: String, tracingName: Option[String]): Action[AnyContent] =
     Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
@@ -273,7 +192,7 @@ class VolumeTracingZarrStreamingController @Inject() (
           layerName = tracingName.getOrElse(tracingId)
           zarrLayer = StaticSegmentationLayer(
             name = layerName,
-            dataFormat = if (zarrVersion == 2) DataFormat.zarr else DataFormat.zarr3,
+            dataFormat = DataFormat.zarr3,
             largestSegmentId = tracing.largestSegmentId,
             boundingBox = boundingBoxFromProto(tracing.boundingBox),
             elementClass = elementClassFromProto(tracing.elementClass),

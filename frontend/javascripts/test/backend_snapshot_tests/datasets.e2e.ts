@@ -140,15 +140,17 @@ describe("Dataset API (E2E)", () => {
     return dataset.id;
   }
 
-  it("Zarr streaming", async () => {
+  it("Zarr streaming (legacy v2, API v14)", async () => {
+    // /data/zarr/... now defaults to Zarr v3 (see "Zarr 3 streaming" below); v2 output is only
+    // available via a version-pinned legacy route (API v14 and below) served by DSLegacyApiController.
     const datasetId = await getTestDatasetId();
-    const zarrAttributesResponse = await fetch(`/data/zarr/${datasetId}/segmentation/.zattrs`, {
+    const zarrAttributesResponse = await fetch(`/data/v14/zarr/${datasetId}/segmentation/.zattrs`, {
       headers: new Headers(),
     });
     const zarrAttributes = await zarrAttributesResponse.text();
     expect(zarrAttributes).toMatchSnapshot();
 
-    const rawDataResponse = await fetch(`/data/zarr/${datasetId}/segmentation/1/0.1.1.0`, {
+    const rawDataResponse = await fetch(`/data/v14/zarr/${datasetId}/segmentation/1/0.1.1.0`, {
       headers: new Headers(),
     });
     expect(rawDataResponse.ok).toBe(true);
@@ -157,28 +159,34 @@ describe("Dataset API (E2E)", () => {
     expect(base64).toMatchSnapshot();
   });
 
-  it("Zarr 3 streaming", async () => {
+  it("Zarr 3 streaming (default)", async () => {
     const datasetId = await getTestDatasetId();
-    const zarrJsonResp = await fetch(
-      `/data/zarr3_experimental/${datasetId}/segmentation/zarr.json`,
-      {
-        headers: new Headers(),
-      },
-    );
+    const zarrJsonResp = await fetch(`/data/zarr/${datasetId}/segmentation/zarr.json`, {
+      headers: new Headers(),
+    });
     const zarrJson = await zarrJsonResp.text();
     expect(zarrJson).toMatchSnapshot();
 
-    const rawDataResponse = await fetch(
-      `/data/zarr3_experimental/${datasetId}/segmentation/1/0.1.1.0`,
-      {
-        headers: new Headers(),
-      },
-    );
+    const rawDataResponse = await fetch(`/data/zarr/${datasetId}/segmentation/1/0.1.1.0`, {
+      headers: new Headers(),
+    });
 
     expect(rawDataResponse.ok).toBe(true);
     const bytes = await rawDataResponse.arrayBuffer();
     const base64 = btoa(String.fromCharCode(...new Uint8Array(bytes.slice(-128))));
     expect(base64).toMatchSnapshot();
+  });
+
+  it("Zarr3_experimental is an alias of the new default (not a redirect)", async () => {
+    const datasetId = await getTestDatasetId();
+    const [defaultResp, experimentalResp] = await Promise.all([
+      fetch(`/data/zarr/${datasetId}/segmentation/zarr.json`, { headers: new Headers() }),
+      fetch(`/data/zarr3_experimental/${datasetId}/segmentation/zarr.json`, {
+        headers: new Headers(),
+      }),
+    ]);
+    expect(experimentalResp.redirected).toBe(false);
+    expect(await experimentalResp.text()).toBe(await defaultResp.text());
   });
 
   /**

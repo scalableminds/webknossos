@@ -805,6 +805,10 @@ object Msg {
     val pathNotAbsolute = "Path of segment statistics file is ambiguous, must be absolute."
     val readGroupHeaderFailed = "Could not read segment statistics file zarr group file."
     val parseAttributesFailed = "Could not parse segment statistics file attributes from zarr group file."
+    val combinedCenterOfMassZeroVolume =
+      "Cannot compute combined center of mass, total volume of segments is zero."
+    val combinedCovarianceMatrixZeroVolume =
+      "Cannot compute combined covariance matrix, total volume of segments is zero."
     def magTooFine(requestedMag: String, fileMag: String): String =
       s"Requested mag $requestedMag is finer than mag $fileMag of segment statistics file. Only the same mag or coarser mags are supported."
     def mappingNameMismatch(requestedMappingName: String, fileMappingName: String): String =

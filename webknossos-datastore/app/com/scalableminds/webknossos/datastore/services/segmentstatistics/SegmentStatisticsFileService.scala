@@ -311,12 +311,6 @@ class SegmentStatisticsFileService @Inject() (
       volumes <- combinedOverSegmentIds(segmentStatisticsFileKey, segmentIds)(readVolume(segmentStatisticsFileKey, _))
     } yield volumes
 
-  // Volumes are stored as voxel counts in the segment statistics file’s own mag. A coarser requested mag has larger
-  // voxels, so the stored count must be scaled down (by the ratio of voxel sizes) to match the requested mag.
-  private def rescaleVolumeToMag(volume: Long, fileMag: Vec3Int, requestedMag: Vec3Int): Long =
-    if (fileMag == requestedMag) volume
-    else volume * fileMag.product / requestedMag.product
-
   def getVolumesInRequestedMag(
       segmentStatisticsFileKey: SegmentStatisticsFileKey,
       dataLayer: DataLayer,
@@ -326,7 +320,7 @@ class SegmentStatisticsFileService @Inject() (
     for {
       volumes <- getVolumes(segmentStatisticsFileKey, segmentIds)
       (fileMag, _) <- resolveMagAndMappingName(segmentStatisticsFileKey, dataLayer)
-    } yield volumes.map(rescaleVolumeToMag(_, fileMag, requestedMag))
+    } yield volumes.map(SegmentStatisticsMath.rescaleVolumeToMag(_, fileMag, requestedMag))
 
   /** Combines the volumes of several (oversegmentation) segments into the volume of their union (a plain sum, exact as
     * long as the given segments are disjoint), then rescales the result from the file’s own mag to requestedMag.
@@ -340,7 +334,7 @@ class SegmentStatisticsFileService @Inject() (
     for {
       volumes <- getVolumes(segmentStatisticsFileKey, segmentIds)
       (fileMag, _) <- resolveMagAndMappingName(segmentStatisticsFileKey, dataLayer)
-    } yield rescaleVolumeToMag(volumes.sum, fileMag, requestedMag)
+    } yield SegmentStatisticsMath.rescaleVolumeToMag(volumes.sum, fileMag, requestedMag)
 
   // Center of mass and covariance matrix are always stored in mag1 voxel units, regardless of the file’s own mag, so
   // volumes must be rescaled to mag1 before being used as weights to combine those two metrics across oversegments.
@@ -352,23 +346,7 @@ class SegmentStatisticsFileService @Inject() (
     for {
       volumes <- getVolumes(segmentStatisticsFileKey, segmentIds)
       (fileMag, _) <- resolveMagAndMappingName(segmentStatisticsFileKey, dataLayer)
-    } yield volumes.map(rescaleVolumeToMag(_, fileMag, Vec3Int.ones))
-
-  // The volume-weighted average of centerOfMasses, per dimension, as Double for precision. totalVolume must be > 0.
-  private def weightedCenterOfMass(
-      centerOfMasses: Seq[Array[Float]],
-      volumes: Seq[Long],
-      totalVolume: Long
-  ): Array[Double] =
-    Array.tabulate(3) { dim =>
-      val weightedSum = centerOfMasses
-        .lazyZip(volumes)
-        .map { case (centerOfMass, volume) =>
-          centerOfMass(dim).toDouble * volume
-        }
-        .sum
-      weightedSum / totalVolume
-    }
+    } yield volumes.map(SegmentStatisticsMath.rescaleVolumeToMag(_, fileMag, Vec3Int.ones))
 
   /** Combines the centers of mass of several (oversegmentation) segments into the center of mass of their union,
     * weighting each one by its volume. This is exact (not an approximation), as long as the given segments are disjoint
@@ -382,10 +360,8 @@ class SegmentStatisticsFileService @Inject() (
     for {
       centerOfMasses <- getCenterOfMasses(segmentStatisticsFileKey, segmentIds)
       volumes <- volumesInMag1(segmentStatisticsFileKey, dataLayer, segmentIds)
-      totalVolume = volumes.sum
-      _ <- Fox.fromBool(totalVolume > 0) ?~> "Cannot compute combined center of mass, total volume of segments is zero"
-      combined = weightedCenterOfMass(centerOfMasses, volumes, totalVolume).map(_.toFloat)
-    } yield combined
+      combined <- SegmentStatisticsMath.weightedCenterOfMass(centerOfMasses, volumes).toFox
+    } yield combined.map(_.toFloat)
 
   /** Combines the covariance matrices of several (oversegmentation) segments into the covariance matrix of their union,
     * via the parallel axis theorem: each segment’s covariance is shifted from its own center of mass to the combined
@@ -402,21 +378,7 @@ class SegmentStatisticsFileService @Inject() (
       covarianceMatrices <- getCovarianceMatrices(segmentStatisticsFileKey, segmentIds)
       centerOfMasses <- getCenterOfMasses(segmentStatisticsFileKey, segmentIds)
       volumes <- volumesInMag1(segmentStatisticsFileKey, dataLayer, segmentIds)
-      totalVolume = volumes.sum
-      _ <- Fox.fromBool(
-        totalVolume > 0
-      ) ?~> "Cannot compute combined covariance matrix, total volume of segments is zero"
-      combinedCenterOfMass = weightedCenterOfMass(centerOfMasses, volumes, totalVolume)
-      combined = Array.tabulate(3, 3) { (i, j) =>
-        val weightedSum = covarianceMatrices.indices.map { idx =>
-          val volume = volumes(idx)
-          val covariance = covarianceMatrices(idx)(i)(j).toDouble
-          val offsetI = centerOfMasses(idx)(i).toDouble - combinedCenterOfMass(i)
-          val offsetJ = centerOfMasses(idx)(j).toDouble - combinedCenterOfMass(j)
-          volume * (covariance + offsetI * offsetJ)
-        }.sum
-        (weightedSum / totalVolume).toFloat
-      }
+      combined <- SegmentStatisticsMath.combineCovarianceMatrices(covarianceMatrices, centerOfMasses, volumes).toFox
     } yield combined
 
   private def readSphericity(segmentStatisticsFileKey: SegmentStatisticsFileKey, segmentId: Long)(using

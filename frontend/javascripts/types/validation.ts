@@ -72,7 +72,7 @@ export const validateUrlStateJSON = (value: string) => {
     if (key === "mappingType") {
       if (value == null) return null;
       const caseFixed = typeof value === "string" ? value.toUpperCase() : value;
-      return caseFixed === "JSON" ? "JSON" : "HDF5";
+      return caseFixed === "JSON" ? "JSON" : "AGGLOMERATE";
     }
     // let lodash handle everything else
     return undefined;

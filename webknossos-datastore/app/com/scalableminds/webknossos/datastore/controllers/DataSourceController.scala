@@ -33,6 +33,7 @@ import com.scalableminds.webknossos.datastore.services.connectome.ConnectomeFile
 import com.scalableminds.webknossos.datastore.services.mesh.{
   DSFullMeshService,
   FullMeshRequest,
+  MappingType,
   MeshFileService,
   MeshMappingHelper
 }
@@ -569,7 +570,7 @@ class DataSourceController @Inject() (
               lod = None,
               segmentId = segmentId,
               mappingName = request.body.mappingName,
-              mappingType = request.body.mappingName.map(_ => "HDF5"),
+              mappingType = request.body.mappingName.map(_ => MappingType.AGGLOMERATE),
               editableMappingTracingId = None,
               annotationVersion = None,
               mag = Some(request.body.mag),

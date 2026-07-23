@@ -410,7 +410,7 @@ export type Mapping = Map<number, number> | Map<bigint, bigint>;
 export type NumberLike = number | bigint;
 export type NumberLikeMap = Map<NumberLike, NumberLike>;
 
-export type MappingType = "JSON" | "HDF5";
+export type MappingType = "JSON" | "AGGLOMERATE";
 export type ActiveMappingInfo = {
   readonly mappingName: string | null | undefined;
   readonly mapping: Mapping | null | undefined;

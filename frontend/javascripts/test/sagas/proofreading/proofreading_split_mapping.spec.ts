@@ -38,7 +38,7 @@ describe("splitAgglomeratesInMapping", () => {
       mappingColors: null,
       hideUnmappedIds: false,
       mappingStatus: MappingStatusEnum.ENABLED,
-      mappingType: "HDF5",
+      mappingType: "AGGLOMERATE",
     };
   }
 

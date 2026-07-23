@@ -100,7 +100,7 @@ function MappingSettingsView({ layerName }: Props) {
         packedMappingNameWithCategory,
       );
 
-      if (mappingType !== "JSON" && mappingType !== "HDF5") {
+      if (mappingType !== "JSON" && mappingType !== "AGGLOMERATE") {
         throw new Error("Invalid mapping type");
       }
 
@@ -196,12 +196,12 @@ function MappingSettingsView({ layerName }: Props) {
     const agglomerateOptions = availableAgglomerates
       .slice()
       .sort(localeCompareBy((s) => s))
-      .map((s) => toOption(s, "HDF5"));
+      .map((s) => toOption(s, "AGGLOMERATE"));
 
     if (useGroups) {
       return [
         { label: "JSON", options: mappingOptions },
-        { label: "HDF5", options: agglomerateOptions },
+        { label: "AGGLOMERATE", options: agglomerateOptions },
       ];
     }
 

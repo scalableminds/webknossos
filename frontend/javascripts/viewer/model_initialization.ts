@@ -783,7 +783,7 @@ function determineDefaultState(
       } else {
         stateByLayer[layerName].mappingInfo = {
           mappingName,
-          mappingType: "HDF5",
+          mappingType: "AGGLOMERATE",
         };
       }
     }

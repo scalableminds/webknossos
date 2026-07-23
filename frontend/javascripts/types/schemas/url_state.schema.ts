@@ -32,7 +32,7 @@ export default {
     },
     "types::MappingType": {
       type: ["string", "null"],
-      default: "HDF5",
+      default: "AGGLOMERATE",
       description: "If value is 'JSON', it is kept. Any other string is treated as 'HDF5'.",
     },
     "types::Mesh": {

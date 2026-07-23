@@ -24,17 +24,22 @@ class DSRemoteTracingstoreClient @Inject() (
     val lifecycle: ApplicationLifecycle
 ) extends LazyLogging {
 
-  private def getZarrVersionDependantSubPath =
-    (zarrVersion: Int) => if (zarrVersion == 2) "zarr" else "zarr3_experimental"
+  // Zarr v2 output is no longer served by tracingstore's latest routes (Zarr v3 is now the default there) - it
+  // is only kept alive by TSLegacyApiController at this frozen, version-pinned API version. Internal RPC calls
+  // that need v2 output must target that fixed path instead of the (now v3-by-default) unversioned one.
+  private val legacyZarrApiVersion = 14
+
+  private def zarrVersionDependantSubPath(zarrVersion: Int) =
+    if (zarrVersion == 2) s"v$legacyZarrApiVersion/volume/zarr" else "volume/zarr"
 
   def getZArray(tracingId: String, mag: String, tracingStoreUri: String)(using tc: TokenContext): Fox[ZarrHeader] =
-    rpc(s"$tracingStoreUri/tracings/volume/zarr/$tracingId/$mag/.zarray").withTokenFromContext
+    rpc(s"$tracingStoreUri/tracings/v$legacyZarrApiVersion/volume/zarr/$tracingId/$mag/.zarray").withTokenFromContext
       .getWithJsonResponse[ZarrHeader]
 
   def getZarrJson(tracingId: String, mag: String, tracingStoreUri: String)(using
       tc: TokenContext
   ): Fox[Zarr3ArrayHeader] =
-    rpc(s"$tracingStoreUri/tracings/volume/zarr3_experimental/$tracingId/$mag/zarr.json").withTokenFromContext
+    rpc(s"$tracingStoreUri/tracings/volume/zarr/$tracingId/$mag/zarr.json").withTokenFromContext
       .getWithJsonResponse[Zarr3ArrayHeader]
 
   def getVolumeLayerAsZarrLayer(
@@ -42,21 +47,19 @@ class DSRemoteTracingstoreClient @Inject() (
       tracingName: Option[String],
       tracingStoreUri: String,
       zarrVersion: Int
-  )(using tc: TokenContext): Fox[StaticSegmentationLayer] = {
-    val zarrVersionDependantSubPath = getZarrVersionDependantSubPath(zarrVersion)
-    rpc(s"$tracingStoreUri/tracings/volume/$zarrVersionDependantSubPath/$tracingId/zarrSource").withTokenFromContext
+  )(using tc: TokenContext): Fox[StaticSegmentationLayer] =
+    rpc(s"$tracingStoreUri/tracings/${zarrVersionDependantSubPath(zarrVersion)}/$tracingId/zarrSource").withTokenFromContext
       .addQueryParam("tracingName", tracingName)
       .getWithJsonResponse[StaticSegmentationLayer]
-  }
 
   def getOmeNgffHeader(tracingId: String, tracingStoreUri: String)(using tc: TokenContext): Fox[NgffMetadata] =
-    rpc(s"$tracingStoreUri/tracings/volume/zarr/$tracingId/.zattrs").withTokenFromContext
+    rpc(s"$tracingStoreUri/tracings/v$legacyZarrApiVersion/volume/zarr/$tracingId/.zattrs").withTokenFromContext
       .getWithJsonResponse[NgffMetadata]
 
   def getZarrJsonGroupHeaderWithNgff(tracingId: String, tracingStoreUri: String)(using
       tc: TokenContext
   ): Fox[NgffZarr3GroupHeader] =
-    rpc(s"$tracingStoreUri/tracings/volume/zarr3_experimental/$tracingId/zarr.json").withTokenFromContext
+    rpc(s"$tracingStoreUri/tracings/volume/zarr/$tracingId/zarr.json").withTokenFromContext
       .getWithJsonResponse[NgffZarr3GroupHeader]
 
   def getRawZarrCube(tracingId: String, mag: String, cxyz: String, tracingStoreUri: String)(using
@@ -70,18 +73,19 @@ class DSRemoteTracingstoreClient @Inject() (
       tc: TokenContext
   ): Fox[List[String]] =
     rpc(
-      s"$tracingStoreUri/tracings/volume/${getZarrVersionDependantSubPath(zarrVersion)}/json/$tracingId/$mag"
+      s"$tracingStoreUri/tracings/${zarrVersionDependantSubPath(zarrVersion)}/json/$tracingId/$mag"
     ).withTokenFromContext.getWithJsonResponse[List[String]]
 
   def getDataLayerDirectoryContents(tracingId: String, tracingStoreUri: String, zarrVersion: Int)(using
       tc: TokenContext
   ): Fox[List[String]] =
     rpc(
-      s"$tracingStoreUri/tracings/volume/${getZarrVersionDependantSubPath(zarrVersion)}/json/$tracingId"
+      s"$tracingStoreUri/tracings/${zarrVersionDependantSubPath(zarrVersion)}/json/$tracingId"
     ).withTokenFromContext.getWithJsonResponse[List[String]]
 
   def getZGroup(tracingId: String, tracingStoreUri: String)(using tc: TokenContext): Fox[JsObject] =
-    rpc(s"$tracingStoreUri/tracings/volume/zarr/$tracingId/.zgroup").withTokenFromContext.getWithJsonResponse[JsObject]
+    rpc(s"$tracingStoreUri/tracings/v$legacyZarrApiVersion/volume/zarr/$tracingId/.zgroup").withTokenFromContext
+      .getWithJsonResponse[JsObject]
 
   def getEditableMappingSegmentIdsForAgglomerate(
       tracingStoreUri: String,

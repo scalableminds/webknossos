@@ -1,6 +1,36 @@
 # Note: keep this in sync with the reported version numbers in the com.scalableminds.util.mvc.ApiVersioning trait
 # Version log in webknossos.versioned.routes
 
+# changed in v15: /volume/zarr now defaults to Zarr v3 output (previously Zarr v2). /volume/zarr3_experimental now
+#                 redirects to /volume/zarr. Old default (Zarr v2) preserved for API v14 and below via TSLegacyApiController.
+
+->  /v15/ tracingstore.latest.Routes
+
+# Zarr endpoints for volume annotations (frozen behavior of /v14/volume/zarr, superseded by Zarr v3 as the default at latest)
+GET         /v14/volume/zarr/json/:tracingId                                            @com.scalableminds.webknossos.tracingstore.controllers.TSLegacyApiController.volumeTracingDirectoryContentJsonV14(tracingId: String, zarrVersion: Int = 2)
+GET         /v14/volume/zarr/json/:tracingId/:mag                                       @com.scalableminds.webknossos.tracingstore.controllers.TSLegacyApiController.volumeTracingMagDirectoryContentJsonV14(tracingId: String, mag: String, zarrVersion: Int = 2)
+GET         /v14/volume/zarr/:tracingId                                                 @com.scalableminds.webknossos.tracingstore.controllers.TSLegacyApiController.volumeTracingDirectoryContentV14(tracingId: String, zarrVersion: Int = 2)
+GET         /v14/volume/zarr/:tracingId/                                                @com.scalableminds.webknossos.tracingstore.controllers.TSLegacyApiController.volumeTracingDirectoryContentV14(tracingId: String, zarrVersion: Int = 2)
+GET         /v14/volume/zarr/:tracingId/.zgroup                                         @com.scalableminds.webknossos.tracingstore.controllers.TSLegacyApiController.zGroupV14(tracingId: String)
+GET         /v14/volume/zarr/:tracingId/.zattrs                                         @com.scalableminds.webknossos.tracingstore.controllers.TSLegacyApiController.zAttrsV14(tracingId: String)
+GET         /v14/volume/zarr/:tracingId/zarrSource                                      @com.scalableminds.webknossos.tracingstore.controllers.TSLegacyApiController.zarrSourceV14(tracingId: String, tracingName: Option[String], zarrVersion: Int = 2)
+GET         /v14/volume/zarr/:tracingId/:mag                                            @com.scalableminds.webknossos.tracingstore.controllers.TSLegacyApiController.volumeTracingMagDirectoryContentV14(tracingId: String, mag: String, zarrVersion: Int = 2)
+GET         /v14/volume/zarr/:tracingId/:mag/                                           @com.scalableminds.webknossos.tracingstore.controllers.TSLegacyApiController.volumeTracingMagDirectoryContentV14(tracingId: String, mag: String, zarrVersion: Int = 2)
+GET         /v14/volume/zarr/:tracingId/:mag/.zarray                                    @com.scalableminds.webknossos.tracingstore.controllers.TSLegacyApiController.zArrayV14(tracingId: String, mag: String)
+GET         /v14/volume/zarr/:tracingId/:mag/:coordinates                               @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.rawZarrCube(tracingId: String, mag: String, coordinates: String)
+
+# Zarr version 3 (frozen: real content, not a redirect, for old API versions)
+GET         /v14/volume/zarr3_experimental/json/:tracingId                              @com.scalableminds.webknossos.tracingstore.controllers.TSLegacyApiController.volumeTracingDirectoryContentJsonV14(tracingId: String, zarrVersion: Int = 3)
+GET         /v14/volume/zarr3_experimental/json/:tracingId/:mag                         @com.scalableminds.webknossos.tracingstore.controllers.TSLegacyApiController.volumeTracingMagDirectoryContentJsonV14(tracingId: String, mag: String, zarrVersion: Int = 3)
+GET         /v14/volume/zarr3_experimental/:tracingId                                   @com.scalableminds.webknossos.tracingstore.controllers.TSLegacyApiController.volumeTracingDirectoryContentV14(tracingId: String, zarrVersion: Int = 3)
+GET         /v14/volume/zarr3_experimental/:tracingId/                                  @com.scalableminds.webknossos.tracingstore.controllers.TSLegacyApiController.volumeTracingDirectoryContentV14(tracingId: String, zarrVersion: Int = 3)
+GET         /v14/volume/zarr3_experimental/:tracingId/zarrSource                        @com.scalableminds.webknossos.tracingstore.controllers.TSLegacyApiController.zarrSourceV14(tracingId: String, tracingName: Option[String], zarrVersion: Int = 3)
+GET         /v14/volume/zarr3_experimental/:tracingId/zarr.json                         @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.zarrJson(tracingId: String)
+GET         /v14/volume/zarr3_experimental/:tracingId/:mag                              @com.scalableminds.webknossos.tracingstore.controllers.TSLegacyApiController.volumeTracingMagDirectoryContentV14(tracingId: String, mag: String, zarrVersion: Int = 3)
+GET         /v14/volume/zarr3_experimental/:tracingId/:mag/                             @com.scalableminds.webknossos.tracingstore.controllers.TSLegacyApiController.volumeTracingMagDirectoryContentV14(tracingId: String, mag: String, zarrVersion: Int = 3)
+GET         /v14/volume/zarr3_experimental/:tracingId/:mag/zarr.json                     @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.zarrJsonForMag(tracingId: String, mag: String)
+GET         /v14/volume/zarr3_experimental/:tracingId/:mag/:coordinates                 @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.rawZarrCube(tracingId: String, mag: String, coordinates: String)
+
 ->  /v14/ tracingstore.latest.Routes
 ->  /v13/ tracingstore.latest.Routes
 ->  /v12/ tracingstore.latest.Routes

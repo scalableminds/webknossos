@@ -131,10 +131,11 @@ const _getSegmentIdForPosition = (mapped: boolean) => (globalPos: Vector3) => {
       );
 };
 
-export const getSegmentIdForPosition = memoizeOne(_getSegmentIdForPosition(true), ([a], [b]) =>
-  V3.isEqual(a, b),
-);
+// This must not be memoized: the mapped segment id at a given position can change
+// even when the position stays the same e.g. due to a foreign proofreading action.
+export const getSegmentIdForPosition = _getSegmentIdForPosition(true);
 
+// The unmapped lookup is far less volatile, so memoizing it on the position is safe.
 export const getUnmappedSegmentIdForPosition = memoizeOne(
   _getSegmentIdForPosition(false),
   ([a], [b]) => V3.isEqual(a, b),

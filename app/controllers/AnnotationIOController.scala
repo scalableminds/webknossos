@@ -4,10 +4,12 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.box.Empty
 import com.scalableminds.util.collections.SequenceUtils
+import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, TextUtils}
 import com.scalableminds.util.tools.Fox.toFox
+import com.scalableminds.util.tools.StringNumberConversions.toDoubleOpt
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
@@ -97,6 +99,12 @@ class AnnotationIOController @Inject() (
         - If "false": in merged annotation, rename trees with the respective file name as prefix
       - As optional form parameter: description [String]
         - If set, this will be the description of the resulting annotation, overwriting any description specified in NML files.
+      - As optional form parameter: fallbackEditPosition [String], e.g. "1,2,3"
+        - If set, this will be used as the editPosition for annotations that do not specify their own.
+      - As optional form parameter: fallbackEditRotation [String], e.g. "1,2,3"
+        - If set, this will be used as the editRotation for annotations that do not specify their own.
+      - As optional form parameter: fallbackZoomLevel [String], e.g. "1.5"
+        - If set, this will be used as the zoomLevel for annotations that do not specify their own.
      Returns:
         JSON object containing annotation information about the newly created annotation, including the assigned id
    */
@@ -108,12 +116,28 @@ class AnnotationIOController @Inject() (
         val overwritingDatasetId: Option[String] =
           request.body.dataParts.get("datasetId").flatMap(_.headOption)
         val overwritingDescription: Option[String] = request.body.dataParts.get("description").flatMap(_.headOption)
+        val fallbackEditPositionRaw: Option[String] =
+          request.body.dataParts.get("fallbackEditPosition").flatMap(_.headOption)
+        val fallbackEditRotationRaw: Option[String] =
+          request.body.dataParts.get("fallbackEditRotation").flatMap(_.headOption)
+        val fallbackZoomLevelRaw: Option[String] =
+          request.body.dataParts.get("fallbackZoomLevel").flatMap(_.headOption)
         val userOrganizationId = request.identity._organization
         val attachedFiles = request.body.files.map(f => (f.ref.path.toFile, f.filename))
         for {
+          fallbackEditPosition <- Fox.runOptional(fallbackEditPositionRaw)(p => Vec3Int.fromUriLiteral(p).toFox)
+          fallbackEditRotation <- Fox.runOptional(fallbackEditRotationRaw)(r => Vec3Double.fromUriLiteral(r).toFox)
+          fallbackZoomLevel <- Fox.runOptional(fallbackZoomLevelRaw)(z => z.toDoubleOpt.toFox)
           parsedFiles <- annotationUploadService.extractFromFiles(
             attachedFiles,
-            SharedParsingParameters(useZipName = true, overwritingDatasetId, userOrganizationId)
+            SharedParsingParameters(
+              useZipName = true,
+              overwritingDatasetId,
+              userOrganizationId,
+              fallbackEditPosition = fallbackEditPosition,
+              fallbackEditRotation = fallbackEditRotation,
+              fallbackZoomLevel = fallbackZoomLevel
+            )
           )
           parsedFilesWrapped = annotationUploadService.wrapOrPrefixGroups(
             parsedFiles.parseResults,

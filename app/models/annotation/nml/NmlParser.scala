@@ -162,10 +162,16 @@ class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
         description = parseDescription(parameters \ "experiment")
         wkUrl = parseWkUrl(parameters \ "experiment")
         activeNodeId = parseActiveNode(parameters \ "activeNode")
-        (editPosition, editPositionAdditionalCoordinates) = parseEditPosition(parameters \ "editPosition")
-          .getOrElse((SkeletonTracingDefaults.editPosition, Seq()))
-        editRotation = parseEditRotation(parameters \ "editRotation").getOrElse(SkeletonTracingDefaults.editRotation)
-        zoomLevel = parseZoomLevel(parameters \ "zoomLevel").getOrElse(SkeletonTracingDefaults.zoomLevel)
+        (editPosition, editPositionAdditionalCoordinates) = parseEditPosition(parameters \ "editPosition").getOrElse(
+          (
+            sharedParsingParameters.fallbackEditPosition.getOrElse(SkeletonTracingDefaults.editPosition),
+            Seq()
+          )
+        )
+        editRotation = parseEditRotation(parameters \ "editRotation")
+          .getOrElse(sharedParsingParameters.fallbackEditRotation.getOrElse(SkeletonTracingDefaults.editRotation))
+        zoomLevel = parseZoomLevel(parameters \ "zoomLevel")
+          .getOrElse(sharedParsingParameters.fallbackZoomLevel.getOrElse(SkeletonTracingDefaults.zoomLevel))
         taskBoundingBox: Option[BoundingBox] =
           if (sharedParsingParameters.isTaskUpload)
             parseTaskBoundingBox(parameters \ "taskBoundingBox")

@@ -4,8 +4,8 @@ import { useCallback, useState } from "react";
 import Dropzone from "react-dropzone";
 import { useDispatch } from "react-redux";
 import { setDropzoneModalVisibilityAction } from "viewer/model/actions/ui_actions";
-import { NmlDropArea } from "./nml_modal_helpers";
 import { DropzoneModal, ImportModal } from "./nml_modals";
+import { NmlDropzoneContent } from "./nml_upload_components";
 
 function OverlayDropZone({ children }: { children: React.ReactNode }) {
   return (
@@ -99,7 +99,7 @@ export default function NmlUploadZoneContainer({
           }
           {dropzoneActive && !showDropzoneModal ? (
             <OverlayDropZone>
-              <NmlDropArea
+              <NmlDropzoneContent
                 isClickAllowed={false}
                 isUpdateAllowed={isUpdateAllowed}
                 getInputProps={getInputProps}

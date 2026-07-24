@@ -4,7 +4,7 @@ import FormattedDate from "components/formatted_date";
 import prettyBytes from "pretty-bytes";
 import type { DropzoneInputProps } from "react-dropzone";
 
-export function NmlDropArea({
+export function NmlDropzoneContent({
   isClickAllowed,
   isUpdateAllowed,
   getInputProps,

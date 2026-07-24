@@ -3,7 +3,7 @@ import { Fragment } from "react";
 import Dropzone from "react-dropzone";
 import { useDispatch } from "react-redux";
 import { setDropzoneModalVisibilityAction } from "viewer/model/actions/ui_actions";
-import { NmlDropArea, NmlList } from "./nml_modal_helpers";
+import { NmlDropzoneContent, NmlList } from "./nml_upload_components";
 
 export function DropzoneModal({
   isUpdateAllowed,
@@ -26,7 +26,7 @@ export function DropzoneModal({
       <Dropzone multiple onDrop={onDrop}>
         {({ getRootProps, getInputProps }) => (
           <div {...getRootProps()}>
-            <NmlDropArea
+            <NmlDropzoneContent
               isClickAllowed
               isUpdateAllowed={isUpdateAllowed}
               getInputProps={getInputProps}

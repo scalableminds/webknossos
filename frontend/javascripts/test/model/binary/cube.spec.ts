@@ -77,6 +77,12 @@ describe("DataCube", () => {
         this.queue.push(item);
       }
 
+      abortRequests() {
+        // Mirrors the real pull queue: aborting an in-flight request does *not*
+        // synchronously transition the affected bucket out of the REQUESTED state
+        // (that only happens later, once the aborted fetch rejects).
+      }
+
       async pull() {
         // If the pull happens synchronously, the bucketLoaded promise
         // in Bucket.ensureLoaded() is created too late. Therefore,
@@ -246,6 +252,105 @@ describe("DataCube", () => {
       [3, 3, 3, 0],
       [2, 2, 2, 0],
     ]);
+  });
+
+  it<TestContext>("removeAllBuckets() should collect a bucket whose in-flight request was just aborted", ({
+    cube,
+  }) => {
+    // Simulate a bucket that is mid-request (REQUESTED) at the moment a reload happens,
+    // e.g. a rendering-triggered prefetch that is still in flight.
+    const bucket = cube.getOrCreateBucket([0, 0, 0, 0, []]);
+    assertNonNullBucket(bucket);
+    bucket.markAsRequested();
+
+    // While REQUESTED, the bucket is normally protected from garbage collection...
+    expect(bucket.mayBeGarbageCollected(false)).toBe(false);
+
+    // ...but removeAllBuckets() aborts in-flight requests, so a REQUESTED bucket is
+    // guaranteed to be superseded and must not linger as a stale cache entry. Since the
+    // abort only fails the bucket asynchronously, removeBucketsIf() must fail it
+    // synchronously; otherwise this bucket would survive and a subsequent read would reuse
+    // its stale (empty) data instead of re-fetching the reloaded data.
+    cube.removeAllBuckets();
+
+    expect(cube.buckets.length).toBe(0);
+    expect(cube.getBucket([0, 0, 0, 0, []]).type).toBe("null");
+  });
+
+  it<TestContext>("removeAllBuckets() should keep a dirty bucket even while it is REQUESTED", ({
+    cube,
+  }) => {
+    // A dirty bucket holds unsaved data and must never be dropped by a reload, even if it
+    // happens to be REQUESTED. (Reload callers guarantee a saved state, so this is a
+    // defense-in-depth guarantee.)
+    const bucket = cube.getOrCreateBucket([0, 0, 0, 0, []]);
+    assertNonNullBucket(bucket);
+    bucket.markAsRequested();
+    bucket.dirty = true;
+
+    cube.removeAllBuckets();
+
+    expect(cube.buckets.length).toBe(1);
+    expect(cube.getBucket([0, 0, 0, 0, []])).toBe(bucket);
+  });
+
+  it<TestContext>("getLoadedBucket() should re-fetch when a concurrent reload evicts the awaited bucket", async ({
+    cube,
+  }) => {
+    // Reproduces the read-vs-reload race: getLoadedBucket() awaits a bucket whose request
+    // is in flight when a reload (removeAllBuckets) aborts it and evicts the bucket. The
+    // evicted bucket's ensureLoaded() resolves (via "bucketRequestFailed") with no data, so
+    // a naive implementation would return an empty bucket (reading 0). getLoadedBucket()
+    // must instead re-create and reload the bucket and return the freshly loaded one.
+    const address: Vector4 = [0, 0, 0, 0];
+
+    // A pull queue that (like the real one) marks queued buckets as REQUESTED synchronously
+    // on pull(). Data is delivered manually below so we can interleave the reload precisely.
+    const queued: Vector4[] = [];
+    const controllablePullQueue = {
+      add: (item: { bucket: Vector4 }) => queued.push(item.bucket),
+      pull: () => {
+        for (const addr of queued) {
+          const bucket = cube.getBucket(addr);
+          if (bucket.type === "data" && bucket.needsRequest()) {
+            bucket.markAsRequested();
+          }
+        }
+        queued.length = 0;
+      },
+      abortRequests: () => {},
+      clear: () => {},
+      destroy: () => {},
+    };
+    cube.initializeWithQueues(
+      controllablePullQueue as any,
+      { insert: vi.fn(), push: vi.fn() } as any,
+    );
+
+    // Start loading. This creates the first bucket, requests it, and awaits ensureLoaded().
+    const loadedBucketPromise = cube.getLoadedBucket(address);
+    await sleep(0);
+    const firstBucket = cube.getBucket(address);
+    assertNonNullBucket(firstBucket);
+    expect(firstBucket.isRequested()).toBe(true);
+
+    // A concurrent reload aborts the in-flight request and evicts the REQUESTED bucket.
+    cube.removeAllBuckets();
+    expect(cube.getBucket(address).type).toBe("null");
+
+    // The retry must have created and requested a fresh bucket; deliver its data.
+    await sleep(0);
+    const secondBucket = cube.getBucket(address);
+    assertNonNullBucket(secondBucket);
+    expect(secondBucket).not.toBe(firstBucket);
+    expect(secondBucket.isRequested()).toBe(true);
+    secondBucket.receiveData(new Uint8Array(4 * 32 ** 3));
+
+    const resultBucket = await loadedBucketPromise;
+    // getLoadedBucket must return the fresh, loaded bucket — not the evicted empty one.
+    assertNonNullBucket(resultBucket);
+    expect(resultBucket).toBe(secondBucket);
+    expect(resultBucket.hasData()).toBe(true);
   });
 
   it<TestContext>("Garbage Collection should grow beyond soft limit if necessary", ({ cube }) => {

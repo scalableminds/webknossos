@@ -767,7 +767,6 @@ function DebugInfo() {
 }
 
 const mapStateToProps = (state: WebknossosState): StateProps => ({
-  
   annotationName: state.annotation.name,
   annotationDescription: state.annotation.description,
   annotationOwner: state.annotation.owner,

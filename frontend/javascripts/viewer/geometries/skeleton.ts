@@ -13,7 +13,6 @@ import {
 } from "three";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { Vector3, Vector4 } from "viewer/constants";
-import { getRenderer } from "viewer/controller/renderer";
 import EdgeShader from "viewer/geometries/materials/edge_shader";
 import NodeShader, {
   COLOR_TEXTURE_WIDTH,
@@ -124,12 +123,6 @@ class Skeleton {
   nodeShader: NodeShader | undefined;
   edgeShader: EdgeShader | undefined;
 
-  // Is true while the buffers are filled in bulk (in which case no partial
-  // update ranges should be tracked). See markChangedAttributes.
-  private isBulkOperation: boolean = false;
-  // Scratch buffer for partial uploads of the tree color texture.
-  private treeColorTexelBuffer = new Float32Array(4);
-
   constructor(
     skeletonTracingSelectorFn: (state: WebknossosState) => SkeletonTracing | null,
     supportsPicking: boolean,
@@ -186,7 +179,12 @@ class Skeleton {
     // Remove all existing geometries
     this.rootGroup.remove(...this.rootGroup.children);
     this.pickingNode.remove(...this.pickingNode.children);
+    const { trees } = skeletonTracing;
 
+    const nodeCount = sum(trees.values().map((tree) => tree.nodes.size()));
+    const edgeCount = sum(trees.values().map((tree) => tree.edges.size()));
+
+    // delete actual GPU buffers in case there were any
     if (this.treeColorTexture != null) {
       this.treeColorTexture.dispose();
     }
@@ -204,11 +202,6 @@ class Skeleton {
         edges.geometry.dispose();
       }
     }
-
-    const { trees } = skeletonTracing;
-
-    const nodeCount = sum(trees.values().map((tree) => tree.nodes.size()));
-    const edgeCount = sum(trees.values().map((tree) => tree.edges.size()));
 
     this.treeColorTexture = new DataTexture(
       new Float32Array(COLOR_TEXTURE_WIDTH * COLOR_TEXTURE_WIDTH * 4),
@@ -236,16 +229,8 @@ class Skeleton {
       (Store.getState().flycam.additionalCoordinates ?? []).map(({ name }) => name),
     );
     // fill buffers with data
-    // Since the buffers were just created, they will be uploaded to the GPU
-    // in full anyway. Tracking per-element update ranges would only waste
-    // memory, which is why this is marked as a bulk operation.
-    this.isBulkOperation = true;
-    try {
-      for (const tree of trees.values()) {
-        this.createTree(tree, flycamAdditionalCoordinateNames);
-      }
-    } finally {
-      this.isBulkOperation = false;
+    for (const tree of trees.values()) {
+      this.createTree(tree, flycamAdditionalCoordinateNames);
     }
 
     // compute bounding sphere to make ThreeJS happy
@@ -324,26 +309,8 @@ class Skeleton {
     };
     collection.idToBufferPosition.set(id, bufferPosition);
     const changedAttributes = createFunc(bufferPosition);
-    this.markChangedAttributes(bufferPosition, changedAttributes);
-  }
-
-  /**
-   * Flags the changed attributes for upload to the GPU. Unless a bulk
-   * operation is running, an update range covering only the changed
-   * node/edge is registered so that three.js doesn't re-upload the whole
-   * attribute array (which can be several MB for large tracings) on the
-   * next render.
-   */
-  markChangedAttributes(bufferPosition: BufferPosition, changedAttributes: BufferAttribute[]) {
-    const { buffer, index } = bufferPosition;
 
     for (const attribute of changedAttributes) {
-      if (!this.isBulkOperation) {
-        // Each node/edge occupies a fixed number of array elements
-        // per attribute (e.g., 3 for a node's position, 6 for an edge's).
-        const elementsPerEntry = attribute.array.length / buffer.capacity;
-        attribute.addUpdateRange(index * elementsPerEntry, elementsPerEntry);
-      }
       attribute.needsUpdate = true;
     }
   }
@@ -359,7 +326,10 @@ class Skeleton {
 
     if (bufferPosition != null) {
       const changedAttributes = deleteFunc(bufferPosition);
-      this.markChangedAttributes(bufferPosition, changedAttributes);
+
+      for (const attribute of changedAttributes) {
+        attribute.needsUpdate = true;
+      }
 
       collection.idToBufferPosition.delete(id);
       collection.freeList.push(bufferPosition);
@@ -378,7 +348,10 @@ class Skeleton {
 
     if (bufferPosition != null) {
       const changedAttributes = updateFunc(bufferPosition);
-      this.markChangedAttributes(bufferPosition, changedAttributes);
+
+      for (const attribute of changedAttributes) {
+        attribute.needsUpdate = true;
+      }
     } else {
       console.warn(`[Skeleton] Unable to find buffer position for id ${id}`);
     }
@@ -851,52 +824,7 @@ class Skeleton {
   ) {
     const rgba = this.getTreeRGBA(color, isVisible, edgesAreVisible);
     this.treeColorTexture.image.data.set(rgba, treeId * 4);
-
-    if (!this.uploadTreeColorTexel(treeId, rgba)) {
-      // Fall back to a full texture upload if a partial upload was not
-      // possible (e.g., because the texture is not on the GPU yet, in which
-      // case the full upload happens on initialization anyway).
-      this.treeColorTexture.needsUpdate = true;
-    }
-  }
-
-  /**
-   * Uploads the changed texel of the tree color texture via texSubImage2D.
-   * Otherwise, setting needsUpdate would re-upload the whole
-   * COLOR_TEXTURE_WIDTH² RGBA-float texture (16.7 MB) on every tree
-   * color/visibility change. Returns false if the partial upload could not
-   * be performed.
-   */
-  uploadTreeColorTexel(treeId: number, rgba: Vector4): boolean {
-    const renderer = getRenderer();
-    if (typeof renderer.getContext !== "function") {
-      // There is no real renderer (e.g., in headless tests).
-      return false;
-    }
-    const gl = renderer.getContext() as WebGL2RenderingContext;
-    const textureProperties = renderer.properties.get(this.treeColorTexture) as {
-      __webglTexture: WebGLTexture | null | undefined;
-    };
-    if (textureProperties?.__webglTexture == null) {
-      return false;
-    }
-
-    this.treeColorTexelBuffer.set(rgba);
-    const activeTexture = gl.getParameter(gl.TEXTURE_BINDING_2D);
-    gl.bindTexture(gl.TEXTURE_2D, textureProperties.__webglTexture);
-    gl.texSubImage2D(
-      gl.TEXTURE_2D,
-      0,
-      treeId % COLOR_TEXTURE_WIDTH,
-      Math.floor(treeId / COLOR_TEXTURE_WIDTH),
-      1,
-      1,
-      gl.RGBA,
-      gl.FLOAT,
-      this.treeColorTexelBuffer,
-    );
-    gl.bindTexture(gl.TEXTURE_2D, activeTexture);
-    return true;
+    this.treeColorTexture.needsUpdate = true;
   }
 
   getTreeRGBA(color: Vector3, isVisible: boolean, areEdgesVisible: boolean): Vector4 {

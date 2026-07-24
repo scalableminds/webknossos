@@ -44,7 +44,7 @@ function DatasetReducer(state: WebknossosState, action: Action): WebknossosState
           lastLabelActions: [],
           contourTracingMode: ContourModeEnum.DRAW,
           contourList: [],
-          idReservations: { SegmentGroup: [], Segment: [] },
+          idReservations: { SegmentGroup: [] },
         })),
         temporaryConfiguration: {
           ...state.temporaryConfiguration,

@@ -111,7 +111,10 @@ export function serverVolumeToClientVolumeTracing(
 
 function getVolumeTracingFromAction(state: WebknossosState, action: VolumeTracingReducerAction) {
   if ("tracingId" in action && action.tracingId != null) {
-    return getVolumeTracingById(state.annotation, action.tracingId);
+    // Unlike getVolumeTracingById, look up the tracing gracefully (returning null instead of
+    // throwing) because some actions (e.g., the BoundingBox id reservation actions) carry a
+    // tracingId that can refer to a skeleton tracing instead of a volume tracing.
+    return state.annotation.volumes.find((t) => t.tracingId === action.tracingId) ?? null;
   }
   const maybeVolumeLayer =
     "layerName" in action && action.layerName != null
@@ -454,6 +457,10 @@ function VolumeTracingReducer(
     }
 
     case "SET_ID_RESERVATIONS": {
+      // BoundingBox reservations are handled in annotation_reducer.ts, as they are not
+      // scoped to a single segmentation layer.
+      if (action.domain === "BoundingBox") return state;
+
       const { idReservations } = state.localSegmentationStateByLayer[action.tracingId];
       return updateLocalSegmentationState(state, action.tracingId, {
         idReservations: {

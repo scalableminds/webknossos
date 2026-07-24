@@ -6,6 +6,7 @@ import type { Vector3 } from "viewer/constants";
 import type { SaveQueueType } from "viewer/model/actions/save_actions";
 import type {
   EditableMapping,
+  IdReservation,
   MipLayerConfig,
   ReadOnlyTracing,
   SkeletonTracing,
@@ -139,6 +140,10 @@ export const getUserBoundingBoxesThatContainPosition = (
 
   return bboxes.filter((el) => new BoundingBox(el.boundingBox).containsPoint(position));
 };
+
+export function getIdReservationsForBoundingBoxes(state: WebknossosState): IdReservation[] {
+  return state.localAnnotationState.idReservationsForBoundingBoxes;
+}
 
 export type MipEnabledBBox = { bbox: UserBoundingBox; configs: MipLayerConfig[] };
 

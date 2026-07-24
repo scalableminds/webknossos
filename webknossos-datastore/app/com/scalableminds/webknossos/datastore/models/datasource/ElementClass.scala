@@ -124,10 +124,12 @@ object ElementClass extends ExtendedEnumeration {
   def largestSegmentIdIsInRange(largestSegmentIdOpt: Option[Long], elementClass: ElementClass.Value): Boolean =
     segmentationElementClasses.contains(elementClass) && largestSegmentIdOpt.forall { largestSegmentId =>
       elementClass match {
-        // Every Long bit pattern is a valid non-negative uint64 value, so there is nothing left
-        // to validate beyond the elementClass check above.
-        case ElementClass.uint64 => true
-        case _                   => largestSegmentId >= 0L && largestSegmentId <= maxSegmentIdValue(elementClass)
+        // For the 64-bit segmentation types every possible Long bit pattern is a valid segment id:
+        // uint64 spans the full unsigned range, and int64 spans the full signed range (negative ids
+        // are allowed; only 0 is disallowed as a segment id, which is enforced elsewhere). So there
+        // is nothing left to validate beyond the elementClass check above.
+        case ElementClass.uint64 | ElementClass.int64 => true
+        case _                                        => largestSegmentId >= 0L && largestSegmentId <= maxSegmentIdValue(elementClass)
       }
     }
 

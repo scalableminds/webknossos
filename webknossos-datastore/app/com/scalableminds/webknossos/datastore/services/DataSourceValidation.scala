@@ -44,7 +44,7 @@ trait DataSourceValidation {
         dataSource.segmentationLayers.forall { layer =>
           ElementClass.largestSegmentIdIsInRange(layer.largestSegmentId, layer.elementClass)
         },
-        "Largest segment id exceeds range (must be nonnegative and within the element class's value range)."
+        "Largest segment id is out of the valid range for the layer's element class."
       ),
       check(
         dataSource.dataLayers.map(_.name).distinct.length == dataSource.dataLayers.length,

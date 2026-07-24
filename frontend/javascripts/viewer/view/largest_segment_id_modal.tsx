@@ -63,8 +63,10 @@ function EnterLargestSegmentIdModal({
 
   const dispatch = useDispatch();
   const handleOk = () => {
-    if (largestSegmentId == null || largestSegmentId < 1n) {
-      Toast.warning("Please enter a segment id greater than 0.");
+    if (largestSegmentId == null || largestSegmentId === 0n) {
+      // 0 is never a valid segment id (it represents empty data / the eraser). Any other value in
+      // the element class's range is allowed, including negative ids for signed (int64) layers.
+      Toast.warning("Please enter a segment id other than 0.");
       return;
     }
     dispatch(setLargestSegmentIdAction(largestSegmentId));

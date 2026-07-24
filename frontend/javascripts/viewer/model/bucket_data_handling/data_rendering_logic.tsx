@@ -373,8 +373,10 @@ function _getSegmentIdRangeForElementClass(elementClass: ElementClass): readonly
     case "uint64":
       return [0n, 2n ** 64n - 1n];
     case "int64":
-      // Segment ids are non-negative; int64 segmentations use the positive half of the range.
-      return [0n, 2n ** 63n - 1n];
+      // int64 segmentations may use the full signed 64-bit range, including negative ids.
+      // The only value that is never a valid segment id is 0 (background / eraser), which is
+      // rejected where new segment ids are entered rather than excluded from this range.
+      return [-(2n ** 63n), 2n ** 63n - 1n];
     case "float":
     case "double":
       // Floating-point layers are never segmentation layers, so they have no segment-id range.

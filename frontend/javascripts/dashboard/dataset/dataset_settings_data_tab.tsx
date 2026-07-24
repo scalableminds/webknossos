@@ -23,7 +23,7 @@ import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { BoundingBoxInput, Vector3Input } from "libs/vector_input";
 import type React from "react";
-import { cloneElement, useCallback, useEffect } from "react";
+import { cloneElement, useEffect } from "react";
 import { type APIDataLayer, type APIDataset, APIJobCommand } from "types/api_types";
 import type { DataLayer, DataLayerWithTransformations } from "types/schemas/datasource.types";
 import { syncValidator, validateTransformationsJSON } from "types/validation";

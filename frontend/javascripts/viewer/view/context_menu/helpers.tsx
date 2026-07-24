@@ -178,7 +178,9 @@ export function getInfoMenuItem(
 }
 
 export function getContextMenuPositionFromEvent(
-  event: React.MouseEvent<HTMLDivElement>,
+  // Only clientX/clientY are read, so any element's mouse event works (e.g. a
+  // right-click on a <div> row or a click on a <button>).
+  event: React.MouseEvent<HTMLElement>,
   className: string,
 ): [number, number] {
   const overlayDivs = document.getElementsByClassName(className);

@@ -18,8 +18,8 @@ import { saveAsCSV, transformToCSVRow } from "viewer/model/helpers/csv_helpers";
 import { getBoundingBoxInMag1 } from "viewer/model/sagas/volume/helpers";
 import { voxelToVolumeInUnit } from "viewer/model/scaleinfo";
 import { api, Store } from "viewer/singletons";
-import type { Segment } from "viewer/store";
-import type { SegmentHierarchyGroup, SegmentHierarchyNode } from "./segments_view_helper";
+import type { Segment, SegmentGroup } from "viewer/store";
+import { findGroup, MISSING_GROUP_ID } from "../shared/tree_hierarchy_view_helpers";
 
 const getSegmentStatisticsCSVHeader = (dataSourceUnit: string) => {
   const capitalizedUnit = capitalize(dataSourceUnit);
@@ -34,7 +34,7 @@ type Props = {
   visibleSegmentationLayer: APISegmentationLayer;
   relevantSegments: Segment[];
   parentGroup: number;
-  groupTree: SegmentHierarchyNode[];
+  segmentGroups: SegmentGroup[];
 };
 
 type SegmentInfo = {
@@ -94,7 +94,7 @@ export function SegmentStatisticsModal({
   visibleSegmentationLayer,
   relevantSegments: segments,
   parentGroup,
-  groupTree,
+  segmentGroups,
 }: Props) {
   const { dataset, annotation } = useWkSelector((state) => state);
   const magInfo = getMagInfo(visibleSegmentationLayer.mags);
@@ -130,30 +130,18 @@ export function SegmentStatisticsModal({
   const additionalCoordStringForCsv = getAdditionalCoordinatesAsString(additionalCoordinates);
 
   const getGroupIdForSegment = useCallback(
-    (segment: Segment) => {
-      if (segment.groupId != null) return segment.groupId;
-      const rootGroup = groupTree.find(
-        (node) => node.type === "group" && node.id === -1,
-      ) as SegmentHierarchyGroup | null;
-      if (rootGroup?.children.find((node: SegmentHierarchyNode) => node.id === segment.id)) {
-        return -1;
-      } else {
-        return null;
-      }
-    },
-    [groupTree],
+    // Segments without a groupId belong to the (virtual) root group.
+    (segment: Segment) => segment.groupId ?? MISSING_GROUP_ID,
+    [],
   );
 
   const getGroupNameForId = useCallback(
     (groupId: number | null) => {
       if (groupId == null) return "";
-      if (groupId === -1) return "root";
-      const potentialGroupNode = groupTree.find(
-        (node) => node.type === "group" && node.id === groupId,
-      );
-      return potentialGroupNode?.name == null ? "" : potentialGroupNode.name;
+      if (groupId === MISSING_GROUP_ID) return "root";
+      return findGroup(segmentGroups, groupId)?.name ?? "";
     },
-    [groupTree],
+    [segmentGroups],
   );
 
   const {

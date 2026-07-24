@@ -5,7 +5,6 @@ import orderBy from "lodash-es/orderBy";
 import memoizeOne from "memoize-one";
 import type { Tree, TreeGroup, TreeMap } from "viewer/model/types/tree_types";
 import type { Segment, SegmentGroup, SegmentMap } from "viewer/store";
-import type { SegmentHierarchyNode } from "../segments_tab/segments_view_helper";
 
 export const MISSING_GROUP_ID = -1;
 
@@ -255,6 +254,19 @@ export function getGroupByIdWithSubgroups(
   return groupWithSubgroups;
 }
 
+/*
+ * Returns the ids of all descendant groups of the given group, i.e. its
+ * subgroups WITHOUT the group itself. For the virtual root group
+ * (MISSING_GROUP_ID) this yields every group in the hierarchy.
+ * In contrast to getGroupByIdWithSubgroups, the group itself is excluded.
+ */
+export function getDescendantGroupIds(treeGroups: TreeGroup[], groupId: number): number[] {
+  if (groupId === MISSING_GROUP_ID) {
+    return treeGroups.flatMap((group) => getGroupByIdWithSubgroups(treeGroups, group.groupId));
+  }
+  return getGroupByIdWithSubgroups(treeGroups, groupId).filter((id) => id !== groupId);
+}
+
 export function moveGroupsHelper(
   groups: TreeGroup[] | SegmentGroup[],
   groupId: number,
@@ -311,7 +323,7 @@ export function createGroupHelper(
   return newSegmentGroups;
 }
 
-export function deepFilter<T extends TreeNode | TreeGroup | SegmentHierarchyNode>(
+export function deepFilter<T extends { children?: T[] }>(
   nodes: T[],
   predicate: (node: T) => boolean,
 ): T[] {
@@ -327,7 +339,7 @@ export function deepFilter<T extends TreeNode | TreeGroup | SegmentHierarchyNode
   }, []);
 }
 
-export function deepFlatFilter<T extends TreeNode | TreeGroup | SegmentHierarchyNode>(
+export function deepFlatFilter<T extends { children?: T[] }>(
   nodes: T[],
   predicate: (node: T) => boolean,
 ): T[] {

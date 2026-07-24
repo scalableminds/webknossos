@@ -6,19 +6,28 @@ import type { WebknossosState } from "viewer/store";
 
 let renderer: WebGLRenderer | null = null;
 
+// True while the current webglcontextlost was caused by destroyRenderer() (our own
+// teardown) rather than a real GPU crash. Set when we force the loss, cleared once a
+// new renderer (fresh context) is created — so a later genuine loss is reported normally.
+let wasContextLossForcedByTeardown = false;
+
+export function wasContextLossForced(): boolean {
+  return wasContextLossForcedByTeardown;
+}
+
 export function destroyRenderer(): void {
-  if (renderer == null) {
-    return;
-  }
+  if (renderer == null) return;
   renderer.dispose();
+  wasContextLossForcedByTeardown = true;
+  renderer.forceContextLoss();
   renderer = null;
   notifyAboutDisposedRenderer();
 }
 
 export function getRenderer(): WebGLRenderer {
-  if (renderer != null) {
-    return renderer;
-  }
+  if (renderer != null) return renderer;
+  // A fresh context is being created, so any future context loss is genuine again.
+  wasContextLossForcedByTeardown = false;
 
   const renderCanvasElement = document.getElementById("render-canvas");
   renderer = (

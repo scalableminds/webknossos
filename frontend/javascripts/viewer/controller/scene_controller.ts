@@ -474,6 +474,8 @@ class SceneController {
         taskCube.getMeshes().forEach((mesh) => {
           this.rootNode.remove(mesh);
         });
+
+        taskCube.destroy();
       }
       this.taskCubeByTracingId[tracingId] = null;
     }
@@ -666,6 +668,9 @@ class SceneController {
   }
 
   setUserBoundingBoxes(bboxes: Array<UserBoundingBox>): void {
+    for (const cube of this.userBoundingBoxes) {
+      cube.destroy();
+    }
     const newUserBoundingBoxGroup = new Group();
     this.userBoundingBoxes = bboxes.map(({ boundingBox, isVisible, color, id }) => {
       const { min, max } = boundingBox;
@@ -757,6 +762,12 @@ class SceneController {
     const layers = getDataLayers(dataset);
     const { layerBoundingBoxVisibilities, layerBoundingBoxColors } = state.temporaryConfiguration;
 
+    // Destroy the old cubes to free their geometries/materials (see setUserBoundingBoxes).
+    if (this.layerBoundingBoxes != null) {
+      for (const cube of Object.values(this.layerBoundingBoxes)) {
+        cube.destroy();
+      }
+    }
     const newLayerBoundingBoxGroup = new Group();
     this.layerBoundingBoxes = Object.fromEntries(
       layers.map((layer) => {
@@ -886,6 +897,13 @@ class SceneController {
       volume.dispose();
     }
     this.mipVolumes.clear();
+
+    this.segmentMeshController.destroy();
+
+    this.contour.destroy();
+    this.quickSelectGeometry.destroy();
+    this.lineMeasurementGeometry.destroy();
+    this.areaMeasurementGeometry.destroy();
 
     destroyRenderer();
     // @ts-expect-error

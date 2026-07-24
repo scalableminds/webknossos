@@ -184,6 +184,25 @@ class Skeleton {
     const nodeCount = sum(trees.values().map((tree) => tree.nodes.size()));
     const edgeCount = sum(trees.values().map((tree) => tree.edges.size()));
 
+    // delete actual GPU buffers in case there were any
+    if (this.treeColorTexture != null) {
+      this.treeColorTexture.dispose();
+    }
+    this.nodeShader?.destroy();
+    this.edgeShader?.destroy();
+    if (this.nodes != null) {
+      this.nodes.material.dispose();
+      for (const nodes of this.nodes.buffers) {
+        nodes.geometry.dispose();
+      }
+    }
+    if (this.edges != null) {
+      this.edges.material.dispose();
+      for (const edges of this.edges.buffers) {
+        edges.geometry.dispose();
+      }
+    }
+
     this.treeColorTexture = new DataTexture(
       new Float32Array(COLOR_TEXTURE_WIDTH * COLOR_TEXTURE_WIDTH * 4),
       COLOR_TEXTURE_WIDTH,
@@ -193,19 +212,6 @@ class Skeleton {
     );
     this.nodeShader = new NodeShader(this.treeColorTexture);
     this.edgeShader = new EdgeShader(this.treeColorTexture);
-
-    // delete actual GPU buffers in case there were any
-    if (this.nodes != null) {
-      for (const nodes of this.nodes.buffers) {
-        nodes.geometry.dispose();
-      }
-    }
-
-    if (this.edges != null) {
-      for (const edges of this.edges.buffers) {
-        edges.geometry.dispose();
-      }
-    }
 
     // create new buffers
     this.nodes = this.initializeBufferCollection(

@@ -52,6 +52,9 @@ class FlightModeView {
   group: Object3D;
   cameraPosition: Vector3;
   unsubscribeFunctions: Array<() => void> = [];
+  // Created as an instance property to avoid allocating a new Matrix4 in
+  // every rendered frame (see renderFunction).
+  private cameraPositionMatrix = new Matrix4();
 
   constructor() {
     this.setClippingDistance = this.setClippingDistanceImpl.bind(this);
@@ -99,10 +102,11 @@ class FlightModeView {
       );
       this.unsubscribeFunctions.push(
         Store.subscribe(() => {
-          // Render in the next frame after the change propagated everywhere
-          window.requestAnimationFrame(() => {
-            this.needsRerender = true;
-          });
+          // Only set the flag here (without scheduling a requestAnimationFrame
+          // per action which would queue many redundant callbacks for
+          // high-frequency actions). The animate() loop picks the flag up in
+          // the next frame, i.e. after the change propagated everywhere.
+          this.needsRerender = true;
         }),
       );
 
@@ -197,7 +201,7 @@ class FlightModeView {
         m[3], m[7], m[11], m[15],
       );
       camera.matrix.multiply(flipYRotationMatrix);
-      camera.matrix.multiply(new Matrix4().makeTranslation(...this.cameraPosition));
+      camera.matrix.multiply(this.cameraPositionMatrix.makeTranslation(...this.cameraPosition));
       camera.matrixWorldNeedsUpdate = true;
       clearCanvas(renderer);
       const storeState = Store.getState();

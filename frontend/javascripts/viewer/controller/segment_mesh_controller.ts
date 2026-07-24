@@ -71,9 +71,12 @@ const setRangeToColor = (
   if (indexRange == null) {
     indexRange = [0, geometry.attributes.color.count];
   }
+  const colorAttribute = geometry.attributes.color as BufferAttribute;
   for (let index = indexRange[0]; index < indexRange[1]; index++) {
-    (geometry.attributes.color as BufferAttribute).set(color, 3 * index);
+    colorAttribute.set(color, 3 * index);
   }
+  // Register the touched range so that the next needsUpdate only pushes
+  // this range to the GPU instead of the full color attribute.
 };
 
 type GroupForLOD = Group & {
@@ -280,8 +283,21 @@ export default class SegmentMeshController {
     }
   }
 
-  removeMeshById(segmentId: number, layerName: string, options?: { lod: number }): void {
-    const additionalCoordinates = Store.getState().flycam.additionalCoordinates;
+  removeMeshById(
+    segmentId: number,
+    layerName: string,
+    options?: {
+      lod?: number;
+      // If additionalCoordinates is not passed, the current additional
+      // coordinates of the flycam are used. Pass them explicitly to remove
+      // meshes that were loaded under other additional coordinates.
+      additionalCoordinates?: AdditionalCoordinate[] | null;
+    },
+  ): void {
+    const additionalCoordinates =
+      options?.additionalCoordinates !== undefined
+        ? options.additionalCoordinates
+        : Store.getState().flycam.additionalCoordinates;
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
     const meshGroups = this.getMeshGroups(additionalCoordKey, layerName, segmentId);
     const lodMeshGroupForLayer = this.getLODGroupOfLayer(layerName);
@@ -297,7 +313,7 @@ export default class SegmentMeshController {
     forEach(meshGroups, (meshGroup, lodStr) => {
       const currentLod = Number.parseInt(lodStr, 10);
 
-      if (options && currentLod !== options.lod) {
+      if (options?.lod != null && currentLod !== options.lod) {
         // If options.lod is provided, only remove that LOD.
         return;
       }
@@ -311,7 +327,7 @@ export default class SegmentMeshController {
 
       this.removeMeshLODFromMeshGroups(additionalCoordKey, layerName, segmentId, currentLod);
     });
-    if (options == null) {
+    if (options?.lod == null) {
       // If options.lod is provided, the parent group should not be removed
       this.removeMeshFromMeshGroups(additionalCoordKey, layerName, segmentId);
     }
@@ -720,4 +736,20 @@ export default class SegmentMeshController {
     this.updateActiveUnmappedSegmentIdHighlighting,
     150,
   );
+
+  destroy(): void {
+    this.throttledUpdateActiveUnmappedSegmentIdHighlighting.cancel();
+    // Dispose all mesh groups (across all additional coordinates) so that
+    // their geometries and materials are freed on the GPU.
+    for (const recordsOfLayers of Object.values(this.meshesGroupsPerSegmentId)) {
+      for (const recordsOfSegments of Object.values(recordsOfLayers)) {
+        for (const recordsOfLODs of Object.values(recordsOfSegments)) {
+          for (const meshGroup of Object.values(recordsOfLODs)) {
+            this.disposeMeshGroup(meshGroup);
+          }
+        }
+      }
+    }
+    this.meshesGroupsPerSegmentId = {};
+  }
 }

@@ -109,6 +109,7 @@ export function renderToTexture(
   renderer.render(scene, camera);
   renderer.readRenderTargetPixels(renderTarget, 0, 0, width, height, buffer);
   renderer.setRenderTarget(null);
+  renderTarget.dispose();
   return buffer;
 }
 

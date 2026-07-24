@@ -52,6 +52,7 @@ import {
   determineAllowedModes,
   getDataLayers,
   getDatasetCenter,
+  getDefaultZoomStep,
   getSegmentationLayers,
   getUnifiedAdditionalCoordinates,
   hasSegmentation,
@@ -735,6 +736,11 @@ function determineDefaultState(
     zoomStep = userState.zoomLevel;
   } else if (someTracing != null) {
     zoomStep = someTracing.zoomLevel;
+  }
+
+  if (zoomStep == null) {
+    // No zoom was configured by the user pick a zoom for an existing mag.
+    zoomStep = getDefaultZoomStep(dataset);
   }
 
   let rotation = datasetConfiguration.rotation;

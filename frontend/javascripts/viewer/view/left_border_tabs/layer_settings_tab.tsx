@@ -369,8 +369,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
     const state = Store.getState();
     const canBeMadeHybrid =
-      this.props.annotation.skeleton === null &&
-      this.props.annotation.annotationType === APIAnnotationTypeEnum.Explorational &&
+      !this.props.hasSkeletonLayer &&
+      this.props.annotationType === APIAnnotationTypeEnum.Explorational &&
       state.task === null;
 
     return (
@@ -392,7 +392,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         {segmentationLayerSettings}
         <SkeletonLayerSettings />
 
-        {this.props.annotation.isUpdatingCurrentlyAllowed &&
+        {this.props.isUpdatingCurrentlyAllowed &&
         this.props.controlMode === ControlModeEnum.TRACE ? (
           <>
             <Divider />
@@ -404,7 +404,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           </>
         ) : null}
 
-        {this.props.annotation.isUpdatingCurrentlyAllowed && canBeMadeHybrid ? (
+        {this.props.isUpdatingCurrentlyAllowed && canBeMadeHybrid ? (
           <Row justify="center" align="middle">
             <Button
               onClick={this.addSkeletonAnnotationLayer}
@@ -439,7 +439,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           <AddVolumeLayerModal
             dataset={this.props.dataset}
             onCancel={this.hideAddVolumeLayerModal}
-            annotation={this.props.annotation}
             preselectedLayerName={this.state.preselectedSegmentationLayerName}
             disableLayerSelection={this.state.segmentationLayerWasPreselected}
           />
@@ -453,7 +452,12 @@ const mapStateToProps = (state: WebknossosState) => ({
   datasetConfiguration: state.datasetConfiguration,
   histogramData: state.temporaryConfiguration.histogramData,
   dataset: state.dataset,
-  annotation: state.annotation,
+  // Select only the annotation fields that are actually rendered. Subscribing to
+  // the whole annotation would re-render the entire settings panel on every
+  // skeleton/volume mutation (e.g., each placed node or brush stroke).
+  isUpdatingCurrentlyAllowed: state.annotation.isUpdatingCurrentlyAllowed,
+  annotationType: state.annotation.annotationType,
+  hasSkeletonLayer: state.annotation.skeleton != null,
   controlMode: state.temporaryConfiguration.controlMode,
   isAdminOrDatasetManager:
     state.activeUser != null ? isUserAdminOrDatasetManager(state.activeUser) : false,

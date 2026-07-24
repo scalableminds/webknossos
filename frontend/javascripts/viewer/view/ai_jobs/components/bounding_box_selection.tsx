@@ -67,15 +67,14 @@ export function BoundingBoxSelection({
 
   return (
     <Select
-      showSearch
+      showSearch={{ filterOption: filterOption, optionFilterProp: "children" }}
       placeholder="Select a bounding box"
-      optionFilterProp="children"
       options={options}
-      filterOption={filterOption}
       disabled={userBoundingBoxes.length < 1}
       onSelect={setSelectedBoundingBoxId}
       style={style}
       value={value}
+      popupMatchSelectWidth={false}
     />
   );
 }

@@ -53,6 +53,10 @@ import { ACTIONBAR_MARGIN_LEFT } from "./action_bar/tools/tool_helpers";
 import ToolkitView from "./action_bar/tools/toolkit_switcher_view";
 import NumberSliderSetting from "./left_border_tabs/components/number_slider_setting";
 
+const ButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
+  AsyncButton,
+);
+
 const VersionRestoreWarning = (
   <Alert
     title="Read-only version restore mode active!"
@@ -210,10 +214,6 @@ function CreateAnnotationButton() {
       : null;
     await continueWithLayer(selectedLayer);
   };
-
-  const ButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
-    AsyncButton,
-  );
 
   return (
     <div

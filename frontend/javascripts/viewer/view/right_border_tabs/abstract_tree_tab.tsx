@@ -2,7 +2,7 @@ import { Button } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import window from "libs/window";
 import throttle from "lodash-es/throttle";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import type { EmptyObject } from "types/type_utils";
 import { setActiveNodeAction } from "viewer/model/actions/skeletontracing_actions";
@@ -16,39 +16,48 @@ const AbstractTreeTab: React.FC<EmptyObject> = () => {
   const nodeListRef = useRef<Array<NodeListItem>>([]);
   const dispatch = useDispatch();
 
-  const drawTree = throttle(
-    useCallback(() => {
-      if (!skeletonTracing || !isVisible) {
-        return;
-      }
+  const drawTreeImpl = useCallback(() => {
+    if (!skeletonTracing || !isVisible) {
+      return;
+    }
 
-      const { activeTreeId, activeNodeId, trees } = skeletonTracing;
-      const canvas = canvasRef.current;
+    const { activeTreeId, activeNodeId, trees } = skeletonTracing;
+    const canvas = canvasRef.current;
 
-      if (canvas) {
-        nodeListRef.current = AbstractTreeRenderer.drawTree(
-          canvas,
-          activeTreeId != null ? trees.getNullable(activeTreeId) : null,
-          activeNodeId,
-          [canvas.offsetWidth, canvas.offsetHeight],
-        );
-      }
-    }, [skeletonTracing, isVisible]),
-    1000,
-  );
+    if (canvas) {
+      nodeListRef.current = AbstractTreeRenderer.drawTree(
+        canvas,
+        activeTreeId != null ? trees.getNullable(activeTreeId) : null,
+        activeNodeId,
+        [canvas.offsetWidth, canvas.offsetHeight],
+      );
+    }
+  }, [skeletonTracing, isVisible]);
+
+  // The throttled function is created only once and delegates to the latest
+  // drawTreeImpl via a ref. Otherwise, the throttling would not take effect
+  // across renders (drawing may be slow for very large tracings).
+  const drawTreeImplRef = useRef(drawTreeImpl);
+  // Keep the ref in sync in an effect (not during render) to keep the render
+  // phase pure. This effect is declared before the drawing effect below so the
+  // ref is updated first when drawTreeImpl changes.
+  useEffect(() => {
+    drawTreeImplRef.current = drawTreeImpl;
+  }, [drawTreeImpl]);
+  const drawTree = useMemo(() => throttle(() => drawTreeImplRef.current(), 1000), []);
 
   useEffect(() => {
     window.addEventListener("resize", drawTree, false);
-    drawTree();
 
     return () => {
       window.removeEventListener("resize", drawTree, false);
+      drawTree.cancel();
     };
   }, [drawTree]);
 
   useEffect(() => {
     drawTree();
-  }, [drawTree]);
+  }, [drawTreeImpl, drawTree]);
 
   const handleClick = useCallback(
     (event: React.MouseEvent<HTMLCanvasElement>) => {

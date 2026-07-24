@@ -16,7 +16,7 @@ import extend from "lodash-es/extend";
 import isEqual from "lodash-es/isEqual";
 import size from "lodash-es/size";
 import messages from "messages";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { APIDataLayer, APIDataSource, APIDataset, MutableAPIDataset } from "types/api_types";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
@@ -98,9 +98,6 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
   const [savedDataSourceOnServer, setSavedDataSourceOnServer] = useState<
     APIDataSource | null | undefined
   >(null);
-
-  onComplete = onComplete ? onComplete : () => navigate("/dashboard");
-  onCancel = onCancel ? onCancel : () => navigate("/dashboard");
 
   const fetchData = useCallback(async (): Promise<string | undefined> => {
     try {
@@ -311,7 +308,11 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
       queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
     }
 
-    onComplete();
+    if (onComplete) {
+      onComplete();
+    } else {
+      navigate("/dashboard");
+    }
   }, [
     datasetId,
     datasetDefaultConfiguration,
@@ -321,6 +322,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
     isEditingMode,
     queryClient,
     onComplete,
+    navigate,
     form.getFieldsValue,
   ]);
 
@@ -362,8 +364,12 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
   }, []);
 
   const handleCancel = useCallback(() => {
-    onCancel();
-  }, [onCancel]);
+    if (onCancel) {
+      onCancel();
+    } else {
+      navigate("/dashboard");
+    }
+  }, [onCancel, navigate]);
 
   useBeforeUnload(hasUnsavedChanges, messages["dataset.leave_with_unsaved_changes"]);
 
@@ -379,19 +385,34 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
     }
   }, [fetchData, formProp]);
 
-  const contextValue: DatasetSettingsContextValue = {
-    form,
-    isLoading,
-    dataset,
-    datasetId,
-    datasetDefaultConfiguration,
-    isEditingMode,
-    handleSubmit,
-    handleCancel,
-    onValuesChange,
-    getFormValidationSummary,
-    hasFormErrors,
-  };
+  const contextValue: DatasetSettingsContextValue = useMemo(
+    () => ({
+      form,
+      isLoading,
+      dataset,
+      datasetId,
+      datasetDefaultConfiguration,
+      isEditingMode,
+      handleSubmit,
+      handleCancel,
+      onValuesChange,
+      getFormValidationSummary,
+      hasFormErrors,
+    }),
+    [
+      form,
+      isLoading,
+      dataset,
+      datasetId,
+      datasetDefaultConfiguration,
+      isEditingMode,
+      handleSubmit,
+      handleCancel,
+      onValuesChange,
+      getFormValidationSummary,
+      hasFormErrors,
+    ],
+  );
 
   return (
     <DatasetSettingsContext.Provider value={contextValue}>

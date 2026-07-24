@@ -45,7 +45,7 @@ import {
   storeLayoutConfig,
 } from "viewer/view/layouting/layout_persistence";
 import { RenderToPortal } from "viewer/view/layouting/portal_utils";
-import NmlUploadZoneContainer from "viewer/view/nml_upload_zone_container";
+import NmlUploadZoneContainer from "viewer/view/nml_upload/nml_upload_zone_container";
 import WelcomeToast from "viewer/view/novel_user_experiences/welcome_toast";
 import { importTracingFiles } from "viewer/view/right_border_tabs/skeleton_tab/import_tracing_files";
 import TracingView from "viewer/view/tracing_view";

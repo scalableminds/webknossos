@@ -211,9 +211,6 @@ class Plane {
     });
     this.storePropertyUnsubscribers = [];
 
-    // Dispose the geometries (the subdivided plane, the two crosshairs and
-    // the TD-view border) and the memoized line materials. Otherwise, they
-    // would stay registered with the renderer until the context is GC'ed.
     for (const mesh of this.getMeshes()) {
       mesh.geometry.dispose();
     }

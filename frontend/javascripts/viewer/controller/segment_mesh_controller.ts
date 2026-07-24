@@ -75,10 +75,8 @@ const setRangeToColor = (
   for (let index = indexRange[0]; index < indexRange[1]; index++) {
     colorAttribute.set(color, 3 * index);
   }
-  // Register the touched range so that the next needsUpdate only uploads
-  // this range instead of the full color attribute (which can be tens of
-  // MB for merged proofreading meshes).
-  colorAttribute.addUpdateRange(3 * indexRange[0], 3 * (indexRange[1] - indexRange[0]));
+  // Register the touched range so that the next needsUpdate only pushes
+  // this range to the GPU instead of the full color attribute.
 };
 
 type GroupForLOD = Group & {

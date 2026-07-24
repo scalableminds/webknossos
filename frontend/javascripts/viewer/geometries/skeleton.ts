@@ -187,9 +187,6 @@ class Skeleton {
     this.rootGroup.remove(...this.rootGroup.children);
     this.pickingNode.remove(...this.pickingNode.children);
 
-    // Dispose the resources of the previous reset() call (if any). Otherwise,
-    // the old tree color texture, the shader materials (including their store
-    // subscriptions) and the old GPU buffers would leak on every tracing change.
     if (this.treeColorTexture != null) {
       this.treeColorTexture.dispose();
     }

@@ -1420,7 +1420,7 @@ export class ProofreadToolController extends ToolController {
     if (isMultiSplitActive && ctrlOrMetaKey) {
       const unmappedSegmentId = getUnmappedSegmentIdForPosition(globalPosition);
       const mappedSegmentId = getSegmentIdForPosition(globalPosition);
-      if (unmappedSegmentId === 0 || mappedSegmentId === 0) {
+      if (unmappedSegmentId === 0n || mappedSegmentId === 0n) {
         // No valid ids were found, ignore action.
         return;
       }

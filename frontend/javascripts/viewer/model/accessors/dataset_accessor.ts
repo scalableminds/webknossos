@@ -40,7 +40,10 @@ import type {
   WebknossosState,
 } from "viewer/store";
 import BoundingBox from "../bucket_data_handling/bounding_box";
-import { getSupportedValueRangeForElementClass } from "../bucket_data_handling/data_rendering_logic";
+import {
+  getSegmentIdRangeForElementClass,
+  getSupportedValueRangeForElementClass,
+} from "../bucket_data_handling/data_rendering_logic";
 import { convertToDenseMags, MagInfo } from "../helpers/mag_info";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
 
@@ -356,13 +359,16 @@ export function getMaximumSegmentIdForLayer(dataset: APIDataset, layerName: stri
   return getDefaultValueRangeOfLayer(dataset, layerName)[1];
 }
 
+// Used for validating segment/cell ids, which are always bigint. uint64 and int64 ids can
+// exceed Number.MAX_SAFE_INTEGER, so this uses the bigint-based getSegmentIdRangeForElementClass
+// rather than the JS-number-based getSupportedValueRangeForElementClass.
 export function isInSupportedValueRangeForLayer(
   dataset: APIDataset,
   layerName: string,
-  value: number,
+  value: bigint,
 ): boolean {
   const elementClass = getElementClass(dataset, layerName);
-  const [min, max] = getSupportedValueRangeForElementClass(elementClass);
+  const [min, max] = getSegmentIdRangeForElementClass(elementClass);
   return value >= min && value <= max;
 }
 
@@ -421,8 +427,8 @@ export function isElementClassSupported(layerInfo: DataLayerType): boolean {
 
     case "uint64":
     case "int64": {
-      // We only support 64 bit for segmentation (note that only segment ids
-      // below 2**53 - 1 will be handled properly due to the JS Number type currently).
+      // We only support 64 bit for segmentation. Segment ids are bigint throughout the
+      // frontend, so the full uint64/int64 range is handled (no longer capped at 2**53-1).
       return layerInfo.category === "segmentation";
     }
 

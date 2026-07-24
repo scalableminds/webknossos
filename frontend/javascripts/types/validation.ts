@@ -1,4 +1,5 @@
 import jsonschema from "jsonschema";
+import { toBigInt } from "libs/bigint_helpers";
 import cloneDeepWith from "lodash-es/cloneDeepWith";
 import ViewConfigurationSchema from "types/schemas/dataset_view_configuration.schema";
 import DatasourceSchema from "types/schemas/datasource.schema";
@@ -73,6 +74,14 @@ export const validateUrlStateJSON = (value: string) => {
       if (value == null) return null;
       const caseFixed = typeof value === "string" ? value.toUpperCase() : value;
       return caseFixed === "JSON" ? "JSON" : "HDF5";
+    }
+    if (key === "segmentId") {
+      // Accepts both the legacy plain-number encoding and the unsigned-decimal string
+      // encoding (needed for ids that exceed the JS Number safe-integer range).
+      return toBigInt(value);
+    }
+    if (key === "agglomerateIdsToImport" && Array.isArray(value)) {
+      return value.map(toBigInt);
     }
     // let lodash handle everything else
     return undefined;

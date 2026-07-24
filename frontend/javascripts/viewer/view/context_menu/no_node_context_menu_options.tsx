@@ -68,7 +68,7 @@ import { useMultiCutToolOptions } from "./min_cut_item";
 
 export function useNoNodeContextMenuOptions(
   contextInfo: ContextMenuInfo,
-  segmentIdAtPosition: number,
+  segmentIdAtPosition: bigint,
   infoRows: ItemType[],
 ): ItemType[] {
   const { globalPosition } = contextInfo;
@@ -126,7 +126,7 @@ export function useNoNodeContextMenuOptions(
     isProofreadingActive && maybeUnmappedSegmentId != null ? "Supervoxel" : "Segment";
 
   const proofreadingMultiSplitToolActions = useMultiCutToolOptions(
-    maybeUnmappedSegmentId ?? 0,
+    maybeUnmappedSegmentId ?? 0n,
     segmentIdAtPosition,
     segmentOrSuperVoxel,
     segmentIdLabel,
@@ -172,7 +172,7 @@ export function useNoNodeContextMenuOptions(
 
     // Ensure that the segment ID is loaded, since a mapping might have been activated
     // shortly before
-    if (segmentId === 0) {
+    if (segmentId === 0n) {
       Toast.info("No segment found at the clicked position");
       return;
     }
@@ -196,7 +196,7 @@ export function useNoNodeContextMenuOptions(
     }
     const clickedSegmentId = getSegmentIdForPosition(globalPosition);
     const layerName = visibleSegmentationLayer.name;
-    if (clickedSegmentId === 0) {
+    if (clickedSegmentId === 0n) {
       Toast.info("No segment found at the clicked position");
       return;
     }
@@ -213,7 +213,7 @@ export function useNoNodeContextMenuOptions(
       return;
     }
     const clickedSegmentId = getSegmentIdForPosition(globalPosition);
-    if (clickedSegmentId === 0) {
+    if (clickedSegmentId === 0n) {
       Toast.info("No segment found at the clicked position");
       return;
     }
@@ -249,7 +249,7 @@ export function useNoNodeContextMenuOptions(
       return;
     }
     const clickedSegmentId = getSegmentIdForPosition(globalPosition);
-    if (clickedSegmentId === 0) {
+    if (clickedSegmentId === 0n) {
       Toast.info("No segment found at the clicked position");
       return;
     }
@@ -272,7 +272,7 @@ export function useNoNodeContextMenuOptions(
 
     const segmentId = getSegmentIdForPosition(globalPosition);
 
-    if (segmentId === 0) {
+    if (segmentId === 0n) {
       Toast.info("No segment found at the clicked position");
       return;
     }
@@ -515,7 +515,7 @@ export function useNoNodeContextMenuOptions(
       ? [
           // Segment 0 cannot/shouldn't be made active (as this
           // would be an eraser effectively).
-          segmentIdAtPosition !== 0 && !disabledVolumeInfo.VOXEL_PIPETTE.isDisabled
+          segmentIdAtPosition !== 0n && !disabledVolumeInfo.VOXEL_PIPETTE.isDisabled
             ? {
                 key: "select-cell",
                 onClick: () => {
@@ -537,9 +537,9 @@ export function useNoNodeContextMenuOptions(
                 ),
               }
             : null,
-          segmentIdAtPosition !== 0 ? onlyShowThisSegmentItem : null,
-          segmentIdAtPosition !== 0 ? toggleSegmentVisibilityItem : null,
-          segmentIdAtPosition !== 0 ? showAllSegmentsItem : null,
+          segmentIdAtPosition !== 0n ? onlyShowThisSegmentItem : null,
+          segmentIdAtPosition !== 0n ? toggleSegmentVisibilityItem : null,
+          segmentIdAtPosition !== 0n ? showAllSegmentsItem : null,
           focusInSegmentListItem,
           loadPrecomputedMeshItem,
           computeMeshAdHocItem,

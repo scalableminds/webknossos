@@ -20,6 +20,7 @@
 import { writeFileSync } from "node:fs";
 import path from "node:path";
 import { readdir, unlink } from "fs/promises";
+import { bigIntReplacer } from "libs/bigint_helpers";
 import DiffableMap from "libs/diffable_map";
 import range from "lodash-es/range";
 import type { BackendMock } from "test/sagas/proofreading/proofreading_test_utils";
@@ -54,7 +55,7 @@ class DebuggingStateSerializer {
   private buildJson(version: number): string {
     const versionMap = this.mapping.getMap(version);
 
-    const adjacencyList: Map<number, Set<number>> = this.mapping.getAdjacencyList(version);
+    const adjacencyList: Map<bigint, Set<bigint>> = this.mapping.getAdjacencyList(version);
 
     if (!adjacencyList) {
       throw new Error("DebuggingStateSerializer requires access to adjacencyList (test-only).");
@@ -75,7 +76,7 @@ class DebuggingStateSerializer {
         if (value instanceof DiffableMap) {
           return { entries: Array.from(value.entries()), _isDiffableMap: true };
         }
-        return value;
+        return bigIntReplacer(_key, value);
       },
     );
   }

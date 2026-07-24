@@ -51,7 +51,7 @@ export function useMeshItems(contextInfo: ContextMenuInfo): MenuItemType[] {
   const activeUnmappedSegmentId = useWkSelector((state) =>
     getActiveUnmappedSegmentId(state, volumeTracing),
   );
-  const activeCellId = volumeTracing ? getActiveCellId(volumeTracing) : 0;
+  const activeCellId = volumeTracing ? getActiveCellId(volumeTracing) : 0n;
 
   const segments = useWkSelector((state) =>
     volumeTracing != null ? getSegmentsForLayer(state, volumeTracing.tracingId) : null,
@@ -67,14 +67,14 @@ export function useMeshItems(contextInfo: ContextMenuInfo): MenuItemType[] {
 
   const segmentIdLabel =
     isProofreadingActive && maybeUnmappedSegmentId != null
-      ? `within Segment ${clickedMeshId ?? 0}`
-      : (clickedMeshId ?? 0);
+      ? `within Segment ${clickedMeshId ?? 0n}`
+      : (clickedMeshId ?? 0n);
   const segmentOrSuperVoxel =
     isProofreadingActive && maybeUnmappedSegmentId != null ? "Supervoxel" : "Segment";
 
   const proofreadingMultiSplitToolActions = useMultiCutToolOptions(
-    maybeUnmappedSegmentId ?? 0,
-    clickedMeshId ?? 0,
+    maybeUnmappedSegmentId ?? 0n,
+    clickedMeshId ?? 0n,
     segmentOrSuperVoxel,
     segmentIdLabel,
   );

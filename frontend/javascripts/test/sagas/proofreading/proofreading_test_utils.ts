@@ -1,4 +1,5 @@
 import type { MinCutTargetEdge, NeighborInfo } from "admin/rest_api";
+import { toBigInt } from "libs/bigint_helpers";
 import type { RequestOptionsWithData } from "libs/request";
 import compact from "lodash-es/compact";
 import isEqual from "lodash-es/isEqual";
@@ -15,7 +16,7 @@ import {
 import { createSaveQueueFromUpdateActions } from "test/helpers/saveHelpers";
 import { delay } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
-import type { Vector2, Vector3 } from "viewer/constants";
+import type { Vector3 } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { getCurrentMag } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
@@ -124,7 +125,7 @@ export class BackendMock {
 
   constructor(
     public overrides: BucketOverride[],
-    additionalEdges: Vector2[] = [],
+    additionalEdges: Array<[bigint, bigint]> = [],
     private initialState: WebknossosState | undefined = undefined,
     public canGrantMutex: boolean = true,
   ) {
@@ -189,7 +190,9 @@ export class BackendMock {
     this.onSavedListeners.push(fn);
   };
 
-  getCurrentMappingEntriesFromServer = (version?: number | null | undefined): Vector2[] => {
+  getCurrentMappingEntriesFromServer = (
+    version?: number | null | undefined,
+  ): Array<[bigint, bigint]> => {
     if (version == null) {
       version = this.agglomerateMapping.currentVersion;
     }
@@ -312,7 +315,7 @@ export class BackendMock {
     _datasetId: string,
     _layerName: string,
     _mappingName: string,
-    segmentId: number,
+    segmentId: bigint,
   ): Promise<Vector3> => {
     return getPositionForSegmentId(segmentId);
   };
@@ -378,7 +381,8 @@ export class BackendMock {
   getEditableAgglomerateTreeAsSkeletonTracing = async (
     _tracingStoreUrl: string,
     tracingId: string,
-    agglomerateId: number,
+    agglomerateId: bigint,
+    _version: number,
   ): Promise<ArrayBuffer> => {
     // Does not currently support versioning as this would require a versioned adjacency list.
     const version = this.agglomerateMapping.currentVersion;
@@ -418,8 +422,10 @@ const initialBucketOverrides: Array<{ position: Vector3; value: number }> = [
   { position: [7, 7, 7], value: 7 },
 ];
 
-export function getPositionForSegmentId(sourceSegmentId: number) {
-  const position = initialBucketOverrides.find((el) => el.value === sourceSegmentId)?.position;
+export function getPositionForSegmentId(sourceSegmentId: NumberLike) {
+  const position = initialBucketOverrides.find(
+    (el) => el.value === Number(sourceSegmentId),
+  )?.position;
   if (!position) {
     throw new Error(`Could not look up position by using ${sourceSegmentId} as id.`);
   }
@@ -428,7 +434,7 @@ export function getPositionForSegmentId(sourceSegmentId: number) {
 
 export function mockInitialBucketAndAgglomerateData(
   context: WebknossosTestContext,
-  additionalEdges: Vector2[] = [],
+  additionalEdges: Array<[bigint, bigint]> = [],
   initialState: WebknossosState | undefined = undefined,
   options?: { grantMutex?: boolean },
 ) {
@@ -505,31 +511,31 @@ export function prepareGetNeighborsForAgglomerateNode(
           `Version mismatch. Expected requested version to be ${expectedVersion} but got ${version}`,
         );
       }
-      if (segmentInfo.segmentId === 2) {
+      if (segmentInfo.segmentId === 2n) {
         const neighbors = includeSegmentIdToOne
           ? [
               {
-                segmentId: 1,
+                segmentId: 1n,
                 position: [1, 1, 1] as Vector3,
               },
               {
-                segmentId: 3,
+                segmentId: 3n,
                 position: [3, 3, 3] as Vector3,
               },
             ]
           : [
               {
-                segmentId: 3,
+                segmentId: 3n,
                 position: [3, 3, 3] as Vector3,
               },
             ];
         return {
-          segmentId: 2,
+          segmentId: 2n,
           neighbors,
         };
       }
       return {
-        segmentId: Number.parseInt(segmentInfo.segmentId.toString(), 10),
+        segmentId: toBigInt(segmentInfo.segmentId),
         neighbors: [],
       };
     },
@@ -572,12 +578,12 @@ export function* performCutFromAllNeighbours(
     yield loadAgglomerateMeshes([4, 6, 1]);
 
     const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context, tracingId);
-    expect(sortBy([...loadedMeshIds])).toEqual([1, 4, 6]);
+    expect(sortBy([...loadedMeshIds])).toEqual([1n, 4n, 6n]);
   }
   // Set up the merge-related segment partners. Normally, this would happen
   // due to the user's interactions.
-  yield put(updateSegmentAction(1, { anchorPosition: [2, 2, 2] }, tracingId));
-  yield put(setActiveCellAction(1));
+  yield put(updateSegmentAction(1n, { anchorPosition: [2, 2, 2] }, tracingId));
+  yield put(setActiveCellAction(1n));
 
   yield makeMappingEditableForTest();
   // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
@@ -603,13 +609,13 @@ export function* simulatePartitionedSplitAgglomeratesViaMeshes(
 ): Saga<void> {
   const { tracingId } = yield* select((state) => state.annotation.volumes[0]);
   const expectedInitialMapping = new Map([
-    [1, 1],
-    [2, 1],
-    [3, 1],
-    [4, 4],
-    [5, 4],
-    [6, 6],
-    [7, 6],
+    [1n, 1n],
+    [2n, 1n],
+    [3n, 1n],
+    [4n, 4n],
+    [5n, 4n],
+    [6n, 6n],
+    [7n, 6n],
   ]);
 
   yield call(initializeMappingAndTool, context, tracingId);
@@ -622,13 +628,13 @@ export function* simulatePartitionedSplitAgglomeratesViaMeshes(
     yield loadAgglomerateMeshes([4, 6, 1]);
 
     const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context, tracingId);
-    expect(sortBy([...loadedMeshIds])).toEqual([1, 4, 6]);
+    expect(sortBy([...loadedMeshIds])).toEqual([1n, 4n, 6n]);
   }
 
   // Set up the merge-related segment partners. Normally, this would happen
   // due to the user's interactions.
-  yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
-  yield put(setActiveCellAction(1, undefined, null, 1));
+  yield put(updateSegmentAction(1n, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
+  yield put(setActiveCellAction(1n, undefined, null, 1n));
 
   yield makeMappingEditableForTest();
   // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
@@ -644,11 +650,11 @@ export function* simulatePartitionedSplitAgglomeratesViaMeshes(
   //Activate Multi-split tool
   yield put(updateUserSettingAction("isMultiSplitActive", true));
   // Select partition 1
-  yield put(toggleSegmentInPartitionAction(1, 1, 1));
-  yield put(toggleSegmentInPartitionAction(2, 1, 1));
+  yield put(toggleSegmentInPartitionAction(1n, 1, 1n));
+  yield put(toggleSegmentInPartitionAction(2n, 1, 1n));
   // Select partition 2
-  yield put(toggleSegmentInPartitionAction(1337, 2, 1));
-  yield put(toggleSegmentInPartitionAction(1338, 2, 1));
+  yield put(toggleSegmentInPartitionAction(1337n, 2, 1n));
+  yield put(toggleSegmentInPartitionAction(1338n, 2, 1n));
   // Execute the actual merge and wait for the finished mapping.
   yield put(minCutPartitionsAction());
   yield take("FINISH_MAPPING_INITIALIZATION");
@@ -679,19 +685,23 @@ export const mockEdgesForPartitionedAgglomerateMinCut = (
         );
       }
       const { agglomerateId, partition1, partition2 } = segmentsInfo;
-      if (agglomerateId === 1 && isEqual(partition1, [1, 2]) && isEqual(partition2, [1337, 1338])) {
+      if (
+        agglomerateId === 1n &&
+        isEqual(partition1, [1n, 2n]) &&
+        isEqual(partition2, [1337n, 1338n])
+      ) {
         return [
           {
             position1: getPositionForSegmentId(1),
             position2: getPositionForSegmentId(1338),
-            segmentId1: 1,
-            segmentId2: 1338,
+            segmentId1: 1n,
+            segmentId2: 1338n,
           },
           {
             position1: getPositionForSegmentId(3),
             position2: getPositionForSegmentId(1337),
-            segmentId1: 3,
-            segmentId2: 1337,
+            segmentId1: 3n,
+            segmentId2: 1337n,
           },
         ];
       }
@@ -701,7 +711,7 @@ export const mockEdgesForPartitionedAgglomerateMinCut = (
 
 export function* expectMapping(
   tracingId: string,
-  expectedMapping: Map<number, number>,
+  expectedMapping: Map<bigint, bigint>,
 ): Saga<void> {
   const mapping0 = yield* select(
     (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
@@ -711,7 +721,7 @@ export function* expectMapping(
 
 export function* expectSegmentList(
   tracingId: string,
-  expectedSegments: Array<Partial<Segment> & { id: number }>,
+  expectedSegments: Array<Partial<Segment> & { id: bigint }>,
   backendMock?: BackendMock,
 ): Saga<void> {
   const states = compact([Store.getState(), backendMock?.getState()]);
@@ -719,9 +729,9 @@ export function* expectSegmentList(
   for (const state of states) {
     const { segments } = getVolumeTracingById(state.annotation, tracingId);
     const expectedSegmentIds = expectedSegments.map((s) => s.id);
-    const actualSegmentIds = Array.from(segments.keys() as Generator<number>);
-    expect(actualSegmentIds.sort((a, b) => a - b)).toEqual(
-      expectedSegmentIds.sort((a, b) => a - b),
+    const actualSegmentIds = Array.from(segments.keys());
+    expect(actualSegmentIds.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))).toEqual(
+      expectedSegmentIds.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)),
     );
 
     for (const expectedSegment of expectedSegments) {

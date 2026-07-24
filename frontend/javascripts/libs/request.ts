@@ -1,3 +1,4 @@
+import { bigIntReplacer } from "libs/bigint_helpers";
 import handleStatus from "libs/handle_http_status";
 import defaultsDeep from "lodash-es/defaultsDeep";
 import isArrayBuffer from "lodash-es/isArrayBuffer";
@@ -70,7 +71,7 @@ class Request {
     let body =
       isString(options.data) || isArrayBuffer(options.data)
         ? options.data
-        : JSON.stringify(options.data);
+        : JSON.stringify(options.data, bigIntReplacer);
 
     if (options.compress) {
       body = await compress(body);

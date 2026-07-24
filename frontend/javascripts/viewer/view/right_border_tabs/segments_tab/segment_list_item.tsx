@@ -70,7 +70,7 @@ const getLoadPrecomputedMeshMenuItem = (
   segment: Segment,
   currentMeshFile: APIMeshFileInfo | null | undefined,
   loadPrecomputedMesh: (
-    segmentId: number,
+    segmentId: bigint,
     seedPosition: Vector3,
     seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
     meshFileName: string,
@@ -125,7 +125,7 @@ const getLoadPrecomputedMeshMenuItem = (
 const getComputeMeshAdHocMenuItem = (
   segment: Segment,
   loadAdHocMesh: (
-    segmentId: number,
+    segmentId: bigint,
     seedPosition: Vector3,
     seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   ) => void,
@@ -161,11 +161,11 @@ const getComputeMeshAdHocMenuItem = (
 const getMakeSegmentActiveMenuItem = (
   segment: Segment,
   setActiveCell: (
-    arg0: number,
+    arg0: bigint,
     anchorPosition?: Vector3 | null,
     additionalCoordinates?: AdditionalCoordinate[] | null,
   ) => void,
-  activeCellId: number | null | undefined,
+  activeCellId: bigint | null | undefined,
   isEditingDisabled: boolean,
   hideContextMenu: (_ignore?: any) => void,
 ): MenuItemType => {
@@ -191,34 +191,34 @@ const getMakeSegmentActiveMenuItem = (
 type Props = {
   segment: Segment;
   mappingInfo: ActiveMappingInfo;
-  selectedSegmentIds: number[] | null | undefined;
-  activeCellId: number | null | undefined;
-  setHoveredSegmentId: (arg0: number | null | undefined) => void;
+  selectedSegmentIds: bigint[] | null | undefined;
+  activeCellId: bigint | null | undefined;
+  setHoveredSegmentId: (arg0: bigint | null | undefined) => void;
   allowUpdate: boolean;
   updateSegment: (
-    arg0: number,
+    arg0: bigint,
     arg1: Partial<Segment>,
     arg2: string,
     createsNewUndoState: boolean,
   ) => void;
-  removeSegment: (arg0: number, arg2: string) => void;
-  deleteSegmentData: (arg0: number, arg2: string, callback?: () => void) => void;
-  setMeshOpacity: (arg0: number, arg1: string, arg2: number) => void;
+  removeSegment: (arg0: bigint, arg2: string) => void;
+  deleteSegmentData: (arg0: bigint, arg2: string, callback?: () => void) => void;
+  setMeshOpacity: (arg0: bigint, arg1: string, arg2: number) => void;
   onSelectSegment: (arg0: Segment) => void;
   visibleSegmentationLayer: APISegmentationLayer | null | undefined;
   loadAdHocMesh: (
-    segmentId: number,
+    segmentId: bigint,
     anchorPosition: Vector3,
     additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   ) => void;
   loadPrecomputedMesh: (
-    segmentId: number,
+    segmentId: bigint,
     seedPosition: Vector3,
     seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
     meshFileName: string,
   ) => void;
   setActiveCell: (
-    arg0: number,
+    arg0: bigint,
     anchorPosition?: Vector3 | null,
     additionalCoordinates?: AdditionalCoordinate[] | null,
   ) => void;
@@ -247,7 +247,7 @@ function _MeshInfoItem(props: {
 }) {
   const additionalCoordinates = useWkSelector((state) => state.flycam.additionalCoordinates);
   const dispatch = useDispatch();
-  const onChangeMeshVisibility = (layerName: string, id: number, isVisible: boolean) => {
+  const onChangeMeshVisibility = (layerName: string, id: bigint, isVisible: boolean) => {
     dispatch(updateMeshVisibilityAction(layerName, id, isVisible, mesh?.seedAdditionalCoordinates));
   };
 
@@ -383,7 +383,7 @@ function _MeshInfoItem(props: {
 
 const MeshInfoItem = React.memo(_MeshInfoItem);
 
-function SegmentIdAddendum({ id }: { id: number }) {
+function SegmentIdAddendum({ id }: { id: bigint }) {
   return (
     <FastTooltip title="Segment ID">
       <span className="deemphasized italic" style={{ marginLeft: 4 }}>
@@ -547,7 +547,7 @@ function _SegmentListItem({
 
             modal.confirm({
               content: `Are you sure you want to delete the data of segment ${getSegmentName(
-                segment,
+                { id: segment.id, name: segment.name },
                 true,
               )}? This operation will set all voxels with id ${segment.id} to 0.`,
               okText: "Yes, delete",
@@ -559,7 +559,8 @@ function _SegmentListItem({
 
                 Toast.info(
                   <span>
-                    The data of segment {getSegmentName(segment, true)} was deleted.{" "}
+                    The data of segment{" "}
+                    {getSegmentName({ id: segment.id, name: segment.name }, true)} was deleted.{" "}
                     <a
                       href="#"
                       onClick={() => {
@@ -616,7 +617,7 @@ function _SegmentListItem({
         <Space size={2}>
           <ColoredDotIcon colorRGBA={segmentColorRGBA} />
           <EditableTextLabel
-            value={getSegmentName(segment)}
+            value={getSegmentName({ id: segment.id, name: segment.name })}
             label="Segment Name"
             onClick={() => onSelectSegment(segment)}
             onRenameStart={onRenameStart}

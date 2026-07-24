@@ -6,6 +6,7 @@ import {
   getMappingsForDatasetLayer,
 } from "admin/rest_api";
 import { message } from "antd";
+import { toBigInt } from "libs/bigint_helpers";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import { fastDiffSetAndMap, sleep } from "libs/utils";
@@ -789,8 +790,7 @@ function* setCustomColors(
 
     const hueValue = mappingProperties.mappingColors[classIdx];
     const color = jsHsv2rgb(360 * hueValue, 1, 1);
-    // TODO: Proper 64 bit support (#6921)
-    yield* put(updateSegmentAction(Number(representativeId), { color }, layerName));
+    yield* put(updateSegmentAction(toBigInt(representativeId), { color }, layerName));
 
     classIdx++;
   }

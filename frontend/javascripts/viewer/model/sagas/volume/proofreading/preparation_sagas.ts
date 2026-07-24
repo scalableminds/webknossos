@@ -2,8 +2,8 @@ import {
   getAgglomeratesForSegmentsFromTracingstore,
   getPositionForSegmentInAgglomerate,
 } from "admin/rest_api";
+import { toBigInt } from "libs/bigint_helpers";
 import { V3 } from "libs/mjs";
-import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
 import Toast from "libs/toast";
 import { isNumberMap, SoftError } from "libs/utils";
 import { all, call, put } from "typed-redux-saga";
@@ -98,13 +98,22 @@ export function* ensureHdf5MappingIsEnabled(layerName: string): Saga<boolean> {
   return true;
 }
 
+// Looks up `key` (a segment/agglomerate id) in a Mapping (which is either number- or
+// BigInt-keyed/valued, depending on whether the dataset is uint32- or uint64-backed) and
+// returns the mapped value as a bigint. This avoids the lossy Number()-based
+// NumberLikeMapWrapper#getAsNumber for scalar id lookups (see #6921).
+export function getMappedIdAsBigInt(mapping: Mapping, key: bigint): bigint | undefined {
+  const mapped = isNumberMap(mapping) ? mapping.get(Number(key)) : mapping.get(key);
+  return mapped == null ? undefined : BigInt(mapped);
+}
+
 export function lookupAgglomerateId(
   activeMapping: ActiveMappingInfo,
-  unmappedId: number,
-  fallback: number,
-): number {
+  unmappedId: bigint,
+  fallback: bigint,
+): bigint {
   if (activeMapping.mapping == null) return fallback;
-  return new NumberLikeMapWrapper(activeMapping.mapping).getAsNumber(unmappedId) ?? fallback;
+  return getMappedIdAsBigInt(activeMapping.mapping, unmappedId) ?? fallback;
 }
 
 export const MISSING_INFORMATION_WARNING =
@@ -151,14 +160,15 @@ export function* prepareSplitOrMerge(
   }
   const agglomerateFileZoomstep = magInfo.getIndexByMag(agglomerateFileMag);
 
-  const getUnmappedDataValue = (position: Vector3): Promise<number> => {
+  const getUnmappedDataValue = async (position: Vector3): Promise<bigint> => {
     const { additionalCoordinates } = Store.getState().flycam;
-    return api.data.getDataValue(
+    const rawId = await api.data.getDataValue(
       volumeTracing.tracingId,
       position,
       agglomerateFileZoomstep,
       additionalCoordinates,
     );
+    return toBigInt(rawId);
   };
 
   console.log("Accessing mapping for proofreading");
@@ -176,15 +186,14 @@ export function* prepareSplitOrMerge(
   const getDataValue = async (
     position: Vector3,
     overrideMapping: Mapping | null = null,
-  ): Promise<number> => {
+  ): Promise<bigint> => {
     const unmappedId = await getUnmappedDataValue(position);
     return mapSegmentId(unmappedId, overrideMapping);
   };
 
-  const mapSegmentId = (segmentId: number, overrideMapping: Mapping | null = null): number => {
+  const mapSegmentId = (segmentId: bigint, overrideMapping: Mapping | null = null): bigint => {
     const mappingToAccess = overrideMapping ?? mapping;
-    const mappingWrapper = new NumberLikeMapWrapper(mappingToAccess);
-    const mappedId = mappingWrapper.getAsNumber(segmentId);
+    const mappedId = getMappedIdAsBigInt(mappingToAccess, segmentId);
     if (mappedId == null) {
       // It could happen that the user tries to perform a proofreading operation
       // that involves an id for which the mapped id wasn't fetched yet.
@@ -200,10 +209,7 @@ export function* prepareSplitOrMerge(
 
   const getMappedAndUnmapped = function* (position: Vector3) {
     const unmappedId = yield* call(getUnmappedDataValue, position);
-    let agglomerateId = isNumberMap(mapping)
-      ? mapping.get(unmappedId)
-      : // TODO: Proper 64 bit support (#6921)
-        Number(mapping.get(BigInt(unmappedId)));
+    let agglomerateId = getMappedIdAsBigInt(mapping, unmappedId);
 
     if (agglomerateId == null) {
       const fetchedEntries = yield* call(
@@ -213,7 +219,7 @@ export function* prepareSplitOrMerge(
         mappingName,
         new Set([unmappedId]),
       );
-      agglomerateId = new NumberLikeMapWrapper(fetchedEntries).getAsNumber(unmappedId);
+      agglomerateId = getMappedIdAsBigInt(fetchedEntries, unmappedId);
       if (agglomerateId == null) {
         throw new SoftError(
           `Could not map id ${unmappedId} at position ${position}. The mapped partner might not be known yet. Please retry.`,
@@ -248,18 +254,16 @@ export function* prepareSplitOrMerge(
 
 export function* reloadMappingAndAggloIds(
   tracingId: string,
-  unmappedSourceId: number,
-  unmappedTargetId: number,
+  unmappedSourceId: bigint,
+  unmappedTargetId: bigint,
 ) {
   const activeMapping = yield* select(
     (store) => store.temporaryConfiguration.activeMappingByLayer[tracingId],
   );
 
   if (activeMapping.mapping != null) {
-    const mappingWrapper = new NumberLikeMapWrapper(activeMapping.mapping);
-
-    const maybeSourceAgglomerateId = mappingWrapper.getAsNumber(unmappedSourceId);
-    const maybeTargetAgglomerateId = mappingWrapper.getAsNumber(unmappedTargetId);
+    const maybeSourceAgglomerateId = getMappedIdAsBigInt(activeMapping.mapping, unmappedSourceId);
+    const maybeTargetAgglomerateId = getMappedIdAsBigInt(activeMapping.mapping, unmappedTargetId);
 
     if (maybeSourceAgglomerateId != null && maybeTargetAgglomerateId != null) {
       return {
@@ -284,11 +288,14 @@ export function* reloadMappingAndAggloIds(
       annotationId,
       annotationVersion,
     );
-    const missingMappingInfoWrapper = new NumberLikeMapWrapper(missingMappingInfo);
-    const maybeSourceAgglomerateIdFromServer =
-      missingMappingInfoWrapper.getAsNumber(unmappedSourceId);
-    const maybeTargetAgglomerateIdFromServer =
-      missingMappingInfoWrapper.getAsNumber(unmappedTargetId);
+    const maybeSourceAgglomerateIdFromServer = getMappedIdAsBigInt(
+      missingMappingInfo,
+      unmappedSourceId,
+    );
+    const maybeTargetAgglomerateIdFromServer = getMappedIdAsBigInt(
+      missingMappingInfo,
+      unmappedTargetId,
+    );
     if (maybeSourceAgglomerateIdFromServer == null || maybeTargetAgglomerateIdFromServer == null) {
       throw new SoftError(
         `Could not look up agglomerate id for unmapped segment id ${unmappedSourceId} or ${unmappedTargetId}.`,
@@ -303,12 +310,12 @@ export function* reloadMappingAndAggloIds(
 }
 
 export function* getAgglomerateInfos(
-  getMappedAndUnmapped: (position: Vector3) => Saga<{ agglomerateId: number; unmappedId: number }>,
+  getMappedAndUnmapped: (position: Vector3) => Saga<{ agglomerateId: bigint; unmappedId: bigint }>,
   positions: Vector3[],
 ): Saga<Array<IdInfoWithoutPosition> | null> {
   try {
     const idInfos = yield* all(positions.map((pos) => call(getMappedAndUnmapped, pos)));
-    if (idInfos.find((idInfo) => idInfo.agglomerateId === 0 || idInfo.unmappedId === 0) != null) {
+    if (idInfos.find((idInfo) => idInfo.agglomerateId === 0n || idInfo.unmappedId === 0n) != null) {
       Toast.warning(
         "One of the selected segments has the id 0 which is the background. Cannot merge/split.",
       );
@@ -325,7 +332,7 @@ export function* getAgglomerateInfos(
 
 export function* getPositionForSegmentId(
   volumeTracing: VolumeTracing,
-  segmentId: number,
+  segmentId: bigint,
 ): Saga<Vector3> {
   const dataset = yield* select((state) => state.dataset);
   const dataStoreUrl = yield* select((state) => state.dataset.dataStore.url);
@@ -356,7 +363,7 @@ export function* gatherInfoForOperation(
   const activeUnmappedSegmentId = yield* select((state) =>
     getActiveUnmappedSegmentId(state, volumeTracing),
   );
-  if (activeCellId === 0) {
+  if (activeCellId === 0n) {
     console.warn("[Proofreading] Cannot execute operation because active segment id is 0");
     return null;
   }

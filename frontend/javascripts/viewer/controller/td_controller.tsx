@@ -328,8 +328,8 @@ class TDController extends PureComponent<Props> {
     if (hitResult == null) {
       return null;
     }
-    const meshId: number | null = hitResult ? get(hitResult.node.parent, "segmentId", null) : null;
-    const unmappedSegmentId: number | null = hitResult?.unmappedSegmentId || null;
+    const meshId: bigint | null = hitResult ? get(hitResult.node.parent, "segmentId", null) : null;
+    const unmappedSegmentId: bigint | null = hitResult?.unmappedSegmentId || null;
     const meshClickedPosition = hitResult ? hitResult.point : null;
     return { meshId, unmappedSegmentId, meshClickedPosition, hitPosition: hitResult.point };
   }

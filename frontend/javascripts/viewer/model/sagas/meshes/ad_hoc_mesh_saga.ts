@@ -63,21 +63,22 @@ const MESH_CHUNK_THROTTLE_DELAY = 500;
 // In order to avoid, that a huge amount of chunks is downloaded at full speed,
 // we artificially throttle the download speed after the first MESH_CHUNK_THROTTLE_LIMIT
 // requests for each segment.
-const batchCounterPerSegment: Record<number, number> = {};
+// Keyed by segmentId.toString(), since bigint cannot be used as an object/Record index type.
+const batchCounterPerSegment: Record<string, number> = {};
 const MESH_CHUNK_THROTTLE_LIMIT = 50;
 
 // Maps from additional coordinates, layerName and segmentId to a ThreeDMap that stores for each chunk
 // (at x, y, z) position whether the mesh chunk was loaded.
-const adhocMeshesMapByLayer: Record<string, Record<string, Map<number, ThreeDMap<boolean>>>> = {};
+const adhocMeshesMapByLayer: Record<string, Record<string, Map<bigint, ThreeDMap<boolean>>>> = {};
 
 function marchingCubeSizeInTargetMag(): Vector3 {
   return WkDevFlags.meshing.marchingCubeSizeInTargetMag;
 }
-const modifiedCells: Set<number> = new Set();
+const modifiedCells: Set<bigint> = new Set();
 
 function getOrAddMapForSegment(
   layerName: string,
-  segmentId: number,
+  segmentId: bigint,
   additionalCoordinates?: AdditionalCoordinate[] | null,
 ): ThreeDMap<boolean> {
   const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
@@ -111,7 +112,7 @@ function* removeMesh(action: RemoveMeshAction, removeFromScene: boolean = true):
 
 function removeMapForSegment(
   layerName: string,
-  segmentId: number,
+  segmentId: bigint,
   additionalCoordinateKey: string,
 ): void {
   if (
@@ -241,14 +242,14 @@ function* getInfoForMeshLoading(
 function* loadAdHocMesh(
   seedPosition: Vector3,
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
-  segmentId: number,
+  segmentId: bigint,
   removeExistingMesh: boolean = false,
   layerName: string,
   maybeExtraInfo?: AdHocMeshInfo,
 ): Saga<void> {
   const layer = Model.getLayerByName(layerName);
 
-  if (segmentId === 0) {
+  if (segmentId === 0n) {
     return;
   }
 
@@ -257,7 +258,7 @@ function* loadAdHocMesh(
   const meshExtraInfo = yield* call(getMeshExtraInfo, layer.name, maybeExtraInfo);
 
   const { zoomStep, magInfo } = yield* call(getInfoForMeshLoading, layer, meshExtraInfo);
-  batchCounterPerSegment[segmentId] = 0;
+  batchCounterPerSegment[segmentId.toString()] = 0;
 
   // If a REMOVE_MESH action is dispatched and consumed
   // here before loadFullAdHocMesh is finished, the latter saga
@@ -286,7 +287,7 @@ function* loadAdHocMesh(
 }
 
 function removeMeshWithoutVoxels(
-  segmentId: number,
+  segmentId: bigint,
   layerName: string,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
 ) {
@@ -319,7 +320,7 @@ function* getUsePositionsFromSegmentIndex(
 
 function* loadFullAdHocMesh(
   layer: DataLayer,
-  segmentId: number,
+  segmentId: bigint,
   position: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   zoomStep: number,
@@ -443,7 +444,7 @@ function* loadFullAdHocMesh(
 
 function* getChunkPositionsFromSegmentIndex(
   layerSourceInfo: LayerSourceInfo,
-  segmentId: number,
+  segmentId: bigint,
   cubeSize: Vector3,
   mag: Vector3,
   clippedPosition: Vector3,
@@ -465,13 +466,13 @@ function* getChunkPositionsFromSegmentIndex(
   return sortByDistanceTo(mag1Positions, clippedPosition) as Vector3[];
 }
 
-function hasMeshChunkExceededThrottleLimit(segmentId: number): boolean {
-  return batchCounterPerSegment[segmentId] > MESH_CHUNK_THROTTLE_LIMIT;
+function hasMeshChunkExceededThrottleLimit(segmentId: bigint): boolean {
+  return batchCounterPerSegment[segmentId.toString()] > MESH_CHUNK_THROTTLE_LIMIT;
 }
 
 function* maybeLoadMeshChunk(
   layer: DataLayer,
-  segmentId: number,
+  segmentId: bigint,
   clippedPosition: Vector3,
   zoomStep: number,
   meshExtraInfo: AdHocMeshInfo,
@@ -509,7 +510,7 @@ function* maybeLoadMeshChunk(
     yield* call(sleep, MESH_CHUNK_THROTTLE_DELAY);
   }
 
-  batchCounterPerSegment[segmentId]++;
+  batchCounterPerSegment[segmentId.toString()]++;
   threeDMap.set(paddedPosition, true);
   const scaleFactor = yield* select((state) => state.dataset.dataSource.scale.factor);
 
@@ -696,7 +697,7 @@ function* refreshMesh(action: RefreshMeshAction): Saga<void> {
 }
 
 function* refreshMeshWithMap(
-  segmentId: number,
+  segmentId: bigint,
   threeDMap: ThreeDMap<boolean>,
   layerName: string,
   additionalCoordinates: AdditionalCoordinate[] | null,

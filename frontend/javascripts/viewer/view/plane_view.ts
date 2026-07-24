@@ -44,7 +44,7 @@ const LIGHT_INTENSITY = 10;
 type RaycasterHit = {
   node: MeshSceneNode;
   indexRange: Vector2 | null;
-  unmappedSegmentId: number | null;
+  unmappedSegmentId: bigint | null;
   point: Vector3;
 } | null;
 
@@ -179,11 +179,11 @@ class PlaneView {
 
       // Outside of the 3D viewport, we don't do mesh hit tests
       if (storeState.viewModeData.plane.activeViewport !== OrthoViews.TDView) {
-        if (hoveredSegmentId !== 0) {
+        if (hoveredSegmentId !== 0n) {
           // Reset hoveredSegmentId if we are outside of the 3D viewport,
           // since that id takes precedence over the shader-calculated cell id
           // under the mouse cursor
-          Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", 0));
+          Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", 0n));
         }
 
         return null;

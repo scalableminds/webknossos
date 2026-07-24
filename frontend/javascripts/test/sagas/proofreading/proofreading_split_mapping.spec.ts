@@ -31,7 +31,7 @@ describe("splitAgglomeratesInMapping", () => {
     expect(hasRootSagaCrashed()).toBe(false);
   });
 
-  function buildActiveMapping(mapping: Map<number, number>): ActiveMappingInfo {
+  function buildActiveMapping(mapping: Map<bigint, bigint>): ActiveMappingInfo {
     return {
       mappingName: "disjoint-test-mapping",
       mapping,
@@ -45,10 +45,10 @@ describe("splitAgglomeratesInMapping", () => {
   function runSplit(
     context: WebknossosTestContext,
     activeMapping: ActiveMappingInfo,
-    segmentIdToOldAgglomerateId: Map<number, number>,
+    segmentIdToOldAgglomerateId: Map<bigint, bigint>,
     addAdditionalSegmentsToMapping: boolean,
     // The full mapping the (mocked) tracingstore returns after the split.
-    mappingAfterSplit: Array<[number, number]>,
+    mappingAfterSplit: Array<[bigint, bigint]>,
   ) {
     vi.mocked(context.mocks.getCurrentMappingEntriesFromServer).mockReturnValue(mappingAfterSplit);
     const { tracingId } = Store.getState().annotation.volumes[0];
@@ -75,23 +75,23 @@ describe("splitAgglomeratesInMapping", () => {
       // foreign split that is forwarded during live collaboration.
       const activeMapping = buildActiveMapping(
         new Map([
-          [1, 100],
-          [3, 200],
-          [4, 200],
+          [1n, 100n],
+          [3n, 200n],
+          [4n, 200n],
         ]),
       );
       // Segment info extracted from the foreign update action: Agglomerate 100 = {segment 1, segment 2} was split.
       const segmentIdToOldAgglomerateId = new Map([
-        [1, 100],
-        [2, 100],
+        [1n, 100n],
+        [2n, 100n],
       ]);
 
       // The split keeps segment 1 on agglomerate 100 and moves segment 2 to the new agglomerate 300.
-      const mappingAfterSplit: [number, number][] = [
-        [1, 100],
-        [2, 300],
-        [3, 200],
-        [4, 200],
+      const mappingAfterSplit: [bigint, bigint][] = [
+        [1n, 100n],
+        [2n, 300n],
+        [3n, 200n],
+        [4n, 200n],
       ];
 
       const result = await runSplit(
@@ -104,23 +104,23 @@ describe("splitAgglomeratesInMapping", () => {
 
       expect(result).toBeDefined();
       // The new agglomerate 300 is discovered even though segment 2 is not in the local mapping.
-      expect(result?.newAgglomerateIds).toEqual(new Set([100, 300]));
-      expect(result?.oldAgglomerateIds).toEqual(new Set([100]));
+      expect(result?.newAgglomerateIds).toEqual(new Set([100n, 300n]));
+      expect(result?.oldAgglomerateIds).toEqual(new Set([100n]));
       // Both the retained and the split-off agglomerate inherit from the original agglomerate 100.
       expect(result?.newToOldAgglomerateIds).toEqual(
         new Map([
-          [100, 100],
-          [300, 100],
+          [100n, 100n],
+          [300n, 100n],
         ]),
       );
       // If addAdditionalSegmentsToMapping = true
       // - Segment 2 stays out of the (sparse) mapping, because it was not present locally.
       // - Else it is present in the mapping.
-      const maybeAdditionalEntry: [number, number][] = addAdditionalSegmentsToMapping
-        ? [[2, 300]]
+      const maybeAdditionalEntry: [bigint, bigint][] = addAdditionalSegmentsToMapping
+        ? [[2n, 300n]]
         : [];
       expect(result?.mappingWithSplitApplied).toEqual(
-        new Map([[1, 100], [3, 200], [4, 200], ...maybeAdditionalEntry]),
+        new Map([[1n, 100n], [3n, 200n], [4n, 200n], ...maybeAdditionalEntry]),
       );
     });
   });
@@ -129,38 +129,38 @@ describe("splitAgglomeratesInMapping", () => {
     // Agglomerate 100 = {1, 2}, agglomerate 200 = {3, 4}. Both are split in the same batch:
     // 100 -> {1 keeps 100} + {2 -> 300}; 200 -> {3 keeps 200} + {4 -> 400}.
     const segmentIdToOldAgglomerateId = new Map([
-      [1, 100],
-      [2, 100],
-      [3, 200],
-      [4, 200],
+      [1n, 100n],
+      [2n, 100n],
+      [3n, 200n],
+      [4n, 200n],
     ]);
     const activeMapping = buildActiveMapping(segmentIdToOldAgglomerateId);
 
     const result = await runSplit(context, activeMapping, segmentIdToOldAgglomerateId, false, [
-      [1, 100],
-      [2, 300],
-      [3, 200],
-      [4, 400],
+      [1n, 100n],
+      [2n, 300n],
+      [3n, 200n],
+      [4n, 400n],
     ]);
 
     // Both old agglomerates are scheduled for refresh and both split-off agglomerates discovered.
-    expect(result?.oldAgglomerateIds).toEqual(new Set([100, 200]));
-    expect(result?.newAgglomerateIds).toEqual(new Set([100, 200, 300, 400]));
+    expect(result?.oldAgglomerateIds).toEqual(new Set([100n, 200n]));
+    expect(result?.newAgglomerateIds).toEqual(new Set([100n, 200n, 300n, 400n]));
     expect(result?.newToOldAgglomerateIds).toEqual(
       new Map([
-        [100, 100],
-        [300, 100],
-        [200, 200],
-        [400, 200],
+        [100n, 100n],
+        [300n, 100n],
+        [200n, 200n],
+        [400n, 200n],
       ]),
     );
     // The interior segments of both agglomerates are re-mapped (they were present locally).
     expect(result?.mappingWithSplitApplied).toEqual(
       new Map([
-        [1, 100],
-        [2, 300],
-        [3, 200],
-        [4, 400],
+        [1n, 100n],
+        [2n, 300n],
+        [3n, 200n],
+        [4n, 400n],
       ]),
     );
   });

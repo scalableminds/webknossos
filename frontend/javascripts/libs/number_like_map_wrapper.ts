@@ -1,13 +1,13 @@
-import type { Mapping } from "viewer/store";
+import type { Mapping, NumberLike } from "viewer/store";
 import { getAdaptToTypeFunction } from "./utils";
 
 export class NumberLikeMapWrapper<T extends number | bigint> {
   private readonly map: Map<T, T>;
-  private readonly adaptKey: (key: number) => T;
+  private readonly adaptKey: (key: NumberLike) => T;
 
   constructor(mapping: Mapping) {
     this.map = mapping as Map<T, T>;
-    this.adaptKey = getAdaptToTypeFunction(mapping) as (key: number) => T;
+    this.adaptKey = getAdaptToTypeFunction(mapping) as (key: NumberLike) => T;
   }
 
   get size(): number {
@@ -18,29 +18,19 @@ export class NumberLikeMapWrapper<T extends number | bigint> {
     this.map.clear();
   }
 
-  delete(key: number): boolean {
+  delete(key: NumberLike): boolean {
     return this.map.delete(this.adaptKey(key));
   }
 
-  get(key: number): T | undefined {
+  get(key: NumberLike): T | undefined {
     return this.map.get(this.adaptKey(key));
   }
 
-  getAsNumber(key: number): number | undefined {
-    // TODO: When implementing proper 64 bit support (#6921),
-    // getAsNumber should probably not be used anymore at all.
-    const val = this.get(key);
-    if (val === undefined) {
-      return val;
-    }
-    return Number(val);
-  }
-
-  has(key: number): boolean {
+  has(key: NumberLike): boolean {
     return this.map.has(this.adaptKey(key));
   }
 
-  set(key: number, value: T): this {
+  set(key: NumberLike, value: T): this {
     this.map.set(this.adaptKey(key), value);
     return this;
   }

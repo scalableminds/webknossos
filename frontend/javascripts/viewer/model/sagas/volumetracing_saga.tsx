@@ -14,7 +14,7 @@ import {
   mayEditAnnotation,
 } from "viewer/model/accessors/annotation_accessor";
 import {
-  getSupportedValueRangeOfLayer,
+  getElementClass,
   isInSupportedValueRangeForLayer,
 } from "viewer/model/accessors/dataset_accessor";
 import {
@@ -56,6 +56,7 @@ import {
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import { markVolumeTransactionEnd } from "viewer/model/bucket_data_handling/bucket";
+import { getSegmentIdRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select, take } from "viewer/model/sagas/effect_generators";
 import type { OperationContext } from "viewer/model/sagas/operation_context_saga";
@@ -140,7 +141,9 @@ function* warnAboutInvalidSegmentId(): Saga<void> {
       volumeTracing.tracingId,
     );
     if (!isInSupportedValueRangeForLayer(dataset, segmentationLayer.name, requestedSegmentId)) {
-      const validRange = getSupportedValueRangeOfLayer(dataset, segmentationLayer.name);
+      const validRange = getSegmentIdRangeForElementClass(
+        getElementClass(dataset, segmentationLayer.name),
+      );
       Toast.warning(messages["tracing.segment_id_out_of_bounds"](requestedSegmentId, validRange));
     }
   }
@@ -210,7 +213,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
       continue;
     }
 
-    if (isDrawing && activeCellId === 0) {
+    if (isDrawing && activeCellId === 0n) {
       yield* call(
         [Toast, Toast.warning],
         "The current segment ID is 0. Please change the active segment ID via the status bar, by creating a new segment from the toolbar or by selecting an existing one via context menu.",
@@ -400,7 +403,7 @@ function* ensureSegmentExists(
   const layerName = layer.name;
   const segmentId = action.segmentId;
 
-  if (segmentId === 0 || segmentId == null) {
+  if (segmentId === 0n || segmentId == null) {
     return;
   }
 
@@ -472,7 +475,7 @@ function* updateHoveredSegmentId(): Saga<void> {
   const { mapped: id, unmapped: unmappedId } =
     globalMousePosition != null
       ? getSegmentIdInfoForPosition(globalMousePosition)
-      : { mapped: 0, unmapped: 0 };
+      : { mapped: 0n, unmapped: 0n };
 
   const oldHoveredSegmentId = yield* select(
     (store) => store.temporaryConfiguration.hoveredSegmentId,

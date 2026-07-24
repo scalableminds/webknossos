@@ -5,7 +5,7 @@ import type { APISegmentationLayer } from "types/api_types";
 import { getConnectomeDataForLayer } from "viewer/model/accessors/connectome_accessor";
 import { fetchConnectomeData } from "viewer/view/right_border_tabs/connectome_tab/connectome_data_utils";
 
-const NO_ACTIVE_AGGLOMERATE_IDS: Array<number> = [];
+const NO_ACTIVE_AGGLOMERATE_IDS: Array<bigint> = [];
 const NO_SYNAPSE_TYPES: Array<string> = [];
 
 // Fetches the synapses of the active agglomerates from the current connectome file

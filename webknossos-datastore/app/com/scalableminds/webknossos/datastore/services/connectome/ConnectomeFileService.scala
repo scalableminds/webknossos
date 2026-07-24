@@ -7,6 +7,7 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
+import com.scalableminds.webknossos.datastore.helpers.UnsignedLongJson
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayer,
   DataSourceId,
@@ -28,7 +29,9 @@ case class ByAgglomerateIdsRequest(
 )
 
 object ByAgglomerateIdsRequest {
-  implicit val jsonFormat: OFormat[ByAgglomerateIdsRequest] = Json.format[ByAgglomerateIdsRequest]
+  private val baseFormat: OFormat[ByAgglomerateIdsRequest] = Json.format[ByAgglomerateIdsRequest]
+  implicit val jsonFormat: OFormat[ByAgglomerateIdsRequest] =
+    UnsignedLongJson.patchSeqField(baseFormat, "agglomerateIds")(_.agglomerateIds, (a, v) => a.copy(agglomerateIds = v))
 }
 
 case class BySynapseIdsRequest(

@@ -1,4 +1,5 @@
 import { getAgglomeratesForSegmentsFromTracingstore } from "admin/rest_api";
+import { toBigInt } from "libs/bigint_helpers";
 import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
 import omitBy from "lodash-es/omitBy";
 import { call, put } from "typed-redux-saga";
@@ -48,13 +49,13 @@ export function saveQueueEntriesToServerUpdateActionBatches(
   }));
 }
 
-type IdsToReloadPerMappingId = Map<string, Set<number>>;
-type AnchorPositionToUnmappedIdByMappingId = Map<string, Map<string, number>>;
+type IdsToReloadPerMappingId = Map<string, Set<bigint>>;
+type AnchorPositionToUnmappedIdByMappingId = Map<string, Map<string, bigint>>;
 
 function appendToIdsToReloadMapping(
   actionTracingId: string,
   idsToReloadByMappingId: IdsToReloadPerMappingId,
-  segmentId2: number,
+  segmentId2: bigint,
 ) {
   if (!idsToReloadByMappingId.has(actionTracingId)) {
     idsToReloadByMappingId.set(actionTracingId, new Set());
@@ -71,11 +72,8 @@ async function appendIdToReloadFromPositionAsync(
   if (anchorPosition == null) {
     return;
   }
-  const unmappedId = await api.data.getDataValue(
-    actionTracingId,
-    anchorPosition,
-    null,
-    additionalCoordinates,
+  const unmappedId = toBigInt(
+    await api.data.getDataValue(actionTracingId, anchorPosition, null, additionalCoordinates),
   );
   const anchorPositionKey = segmentPositionToKey(anchorPosition, additionalCoordinates);
   if (!anchorPositionToUnmappedIdByMappingId.has(actionTracingId)) {
@@ -105,7 +103,7 @@ function* getAllUnknownSegmentIdsInPendingUpdates(saveQueue: SaveQueueEntry[]): 
     (store) => store.temporaryConfiguration.activeMappingByLayer,
   );
   const idsToReloadByMappingId = new Map();
-  const anchorPositionToUnmappedIdByMappingId: Map<string, Map<string, number>> = new Map();
+  const anchorPositionToUnmappedIdByMappingId: AnchorPositionToUnmappedIdByMappingId = new Map();
   const promises = [];
   for (const saveQueueEntry of saveQueue) {
     for (const action of saveQueueEntry.actions) {
@@ -275,9 +273,9 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
               const mappingSyncedWithBackend = new NumberLikeMapWrapper(
                 mappingSyncedWithBackendUnwrapped,
               );
-              let upToDateAgglomerateId1 = mappingSyncedWithBackend.get(segmentId1);
-              let upToDateAgglomerateId2 = mappingSyncedWithBackend.get(segmentId2);
-              if (!upToDateAgglomerateId1 || !upToDateAgglomerateId2) {
+              const upToDateAgglomerateId1Raw = mappingSyncedWithBackend.get(segmentId1);
+              const upToDateAgglomerateId2Raw = mappingSyncedWithBackend.get(segmentId2);
+              if (!upToDateAgglomerateId1Raw || !upToDateAgglomerateId2Raw) {
                 console.error(
                   "Found proofreading action without loaded agglomerate ids. This should never occur.",
                   action,
@@ -285,12 +283,14 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
                 success = false;
                 return null;
               }
+              const upToDateAgglomerateId1 = toBigInt(upToDateAgglomerateId1Raw);
+              const upToDateAgglomerateId2 = toBigInt(upToDateAgglomerateId2Raw);
               if (action.name === "splitAgglomerate") {
                 return {
                   name: action.name,
                   value: {
                     ...action.value,
-                    agglomerateId: Number(upToDateAgglomerateId1),
+                    agglomerateId: upToDateAgglomerateId1,
                   },
                 } satisfies SplitAgglomerateUpdateAction;
               } else if (action.name === "mergeAgglomerate") {
@@ -298,8 +298,8 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
                   name: action.name,
                   value: {
                     ...action.value,
-                    agglomerateId1: Number(upToDateAgglomerateId1),
-                    agglomerateId2: Number(upToDateAgglomerateId2),
+                    agglomerateId1: upToDateAgglomerateId1,
+                    agglomerateId2: upToDateAgglomerateId2,
                   },
                 } satisfies MergeAgglomerateUpdateAction;
               } else if (action.name === "mergeSegmentItems") {
@@ -307,8 +307,8 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
                   name: action.name,
                   value: {
                     ...action.value,
-                    agglomerateId1: Number(upToDateAgglomerateId1),
-                    agglomerateId2: Number(upToDateAgglomerateId2),
+                    agglomerateId1: upToDateAgglomerateId1,
+                    agglomerateId2: upToDateAgglomerateId2,
                   },
                 } satisfies MergeSegmentItemsUpdateAction;
               }
@@ -421,7 +421,7 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
 
 function getUpToDateSegmentIdViaPosition(
   actionTracingId: string,
-  originalSegmentId: number,
+  originalSegmentId: bigint,
   anchorPosition: Vector3 | undefined | null,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   activeMappingByLayer: Record<string, ActiveMappingInfo>,
@@ -465,10 +465,8 @@ function getUpToDateSegmentIdViaPosition(
   }
 
   const mappingSyncedWithBackend = new NumberLikeMapWrapper(mappingSyncedWithBackendUnwrapped);
-  return (
-    mappingSyncedWithBackend.getAsNumber(unmappedId) ??
-    // This fallback should not happen because addMissingSegmentsToLoadedMappings
-    // is called earlier.
-    originalSegmentId
-  );
+  const upToDateId = mappingSyncedWithBackend.get(unmappedId);
+  // This fallback should not happen because addMissingSegmentsToLoadedMappings
+  // is called earlier.
+  return upToDateId != null ? toBigInt(upToDateId) : originalSegmentId;
 }

@@ -183,8 +183,8 @@ instead. Only enable this option if you understand its effect. All layers will n
   ),
   "tracing.copy_cell_id": "Hit CTRL + I to copy the currently hovered segment id",
   "tracing.segment_id_out_of_bounds": (
-    requestedId: number,
-    validRange: readonly [number, number],
+    requestedId: bigint,
+    validRange: readonly [bigint, bigint],
   ) =>
     `Cannot create a segment with id=${requestedId} because it is not between ${validRange[0]} and ${validRange[1]}.`,
 
@@ -198,8 +198,6 @@ instead. Only enable this option if you understand its effect. All layers will n
     "The volume annotation would be changed by this action. This is not allowed while merger mode is active.",
   "tracing.segmentation_zoom_warning":
     "Segmentation data and volume annotation is only fully supported at a smaller zoom level.",
-  "tracing.uint64_segmentation_warning":
-    "This is an unsigned 64-bit segmentation. The displayed ids are truncated to 53 bits. Thus, they might not match the ids on the server.",
   "tracing.segmentation_zoom_warning_agglomerate":
     "Segmentation data which is mapped using an agglomerate file cannot be rendered correctly in this magnification. Please zoom in further.",
   "tracing.no_access": "You are not allowed to access this annotation.",
@@ -250,7 +248,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     "You cannot place nodes outside of a segment in merger mode.",
   "tracing.not_mesh_available_to_download":
     "There is no mesh for the active segment id available to download.",
-  "tracing.mesh_listing_failed": (segmentId: number) =>
+  "tracing.mesh_listing_failed": (segmentId: bigint) =>
     `A precomputed mesh could not be loaded for segment ${segmentId}. You may want to use ad-hoc meshing instead. More information was printed to the browser's console.`,
   "tracing.area_to_fill_is_too_big":
     "The area you want to fill is too big. Please annotate the area in multiple strokes.",

@@ -63,10 +63,10 @@ async function makeProofreadMerge(
     yield take("SET_MAPPING_DATA");
     // Set up the merge-related segment partners. Normally, this would happen
     // due to the user's interactions.
-    yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
-    yield put(setActiveCellAction(1));
+    yield put(updateSegmentAction(1n, { anchorPosition: [1, 1, 1] }, tracingId));
+    yield put(setActiveCellAction(1n));
     // Execute the actual merge and wait for the finished mapping.
-    yield put(proofreadMergeAction(getPositionForSegmentId(4), 4));
+    yield put(proofreadMergeAction(getPositionForSegmentId(4), 4n));
     yield take(operationStarted("PROOFREADING"));
     if (waitTillFinished) {
       // Wait for proofreading operation to start and then finish to ensure saving of the whole saga is done.

@@ -3,14 +3,14 @@ import { updateSegmentAction } from "viewer/model/actions/volumetracing_actions"
 import type { Segment, WebknossosState } from "viewer/store";
 import { VOLUME_TRACING_ID } from "./volumetracing_server_objects";
 
-export const getSegment = (state: WebknossosState, id: number) =>
+export const getSegment = (state: WebknossosState, id: bigint) =>
   state.annotation.volumes[0].segments.getNullable(id);
-export const createAction = (id: number, properties: Partial<Segment>) =>
+export const createAction = (id: bigint, properties: Partial<Segment>) =>
   updateSegmentAction(
     id,
     {
       anchorPosition: getPositionForSegmentId(id),
-      groupId: id,
+      groupId: Number(id),
       ...properties,
     },
     VOLUME_TRACING_ID,
@@ -18,7 +18,7 @@ export const createAction = (id: number, properties: Partial<Segment>) =>
     true,
   );
 
-const [id1, id2, id3] = [1, 2, 3];
+const [id1, id2, id3] = [1n, 2n, 3n];
 export { id1, id2, id3 };
 export const createSegment1 = createAction(id1, {
   name: "Name 1",

@@ -36,16 +36,18 @@ export const getSynapseIdsFromConnectomeData = (connectomeData: ConnectomeData):
 
 export const getAgglomerateIdsFromConnectomeData = (
   connectomeData: ConnectomeData,
-): Array<number> => {
+): Array<bigint> => {
   // In order to find all existing agglomerate ids, the top level agglomerate ids (Object.keys(agglomerates)) need to be merged
   // with the synaptic partner agglomerate ids. The synaptic partner agglomerate ids can be found by looking at the
   // filtered set of all synapses and picking the src/dst key, depending on whether the partner is pre- or postsynaptic
   // (the other key will usually be undefined). For synapses that occur for both directions it doesn't matter, because that
   // implicates that the associated agglomerated ids both need to be top level agglomerate ids as well.
   const { synapses, agglomerates } = connectomeData;
-  const topLevelAgglomerateIds = Object.keys(agglomerates).map((agglomerateId) => +agglomerateId);
+  const topLevelAgglomerateIds = Object.keys(agglomerates).map((agglomerateId) =>
+    BigInt(agglomerateId),
+  );
   const filteredSynapseIds = getSynapseIdsFromConnectomeData(connectomeData);
-  const partnerAgglomerateIds = filteredSynapseIds.map((synapseId): number => {
+  const partnerAgglomerateIds = filteredSynapseIds.map((synapseId): bigint => {
     const synapse = synapses[synapseId];
     if (synapse.src != null) {
       return synapse.src;
@@ -61,8 +63,8 @@ export const getAgglomerateIdsFromConnectomeData = (
 
 export const getTreeNameForSynapse = (synapseId: number): string => `synapse-${synapseId}`;
 
-export const getAgglomerateIdsFromKeys = (keys: Array<string>): Array<number> =>
-  unique(keys.map((key) => +key.split(";")[1])); // The id identifying the respective agglomerate is at the second position (pattern is segment;xxx;[...])
+export const getAgglomerateIdsFromKeys = (keys: Array<string>): Array<bigint> =>
+  unique(keys.map((key) => BigInt(key.split(";")[1]))); // The id identifying the respective agglomerate is at the second position (pattern is segment;xxx;[...])
 
 export const synapseTreeCreator = (synapseId: number, synapseType: string): MutableTree => ({
   name: getTreeNameForSynapse(synapseId),
@@ -155,7 +157,7 @@ export async function fetchConnectomeData(
   dataset: APIDataset,
   segmentationLayer: APISegmentationLayer,
   connectomeFile: APIConnectomeFile,
-  activeAgglomerateIds: Array<number>,
+  activeAgglomerateIds: Array<bigint>,
 ): Promise<ConnectomeFetchResult> {
   const fetchProperties: [string, APIDataset, string, string] = [
     dataset.dataStore.url,
@@ -191,7 +193,10 @@ export async function fetchConnectomeData(
   // Since it's easy to forget to create the json file, this code exists to act as a fail-safe.
   const { synapseTypes, typeToString } = ensureTypeToString(synapseTypesAndNames);
 
-  const agglomerates = safeZipObject(activeAgglomerateIds, synapsesOfAgglomerates);
+  const agglomerates = safeZipObject(
+    activeAgglomerateIds.map((id) => id.toString()),
+    synapsesOfAgglomerates,
+  );
   const synapseIdToSource = safeZipObject(allInSynapseIds, synapseSources);
   const synapseIdToDestination = safeZipObject(allOutSynapseIds, synapseDestinations);
   const synapseIdToPosition = safeZipObject(allSynapseIds, synapsePositions);
@@ -287,9 +292,9 @@ export function computeAgglomerateTreeDiff(
   prev: AgglomerateTreeSnapshot,
   current: AgglomerateTreeSnapshot,
 ): {
-  deletedAgglomerateIds: Array<number>;
-  hiddenAgglomerateIds: Array<number>;
-  addedAgglomerateIds: Array<number>;
+  deletedAgglomerateIds: Array<bigint>;
+  hiddenAgglomerateIds: Array<bigint>;
+  addedAgglomerateIds: Array<bigint>;
 } {
   const {
     connectomeData: prevConnectomeData,

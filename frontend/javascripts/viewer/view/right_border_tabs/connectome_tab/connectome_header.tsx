@@ -66,13 +66,13 @@ function ConnectomeMappingActivationAlert({
 type Props = {
   segmentationLayer: APISegmentationLayer | null | undefined;
   currentConnectomeFile: APIConnectomeFile | null | undefined;
-  activeAgglomerateIds: Array<number>;
+  activeAgglomerateIds: Array<bigint>;
   availableSynapseTypes: Array<string>;
   connectomeData: ConnectomeData | null | undefined;
   onUpdateFilteredConnectomeData: (
     filteredConnectomeData: ConnectomeData | null | undefined,
   ) => void;
-  onSetActiveAgglomerateIds: (agglomerateIds: Array<number>) => void;
+  onSetActiveAgglomerateIds: (agglomerateIds: Array<bigint>) => void;
   onReset: () => void;
 };
 
@@ -88,10 +88,11 @@ function ConnectomeHeader({
 }: Props) {
   const handleChangeActiveSegment = (evt: React.SyntheticEvent) => {
     const target = evt.target as HTMLInputElement;
-    const agglomerateIds = target.value
+    const agglomerateIds: Array<bigint> = target.value
       .split(",")
-      .map((part: string) => Number.parseInt(part, 10))
-      .filter((id: number) => !Number.isNaN(id));
+      .map((part: string) => part.trim())
+      .filter((part: string) => /^\d+$/.test(part))
+      .map((part: string) => BigInt(part));
     onSetActiveAgglomerateIds(agglomerateIds);
     target.blur();
   };

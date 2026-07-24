@@ -1,3 +1,4 @@
+import { bigIntReplacer } from "libs/bigint_helpers";
 import ErrorHandling from "libs/error_handling";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
@@ -34,7 +35,7 @@ const MAX_UPDATE_INTERVAL = 1000;
 const MINIMUM_VALID_CSV_LENGTH = 5;
 
 type BaseMeshUrlDescriptor = {
-  readonly segmentId: number;
+  readonly segmentId: bigint;
   readonly seedPosition: Vector3;
   readonly seedAdditionalCoordinates?: AdditionalCoordinate[];
 };
@@ -66,11 +67,11 @@ export type UrlStateByLayer = Record<
     mappingInfo?: {
       mappingName: string;
       mappingType: MappingType;
-      agglomerateIdsToImport?: Array<number>;
+      agglomerateIdsToImport?: Array<bigint>;
     };
     connectomeInfo?: {
       connectomeName: string;
-      agglomerateIdsToImport?: Array<number>;
+      agglomerateIdsToImport?: Array<bigint>;
     };
   } & DirectLayerSpecificProps
 >;
@@ -418,7 +419,7 @@ class UrlManager {
 
   buildUrlHashJson(state: WebknossosState): string {
     const urlState = this.getUrlState(state);
-    return encodeUrlHash(JSON.stringify(urlState));
+    return encodeUrlHash(JSON.stringify(urlState, bigIntReplacer));
   }
 
   buildUrl(): string {

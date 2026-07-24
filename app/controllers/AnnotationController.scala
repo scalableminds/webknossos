@@ -577,6 +577,10 @@ class AnnotationController @Inject() (
     }
   }
 
+  // KNOWN GAP (uint64): The reserved `ids` are serialized as plain JSON numbers. For the Segment domain
+  // these are uint64 segment ids and would lose precision in JS, but no frontend path reserves Segment
+  // ids (only SegmentGroup/BoundingBox, both 32-bit). Left as-is; see TSAnnotationController.largestIdOrZero
+  // and PR #9765. Applies to reserveIds below as well.
   def reservedIds(id: ObjectId, tracingId: String, domain: String): Action[AnyContent] = sil.SecuredAction.fox {
     implicit request =>
       logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 1 second) {

@@ -15,6 +15,7 @@ import {
 import app from "app";
 import { __setFeatures } from "features";
 import update from "immutability-helper";
+import { toBigInt } from "libs/bigint_helpers";
 import { V3 } from "libs/mjs";
 import Request, { type RequestOptions } from "libs/request";
 import { sleep } from "libs/utils";
@@ -49,7 +50,7 @@ import type { ArbitraryObject } from "types/type_utils";
 import type { ApiInterface } from "viewer/api/api_latest";
 import WebknossosApi from "viewer/api/api_loader";
 import { setupApi } from "viewer/api/internal_api";
-import Constants, { ControlModeEnum, type Vector2, type Vector3 } from "viewer/constants";
+import Constants, { ControlModeEnum, type Vector3 } from "viewer/constants";
 import { setSceneController } from "viewer/controller/scene_controller_provider";
 import SegmentMeshController from "viewer/controller/segment_mesh_controller";
 import UrlManager from "viewer/controller/url_manager";
@@ -170,7 +171,7 @@ vi.mock("libs/request", () => ({
 }));
 
 const getCurrentMappingEntriesFromServer = vi.fn(
-  (_version?: number | null | undefined): Array<[number, number]> => {
+  (_version?: number | null | undefined): Array<[bigint, bigint]> => {
     return [];
   },
 );
@@ -189,10 +190,14 @@ vi.mock("admin/rest_api.ts", async () => {
     segmentIds: Array<NumberLike>,
     version?: number | null | undefined,
   ) => {
-    const segmentIdSet = new Set(segmentIds);
+    // Requested segment ids might be plain numbers (e.g. read from a uint16-backed voxel
+    // buffer) even though the mapping itself is keyed by bigint (mirroring how the real
+    // backend doesn't care which JS type the frontend used locally, since both serialize
+    // to the same canonical value on the wire). Normalize to bigint before comparing.
+    const segmentIdSet = new Set(Array.from(segmentIds, toBigInt));
     const entries = getCurrentMappingEntriesFromServer(version).filter(([id]) =>
-      segmentIdSet.has(id),
-    ) as Vector2[];
+      segmentIdSet.has(toBigInt(id)),
+    );
     if (entries.length < segmentIdSet.size) {
       throw new Error(
         "Incorrect mock implementation of getAgglomeratesForSegmentsImpl detected. The requested segment ids were not properly served.",
@@ -312,7 +317,7 @@ vi.mock("admin/api/mesh", async () => {
       _datasetId: string,
       _layerName: string,
       _meshFile: APIMeshFileInfo,
-      segmentId: number,
+      segmentId: bigint,
       _targetMappingName: string | null | undefined,
       _editableMappingTracingId: string | null | undefined,
     ): Promise<MeshSegmentInfo> => {
@@ -371,6 +376,7 @@ vi.mock("viewer/model/helpers/proto_helpers", async (importOriginal) => {
   return {
     PROTO_FILES: originalProtoHelperModule.PROTO_FILES,
     PROTO_TYPES: originalProtoHelperModule.PROTO_TYPES,
+    bigIntToProtoLong: originalProtoHelperModule.bigIntToProtoLong,
     parseProtoTracing: vi.fn(originalProtoHelperModule.parseProtoTracing),
     parseProtoAnnotation: vi.fn(),
     serializeProtoListOfLong: vi.fn(),

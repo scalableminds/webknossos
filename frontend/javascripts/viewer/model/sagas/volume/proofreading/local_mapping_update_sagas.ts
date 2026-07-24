@@ -1,34 +1,37 @@
 import { getAgglomeratesForSegmentsFromTracingstore } from "admin/rest_api";
-import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
-import { getAdaptToTypeFunction } from "libs/utils";
+import { getAdaptToTypeFunction, isNumberMap } from "libs/utils";
 import { call, put } from "typed-redux-saga";
 import { setMappingDataAction } from "viewer/model/actions/settings_actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import type { ActiveMappingInfo, Mapping, NumberLikeMap } from "viewer/store";
 import { syncAgglomerateTreesAfterSplitAction } from "./agglomerate_tree_syncing_saga_helpers";
+import { getMappedIdAsBigInt } from "./preparation_sagas";
 
 function getSegmentIdsThatMapToAgglomerate(
   activeMapping: ActiveMappingInfo,
-  sourceAgglomerateId: number,
-) {
+  sourceAgglomerateId: bigint,
+): bigint[] {
   // Obtain all segment ids that map to sourceAgglomerateId
   const mappingEntries = Array.from(activeMapping.mapping as NumberLikeMap);
 
-  const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
-
-  // If the mapping contains BigInts, we need a BigInt for the filtering
-  const comparableSourceAgglomerateId = adaptToType(sourceAgglomerateId);
+  // If the mapping contains numbers (uint32-backed dataset) rather than BigInts, we need a
+  // plain number for the filtering. This is safe because such mappings never contain ids
+  // that exceed the safe integer range.
+  const comparableSourceAgglomerateId =
+    activeMapping.mapping != null
+      ? getMappedIdAsBigInt(activeMapping.mapping, sourceAgglomerateId)
+      : sourceAgglomerateId;
   return mappingEntries
     .filter(([_segmentId, agglomerateId]) => agglomerateId === comparableSourceAgglomerateId)
-    .map(([segmentId, _agglomerateId]) => segmentId);
+    .map(([segmentId, _agglomerateId]) => BigInt(segmentId));
 }
 
 type SplitAgglomeratesInMappingResult = {
   mappingWithSplitApplied: Mapping;
-  oldAgglomerateIds: Set<number>;
-  newAgglomerateIds: Set<number>;
-  newToOldAgglomerateIds: Map<number, number>;
+  oldAgglomerateIds: Set<bigint>;
+  newAgglomerateIds: Set<bigint>;
+  newToOldAgglomerateIds: Map<bigint, bigint>;
 };
 
 /**
@@ -63,14 +66,14 @@ type SplitAgglomeratesInMappingResult = {
  */
 export function* splitAgglomeratesInMapping(
   activeMapping: ActiveMappingInfo,
-  segmentIdToOldAgglomerateId: Map<number, number>,
+  segmentIdToOldAgglomerateId: Map<bigint, bigint>,
   volumeTracingId: string,
   version: number,
   syncAgglomerateTrees: boolean,
   addAdditionalSegmentsToMapping = false,
 ): Saga<SplitAgglomeratesInMappingResult | undefined> {
   // The old agglomerate ids are all agglomerates the passed segments belonged to before the split.
-  const oldAgglomerateIds = new Set<number>(segmentIdToOldAgglomerateId.values());
+  const oldAgglomerateIds = new Set<bigint>(segmentIdToOldAgglomerateId.values());
   // Re-map the local segments of EVERY involved old agglomerate, so that segments of those
   // agglomerates are not left in an outdated state.
   const localSegmentIds = new Set(
@@ -102,14 +105,15 @@ export function* splitAgglomeratesInMapping(
     annotationId,
     version,
   );
-  const newToOldAgglomerateIds = new Map<number, number>();
+  const newToOldAgglomerateIds = new Map<bigint, bigint>();
 
-  const knownAndAdditionalSegmentIds = new Set<number>(
-    Array.from(mappingBeforeSplit.keys() ?? [], Number),
+  const knownAndAdditionalSegmentIds = new Set<bigint>(
+    Array.from((mappingBeforeSplit as NumberLikeMap).keys(), (segmentId) => BigInt(segmentId)),
   ).union(new Set(segmentIdToOldAgglomerateId.keys()));
 
-  const requestedMappingInfoWrapped = new NumberLikeMapWrapper(requestedMappingInfo);
-  const mappingBeforeSplitWrapped = new NumberLikeMapWrapper(mappingBeforeSplit);
+  // The mapping's native key/value type (number for uint32-backed datasets, bigint for uint64) must
+  // be preserved when re-building it, so ids are adapted back to that type before being written.
+  const adaptToType = getAdaptToTypeFunction(mappingBeforeSplit);
 
   // Create a new mapping which is equal to the old one with the difference that
   // ids requested from the backend are mapped to their new target agglomerate ids.
@@ -119,14 +123,17 @@ export function* splitAgglomeratesInMapping(
   // mesh opacity and visibility between reloading the meshes.
   const mappingWithSplitApplied = new Map();
   knownAndAdditionalSegmentIds.forEach((segmentId) => {
-    const mappedId = requestedMappingInfoWrapped.getAsNumber(segmentId);
+    const mappedId = getMappedIdAsBigInt(requestedMappingInfo, segmentId);
+    const previousMappedId = getMappedIdAsBigInt(mappingBeforeSplit, segmentId);
     if (mappedId != null) {
-      const prevAgglomerateId =
-        segmentIdToOldAgglomerateId.get(segmentId) ??
-        mappingBeforeSplitWrapped.getAsNumber(segmentId);
-      newToOldAgglomerateIds.set(mappedId, Number(prevAgglomerateId));
-      if (mappingBeforeSplitWrapped.has(segmentId) || addAdditionalSegmentsToMapping) {
-        mappingWithSplitApplied.set(segmentId, mappedId);
+      const prevAgglomerateId = segmentIdToOldAgglomerateId.get(segmentId) ?? previousMappedId;
+      if (prevAgglomerateId != null) {
+        // A split never merges two old agglomerates into one new one, so every segment that maps to
+        // a given newId shares the same prevAgglomerateId — overwriting an existing entry is a no-op.
+        newToOldAgglomerateIds.set(mappedId, prevAgglomerateId);
+      }
+      if (previousMappedId != null || addAdditionalSegmentsToMapping) {
+        mappingWithSplitApplied.set(adaptToType(segmentId), adaptToType(mappedId));
       }
     } else {
       if (splitSegmentIds.has(segmentId)) {
@@ -136,8 +143,9 @@ export function* splitAgglomeratesInMapping(
         );
       }
       // The segment was not requested / not included in the reply, but already present in the previous mapping. Just copy it over.
-      const unchangedAgglomerateId = mappingBeforeSplitWrapped.getAsNumber(segmentId);
-      mappingWithSplitApplied.set(segmentId, unchangedAgglomerateId);
+      if (previousMappedId != null) {
+        mappingWithSplitApplied.set(adaptToType(segmentId), adaptToType(previousMappedId));
+      }
     }
   });
 
@@ -176,15 +184,15 @@ export function* splitAgglomeratesInMapping(
  */
 export function* splitAgglomerateInMapping(
   activeMapping: ActiveMappingInfo,
-  agglomerateId: number,
-  affectedSegmentIds: Iterable<number>,
+  agglomerateId: bigint,
+  affectedSegmentIds: Iterable<bigint>,
   volumeTracingId: string,
   version: number,
   syncAgglomerateTrees: boolean,
   addAdditionalSegmentsToMapping = false,
 ): Saga<SplitAgglomeratesInMappingResult | undefined> {
   const segmentIdToOldAgglomerateId = new Map(
-    Array.from(affectedSegmentIds, (segmentId) => [segmentId, agglomerateId] as [number, number]),
+    Array.from(affectedSegmentIds, (segmentId) => [segmentId, agglomerateId] as [bigint, bigint]),
   );
   return yield* splitAgglomeratesInMapping(
     activeMapping,
@@ -198,13 +206,19 @@ export function* splitAgglomerateInMapping(
 
 function* mergeAgglomeratesInMapping(
   activeMapping: ActiveMappingInfo,
-  sourceAgglomerateId: number,
-  targetAgglomerateId: number,
+  sourceAgglomerateId: bigint,
+  targetAgglomerateId: bigint,
 ): Saga<Mapping> {
-  const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
-
-  const typedTargetAgglomerateId = adaptToType(targetAgglomerateId);
-  const typedSourceAgglomerateId = adaptToType(sourceAgglomerateId);
+  // The mapping is either number- or BigInt-keyed/valued (uint32- vs. uint64-backed dataset).
+  // Number-keyed mappings never contain ids exceeding the safe integer range, so the
+  // round-trip through Number() below is safe.
+  const isNumberBackedMapping = activeMapping.mapping != null && isNumberMap(activeMapping.mapping);
+  const typedTargetAgglomerateId = isNumberBackedMapping
+    ? Number(targetAgglomerateId)
+    : targetAgglomerateId;
+  const typedSourceAgglomerateId = isNumberBackedMapping
+    ? Number(sourceAgglomerateId)
+    : sourceAgglomerateId;
   return new Map(
     Array.from(activeMapping.mapping as NumberLikeMap, ([key, value]) =>
       value === typedTargetAgglomerateId ? [key, typedSourceAgglomerateId] : [key, value],
@@ -215,8 +229,8 @@ function* mergeAgglomeratesInMapping(
 export function* updateMappingWithMerge(
   volumeTracingId: string,
   activeMapping: ActiveMappingInfo,
-  sourceAgglomerateId: number,
-  targetAgglomerateId: number,
+  sourceAgglomerateId: bigint,
+  targetAgglomerateId: bigint,
   // Must be true if we know that the updated mapping info was already saved on the server.
   isVersionStoredOnServer: boolean,
 ) {

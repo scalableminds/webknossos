@@ -20,7 +20,9 @@ case class SegmentStatisticsParameters(
     annotationVersion: Option[Long]
 )
 object SegmentStatisticsParameters {
-  implicit val jsonFormat: OFormat[SegmentStatisticsParameters] = Json.format[SegmentStatisticsParameters]
+  private val baseFormat: OFormat[SegmentStatisticsParameters] = Json.format[SegmentStatisticsParameters]
+  implicit val jsonFormat: OFormat[SegmentStatisticsParameters] =
+    UnsignedLongJson.patchListField(baseFormat, "segmentIds")(_.segmentIds, (a, v) => a.copy(segmentIds = v))
 }
 case class SegmentStatisticsParametersMeshBased(
     mag: Vec3Int,
@@ -31,8 +33,10 @@ case class SegmentStatisticsParametersMeshBased(
     annotationVersion: Option[Long]
 )
 object SegmentStatisticsParametersMeshBased {
-  implicit val jsonFormat: OFormat[SegmentStatisticsParametersMeshBased] =
+  private val baseFormat: OFormat[SegmentStatisticsParametersMeshBased] =
     Json.format[SegmentStatisticsParametersMeshBased]
+  implicit val jsonFormat: OFormat[SegmentStatisticsParametersMeshBased] =
+    UnsignedLongJson.patchListField(baseFormat, "segmentIds")(_.segmentIds, (a, v) => a.copy(segmentIds = v))
 }
 
 trait SegmentStatistics extends ProtoGeometryConversions {

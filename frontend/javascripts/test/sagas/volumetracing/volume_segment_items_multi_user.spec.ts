@@ -37,7 +37,7 @@ describe("Collaborative editing of segment items", () => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
-    const segmentId = 1;
+    const segmentId = 1n;
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
 
@@ -118,7 +118,7 @@ describe("Collaborative editing of segment items", () => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
-    const segmentId = 1;
+    const segmentId = 1n;
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
 
@@ -271,7 +271,7 @@ describe("Collaborative editing of segment items", () => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
-    const segmentId = 1;
+    const segmentId = 1n;
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
 
@@ -365,7 +365,7 @@ describe("Collaborative editing of segment items", () => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
-    const segmentId = 1;
+    const segmentId = 1n;
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
 
@@ -437,7 +437,7 @@ describe("Collaborative editing of segment items", () => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
-    const segmentId = 1;
+    const segmentId = 1n;
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
 
@@ -508,7 +508,7 @@ describe("Collaborative editing of segment items", () => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
-    const segmentId = 1;
+    const segmentId = 1n;
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
 
@@ -586,7 +586,7 @@ describe("Collaborative editing of segment items", () => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
-    const segmentId = 1;
+    const segmentId = 1n;
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
 

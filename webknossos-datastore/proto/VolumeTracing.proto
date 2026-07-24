@@ -7,7 +7,7 @@ import "MetadataEntry.proto";
 import "IdWithBool.proto";
 
 message Segment {
-	required int64 segmentId = 1;
+	required uint64 segmentId = 1;
 	optional Vec3IntProto anchorPosition = 2;
 	optional string name = 3;
 	optional int64 creationTime = 4;
@@ -20,7 +20,7 @@ message Segment {
 
 message VolumeUserStateProto {
   required string userId = 1;
-  optional int64 activeSegmentId = 2;
+  optional uint64 activeSegmentId = 2;
   repeated Id32WithBool segmentGroupExpandedStates = 3;
   repeated Id32WithBool boundingBoxVisibilities = 4;
   repeated Id64WithBool segmentVisibilities = 5;
@@ -41,7 +41,7 @@ message VolumeTracing {
     int64 = 18;
   }
 
-  optional int64 activeSegmentId = 1;
+  optional uint64 activeSegmentId = 1;
   required BoundingBoxProto boundingBox = 2;
   required int64 createdTimestamp = 3;
   required string datasetName = 4; // used when parsing and handling nmls, not used in tracing store anymore, do not rely on correct values
@@ -49,7 +49,7 @@ message VolumeTracing {
   required Vec3DoubleProto editRotation = 6;
   required ElementClassProto elementClass = 7;
   optional string fallbackLayer = 8;
-  optional int64 largestSegmentId = 9;
+  optional uint64 largestSegmentId = 9;
   required int64 version = 10;
   required double zoomLevel = 11;
   optional BoundingBoxProto userBoundingBox = 12;

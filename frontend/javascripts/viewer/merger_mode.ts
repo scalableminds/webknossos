@@ -1,3 +1,4 @@
+import { toBigInt } from "libs/bigint_helpers";
 import cloneDeep from "lodash-es/cloneDeep";
 import messages from "messages";
 import type { AdditionalCoordinate } from "types/api_types";
@@ -25,11 +26,11 @@ import type { CreateNodeAction } from "./model/actions/skeletontracing_actions";
 
 type MergerModeState = {
   // Representative Segment Id is a mapped id.
-  treeIdToRepresentativeSegmentId: Record<number, number | null | undefined>;
-  idMapping: Map<number, number>;
+  treeIdToRepresentativeSegmentId: Record<number, bigint | null | undefined>;
+  idMapping: Map<bigint, bigint>;
 
   // Unmapped Segment Id -> Count
-  nodesPerUnmappedSegment: Record<number, number>;
+  nodesPerUnmappedSegment: Map<bigint, number>;
   nodes: NodeWithTreeId[];
 
   // A properly initialized merger mode should always
@@ -40,7 +41,7 @@ type MergerModeState = {
   segmentationLayerName: string | null | undefined;
 
   // Node Id -> Unmapped Segment Id
-  nodeToUnmappedSegmentMap: Record<string, number>;
+  nodeToUnmappedSegmentMap: Record<string, bigint>;
   prevTracing: SkeletonTracing;
 };
 const unregisterKeyHandlers: UnregisterHandler[] = [];
@@ -48,7 +49,7 @@ const unsubscribeFunctions: Array<() => void> = [];
 let isCodeActive = false;
 
 function mapSegmentToRepresentative(
-  unmappedSegmentId: number,
+  unmappedSegmentId: bigint,
   treeId: number,
   mergerModeState: MergerModeState,
 ) {
@@ -58,7 +59,7 @@ function mapSegmentToRepresentative(
 
 function getRepresentativeForTree(
   treeId: number,
-  unmappedSegmentId: number,
+  unmappedSegmentId: bigint,
   mergerModeState: MergerModeState,
 ) {
   const { treeIdToRepresentativeSegmentId } = mergerModeState;
@@ -74,7 +75,7 @@ function getRepresentativeForTree(
 }
 
 function removeUnmappedSegmentIdFromMapping(
-  unmappedSegmentId: number,
+  unmappedSegmentId: bigint,
   treeId: number,
   mergerModeState: MergerModeState,
 ) {
@@ -109,31 +110,27 @@ function removeUnmappedSegmentIdFromMapping(
 /* This function is used to increment the reference count /
    number of nodes mapped to the given segment */
 function increaseNodesOfUnmappedSegment(
-  unmappedSegmentId: number,
+  unmappedSegmentId: bigint,
   mergerModeState: MergerModeState,
 ) {
   const { nodesPerUnmappedSegment } = mergerModeState;
-  const currentValue = nodesPerUnmappedSegment[unmappedSegmentId];
-
-  if (currentValue == null) {
-    nodesPerUnmappedSegment[unmappedSegmentId] = 1;
-  } else {
-    nodesPerUnmappedSegment[unmappedSegmentId] = currentValue + 1;
-  }
-
-  return nodesPerUnmappedSegment[unmappedSegmentId];
+  const currentValue = nodesPerUnmappedSegment.get(unmappedSegmentId);
+  const newValue = currentValue == null ? 1 : currentValue + 1;
+  nodesPerUnmappedSegment.set(unmappedSegmentId, newValue);
+  return newValue;
 }
 
 /* This function is used to decrement the reference count /
    number of nodes mapped to the given segment. */
 function decreaseNodesOfUnmappedSegment(
-  unmappedSegmentId: number,
+  unmappedSegmentId: bigint,
   mergerModeState: MergerModeState,
 ): number {
   const { nodesPerUnmappedSegment } = mergerModeState;
-  const currentValue = nodesPerUnmappedSegment[unmappedSegmentId];
-  nodesPerUnmappedSegment[unmappedSegmentId] = currentValue - 1;
-  return nodesPerUnmappedSegment[unmappedSegmentId];
+  const currentValue = nodesPerUnmappedSegment.get(unmappedSegmentId) ?? 0;
+  const newValue = currentValue - 1;
+  nodesPerUnmappedSegment.set(unmappedSegmentId, newValue);
+  return newValue;
 }
 
 function getAllNodesWithTreeId(): Array<NodeWithTreeId> {
@@ -256,7 +253,7 @@ async function getUnmappedSegmentId(
     null,
     additionalCoordinates,
   );
-  return segmentId;
+  return toBigInt(segmentId);
 }
 
 /* This function decreases the number of nodes associated with the segment the passed node belongs to.
@@ -319,7 +316,7 @@ async function onUpdateNode(mergerModeState: MergerModeState, node: UpdateAction
       );
     }
 
-    if (unmappedSegmentId != null && unmappedSegmentId > 0) {
+    if (unmappedSegmentId != null && unmappedSegmentId !== 0n) {
       await onCreateNode(
         mergerModeState,
         id,
@@ -446,9 +443,11 @@ async function mergeSegmentsOfAlreadyExistingTrees(
       return;
     }
 
-    const unmappedSegmentId = await api.data.getDataValue(segmentationLayerName, segmentPosition);
+    const unmappedSegmentId = toBigInt(
+      await api.data.getDataValue(segmentationLayerName, segmentPosition),
+    );
 
-    if (unmappedSegmentId != null && unmappedSegmentId > 0) {
+    if (unmappedSegmentId != null && unmappedSegmentId !== 0n) {
       // Store the segment id
       nodeToUnmappedSegmentMap[node.id] = unmappedSegmentId;
       // Add to agglomerate
@@ -481,7 +480,7 @@ function resetState(mergerModeState: Partial<MergerModeState> = {}) {
   const defaults: MergerModeState = {
     treeIdToRepresentativeSegmentId: {},
     idMapping: new Map(),
-    nodesPerUnmappedSegment: {},
+    nodesPerUnmappedSegment: new Map(),
     nodes: getAllNodesWithTreeId(),
     segmentationLayerName,
     nodeToUnmappedSegmentMap: {},

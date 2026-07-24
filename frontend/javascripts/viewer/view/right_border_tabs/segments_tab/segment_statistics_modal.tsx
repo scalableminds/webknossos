@@ -38,9 +38,9 @@ type Props = {
 };
 
 type SegmentInfo = {
-  key: number;
+  key: string;
   additionalCoordinates: string;
-  segmentId: number;
+  segmentId: bigint;
   segmentName: string;
   groupId: number | undefined | null;
   groupName: string;
@@ -288,7 +288,7 @@ export function SegmentStatisticsModal({
       }
 
       return {
-        key: segment.id,
+        key: segment.id.toString(),
         additionalCoordinates: additionalCoordStringForCsv,
         segmentId: segment.id,
         segmentName: segment.name == null ? `Segment ${segment.id}` : segment.name,

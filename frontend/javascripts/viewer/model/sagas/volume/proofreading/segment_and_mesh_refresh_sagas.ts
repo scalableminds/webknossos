@@ -37,7 +37,7 @@ function proofreadCoarseMagIndex(): number {
 
 export function* ensureSegmentItemAndMaybeLoadCoarseMesh(
   layerName: string,
-  segmentId: number,
+  segmentId: bigint,
   position: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | undefined,
 ): Saga<void> {
@@ -53,7 +53,7 @@ export function* ensureSegmentItemAndMaybeLoadCoarseMesh(
 
 function* ensureSegmentItem(
   layerName: string,
-  segmentId: number,
+  segmentId: bigint,
   position: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | undefined,
 ): Saga<void> {
@@ -62,7 +62,7 @@ function* ensureSegmentItem(
 
 function* loadCoarseMesh(
   layerName: string,
-  segmentId: number,
+  segmentId: bigint,
   position: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | undefined,
   opacity?: number,
@@ -130,8 +130,8 @@ export function* refreshProofreadingSegmentsAndMeshes(
   volumeTracingId: string,
   sourceInfo: IdInfo,
   targetInfo: IdInfoOpt,
-  sourceAgglomerateId: number,
-  targetAgglomerateId: number,
+  sourceAgglomerateId: bigint,
+  targetAgglomerateId: bigint,
   ctx: OperationContext,
 ): Saga<void> {
   /* Ensure segment items exist for affected segments and reload affected meshes */
@@ -162,8 +162,8 @@ export function* refreshProofreadingSegmentsAndMeshes(
 export function* refreshAffectedSegmentItems(
   layerName: string,
   items: Array<{
-    oldAgglomerateId?: number;
-    newAgglomerateId: number;
+    oldAgglomerateId?: bigint;
+    newAgglomerateId: bigint;
     nodePosition: Vector3;
   }>,
 ) {
@@ -184,7 +184,7 @@ export function* refreshAffectedSegmentItems(
     call(
       ensureSegmentItem,
       layerName,
-      Number(item.newAgglomerateId),
+      item.newAgglomerateId,
       item.nodePosition,
       additionalCoordinates,
     ),
@@ -196,7 +196,7 @@ export function* refreshAffectedSegmentItems(
 
 export function* shouldReloadMeshesAfterProofreadAction(
   layerName: string,
-  oldAgglomerateIds: number[],
+  oldAgglomerateIds: bigint[],
 ): Saga<boolean> {
   const autoRenderMeshInProofreading = yield* select(
     (state) => state.userConfiguration.autoRenderMeshInProofreading,
@@ -224,18 +224,18 @@ export type PreservedMeshDisplayProps = {
 // original mesh display properties can no longer be read.
 export function* getMeshDisplayPropsByOldAgglomerateId(
   layerName: string,
-  oldAgglomerateIds: Iterable<number | null | undefined>,
+  oldAgglomerateIds: Iterable<bigint | null | undefined>,
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
-): Saga<Map<number, PreservedMeshDisplayProps>> {
+): Saga<Map<bigint, PreservedMeshDisplayProps>> {
   return yield* select((state) => {
-    const displayPropsByAgglomerateId = new Map<number, PreservedMeshDisplayProps>();
+    const displayPropsByAgglomerateId = new Map<bigint, PreservedMeshDisplayProps>();
     for (const oldAgglomerateId of oldAgglomerateIds) {
       if (oldAgglomerateId != null && !displayPropsByAgglomerateId.has(oldAgglomerateId)) {
         const meshInfo = getMeshInfoForSegment(
           state,
           additionalCoordinates || null,
           layerName,
-          Number(oldAgglomerateId),
+          oldAgglomerateId,
         );
         if (meshInfo != null) {
           displayPropsByAgglomerateId.set(oldAgglomerateId, {
@@ -252,8 +252,8 @@ export function* getMeshDisplayPropsByOldAgglomerateId(
 export function* maybeRefreshAffectedMeshes(
   layerName: string,
   items: Array<{
-    oldAgglomerateId?: number;
-    newAgglomerateId: number;
+    oldAgglomerateId?: bigint;
+    newAgglomerateId: bigint;
     nodePosition: Vector3;
     opacity?: number; // see refreshAffectedMeshes below.
   }>,
@@ -271,8 +271,8 @@ export function* maybeRefreshAffectedMeshes(
 export function* refreshAffectedMeshes(
   layerName: string,
   items: Array<{
-    oldAgglomerateId?: number;
-    newAgglomerateId: number;
+    oldAgglomerateId?: bigint;
+    newAgglomerateId: bigint;
     nodePosition: Vector3;
     // Opacity and visibility to apply to the reloaded mesh. If unset, the values of the old
     // mesh (oldAgglomerateId) are used before its removal (see below).
@@ -315,7 +315,7 @@ export function* refreshAffectedMeshes(
     const isVisible = item.isVisible ?? oldDisplayProps?.isVisible;
     // Remove old agglomerate mesh(es) and load updated agglomerate mesh(es)
     if (item.oldAgglomerateId && !removedIds.has(item.oldAgglomerateId)) {
-      yield* put(removeMeshAction(layerName, Number(item.oldAgglomerateId)));
+      yield* put(removeMeshAction(layerName, item.oldAgglomerateId));
       removedIds.add(item.oldAgglomerateId);
     }
     if (!newlyLoadedIds.has(item.newAgglomerateId)) {
@@ -323,7 +323,7 @@ export function* refreshAffectedMeshes(
         yield* call(
           loadCoarseMesh,
           layerName,
-          Number(item.newAgglomerateId),
+          item.newAgglomerateId,
           item.nodePosition,
           additionalCoordinates,
           opacity,

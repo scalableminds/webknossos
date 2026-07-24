@@ -23,5 +23,9 @@ object TreeAgglomerateInfo {
       propertyProto.mappingName
     )
 
-  implicit val jsonFormat: OFormat[TreeAgglomerateInfo] = Json.format[TreeAgglomerateInfo]
+  implicit val jsonFormat: OFormat[TreeAgglomerateInfo] =
+    UnsignedLongJson.patchRequiredField(Json.format[TreeAgglomerateInfo], "agglomerateId")(
+      _.agglomerateId,
+      (a, v) => a.copy(agglomerateId = v)
+    )
 }

@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
+import com.scalableminds.webknossos.datastore.helpers.UnsignedLongJson
 import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, UpdateAction}
 import play.api.libs.json.*
 
@@ -32,7 +33,16 @@ case class SplitAgglomerateUpdateAction(
 }
 
 object SplitAgglomerateUpdateAction {
-  implicit val jsonFormat: OFormat[SplitAgglomerateUpdateAction] = Json.format[SplitAgglomerateUpdateAction]
+  private val baseFormat: OFormat[SplitAgglomerateUpdateAction] = Json.format[SplitAgglomerateUpdateAction]
+  implicit val jsonFormat: OFormat[SplitAgglomerateUpdateAction] =
+    UnsignedLongJson.patchOptionalField(
+      UnsignedLongJson.patchOptionalField(
+        UnsignedLongJson
+          .patchOptionalField(baseFormat, "agglomerateId")(_.agglomerateId, (a, v) => a.copy(agglomerateId = v)),
+        "segmentId1"
+      )(_.segmentId1, (a, v) => a.copy(segmentId1 = v)),
+      "segmentId2"
+    )(_.segmentId2, (a, v) => a.copy(segmentId2 = v))
 }
 
 // we switched from positions to segment ids in https://github.com/scalableminds/webknossos/pull/7742.
@@ -59,5 +69,17 @@ case class MergeAgglomerateUpdateAction(
 }
 
 object MergeAgglomerateUpdateAction {
-  implicit val jsonFormat: OFormat[MergeAgglomerateUpdateAction] = Json.format[MergeAgglomerateUpdateAction]
+  private val baseFormat: OFormat[MergeAgglomerateUpdateAction] = Json.format[MergeAgglomerateUpdateAction]
+  implicit val jsonFormat: OFormat[MergeAgglomerateUpdateAction] =
+    UnsignedLongJson.patchOptionalField(
+      UnsignedLongJson.patchOptionalField(
+        UnsignedLongJson.patchOptionalField(
+          UnsignedLongJson
+            .patchOptionalField(baseFormat, "agglomerateId1")(_.agglomerateId1, (a, v) => a.copy(agglomerateId1 = v)),
+          "agglomerateId2"
+        )(_.agglomerateId2, (a, v) => a.copy(agglomerateId2 = v)),
+        "segmentId1"
+      )(_.segmentId1, (a, v) => a.copy(segmentId1 = v)),
+      "segmentId2"
+    )(_.segmentId2, (a, v) => a.copy(segmentId2 = v))
 }

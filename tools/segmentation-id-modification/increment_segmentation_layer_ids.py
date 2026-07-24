@@ -10,12 +10,15 @@ Usage:
 ATTENTION: Loads the entire dataset into RAM. Only use when the dataset is small.
 """
 
+import sys
+
 import numpy as np
 import webknossos as wk
 
-ID_OFFSET = 4_300_000_000  # This is greater than 2**32 and produces nice IDs when the original ids are small
-DATASET_PATH = "path/to/dataset"
-LAYER_NAME = "segmentation"
+ID_OFFSET = 100000000000000000  # This is greater than 2**32 and produces nice IDs when the original ids are small
+DATASET_PATH = sys.argv[1]
+LAYER_NAME = sys.argv[2]
+
 
 def mutate_layer(dataset_path: str, layer_name: str, constant: int) -> None:
     # Open existing dataset
@@ -45,6 +48,8 @@ def mutate_layer(dataset_path: str, layer_name: str, constant: int) -> None:
 
 
 if __name__ == "__main__":
+    print("DATASET_PATH", DATASET_PATH)
+    print("LAYER_NAME", LAYER_NAME)
     mutate_layer(
         dataset_path=DATASET_PATH,
         layer_name=LAYER_NAME,

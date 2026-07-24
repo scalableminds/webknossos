@@ -59,7 +59,7 @@ export function loadAgglomerateTreeAtPosition(position: Vector3): void {
 
 // loadAgglomerateTreeAtPosition should be preferred as it allows to use the up-to-date agglomerate id at the given position.
 // Is needed in live-collab scenario.
-export function loadAgglomerateTreeFromId(agglomerateId: number): void {
+export function loadAgglomerateTreeFromId(agglomerateId: bigint): void {
   const agglomerateTreeLoadingInfo = getAgglomerateTreeLoadingInfo();
 
   if (agglomerateTreeLoadingInfo) {
@@ -106,7 +106,7 @@ export function handleClickSegment(clickPosition: Point2) {
 
   const { additionalCoordinates } = state.flycam;
 
-  if (segmentId > 0 && positionInSegmentationLayerSpace != null) {
+  if (segmentId !== 0n && positionInSegmentationLayerSpace != null) {
     Store.dispatch(
       clickSegmentAction(segmentId, positionInSegmentationLayerSpace, additionalCoordinates),
     );

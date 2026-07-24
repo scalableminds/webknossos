@@ -1,4 +1,4 @@
-import Icon, { DownloadOutlined, MoreOutlined, WarningOutlined } from "@ant-design/icons";
+import Icon, { DownloadOutlined, MoreOutlined } from "@ant-design/icons";
 import IconStatusbarDownsampling from "@images/icons/icon-statusbar-downsampling.svg?react";
 import IconStatusbarMouseLeft from "@images/icons/icon-statusbar-mouse-left.svg?react";
 import IconStatusbarMouseLeftDrag from "@images/icons/icon-statusbar-mouse-left-drag.svg?react";
@@ -11,7 +11,6 @@ import { formatCountToDataAmountUnit } from "libs/format_utils";
 import { V3 } from "libs/mjs";
 import { useInterval } from "libs/react_helpers";
 import { useKeyPress, useWkSelector } from "libs/react_hooks";
-import message from "messages";
 import messages from "messages";
 import React, { useCallback, useState } from "react";
 import { useDispatch } from "react-redux";
@@ -25,7 +24,6 @@ import {
 import {
   getMappingInfoOrNull,
   getVisibleSegmentationLayer,
-  hasVisibleUint64Segmentation,
 } from "viewer/model/accessors/dataset_accessor";
 import { getActiveMagInfo } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool, adaptActiveToolToShortcuts } from "viewer/model/accessors/tool_accessor";
@@ -43,7 +41,7 @@ import {
   setActiveTreeAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import { setActiveCellAction } from "viewer/model/actions/volumetracing_actions";
-import { getSupportedValueRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
+import { getSegmentIdRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import { getGlobalDataConnectionInfo } from "viewer/model/data_connection_info";
 import { Store } from "viewer/singletons";
 import BorderToggleButton from "./components/border_toggle_button";
@@ -262,23 +260,6 @@ function SegmentInfo() {
   return <span className="info-element">Segment {idString}</span>;
 }
 
-function maybeLabelWithSegmentationWarning(isUint64SegmentationVisible: boolean, label: string) {
-  return isUint64SegmentationVisible ? (
-    <React.Fragment>
-      {label}{" "}
-      <FastTooltip title={message["tracing.uint64_segmentation_warning"]}>
-        <WarningOutlined
-          style={{
-            color: "var(--ant-color-warning)",
-          }}
-        />
-      </FastTooltip>
-    </React.Fragment>
-  ) : (
-    label
-  );
-}
-
 function Infos() {
   const isSkeletonAnnotation = useWkSelector((state) => state.annotation.skeleton != null);
   const activeVolumeTracing = useWkSelector((state) => getActiveSegmentationTracing(state));
@@ -293,7 +274,7 @@ function Infos() {
   const dispatch = useDispatch();
 
   const onChangeActiveCellId = useCallback(
-    (id: number) => dispatch(setActiveCellAction(id)),
+    (id: bigint) => dispatch(setActiveCellAction(id)),
     [dispatch],
   );
   const onChangeActiveNodeId = useCallback(
@@ -313,10 +294,8 @@ function Infos() {
     }
     const segmentationLayer = getSegmentationLayerForTracing(state, activeVolumeTracing);
     const elementClass = segmentationLayer.elementClass;
-    return getSupportedValueRangeForElementClass(elementClass);
+    return getSegmentIdRangeForElementClass(elementClass);
   });
-
-  const isUint64SegmentationVisible = useWkSelector(hasVisibleUint64Segmentation);
 
   return (
     <React.Fragment>
@@ -327,14 +306,11 @@ function Infos() {
       {activeVolumeTracing != null && validSegmentIdRange != null ? (
         <span className="info-element">
           <NumberInputPopoverSetting
-            value={activeCellId}
-            label={maybeLabelWithSegmentationWarning(isUint64SegmentationVisible, "Active Segment")}
+            value={activeCellId ?? null}
+            label="Active Segment"
             min={validSegmentIdRange[0]}
             max={validSegmentIdRange[1]}
-            detailedLabel={maybeLabelWithSegmentationWarning(
-              isUint64SegmentationVisible,
-              "Change Active Segment ID",
-            )}
+            detailedLabel="Change Active Segment ID"
             onChange={onChangeActiveCellId}
           />
         </span>

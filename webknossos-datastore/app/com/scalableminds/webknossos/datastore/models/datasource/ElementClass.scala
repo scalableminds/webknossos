@@ -54,10 +54,8 @@ object ElementClass extends ExtendedEnumeration {
     case ElementClass.int16  => (-math.pow(2, 15), math.pow(2, 15) - 1)
     case ElementClass.int32  => (-math.pow(2, 31), math.pow(2, 31) - 1)
 
-    // Int64 types are only supported for segmentations (which don't need to call this
-    // function as there will be no histogram / color data). Still, for the record:
-    // The frontend only supports number in range of 2 ** 53 - 1 which is currently
-    // the maximum supported "64-bit" segment id due to JS Number limitations (frontend).
+    // Int64/uint64 types are only supported for segmentations (which don't need to call this
+    // function as there will be no histogram / color data).
     case ElementClass.uint64 | ElementClass.int64 => (0.0, math.pow(2, 8) - 1)
     case _                                        => (0.0, 255.0)
   }
@@ -105,25 +103,35 @@ object ElementClass extends ExtendedEnumeration {
       case _                   => Failure(s"Unsupported element class $elementClass for ElementClassProto")
     }
 
-  /* only used for segmentation layers, so only unsigned integers 8 16 32 64 */
+  /* only used for segmentation layers, so only unsigned integers 8 16 32 64, and (legacy) int64 */
   private def maxSegmentIdValue(elementClass: ElementClass.Value): Long = elementClass match {
-    case ElementClass.uint8                       => (1L << 8L) - 1
-    case ElementClass.int8                        => Byte.MaxValue
-    case ElementClass.uint16                      => (1L << 16L) - 1
-    case ElementClass.int16                       => Short.MaxValue
-    case ElementClass.uint32                      => (1L << 32L) - 1
-    case ElementClass.int32                       => Int.MaxValue
-    case ElementClass.uint64 | ElementClass.int64 =>
-      (1L << 53L) - 1 // Front-end can only handle segment-ids up to (2^53)-1
+    case ElementClass.uint8  => (1L << 8L) - 1
+    case ElementClass.int8   => Byte.MaxValue
+    case ElementClass.uint16 => (1L << 16L) - 1
+    case ElementClass.int16  => Short.MaxValue
+    case ElementClass.uint32 => (1L << 32L) - 1
+    case ElementClass.int32  => Int.MaxValue
+    case ElementClass.int64  => Long.MaxValue
+    // uint64's range is the full 64-bit space: every possible Long bit pattern is a valid
+    // unsigned value, so there is no upper bound left to enforce once ids are read with
+    // unsigned semantics (see largestSegmentIdIsInRange below).
+    case ElementClass.uint64 => -1L
   }
 
   def largestSegmentIdIsInRange(largestSegmentId: Long, elementClass: ElementClass.Value): Boolean =
     largestSegmentIdIsInRange(Some(largestSegmentId), elementClass)
 
   def largestSegmentIdIsInRange(largestSegmentIdOpt: Option[Long], elementClass: ElementClass.Value): Boolean =
-    segmentationElementClasses.contains(elementClass) && largestSegmentIdOpt.forall(largestSegmentId =>
-      largestSegmentId >= 0L && largestSegmentId <= maxSegmentIdValue(elementClass)
-    )
+    segmentationElementClasses.contains(elementClass) && largestSegmentIdOpt.forall { largestSegmentId =>
+      elementClass match {
+        // For the 64-bit segmentation types every possible Long bit pattern is a valid segment id:
+        // uint64 spans the full unsigned range, and int64 spans the full signed range (negative ids
+        // are allowed; only 0 is disallowed as a segment id, which is enforced elsewhere). So there
+        // is nothing left to validate beyond the elementClass check above.
+        case ElementClass.uint64 | ElementClass.int64 => true
+        case _                                        => largestSegmentId >= 0L && largestSegmentId <= maxSegmentIdValue(elementClass)
+      }
+    }
 
   def toChannelAndZarrString(elementClass: ElementClass.Value): (Int, String) = elementClass match {
     case ElementClass.uint8  => (1, "|u1")

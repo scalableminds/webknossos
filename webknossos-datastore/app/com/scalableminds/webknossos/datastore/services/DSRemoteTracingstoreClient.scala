@@ -5,6 +5,7 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffMetadata, ZarrHeader}
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.{NgffZarr3GroupHeader, Zarr3ArrayHeader}
+import com.scalableminds.webknossos.datastore.helpers.UnsignedLongJson
 import com.scalableminds.webknossos.datastore.models.datasource.StaticSegmentationLayer
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
@@ -16,7 +17,9 @@ case class EditableMappingSegmentListResult(
     agglomerateIdIsPresent: Boolean
 )
 object EditableMappingSegmentListResult {
-  implicit val jsonFormat: OFormat[EditableMappingSegmentListResult] = Json.format[EditableMappingSegmentListResult]
+  private val baseFormat: OFormat[EditableMappingSegmentListResult] = Json.format[EditableMappingSegmentListResult]
+  implicit val jsonFormat: OFormat[EditableMappingSegmentListResult] =
+    UnsignedLongJson.patchListField(baseFormat, "segmentIds")(_.segmentIds, (a, v) => a.copy(segmentIds = v))
 }
 
 class DSRemoteTracingstoreClient @Inject() (

@@ -39,6 +39,7 @@ import type { DataNode } from "antd/lib/tree";
 import app from "app";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import FastTooltip from "components/fast_tooltip";
+import { toBigInt } from "libs/bigint_helpers";
 import Toast from "libs/toast";
 import { pluralize, sleep } from "libs/utils";
 import difference from "lodash-es/difference";
@@ -176,7 +177,7 @@ const mapStateToProps = (state: WebknossosState) => {
   return {
     activeCellId: activeVolumeTracing?.activeCellId,
     meshes: (meshesForCurrentAdditionalCoordinates || EMPTY_OBJECT) as Record<
-      number,
+      string,
       MeshInformation
     >, // satisfy ts
     dataset: state.dataset,
@@ -221,12 +222,12 @@ const getCleanedSelectedSegmentsOrGroup = (state: WebknossosState) => {
 };
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
-  setHoveredSegmentId(segmentId: number | null | undefined) {
+  setHoveredSegmentId(segmentId: bigint | null | undefined) {
     dispatch(updateTemporarySettingAction("hoveredSegmentId", segmentId || null));
   },
 
   loadAdHocMesh(
-    segmentId: number,
+    segmentId: bigint,
     seedPosition: Vector3,
     additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   ) {
@@ -234,7 +235,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   },
 
   loadPrecomputedMesh(
-    segmentId: number,
+    segmentId: bigint,
     seedPosition: Vector3,
     seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
     meshFileName: string,
@@ -252,7 +253,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   },
 
   setActiveCell(
-    segmentId: number,
+    segmentId: bigint,
     anchorPositionInLayerSpace?: Vector3 | null,
     additionalCoordinates?: AdditionalCoordinate[] | null,
   ) {
@@ -277,7 +278,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   },
 
   updateSegments(
-    segmentIds: number[],
+    segmentIds: bigint[],
     segmentShape: Partial<Segment>,
     layerName: string,
     createsNewUndoState: boolean,
@@ -291,7 +292,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   },
 
   updateSegment(
-    segmentId: number,
+    segmentId: bigint,
     segmentShape: Partial<Segment>,
     layerName: string,
     createsNewUndoState: boolean,
@@ -301,15 +302,15 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     );
   },
 
-  removeSegment(segmentId: number, layerName: string) {
+  removeSegment(segmentId: bigint, layerName: string) {
     dispatch(removeSegmentAction(segmentId, layerName));
   },
 
-  changeMeshOpacity(segmentId: number, layerName: string, opacity: number) {
+  changeMeshOpacity(segmentId: bigint, layerName: string, opacity: number) {
     dispatch(updateMeshOpacityAction(layerName, segmentId, opacity));
   },
 
-  deleteSegmentData(segmentId: number, layerName: string, callback?: () => void) {
+  deleteSegmentData(segmentId: bigint, layerName: string, callback?: () => void) {
     dispatch(deleteSegmentDataAction(segmentId, layerName, callback));
   },
 });
@@ -996,12 +997,12 @@ class SegmentsView extends React.Component<Props, State> {
 
     const meshes = this.props.meshes;
     const areSomeMeshesInvisible = selectedSegments.some((segment) => {
-      const segmentMesh = meshes[segment.id];
-      return segmentMesh != null && !meshes[segment.id].isVisible;
+      const segmentMesh = meshes[segment.id.toString()];
+      return segmentMesh != null && !meshes[segment.id.toString()].isVisible;
     });
     const areSomeMeshesVisible = selectedSegments.some((segment) => {
-      const segmentMesh = meshes[segment.id];
-      return segmentMesh != null && meshes[segment.id].isVisible;
+      const segmentMesh = meshes[segment.id.toString()];
+      return segmentMesh != null && meshes[segment.id.toString()].isVisible;
     });
     return { areSomeMeshesInvisible, areSomeMeshesVisible };
   };
@@ -1061,7 +1062,7 @@ class SegmentsView extends React.Component<Props, State> {
     if (visibleSegmentationLayer == null) return;
 
     this.handlePerSegment(groupId, (segment) => {
-      if (meshes[segment.id] != null) {
+      if (meshes[segment.id.toString()] != null) {
         Store.dispatch(refreshMeshAction(visibleSegmentationLayer.name, segment.id));
       }
     });
@@ -1081,7 +1082,7 @@ class SegmentsView extends React.Component<Props, State> {
     const { visibleSegmentationLayer, meshes } = this.props;
     if (visibleSegmentationLayer == null) return;
     this.handlePerSegment(groupId, (segment) => {
-      if (meshes[segment.id] != null) {
+      if (meshes[segment.id.toString()] != null) {
         Store.dispatch(removeMeshAction(visibleSegmentationLayer.name, segment.id));
       }
     });
@@ -1096,7 +1097,7 @@ class SegmentsView extends React.Component<Props, State> {
     const { meshes } = this.props;
     const additionalCoordinates = flycam.additionalCoordinates;
     this.handlePerSegment(groupId, (segment) => {
-      if (meshes[segment.id] != null) {
+      if (meshes[segment.id.toString()] != null) {
         Store.dispatch(
           updateMeshVisibilityAction(layerName, segment.id, isVisible, additionalCoordinates),
         );
@@ -1113,20 +1114,20 @@ class SegmentsView extends React.Component<Props, State> {
     });
   };
 
-  getSegmentsWithMissingPosition = (groupId: number | null): number[] => {
+  getSegmentsWithMissingPosition = (groupId: number | null): bigint[] => {
     const relevantSegments =
       groupId != null ? this.getSegmentsOfGroupRecursively(groupId) : this.getSelectedSegments();
     if (relevantSegments == null) return [];
     const segmentsWithoutPosition = relevantSegments
       .filter((segment) => segment.anchorPosition == null)
       .map((segment) => segment.id);
-    return segmentsWithoutPosition.sort();
+    return segmentsWithoutPosition.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
   };
 
   getSelectedSegments = (): Segment[] => {
     const allSegments = this.props.segments;
     if (allSegments == null) return [];
-    return this.props.selectedIds.segments.map((segmentId: number) =>
+    return this.props.selectedIds.segments.map((segmentId: bigint) =>
       allSegments.getOrThrow(segmentId),
     );
   };
@@ -1142,7 +1143,7 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getSegmentOrGroupIdsForKeys = (segmentOrGroupKeys: string[]) => {
-    const selectedIds: { segments: number[]; group: number | null } = { segments: [], group: null };
+    const selectedIds: { segments: bigint[]; group: number | null } = { segments: [], group: null };
     const groupPrefix = "Group-";
     segmentOrGroupKeys.forEach((key) => {
       if (key.startsWith(groupPrefix)) {
@@ -1154,8 +1155,8 @@ class SegmentsView extends React.Component<Props, State> {
       } else if (key.startsWith("segment-")) {
         // there should be no negative segment IDs
         const regexSplit = key.split("-");
-        if (isNumber(Number.parseInt(regexSplit[1], 10))) {
-          selectedIds.segments.push(Number.parseInt(regexSplit[1], 10));
+        if (/^\d+$/.test(regexSplit[1])) {
+          selectedIds.segments.push(BigInt(regexSplit[1]));
         }
       }
     });
@@ -1310,7 +1311,7 @@ class SegmentsView extends React.Component<Props, State> {
     if (this.props.visibleSegmentationLayer == null) return;
     const allMatchingSegmentIds = allMatches.map((match) => {
       this.maybeExpandParentGroup(match);
-      return match.id;
+      return toBigInt(match.id);
     });
     Store.dispatch(
       setSelectedSegmentsOrGroupAction(
@@ -1417,7 +1418,7 @@ class SegmentsView extends React.Component<Props, State> {
           segment={segment}
           selectedSegmentIds={this.props.selectedIds.segments}
           onSelectSegment={this.onSelectSegment}
-          mesh={this.props.meshes[segment.id]}
+          mesh={this.props.meshes[segment.id.toString()]}
           mappingInfo={this.props.mappingInfo}
           activeCellId={this.props.activeCellId}
           setHoveredSegmentId={this.props.setHoveredSegmentId}
@@ -1554,7 +1555,9 @@ class SegmentsView extends React.Component<Props, State> {
                   <AdvancedSearchPopover
                     onSelect={this.handleSearchSelect}
                     data={this.state.searchableTreeItemList}
-                    searchKey={(item) => getSegmentName(item)}
+                    searchKey={(item) =>
+                      item.type === "segment" ? getSegmentName(item) : (item.name ?? item.title)
+                    }
                     provideShortcut
                     targetId={segmentsTabId}
                     onSelectAllMatches={this.handleSelectAllMatchingSegments}
@@ -1737,7 +1740,7 @@ class SegmentsView extends React.Component<Props, State> {
       groupId != null ? this.getSegmentsOfGroupRecursively(groupId) : this.getSelectedSegments();
     if (relevantSegments.length === 0) return false;
     const meshesOfLayer = this.props.meshes;
-    return relevantSegments.some((segment) => meshesOfLayer[segment.id] != null);
+    return relevantSegments.some((segment) => meshesOfLayer[segment.id.toString()] != null);
   };
 
   onDrop = (dropInfo: {

@@ -275,21 +275,20 @@ export const convertCellIdToRGB: ShaderModule = {
 // This function mirrors the above convertCellIdToRGB-function.
 // Output is in [0,1] for R, G, B, and A
 export const jsConvertCellIdToRGBA = (
-  id: number,
+  id: bigint,
   customColors?: Array<Vector3> | null | undefined,
   alpha: number = 1,
 ): Vector4 => {
-  if (id === 0) {
+  if (id === 0n) {
     // Return white
     return [1, 1, 1, 1];
   }
 
   let rgb;
-
-  id = Math.abs(id);
+  const idAsNumber = Math.abs(Number(id));
 
   if (customColors != null) {
-    const last8Bits = id % 2 ** 8;
+    const last8Bits = idAsNumber % 2 ** 8;
     rgb = customColors[last8Bits] || [0, 0, 0];
   } else {
     // The shader always derives the segment color by using a 64-bit id from which
@@ -297,9 +296,8 @@ export const jsConvertCellIdToRGBA = (
     // - the lower 16 bits of the upper 32 bits
     // are used to derive the color.
     // In JS, we do it similarly:
-    const bigId = BigInt(id);
-    const highPart = Number((bigId >> 32n) % 2n ** 16n);
-    const lowPart = id % 2 ** 16;
+    const highPart = Number((id >> 32n) % 2n ** 16n);
+    const lowPart = idAsNumber % 2 ** 16;
     const significantSegmentIndex = highPart + lowPart;
     const colorCount = 19;
     const colorIndex = jsGetElementOfPermutation(significantSegmentIndex, colorCount, 2);

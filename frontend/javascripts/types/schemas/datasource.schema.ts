@@ -366,8 +366,13 @@ export default {
                   const: "segmentation",
                 },
                 largestSegmentId: {
-                  type: ["number", "null"],
-                  minimum: 1,
+                  // Decimal string (see datasource.types.ts): 64-bit ids can exceed the JS
+                  // safe-integer range, and jsonschema validates JSON.parse output which never
+                  // yields a bigint. The optional leading minus permits negative ids of signed
+                  // (int64) segmentation layers. 0 and leading zeros stay forbidden (0 is never a
+                  // valid segment id; it represents empty data / the eraser).
+                  type: ["string", "null"],
+                  pattern: "^-?[1-9][0-9]*$",
                 },
                 mappings: {
                   type: "array",

@@ -295,7 +295,7 @@ function* watchConnectomeAgglomerateLoading(): Saga<void> {
 export function* getAgglomerateTreeAsSkeletonTracing(
   layerName: string,
   mappingName: string,
-  agglomerateId: number,
+  agglomerateId: bigint,
 ): Saga<ServerSkeletonTracing> {
   const dataset = yield* select((state) => state.dataset);
   const annotation = yield* select((state) => state.annotation);
@@ -411,7 +411,7 @@ function* loadAgglomerateTreeWithAtPosition(
   if (!allowUpdate) return;
   const { layerName, mappingName } = action;
 
-  if (action.type === "LOAD_AGGLOMERATE_TREE_FROM_ID" && action.agglomerateId === 0) {
+  if (action.type === "LOAD_AGGLOMERATE_TREE_FROM_ID" && action.agglomerateId === 0n) {
     Toast.error(messages["tracing.agglomerate_tree.no_cell"]);
     return;
   }
@@ -525,7 +525,7 @@ function* loadAgglomerateTreeWithAtPosition(
 function* loadConnectomeAgglomerateTreeWithId(action: LoadAgglomerateTreeFromIdAction): Saga<void> {
   const { layerName, mappingName, agglomerateId } = action;
 
-  if (agglomerateId === 0) {
+  if (agglomerateId === 0n) {
     Toast.error(messages["tracing.agglomerate_tree.no_cell"]);
     return;
   }

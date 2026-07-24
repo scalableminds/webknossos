@@ -105,8 +105,8 @@ export function updateLocalSegmentationState(
 export function setActiveCellReducer(
   state: WebknossosState,
   volumeTracing: VolumeTracing,
-  id: number,
-  activeUnmappedSegmentId: number | null | undefined,
+  id: bigint,
+  activeUnmappedSegmentId: bigint | null | undefined,
 ) {
   const segmentationLayer = getSegmentationLayerForTracing(state, volumeTracing);
 
@@ -124,7 +124,7 @@ export function setActiveCellReducer(
 export function createCellReducer(
   state: WebknossosState,
   volumeTracing: VolumeTracing,
-  newSegmentId: number,
+  newSegmentId: bigint,
 ) {
   return setActiveCellReducer(state, volumeTracing, newSegmentId, null);
 }
@@ -205,7 +205,7 @@ export function setContourTracingModeReducer(
 export function setLargestSegmentIdReducer(
   state: WebknossosState,
   volumeTracing: VolumeTracing,
-  id: number | null,
+  id: bigint | null,
 ) {
   return updateVolumeTracing(state, volumeTracing.tracingId, {
     largestSegmentId: id,
@@ -453,13 +453,18 @@ export function handleSetSegments(state: WebknossosState, action: SetSegmentsAct
 }
 
 export function handleRemoveSegment(state: WebknossosState, action: RemoveSegmentAction) {
-  return updateSegments(state, action.layerName, (segments) => segments.delete(action.segmentId));
+  return updateSegments(state, action.layerName, (segments) =>
+    // TODO: Proper 64 bit support (#6921)
+    segments.delete(BigInt(action.segmentId)),
+  );
 }
 
 export function handleUpdateSegment(state: WebknossosState, action: UpdateSegmentAction) {
   return updateSegments(state, action.layerName, (segments) => {
-    const { segmentId, segment } = action;
-    if (segmentId === 0) {
+    // TODO: Proper 64 bit support (#6921)
+    const segmentId = BigInt(action.segmentId);
+    const { segment } = action;
+    if (segmentId === 0n) {
       return segments;
     }
     const oldSegment = segments.getNullable(segmentId);
@@ -500,34 +505,39 @@ export function handleMergeSegments(state: WebknossosState, action: MergeSegment
   }
   const { volumeTracing } = updateInfo;
   const { segments } = volumeTracing;
-  const isSameAgglomerate = action.sourceAgglomerateId === action.targetAgglomerateId;
-  const sourceSegment = segments.getNullable(action.sourceAgglomerateId);
-  const targetSegment = segments.getNullable(action.targetAgglomerateId);
+  // TODO: Proper 64 bit support (#6921)
+  const sourceAgglomerateId = BigInt(action.sourceAgglomerateId);
+  const targetAgglomerateId = BigInt(action.targetAgglomerateId);
+  const sourceSegmentId = BigInt(action.sourceSegmentId);
+  const targetSegmentId = BigInt(action.targetSegmentId);
+  const isSameAgglomerate = sourceAgglomerateId === targetAgglomerateId;
+  const sourceSegment = segments.getNullable(sourceAgglomerateId);
+  const targetSegment = segments.getNullable(targetAgglomerateId);
 
   // If the agglomerates are equal, do not remove the entry as this would empty the whole segment information.
   // This can happen in a concurrent editing scenario of the same segment.
   // Usually the later users client would notice a duplicate merge operation, be we do not want to rely on this here.
   let newState = isSameAgglomerate
     ? state
-    : handleRemoveSegment(state, removeSegmentAction(action.targetAgglomerateId, action.layerName));
+    : handleRemoveSegment(state, removeSegmentAction(targetAgglomerateId, action.layerName));
   const entryIndex = (volumeTracing.segmentJournal.at(-1)?.entryIndex ?? -1) + 1;
 
   newState = updateVolumeTracing(newState, volumeTracing.tracingId, {
     segmentJournal: volumeTracing.segmentJournal.concat([
       {
         type: "MERGE_SEGMENTS_ITEMS",
-        agglomerateId1: action.sourceAgglomerateId,
-        agglomerateId2: action.targetAgglomerateId,
-        segmentId1: action.sourceSegmentId,
-        segmentId2: action.targetSegmentId,
+        agglomerateId1: sourceAgglomerateId,
+        agglomerateId2: targetAgglomerateId,
+        segmentId1: sourceSegmentId,
+        segmentId2: targetSegmentId,
         entryIndex,
       },
     ]),
   });
 
   const updatedSourceProps = getUpdatedSourcePropsAfterMerge(
-    action.sourceAgglomerateId,
-    action.targetAgglomerateId,
+    sourceAgglomerateId,
+    targetAgglomerateId,
     sourceSegment,
     targetSegment,
   );
@@ -537,15 +547,15 @@ export function handleMergeSegments(state: WebknossosState, action: MergeSegment
   // it will be created here.
   newState = handleUpdateSegment(
     newState,
-    updateSegmentAction(action.sourceAgglomerateId, updatedSourceProps, action.layerName),
+    updateSegmentAction(sourceAgglomerateId, updatedSourceProps, action.layerName),
   );
 
   return newState;
 }
 
 export function getUpdatedSourcePropsAfterMerge(
-  sourceId: number,
-  targetId: number,
+  sourceId: bigint,
+  targetId: bigint,
   sourceSegment: Segment | undefined,
   targetSegment: Segment | undefined,
 ) {
@@ -569,7 +579,12 @@ export function getUpdatedSourcePropsAfterMerge(
     // id mismatch.
     // The below logic produces this instead:
     // {id: 1, name: "Segment 1 and Segment 2 - Custom String"}.
-    const sourceName = getSegmentName(sourceSegment ?? { id: sourceId, name: undefined }, false);
+    const sourceName = getSegmentName(
+      sourceSegment != null
+        ? { id: sourceSegment.id, name: sourceSegment.name }
+        : { id: sourceId, name: undefined },
+      false,
+    );
     props.name = `${sourceName} and ${targetSegment.name}`;
   }
 
@@ -638,7 +653,8 @@ export function expandSegmentParents(state: WebknossosState, action: ClickSegmen
   const getNewGroups = () => {
     const { segments, segmentGroups } = getVisibleSegments(state);
     if (segments == null) return segmentGroups;
-    const { segmentId } = action;
+    // TODO: Proper 64 bit support (#6921)
+    const segmentId = BigInt(action.segmentId);
     const segmentForId = segments.getNullable(segmentId);
     if (segmentForId == null) return segmentGroups;
     // Expand recursive parents of group too, if necessary

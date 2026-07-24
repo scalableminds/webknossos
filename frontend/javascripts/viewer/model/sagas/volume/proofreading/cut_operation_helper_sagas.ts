@@ -20,10 +20,10 @@ import type { Tree } from "../../../types/tree_types";
 
 // Returns a tuple of whether the min cut failed and if successful a list of edges removed by the min cut.
 export function* performMinCut(
-  sourceAgglomerateId: number,
-  targetAgglomerateId: number,
-  sourceSegmentIds: number[],
-  targetSegmentIds: number[],
+  sourceAgglomerateId: bigint,
+  targetAgglomerateId: bigint,
+  sourceSegmentIds: bigint[],
+  targetSegmentIds: bigint[],
   agglomerateFileMag: Vector3,
   volumeTracingId: string,
   sourceTree: Tree | null,
@@ -95,8 +95,8 @@ export function* performMinCut(
 }
 
 export function* performCutFromNeighbors(
-  agglomerateId: number,
-  segmentId: number,
+  agglomerateId: bigint,
+  segmentId: bigint,
   segmentPosition: Vector3 | null,
   agglomerateFileMag: Vector3,
   volumeTracingId: string,
@@ -133,14 +133,14 @@ export function* performCutFromNeighbors(
     | {
         position1: Vector3;
         position2: Vector3;
-        segmentId1: number;
-        segmentId2: number;
+        segmentId1: bigint;
+        segmentId2: bigint;
       }
     | {
         position1: null;
         position2: Vector3;
-        segmentId1: number;
-        segmentId2: number;
+        segmentId1: bigint;
+        segmentId2: bigint;
       }
   > = neighborInfo.neighbors.map(
     (neighbor) =>

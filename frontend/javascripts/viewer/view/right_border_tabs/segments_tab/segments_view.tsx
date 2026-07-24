@@ -58,7 +58,6 @@ import {
   getMaybeSegmentIndexAvailability,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
-import { layerToGlobalTransformedPosition } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getAdditionalCoordinatesAsString } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
@@ -92,6 +91,7 @@ import { getUpdateSegmentActionToToggleVisibility } from "viewer/model/actions/v
 import {
   batchUpdateGroupsAndSegmentsAction,
   deleteSegmentDataAction,
+  navigateToSegmentAction,
   removeSegmentAction,
   setActiveCellAction,
   setExpandedSegmentGroupsAction,
@@ -640,17 +640,15 @@ class SegmentsView extends React.Component<Props, State> {
       );
       return;
     }
-    const transformedPosition = layerToGlobalTransformedPosition(
-      segment.anchorPosition,
-      visibleSegmentationLayer.name,
-      "segmentation",
-      Store.getState(),
+
+    Store.dispatch(
+      navigateToSegmentAction(
+        segment.id,
+        segment.anchorPosition,
+        segment.additionalCoordinates,
+        visibleSegmentationLayer.name,
+      ),
     );
-    this.props.setPosition(transformedPosition);
-    const segmentAdditionalCoordinates = segment.additionalCoordinates;
-    if (segmentAdditionalCoordinates != null) {
-      this.props.setAdditionalCoordinates(segmentAdditionalCoordinates);
-    }
   };
 
   handleMeshFileSelected = async (meshFileName: string) => {

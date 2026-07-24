@@ -53,9 +53,6 @@ import { ACTIONBAR_MARGIN_LEFT } from "./action_bar/tools/tool_helpers";
 import ToolkitView from "./action_bar/tools/toolkit_switcher_view";
 import NumberSliderSetting from "./left_border_tabs/components/number_slider_setting";
 
-// Hoisted to module scope so that the component type is stable across renders.
-// Creating it inside a component body would remount the button (and its modal
-// subtree) on every render.
 const ButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
   AsyncButton,
 );

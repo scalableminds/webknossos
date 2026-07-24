@@ -250,10 +250,6 @@ function InnerVersionList(props: Props & { newestVersion: number; initialAllowUp
   // true if another version is being restored or previewed
   const [isChangingVersion, setIsChangingVersion] = useState(false);
 
-  // The expansion state of the version groups is hoisted here (keyed by the
-  // group's newest version) so that it survives the virtualized list unmounting
-  // off-screen groups. A missing entry falls back to the default (expand the
-  // group that contains the active version).
   const [expandedGroups, setExpandedGroups] = useState<Record<number, boolean>>({});
 
   function fetchPaginatedVersions({ pageParam }: { pageParam?: number }) {

@@ -767,10 +767,7 @@ function DebugInfo() {
 }
 
 const mapStateToProps = (state: WebknossosState): StateProps => ({
-  // Select only the needed annotation fields (instead of the whole annotation)
-  // so that this PureComponent doesn't re-render on every node placement or
-  // brush stroke. Stats and mag info have their own narrowly-subscribed
-  // subcomponents (AnnotationStatisticsSection and MagInfoRow).
+  
   annotationName: state.annotation.name,
   annotationDescription: state.annotation.description,
   annotationOwner: state.annotation.owner,

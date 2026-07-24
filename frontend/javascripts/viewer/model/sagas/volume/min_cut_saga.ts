@@ -1,3 +1,4 @@
+import { handleGenericError } from "libs/error_handling";
 import { V3 } from "libs/mjs";
 import createProgressCallback from "libs/progress_callback";
 import Toast from "libs/toast";
@@ -11,10 +12,12 @@ import type { AdditionalCoordinate, APISegmentationLayer } from "types/api_types
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { TypedArray, Vector3 } from "viewer/constants";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
+import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import {
   enforceActiveVolumeTracing,
   getActiveSegmentationTracingLayer,
 } from "viewer/model/accessors/volumetracing_accessor";
+import { dispatchGetNewIdAsync } from "viewer/model/actions/actions";
 import { addUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
 import {
   finishAnnotationStrokeAction,
@@ -26,7 +29,7 @@ import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import { takeEveryInOperationContext } from "viewer/model/sagas/saga_helpers";
 import type { MutableNode, Node } from "viewer/model/types/tree_types";
-import { api } from "viewer/singletons";
+import { api, Store } from "viewer/singletons";
 
 // By default, a new bounding box is created around
 // the seed nodes with a padding. Within the bounding box
@@ -253,15 +256,35 @@ function* performMinCut(action: PerformMinCutAction): Saga<void> {
         ),
       ),
     };
+    let newBBoxId: number;
+    try {
+      const tracingStoringBBoxes = yield* select((state) => getSomeTracing(state.annotation));
+      newBBoxId = yield* call(
+        dispatchGetNewIdAsync,
+        Store.dispatch,
+        tracingStoringBBoxes.tracingId,
+        "BoundingBox",
+      );
+    } catch (error) {
+      handleGenericError(
+        error as Error,
+        "Could not create a bounding box for the min-cut operation.",
+      );
+      return;
+    }
     yield* put(
-      addUserBoundingBoxAction({
-        boundingBox: newBBox,
-        name: `Bounding box used for splitting cell (seedA=(${nodes[0].untransformedPosition.join(
-          ",",
-        )}), seedB=(${nodes[1].untransformedPosition.join(",")}), timestamp=${Date.now()})`,
-        color: getRandomColor(),
-        isVisible: true,
-      }),
+      addUserBoundingBoxAction(
+        {
+          boundingBox: newBBox,
+          name: `Bounding box used for splitting cell (seedA=(${nodes[0].untransformedPosition.join(
+            ",",
+          )}), seedB=(${nodes[1].untransformedPosition.join(",")}), timestamp=${Date.now()})`,
+          color: getRandomColor(),
+          isVisible: true,
+        },
+        undefined,
+        newBBoxId,
+      ),
     );
     boundingBoxObj = newBBox;
   }

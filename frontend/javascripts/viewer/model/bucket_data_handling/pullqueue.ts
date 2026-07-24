@@ -84,6 +84,20 @@ class PullQueue {
     const layerInfo = getLayerByName(dataset, this.layerName);
     const { renderMissingDataBlack } = Store.getState().datasetConfiguration;
 
+    // Capture the exact bucket objects this batch was launched for. Buckets are looked
+    // up by address, but a bucket can be evicted and a fresh one recreated at the same
+    // address while this request is in flight — most notably during a reload, which
+    // aborts this request via abortRequests() and (synchronously) evicts the affected
+    // buckets. Once that happens, this request has been superseded: a newer bucket and
+    // request now own the address. This stale request must not touch that new bucket,
+    // neither by writing its outdated data nor by marking it as failed. We therefore
+    // compare object identity (against the captured bucket) before acting on any bucket
+    // below. This capture is synchronous (no await since markAsRequested in pull()), so
+    // it reliably reflects the buckets this batch requested.
+    const requestedBucketByAddress = new Map(
+      batch.map((address) => [address, this.cube.getBucket(address)] as const),
+    );
+
     let hasErrored = false;
     let failedBucketAddresses = [];
     try {
@@ -96,9 +110,13 @@ class PullQueue {
       for (const [index, bucketAddress] of batch.entries()) {
         try {
           const bucketResult = bucketResults[index];
-          const bucket = this.cube.getOrCreateBucket(bucketAddress);
+          const bucket = this.cube.getBucket(bucketAddress);
 
-          if (bucket.type !== "data") {
+          // Skip if this request has been superseded, i.e. the bucket we requested was
+          // evicted/replaced in the meantime (see the identity note above). We use
+          // getBucket (not getOrCreateBucket) so we don't resurrect an evicted bucket
+          // just to fill it with now-stale data.
+          if (bucket.type !== "data" || bucket !== requestedBucketByAddress.get(bucketAddress)) {
             continue;
           }
 
@@ -138,6 +156,14 @@ class PullQueue {
       failedBucketAddresses = failedBucketAddresses.length === 0 ? batch : failedBucketAddresses;
       for (const bucketAddress of failedBucketAddresses) {
         const bucket = this.cube.getBucket(bucketAddress);
+
+        // Only touch the bucket if it is still the exact object this request was launched
+        // for. If it was evicted/replaced meanwhile (e.g. by a reload that aborted this
+        // request), a newer request now owns the address and marking it as failed here
+        // would clobber that fresh, legitimately-requested bucket.
+        if (bucket !== requestedBucketByAddress.get(bucketAddress)) {
+          continue;
+        }
 
         // Only mark the bucket as failed if it is still in the REQUESTED state.
         // A bucket might have already transitioned to another state (e.g. LOADED

@@ -294,6 +294,65 @@ describe("DataCube", () => {
     expect(cube.getBucket([0, 0, 0, 0, []])).toBe(bucket);
   });
 
+  it<TestContext>("getLoadedBucket() should re-fetch when a concurrent reload evicts the awaited bucket", async ({
+    cube,
+  }) => {
+    // Reproduces the read-vs-reload race: getLoadedBucket() awaits a bucket whose request
+    // is in flight when a reload (removeAllBuckets) aborts it and evicts the bucket. The
+    // evicted bucket's ensureLoaded() resolves (via "bucketRequestFailed") with no data, so
+    // a naive implementation would return an empty bucket (reading 0). getLoadedBucket()
+    // must instead re-create and reload the bucket and return the freshly loaded one.
+    const address: Vector4 = [0, 0, 0, 0];
+
+    // A pull queue that (like the real one) marks queued buckets as REQUESTED synchronously
+    // on pull(). Data is delivered manually below so we can interleave the reload precisely.
+    const queued: Vector4[] = [];
+    const controllablePullQueue = {
+      add: (item: { bucket: Vector4 }) => queued.push(item.bucket),
+      pull: () => {
+        for (const addr of queued) {
+          const bucket = cube.getBucket(addr);
+          if (bucket.type === "data" && bucket.needsRequest()) {
+            bucket.markAsRequested();
+          }
+        }
+        queued.length = 0;
+      },
+      abortRequests: () => {},
+      clear: () => {},
+      destroy: () => {},
+    };
+    cube.initializeWithQueues(
+      controllablePullQueue as any,
+      { insert: vi.fn(), push: vi.fn() } as any,
+    );
+
+    // Start loading. This creates the first bucket, requests it, and awaits ensureLoaded().
+    const loadedBucketPromise = cube.getLoadedBucket(address);
+    await sleep(0);
+    const firstBucket = cube.getBucket(address);
+    assertNonNullBucket(firstBucket);
+    expect(firstBucket.isRequested()).toBe(true);
+
+    // A concurrent reload aborts the in-flight request and evicts the REQUESTED bucket.
+    cube.removeAllBuckets();
+    expect(cube.getBucket(address).type).toBe("null");
+
+    // The retry must have created and requested a fresh bucket; deliver its data.
+    await sleep(0);
+    const secondBucket = cube.getBucket(address);
+    assertNonNullBucket(secondBucket);
+    expect(secondBucket).not.toBe(firstBucket);
+    expect(secondBucket.isRequested()).toBe(true);
+    secondBucket.receiveData(new Uint8Array(4 * 32 ** 3));
+
+    const resultBucket = await loadedBucketPromise;
+    // getLoadedBucket must return the fresh, loaded bucket — not the evicted empty one.
+    assertNonNullBucket(resultBucket);
+    expect(resultBucket).toBe(secondBucket);
+    expect(resultBucket.hasData()).toBe(true);
+  });
+
   it<TestContext>("Garbage Collection should grow beyond soft limit if necessary", ({ cube }) => {
     cube.BUCKET_COUNT_SOFT_LIMIT = 3;
     const b1 = cube.getOrCreateBucket([0, 0, 0, 0, []]);

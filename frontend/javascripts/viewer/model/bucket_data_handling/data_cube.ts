@@ -1090,10 +1090,27 @@ class DataCube {
   }
 
   async getLoadedBucket(bucketAddress: BucketAddress) {
-    const bucket = this.getOrCreateBucket(bucketAddress);
+    let bucket = this.getOrCreateBucket(bucketAddress);
 
     if (bucket.type !== "null") {
       await bucket.ensureLoaded();
+
+      // A concurrent reload (removeBucketsIf, e.g. via reloadAllBuckets) can evict the
+      // bucket we just awaited while its request was still in flight: the reload aborts the
+      // request and removes the bucket from the cube, so ensureLoaded() resolves (via the
+      // "bucketRequestFailed" event) with a detached, unloaded bucket. If we returned that
+      // bucket, the caller (e.g. getDataValue) would read empty data (0) even though fresh
+      // data is available after the reload. Detect this by checking whether our bucket is
+      // still the one registered at this address; if it was superseded, load the fresh
+      // bucket instead. A genuine request failure keeps the same bucket object in the cube
+      // (it is not removed), so this loop does not spin on real load errors.
+      while (bucket !== this.getBucket(bucketAddress)) {
+        bucket = this.getOrCreateBucket(bucketAddress);
+        if (bucket.type === "null") {
+          break;
+        }
+        await bucket.ensureLoaded();
+      }
     }
 
     return bucket;

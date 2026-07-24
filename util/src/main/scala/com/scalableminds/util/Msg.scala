@@ -801,6 +801,28 @@ object Msg {
   object SegmentIndexFile {
     val pathNotAbsolute = "Path of segment index file is ambiguous, must be absolute."
   }
+  object SegmentStatisticsFile {
+    val pathNotAbsolute = "Path of segment statistics file is ambiguous, must be absolute."
+    val readGroupHeaderFailed = "Could not read segment statistics file zarr group file."
+    val parseAttributesFailed = "Could not parse segment statistics file attributes from zarr group file."
+    val combinedCenterOfMassZeroVolume =
+      "Cannot compute combined center of mass, total volume of segments is zero."
+    val combinedCovarianceMatrixZeroVolume =
+      "Cannot compute combined covariance matrix, total volume of segments is zero."
+    def magTooFine(requestedMag: String, fileMag: String): String =
+      s"Requested mag $requestedMag is finer than mag $fileMag of segment statistics file. Only the same mag or coarser mags are supported."
+    def mappingNameMismatch(requestedMappingName: String, fileMappingName: String): String =
+      s"Requested mapping name “$requestedMappingName” does not match mapping name “$fileMappingName” of segment statistics file."
+    def remappingRequiresUnmappedFile(fileMappingName: String): String =
+      s"Requesting a different mapping is only supported for segment statistics files without their own mapping, but this file was computed for mapping “$fileMappingName”."
+    def formatVersionTooOld(formatVersion: Long, minimumSupportedVersion: Long): String =
+      s"Segment statistics file has format version $formatVersion, but at least $minimumSupportedVersion is required."
+    def idsNotDense(first: Long, last: Long, length: Long): String =
+      s"Segment statistics file does not have dense ids: first id is $first (expected 0), last id is $last (expected ${length - 1}), for $length ids total. Only dense ids are supported."
+    val idsEmpty = "Segment statistics file has an empty ids array, expected at least one segment."
+    def metricNotAvailable(metric: String): String =
+      s"Segment statistics file does not contain the metric “$metric”."
+  }
   object Zarr {
     def invalidChunkCoordinates(coordinates: String): String =
       s"Invalid chunk coordinates $coordinates. Expected dot-separated coordinates like “c.<additional_axes.>x.y.z”."

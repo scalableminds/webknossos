@@ -1,9 +1,4 @@
-import {
-  computeAdHocMesh,
-  getBucketPositionsForAdHocMesh,
-  hasSegmentIndexInDataStoreCached,
-  sendAnalyticsEvent,
-} from "admin/rest_api";
+import { computeAdHocMesh, sendAnalyticsEvent } from "admin/rest_api";
 import ErrorHandling from "libs/error_handling";
 import { V3 } from "libs/mjs";
 import ThreeDMap from "libs/ThreeDMap";
@@ -17,7 +12,6 @@ import type { AdditionalCoordinate } from "types/api_types";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Vector3 } from "viewer/constants";
 import { MappingStatusEnum } from "viewer/constants";
-import { sortByDistanceTo } from "viewer/controller/mesh_helpers";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import {
   getMagInfo,
@@ -50,10 +44,15 @@ import { zoomedAddressToAnotherZoomStepWithInfo } from "viewer/model/helpers/pos
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import { Model } from "viewer/singletons";
-import Store, { type StoreDataset, type VolumeTracing } from "viewer/store";
+import Store from "viewer/store";
 import { getAdditionalCoordinatesAsString } from "../../accessors/flycam_accessor";
 import { ensureSceneControllerInitialized, ensureWkInitialized } from "../ready_sagas";
 import { acquireMeshWorker, releaseMeshWorker } from "./common_mesh_saga";
+import {
+  getChunkPositionsFromSegmentIndex,
+  getLayerSourceInfo,
+  getUsePositionsFromSegmentIndex,
+} from "./segment_index_helpers";
 
 const MAX_RETRY_COUNT = 5;
 const RETRY_WAIT_TIME = 5000;
@@ -298,25 +297,6 @@ function removeMeshWithoutVoxels(
   }
 }
 
-function* getUsePositionsFromSegmentIndex(
-  volumeTracing: VolumeTracing | null | undefined,
-  dataset: StoreDataset,
-  layerName: string,
-  maybeTracingId?: string | null,
-): Saga<boolean> {
-  if (volumeTracing == null) {
-    return yield* call(
-      hasSegmentIndexInDataStoreCached,
-      dataset.dataStore.url,
-      dataset.id,
-      layerName,
-    );
-  }
-  return (
-    volumeTracing?.hasSegmentIndex && !volumeTracing.hasEditableMapping && maybeTracingId != null
-  );
-}
-
 function* loadFullAdHocMesh(
   layer: DataLayer,
   segmentId: number,
@@ -360,16 +340,6 @@ function* loadFullAdHocMesh(
         "Loading the ad-hoc mesh failed because the visible segmentation layer must not be null.",
       );
     }
-    // Fetch from datastore if no volumetracing ...
-    let forceUsingDataStore = volumeTracing == null || visibleSegmentationLayer.tracingId == null;
-    if (meshExtraInfo.useDataStore != null) {
-      // ... except if the caller specified whether to use the data store ...
-      forceUsingDataStore = meshExtraInfo.useDataStore;
-    } else if (volumeTracing?.hasEditableMapping) {
-      // ... or if an editable mapping is active.
-      forceUsingDataStore = false;
-    }
-
     // Segment stats can only be used for segmentation layers that have a segment index
     // and that don't have editable mappings.
     const usePositionsFromSegmentIndex = yield* call(
@@ -380,17 +350,17 @@ function* loadFullAdHocMesh(
       visibleSegmentationLayer.tracingId,
     );
 
-    const layerSourceInfo: LayerSourceInfo = {
+    const layerSourceInfo = getLayerSourceInfo(
       dataset,
       annotation,
-      tracingId: visibleSegmentationLayer.tracingId,
-      segmentationLayerName:
-        visibleSegmentationLayer.fallbackLayer ?? visibleSegmentationLayer.name,
-      useDataStore: forceUsingDataStore,
-    };
+      visibleSegmentationLayer,
+      volumeTracing,
+      meshExtraInfo.useDataStore,
+    );
 
     let positionsToRequest = usePositionsFromSegmentIndex
-      ? yield* getChunkPositionsFromSegmentIndex(
+      ? yield* call(
+          getChunkPositionsFromSegmentIndex,
           layerSourceInfo,
           segmentId,
           cubeSize,
@@ -439,30 +409,6 @@ function* loadFullAdHocMesh(
   } finally {
     yield* call(releaseMeshWorker);
   }
-}
-
-function* getChunkPositionsFromSegmentIndex(
-  layerSourceInfo: LayerSourceInfo,
-  segmentId: number,
-  cubeSize: Vector3,
-  mag: Vector3,
-  clippedPosition: Vector3,
-  additionalCoordinates: AdditionalCoordinate[] | null | undefined,
-  mappingName: string | null | undefined,
-  tracingVersion: number,
-) {
-  const targetMagPositions = yield* call(
-    getBucketPositionsForAdHocMesh,
-    layerSourceInfo,
-    segmentId,
-    cubeSize,
-    mag,
-    additionalCoordinates,
-    mappingName,
-    tracingVersion,
-  );
-  const mag1Positions = targetMagPositions.map((pos) => V3.scale3(pos, mag));
-  return sortByDistanceTo(mag1Positions, clippedPosition) as Vector3[];
 }
 
 function hasMeshChunkExceededThrottleLimit(segmentId: number): boolean {

@@ -55,6 +55,7 @@ export type UpdateSegmentAction = ReturnType<typeof updateSegmentAction>;
 export type MergeSegmentItemsAction = ReturnType<typeof mergeSegmentItemsAction>;
 export type RemoveSegmentAction = ReturnType<typeof removeSegmentAction>;
 export type DeleteSegmentDataAction = ReturnType<typeof deleteSegmentDataAction>;
+export type NavigateToSegmentAction = ReturnType<typeof navigateToSegmentAction>;
 export type SetSegmentGroupsAction = ReturnType<typeof setSegmentGroupsAction>;
 export type AddSegmentGroupAction = ReturnType<typeof addSegmentGroupAction>;
 export type SetExpandedSegmentGroupsAction = ReturnType<typeof setExpandedSegmentGroupsAction>;
@@ -131,7 +132,8 @@ export type VolumeTracingAction =
   | ConfirmQuickSelectAction
   | SetVolumeBucketDataHasChangedAction
   | BatchUpdateGroupsAndSegmentsAction
-  | ApplyVolumeUpdateActionsFromServerAction;
+  | ApplyVolumeUpdateActionsFromServerAction
+  | NavigateToSegmentAction;
 
 export const VolumeTracingSaveRelevantActions: Action["type"][] = [
   "CREATE_CELL",
@@ -357,6 +359,20 @@ export const deleteSegmentDataAction = (
     layerName,
     callback,
     timestamp,
+  }) as const;
+
+export const navigateToSegmentAction = (
+  segmentId: number,
+  anchorPosition: Vector3,
+  additionalCoordinates: AdditionalCoordinate[] | null | undefined,
+  layerName: string,
+) =>
+  ({
+    type: "NAVIGATE_TO_SEGMENT",
+    segmentId,
+    anchorPosition,
+    additionalCoordinates,
+    layerName,
   }) as const;
 
 export const setSegmentGroupsAction = (

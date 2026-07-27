@@ -51,6 +51,10 @@ class Plane {
   baseRotationMatrix = new Matrix4();
   flycamRotationMatrix = new Matrix4();
 
+  // Keeps track of the materials created by getLineBasicMaterial so that
+  // they can be disposed in destroy().
+  private lineMaterials: LineBasicMaterial[] = [];
+
   constructor(planeID: OrthoView) {
     this.planeID = planeID;
     this.displayCrosshair = true;
@@ -117,11 +121,14 @@ class Plane {
   };
 
   getLineBasicMaterial = memoize(
-    (color: number, linewidth: number) =>
-      new LineBasicMaterial({
+    (color: number, linewidth: number) => {
+      const material = new LineBasicMaterial({
         color,
         linewidth,
-      }),
+      });
+      this.lineMaterials.push(material);
+      return material;
+    },
     (color: number, linewidth: number) => `${color}_${linewidth}`,
   );
 
@@ -203,6 +210,14 @@ class Plane {
       f();
     });
     this.storePropertyUnsubscribers = [];
+
+    for (const mesh of this.getMeshes()) {
+      mesh.geometry.dispose();
+    }
+    for (const material of this.lineMaterials) {
+      material.dispose();
+    }
+    this.lineMaterials = [];
   }
 
   bindToEvents(): void {

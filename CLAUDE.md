@@ -23,3 +23,7 @@ Code Verification:
 ## Pull Requests
 - run all the appropriate checks above
 - use the PR template at `.github/PULL_REQUEST_TEMPLATE.md
+
+
+# Scripting & Command Permissions
+- Never ever use `rm` commands on OSX platforms. Instead use the safer `trash` command. This prevents accidental permanent deletion.

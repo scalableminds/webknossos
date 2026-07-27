@@ -1,9 +1,25 @@
-import { Alert, Button, Checkbox, Modal, Spin } from "antd";
+import { Alert, Button, Checkbox, Modal, Spin, TreeSelect } from "antd";
 import { Fragment } from "react";
 import Dropzone from "react-dropzone";
 import { useDispatch } from "react-redux";
 import { setDropzoneModalVisibilityAction } from "viewer/model/actions/ui_actions";
+import type { TreeGroup } from "viewer/model/types/tree_types";
+import { MISSING_GROUP_ID } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import { NmlDropzoneContent, NmlList } from "./nml_upload_components";
+
+type GroupTreeSelectNode = {
+  title: string;
+  value: number;
+  children: GroupTreeSelectNode[];
+};
+
+function treeGroupsToTreeSelectData(treeGroups: TreeGroup[]): GroupTreeSelectNode[] {
+  return treeGroups.map((group) => ({
+    title: group.name,
+    value: group.groupId,
+    children: treeGroupsToTreeSelectData(group.children),
+  }));
+}
 
 export function DropzoneModal({
   isUpdateAllowed,
@@ -48,6 +64,10 @@ export function ImportModal({
   setCreateGroupForEachFile,
   setCreateGroupForSingleFile,
   importTracingFiles,
+  showTreeGroupSelect,
+  existingTreeGroups,
+  targetGroupId,
+  setTargetGroupId,
 }: {
   files: File[];
   createGroupForEachFile: boolean;
@@ -58,12 +78,23 @@ export function ImportModal({
   setCreateGroupForEachFile: (a: boolean) => void;
   setCreateGroupForSingleFile: (a: boolean) => void;
   importTracingFiles: () => Promise<void>;
+  showTreeGroupSelect: boolean;
+  existingTreeGroups: TreeGroup[];
+  targetGroupId: number;
+  setTargetGroupId: (groupId: number) => void;
 }) {
   const newGroupMsg =
     files.length > 1
       ? "Create a new tree group for each file."
       : "Create a new tree group for this file.";
   const pluralS = files.length > 1 ? "s" : "";
+  const groupTreeSelectData: GroupTreeSelectNode[] = [
+    {
+      title: "Root",
+      value: MISSING_GROUP_ID,
+      children: treeGroupsToTreeSelectData(existingTreeGroups),
+    },
+  ];
   return (
     <Modal
       title={`Import ${files.length} Annotation${pluralS}`}
@@ -91,6 +122,20 @@ export function ImportModal({
       }
     >
       <Spin spinning={isImporting}>
+        {showTreeGroupSelect ? (
+          <div style={{ marginBottom: 12 }}>
+            <span style={{ marginRight: 8 }}>Add imported trees to group:</span>
+            <TreeSelect
+              style={{ width: 300 }}
+              value={targetGroupId}
+              onChange={setTargetGroupId}
+              treeData={groupTreeSelectData}
+              treeDefaultExpandAll
+              showSearch={{ treeNodeFilterProp: "title" }}
+              popupMatchSelectWidth={false}
+            />
+          </div>
+        ) : null}
         <NmlList files={files} />
       </Spin>
     </Modal>

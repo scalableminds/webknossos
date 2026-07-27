@@ -21,6 +21,7 @@ import { createMutableTreeMapFromTreeArray } from "viewer/model/reducers/skeleto
 import type { MutableTreeMap, TreeGroup } from "viewer/model/types/tree_types";
 import { api, Model } from "viewer/singletons";
 import Store, { type UserBoundingBox } from "viewer/store";
+import { MISSING_GROUP_ID } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 
 // Thrown while importing a volume annotation ZIP when the import cannot proceed
 // (e.g. there is no editable volume layer, or the server rejected the data). Unlike
@@ -30,7 +31,11 @@ class VolumeImportError extends Error {
   name = "VolumeImportError";
 }
 
-export async function importTracingFiles(files: Array<File>, createGroupForEachFile: boolean) {
+export async function importTracingFiles(
+  files: Array<File>,
+  createGroupForEachFile: boolean,
+  targetGroupId: number = MISSING_GROUP_ID,
+) {
   try {
     const wrappedAddTreesAndGroupsAction = async (
       trees: MutableTreeMap,
@@ -41,9 +46,15 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
       let addTreesAction = null;
       if (createGroupForEachFile) {
         const [wrappedTrees, wrappedTreeGroups] = wrapInNewGroup(trees, treeGroups, groupName);
-        addTreesAction = addTreesAndGroupsAction(wrappedTrees, wrappedTreeGroups);
+        addTreesAction = addTreesAndGroupsAction(
+          wrappedTrees,
+          wrappedTreeGroups,
+          undefined,
+          true,
+          targetGroupId,
+        );
       } else {
-        addTreesAction = addTreesAndGroupsAction(trees, treeGroups);
+        addTreesAction = addTreesAndGroupsAction(trees, treeGroups, undefined, true, targetGroupId);
       }
       if (userBoundingBoxes == null || userBoundingBoxes.length === 0) {
         return [addTreesAction];

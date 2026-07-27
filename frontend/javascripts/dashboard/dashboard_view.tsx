@@ -125,7 +125,11 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
     });
   }
 
-  uploadNmls = async (files: Array<File>, createGroupForEachFile: boolean): Promise<void> => {
+  uploadNmls = async (
+    files: Array<File>,
+    createGroupForEachFile: boolean,
+    _targetGroupId: number,
+  ): Promise<void> => {
     const response = await Request.sendMultipartFormReceiveJSON("/api/annotations/upload", {
       data: {
         nmlFile: files,

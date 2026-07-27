@@ -3,9 +3,16 @@ import type React from "react";
 import { useCallback, useState } from "react";
 import Dropzone from "react-dropzone";
 import { useDispatch } from "react-redux";
+import { getSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { setDropzoneModalVisibilityAction } from "viewer/model/actions/ui_actions";
+import type { TreeGroup } from "viewer/model/types/tree_types";
+import { MISSING_GROUP_ID } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import { DropzoneModal, ImportModal } from "./nml_modals";
 import { NmlDropzoneContent } from "./nml_upload_components";
+
+// Kept as a stable reference so that the useWkSelector below doesn't trigger a
+// re-render on every store update when there is no skeleton tracing to read from.
+const EMPTY_TREE_GROUPS: TreeGroup[] = [];
 
 function OverlayDropZone({ children }: { children: React.ReactNode }) {
   return (
@@ -22,10 +29,18 @@ export default function NmlUploadZoneContainer({
 }: {
   children: React.ReactNode;
   isUpdateAllowed: boolean;
-  onImport: (files: File[], createGroupForEachFile: boolean) => Promise<void>;
+  onImport: (
+    files: File[],
+    createGroupForEachFile: boolean,
+    targetGroupId: number,
+  ) => Promise<void>;
 }) {
   const showDropzoneModal = useWkSelector((state) => state.uiInformation.showDropzoneModal);
   const navbarHeight = useWkSelector((state) => state.uiInformation.navbarHeight);
+  const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
+  const existingTreeGroups = useWkSelector(
+    (state) => getSkeletonTracing(state.annotation)?.treeGroups ?? EMPTY_TREE_GROUPS,
+  );
   const dispatch = useDispatch();
   // dispatch(setDropzoneModalVisibilityAction(false));
 
@@ -34,6 +49,12 @@ export default function NmlUploadZoneContainer({
   const [isImporting, setIsImporting] = useState<boolean>(false);
   const [createGroupForEachFile, setCreateGroupForEachFile] = useState<boolean>(true);
   const [createGroupForSingleFile, setCreateGroupForSingleFile] = useState<boolean>(false);
+  const [targetGroupId, setTargetGroupId] = useState<number>(MISSING_GROUP_ID);
+
+  // Only show a picker for an existing tree group when there is actually a tracing to
+  // look up tree groups from (i.e. not in the dashboard) and the drop will update it
+  // (as opposed to creating a brand new annotation).
+  const showTreeGroupSelect = isInAnnotationView && isUpdateAllowed;
 
   const isMounted = useIsMounted();
 
@@ -56,6 +77,8 @@ export default function NmlUploadZoneContainer({
     (files: File[]) => {
       setFiles(files);
       setDropzoneActive(false);
+      // Reset the target group selection for every new drop so that it defaults to the root group.
+      setTargetGroupId(MISSING_GROUP_ID);
       dispatch(setDropzoneModalVisibilityAction(false));
     },
     [dispatch],
@@ -64,14 +87,18 @@ export default function NmlUploadZoneContainer({
   const importTracingFiles = useCallback(async () => {
     setIsImporting(true);
     try {
-      await onImport(files, files.length > 1 ? createGroupForEachFile : createGroupForSingleFile);
+      await onImport(
+        files,
+        files.length > 1 ? createGroupForEachFile : createGroupForSingleFile,
+        targetGroupId,
+      );
     } finally {
       if (isMounted()) {
         setIsImporting(false);
         setFiles([]);
       }
     }
-  }, [onImport, files, createGroupForEachFile, createGroupForSingleFile, isMounted]);
+  }, [onImport, files, createGroupForEachFile, createGroupForSingleFile, targetGroupId, isMounted]);
 
   // This react component wraps its children and lays a dropzone over them.
   // That way, files can be dropped over the entire view.
@@ -127,6 +154,10 @@ export default function NmlUploadZoneContainer({
             setCreateGroupForEachFile={setCreateGroupForEachFile}
             setCreateGroupForSingleFile={setCreateGroupForSingleFile}
             importTracingFiles={importTracingFiles}
+            showTreeGroupSelect={showTreeGroupSelect}
+            existingTreeGroups={existingTreeGroups}
+            targetGroupId={targetGroupId}
+            setTargetGroupId={setTargetGroupId}
           />
 
           {children}

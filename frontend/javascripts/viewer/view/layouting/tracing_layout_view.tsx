@@ -321,6 +321,7 @@ class TracingLayoutView extends PureComponent<PropsWithRouter, State> {
     const createNewTracing = async (
       files: Array<File>,
       createGroupForEachFile: boolean,
+      _targetGroupId: number,
     ): Promise<void> => {
       const response = await Request.sendMultipartFormReceiveJSON("/api/annotations/upload", {
         data: {

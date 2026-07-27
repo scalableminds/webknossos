@@ -61,8 +61,11 @@ import { type Tree, type TreeGroup, TreeMap } from "viewer/model/types/tree_type
 import type { SkeletonTracing, WebknossosState } from "viewer/store";
 import {
   additionallyExpandGroup,
+  findGroup,
   GroupTypeEnum,
   getNodeKey,
+  MISSING_GROUP_ID,
+  mapGroups,
 } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import {
   getUserStateForTracing,
@@ -1090,13 +1093,14 @@ function SkeletonTracingReducer(
     }
 
     case "ADD_TREES_AND_GROUPS": {
-      const { trees, treeGroups, assignNewGroupId } = action;
+      const { trees, treeGroups, assignNewGroupId, targetGroupId } = action;
       const treesWithNames = ensureTreeNames(state, trees);
       const treesResult = addTreesAndGroups(
         skeletonTracing,
         treesWithNames,
         treeGroups,
         assignNewGroupId,
+        targetGroupId,
       );
       if (treesResult == null) {
         return state;
@@ -1113,12 +1117,24 @@ function SkeletonTracingReducer(
       }
 
       const newTrees = DiffableMap.merge(skeletonTracing.trees, updatedTrees);
+      // Nest the newly added groups into the selected target group (if it still exists),
+      // falling back to adding them at the root of the hierarchy otherwise.
+      const targetGroupExists =
+        targetGroupId !== MISSING_GROUP_ID &&
+        findGroup(skeletonTracing.treeGroups, targetGroupId) != null;
+      const newTreeGroups = targetGroupExists
+        ? mapGroups(skeletonTracing.treeGroups, (group) =>
+            group.groupId === targetGroupId
+              ? { ...group, children: group.children.concat(updatedTreeGroups) }
+              : group,
+          )
+        : skeletonTracing.treeGroups.concat(updatedTreeGroups);
 
       return update(state, {
         annotation: {
           skeleton: {
             treeGroups: {
-              $push: updatedTreeGroups,
+              $set: newTreeGroups,
             },
             trees: {
               $set: newTrees,

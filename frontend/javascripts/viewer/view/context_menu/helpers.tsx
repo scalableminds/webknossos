@@ -178,8 +178,6 @@ export function getInfoMenuItem(
 }
 
 export function getContextMenuPositionFromEvent(
-  // Only clientX/clientY are read, so any element's mouse event works (e.g. a
-  // right-click on a <div> row or a click on a <button>).
   event: React.MouseEvent<HTMLElement>,
   className: string,
 ): [number, number] {

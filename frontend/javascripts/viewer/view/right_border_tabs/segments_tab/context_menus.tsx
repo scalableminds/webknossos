@@ -261,6 +261,11 @@ export function useSegmentContextMenuBuilder(
       const segmentColorRGBA = getSegmentColorAsRGBA(Store.getState(), segment.id);
       const isActiveSegment = segment.id === activeVolumeTracing?.activeCellId;
 
+      const runAndHide = (action: () => void) => () => {
+        action();
+        hideContextMenu();
+      };
+
       const withKnownPosition = (action: () => void) => () => {
         if (segment.anchorPosition == null) {
           Toast.info("Cannot load a mesh for this segment, because its position is unknown.");
@@ -345,16 +350,15 @@ export function useSegmentContextMenuBuilder(
           {
             key: "setActiveCell",
             disabled: isActiveSegment || !allowUpdate,
-            onClick: () => {
+            onClick: runAndHide(() =>
               dispatch(
                 setActiveCellAction(
                   segment.id,
                   segment.anchorPosition,
                   segment.additionalCoordinates,
                 ),
-              );
-              hideContextMenu();
-            },
+              ),
+            ),
             label: (
               <FastTooltip
                 title={
@@ -395,17 +399,16 @@ export function useSegmentContextMenuBuilder(
           {
             key: "resetSegmentColor",
             disabled: segment.color == null,
-            onClick: () => updateThisSegment({ color: null }, true),
+            onClick: runAndHide(() => updateThisSegment({ color: null }, true)),
             label: "Reset Segment Color",
           },
           {
             key: "removeSegmentFromList",
-            onClick: () => {
+            onClick: runAndHide(() => {
               if (layerName != null) {
                 dispatch(removeSegmentAction(segment.id, layerName));
               }
-              hideContextMenu();
-            },
+            }),
             label: "Remove Segment From List",
           },
           {

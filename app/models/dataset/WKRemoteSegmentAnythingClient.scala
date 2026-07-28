@@ -52,11 +52,9 @@ class WKRemoteSegmentAnythingClient @Inject() (rpc: RPC, conf: WkConf) {
     buffer.putInt(dataShape.z)
     val imageWithMetadata = buffer.array()
     System.arraycopy(imageData, 0, imageWithMetadata, metadataLengthInBytes, imageData.length)
-    rpc(s"${conf.SegmentAnything.uri}/predictions/sam2_hiera_b")
-      .withBasicAuthOpt(
-        if (conf.SegmentAnything.user.isEmpty) None else Some(conf.SegmentAnything.user),
-        Some(conf.SegmentAnything.password)
-      )
+    rpc(s"${conf.SegmentAnything.uri}/predict")
+      .addHttpHeader("X-API-Key", conf.SegmentAnything.token)
+      .addHttpHeader("Content-Type", "application/octet-stream")
       .postBytesWithBytesResponse(imageWithMetadata)
   }
 }

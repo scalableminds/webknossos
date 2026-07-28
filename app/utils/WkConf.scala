@@ -284,8 +284,7 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
 
   object SegmentAnything {
     val uri: String = get[String]("segmentAnything.uri")
-    val user: String = get[String]("segmentAnything.user")
-    val password: String = get[String]("segmentAnything.password")
+    val token: String = get[String]("segmentAnything.token")
   }
 
   object ExternalPathDeletionService {

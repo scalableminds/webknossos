@@ -277,20 +277,20 @@ describe("Volume Tracing", () => {
     await dispatchUndoAsync(Store.dispatch);
     await assertInitialState();
     // Reload all buckets, "redo" and assert flood-filled state
-    api.data.reloadAllBuckets();
+    await api.data.reloadAllBuckets();
     await dispatchRedoAsync(Store.dispatch);
     await assertFloodFilledState();
     // Reload all buckets, "undo" and assert flood-filled state
-    api.data.reloadAllBuckets();
+    await api.data.reloadAllBuckets();
     await dispatchUndoAsync(Store.dispatch);
     await assertInitialState();
     // "Redo", reload all buckets and assert flood-filled state
     await dispatchRedoAsync(Store.dispatch);
-    api.data.reloadAllBuckets();
+    await api.data.reloadAllBuckets();
     await assertFloodFilledState();
-    // "Undo", reload all buckets and assert flood-filled state
+    // "Undo", reload all buckets and assert initial state
     await dispatchUndoAsync(Store.dispatch);
-    api.data.reloadAllBuckets();
+    await api.data.reloadAllBuckets();
     await assertInitialState();
   });
 

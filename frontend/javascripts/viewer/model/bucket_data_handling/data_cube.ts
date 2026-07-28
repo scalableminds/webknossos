@@ -1105,6 +1105,7 @@ class DataCube {
       // bucket instead. A genuine request failure keeps the same bucket object in the cube
       // (it is not removed), so this loop does not spin on real load errors.
       while (bucket !== this.getBucket(bucketAddress)) {
+        // TODOM: refactor so that bool expr above reads more easily
         bucket = this.getOrCreateBucket(bucketAddress);
         if (bucket.type === "null") {
           break;

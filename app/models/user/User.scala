@@ -559,8 +559,12 @@ class UserDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
       })
     } yield teamMemberships
 
+  // Re-selecting the team id from teams_ ensures the team is not marked as isDeleted = true.
   private def insertTeamMembershipQuery(userId: ObjectId, teamMembership: TeamMembership) =
-    q"INSERT INTO webknossos.user_team_roles(_user, _team, isTeamManager) VALUES($userId, ${teamMembership.teamId}, ${teamMembership.isTeamManager})".asUpdate
+    q"""INSERT INTO webknossos.user_team_roles(_user, _team, isTeamManager)
+        SELECT $userId, t._id, ${teamMembership.isTeamManager}
+        FROM webknossos.teams_ t
+        WHERE t._id = ${teamMembership.teamId}""".asUpdate
 
   def updateTeamMembershipsForUser(userId: ObjectId, teamMemberships: Seq[TeamMembership])(using
       ctx: DBAccessContext

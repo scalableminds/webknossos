@@ -583,11 +583,6 @@ class UserDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
       _ <- run(insertTeamMembershipQuery(userId, teamMembership))
     } yield ()
 
-  def removeTeamFromAllUsers(teamId: ObjectId): Fox[Unit] =
-    for {
-      _ <- run(q"DELETE FROM webknossos.user_team_roles WHERE _team = $teamId".asUpdate)
-    } yield ()
-
   def findTeamMemberDifference(potentialSubteam: ObjectId, superteams: List[ObjectId]): Fox[List[User]] =
     for {
       r <- run(q"""SELECT ${columnsWithPrefix("u.")}

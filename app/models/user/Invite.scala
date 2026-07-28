@@ -159,12 +159,6 @@ class InviteDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed = rows.map(row => TeamMembership(row._1, row._2))
     } yield parsed
 
-  // Called on team deletion, so that the team role does not become a dangling reference in pending invites.
-  def removeTeamFromAllInvites(teamId: ObjectId): Fox[Unit] =
-    for {
-      _ <- run(q"DELETE FROM webknossos.invite_team_roles WHERE _team = $teamId".asUpdate)
-    } yield ()
-
   def deleteAllExpired(): Fox[Unit] =
     for {
       _ <- run(q"UPDATE $collectionName SET isDeleted = TRUE WHERE expirationDateTime <= ${Instant.now}".asUpdate)

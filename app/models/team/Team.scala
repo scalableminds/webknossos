@@ -14,6 +14,7 @@ import models.project.ProjectDAO
 import models.task.TaskTypeDAO
 import models.user.User
 import play.api.libs.json.*
+import slick.jdbc.PostgresProfile.api.*
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import com.scalableminds.util.objectid.ObjectId
 
@@ -220,13 +221,26 @@ class TeamDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     replaceSequentiallyAsTransaction(clearQuery, insertQueries)
   }
 
-  def removeTeamFromAllDatasetsAndFolders(teamId: ObjectId): Fox[Unit] =
-    for {
-      _ <- run(q"DELETE FROM webknossos.dataset_allowedTeams WHERE _team = $teamId".asUpdate)
-      _ <- run(q"DELETE FROM webknossos.folder_allowedTeams WHERE _team = $teamId".asUpdate)
-    } yield ()
-
   override def deleteOne(teamId: ObjectId)(using ctx: DBAccessContext): Fox[Unit] =
     deleteOneWithNameSuffix(teamId)
+
+  /* Marks the team as deleted and removes all references to it (user and invite team roles, allowed teams of
+   * datasets and folders) in a single transaction. Cleaning up in the same transaction as the deletion itself
+   * ensures that a failing cleanup step cannot leave dangling references to an already-deleted team behind.
+   * The references are deleted here rather than in the DAOs owning the respective tables, since they can only
+   * be part of this transaction if they are issued as part of the same query. */
+  def deleteOneWithReferences(teamId: ObjectId)(using ctx: DBAccessContext): Fox[Unit] = {
+    val queries = List(
+      deleteOneWithNameSuffixQuery(teamId),
+      q"DELETE FROM webknossos.user_team_roles WHERE _team = $teamId".asUpdate,
+      q"DELETE FROM webknossos.invite_team_roles WHERE _team = $teamId".asUpdate,
+      q"DELETE FROM webknossos.dataset_allowedTeams WHERE _team = $teamId".asUpdate,
+      q"DELETE FROM webknossos.folder_allowedTeams WHERE _team = $teamId".asUpdate
+    )
+    for {
+      _ <- assertDeleteAccess(teamId)
+      _ <- run(DBIO.sequence(queries).transactionally)
+    } yield ()
+  }
 
 }

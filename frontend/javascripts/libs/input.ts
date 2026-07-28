@@ -38,9 +38,19 @@ function normalizeDigitKeyEvent(event: BrowserKeyEvent): BrowserKeyEvent {
 setGlobalKeystrokesOptions({
   keyRemap: { " ": "space" },
   onKeyPressed: (handler) =>
-    browserOnKeyPressedBinder((event) => handler(normalizeDigitKeyEvent(event))),
+    browserOnKeyPressedBinder((event) => {
+      if (event.key === undefined) {
+        return;
+      }
+      handler(normalizeDigitKeyEvent(event));
+    }),
   onKeyReleased: (handler) =>
-    browserOnKeyReleasedBinder((event) => handler(normalizeDigitKeyEvent(event))),
+    browserOnKeyReleasedBinder((event) => {
+      if (event.key === undefined) {
+        return;
+      }
+      handler(normalizeDigitKeyEvent(event));
+    }),
 });
 
 // This is the main Input implementation.

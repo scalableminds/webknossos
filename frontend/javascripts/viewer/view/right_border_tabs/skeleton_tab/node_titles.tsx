@@ -13,7 +13,7 @@ import {
 import { setTreeNameAction } from "viewer/model/actions/skeletontracing_actions";
 import { api } from "viewer/singletons";
 import EditableTextLabel from "viewer/view/components/editable_text_label";
-import { ColoredDotIcon } from "../segments_tab/segment_list_item";
+import { ColoredDotIcon } from "../shared/colored_dot_icon";
 import type { GroupUiNode, SkeletonUiNode, TreeUiNode } from "./hierarchy";
 
 type TitleProps<NodeType extends SkeletonUiNode> = {

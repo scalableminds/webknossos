@@ -26,6 +26,7 @@ import manyBucketUpdatesWarningSaga from "./many_bucket_updates_warning_saga";
 import adHocMeshSaga from "./meshes/ad_hoc_mesh_saga";
 import commonMeshSaga, { handleAdditionalCoordinateUpdate } from "./meshes/common_mesh_saga";
 import precomputedMeshSaga from "./meshes/precomputed_mesh_saga";
+import mipSaga from "./mip_saga";
 import { resetOperationContextOnWkReady } from "./operation_context_saga";
 import { toggleErrorHighlighting } from "./saving/save_queue_draining_saga";
 import splitBoundaryMeshSaga from "./split_boundary_mesh_saga";
@@ -93,6 +94,7 @@ function* restartableSaga(): Saga<void> {
       call(toolSaga),
       call(manyBucketUpdatesWarningSaga),
       call(idReservationSaga),
+      call(mipSaga),
       call(resetOperationContextOnWkReady),
     ]);
   } catch (err: any) {

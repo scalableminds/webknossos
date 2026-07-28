@@ -177,11 +177,11 @@ class DataSourceService @Inject() (
           Full(RealPathInfo(magPath, magPath, hasLocalData = false))
         } else {
           for {
-            magPathLocal <- magPath.toLocalPath
-            realMagPath <- tryo(magPathLocal.toRealPath())
+            realMagPath <- magPath.toReal
             // Does this dataset have local data, i.e. the data that is referenced by the mag path is within the dataset directory
-            isDatasetLocal = datasetPathOpt.exists(datasetPath => realMagPath.startsWith(datasetPath))
-          } yield RealPathInfo(magPath, UPath.fromLocalPath(realMagPath), hasLocalData = isDatasetLocal)
+            isDatasetLocal = datasetPathOpt
+              .exists(datasetPath => realMagPath.startsWith(UPath.fromLocalPath(datasetPath.toAbsolutePath)))
+          } yield RealPathInfo(magPath, realMagPath, hasLocalData = isDatasetLocal)
         }
     } yield result
 
@@ -191,11 +191,12 @@ class DataSourceService @Inject() (
     } else {
       for {
         _ <- Box.fromBool(attachment.path.isAbsolute) ?~> "Attachment path as stored in db must be absolute"
-        attachmentPath <- attachment.path.toLocalPath
-        realAttachmentPath <- tryo(attachmentPath.toRealPath())
+        realAttachmentPath <- attachment.path.toReal
         // Does this dataset have local data, i.e. the data that is referenced by the mag path is within the dataset directory
-        isDatasetLocal = datasetPathOpt.exists(datasetPath => realAttachmentPath.startsWith(datasetPath))
-      } yield RealPathInfo(attachment.path, UPath.fromLocalPath(realAttachmentPath), hasLocalData = isDatasetLocal)
+        isDatasetLocal = datasetPathOpt.exists(datasetPath =>
+          realAttachmentPath.startsWith(UPath.fromLocalPath(datasetPath.toAbsolutePath))
+        )
+      } yield RealPathInfo(attachment.path, realAttachmentPath, hasLocalData = isDatasetLocal)
     }
 
   private def logFoundDatasources(
@@ -393,6 +394,8 @@ class DataSourceService @Inject() (
     } yield removedEntriesList.sum
 
   def deleteLocalPathsFromDisk(paths: Seq[UPath]): Box[Unit] = {
+    // Note that zipEntryPaths are skipped here (they Fail on toLocalPath).
+    // This is accepted since we cannot know if the full zip should be deleted.
     val localBaseDirs = baseDirService.allLocalBaseDirs
     val localPaths =
       paths.filter(_.isLocal).flatMap(_.toLocalPath).filter(p => localBaseDirs.exists(p.toAbsolutePath.startsWith(_)))

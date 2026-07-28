@@ -2,7 +2,7 @@
 import { type WebknossosTestContext, setupWebknossosForTesting } from "test/helpers/apiHelpers";
 import { MappingStatusEnum } from "viewer/constants";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
-import { splitAgglomeratesInMapping } from "viewer/model/sagas/volume/proofreading/proofread_saga";
+import { splitAgglomeratesInMapping } from "viewer/model/sagas/volume/proofreading/local_mapping_update_sagas";
 import { type ActiveMappingInfo, startSaga } from "viewer/store";
 import { Store } from "viewer/singletons";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

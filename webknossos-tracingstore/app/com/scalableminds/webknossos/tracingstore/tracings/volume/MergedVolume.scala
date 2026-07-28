@@ -27,7 +27,7 @@ object MergedVolumeStats {
     MergedVolumeStats(Some(0L), Set.empty, List.empty, createdSegmentIndex)
 }
 
-class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Long = 0)
+class MergedVolume(elementClass: ElementClassProto, remapSegmentIds: Boolean, initialLargestSegmentId: Long = 0)
     extends ByteUtils
     with VolumeDataZipHelper
     with VolumeBucketCompression
@@ -43,38 +43,40 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
       .bytesPerElement(ElementClass.fromProto(elementClass)) * scala.math.pow(DataLayer.bucketLength, 3).intValue
   private lazy val bucketScanner = new NativeBucketScanner()
 
-  def addIdSetFromDataZip(zipFile: File)(implicit ec: ExecutionContext): Fox[Unit] = {
-    val importIdSet: mutable.Set[Long] = scala.collection.mutable.Set()
-    val unzipResult = withBucketsFromZip(zipFile) { (_, bucketBytes) =>
-      val bucketSegmentIds =
-        bucketScanner.collectSegmentIds(bucketBytes, bytesPerElement, elementsAreSigned, skipZeroes = true)
-      Fox.successful(importIdSet ++= bucketSegmentIds)
-    }
-    for {
-      _ <- unzipResult
-      _ = addIdSet(importIdSet)
-    } yield ()
-  }
+  def addIdSetFromDataZip(zipFile: File)(implicit ec: ExecutionContext): Fox[Unit] =
+    if (remapSegmentIds) {
+      val importIdSet: mutable.Set[Long] = scala.collection.mutable.Set()
+      val unzipResult = withBucketsFromZip(zipFile) { (_, bucketBytes) =>
+        val bucketSegmentIds =
+          bucketScanner.collectSegmentIds(bucketBytes, bytesPerElement, elementsAreSigned, skipZeroes = true)
+        Fox.successful(importIdSet ++= bucketSegmentIds)
+      }
+      for {
+        _ <- unzipResult
+        _ = addIdSet(importIdSet)
+      } yield ()
+    } else Fox.successful(())
 
   def addIdSetFromBucketStream(
       bucketStream: Iterator[(BucketPosition, Array[Byte])],
       allowedMags: Set[Vec3Int]
-  ): Unit = {
-    val idSet: mutable.Set[Long] = scala.collection.mutable.Set()
-    bucketStream.foreach { case (bucketPosition, data) =>
-      if (allowedMags.contains(bucketPosition.mag)) {
-        val bucketSegmentIds =
-          bucketScanner.collectSegmentIds(data, bytesPerElement, elementsAreSigned, skipZeroes = true)
-        idSet ++= bucketSegmentIds
+  ): Unit =
+    if (remapSegmentIds) {
+      val idSet: mutable.Set[Long] = scala.collection.mutable.Set()
+      bucketStream.foreach { case (bucketPosition, data) =>
+        if (allowedMags.contains(bucketPosition.mag)) {
+          val bucketSegmentIds =
+            bucketScanner.collectSegmentIds(data, bytesPerElement, elementsAreSigned, skipZeroes = true)
+          idSet ++= bucketSegmentIds
+        }
       }
+      addIdSet(idSet)
     }
-    addIdSet(idSet)
-  }
 
   private def addIdSet(idSet: mutable.Set[Long]): Unit = idSets += idSet
 
   private def prepareIdMaps(): Unit =
-    if (idSets.isEmpty || (idSets.length == 1 && initialLargestSegmentId == 0) || idMaps.nonEmpty) {
+    if (idSets.isEmpty || (idSets.length == 1 && initialLargestSegmentId == 0) || idMaps.nonEmpty || !remapSegmentIds) {
       ()
     } else {
       val idMapsBuffer = mutable.ListBuffer[mutable.HashMap[Long, Long]]()

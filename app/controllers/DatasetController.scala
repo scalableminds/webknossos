@@ -257,7 +257,13 @@ class DatasetController @Inject() (
   def exploreAndAddRemoteDataset(): Action[ExploreAndAddRemoteDatasetParameters] =
     sil.SecuredAction.fox(validateJson[ExploreAndAddRemoteDatasetParameters]) { implicit request =>
       val adaptedParameters =
-        WKExploreRemoteLayerParameters(request.body.remoteUri, None, None, None, request.body.dataStoreName)
+        WKExploreRemoteLayerParameters(
+          request.body.remoteUri,
+          request.body.credentialIdentifier,
+          request.body.credentialSecret,
+          None,
+          request.body.dataStoreName
+        )
       for {
         exploreResponse <- wkExploreRemoteLayerService.exploreRemoteDatasource(
           List(adaptedParameters),

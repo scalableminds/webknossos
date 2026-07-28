@@ -102,9 +102,6 @@ export const userSettings = {
   tdViewDisplayDatasetBorders: {
     type: "boolean",
   },
-  tdViewDisplayLayerBorders: {
-    type: "boolean",
-  },
   hideTreeRemovalWarning: {
     type: "boolean",
   },
@@ -140,6 +137,14 @@ export const userSettings = {
     enum: Object.values(FillModeEnum),
   },
   useLegacyBindings: {
+    type: "boolean",
+  },
+  mipRaymarchingSteps: {
+    type: "number",
+    minimum: 16,
+    maximum: 512,
+  },
+  mipDepthWrite: {
     type: "boolean",
   },
   ...baseDatasetViewConfiguration,

@@ -13,9 +13,6 @@ addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.6.0")
 // scala linter
 addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.14.7")
 
-// check dependencies against published vulnerabilities with sbt dependencyCheck
-addSbtPlugin("net.nmoncho" % "sbt-dependency-check" % "1.9.0")
-
 // protocol buffers
 libraryDependencies += "com.thesamet.scalapb" %% "compilerplugin" % "0.11.20"
 

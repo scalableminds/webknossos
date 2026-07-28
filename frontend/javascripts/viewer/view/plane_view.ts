@@ -158,13 +158,23 @@ class PlaneView {
     }
   }
 
+  // Converts a TDView mouse position to NDC coordinates and points the shared
+  // raycaster at it. Used by both mesh and MIP hit testing.
+  private setRaycasterFromTDMouse(mousePosition: [number, number]): void {
+    const tdViewport = getInputCatcherRect(Store.getState(), "TDView");
+    const mouse = new ThreeVector2(
+      (mousePosition[0] / tdViewport.width) * 2 - 1,
+      ((mousePosition[1] / tdViewport.height) * 2 - 1) * -1,
+    );
+    raycaster.setFromCamera(mouse, this.cameras[OrthoViews.TDView]);
+  }
+
   performMeshHitTest = throttle(
     (mousePosition: [number, number], allowMeshReuseOptimization: boolean = true): RaycasterHit => {
       const storeState = Store.getState();
       const sceneController = getSceneController();
       const { segmentMeshController } = sceneController;
       const { meshesLayerLODRootGroup } = segmentMeshController;
-      const tdViewport = getInputCatcherRect(storeState, "TDView");
       const { hoveredSegmentId } = storeState.temporaryConfiguration;
 
       // Outside of the 3D viewport, we don't do mesh hit tests
@@ -180,11 +190,7 @@ class PlaneView {
       }
 
       // Perform ray casting
-      const mouse = new ThreeVector2(
-        (mousePosition[0] / tdViewport.width) * 2 - 1,
-        ((mousePosition[1] / tdViewport.height) * 2 - 1) * -1,
-      );
-      raycaster.setFromCamera(mouse, this.cameras[OrthoViews.TDView]);
+      this.setRaycasterFromTDMouse(mousePosition);
       const intersectableObjects = meshesLayerLODRootGroup.children;
       // The second parameter of intersectObjects is set to true to ensure that
       // the groups which contain the actual meshes are traversed.
@@ -265,19 +271,33 @@ class PlaneView {
     MESH_HOVER_THROTTLING_DELAY,
   );
 
+  performMipHitTest(mousePosition: [number, number]): Vector3 | null {
+    const storeState = Store.getState();
+    if (storeState.viewModeData.plane.activeViewport !== OrthoViews.TDView) return null;
+    this.setRaycasterFromTDMouse(mousePosition);
+    const worldPos = getSceneController().getMipHitPosition(raycaster.ray);
+    return worldPos != null ? (worldPos.toArray() as Vector3) : null;
+  }
+
   clearLastMeshHitTest = () => {
-    if (oldRaycasterHit?.node.parent != null) {
-      const sceneController = getSceneController();
-      const { segmentMeshController } = sceneController;
-      segmentMeshController.updateMeshAppearance(
+    if (oldRaycasterHit == null) {
+      return;
+    }
+    // Only update the appearance if the mesh is still part of the scene
+    // graph. In any case, clear the module-level reference as it would
+    // otherwise pin the (potentially huge) geometry of a removed mesh
+    // indefinitely (even across annotation sessions).
+    if (oldRaycasterHit.node.parent != null) {
+      const sceneController = getSceneControllerOrNull();
+      sceneController?.segmentMeshController.updateMeshAppearance(
         oldRaycasterHit.node,
         false,
         undefined,
         undefined,
         null,
       );
-      oldRaycasterHit = null;
     }
+    oldRaycasterHit = null;
   };
 
   draw(): void {
@@ -315,6 +335,10 @@ class PlaneView {
       }
     }
     this.resizeThrottled.cancel();
+    // Cancel a potential trailing invocation which would otherwise run
+    // after teardown, and release the reference to the last hit mesh.
+    this.performMeshHitTest.cancel();
+    this.clearLastMeshHitTest();
     window.removeEventListener("resize", this.resizeThrottled);
 
     for (const fn of this.unsubscribeFunctions) {
@@ -342,10 +366,11 @@ class PlaneView {
 
     this.unsubscribeFunctions.push(
       Store.subscribe(() => {
-        // Render in the next frame after the change propagated everywhere
-        window.requestAnimationFrame(() => {
-          this.needsRerender = true;
-        });
+        // Only set the flag here (without scheduling a requestAnimationFrame
+        // per action which would queue many redundant callbacks for
+        // high-frequency actions). The animate() loop picks the flag up in
+        // the next frame, i.e. after the change propagated everywhere.
+        this.needsRerender = true;
       }),
     );
 

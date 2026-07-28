@@ -23,7 +23,6 @@ First, a _Task Type_ needs to be created:
       | Auto-center Nodes                         | `centerNewNode`              | true                   |                                         |
       | Plane Display Mode in 3D View              | `tdViewDisplayPlanes`        | WIREFRAME              | NONE or WIREFRAME or DATA               |
       | Display Dataset Borders in 3D View         | `tdViewDisplayDatasetBorders`| true                   |                                         |
-      | Display Layer Borders in 3D View           | `tdViewDisplayLayerBorders`  | false                  |                                         |
       | d/f-Switching                             | `dynamicSpaceDirection`      | true                   |                                         |
       | Highlight Commented Nodes                  | `highlightCommentedNodes`    | false                  |                                         |
       | Override Node Radius                       | `overrideNodeRadius`         | true                   |                                         |

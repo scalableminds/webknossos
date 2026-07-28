@@ -89,6 +89,7 @@ exports[`Dataset API (E2E) > getActiveDatasets 1`] = `
     "rootRealPath": "rootRealPath",
     "sortingKey": "sortingKey",
     "tags": [],
+    "uploaderFullName": null,
     "usedStorageBytes": 0,
   },
 ]

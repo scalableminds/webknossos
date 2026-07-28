@@ -10,6 +10,7 @@ import FormattedId from "components/formatted_id";
 import dayjs from "dayjs";
 import { formatMilliCreditsString } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
+import { scrollToTop } from "libs/utils";
 import { useMemo } from "react";
 import type { APICreditTransaction, APIJob } from "types/api_types";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
@@ -143,7 +144,7 @@ export function OrganizationCreditActivityView() {
         <Table
           dataSource={organizationTransactions}
           rowKey="id"
-          pagination={{ defaultPageSize: 50 }}
+          pagination={{ defaultPageSize: 50, onChange: scrollToTop }}
           locale={{ emptyText: "No credit activity recorded yet." }}
           style={{ marginTop: 16 }}
           summary={(pageData) => {

@@ -26,7 +26,7 @@ import {
   findGroup,
   mapGroups,
   moveGroupsHelper,
-} from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
+} from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import { updateUserBoundingBox } from "../annotation_reducer";
 import {
   setLargestSegmentIdReducer,

@@ -77,12 +77,14 @@ import {
   waitUntilNoActiveOperations,
 } from "../saga_helpers";
 import {
+  splitAgglomeratesInMapping,
+  updateMappingWithMerge,
+} from "../volume/proofreading/local_mapping_update_sagas";
+import {
   getMeshDisplayPropsByOldAgglomerateId,
   type PreservedMeshDisplayProps,
   refreshAffectedMeshes,
-  splitAgglomeratesInMapping,
-  updateMappingWithMerge,
-} from "../volume/proofreading/proofread_saga";
+} from "../volume/proofreading/segment_and_mesh_refresh_sagas";
 import {
   saveQueueEntriesToServerUpdateActionBatches,
   updateSaveQueueEntriesToStateAfterRebase,

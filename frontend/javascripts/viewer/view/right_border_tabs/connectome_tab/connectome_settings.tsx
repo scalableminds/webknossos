@@ -1,13 +1,14 @@
 import { SettingOutlined } from "@ant-design/icons";
 import { getConnectomeFilesForDatasetLayer } from "admin/rest_api";
 import { Col, Popover, Row, Select, Tooltip } from "antd";
-import { useWkSelector } from "libs/react_hooks";
+import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
 import { settings } from "messages";
 import { useEffect } from "react";
 import { useDispatch } from "react-redux";
 import type { APISegmentationLayer } from "types/api_types";
 import { userSettings } from "types/schemas/user_settings.schema";
 import defaultState from "viewer/default_state";
+import { getConnectomeDataForLayer } from "viewer/model/accessors/connectome_accessor";
 import { isTracingLayerWithoutFallback } from "viewer/model/accessors/volumetracing_accessor";
 import {
   updateConnectomeFileListAction,
@@ -29,9 +30,7 @@ function ConnectomeSettings({ segmentationLayer }: Props) {
 
   const dataset = useWkSelector((state) => state.dataset);
   const connectomeData = useWkSelector((state) =>
-    segmentationLayer != null
-      ? state.localSegmentationStateByLayer[segmentationLayer.name].connectomeData
-      : null,
+    segmentationLayer != null ? getConnectomeDataForLayer(state, segmentationLayer.name) : null,
   );
   const particleSize = useWkSelector((state) => state.userConfiguration.particleSize);
 
@@ -39,38 +38,60 @@ function ConnectomeSettings({ segmentationLayer }: Props) {
   const currentConnectomeFile = connectomeData?.currentConnectomeFile ?? null;
   const pendingConnectomeFileName = connectomeData?.pendingConnectomeFileName ?? null;
 
-  const maybeFetchConnectomeFiles = async () => {
-    // If availableConnectomeFiles is not null, they have already been fetched
+  // Fetch the list of connectome files once a (new) segmentation layer becomes available.
+  // If availableConnectomeFiles is not null, they have already been fetched.
+  const { data: fetchedConnectomeFiles } = useQueryWithErrorHandling(
+    {
+      queryKey: ["connectomeFiles", dataset.id, segmentationLayer?.name],
+      queryFn: () => {
+        if (segmentationLayer == null) {
+          // Guaranteed by the enabled flag, but TS cannot infer this in the closure
+          throw new Error("Cannot fetch connectome files without a segmentation layer.");
+        }
+        return getConnectomeFilesForDatasetLayer(
+          dataset.dataStore.url,
+          dataset,
+          getBaseSegmentationName(segmentationLayer),
+        );
+      },
+      enabled:
+        segmentationLayer != null &&
+        !isTracingLayerWithoutFallback(segmentationLayer) &&
+        availableConnectomeFiles == null,
+      refetchOnWindowFocus: false,
+      // The Redux store is the source of truth for the file list, don't persist the query
+      meta: { persist: false },
+    },
+    "Failed to load the list of connectome files.",
+  );
+
+  // Transfer the fetched connectome files to the Redux store and select the initial file.
+  useEffect(() => {
     if (
+      fetchedConnectomeFiles == null ||
       segmentationLayer == null ||
-      isTracingLayerWithoutFallback(segmentationLayer) ||
       availableConnectomeFiles != null
     )
       return;
-
-    const connectomeFiles = await getConnectomeFilesForDatasetLayer(
-      dataset.dataStore.url,
-      dataset,
-      getBaseSegmentationName(segmentationLayer),
-    );
     const layerName = segmentationLayer.name;
-    dispatch(updateConnectomeFileListAction(layerName, connectomeFiles));
+    dispatch(updateConnectomeFileListAction(layerName, fetchedConnectomeFiles));
 
-    if (currentConnectomeFile == null && connectomeFiles.length > 0) {
+    if (currentConnectomeFile == null && fetchedConnectomeFiles.length > 0) {
       // If there was a pending connectome file name, use it, otherwise select the first one
       const connectomeFileName =
         pendingConnectomeFileName != null
           ? pendingConnectomeFileName
-          : connectomeFiles[0].connectomeFileName;
+          : fetchedConnectomeFiles[0].connectomeFileName;
       dispatch(updateCurrentConnectomeFileAction(layerName, connectomeFileName));
     }
-  };
-
-  // Fetch the list of connectome files once a (new) segmentation layer becomes available.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Refetch once the segmentation layer changes.
-  useEffect(() => {
-    maybeFetchConnectomeFiles();
-  }, [segmentationLayer]);
+  }, [
+    fetchedConnectomeFiles,
+    segmentationLayer,
+    availableConnectomeFiles,
+    currentConnectomeFile,
+    pendingConnectomeFileName,
+    dispatch,
+  ]);
 
   const handleConnectomeFileSelected = (connectomeFileName: string | null | undefined) => {
     if (segmentationLayer != null && connectomeFileName != null) {

@@ -37,6 +37,7 @@ import {
   filterWithSearchQueryAND,
   localeCompareBy,
   millisecondsToHours,
+  scrollToTop,
 } from "libs/utils";
 import partial from "lodash-es/partial";
 import uniqBy from "lodash-es/uniqBy";
@@ -246,6 +247,7 @@ function ProjectListView() {
           rowKey="id"
           pagination={{
             defaultPageSize: 50,
+            onChange: scrollToTop,
           }}
           locale={{
             emptyText: renderPlaceholder(),

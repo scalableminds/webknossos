@@ -17,7 +17,6 @@ import models.user.{MultiUserDAO, User, UserService}
 import org.apache.pekko.actor.{ActorSelection, ActorSystem}
 import utils.WkConf
 
-import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.*
 
@@ -58,7 +57,7 @@ class TimeSpanService @Inject() (
         Map.empty[T, Duration]
     }
 
-  private val lastUserActivities = mutable.HashMap.empty[ObjectId, TimeSpan]
+  private val lastUserActivities = scala.collection.concurrent.TrieMap.empty[ObjectId, TimeSpan]
 
   @SuppressWarnings(
     Array("TraversableHead", "TraversableLast")

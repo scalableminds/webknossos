@@ -154,7 +154,13 @@ class AnnotationController @Inject() (
     }
   }
 
-  def merge(typ: String, id: ObjectId, mergedTyp: String, mergedId: ObjectId): Action[AnyContent] =
+  def merge(
+      typ: String,
+      id: ObjectId,
+      mergedTyp: String,
+      mergedId: ObjectId,
+      remapSegmentIds: Option[Boolean]
+  ): Action[AnyContent] =
     sil.SecuredAction.fox { implicit request =>
       for {
         annotationA <- provider.provideAnnotation(typ, id, request.identity) ?~> Msg.Annotation.notFound ~> NOT_FOUND
@@ -166,7 +172,8 @@ class AnnotationController @Inject() (
         mergedAnnotation <- annotationMerger.mergeTwo(
           annotationA,
           annotationB,
-          request.identity
+          request.identity,
+          remapSegmentIds.getOrElse(true)
         ) ?~> Msg.Annotation.Merge.failed
         restrictions = annotationRestrictionDefaults.defaultsFor(mergedAnnotation)
         _ <- restrictions.allowAccess(request.identity) ?~> Msg.Annotation.Merge.noAccessOnMerged ~> FORBIDDEN
@@ -179,11 +186,16 @@ class AnnotationController @Inject() (
       } yield JsonOk(js, Msg.Annotation.Merge.success)
     }
 
-  def mergeWithoutType(id: ObjectId, mergedTyp: String, mergedId: ObjectId): Action[AnyContent] =
+  def mergeWithoutType(
+      id: ObjectId,
+      mergedTyp: String,
+      mergedId: ObjectId,
+      remapSegmentIds: Option[Boolean]
+  ): Action[AnyContent] =
     sil.SecuredAction.fox { implicit request =>
       for {
         annotation <- provider.provideAnnotation(id, request.identity) ?~> Msg.Annotation.notFound ~> NOT_FOUND
-        result <- Fox.fromFuture(merge(annotation.typ.toString, id, mergedTyp, mergedId)(request))
+        result <- Fox.fromFuture(merge(annotation.typ.toString, id, mergedTyp, mergedId, remapSegmentIds)(request))
       } yield result
     }
 

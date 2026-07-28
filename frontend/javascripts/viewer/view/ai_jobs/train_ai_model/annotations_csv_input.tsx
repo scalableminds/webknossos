@@ -26,6 +26,7 @@ export function AnnotationsCsvInput({ onClose }: { onClose: () => void }) {
           annotation: item.annotation,
           dataset: item.dataset,
           userBoundingBoxes: item.userBoundingBoxes,
+          volumeTracings: item.volumeTracings,
           volumeTracingMags: item.volumeTracingMags,
         }),
       );
@@ -48,12 +49,23 @@ export function AnnotationsCsvInput({ onClose }: { onClose: () => void }) {
 
   const validator = useCallback((_rule: RuleObject, value?: string) => {
     const text = value ?? "";
-    const valid = text.split("\n").every((line) => !line.includes("#") && !line.includes(","));
+    // A line is either a bare annotation/task ID (no # or , allowed) or a full URL (or shortlink).
+    const isValidLine = (line: string) => {
+      const trimmed = line.trim();
+      return (
+        trimmed === "" ||
+        URL.canParse(trimmed) ||
+        (!trimmed.includes("#") && !trimmed.includes(","))
+      );
+    };
+    const valid = text.split("\n").every(isValidLine);
 
     return valid
       ? Promise.resolve()
       : Promise.reject(
-          new Error("Each line should only contain a single annotation ID or URL (without # or ,)"),
+          new Error(
+            "Each line should only contain a single annotation/task ID or a WEBKNOSSOS URL",
+          ),
         );
   }, []);
 

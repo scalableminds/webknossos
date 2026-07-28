@@ -1,11 +1,10 @@
 package com.scalableminds.webknossos.datastore.services.mesh
 
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.box.{Box, Failure, Full}
+import com.scalableminds.util.box.{Box, Failure}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Float, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, ElementClass, SegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.requests.{
@@ -115,7 +114,7 @@ class AdHocMeshService(
       dataTypeFunctors: DataTypeFunctors[T, B]
   )(using tc: TokenContext): Fox[(Array[Float], List[Int])] = {
 
-    def applyJsonMappingIfNeeded(data: Array[T]): Box[Array[T]] =
+    def applyJsonMappingIfNeeded(data: Array[T]): Fox[Array[T]] =
       request.mapping match {
         case Some(mappingName) =>
           request.mappingType match {
@@ -125,10 +124,10 @@ class AdHocMeshService(
                 data,
                 dataTypeFunctors.fromLong
               )
-            case _ => Full(data)
+            case _ => Fox.successful(data)
           }
         case _ =>
-          Full(data)
+          Fox.successful(data)
       }
 
     def applyAgglomerate(data: Array[Byte]): Fox[Array[Byte]] =
@@ -223,8 +222,8 @@ class AdHocMeshService(
       data <- binaryDataService.handleDataRequest(dataRequest)
       agglomerateMappedData <- applyAgglomerate(data) ?~> "failed to apply agglomerate for ad-hoc meshing"
       typedData = convertData(agglomerateMappedData)
-      mappedData <- applyJsonMappingIfNeeded(typedData).toFox
-      mappedSegmentId <- applyJsonMappingIfNeeded(Array(typedSegmentId)).map(_.head).toFox
+      mappedData <- applyJsonMappingIfNeeded(typedData)
+      mappedSegmentId <- applyJsonMappingIfNeeded(Array(typedSegmentId)).map(_.head)
       neighbors =
         if (request.findNeighbors) { findNeighbors(mappedData, dataDimensions, mappedSegmentId) }
         else {

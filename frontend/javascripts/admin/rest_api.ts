@@ -1005,6 +1005,10 @@ export async function downloadWithFilename(downloadUrl: string) {
   const link = document.createElement("a");
   link.href = downloadUrl;
   link.rel = "noopener";
+  // Without this, the browser treats the click as a top-level navigation until the
+  // Content-Disposition header arrives, firing beforeunload and releasing the annotation
+  // mutex. The download attribute marks it as a forced download upfront.
+  link.download = "";
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

@@ -34,7 +34,7 @@ import { handleGenericError } from "libs/error_handling";
 import { stringToColor } from "libs/format_utils";
 import Persistence from "libs/persistence";
 import Toast from "libs/toast";
-import { compareBy, filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
+import { compareBy, filterWithSearchQueryAND, localeCompareBy, scrollToTop } from "libs/utils";
 import compact from "lodash-es/compact";
 import intersection from "lodash-es/intersection";
 import keyBy from "lodash-es/keyBy";
@@ -708,6 +708,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
         rowKey="id"
         pagination={{
           defaultPageSize: 50,
+          onChange: scrollToTop,
         }}
         className="large-table"
         scroll={{

@@ -30,11 +30,23 @@ class S3ClientPool(ws: WSClient) {
 
   // Key: access key id, secret key (hashed), custom endpoint
   private lazy val defaultPool: AlfuCache[(Option[String], Option[String], Option[String]), S3AsyncClient] =
-    AlfuCache(timeToLive = 100 days, timeToIdle = 100 days)
+    AlfuCache(
+      timeToLive = 100 days,
+      timeToIdle = 100 days,
+      onRemovalFn = Some { (_, clientBox) =>
+        clientBox.foreach(_.close())
+      }
+    )
 
   // Key: access key id, secret key (hashed), custom endpoint
   private lazy val uploadPool: AlfuCache[(Option[String], Option[String], Option[String]), S3AsyncClient] =
-    AlfuCache(timeToLive = 100 days, timeToIdle = 100 days)
+    AlfuCache(
+      timeToLive = 100 days,
+      timeToIdle = 100 days,
+      onRemovalFn = Some { (_, clientBox) =>
+        clientBox.foreach(_.close())
+      }
+    )
 
   def getS3Client(credentialOpt: Option[S3AccessKeyCredential], uri: URI, isForUpload: Boolean)(implicit
       ec: ExecutionContext

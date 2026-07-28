@@ -11,7 +11,7 @@ name: Autodeployment
 #       - trigger-autodeployment-on-ci-success depends on it and in case enabled is true then calls autodeploy.
 #   - trigger path 3: when PR is merged or closed
 #       - cleanup-deployment-on-close is called when a PR with autodeploy label is closed (that’s its if condition)
-#       - it deletes the github deployment if necessary
+#       - it deactivates the github deployment if necessary
 
 on:
   pull_request:
@@ -127,9 +127,10 @@ jobs:
           echo "dynamic_env=dev-${SANITIZED}" >> "$GITHUB_OUTPUT"
         env:
           HEAD_REF: ${{ github.head_ref }}
-      - name: Delete deployment environment
+      - name: Deactivate deployment environment
         uses: bobheadxi/deployments@v1.5.0
         with:
-          step: delete-env
+          # We only deactivate the env, not delete it, because that would require repo admin auth. Empty envs will accumulate but they are cheap.
+          step: deactivate-env
           token: ${{ secrets.GITHUB_TOKEN }}
           env: ${{ steps.get_env.outputs.dynamic_env }}

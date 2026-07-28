@@ -16,6 +16,7 @@ import Constants from "viewer/constants";
 import type {
   Annotation,
   MappingType,
+  MipLayerConfig,
   UserBoundingBox,
   UserBoundingBoxWithoutId,
   UserBoundingBoxWithoutIdMaybe,
@@ -62,6 +63,10 @@ type AddUserBoundingBoxesAction = ReturnType<typeof addUserBoundingBoxesAction>;
 export type AddNewUserBoundingBox = ReturnType<typeof addUserBoundingBoxAction>;
 export type ChangeUserBoundingBoxAction = ReturnType<typeof changeUserBoundingBoxAction>;
 type DeleteUserBoundingBox = ReturnType<typeof deleteUserBoundingBoxAction>;
+export type SetMipForBBoxAction = ReturnType<typeof setMipForBBoxAction>;
+export type RemoveMipForBBoxAction = ReturnType<typeof removeMipForBBoxAction>;
+export type RemoveMipLayerForBBoxAction = ReturnType<typeof removeMipLayerForBBoxAction>;
+export type LoadMipAction = ReturnType<typeof loadMipAction>;
 export type UpdateMeshVisibilityAction = ReturnType<typeof updateMeshVisibilityAction>;
 export type UpdateMeshOpacityAction = ReturnType<typeof updateMeshOpacityAction>;
 export type MaybeFetchMeshFilesAction = ReturnType<typeof maybeFetchMeshFilesAction>;
@@ -106,7 +111,11 @@ export type AnnotationActionTypes =
   | RemoveMeshAction
   | AddAdHocMeshAction
   | AddPrecomputedMeshAction
-  | SetCollaborationModeAction;
+  | SetCollaborationModeAction
+  | SetMipForBBoxAction
+  | RemoveMipForBBoxAction
+  | RemoveMipLayerForBBoxAction
+  | LoadMipAction;
 
 export type UserBoundingBoxAction =
   | SetUserBoundingBoxesAction
@@ -191,13 +200,17 @@ export const finishedResizingUserBoundingBoxAction = (id: number) =>
   }) as const;
 
 export const addUserBoundingBoxAction = (
-  newBoundingBox?: Partial<UserBoundingBoxWithoutId> | null | undefined,
-  center?: Vector3,
+  newBoundingBox: Partial<UserBoundingBoxWithoutId> | null | undefined,
+  center: Vector3 | undefined,
+  // Callers must reserve an id up front (e.g., via dispatchGetNewIdAsync with the
+  // "BoundingBox" domain) to avoid id collisions in collaborative annotations.
+  id: number,
 ) =>
   ({
     type: "ADD_NEW_USER_BOUNDING_BOX",
     newBoundingBox,
     center,
+    id,
   }) as const;
 
 export const deleteUserBoundingBoxAction = (id: number) =>
@@ -206,10 +219,44 @@ export const deleteUserBoundingBoxAction = (id: number) =>
     id,
   }) as const;
 
-export const addUserBoundingBoxesAction = (userBoundingBoxes: Array<UserBoundingBox>) =>
+export const setMipForBBoxAction = (id: number, config: MipLayerConfig) =>
+  ({
+    type: "SET_MIP_FOR_BBOX",
+    id,
+    config,
+  }) as const;
+
+export const removeMipForBBoxAction = (id: number) =>
+  ({
+    type: "REMOVE_MIP_FOR_BBOX",
+    id,
+  }) as const;
+
+export const removeMipLayerForBBoxAction = (id: number, layerName: string) =>
+  ({
+    type: "REMOVE_MIP_LAYER_FOR_BBOX",
+    id,
+    layerName,
+  }) as const;
+
+// Dispatched by scene_controller when a new MIP layer slot is ready for data download.
+// The MIP saga picks this up, downloads the data, and calls volume.receiveLayerData.
+export const loadMipAction = (bboxId: number, bbox: UserBoundingBox, config: MipLayerConfig) =>
+  ({
+    type: "LOAD_MIP",
+    bboxId,
+    bbox,
+    config,
+  }) as const;
+
+export const addUserBoundingBoxesAction = (
+  userBoundingBoxes: Array<UserBoundingBox>,
+  boundingBoxIds: number[],
+) =>
   ({
     type: "ADD_USER_BOUNDING_BOXES",
     userBoundingBoxes,
+    boundingBoxIds,
   }) as const;
 
 export const updateMeshVisibilityAction = (

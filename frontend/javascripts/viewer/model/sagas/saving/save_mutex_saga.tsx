@@ -41,15 +41,17 @@ import { ensureWkInitialized } from "../ready_sagas";
 // Also refer to application.conf where annotation.mutex.expiryTime is defined
 // (typically, 2 minutes).
 
-const MUTEX_NOT_ACQUIRED_KEY = "MutexCouldNotBeAcquired";
-const MUTEX_ACQUIRED_KEY = "AnnotationMutexAcquired";
+const MUTEX_NOT_ACQUIRED_TOAST_KEY = "MutexCouldNotBeAcquired";
+const MUTEX_ACQUIRED_TOAST_KEY = "AnnotationMutexAcquired";
+const STARVING_FOR_MUTEX_TOAST_KEY = "StarvingForMutex";
+const UNABLE_TO_KEEP_MUTEX_TOAST_KEY = "UnableToKeepMutex";
 const ACQUIRE_MUTEX_INTERVAL = import.meta.env.MODE === "test" ? 1 * 1000 : 60 * 1000;
 const DELAY_AFTER_FAILED_MUTEX_FETCH = import.meta.env.MODE === "test" ? 1 * 1000 : 10 * 1000;
 const RETRY_COUNT = 20; // 12 retries with 60/12=5 seconds backup delay
 const INITIAL_BACKOFF_TIME = 750;
 const BACKOFF_TIME_MULTIPLIER = 1.2;
 const BACKOFF_JITTER_LOWER_PERCENT = 0.0;
-const MAX_AD_HOC_RETRY_TIME = 10 * 1000;
+const MAX_AD_HOC_RETRY_TIME = 30 * 1000;
 const BACKOFF_JITTER_UPPER_PERCENT = 0.15;
 const MAX_RELEASE_RETRY_INTERVAL = 30 * 1000;
 
@@ -170,11 +172,25 @@ function getUnsubscribeFromAnnotationMutexSaga(
 
 const MUTEX_SUBSCRIPTION_TIMEOUT = 5 * 60 * 1000;
 function* autoTimeoutSubscription(action: SubscribeToAnnotationMutexAction): Saga<void> {
+  yield* call(waitUntilMutexIsAcquiredOrUnneeded);
   yield delay(MUTEX_SUBSCRIPTION_TIMEOUT);
   const warnIfAlreadyUnsubscribed = false;
   yield call(
     getUnsubscribeFromAnnotationMutexSaga(action.subscriptionId, warnIfAlreadyUnsubscribed),
   );
+}
+
+function* waitUntilMutexIsAcquiredOrUnneeded(): Saga<void> {
+  while (true) {
+    const doesHaveMutex = yield* call(getDoesHaveMutex);
+    const othersMayEdit = yield* select((state) =>
+      isAnnotationEditableByNonOwners(state.annotation),
+    );
+    if (doesHaveMutex || !othersMayEdit) {
+      return;
+    }
+    yield* take("SET_IS_MUTEX_ACQUIRED");
+  }
 }
 
 export function* subscribeToAnnotationMutex(callerId: string): Saga<() => Saga<void>> {
@@ -195,16 +211,8 @@ export function* subscribeToAnnotationMutex(callerId: string): Saga<() => Saga<v
 
   yield* call(ensureCorrectMutexAcquiringSagaIsRunning, state);
 
-  while (true) {
-    const doesHaveMutex = yield* call(getDoesHaveMutex);
-    const othersMayEdit = yield* select((state) =>
-      isAnnotationEditableByNonOwners(state.annotation),
-    );
-    if (doesHaveMutex || !othersMayEdit) {
-      return getUnsubscribeFromAnnotationMutexSaga(newId);
-    }
-    yield* take("SET_IS_MUTEX_ACQUIRED");
-  }
+  yield* call(waitUntilMutexIsAcquiredOrUnneeded);
+  return getUnsubscribeFromAnnotationMutexSaga(newId);
 }
 
 // Needed for tests
@@ -369,6 +377,7 @@ function* acquireMutexInitiallyForAdHocStrategy(annotationId: string): Saga<void
       yield* put(setUserHoldingMutexAction(blockedByUser, mutexResult.blockedBySessionId));
       yield* put(setIsMutexAcquiredAction(canEdit));
       if (canEdit) {
+        Toast.close(STARVING_FOR_MUTEX_TOAST_KEY);
         return;
       }
     } catch (error) {
@@ -389,7 +398,7 @@ function* acquireMutexInitiallyForAdHocStrategy(annotationId: string): Saga<void
         `Could not get the annotations write-lock for more than ${MAX_AD_HOC_RETRY_TIME / 1000} seconds.
         User ${blockingUserName} is currently blocking the annotation.
         Retrying...`,
-        { sticky: true },
+        { sticky: true, key: STARVING_FOR_MUTEX_TOAST_KEY },
       );
       showingToast = true;
     }
@@ -421,6 +430,7 @@ function* keepAnnotationMutexForAdHocStrategy(annotationId: string): Saga<void> 
       yield* put(setUserHoldingMutexAction(blockedByUser, mutexInfo.blockedBySessionId));
       yield* put(setIsMutexAcquiredAction(canEdit));
       if (canEdit) {
+        Toast.close(UNABLE_TO_KEEP_MUTEX_TOAST_KEY);
         // Only wait for next refetching of the mutex in case the user can edit.
         // Else directly go to the error case outside the try-catch block below.
         yield* call(delay, ACQUIRE_MUTEX_INTERVAL);
@@ -431,6 +441,7 @@ function* keepAnnotationMutexForAdHocStrategy(annotationId: string): Saga<void> 
       yield* put(setIsMutexAcquiredAction(false));
       Toast.warning(
         "Unable to get write-lock needed to update the annotation. Please check your connection to WEBKNOSSOS. See the console for more information. Retrying soon.",
+        { key: UNABLE_TO_KEEP_MUTEX_TOAST_KEY },
       );
       yield* call(delay, DELAY_AFTER_FAILED_MUTEX_FETCH);
     }
@@ -511,12 +522,12 @@ function* watchMutexStateChangesForNotification(mutexLogicState: MutexLogicState
           isSavingDisabled ||
           mutexLogicState.fetchingStrategy === MutexFetchingStrategy.AdHoc
         ) {
-          Toast.close(MUTEX_NOT_ACQUIRED_KEY);
-          Toast.close(MUTEX_ACQUIRED_KEY);
+          Toast.close(MUTEX_NOT_ACQUIRED_TOAST_KEY);
+          Toast.close(MUTEX_ACQUIRED_TOAST_KEY);
           return;
         }
         if (isMutexAcquired) {
-          Toast.close(MUTEX_NOT_ACQUIRED_KEY);
+          Toast.close(MUTEX_NOT_ACQUIRED_TOAST_KEY);
           if (!mutexLogicState.isInitialRequest && !wasMutexAlreadyAcquiredBefore) {
             const message = (
               <>
@@ -524,10 +535,10 @@ function* watchMutexStateChangesForNotification(mutexLogicState: MutexLogicState
                 <Button onClick={() => location.reload()}>Reload the annotation</Button>
               </>
             );
-            Toast.success(message, { sticky: true, key: MUTEX_ACQUIRED_KEY });
+            Toast.success(message, { sticky: true, key: MUTEX_ACQUIRED_TOAST_KEY });
           }
         } else {
-          Toast.close(MUTEX_ACQUIRED_KEY);
+          Toast.close(MUTEX_ACQUIRED_TOAST_KEY);
           const activeUser = yield* select((state) => state.activeUser);
           const blockedByUser = yield* select((state) => state.save.mutexState.blockedByUser);
           const blockedBySessionId = yield* select(
@@ -559,7 +570,7 @@ function* watchMutexStateChangesForNotification(mutexLogicState: MutexLogicState
           if (stillHasNoMutex) {
             // Only show the warning if there is still no toast. Due to the 500ms delay,
             // a new mutex acuiqre could have happened theoretically.
-            Toast.warning(message, { key: MUTEX_NOT_ACQUIRED_KEY });
+            Toast.warning(message, { key: MUTEX_NOT_ACQUIRED_TOAST_KEY });
           }
         }
         wasMutexAlreadyAcquiredBefore = yield* select(
@@ -568,8 +579,8 @@ function* watchMutexStateChangesForNotification(mutexLogicState: MutexLogicState
         mutexLogicState.isInitialRequest = false;
       } finally {
         if (yield* cancelled()) {
-          Toast.close(MUTEX_NOT_ACQUIRED_KEY);
-          Toast.close(MUTEX_ACQUIRED_KEY);
+          Toast.close(MUTEX_NOT_ACQUIRED_TOAST_KEY);
+          Toast.close(MUTEX_ACQUIRED_TOAST_KEY);
         }
       }
     },

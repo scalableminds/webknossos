@@ -21,7 +21,8 @@ class AnnotationMerger @Inject() (datasetDAO: DatasetDAO, tracingStoreService: T
   def mergeTwo(
       annotationA: Annotation,
       annotationB: Annotation,
-      issuingUser: User
+      issuingUser: User,
+      remapSegmentIds: Boolean
   )(using ctx: DBAccessContext): Fox[Annotation] =
     mergeN(
       ObjectId.generate,
@@ -30,7 +31,8 @@ class AnnotationMerger @Inject() (datasetDAO: DatasetDAO, tracingStoreService: T
       annotationB._dataset,
       AnnotationType.Explorational,
       List(annotationA, annotationB),
-      Seq.empty
+      Seq.empty,
+      remapSegmentIds
     )
 
   def mergeN(
@@ -40,7 +42,8 @@ class AnnotationMerger @Inject() (datasetDAO: DatasetDAO, tracingStoreService: T
       datasetId: ObjectId,
       typ: AnnotationType,
       annotations: List[Annotation],
-      additionalBoundingBoxes: Seq[NamedBoundingBox]
+      additionalBoundingBoxes: Seq[NamedBoundingBox],
+      remapSegmentIds: Boolean
   )(using ctx: DBAccessContext): Fox[Annotation] =
     if (annotations.isEmpty)
       Fox.empty
@@ -52,7 +55,8 @@ class AnnotationMerger @Inject() (datasetDAO: DatasetDAO, tracingStoreService: T
           newId,
           userId,
           toTemporaryStore,
-          additionalBoundingBoxes
+          additionalBoundingBoxes,
+          remapSegmentIds
         ) ?~> "Failed to merge annotations in tracingstore."
       } yield Annotation(
         newId,
@@ -70,7 +74,8 @@ class AnnotationMerger @Inject() (datasetDAO: DatasetDAO, tracingStoreService: T
       newAnnotationId: ObjectId,
       requestingUserId: ObjectId,
       toTemporaryStore: Boolean,
-      additionalBoundingBoxes: Seq[NamedBoundingBox]
+      additionalBoundingBoxes: Seq[NamedBoundingBox],
+      remapSegmentIds: Boolean
   )(using ctx: DBAccessContext): Fox[List[AnnotationLayer]] =
     for {
       dataset <- datasetDAO.findOne(datasetId)
@@ -81,7 +86,8 @@ class AnnotationMerger @Inject() (datasetDAO: DatasetDAO, tracingStoreService: T
         newAnnotationId,
         toTemporaryStore,
         requestingUserId,
-        additionalBoundingBoxes
+        additionalBoundingBoxes,
+        remapSegmentIds
       )
       layers = mergedAnnotationProto.annotationLayers.map(AnnotationLayer.fromProto)
     } yield layers.toList

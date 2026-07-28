@@ -23,7 +23,7 @@ import Markdown from "libs/markdown_adapter";
 import Persistence from "libs/persistence";
 import Request from "libs/request";
 import Toast from "libs/toast";
-import { compareBy } from "libs/utils";
+import { compareBy, scrollToTop } from "libs/utils";
 import messages from "messages";
 import { PureComponent, useContext } from "react";
 import { connect } from "react-redux";
@@ -490,6 +490,7 @@ class DashboardTaskListView extends PureComponent<Props, State> {
         dataSource={tasks}
         pagination={{
           defaultPageSize: 50,
+          onChange: scrollToTop,
         }}
         loading={this.state.isLoading}
         renderItem={TaskCard}

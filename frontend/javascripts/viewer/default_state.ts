@@ -82,7 +82,6 @@ const defaultState: WebknossosState = {
     sphericalCapRadius: Constants.DEFAULT_SPHERICAL_CAP_RADIUS,
     tdViewDisplayPlanes: TDViewDisplayModeEnum.DATA,
     tdViewDisplayDatasetBorders: true,
-    tdViewDisplayLayerBorders: false,
     gpuMemoryFactor: Constants.DEFAULT_GPU_MEMORY_FACTOR,
     overwriteMode: OverwriteModeEnum.OVERWRITE_ALL,
     fillMode: FillModeEnum._2D,
@@ -104,6 +103,8 @@ const defaultState: WebknossosState = {
     erasePreference: "ERASE_BRUSH",
     writePreference: "BRUSH",
     measurementPreference: "LINE_MEASUREMENT",
+    mipRaymarchingSteps: 128,
+    mipDepthWrite: false,
     timestampsForTools: {
       [AnnotationTool.MOVE.id]: 0,
       [AnnotationTool.BRUSH.id]: 0,
@@ -143,6 +144,8 @@ const defaultState: WebknossosState = {
     preferredQualityForMeshPrecomputation: 2,
     preferredQualityForMeshAdHocComputation: 2,
     lastVisibleSegmentationLayerName: null,
+    layerBoundingBoxVisibilities: {},
+    layerBoundingBoxColors: {},
   },
   task: null,
   dataset: {
@@ -183,6 +186,7 @@ const defaultState: WebknossosState = {
     sortingKey: 123,
     publication: null,
     usedStorageBytes: 0,
+    uploaderFullName: null,
   },
   annotation: {
     ...initialAnnotationInfo,
@@ -315,6 +319,7 @@ const defaultState: WebknossosState = {
       viewport: null,
       unmappedSegmentId: null,
     },
+    mipBBoxSettings: {},
   },
   localSegmentationStateByLayer: {},
   localSkeletonState: {
@@ -325,6 +330,9 @@ const defaultState: WebknossosState = {
       activeIndex: -1,
     },
     showSkeletons: true,
+  },
+  localAnnotationState: {
+    idReservationsForBoundingBoxes: [],
   },
   operationContext: {
     activeOperations: [],

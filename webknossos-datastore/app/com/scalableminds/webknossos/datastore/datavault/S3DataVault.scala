@@ -101,7 +101,7 @@ class S3DataVault(
         Future.successful(BoxFailure(exception.getMessage, Full(exception), Empty))
     })
 
-  override def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(using
+  override def readBytesPlusEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[(Array[Byte], Encoding.Value, Option[String])] =
@@ -129,7 +129,10 @@ class S3DataVault(
       encoding <- Encoding.fromRfc7231String(encodingString).toFox
     } yield (bytes, encoding, rangeHeader)
 
-  override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[Seq[VaultPath]] =
+  override def listDirectory(path: VaultPath, maxItems: Int)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Seq[VaultPath]] =
     for {
       prefixKey <- S3UriUtils.objectKeyFromVaultPath(path).toFox
       s3SubPrefixKeys <- getObjectSummaries(bucketName, prefixKey, maxItems)
@@ -197,16 +200,16 @@ class S3DataVault(
 }
 
 object S3DataVault {
-  def create(credentializedUpath: CredentializedUPath, s3ClientPool: S3ClientPool)(implicit
+  def create(credentializedUPath: CredentializedUPath, s3ClientPool: S3ClientPool)(implicit
       ec: ExecutionContext
   ): Box[S3DataVault] = {
-    val credential = credentializedUpath.credential.flatMap {
+    val credential = credentializedUPath.credential.flatMap {
       case f: S3AccessKeyCredential     => Some(f)
       case f: LegacyDataVaultCredential => Some(f.toS3AccessKey)
       case _                            => None
     }
     for {
-      remoteUri <- credentializedUpath.upath.toRemoteUri
+      remoteUri <- credentializedUPath.upath.toRemoteUri
     } yield new S3DataVault(credential, remoteUri, s3ClientPool, ec)
   }
 

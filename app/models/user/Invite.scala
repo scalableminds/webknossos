@@ -150,14 +150,21 @@ class InviteDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     } yield ()
   }
 
+  // Ensure only teams are returned that are not deleted (present in teams_) as teams might be deleted after the invite was created.
   def findTeamMembershipsFor(inviteId: ObjectId): Fox[Seq[TeamMembership]] =
     for {
-      rows <- run(
-        q"SELECT _team, isTeamManager FROM WEBKNOSSOS.invite_team_roles WHERE _invite = $inviteId"
-          .as[(ObjectId, Boolean)]
-      )
+      rows <- run(q"""SELECT invite._team, invite.isTeamManager
+                      FROM webknossos.invite_team_roles invite
+                      JOIN webknossos.teams_ t ON t._id = invite._team
+                      WHERE invite._invite = $inviteId""".as[(ObjectId, Boolean)])
       parsed = rows.map(row => TeamMembership(row._1, row._2))
     } yield parsed
+
+  // Called on team deletion, so that the team role does not become a dangling reference in pending invites.
+  def removeTeamFromAllInvites(teamId: ObjectId): Fox[Unit] =
+    for {
+      _ <- run(q"DELETE FROM webknossos.invite_team_roles WHERE _team = $teamId".asUpdate)
+    } yield ()
 
   def deleteAllExpired(): Fox[Unit] =
     for {

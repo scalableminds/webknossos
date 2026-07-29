@@ -69,7 +69,7 @@ class PrecomputedArray(
     with NeuroglancerPrecomputedShardingUtils {
 
   lazy val voxelOffset: Array[Int] = header.precomputedScale.voxel_offset.getOrElse(Array(0, 0, 0))
-  override protected def getChunkFilename(chunkIndex: Array[Int]): String = {
+  override protected def getChunkFilename(chunkIndex: Array[Long]): String = {
 
     val bbox = header.chunkIndexToNDimensionalBoundingBox(chunkIndex)
     bbox.map(dim => s"${dim._1}-${dim._2}").mkString(header.dimension_separator.toString)
@@ -78,11 +78,14 @@ class PrecomputedArray(
   val shardingSpecification: ShardingSpecification =
     header.precomputedScale.sharding.getOrElse(ShardingSpecification.empty)
 
-  private def getHashForChunk(chunkIndex: Array[Int]): Long =
-    CompressedMortonCode.encode(chunkIndex, header.gridSize)
+  // Neuroglancer precomputed chunk grids are bounded spatial voxel coordinates (unlike a segment-id-keyed
+  // mapping array), so narrowing back to Int here is safe -- chunkIndex is Long only because it comes from
+  // the shared DatasetArray/ChunkUtils chunk-addressing interface.
+  private def getHashForChunk(chunkIndex: Array[Long]): Long =
+    CompressedMortonCode.encode(chunkIndex.map(_.toInt), header.gridSize)
 
   override def getShardedChunkPathAndRange(
-      chunkIndex: Array[Int]
+      chunkIndex: Array[Long]
   )(implicit ec: ExecutionContext, tc: TokenContext): Fox[(VaultPath, StartEndExclusiveByteRange)] = {
     val chunkIdentifier = getHashForChunk(chunkIndex)
     val minishardInfo = shardingSpecification.getMinishardInfo(chunkIdentifier)

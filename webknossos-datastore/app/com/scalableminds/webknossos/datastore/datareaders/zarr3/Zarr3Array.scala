@@ -65,7 +65,7 @@ class Zarr3Array(
     )
     with LazyLogging {
 
-  override protected def getChunkFilename(chunkIndex: Array[Int]): String =
+  override protected def getChunkFilename(chunkIndex: Array[Long]): String =
     if (header.chunk_key_encoding.name == "default") {
       s"c${header.dimension_separator.toString}${super.getChunkFilename(chunkIndex)}"
     } else {
@@ -119,13 +119,18 @@ class Zarr3Array(
   private lazy val chunksPerShard = indexShape.product
   private def shardIndexEntryLength = 16
 
-  private def getChunkIndexInShardIndex(chunkIndex: Array[Int], shardCoordinates: Array[Int]): Int = {
+  // chunkIndex/shardCoordinates are Long since a segment-id-keyed mapping array (addressed by raw
+  // segment id rather than bounded spatial voxel coordinates) can need chunk indices far beyond
+  // Int.MaxValue. The result (a chunk's position within a single shard's index) stays well within
+  // Int range, since chunksPerShard (indexShape.product) is itself a bounded, small configuration value.
+  private def getChunkIndexInShardIndex(chunkIndex: Array[Long], shardCoordinates: Array[Long]): Int = {
     val shardOffset = shardCoordinates.zip(indexShape).map { case (sc, is) => sc * is }
-    indexShape.tails.toList
+    val indexWithinShard = indexShape.tails.toList
       .dropRight(1)
       .zipWithIndex
-      .map { case (shape, i) => shape.tail.product * (chunkIndex(i) - shardOffset(i)) }
+      .map { case (shape, i) => shape.tail.product.toLong * (chunkIndex(i) - shardOffset(i)) }
       .sum
+    Math.toIntExact(indexWithinShard)
   }
 
   private def readAndParseShardIndex(
@@ -173,16 +178,16 @@ class Zarr3Array(
       .toArray
   }
 
-  private def chunkIndexToShardIndex(chunkIndex: Array[Int]) =
+  private def chunkIndexToShardIndex(chunkIndex: Array[Long]) =
     ChunkUtils.computeChunkIndices(
       header.datasetShape,
       header.outerChunkShape,
       header.chunkShape,
-      chunkIndex.zip(header.chunkShape).map { case (i, s) => i.toLong * s }
+      chunkIndex.zip(header.chunkShape).map { case (i, s) => i * s }
     )
 
   override protected def getShardedChunkPathAndRange(
-      chunkIndex: Array[Int]
+      chunkIndex: Array[Long]
   )(using ec: ExecutionContext, tc: TokenContext): Fox[(VaultPath, StartEndExclusiveByteRange)] =
     for {
       shardCoordinates <- chunkIndexToShardIndex(chunkIndex).headOption.toFox

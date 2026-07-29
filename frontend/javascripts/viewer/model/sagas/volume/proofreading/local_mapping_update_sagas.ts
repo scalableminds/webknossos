@@ -18,9 +18,13 @@ function getSegmentIdsThatMapToAgglomerate(
   // If the mapping contains numbers (uint32-backed dataset) rather than BigInts, we need a
   // plain number for the filtering. This is safe because such mappings never contain ids
   // that exceed the safe integer range.
+  // Note: sourceAgglomerateId must only be adapted to the mapping's native key/value type here
+  // (number vs. bigint), NOT looked up in the mapping (it's an agglomerate id, generally not a
+  // key of the mapping at all, so a lookup would incorrectly yield undefined and silently drop
+  // all matching segments).
   const comparableSourceAgglomerateId =
     activeMapping.mapping != null
-      ? getMappedIdAsBigInt(activeMapping.mapping, sourceAgglomerateId)
+      ? getAdaptToTypeFunction(activeMapping.mapping)(sourceAgglomerateId)
       : sourceAgglomerateId;
   return mappingEntries
     .filter(([_segmentId, agglomerateId]) => agglomerateId === comparableSourceAgglomerateId)

@@ -36,7 +36,7 @@ export function parseProtoTracing(
     arrays: true,
     objects: true,
     enums: String,
-    longs: String,
+    longs: BigInt,
   }) as any;
 
   tracing.createdTimestamp = Number(tracing.createdTimestamp);

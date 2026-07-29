@@ -7,8 +7,17 @@ import SkeletonTracingProto from "SkeletonTracing.proto";
 // @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'VolumeTracing.proto' or its co... Remove this comment to see the full error message
 import VolumeTracingProto from "VolumeTracing.proto";
 import { toBigInt } from "libs/bigint_helpers";
-import { Root, util } from "protobufjs/light";
+import Long from "long";
+import { Root, configure, util } from "protobufjs/light";
 import type { APITracingStoreAnnotation, ServerTracing } from "types/api_types";
+
+// protobufjs resolves its optional Long support via a try/catch require("long") call (see
+// node_modules/protobufjs/src/util/minimal.js). Wire it up explicitly via a real, bundler-visible
+// import so decoding of 64-bit fields (segment/agglomerate ids, ...) doesn't depend on that
+// resolution succeeding implicitly -- without it, protobufjs decodes 64-bit fields via lossy
+// float64 arithmetic no matter what `longs:` option is passed to toObject().
+util.Long = Long;
+configure();
 
 export const PROTO_FILES = {
   skeleton: SkeletonTracingProto,
@@ -36,7 +45,7 @@ export function parseProtoTracing(
     arrays: true,
     objects: true,
     enums: String,
-    longs: BigInt,
+    longs: String,
   }) as any;
 
   tracing.createdTimestamp = Number(tracing.createdTimestamp);

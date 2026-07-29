@@ -129,7 +129,7 @@ object ElementClass extends ExtendedEnumeration {
         // are allowed; only 0 is disallowed as a segment id, which is enforced elsewhere). So there
         // is nothing left to validate beyond the elementClass check above.
         case ElementClass.uint64 | ElementClass.int64 => true
-        case _                                        => largestSegmentId >= 0L && largestSegmentId <= maxSegmentIdValue(elementClass)
+        case _ => largestSegmentId >= 0L && largestSegmentId <= maxSegmentIdValue(elementClass)
       }
     }
 

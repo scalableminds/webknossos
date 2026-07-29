@@ -3,7 +3,7 @@ import { clearCache, importVolumeTracing } from "admin/rest_api";
 import importDynamic from "libs/import_dynamic";
 import { readFileAsArrayBuffer, readFileAsText } from "libs/read_file";
 import Toast from "libs/toast";
-import { isFileExtensionEqualTo, promiseAllWithErrors } from "libs/utils";
+import { isFileExtensionEqualTo, promiseAllWithErrors, stripFileExtension } from "libs/utils";
 import last from "lodash-es/last";
 import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import { getActiveSegmentationTracing } from "viewer/model/accessors/volumetracing_accessor";
@@ -21,6 +21,7 @@ import { createMutableTreeMapFromTreeArray } from "viewer/model/reducers/skeleto
 import type { MutableTreeMap, TreeGroup } from "viewer/model/types/tree_types";
 import { api, Model } from "viewer/singletons";
 import Store, { type UserBoundingBox } from "viewer/store";
+import type { NmlImportOptions } from "viewer/view/nml_upload/nml_upload_zone_container";
 import { MISSING_GROUP_ID } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 
 // Thrown while importing a volume annotation ZIP when the import cannot proceed
@@ -31,20 +32,21 @@ class VolumeImportError extends Error {
   name = "VolumeImportError";
 }
 
-export async function importTracingFiles(
-  files: Array<File>,
-  createGroupForEachFile: boolean,
-  targetGroupId: number = MISSING_GROUP_ID,
-) {
+export async function importTracingFiles(files: Array<File>, options: NmlImportOptions) {
+  const { createGroupForEachFile, targetGroupId = MISSING_GROUP_ID, newGroupName } = options;
   try {
     const wrappedAddTreesAndGroupsAction = async (
       trees: MutableTreeMap,
       treeGroups: TreeGroup[],
-      groupName: string,
+      fileName: string,
       userBoundingBoxes?: UserBoundingBox[],
     ) => {
       let addTreesAction = null;
       if (createGroupForEachFile) {
+        // A user-provided name is only available for a single-file drop, since there is one
+        // group per file otherwise. Fall back to the file name without its extension.
+        const groupName =
+          files.length === 1 && newGroupName ? newGroupName : stripFileExtension(fileName);
         const [wrappedTrees, wrappedTreeGroups] = wrapInNewGroup(trees, treeGroups, groupName);
         addTreesAction = addTreesAndGroupsAction(
           wrappedTrees,

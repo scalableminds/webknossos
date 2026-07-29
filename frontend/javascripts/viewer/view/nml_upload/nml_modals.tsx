@@ -1,11 +1,16 @@
-import { Alert, Button, Checkbox, Modal, Spin, TreeSelect } from "antd";
-import { Fragment } from "react";
+import { Alert, Input, Modal, Radio, Space, TreeSelect } from "antd";
+import { useEffect, useState } from "react";
 import Dropzone from "react-dropzone";
 import { useDispatch } from "react-redux";
 import { setDropzoneModalVisibilityAction } from "viewer/model/actions/ui_actions";
 import type { TreeGroup } from "viewer/model/types/tree_types";
-import { MISSING_GROUP_ID } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
-import { NmlDropzoneContent, NmlList } from "./nml_upload_components";
+import {
+  findGroup,
+  MISSING_GROUP_ID,
+} from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
+import { NmlDropzoneContent, NmlFileList } from "./nml_upload_components";
+
+const ROOT_GROUP_NAME = "Root";
 
 type GroupTreeSelectNode = {
   title: string;
@@ -19,6 +24,10 @@ function treeGroupsToTreeSelectData(treeGroups: TreeGroup[]): GroupTreeSelectNod
     value: group.groupId,
     children: treeGroupsToTreeSelectData(group.children),
   }));
+}
+
+function collectGroupIds(treeGroups: TreeGroup[]): number[] {
+  return treeGroups.flatMap((group) => [group.groupId, ...collectGroupIds(group.children)]);
 }
 
 export function DropzoneModal({
@@ -57,87 +66,142 @@ export function DropzoneModal({
 export function ImportModal({
   files,
   createGroupForEachFile,
-  createGroupForSingleFile,
   isUpdateAllowed,
   isImporting,
   setFiles,
   setCreateGroupForEachFile,
-  setCreateGroupForSingleFile,
   importTracingFiles,
   showTreeGroupSelect,
   existingTreeGroups,
   targetGroupId,
   setTargetGroupId,
+  newGroupName,
+  setNewGroupName,
 }: {
   files: File[];
   createGroupForEachFile: boolean;
-  createGroupForSingleFile: boolean;
   isUpdateAllowed: boolean;
   isImporting: boolean;
   setFiles: (files: File[]) => void;
   setCreateGroupForEachFile: (a: boolean) => void;
-  setCreateGroupForSingleFile: (a: boolean) => void;
   importTracingFiles: () => Promise<void>;
   showTreeGroupSelect: boolean;
   existingTreeGroups: TreeGroup[];
   targetGroupId: number;
   setTargetGroupId: (groupId: number) => void;
+  newGroupName: string;
+  setNewGroupName: (name: string) => void;
 }) {
-  const newGroupMsg =
-    files.length > 1
-      ? "Create a new tree group for each file."
-      : "Create a new tree group for this file.";
-  const pluralS = files.length > 1 ? "s" : "";
+  const hasMultipleFiles = files.length > 1;
+  const pluralS = hasMultipleFiles ? "s" : "";
+  // The name of a new group is only user-editable when exactly one group is created and the
+  // import happens client-side. For a multi-file drop there would be one name per file, and
+  // when a brand new annotation is created the names are derived by the back-end.
+  const isNewGroupNameEditable = showTreeGroupSelect && !hasMultipleFiles;
+  const isNewGroupNameValid = newGroupName.trim().length > 0;
+
+  const parentGroupName =
+    targetGroupId === MISSING_GROUP_ID
+      ? ROOT_GROUP_NAME
+      : (findGroup(existingTreeGroups, targetGroupId)?.name ?? ROOT_GROUP_NAME);
+
   const groupTreeSelectData: GroupTreeSelectNode[] = [
     {
-      title: "Root",
+      title: ROOT_GROUP_NAME,
       value: MISSING_GROUP_ID,
       children: treeGroupsToTreeSelectData(existingTreeGroups),
     },
   ];
+
+  // Show the whole group hierarchy expanded so that the wanted group is easy to spot.
+  // The expanded keys are controlled instead of using treeDefaultExpandAll, because the
+  // latter is only evaluated when the tree mounts: this modal already exists while the
+  // annotation is still loading, so groups that arrive afterwards would stay collapsed.
+  const [expandedGroupIds, setExpandedGroupIds] = useState<number[]>([]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: files is a trigger, to expand all groups again if a new file is dropped.
+  useEffect(() => {
+    setExpandedGroupIds([MISSING_GROUP_ID, ...collectGroupIds(existingTreeGroups)]);
+  }, [existingTreeGroups, files]);
+
   return (
     <Modal
       title={`Import ${files.length} Annotation${pluralS}`}
       open={files.length > 0}
       onCancel={() => setFiles([])}
-      footer={
-        <Fragment>
-          <Checkbox
-            style={{
-              float: "left",
-            }}
-            onChange={(e) =>
-              files.length > 1
-                ? setCreateGroupForEachFile(e.target.checked)
-                : setCreateGroupForSingleFile(e.target.checked)
-            }
-            checked={files.length > 1 ? createGroupForEachFile : createGroupForSingleFile}
-          >
-            {newGroupMsg}
-          </Checkbox>
-          <Button key="submit" type="primary" onClick={importTracingFiles}>
-            {isUpdateAllowed ? "Import" : "Create New Annotation"}
-          </Button>
-        </Fragment>
-      }
+      onOk={importTracingFiles}
+      okText={isUpdateAllowed ? "Import" : "Create New Annotation"}
+      confirmLoading={isImporting}
+      okButtonProps={{
+        disabled: createGroupForEachFile && isNewGroupNameEditable && !isNewGroupNameValid,
+      }}
     >
-      <Spin spinning={isImporting}>
-        {showTreeGroupSelect ? (
-          <div style={{ marginBottom: 12 }}>
-            <span style={{ marginRight: 8 }}>Add imported trees to group:</span>
+      <Space orientation="vertical" size="middle" style={{ display: "flex" }}>
+        <NmlFileList files={files} />
+
+        <div>
+          <div className="nml-import-section-label">Where should the imported trees go?</div>
+
+          {showTreeGroupSelect ? (
             <TreeSelect
-              style={{ width: 300 }}
+              style={{ width: "100%", marginBottom: 10 }}
               value={targetGroupId}
               onChange={setTargetGroupId}
               treeData={groupTreeSelectData}
-              treeDefaultExpandAll
+              treeExpandedKeys={expandedGroupIds}
+              onTreeExpand={(keys) => setExpandedGroupIds(keys as number[])}
               showSearch={{ treeNodeFilterProp: "title" }}
               popupMatchSelectWidth={false}
             />
-          </div>
-        ) : null}
-        <NmlList files={files} />
-      </Spin>
+          ) : null}
+
+          <Radio.Group
+            value={createGroupForEachFile}
+            onChange={(event) => setCreateGroupForEachFile(event.target.value)}
+          >
+            <Space orientation="vertical" size={4}>
+              <Radio value={false}>
+                {showTreeGroupSelect
+                  ? "Add the trees directly to this group"
+                  : "Add all trees at the top level"}
+              </Radio>
+              <Radio value={true}>
+                {getNewGroupRadioLabel(hasMultipleFiles, showTreeGroupSelect)}
+              </Radio>
+            </Space>
+          </Radio.Group>
+
+          {createGroupForEachFile ? (
+            <div className="nml-import-destination-detail">
+              {isNewGroupNameEditable ? (
+                <Input
+                  value={newGroupName}
+                  onChange={(event) => setNewGroupName(event.target.value)}
+                  status={isNewGroupNameValid ? undefined : "error"}
+                  prefix={
+                    <span style={{ color: "var(--ant-color-text-tertiary)" }}>
+                      {parentGroupName} ›
+                    </span>
+                  }
+                  placeholder="Group name"
+                />
+              ) : (
+                <div className="nml-import-file-meta">
+                  {hasMultipleFiles
+                    ? "Each group is named after the file it holds."
+                    : "The group is named after the file."}
+                </div>
+              )}
+            </div>
+          ) : null}
+        </div>
+      </Space>
     </Modal>
   );
+}
+
+function getNewGroupRadioLabel(hasMultipleFiles: boolean, showTreeGroupSelect: boolean) {
+  if (showTreeGroupSelect) {
+    return hasMultipleFiles ? "Create a new subgroup for each file" : "Create a new subgroup";
+  }
+  return hasMultipleFiles ? "Create a new group for each file" : "Create a new group";
 }

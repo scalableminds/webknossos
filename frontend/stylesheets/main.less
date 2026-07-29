@@ -300,6 +300,54 @@ body {
   margin: 0 auto;
 }
 
+/** List of files that are about to be imported, shown in the NML import modal. */
+.nml-import-file-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 232px;
+  overflow-y: auto;
+  background: var(--ant-color-fill-quaternary);
+  border: 1px solid var(--ant-color-border-secondary);
+  border-radius: var(--ant-border-radius-lg);
+}
+
+.nml-import-file-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+
+  & + & {
+    border-top: 1px solid var(--ant-color-border-secondary);
+  }
+}
+
+.nml-import-file-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nml-import-file-meta {
+  font-size: 12.5px;
+  color: var(--ant-color-text-tertiary);
+}
+
+/** Heading above a group of related controls in the NML import modal. */
+.nml-import-section-label {
+  font-weight: 600;
+  color: var(--ant-color-text-secondary);
+  margin-bottom: 10px;
+}
+
+/** Holds the controls belonging to the selected import destination, indented so that they
+    read as part of the radio option above them. */
+.nml-import-destination-detail {
+  margin-top: 6px;
+  margin-left: 24px;
+}
+
 /** Styles for the dataset upload dropzone, including active, accept, and reject states. */
 .dataset-upload-dropzone {
   flex: 1;

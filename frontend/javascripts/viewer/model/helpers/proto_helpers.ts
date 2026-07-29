@@ -8,7 +8,7 @@ import SkeletonTracingProto from "SkeletonTracing.proto";
 import VolumeTracingProto from "VolumeTracing.proto";
 import { toBigInt } from "libs/bigint_helpers";
 import Long from "long";
-import { Root, configure, util } from "protobufjs/light";
+import { configure, Root, util } from "protobufjs/light";
 import type { APITracingStoreAnnotation, ServerTracing } from "types/api_types";
 
 // protobufjs resolves its optional Long support via a try/catch require("long") call (see

@@ -189,6 +189,7 @@ export function getTree(
 
 export function getTreeAndNode(
   skeletonTracing: SkeletonTracing | null | undefined,
+  // used as fallback if no explicit tree / node is passed.
   activeTreeId: number | null | undefined,
   nodeId?: number | null | undefined,
   treeId?: number | null | undefined,

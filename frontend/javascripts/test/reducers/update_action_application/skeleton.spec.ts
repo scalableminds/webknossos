@@ -199,19 +199,16 @@ describe("Update Action Application for SkeletonTracing", () => {
           setActiveUserBoundingBoxId(null),
           deselectActiveTreeGroupAction(),
         ];
-        const state2WithoutActiveBoundingBox = applyActions(
-          state2WithActiveTree,
-          normalizationActions,
-        );
+        const state2WithoutLocalState = applyActions(state2WithActiveTree, normalizationActions);
 
         const actionsToApply = userActions.slice(beforeVersionIndex, afterVersionIndex + 1);
         const state3 = applyActions(
           state2WithActiveTree,
           actionsToApply.concat(normalizationActions),
         );
-        expect(state2WithoutActiveBoundingBox !== state3).toBeTruthy();
+        expect(state2WithoutLocalState !== state3).toBeTruthy();
 
-        const skeletonTracing2 = enforceSkeletonTracing(state2WithoutActiveBoundingBox.annotation);
+        const skeletonTracing2 = enforceSkeletonTracing(state2WithoutLocalState.annotation);
         const skeletonTracing3 = enforceSkeletonTracing(state3.annotation);
 
         const updateActionsBeforeCompaction = Array.from(
@@ -229,13 +226,11 @@ describe("Update Action Application for SkeletonTracing", () => {
           seenActionTypes.add(action.name);
         }
 
-        const reappliedNewState = transformStateAsReadOnly(
-          state2WithoutActiveBoundingBox,
-          (state) =>
-            applyActions(state, [
-              applySkeletonUpdateActionsFromServerAction(updateActions),
-              setActiveUserBoundingBoxId(null),
-            ]),
+        const reappliedNewState = transformStateAsReadOnly(state2WithoutLocalState, (state) =>
+          applyActions(state, [
+            applySkeletonUpdateActionsFromServerAction(updateActions),
+            setActiveUserBoundingBoxId(null),
+          ]),
         );
 
         if (skeletonTracing3.activeNodeId != null) {

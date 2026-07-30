@@ -390,7 +390,7 @@ export function createSkeletonNode(
 
     const treeAndNode = getTreeAndNode(
       newSkeleton,
-      state.localSkeletonState.activeTreeId,
+      null,
       newNodeId,
       state.localSkeletonState.activeTreeId,
     );

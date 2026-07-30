@@ -36,7 +36,7 @@ class TeamController @Inject() (teamDAO: TeamDAO, teamService: TeamService, sil:
       team <- teamDAO.findOne(id) ?~> Msg.Team.notFound(id) ~> NOT_FOUND
       _ <- Fox.fromBool(!team.isOrganizationTeam) ?~> Msg.Team.deleteOrganizationTeam ~> FORBIDDEN
       _ <- teamService.assertNoReferences(id) ?~> Msg.Team.deleteInUse ~> FORBIDDEN
-      _ <- teamDAO.deleteOneWithReferences(id)
+      _ <- teamDAO.deleteOne(id)
     } yield JsonOk(Msg.Team.deleteSuccess)
   }
 

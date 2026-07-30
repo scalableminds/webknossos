@@ -146,7 +146,7 @@ function AcceptTermsOfServiceModal({
       closable={!acceptanceInfo.acceptanceDeadlinePassed}
       onCancel={acceptanceInfo.acceptanceDeadlinePassed ? noop : closeModal}
       width={850}
-      maskClosable={false}
+      mask={{ closable: false }}
       footer={[
         <OrganizationSwitchMenu
           activeUser={activeUser}
@@ -208,7 +208,7 @@ function TermsOfServiceAcceptanceMissingModal({
       closable={!acceptanceInfo.acceptanceDeadlinePassed}
       onCancel={closeModal}
       footer={[<OrganizationSwitchMenu activeUser={activeUser} key={"switch-org"} />]}
-      maskClosable={false}
+      mask={{ closable: false }}
     >
       Please ask the organization owner to accept the terms of services. {deadlineExplanation}
     </Modal>

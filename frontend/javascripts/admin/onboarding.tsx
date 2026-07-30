@@ -593,14 +593,14 @@ function OnboardingView() {
             open
             width="85%"
             footer={null}
-            maskClosable={false}
+            mask={{ closable: false }}
             onCancel={hideDatasetUploadModal}
           >
             <DatasetUploadView datastores={datastores} onUploaded={onDatasetUploaded} withoutCard />
           </Modal>
         )}
         {datasetIdToImport != null && (
-          <Modal open width="85%" footer={null} maskClosable={false} onCancel={advanceStep}>
+          <Modal open width="85%" footer={null} mask={{ closable: false }} onCancel={advanceStep}>
             <DatasetSettingsProvider
               isEditingMode={false}
               datasetId={datasetIdToImport}

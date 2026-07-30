@@ -150,6 +150,7 @@ export type MipEnabledBBox = { bbox: UserBoundingBox; configs: MipLayerConfig[] 
 // Layer bounding boxes are read-only and not part of the annotation's user bounding boxes, so they
 // are represented here as synthetic UserBoundingBox-shaped entries (stable negative id, see
 // getLayerBoundingBoxId) purely to reuse the existing MIP wiring (mipBBoxSettings, scene_controller).
+// isVisible is deliberately hard-coded to true for MIP rendering
 function getLayerBoundingBoxesAsUserBoundingBoxes(state: WebknossosState): UserBoundingBox[] {
   return getDataLayers(state.dataset).map((layer, index) => ({
     id: getLayerBoundingBoxId(index),
@@ -157,18 +158,22 @@ function getLayerBoundingBoxesAsUserBoundingBoxes(state: WebknossosState): UserB
     boundingBox: getLayerBoundingBox(state.dataset, layer.name),
     color:
       state.temporaryConfiguration.layerBoundingBoxColors[layer.name] ?? stringToColor(layer.name),
-    isVisible: state.temporaryConfiguration.layerBoundingBoxVisibilities[layer.name] ?? false,
+    isVisible: true,
   }));
 }
 
 export const getMipEnabledBBoxes = reuseInstanceOnEquality(
   (state: WebknossosState): MipEnabledBBox[] => {
+    const { mipBBoxSettings } = state.uiInformation;
+    if (Object.keys(mipBBoxSettings).length === 0) {
+      return [];
+    }
     const bboxes = [
       ...getUserBoundingBoxesFromState(state),
       ...getLayerBoundingBoxesAsUserBoundingBoxes(state),
     ];
     return bboxes.flatMap((bbox) => {
-      const configs = state.uiInformation.mipBBoxSettings[bbox.id];
+      const configs = mipBBoxSettings[bbox.id];
       return configs != null && configs.length > 0 ? [{ bbox, configs }] : [];
     });
   },

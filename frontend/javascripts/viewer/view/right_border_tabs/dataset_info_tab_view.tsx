@@ -115,7 +115,9 @@ const getShortcuts = (
 ): ShortcutInfo[] => {
   const toUiElement = (keyboardShortcutId: KeyboardShortcutId) =>
     (keyboardShortcutsConfig[keyboardShortcutId] ?? []).flatMap((keySeq, comboIndex) => {
-      const capitalizedKeySeq = keySeq.map((keys) => keys.map((key) => key.toUpperCase()));
+      const capitalizedKeySeq = keySeq.map((keys) =>
+        keys.map((key) => (key.length === 1 ? key.toUpperCase() : key)),
+      );
       return keySequenceToUiElements(
         capitalizedKeySeq,
         true,

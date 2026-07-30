@@ -40,6 +40,7 @@ class FlightModeView {
   plane: FlightModePlane;
   setClippingDistance: (value: number) => void;
   needsRerender: boolean;
+  private isRerenderScheduled: boolean = false;
   additionalInfo: string = "";
   isRunning: boolean = false;
   animationRequestId: number | null | undefined = null;
@@ -102,11 +103,7 @@ class FlightModeView {
       );
       this.unsubscribeFunctions.push(
         Store.subscribe(() => {
-          // Only set the flag here (without scheduling a requestAnimationFrame
-          // per action which would queue many redundant callbacks for
-          // high-frequency actions). The animate() loop picks the flag up in
-          // the next frame, i.e. after the change propagated everywhere.
-          this.needsRerender = true;
+          this.scheduleRerender();
         }),
       );
 
@@ -174,6 +171,19 @@ class FlightModeView {
 
     this.renderFunction();
     this.animationRequestId = window.requestAnimationFrame(() => this.animate());
+  }
+
+  // Sets needsRerender in the next animation frame. At most one callback is
+  // queued at a time, so high-frequency callers don't pile up closures.
+  scheduleRerender(): void {
+    if (this.isRerenderScheduled) {
+      return;
+    }
+    this.isRerenderScheduled = true;
+    window.requestAnimationFrame(() => {
+      this.isRerenderScheduled = false;
+      this.needsRerender = true;
+    });
   }
 
   renderFunction() {

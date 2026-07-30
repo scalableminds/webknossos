@@ -1,5 +1,4 @@
 import { V3 } from "libs/mjs";
-import memoize from "lodash-es/memoize";
 import {
   BufferAttribute,
   BufferGeometry,
@@ -51,9 +50,9 @@ class Plane {
   baseRotationMatrix = new Matrix4();
   flycamRotationMatrix = new Matrix4();
 
-  // Keeps track of the materials created by getLineBasicMaterial so that
-  // they can be disposed in destroy().
-  private lineMaterials: LineBasicMaterial[] = [];
+  // Caches the materials handed out by getLineBasicMaterial, so that identical
+  // materials are shared and all of them can be disposed in destroy().
+  private lineMaterialByKey: Map<string, LineBasicMaterial> = new Map();
 
   constructor(planeID: OrthoView) {
     this.planeID = planeID;
@@ -120,17 +119,20 @@ class Plane {
     this.displayCrosshair = value;
   };
 
-  getLineBasicMaterial = memoize(
-    (color: number, linewidth: number) => {
-      const material = new LineBasicMaterial({
+  getLineBasicMaterial = (color: number, linewidth: number): LineBasicMaterial => {
+    const key = `${color}_${linewidth}`;
+    let material = this.lineMaterialByKey.get(key);
+
+    if (material == null) {
+      material = new LineBasicMaterial({
         color,
         linewidth,
       });
-      this.lineMaterials.push(material);
-      return material;
-    },
-    (color: number, linewidth: number) => `${color}_${linewidth}`,
-  );
+      this.lineMaterialByKey.set(key, material);
+    }
+
+    return material;
+  };
 
   setOriginalCrosshairColor = (): void => {
     [0, 1].forEach((i) => {
@@ -214,10 +216,10 @@ class Plane {
     for (const mesh of this.getMeshes()) {
       mesh.geometry.dispose();
     }
-    for (const material of this.lineMaterials) {
+    for (const material of this.lineMaterialByKey.values()) {
       material.dispose();
     }
-    this.lineMaterials = [];
+    this.lineMaterialByKey.clear();
   }
 
   bindToEvents(): void {

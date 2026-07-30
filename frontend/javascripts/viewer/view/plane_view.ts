@@ -73,6 +73,7 @@ class PlaneView {
   cameras: OrthoViewMap<OrthographicCamera>;
   isRunning: boolean = false;
   needsRerender: boolean;
+  private isRerenderScheduled: boolean = false;
   unsubscribeFunctions: Array<() => void> = [];
 
   constructor() {
@@ -115,6 +116,19 @@ class PlaneView {
 
     this.renderFunction();
     window.requestAnimationFrame(() => this.animate());
+  }
+
+  // Sets needsRerender in the next animation frame. At most one callback is
+  // queued at a time, so high-frequency callers don't pile up closures.
+  scheduleRerender(): void {
+    if (this.isRerenderScheduled) {
+      return;
+    }
+    this.isRerenderScheduled = true;
+    window.requestAnimationFrame(() => {
+      this.isRerenderScheduled = false;
+      this.needsRerender = true;
+    });
   }
 
   renderFunction(forceRender: boolean = false): void {
@@ -366,11 +380,7 @@ class PlaneView {
 
     this.unsubscribeFunctions.push(
       Store.subscribe(() => {
-        // Only set the flag here (without scheduling a requestAnimationFrame
-        // per action which would queue many redundant callbacks for
-        // high-frequency actions). The animate() loop picks the flag up in
-        // the next frame, i.e. after the change propagated everywhere.
-        this.needsRerender = true;
+        this.scheduleRerender();
       }),
     );
 

@@ -88,9 +88,7 @@ export function SkeletonToolbar({ hierarchy, selection, groupOperations, skeleto
   const isConcurrentCollabMode = useWkSelector(isConcurrentCollaborationMode);
   const trees = useWkSelector((state) => enforceSkeletonTracing(state.annotation).trees);
   const treeGroups = useWkSelector((state) => enforceSkeletonTracing(state.annotation).treeGroups);
-  const activeGroupId = useWkSelector(
-    (state) => enforceSkeletonTracing(state.annotation).activeGroupId,
-  );
+  const activeGroupId = useWkSelector((state) => state.localSkeletonState.activeGroupId);
   const sortTreesByName = useWkSelector((state) => state.userConfiguration.sortTreesByName);
   const isSkeletonLayerTransformed = useWkSelector(areGeometriesTransformed);
   const isAnnotationLockedByUser = useWkSelector((state) => state.annotation.isLockedByOwner);

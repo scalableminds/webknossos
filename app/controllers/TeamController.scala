@@ -4,7 +4,6 @@ import com.scalableminds.util.Msg
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.Fox
 import models.team.*
-import models.user.UserDAO
 import play.api.libs.json.*
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.WkEnv
@@ -18,8 +17,7 @@ object TeamParameters {
   implicit val jsonFormat: Format[TeamParameters] = Json.format[TeamParameters]
 }
 
-class TeamController @Inject() (teamDAO: TeamDAO, userDAO: UserDAO, teamService: TeamService, sil: Silhouette[WkEnv])(
-    implicit
+class TeamController @Inject() (teamDAO: TeamDAO, teamService: TeamService, sil: Silhouette[WkEnv])(implicit
     ec: ExecutionContext,
     playBodyParsers: PlayBodyParsers
 ) extends Controller {
@@ -39,8 +37,6 @@ class TeamController @Inject() (teamDAO: TeamDAO, userDAO: UserDAO, teamService:
       _ <- Fox.fromBool(!team.isOrganizationTeam) ?~> Msg.Team.deleteOrganizationTeam ~> FORBIDDEN
       _ <- teamService.assertNoReferences(id) ?~> Msg.Team.deleteInUse ~> FORBIDDEN
       _ <- teamDAO.deleteOne(id)
-      _ <- userDAO.removeTeamFromAllUsers(id)
-      _ <- teamDAO.removeTeamFromAllDatasetsAndFolders(id)
     } yield JsonOk(Msg.Team.deleteSuccess)
   }
 

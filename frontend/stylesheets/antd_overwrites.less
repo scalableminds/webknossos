@@ -2,28 +2,28 @@
 // See theme.tsx for details
 // https://ant.design/docs/react/customize-theme
 
-h1 {
-  font-size: 36px;
-}
-
-h2 {
-  font-size: 30px;
-}
-
-h3 {
-  font-size: 24px;
-}
-
-h4 {
-  font-size: 18px;
-}
-
-h5 {
-  font-size: 14px;
-}
-
+// Heading sizes for h1-h5 now come from the Typography design tokens in theme.ts.
+// h6 has no <Typography.Title> equivalent (antd only supports level 1-5), so the
+// size for markdown-rendered <h6> elements still has to be set here.
 h6 {
   font-size: 12px;
+}
+
+// antd renders <Typography.Title> with `fontWeightStrong` (600), while WEBKNOSSOS
+// headings have always rendered at 500 (antd's reset.css). The token cannot be used
+// for this, because Typography applies `fontWeightStrong` to <strong> and to table
+// headers as well. The `body` prefix exists purely to outweigh antd's own
+// `h1:where(…).ant-typography` selector, which has the same specificity as a bare
+// `h1.ant-typography`.
+body {
+
+  h1.ant-typography,
+  h2.ant-typography,
+  h3.ant-typography,
+  h4.ant-typography,
+  h5.ant-typography {
+    font-weight: 500;
+  }
 }
 
 p {

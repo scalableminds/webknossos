@@ -37,6 +37,31 @@ const darkGlobalToken = theme.getDesignToken({
   algorithm: theme.darkAlgorithm,
 });
 
+// The heading scale WEBKNOSSOS has always used. It used to be enforced by global
+// `h1`–`h5` rules in antd_overwrites.less and now lives here, so that
+// <Typography.Title> renders exactly like the raw heading tags it replaced.
+//
+// These are deliberately scoped to the Typography component instead of being put into
+// `globalDesignToken`: `fontSizeHeading*` / `lineHeightHeading*` are also consumed by
+// Modal, Result, Alert, Avatar, Statistic, Steps, Upload and BackTop. Setting them
+// globally would, for example, shrink every modal title from 16px to 14px, because
+// antd derives `Modal.titleFontSize` from `fontSizeHeading5`.
+const TypographyHeadingToken = {
+  fontSizeHeading1: 36,
+  fontSizeHeading2: 30,
+  fontSizeHeading3: 24,
+  fontSizeHeading4: 18,
+  fontSizeHeading5: 14,
+  // antd applies `line-height: token.lineHeight` to <App> and to every component root,
+  // so raw heading tags have always inherited it. Without pinning these, Typography.Title
+  // would use antd's considerably tighter `lineHeightHeading*` defaults (1.21–1.5).
+  lineHeightHeading1: lightGlobalToken.lineHeight,
+  lineHeightHeading2: lightGlobalToken.lineHeight,
+  lineHeightHeading3: lightGlobalToken.lineHeight,
+  lineHeightHeading4: lightGlobalToken.lineHeight,
+  lineHeightHeading5: lightGlobalToken.lineHeight,
+};
+
 const OverridesForNavbarAndStatusBarTheme: ThemeConfig = {
   components: {
     Radio: {
@@ -93,6 +118,7 @@ export function getAntdTheme(userTheme: Theme) {
       titleHeight: 20, // default is 24px,
       marginXXS: 2, // default is 4px; adjust to match checkboxes because of smaller titleHeight
     },
+    Typography: TypographyHeadingToken,
   };
 
   if (userTheme === "dark") {

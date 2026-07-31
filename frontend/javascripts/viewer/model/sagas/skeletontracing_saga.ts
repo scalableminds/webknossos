@@ -42,6 +42,7 @@ import {
   enforceSkeletonTracing,
   findTreeByAgglomerateId,
   findTreeByName,
+  findTreeByNodeId,
   getActiveNode,
   getBranchPoints,
   getNodePosition,
@@ -84,7 +85,6 @@ import {
   deleteNode,
   deleteTree,
   updateActiveNode,
-  updateActiveTree,
   updateNode,
   updateTree,
   updateTreeEdgesVisibility,
@@ -140,8 +140,8 @@ function* centerActiveNode(action: Action): Saga<void> {
     }
   }
 
-  const activeNode = getActiveNode(
-    yield* select((state: WebknossosState) => enforceSkeletonTracing(state.annotation)),
+  const activeNode = yield* select((state: WebknossosState) =>
+    getActiveNode(state.annotation.skeleton, state.localSkeletonState.activeTreeId),
   );
   const viewMode = yield* select((state: WebknossosState) => state.temporaryConfiguration.viewMode);
   const userApplyRotation = yield* select(
@@ -220,9 +220,7 @@ function* watchBranchPointDeletion(): Saga<void> {
 function* watchFailedNodeCreations(): Saga<void> {
   while (true) {
     yield* take("CREATE_NODE");
-    const activeTreeId = yield* select(
-      (state) => enforceSkeletonTracing(state.annotation).activeTreeId,
-    );
+    const activeTreeId = yield* select((state) => state.localSkeletonState.activeTreeId);
 
     if (activeTreeId == null) {
       Toast.warning(messages["tracing.cant_create_node"]);
@@ -766,12 +764,21 @@ export function* diffSkeletonTracing(
     );
   }
 
-  if (prevSkeletonTracing.activeTreeId !== skeletonTracing.activeTreeId) {
-    yield updateActiveTree(skeletonTracing);
-  }
-  // Active node id should always have precedence over the tree id, thus set it last.
-  if (prevSkeletonTracing.activeNodeId !== skeletonTracing.activeNodeId) {
+  const { activeNodeId } = skeletonTracing;
+  if (prevSkeletonTracing.activeNodeId !== activeNodeId) {
     yield updateActiveNode(skeletonTracing);
+  } else if (activeNodeId != null) {
+    // Even though the active node itself is unchanged, its containing tree might
+    // have changed (e.g., due to a tree split or merge). In that case, an
+    // updateActiveNode action is emitted, too, so that replaying the update
+    // actions (e.g., during a rebase in live collaboration mode) restores the
+    // active node even if it was expressed via deleteNode/createNode actions.
+    // Also, applying the action keeps the user-local activeTreeId in sync.
+    const prevActiveTree = findTreeByNodeId(prevSkeletonTracing.trees, activeNodeId);
+    const activeTree = findTreeByNodeId(skeletonTracing.trees, activeNodeId);
+    if (prevActiveTree?.treeId !== activeTree?.treeId) {
+      yield updateActiveNode(skeletonTracing);
+    }
   }
 
   yield* diffBoundingBoxes(

@@ -268,7 +268,7 @@ vi.mock("admin/rest_api.ts", async () => {
         _datasetId: string,
         _layerName: string,
         _mappingName: string,
-        _segmentId: number,
+        _segmentId: bigint,
       ) => {
         throw new Error("No test has mocked the return value yet here.");
       },
@@ -277,7 +277,7 @@ vi.mock("admin/rest_api.ts", async () => {
       (
         _tracingStoreUrl: string,
         _tracingId: string,
-        _agglomerateId: number,
+        _agglomerateId: bigint,
       ): Promise<ArrayBuffer> => {
         throw new Error("No test has mocked the return value yet here.");
       },

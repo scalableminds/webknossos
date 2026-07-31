@@ -2,7 +2,6 @@ import { Modal } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
-import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import {
   deselectActiveTreeAction,
   deselectActiveTreeGroupAction,
@@ -26,9 +25,7 @@ export type TreeSelection = {
  */
 export function useTreeSelection(): TreeSelection {
   const dispatch = useDispatch();
-  const activeTreeId = useWkSelector(
-    (state) => enforceSkeletonTracing(state.annotation).activeTreeId,
-  );
+  const activeTreeId = useWkSelector((state) => state.localSkeletonState.activeTreeId);
   const [selectedTreeIds, setSelectedTreeIds] = useState<number[]>(
     activeTreeId != null ? [activeTreeId] : [],
   );

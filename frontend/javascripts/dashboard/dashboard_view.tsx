@@ -21,7 +21,7 @@ import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import type { WebknossosState } from "viewer/store";
 import { PortalTarget } from "viewer/view/layouting/portal_utils";
-import NmlUploadZoneContainer from "viewer/view/nml_upload_zone_container";
+import NmlUploadZoneContainer from "viewer/view/nml_upload/nml_upload_zone_container";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 import { DatasetFolderView } from "./dataset_folder_view";
 

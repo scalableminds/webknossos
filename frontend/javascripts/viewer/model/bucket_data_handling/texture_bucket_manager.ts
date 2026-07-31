@@ -95,6 +95,8 @@ export default class TextureBucketManager {
   packingDegree: number;
   elementClass: ElementClass;
   isDestroyed: boolean = false;
+  private areTexturesReady: boolean = false;
+  private isWriterQueueProcessingScheduled: boolean = false;
 
   constructor(textureWidth: number, dataTextureCount: number, elementClass: ElementClass) {
     // If there is one byte per voxel, we pack 4 bytes into one texel (packingDegree = 4)
@@ -113,7 +115,23 @@ export default class TextureBucketManager {
       () =>
         this.lookUpCuckooTable?._texture.isInitialized() && this.dataTextures[0].isInitialized(),
     );
+    this.areTexturesReady = true;
     this.processWriterQueue();
+  }
+
+  // Schedules a processWriterQueue call for the next animation frame (if
+  // none is scheduled yet). The queue processing is event-driven (triggered
+  // by new writerQueue entries) instead of an unconditional rAF loop so that
+  // the tab can idle when there is nothing to write.
+  private scheduleWriterQueueProcessing() {
+    if (this.isWriterQueueProcessingScheduled || !this.areTexturesReady || this.isDestroyed) {
+      return;
+    }
+    this.isWriterQueueProcessingScheduled = true;
+    window.requestAnimationFrame(() => {
+      this.isWriterQueueProcessingScheduled = false;
+      this.processWriterQueue();
+    });
   }
 
   clear() {
@@ -186,6 +204,11 @@ export default class TextureBucketManager {
       // Avoid new requestAnimationFrame
       return;
     }
+    if (this.writerQueue.length === 0) {
+      // Nothing to do. The loop will be restarted when new entries are
+      // enqueued (see scheduleWriterQueueProcessing).
+      return;
+    }
     // uniqBy removes multiple write-buckets-requests for the same index.
     // It preserves the first occurrence of each duplicate, which is why
     // this queue has to be filled from the front (via unshift) und read from the
@@ -256,9 +279,10 @@ export default class TextureBucketManager {
       app.vent.emit("rerender");
     }
 
-    window.requestAnimationFrame(() => {
-      this.processWriterQueue();
-    });
+    if (this.writerQueue.length > 0) {
+      // The time budget was exhausted. Continue in the next frame.
+      this.scheduleWriterQueueProcessing();
+    }
   }
 
   getTextures(): Array<DataTexture | UpdatableTexture> {
@@ -315,6 +339,7 @@ export default class TextureBucketManager {
         bucket,
         _index,
       });
+      this.scheduleWriterQueueProcessing();
     };
 
     enqueueBucket(index);

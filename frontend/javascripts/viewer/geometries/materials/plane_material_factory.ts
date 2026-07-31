@@ -1211,6 +1211,9 @@ class PlaneMaterialFactory {
       this.unsubscribeMappingSeedsFn();
       this.unsubscribeMappingSeedsFn = null;
     }
+    // Dispose the material so that the compiled shader program can be
+    // released from three.js' program cache.
+    this.material?.dispose();
     this.material = null;
     this.recomputeShaders.cancel();
 

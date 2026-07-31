@@ -637,7 +637,7 @@ export default function TaskListView({
           >
             {readableWorkflowName}
           </h3>
-          <h4 style={{ color: "#51686e" }}>
+          <h4 style={{ color: "var(--ant-color-text-secondary)" }}>
             {formatDateMedium(new Date(runBeginTimeString))}{" "}
             <Tooltip title={formatDurationStrict(totalRuntime)}>
               <FieldTimeOutlined style={{ marginLeft: 20 }} className="icon-margin-right" />

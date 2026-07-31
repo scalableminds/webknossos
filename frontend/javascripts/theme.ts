@@ -7,13 +7,22 @@ import type { APIUser } from "types/api_types";
 
 export type Theme = "light" | "dark";
 
+// This file is the single source of truth for WEBKNOSSOS' *color values*. Raw hex codes belong
+// here (and only here); components should reference the antd design tokens as CSS variables
+// (`var(--ant-color-text-secondary)`, see the `cssVar` config in theme_provider.tsx) so that they
+// adapt to the light/dark theme. Import one of the constants below only for colors that must stay
+// identical in both themes. Color conversion helpers live in libs/colors.ts.
 export const ColorWKBlue = "#5660ff"; // WK ~blue/purple
 const ColorWKLinkHover = "#a8b4ff"; // slightly brighter WK Blue
 const ColorWKDarkGrey = "#1f1f1f";
 export const ColorWKBlueZircon = "#59f8e8"; // WK Cyan
+export const ColorWKGold = "#ddbc00"; // WK Gold, used for the credit/billing iconography
 export const ColorWhite = "white";
 export const ColorBlack = "black";
 const ColorDarkBg = "#383d48";
+// Borders and disabled backgrounds of the always-dark navbar/status bar.
+const ColorDarkBorder = "#4e4e4e";
+const ColorDarkDisabledBg = "#313131";
 
 // Ant Design Customizations
 const globalDesignToken: Partial<AliasToken> = {
@@ -50,11 +59,11 @@ const OverridesForNavbarAndStatusBarTheme: ThemeConfig = {
   },
   token: {
     colorBgContainer: ColorDarkBg,
-    colorBorder: "#4e4e4e",
-    colorPrimaryBorder: "#4e4e4e",
+    colorBorder: ColorDarkBorder,
+    colorPrimaryBorder: ColorDarkBorder,
     // Use a non-transparent color for disabled backgrounds. Otherwise the
     // erase-buttons which hide under their neighbors would not hide properly.
-    colorBgContainerDisabled: "#313131",
+    colorBgContainerDisabled: ColorDarkDisabledBg,
   },
 };
 export const NavAndStatusBarTheme = merge(

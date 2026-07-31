@@ -38,8 +38,9 @@ import { Link } from "react-router-dom";
 import { type APIJob, APIJobCommand } from "types/api_types";
 import { getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 
-// Unfortunately, the twoToneColor (nor the style) prop don't support
-// CSS variables.
+// Kept as literals: antd derives the second tone from the first via a color library at render
+// time, so neither the twoToneColor nor the style prop can resolve a CSS variable here. These
+// values are antd's dark-algorithm status colors, which are legible on both backgrounds.
 export const TOOLTIP_MESSAGES_AND_ICONS = {
   UNKNOWN: {
     tooltip:

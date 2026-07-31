@@ -1,8 +1,9 @@
 import update from "immutability-helper";
 import ColorGenerator from "libs/color_generator";
+import { colorObjectToRGBArray } from "libs/colors";
 import DiffableMap from "libs/diffable_map";
 import { V3 } from "libs/mjs";
-import { colorObjectToRGBArray, point3ToVector3, zeroPad } from "libs/utils";
+import { point3ToVector3, zeroPad } from "libs/utils";
 import compact from "lodash-es/compact";
 import first from "lodash-es/first";
 import isEmpty from "lodash-es/isEmpty";

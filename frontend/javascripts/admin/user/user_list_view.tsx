@@ -504,7 +504,7 @@ function UserListView() {
                     className="icon-margin-right"
                     style={{
                       fontSize: 20,
-                      color: "#e84749",
+                      color: "var(--ant-color-error)",
                     }}
                   />
                 </Tooltip>
@@ -525,7 +525,7 @@ function UserListView() {
                     className="icon-margin-right"
                     style={{
                       fontSize: 20,
-                      color: "#e84749",
+                      color: "var(--ant-color-error)",
                     }}
                   />
                 </Tooltip>

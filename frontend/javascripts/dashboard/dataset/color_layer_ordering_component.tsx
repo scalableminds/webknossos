@@ -21,7 +21,11 @@ function SortableListItem({ colorLayerName }: { colorLayerName: string }) {
 
   return (
     <List.Item id={colorLayerName} ref={setNodeRef} style={style}>
-      <MenuOutlined style={{ cursor: "grab", color: "#999" }} {...listeners} {...attributes} />{" "}
+      <MenuOutlined
+        style={{ cursor: "grab", color: "var(--ant-color-text-tertiary)" }}
+        {...listeners}
+        {...attributes}
+      />{" "}
       {colorLayerName}
     </List.Item>
   );

@@ -61,7 +61,8 @@ export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
     <Fragment>
       <h5
         style={{
-          color: "#fff",
+          // This is rendered inside a tooltip, which has an inverted background in both themes.
+          color: "var(--ant-color-text-light-solid)",
         }}
       >
         Where is my layout?

@@ -20,7 +20,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import ReactCommandPalette, { type Command } from "react-command-palette";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { getSystemColorTheme, getThemeFromUser } from "theme";
+import { ColorWKBlue, getSystemColorTheme, getThemeFromUser } from "theme";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { ViewModeValues } from "viewer/constants";
 import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
@@ -38,7 +38,9 @@ import { viewDatasetMenu } from "../action_bar/view_dataset_actions_view";
 import { LayoutEvents, layoutEmitter } from "../layouting/layout_persistence";
 import { commandPaletteDarkTheme, commandPaletteLightTheme } from "./command_palette_theme";
 
-const commandEntryColor = "#5660ff";
+// kbar renders the entry color into its own (fixed-palette) UI, so use the brand constant rather
+// than a theme token.
+const commandEntryColor = ColorWKBlue;
 
 type ExtendedCommand = Command & {
   shortcut?: string;

@@ -336,13 +336,13 @@ export function ShortcutRecorderModal({
             <div
               style={{
                 padding: 14,
-                border: "1px dashed #d9d9d9",
+                border: "1px dashed var(--ant-color-border)",
                 borderRadius: 6,
                 minHeight: 56,
                 display: "flex",
                 alignItems: "center",
                 fontSize: 16,
-                background: "#fafafa",
+                background: "var(--ant-color-fill-quaternary)",
               }}
             >
               <div style={{ width: "100%", overflow: "auto" }}>
@@ -368,7 +368,7 @@ export function ShortcutRecorderModal({
               marginTop: 8,
               padding: 10,
               borderRadius: 6,
-              border: "1px solid #eee",
+              border: "1px solid var(--ant-color-border-secondary)",
               minHeight: 44,
             }}
           >

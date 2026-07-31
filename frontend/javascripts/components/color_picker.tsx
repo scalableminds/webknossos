@@ -1,6 +1,7 @@
 import { InputNumber, Popover } from "antd";
 import useThrottledCallback from "beautiful-react-hooks/useThrottledCallback";
-import { hexToRgb, map3, rgbToHex } from "libs/utils";
+import { hexToRgb, rgbToHex } from "libs/colors";
+import { map3 } from "libs/utils";
 import type { CSSProperties, ReactElement } from "react";
 import { useEffect, useRef, useState } from "react";
 import { HexColorInput, HexColorPicker, type RgbaColor, RgbaColorPicker } from "react-colorful";

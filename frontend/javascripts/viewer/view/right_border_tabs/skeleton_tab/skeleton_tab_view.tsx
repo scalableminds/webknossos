@@ -14,9 +14,7 @@ import { SkeletonToolbar, skeletonTabId } from "./skeleton_toolbar";
 import { SkeletonTreeView } from "./skeleton_tree_view";
 
 function SkeletonsHiddenWarning() {
-  const showSkeletons = useWkSelector(
-    (state) => enforceSkeletonTracing(state.annotation).showSkeletons,
-  );
+  const showSkeletons = useWkSelector((state) => state.localSkeletonState.showSkeletons);
   if (showSkeletons) {
     return null;
   }

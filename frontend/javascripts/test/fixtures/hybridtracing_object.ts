@@ -70,17 +70,10 @@ export const initialSkeletonTracing: SkeletonTracing = {
     [2, initialTreeTwo],
   ]),
   treeGroups: [],
-  activeGroupId: null,
-  activeTreeId: 1,
   activeNodeId: null,
   cachedMaxNodeId: 0,
   boundingBox: null,
   userBoundingBoxes: [],
-  navigationList: {
-    list: [],
-    activeIndex: -1,
-  },
-  showSkeletons: true,
   additionalAxes: [],
 };
 
@@ -91,6 +84,11 @@ export const initialState = update(defaultVolumeState, {
     },
     readOnly: {
       $set: null,
+    },
+  },
+  localSkeletonState: {
+    activeTreeId: {
+      $set: 1,
     },
   },
   dataset: {

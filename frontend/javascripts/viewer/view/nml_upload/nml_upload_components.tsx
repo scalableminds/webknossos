@@ -1,5 +1,5 @@
 import { FileOutlined, InboxOutlined } from "@ant-design/icons";
-import { Avatar } from "antd";
+import { Avatar, List, Typography } from "antd";
 import FormattedDate from "components/formatted_date";
 import prettyBytes from "pretty-bytes";
 import type { DropzoneInputProps } from "react-dropzone";
@@ -48,25 +48,44 @@ export function NmlDropzoneContent({
  */
 export function NmlFileList({ files }: { files: File[] }) {
   return (
-    <div className="nml-import-file-list">
-      {files.map((file) => (
-        <div className="nml-import-file-row" key={`${file.name}-${file.lastModified}-${file.size}`}>
-          <Avatar
-            size={38}
-            icon={<FileOutlined />}
-            style={{
-              flex: "none",
-              backgroundColor: "var(--ant-color-primary)",
-            }}
+    <List
+      size="small"
+      bordered
+      dataSource={files}
+      rowKey={(file) => `${file.name}-${file.lastModified}-${file.size}`}
+      style={{
+        maxHeight: 232,
+        overflowY: "auto",
+        background: "var(--ant-color-fill-quaternary)",
+      }}
+      renderItem={(file) => (
+        <List.Item>
+          <List.Item.Meta
+            // Center the file icon next to the two text lines. Antd aligns the avatar to the
+            // top of the item by default.
+            style={{ alignItems: "center" }}
+            avatar={
+              <Avatar
+                size={38}
+                icon={<FileOutlined />}
+                style={{
+                  backgroundColor: "var(--ant-color-primary)",
+                }}
+              />
+            }
+            title={
+              <Typography.Text strong ellipsis>
+                {file.name}
+              </Typography.Text>
+            }
+            description={
+              <>
+                {prettyBytes(file.size)} · modified <FormattedDate timestamp={file.lastModified} />
+              </>
+            }
           />
-          <div style={{ minWidth: 0 }}>
-            <div className="nml-import-file-name">{file.name}</div>
-            <div className="nml-import-file-meta">
-              {prettyBytes(file.size)} · modified <FormattedDate timestamp={file.lastModified} />
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
+        </List.Item>
+      )}
+    />
   );
 }

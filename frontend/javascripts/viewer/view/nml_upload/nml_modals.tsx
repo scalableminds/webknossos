@@ -1,4 +1,4 @@
-import { Alert, Input, Modal, Radio, Space, TreeSelect } from "antd";
+import { Alert, Flex, Input, Modal, Radio, TreeSelect, Typography } from "antd";
 import { useEffect, useState } from "react";
 import Dropzone from "react-dropzone";
 import { useDispatch } from "react-redux";
@@ -135,15 +135,16 @@ export function ImportModal({
         disabled: createGroupForEachFile && isNewGroupNameEditable && !isNewGroupNameValid,
       }}
     >
-      <Space orientation="vertical" size="middle" style={{ display: "flex" }}>
+      <Flex vertical gap="middle">
         <NmlFileList files={files} />
 
-        <div>
-          <div className="nml-import-section-label">Where should the imported trees go?</div>
+        <Flex vertical gap={10}>
+          <Typography.Text strong type="secondary">
+            Where should the imported trees go?
+          </Typography.Text>
 
           {showTreeGroupSelect ? (
             <TreeSelect
-              style={{ width: "100%", marginBottom: 10 }}
               value={targetGroupId}
               onChange={setTargetGroupId}
               treeData={groupTreeSelectData}
@@ -158,7 +159,7 @@ export function ImportModal({
             value={createGroupForEachFile}
             onChange={(event) => setCreateGroupForEachFile(event.target.value)}
           >
-            <Space orientation="vertical" size={4}>
+            <Flex vertical gap={4}>
               <Radio value={false}>
                 {showTreeGroupSelect
                   ? "Add the trees directly to this group"
@@ -167,34 +168,31 @@ export function ImportModal({
               <Radio value={true}>
                 {getNewGroupRadioLabel(hasMultipleFiles, showTreeGroupSelect)}
               </Radio>
-            </Space>
+            </Flex>
           </Radio.Group>
 
+          {/* Indented so that the controls read as part of the radio option above them. */}
           {createGroupForEachFile ? (
-            <div className="nml-import-destination-detail">
+            <Flex style={{ marginInlineStart: 24 }}>
               {isNewGroupNameEditable ? (
                 <Input
                   value={newGroupName}
                   onChange={(event) => setNewGroupName(event.target.value)}
                   status={isNewGroupNameValid ? undefined : "error"}
-                  prefix={
-                    <span style={{ color: "var(--ant-color-text-tertiary)" }}>
-                      {parentGroupName} ›
-                    </span>
-                  }
+                  prefix={<Typography.Text type="secondary">{parentGroupName} ›</Typography.Text>}
                   placeholder="Group name"
                 />
               ) : (
-                <div className="nml-import-file-meta">
+                <Typography.Text type="secondary">
                   {hasMultipleFiles
                     ? "Each group is named after the file it holds."
                     : "The group is named after the file."}
-                </div>
+                </Typography.Text>
               )}
-            </div>
+            </Flex>
           ) : null}
-        </div>
-      </Space>
+        </Flex>
+      </Flex>
     </Modal>
   );
 }

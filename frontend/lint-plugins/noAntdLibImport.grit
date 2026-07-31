@@ -1,9 +1,0 @@
-language js
-
-`import $spec from $src` where {
-  $src <: r"\"antd/lib/.*\"",
-  register_diagnostic(
-    span = $src,
-    message = "Import from `antd` or `antd/es/...`. `antd/lib` is the CJS build and can duplicate antd modules in the bundle."
-  )
-}

@@ -31,10 +31,7 @@
     }
   },
   // Custom GritQL lint plugins, see frontend/lint-plugins/
-  "plugins": [
-    "./frontend/lint-plugins/noAntdLibImport.grit",
-    "./frontend/lint-plugins/noFlexDiv.grit"
-  ],
+  "plugins": ["./frontend/lint-plugins/noFlexDiv.grit"],
   "linter": {
     "enabled": true,
     "rules": {
@@ -64,10 +61,14 @@
           "level": "error",
           "options": {
             "paths": {
-              "lodash": "Import <method> from 'lodash/<method>' instead.",
-              // Deep `antd/lib/...` paths are covered by the noAntdLibImport plugin instead.
-              "antd/lib": "Import from 'antd' or 'antd/es/<module>' instead. 'antd/lib' is the CJS build and can duplicate antd modules in the bundle."
-            }
+              "lodash": "Import <method> from 'lodash/<method>' instead."
+            },
+            "patterns": [
+              {
+                "group": ["antd/lib", "antd/lib/**"],
+                "message": "Import from 'antd' or 'antd/es/...'; 'antd/lib' is the CJS build and can duplicate antd modules in the bundle."
+              }
+            ]
           }
         }
       },

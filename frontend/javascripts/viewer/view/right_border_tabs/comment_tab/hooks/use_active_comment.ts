@@ -9,7 +9,8 @@ export function useActiveComment(): CommentType | null {
     if (skeletonTracing == null) {
       return null;
     }
-    const { activeTreeId, activeNodeId } = skeletonTracing;
+    const { activeNodeId } = skeletonTracing;
+    const { activeTreeId } = state.localSkeletonState;
     if (activeTreeId == null || activeNodeId == null) {
       return null;
     }
@@ -23,9 +24,7 @@ export function useActiveComment(): CommentType | null {
 
 export function useActiveRowKey(): string | null {
   const activeComment = useActiveComment();
-  const activeTreeId = useWkSelector(
-    (state) => getSkeletonTracing(state.annotation)?.activeTreeId ?? null,
-  );
+  const activeTreeId = useWkSelector((state) => state.localSkeletonState.activeTreeId);
 
   // Highlight the active node's comment or, if it has none, the active tree.
   if (activeComment != null) {

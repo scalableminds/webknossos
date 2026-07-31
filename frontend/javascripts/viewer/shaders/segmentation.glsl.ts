@@ -285,19 +285,21 @@ export const jsConvertCellIdToRGBA = (
   }
 
   let rgb;
-  const idAsNumber = Math.abs(Number(id));
+  const absId = id < 0n ? -id : id;
 
   if (customColors != null) {
-    const last8Bits = idAsNumber % 2 ** 8;
+    const last8Bits = Number(absId % 2n ** 8n);
     rgb = customColors[last8Bits] || [0, 0, 0];
   } else {
     // The shader always derives the segment color by using a 64-bit id from which
     // - the lower 16 bits of the lower 32 bits and
     // - the lower 16 bits of the upper 32 bits
     // are used to derive the color.
-    // In JS, we do it similarly:
-    const highPart = Number((id >> 32n) % 2n ** 16n);
-    const lowPart = idAsNumber % 2 ** 16;
+    // In JS, we do it similarly. Note that this must be done with BigInt arithmetic
+    // throughout, since converting the full id to a JS number loses precision (and
+    // therefore the low bits) for ids beyond 2**53.
+    const highPart = Number((absId >> 32n) % 2n ** 16n);
+    const lowPart = Number(absId % 2n ** 16n);
     const significantSegmentIndex = highPart + lowPart;
     const colorCount = 19;
     const colorIndex = jsGetElementOfPermutation(significantSegmentIndex, colorCount, 2);

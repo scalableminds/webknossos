@@ -6,17 +6,19 @@ import features from "features";
 import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
 import defaultsDeep from "lodash-es/defaultsDeep";
-import { getAntdTheme } from "theme";
+import { ColorWhite, ColorWKBlue, getAntdTheme } from "theme";
 
 // White buttons with blue text/border to stand out against the wk-blue background.
+// The toast background is always wk-blue, so these three shades are deliberately literal and must
+// NOT be replaced by theme tokens – they have to stay white/near-white in both themes.
 const darkThemeWithWhiteButtons = defaultsDeep(
   {
     components: {
       Button: {
-        colorPrimary: "#ffffff",
+        colorPrimary: ColorWhite,
         colorPrimaryHover: "#e6e6e6",
         colorPrimaryActive: "#d9d9d9",
-        primaryColor: "var(--color-wk-blue)",
+        primaryColor: ColorWKBlue,
       },
     },
   },
@@ -88,14 +90,14 @@ function showWelcomeToast(notification: NotificationInstance) {
     styles: {
       root: {
         padding: 34,
-        backgroundColor: "var(--color-wk-blue)",
+        backgroundColor: ColorWKBlue,
       },
       description: {
         marginInlineStart: 0,
       },
       title: {
         marginBottom: 20,
-        color: "white",
+        color: ColorWhite,
       },
     },
   });

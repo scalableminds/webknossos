@@ -4,14 +4,18 @@
   sans-serif;
 
 :root {
-  --color-wk-blue: #5660ff;
+  // The brand colors below mirror the constants in frontend/javascripts/theme.ts, which is the
+  // source of truth – keep both in sync. They cannot be aliased to the corresponding `--ant-*`
+  // variables here, because those are only in scope below `.ant-app` (see the block at the bottom
+  // of this file), not on `:root`.
+  --color-wk-blue: #5660ff; // theme.ts: ColorWKBlue
   --color-black: rgba(0, 0, 0, 0.85);
   --color-white: rgba(255, 255, 255, 1);
   --color-light-grey: rgba(255, 255, 255, 0.85);
-  --color-dark-grey: #1f1f1f;
+  --color-dark-grey: #1f1f1f; // theme.ts: ColorWKDarkGrey
   --color-grey-spotlight: #424242;
   --color-light-grey-spotlight: #f0f0f0;
-  --color-blue-zircon: #59f8e8;
+  --color-blue-zircon: #59f8e8; // theme.ts: ColorWKBlueZircon
   --color-xy-viewport: #eb4b98;
   --color-yz-viewport: var(--color-wk-blue);
   --color-xz-viewport: var(--color-blue-zircon);

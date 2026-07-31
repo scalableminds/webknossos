@@ -641,7 +641,7 @@ export default function TaskListView({
           </Typography.Title>
           {/* marginTop: 0 keeps the previous spacing; antd would otherwise add a top margin
               because this heading directly follows another Typography element. */}
-          <Typography.Title level={4} style={{ color: "#51686e", marginTop: 0 }}>
+          <Typography.Title level={4} style={{ color: "var(--ant-color-text-secondary)", marginTop: 0 }}>
             {formatDateMedium(new Date(runBeginTimeString))}{" "}
             <Tooltip title={formatDurationStrict(totalRuntime)}>
               <FieldTimeOutlined style={{ marginLeft: 20 }} className="icon-margin-right" />

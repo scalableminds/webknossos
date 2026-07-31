@@ -42,6 +42,7 @@ import {
   Space,
   Spin,
   Tooltip,
+  Typography,
 } from "antd";
 import type { FormInstance } from "antd/lib/form";
 import classnames from "classnames";
@@ -136,7 +137,7 @@ function Zarr3Example() {
   `;
   return (
     <div>
-      <h4>A typical WKW dataset looks like this:</h4>
+      <Typography.Title level={4}>A typical WKW dataset looks like this:</Typography.Title>
       <pre className="dataset-import-folder-structure-hint">{description}</pre>
     </div>
   );
@@ -151,7 +152,9 @@ function SingleLayerImageStackExample() {
   `;
   return (
     <div>
-      <h4>For example, a flat list of (sorted) image files can be imported:</h4>
+      <Typography.Title level={4}>
+        For example, a flat list of (sorted) image files can be imported:
+      </Typography.Title>
       <pre className="dataset-import-folder-structure-hint">{description}</pre>
     </div>
   );
@@ -171,7 +174,9 @@ function MultiLayerImageStackExample() {
   `;
   return (
     <div>
-      <h4>Uploading multiple image stacks (one per folder) will create a multi-layer dataset:</h4>
+      <Typography.Title level={4}>
+        Uploading multiple image stacks (one per folder) will create a multi-layer dataset:
+      </Typography.Title>
       <pre className="dataset-import-folder-structure-hint">{description}</pre>
     </div>
   );
@@ -1352,7 +1357,7 @@ function FileUploadArea({
             marginTop: 8,
           }}
         >
-          <h5>Files</h5>
+          <Typography.Title level={5}>Files</Typography.Title>
           <div
             style={{
               maxHeight: 600,

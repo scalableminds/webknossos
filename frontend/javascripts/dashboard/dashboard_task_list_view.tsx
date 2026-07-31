@@ -11,7 +11,7 @@ import {
 import { PropTypes } from "@scalableminds/prop-types";
 import { finishTask, peekNextTasks, requestTask } from "admin/api/tasks";
 import { deleteAnnotation, downloadAnnotation, resetAnnotation } from "admin/rest_api";
-import { Button, Card, Col, List, Modal, Row, Space, Tag, Tooltip } from "antd";
+import { Button, Card, Col, List, Modal, Row, Space, Tag, Tooltip, Typography } from "antd";
 import classNames from "classnames";
 import { AsyncButton, AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
@@ -511,7 +511,9 @@ class DashboardTaskListView extends PureComponent<Props, State> {
           toggleShowFinished={this.toggleShowFinished}
           getFinishVerb={this.getFinishVerb}
         />
-        {this.state.showFinishedTasks ? <h3>My Finished Tasks</h3> : null}
+        {this.state.showFinishedTasks ? (
+          <Typography.Title level={3}>My Finished Tasks</Typography.Title>
+        ) : null}
         {this.renderTaskList()}
         <div
           style={{

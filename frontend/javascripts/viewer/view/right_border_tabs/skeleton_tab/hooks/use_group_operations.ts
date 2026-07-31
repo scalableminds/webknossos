@@ -32,9 +32,8 @@ import {
 // Let the user confirm the deletion of the initial node (node with id 1) of a task.
 export function checkAndConfirmDeletingInitialNode(treeIds: number[]): Promise<void> {
   const state = Store.getState();
-  const skeletonTracing = enforceSkeletonTracing(state.annotation);
 
-  const hasNodeWithIdOne = (id: number) => getTree(skeletonTracing, id)?.nodes.has(1);
+  const hasNodeWithIdOne = (id: number) => getTree(state, id)?.nodes.has(1);
 
   const needsCheck = state.task != null && treeIds.find(hasNodeWithIdOne) != null;
   return new Promise<void>((resolve, reject) => {

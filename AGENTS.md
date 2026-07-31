@@ -22,7 +22,7 @@ Code Verification:
 
 ## Pull Requests
 - run all the appropriate checks above
-- use the PR template at `.github/PULL_REQUEST_TEMPLATE.md
+- use the PR template at `.github/PULL_REQUEST_TEMPLATE.md`
 - keep your summaries short and to the point
 
 

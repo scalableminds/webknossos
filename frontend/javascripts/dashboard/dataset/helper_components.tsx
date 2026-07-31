@@ -1,6 +1,6 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
 import type { FieldError } from "@rc-component/form/es/interface";
-import { Divider, Form, Modal, Tooltip } from "antd";
+import { Divider, Form, Tooltip } from "antd";
 import type { FormItemProps, Rule } from "antd/lib/form";
 import type { NamePath } from "antd/lib/form/interface";
 import sum from "lodash-es/sum";
@@ -52,22 +52,6 @@ export const FormItemWithInfo = ({
     {children}
   </FormItem>
 );
-
-export const confirmAsync = (opts: Record<string, any>): Promise<boolean> => {
-  return new Promise((resolve) => {
-    Modal.confirm({
-      ...opts,
-
-      onOk() {
-        resolve(true);
-      },
-
-      onCancel() {
-        resolve(false);
-      },
-    });
-  });
-};
 
 export const hasFormError = (formErrors: FieldError[], key: string): boolean => {
   // Find the number of errors for form fields whose path starts with key

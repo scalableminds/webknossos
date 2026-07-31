@@ -10,9 +10,8 @@ import {
 } from "@ant-design/icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { clearCache, deleteDatasetOnDisk, getDataset } from "admin/rest_api";
-import { type MenuProps, Modal, Typography } from "antd";
+import { App, type MenuProps, Typography } from "antd";
 import CreateExplorativeModal from "dashboard/advanced_dataset/create_explorative_modal";
-import { confirmAsync } from "dashboard/dataset/helper_components";
 import Toast from "libs/toast";
 import window from "libs/window";
 import messages from "messages";
@@ -121,6 +120,7 @@ function LinkWithDisabled({
 
 function DatasetActionView(props: Props) {
   const queryClient = useQueryClient();
+  const { modal } = App.useApp();
   const { dataset } = props;
 
   const [isReloading, setIsReloading] = useState(false);
@@ -142,7 +142,7 @@ function DatasetActionView(props: Props) {
   const onDeleteDataset = async () => {
     const dataset = await getDataset(props.dataset.id);
 
-    const deleteDataset = await confirmAsync({
+    const deleteDataset = await modal.confirm({
       title: "Danger Zone",
       content: (
         <>
@@ -221,7 +221,7 @@ function DatasetActionView(props: Props) {
       {reloadLink}
       <a
         onClick={() =>
-          Modal.error({
+          modal.error({
             title: "Cannot load this dataset",
             content: (
               <div>

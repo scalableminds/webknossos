@@ -123,6 +123,43 @@ export const getSomeMagInfoForDataset = memoizeOne(
     new MagInfo(getMagnificationUnion(dataset).map((mags) => mags[0])),
 );
 
+export const getMagnificationIntersection = memoizeOne((dataset: APIDataset): Vector3[] => {
+  /*
+   * Returns the mags which *all* layers of the dataset have (i.e., the intersection,
+   * as opposed to getMagnificationUnion). Mags are compared exactly, so [8, 8, 1] and
+   * [8, 8, 2] don't match each other (such a mag level is omitted entirely). For example,
+   * given the layers
+   *   A: [[1, 1, 1], [2, 2, 1], [4, 4, 1], [8, 8, 1]]
+   *   B: [[2, 2, 1], [4, 4, 1], [8, 8, 2]]
+   * this returns [[2, 2, 1], [4, 4, 1]] (sorted from finest to coarsest).
+   */
+  const [firstLayer, ...remainingLayers] = dataset.dataSource.dataLayers;
+
+  if (firstLayer == null) {
+    return [];
+  }
+
+  let sharedMags = uniqWith(
+    firstLayer.mags.map((magObj) => magObj.mag),
+    V3.isEqual,
+  );
+
+  for (const layer of remainingLayers) {
+    sharedMags = sharedMags.filter((mag) =>
+      layer.mags.some((magObj) => V3.isEqual(mag, magObj.mag)),
+    );
+  }
+
+  return sharedMags.sort((magA, magB) => maxValue(magA) - maxValue(magB));
+});
+
+export const getSharedMagInfoForDataset = memoizeOne(
+  (dataset: APIDataset): MagInfo =>
+    // Contains only the mags which exist in every layer of the dataset. Note that
+    // this can be empty (e.g., if the layers use differing anisotropic mags).
+    new MagInfo(getMagnificationIntersection(dataset)),
+);
+
 function _getMaxZoomStep(dataset: APIDataset | null | undefined): number {
   const minimumZoomStepCount = 1;
 
@@ -139,15 +176,6 @@ function _getMaxZoomStep(dataset: APIDataset | null | undefined): number {
 }
 
 export const getMaxZoomStep = memoizeOne(_getMaxZoomStep);
-
-export function getDefaultZoomStep(dataset: APIDataset): number {
-  // View the finest existing mag at native resolution. The real, GPU/viewport-aware
-  // maximum zoom values (see _getMaximumZoomForAllMags) are not available yet at this
-  // point, so this is a best-effort, dataset-structure-only approximation. A factor
-  // of 1 keeps this safely below the real threshold as a hopefully good heuristic.
-  const finestExistingMag = getSomeMagInfoForDataset(dataset).getFinestMag();
-  return maxValue(finestExistingMag);
-}
 
 export function getDataLayers(dataset: APIDataset): DataLayerType[] {
   return dataset.dataSource.dataLayers;

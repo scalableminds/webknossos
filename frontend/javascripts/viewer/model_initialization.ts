@@ -52,7 +52,6 @@ import {
   determineAllowedModes,
   getDataLayers,
   getDatasetCenter,
-  getDefaultZoomStep,
   getSegmentationLayers,
   getUnifiedAdditionalCoordinates,
   hasSegmentation,
@@ -71,6 +70,7 @@ import {
   setAdditionalCoordinatesAction,
   setZoomStepAction,
 } from "viewer/model/actions/flycam_actions";
+import { adjustZoomToFinestSharedMagAction } from "viewer/model/actions/flycam_info_cache_actions";
 import {
   initializeGpuSetupAction,
   initializeSettingsAction,
@@ -290,6 +290,13 @@ export async function initialize(
   const defaultState = determineDefaultState(UrlManager.initialState, userState, serverTracings);
   // Don't override zoom when swapping the task
   applyState(defaultState, !initialFetch, dataset);
+
+  if (initialFetch && defaultState.zoomStep == null) {
+    // Neither the URL, the user state, the tracing nor the view configuration specified a zoom
+    // value. Therefore, let a saga adjust the zoom as soon as the zoom ranges for the available
+    // mags are known (these depend on the viewport sizes which aren't known, yet).
+    Store.dispatch(adjustZoomToFinestSharedMagAction());
+  }
 
   if (initialFetch) {
     setInitialTool();
@@ -737,11 +744,9 @@ function determineDefaultState(
   } else if (someTracing != null) {
     zoomStep = someTracing.zoomLevel;
   }
-
-  if (zoomStep == null) {
-    // No zoom was configured by the user pick a zoom for an existing mag.
-    zoomStep = getDefaultZoomStep(dataset);
-  }
+  // Note that zoomStep can be null at this point, which means that no zoom was configured at all.
+  // In that case, the caller asks for an automatic adjustment of the zoom (see
+  // adjustZoomToFinestSharedMagAction).
 
   let rotation = datasetConfiguration.rotation;
   if (userState != null) {

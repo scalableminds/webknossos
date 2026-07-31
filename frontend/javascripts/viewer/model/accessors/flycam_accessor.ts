@@ -10,7 +10,7 @@ import uniqBy from "lodash-es/uniqBy";
 import memoizeOne from "memoize-one";
 import type { Matrix4x4 } from "mjs";
 import { type Euler, MathUtils, Matrix4, Object3D } from "three";
-import type { AdditionalCoordinate, VoxelSize } from "types/api_types";
+import type { AdditionalCoordinate, APIDataset, VoxelSize } from "types/api_types";
 import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
 import type {
   OrthoView,
@@ -29,7 +29,9 @@ import {
   getEnabledLayers,
   getLayerByName,
   getMagInfo,
+  getMagInfoByLayer,
   getMaxZoomStep,
+  getSharedMagInfoForDataset,
 } from "viewer/model/accessors/dataset_accessor";
 import determineBucketsForFlight from "viewer/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
 import determineBucketsForPlane from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
@@ -225,6 +227,54 @@ function getMaximumZoomForAllMagsFromStore(
   // to ensure that the relevant saga runs in every unit test setup (or in general, that the ranges
   // are set up properly).
   return getDenseMagsForLayerName(state.dataset, layerName).map((_mag, idx) => 2 ** (idx + 1));
+}
+
+export function getBestZoomValueForFinestSharedMag(
+  dataset: APIDataset,
+  maximumZoomForAllMags: Record<string, number[]>,
+): number | null {
+  /*
+   * Returns a zoom value at which each layer renders (its closest existing mag to) the finest
+   * mag that all layers of the dataset share. Returns null if such a value cannot be determined
+   * (e.g., because the layers don't share any mag or because the zoom ranges of a layer are
+   * not computed, yet).
+   */
+  const sharedMagInfo = getSharedMagInfoForDataset(dataset);
+
+  if (sharedMagInfo.mags.length === 0) {
+    // The layers don't have any mag in common (e.g., due to differing anisotropic mags).
+    return null;
+  }
+
+  const finestSharedMag = sharedMagInfo.getFinestMag();
+  const magInfoByLayer = getMagInfoByLayer(dataset);
+  const zoomRanges = [];
+
+  for (const layer of getDataLayers(dataset)) {
+    const zoomThresholds = maximumZoomForAllMags[layer.name];
+
+    if (zoomThresholds == null) {
+      return null;
+    }
+
+    const magInfo = magInfoByLayer[layer.name];
+    const magIndex = magInfo.getIndexByMag(magInfo.getClosestExistingMag(finestSharedMag));
+    // The finest mag doesn't have a lower threshold, which is why 0 is used for it.
+    zoomRanges.push([magIndex === 0 ? 0 : zoomThresholds[magIndex - 1], zoomThresholds[magIndex]]);
+  }
+
+  // Intersect the ranges of all layers: The lower bound is the largest lower bound and the
+  // upper bound is the smallest upper bound.
+  const upperBound = Math.min(...zoomRanges.map(([_lowerBound, upper]) => upper));
+  const lowerBound = Math.max(...zoomRanges.map(([lower, _upperBound]) => lower));
+
+  if (!(upperBound > lowerBound)) {
+    // The ranges don't overlap. Stay at the most restrictive upper bound.
+    return upperBound;
+  }
+
+  // Return middle value of bounds.
+  return (upperBound - lowerBound) / 2 + lowerBound;
 }
 
 // This function depends on functionality from this and the dataset_layer_transformation_accessor module.

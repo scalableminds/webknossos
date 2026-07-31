@@ -14,11 +14,11 @@ import {
 } from "three";
 import TWEEN from "tween.js";
 import type {
+  OrthoViewMap,
   OrthoViewWithoutTDMap,
   Vector2,
   Vector3,
   Viewport,
-  ViewportCameras,
 } from "viewer/constants";
 import Constants, {
   FlightViewport,
@@ -95,7 +95,7 @@ class PlaneView {
   };
   // Combined view of the orthographic cameras, handed to the camera controllers as a
   // prop. Kept as a stable reference so the PureComponents don't re-render each frame.
-  private cameras: ViewportCameras;
+  private cameras: OrthoViewMap<OrthographicCamera>;
   isRunning: boolean = false;
   needsRerender: boolean;
   private isRerenderScheduled: boolean = false;
@@ -127,7 +127,7 @@ class PlaneView {
     scene.add(tdPerspectiveCamera);
     this.tdCameras = { ORTHOGRAPHIC: tdOrthographicCamera, PERSPECTIVE: tdPerspectiveCamera };
 
-    this.cameras = { nonTdCameras: this.nonTdCameras, tdCamera: this.tdCameras.ORTHOGRAPHIC };
+    this.cameras = { ...this.nonTdCameras, [OrthoViews.TDView]: this.tdCameras.ORTHOGRAPHIC };
 
     createDirLight([10, 10, 10], [0, 0, 10], LIGHT_INTENSITY, tdOrthographicCamera);
     createDirLight([-10, 10, 10], [0, 0, 10], LIGHT_INTENSITY, tdOrthographicCamera);
@@ -382,7 +382,7 @@ class PlaneView {
     }
   };
 
-  getCameras(): ViewportCameras {
+  getCameras(): OrthoViewMap<OrthographicCamera> {
     return this.cameras;
   }
 

@@ -11,7 +11,7 @@ import {
   Vector3 as ThreeVector3,
 } from "three";
 import TWEEN from "tween.js";
-import type { Vector3, Viewport, ViewportCameras } from "viewer/constants";
+import type { OrthoViewMap, Vector3, Viewport } from "viewer/constants";
 import Constants, { FLIGHT_CAM_DISTANCE, FlightViewport, OrthoViews } from "viewer/constants";
 import getSceneController, {
   getSceneControllerOrNull,
@@ -35,7 +35,7 @@ type GeometryLike = {
 const flipYRotationMatrix = new Matrix4().makeRotationY(Math.PI);
 
 class FlightModeView {
-  cameras: ViewportCameras;
+  cameras: OrthoViewMap<OrthographicCamera>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'plane' has no initializer and is not def... Remove this comment to see the full error message
   plane: FlightModePlane;
   setClippingDistance: (value: number) => void;
@@ -74,18 +74,16 @@ class FlightModeView {
     this.tdCamera = tdCamera;
     const dummyCamera = new OrthographicCamera(0, 0, 0, 0);
     this.cameras = {
-      tdCamera,
-      nonTdCameras: {
-        PLANE_XY: dummyCamera,
-        PLANE_YZ: dummyCamera,
-        PLANE_XZ: dummyCamera,
-      },
+      TDView: tdCamera,
+      PLANE_XY: dummyCamera,
+      PLANE_YZ: dummyCamera,
+      PLANE_XZ: dummyCamera,
     };
     this.cameraPosition = [0, 0, FLIGHT_CAM_DISTANCE];
     this.needsRerender = true;
   }
 
-  getCameras(): ViewportCameras {
+  getCameras(): OrthoViewMap<OrthographicCamera> {
     return this.cameras;
   }
 

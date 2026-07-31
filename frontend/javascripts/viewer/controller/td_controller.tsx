@@ -9,10 +9,10 @@ import { type OrthographicCamera, Vector3 as ThreeVector3 } from "three";
 import type { VoxelSize } from "types/api_types";
 import {
   type OrthoView,
+  type OrthoViewMap,
   OrthoViews,
   type Point2,
   type Vector3,
-  type ViewportCameras,
 } from "viewer/constants";
 import CameraController, {
   updatePerspectiveCameraFromOrthographic,
@@ -90,7 +90,7 @@ function getTDViewMouseControlsSkeleton(planeView: PlaneView): Record<string, an
 
 const INVALID_ACTIVE_NODE_ID = -1;
 type OwnProps = {
-  cameras: ViewportCameras;
+  cameras: OrthoViewMap<OrthographicCamera>;
   planeView?: PlaneView;
   annotation?: StoreAnnotation;
 };
@@ -172,7 +172,7 @@ class TDController extends PureComponent<Props> {
     const { flycam } = Store.getState();
 
     const pos = voxelToUnit(this.props.voxelSize, getPosition(flycam));
-    const tdCamera = this.props.cameras.tdCamera;
+    const tdCamera = this.props.cameras[OrthoViews.TDView];
     this.controls = new TrackballControls(
       tdCamera,
       view,
@@ -208,7 +208,7 @@ class TDController extends PureComponent<Props> {
       return;
     }
     updatePerspectiveCameraFromOrthographic(
-      this.props.cameras.tdCamera,
+      this.props.cameras[OrthoViews.TDView],
       perspectiveCamera,
       this.controls.target,
     );
@@ -392,7 +392,7 @@ class TDController extends PureComponent<Props> {
     this.oldUnitPos = nmPosition;
     const nmVector = new ThreeVector3(...invertedDiff);
     // moves camera by the nm vector
-    const camera = this.props.cameras.tdCamera;
+    const camera = this.props.cameras[OrthoViews.TDView];
     const rotation = ThreeVector3.prototype.multiplyScalar.call(camera.rotation.clone(), -1);
     // reverse euler order
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'order' does not exist on type 'Vector3'.
@@ -420,7 +420,7 @@ class TDController extends PureComponent<Props> {
   }
 
   onTDCameraChanged = (userTriggered: boolean = true) => {
-    const tdCamera = this.props.cameras.tdCamera;
+    const tdCamera = this.props.cameras[OrthoViews.TDView];
     const setCameraAction = userTriggered
       ? setTDCameraAction
       : setTDCameraWithoutTimeTrackingAction;

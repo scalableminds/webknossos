@@ -23,7 +23,7 @@ import {
 } from "admin/rest_api";
 import { Modal, Space, Spin, Table, Tag } from "antd";
 import type { SearchProps } from "antd/es/input";
-import type { ColumnType } from "antd/lib/table/interface";
+import type { ColumnType } from "antd/es/table/interface";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";

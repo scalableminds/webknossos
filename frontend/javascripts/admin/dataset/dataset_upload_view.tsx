@@ -43,7 +43,7 @@ import {
   Spin,
   Tooltip,
 } from "antd";
-import type { FormInstance } from "antd/lib/form";
+import type { FormInstance } from "antd/es/form";
 import classnames from "classnames";
 import FolderSelection from "dashboard/folders/folder_selection";
 import dayjs from "dayjs";

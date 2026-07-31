@@ -33,7 +33,7 @@ import {
   Table,
   Tooltip,
 } from "antd";
-import type { ColumnsType } from "antd/lib/table";
+import type { ColumnsType } from "antd/es/table";
 import { AsyncButton, AsyncIconButton } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import dayjs from "dayjs";

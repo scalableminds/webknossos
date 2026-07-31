@@ -1,8 +1,7 @@
 import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { updateUser } from "admin/rest_api";
-import { Button, Select, Tag, Tooltip } from "antd";
-import { Flex } from "antd/lib";
+import { Button, Flex, Select, Tag, Tooltip } from "antd";
 import { handleGenericError } from "libs/error_handling";
 import { stringToColor } from "libs/format_utils";
 import messages from "messages";

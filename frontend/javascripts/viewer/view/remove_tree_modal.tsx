@@ -1,5 +1,4 @@
-import { Checkbox, Modal } from "antd";
-import type { CheckboxChangeEvent } from "antd/lib/checkbox";
+import { Checkbox, type CheckboxChangeEvent, Modal } from "antd";
 import messages from "messages";
 import type React from "react";
 import { useCallback, useState } from "react";

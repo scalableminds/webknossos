@@ -7,7 +7,7 @@ import {
 } from "@ant-design/icons";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import { Dropdown, type MenuProps, Modal, Tree } from "antd";
-import type { DataNode, DirectoryTreeProps } from "antd/lib/tree";
+import type { DataNode, DirectoryTreeProps } from "antd/es/tree";
 import classNames from "classnames";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import Toast from "libs/toast";

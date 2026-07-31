@@ -164,6 +164,13 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
           {fullDataset && <DatasetLayerTags dataset={fullDataset} />}
         </div>
 
+        {fullDataset?.uploaderFullName != null && (
+          <div style={{ marginBottom: 4 }}>
+            <div className="sidebar-label">Uploaded By</div>
+            <div>{fullDataset.uploaderFullName}</div>
+          </div>
+        )}
+
         <div style={{ marginBottom: 4 }}>
           <div className="sidebar-label">Datastore</div>
           {fullDataset && (

@@ -20,7 +20,7 @@ import {
   reducerInternalMatrixToEulerAngle,
 } from "viewer/model/helpers/rotation_helpers";
 import Store from "viewer/store";
-import { makeBasicGroupObject } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
+import { makeBasicGroupObject } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const toRadian = (arr: Vector3): Vector3 => [
@@ -355,7 +355,7 @@ describe("API Skeleton", () => {
       const skeletonTracing = enforceSkeletonTracing(Store.getState().annotation);
       // Throw error if no node / tree is active by passing -1 as id.
       const newNode = skeletonTracing.trees
-        .getOrThrow(skeletonTracing.activeTreeId || -1)
+        .getOrThrow(Store.getState().localSkeletonState.activeTreeId || -1)
         .nodes.getOrThrow(skeletonTracing.activeNodeId || -1);
       const propsToCheck = {
         untransformedPosition: newNode.untransformedPosition,
@@ -396,7 +396,7 @@ describe("API Skeleton", () => {
         const skeletonTracing = enforceSkeletonTracing(Store.getState().annotation);
         // Throw error if no node / tree is active by passing -1 as id.
         const newNode = skeletonTracing.trees
-          .getOrThrow(skeletonTracing.activeTreeId || -1)
+          .getOrThrow(Store.getState().localSkeletonState.activeTreeId || -1)
           .nodes.getOrThrow(skeletonTracing.activeNodeId || -1);
         const newNodeQuaternion = new Quaternion().setFromEuler(
           new Euler(...toRadian(newNode.rotation)),

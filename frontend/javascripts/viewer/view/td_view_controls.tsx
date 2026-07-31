@@ -30,22 +30,18 @@ import type { WebknossosState } from "viewer/store";
 type Props = {
   tdViewDisplayPlanes: TDViewDisplayMode;
   tdViewDisplayDatasetBorders: boolean;
-  tdViewDisplayLayerBorders: boolean;
   tdViewUsePerspectiveCamera: boolean;
   onChangeTdViewDisplayPlanes: (arg0: RadioChangeEvent) => void;
   onChangeTdViewDisplayDatasetBorders: SwitchChangeEventHandler;
-  onChangeTdViewDisplayLayerBorders: SwitchChangeEventHandler;
   onChangeTdViewUsePerspectiveCamera: (arg0: RadioChangeEvent) => void;
 };
 
 function TDViewControls({
   tdViewDisplayPlanes,
   tdViewDisplayDatasetBorders,
-  tdViewDisplayLayerBorders,
   tdViewUsePerspectiveCamera,
   onChangeTdViewDisplayPlanes,
   onChangeTdViewDisplayDatasetBorders,
-  onChangeTdViewDisplayLayerBorders,
   onChangeTdViewUsePerspectiveCamera,
 }: Props) {
   const settingsMenu: MenuProps = {
@@ -97,22 +93,6 @@ function TDViewControls({
               <Switch
                 checked={tdViewDisplayDatasetBorders}
                 onChange={onChangeTdViewDisplayDatasetBorders}
-              />
-            </Col>
-          </Row>
-        ),
-      },
-      {
-        key: "showLayerBorders",
-        label: (
-          <Row>
-            <Col span={14}>
-              <label className="setting-label">Show Layer Borders</label>
-            </Col>
-            <Col span={10}>
-              <Switch
-                checked={tdViewDisplayLayerBorders}
-                onChange={onChangeTdViewDisplayLayerBorders}
               />
             </Col>
           </Row>
@@ -179,7 +159,6 @@ function mapStateToProps(state: WebknossosState) {
   return {
     tdViewDisplayPlanes: state.userConfiguration.tdViewDisplayPlanes,
     tdViewDisplayDatasetBorders: state.userConfiguration.tdViewDisplayDatasetBorders,
-    tdViewDisplayLayerBorders: state.userConfiguration.tdViewDisplayLayerBorders,
     tdViewUsePerspectiveCamera: state.userConfiguration.tdViewUsePerspectiveCamera,
   };
 }
@@ -193,10 +172,6 @@ function mapDispatchToProps(dispatch: Dispatch<any>) {
 
     onChangeTdViewDisplayDatasetBorders(tdViewDisplayDatasetBorders: boolean) {
       dispatch(updateUserSettingAction("tdViewDisplayDatasetBorders", tdViewDisplayDatasetBorders));
-    },
-
-    onChangeTdViewDisplayLayerBorders(tdViewDisplayLayerBorders: boolean) {
-      dispatch(updateUserSettingAction("tdViewDisplayLayerBorders", tdViewDisplayLayerBorders));
     },
 
     onChangeTdViewUsePerspectiveCamera(evt: RadioChangeEvent) {

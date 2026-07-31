@@ -58,6 +58,7 @@ import AnnotationReducer from "viewer/model/reducers/annotation_reducer";
 import ConnectomeReducer from "viewer/model/reducers/connectome_reducer";
 import DatasetReducer from "viewer/model/reducers/dataset_reducer";
 import FlycamReducer from "viewer/model/reducers/flycam_reducer";
+import { withRebaseEditGuard } from "viewer/model/reducers/rebase_edit_guard";
 import SaveReducer from "viewer/model/reducers/save_reducer";
 import SettingsReducer from "viewer/model/reducers/settings_reducer";
 import SkeletonTracingReducer from "viewer/model/reducers/skeletontracing_reducer";
@@ -162,10 +163,20 @@ export type SkeletonTracing = TracingBase & {
   readonly type: "skeleton";
   readonly trees: TreeMap;
   readonly treeGroups: Array<TreeGroup>;
-  readonly activeTreeId: number | null | undefined;
   readonly activeNodeId: number | null | undefined;
-  readonly activeGroupId: number | null | undefined;
   readonly cachedMaxNodeId: number;
+};
+// LocalSkeletonState holds user-local skeleton state that is not persisted
+// on the server. It deliberately lives outside of state.annotation.skeleton
+// so that it is not affected by the snapshot/restore machinery used while
+// rebasing in live collaboration mode (compare with LocalSegmentationState).
+// Note that activeTreeId and activeGroupId live here (unlike their sibling
+// activeNodeId) because they are not persisted on the server. The
+// activeTreeId is kept consistent with the activeNodeId (the active node,
+// if set, is always part of the active tree).
+export type LocalSkeletonState = {
+  readonly activeTreeId: number | null | undefined;
+  readonly activeGroupId: number | null | undefined;
   readonly navigationList: NavigationList;
   readonly showSkeletons: boolean;
 };
@@ -377,7 +388,6 @@ export type UserConfiguration = {
   readonly sphericalCapRadius: number;
   readonly tdViewDisplayPlanes: TDViewDisplayMode;
   readonly tdViewDisplayDatasetBorders: boolean;
-  readonly tdViewDisplayLayerBorders: boolean;
   readonly tdViewUsePerspectiveCamera: boolean;
   readonly gpuMemoryFactor: number;
   // For volume (and hybrid) annotations, this mode specifies
@@ -443,6 +453,10 @@ export type TemporaryConfiguration = {
   readonly preferredQualityForMeshPrecomputation: number;
   readonly preferredQualityForMeshAdHocComputation: number;
   readonly lastVisibleSegmentationLayerName: string | null | undefined;
+  // Display state for the read-only bounding boxes of the dataset's layers, keyed by layer name (one
+  // entry per layer). These are client-only (not persisted) and fall back to visible/derived color.
+  readonly layerBoundingBoxVisibilities: Record<string, boolean>;
+  readonly layerBoundingBoxColors: Record<string, Vector3>;
 };
 export type Script = APIScript;
 export type Task = APITask;
@@ -654,6 +668,10 @@ export type LocalMeshesInfo =
   | Record<string, Record<number, MeshInformation> | undefined>
   | undefined;
 
+// A single entry of the id reservation mechanism (see id_reservation_saga.ts). `used`
+// marks whether the id has already been assigned to a newly created item.
+export type IdReservation = { id: number; used: boolean };
+
 // LocalSegmentationState holds per-layer segmentation state that is not
 // persisted on the server (in contrast to the VolumeTracing which must only
 // contain synced state, see its comment).
@@ -686,7 +704,7 @@ export type LocalSegmentationState = {
   readonly contourTracingMode: ContourMode;
   // Stores points of the currently drawn region in layer-space coordinates.
   readonly contourList: Array<Vector3>;
-  readonly idReservations: Record<"SegmentGroup" | "Segment", { id: number; used: boolean }[]>;
+  readonly idReservations: Record<"SegmentGroup", IdReservation[]>;
   // The position of the "proofreading marker" (a cross) is stored separately.
   // In earlier versions, the anchor position of the current segment was simply used.
   // However, the anchor position can be updated by another user (in collab mode) which
@@ -697,6 +715,17 @@ export type LocalSegmentationState = {
   // (see save_saga.tsx). Storing the marker position there would reset it to the position
   // of the last synced version on every rewinding rebase (see #9559).
   readonly proofreadingMarkerPosition: Vector3 | undefined;
+};
+
+// LocalAnnotationState holds local, non-persisted state that applies to the whole annotation
+// (in contrast to LocalSegmentationState, which is scoped to a single segmentation layer, and
+// in contrast to StoreAnnotation, which mirrors the persisted/synced annotation and is stashed
+// and restored during rebasing, see save_saga.tsx).
+export type LocalAnnotationState = {
+  // Bounding boxes are shared/mirrored across all tracings of an annotation (see
+  // updateUserBoundingBoxes in annotation_reducer.ts), so their id reservations are
+  // tracked here on the annotation level instead of per segmentation layer.
+  readonly idReservationsForBoundingBoxes: IdReservation[];
 };
 
 export type StoreDataset = APIDataset & {
@@ -748,6 +777,9 @@ export type WebknossosState = {
     string, // layerName
     LocalSegmentationState
   >;
+  // question to reviewer: Maybe put this somewhere else in the store :thinking:?
+  readonly localSkeletonState: LocalSkeletonState;
+  readonly localAnnotationState: LocalAnnotationState;
   readonly operationContext: OperationContextState;
 };
 const sagaMiddleware = createSagaMiddleware();
@@ -773,7 +805,7 @@ export const combinedReducer = reduceReducers(
 ) as Reducer;
 
 const store = createStore<WebknossosState, Action>(
-  enableBatching(combinedReducer as any),
+  enableBatching(withRebaseEditGuard(combinedReducer) as any),
   defaultState,
   applyMiddleware(
     actionLoggerMiddleware,

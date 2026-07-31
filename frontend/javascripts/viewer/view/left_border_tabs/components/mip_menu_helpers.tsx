@@ -3,6 +3,8 @@ import MipIcon from "@images/icons/icon-mip.svg?react";
 import { Dropdown, type MenuProps } from "antd";
 import { formatBytes } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
+import { computeBoundingBoxFromArray } from "libs/utils";
+import { useMemo } from "react";
 import { useDispatch } from "react-redux";
 import type { Vector6 } from "viewer/constants";
 import {
@@ -15,6 +17,7 @@ import {
   removeMipLayerForBBoxAction,
   setMipForBBoxAction,
 } from "viewer/model/actions/annotation_actions";
+import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import ButtonComponent from "../../components/button_component";
 
 const RECOMMENDED_MIP_THRESHOLD_IN_BYTES = 50 * 1024 * 1024; // 50 MB
@@ -34,16 +37,31 @@ export function useMipContextMenuItems(
 
   const activeMipLayerNames = new Set(mipLayers?.map((l) => l.layerName) ?? []);
   const availableColorLayers = colorLayers.filter((l) => !activeMipLayerNames.has(l.name));
-  const [, , , bboxW, bboxH, bboxD] = propValue;
+  const bboxFromProps = useMemo(
+    () => new BoundingBox(computeBoundingBoxFromArray(propValue)),
+    [propValue],
+  );
+  const bBoxClampedToLayerBounds = useMemo(
+    () =>
+      Object.fromEntries(
+        colorLayers.map((layer) => [
+          layer.name,
+          BoundingBox.fromBoundBoxObject(layer.boundingBox).intersectedWith(bboxFromProps),
+        ]),
+      ),
+    [bboxFromProps, colorLayers],
+  );
 
   const buildAutoSelectHandler = (layers: typeof colorLayers) => () => {
     for (const layer of layers) {
       const mags = magInfoByLayer[layer.name]?.getMagsWithIndices() ?? [];
       const bytesPerVoxel = getByteCountFromLayer(layer);
+
       let bestZoomStep: number | null = null;
       let bestSize = -1;
       let fallbackZoomStep: number | null = null;
       let fallbackSize = Number.MAX_SAFE_INTEGER;
+      const [bboxW, bboxH, bboxD] = bBoxClampedToLayerBounds[layer.name].getSize();
       for (const [zoomStep, mag] of mags) {
         const voxels =
           Math.ceil(bboxW / mag[0]) * Math.ceil(bboxH / mag[1]) * Math.ceil(bboxD / mag[2]);
@@ -78,6 +96,7 @@ export function useMipContextMenuItems(
         key: `mip-${layer.name}`,
         label: layer.name,
         children: mags.map(([zoomStep, mag]) => {
+          const [bboxW, bboxH, bboxD] = bBoxClampedToLayerBounds[layer.name].getSize();
           const voxels =
             Math.ceil(bboxW / mag[0]) * Math.ceil(bboxH / mag[1]) * Math.ceil(bboxD / mag[2]);
           return {

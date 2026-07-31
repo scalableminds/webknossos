@@ -13,7 +13,7 @@ import {
   createGroupToSegmentsMap,
   findGroup,
   getGroupByIdWithSubgroups,
-} from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
+} from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 
 export interface SegmentDetailsPanelProps {
   selectedIds: { segments: number[]; group: number | null };

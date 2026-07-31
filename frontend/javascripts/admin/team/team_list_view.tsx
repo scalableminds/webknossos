@@ -10,7 +10,7 @@ import { handleGenericError } from "libs/error_handling";
 import { stringToColor } from "libs/format_utils";
 import Persistence from "libs/persistence";
 import { useQueryWithErrorHandling } from "libs/react_hooks";
-import { filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
+import { filterWithSearchQueryAND, localeCompareBy, scrollToTop } from "libs/utils";
 import messages from "messages";
 import type React from "react";
 import { useState } from "react";
@@ -159,6 +159,7 @@ function TeamListView() {
           rowKey="id"
           pagination={{
             defaultPageSize: 50,
+            onChange: scrollToTop,
           }}
           expandable={{
             expandedRowRender: (team) => <TeamMembersRow team={team} users={users} />,

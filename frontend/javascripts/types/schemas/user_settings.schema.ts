@@ -102,9 +102,6 @@ export const userSettings = {
   tdViewDisplayDatasetBorders: {
     type: "boolean",
   },
-  tdViewDisplayLayerBorders: {
-    type: "boolean",
-  },
   tdViewUsePerspectiveCamera: {
     type: "boolean",
   },

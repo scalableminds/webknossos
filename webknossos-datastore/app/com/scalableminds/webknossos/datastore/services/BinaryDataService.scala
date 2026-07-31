@@ -135,7 +135,7 @@ class BinaryDataService(
     val layerBboxInMag =
       request.dataLayer.boundingBox / request.mag // Note that this div is implemented to round to the bigger bbox so we don’t lose voxels inside.
     val intersectionOpt = requestBboxInMag.intersection(layerBboxInMag).map(_.move(-requestBboxInMag.topLeft))
-    val outputArray = Array.fill[Byte](inputArray.length)(0)
+    val outputArray = new Array[Byte](inputArray.length)
     intersectionOpt.foreach { intersection =>
       for {
         z <- intersection.topLeft.z until intersection.bottomRight.z

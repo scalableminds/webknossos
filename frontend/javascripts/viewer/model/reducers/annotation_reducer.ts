@@ -5,6 +5,7 @@ import isEqual from "lodash-es/isEqual";
 import reduce from "lodash-es/reduce";
 import uniqWith from "lodash-es/uniqWith";
 import type { AdditionalCoordinate } from "types/api_types";
+import defaultState from "viewer/default_state";
 import { maybeGetSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import { getDisplayedDataExtentInPlaneMode } from "viewer/model/accessors/view_mode_accessor";
 import type { Action } from "viewer/model/actions/actions";
@@ -103,11 +104,11 @@ const maybeAddAdditionalCoordinatesToMeshState = (
 function AnnotationReducer(state: WebknossosState, action: Action): WebknossosState {
   switch (action.type) {
     case "INITIALIZE_ANNOTATION": {
-      // rebaseRelevantServerAnnotationState stores rebasing relevant information of the annotation.
-      // It always is in sync with the latest known version on the server. After initializing it is the current version.
-      // mappingDataByLayer entries are initialized automatically when the mappings are loaded by the saga.
-      const stateWithAnnotationRebaseInformation = update(state, {
+      const resetStoreState = update(state, {
         save: {
+          // rebaseRelevantServerAnnotationState stores rebasing relevant information of the annotation.
+          // It always is in sync with the latest known version on the server. After initializing it is the current version.
+          // mappingDataByLayer entries are initialized automatically when the mappings are loaded by the saga.
           rebaseRelevantServerAnnotationState: {
             annotationVersion: {
               $set: action.annotation.version,
@@ -120,9 +121,14 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
             },
           },
         },
+        // Also reset localAnnotationState. Note that localSegmentationStateByLayer is reset in the reducer
+        // that handles SET_DATASET.
+        localAnnotationState: {
+          $set: defaultState.localAnnotationState,
+        },
       });
 
-      return updateAnnotation(stateWithAnnotationRebaseInformation, {
+      return updateAnnotation(resetStoreState, {
         // Clear all tracings. These will be initialized in corresponding
         // initialization actions.
         mappings: [],
@@ -192,8 +198,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
       }
 
       const { userBoundingBoxes } = tracing;
-      const highestBoundingBoxId = Math.max(0, ...userBoundingBoxes.map((bb) => bb.id));
-      const boundingBoxId = highestBoundingBoxId + 1;
+      const boundingBoxId = action.id;
 
       const { min, max, halfBoxExtent } = getDisplayedDataExtentInPlaneMode(state);
       const newBoundingBoxTemplate: UserBoundingBox = {
@@ -241,16 +246,16 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
     }
 
     case "ADD_USER_BOUNDING_BOXES": {
+      const { userBoundingBoxes, boundingBoxIds } = action;
       const tracing = maybeGetSomeTracing(state.annotation);
-
-      if (tracing == null) {
+      const hasEqualAmountOfIds = userBoundingBoxes.length === boundingBoxIds.length;
+      if (tracing == null || !hasEqualAmountOfIds) {
         return state;
       }
 
-      const highestBoundingBoxId = Math.max(0, ...tracing.userBoundingBoxes.map((bb) => bb.id));
-      const additionalUserBoundingBoxes = action.userBoundingBoxes.map((bb, index) => ({
+      const additionalUserBoundingBoxes = userBoundingBoxes.map((bb, index) => ({
         ...bb,
-        id: highestBoundingBoxId + index + 1,
+        id: boundingBoxIds[index],
       }));
       const mergedUserBoundingBoxes = uniqWith(
         [...tracing.userBoundingBoxes, ...additionalUserBoundingBoxes],
@@ -531,6 +536,16 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
     case "SET_COLLABORATION_MODE": {
       return updateKey(state, "annotation", {
         collaborationMode: action.collaborationMode,
+      });
+    }
+
+    case "SET_ID_RESERVATIONS": {
+      // BoundingBox reservations are annotation-wide (bounding boxes are mirrored across all
+      // tracings, see updateUserBoundingBoxes above), unlike SegmentGroup/Segment reservations
+      // which are handled per segmentation layer in volumetracing_reducer.ts.
+      if (action.domain !== "BoundingBox") return state;
+      return updateKey(state, "localAnnotationState", {
+        idReservationsForBoundingBoxes: action.reservations,
       });
     }
 

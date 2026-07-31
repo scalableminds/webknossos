@@ -14,7 +14,12 @@ import { ColorWKBlue } from "theme";
 import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import { useGenerateBBModalContext } from "viewer/view/ai_jobs/generate_BB_modal_context";
-import { colorLayerMustNotBeUint24Rule, getIntersectingMagList } from "../utils";
+import {
+  colorLayerMustNotBeUint24Rule,
+  getGroundTruthLayerBoundingBox,
+  getIntersectingMagList,
+  getOutOfBoundsBoundingBoxes,
+} from "../utils";
 import {
   type AiTrainingAnnotationSelection,
   useAiTrainingJobContext,
@@ -39,6 +44,7 @@ const AiTrainingDataSelector = ({
     magnification,
     userBoundingBoxes,
     dataset,
+    volumeTracings,
     volumeTracingMags,
   } = selectedAnnotation;
   const annotationId = annotation.id;
@@ -103,6 +109,23 @@ const AiTrainingDataSelector = ({
       errors.push("Total volume of bounding boxes cannot be zero.");
     }
 
+    const groundTruthLayerBoundingBox = getGroundTruthLayerBoundingBox(
+      annotation,
+      groundTruthLayer,
+      volumeTracings,
+    );
+    const outOfBoundsBoxes = getOutOfBoundsBoundingBoxes(
+      userBoundingBoxes,
+      groundTruthLayerBoundingBox,
+    );
+    if (outOfBoundsBoxes.length > 0) {
+      errors.push(
+        `The following bounding boxes are (partially) outside of the "${groundTruthLayer}" volume layer's bounding box and would cause the training to fail: ${outOfBoundsBoxes
+          .map((box) => box.name)
+          .join(", ")}`,
+      );
+    }
+
     const tooSmallBoxes: string[] = [];
     const notMagAlignedBoundingBoxes: string[] = [];
 
@@ -144,7 +167,14 @@ const AiTrainingDataSelector = ({
     }
 
     return { bboxErrors: errors, bboxWarnings: warnings };
-  }, [userBoundingBoxes, magnification, boundingBoxVolume]);
+  }, [
+    userBoundingBoxes,
+    magnification,
+    boundingBoxVolume,
+    annotation,
+    groundTruthLayer,
+    volumeTracings,
+  ]);
 
   return (
     <Card

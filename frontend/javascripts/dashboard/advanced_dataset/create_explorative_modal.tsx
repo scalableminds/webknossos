@@ -56,7 +56,7 @@ export function NewVolumeLayerSelection({
         placement="right"
       >
         <InfoCircleOutlined />
-      </Tooltip>
+      </Tooltip>{" "}
       <Radio.Group
         onChange={(e) => {
           const index = Number.parseInt(e.target.value, 10);

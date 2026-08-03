@@ -1,5 +1,5 @@
 import { FileOutlined, InboxOutlined } from "@ant-design/icons";
-import { Avatar, List } from "antd";
+import { Avatar, List, Typography } from "antd";
 import FormattedDate from "components/formatted_date";
 import prettyBytes from "pretty-bytes";
 import type { DropzoneInputProps } from "react-dropzone";
@@ -31,11 +31,13 @@ export function NmlDropzoneContent({
         />
       </div>
       {isUpdateAllowed ? (
-        <h5>Drop NML or zip files here{isClickAllowed ? " or click to select files" : null}...</h5>
+        <Typography.Title level={5}>
+          Drop NML or zip files here{isClickAllowed ? " or click to select files" : null}...
+        </Typography.Title>
       ) : (
-        <h5>
+        <Typography.Title level={5}>
           Drop NML or zip files here to <b>create a new annotation</b>.
-        </h5>
+        </Typography.Title>
       )}
     </div>
   );

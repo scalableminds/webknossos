@@ -9,7 +9,7 @@ import {
   RollbackOutlined,
   SaveOutlined,
 } from "@ant-design/icons";
-import { Button, Flex, Tooltip } from "antd";
+import { Button, Flex, Tooltip, Typography } from "antd";
 import type { SubMenuType } from "antd/es/menu/interface";
 import messages from "messages";
 import { Fragment } from "react";
@@ -59,14 +59,15 @@ export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
 
   const layoutMissingHelpTitle = (
     <Fragment>
-      <h5
+      <Typography.Title
+        level={5}
         style={{
           // This is rendered inside a tooltip, which has an inverted background in both themes.
           color: "var(--ant-color-text-light-solid)",
         }}
       >
         Where is my layout?
-      </h5>
+      </Typography.Title>
       <p>{messages["layouting.missing_custom_layout_info"]}</p>
     </Fragment>
   );

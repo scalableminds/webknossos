@@ -1,3 +1,4 @@
+import { releaseAllKeys } from "@rwh/keystrokes";
 import { Alert, Button, Flex, Modal, Space, Typography } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -178,9 +179,15 @@ export function ShortcutRecorderModal({
             keyboardShortcutId,
             [...keyboardShortcutConfigWithoutInitialKeySequence[keyboardShortcutId], keySequence],
             keyboardShortcutConfigWithoutInitialKeySequence,
+            unmodifiedLayoutMap,
           )
         : [],
-    [keySequence, keyboardShortcutId, keyboardShortcutConfigWithoutInitialKeySequence],
+    [
+      keySequence,
+      keyboardShortcutId,
+      keyboardShortcutConfigWithoutInitialKeySequence,
+      unmodifiedLayoutMap,
+    ],
   );
 
   const currentDownSetRef = useRef<Set<string>>(new Set());
@@ -275,12 +282,19 @@ export function ShortcutRecorderModal({
     window.addEventListener("keyup", handleKeyUp, true);
     window.addEventListener("keydown", handleEscapeAndCtrlKey, true);
 
+    // The handlers above stop propagation of both keydown and keyup, so keystrokes
+    // never sees the release of a key that is held across the modal boundary. Reset
+    // its state on the way in and on the way out, otherwise such a key stays
+    // "held" and blocks every single-key shortcut afterwards.
+    releaseAllKeys();
+
     return () => {
       window.removeEventListener("keydown", handleKeyDown, true);
       window.removeEventListener("keyup", handleKeyUp, true);
       window.removeEventListener("keydown", handleEscapeAndCtrlKey, true);
       // cleanup
       clearCurrentPreview();
+      releaseAllKeys();
     };
   }, [clearCurrentPreview, isOpen, handleReset]);
 

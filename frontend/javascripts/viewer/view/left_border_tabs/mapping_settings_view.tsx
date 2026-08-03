@@ -5,6 +5,7 @@ import { localeCompareBy } from "libs/utils";
 import messages from "messages";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
+import type { MappingType } from "viewer/constants";
 import { ControlModeEnum, MappingStatusEnum } from "viewer/constants";
 import { isAnnotationOwner, mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import {
@@ -22,7 +23,6 @@ import {
   setMappingAction,
   setMappingEnabledAction,
 } from "viewer/model/actions/settings_actions";
-import type { MappingType } from "viewer/store";
 import SwitchSetting from "./components/switch_setting";
 
 type Props = {

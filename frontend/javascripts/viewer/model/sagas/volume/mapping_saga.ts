@@ -25,7 +25,7 @@ import {
   takeLatest,
 } from "typed-redux-saga";
 import type { APIDataLayer, APIDataset, APIMapping } from "types/api_types";
-import { MappingStatusEnum } from "viewer/constants";
+import { MappingStatusEnum, type MappingType } from "viewer/constants";
 import { getSegmentIdForPositionAsync } from "viewer/controller/combinations/volume_handlers";
 import {
   getLayerByName,
@@ -73,7 +73,6 @@ import type {
   ActiveMappingInfo,
   EditableMapping,
   Mapping,
-  MappingType,
   NumberLike,
   NumberLikeMap,
   StoreAnnotation,

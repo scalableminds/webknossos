@@ -12,7 +12,7 @@ import type { AdditionalCoordinate, APIDataset } from "types/api_types";
 import { type APIAnnotationType, APICompoundTypeEnum } from "types/api_types";
 import type { Mutable } from "types/type_utils";
 import { validateUrlStateJSON } from "types/validation";
-import type { Vector3, ViewMode } from "viewer/constants";
+import type { MappingType, Vector3, ViewMode } from "viewer/constants";
 import constants, { MappingStatusEnum, ViewModeValues } from "viewer/constants";
 import { applyState } from "viewer/controller/apply_url_state";
 import { getPosition } from "viewer/model/accessors/flycam_accessor";
@@ -21,12 +21,7 @@ import {
   additionalCoordinateToKeyValue,
   parseAdditionalCoordinateKey,
 } from "viewer/model/helpers/nml_helpers";
-import type {
-  DatasetLayerConfiguration,
-  MappingType,
-  MeshInformation,
-  WebknossosState,
-} from "viewer/store";
+import type { DatasetLayerConfiguration, MeshInformation, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 
 const MAX_UPDATE_INTERVAL = 1000;

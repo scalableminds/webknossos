@@ -41,7 +41,7 @@ import type {
 } from "types/api_types";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 import type { Mutable } from "types/type_utils";
-import constants, { ControlModeEnum, type Vector3 } from "viewer/constants";
+import constants, { ControlModeEnum, normalizeMappingType, type Vector3 } from "viewer/constants";
 import { applyState, getIsNativelyRenderedNamePresent } from "viewer/controller/apply_url_state";
 import type { PartialUrlManagerState } from "viewer/controller/url_manager";
 import UrlManager, {
@@ -758,7 +758,8 @@ function determineDefaultState(
     if (stateByLayer[layerName].mappingInfo == null && mapping != null) {
       stateByLayer[layerName].mappingInfo = {
         mappingName: mapping.name,
-        mappingType: mapping.type,
+        // View configurations that were stored before the rename can still contain "HDF5".
+        mappingType: normalizeMappingType(mapping.type),
       };
     }
   }

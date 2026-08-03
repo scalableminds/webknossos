@@ -85,7 +85,7 @@ import {
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 import type { DatasourceConfiguration } from "types/schemas/datasource.types";
 import type { ArbitraryObject, EmptyObject } from "types/type_utils";
-import type { AnnotationTypeFilterEnum, LOG_LEVELS, Vector3 } from "viewer/constants";
+import type { AnnotationTypeFilterEnum, LOG_LEVELS, MappingType, Vector3 } from "viewer/constants";
 import Constants, { AnnotationStateFilterEnum } from "viewer/constants";
 import type BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import {
@@ -101,7 +101,6 @@ import {
 import type {
   DatasetConfiguration,
   Mapping,
-  MappingType,
   NumberLike,
   PartialDatasetConfiguration,
   SaveQueueEntry,

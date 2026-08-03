@@ -10,6 +10,31 @@
 # (uv reads the inline metadata above and installs the dependencies
 # into a throwaway environment automatically, no venv/pip needed)
 
+"""
+Generates datasets (with one layer each) that each visualize a dtype's full value range
+as a grid of colored cells, to make it easy to spot rendering/precision
+issues for that dtype.
+
+Layout of the generated data (repeated identically for every z slice):
+- The very first pixel row row (y=0) contains, for each x, the value x - 512.
+  So, x=512 holds exactly 0. For dtypes that can't represent negative numbers, the values left of
+  x=512 wrap around (integer overflow) instead of going negative.
+- The rest of the plane is a grid of 64 columns (x) x 16 rows (y).
+- The dtype's value range is split into 64 equal parts, one per column. The
+  middle row of each column holds that column's value (e.g. for uint8, the
+  middle cell of the first column is 0, the second column's middle cell is
+  4, ...).
+- Within a column, each row moving up/down from the middle changes the
+  value by +-1. Values that would fall outside the dtype's range are
+  clamped, so the first/last columns show a flat run of the dtype's
+  min/max value on one side instead of wrapping.
+- A 1px line (drawn in the dtype's max value) separates each row from the
+  next, to keep neighboring values visually distinguishable.
+- Every cell also has a small 1px marker in its center, inverted (min <->
+  max) whenever the cell's value equals the dtype's minimum, maximum, or
+  exactly 0 - making these notable values easy to spot.
+"""
+
 import numpy as np
 
 import webknossos as wk
@@ -52,19 +77,19 @@ def main() -> None:
     ######################
 
     dtypes = [
-        np.int8,
-        np.uint8,
-        np.int16,
-        np.uint16,
-        np.int32,
-        np.uint32,
-        np.float32,
-        np.uint64,
+        # np.int8,
+        # np.uint8,
+        # np.int16,
+        # np.uint16,
+        # np.int32,
+        # np.uint32,
+        # np.float32,
+        # np.uint64,
         np.int64,
     ]
 
     for dtype in dtypes:
-        for category in ["color", "segmentation"]:
+        for category in ["segmentation"]:
             dtype_str = str(np.dtype(dtype))
             layer_name = f"{dtype_str}_{category}"
             new_dataset_name = f"dtype_test_{layer_name}"

@@ -7,6 +7,17 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
+## [26.08.1](https://github.com/scalableminds/webknossos/releases/tag/26.08.1) - 2026-08-03
+[Commits](https://github.com/scalableminds/webknossos/compare/26.08.0...26.08.1)
+
+### Fixed
+- Fixed keyboard shortcuts silently breaking during an annotation session. After typing a shifted punctuation character such as `?` or `:` into any text field (comment, tree or segment name, search box), every single-key shortcut — `1`, `2`, `3`, `b`, `j`, `c`, space, the arrow keys — stopped working until the browser window lost and regained focus. [#9834](https://github.com/scalableminds/webknossos/pull/9834)
+- Fixed `Cmd + S`, `Cmd + Z` and `Cmd + Y` not working on macOS. Because saving never ran, `Cmd + S` also opened the browser's "Save Page" dialog. [#9834](https://github.com/scalableminds/webknossos/pull/9834)
+- Fixed <kbd>Esc</kbd> not doing anything in plane mode, which meant an in-progress quick select could not be cancelled. [#9834](https://github.com/scalableminds/webknossos/pull/9834)
+- Fixed a partially typed `Ctrl + K` shortcut staying armed indefinitely, so that the next single key pressed — however much later — switched the tool instead of triggering its own shortcut. [#9834](https://github.com/scalableminds/webknossos/pull/9834)
+- Fixed shortcuts on punctuation keys being displayed incorrectly in the info tab, and shortcut collisions not being reported when re-recording a key that a default shortcut already used. [#9834](https://github.com/scalableminds/webknossos/pull/9834)
+- Fixed the raw JSON view of the keyboard shortcut settings falling out of sync with the table view after resetting to defaults. [#9834](https://github.com/scalableminds/webknossos/pull/9834)
+
 ## [26.08.0](https://github.com/scalableminds/webknossos/releases/tag/26.08.0) - 2026-07-22
 [Commits](https://github.com/scalableminds/webknossos/compare/26.07.03...26.08.0)
 

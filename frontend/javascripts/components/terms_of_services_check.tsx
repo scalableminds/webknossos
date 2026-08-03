@@ -111,7 +111,7 @@ function OrganizationSwitchMenu({
   }));
 
   return (
-    <Dropdown menu={{ items }} overlayStyle={{ maxHeight: "60vh", overflow: "auto" }}>
+    <Dropdown menu={{ items }} styles={{ root: { maxHeight: "60vh", overflow: "auto" } }}>
       <a onClick={(e) => e.preventDefault()}>
         <Space style={style}>
           Switch Organization

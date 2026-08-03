@@ -44,7 +44,6 @@ export type DeleteNodeUpdateAction = ReturnType<typeof deleteNode>;
 export type CreateEdgeUpdateAction = ReturnType<typeof createEdge>;
 export type DeleteEdgeUpdateAction = ReturnType<typeof deleteEdge>;
 export type UpdateActiveNodeUpdateAction = ReturnType<typeof updateActiveNode>;
-export type UpdateActiveTreeUpdateAction = ReturnType<typeof updateActiveTree>;
 type LEGACY_UpdateSkeletonTracingUpdateAction = ReturnType<typeof LEGACY_updateSkeletonTracing>;
 type LEGACY_UpdateVolumeTracingUpdateAction = ReturnType<typeof LEGACY_updateVolumeTracingAction>;
 export type UpdateActiveSegmentIdUpdateAction = ReturnType<typeof updateActiveSegmentId>;
@@ -144,7 +143,6 @@ type _ApplicableSkeletonUpdateAction =
   | UpdateUserBoundingBoxInSkeletonTracingAction
   | UpdateUserBoundingBoxVisibilityInSkeletonTracingAction
   | DeleteUserBoundingBoxInSkeletonTracingAction
-  | UpdateActiveTreeUpdateAction
   // User specific actions
   | UpdateActiveNodeUpdateAction
   | UpdateTreeVisibilityUpdateAction
@@ -191,7 +189,6 @@ const ApplicableSkeletonUpdateActionNamesHelper: Record<
   updateActiveNode: true,
   updateTreeVisibility: true,
   updateTreeGroupVisibility: true,
-  updateActiveTree: true,
 };
 export const ApplicableSkeletonUpdateActionNamesHelperNamesList = Object.keys(
   ApplicableSkeletonUpdateActionNamesHelper,
@@ -237,7 +234,6 @@ export type UpdateActionWithoutIsolationRequirement =
   | LEGACY_UpdateUserBoundingBoxesInSkeletonTracingUpdateAction
   | LEGACY_UpdateUserBoundingBoxesInVolumeTracingUpdateAction
   | UpdateActiveNodeUpdateAction
-  | UpdateActiveTreeUpdateAction
   | UpdateActiveSegmentIdUpdateAction
   | UpdateLargestSegmentIdVolumeAction
   | UpdateVolumeBucketDataHasChangedUpdateAction
@@ -560,47 +556,6 @@ export function updateActiveNode(tracing: {
     value: {
       actionTracingId: tracing.tracingId,
       activeNode: tracing.activeNodeId,
-    },
-  } as const;
-}
-
-// This action should never be sent to the backend: (tracking issue #9044)
-// - The backend does not recognize this action type.
-// - The annotation proto in the backend does not have the `activeTreeId` property for a `skeletonTracing`.
-//
-// Purpose:
-// This action exists only to keep track of the `activeTreeId` in the frontend during rebasing.
-//
-// Background:
-// There is a mismatch between frontend redux store actions and backend update actions.
-// The store action `createTree` sets both `activeNodeId` and `activeTreeId`,
-// but the corresponding update action `createTree` from the backend does not.
-// Instead additional update actions are needed to reflect the changes to `activeNodeId` and `activeTreeId`.
-//
-// Why we can’t simply fix this:
-// If we modified the backend `createTree` update action to also apply `activeNodeId` and `activeTreeId`,
-// it would break other logic — for example, the `deleteEdge` store action maps to multiple update actions:
-//   1. `createTree`
-//   2. `moveTreeComponents`
-//   3. `deleteEdge`
-// In that sequence, the `createTree` update action must **not** set `activeNodeId` or `activeTreeId`
-// if an edge was deleted where the active node was not involved. e.g. via frontend api calls or so.
-//
-// Therefore, this special frontend-only update action is used to track whether the `activeTreeId` should change.
-// Thus, the redux action `createTree` maps to the update actions `createTree`, `updateActiveNode` and `updateActiveTree`.
-// (Note: `activeNodeId` changes are already handled by the `updateActiveNode` action, which *is* supported by the backend.)
-export function updateActiveTree(tracing: {
-  tracingId: string;
-  activeTreeId: number | null | undefined;
-  activeNodeId: number | null | undefined;
-}) {
-  return {
-    name: "updateActiveTree",
-    value: {
-      actionTracingId: tracing.tracingId,
-      activeTree: tracing.activeTreeId,
-      activeNode: tracing.activeNodeId,
-      isFrontendOnly: true,
     },
   } as const;
 }

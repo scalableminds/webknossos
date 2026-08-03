@@ -1,4 +1,5 @@
 import { Checkbox, Form, InputNumber, Modal, Select, Space, Typography } from "antd";
+import { handleGenericError } from "libs/error_handling";
 import { V3 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
@@ -14,8 +15,10 @@ import {
 } from "viewer/model/accessors/dataset_accessor";
 import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import type { Action } from "viewer/model/actions/actions";
+import { dispatchGetNewIdAsync } from "viewer/model/actions/actions";
 import { addUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
+import { waitUntilRebaseFinished } from "viewer/model/helpers/bounding_box_creation_helpers";
 
 // These values should be kept in sync with the documentation:
 // docs/automation/choosing_mags_and_bboxes.md
@@ -137,7 +140,7 @@ function GenerateBoundingBoxesModalInner({ isOpen, onClose, magnification, jobTy
     setIsGenerating(true);
 
     // Defer the loop to allow the loading state to render first.
-    setTimeout(() => {
+    setTimeout(async () => {
       try {
         const mag = selectedMag;
         // Restrict sampling to a selected bounding box if one is chosen, otherwise the whole dataset.
@@ -184,6 +187,7 @@ function GenerateBoundingBoxesModalInner({ isOpen, onClose, magnification, jobTy
         let placed = 0;
         let retries = 0;
         const actions: ReturnType<typeof addUserBoundingBoxAction>[] = [];
+        const tracingId = getSomeTracing(annotation).tracingId;
 
         while (placed < numberOfBoxes && retries < MAX_RETRIES) {
           const boxMin = samplePosition();
@@ -201,18 +205,32 @@ function GenerateBoundingBoxesModalInner({ isOpen, onClose, magnification, jobTy
           }
 
           placedBoxes.push(candidate);
+          // Reserved sequentially so every generated box gets a collision-free id, even in
+          // collaborative annotations where other users might be creating bounding boxes too.
+          // If this turns out to become a bottleneck, we can batch-allocate ID before this
+          // loop. This will only be relevant when generating bounding boxes in a collaborative
+          // context, though.
+          const id = await dispatchGetNewIdAsync(dispatch, tracingId, "BoundingBox");
           actions.push(
-            addUserBoundingBoxAction({
-              boundingBox: { min: boxMin, max: boxMax },
-              name: `Generated Bounding Box ${placed + 1}`,
-              color: getRandomColor(),
-              isVisible: true,
-            }),
+            addUserBoundingBoxAction(
+              {
+                boundingBox: { min: boxMin, max: boxMax },
+                name: `Generated Bounding Box ${placed + 1}`,
+                color: getRandomColor(),
+                isVisible: true,
+              },
+              undefined,
+              id,
+            ),
           );
           placed++;
         }
 
         if (actions.length > 0) {
+          // Wait out any active rebase so the batch is not dropped by the rebase edit guard
+          // (see rebase_edit_guard.ts), then dispatch synchronously. Ids were already reserved
+          // above and stay valid across the rebase.
+          await waitUntilRebaseFinished();
           dispatch(batchActions(actions, "ADD_NEW_USER_BOUNDING_BOX") as unknown as Action);
         }
 
@@ -223,6 +241,8 @@ function GenerateBoundingBoxesModalInner({ isOpen, onClose, magnification, jobTy
         }
 
         onClose();
+      } catch (error) {
+        handleGenericError(error as Error, "Could not generate the bounding boxes.");
       } finally {
         setIsGenerating(false);
       }

@@ -4,7 +4,7 @@ import { getAvailableTasksReport } from "admin/rest_api";
 import { Spin, Table, Tag, Tooltip } from "antd";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import { useQueryWithErrorHandling } from "libs/react_hooks";
-import { compareBy, localeCompareBy } from "libs/utils";
+import { compareBy, localeCompareBy, scrollToTop } from "libs/utils";
 import { useState } from "react";
 import type { APIAvailableTasksReport } from "types/api_types";
 
@@ -49,6 +49,7 @@ function AvailableTasksReportView() {
           dataSource={data}
           pagination={{
             defaultPageSize: 500,
+            onChange: scrollToTop,
           }}
           rowKey="id"
           size="small"

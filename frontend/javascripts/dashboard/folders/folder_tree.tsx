@@ -6,7 +6,7 @@ import {
   PlusOutlined,
 } from "@ant-design/icons";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
-import { Dropdown, type MenuProps, Modal, Tree } from "antd";
+import { App, Dropdown, type MenuProps, Tree } from "antd";
 import type { DataNode, DirectoryTreeProps } from "antd/lib/tree";
 import classNames from "classnames";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
@@ -331,6 +331,7 @@ export function useDatasetDrop(
 ] {
   const context = useDatasetCollectionContext();
   const { selectedDatasets, setSelectedDatasets } = context;
+  const { modal } = App.useApp();
   const [collectedProps, drop] = useDrop<
     DnDDropItemProps,
     void,
@@ -350,7 +351,7 @@ export function useDatasetDrop(
         }
 
         // Show a modal so that the user cannot do anything else while the datasets are being moved.
-        const modal = Modal.info({
+        const progressModal = modal.info({
           title: "Moving Datasets",
           content: `Preparing to move ${selectedDatasets.length} datasets...`,
           onCancel: (_close) => {},
@@ -363,7 +364,7 @@ export function useDatasetDrop(
           selectedDatasets.map((ds) =>
             context.queries.updateDatasetMutation.mutateAsync([ds.id, { folderId }]).then(() => {
               successCounter++;
-              modal.update({
+              progressModal.update({
                 content: `Already moved ${successCounter} of ${selectedDatasets.length} datasets.`,
               });
             }),
@@ -382,7 +383,7 @@ export function useDatasetDrop(
             // The datasets are not in the active folder anymore. Clear the selection to avoid
             // that stale instances are mutated during the next bulk action.
             setSelectedDatasets([]);
-            modal.destroy();
+            progressModal.destroy();
           });
       } else {
         const dataset = context.datasets.find((ds) => ds.id === item.datasetId);

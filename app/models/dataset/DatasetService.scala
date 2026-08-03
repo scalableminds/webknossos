@@ -820,6 +820,18 @@ class DatasetService @Inject() (
       } yield ()
     } else Fox.successful(())
 
+  // Full name of the dataset's uploader, but only if the requesting user is in the same organization as the uploader.
+  private def uploaderFullNameFor(dataset: Dataset, requestingUserOpt: Option[User]): Fox[String] =
+    (dataset._uploader, requestingUserOpt) match {
+      case (Some(uploaderId), Some(requestingUser)) =>
+        for {
+          uploader <- userService.findOneCached(uploaderId)(using GlobalAccessContext)
+          _ <- Fox.fromBool(uploader._organization == requestingUser._organization)
+          uploaderMultiUser <- multiUserDAO.findOneById(uploader._multiUser)(using GlobalAccessContext)
+        } yield uploaderMultiUser.fullName
+      case _ => Fox.empty
+    }
+
   def publicWrites(
       dataset: Dataset,
       requestingUserOpt: Option[User],
@@ -863,12 +875,14 @@ class DatasetService @Inject() (
         if (requestingUserOpt.exists(u => u._organization == dataset._organization))
           organizationDAO.getUsedStorageForDataset(dataset._id)
         else Fox.successful(0L)
+      uploaderFullNameBox <- uploaderFullNameFor(dataset, requestingUserOpt).shiftBox
     } yield Json.obj(
       "id" -> dataset._id,
       "name" -> dataset.name,
       "dataSource" -> JsonHelper.removeKeyRecursively(Json.toJson(dataSource), Set("credentialId", "credentials")),
       "dataStore" -> dataStoreJs,
       "owningOrganization" -> organization._id,
+      "uploaderFullName" -> uploaderFullNameBox.toOption,
       "allowedTeams" -> teamsJs,
       "allowedTeamsCumulative" -> teamsCumulativeJs,
       "isActive" -> dataset.isUsable,

@@ -56,7 +56,6 @@ import type {
   SplitAgglomerateUpdateAction,
   UpdateActiveNodeUpdateAction,
   UpdateActiveSegmentIdUpdateAction,
-  UpdateActiveTreeUpdateAction,
   UpdateAnnotationLayerNameUpdateAction,
   UpdateBucketUpdateAction,
   UpdateCameraAnnotationAction,
@@ -82,7 +81,7 @@ import type {
   UpsertSegmentGroupUpdateAction,
 } from "viewer/model/sagas/volume/update_actions";
 import type { StoreAnnotation } from "viewer/store";
-import { MISSING_GROUP_ID } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
+import { MISSING_GROUP_ID } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 
 type Description = {
   description: string;
@@ -505,13 +504,6 @@ const descriptionFns: Record<
     return {
       description: `Updated the active node id to ${action.value.activeNode}`,
       icon: <EditOutlined />,
-    };
-  },
-  // Should never be sent to the backend as the backend does not understand this action. Is filtered out before sending to backend.
-  updateActiveTree: (_action: AsServerAction<UpdateActiveTreeUpdateAction>): Description => {
-    return {
-      description: "",
-      icon: <div />,
     };
   },
   updateCamera: (_action: AsServerAction<UpdateCameraAnnotationAction>): Description => {

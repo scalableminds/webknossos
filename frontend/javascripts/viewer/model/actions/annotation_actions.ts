@@ -200,13 +200,17 @@ export const finishedResizingUserBoundingBoxAction = (id: number) =>
   }) as const;
 
 export const addUserBoundingBoxAction = (
-  newBoundingBox?: Partial<UserBoundingBoxWithoutId> | null | undefined,
-  center?: Vector3,
+  newBoundingBox: Partial<UserBoundingBoxWithoutId> | null | undefined,
+  center: Vector3 | undefined,
+  // Callers must reserve an id up front (e.g., via dispatchGetNewIdAsync with the
+  // "BoundingBox" domain) to avoid id collisions in collaborative annotations.
+  id: number,
 ) =>
   ({
     type: "ADD_NEW_USER_BOUNDING_BOX",
     newBoundingBox,
     center,
+    id,
   }) as const;
 
 export const deleteUserBoundingBoxAction = (id: number) =>
@@ -245,10 +249,14 @@ export const loadMipAction = (bboxId: number, bbox: UserBoundingBox, config: Mip
     config,
   }) as const;
 
-export const addUserBoundingBoxesAction = (userBoundingBoxes: Array<UserBoundingBox>) =>
+export const addUserBoundingBoxesAction = (
+  userBoundingBoxes: Array<UserBoundingBox>,
+  boundingBoxIds: number[],
+) =>
   ({
     type: "ADD_USER_BOUNDING_BOXES",
     userBoundingBoxes,
+    boundingBoxIds,
   }) as const;
 
 export const updateMeshVisibilityAction = (

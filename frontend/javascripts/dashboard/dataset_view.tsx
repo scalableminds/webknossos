@@ -67,6 +67,7 @@ type Props = {
   onSelectDataset: (dataset: APIDatasetCompact | null, multiSelect?: boolean) => void;
   onSelectFolder: (folder: FolderItem | null) => void;
   selectedDatasets: APIDatasetCompact[];
+  scrollContainerRef?: React.RefObject<HTMLElement | null>;
 };
 export type DatasetFilteringMode = "showAllDatasets" | "onlyShowReported" | "onlyShowUnreported";
 type PersistenceState = {
@@ -102,7 +103,14 @@ const refreshMenuItems: ItemType[] = [
   },
 ];
 
-function DatasetView({ user, context, onSelectDataset, selectedDatasets, onSelectFolder }: Props) {
+function DatasetView({
+  user,
+  context,
+  onSelectDataset,
+  selectedDatasets,
+  onSelectFolder,
+  scrollContainerRef,
+}: Props) {
   const searchQuery = context.globalSearchQuery;
   const setSearchQuery = context.setGlobalSearchQuery;
   const [searchTags, setSearchTags] = useState<string[]>([]);
@@ -182,6 +190,7 @@ function DatasetView({ user, context, onSelectDataset, selectedDatasets, onSelec
         updateDataset={context.updateCachedDataset}
         reloadDataset={context.reloadDataset}
         addTagToSearch={addTagToSearch}
+        scrollContainerRef={scrollContainerRef}
       />
     );
   }

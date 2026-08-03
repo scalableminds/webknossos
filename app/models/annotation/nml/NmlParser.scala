@@ -47,6 +47,9 @@ class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
   private val DEFAULT_INTERPOLATION = false
   private val DEFAULT_TIMESTAMP = 0L
 
+  private val stringListValueRegex = "^stringListValue-(\\d+)".r
+  private val additionalCoordinateRegex = "^additionalCoordinate-(\\w)".r
+
   def parse(
       name: String,
       nmlInputStream: InputStream,
@@ -292,11 +295,10 @@ class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
     )
 
   private def parseStringListValue(node: XMLNode): Seq[String] = {
-    val regex = "^stringListValue-(\\d+)".r
     val valuesWithIndex: Seq[(Int, String)] = node.attributes.flatMap {
       case attribute: Attribute =>
         attribute.key match {
-          case regex(indexStr) =>
+          case stringListValueRegex(indexStr) =>
             indexStr.toIntOpt.map { index =>
               (index, attribute.value.toString)
             }
@@ -606,17 +608,15 @@ class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
     }
   }
 
-  private def parseAdditionalCoordinateValues(node: XMLNode): Seq[AdditionalCoordinateProto] = {
-    val regex = "^additionalCoordinate-(\\w)".r
+  private def parseAdditionalCoordinateValues(node: XMLNode): Seq[AdditionalCoordinateProto] =
     node.attributes.flatMap {
       case attribute: Attribute =>
         attribute.key match {
-          case regex(axisName) =>
+          case additionalCoordinateRegex(axisName) =>
             Some(new AdditionalCoordinateProto(axisName, attribute.value.toString().toInt))
           case _ => None
         }
       case _ => None
     }.toSeq
-  }
 
 }

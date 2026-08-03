@@ -13,6 +13,8 @@ import type { Saga } from "viewer/model/sagas/effect_generators";
 import { call, select } from "viewer/model/sagas/effect_generators";
 import { api } from "viewer/singletons";
 import type { MipLayerConfig, UserBoundingBox } from "viewer/store";
+import { getLayerByName } from "../accessors/dataset_accessor";
+import BoundingBox from "../bucket_data_handling/bounding_box";
 import { ensureSceneControllerInitialized } from "./ready_sagas";
 
 // Maximum number of MIP layer downloads that run concurrently.
@@ -35,18 +37,23 @@ function* runMipDownload(
     yield* put(setMipForBBoxAction(bboxId, { ...config, isLoading: true }));
     const dataset = yield* select((state) => state.dataset);
 
-    const mag1Bbox = { min: bbox.boundingBox.min, max: bbox.boundingBox.max };
+    const mag1BBox = new BoundingBox(bbox.boundingBox);
+    const mag1BBoxClampedToLayerBounds = BoundingBox.fromBoundBoxObject(
+      getLayerByName(dataset, config.layerName).boundingBox,
+    )
+      .intersectedWith(mag1BBox)
+      .toBoundingBoxMinMaxType();
     const { actualZoomStep, textureDims, elementClass } = resolveMipLayerSource(
       dataset,
       config.layerName,
-      mag1Bbox,
+      mag1BBoxClampedToLayerBounds,
       config.zoomStep,
     );
 
     const rawDataTyped = yield* call(
       [api.data, api.data.getDataForBoundingBox],
       config.layerName,
-      mag1Bbox,
+      mag1BBoxClampedToLayerBounds,
       actualZoomStep,
       null,
       abortController.signal,

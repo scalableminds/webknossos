@@ -54,7 +54,7 @@ import {
 } from "viewer/model/types/tree_types";
 import type { RestrictionsAndSettings, SkeletonTracing, WebknossosState } from "viewer/store";
 
-import { mapGroups } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
+import { mapGroups } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import { max, maxBy, min } from "../helpers/iterator_utils";
 
 export function generateTreeName(state: WebknossosState, timestamp: number, treeId: number) {
@@ -512,8 +512,8 @@ export function createTree(
   let groupId = null;
 
   if (addToActiveGroup) {
-    const groupIdOfActiveTree = getActiveTree(skeletonTracing)?.groupId;
-    const groupIdOfActiveGroup = getActiveTreeGroup(skeletonTracing)?.groupId;
+    const groupIdOfActiveTree = getActiveTree(state)?.groupId;
+    const groupIdOfActiveGroup = getActiveTreeGroup(state)?.groupId;
     groupId = groupIdOfActiveTree ?? groupIdOfActiveGroup;
   }
 
@@ -544,7 +544,7 @@ export function getOrCreateTree(
   timestamp: number,
   type?: TreeType | null | undefined,
 ): Tree | null {
-  const tree = getTree(skeletonTracing, treeId, type);
+  const tree = getTree(state, treeId, type);
   if (tree != null) {
     return tree;
   }

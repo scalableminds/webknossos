@@ -1,6 +1,6 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { getDataset } from "admin/rest_api";
-import { Button, Modal, Radio, Spin, Tooltip } from "antd";
+import { Button, Modal, Radio, Spin, Tooltip, Typography } from "antd";
 import { Slider } from "components/slider";
 import { useFetch } from "libs/react_helpers";
 import React, { useEffect, useState } from "react";
@@ -56,7 +56,7 @@ export function NewVolumeLayerSelection({
         placement="right"
       >
         <InfoCircleOutlined />
-      </Tooltip>
+      </Tooltip>{" "}
       <Radio.Group
         onChange={(e) => {
           const index = Number.parseInt(e.target.value, 10);
@@ -109,7 +109,8 @@ export function RestrictMagnificationSlider({
 
   return lowestMagIndex < highestMagIndex ? (
     <React.Fragment>
-      <h5
+      <Typography.Title
+        level={5}
         style={{
           marginBottom: 0,
         }}
@@ -121,7 +122,7 @@ export function RestrictMagnificationSlider({
         >
           <InfoCircleOutlined />
         </Tooltip>
-      </h5>
+      </Typography.Title>
       <div
         style={{
           marginBottom: 16,

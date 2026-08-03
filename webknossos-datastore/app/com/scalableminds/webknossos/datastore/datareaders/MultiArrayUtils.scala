@@ -106,6 +106,7 @@ object MultiArrayUtils extends LazyLogging {
     val targetShape: Array[Int] = target.getShape
     val sourceRanges = new util.ArrayList[Range]
     val targetRanges = new util.ArrayList[Range]
+    var hasOverlap = true
     for (dimension <- offset.indices) {
       val dimOffset = offset(dimension)
       var sourceFirst = 0
@@ -120,16 +121,27 @@ object MultiArrayUtils extends LazyLogging {
       val maxSSteps = sourceShape(dimension) - sourceFirst
       val maxTSteps = targetShape(dimension) - targetFirst
       val maxSteps = Math.min(maxSSteps, maxTSteps)
-      val sourceLast = sourceFirst + maxSteps
-      val targetLast = targetFirst + maxSteps
-      sourceRanges.add(new Range(sourceFirst, sourceLast - 1))
-      targetRanges.add(new Range(targetFirst, targetLast - 1))
+      // A non-positive maxSteps means source and target do not overlap at all in this dimension.
+      // This can happen if the image array does not match the layer bbox exactly.
+      // One legitimate case for this is downsampling pyramids where the in-mag bbox extent is rounded
+      // down in the source data, but wk attempts reading with the rounded-up extent.
+      // There is nothing to copy in that case.
+      if (maxSteps <= 0) {
+        hasOverlap = false
+      } else {
+        val sourceLast = sourceFirst + maxSteps
+        val targetLast = targetFirst + maxSteps
+        sourceRanges.add(new Range(sourceFirst, sourceLast - 1))
+        targetRanges.add(new Range(targetFirst, targetLast - 1))
+      }
     }
-    val sourceRangeIterator = source.getRangeIterator(sourceRanges)
-    val targetRangeIterator = target.getRangeIterator(targetRanges)
-    val elementType = source.getElementType
-    val setter = createValueSetter(elementType)
-    while (sourceRangeIterator.hasNext) setter.set(sourceRangeIterator, targetRangeIterator)
+    if (hasOverlap) {
+      val sourceRangeIterator = source.getRangeIterator(sourceRanges)
+      val targetRangeIterator = target.getRangeIterator(targetRanges)
+      val elementType = source.getElementType
+      val setter = createValueSetter(elementType)
+      while (sourceRangeIterator.hasNext) setter.set(sourceRangeIterator, targetRangeIterator)
+    }
   }
 
   private def createValueSetter(elementType: Class[?]): MultiArrayUtils.ValueSetter =

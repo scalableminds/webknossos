@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(174);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(176);
 COMMIT TRANSACTION;
 
 
@@ -665,7 +665,7 @@ CREATE TABLE webknossos.folders(
     _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
     name TEXT NOT NULL CHECK (name !~ '/'),
     metadata JSONB  NOT NULL DEFAULT '[]',
-    created TIMESTAMPTZ DEFAULT NOW(),
+    created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
     CONSTRAINT metadataIsJsonArray CHECK(jsonb_typeof(metadata) = 'array')
 );
@@ -925,6 +925,15 @@ CREATE INDEX ON webknossos.dataset_mags(COALESCE(realPath, path));
 CREATE INDEX ON webknossos.dataset_layer_attachments(path);
 CREATE INDEX ON webknossos.organization_usedStorage_mags(_organization);
 CREATE INDEX ON webknossos.organization_usedStorage_attachments(_organization);
+CREATE INDEX ON webknossos.user_team_roles(_team);
+CREATE INDEX ON webknossos.dataset_allowedTeams(_team);
+CREATE INDEX ON webknossos.folder_allowedTeams(_team);
+CREATE INDEX ON webknossos.annotation_sharedTeams(_team);
+CREATE INDEX ON webknossos.folder_paths(_descendant);
+CREATE INDEX ON webknossos.jobs(state, _dataStore, created);
+CREATE INDEX ON webknossos.jobs(_worker);
+CREATE INDEX ON webknossos.credit_transactions(_paid_job);
+CREATE INDEX ON webknossos.credit_transactions(_organization);
 
 ALTER TABLE webknossos.annotations
   ADD CONSTRAINT task_ref FOREIGN KEY(_task) REFERENCES webknossos.tasks(_id) ON DELETE SET NULL DEFERRABLE,

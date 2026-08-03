@@ -1,4 +1,5 @@
 import LinkButton from "components/link_button";
+import { handleGenericError } from "libs/error_handling";
 import { V2, V3 } from "libs/mjs";
 import createProgressCallback, { type ProgressCallback } from "libs/progress_callback";
 import Toast from "libs/toast";
@@ -15,6 +16,7 @@ import { getDisabledInfoForTools } from "viewer/model/accessors/disabled_tool_ac
 import { getActiveMagIndexForLayer } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool, Toolkit } from "viewer/model/accessors/tool_accessor";
 import { enforceActiveVolumeTracing } from "viewer/model/accessors/volumetracing_accessor";
+import { dispatchGetNewIdAsync } from "viewer/model/actions/actions";
 import { addUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
 import {
   type FloodFillAction,
@@ -27,8 +29,11 @@ import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import { createOperationContext } from "viewer/model/sagas/operation_context_saga";
 import { requestBucketModificationInVolumeTracing } from "viewer/model/sagas/saga_helpers";
-import { Model } from "viewer/singletons";
-import { getUserBoundingBoxesThatContainPosition } from "../../accessors/tracing_accessor";
+import { Model, Store } from "viewer/singletons";
+import {
+  getSomeTracing,
+  getUserBoundingBoxesThatContainPosition,
+} from "../../accessors/tracing_accessor";
 import { applyLabeledVoxelMapToAllMissingMags } from "./helpers";
 
 const NO_FLOODFILL_BBOX_TOAST_KEY = "NO_FLOODFILL_BBOX";
@@ -393,16 +398,31 @@ function* notifyUserAboutResult(
         },
       );
       if (createNewBoundingBox) {
-        yield* put(
-          addUserBoundingBoxAction({
-            boundingBox: coveredBoundingBox,
-            name: `Limits of flood-fill (source_id=${oldSegmentIdAtSeed}, target_id=${activeCellId}, seed=${seedPosition.join(
-              ",",
-            )}, timestamp=${Date.now()})`,
-            color: getRandomColor(),
-            isVisible: true,
-          }),
-        );
+        try {
+          const tracingStoringBBoxes = yield* select((state) => getSomeTracing(state.annotation));
+          const id = yield* call(
+            dispatchGetNewIdAsync,
+            Store.dispatch,
+            tracingStoringBBoxes.tracingId,
+            "BoundingBox",
+          );
+          yield* put(
+            addUserBoundingBoxAction(
+              {
+                boundingBox: coveredBoundingBox,
+                name: `Limits of flood-fill (source_id=${oldSegmentIdAtSeed}, target_id=${activeCellId}, seed=${seedPosition.join(
+                  ",",
+                )}, timestamp=${Date.now()})`,
+                color: getRandomColor(),
+                isVisible: true,
+              },
+              undefined,
+              id,
+            ),
+          );
+        } catch (error) {
+          handleGenericError(error as Error, "Could not create a bounding box for the flood-fill.");
+        }
       }
     } else {
       showSuccessMsg = true;

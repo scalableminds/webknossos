@@ -193,11 +193,19 @@ const DatasetSettingsStorageTabWithDataset = ({ dataset }: { dataset: APIDataset
             tooltip="How this dataset was imported to WEBKNOSSOS"
             style={{ height: "100%" }}
             content={
-              dataset.creationType != null ? (
-                <Text code>{dataset.creationType}</Text>
-              ) : (
-                <Text>(unknown)</Text>
-              )
+              <>
+                {dataset.creationType != null ? (
+                  <Text code>{dataset.creationType}</Text>
+                ) : (
+                  <Text>(unknown)</Text>
+                )}
+                {dataset.uploaderFullName != null && (
+                  <>
+                    <br />
+                    <Text type="secondary">Uploaded by {dataset.uploaderFullName}</Text>
+                  </>
+                )}
+              </>
             }
           />
         </Col>

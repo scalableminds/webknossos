@@ -37,7 +37,7 @@ import type {
   UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/volume/update_actions";
 import { combinedReducer, type WebknossosState } from "viewer/store";
-import { makeBasicGroupObject } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
+import { makeBasicGroupObject } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import { afterAll, describe, expect, it, test } from "vitest";
 
 const enforceVolumeTracing = (state: WebknossosState) => {
@@ -142,12 +142,16 @@ describe("Update Action Application for VolumeTracing", () => {
       },
       tracingId,
     ),
-    addUserBoundingBoxAction({
-      boundingBox: { min: [0, 0, 0], max: [10, 10, 10] },
-      name: "UserBBox",
-      color: [1, 2, 3],
-      isVisible: true,
-    }),
+    addUserBoundingBoxAction(
+      {
+        boundingBox: { min: [0, 0, 0], max: [10, 10, 10] },
+        name: "UserBBox",
+        color: [1, 2, 3],
+        isVisible: true,
+      },
+      undefined,
+      1,
+    ),
     changeUserBoundingBoxAction(1, { name: "Updated Name" }),
     deleteUserBoundingBoxAction(1),
     setSegmentGroupsAction(

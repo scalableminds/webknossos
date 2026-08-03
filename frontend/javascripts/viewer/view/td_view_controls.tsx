@@ -28,19 +28,15 @@ import type { WebknossosState } from "viewer/store";
 type Props = {
   tdViewDisplayPlanes: TDViewDisplayMode;
   tdViewDisplayDatasetBorders: boolean;
-  tdViewDisplayLayerBorders: boolean;
   onChangeTdViewDisplayPlanes: (arg0: RadioChangeEvent) => void;
   onChangeTdViewDisplayDatasetBorders: SwitchChangeEventHandler;
-  onChangeTdViewDisplayLayerBorders: SwitchChangeEventHandler;
 };
 
 function TDViewControls({
   tdViewDisplayPlanes,
   tdViewDisplayDatasetBorders,
-  tdViewDisplayLayerBorders,
   onChangeTdViewDisplayPlanes,
   onChangeTdViewDisplayDatasetBorders,
-  onChangeTdViewDisplayLayerBorders,
 }: Props) {
   const settingsMenu: MenuProps = {
     style: {
@@ -96,22 +92,6 @@ function TDViewControls({
           </Row>
         ),
       },
-      {
-        key: "showLayerBorders",
-        label: (
-          <Row>
-            <Col span={14}>
-              <label className="setting-label">Show Layer Borders</label>
-            </Col>
-            <Col span={10}>
-              <Switch
-                checked={tdViewDisplayLayerBorders}
-                onChange={onChangeTdViewDisplayLayerBorders}
-              />
-            </Col>
-          </Row>
-        ),
-      },
     ],
   };
 
@@ -145,7 +125,6 @@ function mapStateToProps(state: WebknossosState) {
   return {
     tdViewDisplayPlanes: state.userConfiguration.tdViewDisplayPlanes,
     tdViewDisplayDatasetBorders: state.userConfiguration.tdViewDisplayDatasetBorders,
-    tdViewDisplayLayerBorders: state.userConfiguration.tdViewDisplayLayerBorders,
   };
 }
 
@@ -158,10 +137,6 @@ function mapDispatchToProps(dispatch: Dispatch<any>) {
 
     onChangeTdViewDisplayDatasetBorders(tdViewDisplayDatasetBorders: boolean) {
       dispatch(updateUserSettingAction("tdViewDisplayDatasetBorders", tdViewDisplayDatasetBorders));
-    },
-
-    onChangeTdViewDisplayLayerBorders(tdViewDisplayLayerBorders: boolean) {
-      dispatch(updateUserSettingAction("tdViewDisplayLayerBorders", tdViewDisplayLayerBorders));
     },
   };
 }

@@ -33,7 +33,7 @@ export function CheckCertificateModal() {
       onCancel={noop}
       width={"max(70%, 600px)"}
       keyboard={false}
-      maskClosable={false}
+      mask={{ closable: false }}
     >
       <Row justify="center" align="middle" style={{ maxHeight: "50%", width: "auto" }}>
         <Col>

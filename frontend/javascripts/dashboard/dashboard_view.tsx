@@ -2,7 +2,7 @@ import { cachedGetPricingPlanStatus } from "admin/api/organization";
 import { PlanAboutToExceedAlert, PlanExceededAlert } from "admin/organization/organization_cards";
 import { getUser, updateNovelUserExperienceInfos } from "admin/rest_api";
 import { WhatsNextHeader } from "admin/welcome_ui";
-import { Spin, Tabs } from "antd";
+import { Spin, Tabs, Typography } from "antd";
 import DashboardTaskListView from "dashboard/dashboard_task_list_view";
 import ExplorativeAnnotationsView from "dashboard/explorative_annotations_view";
 import { PublicationViewWithHeader } from "dashboard/publication_view";
@@ -253,9 +253,9 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
     };
 
     const userHeader = this.props.isAdminView ? (
-      <h3>
+      <Typography.Title level={3}>
         User: {user.firstName} {user.lastName}
-      </h3>
+      </Typography.Title>
     ) : null;
 
     const whatsNextBanner =

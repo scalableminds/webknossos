@@ -18,7 +18,19 @@ import RegistrationFormGeneric from "admin/auth/registration_form_generic";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import { maxIncludedUsersInPersonalPlan } from "admin/organization/pricing_plan_utils";
 import { getDatastores, getEditableTeams } from "admin/rest_api";
-import { Alert, AutoComplete, Button, Card, Col, Form, Input, Modal, Row, Steps } from "antd";
+import {
+  Alert,
+  AutoComplete,
+  Button,
+  Card,
+  Col,
+  Form,
+  Input,
+  Modal,
+  Row,
+  Steps,
+  Typography,
+} from "antd";
 import CreditsFooter from "components/credits_footer";
 import LinkButton from "components/link_button";
 import { DatasetSettingsProvider } from "dashboard/dataset/dataset_settings_provider";
@@ -184,7 +196,8 @@ function OptionCard({ icon, header, children, action, height }: OptionCardProps)
         >
           {icon}
         </div>
-        <h1
+        <Typography.Title
+          level={1}
           style={{
             fontSize: 20,
             lineHeight: "22px",
@@ -192,7 +205,7 @@ function OptionCard({ icon, header, children, action, height }: OptionCardProps)
           }}
         >
           {header}
-        </h1>
+        </Typography.Title>
         <p
           style={{
             fontSize: 14,
@@ -345,9 +358,9 @@ export function InviteUsersModal({
         ) : null}
         {exceedingUserLimitAlert}
         <DividerWithSubtitle>
-          <h5>
+          <Typography.Title level={5}>
             <b>Invitee Email Addresses</b>
-          </h5>
+          </Typography.Title>
         </DividerWithSubtitle>
         <p style={{ marginTop: -10 }}>
           Multiple email addresses should be separated with a comma, a space or a new line.

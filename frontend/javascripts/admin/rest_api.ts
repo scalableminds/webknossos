@@ -1119,7 +1119,7 @@ type RawAPIDataset = Omit<APIDataset, "dataSource"> & {
 function convertRawDataset(raw: RawAPIDataset): APIDataset {
   // dataLayers may be absent for a malformed/incomplete dataset (see model.spec.ts); leave that
   // to be handled downstream rather than throwing here.
-  if (raw.dataSource.dataLayers == null) {
+  if (raw.dataSource?.dataLayers == null) {
     return raw as unknown as APIDataset;
   }
   return {

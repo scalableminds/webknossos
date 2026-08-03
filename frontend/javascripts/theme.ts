@@ -39,7 +39,7 @@ const darkGlobalToken = theme.getDesignToken({
 
 // The heading scale WEBKNOSSOS has always used. It used to be enforced by global
 // `h1`–`h5` rules in antd_overwrites.less and now lives here, so that
-// <Typography.Title> renders exactly like the raw heading tags it replaced.
+// <Typography.Title> keeps the sizes of the raw heading tags it replaced.
 //
 // These are deliberately scoped to the Typography component instead of being put into
 // `globalDesignToken`: `fontSizeHeading*` / `lineHeightHeading*` are also consumed by

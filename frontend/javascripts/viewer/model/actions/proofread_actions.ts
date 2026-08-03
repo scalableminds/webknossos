@@ -116,6 +116,9 @@ export const minCutPartitionsAction = () =>
     type: "MIN_CUT_PARTITIONS",
   }) as const;
 
+// Needed in case a e.g. foreign action changed the agglomerate id of the agglomerate
+// the current user is in the progress of splitting with the multi split tool.
+// Make sure to only execute in case all multi split segments still be long to the newly given agglomerateId.
 export const setMultiCutAgglomerateIdAction = (agglomerateId: number) =>
   ({
     type: "SET_MULTI_CUT_AGGLOMERATE_ID",

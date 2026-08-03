@@ -247,7 +247,7 @@ export function PermissionsAndTeamsComponent({
       <Alert
         type="warning"
         showIcon
-        message="Users with the organization permissions “Member” and zero team permissions will only be able to view public datasets."
+        title="Users with the organization permissions “Member” and zero team permissions will only be able to view public datasets."
         style={{ marginTop: 12 }}
       />
     ) : null;

@@ -506,7 +506,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       <Modal
         open={isUploading}
         keyboard={false}
-        maskClosable={false}
+        mask={{ closable: false }}
         footer={null}
         onCancel={this.cancelUpload}
       >

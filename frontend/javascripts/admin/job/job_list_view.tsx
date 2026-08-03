@@ -84,7 +84,7 @@ export const getShowTrainingDataLink = (
         modal.info({
           title: "Training Data",
           closable: true,
-          maskClosable: true,
+          mask: { closable: true },
           content: (
             <div>
               The following annotations were used during training:

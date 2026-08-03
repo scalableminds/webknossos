@@ -1,4 +1,4 @@
-import { type Tree as AntdTree, type GetRef, Modal, type TreeProps } from "antd";
+import { type Tree as AntdTree, App, type GetRef, type TreeProps } from "antd";
 import app from "app";
 import { useWkSelector } from "libs/react_hooks";
 import { sleep } from "libs/utils";
@@ -78,6 +78,7 @@ function useScrollBenchmark(treeRef: React.RefObject<GetRef<typeof AntdTree> | n
 export function SegmentTreeView(props: Props) {
   const { hierarchy, selection, groupOperations } = props;
   const dispatch = useDispatch();
+  const { modal } = App.useApp();
   const allowUpdate = useWkSelector(mayEditVisibleSegmentation);
   const visibleSegmentationLayer = useWkSelector(getVisibleSegmentationLayer);
   const segmentGroups = useWkSelector((state) => getVisibleSegments(state).segmentGroups);
@@ -211,7 +212,7 @@ export function SegmentTreeView(props: Props) {
 
     if (multiSelection.groupId != null && multiSelection.segmentIds.length > 0) {
       if (multiSelection.segmentIds.length > 1) {
-        Modal.confirm({
+        modal.confirm({
           title: "Do you really want to select this group?",
           content: `You have ${multiSelection.segmentIds.length} selected segments. Do you really want to select this group?
         This will deselect all selected segments.`,

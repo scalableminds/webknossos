@@ -21,7 +21,9 @@ import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import type { WebknossosState } from "viewer/store";
 import { PortalTarget } from "viewer/view/layouting/portal_utils";
-import NmlUploadZoneContainer from "viewer/view/nml_upload/nml_upload_zone_container";
+import NmlUploadZoneContainer, {
+  type NmlImportOptions,
+} from "viewer/view/nml_upload/nml_upload_zone_container";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 import { DatasetFolderView } from "./dataset_folder_view";
 
@@ -125,7 +127,10 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
     });
   }
 
-  uploadNmls = async (files: Array<File>, createGroupForEachFile: boolean): Promise<void> => {
+  uploadNmls = async (
+    files: Array<File>,
+    { createGroupForEachFile }: NmlImportOptions,
+  ): Promise<void> => {
     const response = await Request.sendMultipartFormReceiveJSON("/api/annotations/upload", {
       data: {
         nmlFile: files,

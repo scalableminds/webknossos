@@ -32,8 +32,10 @@ import {
   type APIBuildInfoDatastore,
   type APIBuildInfoTracingstore,
   type APIBuildInfoWk,
+  type APIColorLayer,
   type APICompoundType,
   type APIConnectomeFile,
+  type APIDataLayer,
   type APIDataSource,
   type APIDataSourceId,
   type APIDataStore,
@@ -55,6 +57,7 @@ import {
   type APIScript,
   type APIScriptCreator,
   type APIScriptUpdater,
+  type APISegmentationLayer,
   type APIStorageDetailEntry,
   type APITaskType,
   type APITeam,
@@ -1102,6 +1105,41 @@ export async function reserveIdsForAnnotation(
 }
 
 // ### Datasets
+
+// The raw shape mirrors the JSON as it comes over the wire, before largestSegmentId
+// (an unsigned-decimal string or, for legacy payloads, a plain number) is normalized to bigint.
+type RawAPISegmentationLayer = Omit<APISegmentationLayer, "largestSegmentId"> & {
+  largestSegmentId?: string | number | null;
+};
+type RawAPIDataLayer = APIColorLayer | RawAPISegmentationLayer;
+type RawAPIDataset = Omit<APIDataset, "dataSource"> & {
+  dataSource: Omit<APIDataSource, "dataLayers"> & { dataLayers: Array<RawAPIDataLayer> };
+};
+
+function convertRawDataset(raw: RawAPIDataset): APIDataset {
+  // dataLayers may be absent for a malformed/incomplete dataset (see model.spec.ts); leave that
+  // to be handled downstream rather than throwing here.
+  if (raw.dataSource.dataLayers == null) {
+    return raw as unknown as APIDataset;
+  }
+  return {
+    ...raw,
+    dataSource: {
+      ...raw.dataSource,
+      dataLayers: raw.dataSource.dataLayers.map(
+        (layer): APIDataLayer =>
+          layer.category === "segmentation"
+            ? {
+                ...layer,
+                largestSegmentId:
+                  layer.largestSegmentId != null ? toBigInt(layer.largestSegmentId) : undefined,
+              }
+            : layer,
+      ),
+    },
+  };
+}
+
 export async function getDatasets(
   isUnreported: boolean | null | undefined = null,
   folderId: string | null = null,
@@ -1134,9 +1172,11 @@ export async function getDatasets(
 }
 
 export async function getActiveDatasetsOfMyOrganization(): Promise<Array<APIDataset>> {
-  const datasets = await Request.receiveJSON("/api/datasets?isActive=true&onlyMyOrganization=true");
-  assertResponseLimit(datasets);
-  return datasets;
+  const rawDatasets: Array<RawAPIDataset> = await Request.receiveJSON(
+    "/api/datasets?isActive=true&onlyMyOrganization=true",
+  );
+  assertResponseLimit(rawDatasets);
+  return rawDatasets.map(convertRawDataset);
 }
 
 export async function getDataset(
@@ -1150,10 +1190,11 @@ export async function getDataset(
     params.set("sharingToken", String(sharingToken));
   }
 
-  const dataset: APIDataset = await Request.receiveJSON(
+  const rawDataset: RawAPIDataset = await Request.receiveJSON(
     `/api/datasets/${datasetId}?${params}`,
     options,
   );
+  const dataset = convertRawDataset(rawDataset);
 
   if (!filterZeroMagLayers || !("dataLayers" in (dataset.dataSource ?? {}))) {
     return dataset;
@@ -1193,16 +1234,20 @@ export type DatasetUpdater = {
   dataSource?: APIDataSource;
 };
 
-export function updateDatasetPartial(
+export async function updateDatasetPartial(
   datasetId: string,
   updater: Partial<DatasetUpdater>,
   options: RequestOptions = {},
 ): Promise<APIDataset> {
-  return Request.sendJSONReceiveJSON(`/api/datasets/${datasetId}/updatePartial`, {
-    method: "PATCH",
-    data: updater,
-    ...options,
-  });
+  const rawDataset: RawAPIDataset = await Request.sendJSONReceiveJSON(
+    `/api/datasets/${datasetId}/updatePartial`,
+    {
+      method: "PATCH",
+      data: updater,
+      ...options,
+    },
+  );
+  return convertRawDataset(rawDataset);
 }
 
 export async function getDatasetViewConfiguration(
@@ -1521,16 +1566,20 @@ export async function isDatasetNameValid(datasetName: string): Promise<string | 
   }
 }
 
-export function updateDatasetTeams(
+export async function updateDatasetTeams(
   datasetId: string,
   newTeams: Array<string>,
   options: RequestOptions = {},
 ): Promise<APIDataset> {
-  return Request.sendJSONReceiveJSON(`/api/datasets/${datasetId}/teams`, {
-    method: "PATCH",
-    data: newTeams,
-    ...options,
-  });
+  const rawDataset: RawAPIDataset = await Request.sendJSONReceiveJSON(
+    `/api/datasets/${datasetId}/teams`,
+    {
+      method: "PATCH",
+      data: newTeams,
+      ...options,
+    },
+  );
+  return convertRawDataset(rawDataset);
 }
 
 export function getDatasetUsedStorageDetails(datasetId: string): Promise<APIStorageDetailEntry[]> {

@@ -24,9 +24,9 @@ export type MeshSegmentInfo = {
 };
 
 // The raw shapes mirror the JSON as it comes over the wire, before unmappedSegmentId
-// (an unsigned-decimal string or, for legacy payloads, a plain number) is normalized to bigint.
+// (an unsigned-decimal string) is normalized to bigint.
 type RawMeshChunk = Omit<MeshChunk, "unmappedSegmentId"> & {
-  unmappedSegmentId?: string | number | null;
+  unmappedSegmentId?: string | null;
 };
 type RawMeshLodInfo = Omit<MeshLodInfo, "chunks"> & { chunks: Array<RawMeshChunk> };
 type RawMeshSegmentInfo = Omit<MeshSegmentInfo, "lods"> & { lods: Array<RawMeshLodInfo> };

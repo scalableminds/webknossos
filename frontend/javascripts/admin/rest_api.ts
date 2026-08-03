@@ -1107,9 +1107,9 @@ export async function reserveIdsForAnnotation(
 // ### Datasets
 
 // The raw shape mirrors the JSON as it comes over the wire, before largestSegmentId
-// (an unsigned-decimal string or, for legacy payloads, a plain number) is normalized to bigint.
+// (an unsigned-decimal string) is normalized to bigint.
 type RawAPISegmentationLayer = Omit<APISegmentationLayer, "largestSegmentId"> & {
-  largestSegmentId?: string | number | null;
+  largestSegmentId?: string | null;
 };
 type RawAPIDataLayer = APIColorLayer | RawAPISegmentationLayer;
 type RawAPIDataset = Omit<APIDataset, "dataSource"> & {

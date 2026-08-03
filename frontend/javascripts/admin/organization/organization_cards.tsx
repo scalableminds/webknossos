@@ -1,5 +1,5 @@
 import { FieldTimeOutlined, PlusCircleOutlined, RobotOutlined } from "@ant-design/icons";
-import { Alert, Button, Card, Col, Row, Space } from "antd";
+import { Alert, App, Button, Card, Col, Row, Space } from "antd";
 import FormattedDate from "components/formatted_date";
 import dayjs from "dayjs";
 import { useWkSelector } from "libs/react_hooks";
@@ -87,6 +87,8 @@ export function PlanUpgradeCard({ organization }: { organization: APIOrganizatio
 }
 
 export function PlanExpirationCard({ organization }: { organization: APIOrganization }) {
+  const { modal } = App.useApp();
+
   if (organization.paidUntil === Constants.MAXIMUM_DATE_TIMESTAMP) return null;
 
   return (
@@ -100,7 +102,7 @@ export function PlanExpirationCard({ organization }: { organization: APIOrganiza
           <Button
             type="primary"
             icon={<FieldTimeOutlined />}
-            onClick={() => UpgradePricingPlanModal.extendPricingPlan(organization)}
+            onClick={() => UpgradePricingPlanModal.extendPricingPlan(modal, organization)}
           >
             Extend Now
           </Button>
@@ -113,6 +115,7 @@ export function PlanExpirationCard({ organization }: { organization: APIOrganiza
 export function PlanExceededAlert({ organization }: { organization: APIOrganization }) {
   const hasPlanExpired = hasPricingPlanExpired(organization);
   const activeUser = useWkSelector((state) => state.activeUser);
+  const { modal } = App.useApp();
 
   const message = hasPlanExpired
     ? "Your WEBKNOSSOS plan has expired. Renew your plan now to avoid being downgraded, users being blocked, and losing access to features."
@@ -121,7 +124,7 @@ export function PlanExceededAlert({ organization }: { organization: APIOrganizat
     <Button
       size="small"
       type="primary"
-      onClick={() => UpgradePricingPlanModal.extendPricingPlan(organization)}
+      onClick={() => UpgradePricingPlanModal.extendPricingPlan(modal, organization)}
     >
       Extend Plan Now
     </Button>
@@ -148,6 +151,7 @@ export function PlanExceededAlert({ organization }: { organization: APIOrganizat
 
 export function PlanAboutToExceedAlert({ organization }: { organization: APIOrganization }) {
   const activeUser = useWkSelector((state) => state.activeUser);
+  const { modal } = App.useApp();
   const isAboutToExpire =
     dayjs.duration(dayjs(organization.paidUntil).diff(dayjs())).asWeeks() <= 6 &&
     !hasPricingPlanExpired(organization);
@@ -157,7 +161,7 @@ export function PlanAboutToExceedAlert({ organization }: { organization: APIOrga
       <Button
         size="small"
         type="primary"
-        onClick={() => UpgradePricingPlanModal.extendPricingPlan(organization)}
+        onClick={() => UpgradePricingPlanModal.extendPricingPlan(modal, organization)}
       >
         Extend Plan Now
       </Button>

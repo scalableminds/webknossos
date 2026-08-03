@@ -32,6 +32,7 @@ import {
   Spin,
   Table,
   Tooltip,
+  Typography,
 } from "antd";
 import type { ColumnsType } from "antd/lib/table";
 import { AsyncButton, AsyncIconButton } from "components/async_clickables";
@@ -271,7 +272,9 @@ function ExpirationDate({ linkItem }: { linkItem: ZarrPrivateLink }) {
   const maybeWarning =
     Date.now() > linkItem.expirationDateTime ? (
       <Tooltip title="This link has expired">
-        <InfoCircleOutlined style={{ color: "var(--ant-color-error)" }} />
+        <Typography.Text type="danger">
+          <InfoCircleOutlined />
+        </Typography.Text>
       </Tooltip>
     ) : null;
 

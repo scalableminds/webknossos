@@ -43,17 +43,32 @@ export function NmlDropzoneContent({
   );
 }
 
-export function NmlList({ files }: { files: File[] }) {
+/**
+ * Compact summary of the files that are about to be imported. Each row states what the
+ * file actually is (size and modification time), so that the import can be sanity-checked
+ * before it is confirmed.
+ */
+export function NmlFileList({ files }: { files: File[] }) {
   return (
     <List
-      itemLayout="horizontal"
+      size="small"
+      bordered
       dataSource={files}
-      renderItem={(file: File) => (
+      rowKey={(file) => `${file.name}-${file.lastModified}-${file.size}`}
+      style={{
+        maxHeight: 232,
+        overflowY: "auto",
+        background: "var(--ant-color-fill-quaternary)",
+      }}
+      renderItem={(file) => (
         <List.Item>
           <List.Item.Meta
+            // Center the file icon next to the two text lines. Antd aligns the avatar to the
+            // top of the item by default.
+            style={{ alignItems: "center" }}
             avatar={
               <Avatar
-                size="large"
+                size={38}
                 icon={<FileOutlined />}
                 style={{
                   backgroundColor: "var(--ant-color-primary)",
@@ -61,19 +76,14 @@ export function NmlList({ files }: { files: File[] }) {
               />
             }
             title={
-              <span
-                style={{
-                  wordBreak: "break-word",
-                }}
-              >
-                {file.name}{" "}
-                <span className="ant-list-item-meta-description">({prettyBytes(file.size)})</span>
-              </span>
+              <Typography.Text strong ellipsis>
+                {file.name}
+              </Typography.Text>
             }
             description={
-              <span>
-                Last modified: <FormattedDate timestamp={file.lastModified} />
-              </span>
+              <>
+                {prettyBytes(file.size)} · modified <FormattedDate timestamp={file.lastModified} />
+              </>
             }
           />
         </List.Item>

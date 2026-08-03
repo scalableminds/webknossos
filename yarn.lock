@@ -2701,8 +2701,8 @@ __metadata:
 
 "@rwh/keystrokes@github:scalableminds/Keystrokes#dist/keystrokes":
   version: 1.5.6
-  resolution: "@rwh/keystrokes@https://github.com/scalableminds/Keystrokes.git#commit=1cabebec7b88c37a8a014b6d7cae171b29aad0c5"
-  checksum: 10c0/6e46d0b8514c5e3e17bbd8ae44cf5098374c131a3137cd1117b670307d995e647ac8dd2d7b4eadec76dc34da2d0d8cae341b5330a0e3fc56b591b9ea255bd685
+  resolution: "@rwh/keystrokes@https://github.com/scalableminds/Keystrokes.git#commit=c22c1e9b2daee7197921763a18ac288b23cb3c8f"
+  checksum: 10c0/ed6383164070cdcd738a7e7aa062b5d14cd3d860bf9928769cf61021cb572a90e29437c364bbfd1f98fe9576feaf613fa41b2d887785cc07280a60f42fe8ef06
   languageName: node
   linkType: hard
 
@@ -7901,13 +7901,6 @@ __metadata:
     json-schema: "npm:0.2.3"
     verror: "npm:1.10.0"
   checksum: 10c0/e457bd0d5f7eb11477708d77ed37a7dae88caf8226dc807a1a7d320bdb1085b7e3f89c057c2cbbcd543be41bbb934231549ef3842c9a5bbf2def940f2d07a841
-  languageName: node
-  linkType: hard
-
-"keyboardjs@npm:^2.7.0":
-  version: 2.7.0
-  resolution: "keyboardjs@npm:2.7.0"
-  checksum: 10c0/0e9ff96cc22c9f947e1ea1506832aea19ec17591e288ff7b26b8fc7b11e4f2625335e4fafb1c7b8aae219e435147f0676e5f4fca12d1cfc66fc200155db123dc
   languageName: node
   linkType: hard
 
@@ -13920,7 +13913,6 @@ __metadata:
     js-priority-queue: "npm:^0.1.5"
     jsdom: "npm:^26.1.0"
     jsonschema: "npm:^1.2.4"
-    keyboardjs: "npm:^2.7.0"
     knip: "npm:^5.82.1"
     less: "npm:^4.0.0"
     lodash-es: "npm:^4.18.1"

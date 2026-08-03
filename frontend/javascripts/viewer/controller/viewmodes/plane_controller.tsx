@@ -494,7 +494,7 @@ class PlaneController extends PureComponent<Props> {
           Store.dispatch(enterAction(event));
         },
       },
-      esc: {
+      escape: {
         onPressed: () => {
           Store.dispatch(escapeAction());
         },

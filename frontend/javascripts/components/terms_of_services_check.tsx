@@ -111,7 +111,7 @@ function OrganizationSwitchMenu({
   }));
 
   return (
-    <Dropdown menu={{ items }} overlayStyle={{ maxHeight: "60vh", overflow: "auto" }}>
+    <Dropdown menu={{ items }} styles={{ root: { maxHeight: "60vh", overflow: "auto" } }}>
       <a onClick={(e) => e.preventDefault()}>
         <Space style={style}>
           Switch Organization
@@ -146,7 +146,7 @@ function AcceptTermsOfServiceModal({
       closable={!acceptanceInfo.acceptanceDeadlinePassed}
       onCancel={acceptanceInfo.acceptanceDeadlinePassed ? noop : closeModal}
       width={850}
-      maskClosable={false}
+      mask={{ closable: false }}
       footer={[
         <OrganizationSwitchMenu
           activeUser={activeUser}
@@ -208,7 +208,7 @@ function TermsOfServiceAcceptanceMissingModal({
       closable={!acceptanceInfo.acceptanceDeadlinePassed}
       onCancel={closeModal}
       footer={[<OrganizationSwitchMenu activeUser={activeUser} key={"switch-org"} />]}
-      maskClosable={false}
+      mask={{ closable: false }}
     >
       Please ask the organization owner to accept the terms of services. {deadlineExplanation}
     </Modal>

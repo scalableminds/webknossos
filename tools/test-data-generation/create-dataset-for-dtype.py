@@ -1,3 +1,15 @@
+# /// script
+# requires-python = ">=3.10"
+# dependencies = [
+#     "webknossos",
+#     "numpy",
+# ]
+# ///
+#
+# Run with: uv run create-dataset-for-dtype.py
+# (uv reads the inline metadata above and installs the dependencies
+# into a throwaway environment automatically, no venv/pip needed)
+
 import numpy as np
 
 import webknossos as wk
@@ -19,9 +31,9 @@ def get_dtype_range(dtype):
         # This is what WebGL supports as min/max in float32 textures
         return (-(2**127), 2**127)
     elif dtype == np.uint64:
-        return (0, 2**53 - 1)
+        return (0, 2**64 - 1)
     elif dtype == np.int64:
-        return (-(2**53 - 1), 2**53 - 1)
+        return (-(2**63), 2**63 - 1)
 
     if np.issubdtype(dtype, np.integer):
         info = np.iinfo(dtype)
@@ -167,7 +179,7 @@ def write_dtype_layer(
         ] = np.arange(-top_bar_width // 2, top_bar_width // 2).astype(dtype)
 
     # Write the data to the dataset
-    mag1.write(absolute_offset=(0, 0, 0), data=data)
+    mag1.write(absolute_offset=(0, 0, 0), data=data, allow_resize=True)
 
 
 if __name__ == "__main__":

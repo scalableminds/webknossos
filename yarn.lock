@@ -2699,10 +2699,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rwh/keystrokes@github:scalableminds/Keystrokes#8dbb3aafe73910a90a14e0f5e60c99f853a7c021":
+"@rwh/keystrokes@github:scalableminds/Keystrokes#dist/keystrokes":
   version: 1.5.6
-  resolution: "@rwh/keystrokes@https://github.com/scalableminds/Keystrokes.git#commit=8dbb3aafe73910a90a14e0f5e60c99f853a7c021"
-  checksum: 10c0/afea0bc3926e9e51d7e829a1849c0a37e98fd6f3b2436c32d8eb635d6043ad66b5572312e59118cd82c85731ade9af19d625ca3c8da9f961bf4ba7c107240e2b
+  resolution: "@rwh/keystrokes@https://github.com/scalableminds/Keystrokes.git#commit=c22c1e9b2daee7197921763a18ac288b23cb3c8f"
+  checksum: 10c0/ed6383164070cdcd738a7e7aa062b5d14cd3d860bf9928769cf61021cb572a90e29437c364bbfd1f98fe9576feaf613fa41b2d887785cc07280a60f42fe8ef06
   languageName: node
   linkType: hard
 
@@ -13858,7 +13858,7 @@ __metadata:
     "@rc-component/virtual-list": "npm:^1.0.2"
     "@redux-saga/testing-utils": "npm:^1.1.5"
     "@rolldown/plugin-babel": "npm:^0.2.3"
-    "@rwh/keystrokes": "github:scalableminds/Keystrokes#8dbb3aafe73910a90a14e0f5e60c99f853a7c021"
+    "@rwh/keystrokes": "github:scalableminds/Keystrokes#dist/keystrokes"
     "@scalableminds/prop-types": "npm:^15.8.1"
     "@shaderfrog/glsl-parser": "npm:^0.3.0"
     "@svgr/plugin-svgo": "npm:^8.1.0"

@@ -131,7 +131,7 @@
     "@dnd-kit/sortable": "^8.0.0",
     "@github/webauthn-json": "^2.1.1",
     "@rc-component/virtual-list": "^1.0.2",
-    "@rwh/keystrokes": "github:scalableminds/Keystrokes#8dbb3aafe73910a90a14e0f5e60c99f853a7c021",
+    "@rwh/keystrokes": "github:scalableminds/Keystrokes#dist/keystrokes",
     "@scalableminds/prop-types": "^15.8.1",
     "@tanstack/query-async-storage-persister": "^5.83.0",
     "@tanstack/react-query": "^5.83.0",

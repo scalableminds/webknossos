@@ -1,9 +1,13 @@
 import { convertNumberTo64BitTuple } from "libs/utils";
 import type { NumberLike } from "viewer/store";
-import { AbstractCuckooTable, EMPTY_KEY_VALUE } from "./abstract_cuckoo_table";
+import { AbstractCuckooTable } from "./abstract_cuckoo_table";
 
-const EMPTY_KEY = [EMPTY_KEY_VALUE, EMPTY_KEY_VALUE] as Value;
-const EMPTY_VALUE = [EMPTY_KEY_VALUE, EMPTY_KEY_VALUE] as Value;
+// Keys in this table are segment ids. A segment id of 0 is reserved throughout webknossos
+// to mean "no segment" and can therefore never be a real key, which makes it a safe sentinel
+// here. Note that this is intentionally different from the generic EMPTY_KEY_VALUE (2**32 - 1),
+// which would collide with the legitimate, maximum representable uint64 segment id.
+const EMPTY_KEY = [0, 0] as Value;
+const EMPTY_VALUE = [0, 0] as Value;
 
 // This module defines a cuckoo table that can map from a 64-bit key to 64-bit value.
 // Both key and value are stored as a tuple of: [High-32-Bits, Low-32-Bits]

@@ -1,7 +1,12 @@
 import type { Vector3 } from "viewer/constants";
-import { AbstractCuckooTable, EMPTY_KEY_VALUE } from "./abstract_cuckoo_table";
+import { AbstractCuckooTable } from "./abstract_cuckoo_table";
 
-const EMPTY_KEY = EMPTY_KEY_VALUE;
+// Keys in this table are segment ids (truncated to 32 bits, see the callers of this class
+// for details). A segment id of 0 is reserved throughout webknossos to mean "no segment" and
+// can therefore never be a real key, which makes it a safe sentinel here. Note that this is
+// intentionally different from the generic EMPTY_KEY_VALUE (2**32 - 1), which would collide
+// with the legitimate, maximum representable (truncated) segment id.
+const EMPTY_KEY = 0;
 const EMPTY_VALUE = [EMPTY_KEY, EMPTY_KEY, EMPTY_KEY] as Value;
 
 type Key = number;

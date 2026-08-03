@@ -1,9 +1,13 @@
 import { type PixelFormatGPU, RGIntegerFormat } from "three";
 import type { NumberLike } from "viewer/store";
-import { AbstractCuckooTable, EMPTY_KEY_VALUE } from "./abstract_cuckoo_table";
+import { AbstractCuckooTable } from "./abstract_cuckoo_table";
 
-const EMPTY_KEY = EMPTY_KEY_VALUE;
-const EMPTY_VALUE = EMPTY_KEY_VALUE;
+// Keys in this table are segment ids. A segment id of 0 is reserved throughout webKnossos
+// to mean "no segment" and can therefore never be a real key, which makes it a safe sentinel
+// here. Note that this is intentionally different from the generic EMPTY_KEY_VALUE (2**32 - 1),
+// which would collide with the legitimate, maximum representable uint32 segment id.
+const EMPTY_KEY = 0;
+const EMPTY_VALUE = 0;
 
 // This module defines a cuckoo table that can map from a 32-bit key to 32-bit value.
 type Key = number;

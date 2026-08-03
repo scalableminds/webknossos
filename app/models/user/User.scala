@@ -559,8 +559,12 @@ class UserDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
       })
     } yield teamMemberships
 
+  // Re-selecting the team id from teams_ ensures the team is not marked as isDeleted = true.
   private def insertTeamMembershipQuery(userId: ObjectId, teamMembership: TeamMembership) =
-    q"INSERT INTO webknossos.user_team_roles(_user, _team, isTeamManager) VALUES($userId, ${teamMembership.teamId}, ${teamMembership.isTeamManager})".asUpdate
+    q"""INSERT INTO webknossos.user_team_roles(_user, _team, isTeamManager)
+        SELECT $userId, t._id, ${teamMembership.isTeamManager}
+        FROM webknossos.teams_ t
+        WHERE t._id = ${teamMembership.teamId}""".asUpdate
 
   def updateTeamMembershipsForUser(userId: ObjectId, teamMemberships: Seq[TeamMembership])(using
       ctx: DBAccessContext
@@ -577,11 +581,6 @@ class UserDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       _ <- assertUpdateAccess(userId)
       _ <- run(insertTeamMembershipQuery(userId, teamMembership))
-    } yield ()
-
-  def removeTeamFromAllUsers(teamId: ObjectId): Fox[Unit] =
-    for {
-      _ <- run(q"DELETE FROM webknossos.user_team_roles WHERE _team = $teamId".asUpdate)
     } yield ()
 
   def findTeamMemberDifference(potentialSubteam: ObjectId, superteams: List[ObjectId]): Fox[List[User]] =

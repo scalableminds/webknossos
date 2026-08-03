@@ -90,7 +90,7 @@ const US_LAYOUT_FALLBACK: Record<string, string> = {
 function seedDigits(base: UnmodifiedLayoutMap = new Map()): UnmodifiedLayoutMap {
   const result = new Map(base);
   for (let i = 0; i <= 9; i++) {
-    if (!(`Digit${i}` in result)) {
+    if (!result.has(`Digit${i}`)) {
       result.set(`Digit${i}`, String(i));
     }
   }
@@ -105,7 +105,8 @@ function persistToLocalStorage(map: UnmodifiedLayoutMap) {
 // Returns whether the Keyboard Layout API is available in this browser.
 // When false, sign keys may temporarily display as "@code" until runtime-learned.
 export function isKeyboardLayoutApiAvailable(): boolean {
-  return "keyboard" in navigator && "getLayoutMap" in ((navigator as any).keyboard as object);
+  const keyboardApi = (navigator as any).keyboard;
+  return keyboardApi != null && typeof keyboardApi.getLayoutMap === "function";
 }
 
 async function loadFromLayoutAPI(): Promise<boolean> {

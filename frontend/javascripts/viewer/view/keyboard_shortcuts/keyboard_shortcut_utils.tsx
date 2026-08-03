@@ -184,6 +184,24 @@ export function keySequenceToComparableKeySequence(keySeq: KeySequence): Compara
   return keySeq.map((keyCombination: string[]) => new Set<string>(keyCombination));
 }
 
+// The shortcut recorder always emits keys as "@<code>" while the defaults use literal
+// characters (e.g. MAXIMIZE is "."). Both denote the same physical key, so comparing
+// them verbatim misses collisions between a default and a re-recorded identical key.
+// Resolving "@<code>" to the character it produces on the current layout gives one
+// canonical form, and it is also the form the user sees in the UI.
+//
+// Only for comparison — never for building bindings. The "@<code>" form is what makes
+// a binding layout independent, so the binding path must keep it as is.
+function keySequenceToCollisionComparableKeySequence(
+  keySeq: KeySequence,
+  layoutMap: UnmodifiedLayoutMap,
+): ComparableKeySequence {
+  return keySeq.map(
+    (keyCombination: string[]) =>
+      new Set<string>(keyCombination.map((key) => displayKeyName(key, layoutMap))),
+  );
+}
+
 export function areComparableSequencesEqual(
   comparableKeySeq1: ComparableKeySequence,
   comparableKeySeq2: ComparableKeySequence,
@@ -202,8 +220,11 @@ export function areComparableSequencesEqual(
 // Folds a KeyboardShortcutsMap into a Map from comparable key sequence to all shortcut IDs
 // configured to activate on that sequence. An entry with more than one ID is a collision,
 // though collision domains are not considered here — that is left to the caller.
+// Pass a layoutMap to canonicalize "@<code>" keys for collision comparison. Omit it
+// when the resulting sequences are turned back into bindings, which must stay verbatim.
 export function keyboardShortcutMapToCollidingTuples(
   config: Partial<KeyboardShortcutsMap>,
+  layoutMap?: UnmodifiedLayoutMap,
 ): Map<ComparableKeySequence, KeyboardShortcutId[]> {
   // Build as a tuple list first: Map uses reference equality for object keys, so we can't
   // use map.get/has to merge entries — we need structural equality via areComparableSequencesEqual.
@@ -213,7 +234,10 @@ export function keyboardShortcutMapToCollidingTuples(
   for (const shortcutIdStr in config) {
     const shortcutId = shortcutIdStr as KeyboardShortcutId;
     for (const keySeq of config[shortcutId]!) {
-      const comparableKeySeq = keySequenceToComparableKeySequence(keySeq);
+      const comparableKeySeq =
+        layoutMap != null
+          ? keySequenceToCollisionComparableKeySequence(keySeq, layoutMap)
+          : keySequenceToComparableKeySequence(keySeq);
       const existingEntry = tuples.find(([otherChain]) =>
         areComparableSequencesEqual(comparableKeySeq, otherChain),
       );
@@ -351,6 +375,7 @@ export type Collision = {
 function createKeySequenceToShortcutIdsTuplesForCollisionDomain(
   collisionDomain: KeyboardShortcutCollisionDomain,
   shortcutMap: KeyboardShortcutsMap,
+  layoutMap: UnmodifiedLayoutMap,
 ): Map<ComparableKeySequence, KeyboardShortcutId[]> {
   const collisionDomains = getAllCollidingDomainsOf(collisionDomain);
   const relevantShortcuts: Partial<KeyboardShortcutsMap> = {};
@@ -360,7 +385,7 @@ function createKeySequenceToShortcutIdsTuplesForCollisionDomain(
       relevantShortcuts[shortcutId] = shortcutMap[shortcutId];
     }
   }
-  return keyboardShortcutMapToCollidingTuples(relevantShortcuts);
+  return keyboardShortcutMapToCollidingTuples(relevantShortcuts, layoutMap);
 }
 
 const acceptedCollisions: Collision[] = [
@@ -384,7 +409,10 @@ function isAcceptedCollision(collision: Collision): boolean {
 }
 
 // Takes a full KeyboardShortcutsMap and checks for shortcut collisions across all collision domains.
-export function checkCollisionsInShortcutMap(shortcutMap: KeyboardShortcutsMap): Collision[] {
+export function checkCollisionsInShortcutMap(
+  shortcutMap: KeyboardShortcutsMap,
+  layoutMap: UnmodifiedLayoutMap,
+): Collision[] {
   // Keyed by the key sequence as a string so that shortcutIds from different leaf
   // traversals that share the same shortcut are merged into one Collision entry.
   const collisionsByKeySeq = new Map<string, Collision>();
@@ -396,6 +424,7 @@ export function checkCollisionsInShortcutMap(shortcutMap: KeyboardShortcutsMap):
     const keySeqAndShortcutIdsTuples = createKeySequenceToShortcutIdsTuplesForCollisionDomain(
       collisionDomain,
       shortcutMap,
+      layoutMap,
     );
     for (const [comparableKeySeq, shortcutIds] of keySeqAndShortcutIdsTuples) {
       // Checking for a collision:
@@ -432,6 +461,7 @@ export function checkCollisionForShortcut(
   keyboardShortcutId: KeyboardShortcutId,
   newKeySequences: KeySequence[],
   existingShortcutMap: KeyboardShortcutsMap,
+  layoutMap: UnmodifiedLayoutMap,
 ): Collision[] {
   const metaInfoOfShortcut = ALL_KEYBOARD_SHORTCUT_META_INFOS[keyboardShortcutId];
   if (!metaInfoOfShortcut) {
@@ -445,6 +475,7 @@ export function checkCollisionForShortcut(
   const keySeqAndShortcutIdsTuples = createKeySequenceToShortcutIdsTuplesForCollisionDomain(
     metaInfoOfShortcut.getCollisionDomain(),
     tempMap,
+    layoutMap,
   );
   const collisions: Collision[] = [];
   for (const [comparableKeySeq, shortcutIds] of keySeqAndShortcutIdsTuples) {

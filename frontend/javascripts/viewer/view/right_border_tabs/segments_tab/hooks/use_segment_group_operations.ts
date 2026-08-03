@@ -1,5 +1,5 @@
 import { ExclamationCircleOutlined } from "@ant-design/icons";
-import { Modal } from "antd";
+import { App } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import React, { useCallback, useState } from "react";
 import { useDispatch } from "react-redux";
@@ -43,6 +43,7 @@ export type SegmentGroupOperations = {
 
 export function useSegmentGroupOperations(): SegmentGroupOperations {
   const dispatch = useDispatch();
+  const { modal } = App.useApp();
   const visibleSegmentationLayer = useWkSelector(getVisibleSegmentationLayer);
   const segments = useWkSelector((state) => getVisibleSegments(state).segments);
   const segmentGroups = useWkSelector((state) => getVisibleSegments(state).segmentGroups);
@@ -85,7 +86,7 @@ export function useSegmentGroupOperations(): SegmentGroupOperations {
         // Ask whether all children of the root group should be deleted
         // (doesn't need the recursive/not-recursive distinction, since
         // the root group itself cannot be removed).
-        Modal.confirm({
+        modal.confirm({
           title: "Do you want to delete all segments and groups?",
           icon: React.createElement(ExclamationCircleOutlined),
           okType: "danger",
@@ -96,7 +97,7 @@ export function useSegmentGroupOperations(): SegmentGroupOperations {
         setGroupIdPendingDeletion(groupId);
       }
     },
-    [segments, segmentGroups, deleteGroup],
+    [segments, segmentGroups, deleteGroup, modal],
   );
 
   const confirmGroupDeletion = useCallback(

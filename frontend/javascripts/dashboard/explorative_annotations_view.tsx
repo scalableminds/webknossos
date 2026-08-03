@@ -21,7 +21,7 @@ import {
   getReadableAnnotations,
   reOpenAnnotation,
 } from "admin/rest_api";
-import { Modal, Space, Spin, Table, Tag } from "antd";
+import { Space, Spin, Table, Tag } from "antd";
 import type { SearchProps } from "antd/es/input";
 import type { ColumnType } from "antd/es/table/interface";
 import { AsyncLink } from "components/async_clickables";
@@ -35,6 +35,7 @@ import { stringToColor } from "libs/format_utils";
 import Persistence from "libs/persistence";
 import Toast from "libs/toast";
 import { compareBy, filterWithSearchQueryAND, localeCompareBy, scrollToTop } from "libs/utils";
+import { type WithModalProps, withModal } from "libs/with_modal_hoc";
 import compact from "lodash-es/compact";
 import intersection from "lodash-es/intersection";
 import keyBy from "lodash-es/keyBy";
@@ -74,7 +75,7 @@ type Props = {
   userId: string | null | undefined;
   isAdminView: boolean;
   activeUser: APIUser;
-};
+} & WithModalProps;
 type State = {
   shouldShowArchivedAnnotations: boolean;
   archivedModeState: AnnotationModeState;
@@ -397,7 +398,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
       return;
     }
 
-    Modal.confirm({
+    this.props.modal.confirm({
       content: `Are you sure you want to archive ${selectedAnnotations.length} explorative annotations matching the current search query / tags? Note that annotations that you don't own are ignored.`,
       onOk: async () => {
         const selectedAnnotationIds = selectedAnnotations.map((t) => t.id);
@@ -773,4 +774,4 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
   }
 }
 
-export default ExplorativeAnnotationsView;
+export default withModal(ExplorativeAnnotationsView);

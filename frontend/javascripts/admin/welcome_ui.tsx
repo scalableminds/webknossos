@@ -4,7 +4,7 @@ import IconImportOwnData from "@images/backgrounds/import-own-data.svg?react";
 import IconInviteColleagues from "@images/backgrounds/invite-colleagues.svg?react";
 import IconOpenDemo from "@images/backgrounds/open-demo.svg?react";
 import { InviteUsersModal } from "admin/onboarding";
-import { Button, Tooltip } from "antd";
+import { Button, Tooltip, Typography } from "antd";
 import { getDemoDatasetUrl } from "features";
 import renderIndependently from "libs/render_independently";
 import { isUserAdminOrDatasetManager, isUserAdminOrTeamManager } from "libs/utils";
@@ -27,7 +27,7 @@ const WhatsNextAction = ({ title, description, icon, onClick, href, to }: WhatsN
     <Fragment>
       {icon}
       <div className="label">
-        <h2>{title}</h2>
+        <Typography.Title level={2}>{title}</Typography.Title>
         <p>{description}</p>
       </div>
     </Fragment>
@@ -78,7 +78,7 @@ export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps)
       </div>
       <div className="welcome-header-content">
         <div className="text-and-button-container">
-          <h1>Welcome to WEBKNOSSOS</h1>
+          <Typography.Title level={1}>Welcome to WEBKNOSSOS</Typography.Title>
           <p className="subtitle">
             Congratulations on your new WEBKNOSSOS account! To hit the ground running, we recommend
             the following steps to you:

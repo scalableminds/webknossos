@@ -1,4 +1,4 @@
-import { Modal } from "antd";
+import { App } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
@@ -25,6 +25,7 @@ export type TreeSelection = {
  */
 export function useTreeSelection(): TreeSelection {
   const dispatch = useDispatch();
+  const { modal } = App.useApp();
   const activeTreeId = useWkSelector((state) => state.localSkeletonState.activeTreeId);
   const [selectedTreeIds, setSelectedTreeIds] = useState<number[]>(
     activeTreeId != null ? [activeTreeId] : [],
@@ -105,7 +106,7 @@ export function useTreeSelection(): TreeSelection {
       };
 
       if (selectedTreeIds.length > 1) {
-        Modal.confirm({
+        modal.confirm({
           title: "Do you really want to select this group?",
           content: `You have ${selectedTreeIds.length} selected Trees. Do you really want to select this group?
         This will deselect all selected trees.`,
@@ -116,7 +117,7 @@ export function useTreeSelection(): TreeSelection {
         activateGroup();
       }
     },
-    [dispatch, selectedTreeIds],
+    [dispatch, selectedTreeIds, modal],
   );
 
   return {

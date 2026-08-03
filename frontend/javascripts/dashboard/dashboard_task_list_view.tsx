@@ -11,7 +11,7 @@ import {
 import { PropTypes } from "@scalableminds/prop-types";
 import { finishTask, peekNextTasks, requestTask } from "admin/api/tasks";
 import { deleteAnnotation, downloadAnnotation, resetAnnotation } from "admin/rest_api";
-import { Button, Card, Col, List, Modal, Row, Space, Tag, Tooltip } from "antd";
+import { Button, Card, Col, List, Row, Space, Tag, Tooltip } from "antd";
 import classNames from "classnames";
 import { AsyncButton, AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
@@ -24,6 +24,7 @@ import Persistence from "libs/persistence";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import { compareBy, scrollToTop } from "libs/utils";
+import { type WithModalProps, withModal } from "libs/with_modal_hoc";
 import messages from "messages";
 import { PureComponent, useContext } from "react";
 import { connect } from "react-redux";
@@ -50,7 +51,7 @@ type OwnProps = {
 type StateProps = {
   activeUser: APIUser;
 };
-type Props = OwnProps & StateProps;
+type Props = OwnProps & StateProps & WithModalProps;
 
 type State = {
   showFinishedTasks: boolean;
@@ -143,7 +144,7 @@ class DashboardTaskListView extends PureComponent<Props, State> {
   };
 
   confirmFinish(task: APITaskWithAnnotation) {
-    Modal.confirm({
+    this.props.modal.confirm({
       content: messages["annotation.finish"],
       onOk: async () => {
         const { annotation } = task;
@@ -276,7 +277,7 @@ class DashboardTaskListView extends PureComponent<Props, State> {
   };
 
   resetTask(annotation: APIAnnotation) {
-    Modal.confirm({
+    this.props.modal.confirm({
       content: messages["task.confirm_reset"],
       cancelText: messages.no,
       okText: messages.yes,
@@ -289,7 +290,7 @@ class DashboardTaskListView extends PureComponent<Props, State> {
 
   cancelAnnotation(annotation: APIAnnotation) {
     const annotationId = annotation.id;
-    Modal.confirm({
+    this.props.modal.confirm({
       content: messages["annotation.delete"],
       cancelText: messages.no,
       okText: messages.yes,
@@ -315,7 +316,7 @@ class DashboardTaskListView extends PureComponent<Props, State> {
         })}`;
       }
 
-      Modal.confirm({
+      this.props.modal.confirm({
         content: modalContent,
         onOk: () => this.getNewTask(),
       });
@@ -584,4 +585,4 @@ const mapStateToProps = (state: WebknossosState): StateProps => ({
 });
 
 const connector = connect(mapStateToProps);
-export default connector(DashboardTaskListView);
+export default connector(withModal(DashboardTaskListView));

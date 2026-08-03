@@ -3,13 +3,14 @@ import { DndContext, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { clearCache, updateDatasetDefaultConfiguration } from "admin/rest_api";
-import { Button, Divider, Modal, Row } from "antd";
+import { Button, Divider, Row } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import update from "immutability-helper";
 import ErrorHandling from "libs/error_handling";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import { isUserAdminOrDatasetManager } from "libs/utils";
+import { type WithModalProps, withModal } from "libs/with_modal_hoc";
 import partial from "lodash-es/partial";
 import { type RecommendedConfiguration, settings, settingsTooltips } from "messages";
 import React from "react";
@@ -49,7 +50,8 @@ import Histogram, { isHistogramSupported } from "./histogram_view";
 import AddVolumeLayerModal from "./modals/add_volume_layer_modal";
 
 type DatasetSettingsProps = ReturnType<typeof mapStateToProps> &
-  ReturnType<typeof mapDispatchToProps>;
+  ReturnType<typeof mapDispatchToProps> &
+  WithModalProps;
 
 type State = {
   isAddVolumeLayerModalVisible: boolean;
@@ -231,7 +233,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       description: settingsTooltips[key],
     }));
     dataSource.push(...additionalData);
-    Modal.confirm({
+    this.props.modal.confirm({
       title: "Save current view configuration as default?",
       width: 700,
       content: (
@@ -369,8 +371,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
     const state = Store.getState();
     const canBeMadeHybrid =
-      this.props.annotation.skeleton === null &&
-      this.props.annotation.annotationType === APIAnnotationTypeEnum.Explorational &&
+      !this.props.hasSkeletonLayer &&
+      this.props.annotationType === APIAnnotationTypeEnum.Explorational &&
       state.task === null;
 
     return (
@@ -392,7 +394,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         {segmentationLayerSettings}
         <SkeletonLayerSettings />
 
-        {this.props.annotation.isUpdatingCurrentlyAllowed &&
+        {this.props.isUpdatingCurrentlyAllowed &&
         this.props.controlMode === ControlModeEnum.TRACE ? (
           <>
             <Divider />
@@ -404,7 +406,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           </>
         ) : null}
 
-        {this.props.annotation.isUpdatingCurrentlyAllowed && canBeMadeHybrid ? (
+        {this.props.isUpdatingCurrentlyAllowed && canBeMadeHybrid ? (
           <Row justify="center" align="middle">
             <Button
               onClick={this.addSkeletonAnnotationLayer}
@@ -439,7 +441,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           <AddVolumeLayerModal
             dataset={this.props.dataset}
             onCancel={this.hideAddVolumeLayerModal}
-            annotation={this.props.annotation}
             preselectedLayerName={this.state.preselectedSegmentationLayerName}
             disableLayerSelection={this.state.segmentationLayerWasPreselected}
           />
@@ -453,7 +454,12 @@ const mapStateToProps = (state: WebknossosState) => ({
   datasetConfiguration: state.datasetConfiguration,
   histogramData: state.temporaryConfiguration.histogramData,
   dataset: state.dataset,
-  annotation: state.annotation,
+  // Select only the annotation fields that are actually rendered. Subscribing to
+  // the whole annotation would re-render the entire settings panel on every
+  // skeleton/volume mutation (e.g., each placed node or brush stroke).
+  isUpdatingCurrentlyAllowed: state.annotation.isUpdatingCurrentlyAllowed,
+  annotationType: state.annotation.annotationType,
+  hasSkeletonLayer: state.annotation.skeleton != null,
   controlMode: state.temporaryConfiguration.controlMode,
   isAdminOrDatasetManager:
     state.activeUser != null ? isUserAdminOrDatasetManager(state.activeUser) : false,
@@ -490,4 +496,4 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 });
 
 const connector = connect(mapStateToProps, mapDispatchToProps);
-export default connector(DatasetSettings);
+export default connector(withModal(DatasetSettings));

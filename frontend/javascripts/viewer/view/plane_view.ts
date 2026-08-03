@@ -73,6 +73,7 @@ class PlaneView {
   cameras: OrthoViewMap<OrthographicCamera>;
   isRunning: boolean = false;
   needsRerender: boolean;
+  private isRerenderScheduled: boolean = false;
   unsubscribeFunctions: Array<() => void> = [];
 
   constructor() {
@@ -115,6 +116,19 @@ class PlaneView {
 
     this.renderFunction();
     window.requestAnimationFrame(() => this.animate());
+  }
+
+  // Sets needsRerender in the next animation frame. At most one callback is
+  // queued at a time, so high-frequency callers don't pile up closures.
+  scheduleRerender(): void {
+    if (this.isRerenderScheduled) {
+      return;
+    }
+    this.isRerenderScheduled = true;
+    window.requestAnimationFrame(() => {
+      this.isRerenderScheduled = false;
+      this.needsRerender = true;
+    });
   }
 
   renderFunction(forceRender: boolean = false): void {
@@ -280,18 +294,24 @@ class PlaneView {
   }
 
   clearLastMeshHitTest = () => {
-    if (oldRaycasterHit?.node.parent != null) {
-      const sceneController = getSceneController();
-      const { segmentMeshController } = sceneController;
-      segmentMeshController.updateMeshAppearance(
+    if (oldRaycasterHit == null) {
+      return;
+    }
+    // Only update the appearance if the mesh is still part of the scene
+    // graph. In any case, clear the module-level reference as it would
+    // otherwise pin the (potentially huge) geometry of a removed mesh
+    // indefinitely (even across annotation sessions).
+    if (oldRaycasterHit.node.parent != null) {
+      const sceneController = getSceneControllerOrNull();
+      sceneController?.segmentMeshController.updateMeshAppearance(
         oldRaycasterHit.node,
         false,
         undefined,
         undefined,
         null,
       );
-      oldRaycasterHit = null;
     }
+    oldRaycasterHit = null;
   };
 
   draw(): void {
@@ -329,6 +349,10 @@ class PlaneView {
       }
     }
     this.resizeThrottled.cancel();
+    // Cancel a potential trailing invocation which would otherwise run
+    // after teardown, and release the reference to the last hit mesh.
+    this.performMeshHitTest.cancel();
+    this.clearLastMeshHitTest();
     window.removeEventListener("resize", this.resizeThrottled);
 
     for (const fn of this.unsubscribeFunctions) {
@@ -356,10 +380,7 @@ class PlaneView {
 
     this.unsubscribeFunctions.push(
       Store.subscribe(() => {
-        // Render in the next frame after the change propagated everywhere
-        window.requestAnimationFrame(() => {
-          this.needsRerender = true;
-        });
+        this.scheduleRerender();
       }),
     );
 

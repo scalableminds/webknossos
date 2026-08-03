@@ -140,9 +140,7 @@ const initialSkeletonTracing: SkeletonTracing = {
       isExpanded: true,
     },
   ],
-  activeTreeId: 1,
   activeNodeId: 1,
-  activeGroupId: null,
   boundingBox: {
     min: [0, 0, 0],
     max: [500, 500, 500],
@@ -159,11 +157,6 @@ const initialSkeletonTracing: SkeletonTracing = {
       isVisible: true,
     },
   ],
-  navigationList: {
-    list: [],
-    activeIndex: -1,
-  },
-  showSkeletons: true,
   additionalAxes: [],
 };
 
@@ -187,6 +180,10 @@ const initialState: WebknossosState = extend({}, defaultState, {
     isUpdatingCurrentlyAllowed: true,
   },
   task: TASK_ANNOTATION.task,
+  localSkeletonState: {
+    ...defaultState.localSkeletonState,
+    activeTreeId: 1,
+  },
 });
 
 async function testThatParserThrowsWithState(invalidState: WebknossosState, key: string) {
@@ -799,7 +796,9 @@ describe("NML", () => {
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
     // This should be unchanged / sanity check
     expect(newState.annotation.name).toBe(initialState.annotation.name);
-    expect(newSkeletonTracing.activeTreeId).toBe(initialSkeletonTracing.activeTreeId);
+    expect(newState.localSkeletonState.activeTreeId).toBe(
+      initialState.localSkeletonState.activeTreeId,
+    );
 
     // New node and tree ids should have been assigned
     expect(newSkeletonTracing.trees.size()).toBe(4);
@@ -869,7 +868,9 @@ describe("NML", () => {
 
     // This should be unchanged / sanity check
     expect(newState.annotation.name).toBe(initialState.annotation.name);
-    expect(newSkeletonTracing.activeTreeId).toBe(initialSkeletonTracing.activeTreeId);
+    expect(newState.localSkeletonState.activeTreeId).toBe(
+      initialState.localSkeletonState.activeTreeId,
+    );
 
     // New node and tree ids should have been assigned
     expect(size(newSkeletonTracing.treeGroups)).toBe(4);

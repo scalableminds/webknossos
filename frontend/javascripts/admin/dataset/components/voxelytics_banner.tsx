@@ -1,7 +1,7 @@
 import vxAlignmentSchema from "@images/vx/alignment-schema.png";
 import vxManualAnnotationsVertical from "@images/vx/manual-annotations-vertical.png";
 import vxSegmentationL4denseMottaEtAlDemoRotated from "@images/vx/segmentation-l4dense-motta-et-al-demo-rotated.jpg";
-import { Button, Flex, Layout } from "antd";
+import { Button, Flex, Layout, Typography } from "antd";
 import features from "features";
 import { useWkSelector } from "libs/react_hooks";
 import { useState } from "react";
@@ -26,14 +26,15 @@ const segmentationBanner = (
           "linear-gradient(181deg, transparent, rgb(59 59 59 / 20%), rgba(20, 19, 31, 0.84), #48484833, transparent)",
       }}
     >
-      <h4
+      <Typography.Title
+        level={4}
         style={{
           color: "white",
           textAlign: "center",
         }}
       >
         Are you looking for an automated segmentation of this dataset?
-      </h4>
+      </Typography.Title>
       <Flex justify="center">
         <Button
           size="middle"
@@ -53,14 +54,15 @@ const segmentationBanner = (
 
 const alignBanner = (
   <div className="crosslink-box">
-    <h4
+    <Typography.Title
+      level={4}
       style={{
         fontWeight: "bold",
         textAlign: "center",
       }}
     >
       Are you looking for dataset alignment or stitching?
-    </h4>
+    </Typography.Title>
     <img
       src={vxAlignmentSchema}
       alt="Schematic Alignment"
@@ -106,7 +108,8 @@ const manualAnnotationBanner = (
           "linear-gradient(181deg , transparent, rgba(59, 59, 59, 0.2), rgba(20, 19, 31, 0.84))",
       }}
     >
-      <h4
+      <Typography.Title
+        level={4}
         style={{
           color: "white",
           textAlign: "center",
@@ -115,7 +118,7 @@ const manualAnnotationBanner = (
         Need more workforce for annotating your dataset?
         <br />
         Have a look at our annotation services.
-      </h4>
+      </Typography.Title>
       <Flex justify="center">
         <Button
           size="middle"

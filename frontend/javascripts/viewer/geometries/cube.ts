@@ -222,6 +222,11 @@ class Cube {
       fn();
     }
     this.storePropertyUnsubscribers = [];
+
+    for (const mesh of this.getMeshes()) {
+      mesh.geometry.dispose();
+      (mesh.material as LineBasicMaterial).dispose();
+    }
   }
 }
 

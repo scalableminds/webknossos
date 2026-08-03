@@ -133,16 +133,18 @@ def write_dtype_layer(
         start_col = col * rect_width
         end_col = start_col + rect_width
 
+        # Do the offset arithmetic with Python's arbitrary-precision int/float
+        # (not the fixed-width dtype) so that out-of-range results don't
+        # silently wrap around before they reach the clamp below.
+        base_value = int(value) if np.issubdtype(dtype, np.integer) else float(value)
+
         for row_idx, row_offset in enumerate(row_offsets):
             # Define the rectangle's boundaries
             start_row = row_idx * rect_height
             end_row = start_row + rect_height
 
             # print(f"Writing {value} at {start_col}:{end_col}, {start_row}:{end_row}")
-            if row_offset < 0:
-                row_value = value - dtype(-row_offset)
-            else:
-                row_value = value + dtype(row_offset)
+            row_value = base_value + row_offset
 
             row_value = min(max_value, row_value)
             row_value = max(min_value, row_value)

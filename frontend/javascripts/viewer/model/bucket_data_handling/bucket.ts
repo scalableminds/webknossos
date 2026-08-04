@@ -706,7 +706,6 @@ export class DataBucket {
         // @ts-expect-error Removing 0n will always work (regardless of the actual type).
         this.cachedValueSet.delete(0n);
       }
-
     }
   }
 

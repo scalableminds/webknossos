@@ -63,8 +63,8 @@ function EnterLargestSegmentIdModal({
 
   const dispatch = useDispatch();
   const handleOk = () => {
-    if (largestSegmentId == null || largestSegmentId === 0n) {
-      Toast.warning("Please enter a segment id other than 0.");
+    if (largestSegmentId == null || largestSegmentId < 1n) {
+      Toast.warning("Please enter a segment id greater than 0.");
       return;
     }
     dispatch(setLargestSegmentIdAction(largestSegmentId));

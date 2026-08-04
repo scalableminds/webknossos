@@ -103,7 +103,7 @@ object ElementClass extends ExtendedEnumeration {
       case _                   => Failure(s"Unsupported element class $elementClass for ElementClassProto")
     }
 
-  /* only used for segmentation layers, so only integers 8 16 32 64, signed or unsigned */
+  /* only used for segmentation layers, so only unsigned integers 8 16 32 64, and (legacy) int64 */
   private def maxSegmentIdValue(elementClass: ElementClass.Value): Long = elementClass match {
     case ElementClass.uint8  => (1L << 8L) - 1
     case ElementClass.int8   => Byte.MaxValue
@@ -118,15 +118,6 @@ object ElementClass extends ExtendedEnumeration {
     case ElementClass.uint64 => -1L
   }
 
-  // int8/int16/int32 are signed and may hold negative segment ids; the other element classes
-  // (including, deliberately, int64 for now) start at zero.
-  private def minSegmentIdValue(elementClass: ElementClass.Value): Long = elementClass match {
-    case ElementClass.int8  => Byte.MinValue.toLong
-    case ElementClass.int16 => Short.MinValue.toLong
-    case ElementClass.int32 => Int.MinValue.toLong
-    case _                  => 0L
-  }
-
   def largestSegmentIdIsInRange(largestSegmentId: Long, elementClass: ElementClass.Value): Boolean =
     largestSegmentIdIsInRange(Some(largestSegmentId), elementClass)
 
@@ -136,8 +127,7 @@ object ElementClass extends ExtendedEnumeration {
         // Every Long bit pattern is a valid non-negative uint64 value, so there is nothing left
         // to validate beyond the elementClass check above.
         case ElementClass.uint64 => true
-        case _ =>
-          largestSegmentId >= minSegmentIdValue(elementClass) && largestSegmentId <= maxSegmentIdValue(elementClass)
+        case _                   => largestSegmentId >= 0L && largestSegmentId <= maxSegmentIdValue(elementClass)
       }
     }
 

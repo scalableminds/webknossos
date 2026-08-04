@@ -27,25 +27,6 @@ class ElementClassSegmentIdRangeTestSuite extends AsyncWordSpec {
     }
   }
 
-  "largestSegmentIdIsInRange for smaller signed element classes" should {
-    "accept the full signed range" in {
-      assert(ElementClass.largestSegmentIdIsInRange(Byte.MaxValue.toLong, ElementClass.int8))
-      assert(ElementClass.largestSegmentIdIsInRange(Byte.MinValue.toLong, ElementClass.int8))
-      assert(ElementClass.largestSegmentIdIsInRange(Short.MaxValue.toLong, ElementClass.int16))
-      assert(ElementClass.largestSegmentIdIsInRange(Short.MinValue.toLong, ElementClass.int16))
-      assert(ElementClass.largestSegmentIdIsInRange(Int.MaxValue.toLong, ElementClass.int32))
-      assert(ElementClass.largestSegmentIdIsInRange(Int.MinValue.toLong, ElementClass.int32))
-    }
-    "reject ids one past the boundary on either end" in {
-      assert(!ElementClass.largestSegmentIdIsInRange(Byte.MaxValue.toLong + 1, ElementClass.int8))
-      assert(!ElementClass.largestSegmentIdIsInRange(Byte.MinValue.toLong - 1, ElementClass.int8))
-      assert(!ElementClass.largestSegmentIdIsInRange(Short.MaxValue.toLong + 1, ElementClass.int16))
-      assert(!ElementClass.largestSegmentIdIsInRange(Short.MinValue.toLong - 1, ElementClass.int16))
-      assert(!ElementClass.largestSegmentIdIsInRange(Int.MaxValue.toLong + 1, ElementClass.int32))
-      assert(!ElementClass.largestSegmentIdIsInRange(Int.MinValue.toLong - 1, ElementClass.int32))
-    }
-  }
-
   "largestSegmentIdIsInRange for smaller unsigned element classes" should {
     "still enforce their original bounds" in {
       assert(ElementClass.largestSegmentIdIsInRange((1L << 8) - 1, ElementClass.uint8))

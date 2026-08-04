@@ -2117,10 +2117,14 @@ async function _getAgglomeratesForSegmentsHelper<T extends number | bigint>(
   url: string,
   extraParams: URLSearchParams,
 ): Promise<Mapping> {
-  if (segmentIds.size === 0) {
+  // Segment id 0 represents unlabeled/background voxels and is never a real segment. It must
+  // never be requested from the server or end up as a 0 -> 0 entry in the resulting mapping: 0 is
+  // reserved as the "empty" sentinel in the GPU-side cuckoo table and is rejected as a key there.
+  const filteredSegmentIds = new Set([...segmentIds].filter((id) => id !== 0 && id !== 0n));
+  if (filteredSegmentIds.size === 0) {
     return new Map();
   }
-  const sortedSegmentIdArray = [...segmentIds].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  const sortedSegmentIdArray = [...filteredSegmentIds].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
   const segmentIdBuffer = serializeProtoListOfLong(sortedSegmentIdArray.map(toBigInt));
   const listArrayBuffer = await doWithToken((token) => {
     const params = new URLSearchParams(extraParams);

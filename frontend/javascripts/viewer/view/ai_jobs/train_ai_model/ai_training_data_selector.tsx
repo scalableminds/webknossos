@@ -409,7 +409,7 @@ export const AiTrainingDataSection = () => {
           );
         })}
         {warningNode && (
-          <Alert message={warningNode} type="warning" showIcon style={{ marginTop: 12 }} />
+          <Alert title={warningNode} type="warning" showIcon style={{ marginTop: 12 }} />
         )}
       </Form>
     </Card>

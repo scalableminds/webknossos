@@ -1,5 +1,5 @@
 import { WarningOutlined } from "@ant-design/icons";
-import { Empty, Modal } from "antd";
+import { App, Empty } from "antd";
 import type { ItemType, MenuItemType } from "antd/es/menu/interface";
 import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
@@ -73,6 +73,7 @@ export function useNoNodeContextMenuOptions(
 ): ItemType[] {
   const { globalPosition } = contextInfo;
 
+  const { modal } = App.useApp();
   const skeletonTracing = useWkSelector((state) => state.annotation.skeleton);
   const volumeTracing = useWkSelector(getActiveSegmentationTracing);
   const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
@@ -281,7 +282,7 @@ export function useNoNodeContextMenuOptions(
   };
 
   const showAutomatedSegmentationServicesModal = (errorMessage: string, entity: string) =>
-    Modal.info({
+    modal.info({
       title: "Get More out of WEBKNOSSOS",
       content: (
         <>

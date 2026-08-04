@@ -1,11 +1,26 @@
 import { useIsMounted, useWkSelector } from "libs/react_hooks";
+import { stripFileExtension } from "libs/utils";
 import type React from "react";
 import { useCallback, useState } from "react";
 import Dropzone from "react-dropzone";
 import { useDispatch } from "react-redux";
+import { getSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { setDropzoneModalVisibilityAction } from "viewer/model/actions/ui_actions";
+import type { TreeGroup } from "viewer/model/types/tree_types";
+import { MISSING_GROUP_ID } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import { DropzoneModal, ImportModal } from "./nml_modals";
 import { NmlDropzoneContent } from "./nml_upload_components";
+
+// Kept as a stable reference so that the useWkSelector below doesn't trigger a
+// re-render on every store update when there is no skeleton tracing to read from.
+const EMPTY_TREE_GROUPS: TreeGroup[] = [];
+
+/** The destination the user picked in the import modal. */
+export type NmlImportOptions = {
+  createGroupForEachFile: boolean; // Wether to wrap each file's trees in a new group.
+  targetGroupId: number;
+  newGroupName?: string; // If createGroupForEachFile is set -> the name of the wrapping group.
+};
 
 function OverlayDropZone({ children }: { children: React.ReactNode }) {
   return (
@@ -22,18 +37,28 @@ export default function NmlUploadZoneContainer({
 }: {
   children: React.ReactNode;
   isUpdateAllowed: boolean;
-  onImport: (files: File[], createGroupForEachFile: boolean) => Promise<void>;
+  onImport: (files: File[], options: NmlImportOptions) => Promise<void>;
 }) {
   const showDropzoneModal = useWkSelector((state) => state.uiInformation.showDropzoneModal);
   const navbarHeight = useWkSelector((state) => state.uiInformation.navbarHeight);
+  const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
+  const existingTreeGroups = useWkSelector(
+    (state) => getSkeletonTracing(state.annotation)?.treeGroups ?? EMPTY_TREE_GROUPS,
+  );
   const dispatch = useDispatch();
   // dispatch(setDropzoneModalVisibilityAction(false));
 
   const [files, setFiles] = useState<File[]>([]);
   const [dropzoneActive, setDropzoneActive] = useState<boolean>(false);
   const [isImporting, setIsImporting] = useState<boolean>(false);
-  const [createGroupForEachFile, setCreateGroupForEachFile] = useState<boolean>(true);
-  const [createGroupForSingleFile, setCreateGroupForSingleFile] = useState<boolean>(false);
+  const [createGroupForEachFile, setCreateGroupForEachFile] = useState<boolean>(false);
+  const [targetGroupId, setTargetGroupId] = useState<number>(MISSING_GROUP_ID);
+  const [newGroupName, setNewGroupName] = useState<string>("");
+
+  // Only show a picker for an existing tree group when there is actually a tracing to
+  // look up tree groups from (i.e. not in the dashboard) and the drop will update it
+  // (as opposed to creating a brand new annotation).
+  const showTreeGroupSelect = isInAnnotationView && isUpdateAllowed;
 
   const isMounted = useIsMounted();
 
@@ -56,6 +81,15 @@ export default function NmlUploadZoneContainer({
     (files: File[]) => {
       setFiles(files);
       setDropzoneActive(false);
+      // Reset the target group selection for every new drop so that it defaults to the root group.
+      setTargetGroupId(MISSING_GROUP_ID);
+      // Wrapping each file into a group of its own is the sensible default for a multi-file
+      // drop, because it keeps the files apart. A single file is usually meant to be merged
+      // into the target group as-is.
+      setCreateGroupForEachFile(files.length > 1);
+      // Propose the file name as the name of a potential new group. Only relevant for
+      // single-file drops, because a new group per file is always named after its file.
+      setNewGroupName(files.length === 1 ? stripFileExtension(files[0].name) : "");
       dispatch(setDropzoneModalVisibilityAction(false));
     },
     [dispatch],
@@ -64,14 +98,18 @@ export default function NmlUploadZoneContainer({
   const importTracingFiles = useCallback(async () => {
     setIsImporting(true);
     try {
-      await onImport(files, files.length > 1 ? createGroupForEachFile : createGroupForSingleFile);
+      await onImport(files, {
+        createGroupForEachFile,
+        targetGroupId,
+        newGroupName: files.length === 1 ? newGroupName.trim() : undefined,
+      });
     } finally {
       if (isMounted()) {
         setIsImporting(false);
         setFiles([]);
       }
     }
-  }, [onImport, files, createGroupForEachFile, createGroupForSingleFile, isMounted]);
+  }, [onImport, files, createGroupForEachFile, targetGroupId, newGroupName, isMounted]);
 
   // This react component wraps its children and lays a dropzone over them.
   // That way, files can be dropped over the entire view.
@@ -120,13 +158,17 @@ export default function NmlUploadZoneContainer({
           <ImportModal
             files={files}
             createGroupForEachFile={createGroupForEachFile}
-            createGroupForSingleFile={createGroupForSingleFile}
             isUpdateAllowed={isUpdateAllowed}
             isImporting={isImporting}
             setFiles={setFiles}
             setCreateGroupForEachFile={setCreateGroupForEachFile}
-            setCreateGroupForSingleFile={setCreateGroupForSingleFile}
             importTracingFiles={importTracingFiles}
+            showTreeGroupSelect={showTreeGroupSelect}
+            existingTreeGroups={existingTreeGroups}
+            targetGroupId={targetGroupId}
+            setTargetGroupId={setTargetGroupId}
+            newGroupName={newGroupName}
+            setNewGroupName={setNewGroupName}
           />
 
           {children}

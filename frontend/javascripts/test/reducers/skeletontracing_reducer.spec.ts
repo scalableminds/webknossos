@@ -65,10 +65,8 @@ const initialState: WebknossosState = update(defaultState, {
 });
 
 const initialStateWithActiveTreeId2 = update(initialState, {
-  annotation: {
-    skeleton: {
-      activeTreeId: { $set: 2 },
-    },
+  localSkeletonState: {
+    activeTreeId: { $set: 2 },
   },
 });
 const position = [10, 10, 10] as Vector3;
@@ -87,7 +85,9 @@ describe("SkeletonTracing", () => {
 
     // This should be unchanged / sanity check
     expect(newState.annotation.name).toBe(initialState.annotation.name);
-    expect(newSkeletonTracing.activeTreeId).toBe(initialSkeletonTracing.activeTreeId);
+    expect(newState.localSkeletonState.activeTreeId).toBe(
+      initialState.localSkeletonState.activeTreeId,
+    );
     expect(newSkeletonTracing.trees.getOrThrow(1).branchPoints).toBe(
       initialSkeletonTracing.trees.getOrThrow(1).branchPoints,
     );
@@ -161,7 +161,7 @@ describe("SkeletonTracing", () => {
     );
 
     expect(maxNodeId).toBe(3);
-    expect(newSkeletonTracing.activeTreeId).toBe(3);
+    expect(newState.localSkeletonState.activeTreeId).toBe(3);
     expect(newSkeletonTracing.activeNodeId).toBe(3);
     expect(newSkeletonTracing.trees.getOrThrow(1).nodes.size()).toEqual(1);
     expect(newSkeletonTracing.trees.getOrThrow(2).nodes.size()).toEqual(0);
@@ -535,7 +535,7 @@ describe("SkeletonTracing", () => {
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
     expect(newSkeletonTracing.activeNodeId).toBe(1);
-    expect(newSkeletonTracing.activeTreeId).toBe(1);
+    expect(newState.localSkeletonState.activeTreeId).toBe(1);
   });
 
   it("should set a new active node in a different tree", () => {
@@ -554,7 +554,7 @@ describe("SkeletonTracing", () => {
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
     expect(newSkeletonTracing.activeNodeId).toBe(1);
-    expect(newSkeletonTracing.activeTreeId).toBe(1);
+    expect(newState.localSkeletonState.activeTreeId).toBe(1);
   });
 
   it("should set a new node radius", () => {
@@ -650,7 +650,7 @@ describe("SkeletonTracing", () => {
     expect(newSkeletonTracing.trees.getOrThrow(1).branchPoints.length).toBe(0);
     expect(newSkeletonTracing.trees.getOrThrow(1).nodes.size()).toBe(2);
     expect(newSkeletonTracing.activeNodeId).toBe(1);
-    expect(newSkeletonTracing.activeTreeId).toBe(1);
+    expect(newState.localSkeletonState.activeTreeId).toBe(1);
   });
 
   it("should delete specific selected branchpoint", () => {
@@ -672,7 +672,7 @@ describe("SkeletonTracing", () => {
     expect(newSkeletonTracing.trees.getOrThrow(1).branchPoints[0].nodeId).toBe(2);
     expect(newSkeletonTracing.trees.getOrThrow(1).nodes.size()).toBe(2);
     expect(newSkeletonTracing.activeNodeId).toBe(2);
-    expect(newSkeletonTracing.activeTreeId).toBe(1);
+    expect(newState.localSkeletonState.activeTreeId).toBe(1);
   });
 
   it("should delete several branchpoints", () => {
@@ -694,7 +694,7 @@ describe("SkeletonTracing", () => {
     expect(newSkeletonTracing.trees.getOrThrow(1).branchPoints.length).toBe(0);
     expect(newSkeletonTracing.trees.getOrThrow(1).nodes.size()).toBe(2);
     expect(newSkeletonTracing.activeNodeId).toBe(1);
-    expect(newSkeletonTracing.activeTreeId).toBe(1);
+    expect(newState.localSkeletonState.activeTreeId).toBe(1);
   });
 
   it("shouldn't delete more branchpoints than available", () => {
@@ -715,7 +715,7 @@ describe("SkeletonTracing", () => {
     expect(newSkeletonTracing.trees.getOrThrow(1).branchPoints.length).toBe(0);
     expect(newSkeletonTracing.trees.getOrThrow(1).nodes.size()).toBe(1);
     expect(newSkeletonTracing.activeNodeId).toBe(1);
-    expect(newSkeletonTracing.activeTreeId).toBe(1);
+    expect(newState.localSkeletonState.activeTreeId).toBe(1);
   });
 
   it("should delete a branchpoint from a different tree", () => {
@@ -758,7 +758,7 @@ describe("SkeletonTracing", () => {
     expect(newSkeletonTracing.trees.getOrThrow(2).branchPoints.length).toBe(0);
     expect(newSkeletonTracing.trees.getOrThrow(3).branchPoints.length).toBe(0);
     // as the branchpoint was in the third tree, the third tree should be active again
-    expect(newSkeletonTracing.activeTreeId).toBe(3);
+    expect(newState.localSkeletonState.activeTreeId).toBe(3);
   });
 
   it("should add a new tree", () => {
@@ -769,7 +769,7 @@ describe("SkeletonTracing", () => {
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
     expect(newSkeletonTracing.trees.size()).toBe(3);
     expect(newSkeletonTracing.trees.getOrThrow(1).treeId).toBe(1);
-    expect(newSkeletonTracing.activeTreeId).toBe(3);
+    expect(newState.localSkeletonState.activeTreeId).toBe(3);
     expect(newSkeletonTracing.activeNodeId).toBe(null);
     expect(newSkeletonTracing.trees.getOrThrow(3)).toMatchObject({
       comments: [],
@@ -790,7 +790,7 @@ describe("SkeletonTracing", () => {
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
     expect(newSkeletonTracing.trees.size()).toBe(5);
     expect(max(newSkeletonTracing.trees.values().map((tree) => tree.treeId))).toBe(5);
-    expect(newSkeletonTracing.activeTreeId).toBe(5);
+    expect(newState.localSkeletonState.activeTreeId).toBe(5);
     expect(newSkeletonTracing.activeNodeId).toBe(null);
   });
 
@@ -837,7 +837,7 @@ describe("SkeletonTracing", () => {
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(newSkeletonTracing.activeTreeId).toBe(2);
+    expect(newState.localSkeletonState.activeTreeId).toBe(2);
     expect(newSkeletonTracing.activeNodeId).toBe(null);
   });
 
@@ -857,7 +857,7 @@ describe("SkeletonTracing", () => {
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(newSkeletonTracing.activeTreeId).toBe(3);
+    expect(newState.localSkeletonState.activeTreeId).toBe(3);
     expect(newSkeletonTracing.activeNodeId).toBe(2);
   });
 
@@ -1079,8 +1079,7 @@ describe("SkeletonTracing", () => {
     // create a second tree, set first tree active then increase activeTreeId
     const newState = applyActions(initialState, [createTree, setActiveTree, selectNextTree]);
     expect(newState).not.toBe(initialState);
-    const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(newSkeletonTracing.activeTreeId).toBe(2);
+    expect(newState.localSkeletonState.activeTreeId).toBe(2);
   });
 
   it("should decrease the activeTreeId", () => {
@@ -1091,8 +1090,7 @@ describe("SkeletonTracing", () => {
     const newState = applyActions(initialState, [createTree, selectNextTree, selectNextTree]);
     expect(newState).not.toBe(initialState);
 
-    const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(newSkeletonTracing.activeTreeId).toBe(1);
+    expect(newState.localSkeletonState.activeTreeId).toBe(1);
   });
 
   it("should wrap around when decreasing the activeTreeId below 1", () => {
@@ -1108,8 +1106,7 @@ describe("SkeletonTracing", () => {
     ]);
     expect(newState).not.toBe(initialState);
 
-    const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(newSkeletonTracing.activeTreeId).toBe(3);
+    expect(newState.localSkeletonState.activeTreeId).toBe(3);
   });
 
   it("should be able to select next tree when tree ids are not consecutive", () => {
@@ -1128,8 +1125,7 @@ describe("SkeletonTracing", () => {
     ]);
     expect(newState).not.toBe(initialState);
 
-    const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(newSkeletonTracing.activeTreeId).toBe(4);
+    expect(newState.localSkeletonState.activeTreeId).toBe(4);
   });
 
   it("should shuffle the color of a specified tree", () => {
@@ -1266,7 +1262,7 @@ describe("SkeletonTracing", () => {
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
 
     expect(newSkeletonTracing.trees.getOrThrow(3).nodes.getOrThrow(1)).toBeTruthy();
-    expect(newSkeletonTracing.activeTreeId).toBe(3);
+    expect(newState.localSkeletonState.activeTreeId).toBe(3);
     expect(newSkeletonTracing.activeNodeId).toBe(1);
   });
 
@@ -1284,7 +1280,7 @@ describe("SkeletonTracing", () => {
     // tree is split
     expect(newSkeletonTracing.trees.getOrThrow(2)).toBeTruthy();
     expect(newSkeletonTracing.activeNodeId).toBe(1);
-    expect(newSkeletonTracing.activeTreeId).toBe(1);
+    expect(newState.localSkeletonState.activeTreeId).toBe(1);
   });
 
   it("should delete a specified node (2/2)", () => {
@@ -1302,7 +1298,7 @@ describe("SkeletonTracing", () => {
     // tree is split
     expect(newSkeletonTracing.trees.getOrThrow(2)).toBeTruthy();
     expect(newSkeletonTracing.activeNodeId).toBe(1);
-    expect(newSkeletonTracing.activeTreeId).toBe(1);
+    expect(newState.localSkeletonState.activeTreeId).toBe(1);
   });
 
   it("should create a branchpoint for a specified node (1/2)", () => {
@@ -1352,7 +1348,7 @@ describe("SkeletonTracing", () => {
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
     expect(newSkeletonTracing.trees.getNullable(2)).toBe(undefined);
     expect(newSkeletonTracing.trees.getOrThrow(3)).toBeTruthy();
-    expect(newSkeletonTracing.activeTreeId).toBe(3);
+    expect(newState.localSkeletonState.activeTreeId).toBe(3);
   });
 
   it("should rename a specified tree", () => {

@@ -133,7 +133,10 @@ case class ShardingSpecification(
   }
 
   def getMinishardInfo(chunkHash: Long): (Long, Long) = {
-    val rawChunkIdentifier = chunkHash >> preshift_bits
+    // Neuroglancer sharded ids are unsigned 64-bit, so this must be an unsigned shift: chunkHash can be
+    // a uint64 segment id >= 2^63, and a signed >> would sign-extend garbage bits into rawChunkIdentifier,
+    // which (for a non-identity hash function) then propagates into a wrong shard/minishard.
+    val rawChunkIdentifier = chunkHash >>> preshift_bits
     val chunkIdentifier = hashFunction(rawChunkIdentifier)
     val minishardNumber = chunkIdentifier & minishardMask
     val shardNumber = (chunkIdentifier & shardMask) >> minishard_bits

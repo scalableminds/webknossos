@@ -18,6 +18,7 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.Elemen
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, ProtoGeometryConversions}
+import com.scalableminds.webknossos.datastore.helpers.UnsignedLongOps.maxUnsigned
 import com.scalableminds.webknossos.datastore.models.*
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
@@ -849,7 +850,7 @@ class VolumeTracingService @Inject() (
       mergedVolumeStats: MergedVolumeStats
   ): Box[VolumeTracing] = {
     val largestSegmentId =
-      combineLargestSegmentIdsByMaxDefined(tracingA.largestSegmentId, tracingB.largestSegmentId, tracingA.elementClass)
+      combineLargestSegmentIdsByMaxDefined(tracingA.largestSegmentId, tracingB.largestSegmentId)
     val groupMappingA = GroupUtils.calculateSegmentGroupMapping(tracingA.segmentGroups, tracingB.segmentGroups)
     val mergedGroups = GroupUtils.mergeSegmentGroups(tracingA.segmentGroups, tracingB.segmentGroups, groupMappingA)
     val mergedBoundingBox = combineBoundingBoxes(Some(tracingA.boundingBox), Some(tracingB.boundingBox))
@@ -900,18 +901,9 @@ class VolumeTracingService @Inject() (
     )
   }
 
-  private def combineLargestSegmentIdsByMaxDefined(
-      aOpt: Option[Long],
-      bOpt: Option[Long],
-      elementClassProto: ElementClassProto
-  ): Option[Long] = {
-    // uint64 ids >= 2^63 are negative as a signed Long, so Math.max would pick the wrong one.
-    def max(a: Long, b: Long): Long =
-      if (elementClassFromProto(elementClassProto) == ElementClass.uint64) {
-        if (java.lang.Long.compareUnsigned(a, b) >= 0) a else b
-      } else Math.max(a, b)
+  private def combineLargestSegmentIdsByMaxDefined(aOpt: Option[Long], bOpt: Option[Long]): Option[Long] = {
     (aOpt, bOpt) match {
-      case (Some(a), Some(b)) => Some(max(a, b))
+      case (Some(a), Some(b)) => Some(maxUnsigned(a, b))
       case (Some(a), None)    => Some(a)
       case (None, Some(b))    => Some(b)
       case (None, None)       => None

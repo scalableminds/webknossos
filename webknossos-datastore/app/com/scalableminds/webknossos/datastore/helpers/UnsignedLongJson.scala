@@ -55,3 +55,17 @@ object UnsignedLong {
   implicit val jsonFormat: Format[UnsignedLong] =
     Format(UnsignedLongJson.reads.map(apply), UnsignedLongJson.writes.contramap(_.toLong))
 }
+
+/*
+ * Unlike UnsignedLong above (JSON boundary only), these operate on plain Long values as used
+ * in internal domain/service logic. A uint64 id >= 2^63 is negative as a signed Long, so
+ * ordinary <, >, Math.max, Math.min silently pick the wrong value once the sign bit is set.
+ * java.lang.Long.compareUnsigned agrees with signed comparison whenever both values are
+ * < 2^63 (i.e. always, for every non-uint64 element class), so these are safe to use
+ * unconditionally for any Long that represents a segment/agglomerate id, regardless of
+ * element class.
+ */
+object UnsignedLongOps {
+  def maxUnsigned(a: Long, b: Long): Long = if (java.lang.Long.compareUnsigned(a, b) >= 0) a else b
+  def minUnsigned(a: Long, b: Long): Long = if (java.lang.Long.compareUnsigned(a, b) <= 0) a else b
+}

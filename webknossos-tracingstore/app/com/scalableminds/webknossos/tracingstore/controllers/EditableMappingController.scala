@@ -98,7 +98,9 @@ class EditableMappingController @Inject() (
               tracingId,
               remoteFallbackLayer
             ) ?~> Msg.Annotation.EditableMapping.getAgglomerateIdsForSegmentsFailed
-            agglomerateIdsSorted = relevantMapping.toSeq.sortBy(_._1).map(_._2)
+            agglomerateIdsSorted = relevantMapping.toSeq
+              .sortBy(_._1)(using Ordering.fromLessThan((a, b) => java.lang.Long.compareUnsigned(a, b) < 0))
+              .map(_._2)
           } yield Ok(ListOfLong(agglomerateIdsSorted).toByteArray)
         }
       }

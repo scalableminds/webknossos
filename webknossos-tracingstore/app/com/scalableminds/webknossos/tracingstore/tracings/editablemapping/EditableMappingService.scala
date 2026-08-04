@@ -556,8 +556,17 @@ class EditableMappingService @Inject() (
       }
 
       // Add artificial root nodes which will force the two given partitions to stay connected during the min-cut.
-      val partition1RootId = -1
-      val partition2RootId = -2
+      // Their ids must not collide with any real segment id -- a fixed literal like -1L is not
+      // safe here, since for a uint64 layer that bit pattern equals the legitimate id 2^64-1.
+      // // todo: is this a performance problem?
+      val realSegmentIds = agglomerateGraph.segments.toSet
+      def freshRootId(start: Long): Long = {
+        var candidate = start
+        while (realSegmentIds.contains(candidate)) candidate -= 1
+        candidate
+      }
+      val partition1RootId = freshRootId(-1L)
+      val partition2RootId = freshRootId(partition1RootId - 1L)
       g.addVertex(partition1RootId)
       g.addVertex(partition2RootId)
       partition1Unique.foreach { segmentId =>

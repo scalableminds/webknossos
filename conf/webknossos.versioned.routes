@@ -4,7 +4,7 @@
 # Note: keep this in sync with the reported version numbers in the com.scalableminds.util.mvc.ApiVersioning trait
 
 # version log
- # changed in v15: datastore and tracingstore zarr streaming routes now server zarr v3. “zarr3_experimental” still serves the same.
+ # changed in v15: datastore and tracingstore zarr streaming routes now serve zarr v3. “zarr3_experimental” still serves the same.
  # changed in v14: Dataset upload routes and parameters have been refactored, introduced upload domain
  # changed in v13: Attachments not mentioned in the dataSource passed to updatePartial will now be deleted.
  # changed in v12: Dataset upload now expects layersToLink in new format with datasetId instead of orgaId+directoryName

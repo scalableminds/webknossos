@@ -201,7 +201,7 @@ function getEdgesAndNodes(
       style: { opacity, strokeWidth },
       labelStyle: {
         opacity,
-        fill: (labelFontColor ?? theme === "light") ? "black" : "white",
+        fill: labelFontColor ?? (theme === "light" ? "black" : "white"),
       },
       labelBgStyle: {
         fill: theme === "light" ? "white" : "black",

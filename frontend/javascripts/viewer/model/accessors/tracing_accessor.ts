@@ -150,7 +150,6 @@ export type MipEnabledBBox = { bbox: UserBoundingBox; configs: MipLayerConfig[] 
 // Layer bounding boxes are read-only and not part of the annotation's user bounding boxes, so they
 // are represented here as synthetic UserBoundingBox-shaped entries (stable negative id, see
 // getLayerBoundingBoxId) purely to reuse the existing MIP wiring (mipBBoxSettings, scene_controller).
-// isVisible is deliberately hard-coded to true for MIP rendering
 function getLayerBoundingBoxesAsUserBoundingBoxes(state: WebknossosState): UserBoundingBox[] {
   return getDataLayers(state.dataset).map((layer, index) => ({
     id: getLayerBoundingBoxId(index),

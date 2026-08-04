@@ -1,5 +1,5 @@
 import { LinkOutlined } from "@ant-design/icons";
-import { Button, Card, Flex, Tooltip } from "antd";
+import { Button, Card, Flex, Tooltip, Typography } from "antd";
 import classNames from "classnames";
 import { formatScale } from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
@@ -222,7 +222,7 @@ function PublicationCard({ publication, showDetailedLink }: Props) {
         }}
       >
         <div className="publication-description">
-          <h3 className="container-with-hidden-icon">
+          <Typography.Title level={3} className="container-with-hidden-icon">
             {publication.title}
             {showDetailedLink ? (
               <Link to={`/publications/${publication.id}`}>
@@ -239,7 +239,7 @@ function PublicationCard({ publication, showDetailedLink }: Props) {
                 </Tooltip>
               </Link>
             ) : null}
-          </h3>
+          </Typography.Title>
           <div className="publication-description-body nice-scrollbar">
             <Markdown>{publication.description}</Markdown>
           </div>

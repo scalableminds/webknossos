@@ -42,6 +42,7 @@ import {
   Space,
   Spin,
   Tooltip,
+  Typography,
 } from "antd";
 import type { FormInstance } from "antd/lib/form";
 import classnames from "classnames";
@@ -55,6 +56,7 @@ import Toast from "libs/toast";
 import { getFileExtension, isFileExtensionEqualTo, isUserAdminOrDatasetManager } from "libs/utils";
 import { Vector3Input } from "libs/vector_input";
 import { type WithBlockerProps, withBlocker } from "libs/with_blocker_hoc";
+import { type WithModalProps, withModal } from "libs/with_modal_hoc";
 import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
 import countBy from "lodash-es/countBy";
 import difference from "lodash-es/difference";
@@ -77,7 +79,7 @@ import { syncValidator } from "types/validation";
 import { AllUnits, LongUnitToShortUnitMap, UnitLong, type Vector3 } from "viewer/constants";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 import type { WebknossosState } from "viewer/store";
-import { confirmAsync, FormItemWithInfo } from "../../dashboard/dataset/helper_components";
+import { FormItemWithInfo } from "../../dashboard/dataset/helper_components";
 
 const FormItem = Form.Item;
 const REPORT_THROTTLE_THRESHOLD = 1 * 60 * 1000; // 1 min
@@ -99,7 +101,11 @@ type StateProps = {
   activeUser: APIUser | null | undefined;
   organization: APIOrganization;
 };
-type PropsWithFormAndRouter = OwnProps & StateProps & RouteComponentProps & WithBlockerProps;
+type PropsWithFormAndRouter = OwnProps &
+  StateProps &
+  RouteComponentProps &
+  WithBlockerProps &
+  WithModalProps;
 type State = {
   isUploading: boolean;
   isFinishing: boolean;
@@ -136,7 +142,7 @@ function Zarr3Example() {
   `;
   return (
     <div>
-      <h4>A typical WKW dataset looks like this:</h4>
+      <Typography.Title level={4}>A typical WKW dataset looks like this:</Typography.Title>
       <pre className="dataset-import-folder-structure-hint">{description}</pre>
     </div>
   );
@@ -151,7 +157,9 @@ function SingleLayerImageStackExample() {
   `;
   return (
     <div>
-      <h4>For example, a flat list of (sorted) image files can be imported:</h4>
+      <Typography.Title level={4}>
+        For example, a flat list of (sorted) image files can be imported:
+      </Typography.Title>
       <pre className="dataset-import-folder-structure-hint">{description}</pre>
     </div>
   );
@@ -171,7 +179,9 @@ function MultiLayerImageStackExample() {
   `;
   return (
     <div>
-      <h4>Uploading multiple image stacks (one per folder) will create a multi-layer dataset:</h4>
+      <Typography.Title level={4}>
+        Uploading multiple image stacks (one per folder) will create a multi-layer dataset:
+      </Typography.Title>
       <pre className="dataset-import-folder-structure-hint">{description}</pre>
     </div>
   );
@@ -462,7 +472,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     const { uploadId, resumableUpload, datastoreUrl } = this.state;
     this._isCancellingUpload = true;
     resumableUpload.pause();
-    const shouldCancel = await confirmAsync({
+    const shouldCancel = await this.props.modal.confirm({
       title:
         "Cancelling the running upload will delete already uploaded files on the server and cannot be undone. Are you sure you want to cancel the upload?",
       okText: "Yes, cancel the upload",
@@ -501,7 +511,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       <Modal
         open={isUploading}
         keyboard={false}
-        maskClosable={false}
+        mask={{ closable: false }}
         footer={null}
         onCancel={this.cancelUpload}
       >
@@ -583,7 +593,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         } catch (e) {
           console.error(e);
           ErrorHandling.notify(e as Error);
-          Modal.error({
+          this.props.modal.error({
             content: messages["dataset.upload_invalid_zip"],
           });
           const form = this.formRef.current;
@@ -605,7 +615,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     const containsExtension = (extension: string) => countedFileExtensions[extension] > 0;
 
     if (containsExtension("nml")) {
-      Modal.error({
+      this.props.modal.error({
         content: messages["dataset.upload_zip_with_nml"],
       });
     }
@@ -643,7 +653,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       form.setFieldsValue({
         zipFile: [],
       });
-      Modal.info({
+      this.props.modal.info({
         content: (
           <div>
             The selected dataset does not seem to be in the Zarr or WKW format. Please convert the
@@ -1352,7 +1362,7 @@ function FileUploadArea({
             marginTop: 8,
           }}
         >
-          <h5>Files</h5>
+          <Typography.Title level={5}>Files</Typography.Title>
           <div
             style={{
               maxHeight: 600,
@@ -1373,4 +1383,6 @@ const mapStateToProps = (state: WebknossosState): StateProps => ({
 });
 
 const connector = connect(mapStateToProps);
-export default connector(withBlocker(withRouter<PropsWithFormAndRouter>(DatasetUploadView)));
+export default connector(
+  withBlocker(withModal(withRouter<PropsWithFormAndRouter>(DatasetUploadView))),
+);

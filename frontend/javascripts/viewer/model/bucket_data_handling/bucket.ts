@@ -697,7 +697,16 @@ export class DataBucket {
   private ensureValueSet(): asserts this is { cachedValueSet: Set<number> | Set<bigint> } {
     if (this.cachedValueSet == null) {
       // @ts-expect-error The Set constructor accepts null and BigUint64Arrays just fine.
-      this.cachedValueSet = new Set(this.data);
+      this.cachedValueSet = new Set<number | bigint>(this.data);
+      if (this.cube.isSegmentation) {
+        // We always remove segment 0 from the value set because it should be ignored for all known
+        // use cases (e.g., when populating a mapping).
+        // @ts-expect-error Removing 0 will always work (regardless of the actual type).
+        this.cachedValueSet.delete(0);
+        // @ts-expect-error Removing 0n will always work (regardless of the actual type).
+        this.cachedValueSet.delete(0n);
+      }
+
     }
   }
 

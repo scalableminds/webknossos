@@ -14,29 +14,25 @@ import scala.concurrent.ExecutionContext
 
 case class SegmentStatisticsParameters(
     mag: Vec3Int,
-    segmentIds: List[Long],
+    segmentIds: List[UnsignedLong],
     mappingName: Option[String],
     additionalCoordinates: Option[Seq[AdditionalCoordinate]],
     annotationVersion: Option[Long]
 )
 object SegmentStatisticsParameters {
-  private val baseFormat: OFormat[SegmentStatisticsParameters] = Json.format[SegmentStatisticsParameters]
-  implicit val jsonFormat: OFormat[SegmentStatisticsParameters] =
-    UnsignedLongJson.patchListField(baseFormat, "segmentIds")(_.segmentIds, (a, v) => a.copy(segmentIds = v))
+  implicit val jsonFormat: OFormat[SegmentStatisticsParameters] = Json.format[SegmentStatisticsParameters]
 }
 case class SegmentStatisticsParametersMeshBased(
     mag: Vec3Int,
-    segmentIds: List[Long],
+    segmentIds: List[UnsignedLong],
     mappingName: Option[String],
     additionalCoordinates: Option[Seq[AdditionalCoordinate]],
     meshFileName: Option[String],
     annotationVersion: Option[Long]
 )
 object SegmentStatisticsParametersMeshBased {
-  private val baseFormat: OFormat[SegmentStatisticsParametersMeshBased] =
-    Json.format[SegmentStatisticsParametersMeshBased]
   implicit val jsonFormat: OFormat[SegmentStatisticsParametersMeshBased] =
-    UnsignedLongJson.patchListField(baseFormat, "segmentIds")(_.segmentIds, (a, v) => a.copy(segmentIds = v))
+    Json.format[SegmentStatisticsParametersMeshBased]
 }
 
 trait SegmentStatistics extends ProtoGeometryConversions {

@@ -13,7 +13,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   LayerAttachment,
   LayerAttachmentDataformat
 }
-import com.scalableminds.webknossos.datastore.helpers.UnsignedLongJson
+import com.scalableminds.webknossos.datastore.helpers.UnsignedLong
 import com.scalableminds.webknossos.datastore.storage.AttachmentKey
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{Json, OFormat}
@@ -23,20 +23,18 @@ import scala.concurrent.ExecutionContext
 
 case class ListMeshChunksRequest(
     meshFileName: String,
-    segmentId: Long,
+    segmentId: UnsignedLong,
     annotationVersion: Option[Long]
 )
 
 object ListMeshChunksRequest {
-  implicit val jsonFormat: OFormat[ListMeshChunksRequest] =
-    UnsignedLongJson
-      .patchRequiredField(Json.format[ListMeshChunksRequest], "segmentId")(_.segmentId, (a, v) => a.copy(segmentId = v))
+  implicit val jsonFormat: OFormat[ListMeshChunksRequest] = Json.format[ListMeshChunksRequest]
 }
 
 case class MeshChunkDataRequest(
     byteOffset: Long,
     byteSize: Int,
-    segmentId: Option[Long] // Only relevant for neuroglancer precomputed meshes, needed because of sharding
+    segmentId: Option[UnsignedLong] // Only relevant for neuroglancer precomputed meshes, needed because of sharding
 )
 
 case class MeshChunkDataRequestList(
@@ -45,9 +43,7 @@ case class MeshChunkDataRequestList(
 )
 
 object MeshChunkDataRequest {
-  implicit val jsonFormat: OFormat[MeshChunkDataRequest] =
-    UnsignedLongJson
-      .patchOptionalField(Json.format[MeshChunkDataRequest], "segmentId")(_.segmentId, (a, v) => a.copy(segmentId = v))
+  implicit val jsonFormat: OFormat[MeshChunkDataRequest] = Json.format[MeshChunkDataRequest]
 }
 
 object MeshChunkDataRequestList {

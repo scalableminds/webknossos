@@ -316,7 +316,7 @@ async function onUpdateNode(mergerModeState: MergerModeState, node: UpdateAction
       );
     }
 
-    if (unmappedSegmentId != null && unmappedSegmentId > 0n) {
+    if (unmappedSegmentId != null && unmappedSegmentId !== 0n) {
       await onCreateNode(
         mergerModeState,
         id,
@@ -447,7 +447,7 @@ async function mergeSegmentsOfAlreadyExistingTrees(
       await api.data.getDataValue(segmentationLayerName, segmentPosition),
     );
 
-    if (unmappedSegmentId != null && unmappedSegmentId > 0n) {
+    if (unmappedSegmentId != null && unmappedSegmentId !== 0n) {
       // Store the segment id
       nodeToUnmappedSegmentMap[node.id] = unmappedSegmentId;
       // Add to agglomerate

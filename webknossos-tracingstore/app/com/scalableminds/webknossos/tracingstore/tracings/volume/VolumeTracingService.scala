@@ -247,7 +247,7 @@ class VolumeTracingService @Inject() (
               volumeTracing,
               fallbackLayer,
               tracingId,
-              a.id,
+              a.id.toLong,
               mag,
               mappingName,
               editableMappingTracingId(volumeTracing, tracingId),
@@ -265,7 +265,7 @@ class VolumeTracingService @Inject() (
               for {
                 bucketBytes <- loadBucket(volumeLayer, bucketPosition)
                 filteredBucketBytes <- tryo(
-                  bucketScanner.deleteSegmentFromBucket(bucketBytes, bytesPerElement, isSigned, a.id)
+                  bucketScanner.deleteSegmentFromBucket(bucketBytes, bytesPerElement, isSigned, a.id.toLong)
                 ).toFox
                 _ <- saveBucket(volumeLayer, bucketPosition, filteredBucketBytes, version)
                 _ <- updateSegmentIndex(
@@ -778,7 +778,7 @@ class VolumeTracingService @Inject() (
         None,
         volumeLayer,
         request.cuboid,
-        request.segmentId,
+        request.segmentId.toLong,
         request.voxelSizeFactorInUnit,
         tc,
         None,

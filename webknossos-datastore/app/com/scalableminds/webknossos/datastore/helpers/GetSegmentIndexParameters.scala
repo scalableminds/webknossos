@@ -17,7 +17,7 @@ object GetSegmentIndexParameters {
 }
 
 case class GetMultipleSegmentIndexParameters(
-    segmentIds: List[Long],
+    segmentIds: List[UnsignedLong],
     mag: Vec3Int,
     additionalCoordinates: Option[Seq[AdditionalCoordinate]],
     mappingName: Option[String],
@@ -26,16 +26,12 @@ case class GetMultipleSegmentIndexParameters(
 )
 
 object GetMultipleSegmentIndexParameters {
-  private val baseFormat: OFormat[GetMultipleSegmentIndexParameters] = Json.format[GetMultipleSegmentIndexParameters]
-  implicit val format: Format[GetMultipleSegmentIndexParameters] =
-    UnsignedLongJson.patchListField(baseFormat, "segmentIds")(_.segmentIds, (a, v) => a.copy(segmentIds = v))
+  implicit val format: Format[GetMultipleSegmentIndexParameters] = Json.format[GetMultipleSegmentIndexParameters]
 }
 
 // positions = List of indices of buckets directly in a requested mag
-case class SegmentIndexData(segmentId: Long, positions: Seq[Vec3Int])
+case class SegmentIndexData(segmentId: UnsignedLong, positions: Seq[Vec3Int])
 
 object SegmentIndexData {
-  private val baseFormat: OFormat[SegmentIndexData] = Json.format[SegmentIndexData]
-  implicit val format: Format[SegmentIndexData] =
-    UnsignedLongJson.patchRequiredField(baseFormat, "segmentId")(_.segmentId, (a, v) => a.copy(segmentId = v))
+  implicit val format: Format[SegmentIndexData] = Json.format[SegmentIndexData]
 }

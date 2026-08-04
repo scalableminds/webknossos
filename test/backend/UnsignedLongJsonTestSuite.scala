@@ -1,6 +1,6 @@
 package backend
 
-import com.scalableminds.webknossos.datastore.helpers.UnsignedLongJson
+import com.scalableminds.webknossos.datastore.helpers.{UnsignedLong, UnsignedLongJson}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   CreateSegmentVolumeAction,
   MergeSegmentItemsVolumeAction,
@@ -41,7 +41,7 @@ class UnsignedLongJsonTestSuite extends AsyncWordSpec {
   "UnsignedLongJson-patched action formats" should {
     "round-trip a segment id above 2^53 as a JSON string, leaving other Long fields as JsNumber" in {
       val action = CreateSegmentVolumeAction(
-        id = (1L << 60) + 7L,
+        id = UnsignedLong((1L << 60) + 7L),
         anchorPosition = None,
         name = None,
         color = None,
@@ -60,7 +60,7 @@ class UnsignedLongJsonTestSuite extends AsyncWordSpec {
 
     "round-trip an id above Long.MaxValue's bit pattern (true uint64 range)" in {
       val action = UpdateActiveSegmentIdVolumeAction(
-        activeSegmentId = -1L, // 2^64 - 1
+        activeSegmentId = UnsignedLong(-1L), // 2^64 - 1
         actionTracingId = "someTracingId"
       )
       val json = Json.toJson(action)
@@ -80,10 +80,10 @@ class UnsignedLongJsonTestSuite extends AsyncWordSpec {
       assert(
         parsed == JsSuccess(
           MergeSegmentItemsVolumeAction(
-            agglomerateId1 = 111L,
-            agglomerateId2 = 222L,
-            segmentId1 = 333L,
-            segmentId2 = 444L,
+            agglomerateId1 = UnsignedLong(111L),
+            agglomerateId2 = UnsignedLong(222L),
+            segmentId1 = UnsignedLong(333L),
+            segmentId2 = UnsignedLong(444L),
             actionTracingId = "someTracingId"
           )
         )

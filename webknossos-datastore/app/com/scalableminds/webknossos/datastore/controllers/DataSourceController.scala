@@ -356,7 +356,10 @@ class DataSourceController @Inject() (
             dataLayer,
             request.body.connectomeFile
           )
-          synapses <- connectomeFileService.synapsesForAgglomerates(meshFileKey, request.body.agglomerateIds)
+          synapses <- connectomeFileService.synapsesForAgglomerates(
+            meshFileKey,
+            request.body.agglomerateIds.map(_.toLong)
+          )
         } yield Ok(Json.toJson(synapses))
       }
     }
@@ -488,7 +491,7 @@ class DataSourceController @Inject() (
                 request.body.mappingName,
                 request.body.editableMappingTracingId,
                 request.body.annotationVersion,
-                segmentOrAgglomerateId,
+                segmentOrAgglomerateId.toLong,
                 mappingNameForMeshFile = None,
                 omitMissing = true // assume agglomerate ids not present in the mapping belong to user-brushed segments
               )
@@ -522,7 +525,7 @@ class DataSourceController @Inject() (
               dataLayer,
               segmentIndexFileKey,
               agglomerateFileKeyOpt,
-              segmentId,
+              segmentId.toLong,
               request.body.mag
             )
           }
@@ -546,7 +549,7 @@ class DataSourceController @Inject() (
               dataLayer,
               segmentIndexFileKey,
               agglomerateFileKeyOpt,
-              segmentId,
+              segmentId.toLong,
               request.body.mag
             )
           }

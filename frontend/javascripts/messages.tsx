@@ -184,7 +184,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.copy_cell_id": "Hit CTRL + I to copy the currently hovered segment id",
   "tracing.segment_id_out_of_bounds": (
     requestedId: bigint,
-    validRange: readonly [number, number],
+    validRange: readonly [bigint, bigint],
   ) =>
     `Cannot create a segment with id=${requestedId} because it is not between ${validRange[0]} and ${validRange[1]}.`,
 

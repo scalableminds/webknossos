@@ -4,12 +4,12 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing.TreeAgglomerateInf
 import play.api.libs.json.{Json, OFormat}
 
 case class TreeAgglomerateInfo(
-    agglomerateId: Long,
+    agglomerateId: UnsignedLong,
     tracingId: Option[String] = None,
     mappingName: Option[String] = None
 ) {
   def toProto: TreeAgglomerateInfoProto = TreeAgglomerateInfoProto(
-    agglomerateId,
+    agglomerateId.toLong,
     tracingId,
     mappingName
   )
@@ -18,14 +18,10 @@ case class TreeAgglomerateInfo(
 object TreeAgglomerateInfo {
   def fromProto(propertyProto: TreeAgglomerateInfoProto): TreeAgglomerateInfo =
     TreeAgglomerateInfo(
-      propertyProto.agglomerateId,
+      UnsignedLong(propertyProto.agglomerateId),
       propertyProto.tracingId,
       propertyProto.mappingName
     )
 
-  implicit val jsonFormat: OFormat[TreeAgglomerateInfo] =
-    UnsignedLongJson.patchRequiredField(Json.format[TreeAgglomerateInfo], "agglomerateId")(
-      _.agglomerateId,
-      (a, v) => a.copy(agglomerateId = v)
-    )
+  implicit val jsonFormat: OFormat[TreeAgglomerateInfo] = Json.format[TreeAgglomerateInfo]
 }

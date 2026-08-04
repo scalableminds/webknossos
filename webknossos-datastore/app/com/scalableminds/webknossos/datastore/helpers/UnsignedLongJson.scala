@@ -1,20 +1,6 @@
 package com.scalableminds.webknossos.datastore.helpers
 
-import play.api.libs.json.{
-  Format,
-  JsArray,
-  JsError,
-  JsNull,
-  JsNumber,
-  JsObject,
-  JsResult,
-  JsString,
-  JsSuccess,
-  JsValue,
-  OFormat,
-  Reads,
-  Writes
-}
+import play.api.libs.json.{Format, JsError, JsNumber, JsString, JsSuccess, Reads, Writes}
 
 import scala.util.Try
 
@@ -41,69 +27,31 @@ object UnsignedLongJson {
   val writes: Writes[Long] = Writes(l => JsString(java.lang.Long.toUnsignedString(l)))
 
   val format: Format[Long] = Format(reads, writes)
+}
 
-  /*
-   * Overrides a single required Long field of an existing (typically macro-derived) OFormat to use
-   * unsigned-decimal string encoding, without having to hand-write Reads/Writes for every other field.
-   * The field is temporarily replaced with a placeholder while delegating to the base format, so that
-   * unrelated fields (including other Long fields, e.g. timestamps) keep their normal JsNumber encoding.
-   */
-  def patchRequiredField[A](base: OFormat[A], field: String)(get: A => Long, set: (A, Long) => A): OFormat[A] =
-    new OFormat[A] {
-      override def writes(a: A): JsObject =
-        base.writes(a) ++ JsObject(Seq(field -> UnsignedLongJson.writes.writes(get(a))))
-      override def reads(json: JsValue): JsResult[A] =
-        for {
-          value <- (json \ field).validate[Long](using UnsignedLongJson.reads)
-          patchedJson <- json.validate[JsObject].map(_ + (field -> JsNumber(0)))
-          baseResult <- base.reads(patchedJson)
-        } yield set(baseResult, value)
-    }
+/*
+ * A Long that is JSON-(de)serialized via UnsignedLongJson instead of the default JsNumber
+ * encoding. Giving id fields this distinct type (instead of plain Long) lets ordinary
+ * Json.format[X] macro derivation pick up the right codec automatically, instead of having to
+ * hand-write a Format for every case class that has an id field.
+ *
+ * The name reflects the unsigned-decimal *wire encoding* (java.lang.Long.toUnsignedString /
+ * parseUnsignedLong, an exact bijection over the full 64-bit space), not a claim that the
+ * wrapped value is non-negative -- a signed int64 id (or, once allowed, a negative int32/16/8
+ * id) round-trips through this encoding exactly, bit pattern preserved either way.
+ *
+ * Deliberately has no arithmetic/Ordering/Numeric instance: this type exists only for the JSON
+ * boundary. Internal domain/service logic should keep using plain Long, converting with
+ * .toLong/UnsignedLong(...) right at the point where a case class using this type is
+ * constructed or consumed.
+ */
+opaque type UnsignedLong = Long
 
-  /* Same as patchRequiredField, but for an optional Long field (e.g. largestSegmentId). */
-  def patchOptionalField[A](
-      base: OFormat[A],
-      field: String
-  )(get: A => Option[Long], set: (A, Option[Long]) => A): OFormat[A] =
-    new OFormat[A] {
-      override def writes(a: A): JsObject =
-        base.writes(a) ++ get(a)
-          .map(v => JsObject(Seq(field -> UnsignedLongJson.writes.writes(v))))
-          .getOrElse(JsObject(Seq.empty))
-      override def reads(json: JsValue): JsResult[A] =
-        for {
-          value <- (json \ field).toOption match {
-            case None | Some(JsNull) => JsSuccess(None)
-            case Some(v)             => v.validate[Long](using UnsignedLongJson.reads).map(Some(_))
-          }
-          patchedJson <- json.validate[JsObject].map(_ - field)
-          baseResult <- base.reads(patchedJson)
-        } yield set(baseResult, value)
-    }
+object UnsignedLong {
+  def apply(value: Long): UnsignedLong = value
 
-  /* Same as patchRequiredField, but for a required List[Long] field (e.g. a list of segment ids). */
-  def patchListField[A](base: OFormat[A], field: String)(get: A => List[Long], set: (A, List[Long]) => A): OFormat[A] =
-    new OFormat[A] {
-      override def writes(a: A): JsObject =
-        base.writes(a) ++ JsObject(Seq(field -> JsArray(get(a).map(UnsignedLongJson.writes.writes))))
-      override def reads(json: JsValue): JsResult[A] =
-        for {
-          values <- (json \ field).validate[List[Long]](using Reads.list(using UnsignedLongJson.reads))
-          patchedJson <- json.validate[JsObject].map(_ + (field -> JsArray()))
-          baseResult <- base.reads(patchedJson)
-        } yield set(baseResult, values)
-    }
+  extension (u: UnsignedLong) def toLong: Long = u
 
-  /* Same as patchListField, but for a required Seq[Long] field. */
-  def patchSeqField[A](base: OFormat[A], field: String)(get: A => Seq[Long], set: (A, Seq[Long]) => A): OFormat[A] =
-    new OFormat[A] {
-      override def writes(a: A): JsObject =
-        base.writes(a) ++ JsObject(Seq(field -> JsArray(get(a).map(UnsignedLongJson.writes.writes))))
-      override def reads(json: JsValue): JsResult[A] =
-        for {
-          values <- (json \ field).validate[Seq[Long]](using Reads.seq(using UnsignedLongJson.reads))
-          patchedJson <- json.validate[JsObject].map(_ + (field -> JsArray()))
-          baseResult <- base.reads(patchedJson)
-        } yield set(baseResult, values)
-    }
+  implicit val jsonFormat: Format[UnsignedLong] =
+    Format(UnsignedLongJson.reads.map(apply), UnsignedLongJson.writes.contramap(_.toLong))
 }

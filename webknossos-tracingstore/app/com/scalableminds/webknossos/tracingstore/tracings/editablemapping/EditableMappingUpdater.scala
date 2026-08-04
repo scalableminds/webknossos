@@ -150,13 +150,13 @@ class EditableMappingUpdater(
       segmentId1 <- editableMappingService.findSegmentIdAtPositionIfNeeded(
         remoteFallbackLayer,
         update.segmentPosition1,
-        update.segmentId1,
+        update.segmentId1.map(_.toLong),
         update.mag
       )(using tokenContext)
       segmentId2 <- editableMappingService.findSegmentIdAtPositionIfNeeded(
         remoteFallbackLayer,
         update.segmentPosition2,
-        update.segmentId2,
+        update.segmentId2.map(_.toLong),
         update.mag
       )(using tokenContext)
       agglomerateId <- agglomerateIdForSegmentId(segmentId1)
@@ -363,13 +363,13 @@ class EditableMappingUpdater(
       segmentId1 <- editableMappingService.findSegmentIdAtPositionIfNeeded(
         remoteFallbackLayer,
         update.segmentPosition1,
-        update.segmentId1,
+        update.segmentId1.map(_.toLong),
         update.mag
       )(using tokenContext)
       segmentId2 <- editableMappingService.findSegmentIdAtPositionIfNeeded(
         remoteFallbackLayer,
         update.segmentPosition2,
-        update.segmentId2,
+        update.segmentId2.map(_.toLong),
         update.mag
       )(using tokenContext)
       _ = if (segmentId1 == 0)

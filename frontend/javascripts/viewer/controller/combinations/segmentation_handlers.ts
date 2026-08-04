@@ -106,7 +106,7 @@ export function handleClickSegment(clickPosition: Point2) {
 
   const { additionalCoordinates } = state.flycam;
 
-  if (segmentId > 0 && positionInSegmentationLayerSpace != null) {
+  if (segmentId !== 0n && positionInSegmentationLayerSpace != null) {
     Store.dispatch(
       clickSegmentAction(segmentId, positionInSegmentationLayerSpace, additionalCoordinates),
     );

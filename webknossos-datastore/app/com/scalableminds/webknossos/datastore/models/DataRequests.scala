@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.models
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.geometry.AdditionalCoordinateProto
-import com.scalableminds.webknossos.datastore.helpers.UnsignedLongJson
+import com.scalableminds.webknossos.datastore.helpers.UnsignedLong
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceRequestSettings}
 import play.api.libs.json.{Json, OFormat}
@@ -50,7 +50,7 @@ case class WebknossosAdHocMeshRequest(
     position: Vec3Int, // In mag1
     mag: Vec3Int,
     cubeSize: Vec3Int, // In target mag
-    segmentId: Long,
+    segmentId: UnsignedLong,
     voxelSizeFactorInUnit: Vec3Double, // assumed to be in dataset’s unit
     mapping: Option[String] = None,
     mappingType: Option[String] = None,
@@ -63,11 +63,7 @@ case class WebknossosAdHocMeshRequest(
 }
 
 object WebknossosAdHocMeshRequest {
-  implicit val jsonFormat: OFormat[WebknossosAdHocMeshRequest] =
-    UnsignedLongJson.patchRequiredField(Json.format[WebknossosAdHocMeshRequest], "segmentId")(
-      _.segmentId,
-      (a, v) => a.copy(segmentId = v)
-    )
+  implicit val jsonFormat: OFormat[WebknossosAdHocMeshRequest] = Json.format[WebknossosAdHocMeshRequest]
 }
 
 case class RawCuboidRequest(

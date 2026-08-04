@@ -14,9 +14,10 @@ import {
   mayEditAnnotation,
 } from "viewer/model/accessors/annotation_accessor";
 import {
-  getSupportedValueRangeOfLayer,
+  getElementClass,
   isInSupportedValueRangeForLayer,
 } from "viewer/model/accessors/dataset_accessor";
+import { getSegmentIdRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import {
   AnnotationTool,
   isBrushTool,
@@ -140,7 +141,8 @@ function* warnAboutInvalidSegmentId(): Saga<void> {
       volumeTracing.tracingId,
     );
     if (!isInSupportedValueRangeForLayer(dataset, segmentationLayer.name, requestedSegmentId)) {
-      const validRange = getSupportedValueRangeOfLayer(dataset, segmentationLayer.name);
+      const elementClass = getElementClass(dataset, segmentationLayer.name);
+      const validRange = getSegmentIdRangeForElementClass(elementClass);
       Toast.warning(messages["tracing.segment_id_out_of_bounds"](requestedSegmentId, validRange));
     }
   }

@@ -21,6 +21,7 @@ import com.scalableminds.webknossos.datastore.helpers.{
   NodeDefaults,
   ProtoGeometryConversions,
   SkeletonTracingDefaults,
+  UnsignedLong,
   UnsignedLongJson
 }
 import com.scalableminds.webknossos.datastore.models.*
@@ -57,61 +58,41 @@ case class FallbackDataKey(
 )
 
 case class MinCutParameters(
-    partition1: List[Long],
-    partition2: List[Long],
+    partition1: List[UnsignedLong],
+    partition2: List[UnsignedLong],
     mag: Vec3Int,
-    agglomerateId: Long,
+    agglomerateId: UnsignedLong,
     version: Long
 )
 
 object MinCutParameters {
-  private val baseFormat: OFormat[MinCutParameters] = Json.format[MinCutParameters]
-  implicit val jsonFormat: OFormat[MinCutParameters] =
-    UnsignedLongJson.patchRequiredField(
-      UnsignedLongJson.patchListField(
-        UnsignedLongJson.patchListField(baseFormat, "partition1")(_.partition1, (a, v) => a.copy(partition1 = v)),
-        "partition2"
-      )(_.partition2, (a, v) => a.copy(partition2 = v)),
-      "agglomerateId"
-    )(_.agglomerateId, (a, v) => a.copy(agglomerateId = v))
+  implicit val jsonFormat: OFormat[MinCutParameters] = Json.format[MinCutParameters]
 }
 
-case class NeighborsParameters(segmentId: Long, mag: Vec3Int, agglomerateId: Long, version: Long)
+case class NeighborsParameters(segmentId: UnsignedLong, mag: Vec3Int, agglomerateId: UnsignedLong, version: Long)
 
 object NeighborsParameters {
-  private val baseFormat: OFormat[NeighborsParameters] = Json.format[NeighborsParameters]
-  implicit val jsonFormat: OFormat[NeighborsParameters] =
-    UnsignedLongJson.patchRequiredField(
-      UnsignedLongJson.patchRequiredField(baseFormat, "segmentId")(_.segmentId, (a, v) => a.copy(segmentId = v)),
-      "agglomerateId"
-    )(_.agglomerateId, (a, v) => a.copy(agglomerateId = v))
+  implicit val jsonFormat: OFormat[NeighborsParameters] = Json.format[NeighborsParameters]
 }
 
 case class EdgeWithPositions(
-    segmentId1: Long,
-    segmentId2: Long,
+    segmentId1: UnsignedLong,
+    segmentId2: UnsignedLong,
     position1: Vec3Int,
     position2: Vec3Int
 )
 
 object EdgeWithPositions {
-  private val baseFormat: OFormat[EdgeWithPositions] = Json.format[EdgeWithPositions]
-  implicit val jsonFormat: OFormat[EdgeWithPositions] =
-    UnsignedLongJson.patchRequiredField(
-      UnsignedLongJson.patchRequiredField(baseFormat, "segmentId1")(_.segmentId1, (a, v) => a.copy(segmentId1 = v)),
-      "segmentId2"
-    )(_.segmentId2, (a, v) => a.copy(segmentId2 = v))
+  implicit val jsonFormat: OFormat[EdgeWithPositions] = Json.format[EdgeWithPositions]
 }
 
 case class NodeWithPosition(
-    segmentId: Long,
+    segmentId: UnsignedLong,
     position: Vec3Int
 )
 
 object NodeWithPosition {
-  private val baseFormat: OFormat[NodeWithPosition] = Json.format[NodeWithPosition]
-  implicit val jsonFormat: OFormat[NodeWithPosition] =
-    UnsignedLongJson.patchRequiredField(baseFormat, "segmentId")(_.segmentId, (a, v) => a.copy(segmentId = v))
+  implicit val jsonFormat: OFormat[NodeWithPosition] = Json.format[NodeWithPosition]
 }
 
 class EditableMappingService @Inject() (
@@ -480,7 +461,7 @@ class EditableMappingService @Inject() (
       dataSourceId = None,
       dataLayer = editableMappingLayer,
       cuboid = request.cuboid,
-      segmentId = request.segmentId,
+      segmentId = request.segmentId.toLong,
       voxelSizeFactor = request.voxelSizeFactorInUnit,
       tokenContext = tc,
       mapping = None,
@@ -536,13 +517,13 @@ class EditableMappingService @Inject() (
         editableMappingInfo,
         tracingId,
         version,
-        parameters.agglomerateId,
+        parameters.agglomerateId.toLong,
         remoteFallbackLayer
       ) ?~> Msg.AgglomerateGraph.failed
       edgesToCut <- minCut(
         agglomerateGraph,
-        parameters.partition1,
-        parameters.partition2
+        parameters.partition1.map(_.toLong),
+        parameters.partition2.map(_.toLong)
       ).toFox ?~> "Could not calculate min-cut on agglomerate graph."
       edgesWithPositions = annotateEdgesWithPositions(edgesToCut, agglomerateGraph)
     } yield edgesWithPositions
@@ -613,8 +594,8 @@ class EditableMappingService @Inject() (
       val position1 = agglomerateGraph.positions(index1)
       val position2 = agglomerateGraph.positions(index2)
       EdgeWithPositions(
-        segmentId1,
-        segmentId2,
+        UnsignedLong(segmentId1),
+        UnsignedLong(segmentId2),
         vec3IntFromProto(position1),
         vec3IntFromProto(position2)
       )
@@ -625,7 +606,7 @@ class EditableMappingService @Inject() (
       val index = agglomerateGraph.segments.indexOf(segmentId)
       val position = agglomerateGraph.positions(index)
       NodeWithPosition(
-        segmentId,
+        UnsignedLong(segmentId),
         vec3IntFromProto(position)
       )
     }
@@ -642,12 +623,12 @@ class EditableMappingService @Inject() (
         editableMappingInfo,
         tracingId,
         version,
-        parameters.agglomerateId,
+        parameters.agglomerateId.toLong,
         remoteFallbackLayer
       )
-      neighborNodes = neighbors(agglomerateGraph, parameters.segmentId)
+      neighborNodes = neighbors(agglomerateGraph, parameters.segmentId.toLong)
       nodesWithPositions = annotateNodesWithPositions(neighborNodes, agglomerateGraph)
-    } yield (parameters.segmentId, nodesWithPositions)
+    } yield (parameters.segmentId.toLong, nodesWithPositions)
 
   private def neighbors(agglomerateGraph: AgglomerateGraph, segmentId: Long): Seq[Long] = {
     val relevantEdges = agglomerateGraph.edges.filter { edge =>
@@ -677,13 +658,13 @@ class EditableMappingService @Inject() (
             segmentId1 <- findSegmentIdAtPositionIfNeeded(
               remoteFallbackLayer,
               update.segmentPosition1,
-              update.segmentId1,
+              update.segmentId1.map(_.toLong),
               update.mag
             )
             segmentId2 <- findSegmentIdAtPositionIfNeeded(
               remoteFallbackLayer,
               update.segmentPosition2,
-              update.segmentId2,
+              update.segmentId2.map(_.toLong),
               update.mag
             )
           } yield Some(segmentId1, segmentId2, false)
@@ -692,13 +673,13 @@ class EditableMappingService @Inject() (
             segmentId1 <- findSegmentIdAtPositionIfNeeded(
               remoteFallbackLayer,
               update.segmentPosition1,
-              update.segmentId1,
+              update.segmentId1.map(_.toLong),
               update.mag
             )
             segmentId2 <- findSegmentIdAtPositionIfNeeded(
               remoteFallbackLayer,
               update.segmentPosition2,
-              update.segmentId2,
+              update.segmentId2.map(_.toLong),
               update.mag
             )
           } yield Some(segmentId1, segmentId2, true)

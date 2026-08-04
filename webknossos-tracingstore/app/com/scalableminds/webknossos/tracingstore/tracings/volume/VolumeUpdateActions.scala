@@ -7,7 +7,7 @@ import com.scalableminds.util.tools.TristateOptionJsonHelper
 import com.scalableminds.webknossos.datastore.IdWithBool.{Id32WithBool, Id64WithBool}
 import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing, VolumeUserStateProto}
-import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryConversions, UnsignedLongJson}
+import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryConversions, UnsignedLong}
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition}
 import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, UpdateAction, UserStateUpdateAction}
 import com.scalableminds.webknossos.tracingstore.tracings.{GroupUtils, MetadataEntry, NamedBoundingBox}
@@ -103,10 +103,10 @@ case class UpdateBucketVolumeAction(
 }
 
 case class UpdateTracingVolumeAction(
-    activeSegmentId: Long,
+    activeSegmentId: UnsignedLong,
     editPosition: Vec3Int,
     editRotation: Vec3Double,
-    largestSegmentId: Option[Long],
+    largestSegmentId: Option[UnsignedLong],
     zoomLevel: Double,
     editPositionAdditionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
     hideUnregisteredSegments: Option[Boolean] = None,
@@ -127,17 +127,17 @@ case class UpdateTracingVolumeAction(
 
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
     tracing.copy(
-      activeSegmentId = Some(activeSegmentId),
+      activeSegmentId = Some(activeSegmentId.toLong),
       editPosition = vec3IntToProto(editPosition),
       editRotation = vec3DoubleToProto(editRotation),
-      largestSegmentId = largestSegmentId,
+      largestSegmentId = largestSegmentId.map(_.toLong),
       zoomLevel = zoomLevel,
       editPositionAdditionalCoordinates = AdditionalCoordinate.toProto(editPositionAdditionalCoordinates)
     )
 }
 
 case class UpdateActiveSegmentIdVolumeAction(
-    activeSegmentId: Long,
+    activeSegmentId: UnsignedLong,
     actionTracingId: String,
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
@@ -159,11 +159,11 @@ case class UpdateActiveSegmentIdVolumeAction(
   ): VolumeUserStateProto =
     existingUserStateOpt
       .getOrElse(VolumeTracingDefaults.emptyUserState(actionUserId))
-      .copy(activeSegmentId = Some(activeSegmentId))
+      .copy(activeSegmentId = Some(activeSegmentId.toLong))
 }
 
 case class UpdateLargestSegmentIdVolumeAction(
-    largestSegmentId: Long,
+    largestSegmentId: UnsignedLong,
     actionTracingId: String,
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
@@ -177,7 +177,7 @@ case class UpdateLargestSegmentIdVolumeAction(
     this.copy(actionTracingId = newTracingId)
 
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
-    tracing.copy(largestSegmentId = Some(largestSegmentId))
+    tracing.copy(largestSegmentId = Some(largestSegmentId.toLong))
 }
 
 case class UpdateVolumeBucketDataHasChangedVolumeAction(
@@ -349,7 +349,7 @@ case class RemoveFallbackLayerVolumeAction(
 
 case class ImportVolumeDataVolumeAction(
     actionTracingId: String,
-    largestSegmentId: Option[Long],
+    largestSegmentId: Option[UnsignedLong],
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
@@ -362,7 +362,7 @@ case class ImportVolumeDataVolumeAction(
     this.copy(actionTracingId = newTracingId)
 
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
-    tracing.copy(largestSegmentId = largestSegmentId)
+    tracing.copy(largestSegmentId = largestSegmentId.map(_.toLong))
 }
 
 // The current code no longer creates these actions, but they are in the history of some volume annotations.
@@ -385,7 +385,7 @@ case class AddSegmentIndexVolumeAction(
 }
 
 case class CreateSegmentVolumeAction(
-    id: Long,
+    id: UnsignedLong,
     anchorPosition: Option[Vec3Int],
     name: Option[String],
     color: Option[com.scalableminds.util.image.Color],
@@ -411,7 +411,7 @@ case class CreateSegmentVolumeAction(
   override def applyOn(tracing: VolumeTracing): VolumeTracing = {
     val newSegment =
       Segment(
-        id,
+        id.toLong,
         anchorPosition.map(vec3IntToProto),
         name,
         creationTime,
@@ -425,7 +425,7 @@ case class CreateSegmentVolumeAction(
 }
 
 case class LegacyUpdateSegmentVolumeAction(
-    id: Long,
+    id: UnsignedLong,
     anchorPosition: Option[Vec3Int],
     name: Option[String],
     color: Option[com.scalableminds.util.image.Color],
@@ -460,12 +460,12 @@ case class LegacyUpdateSegmentVolumeAction(
         anchorPositionAdditionalCoordinates = AdditionalCoordinate.toProto(additionalCoordinates),
         metadata = MetadataEntry.toProtoMultiple(MetadataEntry.deduplicate(metadata))
       )
-    tracing.withSegments(mapSegments(tracing, id, segmentTransform))
+    tracing.withSegments(mapSegments(tracing, id.toLong, segmentTransform))
   }
 }
 
 case class UpdateSegmentPartialVolumeAction(
-    id: Long,
+    id: UnsignedLong,
     anchorPosition: Option[Option[Vec3Int]],
     name: Option[Option[String]],
     color: Option[Option[com.scalableminds.util.image.Color]],
@@ -501,12 +501,12 @@ case class UpdateSegmentPartialVolumeAction(
           additionalCoordinates.map(AdditionalCoordinate.toProto).getOrElse(segment.anchorPositionAdditionalCoordinates)
       )
 
-    tracing.withSegments(mapSegments(tracing, id, segmentTransform))
+    tracing.withSegments(mapSegments(tracing, id.toLong, segmentTransform))
   }
 }
 
 case class UpdateMetadataOfSegmentVolumeAction(
-    id: Long,
+    id: UnsignedLong,
     upsertEntriesByKey: Seq[MetadataEntry],
     removeEntriesByKey: Seq[String],
     actionTracingId: String,
@@ -538,12 +538,12 @@ case class UpdateMetadataOfSegmentVolumeAction(
       )
     }
 
-    tracing.withSegments(mapSegments(tracing, id, segmentTransform))
+    tracing.withSegments(mapSegments(tracing, id.toLong, segmentTransform))
   }
 }
 
 case class DeleteSegmentVolumeAction(
-    id: Long,
+    id: UnsignedLong,
     actionTracingId: String,
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
@@ -559,12 +559,12 @@ case class DeleteSegmentVolumeAction(
     this.copy(actionTracingId = newTracingId)
 
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
-    tracing.withSegments(tracing.segments.filter(_.segmentId != id))
+    tracing.withSegments(tracing.segments.filter(_.segmentId != id.toLong))
 
 }
 
 case class DeleteSegmentDataVolumeAction(
-    id: Long,
+    id: UnsignedLong,
     actionTracingId: String,
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
@@ -624,10 +624,10 @@ case class LegacyUpdateSegmentGroupsVolumeAction(
 }
 
 case class MergeSegmentItemsVolumeAction(
-    agglomerateId1: Long, // merged into
-    agglomerateId2: Long, // is "swallowed" by source
-    segmentId1: Long, // only used by frontend to resolve live collab conflicts
-    segmentId2: Long, // only used by frontend to resolve live collab conflicts
+    agglomerateId1: UnsignedLong, // merged into
+    agglomerateId2: UnsignedLong, // is "swallowed" by source
+    segmentId1: UnsignedLong, // only used by frontend to resolve live collab conflicts
+    segmentId2: UnsignedLong, // only used by frontend to resolve live collab conflicts
     actionTracingId: String,
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
@@ -635,15 +635,17 @@ case class MergeSegmentItemsVolumeAction(
 ) extends ApplyableVolumeUpdateAction
     with VolumeUpdateActionHelper {
   override def applyOn(tracing: VolumeTracing): VolumeTracing = {
-    val sourceSegmentOpt = tracing.segments.find(_.segmentId == agglomerateId1)
-    val targetSegmentOpt = tracing.segments.find(_.segmentId == agglomerateId2)
+    val agglomerateId1L = agglomerateId1.toLong
+    val agglomerateId2L = agglomerateId2.toLong
+    val sourceSegmentOpt = tracing.segments.find(_.segmentId == agglomerateId1L)
+    val targetSegmentOpt = tracing.segments.find(_.segmentId == agglomerateId2L)
 
     val resultSegment = (sourceSegmentOpt, targetSegmentOpt) match {
-      case (None, None) => Segment(segmentId = agglomerateId1, creationTime = actionTimestamp, isVisible = Some(true))
+      case (None, None) => Segment(segmentId = agglomerateId1L, creationTime = actionTimestamp, isVisible = Some(true))
       case (Some(sourceSegment), None) => sourceSegment
       case (None, Some(targetSegment)) =>
         Segment(
-          segmentId = agglomerateId1,
+          segmentId = agglomerateId1L,
           creationTime = actionTimestamp,
           isVisible = targetSegment.isVisible,
           metadata = targetSegment.metadata,
@@ -665,11 +667,11 @@ case class MergeSegmentItemsVolumeAction(
 
     val withResultSegment =
       if (sourceSegmentOpt.isDefined) tracing.segments.map { (segment: Segment) =>
-        if (segment.segmentId == agglomerateId1) resultSegment else segment
+        if (segment.segmentId == agglomerateId1L) resultSegment else segment
       }
       else tracing.segments :+ resultSegment
 
-    tracing.withSegments(withResultSegment.filter(_.segmentId != agglomerateId2))
+    tracing.withSegments(withResultSegment.filter(_.segmentId != agglomerateId2L))
   }
 
   private def mergeSegmentNames(
@@ -679,7 +681,8 @@ case class MergeSegmentItemsVolumeAction(
     (sourceSegmentNameOpt, targetSegmentNameOpt) match {
       case (None, None)                                       => None
       case (Some(sourceSegmentName), None)                    => Some(sourceSegmentName)
-      case (None, Some(targetSegmentName))                    => Some(s"Segment $agglomerateId1 and $targetSegmentName")
+      case (None, Some(targetSegmentName)) =>
+        Some(s"Segment ${agglomerateId1.toLong} and $targetSegmentName")
       case (Some(sourceSegmentName), Some(targetSegmentName)) => Some(s"$sourceSegmentName and $targetSegmentName")
     }
 
@@ -691,7 +694,7 @@ case class MergeSegmentItemsVolumeAction(
       if (byKey(entry.key).distinct.length == 1) {
         entry
       } else {
-        val originalSegmentId = if (index < pivotIndex) agglomerateId1 else agglomerateId2
+        val originalSegmentId = if (index < pivotIndex) agglomerateId1.toLong else agglomerateId2.toLong
         entry.copy(key = s"${entry.key}-$originalSegmentId")
       }
     }.distinctBy(_.key)
@@ -862,7 +865,7 @@ case class UpdateSegmentGroupsExpandedStateVolumeAction(
 }
 
 case class UpdateSegmentVisibilityVolumeAction(
-    id: Long,
+    id: UnsignedLong,
     isVisible: Boolean,
     actionTracingId: String,
     actionTimestamp: Option[Long] = None,
@@ -878,7 +881,7 @@ case class UpdateSegmentVisibilityVolumeAction(
   ): VolumeUserStateProto =
     existingUserStateOpt.map { existingUserState =>
       val visibilityMap = id64WithBoolsToMutableMap(existingUserState.segmentVisibilities)
-      visibilityMap(id) = isVisible
+      visibilityMap(id.toLong) = isVisible
       existingUserState.copy(
         segmentVisibilities = mutableMapToId64WithBools(visibilityMap)
       )
@@ -886,7 +889,7 @@ case class UpdateSegmentVisibilityVolumeAction(
       VolumeTracingDefaults
         .emptyUserState(actionUserId)
         .copy(
-          segmentVisibilities = Seq(Id64WithBool(id, isVisible))
+          segmentVisibilities = Seq(Id64WithBool(id.toLong, isVisible))
         )
     )
 
@@ -991,30 +994,14 @@ object UpdateBucketVolumeAction {
   implicit val jsonFormat: OFormat[UpdateBucketVolumeAction] = Json.format[UpdateBucketVolumeAction]
 }
 object UpdateTracingVolumeAction {
-  private val baseFormat: OFormat[UpdateTracingVolumeAction] = Json.format[UpdateTracingVolumeAction]
-  implicit val jsonFormat: OFormat[UpdateTracingVolumeAction] =
-    UnsignedLongJson.patchOptionalField(
-      UnsignedLongJson
-        .patchRequiredField(baseFormat, "activeSegmentId")(_.activeSegmentId, (a, v) => a.copy(activeSegmentId = v)),
-      "largestSegmentId"
-    )(_.largestSegmentId, (a, v) => a.copy(largestSegmentId = v))
+  implicit val jsonFormat: OFormat[UpdateTracingVolumeAction] = Json.format[UpdateTracingVolumeAction]
 }
 object UpdateActiveSegmentIdVolumeAction {
-  private val baseFormat: OFormat[UpdateActiveSegmentIdVolumeAction] = Json.format[UpdateActiveSegmentIdVolumeAction]
-  implicit val jsonFormat: OFormat[UpdateActiveSegmentIdVolumeAction] =
-    UnsignedLongJson.patchRequiredField(baseFormat, "activeSegmentId")(
-      _.activeSegmentId,
-      (a, v) => a.copy(activeSegmentId = v)
-    )
+  implicit val jsonFormat: OFormat[UpdateActiveSegmentIdVolumeAction] = Json.format[UpdateActiveSegmentIdVolumeAction]
 }
 object UpdateLargestSegmentIdVolumeAction {
-  private val baseFormat: OFormat[UpdateLargestSegmentIdVolumeAction] =
-    Json.format[UpdateLargestSegmentIdVolumeAction]
   implicit val jsonFormat: OFormat[UpdateLargestSegmentIdVolumeAction] =
-    UnsignedLongJson.patchRequiredField(baseFormat, "largestSegmentId")(
-      _.largestSegmentId,
-      (a, v) => a.copy(largestSegmentId = v)
-    )
+    Json.format[UpdateLargestSegmentIdVolumeAction]
 }
 object UpdateVolumeBucketDataHasChangedVolumeAction {
   implicit val jsonFormat: OFormat[UpdateVolumeBucketDataHasChangedVolumeAction] =
@@ -1044,62 +1031,33 @@ object RemoveFallbackLayerVolumeAction {
   implicit val jsonFormat: OFormat[RemoveFallbackLayerVolumeAction] = Json.format[RemoveFallbackLayerVolumeAction]
 }
 object ImportVolumeDataVolumeAction {
-  private val baseFormat: OFormat[ImportVolumeDataVolumeAction] = Json.format[ImportVolumeDataVolumeAction]
-  implicit val jsonFormat: OFormat[ImportVolumeDataVolumeAction] =
-    UnsignedLongJson.patchOptionalField(baseFormat, "largestSegmentId")(
-      _.largestSegmentId,
-      (a, v) => a.copy(largestSegmentId = v)
-    )
+  implicit val jsonFormat: OFormat[ImportVolumeDataVolumeAction] = Json.format[ImportVolumeDataVolumeAction]
 }
 object AddSegmentIndexVolumeAction {
   implicit val jsonFormat: OFormat[AddSegmentIndexVolumeAction] = Json.format[AddSegmentIndexVolumeAction]
 }
 object CreateSegmentVolumeAction {
-  private val baseFormat: OFormat[CreateSegmentVolumeAction] = Json.format[CreateSegmentVolumeAction]
-  implicit val jsonFormat: OFormat[CreateSegmentVolumeAction] =
-    UnsignedLongJson.patchRequiredField(baseFormat, "id")(_.id, (a, v) => a.copy(id = v))
+  implicit val jsonFormat: OFormat[CreateSegmentVolumeAction] = Json.format[CreateSegmentVolumeAction]
 }
 object LegacyUpdateSegmentVolumeAction {
-  private val baseFormat: OFormat[LegacyUpdateSegmentVolumeAction] = Json.format[LegacyUpdateSegmentVolumeAction]
-  implicit val jsonFormat: OFormat[LegacyUpdateSegmentVolumeAction] =
-    UnsignedLongJson.patchRequiredField(baseFormat, "id")(_.id, (a, v) => a.copy(id = v))
+  implicit val jsonFormat: OFormat[LegacyUpdateSegmentVolumeAction] = Json.format[LegacyUpdateSegmentVolumeAction]
 }
 object UpdateSegmentPartialVolumeAction extends TristateOptionJsonHelper {
-  private val baseFormat: OFormat[UpdateSegmentPartialVolumeAction] =
-    Json.configured(using tristateOptionParsing).format[UpdateSegmentPartialVolumeAction]
   implicit val jsonFormat: OFormat[UpdateSegmentPartialVolumeAction] =
-    UnsignedLongJson.patchRequiredField(baseFormat, "id")(_.id, (a, v) => a.copy(id = v))
+    Json.configured(using tristateOptionParsing).format[UpdateSegmentPartialVolumeAction]
 }
 object UpdateMetadataOfSegmentVolumeAction {
-  private val baseFormat: OFormat[UpdateMetadataOfSegmentVolumeAction] =
-    Json.format[UpdateMetadataOfSegmentVolumeAction]
   implicit val jsonFormat: OFormat[UpdateMetadataOfSegmentVolumeAction] =
-    UnsignedLongJson.patchRequiredField(baseFormat, "id")(_.id, (a, v) => a.copy(id = v))
+    Json.format[UpdateMetadataOfSegmentVolumeAction]
 }
 object MergeSegmentItemsVolumeAction {
-  private val baseFormat: OFormat[MergeSegmentItemsVolumeAction] = Json.format[MergeSegmentItemsVolumeAction]
-  implicit val jsonFormat: OFormat[MergeSegmentItemsVolumeAction] =
-    UnsignedLongJson.patchRequiredField(
-      UnsignedLongJson.patchRequiredField(
-        UnsignedLongJson.patchRequiredField(
-          UnsignedLongJson
-            .patchRequiredField(baseFormat, "agglomerateId1")(_.agglomerateId1, (a, v) => a.copy(agglomerateId1 = v)),
-          "agglomerateId2"
-        )(_.agglomerateId2, (a, v) => a.copy(agglomerateId2 = v)),
-        "segmentId1"
-      )(_.segmentId1, (a, v) => a.copy(segmentId1 = v)),
-      "segmentId2"
-    )(_.segmentId2, (a, v) => a.copy(segmentId2 = v))
+  implicit val jsonFormat: OFormat[MergeSegmentItemsVolumeAction] = Json.format[MergeSegmentItemsVolumeAction]
 }
 object DeleteSegmentVolumeAction {
-  private val baseFormat: OFormat[DeleteSegmentVolumeAction] = Json.format[DeleteSegmentVolumeAction]
-  implicit val jsonFormat: OFormat[DeleteSegmentVolumeAction] =
-    UnsignedLongJson.patchRequiredField(baseFormat, "id")(_.id, (a, v) => a.copy(id = v))
+  implicit val jsonFormat: OFormat[DeleteSegmentVolumeAction] = Json.format[DeleteSegmentVolumeAction]
 }
 object DeleteSegmentDataVolumeAction {
-  private val baseFormat: OFormat[DeleteSegmentDataVolumeAction] = Json.format[DeleteSegmentDataVolumeAction]
-  implicit val jsonFormat: OFormat[DeleteSegmentDataVolumeAction] =
-    UnsignedLongJson.patchRequiredField(baseFormat, "id")(_.id, (a, v) => a.copy(id = v))
+  implicit val jsonFormat: OFormat[DeleteSegmentDataVolumeAction] = Json.format[DeleteSegmentDataVolumeAction]
 }
 object UpdateMappingNameVolumeAction {
   implicit val jsonFormat: OFormat[UpdateMappingNameVolumeAction] = Json.format[UpdateMappingNameVolumeAction]
@@ -1119,10 +1077,8 @@ object UpdateSegmentGroupsExpandedStateVolumeAction {
     Json.format[UpdateSegmentGroupsExpandedStateVolumeAction]
 }
 object UpdateSegmentVisibilityVolumeAction {
-  private val baseFormat: OFormat[UpdateSegmentVisibilityVolumeAction] =
-    Json.format[UpdateSegmentVisibilityVolumeAction]
   implicit val jsonFormat: OFormat[UpdateSegmentVisibilityVolumeAction] =
-    UnsignedLongJson.patchRequiredField(baseFormat, "id")(_.id, (a, v) => a.copy(id = v))
+    Json.format[UpdateSegmentVisibilityVolumeAction]
 }
 object UpdateSegmentGroupVisibilityVolumeAction {
   implicit val jsonFormat: OFormat[UpdateSegmentGroupVisibilityVolumeAction] =

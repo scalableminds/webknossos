@@ -93,14 +93,20 @@
 
 .markdown-small {
 
-  h1,
-  h2,
-  h3,
-  h4,
-  h5 {
-    font-size: 16px;
-    margin-bottom: 0;
-    color: var(--ant-color-text);
+  // Markdown headings render as <Typography.Title>, so the class has to be repeated
+  // here to outweigh antd's `h1:where(…).ant-typography` rule, which would otherwise
+  // have the same specificity as a plain `.markdown-small h1`.
+  &.markdown-small {
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5 {
+      font-size: 16px;
+      margin-bottom: 0;
+      color: var(--ant-color-text);
+    }
   }
 
   max-height: 24px;

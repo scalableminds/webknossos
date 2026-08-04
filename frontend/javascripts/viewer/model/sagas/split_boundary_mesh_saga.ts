@@ -51,7 +51,7 @@ function* updateSplitBoundaryMesh() {
 
   const sceneController = yield* call(getSceneController);
 
-  const activeTree = yield* select((state) => getActiveTree(state.annotation.skeleton));
+  const activeTree = yield* select((state) => getActiveTree(state));
 
   if (activeTree?.treeId !== temporarilyChangedTreeInfo?.treeId) {
     // The active tree changed.

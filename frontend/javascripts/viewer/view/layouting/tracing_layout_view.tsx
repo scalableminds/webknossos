@@ -325,14 +325,15 @@ class TracingLayoutView extends PureComponent<PropsWithRouter, State> {
       files: Array<File>,
       { createGroupForEachFile }: NmlImportOptions,
     ): Promise<void> => {
+      const { flycam } = Store.getState();
       const response = await Request.sendMultipartFormReceiveJSON("/api/annotations/upload", {
         data: {
           nmlFile: files,
           createGroupForEachFile,
           datasetId: this.props.datasetId,
-          fallbackEditPosition: this.props.editPosition.map(Math.round).join(","),
-          fallbackEditRotation: this.props.editRotation.join(","),
-          fallbackZoomLevel: this.props.zoomLevel,
+          fallbackEditPosition: getPosition(flycam).map(Math.round).join(","),
+          fallbackEditRotation: getRotationInDegrees(flycam).join(","),
+          fallbackZoomLevel: flycam.zoomStep,
         },
       });
       this.props.navigate(`/annotations/${response.annotation.typ}/${response.annotation.id}`);
@@ -447,9 +448,6 @@ function mapStateToProps(state: WebknossosState) {
     showVersionRestore: state.uiInformation.showVersionRestore,
     storedLayouts: state.uiInformation.storedLayouts,
     datasetId: state.dataset.id,
-    editPosition: getPosition(state.flycam),
-    editRotation: getRotationInDegrees(state.flycam),
-    zoomLevel: state.flycam.zoomStep,
     is2d: is2dDataset(state.dataset),
     displayName: state.annotation.name ? state.annotation.name : state.dataset.name,
     organization: state.dataset.owningOrganization,

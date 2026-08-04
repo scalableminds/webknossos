@@ -1067,15 +1067,10 @@ class UploadService @Inject() (
             _ = logger.info(
               s"Detected $uploadDomain root during finishUpload of $datasetId from ${deepFileList.length} files in $uploadDir with commonPrefixPreliminary=$commonPrefixPreliminary"
             )
-            // Cut off / clean up only within uploadDir, so that path elements of uploadDir itself
-            // (e.g. the base dir or the organization id) cannot accidentally match.
-            relativePrefix = uploadDir.relativize(commonPrefixPreliminary)
-            strippedPrefix = PathUtils.cutOffPathAtLastOccurrenceOf(relativePrefix, excludeFromPrefix)
-            commonPrefix = uploadDir.resolve(
-              PathUtils.removeSingleFileNameFromPrefix(
+            strippedPrefix = PathUtils.cutOffPathAtLastOccurrenceOf(commonPrefixPreliminary, excludeFromPrefix)
+            commonPrefix = PathUtils.removeSingleFileNameFromPrefix(
                 strippedPrefix,
                 deepFileList.map(_.getFileName.toString)
-              )
             )
             _ <- tryo(
               FileUtils.moveDirectory(new File(commonPrefix.toString), new File(unpackToDir.toString))

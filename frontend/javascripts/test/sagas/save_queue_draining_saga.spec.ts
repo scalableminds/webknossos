@@ -76,7 +76,6 @@ const initialState = {
     annotationType: "Explorational",
     name: "",
     tracingId,
-    activeTreeId: 1,
     activeNodeId: null,
     restrictions: {
       branchPointsAllowed: true,

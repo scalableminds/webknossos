@@ -112,8 +112,8 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
   );
   const [localShortcutConfig, setLocalShortcutConfig] = useState(keyboardShortcutsConfigFromStore);
   const shortcutCollisions = useMemo(
-    () => checkCollisionsInShortcutMap(localShortcutConfig),
-    [localShortcutConfig],
+    () => checkCollisionsInShortcutMap(localShortcutConfig, unmodifiedLayoutMap),
+    [localShortcutConfig, unmodifiedLayoutMap],
   );
 
   const [jsonString, setJsonString] = useState(() => JSON.stringify(localShortcutConfig, null, 2));
@@ -126,20 +126,16 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
   };
 
   const handleRemoveComboChain = (shortcutId: KeyboardShortcutId, comboChain: string[][]) => {
-    setLocalShortcutConfig((prevConfig) => {
-      const updatedCombos = prevConfig[shortcutId].filter((c) => c !== comboChain);
-      const updatedConfig = { ...prevConfig, [shortcutId]: updatedCombos };
-      updateLocalShortcutConfig(updatedConfig);
-      return updatedConfig;
+    updateLocalShortcutConfig({
+      ...localShortcutConfig,
+      [shortcutId]: localShortcutConfig[shortcutId].filter((c) => c !== comboChain),
     });
   };
 
   const handleRestoreDefaultForShortcut = (shortcutId: KeyboardShortcutId) => {
-    const defaultCombos = getAllDefaultKeyboardShortcuts()[shortcutId];
-    setLocalShortcutConfig((prevConfig) => {
-      const updatedConfig = { ...prevConfig, [shortcutId]: defaultCombos };
-      updateLocalShortcutConfig(updatedConfig);
-      return updatedConfig;
+    updateLocalShortcutConfig({
+      ...localShortcutConfig,
+      [shortcutId]: getAllDefaultKeyboardShortcuts()[shortcutId],
     });
   };
 
@@ -336,14 +332,12 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
     }
   };
   const handleCancel = () => {
-    setLocalShortcutConfig(keyboardShortcutsConfigFromStore);
-    setJsonString(JSON.stringify(keyboardShortcutsConfigFromStore, null, 2));
-    setJsonError(null);
+    updateLocalShortcutConfig(keyboardShortcutsConfigFromStore);
     onClose();
   };
 
   const onReset = () => {
-    setLocalShortcutConfig(getAllDefaultKeyboardShortcuts());
+    updateLocalShortcutConfig(getAllDefaultKeyboardShortcuts());
   };
 
   const shortcutsTabItems: TabsProps["items"] = [

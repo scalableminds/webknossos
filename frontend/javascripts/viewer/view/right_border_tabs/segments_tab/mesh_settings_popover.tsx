@@ -10,8 +10,6 @@ import ButtonComponent from "viewer/view/components/button_component";
 import type { MeshFiles } from "./hooks/use_mesh_files";
 import { formatMagWithLabel } from "./segments_view_helper";
 
-const { Option } = Select;
-
 const formatMeshFile = (meshFile: APIMeshFileInfo): string => {
   if (meshFile.mappingName == null) return meshFile.name;
   return `${meshFile.name} (${meshFile.mappingName})`;
@@ -38,6 +36,18 @@ export function MeshSettingsPopover({ meshFiles }: { meshFiles: MeshFiles }) {
     (state) => state.temporaryConfiguration.preferredQualityForMeshAdHocComputation,
   );
 
+  const meshFileOptions = availableMeshFiles
+    ? availableMeshFiles.map((meshFile) => ({
+        value: meshFile.name,
+        label: formatMeshFile(meshFile),
+      }))
+    : [{ value: "", label: "No files available.", disabled: true }];
+
+  const qualityOptions = magInfo.getMagsWithIndices().map(([log2Index, mag], index) => ({
+    value: log2Index,
+    label: formatMagWithLabel(mag, index),
+  }));
+
   return (
     <div>
       <Typography.Paragraph>
@@ -54,19 +64,8 @@ export function MeshSettingsPopover({ meshFiles }: { meshFiles: MeshFiles }) {
               loading={availableMeshFiles == null}
               popupMatchSelectWidth={false}
               style={{ width: "100%" }}
-            >
-              {availableMeshFiles ? (
-                availableMeshFiles.map((meshFile) => (
-                  <Option key={meshFile.name} value={meshFile.name}>
-                    {formatMeshFile(meshFile)}
-                  </Option>
-                ))
-              ) : (
-                <Option value="" disabled>
-                  No files available.
-                </Option>
-              )}
-            </Select>
+              options={meshFileOptions}
+            />
             <ButtonComponent icon={<ReloadOutlined />} onClick={refreshMeshFiles} />
           </Space.Compact>
         </ConfigProvider>
@@ -85,13 +84,8 @@ export function MeshSettingsPopover({ meshFiles }: { meshFiles: MeshFiles }) {
           }
           popupMatchSelectWidth={false}
           style={{ width: "100%" }}
-        >
-          {magInfo.getMagsWithIndices().map(([log2Index, mag], index) => (
-            <Option value={log2Index} key={log2Index}>
-              {formatMagWithLabel(mag, index)}
-            </Option>
-          ))}
-        </Select>
+          options={qualityOptions}
+        />
       </Typography.Paragraph>
     </div>
   );

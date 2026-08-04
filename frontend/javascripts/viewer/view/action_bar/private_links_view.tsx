@@ -299,8 +299,10 @@ function ExpirationDate({ linkItem }: { linkItem: ZarrPrivateLink }) {
         title="Set an expiration date"
         trigger="click"
       >
-        <EditOutlined style={{ marginLeft: 4 }} />
-        {maybeWarning || <HumanizedDuration expirationDate={expirationDate} />}
+        <Space size="small">
+          <EditOutlined style={{ marginLeft: 4 }} />
+          {maybeWarning || <HumanizedDuration expirationDate={expirationDate} />}
+        </Space>
       </Popover>
     </span>
   );

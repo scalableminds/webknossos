@@ -28,6 +28,7 @@ import {
   Space,
   Tag,
   Tooltip,
+  Typography,
 } from "antd";
 import dayjs from "dayjs";
 import {
@@ -627,7 +628,8 @@ export default function TaskListView({
     >
       <Col xs={10}>
         <Flex vertical style={{ height: "100%" }}>
-          <h3
+          <Typography.Title
+            level={3}
             style={{
               marginBottom: 0,
               maxWidth: "100%",
@@ -636,14 +638,16 @@ export default function TaskListView({
             title={readableWorkflowName}
           >
             {readableWorkflowName}
-          </h3>
-          <h4 style={{ color: "#51686e" }}>
+          </Typography.Title>
+          {/* marginTop: 0 keeps the previous spacing; antd would otherwise add a top margin
+              because this heading directly follows another Typography element. */}
+          <Typography.Title level={4} style={{ color: "#51686e", marginTop: 0 }}>
             {formatDateMedium(new Date(runBeginTimeString))}{" "}
             <Tooltip title={formatDurationStrict(totalRuntime)}>
               <FieldTimeOutlined style={{ marginLeft: 20 }} className="icon-margin-right" />
               {totalRuntime.humanize()}
             </Tooltip>
-          </h4>
+          </Typography.Title>
           <div style={{ flex: 1, position: "relative" }}>
             <DAGView
               key={filteredTasks.map((t) => t.taskName).join("_")}

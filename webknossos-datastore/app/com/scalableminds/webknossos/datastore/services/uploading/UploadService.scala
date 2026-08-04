@@ -1069,9 +1069,10 @@ class UploadService @Inject() (
             )
             strippedPrefix = PathUtils.cutOffPathAtLastOccurrenceOf(commonPrefixPreliminary, excludeFromPrefix)
             commonPrefix = PathUtils.removeSingleFileNameFromPrefix(
-                strippedPrefix,
-                deepFileList.map(_.getFileName.toString)
+              strippedPrefix,
+              deepFileList.map(_.getFileName.toString)
             )
+            _ <- Fox.fromBool(commonPrefix.startsWith(uploadDir)) ?~> Msg.Dataset.Upload.datasetRootDetectionFailed
             _ <- tryo(
               FileUtils.moveDirectory(new File(commonPrefix.toString), new File(unpackToDir.toString))
             ).toFox ?~> Msg.Dataset.Upload.moveToTargetFailed

@@ -156,10 +156,12 @@ object PathUtils extends LazyLogging {
     }
 
   /*
-   * removes the end of a path, after the last occurrence of any of excludeFromPrefix
-   * example:  /path/to/color/layer/that/is/named/color/and/has/files
-   *    becomes  /path/to/color/layer/that/is/named/color
-   *    if "color" is in excludeFromPrefix
+   * removes the end of a path, starting at the last element that contains any of cutOffList
+   *    example:  /path/to/color/layer/that/is/named/color/and/has/files
+   *    becomes  /path/to/color/layer/that/is/named
+   *    if "color" is in cutOffList
+   * Note that the caller should pass a path that is relative to the directory the search should be
+   * limited to, so that no element outside of it can accidentally match.
    */
   def cutOffPathAtLastOccurrenceOf(path: Path, cutOffList: List[String]): Path = {
     var lastCutOffIndex = -1
@@ -174,7 +176,10 @@ object PathUtils extends LazyLogging {
       case -1 => path
       // subpath(0, 0) is forbidden, therefore we handle this special case ourselves
       case 0 => Path.of("")
-      case i => path.subpath(0, i)
+      case i =>
+        val cutOff = path.subpath(0, i)
+        // subpath drops the root element, so re-add it for absolute paths
+        Option(path.getRoot).map(_.resolve(cutOff)).getOrElse(cutOff)
     }
   }
 

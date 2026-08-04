@@ -57,6 +57,7 @@ import {
   handlePickCell,
 } from "viewer/controller/combinations/volume_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
+import { isSkeletonLayerVisible } from "viewer/model/accessors/skeletontracing_accessor";
 import {
   AnnotationTool,
   type AnnotationToolId,
@@ -423,7 +424,7 @@ export class SkeletonToolController extends ToolController {
     allowNodeCreation: boolean = true,
   ): void {
     const { useLegacyBindings, continuousNodeCreation } = Store.getState().userConfiguration;
-    const showSkeleton = Store.getState().annotation.skeleton?.showSkeletons ?? false;
+    const showSkeleton = isSkeletonLayerVisible(Store.getState());
     if (!showSkeleton) {
       // Don't do anything in case the skeleton layer is disabled or does not exist.
       return;
@@ -789,6 +790,8 @@ export class EraseToolController extends VolumeToolController {
   static onToolDeselected() {}
 }
 
+// Not inheriting from VolumeToolController by design as no shortcuts like
+// `c` -> create new cell should be supported in this tool for now.
 export class VoxelPipetteToolController extends ToolController {
   static getPlaneMouseControls(_planeId: OrthoView): MouseBindingMap {
     return {

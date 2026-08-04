@@ -1,0 +1,142 @@
+import { useWkSelector } from "libs/react_hooks";
+import Toast from "libs/toast";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useDispatch } from "react-redux";
+import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
+import { layerToGlobalTransformedPosition } from "viewer/model/accessors/dataset_layer_transformation_accessor";
+import { getAdditionalCoordinatesAsString } from "viewer/model/accessors/flycam_accessor";
+import { getSelectedIds, getVisibleSegments } from "viewer/model/accessors/volumetracing_accessor";
+import {
+  setAdditionalCoordinatesAction,
+  setPositionAction,
+} from "viewer/model/actions/flycam_actions";
+import { setSelectedSegmentsOrGroupAction } from "viewer/model/actions/volumetracing_actions";
+import type { Segment } from "viewer/store";
+import Store from "viewer/store";
+import { getGroupUiNodeKey, getSegmentUiNodeKey } from "../hierarchy";
+
+export type SegmentSelection = {
+  selectedSegmentIds: number[];
+  selectedGroupId: number | null;
+  // The selected segments, resolved from their ids.
+  selectedSegments: Segment[];
+  // Keys of the selected nodes (for highlighting them in the antd tree).
+  selectedKeys: string[];
+  // Selects the given segments and/or group (they are mutually exclusive).
+  setSelection: (segmentIds: number[], groupId: number | null) => void;
+  // Like setSelection, but also requests that the tree view scroll the
+  // selection into view, even if it is already selected (e.g., re-running a
+  // search that lands on the same segment/group again). Use this for
+  // explicit "jump to X" requests (search, select-all-matches); use plain
+  // setSelection for in-tree interactions (click, ctrl/shift-click), which
+  // are already visible and shouldn't cause a scroll jump.
+  focusSelection: (segmentIds: number[], groupId: number | null) => void;
+  // Bumped on every focusSelection call. selectedSegmentIds/selectedGroupId
+  // alone can't signal "please scroll", because getSelectedIds reuses its
+  // previous instance when a re-selection is deep-equal to the current one.
+  focusToken: number;
+  // Selects a single segment and moves the camera to its anchor position.
+  selectSegmentAndJumpToPosition: (segment: Segment) => void;
+};
+
+/*
+ * Manages which segments (or which single group) are selected in the tab.
+ * In contrast to the skeleton tab, this selection lives in the Redux store
+ * (per segmentation layer), since other parts of the app interact with it.
+ */
+export function useSegmentSelection(): SegmentSelection {
+  const dispatch = useDispatch();
+  const visibleSegmentationLayer = useWkSelector(getVisibleSegmentationLayer);
+  const selectedIds = useWkSelector(getSelectedIds);
+  const segments = useWkSelector((state) => getVisibleSegments(state).segments);
+
+  useEffect(() => {
+    // getSelectedIds removes stale ids (e.g., of segments that were removed
+    // from the list) from the selection. Persist that clean-up to the store.
+    selectedIds.maybeUpdateStoreAction?.();
+  }, [selectedIds]);
+
+  const setSelection = useCallback(
+    (segmentIds: number[], groupId: number | null) => {
+      if (visibleSegmentationLayer == null) {
+        return;
+      }
+      dispatch(
+        setSelectedSegmentsOrGroupAction(segmentIds, groupId, visibleSegmentationLayer.name),
+      );
+    },
+    [dispatch, visibleSegmentationLayer],
+  );
+
+  const [focusToken, setFocusToken] = useState(0);
+  const focusSelection = useCallback(
+    (segmentIds: number[], groupId: number | null) => {
+      setSelection(segmentIds, groupId);
+      setFocusToken((token) => token + 1);
+    },
+    [setSelection],
+  );
+
+  const selectSegmentAndJumpToPosition = useCallback(
+    (segment: Segment) => {
+      if (visibleSegmentationLayer == null) {
+        Toast.info("Cannot select segment, because there is no visible segmentation layer.");
+        return;
+      }
+      focusSelection([segment.id], null);
+
+      if (!segment.anchorPosition) {
+        Toast.info("Cannot go to this segment, because its position is unknown.");
+        return;
+      }
+      const transformedPosition = layerToGlobalTransformedPosition(
+        segment.anchorPosition,
+        visibleSegmentationLayer.name,
+        "segmentation",
+        Store.getState(),
+      );
+      dispatch(setPositionAction(transformedPosition));
+
+      const { additionalCoordinates } = segment;
+      if (
+        additionalCoordinates != null &&
+        getAdditionalCoordinatesAsString(Store.getState().flycam.additionalCoordinates) !==
+          getAdditionalCoordinatesAsString(additionalCoordinates)
+      ) {
+        dispatch(setAdditionalCoordinatesAction(additionalCoordinates));
+      }
+    },
+    [dispatch, visibleSegmentationLayer, focusSelection],
+  );
+
+  // Memoize the derived arrays so their identities stay stable while the
+  // selection is unchanged. Consumers feed these into React.memo children
+  // (segment rows) and useCallback dependency arrays (the context-menu
+  // builders), which would otherwise be invalidated on every render.
+  const selectedSegments = useMemo(
+    () =>
+      segments != null
+        ? selectedIds.segments.flatMap((segmentId) => segments.getNullable(segmentId) ?? [])
+        : [],
+    [segments, selectedIds.segments],
+  );
+
+  const selectedKeys = useMemo(() => {
+    const keys = selectedIds.segments.map(getSegmentUiNodeKey);
+    if (selectedIds.group != null) {
+      keys.push(getGroupUiNodeKey(selectedIds.group));
+    }
+    return keys;
+  }, [selectedIds.segments, selectedIds.group]);
+
+  return {
+    selectedSegmentIds: selectedIds.segments,
+    selectedGroupId: selectedIds.group,
+    selectedSegments,
+    selectedKeys,
+    setSelection,
+    focusSelection,
+    focusToken,
+    selectSegmentAndJumpToPosition,
+  };
+}

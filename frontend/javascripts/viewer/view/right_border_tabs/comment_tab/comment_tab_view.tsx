@@ -26,9 +26,7 @@ function CommentTab() {
   const { nextComment, previousComment } = useCommentNavigation(sortedComments);
   useCommentKeyboardShortcuts(nextComment, previousComment);
 
-  const activeTreeId = useWkSelector(
-    (state) => getSkeletonTracing(state.annotation)?.activeTreeId ?? null,
-  );
+  const activeTreeId = useWkSelector((state) => state.localSkeletonState.activeTreeId);
   const [isMarkdownModalOpen, setIsMarkdownModalOpen] = useState(false);
 
   // When a comment is created, make sure its tree is expanded so the comment is visible.

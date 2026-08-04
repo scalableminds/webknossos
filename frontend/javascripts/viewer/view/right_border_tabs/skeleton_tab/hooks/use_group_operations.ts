@@ -1,6 +1,7 @@
 import { ExclamationCircleOutlined } from "@ant-design/icons";
-import { Modal } from "antd";
+import { App } from "antd";
 import { useWkSelector } from "libs/react_hooks";
+import type { ModalApi } from "libs/with_modal_hoc";
 import cloneDeep from "lodash-es/cloneDeep";
 import messages from "messages";
 import React, { useCallback, useState } from "react";
@@ -30,23 +31,24 @@ import {
 } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 
 // Let the user confirm the deletion of the initial node (node with id 1) of a task.
-export function checkAndConfirmDeletingInitialNode(treeIds: number[]): Promise<void> {
+// Takes the themed modal API (obtained via App.useApp()), since the static Modal.confirm
+// doesn't pick up the surrounding ConfigProvider theme (and isn't awaitable).
+// Resolves to false if the user aborted the deletion.
+export async function checkAndConfirmDeletingInitialNode(
+  modal: ModalApi,
+  treeIds: number[],
+): Promise<boolean> {
   const state = Store.getState();
-  const skeletonTracing = enforceSkeletonTracing(state.annotation);
 
-  const hasNodeWithIdOne = (id: number) => getTree(skeletonTracing, id)?.nodes.has(1);
+  const hasNodeWithIdOne = (id: number) => getTree(state, id)?.nodes.has(1);
 
   const needsCheck = state.task != null && treeIds.find(hasNodeWithIdOne) != null;
-  return new Promise<void>((resolve, reject) => {
-    if (needsCheck) {
-      Modal.confirm({
-        title: messages["tracing.delete_tree_with_initial_node"],
-        onOk: () => resolve(),
-        onCancel: () => reject(),
-      });
-    } else {
-      resolve();
-    }
+  if (!needsCheck) {
+    return true;
+  }
+
+  return await modal.confirm({
+    title: messages["tracing.delete_tree_with_initial_node"],
   });
 }
 
@@ -64,6 +66,7 @@ export type GroupOperations = {
 
 export function useGroupOperations(deselectAllTrees: () => void): GroupOperations {
   const dispatch = useDispatch();
+  const { modal } = App.useApp();
   const trees = useWkSelector((state) => enforceSkeletonTracing(state.annotation).trees);
   const treeGroups = useWkSelector((state) => enforceSkeletonTracing(state.annotation).treeGroups);
   const [groupIdPendingDeletion, setGroupIdPendingDeletion] = useState<number | null>(null);
@@ -129,21 +132,20 @@ export function useGroupOperations(deselectAllTrees: () => void): GroupOperation
         collectTreeIdsRecursively(group);
       });
 
-      checkAndConfirmDeletingInitialNode(treeIdsToDelete)
-        .then(() => {
-          dispatch(
-            batchUpdateGroupsAndTreesAction(
-              updateTreeActions.concat([
-                deleteTreesAction(treeIdsToDelete),
-                setTreeGroupsAction(newTreeGroups),
-              ]),
-            ),
-          );
-        })
-        // The user cancelled the initial-node confirmation; keep everything as is.
-        .catch(() => {});
+      checkAndConfirmDeletingInitialNode(modal, treeIdsToDelete).then((isConfirmed) => {
+        // If the user cancelled the initial-node confirmation, keep everything as is.
+        if (!isConfirmed) return;
+        dispatch(
+          batchUpdateGroupsAndTreesAction(
+            updateTreeActions.concat([
+              deleteTreesAction(treeIdsToDelete),
+              setTreeGroupsAction(newTreeGroups),
+            ]),
+          ),
+        );
+      });
     },
-    [dispatch, trees, treeGroups],
+    [dispatch, trees, treeGroups, modal],
   );
 
   const requestGroupDeletion = useCallback(
@@ -159,7 +161,7 @@ export function useGroupOperations(deselectAllTrees: () => void): GroupOperation
         // Ask whether all children of the root group should be deleted
         // (doesn't need the recursive/not-recursive distinction, since
         // the root group itself cannot be removed).
-        Modal.confirm({
+        modal.confirm({
           title: "Do you want to delete all trees and groups?",
           icon: React.createElement(ExclamationCircleOutlined),
           okType: "danger",
@@ -170,7 +172,7 @@ export function useGroupOperations(deselectAllTrees: () => void): GroupOperation
         setGroupIdPendingDeletion(groupId);
       }
     },
-    [trees, treeGroups, deleteGroup],
+    [trees, treeGroups, deleteGroup, modal],
   );
 
   const confirmGroupDeletion = useCallback(

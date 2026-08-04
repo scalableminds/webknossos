@@ -5,6 +5,7 @@ import {
   NewVolumeLayerSelection,
   RestrictMagnificationSlider,
 } from "dashboard/advanced_dataset/create_explorative_modal";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import clone from "lodash-es/clone";
 import differenceWith from "lodash-es/differenceWith";
@@ -28,7 +29,7 @@ import {
 import { pushSaveQueueTransactionIsolated } from "viewer/model/actions/save_actions";
 import { addLayerToAnnotation } from "viewer/model/sagas/volume/update_actions";
 import { api, Model } from "viewer/singletons";
-import Store, { type StoreAnnotation } from "viewer/store";
+import Store from "viewer/store";
 import InputComponent from "viewer/view/components/input_component";
 
 export type ValidationResult = { isValid: boolean; message: string };
@@ -104,13 +105,11 @@ export function validateReadableLayerName(
 export default function AddVolumeLayerModal({
   dataset,
   onCancel,
-  annotation,
   preselectedLayerName,
   disableLayerSelection,
 }: {
   dataset: APIDataset;
   onCancel: () => void;
-  annotation: StoreAnnotation;
   preselectedLayerName: string | undefined;
   disableLayerSelection: boolean | undefined;
 }) {
@@ -118,6 +117,7 @@ export default function AddVolumeLayerModal({
     string | undefined
   >(preselectedLayerName);
   const dispatch = useDispatch();
+  const annotation = useWkSelector((state) => state.annotation);
   const allReadableLayerNames = useMemo(
     () => getAllReadableLayerNames(dataset, annotation),
     [dataset, annotation],

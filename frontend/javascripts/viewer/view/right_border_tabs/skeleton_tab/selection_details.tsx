@@ -115,9 +115,7 @@ function GroupDetails({ groupId }: { groupId: number }) {
  */
 export const SelectionDetails = memo(({ selectedTreeIds }: { selectedTreeIds: number[] }) => {
   const trees = useWkSelector((state) => enforceSkeletonTracing(state.annotation).trees);
-  const activeGroupId = useWkSelector(
-    (state) => enforceSkeletonTracing(state.annotation).activeGroupId,
-  );
+  const activeGroupId = useWkSelector((state) => state.localSkeletonState.activeGroupId);
 
   if (selectedTreeIds.length === 1) {
     const tree = trees.getNullable(selectedTreeIds[0]);

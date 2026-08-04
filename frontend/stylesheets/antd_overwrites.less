@@ -2,26 +2,9 @@
 // See theme.tsx for details
 // https://ant.design/docs/react/customize-theme
 
-h1 {
-  font-size: 36px;
-}
-
-h2 {
-  font-size: 30px;
-}
-
-h3 {
-  font-size: 24px;
-}
-
-h4 {
-  font-size: 18px;
-}
-
-h5 {
-  font-size: 14px;
-}
-
+// Heading sizes for h1-h5 now come from the Typography design tokens in theme.ts.
+// h6 has no <Typography.Title> equivalent (antd only supports level 1-5), so the
+// size for markdown-rendered <h6> elements still has to be set here.
 h6 {
   font-size: 12px;
 }

@@ -235,7 +235,7 @@ function handlePickCellFromGlobalPosition(
 ) {
   const segmentId = getSegmentIdForPosition(globalPos.rounded);
 
-  if (segmentId === 0n) {
+  if (segmentId < 0n) {
     return;
   }
   const visibleSegmentationLayer = getVisibleSegmentationLayer(Store.getState());

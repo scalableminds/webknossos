@@ -110,7 +110,7 @@ export function setActiveCellReducer(
 ) {
   const segmentationLayer = getSegmentationLayerForTracing(state, volumeTracing);
 
-  if (!isInSupportedValueRangeForLayer(state.dataset, segmentationLayer.name, id)) {
+  if (!isInSupportedValueRangeForLayer(state.dataset, segmentationLayer.name, id) || id < 0) {
     // Ignore the action if the segment id is not valid for the current elementClass
     return state;
   }

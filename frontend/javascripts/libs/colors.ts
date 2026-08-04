@@ -7,13 +7,12 @@ import type { ColorObject, Vector3, Vector4 } from "viewer/constants";
  * normalized 0–1 RGB tuples, packed integers) and deterministic string → color
  * mappings.
  *
- * Color *values* deliberately do not live here. Their sources of truth are:
- *  - the Ant Design design tokens, which `theme_provider.tsx` exposes as CSS
- *    variables (`var(--ant-color-text-secondary)`, …). Prefer these in
- *    components – they automatically adapt to the light/dark theme.
- *  - `theme.ts` for the WEBKNOSSOS brand palette (`ColorWKBlue`, …) and the
- *    antd theme configuration derived from it. Use a brand constant only for
- *    colors that must stay identical in both themes.
+ * Color *values* deliberately do not live here. Their sources of truth are the
+ * Ant Design design tokens and, for the WEBKNOSSOS brand palette (`ColorWKBlue`,
+ * …), `theme.ts`. See the comment at the top of `theme.ts` for how to pick
+ * between them – in short: prefer a semantic antd component or prop, then
+ * `theme.useToken()`, then a stylesheet class using `var(--ant-…)`, and reach for
+ * a brand constant only when a color must stay identical in both themes.
  */
 
 function intToHex(int: number, digits: number = 6): string {

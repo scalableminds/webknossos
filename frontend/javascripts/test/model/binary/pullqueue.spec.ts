@@ -164,49 +164,51 @@ describe("PullQueue", () => {
     expect(buckets[1].state).toBe(BucketStateEnum.UNREQUESTED);
   });
 
-  it<TestContext>("Superseded request must not clobber a bucket recreated at the same address", async ({
+  it<TestContext>("Discarded bucket: data of an in-flight request must be dropped", async ({
     pullQueue,
     buckets,
   }) => {
-    // Reproduces the reload race: a request is in flight when a reload aborts it and
-    // evicts the affected buckets. By the time the aborted request's rejection is
-    // processed, a *fresh* bucket has been recreated at the same address and a newer
-    // request has already put it into REQUESTED. The stale request must not touch this
-    // new bucket (it identifies buckets by address, so without an identity check it would
-    // wrongly mark the fresh, legitimately-requested bucket as failed -> data lost).
+    // Reproduces the reload race: a request is in flight when a reload discards the affected
+    // buckets (via DataCube.removeBucket). By the time the result arrives, it is outdated and
+    // must not be written into the discarded bucket (a fresh bucket now owns that address).
     vi.mocked(requestWithFallback)
       .mockReset()
-      .mockRejectedValue(new Error("Expected promise rejection in tests. Can be ignored."));
-
-    // Start the request. pullBatch synchronously captures the exact bucket objects it is
-    // responsible for (buckets[0], buckets[1]) before awaiting.
+      .mockResolvedValue([
+        { type: "data", data: new Uint8Array(32 ** 3) },
+        { type: "data", data: new Uint8Array(32 ** 3) },
+      ]);
     pullQueue.pull();
     expect(buckets[0].state).toBe(BucketStateEnum.REQUESTED);
 
-    // Simulate the reload having evicted buckets[0] and recreated a fresh bucket at the
-    // same address, which a newer request already put into REQUESTED. getBucket() now
-    // resolves this address to the new object instead of the original one.
-    const freshBucket = new DataBucket(
-      "uint8",
-      buckets[0].zoomedAddress,
-      null as any,
-      { type: "full" },
-      pullQueue.cube as any,
-    );
-    freshBucket.markAsRequested();
-    (pullQueue.cube.getBucket as any).mockImplementation((address: BucketAddress) =>
-      isEqual(address, freshBucket.zoomedAddress)
-        ? freshBucket
-        : buckets.find((bucket) => isEqual(bucket.zoomedAddress, address)),
-    );
+    buckets[0].markAsDiscarded();
 
-    // Let the original (now superseded) request's rejection be processed.
-    await sleep(0);
+    await sleep(0); // sleep a bit so that the event loop can process the fetches
 
-    // The fresh bucket must be left untouched by the stale request...
-    expect(freshBucket.state).toBe(BucketStateEnum.REQUESTED);
-    // ...while a bucket that is still the same object this request was launched for is
-    // correctly failed (reset to UNREQUESTED) as before.
+    expect(buckets[0].state).toBe(BucketStateEnum.DISCARDED);
+    expect(buckets[0].hasData()).toBe(false);
+    // The other bucket of the same batch is unaffected.
+    expect(buckets[1].state).toBe(BucketStateEnum.LOADED);
+  });
+
+  it<TestContext>("Discarded bucket: failure of an in-flight request must not re-request it", async ({
+    pullQueue,
+    buckets,
+  }) => {
+    // A reload aborts in-flight requests, so the rejection below is the common case. The
+    // discarded bucket must stay discarded instead of being reset to UNREQUESTED (which
+    // would mark a detached bucket as requestable again).
+    vi.mocked(requestWithFallback)
+      .mockReset()
+      .mockRejectedValue(new Error("Expected promise rejection in tests. Can be ignored."));
+    pullQueue.pull();
+    expect(buckets[0].state).toBe(BucketStateEnum.REQUESTED);
+
+    buckets[0].markAsDiscarded();
+
+    await sleep(0); // sleep a bit so that the event loop can process the fetches
+
+    expect(buckets[0].state).toBe(BucketStateEnum.DISCARDED);
+    // The other bucket of the same batch is failed (i.e. reset to UNREQUESTED) as usual.
     expect(buckets[1].state).toBe(BucketStateEnum.UNREQUESTED);
   });
 

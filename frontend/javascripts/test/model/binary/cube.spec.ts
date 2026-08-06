@@ -78,9 +78,9 @@ describe("DataCube", () => {
       }
 
       abortRequests() {
-        // Mirrors the real pull queue: aborting an in-flight request does *not*
-        // synchronously transition the affected bucket out of the REQUESTED state
-        // (that only happens later, once the aborted fetch rejects).
+        // Mirrors the real pull queue: aborting an in-flight request does not synchronously
+        // transition the affected bucket out of the REQUESTED state (that only happens later,
+        // once the aborted fetch rejects).
       }
 
       async pull() {
@@ -155,6 +155,31 @@ describe("DataCube", () => {
     await ensureLoadedPromise;
 
     // The failed bucket is treated like an empty bucket: it holds no data.
+    expect(bucket.hasData()).toBe(false);
+  });
+
+  it<TestContext>("A discarded bucket should ignore the outcome of its request", async ({
+    cube,
+  }) => {
+    const bucket = cube.getOrCreateBucket([0, 0, 0, 0, []]);
+    assertNonNullBucket(bucket);
+
+    // Simulate the pull queue having requested the bucket...
+    bucket.markAsRequested();
+    const ensureLoadedPromise = bucket.ensureLoaded();
+
+    // ...and a reload discarding it while the request is in flight. This must settle awaiters
+    // (discarding removes all event handlers, so a missing notification would leave
+    // ensureLoaded() hanging forever and this test would fail with a timeout).
+    cube.removeAllBuckets();
+    await ensureLoadedPromise;
+
+    // The outcome of the aborted request may arrive afterwards. Since DISCARDED is terminal,
+    // it must neither revive the detached bucket nor throw due to an unexpected state.
+    bucket.receiveData(new Uint8Array(4 * 32 ** 3));
+    bucket.markAsFailed();
+
+    expect(bucket.isDiscarded()).toBe(true);
     expect(bucket.hasData()).toBe(false);
   });
 
@@ -254,7 +279,7 @@ describe("DataCube", () => {
     ]);
   });
 
-  it<TestContext>("removeAllBuckets() should collect a bucket whose in-flight request was just aborted", ({
+  it<TestContext>("removeAllBuckets() should discard a bucket whose request is still in flight", ({
     cube,
   }) => {
     // Simulate a bucket that is mid-request (REQUESTED) at the moment a reload happens,
@@ -263,21 +288,20 @@ describe("DataCube", () => {
     assertNonNullBucket(bucket);
     bucket.markAsRequested();
 
-    // While REQUESTED, the bucket is normally protected from garbage collection...
+    // The garbage collection would spare such a bucket to not throw away the running fetch...
     expect(bucket.mayBeGarbageCollected(false)).toBe(false);
 
-    // ...but removeAllBuckets() aborts in-flight requests, so a REQUESTED bucket is
-    // guaranteed to be superseded and must not linger as a stale cache entry. Since the
-    // abort only fails the bucket asynchronously, removeBucketsIf() must fail it
-    // synchronously; otherwise this bucket would survive and a subsequent read would reuse
-    // its stale (empty) data instead of re-fetching the reloaded data.
+    // ...but a reload aborts in-flight requests and must not let the bucket linger as a
+    // stale cache entry (a subsequent read would reuse its empty data instead of the
+    // reloaded data). The discarded bucket ignores the aborted request's outcome.
     cube.removeAllBuckets();
 
+    expect(bucket.isDiscarded()).toBe(true);
     expect(cube.buckets.length).toBe(0);
     expect(cube.getBucket([0, 0, 0, 0, []]).type).toBe("null");
   });
 
-  it<TestContext>("removeAllBuckets() should keep a dirty bucket even while it is REQUESTED", ({
+  it<TestContext>("removeAllBuckets() should keep a bucket with unsaved data even while it is REQUESTED", ({
     cube,
   }) => {
     // A dirty bucket holds unsaved data and must never be dropped by a reload, even if it
@@ -290,18 +314,19 @@ describe("DataCube", () => {
 
     cube.removeAllBuckets();
 
+    expect(bucket.isDiscarded()).toBe(false);
     expect(cube.buckets.length).toBe(1);
     expect(cube.getBucket([0, 0, 0, 0, []])).toBe(bucket);
   });
 
-  it<TestContext>("getLoadedBucket() should re-fetch when a concurrent reload evicts the awaited bucket", async ({
+  it<TestContext>("getLoadedBucket() should re-fetch when a concurrent reload discards the awaited bucket", async ({
     cube,
   }) => {
     // Reproduces the read-vs-reload race: getLoadedBucket() awaits a bucket whose request
-    // is in flight when a reload (removeAllBuckets) aborts it and evicts the bucket. The
-    // evicted bucket's ensureLoaded() resolves (via "bucketRequestFailed") with no data, so
-    // a naive implementation would return an empty bucket (reading 0). getLoadedBucket()
-    // must instead re-create and reload the bucket and return the freshly loaded one.
+    // is in flight when a reload (removeAllBuckets) aborts it and discards the bucket. The
+    // discarded bucket's ensureLoaded() resolves with no data, so a naive implementation
+    // would return an empty bucket (reading 0). getLoadedBucket() must instead load the
+    // freshly created bucket for that address and return it.
     const address: Vector4 = [0, 0, 0, 0];
 
     // A pull queue that (like the real one) marks queued buckets as REQUESTED synchronously
@@ -334,8 +359,9 @@ describe("DataCube", () => {
     assertNonNullBucket(firstBucket);
     expect(firstBucket.isRequested()).toBe(true);
 
-    // A concurrent reload aborts the in-flight request and evicts the REQUESTED bucket.
+    // A concurrent reload aborts the in-flight request and discards the REQUESTED bucket.
     cube.removeAllBuckets();
+    expect(firstBucket.isDiscarded()).toBe(true);
     expect(cube.getBucket(address).type).toBe("null");
 
     // The retry must have created and requested a fresh bucket; deliver its data.
@@ -347,7 +373,7 @@ describe("DataCube", () => {
     secondBucket.receiveData(new Uint8Array(4 * 32 ** 3));
 
     const resultBucket = await loadedBucketPromise;
-    // getLoadedBucket must return the fresh, loaded bucket — not the evicted empty one.
+    // getLoadedBucket must return the fresh, loaded bucket — not the discarded empty one.
     assertNonNullBucket(resultBucket);
     expect(resultBucket).toBe(secondBucket);
     expect(resultBucket.hasData()).toBe(true);

@@ -470,53 +470,27 @@ class DataCube {
     // happens *after* dequeuing. Also, clear() does not remove high-pri buckets anyway,
     // so we cannot rely on that.
     // However, we abort ongoing requests in the pullQueue as they might yield outdated
-    // results. The buckets for which request(s) got aborted, will be marked as failed.
-    // Typically, they will be refetched as soon as they are needed again.
+    // results. Buckets that are discarded below simply ignore such a result (see
+    // DataBucket.markAsDiscarded); the other buckets are marked as failed once the aborted
+    // request rejects and are typically refetched as soon as they are needed again.
     this.pullQueue.abortRequests();
 
-    const notCollectedBuckets = [];
+    const keptBuckets = [];
     for (const bucket of this.buckets) {
-      const matchesPredicate = predicateFn(bucket);
-
-      // We aborted any in-flight requests above (via pullQueue.abortRequests()). However,
-      // that only transitions a bucket out of the REQUESTED state *asynchronously*:
-      // markAsFailed() is not called until the aborted fetch's promise later rejects in
-      // pullQueue.pullBatch. If a bucket happened to be mid-request at this exact moment, it
-      // would therefore still be REQUESTED here and be excluded from garbage collection by
-      // mayBeGarbageCollected() below. It would then linger as a stale cache entry, and a
-      // subsequent read (e.g. getDataValue) would reuse this stale bucket instead of
-      // re-fetching the fresh data we are reloading.
-      // To close this race, we fail such buckets synchronously so they become collectible
-      // right now (which also notifies any ensureLoaded awaiters). We restrict this to
-      // buckets that would otherwise be collectible, i.e. non-dirty ones; dirty buckets keep
-      // their existing asynchronous handling in pullBatch (they get re-requested there), and
-      // reload callers guarantee a saved (non-dirty) state anyway.
-      if (matchesPredicate && bucket.isRequested() && !bucket.dirty && bucket.dirtyCount === 0) {
-        bucket.markAsFailed();
-      }
-
-      if (
-        // In addition to the given predicate...
-        matchesPredicate &&
-        // ...we also call mayBeGarbageCollected() to find out whether we can GC the bucket.
-        // Thanks to the synchronous markAsFailed() above, a bucket whose request we aborted
-        // is no longer REQUESTED here. Using mayBeGarbageCollected guards us against
-        // collecting unsaved buckets (that should never occur, though, because of the saved
-        // state as explained above).
-        bucket.mayBeGarbageCollected(
-          // respectAccessedFlag=false because we don't care whether the bucket
-          // was just used for rendering, as we reload data anyway.
-          false,
-        )
-      ) {
+      // A reload drops all cached data. Therefore, in contrast to the garbage collection, we
+      // also discard buckets that were just used for rendering as well as buckets whose
+      // request is still in flight (it was aborted above). Only unsaved data must survive.
+      // Note that reload callers guarantee a saved state anyway (see above), so the latter
+      // check is only a safety net.
+      if (predicateFn(bucket) && !bucket.hasUnsavedData()) {
         this.removeBucket(bucket);
       } else {
-        notCollectedBuckets.push(bucket);
+        keptBuckets.push(bucket);
       }
     }
 
-    this.buckets = notCollectedBuckets;
-    this.bucketIterator = notCollectedBuckets.length;
+    this.buckets = keptBuckets;
+    this.bucketIterator = keptBuckets.length;
   }
 
   triggerRenderedBucketDataChanged(): void {
@@ -548,7 +522,7 @@ class DataCube {
     const [bucketIndex, cube] = this.getBucketIndexAndCube(address);
 
     if (bucketIndex != null && cube != null) {
-      bucket.destroy();
+      bucket.markAsDiscarded();
       cube.data.delete(bucketIndex);
     }
   }
@@ -1092,26 +1066,20 @@ class DataCube {
   async getLoadedBucket(bucketAddress: BucketAddress) {
     let bucket = this.getOrCreateBucket(bucketAddress);
 
-    if (bucket.type !== "null") {
+    while (bucket.type !== "null") {
       await bucket.ensureLoaded();
 
-      // A concurrent reload (removeBucketsIf, e.g. via reloadAllBuckets) can evict the
-      // bucket we just awaited while its request was still in flight: the reload aborts the
-      // request and removes the bucket from the cube, so ensureLoaded() resolves (via the
-      // "bucketRequestFailed" event) with a detached, unloaded bucket. If we returned that
-      // bucket, the caller (e.g. getDataValue) would read empty data (0) even though fresh
-      // data is available after the reload. Detect this by checking whether our bucket is
-      // still the one registered at this address; if it was superseded, load the fresh
-      // bucket instead. A genuine request failure keeps the same bucket object in the cube
-      // (it is not removed), so this loop does not spin on real load errors.
-      while (bucket !== this.getBucket(bucketAddress)) {
-        // TODOM: refactor so that bool expr above reads more easily
-        bucket = this.getOrCreateBucket(bucketAddress);
-        if (bucket.type === "null") {
-          break;
-        }
-        await bucket.ensureLoaded();
+      if (!bucket.isDiscarded()) {
+        break;
       }
+
+      // A concurrent reload (e.g. via reloadAllBuckets) discarded the bucket while we were
+      // awaiting it, which means its data is gone. If we returned it, the caller (e.g.
+      // getDataValue) would read empty data (0) even though fresh data is available after
+      // the reload. Therefore, we load the fresh bucket for this address instead.
+      // Note that a genuine request failure does not discard the bucket, so this loop cannot
+      // spin on real load errors.
+      bucket = this.getOrCreateBucket(bucketAddress);
     }
 
     return bucket;

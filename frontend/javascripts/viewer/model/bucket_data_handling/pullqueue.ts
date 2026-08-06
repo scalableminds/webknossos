@@ -54,14 +54,17 @@ class PullQueue {
       this.fetchingBatchCount < PullQueueConstants.BATCH_LIMIT &&
       this.priorityQueue.length > 0
     ) {
-      const batch = [];
+      // Note that the batch holds the bucket objects (and not their addresses), because a
+      // bucket can be discarded and recreated at the same address while the request is in
+      // flight (see DataBucket.markAsDiscarded).
+      const batch: Array<DataBucket> = [];
 
       while (batch.length < BATCH_SIZE && this.priorityQueue.length > 0) {
         const address = this.priorityQueue.dequeue().bucket;
         const bucket = this.cube.getOrCreateBucket(address);
 
         if (bucket.type === "data" && bucket.needsRequest()) {
-          batch.push(address);
+          batch.push(bucket);
           bucket.markAsRequested();
         }
       }
@@ -77,46 +80,32 @@ class PullQueue {
     this.abortController = new AbortController();
   }
 
-  private async pullBatch(batch: Array<BucketAddress>): Promise<void> {
+  private async pullBatch(batch: Array<DataBucket>): Promise<void> {
     // Loading a bunch of buckets
     this.fetchingBatchCount++;
     const { dataset } = Store.getState();
     const layerInfo = getLayerByName(dataset, this.layerName);
     const { renderMissingDataBlack } = Store.getState().datasetConfiguration;
 
-    // Capture the exact bucket objects this batch was launched for. Buckets are looked
-    // up by address, but a bucket can be evicted and a fresh one recreated at the same
-    // address while this request is in flight — most notably during a reload, which
-    // aborts this request via abortRequests() and (synchronously) evicts the affected
-    // buckets. Once that happens, this request has been superseded: a newer bucket and
-    // request now own the address. This stale request must not touch that new bucket,
-    // neither by writing its outdated data nor by marking it as failed. We therefore
-    // compare object identity (against the captured bucket) before acting on any bucket
-    // below. This capture is synchronous (no await since markAsRequested in pull()), so
-    // it reliably reflects the buckets this batch requested.
-    const requestedBucketByAddress = new Map(
-      batch.map((address) => [address, this.cube.getBucket(address)] as const),
-    );
-
     let hasErrored = false;
-    let failedBucketAddresses = [];
+    let failedBuckets: Array<DataBucket> = [];
     try {
       const bucketResults = await asAbortable(
-        requestWithFallback(layerInfo, batch),
+        requestWithFallback(
+          layerInfo,
+          batch.map((bucket) => bucket.zoomedAddress),
+        ),
         this.abortController.signal,
         PULL_ABORTION_ERROR,
       );
 
-      for (const [index, bucketAddress] of batch.entries()) {
+      for (const [index, bucket] of batch.entries()) {
         try {
           const bucketResult = bucketResults[index];
-          const bucket = this.cube.getBucket(bucketAddress);
 
-          // Skip if this request has been superseded, i.e. the bucket we requested was
-          // evicted/replaced in the meantime (see the identity note above). We use
-          // getBucket (not getOrCreateBucket) so we don't resurrect an evicted bucket
-          // just to fill it with now-stale data.
-          if (bucket.type !== "data" || bucket !== requestedBucketByAddress.get(bucketAddress)) {
+          // If the bucket was discarded meanwhile (e.g. by a reload which aborted this
+          // request), the received data is outdated and must be dropped.
+          if (bucket.isDiscarded()) {
             continue;
           }
 
@@ -137,39 +126,30 @@ class PullQueue {
             case "failure": {
               // The bucket could not be read. Schedule it for a retry via the
               // batch-level error handling below.
-              failedBucketAddresses.push(bucketAddress);
+              failedBuckets.push(bucket);
               break;
             }
           }
         } catch {
-          failedBucketAddresses.push(bucketAddress);
+          failedBuckets.push(bucket);
         }
       }
 
-      if (failedBucketAddresses.length > 0) {
+      if (failedBuckets.length > 0) {
         throw new Error("Some buckets could not be handled.");
       }
     } catch (error) {
       if (this.isDestroyed) {
         return;
       }
-      failedBucketAddresses = failedBucketAddresses.length === 0 ? batch : failedBucketAddresses;
-      for (const bucketAddress of failedBucketAddresses) {
-        const bucket = this.cube.getBucket(bucketAddress);
-
-        // Only touch the bucket if it is still the exact object this request was launched
-        // for. If it was evicted/replaced meanwhile (e.g. by a reload that aborted this
-        // request), a newer request now owns the address and marking it as failed here
-        // would clobber that fresh, legitimately-requested bucket.
-        if (bucket !== requestedBucketByAddress.get(bucketAddress)) {
-          continue;
-        }
-
+      failedBuckets = failedBuckets.length === 0 ? batch : failedBuckets;
+      for (const bucket of failedBuckets) {
         // Only mark the bucket as failed if it is still in the REQUESTED state.
         // A bucket might have already transitioned to another state (e.g. LOADED
-        // via an earlier result in the same batch), in which case markAsFailed()
-        // would throw. Skipping it lets the loop safely handle the remaining buckets.
-        if (bucket.type === "data" && bucket.isRequested()) {
+        // via an earlier result in the same batch or DISCARDED via a reload), in which case
+        // markAsFailed() would throw or be a no-op. Skipping it lets the loop safely handle
+        // the remaining buckets.
+        if (bucket.isRequested()) {
           bucket.markAsFailed();
 
           if (bucket.dirty) {

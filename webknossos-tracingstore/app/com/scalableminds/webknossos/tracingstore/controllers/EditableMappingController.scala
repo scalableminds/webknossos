@@ -20,6 +20,7 @@ import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   EditableMappingIOService,
   EditableMappingService,
+  MappingLevelPreviewParameters,
   MinCutParameters,
   NeighborsParameters
 }
@@ -201,6 +202,38 @@ class EditableMappingController @Inject() (
             agglomerateId
           )
         } yield Ok(agglomerateTreeBytes)
+      }
+    }
+
+  // Read-only preview: returns the serialized skeleton of the anchor segment's agglomerate as it would look at
+  // targetMappingName (respecting existing manual edits). The anchor is given by segmentId or by segmentPosition
+  // (+ mag), resolved server-side like split/merge. See SPIKE-per-agglomerate-mapping-level.md.
+  def mappingLevelPreviewSkeleton(tracingId: String): Action[MappingLevelPreviewParameters] =
+    Action.fox(validateJson[MappingLevelPreviewParameters]) { implicit request =>
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
+        val versionOpt = Some(request.body.version)
+        for {
+          annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
+          tracing <- annotationService.findVolume(annotationId, tracingId, versionOpt)
+          _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
+          editableMappingInfo <- annotationService.findEditableMappingInfo(annotationId, tracingId, versionOpt)
+          remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerForVolumeTracing(tracing, annotationId)
+          anchorSegmentId <- editableMappingService.findSegmentIdAtPositionIfNeeded(
+            remoteFallbackLayer,
+            request.body.segmentPosition,
+            request.body.segmentId,
+            request.body.mag
+          )
+          skeletonBytes <- editableMappingService.mappingLevelPreviewSkeleton(
+            tracingId,
+            annotationId,
+            editableMappingInfo,
+            tracing.version,
+            anchorSegmentId,
+            request.body.targetMappingName,
+            remoteFallbackLayer
+          )
+        } yield Ok(skeletonBytes)
       }
     }
 

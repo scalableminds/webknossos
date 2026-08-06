@@ -2154,6 +2154,40 @@ export function getEditableAgglomerateTreeAsSkeletonTracing(
   });
 }
 
+// Preview (skeleton) of the anchor segment's agglomerate as it would look at targetMappingName, respecting existing
+// manual edits. The anchor is given by an unmapped segmentId or by a position (+mag), resolved server-side like
+// split/merge. See SPIKE-per-agglomerate-mapping-level.md. Returns serialized SkeletonTracing bytes (parse with parseProtoTracing).
+export function getMappingLevelPreviewSkeleton(
+  tracingStoreUrl: string,
+  tracingId: string,
+  anchor: {
+    segmentId?: number | null;
+    segmentPosition?: Vector3 | null;
+    mag?: Vector3 | null;
+  },
+  targetMappingName: string,
+  version: number,
+): Promise<ArrayBuffer> {
+  return doWithToken((token) =>
+    Request.sendJSONReceiveArraybuffer(
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/mappingLevelPreviewSkeleton?token=${token}`,
+      {
+        data: {
+          // TODO: Proper 64 bit support (#6921)
+          segmentId: anchor.segmentId != null ? Number(anchor.segmentId) : undefined,
+          segmentPosition: anchor.segmentPosition ?? undefined,
+          mag: anchor.mag ?? undefined,
+          targetMappingName,
+          version,
+        },
+        // See getEditableAgglomerateTreeAsSkeletonTracing: avoid the webworker path so json errors surface correctly.
+        useWebworkerForArrayBuffer: false,
+        showErrorToast: false,
+      },
+    ),
+  );
+}
+
 export async function getMeshFilesForDatasetLayer(
   dataStoreUrl: string,
   dataset: APIDataset,

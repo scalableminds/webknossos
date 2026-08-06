@@ -76,7 +76,7 @@ The information is JSON-encoded in the URL fragment and has the following format
   type AdditionalCoordinate = { name: string; value: number };
 
   type BaseMeshUrlDescriptor = {|
-    +segmentId: string, // todop: this used to be number. for 64 bit support this needs to be string. is this backwards compatible?
+    +segmentId: string, // number is supported, too, for legacy reasons. Prefer string to be compatible with 64-bit numbers
     +seedPosition: Vector3,
     +seedAdditionalCoordinates?: AdditionalCoordinate[];
   |};

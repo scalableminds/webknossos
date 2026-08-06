@@ -4,15 +4,20 @@ import {
   setupWebknossosForTestingWithRestrictions,
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
-import type { MinCutTargetEdge } from "admin/rest_api";
+import type { MeshSegmentInfo } from "admin/api/mesh";
+import { type MinCutTargetEdge, meshApi } from "admin/rest_api";
 import isEqual from "lodash-es/isEqual";
+import type { APIMeshFileInfo } from "types/api_types";
 import { actionChannel, call, put, take } from "redux-saga/effects";
 import type { Vector3 } from "viewer/constants";
+import { PARTITION_COLORS } from "viewer/controller/segment_mesh_controller";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import {
   minCutAgglomerateWithPositionAction,
   proofreadMergeAction,
+  toggleSegmentInPartitionAction,
 } from "viewer/model/actions/proofread_actions";
+import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import {
   setActiveCellAction,
   updateSegmentAction,
@@ -32,18 +37,83 @@ import {
   expectSegmentList,
   getPositionForSegmentId,
   initializeMappingAndTool,
+  loadAgglomerateMeshes,
   makeMappingEditableForTest,
   mockEdgesForPartitionedAgglomerateMinCut,
   mockInitialBucketAndAgglomerateData,
   operationFinished,
   simulatePartitionedSplitAgglomeratesViaMeshes,
 } from "./proofreading_test_utils";
-import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
+import {
+  finishedLoadingMeshAction,
+  setCollaborationModeAction,
+} from "viewer/model/actions/annotation_actions";
 import {
   mergeSegment1And4,
   mergeSegment5And6,
 } from "./proofreading_interaction_update_action_fixtures";
 import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_server_objects";
+
+// Initial mapping produced by mockInitialBucketAndAgglomerateData below:
+// agglomerate 1 -> {1, 2, 3, 1337, 1338}, agglomerate 4 -> {4, 5}, agglomerate 6 -> {6, 7}.
+const SUPERVOXELS_BY_AGGLOMERATE_ID = new Map<number, number[]>([
+  [1, [1, 2, 3, 1337, 1338]],
+  [4, [4, 5]],
+  [6, [6, 7]],
+]);
+
+// The default harness mock for getMeshFileChunksForSegment returns a single chunk whose
+// unmappedSegmentId equals the requested agglomerate id. That is fine for tests that only need a
+// mesh to exist, but the multi-split highlighting/reconcile logic needs an agglomerate's mesh to
+// resolve its individual supervoxels. This override returns one chunk per constituent supervoxel
+// (each decoded to a unit cube by the mocked draco loader), so the precomputed mesh's real
+// VertexSegmentMapping — built in precomputed_mesh_saga — resolves those supervoxels.
+async function getMultiSupervoxelChunksForSegment(
+  _dataStoreUrl: string,
+  _datasetId: string,
+  _layerName: string,
+  _meshFile: APIMeshFileInfo,
+  segmentId: number,
+): Promise<MeshSegmentInfo> {
+  const supervoxels = SUPERVOXELS_BY_AGGLOMERATE_ID.get(segmentId) ?? [segmentId];
+  return {
+    meshFormat: "draco",
+    lods: [
+      {
+        chunks: supervoxels.map((unmappedSegmentId) => ({
+          position: [0, 0, 0],
+          byteOffset: 0,
+          byteSize: 666,
+          unmappedSegmentId,
+        })),
+        transform: [
+          [1, 0, 0, 0],
+          [0, 1, 0, 0],
+          [0, 0, 1, 0],
+        ],
+      },
+    ],
+    chunkScale: [1, 1, 1],
+  };
+}
+
+function findMeshNodeForAgglomerate(
+  context: WebknossosTestContext,
+  layerName: string,
+  agglomerateId: number,
+): any {
+  const layerLODGroup = context.segmentMeshController.getLODGroupOfLayer(layerName);
+  let meshNode: any = null;
+  layerLODGroup?.traverse((obj: any) => {
+    if (meshNode == null && "geometry" in obj && obj.parent?.segmentId === agglomerateId) {
+      meshNode = obj;
+    }
+  });
+  if (meshNode == null) {
+    throw new Error(`Expected a loaded mesh for agglomerate ${agglomerateId}.`);
+  }
+  return meshNode;
+}
 
 describe("Proofreading (with mesh actions)", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
@@ -735,5 +805,119 @@ describe("Proofreading (with mesh actions)", () => {
     });
 
     await task.toPromise();
+  });
+
+  function* setupProofreadingTool(context: WebknossosTestContext): Saga<string> {
+    mockInitialBucketAndAgglomerateData(
+      context,
+      [
+        [1, 1338],
+        [3, 1337],
+      ],
+      Store.getState(),
+    );
+    const { tracingId } = Store.getState().annotation.volumes[0];
+    yield initializeMappingAndTool(context, tracingId);
+    return tracingId;
+  }
+
+  function* setupLoadedMeshes(
+    context: WebknossosTestContext,
+    agglomerateIds: number[],
+  ): Saga<string> {
+    const tracingId = yield* setupProofreadingTool(context);
+    yield loadAgglomerateMeshes(agglomerateIds);
+    return tracingId;
+  }
+
+  describe("multi-split selection", () => {
+    // Load precomputed meshes whose VertexSegmentMapping resolves each agglomerate's constituent
+    // supervoxels (see getMultiSupervoxelChunksForSegment), so the mesh-data based highlighting and
+    // reconcile logic runs against a realistic mapping. Restore the default chunk mock afterwards so
+    // other tests remain unaffected.
+    let restoreChunksMock: () => void;
+    beforeEach(() => {
+      const mockedFn = vi.mocked(meshApi.getMeshFileChunksForSegment);
+      const previousImpl = mockedFn.getMockImplementation();
+      mockedFn.mockImplementation(getMultiSupervoxelChunksForSegment);
+      restoreChunksMock = () => mockedFn.mockImplementation(previousImpl!);
+    });
+    afterEach(() => {
+      restoreChunksMock();
+    });
+
+    it("keeps the multi-split selection's agglomerate id in sync when a reload changes the id", async (context: WebknossosTestContext) => {
+      const task = startSaga(function* task(): Saga<void> {
+        const tracingId = yield* setupLoadedMeshes(context, [1, 4]);
+
+        yield put(updateUserSettingAction("isMultiSplitActive", true));
+        // Select supervoxels 1 and 2 (both in agglomerate 1's mesh) but pretend the selection still
+        // belongs to a stale agglomerate id (99), as it would right after a foreign edit reloaded the
+        // mesh under a new id.
+        yield put(toggleSegmentInPartitionAction(1, 1, 99));
+        yield put(toggleSegmentInPartitionAction(2, 2, 99));
+
+        // A (re)loaded mesh finishing triggers the reconcile.
+        yield put(finishedLoadingMeshAction(tracingId, 1));
+        yield take("SET_MULTI_CUT_AGGLOMERATE_ID");
+
+        const minCutPartitions =
+          Store.getState().localSegmentationStateByLayer[tracingId].minCutPartitions;
+        // Supervoxels 1 and 2 live in agglomerate 1's mesh, so the id is synced to 1.
+        expect(minCutPartitions.agglomerateId).toBe(1);
+        expect(minCutPartitions[1]).toEqual([1]);
+        expect(minCutPartitions[2]).toEqual([2]);
+      });
+      await task.toPromise();
+    });
+
+    it("clears the multi-split selection when a foreign edit scattered it across agglomerates", async (context: WebknossosTestContext) => {
+      const task = startSaga(function* task(): Saga<void> {
+        const tracingId = yield* setupLoadedMeshes(context, [1, 4]);
+
+        yield put(updateUserSettingAction("isMultiSplitActive", true));
+        // Selection now spans agglomerate 1 (supervoxel 1) and agglomerate 4 (supervoxel 4).
+        yield put(toggleSegmentInPartitionAction(1, 1, 1));
+        yield put(toggleSegmentInPartitionAction(4, 2, 1));
+
+        yield put(finishedLoadingMeshAction(tracingId, 1));
+        yield take("RESET_MULTI_CUT_TOOL_PARTITIONS");
+
+        const minCutPartitions =
+          Store.getState().localSegmentationStateByLayer[tracingId].minCutPartitions;
+        expect(minCutPartitions).toEqual({ 1: [], 2: [], agglomerateId: null });
+      });
+      await task.toPromise();
+    });
+
+    it("re-applies the partition highlighting to a mesh reloaded during a multi-split", async (context: WebknossosTestContext) => {
+      const task = startSaga(function* task(): Saga<void> {
+        const tracingId = yield* setupProofreadingTool(context);
+        const { segmentMeshController } = context;
+
+        // Establish a multi-split selection within agglomerate 1 before its mesh (re)loads.
+        yield put(updateUserSettingAction("isMultiSplitActive", true));
+        yield put(toggleSegmentInPartitionAction(1, 1, 1));
+        yield put(toggleSegmentInPartitionAction(1337, 2, 1));
+
+        // Load agglomerate 1's precomputed mesh. This is the (re)load path: it goes through
+        // addMeshFromGeometry, which must re-apply the partition highlighting to the fresh geometry —
+        // the plane_view store subscription only fires when minCutPartitions *changes*, which a reload
+        // is not. The re-highlight is throttled, so we flush it to assert deterministically.
+        yield loadAgglomerateMeshes([1]);
+        segmentMeshController.throttledUpdateMinCutPartitionHighlighting.flush();
+
+        // The reloaded merged mesh carries a real VertexSegmentMapping. Its supervoxels
+        // (1, 2, 3, 1337, 1338) are sorted ascending and each is a unit cube of 8 vertices, so
+        // partition 1 (supervoxel 1) covers vertices [0, 8) and partition 2 (supervoxel 1337)
+        // covers [24, 32).
+        const meshNode = findMeshNodeForAgglomerate(context, tracingId, 1);
+        expect(meshNode.partitionedState).toEqual([
+          { range: [0, 8], color: PARTITION_COLORS[1] },
+          { range: [24, 32], color: PARTITION_COLORS[2] },
+        ]);
+      });
+      await task.toPromise();
+    });
   });
 });

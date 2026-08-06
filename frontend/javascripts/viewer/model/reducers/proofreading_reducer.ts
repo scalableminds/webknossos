@@ -87,6 +87,25 @@ function ProofreadingReducer(state: WebknossosState, action: ProofreadAction): W
       });
     }
 
+    case "SET_MULTI_CUT_AGGLOMERATE_ID": {
+      const layerData = state.localSegmentationStateByLayer[layerName];
+      // Only update the id while a selection exists.
+      if (!layerData?.minCutPartitions || layerData.minCutPartitions.agglomerateId == null) {
+        return state;
+      }
+      return update(state, {
+        localSegmentationStateByLayer: {
+          [layerName]: {
+            minCutPartitions: {
+              agglomerateId: {
+                $set: action.agglomerateId,
+              },
+            },
+          },
+        },
+      });
+    }
+
     default:
       return state;
   }

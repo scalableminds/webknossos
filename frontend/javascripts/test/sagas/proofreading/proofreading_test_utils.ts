@@ -5,6 +5,7 @@ import isEqual from "lodash-es/isEqual";
 import sortBy from "lodash-es/sortBy";
 import { call, put, take } from "redux-saga/effects";
 import { sampleHdf5AgglomerateName } from "test/fixtures/dataset_server_object";
+import { dummyMeshFile } from "test/fixtures/dummy_mesh_file";
 import { powerOrga } from "test/fixtures/dummy_organization";
 import { AgglomerateMapping } from "test/helpers/agglomerate_mapping_helper";
 import {
@@ -23,7 +24,11 @@ import {
   getVolumeTracingById,
   hasEditableMapping,
 } from "viewer/model/accessors/volumetracing_accessor";
-import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
+import {
+  setCollaborationModeAction,
+  updateCurrentMeshFileAction,
+  updateMeshFileListAction,
+} from "viewer/model/actions/annotation_actions";
 import { setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import {
@@ -537,6 +542,12 @@ export function prepareGetNeighborsForAgglomerateNode(
 }
 
 export function* loadAgglomerateMeshes(agglomerateIds: number[]): Saga<void> {
+  // Activate a (mocked) precomputed mesh file so that loadCoarseMesh takes the precomputed path
+  // instead of ad-hoc meshing. This mirrors production proofreading helper meshes, which are
+  // precomputed and therefore carry a vertexSegmentMapping (used e.g. for multi-split highlighting).
+  const layerName = yield* select((state) => state.annotation.volumes[0].tracingId);
+  yield put(updateMeshFileListAction(layerName, [dummyMeshFile]));
+  yield put(updateCurrentMeshFileAction(layerName, dummyMeshFile.name));
   for (const id of agglomerateIds) {
     yield put(proofreadAtPosition([id, id, id]));
     yield take("FINISHED_LOADING_MESH");

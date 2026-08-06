@@ -10922,16 +10922,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-colorful@npm:^5.6.1":
-  version: 5.6.1
-  resolution: "react-colorful@npm:5.6.1"
-  peerDependencies:
-    react: ">=16.8.0"
-    react-dom: ">=16.8.0"
-  checksum: 10c0/48eb73cf71e10841c2a61b6b06ab81da9fffa9876134c239bfdebcf348ce2a47e56b146338e35dfb03512c85966bfc9a53844fc56bc50154e71f8daee59ff6f0
-  languageName: node
-  linkType: hard
-
 "react-command-palette@npm:^0.22.1":
   version: 0.22.1
   resolution: "react-command-palette@npm:0.22.1"
@@ -13949,7 +13939,6 @@ __metadata:
     protobufjs: "npm:^6.11.5"
     puppeteer-core: "npm:^24.40.0"
     react: "npm:^19.2.0"
-    react-colorful: "npm:^5.6.1"
     react-command-palette: "npm:^0.22.1"
     react-dnd: "npm:^16.0.0"
     react-dnd-html5-backend: "npm:^16.0.0"

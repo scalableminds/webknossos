@@ -16,7 +16,6 @@ import type { Vector3, ViewMode } from "viewer/constants";
 import constants, { MappingStatusEnum, ViewModeValues } from "viewer/constants";
 import { applyState } from "viewer/controller/apply_url_state";
 import { getPosition } from "viewer/model/accessors/flycam_accessor";
-import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { getMeshesForCurrentAdditionalCoordinates } from "viewer/model/accessors/volumetracing_accessor";
 import {
   additionalCoordinateToKeyValue,
@@ -366,8 +365,7 @@ class UrlManager {
 
     const annotation = state.annotation;
     if (annotation.skeleton != null) {
-      const skeletonTracing = enforceSkeletonTracing(annotation);
-      const { showSkeletons } = skeletonTracing;
+      const { showSkeletons } = state.localSkeletonState;
       const layerName = "Skeleton";
 
       stateByLayer[layerName] = {

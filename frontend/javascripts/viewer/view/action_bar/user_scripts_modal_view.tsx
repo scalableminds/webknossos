@@ -1,5 +1,5 @@
 /* eslint-disable no-eval */
-import { Input, Modal, Select, Spin } from "antd";
+import { App, Input, Modal, Select, Spin } from "antd";
 import { handleGenericError } from "libs/error_handling";
 import { fetchGistContent } from "libs/gist";
 import { makeComponentLazy, useGuardedFetch } from "libs/react_helpers";
@@ -18,6 +18,7 @@ type UserScriptsModalViewProps = {
 };
 
 const _UserScriptsModalView: React.FC<UserScriptsModalViewProps> = ({ onOK, isOpen }) => {
+  const { modal } = App.useApp();
   const [code, setCode] = useState("");
   const [isCodeChanged, setIsCodeChanged] = useState(false);
   // Needs to be undefined so the placeholder is displayed in the beginning
@@ -58,13 +59,13 @@ const _UserScriptsModalView: React.FC<UserScriptsModalViewProps> = ({ onOK, isOp
       if (!isCodeChanged) {
         void loadScript(script);
       } else {
-        Modal.confirm({
+        modal.confirm({
           content: messages["add_script.confirm_change"],
           onOk: () => loadScript(script),
         });
       }
     },
-    [scripts, isCodeChanged, loadScript],
+    [scripts, isCodeChanged, loadScript, modal],
   );
 
   const handleClick = useCallback(() => {

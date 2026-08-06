@@ -22,13 +22,10 @@ import {
   Typography,
 } from "antd";
 import FastTooltip from "components/fast_tooltip";
+import { stringToNormalizedRgbColor } from "libs/colors";
 import { handleGenericError } from "libs/error_handling";
 import { useWkSelector } from "libs/react_hooks";
-import {
-  computeArrayFromBoundingBox,
-  computeBoundingBoxFromArray,
-  stringToColor,
-} from "libs/utils";
+import { computeArrayFromBoundingBox, computeBoundingBoxFromArray } from "libs/utils";
 import noop from "lodash-es/noop";
 import partial from "lodash-es/partial";
 import type React from "react";
@@ -371,7 +368,8 @@ export default function BoundingBoxTab() {
           value={layerBoundingBox.value}
           name={layerBoundingBox.displayName}
           color={
-            layerBoundingBoxColors[layerBoundingBox.name] ?? stringToColor(layerBoundingBox.name)
+            layerBoundingBoxColors[layerBoundingBox.name] ??
+            stringToNormalizedRgbColor(layerBoundingBox.name)
           }
           isVisible={layerBoundingBoxVisibilities[layerBoundingBox.name] ?? false}
           isExportEnabled={isExportEnabled}

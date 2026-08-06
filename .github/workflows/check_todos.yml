@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-22.04
     if: "!github.event.pull_request.draft"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Check for TODO comments without issue links
         run: tools/check-todos.sh

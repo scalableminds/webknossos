@@ -819,9 +819,7 @@ object Msg {
       s"Requesting a different mapping is only supported for segment statistics files without their own mapping, but this file was computed for mapping “$fileMappingName”."
     def formatVersionTooOld(formatVersion: Long, minimumSupportedVersion: Long): String =
       s"Segment statistics file has format version $formatVersion, but at least $minimumSupportedVersion is required."
-    def idsNotDense(first: Long, last: Long, length: Long): String =
-      s"Segment statistics file does not have dense ids: first id is $first (expected 0), last id is $last (expected ${length - 1}), for $length ids total. Only dense ids are supported."
-    val idsEmpty = "Segment statistics file has an empty ids array, expected at least one segment."
+    val idsNotDense = "Segment statistics file does not have dense ids. Only files with dense ids are supported."
     def metricNotAvailable(metric: String): String =
       s"Segment statistics file does not contain the metric “$metric”."
   }

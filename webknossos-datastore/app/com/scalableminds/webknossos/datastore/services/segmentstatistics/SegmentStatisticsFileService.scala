@@ -81,6 +81,10 @@ class SegmentStatisticsFileService @Inject() (
 
   private val openArraysCache: AlfuCache[(SegmentStatisticsFileKey, String), DatasetArray] = AlfuCache()
 
+  private val availableMetricsCache: AlfuCache[SegmentStatisticsFileKey, Seq[String]] = AlfuCache()
+
+  private val idsAreDenseCache: AlfuCache[SegmentStatisticsFileKey, Boolean] = AlfuCache()
+
   def lookUpSegmentStatisticsFileKey(dataSourceId: DataSourceId, dataLayer: DataLayer)(implicit
       ec: ExecutionContext
   ): Fox[SegmentStatisticsFileKey] =
@@ -154,6 +158,11 @@ class SegmentStatisticsFileService @Inject() (
   private def availableMetrics(
       segmentStatisticsFileKey: SegmentStatisticsFileKey
   )(using ec: ExecutionContext, tc: TokenContext): Fox[Seq[String]] =
+    availableMetricsCache.getOrLoad(segmentStatisticsFileKey, key => availableMetricsImpl(key))
+
+  private def availableMetricsImpl(
+      segmentStatisticsFileKey: SegmentStatisticsFileKey
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Seq[String]] =
     for {
       existsPerMetric <- Fox.serialCombined(SegmentStatisticsFileService.possibleMetrics) { metric =>
         openZarrArray(segmentStatisticsFileKey, metric).shiftBox.map(_.isDefined)
@@ -221,6 +230,7 @@ class SegmentStatisticsFileService @Inject() (
       allowRemapping: Boolean
   )(using ec: ExecutionContext, tc: TokenContext): Fox[Unit] =
     for {
+      _ <- checkIdsAreDense(segmentStatisticsFileKey)
       (fileMag, fileMappingName) <- resolveMagAndMappingName(segmentStatisticsFileKey, dataLayer)
       _ <- Fox.fromBool(fileMag <= requestedMag) ?~> Msg.SegmentStatisticsFile
         .magTooFine(requestedMag.toMagLiteral(true), fileMag.toMagLiteral(true))
@@ -423,21 +433,32 @@ class SegmentStatisticsFileService @Inject() (
       )
     } yield surfaceAreas
 
-  private def checkIdsAreDense(
+  private def idsAreDense(
       segmentStatisticsFileKey: SegmentStatisticsFileKey
-  )(using ec: ExecutionContext, tc: TokenContext): Fox[Unit] =
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Boolean] =
     for {
       idsArray <- openZarrArray(segmentStatisticsFileKey, SegmentStatisticsFileService.keyIds)
       length <- idsArray.datasetShape
         .flatMap(_.headOption)
         .toFox ?~> "Could not determine length of ids array in segment statistics file"
-      _ <- Fox.fromBool(length > 0) ?~> Msg.SegmentStatisticsFile.idsEmpty
-      firstMultiArray <- idsArray.readAsMultiArray(offset = 0L, shape = 1)
-      lastMultiArray <- idsArray.readAsMultiArray(offset = length - 1, shape = 1)
-      // the underlying dtype of ids may vary, but getLong will auto-convert to long.
-      first <- tryo(firstMultiArray.getLong(0)).toFox
-      last <- tryo(lastMultiArray.getLong(0)).toFox
-      _ <- Fox.fromBool(first == 0 && last == length - 1) ?~> Msg.SegmentStatisticsFile.idsNotDense(first, last, length)
+      isDense <-
+        if (length == 0) Fox.successful(false)
+        else
+          for {
+            firstMultiArray <- idsArray.readAsMultiArray(offset = 0L, shape = 1)
+            lastMultiArray <- idsArray.readAsMultiArray(offset = length - 1, shape = 1)
+            // the underlying dtype of ids may vary, but getLong will auto-convert to long.
+            first <- tryo(firstMultiArray.getLong(0)).toFox
+            last <- tryo(lastMultiArray.getLong(0)).toFox
+          } yield first == 0 && last == length - 1
+    } yield isDense
+
+  private def checkIdsAreDense(
+      segmentStatisticsFileKey: SegmentStatisticsFileKey
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Unit] =
+    for {
+      isDense <- idsAreDenseCache.getOrLoad(segmentStatisticsFileKey, key => idsAreDense(key))
+      _ <- Fox.fromBool(isDense) ?~> Msg.SegmentStatisticsFile.idsNotDense
     } yield ()
 
   def getInfos(dataSourceId: DataSourceId, dataLayer: DataLayer)(using
@@ -456,6 +477,14 @@ class SegmentStatisticsFileService @Inject() (
     }
 
     openArraysCache.clear { case (key, _) =>
+      key.dataSourceId == dataSourceId && layerNameOpt.forall(_ == key.layerName)
+    }
+
+    availableMetricsCache.clear { key =>
+      key.dataSourceId == dataSourceId && layerNameOpt.forall(_ == key.layerName)
+    }
+
+    idsAreDenseCache.clear { key =>
       key.dataSourceId == dataSourceId && layerNameOpt.forall(_ == key.layerName)
     }
 

@@ -132,16 +132,16 @@ function applySingleAction(
       return VolumeTracingReducer(
         state,
         mergeSegmentItemsAction(
-          ua.value.agglomerateId1,
-          ua.value.agglomerateId2,
-          ua.value.segmentId1,
-          ua.value.segmentId2,
+          BigInt(ua.value.agglomerateId1),
+          BigInt(ua.value.agglomerateId2),
+          BigInt(ua.value.segmentId1),
+          BigInt(ua.value.segmentId2),
           actionTracingId,
         ),
       );
     }
     case "deleteSegment": {
-      return VolumeTracingReducer(state, removeSegmentAction(ua.value.id, actionTracingId));
+      return VolumeTracingReducer(state, removeSegmentAction(BigInt(ua.value.id), actionTracingId));
     }
     case "upsertSegmentGroup": {
       const { groupId, newParentId, name, ...props } = ua.value;
@@ -248,7 +248,7 @@ function applySingleAction(
       return VolumeTracingReducer(
         state,
         updateSegmentAction(
-          ua.value.id,
+          BigInt(ua.value.id),
           { isVisible: ua.value.isVisible },
           actionTracingId,
           actionTimestamp,
@@ -257,7 +257,7 @@ function applySingleAction(
       );
     }
     case "updateActiveSegmentId": {
-      return VolumeTracingReducer(state, setActiveCellAction(ua.value.activeSegmentId));
+      return VolumeTracingReducer(state, setActiveCellAction(BigInt(ua.value.activeSegmentId)));
     }
     case "updateSegmentGroupVisibility": {
       const { groupId, isVisible } = ua.value;

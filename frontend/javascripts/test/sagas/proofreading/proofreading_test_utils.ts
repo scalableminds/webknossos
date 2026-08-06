@@ -255,8 +255,8 @@ export class BackendMock {
             throw new Error("Segment Id is null");
           }
           this.agglomerateMapping.addEdge(
-            updateAction.value.segmentId1,
-            updateAction.value.segmentId2,
+            BigInt(updateAction.value.segmentId1),
+            BigInt(updateAction.value.segmentId2),
             bumpVersion,
           );
           isFirstUpdateAction = false;
@@ -265,8 +265,8 @@ export class BackendMock {
             throw new Error("Segment Id is null");
           }
           this.agglomerateMapping.removeEdge(
-            updateAction.value.segmentId1,
-            updateAction.value.segmentId2,
+            BigInt(updateAction.value.segmentId1),
+            BigInt(updateAction.value.segmentId2),
             bumpVersion,
           );
           isFirstUpdateAction = false;

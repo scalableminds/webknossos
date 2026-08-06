@@ -751,8 +751,8 @@ export function* tryToIncorporateActions(
 
         // Proofreading
         case "mergeAgglomerate": {
-          const { actionTracingId, agglomerateId1, agglomerateId2 } = action.value;
-          if (agglomerateId1 == null || agglomerateId2 == null) {
+          const { actionTracingId } = action.value;
+          if (action.value.agglomerateId1 == null || action.value.agglomerateId2 == null) {
             console.log(
               "Cannot apply mergeAgglomerate action due to agglomerateId1 or agglomerateId2 not being provided in the action",
               action.value,
@@ -760,6 +760,9 @@ export function* tryToIncorporateActions(
             yield* call(finalize);
             return FailedIncorporateActionsReturnValue;
           }
+          // Legacy persisted actions may still have a plain number here instead of bigint.
+          const agglomerateId1 = BigInt(action.value.agglomerateId1);
+          const agglomerateId2 = BigInt(action.value.agglomerateId2);
           const activeMapping = yield* select(
             (store) => store.temporaryConfiguration.activeMappingByLayer[actionTracingId],
           );

@@ -125,10 +125,10 @@ function* getAllUnknownSegmentIdsInPendingUpdates(saveQueue: SaveQueueEntry[]): 
           const updatedAgglomerateId1 = mappingSyncedWithBackend.get(segmentId1);
           const updatedAgglomerateId2 = mappingSyncedWithBackend.get(segmentId2);
           if (!updatedAgglomerateId1) {
-            appendToIdsToReloadMapping(actionTracingId, idsToReloadByMappingId, segmentId1);
+            appendToIdsToReloadMapping(actionTracingId, idsToReloadByMappingId, BigInt(segmentId1));
           }
           if (!updatedAgglomerateId2) {
-            appendToIdsToReloadMapping(actionTracingId, idsToReloadByMappingId, segmentId2);
+            appendToIdsToReloadMapping(actionTracingId, idsToReloadByMappingId, BigInt(segmentId2));
           }
           break;
         }
@@ -319,7 +319,7 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
               const { actionTracingId } = action.value;
               const segmentId = getUpToDateSegmentIdViaPosition(
                 actionTracingId,
-                action.value.id,
+                BigInt(action.value.id),
                 action.value.anchorPosition,
                 action.value.additionalCoordinates,
                 activeMappingByLayer,
@@ -360,12 +360,12 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
                 (v) => v.tracingId === actionTracingId,
               );
               const maybeExistingSegmentBeforeRebase = tracingBeforeRebase?.segments.getNullable(
-                action.value.id,
+                BigInt(action.value.id),
               );
 
               const segmentId = getUpToDateSegmentIdViaPosition(
                 actionTracingId,
-                action.value.id,
+                BigInt(action.value.id),
                 maybeExistingSegmentBeforeRebase?.anchorPosition,
                 maybeExistingSegmentBeforeRebase?.additionalCoordinates,
                 activeMappingByLayer,

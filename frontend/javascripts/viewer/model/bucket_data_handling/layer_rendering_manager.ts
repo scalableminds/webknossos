@@ -386,7 +386,10 @@ export default class LayerRenderingManager {
           updateAction.name === "deleteSegment" ||
           updateAction.name === "updateSegmentVisibility"
         ) {
-          const { id } = updateAction.value;
+          // For legacy reasons, update actions are typed with number | bigint for segment ids.
+          // The update actions were just produced, so they won't contain numbers, but we still cast
+          // to make typescript happy.
+          const id = BigInt(updateAction.value.id);
           const newSegment = newSegments.getNullable(id);
           const isVisible = newSegment?.isVisible ?? !hideUnregisteredSegments;
           const color = newSegment?.color;

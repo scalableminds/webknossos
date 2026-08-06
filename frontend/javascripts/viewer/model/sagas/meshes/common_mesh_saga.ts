@@ -238,10 +238,10 @@ function* handleSegmentColorChangeFromOtherUsers(
       const { actionTracingId } = updateAction.value;
       const actionWithoutMetaInfo = withoutServerSpecificFields(updateAction);
       const segmentUpdateInfo = actionWithoutMetaInfo.value;
-      if (
-        segmentMeshController.hasMesh(segmentUpdateInfo.id, actionTracingId, additionalCoordinates)
-      ) {
-        segmentMeshController.setMeshColor(segmentUpdateInfo.id, actionTracingId);
+      // Legacy persisted actions may still have a plain number here instead of bigint.
+      const segmentId = BigInt(segmentUpdateInfo.id);
+      if (segmentMeshController.hasMesh(segmentId, actionTracingId, additionalCoordinates)) {
+        segmentMeshController.setMeshColor(segmentId, actionTracingId);
       }
     }
   }

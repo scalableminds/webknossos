@@ -1,5 +1,5 @@
 import { ExpandOutlined, MinusOutlined, PlusOutlined } from "@ant-design/icons";
-import { Button } from "antd";
+import { theme as antdTheme, Button } from "antd";
 import ColorHash from "color-hash";
 import dagre from "dagre";
 import { useWkSelector } from "libs/react_hooks";
@@ -94,6 +94,10 @@ function getEdgesAndNodes(
   filteredTasks: Array<VoxelyticsTaskConfigWithName>,
   selectedNodeId: string | null,
   theme: Theme,
+  // React Flow renders parts of the graph via SVG presentation attributes (e.g. the
+  // <rect stroke> behind an edge label), where a `var(--ant-…)` reference is not resolved.
+  // So the border color has to be passed in as an already-resolved value.
+  borderColor: string,
 ) {
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
@@ -129,7 +133,7 @@ function getEdgesAndNodes(
   const nodes: Array<FlowNode> = dag.nodes.map((node) => {
     const nodeType = getNodeType(nodeMap.get(node.id) ?? null);
 
-    let color = "var(--ant-color-border)";
+    let color = borderColor;
     let opacity = 100;
 
     const fontColor = colorHasher.hex(
@@ -197,11 +201,11 @@ function getEdgesAndNodes(
       style: { opacity, strokeWidth },
       labelStyle: {
         opacity,
-        fill: (labelFontColor ?? theme === "light") ? "black" : "white",
+        fill: labelFontColor ?? (theme === "light" ? "black" : "white"),
       },
       labelBgStyle: {
         fill: theme === "light" ? "white" : "black",
-        stroke: "var(--ant-color-border)",
+        stroke: borderColor,
       },
       labelShowBg: true,
       type: "smoothstep",
@@ -223,6 +227,9 @@ function DAGView({
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const allTaskIds = dag.nodes.map((node) => node.id);
   const theme = useWkSelector((state) => state.uiInformation.theme);
+  // Resolved token values, because React Flow passes these into SVG presentation
+  // attributes where `var(--ant-…)` references are not resolved.
+  const { token } = antdTheme.useToken();
   const reactFlowRef = useRef<ReactFlowInstance | null>(null);
 
   const handleNodeClick = (_event: any, element: FlowNode) => {
@@ -246,7 +253,13 @@ function DAGView({
     }
   };
 
-  const { nodes, edges } = getEdgesAndNodes(dag, filteredTasks, selectedNodeId, theme);
+  const { nodes, edges } = getEdgesAndNodes(
+    dag,
+    filteredTasks,
+    selectedNodeId,
+    theme,
+    token.colorBorder,
+  );
 
   return (
     <ReactFlow
@@ -267,15 +280,15 @@ function DAGView({
       <MiniMap
         nodeStrokeColor={(n) => {
           if (n.style?.borderColor) return n.style.borderColor;
-          return "var(--ant-color-border-secondary)";
+          return token.colorBorderSecondary;
         }}
         nodeColor={(n) => {
           if (n.style?.borderColor) return n.style.borderColor;
-          return "var(--ant-color-bg-container)";
+          return token.colorBgContainer;
         }}
         nodeBorderRadius={2}
       />
-      <Background color="var(--ant-color-border)" gap={16} />
+      <Background color={token.colorBorder} gap={16} />
       <div className="controls">
         <Button
           icon={<PlusOutlined />}

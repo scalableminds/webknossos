@@ -34,6 +34,7 @@ import {
   Table,
   Tag,
   Tooltip,
+  Typography,
 } from "antd";
 import LinkButton from "components/link_button";
 import dayjs from "dayjs";
@@ -500,13 +501,14 @@ function UserListView() {
                 </Tooltip>
               ) : (
                 <Tooltip title="Account is not activated">
-                  <CloseCircleOutlined
-                    className="icon-margin-right"
-                    style={{
-                      fontSize: 20,
-                      color: "var(--ant-color-error)",
-                    }}
-                  />
+                  <Typography.Text type="danger">
+                    <CloseCircleOutlined
+                      className="icon-margin-right"
+                      style={{
+                        fontSize: 20,
+                      }}
+                    />
+                  </Typography.Text>
                 </Tooltip>
               );
 
@@ -521,13 +523,14 @@ function UserListView() {
                 </Tooltip>
               ) : (
                 <Tooltip title="Email is not verified">
-                  <MailOutlined
-                    className="icon-margin-right"
-                    style={{
-                      fontSize: 20,
-                      color: "var(--ant-color-error)",
-                    }}
-                  />
+                  <Typography.Text type="danger">
+                    <MailOutlined
+                      className="icon-margin-right"
+                      style={{
+                        fontSize: 20,
+                      }}
+                    />
+                  </Typography.Text>
                 </Tooltip>
               );
 

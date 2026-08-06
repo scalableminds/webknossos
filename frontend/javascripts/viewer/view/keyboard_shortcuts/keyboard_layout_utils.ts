@@ -157,7 +157,7 @@ export async function initializeKeyboardLayoutMap(): Promise<void> {
 // Called from the shortcut recorder modal's keydown handler (all browsers) and the global
 // keydown listener registered above.
 export function registerKeyForLayoutMap(e: KeyboardEvent) {
-  if (e.repeat) {
+  if (e.repeat || e.key == null) {
     // Skip repeated events.
     return;
   }

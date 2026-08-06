@@ -49,8 +49,6 @@ function SegmentIdAddendum({ id }: { id: number }) {
 export const SegmentNodeTitle = memo(
   ({
     node,
-    // Whether this segment is the one at the camera center. Looked up once for the whole
-    // list by SegmentTreeView, since the lookup is too expensive to do per row.
     isCentered,
     onContextMenu,
     onRenameStart,

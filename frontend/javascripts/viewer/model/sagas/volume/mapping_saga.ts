@@ -774,7 +774,7 @@ function convertMappingObjectToEquivalenceClasses(existingMapping: Mapping) {
 
 function* setCustomColors(
   mappingProperties: OptionalMappingProperties,
-  classes: number[][],
+  classes: NumberLike[][],
   layerName: string,
 ) {
   if (mappingProperties.mapping == null || mappingProperties.mappingColors == null) {

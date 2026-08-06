@@ -2,7 +2,7 @@ import memoize from "lodash-es/memoize";
 import memoizeOne from "memoize-one";
 import type { Matrix4x4 } from "mjs";
 import { buffers } from "redux-saga";
-import { actionChannel, delay, put } from "typed-redux-saga";
+import { actionChannel, put } from "typed-redux-saga";
 import type { OrthoViewRects, Vector3, ViewMode } from "viewer/constants";
 import constants from "viewer/constants";
 import type { Saga } from "viewer/model/sagas/effect_generators";
@@ -15,65 +15,15 @@ import {
   getTransformsForLayer,
   invertAndTranspose,
 } from "../accessors/dataset_layer_transformation_accessor";
-import {
-  _getDummyFlycamMatrix,
-  getBestZoomValueForFinestSharedMag,
-} from "../accessors/flycam_accessor";
+import { _getDummyFlycamMatrix } from "../accessors/flycam_accessor";
 import { getViewportRects } from "../accessors/view_mode_accessor";
 import type { Action } from "../actions/actions";
-import { setZoomStepAction } from "../actions/flycam_actions";
 import { setMaximumZoomForAllMagsForLayerAction } from "../actions/flycam_info_cache_actions";
 import { ensureWkInitialized } from "./ready_sagas";
 
 const asyncGetMaximumZoomForAllMags = createWorker<typeof AsyncGetMaximumZoomForAllMags>(
   "async_get_maximum_zoom_for_all_mags.worker.ts",
 );
-
-// The zoom ranges are computed asynchronously (in a webworker) whenever a relevant parameter,
-// such as the viewport size, changed. Therefore, wait a bit after the last update to be
-// reasonably sure that the recomputation for the current parameters finished.
-// dataset_saga does the same for its downsampling warning.
-const ZOOM_RANGES_SETTLE_DELAY = 500;
-
-function hasEveryLayerMaxZoomInfoPresent(state: WebknossosState): boolean {
-  return getDataLayers(state.dataset).every(
-    (layer) => state.flycamInfoCache.maximumZoomForAllMags[layer.name] != null,
-  );
-}
-
-function* waitUntilZoomRangesAreReady(): Saga<void> {
-  // The zoom ranges are only meaningful once the viewports have their real size. Until
-  // initializeInputCatcherSizes dispatches one of the following actions (which only happens
-  // after the first render), inputCatcherRects still holds a placeholder rect.
-  yield* take(["SET_INPUT_CATCHER_RECT", "SET_INPUT_CATCHER_RECTS"]);
-  yield* delay(ZOOM_RANGES_SETTLE_DELAY);
-  let doAllLayersHaveZoomInfo = yield* select(hasEveryLayerMaxZoomInfoPresent);
-  while (!doAllLayersHaveZoomInfo) {
-    yield* take("SET_MAXIMUM_ZOOM_FOR_ALL_MAGS_FOR_LAYER");
-    doAllLayersHaveZoomInfo = yield* select(hasEveryLayerMaxZoomInfoPresent);
-  }
-}
-
-export function* adjustZoomToFinestSharedMagSaga(): Saga<void> {
-  // Buffer the request, because it is dispatched at the end of the initialization (i.e., before
-  // WK_INITIALIZED) and thus possibly before this saga reaches the take below.
-  const requestChannel = yield* actionChannel(
-    "ADJUST_ZOOM_TO_FINEST_SHARED_MAG",
-    buffers.sliding<Action>(1),
-  );
-  yield* take(requestChannel);
-  yield* call(waitUntilZoomRangesAreReady);
-
-  const dataset = yield* select((state) => state.dataset);
-  const maximumZoomForAllMags = yield* select(
-    (state) => state.flycamInfoCache.maximumZoomForAllMags,
-  );
-  const zoomValue = yield* call(getBestZoomValueForFinestSharedMag, dataset, maximumZoomForAllMags);
-
-  if (zoomValue != null) {
-    yield* put(setZoomStepAction(zoomValue));
-  }
-}
 
 const getComputeFunction = memoize((_layerName: string) => {
   // The argument _layerName is not used in this function, but

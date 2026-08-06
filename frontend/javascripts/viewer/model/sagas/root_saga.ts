@@ -20,9 +20,7 @@ import ProofreadSaga from "viewer/model/sagas/volume/proofreading/proofread_saga
 import VolumetracingSagas from "viewer/model/sagas/volumetracing_saga";
 import type { EscalateErrorAction } from "../actions/actions";
 import { setIsWkInitializedAction } from "../actions/ui_actions";
-import maintainMaximumZoomForAllMagsSaga, {
-  adjustZoomToFinestSharedMagSaga,
-} from "./flycam_info_cache_saga";
+import maintainMaximumZoomForAllMagsSaga from "./flycam_info_cache_saga";
 import idReservationSaga from "./id_reservation_saga";
 import manyBucketUpdatesWarningSaga from "./many_bucket_updates_warning_saga";
 import adHocMeshSaga from "./meshes/ad_hoc_mesh_saga";
@@ -91,7 +89,6 @@ function* restartableSaga(): Saga<void> {
       call(listenToErrorEscalation),
       call(handleAdditionalCoordinateUpdate),
       call(maintainMaximumZoomForAllMagsSaga),
-      call(adjustZoomToFinestSharedMagSaga),
       ...DatasetSagas.map((saga) => call(saga)),
       call(splitBoundaryMeshSaga),
       call(toolSaga),

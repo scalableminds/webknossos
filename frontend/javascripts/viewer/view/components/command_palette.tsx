@@ -5,7 +5,7 @@ import {
   getReadableAnnotations,
   updateSelectedThemeOfUser,
 } from "admin/rest_api";
-import type { ItemType } from "antd/lib/menu/interface";
+import type { ItemType } from "antd/es/menu/interface";
 import DOMPurify from "dompurify";
 import { copyToClipboard } from "libs/clipboard";
 import { useWkSelector } from "libs/react_hooks";

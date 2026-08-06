@@ -4,8 +4,7 @@ import {
   ReloadOutlined,
   VerticalAlignBottomOutlined,
 } from "@ant-design/icons";
-import { Checkbox } from "antd";
-import type { CheckboxChangeEvent } from "antd/lib/checkbox/Checkbox";
+import { Checkbox, type CheckboxChangeEvent } from "antd";
 import classnames from "classnames";
 import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";

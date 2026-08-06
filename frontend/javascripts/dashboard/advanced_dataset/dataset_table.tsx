@@ -16,7 +16,7 @@ import type {
   FilterValue,
   SorterResult,
   TablePaginationConfig,
-} from "antd/lib/table/interface";
+} from "antd/es/table/interface";
 import classNames from "classnames";
 import FastTooltip from "components/fast_tooltip";
 import FormattedDate from "components/formatted_date";

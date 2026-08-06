@@ -23,7 +23,6 @@
       "!binaryData"
     ]
   },
-  "plugins": ["frontend/lint-plugins/noRawHeading.grit"],
   "assist": {
     "actions": {
       "source": {
@@ -31,6 +30,9 @@
       }
     }
   },
+  // NOTE: GritQL lint plugins are deliberately NOT declared here. They cost roughly
+  // 6x the lint runtime (184ms -> 1112ms for frontend/javascripts), so they only run
+  // in CI via the extending config in .biome-ci/. See frontend/lint-plugins/README.md
   "linter": {
     "enabled": true,
     "rules": {
@@ -61,7 +63,13 @@
           "options": {
             "paths": {
               "lodash": "Import <method> from 'lodash/<method>' instead."
-            }
+            },
+            "patterns": [
+              {
+                "group": ["antd/lib", "antd/lib/**"],
+                "message": "Import from 'antd' or 'antd/es/...'; 'antd/lib' is the CJS build and can duplicate antd modules in the bundle."
+              }
+            ]
           }
         }
       },

@@ -10,7 +10,7 @@ import {
   Space,
   Table,
 } from "antd";
-import type { FormInstance } from "antd/lib/form";
+import type { FormInstance } from "antd/es/form";
 import { jsonEditStyle } from "dashboard/dataset/helper_components";
 import features from "features";
 import { jsonStringify } from "libs/utils";

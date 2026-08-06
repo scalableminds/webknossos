@@ -1,5 +1,5 @@
 import { DeleteOutlined } from "@ant-design/icons";
-import { Flex, Switch } from "antd";
+import { App, Flex, Switch } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
 import { location } from "libs/window";
@@ -26,7 +26,6 @@ import {
 import { deleteAnnotationLayer } from "viewer/model/sagas/volume/update_actions";
 import { Model } from "viewer/singletons";
 import ButtonComponent from "viewer/view/components/button_component";
-import { confirmAsync } from "../../../../dashboard/dataset/helper_components";
 import { DummyDragHandle } from "./drag_handle";
 import LayerTransformationIcon from "./layer_transformation_icon";
 import { LogSliderSetting } from "./log_slider_setting";
@@ -35,6 +34,7 @@ import SwitchSetting from "./switch_setting";
 
 export default function SkeletonLayerSettings() {
   const dispatch = useDispatch();
+  const { modal } = App.useApp();
   const annotation = useWkSelector((state) => state.annotation);
   const showSkeletons = useWkSelector((state) => state.localSkeletonState.showSkeletons);
   const activeNodeRadius = useWkSelector(
@@ -81,7 +81,7 @@ export default function SkeletonLayerSettings() {
       type: AnnotationLayerType,
       layerTracingId: string,
     ) => {
-      const shouldDelete = await confirmAsync({
+      const shouldDelete = await modal.confirm({
         title: `Deleting an annotation layer makes its content and history inaccessible. This cannot be undone. Are you sure you want to delete this layer?`,
         okText: `Yes, delete annotation layer "${readableAnnotationLayerName}"`,
         cancelText: "Cancel",
@@ -103,7 +103,7 @@ export default function SkeletonLayerSettings() {
       await Model.ensureSavedState();
       location.reload();
     },
-    [dispatch],
+    [dispatch, modal],
   );
 
   const onChangeParticleSize = useCallback(

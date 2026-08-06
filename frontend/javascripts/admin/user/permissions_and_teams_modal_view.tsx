@@ -1,6 +1,16 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { getEditableTeams, updateUser } from "admin/rest_api";
-import { Alert, App, Checkbox, Col, Modal, Radio, type RadioChangeEvent, Row } from "antd";
+import {
+  Alert,
+  App,
+  Checkbox,
+  Col,
+  Modal,
+  Radio,
+  type RadioChangeEvent,
+  Row,
+  Typography,
+} from "antd";
 import { DividerWithSubtitle } from "dashboard/dataset/helper_components";
 import { useFetch } from "libs/react_helpers";
 import has from "lodash-es/has";
@@ -145,12 +155,12 @@ export function PermissionsAndTeamsComponent({
   function renderSubtitles(title: React.ReactNode) {
     return renderSubtitlesWithDivider ? (
       <DividerWithSubtitle>
-        <h5>
+        <Typography.Title level={5}>
           <b>{title}</b>
-        </h5>
+        </Typography.Title>
       </DividerWithSubtitle>
     ) : (
-      <h4>{title}</h4>
+      <Typography.Title level={4}>{title}</Typography.Title>
     );
   }
 
@@ -231,10 +241,10 @@ export function PermissionsAndTeamsComponent({
       <div>
         <Row>
           <Col span={12}>
-            <h5>Teams</h5>
+            <Typography.Title level={5}>Teams</Typography.Title>
           </Col>
           <Col span={12}>
-            <h5>Role</h5>
+            <Typography.Title level={5}>Role</Typography.Title>
           </Col>
         </Row>
         {teamsRoleRows}
@@ -247,7 +257,7 @@ export function PermissionsAndTeamsComponent({
       <Alert
         type="warning"
         showIcon
-        message="Users with the organization permissions “Member” and zero team permissions will only be able to view public datasets."
+        title="Users with the organization permissions “Member” and zero team permissions will only be able to view public datasets."
         style={{ marginTop: 12 }}
       />
     ) : null;
@@ -372,7 +382,7 @@ function PermissionsAndTeamsModalView(props: TeamRoleModalProps) {
 
   return (
     <Modal
-      maskClosable={false}
+      mask={{ closable: false }}
       closable={false}
       open={isOpen}
       onCancel={onCancel}

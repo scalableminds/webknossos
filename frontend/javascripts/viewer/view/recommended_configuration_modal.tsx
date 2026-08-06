@@ -54,7 +54,7 @@ const RecommendedConfigurationModal: React.FC<Props> = ({ config, onOk, destroy 
 
   return (
     <Modal
-      maskClosable={false}
+      mask={{ closable: false }}
       open={isOpen}
       title="Recommended Configuration"
       okText="Accept"

@@ -184,7 +184,15 @@ class FlightModePlane {
 
   destroy() {
     this.stopStoreListening();
+    // Disposes the plane material, too.
     this.materialFactory.destroy();
+
+    for (const mesh of Object.values(this.meshes)) {
+      if (mesh != null) {
+        mesh.geometry.dispose();
+        (mesh.material as ShaderMaterial).dispose();
+      }
+    }
   }
 }
 

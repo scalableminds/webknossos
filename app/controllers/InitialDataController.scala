@@ -104,6 +104,12 @@ Samplecountry
     )
   private val organizationTeam =
     Team(organizationTeamId, defaultOrganization._id, "Default", isOrganizationTeam = true)
+  // Default folder/team structure illustrating the private-vs-shared access model (see OrganizationService.createOrganization).
+  private val sharedTeamId = ObjectId.generate
+  private val sharedTeam =
+    Team(sharedTeamId, defaultOrganization._id, folderService.defaultSharedTeamName)
+  private val privateFolderId = ObjectId.generate
+  private val sharedFolderId = ObjectId.generate
   private val userId = ObjectId.generate
   private val multiUserId = ObjectId.generate
   private val userId2 = ObjectId.generate
@@ -420,6 +426,7 @@ Samplecountry
       _ <- insertOrganization()
       _ <- createOrganizationDirectory()
       _ <- insertTeams()
+      _ <- insertDefaultFolders()
       _ <- insertDefaultUser(defaultUserEmail, defaultMultiUser, defaultUser, isTeamManager = true)
       _ <- insertDefaultUser(defaultUserEmail2, defaultMultiUser2, defaultUser2, isTeamManager = false)
       _ <- insertToken()
@@ -493,9 +500,27 @@ Samplecountry
   private def insertTeams(): Fox[Unit] =
     teamDAO.findAll.flatMap { teams =>
       if (teams.isEmpty)
-        teamDAO.insertOne(organizationTeam)
+        for {
+          _ <- teamDAO.insertOne(organizationTeam)
+          _ <- teamDAO.insertOne(sharedTeam)
+        } yield ()
       else
         Fox.successful(())
+    }
+
+  // Allowed teams are additive down the folder path, so the root stays team-less to keep the private folder private;
+  // the team is only assigned to the leaf "Shared Datasets" folder.
+  private def insertDefaultFolders(): Fox[Unit] =
+    folderDAO.findOne(privateFolderId).shiftBox.flatMap {
+      case Full(_) => Fox.successful(())
+      case _ =>
+        for {
+          _ <- folderDAO.insertAsChild(defaultOrganization._rootFolder,
+                                       Folder(privateFolderId, folderService.defaultPrivateFolderName, JsArray.empty))
+          _ <- folderDAO.insertAsChild(defaultOrganization._rootFolder,
+                                       Folder(sharedFolderId, folderService.defaultSharedFolderName, JsArray.empty))
+          _ <- teamDAO.updateAllowedTeamsForFolder(sharedFolderId, List(sharedTeamId))
+        } yield ()
     }
 
   private def insertTaskType(): Fox[Unit] =

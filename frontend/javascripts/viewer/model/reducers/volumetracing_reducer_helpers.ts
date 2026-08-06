@@ -453,14 +453,12 @@ export function handleSetSegments(state: WebknossosState, action: SetSegmentsAct
 }
 
 export function handleRemoveSegment(state: WebknossosState, action: RemoveSegmentAction) {
-  return updateSegments(state, action.layerName, (segments) =>
-    segments.delete((action.segmentId)),
-  );
+  return updateSegments(state, action.layerName, (segments) => segments.delete(action.segmentId));
 }
 
 export function handleUpdateSegment(state: WebknossosState, action: UpdateSegmentAction) {
   return updateSegments(state, action.layerName, (segments) => {
-    const segmentId = (action.segmentId);
+    const segmentId = action.segmentId;
     const { segment } = action;
     if (segmentId === 0n) {
       return segments;
@@ -650,7 +648,7 @@ export function expandSegmentParents(state: WebknossosState, action: ClickSegmen
   const getNewGroups = () => {
     const { segments, segmentGroups } = getVisibleSegments(state);
     if (segments == null) return segmentGroups;
-    const segmentId = (action.segmentId);
+    const segmentId = action.segmentId;
     const segmentForId = segments.getNullable(segmentId);
     if (segmentForId == null) return segmentGroups;
     // Expand recursive parents of group too, if necessary

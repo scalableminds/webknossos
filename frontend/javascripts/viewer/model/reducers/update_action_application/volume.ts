@@ -72,7 +72,6 @@ function applySingleAction(
   switch (ua.name) {
     case "updateLargestSegmentId": {
       const volumeTracing = getVolumeTracingById(state.annotation, actionTracingId);
-      // TODO: Proper 64 bit support (#6921)
       const largestSegmentId =
         ua.value.largestSegmentId != null ? BigInt(ua.value.largestSegmentId) : null;
       return setLargestSegmentIdReducer(state, volumeTracing, largestSegmentId);
@@ -83,7 +82,6 @@ function applySingleAction(
     }
     case "createSegment": {
       const { id, ...segmentProps } = ua.value;
-      // TODO: Proper 64 bit support (#6921)
       return VolumeTracingReducer(
         state,
         updateSegmentAction(BigInt(id), segmentProps, actionTracingId, actionTimestamp, false),
@@ -91,7 +89,6 @@ function applySingleAction(
     }
     case "updateSegmentPartial": {
       const { id, ...segmentProps } = ua.value;
-      // TODO: Proper 64 bit support (#6921)
       return VolumeTracingReducer(
         state,
         updateSegmentAction(BigInt(id), segmentProps, actionTracingId, actionTimestamp, false),
@@ -99,7 +96,6 @@ function applySingleAction(
     }
     case "updateMetadataOfSegment": {
       const { id, upsertEntriesByKey, removeEntriesByKey } = ua.value;
-      // TODO: Proper 64 bit support (#6921)
       const segmentId = BigInt(id);
       const segments = getSegmentsForLayer(state, actionTracingId);
       const segment = segments.getNullable(segmentId);

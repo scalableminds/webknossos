@@ -601,6 +601,7 @@ function LEGACY_updateVolumeTracingAction(
   } as const;
 }
 
+// todop: the type does not contain the information that older actions can have number instead of bigint. same for the other update actions.
 export function updateLargestSegmentId(largestSegmentId: bigint | null, actionTracingId: string) {
   return { name: "updateLargestSegmentId", value: { largestSegmentId, actionTracingId } } as const;
 }

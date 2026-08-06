@@ -17,9 +17,8 @@ function ProofreadingReducer(state: WebknossosState, action: ProofreadAction): W
       }
       const minCutPartitions = layerData.minCutPartitions;
       const otherPartitionIndex = action.partition === 1 ? 2 : 1;
-      // TODO: Proper 64 bit support (#6921)
-      const actionAgglomerateId = BigInt(action.agglomerateId);
-      const actionUnmappedSegmentId = BigInt(action.unmappedSegmentId);
+      const actionAgglomerateId = action.agglomerateId;
+      const actionUnmappedSegmentId = action.unmappedSegmentId;
       if (
         minCutPartitions.agglomerateId != null &&
         minCutPartitions.agglomerateId !== actionAgglomerateId

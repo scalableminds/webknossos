@@ -454,15 +454,13 @@ export function handleSetSegments(state: WebknossosState, action: SetSegmentsAct
 
 export function handleRemoveSegment(state: WebknossosState, action: RemoveSegmentAction) {
   return updateSegments(state, action.layerName, (segments) =>
-    // TODO: Proper 64 bit support (#6921)
-    segments.delete(BigInt(action.segmentId)),
+    segments.delete((action.segmentId)),
   );
 }
 
 export function handleUpdateSegment(state: WebknossosState, action: UpdateSegmentAction) {
   return updateSegments(state, action.layerName, (segments) => {
-    // TODO: Proper 64 bit support (#6921)
-    const segmentId = BigInt(action.segmentId);
+    const segmentId = (action.segmentId);
     const { segment } = action;
     if (segmentId === 0n) {
       return segments;
@@ -505,11 +503,10 @@ export function handleMergeSegments(state: WebknossosState, action: MergeSegment
   }
   const { volumeTracing } = updateInfo;
   const { segments } = volumeTracing;
-  // TODO: Proper 64 bit support (#6921)
-  const sourceAgglomerateId = BigInt(action.sourceAgglomerateId);
-  const targetAgglomerateId = BigInt(action.targetAgglomerateId);
-  const sourceSegmentId = BigInt(action.sourceSegmentId);
-  const targetSegmentId = BigInt(action.targetSegmentId);
+  const sourceAgglomerateId = action.sourceAgglomerateId;
+  const targetAgglomerateId = action.targetAgglomerateId;
+  const sourceSegmentId = action.sourceSegmentId;
+  const targetSegmentId = action.targetSegmentId;
   const isSameAgglomerate = sourceAgglomerateId === targetAgglomerateId;
   const sourceSegment = segments.getNullable(sourceAgglomerateId);
   const targetSegment = segments.getNullable(targetAgglomerateId);
@@ -653,8 +650,7 @@ export function expandSegmentParents(state: WebknossosState, action: ClickSegmen
   const getNewGroups = () => {
     const { segments, segmentGroups } = getVisibleSegments(state);
     if (segments == null) return segmentGroups;
-    // TODO: Proper 64 bit support (#6921)
-    const segmentId = BigInt(action.segmentId);
+    const segmentId = (action.segmentId);
     const segmentForId = segments.getNullable(segmentId);
     if (segmentForId == null) return segmentGroups;
     // Expand recursive parents of group too, if necessary

@@ -204,9 +204,9 @@ function VolumeTracingReducer(
         // we can automatically create a new segment ID for the user.
         const segmentationLayer = getSegmentationLayerForTracing(newState, volumeTracing);
         const newSegmentId = volumeTracing.largestSegmentId + 1n;
-        // TODO: Proper 64 bit support (#6921)
-        const maximumSegmentId = BigInt(
-          getMaximumSegmentIdForLayer(newState.dataset, segmentationLayer.name),
+        const maximumSegmentId = getMaximumSegmentIdForLayer(
+          newState.dataset,
+          segmentationLayer.name,
         );
         if (newSegmentId > maximumSegmentId) {
           // If the new segment ID would overflow the maximum segment ID, simply set the active cell to largestSegmentId.
@@ -361,18 +361,16 @@ function VolumeTracingReducer(
 
   switch (action.type) {
     case "SET_ACTIVE_CELL": {
-      // TODO: Proper 64 bit support (#6921)
       return setActiveCellReducer(
         state,
         volumeTracing,
-        BigInt(action.segmentId),
-        action.activeUnmappedSegmentId != null ? BigInt(action.activeUnmappedSegmentId) : null,
+        action.segmentId,
+        action.activeUnmappedSegmentId != null ? action.activeUnmappedSegmentId : null,
       );
     }
 
     case "CREATE_CELL": {
-      // TODO: Proper 64 bit support (#6921)
-      return createCellReducer(state, volumeTracing, BigInt(action.newSegmentId));
+      return createCellReducer(state, volumeTracing, action.newSegmentId);
     }
 
     case "UPDATE_DIRECTION": {
@@ -396,8 +394,7 @@ function VolumeTracingReducer(
     }
 
     case "SET_LARGEST_SEGMENT_ID": {
-      // TODO: Proper 64 bit support (#6921)
-      return setLargestSegmentIdReducer(state, volumeTracing, BigInt(action.segmentId));
+      return setLargestSegmentIdReducer(state, volumeTracing, action.segmentId);
     }
 
     case "FINISH_ANNOTATION_STROKE": {

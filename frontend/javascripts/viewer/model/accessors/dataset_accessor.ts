@@ -356,7 +356,7 @@ export function determineAllowedModes(settings?: Settings): {
 }
 
 export function getMaximumSegmentIdForLayer(dataset: APIDataset, layerName: string) {
-  return getDefaultValueRangeOfLayer(dataset, layerName)[1];
+  return BigInt(getDefaultValueRangeOfLayer(dataset, layerName)[1]);
 }
 
 // Used for validating segment/cell ids, which are always bigint. uint64 and int64 ids can

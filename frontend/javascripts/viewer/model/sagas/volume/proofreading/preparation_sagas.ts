@@ -100,8 +100,7 @@ export function* ensureHdf5MappingIsEnabled(layerName: string): Saga<boolean> {
 
 // Looks up `key` (a segment/agglomerate id) in a Mapping (which is either number- or
 // BigInt-keyed/valued, depending on whether the dataset is uint32- or uint64-backed) and
-// returns the mapped value as a bigint. This avoids the lossy Number()-based
-// NumberLikeMapWrapper#getAsNumber for scalar id lookups (see #6921).
+// returns the mapped value as a bigint.
 export function getMappedIdAsBigInt(mapping: Mapping, key: bigint): bigint | undefined {
   const mapped = isNumberMap(mapping) ? mapping.get(Number(key)) : mapping.get(key);
   return mapped == null ? undefined : BigInt(mapped);

@@ -703,14 +703,11 @@ export default function TaskListView({
                     },
                   },
                 }}
-              >
-                <Select.Option value="">Consolidated</Select.Option>
-                {report.runs.map((run) => (
-                  <Select.Option value={run.id} key={run.id}>
-                    {run.name}
-                  </Select.Option>
-                ))}
-              </Select>
+                options={[
+                  { value: "", label: "Consolidated" },
+                  ...report.runs.map((run) => ({ value: run.id, label: run.name })),
+                ]}
+              />
               <Space.Compact>
                 <Button onClick={() => setExpandedTasks([])}>Collapse All</Button>
                 <Dropdown menu={overflowMenu}>

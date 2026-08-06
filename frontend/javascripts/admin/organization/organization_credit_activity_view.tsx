@@ -199,11 +199,8 @@ export function OrganizationCreditActivityView() {
                 </Space>
               );
             }}
-            filterIcon={(filtered) => (
-              <CalendarOutlined
-                style={{ color: filtered ? "var(--ant-color-primary" : undefined }}
-              />
-            )}
+            // antd already colors an active filter trigger with colorPrimary.
+            filterIcon={<CalendarOutlined />}
             onFilter={(value, record) => {
               const [startDate, endDate] = parseRangeValue(value as string);
               if (startDate == null || endDate == null) {

@@ -1983,9 +1983,9 @@ class DataApi {
     );
 
     if (activeMappingInfo.mapping != null) {
-      const mappedId = new NumberLikeMapWrapper(activeMappingInfo.mapping).get(unmappedId);
+      const mappedId = new NumberLikeMapWrapper(activeMappingInfo.mapping).getAsBigInt(unmappedId);
       if (mappedId != null) {
-        return toBigInt(mappedId);
+        return mappedId;
       }
     }
 
@@ -2004,11 +2004,11 @@ class DataApi {
       new Set([unmappedId]),
     );
 
-    const agglomerateId = new NumberLikeMapWrapper(fetchedEntries).get(unmappedId);
+    const agglomerateId = new NumberLikeMapWrapper(fetchedEntries).getAsBigInt(unmappedId);
     if (agglomerateId == null) {
       throw new Error(`Could not map id ${unmappedId} at position ${position}`);
     }
-    return toBigInt(agglomerateId);
+    return agglomerateId;
   }
 
   /**

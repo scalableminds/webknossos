@@ -26,6 +26,14 @@ export class NumberLikeMapWrapper<T extends number | bigint> {
     return this.map.get(this.adaptKey(key));
   }
 
+  getAsBigInt(key: NumberLike): bigint | undefined {
+    const value = this.map.get(this.adaptKey(key));
+    if (value == null) {
+      return value;
+    }
+    return BigInt(value);
+  }
+
   has(key: NumberLike): boolean {
     return this.map.has(this.adaptKey(key));
   }

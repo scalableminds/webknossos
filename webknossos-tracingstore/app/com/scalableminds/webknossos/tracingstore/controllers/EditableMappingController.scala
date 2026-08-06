@@ -75,7 +75,9 @@ class EditableMappingController @Inject() (
             }
             agglomerateIdIsPresent = agglomerateGraphBox.isDefined
           } yield Ok(
-            Json.toJson(EditableMappingSegmentListResult(segmentIds.toList.map(UnsignedLong(_)), agglomerateIdIsPresent))
+            Json.toJson(
+              EditableMappingSegmentListResult(segmentIds.toList.map(UnsignedLong(_)), agglomerateIdIsPresent)
+            )
           )
         }
       }

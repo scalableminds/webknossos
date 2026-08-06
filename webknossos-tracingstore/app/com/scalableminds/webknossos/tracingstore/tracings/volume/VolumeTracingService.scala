@@ -901,14 +901,13 @@ class VolumeTracingService @Inject() (
     )
   }
 
-  private def combineLargestSegmentIdsByMaxDefined(aOpt: Option[Long], bOpt: Option[Long]): Option[Long] = {
+  private def combineLargestSegmentIdsByMaxDefined(aOpt: Option[Long], bOpt: Option[Long]): Option[Long] =
     (aOpt, bOpt) match {
       case (Some(a), Some(b)) => Some(maxUnsigned(a, b))
       case (Some(a), None)    => Some(a)
       case (None, Some(b))    => Some(b)
       case (None, None)       => None
     }
-  }
 
   def mergeVolumeData(
       firstVolumeAnnotationIdOpt: Option[ObjectId],

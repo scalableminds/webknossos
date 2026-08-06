@@ -113,7 +113,13 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryC
 
     "merge two segments (both segments exist; source should take precedence)" in {
       val action =
-        MergeSegmentItemsVolumeAction(UnsignedLong(1), UnsignedLong(2), UnsignedLong(1), UnsignedLong(2), Dummies.tracingId)
+        MergeSegmentItemsVolumeAction(
+          UnsignedLong(1),
+          UnsignedLong(2),
+          UnsignedLong(1),
+          UnsignedLong(2),
+          Dummies.tracingId
+        )
       val result = action.applyOn(Dummies.volumeTracing.withSegments(Seq(segmentWithMetadata1, segmentWithMetadata2)))
 
       assert(
@@ -137,7 +143,13 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryC
 
     "should merge two segments (both segments exist, but source lacks some properties)" in {
       val action =
-        MergeSegmentItemsVolumeAction(UnsignedLong(1), UnsignedLong(2), UnsignedLong(1), UnsignedLong(2), Dummies.tracingId)
+        MergeSegmentItemsVolumeAction(
+          UnsignedLong(1),
+          UnsignedLong(2),
+          UnsignedLong(1),
+          UnsignedLong(2),
+          Dummies.tracingId
+        )
       val result = action.applyOn(
         Dummies.volumeTracing.withSegments(Seq(segment1WithoutAdditionalProps, segment2WithAdditionalProps))
       )
@@ -160,7 +172,13 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryC
 
     "merge two segments (segment 1 doesn't exist, though)" in {
       val action =
-        MergeSegmentItemsVolumeAction(UnsignedLong(1), UnsignedLong(2), UnsignedLong(1), UnsignedLong(2), Dummies.tracingId)
+        MergeSegmentItemsVolumeAction(
+          UnsignedLong(1),
+          UnsignedLong(2),
+          UnsignedLong(1),
+          UnsignedLong(2),
+          Dummies.tracingId
+        )
       val result = action.applyOn(Dummies.volumeTracing.withSegments(Seq(segmentWithMetadata2)))
 
       assert(
@@ -182,7 +200,13 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryC
 
     "merge two segments (segment 2 doesn't exist, though)" in {
       val action =
-        MergeSegmentItemsVolumeAction(UnsignedLong(1), UnsignedLong(2), UnsignedLong(1), UnsignedLong(2), Dummies.tracingId)
+        MergeSegmentItemsVolumeAction(
+          UnsignedLong(1),
+          UnsignedLong(2),
+          UnsignedLong(1),
+          UnsignedLong(2),
+          Dummies.tracingId
+        )
       val result = action.applyOn(Dummies.volumeTracing.withSegments(Seq(segmentWithMetadata1)))
 
       assert(result.segments == Seq(segmentWithMetadata1))

@@ -548,9 +548,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             // Use floor so that 100% is not displayed while the progress is still lower.
             percent={isFinishing ? 100 : Math.floor(uploadProgress * 100)}
             status="active"
-            // antd's default easing (0.3s ease-in-out-circ) is very flat at the start, so the bar
-            // lags tens of percent behind the — untransitioned — label whenever the progress
-            // jumps, which it does at the end of every upload (in-flight chunks count as 0%).
+            // Fix too slow updating of progress bar via own transition style.
             styles={{ track: { transition: "width 150ms linear" } }}
           />
         </div>

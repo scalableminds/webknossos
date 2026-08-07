@@ -542,14 +542,15 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
               <br />
               {isRetrying ? "Retrying to continue the upload …" : null}
               <br />
-              <Progress
-                // Round to 1 digit after the comma, but use floor
-                // to avoid that 100% are displayed even though the progress is lower.
-                percent={Math.floor(uploadProgress * 1000) / 10}
-                status="active"
-              />
             </>
           )}
+          <Progress
+            // Use floor so that 100% is not displayed while the progress is still lower.
+            percent={isFinishing ? 100 : Math.floor(uploadProgress * 100)}
+            status="active"
+            // Fix too slow updating of progress bar via own transition style.
+            styles={{ track: { transition: "width 150ms linear" } }}
+          />
         </div>
       </Modal>
     );

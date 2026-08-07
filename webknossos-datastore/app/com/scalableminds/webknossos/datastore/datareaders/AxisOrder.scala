@@ -91,6 +91,9 @@ case class FullAxisOrder(axes: Seq[Axis]) {
   def permuteIndicesWkToArray(indices: Array[Int]): Array[Int] =
     wkToArrayPermutation.map(indices(_))
 
+  def permuteIndicesWkToArrayLong(indices: Array[Long]): Array[Long] =
+    wkToArrayPermutation.map(indices(_))
+
   def permuteIndicesArrayToWk(indices: Array[Int]): Array[Int] =
     arrayToWkPermutation.map(indices(_))
 

@@ -17,7 +17,9 @@ import com.scalableminds.webknossos.datastore.helpers.{
   MissingBucketHeaders,
   ProtoGeometryConversions,
   SegmentStatisticsParameters,
-  SegmentStatisticsParametersMeshBased
+  SegmentStatisticsParametersMeshBased,
+  UnsignedLong,
+  UnsignedLongJson
 }
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.{
@@ -305,9 +307,9 @@ class VolumeTracingController @Inject() (
             _ <- annotationTransactionService.handleSingleUpdateAction(
               annotationId,
               tracing.version,
-              ImportVolumeDataVolumeAction(tracingId, Some(largestSegmentId))
+              ImportVolumeDataVolumeAction(tracingId, Some(UnsignedLong(largestSegmentId)))
             )
-          } yield Ok(Json.toJson(largestSegmentId))
+          } yield Ok(Json.toJson(largestSegmentId)(using UnsignedLongJson.writes))
         }
       }
     }
@@ -377,7 +379,7 @@ class VolumeTracingController @Inject() (
             volumeSegmentStatisticsService.getSegmentVolume(
               annotationId,
               tracingId,
-              segmentId,
+              segmentId.toLong,
               request.body.mag,
               mappingName,
               request.body.additionalCoordinates,
@@ -399,7 +401,7 @@ class VolumeTracingController @Inject() (
             volumeSegmentStatisticsService.getSegmentBoundingBox(
               annotationId,
               tracingId,
-              segmentId,
+              segmentId.toLong,
               request.body.mag,
               mappingName,
               request.body.additionalCoordinates,

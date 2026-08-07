@@ -20,7 +20,9 @@ import com.scalableminds.webknossos.datastore.helpers.{
   NativeBucketScanner,
   NodeDefaults,
   ProtoGeometryConversions,
-  SkeletonTracingDefaults
+  SkeletonTracingDefaults,
+  UnsignedLong,
+  UnsignedLongJson
 }
 import com.scalableminds.webknossos.datastore.models.*
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
@@ -56,10 +58,10 @@ case class FallbackDataKey(
 )
 
 case class MinCutParameters(
-    partition1: List[Long],
-    partition2: List[Long],
+    partition1: List[UnsignedLong],
+    partition2: List[UnsignedLong],
     mag: Vec3Int,
-    agglomerateId: Long,
+    agglomerateId: UnsignedLong,
     version: Long
 )
 
@@ -67,15 +69,15 @@ object MinCutParameters {
   implicit val jsonFormat: OFormat[MinCutParameters] = Json.format[MinCutParameters]
 }
 
-case class NeighborsParameters(segmentId: Long, mag: Vec3Int, agglomerateId: Long, version: Long)
+case class NeighborsParameters(segmentId: UnsignedLong, mag: Vec3Int, agglomerateId: UnsignedLong, version: Long)
 
 object NeighborsParameters {
   implicit val jsonFormat: OFormat[NeighborsParameters] = Json.format[NeighborsParameters]
 }
 
 case class EdgeWithPositions(
-    segmentId1: Long,
-    segmentId2: Long,
+    segmentId1: UnsignedLong,
+    segmentId2: UnsignedLong,
     position1: Vec3Int,
     position2: Vec3Int
 )
@@ -85,7 +87,7 @@ object EdgeWithPositions {
 }
 
 case class NodeWithPosition(
-    segmentId: Long,
+    segmentId: UnsignedLong,
     position: Vec3Int
 )
 
@@ -127,7 +129,7 @@ class EditableMappingService @Inject() (
     Json.obj(
       "tracingId" -> tracingId,
       "baseMappingName" -> editableMappingInfo.baseMappingName,
-      "largestAgglomerateId" -> editableMappingInfo.largestAgglomerateId,
+      "largestAgglomerateId" -> UnsignedLongJson.writes.writes(editableMappingInfo.largestAgglomerateId),
       "createdTimestamp" -> editableMappingInfo.createdTimestamp
     )
 
@@ -459,7 +461,7 @@ class EditableMappingService @Inject() (
       dataSourceId = None,
       dataLayer = editableMappingLayer,
       cuboid = request.cuboid,
-      segmentId = request.segmentId,
+      segmentId = request.segmentId.toLong,
       voxelSizeFactor = request.voxelSizeFactorInUnit,
       tokenContext = tc,
       mapping = None,
@@ -515,13 +517,13 @@ class EditableMappingService @Inject() (
         editableMappingInfo,
         tracingId,
         version,
-        parameters.agglomerateId,
+        parameters.agglomerateId.toLong,
         remoteFallbackLayer
       ) ?~> Msg.AgglomerateGraph.failed
       edgesToCut <- minCut(
         agglomerateGraph,
-        parameters.partition1,
-        parameters.partition2
+        parameters.partition1.map(_.toLong),
+        parameters.partition2.map(_.toLong)
       ).toFox ?~> "Could not calculate min-cut on agglomerate graph."
       edgesWithPositions = annotateEdgesWithPositions(edgesToCut, agglomerateGraph)
     } yield edgesWithPositions
@@ -554,8 +556,17 @@ class EditableMappingService @Inject() (
       }
 
       // Add artificial root nodes which will force the two given partitions to stay connected during the min-cut.
-      val partition1RootId = -1
-      val partition2RootId = -2
+      // Their ids must not collide with any real segment id -- a fixed literal like -1L is not
+      // safe here, since for a uint64 layer that bit pattern equals the legitimate id 2^64-1.
+      // // todo: is this a performance problem?
+      val realSegmentIds = agglomerateGraph.segments.toSet
+      def freshRootId(start: Long): Long = {
+        var candidate = start
+        while (realSegmentIds.contains(candidate)) candidate -= 1
+        candidate
+      }
+      val partition1RootId = freshRootId(-1L)
+      val partition2RootId = freshRootId(partition1RootId - 1L)
       g.addVertex(partition1RootId)
       g.addVertex(partition2RootId)
       partition1Unique.foreach { segmentId =>
@@ -592,8 +603,8 @@ class EditableMappingService @Inject() (
       val position1 = agglomerateGraph.positions(index1)
       val position2 = agglomerateGraph.positions(index2)
       EdgeWithPositions(
-        segmentId1,
-        segmentId2,
+        UnsignedLong(segmentId1),
+        UnsignedLong(segmentId2),
         vec3IntFromProto(position1),
         vec3IntFromProto(position2)
       )
@@ -604,7 +615,7 @@ class EditableMappingService @Inject() (
       val index = agglomerateGraph.segments.indexOf(segmentId)
       val position = agglomerateGraph.positions(index)
       NodeWithPosition(
-        segmentId,
+        UnsignedLong(segmentId),
         vec3IntFromProto(position)
       )
     }
@@ -621,12 +632,12 @@ class EditableMappingService @Inject() (
         editableMappingInfo,
         tracingId,
         version,
-        parameters.agglomerateId,
+        parameters.agglomerateId.toLong,
         remoteFallbackLayer
       )
-      neighborNodes = neighbors(agglomerateGraph, parameters.segmentId)
+      neighborNodes = neighbors(agglomerateGraph, parameters.segmentId.toLong)
       nodesWithPositions = annotateNodesWithPositions(neighborNodes, agglomerateGraph)
-    } yield (parameters.segmentId, nodesWithPositions)
+    } yield (parameters.segmentId.toLong, nodesWithPositions)
 
   private def neighbors(agglomerateGraph: AgglomerateGraph, segmentId: Long): Seq[Long] = {
     val relevantEdges = agglomerateGraph.edges.filter { edge =>
@@ -656,13 +667,13 @@ class EditableMappingService @Inject() (
             segmentId1 <- findSegmentIdAtPositionIfNeeded(
               remoteFallbackLayer,
               update.segmentPosition1,
-              update.segmentId1,
+              update.segmentId1.map(_.toLong),
               update.mag
             )
             segmentId2 <- findSegmentIdAtPositionIfNeeded(
               remoteFallbackLayer,
               update.segmentPosition2,
-              update.segmentId2,
+              update.segmentId2.map(_.toLong),
               update.mag
             )
           } yield Some(segmentId1, segmentId2, false)
@@ -671,13 +682,13 @@ class EditableMappingService @Inject() (
             segmentId1 <- findSegmentIdAtPositionIfNeeded(
               remoteFallbackLayer,
               update.segmentPosition1,
-              update.segmentId1,
+              update.segmentId1.map(_.toLong),
               update.mag
             )
             segmentId2 <- findSegmentIdAtPositionIfNeeded(
               remoteFallbackLayer,
               update.segmentPosition2,
-              update.segmentId2,
+              update.segmentId2.map(_.toLong),
               update.mag
             )
           } yield Some(segmentId1, segmentId2, true)

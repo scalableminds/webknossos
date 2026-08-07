@@ -64,7 +64,7 @@ describe("withRebaseEditGuard (integrated into the real store)", () => {
 
   it("drops another save-relevant edit (segment update) while rebasing and applies it once finished", () => {
     const { tracingId: volumeTracingId } = Store.getState().annotation.volumes[0];
-    const segmentId = 777;
+    const segmentId = 777n;
     const getSegment = () => Store.getState().annotation.volumes[0].segments.getNullable(segmentId);
     expect(getSegment()).toBeUndefined();
 

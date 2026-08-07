@@ -14,7 +14,8 @@ import com.scalableminds.webknossos.datastore.helpers.{
   GetMultipleSegmentIndexParameters,
   MissingBucketHeaders,
   ProtoGeometryConversions,
-  SegmentIndexData
+  SegmentIndexData,
+  UnsignedLong
 }
 import com.scalableminds.webknossos.datastore.models.WebknossosDataRequest
 import com.scalableminds.webknossos.datastore.rpc.RPC
@@ -141,7 +142,7 @@ class TSRemoteDatastoreClient @Inject() (
       result <- rpc(s"$remoteLayerUri/segmentIndex").withTokenFromContext.silent
         .postJsonWithJsonResponse[GetMultipleSegmentIndexParameters, Seq[SegmentIndexData]](
           GetMultipleSegmentIndexParameters(
-            segmentIds.toList,
+            segmentIds.toList.map(UnsignedLong(_)),
             mag,
             additionalCoordinates = None,
             mappingName = mappingName,
@@ -150,7 +151,7 @@ class TSRemoteDatastoreClient @Inject() (
           )
         )
 
-    } yield result.map(data => (data.segmentId, data.positions.toSet.map(vec3IntToProto)))
+    } yield result.map(data => (data.segmentId.toLong, data.positions.toSet.map(vec3IntToProto)))
 
   def loadFullMeshStl(remoteFallbackLayer: RemoteFallbackLayer, fullMeshRequest: FullMeshRequest)(using
       tc: TokenContext

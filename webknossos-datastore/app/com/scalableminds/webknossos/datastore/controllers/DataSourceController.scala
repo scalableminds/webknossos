@@ -25,6 +25,7 @@ import com.scalableminds.webknossos.datastore.helpers.{
   SegmentIndexData,
   SegmentStatisticsParameters,
   SegmentStatisticsParametersMeshBased,
+  UnsignedLongJson,
   UPath
 }
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, UsableDataSource}
@@ -44,7 +45,7 @@ import com.scalableminds.webknossos.datastore.services.connectome.{
 }
 import com.scalableminds.webknossos.datastore.services.mapping.{AgglomerateService, MappingService}
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.{Json, OFormat, Writes}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
 import java.net.URI
@@ -213,7 +214,7 @@ class DataSourceController @Inject() (
         (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
         agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, mappingName)
         largestAgglomerateId: Long <- agglomerateService.largestAgglomerateId(agglomerateFileKey)
-      } yield Ok(Json.toJson(largestAgglomerateId))
+      } yield Ok(Json.toJson(largestAgglomerateId)(using UnsignedLongJson.writes))
     }
   }
 
@@ -355,7 +356,10 @@ class DataSourceController @Inject() (
             dataLayer,
             request.body.connectomeFile
           )
-          synapses <- connectomeFileService.synapsesForAgglomerates(meshFileKey, request.body.agglomerateIds)
+          synapses <- connectomeFileService.synapsesForAgglomerates(
+            meshFileKey,
+            request.body.agglomerateIds.map(_.toLong)
+          )
         } yield Ok(Json.toJson(synapses))
       }
     }
@@ -382,7 +386,7 @@ class DataSourceController @Inject() (
             request.body.synapseIds,
             directionValidated
           )
-        } yield Ok(Json.toJson(agglomerateIds))
+        } yield Ok(Json.toJson(agglomerateIds)(using Writes.list(using UnsignedLongJson.writes)))
       }
     }
 
@@ -487,7 +491,7 @@ class DataSourceController @Inject() (
                 request.body.mappingName,
                 request.body.editableMappingTracingId,
                 request.body.annotationVersion,
-                segmentOrAgglomerateId,
+                segmentOrAgglomerateId.toLong,
                 mappingNameForMeshFile = None,
                 omitMissing = true // assume agglomerate ids not present in the mapping belong to user-brushed segments
               )
@@ -521,7 +525,7 @@ class DataSourceController @Inject() (
               dataLayer,
               segmentIndexFileKey,
               agglomerateFileKeyOpt,
-              segmentId,
+              segmentId.toLong,
               request.body.mag
             )
           }
@@ -545,7 +549,7 @@ class DataSourceController @Inject() (
               dataLayer,
               segmentIndexFileKey,
               agglomerateFileKeyOpt,
-              segmentId,
+              segmentId.toLong,
               request.body.mag
             )
           }

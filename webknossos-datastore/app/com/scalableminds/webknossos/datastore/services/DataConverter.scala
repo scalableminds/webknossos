@@ -17,6 +17,13 @@ trait DataConverter {
   def uShortToLong(uShort: Short): Long = uShort & 0xffffL
   def uIntToLong(uInt: Int): Long = uInt & 0xffffffffL
 
+  // An 8-byte read already yields the full uint64 bit pattern in uLong, so no bitwise
+  // widening is needed here (unlike the smaller-width helpers above). This identity
+  // function exists to mark call sites where the resulting Long must be treated with
+  // unsigned semantics from here on (java.lang.Long.compareUnsigned/toUnsignedString/etc.),
+  // mirroring the uByteToLong/uShortToLong/uIntToLong naming convention.
+  def uLongToLong(uLong: Long): Long = uLong
+
   def convertData(data: Array[Byte], elementClass: ElementClass.Value): Array[? >: Byte & Short & Int & Long & Float] =
     elementClass match {
       case ElementClass.uint8 | ElementClass.int8 =>

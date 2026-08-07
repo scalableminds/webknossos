@@ -257,7 +257,7 @@ export function useSegmentContextMenuBuilder(
     (segment: Segment): MenuProps => {
       const layerName = visibleSegmentationLayer?.name;
       const { currentMeshFile } = meshFiles;
-      const mesh = meshOperations.meshes[segment.id];
+      const mesh = meshOperations.meshes[segment.id.toString()];
       const segmentColorRGBA = getSegmentColorAsRGBA(Store.getState(), segment.id);
       const isActiveSegment = segment.id === activeVolumeTracing?.activeCellId;
 

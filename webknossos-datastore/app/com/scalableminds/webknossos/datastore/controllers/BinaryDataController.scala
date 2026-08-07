@@ -242,7 +242,7 @@ class BinaryDataController @Inject() (
             Some(dataSource.id),
             segmentationLayer,
             request.body.cuboid,
-            request.body.segmentId,
+            request.body.segmentId.toLong,
             request.body.voxelSizeFactorInUnit,
             tokenContextForRequest(using request),
             request.body.mapping,

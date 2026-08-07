@@ -38,7 +38,7 @@ type TitleProps<NodeType extends SegmentsUiNode> = {
   onRenameEnd: () => void;
 };
 
-function SegmentIdAddendum({ id }: { id: number }) {
+function SegmentIdAddendum({ id }: { id: bigint }) {
   return (
     <FastTooltip title="Segment ID">
       <span className="deemphasized italic" style={{ marginLeft: 4 }}>
@@ -70,7 +70,7 @@ export const SegmentNodeTitle = memo(
     const mesh = useWkSelector((state) =>
       visibleSegmentationLayer != null
         ? getMeshesForCurrentAdditionalCoordinates(state, visibleSegmentationLayer.name)?.[
-            segment.id
+            segment.id.toString()
           ]
         : undefined,
     );
@@ -85,7 +85,7 @@ export const SegmentNodeTitle = memo(
       (state) => getSegmentIdForPosition(getPosition(state.flycam)) === segment.id,
     );
 
-    const setHoveredSegmentId = (segmentId: number | null) =>
+    const setHoveredSegmentId = (segmentId: bigint | null) =>
       dispatch(updateTemporarySettingAction("hoveredSegmentId", segmentId));
 
     return (

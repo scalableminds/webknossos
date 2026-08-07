@@ -7,6 +7,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
+import com.scalableminds.webknossos.datastore.helpers.UnsignedLongOps.maxUnsigned
 import com.scalableminds.webknossos.datastore.SegmentToAgglomerateProto.{
   SegmentAgglomeratePair,
   SegmentToAgglomerateChunkProto
@@ -150,13 +151,13 @@ class EditableMappingUpdater(
       segmentId1 <- editableMappingService.findSegmentIdAtPositionIfNeeded(
         remoteFallbackLayer,
         update.segmentPosition1,
-        update.segmentId1,
+        update.segmentId1.map(_.toLong),
         update.mag
       )(using tokenContext)
       segmentId2 <- editableMappingService.findSegmentIdAtPositionIfNeeded(
         remoteFallbackLayer,
         update.segmentPosition2,
-        update.segmentId2,
+        update.segmentId2.map(_.toLong),
         update.mag
       )(using tokenContext)
       agglomerateId <- agglomerateIdForSegmentId(segmentId1)
@@ -354,7 +355,7 @@ class EditableMappingUpdater(
         remoteFallbackLayer,
         mapping.baseMappingName
       )(using tokenContext)
-    } yield math.max(mapping.largestAgglomerateId, largestBaseAgglomerateId)
+    } yield maxUnsigned(mapping.largestAgglomerateId, largestBaseAgglomerateId)
 
   private def applyMergeAction(mapping: EditableMappingInfo, update: MergeAgglomerateUpdateAction)(implicit
       ec: ExecutionContext
@@ -363,13 +364,13 @@ class EditableMappingUpdater(
       segmentId1 <- editableMappingService.findSegmentIdAtPositionIfNeeded(
         remoteFallbackLayer,
         update.segmentPosition1,
-        update.segmentId1,
+        update.segmentId1.map(_.toLong),
         update.mag
       )(using tokenContext)
       segmentId2 <- editableMappingService.findSegmentIdAtPositionIfNeeded(
         remoteFallbackLayer,
         update.segmentPosition2,
-        update.segmentId2,
+        update.segmentId2.map(_.toLong),
         update.mag
       )(using tokenContext)
       _ = if (segmentId1 == 0)

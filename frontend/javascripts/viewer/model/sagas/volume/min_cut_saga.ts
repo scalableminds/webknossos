@@ -839,7 +839,7 @@ function labelDeletedEdges(
                   for (let dx = 0; dx < targetMag[0]; dx++) {
                     api.data.labelVoxels(
                       [V3.add(position, [dx, dy, dz])],
-                      0,
+                      0n,
                       additionalCoordinates,
                     );
                   }

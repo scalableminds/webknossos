@@ -1,6 +1,6 @@
 {
   "agglomerateInfo": {
-    "agglomerateId": 1,
+    "agglomerateId": 1n,
     "tracingId": "volumeTracingId",
   },
   "branchPoints": [],

@@ -445,7 +445,9 @@ class AnnotationService @Inject() (
           }.headOption
         } else None
       _ <- Fox.fromBool(
-        fallbackLayer.forall(_.largestSegmentId.exists(_ >= 0L))
+        fallbackLayer.forall(layer =>
+          ElementClass.largestSegmentIdIsInRange(layer.largestSegmentId, layer.elementClass)
+        )
       ) ?~> Msg.Annotation.Volume.invalidLargestSegmentId
 
       volumeTracing <- createVolumeTracing(

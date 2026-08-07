@@ -186,6 +186,12 @@ class TSAnnotationController @Inject() (
             for {
               domainValidated <- AnnotationIdDomain.fromString(domain).toFox
               largestIdWithFallback: Long <- domainValidated match {
+                // KNOWN GAP (uint64): For the Segment domain the returned id is a uint64 segment id, but
+                // it is serialized as a plain JSON number below (not via UnsignedLongJson) and .maxOption
+                // compares Longs with signed semantics. This is not fully uint64-safe. It is left as-is
+                // because no frontend path requests id reservation for the Segment domain (the frontend
+                // only reserves SegmentGroup/BoundingBox ids, both 32-bit). Making it uint64-correct would
+                // also require unsigned max comparison and a DB-storage audit. See PR #9765.
                 case AnnotationIdDomain.Segment =>
                   for {
                     volume <- annotationService.findVolume(annotationId, tracingId)

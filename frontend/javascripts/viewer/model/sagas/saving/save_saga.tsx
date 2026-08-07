@@ -873,7 +873,7 @@ export function* tryToIncorporateActions(
             }
             mappingType =
               (volumeDataLayer.agglomerates ?? []).indexOf(mappingName) >= 0
-                ? ("HDF5" as const)
+                ? ("AGGLOMERATE" as const)
                 : ("JSON" as const);
           }
           yield* put(setMappingAction(actionTracingId, mappingName, mappingType, true));

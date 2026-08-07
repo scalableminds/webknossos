@@ -4,6 +4,7 @@ import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.geometry.AdditionalCoordinateProto
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceRequestSettings}
+import com.scalableminds.webknossos.datastore.services.mesh.MappingType
 import play.api.libs.json.{Json, OFormat}
 
 trait AbstractDataRequest {
@@ -52,7 +53,7 @@ case class WebknossosAdHocMeshRequest(
     segmentId: Long,
     voxelSizeFactorInUnit: Vec3Double, // assumed to be in dataset’s unit
     mapping: Option[String] = None,
-    mappingType: Option[String] = None,
+    mappingType: Option[MappingType.Value] = None,
     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
     annotationVersion: Option[Long],
     findNeighbors: Boolean = true

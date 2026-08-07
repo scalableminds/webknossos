@@ -27,7 +27,8 @@ case class FullMeshRequest(
     lod: Option[Int],
     segmentId: Long, // if mappingName is set, this is an agglomerate id
     mappingName: Option[String],
-    mappingType: Option[String], // json, agglomerate, editableMapping
+    // An editable mapping is signaled via editableMappingTracingId below, not via mappingType (which stays AGGLOMERATE for it).
+    mappingType: Option[MappingType.Value],
     editableMappingTracingId: Option[String],
     annotationVersion: Option[Long],
     mag: Option[Vec3Int], // required for ad-hoc meshing

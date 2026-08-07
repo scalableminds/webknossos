@@ -42,7 +42,7 @@ const dummyActiveMapping: ActiveMappingInfo = {
   mappingColors: [],
   hideUnmappedIds: false,
   mappingStatus: "ENABLED",
-  mappingType: "HDF5",
+  mappingType: "AGGLOMERATE",
 };
 
 const ensureMaybeMappingIsLockedReturnValueDummy = { isMappingLockedIfNeeded: true };

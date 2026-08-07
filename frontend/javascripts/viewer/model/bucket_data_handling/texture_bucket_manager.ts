@@ -363,7 +363,7 @@ export default class TextureBucketManager {
     }
 
     unlistenToLabeledFn = bucket.on("bucketLabeled", updateBucketData);
-    bucket.once("bucketCollected", () => {
+    bucket.once("bucketDiscarded", () => {
       unlistenToLoadedFn();
       unlistenToLabeledFn();
       this.freeBucket(bucket);

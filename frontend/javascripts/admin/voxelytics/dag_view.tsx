@@ -94,8 +94,7 @@ function getEdgesAndNodes(
   filteredTasks: Array<VoxelyticsTaskConfigWithName>,
   selectedNodeId: string | null,
   theme: Theme,
-  // React Flow renders parts of the graph via SVG presentation attributes (e.g. the
-  // <rect stroke> behind an edge label), where a `var(--ant-…)` reference is not resolved.
+  // React Flow renders parts of the graph via SVG presentation attributes, where a `var(--ant-…)` reference is not resolved.
   // So the border color has to be passed in as an already-resolved value.
   borderColor: string,
 ) {

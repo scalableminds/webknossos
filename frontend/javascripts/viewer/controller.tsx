@@ -277,7 +277,7 @@ class Controller extends PureComponent<PropsWithRouter, State> {
     function moveAlongFirstAdditionalAxis(delta: number) {
       const newAdditionalCoordinates = getAdditionalCoordinatesShiftedBy(
         Store.getState(),
-        0,
+        0, // the first axis has index=0
         delta,
       );
       if (newAdditionalCoordinates == null) {

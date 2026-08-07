@@ -307,9 +307,6 @@ export function getAdditionalCoordinatesShiftedBy(
   }
   const [lowerBound, upperBoundExclusive] = axis.bounds;
   const newValue = clamp(lowerBound, coordinate.value + delta, upperBoundExclusive - 1);
-  if (newValue === coordinate.value) {
-    return null;
-  }
   return additionalCoordinates.map((coord, index) =>
     index === axisIndex ? { ...coord, value: newValue } : coord,
   );

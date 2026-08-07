@@ -99,7 +99,7 @@ class SegmentIndexFileService @Inject() (
       .map(_ / Vec3Int.full(DataLayer.bucketLength)) // map positions to cube indices
       .distinct
 
-  def getSegmentVolume(
+  def getSegmentVolumeViaSegmentIndex(
       datasetId: ObjectId,
       dataSourceId: DataSourceId,
       dataLayer: DataLayer,

@@ -1,5 +1,5 @@
 import { M4x4, V3 } from "libs/mjs";
-import { map3, mod } from "libs/utils";
+import { clamp, map3, mod } from "libs/utils";
 import first from "lodash-es/first";
 import last from "lodash-es/last";
 import max from "lodash-es/max";
@@ -30,6 +30,7 @@ import {
   getLayerByName,
   getMagInfo,
   getMaxZoomStep,
+  getUnifiedAdditionalCoordinates,
 } from "viewer/model/accessors/dataset_accessor";
 import determineBucketsForFlight from "viewer/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
 import determineBucketsForPlane from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
@@ -288,6 +289,30 @@ export function getAdditionalCoordinatesAsString(
       .join(separator);
   }
   return "";
+}
+
+export function getAdditionalCoordinatesShiftedBy(
+  state: WebknossosState,
+  axisIndex: number,
+  delta: number,
+): AdditionalCoordinate[] | null {
+  const { additionalCoordinates } = state.flycam;
+  if (additionalCoordinates == null || additionalCoordinates.length <= axisIndex) {
+    return null;
+  }
+  const coordinate = additionalCoordinates[axisIndex];
+  const axis = getUnifiedAdditionalCoordinates(state.dataset)[coordinate.name];
+  if (axis == null) {
+    return null;
+  }
+  const [lowerBound, upperBoundExclusive] = axis.bounds;
+  const newValue = clamp(lowerBound, coordinate.value + delta, upperBoundExclusive - 1);
+  if (newValue === coordinate.value) {
+    return null;
+  }
+  return additionalCoordinates.map((coord, index) =>
+    index === axisIndex ? { ...coord, value: newValue } : coord,
+  );
 }
 
 function _getFlooredPosition(flycam: Flycam): Vector3 {

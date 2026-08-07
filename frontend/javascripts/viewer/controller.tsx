@@ -20,7 +20,9 @@ import { initializeSceneController } from "viewer/controller/scene_controller";
 import UrlManager from "viewer/controller/url_manager";
 import FlightModeController from "viewer/controller/viewmodes/arbitrary_controller";
 import PlaneController from "viewer/controller/viewmodes/plane_controller";
+import { getAdditionalCoordinatesShiftedBy } from "viewer/model/accessors/flycam_accessor";
 import { wkInitializedAction } from "viewer/model/actions/actions";
+import { setAdditionalCoordinatesAction } from "viewer/model/actions/flycam_actions";
 import {
   exitingAnnotationAction,
   redoAction,
@@ -272,6 +274,18 @@ class Controller extends PureComponent<PropsWithRouter, State> {
       );
     }
 
+    function moveAlongFirstAdditionalAxis(delta: number) {
+      const newAdditionalCoordinates = getAdditionalCoordinatesShiftedBy(
+        Store.getState(),
+        0,
+        delta,
+      );
+      if (newAdditionalCoordinates == null) {
+        return;
+      }
+      Store.dispatch(setAdditionalCoordinatesAction(newAdditionalCoordinates));
+    }
+
     const isInViewMode =
       Store.getState().temporaryConfiguration.controlMode === ControlModeEnum.VIEW;
 
@@ -338,6 +352,14 @@ class Controller extends PureComponent<PropsWithRouter, State> {
       },
       TOGGLE_SEGMENTATION: {
         onPressed: toggleSegmentationOpacity,
+      },
+      INCREASE_FIRST_ADDITIONAL_COORDINATE: {
+        onPressedWithRepeat: () => moveAlongFirstAdditionalAxis(1),
+        delayed: true,
+      },
+      DECREASE_FIRST_ADDITIONAL_COORDINATE: {
+        onPressedWithRepeat: () => moveAlongFirstAdditionalAxis(-1),
+        delayed: true,
       },
       ...(isInViewMode ? {} : editRelatedHandlers),
     };

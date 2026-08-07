@@ -226,7 +226,6 @@ function DAGView({
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const allTaskIds = dag.nodes.map((node) => node.id);
   const theme = useWkSelector((state) => state.uiInformation.theme);
-  // Resolved token values, because React Flow passes these into SVG presentation
   // attributes where `var(--ant-…)` references are not resolved.
   const { token } = antdTheme.useToken();
   const reactFlowRef = useRef<ReactFlowInstance | null>(null);

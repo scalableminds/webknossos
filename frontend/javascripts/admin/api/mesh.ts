@@ -1,4 +1,3 @@
-import { toBigInt } from "libs/bigint_helpers";
 import Request from "libs/request";
 import { retryAsyncFunction } from "libs/utils";
 import type { APIMeshFileInfo } from "types/api_types";
@@ -23,10 +22,10 @@ export type MeshSegmentInfo = {
   chunkScale: Vector3;
 };
 
-// The raw shapes mirror the JSON as it comes over the wire, before unmappedSegmentId
-// (an unsigned-decimal string) is normalized to bigint.
+// unmappedSegmentId is only relevant for neuroglancer precomputed meshes and is therefore
+// absent/null in the response for every other mesh format; default it to 0n in that case.
 type RawMeshChunk = Omit<MeshChunk, "unmappedSegmentId"> & {
-  unmappedSegmentId?: string | null;
+  unmappedSegmentId?: bigint | null;
 };
 type RawMeshLodInfo = Omit<MeshLodInfo, "chunks"> & { chunks: Array<RawMeshChunk> };
 type RawMeshSegmentInfo = Omit<MeshSegmentInfo, "lods"> & { lods: Array<RawMeshLodInfo> };
@@ -83,8 +82,7 @@ export function getMeshFileChunksForSegment(
         ...lod,
         chunks: lod.chunks.map((chunk) => ({
           ...chunk,
-          unmappedSegmentId:
-            chunk.unmappedSegmentId != null ? toBigInt(chunk.unmappedSegmentId) : 0n,
+          unmappedSegmentId: chunk.unmappedSegmentId ?? 0n,
         })),
       })),
     };

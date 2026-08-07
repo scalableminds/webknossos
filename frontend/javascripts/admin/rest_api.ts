@@ -32,10 +32,8 @@ import {
   type APIBuildInfoDatastore,
   type APIBuildInfoTracingstore,
   type APIBuildInfoWk,
-  type APIColorLayer,
   type APICompoundType,
   type APIConnectomeFile,
-  type APIDataLayer,
   type APIDataSource,
   type APIDataSourceId,
   type APIDataStore,
@@ -57,7 +55,6 @@ import {
   type APIScript,
   type APIScriptCreator,
   type APIScriptUpdater,
-  type APISegmentationLayer,
   type APIStorageDetailEntry,
   type APITaskType,
   type APITeam,
@@ -991,7 +988,7 @@ export async function importVolumeTracing(
   dataFile: File,
   version: number,
 ): Promise<bigint> {
-  const largestSegmentId: string = await doWithToken((token) =>
+  const largestSegmentId: bigint = await doWithToken((token) =>
     Request.sendMultipartFormReceiveJSON(
       `${annotation.tracingStore.url}/tracings/volume/${volumeTracing.tracingId}/importVolumeData?token=${token}`,
       {
@@ -1002,7 +999,7 @@ export async function importVolumeTracing(
       },
     ),
   );
-  return BigInt(largestSegmentId);
+  return largestSegmentId;
 }
 
 export async function downloadWithFilename(downloadUrl: string) {
@@ -1106,40 +1103,6 @@ export async function reserveIdsForAnnotation(
 
 // ### Datasets
 
-// The raw shape mirrors the JSON as it comes over the wire, before largestSegmentId
-// (an unsigned-decimal string) is normalized to bigint.
-type RawAPISegmentationLayer = Omit<APISegmentationLayer, "largestSegmentId"> & {
-  largestSegmentId?: string | null;
-};
-type RawAPIDataLayer = APIColorLayer | RawAPISegmentationLayer;
-type RawAPIDataset = Omit<APIDataset, "dataSource"> & {
-  dataSource: Omit<APIDataSource, "dataLayers"> & { dataLayers: Array<RawAPIDataLayer> };
-};
-
-function convertRawDataset(raw: RawAPIDataset): APIDataset {
-  // dataLayers may be absent for a malformed/incomplete dataset (see model.spec.ts); leave that
-  // to be handled downstream rather than throwing here.
-  if (raw.dataSource?.dataLayers == null) {
-    return raw as unknown as APIDataset;
-  }
-  return {
-    ...raw,
-    dataSource: {
-      ...raw.dataSource,
-      dataLayers: raw.dataSource.dataLayers.map(
-        (layer): APIDataLayer =>
-          layer.category === "segmentation"
-            ? {
-                ...layer,
-                largestSegmentId:
-                  layer.largestSegmentId != null ? toBigInt(layer.largestSegmentId) : undefined,
-              }
-            : layer,
-      ),
-    },
-  };
-}
-
 export async function getDatasets(
   isUnreported: boolean | null | undefined = null,
   folderId: string | null = null,
@@ -1172,11 +1135,11 @@ export async function getDatasets(
 }
 
 export async function getActiveDatasetsOfMyOrganization(): Promise<Array<APIDataset>> {
-  const rawDatasets: Array<RawAPIDataset> = await Request.receiveJSON(
+  const datasets: Array<APIDataset> = await Request.receiveJSON(
     "/api/datasets?isActive=true&onlyMyOrganization=true",
   );
-  assertResponseLimit(rawDatasets);
-  return rawDatasets.map(convertRawDataset);
+  assertResponseLimit(datasets);
+  return datasets;
 }
 
 export async function getDataset(
@@ -1190,11 +1153,10 @@ export async function getDataset(
     params.set("sharingToken", String(sharingToken));
   }
 
-  const rawDataset: RawAPIDataset = await Request.receiveJSON(
+  const dataset: APIDataset = await Request.receiveJSON(
     `/api/datasets/${datasetId}?${params}`,
     options,
   );
-  const dataset = convertRawDataset(rawDataset);
 
   if (!filterZeroMagLayers || !("dataLayers" in (dataset.dataSource ?? {}))) {
     return dataset;
@@ -1239,15 +1201,11 @@ export async function updateDatasetPartial(
   updater: Partial<DatasetUpdater>,
   options: RequestOptions = {},
 ): Promise<APIDataset> {
-  const rawDataset: RawAPIDataset = await Request.sendJSONReceiveJSON(
-    `/api/datasets/${datasetId}/updatePartial`,
-    {
-      method: "PATCH",
-      data: updater,
-      ...options,
-    },
-  );
-  return convertRawDataset(rawDataset);
+  return Request.sendJSONReceiveJSON(`/api/datasets/${datasetId}/updatePartial`, {
+    method: "PATCH",
+    data: updater,
+    ...options,
+  });
 }
 
 export async function getDatasetViewConfiguration(
@@ -1571,15 +1529,11 @@ export async function updateDatasetTeams(
   newTeams: Array<string>,
   options: RequestOptions = {},
 ): Promise<APIDataset> {
-  const rawDataset: RawAPIDataset = await Request.sendJSONReceiveJSON(
-    `/api/datasets/${datasetId}/teams`,
-    {
-      method: "PATCH",
-      data: newTeams,
-      ...options,
-    },
-  );
-  return convertRawDataset(rawDataset);
+  return Request.sendJSONReceiveJSON(`/api/datasets/${datasetId}/teams`, {
+    method: "PATCH",
+    data: newTeams,
+    ...options,
+  });
 }
 
 export function getDatasetUsedStorageDetails(datasetId: string): Promise<APIStorageDetailEntry[]> {
@@ -2272,9 +2226,7 @@ async function getSynapseSourcesOrDestinations(
   synapseIds: Array<number>,
   srcOrDst: "src" | "dst",
 ): Promise<Array<bigint>> {
-  // The response contains the synaptic partners' agglomerate ids, encoded as unsigned-decimal
-  // strings (see UnsignedLongJson on the backend), since they can exceed Number.MAX_SAFE_INTEGER.
-  const agglomerateIds: Array<string> = await doWithToken((token) =>
+  return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
       `${dataStoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/connectomes/synapses/${srcOrDst}?token=${token}`,
       {
@@ -2285,7 +2237,6 @@ async function getSynapseSourcesOrDestinations(
       },
     ),
   );
-  return agglomerateIds.map((id) => BigInt(id));
 }
 
 export function getSynapseSources(...args: any): Promise<Array<bigint>> {
@@ -2359,12 +2310,7 @@ export async function getEdgesForAgglomerateMinCut(
     editableMappingId: string;
   },
 ): Promise<Array<MinCutTargetEdge>> {
-  const edges: Array<{
-    segmentId1: string;
-    segmentId2: string;
-    position1: Vector3;
-    position2: Vector3;
-  }> = await doWithToken((token) =>
+  return doWithToken((token) =>
     retryAsyncFunction(() =>
       Request.sendJSONReceiveJSON(
         `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphMinCut?token=${token}`,
@@ -2380,11 +2326,6 @@ export async function getEdgesForAgglomerateMinCut(
       ),
     ),
   );
-  return edges.map((edge) => ({
-    ...edge,
-    segmentId1: BigInt(edge.segmentId1),
-    segmentId2: BigInt(edge.segmentId2),
-  }));
 }
 
 export type NeighborInfo = {
@@ -2403,10 +2344,7 @@ export async function getNeighborsForAgglomerateNode(
     editableMappingId: string;
   },
 ): Promise<NeighborInfo> {
-  const result: {
-    segmentId: string;
-    neighbors: Array<{ segmentId: string; position: Vector3 }>;
-  } = await doWithToken((token) =>
+  return doWithToken((token) =>
     retryAsyncFunction(() =>
       Request.sendJSONReceiveJSON(
         `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphNeighbors?token=${token}`,
@@ -2419,13 +2357,6 @@ export async function getNeighborsForAgglomerateNode(
       ),
     ),
   );
-  return {
-    segmentId: BigInt(result.segmentId),
-    neighbors: result.neighbors.map((neighbor) => ({
-      ...neighbor,
-      segmentId: BigInt(neighbor.segmentId),
-    })),
-  };
 }
 
 // ### Smart Select

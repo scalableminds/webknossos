@@ -1,4 +1,4 @@
-import { unsignedBigIntReplacer } from "libs/bigint_helpers";
+import { bigIntReviver, unsignedBigIntReplacer } from "libs/bigint_helpers";
 import handleStatus from "libs/handle_http_status";
 import defaultsDeep from "lodash-es/defaultsDeep";
 import isArrayBuffer from "lodash-es/isArrayBuffer";
@@ -293,7 +293,7 @@ class Request {
       if (responseText.length === 0) {
         return {};
       } else {
-        return JSON.parse(responseText);
+        return JSON.parse(responseText, bigIntReviver);
       }
     });
 }

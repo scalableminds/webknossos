@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.helpers
 
-import play.api.libs.json.{Format, JsError, JsNumber, JsString, JsSuccess, Reads, Writes}
+import play.api.libs.json.{Format, JsError, JsNumber, JsObject, JsString, JsSuccess, Reads, Writes}
 
 import scala.util.Try
 
@@ -11,20 +11,40 @@ import scala.util.Try
  * silently reinterpret *every* Long field of every case class (timestamps, versions, ...) as a
  * string. Apply `format` explicitly to the specific id fields that need it.
  *
- * Reading accepts both the new JsString (unsigned-decimal) encoding and the legacy plain
- * JsNumber encoding. The legacy JsNumber path is permanent, not a migration-window shim:
- * update actions using it are persisted indefinitely and replayed for undo/redo/history.
+ * Writing emits a self-describing envelope, {"_customEncoding": "bigint", "value": "<unsigned
+ * decimal>"}, so that a generic frontend JSON.parse reviver can recognize and convert any such
+ * value anywhere in a response payload into a real bigint, without per-field conversion code
+ * (a plain JsString can't be distinguished from an ordinary string field without this tag).
+ *
+ * Reading accepts, in order: the current tagged-envelope encoding, the previous plain
+ * unsigned-decimal JsString encoding (used before the envelope was introduced), and the
+ * original plain JsNumber encoding. The two legacy paths are permanent, not a migration-window
+ * shim: update actions using them are persisted indefinitely and replayed for undo/redo/history.
  */
 object UnsignedLongJson {
 
+  val customEncodingKey = "_customEncoding"
+  val bigIntEncodingName = "bigint"
+
   val reads: Reads[Long] = Reads {
+    case obj: JsObject if (obj \ customEncodingKey).asOpt[String].contains(bigIntEncodingName) =>
+      (obj \ "value").validate[String].flatMap { s =>
+        Try(java.lang.Long.parseUnsignedLong(s)).map(JsSuccess(_)).getOrElse(JsError("error.expected.unsignedLongString"))
+      }
     case JsString(s) =>
       Try(java.lang.Long.parseUnsignedLong(s)).map(JsSuccess(_)).getOrElse(JsError("error.expected.unsignedLongString"))
     case JsNumber(n) => JsSuccess(n.toLong)
-    case _           => JsError("error.expected.jsstringOrJsnumber")
+    case _           => JsError("error.expected.unsignedLongEnvelopeOrJsstringOrJsnumber")
   }
 
-  val writes: Writes[Long] = Writes(l => JsString(java.lang.Long.toUnsignedString(l)))
+  val writes: Writes[Long] = Writes(l =>
+    JsObject(
+      Seq(
+        customEncodingKey -> JsString(bigIntEncodingName),
+        "value" -> JsString(java.lang.Long.toUnsignedString(l))
+      )
+    )
+  )
 
   val format: Format[Long] = Format(reads, writes)
 }

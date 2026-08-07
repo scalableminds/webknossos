@@ -7,23 +7,47 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   UpdateActiveSegmentIdVolumeAction
 }
 import org.scalatest.wordspec.AsyncWordSpec
-import play.api.libs.json.{JsNumber, JsString, JsSuccess, Json}
+import play.api.libs.json.{JsNumber, JsObject, JsString, JsSuccess, Json}
 
 class UnsignedLongJsonTestSuite extends AsyncWordSpec {
 
   "UnsignedLongJson.writes" should {
-    "encode values within the legacy safe-integer range as an unsigned-decimal string" in
-      assert(UnsignedLongJson.writes.writes(12345L) == JsString("12345"))
+    "encode values within the legacy safe-integer range as a tagged bigint envelope" in
+      assert(
+        UnsignedLongJson.writes.writes(12345L) ==
+          Json.obj("_customEncoding" -> "bigint", "value" -> "12345")
+      )
     "encode values above Long.MaxValue's bit pattern as the correct large unsigned string" in {
       // -1L is the bit pattern for 2^64 - 1 when interpreted as unsigned
-      assert(UnsignedLongJson.writes.writes(-1L) == JsString("18446744073709551615"))
+      assert(
+        UnsignedLongJson.writes.writes(-1L) ==
+          Json.obj("_customEncoding" -> "bigint", "value" -> "18446744073709551615")
+      )
       // Long.MinValue's bit pattern is 2^63 when interpreted as unsigned
-      assert(UnsignedLongJson.writes.writes(Long.MinValue) == JsString("9223372036854775808"))
+      assert(
+        UnsignedLongJson.writes.writes(Long.MinValue) ==
+          Json.obj("_customEncoding" -> "bigint", "value" -> "9223372036854775808")
+      )
     }
   }
 
   "UnsignedLongJson.reads" should {
-    "parse the new unsigned-decimal string encoding, round-tripping the exact bit pattern" in {
+    "parse the tagged bigint envelope, round-tripping the exact bit pattern" in {
+      assert(
+        UnsignedLongJson.reads.reads(
+          Json.obj("_customEncoding" -> "bigint", "value" -> "18446744073709551615")
+        ) == JsSuccess(-1L)
+      )
+      assert(
+        UnsignedLongJson.reads.reads(
+          Json.obj("_customEncoding" -> "bigint", "value" -> "9223372036854775808")
+        ) == JsSuccess(Long.MinValue)
+      )
+      assert(
+        UnsignedLongJson.reads.reads(Json.obj("_customEncoding" -> "bigint", "value" -> "42")) == JsSuccess(42L)
+      )
+    }
+    "parse the legacy plain unsigned-decimal JsString encoding (permanent backward compatibility)" in {
       assert(UnsignedLongJson.reads.reads(JsString("18446744073709551615")) == JsSuccess(-1L))
       assert(UnsignedLongJson.reads.reads(JsString("9223372036854775808")) == JsSuccess(Long.MinValue))
       assert(UnsignedLongJson.reads.reads(JsString("42")) == JsSuccess(42L))
@@ -35,11 +59,17 @@ class UnsignedLongJsonTestSuite extends AsyncWordSpec {
     "fail on malformed input" in {
       assert(UnsignedLongJson.reads.reads(JsString("not-a-number")).isError)
       assert(UnsignedLongJson.reads.reads(Json.obj()).isError)
+      assert(
+        UnsignedLongJson.reads
+          .reads(Json.obj("_customEncoding" -> "bigint", "value" -> "not-a-number"))
+          .isError
+      )
+      assert(UnsignedLongJson.reads.reads(Json.obj("_customEncoding" -> "somethingElse")).isError)
     }
   }
 
   "UnsignedLongJson-patched action formats" should {
-    "round-trip a segment id above 2^53 as a JSON string, leaving other Long fields as JsNumber" in {
+    "round-trip a segment id above 2^53 as a tagged bigint envelope, leaving other Long fields as JsNumber" in {
       val action = CreateSegmentVolumeAction(
         id = UnsignedLong((1L << 60) + 7L),
         anchorPosition = None,
@@ -50,7 +80,10 @@ class UnsignedLongJsonTestSuite extends AsyncWordSpec {
         actionTracingId = "someTracingId"
       )
       val json = Json.toJson(action)
-      assert((json \ "id").as[String] == java.lang.Long.toUnsignedString((1L << 60) + 7L))
+      assert(
+        (json \ "id").as[JsObject] ==
+          Json.obj("_customEncoding" -> "bigint", "value" -> java.lang.Long.toUnsignedString((1L << 60) + 7L))
+      )
       // creationTime is a timestamp, not an id, and must keep the default JsNumber encoding.
       assert((json \ "creationTime").as[Long] == 1234567890L)
 
@@ -64,7 +97,10 @@ class UnsignedLongJsonTestSuite extends AsyncWordSpec {
         actionTracingId = "someTracingId"
       )
       val json = Json.toJson(action)
-      assert((json \ "activeSegmentId").as[String] == "18446744073709551615")
+      assert(
+        (json \ "activeSegmentId").as[JsObject] ==
+          Json.obj("_customEncoding" -> "bigint", "value" -> "18446744073709551615")
+      )
       assert(json.validate[UpdateActiveSegmentIdVolumeAction] == JsSuccess(action))
     }
 

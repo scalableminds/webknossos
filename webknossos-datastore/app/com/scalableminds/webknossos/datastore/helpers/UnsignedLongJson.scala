@@ -29,7 +29,9 @@ object UnsignedLongJson {
   val reads: Reads[Long] = Reads {
     case obj: JsObject if (obj \ customEncodingKey).asOpt[String].contains(bigIntEncodingName) =>
       (obj \ "value").validate[String].flatMap { s =>
-        Try(java.lang.Long.parseUnsignedLong(s)).map(JsSuccess(_)).getOrElse(JsError("error.expected.unsignedLongString"))
+        Try(java.lang.Long.parseUnsignedLong(s))
+          .map(JsSuccess(_))
+          .getOrElse(JsError("error.expected.unsignedLongString"))
       }
     case JsString(s) =>
       Try(java.lang.Long.parseUnsignedLong(s)).map(JsSuccess(_)).getOrElse(JsError("error.expected.unsignedLongString"))

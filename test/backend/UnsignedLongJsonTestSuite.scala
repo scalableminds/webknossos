@@ -60,9 +60,7 @@ class UnsignedLongJsonTestSuite extends AsyncWordSpec {
       assert(UnsignedLongJson.reads.reads(JsString("not-a-number")).isError)
       assert(UnsignedLongJson.reads.reads(Json.obj()).isError)
       assert(
-        UnsignedLongJson.reads
-          .reads(Json.obj("_customEncoding" -> "bigint", "value" -> "not-a-number"))
-          .isError
+        UnsignedLongJson.reads.reads(Json.obj("_customEncoding" -> "bigint", "value" -> "not-a-number")).isError
       )
       assert(UnsignedLongJson.reads.reads(Json.obj("_customEncoding" -> "somethingElse")).isError)
     }

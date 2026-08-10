@@ -32,7 +32,7 @@ function entriesToPairs(entries: KeyValueEntry[]): KeyValuePairs {
  * An editable list of key-value pairs whose result is a JSON-serializable object.
  * Values are entered as plain text and automatically coerced to numbers or booleans
  * where applicable (e.g. "42" → 42, "true" → true). Comma-separated text yields a list of
- * values ("1, 2, 3") or a list of value groups ("[0, 0, 0], [10, 10, 10]").
+ * values ("1, 2, 3" → [1, 2, 3]) or a list of value groups ("[0, 0, 0], [10, 10, 10]" → [0, 0, 0], [10, 10, 10]).
  * Keys support autocomplete from the known workflow config keys.
  *
  * Designed to be embedded in an antd Form.Item — the `onChange` prop is called with

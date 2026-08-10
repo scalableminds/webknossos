@@ -11,8 +11,9 @@ const CHECK_NUMBER_OF_BUCKETS_IN_SAVE_QUEUE_INTERVAL_MS = 10 * 1000;
 // sliding time window for which the number of buckets in save queue is summed up
 const CHECK_NUMBER_OF_BUCKETS_SLIDING_WINDOW_MS = 120 * 1000;
 
-// Warns the user in case a lot of bucket data is queued for saving within a short period
-// of time (which usually hints at an unintended, very large volume annotation operation).
+// Informs the user in case a lot of bucket data is queued for saving within a short period
+// of time (which usually hints at the annotation being configured in a wrong mag granularity.
+// e.g. coarse volume strokes in an annotation with mag 1).
 export function* watchForNumberOfBucketsInSaveQueue(): Saga<void> {
   const bucketSaveWarningThreshold = features().bucketSaveWarningThreshold;
   let bucketsForCurrentInterval = 0;

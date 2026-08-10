@@ -11,9 +11,9 @@ import type { PreservedMeshDisplayProps } from "../volume/proofreading/segment_a
 export type ApplyingUpdateArtifacts = {
   // All properties having the layer name / tracing id as a key.
   meshIdsToRemovePerLayer: ReadonlyMap<string, ReadonlySet<number>>;
-  // Maps for each layer from agglomerate ids whose meshes should be (re)loaded to the display
-  // properties (opacity and visibility) the reloaded mesh should inherit from the agglomerate it
-  // originated from (empty if nothing was stored for the original mesh).
+  // Maps for each layer to agglomerate ids whose meshes should be (re)loaded. In the inner map
+  // the agglomerate ids map to the display properties (opacity and visibility). This info is
+  // necessary because the display properties of reloaded meshes should inherit stay the same as before.
   meshesToLoadPerLayer: ReadonlyMap<string, ReadonlyMap<number, PreservedMeshDisplayProps>>;
 };
 

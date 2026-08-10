@@ -476,11 +476,13 @@ function getUpToDateSegmentIdViaPosition(
   );
 }
 
-// This function updates the agglomerate ids of source- and targetInformation from proofreading actions,
-// put into the store by them (state.save.proofreadingPostProcessingInfo).
-// Ensure that the post processing of a proofreading interaction by a saga in proofread_saga.tsx has
-// agglomerate id information from the state where the latest backend updates were applied but the own
-// mapping changes are not yet applied.
+// This function updates the agglomerate ids of source- and targetInformation from proofreading actions
+// (state.save.proofreadingPostProcessingInfo), to ensure that the post processing of a proofreading
+// interaction by a saga in proofread_saga.tsx has agglomerate id information from the state where the
+// latest backend updates were applied but the own mapping changes are not yet applied. This is needed
+// to have correct information about what agglomerate ids were actually affected by a proofreading action
+// done by the local user. The info correctness is essential to properly reload and synchronize loaded
+// agglomerate trees and meshes.
 export function* updatePendingProofreadingOperationInfo(): Saga<void> {
   const proofreadingPostProcessingInfo = yield* select(
     (state) => state.save.proofreadingPostProcessingInfo,

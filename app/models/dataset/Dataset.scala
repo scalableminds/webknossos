@@ -964,12 +964,33 @@ class DatasetMagDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
   // Note: also see attachments
   def updateMagRealPathsForDataset(datasetId: ObjectId, realPathInfos: Seq[RealPathInfo]): Fox[Unit] =
     for {
-      _ <- Fox.successful(())
-      updateQueries = realPathInfos.map(realPathInfo => q"""UPDATE webknossos.dataset_mags
+      // Scans (e.g. VirtualDatasetsRealPathScanService, run hourly for every virtual dataset) report
+      // realPathInfos unconditionally, even when nothing changed since the last scan (which, for
+      // fully remote/virtual mags, is always the case: realPath == path, hasLocalData == false,
+      // forever). Diffing against the currently stored values here avoids issuing a no-op UPDATE
+      // (and the surrounding Serializable transaction/retry machinery) for every mag on every scan.
+      currentRows <- run(
+        q"""SELECT path, realPath, hasLocalData
+            FROM webknossos.dataset_mags
+            WHERE _dataset = $datasetId""".as[(Option[String], Option[String], Boolean)]
+      )
+      currentByPath = currentRows.collect { case (Some(path), realPath, hasLocalData) =>
+        path -> (realPath, hasLocalData)
+      }.toMap
+      changedRealPathInfos = realPathInfos.filter { realPathInfo =>
+        currentByPath.get(realPathInfo.path.toString) match {
+          case Some((currentRealPath, currentHasLocalData)) =>
+            !currentRealPath.contains(
+              realPathInfo.realPath.toString
+            ) || currentHasLocalData != realPathInfo.hasLocalData
+          case None => true // no current row found locally; let the (then no-op) UPDATE proceed as before
+        }
+      }
+      updateQueries = changedRealPathInfos.map(realPathInfo => q"""UPDATE webknossos.dataset_mags
             SET realPath = ${realPathInfo.realPath}, hasLocalData = ${realPathInfo.hasLocalData}
             WHERE _dataset = $datasetId
             AND path = ${realPathInfo.path}""".asUpdate)
-      _ <- runAsSerializableTransaction(updateQueries)
+      _ <- if (updateQueries.nonEmpty) runAsSerializableTransaction(updateQueries) else Fox.successful(())
     } yield ()
 
   implicit def GetResultDataSourceMagRow: GetResult[DataSourceMagRow] =
@@ -1438,12 +1459,27 @@ class DatasetLayerAttachmentDAO @Inject() (sqlClient: SqlClient)(implicit ec: Ex
   // Note: also see mags.
   def updateAttachmentRealPathsForDataset(datasetId: ObjectId, realPathInfos: Seq[RealPathInfo]): Fox[Unit] =
     for {
-      _ <- Fox.successful(())
-      updateQueries = realPathInfos.map(realPathInfo => q"""UPDATE webknossos.dataset_layer_attachments
+      // See the comment on the equivalent diffing in DatasetMagDAO.updateMagRealPathsForDataset.
+      currentRows <- run(
+        q"""SELECT path, realPath, hasLocalData
+            FROM webknossos.dataset_layer_attachments
+            WHERE _dataset = $datasetId""".as[(String, Option[String], Boolean)]
+      )
+      currentByPath = currentRows.map { case (path, realPath, hasLocalData) => path -> (realPath, hasLocalData) }.toMap
+      changedRealPathInfos = realPathInfos.filter { realPathInfo =>
+        currentByPath.get(realPathInfo.path.toString) match {
+          case Some((currentRealPath, currentHasLocalData)) =>
+            !currentRealPath.contains(
+              realPathInfo.realPath.toString
+            ) || currentHasLocalData != realPathInfo.hasLocalData
+          case None => true // no current row found locally; let the (then no-op) UPDATE proceed as before
+        }
+      }
+      updateQueries = changedRealPathInfos.map(realPathInfo => q"""UPDATE webknossos.dataset_layer_attachments
             SET realPath = ${realPathInfo.realPath}, hasLocalData = ${realPathInfo.hasLocalData}
             WHERE _dataset = $datasetId
             AND path = ${realPathInfo.path}""".asUpdate)
-      _ <- runAsSerializableTransaction(updateQueries)
+      _ <- if (updateQueries.nonEmpty) runAsSerializableTransaction(updateQueries) else Fox.successful(())
     } yield ()
 
   def insertWithUploadToPathPending(

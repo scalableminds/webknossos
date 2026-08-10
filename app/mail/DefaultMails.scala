@@ -1,6 +1,6 @@
 package mail
 
-import models.organization.Organization
+import models.organization.{Organization, PricingPlanFeatures}
 import models.user.MultiUser
 import utils.WkConf
 import views.*
@@ -170,6 +170,29 @@ class DefaultMails @Inject() (conf: WkConf) {
         html.mail.upgradeAiAddon(multiUser.fullName, aiPlan, pricingPlan, additionalFooter, organizationName).body,
       recipients = List(supportEmail, multiUser.email),
       replyTo = List(multiUser.email, supportEmail)
+    )
+
+  def pricingPlanUpgradedMail(
+      multiUser: MultiUser,
+      organizationName: String,
+      newPlanLabel: String,
+      unlockedFeatures: List[PricingPlanFeatures]
+  ): Mail =
+    Mail(
+      from = defaultSender,
+      subject = s"WEBKNOSSOS Upgrade: Your organization is now on the $newPlanLabel plan",
+      bodyHtml = html.mail
+        .pricingPlanUpgraded(
+          multiUser.fullName,
+          organizationName,
+          newPlanLabel,
+          unlockedFeatures,
+          uri,
+          additionalFooter
+        )
+        .body,
+      recipients = List(multiUser.email),
+      replyTo = List(supportEmail)
     )
 
   def orderCreditsMail(multiUser: MultiUser, requestedCredits: Int): Mail =

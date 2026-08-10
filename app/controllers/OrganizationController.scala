@@ -331,6 +331,12 @@ class OrganizationController @Inject() (
         ) ~> NOT_FOUND
         _ <- organizationDAO.insertPlanUpdate(organization._id, request.body)
         _ <- organizationDAO.updatePlan(organization._id, request.body)
+        // Sending the notification must not fail the plan update, as that has already been persisted.
+        _ <- Fox.runOptional(request.body.pricingPlan)(newPricingPlan =>
+          organizationService
+            .sendPricingPlanUpgradeMails(organization, organization.pricingPlan, newPricingPlan)
+            .shiftBox
+        )
       } yield Ok
     }
 

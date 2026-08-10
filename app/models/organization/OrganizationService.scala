@@ -9,6 +9,8 @@ import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import controllers.RpcTokenHolder
+import mail.{DefaultMails, Send}
+import org.apache.pekko.actor.ActorSystem
 
 import javax.inject.Inject
 import models.dataset.{DataStore, DataStoreDAO}
@@ -30,10 +32,14 @@ class OrganizationService @Inject() (
     folderDAO: FolderDAO,
     folderService: FolderService,
     userService: UserService,
+    defaultMails: DefaultMails,
     rpc: RPC,
-    conf: WkConf
+    conf: WkConf,
+    actorSystem: ActorSystem
 )(implicit ec: ExecutionContext)
     extends LazyLogging {
+
+  private lazy val Mailer = actorSystem.actorSelection("/user/mailActor")
 
   def compactWrites(organization: Organization): JsObject =
     Json.obj(
@@ -200,6 +206,35 @@ class OrganizationService @Inject() (
         .versionMismatch(requiredVersion, version)
       _ <- organizationDAO.acceptTermsOfService(organizationId, version, Instant.now)
     } yield ()
+
+  /** Notifies the organization owner and all of its admins that the organization was moved to a higher pricing tier,
+    * highlighting the features they gained. Does nothing if the plan change was not an upgrade.
+    */
+  def sendPricingPlanUpgradeMails(
+      organization: Organization,
+      previousPlan: PricingPlan.PricingPlan,
+      newPlan: PricingPlan.PricingPlan
+  ): Fox[Unit] = {
+    val unlockedFeatures = PricingPlanFeatures.unlockedBy(previousPlan, newPlan)
+    if (unlockedFeatures.isEmpty) Fox.successful(())
+    else
+      for {
+        admins <- userDAO.findAdminsByOrg(organization._id)(using GlobalAccessContext)
+        adminMultiUsers <- Fox
+          .serialCombined(admins)(admin => multiUserDAO.findOne(admin._multiUser)(using GlobalAccessContext))
+        ownerMultiUserBox <- multiUserDAO.findMultiUserOfOrganizationOwner(organization._id).shiftBox
+        recipients = (ownerMultiUserBox.toOption.toList ++ adminMultiUsers).distinctBy(_._id)
+        newPlanLabel = unlockedFeatures.last.planLabel
+        _ = recipients.foreach(recipient =>
+          Mailer ! Send(
+            defaultMails.pricingPlanUpgradedMail(recipient, organization.name, newPlanLabel, unlockedFeatures)
+          )
+        )
+        _ = logger.info(
+          s"Notified ${recipients.length} owner/admins of organization ${organization._id} about the pricing plan upgrade from $previousPlan to $newPlan."
+        )
+      } yield ()
+  }
 
   def assertIsSuperUserOrOrganizationHasAiPlan(organization: Organization, user: User)(using
       ctx: DBAccessContext

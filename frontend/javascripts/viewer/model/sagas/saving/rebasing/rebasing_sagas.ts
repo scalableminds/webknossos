@@ -26,8 +26,8 @@ import { resolveApplyingUpdateArtifacts } from "./mesh_artifact_resolution_sagas
 import {
   saveQueueEntriesToServerUpdateActionBatches,
   updatePendingProofreadingOperationInfo,
-  updateSaveQueueEntriesToStateAfterRebase,
 } from "./rebasing_helpers_sagas";
+import { rewriteSaveQueueEntriesForReapplying } from "./rewrite_for_reapplying_sagas";
 
 /*
  * This module performs one rebase round: it fetches the update actions that are missing locally,
@@ -204,7 +204,7 @@ function* reapplyUpdateActionsFromSaveQueue(
   // Properties like unmapped segment ids of proofreading actions might have changed and are updated here.
   // updateSaveQueueEntriesToStateAfterRebase might do some additional needed backend requests.
   const { success, updatedSaveQueue } = yield* call(
-    updateSaveQueueEntriesToStateAfterRebase,
+    rewriteSaveQueueEntriesForReapplying,
     appliedBackendUpdateActions,
     annotationBeforeRebase,
   );

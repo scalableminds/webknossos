@@ -20,7 +20,6 @@ import models.team.*
 import play.api.libs.json.*
 import slick.jdbc.GetResult
 import slick.jdbc.PostgresProfile.api.*
-import slick.jdbc.TransactionIsolation.Serializable
 import utils.sql.{SQLDAO, SimpleSQLDAO, SqlClient, SqlToken}
 import com.scalableminds.util.objectid.ObjectId
 import models.organization.PricingPlan
@@ -662,11 +661,7 @@ class UserDatasetConfigurationDAO @Inject() (sqlClient: SqlClient, userDAO: User
                         AND _dataset = $datasetId""".asUpdate
       insertQuery = q"""INSERT INTO webknossos.user_datasetConfigurations(_user, _dataset, viewConfiguration)
                         VALUES($userId, $datasetId, ${Json.toJson(configuration)})""".asUpdate
-      _ <- run(
-        DBIO.sequence(List(deleteQuery, insertQuery)).transactionally.withTransactionIsolation(Serializable),
-        retryCount = 50,
-        retryIfErrorContains = List(transactionSerializationError)
-      )
+      _ <- runAsSerializableTransaction(List(deleteQuery, insertQuery))
     } yield ()
 }
 
@@ -706,10 +701,6 @@ class UserDatasetLayerConfigurationDAO @Inject() (sqlClient: SqlClient, userDAO:
       insertQuery =
         q"""INSERT INTO webknossos.user_datasetLayerConfigurations(_user, _dataset, layerName, viewConfiguration)
                         VALUES($userId, $datasetId, $layerName, ${Json.toJson(viewConfiguration)})""".asUpdate
-      _ <- run(
-        DBIO.sequence(List(deleteQuery, insertQuery)).transactionally.withTransactionIsolation(Serializable),
-        retryCount = 50,
-        retryIfErrorContains = List(transactionSerializationError)
-      )
+      _ <- runAsSerializableTransaction(List(deleteQuery, insertQuery))
     } yield ()
 }

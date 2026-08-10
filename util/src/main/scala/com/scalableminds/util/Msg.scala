@@ -534,6 +534,8 @@ object Msg {
         "Could not verify that all chunks have been uploaded."
       val couldNotLoadUnfinishedUploads: String = "Could not load unfinished uploads of user."
       val createFailed: String = "Could not create dataset."
+      val datasetRootDetectionFailed: String =
+        "Could not determine the dataset root directory in the uploaded files. Please check the folder structure of your upload and try again."
       val datastoreRestricted: String =
         "Your organization does not have permission to upload datasets to this data store. Please choose another data store."
       val disallowedPaths: String =

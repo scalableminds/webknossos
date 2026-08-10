@@ -38,7 +38,6 @@ import { viewDatasetMenu } from "../action_bar/view_dataset_actions_view";
 import { LayoutEvents, layoutEmitter } from "../layouting/layout_persistence";
 import { commandPaletteDarkTheme, commandPaletteLightTheme } from "./command_palette_theme";
 
-// kbar renders the entry color into its own (fixed-palette) UI, so use the brand constant rather
 // than a theme token.
 const commandEntryColor = ColorWKBlue;
 

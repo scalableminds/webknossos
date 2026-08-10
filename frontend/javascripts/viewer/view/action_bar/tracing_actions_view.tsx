@@ -62,7 +62,6 @@ export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
       <Typography.Title
         level={5}
         style={{
-          // This is rendered inside a tooltip, which has an inverted background in both themes.
           color: "var(--ant-color-text-light-solid)",
         }}
       >

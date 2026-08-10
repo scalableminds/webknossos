@@ -1,0 +1,21 @@
+@(name: String, organizationName: String, pricingPlanLabel: String, expiryDate: String, daysRemaining: Long, renewUrl: String, additionalFooter: String)
+
+@emailBaseTemplate(additionalFooter) {
+<p>Hi @{name},</p>
+
+<p>
+  the WEBKNOSSOS <i>@{pricingPlanLabel}</i> plan of your organization <i>@{organizationName}</i> expires on
+  <b>@{expiryDate}</b>@if(daysRemaining == 1) { — that is tomorrow.} else { — that is in @{daysRemaining} days.}
+</p>
+
+<p>
+  Renew now to keep access to all features of your plan. Once the plan has expired, your organization is downgraded,
+  which blocks users and disables plan features.
+</p>
+
+@emailButton("Renew Plan", renewUrl)
+
+<p>If you have already renewed or would like to discuss your options, simply reply to this email.</p>
+
+<p>With best regards,<br />the WEBKNOSSOS team</p>
+}

@@ -181,6 +181,19 @@ class MultiUserDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContex
       parsed <- parseFirst(r, organizationId)
     } yield parsed
 
+  // Note that users_ is unique per (_multiUser, _organization), so no multiUser is returned twice here.
+  def findMultiUsersOfOrganizationOwnerAndAdmins(organizationId: String): Fox[List[MultiUser]] =
+    for {
+      r <- run(q"""SELECT ${columnsWithPrefix("mu.")}
+                   FROM webknossos.users_ u
+                   JOIN webknossos.multiUsers_ mu ON u._multiUser = mu._id
+                   WHERE (u.isOrganizationOwner OR u.isAdmin)
+                   AND NOT u.isDeactivated
+                   AND u._organization = $organizationId
+                   ORDER BY u.isOrganizationOwner DESC, mu._id""".as[MultiusersRow])
+      parsed <- parseAll(r)
+    } yield parsed
+
   def emailNotPresentYet(email: String)(using ctx: DBAccessContext): Fox[Boolean] =
     for {
       accessQuery <- readAccessQuery

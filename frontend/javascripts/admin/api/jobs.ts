@@ -186,7 +186,7 @@ type RunNeuronInferenceParameters = {
   evalMaxEdgeLength?: number;
   evalSparseTubeThresholdNm?: number;
   evalMinMergerPathLengthNm?: number;
-  customConfiguration?: Record<string, JsonPrimitive>;
+  customConfiguration?: Record<string, JsonValue>;
 };
 
 type RunInstanceInferenceParameters = {
@@ -199,7 +199,7 @@ type RunInstanceInferenceParameters = {
   newDatasetName: string;
   workflowYaml?: string;
   seedGeneratorDistanceThreshold?: number | null;
-  customConfiguration?: Record<string, JsonPrimitive>;
+  customConfiguration?: Record<string, JsonValue>;
 };
 
 export function runNeuronModelInference(params: RunNeuronInferenceParameters): Promise<APIJob> {
@@ -310,7 +310,7 @@ export function startAlignSectionsJob(
   layerName: string,
   newDatasetName: string,
   annotationId?: string,
-  customConfiguration?: Record<string, JsonPrimitive>,
+  customConfiguration?: Record<string, JsonValue>,
 ): Promise<APIJob> {
   return Request.sendJSONReceiveJSON(`/api/jobs/run/alignSections/${datasetId}`, {
     method: "POST",
@@ -343,7 +343,7 @@ type RunNeuronModelTrainingParameters = {
   aiModelCategory: APIAiModelCategory.EM_NEURONS;
   comment?: string;
   workflowYaml?: string;
-  customConfiguration?: Record<string, JsonPrimitive>;
+  customConfiguration?: Record<string, JsonValue>;
 };
 
 export function runNeuronTraining(params: RunNeuronModelTrainingParameters) {
@@ -354,6 +354,10 @@ export function runNeuronTraining(params: RunNeuronModelTrainingParameters) {
 }
 
 export type JsonPrimitive = string | number | boolean;
+// A configuration value may also be a list of values or a list of value groups
+// (e.g. a set of coordinates or bounding boxes).
+export type JsonValue = JsonPrimitive | JsonValue[];
+
 type RunInstanceModelTrainingParameters = {
   trainingAnnotations: AiModelTrainingAnnotationSpecification[];
   name: string;
@@ -361,7 +365,7 @@ type RunInstanceModelTrainingParameters = {
   instanceDiameterNm: number;
   comment?: string;
   workflowYaml?: string;
-  customConfiguration?: Record<string, JsonPrimitive>;
+  customConfiguration?: Record<string, JsonValue>;
 };
 
 export function runInstanceModelTraining(params: RunInstanceModelTrainingParameters) {

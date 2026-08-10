@@ -210,6 +210,46 @@ describe("UrlManager", () => {
     expect(UrlManager.parseUrlHash()).toEqual(urlState as Partial<UrlManagerState>);
   });
 
+  it("should build json url hash with the td camera and parse it again", () => {
+    const mode = Constants.MODE_FLIGHT;
+    const tdCamera = {
+      position: [12.5, -3, 100] as Vector3,
+      up: [0, -1, 0] as Vector3,
+      left: -500,
+      right: 500,
+      top: 250,
+      bottom: -250,
+    };
+    const urlState = {
+      position: [0, 0, 0] as Vector3,
+      clippingDistance: 50,
+      clipSkeletonToCurrentSection: false,
+      additionalCoordinates: [],
+      mode,
+      nativelyRenderedLayerName: null,
+      zoomStep: 1.3,
+      rotation: [0, 0, 180] as Vector3,
+      tdCamera,
+    };
+    const initialState = update(defaultState, {
+      temporaryConfiguration: {
+        viewMode: {
+          $set: mode,
+        },
+      },
+      viewModeData: {
+        plane: {
+          tdCamera: {
+            $merge: tdCamera,
+          },
+        },
+      },
+    });
+    const hash = UrlManager.buildUrlHashJson(initialState);
+    location.hash = `#${hash}`;
+    expect(UrlManager.parseUrlHash()).toEqual(urlState as Partial<UrlManagerState>);
+  });
+
   it("should support hashes with active node id and without a rotation", () => {
     location.hash = "#3705,5200,795,0,1.3,15";
     const urlState = UrlManager.parseUrlHash();

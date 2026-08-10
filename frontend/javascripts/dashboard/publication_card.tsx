@@ -230,7 +230,7 @@ function PublicationCard({ publication, showDetailedLink }: Props) {
                   <LinkOutlined
                     style={{
                       fontSize: 16,
-                      color: "#555",
+                      color: "var(--ant-color-text-secondary)",
                       marginBottom: 18,
                       marginLeft: 8,
                     }}

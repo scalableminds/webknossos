@@ -34,7 +34,8 @@ import {
 } from "dashboard/folders/folder_tree";
 import { ZeroStorageReasonList } from "dashboard/storage_info";
 import { diceCoefficient as dice } from "dice-coefficient";
-import { formatCountToDataAmountUnit, stringToColor } from "libs/format_utils";
+import { stringToTagColor } from "libs/colors";
+import { formatCountToDataAmountUnit } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import Shortcut from "libs/shortcut_component";
 import { compareBy, localeCompareBy, scrollContainerToTop } from "libs/utils";
@@ -947,7 +948,7 @@ export function TeamTags({
                 textOverflow: "ellipsis",
               }}
               variant="outlined"
-              color={stringToColor(team.name)}
+              color={stringToTagColor(team.name)}
             >
               {team.name}
               {isCumulative ? "*" : ""}

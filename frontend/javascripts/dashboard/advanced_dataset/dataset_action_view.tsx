@@ -71,11 +71,7 @@ function NewAnnotationLink({
         className="ant-dropdown-link"
         onClick={() => !isReloading && onShowCreateExplorativeModal()}
       >
-        <EllipsisOutlined
-          style={{
-            color: "var(--ant-color-link)",
-          }}
-        />
+        <EllipsisOutlined />
       </a>
       {isCreateExplorativeModalVisible ? (
         <CreateExplorativeModal datasetId={dataset.id} onClose={onCloseCreateExplorativeModal} />

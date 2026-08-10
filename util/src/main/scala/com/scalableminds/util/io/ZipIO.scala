@@ -77,11 +77,10 @@ object ZipIO extends LazyLogging {
       zip.stream.setLevel(level)
     }
     if (sources.nonEmpty) {
-      for {
-        _ <- zipIterator(sources, zip)
-        _ = zip.close()
-        _ = out.close()
-      } yield ()
+      Fox.withCleanup(zipIterator(sources, zip)) {
+        zip.close()
+        out.close()
+      }
     } else {
       zip.close()
       out.close()

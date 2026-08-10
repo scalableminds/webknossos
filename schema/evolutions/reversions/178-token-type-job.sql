@@ -1,6 +1,6 @@
 START TRANSACTION;
 
-do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 177 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
+do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 178 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
 
 DROP INDEX IF EXISTS webknossos.tokens_value_idx;
 DROP INDEX IF EXISTS webknossos.tokens_logininfo_providerid_logininfo_providerkey_tokentype_idx;
@@ -15,6 +15,6 @@ DROP TYPE webknossos.TOKEN_TYPES;
 CREATE TYPE webknossos.TOKEN_TYPES AS ENUM ('Authentication', 'DataStore', 'ResetPassword');
 ALTER TABLE webknossos.tokens ALTER COLUMN tokenType TYPE webknossos.TOKEN_TYPES USING tokenType::webknossos.TOKEN_TYPES;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 176;
+UPDATE webknossos.releaseInformation SET schemaVersion = 177;
 
 COMMIT TRANSACTION;

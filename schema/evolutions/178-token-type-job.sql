@@ -1,6 +1,6 @@
 START TRANSACTION;
 
-do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 176 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
+do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 177 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
 
 ALTER TYPE webknossos.TOKEN_TYPES ADD VALUE IF NOT EXISTS 'Job';
 
@@ -13,6 +13,6 @@ CREATE INDEX ON webknossos.tokens(loginInfo_providerID, loginInfo_providerKey, t
 -- Speeds up the periodic hard-delete sweep of expired/soft-deleted tokens.
 CREATE INDEX ON webknossos.tokens(expirationDateTime);
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 177;
+UPDATE webknossos.releaseInformation SET schemaVersion = 178;
 
 COMMIT TRANSACTION;

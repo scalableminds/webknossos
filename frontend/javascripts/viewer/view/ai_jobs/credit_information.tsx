@@ -1,7 +1,20 @@
 import { CreditCardOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
+import { hasPricingPlanExceededStorage } from "admin/organization/pricing_plan_utils";
 import { getJobCreditCostAndUpdateOrgaCredits, type JobCreditCostInfo } from "admin/rest_api";
-import { Button, Card, Col, Divider, Flex, Row, Space, Spin, Tooltip, Typography } from "antd";
+import {
+  Alert,
+  Button,
+  Card,
+  Col,
+  Divider,
+  Flex,
+  Row,
+  Space,
+  Spin,
+  Tooltip,
+  Typography,
+} from "antd";
 import features from "features";
 import { formatMilliCreditsString, formatVoxels } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
@@ -16,6 +29,7 @@ import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import type { UserBoundingBox } from "viewer/store";
 import { useAlignmentJobContext } from "./alignment/ai_alignment_job_context";
+import { JOB_COMMANDS_WRITING_TO_STORAGE } from "./constants";
 import { useRunAiModelJobContext } from "./run_ai_model/ai_image_segmentation_job_context";
 import { useAiTrainingJobContext } from "./train_ai_model/ai_training_job_context";
 import { getBestFittingMagComparedToTrainingDS } from "./utils";
@@ -179,6 +193,16 @@ const CreditInformation: React.FC<CreditInformationProps> = ({
     (state) => state.activeOrganization?.milliCreditBalance || 0,
   );
 
+  // Jobs storing their results in WEBKNOSSOS are refused by the backend while the storage quota is
+  // exceeded. Thus, don't offer starting them in the first place.
+  const isBlockedByStorageQuota = useWkSelector(
+    (state) =>
+      selectedJobType != null &&
+      JOB_COMMANDS_WRITING_TO_STORAGE.has(selectedJobType) &&
+      state.activeOrganization != null &&
+      hasPricingPlanExceededStorage(state.activeOrganization),
+  );
+
   const boundingBoxVolume = useMemo(() => {
     if (selectedBoundingBox) {
       return new BoundingBox(selectedBoundingBox.boundingBox).getVolume();
@@ -208,6 +232,13 @@ const CreditInformation: React.FC<CreditInformationProps> = ({
   }, [selectedBoundingBox, boundingBoxVolume]);
 
   const costInCredits = jobCreditCostInfo?.costInMilliCredits;
+
+  let startButtonSuffix = "";
+  if (isBlockedByStorageQuota) {
+    startButtonSuffix = " (storage quota exceeded)";
+  } else if (jobCreditCostInfo?.hasEnoughCredits === false) {
+    startButtonSuffix = " (not enough credits)";
+  }
 
   return (
     <Card
@@ -282,24 +313,38 @@ const CreditInformation: React.FC<CreditInformationProps> = ({
           )}
         </Col>
       </Row>
-      <Flex vertical gap="small">
+      <Flex vertical gap="small" style={{ marginTop: "24px" }}>
+        {isBlockedByStorageQuota && (
+          <Alert
+            showIcon
+            type="error"
+            title="Storage quota exceeded"
+            description={
+              <Text>
+                Your organization has exceeded the available storage, so the results of this job
+                could not be stored. Visit the <Link to="/organization">organization page</Link> for
+                details.
+              </Text>
+            }
+          />
+        )}
         <Button
           type="primary"
           block
           size="large"
-          style={{ marginTop: "24px" }}
           disabled={
             isFetching ||
             !selectedModel ||
             !selectedBoundingBox ||
             !jobCreditCostInfo?.hasEnoughCredits ||
             boundingBoxVolume === 0 ||
-            !areParametersValid
+            !areParametersValid ||
+            isBlockedByStorageQuota
           }
           onClick={handleStartAnalysis}
         >
           {startButtonTitle}
-          {jobCreditCostInfo?.hasEnoughCredits === false ? " (not enough credits)" : ""}
+          {startButtonSuffix}
         </Button>
         {jobCreditCostInfo?.hasEnoughCredits === false && (
           <Link to={"/organization"}>

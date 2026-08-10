@@ -14,10 +14,11 @@ import com.typesafe.scalalogging.LazyLogging
 import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
 import models.analytics.{AnalyticsService, FailedJobEvent, RunJobEvent}
 import models.job.JobCommand.JobCommand
-import models.organization.{CreditTransactionService, OrganizationDAO}
+import models.organization.{CreditTransactionService, OrganizationDAO, OrganizationService}
 import models.user.{MultiUserDAO, User, UserDAO, UserService}
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import org.apache.pekko.actor.ActorSystem
+import play.api.http.Status.FORBIDDEN
 import play.api.libs.json.{JsObject, JsValue, Json}
 import security.WkSilhouetteEnvironment
 import telemetry.SlackNotificationService
@@ -35,6 +36,7 @@ class JobService @Inject() (
     jobDAO: JobDAO,
     workerDAO: WorkerDAO,
     organizationDAO: OrganizationDAO,
+    organizationService: OrganizationService,
     datasetDAO: DatasetDAO,
     defaultMails: DefaultMails,
     analyticsService: AnalyticsService,
@@ -238,10 +240,27 @@ class JobService @Inject() (
       _ <- Fox.assertTrue(
         jobIsSupportedByAvailableWorkers(command, dataStoreName)
       ) ?~> Msg.Job.noWorkerForDatastoreAndJob
+      _ <- assertStorageNotExceededFor(command, owner)
       job = Job(ObjectId.generate, owner._id, dataStoreName, command, commandArgs)
       _ <- jobDAO.insertOne(job)
       _ = analyticsService.track(RunJobEvent(owner, command))
     } yield job
+
+  /* If the job stores its results in the organization’s WEBKNOSSOS storage, refuse to start it while
+   * the storage quota is exceeded. Otherwise, the results could not be stored once the job is done,
+   * wasting compute time and failing late.
+   */
+  private def assertStorageNotExceededFor(command: JobCommand, owner: User): Fox[Unit] =
+    for {
+      _ <- Fox.runIf(JobCommand.jobsWritingToStorage.contains(command)) {
+        for {
+          organization <- organizationDAO.findOne(owner._organization)(using
+            GlobalAccessContext
+          ) ?~> Msg.Organization.notFound(owner._organization)
+          _ <- organizationService.assertUsedStorageNotExceeded(organization) ?~> Msg.Job.storageExceeded ~> FORBIDDEN
+        } yield ()
+      }
+    } yield ()
 
   def submitConvertToWkwJob(
       dataset: Dataset,
@@ -281,6 +300,8 @@ class JobService @Inject() (
     for {
       isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
       _ <- Fox.fromBool(isTeamManagerOrAdmin || user.isDatasetManager) ?~> Msg.Job.paidNoAdminOrManager
+      // Checked here as well (and not only in submitJob) so that no credits are reserved for a job that is refused anyway
+      _ <- assertStorageNotExceededFor(command, user)
       costInMilliCredits <- calculateJobCostInMilliCredits(jobBoundingBoxInTargetMag, command)
       _ <- Fox.assertTrue(
         creditTransactionService.hasEnoughCredits(user._organization, costInMilliCredits)

@@ -368,9 +368,12 @@ export function LayerTransformSettingsPopover({
       <span>
         <Typography.Title level={4}>Layer Transforms</Typography.Title>
       </span>
-      <CloseOutlined
-        style={{ cursor: "pointer", fontSize: 12, color: "var(--ant-color-text-secondary)" }}
+      <Button
+        type="text"
+        size="small"
+        icon={<CloseOutlined />}
         onClick={onClose}
+        aria-label="Close layer transform settings"
       />
     </Flex>
   );

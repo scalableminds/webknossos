@@ -1,8 +1,7 @@
+import { colorObjectToRGBArray, getRandomColor } from "libs/colors";
 import {
-  colorObjectToRGBArray,
   computeBoundingBoxFromBoundingBoxObject,
   computeBoundingBoxObjectFromBoundingBox,
-  getRandomColor,
   mapEntriesToMap,
   mapGroupsDeep,
   point3ToVector3,

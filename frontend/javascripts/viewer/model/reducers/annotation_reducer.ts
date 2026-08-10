@@ -1,6 +1,6 @@
 import update from "immutability-helper";
+import { getRandomColor } from "libs/colors";
 import { V3 } from "libs/mjs";
-import { getRandomColor } from "libs/utils";
 import isEqual from "lodash-es/isEqual";
 import reduce from "lodash-es/reduce";
 import uniqWith from "lodash-es/uniqWith";

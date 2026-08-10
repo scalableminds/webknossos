@@ -1,8 +1,8 @@
 import { Input, Popover } from "antd";
 import type { ItemType, MenuItemType } from "antd/es/menu/interface";
+import { hexToRgb, rgbToHex } from "libs/colors";
 import { handleGenericError } from "libs/error_handling";
 import { useWkSelector } from "libs/react_hooks";
-import { hexToRgb, rgbToHex } from "libs/utils";
 import type React from "react";
 import type { MouseEvent } from "react";
 import { useDispatch } from "react-redux";

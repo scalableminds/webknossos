@@ -9,6 +9,7 @@ import { computeArrayFromBoundingBox, computeVolumeFromBoundingBox } from "libs/
 import type React from "react";
 import { useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
+import { ColorWKGold } from "theme";
 import { type AiModel, APIJobCommand } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
@@ -213,7 +214,7 @@ const CreditInformation: React.FC<CreditInformationProps> = ({
       type="inner"
       title={
         <Space align="center">
-          <CreditCardOutlined style={{ color: "#ddbc00" }} />
+          <CreditCardOutlined style={{ color: ColorWKGold }} />
           Credit Information
         </Space>
       }

@@ -163,12 +163,16 @@ function getLayerBoundingBoxesAsUserBoundingBoxes(state: WebknossosState): UserB
 
 export const getMipEnabledBBoxes = reuseInstanceOnEquality(
   (state: WebknossosState): MipEnabledBBox[] => {
+    const { mipBBoxSettings } = state.uiInformation;
+    if (Object.keys(mipBBoxSettings).length === 0) {
+      return [];
+    }
     const bboxes = [
       ...getUserBoundingBoxesFromState(state),
       ...getLayerBoundingBoxesAsUserBoundingBoxes(state),
     ];
     return bboxes.flatMap((bbox) => {
-      const configs = state.uiInformation.mipBBoxSettings[bbox.id];
+      const configs = mipBBoxSettings[bbox.id];
       return configs != null && configs.length > 0 ? [{ bbox, configs }] : [];
     });
   },

@@ -99,6 +99,8 @@ function useOlvy() {
         showHeader: true,
         // only applies when widget type is embed. you cannot hide header for modal and sidebar widgets
         showUnreadIndicator: false,
+        // Kept as a literal: this is configuration handed to the third-party Olvy widget, which
+        // renders in its own iframe and cannot resolve our CSS variables.
         unreadIndicatorColor: "#cc1919",
         unreadIndicatorPosition: "top-right",
       },

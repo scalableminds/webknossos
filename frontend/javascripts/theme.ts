@@ -1,5 +1,5 @@
 import { type ThemeConfig, theme } from "antd";
-import type { AliasToken, OverrideToken } from "antd/lib/theme/interface";
+import type { AliasToken, OverrideToken } from "antd/es/theme/interface";
 import window from "libs/window";
 import clone from "lodash-es/clone";
 import merge from "lodash-es/merge";

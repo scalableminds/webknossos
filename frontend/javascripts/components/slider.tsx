@@ -1,5 +1,5 @@
 import { Slider as AntdSlider, type SliderSingleProps } from "antd";
-import type { SliderRangeProps } from "antd/lib/slider";
+import type { SliderRangeProps } from "antd/es/slider";
 import { clamp } from "libs/utils";
 import { useCallback, useEffect, useRef } from "react";
 

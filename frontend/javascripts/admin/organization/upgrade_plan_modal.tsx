@@ -13,8 +13,7 @@ import {
   sendUpgradePricingPlanStorageEmail,
   sendUpgradePricingPlanUserEmail,
 } from "admin/api/organization";
-import { Button, Col, Divider, InputNumber, Modal, Row, Typography } from "antd";
-import type { GetRef } from "antd/lib";
+import { Button, Col, Divider, type GetRef, InputNumber, Modal, Row, Typography } from "antd";
 import FormattedDate from "components/formatted_date";
 import dayjs from "dayjs";
 import renderIndependently from "libs/render_independently";

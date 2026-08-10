@@ -6,9 +6,17 @@ import {
   type PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
 import UpgradePricingPlanModal from "admin/organization/upgrade_plan_modal";
-import { Alert, Button, type ButtonProps, Col, Popover, Result, Row } from "antd";
-import type { PopoverProps } from "antd/lib";
-import type { TooltipPlacement } from "antd/lib/tooltip";
+import {
+  Alert,
+  Button,
+  type ButtonProps,
+  Col,
+  Popover,
+  type PopoverProps,
+  Result,
+  Row,
+} from "antd";
+import type { TooltipPlacement } from "antd/es/tooltip";
 import { useWkSelector } from "libs/react_hooks";
 import { rgbToHex } from "libs/utils";
 import noop from "lodash-es/noop";

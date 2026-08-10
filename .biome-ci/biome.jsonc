@@ -1,0 +1,20 @@
+{
+  // CI-only Biome configuration.
+  //
+  // This extends the root config and additionally enables the custom GritQL lint
+  // plugins in frontend/lint-plugins/. The plugins are kept out of the root config
+  // because they are expensive: enabling them raises the lint time for
+  // frontend/javascripts from ~184ms to ~1112ms (~6x), and the cost grows per
+  // GritQL *pattern*, not per plugin. Local `yarn check-frontend` therefore stays
+  // fast, and CI pays the cost via `yarn check-frontend-lint-plugins`.
+  //
+  // Plugin paths are resolved relative to THIS file's directory.
+  "extends": ["../biome.jsonc"],
+  "plugins": [
+    "../frontend/lint-plugins/noRawHeading.grit",
+    "../frontend/lint-plugins/noFlexDiv.grit"
+  ]
+  // NOTE: the built-in rules are intentionally inherited unchanged. Disabling them here
+  // (e.g. `recommended: false`) makes every existing `biome-ignore` comment count as an
+  // unused suppression, which adds ~30 spurious warnings instead of removing noise.
+}

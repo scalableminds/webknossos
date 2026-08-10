@@ -100,6 +100,8 @@
     "check-untyped-use-selector": "./tools/check-no-untyped-use-selector-imports.js",
     "check-bare-dynamic-imports": "./tools/check-no-bare-dynamic-imports.js",
     "check-frontend": "yarn run biome check --diagnostic-level=error --max-diagnostics 50 frontend package.json && tools/assert-no-test-only.sh && yarn check-untyped-saga-selects && yarn check-untyped-use-selector && yarn check-bare-dynamic-imports",
+    "@comment check-frontend-lint-plugins": "Runs the custom GritQL lint plugins. Kept out of check-frontend because they are ~6x slower; CI runs this separately. See .biome-ci/biome.jsonc",
+    "check-frontend-lint-plugins": "yarn run biome lint --config-path=.biome-ci --max-diagnostics 50 frontend",
     "fix-frontend": "yarn run biome check --diagnostic-level=error --max-diagnostics 50 frontend package.json --write && echo Please proofread the applied suggestions, as they may not be safe.",
     "fix-backend": "sbt --client \";scalafmt; Test/scalafmt; util/scalafmt; webknossosTracingstore/scalafmt; webknossosDatastore/scalafmt; webknossosSlickCodegen/scalafmt; scalafix ; Test/scalafix ; util/scalafix ; webknossosTracingstore/scalafix ; webknossosDatastore/scalafix ; webknossosSlickCodegen/scalafix \"",
     "licenses-backend": "sbt --client dumpLicenseReport",

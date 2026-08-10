@@ -7,7 +7,7 @@ import {
   VideoCameraOutlined,
 } from "@ant-design/icons";
 import { ConfigProvider, Dropdown, type MenuProps } from "antd";
-import type { MenuItemType, SubMenuType } from "antd/lib/menu/interface";
+import type { MenuItemType, SubMenuType } from "antd/es/menu/interface";
 import { useWkSelector } from "libs/react_hooks";
 import { useCallback } from "react";
 import { useDispatch } from "react-redux";

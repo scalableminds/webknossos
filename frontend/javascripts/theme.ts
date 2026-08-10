@@ -55,7 +55,7 @@ const globalDesignToken: Partial<AliasToken> = {
   blue: ColorWKBlue,
   borderRadius: 4,
   fontFamily:
-    '"Nunito", "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;',
+    '"Nunito", "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif',
 };
 
 const lightGlobalToken = theme.getDesignToken({

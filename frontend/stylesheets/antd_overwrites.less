@@ -1,4 +1,4 @@
-// Whenever possible try to customize antd v5 components through their "Design Tokens" and builtin theming
+// Whenever possible try to customize antd v6 components through their "Design Tokens" and builtin theming
 // See theme.tsx for details
 // https://ant.design/docs/react/customize-theme
 
@@ -13,7 +13,8 @@ p {
   margin: 0 0 10px;
 }
 
-.ant-layout-sider,
+// antd defaults this to `colorBgLayout` (#f5f5f5 in light mode); WEBKNOSSOS wants the
+// plain base background. 
 .ant-layout {
   background-color: var(--ant-color-bg-base);
 }
@@ -98,19 +99,6 @@ p {
   }
 }
 
-.ant-notification-notice-message {
-  white-space: pre-wrap;
-
-  .ant-notification-notice-message-single-line-auto-margin {
-    // This fixes a too large margin-top for the notification content in Firefox
-    float: left;
-  }
-}
-
-.ant-table-small>.ant-table-content>.ant-table-body>table>.ant-table-tbody>tr>td {
-  padding: 1px 8px;
-}
-
 .large-table {
   word-break: break-word;
 }
@@ -129,33 +117,10 @@ label.ant-checkbox-wrapper {
   transition: none;
 }
 
-// Remove Chinese Quote font, which is messing up our quotes
-.ant-alert {
-  font-family: @font-family;
-}
-
-.ant-alert-message {
-  margin-left: 5px;
-}
-
 .ant-alert-banner {
   position: absolute;
   z-index: 1000;
   width: 100%;
-}
-
-.ant-card {
-  font-family: @font-family;
-}
-
-.ant-radio-button-wrapper.aIJobSelection {
-  width: auto;
-  height: auto;
-  padding: 0px;
-
-  div.ant-card-body {
-    line-height: 0.9;
-  }
 }
 
 .antd-no-border-list .ant-list-item {
@@ -168,16 +133,6 @@ label.ant-checkbox-wrapper {
   .ant-menu-submenu-title,
   li.ant-menu-submenu {
     padding: 0 4px !important;
-  }
-
-  .anticon {
-    margin-right: 0;
-  }
-}
-
-.ant-steps-icon {
-  .anticon {
-    margin-right: 0;
   }
 }
 
@@ -229,7 +184,6 @@ label.ant-checkbox-wrapper {
 }
 
 .ant-tree-directory {
-  background: transparent;
   display: flex;
 }
 
@@ -238,11 +192,6 @@ label.ant-checkbox-wrapper {
   // Set padding to 0 so that the contained title span fills the
   // wrapper entirely. Otherwise, ugly borders would appear on hovering.
   padding: 0 !important;
-}
-
-.ant-tree.ant-tree-directory .ant-tree-treenode-selected:hover::before,
-.ant-tree.ant-tree-directory .ant-tree-treenode-selected::before {
-  border-radius: 4px;
 }
 
 .anticon.anticon-sync.anticon-spin {

@@ -26,7 +26,9 @@ class PricingPlanFeaturesTestSuite extends AsyncWordSpec {
       assert(
         PricingPlanFeatures.unlockedBy(PricingPlan.Personal, PricingPlan.Team_Trial).map(_.planLabel) == List("Team")
       )
-      assert(PricingPlanFeatures.unlockedBy(PricingPlan.Team_Trial, PricingPlan.Power).map(_.planLabel) == List("Power"))
+      assert(
+        PricingPlanFeatures.unlockedBy(PricingPlan.Team_Trial, PricingPlan.Power).map(_.planLabel) == List("Power")
+      )
       assert(PricingPlanFeatures.unlockedBy(PricingPlan.Team_Trial, PricingPlan.Team).isEmpty)
     }
 

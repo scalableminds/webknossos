@@ -17,10 +17,10 @@ export function bigIntReplacer(_key: string, value: unknown): unknown {
 }
 
 // Tag used by the backend's UnsignedLongJson to mark a self-describing bigint envelope, e.g.
-// { _customEncoding: "bigint", value: "3" }, instead of a plain JsString -- a plain string can't
+// { customJsonEncoding: "bigint", value: "3" }, instead of a plain JsString -- a plain string can't
 // be distinguished from an ordinary string field without this tag. Shared by the replacer
 // (below) and the reviver in libs/request.ts so both sides agree on the exact shape.
-const CUSTOM_ENCODING_KEY = "_customEncoding";
+const CUSTOM_ENCODING_KEY = "customJsonEncoding";
 const BIGINT_ENCODING_NAME = "bigint";
 
 // Every bigint that ends up in a request payload to the backend is a segment/agglomerate id
@@ -41,7 +41,7 @@ export function unsignedBigIntReplacer(_key: string, value: unknown): unknown {
   };
 }
 
-// Mirrors unsignedBigIntReplacer: recognizes the { _customEncoding: "bigint", value: "..." }
+// Mirrors unsignedBigIntReplacer: recognizes the { customJsonEncoding: "bigint", value: "..." }
 // envelope anywhere in a JSON.parse'd response tree and converts it back into a real bigint, so
 // individual call sites never need to manually convert a known id field after receiving a
 // response (see JSON.parse's reviver parameter, which is passed this function in libs/request.ts).

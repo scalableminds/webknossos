@@ -11,7 +11,7 @@ import scala.util.Try
  * silently reinterpret *every* Long field of every case class (timestamps, versions, ...) as a
  * string. Apply `format` explicitly to the specific id fields that need it.
  *
- * Writing emits a self-describing envelope, {"_customEncoding": "bigint", "value": "<unsigned
+ * Writing emits a self-describing envelope, {"customJsonEncoding": "bigint", "value": "<unsigned
  * decimal>"}, so that a generic frontend JSON.parse reviver can recognize and convert any such
  * value anywhere in a response payload into a real bigint, without per-field conversion code
  * (a plain JsString can't be distinguished from an ordinary string field without this tag).
@@ -23,7 +23,7 @@ import scala.util.Try
  */
 object UnsignedLongJson {
 
-  val customEncodingKey = "_customEncoding"
+  val customEncodingKey = "customJsonEncoding"
   val bigIntEncodingName = "bigint"
 
   val reads: Reads[Long] = Reads {

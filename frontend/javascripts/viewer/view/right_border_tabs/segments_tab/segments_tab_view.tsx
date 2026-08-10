@@ -16,6 +16,7 @@ import { useMeshOperations } from "./hooks/use_mesh_operations";
 import { useSegmentGroupOperations } from "./hooks/use_segment_group_operations";
 import { useSegmentHierarchy } from "./hooks/use_segment_hierarchy";
 import { useSegmentSelection } from "./hooks/use_segment_selection";
+import { useSegmentStatisticsFile } from "./hooks/use_segment_statistics_file";
 import { SegmentStatisticsModal } from "./segment_statistics_modal";
 import { SegmentTreeView } from "./segment_tree_view";
 import { SegmentsToolbar, segmentsTabId } from "./segments_toolbar";
@@ -72,6 +73,11 @@ function SegmentsTabContent() {
   useEffect(() => {
     dispatch(ensureSegmentIndexIsLoadedAction(visibleSegmentationLayer?.name));
   }, [dispatch, visibleSegmentationLayer]);
+
+  // Probed here rather than only where it is consumed, because the segment tree – and with it the
+  // group context menu that gates on this – is not rendered while the segment list is empty.
+  // The result is shared via the react-query cache, so consumers cause no extra request.
+  useSegmentStatisticsFile(visibleSegmentationLayer);
 
   return (
     <>

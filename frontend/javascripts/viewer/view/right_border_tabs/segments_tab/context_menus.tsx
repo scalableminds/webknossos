@@ -58,6 +58,7 @@ import type { MeshFiles } from "./hooks/use_mesh_files";
 import type { MeshOperations } from "./hooks/use_mesh_operations";
 import type { SegmentGroupOperations } from "./hooks/use_segment_group_operations";
 import type { SegmentSelection } from "./hooks/use_segment_selection";
+import { useSegmentStatisticsFile } from "./hooks/use_segment_statistics_file";
 import { LoadMeshMenuItemLabel } from "./load_mesh_menu_item_label";
 import {
   mayEditVisibleSegmentation,
@@ -462,6 +463,14 @@ export function useGroupContextMenuBuilder(
   const isSegmentIndexAvailable = useWkSelector((state) =>
     getMaybeSegmentIndexAvailability(state.dataset, visibleSegmentationLayer?.name),
   );
+  // A segment statistics file can serve volume and surface area on its own, so the modal is also
+  // worth offering on datasets that have no segment index.
+  const { fileInfo: segmentStatisticsFileInfo } =
+    useSegmentStatisticsFile(visibleSegmentationLayer);
+  console.log(segmentStatisticsFileInfo);
+  const areSegmentStatisticsAvailable =
+    isSegmentIndexAvailable || segmentStatisticsFileInfo != null;
+  console.log(areSegmentStatisticsAvailable);
   const getSegmentListMenuItems = useSegmentListMenuItems(dependencies);
 
   return useCallback(
@@ -539,7 +548,7 @@ export function useGroupContextMenuBuilder(
           },
           listItems.setColorItem,
           listItems.resetColorItem,
-          isSegmentIndexAvailable
+          areSegmentStatisticsAvailable
             ? {
                 key: "segmentStatistics",
                 icon: <BarChartOutlined />,
@@ -563,7 +572,7 @@ export function useGroupContextMenuBuilder(
       selection.selectedSegmentIds,
       groupOperations,
       getSegmentListMenuItems,
-      isSegmentIndexAvailable,
+      areSegmentStatisticsAvailable,
       openStatisticsModal,
       hideContextMenu,
     ],

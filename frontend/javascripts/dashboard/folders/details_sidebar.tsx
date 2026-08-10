@@ -12,7 +12,8 @@ import { deleteDatasetOnDisk } from "admin/rest_api";
 import { Button, Modal, Progress, Result, Space, Spin, Tag, Tooltip, Typography } from "antd";
 import FormattedId from "components/formatted_id";
 import features from "features";
-import { formatCountToDataAmountUnit, stringToColor } from "libs/format_utils";
+import { stringToTagColor } from "libs/colors";
+import { formatCountToDataAmountUnit } from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
@@ -174,7 +175,7 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
         <div style={{ marginBottom: 4 }}>
           <div className="sidebar-label">Datastore</div>
           {fullDataset && (
-            <Tag color={stringToColor(fullDataset.dataStore.name)} variant="outlined">
+            <Tag color={stringToTagColor(fullDataset.dataStore.name)} variant="outlined">
               {fullDataset.dataStore.name}
             </Tag>
           )}
@@ -462,7 +463,7 @@ function FolderTeamTags({ folder }: { folder: Folder }) {
                 whiteSpace: "nowrap",
                 textOverflow: "ellipsis",
               }}
-              color={stringToColor(team.name)}
+              color={stringToTagColor(team.name)}
               variant="outlined"
             >
               {team.name}

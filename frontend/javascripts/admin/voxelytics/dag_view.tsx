@@ -129,7 +129,7 @@ function getEdgesAndNodes(
   const nodes: Array<FlowNode> = dag.nodes.map((node) => {
     const nodeType = getNodeType(nodeMap.get(node.id) ?? null);
 
-    let color = "#b1b1b7";
+    let color = "var(--ant-color-border)";
     let opacity = 100;
 
     const fontColor = colorHasher.hex(
@@ -140,6 +140,8 @@ function getEdgesAndNodes(
     const position = dagreGraph.node(node.id);
 
     switch (node.state) {
+      // The two run-state colors are a fixed data-visualization palette that must stay
+      // recognizable (and identical) in both themes, so they are deliberately not theme tokens.
       case VoxelyticsRunState.COMPLETE: {
         color = "rgb(9, 210, 150)";
         break;
@@ -199,7 +201,7 @@ function getEdgesAndNodes(
       },
       labelBgStyle: {
         fill: theme === "light" ? "white" : "black",
-        stroke: "#b1b1b7",
+        stroke: "var(--ant-color-border)",
       },
       labelShowBg: true,
       type: "smoothstep",
@@ -265,15 +267,15 @@ function DAGView({
       <MiniMap
         nodeStrokeColor={(n) => {
           if (n.style?.borderColor) return n.style.borderColor;
-          return "#eee";
+          return "var(--ant-color-border-secondary)";
         }}
         nodeColor={(n) => {
           if (n.style?.borderColor) return n.style.borderColor;
-          return "#fff";
+          return "var(--ant-color-bg-container)";
         }}
         nodeBorderRadius={2}
       />
-      <Background color="#aaa" gap={16} />
+      <Background color="var(--ant-color-border)" gap={16} />
       <div className="controls">
         <Button
           icon={<PlusOutlined />}

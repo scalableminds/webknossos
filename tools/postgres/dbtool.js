@@ -191,12 +191,8 @@ function refreshSchema() {
 }
 
 function updateRefreshStamp() {
-  try {
-    fs.mkdirSync(path.dirname(refreshStampPath), { recursive: true });
-    fs.writeFileSync(refreshStampPath, `Last schema changes by dbtool.js applied at ${new Date().toISOString()}.\n`);
-  } catch (e) {
-    console.warn(`Could not write schema refresh stamp file (this is expected in production setups): ${e.message}`);
-  }
+  fs.mkdirSync(path.dirname(refreshStampPath), { recursive: true });
+  fs.writeFileSync(refreshStampPath, `Last schema changes by dbtool.js applied at ${new Date().toISOString()}.\n`);
 }
 
 function dumpCurrentSchema(databaseUrl, schemaDir, silent = false) {

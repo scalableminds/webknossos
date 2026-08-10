@@ -22,6 +22,7 @@ import { destroySceneController } from "viewer/controller/scene_controller_provi
 import UrlManager from "viewer/controller/url_manager";
 import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import { is2dDataset } from "viewer/model/accessors/dataset_accessor";
+import { getPosition, getRotationInDegrees } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool, MeasurementTools } from "viewer/model/accessors/tool_accessor";
 import { cancelSagaAction, resetStoreAction } from "viewer/model/actions/actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
@@ -324,11 +325,15 @@ class TracingLayoutView extends PureComponent<PropsWithRouter, State> {
       files: Array<File>,
       { createGroupForEachFile }: NmlImportOptions,
     ): Promise<void> => {
+      const { flycam } = Store.getState();
       const response = await Request.sendMultipartFormReceiveJSON("/api/annotations/upload", {
         data: {
           nmlFile: files,
           createGroupForEachFile,
           datasetId: this.props.datasetId,
+          fallbackEditPosition: getPosition(flycam).map(Math.round).join(","),
+          fallbackEditRotation: getRotationInDegrees(flycam).join(","),
+          fallbackZoomLevel: flycam.zoomStep,
         },
       });
       this.props.navigate(`/annotations/${response.annotation.typ}/${response.annotation.id}`);

@@ -43,6 +43,7 @@ import {
   setActiveNodeAction,
   setShowSkeletonsAction,
 } from "viewer/model/actions/skeletontracing_actions";
+import { setTDCameraWithoutTimeTrackingAction } from "viewer/model/actions/view_mode_actions";
 import Store from "viewer/store";
 
 export function applyState(
@@ -66,6 +67,10 @@ export function applyState(
 
   if (state.rotation != null) {
     Store.dispatch(setRotationAction(state.rotation));
+  }
+
+  if (state.tdCamera != null) {
+    Store.dispatch(setTDCameraWithoutTimeTrackingAction(state.tdCamera));
   }
 
   if (state.stateByLayer != null) {

@@ -544,6 +544,15 @@ export function sleep(timeout: number): Promise<void> {
   });
 }
 
+/**
+ * Strips a single trailing extension from a file name (e.g. "tracing.nml" -> "tracing").
+ * File names without an extension and dotfiles are returned unchanged.
+ */
+export function stripFileExtension(fileName: string): string {
+  const dotIndex = fileName.lastIndexOf(".");
+  return dotIndex > 0 ? fileName.slice(0, dotIndex) : fileName;
+}
+
 export function isFileExtensionEqualTo(
   fileName: string | null | undefined,
   extensionOrExtensions: string | Array<string>,

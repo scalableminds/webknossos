@@ -6,7 +6,7 @@ import AutoSizer from "react-virtualized-auto-sizer";
 import { getSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { setActiveNodeAction } from "viewer/model/actions/skeletontracing_actions";
 import type { Tree } from "viewer/model/types/tree_types";
-import { ColoredDotIcon } from "../segments_tab/segment_list_item";
+import { ColoredDotIcon } from "../shared/colored_dot_icon";
 import { TreeSwitcherIcon } from "../shared/tree_switcher_icon";
 import Comment, { commentListId } from "./comment";
 import type { CommentTabNode, TreeRowNode } from "./comment_tab_types";

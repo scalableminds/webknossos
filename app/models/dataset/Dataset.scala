@@ -56,7 +56,6 @@ import play.api.libs.json.*
 import slick.dbio.DBIO
 import slick.jdbc.GetResult
 import slick.jdbc.PostgresProfile.api.*
-import slick.jdbc.TransactionIsolation.Serializable
 import slick.sql.SqlAction
 import utils.sql.{SQLDAO, SimpleSQLDAO, SqlClient, SqlToken}
 
@@ -958,7 +957,7 @@ class DatasetMagDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
            """.asUpdate
       }
     }
-    replaceSequentiallyAsTransaction(clearQuery, insertQueries)
+    runAsSerializableTransaction(clearQuery +: insertQueries)
   }
 
   // Note: also see attachments
@@ -969,12 +968,7 @@ class DatasetMagDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
             SET realPath = ${realPathInfo.realPath}, hasLocalData = ${realPathInfo.hasLocalData}
             WHERE _dataset = $datasetId
             AND path = ${realPathInfo.path}""".asUpdate)
-      composedQuery = DBIO.sequence(updateQueries)
-      _ <- run(
-        composedQuery.transactionally.withTransactionIsolation(Serializable),
-        retryCount = 50,
-        retryIfErrorContains = List(transactionSerializationError)
-      )
+      _ <- runAsSerializableTransaction(updateQueries)
     } yield ()
 
   implicit def GetResultDataSourceMagRow: GetResult[DataSourceMagRow] =
@@ -1341,13 +1335,8 @@ class DatasetLastUsedTimesDAO @Inject() (sqlClient: SqlClient)(implicit ec: Exec
       q"DELETE FROM webknossos.dataset_lastUsedTimes WHERE _dataset = $datasetId AND _user = $userId".asUpdate
     val insertQuery =
       q"INSERT INTO webknossos.dataset_lastUsedTimes(_dataset, _user, lastUsedTime) VALUES($datasetId, $userId, NOW())".asUpdate
-    val composedQuery = DBIO.sequence(List(clearQuery, insertQuery))
     for {
-      _ <- run(
-        composedQuery.transactionally.withTransactionIsolation(Serializable),
-        retryCount = 50,
-        retryIfErrorContains = List(transactionSerializationError)
-      )
+      _ <- runAsSerializableTransaction(List(clearQuery, insertQuery))
     } yield ()
   }
 }
@@ -1370,7 +1359,7 @@ class DatasetLayerAttachmentDAO @Inject() (sqlClient: SqlClient)(implicit ec: Ex
       dataFormat <- LayerAttachmentDataformat.fromString(row.dataformat).toFox ?~> "Could not parse data format"
       realPathWithFallback = if (useRealPaths) row.realpath.getOrElse(row.path) else row.path
       path <- UPath.fromString(realPathWithFallback).toFox
-    } yield LayerAttachment(row.name, path, dataFormat)
+    } yield LayerAttachment(row.name, path, dataFormat, row.credentialid)
 
   private def parseAttachments(rows: List[DatasetLayerAttachmentsRow], useRealPaths: Boolean): Fox[AttachmentWrapper] =
     for {
@@ -1403,7 +1392,7 @@ class DatasetLayerAttachmentDAO @Inject() (sqlClient: SqlClient)(implicit ec: Ex
   ): Fox[AttachmentWrapper] =
     for {
       rows <- run(
-        q"""SELECT _dataset, layerName, name, path, realpath, hasLocalData, type, dataFormat, uploadToPathIsPending, uploadIsPending
+        q"""SELECT _dataset, layerName, name, path, realpath, hasLocalData, type, dataFormat, credentialId, uploadToPathIsPending, uploadIsPending
                 FROM webknossos.dataset_layer_attachments
                 WHERE _dataset = $datasetId
                 AND layerName = $layerName
@@ -1416,9 +1405,9 @@ class DatasetLayerAttachmentDAO @Inject() (sqlClient: SqlClient)(implicit ec: Ex
   def updateAttachments(datasetId: ObjectId, dataLayers: List[StaticLayer]): Fox[Unit] = {
     def insertQuery(attachment: LayerAttachment, layerName: String, attachmentType: LayerAttachmentType.Value) = {
       val query =
-        q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, name, path, type, dataFormat, uploadToPathIsPending, uploadIsPending)
+        q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, name, path, type, dataFormat, credentialId, uploadToPathIsPending, uploadIsPending)
           VALUES($datasetId, $layerName, ${attachment.name}, ${attachment.path}, $attachmentType::webknossos.LAYER_ATTACHMENT_TYPE,
-          ${attachment.dataFormat}::webknossos.LAYER_ATTACHMENT_DATAFORMAT, ${false}, ${false})"""
+          ${attachment.dataFormat}::webknossos.LAYER_ATTACHMENT_DATAFORMAT, ${attachment.credentialId}, ${false}, ${false})"""
       query.asUpdate
     }
 
@@ -1442,7 +1431,7 @@ class DatasetLayerAttachmentDAO @Inject() (sqlClient: SqlClient)(implicit ec: Ex
           List.empty
       }
     }
-    replaceSequentiallyAsTransaction(clearQuery, insertQueries)
+    runAsSerializableTransaction(clearQuery +: insertQueries)
   }
 
   // Note: also see mags.
@@ -1453,12 +1442,7 @@ class DatasetLayerAttachmentDAO @Inject() (sqlClient: SqlClient)(implicit ec: Ex
             SET realPath = ${realPathInfo.realPath}, hasLocalData = ${realPathInfo.hasLocalData}
             WHERE _dataset = $datasetId
             AND path = ${realPathInfo.path}""".asUpdate)
-      composedQuery = DBIO.sequence(updateQueries)
-      _ <- run(
-        composedQuery.transactionally.withTransactionIsolation(Serializable),
-        retryCount = 50,
-        retryIfErrorContains = List(transactionSerializationError)
-      )
+      _ <- runAsSerializableTransaction(updateQueries)
     } yield ()
 
   def insertWithUploadToPathPending(
@@ -1537,7 +1521,7 @@ class DatasetLayerAttachmentDAO @Inject() (sqlClient: SqlClient)(implicit ec: Ex
   ): Fox[LayerAttachment] =
     for {
       rows <- run(
-        q"""SELECT _dataset, layerName, name, path, realpath, hasLocalData, type, dataFormat, uploadToPathIsPending, uploadIsPending
+        q"""SELECT _dataset, layerName, name, path, realpath, hasLocalData, type, dataFormat, credentialId, uploadToPathIsPending, uploadIsPending
                       FROM webknossos.dataset_layer_attachments
                       WHERE _dataset = $datasetId
                       AND layerName = $layerName
@@ -1558,7 +1542,7 @@ class DatasetLayerAttachmentDAO @Inject() (sqlClient: SqlClient)(implicit ec: Ex
   ): Fox[LayerAttachment] =
     for {
       rows <- run(
-        q"""SELECT _dataset, layerName, name, path, realpath, hasLocalData, type, dataFormat, uploadToPathIsPending, uploadIsPending
+        q"""SELECT _dataset, layerName, name, path, realpath, hasLocalData, type, dataFormat, credentialId, uploadToPathIsPending, uploadIsPending
                       FROM webknossos.dataset_layer_attachments
                       WHERE _dataset = $datasetId
                       AND layerName = $layerName
@@ -1753,7 +1737,7 @@ class DatasetCoordinateTransformationsDAO @Inject() (sqlClient: SqlClient)(impli
               """.asUpdate
       }
     }
-    replaceSequentiallyAsTransaction(clearQuery, insertQueries)
+    runAsSerializableTransaction(clearQuery +: insertQueries)
   }
 }
 
@@ -1782,6 +1766,6 @@ class DatasetLayerAdditionalAxesDAO @Inject() (sqlClient: SqlClient)(implicit ec
               """.asUpdate
       }
     }
-    replaceSequentiallyAsTransaction(clearQuery, insertQueries)
+    runAsSerializableTransaction(clearQuery +: insertQueries)
   }
 }

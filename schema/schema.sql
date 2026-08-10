@@ -190,6 +190,7 @@ CREATE TABLE webknossos.dataset_layer_attachments(
   hasLocalData BOOLEAN NOT NULL DEFAULT FALSE,
   type webknossos.LAYER_ATTACHMENT_TYPE NOT NULL,
   dataFormat webknossos.LAYER_ATTACHMENT_DATAFORMAT NOT NULL,
+  credentialId TEXT,
   uploadToPathIsPending BOOLEAN NOT NULL DEFAULT FALSE,
   uploadIsPending BOOLEAN NOT NULL DEFAULT FALSE,
   PRIMARY KEY(_dataset, layerName, name, type)

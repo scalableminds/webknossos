@@ -6,7 +6,6 @@ import { isMalformedList, parseValue } from "components/key_value_pairs_parser";
 import importDynamic, { DynamicImportError } from "libs/import_dynamic";
 import Toast from "libs/toast";
 import { useId, useState } from "react";
-import type { WorkflowConfigKey } from "viewer/view/ai_jobs/workflow_config_keys";
 
 export type KeyValuePairs = Record<string, JsonValue>;
 
@@ -51,12 +50,12 @@ export function KeyValuePairsInput({
 
   useDidMount(async () => {
     try {
-      const WORKFLOW_CONFIG_KEYS: WorkflowConfigKey[] = (await importDynamic(
+      const { WORKFLOW_CONFIG_KEYS } = await importDynamic(
         () => import("viewer/view/ai_jobs/workflow_config_keys"),
         {
           showErrorToast: false,
         },
-      )) as any;
+      );
       setConfigKeyOptions(WORKFLOW_CONFIG_KEYS.map((k) => ({ value: k })));
     } catch (error) {
       // If the error has nothing to do with imports failing, propagate the error further upwards.

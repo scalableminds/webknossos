@@ -22,7 +22,6 @@ import { updateTemporarySettingAction } from "viewer/model/actions/settings_acti
 import Store from "viewer/store";
 import { formatMagWithLabel, getBaseSegmentationName } from "./segments_view_helper";
 
-const { Option } = Select;
 const REFRESH_INTERVAL = 5000;
 
 type PrecomputeMeshesPopoverProps = {
@@ -164,6 +163,11 @@ export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesP
   const handleQualityChange = (magIndex: number) =>
     dispatch(updateTemporarySettingAction("preferredQualityForMeshPrecomputation", magIndex));
 
+  const qualityOptions = magInfo.getMagsWithIndices().map(([logToIndex, mag], index) => ({
+    value: logToIndex,
+    label: formatMagWithLabel(mag, index),
+  }));
+
   return (
     <div
       style={{
@@ -195,13 +199,8 @@ export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesP
             style={{ width: 220 }}
             value={magInfo.getClosestExistingIndex(preferredQualityForMeshPrecomputation)}
             onChange={handleQualityChange}
-          >
-            {magInfo.getMagsWithIndices().map(([logToIndex, mag], index) => (
-              <Option value={logToIndex} key={logToIndex}>
-                {formatMagWithLabel(mag, index)}
-              </Option>
-            ))}
-          </Select>
+            options={qualityOptions}
+          />
         </Space>
       </Typography.Paragraph>
 

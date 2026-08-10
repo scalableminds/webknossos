@@ -60,15 +60,7 @@ function MagSelection({
             )
       }
       onSelect={onSelect}
-    >
-      {allMags.map((mag, index) => {
-        const readableName = mag.join("-");
-        return (
-          <Select.Option key={index} value={index}>
-            {readableName}
-          </Select.Option>
-        );
-      })}
-    </Select>
+      options={allMags.map((mag, index) => ({ value: index, label: mag.join("-") }))}
+    />
   );
 }

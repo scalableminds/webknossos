@@ -28,11 +28,11 @@ import { Model } from "viewer/singletons";
 import {
   splitAgglomeratesInMapping,
   updateMappingWithMerge,
-} from "../volume/proofreading/local_mapping_update_sagas";
+} from "../../volume/proofreading/local_mapping_update_sagas";
 import {
   getMeshDisplayPropsByOldAgglomerateId,
   type PreservedMeshDisplayProps,
-} from "../volume/proofreading/segment_and_mesh_refresh_sagas";
+} from "../../volume/proofreading/segment_and_mesh_refresh_sagas";
 import {
   type ApplyingUpdateArtifacts,
   FailedIncorporateActionsReturnValue,

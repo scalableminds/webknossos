@@ -1,4 +1,4 @@
-import type { PreservedMeshDisplayProps } from "../volume/proofreading/segment_and_mesh_refresh_sagas";
+import type { PreservedMeshDisplayProps } from "../../volume/proofreading/segment_and_mesh_refresh_sagas";
 
 /*
  * This module holds the "artifacts" that applying foreign missing update actions produces, i.e. the information

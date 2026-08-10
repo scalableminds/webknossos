@@ -8,8 +8,8 @@ import {
 import { removeMeshAction } from "viewer/model/actions/annotation_actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
-import { spawnUntilCanceled, waitUntilNoActiveOperations } from "../saga_helpers";
-import { refreshAffectedMeshes } from "../volume/proofreading/segment_and_mesh_refresh_sagas";
+import { spawnUntilCanceled, waitUntilNoActiveOperations } from "../../saga_helpers";
+import { refreshAffectedMeshes } from "../../volume/proofreading/segment_and_mesh_refresh_sagas";
 import type { ApplyingUpdateArtifacts } from "./applying_update_artifacts";
 
 export function* resolveApplyingUpdateArtifacts(

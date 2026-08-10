@@ -30,7 +30,7 @@ import type {
   UpdateMetadataOfSegmentUpdateAction,
   UpdateSegmentPartialUpdateAction,
   UpdateSegmentVisibilityVolumeAction,
-} from "../volume/update_actions";
+} from "../../volume/update_actions";
 
 export function saveQueueEntriesToServerUpdateActionBatches(
   data: Array<SaveQueueEntry>,

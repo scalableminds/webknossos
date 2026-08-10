@@ -1,6 +1,7 @@
 import type { AdditionalCoordinate } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import type { Tree } from "viewer/model/types/tree_types";
+import type { MappingLevelPreviewStatus, SkeletonTracing } from "viewer/store";
 
 export type ProofreadAtPositionAction = ReturnType<typeof proofreadAtPosition>;
 export type ClearProofreadingByProductsAction = ReturnType<typeof clearProofreadingByProducts>;
@@ -15,6 +16,20 @@ export type CutAgglomerateFromNeighborsAction = ReturnType<
 >;
 type ResetMultiCutToolPartitionsAction = ReturnType<typeof resetMultiCutToolPartitionsAction>;
 export type MinCutPartitionsAction = ReturnType<typeof minCutPartitionsAction>;
+export type SetMappingLevelPreviewTargetAction = ReturnType<
+  typeof setMappingLevelPreviewTargetAction
+>;
+export type InitializeMappingLevelPreviewSkeletonAction = ReturnType<
+  typeof initializeMappingLevelPreviewSkeletonAction
+>;
+export type SetMappingLevelPreviewSkeletonAction = ReturnType<
+  typeof setMappingLevelPreviewSkeletonAction
+>;
+export type SetMappingLevelPreviewStatusAction = ReturnType<
+  typeof setMappingLevelPreviewStatusAction
+>;
+export type ClearMappingLevelPreviewAction = ReturnType<typeof clearMappingLevelPreviewAction>;
+export type CommitMappingLevelPreviewAction = ReturnType<typeof commitMappingLevelPreviewAction>;
 
 export type ProofreadAction =
   | ProofreadAtPositionAction
@@ -25,7 +40,13 @@ export type ProofreadAction =
   | CutAgglomerateFromNeighborsAction
   | ToggleSegmentInPartitionAction
   | ResetMultiCutToolPartitionsAction
-  | MinCutPartitionsAction;
+  | MinCutPartitionsAction
+  | SetMappingLevelPreviewTargetAction
+  | InitializeMappingLevelPreviewSkeletonAction
+  | SetMappingLevelPreviewSkeletonAction
+  | SetMappingLevelPreviewStatusAction
+  | ClearMappingLevelPreviewAction
+  | CommitMappingLevelPreviewAction;
 
 export const proofreadAtPosition = (
   position: Vector3,
@@ -112,4 +133,46 @@ export const resetMultiCutToolPartitionsAction = () =>
 export const minCutPartitionsAction = () =>
   ({
     type: "MIN_CUT_PARTITIONS",
+  }) as const;
+
+// --- Per-agglomerate mapping-level preview subtool (see SPIKE-per-agglomerate-mapping-level.md) ---
+
+// User picked a new preview target (target mapping level). The saga resolves the anchor supervoxel from the active
+// segment/marker and fetches the preview skeleton.
+export const setMappingLevelPreviewTargetAction = (targetMappingName: string) =>
+  ({
+    type: "SET_MAPPING_LEVEL_PREVIEW_TARGET",
+    targetMappingName,
+  }) as const;
+
+// Seeds an empty ephemeral preview skeleton so the three.js Skeleton is initialized before any data arrives
+// (the Skeleton class does not support a null tracing). Mirrors initializeConnectomeTracingAction.
+export const initializeMappingLevelPreviewSkeletonAction = () =>
+  ({
+    type: "INITIALIZE_MAPPING_LEVEL_PREVIEW_SKELETON",
+  }) as const;
+
+// Dispatched by the saga once the preview skeleton for the current target has been fetched.
+export const setMappingLevelPreviewSkeletonAction = (skeleton: SkeletonTracing | null) =>
+  ({
+    type: "SET_MAPPING_LEVEL_PREVIEW_SKELETON",
+    skeleton,
+  }) as const;
+
+export const setMappingLevelPreviewStatusAction = (status: MappingLevelPreviewStatus) =>
+  ({
+    type: "SET_MAPPING_LEVEL_PREVIEW_STATUS",
+    status,
+  }) as const;
+
+// Clears the preview state and removes the ephemeral skeleton (cancel / tool switch / anchor change).
+export const clearMappingLevelPreviewAction = () =>
+  ({
+    type: "CLEAR_MAPPING_LEVEL_PREVIEW",
+  }) as const;
+
+// Commits the currently previewed mapping level for the anchor segment (handled by the saga).
+export const commitMappingLevelPreviewAction = () =>
+  ({
+    type: "COMMIT_MAPPING_LEVEL_PREVIEW",
   }) as const;

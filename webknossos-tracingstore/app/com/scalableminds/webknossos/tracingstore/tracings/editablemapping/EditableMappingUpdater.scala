@@ -140,8 +140,78 @@ class EditableMappingUpdater(
         applySplitAction(mapping, splitAction) ?~> "Failed to apply split action"
       case mergeAction: MergeAgglomerateUpdateAction =>
         applyMergeAction(mapping, mergeAction) ?~> "Failed to apply merge action"
+      case setLevelAction: SetAgglomerateMappingLevelUpdateAction =>
+        applySetMappingLevelAction(mapping, setLevelAction) ?~> "Failed to apply set mapping level action"
       case _ => Fox.failure("this is not an editable mapping update action!")
     }
+
+  // Expands a per-agglomerate mapping-level change into the equivalent split/merge edge changes and applies them,
+  // reusing the exact per-edge logic used for manual proofreading. All resulting buffer mutations flush at this
+  // group's single version, so the change is atomic. See SPIKE-per-agglomerate-mapping-level.md.
+  private def applySetMappingLevelAction(
+      mapping: EditableMappingInfo,
+      update: SetAgglomerateMappingLevelUpdateAction
+  )(implicit ec: ExecutionContext): Fox[EditableMappingInfo] =
+    for {
+      anchorSegmentId <- editableMappingService.findSegmentIdAtPositionIfNeeded(
+        remoteFallbackLayer,
+        update.segmentPosition,
+        update.segmentId,
+        update.mag
+      )(using tokenContext)
+      currentAgglomerateId <- agglomerateIdForSegmentId(anchorSegmentId)
+      currentGraph <- agglomerateGraphForIdWithFallback(mapping, currentAgglomerateId)
+      targetAgglomerateIds <- remoteDatastoreClient.getAgglomerateIdsForSegmentIds(
+        remoteFallbackLayer,
+        update.targetMappingName,
+        List(anchorSegmentId)
+      )(using tokenContext)
+      targetAgglomerateId <-
+        targetAgglomerateIds.headOption.toFox ?~> s"Could not resolve agglomerate id at level ${update.targetMappingName} for segment $anchorSegmentId"
+      targetGraph <- remoteDatastoreClient.getAgglomerateGraph(
+        remoteFallbackLayer,
+        update.targetMappingName,
+        targetAgglomerateId
+      )(using tokenContext)
+      editedEdges <- editableMappingService.getEditedEdges(
+        annotationId,
+        tracingId,
+        Some(oldVersion),
+        remoteFallbackLayer
+      )(using tokenContext)
+      (edgesToAdd, edgesToRemove) = MappingLevelDiff.computeEdgeChanges(currentGraph, targetGraph, editedEdges)
+      // Apply removes as splits first, then adds as merges. Each synthesized action re-resolves ids from the buffers,
+      // so applying them sequentially is correct even as the graph changes.
+      afterRemoves <- edgesToRemove.foldLeft(Fox.successful(mapping)) { (accFox, edge) =>
+        accFox.flatMap(acc => applySplitAction(acc, syntheticSplitAction(edge._1, edge._2)))
+      }
+      afterAdds <- edgesToAdd.foldLeft(Fox.successful(afterRemoves)) { (accFox, edge) =>
+        accFox.flatMap(acc => applyMergeAction(acc, syntheticMergeAction(edge._1, edge._2)))
+      }
+    } yield afterAdds
+
+  private def syntheticSplitAction(segmentId1: Long, segmentId2: Long): SplitAgglomerateUpdateAction =
+    SplitAgglomerateUpdateAction(
+      agglomerateId = None,
+      segmentPosition1 = None,
+      segmentPosition2 = None,
+      segmentId1 = Some(segmentId1),
+      segmentId2 = Some(segmentId2),
+      mag = None,
+      actionTracingId = tracingId
+    )
+
+  private def syntheticMergeAction(segmentId1: Long, segmentId2: Long): MergeAgglomerateUpdateAction =
+    MergeAgglomerateUpdateAction(
+      agglomerateId1 = None,
+      agglomerateId2 = None,
+      segmentPosition1 = None,
+      segmentPosition2 = None,
+      segmentId1 = Some(segmentId1),
+      segmentId2 = Some(segmentId2),
+      mag = None,
+      actionTracingId = tracingId
+    )
 
   private def applySplitAction(editableMappingInfo: EditableMappingInfo, update: SplitAgglomerateUpdateAction)(implicit
       ec: ExecutionContext

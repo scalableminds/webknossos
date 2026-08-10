@@ -93,6 +93,30 @@ object NodeWithPosition {
   implicit val jsonFormat: OFormat[NodeWithPosition] = Json.format[NodeWithPosition]
 }
 
+// Request body for the read-only mapping-level preview. The anchor supervoxel is given either directly by segmentId
+// or by segmentPosition (+ mag), resolved server-side like the split/merge proofreading actions.
+case class MappingLevelPreviewParameters(
+    segmentId: Option[Long],
+    segmentPosition: Option[Vec3Int],
+    mag: Option[Vec3Int],
+    targetMappingName: String,
+    version: Long
+)
+
+object MappingLevelPreviewParameters {
+  implicit val jsonFormat: OFormat[MappingLevelPreviewParameters] = Json.format[MappingLevelPreviewParameters]
+}
+
+// Result of diffing one agglomerate against a different mapping level (see EditableMappingService.computeMappingLevelDiff).
+// edgesToAdd/edgesToRemove are normalized segment-id pairs; resultingGraph is a preview-only reconstruction for skeleton rendering.
+case class MappingLevelDiffResult(
+    currentAgglomerateId: Long,
+    targetAgglomerateId: Long,
+    resultingGraph: AgglomerateGraph,
+    edgesToAdd: Seq[(Long, Long)],
+    edgesToRemove: Seq[(Long, Long)]
+)
+
 class EditableMappingService @Inject() (
     datasetErrorLoggingService: TSDatasetErrorLoggingService,
     val tracingDataStore: TracingDataStore,
@@ -501,6 +525,75 @@ class EditableMappingService @Inject() (
         case f: Failure => f.toFox
       }
     } yield agglomerateGraph
+
+  // Resolves the anchor segment's current + target agglomerate ids, fetches both graphs and existing edits,
+  // and computes the edge changes needed to make the anchor's agglomerate look like it does at targetMappingName.
+  // Shared by the read-only preview endpoint and (indirectly, via the same pure helper) the commit path.
+  def computeMappingLevelDiff(
+      tracingId: String,
+      annotationId: ObjectId,
+      editableMappingInfo: EditableMappingInfo,
+      version: Long,
+      anchorSegmentId: Long,
+      targetMappingName: String,
+      remoteFallbackLayer: RemoteFallbackLayer
+  )(using tc: TokenContext): Fox[MappingLevelDiffResult] =
+    for {
+      currentMapping <- generateCombinedMappingForSegmentIds(
+        Set(anchorSegmentId),
+        editableMappingInfo,
+        version,
+        tracingId,
+        remoteFallbackLayer
+      )
+      currentAgglomerateId <- currentMapping
+        .get(anchorSegmentId)
+        .toFox ?~> s"Could not resolve current agglomerate id for segment $anchorSegmentId"
+      currentGraph <- getAgglomerateGraphForIdWithFallback(
+        editableMappingInfo,
+        tracingId,
+        version,
+        currentAgglomerateId,
+        remoteFallbackLayer
+      ) ?~> Msg.AgglomerateGraph.failed
+      targetAgglomerateIds <- remoteDatastoreClient.getAgglomerateIdsForSegmentIds(
+        remoteFallbackLayer,
+        targetMappingName,
+        List(anchorSegmentId)
+      )
+      targetAgglomerateId <-
+        targetAgglomerateIds.headOption.toFox ?~> s"Could not resolve agglomerate id at level $targetMappingName for segment $anchorSegmentId"
+      targetGraph <- remoteDatastoreClient.getAgglomerateGraph(
+        remoteFallbackLayer,
+        targetMappingName,
+        targetAgglomerateId
+      ) ?~> Msg.AgglomerateGraph.failed
+      editedEdges <- getEditedEdges(annotationId, tracingId, Some(version), remoteFallbackLayer)
+      (edgesToAdd, edgesToRemove) = MappingLevelDiff.computeEdgeChanges(currentGraph, targetGraph, editedEdges)
+      resultingGraph = MappingLevelDiff.buildPreviewGraph(currentGraph, targetGraph, edgesToAdd, edgesToRemove)
+    } yield MappingLevelDiffResult(currentAgglomerateId, targetAgglomerateId, resultingGraph, edgesToAdd, edgesToRemove)
+
+  // Produces the serialized SkeletonTracing (protobuf bytes) for the preview of the anchor's agglomerate at targetMappingName.
+  def mappingLevelPreviewSkeleton(
+      tracingId: String,
+      annotationId: ObjectId,
+      editableMappingInfo: EditableMappingInfo,
+      version: Long,
+      anchorSegmentId: Long,
+      targetMappingName: String,
+      remoteFallbackLayer: RemoteFallbackLayer
+  )(using tc: TokenContext): Fox[Array[Byte]] =
+    for {
+      diff <- computeMappingLevelDiff(
+        tracingId,
+        annotationId,
+        editableMappingInfo,
+        version,
+        anchorSegmentId,
+        targetMappingName,
+        remoteFallbackLayer
+      )
+    } yield agglomerateGraphToTree(tracingId, diff.resultingGraph, diff.targetAgglomerateId)
 
   def agglomerateGraphMinCut(
       tracingId: String,

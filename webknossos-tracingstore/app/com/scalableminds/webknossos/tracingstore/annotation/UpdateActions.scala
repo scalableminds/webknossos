@@ -4,6 +4,7 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.tracingstore.tracings.IdWithBoolUtils
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   MergeAgglomerateUpdateAction,
+  SetAgglomerateMappingLevelUpdateAction,
   SplitAgglomerateUpdateAction
 }
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.*
@@ -102,8 +103,9 @@ object UpdateAction {
           case "updateActiveSegmentId" => deserialize[UpdateActiveSegmentIdVolumeAction](jsonValue)
 
           // Editable Mapping
-          case "mergeAgglomerate" => deserialize[MergeAgglomerateUpdateAction](jsonValue)
-          case "splitAgglomerate" => deserialize[SplitAgglomerateUpdateAction](jsonValue)
+          case "mergeAgglomerate"           => deserialize[MergeAgglomerateUpdateAction](jsonValue)
+          case "splitAgglomerate"           => deserialize[SplitAgglomerateUpdateAction](jsonValue)
+          case "setAgglomerateMappingLevel" => deserialize[SetAgglomerateMappingLevelUpdateAction](jsonValue)
 
           // Annotation
           case "addLayerToAnnotation"       => deserialize[AddLayerAnnotationAction](jsonValue)
@@ -343,6 +345,11 @@ object UpdateAction {
         Json.obj("name" -> "splitAgglomerate", "value" -> Json.toJson(s)(using SplitAgglomerateUpdateAction.jsonFormat))
       case s: MergeAgglomerateUpdateAction =>
         Json.obj("name" -> "mergeAgglomerate", "value" -> Json.toJson(s)(using MergeAgglomerateUpdateAction.jsonFormat))
+      case s: SetAgglomerateMappingLevelUpdateAction =>
+        Json.obj(
+          "name" -> "setAgglomerateMappingLevel",
+          "value" -> Json.toJson(s)(using SetAgglomerateMappingLevelUpdateAction.jsonFormat)
+        )
 
       // Annotation
       case s: AddLayerAnnotationAction =>

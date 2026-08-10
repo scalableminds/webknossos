@@ -1,6 +1,7 @@
 import Icon, {
   ClearOutlined,
   InfoCircleOutlined,
+  PartitionOutlined,
   ScissorOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
@@ -16,7 +17,7 @@ import { Badge, Button, Popconfirm, Popover, Radio, type RadioChangeEvent, Space
 import FastTooltip from "components/fast_tooltip";
 import { usePrevious, useWkSelector } from "libs/react_hooks";
 import type React from "react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import {
   FillModeEnum,
@@ -44,6 +45,7 @@ import Store from "viewer/store";
 import ButtonComponent, { ToggleButton } from "viewer/view/components/button_component";
 import { showToastWarningForLargestSegmentIdMissing } from "viewer/view/largest_segment_id_modal";
 import { QuickSelectControls } from "../quick_select_settings";
+import { MappingLevelPreviewPanel } from "./mapping_level_preview_settings";
 import { ACTIONBAR_MARGIN_LEFT, NARROW_BUTTON_STYLE, RadioButtonWithTooltip } from "./tool_helpers";
 
 function toggleOverwriteMode(overwriteMode: OverwriteMode) {
@@ -374,6 +376,9 @@ export function ProofreadingComponents() {
 
   const isMultiSplitActive = useWkSelector((state) => state.userConfiguration.isMultiSplitActive);
 
+  // Local open-state of the per-agglomerate mapping-level preview subtool popover.
+  const [isLevelPreviewOpen, setIsLevelPreviewOpen] = useState(false);
+
   return (
     <Space.Compact>
       <ButtonComponent
@@ -409,6 +414,27 @@ export function ProofreadingComponents() {
         onClick={() => handleToggleIsMultiSplitActive(!isMultiSplitActive)}
         icon={<ScissorOutlined />}
       />
+      <Popover
+        // Fully controlled: no automatic triggers, so selecting a segment in a viewport (an "outside click")
+        // does not close the panel. It only opens/closes via the toggle button or the panel's own Close button.
+        trigger={[]}
+        placement="bottom"
+        open={isLevelPreviewOpen}
+        content={
+          <MappingLevelPreviewPanel
+            active={isLevelPreviewOpen}
+            onClose={() => setIsLevelPreviewOpen(false)}
+          />
+        }
+      >
+        <ToggleButton
+          active={isLevelPreviewOpen}
+          title="Preview and select a different agglomerate mapping level for the currently selected supervoxel's agglomerate."
+          style={NARROW_BUTTON_STYLE}
+          onClick={() => setIsLevelPreviewOpen((open) => !open)}
+          icon={<PartitionOutlined />}
+        />
+      </Popover>
     </Space.Compact>
   );
 }

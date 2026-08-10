@@ -918,30 +918,31 @@ class DatasetMagDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
       datasetIdOpt: Option[ObjectId]
   ): Fox[List[DataSourceMagRow]] =
     for {
+      // Filters to the requested organization/dataStore/dataset first, then, for each surviving mag,
+      // checks whether some other dataset (in any organization) already "owns" the same physical path
+      // by having been created earlier. This is equivalent to ranking all mags globally by
+      // ROW_NUMBER() OVER (PARTITION BY COALESCE(realPath, path) ORDER BY created) and keeping rn = 1,
+      // but avoids sorting the entire system-wide dataset_mags/datasets join on every call: the filter
+      // narrows the outer scan first, and the ownership check is a targeted lookup via the existing
+      // index on dataset_mags(COALESCE(realPath, path)).
       storageRelevantMags <- run(q"""
-            WITH ranked AS (
-              SELECT
-                ds._id AS dataset_id, mag.dataLayerName, mag.mag, mag.path, mag.realPath, mag.hasLocalData,
-                ds._organization, ds._dataStore, ds.directoryName,
-                -- rn is the rank of the mags with the same path. It is used to deduplicate mags with the same path to
-                -- count each physical mag only once. Filtering is done below.
-                ROW_NUMBER() OVER (
-                  PARTITION BY COALESCE(mag.realPath, mag.path)
-                  ORDER BY ds.created ASC
-                ) AS rn
-              FROM webknossos.dataset_mags AS mag
-              JOIN webknossos.datasets AS ds
-                ON mag._dataset = ds._id
-            )
             SELECT
-              dataset_id, dataLayerName, mag, path, realPath, hasLocalData, _organization, directoryName
-            FROM ranked
-            -- Filter !after! grouping mags with the same path,
-            -- so mags shared between organizations are deduplicated properly using rn.
-            WHERE rn = 1
-              AND ranked._organization = $organizationId
-              AND ranked._dataStore = $dataStoreId
-              ${datasetIdOpt.map(datasetId => q"AND ranked.dataset_id = $datasetId").getOrElse(q"")};
+              ds._id, mag.dataLayerName, mag.mag, mag.path, mag.realPath, mag.hasLocalData,
+              ds._organization, ds.directoryName
+            FROM webknossos.dataset_mags AS mag
+            JOIN webknossos.datasets AS ds
+              ON mag._dataset = ds._id
+            WHERE ds._organization = $organizationId
+              AND ds._dataStore = $dataStoreId
+              ${datasetIdOpt.map(datasetId => q"AND mag._dataset = $datasetId").getOrElse(q"")}
+              AND NOT EXISTS (
+                SELECT 1
+                FROM webknossos.dataset_mags AS mag2
+                JOIN webknossos.datasets AS ds2
+                  ON mag2._dataset = ds2._id
+                WHERE COALESCE(mag2.realPath, mag2.path) IS NOT DISTINCT FROM COALESCE(mag.realPath, mag.path)
+                  AND (ds2.created < ds.created OR (ds2.created = ds.created AND ds2._id < ds._id))
+              );
             """.as[DataSourceMagRow])
     } yield storageRelevantMags.toList
 
@@ -1616,29 +1617,26 @@ class DatasetLayerAttachmentDAO @Inject() (sqlClient: SqlClient)(implicit ec: Ex
       datasetIdOpt: Option[ObjectId]
   ): Fox[List[StorageRelevantDataLayerAttachment]] =
     for {
+      // See the equivalent query in DatasetMagsDAO.findAllStorageRelevantMags for why this filters
+      // to the requested scope first and uses a NOT EXISTS ownership check instead of a global
+      // ROW_NUMBER() ranking.
       storageRelevantAttachments <- run(q"""
-          WITH ranked AS (
-            SELECT
-              att._dataset, att.layerName, att.name, att.path, att.type, ds._organization, ds._dataStore, ds.directoryName,
-              -- rn is the rank of the attachments with the same path. It is used to deduplicate attachments with the same path
-               -- to count each physical attachment only once. Filtering is done below.
-              ROW_NUMBER() OVER (
-                PARTITION BY COALESCE(att.realPath, att.path)
-                ORDER BY ds.created ASC
-              ) AS rn
-            FROM webknossos.dataset_layer_attachments AS att
-            JOIN webknossos.datasets AS ds
-              ON att._dataset = ds._id
-          )
           SELECT
-            _dataset, layerName, name, path, type, _organization, directoryName
-          FROM ranked
-          -- Filter !after! grouping attachments with the same path,
-          -- so attachments shared between organizations are deduplicated properly using rn.
-          WHERE ranked.rn = 1
-            AND ranked._organization = $organizationId
-            AND ranked._dataStore = $dataStoreId
-            ${datasetIdOpt.map(datasetId => q"AND ranked._dataset = $datasetId").getOrElse(q"")};
+            att._dataset, att.layerName, att.name, att.path, att.type, ds._organization, ds.directoryName
+          FROM webknossos.dataset_layer_attachments AS att
+          JOIN webknossos.datasets AS ds
+            ON att._dataset = ds._id
+          WHERE ds._organization = $organizationId
+            AND ds._dataStore = $dataStoreId
+            ${datasetIdOpt.map(datasetId => q"AND att._dataset = $datasetId").getOrElse(q"")}
+            AND NOT EXISTS (
+              SELECT 1
+              FROM webknossos.dataset_layer_attachments AS att2
+              JOIN webknossos.datasets AS ds2
+                ON att2._dataset = ds2._id
+              WHERE COALESCE(att2.realPath, att2.path) IS NOT DISTINCT FROM COALESCE(att.realPath, att.path)
+                AND (ds2.created < ds.created OR (ds2.created = ds.created AND ds2._id < ds._id))
+            );
            """.as[StorageRelevantDataLayerAttachment])
     } yield storageRelevantAttachments.toList
 

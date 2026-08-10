@@ -20,9 +20,8 @@ class PricingPlanExpiryReminderTestSuite extends AsyncWordSpec {
   }
 
   "crossedLeadTimesDays" should {
-    "be empty while the expiry date is further out than the largest lead time" in {
+    "be empty while the expiry date is further out than the largest lead time" in
       assert(crossedLeadTimesDays(31, leadTimesDays).isEmpty)
-    }
     "contain only the lead times that were crossed" in {
       assert(crossedLeadTimesDays(30, leadTimesDays) == List(30))
       assert(crossedLeadTimesDays(20, leadTimesDays) == List(30))
@@ -34,9 +33,8 @@ class PricingPlanExpiryReminderTestSuite extends AsyncWordSpec {
       assert(crossedLeadTimesDays(5, leadTimesDays) == List(7, 14, 30))
       assert(crossedLeadTimesDays(1, leadTimesDays) == List(7, 14, 30))
     }
-    "be empty if no lead times are configured" in {
+    "be empty if no lead times are configured" in
       assert(crossedLeadTimesDays(1, Seq.empty).isEmpty)
-    }
   }
 
   "the reminder mail" should {

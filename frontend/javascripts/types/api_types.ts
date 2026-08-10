@@ -1365,7 +1365,37 @@ export type ServerErrorMessage = {
   error: string;
 };
 
-export type LayerAttachmentType = "mesh" | "agglomerate" | "segmentIndex" | "connectome" | "cumsum";
+export type LayerAttachmentType =
+  | "mesh"
+  | "agglomerate"
+  | "segmentIndex"
+  | "connectome"
+  | "cumsum"
+  | "segmentStatistics";
+
+// Names of the arrays within a segment statistics attachment. `positions` has no route to query it
+// yet, and `ids` is used internally by the backend but never reported as available.
+export type SegmentStatisticsMetric =
+  | "positions"
+  | "ids"
+  | "max_distances"
+  | "volumes"
+  | "center_of_mass"
+  | "covariance_matrix"
+  | "surfaces"
+  | "sphericities";
+
+/** Row-major 3×3 matrix, i.e. `matrix[row][column]`. */
+export type SegmentCovarianceMatrix = [Vector3, Vector3, Vector3];
+
+export type SegmentStatisticsFileInfo = {
+  // The mag the file was computed for. Queries in finer mags are rejected by the backend.
+  mag: Vector3;
+  availableMetrics: SegmentStatisticsMetric[];
+  // Omitted (not null) by the backend when the file was computed without a mapping,
+  // i.e. for the oversegmentation.
+  mappingName?: string | null;
+};
 
 export type APIStorageDetailEntry = {
   layerName: string;

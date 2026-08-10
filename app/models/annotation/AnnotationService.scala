@@ -708,8 +708,7 @@ class AnnotationService @Inject() (
               ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(new File(subZip.toString))))
             volumeDataOpt.foreach(volumeData => subZipper.addFileFromBytes(nml.name + "_data.zip", volumeData))
             for {
-              _ <- subZipper.addFileFromNamedStream(nml, suffix = ".nml")
-              _ = subZipper.close()
+              _ <- Fox.withCleanup(subZipper.addFileFromNamedStream(nml, suffix = ".nml"))(subZipper.close())
               _ = zipper.addFileFromTemporaryFile(nml.name + ".zip", subZip)
               res <- addToZip(tail)
             } yield res
@@ -720,10 +719,7 @@ class AnnotationService @Inject() (
           Fox.successful(true)
       }
 
-    addToZip(nmls).map { _ =>
-      zipper.close()
-      zipped
-    }
+    Fox.withCleanup(addToZip(nmls))(zipper.close()).map(_ => zipped)
   }
 
   def transferAnnotationToUser(typ: String, id: ObjectId, userId: ObjectId, issuingUser: User)(using

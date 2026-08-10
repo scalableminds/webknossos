@@ -1,8 +1,8 @@
+import { getRandomColor } from "libs/colors";
 import { handleGenericError } from "libs/error_handling";
 import { V3 } from "libs/mjs";
 import createProgressCallback from "libs/progress_callback";
 import Toast from "libs/toast";
-import { getRandomColor } from "libs/utils";
 import window from "libs/window";
 import memoize from "lodash-es/memoize";
 import range from "lodash-es/range";

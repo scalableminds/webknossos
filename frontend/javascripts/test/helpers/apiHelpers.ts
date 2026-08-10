@@ -503,14 +503,6 @@ export function createBucketResponseFunction(
   };
 }
 
-vi.mock("libs/keyboard", () => ({
-  default: {
-    bind: vi.fn(),
-    unbind: vi.fn(),
-    withContext: (_arg0: string, arg1: () => void) => arg1(),
-  },
-}));
-
 const modelData = {
   skeleton: {
     dataset: DATASET,

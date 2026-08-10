@@ -790,6 +790,8 @@ export class EraseToolController extends VolumeToolController {
   static onToolDeselected() {}
 }
 
+// Not inheriting from VolumeToolController by design as no shortcuts like
+// `c` -> create new cell should be supported in this tool for now.
 export class VoxelPipetteToolController extends ToolController {
   static getPlaneMouseControls(_planeId: OrthoView): MouseBindingMap {
     return {

@@ -12,6 +12,7 @@ import {
 } from "viewer/model/actions/annotation_actions";
 import type { MutableTreeMap, Tree, TreeGroup } from "viewer/model/types/tree_types";
 import type { SkeletonTracing } from "viewer/store";
+import { MISSING_GROUP_ID } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import type { ApplicableSkeletonServerUpdateAction } from "../sagas/volume/update_actions";
 
 export type InitializeSkeletonTracingAction = ReturnType<typeof initializeSkeletonTracingAction>;
@@ -433,17 +434,21 @@ export const addTreesAndGroupsAction = (
   treeGroups: Array<TreeGroup> | null | undefined,
   treeIdsCallback: ((ids: number[]) => void) | undefined = undefined,
   assignTreeToNewGroupId: boolean = true,
+  targetGroupId: number = MISSING_GROUP_ID,
 ) =>
   // If assignTreeToNewGroupId is false, the given group id of a tree will be kept. This is useful
   // when trees are duplicated, as the copied tree should be in the same group as the original tree.
   // If assignTreeToNewGroupId is true, the tree will be assigned to a new group id, as the original
   // group id might already be used by another group.
+  // targetGroupId nests the newly added top-level trees/groups into an already existing group
+  // instead of adding them to the root of the tree hierarchy.
   ({
     type: "ADD_TREES_AND_GROUPS",
     trees,
     treeGroups: treeGroups || [],
     treeIdsCallback,
     assignNewGroupId: assignTreeToNewGroupId,
+    targetGroupId,
   }) as const;
 
 export const deleteTreeAction = (treeId?: number, suppressActivatingNextNode: boolean = false) =>

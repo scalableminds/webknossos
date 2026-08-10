@@ -1,6 +1,7 @@
 import update from "immutability-helper";
+import { colorObjectToRGBArray } from "libs/colors";
 import DiffableMap from "libs/diffable_map";
-import { colorObjectToRGBArray, point3ToVector3, replaceOrAdd } from "libs/utils";
+import { point3ToVector3, replaceOrAdd } from "libs/utils";
 import type { APIUserBase, ServerVolumeTracing } from "types/api_types";
 import {
   getLayerByName,

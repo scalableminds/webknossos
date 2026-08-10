@@ -1,9 +1,9 @@
 import { Checkbox, Form, InputNumber, Modal, Select, Space, Typography } from "antd";
+import { getRandomColor } from "libs/colors";
 import { handleGenericError } from "libs/error_handling";
 import { V3 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { getRandomColor } from "libs/utils";
 import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { batchActions } from "redux-batched-actions";

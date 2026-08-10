@@ -19,12 +19,11 @@ import {
   findDataPositionForVolumeTracing,
   startComputeSegmentIndexFileJob,
 } from "admin/rest_api";
-import { Dropdown, Flex, type MenuProps, Switch } from "antd";
+import { App, Dropdown, Flex, type MenuProps, Switch, Typography } from "antd";
 import type { ItemType } from "antd/es/menu/interface";
 import type { SwitchChangeEventHandler } from "antd/es/switch";
 import FastTooltip from "components/fast_tooltip";
 import { HoverIconButton } from "components/hover_icon_button";
-import { confirmAsync } from "dashboard/dataset/helper_components";
 import { M4x4, V3 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
@@ -121,6 +120,7 @@ export default function LayerSettingsHeader({
   onSetLayerToMergeWithFallback: (layer: APIDataLayer) => void;
 }) {
   const dispatch = useDispatch();
+  const { modal } = App.useApp();
   const dataset = useWkSelector((state) => state.dataset);
   const annotation = useWkSelector((state) => state.annotation);
   const controlMode = useWkSelector((state) => state.temporaryConfiguration.controlMode);
@@ -265,7 +265,7 @@ export default function LayerSettingsHeader({
         targetLayer && targetLayer.category === "segmentation" && targetLayer.fallbackLayer
           ? "Changes to the original segmentation layer will be discarded and the original state will be displayed again. "
           : "";
-      const shouldDelete = await confirmAsync({
+      const shouldDelete = await modal.confirm({
         title: `Deleting an annotation layer makes its content and history inaccessible. ${fallbackLayerNote}This cannot be undone. Are you sure you want to delete this layer?`,
         okText: `Yes, delete annotation layer "${readableAnnotationLayerName}"`,
         cancelText: "Cancel",
@@ -287,7 +287,7 @@ export default function LayerSettingsHeader({
       await Model.ensureSavedState();
       location.reload();
     },
-    [dispatch],
+    [dispatch, modal],
   );
 
   const getVolumeMagsToDownsample = (
@@ -322,11 +322,9 @@ export default function LayerSettingsHeader({
 
     return (
       <FastTooltip title="This volume tracing does not have data at all magnifications.">
-        <WarningOutlined
-          style={{
-            color: "var(--ant-color-warning)",
-          }}
-        />
+        <Typography.Text type="warning">
+          <WarningOutlined />
+        </Typography.Text>
       </FastTooltip>
     );
   };
@@ -652,11 +650,9 @@ export default function LayerSettingsHeader({
             title={`No data is being rendered for this layer as the minimum and maximum of the range have the same values.
             If you want to hide this layer, you can also disable it with the switch on the left.`}
           >
-            <WarningOutlined
-              style={{
-                color: "var(--ant-color-warning)",
-              }}
-            />
+            <Typography.Text type="warning">
+              <WarningOutlined />
+            </Typography.Text>
           </FastTooltip>
         ) : null}
         {isColorLayer ? null : getOptionalDownsampleVolumeIcon(maybeVolumeTracing)}

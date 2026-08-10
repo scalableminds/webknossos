@@ -517,9 +517,12 @@ function SimpleLayerForm({
               }}
               info="The data format of the layer."
             >
-              <Select disabled value={layer.dataFormat} style={{ width: 120 }}>
-                <Select.Option value={layer.dataFormat}>{layer.dataFormat}</Select.Option>
-              </Select>
+              <Select
+                disabled
+                value={layer.dataFormat}
+                style={{ width: 120 }}
+                options={[{ value: layer.dataFormat, label: layer.dataFormat }]}
+              />
             </FormItemWithInfo>
             <FormItemWithInfo
               label="Data Type"
@@ -528,9 +531,12 @@ function SimpleLayerForm({
               }}
               info="The data type (sometimes called dtype) of the layer."
             >
-              <Select disabled value={layer.elementClass} style={{ width: 120 }}>
-                <Select.Option value={layer.elementClass}>{layer.elementClass}</Select.Option>
-              </Select>
+              <Select
+                disabled
+                value={layer.elementClass}
+                style={{ width: 120 }}
+                options={[{ value: layer.elementClass, label: layer.elementClass }]}
+              />
             </FormItemWithInfo>
             {"numChannels" in layer ? (
               <FormItemWithInfo
@@ -540,9 +546,12 @@ function SimpleLayerForm({
                 }}
                 info="The channel count of the layer."
               >
-                <Select disabled value={layer.numChannels} style={{ width: 120 }}>
-                  <Select.Option value={layer.numChannels}>{layer.numChannels}</Select.Option>
-                </Select>
+                <Select
+                  disabled
+                  value={layer.numChannels}
+                  style={{ width: 120 }}
+                  options={[{ value: layer.numChannels, label: layer.numChannels }]}
+                />
               </FormItemWithInfo>
             ) : null}
           </Space>
@@ -560,13 +569,11 @@ function SimpleLayerForm({
               allowClear
               value={getMags(layer).map((mag) => mag.toString())}
               style={{ width: LEFT_COLUMN_ITEMS_WIDTH }}
-            >
-              {getMags(layer).map((mag) => (
-                <Select.Option key={mag.toString()} value={mag.toString()}>
-                  {typeof mag === "number" ? mag : mag.join("-")}
-                </Select.Option>
-              ))}
-            </Select>
+              options={getMags(layer).map((mag) => ({
+                value: mag.toString(),
+                label: typeof mag === "number" ? mag : mag.join("-"),
+              }))}
+            />
           </FormItemWithInfo>
         </Col>
         <Col span={24} xl={12}>
@@ -619,10 +626,11 @@ function SimpleLayerForm({
               style={{
                 width: 300,
               }}
-            >
-              <Select.Option value="color">Color / grayscale</Select.Option>
-              <Select.Option value="segmentation">Segmentation</Select.Option>
-            </Select>
+              options={[
+                { value: "color", label: "Color / grayscale" },
+                { value: "segmentation", label: "Segmentation" },
+              ]}
+            />
           </Form.Item>
 
           {isSegmentation ? (

@@ -100,7 +100,7 @@ function EnterLargestSegmentIdModal({
         would be safe to use, please input it below:
       </p>
       <div style={{ display: "grid", placeItems: "center" }}>
-        <InputNumber
+        <InputNumber<string>
           size="large"
           stringMode
           precision={0}

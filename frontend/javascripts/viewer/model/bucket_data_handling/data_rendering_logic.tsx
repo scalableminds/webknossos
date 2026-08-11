@@ -312,8 +312,8 @@ function _getSupportedValueRangeForElementClass(
   elementClass: ElementClass,
 ): readonly [number, number] {
   // The returned range is inclusive (min and max).
-  // This function needs to be adapted when a new dtype should/element class needs
-  // to be supported.
+  // The function should not be called for (u)int64, because number is not precise enough.
+  // Prefer getSegmentIdRangeForElementClass for (u)int64.
   switch (elementClass) {
     case "int8":
       return [-(2 ** 7), 2 ** 7 - 1];
@@ -350,9 +350,11 @@ function _getSupportedValueRangeForElementClass(
     }
 
     case "uint64":
-      return [0, 2 ** 53 - 1];
+      // Note that these high values can only be correctly stored in bigint (and not number).
+      // Prefer getSegmentIdRangeForElementClass for (u)int64.
+      return [0, 2 ** 64 - 1];
     case "int64":
-      return [-(2 ** 53 - 1), 2 ** 53 - 1];
+      return [-(2 ** 64 - 1), 2 ** 64 - 1];
     default:
       throw new Error("Unknown elementClass: " + elementClass);
   }

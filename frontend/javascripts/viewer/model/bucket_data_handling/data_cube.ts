@@ -49,6 +49,7 @@ import Store from "viewer/store";
 import type { MagInfo } from "../helpers/mag_info";
 import { getConstructorForElementClass } from "../helpers/typed_buffer";
 import { getMappedIdAsBigInt } from "../sagas/volume/proofreading/preparation_sagas";
+import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
 
 const warnAboutTooManyAllocations = once(() => {
   const msg =
@@ -974,10 +975,6 @@ class DataCube {
     return usableZoomStep;
   }
 
-  // Returns bigint only for uint64/int64 (segmentation) layers, where the underlying typed
-  // array is a BigUint64Array/BigInt64Array; returns a plain (possibly fractional, for float
-  // color layers) number for every other element class. Callers that know they are querying a
-  // segmentation layer should convert with toBigInt(...) at their call site.
   getDataValue(
     _voxel: Vector3,
     additionalCoordinates: AdditionalCoordinate[] | null,
@@ -1001,12 +998,7 @@ class DataCube {
       const dataValue = data[voxelIndex];
 
       if (mapping) {
-        // Mappings only exist for (integer-typed) segmentation layers, so dataValue is
-        // guaranteed to be a whole number/bigint here.
-        const mappedValue = isNumberMap(mapping)
-          ? mapping.get(Number(dataValue))
-          : mapping.get(BigInt(dataValue));
-
+        const mappedValue = new NumberLikeMapWrapper(mapping).get(dataValue);
         if (mappedValue != null) {
           return mappedValue;
         }

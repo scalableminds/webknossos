@@ -458,7 +458,7 @@ export function SegmentStatisticsModal({
       okText="Export to CSV"
       okButtonProps={{ disabled: isAnyStatisticLoading }}
     >
-      <Space vertical size="small">
+      <Space vertical size="small" style={{ width: "100%" }} styles={{ item: { minWidth: 0 } }}>
         {hasAdditionalCoords && (
           <Alert
             title={`These statistics only refer to the current additional ${pluralize(

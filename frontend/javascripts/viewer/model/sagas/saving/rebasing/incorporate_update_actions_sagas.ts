@@ -37,6 +37,7 @@ import {
   type ApplyingUpdateArtifacts,
   FailedIncorporateActionsReturnValue,
 } from "./applying_update_artifacts";
+import { LayerNameAsKey } from "types/type_utils";
 
 export function* tryToIncorporateActions(
   newerActions: APIUpdateActionBatch[],
@@ -57,15 +58,15 @@ export function* tryToIncorporateActions(
   // Tracks which agglomerate ids were changed of which the frontend has loaded meshes to assist proofreading.
   // Maps from the old agglomerate id to a potentially new one.
   // Duplicates are later ignored when refreshing the meshes.
-  const meshIdsToRemovePerLayer: Map<string, Set<number>> = new Map();
+  const meshIdsToRemovePerLayer: Map<string, Set<bigint>> = new Map();
   // Maps each layer's agglomerate ids whose meshes should be (re)loaded to the display properties
   // (opacity and visibility) the reloaded mesh should inherit from the agglomerate it originated
   // from (empty if nothing was stored). These must be gathered here while the original meshes still
   // exist; the meshes are only removed later in resolveApplyingUpdateArtifacts.
-  const meshesToLoadPerLayer: Map<string, Map<number, PreservedMeshDisplayProps>> = new Map();
+  const meshesToLoadPerLayer: Map<LayerNameAsKey, Map<bigint, PreservedMeshDisplayProps>> = new Map();
   function recordMeshToLoad(
     tracingId: string,
-    agglomerateId: number,
+    agglomerateId: bigint,
     displayProps: PreservedMeshDisplayProps,
   ) {
     if (!meshesToLoadPerLayer.has(tracingId)) {
@@ -77,7 +78,7 @@ export function* tryToIncorporateActions(
   for (const actionBatch of newerActions) {
     // Per layer: maps each split segment id (segmentId1/segmentId2 of splitAgglomerate actions)
     // to the agglomerate id it belonged to before the split.
-    const splitSegmentIdToOldAgglomeratePerLayer: Map<string, Map<number, number>> = new Map();
+    const splitSegmentIdToOldAgglomeratePerLayer: Map<string, Map<bigint, bigint>> = new Map();
     for (const action of actionBatch.value) {
       switch (action.name) {
         /////////////
@@ -188,8 +189,8 @@ export function* tryToIncorporateActions(
 
         // Proofreading
         case "mergeAgglomerate": {
-          const { actionTracingId, agglomerateId1, agglomerateId2 } = action.value;
-          if (agglomerateId1 == null || agglomerateId2 == null) {
+          const { actionTracingId } = action.value;
+          if (action.value.agglomerateId1 == null || action.value.agglomerateId2 == null) {
             console.log(
               "Cannot apply mergeAgglomerate action due to agglomerateId1 or agglomerateId2 not being provided in the action",
               action.value,
@@ -197,6 +198,9 @@ export function* tryToIncorporateActions(
             yield* call(finalize);
             return FailedIncorporateActionsReturnValue;
           }
+          // Legacy persisted actions may still have a plain number here instead of bigint.
+          const agglomerateId1 = BigInt(action.value.agglomerateId1);
+          const agglomerateId2 = BigInt(action.value.agglomerateId2);
           const activeMapping = yield* select(
             (store) => store.temporaryConfiguration.activeMappingByLayer[actionTracingId],
           );

@@ -32,7 +32,7 @@ function* removeOutdatedMeshes(
   // Remove all outdated meshes.
   for (const [tracingId, meshIdsToRemove] of meshIdsToRemovePerLayer.entries()) {
     for (const aggloId of meshIdsToRemove) {
-      yield* put(removeMeshAction(tracingId, Number(aggloId)));
+      yield* put(removeMeshAction(tracingId, (aggloId)));
     }
   }
 }
@@ -46,7 +46,7 @@ function* reloadMeshes(
   const refreshAffectedMeshesEffects = [];
   for (const [tracingId, displayPropsByAgglomerateId] of meshesToReloadPerLayer.entries()) {
     const refreshList: Array<{
-      newAgglomerateId: number;
+      newAgglomerateId: bigint;
       nodePosition: Vector3;
       opacity?: number;
       isVisible?: boolean;

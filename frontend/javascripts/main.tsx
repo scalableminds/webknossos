@@ -32,8 +32,6 @@ import { checkAnyOrganizationExists, getOrganization } from "admin/api/organizat
 import { CheckCertificateModal } from "components/check_certificate_modal";
 import DisableGenericDnd from "components/disable_generic_dnd";
 import { CheckTermsOfServices } from "components/terms_of_services_check";
-import Toast from "libs/toast";
-import { sleep } from "libs/utils";
 import { RouterProvider } from "react-router-dom";
 import router from "router/router";
 import { getThemeFromUser } from "theme";
@@ -126,13 +124,6 @@ async function initApp() {
       loadHasOrganizations(),
     ]);
     await loadOrganization();
-
-    // todop: remove again
-    sleep(2000).then(async () => {
-      Toast.error("you should see this error for 3 s", {
-        timeout: 3000,
-      });
-    });
 
     // In dev setup the original title indicates loading. That’s done now.
     // Note that this doesn’t use the TabTitle component so that we avoid having multiple ones at once.

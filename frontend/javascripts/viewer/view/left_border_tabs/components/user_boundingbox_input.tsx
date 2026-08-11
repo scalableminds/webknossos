@@ -9,9 +9,10 @@ import {
 } from "@ant-design/icons";
 import { Flex, Input, type MenuProps, Switch } from "antd";
 import FastTooltip from "components/fast_tooltip";
+import { rgbToHex } from "libs/colors";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { numberArrayToVector6, rgbToHex, stringToNumberArray } from "libs/utils";
+import { numberArrayToVector6, stringToNumberArray } from "libs/utils";
 import messages from "messages";
 import { useEffect, useState } from "react";
 import type { Vector3, Vector6 } from "viewer/constants";

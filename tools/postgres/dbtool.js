@@ -390,7 +390,6 @@ function applyEvolutions() {
       ]);
     }
     console.log("✨✨ Successfully applied the evolutions");
-    updateRefreshStamp();
   } else {
     console.log("There are no evolutions that can be applied.");
   }

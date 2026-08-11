@@ -2,7 +2,7 @@ import { Collapse, notification } from "antd";
 import debounce from "lodash-es/debounce";
 import type React from "react";
 import { useEffect } from "react";
-import { animationFrame, sleep } from "./utils";
+import { ensureUserIsAttentive, sleep } from "./utils";
 
 export type ToastStyle = "info" | "warning" | "success" | "error";
 export type Message = {
@@ -135,19 +135,15 @@ const Toast = {
       actions: config.customFooter,
     };
 
-    // Make sure that toasts don't just disappear while the user has WK in a background tab (e.g. while uploading large dataset).
-    // Most browsers pause requestAnimationFrame() if the current tab is not active, but Firefox does not seem to do that.
+    // Make sure that toasts don't just disappear while the user is not attentive (e.g. the tab is
+    // in the background, or another OS window covers WK, while uploading a large dataset).
     if (useManualTimeout) {
       // In case a toast with the same key is already open, close it first.
       this.closePendingToastsEarlyMap[key]?.();
       let cancelledTimeout = false;
       const timeoutToastManually = async () => {
-        const splitTimeout = timeout / 2;
-        await animationFrame(); // ensure tab is active
-        await sleep(splitTimeout);
-        await animationFrame();
-        // If the user has switched the tab, show the toast again so that the user doesn't just see the toast disappear.
-        await sleep(splitTimeout);
+        await ensureUserIsAttentive();
+        await sleep(timeout);
         if (cancelledTimeout) {
           // If the toast has been closed early, don't close it again.
           return;

@@ -32,15 +32,16 @@ class WebknossosBearerTokenAuthenticatorService(
 )(implicit override val executionContext: ExecutionContext)
     extends BearerTokenAuthenticatorService(settings, repository, idGenerator, clock) {
 
-  private val resetPasswordExpiry: FiniteDuration =
-    conf.Silhouette.TokenAuthenticator.resetPasswordExpiry.toMillis millis
-  val dataStoreExpiry: FiniteDuration = conf.Silhouette.TokenAuthenticator.dataStoreExpiry.toMillis millis
+  private val resetPasswordExpiry: FiniteDuration = conf.Silhouette.TokenAuthenticator.resetPasswordExpiry
+  val dataStoreExpiry: FiniteDuration = conf.Silhouette.TokenAuthenticator.dataStoreExpiry
+  private val jobExpiry: FiniteDuration = conf.Silhouette.TokenAuthenticator.jobExpiry
 
   def create(loginInfo: LoginInfo, tokenType: TokenType): Future[BearerTokenAuthenticator] = {
     val expiry: FiniteDuration = tokenType match {
       case TokenType.Authentication => settings.authenticatorExpiry
       case TokenType.ResetPassword  => resetPasswordExpiry
       case TokenType.DataStore      => dataStoreExpiry
+      case TokenType.Job            => jobExpiry
       case _                        => throw new Exception("Cannot create an authenticator without a valid TokenType")
     }
     idGenerator.generate.map { id =>
@@ -69,6 +70,9 @@ class WebknossosBearerTokenAuthenticatorService(
   def createAndInitDataStoreTokenForUser(user: User): Fox[String] =
     Fox.fromFuture(createAndInit(user.loginInfo, TokenType.DataStore, deleteOld = false))
 
+  def createAndInitJobTokenForUser(user: User): Fox[String] =
+    Fox.fromFuture(createAndInit(user.loginInfo, TokenType.Job, deleteOld = false))
+
   def createAndInit(loginInfo: LoginInfo, tokenType: TokenType, deleteOld: Boolean): Future[String] =
     for {
       tokenAuthenticator <- create(loginInfo, tokenType)
@@ -93,4 +97,7 @@ class WebknossosBearerTokenAuthenticatorService(
 
   def removeExpiredTokens(): Fox[Unit] =
     repository.deleteAllExpired()
+
+  def hardDeleteOldTokens(): Fox[Unit] =
+    repository.hardDeleteOldTokens()
 }

@@ -209,7 +209,7 @@ class TeamDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     val insertQueries = allowedTeams.map(teamId => q"""INSERT INTO webknossos.dataset_allowedTeams(_dataset, _team)
              VALUES($datasetId, $teamId)""".asUpdate)
 
-    replaceSequentiallyAsTransaction(clearQuery, insertQueries)
+    runAsSerializableTransaction(clearQuery +: insertQueries)
   }
 
   def updateAllowedTeamsForFolder(folderId: ObjectId, allowedTeams: List[ObjectId]): Fox[Unit] = {
@@ -217,28 +217,21 @@ class TeamDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     val insertQueries = allowedTeams.map(teamId => q"""INSERT INTO webknossos.folder_allowedTeams(_folder, _team)
              VALUES($folderId, $teamId)""".asUpdate)
 
-    replaceSequentiallyAsTransaction(clearQuery, insertQueries)
+    runAsSerializableTransaction(clearQuery +: insertQueries)
   }
 
-  /* Marks the team as deleted and removes all references to it (user and invite team roles, allowed teams of
-   * datasets and folders, shared teams of annotations) in a single transaction. Cleaning up in the same
-   * transaction as the deletion itself ensures that a failing cleanup step cannot leave dangling references to
-   * an already-deleted team behind, and that no reference can be inserted concurrently.
-   * The references are deleted here rather than in the DAOs owning the respective tables, since they can only
-   * be part of this transaction if they are issued as part of the same query. */
-  override def deleteOne(teamId: ObjectId)(using ctx: DBAccessContext): Fox[Unit] = {
-    val queries = List(
-      deleteOneWithNameSuffixQuery(teamId),
-      q"DELETE FROM webknossos.user_team_roles WHERE _team = $teamId".asUpdate,
-      q"DELETE FROM webknossos.invite_team_roles WHERE _team = $teamId".asUpdate,
-      q"DELETE FROM webknossos.annotation_sharedTeams WHERE _team = $teamId".asUpdate,
-      q"DELETE FROM webknossos.dataset_allowedTeams WHERE _team = $teamId".asUpdate,
-      q"DELETE FROM webknossos.folder_allowedTeams WHERE _team = $teamId".asUpdate
-    )
+  override def deleteOne(teamId: ObjectId)(using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertDeleteAccess(teamId)
-      _ <- runAsTransaction(queries)
+      queries = List(
+        deleteOneWithNameSuffixQuery(teamId),
+        q"DELETE FROM webknossos.user_team_roles WHERE _team = $teamId".asUpdate,
+        q"DELETE FROM webknossos.invite_team_roles WHERE _team = $teamId".asUpdate,
+        q"DELETE FROM webknossos.annotation_sharedTeams WHERE _team = $teamId".asUpdate,
+        q"DELETE FROM webknossos.dataset_allowedTeams WHERE _team = $teamId".asUpdate,
+        q"DELETE FROM webknossos.folder_allowedTeams WHERE _team = $teamId".asUpdate
+      )
+      _ <- runAsSerializableTransaction(queries)
     } yield ()
-  }
 
 }

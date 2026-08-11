@@ -20,7 +20,6 @@ import play.api.libs.json.*
 import slick.jdbc.GetResult
 import slick.jdbc.GetResult.*
 import slick.jdbc.PostgresProfile.api.*
-import slick.jdbc.TransactionIsolation.Serializable
 import slick.sql.SqlAction
 import com.scalableminds.util.objectid.ObjectId
 import slick.dbio.DBIO
@@ -735,13 +734,8 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
     val deleteLayersQuery = annotationLayerDAO.deleteAllForAnnotationQuery(id)
     val deleteAnnotationQuery =
       q"DELETE FROM webknossos.annotations WHERE _id = $id AND state = ${AnnotationState.Initializing}".asUpdate
-    val composed = DBIO.sequence(List(deleteLayersQuery, deleteAnnotationQuery)).transactionally
     for {
-      _ <- run(
-        composed.withTransactionIsolation(Serializable),
-        retryCount = 50,
-        retryIfErrorContains = List(transactionSerializationError)
-      )
+      _ <- runAsSerializableTransaction(List(deleteLayersQuery, deleteAnnotationQuery))
       _ = logger.info(s"Aborted initializing task annotation $id")
     } yield ()
   }
@@ -765,11 +759,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
     for {
       _ <- assertUpdateAccess(id) ?~> "FAILED: AnnotationSQLDAO.assertUpdateAccess"
       query = q"UPDATE webknossos.annotations SET state = $state WHERE _id = $id".asUpdate
-      _ <- run(
-        query.withTransactionIsolation(Serializable),
-        retryCount = 50,
-        retryIfErrorContains = List(transactionSerializationError)
-      ) ?~> "FAILED: run in AnnotationSQLDAO.updateState"
+      _ <- runAsSerializableTransaction(query) ?~> "FAILED: run in AnnotationSQLDAO.updateState"
       _ = logger.info(s"Updated state of Annotation $id to $state, access context: ${ctx.toStringAnonymous}")
     } yield ()
 
@@ -777,11 +767,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
     for {
       _ <- assertUpdateAccess(id) ?~> "FAILED: AnnotationSQLDAO.assertUpdateAccess"
       query = q"UPDATE webknossos.annotations SET isLockedByOwner = $isLocked WHERE _id = $id".asUpdate
-      _ <- run(
-        query.withTransactionIsolation(Serializable),
-        retryCount = 50,
-        retryIfErrorContains = List(transactionSerializationError)
-      ) ?~> "FAILED: run in AnnotationSQLDAO.updateState"
+      _ <- runAsSerializableTransaction(query) ?~> "FAILED: run in AnnotationSQLDAO.updateState"
       _ = logger.info(
         s"Updated isLockedByOwner of Annotation $id to $isLocked, access context: ${ctx.toStringAnonymous}"
       )
@@ -872,14 +858,9 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
     val insertQueries = teams.map(teamId => q"""INSERT INTO webknossos.annotation_sharedTeams(_annotation, _team)
                                                 VALUES($annotationId, $teamId)""".asUpdate)
 
-    val composedQuery = DBIO.sequence(List(clearQuery) ++ insertQueries)
     for {
       _ <- assertUpdateAccess(annotationId)
-      _ <- run(
-        composedQuery.transactionally.withTransactionIsolation(Serializable),
-        retryCount = 50,
-        retryIfErrorContains = List(transactionSerializationError)
-      )
+      _ <- runAsSerializableTransaction(clearQuery +: insertQueries)
     } yield ()
   }
 }

@@ -4,6 +4,7 @@ import com.scalableminds.util.box.Box
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
+import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import Box.tryo
 
 import java.nio.ByteBuffer
@@ -12,7 +13,12 @@ import ucar.ma2.{Array as MultiArray, DataType as MADataType}
 import scala.concurrent.ExecutionContext
 
 object ChunkTyper {
-  def createFromHeader(header: DatasetHeader): ChunkTyper = header.resolvedDataType match {
+  // Uses storedDataType, i.e. the data type of the chunk bytes on disk. This equals resolvedDataType
+  // unless a data-type-changing array->array codec (e.g. Zarr3 cast_value) is in the codec chain, in
+  // which case the array->array decode converts to resolvedDataType after typing.
+  def createFromHeader(header: DatasetHeader): ChunkTyper = createForDataType(header, header.storedDataType)
+
+  def createForDataType(header: DatasetHeader, dataType: ArrayDataType): ChunkTyper = dataType match {
     case ArrayDataType.i1 | ArrayDataType.u1 => new ByteChunkTyper(header)
     case ArrayDataType.i2 | ArrayDataType.u2 => new ShortChunkTyper(header)
     case ArrayDataType.i4 | ArrayDataType.u4 => new IntChunkTyper(header)

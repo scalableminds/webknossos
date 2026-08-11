@@ -51,6 +51,30 @@ case class Zarr3ArrayHeader(
 
   override def resolvedDataType: ArrayDataType = Zarr3DataType.toArrayDataType(zarr3DataType)
 
+  private def castValueCodec: Option[CastValueCodecConfiguration] =
+    CodecTreeExplorer.findOne {
+      case _: CastValueCodecConfiguration => true
+      case _                              => false
+    }(codecs).collect { case c: CastValueCodecConfiguration => c }
+
+  // The stored (on-disk) data type differs from the logical resolvedDataType when a cast_value codec
+  // narrows the data type on encode. scale_offset and reshape are dtype-preserving, so the single
+  // cast_value.data_type is unambiguously the stored dtype.
+  override def storedDataType: ArrayDataType =
+    castValueCodec
+      .flatMap(c => Zarr3DataType.fromString(c.data_type))
+      .map(Zarr3DataType.toArrayDataType)
+      .getOrElse(resolvedDataType)
+
+  // The skip-typing shortcut returns raw, untyped chunk bytes. It is only valid when no array->array
+  // codec transforms values or the data type. reshape is a no-op and may keep the shortcut.
+  override def isSkipTypingShortcutSupported: Boolean =
+    CodecTreeExplorer.findOne {
+      case _: ScaleOffsetCodecConfiguration => true
+      case _: CastValueCodecConfiguration   => true
+      case _                                => false
+    }(codecs).isEmpty
+
   override def compressorImpl: Compressor = new NullCompressor // Not used, since specific chunk reader is used
 
   override def voxelOffset: Array[Int] = Array.fill(rank)(0)
@@ -62,11 +86,22 @@ case class Zarr3ArrayHeader(
     s
   }
 
+  private def countCodecs(condition: CodecConfiguration => Boolean)(codecsToSearch: Seq[CodecConfiguration]): Int =
+    codecsToSearch.map {
+      case s: ShardingCodecConfiguration => (if (condition(s)) 1 else 0) + countCodecs(condition)(s.codecs)
+      case c: CodecConfiguration         => if (condition(c)) 1 else 0
+    }.sum
+
   def assertValid: Box[Unit] =
     for {
       _ <- Box.fromBool(zarr_format == 3) ?~> s"Expected zarr_format 3, got $zarr_format"
       _ <- Box.fromBool(node_type == "array") ?~> s"Expected node_type 'array', got $node_type"
       _ <- tryo(resolvedDataType) ?~> "Data type is not supported"
+      _ <- Box.fromBool(countCodecs {
+        case _: CastValueCodecConfiguration => true
+        case _                              => false
+      }(codecs) <= 1) ?~> "At most one cast_value codec is supported"
+      _ <- tryo(storedDataType) ?~> "Stored data type (cast_value target) is not supported"
       _ <- shardingCodecConfiguration
         .map(_.isSupported)
         .getOrElse(Full(())) ?~> "Sharding codec configuration is not supported"
@@ -236,6 +271,10 @@ object Zarr3ArrayHeader extends JsonImplicits {
             case JsString(GzipCodecConfiguration.name)      => c(configurationKey).validate[GzipCodecConfiguration]
             case JsString(BloscCodecConfiguration.name)     => c(configurationKey).validate[BloscCodecConfiguration]
             case JsString(ZstdCodecConfiguration.name)      => c(configurationKey).validate[ZstdCodecConfiguration]
+            case JsString(ReshapeCodecConfiguration.name)   => c(configurationKey).validate[ReshapeCodecConfiguration]
+            case JsString(ScaleOffsetCodecConfiguration.name) =>
+              c(configurationKey).validate[ScaleOffsetCodecConfiguration]
+            case JsString(CastValueCodecConfiguration.name) => c(configurationKey).validate[CastValueCodecConfiguration]
             case JsString(Crc32CCodecConfiguration.name)    =>
               JsSuccess(Crc32CCodecConfiguration) // Crc32 codec has no configuration
             case JsString(ShardingCodecConfiguration.name) => readShardingCodecConfiguration(c(configurationKey))

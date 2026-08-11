@@ -7,6 +7,17 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
+## [26.08.1](https://github.com/scalableminds/webknossos/releases/tag/26.08.1) - 2026-08-03
+[Commits](https://github.com/scalableminds/webknossos/compare/26.08.0...26.08.1)
+
+### Fixed
+- Fixed keyboard shortcuts silently breaking during an annotation session. After typing a shifted punctuation character such as `?` or `:` into any text field (comment, tree or segment name, search box), every single-key shortcut — `1`, `2`, `3`, `b`, `j`, `c`, space, the arrow keys — stopped working until the browser window lost and regained focus. [#9834](https://github.com/scalableminds/webknossos/pull/9834)
+- Fixed `Cmd + S`, `Cmd + Z` and `Cmd + Y` not working on macOS. Because saving never ran, `Cmd + S` also opened the browser's "Save Page" dialog. [#9834](https://github.com/scalableminds/webknossos/pull/9834)
+- Fixed <kbd>Esc</kbd> not doing anything in plane mode, which meant an in-progress quick select could not be cancelled. [#9834](https://github.com/scalableminds/webknossos/pull/9834)
+- Fixed a partially typed `Ctrl + K` shortcut staying armed indefinitely, so that the next single key pressed — however much later — switched the tool instead of triggering its own shortcut. [#9834](https://github.com/scalableminds/webknossos/pull/9834)
+- Fixed shortcuts on punctuation keys being displayed incorrectly in the info tab, and shortcut collisions not being reported when re-recording a key that a default shortcut already used. [#9834](https://github.com/scalableminds/webknossos/pull/9834)
+- Fixed the raw JSON view of the keyboard shortcut settings falling out of sync with the table view after resetting to defaults. [#9834](https://github.com/scalableminds/webknossos/pull/9834)
+
 ## [26.08.0](https://github.com/scalableminds/webknossos/releases/tag/26.08.0) - 2026-07-22
 [Commits](https://github.com/scalableminds/webknossos/compare/26.07.03...26.08.0)
 
@@ -63,7 +74,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a crash when the network request failed that checks whether WEBKNOSSOS is in maintenance mode. [#9739](https://github.com/scalableminds/webknossos/pull/9739)
 - Fixed an issue with importing remote datasets that have spaces in their URLs. [#9746](https://github.com/scalableminds/webknossos/pull/9746)
 - Fixed that a previously disabled tool wasn't automatically re-enabled if it became available again (e.g., because of adapting the zoom level). [#9747](https://github.com/scalableminds/webknossos/pull/9747)
-- Fixed that the collapsed tools in the tool bar only showed it dropdown menu when the icon was hovered. Now the dropdown shows when hovering any part of the button. [#9755](https://github.com/scalableminds/webknossos/pull/9755)
+- Fixed that the collapsed tools in the tool bar only showed its dropdown menu when the icon was hovered. Now the dropdown shows when hovering any part of the button. [#9755](https://github.com/scalableminds/webknossos/pull/9755)
 - Fixed a concurrency bug when two users created a bounding box in the same annotation at the same time (only possible with the experimental live collaboration feature). [#9756](https://github.com/scalableminds/webknossos/pull/9756)
 - The bounding box tool can now be used in the experimental live collaboration mode. Bounding box creation is deferred while the annotation is synchronizing with remote changes (a spinner is shown) so that no changes are lost. [#9756](https://github.com/scalableminds/webknossos/pull/9756)
 - Fixed a bug where downloading an annotation would incorrectly trigger a "This annotation is currently being edited by someone else" toast for shared/collaborative annotations. [#9768](https://github.com/scalableminds/webknossos/pull/9768)

@@ -19,7 +19,7 @@ import {
   findDataPositionForVolumeTracing,
   startComputeSegmentIndexFileJob,
 } from "admin/rest_api";
-import { App, Dropdown, Flex, type MenuProps, Switch } from "antd";
+import { App, Dropdown, Flex, type MenuProps, Switch, Typography } from "antd";
 import type { ItemType } from "antd/es/menu/interface";
 import type { SwitchChangeEventHandler } from "antd/es/switch";
 import FastTooltip from "components/fast_tooltip";
@@ -322,11 +322,9 @@ export default function LayerSettingsHeader({
 
     return (
       <FastTooltip title="This volume tracing does not have data at all magnifications.">
-        <WarningOutlined
-          style={{
-            color: "var(--ant-color-warning)",
-          }}
-        />
+        <Typography.Text type="warning">
+          <WarningOutlined />
+        </Typography.Text>
       </FastTooltip>
     );
   };
@@ -652,11 +650,9 @@ export default function LayerSettingsHeader({
             title={`No data is being rendered for this layer as the minimum and maximum of the range have the same values.
             If you want to hide this layer, you can also disable it with the switch on the left.`}
           >
-            <WarningOutlined
-              style={{
-                color: "var(--ant-color-warning)",
-              }}
-            />
+            <Typography.Text type="warning">
+              <WarningOutlined />
+            </Typography.Text>
           </FastTooltip>
         ) : null}
         {isColorLayer ? null : getOptionalDownsampleVolumeIcon(maybeVolumeTracing)}

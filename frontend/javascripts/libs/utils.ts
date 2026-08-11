@@ -534,6 +534,27 @@ export function animationFrame(maxTimeout?: number): Promise<number | undefined>
   return Promise.race([rafPromise, timeoutPromise]);
 }
 
+// Waits until the user is actually attentive, i.e., they moved the mouse or pressed a key.
+// This is more reliable than the Page Visibility API, which can still report the page as visible
+// even when another OS window fully covers it.
+// On touch devices, mouse/keyboard events don't occur, so an animation frame is used as a fallback.
+export function ensureUserIsAttentive(): Promise<void> {
+  const isTouchDevice = "ontouchstart" in window || navigator.maxTouchPoints > 0;
+  if (isTouchDevice) {
+    return animationFrame().then(() => {});
+  }
+
+  return new Promise((resolve) => {
+    const onUserActivity = () => {
+      window.removeEventListener("mousemove", onUserActivity);
+      window.removeEventListener("keydown", onUserActivity);
+      resolve();
+    };
+    window.addEventListener("mousemove", onUserActivity);
+    window.addEventListener("keydown", onUserActivity);
+  });
+}
+
 export function diffArrays<T>(
   stateA: Array<T>,
   stateB: Array<T>,

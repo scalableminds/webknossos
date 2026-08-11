@@ -254,24 +254,27 @@ export function useSegmentStatistics({
     gcTime: 0,
   });
 
-  type RawQuery<T> = { data: T[] | undefined; isLoading: boolean; isError: boolean };
+  type RawQuery<T> = { data: T[] | undefined; isError: boolean };
 
-  // A disabled query reports isLoading: false, which consumers would render as "no value" rather
-  // than "pending". The three core statistics are therefore reported as loading while the file
-  // info that decides their mag is still being resolved.
-  const toCoreStatistic = <T>(query: RawQuery<T>): SegmentStatistic<T> =>
-    canRequest && (isLoadingFileInfo || areSegmentStatisticsAvailable)
+  /*
+   * Reports a statistic as pending whenever it has been requested but has neither arrived nor
+   * failed, rather than forwarding react-query's `isLoading`. That flag is `isPending && isFetching`,
+   * and `isFetching` is false both before the fetch has actually been kicked off and for as long as
+   * PersistQueryClientProvider is restoring the cache from localStorage — in either window a
+   * consumer would render an empty cell instead of a spinner.
+   */
+  const toStatistic = <T>(query: RawQuery<T>, isRequested: boolean): SegmentStatistic<T> =>
+    isRequested
       ? {
           data: query.data,
-          isLoading: isLoadingFileInfo || query.isLoading,
+          isLoading: query.data === undefined && !query.isError,
           isError: query.isError,
         }
       : NOT_REQUESTED;
 
-  const toFileStatistic = <T>(query: RawQuery<T>, isAvailable: boolean): SegmentStatistic<T> =>
-    isReady && isAvailable
-      ? { data: query.data, isLoading: query.isLoading, isError: query.isError }
-      : NOT_REQUESTED;
+  // The three core statistics count as requested while the file info is still resolving, since they
+  // are only waiting for the mag that it decides. The file-backed ones cannot be known to exist yet.
+  const isCoreRequested = canRequest && (isLoadingFileInfo || areSegmentStatisticsAvailable);
 
   return {
     areSegmentStatisticsAvailable,
@@ -279,12 +282,12 @@ export function useSegmentStatistics({
     statisticsMag,
     boundingBoxMag,
     availableFileMetrics,
-    volumes: toCoreStatistic(volumes),
-    boundingBoxes: toCoreStatistic(boundingBoxes),
-    surfaceAreas: toCoreStatistic(surfaceAreas),
-    maxDistances: toFileStatistic(maxDistances, availableFileMetrics.maxDistance),
-    sphericities: toFileStatistic(sphericities, availableFileMetrics.sphericity),
-    centersOfMass: toFileStatistic(centersOfMass, availableFileMetrics.centerOfMass),
-    covarianceMatrices: toFileStatistic(covarianceMatrices, availableFileMetrics.covariance),
+    volumes: toStatistic(volumes, isCoreRequested),
+    boundingBoxes: toStatistic(boundingBoxes, isCoreRequested),
+    surfaceAreas: toStatistic(surfaceAreas, isCoreRequested),
+    maxDistances: toStatistic(maxDistances, isReady && availableFileMetrics.maxDistance),
+    sphericities: toStatistic(sphericities, isReady && availableFileMetrics.sphericity),
+    centersOfMass: toStatistic(centersOfMass, isReady && availableFileMetrics.centerOfMass),
+    covarianceMatrices: toStatistic(covarianceMatrices, isReady && availableFileMetrics.covariance),
   };
 }

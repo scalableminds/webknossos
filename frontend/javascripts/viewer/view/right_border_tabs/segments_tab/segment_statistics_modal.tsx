@@ -1,4 +1,4 @@
-import { Alert, Modal, Spin, Table } from "antd";
+import { Alert, Modal, Space, Spin, Table } from "antd";
 import { formatNumberToArea, formatNumberToLength, formatNumberToVolume } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import { pluralize } from "libs/utils";
@@ -25,7 +25,8 @@ type Props = {
   tracingId: string | undefined;
   visibleSegmentationLayer: APISegmentationLayer;
   relevantSegments: Segment[];
-  parentGroup: number;
+  /** Appended to the exported filename to tell exports of the same layer apart. */
+  csvFilenameSuffix: string | null;
   segmentGroups: SegmentGroup[];
 };
 
@@ -79,7 +80,7 @@ const exportStatisticsToCSV = (
   segmentInformation: SegmentInfo[],
   specs: StatisticSpec[],
   tracingIdOrDatasetName: string,
-  groupIdToExport: number,
+  filenameSuffix: string | null,
 ) => {
   const csvHeader = specs.flatMap((spec) => spec.csvHeaders);
   const segmentStatisticsAsRows = segmentInformation.map((row) =>
@@ -87,9 +88,9 @@ const exportStatisticsToCSV = (
   );
 
   const filename =
-    groupIdToExport === -1
+    filenameSuffix == null
       ? `segmentStatistics_${tracingIdOrDatasetName}.csv`
-      : `segmentStatistics_${tracingIdOrDatasetName}_group-${groupIdToExport}.csv`;
+      : `segmentStatistics_${tracingIdOrDatasetName}_${filenameSuffix}.csv`;
   saveAsCSV(csvHeader, segmentStatisticsAsRows, filename);
 };
 
@@ -98,7 +99,7 @@ export function SegmentStatisticsModal({
   tracingId,
   visibleSegmentationLayer,
   relevantSegments: segments,
-  parentGroup,
+  csvFilenameSuffix,
   segmentGroups,
 }: Props) {
   const dataset = useWkSelector((state) => state.dataset);
@@ -451,37 +452,39 @@ export function SegmentStatisticsModal({
           statisticsList,
           statisticSpecs,
           tracingId || dataset.name,
-          parentGroup,
+          csvFilenameSuffix,
         )
       }
       okText="Export to CSV"
       okButtonProps={{ disabled: isAnyStatisticLoading }}
     >
-      {hasAdditionalCoords && (
-        <Alert
-          title={`These statistics only refer to the current additional ${pluralize(
-            "coordinate",
-            additionalCoordinates?.length || 0,
-          )} ${additionalCoordinateStringForModal}.`}
-          type="info"
-          showIcon
+      <Space vertical size="small">
+        {hasAdditionalCoords && (
+          <Alert
+            title={`These statistics only refer to the current additional ${pluralize(
+              "coordinate",
+              additionalCoordinates?.length || 0,
+            )} ${additionalCoordinateStringForModal}.`}
+            type="info"
+            showIcon
+          />
+        )}
+        {fileInfo != null && (
+          <Alert
+            title={`Statistics are read from a precomputed segment statistics file, which was computed for mag ${fileInfo.mag.join(
+              "-",
+            )}.`}
+            type="info"
+            showIcon
+          />
+        )}
+        <Table
+          dataSource={statisticsList}
+          columns={columns}
+          style={{ whiteSpace: "pre" }}
+          scroll={{ x: "max-content" }}
         />
-      )}
-      {fileInfo != null && (
-        <Alert
-          title={`Statistics are read from a precomputed segment statistics file, which was computed for mag ${fileInfo.mag.join(
-            "-",
-          )}.`}
-          type="info"
-          showIcon
-        />
-      )}
-      <Table
-        dataSource={statisticsList}
-        columns={columns}
-        style={{ whiteSpace: "pre" }}
-        scroll={{ x: "max-content" }}
-      />
+      </Space>
     </Modal>
   );
 }

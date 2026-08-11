@@ -79,9 +79,7 @@ case class PrecomputedScaleHeader(precomputedScale: PrecomputedScale, precompute
 
   override def voxelOffset: Array[Int] = precomputedScale.voxel_offset.getOrElse(Array(0, 0, 0))
 
-  // Neuroglancer precomputed chunk grids are bounded spatial voxel coordinates (unlike a segment-id-keyed
-  // mapping array), so narrowing back to Int here is safe -- chunkIndex is Long only because it comes from
-  // the shared DatasetArray/ChunkUtils chunk-addressing interface.
+  // Neuroglancer precomputed chunk grids are bounded spatial voxel coordinates, so narrowing back to Int here is safe.
   def chunkIndexToNDimensionalBoundingBox(chunkIndex: Array[Long]): Array[(Int, Int)] =
     chunkIndex.zipWithIndex.map { chunkIndexWithDim =>
       val (chunkIndexAtDim, dim) = chunkIndexWithDim

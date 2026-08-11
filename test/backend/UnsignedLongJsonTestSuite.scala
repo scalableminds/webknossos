@@ -1,6 +1,7 @@
 package backend
 
-import com.scalableminds.webknossos.datastore.helpers.{UnsignedLong, UnsignedLongJson, UnsignedLongOps}
+import com.scalableminds.util.tools.MathUtils
+import com.scalableminds.webknossos.datastore.helpers.{UnsignedLong, UnsignedLongJson}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   CreateSegmentVolumeAction,
   MergeSegmentItemsVolumeAction,
@@ -133,22 +134,22 @@ class UnsignedLongJsonTestSuite extends AsyncWordSpec {
     }
   }
 
-  "UnsignedLongOps.maxUnsigned/minUnsigned" should {
+  "MathUtils.maxUnsignedUnsigned/minUnsigned" should {
     "agree with signed max/min when both values are non-negative" in {
-      assert(UnsignedLongOps.maxUnsigned(5L, 12L) == 12L)
-      assert(UnsignedLongOps.minUnsigned(5L, 12L) == 5L)
+      assert(MathUtils.maxUnsigned(5L, 12L) == 12L)
+      assert(MathUtils.minUnsigned(5L, 12L) == 5L)
     }
     "treat a negative bit pattern as the larger uint64 value" in {
       // -1L's bit pattern is 2^64 - 1, the largest possible uint64 value.
-      assert(UnsignedLongOps.maxUnsigned(-1L, 5L) == -1L)
-      assert(UnsignedLongOps.minUnsigned(-1L, 5L) == 5L)
+      assert(MathUtils.maxUnsigned(-1L, 5L) == -1L)
+      assert(MathUtils.minUnsigned(-1L, 5L) == 5L)
       // Long.MinValue's bit pattern is 2^63, also larger than any non-negative Long.
-      assert(UnsignedLongOps.maxUnsigned(Long.MinValue, Long.MaxValue) == Long.MinValue)
-      assert(UnsignedLongOps.minUnsigned(Long.MinValue, Long.MaxValue) == Long.MaxValue)
+      assert(MathUtils.maxUnsigned(Long.MinValue, Long.MaxValue) == Long.MinValue)
+      assert(MathUtils.minUnsigned(Long.MinValue, Long.MaxValue) == Long.MaxValue)
     }
     "return either argument when both are equal" in {
-      assert(UnsignedLongOps.maxUnsigned(7L, 7L) == 7L)
-      assert(UnsignedLongOps.minUnsigned(7L, 7L) == 7L)
+      assert(MathUtils.maxUnsigned(7L, 7L) == 7L)
+      assert(MathUtils.minUnsigned(7L, 7L) == 7L)
     }
   }
 

@@ -4,8 +4,8 @@ import java.util
 import ch.systemsx.cisd.hdf5.{HDF5DataSet, IHDF5Reader}
 import com.scalableminds.util.box.{Box, Full}
 import com.scalableminds.util.cache.LRUConcurrentCache
+import com.scalableminds.util.tools.MathUtils
 import com.scalableminds.webknossos.datastore.dataformats.SafeCacheable
-import com.scalableminds.webknossos.datastore.helpers.UnsignedLongOps.{maxUnsigned, minUnsigned}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, LayerAttachment}
 import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceDataRequest}
 import com.typesafe.scalalogging.LazyLogging
@@ -150,7 +150,8 @@ class BoundingBoxCache(
         while (z < requestedCuboidBottomRight.voxelZInMag && z < dataLayerBoxBottomRight.z) {
           // get cached values for current bb and update the reader range by extending if necessary
           cache.get((x, y, z)).foreach { value =>
-            range = (minUnsigned(range._1, value.idRange._1), maxUnsigned(range._2, value.idRange._2))
+            range =
+              (MathUtils.minUnsigned(range._1, value.idRange._1), MathUtils.maxUnsigned(range._2, value.idRange._2))
             currDimensions = value.dimensions
           }
           z = z + currDimensions._3

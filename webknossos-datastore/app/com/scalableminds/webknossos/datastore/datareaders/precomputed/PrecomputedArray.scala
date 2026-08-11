@@ -78,9 +78,7 @@ class PrecomputedArray(
   val shardingSpecification: ShardingSpecification =
     header.precomputedScale.sharding.getOrElse(ShardingSpecification.empty)
 
-  // Neuroglancer precomputed chunk grids are bounded spatial voxel coordinates (unlike a segment-id-keyed
-  // mapping array), so narrowing back to Int here is safe -- chunkIndex is Long only because it comes from
-  // the shared DatasetArray/ChunkUtils chunk-addressing interface.
+  // Neuroglancer precomputed chunk grids are bounded spatial voxel coordinates, so narrowing back to Int here is safe.
   private def getHashForChunk(chunkIndex: Array[Long]): Long =
     CompressedMortonCode.encode(chunkIndex.map(_.toInt), header.gridSize)
 

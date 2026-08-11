@@ -5,8 +5,8 @@ import {
   getSynapsesOfAgglomerates,
   getSynapseTypes,
 } from "admin/rest_api";
+import { stringToAntdColorPresetRgb } from "libs/colors";
 import DiffableMap from "libs/diffable_map";
-import { stringToAntdColorPresetRgb } from "libs/format_utils";
 import Toast from "libs/toast";
 import { diffArrays, map3, safeZipObject, unique } from "libs/utils";
 import type { APIConnectomeFile, APIDataset, APISegmentationLayer } from "types/api_types";

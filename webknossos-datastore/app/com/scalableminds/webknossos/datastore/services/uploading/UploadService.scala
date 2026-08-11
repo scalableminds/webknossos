@@ -161,11 +161,6 @@ object LinkedLayerIdentifier {
   implicit val jsonFormat: OFormat[LinkedLayerIdentifier] = Json.format[LinkedLayerIdentifier]
 }
 
-case class CancelUploadInformation(uploadId: String)
-object CancelUploadInformation {
-  implicit val jsonFormat: OFormat[CancelUploadInformation] = Json.format[CancelUploadInformation]
-}
-
 class UploadService @Inject() (
     dataSourceService: DataSourceService,
     datasetUploadMetadataStore: DatasetUploadMetadataStore,

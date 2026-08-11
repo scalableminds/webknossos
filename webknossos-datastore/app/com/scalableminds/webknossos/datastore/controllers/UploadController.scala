@@ -10,7 +10,6 @@ import com.scalableminds.webknossos.datastore.services.{
 }
 import com.scalableminds.webknossos.datastore.services.uploading.{
   AttachmentUploadInfo,
-  CancelUploadInformation,
   DatasetUploadInfo,
   MagUploadInfo,
   UploadDomain,
@@ -214,15 +213,15 @@ class UploadController @Inject() (
     }
   }
 
-  def cancelUpload(uploadDomain: String, uploadId: String): Action[CancelUploadInformation] =
-    Action.fox(validateJson[CancelUploadInformation]) { implicit request =>
+  def cancelUpload(uploadDomain: String, uploadId: String): Action[AnyContent] =
+    Action.fox { implicit request =>
       for {
         uploadDomainValidated <- UploadDomain.fromString(uploadDomain).toFox
         _ <- Fox.fromBool(
           uploadDomainValidated == UploadDomain.dataset
         ) ?~> "Cancel upload is only supported for datasets."
         datasetIdFox = uploadService.isKnownUpload(uploadId, uploadDomainValidated).flatMap {
-          case false => Fox.failure(Msg.Dataset.Upload.noSuchUpload(request.body.uploadId, uploadDomain))
+          case false => Fox.failure(Msg.Dataset.Upload.noSuchUpload(uploadId, uploadDomain))
           case true  => uploadService.getDatasetIdByUploadId(uploadId, uploadDomainValidated)
         }
         result <- datasetIdFox.flatMap { datasetId =>

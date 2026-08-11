@@ -48,6 +48,7 @@ import type { Mapping, NumberLike } from "viewer/store";
 import Store from "viewer/store";
 import type { MagInfo } from "../helpers/mag_info";
 import { getConstructorForElementClass } from "../helpers/typed_buffer";
+import { getMappedIdAsBigInt } from "../sagas/volume/proofreading/preparation_sagas";
 
 const warnAboutTooManyAllocations = once(() => {
   const msg =
@@ -227,7 +228,7 @@ class DataCube {
     const mapping = this.getMapping();
 
     if (mapping != null && this.isMappingEnabled()) {
-      mappedId = isNumberMap(mapping) ? mapping.get(Number(unmappedId)) : mapping.get(unmappedId);
+      mappedId = getMappedIdAsBigInt(mapping, unmappedId);
     }
     if (mappedId == null || (typeof mappedId === "number" && Number.isNaN(mappedId))) {
       // The id couldn't be mapped.

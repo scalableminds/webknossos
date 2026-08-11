@@ -60,7 +60,7 @@ export const SegmentDetailsPanel: React.FC<SegmentDetailsPanelProps> = ({
       if (activeSegments.length !== 1) {
         return;
       }
-      const segment = segments?.getNullable(BigInt(activeSegments[0]));
+      const segment = segments?.getNullable(activeSegments[0]);
       if (segment == null) {
         return;
       }
@@ -81,7 +81,7 @@ export const SegmentDetailsPanel: React.FC<SegmentDetailsPanelProps> = ({
   const { segments: selectedSegmentIds, group: selectedGroupId } = selectedIds;
 
   if (selectedSegmentIds.length === 1) {
-    const segment = segments?.getNullable(BigInt(selectedSegmentIds[0]));
+    const segment = segments?.getNullable(selectedSegmentIds[0]);
     if (segment == null) {
       return <>Cannot find details for selected segment.</>;
     }

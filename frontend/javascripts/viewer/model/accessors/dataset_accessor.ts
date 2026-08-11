@@ -427,8 +427,7 @@ export function isElementClassSupported(layerInfo: DataLayerType): boolean {
 
     case "uint64":
     case "int64": {
-      // We only support 64 bit for segmentation. Segment ids are bigint throughout the
-      // frontend, so the full uint64/int64 range is handled (no longer capped at 2**53-1).
+      // We only support 64 bit for segmentation.
       return layerInfo.category === "segmentation";
     }
 

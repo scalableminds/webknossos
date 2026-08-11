@@ -35,7 +35,7 @@ type PartialBoundingBoxWithoutVisibility = Partial<Omit<UserBoundingBox, "isVisi
 // type for whoever reads it back (e.g. from the update-action log) while the action creator's
 // own parameter stays bigint-only, so newly-constructed actions may only contain big int.
 // It's purelya type-level marker (the value is passed through unchanged at runtime).
-function legacyNumber<T extends bigint>(value: T): T | number {
+function asBigIntOrNumber<T extends bigint>(value: T): T | number {
   return value;
 }
 
@@ -601,12 +601,12 @@ function LEGACY_updateVolumeTracingAction(
     name: "updateVolumeTracing",
     value: {
       actionTracingId: tracing.tracingId,
-      activeSegmentId: legacyNumber(tracing.activeCellId),
+      activeSegmentId: asBigIntOrNumber(tracing.activeCellId),
       editPosition: position,
       editPositionAdditionalCoordinates,
       editRotation: rotation,
       largestSegmentId:
-        tracing.largestSegmentId != null ? legacyNumber(tracing.largestSegmentId) : null,
+        tracing.largestSegmentId != null ? asBigIntOrNumber(tracing.largestSegmentId) : null,
       hideUnregisteredSegments,
       zoomLevel,
     },
@@ -617,7 +617,7 @@ export function updateLargestSegmentId(largestSegmentId: bigint | null, actionTr
   return {
     name: "updateLargestSegmentId",
     value: {
-      largestSegmentId: largestSegmentId != null ? legacyNumber(largestSegmentId) : null,
+      largestSegmentId: largestSegmentId != null ? asBigIntOrNumber(largestSegmentId) : null,
       actionTracingId,
     },
   } as const;
@@ -628,7 +628,7 @@ export function updateActiveSegmentId(activeSegmentId: bigint, actionTracingId: 
     name: "updateActiveSegmentId",
     value: {
       actionTracingId,
-      activeSegmentId: legacyNumber(activeSegmentId),
+      activeSegmentId: asBigIntOrNumber(activeSegmentId),
     },
   } as const;
 }
@@ -814,7 +814,7 @@ export function createSegmentVolumeAction(
     name: "createSegment",
     value: {
       actionTracingId,
-      id: legacyNumber(id),
+      id: asBigIntOrNumber(id),
       anchorPosition,
       additionalCoordinates,
       name,
@@ -841,7 +841,7 @@ export function LEGACY_updateSegmentVolumeAction(
     name: "updateSegment",
     value: {
       actionTracingId,
-      id: legacyNumber(id),
+      id: asBigIntOrNumber(id),
       anchorPosition,
       additionalCoordinates,
       name,
@@ -870,7 +870,7 @@ export function updateSegmentPartialVolumeAction(
     value: {
       actionTracingId,
       ...shape,
-      id: legacyNumber(shape.id),
+      id: asBigIntOrNumber(shape.id),
     },
   } as const;
 }
@@ -884,7 +884,7 @@ export function updateMetadataOfSegmentUpdateAction(
   return {
     name: "updateMetadataOfSegment",
     value: {
-      id: legacyNumber(id),
+      id: asBigIntOrNumber(id),
       upsertEntriesByKey: enforceValidMetadata(upsertEntriesByKey),
       removeEntriesByKey,
       actionTracingId,
@@ -933,7 +933,7 @@ export function updateSegmentVisibilityVolumeAction(
   return {
     name: "updateSegmentVisibility",
     value: {
-      id: legacyNumber(id),
+      id: asBigIntOrNumber(id),
       actionTracingId,
       isVisible,
     },
@@ -951,10 +951,10 @@ export function mergeSegmentItemsVolumeAction(
     name: "mergeSegmentItems",
     value: {
       actionTracingId,
-      agglomerateId1: legacyNumber(agglomerateId1), // aka "source"
-      agglomerateId2: legacyNumber(agglomerateId2), // aka "target"; will be "swallowed" by source
-      segmentId1: legacyNumber(segmentId1), // the unmapped ID (supervoxel) that belongs to agglomerateId1
-      segmentId2: legacyNumber(segmentId2), // the unmapped ID (supervoxel) that belongs to agglomerateId2
+      agglomerateId1: asBigIntOrNumber(agglomerateId1), // aka "source"
+      agglomerateId2: asBigIntOrNumber(agglomerateId2), // aka "target"; will be "swallowed" by source
+      segmentId1: asBigIntOrNumber(segmentId1), // the unmapped ID (supervoxel) that belongs to agglomerateId1
+      segmentId2: asBigIntOrNumber(segmentId2), // the unmapped ID (supervoxel) that belongs to agglomerateId2
     },
   } as const;
 }
@@ -964,7 +964,7 @@ export function deleteSegmentVolumeAction(id: bigint, actionTracingId: string) {
     name: "deleteSegment",
     value: {
       actionTracingId,
-      id: legacyNumber(id),
+      id: asBigIntOrNumber(id),
     },
   } as const;
 }
@@ -973,7 +973,7 @@ export function deleteSegmentDataVolumeAction(id: bigint, actionTracingId: strin
     name: "deleteSegmentData",
     value: {
       actionTracingId,
-      id: legacyNumber(id),
+      id: asBigIntOrNumber(id),
     },
   } as const;
 }

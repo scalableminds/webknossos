@@ -1,6 +1,6 @@
 package backend
 
-import com.scalableminds.util.tools.MathUtils
+import com.scalableminds.util.tools.{JsonHelper, MathUtils}
 import com.scalableminds.webknossos.datastore.helpers.UnsignedLong
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   CreateSegmentVolumeAction,
@@ -129,6 +129,73 @@ class UnsignedLongTestSuite extends AsyncWordSpec {
         "actionTracingId" -> "someTracingId"
       )
       assert(badJson.validate[CreateSegmentVolumeAction](using CreateSegmentVolumeAction.jsonFormat).isError)
+    }
+  }
+
+  "UnsignedLong.downgradeToPlainNumberIfSafe" should {
+    "rewrite a bigint envelope within the JS-safe-integer range as a plain JsNumber" in {
+      assert(
+        UnsignedLong.downgradeToPlainNumberIfSafe(
+          Json.obj("customJsonEncoding" -> "bigint", "value" -> "12345")
+        ) == JsNumber(12345)
+      )
+      assert(
+        UnsignedLong.downgradeToPlainNumberIfSafe(
+          Json.obj("customJsonEncoding" -> "bigint", "value" -> "9007199254740991") // 2^53 - 1
+        ) == JsNumber(BigDecimal("9007199254740991"))
+      )
+      assert(
+        UnsignedLong.downgradeToPlainNumberIfSafe(Json.obj("customJsonEncoding" -> "bigint", "value" -> "0"))
+          == JsNumber(0)
+      )
+    }
+    "leave a bigint envelope above the JS-safe-integer range untouched" in {
+      val tooLarge = Json.obj("customJsonEncoding" -> "bigint", "value" -> "9007199254740992") // 2^53
+      assert(UnsignedLong.downgradeToPlainNumberIfSafe(tooLarge) == tooLarge)
+      val trueUint64 = Json.obj("customJsonEncoding" -> "bigint", "value" -> "18446744073709551615") // 2^64 - 1
+      assert(UnsignedLong.downgradeToPlainNumberIfSafe(trueUint64) == trueUint64)
+    }
+    "leave non-envelope values (including plain numbers) untouched" in {
+      assert(UnsignedLong.downgradeToPlainNumberIfSafe(JsNumber(42)) == JsNumber(42))
+      assert(UnsignedLong.downgradeToPlainNumberIfSafe(JsString("hello")) == JsString("hello"))
+      assert(UnsignedLong.downgradeToPlainNumberIfSafe(Json.obj("foo" -> "bar")) == Json.obj("foo" -> "bar"))
+    }
+  }
+
+  "JsonHelper.patchKeyRecursively combined with removeKeyRecursively (as used for datasource-properties.json)" should {
+    "downgrade largestSegmentId to a plain number when safe, drop resolutions, and recurse into nested layers" in {
+      val dataSourceJson = Json.obj(
+        "dataLayers" -> Json.arr(
+          Json.obj(
+            "name" -> "segmentation",
+            "largestSegmentId" -> Json.toJson(UnsignedLong(123L)),
+            "resolutions" -> Json.arr(1, 2, 4)
+          ),
+          Json.obj(
+            "name" -> "hugeSegmentation",
+            "largestSegmentId" -> Json.toJson(UnsignedLong(-1L)) // 2^64 - 1, must stay a bigint envelope
+          )
+        )
+      )
+      val withoutResolutions = JsonHelper.removeKeyRecursively(dataSourceJson, Set("resolutions"))
+      val patched =
+        JsonHelper.patchKeyRecursively(withoutResolutions, "largestSegmentId")(
+          UnsignedLong.downgradeToPlainNumberIfSafe
+        )
+      assert(
+        patched == Json.obj(
+          "dataLayers" -> Json.arr(
+            Json.obj("name" -> "segmentation", "largestSegmentId" -> JsNumber(123)),
+            Json.obj(
+              "name" -> "hugeSegmentation",
+              "largestSegmentId" -> Json.obj(
+                "customJsonEncoding" -> "bigint",
+                "value" -> "18446744073709551615"
+              )
+            )
+          )
+        )
+      )
     }
   }
 

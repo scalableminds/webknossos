@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.helpers
 
 import com.scalableminds.util.box.Box
 import com.scalableminds.util.box.Box.tryo
-import play.api.libs.json.{Format, JsError, JsNumber, JsObject, JsString, JsSuccess, Reads, Writes}
+import play.api.libs.json.{Format, JsError, JsNumber, JsObject, JsString, JsSuccess, JsValue, Reads, Writes}
 
 /*
  * A Long that is assumed to always be unsigned, so uint64.
@@ -45,4 +45,22 @@ object UnsignedLong {
   )
 
   implicit val jsonFormat: Format[UnsignedLong] = Format(jsonReads, jsonWrites)
+
+  // The largest integer JavaScript (and thus legacy consumers of the plain-JsNumber encoding) can represent exactly.
+  private val jsMaxSafeInteger: Long = 9007199254740991L // 2^53 - 1
+
+  // Rewrites a value written by jsonWrites (the tagged bigint envelope) back into a plain JsNumber, for
+  // backwards compatibility with readers that only understand plain numbers. Only safe for values that fit
+  // the legacy JS-safe-integer range; larger values are left as the bigint envelope, since downgrading them
+  // would silently lose precision. Values that are not a recognized envelope are returned unchanged.
+  def downgradeToPlainNumberIfSafe(json: JsValue): JsValue =
+    json match {
+      case obj: JsObject if (obj \ customEncodingKey).asOpt[String].contains(bigIntEncodingName) =>
+        (obj \ "value").asOpt[String].flatMap(fromString(_).toOption) match {
+          case Some(value) if java.lang.Long.compareUnsigned(value, jsMaxSafeInteger) <= 0 =>
+            JsNumber(BigDecimal(value))
+          case _ => json
+        }
+      case _ => json
+    }
 }

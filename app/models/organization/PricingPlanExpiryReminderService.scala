@@ -107,9 +107,12 @@ object PricingPlanExpiryReminderService {
   def daysUntil(instant: Instant, now: Instant): Long =
     math.ceil((instant.epochMillis - now.epochMillis).toDouble / (1 day).toMillis).toLong
 
-  // The configured lead times that the remaining time has already fallen below, ascending.
+  /* The configured lead times that the remaining time has already fallen below, ascending.
+     Once the plan has expired, no reminder is due any more; the app shows an expired-plan banner instead.
+     The query already excludes expired plans, but it uses the database clock, which may differ from ours. */
   def crossedLeadTimesDays(daysRemaining: Long, leadTimesDays: Seq[Int]): List[Int] =
-    leadTimesDays.filter(_ >= daysRemaining).sorted.toList
+    if (daysRemaining <= 0) List.empty
+    else leadTimesDays.filter(_ >= daysRemaining).sorted.toList
 
   // Trials run for a short time only, so they get their own (shorter) set of lead times.
   def leadTimesDaysFor(

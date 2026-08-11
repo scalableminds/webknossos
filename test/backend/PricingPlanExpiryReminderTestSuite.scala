@@ -37,6 +37,12 @@ class PricingPlanExpiryReminderTestSuite extends AsyncWordSpec {
     }
     "be empty if no lead times are configured" in
       assert(crossedLeadTimesDays(1, Seq.empty).isEmpty)
+    // The query excludes expired plans using the database clock, which may differ from ours. Without this,
+    // a plan that is already expired would match every lead time and be announced as expiring "in 0 days".
+    "be empty once the plan has expired" in {
+      assert(crossedLeadTimesDays(0, leadTimesDays).isEmpty)
+      assert(crossedLeadTimesDays(-5, leadTimesDays).isEmpty)
+    }
   }
 
   "leadTimesDaysFor" should {

@@ -193,8 +193,6 @@ const CreditInformation: React.FC<CreditInformationProps> = ({
     (state) => state.activeOrganization?.milliCreditBalance || 0,
   );
 
-  // Jobs storing their results in WEBKNOSSOS are refused by the backend while the storage quota is
-  // exceeded. Thus, don't offer starting them in the first place.
   const isBlockedByStorageQuota = useWkSelector(
     (state) =>
       selectedJobType != null &&
@@ -232,6 +230,15 @@ const CreditInformation: React.FC<CreditInformationProps> = ({
   }, [selectedBoundingBox, boundingBoxVolume]);
 
   const costInCredits = jobCreditCostInfo?.costInMilliCredits;
+
+  const isSubmitDisabled =
+    isFetching ||
+    !selectedModel ||
+    !selectedBoundingBox ||
+    !jobCreditCostInfo?.hasEnoughCredits ||
+    boundingBoxVolume === 0 ||
+    !areParametersValid ||
+    isBlockedByStorageQuota;
 
   let startButtonSuffix = "";
   if (isBlockedByStorageQuota) {
@@ -332,15 +339,7 @@ const CreditInformation: React.FC<CreditInformationProps> = ({
           type="primary"
           block
           size="large"
-          disabled={
-            isFetching ||
-            !selectedModel ||
-            !selectedBoundingBox ||
-            !jobCreditCostInfo?.hasEnoughCredits ||
-            boundingBoxVolume === 0 ||
-            !areParametersValid ||
-            isBlockedByStorageQuota
-          }
+          disabled={isSubmitDisabled}
           onClick={handleStartAnalysis}
         >
           {startButtonTitle}

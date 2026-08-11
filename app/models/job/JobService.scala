@@ -246,10 +246,6 @@ class JobService @Inject() (
       _ = analyticsService.track(RunJobEvent(owner, command))
     } yield job
 
-  /* If the job stores its results in the organization’s WEBKNOSSOS storage, refuse to start it while
-   * the storage quota is exceeded. Otherwise, the results could not be stored once the job is done,
-   * wasting compute time and failing late.
-   */
   private def assertStorageNotExceededFor(command: JobCommand, owner: User): Fox[Unit] =
     for {
       _ <- Fox.runIf(JobCommand.jobsWritingToStorage.contains(command)) {
@@ -300,7 +296,6 @@ class JobService @Inject() (
     for {
       isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
       _ <- Fox.fromBool(isTeamManagerOrAdmin || user.isDatasetManager) ?~> Msg.Job.paidNoAdminOrManager
-      // Checked here as well (and not only in submitJob) so that no credits are reserved for a job that is refused anyway
       _ <- assertStorageNotExceededFor(command, user)
       costInMilliCredits <- calculateJobCostInMilliCredits(jobBoundingBoxInTargetMag, command)
       _ <- Fox.assertTrue(

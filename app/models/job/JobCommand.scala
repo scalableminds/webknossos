@@ -21,13 +21,7 @@ object JobCommand extends ExtendedEnumeration {
   val highPriorityJobs: Set[Value] = Set(convert_to_wkw, export_tiff)
   val lowPriorityJobs: Set[Value] = values.diff(highPriorityJobs)
 
-  /* Jobs that store their results in the organization’s WEBKNOSSOS storage (as new datasets or as
-   * layer attachments). Starting them is refused while the organization’s storage quota is exceeded,
-   * as their results could not be stored. Jobs that only write to the exports directory
-   * (export_tiff, render_animation), report back a value (find_largest_segment_id) or store a model
-   * (train_*) are not included. convert_to_wkw is not included either, since the storage quota is
-   * already checked when reserving the upload it belongs to.
-   */
+  // Jobs storing results as new datasets or layer attachments. They are refused while the storage quota is exceeded.
   val jobsWritingToStorage: Set[Value] = Set(
     align_sections,
     compute_mesh_file,

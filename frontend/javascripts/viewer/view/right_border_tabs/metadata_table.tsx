@@ -59,14 +59,7 @@ function _MetadataTableRows<ItemType extends { metadata: MetadataEntryProto[] }>
         type="text"
         disabled={readOnly}
         style={{ width: 16, height: 19 }}
-        icon={
-          <CloseOutlined
-            style={{
-              color: "var(--ant-color-text-tertiary)",
-              width: 16,
-            }}
-          />
-        }
+        icon={<CloseOutlined />}
         onClick={() => {
           removeMetadataEntryByIndex(item, index);
         }}

@@ -1,11 +1,13 @@
-import { type Tree as AntdTree, type GetRef, Modal, type TreeProps } from "antd";
+import { type Tree as AntdTree, App, type GetRef, type TreeProps } from "antd";
 import app from "app";
 import { useWkSelector } from "libs/react_hooks";
 import { sleep } from "libs/utils";
 import { useCallback, useEffect, useRef } from "react";
 import { useDispatch } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
+import { getSegmentIdForPosition } from "viewer/controller/combinations/volume_handlers";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
+import { getPosition } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { getVisibleSegments } from "viewer/model/accessors/volumetracing_accessor";
 import { getUpdateSegmentActionToToggleVisibility } from "viewer/model/actions/volumetracing_action_helpers";
@@ -78,6 +80,7 @@ function useScrollBenchmark(treeRef: React.RefObject<GetRef<typeof AntdTree> | n
 export function SegmentTreeView(props: Props) {
   const { hierarchy, selection, groupOperations } = props;
   const dispatch = useDispatch();
+  const { modal } = App.useApp();
   const allowUpdate = useWkSelector(mayEditVisibleSegmentation);
   const visibleSegmentationLayer = useWkSelector(getVisibleSegmentationLayer);
   const segmentGroups = useWkSelector((state) => getVisibleSegments(state).segmentGroups);
@@ -87,6 +90,12 @@ export function SegmentTreeView(props: Props) {
         state.uiInformation.activeTool === AnnotationTool.PROOFREAD &&
         state.userConfiguration.selectiveVisibilityInProofreading
       ),
+  );
+  // The segment id at the camera center is looked up once for the whole list. The lookup must not
+  // be memoized on the position (see volume_handlers.ts), so doing it per row would repeat a
+  // transform + mag + cube lookup for every rendered row on every store notification.
+  const centeredSegmentId = useWkSelector((state) =>
+    getSegmentIdForPosition(getPosition(state.flycam)),
   );
 
   const treeRef = useRef<GetRef<typeof AntdTree>>(null);
@@ -211,7 +220,7 @@ export function SegmentTreeView(props: Props) {
 
     if (multiSelection.groupId != null && multiSelection.segmentIds.length > 0) {
       if (multiSelection.segmentIds.length > 1) {
-        Modal.confirm({
+        modal.confirm({
           title: "Do you really want to select this group?",
           content: `You have ${multiSelection.segmentIds.length} selected segments. Do you really want to select this group?
         This will deselect all selected segments.`,
@@ -299,6 +308,7 @@ export function SegmentTreeView(props: Props) {
                     node.type === "segment" ? (
                       <SegmentNodeTitle
                         node={node}
+                        isCentered={centeredSegmentId === node.segment.id}
                         onContextMenu={onSegmentNodeContextMenu}
                         onRenameStart={onRenameStart}
                         onRenameEnd={onRenameEnd}

@@ -1,6 +1,7 @@
 import { Select, type SelectProps } from "antd";
+import { rgbToHex } from "libs/colors";
 import { formatVoxels } from "libs/format_utils";
-import { computeArrayFromBoundingBox, rgbToHex } from "libs/utils";
+import { computeArrayFromBoundingBox } from "libs/utils";
 import type React from "react";
 import { type ReactElement, useCallback } from "react";
 import type { ArrayElement } from "types/type_utils";

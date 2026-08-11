@@ -16,13 +16,13 @@ import type { Vector3, ViewMode } from "viewer/constants";
 import constants, { MappingStatusEnum, ViewModeValues } from "viewer/constants";
 import { applyState } from "viewer/controller/apply_url_state";
 import { getPosition } from "viewer/model/accessors/flycam_accessor";
-import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { getMeshesForCurrentAdditionalCoordinates } from "viewer/model/accessors/volumetracing_accessor";
 import {
   additionalCoordinateToKeyValue,
   parseAdditionalCoordinateKey,
 } from "viewer/model/helpers/nml_helpers";
 import type {
+  CameraData,
   DatasetLayerConfiguration,
   MappingType,
   MeshInformation,
@@ -55,6 +55,10 @@ export type DirectLayerSpecificProps = Mutable<
       "isDisabled" | "intensityRange" | "color" | "isInverted" | "gammaCorrectionValue"
     >
   >
+>;
+export type TdCameraUrlState = Pick<
+  CameraData,
+  "position" | "up" | "left" | "right" | "top" | "bottom"
 >;
 export type UrlStateByLayer = Record<
   string,
@@ -127,6 +131,7 @@ export type UrlManagerState = {
   nativelyRenderedLayerName?: string | null;
   clippingDistance?: number;
   clipSkeletonToCurrentSection?: boolean;
+  tdCamera?: TdCameraUrlState;
 };
 export type PartialUrlManagerState = Partial<UrlManagerState>;
 
@@ -366,8 +371,7 @@ class UrlManager {
 
     const annotation = state.annotation;
     if (annotation.skeleton != null) {
-      const skeletonTracing = enforceSkeletonTracing(annotation);
-      const { showSkeletons } = skeletonTracing;
+      const { showSkeletons } = state.localSkeletonState;
       const layerName = "Skeleton";
 
       stateByLayer[layerName] = {
@@ -384,6 +388,24 @@ class UrlManager {
         : {};
     const { clippingDistance, clipSkeletonToCurrentSection } = state.userConfiguration;
 
+    const tdCamera = state.viewModeData.plane.tdCamera;
+    // The td camera defaults to a degenerate, zero-sized frustum until it is
+    // initialized by the CameraController. Omit it in that case to avoid
+    // encoding meaningless zeros.
+    const tdCameraOptional =
+      tdCamera.left !== tdCamera.right && tdCamera.top !== tdCamera.bottom
+        ? {
+            tdCamera: {
+              position: map3((e) => roundTo(e, 2), tdCamera.position),
+              up: map3((e) => roundTo(e, 2), tdCamera.up),
+              left: roundTo(tdCamera.left, 2),
+              right: roundTo(tdCamera.right, 2),
+              top: roundTo(tdCamera.top, 2),
+              bottom: roundTo(tdCamera.bottom, 2),
+            },
+          }
+        : {};
+
     return {
       position,
       mode,
@@ -395,6 +417,7 @@ class UrlManager {
       ...rotation,
       ...activeNodeOptional,
       ...stateByLayerOptional,
+      ...tdCameraOptional,
     };
   }
 

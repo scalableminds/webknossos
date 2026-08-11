@@ -10,6 +10,7 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.util.geometry.Vec3Double
 import com.scalableminds.util.io.{PathUtils, ZipIO}
+import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.box.Box.tryo
@@ -160,11 +161,6 @@ object LinkedLayerIdentifier {
   implicit val jsonFormat: OFormat[LinkedLayerIdentifier] = Json.format[LinkedLayerIdentifier]
 }
 
-case class CancelUploadInformation(uploadId: String)
-object CancelUploadInformation {
-  implicit val jsonFormat: OFormat[CancelUploadInformation] = Json.format[CancelUploadInformation]
-}
-
 class UploadService @Inject() (
     dataSourceService: DataSourceService,
     datasetUploadMetadataStore: DatasetUploadMetadataStore,
@@ -181,6 +177,7 @@ class UploadService @Inject() (
 )(implicit ec: ExecutionContext)
     extends DirectoryConstants
     with WKWDataFormatHelper
+    with Formatter
     with LazyLogging {
 
   actorSystem.scheduler.scheduleOnce(10 seconds)(cleanUpOrphanUploads())
@@ -830,8 +827,8 @@ class UploadService @Inject() (
           Some("the upload failed")
         )
         Failure(s"Unknown error $label")
-      case Failure(msg, e, _) =>
-        logger.warn(s"Error while $label: $msg, $e")
+      case f: Failure =>
+        logger.warn(s"Error while $label: ${formatFailureChain(f, includeStackTraces = true)}")
         localDatasetDeletionService.deleteOnDisk(
           datasetId,
           unpackToDir,
@@ -1070,6 +1067,7 @@ class UploadService @Inject() (
               strippedPrefix,
               deepFileList.map(_.getFileName.toString)
             )
+            _ <- Fox.fromBool(commonPrefix.startsWith(uploadDir)) ?~> Msg.Dataset.Upload.datasetRootDetectionFailed
             _ <- tryo(
               FileUtils.moveDirectory(new File(commonPrefix.toString), new File(unpackToDir.toString))
             ).toFox ?~> Msg.Dataset.Upload.moveToTargetFailed

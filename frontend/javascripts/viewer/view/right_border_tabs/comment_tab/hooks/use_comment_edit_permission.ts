@@ -21,11 +21,14 @@ export function useCommentEditPermission(): { isDisabled: boolean; disabledReaso
     if (skeletonTracing == null) {
       return true;
     }
-    const activeTree = getActiveTree(skeletonTracing);
-    return getActiveNode(skeletonTracing) == null || !mayEditSkeletonTree(state, activeTree);
+    const activeTree = getActiveTree(state);
+    return (
+      getActiveNode(skeletonTracing, state.localSkeletonState.activeTreeId) == null ||
+      !mayEditSkeletonTree(state, activeTree)
+    );
   });
   const disabledReason = useWkSelector((state) => {
-    const activeTree = getActiveTree(getSkeletonTracing(state.annotation));
+    const activeTree = getActiveTree(state);
     return getReasonForCantEditSkeletonTree(state, activeTree) ?? null;
   });
 

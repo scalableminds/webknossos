@@ -163,10 +163,20 @@ export type SkeletonTracing = TracingBase & {
   readonly type: "skeleton";
   readonly trees: TreeMap;
   readonly treeGroups: Array<TreeGroup>;
-  readonly activeTreeId: number | null | undefined;
   readonly activeNodeId: number | null | undefined;
-  readonly activeGroupId: number | null | undefined;
   readonly cachedMaxNodeId: number;
+};
+// LocalSkeletonState holds user-local skeleton state that is not persisted
+// on the server. It deliberately lives outside of state.annotation.skeleton
+// so that it is not affected by the snapshot/restore machinery used while
+// rebasing in live collaboration mode (compare with LocalSegmentationState).
+// Note that activeTreeId and activeGroupId live here (unlike their sibling
+// activeNodeId) because they are not persisted on the server. The
+// activeTreeId is kept consistent with the activeNodeId (the active node,
+// if set, is always part of the active tree).
+export type LocalSkeletonState = {
+  readonly activeTreeId: number | null | undefined;
+  readonly activeGroupId: number | null | undefined;
   readonly navigationList: NavigationList;
   readonly showSkeletons: boolean;
 };
@@ -213,7 +223,7 @@ export type SegmentJournalEntry = {
 // Note that VolumeTracing should only contain state that is persisted on the
 // server (i.e., state that is synced via the save queue). This is important
 // because the VolumeTracing objects are stashed and restored from
-// RebaseRelevantAnnotationState during rebasing (see save_saga.tsx). Any
+// RebaseRelevantAnnotationState during rebasing (see rebasing_sagas.ts). Any
 // state that is not synced would be reset to the last synced version on
 // every rewinding rebase (see #9559). Local-only state belongs into
 // `state.localSegmentationStateByLayer` instead.
@@ -378,6 +388,7 @@ export type UserConfiguration = {
   readonly sphericalCapRadius: number;
   readonly tdViewDisplayPlanes: TDViewDisplayMode;
   readonly tdViewDisplayDatasetBorders: boolean;
+  readonly tdViewUsePerspectiveCamera: boolean;
   readonly gpuMemoryFactor: number;
   // For volume (and hybrid) annotations, this mode specifies
   // how volume annotations overwrite existing voxels.
@@ -701,7 +712,7 @@ export type LocalSegmentationState = {
   // Note, that it is intentional that the marker position is stored here (in the
   // user-local, per-layer state) instead of within the VolumeTracing. The VolumeTracing
   // objects are stashed and restored from RebaseRelevantAnnotationState during rebasing
-  // (see save_saga.tsx). Storing the marker position there would reset it to the position
+  // (see rebasing_sagas.ts). Storing the marker position there would reset it to the position
   // of the last synced version on every rewinding rebase (see #9559).
   readonly proofreadingMarkerPosition: Vector3 | undefined;
 };
@@ -709,7 +720,7 @@ export type LocalSegmentationState = {
 // LocalAnnotationState holds local, non-persisted state that applies to the whole annotation
 // (in contrast to LocalSegmentationState, which is scoped to a single segmentation layer, and
 // in contrast to StoreAnnotation, which mirrors the persisted/synced annotation and is stashed
-// and restored during rebasing, see save_saga.tsx).
+// and restored during rebasing, see rebasing_sagas.ts).
 export type LocalAnnotationState = {
   // Bounding boxes are shared/mirrored across all tracings of an annotation (see
   // updateUserBoundingBoxes in annotation_reducer.ts), so their id reservations are
@@ -766,6 +777,8 @@ export type WebknossosState = {
     string, // layerName
     LocalSegmentationState
   >;
+  // question to reviewer: Maybe put this somewhere else in the store :thinking:?
+  readonly localSkeletonState: LocalSkeletonState;
   readonly localAnnotationState: LocalAnnotationState;
   readonly operationContext: OperationContextState;
 };

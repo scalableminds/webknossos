@@ -224,13 +224,12 @@ class JobService @Inject() (
   def parameterWrites(job: Job)(using ctx: DBAccessContext): Fox[JsObject] =
     for {
       owner <- userDAO.findOne(job._owner)
-      userAuthToken <- Fox.fromFuture(
-        wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(owner.loginInfo)
-      )
+      userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
+        .createAndInitJobTokenForUser(owner)
     } yield Json.obj(
       "job_id" -> job._id.id,
       "command" -> job.command,
-      "job_kwargs" -> (job.args ++ Json.obj("user_auth_token" -> userAuthToken.id))
+      "job_kwargs" -> (job.args ++ Json.obj("user_auth_token" -> userAuthToken))
     )
 
   def submitJob(command: JobCommand, commandArgs: JsObject, owner: User, dataStoreName: String): Fox[Job] =

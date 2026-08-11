@@ -1,7 +1,7 @@
 import app from "app";
+import { rgbToInt, stringToNormalizedRgbColor } from "libs/colors";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
-import { rgbToInt, stringToColor } from "libs/utils";
 import window from "libs/window";
 import debounce from "lodash-es/debounce";
 import {
@@ -65,6 +65,7 @@ import {
 } from "viewer/model/accessors/flycam_accessor";
 import {
   getSkeletonTracing,
+  isSkeletonLayerVisible,
   isSkeletonSectionClippingActive,
 } from "viewer/model/accessors/skeletontracing_accessor";
 import {
@@ -773,7 +774,7 @@ class SceneController {
       layers.map((layer) => {
         const boundingBox = getLayerBoundingBox(dataset, layer.name);
         const { min, max } = boundingBox;
-        const color = layerBoundingBoxColors[layer.name] ?? stringToColor(layer.name);
+        const color = layerBoundingBoxColors[layer.name] ?? stringToNormalizedRgbColor(layer.name);
         const bbCube = new Cube({
           min,
           max,
@@ -975,8 +976,7 @@ class SceneController {
         true,
       ),
       listenToStoreProperty(
-        (storeState) =>
-          storeState.annotation.skeleton ? storeState.annotation.skeleton.showSkeletons : false,
+        (storeState) => isSkeletonLayerVisible(storeState),
         (showSkeletons) => this.setSkeletonGroupVisibility(showSkeletons),
         true,
       ),

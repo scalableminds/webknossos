@@ -1,5 +1,5 @@
 import { MailOutlined } from "@ant-design/icons";
-import { Button, Card, Col, Form, Input, Row } from "antd";
+import { Button, Card, Col, Form, Input, Row, Typography } from "antd";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -24,7 +24,7 @@ function StartResetPasswordView() {
     <Row className="login-view" justify="center" align="middle">
       <Col>
         <Card className="login-content">
-          <h3>Reset Password</h3>
+          <Typography.Title level={3}>Reset Password</Typography.Title>
           <Form onFinish={onFinish} form={form}>
             <FormItem
               name="email"

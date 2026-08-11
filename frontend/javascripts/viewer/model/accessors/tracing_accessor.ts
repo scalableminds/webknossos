@@ -1,4 +1,4 @@
-import { stringToColor } from "libs/utils";
+import { stringToNormalizedRgbColor } from "libs/colors";
 import compact from "lodash-es/compact";
 import type { TracingType } from "types/api_types";
 import { TracingTypeEnum } from "types/api_types";
@@ -156,19 +156,24 @@ function getLayerBoundingBoxesAsUserBoundingBoxes(state: WebknossosState): UserB
     name: layer.name,
     boundingBox: getLayerBoundingBox(state.dataset, layer.name),
     color:
-      state.temporaryConfiguration.layerBoundingBoxColors[layer.name] ?? stringToColor(layer.name),
+      state.temporaryConfiguration.layerBoundingBoxColors[layer.name] ??
+      stringToNormalizedRgbColor(layer.name),
     isVisible: state.temporaryConfiguration.layerBoundingBoxVisibilities[layer.name] ?? false,
   }));
 }
 
 export const getMipEnabledBBoxes = reuseInstanceOnEquality(
   (state: WebknossosState): MipEnabledBBox[] => {
+    const { mipBBoxSettings } = state.uiInformation;
+    if (Object.keys(mipBBoxSettings).length === 0) {
+      return [];
+    }
     const bboxes = [
       ...getUserBoundingBoxesFromState(state),
       ...getLayerBoundingBoxesAsUserBoundingBoxes(state),
     ];
     return bboxes.flatMap((bbox) => {
-      const configs = state.uiInformation.mipBBoxSettings[bbox.id];
+      const configs = mipBBoxSettings[bbox.id];
       return configs != null && configs.length > 0 ? [{ bbox, configs }] : [];
     });
   },

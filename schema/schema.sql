@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(176);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(178);
 COMMIT TRANSACTION;
 
 
@@ -190,6 +190,7 @@ CREATE TABLE webknossos.dataset_layer_attachments(
   hasLocalData BOOLEAN NOT NULL DEFAULT FALSE,
   type webknossos.LAYER_ATTACHMENT_TYPE NOT NULL,
   dataFormat webknossos.LAYER_ATTACHMENT_DATAFORMAT NOT NULL,
+  credentialId TEXT,
   uploadToPathIsPending BOOLEAN NOT NULL DEFAULT FALSE,
   uploadIsPending BOOLEAN NOT NULL DEFAULT FALSE,
   PRIMARY KEY(_dataset, layerName, name, type)
@@ -559,7 +560,7 @@ CREATE TABLE webknossos.webauthnCredentials(
 );
 
 
-CREATE TYPE webknossos.TOKEN_TYPES AS ENUM ('Authentication', 'DataStore', 'ResetPassword');
+CREATE TYPE webknossos.TOKEN_TYPES AS ENUM ('Authentication', 'DataStore', 'ResetPassword', 'Job');
 CREATE TYPE webknossos.USER_LOGININFO_PROVDERIDS AS ENUM ('credentials');
 CREATE TABLE webknossos.tokens(
   _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
@@ -922,6 +923,9 @@ CREATE INDEX ON webknossos.annotation_privateLinks(accessToken);
 CREATE INDEX ON webknossos.shortLinks(key);
 CREATE INDEX ON webknossos.credit_transactions(credit_state);
 CREATE INDEX ON webknossos.dataset_mags(COALESCE(realPath, path));
+CREATE INDEX ON webknossos.tokens(value);
+CREATE INDEX ON webknossos.tokens(loginInfo_providerID, loginInfo_providerKey, tokenType);
+CREATE INDEX ON webknossos.tokens(expirationDateTime);
 CREATE INDEX ON webknossos.dataset_layer_attachments(path);
 CREATE INDEX ON webknossos.organization_usedStorage_mags(_organization);
 CREATE INDEX ON webknossos.organization_usedStorage_attachments(_organization);

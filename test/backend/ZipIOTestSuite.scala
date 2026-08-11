@@ -1,14 +1,30 @@
 package backend
 
 import com.scalableminds.util.box.{Box, Failure, Full}
-import com.scalableminds.util.io.ZipIO
+import com.scalableminds.util.io.{NamedFunctionStream, ZipIO}
+import com.scalableminds.util.tools.Fox
 import org.scalatest.wordspec.AsyncWordSpec
 
-import java.io.{File, FileOutputStream}
+import java.io.{File, FileOutputStream, OutputStream}
 import java.nio.file.{Files, Path}
-import java.util.zip.{ZipEntry, ZipOutputStream}
+import java.util.zip.{ZipEntry, ZipFile, ZipOutputStream}
+import scala.concurrent.ExecutionContext
 
 class ZipIOTestSuite extends AsyncWordSpec {
+
+  implicit private val ec: ExecutionContext = scala.concurrent.ExecutionContext.global
+
+  private class CloseTrackingOutputStream(underlying: OutputStream) extends OutputStream {
+    var closed = false
+    override def write(b: Int): Unit = underlying.write(b)
+    override def write(b: Array[Byte]): Unit = underlying.write(b)
+    override def write(b: Array[Byte], off: Int, len: Int): Unit = underlying.write(b, off, len)
+    override def flush(): Unit = underlying.flush()
+    override def close(): Unit = {
+      closed = true
+      underlying.close()
+    }
+  }
 
   private def createZip(entryNames: Seq[String]): File = {
     val zipFile = Files.createTempFile("zipio-test", ".zip").toFile
@@ -104,6 +120,46 @@ class ZipIOTestSuite extends AsyncWordSpec {
       assert(result.isDefined)
       assert(Files.exists(targetDir.resolve("a.txt")))
     }
+  }
+
+  "ZipIO.zip" should {
+
+    "write all entries and close the output stream" in {
+      val file = Files.createTempFile("zipio-zip-test", ".zip").toFile
+      file.deleteOnExit()
+      val tracked = new CloseTrackingOutputStream(new FileOutputStream(file))
+      val sources = Iterator(
+        NamedFunctionStream.fromBytes("a.txt", "hello".getBytes),
+        NamedFunctionStream.fromBytes("b.txt", "world".getBytes)
+      )
+
+      ZipIO.zip(sources, tracked).futureBox.map { result =>
+        assert(result.isDefined)
+        assert(tracked.closed)
+        val zf = new ZipFile(file)
+        try {
+          assert(zf.getEntry("a.txt") != null)
+          assert(zf.getEntry("b.txt") != null)
+        } finally zf.close()
+      }
+    }
+
+    "close the output stream even when one of the sources fails" in {
+      val file = Files.createTempFile("zipio-zip-fail-test", ".zip").toFile
+      file.deleteOnExit()
+      val tracked = new CloseTrackingOutputStream(new FileOutputStream(file))
+      val sources = Iterator(
+        NamedFunctionStream.fromBytes("a.txt", "hello".getBytes),
+        NamedFunctionStream("b.txt", (_: OutputStream) => Fox.failure("boom!")),
+        NamedFunctionStream.fromBytes("c.txt", "world".getBytes)
+      )
+
+      ZipIO.zip(sources, tracked).futureBox.map { result =>
+        assert(result.isInstanceOf[Failure])
+        assert(tracked.closed)
+      }
+    }
+
   }
 
   "ZipIO.withUnziped" should {

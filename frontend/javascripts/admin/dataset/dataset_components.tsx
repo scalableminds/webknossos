@@ -1,4 +1,4 @@
-import { Card, Form, type FormInstance, Input, Select } from "antd";
+import { Card, Form, type FormInstance, Input, Select, Typography } from "antd";
 import { FormItemWithInfo } from "dashboard/dataset/helper_components";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import messages from "messages";
@@ -31,9 +31,12 @@ export function CardContainer({
         variant="borderless"
         title={
           <>
-            <h3 style={{ lineHeight: "10px", marginTop: subtitle != null ? "22px" : "12px" }}>
+            <Typography.Title
+              level={3}
+              style={{ lineHeight: "10px", marginTop: subtitle != null ? "22px" : "12px" }}
+            >
               {title}
-            </h3>
+            </Typography.Title>
             <span style={{ fontSize: 12, marginTop: 0, marginLeft: 1, color: "grey" }}>
               {subtitle}
             </span>

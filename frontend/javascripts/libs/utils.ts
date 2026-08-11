@@ -519,12 +519,10 @@ function _busyWaitDevHelper(time: number) {
   }
 }
 
-export function animationFrame(maxTimeout?: number): Promise<number | undefined> {
-  const rafPromise: Promise<ReturnType<typeof window.requestAnimationFrame>> = new Promise(
-    (resolve) => {
-      window.requestAnimationFrame(resolve);
-    },
-  );
+export function animationFrame(maxTimeout?: number): Promise<undefined> {
+  const rafPromise = new Promise<undefined>((resolve) => {
+    window.requestAnimationFrame(() => resolve(undefined));
+  });
 
   if (maxTimeout == null) {
     return rafPromise;
@@ -532,6 +530,31 @@ export function animationFrame(maxTimeout?: number): Promise<number | undefined>
 
   const timeoutPromise = sleep(maxTimeout) as Promise<undefined>;
   return Promise.race([rafPromise, timeoutPromise]);
+}
+
+// Waits until the user is actually attentive, i.e., they moved the mouse or pressed a key.
+// This is more reliable than the Page Visibility API, which can still report the page as visible
+// even when another OS window fully covers it.
+// Devices without a mouse/trackpad (e.g. tablets) never fire mousemove, so an animation frame is
+// used as a fallback there. This is checked via "any-pointer: fine" rather than touch support, since
+// convertible devices (e.g. 2-in-1 laptops) can have both a touchscreen and a mouse attached.
+export function ensureUserIsAttentive(): Promise<void> {
+  const hasFinePointer = window.matchMedia?.("(any-pointer: fine)").matches ?? true;
+  if (!hasFinePointer) {
+    return animationFrame();
+  }
+
+  return new Promise((resolve) => {
+    const onUserActivity = () => {
+      window.removeEventListener("mousemove", onUserActivity);
+      window.removeEventListener("keydown", onUserActivity);
+      window.removeEventListener("wheel", onUserActivity);
+      resolve();
+    };
+    window.addEventListener("mousemove", onUserActivity);
+    window.addEventListener("keydown", onUserActivity);
+    window.addEventListener("wheel", onUserActivity);
+  });
 }
 
 export function diffArrays<T>(

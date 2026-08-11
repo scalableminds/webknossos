@@ -9,9 +9,7 @@ import { useWkSelector } from "libs/react_hooks";
 import { memo } from "react";
 import { useDispatch } from "react-redux";
 import type { Vector4 } from "viewer/constants";
-import { getSegmentIdForPosition } from "viewer/controller/combinations/volume_handlers";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
-import { getPosition } from "viewer/model/accessors/flycam_accessor";
 import {
   getActiveSegmentationTracing,
   getMeshesForCurrentAdditionalCoordinates,
@@ -51,11 +49,15 @@ function SegmentIdAddendum({ id }: { id: bigint }) {
 export const SegmentNodeTitle = memo(
   ({
     node,
+    isCentered,
     onContextMenu,
     onRenameStart,
     onRenameEnd,
     onSelectSegment,
-  }: TitleProps<SegmentUiNode> & { onSelectSegment: (segment: Segment) => void }) => {
+  }: TitleProps<SegmentUiNode> & {
+    isCentered: boolean;
+    onSelectSegment: (segment: Segment) => void;
+  }) => {
     const dispatch = useDispatch();
     const { segment } = node;
 
@@ -80,9 +82,6 @@ export const SegmentNodeTitle = memo(
     );
     const isHovered = useWkSelector(
       (state) => state.temporaryConfiguration.hoveredSegmentId === segment.id,
-    );
-    const isCentered = useWkSelector(
-      (state) => getSegmentIdForPosition(getPosition(state.flycam)) === segment.id,
     );
 
     const setHoveredSegmentId = (segmentId: bigint | null) =>

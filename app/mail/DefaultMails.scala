@@ -175,18 +175,17 @@ class DefaultMails @Inject() (conf: WkConf) {
   def pricingPlanUpgradedMail(
       multiUser: MultiUser,
       organizationName: String,
-      newPlanLabel: String,
-      unlockedFeatures: List[PricingPlanFeatures]
+      unlockedFeatures: PricingPlanFeatures
   ): Mail =
     Mail(
       from = defaultSender,
-      subject = s"WEBKNOSSOS Upgrade: Your organization is now on the $newPlanLabel plan",
+      subject = s"WEBKNOSSOS Upgrade: Your organization is now on the ${unlockedFeatures.planLabel} plan",
       bodyHtml = html.mail
         .pricingPlanUpgraded(
           multiUser.fullName,
           organizationName,
-          newPlanLabel,
-          unlockedFeatures,
+          unlockedFeatures.planLabel,
+          unlockedFeatures.featureHighlights,
           uri,
           additionalFooter
         )

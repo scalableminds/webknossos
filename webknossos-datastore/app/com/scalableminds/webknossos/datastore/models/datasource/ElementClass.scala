@@ -103,18 +103,15 @@ object ElementClass extends ExtendedEnumeration {
       case _                   => Failure(s"Unsupported element class $elementClass for ElementClassProto")
     }
 
-  private def maxSegmentIdValue(elementClass: ElementClass.Value): Long = elementClass match {
-    case ElementClass.uint8  => (1L << 8L) - 1
-    case ElementClass.int8   => Byte.MaxValue
-    case ElementClass.uint16 => (1L << 16L) - 1
-    case ElementClass.int16  => Short.MaxValue
-    case ElementClass.uint32 => (1L << 32L) - 1
-    case ElementClass.int32  => Int.MaxValue
-    case ElementClass.int64  => Long.MaxValue
-    // uint64's range is the full 64-bit space: every possible Long bit pattern is a valid
-    // unsigned value, so there is no upper bound left to enforce once ids are read with
-    // unsigned semantics (see largestSegmentIdIsInRange below).
-    case ElementClass.uint64 => -1L
+  private def maxSegmentIdValue(elementClass: ElementClass.Value): Option[Long] = elementClass match {
+    case ElementClass.uint8  => Some((1L << 8L) - 1)
+    case ElementClass.int8   => Some(Byte.MaxValue)
+    case ElementClass.uint16 => Some((1L << 16L) - 1)
+    case ElementClass.int16  => Some(Short.MaxValue)
+    case ElementClass.uint32 => Some((1L << 32L) - 1)
+    case ElementClass.int32  => Some(Int.MaxValue)
+    case ElementClass.int64  => Some(Long.MaxValue)
+    case ElementClass.uint64 => None
   }
 
   def largestSegmentIdIsInRange(largestSegmentId: Long, elementClass: ElementClass.Value): Boolean =
@@ -122,12 +119,7 @@ object ElementClass extends ExtendedEnumeration {
 
   def largestSegmentIdIsInRange(largestSegmentIdOpt: Option[Long], elementClass: ElementClass.Value): Boolean =
     segmentationElementClasses.contains(elementClass) && largestSegmentIdOpt.forall { largestSegmentId =>
-      elementClass match {
-        // Every Long bit pattern is a valid non-negative uint64 value, so there is nothing left
-        // to validate beyond the elementClass check above.
-        case ElementClass.uint64 => true
-        case _                   => largestSegmentId >= 0L && largestSegmentId <= maxSegmentIdValue(elementClass)
-      }
+      largestSegmentId >= 0L && maxSegmentIdValue(elementClass).forall(largestSegmentId <= _)
     }
 
   def toChannelAndZarrString(elementClass: ElementClass.Value): (Int, String) = elementClass match {

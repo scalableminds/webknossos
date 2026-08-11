@@ -119,10 +119,6 @@ class Zarr3Array(
   private lazy val chunksPerShard = indexShape.product
   private def shardIndexEntryLength = 16
 
-  // chunkIndex/shardCoordinates are Long since a segment-id-keyed mapping array (addressed by raw
-  // segment id rather than bounded spatial voxel coordinates) can need chunk indices far beyond
-  // Int.MaxValue. The result (a chunk's position within a single shard's index) stays well within
-  // Int range, since chunksPerShard (indexShape.product) is itself a bounded, small configuration value.
   private def getChunkIndexInShardIndex(chunkIndex: Array[Long], shardCoordinates: Array[Long]): Int = {
     val shardOffset = shardCoordinates.zip(indexShape).map { case (sc, is) => sc * is }
     val indexWithinShard = indexShape.tails.toList

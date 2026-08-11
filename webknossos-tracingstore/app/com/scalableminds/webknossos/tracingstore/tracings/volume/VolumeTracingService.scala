@@ -11,14 +11,13 @@ import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.box.Box.tryo
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, MathUtils}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, ProtoGeometryConversions}
-import com.scalableminds.webknossos.datastore.helpers.UnsignedLongOps.maxUnsigned
 import com.scalableminds.webknossos.datastore.models.*
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
@@ -903,7 +902,7 @@ class VolumeTracingService @Inject() (
 
   private def combineLargestSegmentIdsByMaxDefined(aOpt: Option[Long], bOpt: Option[Long]): Option[Long] =
     (aOpt, bOpt) match {
-      case (Some(a), Some(b)) => Some(maxUnsigned(a, b))
+      case (Some(a), Some(b)) => Some(MathUtils.maxUnsigned(a, b))
       case (Some(a), None)    => Some(a)
       case (None, Some(b))    => Some(b)
       case (None, None)       => None

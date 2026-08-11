@@ -15,8 +15,7 @@ import com.scalableminds.webknossos.datastore.helpers.{
   MissingBucketHeaders,
   ProtoGeometryConversions,
   SegmentIndexData,
-  UnsignedLong,
-  UnsignedLongJson
+  UnsignedLong
 }
 import com.scalableminds.webknossos.datastore.models.WebknossosDataRequest
 import com.scalableminds.webknossos.datastore.rpc.RPC
@@ -119,8 +118,8 @@ class TSRemoteDatastoreClient @Inject() (
           result <- rpc(s"$remoteLayerUri/agglomerates/${k._2}/largestAgglomerateId")
             .addQueryParam("token", k._3)
             .silent
-            .getWithJsonResponse[Long](using UnsignedLongJson.reads)
-        } yield result
+            .getWithJsonResponse[UnsignedLong]
+        } yield result.toLong
     )
   }
 

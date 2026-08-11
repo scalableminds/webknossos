@@ -18,8 +18,7 @@ import com.scalableminds.webknossos.datastore.helpers.{
   ProtoGeometryConversions,
   SegmentStatisticsParameters,
   SegmentStatisticsParametersMeshBased,
-  UnsignedLong,
-  UnsignedLongJson
+  UnsignedLong
 }
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.{
@@ -309,7 +308,7 @@ class VolumeTracingController @Inject() (
               tracing.version,
               ImportVolumeDataVolumeAction(tracingId, Some(UnsignedLong(largestSegmentId)))
             )
-          } yield Ok(Json.toJson(largestSegmentId)(using UnsignedLongJson.writes))
+          } yield Ok(Json.toJson(UnsignedLong(largestSegmentId)))
         }
       }
     }

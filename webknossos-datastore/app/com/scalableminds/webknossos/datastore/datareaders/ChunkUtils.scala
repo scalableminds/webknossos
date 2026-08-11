@@ -2,10 +2,6 @@ package com.scalableminds.webknossos.datastore.datareaders
 
 object ChunkUtils {
 
-  // Chunk indices are modelled as Long (rather than Int) because arrayShape/selectedOffset can span the
-  // full uint64 range (e.g. a segment-id-keyed mapping array addressed by raw segment id, not by bounded
-  // spatial voxel coordinates) -- with a realistic chunk shape, the resulting chunk index can exceed
-  // Int.MaxValue (~2.1 billion) even though the chunk shape itself (an actual array held in memory) cannot.
   def computeChunkIndices(
       arrayShapeOpt: Option[Array[Long]],
       arrayChunkShape: Array[Int],

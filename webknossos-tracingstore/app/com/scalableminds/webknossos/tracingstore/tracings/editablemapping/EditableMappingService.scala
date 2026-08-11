@@ -21,8 +21,7 @@ import com.scalableminds.webknossos.datastore.helpers.{
   NodeDefaults,
   ProtoGeometryConversions,
   SkeletonTracingDefaults,
-  UnsignedLong,
-  UnsignedLongJson
+  UnsignedLong
 }
 import com.scalableminds.webknossos.datastore.models.*
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
@@ -129,7 +128,7 @@ class EditableMappingService @Inject() (
     Json.obj(
       "tracingId" -> tracingId,
       "baseMappingName" -> editableMappingInfo.baseMappingName,
-      "largestAgglomerateId" -> UnsignedLongJson.writes.writes(editableMappingInfo.largestAgglomerateId),
+      "largestAgglomerateId" -> UnsignedLong(editableMappingInfo.largestAgglomerateId),
       "createdTimestamp" -> editableMappingInfo.createdTimestamp
     )
 
@@ -555,10 +554,8 @@ class EditableMappingService @Inject() (
         g.setEdgeWeight(e, affinity)
       }
 
-      // Add artificial root nodes which will force the two given partitions to stay connected during the min-cut.
-      // Their ids must not collide with any real segment id -- a fixed literal like -1L is not
-      // safe here, since for a uint64 layer that bit pattern equals the legitimate id 2^64-1.
-      // // todo: is this a performance problem?
+      // Add artificial root nodes that will force the two given partitions to stay connected during the min-cut.
+      // Their ids must not collide with any real segment id. Since any number can be valid now, we need to find a free value.
       val realSegmentIds = agglomerateGraph.segments.toSet
       def freshRootId(start: Long): Long = {
         var candidate = start

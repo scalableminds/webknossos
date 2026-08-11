@@ -10,7 +10,7 @@ import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
 import com.scalableminds.webknossos.datastore.controllers.Controller
-import com.scalableminds.webknossos.datastore.helpers.{UnsignedLong, UnsignedLongJson}
+import com.scalableminds.webknossos.datastore.helpers.UnsignedLong
 import com.scalableminds.webknossos.datastore.services.{EditableMappingSegmentListResult, UserAccessRequest}
 import com.scalableminds.webknossos.tracingstore.{
   TSRemoteDatastoreClient,
@@ -150,7 +150,7 @@ class EditableMappingController @Inject() (
               remoteFallbackLayer
             )
           } yield Ok(
-            Json.obj("segmentId" -> UnsignedLongJson.writes.writes(segmentId), "neighbors" -> Json.toJson(edges))
+            Json.obj("segmentId" -> UnsignedLong(segmentId), "neighbors" -> Json.toJson(edges))
           )
         }
       }

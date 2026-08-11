@@ -113,9 +113,7 @@ class WKWArray(
       )
     } yield mortonEncode(x, y, z)
 
-  // WKW datasets are addressed by bounded spatial X/Y/Z chunk coordinates (unlike a segment-id-keyed
-  // mapping array), so narrowing back to Int here is safe -- chunkIndex is Long only because it comes
-  // from the shared DatasetArray/ChunkUtils chunk-addressing interface.
+  // WKW datasets are addressed by bounded spatial X/Y/Z chunk coordinates, so narrowing back to Int here is safe.
   private def getChunkIndexInShardIndex(chunkIndex: Array[Long]): Box[Int] = {
     val x = chunkIndex(axisOrder.x)
     val y = chunkIndex(axisOrder.y)

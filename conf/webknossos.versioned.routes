@@ -4,6 +4,7 @@
 # Note: keep this in sync with the reported version numbers in the com.scalableminds.util.mvc.ApiVersioning trait
 
 # version log
+ # changed in v15: largestSegmentId is now written using a bigint envelope (to support the full uint64 range) for /datasets/:datasetId, /datasets and PATCH /datasets/:datasetId/updatePartial. Older API versions keep receiving it as a plain number whenever that does not lose precision.
  # changed in v14: Dataset upload routes and parameters have been refactored, introduced upload domain
  # changed in v13: Attachments not mentioned in the dataSource passed to updatePartial will now be deleted.
  # changed in v12: Dataset upload now expects layersToLink in new format with datasetId instead of orgaId+directoryName
@@ -18,19 +19,37 @@
  # new in v3: annotation info and finish request now take timestamp
  # new in v2: annotation json contains visibility enum instead of booleans
 
+->       /v15/                                                                webknossos.latest.Routes
+
 ->       /v14/                                                                webknossos.latest.Routes
 
+# v13: support changes to v15
+GET      /v13/datasets/:datasetId                                             controllers.LegacyApiController.readV14(datasetId: ObjectId, sharingToken: Option[String])
+GET      /v13/datasets                                                        controllers.LegacyApiController.listV14(isActive: Option[Boolean], isUnreported: Option[Boolean], organizationId: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[ObjectId], folderId: Option[ObjectId], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int], compact: Option[Boolean])
+PATCH    /v13/datasets/:datasetId/updatePartial                               controllers.LegacyApiController.updatePartialV14(datasetId: ObjectId)
 ->       /v13/                                                                webknossos.latest.Routes
 
+# v12: support changes to v15
+GET      /v12/datasets/:datasetId                                             controllers.LegacyApiController.readV14(datasetId: ObjectId, sharingToken: Option[String])
+GET      /v12/datasets                                                        controllers.LegacyApiController.listV14(isActive: Option[Boolean], isUnreported: Option[Boolean], organizationId: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[ObjectId], folderId: Option[ObjectId], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int], compact: Option[Boolean])
 PATCH    /v12/datasets/:datasetId/updatePartial                               controllers.LegacyApiController.updatePartialV12(datasetId: ObjectId)
 ->       /v12/                                                                webknossos.latest.Routes
 
+# v11: support changes to v15
+GET      /v11/datasets/:datasetId                                             controllers.LegacyApiController.readV14(datasetId: ObjectId, sharingToken: Option[String])
+GET      /v11/datasets                                                        controllers.LegacyApiController.listV14(isActive: Option[Boolean], isUnreported: Option[Boolean], organizationId: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[ObjectId], folderId: Option[ObjectId], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int], compact: Option[Boolean])
 PATCH    /v11/datasets/:datasetId/updatePartial                               controllers.LegacyApiController.updatePartialV12(datasetId: ObjectId)
 ->       /v11/                                                                webknossos.latest.Routes
 
+# v10: support changes to v15
+GET      /v10/datasets/:datasetId                                             controllers.LegacyApiController.readV14(datasetId: ObjectId, sharingToken: Option[String])
+GET      /v10/datasets                                                        controllers.LegacyApiController.listV14(isActive: Option[Boolean], isUnreported: Option[Boolean], organizationId: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[ObjectId], folderId: Option[ObjectId], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int], compact: Option[Boolean])
 PATCH    /v10/datasets/:datasetId/updatePartial                               controllers.LegacyApiController.updatePartialV12(datasetId: ObjectId)
 ->       /v10/                                                                webknossos.latest.Routes
 
+# v9: support changes to v15
+GET      /v9/datasets/:datasetId                                              controllers.LegacyApiController.readV14(datasetId: ObjectId, sharingToken: Option[String])
+GET      /v9/datasets                                                         controllers.LegacyApiController.listV14(isActive: Option[Boolean], isUnreported: Option[Boolean], organizationId: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[ObjectId], folderId: Option[ObjectId], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int], compact: Option[Boolean])
 PATCH    /v9/datasets/:datasetId/updatePartial                               controllers.LegacyApiController.updatePartialV12(datasetId: ObjectId)
 ->       /v9/                                                                 webknossos.latest.Routes
 
@@ -45,6 +64,8 @@ GET      /v8/datasets/:organizationId/:datasetName                            co
 GET      /v8/tasks/:id                                                        controllers.LegacyApiController.readTaskV8(id: ObjectId)
 POST     /v8/tasks                                                            controllers.LegacyApiController.createTaskV8()
 GET      /v8/projects/:id/tasks                                               controllers.LegacyApiController.tasksForProjectV8(id: ObjectId, limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
+# v8: support changes to v15
+GET      /v8/datasets                                                         controllers.LegacyApiController.listV14(isActive: Option[Boolean], isUnreported: Option[Boolean], organizationId: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[ObjectId], folderId: Option[ObjectId], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int], compact: Option[Boolean])
 
 ->       /v8/                                                                 webknossos.latest.Routes
 

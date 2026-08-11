@@ -682,7 +682,7 @@ case class MergeSegmentItemsVolumeAction(
       case (None, None)                    => None
       case (Some(sourceSegmentName), None) => Some(sourceSegmentName)
       case (None, Some(targetSegmentName)) =>
-        Some(s"Segment ${agglomerateId1.toLong} and $targetSegmentName")
+        Some(s"Segment ${UnsignedLong.toString(agglomerateId1)} and $targetSegmentName")
       case (Some(sourceSegmentName), Some(targetSegmentName)) => Some(s"$sourceSegmentName and $targetSegmentName")
     }
 

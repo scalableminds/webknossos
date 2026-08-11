@@ -170,7 +170,7 @@ class BoundingBoxCache(
       readHDF: (IHDF5Reader, Long, Long) => Array[Long]
   ): Array[Long] = {
     val readerRange = getReaderRange(request)
-    if (readerRange._2 - readerRange._1 < maxReaderRange) {
+    if (java.lang.Long.compareUnsigned(readerRange._2 - readerRange._1, maxReaderRange) < 0) {
       val agglomerateIds = readHDF(reader, readerRange._1, (readerRange._2 - readerRange._1) + 1)
       input.map(i => if (i == 0L) 0L else agglomerateIds((i - readerRange._1).toInt))
     } else {

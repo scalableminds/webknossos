@@ -396,7 +396,13 @@ export const AiTrainingDataSection = () => {
     >
       <Form layout="vertical">
         {selectedAnnotations.length === 0 && (
-          <div style={{ textAlign: "center", color: "#999", padding: "24px" }}>
+          <div
+            style={{
+              textAlign: "center",
+              color: "var(--ant-color-text-tertiary)",
+              padding: "24px",
+            }}
+          >
             Please add training annotations via the + button
           </div>
         )}

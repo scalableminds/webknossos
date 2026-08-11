@@ -49,7 +49,7 @@ function EditableTextIcon(props: Props) {
         height: 22,
         width: props.label ? "initial" : 22,
         fontSize: "12px",
-        color: "#7c7c7c",
+        color: "var(--ant-color-text-secondary)",
       }}
       onClick={() => setIsEditing(true)}
     >

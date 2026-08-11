@@ -267,11 +267,9 @@ function maybeLabelWithSegmentationWarning(isUint64SegmentationVisible: boolean,
     <React.Fragment>
       {label}{" "}
       <FastTooltip title={message["tracing.uint64_segmentation_warning"]}>
-        <WarningOutlined
-          style={{
-            color: "var(--ant-color-warning)",
-          }}
-        />
+        <Typography.Text type="warning">
+          <WarningOutlined />
+        </Typography.Text>
       </FastTooltip>
     </React.Fragment>
   ) : (

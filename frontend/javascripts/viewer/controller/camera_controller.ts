@@ -18,6 +18,7 @@ import {
   OrthoViewValuesWithoutTDView,
   TDViewPerspectiveFov,
 } from "viewer/constants";
+import UrlManager from "viewer/controller/url_manager";
 import { getDatasetExtentInUnit } from "viewer/model/accessors/dataset_accessor";
 import { getPosition, getRotationInRadian } from "viewer/model/accessors/flycam_accessor";
 import { isSkeletonSectionClippingActive } from "viewer/model/accessors/skeletontracing_accessor";
@@ -168,7 +169,12 @@ class CameraController extends PureComponent<Props> {
           far,
         }),
       );
-      api.tracing.rotate3DViewToDiagonal(false);
+      if (UrlManager.initialState.tdCamera == null) {
+        // Only reset to the default diagonal view if the URL did not request a
+        // specific td camera; otherwise this would immediately overwrite the
+        // camera that was just restored from the URL/sharing link.
+        api.tracing.rotate3DViewToDiagonal(false);
+      }
       const tdData = Store.getState().viewModeData.plane.tdCamera;
       this.updateTDCamera(tdData);
     });

@@ -555,7 +555,6 @@ export function ensureUserIsAttentive(): Promise<void> {
     window.addEventListener("keydown", onUserActivity);
     window.addEventListener("wheel", onUserActivity);
   });
-
 }
 
 export function diffArrays<T>(

@@ -130,7 +130,7 @@ async function initApp() {
     // todop: remove again
     sleep(2000).then(async () => {
       Toast.error("you should see this error for 3 s", {
-        timeout: 3000
+        timeout: 3000,
       });
     });
 

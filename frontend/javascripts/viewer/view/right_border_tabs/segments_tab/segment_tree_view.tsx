@@ -5,7 +5,9 @@ import { sleep } from "libs/utils";
 import { useCallback, useEffect, useRef } from "react";
 import { useDispatch } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
+import { getSegmentIdForPosition } from "viewer/controller/combinations/volume_handlers";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
+import { getPosition } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { getVisibleSegments } from "viewer/model/accessors/volumetracing_accessor";
 import { getUpdateSegmentActionToToggleVisibility } from "viewer/model/actions/volumetracing_action_helpers";
@@ -88,6 +90,12 @@ export function SegmentTreeView(props: Props) {
         state.uiInformation.activeTool === AnnotationTool.PROOFREAD &&
         state.userConfiguration.selectiveVisibilityInProofreading
       ),
+  );
+  // The segment id at the camera center is looked up once for the whole list. The lookup must not
+  // be memoized on the position (see volume_handlers.ts), so doing it per row would repeat a
+  // transform + mag + cube lookup for every rendered row on every store notification.
+  const centeredSegmentId = useWkSelector((state) =>
+    getSegmentIdForPosition(getPosition(state.flycam)),
   );
 
   const treeRef = useRef<GetRef<typeof AntdTree>>(null);
@@ -300,6 +308,7 @@ export function SegmentTreeView(props: Props) {
                     node.type === "segment" ? (
                       <SegmentNodeTitle
                         node={node}
+                        isCentered={centeredSegmentId === node.segment.id}
                         onContextMenu={onSegmentNodeContextMenu}
                         onRenameStart={onRenameStart}
                         onRenameEnd={onRenameEnd}

@@ -21,8 +21,7 @@ import com.scalableminds.webknossos.datastore.helpers.{
   NodeDefaults,
   ProtoGeometryConversions,
   SkeletonTracingDefaults,
-  UnsignedLong,
-  UnsignedLongJson
+  UnsignedLong
 }
 import com.scalableminds.webknossos.datastore.models.*
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
@@ -129,7 +128,7 @@ class EditableMappingService @Inject() (
     Json.obj(
       "tracingId" -> tracingId,
       "baseMappingName" -> editableMappingInfo.baseMappingName,
-      "largestAgglomerateId" -> UnsignedLongJson.writes.writes(editableMappingInfo.largestAgglomerateId),
+      "largestAgglomerateId" -> UnsignedLong(editableMappingInfo.largestAgglomerateId),
       "createdTimestamp" -> editableMappingInfo.createdTimestamp
     )
 

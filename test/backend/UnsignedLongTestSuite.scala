@@ -1,7 +1,7 @@
 package backend
 
 import com.scalableminds.util.tools.MathUtils
-import com.scalableminds.webknossos.datastore.helpers.{UnsignedLong, UnsignedLongJson}
+import com.scalableminds.webknossos.datastore.helpers.UnsignedLong
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   CreateSegmentVolumeAction,
   MergeSegmentItemsVolumeAction,
@@ -10,64 +10,62 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
 import org.scalatest.wordspec.AsyncWordSpec
 import play.api.libs.json.{JsNumber, JsObject, JsString, JsSuccess, Json}
 
-class UnsignedLongJsonTestSuite extends AsyncWordSpec {
+class UnsignedLongTestSuite extends AsyncWordSpec {
 
-  "UnsignedLongJson.writes" should {
+  "UnsignedLong.writes" should {
     "encode values within the legacy safe-integer range as a tagged bigint envelope" in
       assert(
-        UnsignedLongJson.writes.writes(12345L) ==
+        Json.toJson(UnsignedLong(12345L)) ==
           Json.obj("customJsonEncoding" -> "bigint", "value" -> "12345")
       )
     "encode values above Long.MaxValue's bit pattern as the correct large unsigned string" in {
       // -1L is the bit pattern for 2^64 - 1 when interpreted as unsigned
       assert(
-        UnsignedLongJson.writes.writes(-1L) ==
+        Json.toJson(UnsignedLong(-1L)) ==
           Json.obj("customJsonEncoding" -> "bigint", "value" -> "18446744073709551615")
       )
       // Long.MinValue's bit pattern is 2^63 when interpreted as unsigned
       assert(
-        UnsignedLongJson.writes.writes(Long.MinValue) ==
+        Json.toJson(UnsignedLong(Long.MinValue)) ==
           Json.obj("customJsonEncoding" -> "bigint", "value" -> "9223372036854775808")
       )
     }
   }
 
-  "UnsignedLongJson.reads" should {
+  "UnsignedLong reads" should {
     "parse the tagged bigint envelope, round-tripping the exact bit pattern" in {
       assert(
-        UnsignedLongJson.reads.reads(
-          Json.obj("customJsonEncoding" -> "bigint", "value" -> "18446744073709551615")
-        ) == JsSuccess(-1L)
+        Json
+          .obj("customJsonEncoding" -> "bigint", "value" -> "18446744073709551615")
+          .validate[UnsignedLong] == JsSuccess(
+          UnsignedLong(-1L)
+        )
       )
       assert(
-        UnsignedLongJson.reads.reads(
-          Json.obj("customJsonEncoding" -> "bigint", "value" -> "9223372036854775808")
-        ) == JsSuccess(Long.MinValue)
+        Json.obj("customJsonEncoding" -> "bigint", "value" -> "9223372036854775808").validate[UnsignedLong]
+          == JsSuccess(UnsignedLong(Long.MinValue))
       )
       assert(
-        UnsignedLongJson.reads.reads(Json.obj("customJsonEncoding" -> "bigint", "value" -> "42")) == JsSuccess(42L)
+        Json.obj("customJsonEncoding" -> "bigint", "value" -> "42").validate[UnsignedLong] == JsSuccess(
+          UnsignedLong(42L)
+        )
       )
-    }
-    "parse the legacy plain unsigned-decimal JsString encoding (permanent backward compatibility)" in {
-      assert(UnsignedLongJson.reads.reads(JsString("18446744073709551615")) == JsSuccess(-1L))
-      assert(UnsignedLongJson.reads.reads(JsString("9223372036854775808")) == JsSuccess(Long.MinValue))
-      assert(UnsignedLongJson.reads.reads(JsString("42")) == JsSuccess(42L))
     }
     "parse the legacy plain JsNumber encoding (permanent backward compatibility)" in {
-      assert(UnsignedLongJson.reads.reads(JsNumber(42)) == JsSuccess(42L))
-      assert(UnsignedLongJson.reads.reads(JsNumber(0)) == JsSuccess(0L))
+      assert(JsNumber(42).validate[UnsignedLong] == JsSuccess(42L))
+      assert(JsNumber(0).validate[UnsignedLong] == JsSuccess(0L))
     }
     "fail on malformed input" in {
-      assert(UnsignedLongJson.reads.reads(JsString("not-a-number")).isError)
-      assert(UnsignedLongJson.reads.reads(Json.obj()).isError)
+      assert(JsString("not-a-number").validate[UnsignedLong].isError)
+      assert(Json.obj().validate[UnsignedLong].isError)
       assert(
-        UnsignedLongJson.reads.reads(Json.obj("customJsonEncoding" -> "bigint", "value" -> "not-a-number")).isError
+        Json.obj("customJsonEncoding" -> "bigint", "value" -> "not-a-number").validate[UnsignedLong].isError
       )
-      assert(UnsignedLongJson.reads.reads(Json.obj("customJsonEncoding" -> "somethingElse")).isError)
+      assert(Json.obj("customJsonEncoding" -> "somethingElse").validate[UnsignedLong].isError)
     }
   }
 
-  "UnsignedLongJson-patched action formats" should {
+  "UnsignedLong-patched action formats" should {
     "round-trip a segment id above 2^53 as a tagged bigint envelope, leaving other Long fields as JsNumber" in {
       val action = CreateSegmentVolumeAction(
         id = UnsignedLong((1L << 60) + 7L),

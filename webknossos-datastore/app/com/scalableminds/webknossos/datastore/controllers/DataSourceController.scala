@@ -25,8 +25,8 @@ import com.scalableminds.webknossos.datastore.helpers.{
   SegmentIndexData,
   SegmentStatisticsParameters,
   SegmentStatisticsParametersMeshBased,
-  UnsignedLongJson,
-  UPath
+  UPath,
+  UnsignedLong
 }
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, UsableDataSource}
 import com.scalableminds.webknossos.datastore.services.*
@@ -214,7 +214,7 @@ class DataSourceController @Inject() (
         (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
         agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, mappingName)
         largestAgglomerateId: Long <- agglomerateService.largestAgglomerateId(agglomerateFileKey)
-      } yield Ok(Json.toJson(largestAgglomerateId)(using UnsignedLongJson.writes))
+      } yield Ok(Json.toJson(UnsignedLong(largestAgglomerateId)))
     }
   }
 
@@ -386,7 +386,7 @@ class DataSourceController @Inject() (
             request.body.synapseIds,
             directionValidated
           )
-        } yield Ok(Json.toJson(agglomerateIds)(using Writes.list(using UnsignedLongJson.writes)))
+        } yield Ok(Json.toJson(agglomerateIds.map(UnsignedLong(_))))
       }
     }
 

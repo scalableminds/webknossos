@@ -103,7 +103,6 @@ object ElementClass extends ExtendedEnumeration {
       case _                   => Failure(s"Unsupported element class $elementClass for ElementClassProto")
     }
 
-  /* only used for segmentation layers, so only unsigned integers 8 16 32 64, and (legacy) int64 */
   private def maxSegmentIdValue(elementClass: ElementClass.Value): Long = elementClass match {
     case ElementClass.uint8  => (1L << 8L) - 1
     case ElementClass.int8   => Byte.MaxValue

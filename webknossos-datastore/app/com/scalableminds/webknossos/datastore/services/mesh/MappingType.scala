@@ -18,7 +18,9 @@ object MappingType extends ExtendedEnumeration {
       json.validate[String].flatMap { asString =>
         fromString(asString)
           .map(JsSuccess(_))
-          .getOrElse(JsError(Seq(JsPath -> Seq(JsonValidationError(s"Error. Expected a enum valid value but got $asString.")))))
+          .getOrElse(
+            JsError(Seq(JsPath -> Seq(JsonValidationError(s"Error. Expected a enum valid value but got $asString."))))
+          )
       }
 
     def writes(value: Value): JsValue = JsString(value.toString)

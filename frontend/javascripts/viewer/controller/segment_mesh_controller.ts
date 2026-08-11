@@ -21,6 +21,7 @@ import {
 import { acceleratedRaycast } from "three-mesh-bvh";
 import TWEEN from "tween.js";
 import type { AdditionalCoordinate } from "types/api_types";
+import type { BigIntAsKey, LayerNameAsKey } from "types/type_utils";
 import type { Vector2, Vector3 } from "viewer/constants";
 import Constants from "viewer/constants";
 import CustomLOD from "viewer/controller/custom_lod";
@@ -34,7 +35,6 @@ import {
 import { NO_LOD_MESH_INDEX } from "viewer/model/sagas/meshes/common_mesh_saga";
 import Store, { type MinCutPartitions } from "viewer/store";
 import type { BufferGeometryWithInfo } from "./mesh_helpers";
-import { BigIntAsKey, LayerNameAsKey } from "types/type_utils";
 
 // Add the raycast function. Assumes the BVH is available on
 // the `boundsTree` variable

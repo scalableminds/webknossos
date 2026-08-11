@@ -1,15 +1,10 @@
 import { toBigInt } from "libs/bigint_helpers";
 import ErrorHandling from "libs/error_handling";
 import { V3, V4 } from "libs/mjs";
+import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
 import type { ProgressCallback } from "libs/progress_callback";
 import Toast from "libs/toast";
-import {
-  areBoundingBoxesOverlappingOrTouching,
-  castForArrayType,
-  isNumberMap,
-  mod,
-  union,
-} from "libs/utils";
+import { areBoundingBoxesOverlappingOrTouching, castForArrayType, mod, union } from "libs/utils";
 import keyBy from "lodash-es/keyBy";
 import once from "lodash-es/once";
 import { createNanoEvents, type Emitter } from "nanoevents";
@@ -49,7 +44,6 @@ import Store from "viewer/store";
 import type { MagInfo } from "../helpers/mag_info";
 import { getConstructorForElementClass } from "../helpers/typed_buffer";
 import { getMappedIdAsBigInt } from "../sagas/volume/proofreading/preparation_sagas";
-import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
 
 const warnAboutTooManyAllocations = once(() => {
   const msg =

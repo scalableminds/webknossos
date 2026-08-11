@@ -3,6 +3,7 @@ import { colorObjectToRGBArray } from "libs/colors";
 import DiffableMap from "libs/diffable_map";
 import { point3ToVector3, replaceOrAdd } from "libs/utils";
 import type { APIUserBase, ServerVolumeTracing } from "types/api_types";
+import type { BigIntAsKey } from "types/type_utils";
 import {
   getLayerByName,
   getMappingInfo,
@@ -51,7 +52,6 @@ import {
 } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import { getUserStateForTracing } from "../accessors/annotation_accessor";
 import { applyVolumeUpdateActionsFromServer } from "./update_action_application/volume";
-import { BigIntAsKey } from "types/type_utils";
 
 export function serverVolumeToClientVolumeTracing(
   tracing: ServerVolumeTracing,

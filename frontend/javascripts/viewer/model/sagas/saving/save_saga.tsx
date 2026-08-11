@@ -281,7 +281,7 @@ function* updatePendingProofreadingOperationInfoAction() {
 
   if (activeMapping.mapping != null) {
     const mappingWrapper = new NumberLikeMapWrapper(activeMapping.mapping);
-    sourceAgglomerateId = mappingWrapper.getAsBigInt(sourceInfo.unmappedId);;
+    sourceAgglomerateId = mappingWrapper.getAsBigInt(sourceInfo.unmappedId);
     if (targetInfo) {
       targetAgglomerateId = mappingWrapper.getAsBigInt(targetInfo.unmappedId);
     }

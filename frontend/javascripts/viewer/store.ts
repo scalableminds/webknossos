@@ -29,7 +29,7 @@ import type {
   TracingType,
 } from "types/api_types";
 import type { BoundingBoxMinMaxType, BoundingBoxObject } from "types/bounding_box";
-import { BigIntAsKey, ensureExactKeys, LayerNameAsKey } from "types/type_utils";
+import { type BigIntAsKey, ensureExactKeys, type LayerNameAsKey } from "types/type_utils";
 import type {
   AdditionalCoordinate,
   BLEND_MODES,
@@ -774,10 +774,7 @@ export type WebknossosState = {
   readonly activeUser: APIUser | null | undefined;
   readonly activeOrganization: APIOrganization | null;
   readonly uiInformation: UiInformation;
-  readonly localSegmentationStateByLayer: Record<
-    LayerNameAsKey,
-    LocalSegmentationState
-  >;
+  readonly localSegmentationStateByLayer: Record<LayerNameAsKey, LocalSegmentationState>;
   // question to reviewer: Maybe put this somewhere else in the store :thinking:?
   readonly localSkeletonState: LocalSkeletonState;
   readonly localAnnotationState: LocalAnnotationState;

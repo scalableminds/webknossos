@@ -3,7 +3,7 @@ import Toast from "libs/toast";
 import { pluralize } from "libs/utils";
 import { useCallback } from "react";
 import { useDispatch } from "react-redux";
-import { BigIntAsKey } from "types/type_utils";
+import type { BigIntAsKey } from "types/type_utils";
 import { EMPTY_OBJECT } from "viewer/constants";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
 import { getMeshesForCurrentAdditionalCoordinates } from "viewer/model/accessors/volumetracing_accessor";

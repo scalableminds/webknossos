@@ -14,6 +14,7 @@ import set from "lodash-es/set";
 import type { ActionPattern } from "redux-saga/effects";
 import { actionChannel, call, put, race, take, takeEvery } from "typed-redux-saga";
 import type { AdditionalCoordinate } from "types/api_types";
+import type { BigIntAsKey } from "types/type_utils";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Vector3 } from "viewer/constants";
 import { MappingStatusEnum } from "viewer/constants";
@@ -54,7 +55,6 @@ import Store, { type StoreDataset, type VolumeTracing } from "viewer/store";
 import { getAdditionalCoordinatesAsString } from "../../accessors/flycam_accessor";
 import { ensureSceneControllerInitialized, ensureWkInitialized } from "../ready_sagas";
 import { acquireMeshWorker, releaseMeshWorker } from "./common_mesh_saga";
-import { BigIntAsKey } from "types/type_utils";
 
 const MAX_RETRY_COUNT = 5;
 const RETRY_WAIT_TIME = 5000;

@@ -2,10 +2,7 @@ import { type PixelFormatGPU, RGIntegerFormat } from "three";
 import type { NumberLike } from "viewer/store";
 import { AbstractCuckooTable } from "./abstract_cuckoo_table";
 
-// Keys in this table are segment ids. A segment id of 0 is reserved throughout webKnossos
-// to mean "no segment" and can therefore never be a real key, which makes it a safe sentinel
-// here. Note that this is intentionally different from the generic EMPTY_KEY_VALUE (2**32 - 1),
-// which would collide with the legitimate, maximum representable uint32 segment id.
+// See EMPTY_KEY_VALUE definition in abstract super class for an explanation.
 const EMPTY_KEY = 0;
 const EMPTY_VALUE = 0;
 

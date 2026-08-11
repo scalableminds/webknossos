@@ -5,9 +5,8 @@ import { createUpdatableTexture } from "viewer/geometries/materials/plane_materi
 
 const DEFAULT_LOAD_FACTOR = 0.9;
 // Sentinel for subclasses whose key domain includes 0 as a legitimate value (e.g., bucket
-// coordinates in CuckooTableVec5). Subclasses whose keys are segment ids should use 0 instead,
-// since a segment id of 0 is reserved throughout webknossos to mean "no segment" and can
-// therefore never be a real key.
+// coordinates in CuckooTableVec5). Subclasses whose keys are segment ids should use 0 instead
+// so that segment id = 2 ** 32 - 1 is still supported.
 export const EMPTY_KEY_VALUE = 2 ** 32 - 1;
 const REHASH_THRESHOLD = 20;
 
@@ -113,11 +112,7 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
     const elementsPerEntry = this.getClass().getElementsPerEntry();
     this.table = new Uint32Array(elementsPerEntry * this.entryCapacity);
 
-    // Determine the raw (possibly packed, see CuckooTableVec5) representation of an empty
-    // entry via the subclass's own encoding logic, since subclasses may use different empty-key
-    // sentinels (e.g., 0 for segment-id-keyed tables, because a segment id of 0 is reserved and
-    // never a valid key; EMPTY_KEY_VALUE for tables whose key domain includes 0, such as bucket
-    // coordinates).
+    // Determine the raw (possibly packed) representation of an empty entry.
     this.writeEntryToTable(this.getEmptyKey(), this.getEmptyValue(), 0);
     const emptyEntry = this.table.slice(0, elementsPerEntry);
 

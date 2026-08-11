@@ -119,7 +119,11 @@ object ElementClass extends ExtendedEnumeration {
 
   def largestSegmentIdIsInRange(largestSegmentIdOpt: Option[Long], elementClass: ElementClass.Value): Boolean =
     segmentationElementClasses.contains(elementClass) && largestSegmentIdOpt.forall { largestSegmentId =>
-      largestSegmentId >= 0L && maxSegmentIdValue(elementClass).forall(largestSegmentId <= _)
+      elementClass match {
+        // Every Long bit pattern is a valid non-negative uint64 value
+        case ElementClass.uint64 => true
+        case _ => largestSegmentId >= 0L && maxSegmentIdValue(elementClass).forall(largestSegmentId <= _)
+      }
     }
 
   def toChannelAndZarrString(elementClass: ElementClass.Value): (Int, String) = elementClass match {

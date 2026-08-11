@@ -51,6 +51,7 @@ import {
 } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import { getUserStateForTracing } from "../accessors/annotation_accessor";
 import { applyVolumeUpdateActionsFromServer } from "./update_action_application/volume";
+import { BigIntAsKey } from "types/type_utils";
 
 export function serverVolumeToClientVolumeTracing(
   tracing: ServerVolumeTracing,
@@ -67,9 +68,7 @@ export function serverVolumeToClientVolumeTracing(
     userState,
   );
   const segmentGroups = applyUserStateToGroups(tracing.segmentGroups || [], userState);
-  // Keyed by the string representation of the (bigint) segment id, since bigint
-  // cannot be used as a Record index type.
-  const segmentVisibilityMap: Record<string, boolean> = userState
+  const segmentVisibilityMap: Record<BigIntAsKey, boolean> = userState
     ? Object.fromEntries(
         userState.segmentVisibilities.map((entry) => [entry.id.toString(), entry.value]),
       )

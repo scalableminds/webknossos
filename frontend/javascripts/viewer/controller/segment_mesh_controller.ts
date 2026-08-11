@@ -34,6 +34,7 @@ import {
 import { NO_LOD_MESH_INDEX } from "viewer/model/sagas/meshes/common_mesh_saga";
 import Store, { type MinCutPartitions } from "viewer/store";
 import type { BufferGeometryWithInfo } from "./mesh_helpers";
+import { BigIntAsKey, LayerNameAsKey } from "types/type_utils";
 
 // Add the raycast function. Assumes the BVH is available on
 // the `boundsTree` variable
@@ -99,14 +100,12 @@ export default class SegmentMeshController {
   //      - meshes
   meshesLayerLODRootGroup: Group;
 
-  // segmentId level is keyed by segmentId.toString(), since bigint cannot be used as an
-  // object/Record index type.
   meshesGroupsPerSegmentId: Record<
     string, // additionalCoordinatesString
     Record<
-      string, // layerName
+      LayerNameAsKey,
       Record<
-        string, // segmentId.toString()
+        BigIntAsKey, // segmentId.toString()
         Record<
           number, // level of detail (LOD)
           GroupForLOD

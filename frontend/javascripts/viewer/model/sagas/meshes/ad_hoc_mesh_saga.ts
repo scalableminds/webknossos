@@ -54,6 +54,7 @@ import Store, { type StoreDataset, type VolumeTracing } from "viewer/store";
 import { getAdditionalCoordinatesAsString } from "../../accessors/flycam_accessor";
 import { ensureSceneControllerInitialized, ensureWkInitialized } from "../ready_sagas";
 import { acquireMeshWorker, releaseMeshWorker } from "./common_mesh_saga";
+import { BigIntAsKey } from "types/type_utils";
 
 const MAX_RETRY_COUNT = 5;
 const RETRY_WAIT_TIME = 5000;
@@ -63,8 +64,7 @@ const MESH_CHUNK_THROTTLE_DELAY = 500;
 // In order to avoid, that a huge amount of chunks is downloaded at full speed,
 // we artificially throttle the download speed after the first MESH_CHUNK_THROTTLE_LIMIT
 // requests for each segment.
-// Keyed by segmentId.toString(), since bigint cannot be used as an object/Record index type.
-const batchCounterPerSegment: Record<string, number> = {};
+const batchCounterPerSegment: Record<BigIntAsKey, number> = {};
 const MESH_CHUNK_THROTTLE_LIMIT = 50;
 
 // Maps from additional coordinates, layerName and segmentId to a ThreeDMap that stores for each chunk

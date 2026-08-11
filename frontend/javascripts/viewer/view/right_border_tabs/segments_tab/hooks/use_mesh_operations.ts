@@ -3,6 +3,7 @@ import Toast from "libs/toast";
 import { pluralize } from "libs/utils";
 import { useCallback } from "react";
 import { useDispatch } from "react-redux";
+import { BigIntAsKey } from "types/type_utils";
 import { EMPTY_OBJECT } from "viewer/constants";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
 import { getMeshesForCurrentAdditionalCoordinates } from "viewer/model/accessors/volumetracing_accessor";
@@ -21,7 +22,7 @@ import Store from "viewer/store";
 
 export type MeshOperations = {
   // Meshes (of the current additional coordinates) by segment id.
-  meshes: Record<string, MeshInformation>;
+  meshes: Record<BigIntAsKey, MeshInformation>;
   loadPrecomputedMeshes: (segments: Segment[]) => void;
   loadAdHocMeshes: (segments: Segment[]) => void;
   refreshMeshes: (segments: Segment[]) => void;
@@ -66,7 +67,7 @@ export function useMeshOperations(): MeshOperations {
       visibleSegmentationLayer != null
         ? getMeshesForCurrentAdditionalCoordinates(state, visibleSegmentationLayer.name)
         : undefined,
-    ) ?? (EMPTY_OBJECT as Record<string, MeshInformation>);
+    ) ?? (EMPTY_OBJECT as Record<BigIntAsKey, MeshInformation>);
 
   const loadPrecomputedMeshes = useCallback(
     (segments: Segment[]) => {

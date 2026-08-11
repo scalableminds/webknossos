@@ -29,7 +29,7 @@ import type {
   TracingType,
 } from "types/api_types";
 import type { BoundingBoxMinMaxType, BoundingBoxObject } from "types/bounding_box";
-import { ensureExactKeys } from "types/type_utils";
+import { BigIntAsKey, ensureExactKeys, LayerNameAsKey } from "types/type_utils";
 import type {
   AdditionalCoordinate,
   BLEND_MODES,
@@ -664,10 +664,9 @@ type ConnectomeData = {
   readonly skeleton: SkeletonTracing | null | undefined;
 };
 export type MinCutPartitions = { 1: bigint[]; 2: bigint[]; agglomerateId: bigint | null };
-// The inner record is keyed by segmentId.toString(), since bigint cannot be used as an
-// object/Record index type.
+
 export type LocalMeshesInfo =
-  | Record<string, Record<string, MeshInformation> | undefined>
+  | Record<LayerNameAsKey, Record<BigIntAsKey, MeshInformation> | undefined>
   | undefined;
 
 // A single entry of the id reservation mechanism (see id_reservation_saga.ts). `used`
@@ -776,7 +775,7 @@ export type WebknossosState = {
   readonly activeOrganization: APIOrganization | null;
   readonly uiInformation: UiInformation;
   readonly localSegmentationStateByLayer: Record<
-    string, // layerName
+    LayerNameAsKey,
     LocalSegmentationState
   >;
   // question to reviewer: Maybe put this somewhere else in the store :thinking:?

@@ -77,12 +77,20 @@ class Zarr3Array(
 
   private def initializeCodecs(codecSpecs: Seq[CodecConfiguration]): (Option[ShardingCodec], Seq[Codec], Seq[Codec]) = {
     val outerCodecs = codecSpecs.map {
-      case BytesCodecConfiguration(endian)             => new BytesCodec(endian)
-      case TransposeCodecConfiguration(order)          => new TransposeCodec(order)
-      case bloscConfiguration: BloscCodecConfiguration => BloscCodec.fromConfiguration(bloscConfiguration)
-      case GzipCodecConfiguration(level)               => new GzipCodec(level)
-      case ZstdCodecConfiguration(level, checksum)     => new ZstdCodec(level, checksum)
-      case Crc32CCodecConfiguration                    => new Crc32CCodec
+      case BytesCodecConfiguration(endian)              => new BytesCodec(endian)
+      case TransposeCodecConfiguration(order)           => new TransposeCodec(order)
+      case bloscConfiguration: BloscCodecConfiguration  => BloscCodec.fromConfiguration(bloscConfiguration)
+      case GzipCodecConfiguration(level)                => new GzipCodec(level)
+      case ZstdCodecConfiguration(level, checksum)      => new ZstdCodec(level, checksum)
+      case _: ReshapeCodecConfiguration                 => new ReshapeCodec
+      case ScaleOffsetCodecConfiguration(offset, scale) =>
+        new ScaleOffsetCodec(offset.getOrElse(0.0), scale.getOrElse(1.0), header.resolvedDataType)
+      case CastValueCodecConfiguration(dataType, _, _, _) =>
+        new CastValueCodec(
+          Zarr3DataType.toArrayDataType(Zarr3DataType.fromString(dataType).getOrElse(Zarr3DataType.raw)),
+          header.resolvedDataType
+        )
+      case Crc32CCodecConfiguration                                                      => new Crc32CCodec
       case ShardingCodecConfiguration(chunk_shape, codecs, index_codecs, index_location) =>
         new ShardingCodec(chunk_shape, codecs, index_codecs, index_location)
     }

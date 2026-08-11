@@ -4,19 +4,22 @@ import com.scalableminds.util.box.Box
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.tools.ByteUtils
 import com.scalableminds.webknossos.datastore.datareaders.{
+  ArrayDataType,
   BloscCompressor,
   BoolCompressionSetting,
   CompressionSetting,
   GzipCompressor,
   IntCompressionSetting,
+  MultiArrayUtils,
   StringCompressionSetting,
   ZstdCompressor
 }
+import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{Format, JsObject, JsResult, JsString, JsSuccess, JsValue, Json, OFormat, Reads, Writes}
 import play.api.libs.json.Json.WithDefaultValues
-import ucar.ma2.Array as MultiArray
+import ucar.ma2.{IndexIterator, Array as MultiArray}
 
 import java.util.zip.CRC32C
 
@@ -101,6 +104,89 @@ class TransposeCodec(order: TransposeSetting) extends ArrayToArrayCodec {
   override def encode(array: MultiArray): MultiArray = ???
 
   override def decode(array: MultiArray): MultiArray = ???
+}
+
+// Element-wise arithmetic on MultiArrays that honors the signedness of the (zarr) data type.
+// ucar.ma2 stores unsigned types in signed primitives, so unsigned values must be masked when read.
+private object ArrayCodecMath {
+
+  def getAsDouble(iter: IndexIterator, dataType: ArrayDataType): Double = dataType match {
+    case ArrayDataType.u1 => (iter.getByteNext & 0xff).toDouble
+    case ArrayDataType.u2 => (iter.getShortNext & 0xffff).toDouble
+    case ArrayDataType.u4 => (iter.getIntNext.toLong & 0xffffffffL).toDouble
+    case ArrayDataType.u8 =>
+      val l = iter.getLongNext
+      if (l >= 0) l.toDouble else l.toDouble + 18446744073709551616.0 // + 2^64
+    case ArrayDataType.i1   => iter.getByteNext.toDouble
+    case ArrayDataType.i2   => iter.getShortNext.toDouble
+    case ArrayDataType.i4   => iter.getIntNext.toDouble
+    case ArrayDataType.i8   => iter.getLongNext.toDouble
+    case ArrayDataType.f4   => iter.getFloatNext.toDouble
+    case ArrayDataType.f8   => iter.getDoubleNext
+    case ArrayDataType.bool => if (iter.getBooleanNext) 1.0 else 0.0
+  }
+
+  // Writes value into the target element, rounding and clamping into range for integer targets.
+  // The primitive truncation (e.g. .toByte) yields the correct little-endian bit pattern for unsigned targets.
+  def setFromDouble(iter: IndexIterator, dataType: ArrayDataType, value: Double): Unit = dataType match {
+    case ArrayDataType.f8 => iter.setDoubleNext(value)
+    case ArrayDataType.f4 => iter.setFloatNext(value.toFloat)
+    case _                =>
+      val clamped = clampToRange(Math.rint(value), dataType)
+      dataType match {
+        case ArrayDataType.i1 | ArrayDataType.u1 => iter.setByteNext(clamped.toLong.toByte)
+        case ArrayDataType.i2 | ArrayDataType.u2 => iter.setShortNext(clamped.toLong.toShort)
+        case ArrayDataType.i4 | ArrayDataType.u4 => iter.setIntNext(clamped.toLong.toInt)
+        case ArrayDataType.i8 | ArrayDataType.u8 => iter.setLongNext(clamped.toLong)
+        case ArrayDataType.bool                  => iter.setBooleanNext(clamped != 0.0)
+        case _                                   => iter.setDoubleNext(value)
+      }
+  }
+
+  private def clampToRange(value: Double, dataType: ArrayDataType): Double = {
+    val min = ArrayDataType.minValue(dataType).doubleValue
+    val max = ArrayDataType.maxValue(dataType).doubleValue
+    Math.max(min, Math.min(max, value))
+  }
+
+  // Maps each element of source (interpreted as sourceDataType) through f, writing into a fresh
+  // MultiArray of targetDataType with the same shape and (C-)order.
+  def mapElements(source: MultiArray, sourceDataType: ArrayDataType, targetDataType: ArrayDataType)(
+      f: Double => Double
+  ): MultiArray = {
+    val target = MultiArray.factory(MultiArrayUtils.toMADataType(targetDataType), source.getShape)
+    val sourceIter = source.getIndexIterator
+    val targetIter = target.getIndexIterator
+    while (sourceIter.hasNext)
+      setFromDouble(targetIter, targetDataType, f(getAsDouble(sourceIter, sourceDataType)))
+    target
+  }
+}
+
+// https://github.com/zarr-developers/zarr-extensions/tree/main/codecs/reshape
+// Reshape preserves the C-order (lexicographical) ravel of the elements. Since chunks are typed
+// directly into their logical chunk shape, decoding is a no-op here (analogous to the transpose codec).
+class ReshapeCodec extends ArrayToArrayCodec {
+  override def encode(array: MultiArray): MultiArray = ???
+  override def decode(array: MultiArray): MultiArray = array
+}
+
+// https://github.com/zarr-developers/zarr-extensions/tree/main/codecs/scale_offset
+// Decode: out = in / scale + offset, performed in the array's own data type (dtype-preserving).
+class ScaleOffsetCodec(offset: Double, scale: Double, dataType: ArrayDataType) extends ArrayToArrayCodec {
+  override def encode(array: MultiArray): MultiArray = ???
+  override def decode(array: MultiArray): MultiArray =
+    ArrayCodecMath.mapElements(array, dataType, dataType)(in => in / scale + offset)
+}
+
+// https://github.com/zarr-developers/zarr-extensions/tree/main/codecs/cast_value
+// Decode: reinterpret the stored (encoded) values as the logical array data type.
+// rounding/out_of_range/scalar_map primarily describe the (lossy) encode direction; on decode we
+// convert exactly, clamping into range as a safeguard (best-effort support).
+class CastValueCodec(sourceDataType: ArrayDataType, targetDataType: ArrayDataType) extends ArrayToArrayCodec {
+  override def encode(array: MultiArray): MultiArray = ???
+  override def decode(array: MultiArray): MultiArray =
+    ArrayCodecMath.mapElements(array, sourceDataType, targetDataType)(identity)
 }
 
 class BloscCodec(cname: String, clevel: Int, shuffle: CompressionSetting, typesize: Option[Int], blocksize: Int)
@@ -283,6 +369,36 @@ final case class ZstdCodecConfiguration(level: Int, checksum: Boolean) extends C
 object ZstdCodecConfiguration {
   implicit val jsonFormat: OFormat[ZstdCodecConfiguration] = Json.format[ZstdCodecConfiguration]
   val name = "zstd"
+}
+
+final case class ReshapeCodecConfiguration(shape: JsValue) extends CodecConfiguration {
+  override def name: String = ReshapeCodecConfiguration.name
+}
+object ReshapeCodecConfiguration {
+  implicit val jsonFormat: OFormat[ReshapeCodecConfiguration] = Json.format[ReshapeCodecConfiguration]
+  val name = "reshape"
+}
+
+final case class ScaleOffsetCodecConfiguration(offset: Option[Double], scale: Option[Double])
+    extends CodecConfiguration {
+  override def name: String = ScaleOffsetCodecConfiguration.name
+}
+object ScaleOffsetCodecConfiguration {
+  implicit val jsonFormat: OFormat[ScaleOffsetCodecConfiguration] = Json.format[ScaleOffsetCodecConfiguration]
+  val name = "scale_offset"
+}
+
+final case class CastValueCodecConfiguration(
+    data_type: String,
+    rounding: Option[String],
+    out_of_range: Option[String],
+    scalar_map: Option[JsObject]
+) extends CodecConfiguration {
+  override def name: String = CastValueCodecConfiguration.name
+}
+object CastValueCodecConfiguration {
+  implicit val jsonFormat: OFormat[CastValueCodecConfiguration] = Json.format[CastValueCodecConfiguration]
+  val name = "cast_value"
 }
 
 case object Crc32CCodecConfiguration extends CodecConfiguration {

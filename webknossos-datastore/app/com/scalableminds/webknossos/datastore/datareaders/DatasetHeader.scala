@@ -22,6 +22,14 @@ trait DatasetHeader {
 
   def resolvedDataType: ArrayDataType
 
+  // The data type in which chunks are stored on disk. Differs from resolvedDataType (the logical array
+  // data type) only when an array->array codec changes the data type on encode (e.g. Zarr3 cast_value).
+  def storedDataType: ArrayDataType = resolvedDataType
+
+  // Whether the skip-typing shortcut (returning raw, untyped chunk bytes for whole-chunk reads) is valid.
+  // Must be false when a codec transforms values or the data type during decoding.
+  def isSkipTypingShortcutSupported: Boolean = true
+
   lazy val elementClass: Option[ElementClass.Value] = ElementClass.fromArrayDataType(resolvedDataType)
 
   def compressorImpl: Compressor

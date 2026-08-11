@@ -172,7 +172,7 @@ class DatasetArray(
         chunkIndex <- chunkIndices.headOption.toFox
         sourceChunk: MultiArray <- getSourceChunkDataWithCache(
           fullAxisOrder.permuteIndicesWkToArray(chunkIndex),
-          useSkipTypingShortcut = true
+          useSkipTypingShortcut = header.isSkipTypingShortcutSupported
         )
       } yield sourceChunk
     } else {
@@ -212,7 +212,10 @@ class DatasetArray(
       if (partialCopyingIsNotNeededForMultiArray(shape, totalOffset, chunkIndices)) {
         for {
           chunkIndex <- chunkIndices.headOption.toFox
-          sourceChunk: MultiArray <- getSourceChunkDataWithCache(chunkIndex, useSkipTypingShortcut = true)
+          sourceChunk: MultiArray <- getSourceChunkDataWithCache(
+            chunkIndex,
+            useSkipTypingShortcut = header.isSkipTypingShortcutSupported
+          )
         } yield sourceChunk
       } else {
         val targetBuffer = MultiArrayUtils.createDataBuffer(header.resolvedDataType, shape)

@@ -32,7 +32,7 @@ function* removeOutdatedMeshes(
   // Remove all outdated meshes.
   for (const [tracingId, meshIdsToRemove] of meshIdsToRemovePerLayer.entries()) {
     for (const aggloId of meshIdsToRemove) {
-      yield* put(removeMeshAction(tracingId, (aggloId)));
+      yield* put(removeMeshAction(tracingId, aggloId));
     }
   }
 }

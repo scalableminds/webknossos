@@ -2,6 +2,7 @@ import Toast from "libs/toast";
 import { addToNestedMap, addToSetMap } from "libs/utils";
 import { actionChannel, call, put } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
+import type { LayerNameAsKey } from "types/type_utils";
 import { getSegmentationLayerByName } from "viewer/model/accessors/dataset_accessor";
 import {
   getAllLoadedMeshes,
@@ -37,7 +38,6 @@ import {
   type ApplyingUpdateArtifacts,
   FailedIncorporateActionsReturnValue,
 } from "./applying_update_artifacts";
-import { LayerNameAsKey } from "types/type_utils";
 
 export function* tryToIncorporateActions(
   newerActions: APIUpdateActionBatch[],
@@ -63,7 +63,10 @@ export function* tryToIncorporateActions(
   // (opacity and visibility) the reloaded mesh should inherit from the agglomerate it originated
   // from (empty if nothing was stored). These must be gathered here while the original meshes still
   // exist; the meshes are only removed later in resolveApplyingUpdateArtifacts.
-  const meshesToLoadPerLayer: Map<LayerNameAsKey, Map<bigint, PreservedMeshDisplayProps>> = new Map();
+  const meshesToLoadPerLayer: Map<
+    LayerNameAsKey,
+    Map<bigint, PreservedMeshDisplayProps>
+  > = new Map();
   function recordMeshToLoad(
     tracingId: string,
     agglomerateId: bigint,

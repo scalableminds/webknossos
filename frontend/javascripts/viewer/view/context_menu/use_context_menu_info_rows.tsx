@@ -24,7 +24,7 @@ import type { ContextMenuInfo } from "viewer/store";
 import Store from "viewer/store";
 import { CopyIconWithTooltip } from "./copy_icon_with_tooltip";
 import { getInfoMenuItem, positionToString } from "./helpers";
-import { useSegmentStatistics } from "./use_segment_statistics";
+import { useSegmentStatisticsLabels } from "./use_segment_statistics_labels";
 
 export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAtPosition: bigint) {
   const {
@@ -66,8 +66,8 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
     segmentVolumeLabel,
     boundingBoxInfoLabel,
     segmentSurfaceAreaLabel,
-    isSegmentIndexAvailable,
-  } = useSegmentStatistics(
+    areSegmentStatisticsAvailable: canLayerAnswerSegmentStatistics,
+  } = useSegmentStatisticsLabels(
     clickedSegmentOrMeshId,
     segmentStatsTriggerDate,
     contextMenuPosition,
@@ -117,7 +117,7 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
 
   const infoRows: ItemType[] = [];
 
-  const areSegmentStatisticsAvailable = wasSegmentOrMeshClicked && isSegmentIndexAvailable;
+  const areSegmentStatisticsAvailable = wasSegmentOrMeshClicked && canLayerAnswerSegmentStatistics;
   if (areSegmentStatisticsAvailable) {
     infoRows.push({
       key: "load-stats",

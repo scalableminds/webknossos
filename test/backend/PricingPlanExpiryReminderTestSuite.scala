@@ -1,7 +1,8 @@
 package backend
 
 import com.scalableminds.util.time.Instant
-import models.organization.PricingPlanExpiryReminderService.{crossedLeadTimesDays, daysUntil}
+import models.organization.PricingPlan
+import models.organization.PricingPlanExpiryReminderService.{crossedLeadTimesDays, daysUntil, leadTimesDaysFor}
 import org.scalatest.wordspec.AsyncWordSpec
 
 import scala.concurrent.duration.*
@@ -9,6 +10,7 @@ import scala.concurrent.duration.*
 class PricingPlanExpiryReminderTestSuite extends AsyncWordSpec {
 
   private val leadTimesDays = List(30, 14, 7)
+  private val trialLeadTimesDays = List(7)
   private val now = Instant(1770000000000L)
 
   "daysUntil" should {
@@ -35,6 +37,25 @@ class PricingPlanExpiryReminderTestSuite extends AsyncWordSpec {
     }
     "be empty if no lead times are configured" in
       assert(crossedLeadTimesDays(1, Seq.empty).isEmpty)
+  }
+
+  "leadTimesDaysFor" should {
+    // Trials usually run for a short time only, so a single reminder shortly before expiry is enough.
+    "use the trial lead times for trial plans" in {
+      assert(leadTimesDaysFor(PricingPlan.Team_Trial, leadTimesDays, trialLeadTimesDays) == List(7))
+      assert(leadTimesDaysFor(PricingPlan.Power_Trial, leadTimesDays, trialLeadTimesDays) == List(7))
+    }
+    "use the regular lead times for all other plans" in {
+      assert(leadTimesDaysFor(PricingPlan.Team, leadTimesDays, trialLeadTimesDays) == leadTimesDays)
+      assert(leadTimesDaysFor(PricingPlan.Power, leadTimesDays, trialLeadTimesDays) == leadTimesDays)
+      assert(leadTimesDaysFor(PricingPlan.Custom, leadTimesDays, trialLeadTimesDays) == leadTimesDays)
+    }
+    "let a trial reminder fire only once, 7 days before expiry" in {
+      val trialLeadTimes = leadTimesDaysFor(PricingPlan.Team_Trial, leadTimesDays, trialLeadTimesDays)
+      assert(crossedLeadTimesDays(14, trialLeadTimes).isEmpty)
+      assert(crossedLeadTimesDays(7, trialLeadTimes) == List(7))
+      assert(crossedLeadTimesDays(1, trialLeadTimes) == List(7))
+    }
   }
 
   "the reminder mail" should {

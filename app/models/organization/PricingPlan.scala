@@ -8,6 +8,8 @@ object PricingPlan extends ExtendedEnumeration {
 
   def isPaidPlan(plan: PricingPlan): Boolean = plan != Personal
 
+  def isTrialPlan(plan: PricingPlan): Boolean = plan == Team_Trial || plan == Power_Trial
+
   // Human-readable name, e.g. for use in emails
   def label(plan: PricingPlan): String = plan match {
     case Team_Trial  => "Team (Trial)"

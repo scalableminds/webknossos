@@ -82,6 +82,7 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
     object PricingPlanExpiryReminder {
       val enabled: Boolean = get[Boolean]("webKnossos.pricingPlanExpiryReminder.enabled")
       val leadTimesDays: List[Int] = getList[Int]("webKnossos.pricingPlanExpiryReminder.leadTimesDays")
+      val trialLeadTimesDays: List[Int] = getList[Int]("webKnossos.pricingPlanExpiryReminder.trialLeadTimesDays")
       val tickerInterval: FiniteDuration = get[FiniteDuration]("webKnossos.pricingPlanExpiryReminder.tickerInterval")
     }
 

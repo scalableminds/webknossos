@@ -31,14 +31,15 @@ class PricingPlanExpiryReminderService @Inject() (
     extends IntervalScheduler
     with LazyLogging {
 
-  import PricingPlanExpiryReminderService.{crossedLeadTimesDays, daysUntil}
+  import PricingPlanExpiryReminderService.{crossedLeadTimesDays, daysUntil, leadTimesDaysFor}
 
   private lazy val Mailer = actorSystem.actorSelection("/user/mailActor")
 
-  private def leadTimesDays: List[Int] = conf.WebKnossos.PricingPlanExpiryReminder.leadTimesDays
+  private def allLeadTimesDays: List[Int] =
+    conf.WebKnossos.PricingPlanExpiryReminder.leadTimesDays ++ conf.WebKnossos.PricingPlanExpiryReminder.trialLeadTimesDays
 
   override protected def tickerEnabled: Boolean =
-    conf.WebKnossos.PricingPlanExpiryReminder.enabled && leadTimesDays.nonEmpty
+    conf.WebKnossos.PricingPlanExpiryReminder.enabled && allLeadTimesDays.nonEmpty
 
   override protected def tickerInterval: FiniteDuration = conf.WebKnossos.PricingPlanExpiryReminder.tickerInterval
 
@@ -47,7 +48,7 @@ class PricingPlanExpiryReminderService @Inject() (
   override protected def tick(): Fox[Unit] =
     for {
       now <- Instant.nowFox
-      organizations <- organizationDAO.findAllWithPlanExpiringBefore(now + (leadTimesDays.max days))
+      organizations <- organizationDAO.findAllWithPlanExpiringBefore(now + (allLeadTimesDays.max days))
       _ <- Fox.serialCombined(organizations)(organization => tryAndLog(organization, remindIfDue(organization, now)))
     } yield ()
 
@@ -55,6 +56,11 @@ class PricingPlanExpiryReminderService @Inject() (
     for {
       paidUntil <- organization.paidUntil.toFox
       daysRemaining = daysUntil(paidUntil, now)
+      leadTimesDays = leadTimesDaysFor(
+        organization.pricingPlan,
+        conf.WebKnossos.PricingPlanExpiryReminder.leadTimesDays,
+        conf.WebKnossos.PricingPlanExpiryReminder.trialLeadTimesDays
+      )
       dueLeadTimesDays = crossedLeadTimesDays(daysRemaining, leadTimesDays)
       _ <- Fox.runIf(dueLeadTimesDays.nonEmpty)(remind(organization, paidUntil, daysRemaining, dueLeadTimesDays))
     } yield ()
@@ -104,4 +110,12 @@ object PricingPlanExpiryReminderService {
   // The configured lead times that the remaining time has already fallen below, ascending.
   def crossedLeadTimesDays(daysRemaining: Long, leadTimesDays: Seq[Int]): List[Int] =
     leadTimesDays.filter(_ >= daysRemaining).sorted.toList
+
+  // Trials run for a short time only, so they get their own (shorter) set of lead times.
+  def leadTimesDaysFor(
+      pricingPlan: PricingPlan.PricingPlan,
+      leadTimesDays: Seq[Int],
+      trialLeadTimesDays: Seq[Int]
+  ): Seq[Int] =
+    if (PricingPlan.isTrialPlan(pricingPlan)) trialLeadTimesDays else leadTimesDays
 }

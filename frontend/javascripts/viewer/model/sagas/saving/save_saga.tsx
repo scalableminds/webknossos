@@ -281,11 +281,9 @@ function* updatePendingProofreadingOperationInfoAction() {
 
   if (activeMapping.mapping != null) {
     const mappingWrapper = new NumberLikeMapWrapper(activeMapping.mapping);
-    const sourceVal = mappingWrapper.get(sourceInfo.unmappedId);
-    sourceAgglomerateId = sourceVal != null ? BigInt(sourceVal) : undefined;
+    sourceAgglomerateId = mappingWrapper.getAsBigInt(sourceInfo.unmappedId);;
     if (targetInfo) {
-      const targetVal = mappingWrapper.get(targetInfo.unmappedId);
-      targetAgglomerateId = targetVal != null ? BigInt(targetVal) : undefined;
+      targetAgglomerateId = mappingWrapper.getAsBigInt(targetInfo.unmappedId);
     }
   }
 
@@ -323,9 +321,9 @@ function* updatePendingProofreadingOperationInfoAction() {
       annotationVersion,
     );
     const mappingWrapper = new NumberLikeMapWrapper(agglomerateInfoFromServer);
-    const sourceAgglomerateIdFromServer = mappingWrapper.get(sourceInfo.unmappedId);
+    const sourceAgglomerateIdFromServer = mappingWrapper.getAsBigInt(sourceInfo.unmappedId);
     const targetAgglomerateIdFromServer = targetInfo
-      ? mappingWrapper.get(targetInfo.unmappedId)
+      ? mappingWrapper.getAsBigInt(targetInfo.unmappedId)
       : null;
 
     yield* put(
@@ -333,12 +331,12 @@ function* updatePendingProofreadingOperationInfoAction() {
         tracingId,
         sourceInfo: {
           ...sourceInfo,
-          agglomerateId: BigInt(sourceAgglomerateIdFromServer ?? sourceInfo.agglomerateId),
+          agglomerateId: sourceAgglomerateIdFromServer ?? sourceInfo.agglomerateId,
         },
         targetInfo: targetInfo
           ? {
               ...targetInfo,
-              agglomerateId: BigInt(targetAgglomerateIdFromServer ?? targetInfo.agglomerateId),
+              agglomerateId: targetAgglomerateIdFromServer ?? targetInfo.agglomerateId,
             }
           : null,
       }),

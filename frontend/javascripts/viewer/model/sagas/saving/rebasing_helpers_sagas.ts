@@ -273,9 +273,9 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
               const mappingSyncedWithBackend = new NumberLikeMapWrapper(
                 mappingSyncedWithBackendUnwrapped,
               );
-              const upToDateAgglomerateId1Raw = mappingSyncedWithBackend.get(segmentId1);
-              const upToDateAgglomerateId2Raw = mappingSyncedWithBackend.get(segmentId2);
-              if (!upToDateAgglomerateId1Raw || !upToDateAgglomerateId2Raw) {
+              const upToDateAgglomerateId1 = mappingSyncedWithBackend.getAsBigInt(segmentId1);
+              const upToDateAgglomerateId2 = mappingSyncedWithBackend.getAsBigInt(segmentId2);
+              if (!upToDateAgglomerateId1 || !upToDateAgglomerateId2) {
                 console.error(
                   "Found proofreading action without loaded agglomerate ids. This should never occur.",
                   action,
@@ -283,8 +283,6 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
                 success = false;
                 return null;
               }
-              const upToDateAgglomerateId1 = toBigInt(upToDateAgglomerateId1Raw);
-              const upToDateAgglomerateId2 = toBigInt(upToDateAgglomerateId2Raw);
               if (action.name === "splitAgglomerate") {
                 return {
                   name: action.name,
@@ -465,8 +463,8 @@ function getUpToDateSegmentIdViaPosition(
   }
 
   const mappingSyncedWithBackend = new NumberLikeMapWrapper(mappingSyncedWithBackendUnwrapped);
-  const upToDateId = mappingSyncedWithBackend.get(unmappedId);
+  const upToDateId = mappingSyncedWithBackend.getAsBigInt(unmappedId);
   // This fallback should not happen because addMissingSegmentsToLoadedMappings
   // is called earlier.
-  return upToDateId != null ? toBigInt(upToDateId) : originalSegmentId;
+  return upToDateId ?? originalSegmentId;
 }

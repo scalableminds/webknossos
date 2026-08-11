@@ -6,13 +6,14 @@ case class PricingPlanFeatures(planLabel: String, featureHighlights: List[String
 
 object PricingPlanFeatures {
 
-  // Mirrors teamPlanFeatures/powerPlanFeatures in frontend/javascripts/admin/organization/pricing_plan_utils.ts,
+  // Based on teamPlanFeatures/powerPlanFeatures in frontend/javascripts/admin/organization/pricing_plan_utils.ts,
   // without the "Everything from …" lines, since the highlights of the skipped tiers are listed here as well.
+  // Concrete user and storage limits are left out on purpose, as they can be negotiated per organization.
   private val teamPlanFeatureHighlights = List(
     "Collaborative Annotation",
     "Project Management",
     "Dataset Management and Access Control",
-    "5 Users / 1TB Storage (upgradable)",
+    "More users and storage",
     "Eligible for the AI Add-on and AI model training",
     "Priority Email Support"
   )

@@ -2,6 +2,7 @@ package models.organization
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.box.Failure
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, TextUtils}
@@ -208,30 +209,40 @@ class OrganizationService @Inject() (
     } yield ()
 
   /** Notifies the organization owner and all of its admins that the organization was moved to a higher pricing tier,
-    * highlighting the features they gained. Does nothing if the plan change was not an upgrade.
+    * highlighting the features they gained. Does nothing if the plan change was not an upgrade. Never fails, as the
+    * plan update it belongs to has already been persisted by then. Failures are logged instead.
     */
   def sendPricingPlanUpgradeMails(
       organization: Organization,
       previousPlan: PricingPlan.PricingPlan,
       newPlan: PricingPlan.PricingPlan
   ): Fox[Unit] =
-    Fox
-      .runOptional(PricingPlanFeatures.unlockedBy(previousPlan, newPlan))(unlockedFeatures =>
-        for {
-          admins <- userDAO.findAdminsByOrg(organization._id)(using GlobalAccessContext)
-          adminMultiUsers <- Fox
-            .serialCombined(admins)(admin => multiUserDAO.findOne(admin._multiUser)(using GlobalAccessContext))
-          ownerMultiUserBox <- multiUserDAO.findMultiUserOfOrganizationOwner(organization._id).shiftBox
-          recipients = (ownerMultiUserBox.toOption.toList ++ adminMultiUsers).distinctBy(_._id)
-          _ = recipients.foreach(recipient =>
-            Mailer ! Send(defaultMails.pricingPlanUpgradedMail(recipient, organization.name, unlockedFeatures))
+    for {
+      resultBox <- Fox
+        .runOptional(PricingPlanFeatures.unlockedBy(previousPlan, newPlan))(unlockedFeatures =>
+          for {
+            admins <- userDAO.findAdminsByOrg(organization._id)(using GlobalAccessContext)
+            adminMultiUsers <- Fox
+              .serialCombined(admins)(admin => multiUserDAO.findOne(admin._multiUser)(using GlobalAccessContext))
+            ownerMultiUserBox <- multiUserDAO.findMultiUserOfOrganizationOwner(organization._id).shiftBox
+            recipients = (ownerMultiUserBox.toOption.toList ++ adminMultiUsers).distinctBy(_._id)
+            _ = recipients.foreach(recipient =>
+              Mailer ! Send(defaultMails.pricingPlanUpgradedMail(recipient, organization.name, unlockedFeatures))
+            )
+            _ = logger.info(
+              s"Notified ${recipients.length} owner/admins of organization ${organization._id} about the pricing plan upgrade from $previousPlan to $newPlan."
+            )
+          } yield ()
+        )
+        .shiftBox
+      _ = resultBox match {
+        case Failure(msg, _, _) =>
+          logger.warn(
+            s"Could not notify owner/admins of organization ${organization._id} about the pricing plan upgrade from $previousPlan to $newPlan: $msg"
           )
-          _ = logger.info(
-            s"Notified ${recipients.length} owner/admins of organization ${organization._id} about the pricing plan upgrade from $previousPlan to $newPlan."
-          )
-        } yield ()
-      )
-      .map(_ => ())
+        case _ => ()
+      }
+    } yield ()
 
   def assertIsSuperUserOrOrganizationHasAiPlan(organization: Organization, user: User)(using
       ctx: DBAccessContext

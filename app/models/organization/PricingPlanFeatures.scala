@@ -36,13 +36,11 @@ object PricingPlanFeatures {
   // highlights shared between the tiers listed only once.
   // None if newPlan is not an upgrade, or if it is a tier we have no highlights for (Custom).
   def unlockedBy(previousPlan: PricingPlan, newPlan: PricingPlan): Option[PricingPlanFeatures] =
-    forPlan(newPlan)
-      .filter(_ => PricingPlan.isUpgrade(previousPlan, newPlan))
-      .map { newPlanFeatures =>
-        val gainedTiers = List(PricingPlan.Team, PricingPlan.Power).filter(tier =>
-          PricingPlan.tierRank(tier) > PricingPlan.tierRank(previousPlan) &&
-            PricingPlan.tierRank(tier) <= PricingPlan.tierRank(newPlan)
-        )
-        newPlanFeatures.copy(featureHighlights = gainedTiers.flatMap(forPlan).flatMap(_.featureHighlights).distinct)
-      }
+    forPlan(newPlan).filter(_ => PricingPlan.isUpgrade(previousPlan, newPlan)).map { newPlanFeatures =>
+      val gainedTiers = List(PricingPlan.Team, PricingPlan.Power).filter(tier =>
+        PricingPlan.tierRank(tier) > PricingPlan.tierRank(previousPlan) &&
+          PricingPlan.tierRank(tier) <= PricingPlan.tierRank(newPlan)
+      )
+      newPlanFeatures.copy(featureHighlights = gainedTiers.flatMap(forPlan).flatMap(_.featureHighlights).distinct)
+    }
 }

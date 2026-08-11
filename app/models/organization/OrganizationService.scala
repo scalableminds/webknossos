@@ -215,21 +215,23 @@ class OrganizationService @Inject() (
       previousPlan: PricingPlan.PricingPlan,
       newPlan: PricingPlan.PricingPlan
   ): Fox[Unit] =
-    Fox.runOptional(PricingPlanFeatures.unlockedBy(previousPlan, newPlan))(unlockedFeatures =>
-      for {
-        admins <- userDAO.findAdminsByOrg(organization._id)(using GlobalAccessContext)
-        adminMultiUsers <- Fox
-          .serialCombined(admins)(admin => multiUserDAO.findOne(admin._multiUser)(using GlobalAccessContext))
-        ownerMultiUserBox <- multiUserDAO.findMultiUserOfOrganizationOwner(organization._id).shiftBox
-        recipients = (ownerMultiUserBox.toOption.toList ++ adminMultiUsers).distinctBy(_._id)
-        _ = recipients.foreach(recipient =>
-          Mailer ! Send(defaultMails.pricingPlanUpgradedMail(recipient, organization.name, unlockedFeatures))
-        )
-        _ = logger.info(
-          s"Notified ${recipients.length} owner/admins of organization ${organization._id} about the pricing plan upgrade from $previousPlan to $newPlan."
-        )
-      } yield ()
-    ).map(_ => ())
+    Fox
+      .runOptional(PricingPlanFeatures.unlockedBy(previousPlan, newPlan))(unlockedFeatures =>
+        for {
+          admins <- userDAO.findAdminsByOrg(organization._id)(using GlobalAccessContext)
+          adminMultiUsers <- Fox
+            .serialCombined(admins)(admin => multiUserDAO.findOne(admin._multiUser)(using GlobalAccessContext))
+          ownerMultiUserBox <- multiUserDAO.findMultiUserOfOrganizationOwner(organization._id).shiftBox
+          recipients = (ownerMultiUserBox.toOption.toList ++ adminMultiUsers).distinctBy(_._id)
+          _ = recipients.foreach(recipient =>
+            Mailer ! Send(defaultMails.pricingPlanUpgradedMail(recipient, organization.name, unlockedFeatures))
+          )
+          _ = logger.info(
+            s"Notified ${recipients.length} owner/admins of organization ${organization._id} about the pricing plan upgrade from $previousPlan to $newPlan."
+          )
+        } yield ()
+      )
+      .map(_ => ())
 
   def assertIsSuperUserOrOrganizationHasAiPlan(organization: Organization, user: User)(using
       ctx: DBAccessContext

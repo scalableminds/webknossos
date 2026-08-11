@@ -39,8 +39,12 @@ class PricingPlanFeaturesTestSuite extends AsyncWordSpec {
     }
 
     "treat trials like their paid counterpart" in {
-      assert(PricingPlanFeatures.unlockedBy(PricingPlan.Personal, PricingPlan.Team_Trial).map(_.planLabel).contains("Team"))
-      assert(PricingPlanFeatures.unlockedBy(PricingPlan.Team_Trial, PricingPlan.Power).map(_.planLabel).contains("Power"))
+      assert(
+        PricingPlanFeatures.unlockedBy(PricingPlan.Personal, PricingPlan.Team_Trial).map(_.planLabel).contains("Team")
+      )
+      assert(
+        PricingPlanFeatures.unlockedBy(PricingPlan.Team_Trial, PricingPlan.Power).map(_.planLabel).contains("Power")
+      )
       assert(PricingPlanFeatures.unlockedBy(PricingPlan.Team_Trial, PricingPlan.Team).isEmpty)
     }
 

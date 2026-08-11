@@ -142,12 +142,8 @@ const Toast = {
       this.closePendingToastsEarlyMap[key]?.();
       let cancelledTimeout = false;
       const timeoutToastManually = async () => {
-        const splitTimeout = timeout / 2;
         await ensureUserIsAttentive();
-        await sleep(splitTimeout);
-        await ensureUserIsAttentive();
-        // If the user was not attentive, show the toast again so that the user doesn't just see the toast disappear.
-        await sleep(splitTimeout);
+        await sleep(timeout);
         if (cancelledTimeout) {
           // If the toast has been closed early, don't close it again.
           return;

@@ -21,6 +21,10 @@
 
 ->       /v15/                                                                webknossos.latest.Routes
 
+# v14: support changes to v15
+GET      /v14/datasets/:datasetId                                             controllers.LegacyApiController.readV14(datasetId: ObjectId, sharingToken: Option[String])
+GET      /v14/datasets                                                        controllers.LegacyApiController.listV14(isActive: Option[Boolean], isUnreported: Option[Boolean], organizationId: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[ObjectId], folderId: Option[ObjectId], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int], compact: Option[Boolean])
+PATCH    /v14/datasets/:datasetId/updatePartial                               controllers.LegacyApiController.updatePartialV14(datasetId: ObjectId)
 ->       /v14/                                                                webknossos.latest.Routes
 
 # v13: support changes to v15

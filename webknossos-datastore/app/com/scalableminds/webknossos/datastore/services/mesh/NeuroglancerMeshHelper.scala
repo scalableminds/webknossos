@@ -92,7 +92,7 @@ case class MeshChunk(
     position: Vec3Float,
     byteOffset: Long,
     byteSize: Int,
-    unmappedSegmentId: Option[UnsignedLong] = None
+    unmappedSegmentId: UnsignedLong
 )
 
 object MeshChunk {
@@ -174,7 +174,7 @@ trait NeuroglancerMeshHelper {
         position = globalPosition, // This position is in Voxel Space
         byteOffset = meshByteStartOffset + getChunkByteOffset(lod, currentChunk),
         byteSize = segmentInfo.chunkByteSizes(lod)(currentChunk).toInt, // size must be int32 to fit in java array
-        unmappedSegmentId = Some(UnsignedLong(segmentId))
+        unmappedSegmentId = UnsignedLong(segmentId)
       )
     }
 

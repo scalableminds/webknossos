@@ -22,17 +22,6 @@ export type MeshSegmentInfo = {
   chunkScale: Vector3;
 };
 
-// The backend always populates unmappedSegmentId (see NeuroglancerMeshHelper.enrichSegmentInfo,
-// shared by all mesh file backends: hdf5, zarr3, and neuroglancer precomputed), but it's
-// nonetheless modeled as optional on the wire (Option[UnsignedLong]); default to 0n defensively
-// in case a response is ever missing it.
-// todop: make it non-optional in backend and simplify code here?
-type RawMeshChunk = Omit<MeshChunk, "unmappedSegmentId"> & {
-  unmappedSegmentId?: bigint | null;
-};
-type RawMeshLodInfo = Omit<MeshLodInfo, "chunks"> & { chunks: Array<RawMeshChunk> };
-type RawMeshSegmentInfo = Omit<MeshSegmentInfo, "lods"> & { lods: Array<RawMeshLodInfo> };
-
 type ListMeshChunksRequest = {
   meshFileName: string;
   segmentId: bigint;
@@ -56,8 +45,8 @@ export function getMeshFileChunksForSegment(
   editableMappingTracingId: string | null | undefined,
   annotationVersion: number | undefined | null,
 ): Promise<MeshSegmentInfo> {
-  return retryAsyncFunction(async () => {
-    const rawSegmentInfo = await doWithToken<RawMeshSegmentInfo>((token) => {
+  return retryAsyncFunction(() => {
+    return doWithToken<MeshSegmentInfo>((token) => {
       const params = new URLSearchParams();
       params.append("token", token);
       if (targetMappingName != null) {
@@ -79,16 +68,6 @@ export function getMeshFileChunksForSegment(
         },
       );
     });
-    return {
-      ...rawSegmentInfo,
-      lods: rawSegmentInfo.lods.map((lod) => ({
-        ...lod,
-        chunks: lod.chunks.map((chunk) => ({
-          ...chunk,
-          unmappedSegmentId: chunk.unmappedSegmentId ?? 0n,
-        })),
-      })),
-    };
   });
 }
 

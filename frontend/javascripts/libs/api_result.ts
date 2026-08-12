@@ -77,20 +77,8 @@ function showErrorToastFor(error: RestApiError): void {
  * resolves (never rejects) with an ApiResult.
  *
  * `requester` receives `adaptedOptions` — the caller's `options` with
- * `showErrorToast` forced to `false` for the duration of the retry loop.
- * It's named `adaptedOptions` (never just `options`) specifically so a
- * rest_api.ts function calling this never has two same-looking "options"
- * variables in scope — the one the caller passed in, and the one to
- * actually forward to Request.*.
- *
- * Toast handling: every individual attempt is issued with showErrorToast:false
- * — retries must stay silent. Once the loop gives up for good (retries
- * exhausted, overallTimeoutMs elapsed, or the error isn't retryable), this
- * shows exactly one toast, gated on the caller's own `options.showErrorToast`
- * (default true, same default as Request.* today). Callers therefore get
- * today's exact toast behavior for free; they only need to think about toasts
- * at all if they want to opt out (`showErrorToast: false`) and branch on the
- * returned ApiResult themselves, same as they could opt out today.
+ * `showErrorToast` forced to `false` for the duration of the retry loop
+ * so that no error toast is shown when a retry is pending.
  */
 export async function requestResult<T>(
   requester: (adaptedOptions: RequestOptions) => Promise<T>,

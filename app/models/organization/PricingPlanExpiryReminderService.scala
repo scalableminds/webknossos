@@ -31,7 +31,7 @@ class PricingPlanExpiryReminderService @Inject() (
     extends IntervalScheduler
     with LazyLogging {
 
-  import PricingPlanExpiryReminderService.{crossedLeadTimesDays, daysUntil, leadTimesDaysFor}
+  import PricingPlanExpiryReminderService.{crossedLeadTimesDays, leadTimesDaysFor}
 
   private lazy val Mailer = actorSystem.actorSelection("/user/mailActor")
 
@@ -55,7 +55,7 @@ class PricingPlanExpiryReminderService @Inject() (
   private def remindIfDue(organization: Organization, now: Instant): Fox[Unit] =
     for {
       paidUntil <- organization.paidUntil.toFox
-      daysRemaining = daysUntil(paidUntil, now)
+      daysRemaining = now.daysUntil(paidUntil)
       leadTimesDays = leadTimesDaysFor(
         organization.pricingPlan,
         conf.WebKnossos.PricingPlanExpiryReminder.leadTimesDays,
@@ -69,7 +69,7 @@ class PricingPlanExpiryReminderService @Inject() (
       organization: Organization,
       paidUntil: Instant,
       daysRemaining: Long,
-      dueLeadTimesDays: List[Int]
+      dueLeadTimesDays: Seq[Int]
   ): Fox[Unit] =
     for {
       recipients <- multiUserDAO.findMultiUsersOfOrganizationOwnerAndAdmins(organization._id)
@@ -81,7 +81,6 @@ class PricingPlanExpiryReminderService @Inject() (
         logger.info(
           s"Reminding the owner and admins (${recipients.length}) of organization ${organization._id} that its ${organization.pricingPlan} plan expires in $daysRemaining days..."
         )
-        // One mail per recipient, so that each is addressed by their own name and does not see the other addresses.
         recipients.foreach(recipient =>
           Mailer ! Send(defaultMails.pricingPlanExpiryReminderMail(recipient, organization, paidUntil, daysRemaining))
         )
@@ -103,16 +102,12 @@ class PricingPlanExpiryReminderService @Inject() (
 
 object PricingPlanExpiryReminderService {
 
-  // Rounded up, so that a plan expiring in 6 days and 12 hours is reported as expiring in 7 days.
-  def daysUntil(instant: Instant, now: Instant): Long =
-    math.ceil((instant.epochMillis - now.epochMillis).toDouble / (1 day).toMillis).toLong
-
   /* The configured lead times that the remaining time has already fallen below, ascending.
      Once the plan has expired, no reminder is due any more; the app shows an expired-plan banner instead.
      The query already excludes expired plans, but it uses the database clock, which may differ from ours. */
-  def crossedLeadTimesDays(daysRemaining: Long, leadTimesDays: Seq[Int]): List[Int] =
-    if (daysRemaining <= 0) List.empty
-    else leadTimesDays.filter(_ >= daysRemaining).sorted.toList
+  def crossedLeadTimesDays(daysRemaining: Long, leadTimesDays: Seq[Int]): Seq[Int] =
+    if (daysRemaining <= 0) Seq.empty
+    else leadTimesDays.filter(_ >= daysRemaining).sorted
 
   // Trials run for a short time only, so they get their own (shorter) set of lead times.
   def leadTimesDaysFor(

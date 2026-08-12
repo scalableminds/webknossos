@@ -189,8 +189,7 @@ class MultiUserDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContex
                    JOIN webknossos.multiUsers_ mu ON u._multiUser = mu._id
                    WHERE (u.isOrganizationOwner OR u.isAdmin)
                    AND NOT u.isDeactivated
-                   AND u._organization = $organizationId
-                   ORDER BY u.isOrganizationOwner DESC, mu._id""".as[MultiusersRow])
+                   AND u._organization = $organizationId""".as[MultiusersRow])
       parsed <- parseAll(r)
     } yield parsed
 

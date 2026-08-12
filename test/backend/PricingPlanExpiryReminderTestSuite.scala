@@ -1,25 +1,13 @@
 package backend
 
-import com.scalableminds.util.time.Instant
 import models.organization.PricingPlan
-import models.organization.PricingPlanExpiryReminderService.{crossedLeadTimesDays, daysUntil, leadTimesDaysFor}
+import models.organization.PricingPlanExpiryReminderService.{crossedLeadTimesDays, leadTimesDaysFor}
 import org.scalatest.wordspec.AsyncWordSpec
-
-import scala.concurrent.duration.*
 
 class PricingPlanExpiryReminderTestSuite extends AsyncWordSpec {
 
   private val leadTimesDays = List(30, 14, 7)
   private val trialLeadTimesDays = List(7)
-  private val now = Instant(1770000000000L)
-
-  "daysUntil" should {
-    "round up to full days" in {
-      assert(daysUntil(now + (7 days), now) == 7)
-      assert(daysUntil(now + (6 days) + (12 hours), now) == 7)
-      assert(daysUntil(now + (1 hour), now) == 1)
-    }
-  }
 
   "crossedLeadTimesDays" should {
     "be empty while the expiry date is further out than the largest lead time" in

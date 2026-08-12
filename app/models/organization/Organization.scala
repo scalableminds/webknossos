@@ -424,7 +424,6 @@ class OrganizationDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionCon
       parsed <- Fox.serialCombined(rows)(parsePlanUpdate)
     } yield parsed
 
-  // Organizations on a paid plan that has not expired yet, but will expire at or before the given instant.
   def findAllWithPlanExpiringBefore(expiryThreshold: Instant): Fox[List[Organization]] =
     for {
       rows <- run(q"""SELECT $columns
@@ -440,7 +439,7 @@ class OrganizationDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionCon
   /* Records that the organization was reminded about the given paidUntil date for the given lead times.
      Rows that are already present are skipped, so the returned count is the number of lead times that
      were not recorded before. Callers use it to decide whether a reminder mail still needs to be sent. */
-  def insertPlanExpiryReminders(organizationId: String, paidUntil: Instant, leadTimesDays: List[Int]): Fox[Int] =
+  def insertPlanExpiryReminders(organizationId: String, paidUntil: Instant, leadTimesDays: Seq[Int]): Fox[Int] =
     if (leadTimesDays.isEmpty) Fox.successful(0)
     else {
       val values = SqlToken.joinBySeparator(

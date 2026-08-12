@@ -1,5 +1,6 @@
 package mail
 
+import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.time.Instant
 import models.organization.{Organization, PricingPlan}
 import models.user.MultiUser
@@ -7,12 +8,10 @@ import utils.WkConf
 import views.*
 
 import java.net.URI
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 import javax.inject.Inject
 import scala.util.Try
 
-class DefaultMails @Inject() (conf: WkConf) {
+class DefaultMails @Inject() (conf: WkConf) extends Formatter {
 
   private val uri = conf.Http.uri
   private val defaultSender = conf.Mail.defaultSender
@@ -133,7 +132,7 @@ class DefaultMails @Inject() (conf: WkConf) {
       daysRemaining: Long
   ): Mail = {
     val pricingPlanLabel = PricingPlan.label(organization.pricingPlan)
-    val expiryDate = formatDateForMail(paidUntil)
+    val expiryDate = formatDateOnly(paidUntil)
     Mail(
       from = defaultSender,
       subject = s"WEBKNOSSOS | Your $pricingPlanLabel plan expires on $expiryDate",
@@ -152,9 +151,6 @@ class DefaultMails @Inject() (conf: WkConf) {
       replyTo = List(supportEmail)
     )
   }
-
-  private def formatDateForMail(instant: Instant): String =
-    DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.ENGLISH).format(instant.toZonedDateTime)
 
   def upgradePricingPlanToTeamMail(multiUser: MultiUser, organizationName: String): Mail =
     Mail(

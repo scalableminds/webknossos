@@ -45,8 +45,8 @@ export function getMeshFileChunksForSegment(
   editableMappingTracingId: string | null | undefined,
   annotationVersion: number | undefined | null,
 ): Promise<MeshSegmentInfo> {
-  return retryAsyncFunction(() => {
-    return doWithToken<MeshSegmentInfo>((token) => {
+  return retryAsyncFunction(() =>
+    doWithToken((token) => {
       const params = new URLSearchParams();
       params.append("token", token);
       if (targetMappingName != null) {
@@ -67,8 +67,8 @@ export function getMeshFileChunksForSegment(
           showErrorToast: false,
         },
       );
-    });
-  });
+    }),
+  );
 }
 
 type MeshChunkDataRequest = {

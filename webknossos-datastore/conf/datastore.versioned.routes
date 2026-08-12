@@ -3,6 +3,12 @@
 
 ->  /v15/ datastore.latest.Routes
 
+GET           /v14/datasets/:datasetId/proxy/datasource-properties.json                                                                                  @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.proxyDatasourceV14(datasetId: ObjectId)
+GET           /v14/zarr/:datasetId/datasource-properties.json                                                                                            @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.requestDataSourceV14(datasetId: ObjectId, zarrVersion: Int = 2)
+GET           /v14/zarr3_experimental/:datasetId/datasource-properties.json                                                                              @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.requestDataSourceV14(datasetId: ObjectId, zarrVersion: Int = 3)
+GET           /v14/annotations/zarr/:accessTokenOrId/datasource-properties.json                                                                          @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.dataSourceWithAnnotationPrivateLinkV14(accessTokenOrId: String, zarrVersion: Int = 2)
+GET           /v14/annotations/zarr3_experimental/:accessTokenOrId/datasource-properties.json                                                            @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.dataSourceWithAnnotationPrivateLinkV14(accessTokenOrId: String, zarrVersion: Int = 3)
+
 ->  /v14/ datastore.latest.Routes
 
 # Dataset upload
@@ -11,6 +17,12 @@ POST          /v13/datasets                                                     
 POST          /v13/datasets/reserveUpload                                                                                                                @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.reserveDatasetUploadV13()
 GET           /v13/datasets/unfinishedUploads                                                                                                            @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.getUnfinishedUploadsV13(organizationName: String)
 POST          /v13/datasets/finishUpload                                                                                                                 @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.finishUploadV13()
+
+GET           /v13/datasets/:datasetId/proxy/datasource-properties.json                                                                                  @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.proxyDatasourceV14(datasetId: ObjectId)
+GET           /v13/zarr/:datasetId/datasource-properties.json                                                                                            @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.requestDataSourceV14(datasetId: ObjectId, zarrVersion: Int = 2)
+GET           /v13/zarr3_experimental/:datasetId/datasource-properties.json                                                                              @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.requestDataSourceV14(datasetId: ObjectId, zarrVersion: Int = 3)
+GET           /v13/annotations/zarr/:accessTokenOrId/datasource-properties.json                                                                          @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.dataSourceWithAnnotationPrivateLinkV14(accessTokenOrId: String, zarrVersion: Int = 2)
+GET           /v13/annotations/zarr3_experimental/:accessTokenOrId/datasource-properties.json                                                            @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.dataSourceWithAnnotationPrivateLinkV14(accessTokenOrId: String, zarrVersion: Int = 3)
 
 ->  /v13/ datastore.latest.Routes
 
@@ -21,6 +33,12 @@ POST          /v12/datasets/reserveUpload                                       
 GET           /v12/datasets/unfinishedUploads                                                                                                            @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.getUnfinishedUploadsV13(organizationName: String)
 POST          /v12/datasets/finishUpload                                                                                                                 @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.finishUploadV13()
 
+GET           /v12/datasets/:datasetId/proxy/datasource-properties.json                                                                                  @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.proxyDatasourceV14(datasetId: ObjectId)
+GET           /v12/zarr/:datasetId/datasource-properties.json                                                                                            @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.requestDataSourceV14(datasetId: ObjectId, zarrVersion: Int = 2)
+GET           /v12/zarr3_experimental/:datasetId/datasource-properties.json                                                                              @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.requestDataSourceV14(datasetId: ObjectId, zarrVersion: Int = 3)
+GET           /v12/annotations/zarr/:accessTokenOrId/datasource-properties.json                                                                          @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.dataSourceWithAnnotationPrivateLinkV14(accessTokenOrId: String, zarrVersion: Int = 2)
+GET           /v12/annotations/zarr3_experimental/:accessTokenOrId/datasource-properties.json                                                            @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.dataSourceWithAnnotationPrivateLinkV14(accessTokenOrId: String, zarrVersion: Int = 3)
+
 ->  /v12/ datastore.latest.Routes
 
 # Dataset upload
@@ -30,6 +48,12 @@ GET           /v11/datasets/unfinishedUploads                                   
 POST          /v11/datasets/finishUpload                                                                                                                 @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.finishUploadV13()
 # Dataset upload (v11 and older is separate!)
 POST          /v11/datasets/reserveUpload                                                                                                                @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.reserveUploadV11()
+
+GET           /v11/datasets/:datasetId/proxy/datasource-properties.json                                                                                  @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.proxyDatasourceV14(datasetId: ObjectId)
+GET           /v11/zarr/:datasetId/datasource-properties.json                                                                                            @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.requestDataSourceV14(datasetId: ObjectId, zarrVersion: Int = 2)
+GET           /v11/zarr3_experimental/:datasetId/datasource-properties.json                                                                              @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.requestDataSourceV14(datasetId: ObjectId, zarrVersion: Int = 3)
+GET           /v11/annotations/zarr/:accessTokenOrId/datasource-properties.json                                                                          @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.dataSourceWithAnnotationPrivateLinkV14(accessTokenOrId: String, zarrVersion: Int = 2)
+GET           /v11/annotations/zarr3_experimental/:accessTokenOrId/datasource-properties.json                                                            @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.dataSourceWithAnnotationPrivateLinkV14(accessTokenOrId: String, zarrVersion: Int = 3)
 
 ->  /v11/ datastore.latest.Routes
 
@@ -42,6 +66,12 @@ GET           /v10/datasets/unfinishedUploads                                   
 POST          /v10/datasets/finishUpload                                                                                                                 @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.finishUploadV13()
 # Dataset upload (v11 and older is separate!)
 POST          /v10/datasets/reserveUpload                                                                                                                @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.reserveUploadV11()
+
+GET           /v10/datasets/:datasetId/proxy/datasource-properties.json                                                                                  @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.proxyDatasourceV14(datasetId: ObjectId)
+GET           /v10/zarr/:datasetId/datasource-properties.json                                                                                            @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.requestDataSourceV14(datasetId: ObjectId, zarrVersion: Int = 2)
+GET           /v10/zarr3_experimental/:datasetId/datasource-properties.json                                                                              @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.requestDataSourceV14(datasetId: ObjectId, zarrVersion: Int = 3)
+GET           /v10/annotations/zarr/:accessTokenOrId/datasource-properties.json                                                                          @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.dataSourceWithAnnotationPrivateLinkV14(accessTokenOrId: String, zarrVersion: Int = 2)
+GET           /v10/annotations/zarr3_experimental/:accessTokenOrId/datasource-properties.json                                                            @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.dataSourceWithAnnotationPrivateLinkV14(accessTokenOrId: String, zarrVersion: Int = 3)
 
 ->  /v10/ datastore.latest.Routes
 
@@ -95,6 +125,12 @@ GET           /v9/datasets/unfinishedUploads                                    
 POST          /v9/datasets/finishUpload                                                                                                                  @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.finishUploadV13()
 # Dataset upload (v11 and older is separate!)
 POST          /v9/datasets/reserveUpload                                                                                                                 @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.reserveUploadV11()
+
+GET           /v9/datasets/:datasetId/proxy/datasource-properties.json                                                                                   @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.proxyDatasourceV14(datasetId: ObjectId)
+GET           /v9/zarr/:datasetId/datasource-properties.json                                                                                             @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.requestDataSourceV14(datasetId: ObjectId, zarrVersion: Int = 2)
+GET           /v9/zarr3_experimental/:datasetId/datasource-properties.json                                                                               @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.requestDataSourceV14(datasetId: ObjectId, zarrVersion: Int = 3)
+GET           /v9/annotations/zarr/:accessTokenOrId/datasource-properties.json                                                                           @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.dataSourceWithAnnotationPrivateLinkV14(accessTokenOrId: String, zarrVersion: Int = 2)
+GET           /v9/annotations/zarr3_experimental/:accessTokenOrId/datasource-properties.json                                                             @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.dataSourceWithAnnotationPrivateLinkV14(accessTokenOrId: String, zarrVersion: Int = 3)
 
 ->  /v9/  datastore.latest.Routes
 
@@ -150,6 +186,12 @@ POST          /v8/datasets/finishUpload                                         
 # Dataset upload (v11 and older is separate!)
 POST          /v8/datasets/reserveUpload                                                                                                                 @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.reserveUploadV11()
 
+GET           /v8/datasets/:datasetId/proxy/datasource-properties.json                                                                                   @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.proxyDatasourceV14(datasetId: ObjectId)
+GET           /v8/zarr/:datasetId/datasource-properties.json                                                                                             @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.requestDataSourceV14(datasetId: ObjectId, zarrVersion: Int = 2)
+GET           /v8/zarr3_experimental/:datasetId/datasource-properties.json                                                                               @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.requestDataSourceV14(datasetId: ObjectId, zarrVersion: Int = 3)
+GET           /v8/annotations/zarr/:accessTokenOrId/datasource-properties.json                                                                           @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.dataSourceWithAnnotationPrivateLinkV14(accessTokenOrId: String, zarrVersion: Int = 2)
+GET           /v8/annotations/zarr3_experimental/:accessTokenOrId/datasource-properties.json                                                             @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.dataSourceWithAnnotationPrivateLinkV14(accessTokenOrId: String, zarrVersion: Int = 3)
+
 ->  /v8/  datastore.latest.Routes
 
 # Read image data
@@ -202,6 +244,12 @@ GET           /v7/datasets/unfinishedUploads                                    
 POST          /v7/datasets/finishUpload                                                                                                                  @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.finishUploadV13()
 # Dataset upload (v11 and older is separate!)
 POST          /v7/datasets/reserveUpload                                                                                                                 @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.reserveUploadV11()
+
+GET           /v7/datasets/:datasetId/proxy/datasource-properties.json                                                                                   @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.proxyDatasourceV14(datasetId: ObjectId)
+GET           /v7/zarr/:datasetId/datasource-properties.json                                                                                             @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.requestDataSourceV14(datasetId: ObjectId, zarrVersion: Int = 2)
+GET           /v7/zarr3_experimental/:datasetId/datasource-properties.json                                                                               @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.requestDataSourceV14(datasetId: ObjectId, zarrVersion: Int = 3)
+GET           /v7/annotations/zarr/:accessTokenOrId/datasource-properties.json                                                                           @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.dataSourceWithAnnotationPrivateLinkV14(accessTokenOrId: String, zarrVersion: Int = 2)
+GET           /v7/annotations/zarr3_experimental/:accessTokenOrId/datasource-properties.json                                                             @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.dataSourceWithAnnotationPrivateLinkV14(accessTokenOrId: String, zarrVersion: Int = 3)
 
 ->  /v7/  datastore.latest.Routes
 
@@ -256,6 +304,12 @@ POST          /v6/datasets/finishUpload                                         
 # Dataset upload (v11 and older is separate!)
 POST          /v6/datasets/reserveUpload                                                                                                                 @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.reserveUploadV11()
 
+GET           /v6/datasets/:datasetId/proxy/datasource-properties.json                                                                                   @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.proxyDatasourceV14(datasetId: ObjectId)
+GET           /v6/zarr/:datasetId/datasource-properties.json                                                                                             @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.requestDataSourceV14(datasetId: ObjectId, zarrVersion: Int = 2)
+GET           /v6/zarr3_experimental/:datasetId/datasource-properties.json                                                                               @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.requestDataSourceV14(datasetId: ObjectId, zarrVersion: Int = 3)
+GET           /v6/annotations/zarr/:accessTokenOrId/datasource-properties.json                                                                           @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.dataSourceWithAnnotationPrivateLinkV14(accessTokenOrId: String, zarrVersion: Int = 2)
+GET           /v6/annotations/zarr3_experimental/:accessTokenOrId/datasource-properties.json                                                             @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.dataSourceWithAnnotationPrivateLinkV14(accessTokenOrId: String, zarrVersion: Int = 3)
+
 ->  /v6/  datastore.latest.Routes
 
 # Read image data
@@ -306,6 +360,12 @@ GET           /v5/datasets/unfinishedUploads                                    
 POST          /v5/datasets/finishUpload                                                                                                                  @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.finishUploadV13()
 # Dataset upload (v11 and older is separate!)
 POST          /v5/datasets/reserveUpload                                                                                                                 @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.reserveUploadV11()
+
+GET           /v5/datasets/:datasetId/proxy/datasource-properties.json                                                                                   @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.proxyDatasourceV14(datasetId: ObjectId)
+GET           /v5/zarr/:datasetId/datasource-properties.json                                                                                             @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.requestDataSourceV14(datasetId: ObjectId, zarrVersion: Int = 2)
+GET           /v5/zarr3_experimental/:datasetId/datasource-properties.json                                                                               @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.requestDataSourceV14(datasetId: ObjectId, zarrVersion: Int = 3)
+GET           /v5/annotations/zarr/:accessTokenOrId/datasource-properties.json                                                                           @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.dataSourceWithAnnotationPrivateLinkV14(accessTokenOrId: String, zarrVersion: Int = 2)
+GET           /v5/annotations/zarr3_experimental/:accessTokenOrId/datasource-properties.json                                                             @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.dataSourceWithAnnotationPrivateLinkV14(accessTokenOrId: String, zarrVersion: Int = 3)
 
 ->  /v5/  datastore.latest.Routes
 ->  /     datastore.latest.Routes

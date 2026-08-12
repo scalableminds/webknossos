@@ -122,10 +122,10 @@ describe("Update Action Application for VolumeTracing", () => {
   const hardcodedAfterVersionIndex: number | null = null;
 
   const userActions: Action[] = [
-    updateSegmentAction(2, { anchorPosition: [1, 2, 3] }, tracingId),
-    updateSegmentAction(3, { anchorPosition: [3, 4, 5] }, tracingId),
+    updateSegmentAction(2n, { anchorPosition: [1, 2, 3] }, tracingId),
+    updateSegmentAction(3n, { anchorPosition: [3, 4, 5] }, tracingId),
     updateSegmentAction(
-      3,
+      3n,
       {
         name: "name",
         groupId: 3,
@@ -158,18 +158,18 @@ describe("Update Action Application for VolumeTracing", () => {
       [makeBasicGroupObject(3, "group 3"), makeBasicGroupObject(7, "group 7")],
       tracingId,
     ),
-    updateSegmentAction(3, { isVisible: false }, tracingId),
+    updateSegmentAction(3n, { isVisible: false }, tracingId),
     // Needs to be visible again for the toggleSegmentGroupAction to turn all segments invisible and thus trigger a compact updateSegmentGroupVisibilityAction.
-    updateSegmentAction(3, { isVisible: true }, tracingId),
+    updateSegmentAction(3n, { isVisible: true }, tracingId),
     // The group with id 3 needs at least one visible cells for the reducer to make to toggle it.
-    updateSegmentAction(2, { groupId: 3 }, tracingId),
+    updateSegmentAction(2n, { groupId: 3 }, tracingId),
     // Moreover, at least two are needed to make the compaction evict a updateSegmentGroupVisibilityAction.
-    createCellAction(4, 4),
-    setActiveCellAction(4),
-    updateSegmentAction(4, { groupId: 3, anchorPosition: [7, 8, 9], isVisible: true }, tracingId),
+    createCellAction(4n, 4n),
+    setActiveCellAction(4n),
+    updateSegmentAction(4n, { groupId: 3, anchorPosition: [7, 8, 9], isVisible: true }, tracingId),
     toggleSegmentGroupAction(3, tracingId),
     updateSegmentAction(
-      3,
+      3n,
       {
         metadata: [
           {
@@ -184,9 +184,9 @@ describe("Update Action Application for VolumeTracing", () => {
       },
       tracingId,
     ),
-    mergeSegmentItemsAction(3, 2, 30, 20, tracingId),
-    removeSegmentAction(3, tracingId),
-    setLargestSegmentIdAction(10000),
+    mergeSegmentItemsAction(3n, 2n, 30n, 20n, tracingId),
+    removeSegmentAction(3n, tracingId),
+    setLargestSegmentIdAction(10000n),
     setVolumeBucketDataHasChangedAction(tracingId),
     setSegmentGroupsAction([makeBasicGroupObject(3, "group 3 - renamed")], tracingId),
   ];

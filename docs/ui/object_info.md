@@ -44,6 +44,9 @@ The `Segments` tab is for managing volume annotations. It lists all the segments
 
 The `BBoxes` tab lists all the bounding boxes in the annotation and is the central place to manage them. It provides an alternative to drawing boxes with the `Bounding Box` tool from the [toolbar](./toolbar.md).
 
+Watch this short video for an overview of the bounding box tool:
+![youtube-video](https://www.youtube.com/embed/2mgqDvUZ9Dk)
+
 ### Creating Bounding Boxes
 
 The buttons at the top of the tab let you:

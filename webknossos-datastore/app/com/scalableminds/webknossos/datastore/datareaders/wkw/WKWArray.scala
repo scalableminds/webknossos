@@ -58,7 +58,7 @@ class WKWArray(
   private val parsedShardIndexCache: AlfuCache[VaultPath, Array[Long]] = AlfuCache()
 
   override protected def getShardedChunkPathAndRange(
-      chunkIndex: Array[Int]
+      chunkIndex: Array[Long]
   )(implicit ec: ExecutionContext, tc: TokenContext): Fox[(VaultPath, StartEndExclusiveByteRange)] =
     for {
       shardCoordinates <- chunkIndexToShardIndex(chunkIndex).headOption.toFox
@@ -113,28 +113,29 @@ class WKWArray(
       )
     } yield mortonEncode(x, y, z)
 
-  private def getChunkIndexInShardIndex(chunkIndex: Array[Int]): Box[Int] = {
+  // WKW datasets are addressed by bounded spatial X/Y/Z chunk coordinates, so narrowing back to Int here is safe.
+  private def getChunkIndexInShardIndex(chunkIndex: Array[Long]): Box[Int] = {
     val x = chunkIndex(axisOrder.x)
     val y = chunkIndex(axisOrder.y)
     val z = chunkIndex(axisOrder.z.getOrElse(3))
-    val chunkOffsetX = x % header.numChunksPerShardDimension
-    val chunkOffsetY = y % header.numChunksPerShardDimension
-    val chunkOffsetZ = z % header.numChunksPerShardDimension
+    val chunkOffsetX = (x % header.numChunksPerShardDimension).toInt
+    val chunkOffsetY = (y % header.numChunksPerShardDimension).toInt
+    val chunkOffsetZ = (z % header.numChunksPerShardDimension).toInt
     computeMortonIndex(chunkOffsetX, chunkOffsetY, chunkOffsetZ)
   }
 
-  override protected def getChunkFilename(chunkIndex: Array[Int]): String = {
-    val x = chunkIndex(axisOrder.x)
-    val y = chunkIndex(axisOrder.y)
-    val z = chunkIndex(axisOrder.z.getOrElse(3))
+  override protected def getChunkFilename(chunkIndex: Array[Long]): String = {
+    val x = chunkIndex(axisOrder.x).toInt
+    val y = chunkIndex(axisOrder.y).toInt
+    val z = chunkIndex(axisOrder.z.getOrElse(3)).toInt
     wkwFilePath(x, y, z)
   }
 
-  private def chunkIndexToShardIndex(chunkIndex: Array[Int]) =
+  private def chunkIndexToShardIndex(chunkIndex: Array[Long]) =
     ChunkUtils.computeChunkIndices(
       header.datasetShape.map(fullAxisOrder.permuteIndicesArrayToWkLong),
       fullAxisOrder.permuteIndicesArrayToWk(header.shardShape),
       header.chunkShape,
-      chunkIndex.zip(header.chunkShape).map { case (i, s) => i.toLong * s }
+      chunkIndex.zip(header.chunkShape).map { case (i, s) => i * s }
     )
 }

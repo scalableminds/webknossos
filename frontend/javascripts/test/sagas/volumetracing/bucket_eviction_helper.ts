@@ -29,7 +29,7 @@ export async function testLabelingManyBuckets(
   cube.BUCKET_COUNT_SOFT_LIMIT = 150;
   const oldCellId = 11;
   const brushSize = 10;
-  const newCellId = 2;
+  const newCellId = 2n;
 
   vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
     createBucketResponseFunction(

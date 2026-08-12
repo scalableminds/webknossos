@@ -150,7 +150,7 @@ function* clearActiveSegmentIfTdViewportIsActive(): Saga<void> {
     activeTool === AnnotationTool.PROOFREAD &&
     activeViewport === OrthoViews.TDView
   ) {
-    yield* put(setActiveCellAction(activeVolumeTracing?.activeCellId, undefined, undefined, null));
+    yield* put(setActiveCellAction(activeVolumeTracing!.activeCellId, undefined, undefined, null));
   }
 }
 
@@ -169,7 +169,7 @@ function* showToastIfSegmentOfOtherAgglomerateWasSelected(
   const minCutPartitions = layerData.minCutPartitions;
   if (
     minCutPartitions.agglomerateId != null &&
-    minCutPartitions.agglomerateId !== action.agglomerateId
+    minCutPartitions.agglomerateId !== BigInt(action.agglomerateId)
   ) {
     Toast.info(messages["proofreading.multi_cut.different_agglomerate_selected"]);
   }

@@ -251,9 +251,9 @@ export const showContextMenuAction = (
   boundingBoxId: number | null | undefined,
   globalPosition: Vector3 | null | undefined,
   viewport: OrthoView,
-  meshId: number | null | undefined,
+  meshId: bigint | null | undefined,
   meshIntersectionPosition: Vector3 | null | undefined,
-  unmappedSegmentId: number | undefined | null,
+  unmappedSegmentId: bigint | undefined | null,
 ) =>
   ({
     type: "SHOW_CONTEXT_MENU",

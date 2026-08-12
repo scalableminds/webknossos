@@ -8,6 +8,8 @@ export type KeyboardShortcutId =
   | "SWITCH_VIEWMODE_FLIGHT"
   | "CYCLE_VIEWMODE"
   | "TOGGLE_SEGMENTATION"
+  | "INCREASE_FIRST_ADDITIONAL_COORDINATE"
+  | "DECREASE_FIRST_ADDITIONAL_COORDINATE"
   | "SAVE"
   | "UNDO"
   | "REDO"
@@ -141,6 +143,19 @@ export const ALL_KEYBOARD_SHORTCUT_META_INFOS: Record<
   TOGGLE_SEGMENTATION: new KeyboardShortcutMetaInfo(
     "Toggle Segmentation Layer",
     [[["3"]]],
+    "GENERAL",
+  ),
+  // These two intentionally have no default binding. Datasets with additional axes are rare
+  // enough that reserving two keys for everybody is not justified. Users can assign their own
+  // keys in the shortcut configuration modal.
+  INCREASE_FIRST_ADDITIONAL_COORDINATE: new KeyboardShortcutMetaInfo(
+    "Move Forward Along the First Additional Axis (e.g. Time (t); nD Datasets Only)",
+    [],
+    "GENERAL",
+  ),
+  DECREASE_FIRST_ADDITIONAL_COORDINATE: new KeyboardShortcutMetaInfo(
+    "Move Backward Along the First Additional Axis (e.g. Time (t); nD Datasets Only)",
+    [],
     "GENERAL",
   ),
   SAVE: new KeyboardShortcutMetaInfo(

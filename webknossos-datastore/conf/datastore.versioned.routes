@@ -1,6 +1,8 @@
 # Note: keep this in sync with the reported version numbers in the com.scalableminds.util.mvc.ApiVersioning trait
 # Version log in webknossos.versioned.routes
 
+->  /v15/ datastore.latest.Routes
+
 ->  /v14/ datastore.latest.Routes
 
 # Dataset upload

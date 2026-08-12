@@ -31,7 +31,7 @@ export type SegmentGroupUiNode = BasicDataNode & {
 
 export type SegmentsUiNode = SegmentUiNode | SegmentGroupUiNode;
 
-export function getSegmentUiNodeKey(segmentId: number): string {
+export function getSegmentUiNodeKey(segmentId: bigint): string {
   return `segment-${segmentId}`;
 }
 

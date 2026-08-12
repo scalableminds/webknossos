@@ -314,7 +314,7 @@ class ZarrAgglomerateService @Inject() (
         segmentIndex <-
           if (segmentIdAtMiddle == segmentId)
             Fox.successful(middle)
-          else if (segmentIdAtMiddle < segmentId) {
+          else if (java.lang.Long.compareUnsigned(segmentIdAtMiddle, segmentId) < 0) {
             binarySearchForSegment(middle + 1L, rangeEnd, segmentId, agglomerateToSegments)
           } else binarySearchForSegment(rangeStart, middle - 1L, segmentId, agglomerateToSegments)
       } yield segmentIndex

@@ -76,7 +76,7 @@ The information is JSON-encoded in the URL fragment and has the following format
   type AdditionalCoordinate = { name: string; value: number };
 
   type BaseMeshUrlDescriptor = {|
-    +segmentId: number,
+    +segmentId: string, // number is supported, too, for legacy reasons. Prefer string to be compatible with 64-bit numbers
     +seedPosition: Vector3,
     +seedAdditionalCoordinates?: AdditionalCoordinate[];
   |};

@@ -955,11 +955,7 @@ class DatasetMagDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
   // Note: also see attachments
   def updateMagRealPathsForDataset(datasetId: ObjectId, realPathInfos: Seq[RealPathInfo]): Fox[Unit] =
     for {
-      // Scans (e.g. VirtualDatasetsRealPathScanService, run hourly for every virtual dataset) report
-      // realPathInfos unconditionally, even when nothing changed since the last scan (which, for
-      // fully remote/virtual mags, is always the case: realPath == path, hasLocalData == false,
-      // forever). Diffing against the currently stored values here avoids issuing a no-op UPDATE
-      // (and the surrounding Serializable transaction/retry machinery) for every mag on every scan.
+      // Reduce number of queries by checking what actually changed first.
       currentRows <- run(
         q"""SELECT path, realPath, hasLocalData
             FROM webknossos.dataset_mags
@@ -974,7 +970,7 @@ class DatasetMagDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
             !currentRealPath.contains(
               realPathInfo.realPath.toString
             ) || currentHasLocalData != realPathInfo.hasLocalData
-          case None => true // no current row found locally; let the (then no-op) UPDATE proceed as before
+          case None => false // No matching row exists, no UPDATE needed.
         }
       }
       updateQueries = changedRealPathInfos.map(realPathInfo => q"""UPDATE webknossos.dataset_mags
@@ -1450,7 +1446,7 @@ class DatasetLayerAttachmentDAO @Inject() (sqlClient: SqlClient)(implicit ec: Ex
   // Note: also see mags.
   def updateAttachmentRealPathsForDataset(datasetId: ObjectId, realPathInfos: Seq[RealPathInfo]): Fox[Unit] =
     for {
-      // See the comment on the equivalent diffing in DatasetMagDAO.updateMagRealPathsForDataset.
+      // Reduce number of queries by checking what actually changed first.
       currentRows <- run(
         q"""SELECT path, realPath, hasLocalData
             FROM webknossos.dataset_layer_attachments
@@ -1463,7 +1459,7 @@ class DatasetLayerAttachmentDAO @Inject() (sqlClient: SqlClient)(implicit ec: Ex
             !currentRealPath.contains(
               realPathInfo.realPath.toString
             ) || currentHasLocalData != realPathInfo.hasLocalData
-          case None => true // no current row found locally; let the (then no-op) UPDATE proceed as before
+          case None => false // No matching row exists, no UPDATE needed.
         }
       }
       updateQueries = changedRealPathInfos.map(realPathInfo => q"""UPDATE webknossos.dataset_layer_attachments

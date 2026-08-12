@@ -82,7 +82,8 @@ function ChatMessageBubble({
     fontSize: 13,
     lineHeight: 1.4,
     background: message.role === "user" ? ColorWKBlue : "var(--ant-color-bg-layout)",
-    color: message.role === "user" ? "#fff" : "var(--ant-color-text)",
+    // The user bubble always has the (solid) WK blue background, hence the light text color.
+    color: message.role === "user" ? "var(--ant-color-text-light-solid)" : "var(--ant-color-text)",
     whiteSpace: message.role === "user" ? "pre-line" : "normal",
     borderBottomRightRadius: message.role === "user" ? 2 : 12,
     borderBottomLeftRadius: message.role === "assistant" ? 2 : 12,

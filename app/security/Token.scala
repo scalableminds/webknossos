@@ -14,6 +14,7 @@ import utils.sql.{SQLDAO, SqlClient}
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{FiniteDuration, MILLISECONDS}
+import scala.concurrent.duration.DurationInt
 
 case class Token(
     _id: ObjectId,
@@ -91,8 +92,9 @@ class TokenDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def findOneByLoginInfo(providerID: String, providerKey: String, tokenType: TokenType): Fox[Token] =
     for {
+      loginInfoProvider <- LoginInfoProvider.fromString(providerID).toFox
       r <- run(q"""SELECT $columns from $existingCollectionName
-            WHERE loginInfo_providerID::TEXT = $providerID
+            WHERE loginInfo_providerID = $loginInfoProvider
             AND loginInfo_providerKey = $providerKey
             AND tokenType = $tokenType""".as[TokensRow])
       parsed <- parseFirst(r, "loginInfo")
@@ -127,6 +129,15 @@ class TokenDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def deleteAllExpired(): Fox[Unit] =
     for {
       _ <- run(q"UPDATE $collectionName SET isDeleted = TRUE WHERE expirationDateTime <= ${Instant.now}".asUpdate)
+    } yield ()
+
+  private val hardDeleteGracePeriod: FiniteDuration = 7.days
+
+  def hardDeleteOldTokens(): Fox[Unit] =
+    for {
+      _ <- run(
+        q"DELETE FROM $collectionName WHERE isDeleted AND expirationDateTime <= ${Instant.now - hardDeleteGracePeriod}".asUpdate
+      )
     } yield ()
 
   def deleteDataStoreTokensForMultiUser(multiUserId: ObjectId): Fox[Unit] =

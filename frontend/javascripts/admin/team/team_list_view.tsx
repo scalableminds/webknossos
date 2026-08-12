@@ -6,8 +6,8 @@ import { deleteTeam as deleteTeamAPI, getEditableTeams, getEditableUsers } from 
 import CreateTeamModal from "admin/team/create_team_modal_view";
 import { App, Button, Input, Space, Spin, Table, Tag, Tooltip } from "antd";
 import LinkButton from "components/link_button";
+import { stringToTagColor } from "libs/colors";
 import { handleGenericError } from "libs/error_handling";
-import { stringToColor } from "libs/format_utils";
 import Persistence from "libs/persistence";
 import { useQueryWithErrorHandling } from "libs/react_hooks";
 import { filterWithSearchQueryAND, localeCompareBy, scrollToTop } from "libs/utils";
@@ -49,7 +49,7 @@ export function renderTeamRolesAndPermissionsForUser(user: APIUser) {
             : []),
           ...user.teams.map((team) => {
             const roleName = team.isTeamManager ? "Team Manager" : "Member";
-            return [`${team.name}: ${roleName}`, stringToColor(roleName)];
+            return [`${team.name}: ${roleName}`, stringToTagColor(roleName)];
           }),
         ]),
   ];

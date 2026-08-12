@@ -94,6 +94,31 @@ export default {
       additionalProperties: false,
       required: ["isPrecomputed"],
     },
+    "types::TdCamera": {
+      type: "object",
+      properties: {
+        position: {
+          $ref: "#/definitions/types::Vector3",
+        },
+        up: {
+          $ref: "#/definitions/types::Vector3",
+        },
+        left: {
+          type: "number",
+        },
+        right: {
+          type: "number",
+        },
+        top: {
+          type: "number",
+        },
+        bottom: {
+          type: "number",
+        },
+      },
+      additionalProperties: false,
+      required: ["position", "up", "left", "right", "top", "bottom"],
+    },
     "types::UrlStateByLayer": {
       type: "object",
       additionalProperties: {
@@ -204,6 +229,9 @@ export default {
         },
         clipSkeletonToCurrentSection: {
           type: "boolean",
+        },
+        tdCamera: {
+          $ref: "#/definitions/types::TdCamera",
         },
       },
       additionalProperties: false,

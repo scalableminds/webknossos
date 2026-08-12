@@ -1,5 +1,7 @@
 import dayjs from "dayjs";
 import update from "immutability-helper";
+import type { ApiResult, RetryOptions } from "libs/api_result";
+import { requestResult } from "libs/api_result";
 import type { RequestOptions, RequestOptionsWithData } from "libs/request";
 import Request from "libs/request";
 import ResumableUpload from "libs/resumable_upload/resumable_upload";
@@ -634,14 +636,21 @@ export function duplicateAnnotation(
 export async function getUnversionedAnnotationInformation(
   annotationId: string,
   options: RequestOptions = {},
-): Promise<APIAnnotation> {
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<APIAnnotation>> {
   const infoUrl = `/api/annotations/${annotationId}/info?timestamp=${Date.now()}`;
-  const annotationWithMessages = await Request.receiveJSON(infoUrl, options);
+  return requestResult(
+    async (adaptedOpts) => {
+      const annotationWithMessages = await Request.receiveJSON(infoUrl, adaptedOpts);
 
-  // Extract the potential messages property before returning the task to avoid
-  // failing e2e tests in annotations.e2e.ts
-  const { messages: _messages, ...annotation } = annotationWithMessages;
-  return annotation;
+      // Extract the potential messages property before returning the task to avoid
+      // failing e2e tests in annotations.e2e.ts
+      const { messages: _messages, ...annotation } = annotationWithMessages;
+      return annotation;
+    },
+    options,
+    retryOptions,
+  );
 }
 
 export async function getAnnotationCompoundInformation(

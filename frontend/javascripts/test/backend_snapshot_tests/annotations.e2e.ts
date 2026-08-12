@@ -18,6 +18,7 @@ import {
   reOpenAnnotation,
   sendSaveRequestWithToken,
 } from "admin/rest_api";
+import { unwrapOrThrow } from "libs/api_result";
 import DiffableMap from "libs/diffable_map";
 import type { APIAnnotation, SkeletonUserState } from "types/api_types";
 import { AnnotationLayerEnum, APIAnnotationTypeEnum } from "types/api_types";
@@ -53,7 +54,7 @@ describe("Annotation API (E2E)", () => {
 
   it("getAnnotationInformation()", async () => {
     const annotationId = "570ba0092a7c0e980056fe9b";
-    const annotation = await getUnversionedAnnotationInformation(annotationId);
+    const annotation = unwrapOrThrow(await getUnversionedAnnotationInformation(annotationId));
     expect(annotation.id).toBe(annotationId);
 
     writeTypeCheckingFile(annotation, "annotation", "APIAnnotation");
@@ -64,7 +65,7 @@ describe("Annotation API (E2E)", () => {
   it("getAnnotationInformation() for public annotation while logged out", async () => {
     setUserAuthToken("invalidToken");
     const annotationId = "88135c192faeb34c0081c05d";
-    const annotation = await getUnversionedAnnotationInformation(annotationId);
+    const annotation = unwrapOrThrow(await getUnversionedAnnotationInformation(annotationId));
 
     expect(annotation.id).toBe(annotationId);
     expect(annotation).toMatchSnapshot();
@@ -107,7 +108,9 @@ describe("Annotation API (E2E)", () => {
 
   it("editAnnotation()", async () => {
     const annotationId = "68135c192faeb34c0081c05d";
-    const originalAnnotation = await getUnversionedAnnotationInformation(annotationId);
+    const originalAnnotation = unwrapOrThrow(
+      await getUnversionedAnnotationInformation(annotationId),
+    );
     const { visibility } = originalAnnotation;
     const newName = "new name";
     const newVisibility = "Public";
@@ -115,7 +118,7 @@ describe("Annotation API (E2E)", () => {
       visibility: newVisibility,
       name: newName,
     });
-    const editedAnnotation = await getUnversionedAnnotationInformation(annotationId);
+    const editedAnnotation = unwrapOrThrow(await getUnversionedAnnotationInformation(annotationId));
     expect(editedAnnotation.name).toBe(newName);
     expect(editedAnnotation.visibility).toBe(newVisibility);
     expect(editedAnnotation.id).toBe(annotationId);
@@ -135,7 +138,7 @@ describe("Annotation API (E2E)", () => {
     await finishAllAnnotations(annotationIds);
 
     const finishedAnnotations = await Promise.all(
-      annotationIds.map((id) => getUnversionedAnnotationInformation(id)),
+      annotationIds.map(async (id) => unwrapOrThrow(await getUnversionedAnnotationInformation(id))),
     );
     expect(finishedAnnotations.length).toBe(2);
 
@@ -150,7 +153,9 @@ describe("Annotation API (E2E)", () => {
     expect(replaceVolatileValues(createdExplorational)).toMatchSnapshot();
 
     await finishAnnotation(createdExplorational.id, APIAnnotationTypeEnum.Explorational);
-    const finishedAnnotation = await getUnversionedAnnotationInformation(createdExplorational.id);
+    const finishedAnnotation = unwrapOrThrow(
+      await getUnversionedAnnotationInformation(createdExplorational.id),
+    );
     expect(finishedAnnotation.state).toBe("Finished");
   });
 

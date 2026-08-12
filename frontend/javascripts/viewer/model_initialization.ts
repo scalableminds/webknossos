@@ -141,7 +141,11 @@ export async function initialize(
     if (initialMaybeCompoundType != null) {
       annotation = await getAnnotationCompoundInformation(annotationId, initialMaybeCompoundType);
     } else {
-      let unversionedAnnotation = await getUnversionedAnnotationInformation(annotationId);
+      const unversionedAnnotationResult = await getUnversionedAnnotationInformation(annotationId);
+      if (!unversionedAnnotationResult.ok) {
+        throw new Error(`Could not load annotation: ${unversionedAnnotationResult.error.message}`);
+      }
+      let unversionedAnnotation = unversionedAnnotationResult.value;
       annotationProto = await getAnnotationProto(
         unversionedAnnotation.tracingStore.url,
         unversionedAnnotation.id,

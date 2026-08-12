@@ -5,6 +5,7 @@ import {
 } from "admin/organization/pricing_plan_utils";
 import { getUnversionedAnnotationInformation } from "admin/rest_api";
 import { PageUnavailableForYourPlanView } from "components/pricing_enforcers";
+import { unwrapOrThrow } from "libs/api_result";
 import { useWkSelector } from "libs/react_hooks";
 import { isUserAdminOrManager } from "libs/utils";
 import type React from "react";
@@ -36,7 +37,9 @@ function SecuredRoute({
   const getIsResourcePublic = useCallback(async () => {
     if (id) {
       try {
-        const annotationInformation = await getUnversionedAnnotationInformation(id || "");
+        const annotationInformation = unwrapOrThrow(
+          await getUnversionedAnnotationInformation(id || ""),
+        );
         return annotationInformation.visibility === "Public";
       } catch (_ex) {
         // Annotation could not be found

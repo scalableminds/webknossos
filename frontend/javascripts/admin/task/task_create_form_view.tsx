@@ -34,6 +34,7 @@ import { AsyncButton } from "components/async_clickables";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import SelectExperienceDomain from "components/select_experience_domain";
 import { saveAs } from "file-saver";
+import { unwrapOrThrow } from "libs/api_result";
 import { coalesce, pluralize, tryToAwaitPromise } from "libs/utils";
 import { Vector3Input, Vector6Input } from "libs/vector_input";
 import isEqual from "lodash-es/isEqual";
@@ -472,7 +473,7 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
                   const annotationResponse = await tryToAwaitPromise(
                     getUnversionedAnnotationInformation(value, {
                       showErrorToast: false,
-                    }),
+                    }).then(unwrapOrThrow),
                   );
 
                   if (annotationResponse?.dataSetName != null) {

@@ -5,6 +5,7 @@ import {
   getTracingForAnnotationType,
   getUnversionedAnnotationInformation,
 } from "admin/rest_api";
+import { unwrapOrThrow } from "libs/api_result";
 import Toast from "libs/toast";
 import { computeBoundingBoxFromBoundingBoxObject, point3ToVector3 } from "libs/utils";
 import { AnnotationLayerEnum, type APIAnnotation, type ServerVolumeTracing } from "types/api_types";
@@ -177,9 +178,11 @@ async function getBoundingBoxes(
 export async function fetchAnnotationInfo(
   annotationId: string,
 ): Promise<AnnotationInfoForAITrainingJob<APIAnnotation>> {
-  const annotation = await getUnversionedAnnotationInformation(annotationId, {
-    showErrorToast: false,
-  });
+  const annotation = unwrapOrThrow(
+    await getUnversionedAnnotationInformation(annotationId, {
+      showErrorToast: false,
+    }),
+  );
   const dataset = await getDataset(annotation.datasetId);
 
   const volumeServerTracings = await getVolumeServerTracings(annotation);

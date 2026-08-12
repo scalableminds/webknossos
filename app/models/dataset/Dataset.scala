@@ -916,35 +916,26 @@ class DatasetMagDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
       organizationId: String,
       dataStoreId: String,
       datasetIdOpt: Option[ObjectId]
-  ): Fox[List[DataSourceMagRow]] =
+  ): Fox[Seq[DataSourceMagRow]] =
     for {
-      // Filters to the requested organization/dataStore/dataset first, then, for each surviving mag,
-      // checks whether some other dataset (in any organization) already "owns" the same physical path
-      // by having been created earlier. This is equivalent to ranking all mags globally by
-      // ROW_NUMBER() OVER (PARTITION BY COALESCE(realPath, path) ORDER BY created) and keeping rn = 1,
-      // but avoids sorting the entire system-wide dataset_mags/datasets join on every call: the filter
-      // narrows the outer scan first, and the ownership check is a targeted lookup via the existing
-      // index on dataset_mags(COALESCE(realPath, path)).
       storageRelevantMags <- run(q"""
             SELECT
               ds._id, mag.dataLayerName, mag.mag, mag.path, mag.realPath, mag.hasLocalData,
               ds._organization, ds.directoryName
             FROM webknossos.dataset_mags AS mag
-            JOIN webknossos.datasets AS ds
-              ON mag._dataset = ds._id
+            JOIN webknossos.datasets AS ds ON mag._dataset = ds._id
             WHERE ds._organization = $organizationId
               AND ds._dataStore = $dataStoreId
               ${datasetIdOpt.map(datasetId => q"AND mag._dataset = $datasetId").getOrElse(q"")}
-              AND NOT EXISTS (
+              AND NOT EXISTS ( -- omit mags already counted for other datasets (cross-orga)
                 SELECT 1
                 FROM webknossos.dataset_mags AS mag2
-                JOIN webknossos.datasets AS ds2
-                  ON mag2._dataset = ds2._id
+                JOIN webknossos.datasets AS ds2 ON mag2._dataset = ds2._id
                 WHERE COALESCE(mag2.realPath, mag2.path) IS NOT DISTINCT FROM COALESCE(mag.realPath, mag.path)
                   AND (ds2.created < ds.created OR (ds2.created = ds.created AND ds2._id < ds._id))
               );
             """.as[DataSourceMagRow])
-    } yield storageRelevantMags.toList
+    } yield storageRelevantMags
 
   def updateMags(datasetId: ObjectId, dataLayers: List[StaticLayer]): Fox[Unit] = {
     val clearQuery =
@@ -1651,30 +1642,24 @@ class DatasetLayerAttachmentDAO @Inject() (sqlClient: SqlClient)(implicit ec: Ex
       organizationId: String,
       dataStoreId: String,
       datasetIdOpt: Option[ObjectId]
-  ): Fox[List[StorageRelevantDataLayerAttachment]] =
+  ): Fox[Seq[StorageRelevantDataLayerAttachment]] =
     for {
-      // See the equivalent query in DatasetMagsDAO.findAllStorageRelevantMags for why this filters
-      // to the requested scope first and uses a NOT EXISTS ownership check instead of a global
-      // ROW_NUMBER() ranking.
       storageRelevantAttachments <- run(q"""
-          SELECT
-            att._dataset, att.layerName, att.name, att.path, att.type, ds._organization, ds.directoryName
+          SELECT att._dataset, att.layerName, att.name, att.path, att.type, ds._organization, ds.directoryName
           FROM webknossos.dataset_layer_attachments AS att
-          JOIN webknossos.datasets AS ds
-            ON att._dataset = ds._id
+          JOIN webknossos.datasets AS ds ON att._dataset = ds._id
           WHERE ds._organization = $organizationId
             AND ds._dataStore = $dataStoreId
             ${datasetIdOpt.map(datasetId => q"AND att._dataset = $datasetId").getOrElse(q"")}
-            AND NOT EXISTS (
+            AND NOT EXISTS ( -- omit mags already counted for other datasets (cross-orga)
               SELECT 1
               FROM webknossos.dataset_layer_attachments AS att2
-              JOIN webknossos.datasets AS ds2
-                ON att2._dataset = ds2._id
+              JOIN webknossos.datasets AS ds2 ON att2._dataset = ds2._id
               WHERE COALESCE(att2.realPath, att2.path) IS NOT DISTINCT FROM COALESCE(att.realPath, att.path)
                 AND (ds2.created < ds.created OR (ds2.created = ds.created AND ds2._id < ds._id))
             );
            """.as[StorageRelevantDataLayerAttachment])
-    } yield storageRelevantAttachments.toList
+    } yield storageRelevantAttachments
 
   // Note equivalent in DatasetMagsDAO
   def findAttachmentPathsUsedOnlyByThisDataset(datasetId: ObjectId): Fox[Seq[UPath]] =

@@ -927,11 +927,13 @@ class DatasetMagDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
             WHERE ds._organization = $organizationId
               AND ds._dataStore = $dataStoreId
               ${datasetIdOpt.map(datasetId => q"AND mag._dataset = $datasetId").getOrElse(q"")}
+              -- mags with neither path nor realPath are never storage relevant. Exclude explicitly to avoid effects of NULL
+              AND (mag.path IS NOT NULL OR mag.realPath IS NOT NULL)
               AND NOT EXISTS ( -- omit mags already counted for other datasets (cross-orga)
                 SELECT 1
                 FROM webknossos.dataset_mags AS mag2
                 JOIN webknossos.datasets AS ds2 ON mag2._dataset = ds2._id
-                WHERE COALESCE(mag2.realPath, mag2.path) IS NOT DISTINCT FROM COALESCE(mag.realPath, mag.path)
+                WHERE COALESCE(mag2.realPath, mag2.path) = COALESCE(mag.realPath, mag.path)
                   AND (ds2.created < ds.created OR (ds2.created = ds.created AND ds2._id < ds._id))
               );
             """.as[DataSourceMagRow])
@@ -1651,7 +1653,7 @@ class DatasetLayerAttachmentDAO @Inject() (sqlClient: SqlClient)(implicit ec: Ex
               SELECT 1
               FROM webknossos.dataset_layer_attachments AS att2
               JOIN webknossos.datasets AS ds2 ON att2._dataset = ds2._id
-              WHERE COALESCE(att2.realPath, att2.path) IS NOT DISTINCT FROM COALESCE(att.realPath, att.path)
+              WHERE COALESCE(att2.realPath, att2.path) = COALESCE(att.realPath, att.path)
                 AND (ds2.created < ds.created OR (ds2.created = ds.created AND ds2._id < ds._id))
             );
            """.as[StorageRelevantDataLayerAttachment])

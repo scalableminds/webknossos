@@ -562,6 +562,8 @@ class EditableMappingService @Inject() (
         while (realSegmentIds.contains(candidate)) candidate -= 1
         candidate
       }
+      // -1L is the highest number in an unsigned long. Since the JVM doesn't have unsigned longs,
+      // -1L is used here as the starting point to search for a free root id downwards.
       val partition1RootId = freshRootId(-1L)
       val partition2RootId = freshRootId(partition1RootId - 1L)
       g.addVertex(partition1RootId)

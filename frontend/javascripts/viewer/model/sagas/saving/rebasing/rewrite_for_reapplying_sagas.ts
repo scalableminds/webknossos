@@ -22,31 +22,11 @@ import type {
   DeleteSegmentUpdateAction,
   MergeAgglomerateUpdateAction,
   MergeSegmentItemsUpdateAction,
-  ServerUpdateAction,
   SplitAgglomerateUpdateAction,
   UpdateMetadataOfSegmentUpdateAction,
   UpdateSegmentPartialUpdateAction,
   UpdateSegmentVisibilityVolumeAction,
-} from "../volume/update_actions";
-
-export function saveQueueEntriesToServerUpdateActionBatches(
-  data: Array<SaveQueueEntry>,
-  version: number,
-) {
-  return data.map((entry) => ({
-    version,
-    value: entry.actions.map(
-      (action) =>
-        ({
-          ...action,
-          value: {
-            actionTimestamp: 0,
-            ...action.value,
-          },
-        }) as ServerUpdateAction,
-    ),
-  }));
-}
+} from "../../volume/update_actions";
 
 type IdsToReloadPerMappingId = Map<string, Set<number>>;
 type AnchorPositionToUnmappedIdByMappingId = Map<string, Map<string, number>>;
@@ -212,7 +192,7 @@ function* addMissingSegmentsToLoadedMappings(
 // up-to-date mapping info is needed for all segments in all proofreading actions. Thus, the missing info
 // is first loaded and then the save queue update actions are remapped to update their agglomerate id infos
 // to apply them correctly during rebasing. Lastly, the save queue is replaced with the updated save queue entries.
-export function* updateSaveQueueEntriesToStateAfterRebase(
+export function* rewriteSaveQueueEntriesForReapplying(
   // appliedBackendUpdateActions contains the backend actions that were used to forward the local state
   // during rebase. These actions can be used as additional information to adapt the local, pending
   // save queue entries to the rebase.

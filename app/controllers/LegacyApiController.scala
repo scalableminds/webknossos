@@ -6,6 +6,7 @@ import play.silhouette.api.Silhouette
 import play.silhouette.api.actions.SecuredRequest
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
+import com.scalableminds.webknossos.datastore.helpers.UnsignedLong
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import models.dataset.{DatasetDAO, DatasetService}
 import models.organization.OrganizationDAO
@@ -62,6 +63,57 @@ class LegacyApiController @Inject() (
     extends Controller
     with MetadataAssertions {
 
+  /* provide v14 */
+
+  def readV14(datasetId: ObjectId, sharingToken: Option[String]): Action[AnyContent] =
+    sil.UserAwareAction.fox { implicit request =>
+      for {
+        result <- Fox.fromFuture(datasetController.read(datasetId, sharingToken)(request))
+        adaptedResult <- replaceInResult(downgradeLargestSegmentIdsIfSafeFox)(result)
+      } yield adaptedResult
+    }
+
+  def listV14(
+      isActive: Option[Boolean],
+      isUnreported: Option[Boolean],
+      organizationId: Option[String],
+      onlyMyOrganization: Option[Boolean],
+      uploaderId: Option[ObjectId],
+      folderId: Option[ObjectId],
+      includeSubfolders: Option[Boolean],
+      searchQuery: Option[String],
+      limit: Option[Int],
+      compact: Option[Boolean]
+  ): Action[AnyContent] = sil.UserAwareAction.fox { implicit request =>
+    for {
+      result <- Fox.fromFuture(
+        datasetController.list(
+          isActive,
+          isUnreported,
+          organizationId,
+          onlyMyOrganization,
+          uploaderId,
+          folderId,
+          includeSubfolders,
+          searchQuery,
+          limit,
+          compact
+        )(request)
+      )
+      adaptedResult <- replaceInResult(downgradeLargestSegmentIdsIfSafeFox)(result)
+    } yield adaptedResult
+  }
+
+  def updatePartialV14(datasetId: ObjectId): Action[DatasetUpdatePartialParameters] =
+    sil.SecuredAction.fox(validateJson[DatasetUpdatePartialParameters]) { implicit request =>
+      for {
+        result <- Fox.fromFuture(datasetController.updatePartial(datasetId)(request))
+        adaptedResult <- replaceInResult(downgradeLargestSegmentIdsIfSafeFox)(result)
+      } yield adaptedResult
+    }
+
+  /* provide v12 */
+
   def updatePartialV12(datasetId: ObjectId): Action[DatasetUpdatePartialParameters] =
     sil.SecuredAction.fox(validateJson[DatasetUpdatePartialParameters]) { implicit request =>
       for {
@@ -100,8 +152,9 @@ class LegacyApiController @Inject() (
         }
         updated <- datasetDAO.findOne(datasetId)
         _ = analyticsService.track(ChangeDatasetSettingsEvent(request.identity, updated))
-        js <- datasetService.publicWrites(updated, Some(request.identity))
-      } yield Ok(js)
+        jsRaw <- datasetService.publicWrites(updated, Some(request.identity))
+        jsAdapted = downgradeLargestSegmentIdsIfSafe(jsRaw)
+      } yield Ok(jsAdapted)
     }
 
   /* provide v8 */
@@ -119,7 +172,9 @@ class LegacyApiController @Inject() (
       for {
         dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
         result <- Fox.fromFuture(datasetController.read(dataset._id, sharingToken)(request))
-        adaptedResult <- replaceInResult(migrateDatasetJsonToOldFormat)(result)
+        adaptedResult <- replaceInResult(migrateDatasetJsonToOldFormat(_).flatMap(downgradeLargestSegmentIdsIfSafeFox))(
+          result
+        )
       } yield adaptedResult
     }
 
@@ -201,19 +256,24 @@ class LegacyApiController @Inject() (
       searchQuery: Option[String],
       limit: Option[Int],
       compact: Option[Boolean]
-  ): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
-    datasetController.list(
-      isActive,
-      isUnreported,
-      organizationName,
-      onlyMyOrganization,
-      uploaderId,
-      folderId,
-      includeSubfolders,
-      searchQuery,
-      limit,
-      compact
-    )(request)
+  ): Action[AnyContent] = sil.UserAwareAction.fox { implicit request =>
+    for {
+      result <- Fox.fromFuture(
+        datasetController.list(
+          isActive,
+          isUnreported,
+          organizationName,
+          onlyMyOrganization,
+          uploaderId,
+          folderId,
+          includeSubfolders,
+          searchQuery,
+          limit,
+          compact
+        )(request)
+      )
+      adaptedResult <- replaceInResult(downgradeLargestSegmentIdsIfSafeFox)(result)
+    } yield adaptedResult
   }
 
   /* provide v6 */
@@ -245,7 +305,7 @@ class LegacyApiController @Inject() (
           compact
         )(request)
       )
-      adaptedResult <- replaceInResult(replaceVoxelSize)(result)
+      adaptedResult <- replaceInResult(replaceVoxelSize(_).flatMap(downgradeLargestSegmentIdsIfSafeFox))(result)
     } yield adaptedResult
   }
 
@@ -254,7 +314,7 @@ class LegacyApiController @Inject() (
       for {
         dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationName)
         result <- Fox.fromFuture(datasetController.read(dataset._id, sharingToken)(request))
-        adaptedResult <- replaceInResult(replaceVoxelSize)(result)
+        adaptedResult <- replaceInResult(replaceVoxelSize(_).flatMap(downgradeLargestSegmentIdsIfSafeFox))(result)
       } yield adaptedResult
     }
 
@@ -318,6 +378,15 @@ class LegacyApiController @Inject() (
         } yield newValue
     }
   }
+
+  // For API versions <= 14, largestSegmentId must keep being written as a plain JsNumber
+  // whenever that does not lose precision, for backwards compatibility with clients that
+  // do not understand the newer UnsignedLong bigint envelope (see UnsignedLong.scala).
+  private def downgradeLargestSegmentIdsIfSafe(jsObject: JsObject): JsObject =
+    JsonHelper.patchKeyRecursively(jsObject, "largestSegmentId")(UnsignedLong.downgradeToPlainNumberIfSafe).as[JsObject]
+
+  private def downgradeLargestSegmentIdsIfSafeFox(jsObject: JsObject): Fox[JsObject] =
+    Fox.successful(downgradeLargestSegmentIdsIfSafe(jsObject))
 
   private def replaceInResult(replacement: JsObject => Fox[JsObject])(result: Result): Fox[Result] =
     if (result.header.status == 200) {

@@ -45,14 +45,14 @@ export function* updatePendingProofreadingOperationInfo(): Saga<void> {
     (store) => store.temporaryConfiguration.activeMappingByLayer[tracingId],
   );
 
-  let sourceAgglomerateId: number | undefined;
-  let targetAgglomerateId: number | undefined;
+  let sourceAgglomerateId: bigint | undefined;
+  let targetAgglomerateId: bigint | undefined;
 
   if (activeMapping.mapping != null) {
     const mappingWrapper = new NumberLikeMapWrapper(activeMapping.mapping);
-    sourceAgglomerateId = mappingWrapper.getAsNumber(sourceInfo.unmappedId);
+    sourceAgglomerateId = mappingWrapper.getAsBigInt(sourceInfo.unmappedId);
     if (targetInfo) {
-      targetAgglomerateId = mappingWrapper.getAsNumber(targetInfo.unmappedId);
+      targetAgglomerateId = mappingWrapper.getAsBigInt(targetInfo.unmappedId);
     }
   }
 
@@ -67,7 +67,7 @@ export function* updatePendingProofreadingOperationInfo(): Saga<void> {
               agglomerateId:
                 // If targetInfo != null, targetAgglomerateId will be != null, too
                 // (we ensure this in the if-condition).
-                targetAgglomerateId as number,
+                targetAgglomerateId as bigint,
             }
           : null,
       }),
@@ -90,9 +90,9 @@ export function* updatePendingProofreadingOperationInfo(): Saga<void> {
       annotationVersion,
     );
     const mappingWrapper = new NumberLikeMapWrapper(agglomerateInfoFromServer);
-    const sourceAgglomerateIdFromServer = mappingWrapper.get(sourceInfo.unmappedId);
+    const sourceAgglomerateIdFromServer = mappingWrapper.getAsBigInt(sourceInfo.unmappedId);
     const targetAgglomerateIdFromServer = targetInfo
-      ? mappingWrapper.get(targetInfo.unmappedId)
+      ? mappingWrapper.getAsBigInt(targetInfo.unmappedId)
       : null;
 
     yield* put(
@@ -100,12 +100,12 @@ export function* updatePendingProofreadingOperationInfo(): Saga<void> {
         tracingId,
         sourceInfo: {
           ...sourceInfo,
-          agglomerateId: Number(sourceAgglomerateIdFromServer ?? sourceInfo.agglomerateId),
+          agglomerateId: sourceAgglomerateIdFromServer ?? sourceInfo.agglomerateId,
         },
         targetInfo: targetInfo
           ? {
               ...targetInfo,
-              agglomerateId: Number(targetAgglomerateIdFromServer ?? targetInfo.agglomerateId),
+              agglomerateId: targetAgglomerateIdFromServer ?? targetInfo.agglomerateId,
             }
           : null,
       }),

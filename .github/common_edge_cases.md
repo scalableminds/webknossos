@@ -10,6 +10,7 @@ Will this also work if
  - User uses dark mode / light mode
  - There is no local datastore/tracingstore module (Compare [instructions to test this locally](https://github.com/scalableminds/webknossos/wiki/Set-up-a-standalone-datastore-locally))
  - An annotation is opened by multiple users at the same time
+ - Segment ids are in the full uint64 range.
 
 Consider SQL pitfalls:
  - `x IN ()` statements must never called with empty list

@@ -1,3 +1,4 @@
+import { toBigInt } from "libs/bigint_helpers";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { OrthoView, Point2, Vector3 } from "viewer/constants";
 import { ContourModeEnum } from "viewer/constants";
@@ -99,7 +100,7 @@ const _getSegmentIdForPosition = (mapped: boolean) => (globalPos: Vector3) => {
   const { additionalCoordinates } = Store.getState().flycam;
 
   if (!layer) {
-    return 0;
+    return 0n;
   }
   const posInLayerSpace = globalToLayerTransformedPosition(
     globalPos,
@@ -115,18 +116,20 @@ const _getSegmentIdForPosition = (mapped: boolean) => (globalPos: Vector3) => {
     posInLayerSpace,
   );
 
-  return mapped
-    ? segmentationCube.getMappedDataValue(
-        posInLayerSpace,
-        additionalCoordinates,
-        renderedZoomStepForCameraPosition,
-      )
-    : segmentationCube.getDataValue(
-        posInLayerSpace,
-        additionalCoordinates,
-        null,
-        renderedZoomStepForCameraPosition,
-      );
+  return toBigInt(
+    mapped
+      ? segmentationCube.getMappedDataValue(
+          posInLayerSpace,
+          additionalCoordinates,
+          renderedZoomStepForCameraPosition,
+        )
+      : segmentationCube.getDataValue(
+          posInLayerSpace,
+          additionalCoordinates,
+          null,
+          renderedZoomStepForCameraPosition,
+        ),
+  );
 };
 
 // This must not be memoized: the mapped segment id at a given position can change
@@ -146,7 +149,7 @@ const _getSegmentIdInfoForPosition = (globalPos: Vector3) => {
   const { additionalCoordinates } = Store.getState().flycam;
 
   if (!layer) {
-    return { mapped: 0, unmapped: 0 };
+    return { mapped: 0n, unmapped: 0n };
   }
   const posInLayerSpace = globalToLayerTransformedPosition(
     globalPos,
@@ -163,16 +166,20 @@ const _getSegmentIdInfoForPosition = (globalPos: Vector3) => {
   );
 
   return {
-    mapped: segmentationCube.getMappedDataValue(
-      posInLayerSpace,
-      additionalCoordinates,
-      renderedZoomStepForCameraPosition,
+    mapped: toBigInt(
+      segmentationCube.getMappedDataValue(
+        posInLayerSpace,
+        additionalCoordinates,
+        renderedZoomStepForCameraPosition,
+      ),
     ),
-    unmapped: segmentationCube.getDataValue(
-      posInLayerSpace,
-      additionalCoordinates,
-      null,
-      renderedZoomStepForCameraPosition,
+    unmapped: toBigInt(
+      segmentationCube.getDataValue(
+        posInLayerSpace,
+        additionalCoordinates,
+        null,
+        renderedZoomStepForCameraPosition,
+      ),
     ),
   };
 };
@@ -189,7 +196,7 @@ export async function getSegmentIdForPositionAsync(globalPos: Vector3) {
   const { additionalCoordinates } = Store.getState().flycam;
 
   if (!layer) {
-    return 0;
+    return 0n;
   }
   const posInLayerSpace = globalToLayerTransformedPosition(
     globalPos,
@@ -211,10 +218,12 @@ export async function getSegmentIdForPositionAsync(globalPos: Vector3) {
     renderedZoomStepForCameraPosition,
     additionalCoordinates,
   );
-  return segmentationCube.getMappedDataValue(
-    posInLayerSpace,
-    additionalCoordinates,
-    renderedZoomStepForCameraPosition,
+  return toBigInt(
+    segmentationCube.getMappedDataValue(
+      posInLayerSpace,
+      additionalCoordinates,
+      renderedZoomStepForCameraPosition,
+    ),
   );
 }
 
@@ -224,7 +233,7 @@ function handlePickCellFromGlobalPosition(
 ) {
   const segmentId = getSegmentIdForPosition(globalPos.rounded);
 
-  if (segmentId === 0) {
+  if (segmentId < 0n) {
     return;
   }
   const visibleSegmentationLayer = getVisibleSegmentationLayer(Store.getState());

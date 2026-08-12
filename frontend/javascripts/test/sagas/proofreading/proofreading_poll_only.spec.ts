@@ -20,6 +20,7 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import { select } from "viewer/model/sagas/effect_generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
+import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/volume/update_actions";
 import { Store } from "viewer/singletons";
 import { startSaga } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -97,10 +98,10 @@ describe.each(
         name: "mergeAgglomerate" as const,
         value: {
           actionTracingId: "volumeTracingId",
-          segmentId1: 1,
-          segmentId2: 4,
-          agglomerateId1: 1,
-          agglomerateId2: 4,
+          segmentId1: 1n,
+          segmentId2: 4n,
+          agglomerateId1: 1n,
+          agglomerateId2: 4n,
         },
       };
       backendMock.injectVersion([foreignMergeAction], 4);
@@ -137,8 +138,8 @@ describe.each(
     const backendMock = mockInitialBucketAndAgglomerateData(
       context,
       [
-        [7, 1337],
-        [4, 1338],
+        [7n, 1337n],
+        [4n, 1338n],
       ],
       Store.getState(),
       { grantMutex: false },
@@ -160,13 +161,13 @@ describe.each(
       );
       expect(mapping0).toEqual(
         new Map([
-          [1, 1],
-          [2, 1],
-          [3, 1],
-          [4, 4],
-          [5, 4],
-          [6, 4],
-          [7, 4],
+          [1n, 1n],
+          [2n, 1n],
+          [3n, 1n],
+          [4n, 4n],
+          [5n, 4n],
+          [6n, 4n],
+          [7n, 4n],
         ]),
       );
 
@@ -176,9 +177,9 @@ describe.each(
         name: "splitAgglomerate" as const,
         value: {
           actionTracingId: "volumeTracingId",
-          segmentId1: 1338,
-          segmentId2: 1337,
-          agglomerateId: 4,
+          segmentId1: 1338n,
+          segmentId2: 1337n,
+          agglomerateId: 4n,
         },
       };
       backendMock.injectVersion([foreignSplitAction], 4);
@@ -192,13 +193,13 @@ describe.each(
 
       expect(mapping1).toEqual(
         new Map([
-          [1, 1],
-          [2, 1],
-          [3, 1],
-          [4, 4],
-          [5, 4],
-          [6, 1339],
-          [7, 1339],
+          [1n, 1n],
+          [2n, 1n],
+          [3n, 1n],
+          [4n, 4n],
+          [5n, 4n],
+          [6n, 1339n],
+          [7n, 1339n],
         ]),
       );
 
@@ -214,10 +215,10 @@ describe.each(
         name: "mergeAgglomerate" as const,
         value: {
           actionTracingId: "volumeTracingId",
-          segmentId1: 1337,
-          segmentId2: 1338,
-          agglomerateId1: 1339,
-          agglomerateId2: 4,
+          segmentId1: 1337n,
+          segmentId2: 1338n,
+          agglomerateId1: 1339n,
+          agglomerateId2: 4n,
         },
       };
       backendMock.injectVersion([foreignMergeAction], 5);
@@ -231,13 +232,13 @@ describe.each(
 
       expect(mapping2).toEqual(
         new Map([
-          [1, 1],
-          [2, 1],
-          [3, 1],
-          [4, 1339],
-          [5, 1339],
-          [6, 1339],
-          [7, 1339],
+          [1n, 1n],
+          [2n, 1n],
+          [3n, 1n],
+          [4n, 1339n],
+          [5n, 1339n],
+          [6n, 1339n],
+          [7n, 1339n],
         ]),
       );
 
@@ -278,9 +279,9 @@ describe.each(
         name: "splitAgglomerate" as const,
         value: {
           actionTracingId: "volumeTracingId",
-          segmentId1: 1,
-          segmentId2: 2,
-          agglomerateId: 1,
+          segmentId1: 1n,
+          segmentId2: 2n,
+          agglomerateId: 1n,
         },
       };
       backendMock.injectVersion([foreignSplitAction], 4);
@@ -311,7 +312,11 @@ describe.each(
 
   it("should update the mapping correctly when the server has a new update action with a split operation with segments unknown to the client", async (context: WebknossosTestContext) => {
     const { api } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context, [[7, 1337]], Store.getState());
+    const backendMock = mockInitialBucketAndAgglomerateData(
+      context,
+      [[7n, 1337n]],
+      Store.getState(),
+    );
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -323,18 +328,18 @@ describe.each(
         name: "splitAgglomerate" as const,
         value: {
           actionTracingId: "volumeTracingId",
-          segmentId1: 1,
-          segmentId2: 2,
-          agglomerateId: 1,
+          segmentId1: 1n,
+          segmentId2: 2n,
+          agglomerateId: 1n,
         },
       };
       const foreignSplitAction2 = {
         name: "splitAgglomerate" as const,
         value: {
           actionTracingId: "volumeTracingId",
-          segmentId1: 1338,
-          segmentId2: 1337,
-          agglomerateId: 6,
+          segmentId1: 1338n,
+          segmentId2: 1337n,
+          agglomerateId: 6n,
         },
       };
       backendMock.injectVersion([foreignSplitAction1], 4);
@@ -349,13 +354,13 @@ describe.each(
 
       expect(mapping1).toEqual(
         new Map([
-          [1, 1],
-          [2, 1339],
-          [3, 1339],
-          [4, 4],
-          [5, 4],
-          [6, 1340],
-          [7, 1340],
+          [1n, 1n],
+          [2n, 1339n],
+          [3n, 1339n],
+          [4n, 4n],
+          [5n, 4n],
+          [6n, 1340n],
+          [7n, 1340n],
         ]),
       );
 
@@ -396,19 +401,19 @@ describe.each(
         name: "mergeAgglomerate" as const,
         value: {
           actionTracingId: "volumeTracingId",
-          segmentId1: 7,
-          segmentId2: 1337,
-          agglomerateId1: 6,
-          agglomerateId2: 1337,
+          segmentId1: 7n,
+          segmentId2: 1337n,
+          agglomerateId1: 6n,
+          agglomerateId2: 1337n,
         },
       };
       const foreignSplitAction = {
         name: "splitAgglomerate" as const,
         value: {
           actionTracingId: "volumeTracingId",
-          segmentId1: 1338,
-          segmentId2: 1337,
-          agglomerateId: 6,
+          segmentId1: 1338n,
+          segmentId2: 1337n,
+          agglomerateId: 6n,
         },
       };
       backendMock.injectVersion([foreignMergeAction], 4);
@@ -423,13 +428,13 @@ describe.each(
 
       expect(mapping1).toEqual(
         new Map([
-          [1, 1],
-          [2, 1],
-          [3, 1],
-          [4, 4],
-          [5, 4],
-          [6, 1339],
-          [7, 1339],
+          [1n, 1n],
+          [2n, 1n],
+          [3n, 1n],
+          [4n, 4n],
+          [5n, 4n],
+          [6n, 1339n],
+          [7n, 1339n],
         ]),
       );
 
@@ -469,10 +474,10 @@ describe.each(
         name: "mergeAgglomerate" as const,
         value: {
           actionTracingId: "volumeTracingId",
-          segmentId1: 1,
-          segmentId2: 4,
-          agglomerateId1: 1,
-          agglomerateId2: 4,
+          segmentId1: 1n,
+          segmentId2: 4n,
+          agglomerateId1: 1n,
+          agglomerateId2: 4n,
         },
       };
       backendMock.injectVersion([foreignMergeAction], 4);
@@ -523,10 +528,10 @@ describe.each(
         name: "mergeAgglomerate" as const,
         value: {
           actionTracingId: "volumeTracingId",
-          segmentId1: 1,
-          segmentId2: 4,
-          agglomerateId1: 1,
-          agglomerateId2: 4,
+          segmentId1: 1n,
+          segmentId2: 4n,
+          agglomerateId1: 1n,
+          agglomerateId2: 4n,
         },
       };
 
@@ -571,8 +576,8 @@ describe.each(
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
-      yield put(setActiveCellAction(1));
+      yield put(updateSegmentAction(1n, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
+      yield put(setActiveCellAction(1n));
       yield makeMappingEditableForTest();
 
       yield* makeAnnotationPollOnly(context);
@@ -587,7 +592,7 @@ describe.each(
         receivedAmountOfUpdateRequests + loadAgglomerateTree1.length;
       backendMock.planMultipleVersionInjections(
         versionBeforeForwardingAgglomerateTreeLoading + 1,
-        injectedAgglomerateTreeLoadingUpdates,
+        injectedAgglomerateTreeLoadingUpdates as UpdateActionWithoutIsolationRequirement[][],
       );
 
       // Load the injected agglomerate tree updates and forward them.
@@ -606,7 +611,7 @@ describe.each(
       saveQueue = yield* select((state) => state.save.queue);
       expect(saveQueue.length).toBe(0);
 
-      yield expectSegmentList(tracingId, [{ id: 1, anchorPosition: [1, 1, 1] }]);
+      yield expectSegmentList(tracingId, [{ id: 1n, anchorPosition: [1, 1, 1] }]);
     });
 
     await task.toPromise();

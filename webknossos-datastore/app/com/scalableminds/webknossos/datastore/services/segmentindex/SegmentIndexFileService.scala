@@ -220,7 +220,7 @@ class SegmentIndexFileService @Inject() (
         for {
           largestAgglomerateId <- agglomerateService.largestAgglomerateId(agglomerateFileKey)
           segmentIds <-
-            if (segmentOrAgglomerateId <= largestAgglomerateId) {
+            if (java.lang.Long.compareUnsigned(segmentOrAgglomerateId, largestAgglomerateId) <= 0) {
               agglomerateService.segmentIdsForAgglomerateId(
                 agglomerateFileKey,
                 segmentOrAgglomerateId

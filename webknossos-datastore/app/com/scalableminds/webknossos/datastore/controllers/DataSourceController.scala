@@ -16,7 +16,7 @@ import com.scalableminds.webknossos.datastore.explore.{
   ExploreRemoteDatasetResponse,
   ExploreRemoteLayerService
 }
-import com.scalableminds.webknossos.datastore.helpers.{LocalDatasetDeletionService, PathSchemes, UPath}
+import com.scalableminds.webknossos.datastore.helpers.{LocalDatasetDeletionService, PathSchemes, UPath, UnsignedLong}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, UsableDataSource}
 import com.scalableminds.webknossos.datastore.services.*
 import com.scalableminds.webknossos.datastore.services.connectome.ConnectomeFileService
@@ -30,7 +30,7 @@ import com.scalableminds.webknossos.datastore.services.connectome.{
 }
 import com.scalableminds.webknossos.datastore.services.mapping.{AgglomerateService, MappingService}
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.{Json, OFormat, Writes}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
 import java.net.URI
@@ -198,7 +198,7 @@ class DataSourceController @Inject() (
         (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
         agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, mappingName)
         largestAgglomerateId: Long <- agglomerateService.largestAgglomerateId(agglomerateFileKey)
-      } yield Ok(Json.toJson(largestAgglomerateId))
+      } yield Ok(Json.toJson(UnsignedLong(largestAgglomerateId)))
     }
   }
 
@@ -342,7 +342,10 @@ class DataSourceController @Inject() (
             dataLayer,
             request.body.connectomeFile
           )
-          synapses <- connectomeFileService.synapsesForAgglomerates(meshFileKey, request.body.agglomerateIds)
+          synapses <- connectomeFileService.synapsesForAgglomerates(
+            meshFileKey,
+            request.body.agglomerateIds.map(_.toLong)
+          )
         } yield Ok(Json.toJson(synapses))
       }
     }
@@ -369,7 +372,7 @@ class DataSourceController @Inject() (
             request.body.synapseIds,
             directionValidated
           )
-        } yield Ok(Json.toJson(agglomerateIds))
+        } yield Ok(Json.toJson(agglomerateIds.map(UnsignedLong(_))))
       }
     }
 

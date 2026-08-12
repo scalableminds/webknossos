@@ -11,7 +11,7 @@ import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.box.Box.tryo
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, MathUtils}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
@@ -247,7 +247,7 @@ class VolumeTracingService @Inject() (
               volumeTracing,
               fallbackLayer,
               tracingId,
-              a.id,
+              a.id.toLong,
               mag,
               mappingName,
               editableMappingTracingId(volumeTracing, tracingId),
@@ -265,7 +265,7 @@ class VolumeTracingService @Inject() (
               for {
                 bucketBytes <- loadBucket(volumeLayer, bucketPosition)
                 filteredBucketBytes <- tryo(
-                  bucketScanner.deleteSegmentFromBucket(bucketBytes, bytesPerElement, isSigned, a.id)
+                  bucketScanner.deleteSegmentFromBucket(bucketBytes, bytesPerElement, isSigned, a.id.toLong)
                 ).toFox
                 _ <- saveBucket(volumeLayer, bucketPosition, filteredBucketBytes, version)
                 _ <- updateSegmentIndex(
@@ -778,7 +778,7 @@ class VolumeTracingService @Inject() (
         None,
         volumeLayer,
         request.cuboid,
-        request.segmentId,
+        request.segmentId.toLong,
         request.voxelSizeFactorInUnit,
         tc,
         None,
@@ -848,7 +848,8 @@ class VolumeTracingService @Inject() (
       indexB: Int, // Index of tracingB in the labelMaps of the mergedVolumeStats.
       mergedVolumeStats: MergedVolumeStats
   ): Box[VolumeTracing] = {
-    val largestSegmentId = combineLargestSegmentIdsByMaxDefined(tracingA.largestSegmentId, tracingB.largestSegmentId)
+    val largestSegmentId =
+      combineLargestSegmentIdsByMaxDefined(tracingA.largestSegmentId, tracingB.largestSegmentId)
     val groupMappingA = GroupUtils.calculateSegmentGroupMapping(tracingA.segmentGroups, tracingB.segmentGroups)
     val mergedGroups = GroupUtils.mergeSegmentGroups(tracingA.segmentGroups, tracingB.segmentGroups, groupMappingA)
     val mergedBoundingBox = combineBoundingBoxes(Some(tracingA.boundingBox), Some(tracingB.boundingBox))
@@ -901,7 +902,7 @@ class VolumeTracingService @Inject() (
 
   private def combineLargestSegmentIdsByMaxDefined(aOpt: Option[Long], bOpt: Option[Long]): Option[Long] =
     (aOpt, bOpt) match {
-      case (Some(a), Some(b)) => Some(Math.max(a, b))
+      case (Some(a), Some(b)) => Some(MathUtils.maxUnsigned(a, b))
       case (Some(a), None)    => Some(a)
       case (None, Some(b))    => Some(b)
       case (None, None)       => None

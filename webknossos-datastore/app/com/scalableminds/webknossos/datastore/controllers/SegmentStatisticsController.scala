@@ -134,7 +134,7 @@ class SegmentStatisticsController @Inject() (
                 request.body.mappingName,
                 request.body.editableMappingTracingId,
                 request.body.annotationVersion,
-                segmentOrAgglomerateId,
+                segmentOrAgglomerateId.toLong,
                 mappingNameForMeshFile = None,
                 omitMissing = true // assume agglomerate ids not present in the mapping belong to user-brushed segments
               )
@@ -200,7 +200,7 @@ class SegmentStatisticsController @Inject() (
                 params.mappingName,
                 None,
                 params.annotationVersion,
-                segmentOrAgglomerateId,
+                segmentOrAgglomerateId.toLong,
                 mappingNameForMeshFile = None,
                 omitMissing = false
               )
@@ -218,7 +218,7 @@ class SegmentStatisticsController @Inject() (
           segmentStatisticsFileService.getVolumesInRequestedMag(
             segmentStatisticsFileKey,
             dataLayer,
-            params.segmentIds,
+            params.segmentIds.map(_.toLong),
             params.mag
           )
         }
@@ -242,7 +242,7 @@ class SegmentStatisticsController @Inject() (
           dataLayer,
           segmentIndexFileKey,
           agglomerateFileKeyOpt,
-          segmentId,
+          segmentId.toLong,
           params.mag
         )
       }
@@ -264,7 +264,7 @@ class SegmentStatisticsController @Inject() (
               dataLayer,
               segmentIndexFileKey,
               agglomerateFileKeyOpt,
-              segmentId,
+              segmentId.toLong,
               request.body.mag
             )
           }
@@ -304,7 +304,10 @@ class SegmentStatisticsController @Inject() (
         params.mappingName,
         allowRemapping = false
       )
-      surfaceAreas <- segmentStatisticsFileService.getSurfaceAreas(segmentStatisticsFileKey, params.segmentIds)
+      surfaceAreas <- segmentStatisticsFileService.getSurfaceAreas(
+        segmentStatisticsFileKey,
+        params.segmentIds.map(_.toLong)
+      )
     } yield surfaceAreas
 
   private def surfaceAreasFromFullMeshService(
@@ -370,7 +373,7 @@ class SegmentStatisticsController @Inject() (
                     request.body.mappingName,
                     None,
                     request.body.annotationVersion,
-                    segmentOrAgglomerateId,
+                    segmentOrAgglomerateId.toLong,
                     mappingNameForMeshFile = None,
                     omitMissing = false
                   )
@@ -384,7 +387,10 @@ class SegmentStatisticsController @Inject() (
             } else {
               // Shortcut: the file already holds stats for the requested mapping (or lack thereof), no need to
               // combine oversegmentation values.
-              segmentStatisticsFileService.getCovarianceMatrices(segmentStatisticsFileKey, request.body.segmentIds)
+              segmentStatisticsFileService.getCovarianceMatrices(
+                segmentStatisticsFileKey,
+                request.body.segmentIds.map(_.toLong)
+              )
             }
         } yield Ok(Json.toJson(covarianceMatrices))
       }
@@ -408,7 +414,7 @@ class SegmentStatisticsController @Inject() (
           )
           maxDistances <- segmentStatisticsFileService.getMaxDistances(
             segmentStatisticsFileKey,
-            request.body.segmentIds
+            request.body.segmentIds.map(_.toLong)
           )
         } yield Ok(Json.toJson(maxDistances))
       }
@@ -444,7 +450,7 @@ class SegmentStatisticsController @Inject() (
                     request.body.mappingName,
                     None,
                     request.body.annotationVersion,
-                    segmentOrAgglomerateId,
+                    segmentOrAgglomerateId.toLong,
                     mappingNameForMeshFile = None,
                     omitMissing = false
                   )
@@ -458,7 +464,10 @@ class SegmentStatisticsController @Inject() (
             } else {
               // Shortcut: the file already holds stats for the requested mapping (or lack thereof), no need to
               // combine oversegmentation values.
-              segmentStatisticsFileService.getCenterOfMasses(segmentStatisticsFileKey, request.body.segmentIds)
+              segmentStatisticsFileService.getCenterOfMasses(
+                segmentStatisticsFileKey,
+                request.body.segmentIds.map(_.toLong)
+              )
             }
         } yield Ok(Json.toJson(centerOfMasses))
       }
@@ -482,7 +491,7 @@ class SegmentStatisticsController @Inject() (
           )
           sphericities <- segmentStatisticsFileService.getSphericities(
             segmentStatisticsFileKey,
-            request.body.segmentIds
+            request.body.segmentIds.map(_.toLong)
           )
         } yield Ok(Json.toJson(sphericities))
       }

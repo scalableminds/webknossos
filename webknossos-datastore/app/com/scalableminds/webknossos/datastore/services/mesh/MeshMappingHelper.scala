@@ -61,7 +61,7 @@ trait MeshMappingHelper {
           )
           segmentIds <-
             if (segmentIdsResult.agglomerateIdIsPresent)
-              Fox.successful(segmentIdsResult.segmentIds)
+              Fox.successful(segmentIdsResult.segmentIds.map(_.toLong))
             else // the agglomerate id is not present in the editable mapping. Fetch its info from the base mapping.
               for {
                 agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox

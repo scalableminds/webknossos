@@ -68,7 +68,7 @@ class Hdf5MeshFileService @Inject() extends NeuroglancerMeshHelper with MeshFile
     }
 
   private def getNeuroglancerSegmentManifestOffsets(segmentId: Long, cachedMeshFile: CachedHdf5File): (Long, Long) = {
-    val bucketIndex = cachedMeshFile.hashFunction(segmentId) % cachedMeshFile.nBuckets
+    val bucketIndex = java.lang.Long.remainderUnsigned(cachedMeshFile.hashFunction(segmentId), cachedMeshFile.nBuckets)
     val bucketOffsets = cachedMeshFile.uint64Reader.readArrayBlockWithOffset(keyBucketOffsets, 2, bucketIndex)
     val bucketStart = bucketOffsets(0)
     val bucketEnd = bucketOffsets(1)

@@ -114,7 +114,7 @@ class NeuroglancerPrecomputedMeshFileService @Inject() (dataVaultService: DataVa
   ): Fox[(Array[Byte], String)] =
     for {
       vaultPath <- dataVaultService.vaultPathFor(meshFileKey.attachment)
-      segmentId <- meshChunkDataRequests.head.segmentId.toFox ?~> "Segment id parameter is required"
+      segmentId <- meshChunkDataRequests.head.segmentId.map(_.toLong).toFox ?~> "Segment id parameter is required"
       _ <- Fox.fromBool(
         meshChunkDataRequests.flatMap(_.segmentId).distinct.length == 1
       ) ?~> "All requests must have the same segment id"

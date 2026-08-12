@@ -519,12 +519,10 @@ function _busyWaitDevHelper(time: number) {
   }
 }
 
-export function animationFrame(maxTimeout?: number): Promise<number | undefined> {
-  const rafPromise: Promise<ReturnType<typeof window.requestAnimationFrame>> = new Promise(
-    (resolve) => {
-      window.requestAnimationFrame(resolve);
-    },
-  );
+export function animationFrame(maxTimeout?: number): Promise<undefined> {
+  const rafPromise = new Promise<undefined>((resolve) => {
+    window.requestAnimationFrame(() => resolve(undefined));
+  });
 
   if (maxTimeout == null) {
     return rafPromise;
@@ -532,6 +530,31 @@ export function animationFrame(maxTimeout?: number): Promise<number | undefined>
 
   const timeoutPromise = sleep(maxTimeout) as Promise<undefined>;
   return Promise.race([rafPromise, timeoutPromise]);
+}
+
+// Waits until the user is actually attentive, i.e., they moved the mouse or pressed a key.
+// This is more reliable than the Page Visibility API, which can still report the page as visible
+// even when another OS window fully covers it.
+// Devices without a mouse/trackpad (e.g. tablets) never fire mousemove, so an animation frame is
+// used as a fallback there. This is checked via "any-pointer: fine" rather than touch support, since
+// convertible devices (e.g. 2-in-1 laptops) can have both a touchscreen and a mouse attached.
+export function ensureUserIsAttentive(): Promise<void> {
+  const hasFinePointer = window.matchMedia?.("(any-pointer: fine)").matches ?? true;
+  if (!hasFinePointer) {
+    return animationFrame();
+  }
+
+  return new Promise((resolve) => {
+    const onUserActivity = () => {
+      window.removeEventListener("mousemove", onUserActivity);
+      window.removeEventListener("keydown", onUserActivity);
+      window.removeEventListener("wheel", onUserActivity);
+      resolve();
+    };
+    window.addEventListener("mousemove", onUserActivity);
+    window.addEventListener("keydown", onUserActivity);
+    window.addEventListener("wheel", onUserActivity);
+  });
 }
 
 export function diffArrays<T>(
@@ -864,10 +887,12 @@ function convertDecToBase256(num: number): Vector4 {
   return map4((el) => sign * el, [r, g, b, a]);
 }
 
-export function castForArrayType(uncastNumber: number, data: TypedArray): number | bigint {
-  return data instanceof BigUint64Array || data instanceof BigInt64Array
-    ? BigInt(uncastNumber)
-    : uncastNumber;
+export function castForArrayType(uncastNumber: NumberLike, data: TypedArray): NumberLike {
+  const needsBigInt = data instanceof BigUint64Array || data instanceof BigInt64Array;
+  if (needsBigInt) {
+    return typeof uncastNumber === "bigint" ? uncastNumber : BigInt(uncastNumber);
+  }
+  return typeof uncastNumber === "number" ? uncastNumber : Number(uncastNumber);
 }
 
 function _convertNumberTo64Bit(num: number | bigint | null): [Vector4, Vector4] {
@@ -1240,13 +1265,23 @@ export function isNumberMap(x: Map<NumberLike, NumberLike>): x is Map<number, nu
 }
 
 export function getAdaptToTypeFunction(mapping: Mapping | null | undefined) {
-  return mapping && isNumberMap(mapping) ? (el: number) => el : (el: number) => BigInt(el);
+  // Segment/agglomerate ids are always bigint scalars now; adapt to whichever key type the
+  // given mapping actually uses (number for smaller element classes, bigint for uint64).
+  return mapping && isNumberMap(mapping)
+    ? (el: NumberLike) => Number(el)
+    : (el: NumberLike) => BigInt(el);
 }
 
-export function getAdaptToTypeFunctionFromList<T extends number | bigint>(list: Array<T>) {
+// Adapts a bigint (as returned by parseProtoListOfLong, which always decodes ids as
+// bigint to preserve full uint64 precision on the wire) back to whichever type `list`
+// uses, so callers working with number-keyed (smaller element class) mappings get
+// numbers back, and callers working with bigint-keyed (uint64) mappings get bigints.
+export function getAdaptToTypeFunctionFromList<T extends number | bigint>(
+  list: Array<T>,
+): (el: bigint) => NumberLike {
   return list[0] == null || Boolean(typeof list[0] === "number")
-    ? (el: NumberLike) => el
-    : (el: NumberLike) => BigInt(el);
+    ? (el: bigint) => Number(el)
+    : (el: bigint) => el;
 }
 
 export function isBigInt(x: NumberLike): x is bigint {

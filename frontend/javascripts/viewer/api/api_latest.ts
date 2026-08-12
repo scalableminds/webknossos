@@ -752,13 +752,13 @@ class TracingApi {
     const boundingBoxInMag1MagAligned = boundingBoxInMag1.alignWithMag(currentMag, "grow");
     const dataMin = boundingBoxInMag1MagAligned.min;
     const dataMax = boundingBoxInMag1MagAligned.max;
-    const segmentIdToPosition = new Map();
+    const segmentIdToPosition = new Map<bigint, Vector3>();
     let idx = 0;
     for (let z = dataMin[2]; z < dataMax[2]; z += dz) {
       for (let y = dataMin[1]; y < dataMax[1]; y += dy) {
         for (let x = dataMin[0]; x < dataMax[0]; x += dx) {
-          const id = data[idx];
-          if (id !== 0 && !segmentIdToPosition.has(id)) {
+          const id = BigInt(data[idx]);
+          if (id !== 0n && !segmentIdToPosition.has(id)) {
             segmentIdToPosition.set(id, [x, y, z]);
           }
           idx++;

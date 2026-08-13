@@ -51,23 +51,27 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
           range match {
             case r: StartEndExclusiveByteRange =>
               val blobReader = storage.reader(blobId)
-              blobReader.seek(r.start)
-              blobReader.limit(r.end)
-              val bb = ByteBuffer.allocateDirect(r.length)
-              readFully(blobReader, bb)
-              val arr = new Array[Byte](r.length)
-              bb.position(0)
-              bb.get(arr)
-              Fox.successful(arr)
+              try {
+                blobReader.seek(r.start)
+                blobReader.limit(r.end)
+                val bb = ByteBuffer.allocateDirect(r.length)
+                readFully(blobReader, bb)
+                val arr = new Array[Byte](r.length)
+                bb.position(0)
+                bb.get(arr)
+                Fox.successful(arr)
+              } finally blobReader.close()
             case SuffixLengthByteRange(l) =>
               val blobReader = storage.reader(blobId)
-              blobReader.seek(-l)
-              val bb = ByteBuffer.allocateDirect(l)
-              readFully(blobReader, bb)
-              val arr = new Array[Byte](l)
-              bb.position(0)
-              bb.get(arr)
-              Fox.successful(arr)
+              try {
+                blobReader.seek(-l)
+                val bb = ByteBuffer.allocateDirect(l)
+                readFully(blobReader, bb)
+                val arr = new Array[Byte](l)
+                bb.position(0)
+                bb.get(arr)
+                Fox.successful(arr)
+              } finally blobReader.close()
             case CompleteByteRange() =>
               Fox.successful(storage.readAllBytes(bucket, objName, BlobSourceOption.shouldReturnRawInputStream(true)))
           }

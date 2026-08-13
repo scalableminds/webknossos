@@ -112,6 +112,24 @@ class LegacyApiController @Inject() (
       } yield adaptedResult
     }
 
+  def reserveUploadToPathsV14(): Action[ReserveDatasetUploadToPathsRequest] =
+    sil.SecuredAction.fox(validateJson[ReserveDatasetUploadToPathsRequest]) { implicit request =>
+      for {
+        result <- Fox.fromFuture(datasetController.reserveUploadToPaths()(request))
+        adaptedResult <- replaceInResult(downgradeLargestSegmentIdsIfSafeFox)(result)
+      } yield adaptedResult
+    }
+
+  def reserveUploadToPathsForPreliminaryV14(
+      datasetId: ObjectId
+  ): Action[ReserveDatasetUploadToPathsForPreliminaryRequest] =
+    sil.SecuredAction.fox(validateJson[ReserveDatasetUploadToPathsForPreliminaryRequest]) { implicit request =>
+      for {
+        result <- Fox.fromFuture(datasetController.reserveUploadToPathsForPreliminary(datasetId)(request))
+        adaptedResult <- replaceInResult(downgradeLargestSegmentIdsIfSafeFox)(result)
+      } yield adaptedResult
+    }
+
   /* provide v12 */
 
   def updatePartialV12(datasetId: ObjectId): Action[DatasetUpdatePartialParameters] =

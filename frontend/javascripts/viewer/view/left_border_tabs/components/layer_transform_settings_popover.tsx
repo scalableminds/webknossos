@@ -5,7 +5,7 @@ import { getDataset, updateDatasetPartial } from "admin/rest_api";
 import { Button, Divider, Flex, InputNumber, Popover, Slider, Tooltip, Typography } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { type ReactNode, useCallback, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import type { APIDataLayer, APISkeletonLayer } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
@@ -255,6 +255,56 @@ export function LayerTransformSettingsContent({
   const translationSliderConfigs = useMemo(
     () => viewportExtent.map(getTranslationSliderConfig),
     [viewportExtent],
+  );
+
+  // The slider ranges adapt to the values in use: committing a value at the end of a slider extends
+  // its range, so that the user can go further. The range is only extended once a value is actually
+  // committed (the slider is released or the number input is confirmed) and never while dragging,
+  // so that the slider does not rescale under the cursor.
+  const [translationLimits, setTranslationLimits] = useState<Vector3>(() =>
+    growLimitsToFit(defaultTranslationLimits, srtFromStore.translation, defaultTranslationLimits),
+  );
+  const [scaleMaxima, setScaleMaxima] = useState<Vector3>(() =>
+    growLimitsToFit(DEFAULT_SCALE_MAXIMA, srtFromStore.scale, DEFAULT_SCALE_MAXIMA),
+  );
+
+  // Values are read through a ref so that refitting does not re-run on every slider movement.
+  const srtRef = useRef(srtFromStore);
+  srtRef.current = srtFromStore;
+
+  // Refit when the edited layer changes, so that values stored outside the default range are shown
+  // correctly instead of appearing clamped to the end of the slider.
+  useEffect(() => {
+    setTranslationLimits(
+      growLimitsToFit(
+        defaultTranslationLimits,
+        srtRef.current.translation,
+        defaultTranslationLimits,
+      ),
+    );
+    setScaleMaxima(
+      growLimitsToFit(DEFAULT_SCALE_MAXIMA, srtRef.current.scale, DEFAULT_SCALE_MAXIMA),
+    );
+  }, [layer.name, defaultTranslationLimits]);
+
+  const growLimitForAxis = useCallback(
+    (
+      setLimits: typeof setTranslationLimits,
+      defaultLimits: Vector3,
+      axis: 0 | 1 | 2,
+      value: number,
+    ) => {
+      setLimits((limits) => {
+        const grown = growLimitToFit(limits[axis], value, defaultLimits[axis]);
+        if (grown === limits[axis]) {
+          return limits;
+        }
+        const newLimits = [...limits] as Vector3;
+        newLimits[axis] = grown;
+        return newLimits;
+      });
+    },
+    [],
   );
 
   const handleChange = useCallback(

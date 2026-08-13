@@ -16,7 +16,7 @@ export type LoadPrecomputedMeshAction = ReturnType<typeof loadPrecomputedMeshAct
 export type SegmentationAction = LoadAdHocMeshAction | LoadPrecomputedMeshAction;
 
 export const loadAdHocMeshAction = (
-  segmentId: number,
+  segmentId: bigint,
   seedPosition: Vector3,
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   extraInfo?: AdHocMeshInfo,
@@ -32,7 +32,7 @@ export const loadAdHocMeshAction = (
   }) as const;
 
 export const loadPrecomputedMeshAction = (
-  segmentId: number,
+  segmentId: bigint,
   seedPosition: Vector3,
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   meshFileName: string,

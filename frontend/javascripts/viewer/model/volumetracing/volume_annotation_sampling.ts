@@ -304,13 +304,13 @@ export default function sampleVoxelMapToMagnification(
 export function applyVoxelMap(
   labeledVoxelMap: LabeledVoxelsMap,
   dataCube: DataCube,
-  segmentId: number,
+  segmentId: bigint,
   get3DAddress: (arg0: number, arg1: number, arg2: Vector3 | Float32Array) => void,
   numberOfSlicesToApply: number,
   thirdDimensionIndex: 0 | 1 | 2, // If shouldOverwrite is false, a voxel is only overwritten if
   // its old value is equal to overwritableValue.
   shouldOverwrite: boolean = true,
-  overwritableValue: number = 0,
+  overwritableValue: bigint = 0n,
 ): boolean {
   function preprocessBucket(bucket: Bucket) {
     if (bucket.type === "null") {

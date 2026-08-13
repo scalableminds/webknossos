@@ -66,10 +66,10 @@ export function useMaybeMinCutItem(clickedTree: Tree | null): SubMenuType | null
 }
 
 export function useMultiCutToolOptions(
-  unmappedSegmentId: number,
-  mappedSegmentId: number,
+  unmappedSegmentId: bigint,
+  mappedSegmentId: bigint,
   segmentOrSuperVoxel: string,
-  segmentIdLabel: string | number,
+  segmentIdLabel: string | bigint,
 ): MenuItemType[] {
   const minCutPartitions = useWkSelector((state) => {
     const volumeTracing = getActiveSegmentationTracing(state);

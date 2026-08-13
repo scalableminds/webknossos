@@ -275,7 +275,8 @@ class Hdf5AgglomerateService @Inject() (config: DataStoreConfig) extends DataCon
       val middle = rangeStart + (rangeEnd - rangeStart) / 2
       val segmentIdAtMiddle: Long = reader.uint64().readArrayBlockWithOffset(keyAgglomerateToSegments, 1, middle)(0)
       if (segmentIdAtMiddle == segmentId) Full(middle)
-      else if (segmentIdAtMiddle < segmentId) binarySearchForSegment(middle + 1L, rangeEnd, segmentId, reader)
+      else if (java.lang.Long.compareUnsigned(segmentIdAtMiddle, segmentId) < 0)
+        binarySearchForSegment(middle + 1L, rangeEnd, segmentId, reader)
       else binarySearchForSegment(rangeStart, middle - 1L, segmentId, reader)
     }
 

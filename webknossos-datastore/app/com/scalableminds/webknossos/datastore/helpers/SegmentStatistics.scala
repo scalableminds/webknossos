@@ -14,7 +14,7 @@ import scala.concurrent.ExecutionContext
 
 case class SegmentStatisticsParameters(
     mag: Vec3Int,
-    segmentIds: List[Long],
+    segmentIds: List[UnsignedLong],
     mappingName: Option[String],
     additionalCoordinates: Option[Seq[AdditionalCoordinate]],
     annotationVersion: Option[Long]
@@ -24,7 +24,7 @@ object SegmentStatisticsParameters {
 }
 case class SegmentStatisticsParametersMeshBased(
     mag: Vec3Int,
-    segmentIds: List[Long],
+    segmentIds: List[UnsignedLong],
     mappingName: Option[String],
     additionalCoordinates: Option[Seq[AdditionalCoordinate]],
     meshFileName: Option[String],

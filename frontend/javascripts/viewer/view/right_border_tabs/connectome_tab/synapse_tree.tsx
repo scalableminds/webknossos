@@ -16,28 +16,29 @@ type BaseSynapse = {
   type: string;
 };
 type SrcSynapse = BaseSynapse & {
-  src: number;
+  src: bigint;
   dst: void;
 };
 type DstSynapse = BaseSynapse & {
   src: void;
-  dst: number;
+  dst: bigint;
 };
 type SrcAndDstSynapse = BaseSynapse & {
-  src: number;
-  dst: number;
+  src: bigint;
+  dst: bigint;
 };
 export type DirectionCaptionsKeys = keyof typeof directionCaptions;
 export type Synapse = SrcSynapse | DstSynapse | SrcAndDstSynapse;
 export type Agglomerate = Record<DirectionCaptionsKeys, Array<number>>;
 export type ConnectomeData = {
-  agglomerates: Record<number, Agglomerate>;
+  // Keyed by agglomerateId.toString(), since bigint cannot be used as an object/Record index type.
+  agglomerates: Record<string, Agglomerate>;
   synapses: Record<number, Synapse>;
   connectomeFile: APIConnectomeFile;
 };
 type SegmentData = {
   type: "segment";
-  id: number;
+  id: bigint;
   level: 0 | 1;
 };
 type SynapseData = {
@@ -71,7 +72,7 @@ const showLine = {
 };
 const contextMenuTrigger = ["contextMenu"];
 
-const segmentData = (segmentId: number, level: 0 | 1): SegmentData => ({
+const segmentData = (segmentId: bigint, level: 0 | 1): SegmentData => ({
   type: "segment",
   id: segmentId,
   level,
@@ -110,8 +111,8 @@ function _convertConnectomeToTreeData(
     return Object.keys(synapsesByPartner).map((partnerId2) => ({
       key: `segment;${partnerId2};${direction};${partnerId1};`,
       title: `Segment ${partnerId2}`,
-      data: segmentData(+partnerId2, 1),
-      children: synapsesByPartner[+partnerId2].map((synapse) => ({
+      data: segmentData(BigInt(partnerId2), 1),
+      children: synapsesByPartner[partnerId2].map((synapse) => ({
         key: `synapse;${synapse.id};${direction};`,
         title: `Synapse ${synapse.id}`,
         data: synapseData(synapse.id, synapse.position, synapse.type),
@@ -130,15 +131,15 @@ function _convertConnectomeToTreeData(
   return Object.keys(agglomerates).map((partnerId1: string) => ({
     key: `segment;${partnerId1};`,
     title: `Segment ${partnerId1}`,
-    data: segmentData(+partnerId1, 0),
-    children: Object.keys(agglomerates[+partnerId1]).map(
+    data: segmentData(BigInt(partnerId1), 0),
+    children: Object.keys(agglomerates[partnerId1]).map(
       // @ts-expect-error TypeScript doesn't correctly infer the type of Object.keys, but assumes string instead
       (direction: DirectionCaptionsKeys) => ({
         key: `${direction};segment;${partnerId1};`,
         title: `${directionCaptions[direction]} Synapses`,
         data: noneData,
         children: convertSynapsesForPartner(
-          agglomerates[+partnerId1][direction],
+          agglomerates[partnerId1][direction],
           partnerId1,
           direction,
         ),
@@ -158,7 +159,7 @@ type Props = {
   expandedKeys: Array<string>;
   onCheck: TreeProps<TreeNode>["onCheck"];
   onExpand: TreeProps<TreeNode>["onExpand"];
-  onChangeActiveAgglomerateIds: (arg0: Array<number>) => void;
+  onChangeActiveAgglomerateIds: (arg0: Array<bigint>) => void;
   connectomeData: ConnectomeData | null | undefined;
 };
 
@@ -188,11 +189,11 @@ class SynapseTree extends React.Component<Props, State> {
     });
   };
 
-  setHoveredSegmentId(agglomerateId: number | null | undefined) {
+  setHoveredSegmentId(agglomerateId: bigint | null | undefined) {
     Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", agglomerateId || null));
   }
 
-  createSegmentDropdownMenu = (agglomerateId: number): MenuProps => {
+  createSegmentDropdownMenu = (agglomerateId: bigint): MenuProps => {
     return {
       items: [
         {

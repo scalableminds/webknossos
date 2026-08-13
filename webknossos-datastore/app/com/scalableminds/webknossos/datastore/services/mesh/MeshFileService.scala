@@ -13,6 +13,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   LayerAttachment,
   LayerAttachmentDataformat
 }
+import com.scalableminds.webknossos.datastore.helpers.UnsignedLong
 import com.scalableminds.webknossos.datastore.storage.AttachmentKey
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{Json, OFormat}
@@ -22,7 +23,7 @@ import scala.concurrent.ExecutionContext
 
 case class ListMeshChunksRequest(
     meshFileName: String,
-    segmentId: Long,
+    segmentId: UnsignedLong,
     annotationVersion: Option[Long]
 )
 
@@ -33,7 +34,7 @@ object ListMeshChunksRequest {
 case class MeshChunkDataRequest(
     byteOffset: Long,
     byteSize: Int,
-    segmentId: Option[Long] // Only relevant for neuroglancer precomputed meshes, needed because of sharding
+    segmentId: Option[UnsignedLong] // Only relevant for neuroglancer precomputed meshes, needed because of sharding
 )
 
 case class MeshChunkDataRequestList(

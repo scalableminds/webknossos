@@ -632,8 +632,11 @@ export function getTransformedDatasetCenter(
 }
 
 // The live SRT transform format uses exactly 7 affine matrices in this order:
-// [0]  dataset center → origin translation, [1] scale, [2] rotX, [3] rotY, [4] rotZ,
-// [5] user translation, [6] origin → center dataset translation.
+// [0]  pivot → origin translation, [1] scale, [2] rotX, [3] rotY, [4] rotZ,
+// [5] user translation, [6] origin → pivot translation.
+// The pivot is the point that scaling and rotation happen around. It is usually the center of the
+// layer's bounding box, but the exact value is read back from matrix [0] so that transforms which
+// were stored with a different pivot keep rotating around that pivot.
 // They are stored separately to keep the extracted value consistent between reloads.
 // Else e.g. some rotations might be shown differently as euler angles are not deterministic.
 export const EXPECTED_LIVE_TRANSFORMATION_LENGTH = 7;
@@ -721,21 +724,29 @@ export function extractSRTFromTransforms(transforms: CoordinateTransformation[])
   };
 }
 
+// Extracts the pivot (the point that scaling and rotation happen around) from a 7 matrix
+// coordinate transformation of a layer. It is stored as the negated translation of the first matrix.
+export function extractPivotFromTransforms(transforms: CoordinateTransformation[]): Vector3 | null {
+  if (transforms.length !== EXPECTED_LIVE_TRANSFORMATION_LENGTH) return null;
+  const [x, y, z] = extractTranslationFromMatrix(transforms[0] as AffineTransformation);
+  return [-x, -y, -z];
+}
+
 // Build the 7-matrix SRT transform array for a layer.
-// Order: center→origin, scale, rotX, rotY, rotZ, translation, origin→center
+// Order: pivot→origin, scale, rotX, rotY, rotZ, translation, origin→pivot
 export function buildLiveTransforms(
   scale: [number, number, number],
   rotation: [number, number, number],
   translation: [number, number, number],
-  datasetBbox: BoundingBox,
+  pivot: Vector3,
 ): AffineTransformation[] {
   return [
-    fromCenterToOriginAsAffine(datasetBbox),
+    makeTranslationMatrix(-pivot[0], -pivot[1], -pivot[2]),
     makeScaleMatrix(...scale),
     getRotationMatrixAroundAxis("x", { rotationInDegrees: rotation[0], isMirrored: false }),
     getRotationMatrixAroundAxis("y", { rotationInDegrees: rotation[1], isMirrored: false }),
     getRotationMatrixAroundAxis("z", { rotationInDegrees: rotation[2], isMirrored: false }),
     makeTranslationMatrix(...translation),
-    fromOriginToCenterAsAffine(datasetBbox),
+    makeTranslationMatrix(...pivot),
   ];
 }

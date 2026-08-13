@@ -1,14 +1,10 @@
+import { toBigInt } from "libs/bigint_helpers";
 import ErrorHandling from "libs/error_handling";
 import { V3, V4 } from "libs/mjs";
+import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
 import type { ProgressCallback } from "libs/progress_callback";
 import Toast from "libs/toast";
-import {
-  areBoundingBoxesOverlappingOrTouching,
-  castForArrayType,
-  isNumberMap,
-  mod,
-  union,
-} from "libs/utils";
+import { areBoundingBoxesOverlappingOrTouching, castForArrayType, mod, union } from "libs/utils";
 import keyBy from "lodash-es/keyBy";
 import once from "lodash-es/once";
 import { createNanoEvents, type Emitter } from "nanoevents";
@@ -43,10 +39,11 @@ import {
   VoxelNeighborQueue2D,
   VoxelNeighborQueue3D,
 } from "viewer/model/volumetracing/section_labeling";
-import type { Mapping } from "viewer/store";
+import type { Mapping, NumberLike } from "viewer/store";
 import Store from "viewer/store";
 import type { MagInfo } from "../helpers/mag_info";
 import { getConstructorForElementClass } from "../helpers/typed_buffer";
+import { getMappedIdAsBigInt } from "../sagas/volume/proofreading/preparation_sagas";
 
 const warnAboutTooManyAllocations = once(() => {
   const msg =
@@ -218,25 +215,22 @@ class DataCube {
       : false;
   }
 
-  mapId(unmappedId: number): number {
+  mapId(unmappedId: bigint): bigint {
     // Note that the return value can be an unmapped id even when
     // a mapping is active, if it is a HDF5 mapping that is partially loaded
     // and no entry exists yet for the input id.
-    let mappedId: number | null | undefined = null;
+    let mappedId: bigint | number | null | undefined = null;
     const mapping = this.getMapping();
 
     if (mapping != null && this.isMappingEnabled()) {
-      mappedId = isNumberMap(mapping)
-        ? mapping.get(Number(unmappedId))
-        : // TODO: Proper 64 bit support (#6921)
-          Number(mapping.get(BigInt(unmappedId)));
+      mappedId = getMappedIdAsBigInt(mapping, unmappedId);
     }
-    if (mappedId == null || Number.isNaN(mappedId)) {
+    if (mappedId == null || (typeof mappedId === "number" && Number.isNaN(mappedId))) {
       // The id couldn't be mapped.
-      return this.shouldHideUnmappedIds() ? 0 : unmappedId;
+      return this.shouldHideUnmappedIds() ? 0n : unmappedId;
     }
 
-    return mappedId;
+    return toBigInt(mappedId);
   }
 
   private getCubeKey(zoomStep: number, allCoords: AdditionalCoordinate[] | undefined | null) {
@@ -539,7 +533,7 @@ class DataCube {
     additionalCoordinates: AdditionalCoordinate[] | null,
     label: number,
     zoomStep: number,
-    activeSegmentId: number | null | undefined,
+    activeSegmentId: bigint | null | undefined,
   ): Promise<void> {
     // This function is only provided for testing purposes and should not be used internally,
     // since it only operates on one voxel and therefore is not performance-optimized. It should
@@ -574,7 +568,7 @@ class DataCube {
   async floodFill(
     globalSeedVoxel: Vector3,
     additionalCoordinates: AdditionalCoordinate[] | null,
-    segmentIdNumber: number,
+    segmentIdNumber: bigint,
     dimensionIndices: DimensionMap,
     _floodfillBoundingBox: BoundingBoxMinMaxType,
     zoomStep: number,
@@ -981,7 +975,7 @@ class DataCube {
     mapping: Mapping | null | undefined,
     zoomStep: number = 0,
     channelIndex: number = 0,
-  ): number {
+  ): NumberLike {
     if (!this.magInfo.hasIndex(zoomStep)) {
       return 0;
     }
@@ -998,18 +992,13 @@ class DataCube {
       const dataValue = data[voxelIndex];
 
       if (mapping) {
-        const mappedValue = isNumberMap(mapping)
-          ? mapping.get(Number(dataValue))
-          : mapping.get(BigInt(dataValue));
-
+        const mappedValue = new NumberLikeMapWrapper(mapping).get(dataValue);
         if (mappedValue != null) {
-          // TODO: Proper 64 bit support (#6921)
-          return Number(mappedValue);
+          return mappedValue;
         }
       }
 
-      // TODO: Proper 64 bit support (#6921)
-      return Number(dataValue);
+      return dataValue;
     }
 
     return 0;
@@ -1019,7 +1008,7 @@ class DataCube {
     voxel: Vector3,
     additionalCoordinates: AdditionalCoordinate[] | null,
     zoomStep: number = 0,
-  ): number {
+  ): NumberLike {
     return this.getDataValue(
       voxel,
       additionalCoordinates,

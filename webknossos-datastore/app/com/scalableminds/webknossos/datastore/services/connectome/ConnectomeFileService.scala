@@ -7,6 +7,7 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
+import com.scalableminds.webknossos.datastore.helpers.UnsignedLong
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayer,
   DataSourceId,
@@ -24,7 +25,7 @@ import scala.concurrent.ExecutionContext
 
 case class ByAgglomerateIdsRequest(
     connectomeFile: String,
-    agglomerateIds: Seq[Long]
+    agglomerateIds: Seq[UnsignedLong]
 )
 
 object ByAgglomerateIdsRequest {

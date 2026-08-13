@@ -10,7 +10,7 @@ import { updateSegmentAction } from "./volumetracing_actions";
 
 export const getUpdateSegmentActionToToggleVisibility = (
   storeState: WebknossosState,
-  segmentId: number,
+  segmentId: bigint,
   anchorPosition?: Vector3,
   additionalCoordinates?: AdditionalCoordinate[],
 ) => {

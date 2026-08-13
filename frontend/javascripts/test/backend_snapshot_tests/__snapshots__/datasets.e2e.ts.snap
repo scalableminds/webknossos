@@ -31,7 +31,7 @@ exports[`Dataset API (E2E) > getActiveDatasets 1`] = `
           "category": "segmentation",
           "dataFormat": "wkw",
           "elementClass": "uint32",
-          "largestSegmentId": 176,
+          "largestSegmentId": 176n,
           "mags": [
             {
               "mag": [

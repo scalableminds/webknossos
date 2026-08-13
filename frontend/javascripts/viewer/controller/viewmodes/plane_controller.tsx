@@ -470,6 +470,22 @@ class PlaneController extends PureComponent<Props> {
           Toast.warning("No segment under cursor.");
         },
       },
+      // TD viewport controls — globally available regardless of active tool
+      CENTER_TD_VIEW: {
+        onPressed: () => api.tracing.centerTDView(),
+      },
+      ROTATE_TD_VIEW_TO_XY: {
+        onPressed: () => api.tracing.rotate3DViewToXY(),
+      },
+      ROTATE_TD_VIEW_TO_YZ: {
+        onPressed: () => api.tracing.rotate3DViewToYZ(),
+      },
+      ROTATE_TD_VIEW_TO_XZ: {
+        onPressed: () => api.tracing.rotate3DViewToXZ(),
+      },
+      ROTATE_TD_VIEW_TO_DIAGONAL: {
+        onPressed: () => api.tracing.rotate3DViewToDiagonal(),
+      },
     };
   }
 

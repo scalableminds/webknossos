@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.helpers
 
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
-import play.api.libs.json.{Format, Json}
+import play.api.libs.json.{Format, Json, OFormat}
 
 case class GetSegmentIndexParameters(
     mag: Vec3Int,
@@ -17,7 +17,7 @@ object GetSegmentIndexParameters {
 }
 
 case class GetMultipleSegmentIndexParameters(
-    segmentIds: List[Long],
+    segmentIds: List[UnsignedLong],
     mag: Vec3Int,
     additionalCoordinates: Option[Seq[AdditionalCoordinate]],
     mappingName: Option[String],
@@ -30,7 +30,7 @@ object GetMultipleSegmentIndexParameters {
 }
 
 // positions = List of indices of buckets directly in a requested mag
-case class SegmentIndexData(segmentId: Long, positions: Seq[Vec3Int])
+case class SegmentIndexData(segmentId: UnsignedLong, positions: Seq[Vec3Int])
 
 object SegmentIndexData {
   implicit val format: Format[SegmentIndexData] = Json.format[SegmentIndexData]

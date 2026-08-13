@@ -76,11 +76,11 @@ trait NeuroglancerPrecomputedShardingUtils {
      The decoded "minishard index" is a binary string of 24*n bytes, specifying a contiguous C-order array of [3, n]
       uint64le values.
      */
-    val n = bytes.length / 24
-    if (n == 0) {
+    if (bytes.isEmpty) {
       // Minishard with zero chunks
       Array.empty[(Long, Long, Long)]
     } else {
+      val n = bytes.length / 24
       val buf = ByteBuffer.allocate(bytes.length)
       buf.put(bytes)
 

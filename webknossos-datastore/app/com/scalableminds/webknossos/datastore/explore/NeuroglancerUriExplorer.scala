@@ -12,14 +12,51 @@ import com.scalableminds.webknossos.datastore.models.datasource.{LayerViewConfig
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.scalableminds.util.box.{Box, Failure, Full}
 import com.scalableminds.webknossos.datastore.helpers.UPath
+import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.*
 
 import java.net.{URI, URLDecoder}
 import java.nio.charset.StandardCharsets
 import scala.concurrent.ExecutionContext
 
+object NeuroglancerUriExplorer {
+
+  // Note: we deliberately do not use java.net.URI.getFragment here. Neuroglancer URIs are not strictly
+  // RFC-3986 conformant: their fragment can contain further raw, unescaped "#" characters (e.g. a hex
+  // color such as "annotationColor":"#8f8f8a", or a hashtag-style "segmentQuery" value). Asking
+  // java.net.URI to parse such a string fails outright with a URISyntaxException, even though the
+  // payload is perfectly recoverable. Splitting on the literal "#!" ourselves sidesteps that.
+  def extractRawFragment(rawUri: String): Box[String] =
+    rawUri.split("#!", 2) match {
+      case Array(_, fragment) => Full(fragment)
+      case _                  => Failure("URI has no matching fragment part")
+    }
+
+  // Some tools double-percent-encode neuroglancer uris (e.g. "%2522" instead of "%22"). Decode once,
+  // and if the result is not valid JSON, try decoding a second time before giving up.
+  def parseFragmentAsJson(rawFragment: String): Box[JsObject] = {
+    val decodedOnce = URLDecoder.decode(rawFragment, StandardCharsets.UTF_8)
+    JsonHelper
+      .parseAs[JsObject](decodedOnce)
+      .orElse(JsonHelper.parseAs[JsObject](URLDecoder.decode(decodedOnce, StandardCharsets.UTF_8)))
+  }
+
+  // A Neuroglancer layer's "source" field can be a plain string, an object with a "url" field (used to
+  // attach subsource config), or an array of either — the array form is used e.g. to pair a segmentation's
+  // main data source with an auxiliary "segment_properties" source. We only need one URL to explore the
+  // volumetric data, so we recurse into the first entry of arrays and unwrap "url" from objects.
+  def extractPrimarySourceUrl(source: JsValue): Box[String] = source match {
+    case JsString(url)                      => Full(url)
+    case obj: JsObject                      => JsonHelper.as[JsString](obj \ "url").map(_.value)
+    case JsArray(values) if values.nonEmpty => extractPrimarySourceUrl(values.head)
+    case _                                  => Failure("Neuroglancer layer has no valid 'source'")
+  }
+
+}
+
 class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val ec: ExecutionContext)
     extends RemoteLayerExplorer
+    with LazyLogging
     with ExploreLayerUtils {
   override def name: String = "Neuroglancer URI Explorer"
 
@@ -27,8 +64,11 @@ class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val e
       tc: TokenContext
   ): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
-      rawFragment <- extractRawFragment(remotePath.toString).toFox ?~> "URI has no matching fragment part"
-      spec <- parseFragmentAsJson(rawFragment).toFox ?~> "Did not find JSON object in URI"
+      rawFragment <- NeuroglancerUriExplorer
+        .extractRawFragment(remotePath.toString)
+        .toFox ?~> "URI has no matching fragment part"
+      spec <- NeuroglancerUriExplorer.parseFragmentAsJson(rawFragment).toFox ?~> "Did not find JSON object in URI"
+      _ = logger.error(spec.toString)
       layerSpecs <- JsonHelper.as[JsArray](spec \ "layers").toFox
       _ <- Fox.fromBool(credentialId.isEmpty) ?~> "Neuroglancer URI Explorer does not support credentials"
       exploredLayers = layerSpecs.value.map(exploreNeuroglancerLayer).toList
@@ -37,32 +77,18 @@ class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val e
       renamedLayers = makeLayerNamesUnique(layers.map(_._1))
     } yield renamedLayers.zip(layers.map(_._2))
 
-  private def extractRawFragment(rawUri: String): Box[String] =
-    // Note: Neuroglancer URIs are not strictly RFC-3986 conformant, so we do raw string ops rather than relying on URI classes.
-    rawUri.split("#!", 2) match {
-      case Array(_, fragment) => Full(fragment)
-      case _                  => Failure("URI has no matching fragment part")
-    }
-
-  // Some tools double-percent-encode neuroglancer uris (e.g. "%2522" instead of "%22"). Decode once,
-  // and if the result is not valid JSON, try decoding a second time before giving up.
-  private def parseFragmentAsJson(rawFragment: String): Box[JsObject] = {
-    val decodedOnce = URLDecoder.decode(rawFragment, StandardCharsets.UTF_8)
-    JsonHelper
-      .parseAs[JsObject](decodedOnce)
-      .orElse(JsonHelper.parseAs[JsObject](URLDecoder.decode(decodedOnce, StandardCharsets.UTF_8)))
-  }
-
   private def exploreNeuroglancerLayer(
       layerSpec: JsValue
   )(using tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
       _ <- Fox.successful(())
       obj <- JsonHelper.as[JsObject](layerSpec).toFox
-      source <- JsonHelper.as[JsString](obj \ "source").toFox
-      layerType = new URI(source.value).getScheme
+      sourceUrl <- NeuroglancerUriExplorer
+        .extractPrimarySourceUrl((obj \ "source").asOpt[JsValue].getOrElse(JsNull))
+        .toFox
+      layerType = new URI(sourceUrl).getScheme
       name <- JsonHelper.as[JsString](obj \ "name").toFox
-      upath <- UPath.fromString(source.value.substring(f"$layerType://".length)).toFox
+      upath <- UPath.fromString(sourceUrl.substring(f"$layerType://".length)).toFox
       remotePath <- dataVaultService.vaultPathFor(upath) ?~> Msg.DataVault.setupFailed
       viewConfiguration = getViewConfig(obj)
       layer <- exploreLayer(layerType, remotePath, name.value)

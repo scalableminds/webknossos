@@ -27,12 +27,6 @@ class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val e
       tc: TokenContext
   ): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
-      // Note: we deliberately do not use remotePath.toRemoteUri.getFragment here. Some tools that
-      // generate/relay neuroglancer links produce fragments that are not strictly RFC 3986 conformant
-      // (e.g. containing a raw, unescaped "#" originating from a hex color value such as
-      // "annotationColor":"#8f8f8a"). java.net.URI rejects such URIs outright with a
-      // URISyntaxException, even though the payload is perfectly recoverable. Splitting on the literal
-      // "#!" ourselves sidesteps that strict validation.
       rawFragment <- extractRawFragment(remotePath.toString).toFox ?~> "URI has no matching fragment part"
       spec <- parseFragmentAsJson(rawFragment).toFox ?~> "Did not find JSON object in URI"
       layerSpecs <- JsonHelper.as[JsArray](spec \ "layers").toFox
@@ -44,12 +38,13 @@ class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val e
     } yield renamedLayers.zip(layers.map(_._2))
 
   private def extractRawFragment(rawUri: String): Box[String] =
+    // Note: Neuroglancer URIs are not strictly RFC-3986 conformant, so we do raw string ops rather than relying on URI classes.
     rawUri.split("#!", 2) match {
       case Array(_, fragment) => Full(fragment)
       case _                  => Failure("URI has no matching fragment part")
     }
 
-  // Some tools double-percent-encode neuroglancer links (e.g. "%2522" instead of "%22"). Decode once,
+  // Some tools double-percent-encode neuroglancer uris (e.g. "%2522" instead of "%22"). Decode once,
   // and if the result is not valid JSON, try decoding a second time before giving up.
   private def parseFragmentAsJson(rawFragment: String): Box[JsObject] = {
     val decodedOnce = URLDecoder.decode(rawFragment, StandardCharsets.UTF_8)

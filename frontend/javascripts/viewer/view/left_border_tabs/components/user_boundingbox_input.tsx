@@ -68,6 +68,10 @@ const READ_ONLY_INPUT_STYLE: React.CSSProperties = {
   backgroundColor: "var(--ant-color-bg-container-disabled)",
   cursor: "text",
 };
+// Ensures the position/size sliders always span a usable range around the current
+// value, even for tiny bounding boxes or ones whose size already matches the dataset
+// extent (where the naive range would otherwise collapse to a single point).
+const MINIMUM_SLIDER_PADDING = 100;
 
 // The slider should only cover a small area around the current position (rather than
 // e.g. the entire dataset), so that dragging it allows for fine-grained adjustments.
@@ -80,8 +84,8 @@ function getPositionSliderRange(
   datasetMax: number,
 ): { min: number; max: number } {
   const halfRange = Math.max(extent, 1);
-  const min = Math.min(current, Math.max(datasetMin, current - halfRange));
-  const max = Math.max(current, Math.min(datasetMax, current + halfRange));
+  const min = Math.min(current - MINIMUM_SLIDER_PADDING, Math.max(datasetMin, current - halfRange));
+  const max = Math.max(current + MINIMUM_SLIDER_PADDING, Math.min(datasetMax, current + halfRange));
   return { min, max };
 }
 
@@ -236,7 +240,7 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
           key={`size-${label}`}
           label={label}
           min={1}
-          max={Math.max(datasetExtent[dim], boundingBoxSize[dim])}
+          max={Math.max(datasetExtent[dim], MINIMUM_SLIDER_PADDING + boundingBoxSize[dim])}
           value={boundingBoxSize[dim]}
           onChange={(newValue) => handleSizeSliderChange(dim, newValue)}
           wheelFactor={0.05}

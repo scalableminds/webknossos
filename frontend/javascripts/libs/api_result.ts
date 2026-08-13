@@ -121,5 +121,5 @@ export async function requestResult<T>(
 // restores today's throw-based behavior with a one-line change.
 export function unwrapOrThrow<T>(result: ApiResult<T>): T {
   if (result.ok) return result.value;
-  throw result.error.cause instanceof Error ? result.error.cause : new Error(result.error.message);
+  throw result.error.cause;
 }

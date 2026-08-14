@@ -96,7 +96,7 @@ export const cutAgglomerateFromNeighborsAction = (
 
 export const toggleSegmentInPartitionAction = (
   unmappedSegmentId: number,
-  partition: 1 | 2,
+  partition: "partitionA" | "partitionB",
   agglomerateId: number,
 ) =>
   ({

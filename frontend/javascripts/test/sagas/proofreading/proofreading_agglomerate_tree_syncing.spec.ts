@@ -1030,11 +1030,11 @@ describe("Proofreading agglomerate tree syncing", () => {
       //Activate Multi-split tool
       yield put(updateUserSettingAction("isMultiSplitActive", true));
       // Select partition 1
-      yield put(toggleSegmentInPartitionAction(1, 1, 1));
-      yield put(toggleSegmentInPartitionAction(1338, 1, 1));
+      yield put(toggleSegmentInPartitionAction(1, "partitionA", 1));
+      yield put(toggleSegmentInPartitionAction(1338, "partitionA", 1));
       // Select partition 2
-      yield put(toggleSegmentInPartitionAction(1337, 2, 1));
-      yield put(toggleSegmentInPartitionAction(3, 2, 1));
+      yield put(toggleSegmentInPartitionAction(1337, "partitionB", 1));
+      yield put(toggleSegmentInPartitionAction(3, "partitionA", 1));
       // Execute the actual merge and wait for the finished mapping.
       yield put(minCutPartitionsAction());
       yield take(operationFinished("PROOFREADING")); // operation finished

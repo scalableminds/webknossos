@@ -72,7 +72,7 @@ export function* performPartitionedMinCut(
       state.localSegmentationStateByLayer[preparation.volumeTracing.tracingId].minCutPartitions,
   );
   let agglomerateId = partitions.agglomerateId;
-  if (partitions[1].length <= 0 || partitions[2].length <= 0) {
+  if (partitions.partitionA.length <= 0 || partitions.partitionB.length <= 0) {
     console.error(messages["proofreading.multi_cut.empty_partition"]);
     Toast.error(messages["proofreading.multi_cut.empty_partition"]);
     return;
@@ -92,8 +92,8 @@ export function* performPartitionedMinCut(
     performMinCut,
     agglomerateId,
     agglomerateId,
-    partitions[1],
-    partitions[2],
+    partitions.partitionA,
+    partitions.partitionB,
     agglomerateFileMag,
     volumeTracingId,
     null,
@@ -107,7 +107,7 @@ export function* performPartitionedMinCut(
   }
 
   // Only one info object is needed as the min cut is performed on only one
-  const dummySourceInfo = { agglomerateId, unmappedId: partitions[1][0] };
+  const dummySourceInfo = { agglomerateId, unmappedId: partitions.partitionA[0] };
 
   yield* call(pushPendingProofreadingOperationInfo, volumeTracingId, dummySourceInfo);
 
@@ -135,9 +135,12 @@ export function* performPartitionedMinCut(
 
     // The agglomerateId of the split agglomerate might have changed due to syncing with the server caused by Model.ensureSavedState.
     // Thus we reload the agglomerateId via simply looking it up via the first segment of partition 1.
-    agglomerateId = lookupAgglomerateId(activeMapping, partitions[1][0], agglomerateId);
+    agglomerateId = lookupAgglomerateId(activeMapping, partitions.partitionA[0], agglomerateId);
 
-    const unmappedSegmentsOfPartitions = new Set([...partitions[1], ...partitions[2]]);
+    const unmappedSegmentsOfPartitions = new Set([
+      ...partitions.partitionA,
+      ...partitions.partitionB,
+    ]);
     // Make sure the reloaded partial mapping has mapping info about the partitions and first removed edge. The first removed edge is used for reloading the meshes.
     // The unmapped segments of this edge might not be present in the partial mapping of the frontend as splitting can be done via mesh interactions.
     // There is no guarantee that for all mesh parts the mapping is locally stored.
@@ -180,12 +183,12 @@ export function* performPartitionedMinCut(
     /* Reload meshes */
     const newAgglomerateIdFromPartition1 = yield* call(
       preparation.mapSegmentId,
-      partitions[1][0],
+      partitions.partitionA[0],
       mappingWithSplitApplied,
     );
     const newAgglomerateIdFromPartition2 = yield* call(
       preparation.mapSegmentId,
-      partitions[2][0],
+      partitions.partitionB[0],
       mappingWithSplitApplied,
     );
 

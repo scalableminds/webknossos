@@ -28,7 +28,7 @@ function findUnresolvedSupervoxelIds(
   minCutPartitions: MinCutPartitions,
 ): number[] {
   const mappingWrapper = new NumberLikeMapWrapper(mapping);
-  return [...minCutPartitions[1], ...minCutPartitions[2]].filter(
+  return [...minCutPartitions.partitionA, ...minCutPartitions.partitionB].filter(
     (segmentId) => mappingWrapper.getAsNumber(segmentId) == null,
   );
 }
@@ -41,7 +41,7 @@ function resolveMultiCutSelectionFromMapping(
 ): MultiCutSelectionResolution {
   const mappingWrapper = new NumberLikeMapWrapper(mapping);
   const agglomerateIds = new Set<number>();
-  for (const segmentId of [...minCutPartitions[1], ...minCutPartitions[2]]) {
+  for (const segmentId of [...minCutPartitions.partitionA, ...minCutPartitions.partitionB]) {
     const agglomerateId = mappingWrapper.getAsNumber(segmentId);
     if (agglomerateId != null) {
       agglomerateIds.add(agglomerateId);
@@ -124,7 +124,7 @@ export function* reconcileMultiCutSelectionAfterForeignSplit(
   );
   const hasNoActiveMultiMincut =
     minCutPartitions?.agglomerateId == null ||
-    minCutPartitions[1].length + minCutPartitions[2].length === 0;
+    minCutPartitions.partitionA.length + minCutPartitions.partitionB.length === 0;
   if (hasNoActiveMultiMincut || !oldAgglomerateIds.has(minCutPartitions?.agglomerateId)) {
     return;
   }

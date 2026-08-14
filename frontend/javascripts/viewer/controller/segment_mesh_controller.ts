@@ -45,8 +45,8 @@ const WHITE = new Color(1, 1, 1);
 const ACTIVATED_COLOR = hslToSRGB([0.7, 0.9, 0.75]);
 const HOVERED_COLOR = hslToSRGB([0.65, 0.9, 0.75]);
 export const PARTITION_COLORS = {
-  1: [0.2, 0.2, 0.2] as Vector3,
-  2: [0.7, 0.7, 0.7] as Vector3,
+  partitionA: [0.2, 0.2, 0.2] as Vector3,
+  partitionB: [0.7, 0.7, 0.7] as Vector3,
 };
 const ACTIVATED_COLOR_VEC3 = ACTIVATED_COLOR.toArray() as Vector3;
 const HOVERED_COLOR_VEC3 = HOVERED_COLOR.toArray() as Vector3;
@@ -715,9 +715,9 @@ export default class SegmentMeshController {
 
       const highlightRanges: HighlightState = [];
       if (vertexSegmentMapping && minCutPartitions) {
-        for (const partitionNumber of [1, 2] as const) {
-          const partitionColor = PARTITION_COLORS[partitionNumber];
-          for (const segmentId of minCutPartitions[partitionNumber]) {
+        for (const partitionName of ["partitionA", "partitionB"] as const) {
+          const partitionColor = PARTITION_COLORS[partitionName];
+          for (const segmentId of minCutPartitions[partitionName]) {
             const containsSegmentId = vertexSegmentMapping.containsSegmentId(segmentId);
             if (containsSegmentId) {
               const indexRange = vertexSegmentMapping.getRangeForUnmappedSegmentId(segmentId);

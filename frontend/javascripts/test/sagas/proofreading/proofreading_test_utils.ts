@@ -655,11 +655,11 @@ export function* simulatePartitionedSplitAgglomeratesViaMeshes(
   //Activate Multi-split tool
   yield put(updateUserSettingAction("isMultiSplitActive", true));
   // Select partition 1
-  yield put(toggleSegmentInPartitionAction(1, 1, 1));
-  yield put(toggleSegmentInPartitionAction(2, 1, 1));
+  yield put(toggleSegmentInPartitionAction(1, "partitionA", 1));
+  yield put(toggleSegmentInPartitionAction(2, "partitionA", 1));
   // Select partition 2
-  yield put(toggleSegmentInPartitionAction(1337, 2, 1));
-  yield put(toggleSegmentInPartitionAction(1338, 2, 1));
+  yield put(toggleSegmentInPartitionAction(1337, "partitionB", 1));
+  yield put(toggleSegmentInPartitionAction(1338, "partitionB", 1));
   // Execute the actual merge and wait for the finished mapping.
   yield put(minCutPartitionsAction());
   yield take("FINISH_MAPPING_INITIALIZATION");

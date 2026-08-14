@@ -16,7 +16,7 @@ function ProofreadingReducer(state: WebknossosState, action: ProofreadAction): W
         return state;
       }
       const minCutPartitions = layerData.minCutPartitions;
-      const otherPartitionIndex = action.partition === 1 ? 2 : 1;
+      const otherPartitionIndex = action.partition === "partitionA" ? "partitionB" : "partitionA";
       if (
         minCutPartitions.agglomerateId != null &&
         minCutPartitions.agglomerateId !== action.agglomerateId
@@ -72,10 +72,10 @@ function ProofreadingReducer(state: WebknossosState, action: ProofreadAction): W
         localSegmentationStateByLayer: {
           [layerName]: {
             minCutPartitions: {
-              [1]: {
+              partitionA: {
                 $set: [],
               },
-              [2]: {
+              partitionB: {
                 $set: [],
               },
               agglomerateId: {

@@ -89,6 +89,10 @@ function getPositionSliderRange(
   return { min, max };
 }
 
+function computeText(vector: Vector6) {
+  return vector.join(", ");
+}
+
 export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
   const {
     bboxId,
@@ -133,10 +137,6 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
       setName(propName);
     }
   }, [propName]);
-
-  function computeText(vector: Vector6) {
-    return vector.join(", ");
-  }
 
   const handleBlur = () => {
     setIsEditing(false);

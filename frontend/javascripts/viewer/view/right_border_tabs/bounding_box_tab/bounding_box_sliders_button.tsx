@@ -19,11 +19,11 @@ const MINIMUM_SLIDER_PADDING = 100;
 // (which could already lie outside the dataset, or have a zero-size dataset extent).
 function getPositionSliderRange(
   current: number,
-  extent: number,
+  _extent: number,
   datasetMin: number,
   datasetMax: number,
 ): { min: number; max: number } {
-  const halfRange = Math.max(extent, 1);
+  const halfRange = 500; // Math.min(500, Math.max(extent, 1));
   const min = Math.min(current - MINIMUM_SLIDER_PADDING, Math.max(datasetMin, current - halfRange));
   const max = Math.max(current + MINIMUM_SLIDER_PADDING, Math.min(datasetMax, current + halfRange));
   return { min, max };

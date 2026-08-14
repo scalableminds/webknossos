@@ -190,19 +190,26 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
       .catch((error) => Toast.error(error.message));
   };
 
-  const boundingBoxMin: Vector3 = [propValue[0], propValue[1], propValue[2]];
-  const boundingBoxSize: Vector3 = [propValue[3], propValue[4], propValue[5]];
+  const [boundingBoxMin, boundingBoxSize] = useMemo<[Vector3, Vector3]>(
+    () => [
+      [propValue[0], propValue[1], propValue[2]],
+      [propValue[3], propValue[4], propValue[5]],
+    ],
+    [propValue],
+  );
+
 
   const positionSliderRanges = useMemo(
     () =>
-      [0, 1, 2].map((dim) =>
-        getPositionSliderRange(
+      {
+        return [0, 1, 2].map((dim) => getPositionSliderRange(
           boundingBoxMin[dim],
           boundingBoxSize[dim],
           datasetBoundingBox.min[dim],
-          datasetBoundingBox.max[dim],
-        ),
-      ),
+          datasetBoundingBox.max[dim]
+        )
+        );
+      },
     [boundingBoxMin, boundingBoxSize, datasetBoundingBox],
   );
   const datasetExtent = datasetBoundingBox.getSize();

@@ -56,13 +56,13 @@ import {
 import { setActiveUserBoundingBoxId } from "viewer/model/actions/ui_actions";
 import { reserveIdAndAddBoundingBox } from "viewer/model/helpers/bounding_box_creation_helpers";
 import type { StoreAnnotation, UserBoundingBox } from "viewer/store";
-import DownloadModalView from "../action_bar/download_modal/download_modal_view";
-import ButtonComponent from "../components/button_component";
-import { getContextMenuPositionFromEvent } from "../context_menu/helpers";
-import UserBoundingBoxInput from "../left_border_tabs/components/user_boundingbox_input";
-import AdvancedSearchPopover from "./advanced_search_popover";
-import GenerateBoundingBoxesModal from "./generate_bounding_boxes_modal";
-import { ContextMenuContainer } from "./sidebar_context_menu";
+import DownloadModalView from "../../action_bar/download_modal/download_modal_view";
+import ButtonComponent from "../../components/button_component";
+import { getContextMenuPositionFromEvent } from "../../context_menu/helpers";
+import AdvancedSearchPopover from "../advanced_search_popover";
+import GenerateBoundingBoxesModal from "../generate_bounding_boxes_modal";
+import { ContextMenuContainer } from "../sidebar_context_menu";
+import UserBoundingBoxInput from "./user_boundingbox_input";
 
 const BBOX_BUTTONS_HEADER_HEIGHT = 40;
 const CONTEXT_MENU_CLASS = "bbox-list-context-menu-overlay";

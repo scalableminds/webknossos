@@ -155,6 +155,7 @@ function BoundingBoxSlidersButton({
           value={boundingBoxMin[dim]}
           onChange={(newValue) => handlePositionSliderChange(dim, newValue)}
           wheelFactor={0.05}
+          spans={[1, 18, 5]}
         />
       ))}
       <Divider style={{ margin: "8px 0" }} />
@@ -168,6 +169,7 @@ function BoundingBoxSlidersButton({
           value={boundingBoxSize[dim]}
           onChange={(newValue) => handleSizeSliderChange(dim, newValue)}
           wheelFactor={0.05}
+          spans={[4, 15, 5]}
         />
       ))}
     </div>

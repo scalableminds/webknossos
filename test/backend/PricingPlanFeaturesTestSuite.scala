@@ -37,7 +37,16 @@ class PricingPlanFeaturesTestSuite extends AsyncWordSpec {
     "list only the highlights of the new tier when no tier was skipped" in {
       val unlocked = PricingPlanFeatures.unlockedBy(PricingPlan.Team, PricingPlan.Power)
       assert(unlocked.map(_.planLabel).contains(PricingPlan.label(PricingPlan.Power)))
-      assert(unlocked.exists(!_.featureHighlights.contains("Collaborative Annotation")))
+      // Spelled out rather than sampled, so that any Team highlight leaking into a Team -> Power upgrade fails here
+      assert(
+        highlightsOf(PricingPlan.Team, PricingPlan.Power) == List(
+          "Up to Unlimited Users",
+          "Segmentation Proof-Reading Tool",
+          "On-premise or dedicated hosting solutions available",
+          "Integration with your HPC and storage servers",
+          "Eligible for the AI Add-on and AI model training"
+        )
+      )
     }
 
     "unlock the same highlights for a trial as for its paid counterpart" in {

@@ -18,7 +18,7 @@ import { splitAgglomeratesInMapping } from "./local_mapping_update_sagas";
 // - "scattered": the resolved supervoxels span multiple agglomerates (invalid for a min-cut split).
 // - "unresolved": none of the selected supervoxels could be resolved (e.g. mesh not loaded yet).
 type MultiCutSelectionResolution =
-  | { type: "single"; agglomerateId: number }
+  | { type: "single"; agglomerateId: bigint }
   | { type: "scattered" }
   | { type: "unresolved" };
 
@@ -26,10 +26,10 @@ type MultiCutSelectionResolution =
 function findUnresolvedSupervoxelIds(
   mapping: Mapping,
   minCutPartitions: MinCutPartitions,
-): number[] {
+): bigint[] {
   const mappingWrapper = new NumberLikeMapWrapper(mapping);
   return [...minCutPartitions.partitionA, ...minCutPartitions.partitionB].filter(
-    (segmentId) => mappingWrapper.getAsNumber(segmentId) == null,
+    (segmentId) => mappingWrapper.getAsBigInt(segmentId) == null,
   );
 }
 
@@ -40,9 +40,9 @@ function resolveMultiCutSelectionFromMapping(
   minCutPartitions: MinCutPartitions,
 ): MultiCutSelectionResolution {
   const mappingWrapper = new NumberLikeMapWrapper(mapping);
-  const agglomerateIds = new Set<number>();
+  const agglomerateIds = new Set<bigint>();
   for (const segmentId of [...minCutPartitions.partitionA, ...minCutPartitions.partitionB]) {
-    const agglomerateId = mappingWrapper.getAsNumber(segmentId);
+    const agglomerateId = mappingWrapper.getAsBigInt(segmentId);
     if (agglomerateId != null) {
       agglomerateIds.add(agglomerateId);
     }
@@ -63,12 +63,12 @@ function resolveMultiCutSelectionFromMapping(
 function* fetchMissingSupervoxelAgglomerateIds(
   tracingId: string,
   activeMapping: ActiveMappingInfo,
-  missingSegmentIds: number[],
-  oldAgglomerateId: number,
+  missingSegmentIds: bigint[],
+  oldAgglomerateId: bigint,
   version: number,
 ): Saga<Mapping | undefined> {
   const segmentIdToOldAgglomerateId = new Map(
-    missingSegmentIds.map((segmentId) => [segmentId, oldAgglomerateId] as [number, number]),
+    missingSegmentIds.map((segmentId) => [segmentId, oldAgglomerateId] as [bigint, bigint]),
   );
   const splitInfo = yield* call(
     splitAgglomeratesInMapping,
@@ -90,8 +90,8 @@ function* fetchMissingSupervoxelAgglomerateIds(
 // id of the multi cut info in the store if it was changed due to the foreign merge action.
 export function* reconcileMultiCutSelectionAfterForeignMerge(
   tracingId: string,
-  agglomerateId1: number,
-  agglomerateId2: number,
+  agglomerateId1: bigint,
+  agglomerateId2: bigint,
 ): Saga<void> {
   const minCutPartitions = yield* select(
     (state) => state.localSegmentationStateByLayer[tracingId]?.minCutPartitions,
@@ -114,7 +114,7 @@ export function* reconcileMultiCutSelectionAfterForeignMerge(
 // split separated some of the currently selected segments for multi-split.
 export function* reconcileMultiCutSelectionAfterForeignSplit(
   tracingId: string,
-  oldAgglomerateIds: ReadonlySet<number>,
+  oldAgglomerateIds: ReadonlySet<bigint>,
   activeMapping: ActiveMappingInfo,
   mappingWithSplitApplied: Mapping,
   version: number,

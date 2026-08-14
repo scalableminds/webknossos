@@ -60,10 +60,10 @@ import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_server_objects";
 
 // Initial mapping produced by mockInitialBucketAndAgglomerateData below:
 // agglomerate 1 -> {1, 2, 3, 1337, 1338}, agglomerate 4 -> {4, 5}, agglomerate 6 -> {6, 7}.
-const SUPERVOXELS_BY_AGGLOMERATE_ID = new Map<number, number[]>([
-  [1, [1, 2, 3, 1337, 1338]],
-  [4, [4, 5]],
-  [6, [6, 7]],
+const SUPERVOXELS_BY_AGGLOMERATE_ID = new Map<bigint, bigint[]>([
+  [1n, [1n, 2n, 3n, 1337n, 1338n]],
+  [4n, [4n, 5n]],
+  [6n, [6n, 7n]],
 ]);
 
 // The default harness mock for getMeshFileChunksForSegment returns a single chunk whose
@@ -77,7 +77,7 @@ async function getMultiSupervoxelChunksForSegment(
   _datasetId: string,
   _layerName: string,
   _meshFile: APIMeshFileInfo,
-  segmentId: number,
+  segmentId: bigint,
 ): Promise<MeshSegmentInfo> {
   const supervoxels = SUPERVOXELS_BY_AGGLOMERATE_ID.get(segmentId) ?? [segmentId];
   return {
@@ -104,7 +104,7 @@ async function getMultiSupervoxelChunksForSegment(
 function findMeshNodeForAgglomerate(
   context: WebknossosTestContext,
   layerName: string,
-  agglomerateId: number,
+  agglomerateId: bigint,
 ): any {
   const layerLODGroup = context.segmentMeshController.getLODGroupOfLayer(layerName);
   let meshNode: any = null;
@@ -817,8 +817,8 @@ describe("Proofreading (with mesh actions)", () => {
     mockInitialBucketAndAgglomerateData(
       context,
       [
-        [1, 1338],
-        [3, 1337],
+        [1n, 1338n],
+        [3n, 1337n],
       ],
       Store.getState(),
     );
@@ -868,9 +868,9 @@ describe("Proofreading (with mesh actions)", () => {
         const minCutPartitions =
           Store.getState().localSegmentationStateByLayer[tracingId].minCutPartitions;
         // The agglomerate id of the mincut info should be updated from 4 to 1 due to the foreign merge.
-        expect(minCutPartitions.agglomerateId).toBe(1);
-        expect(minCutPartitions.partitionA).toEqual([4]);
-        expect(minCutPartitions.partitionB).toEqual([5]);
+        expect(minCutPartitions.agglomerateId).toBe(1n);
+        expect(minCutPartitions.partitionA).toEqual([4n]);
+        expect(minCutPartitions.partitionB).toEqual([5n]);
       });
       await task.toPromise();
     });
@@ -899,9 +899,9 @@ describe("Proofreading (with mesh actions)", () => {
         const minCutPartitions =
           Store.getState().localSegmentationStateByLayer[tracingId].minCutPartitions;
         // Both supervoxels stayed together, assert the new agglomerate id.
-        expect(minCutPartitions.agglomerateId).toBe(1339);
-        expect(minCutPartitions.partitionA).toEqual([1]);
-        expect(minCutPartitions.partitionB).toEqual([2]);
+        expect(minCutPartitions.agglomerateId).toBe(1339n);
+        expect(minCutPartitions.partitionA).toEqual([1n]);
+        expect(minCutPartitions.partitionB).toEqual([2n]);
       });
       await task.toPromise();
     });
@@ -917,8 +917,8 @@ describe("Proofreading (with mesh actions)", () => {
 
         yield put(updateUserSettingAction("isMultiSplitActive", true));
         // Selection spans supervoxels 1 and 3, both in agglomerate 1's chain 1-2-3.
-        yield put(toggleSegmentInPartitionAction(1, "partitionA", 1));
-        yield put(toggleSegmentInPartitionAction(3, "partitionB", 1));
+        yield put(toggleSegmentInPartitionAction(1n, "partitionA", 1n));
+        yield put(toggleSegmentInPartitionAction(3n, "partitionB", 1n));
 
         // A foreign split separates {1, 2} (new agglomerate) from {3} (stays agglomerate 1),
         // right through the middle of the selection.
@@ -930,7 +930,7 @@ describe("Proofreading (with mesh actions)", () => {
         // Assert that the min cut selection was cleared.
         const minCutPartitions =
           Store.getState().localSegmentationStateByLayer[tracingId].minCutPartitions;
-        expect(minCutPartitions).toEqual({ 1: [], 2: [], agglomerateId: null });
+        expect(minCutPartitions).toEqual({ partitionA: [], partitionB: [], agglomerateId: null });
       });
       await task.toPromise();
     });
@@ -942,7 +942,7 @@ describe("Proofreading (with mesh actions)", () => {
       // of the local mapping when the foreign split arrives.
       const backendMock = mockInitialBucketAndAgglomerateData(
         context,
-        [[3, 1337]],
+        [[3n, 1337n]],
         Store.getState(),
       );
       const { tracingId } = Store.getState().annotation.volumes[0];
@@ -955,8 +955,8 @@ describe("Proofreading (with mesh actions)", () => {
         yield put(updateUserSettingAction("isMultiSplitActive", true));
         // Select supervoxel 1 (locally known) and supervoxel 1337 (not locally known), both
         // members of agglomerate 1 before the split.
-        yield put(toggleSegmentInPartitionAction(1, "partitionA", 1));
-        yield put(toggleSegmentInPartitionAction(1337, "partitionB", 1));
+        yield put(toggleSegmentInPartitionAction(1n, "partitionA", 1n));
+        yield put(toggleSegmentInPartitionAction(1337n, "partitionB", 1n));
 
         // A foreign split separates {1, 2} (new agglomerate) from {3, 1337, 1338} (stays
         // agglomerate 1). Supervoxel 1337 is not referenced by the split action itself, so it
@@ -979,13 +979,13 @@ describe("Proofreading (with mesh actions)", () => {
           (state) =>
             getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
         );
-        expect(finalMapping && new NumberLikeMapWrapper(finalMapping).getAsNumber(1337)).toBe(1);
+        expect(finalMapping && new NumberLikeMapWrapper(finalMapping).getAsBigInt(1337n)).toBe(1n);
 
         // Supervoxel 1 ended up in the new agglomerate while 1337 stayed in agglomerate 1, so the
         // selection is now scattered and gets cleared.
         const minCutPartitions =
           Store.getState().localSegmentationStateByLayer[tracingId].minCutPartitions;
-        expect(minCutPartitions).toEqual({ 1: [], 2: [], agglomerateId: null });
+        expect(minCutPartitions).toEqual({ partitionA: [], partitionB: [], agglomerateId: null });
       });
       await task.toPromise();
     });
@@ -997,8 +997,8 @@ describe("Proofreading (with mesh actions)", () => {
 
         // Establish a multi-split selection within agglomerate 1 before its mesh (re)loads.
         yield put(updateUserSettingAction("isMultiSplitActive", true));
-        yield put(toggleSegmentInPartitionAction(1, "partitionA", 1));
-        yield put(toggleSegmentInPartitionAction(1337, "partitionB", 1));
+        yield put(toggleSegmentInPartitionAction(1n, "partitionA", 1n));
+        yield put(toggleSegmentInPartitionAction(1337n, "partitionB", 1n));
 
         // Load agglomerate 1's precomputed mesh. This is the (re)load path: it goes through
         // addMeshFromGeometry, which must re-apply the partition highlighting to the fresh geometry —
@@ -1011,7 +1011,7 @@ describe("Proofreading (with mesh actions)", () => {
         // (1, 2, 3, 1337, 1338) are sorted ascending and each is a unit cube of 8 vertices, so
         // partition 1 (supervoxel 1) covers vertices [0, 8) and partition 2 (supervoxel 1337)
         // covers [24, 32).
-        const meshNode = findMeshNodeForAgglomerate(context, tracingId, 1);
+        const meshNode = findMeshNodeForAgglomerate(context, tracingId, 1n);
         expect(meshNode.partitionedState).toEqual([
           { range: [0, 8], color: PARTITION_COLORS["partitionA"] },
           { range: [24, 32], color: PARTITION_COLORS["partitionB"] },

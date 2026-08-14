@@ -89,12 +89,12 @@ export function applyLabeledVoxelMapToAllMissingMags(
   dimensionIndices: DimensionMap,
   magInfo: MagInfo,
   segmentationCube: DataCube,
-  segmentId: number,
+  segmentId: bigint,
   thirdDimensionOfSlice: number, // this value is specified in global (mag1) coords
   // If shouldOverwrite is false, a voxel is only overwritten if
   // its old value is equal to overwritableValue.
   shouldOverwrite: boolean,
-  overwritableValue: number = 0,
+  overwritableValue: bigint = 0n,
 ): void {
   const thirdDim = dimensionIndices[2];
 
@@ -246,8 +246,8 @@ export function* labelWithVoxelBuffer2D(
   const numberOfSlices = 1;
   const thirdDim = dimensionIndices[2];
   const isDeleting = contourTracingMode === ContourModeEnum.DELETE;
-  const newCellIdValue = isDeleting ? 0 : activeCellId;
-  const overwritableValue = isDeleting ? activeCellId : 0;
+  const newCellIdValue = isDeleting ? 0n : activeCellId;
+  const overwritableValue = isDeleting ? activeCellId : 0n;
   const wroteVoxels = applyVoxelMap(
     currentLabeledVoxelMap,
     cube,

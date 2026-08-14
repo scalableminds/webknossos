@@ -120,7 +120,7 @@ class TSFullMeshService @Inject() (
         tracing,
         fallbackLayer,
         tracingId,
-        fullMeshRequest.segmentId,
+        fullMeshRequest.segmentId.toLong,
         mag,
         mappingName,
         volumeTracingService.editableMappingTracingId(tracing, tracingId),

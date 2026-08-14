@@ -1,6 +1,8 @@
 package mail
 
-import models.organization.Organization
+import com.scalableminds.util.mvc.Formatter
+import com.scalableminds.util.time.Instant
+import models.organization.{Organization, PricingPlan}
 import models.user.MultiUser
 import utils.WkConf
 import views.*
@@ -9,7 +11,7 @@ import java.net.URI
 import javax.inject.Inject
 import scala.util.Try
 
-class DefaultMails @Inject() (conf: WkConf) {
+class DefaultMails @Inject() (conf: WkConf) extends Formatter {
 
   private val uri = conf.Http.uri
   private val defaultSender = conf.Mail.defaultSender
@@ -122,6 +124,33 @@ class DefaultMails @Inject() (conf: WkConf) {
       recipients = List(supportEmail, multiUser.email),
       replyTo = List(multiUser.email, supportEmail)
     )
+
+  def pricingPlanExpiryReminderMail(
+      multiUser: MultiUser,
+      organization: Organization,
+      paidUntil: Instant,
+      daysRemaining: Long
+  ): Mail = {
+    val pricingPlanLabel = PricingPlan.label(organization.pricingPlan)
+    val expiryDate = formatDateOnly(paidUntil)
+    Mail(
+      from = defaultSender,
+      subject = s"WEBKNOSSOS | Your $pricingPlanLabel plan expires on $expiryDate",
+      bodyHtml = html.mail
+        .pricingPlanExpiryReminder(
+          multiUser.fullName,
+          organization.name,
+          pricingPlanLabel,
+          expiryDate,
+          daysRemaining,
+          s"$uri/organization/overview",
+          additionalFooter
+        )
+        .body,
+      recipients = List(multiUser.email),
+      replyTo = List(supportEmail)
+    )
+  }
 
   def upgradePricingPlanToTeamMail(multiUser: MultiUser, organizationName: String): Mail =
     Mail(

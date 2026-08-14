@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.box.{Empty, Failure, Full}
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, MathUtils}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
@@ -150,13 +150,13 @@ class EditableMappingUpdater(
       segmentId1 <- editableMappingService.findSegmentIdAtPositionIfNeeded(
         remoteFallbackLayer,
         update.segmentPosition1,
-        update.segmentId1,
+        update.segmentId1.map(_.toLong),
         update.mag
       )(using tokenContext)
       segmentId2 <- editableMappingService.findSegmentIdAtPositionIfNeeded(
         remoteFallbackLayer,
         update.segmentPosition2,
-        update.segmentId2,
+        update.segmentId2.map(_.toLong),
         update.mag
       )(using tokenContext)
       agglomerateId <- agglomerateIdForSegmentId(segmentId1)
@@ -354,7 +354,7 @@ class EditableMappingUpdater(
         remoteFallbackLayer,
         mapping.baseMappingName
       )(using tokenContext)
-    } yield math.max(mapping.largestAgglomerateId, largestBaseAgglomerateId)
+    } yield MathUtils.maxUnsigned(mapping.largestAgglomerateId, largestBaseAgglomerateId)
 
   private def applyMergeAction(mapping: EditableMappingInfo, update: MergeAgglomerateUpdateAction)(implicit
       ec: ExecutionContext
@@ -363,13 +363,13 @@ class EditableMappingUpdater(
       segmentId1 <- editableMappingService.findSegmentIdAtPositionIfNeeded(
         remoteFallbackLayer,
         update.segmentPosition1,
-        update.segmentId1,
+        update.segmentId1.map(_.toLong),
         update.mag
       )(using tokenContext)
       segmentId2 <- editableMappingService.findSegmentIdAtPositionIfNeeded(
         remoteFallbackLayer,
         update.segmentPosition2,
-        update.segmentId2,
+        update.segmentId2.map(_.toLong),
         update.mag
       )(using tokenContext)
       _ = if (segmentId1 == 0)

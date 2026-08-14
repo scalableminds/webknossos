@@ -245,7 +245,7 @@ export function getLayerBoundingBoxId(layerIndex: number): number {
   return -2 - layerIndex;
 }
 
-export function getDatasetBoundingBox(dataset: APIDataset): BoundingBox {
+function _getDatasetBoundingBox(dataset: APIDataset): BoundingBox {
   const min: Vector3 = [
     Number.POSITIVE_INFINITY,
     Number.POSITIVE_INFINITY,
@@ -272,6 +272,9 @@ export function getDatasetBoundingBox(dataset: APIDataset): BoundingBox {
     max,
   });
 }
+
+const getDatasetBoundingBox = memoizeOne(_getDatasetBoundingBox);
+
 export function getDatasetCenter(dataset: APIDataset): Vector3 {
   return getDatasetBoundingBox(dataset).getCenter();
 }

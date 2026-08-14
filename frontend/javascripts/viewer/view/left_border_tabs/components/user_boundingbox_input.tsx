@@ -21,6 +21,7 @@ import {
   getDatasetBoundingBox,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
+import type BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import { api } from "viewer/singletons";
 import ButtonComponent from "../../components/button_component";
 import ColorSetting from "./color_setting";
@@ -91,6 +92,106 @@ function getPositionSliderRange(
 
 function computeText(vector: Vector6) {
   return vector.join(", ");
+}
+
+type BoundingBoxSlidersButtonProps = {
+  value: Vector6;
+  datasetBoundingBox: BoundingBox;
+  onBoundingChange?: (arg0: Vector6) => void;
+  disabled?: boolean;
+  editingDisallowedExplanation: string;
+};
+
+function BoundingBoxSlidersButton({
+  value,
+  datasetBoundingBox,
+  onBoundingChange,
+  disabled,
+  editingDisallowedExplanation,
+}: BoundingBoxSlidersButtonProps) {
+  const [boundingBoxMin, boundingBoxSize] = useMemo<[Vector3, Vector3]>(
+    () => [
+      [value[0], value[1], value[2]],
+      [value[3], value[4], value[5]],
+    ],
+    [value],
+  );
+
+  const positionSliderRanges = useMemo(
+    () =>
+      [0, 1, 2].map((dim) =>
+        getPositionSliderRange(
+          boundingBoxMin[dim],
+          boundingBoxSize[dim],
+          datasetBoundingBox.min[dim],
+          datasetBoundingBox.max[dim],
+        ),
+      ),
+    [boundingBoxMin, boundingBoxSize, datasetBoundingBox],
+  );
+  const datasetExtent = datasetBoundingBox.getSize();
+
+  const handlePositionSliderChange = (dim: number, newValue: number) => {
+    const newMin: Vector3 = [...boundingBoxMin];
+    newMin[dim] = newValue;
+    onBoundingChange?.([...newMin, ...boundingBoxSize] as Vector6);
+  };
+
+  const handleSizeSliderChange = (dim: number, newValue: number) => {
+    const newSize: Vector3 = [...boundingBoxSize];
+    newSize[dim] = newValue;
+    onBoundingChange?.([...boundingBoxMin, ...newSize] as Vector6);
+  };
+
+  const slidersContent = (
+    <div style={{ width: 280 }}>
+      <div style={{ fontWeight: "bold", marginBottom: 4 }}>Position</div>
+      {POSITION_LABELS.map((label, dim) => (
+        <NumberSliderSetting
+          key={`position-${label}`}
+          label={label}
+          min={positionSliderRanges[dim].min}
+          max={positionSliderRanges[dim].max}
+          value={boundingBoxMin[dim]}
+          onChange={(newValue) => handlePositionSliderChange(dim, newValue)}
+          wheelFactor={0.05}
+        />
+      ))}
+      <Divider style={{ margin: "8px 0" }} />
+      <div style={{ fontWeight: "bold", marginBottom: 4 }}>Size</div>
+      {SIZE_LABELS.map((label, dim) => (
+        <NumberSliderSetting
+          key={`size-${label}`}
+          label={label}
+          min={1}
+          max={Math.max(datasetExtent[dim], MINIMUM_SLIDER_PADDING + boundingBoxSize[dim])}
+          value={boundingBoxSize[dim]}
+          onChange={(newValue) => handleSizeSliderChange(dim, newValue)}
+          wheelFactor={0.05}
+        />
+      ))}
+    </div>
+  );
+
+  return (
+    <Popover
+      content={slidersContent}
+      title="Adjust Position & Size"
+      placement="bottom"
+      style={{ height: 24 }}
+      trigger="click"
+    >
+      <ButtonComponent
+        title={disabled ? editingDisallowedExplanation : "Adjust position and size with sliders"}
+        icon={<SlidersOutlined />}
+        type="text"
+        size="small"
+        disabled={disabled}
+        onClick={(e) => e.stopPropagation()}
+        style={{ height: 24 }}
+      />
+    </Popover>
+  );
 }
 
 export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
@@ -189,72 +290,6 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
       .registerSegmentsForBoundingBox(min, max, name)
       .catch((error) => Toast.error(error.message));
   };
-
-  const [boundingBoxMin, boundingBoxSize] = useMemo<[Vector3, Vector3]>(
-    () => [
-      [propValue[0], propValue[1], propValue[2]],
-      [propValue[3], propValue[4], propValue[5]],
-    ],
-    [propValue],
-  );
-
-
-  const positionSliderRanges = useMemo(
-    () =>
-      {
-        return [0, 1, 2].map((dim) => getPositionSliderRange(
-          boundingBoxMin[dim],
-          boundingBoxSize[dim],
-          datasetBoundingBox.min[dim],
-          datasetBoundingBox.max[dim]
-        )
-        );
-      },
-    [boundingBoxMin, boundingBoxSize, datasetBoundingBox],
-  );
-  const datasetExtent = datasetBoundingBox.getSize();
-
-  const handlePositionSliderChange = (dim: number, newValue: number) => {
-    const newMin: Vector3 = [...boundingBoxMin];
-    newMin[dim] = newValue;
-    onBoundingChange?.([...newMin, ...boundingBoxSize] as Vector6);
-  };
-
-  const handleSizeSliderChange = (dim: number, newValue: number) => {
-    const newSize: Vector3 = [...boundingBoxSize];
-    newSize[dim] = newValue;
-    onBoundingChange?.([...boundingBoxMin, ...newSize] as Vector6);
-  };
-
-  const slidersContent = (
-    <div style={{ width: 280 }}>
-      <div style={{ fontWeight: "bold", marginBottom: 4 }}>Position</div>
-      {POSITION_LABELS.map((label, dim) => (
-        <NumberSliderSetting
-          key={`position-${label}`}
-          label={label}
-          min={positionSliderRanges[dim].min}
-          max={positionSliderRanges[dim].max}
-          value={boundingBoxMin[dim]}
-          onChange={(newValue) => handlePositionSliderChange(dim, newValue)}
-          wheelFactor={0.05}
-        />
-      ))}
-      <Divider style={{ margin: "8px 0" }} />
-      <div style={{ fontWeight: "bold", marginBottom: 4 }}>Size</div>
-      {SIZE_LABELS.map((label, dim) => (
-        <NumberSliderSetting
-          key={`size-${label}`}
-          label={label}
-          min={1}
-          max={Math.max(datasetExtent[dim], MINIMUM_SLIDER_PADDING + boundingBoxSize[dim])}
-          value={boundingBoxSize[dim]}
-          onChange={(newValue) => handleSizeSliderChange(dim, newValue)}
-          wheelFactor={0.05}
-        />
-      ))}
-    </div>
-  );
 
   const upscaledColor = color.map((colorPart) => colorPart * 255) as any as Vector3;
   const marginLeftStyle = { marginLeft: 6 };
@@ -413,27 +448,13 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
             onClick={(e) => e.stopPropagation()}
             suffix={
               !isReadOnly && (
-                <Popover
-                  content={slidersContent}
-                  title="Adjust Position & Size"
-                  placement="bottom"
-                  style={{ height: 24 }}
-                  trigger="click"
-                >
-                  <ButtonComponent
-                    title={
-                      disabled
-                        ? editingDisallowedExplanation
-                        : "Adjust position and size with sliders"
-                    }
-                    icon={<SlidersOutlined />}
-                    type="text"
-                    size="small"
-                    disabled={disabled}
-                    onClick={(e) => e.stopPropagation()}
-                    style={{ height: 24 }}
-                  />
-                </Popover>
+                <BoundingBoxSlidersButton
+                  value={propValue}
+                  datasetBoundingBox={datasetBoundingBox}
+                  onBoundingChange={onBoundingChange}
+                  disabled={disabled}
+                  editingDisallowedExplanation={editingDisallowedExplanation}
+                />
               )
             }
           />

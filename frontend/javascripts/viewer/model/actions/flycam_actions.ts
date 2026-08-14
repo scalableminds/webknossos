@@ -9,8 +9,8 @@ type SetPositionAction = ReturnType<typeof setPositionAction>;
 type SetAdditionalCoordinatesAction = ReturnType<typeof setAdditionalCoordinatesAction>;
 type SetRotationAction = ReturnType<typeof setRotationAction>;
 type SetDirectionAction = ReturnType<typeof setDirectionAction>;
-type MoveFlycamOrthoAction = ReturnType<typeof moveFlycamOrthoAction>;
-type MovePlaneFlycamOrthoAction = ReturnType<typeof movePlaneFlycamOrthoAction>;
+export type MoveFlycamOrthoAction = ReturnType<typeof moveFlycamOrthoAction>;
+export type MovePlaneFlycamOrthoAction = ReturnType<typeof movePlaneFlycamOrthoAction>;
 type MoveFlycamAction = ReturnType<typeof moveFlycamAction>;
 type MoveFlycamAbsoluteAction = ReturnType<typeof moveFlycamAbsoluteAction>;
 type YawFlycamAction = ReturnType<typeof yawFlycamAction>;
@@ -113,6 +113,7 @@ export const moveFlycamOrthoAction = (
     planeId,
     useDynamicSpaceDirection,
     clampToDatasetBounds,
+    increaseSpeedWithZoom: false,
   }) as const;
 
 export const movePlaneFlycamOrthoAction = (
@@ -127,6 +128,7 @@ export const movePlaneFlycamOrthoAction = (
     planeId,
     increaseSpeedWithZoom,
     useDynamicSpaceDirection,
+    clampToDatasetBounds: false
   }) as const;
 
 export const moveFlycamAction = (vector: Vector3) =>

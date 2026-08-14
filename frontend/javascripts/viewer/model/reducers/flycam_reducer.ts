@@ -2,7 +2,6 @@ import update from "immutability-helper";
 import type { Matrix4x4 } from "libs/mjs";
 import { M4x4, V3 } from "libs/mjs";
 import { clamp, map3, mod } from "libs/utils";
-import clone from "lodash-es/clone";
 import { Euler, Matrix4, Vector3 as ThreeVector3 } from "three";
 import type { VoxelSize } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
@@ -21,6 +20,7 @@ import {
   getDatasetBoundingBox,
   getUnifiedAdditionalCoordinates,
 } from "../accessors/dataset_accessor";
+import type { MoveFlycamOrthoAction, MovePlaneFlycamOrthoAction } from "../actions/flycam_actions";
 
 function cloneMatrix(m: Matrix4x4): Matrix4x4 {
   return [
@@ -216,6 +216,42 @@ function setRotationReducer(state: WebknossosState, rotation: Vector3) {
   return state;
 }
 
+function handleMoveFlycamOrtho(
+  state: WebknossosState,
+  action: MovePlaneFlycamOrthoAction | MoveFlycamOrthoAction,
+  { tranposeToPlane, useDatasetScale }: { tranposeToPlane: boolean; useDatasetScale: boolean },
+): WebknossosState {
+  const { dataset, flycam } = state;
+
+  const { planeId, increaseSpeedWithZoom } = action;
+  const vector = tranposeToPlane && planeId != null ? Dimensions.transDim(action.vector, planeId) : action.vector;
+  const flycamRotation = getRotationInRadian(flycam);
+
+  flycamRotationMatrix.makeRotationFromEuler(flycamRotationEuler.set(...flycamRotation, "ZYX"));
+  let deltaInWorldV3 = deltaInWorld
+    .set(...vector)
+    .applyMatrix4(flycamRotationMatrix)
+    .toArray();
+
+  if (
+    planeId != null &&
+    state.userConfiguration.dynamicSpaceDirection &&
+    action.useDynamicSpaceDirection
+  ) {
+    // Change direction of the value connected to space, based on the last direction
+    deltaInWorldV3 = V3.multiply(deltaInWorldV3, state.flycam.spaceDirectionOrtho);
+  }
+
+  const zoomFactor = increaseSpeedWithZoom ? flycam.zoomStep : 1;
+  const scaleFactor: Vector3 = useDatasetScale
+    ? getBaseVoxelFactorsInUnit(dataset.dataSource.scale)
+    : [1, 1, 1];
+  let deltaInWorldZoomed = V3.multiply(V3.scale(deltaInWorldV3, zoomFactor), scaleFactor);
+
+  const newState = moveReducer(state, deltaInWorldZoomed);
+  return action.clampToDatasetBounds ? clampPositionToDatasetBounds(newState) : newState;
+}
+
 function FlycamReducer(state: WebknossosState, action: Action): WebknossosState {
   switch (action.type) {
     case "SET_DATASET": {
@@ -340,63 +376,17 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
     }
 
     case "MOVE_FLYCAM_ORTHO": {
-      const vector = clone(action.vector);
-
-      const { planeId } = action;
-
-      const flycamRotation = getRotationInRadian(state.flycam);
-      flycamRotationMatrix.makeRotationFromEuler(flycamRotationEuler.set(...flycamRotation, "ZYX"));
-      let deltaInWorldV3 = deltaInWorld
-        .set(...vector)
-        .applyMatrix4(flycamRotationMatrix)
-        .toArray();
-
-      // if planeID is given, use it to manipulate z
-      if (
-        planeId != null &&
-        state.userConfiguration.dynamicSpaceDirection &&
-        action.useDynamicSpaceDirection
-      ) {
-        // change direction of the value connected to space, based on the last direction
-        deltaInWorldV3 = V3.multiply(deltaInWorldV3, state.flycam.spaceDirectionOrtho);
-      }
-
-      const newState = moveReducer(state, deltaInWorldV3);
-      return action.clampToDatasetBounds ? clampPositionToDatasetBounds(newState) : newState;
+      return handleMoveFlycamOrtho(state, action, {
+        tranposeToPlane: false,
+        useDatasetScale: false,
+      });
     }
 
     case "MOVE_PLANE_FLYCAM_ORTHO": {
-      const { dataset, flycam } = state;
-
-      if (dataset != null) {
-        const { planeId, increaseSpeedWithZoom } = action;
-        const vector = Dimensions.transDim(action.vector, planeId);
-        const flycamRotation = getRotationInRadian(flycam);
-
-        flycamRotationMatrix.makeRotationFromEuler(
-          flycamRotationEuler.set(...flycamRotation, "ZYX"),
-        );
-        deltaInWorld.set(...vector).applyMatrix4(flycamRotationMatrix);
-        const zoomFactor = increaseSpeedWithZoom ? flycam.zoomStep : 1;
-        const scaleFactor = getBaseVoxelFactorsInUnit(dataset.dataSource.scale);
-        let deltaInWorldZoomed = V3.multiply(
-          V3.scale(deltaInWorld.toArray(), zoomFactor),
-          scaleFactor,
-        );
-
-        if (
-          planeId != null &&
-          state.userConfiguration.dynamicSpaceDirection &&
-          action.useDynamicSpaceDirection
-        ) {
-          // Change direction of the value connected to space, based on the last direction
-          deltaInWorldZoomed = V3.multiply(deltaInWorldZoomed, state.flycam.spaceDirectionOrtho);
-        }
-
-        return moveReducer(state, deltaInWorldZoomed);
-      }
-
-      return state;
+      return handleMoveFlycamOrtho(state, action, {
+        tranposeToPlane: true,
+        useDatasetScale: true,
+      });
     }
 
     case "YAW_FLYCAM":

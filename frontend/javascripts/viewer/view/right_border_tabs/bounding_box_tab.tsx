@@ -392,6 +392,14 @@ export default function BoundingBoxTab() {
   const getPropsForUserRow = useCallback<NonNullable<TableProps<UserBoundingBox>["onRow"]>>(
     (bb: UserBoundingBox) => ({
       onClick: (event) => {
+        // Popovers/dropdowns (e.g. the position/extent sliders, the MIP menu) render their
+        // content into a portal outside the row's DOM subtree, but React still bubbles their
+        // click events through the row because it follows the component tree, not the DOM
+        // tree. Bailing out here avoids having to add e.stopPropagation() to every interactive
+        // control in the row.
+        if (!event.currentTarget.contains(event.target as Node)) {
+          return;
+        }
         hideContextMenu();
         if (event.ctrlKey || event.metaKey) {
           setSelectedRowKeys((prev) =>
@@ -409,7 +417,12 @@ export default function BoundingBoxTab() {
 
   const getPropsForLayerRow = useCallback<NonNullable<TableProps<LayerBoundingBox>["onRow"]>>(
     (layerBoundingBox: LayerBoundingBox) => ({
-      onClick: () => {
+      onClick: (event) => {
+        // See the comment in getPropsForUserRow: bail out on clicks that bubbled up from a
+        // portaled popover/dropdown (e.g. the MIP menu) rather than the row itself.
+        if (!event.currentTarget.contains(event.target as Node)) {
+          return;
+        }
         // Read-only layer bounding boxes cannot be selected, but clicking still navigates to them.
         hideContextMenu();
         handleGoToLayerBoundingBox(layerBoundingBox.center);

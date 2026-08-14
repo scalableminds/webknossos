@@ -105,12 +105,14 @@ export const moveFlycamOrthoAction = (
   vector: Vector3,
   planeId: OrthoView | null | undefined,
   useDynamicSpaceDirection: boolean = false,
+  clampToDatasetBounds: boolean = false,
 ) =>
   ({
     type: "MOVE_FLYCAM_ORTHO",
     vector,
     planeId,
     useDynamicSpaceDirection,
+    clampToDatasetBounds,
   }) as const;
 
 export const movePlaneFlycamOrthoAction = (

@@ -17,7 +17,10 @@ import type { Action } from "viewer/model/actions/actions";
 import Dimensions from "viewer/model/dimensions";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import type { WebknossosState } from "viewer/store";
-import { getUnifiedAdditionalCoordinates } from "../accessors/dataset_accessor";
+import {
+  getDatasetBoundingBox,
+  getUnifiedAdditionalCoordinates,
+} from "../accessors/dataset_accessor";
 
 function cloneMatrix(m: Matrix4x4): Matrix4x4 {
   return [
@@ -119,6 +122,28 @@ function moveReducer(state: WebknossosState, vector: Vector3): WebknossosState {
     matrix[13] += vector[1];
     matrix[14] += vector[2];
   }
+
+  return update(state, {
+    flycam: {
+      currentMatrix: {
+        $set: matrix,
+      },
+    },
+  });
+}
+
+function clampPositionToDatasetBounds(state: WebknossosState): WebknossosState {
+  const { dataset } = state;
+
+  if (dataset == null) {
+    return state;
+  }
+
+  const { min, max } = getDatasetBoundingBox(dataset);
+  const matrix = cloneMatrix(state.flycam.currentMatrix);
+  matrix[12] = clamp(min[0], matrix[12], max[0]);
+  matrix[13] = clamp(min[1], matrix[13], max[1]);
+  matrix[14] = clamp(min[2], matrix[14], max[2]);
 
   return update(state, {
     flycam: {
@@ -336,7 +361,8 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
         deltaInWorldV3 = V3.multiply(deltaInWorldV3, state.flycam.spaceDirectionOrtho);
       }
 
-      return moveReducer(state, deltaInWorldV3);
+      const newState = moveReducer(state, deltaInWorldV3);
+      return action.clampToDatasetBounds ? clampPositionToDatasetBounds(newState) : newState;
     }
 
     case "MOVE_PLANE_FLYCAM_ORTHO": {

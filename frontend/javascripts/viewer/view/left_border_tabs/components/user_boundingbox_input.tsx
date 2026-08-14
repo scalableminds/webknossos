@@ -90,10 +90,6 @@ function getPositionSliderRange(
   return { min, max };
 }
 
-function computeText(vector: Vector6) {
-  return vector.join(", ");
-}
-
 type BoundingBoxSlidersButtonProps = {
   value: Vector6;
   datasetBoundingBox: BoundingBox;
@@ -194,6 +190,10 @@ function BoundingBoxSlidersButton({
       />
     </Popover>
   );
+}
+
+function computeText(vector: Vector6) {
+  return vector.join(", ");
 }
 
 export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {

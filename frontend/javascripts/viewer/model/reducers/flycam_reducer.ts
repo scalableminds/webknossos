@@ -234,7 +234,10 @@ function handleMoveFlycamOrtho(
   const { dataset, flycam } = state;
 
   const { planeId, increaseSpeedWithZoom } = action;
-  const vector = tranposeToPlane && planeId != null ? Dimensions.transDim(action.vector, planeId) : action.vector;
+  const vector =
+    tranposeToPlane && planeId != null
+      ? Dimensions.transDim(action.vector, planeId)
+      : action.vector;
   const flycamRotation = getRotationInRadian(flycam);
 
   flycamRotationMatrix.makeRotationFromEuler(flycamRotationEuler.set(...flycamRotation, "ZYX"));

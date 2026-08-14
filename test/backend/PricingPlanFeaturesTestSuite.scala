@@ -5,17 +5,20 @@ import org.scalatest.wordspec.AsyncWordSpec
 
 class PricingPlanFeaturesTestSuite extends AsyncWordSpec {
 
+  private def highlightsOf(previousPlan: PricingPlan.PricingPlan, newPlan: PricingPlan.PricingPlan): List[String] =
+    PricingPlanFeatures.unlockedBy(previousPlan, newPlan).map(_.featureHighlights).getOrElse(List.empty)
+
   "PricingPlanFeatures.unlockedBy" should {
 
     "label the highlights with the new plan when upgrading from Personal to Team" in {
       val unlocked = PricingPlanFeatures.unlockedBy(PricingPlan.Personal, PricingPlan.Team)
-      assert(unlocked.map(_.planLabel).contains("Team"))
+      assert(unlocked.map(_.planLabel).contains(PricingPlan.label(PricingPlan.Team)))
       assert(unlocked.exists(_.featureHighlights.contains("Collaborative Annotation")))
     }
 
     "label the highlights with the new plan only, also when a tier was skipped" in {
       val unlocked = PricingPlanFeatures.unlockedBy(PricingPlan.Personal, PricingPlan.Power)
-      assert(unlocked.map(_.planLabel).contains("Power"))
+      assert(unlocked.map(_.planLabel).contains(PricingPlan.label(PricingPlan.Power)))
     }
 
     "fold in the highlights of skipped tiers" in {
@@ -26,36 +29,58 @@ class PricingPlanFeaturesTestSuite extends AsyncWordSpec {
     }
 
     "list a highlight shared between the folded-in tiers only once" in {
-      val unlocked = PricingPlanFeatures.unlockedBy(PricingPlan.Personal, PricingPlan.Power)
-      val highlights = unlocked.map(_.featureHighlights).getOrElse(List.empty)
+      val highlights = highlightsOf(PricingPlan.Personal, PricingPlan.Power)
       assert(highlights == highlights.distinct)
       assert(highlights.count(_ == "Eligible for the AI Add-on and AI model training") == 1)
     }
 
     "list only the highlights of the new tier when no tier was skipped" in {
       val unlocked = PricingPlanFeatures.unlockedBy(PricingPlan.Team, PricingPlan.Power)
-      assert(unlocked.map(_.planLabel).contains("Power"))
+      assert(unlocked.map(_.planLabel).contains(PricingPlan.label(PricingPlan.Power)))
       assert(unlocked.exists(!_.featureHighlights.contains("Collaborative Annotation")))
     }
 
-    "treat trials like their paid counterpart" in {
+    "unlock the same highlights for a trial as for its paid counterpart" in {
       assert(
-        PricingPlanFeatures.unlockedBy(PricingPlan.Personal, PricingPlan.Team_Trial).map(_.planLabel).contains("Team")
+        highlightsOf(PricingPlan.Personal, PricingPlan.Team_Trial) ==
+          highlightsOf(PricingPlan.Personal, PricingPlan.Team)
       )
       assert(
-        PricingPlanFeatures.unlockedBy(PricingPlan.Team_Trial, PricingPlan.Power).map(_.planLabel).contains("Power")
+        highlightsOf(PricingPlan.Personal, PricingPlan.Power_Trial) ==
+          highlightsOf(PricingPlan.Personal, PricingPlan.Power)
       )
-      assert(PricingPlanFeatures.unlockedBy(PricingPlan.Team_Trial, PricingPlan.Team).isEmpty)
+      assert(
+        highlightsOf(PricingPlan.Team_Trial, PricingPlan.Power) == highlightsOf(PricingPlan.Team, PricingPlan.Power)
+      )
+      assert(highlightsOf(PricingPlan.Personal, PricingPlan.Team_Trial).nonEmpty)
     }
 
-    "be empty if the plan did not change" in {
+    "label a trial as a trial" in {
+      assert(
+        PricingPlanFeatures
+          .unlockedBy(PricingPlan.Personal, PricingPlan.Team_Trial)
+          .map(_.planLabel)
+          .contains(PricingPlan.label(PricingPlan.Team_Trial))
+      )
+      assert(
+        PricingPlanFeatures
+          .unlockedBy(PricingPlan.Personal, PricingPlan.Power_Trial)
+          .map(_.planLabel)
+          .contains(PricingPlan.label(PricingPlan.Power_Trial))
+      )
+    }
+
+    "be empty if the plan did not change tier" in {
       assert(PricingPlanFeatures.unlockedBy(PricingPlan.Team, PricingPlan.Team).isEmpty)
       assert(PricingPlanFeatures.unlockedBy(PricingPlan.Personal, PricingPlan.Personal).isEmpty)
+      assert(PricingPlanFeatures.unlockedBy(PricingPlan.Team_Trial, PricingPlan.Team).isEmpty)
+      assert(PricingPlanFeatures.unlockedBy(PricingPlan.Power, PricingPlan.Power_Trial).isEmpty)
     }
 
     "be empty for downgrades" in {
       assert(PricingPlanFeatures.unlockedBy(PricingPlan.Power, PricingPlan.Team).isEmpty)
       assert(PricingPlanFeatures.unlockedBy(PricingPlan.Team, PricingPlan.Personal).isEmpty)
+      assert(PricingPlanFeatures.unlockedBy(PricingPlan.Power_Trial, PricingPlan.Team_Trial).isEmpty)
     }
 
     "be empty for tiers without defined highlights" in {

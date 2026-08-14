@@ -26,9 +26,9 @@ object PricingPlanFeatures {
     "Eligible for the AI Add-on and AI model training"
   )
 
-  private def forPlan(plan: PricingPlan): Option[PricingPlanFeatures] = plan match {
-    case PricingPlan.Team | PricingPlan.Team_Trial   => Some(PricingPlanFeatures("Team", teamPlanFeatureHighlights))
-    case PricingPlan.Power | PricingPlan.Power_Trial => Some(PricingPlanFeatures("Power", powerPlanFeatureHighlights))
+  private def featureHighlightsOf(plan: PricingPlan): Option[List[String]] = plan match {
+    case PricingPlan.Team | PricingPlan.Team_Trial   => Some(teamPlanFeatureHighlights)
+    case PricingPlan.Power | PricingPlan.Power_Trial => Some(powerPlanFeatureHighlights)
     case _                                           => None
   }
 
@@ -37,11 +37,14 @@ object PricingPlanFeatures {
   // highlights shared between the tiers listed only once.
   // None if newPlan is not an upgrade, or if it is a tier we have no highlights for (Custom).
   def unlockedBy(previousPlan: PricingPlan, newPlan: PricingPlan): Option[PricingPlanFeatures] =
-    forPlan(newPlan).filter(_ => PricingPlan.isUpgrade(previousPlan, newPlan)).map { newPlanFeatures =>
+    featureHighlightsOf(newPlan).filter(_ => PricingPlan.isUpgrade(previousPlan, newPlan)).map { _ =>
       val gainedTiers = List(PricingPlan.Team, PricingPlan.Power).filter(tier =>
         PricingPlan.tierRank(tier) > PricingPlan.tierRank(previousPlan) &&
           PricingPlan.tierRank(tier) <= PricingPlan.tierRank(newPlan)
       )
-      newPlanFeatures.copy(featureHighlights = gainedTiers.flatMap(forPlan).flatMap(_.featureHighlights).distinct)
+      PricingPlanFeatures(
+        planLabel = PricingPlan.label(newPlan),
+        featureHighlights = gainedTiers.flatMap(featureHighlightsOf).flatten.distinct
+      )
     }
 }

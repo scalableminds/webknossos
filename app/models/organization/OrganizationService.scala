@@ -221,11 +221,7 @@ class OrganizationService @Inject() (
       resultBox <- Fox
         .runOptional(PricingPlanFeatures.unlockedBy(previousPlan, newPlan))(unlockedFeatures =>
           for {
-            admins <- userDAO.findAdminsByOrg(organization._id)(using GlobalAccessContext)
-            adminMultiUsers <- Fox
-              .serialCombined(admins)(admin => multiUserDAO.findOne(admin._multiUser)(using GlobalAccessContext))
-            ownerMultiUserBox <- multiUserDAO.findMultiUserOfOrganizationOwner(organization._id).shiftBox
-            recipients = (ownerMultiUserBox.toOption.toList ++ adminMultiUsers).distinctBy(_._id)
+            recipients <- multiUserDAO.findMultiUsersOfOrganizationOwnerAndAdmins(organization._id)
             _ = recipients.foreach(recipient =>
               Mailer ! Send(defaultMails.pricingPlanUpgradedMail(recipient, organization.name, unlockedFeatures))
             )

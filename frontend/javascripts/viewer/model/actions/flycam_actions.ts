@@ -128,7 +128,7 @@ export const movePlaneFlycamOrthoAction = (
     planeId,
     increaseSpeedWithZoom,
     useDynamicSpaceDirection,
-    clampToDatasetBounds: false
+    clampToDatasetBounds: false,
   }) as const;
 
 export const moveFlycamAction = (vector: Vector3) =>

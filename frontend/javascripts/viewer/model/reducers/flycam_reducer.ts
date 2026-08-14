@@ -132,7 +132,14 @@ function moveReducer(state: WebknossosState, vector: Vector3): WebknossosState {
   });
 }
 
-function clampPositionToDatasetBounds(state: WebknossosState): WebknossosState {
+// Below this magnitude, a delta component is considered floating-point noise (e.g. from
+// rotating by 180 degrees, where Math.sin(Math.PI) is not exactly 0) rather than an
+// intentional move along that axis.
+const MOVED_AXIS_EPSILON = 1e-7;
+
+// Only clamps the axes that this move actually changed, so an axis that is already
+// out-of-bounds from a previous (unclamped) pan/keyboard move is left alone.
+function clampPositionToDatasetBounds(state: WebknossosState, moveDelta: Vector3): WebknossosState {
   const { dataset } = state;
 
   if (dataset == null) {
@@ -141,9 +148,12 @@ function clampPositionToDatasetBounds(state: WebknossosState): WebknossosState {
 
   const { min, max } = getDatasetBoundingBox(dataset);
   const matrix = cloneMatrix(state.flycam.currentMatrix);
-  matrix[12] = clamp(min[0], matrix[12], max[0]);
-  matrix[13] = clamp(min[1], matrix[13], max[1]);
-  matrix[14] = clamp(min[2], matrix[14], max[2]);
+
+  for (let i = 0; i < 3; i++) {
+    if (Math.abs(moveDelta[i]) > MOVED_AXIS_EPSILON) {
+      matrix[12 + i] = clamp(min[i], matrix[12 + i], max[i]);
+    }
+  }
 
   return update(state, {
     flycam: {
@@ -249,7 +259,9 @@ function handleMoveFlycamOrtho(
   let deltaInWorldZoomed = V3.multiply(V3.scale(deltaInWorldV3, zoomFactor), scaleFactor);
 
   const newState = moveReducer(state, deltaInWorldZoomed);
-  return action.clampToDatasetBounds ? clampPositionToDatasetBounds(newState) : newState;
+  return action.clampToDatasetBounds
+    ? clampPositionToDatasetBounds(newState, deltaInWorldZoomed)
+    : newState;
 }
 
 function FlycamReducer(state: WebknossosState, action: Action): WebknossosState {

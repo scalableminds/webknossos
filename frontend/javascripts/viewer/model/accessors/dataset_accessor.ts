@@ -273,7 +273,7 @@ function _getDatasetBoundingBox(dataset: APIDataset): BoundingBox {
   });
 }
 
-const getDatasetBoundingBox = memoizeOne(_getDatasetBoundingBox);
+export const getDatasetBoundingBox = memoizeOne(_getDatasetBoundingBox);
 
 export function getDatasetCenter(dataset: APIDataset): Vector3 {
   return getDatasetBoundingBox(dataset).getCenter();

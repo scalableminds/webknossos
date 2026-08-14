@@ -8,7 +8,7 @@ import {
   ScanOutlined,
   SlidersOutlined,
 } from "@ant-design/icons";
-import { Divider, Flex, Input, type MenuProps, Popover, Switch } from "antd";
+import { Divider, Flex, Input, type MenuProps, Popover, Space, Switch } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { rgbToHex } from "libs/colors";
 import { useWkSelector } from "libs/react_hooks";
@@ -307,7 +307,7 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
         display: "grid",
         gridTemplateColumns: "auto 1fr auto",
         alignItems: "center",
-        columnGap: 16,
+        columnGap: 8,
         rowGap: 6,
         marginTop: 10,
         marginBottom: 10,
@@ -322,16 +322,8 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
           // the click events are stopped from propagating to the parent div.
           onClick={(_value, e) => e.stopPropagation()}
         />
-        <FastTooltip title={!isReadOnly && disabled ? editingDisallowedExplanation : null}>
-          <ColorSetting
-            value={rgbToHex(upscaledColor)}
-            onChange={handleColorChange}
-            // The color of a read-only layer bounding box is a client-side display setting and
-            // therefore stays editable even when the annotation cannot be updated.
-            disabled={!isReadOnly && disabled}
-          />
-        </FastTooltip>
       </Flex>
+
       <FastTooltip
         title={isReadOnly ? READ_ONLY_TOOLTIP : disabled ? editingDisallowedExplanation : null}
       >
@@ -376,53 +368,75 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
           />
         )}
       </Flex>
-
-      <Flex justify="flex-end">
-        {isReadOnly ? (
-          <SlidersOutlined />
-        ) : (
-          <Popover
-            content={slidersContent}
-            title="Adjust Position & Size"
-            placement="bottom"
-            trigger="click"
-          >
-            <ButtonComponent
-              title={
-                disabled ? editingDisallowedExplanation : "Adjust position and size with sliders"
-              }
-              icon={<SlidersOutlined />}
-              type="text"
-              size="small"
-              disabled={disabled}
-              onClick={(e) => e.stopPropagation()}
-              block
-            />
-          </Popover>
-        )}
-      </Flex>
       <FastTooltip
-        title={
-          isReadOnly ? READ_ONLY_TOOLTIP : disabled ? editingDisallowedExplanation : FORMAT_TOOLTIP
-        }
-        placement="top-start"
+        title={!isReadOnly && disabled ? editingDisallowedExplanation : null}
+        style={{ gridColumn: 1, gridRow: 2, display: "flex", justifyContent: "center" }}
       >
-        <Input
-          status={isValid ? "" : "error"}
-          onChange={handleChange}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          value={text}
-          placeholder="0, 0, 0, 512, 512, 512"
-          size="small"
+        <ColorSetting
+          value={rgbToHex(upscaledColor)}
+          onChange={handleColorChange}
+          // The color of a read-only layer bounding box is a client-side display setting and
+          // therefore stays editable even when the annotation cannot be updated.
           disabled={!isReadOnly && disabled}
-          readOnly={isReadOnly}
-          style={isReadOnly ? READ_ONLY_INPUT_STYLE : undefined}
-          onClick={(e) => e.stopPropagation()}
         />
       </FastTooltip>
+      <Space.Compact size="small" style={{ gridColumn: 2, gridRow: 2, width: "100%" }}>
+        <FastTooltip
+          title={
+            isReadOnly
+              ? READ_ONLY_TOOLTIP
+              : disabled
+                ? editingDisallowedExplanation
+                : FORMAT_TOOLTIP
+          }
+          placement="top-start"
+          style={{ flexGrow: 1 }}
+        >
+          <Input
+            status={isValid ? "" : "error"}
+            onChange={handleChange}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            value={text}
+            placeholder="0, 0, 0, 512, 512, 512"
+            size="small"
+            disabled={!isReadOnly && disabled}
+            readOnly={isReadOnly}
+            style={isReadOnly ? READ_ONLY_INPUT_STYLE : undefined}
+            onClick={(e) => e.stopPropagation()}
+            suffix={
+              !isReadOnly && (
+                <Popover
+                  content={slidersContent}
+                  title="Adjust Position & Size"
+                  placement="bottom"
+                  style={{ height: 24 }}
+                  trigger="click"
+                >
+                  <ButtonComponent
+                    title={
+                      disabled
+                        ? editingDisallowedExplanation
+                        : "Adjust position and size with sliders"
+                    }
+                    icon={<SlidersOutlined />}
+                    type="text"
+                    size="small"
+                    disabled={disabled}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ height: 24 }}
+                  />
+                </Popover>
+              )
+            }
+          />
+        </FastTooltip>
+      </Space.Compact>
       {/* onOpenContextMenu needs event from div*/}
-      <div onClick={(evt) => onOpenContextMenu(getContextMenu(), evt, bboxId)}>
+      <div
+        style={{ gridColumn: 3, gridRow: 2 }}
+        onClick={(evt) => onOpenContextMenu(getContextMenu(), evt, bboxId)}
+      >
         <ButtonComponent type="text" size="small" icon={<EllipsisOutlined />} />
       </div>
     </div>

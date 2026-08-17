@@ -16,9 +16,7 @@ class S3UriUtilsTestSuite extends AsyncWordSpec {
       "read bucket and object key" in {
         assert(S3UriUtils.hostBucketFromUri(uri("s3://my-bucket/dataset/color/1/.zarray")).contains("my-bucket"))
         assert(
-          S3UriUtils
-            .objectKeyFromUri(uri("s3://my-bucket/dataset/color/1/.zarray"))
-            .contains("dataset/color/1/.zarray")
+          S3UriUtils.objectKeyFromUri(uri("s3://my-bucket/dataset/color/1/.zarray")).contains("dataset/color/1/.zarray")
         )
       }
 

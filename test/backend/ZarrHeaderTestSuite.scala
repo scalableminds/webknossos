@@ -223,8 +223,9 @@ class ZarrHeaderTestSuite extends AsyncWordSpec {
         assert(headerWithCompressor("""{"id": "zlib", "level": 1}""").compressorImpl.isInstanceOf[ZlibCompressor])
         assert(headerWithCompressor("""{"id": "gzip", "level": 5}""").compressorImpl.isInstanceOf[GzipCompressor])
         assert(
-          headerWithCompressor("""{"id": "blosc", "cname": "zstd", "clevel": 5, "shuffle": 2, "blocksize": 0}""").compressorImpl
-            .isInstanceOf[BloscCompressor]
+          headerWithCompressor(
+            """{"id": "blosc", "cname": "zstd", "clevel": 5, "shuffle": 2, "blocksize": 0}"""
+          ).compressorImpl.isInstanceOf[BloscCompressor]
         )
         assert(headerWithCompressor("""{"id": "zstd", "level": 3}""").compressorImpl.isInstanceOf[ZstdCompressor])
       }

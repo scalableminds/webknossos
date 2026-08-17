@@ -36,7 +36,8 @@ class ExploreLayerUtilsTestSuite extends AsyncWordSpec with ExploreLayerUtils {
       }
 
       "suffix repeated names with an index starting at 2" in {
-        val names = makeLayerNamesUnique(List(layerNamed("color"), layerNamed("color"), layerNamed("color"))).map(_.name)
+        val names =
+          makeLayerNamesUnique(List(layerNamed("color"), layerNamed("color"), layerNamed("color"))).map(_.name)
         assert(names == List("color", "color_2", "color_3"))
       }
 

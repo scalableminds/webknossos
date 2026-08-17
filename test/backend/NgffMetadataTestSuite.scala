@@ -292,9 +292,7 @@ class NgffMetadataTestSuite extends AsyncWordSpec {
 
       "reject a document without a version" in
         assert(
-          JsonHelper
-            .parseAs[NgffMetadataV0_5]("""{"multiscales": [{"axes": [], "datasets": []}]}""")
-            .isEmpty
+          JsonHelper.parseAs[NgffMetadataV0_5]("""{"multiscales": [{"axes": [], "datasets": []}]}""").isEmpty
         )
     }
 

@@ -247,9 +247,7 @@ class N5HeaderTestSuite extends AsyncWordSpec {
         // resolution is the only non-optional field, so the multiscales metadata of the FIB-SEM volume above
         // (which states pixelResolution instead) is not readable as compact metadata
         assert(
-          JsonHelper
-            .parseAs[N5CompactMultiscalesMetadata]("""{"scales": [[1, 1, 1]], "multiScale": true}""")
-            .isEmpty
+          JsonHelper.parseAs[N5CompactMultiscalesMetadata]("""{"scales": [[1, 1, 1]], "multiScale": true}""").isEmpty
         )
     }
   }

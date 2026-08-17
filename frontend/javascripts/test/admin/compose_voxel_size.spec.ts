@@ -2,34 +2,25 @@ import { withVoxelSizeTransforms } from "admin/dataset/composition_wizard/04_con
 import type { APIDataset, LayerLink, VoxelSize } from "types/api_types";
 import { UnitLong, type Vector3 } from "viewer/constants";
 import {
+  buildLiveTransforms,
   combineCoordinateTransformations,
   EXPECTED_LIVE_TRANSFORMATION_LENGTH,
   extractPivotFromTransforms,
   extractSRTFromTransforms,
   hasValidLiveTransformationPattern,
+  rebaseTranslationToPivot,
 } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { transformPointUnscaled } from "viewer/model/helpers/transformation_helpers";
 import { getFinestVoxelSize } from "viewer/model/scaleinfo";
 import { describe, expect, it } from "vitest";
 
-// The layer's bounding box center, which withVoxelSizeTransforms uses as the pivot. Deliberately
-// off-origin and asymmetric, so that a wrong pivot cannot pass unnoticed.
-const LAYER_TOP_LEFT = [100, 200, 300];
-const LAYER_SIZE = { width: 200, height: 400, depth: 600 };
+// A layer center the transform editor would rebase onto. Deliberately off-origin and asymmetric, so
+// that a rebasing mistake cannot pass unnoticed.
 const LAYER_CENTER: Vector3 = [200, 400, 600];
 
-function makeDataset(id: string, voxelSize: VoxelSize, layerNames: string[]): APIDataset {
+function makeDataset(id: string, voxelSize: VoxelSize): APIDataset {
   // Only the fields that withVoxelSizeTransforms reads are relevant here.
-  return {
-    id,
-    dataSource: {
-      scale: voxelSize,
-      dataLayers: layerNames.map((name) => ({
-        name,
-        boundingBox: { topLeft: LAYER_TOP_LEFT, ...LAYER_SIZE },
-      })),
-    },
-  } as unknown as APIDataset;
+  return { id, dataSource: { scale: voxelSize } } as unknown as APIDataset;
 }
 
 function makeLayerLink(sourceDatasetId: string, name: string): LayerLink {
@@ -46,10 +37,7 @@ const COARSE = { factor: [6, 6, 6], unit: UnitLong.nm } as VoxelSize;
 const FINE = { factor: [2, 2, 2], unit: UnitLong.nm } as VoxelSize;
 
 describe("withVoxelSizeTransforms", () => {
-  const datasets = [
-    makeDataset("coarse", COARSE, ["coarse_layer"]),
-    makeDataset("fine", FINE, ["fine_layer"]),
-  ];
+  const datasets = [makeDataset("coarse", COARSE), makeDataset("fine", FINE)];
   const layers = [makeLayerLink("coarse", "coarse_layer"), makeLayerLink("fine", "fine_layer")];
   const targetVoxelSize = getFinestVoxelSize(datasets.map((d) => d.dataSource.scale));
 
@@ -66,24 +54,38 @@ describe("withVoxelSizeTransforms", () => {
     expect(extractSRTFromTransforms(coarseLayer.transformations)).toEqual({
       scale: [3, 3, 3],
       rotation: [0, 0, 0],
-      // Compensates for pivoting about the layer center instead of the origin: center * (scale - 1).
-      translation: [400, 800, 1200],
+      translation: [0, 0, 0],
     });
+    // A plain scaling about the origin. The transform editor rebases the pivot onto the layer
+    // center when the layer is edited, so it does not have to be expressed that way here.
+    expect(extractPivotFromTransforms(coarseLayer.transformations)).toEqual([0, 0, 0]);
   });
 
-  it("should pivot about the layer center, like the transforms editor does", () => {
-    const [coarseLayer] = withVoxelSizeTransforms(layers, datasets, targetVoxelSize);
-
-    expect(extractPivotFromTransforms(coarseLayer.transformations)).toEqual(LAYER_CENTER);
-  });
-
-  it("should map a voxel to p * scale despite the non-zero pivot", () => {
+  it("should map a voxel to p * scale", () => {
     const [coarseLayer] = withVoxelSizeTransforms(layers, datasets, targetVoxelSize);
     const transform = combineCoordinateTransformations(coarseLayer.transformations, [1, 1, 1]);
 
     expect(transformPointUnscaled(transform)([0, 0, 0])).toEqual([0, 0, 0]);
     expect(transformPointUnscaled(transform)([10, 20, 30])).toEqual([30, 60, 90]);
-    expect(transformPointUnscaled(transform)(LAYER_CENTER)).toEqual([600, 1200, 1800]);
+  });
+
+  it("should survive the editor rebasing the pivot onto the layer center", () => {
+    // This is what the layer transform popover does when such a layer is opened: the pivot moves to
+    // the layer's center and the translation absorbs the difference, leaving the layer in place.
+    const [coarseLayer] = withVoxelSizeTransforms(layers, datasets, targetVoxelSize);
+    const srt = extractSRTFromTransforms(coarseLayer.transformations);
+    const rebased = buildLiveTransforms(
+      srt.scale,
+      srt.rotation,
+      rebaseTranslationToPivot(srt, [0, 0, 0], LAYER_CENTER),
+      LAYER_CENTER,
+    );
+
+    const before = combineCoordinateTransformations(coarseLayer.transformations, [1, 1, 1]);
+    const after = combineCoordinateTransformations(rebased, [1, 1, 1]);
+    for (const point of [[0, 0, 0], [10, 20, 30], LAYER_CENTER] as Vector3[]) {
+      expect(transformPointUnscaled(after)(point)).toEqual(transformPointUnscaled(before)(point));
+    }
   });
 
   it("should not add an identity transform for the layer that already matches", () => {
@@ -114,8 +116,8 @@ describe("withVoxelSizeTransforms", () => {
 
   it("should handle anisotropic voxel sizes per axis", () => {
     const anisotropicDatasets = [
-      makeDataset("a", { factor: [4, 8, 40], unit: UnitLong.nm } as VoxelSize, ["layer_a"]),
-      makeDataset("b", { factor: [2, 2, 10], unit: UnitLong.nm } as VoxelSize, ["layer_b"]),
+      makeDataset("a", { factor: [4, 8, 40], unit: UnitLong.nm } as VoxelSize),
+      makeDataset("b", { factor: [2, 2, 10], unit: UnitLong.nm } as VoxelSize),
     ];
     const target = getFinestVoxelSize(anisotropicDatasets.map((d) => d.dataSource.scale));
     const [layerA] = withVoxelSizeTransforms(

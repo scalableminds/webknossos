@@ -32,11 +32,7 @@ import type { APIDataLayer, APIDataset, APITeam, LayerLink, VoxelSize } from "ty
 import { syncValidator } from "types/validation";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Vector3 } from "viewer/constants";
-import {
-  getLayerBoundingBox,
-  getReadableURLPart,
-  getViewDatasetURL,
-} from "viewer/model/accessors/dataset_accessor";
+import { getReadableURLPart, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import {
   buildLiveTransforms,
   flatToNestedMatrix,
@@ -66,12 +62,11 @@ const VOXEL_SIZE_SCALE_EPSILON = 1e-6;
 // The transform is emitted in the same 7-matrix format that the Layer Transforms editor produces,
 // so that the result stays editable there.
 //
-// The scaling itself has to happen about the coordinate origin: a voxel at index p lies at the
-// physical position p * sourceVoxelSize, i.e. at p * scale in the new dataset's voxel grid. The
-// pivot is nevertheless set to the layer's center, matching what the editor uses for layers without
-// transforms, so that rotating such a layer later on rotates it in place instead of swinging it
-// around the dataset origin. Pivoting about the center moves the layer by center * (1 - scale),
-// which the translation below compensates for; the resulting mapping is exactly p -> p * scale.
+// The scaling happens about the coordinate origin: a voxel at index p lies at the physical position
+// p * sourceVoxelSize, i.e. at p * scale in the new dataset's voxel grid. A zero pivot makes the
+// surrounding translation matrices of the chain identities, so the chain is exactly that scaling.
+// The editor rebases the pivot onto the layer's center when the layer is edited, so there is no
+// need to express it that way here.
 export function withVoxelSizeTransforms(
   layers: LayerLink[],
   linkedDatasets: APIDataset[],
@@ -86,13 +81,11 @@ export function withVoxelSizeTransforms(
     if (scale.every((value) => Math.abs(value - 1) < VOXEL_SIZE_SCALE_EPSILON)) {
       return layer;
     }
-    const pivot = getLayerBoundingBox(sourceDataset, layer.sourceLayerName).getCenter();
-    const translation = pivot.map((value, index) => value * (scale[index] - 1)) as Vector3;
     return {
       ...layer,
       transformations: [
         ...layer.transformations,
-        ...buildLiveTransforms(scale, [0, 0, 0], translation, pivot),
+        ...buildLiveTransforms(scale, [0, 0, 0], [0, 0, 0], [0, 0, 0]),
       ],
     };
   });

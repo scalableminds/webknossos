@@ -8,7 +8,6 @@ import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.zarr.Zarr3OutputHelper
 import com.scalableminds.webknossos.datastore.helpers.UnsignedLong
-import com.scalableminds.webknossos.datastore.services.mesh.FullMeshRequest
 import com.scalableminds.webknossos.datastore.services.uploading.{
   DatasetUploadInfo,
   LinkedLayerIdentifier,
@@ -271,33 +270,6 @@ class DSLegacyApiController @Inject() (
         )
       }
     }
-
-  // MESH ROUTES
-
-  def loadFullMeshStl(
-      organizationId: String,
-      datasetDirectoryName: String,
-      dataLayerName: String
-  ): Action[FullMeshRequest] =
-    Action.async(validateJson[FullMeshRequest]) { implicit request =>
-      withResolvedDatasetId(organizationId, datasetDirectoryName) { datasetId =>
-        meshController.loadFullMeshStl(datasetId, dataLayerName)(request)
-      }
-    }
-
-  private def withResolvedDatasetId(organizationId: String, datasetDirectoryName: String)(
-      block: ObjectId => Future[Result]
-  ): Future[Result] =
-    for {
-      datasetIdBox <- remoteWebknossosClient.getDatasetId(organizationId, datasetDirectoryName).futureBox
-      result <- datasetIdBox match {
-        case Full(datasetId) => block(datasetId)
-        case _               =>
-          Future.successful(
-            Forbidden("Token may be expired, consider reloading. Access forbidden: No read access on dataset")
-          )
-      }
-    } yield result
 
   // For API versions <= 14, largestSegmentId must keep being written as a plain JsNumber (rather than the
   // UnsignedLong bigint envelope) whenever that does not lose precision, for backwards compatibility with

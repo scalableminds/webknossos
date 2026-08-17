@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(178);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(179);
 COMMIT TRANSACTION;
 
 
@@ -395,6 +395,15 @@ CREATE TABLE webknossos.organization_plan_updates(
   includedStorage BIGINT DEFAULT NULL,
   includedStorageChanged BOOLEAN NOT NULL, -- bool is necessary because set to null is distinct from did not change
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT validOrganizationId CHECK (_organization ~* '^[A-Za-z0-9\-_. ]+$')
+);
+
+CREATE TABLE webknossos.organization_planExpiryReminders(
+  _organization TEXT NOT NULL,
+  paidUntil TIMESTAMPTZ NOT NULL, -- the expiry date the reminder was sent for, so that extending the plan re-arms the reminders
+  leadTimeDays INT NOT NULL,
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (_organization, paidUntil, leadTimeDays),
   CONSTRAINT validOrganizationId CHECK (_organization ~* '^[A-Za-z0-9\-_. ]+$')
 );
 
@@ -1031,6 +1040,8 @@ ALTER TABLE webknossos.organization_usedStorage_mags
 ALTER TABLE webknossos.organization_usedStorage_attachments
   ADD CONSTRAINT attachments_ref FOREIGN KEY (_dataset, layerName, name, type) REFERENCES webknossos.dataset_layer_attachments(_dataset, layerName, name, type) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.organization_plan_updates
+  ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.organization_planExpiryReminders
   ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.dataset_layer_coordinateTransformations
   ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) DEFERRABLE;

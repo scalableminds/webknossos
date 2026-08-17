@@ -109,12 +109,27 @@ class DataVaultTestSuite extends AsyncWordSpec with ParallelTestExecution {
               case _ => fail()
             }
 
-        "return empty box" when {
+        "return empty box, not failure" when {
           "requesting a non-existent object" in
             (vaultPath / s"non-existent-key${UUID.randomUUID}")
               .readBytes()(using globalExecutionContext, emptyTokenContext)
               .futureBox
               .map(assertBoxEmpty)
+
+          "requesting a byte range from an object that does not exist (404)" in {
+            val upath =
+              UPath.fromStringUnsafe("gs://iarpa_microns/minnie/minnie65/seg_m1300/8.0x8.0x40.0/03b1e.shard")
+            val vaultPath = new VaultPath(
+              upath,
+              GoogleCloudDataVault
+                .create(CredentializedUPath(upath, None))
+                .getOrElse(fail("Failed to create GoogleCloudDataVault"))
+            )
+            vaultPath
+              .readBytes(ByteRange.startEndExclusive(0, 1024))(using globalExecutionContext, emptyTokenContext)
+              .futureBox
+              .map(assertBoxEmpty)
+          }
         }
         "return failure" when {
           "requesting invalid range" in
@@ -137,6 +152,23 @@ class DataVaultTestSuite extends AsyncWordSpec with ParallelTestExecution {
               )
             (vaultPath / dataKey)
               .readBytes(ByteRange.startEndExclusive(-10, 10))(using globalExecutionContext, emptyTokenContext)
+              .futureBox
+              .map(assertBoxFailure)
+          }
+
+          "requesting a byte range that extends past the object's actual end" in {
+            val dataKey = "32_32_40/15360-15424_8384-8448_3520-3584"
+            val realObjectSize = 127808
+            val upath = UPath.fromStringUnsafe(s"gs://neuroglancer-fafb-data/fafb_v14/fafb_v14_orig/$dataKey")
+            val vaultPath = new VaultPath(
+              upath,
+              GoogleCloudDataVault
+                .create(CredentializedUPath(upath, None))
+                .getOrElse(fail("Failed to create GoogleCloudDataVault"))
+            )
+            val overreachingRange = ByteRange.startEndExclusive(realObjectSize - 100, realObjectSize + 1000)
+            vaultPath
+              .readBytes(overreachingRange)(using globalExecutionContext, emptyTokenContext)
               .futureBox
               .map(assertBoxFailure)
           }

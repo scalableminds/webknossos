@@ -4,10 +4,11 @@ import com.scalableminds.util.Msg
 import com.google.inject.Inject
 import com.scalableminds.util.box.Full
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.zarr.Zarr3OutputHelper
+import com.scalableminds.webknossos.datastore.helpers.UnsignedLong
 import com.scalableminds.webknossos.datastore.models.{
   RawCuboidRequest,
   WebknossosAdHocMeshRequest,
@@ -29,8 +30,9 @@ import com.scalableminds.webknossos.datastore.services.{
   DatasetCache,
   UserAccessRequest
 }
+import play.api.http.HttpEntity
 import play.api.libs.Files
-import play.api.libs.json.{JsObject, Json, OFormat}
+import play.api.libs.json.{JsObject, JsValue, Json, OFormat}
 import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers, RawBuffer, Result}
 
 import java.nio.file.Path
@@ -119,6 +121,7 @@ class DSLegacyApiController @Inject() (
     remoteWebknossosClient: DSRemoteWebknossosClient,
     binaryDataController: BinaryDataController,
     zarrStreamingController: ZarrStreamingController,
+    dataProxyController: DataProxyController,
     meshController: DSMeshController,
     dataSourceController: DataSourceController,
     dataSourceService: DataSourceService,
@@ -131,6 +134,22 @@ class DSLegacyApiController @Inject() (
     with Zarr3OutputHelper {
 
   override def allowRemoteOrigin: Boolean = true
+
+  def proxyDatasourceV14(datasetId: ObjectId): Action[AnyContent] = Action.async { implicit request =>
+    withDowngradedLargestSegmentIds(dataProxyController.proxyDatasource(datasetId)(request))
+  }
+
+  def requestDataSourceV14(datasetId: ObjectId, zarrVersion: Int): Action[AnyContent] = Action.async {
+    implicit request =>
+      withDowngradedLargestSegmentIds(zarrStreamingController.requestDataSource(datasetId, zarrVersion)(request))
+  }
+
+  def dataSourceWithAnnotationPrivateLinkV14(accessTokenOrId: String, zarrVersion: Int): Action[AnyContent] =
+    Action.async { implicit request =>
+      withDowngradedLargestSegmentIds(
+        zarrStreamingController.dataSourceWithAnnotationPrivateLink(accessTokenOrId, zarrVersion)(request)
+      )
+    }
 
   def testChunkV13(resumableChunkNumber: Int, resumableIdentifier: String): Action[AnyContent] =
     uploadController.testChunk(resumableChunkNumber, resumableIdentifier, UploadDomain.dataset.toString)
@@ -467,7 +486,7 @@ class DSLegacyApiController @Inject() (
       zarrVersion: Int
   ): Action[AnyContent] = Action.async { implicit request =>
     withResolvedDatasetId(organizationId, datasetDirectoryName) { datasetId =>
-      zarrStreamingController.requestDataSource(datasetId, zarrVersion)(request)
+      withDowngradedLargestSegmentIds(zarrStreamingController.requestDataSource(datasetId, zarrVersion)(request))
     }
   }
 
@@ -631,4 +650,25 @@ class DSLegacyApiController @Inject() (
           )
       }
     } yield result
+
+  // For API versions <= 14, largestSegmentId must keep being written as a plain JsNumber (rather than the
+  // UnsignedLong bigint envelope) whenever that does not lose precision, for backwards compatibility with
+  // clients that do not understand that newer format (see UnsignedLong.scala). This mirrors the analogous
+  // shim in controllers.LegacyApiController of the webknossos app.
+  private def withDowngradedLargestSegmentIds(result: Future[Result]): Future[Result] =
+    result.map { r =>
+      if (r.header.status == OK) {
+        r.body match {
+          case HttpEntity.Strict(data, _) =>
+            JsonHelper.parseAs[JsValue](data.toArray) match {
+              case Full(jsValue) =>
+                val downgraded =
+                  JsonHelper.patchKeyRecursively(jsValue, "largestSegmentId")(UnsignedLong.downgradeToPlainNumberIfSafe)
+                Ok(downgraded).copy(header = r.header)
+              case _ => r
+            }
+          case _ => r
+        }
+      } else r
+    }
 }

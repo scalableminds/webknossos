@@ -13,6 +13,7 @@ import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, SegmentationLayer, UsableDataSource}
 import com.scalableminds.webknossos.datastore.models.requests.Cuboid
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, VoxelPosition}
+import com.scalableminds.webknossos.datastore.helpers.UnsignedLong
 import com.scalableminds.webknossos.datastore.services.*
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.box.Box.tryo
@@ -25,7 +26,7 @@ import scala.concurrent.ExecutionContext
 case class FullMeshRequest(
     meshFileName: Option[String], // None means ad-hoc meshing
     lod: Option[Int],
-    segmentId: Long, // if mappingName is set, this is an agglomerate id
+    segmentId: UnsignedLong, // if mappingName is set, this is an agglomerate id
     mappingName: Option[String],
     mappingType: Option[String], // json, agglomerate, editableMapping
     editableMappingTracingId: Option[String],
@@ -171,7 +172,7 @@ class DSFullMeshService @Inject() (
         fullMeshRequest.mappingName,
         fullMeshRequest.editableMappingTracingId,
         fullMeshRequest.annotationVersion,
-        fullMeshRequest.segmentId,
+        fullMeshRequest.segmentId.toLong,
         mappingNameForMeshFile = None,
         omitMissing = false
       )
@@ -200,7 +201,7 @@ class DSFullMeshService @Inject() (
             DataLayer.bucketLength + 1,
             DataLayer.bucketLength + 1
           ),
-          fullMeshRequest.segmentId,
+          fullMeshRequest.segmentId.toLong,
           dataSource.scale.factor,
           tc,
           fullMeshRequest.mappingName,
@@ -244,7 +245,7 @@ class DSFullMeshService @Inject() (
                 Some(dataSource.id),
                 segmentationLayer,
                 Cuboid(position, chunkSize.x + 1, chunkSize.y + 1, chunkSize.z + 1),
-                fullMeshRequest.segmentId,
+                fullMeshRequest.segmentId.toLong,
                 dataSource.scale.factor,
                 tc,
                 fullMeshRequest.mappingName,
@@ -285,7 +286,7 @@ class DSFullMeshService @Inject() (
         fullMeshRequest.mappingName,
         fullMeshRequest.editableMappingTracingId,
         fullMeshRequest.annotationVersion,
-        fullMeshRequest.segmentId,
+        fullMeshRequest.segmentId.toLong,
         mappingNameForMeshFile,
         omitMissing = false
       )
@@ -301,7 +302,7 @@ class DSFullMeshService @Inject() (
         Array(0, 0, lodTransform(2)(2))
       )
       stlEncodedChunks: Seq[Array[Byte]] <- Fox.serialCombined(allChunkRanges) { (chunkRange: MeshChunk) =>
-        readMeshChunkAsStl(fullMeshRequest.segmentId, meshFileKey, chunkRange, transform, vertexQuantizationBits)
+        readMeshChunkAsStl(fullMeshRequest.segmentId.toLong, meshFileKey, chunkRange, transform, vertexQuantizationBits)
       }
     } yield stlEncodedChunks
 
@@ -327,7 +328,7 @@ class DSFullMeshService @Inject() (
     for {
       (dracoMeshChunkBytes, encoding) <- meshFileService.readMeshChunk(
         meshFileKey,
-        List(MeshChunkDataRequest(chunkInfo.byteOffset, chunkInfo.byteSize, Some(segmentId)))
+        List(MeshChunkDataRequest(chunkInfo.byteOffset, chunkInfo.byteSize, Some(UnsignedLong(segmentId))))
       ) ?~> Msg.Mesh.File.loadChunkFailed
       _ <- Fox.fromBool(encoding == "draco") ?~> s"mesh file encoding is $encoding, only draco is supported"
       stlEncodedChunk <- getStlEncodedChunkFromDraco(chunkInfo, transform, dracoMeshChunkBytes, vertexQuantizationBits)

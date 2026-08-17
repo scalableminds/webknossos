@@ -5,7 +5,7 @@ import com.scalableminds.util.box.{Box, Failure, Full}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
-import com.scalableminds.webknossos.datastore.helpers.UPath
+import com.scalableminds.webknossos.datastore.helpers.{UPath, UnsignedLong}
 import com.scalableminds.webknossos.datastore.models.datasource.UsableDataSource
 import play.api.libs.json.Json
 
@@ -27,11 +27,15 @@ trait DataSourceToDiskWriter extends DataSourceValidation {
       propertiesFile = dataSourcePath.resolve(propertiesFileName)
       _ <- backupPreviousProperties(dataSourcePath).toFox ?~> Msg.Dataset.DataSource.updateFileFailed
       dataSourceWithRelativizedPaths = relativizePathsOfDataSource(dataSourcePath, dataSource)
+      dataSourceJsonRaw = Json.toJson(dataSourceWithRelativizedPaths)
+      dataSourceJsonWithoutResolutions = JsonHelper.removeKeyRecursively(dataSourceJsonRaw, Set("resolutions"))
+      // For backwards compatibility, write largestSegmentId as a plain JsNumber (rather than the
+      // UnsignedLong bigint envelope) whenever that does not lose precision.
+      dataSourceJsonPatched = JsonHelper.patchKeyRecursively(dataSourceJsonWithoutResolutions, "largestSegmentId")(
+        UnsignedLong.downgradeToPlainNumberIfSafe
+      )
       _ <- JsonHelper
-        .writeToFile(
-          propertiesFile,
-          JsonHelper.removeKeyRecursively(Json.toJson(dataSourceWithRelativizedPaths), Set("resolutions"))
-        )
+        .writeToFile(propertiesFile, dataSourceJsonPatched)
         .toFox ?~> Msg.Dataset.DataSource.updateFileFailed
     } yield ()
 

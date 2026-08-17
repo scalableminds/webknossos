@@ -62,7 +62,7 @@ class DatasetArray(
     header.chunkShape :+ 1
   }
 
-  private def chunkShapeAtIndex(index: Array[Int]) =
+  private def chunkShapeAtIndex(index: Array[Long]) =
     if (axisOrder.hasZAxis) { header.chunkShapeAtIndex(index) }
     else {
       chunkShape // irregular shaped chunk indexes are currently not supported for 2d datasets
@@ -171,16 +171,16 @@ class DatasetArray(
       for {
         chunkIndex <- chunkIndices.headOption.toFox
         sourceChunk: MultiArray <- getSourceChunkDataWithCache(
-          fullAxisOrder.permuteIndicesWkToArray(chunkIndex),
+          fullAxisOrder.permuteIndicesWkToArrayLong(chunkIndex),
           useSkipTypingShortcut = true
         )
       } yield sourceChunk
     } else {
       val targetBuffer = MultiArrayUtils.createDataBuffer(header.resolvedDataType, shape)
       val targetMultiArray = MultiArrayUtils.createArrayWithGivenStorage(targetBuffer, shape.reverse)
-      val copiedFox = Fox.combined(chunkIndices.map { (chunkIndex: Array[Int]) =>
+      val copiedFox = Fox.combined(chunkIndices.map { (chunkIndex: Array[Long]) =>
         for {
-          sourceChunk: MultiArray <- getSourceChunkDataWithCache(fullAxisOrder.permuteIndicesWkToArray(chunkIndex))
+          sourceChunk: MultiArray <- getSourceChunkDataWithCache(fullAxisOrder.permuteIndicesWkToArrayLong(chunkIndex))
           sourceChunkInWkFOrder: MultiArray = MultiArrayUtils
             .axisOrderXYZViewF(sourceChunk, fullAxisOrder, sourceIsF = header.order == ArrayOrder.F)
           offsetInChunkFOrder = computeOffsetInChunk(chunkIndex, totalOffset).reverse
@@ -217,7 +217,7 @@ class DatasetArray(
       } else {
         val targetBuffer = MultiArrayUtils.createDataBuffer(header.resolvedDataType, shape)
         val targetMultiArray = MultiArrayUtils.createArrayWithGivenStorage(targetBuffer, shape)
-        val copiedFuture = Fox.combined(chunkIndices.map { (chunkIndex: Array[Int]) =>
+        val copiedFuture = Fox.combined(chunkIndices.map { (chunkIndex: Array[Long]) =>
           for {
             sourceChunk: MultiArray <- getSourceChunkDataWithCache(chunkIndex)
             offsetInChunk = computeOffsetInChunkIgnoringAxisOrder(chunkIndex, totalOffset)
@@ -244,13 +244,13 @@ class DatasetArray(
         .mkString(",")}, offsetInChunk: ${offsetInChunk.mkString(",")}"
 
   protected def getShardedChunkPathAndRange(
-      chunkIndex: Array[Int]
+      chunkIndex: Array[Long]
   )(using ec: ExecutionContext, tc: TokenContext): Fox[(VaultPath, StartEndExclusiveByteRange)] =
     ??? // Defined in subclass
 
   private val chunkContentsCacheKeyPrefix: String = s"${dataSourceId}__${layerName}__${vaultPath}__chunk_"
 
-  private def chunkContentsCacheKey(chunkIndex: Array[Int]): String = {
+  private def chunkContentsCacheKey(chunkIndex: Array[Long]): String = {
     val builder = new java.lang.StringBuilder(chunkContentsCacheKeyPrefix.length + chunkIndex.length * 4)
     builder.append(chunkContentsCacheKeyPrefix)
     // Builder + while loop is faster than mkString, and this is a very hot code path.
@@ -263,7 +263,7 @@ class DatasetArray(
     builder.toString
   }
 
-  private def getSourceChunkDataWithCache(chunkIndex: Array[Int], useSkipTypingShortcut: Boolean = false)(using
+  private def getSourceChunkDataWithCache(chunkIndex: Array[Long], useSkipTypingShortcut: Boolean = false)(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[MultiArray] =
@@ -273,7 +273,7 @@ class DatasetArray(
       _ => readSourceChunkData(chunkIndex, useSkipTypingShortcut)
     )
 
-  private def readSourceChunkData(chunkIndex: Array[Int], useSkipTypingShortcut: Boolean)(using
+  private def readSourceChunkData(chunkIndex: Array[Long], useSkipTypingShortcut: Boolean)(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[MultiArray] =
@@ -294,7 +294,7 @@ class DatasetArray(
       chunkReader.read(chunkPath, chunkShape, ByteRange.complete, useSkipTypingShortcut)
     }
 
-  protected def getChunkFilename(chunkIndex: Array[Int]): String =
+  protected def getChunkFilename(chunkIndex: Array[Long]): String =
     if (axisOrder.hasZAxis) {
       chunkIndex.mkString(header.dimension_separator.toString)
     } else {
@@ -304,7 +304,7 @@ class DatasetArray(
   private def partialCopyingIsNotNeededForMultiArray(
       bufferShape: Array[Int],
       globalOffset: Array[Long],
-      chunkIndices: Seq[Array[Int]]
+      chunkIndices: Seq[Array[Long]]
   ): Boolean =
     chunkIndices match {
       case chunkIndex :: Nil =>
@@ -317,7 +317,7 @@ class DatasetArray(
   private def partialCopyingIsNotNeededForWkOrder(
       bufferShape: Array[Int],
       globalOffset: Array[Int],
-      chunkIndices: Seq[Array[Int]]
+      chunkIndices: Seq[Array[Long]]
   ): Boolean =
     chunkIndices.headOption match {
       case Some(chunkIndex) =>
@@ -335,14 +335,14 @@ class DatasetArray(
   private def isZeroOffset(offset: Array[Int]): Boolean =
     offset.forall(_ == 0)
 
-  private def computeOffsetInChunk(chunkIndex: Array[Int], globalOffset: Array[Int]): Array[Int] =
+  private def computeOffsetInChunk(chunkIndex: Array[Long], globalOffset: Array[Int]): Array[Int] =
     chunkIndex.indices.map { dim =>
-      globalOffset(dim) - (chunkIndex(dim) * fullAxisOrder.permuteIndicesArrayToWk(chunkShape)(dim))
+      (globalOffset(dim) - (chunkIndex(dim) * fullAxisOrder.permuteIndicesArrayToWk(chunkShape)(dim))).toInt
     }.toArray
 
-  private def computeOffsetInChunkIgnoringAxisOrder(chunkIndex: Array[Int], globalOffset: Array[Long]): Array[Int] =
+  private def computeOffsetInChunkIgnoringAxisOrder(chunkIndex: Array[Long], globalOffset: Array[Long]): Array[Int] =
     chunkIndex.indices.map { dim =>
-      (globalOffset(dim) - (chunkIndex(dim).toLong * chunkShape(dim).toLong)).toInt
+      (globalOffset(dim) - (chunkIndex(dim) * chunkShape(dim).toLong)).toInt
     }.toArray
 
   override def toString: String =

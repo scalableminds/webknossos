@@ -186,7 +186,7 @@ export function SegmentTreeView(props: Props) {
   };
 
   const getSelectionForKeys = (keys: string[]) => {
-    const segmentIds: number[] = [];
+    const segmentIds: bigint[] = [];
     let groupId: number | null = null;
     for (const key of keys) {
       const node = hierarchy.nodesByKey.get(key);

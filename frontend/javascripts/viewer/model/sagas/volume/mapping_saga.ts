@@ -6,6 +6,7 @@ import {
   getMappingsForDatasetLayer,
 } from "admin/rest_api";
 import { message } from "antd";
+import { toBigInt } from "libs/bigint_helpers";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import { fastDiffSetAndMap, sleep } from "libs/utils";
@@ -758,13 +759,13 @@ function* handleSetJsonMapping(
 }
 
 function convertMappingObjectToEquivalenceClasses(existingMapping: Mapping) {
-  const classesByRepresentative: Record<number, number[]> = {};
+  const classesByRepresentative: Record<string, NumberLike[]> = {};
   for (let [unmapped, mapped] of existingMapping.entries()) {
-    // TODO: Proper 64 bit support (#6921)
-    unmapped = Number(unmapped);
-    mapped = Number(mapped);
-    classesByRepresentative[mapped] = classesByRepresentative[mapped] || [];
-    classesByRepresentative[mapped].push(Number(unmapped));
+    // Regardless of number or bigint, convert to string so that it can be used as a
+    // key in both cases.
+    const mappedStr = mapped.toString();
+    classesByRepresentative[mappedStr] = classesByRepresentative[mappedStr] || [];
+    classesByRepresentative[mappedStr].push(unmapped);
   }
   const classes = Object.values(classesByRepresentative);
   return classes;
@@ -772,7 +773,7 @@ function convertMappingObjectToEquivalenceClasses(existingMapping: Mapping) {
 
 function* setCustomColors(
   mappingProperties: OptionalMappingProperties,
-  classes: number[][],
+  classes: NumberLike[][],
   layerName: string,
 ) {
   if (mappingProperties.mapping == null || mappingProperties.mappingColors == null) {
@@ -788,8 +789,7 @@ function* setCustomColors(
 
     const hueValue = mappingProperties.mappingColors[classIdx];
     const color = jsHsv2rgb(360 * hueValue, 1, 1);
-    // TODO: Proper 64 bit support (#6921)
-    yield* put(updateSegmentAction(Number(representativeId), { color }, layerName));
+    yield* put(updateSegmentAction(toBigInt(representativeId), { color }, layerName));
 
     classIdx++;
   }

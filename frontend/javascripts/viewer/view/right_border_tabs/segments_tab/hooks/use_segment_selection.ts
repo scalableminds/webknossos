@@ -16,21 +16,21 @@ import Store from "viewer/store";
 import { getGroupUiNodeKey, getSegmentUiNodeKey } from "../hierarchy";
 
 export type SegmentSelection = {
-  selectedSegmentIds: number[];
+  selectedSegmentIds: bigint[];
   selectedGroupId: number | null;
   // The selected segments, resolved from their ids.
   selectedSegments: Segment[];
   // Keys of the selected nodes (for highlighting them in the antd tree).
   selectedKeys: string[];
   // Selects the given segments and/or group (they are mutually exclusive).
-  setSelection: (segmentIds: number[], groupId: number | null) => void;
+  setSelection: (segmentIds: bigint[], groupId: number | null) => void;
   // Like setSelection, but also requests that the tree view scroll the
   // selection into view, even if it is already selected (e.g., re-running a
   // search that lands on the same segment/group again). Use this for
   // explicit "jump to X" requests (search, select-all-matches); use plain
   // setSelection for in-tree interactions (click, ctrl/shift-click), which
   // are already visible and shouldn't cause a scroll jump.
-  focusSelection: (segmentIds: number[], groupId: number | null) => void;
+  focusSelection: (segmentIds: bigint[], groupId: number | null) => void;
   // Bumped on every focusSelection call. selectedSegmentIds/selectedGroupId
   // alone can't signal "please scroll", because getSelectedIds reuses its
   // previous instance when a re-selection is deep-equal to the current one.
@@ -57,7 +57,7 @@ export function useSegmentSelection(): SegmentSelection {
   }, [selectedIds]);
 
   const setSelection = useCallback(
-    (segmentIds: number[], groupId: number | null) => {
+    (segmentIds: bigint[], groupId: number | null) => {
       if (visibleSegmentationLayer == null) {
         return;
       }
@@ -70,7 +70,7 @@ export function useSegmentSelection(): SegmentSelection {
 
   const [focusToken, setFocusToken] = useState(0);
   const focusSelection = useCallback(
-    (segmentIds: number[], groupId: number | null) => {
+    (segmentIds: bigint[], groupId: number | null) => {
       setSelection(segmentIds, groupId);
       setFocusToken((token) => token + 1);
     },

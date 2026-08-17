@@ -57,7 +57,7 @@ type SegmentInfo = {
   covarianceMatrix: SegmentCovarianceMatrix | undefined;
 };
 
-type CsvValue = string | number | undefined;
+type CsvValue = string | number | bigint | undefined;
 
 /*
  * Describes one statistic in both of its representations, so that the rendered table and the

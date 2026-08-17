@@ -1,5 +1,5 @@
 import { V3 } from "libs/mjs";
-import min from "lodash-es/min";
+import max from "lodash-es/min";
 import memoizeOne from "memoize-one";
 import { Euler, Matrix4, Vector3 as ThreeVector3 } from "three";
 import type {
@@ -338,10 +338,9 @@ function _calculateGlobalDelta(
 
 function _getViewportExtentInVoxelPerAxis(state: WebknossosState): Vector3 {
   /* Returns, for each axis (x, y, z), how many voxels are currently visible along that axis in
-   * the ortho viewports that show it (the minimum of the two relevant viewports, so the result
-   * never exceeds what is actually visible in either of them), corrected for anisotropic voxel
-   * sizes so the result is expressed in mag1 voxels, comparable to bounding box/position
-   * coordinates.
+   * the ortho viewports that show it (the maximum of the two relevant viewports), corrected
+   * for anisotropic voxel sizes so the result is expressed in mag1 voxels, comparable to
+   * bounding box/position coordinates.
    */
   const planeRatio = getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale);
   const extents = OrthoViewValuesWithoutTDView.map((orthoView) =>
@@ -351,7 +350,7 @@ function _getViewportExtentInVoxelPerAxis(state: WebknossosState): Vector3 {
   const minExtent = 1;
 
   const getMinExtent = (val1: number, val2: number) =>
-    min([val1, val2].filter((v) => v >= minExtent)) || minExtent;
+    max([val1, val2].filter((v) => v >= minExtent)) || minExtent;
 
   return [
     Math.ceil(getMinExtent(xyExtent[0], xzExtent[0]) * planeRatio[0]),

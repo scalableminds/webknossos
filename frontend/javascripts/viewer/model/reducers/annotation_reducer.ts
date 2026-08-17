@@ -76,16 +76,20 @@ export const updateUserBoundingBox = (
         ...bbox,
         ...action.newProps,
       };
-      if ("boundingBox" in action.newProps) {
-        // If the boundingBox min/max properties were changed, ensure
-        // that these are integer. We can mutate the property in-place since it was
-        // created solely for the action.
-        if (newBox.boundingBox.min.some((el) => Math.floor(el) !== el)) {
-          newBox.boundingBox.min = V3.floor(newBox.boundingBox.min);
-        }
-        if (newBox.boundingBox.max.some((el) => Math.floor(el) !== el)) {
-          newBox.boundingBox.max = V3.floor(newBox.boundingBox.max);
-        }
+      if (action.newProps.boundingBox != null) {
+        // If the boundingBox min/max properties are changed, ensure
+        // that these are integer (otherwise, the backend will reject
+        // the update actions).
+        const { boundingBox } = action.newProps;
+        newBox.boundingBox = {
+          ...boundingBox,
+          min: boundingBox.min.some((el) => Math.floor(el) !== el)
+            ? V3.floor(boundingBox.min)
+            : boundingBox.min,
+          max: boundingBox.max.some((el) => Math.floor(el) !== el)
+            ? V3.floor(boundingBox.max)
+            : boundingBox.max,
+        };
       }
       return newBox;
     }

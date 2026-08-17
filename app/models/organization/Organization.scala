@@ -215,8 +215,8 @@ class OrganizationDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionCon
     } yield ()
 
   def upsertUsedStorage(
-      datasetMagReports: List[DatasetMagStorageReport],
-      dataLayerAttachmentReports: List[DataLayerAttachmentStorageReport]
+      datasetMagReports: Seq[DatasetMagStorageReport],
+      dataLayerAttachmentReports: Seq[DataLayerAttachmentStorageReport]
   ): Fox[Unit] = {
     val datasetMagReportsQueries = datasetMagReports.map(r =>
       q"""

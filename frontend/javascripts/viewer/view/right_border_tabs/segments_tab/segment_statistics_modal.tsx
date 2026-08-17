@@ -123,6 +123,7 @@ export function SegmentStatisticsModal({
     fileInfo,
     statisticsMag,
     boundingBoxMag,
+    isBoundingBoxAvailable,
     availableFileMetrics,
     volumes,
     boundingBoxes,
@@ -358,28 +359,30 @@ export function SegmentStatisticsModal({
       );
     }
 
-    specs.push(
-      {
-        key: "boundingBoxTopLeft",
-        title: "Bounding Box\nTop Left Position",
-        dataIndex: "boundingBoxTopLeftAsString",
-        width: 150,
-        isLoading: boundingBoxes.isLoading,
-        isError: boundingBoxes.isError,
-        csvHeaders: ["X", "Y", "Z"].map((axis) => `boundingBoxTopLeftPosition${axis}`),
-        getCsvValues: (row) => row.boundingBoxTopLeft ?? [undefined, undefined, undefined],
-      },
-      {
-        key: "boundingBoxPosition",
-        title: "Bounding Box\nSize in vx",
-        dataIndex: "boundingBoxPositionAsString",
-        width: 150,
-        isLoading: boundingBoxes.isLoading,
-        isError: boundingBoxes.isError,
-        csvHeaders: ["X", "Y", "Z"].map((axis) => `boundingBoxSize${axis}`),
-        getCsvValues: (row) => row.boundingBoxPosition ?? [undefined, undefined, undefined],
-      },
-    );
+    if (isBoundingBoxAvailable) {
+      specs.push(
+        {
+          key: "boundingBoxTopLeft",
+          title: "Bounding Box\nTop Left Position",
+          dataIndex: "boundingBoxTopLeftAsString",
+          width: 150,
+          isLoading: boundingBoxes.isLoading,
+          isError: boundingBoxes.isError,
+          csvHeaders: ["X", "Y", "Z"].map((axis) => `boundingBoxTopLeftPosition${axis}`),
+          getCsvValues: (row) => row.boundingBoxTopLeft ?? [undefined, undefined, undefined],
+        },
+        {
+          key: "boundingBoxPosition",
+          title: "Bounding Box\nSize in vx",
+          dataIndex: "boundingBoxPositionAsString",
+          width: 150,
+          isLoading: boundingBoxes.isLoading,
+          isError: boundingBoxes.isError,
+          csvHeaders: ["X", "Y", "Z"].map((axis) => `boundingBoxSize${axis}`),
+          getCsvValues: (row) => row.boundingBoxPosition ?? [undefined, undefined, undefined],
+        },
+      );
+    }
 
     if (availableFileMetrics.centerOfMass) {
       specs.push({
@@ -399,6 +402,7 @@ export function SegmentStatisticsModal({
     voxelSize.unit,
     hasAdditionalCoords,
     availableFileMetrics,
+    isBoundingBoxAvailable,
     volumes.isLoading,
     volumes.isError,
     surfaceAreas.isLoading,

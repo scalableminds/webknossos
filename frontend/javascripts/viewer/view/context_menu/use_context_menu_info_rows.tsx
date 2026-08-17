@@ -67,6 +67,7 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
     boundingBoxInfoLabel,
     segmentSurfaceAreaLabel,
     areSegmentStatisticsAvailable: canLayerAnswerSegmentStatistics,
+    isBoundingBoxAvailable,
   } = useSegmentStatisticsLabels(
     clickedSegmentOrMeshId,
     segmentStatsTriggerDate,
@@ -237,19 +238,22 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
       ),
     );
 
-    infoRows.push(
-      getInfoMenuItem(
-        "boundingBoxPositionInfo",
-        <Space size="small">
-          <Icon component={BoundingBoxIcon} />
-          {`Bounding Box: ${boundingBoxInfoLabel}`}
-          <CopyIconWithTooltip
-            value={boundingBoxInfoLabel}
-            label="Bbox top left point and extent"
-          />
-        </Space>,
-      ),
-    );
+    // Bounding boxes require a segment index; unlike volume and surface area they have no fallback.
+    if (isBoundingBoxAvailable) {
+      infoRows.push(
+        getInfoMenuItem(
+          "boundingBoxPositionInfo",
+          <Space size="small">
+            <Icon component={BoundingBoxIcon} />
+            {`Bounding Box: ${boundingBoxInfoLabel}`}
+            <CopyIconWithTooltip
+              value={boundingBoxInfoLabel}
+              label="Bbox top left point and extent"
+            />
+          </Space>,
+        ),
+      );
+    }
   }
 
   if (infoRows.length > 0) {

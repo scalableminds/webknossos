@@ -124,6 +124,8 @@ export function SegmentStatisticsModal({
     statisticsMag,
     boundingBoxMag,
     isBoundingBoxAvailable,
+    isVolumeAvailable,
+    isSurfaceAreaAvailable,
     availableFileMetrics,
     volumes,
     boundingBoxes,
@@ -294,7 +296,10 @@ export function SegmentStatisticsModal({
         csvHeaders: ["groupId", "groupName"],
         getCsvValues: (row) => [row.groupId ?? undefined, row.groupName],
       },
-      {
+    );
+
+    if (isVolumeAvailable) {
+      specs.push({
         key: "formattedSize",
         title: "Volume",
         dataIndex: "formattedSize",
@@ -302,8 +307,11 @@ export function SegmentStatisticsModal({
         isError: volumes.isError,
         csvHeaders: ["volumeInVoxel", `volumeIn${capitalizedUnit}3`],
         getCsvValues: (row) => [row.volumeInVoxel, row.volumeInUnit3],
-      },
-      {
+      });
+    }
+
+    if (isSurfaceAreaAvailable) {
+      specs.push({
         key: "formattedSurfaceArea",
         title: "Surface Area",
         dataIndex: "formattedSurfaceArea",
@@ -311,8 +319,8 @@ export function SegmentStatisticsModal({
         isError: surfaceAreas.isError,
         csvHeaders: [`surfaceAreaIn${capitalizedUnit}2`],
         getCsvValues: (row) => [row.surfaceAreaInUnit2],
-      },
-    );
+      });
+    }
 
     if (availableFileMetrics.maxDistance) {
       specs.push({
@@ -403,6 +411,8 @@ export function SegmentStatisticsModal({
     hasAdditionalCoords,
     availableFileMetrics,
     isBoundingBoxAvailable,
+    isVolumeAvailable,
+    isSurfaceAreaAvailable,
     volumes.isLoading,
     volumes.isError,
     surfaceAreas.isLoading,

@@ -133,8 +133,8 @@ export default function BoundingBoxSlidersButton({
         />
       ))}
       <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-        The slider range matches what's currently visible in the viewports. Zoom in or out to adjust
-        it.
+        The slider ranges depend on the regions that are visible in the viewport. Zoom in or out to adjust
+        it. You can press <Text keyboard>Alt</Text> and scroll in the viewports to zoom.
       </Typography.Text>
     </div>
   );

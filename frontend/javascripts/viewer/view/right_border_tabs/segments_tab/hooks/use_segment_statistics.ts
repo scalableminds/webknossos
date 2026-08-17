@@ -48,6 +48,8 @@ export type SegmentStatistics = {
   statisticsMag: Vector3;
   /** Bounding boxes are never in the statistics file and stay on the layer's finest mag. */
   boundingBoxMag: Vector3;
+  /** Bounding boxes can only be computed from a segment index; there is no fallback for them. */
+  isBoundingBoxAvailable: boolean;
   availableFileMetrics: AvailableFileMetrics;
   volumes: SegmentStatistic<number>;
   boundingBoxes: SegmentStatistic<SegmentBoundingBox>;
@@ -177,7 +179,9 @@ export function useSegmentStatistics({
         mappingName,
         await saveAndGetAnnotationVersion(),
       ),
-    enabled: isReady,
+    // Bounding boxes are computed from the segment index only; unlike volume and surface area they
+    // have neither a statistics-file source nor a fallback, so without one the route 404s.
+    enabled: isReady && isSegmentIndexAvailable,
     gcTime: 0,
   });
 
@@ -279,12 +283,13 @@ export function useSegmentStatistics({
 
   return {
     areSegmentStatisticsAvailable,
+    isBoundingBoxAvailable: isSegmentIndexAvailable,
     fileInfo,
     statisticsMag,
     boundingBoxMag,
     availableFileMetrics,
     volumes: toStatistic(volumes, isCoreRequested),
-    boundingBoxes: toStatistic(boundingBoxes, isCoreRequested),
+    boundingBoxes: toStatistic(boundingBoxes, isCoreRequested && isSegmentIndexAvailable),
     surfaceAreas: toStatistic(surfaceAreas, isCoreRequested),
     maxDistances: toStatistic(maxDistances, isReady && availableFileMetrics.maxDistance),
     sphericities: toStatistic(sphericities, isReady && availableFileMetrics.sphericity),

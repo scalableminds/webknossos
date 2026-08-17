@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.annotation
 
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.tracingstore.tracings.volume.BucketMutatingVolumeUpdateAction
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
@@ -23,13 +24,23 @@ class UpdateTimingStats {
       .map { case (name, count) => s"$name=$count" }
       .mkString(", ")
     val versions = updateGroups.map(_.version)
+    // Per-group breakdown of bucket-mutating (volume data) actions, to see whether they are spread
+    // across most groups or concentrated in a few — this matters for whether batching optimizations
+    // that operate across groups of one request would pay off.
+    val bucketMutatingActionCountsPerGroup: List[Int] = updateGroups.map(_.actions.count {
+      case _: BucketMutatingVolumeUpdateAction => true
+      case _                                   => false
+    })
+    val groupsWithBucketMutatingActions = bucketMutatingActionCountsPerGroup.count(_ > 0)
     requestShapeSummary = s"groups=${updateGroups.length}, " +
       s"transactions=${updateGroups.map(_.transactionId).distinct.length}, " +
       s"actions=${actions.length}, " +
       s"versions=${versions.minOption.getOrElse(0)}-${versions.maxOption.getOrElse(0)}, " +
       s"significantChanges=${updateGroups.map(_.significantChangesCount).sum}, " +
       s"viewChanges=${updateGroups.map(_.viewChangesCount).sum}, " +
-      s"actionTypes=[$actionTypeCounts]"
+      s"actionTypes=[$actionTypeCounts], " +
+      s"groupsWithBucketMutatingActions=$groupsWithBucketMutatingActions/${updateGroups.length}, " +
+      s"bucketMutatingActionsPerGroup=[${bucketMutatingActionCountsPerGroup.mkString(",")}]"
   }
 
   def count(key: String, by: Long = 1): Unit =

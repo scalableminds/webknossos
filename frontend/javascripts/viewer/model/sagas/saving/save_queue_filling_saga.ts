@@ -4,7 +4,7 @@
  * the proofreading saga is directly responsible for filling the queue.
  */
 import { buffers } from "redux-saga";
-import { actionChannel, call, flush, put, race, take } from "typed-redux-saga";
+import { actionChannel, call, flush, put, race, take, throttle } from "typed-redux-saga";
 import { mayAddToSaveQueue } from "viewer/model/accessors/annotation_accessor";
 import { selectTracing } from "viewer/model/accessors/tracing_accessor";
 import { FlycamActions } from "viewer/model/actions/flycam_actions";
@@ -49,11 +49,13 @@ export function* setupSavingForAnnotation(
   while (true) {
     let prevFlycam = yield* select((state) => state.flycam);
     let prevTdCamera = yield* select((state) => state.viewModeData.plane.tdCamera);
-    yield* take([
-      ...FlycamActions,
-      ...ViewModeSaveRelevantActions,
-      ...SkeletonTracingSaveRelevantActions,
-    ]);
+    yield* race({
+      flycam: throttle(1000, FlycamActions, function* (action) {
+        return action;
+      }),
+      other: take([...ViewModeSaveRelevantActions, ...SkeletonTracingSaveRelevantActions]),
+    });
+
     const shouldDiff = yield* select(mayAddToSaveQueue);
     if (!shouldDiff) {
       // Note that we completely ignore changes if adding to save queue

@@ -383,7 +383,7 @@ class SceneController {
         !V3.equals(storeMip.bbox.boundingBox.max, bb.max);
       if (bboxChanged) {
         this.rootNode.remove(volume.mesh);
-        volume.dispose();
+        this.deferUntilCompileReady(() => volume.dispose());
         this.mipVolumes.delete(bboxId);
       }
     }
@@ -450,7 +450,9 @@ class SceneController {
     skeletonTracingSelector: (arg0: WebknossosState) => SkeletonTracing | null,
     supportsPicking: boolean,
   ): number {
-    const skeleton = new Skeleton(skeletonTracingSelector, supportsPicking);
+    const skeleton = new Skeleton(skeletonTracingSelector, supportsPicking, (dispose) =>
+      this.deferUntilCompileReady(dispose),
+    );
     const skeletonGroup = skeleton.getRootGroup();
     this.skeletons[skeletonGroup.id] = skeleton;
     this.rootNode.add(skeletonGroup);
@@ -484,7 +486,7 @@ class SceneController {
           this.rootNode.remove(mesh);
         });
 
-        taskCube.destroy();
+        this.deferUntilCompileReady(() => taskCube.destroy());
       }
       this.taskCubeByTracingId[tracingId] = null;
     }
@@ -678,7 +680,7 @@ class SceneController {
 
   setUserBoundingBoxes(bboxes: Array<UserBoundingBox>): void {
     for (const cube of this.userBoundingBoxes) {
-      cube.destroy();
+      this.deferUntilCompileReady(() => cube.destroy());
     }
     const newUserBoundingBoxGroup = new Group();
     this.userBoundingBoxes = bboxes.map(({ boundingBox, isVisible, color, id }) => {
@@ -771,9 +773,12 @@ class SceneController {
     const layers = getDataLayers(dataset);
     const { layerBoundingBoxVisibilities, layerBoundingBoxColors } = state.temporaryConfiguration;
 
+    console.log("updateLayerBoundingBoxes")
+
     // Destroy the old cubes to free their geometries/materials (see setUserBoundingBoxes).
     if (this.layerBoundingBoxes != null) {
       for (const cube of Object.values(this.layerBoundingBoxes)) {
+        // this.deferUntilCompileReady(() => cube.destroy());
         cube.destroy();
       }
     }
@@ -906,7 +911,28 @@ class SceneController {
     ]);
   }
 
+  // Disposal of any three.js material/geometry/texture that might currently be part of a
+  // scene snapshot tracked by an in-flight renderer.compileAsync() call must go through this
+  // (rather than disposing directly), since compileAsync's polling loop crashes if a tracked
+  // material is disposed out from under it (see waitForPendingCompiles() above). This isn't
+  // only relevant at teardown: e.g. bounding box cubes get destroyed-and-recreated during
+  // completely normal operation (a mapping/segment-index finishing loading shortly after the
+  // annotation opened, while the very first compileAsync is still warming up shaders), so the
+  // guard has to live at the point of disposal, not just be sequenced once in destroy().
+  deferUntilCompileReady(dispose: () => void): void {
+    if (this.pendingCompilePromises.size === 0) {
+      dispose();
+      return;
+    }
+    this.waitForPendingCompiles().then(dispose);
+  }
+
   async destroy(): Promise<void> {
+    // Wait first, before any disposal below (including skeleton removal), since none of it
+    // is safe to run while a compileAsync poll for this SceneController's own materials is
+    // still in flight.
+    await this.waitForPendingCompiles();
+
     // @ts-expect-error
     window.addBucketMesh = undefined;
     // @ts-expect-error
@@ -933,8 +959,6 @@ class SceneController {
       volume.dispose();
     }
     this.mipVolumes.clear();
-
-    await this.waitForPendingCompiles();
 
     this.segmentMeshController.destroy();
 

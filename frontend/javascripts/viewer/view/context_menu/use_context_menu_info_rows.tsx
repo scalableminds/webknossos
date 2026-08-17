@@ -68,6 +68,8 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
     segmentSurfaceAreaLabel,
     areSegmentStatisticsAvailable: canLayerAnswerSegmentStatistics,
     isBoundingBoxAvailable,
+    isVolumeAvailable,
+    isSurfaceAreaAvailable,
   } = useSegmentStatisticsLabels(
     clickedSegmentOrMeshId,
     segmentStatsTriggerDate,
@@ -216,29 +218,34 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
   }
 
   if (areSegmentStatisticsAvailable && segmentStatsTriggerDate != null) {
-    infoRows.push(
-      getInfoMenuItem(
-        "surfaceInfo",
-        <Space size="small">
-          <i>m²</i>
-          {`Surface Area: ${segmentSurfaceAreaLabel}`}
-          <CopyIconWithTooltip value={segmentSurfaceAreaLabel} label="surface area" />
-        </Space>,
-      ),
-    );
+    // Each statistic is only shown when this layer can actually answer it — otherwise the row would
+    // be permanently stuck on an error message.
+    if (isSurfaceAreaAvailable) {
+      infoRows.push(
+        getInfoMenuItem(
+          "surfaceInfo",
+          <Space size="small">
+            <i>m²</i>
+            {`Surface Area: ${segmentSurfaceAreaLabel}`}
+            <CopyIconWithTooltip value={segmentSurfaceAreaLabel} label="surface area" />
+          </Space>,
+        ),
+      );
+    }
 
-    infoRows.push(
-      getInfoMenuItem(
-        "volumeInfo",
-        <Space size="small">
-          <i>m³</i>
-          {`Volume: ${segmentVolumeLabel}`}
-          <CopyIconWithTooltip value={segmentVolumeLabel} label="segment volume" />
-        </Space>,
-      ),
-    );
+    if (isVolumeAvailable) {
+      infoRows.push(
+        getInfoMenuItem(
+          "volumeInfo",
+          <Space size="small">
+            <i>m³</i>
+            {`Volume: ${segmentVolumeLabel}`}
+            <CopyIconWithTooltip value={segmentVolumeLabel} label="segment volume" />
+          </Space>,
+        ),
+      );
+    }
 
-    // Bounding boxes require a segment index; unlike volume and surface area they have no fallback.
     if (isBoundingBoxAvailable) {
       infoRows.push(
         getInfoMenuItem(

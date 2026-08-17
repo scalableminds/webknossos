@@ -12,6 +12,10 @@ export type AvailableFileMetrics = {
   sphericity: boolean;
   centerOfMass: boolean;
   covariance: boolean;
+  // Unlike the four above, these two also have non-file sources, so a false here does not mean the
+  // statistic is unavailable – only that this file cannot serve it.
+  volume: boolean;
+  surfaceArea: boolean;
 };
 
 const NO_METRICS: AvailableFileMetrics = {
@@ -19,6 +23,8 @@ const NO_METRICS: AvailableFileMetrics = {
   sphericity: false,
   centerOfMass: false,
   covariance: false,
+  volume: false,
+  surfaceArea: false,
 };
 
 /**
@@ -28,6 +34,9 @@ const NO_METRICS: AvailableFileMetrics = {
  * be served for a different mapping by recombining oversegmentation values – but only if the file
  * itself was computed without a mapping, and only if the arrays needed for that recombination are
  * present.
+ *
+ * Volume and surface area follow the same rules but are reported separately, because the backend can
+ * also serve them without a file — callers have to combine these flags with the other sources.
  *
  * The mag is deliberately not checked here: callers request the file's own mag, which the backend
  * always accepts.
@@ -54,6 +63,8 @@ export function getAvailableFileMetrics(
     covariance:
       has("covariance_matrix") &&
       (mappingMatches || (canRecombine && has("volumes") && has("center_of_mass"))),
+    volume: has("volumes") && (mappingMatches || canRecombine),
+    surfaceArea: has("surfaces") && mappingMatches,
   };
 }
 

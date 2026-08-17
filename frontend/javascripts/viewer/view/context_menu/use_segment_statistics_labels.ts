@@ -53,6 +53,8 @@ export function useSegmentStatisticsLabels(
   const {
     areSegmentStatisticsAvailable,
     isBoundingBoxAvailable,
+    isVolumeAvailable,
+    isSurfaceAreaAvailable,
     statisticsMag,
     boundingBoxMag,
     volumes,
@@ -89,5 +91,7 @@ export function useSegmentStatisticsLabels(
     segmentSurfaceAreaLabel,
     areSegmentStatisticsAvailable,
     isBoundingBoxAvailable,
+    isVolumeAvailable,
+    isSurfaceAreaAvailable,
   };
 }

@@ -102,6 +102,8 @@ describe("getAvailableFileMetrics", () => {
       sphericity: false,
       centerOfMass: false,
       covariance: false,
+      volume: false,
+      surfaceArea: false,
     });
   });
 
@@ -111,6 +113,8 @@ describe("getAvailableFileMetrics", () => {
       sphericity: true,
       centerOfMass: true,
       covariance: true,
+      volume: true,
+      surfaceArea: true,
     });
   });
 
@@ -122,6 +126,8 @@ describe("getAvailableFileMetrics", () => {
       sphericity: true,
       centerOfMass: true,
       covariance: true,
+      volume: true,
+      surfaceArea: true,
     });
   });
 
@@ -131,6 +137,9 @@ describe("getAvailableFileMetrics", () => {
       sphericity: false,
       centerOfMass: true,
       covariance: true,
+      // Volumes can be summed over the oversegmentation, surfaces cannot.
+      volume: true,
+      surfaceArea: false,
     });
   });
 
@@ -140,6 +149,8 @@ describe("getAvailableFileMetrics", () => {
       sphericity: false,
       centerOfMass: false,
       covariance: false,
+      volume: false,
+      surfaceArea: false,
     });
   });
 
@@ -172,6 +183,16 @@ describe("getAvailableFileMetrics", () => {
       sphericity: false,
       centerOfMass: false,
       covariance: false,
+      volume: true,
+      surfaceArea: true,
     });
+  });
+
+  it("should not report volume or surface area for a file that lacks those arrays", () => {
+    // These two are the only metrics the backend can also serve without a file, so callers have to
+    // combine these flags with segment index availability rather than treating false as "hidden".
+    expect(
+      getAvailableFileMetrics(fileInfo(["max_distances", "sphericities"]), null),
+    ).toMatchObject({ volume: false, surfaceArea: false });
   });
 });

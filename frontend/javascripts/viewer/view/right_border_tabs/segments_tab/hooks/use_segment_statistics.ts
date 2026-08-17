@@ -50,6 +50,10 @@ export type SegmentStatistics = {
   boundingBoxMag: Vector3;
   /** Bounding boxes can only be computed from a segment index; there is no fallback for them. */
   isBoundingBoxAvailable: boolean;
+  /** Either the statistics file holds volumes, or a segment index can be counted. */
+  isVolumeAvailable: boolean;
+  /** Either the statistics file holds surfaces, or a segment index can drive ad-hoc meshing. */
+  isSurfaceAreaAvailable: boolean;
   availableFileMetrics: AvailableFileMetrics;
   volumes: SegmentStatistic<number>;
   boundingBoxes: SegmentStatistic<SegmentBoundingBox>;
@@ -115,6 +119,18 @@ export function useSegmentStatistics({
 
   const areSegmentStatisticsAvailable = isSegmentIndexAvailable || fileInfo != null;
 
+  /*
+   * Which of the three fallback-capable statistics this layer can actually answer.
+   *
+   * Volume falls back to counting the segment index, and surface area to ad-hoc meshing, which
+   * itself walks the segment index. Without a segment index both fall back to nothing and the route
+   * 404s, so they must not be requested at all. (Ad-hoc meshing can also run from a seed position
+   * instead of a segment index, but the request body has no field to carry one, so that path is out
+   * of reach from here.)
+   */
+  const isVolumeAvailable = availableFileMetrics.volume || isSegmentIndexAvailable;
+  const isSurfaceAreaAvailable = availableFileMetrics.surfaceArea || isSegmentIndexAvailable;
+
   const layerSourceInfo: LayerSourceInfo | null = useMemo(
     () =>
       layer == null
@@ -164,7 +180,7 @@ export function useSegmentStatistics({
         mappingName,
         await saveAndGetAnnotationVersion(),
       ),
-    enabled: isReady,
+    enabled: isReady && isVolumeAvailable,
     gcTime: 0,
   });
 
@@ -197,7 +213,7 @@ export function useSegmentStatistics({
         mappingName,
         await saveAndGetAnnotationVersion(),
       ),
-    enabled: isReady,
+    enabled: isReady && isSurfaceAreaAvailable,
     gcTime: 0,
   });
 
@@ -284,13 +300,15 @@ export function useSegmentStatistics({
   return {
     areSegmentStatisticsAvailable,
     isBoundingBoxAvailable: isSegmentIndexAvailable,
+    isVolumeAvailable,
+    isSurfaceAreaAvailable,
     fileInfo,
     statisticsMag,
     boundingBoxMag,
     availableFileMetrics,
-    volumes: toStatistic(volumes, isCoreRequested),
+    volumes: toStatistic(volumes, isCoreRequested && isVolumeAvailable),
     boundingBoxes: toStatistic(boundingBoxes, isCoreRequested && isSegmentIndexAvailable),
-    surfaceAreas: toStatistic(surfaceAreas, isCoreRequested),
+    surfaceAreas: toStatistic(surfaceAreas, isCoreRequested && isSurfaceAreaAvailable),
     maxDistances: toStatistic(maxDistances, isReady && availableFileMetrics.maxDistance),
     sphericities: toStatistic(sphericities, isReady && availableFileMetrics.sphericity),
     centersOfMass: toStatistic(centersOfMass, isReady && availableFileMetrics.centerOfMass),

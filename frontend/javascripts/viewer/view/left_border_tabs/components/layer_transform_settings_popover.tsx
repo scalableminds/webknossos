@@ -74,11 +74,13 @@ function growLimitToFit(limit: number, value: number, increment: number): number
   if (!Number.isFinite(value) || increment <= 0) {
     return limit;
   }
-  let grownLimit = limit;
-  while (Math.abs(value) >= grownLimit) {
-    grownLimit += increment;
+  const magnitude = Math.abs(value);
+  if (magnitude < limit) {
+    return limit;
   }
-  return grownLimit;
+  // One extra increment keeps the value strictly inside the limit, as before.
+  const steps = Math.floor((magnitude - limit) / increment) + 1;
+  return limit + steps * increment;
 }
 
 // Grows the per-axis limits so that all values fit, using the default limits as the increment.

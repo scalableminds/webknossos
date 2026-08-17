@@ -7,7 +7,7 @@ import uniqWith from "lodash-es/uniqWith";
 import type { AdditionalCoordinate } from "types/api_types";
 import defaultState from "viewer/default_state";
 import { maybeGetSomeTracing } from "viewer/model/accessors/tracing_accessor";
-import { getDisplayedDataExtentInPlaneMode } from "viewer/model/accessors/view_mode_accessor";
+import { getExtentForNewBoundingBox } from "viewer/model/accessors/view_mode_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import { updateKey, updateKey2 } from "viewer/model/helpers/deep_update";
 import type { MeshInformation, UserBoundingBox, WebknossosState } from "viewer/store";
@@ -70,14 +70,28 @@ export const updateUserBoundingBox = (
     return state;
   }
 
-  const updatedUserBoundingBoxes = tracing.userBoundingBoxes.map((bbox) =>
-    bbox.id === action.id
-      ? {
-          ...bbox,
-          ...action.newProps,
+  const updatedUserBoundingBoxes = tracing.userBoundingBoxes.map((bbox) => {
+    if (bbox.id === action.id) {
+      const newBox = {
+        ...bbox,
+        ...action.newProps,
+      };
+      if ("boundingBox" in action.newProps) {
+        // If the boundingBox min/max properties were changed, ensure
+        // that these are integer. We can mutate the property in-place since it was
+        // created solely for the action.
+        if (newBox.boundingBox.min.some((el) => Math.floor(el) !== el)) {
+          newBox.boundingBox.min = V3.floor(newBox.boundingBox.min);
         }
-      : bbox,
-  );
+        if (newBox.boundingBox.max.some((el) => Math.floor(el) !== el)) {
+          newBox.boundingBox.max = V3.floor(newBox.boundingBox.max);
+        }
+      }
+      return newBox;
+    }
+
+    return bbox;
+  });
   return updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
 };
 
@@ -200,7 +214,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
       const { userBoundingBoxes } = tracing;
       const boundingBoxId = action.id;
 
-      const { min, max, halfBoxExtent } = getDisplayedDataExtentInPlaneMode(state);
+      const { min, max, halfBoxExtent } = getExtentForNewBoundingBox(state);
       const newBoundingBoxTemplate: UserBoundingBox = {
         boundingBox: {
           min,

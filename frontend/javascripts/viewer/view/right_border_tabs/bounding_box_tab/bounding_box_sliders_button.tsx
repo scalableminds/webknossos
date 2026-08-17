@@ -1,31 +1,32 @@
 import { SlidersOutlined } from "@ant-design/icons";
-import { Divider, Popover } from "antd";
+import { Divider, Popover, Typography } from "antd";
+import { useWkSelector } from "libs/react_hooks";
+import { clamp } from "libs/utils";
 import { useMemo } from "react";
 import type { Vector3, Vector6 } from "viewer/constants";
+import { getViewportBoundsInVoxel } from "viewer/model/accessors/view_mode_accessor";
 import type BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import ButtonComponent from "../../components/button_component";
 import NumberSliderSetting from "../../left_border_tabs/components/number_slider_setting";
 
 const POSITION_LABELS = ["X", "Y", "Z"] as const;
 const SIZE_LABELS = ["Width", "Height", "Depth"] as const;
-// Ensures the position/size sliders always span a usable range around the current
-// value, even for tiny bounding boxes or ones whose size already matches the dataset
-// extent (where the naive range would otherwise collapse to a single point).
-const MINIMUM_SLIDER_PADDING = 100;
 
-// The slider should only cover a small area around the current position (rather than
-// e.g. the entire dataset), so that dragging it allows for fine-grained adjustments.
-// The range is clamped to the dataset bounds, but never excludes the current value
-// (which could already lie outside the dataset, or have a zero-size dataset extent).
+// The slider range matches the [viewportMin, viewportMax] that is currently visible along that
+// axis in the viewports (see getViewportBoundsInVoxel), rather than a fixed number: zooming in
+// shrinks the range for fine-grained adjustments, zooming out grows it, and the full slider
+// motion always stays observable on screen. The range is clamped to the dataset bounds, and the
+// current value is never excluded (which could otherwise happen if the box already lies outside
+// the dataset or the viewport).
 function getPositionSliderRange(
   current: number,
-  _extent: number,
+  viewportMin: number,
+  viewportMax: number,
   datasetMin: number,
   datasetMax: number,
 ): { min: number; max: number } {
-  const halfRange = 500; // Math.min(500, Math.max(extent, 1));
-  const min = Math.min(current - MINIMUM_SLIDER_PADDING, Math.max(datasetMin, current - halfRange));
-  const max = Math.max(current + MINIMUM_SLIDER_PADDING, Math.min(datasetMax, current + halfRange));
+  const min = Math.min(current, clamp(datasetMin, viewportMin, datasetMax));
+  const max = Math.max(current, clamp(datasetMin, viewportMax, datasetMax));
   return { min, max };
 }
 
@@ -52,17 +53,20 @@ export default function BoundingBoxSlidersButton({
     [value],
   );
 
+  const viewportBounds = useWkSelector(getViewportBoundsInVoxel);
+
   const positionSliderRanges = useMemo(
     () =>
       [0, 1, 2].map((dim) =>
         getPositionSliderRange(
           boundingBoxMin[dim],
-          boundingBoxSize[dim],
+          viewportBounds.min[dim],
+          viewportBounds.max[dim],
           datasetBoundingBox.min[dim],
           datasetBoundingBox.max[dim],
         ),
       ),
-    [boundingBoxMin, boundingBoxSize, datasetBoundingBox],
+    [boundingBoxMin, viewportBounds, datasetBoundingBox],
   );
   const datasetExtent = datasetBoundingBox.getSize();
 
@@ -91,6 +95,7 @@ export default function BoundingBoxSlidersButton({
           onChange={(newValue) => handlePositionSliderChange(dim, newValue)}
           wheelFactor={0.05}
           spans={[1, 18, 5]}
+          step={1}
         />
       ))}
       <Divider style={{ margin: "8px 0" }} />
@@ -100,13 +105,21 @@ export default function BoundingBoxSlidersButton({
           key={`size-${label}`}
           label={label}
           min={1}
-          max={Math.max(datasetExtent[dim], MINIMUM_SLIDER_PADDING + boundingBoxSize[dim])}
+          max={Math.max(
+            Math.min(viewportBounds.max[dim] - viewportBounds.min[dim], datasetExtent[dim]),
+            boundingBoxSize[dim],
+          )}
           value={boundingBoxSize[dim]}
           onChange={(newValue) => handleSizeSliderChange(dim, newValue)}
           wheelFactor={0.05}
           spans={[4, 15, 5]}
+          step={1}
         />
       ))}
+      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+        The slider range matches what's currently visible in the viewports. Zoom in or out to adjust
+        it.
+      </Typography.Text>
     </div>
   );
 

@@ -19,6 +19,7 @@ import {
   extractPivotFromTransforms,
   extractSRTFromTransforms,
   hasValidLiveTransformationPattern,
+  rebaseTranslationToPivot,
   type SRTValues,
 } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { setLayerTransformsAction } from "viewer/model/actions/dataset_actions";
@@ -28,18 +29,36 @@ import { niceStep, reanchorWindow, type SliderWindow } from "./layer_transform_s
 // Fetches the dataset from the backend and extracts the stored SRT values for a single layer.
 // isValid is false when the layer has no transforms or transforms incompatible with this editor.
 // The dataset is fetched from the backend rather than read from the store, because the store's
-// dataSource may already contain unsaved, locally mutated transforms.
+// dataSource may already contain unsaved, locally mutated transforms. The pivot the values are
+// expressed around is returned as well, so that they can be rebased onto the editor's pivot.
 async function fetchStoredSRTForLayer(
   datasetId: string,
   layerName: string,
-): Promise<{ srt: SRTValues; isValid: boolean }> {
+): Promise<{ srt: SRTValues; isValid: boolean; pivot: Vector3 | null }> {
   const backendDataset = await getDataset(datasetId);
   const backendLayer = backendDataset.dataSource.dataLayers.find((l) => l.name === layerName);
   const stored = backendLayer?.coordinateTransformations ?? null;
   if (stored != null && hasValidLiveTransformationPattern(stored)) {
-    return { srt: extractSRTFromTransforms(stored), isValid: true };
+    return {
+      srt: extractSRTFromTransforms(stored),
+      isValid: true,
+      pivot: extractPivotFromTransforms(stored),
+    };
   }
-  return { srt: DEFAULT_SRT, isValid: false };
+  return { srt: DEFAULT_SRT, isValid: false, pivot: null };
+}
+
+// Expresses the SRT values around the given pivot. Only the translation changes; the layer stays
+// exactly where it is. fromPivot may be null for values that carry no pivot of their own.
+function withRebasedTranslation(
+  srt: SRTValues,
+  fromPivot: Vector3 | null,
+  toPivot: Vector3,
+): SRTValues {
+  if (fromPivot == null) {
+    return srt;
+  }
+  return { ...srt, translation: rebaseTranslationToPivot(srt, fromPivot, toPivot) };
 }
 
 const SCALE_MIN = 0.0001;
@@ -287,23 +306,18 @@ export function LayerTransformSettingsContent({
 
   const isCompatible = useMemo(() => hasValidLiveTransformationPattern(transforms), [transforms]);
 
-  // The point that scaling and rotation happen around. New transforms pivot around the center of
-  // the layer itself, so that a layer rotates in place instead of orbiting the dataset center.
-  // Transforms that already exist keep the pivot they were stored with, so that editing a layer
-  // which was configured before this behavior changed does not make it jump.
+  // The point that scaling and rotation happen around. This is always the center of the layer
+  // itself, so that a layer rotates in place instead of orbiting some other point. Transforms that
+  // were stored with a different pivot (e.g. the dataset center, which this editor used to write)
+  // are rebased onto this pivot, which changes the translation but not the resulting transform.
   const pivot = useMemo(() => {
-    const storedPivot =
-      transforms != null && isCompatible ? extractPivotFromTransforms(transforms) : null;
-    if (storedPivot != null) {
-      return storedPivot;
-    }
     try {
       return getLayerBoundingBox(dataset, layer.name).getCenter();
     } catch {
       // getLayerBoundingBox throws for layers that are not part of the dataset's data source.
       return datasetBbox.getCenter();
     }
-  }, [transforms, isCompatible, dataset, layer.name, datasetBbox]);
+  }, [dataset, layer.name, datasetBbox]);
 
   // The stored SRT values are the "default" baseline saved in the backend that the reset buttons
   // restore to. They are fetched lazily once the popover becomes visible.
@@ -316,12 +330,24 @@ export function LayerTransformSettingsContent({
     queryFn: () => fetchStoredSRTForLayer(dataset.id, layer.name),
     enabled: isVisible,
   });
-  const storedSRT = storedSRTResult?.srt ?? DEFAULT_SRT;
+  // The stored values are rebased onto the current pivot too, so that the reset buttons restore the
+  // layer to exactly the stored state instead of moving it.
+  const storedSRT = useMemo(
+    () =>
+      storedSRTResult == null
+        ? DEFAULT_SRT
+        : withRebasedTranslation(storedSRTResult.srt, storedSRTResult.pivot, pivot),
+    [storedSRTResult, pivot],
+  );
 
   const srtFromStore = useMemo((): SRTValues => {
     if (!transforms || transforms.length === 0) return DEFAULT_SRT;
-    return extractSRTFromTransforms(transforms);
-  }, [transforms]);
+    return withRebasedTranslation(
+      extractSRTFromTransforms(transforms),
+      extractPivotFromTransforms(transforms),
+      pivot,
+    );
+  }, [transforms, pivot]);
 
   // The scaling range adapts to the values in use: committing a value at the end of a slider extends
   // its range, so that the user can go further. The range is only extended once a value is actually
@@ -385,13 +411,13 @@ export function LayerTransformSettingsContent({
       Toast.error("Failed to fetch stored transforms. Please try again.");
       return;
     }
-    handleChange(data.srt);
+    handleChange(withRebasedTranslation(data.srt, data.pivot, pivot));
     if (!data.isValid) {
       Toast.info(
         "Restored to default transforms as transforms in the backend are incompatible with the Live Transforms editor.",
       );
     }
-  }, [refetchStoredSRT, handleChange]);
+  }, [refetchStoredSRT, handleChange, pivot]);
 
   const handleSaveForAllUsers = useCallback(async () => {
     setIsSaving(true);
@@ -411,6 +437,7 @@ export function LayerTransformSettingsContent({
       queryClient.setQueryData(["storedLayerSRT", dataset.id, layer.name], {
         srt: extractSRTFromTransforms(transforms),
         isValid: true,
+        pivot: extractPivotFromTransforms(transforms),
       });
       Toast.success("Layer transforms saved for all users.");
     } catch (e) {

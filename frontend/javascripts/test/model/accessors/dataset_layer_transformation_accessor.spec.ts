@@ -7,6 +7,8 @@ import {
   extractPivotFromTransforms,
   extractSRTFromTransforms,
   hasValidLiveTransformationPattern,
+  rebaseTranslationToPivot,
+  type SRTValues,
 } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { transformPointUnscaled } from "viewer/model/helpers/transformation_helpers";
 import { describe, expect, it } from "vitest";
@@ -83,6 +85,129 @@ describe("Live layer transforms", () => {
     ];
     almostEqual(expect, transformPoint(withPivot, point), expected, EPSILON);
     almostEqual(expect, transformPoint(withoutPivot, point), expected, EPSILON);
+  });
+
+  it("should rebase the pivot without changing the resulting transform", () => {
+    // Covers the composite-equality requirement: the two chains must agree as maps, including for
+    // a rotation that is not aligned with the (non-uniform) scale axes.
+    const srt: SRTValues = {
+      scale: [2, 0.5, 3],
+      rotation: [17, 231, 94],
+      translation: [10, -20, 30],
+    };
+    const oldPivot: Vector3 = [1000, 2000, 3000];
+    const newPivot: Vector3 = [-40, 15, 700];
+
+    const rebased = {
+      ...srt,
+      translation: rebaseTranslationToPivot(srt, oldPivot, newPivot),
+    };
+    const before = combineCoordinateTransformations(
+      buildLiveTransforms(srt.scale, srt.rotation, srt.translation, oldPivot),
+      [1, 1, 1],
+    );
+    const after = combineCoordinateTransformations(
+      buildLiveTransforms(rebased.scale, rebased.rotation, rebased.translation, newPivot),
+      [1, 1, 1],
+    );
+
+    for (const point of [[0, 0, 0], [1, 2, 3], oldPivot, newPivot, [-512, 4096, 77]] as Vector3[]) {
+      almostEqual(
+        expect,
+        transformPointUnscaled(before)(point),
+        transformPointUnscaled(after)(point),
+        1e-6,
+      );
+    }
+  });
+
+  it("should preserve the composite transform for randomized parameters", () => {
+    // Deterministic pseudo random numbers, so that a failure is always reproducible.
+    let seed = 20260817;
+    const random = (min: number, max: number) => {
+      seed = (seed * 1103515245 + 12345) % 2147483648;
+      return min + (seed / 2147483648) * (max - min);
+    };
+    const randomVector = (min: number, max: number): Vector3 => [
+      random(min, max),
+      random(min, max),
+      random(min, max),
+    ];
+
+    for (let run = 0; run < 50; run++) {
+      const srt: SRTValues = {
+        scale: randomVector(0.1, 5),
+        rotation: randomVector(0, 360),
+        translation: randomVector(-500, 500),
+      };
+      const oldPivot = randomVector(-5000, 5000);
+      const newPivot = randomVector(-5000, 5000);
+
+      const before = combineCoordinateTransformations(
+        buildLiveTransforms(srt.scale, srt.rotation, srt.translation, oldPivot),
+        [1, 1, 1],
+      );
+      const after = combineCoordinateTransformations(
+        buildLiveTransforms(
+          srt.scale,
+          srt.rotation,
+          rebaseTranslationToPivot(srt, oldPivot, newPivot),
+          newPivot,
+        ),
+        [1, 1, 1],
+      );
+
+      for (const point of [randomVector(-1000, 1000), oldPivot, newPivot]) {
+        almostEqual(
+          expect,
+          transformPointUnscaled(before)(point),
+          transformPointUnscaled(after)(point),
+          1e-6,
+        );
+      }
+    }
+  });
+
+  it("should leave the translation untouched when the pivot does not change", () => {
+    const srt: SRTValues = { scale: [2, 3, 4], rotation: [10, 20, 30], translation: [5, 6, 7] };
+
+    expect(rebaseTranslationToPivot(srt, PIVOT, PIVOT)).toEqual([5, 6, 7]);
+  });
+
+  it("should leave the translation untouched for a pure translation", () => {
+    // With an identity linear part the pivot is irrelevant.
+    const srt: SRTValues = { scale: [1, 1, 1], rotation: [0, 0, 0], translation: [5, 6, 7] };
+
+    almostEqual(expect, rebaseTranslationToPivot(srt, [1, 2, 3], [400, -5, 60]), [5, 6, 7], 1e-9);
+  });
+
+  it("should yield (I - A) * p for the classic offset case", () => {
+    // t = 0 and the new pivot at the origin, with a pure scaling: t' = p - A p = p * (1 - scale).
+    const srt: SRTValues = { scale: [3, 3, 3], rotation: [0, 0, 0], translation: [0, 0, 0] };
+    const p: Vector3 = [100, 200, 300];
+
+    almostEqual(expect, rebaseTranslationToPivot(srt, p, [0, 0, 0]), [-200, -400, -600], 1e-9);
+  });
+
+  it("should round-trip when rebasing back to the original pivot", () => {
+    const srt: SRTValues = { scale: [2, 0.5, 3], rotation: [17, 231, 94], translation: [1, 2, 3] };
+    const other: Vector3 = [-40, 15, 700];
+
+    const there = { ...srt, translation: rebaseTranslationToPivot(srt, PIVOT, other) };
+    const back = rebaseTranslationToPivot(there, other, PIVOT);
+
+    almostEqual(expect, back, srt.translation, 1e-9);
+  });
+
+  it("should handle a degenerate scale, where the linear part is singular", () => {
+    const srt: SRTValues = { scale: [0, 2, 2], rotation: [0, 0, 0], translation: [0, 0, 0] };
+    const p: Vector3 = [100, 200, 300];
+
+    const rebased = rebaseTranslationToPivot(srt, p, [0, 0, 0]);
+
+    // x is scaled by 0, so (I - A) p keeps the full 100 on that axis.
+    almostEqual(expect, rebased, [100, -200, -300], 1e-9);
+    expect(rebased.every((value) => Number.isFinite(value))).toBe(true);
   });
 
   it("should reject transform lists that do not match the editable pattern", () => {

@@ -732,6 +732,40 @@ export function extractPivotFromTransforms(transforms: CoordinateTransformation[
   return [-x, -y, -z];
 }
 
+// Returns the translation that expresses the same overall transform around a different pivot.
+//
+// The chain is T(pivot) * T(t) * R * S * T(-pivot), so as a point map it is
+//   M x = A (x - pivot) + pivot + t   with the linear part A = R * S.
+// A carries no pivot information, which is why the rotation and the scale stay untouched and the
+// whole difference is absorbed by the translation. Matching the total translation for a new pivot q
+//   (I - A) q + t' = (I - A) p + t
+// gives the result below. See docs in the spec: t' = t + (I - A)(p - q).
+export function rebaseTranslationToPivot(
+  srt: SRTValues,
+  oldPivot: Vector3,
+  newPivot: Vector3,
+): Vector3 {
+  const delta: Vector3 = [
+    oldPivot[0] - newPivot[0],
+    oldPivot[1] - newPivot[1],
+    oldPivot[2] - newPivot[2],
+  ];
+  if (delta[0] === 0 && delta[1] === 0 && delta[2] === 0) {
+    // Nothing to do. Returning early also keeps the values bit-for-bit identical.
+    return srt.translation;
+  }
+  // The linear part is taken from the very chain that buildLiveTransforms produces, so that this
+  // function cannot disagree with it about the rotation order or the matrix convention.
+  const chain = buildLiveTransforms(srt.scale, srt.rotation, [0, 0, 0], [0, 0, 0]);
+  const linearPart = combineCoordinateTransformations(chain.slice(1, 5), [1, 1, 1]);
+  const mappedDelta = transformPointUnscaled(linearPart)(delta);
+  return [
+    srt.translation[0] + delta[0] - mappedDelta[0],
+    srt.translation[1] + delta[1] - mappedDelta[1],
+    srt.translation[2] + delta[2] - mappedDelta[2],
+  ];
+}
+
 // Build the 7-matrix SRT transform array for a layer.
 // Order: pivot→origin, scale, rotX, rotY, rotZ, translation, origin→pivot
 export function buildLiveTransforms(

@@ -916,34 +916,28 @@ class DatasetMagDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
       organizationId: String,
       dataStoreId: String,
       datasetIdOpt: Option[ObjectId]
-  ): Fox[List[DataSourceMagRow]] =
+  ): Fox[Seq[DataSourceMagRow]] =
     for {
       storageRelevantMags <- run(q"""
-            WITH ranked AS (
-              SELECT
-                ds._id AS dataset_id, mag.dataLayerName, mag.mag, mag.path, mag.realPath, mag.hasLocalData,
-                ds._organization, ds._dataStore, ds.directoryName,
-                -- rn is the rank of the mags with the same path. It is used to deduplicate mags with the same path to
-                -- count each physical mag only once. Filtering is done below.
-                ROW_NUMBER() OVER (
-                  PARTITION BY COALESCE(mag.realPath, mag.path)
-                  ORDER BY ds.created ASC
-                ) AS rn
-              FROM webknossos.dataset_mags AS mag
-              JOIN webknossos.datasets AS ds
-                ON mag._dataset = ds._id
-            )
             SELECT
-              dataset_id, dataLayerName, mag, path, realPath, hasLocalData, _organization, directoryName
-            FROM ranked
-            -- Filter !after! grouping mags with the same path,
-            -- so mags shared between organizations are deduplicated properly using rn.
-            WHERE rn = 1
-              AND ranked._organization = $organizationId
-              AND ranked._dataStore = $dataStoreId
-              ${datasetIdOpt.map(datasetId => q"AND ranked.dataset_id = $datasetId").getOrElse(q"")};
+              ds._id, mag.dataLayerName, mag.mag, mag.path, mag.realPath, mag.hasLocalData,
+              ds._organization, ds.directoryName
+            FROM webknossos.dataset_mags AS mag
+            JOIN webknossos.datasets AS ds ON mag._dataset = ds._id
+            WHERE ds._organization = $organizationId
+              AND ds._dataStore = $dataStoreId
+              ${datasetIdOpt.map(datasetId => q"AND mag._dataset = $datasetId").getOrElse(q"")}
+              -- mags with neither path nor realPath are never storage relevant. Exclude explicitly to avoid effects of NULL
+              AND (mag.path IS NOT NULL OR mag.realPath IS NOT NULL)
+              AND NOT EXISTS ( -- omit mags already counted for other datasets (cross-orga)
+                SELECT 1
+                FROM webknossos.dataset_mags AS mag2
+                JOIN webknossos.datasets AS ds2 ON mag2._dataset = ds2._id
+                WHERE COALESCE(mag2.realPath, mag2.path) = COALESCE(mag.realPath, mag.path)
+                  AND (ds2.created < ds.created OR (ds2.created = ds.created AND ds2._id < ds._id))
+              );
             """.as[DataSourceMagRow])
-    } yield storageRelevantMags.toList
+    } yield storageRelevantMags
 
   def updateMags(datasetId: ObjectId, dataLayers: List[StaticLayer]): Fox[Unit] = {
     val clearQuery =
@@ -963,12 +957,29 @@ class DatasetMagDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
   // Note: also see attachments
   def updateMagRealPathsForDataset(datasetId: ObjectId, realPathInfos: Seq[RealPathInfo]): Fox[Unit] =
     for {
-      _ <- Fox.successful(())
-      updateQueries = realPathInfos.map(realPathInfo => q"""UPDATE webknossos.dataset_mags
+      // Reduce number of queries by checking what actually changed first.
+      currentRows <- run(
+        q"""SELECT path, realPath, hasLocalData
+            FROM webknossos.dataset_mags
+            WHERE _dataset = $datasetId""".as[(Option[String], Option[String], Boolean)]
+      )
+      currentByPath = currentRows.collect { case (Some(path), realPath, hasLocalData) =>
+        path -> (realPath, hasLocalData)
+      }.toMap
+      changedRealPathInfos = realPathInfos.filter { realPathInfo =>
+        currentByPath.get(realPathInfo.path.toString) match {
+          case Some((currentRealPath, currentHasLocalData)) =>
+            !currentRealPath.contains(
+              realPathInfo.realPath.toString
+            ) || currentHasLocalData != realPathInfo.hasLocalData
+          case None => false // No matching row exists, no UPDATE needed.
+        }
+      }
+      updateQueries = changedRealPathInfos.map(realPathInfo => q"""UPDATE webknossos.dataset_mags
             SET realPath = ${realPathInfo.realPath}, hasLocalData = ${realPathInfo.hasLocalData}
             WHERE _dataset = $datasetId
             AND path = ${realPathInfo.path}""".asUpdate)
-      _ <- runAsSerializableTransaction(updateQueries)
+      _ <- if (updateQueries.nonEmpty) runAsSerializableTransaction(updateQueries) else Fox.successful(())
     } yield ()
 
   implicit def GetResultDataSourceMagRow: GetResult[DataSourceMagRow] =
@@ -1443,12 +1454,27 @@ class DatasetLayerAttachmentDAO @Inject() (sqlClient: SqlClient)(implicit ec: Ex
   // Note: also see mags.
   def updateAttachmentRealPathsForDataset(datasetId: ObjectId, realPathInfos: Seq[RealPathInfo]): Fox[Unit] =
     for {
-      _ <- Fox.successful(())
-      updateQueries = realPathInfos.map(realPathInfo => q"""UPDATE webknossos.dataset_layer_attachments
+      // Reduce number of queries by checking what actually changed first.
+      currentRows <- run(
+        q"""SELECT path, realPath, hasLocalData
+            FROM webknossos.dataset_layer_attachments
+            WHERE _dataset = $datasetId""".as[(String, Option[String], Boolean)]
+      )
+      currentByPath = currentRows.map { case (path, realPath, hasLocalData) => path -> (realPath, hasLocalData) }.toMap
+      changedRealPathInfos = realPathInfos.filter { realPathInfo =>
+        currentByPath.get(realPathInfo.path.toString) match {
+          case Some((currentRealPath, currentHasLocalData)) =>
+            !currentRealPath.contains(
+              realPathInfo.realPath.toString
+            ) || currentHasLocalData != realPathInfo.hasLocalData
+          case None => false // No matching row exists, no UPDATE needed.
+        }
+      }
+      updateQueries = changedRealPathInfos.map(realPathInfo => q"""UPDATE webknossos.dataset_layer_attachments
             SET realPath = ${realPathInfo.realPath}, hasLocalData = ${realPathInfo.hasLocalData}
             WHERE _dataset = $datasetId
             AND path = ${realPathInfo.path}""".asUpdate)
-      _ <- runAsSerializableTransaction(updateQueries)
+      _ <- if (updateQueries.nonEmpty) runAsSerializableTransaction(updateQueries) else Fox.successful(())
     } yield ()
 
   def insertWithUploadToPathPending(
@@ -1620,33 +1646,24 @@ class DatasetLayerAttachmentDAO @Inject() (sqlClient: SqlClient)(implicit ec: Ex
       organizationId: String,
       dataStoreId: String,
       datasetIdOpt: Option[ObjectId]
-  ): Fox[List[StorageRelevantDataLayerAttachment]] =
+  ): Fox[Seq[StorageRelevantDataLayerAttachment]] =
     for {
       storageRelevantAttachments <- run(q"""
-          WITH ranked AS (
-            SELECT
-              att._dataset, att.layerName, att.name, att.path, att.type, ds._organization, ds._dataStore, ds.directoryName,
-              -- rn is the rank of the attachments with the same path. It is used to deduplicate attachments with the same path
-               -- to count each physical attachment only once. Filtering is done below.
-              ROW_NUMBER() OVER (
-                PARTITION BY COALESCE(att.realPath, att.path)
-                ORDER BY ds.created ASC
-              ) AS rn
-            FROM webknossos.dataset_layer_attachments AS att
-            JOIN webknossos.datasets AS ds
-              ON att._dataset = ds._id
-          )
-          SELECT
-            _dataset, layerName, name, path, type, _organization, directoryName
-          FROM ranked
-          -- Filter !after! grouping attachments with the same path,
-          -- so attachments shared between organizations are deduplicated properly using rn.
-          WHERE ranked.rn = 1
-            AND ranked._organization = $organizationId
-            AND ranked._dataStore = $dataStoreId
-            ${datasetIdOpt.map(datasetId => q"AND ranked._dataset = $datasetId").getOrElse(q"")};
+          SELECT att._dataset, att.layerName, att.name, att.path, att.type, ds._organization, ds.directoryName
+          FROM webknossos.dataset_layer_attachments AS att
+          JOIN webknossos.datasets AS ds ON att._dataset = ds._id
+          WHERE ds._organization = $organizationId
+            AND ds._dataStore = $dataStoreId
+            ${datasetIdOpt.map(datasetId => q"AND att._dataset = $datasetId").getOrElse(q"")}
+            AND NOT EXISTS ( -- omit mags already counted for other datasets (cross-orga)
+              SELECT 1
+              FROM webknossos.dataset_layer_attachments AS att2
+              JOIN webknossos.datasets AS ds2 ON att2._dataset = ds2._id
+              WHERE COALESCE(att2.realPath, att2.path) = COALESCE(att.realPath, att.path)
+                AND (ds2.created < ds.created OR (ds2.created = ds.created AND ds2._id < ds._id))
+            );
            """.as[StorageRelevantDataLayerAttachment])
-    } yield storageRelevantAttachments.toList
+    } yield storageRelevantAttachments
 
   // Note equivalent in DatasetMagsDAO
   def findAttachmentPathsUsedOnlyByThisDataset(datasetId: ObjectId): Fox[Seq[UPath]] =

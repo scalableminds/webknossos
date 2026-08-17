@@ -363,6 +363,8 @@ object Msg {
     val updateStatusFailed: String = "Could not update job status."
     val workerNotFound: String = "Could not find this worker in the database."
     val submitFailed: String = "Could not submit job."
+    val storageExceeded: String =
+      "Cannot start this job because the storage quota of the organization is exceeded, so its results could not be stored. Please free up storage or upgrade your plan."
     object TrainModel {
       val wrongOrga: String = "Training AI models is only allowed for datasets of your own organization."
       val submitFailed: String = "Could not start the AI model training job."

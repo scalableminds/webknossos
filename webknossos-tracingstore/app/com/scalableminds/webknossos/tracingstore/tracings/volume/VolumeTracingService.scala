@@ -205,13 +205,15 @@ class VolumeTracingService @Inject() (
           previousBucketBytes <- stats.time("volume.bufferGetWithFallback")(
             volumeBucketBuffer.getWithFallback(action.bucketPosition).shiftBox
           )
-          _ <- updateSegmentIndex(
-            volumeLayer,
-            segmentIndexBuffer,
-            action.bucketPosition,
-            actionBucketData,
-            previousBucketBytes,
-            editableMappingTracingId(volumeLayer.tracing, tracingId)
+          _ <- stats.time("volume.updateSegmentIndex")(
+            updateSegmentIndex(
+              volumeLayer,
+              segmentIndexBuffer,
+              action.bucketPosition,
+              actionBucketData,
+              previousBucketBytes,
+              editableMappingTracingId(volumeLayer.tracing, tracingId)
+            )
           ) ?~> "failed to update segment index"
         } yield ()
       }

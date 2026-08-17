@@ -67,7 +67,7 @@ class VolumeSegmentIndexService @Inject() (
       editableMappingTracingId: Option[String]
   )(implicit ec: ExecutionContext, stats: UpdateTimingStats): Fox[Unit] =
     for {
-      bucketBytesDecompressed <-
+      bucketBytesDecompressed <- stats.time("segmentIndex.decompress")(
         if (isRevertedElement(bucketBytes)) {
           Fox.successful(segmentIndexBuffer.emptyBucketArrayForElementClass)
         } else {
@@ -79,14 +79,19 @@ class VolumeSegmentIndexService @Inject() (
             )
           ).toFox
         }
+      )
       previousBucketBytesWithEmptyFallback <- segmentIndexBuffer
         .bytesWithEmptyFallback(previousBucketBytesBox)
         .toFox ?~> Msg.Annotation.Volume.SegmentIndex.updateGetPreviousBucketFailed
-      segmentIds: Set[Long] <- collectSegmentIds(bucketBytesDecompressed, volumeLayer.elementClass).toFox
-      previousSegmentIds: Set[Long] <- collectSegmentIds(
-        previousBucketBytesWithEmptyFallback,
-        volumeLayer.elementClass
-      ).toFox ?~> Msg.Annotation.Volume.SegmentIndex.updateCollectSegmentIdsFailed
+      segmentIds: Set[Long] <- stats.time("segmentIndex.collectSegmentIds")(
+        collectSegmentIds(bucketBytesDecompressed, volumeLayer.elementClass).toFox
+      )
+      previousSegmentIds: Set[Long] <- stats.time("segmentIndex.collectSegmentIds")(
+        collectSegmentIds(
+          previousBucketBytesWithEmptyFallback,
+          volumeLayer.elementClass
+        ).toFox
+      ) ?~> Msg.Annotation.Volume.SegmentIndex.updateCollectSegmentIdsFailed
       additions = segmentIds.diff(previousSegmentIds)
       removals = previousSegmentIds.diff(segmentIds)
       _ = stats.count("segmentIndex.additions", additions.size)

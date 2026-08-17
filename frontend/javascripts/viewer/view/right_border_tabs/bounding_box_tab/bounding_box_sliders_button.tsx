@@ -1,5 +1,6 @@
 import { SlidersOutlined } from "@ant-design/icons";
 import { Divider, Popover, Typography } from "antd";
+import Text from "antd/es/typography/Text";
 import { useWkSelector } from "libs/react_hooks";
 import { clamp } from "libs/utils";
 import { useMemo } from "react";
@@ -8,7 +9,6 @@ import { getViewportBoundsInVoxel } from "viewer/model/accessors/view_mode_acces
 import type BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import ButtonComponent from "../../components/button_component";
 import NumberSliderSetting from "../../left_border_tabs/components/number_slider_setting";
-import Text from "antd/es/typography/Text";
 
 const POSITION_LABELS = ["X", "Y", "Z"] as const;
 const SIZE_LABELS = ["Width", "Height", "Depth"] as const;
@@ -133,8 +133,8 @@ export default function BoundingBoxSlidersButton({
         />
       ))}
       <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-        The slider ranges depend on the regions that are visible in the viewport. Zoom in or out to adjust
-        it. You can press <Text keyboard>Alt</Text> and scroll in the viewports to zoom.
+        The slider ranges depend on the regions that are visible in the viewport. Zoom in or out to
+        adjust it. You can press <Text keyboard>Alt</Text> and scroll in the viewports to zoom.
       </Typography.Text>
     </div>
   );

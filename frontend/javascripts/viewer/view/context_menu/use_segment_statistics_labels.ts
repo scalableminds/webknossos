@@ -33,7 +33,7 @@ function formatStatistic<T>(statistic: SegmentStatistic<T>, format: (value: T) =
  * `segmentStatsTriggerDate` tracks.
  */
 export function useSegmentStatisticsLabels(
-  clickedSegmentOrMeshId: number,
+  clickedSegmentOrMeshId: bigint,
   segmentStatsTriggerDate: Date | null,
   contextMenuPosition: Readonly<[number, number]> | null | undefined,
   wasSegmentOrMeshClicked: boolean,

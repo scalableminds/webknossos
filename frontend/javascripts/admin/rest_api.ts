@@ -1020,7 +1020,7 @@ function fetchSegmentStatistic<T>(
   layerSourceInfo: LayerSourceInfo,
   route: string,
   mag: Vector3,
-  segmentIds: Array<number>,
+  segmentIds: Array<bigint>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
 ): Promise<T[]> {
@@ -1037,7 +1037,7 @@ function fetchSegmentStatistic<T>(
 export function getSegmentMaxDistances(
   layerSourceInfo: LayerSourceInfo,
   mag: Vector3,
-  segmentIds: Array<number>,
+  segmentIds: Array<bigint>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
 ): Promise<number[]> {
@@ -1055,7 +1055,7 @@ export function getSegmentMaxDistances(
 export function getSegmentSphericities(
   layerSourceInfo: LayerSourceInfo,
   mag: Vector3,
-  segmentIds: Array<number>,
+  segmentIds: Array<bigint>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
 ): Promise<number[]> {
@@ -1073,7 +1073,7 @@ export function getSegmentSphericities(
 export function getSegmentCentersOfMass(
   layerSourceInfo: LayerSourceInfo,
   mag: Vector3,
-  segmentIds: Array<number>,
+  segmentIds: Array<bigint>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
 ): Promise<Vector3[]> {
@@ -1091,7 +1091,7 @@ export function getSegmentCentersOfMass(
 export function getSegmentCovarianceMatrices(
   layerSourceInfo: LayerSourceInfo,
   mag: Vector3,
-  segmentIds: Array<number>,
+  segmentIds: Array<bigint>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
 ): Promise<SegmentCovarianceMatrix[]> {

@@ -60,7 +60,7 @@ export type SegmentStatistics = {
 
 type Options = {
   layer: APISegmentationLayer | null | undefined;
-  segmentIds: number[];
+  segmentIds: bigint[];
   /** Set to false to defer fetching, e.g. until the user asks for the statistics. */
   enabled?: boolean;
   /** Change this to force a refetch, e.g. for an explicit reload button. */

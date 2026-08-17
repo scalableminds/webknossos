@@ -8,7 +8,7 @@ import Toast from "libs/toast";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import type { APIDataLayer, APISkeletonLayer } from "types/api_types";
-import type { Vector3 } from "viewer/constants";
+import constants, { type Vector3 } from "viewer/constants";
 import {
   getLayerBoundingBox,
 } from "viewer/model/accessors/dataset_accessor";
@@ -70,6 +70,88 @@ function withRebasedTranslation(
 // SCALE_SLIDER_CONFIG.
 const SCALE_INPUT_STEP = 0.01;
 
+// Derives the step size and the visible range of the translation sliders from the current zoom.
+// state.flycam.zoomStep is base voxels per screen pixel, so one step corresponds to roughly one
+// pixel on screen at any zoom, and the window spans about one viewport worth of movement.
+// While isFrozen is set (i.e. a slider is being dragged), nothing is recomputed, so that the slider
+// never rescales under the cursor; the pending zoom is applied once the drag ends.
+function useZoomAdaptiveTranslationScaling(
+  translationRef: React.RefObject<Vector3>,
+  layerName: string,
+  isFrozen: boolean,
+) {
+  const zoomStep = useWkSelector((state) => state.flycam.zoomStep);
+  const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
+  // Per-axis voxels per screen pixel. The base voxel factors account for anisotropic voxel sizes,
+  // so that a dataset with thick z slices gets a correspondingly smaller z step.
+  const [factorX, factorY, factorZ] = getBaseVoxelFactorsInUnit(voxelSize);
+
+  const steps = useMemo(
+    () =>
+      [factorX, factorY, factorZ].map((factor) =>
+        niceStep(zoomStep * factor),
+      ) as unknown as Vector3,
+    [zoomStep, factorX, factorY, factorZ],
+  );
+  const widths = useMemo(
+    () =>
+      [factorX, factorY, factorZ].map(
+        (factor) => constants.VIEWPORT_WIDTH * zoomStep * factor,
+      ) as unknown as Vector3,
+    [zoomStep, factorX, factorY, factorZ],
+  );
+
+  const [windows, setWindows] = useState<SliderWindow[]>(() =>
+    AXES.map((axis) =>
+      reanchorWindow(null, translationRef.current[axis], widths[axis], steps[axis]),
+    ),
+  );
+
+  // Recentering on a layer switch, rather than keeping the previous layer's handle position.
+  const lastLayerRef = useRef(layerName);
+
+  useEffect(() => {
+    if (isFrozen) {
+      return;
+    }
+    const isNewLayer = lastLayerRef.current !== layerName;
+    lastLayerRef.current = layerName;
+    setWindows((previous) =>
+      AXES.map((axis) =>
+        reanchorWindow(
+          isNewLayer ? null : (previous[axis] ?? null),
+          translationRef.current[axis],
+          widths[axis],
+          steps[axis],
+        ),
+      ),
+    );
+  }, [widths, steps, isFrozen, layerName, translationRef]);
+
+  // Once a value is committed at the very edge of the window, slide the window so that the value is
+  // centered again. Without this the user could not keep dragging in the same direction.
+  const recenterIfAtEdge = useCallback(
+    (axis: 0 | 1 | 2, value: number) => {
+      setWindows((previous) => {
+        const current = previous[axis];
+        if (current == null) {
+          return previous;
+        }
+        const isAtEdge = value <= current.min + steps[axis] || value >= current.max - steps[axis];
+        if (!isAtEdge) {
+          return previous;
+        }
+        const next = [...previous];
+        next[axis] = reanchorWindow(null, value, current.max - current.min, steps[axis]);
+        return next;
+      });
+    },
+    [steps],
+  );
+
+  return { steps, windows, recenterIfAtEdge };
+}
+
 function SectionLabel({ children }: { children: ReactNode }) {
   return (
     <Typography.Title level={5} style={{ marginBottom: 4 }}>
@@ -95,6 +177,9 @@ type AxisSliderRowProps = {
   // Called once a value is actually committed, i.e. the slider is released or the number input is
   // confirmed – as opposed to onChange, which also fires continuously while dragging.
   onCommit?: (v: number) => void;
+  // Reports whether the slider (not the number input) is currently being dragged, so that callers
+  // can keep the slider's range stable for the duration of the drag.
+  onDraggingChange?: (isDragging: boolean) => void;
   resetDisabled: boolean;
   // Custom reset handler. Defaults to onChange(storedValue); used when resetting the row needs to
   // restore more than the displayed value (e.g. the rotation row also restores the flip sign).
@@ -257,13 +342,10 @@ export function LayerTransformSettingsContent({
     [viewportExtent],
   );
 
-  // The slider ranges adapt to the values in use: committing a value at the end of a slider extends
+  // The scaling range adapts to the values in use: committing a value at the end of a slider extends
   // its range, so that the user can go further. The range is only extended once a value is actually
   // committed (the slider is released or the number input is confirmed) and never while dragging,
   // so that the slider does not rescale under the cursor.
-  const [translationLimits, setTranslationLimits] = useState<Vector3>(() =>
-    growLimitsToFit(defaultTranslationLimits, srtFromStore.translation, defaultTranslationLimits),
-  );
   const [scaleMaxima, setScaleMaxima] = useState<Vector3>(() =>
     growLimitsToFit(DEFAULT_SCALE_MAXIMA, srtFromStore.scale, DEFAULT_SCALE_MAXIMA),
   );
@@ -271,41 +353,36 @@ export function LayerTransformSettingsContent({
   // Values are read through a ref so that refitting does not re-run on every slider movement.
   const srtRef = useRef(srtFromStore);
   srtRef.current = srtFromStore;
+  const translationRef = useRef(srtFromStore.translation);
+  translationRef.current = srtFromStore.translation;
+
+  // The translation sliders follow the zoom instead of the dataset extent, see the hook.
+  const [isDraggingSlider, setIsDraggingSlider] = useState(false);
+  const {
+    steps: translationSteps,
+    windows: translationWindows,
+    recenterIfAtEdge,
+  } = useZoomAdaptiveTranslationScaling(translationRef, layer.name, isDraggingSlider);
 
   // Refit when the edited layer changes, so that values stored outside the default range are shown
   // correctly instead of appearing clamped to the end of the slider.
   useEffect(() => {
-    setTranslationLimits(
-      growLimitsToFit(
-        defaultTranslationLimits,
-        srtRef.current.translation,
-        defaultTranslationLimits,
-      ),
-    );
     setScaleMaxima(
       growLimitsToFit(DEFAULT_SCALE_MAXIMA, srtRef.current.scale, DEFAULT_SCALE_MAXIMA),
     );
-  }, [layer.name, defaultTranslationLimits]);
+  }, [layer.name]);
 
-  const growLimitForAxis = useCallback(
-    (
-      setLimits: typeof setTranslationLimits,
-      defaultLimits: Vector3,
-      axis: 0 | 1 | 2,
-      value: number,
-    ) => {
-      setLimits((limits) => {
-        const grown = growLimitToFit(limits[axis], value, defaultLimits[axis]);
-        if (grown === limits[axis]) {
-          return limits;
-        }
-        const newLimits = [...limits] as Vector3;
-        newLimits[axis] = grown;
-        return newLimits;
-      });
-    },
-    [],
-  );
+  const growScaleMaximumForAxis = useCallback((axis: 0 | 1 | 2, value: number) => {
+    setScaleMaxima((maxima) => {
+      const grown = growLimitToFit(maxima[axis], value, DEFAULT_SCALE_MAXIMA[axis]);
+      if (grown === maxima[axis]) {
+        return maxima;
+      }
+      const newMaxima = [...maxima] as Vector3;
+      newMaxima[axis] = grown;
+      return newMaxima;
+    });
+  }, []);
 
   const handleChange = useCallback(
     (newSRT: SRTValues) => {

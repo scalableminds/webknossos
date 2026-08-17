@@ -96,10 +96,10 @@ class VolumeSegmentIndexService @Inject() (
       removals = previousSegmentIds.diff(segmentIds)
       _ = stats.count("segmentIndex.additions", additions.size)
       _ = stats.count("segmentIndex.removals", removals.size)
+      // When fallback layer is used we also need to include relevant segments here into the fossildb since otherwise the fallback layer would be used with invalid data
       _ <- stats.time("segmentIndex.removeBucket")(
-        Fox.serialCombined(removals.toList)(segmentId =>
-          // When fallback layer is used we also need to include relevant segments here into the fossildb since otherwise the fallback layer would be used with invalid data
-          removeBucketFromSegmentIndex(segmentIndexBuffer, segmentId, bucketPosition, editableMappingTracingId)
+        Fox.runIf(removals.nonEmpty)(
+          removeBucketFromSegmentIndex(segmentIndexBuffer, removals.toList, bucketPosition, editableMappingTracingId)
         )
       ) ?~> Msg.Annotation.Volume.SegmentIndex.updateRemoveBucketFailed
       // When fallback layer is used, copy the entire bucketlist for this segment instead of one bucket
@@ -112,26 +112,29 @@ class VolumeSegmentIndexService @Inject() (
 
   private def removeBucketFromSegmentIndex(
       segmentIndexBuffer: VolumeSegmentIndexBuffer,
-      segmentId: Long,
+      segmentIds: List[Long],
       bucketPosition: BucketPosition,
       editableMappingTracingId: Option[String]
   )(implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      previousBucketPositions: Set[Vec3IntProto] <- segmentIndexBuffer.getOne(
-        segmentId,
+      previousBucketPositionsBySegment: Seq[(Long, Set[Vec3IntProto])] <- segmentIndexBuffer.getMultiple(
+        segmentIds,
         bucketPosition.mag,
         editableMappingTracingId,
+        None, // use newest version
         bucketPosition.additionalCoordinates
       )
       bucketPositionProto = bucketPosition.toVec3IntProto
-      newBucketPositions = previousBucketPositions - bucketPositionProto
-      _ = segmentIndexBuffer.put(
-        segmentId,
-        bucketPosition.mag,
-        bucketPosition.additionalCoordinates,
-        newBucketPositions,
-        markAsChanged = true
-      )
+      _ = previousBucketPositionsBySegment.foreach { case (segmentId, previousBucketPositions) =>
+        val newBucketPositions = previousBucketPositions - bucketPositionProto
+        segmentIndexBuffer.put(
+          segmentId,
+          bucketPosition.mag,
+          bucketPosition.additionalCoordinates,
+          newBucketPositions,
+          markAsChanged = true
+        )
+      }
     } yield ()
 
   private def addBucketToSegmentIndex(

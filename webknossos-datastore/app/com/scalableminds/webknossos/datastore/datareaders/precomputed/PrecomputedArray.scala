@@ -97,7 +97,7 @@ class PrecomputedArray(
       chunkRange <- getChunkRange(
         chunkIdentifier,
         minishardIndex
-      ) ?~> s"Could not get chunk range for chunkIndex ${chunkIndex
+      ) ?-> s"Could not get chunk range for chunkIndex ${chunkIndex
           .mkString(",")}  with chunkIdentifier $chunkIdentifier in minishard index."
     } yield (shardPath, chunkRange)
   }

@@ -12,20 +12,25 @@ import NumberSliderSetting from "../../left_border_tabs/components/number_slider
 const POSITION_LABELS = ["X", "Y", "Z"] as const;
 const SIZE_LABELS = ["Width", "Height", "Depth"] as const;
 
-// The slider range matches the [viewportMin, viewportMax] that is currently visible along that
-// axis in the viewports (see getViewportBoundsInVoxel), rather than a fixed number: zooming in
-// shrinks the range for fine-grained adjustments, zooming out grows it, and the full slider
-// motion always stays observable on screen. The range is clamped to the dataset bounds, and the
-// current value is never excluded (which could otherwise happen if the box already lies outside
-// the dataset or the viewport).
+// The slider moves boundingBoxMin while keeping the box's size fixed, so boundingBoxMax moves
+// along with it. The slider range matches the [viewportMin, viewportMax] that is currently
+// visible along that axis in the viewports (see getViewportBoundsInVoxel), rather than a fixed
+// number: zooming in shrinks the range for fine-grained adjustments, zooming out grows it, and
+// the full slider motion always stays observable on screen. The lower bound is shifted down by
+// `size` so that boundingBoxMax (not just boundingBoxMin) can be dragged below viewportMin,
+// letting the box be pushed fully out of view on that side too, symmetric to the upper bound
+// (where boundingBoxMin reaching viewportMax already pushes the whole box out on that side).
+// The range is clamped to the dataset bounds, and the current value is never excluded (which
+// could otherwise happen if the box already lies outside the dataset or the viewport).
 function getPositionSliderRange(
   current: number,
+  size: number,
   viewportMin: number,
   viewportMax: number,
   datasetMin: number,
   datasetMax: number,
 ): { min: number; max: number } {
-  const min = Math.min(current, clamp(datasetMin, viewportMin, datasetMax));
+  const min = Math.min(current, clamp(datasetMin, viewportMin - size, datasetMax));
   const max = Math.max(current, clamp(datasetMin, viewportMax, datasetMax));
   return { min, max };
 }
@@ -60,13 +65,14 @@ export default function BoundingBoxSlidersButton({
       [0, 1, 2].map((dim) =>
         getPositionSliderRange(
           boundingBoxMin[dim],
+          boundingBoxSize[dim],
           viewportBounds.min[dim],
           viewportBounds.max[dim],
           datasetBoundingBox.min[dim],
           datasetBoundingBox.max[dim],
         ),
       ),
-    [boundingBoxMin, viewportBounds, datasetBoundingBox],
+    [boundingBoxMin, boundingBoxSize, viewportBounds, datasetBoundingBox],
   );
   const datasetExtent = datasetBoundingBox.getSize();
 

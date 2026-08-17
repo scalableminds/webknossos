@@ -370,8 +370,8 @@ function _getViewportBoundsInVoxel(state: WebknossosState): { min: Vector3; max:
   const center = getPosition(state.flycam);
   const halfExtent = _getViewportExtentInVoxelPerAxis(state).map((extent) => extent / 2) as Vector3;
   return {
-    min: V3.sub(center, halfExtent),
-    max: V3.add(center, halfExtent),
+    min: V3.floor(V3.sub(center, halfExtent)),
+    max: V3.ceil(V3.add(center, halfExtent)),
   };
 }
 

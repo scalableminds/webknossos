@@ -512,8 +512,7 @@ export function LayerTransformSettingsContent({
           storedValue={storedSRT.translation[i]}
           min={translationWindows[i].min}
           max={translationWindows[i].max}
-          // The slider is only a zoom-sized window onto the translation axis, so the number input
-          // must not be clamped to it.
+          // Allow inputting values outside the slider's range, since we allow any translation but the slider can only show a window onto a larger translation space.
           inputMin={null}
           step={translationSteps[i]}
           onChange={(v) => updateTranslation(i as 0 | 1 | 2, v)}

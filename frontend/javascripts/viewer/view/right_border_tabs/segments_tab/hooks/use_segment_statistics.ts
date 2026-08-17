@@ -95,11 +95,10 @@ export function useSegmentStatistics({
   const annotation = useWkSelector((state) => state.annotation);
   const mappingName = useWkSelector(getCurrentMappingName);
   const additionalCoordinates = useWkSelector((state) => state.flycam.additionalCoordinates);
-  const currentMeshFileName = useWkSelector((state) =>
-    layer != null
-      ? state.localSegmentationStateByLayer[layer.name]?.currentMeshFile?.name
-      : undefined,
+  const currentMeshFile = useWkSelector((state) =>
+    layer != null ? state.localSegmentationStateByLayer[layer.name]?.currentMeshFile : null,
   );
+  const currentMeshFileName = currentMeshFile?.name;
   const isSegmentIndexAvailable =
     useWkSelector((state) => getMaybeSegmentIndexAvailability(state.dataset, layer?.name)) === true;
 
@@ -122,14 +121,20 @@ export function useSegmentStatistics({
   /*
    * Which of the three fallback-capable statistics this layer can actually answer.
    *
-   * Volume falls back to counting the segment index, and surface area to ad-hoc meshing, which
-   * itself walks the segment index. Without a segment index both fall back to nothing and the route
-   * 404s, so they must not be requested at all. (Ad-hoc meshing can also run from a seed position
-   * instead of a segment index, but the request body has no field to carry one, so that path is out
-   * of reach from here.)
+   * Volume falls back to counting the segment index. Surface area falls back to a precomputed mesh
+   * file, or failing that to ad-hoc meshing, which itself walks the segment index. When no source
+   * applies, the route 404s rather than returning a value, so it must not be requested at all.
+   * (Ad-hoc meshing can also run from a seed position instead of a segment index, but the request
+   * body has no field to carry one, so that path is out of reach from here.)
    */
   const isVolumeAvailable = availableFileMetrics.volume || isSegmentIndexAvailable;
-  const isSurfaceAreaAvailable = availableFileMetrics.surfaceArea || isSegmentIndexAvailable;
+  // The backend only uses the selected mesh file when its mapping is exactly the requested one,
+  // otherwise it falls through to ad-hoc meshing. Mirrors `meshFileMappingMatches` in
+  // SegmentStatisticsController.
+  const canMeshFileServeSurfaceArea =
+    currentMeshFile != null && (currentMeshFile.mappingName || null) === (mappingName || null);
+  const isSurfaceAreaAvailable =
+    availableFileMetrics.surfaceArea || canMeshFileServeSurfaceArea || isSegmentIndexAvailable;
 
   const layerSourceInfo: LayerSourceInfo | null = useMemo(
     () =>

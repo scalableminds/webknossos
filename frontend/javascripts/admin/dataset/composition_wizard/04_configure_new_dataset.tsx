@@ -28,13 +28,21 @@ import { isUserAdminOrDatasetManager } from "libs/utils";
 import uniqBy from "lodash-es/uniqBy";
 import messages from "messages";
 import React, { useState } from "react";
-import type { APIDataLayer, APIDataset, APITeam, LayerLink } from "types/api_types";
+import type { APIDataLayer, APIDataset, APITeam, LayerLink, VoxelSize } from "types/api_types";
 import { syncValidator } from "types/validation";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Vector3 } from "viewer/constants";
-import { getReadableURLPart, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
-import { flatToNestedMatrix } from "viewer/model/accessors/dataset_layer_transformation_accessor";
+import {
+  getLayerBoundingBox,
+  getReadableURLPart,
+  getViewDatasetURL,
+} from "viewer/model/accessors/dataset_accessor";
+import {
+  buildLiveTransforms,
+  flatToNestedMatrix,
+} from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { checkLandmarksForThinPlateSpline } from "viewer/model/helpers/transformation_helpers";
+import { getFinestVoxelSize, getVoxelSizeScaleFactor } from "viewer/model/scaleinfo";
 import type { WizardComponentProps } from "./common";
 
 const FormItem = Form.Item;
@@ -47,6 +55,47 @@ async function guardedWithErrorToast(fn: () => Promise<any>) {
     console.error(error);
     ErrorHandling.notify(error as Error);
   }
+}
+
+// Scale factors this close to 1 are treated as identity, so that layers whose voxel size already
+// matches the new dataset's keep their empty transformation list.
+const VOXEL_SIZE_SCALE_EPSILON = 1e-6;
+
+// Adds a scaling transform to each layer that compensates for the difference between its source
+// dataset's voxel size and the voxel size of the dataset that is about to be created.
+// The transform is emitted in the same 7-matrix format that the Layer Transforms editor produces,
+// so that the result stays editable there.
+//
+// The scaling itself has to happen about the coordinate origin: a voxel at index p lies at the
+// physical position p * sourceVoxelSize, i.e. at p * scale in the new dataset's voxel grid. The
+// pivot is nevertheless set to the layer's center, matching what the editor uses for layers without
+// transforms, so that rotating such a layer later on rotates it in place instead of swinging it
+// around the dataset origin. Pivoting about the center moves the layer by center * (1 - scale),
+// which the translation below compensates for; the resulting mapping is exactly p -> p * scale.
+export function withVoxelSizeTransforms(
+  layers: LayerLink[],
+  linkedDatasets: APIDataset[],
+  targetVoxelSize: VoxelSize,
+): LayerLink[] {
+  return layers.map((layer) => {
+    const sourceDataset = linkedDatasets.find((dataset) => dataset.id === layer.sourceDatasetId);
+    if (sourceDataset == null) {
+      return layer;
+    }
+    const scale = getVoxelSizeScaleFactor(sourceDataset.dataSource.scale, targetVoxelSize);
+    if (scale.every((value) => Math.abs(value - 1) < VOXEL_SIZE_SCALE_EPSILON)) {
+      return layer;
+    }
+    const pivot = getLayerBoundingBox(sourceDataset, layer.sourceLayerName).getCenter();
+    const translation = pivot.map((value, index) => value * (scale[index] - 1)) as Vector3;
+    return {
+      ...layer,
+      transformations: [
+        ...layer.transformations,
+        ...buildLiveTransforms(scale, [0, 0, 0], translation, pivot),
+      ],
+    };
+  });
 }
 
 export function ConfigureNewDataset(props: WizardComponentProps) {
@@ -102,6 +151,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
     }
     const layersWithoutTransforms = form.getFieldValue(["layers"]) as LayerLink[];
     const useThinPlateSplines = (form.getFieldValue("useThinPlateSplines") ?? false) as boolean;
+    const respectVoxelSize = (form.getFieldValue("respectVoxelSize") ?? false) as boolean;
 
     const affineMeanError = { meanError: 0 };
 
@@ -172,6 +222,19 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
       }
     }
 
+    // When the voxel sizes should be respected, the new dataset uses the finest voxel size of all
+    // source datasets so that no layer needs to be downscaled.
+    const targetVoxelSize = respectVoxelSize
+      ? getFinestVoxelSize(linkedDatasets.map((dataset) => dataset.dataSource.scale))
+      : linkedDatasets.slice(-1)[0].dataSource.scale;
+    if (respectVoxelSize) {
+      layersWithTransforms = withVoxelSizeTransforms(
+        layersWithTransforms,
+        linkedDatasets,
+        targetVoxelSize,
+      );
+    }
+
     const newDatasetName = form.getFieldValue(["name"]);
     setIsLoading(true);
     try {
@@ -180,7 +243,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
         newDatasetName,
         targetFolderId: form.getFieldValue(["targetFolderId"]),
         organizationId: activeUser.organization,
-        voxelSize: linkedDatasets.slice(-1)[0].dataSource.scale,
+        voxelSize: targetVoxelSize,
         layers: layersWithTransforms,
       });
 
@@ -199,7 +262,9 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
           "",
           "The layers were combined " +
             (sourcePoints.length === 0
-              ? "without any transforms"
+              ? respectVoxelSize
+                ? "without any transforms, except for a scaling that compensates for the differing voxel sizes of the source datasets"
+                : "without any transforms"
               : `with ${
                   useThinPlateSplines
                     ? `Thin-Plate-Splines (${sourcePoints.length} correspondences)`
@@ -289,6 +354,15 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
               <Checkbox>Use Thin-Plate-Splines (Experimental)</Checkbox>
             </FormItem>
           )}
+        {wizardContext.sourcePoints.length === 0 && (
+          <FormItem name={["respectVoxelSize"]} valuePropName="checked">
+            <Checkbox>
+              <Tooltip title="If the selected datasets have different voxel sizes, each layer is scaled so that it keeps its physical size. The new dataset then uses the finest voxel size of the selected datasets.">
+                Respect voxel size
+              </Tooltip>
+            </Checkbox>
+          </FormItem>
+        )}
 
         <FormItem
           style={{

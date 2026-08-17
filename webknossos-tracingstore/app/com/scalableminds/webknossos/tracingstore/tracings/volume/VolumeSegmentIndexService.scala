@@ -14,6 +14,7 @@ import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, Prot
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.tracingstore.TSRemoteDatastoreClient
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
+import com.scalableminds.webknossos.tracingstore.annotation.UpdateTimingStats
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FossilDBClient,
   KeyValueStoreConversions,
@@ -64,7 +65,7 @@ class VolumeSegmentIndexService @Inject() (
       bucketBytes: Array[Byte],
       previousBucketBytesBox: Box[Array[Byte]],
       editableMappingTracingId: Option[String]
-  )(implicit ec: ExecutionContext): Fox[Unit] =
+  )(implicit ec: ExecutionContext, stats: UpdateTimingStats): Fox[Unit] =
     for {
       bucketBytesDecompressed <-
         if (isRevertedElement(bucketBytes)) {
@@ -88,13 +89,19 @@ class VolumeSegmentIndexService @Inject() (
       ).toFox ?~> Msg.Annotation.Volume.SegmentIndex.updateCollectSegmentIdsFailed
       additions = segmentIds.diff(previousSegmentIds)
       removals = previousSegmentIds.diff(segmentIds)
-      _ <- Fox.serialCombined(removals.toList)(segmentId =>
-        // When fallback layer is used we also need to include relevant segments here into the fossildb since otherwise the fallback layer would be used with invalid data
-        removeBucketFromSegmentIndex(segmentIndexBuffer, segmentId, bucketPosition, editableMappingTracingId)
+      _ = stats.count("segmentIndex.additions", additions.size)
+      _ = stats.count("segmentIndex.removals", removals.size)
+      _ <- stats.time("segmentIndex.removeBucket")(
+        Fox.serialCombined(removals.toList)(segmentId =>
+          // When fallback layer is used we also need to include relevant segments here into the fossildb since otherwise the fallback layer would be used with invalid data
+          removeBucketFromSegmentIndex(segmentIndexBuffer, segmentId, bucketPosition, editableMappingTracingId)
+        )
       ) ?~> Msg.Annotation.Volume.SegmentIndex.updateRemoveBucketFailed
       // When fallback layer is used, copy the entire bucketlist for this segment instead of one bucket
-      _ <- Fox.runIf(additions.nonEmpty)(
-        addBucketToSegmentIndex(segmentIndexBuffer, additions.toList, bucketPosition, editableMappingTracingId)
+      _ <- stats.time("segmentIndex.addBucket")(
+        Fox.runIf(additions.nonEmpty)(
+          addBucketToSegmentIndex(segmentIndexBuffer, additions.toList, bucketPosition, editableMappingTracingId)
+        )
       ) ?~> Msg.Annotation.Volume.SegmentIndex.updateAddBucketFailed
     } yield ()
 

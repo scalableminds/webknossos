@@ -8,6 +8,7 @@ import { getViewportBoundsInVoxel } from "viewer/model/accessors/view_mode_acces
 import type BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import ButtonComponent from "../../components/button_component";
 import NumberSliderSetting from "../../left_border_tabs/components/number_slider_setting";
+import Text from "antd/es/typography/Text";
 
 const POSITION_LABELS = ["X", "Y", "Z"] as const;
 const SIZE_LABELS = ["Width", "Height", "Depth"] as const;
@@ -102,6 +103,11 @@ export default function BoundingBoxSlidersButton({
           wheelFactor={0.05}
           spans={[1, 18, 5]}
           step={1}
+          // The slider's range depends on what's currently visible in the viewports, so users
+          // might reasonably want to type a position outside of it (e.g. to move the box
+          // somewhere not currently on screen) rather than being forced to zoom out first.
+          ignoreMin
+          ignoreMax
         />
       ))}
       <Divider style={{ margin: "8px 0" }} />
@@ -120,6 +126,10 @@ export default function BoundingBoxSlidersButton({
           wheelFactor={0.05}
           spans={[4, 15, 5]}
           step={1}
+          // Like the position sliders, the max here depends on what's currently visible in the
+          // viewports, so users might want a larger size than that. min is NOT ignored though:
+          // a bounding box size must stay positive.
+          ignoreMax
         />
       ))}
       <Typography.Text type="secondary" style={{ fontSize: 12 }}>

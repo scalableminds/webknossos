@@ -1,5 +1,5 @@
 import { V3 } from "libs/mjs";
-import max from "lodash-es/min";
+import max from "lodash-es/max";
 import memoizeOne from "memoize-one";
 import { Euler, Matrix4, Vector3 as ThreeVector3 } from "three";
 import type {
@@ -349,13 +349,13 @@ function _getViewportExtentInVoxelPerAxis(state: WebknossosState): Vector3 {
   const [xyExtent, yzExtent, xzExtent] = extents;
   const minExtent = 1;
 
-  const getMinExtent = (val1: number, val2: number) =>
+  const getMaxExtent = (val1: number, val2: number) =>
     max([val1, val2].filter((v) => v >= minExtent)) || minExtent;
 
   return [
-    Math.ceil(getMinExtent(xyExtent[0], xzExtent[0]) * planeRatio[0]),
-    Math.ceil(getMinExtent(xyExtent[1], yzExtent[1]) * planeRatio[1]),
-    Math.ceil(getMinExtent(xzExtent[1], yzExtent[0]) * planeRatio[2]),
+    Math.ceil(getMaxExtent(xyExtent[0], xzExtent[0]) * planeRatio[0]),
+    Math.ceil(getMaxExtent(xyExtent[1], yzExtent[1]) * planeRatio[1]),
+    Math.ceil(getMaxExtent(xzExtent[1], yzExtent[0]) * planeRatio[2]),
   ];
 }
 

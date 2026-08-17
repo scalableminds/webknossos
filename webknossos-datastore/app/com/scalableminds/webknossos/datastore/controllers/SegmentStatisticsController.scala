@@ -320,10 +320,20 @@ class SegmentStatisticsController @Inject() (
       meshFileKeyOpt <- Fox.runOptional(params.meshFileName)(
         meshFileService.lookUpMeshFileKey(dataSource.id, dataLayer, _)
       )
-      mappingNameForMeshFile <- Fox.runOptional(meshFileKeyOpt)(meshFileService.mappingNameForMeshFile)
+      mappingNameForMeshFileOpt <- Fox.runOptional(meshFileKeyOpt)(meshFileService.mappingNameForMeshFile)
+      meshFileMappingMatches = (mappingNameForMeshFileOpt, params.mappingName) match {
+        case (Some(None), None) => true // mesh file has no mapping name, and no mapping was requested. That matches
+        case (
+              Some(Some(mappingNameForMeshFile)),
+              Some(selectedMappingName)
+            ) => // mesh file has mapping name, and it matches the requested one
+          mappingNameForMeshFile == selectedMappingName
+        case (None, _) => false // No mesh file selected anyway
+        case _         => false // All other combinations are not a match
+      }
       surfaceAreas <- Fox.serialCombined(params.segmentIds) { segmentId =>
         val fullMeshRequest = FullMeshRequest(
-          meshFileName = if (mappingNameForMeshFile.contains(params.meshFileName)) params.meshFileName else None,
+          meshFileName = if (meshFileMappingMatches) params.meshFileName else None,
           lod = None,
           segmentId = segmentId,
           mappingName = params.mappingName,

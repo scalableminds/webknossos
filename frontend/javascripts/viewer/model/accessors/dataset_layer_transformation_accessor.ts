@@ -634,9 +634,7 @@ export function getTransformedDatasetCenter(
 // The live SRT transform format uses exactly 7 affine matrices in this order:
 // [0]  pivot → origin translation, [1] scale, [2] rotX, [3] rotY, [4] rotZ,
 // [5] user translation, [6] origin → pivot translation.
-// The pivot is the point that scaling and rotation happen around. It is usually the center of the
-// layer's bounding box, but the exact value is read back from matrix [0] so that transforms which
-// were stored with a different pivot keep rotating around that pivot.
+// The pivot is the point that scaling and rotation happen around.
 // They are stored separately to keep the extracted value consistent between reloads.
 // Else e.g. some rotations might be shown differently as euler angles are not deterministic.
 export const EXPECTED_LIVE_TRANSFORMATION_LENGTH = 7;

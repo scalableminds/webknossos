@@ -94,6 +94,62 @@ size_t getElementCount(jsize inputLengthBytes, jint bytesPerElement) {
     return inputLengthBytes / bytesPerElement;
 }
 
+// Reads the value at `index` as type T and widens it to int64_t, matching the semantics of
+// segmentIdAtIndex above but resolved at compile time instead of via a per-element switch.
+template <typename T>
+inline int64_t typedValueAtIndex(const jbyte *bucketBytes, size_t index) {
+    return static_cast<int64_t>(*reinterpret_cast<const T *>(bucketBytes + index * sizeof(T)));
+}
+
+// Scans a whole bucket for one concrete element type. Specializing on T (instead of branching on
+// bytesPerElement/isSigned inside the loop, as segmentIdAtIndex does) lets the compiler emit a
+// tight loop without a per-voxel switch, enabling auto-vectorization. Consecutive voxels very
+// commonly share the same segment id (segments are spatially contiguous blobs), so we also skip
+// the hash-set operation entirely whenever the current value is identical to the immediately
+// preceding one - the insert-or-skip decision for a value only depends on that value and
+// skipZeroes (both unchanged since the previous voxel), so repeating it is redundant.
+template <typename T>
+void collectSegmentIdsTyped(const jbyte *bucketBytes, size_t elementCount, bool skipZeroes,
+                            std::unordered_set<int64_t> &uniqueSegmentIds) {
+    bool hasLastValue = false;
+    int64_t lastValue = 0;
+    for (size_t i = 0; i < elementCount; ++i) {
+        const int64_t currentValue = typedValueAtIndex<T>(bucketBytes, i);
+        if (hasLastValue && currentValue == lastValue) {
+            continue;
+        }
+        lastValue = currentValue;
+        hasLastValue = true;
+        if (!skipZeroes || currentValue != 0) {
+            uniqueSegmentIds.insert(currentValue);
+        }
+    }
+}
+
+void collectSegmentIdsDispatch(const jbyte *bucketBytes, size_t elementCount, jint bytesPerElement, jboolean isSigned,
+                                jboolean skipZeroes, std::unordered_set<int64_t> &uniqueSegmentIds) {
+    switch (bytesPerElement) {
+        case 1:
+            if (isSigned) collectSegmentIdsTyped<int8_t>(bucketBytes, elementCount, skipZeroes, uniqueSegmentIds);
+            else collectSegmentIdsTyped<uint8_t>(bucketBytes, elementCount, skipZeroes, uniqueSegmentIds);
+            break;
+        case 2:
+            if (isSigned) collectSegmentIdsTyped<int16_t>(bucketBytes, elementCount, skipZeroes, uniqueSegmentIds);
+            else collectSegmentIdsTyped<uint16_t>(bucketBytes, elementCount, skipZeroes, uniqueSegmentIds);
+            break;
+        case 4:
+            if (isSigned) collectSegmentIdsTyped<int32_t>(bucketBytes, elementCount, skipZeroes, uniqueSegmentIds);
+            else collectSegmentIdsTyped<uint32_t>(bucketBytes, elementCount, skipZeroes, uniqueSegmentIds);
+            break;
+        case 8:
+            if (isSigned) collectSegmentIdsTyped<int64_t>(bucketBytes, elementCount, skipZeroes, uniqueSegmentIds);
+            else collectSegmentIdsTyped<uint64_t>(bucketBytes, elementCount, skipZeroes, uniqueSegmentIds);
+            break;
+        default:
+            throw std::invalid_argument("Cannot collect segment ids, unsupported bytesPerElement value");
+    }
+}
+
 JNIEXPORT jlongArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_collectSegmentIds(
     JNIEnv *env, jobject instance, jbyteArray bucketBytesJavaArray, jint bytesPerElement, jboolean isSigned, jboolean skipZeroes) {
 
@@ -103,13 +159,7 @@ JNIEXPORT jlongArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers
         const size_t elementCount = getElementCount(inputLengthBytes, bytesPerElement);
 
         std::unordered_set<int64_t> uniqueSegmentIds;
-
-        for (size_t i = 0; i < elementCount; ++i) {
-            const int64_t currentValue = segmentIdAtIndex(bucketBytes, i, bytesPerElement, isSigned);
-            if (!skipZeroes || currentValue != 0) {
-                uniqueSegmentIds.insert(currentValue);
-            }
-        }
+        collectSegmentIdsDispatch(bucketBytes, elementCount, bytesPerElement, isSigned, skipZeroes, uniqueSegmentIds);
 
         env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
         return copyToJLongArray(env, uniqueSegmentIds);

@@ -137,7 +137,8 @@ export function useSegmentStatistics({
     dataset.id,
     layer?.name ?? null,
     layer?.tracingId ?? null,
-    segmentIds,
+    // BigInts cannot be serialized by react-query's JSON-based key hashing, so stringify them.
+    segmentIds.map(String),
     additionalCoordinates,
     mappingName,
     refreshToken ?? null,

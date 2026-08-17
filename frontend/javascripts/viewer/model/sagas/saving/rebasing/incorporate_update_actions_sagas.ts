@@ -11,6 +11,10 @@ import {
   isMeshLoaded,
 } from "viewer/model/accessors/volumetracing_accessor";
 import {
+  editAnnotationLayerAction,
+  setAnnotationDescriptionAction,
+} from "viewer/model/actions/annotation_actions";
+import {
   ensureLayerMappingsAreLoadedAction,
   type SetLayerMappingsAction,
 } from "viewer/model/actions/dataset_actions";
@@ -20,6 +24,7 @@ import { applySkeletonUpdateActionsFromServerAction } from "viewer/model/actions
 import {
   applyVolumeUpdateActionsFromServerAction,
   setHasEditableMappingAction,
+  setHasSegmentIndexAction,
   setMappingIsLockedAction,
 } from "viewer/model/actions/volumetracing_actions";
 import { globalPositionToBucketPositionWithMag } from "viewer/model/helpers/position_converter";
@@ -334,6 +339,24 @@ export function* tryToIncorporateActions(
           }
           break;
         }
+
+        /////////////
+        // Annotation-level metadata
+        /////////////
+        case "updateLayerMetadata": {
+          const { tracingId, layerName } = action.value;
+          yield* put(editAnnotationLayerAction(tracingId, { name: layerName }));
+          break;
+        }
+        case "updateMetadataOfAnnotation": {
+          yield* put(setAnnotationDescriptionAction(action.value.description));
+          break;
+        }
+        case "addSegmentIndex": {
+          yield* put(setHasSegmentIndexAction(action.value.actionTracingId));
+          break;
+        }
+
         /*
          * Currently NOT supported:
          */
@@ -341,13 +364,10 @@ export function* tryToIncorporateActions(
 
         // High-level annotation specific
         case "addLayerToAnnotation":
-        case "addSegmentIndex":
         case "createTracing":
         case "deleteLayerFromAnnotation":
         case "importVolumeTracing":
         case "revertToVersion":
-        case "updateLayerMetadata":
-        case "updateMetadataOfAnnotation":
 
         // Volume
         case "removeFallbackLayer":

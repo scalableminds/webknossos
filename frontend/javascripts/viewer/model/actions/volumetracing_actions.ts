@@ -62,6 +62,7 @@ export type ToggleSegmentGroupAction = ReturnType<typeof toggleSegmentGroupActio
 export type ToggleAllSegmentsAction = ReturnType<typeof toggleAllSegmentsAction>;
 export type SetHasEditableMappingAction = ReturnType<typeof setHasEditableMappingAction>;
 export type SetMappingIsLockedAction = ReturnType<typeof setMappingIsLockedAction>;
+export type SetHasSegmentIndexAction = ReturnType<typeof setHasSegmentIndexAction>;
 export type SetVolumeBucketDataHasChangedAction = ReturnType<
   typeof setVolumeBucketDataHasChangedAction
 >;
@@ -123,6 +124,7 @@ export type VolumeTracingAction =
   | SetSelectedSegmentsOrGroupAction
   | SetHasEditableMappingAction
   | SetMappingIsLockedAction
+  | SetHasSegmentIndexAction
   | InitializeEditableMappingAction
   | ComputeQuickSelectForRectAction
   | ComputeQuickSelectForPointAction
@@ -482,6 +484,15 @@ export const setHasEditableMappingAction = (tracingId: string) =>
 export const setMappingIsLockedAction = (tracingId: string) =>
   ({
     type: "SET_MAPPING_IS_LOCKED",
+    tracingId,
+  }) as const;
+
+// Not save-relevant on purpose: addSegmentIndex is only ever produced by the backend
+// (see AddSegmentIndexUpdateAction), never authored locally, so this must not be diffed
+// back into an update action nor dropped by the rebase edit guard.
+export const setHasSegmentIndexAction = (tracingId: string) =>
+  ({
+    type: "SET_HAS_SEGMENT_INDEX",
     tracingId,
   }) as const;
 

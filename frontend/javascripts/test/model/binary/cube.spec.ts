@@ -169,9 +169,11 @@ describe("DataCube", () => {
     const bucket = cube.getOrCreateBucket([0, 0, 0, 0, []]);
     assertNonNullBucket(bucket);
 
+    let pullCount = 0;
     const alwaysFailingPullQueue = {
       add: () => {},
       pull: async () => {
+        pullCount++;
         // Mirrors the real pull queue: the bucketRequestFailed listeners in ensureLoaded()
         // must already be registered by the time the event fires (see the default
         // PullQueueMock above for the same reasoning).
@@ -192,7 +194,12 @@ describe("DataCube", () => {
       { insert: vi.fn(), push: vi.fn() } as any,
     );
 
-    await expect(bucket.ensureLoaded()).rejects.toThrow();
+    // Passing an explicit, small maxRetries (instead of relying on the default) pins down
+    // the exact retry boundary and verifies that maxRetries is threaded through the
+    // recursive calls: one initial attempt plus exactly one retry, then ensureLoaded()
+    // must give up.
+    await expect(bucket.ensureLoaded(0, 1)).rejects.toThrow();
+    expect(pullCount).toBe(2);
     expect(bucket.hasData()).toBe(false);
   });
 

@@ -1,6 +1,6 @@
 import handleStatus from "libs/handle_http_status";
-import { expose, transfer } from "./comlink_core";
 import type { RequestOptions } from "libs/request";
+import { expose, transfer } from "./comlink_core";
 
 function fetchBufferWithHeaders(
   url: RequestInfo,

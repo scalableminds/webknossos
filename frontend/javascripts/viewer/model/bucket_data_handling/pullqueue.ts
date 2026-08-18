@@ -54,17 +54,14 @@ class PullQueue {
       this.fetchingBatchCount < PullQueueConstants.BATCH_LIMIT &&
       this.priorityQueue.length > 0
     ) {
-      // Note that the batch holds the bucket objects (and not their addresses), because a
-      // bucket can be discarded and recreated at the same address while the request is in
-      // flight (see DataBucket.markAsDiscarded).
-      const batch: Array<DataBucket> = [];
+      const batch = [];
 
       while (batch.length < BATCH_SIZE && this.priorityQueue.length > 0) {
         const address = this.priorityQueue.dequeue().bucket;
         const bucket = this.cube.getOrCreateBucket(address);
 
         if (bucket.type === "data" && bucket.needsRequest()) {
-          batch.push(bucket);
+          batch.push(address);
           bucket.markAsRequested();
         }
       }
@@ -80,7 +77,7 @@ class PullQueue {
     this.abortController = new AbortController();
   }
 
-  private async pullBatch(batch: Array<DataBucket>): Promise<void> {
+  private async pullBatch(batch: Array<BucketAddress>): Promise<void> {
     // Loading a bunch of buckets
     this.fetchingBatchCount++;
     const { dataset } = Store.getState();
@@ -88,24 +85,20 @@ class PullQueue {
     const { renderMissingDataBlack } = Store.getState().datasetConfiguration;
 
     let hasErrored = false;
-    let failedBuckets: Array<DataBucket> = [];
+    let failedBucketAddresses = [];
     try {
       const bucketResults = await asAbortable(
-        requestWithFallback(
-          layerInfo,
-          batch.map((bucket) => bucket.zoomedAddress),
-        ),
+        requestWithFallback(layerInfo, batch),
         this.abortController.signal,
         PULL_ABORTION_ERROR,
       );
 
-      for (const [index, bucket] of batch.entries()) {
+      for (const [index, bucketAddress] of batch.entries()) {
         try {
           const bucketResult = bucketResults[index];
+          const bucket = this.cube.getOrCreateBucket(bucketAddress);
 
-          // If the bucket was discarded meanwhile (e.g. by a reload which aborted this
-          // request), the received data is outdated and must be dropped.
-          if (bucket.isDiscarded()) {
+          if (bucket.type !== "data") {
             continue;
           }
 
@@ -126,30 +119,31 @@ class PullQueue {
             case "failure": {
               // The bucket could not be read. Schedule it for a retry via the
               // batch-level error handling below.
-              failedBuckets.push(bucket);
+              failedBucketAddresses.push(bucketAddress);
               break;
             }
           }
         } catch {
-          failedBuckets.push(bucket);
+          failedBucketAddresses.push(bucketAddress);
         }
       }
 
-      if (failedBuckets.length > 0) {
+      if (failedBucketAddresses.length > 0) {
         throw new Error("Some buckets could not be handled.");
       }
     } catch (error) {
       if (this.isDestroyed) {
         return;
       }
-      failedBuckets = failedBuckets.length === 0 ? batch : failedBuckets;
-      for (const bucket of failedBuckets) {
+      failedBucketAddresses = failedBucketAddresses.length === 0 ? batch : failedBucketAddresses;
+      for (const bucketAddress of failedBucketAddresses) {
+        const bucket = this.cube.getBucket(bucketAddress);
+
         // Only mark the bucket as failed if it is still in the REQUESTED state.
         // A bucket might have already transitioned to another state (e.g. LOADED
-        // via an earlier result in the same batch or DISCARDED via a reload), in which case
-        // markAsFailed() would throw or be a no-op. Skipping it lets the loop safely handle
-        // the remaining buckets.
-        if (bucket.isRequested()) {
+        // via an earlier result in the same batch), in which case markAsFailed()
+        // would throw. Skipping it lets the loop safely handle the remaining buckets.
+        if (bucket.type === "data" && bucket.isRequested()) {
           bucket.markAsFailed();
 
           if (bucket.dirty) {

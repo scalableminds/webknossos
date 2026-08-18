@@ -164,54 +164,6 @@ describe("PullQueue", () => {
     expect(buckets[1].state).toBe(BucketStateEnum.UNREQUESTED);
   });
 
-  it<TestContext>("Discarded bucket: data of an in-flight request must be dropped", async ({
-    pullQueue,
-    buckets,
-  }) => {
-    // Reproduces the reload race: a request is in flight when a reload discards the affected
-    // buckets (via DataCube.removeBucket). By the time the result arrives, it is outdated and
-    // must not be written into the discarded bucket (a fresh bucket now owns that address).
-    vi.mocked(requestWithFallback)
-      .mockReset()
-      .mockResolvedValue([
-        { type: "data", data: new Uint8Array(32 ** 3) },
-        { type: "data", data: new Uint8Array(32 ** 3) },
-      ]);
-    pullQueue.pull();
-    expect(buckets[0].state).toBe(BucketStateEnum.REQUESTED);
-
-    buckets[0].markAsDiscarded();
-
-    await sleep(0); // sleep a bit so that the event loop can process the fetches
-
-    expect(buckets[0].state).toBe(BucketStateEnum.DISCARDED);
-    expect(buckets[0].hasData()).toBe(false);
-    // The other bucket of the same batch is unaffected.
-    expect(buckets[1].state).toBe(BucketStateEnum.LOADED);
-  });
-
-  it<TestContext>("Discarded bucket: failure of an in-flight request must not re-request it", async ({
-    pullQueue,
-    buckets,
-  }) => {
-    // A reload aborts in-flight requests, so the rejection below is the common case. The
-    // discarded bucket must stay discarded instead of being reset to UNREQUESTED (which
-    // would mark a detached bucket as requestable again).
-    vi.mocked(requestWithFallback)
-      .mockReset()
-      .mockRejectedValue(new Error("Expected promise rejection in tests. Can be ignored."));
-    pullQueue.pull();
-    expect(buckets[0].state).toBe(BucketStateEnum.REQUESTED);
-
-    buckets[0].markAsDiscarded();
-
-    await sleep(0); // sleep a bit so that the event loop can process the fetches
-
-    expect(buckets[0].state).toBe(BucketStateEnum.DISCARDED);
-    // The other bucket of the same batch is failed (i.e. reset to UNREQUESTED) as usual.
-    expect(buckets[1].state).toBe(BucketStateEnum.UNREQUESTED);
-  });
-
   it<TestContext>("Partial failure: failure results are retried, empty results are not", async ({
     pullQueue,
     buckets,

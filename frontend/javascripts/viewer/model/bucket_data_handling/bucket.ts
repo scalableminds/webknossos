@@ -26,13 +26,15 @@ export enum BucketStateEnum {
   REQUESTED = "REQUESTED",
   MISSING = "MISSING", // Missing means that the bucket couldn't be found on the data store
   LOADED = "LOADED",
-  // Discarded means that the bucket was removed from its cube. This state is terminal,
-  // see DataBucket.markAsDiscarded.
-  DISCARDED = "DISCARDED",
 }
 export type BucketStateEnumType = keyof typeof BucketStateEnum;
 
 const WARNING_THROTTLE_THRESHOLD = 10000;
+
+// Number of additional attempts ensureLoaded() makes to load a bucket after its request
+// failed (e.g. due to a backend error, a network error or an aborted request caused by a
+// concurrent reload), before giving up and throwing an error.
+const DEFAULT_ENSURE_LOADED_RETRY_COUNT = 3;
 
 const warnMergeWithoutPendingOperations = throttle(() => {
   ErrorHandling.notify(
@@ -196,33 +198,16 @@ export class DataBucket {
     ];
   }
 
-  // Unsaved data must never be dropped from the cube.
-  hasUnsavedData(): boolean {
-    return this.dirty || this.dirtyCount !== 0;
-  }
-
   mayBeGarbageCollected(respectAccessedFlag: boolean): boolean {
-    // In contrast to a reload (see DataCube.removeBucketsIf), the garbage collection also
-    // spares buckets with an in-flight request (we would throw away a running fetch) and,
-    // optionally, buckets that were just used for rendering.
-    return (
-      !this.hasUnsavedData() && !this.isRequested() && (!respectAccessedFlag || !this.accessed)
-    );
+    const mayBeCollected =
+      (!respectAccessedFlag || !this.accessed) &&
+      !this.dirty &&
+      this.state !== BucketStateEnum.REQUESTED &&
+      this.dirtyCount === 0;
+    return mayBeCollected;
   }
 
-  /*
-   * Marks the bucket as removed from its cube (either by the garbage collection or by a
-   * reload which drops cached data). DISCARDED is a terminal state: the bucket is detached
-   * from its address (the cube creates a fresh bucket if that address is needed again), its
-   * data was freed and it will never be requested or receive data again.
-   * Code that holds a bucket across an await should therefore check isDiscarded() afterwards
-   * and re-obtain the bucket from the cube (see DataCube.getLoadedBucket).
-   * Note that a bucket may be discarded in any state, especially in REQUESTED: a reload
-   * discards buckets whose request is still in flight (PullQueue.pullBatch then drops the
-   * outdated result).
-   */
-  markAsDiscarded(): void {
-    this.state = BucketStateEnum.DISCARDED;
+  destroy(): void {
     // Since we rely on the GC to collect buckets, we
     // can easily have references to buckets which prohibit GC.
     // As a countermeasure, we set the data attribute to null
@@ -230,9 +215,7 @@ export class DataBucket {
     // this doesn't help against references which point directly to this.data)
     this.data = null;
     this.invalidateValueSet();
-    // Notify the TextureBucketManager and any ensureLoaded awaiters *before* removing the
-    // event handlers below.
-    this.trigger("bucketDiscarded");
+    this.trigger("bucketCollected");
     // Remove all event handlers (see https://github.com/ai/nanoevents#remove-all-listeners)
     this.emitter.events = {};
   }
@@ -251,10 +234,6 @@ export class DataBucket {
 
   isMissing(): boolean {
     return this.state === BucketStateEnum.MISSING;
-  }
-
-  isDiscarded(): boolean {
-    return this.state === BucketStateEnum.DISCARDED;
   }
 
   needsBackendData(): boolean {
@@ -657,10 +636,6 @@ export class DataBucket {
         break;
       }
 
-      case BucketStateEnum.DISCARDED:
-        // A discarded bucket doesn't care about the outcome of its request anymore.
-        break;
-
       default:
         this.unexpectedState();
     }
@@ -670,12 +645,6 @@ export class DataBucket {
     arrayBuffer: Uint8Array<ArrayBuffer> | null | undefined,
     computeValueSet: boolean = false,
   ): void {
-    if (this.isDiscarded()) {
-      // The bucket left its cube while its request was in flight, so the received data is
-      // outdated (see markAsDiscarded).
-      return;
-    }
-
     const data = uint8ToTypedBuffer(arrayBuffer, this.elementClass);
     const [_TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
 
@@ -865,14 +834,11 @@ export class DataBucket {
     }
   };
 
-  async ensureLoaded(): Promise<void> {
+  async ensureLoaded(
+    retryCount: number = 0,
+    maxRetries: number = DEFAULT_ENSURE_LOADED_RETRY_COUNT,
+  ): Promise<void> {
     let needsToAwaitBucket = false;
-
-    if (this.isDiscarded()) {
-      // A discarded bucket never receives data. Callers should re-obtain the bucket for this
-      // address from the cube instead (see DataCube.getLoadedBucket).
-      return;
-    }
 
     if (this.isRequested()) {
       needsToAwaitBucket = true;
@@ -885,15 +851,24 @@ export class DataBucket {
     }
 
     if (needsToAwaitBucket) {
-      await new Promise((resolve) => {
-        this.once("bucketLoaded", resolve);
-        this.once("bucketMissing", resolve);
-        // Treat failure like missing to not block callers waiting for ensureLoaded to resolve
-        // as a failure not necessarily auto re-requests the bucket from the backend.
-        this.once("bucketRequestFailed", resolve);
-        // The bucket may also be discarded while we are awaiting it (e.g. by a reload).
-        this.once("bucketDiscarded", resolve);
+      const didRequestFail = await new Promise<boolean>((resolve) => {
+        this.once("bucketLoaded", () => resolve(false));
+        this.once("bucketMissing", () => resolve(false));
+        this.once("bucketRequestFailed", () => resolve(true));
       });
+
+      if (didRequestFail) {
+        // The request failed. This covers a backend failure, a network error and a request
+        // that was aborted (e.g. because a concurrent reload called pullQueue.abortRequests()).
+        // Thus, we should retry now.
+        if (retryCount > maxRetries) {
+          throw new Error(
+            `Bucket ${this.zoomedAddress.join(",")} could not be loaded after ${maxRetries} retries.`,
+          );
+        }
+        await this.ensureLoaded(retryCount + 1);
+        return;
+      }
     }
 
     // Bucket has been loaded by now or was loaded already

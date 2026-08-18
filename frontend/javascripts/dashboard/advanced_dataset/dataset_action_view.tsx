@@ -1,4 +1,5 @@
 import {
+  CopyOutlined,
   DeleteOutlined,
   EllipsisOutlined,
   EyeOutlined,
@@ -313,6 +314,7 @@ export function getDatasetActionContextMenu({
       dataset.isActive
         ? {
             key: "view",
+            icon: <EyeOutlined className="icon-margin-right" />,
             label: "View",
             onClick: () => {
               window.location.href = getViewDatasetURL(dataset);
@@ -322,6 +324,7 @@ export function getDatasetActionContextMenu({
       dataset.isEditable
         ? {
             key: "edit",
+            icon: <SettingOutlined className="icon-margin-right" />,
             label: "Open Settings",
             onClick: () => {
               window.location.href = `/datasets/${getReadableURLPart(dataset)}/edit`;
@@ -331,19 +334,26 @@ export function getDatasetActionContextMenu({
 
       {
         key: "reload",
+        icon: <ReloadOutlined className="icon-margin-right" />,
         label: "Reload",
         onClick: async () => {
           const fullDataset = await getDataset(dataset.id);
           return dataset.isActive ? onClearCache(fullDataset, reloadDataset) : null;
         },
       },
-      dataset.isEditable && dataset.isActive
-        ? {
-            key: "apply-view-configuration",
-            label: "Apply View Configuration to Folder",
-            onClick: () => applyViewConfigurationToDatasetsInFolder(dataset, modal),
-          }
-        : null,
+      // The divider sets this apart from the actions above, because it doesn't only affect
+      // the dataset that was clicked on.
+      ...(dataset.isEditable && dataset.isActive
+        ? ([
+            { key: "apply-view-configuration-divider", type: "divider" },
+            {
+              key: "apply-view-configuration",
+              icon: <CopyOutlined className="icon-margin-right" />,
+              label: "Apply View Configuration to All Datasets in Folder…",
+              onClick: () => applyViewConfigurationToDatasetsInFolder(dataset, modal),
+            },
+          ] as NonNullable<MenuProps["items"]>)
+        : []),
     ],
   };
 }

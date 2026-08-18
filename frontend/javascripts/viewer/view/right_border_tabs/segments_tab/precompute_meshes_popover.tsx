@@ -1,5 +1,6 @@
 import {
   getFeatureNotAvailableInPlanMessage,
+  hasPricingPlanExceededStorage,
   isFeatureAllowedByPricingPlan,
   PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
@@ -85,6 +86,15 @@ export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesP
           activeOrganization,
           activeUser,
         ),
+      };
+    }
+
+    if (activeOrganization != null && hasPricingPlanExceededStorage(activeOrganization)) {
+      // The backend refuses to start the job in this case, as the mesh file could not be stored.
+      return {
+        disabled: true,
+        title:
+          "Your organization has exceeded the available storage. Therefore, meshes cannot be precomputed.",
       };
     }
 

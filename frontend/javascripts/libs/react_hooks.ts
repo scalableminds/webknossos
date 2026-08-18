@@ -1,7 +1,7 @@
 import type { QueryKey, UseQueryOptions } from "@tanstack/react-query";
 import { useQuery } from "@tanstack/react-query";
-import type { ApiResult } from "libs/api_result";
-import { unwrapOrThrow } from "libs/api_result";
+import type { ApiResult } from "admin/api/api_result";
+import { unwrapOrThrow } from "admin/api/api_result";
 import { handleGenericError } from "libs/error_handling";
 import debounce from "lodash-es/debounce";
 import noop from "lodash-es/noop";

@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
 import update from "immutability-helper";
-import type { ApiResult, RetryOptions } from "libs/api_result";
-import { requestResult } from "libs/api_result";
+import type { ApiResult, RetryOptions } from "admin/api/api_result";
+import { requestResult } from "admin/api/api_result";
 import { toBigInt } from "libs/bigint_helpers";
 import type { RequestOptions, RequestOptionsWithData } from "libs/request";
 import Request from "libs/request";

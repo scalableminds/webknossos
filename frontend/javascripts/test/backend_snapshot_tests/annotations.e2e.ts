@@ -18,7 +18,7 @@ import {
   reOpenAnnotation,
   sendSaveRequestWithToken,
 } from "admin/rest_api";
-import { unwrapOrThrow } from "libs/api_result";
+import { unwrapOrThrow } from "admin/api/api_result";
 import DiffableMap from "libs/diffable_map";
 import type { APIAnnotation, SkeletonUserState } from "types/api_types";
 import { AnnotationLayerEnum, APIAnnotationTypeEnum } from "types/api_types";

@@ -79,6 +79,13 @@ function showErrorToastFor(error: RestApiError): void {
  * `requester` receives `adaptedOptions` — the caller's `options` with
  * `showErrorToast` forced to `false` for the duration of the retry loop
  * so that no error toast is shown when a retry is pending.
+ *
+ * If `overallTimeoutMs` is set, each attempt is bounded to whatever's left of
+ * it (via RequestOptions.timeout) and the backoff sleep is capped to the
+ * remaining time as well, so this promise can't run past the deadline by a
+ * full attempt-plus-backoff. Note this only makes requestResult itself stop
+ * waiting — libs/request.ts has no AbortController/signal support, so a
+ * timed-out attempt's underlying fetch keeps running in the browser regardless.
  */
 export async function requestResult<T>(
   requester: (adaptedOptions: RequestOptions) => Promise<T>,
@@ -99,19 +106,36 @@ export async function requestResult<T>(
   let delay = initialDelayMs;
 
   while (true) {
+    const remainingMs = deadline != null ? deadline - Date.now() : null;
+    const attemptOptions: RequestOptions = {
+      ...options,
+      showErrorToast: false,
+      timeout:
+        remainingMs != null
+          ? options.timeout != null
+            ? Math.min(options.timeout, remainingMs)
+            : remainingMs
+          : options.timeout,
+    };
+
     try {
-      const value = await requester({ ...options, showErrorToast: false });
+      const value = await requester(attemptOptions);
       return { ok: true, value };
     } catch (cause) {
       const error = classifyError(cause);
+      const remainingAfterFailure = deadline != null ? deadline - Date.now() : null;
       const outOfAttempts = attempt >= retries;
-      const outOfTime = deadline != null && Date.now() >= deadline;
+      const outOfTime = remainingAfterFailure != null && remainingAfterFailure <= 0;
       if (outOfAttempts || outOfTime || !isRetryable(error)) {
         if (showErrorToast) showErrorToastFor(error);
         return { ok: false, error };
       }
       attempt++;
-      await sleep(Math.min(delay, maxDelayMs));
+      const sleepMs =
+        remainingAfterFailure != null
+          ? Math.min(delay, maxDelayMs, remainingAfterFailure)
+          : Math.min(delay, maxDelayMs);
+      await sleep(sleepMs);
       delay *= backoffFactor;
     }
   }

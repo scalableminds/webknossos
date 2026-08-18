@@ -1,6 +1,5 @@
 import { DownloadOutlined, InboxOutlined, ReloadOutlined } from "@ant-design/icons";
 import AdminPage from "admin/admin_page";
-import { unwrapOrThrow } from "admin/api/api_result";
 import { createTaskFromNML, createTasks, getTask, updateTask } from "admin/api/tasks";
 import {
   getActiveDatasetsOfMyOrganization,

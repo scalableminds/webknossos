@@ -32,8 +32,16 @@ export type RetryOptions = {
 };
 
 function classifyError(cause: unknown): RestApiError {
-  if (cause instanceof Error && cause.name === "AbortError") {
-    return { kind: "abort", message: cause.message, cause };
+  // A real aborted fetch rejects with a DOMException, which -- unlike a plain
+  // Error -- doesn't extend Error, so this can't be folded into the
+  // `cause instanceof Error` checks below.
+  if (
+    typeof cause === "object" &&
+    cause !== null &&
+    (cause as { name?: string }).name === "AbortError"
+  ) {
+    const message = (cause as { message?: string }).message ?? "Aborted";
+    return { kind: "abort", message, cause };
   }
   if (cause instanceof Error && cause.message === "Timeout") {
     return { kind: "timeout", message: cause.message, cause };

@@ -861,12 +861,12 @@ export class DataBucket {
         // The request failed. This covers a backend failure, a network error and a request
         // that was aborted (e.g. because a concurrent reload called pullQueue.abortRequests()).
         // Thus, we should retry now.
-        if (retryCount > maxRetries) {
+        if (retryCount >= maxRetries) {
           throw new Error(
             `Bucket ${this.zoomedAddress.join(",")} could not be loaded after ${maxRetries} retries.`,
           );
         }
-        await this.ensureLoaded(retryCount + 1);
+        await this.ensureLoaded(retryCount + 1, maxRetries);
         return;
       }
     }

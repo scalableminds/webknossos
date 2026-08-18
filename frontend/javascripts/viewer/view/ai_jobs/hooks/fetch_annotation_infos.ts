@@ -1,3 +1,4 @@
+import { unwrapOrThrow } from "admin/api/api_result";
 import { getAnnotationsForTask } from "admin/api/tasks";
 import {
   getDataset,
@@ -5,7 +6,6 @@ import {
   getTracingForAnnotationType,
   getUnversionedAnnotationInformation,
 } from "admin/rest_api";
-import { unwrapOrThrow } from "admin/api/api_result";
 import Toast from "libs/toast";
 import { computeBoundingBoxFromBoundingBoxObject, point3ToVector3 } from "libs/utils";
 import { AnnotationLayerEnum, type APIAnnotation, type ServerVolumeTracing } from "types/api_types";

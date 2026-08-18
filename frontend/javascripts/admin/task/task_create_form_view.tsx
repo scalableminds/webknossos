@@ -1,5 +1,6 @@
 import { DownloadOutlined, InboxOutlined, ReloadOutlined } from "@ant-design/icons";
 import AdminPage from "admin/admin_page";
+import { unwrapOrThrow } from "admin/api/api_result";
 import { createTaskFromNML, createTasks, getTask, updateTask } from "admin/api/tasks";
 import {
   getActiveDatasetsOfMyOrganization,
@@ -34,7 +35,6 @@ import { AsyncButton } from "components/async_clickables";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import SelectExperienceDomain from "components/select_experience_domain";
 import { saveAs } from "file-saver";
-import { unwrapOrThrow } from "admin/api/api_result";
 import { coalesce, pluralize, tryToAwaitPromise } from "libs/utils";
 import { Vector3Input, Vector6Input } from "libs/vector_input";
 import isEqual from "lodash-es/isEqual";
@@ -470,11 +470,9 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
                     return Promise.resolve();
                   }
 
-                  const annotationResponse = await (
-                    getUnversionedAnnotationInformation(value, {
-                      showErrorToast: false,
-                    })
-                  );
+                  const annotationResponse = await getUnversionedAnnotationInformation(value, {
+                    showErrorToast: false,
+                  });
 
                   if (annotationResponse.ok) {
                     form.setFieldsValue({

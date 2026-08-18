@@ -1,5 +1,5 @@
 import type { QueryKey, UseQueryOptions } from "@tanstack/react-query";
-import { useQuery } from "@tanstack/react-query";
+import { hashKey, useQuery } from "@tanstack/react-query";
 import { handleGenericError } from "libs/error_handling";
 import debounce from "lodash-es/debounce";
 import noop from "lodash-es/noop";
@@ -8,6 +8,7 @@ import { type EqualityFn, useSelector } from "react-redux";
 import { useLocation } from "react-router-dom";
 import constants from "viewer/constants";
 import type { WebknossosState } from "viewer/store";
+import { bigIntReplacer } from "./bigint_helpers";
 import { KEYBOARD_BUTTON_LOOP_INTERVAL } from "./input";
 
 /**
@@ -311,7 +312,21 @@ export function useQueryWithErrorHandling<
   TData = TQueryFnData,
   TQueryKey extends QueryKey = QueryKey,
 >(options: UseQueryOptions<TQueryFnData, TError, TData, TQueryKey>, fallbackMessage?: string) {
-  const result = useQuery(options);
+  const result = useQuery({
+    queryKeyHashFn: (queryKey) => {
+      return JSON.stringify(queryKey, (key, val) => {
+        // react-query cannot hash bigints by default which is why we take care of these
+        // here. Since this value won't be sent to the backend (this is only the hashed
+        // query key), we don't need to use the unsignedBigIntReplacer which creates
+        // a wrapper for each bigint.
+        if (typeof val === "bigint") {
+          return bigIntReplacer(key, val);
+        }
+        return hashKey(queryKey);
+      });
+    },
+    ...options,
+  });
 
   useEffect(() => {
     if (result.error != null) {

@@ -77,7 +77,7 @@ class TSAnnotationController @Inject() (
   def update(annotationId: ObjectId): Action[List[UpdateActionGroup]] =
     Action.fox(validateJson[List[UpdateActionGroup]]) { implicit request =>
       log() {
-        logTime(slackNotificationService.noticeSlowRequest) {
+        logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 1 minute) {
           accessTokenService.validateAccessFromTokenContext(
             UserAccessRequest.writeAnnotation(annotationId),
             useCaching = false
@@ -86,19 +86,14 @@ class TSAnnotationController @Inject() (
             val requestStart = Instant.now
             for {
               _ <- annotationTransactionService.handleUpdateGroups(annotationId, request.body)
-              _ = logIfSlow(annotationId, requestStart, stats)
+              _ = logger.info(
+                s"Annotation update for $annotationId took ${formatDuration(Instant.since(requestStart))}. ${stats.summary}"
+              )
             } yield Ok
           }
         }
       }
     }
-
-  private def logIfSlow(annotationId: ObjectId, requestStart: Instant, stats: UpdateTimingStats): Unit = {
-    val duration = Instant.since(requestStart)
-    if (duration > slowUpdateTimingStatsLogThreshold) {
-      logger.warn(s"Slow annotation update for $annotationId took ${formatDuration(duration)}. ${stats.summary}")
-    }
-  }
 
   def updateActionLog(
       annotationId: ObjectId,

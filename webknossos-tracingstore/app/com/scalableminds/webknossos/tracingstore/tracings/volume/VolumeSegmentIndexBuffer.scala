@@ -118,15 +118,23 @@ class VolumeSegmentIndexBuffer(
         (fromFossilOrTempHits, fromFossilOrTempMisses) <-
           if (toTemporaryStore)
             Fox.successful(getMultipleFromTemporaryStoreNoteMisses(fromBufferMisses, mag, additionalCoordinates))
-          else getMultipleFromFossilNoteMisses(fromBufferMisses, mag, additionalCoordinates)
+          else {
+            if (fromBufferMisses.nonEmpty) stats.count("segmentIndex.fossilLookup.calls")
+            stats.time("segmentIndex.fossilLookup")(
+              getMultipleFromFossilNoteMisses(fromBufferMisses, mag, additionalCoordinates)
+            )
+          }
         _ = stats.count("segmentIndex.lookup.fossilOrTempHits", fromFossilOrTempHits.size)
-        fromDatastoreHits <- getMultipleFromDatastore(
-          fromFossilOrTempMisses,
-          mag,
-          additionalCoordinates,
-          mappingName,
-          editableMappingTracingId,
-          annotationVersion
+        _ = if (fromFossilOrTempMisses.nonEmpty) stats.count("segmentIndex.datastoreLookup.calls")
+        fromDatastoreHits <- stats.time("segmentIndex.datastoreLookup")(
+          getMultipleFromDatastore(
+            fromFossilOrTempMisses,
+            mag,
+            additionalCoordinates,
+            mappingName,
+            editableMappingTracingId,
+            annotationVersion
+          )
         )
         _ = stats.count("segmentIndex.lookup.datastoreHits", fromDatastoreHits.size)
         _ = stats.count("segmentIndex.lookup.misses", fromFossilOrTempMisses.length - fromDatastoreHits.length)

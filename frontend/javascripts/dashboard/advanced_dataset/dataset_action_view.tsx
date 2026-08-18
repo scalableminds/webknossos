@@ -11,6 +11,8 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { clearCache, deleteDatasetOnDisk, getDataset } from "admin/rest_api";
 import { App, type MenuProps, Typography } from "antd";
+import type { useAppProps } from "antd/es/app/context";
+import { applyViewConfigurationToDatasetsInFolder } from "dashboard/advanced_dataset/apply_view_configuration";
 import CreateExplorativeModal from "dashboard/advanced_dataset/create_explorative_modal";
 import Toast from "libs/toast";
 import window from "libs/window";
@@ -289,10 +291,12 @@ export function getDatasetActionContextMenu({
   reloadDataset,
   datasets,
   hideContextMenu,
+  modal,
 }: {
   reloadDataset: (arg0: string) => Promise<void>;
   datasets: APIDatasetCompact[];
   hideContextMenu: () => void;
+  modal: useAppProps["modal"];
 }): MenuProps {
   if (datasets.length !== 1) {
     return getNoActionsAvailableMenu(hideContextMenu);
@@ -333,6 +337,13 @@ export function getDatasetActionContextMenu({
           return dataset.isActive ? onClearCache(fullDataset, reloadDataset) : null;
         },
       },
+      dataset.isEditable && dataset.isActive
+        ? {
+            key: "apply-view-configuration",
+            label: "Apply View Configuration to Folder",
+            onClick: () => applyViewConfigurationToDatasetsInFolder(dataset, modal),
+          }
+        : null,
     ],
   };
 }

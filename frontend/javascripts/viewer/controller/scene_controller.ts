@@ -47,10 +47,10 @@ import Skeleton from "viewer/geometries/skeleton";
 import { reuseInstanceOnEquality } from "viewer/model/accessors/accessor_helpers";
 import {
   getDataLayers,
-  getDatasetBoundingBox,
   getLayerBoundingBox,
   getLayerByName,
   getSegmentationLayers,
+  getTransformedDatasetBoundingBox,
   getVisibleSegmentationLayers,
 } from "viewer/model/accessors/dataset_accessor";
 import {
@@ -267,7 +267,10 @@ class SceneController {
     this.annotationToolsGeometryGroup = new Group();
     const state = Store.getState();
     // Cubes
-    const { min, max } = getDatasetBoundingBox(state.dataset);
+    const { min, max } = getTransformedDatasetBoundingBox(
+      state.dataset,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    );
     this.datasetBoundingBox = new Cube({
       min,
       max,
@@ -806,6 +809,15 @@ class SceneController {
     this.rootNode.add(this.layerBoundingBoxGroup);
   }
 
+  updateDatasetBoundingBoxToTransforms(): void {
+    const state = Store.getState();
+    const { min, max } = getTransformedDatasetBoundingBox(
+      state.dataset,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    );
+    this.datasetBoundingBox.setCorners(min, max);
+  }
+
   // Visibility is a cheap per-cube flag (unlike the color, which is baked in at construction), so a
   // visibility change only updates the existing cubes instead of rebuilding them. updateSceneForCam
   // then refines the per-cam cross-section visibility on the next render.
@@ -948,7 +960,10 @@ class SceneController {
       ),
       listenToStoreProperty(
         (storeState) => getDataLayers(storeState.dataset),
-        () => this.updateLayerBoundingBoxes(),
+        () => {
+          this.updateLayerBoundingBoxes();
+          this.updateDatasetBoundingBoxToTransforms();
+        },
       ),
       // The color is baked into the cubes at construction, so a color change requires rebuilding
       // them, whereas a visibility change (below) only needs to flip a per-cube flag.
@@ -965,6 +980,7 @@ class SceneController {
         () => {
           this.updateLayerBoundingBoxes();
           this.updateGeometriesToTransforms();
+          this.updateDatasetBoundingBoxToTransforms();
         },
       ),
       listenToStoreProperty(getVisibleSegmentationLayerNames, () =>

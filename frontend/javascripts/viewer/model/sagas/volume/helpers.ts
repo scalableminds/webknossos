@@ -11,9 +11,9 @@ import Constants, {
 } from "viewer/constants";
 import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import {
-  getDatasetBoundingBox,
   getLayerByName,
   getMagInfo,
+  getTransformedDatasetBoundingBox,
 } from "viewer/model/accessors/dataset_accessor";
 import { getTransformsForLayer } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { enforceActiveVolumeTracing } from "viewer/model/accessors/volumetracing_accessor";
@@ -66,7 +66,12 @@ export function* getBoundingBoxForViewport(
     ),
   };
 
-  const datasetBoundingBox = yield* select((state) => getDatasetBoundingBox(state.dataset));
+  const datasetBoundingBox = yield* select((state) =>
+    getTransformedDatasetBoundingBox(
+      state.dataset,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    ),
+  );
   return new BoundingBox(currentViewportBounding).intersectedWith(datasetBoundingBox);
 }
 

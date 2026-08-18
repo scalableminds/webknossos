@@ -45,7 +45,9 @@ import {
   getSupportedValueRangeForElementClass,
 } from "../bucket_data_handling/data_rendering_logic";
 import { convertToDenseMags, MagInfo } from "../helpers/mag_info";
+import { transformPointUnscaled } from "../helpers/transformation_helpers";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
+import { getTransformsForLayerOrNull } from "./dataset_layer_transformation_accessor";
 
 const { ThinSpace } = Unicode;
 
@@ -245,7 +247,7 @@ export function getLayerBoundingBoxId(layerIndex: number): number {
   return -2 - layerIndex;
 }
 
-function _getDatasetBoundingBox(dataset: APIDataset): BoundingBox {
+function _getUntransformedDatasetBoundingBox(dataset: APIDataset): BoundingBox {
   const min: Vector3 = [
     Number.POSITIVE_INFINITY,
     Number.POSITIVE_INFINITY,
@@ -273,10 +275,65 @@ function _getDatasetBoundingBox(dataset: APIDataset): BoundingBox {
   });
 }
 
-export const getDatasetBoundingBox = memoizeOne(_getDatasetBoundingBox);
+export const getUntransformedDatasetBoundingBox = memoizeOne(_getUntransformedDatasetBoundingBox);
+
+function getBoundingBoxCorners(boundingBox: { min: Vector3; max: Vector3 }): Vector3[] {
+  const { min, max } = boundingBox;
+  return [
+    [min[0], min[1], min[2]],
+    [max[0], min[1], min[2]],
+    [min[0], max[1], min[2]],
+    [max[0], max[1], min[2]],
+    [min[0], min[1], max[2]],
+    [max[0], min[1], max[2]],
+    [min[0], max[1], max[2]],
+    [max[0], max[1], max[2]],
+  ];
+}
+
+// Unlike _getUntransformedDatasetBoundingBox, this variant takes each layer's coordinate
+// transforms (relative to nativelyRenderedLayerName) into account. Since different layers
+// can have different transforms, the axis-aligned extent has to be computed per layer
+// (by transforming its 8 corners) before taking the union across layers.
+function _getTransformedDatasetBoundingBox(
+  dataset: APIDataset,
+  nativelyRenderedLayerName: string | null,
+): BoundingBox {
+  const min: Vector3 = [
+    Number.POSITIVE_INFINITY,
+    Number.POSITIVE_INFINITY,
+    Number.POSITIVE_INFINITY,
+  ];
+  const max: Vector3 = [
+    Number.NEGATIVE_INFINITY,
+    Number.NEGATIVE_INFINITY,
+    Number.NEGATIVE_INFINITY,
+  ];
+
+  for (const dataLayer of getDataLayers(dataset)) {
+    const layerBox = getLayerBoundingBox(dataset, dataLayer.name);
+    const transform = getTransformsForLayerOrNull(dataset, dataLayer, nativelyRenderedLayerName);
+    const corners = getBoundingBoxCorners(layerBox);
+    const transformedCorners = transform ? corners.map(transformPointUnscaled(transform)) : corners;
+
+    for (const corner of transformedCorners) {
+      for (const i of Vector3Indices) {
+        min[i] = Math.min(min[i], corner[i]);
+        max[i] = Math.max(max[i], corner[i]);
+      }
+    }
+  }
+
+  return new BoundingBox({
+    min,
+    max,
+  });
+}
+
+export const getTransformedDatasetBoundingBox = memoizeOne(_getTransformedDatasetBoundingBox);
 
 export function getDatasetCenter(dataset: APIDataset): Vector3 {
-  return getDatasetBoundingBox(dataset).getCenter();
+  return getUntransformedDatasetBoundingBox(dataset).getCenter();
 }
 export function getDatasetExtentInVoxel(dataset: APIDataset) {
   const datasetLayers = dataset.dataSource.dataLayers;

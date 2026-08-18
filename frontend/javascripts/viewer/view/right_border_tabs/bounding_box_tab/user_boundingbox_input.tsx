@@ -17,7 +17,7 @@ import messages from "messages";
 import { useEffect, useState } from "react";
 import type { Vector3, Vector6 } from "viewer/constants";
 import {
-  getDatasetBoundingBox,
+  getUntransformedDatasetBoundingBox,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
 import { api } from "viewer/singletons";
@@ -102,7 +102,9 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
   const [name, setName] = useState(propName);
 
   const visibleSegmentationLayer = useWkSelector((state) => getVisibleSegmentationLayer(state));
-  const datasetBoundingBox = useWkSelector((state) => getDatasetBoundingBox(state.dataset));
+  const datasetBoundingBox = useWkSelector((state) =>
+    getUntransformedDatasetBoundingBox(state.dataset),
+  );
   const mipContextMenuItems = useMipContextMenuItems(bboxId, propValue, onHideContextMenu);
 
   useEffect(() => {

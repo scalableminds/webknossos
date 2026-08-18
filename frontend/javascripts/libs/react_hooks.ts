@@ -298,11 +298,6 @@ export function useIsMounted() {
 }
 
 /**
- * Hook that provides type-safe access to the Webknossos Redux store.
- * @param fn - Selector function that receives the Webknossos state
- * @returns Selected state value
- */
-/**
  * Wrapper around `useQuery` that automatically calls `handleGenericError` when the query fails.
  * This ensures the user sees a toast notification for any unhandled query error.
  * Pass `fallbackMessage` to override the default generic error message.
@@ -343,6 +338,11 @@ export function useApi<TData, TQueryKey extends QueryKey = QueryKey>(
   });
 }
 
+/**
+ * Hook that provides type-safe access to the Webknossos Redux store.
+ * @param fn - Selector function that receives the Webknossos state
+ * @returns Selected state value
+ */
 export function useWkSelector<T>(fn: (state: WebknossosState) => T, equalityFn?: EqualityFn<T>): T {
   return useSelector(fn, equalityFn);
 }

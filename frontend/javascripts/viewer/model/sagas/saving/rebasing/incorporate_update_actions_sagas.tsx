@@ -1,3 +1,4 @@
+import { Button } from "antd";
 import Toast from "libs/toast";
 import { addToNestedMap, addToSetMap } from "libs/utils";
 import { actionChannel, call, put } from "typed-redux-saga";
@@ -13,6 +14,7 @@ import {
 import {
   editAnnotationLayerAction,
   setAnnotationDescriptionAction,
+  setIsUpdatingAnnotationCurrentlyAllowedAction,
 } from "viewer/model/actions/annotation_actions";
 import {
   ensureLayerMappingsAreLoadedAction,
@@ -40,14 +42,17 @@ import {
   type PreservedMeshDisplayProps,
 } from "../../volume/proofreading/segment_and_mesh_refresh_sagas";
 import {
-  type ApplyingUpdateArtifacts,
+  type ApplyingUpdateResults,
   FailedIncorporateActionsReturnValue,
+  UnrecoverableIncorporateActionsReturnValue,
 } from "./applying_update_artifacts";
+
+const ANNOTATION_REVERTED_TOAST_KEY = "annotation_reverted_warning";
 
 export function* tryToIncorporateActions(
   newerActions: APIUpdateActionBatch[],
   areUnsavedChangesOfUser: boolean,
-): Saga<{ success: boolean; artifactInfos: ApplyingUpdateArtifacts }> {
+): Saga<ApplyingUpdateResults> {
   // After all actions were incorporated, volume buckets and hdf5 mappings
   // are reloaded (if they exist and necessary). This is done as a
   // "finalization step", because it requires that the newest version is set
@@ -321,7 +326,13 @@ export function* tryToIncorporateActions(
                 yield* actionChannel<SetLayerMappingsAction>("SET_LAYER_MAPPINGS");
               yield* put(ensureLayerMappingsAreLoadedAction(actionTracingId));
               yield* take(setMappingsChannel);
+              // Re-read volumeDataLayer as new mapping info might have arrived.
+              volumeDataLayer = yield* select((state) =>
+                getSegmentationLayerByName(state.dataset, actionTracingId),
+              );
             }
+            // The mapping's type isn't part of the updateMappingName action. On an ambiguous naming
+            // (mapping of type JSON and AGGLOMERATE exist for the given name) HDF5 wins.
             mappingType =
               (volumeDataLayer.agglomerates ?? []).indexOf(mappingName) >= 0
                 ? ("HDF5" as const)
@@ -356,6 +367,37 @@ export function* tryToIncorporateActions(
           yield* put(setHasSegmentIndexAction(action.value.actionTracingId));
           break;
         }
+        case "revertToVersion": {
+          if (areUnsavedChangesOfUser) {
+            // This is the current user's own pending revert (queued via the "Restore"
+            // button), being reapplied on top of a concurrent rebase. Local Redux state
+            // cannot cheaply reflect "what the tracing looks like after reverting"
+            // without reloading, so we don't try -- just let this pass through
+            // unchanged so it still gets persisted to the backend. The initiating
+            // session force-reloads itself once that save succeeds (see
+            // version_list.tsx's handleRestoreVersion).
+            break;
+          }
+          // A revert authored by someone else arrived via fast-forward. There's no
+          // cheap way to represent the reverted state locally, so lock out further
+          // local edits and ask this session to reload.
+          yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
+          Toast.error(
+            "This annotation was just reverted to an earlier version by another user. " +
+              "Your local session is now out of sync and further changes can no longer be saved. Please reload the page.",
+            {
+              sticky: true,
+              key: ANNOTATION_REVERTED_TOAST_KEY,
+              customFooter: (
+                <Button type="primary" size="small" onClick={() => window.location.reload()}>
+                  Reload Page
+                </Button>
+              ),
+            },
+          );
+          yield* call(finalize);
+          return UnrecoverableIncorporateActionsReturnValue;
+        }
 
         /*
          * Currently NOT supported:
@@ -367,7 +409,6 @@ export function* tryToIncorporateActions(
         case "createTracing":
         case "deleteLayerFromAnnotation":
         case "importVolumeTracing":
-        case "revertToVersion":
 
         // Volume
         case "removeFallbackLayer":

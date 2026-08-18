@@ -84,7 +84,7 @@ export function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
   try {
     const applyingResult = yield* call(applyNewestMissingUpdateActions, missingUpdateActions);
     if (!applyingResult.success) {
-      return { successful: false, shouldTerminate: false };
+      return { successful: false, shouldTerminate: applyingResult.terminatesPolling ?? false };
     }
     yield* call(resolveApplyingUpdateArtifacts, applyingResult.artifactInfos);
     if (hasLocalUnsavedChanges) {
@@ -94,13 +94,17 @@ export function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
       // emitter of these updates (e.g., the proofreading saga) is responsible for handling
       // such updates.
       // TODO #9711: Refactor this?
-      const { success, artifactInfos: _artifactInfos } = yield* call(
+      const {
+        success,
+        artifactInfos: _artifactInfos,
+        terminatesPolling,
+      } = yield* call(
         reapplyUpdateActionsFromSaveQueue, // isRebasingOrForwarding := false (in happy case)
         missingUpdateActions,
         annotationBeforeRebase,
       );
       if (!success) {
-        return { successful: false, shouldTerminate: false };
+        return { successful: false, shouldTerminate: terminatesPolling ?? false };
       }
     }
     return { successful: true, shouldTerminate: false };
@@ -155,17 +159,29 @@ function* applyNewestMissingUpdateActions(
     return SuccessEmptyIncorporateActionsReturnValue;
   }
   const mayEdit = yield* select((state) => mayEditAnnotation(state));
+  let terminatesPolling = false;
   try {
-    const { success, artifactInfos } = yield* tryToIncorporateActions(actions, false);
+    const {
+      success,
+      artifactInfos,
+      terminatesPolling: unrecoverable,
+    } = yield* tryToIncorporateActions(actions, false);
     // Updates the annotation state used for future rebase operation to the current state with the missingUpdateActions applied.
     yield* put(finishedApplyingMissingUpdatesAction()); // knownServerState := annotation
     if (success) {
       yield* call(updatePendingProofreadingOperationInfo);
       return { success: true, artifactInfos };
     }
+    terminatesPolling = unrecoverable ?? false;
   } catch (exc) {
     // Afterwards, the user will be asked to reload the page.
     console.error("Error during application of update actions", exc);
+  }
+
+  if (terminatesPolling) {
+    // A dedicated, more specific toast was already shown at the point of failure
+    // (e.g., for an incorporated revertToVersion action).
+    return { ...FailedIncorporateActionsReturnValue, terminatesPolling: true };
   }
 
   const hasPendingUpdates = (yield* select((state) => state.save.queue)).length > 0;
@@ -213,11 +229,15 @@ function* reapplyUpdateActionsFromSaveQueue(
       updatedSaveQueue,
       currentVersion,
     );
-    const { success: successfullyAppliedSaveQueueUpdates, artifactInfos } =
-      yield* tryToIncorporateActions(saveQueueAsServerUpdateActionBatches, true);
+    const {
+      success: successfullyAppliedSaveQueueUpdates,
+      artifactInfos,
+      terminatesPolling,
+    } = yield* tryToIncorporateActions(saveQueueAsServerUpdateActionBatches, true);
     if (successfullyAppliedSaveQueueUpdates) {
       return { success: true, artifactInfos };
     }
+    return { ...FailedIncorporateActionsReturnValue, terminatesPolling };
   }
   return FailedIncorporateActionsReturnValue;
 }

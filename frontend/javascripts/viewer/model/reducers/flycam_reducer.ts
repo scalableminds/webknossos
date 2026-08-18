@@ -229,13 +229,13 @@ function setRotationReducer(state: WebknossosState, rotation: Vector3) {
 function handleMoveFlycamOrtho(
   state: WebknossosState,
   action: MovePlaneFlycamOrthoAction | MoveFlycamOrthoAction,
-  { tranposeToPlane, useDatasetScale }: { tranposeToPlane: boolean; useDatasetScale: boolean },
+  { transposeToPlane, useDatasetScale }: { transposeToPlane: boolean; useDatasetScale: boolean },
 ): WebknossosState {
   const { dataset, flycam } = state;
 
   const { planeId, increaseSpeedWithZoom } = action;
   const vector =
-    tranposeToPlane && planeId != null
+    transposeToPlane && planeId != null
       ? Dimensions.transDim(action.vector, planeId)
       : action.vector;
   const flycamRotation = getRotationInRadian(flycam);
@@ -392,14 +392,14 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
 
     case "MOVE_FLYCAM_ORTHO": {
       return handleMoveFlycamOrtho(state, action, {
-        tranposeToPlane: false,
+        transposeToPlane: false,
         useDatasetScale: false,
       });
     }
 
     case "MOVE_PLANE_FLYCAM_ORTHO": {
       return handleMoveFlycamOrtho(state, action, {
-        tranposeToPlane: true,
+        transposeToPlane: true,
         useDatasetScale: true,
       });
     }

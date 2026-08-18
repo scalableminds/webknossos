@@ -1,5 +1,5 @@
 import type { QueryKey, UseQueryOptions } from "@tanstack/react-query";
-import { hashKey, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { handleGenericError } from "libs/error_handling";
 import { isPlainObject } from "lodash-es";
 import debounce from "lodash-es/debounce";

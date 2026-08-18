@@ -3,11 +3,11 @@ import Toast, { type Message } from "libs/toast";
 import { sleep } from "libs/utils";
 
 /**
- * Discriminated-union failure reason for a rest_api.ts call, classified from
- * whatever libs/request.ts / handle_request_error_helper.tsx currently rejects with
- * (a plain object for HTTP errors, a mutated Error for network/timeout failures).
- * Centralizing the classification here means we can later make request.ts throw
- * proper typed errors without touching any rest_api.ts call site.
+ * Most importantly this module exposes the type ApiResult which should be returned
+ * by all REST api functions (by using `requestResult`). `requestResult` also takes
+ * care of automatic retries.
+ * In case of an error, RestApiError will be contained in ApiResult. The
+ * construction of that error is implemented by classifyError in this module.
  */
 export type RestApiErrorKind = "network" | "timeout" | "abort" | "http" | "unknown";
 

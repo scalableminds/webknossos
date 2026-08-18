@@ -19,9 +19,8 @@ import {
   Typography,
   theme,
 } from "antd";
-import { unwrapOrThrow } from "libs/api_result";
 import { makeComponentLazy } from "libs/react_helpers";
-import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
+import { useApi, useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import { animationFrame, sleep } from "libs/utils";
@@ -96,14 +95,12 @@ function _MergeModalView({ isOpen, onOk }: Props) {
     data: fetchedAnnotationData,
     isFetching: isFetchingAnnotation,
     status: annotationQueryStatus,
-  } = useQueryWithErrorHandling({
+  } = useApi({
     queryKey: ["unversionedAnnotation", extractedAnnotationId],
-    queryFn: async () =>
-      unwrapOrThrow(
-        await getUnversionedAnnotationInformation(extractedAnnotationId!, {
-          showErrorToast: false,
-        }),
-      ),
+    queryFn: () =>
+      getUnversionedAnnotationInformation(extractedAnnotationId!, {
+        showErrorToast: false,
+      }),
     enabled: isOpen && extractedAnnotationId != null,
     refetchOnWindowFocus: false,
   });

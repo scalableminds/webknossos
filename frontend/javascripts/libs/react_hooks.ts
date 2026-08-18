@@ -1,5 +1,7 @@
 import type { QueryKey, UseQueryOptions } from "@tanstack/react-query";
 import { useQuery } from "@tanstack/react-query";
+import type { ApiResult } from "libs/api_result";
+import { unwrapOrThrow } from "libs/api_result";
 import { handleGenericError } from "libs/error_handling";
 import debounce from "lodash-es/debounce";
 import noop from "lodash-es/noop";
@@ -320,6 +322,25 @@ export function useQueryWithErrorHandling<
   }, [result.error, fallbackMessage]);
 
   return result;
+}
+
+/**
+ * Wrapper around `useQuery` for rest_api.ts functions that return an `ApiResult`
+ * (see libs/api_result.ts) and already retry internally. Unwraps the ApiResult so
+ * `data`/`error` behave like a normal useQuery result, and disables useQuery's own
+ * retry — the retrying already happened inside the queryFn, so retrying again here
+ * would compound backoff on top of backoff.
+ */
+export function useApi<TData, TQueryKey extends QueryKey = QueryKey>(
+  options: Omit<UseQueryOptions<TData, Error, TData, TQueryKey>, "queryFn" | "retry"> & {
+    queryFn: () => Promise<ApiResult<TData>>;
+  },
+) {
+  return useQuery({
+    ...options,
+    queryFn: async () => unwrapOrThrow(await options.queryFn()),
+    retry: false,
+  });
 }
 
 export function useWkSelector<T>(fn: (state: WebknossosState) => T, equalityFn?: EqualityFn<T>): T {

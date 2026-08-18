@@ -311,46 +311,60 @@ export function getDatasetActionContextMenu({
     },
     mode: "vertical",
     items: [
-      dataset.isActive
-        ? {
-            key: "view",
-            icon: <EyeOutlined className="icon-margin-right" />,
-            label: "View",
-            onClick: () => {
-              window.location.href = getViewDatasetURL(dataset);
-            },
-          }
-        : null,
-      dataset.isEditable
-        ? {
-            key: "edit",
-            icon: <SettingOutlined className="icon-margin-right" />,
-            label: "Open Settings",
-            onClick: () => {
-              window.location.href = `/datasets/${getReadableURLPart(dataset)}/edit`;
-            },
-          }
-        : null,
-
+      // The headings tell apart the actions which only affect the clicked dataset from the
+      // ones which reach beyond it. The item labels still name their scope themselves,
+      // because screen readers don't announce the heading of a menu item.
       {
-        key: "reload",
-        icon: <ReloadOutlined className="icon-margin-right" />,
-        label: "Reload",
-        onClick: async () => {
-          const fullDataset = await getDataset(dataset.id);
-          return dataset.isActive ? onClearCache(fullDataset, reloadDataset) : null;
-        },
+        key: "dataset-group",
+        type: "group",
+        label: "This Dataset",
+        children: [
+          dataset.isActive
+            ? {
+                key: "view",
+                icon: <EyeOutlined className="icon-margin-right" />,
+                label: "View",
+                onClick: () => {
+                  window.location.href = getViewDatasetURL(dataset);
+                },
+              }
+            : null,
+          dataset.isEditable
+            ? {
+                key: "edit",
+                icon: <SettingOutlined className="icon-margin-right" />,
+                label: "Open Settings",
+                onClick: () => {
+                  window.location.href = `/datasets/${getReadableURLPart(dataset)}/edit`;
+                },
+              }
+            : null,
+          {
+            key: "reload",
+            icon: <ReloadOutlined className="icon-margin-right" />,
+            label: "Reload",
+            onClick: async () => {
+              const fullDataset = await getDataset(dataset.id);
+              return dataset.isActive ? onClearCache(fullDataset, reloadDataset) : null;
+            },
+          },
+        ],
       },
-      // The divider sets this apart from the actions above, because it doesn't only affect
-      // the dataset that was clicked on.
       ...(dataset.isEditable && dataset.isActive
         ? ([
-            { key: "apply-view-configuration-divider", type: "divider" },
+            { key: "whole-folder-divider", type: "divider" },
             {
-              key: "apply-view-configuration",
-              icon: <CopyOutlined className="icon-margin-right" />,
-              label: "Apply View Configuration to All Datasets in Folder…",
-              onClick: () => applyViewConfigurationToDatasetsInFolder(dataset, modal),
+              key: "folder-group",
+              type: "group",
+              label: "Whole Folder",
+              children: [
+                {
+                  key: "apply-view-configuration",
+                  icon: <CopyOutlined className="icon-margin-right" />,
+                  label: "Apply View Configuration to All Datasets in Folder…",
+                  onClick: () => applyViewConfigurationToDatasetsInFolder(dataset, modal),
+                },
+              ],
             },
           ] as NonNullable<MenuProps["items"]>)
         : []),

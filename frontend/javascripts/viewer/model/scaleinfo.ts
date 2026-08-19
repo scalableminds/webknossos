@@ -1,4 +1,5 @@
 import { UnitsMap } from "libs/format_utils";
+import { isPowerOfTwo } from "libs/utils";
 import type { VoxelSize } from "types/api_types";
 import { LongUnitToShortUnitMap, UnitShort, type Vector3 } from "viewer/constants";
 
@@ -89,4 +90,15 @@ export function getFinestVoxelSize(voxelSizes: VoxelSize[]): VoxelSize {
         finestFactor.map((value, index) => Math.min(value, currentFactor[index])) as Vector3,
     );
   return { factor, unit };
+}
+
+// Returns whether each of the given voxel sizes is a power-of-two multiple of the finest of them on
+// every axis. This is the condition under which the backend can express differing voxel sizes by
+// rebasing the layers' mags onto a common voxel size instead of by scaling transformations
+// (see ExploreLayerUtils.magFromVoxelSize).
+export function areVoxelSizesPowerOfTwoMultiples(voxelSizes: VoxelSize[]): boolean {
+  const finestVoxelSize = getFinestVoxelSize(voxelSizes);
+  return voxelSizes.every((voxelSize) =>
+    getVoxelSizeScaleFactor(voxelSize, finestVoxelSize).every((factor) => isPowerOfTwo(factor)),
+  );
 }

@@ -1,5 +1,6 @@
 import { UnitLong, UnitShort } from "viewer/constants";
 import {
+  areVoxelSizesPowerOfTwoMultiples,
   convertVoxelSizeToUnit,
   getFinestVoxelSize,
   getVoxelSizeScaleFactor,
@@ -123,5 +124,44 @@ describe("getFinestVoxelSize", () => {
 
   it("should throw for an empty list", () => {
     expect(() => getFinestVoxelSize([])).toThrow();
+  });
+});
+
+describe("areVoxelSizesPowerOfTwoMultiples", () => {
+  it("should accept voxel sizes that are power-of-two multiples of the finest one", () => {
+    expect(
+      areVoxelSizesPowerOfTwoMultiples([
+        { factor: [2, 2, 10], unit: UnitLong.nm },
+        { factor: [8, 8, 20], unit: UnitLong.nm },
+      ]),
+    ).toBe(true);
+  });
+
+  it("should accept voxel sizes that only differ in their unit", () => {
+    expect(
+      areVoxelSizesPowerOfTwoMultiples([
+        { factor: [1, 1, 1], unit: UnitLong.µm },
+        { factor: [1000, 1000, 1000], unit: UnitLong.nm },
+      ]),
+    ).toBe(true);
+  });
+
+  it("should reject a non-power-of-two ratio on a single axis", () => {
+    expect(
+      areVoxelSizesPowerOfTwoMultiples([
+        { factor: [2, 2, 10], unit: UnitLong.nm },
+        { factor: [8, 8, 30], unit: UnitLong.nm },
+      ]),
+    ).toBe(false);
+  });
+
+  it("should reject a ratio that is only close to a power of two", () => {
+    // 3 / 2 rounds to 2, which the backend would silently accept as a mag.
+    expect(
+      areVoxelSizesPowerOfTwoMultiples([
+        { factor: [2, 2, 2], unit: UnitLong.nm },
+        { factor: [3, 3, 3], unit: UnitLong.nm },
+      ]),
+    ).toBe(false);
   });
 });

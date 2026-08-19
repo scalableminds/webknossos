@@ -98,10 +98,14 @@ function growLimitsToFit(limits: Vector3, values: Vector3, defaultLimits: Vector
 // While isFrozen is set (i.e. a slider is being dragged), nothing is recomputed, so that the slider
 // never rescales under the cursor; the pending zoom is applied once the drag ends.
 function useZoomAdaptiveTranslationScaling(
-  translationRef: React.RefObject<Vector3>,
+  translation: Vector3,
   layerName: string,
   isFrozen: boolean,
 ) {
+  // The current values are also read through a ref, so that reanchoring on a zoom change does not
+  // have to re-run whenever the user moves a slider.
+  const translationRef = useRef(translation);
+  translationRef.current = translation;
   const zoomStep = useWkSelector((state) => state.flycam.zoomStep);
   const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
   // Per-axis voxels per screen pixel. The base voxel factors account for anisotropic voxel sizes,
@@ -148,7 +152,28 @@ function useZoomAdaptiveTranslationScaling(
         ),
       ),
     );
-  }, [widths, steps, isFrozen, layerName, translationRef]);
+  }, [widths, steps, isFrozen, layerName]);
+
+  // Keep the window on the value. Resetting a row restores a stored value that can lie far outside
+  // the current window, and it does not go through the commit handler below, so the slider would
+  // otherwise show a range that no longer contains its own value – and the next drag would snap the
+  // value to the window's edge. While a slider is dragged its value cannot leave the window, which
+  // makes this a no-op then.
+  useEffect(() => {
+    if (isFrozen) {
+      return;
+    }
+    setWindows((previous) => {
+      const next = previous.map((window, axis) => {
+        const value = translation[axis];
+        if (value >= window.min && value <= window.max) {
+          return window;
+        }
+        return reanchorWindow(null, value, window.max - window.min, steps[axis]);
+      });
+      return next.every((window, axis) => window === previous[axis]) ? previous : next;
+    });
+  }, [translation, steps, isFrozen]);
 
   // Once a value is committed at the very edge of the window, slide the window so that the value is
   // centered again. Without this the user could not keep dragging in the same direction.
@@ -362,8 +387,6 @@ export function LayerTransformSettingsContent({
   // Values are read through a ref so that refitting does not re-run on every slider movement.
   const srtRef = useRef(srtFromStore);
   srtRef.current = srtFromStore;
-  const translationRef = useRef(srtFromStore.translation);
-  translationRef.current = srtFromStore.translation;
 
   // The translation sliders follow the zoom instead of the dataset extent, see the hook.
   const [isDraggingSlider, setIsDraggingSlider] = useState(false);
@@ -371,7 +394,7 @@ export function LayerTransformSettingsContent({
     steps: translationSteps,
     windows: translationWindows,
     recenterIfAtEdge,
-  } = useZoomAdaptiveTranslationScaling(translationRef, layer.name, isDraggingSlider);
+  } = useZoomAdaptiveTranslationScaling(srtFromStore.translation, layer.name, isDraggingSlider);
 
   // Refit when the edited layer changes, so that values stored outside the default range are shown
   // correctly instead of appearing clamped to the end of the slider.

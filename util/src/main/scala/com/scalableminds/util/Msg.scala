@@ -818,7 +818,7 @@ object Msg {
     def mappingNameMismatch(requestedMappingName: String, fileMappingName: String): String =
       s"Requested mapping name “$requestedMappingName” does not match mapping name “$fileMappingName” of segment statistics file."
     def remappingRequiresUnmappedFile(fileMappingName: String): String =
-      s"Requesting a different mapping is only supported for segment statistics files without their own mapping, but this file was computed for mapping “$fileMappingName”."
+      s"Requesting a different mapping is only supported for segment statistics files calculated on unmapped data, but this file was computed for mapping “$fileMappingName”."
     def formatVersionTooOld(formatVersion: Long, minimumSupportedVersion: Long): String =
       s"Segment statistics file has format version $formatVersion, but at least $minimumSupportedVersion is required."
     val idsNotDense = "Segment statistics file does not have dense ids. Only files with dense ids are supported."

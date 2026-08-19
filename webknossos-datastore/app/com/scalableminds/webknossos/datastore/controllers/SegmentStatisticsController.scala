@@ -18,6 +18,7 @@ import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateServic
 import com.scalableminds.webknossos.datastore.services.mesh.{
   DSFullMeshService,
   FullMeshRequest,
+  MappingType,
   MeshFileService,
   MeshMappingHelper
 }
@@ -339,7 +340,7 @@ class SegmentStatisticsController @Inject() (
           lod = None,
           segmentId = segmentId,
           mappingName = params.mappingName,
-          mappingType = params.mappingName.map(_ => "HDF5"),
+          mappingType = params.mappingName.map(_ => MappingType.AGGLOMERATE),
           editableMappingTracingId = None,
           annotationVersion = None,
           mag = Some(params.mag),

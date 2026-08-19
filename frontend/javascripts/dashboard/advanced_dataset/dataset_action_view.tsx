@@ -311,9 +311,6 @@ export function getDatasetActionContextMenu({
     },
     mode: "vertical",
     items: [
-      // The headings tell apart the actions which only affect the clicked dataset from the
-      // ones which reach beyond it. The item labels still name their scope themselves,
-      // because screen readers don't announce the heading of a menu item.
       {
         key: "dataset-group",
         type: "group",

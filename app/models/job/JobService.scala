@@ -2,7 +2,7 @@ package models.job
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.box.{Empty, Failure, Full}
+import com.scalableminds.util.box.Full
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import models.dataset.{Dataset, DatasetDAO, DataStoreDAO, WKRemoteDataStoreClient}
@@ -196,37 +196,20 @@ class JobService @Inject() (
       } yield ()
     } else Fox.successful(())
 
-  // Tells the datastore to clean up the temporary artifacts (raw upload backup, .forConversion staging dir) of the
-  // upload that triggered this convert_to_wkw job, once the job has just reached a terminal state (success, failure,
-  // or cancellation). Uses job.args rather than looking up the Dataset, since a failed conversion may have already
-  // deleted the Dataset row via cleanUpIfFailed above. No-op if the datastore isn't configured to delete these.
-  // Best-effort: a failure here (missing args, datastore unreachable, ...) is logged but must never fail this Fox,
-  // since callers chain it alongside other, more critical, job-status-update side effects that must still run.
-  def cleanUpUploadArtifactsIfNeeded(jobBeforeChange: Job, jobAfterChange: Job): Fox[Unit] = {
-    val justBecameTerminal =
+  def cleanUpUploadArtifactsIfNeeded(jobBeforeChange: Job, jobAfterChange: Job): Unit = {
+    val jobJustEnded =
       jobBeforeChange.state != jobAfterChange.state &&
         Set(JobState.SUCCESS, JobState.FAILURE, JobState.CANCELLED).contains(jobAfterChange.state)
-    if (jobAfterChange.command == JobCommand.convert_to_wkw && justBecameTerminal) {
-      val commandArgs = jobAfterChange.args.value
-      val cleanUpResult = for {
-        uploadId <- commandArgs.get("upload_id").map(_.as[String]).toFox
+    Fox.runIf(jobAfterChange.command == JobCommand.convert_to_wkw && jobJustEnded) {
+      for {
+        commandArgs = jobAfterChange.args.value
         organizationId <- commandArgs.get("organization_id").map(_.as[String]).toFox
         directoryName <- commandArgs.get("dataset_directory_name").map(_.as[String]).toFox
         dataStore <- dataStoreDAO.findOneByName(jobAfterChange._dataStore)(using GlobalAccessContext)
         remoteClient = new WKRemoteDataStoreClient(dataStore, rpc)
-        _ <- remoteClient.cleanUpUploadArtifacts(organizationId, uploadId, directoryName)
+        _ <- remoteClient.cleanUpUploadArtifacts(organizationId, directoryName)
       } yield ()
-      for {
-        box <- cleanUpResult.shiftBox
-        _ = box match {
-          case Full(_)    => ()
-          case f: Failure =>
-            logger.warn(s"Could not clean up upload artifacts for job ${jobAfterChange._id}: $f")
-          case Empty =>
-            logger.warn(s"Could not clean up upload artifacts for job ${jobAfterChange._id}: Empty")
-        }
-      } yield ()
-    } else Fox.successful(())
+    }
   }
 
   def publicWrites(job: Job)(using ctx: DBAccessContext): Fox[JsValue] =
@@ -298,8 +281,7 @@ class JobService @Inject() (
       dataset: Dataset,
       user: User,
       voxelSize: VoxelSize,
-      organizationBaseDirectory: UPath,
-      uploadId: String
+      organizationBaseDirectory: UPath
   ): Fox[Unit] =
     for {
       organization <- organizationDAO.findOne(dataset._organization)(using GlobalAccessContext) ?~> Msg.Organization
@@ -312,8 +294,7 @@ class JobService @Inject() (
         "dataset_id" -> dataset._id,
         "dataset_directory_name" -> dataset.directoryName,
         "voxel_size_factor" -> voxelSize.factor.toUriLiteral,
-        "voxel_size_unit" -> voxelSize.unit,
-        "upload_id" -> uploadId
+        "voxel_size_unit" -> voxelSize.unit
       )
       _ <- submitJob(
         JobCommand.convert_to_wkw,

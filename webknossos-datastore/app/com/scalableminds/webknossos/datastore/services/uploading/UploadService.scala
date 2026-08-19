@@ -129,8 +129,7 @@ case class ReportDatasetUploadParameters(
     datasetSizeBytes: Long,
     dataSourceOpt: Option[UsableDataSource], // must be set if needsConversion is false
     layersToLink: Seq[LinkedLayerIdentifier],
-    voxelSize: Option[VoxelSize],
-    uploadId: String
+    voxelSize: Option[VoxelSize]
 )
 object ReportDatasetUploadParameters {
   implicit val jsonFormat: OFormat[ReportDatasetUploadParameters] =
@@ -226,32 +225,14 @@ class UploadService @Inject() (
         logger.warn(s"Could not delete $description at $path: unknown error")
     }
 
-  // Deletes the raw-upload backup (kept in .trash so far only for potential manual recovery/debugging),
-  // if configured to do so. Safe to call even if the backup dir does not (or no longer) exist.
-  private def deleteUploadBackupIfConfigured(organizationId: String, uploadId: String): Unit =
-    if (dataStoreConfig.Datastore.Upload.deleteTemporaryArtifactsAfterUpload) {
-      uploadBackupDirectoryFor(organizationId, uploadId).foreach { backupDir =>
-        logger.info(s"Deleting temporary upload backup at $backupDir (deleteTemporaryArtifactsAfterUpload=true)")
-        deleteArtifactDirLogged(backupDir, "temporary upload backup")
-      }
-    }
-
   // Called once a needsConversion=true upload's convert_to_wkw job has reached a terminal state (reported by
-  // webknossos, which tracks job completion). Deletes the raw-upload backup and the .forConversion staging dir
-  // that the worker job read from, if configured to do so. Safe no-op if either no longer exists. This must never
-  // fail: the datastore route calling this always reports success back to webknossos, regardless of the outcome,
-  // since a leftover temp artifact is not worth blocking or retrying the job-status-update flow over.
-  def cleanUpUploadArtifactsAfterConversion(
-      organizationId: String,
-      uploadId: String,
-      directoryName: String
-  ): Fox[Unit] =
+  // webknossos, which tracks job completion). Deletes the .forConversion staging dir that the worker job read
+  // from, if configured to do so. Safe no-op if it no longer exists. This must never fail: the datastore route
+  // calling this always reports success back to webknossos, regardless of the outcome, since a leftover temp
+  // artifact is not worth blocking or retrying the job-status-update flow over.
+  def cleanUpUploadArtifactsAfterConversion(organizationId: String, directoryName: String): Fox[Unit] =
     Fox.successful {
       if (dataStoreConfig.Datastore.Upload.deleteTemporaryArtifactsAfterUpload) {
-        uploadBackupDirectoryFor(organizationId, uploadId).foreach { backupDir =>
-          logger.info(s"Deleting temporary upload backup at $backupDir after conversion job finished.")
-          deleteArtifactDirLogged(backupDir, "temporary upload backup")
-        }
         forConversionDirectoryFor(organizationId, directoryName).foreach { forConversionPath =>
           logger.info(s"Deleting conversion staging dir at $forConversionPath after conversion job finished.")
           deleteArtifactDirLogged(forConversionPath, "conversion staging dir")
@@ -448,7 +429,6 @@ class UploadService @Inject() (
       if (knownUpload) {
         logger.info(f"Cancelling ${uploadFullName(uploadDomain, uploadId, datasetId, dataSourceId)}...")
         cleanUpUploaded(uploadId, reason = "Cancelled by user", uploadDomain)
-        if (uploadDomain == UploadDomain.dataset) deleteUploadBackupIfConfigured(dataSourceId.organizationId, uploadId)
       } else Fox.failure("Unknown upload")
   }
 
@@ -468,8 +448,14 @@ class UploadService @Inject() (
       _ = logger.info(s"Finishing ${uploadFullName(UploadDomain.dataset, uploadId, datasetId, dataSourceId)}...")
       linkedLayerIdentifiers <- datasetUploadMetadataStore.findLinkedLayerIdentifiers(uploadId)
       uploadDir <- uploadDirectoryFor(dataSourceId.organizationId, uploadId, UploadDomain.dataset).toFox
-      uploadBackupDir <- uploadBackupDirectoryFor(dataSourceId.organizationId, uploadId).toFox
-      _ <- backupRawUploadedData(uploadDir, uploadBackupDir, datasetId).toFox
+      // If configured to delete temporary upload artifacts anyway, skip making this backup copy in the first
+      // place, rather than making it and immediately deleting it again.
+      _ <- Fox.runIf(!dataStoreConfig.Datastore.Upload.deleteTemporaryArtifactsAfterUpload) {
+        for {
+          uploadBackupDir <- uploadBackupDirectoryFor(dataSourceId.organizationId, uploadId).toFox
+          _ <- backupRawUploadedData(uploadDir, uploadBackupDir, datasetId).toFox
+        } yield ()
+      }
       _ <- checkWithinRequestedFileSize(
         uploadDir,
         uploadId,
@@ -480,7 +466,6 @@ class UploadService @Inject() (
       unpackToDir <- unpackToDirFor(dataSourceId, UploadDomain.dataset, uploadId).toFox
       unpackResult <- unpackOrMoveUploaded(uploadDir, unpackToDir, datasetId, UploadDomain.dataset).shiftBox
       _ <- cleanUpUploaded(uploadId, reason = "Upload complete, data unpacked.", UploadDomain.dataset)
-      _ = deleteUploadBackupIfConfigured(dataSourceId.organizationId, uploadId)
       _ <- cleanUpOnFailure(
         UploadDomain.dataset,
         unpackResult,
@@ -490,7 +475,6 @@ class UploadService @Inject() (
         label = s"unpacking dataset to $unpackToDir"
       ).toFox
       postProcessingResult <- exploreUploadedDataSourceIfNeeded(needsConversion, unpackToDir, dataSourceId).shiftBox
-      _ = deleteUploadBackupIfConfigured(dataSourceId.organizationId, uploadId)
       _ <- cleanUpOnFailure(
         UploadDomain.dataset,
         postProcessingResult,
@@ -506,7 +490,6 @@ class UploadService @Inject() (
         datasetId,
         dataSourceId
       ) ?~> Msg.Dataset.Upload.moveUnpackedToTargetFailed
-      _ = if (!needsConversion) deleteUploadBackupIfConfigured(dataSourceId.organizationId, uploadId)
       _ <- remoteWebknossosClient.reportDatasetUpload(
         datasetId,
         ReportDatasetUploadParameters(
@@ -514,8 +497,7 @@ class UploadService @Inject() (
           datasetSizeBytes,
           dataSourceWithAbsolutePathsOpt,
           linkedLayerIdentifiers,
-          voxelSizeBox.toOption,
-          uploadId
+          voxelSizeBox.toOption
         )
       ) ?~> Msg.Dataset.Upload.reportUploadFailed
     } yield ()
@@ -635,10 +617,7 @@ class UploadService @Inject() (
   private def cleanUpExceedingSize(uploadId: String, uploadDomain: UploadDomain): Fox[Unit] =
     for {
       datasetId <- getDatasetIdByUploadId(uploadId, uploadDomain)
-      dataSourceIdBox <- selectUploadMetadataStore(uploadDomain).findDataSourceId(uploadId).shiftBox
       _ <- cleanUpUploaded(uploadId, reason = "Exceeded reserved fileSize", uploadDomain)
-      _ = if (uploadDomain == UploadDomain.dataset)
-        dataSourceIdBox.foreach(dataSourceId => deleteUploadBackupIfConfigured(dataSourceId.organizationId, uploadId))
       // Datasets need to be cleaned up in postgres as well. The other domains don’t (overwritePending mechanism is used there)
       _ <- Fox.runIf(uploadDomain == UploadDomain.dataset)(remoteWebknossosClient.deleteDataset(datasetId))
     } yield ()

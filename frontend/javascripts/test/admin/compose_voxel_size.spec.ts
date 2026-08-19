@@ -1,4 +1,9 @@
-import { withVoxelSizeTransforms } from "admin/dataset/composition_wizard/04_configure_new_dataset";
+import {
+  canBackendRespectVoxelSizes,
+  doVoxelSizesDiffer,
+  getUsedDatasets,
+  withVoxelSizeTransforms,
+} from "admin/dataset/composition_wizard/04_configure_new_dataset";
 import type { APIDataset, LayerLink, VoxelSize } from "types/api_types";
 import { UnitLong, type Vector3 } from "viewer/constants";
 import {
@@ -18,9 +23,15 @@ import { describe, expect, it } from "vitest";
 // that a rebasing mistake cannot pass unnoticed.
 const LAYER_CENTER: Vector3 = [200, 400, 600];
 
-function makeDataset(id: string, voxelSize: VoxelSize): APIDataset {
-  // Only the fields that withVoxelSizeTransforms reads are relevant here.
-  return { id, dataSource: { scale: voxelSize } } as unknown as APIDataset;
+function makeDataset(id: string, voxelSize: VoxelSize, mags: Vector3[] = [[1, 1, 1]]): APIDataset {
+  // Only the fields that the tested functions read are relevant here.
+  return {
+    id,
+    dataSource: {
+      scale: voxelSize,
+      dataLayers: [{ name: `${id}_layer`, mags: mags.map((mag) => ({ mag })) }],
+    },
+  } as unknown as APIDataset;
 }
 
 function makeLayerLink(sourceDatasetId: string, name: string): LayerLink {
@@ -129,5 +140,94 @@ describe("withVoxelSizeTransforms", () => {
     expect(target).toEqual({ factor: [2, 2, 10], unit: UnitLong.nm });
     expect(hasValidLiveTransformationPattern(layerA.transformations)).toBe(true);
     expect(extractSRTFromTransforms(layerA.transformations).scale).toEqual([2, 4, 4]);
+  });
+});
+
+describe("getUsedDatasets", () => {
+  const datasets = [makeDataset("coarse", COARSE), makeDataset("fine", FINE)];
+
+  it("should only return the datasets that the given layers stem from", () => {
+    const layers = [makeLayerLink("fine", "fine_layer")];
+
+    expect(getUsedDatasets(layers, datasets).map((dataset) => dataset.id)).toEqual(["fine"]);
+  });
+
+  it("should keep the order in which the datasets were linked", () => {
+    const layers = [makeLayerLink("fine", "fine_layer"), makeLayerLink("coarse", "coarse_layer")];
+
+    expect(getUsedDatasets(layers, datasets).map((dataset) => dataset.id)).toEqual([
+      "coarse",
+      "fine",
+    ]);
+  });
+});
+
+describe("doVoxelSizesDiffer", () => {
+  it("should ignore voxel sizes that only differ in their unit", () => {
+    expect(doVoxelSizesDiffer([FINE, { factor: [0.002, 0.002, 0.002], unit: UnitLong.µm }])).toBe(
+      false,
+    );
+  });
+
+  it("should detect differing voxel sizes", () => {
+    expect(doVoxelSizesDiffer([COARSE, FINE])).toBe(true);
+  });
+
+  it("should not consider a single voxel size to be differing", () => {
+    expect(doVoxelSizesDiffer([COARSE])).toBe(false);
+    expect(doVoxelSizesDiffer([])).toBe(false);
+  });
+});
+
+describe("canBackendRespectVoxelSizes", () => {
+  const POWER_OF_TWO = { factor: [4, 4, 4], unit: UnitLong.nm } as VoxelSize;
+
+  it("should be true for voxel sizes that are power-of-two multiples of each other", () => {
+    // The backend rebases the mags of the 4 nm dataset onto 2 nm, so no transform is needed.
+    const datasets = [makeDataset("a", POWER_OF_TWO), makeDataset("b", FINE)];
+    const layers = [makeLayerLink("a", "a_layer"), makeLayerLink("b", "b_layer")];
+
+    expect(canBackendRespectVoxelSizes(layers, datasets)).toBe(true);
+  });
+
+  it("should be false for a non-power-of-two ratio", () => {
+    // 6 nm / 2 nm = 3, which the backend cannot express as a mag.
+    const datasets = [makeDataset("coarse", COARSE), makeDataset("fine", FINE)];
+    const layers = [makeLayerLink("coarse", "coarse_layer"), makeLayerLink("fine", "fine_layer")];
+
+    expect(canBackendRespectVoxelSizes(layers, datasets)).toBe(false);
+  });
+
+  it("should ignore datasets whose layers were all removed", () => {
+    const datasets = [makeDataset("coarse", COARSE), makeDataset("fine", FINE)];
+    const layers = [makeLayerLink("fine", "fine_layer")];
+
+    expect(canBackendRespectVoxelSizes(layers, datasets)).toBe(true);
+  });
+
+  it("should be false if a source layer has a non-power-of-two mag", () => {
+    const datasets = [
+      makeDataset("a", POWER_OF_TWO, [
+        [1, 1, 1],
+        [3, 3, 3],
+      ]),
+      makeDataset("b", FINE),
+    ];
+    const layers = [makeLayerLink("a", "a_layer"), makeLayerLink("b", "b_layer")];
+
+    expect(canBackendRespectVoxelSizes(layers, datasets)).toBe(false);
+  });
+
+  it("should be false if a layer already carries a transformation", () => {
+    const datasets = [makeDataset("a", POWER_OF_TWO), makeDataset("b", FINE)];
+    const layers = [
+      {
+        ...makeLayerLink("a", "a_layer"),
+        transformations: [{ type: "affine" as const, matrix: [[1, 0, 0, 5]] as any }],
+      },
+      makeLayerLink("b", "b_layer"),
+    ];
+
+    expect(canBackendRespectVoxelSizes(layers, datasets)).toBe(false);
   });
 });

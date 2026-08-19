@@ -24,7 +24,7 @@ import { estimateAffineMatrix4x4 } from "libs/estimate_affine";
 import { formatNumber } from "libs/format_utils";
 import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { isUserAdminOrDatasetManager } from "libs/utils";
+import { isPowerOfTwo, isUserAdminOrDatasetManager } from "libs/utils";
 import uniqBy from "lodash-es/uniqBy";
 import messages from "messages";
 import React, { useState } from "react";
@@ -38,7 +38,11 @@ import {
   flatToNestedMatrix,
 } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { checkLandmarksForThinPlateSpline } from "viewer/model/helpers/transformation_helpers";
-import { getFinestVoxelSize, getVoxelSizeScaleFactor } from "viewer/model/scaleinfo";
+import {
+  areVoxelSizesPowerOfTwoMultiples,
+  getFinestVoxelSize,
+  getVoxelSizeScaleFactor,
+} from "viewer/model/scaleinfo";
 import type { WizardComponentProps } from "./common";
 
 const FormItem = Form.Item;
@@ -89,6 +93,65 @@ export function withVoxelSizeTransforms(
       ],
     };
   });
+}
+
+// Returns the linked datasets that the given layers actually stem from, in the order in which they
+// were linked. Layers can be removed in this wizard step, so this can be a subset of all datasets
+// that were selected in the previous step.
+export function getUsedDatasets(layers: LayerLink[], linkedDatasets: APIDataset[]): APIDataset[] {
+  const usedDatasetIds = new Set(layers.map((layer) => layer.sourceDatasetId));
+  return linkedDatasets.filter((dataset) => usedDatasetIds.has(dataset.id));
+}
+
+// Returns whether the given voxel sizes are not all the same (up to the scale factor epsilon, so
+// that voxel sizes which only differ in their unit are still considered equal).
+export function doVoxelSizesDiffer(voxelSizes: VoxelSize[]): boolean {
+  if (voxelSizes.length === 0) {
+    return false;
+  }
+  const finestVoxelSize = getFinestVoxelSize(voxelSizes);
+  return voxelSizes.some((voxelSize) =>
+    getVoxelSizeScaleFactor(voxelSize, finestVoxelSize).some(
+      (factor) => Math.abs(factor - 1) >= VOXEL_SIZE_SCALE_EPSILON,
+    ),
+  );
+}
+
+// The backend can respect differing voxel sizes exactly and without any transformations by rebasing
+// the mags of each layer onto the finest voxel size. It does so when no layer carries a
+// transformation (see ComposeService.createDatasource), which requires that all resulting mags are
+// powers of two (see ExploreLayerUtils.rescaleLayersByCommonVoxelSize). That path yields a dataset
+// whose layers stay untransformed, so it is preferred over adding scaling transformations.
+export function canBackendRespectVoxelSizes(
+  layers: LayerLink[],
+  linkedDatasets: APIDataset[],
+): boolean {
+  if (layers.some((layer) => layer.transformations.length > 0)) {
+    return false;
+  }
+  const usedDatasets = getUsedDatasets(layers, linkedDatasets);
+  if (!areVoxelSizesPowerOfTwoMultiples(usedDatasets.map((dataset) => dataset.dataSource.scale))) {
+    return false;
+  }
+  return layers.every((layerLink) => {
+    const sourceLayer = linkedDatasets
+      .find((dataset) => dataset.id === layerLink.sourceDatasetId)
+      ?.dataSource.dataLayers.find((layer) => layer.name === layerLink.sourceLayerName);
+    return (
+      sourceLayer != null && sourceLayer.mags.every((mag) => mag.mag.every((v) => isPowerOfTwo(v)))
+    );
+  });
+}
+
+// Returns whether the user should be able to decide about scaling the layers according to their
+// voxel sizes. This is only the case if the voxel sizes actually differ and if the backend cannot
+// respect them on its own.
+function shouldOfferVoxelSizeScaling(layers: LayerLink[], linkedDatasets: APIDataset[]): boolean {
+  const usedDatasets = getUsedDatasets(layers, linkedDatasets);
+  return (
+    doVoxelSizesDiffer(usedDatasets.map((dataset) => dataset.dataSource.scale)) &&
+    !canBackendRespectVoxelSizes(layers, linkedDatasets)
+  );
 }
 
 export function ConfigureNewDataset(props: WizardComponentProps) {
@@ -215,15 +278,25 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
       }
     }
 
+    // Layers can be removed in this step, so only the datasets that the remaining layers stem from
+    // may influence the voxel size of the new dataset.
+    const usedDatasets = getUsedDatasets(layersWithTransforms, linkedDatasets);
+    if (usedDatasets.length === 0) {
+      Toast.error("Please keep at least one layer.");
+      return;
+    }
     // When the voxel sizes should be respected, the new dataset uses the finest voxel size of all
-    // source datasets so that no layer needs to be downscaled.
+    // used source datasets so that no layer needs to be downscaled.
     const targetVoxelSize = respectVoxelSize
-      ? getFinestVoxelSize(linkedDatasets.map((dataset) => dataset.dataSource.scale))
-      : linkedDatasets.slice(-1)[0].dataSource.scale;
-    if (respectVoxelSize) {
+      ? getFinestVoxelSize(usedDatasets.map((dataset) => dataset.dataSource.scale))
+      : usedDatasets.slice(-1)[0].dataSource.scale;
+    // Scaling transformations are only needed if the backend cannot respect the voxel sizes itself.
+    const needsVoxelSizeTransforms =
+      respectVoxelSize && shouldOfferVoxelSizeScaling(layersWithTransforms, linkedDatasets);
+    if (needsVoxelSizeTransforms) {
       layersWithTransforms = withVoxelSizeTransforms(
         layersWithTransforms,
-        linkedDatasets,
+        usedDatasets,
         targetVoxelSize,
       );
     }
@@ -255,7 +328,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
           "",
           "The layers were combined " +
             (sourcePoints.length === 0
-              ? respectVoxelSize
+              ? needsVoxelSizeTransforms
                 ? "without any transforms, except for a scaling that compensates for the differing voxel sizes of the source datasets"
                 : "without any transforms"
               : `with ${
@@ -348,13 +421,22 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
             </FormItem>
           )}
         {wizardContext.sourcePoints.length === 0 && (
-          <FormItem name={["respectVoxelSize"]} valuePropName="checked">
-            <Checkbox>
-              <Tooltip title="If the selected datasets have different voxel sizes, each layer is scaled so that it keeps its physical size. The new dataset then uses the finest voxel size of the selected datasets.">
-                Respect voxel size
-              </Tooltip>
-            </Checkbox>
-          </FormItem>
+          <Form.Item
+            noStyle
+            shouldUpdate={(prevValues, curValues) => prevValues.layers !== curValues.layers}
+          >
+            {({ getFieldValue }) =>
+              shouldOfferVoxelSizeScaling(getFieldValue("layers") || [], linkedDatasets) ? (
+                <FormItem name={["respectVoxelSize"]} valuePropName="checked">
+                  <Checkbox>
+                    <Tooltip title="The voxel sizes of the selected datasets differ in a way that WEBKNOSSOS cannot express as mags. Enable this option to scale each layer so that it keeps its physical size. The new dataset then uses the finest voxel size of the selected datasets.">
+                      Respect voxel size
+                    </Tooltip>
+                  </Checkbox>
+                </FormItem>
+              ) : null
+            }
+          </Form.Item>
         )}
 
         <FormItem

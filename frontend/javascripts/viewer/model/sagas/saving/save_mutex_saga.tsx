@@ -45,10 +45,11 @@ const MUTEX_NOT_ACQUIRED_TOAST_KEY = "MutexCouldNotBeAcquired";
 const MUTEX_ACQUIRED_TOAST_KEY = "AnnotationMutexAcquired";
 const STARVING_FOR_MUTEX_TOAST_KEY = "StarvingForMutex";
 const UNABLE_TO_KEEP_MUTEX_TOAST_KEY = "UnableToKeepMutex";
-const ACQUIRE_MUTEX_INTERVAL = import.meta.env.MODE === "test" ? 1 * 1000 : 60 * 1000;
-const DELAY_AFTER_FAILED_MUTEX_FETCH = import.meta.env.MODE === "test" ? 1 * 1000 : 10 * 1000;
+// Exported so that tests can wait for a multiple of this interval instead of hardcoding it.
+export const ACQUIRE_MUTEX_INTERVAL = import.meta.env.MODE === "test" ? 100 : 60 * 1000;
+const DELAY_AFTER_FAILED_MUTEX_FETCH = import.meta.env.MODE === "test" ? 100 : 10 * 1000;
 const RETRY_COUNT = 20; // 12 retries with 60/12=5 seconds backup delay
-const INITIAL_BACKOFF_TIME = 750;
+const INITIAL_BACKOFF_TIME = import.meta.env.MODE === "test" ? 75 : 750;
 const BACKOFF_TIME_MULTIPLIER = 1.2;
 const BACKOFF_JITTER_LOWER_PERCENT = 0.0;
 const MAX_AD_HOC_RETRY_TIME = 30 * 1000;

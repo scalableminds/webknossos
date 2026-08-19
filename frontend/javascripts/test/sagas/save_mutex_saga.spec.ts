@@ -24,6 +24,7 @@ import {
 import { type Saga, select } from "viewer/model/sagas/effect_generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import {
+  ACQUIRE_MUTEX_INTERVAL,
   clearAllSubscriptions,
   getMutexLogicState,
   subscribeToAnnotationMutex,
@@ -118,14 +119,14 @@ describe("Save Mutex Saga", () => {
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
     const task = startSaga(function* task() {
       const _unsubscribe = yield call(subscribeToAnnotationMutex, "Test");
-      yield delay(1000);
+      yield delay(ACQUIRE_MUTEX_INTERVAL);
       expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
       yield call(clearAllSubscriptions);
       yield delay(10);
       expect(context.mocks.releaseAnnotationMutex).toHaveBeenCalled();
       context.mocks.acquireAnnotationMutex.mockClear();
       context.mocks.releaseAnnotationMutex.mockClear();
-      yield delay(1000);
+      yield delay(ACQUIRE_MUTEX_INTERVAL);
       expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
       expect(context.mocks.releaseAnnotationMutex).not.toHaveBeenCalled();
     });
@@ -137,7 +138,7 @@ describe("Save Mutex Saga", () => {
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
     const task = startSaga(function* task() {
       const unsubscribe = yield call(subscribeToAnnotationMutex, "Test");
-      yield delay(1000);
+      yield delay(ACQUIRE_MUTEX_INTERVAL);
       expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
       yield call(unsubscribe);
       yield delay(10);
@@ -147,7 +148,7 @@ describe("Save Mutex Saga", () => {
       yield call(unsubscribe);
       yield call(unsubscribe);
       yield call(unsubscribe);
-      yield delay(1000);
+      yield delay(ACQUIRE_MUTEX_INTERVAL);
       expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
       expect(context.mocks.releaseAnnotationMutex).not.toHaveBeenCalled();
     });
@@ -305,7 +306,7 @@ describe("Save Mutex Saga", () => {
     await setupWebknossosForTestingWithRestrictions(context, "OwnerOnly", true, true);
     mockInitialBucketAndAgglomerateData(context);
     // Give mutex saga time to potentially acquire the mutex. This should not happen!
-    await sleep(100);
+    await sleep(20);
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
     await makeProofreadMerge(context, true);
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
@@ -315,7 +316,7 @@ describe("Save Mutex Saga", () => {
     await setupWebknossosForTestingWithRestrictions(context, "Concurrent", true, true);
     mockInitialBucketAndAgglomerateData(context);
     // Give mutex saga time to potentially acquire the mutex. This should not happen!
-    await sleep(100);
+    await sleep(20);
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
     await makeProofreadMerge(context, true);
     expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
@@ -325,7 +326,7 @@ describe("Save Mutex Saga", () => {
     await setupWebknossosForTestingWithRestrictions(context, "Exclusive", true, true);
     mockInitialBucketAndAgglomerateData(context);
     // Give mutex saga time to potentially acquire the mutex. This should not happen!
-    await sleep(100);
+    await sleep(20);
     expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
   });
 
@@ -336,7 +337,7 @@ describe("Save Mutex Saga", () => {
 
     mockInitialBucketAndAgglomerateData(context);
     // Give mutex saga time to potentially acquire the mutex. This should not happen as ad hoc mutex fetching should be active!
-    await sleep(100);
+    await sleep(20);
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
     // Block first acquiring mutex try.
     context.mocks.acquireAnnotationMutex.mockImplementation(async () => ({
@@ -387,7 +388,7 @@ describe("Save Mutex Saga", () => {
     expect(context.mocks.releaseAnnotationMutex).not.toHaveBeenCalled();
     mockInitialBucketAndAgglomerateData(context);
     // Give mutex saga time to potentially acquire the mutex. This should not happen as ad hoc mutex fetching should be active!
-    await sleep(100);
+    await sleep(20);
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
     expect(context.mocks.releaseAnnotationMutex).not.toHaveBeenCalled();
     const task = startSaga(function* task() {
@@ -407,13 +408,13 @@ describe("Save Mutex Saga", () => {
         blockingUser: null,
         isUpdatingCurrentlyAllowed,
       });
-      // Wait two more fetching cycles (1 second each in testing env)
+      // Wait two more fetching cycles (ACQUIRE_MUTEX_INTERVAL each in testing env)
       yield take("SET_IS_MUTEX_ACQUIRED");
       yield take("SET_IS_MUTEX_ACQUIRED");
       expect(context.mocks.releaseAnnotationMutex).not.toHaveBeenCalled();
       // Simulate saving finished so the mutex is released.
       yield call(unsubscribeFromMutex);
-      yield sleep(100);
+      yield sleep(20);
       expect(context.mocks.releaseAnnotationMutex).toHaveBeenCalled();
       // Check whether the mutex was stored as released.
       hasAnnotationMutex = false;
@@ -432,7 +433,7 @@ describe("Save Mutex Saga", () => {
     expect(context.mocks.releaseAnnotationMutex).not.toHaveBeenCalled();
     mockInitialBucketAndAgglomerateData(context);
     // Give mutex saga time to potentially acquire the mutex. This should not happen as ad hoc mutex fetching should be active!
-    await sleep(100);
+    await sleep(20);
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
     expect(context.mocks.releaseAnnotationMutex).not.toHaveBeenCalled();
     const task = startSaga(function* task() {
@@ -454,7 +455,7 @@ describe("Save Mutex Saga", () => {
         blockingUser: null,
         isUpdatingCurrentlyAllowed,
       });
-      // Wait two more fetching cycles (1 second each in testing env)
+      // Wait two more fetching cycles (ACQUIRE_MUTEX_INTERVAL each in testing env)
       yield take("SET_IS_MUTEX_ACQUIRED");
       yield take("SET_IS_MUTEX_ACQUIRED");
       expect(context.mocks.releaseAnnotationMutex).not.toHaveBeenCalled();
@@ -483,14 +484,14 @@ describe("Save Mutex Saga", () => {
     await setupWebknossosForTestingWithRestrictions(context, "Concurrent", true, true);
     mockInitialBucketAndAgglomerateData(context);
     // Give mutex saga time to potentially acquire the mutex. This should not happen!
-    await sleep(100);
+    await sleep(20);
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
     await makeProofreadMerge(context, true);
     expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
     expect(context.mocks.releaseAnnotationMutex).toHaveBeenCalled();
     context.mocks.acquireAnnotationMutex.mockClear();
     // Give time to potentially try to acquire the mutex again.
-    await sleep(2000);
+    await sleep(ACQUIRE_MUTEX_INTERVAL * 2);
     // But there shouldn't be a try to fetch the mutex again.
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
   });
@@ -499,7 +500,7 @@ describe("Save Mutex Saga", () => {
     await setupWebknossosForTestingWithRestrictions(context, "Concurrent", true, true);
     mockInitialBucketAndAgglomerateData(context);
     // Give mutex saga time to potentially acquire the mutex. This should not happen!
-    await sleep(100);
+    await sleep(20);
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
     const task = startSaga(function* task() {
       // Manually trigger mutex fetching for ad hoc strategy to have more control in test.
@@ -548,7 +549,7 @@ describe("Save Mutex Saga", () => {
       expect(context.mocks.releaseAnnotationMutex).not.toHaveBeenCalled();
       // Simulate saving finished so the mutex is released.
       yield call(unsubscribeFromMutex);
-      yield sleep(100);
+      yield sleep(20);
       expect(context.mocks.releaseAnnotationMutex).toHaveBeenCalled();
     });
     await task.toPromise();
@@ -569,10 +570,10 @@ describe("Save Mutex Saga", () => {
           expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
           context.mocks.acquireAnnotationMutex.mockClear();
           Store.dispatch(disableSavingAction());
-          yield sleep(200);
+          yield sleep(20);
           context.mocks.acquireAnnotationMutex.mockClear();
-          // Wait longer than one acquire interval (1s in test mode) to confirm no retries.
-          yield sleep(2000);
+          // Wait longer than one acquire interval to confirm no retries.
+          yield sleep(ACQUIRE_MUTEX_INTERVAL * 2);
           expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
         });
         await task.toPromise();
@@ -585,7 +586,7 @@ describe("Save Mutex Saga", () => {
           expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
           expect(context.mocks.releaseAnnotationMutex).not.toHaveBeenCalled();
           Store.dispatch(disableSavingAction());
-          yield sleep(200);
+          yield sleep(20);
           expect(context.mocks.releaseAnnotationMutex).toHaveBeenCalled();
           yield assertMutexStoreProperties({
             hasAnnotationMutex: false,
@@ -601,12 +602,12 @@ describe("Save Mutex Saga", () => {
         const task = startSaga(function* task() {
           yield call(subscribeToAnnotationMutex, "Test");
           Store.dispatch(disableSavingAction());
-          yield sleep(200);
+          yield sleep(20);
           context.mocks.acquireAnnotationMutex.mockClear();
           // Switching collaboration mode would normally restart the acquiring saga.
           yield put(setCollaborationModeAction("Exclusive"));
           yield put(setCollaborationModeAction("Concurrent"));
-          yield sleep(2000);
+          yield sleep(ACQUIRE_MUTEX_INTERVAL * 2);
           expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
         });
         await task.toPromise();
@@ -627,7 +628,7 @@ describe("Save Mutex Saga should crash", () => {
     await setupWebknossosForTestingWithRestrictions(context, "Concurrent", true, true);
     mockInitialBucketAndAgglomerateData(context);
     // Give mutex saga time to potentially acquire the mutex. This should not happen!
-    await sleep(100);
+    await sleep(20);
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
     const task = startSaga(function* task() {
       // Manually trigger mutex fetching for ad hoc strategy to have more control in test.
@@ -667,7 +668,7 @@ describe("Save Mutex Saga should crash", () => {
         blockedBySessionId: null,
       }));
       yield take("SET_IS_MUTEX_ACQUIRED");
-      yield sleep(100);
+      yield sleep(30);
       // Checking whether the spawned mutex fetching saga did indeed crash.
       const annotationMutexLogicState = yield call(getMutexLogicState);
       expect(annotationMutexLogicState.runningAdHocMutexAcquiringSaga?.error()).toBeDefined();

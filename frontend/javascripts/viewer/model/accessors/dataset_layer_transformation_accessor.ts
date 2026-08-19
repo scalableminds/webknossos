@@ -638,6 +638,10 @@ function _getTransformedDatasetBoundingBox(
 
 export const getTransformedDatasetBoundingBox = memoizeOne(_getTransformedDatasetBoundingBox);
 
+export function getTransformedDatasetCenter(dataset: APIDataset, nativelyRenderedLayerName: string | null): Vector3 {
+  return getTransformedDatasetBoundingBox(dataset, nativelyRenderedLayerName).getCenter();
+}
+
 // The live SRT transform format uses exactly 7 affine matrices in this order:
 // [0]  dataset center → origin translation, [1] scale, [2] rotX, [3] rotY, [4] rotZ,
 // [5] user translation, [6] origin → center dataset translation.

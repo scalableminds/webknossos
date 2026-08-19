@@ -275,9 +275,6 @@ function _getUntransformedDatasetBoundingBox(dataset: APIDataset): BoundingBox {
 
 export const getUntransformedDatasetBoundingBox = memoizeOne(_getUntransformedDatasetBoundingBox);
 
-export function getDatasetCenter(dataset: APIDataset): Vector3 {
-  return getUntransformedDatasetBoundingBox(dataset).getCenter();
-}
 export function getDatasetExtentInVoxel(dataset: APIDataset) {
   const datasetLayers = dataset.dataSource.dataLayers;
   const allBoundingBoxes = datasetLayers.map((layer) => layer.boundingBox);

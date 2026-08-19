@@ -189,7 +189,6 @@ object Zarr3ArrayHeader extends JsonImplicits {
         attributes = (json \ "attributes").validate[JsObject].asOpt
         codecsJsValue <- (json \ "codecs").validate[JsValue]
         codecs <- readCodecs(codecsJsValue)
-        // The spec allows null entries in dimension_names, which we cannot model. Ignore the field in that case.
         dimension_names = (json \ "dimension_names").validate[Array[String]].asOpt
       } yield Zarr3ArrayHeader(
         zarr_format,

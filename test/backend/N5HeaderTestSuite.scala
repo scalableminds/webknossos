@@ -119,7 +119,6 @@ class N5HeaderTestSuite extends AsyncWordSpec {
 
     "selecting the compressor from the parsed header" should {
       "resolve the known compression types" in {
-        // "raw" is the N5 spec’s identifier for uncompressed data
         assert(headerWithCompression("""{"type": "raw"}""").compressorImpl.isInstanceOf[NullCompressor])
         assert(headerWithCompression("""{"type": "null"}""").compressorImpl.isInstanceOf[NullCompressor])
         assert(headerWithCompression("""{"type": "zlib", "level": 6}""").compressorImpl.isInstanceOf[ZlibCompressor])

@@ -10,28 +10,28 @@ object S3UriUtils {
 
   sealed private trait S3UriStyle
 
-  // S3://bucket-name/key-name — the host is the bucket
+  // s3://bucket-name/key-name (uri host is the bucket)
   private case object ShortStyle extends S3UriStyle
 
-  // https://bucket-name.s3.region-code.amazonaws.com/key-name — the bucket is a prefix of the host
+  // https://bucket-name.s3.region-code.amazonaws.com/key-name (the bucket is a prefix of the host)
   private case class VirtualHostedStyle(bucket: String) extends S3UriStyle
 
-  // https://s3.region-code.amazonaws.com/bucket-name/key-name — the host is an endpoint,
-  // the bucket is the first path segment
+  // https://s3.region-code.amazonaws.com/bucket-name/key-name (the host is an endpoint,
+  // the bucket is the first path segment)
   private case object PathStyle extends S3UriStyle
 
   // Matches bucket-name.s3.amazonaws.com, bucket-name.s3.us-west-2.amazonaws.com,
   // bucket-name.s3-us-west-2.amazonaws.com and bucket-name.s3.dualstack.us-west-2.amazonaws.com
-  private val virtualHostedStyleHost = """^(.+?)\.s3([.-][\w.-]+)?\.amazonaws\.com$""".r
+  private val virtualHostedStyleHostRegex = """^(.+?)\.s3([.-][\w.-]+)?\.amazonaws\.com$""".r
 
   // Matches s3.amazonaws.com, s3.us-west-2.amazonaws.com, s3-us-west-2.amazonaws.com
-  private val amazonEndpointHost = """^s3([.-][\w.-]+)?\.amazonaws\.com$""".r
+  private val amazonEndpointHostRegex = """^s3([.-][\w.-]+)?\.amazonaws\.com$""".r
 
   private def styleOf(uri: URI): Option[S3UriStyle] =
     Option(uri.getHost).filter(_.nonEmpty).map {
-      case virtualHostedStyleHost(bucket, _) => VirtualHostedStyle(bucket)
-      case host if isEndpointHost(uri, host) => PathStyle
-      case _                                 => ShortStyle
+      case virtualHostedStyleHostRegex(bucket, _) => VirtualHostedStyle(bucket)
+      case host if isEndpointHost(uri, host)      => PathStyle
+      case _                                      => ShortStyle
     }
 
   /** Telling an endpoint host apart from a bucket name can only be done heuristically, since the host slot of an s3://
@@ -41,7 +41,7 @@ object S3UriUtils {
     * endpoint host; such a host is read as an endpoint.
     */
   private def isEndpointHost(uri: URI, host: String): Boolean =
-    amazonEndpointHost.matches(host) || uri.getPort >= 0 || host == "localhost" || host.contains(".")
+    amazonEndpointHostRegex.matches(host) || uri.getPort >= 0 || host == "localhost" || host.contains(".")
 
   private def pathWithoutLeadingSlash(uri: URI): String =
     Option(uri.getPath).getOrElse("").stripPrefix("/")

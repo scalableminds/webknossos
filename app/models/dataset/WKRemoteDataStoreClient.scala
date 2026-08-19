@@ -142,6 +142,18 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
         .delete()
     } yield ()
 
+  // Called once a needsConversion=true upload's convert_to_wkw job has reached a terminal state, so the datastore
+  // can now safely clean up the temporary upload artifacts (raw upload backup, .forConversion staging dir) it kept
+  // around for the worker job to read from.
+  def cleanUpUploadArtifacts(organizationId: String, uploadId: String, directoryName: String): Fox[Unit] =
+    for {
+      _ <- rpc(s"${dataStore.url}/data/datasets/upload/dataset/cleanUpUploadArtifacts/$uploadId")
+        .addQueryParam("organizationId", organizationId)
+        .addQueryParam("directoryName", directoryName)
+        .addQueryParam("token", RpcTokenHolder.webknossosToken)
+        .delete()
+    } yield ()
+
   def getOneBaseDirForOrgaAbsolute(organizationId: String): Fox[UPath] =
     rpc(s"${dataStore.url}/data/datasets/getOneBaseDirForOrgaAbsolute")
       .addQueryParam("organizationId", organizationId)

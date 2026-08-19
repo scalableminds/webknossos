@@ -98,6 +98,8 @@ class WKRemoteWorkerController @Inject() (
         jobAfterChange <- jobDAO.findOne(id)(using GlobalAccessContext) ?~> Msg.Job.notFound
         _ = jobService.trackStatusChange(jobBeforeChange, jobAfterChange)
         _ <- jobService.cleanUpIfFailed(jobAfterChange) ?~> Msg.Job.cleanupFailed
+        // Best-effort cleanup: never fails, so it can't block the credit-transaction handling below.
+        _ <- jobService.cleanUpUploadArtifactsIfNeeded(jobBeforeChange, jobAfterChange)
         _ <- Fox.runIf(request.body.state == JobState.SUCCESS) {
           creditTransactionService.completeTransactionOfJob(jobAfterChange._id)(using
             GlobalAccessContext

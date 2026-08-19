@@ -235,4 +235,16 @@ class UploadController @Inject() (
       } yield result
     }
 
+  /* Called by webknossos once a needsConversion=true upload's convert_to_wkw job has reached a terminal state
+     (success, failure, or cancellation), so the datastore can now safely delete the raw upload backup and the
+     .forConversion staging dir the worker job read from (if configured to delete temporary upload artifacts). */
+  def cleanUpUploadArtifacts(organizationId: String, uploadId: String, directoryName: String): Action[AnyContent] =
+    Action.fox { implicit request =>
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
+        for {
+          _ <- uploadService.cleanUpUploadArtifactsAfterConversion(organizationId, uploadId, directoryName)
+        } yield Ok
+      }
+    }
+
 }

@@ -264,7 +264,13 @@ class WKRemoteDataStoreController @Inject() (
                 requireAllowsUpload = true,
                 requireLocal = true
               )
-              _ <- jobService.submitConvertToWkwJob(updated, user, voxelSize, organizationBaseDirectory)
+              _ <- jobService.submitConvertToWkwJob(
+                updated,
+                user,
+                voxelSize,
+                organizationBaseDirectory,
+                request.body.uploadId
+              )
             } yield ()
           }
         } yield Ok

@@ -11,7 +11,6 @@ import { APIJobCommand } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import {
   getSomeMagInfoForDataset,
-  getUntransformedDatasetBoundingBox,
 } from "viewer/model/accessors/dataset_accessor";
 import { getTransformedDatasetBoundingBox } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
@@ -67,7 +66,9 @@ type Props = {
 function GenerateBoundingBoxesModalInner({ isOpen, onClose, magnification, jobType }: Props) {
   const dispatch = useDispatch();
   const dataset = useWkSelector((state) => state.dataset);
-  const nativelyRenderedLayerName = useWkSelector((state) => state.datasetConfiguration.nativelyRenderedLayerName);
+  const nativelyRenderedLayerName = useWkSelector(
+    (state) => state.datasetConfiguration.nativelyRenderedLayerName,
+  );
   const annotation = useWkSelector((state) => state.annotation);
   const { userBoundingBoxes: existingBoundingBoxes } = getSomeTracing(annotation);
 

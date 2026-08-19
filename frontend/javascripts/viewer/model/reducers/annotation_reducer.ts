@@ -11,12 +11,11 @@ import { getExtentForNewBoundingBox } from "viewer/model/accessors/view_mode_acc
 import type { Action } from "viewer/model/actions/actions";
 import { updateKey, updateKey2 } from "viewer/model/helpers/deep_update";
 import type { MeshInformation, UserBoundingBox, WebknossosState } from "viewer/store";
-import { getUntransformedDatasetBoundingBox } from "../accessors/dataset_accessor";
+import { getTransformedDatasetBoundingBox } from "../accessors/dataset_layer_transformation_accessor";
 import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
 import { getMeshesForAdditionalCoordinates } from "../accessors/volumetracing_accessor";
 import type { ChangeUserBoundingBoxAction } from "../actions/annotation_actions";
 import BoundingBox from "../bucket_data_handling/bounding_box";
-import { getTransformedDatasetBoundingBox } from "../accessors/dataset_layer_transformation_accessor";
 
 const updateAnnotation = (
   state: WebknossosState,
@@ -248,7 +247,10 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
       }
 
       // Ensure the new bounding box is within the dataset bounding box.
-      const datasetBoundingBox = getTransformedDatasetBoundingBox(state.dataset, state.datasetConfiguration.nativelyRenderedLayerName);
+      const datasetBoundingBox = getTransformedDatasetBoundingBox(
+        state.dataset,
+        state.datasetConfiguration.nativelyRenderedLayerName,
+      );
       const newBoundingBox = new BoundingBox(newUserBoundingBox.boundingBox);
       const newBoundingBoxWithinDataset = newBoundingBox.intersectedWith(datasetBoundingBox);
       // Only update the bounding box if the bounding box overlaps with the dataset bounds.

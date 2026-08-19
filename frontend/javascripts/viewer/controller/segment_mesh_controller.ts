@@ -756,6 +756,7 @@ export default class SegmentMeshController {
 
   destroy(): void {
     this.throttledUpdateActiveUnmappedSegmentIdHighlighting.cancel();
+    this.throttledUpdateMinCutPartitionHighlighting.cancel();
     // Dispose all mesh groups (across all additional coordinates) so that
     // their geometries and materials are freed on the GPU.
     for (const recordsOfLayers of Object.values(this.meshesGroupsPerSegmentId)) {

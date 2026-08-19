@@ -1034,7 +1034,7 @@ describe("Proofreading agglomerate tree syncing", () => {
       yield put(toggleSegmentInPartitionAction(1338n, "partitionA", 1n));
       // Select partition 2
       yield put(toggleSegmentInPartitionAction(1337n, "partitionB", 1n));
-      yield put(toggleSegmentInPartitionAction(3n, "partitionA", 1n));
+      yield put(toggleSegmentInPartitionAction(3n, "partitionB", 1n));
       // Execute the actual merge and wait for the finished mapping.
       yield put(minCutPartitionsAction());
       yield take(operationFinished("PROOFREADING")); // operation finished

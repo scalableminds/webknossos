@@ -40,7 +40,7 @@ import {
   ACQUIRE_MUTEX_INTERVAL,
   DELAY_AFTER_FAILED_MUTEX_FETCH,
   INITIAL_BACKOFF_TIME,
-} from "viewer/model/sagas/saving/save_mutex_saga_constants";
+} from "viewer/model/sagas/saving/save_saga_constants";
 import { ensureWkInitialized } from "../ready_sagas";
 
 const MUTEX_NOT_ACQUIRED_TOAST_KEY = "MutexCouldNotBeAcquired";

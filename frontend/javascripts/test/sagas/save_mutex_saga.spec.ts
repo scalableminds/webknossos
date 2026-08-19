@@ -28,7 +28,7 @@ import {
   getMutexLogicState,
   subscribeToAnnotationMutex,
 } from "viewer/model/sagas/saving/save_mutex_saga";
-import { ACQUIRE_MUTEX_INTERVAL } from "viewer/model/sagas/saving/save_mutex_saga_constants";
+import { ACQUIRE_MUTEX_INTERVAL } from "viewer/model/sagas/saving/save_saga_constants";
 import { Store } from "viewer/singletons";
 import { startSaga } from "viewer/store";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -39,14 +39,20 @@ import {
   operationStarted,
 } from "./proofreading/proofreading_test_utils";
 
-// Mocked here (rather than reducing the real values in save_mutex_saga_constants.ts)
-// because the mutex-acquiring saga runs in the background for every test via the root
-// saga, not just here — shrinking the real constants made unrelated test files flaky.
-vi.mock("viewer/model/sagas/saving/save_mutex_saga_constants", () => ({
-  ACQUIRE_MUTEX_INTERVAL: 100,
-  DELAY_AFTER_FAILED_MUTEX_FETCH: 100,
-  INITIAL_BACKOFF_TIME: 75,
-}));
+// Mocked here (rather than reducing the real values in save_saga_constants.ts) because
+// the mutex-acquiring saga runs in the background for every test via the root saga, not
+// just here — shrinking the real constants made unrelated test files flaky. The other
+// constants from this module (e.g. PUSH_THROTTLE_TIME) are spread through unchanged
+// since other sagas running in the background during these tests rely on them too.
+vi.mock("viewer/model/sagas/saving/save_saga_constants", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("viewer/model/sagas/saving/save_saga_constants")>();
+  return {
+    ...actual,
+    ACQUIRE_MUTEX_INTERVAL: 100,
+    DELAY_AFTER_FAILED_MUTEX_FETCH: 100,
+    INITIAL_BACKOFF_TIME: 75,
+  };
+});
 
 const blockingUser: APIUserCompact = { firstName: "Sample", lastName: "User", id: "1111" };
 

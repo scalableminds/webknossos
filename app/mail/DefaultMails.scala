@@ -2,7 +2,7 @@ package mail
 
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.time.Instant
-import models.organization.{Organization, PricingPlan}
+import models.organization.{Organization, PricingPlan, PricingPlanFeatures}
 import models.user.MultiUser
 import utils.WkConf
 import views.*
@@ -199,6 +199,28 @@ class DefaultMails @Inject() (conf: WkConf) extends Formatter {
         html.mail.upgradeAiAddon(multiUser.fullName, aiPlan, pricingPlan, additionalFooter, organizationName).body,
       recipients = List(supportEmail, multiUser.email),
       replyTo = List(multiUser.email, supportEmail)
+    )
+
+  def pricingPlanUpgradedMail(
+      multiUser: MultiUser,
+      organizationName: String,
+      unlockedFeatures: PricingPlanFeatures
+  ): Mail =
+    Mail(
+      from = defaultSender,
+      subject = s"WEBKNOSSOS Upgrade: Your organization is now on the ${unlockedFeatures.planLabel} plan",
+      bodyHtml = html.mail
+        .pricingPlanUpgraded(
+          multiUser.fullName,
+          organizationName,
+          unlockedFeatures.planLabel,
+          unlockedFeatures.featureHighlights,
+          uri,
+          additionalFooter
+        )
+        .body,
+      recipients = List(multiUser.email),
+      replyTo = List(supportEmail)
     )
 
   def orderCreditsMail(multiUser: MultiUser, requestedCredits: Int): Mail =

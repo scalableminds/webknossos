@@ -34,7 +34,7 @@ import ControlsAndRenderingSettingsTab from "viewer/view/left_border_tabs/contro
 import LayerSettingsTab from "viewer/view/left_border_tabs/layer_settings_tab";
 import RecordingSwitch from "viewer/view/recording_switch";
 import AbstractTreeTab from "viewer/view/right_border_tabs/abstract_tree_tab";
-import BoundingBoxTab from "viewer/view/right_border_tabs/bounding_box_tab";
+import BoundingBoxTab from "viewer/view/right_border_tabs/bounding_box_tab/bounding_box_tab";
 import CommentTabView from "viewer/view/right_border_tabs/comment_tab/comment_tab_view";
 import ConnectomeView from "viewer/view/right_border_tabs/connectome_tab/connectome_view";
 import DatasetInfoTabView from "viewer/view/right_border_tabs/dataset_info_tab_view";

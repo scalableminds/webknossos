@@ -197,6 +197,20 @@ export function handleTaskCreationResponse(
       "Too many failed tasks to show, please use the CSV download for a full list."
     );
 
+  const downloadFailedTasksButton = (
+    <Button
+      onClick={() => {
+        const blob = new Blob([failedTasksAsString], {
+          type: "text/plain;charset=utf-8",
+        });
+        saveAs(blob, "failed-tasks.csv");
+      }}
+      icon={<DownloadOutlined />}
+    >
+      Download failed task info as CSV
+    </Button>
+  );
+
   modal.info({
     title: `${successfulTasks.length} ${pluralize("task", successfulTasks.length)} successfully created, ${failedTasks.length} ${pluralize("task", failedTasks.length)} failed. ${warnings.length} ${pluralize("warning", warnings.length)}.`,
     content: (
@@ -221,24 +235,6 @@ export function handleTaskCreationResponse(
           <React.Fragment>
             <Divider />
             <div>
-              <Flex
-                justify="center"
-                style={{
-                  margin: 20,
-                }}
-              >
-                <Button
-                  onClick={() => {
-                    const blob = new Blob([failedTasksAsString], {
-                      type: "text/plain;charset=utf-8",
-                    });
-                    saveAs(blob, "failed-tasks.csv");
-                  }}
-                  icon={<DownloadOutlined />}
-                >
-                  Download failed task info as CSV
-                </Button>
-              </Flex>
               <Typography.Text strong>Failed Tasks:</Typography.Text>
               <div style={displayResultsStyle}> {failedTasksContent}</div>
             </div>
@@ -246,7 +242,16 @@ export function handleTaskCreationResponse(
         ) : null}
       </div>
     ),
-    width: ModalWidth.Medium,
+    footer:
+      failedTasks.length > 0
+        ? (_, { OkBtn }) => (
+            <Flex justify="space-between" align="center">
+              {downloadFailedTasksButton}
+              <OkBtn />
+            </Flex>
+          )
+        : undefined,
+    width: ModalWidth.Large,
   });
 }
 

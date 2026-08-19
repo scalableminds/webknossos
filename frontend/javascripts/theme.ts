@@ -108,6 +108,18 @@ const TypographyHeadingToken = {
 const ModalToken = {
   titleFontSize: 16,
   titleLineHeight: 1.5,
+
+  // antd colors the `confirm` dialog's icon with `colorWarning`, because one CSS rule covers both
+  // `-warning` and `-confirm` (antd/lib/modal/style/confirm.js). Every confirmation therefore
+  // renders a yellow icon, which reads as a warning even for an ordinary question. Scoping
+  // `colorWarning` to Modal re-points that single declaration at the WEBKNOSSOS blue --
+  // `colorWarning` is used exactly once in the whole Modal stylesheet, so nothing else moves.
+  //
+  // This is only safe because we never call `modal.warning()` / `modal.warn()`. If a warning
+  // dialog is ever added it would silently lose its warning color, and this needs revisiting.
+  // `modal.error` and `modal.info` are unaffected: they use `colorError` and `colorInfo`, and
+  // `colorInfo` is already ColorWKBlue via `globalDesignToken`.
+  colorWarning: ColorWKBlue,
 };
 
 // The width scale for modals. Pick one of these instead of a bespoke pixel value, so that

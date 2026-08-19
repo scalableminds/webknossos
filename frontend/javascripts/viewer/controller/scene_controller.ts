@@ -50,10 +50,10 @@ import {
   getLayerBoundingBox,
   getLayerByName,
   getSegmentationLayers,
-  getTransformedDatasetBoundingBox,
   getVisibleSegmentationLayers,
 } from "viewer/model/accessors/dataset_accessor";
 import {
+  getTransformedDatasetBoundingBox,
   getTransformsForLayer,
   getTransformsForLayerOrNull,
   getTransformsForSkeletonLayer,

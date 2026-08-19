@@ -358,7 +358,7 @@ export function getDatasetActionContextMenu({
                 {
                   key: "apply-view-configuration",
                   icon: <CopyOutlined className="icon-margin-right" />,
-                  label: "Apply View Configuration to All Datasets in Folder…",
+                  label: "Apply View Configuration to All Datasets in this Folder",
                   onClick: () => applyViewConfigurationToDatasetsInFolder(dataset, modal),
                 },
               ],

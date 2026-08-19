@@ -638,7 +638,10 @@ function _getTransformedDatasetBoundingBox(
 
 export const getTransformedDatasetBoundingBox = memoizeOne(_getTransformedDatasetBoundingBox);
 
-export function getTransformedDatasetCenter(dataset: APIDataset, nativelyRenderedLayerName: string | null): Vector3 {
+export function getTransformedDatasetCenter(
+  dataset: APIDataset,
+  nativelyRenderedLayerName: string | null,
+): Vector3 {
   return getTransformedDatasetBoundingBox(dataset, nativelyRenderedLayerName).getCenter();
 }
 

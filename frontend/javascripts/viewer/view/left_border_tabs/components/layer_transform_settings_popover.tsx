@@ -8,11 +8,11 @@ import Toast from "libs/toast";
 import { type ReactNode, useCallback, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import type { APIDataLayer, APISkeletonLayer } from "types/api_types";
-import { getUntransformedDatasetBoundingBox } from "viewer/model/accessors/dataset_accessor";
 import {
   buildLiveTransforms,
   DEFAULT_SRT,
   extractSRTFromTransforms,
+  getTransformedDatasetBoundingBox,
   hasValidLiveTransformationPattern,
   type SRTValues,
 } from "viewer/model/accessors/dataset_layer_transformation_accessor";
@@ -135,7 +135,10 @@ export function LayerTransformSettingsContent({
   const queryClient = useQueryClient();
   const [isSaving, setIsSaving] = useState(false);
   const dataset = useWkSelector((state) => state.dataset);
-  const datasetBbox = getUntransformedDatasetBoundingBox(dataset);
+  const nativelyRenderedLayerName = useWkSelector(
+    (state) => state.datasetConfiguration.nativelyRenderedLayerName,
+  );
+  const datasetBbox = getTransformedDatasetBoundingBox(dataset, nativelyRenderedLayerName);
   const translationSettingLimits = useMemo<[number, number, number]>(
     () => [
       datasetBbox.max[0] - datasetBbox.min[0],
@@ -148,9 +151,7 @@ export function LayerTransformSettingsContent({
     const dataLayer = state.dataset.dataSource.dataLayers.find((l) => l.name === layer.name);
     return dataLayer?.coordinateTransformations ?? null;
   });
-  const isNativelyRendered = useWkSelector(
-    (state) => state.datasetConfiguration.nativelyRenderedLayerName === layer.name,
-  );
+  const isNativelyRendered = nativelyRenderedLayerName === layer.name;
 
   const isCompatible = useMemo(() => hasValidLiveTransformationPattern(transforms), [transforms]);
 

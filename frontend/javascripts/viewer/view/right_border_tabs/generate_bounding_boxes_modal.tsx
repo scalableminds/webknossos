@@ -9,9 +9,7 @@ import { useDispatch } from "react-redux";
 import { batchActions } from "redux-batched-actions";
 import { APIJobCommand } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
-import {
-  getSomeMagInfoForDataset,
-} from "viewer/model/accessors/dataset_accessor";
+import { getSomeMagInfoForDataset } from "viewer/model/accessors/dataset_accessor";
 import { getTransformedDatasetBoundingBox } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import type { Action } from "viewer/model/actions/actions";

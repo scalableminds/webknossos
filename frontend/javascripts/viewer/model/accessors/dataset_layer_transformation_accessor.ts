@@ -583,20 +583,6 @@ export function layerToGlobalTransformedPosition(
   return layerPos;
 }
 
-function getBoundingBoxCorners(boundingBox: { min: Vector3; max: Vector3 }): Vector3[] {
-  const { min, max } = boundingBox;
-  return [
-    [min[0], min[1], min[2]],
-    [max[0], min[1], min[2]],
-    [min[0], max[1], min[2]],
-    [max[0], max[1], min[2]],
-    [min[0], min[1], max[2]],
-    [max[0], min[1], max[2]],
-    [min[0], max[1], max[2]],
-    [max[0], max[1], max[2]],
-  ];
-}
-
 // Unlike getUntransformedDatasetBoundingBox (dataset_accessor.ts), this variant takes each
 // layer's coordinate transforms (relative to nativelyRenderedLayerName) into account. Since
 // different layers can have different transforms, the axis-aligned extent has to be computed
@@ -619,7 +605,7 @@ function _getTransformedDatasetBoundingBox(
   for (const dataLayer of getDataLayers(dataset)) {
     const layerBox = getLayerBoundingBox(dataset, dataLayer.name);
     const transform = getTransformsForLayerOrNull(dataset, dataLayer, nativelyRenderedLayerName);
-    const corners = getBoundingBoxCorners(layerBox);
+    const corners = new BoundingBox(layerBox).getCorners();
     const transformedCorners = transform ? corners.map(transformPointUnscaled(transform)) : corners;
 
     for (const corner of transformedCorners) {

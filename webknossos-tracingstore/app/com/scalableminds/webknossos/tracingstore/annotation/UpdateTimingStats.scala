@@ -11,8 +11,6 @@ class UpdateTimingStats {
   private val phaseDurationsNanos: mutable.LinkedHashMap[String, Long] = mutable.LinkedHashMap.empty
   private var requestShapeSummary: String = "not recorded"
 
-  // Called once, as soon as the request body is available, to capture how many updates/groups/
-  // versions/transactions the save request contained, and of what kind.
   def recordRequestShape(updateGroups: List[UpdateActionGroup]): Unit = {
     val actions = updateGroups.flatMap(_.actions)
     val actionTypeCounts = actions
@@ -24,9 +22,6 @@ class UpdateTimingStats {
       .map { case (name, count) => s"$name=$count" }
       .mkString(", ")
     val versions = updateGroups.map(_.version)
-    // Per-group breakdown of bucket-mutating (volume data) actions, to see whether they are spread
-    // across most groups or concentrated in a few — this matters for whether batching optimizations
-    // that operate across groups of one request would pay off.
     val bucketMutatingActionCountsPerGroup: List[Int] = updateGroups.map(_.actions.count {
       case _: BucketMutatingVolumeUpdateAction => true
       case _                                   => false
@@ -46,8 +41,6 @@ class UpdateTimingStats {
   def count(key: String, by: Long = 1): Unit =
     counters.update(key, counters.getOrElse(key, 0L) + by)
 
-  // Times a Fox-returning block, including the time spent awaiting its async I/O, and adds it to
-  // the (possibly already non-zero) duration recorded for that phase.
   def time[T](phase: String)(fox: => Fox[T])(implicit ec: ExecutionContext): Fox[T] = {
     val start = System.nanoTime()
     val result = fox

@@ -60,7 +60,7 @@ describe("Volume Tracing", () => {
 
     const paintCenter = [0, 0, 0] as Vector3;
     const brushSize = 10;
-    const newCellId = 2;
+    const newCellId = 2n;
     const volumeTracingLayerName = api.data.getVolumeTracingLayerIds()[0];
 
     Store.dispatch(updateUserSettingAction("brushSize", brushSize));
@@ -72,7 +72,7 @@ describe("Volume Tracing", () => {
     Store.dispatch(addToContourListAction(paintCenter));
     Store.dispatch(finishEditingAction());
     // Brush with ${newCellId + 1}
-    Store.dispatch(setActiveCellAction(newCellId + 1));
+    Store.dispatch(setActiveCellAction(newCellId + 1n));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
     Store.dispatch(addToContourListAction(paintCenter));
     Store.dispatch(finishEditingAction());
@@ -80,14 +80,14 @@ describe("Volume Tracing", () => {
     expect(
       await api.data.getDataValue(volumeTracingLayerName, paintCenter),
       "Before undo, there should be newCellId + 1",
-    ).toBe(newCellId + 1);
+    ).toBe(Number(newCellId) + 1);
 
     await api.tracing.save();
 
     vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
       createBucketResponseFunction(
         { volumeTracingId: "uint16", color: "uint8" },
-        newCellId + 1,
+        Number(newCellId) + 1,
         500,
       ),
     );
@@ -97,10 +97,14 @@ describe("Volume Tracing", () => {
 
     await dispatchUndoAsync(Store.dispatch);
 
-    expect(await api.data.getDataValue(volumeTracingLayerName, paintCenter)).toBe(newCellId);
+    expect(await api.data.getDataValue(volumeTracingLayerName, paintCenter)).toBe(
+      Number(newCellId),
+    );
 
     await dispatchRedoAsync(Store.dispatch);
-    expect(await api.data.getDataValue(volumeTracingLayerName, paintCenter)).toBe(newCellId + 1);
+    expect(await api.data.getDataValue(volumeTracingLayerName, paintCenter)).toBe(
+      Number(newCellId) + 1,
+    );
   });
 
   it<WebknossosTestContext>("Brushing/Tracing with upsampling to unloaded data", async ({
@@ -121,7 +125,7 @@ describe("Volume Tracing", () => {
     const volumeTracingLayerName = api.data.getVolumeTracingLayerIds()[0];
     const paintCenter = [0, 0, 0] as Vector3;
     const brushSize = 16;
-    const newCellId = 2;
+    const newCellId = 2n;
 
     Store.dispatch(updateUserSettingAction("overwriteMode", OverwriteModeEnum.OVERWRITE_EMPTY));
     Store.dispatch(updateUserSettingAction("brushSize", brushSize));
@@ -310,10 +314,10 @@ describe("Volume Tracing", () => {
     const volumeTracingLayerName = api.data.getVolumeTracingLayerIds()[0];
     const position = [1, 2, 3] as Vector3;
 
-    Store.dispatch(clickSegmentAction(1, position, undefined));
-    Store.dispatch(clickSegmentAction(2, position, undefined));
-    Store.dispatch(clickSegmentAction(3, position, undefined));
-    Store.dispatch(clickSegmentAction(4, position, undefined));
+    Store.dispatch(clickSegmentAction(1n, position, undefined));
+    Store.dispatch(clickSegmentAction(2n, position, undefined));
+    Store.dispatch(clickSegmentAction(3n, position, undefined));
+    Store.dispatch(clickSegmentAction(4n, position, undefined));
 
     Store.dispatch(
       setSegmentGroupsAction(
@@ -325,17 +329,17 @@ describe("Volume Tracing", () => {
       ),
     );
 
-    Store.dispatch(updateSegmentAction(1, { groupId: 1 }, volumeTracingLayerName));
-    Store.dispatch(updateSegmentAction(2, { groupId: 1 }, volumeTracingLayerName));
-    Store.dispatch(updateSegmentAction(3, { groupId: 2 }, volumeTracingLayerName));
-    Store.dispatch(updateSegmentAction(4, { groupId: 2 }, volumeTracingLayerName));
+    Store.dispatch(updateSegmentAction(1n, { groupId: 1 }, volumeTracingLayerName));
+    Store.dispatch(updateSegmentAction(2n, { groupId: 1 }, volumeTracingLayerName));
+    Store.dispatch(updateSegmentAction(3n, { groupId: 2 }, volumeTracingLayerName));
+    Store.dispatch(updateSegmentAction(4n, { groupId: 2 }, volumeTracingLayerName));
 
     Store.dispatch(
       batchUpdateGroupsAndSegmentsAction([
-        updateSegmentAction(1, { groupId: MISSING_GROUP_ID }, volumeTracingLayerName),
-        updateSegmentAction(2, { groupId: MISSING_GROUP_ID }, volumeTracingLayerName),
-        updateSegmentAction(3, { groupId: MISSING_GROUP_ID }, volumeTracingLayerName),
-        updateSegmentAction(4, { groupId: MISSING_GROUP_ID }, volumeTracingLayerName),
+        updateSegmentAction(1n, { groupId: MISSING_GROUP_ID }, volumeTracingLayerName),
+        updateSegmentAction(2n, { groupId: MISSING_GROUP_ID }, volumeTracingLayerName),
+        updateSegmentAction(3n, { groupId: MISSING_GROUP_ID }, volumeTracingLayerName),
+        updateSegmentAction(4n, { groupId: MISSING_GROUP_ID }, volumeTracingLayerName),
         setSegmentGroupsAction([], volumeTracingLayerName),
       ]),
     );
@@ -356,20 +360,20 @@ describe("Volume Tracing", () => {
     expect(tracingRestored.segmentGroups.length).toBe(2);
     expect(tracingRestored.segments.size()).toBe(4);
 
-    expect(tracingRestored.segments.getOrThrow(1).groupId).toBe(1);
-    expect(tracingRestored.segments.getOrThrow(2).groupId).toBe(1);
-    expect(tracingRestored.segments.getOrThrow(3).groupId).toBe(2);
-    expect(tracingRestored.segments.getOrThrow(4).groupId).toBe(2);
+    expect(tracingRestored.segments.getOrThrow(1n).groupId).toBe(1);
+    expect(tracingRestored.segments.getOrThrow(2n).groupId).toBe(1);
+    expect(tracingRestored.segments.getOrThrow(3n).groupId).toBe(2);
+    expect(tracingRestored.segments.getOrThrow(4n).groupId).toBe(2);
   });
 
   it<WebknossosTestContext>("Undo for deleting segment group (with recursion)", async ({ api }) => {
     const volumeTracingLayerName = api.data.getVolumeTracingLayerIds()[0];
     const position = [1, 2, 3] as Vector3;
 
-    Store.dispatch(clickSegmentAction(1, position, undefined));
-    Store.dispatch(clickSegmentAction(2, position, undefined));
-    Store.dispatch(clickSegmentAction(3, position, undefined));
-    Store.dispatch(clickSegmentAction(4, position, undefined));
+    Store.dispatch(clickSegmentAction(1n, position, undefined));
+    Store.dispatch(clickSegmentAction(2n, position, undefined));
+    Store.dispatch(clickSegmentAction(3n, position, undefined));
+    Store.dispatch(clickSegmentAction(4n, position, undefined));
 
     Store.dispatch(
       setSegmentGroupsAction(
@@ -384,17 +388,17 @@ describe("Volume Tracing", () => {
       ),
     );
 
-    Store.dispatch(updateSegmentAction(1, { groupId: 1 }, volumeTracingLayerName));
-    Store.dispatch(updateSegmentAction(2, { groupId: 1 }, volumeTracingLayerName));
-    Store.dispatch(updateSegmentAction(3, { groupId: 2 }, volumeTracingLayerName));
-    Store.dispatch(updateSegmentAction(4, { groupId: 2 }, volumeTracingLayerName));
+    Store.dispatch(updateSegmentAction(1n, { groupId: 1 }, volumeTracingLayerName));
+    Store.dispatch(updateSegmentAction(2n, { groupId: 1 }, volumeTracingLayerName));
+    Store.dispatch(updateSegmentAction(3n, { groupId: 2 }, volumeTracingLayerName));
+    Store.dispatch(updateSegmentAction(4n, { groupId: 2 }, volumeTracingLayerName));
 
     Store.dispatch(
       batchUpdateGroupsAndSegmentsAction([
-        removeSegmentAction(1, volumeTracingLayerName),
-        removeSegmentAction(2, volumeTracingLayerName),
-        removeSegmentAction(3, volumeTracingLayerName),
-        removeSegmentAction(4, volumeTracingLayerName),
+        removeSegmentAction(1n, volumeTracingLayerName),
+        removeSegmentAction(2n, volumeTracingLayerName),
+        removeSegmentAction(3n, volumeTracingLayerName),
+        removeSegmentAction(4n, volumeTracingLayerName),
         setSegmentGroupsAction([], volumeTracingLayerName),
       ]),
     );
@@ -412,20 +416,20 @@ describe("Volume Tracing", () => {
     expect(tracingRestored.segmentGroups[0]?.children.length || 0).toBe(1);
     expect(tracingRestored.segments.size()).toBe(4);
 
-    expect(tracingRestored.segments.getOrThrow(1).groupId).toBe(1);
-    expect(tracingRestored.segments.getOrThrow(2).groupId).toBe(1);
-    expect(tracingRestored.segments.getOrThrow(3).groupId).toBe(2);
-    expect(tracingRestored.segments.getOrThrow(4).groupId).toBe(2);
+    expect(tracingRestored.segments.getOrThrow(1n).groupId).toBe(1);
+    expect(tracingRestored.segments.getOrThrow(2n).groupId).toBe(1);
+    expect(tracingRestored.segments.getOrThrow(3n).groupId).toBe(2);
+    expect(tracingRestored.segments.getOrThrow(4n).groupId).toBe(2);
   });
 
   it<WebknossosTestContext>("Undo for deleting segment group (bug repro)", async ({ api }) => {
     const volumeTracingLayerName = api.data.getVolumeTracingLayerIds()[0];
     const position = [1, 2, 3] as Vector3;
 
-    Store.dispatch(clickSegmentAction(1, position, undefined));
-    Store.dispatch(clickSegmentAction(2, position, undefined));
-    Store.dispatch(clickSegmentAction(3, position, undefined));
-    Store.dispatch(clickSegmentAction(4, position, undefined));
+    Store.dispatch(clickSegmentAction(1n, position, undefined));
+    Store.dispatch(clickSegmentAction(2n, position, undefined));
+    Store.dispatch(clickSegmentAction(3n, position, undefined));
+    Store.dispatch(clickSegmentAction(4n, position, undefined));
 
     /* Set up
     Group 1
@@ -445,20 +449,20 @@ describe("Volume Tracing", () => {
       ),
     );
 
-    Store.dispatch(updateSegmentAction(1, { groupId: 1 }, volumeTracingLayerName));
-    Store.dispatch(updateSegmentAction(2, { groupId: 1 }, volumeTracingLayerName));
-    Store.dispatch(updateSegmentAction(3, { groupId: 2 }, volumeTracingLayerName));
-    Store.dispatch(updateSegmentAction(4, { groupId: 2 }, volumeTracingLayerName));
+    Store.dispatch(updateSegmentAction(1n, { groupId: 1 }, volumeTracingLayerName));
+    Store.dispatch(updateSegmentAction(2n, { groupId: 1 }, volumeTracingLayerName));
+    Store.dispatch(updateSegmentAction(3n, { groupId: 2 }, volumeTracingLayerName));
+    Store.dispatch(updateSegmentAction(4n, { groupId: 2 }, volumeTracingLayerName));
 
     expect(Store.getState().annotation.volumes[0].segmentGroups.length).toBe(2);
 
     // Delete everything
     Store.dispatch(
       batchUpdateGroupsAndSegmentsAction([
-        removeSegmentAction(1, volumeTracingLayerName),
-        removeSegmentAction(2, volumeTracingLayerName),
-        removeSegmentAction(3, volumeTracingLayerName),
-        removeSegmentAction(4, volumeTracingLayerName),
+        removeSegmentAction(1n, volumeTracingLayerName),
+        removeSegmentAction(2n, volumeTracingLayerName),
+        removeSegmentAction(3n, volumeTracingLayerName),
+        removeSegmentAction(4n, volumeTracingLayerName),
         setSegmentGroupsAction([], volumeTracingLayerName),
       ]),
     );
@@ -476,10 +480,10 @@ describe("Volume Tracing", () => {
     // Delete without recursion
     Store.dispatch(
       batchUpdateGroupsAndSegmentsAction([
-        updateSegmentAction(1, { groupId: MISSING_GROUP_ID }, volumeTracingLayerName),
-        updateSegmentAction(2, { groupId: MISSING_GROUP_ID }, volumeTracingLayerName),
-        updateSegmentAction(3, { groupId: MISSING_GROUP_ID }, volumeTracingLayerName),
-        updateSegmentAction(4, { groupId: MISSING_GROUP_ID }, volumeTracingLayerName),
+        updateSegmentAction(1n, { groupId: MISSING_GROUP_ID }, volumeTracingLayerName),
+        updateSegmentAction(2n, { groupId: MISSING_GROUP_ID }, volumeTracingLayerName),
+        updateSegmentAction(3n, { groupId: MISSING_GROUP_ID }, volumeTracingLayerName),
+        updateSegmentAction(4n, { groupId: MISSING_GROUP_ID }, volumeTracingLayerName),
         setSegmentGroupsAction([], volumeTracingLayerName),
       ]),
     );
@@ -491,9 +495,9 @@ describe("Volume Tracing", () => {
     expect(tracingRestored.segments.size()).toBe(4);
     expect(tracingRestored.segmentGroups.length).toBe(2);
 
-    expect(tracingRestored.segments.getOrThrow(1).groupId).toBe(1);
-    expect(tracingRestored.segments.getOrThrow(2).groupId).toBe(1);
-    expect(tracingRestored.segments.getOrThrow(3).groupId).toBe(2);
-    expect(tracingRestored.segments.getOrThrow(4).groupId).toBe(2);
+    expect(tracingRestored.segments.getOrThrow(1n).groupId).toBe(1);
+    expect(tracingRestored.segments.getOrThrow(2n).groupId).toBe(1);
+    expect(tracingRestored.segments.getOrThrow(3n).groupId).toBe(2);
+    expect(tracingRestored.segments.getOrThrow(4n).groupId).toBe(2);
   });
 });

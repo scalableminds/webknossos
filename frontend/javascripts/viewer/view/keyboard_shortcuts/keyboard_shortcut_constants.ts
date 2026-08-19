@@ -8,6 +8,8 @@ export type KeyboardShortcutId =
   | "SWITCH_VIEWMODE_FLIGHT"
   | "CYCLE_VIEWMODE"
   | "TOGGLE_SEGMENTATION"
+  | "INCREASE_FIRST_ADDITIONAL_COORDINATE"
+  | "DECREASE_FIRST_ADDITIONAL_COORDINATE"
   | "SAVE"
   | "UNDO"
   | "REDO"
@@ -71,6 +73,11 @@ export type KeyboardShortcutId =
   // Plane mode — general
   | "DOWNLOAD_SCREENSHOT_PLANE"
   | "COPY_SEGMENT_ID"
+  | "CENTER_TD_VIEW"
+  | "ROTATE_TD_VIEW_TO_XY"
+  | "ROTATE_TD_VIEW_TO_YZ"
+  | "ROTATE_TD_VIEW_TO_XZ"
+  | "ROTATE_TD_VIEW_TO_DIAGONAL"
   // Plane mode — tool switching
   | "CYCLE_TOOLS"
   | "CYCLE_TOOLS_BACKWARDS"
@@ -141,6 +148,19 @@ export const ALL_KEYBOARD_SHORTCUT_META_INFOS: Record<
   TOGGLE_SEGMENTATION: new KeyboardShortcutMetaInfo(
     "Toggle Segmentation Layer",
     [[["3"]]],
+    "GENERAL",
+  ),
+  // These two intentionally have no default binding. Datasets with additional axes are rare
+  // enough that reserving two keys for everybody is not justified. Users can assign their own
+  // keys in the shortcut configuration modal.
+  INCREASE_FIRST_ADDITIONAL_COORDINATE: new KeyboardShortcutMetaInfo(
+    "Move Forward Along the First Additional Axis (e.g. Time (t); nD Datasets Only)",
+    [],
+    "GENERAL",
+  ),
+  DECREASE_FIRST_ADDITIONAL_COORDINATE: new KeyboardShortcutMetaInfo(
+    "Move Backward Along the First Additional Axis (e.g. Time (t); nD Datasets Only)",
+    [],
     "GENERAL",
   ),
   SAVE: new KeyboardShortcutMetaInfo(
@@ -401,6 +421,30 @@ export const ALL_KEYBOARD_SHORTCUT_META_INFOS: Record<
   COPY_SEGMENT_ID: new KeyboardShortcutMetaInfo(
     "Copy Segment ID Under Cursor",
     [[["Control", "i"]]],
+    "PLANE_GENERAL",
+  ),
+  // These intentionally have no default binding, mirroring
+  // INCREASE_FIRST_ADDITIONAL_COORDINATE above: users can assign their own keys in the
+  // shortcut configuration modal without disrupting existing muscle memory.
+  CENTER_TD_VIEW: new KeyboardShortcutMetaInfo("Center 3D Viewport", [], "PLANE_GENERAL"),
+  ROTATE_TD_VIEW_TO_XY: new KeyboardShortcutMetaInfo(
+    "Rotate 3D Viewport to XY Plane",
+    [],
+    "PLANE_GENERAL",
+  ),
+  ROTATE_TD_VIEW_TO_YZ: new KeyboardShortcutMetaInfo(
+    "Rotate 3D Viewport to YZ Plane",
+    [],
+    "PLANE_GENERAL",
+  ),
+  ROTATE_TD_VIEW_TO_XZ: new KeyboardShortcutMetaInfo(
+    "Rotate 3D Viewport to XZ Plane",
+    [],
+    "PLANE_GENERAL",
+  ),
+  ROTATE_TD_VIEW_TO_DIAGONAL: new KeyboardShortcutMetaInfo(
+    "Rotate 3D Viewport to Diagonal View",
+    [],
     "PLANE_GENERAL",
   ),
   CYCLE_TOOLS: new KeyboardShortcutMetaInfo(

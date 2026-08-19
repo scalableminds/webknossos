@@ -40,7 +40,10 @@ import type {
   WebknossosState,
 } from "viewer/store";
 import BoundingBox from "../bucket_data_handling/bounding_box";
-import { getSupportedValueRangeForElementClass } from "../bucket_data_handling/data_rendering_logic";
+import {
+  getSegmentIdRangeForElementClass,
+  getSupportedValueRangeForElementClass,
+} from "../bucket_data_handling/data_rendering_logic";
 import { convertToDenseMags, MagInfo } from "../helpers/mag_info";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
 
@@ -242,7 +245,7 @@ export function getLayerBoundingBoxId(layerIndex: number): number {
   return -2 - layerIndex;
 }
 
-export function getDatasetBoundingBox(dataset: APIDataset): BoundingBox {
+function _getDatasetBoundingBox(dataset: APIDataset): BoundingBox {
   const min: Vector3 = [
     Number.POSITIVE_INFINITY,
     Number.POSITIVE_INFINITY,
@@ -269,6 +272,9 @@ export function getDatasetBoundingBox(dataset: APIDataset): BoundingBox {
     max,
   });
 }
+
+export const getDatasetBoundingBox = memoizeOne(_getDatasetBoundingBox);
+
 export function getDatasetCenter(dataset: APIDataset): Vector3 {
   return getDatasetBoundingBox(dataset).getCenter();
 }
@@ -353,16 +359,19 @@ export function determineAllowedModes(settings?: Settings): {
 }
 
 export function getMaximumSegmentIdForLayer(dataset: APIDataset, layerName: string) {
-  return getDefaultValueRangeOfLayer(dataset, layerName)[1];
+  return BigInt(getDefaultValueRangeOfLayer(dataset, layerName)[1]);
 }
 
+// Used for validating segment/cell ids, which are always bigint. uint64 and int64 ids can
+// exceed Number.MAX_SAFE_INTEGER, so this uses the bigint-based getSegmentIdRangeForElementClass
+// rather than the JS-number-based getSupportedValueRangeForElementClass.
 export function isInSupportedValueRangeForLayer(
   dataset: APIDataset,
   layerName: string,
-  value: number,
+  value: bigint,
 ): boolean {
   const elementClass = getElementClass(dataset, layerName);
-  const [min, max] = getSupportedValueRangeForElementClass(elementClass);
+  const [min, max] = getSegmentIdRangeForElementClass(elementClass);
   return value >= min && value <= max;
 }
 
@@ -421,8 +430,7 @@ export function isElementClassSupported(layerInfo: DataLayerType): boolean {
 
     case "uint64":
     case "int64": {
-      // We only support 64 bit for segmentation (note that only segment ids
-      // below 2**53 - 1 will be handled properly due to the JS Number type currently).
+      // We only support 64 bit for segmentation.
       return layerInfo.category === "segmentation";
     }
 

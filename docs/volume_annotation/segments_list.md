@@ -13,10 +13,10 @@ The following functionality is available for each segment:
 - activating the segment id (so that you can annotate with that id)
 - organizing your segments in groups
 
-![youtube-video](https://www.youtube.com/embed/BJ7lblTSVKY)
+Watch this short video for an overview of the segments list:
+![youtube-video](https://www.youtube.com/embed/3QYBQjL1fls)
 
 Working with groups allows you to perform batch actions on a whole group of segments (e.g. changing the color, loading meshes, ...)
-![youtube-video](https://www.youtube.com/embed/lz-3kFWQ2H8)
 
 ## Segment Groups
 

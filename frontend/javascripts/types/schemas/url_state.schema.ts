@@ -38,8 +38,11 @@ export default {
     "types::Mesh": {
       type: "object",
       properties: {
+        // A number is the legacy encoding (kept for permanent backward-compatibility with old
+        // shared URLs); a string is the unsigned-decimal encoding used for ids that may exceed
+        // the JS Number safe-integer range.
         segmentId: {
-          type: "number",
+          type: ["number", "string"],
         },
         seedPosition: {
           $ref: "#/definitions/types::Vector3",
@@ -94,6 +97,31 @@ export default {
       additionalProperties: false,
       required: ["isPrecomputed"],
     },
+    "types::TdCamera": {
+      type: "object",
+      properties: {
+        position: {
+          $ref: "#/definitions/types::Vector3",
+        },
+        up: {
+          $ref: "#/definitions/types::Vector3",
+        },
+        left: {
+          type: "number",
+        },
+        right: {
+          type: "number",
+        },
+        top: {
+          type: "number",
+        },
+        bottom: {
+          type: "number",
+        },
+      },
+      additionalProperties: false,
+      required: ["position", "up", "left", "right", "top", "bottom"],
+    },
     "types::UrlStateByLayer": {
       type: "object",
       additionalProperties: {
@@ -112,7 +140,7 @@ export default {
                 type: "array",
                 items: [
                   {
-                    type: "number",
+                    type: ["number", "string"],
                   },
                 ],
               },
@@ -153,7 +181,7 @@ export default {
                 type: "array",
                 items: [
                   {
-                    type: "number",
+                    type: ["number", "string"],
                   },
                 ],
               },
@@ -204,6 +232,9 @@ export default {
         },
         clipSkeletonToCurrentSection: {
           type: "boolean",
+        },
+        tdCamera: {
+          $ref: "#/definitions/types::TdCamera",
         },
       },
       additionalProperties: false,

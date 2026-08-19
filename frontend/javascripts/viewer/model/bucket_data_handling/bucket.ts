@@ -485,13 +485,13 @@ export class DataBucket {
 
   applyVoxelMap(
     voxelMap: Uint8Array,
-    segmentId: number,
+    segmentId: bigint,
     get3DAddress: (arg0: number, arg1: number, arg2: Vector3 | Float32Array) => void,
     sliceOffset: number,
     thirdDimensionIndex: 0 | 1 | 2, // If shouldOverwrite is false, a voxel is only overwritten if
     // its old value is equal to overwritableValue.
     shouldOverwrite: boolean = true,
-    overwritableValue: number = 0,
+    overwritableValue: bigint = 0n,
   ): boolean {
     const data = this.getOrCreateData();
 
@@ -529,19 +529,20 @@ export class DataBucket {
   _applyVoxelMapInPlace(
     data: BucketDataArray,
     voxelMap: Uint8Array,
-    uncastSegmentId: number,
+    uncastSegmentId: bigint,
     get3DAddress: (arg0: number, arg1: number, arg2: Vector3 | Float32Array) => void,
     sliceOffset: number,
     thirdDimensionIndex: 0 | 1 | 2,
     // If shouldOverwrite is false, a voxel is only overwritten if
     // its old value is equal to overwritableValue.
     shouldOverwrite: boolean = true,
-    overwritableValue: number = 0,
+    overwritableValue: bigint = 0n,
   ): boolean {
     const out = new Float32Array(3);
     let wroteVoxels = false;
 
     const segmentId = castForArrayType(uncastSegmentId, data);
+    const castOverwritableValue = castForArrayType(overwritableValue, data);
 
     const limits = {
       u: { min: 0, max: Constants.BUCKET_WIDTH as number },
@@ -581,9 +582,9 @@ export class DataBucket {
 
           // The voxelToLabel is already within the bucket and in the correct magnification.
           const voxelAddress = this.cube.getVoxelIndexByVoxelOffset(voxelToLabel);
-          const currentSegmentId = Number(data[voxelAddress]);
+          const currentSegmentId = data[voxelAddress];
 
-          if (shouldOverwrite || (!shouldOverwrite && currentSegmentId === overwritableValue)) {
+          if (shouldOverwrite || (!shouldOverwrite && currentSegmentId === castOverwritableValue)) {
             data[voxelAddress] = segmentId;
             wroteVoxels = true;
           }
@@ -701,7 +702,15 @@ export class DataBucket {
   private ensureValueSet(): asserts this is { cachedValueSet: Set<number> | Set<bigint> } {
     if (this.cachedValueSet == null) {
       // @ts-expect-error The Set constructor accepts null and BigUint64Arrays just fine.
-      this.cachedValueSet = new Set(this.data);
+      this.cachedValueSet = new Set<number | bigint>(this.data);
+      if (this.cube.isSegmentation) {
+        // We always remove segment 0 from the value set because it should be ignored for all known
+        // use cases (e.g., when populating a mapping).
+        // @ts-expect-error Removing 0 will always work (regardless of the actual type).
+        this.cachedValueSet.delete(0);
+        // @ts-expect-error Removing 0n will always work (regardless of the actual type).
+        this.cachedValueSet.delete(0n);
+      }
     }
   }
 

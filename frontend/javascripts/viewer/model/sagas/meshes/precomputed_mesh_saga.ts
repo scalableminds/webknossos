@@ -166,7 +166,7 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
 type ChunksMap = Record<number, Vector3[] | meshApi.MeshChunk[] | null | undefined>;
 
 function* loadPrecomputedMeshForSegmentId(
-  segmentId: number,
+  segmentId: bigint,
   seedPosition: Vector3,
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   meshFileName: string,
@@ -207,7 +207,7 @@ function* loadPrecomputedMeshForSegmentId(
     Toast.error("Could not load mesh, since the requested mesh file was not found.");
     return;
   }
-  if (segmentId === 0) {
+  if (segmentId === 0n) {
     Toast.error("Could not load mesh, since the clicked segment ID is 0.");
     return;
   }
@@ -286,7 +286,7 @@ function* getMappingName(segmentationLayer: APISegmentationLayer) {
 }
 
 function* _getChunkLoadingDescriptors(
-  segmentId: number,
+  segmentId: bigint,
   dataset: APIDataset,
   segmentationLayer: APISegmentationLayer,
   meshFile: APIMeshFileInfo,
@@ -370,7 +370,7 @@ function* loadPrecomputedMeshesInChunksForLod(
   layerName: string,
   meshFile: APIMeshFileInfo,
   segmentationLayer: APISegmentationLayer,
-  segmentId: number,
+  segmentId: bigint,
   seedPosition: Vector3,
   availableChunksMap: ChunksMap,
   lod: number,

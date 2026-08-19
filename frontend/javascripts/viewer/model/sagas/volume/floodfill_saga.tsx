@@ -1,9 +1,10 @@
 import LinkButton from "components/link_button";
+import { toBigInt } from "libs/bigint_helpers";
+import { getRandomColor } from "libs/colors";
 import { handleGenericError } from "libs/error_handling";
 import { V2, V3 } from "libs/mjs";
 import createProgressCallback, { type ProgressCallback } from "libs/progress_callback";
 import Toast from "libs/toast";
-import { getRandomColor } from "libs/utils";
 import sortBy from "lodash-es/sortBy";
 import { call, put, takeEvery } from "typed-redux-saga";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
@@ -184,11 +185,8 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
   const magInfo = yield* call(getMagInfo, segmentationLayer.mags);
   const labeledZoomStep = magInfo.getClosestExistingIndex(requestedZoomStep);
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
-  const oldSegmentIdAtSeed = cube.getDataValue(
-    seedPosition,
-    additionalCoordinates,
-    null,
-    labeledZoomStep,
+  const oldSegmentIdAtSeed = toBigInt(
+    cube.getDataValue(seedPosition, additionalCoordinates, null, labeledZoomStep),
   );
 
   if (activeCellId === oldSegmentIdAtSeed) {
@@ -354,8 +352,8 @@ function* notifyUserAboutResult(
   progressCallback: ProgressCallback,
   fillMode: FillMode,
   coveredBoundingBox: BoundingBoxMinMaxType,
-  oldSegmentIdAtSeed: number,
-  activeCellId: number,
+  oldSegmentIdAtSeed: bigint,
+  activeCellId: bigint,
   seedPosition: Vector3,
 ) {
   let showSuccessMsg = false;

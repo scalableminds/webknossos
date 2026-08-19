@@ -22,13 +22,10 @@ import {
   Typography,
 } from "antd";
 import FastTooltip from "components/fast_tooltip";
+import { stringToNormalizedRgbColor } from "libs/colors";
 import { handleGenericError } from "libs/error_handling";
 import { useWkSelector } from "libs/react_hooks";
-import {
-  computeArrayFromBoundingBox,
-  computeBoundingBoxFromArray,
-  stringToColor,
-} from "libs/utils";
+import { computeArrayFromBoundingBox, computeBoundingBoxFromArray } from "libs/utils";
 import noop from "lodash-es/noop";
 import partial from "lodash-es/partial";
 import type React from "react";
@@ -59,13 +56,13 @@ import {
 import { setActiveUserBoundingBoxId } from "viewer/model/actions/ui_actions";
 import { reserveIdAndAddBoundingBox } from "viewer/model/helpers/bounding_box_creation_helpers";
 import type { StoreAnnotation, UserBoundingBox } from "viewer/store";
-import DownloadModalView from "../action_bar/download_modal/download_modal_view";
-import ButtonComponent from "../components/button_component";
-import { getContextMenuPositionFromEvent } from "../context_menu/helpers";
-import UserBoundingBoxInput from "../left_border_tabs/components/user_boundingbox_input";
-import AdvancedSearchPopover from "./advanced_search_popover";
-import GenerateBoundingBoxesModal from "./generate_bounding_boxes_modal";
-import { ContextMenuContainer } from "./sidebar_context_menu";
+import DownloadModalView from "../../action_bar/download_modal/download_modal_view";
+import ButtonComponent from "../../components/button_component";
+import { getContextMenuPositionFromEvent } from "../../context_menu/helpers";
+import AdvancedSearchPopover from "../advanced_search_popover";
+import GenerateBoundingBoxesModal from "../generate_bounding_boxes_modal";
+import { ContextMenuContainer } from "../sidebar_context_menu";
+import UserBoundingBoxInput from "./user_boundingbox_input";
 
 const BBOX_BUTTONS_HEADER_HEIGHT = 40;
 const CONTEXT_MENU_CLASS = "bbox-list-context-menu-overlay";
@@ -371,7 +368,8 @@ export default function BoundingBoxTab() {
           value={layerBoundingBox.value}
           name={layerBoundingBox.displayName}
           color={
-            layerBoundingBoxColors[layerBoundingBox.name] ?? stringToColor(layerBoundingBox.name)
+            layerBoundingBoxColors[layerBoundingBox.name] ??
+            stringToNormalizedRgbColor(layerBoundingBox.name)
           }
           isVisible={layerBoundingBoxVisibilities[layerBoundingBox.name] ?? false}
           isExportEnabled={isExportEnabled}
@@ -394,6 +392,14 @@ export default function BoundingBoxTab() {
   const getPropsForUserRow = useCallback<NonNullable<TableProps<UserBoundingBox>["onRow"]>>(
     (bb: UserBoundingBox) => ({
       onClick: (event) => {
+        // Popovers/dropdowns (e.g. the position/extent sliders, the MIP menu) render their
+        // content into a portal outside the row's DOM subtree, but React still bubbles their
+        // click events through the row because it follows the component tree, not the DOM
+        // tree. Bailing out here avoids having to add e.stopPropagation() to every interactive
+        // control in the row.
+        if (!event.currentTarget.contains(event.target as Node)) {
+          return;
+        }
         hideContextMenu();
         if (event.ctrlKey || event.metaKey) {
           setSelectedRowKeys((prev) =>
@@ -411,7 +417,12 @@ export default function BoundingBoxTab() {
 
   const getPropsForLayerRow = useCallback<NonNullable<TableProps<LayerBoundingBox>["onRow"]>>(
     (layerBoundingBox: LayerBoundingBox) => ({
-      onClick: () => {
+      onClick: (event) => {
+        // See the comment in getPropsForUserRow: bail out on clicks that bubbled up from a
+        // portaled popover/dropdown (e.g. the MIP menu) rather than the row itself.
+        if (!event.currentTarget.contains(event.target as Node)) {
+          return;
+        }
         // Read-only layer bounding boxes cannot be selected, but clicking still navigates to them.
         hideContextMenu();
         handleGoToLayerBoundingBox(layerBoundingBox.center);

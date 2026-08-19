@@ -1,3 +1,4 @@
+import { bigIntReplacer } from "libs/bigint_helpers";
 import ErrorHandling from "libs/error_handling";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
@@ -22,6 +23,7 @@ import {
   parseAdditionalCoordinateKey,
 } from "viewer/model/helpers/nml_helpers";
 import type {
+  CameraData,
   DatasetLayerConfiguration,
   MappingType,
   MeshInformation,
@@ -33,7 +35,7 @@ const MAX_UPDATE_INTERVAL = 1000;
 const MINIMUM_VALID_CSV_LENGTH = 5;
 
 type BaseMeshUrlDescriptor = {
-  readonly segmentId: number;
+  readonly segmentId: bigint;
   readonly seedPosition: Vector3;
   readonly seedAdditionalCoordinates?: AdditionalCoordinate[];
 };
@@ -55,6 +57,10 @@ export type DirectLayerSpecificProps = Mutable<
     >
   >
 >;
+export type TdCameraUrlState = Pick<
+  CameraData,
+  "position" | "up" | "left" | "right" | "top" | "bottom"
+>;
 export type UrlStateByLayer = Record<
   string,
   {
@@ -65,11 +71,11 @@ export type UrlStateByLayer = Record<
     mappingInfo?: {
       mappingName: string;
       mappingType: MappingType;
-      agglomerateIdsToImport?: Array<number>;
+      agglomerateIdsToImport?: Array<bigint>;
     };
     connectomeInfo?: {
       connectomeName: string;
-      agglomerateIdsToImport?: Array<number>;
+      agglomerateIdsToImport?: Array<bigint>;
     };
   } & DirectLayerSpecificProps
 >;
@@ -126,6 +132,7 @@ export type UrlManagerState = {
   nativelyRenderedLayerName?: string | null;
   clippingDistance?: number;
   clipSkeletonToCurrentSection?: boolean;
+  tdCamera?: TdCameraUrlState;
 };
 export type PartialUrlManagerState = Partial<UrlManagerState>;
 
@@ -382,6 +389,24 @@ class UrlManager {
         : {};
     const { clippingDistance, clipSkeletonToCurrentSection } = state.userConfiguration;
 
+    const tdCamera = state.viewModeData.plane.tdCamera;
+    // The td camera defaults to a degenerate, zero-sized frustum until it is
+    // initialized by the CameraController. Omit it in that case to avoid
+    // encoding meaningless zeros.
+    const tdCameraOptional =
+      tdCamera.left !== tdCamera.right && tdCamera.top !== tdCamera.bottom
+        ? {
+            tdCamera: {
+              position: map3((e) => roundTo(e, 2), tdCamera.position),
+              up: map3((e) => roundTo(e, 2), tdCamera.up),
+              left: roundTo(tdCamera.left, 2),
+              right: roundTo(tdCamera.right, 2),
+              top: roundTo(tdCamera.top, 2),
+              bottom: roundTo(tdCamera.bottom, 2),
+            },
+          }
+        : {};
+
     return {
       position,
       mode,
@@ -393,6 +418,7 @@ class UrlManager {
       ...rotation,
       ...activeNodeOptional,
       ...stateByLayerOptional,
+      ...tdCameraOptional,
     };
   }
 
@@ -416,7 +442,7 @@ class UrlManager {
 
   buildUrlHashJson(state: WebknossosState): string {
     const urlState = this.getUrlState(state);
-    return encodeUrlHash(JSON.stringify(urlState));
+    return encodeUrlHash(JSON.stringify(urlState, bigIntReplacer));
   }
 
   buildUrl(): string {

@@ -59,7 +59,7 @@ To get the sharing link of an annotation, follow the same steps as for changing 
 
 By default, WEBKNOSSOS shortens the web links for ease of use. Use the `Shorten this link` toggle next to the link field in the Share dialog to switch between shortened and full-length links.
 
-As mentioned above, the sharing link encodes certain properties, like the current position, rotation, zoom, active mapping, and visible meshes.
+As mentioned above, the sharing link encodes properties, like the current position, rotation, zoom, active mapping, visible meshes, and the camera of the 3D viewport.
 Anyone who opens a link will have the same WEBKNOSSOS experience that was captured when copying the link.
 Alternatively, the link can be crafted manually or programmatically to direct users to specific locations in a dataset.
 
@@ -76,7 +76,7 @@ The information is JSON-encoded in the URL fragment and has the following format
   type AdditionalCoordinate = { name: string; value: number };
 
   type BaseMeshUrlDescriptor = {|
-    +segmentId: number,
+    +segmentId: string, // number is supported, too, for legacy reasons. Prefer string to be compatible with 64-bit numbers
     +seedPosition: Vector3,
     +seedAdditionalCoordinates?: AdditionalCoordinate[];
   |};
@@ -92,6 +92,16 @@ The information is JSON-encoded in the URL fragment and has the following format
     meshFileName: string,
   |};
   type MeshUrlDescriptor = AdHocMeshUrlDescriptor | PrecomputedMeshUrlDescriptor;
+
+  // Describes the camera of the 3D viewport (position, orientation and zoom).
+  type TdCamera = {|
+    +position: Vector3,
+    +up: Vector3,
+    +left: number,
+    +right: number,
+    +top: number,
+    +bottom: number,
+  |};
 
   type UrlStateByLayer = {
     [layerName: string]: {
@@ -123,6 +133,7 @@ The information is JSON-encoded in the URL fragment and has the following format
     nativelyRenderedLayerName?: string | null;
     clippingDistance?: number;
     clipSkeletonToCurrentSection?: boolean;
+    tdCamera?: TdCamera,
   |};
 
   ```

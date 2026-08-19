@@ -7,6 +7,7 @@ object JobCommand extends ExtendedEnumeration {
 
   /* NOTE: When adding a new job command here, do
    * - Decide if it should be a highPriority job
+   * - Decide if it writes to the organization’s storage (see jobsWritingToStorage)
    * - Add it to the dbtool.js command enable-jobs so it is available during development
    * - Add it to the migration guide (operators need to decide which workers should provide it)
    */
@@ -19,4 +20,15 @@ object JobCommand extends ExtendedEnumeration {
 
   val highPriorityJobs: Set[Value] = Set(convert_to_wkw, export_tiff)
   val lowPriorityJobs: Set[Value] = values.diff(highPriorityJobs)
+
+  // Jobs storing results as new datasets or layer attachments. They are refused while the storage quota is exceeded.
+  val jobsWritingToStorage: Set[Value] = Set(
+    align_sections,
+    compute_mesh_file,
+    compute_segment_index_file,
+    infer_instances,
+    infer_mitochondria,
+    infer_neurons,
+    materialize_volume_annotation
+  )
 }

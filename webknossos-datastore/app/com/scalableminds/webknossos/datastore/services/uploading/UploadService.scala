@@ -209,25 +209,11 @@ class UploadService @Inject() (
       orgaDir <- baseDirService.getOneLocalForOrga(organizationId, requireAllowsUpload = true)
     } yield orgaDir.resolve(trashDir).resolve(s"uploadBackup__$uploadId")
 
-  private def forConversionDirectoryFor(organizationId: String, directoryName: String): Box[Path] =
-    for {
-      orgaDir <- baseDirService.getOneLocalForOrga(organizationId, requireAllowsUpload = true)
-    } yield orgaDir.resolve(forConversionDir).resolve(directoryName)
-
-  private def convertingDirectoryFor(organizationId: String, jobId: String): Box[Path] =
-    for {
-      orgaDir <- baseDirService.getOneLocalForOrga(organizationId, requireAllowsUpload = true)
-    } yield orgaDir.resolve(convertingDir).resolve(jobId)
-
   def cleanUpUploadFilesAfterConvertJob(organizationId: String, directoryName: String, jobId: String): Unit =
     if (dataStoreConfig.Datastore.Upload.deleteTemporaryFilesAfterUpload) {
-      forConversionDirectoryFor(organizationId, directoryName).foreach { forConversionPath =>
-        logger.info(s"Deleting conversion staging dir at $forConversionPath after conversion job finished.")
-        PathUtils.deleteDirectoryRecursively(forConversionPath)
-      }
-      convertingDirectoryFor(organizationId, jobId).foreach { convertingPath =>
-        logger.info(s"Deleting worker scratch dir at $convertingPath after conversion job finished.")
-        PathUtils.deleteDirectoryRecursively(convertingPath)
+      baseDirService.getOneLocalForOrga(organizationId, requireAllowsUpload = true).foreach { orgaDir =>
+        PathUtils.deleteDirectoryRecursively(orgaDir.resolve(forConversionDir), enforceContainedIn = Some(orgaDir))
+        PathUtils.deleteDirectoryRecursively(orgaDir.resolve(convertingDir), enforceContainedIn = Some(orgaDir))
       }
     }
 
@@ -662,7 +648,8 @@ class UploadService @Inject() (
   ): Fox[Option[UsableDataSource]] =
     if (needsConversion) {
       for {
-        forConversionPath <- forConversionDirectoryFor(dataSourceId.organizationId, dataSourceId.directoryName).toFox
+        orgaDir <- baseDirService.getOneLocalForOrga(dataSourceId.organizationId, requireAllowsUpload = true).toFox
+        forConversionPath = orgaDir.resolve(forConversionDir).resolve(dataSourceId.directoryName)
         _ = logger.info(s"finishUpload for $datasetId: Moving data to input dir for worker conversion...")
         _ <- tryo(FileUtils.moveDirectory(unpackedDir.toFile, forConversionPath.toFile)).toFox
       } yield None

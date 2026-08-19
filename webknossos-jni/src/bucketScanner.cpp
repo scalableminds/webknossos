@@ -96,7 +96,10 @@ size_t getElementCount(jsize inputLengthBytes, jint bytesPerElement) {
 
 template <typename T>
 inline int64_t typedValueAtIndex(const jbyte *bucketBytes, size_t index) {
-    return static_cast<int64_t>(*reinterpret_cast<const T *>(bucketBytes + index * sizeof(T)));
+    T value;
+    // memcpy+static_cast instead of reinterpret_cast forces compiler to do this with correct alignment. No runtime cost.
+    std::memcpy(&value, bucketBytes + index * sizeof(T), sizeof(T));
+    return static_cast<int64_t>(value);
 }
 
 template <typename T>

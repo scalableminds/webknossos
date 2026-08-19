@@ -45,7 +45,8 @@ import {
 // constants from this module (e.g. PUSH_THROTTLE_TIME) are spread through unchanged
 // since other sagas running in the background during these tests rely on them too.
 vi.mock("viewer/model/sagas/saving/save_saga_constants", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("viewer/model/sagas/saving/save_saga_constants")>();
+  const actual =
+    await importOriginal<typeof import("viewer/model/sagas/saving/save_saga_constants")>();
   return {
     ...actual,
     ACQUIRE_MUTEX_INTERVAL: 100,

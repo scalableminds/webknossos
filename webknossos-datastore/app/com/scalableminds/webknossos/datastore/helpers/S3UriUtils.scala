@@ -27,8 +27,11 @@ object S3UriUtils {
   // Matches s3.amazonaws.com, s3.us-west-2.amazonaws.com, s3-us-west-2.amazonaws.com
   private val amazonEndpointHostRegex = """^s3([.-][\w.-]+)?\.amazonaws\.com$""".r
 
+  // DNS host names cannot exceed this length. Rejecting longer protects against quadratic regex expansion.
+  private val maxHostLength = 253
+
   private def styleOf(uri: URI): Option[S3UriStyle] =
-    Option(uri.getHost).filter(_.nonEmpty).map {
+    Option(uri.getHost).filter(_.nonEmpty).filter(_.length <= maxHostLength).map {
       case virtualHostedStyleHostRegex(bucket, _) => VirtualHostedStyle(bucket)
       case host if isEndpointHost(uri, host)      => PathStyle
       case _                                      => ShortStyle

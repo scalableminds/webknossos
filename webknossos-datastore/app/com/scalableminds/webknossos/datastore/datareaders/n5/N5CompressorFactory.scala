@@ -24,8 +24,9 @@ object N5CompressorFactory {
 
   def create(id: String, properties: Map[String, CompressionSetting]): Compressor =
     id match {
-      case "null" => nullCompressor
-      case "zlib" => new ZlibCompressor(properties)
+      // "raw" is the N5 spec’s identifier for uncompressed data
+      case "raw" | "null" => nullCompressor
+      case "zlib"         => new ZlibCompressor(properties)
       case "gzip" if properties.getOrElse("useZlib", BoolCompressionSetting(false)) == BoolCompressionSetting(true) =>
         new ZlibCompressor(properties)
       case "gzip"  => new GzipCompressor(properties)

@@ -31,16 +31,28 @@ class S3UriUtilsTestSuite extends AsyncWordSpec {
       "read bucket and object key" in {
         val virtualHosted = uri("https://my-bucket.s3.amazonaws.com/dataset/color/1/.zarray")
         assert(S3UriUtils.hostBucketFromUri(virtualHosted).contains("my-bucket"))
-        // Note: unlike the other two styles, the object key keeps its leading slash here
-        assert(S3UriUtils.objectKeyFromUri(virtualHosted).contains("/dataset/color/1/.zarray"))
+        assert(S3UriUtils.objectKeyFromUri(virtualHosted).contains("dataset/color/1/.zarray"))
       }
 
-      "not read a bucket from a region-qualified virtual hosted uri" in {
-        // Pinning current behavior: only the region-less ".s3.amazonaws.com" suffix is recognised as
-        // virtual hosted style, so "bucket.s3.<region>.amazonaws.com" matches no style at all.
+      "read bucket and object key from a region-qualified host" in {
         val regional = uri("https://my-bucket.s3.us-west-2.amazonaws.com/dataset/color")
-        assert(S3UriUtils.hostBucketFromUri(regional).isEmpty)
-        assert(S3UriUtils.objectKeyFromUri(regional).isEmpty)
+        assert(S3UriUtils.hostBucketFromUri(regional).contains("my-bucket"))
+        assert(S3UriUtils.objectKeyFromUri(regional).contains("dataset/color"))
+      }
+
+      "read bucket and object key from the legacy dash form and from a dualstack host" in {
+        val dashed = uri("https://my-bucket.s3-us-west-2.amazonaws.com/dataset/color")
+        assert(S3UriUtils.hostBucketFromUri(dashed).contains("my-bucket"))
+        assert(S3UriUtils.objectKeyFromUri(dashed).contains("dataset/color"))
+        val dualstack = uri("https://my-bucket.s3.dualstack.us-west-2.amazonaws.com/dataset/color")
+        assert(S3UriUtils.hostBucketFromUri(dualstack).contains("my-bucket"))
+        assert(S3UriUtils.objectKeyFromUri(dualstack).contains("dataset/color"))
+      }
+
+      "read a bucket name containing dots" in {
+        val dottedBucket = uri("https://my.bucket.name.s3.us-west-2.amazonaws.com/dataset/color")
+        assert(S3UriUtils.hostBucketFromUri(dottedBucket).contains("my.bucket.name"))
+        assert(S3UriUtils.objectKeyFromUri(dottedBucket).contains("dataset/color"))
       }
     }
 
@@ -81,21 +93,28 @@ class S3UriUtilsTestSuite extends AsyncWordSpec {
         assert(!S3UriUtils.isNonAmazonHost(uri("s3://my-bucket/key")))
       }
 
-      "recognise localhost as a non-amazon host" in {
-        val local = uri("http://localhost:9000/my-bucket/dataset")
+      "read bucket and object key from localhost" in {
+        val local = uri("s3://localhost:9000/my-bucket/dataset")
         assert(S3UriUtils.isNonAmazonHost(local))
-        // Pinning current behavior: a dot-free host is treated as short style, so the host itself
-        // becomes the bucket and the whole path becomes the object key.
-        assert(S3UriUtils.hostBucketFromUri(local).contains("localhost"))
-        assert(S3UriUtils.objectKeyFromUri(local).contains("my-bucket/dataset"))
+        assert(S3UriUtils.hostBucketFromUri(local).contains("my-bucket"))
+        assert(S3UriUtils.objectKeyFromUri(local).contains("dataset"))
+      }
+
+      "read a dot-free endpoint host that states a port as an endpoint" in {
+        // Bucket names cannot contain a port, so a port disambiguates an endpoint from a bucket
+        val kubernetesService = uri("s3://minio:9000/my-bucket/dataset/color")
+        assert(S3UriUtils.isNonAmazonHost(kubernetesService))
+        assert(S3UriUtils.hostBucketFromUri(kubernetesService).contains("my-bucket"))
+        assert(S3UriUtils.objectKeyFromUri(kubernetesService).contains("dataset/color"))
       }
     }
 
     "the bucket name contains dots" should {
 
-      "classify a short style uri as path style" in {
-        // Pinning current behavior: isShortStyle only matches dot-free hosts, so a dotted bucket in
-        // short form falls through to the path style branch and the first path segment becomes the bucket.
+      "still classify a short style uri as path style" in {
+        // Pinning current behavior: an s3:// uri states either a bucket or an endpoint in its host slot, and a
+        // dotted bucket name is indistinguishable from an endpoint host, so the endpoint reading wins here.
+        // Such buckets can be addressed in virtual hosted style instead, see above.
         val dottedBucket = uri("s3://my.bucket.name/dataset/color")
         assert(S3UriUtils.hostBucketFromUri(dottedBucket).contains("dataset"))
         assert(S3UriUtils.objectKeyFromUri(dottedBucket).contains("color"))
@@ -103,9 +122,26 @@ class S3UriUtilsTestSuite extends AsyncWordSpec {
     }
 
     "the uri has no host at all" should {
-      "yield no bucket" in {
+      "yield no bucket and no object key" in {
         assert(S3UriUtils.hostBucketFromUri(uri("s3:///dataset/color")).isEmpty)
         assert(S3UriUtils.hostBucketFromUri(uri("/dataset/color")).isEmpty)
+        assert(S3UriUtils.objectKeyFromUri(uri("s3:///dataset/color")).isEmpty)
+      }
+    }
+
+    "the key has a trailing slash" should {
+      "keep it, since it is significant as a listing prefix" in {
+        assert(S3UriUtils.objectKeyFromUri(uri("s3://my-bucket/dataset/color/")).contains("dataset/color/"))
+        assert(
+          S3UriUtils
+            .objectKeyFromUri(uri("https://s3.amazonaws.com/my-bucket/dataset/color/"))
+            .contains("dataset/color/")
+        )
+        assert(
+          S3UriUtils
+            .objectKeyFromUri(uri("https://my-bucket.s3.amazonaws.com/dataset/color/"))
+            .contains("dataset/color/")
+        )
       }
     }
 

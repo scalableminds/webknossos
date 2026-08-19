@@ -119,6 +119,8 @@ class N5HeaderTestSuite extends AsyncWordSpec {
 
     "selecting the compressor from the parsed header" should {
       "resolve the known compression types" in {
+        // "raw" is the N5 spec’s identifier for uncompressed data
+        assert(headerWithCompression("""{"type": "raw"}""").compressorImpl.isInstanceOf[NullCompressor])
         assert(headerWithCompression("""{"type": "null"}""").compressorImpl.isInstanceOf[NullCompressor])
         assert(headerWithCompression("""{"type": "zlib", "level": 6}""").compressorImpl.isInstanceOf[ZlibCompressor])
         assert(headerWithCompression("""{"type": "gzip", "level": 6}""").compressorImpl.isInstanceOf[GzipCompressor])
@@ -138,11 +140,10 @@ class N5HeaderTestSuite extends AsyncWordSpec {
       }
 
       "throw for an unknown compression type" in {
+        // lz4, xz and bzip2 are valid N5 compression types that webknossos does not implement
         assertThrows[IllegalArgumentException](headerWithCompression("""{"type": "lz4"}""").compressorImpl)
+        assertThrows[IllegalArgumentException](headerWithCompression("""{"type": "xz"}""").compressorImpl)
         assertThrows[IllegalArgumentException](headerWithCompression("""{"type": 5}""").compressorImpl)
-        // Pinning current behavior: "raw" is the N5 spec’s identifier for uncompressed data, but the factory
-        // only knows "null", so an attributes.json that states it explicitly throws here.
-        assertThrows[IllegalArgumentException](headerWithCompression("""{"type": "raw"}""").compressorImpl)
       }
     }
 

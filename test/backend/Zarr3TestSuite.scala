@@ -1,5 +1,6 @@
 package backend
 
+import com.scalableminds.util.box.Failure
 import com.scalableminds.util.tools.JsonHelper
 import com.scalableminds.webknossos.datastore.datareaders.{ArrayDataType, ArrayOrder, DimensionSeparator}
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.{
@@ -22,6 +23,9 @@ class Zarr3TestSuite extends AsyncWordSpec {
 
   private def parseHeader(json: String): Zarr3ArrayHeader =
     JsonHelper.parseAs[Zarr3ArrayHeader](json).get("test execution")
+
+  private def failureChain(failure: Failure): String =
+    (failure.msg :: failure.chain.toList.map(failureChain)).mkString(" <- ")
 
   "Zarr 3" when {
 
@@ -126,7 +130,7 @@ class Zarr3TestSuite extends AsyncWordSpec {
     }
 
     "dimension_names are absent" should {
-      "read an empty array of dimension names" in {
+      "read no dimension names" in {
         // Captured from a webknossos-written 1-dimensional zarr v3 array (a segment statistics attachment),
         // which states neither dimension_names nor a chunk key separator.
         val json =
@@ -139,8 +143,13 @@ class Zarr3TestSuite extends AsyncWordSpec {
                "name":"sharding_indexed"}],
              "data_type":"uint32","fill_value":0,"node_type":"array","shape":[1332],"zarr_format":3}"""
         val header = parseHeader(json)
-        // Note: absent dimension_names become an empty array rather than None
-        assert(header.dimension_names.exists(_.isEmpty))
+        assert(header.dimension_names.isEmpty)
+        // The spec allows null entries in dimension_names, which we cannot model, so the field is ignored then
+        assert(
+          parseHeader(
+            json.replace(""""shape":[1332]""", """"dimension_names":[null],"shape":[1332]""")
+          ).dimension_names.isEmpty
+        )
         assert(header.rank == 1)
         assert(header.chunkShape.sameElements(Array(4096)))
         assert(header.outerChunkShape.sameElements(Array(134217728)))
@@ -291,8 +300,8 @@ class Zarr3TestSuite extends AsyncWordSpec {
         assert(parseHeader(groupJson).assertValid.isEmpty)
       }
 
-      "throw for an unsupported codec name" in {
-        // Note: an unknown codec escapes as an exception instead of a failed Box
+      "reject an unsupported codec name" in {
+        // A codec we cannot read must fail the header, since decoding chunks without it would yield wrong data
         val json = """{
           "shape": [64], "data_type": "uint8", "zarr_format": 3,
           "chunk_grid": {"configuration": {"chunk_shape": [8]}, "name": "regular"},
@@ -301,7 +310,32 @@ class Zarr3TestSuite extends AsyncWordSpec {
                      {"configuration": {"digits": 4}, "name": "quantize"}],
           "node_type": "array"
         }"""
-        assertThrows[UnsupportedOperationException](JsonHelper.parseAs[Zarr3ArrayHeader](json))
+        JsonHelper.parseAs[Zarr3ArrayHeader](json) match {
+          case failure: Failure => assert(failureChain(failure).contains("Codec quantize is not supported"))
+          case other            => fail(s"expected Failure, got $other")
+        }
+      }
+
+      "reject a codec whose configuration cannot be read" in {
+        // Malformed codec configurations used to be dropped silently
+        val json = """{
+          "shape": [64], "data_type": "uint8", "zarr_format": 3,
+          "chunk_grid": {"configuration": {"chunk_shape": [8]}, "name": "regular"},
+          "chunk_key_encoding": {"name": "default"}, "fill_value": 0,
+          "codecs": [{"configuration": {"endian": "little"}, "name": "bytes"},
+                     {"configuration": {"level": "high"}, "name": "gzip"}],
+          "node_type": "array"
+        }"""
+        assert(JsonHelper.parseAs[Zarr3ArrayHeader](json).isEmpty)
+        // A codec entry without a name is rejected as well
+        val noNameJson = """{
+          "shape": [64], "data_type": "uint8", "zarr_format": 3,
+          "chunk_grid": {"configuration": {"chunk_shape": [8]}, "name": "regular"},
+          "chunk_key_encoding": {"name": "default"}, "fill_value": 0,
+          "codecs": [{"configuration": {"endian": "little"}}],
+          "node_type": "array"
+        }"""
+        assert(JsonHelper.parseAs[Zarr3ArrayHeader](noNameJson).isEmpty)
       }
     }
   }

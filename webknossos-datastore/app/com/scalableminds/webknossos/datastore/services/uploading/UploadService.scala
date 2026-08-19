@@ -662,8 +662,7 @@ class UploadService @Inject() (
   ): Fox[Option[UsableDataSource]] =
     if (needsConversion) {
       for {
-        orgaDir <- baseDirService.getOneLocalForOrga(dataSourceId.organizationId, requireAllowsUpload = true).toFox
-        forConversionPath = orgaDir.resolve(forConversionDir).resolve(dataSourceId.directoryName)
+        forConversionPath <- forConversionDirectoryFor(dataSourceId.organizationId, dataSourceId.directoryName).toFox
         _ = logger.info(s"finishUpload for $datasetId: Moving data to input dir for worker conversion...")
         _ <- tryo(FileUtils.moveDirectory(unpackedDir.toFile, forConversionPath.toFile)).toFox
       } yield None

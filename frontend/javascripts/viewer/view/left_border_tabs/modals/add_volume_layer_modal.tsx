@@ -1,6 +1,7 @@
 import { PlusOutlined } from "@ant-design/icons";
 import { Modal, Row } from "antd";
 import { AsyncButton } from "components/async_clickables";
+import FastTooltip from "components/fast_tooltip";
 import {
   NewVolumeLayerSelection,
   RestrictMagnificationSlider,
@@ -15,6 +16,10 @@ import { useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import type { APIDataset, APISegmentationLayer } from "types/api_types";
 import { MappingStatusEnum } from "viewer/constants";
+import {
+  getReasonForCantChangeAnnotationLayerSet,
+  mayChangeAnnotationLayerSet,
+} from "viewer/model/accessors/annotation_accessor";
 import {
   getLayerByName,
   getMagInfo,
@@ -118,6 +123,8 @@ export default function AddVolumeLayerModal({
   >(preselectedLayerName);
   const dispatch = useDispatch();
   const annotation = useWkSelector((state) => state.annotation);
+  const mayChangeLayerSet = useWkSelector(mayChangeAnnotationLayerSet);
+  const reasonForCantChangeLayerSet = useWkSelector(getReasonForCantChangeAnnotationLayerSet);
   const allReadableLayerNames = useMemo(
     () => getAllReadableLayerNames(dataset, annotation),
     [dataset, annotation],
@@ -256,9 +263,16 @@ export default function AddVolumeLayerModal({
         setMagIndices={setMagIndices}
       />
       <Row justify="center" align="middle">
-        <AsyncButton onClick={handleAddVolumeLayer} type="primary" icon={<PlusOutlined />}>
-          Add Volume Annotation Layer
-        </AsyncButton>
+        <FastTooltip title={reasonForCantChangeLayerSet}>
+          <AsyncButton
+            onClick={handleAddVolumeLayer}
+            type="primary"
+            icon={<PlusOutlined />}
+            disabled={!mayChangeLayerSet}
+          >
+            Add Volume Annotation Layer
+          </AsyncButton>
+        </FastTooltip>
       </Row>
     </Modal>
   );

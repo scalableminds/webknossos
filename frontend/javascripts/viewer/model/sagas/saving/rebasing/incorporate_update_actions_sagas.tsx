@@ -332,7 +332,7 @@ export function* tryToIncorporateActions(
               );
             }
             // The mapping's type isn't part of the updateMappingName action. On an ambiguous naming
-            // (mapping of type JSON and AGGLOMERATE exist for the given name) HDF5 wins.
+            // (mapping of type JSON and AGGLOMERATE exist for the given name) AGGLOMERATE wins.
             mappingType =
               (volumeDataLayer.agglomerates ?? []).indexOf(mappingName) >= 0
                 ? ("AGGLOMERATE" as const)
@@ -400,9 +400,11 @@ export function* tryToIncorporateActions(
         }
 
         /*
-         * Currently NOT supported:
+         * Not allowed to be forwarded / replayed:
          */
-        // TODO (#9052): These actions should be supported if applied from own save queue!
+        // These actions are only supported while live collab is turned off. The owner will therefore never forward such actions here and
+        // other users just viewing the annotation while the owner does high level annotation specific changes via update actions must reload.
+        // See #9917.
 
         // High-level annotation specific
         case "addLayerToAnnotation":

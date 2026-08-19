@@ -11,6 +11,10 @@ import { AnnotationLayerEnum } from "types/api_types";
 import { userSettings } from "types/schemas/user_settings.schema";
 import Constants, { ControlModeEnum, LongUnitToShortUnitMap } from "viewer/constants";
 import defaultState from "viewer/default_state";
+import {
+  getReasonForCantChangeAnnotationLayerSet,
+  mayChangeAnnotationLayerSet,
+} from "viewer/model/accessors/annotation_accessor";
 import { isRotated } from "viewer/model/accessors/flycam_accessor";
 import {
   areGeometriesTransformed,
@@ -51,6 +55,8 @@ export default function SkeletonLayerSettings() {
   const isSectionClippingAvailable = useWkSelector(
     (state) => !isRotated(state.flycam) && !areGeometriesTransformed(state),
   );
+  const mayChangeLayerSet = useWkSelector(mayChangeAnnotationLayerSet);
+  const reasonForCantChangeLayerSet = useWkSelector(getReasonForCantChangeAnnotationLayerSet);
 
   const isPublicViewMode = controlMode === ControlModeEnum.VIEW;
 
@@ -213,6 +219,7 @@ export default function SkeletonLayerSettings() {
               variant="text"
               color="default"
               size="small"
+              disabled={!mayChangeLayerSet}
               onClick={() =>
                 deleteAnnotationLayerIfConfirmed(
                   readableName,
@@ -221,7 +228,9 @@ export default function SkeletonLayerSettings() {
                 )
               }
               icon={<DeleteOutlined />}
-              title="Delete this annotation layer."
+              title={
+                mayChangeLayerSet ? "Delete this annotation layer." : reasonForCantChangeLayerSet
+              }
             />
           ) : null}
         </Flex>

@@ -148,10 +148,6 @@ export function useZarrLinkMenu(maybeAccessToken: string | null) {
   const dataStoreURL = dataset.dataStore.url;
   const dataLayers = getDataLayers(dataset);
 
-  // The zarr links are versioned (e.g. /data/v15/zarr/...) so that they keep working
-  // against a future datastore even if it drops support for older, unversioned
-  // requests. Fetch the currently supported API version from the webknossos backend's
-  // build info (cached indefinitely, since it only changes when the server is upgraded).
   const buildInfoQuery = useQueryWithErrorHandling(
     {
       queryKey: ["buildInfo"],

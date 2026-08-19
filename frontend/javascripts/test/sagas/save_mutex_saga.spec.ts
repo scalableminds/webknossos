@@ -24,11 +24,11 @@ import {
 import { type Saga, select } from "viewer/model/sagas/effect_generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import {
-  ACQUIRE_MUTEX_INTERVAL,
   clearAllSubscriptions,
   getMutexLogicState,
   subscribeToAnnotationMutex,
 } from "viewer/model/sagas/saving/save_mutex_saga";
+import { ACQUIRE_MUTEX_INTERVAL } from "viewer/model/sagas/saving/save_mutex_saga_constants";
 import { Store } from "viewer/singletons";
 import { startSaga } from "viewer/store";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -38,6 +38,15 @@ import {
   operationFinished,
   operationStarted,
 } from "./proofreading/proofreading_test_utils";
+
+// Mocked here (rather than reducing the real values in save_mutex_saga_constants.ts)
+// because the mutex-acquiring saga runs in the background for every test via the root
+// saga, not just here — shrinking the real constants made unrelated test files flaky.
+vi.mock("viewer/model/sagas/saving/save_mutex_saga_constants", () => ({
+  ACQUIRE_MUTEX_INTERVAL: 100,
+  DELAY_AFTER_FAILED_MUTEX_FETCH: 100,
+  INITIAL_BACKOFF_TIME: 75,
+}));
 
 const blockingUser: APIUserCompact = { firstName: "Sample", lastName: "User", id: "1111" };
 

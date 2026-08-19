@@ -36,20 +36,18 @@ import {
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import { spawnUntilCanceled } from "viewer/model/sagas/saga_helpers";
+import {
+  ACQUIRE_MUTEX_INTERVAL,
+  DELAY_AFTER_FAILED_MUTEX_FETCH,
+  INITIAL_BACKOFF_TIME,
+} from "viewer/model/sagas/saving/save_mutex_saga_constants";
 import { ensureWkInitialized } from "../ready_sagas";
-
-// Also refer to application.conf where annotation.mutex.expiryTime is defined
-// (typically, 2 minutes).
 
 const MUTEX_NOT_ACQUIRED_TOAST_KEY = "MutexCouldNotBeAcquired";
 const MUTEX_ACQUIRED_TOAST_KEY = "AnnotationMutexAcquired";
 const STARVING_FOR_MUTEX_TOAST_KEY = "StarvingForMutex";
 const UNABLE_TO_KEEP_MUTEX_TOAST_KEY = "UnableToKeepMutex";
-// Exported so that tests can wait for a multiple of this interval instead of hardcoding it.
-export const ACQUIRE_MUTEX_INTERVAL = import.meta.env.MODE === "test" ? 100 : 60 * 1000;
-const DELAY_AFTER_FAILED_MUTEX_FETCH = import.meta.env.MODE === "test" ? 100 : 10 * 1000;
 const RETRY_COUNT = 20; // 12 retries with 60/12=5 seconds backup delay
-const INITIAL_BACKOFF_TIME = import.meta.env.MODE === "test" ? 75 : 750;
 const BACKOFF_TIME_MULTIPLIER = 1.2;
 const BACKOFF_JITTER_LOWER_PERCENT = 0.0;
 const MAX_AD_HOC_RETRY_TIME = 30 * 1000;

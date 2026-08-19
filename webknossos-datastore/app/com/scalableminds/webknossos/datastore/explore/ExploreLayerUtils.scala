@@ -175,12 +175,8 @@ trait ExploreLayerUtils {
   def removeNeuroglancerPrefixesFromUri(uri: String): String =
     uri.stripPrefix("zarr3://").stripPrefix("zarr://").stripPrefix("precomputed://").stripPrefix("n5://")
 
-  // A URI's fragment may itself legitimately contain further "#" characters (e.g. a Neuroglancer share
-  // link embeds its whole view state as JSON in the fragment, which can contain a hex color like
-  // "#8f8f8a" or a hashtag-style "segmentQuery" value). java.net.URI's strict RFC-3986 parser rejects
-  // any "#" beyond the first one, even when only scheme/host/userinfo are actually needed. So we
-  // percent-encode every "#" after the first (which remains the legitimate fragment delimiter) before
-  // handing the string to `new URI(...)`.
+  // A URI fragment may itself contain further "#" characters.
+  // We escape those before we can pass it to java.net.URI
   def escapeExtraFragmentHashes(uri: String): String = {
     val firstHashIndex = uri.indexOf('#')
     if (firstHashIndex < 0) uri

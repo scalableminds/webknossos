@@ -17,15 +17,12 @@ import play.api.libs.json.*
 
 import java.net.{URI, URLDecoder}
 import java.nio.charset.StandardCharsets
+import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 
 object NeuroglancerUriExplorer {
 
-  // Note: we deliberately do not use java.net.URI.getFragment here. Neuroglancer URIs are not strictly
-  // RFC-3986 conformant: their fragment can contain further raw, unescaped "#" characters (e.g. a hex
-  // color such as "annotationColor":"#8f8f8a", or a hashtag-style "segmentQuery" value). Asking
-  // java.net.URI to parse such a string fails outright with a URISyntaxException, even though the
-  // payload is perfectly recoverable. Splitting on the literal "#!" ourselves sidesteps that.
+  // Note: Neuroglancer URIs are not strictly RFC-3986 conformant, so we do raw string ops rather than relying on URI classes.
   def extractRawFragment(rawUri: String): Box[String] =
     rawUri.split("#!", 2) match {
       case Array(_, fragment) => Full(fragment)
@@ -41,10 +38,9 @@ object NeuroglancerUriExplorer {
       .orElse(JsonHelper.parseAs[JsObject](URLDecoder.decode(decodedOnce, StandardCharsets.UTF_8)))
   }
 
-  // A Neuroglancer layer's "source" field can be a plain string, an object with a "url" field (used to
-  // attach subsource config), or an array of either — the array form is used e.g. to pair a segmentation's
-  // main data source with an auxiliary "segment_properties" source. We only need one URL to explore the
-  // volumetric data, so we recurse into the first entry of arrays and unwrap "url" from objects.
+  // A Neuroglancer layer's "source" field can be a plain string, an object with a "url" field,
+  // or an array of either. We recurse into the first entry of arrays and unwrap "url" from objects.
+  @tailrec
   def extractPrimarySourceUrl(source: JsValue): Box[String] = source match {
     case JsString(url)                      => Full(url)
     case obj: JsObject                      => JsonHelper.as[JsString](obj \ "url").map(_.value)

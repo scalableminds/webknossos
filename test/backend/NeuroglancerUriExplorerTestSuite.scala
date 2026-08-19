@@ -7,9 +7,6 @@ import play.api.libs.json.{JsObject, Json}
 
 class NeuroglancerUriExplorerTestSuite extends AnyWordSpec with ExploreLayerUtils {
 
-  // A minimal Neuroglancer view state, matching the ones causing https://github.com/scalableminds/webknossos
-  // "Illegal character in fragment"/"Received invalid URI" reports: it contains an "annotationColor" hex
-  // value and a hashtag-style "segmentQuery", both of which embed a raw "#" that is not percent-encoded.
   private val stateJson =
     """{"layers":[{"type":"segmentation","source":"precomputed://gs://bucket/seg","annotationColor":"#8f8f8a","segmentQuery":"#interneuron #L2","name":"seg"}]}"""
   private val stateJsonObj = Json.parse(stateJson).as[JsObject]
@@ -75,8 +72,6 @@ class NeuroglancerUriExplorerTestSuite extends AnyWordSpec with ExploreLayerUtil
 
     "let java.net.URI parse a sanitized uri that would otherwise throw" in {
       import java.net.URI
-      // Mirrors real-world Neuroglancer links (see the h01 dataset's "segmentQuery" report): every JSON
-      // syntax character is properly percent-encoded, but a raw "#" survives inside a string value.
       val rawUri =
         "https://h01-dot-neuroglancer-demo.appspot.com/#!%7B%22segmentQuery%22:%22#interneuron%20#L2%22%7D"
       assertThrows[java.net.URISyntaxException](new URI(rawUri))
@@ -98,8 +93,6 @@ class NeuroglancerUriExplorerTestSuite extends AnyWordSpec with ExploreLayerUtil
       assert(NeuroglancerUriExplorer.extractPrimarySourceUrl(source) == Full("precomputed://gs://bucket/seg"))
     }
 
-    // Regression test for the h01 dataset's "c3 segmentation" layer, whose "source" pairs the main
-    // segmentation data with an auxiliary "segment_properties" source as a two-element array.
     "accept an array of sources and use the first entry" in {
       val source = Json.parse(
         """[{"url":"precomputed://gs://h01-release/data/20210601/c3","enableDefaultSubsources":false},"precomputed://gs://other-bucket/segment_properties"]"""

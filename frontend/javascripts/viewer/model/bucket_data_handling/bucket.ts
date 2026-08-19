@@ -1,5 +1,5 @@
 import ErrorHandling from "libs/error_handling";
-import { castForArrayType, mod } from "libs/utils";
+import { castForArrayType, mod, sleep } from "libs/utils";
 import window from "libs/window";
 import noop from "lodash-es/noop";
 import throttle from "lodash-es/throttle";
@@ -871,7 +871,10 @@ export class DataBucket {
               `Bucket ${this.zoomedAddress.join(",")} could not be loaded after ${maxRetries} retries.`,
             );
           }
-          await ensureLoadedInner(currentRetryCount + 1);
+          const nextRetryCount = currentRetryCount + 1;
+          // Exponential backoff before retry: 400ms -> 800ms -> 1600ms.
+          await sleep(2 ** nextRetryCount * 200);
+          await ensureLoadedInner(nextRetryCount);
           return;
         }
       }

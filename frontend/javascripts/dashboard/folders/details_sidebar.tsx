@@ -22,6 +22,7 @@ import keyBy from "lodash-es/keyBy";
 import uniq from "lodash-es/uniq";
 import { useEffect, useState } from "react";
 import type { APIDatasetCompact, Folder } from "types/api_types";
+import Constants from "viewer/constants";
 import {
   DatasetExtentRow,
   OwningOrganizationRow,
@@ -31,7 +32,6 @@ import { DatasetLayerTags, DatasetTags, TeamTags } from "../advanced_dataset/dat
 import { useDatasetCollectionContext } from "../dataset/dataset_collection_context";
 import { SEARCH_RESULTS_LIMIT, useDatasetQuery, useFolderQuery } from "../dataset/queries";
 import MetadataTable from "./metadata_table";
-import Constants from "viewer/constants";
 
 export function DetailsSidebar({
   selectedDatasets,
@@ -68,7 +68,9 @@ export function DetailsSidebar({
   }, [selectedDatasets, context.activeFolderId]);
 
   return (
-    <div style={{ width: 300, padding: 16, position: "sticky", top: Constants.DEFAULT_NAVBAR_HEIGHT }}>
+    <div
+      style={{ width: 300, padding: 16, position: "sticky", top: Constants.DEFAULT_NAVBAR_HEIGHT }}
+    >
       {selectedDatasets.length === 1 ? (
         <DatasetDetails selectedDataset={selectedDatasets[0]} />
       ) : selectedDatasets.length > 1 ? (

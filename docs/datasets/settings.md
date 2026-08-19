@@ -149,6 +149,20 @@ Alternatively, you can set the default view configuration from the main annotati
 View Configuration Tab: Set the default viewing parameters for this dataset
 ///
 
+### Applying a View Configuration to a Whole Folder
+
+If several datasets should look the same, you do not have to configure each of them by hand.
+Right-click a dataset in the dashboard's dataset table and choose `Apply View Configuration to All Datasets in Folder…` from the `Whole Folder` section of the context menu.
+This copies the view configuration of the dataset you clicked on to all other datasets in the same folder, overwriting their current view configuration.
+A confirmation dialog tells you how many datasets are affected before anything is changed.
+
+A few things to keep in mind:
+
+- Only datasets that you are allowed to edit are changed. Datasets in subfolders and datasets that currently cannot be loaded are skipped.
+- Layer settings are copied on a best-effort basis: they are only applied to layers that carry the same name and belong to the same category (color or segmentation). Layers that exist only in the target dataset keep their current settings.
+- The dataset-wide settings, such as position, zoom, rotation, and blend mode, are always copied. Since the default position is given in voxel coordinates, it may not point at a meaningful location in datasets that have a different size.
+- The action affects the datasets' defaults for all users and cannot be undone.
+
 
 ## Delete Tab
 

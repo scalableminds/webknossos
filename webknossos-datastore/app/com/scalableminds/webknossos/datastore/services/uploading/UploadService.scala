@@ -212,8 +212,14 @@ class UploadService @Inject() (
   def cleanUpUploadFilesAfterConvertJob(organizationId: String, directoryName: String, jobId: String): Unit =
     if (dataStoreConfig.Datastore.Upload.deleteTemporaryFilesAfterUpload) {
       baseDirService.getOneLocalForOrga(organizationId, requireAllowsUpload = true).foreach { orgaDir =>
-        PathUtils.deleteDirectoryRecursively(orgaDir.resolve(forConversionDir), enforceContainedIn = Some(orgaDir))
-        PathUtils.deleteDirectoryRecursively(orgaDir.resolve(convertingDir), enforceContainedIn = Some(orgaDir))
+        PathUtils.deleteDirectoryRecursively(
+          orgaDir.resolve(forConversionDir).resolve(directoryName),
+          enforceContainedIn = Some(orgaDir)
+        )
+        PathUtils.deleteDirectoryRecursively(
+          orgaDir.resolve(convertingDir).resolve(jobId),
+          enforceContainedIn = Some(orgaDir)
+        )
       }
     }
 

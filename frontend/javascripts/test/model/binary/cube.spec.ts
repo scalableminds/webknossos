@@ -198,7 +198,7 @@ describe("DataCube", () => {
     // the exact retry boundary and verifies that maxRetries is threaded through the
     // recursive calls: one initial attempt plus exactly one retry, then ensureLoaded()
     // must give up.
-    await expect(bucket.ensureLoaded(0, 1)).rejects.toThrow();
+    await expect(bucket.ensureLoaded(1)).rejects.toThrow();
     expect(pullCount).toBe(2);
     expect(bucket.hasData()).toBe(false);
   });

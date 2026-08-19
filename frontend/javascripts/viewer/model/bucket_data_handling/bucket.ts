@@ -834,42 +834,49 @@ export class DataBucket {
     }
   };
 
-  async ensureLoaded(
-    retryCount: number = 0,
-    maxRetries: number = DEFAULT_ENSURE_LOADED_RETRY_COUNT,
-  ): Promise<void> {
-    let needsToAwaitBucket = false;
+  async ensureLoaded(maxRetries: number = DEFAULT_ENSURE_LOADED_RETRY_COUNT): Promise<void> {
+    const ensureLoadedInner = async (currentRetryCount: number) => {
+      let needsToAwaitBucket = false;
 
-    if (this.isRequested()) {
-      needsToAwaitBucket = true;
-    } else if (this.needsRequest()) {
-      this.addToPullQueueWithHighestPriority();
-      this.cube.pullQueue.pull();
-      needsToAwaitBucket = true;
-    } else if (this.isMissing()) {
-      // Awaiting is not necessary.
-    }
-
-    if (needsToAwaitBucket) {
-      const didRequestFail = await new Promise<boolean>((resolve) => {
-        this.once("bucketLoaded", () => resolve(false));
-        this.once("bucketMissing", () => resolve(false));
-        this.once("bucketRequestFailed", () => resolve(true));
-      });
-
-      if (didRequestFail) {
-        // The request failed. This covers a backend failure, a network error and a request
-        // that was aborted (e.g. because a concurrent reload called pullQueue.abortRequests()).
-        // Thus, we should retry now.
-        if (retryCount >= maxRetries) {
-          throw new Error(
-            `Bucket ${this.zoomedAddress.join(",")} could not be loaded after ${maxRetries} retries.`,
-          );
-        }
-        await this.ensureLoaded(retryCount + 1, maxRetries);
-        return;
+      if (this.isRequested()) {
+        needsToAwaitBucket = true;
+      } else if (this.needsRequest()) {
+        this.addToPullQueueWithHighestPriority();
+        this.cube.pullQueue.pull();
+        needsToAwaitBucket = true;
+      } else if (this.isMissing()) {
+        // Awaiting is not necessary.
       }
-    }
+
+      if (needsToAwaitBucket) {
+        const didRequestFail = await new Promise<boolean>((resolve) => {
+          const unbindFunctions: (() => void)[] = [];
+          const clearAndResolve = (success: boolean) => {
+            unbindFunctions.forEach((fn) => {
+              fn();
+            });
+            resolve(success);
+          };
+          unbindFunctions.push(this.once("bucketLoaded", () => clearAndResolve(false)));
+          unbindFunctions.push(this.once("bucketMissing", () => clearAndResolve(false)));
+          unbindFunctions.push(this.once("bucketRequestFailed", () => clearAndResolve(true)));
+        });
+
+        if (didRequestFail) {
+          // The request failed. This covers a backend failure, a network error and a request
+          // that was aborted (e.g. because a concurrent reload called pullQueue.abortRequests()).
+          // Thus, we should retry now.
+          if (currentRetryCount >= maxRetries) {
+            throw new Error(
+              `Bucket ${this.zoomedAddress.join(",")} could not be loaded after ${maxRetries} retries.`,
+            );
+          }
+          await ensureLoadedInner(currentRetryCount + 1);
+          return;
+        }
+      }
+    };
+    await ensureLoadedInner(0);
 
     // Bucket has been loaded by now or was loaded already
     if (this.isMissing()) {

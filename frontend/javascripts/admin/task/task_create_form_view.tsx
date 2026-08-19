@@ -44,6 +44,7 @@ import uniq from "lodash-es/uniq";
 import messages from "messages";
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { ModalWidth } from "theme";
 import type { APIDataset, APIProject, APIScript, APITask, APITaskType } from "types/api_types";
 import type { Vector3, Vector6 } from "viewer/constants";
 import type { BoundingBoxObject } from "viewer/store";
@@ -245,7 +246,7 @@ export function handleTaskCreationResponse(
         ) : null}
       </div>
     ),
-    width: 600,
+    width: ModalWidth.Medium,
   });
 }
 

@@ -21,6 +21,7 @@ import { isEqual } from "lodash-es";
 import type React from "react";
 import { useCallback, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
+import { ModalWidth } from "theme";
 import { setKeyboardShortcutsConfigAction } from "viewer/model/actions/settings_actions";
 import {
   ALL_KEYBOARD_SHORTCUT_IDS,
@@ -492,7 +493,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
       onCancel={handleCancel}
       okButtonProps={{ disabled: activeUser == null || (isJsonView && jsonError != null) }}
       onOk={handleSave}
-      width={1000}
+      width={ModalWidth.ExtraLarge}
       style={{ padding: 20 }}
       title="Shortcut Configuration"
       styles={{
@@ -502,6 +503,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
           paddingRight: 8, // prevents scrollbar overlap
         },
       }}
+      mask={{ closable: false }}
     >
       <CollisionWarningAlert shortcutCollisions={shortcutCollisions} />
       <KeyboardLayoutApiNotice />

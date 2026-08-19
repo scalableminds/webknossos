@@ -131,7 +131,14 @@ function CreateFolderModalContent({
   };
 
   return (
-    <Modal title="New Folder" open okText="Create" onOk={onSave} onCancel={onClose}>
+    <Modal
+      title="New Folder"
+      open
+      okText="Create"
+      onOk={onSave}
+      onCancel={onClose}
+      mask={{ closable: false }}
+    >
       <div>
         <Shortcut keys="enter" onTrigger={onSave} supportInputElements />
         <Form

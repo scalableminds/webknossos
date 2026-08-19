@@ -1,0 +1,14 @@
+language js
+
+// Modal widths belong to the `ModalWidth` scale in theme.ts, so that dialogs of the same kind
+// end up the same size. A modal that genuinely does not fit the scale should say why in a
+// comment next to its width.
+`<Modal $props>` where {
+  $props <: contains bubble `width={$w}` where {
+    $w <: not contains `ModalWidth`,
+    register_diagnostic(
+      span = $w,
+      message = "Use a `ModalWidth` value from theme.ts instead of a raw modal width."
+    )
+  }
+}

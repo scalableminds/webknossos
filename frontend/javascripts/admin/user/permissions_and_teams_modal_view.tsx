@@ -382,6 +382,7 @@ function PermissionsAndTeamsModalView(props: TeamRoleModalProps) {
 
   return (
     <Modal
+      title="Teams & Permissions"
       mask={{ closable: false }}
       closable={false}
       open={isOpen}

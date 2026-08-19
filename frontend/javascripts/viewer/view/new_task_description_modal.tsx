@@ -1,4 +1,4 @@
-import { Button, Modal } from "antd";
+import { Modal } from "antd";
 import Markdown from "libs/markdown_adapter";
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
@@ -42,17 +42,8 @@ const NewTaskDescriptionModal: React.FC<Props> = ({ description, destroy, title 
       title={title}
       onOk={handleOk}
       onCancel={handleOk}
-      footer={[
-        <Button
-          key="submit"
-          type="primary"
-          loading={!mayClose}
-          onClick={handleOk}
-          disabled={!mayClose}
-        >
-          Ok
-        </Button>,
-      ]}
+      okButtonProps={{ loading: !mayClose, disabled: !mayClose }}
+      footer={(_, { OkBtn }) => <OkBtn />}
     >
       <Markdown>{description}</Markdown>
     </Modal>

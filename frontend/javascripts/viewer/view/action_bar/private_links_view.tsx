@@ -42,6 +42,7 @@ import { copyToClipboard } from "libs/clipboard";
 import { makeComponentLazy } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
+import { ModalWidth } from "theme";
 import type { ZarrPrivateLink } from "types/api_types";
 import { getDataLayers } from "viewer/model/accessors/dataset_accessor";
 import { getReadableNameByVolumeTracingId } from "viewer/model/accessors/volumetracing_accessor";
@@ -319,9 +320,7 @@ function HumanizedDuration({ expirationDate }: { expirationDate: dayjs.Dayjs }) 
         // expiration date at 08:00, moment.to() would round the duration and
         // render "2 days" which is confusing if the user selected (in 1 day).
         // Therefore, we pin the time at each date to 23:59 UTC.
-        now
-          .endOf("day")
-          .to(expirationDate.endOf("day"));
+        now.endOf("day").to(expirationDate.endOf("day"));
   return (
     <span style={{ color: "var(--ant-color-text-secondary)", marginLeft: 4 }}>{duration}</span>
   );
@@ -434,14 +433,11 @@ function _PrivateLinksModal({
     <Modal
       title="Manage Zarr Links"
       open={isOpen}
-      width={800}
+      width={ModalWidth.Large}
       onCancel={onOk}
       onOk={onOk}
-      footer={[
-        <Button key="ok" type="primary" loading={isBusy} onClick={onOk}>
-          OK
-        </Button>,
-      ]}
+      okButtonProps={{ loading: isBusy }}
+      footer={(_, { OkBtn }) => <OkBtn />}
     >
       <PrivateLinksView annotationId={annotationId} />
     </Modal>

@@ -6,6 +6,7 @@ import { useWkSelector } from "libs/react_hooks";
 import { pluralize } from "libs/utils";
 import capitalize from "lodash-es/capitalize";
 import { useCallback, useMemo } from "react";
+import { ModalWidth } from "theme";
 import type { APISegmentationLayer, VoxelSize } from "types/api_types";
 import { LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
@@ -353,7 +354,7 @@ export function SegmentStatisticsModal({
       open
       title="Segment Statistics"
       onCancel={onCancel}
-      width={1000}
+      width={ModalWidth.ExtraLarge}
       onOk={() =>
         !isErrorCase &&
         exportStatisticsToCSV(

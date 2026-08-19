@@ -7,8 +7,10 @@ import type { APIUser } from "types/api_types";
 
 export type Theme = "light" | "dark";
 
-// This file is the single source of truth for WEBKNOSSOS' *color values*. Raw hex codes belong
-// here (and only here). Color conversion helpers live in libs/colors.ts.
+// This file is the single source of truth for WEBKNOSSOS' *color values* and for the handful of
+// non-color design decisions that antd expresses as tokens (see `ModalToken` / `ModalWidth`
+// below). Raw hex codes belong here (and only here). Color conversion helpers live in
+// libs/colors.ts.
 //
 // When a component needs a color, prefer these options in order:
 //
@@ -77,6 +79,9 @@ const darkGlobalToken = theme.getDesignToken({
 // Modal, Result, Alert, Avatar, Statistic, Steps, Upload and BackTop. Setting them
 // globally would, for example, shrink every modal title from 16px to 14px, because
 // antd derives `Modal.titleFontSize` from `fontSizeHeading5`.
+//
+// Modal no longer relies on that scoping to keep its title size — see `ModalToken` below,
+// which pins the title tokens explicitly. The other listed components still do.
 const TypographyHeadingToken = {
   fontSizeHeading1: 36,
   fontSizeHeading2: 30,
@@ -92,6 +97,35 @@ const TypographyHeadingToken = {
   lineHeightHeading4: lightGlobalToken.lineHeight,
   lineHeightHeading5: lightGlobalToken.lineHeight,
 };
+
+// antd derives `titleFontSize` from `fontSizeHeading5` and `titleLineHeight` from
+// `lineHeightHeading5`, which means a modal title silently follows whatever the heading scale
+// does. Pinning both here makes the modal title an independent decision. The values are antd's
+// own defaults, so this is visually neutral today; it just stops being accidental.
+//
+// `titleColor` and `contentBg` are deliberately left derived — they differ between the light and
+// the dark algorithm, so hardcoding either would break one of the two themes.
+const ModalToken = {
+  titleFontSize: 16,
+  titleLineHeight: 1.5,
+};
+
+// The width scale for modals. Pick one of these instead of a bespoke pixel value, so that
+// dialogs of the same kind end up the same size. Omitting `width` is the smallest option and
+// the most common one: antd's 520px default suits confirmations and single-input dialogs.
+//
+// A modal that genuinely does not fit the scale (a bare spinner, a docked panel) may still set
+// its own width, but should say why in a comment.
+export const ModalWidth = {
+  /** Forms. */
+  Medium: 600,
+  /** Tables and other rich content. */
+  Large: 800,
+  /** Data-heavy dialogs, e.g. statistics tables and the shortcut configuration. */
+  ExtraLarge: 1000,
+  /** Dialogs that embed a whole view, e.g. dataset upload and onboarding. */
+  Full: "85%",
+} as const;
 
 const OverridesForNavbarAndStatusBarTheme: ThemeConfig = {
   components: {
@@ -150,6 +184,7 @@ export function getAntdTheme(userTheme: Theme) {
       marginXXS: 2, // default is 4px; adjust to match checkboxes because of smaller titleHeight
     },
     Typography: TypographyHeadingToken,
+    Modal: ModalToken,
   };
 
   if (userTheme === "dark") {

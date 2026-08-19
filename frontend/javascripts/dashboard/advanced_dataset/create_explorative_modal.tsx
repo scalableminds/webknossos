@@ -263,7 +263,6 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
     <Modal
       title={`Create New Annotation for Dataset “${dataset?.name || datasetId}”`}
       open
-      width={500}
       footer={null}
       onCancel={onClose}
     >

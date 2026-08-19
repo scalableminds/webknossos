@@ -23,6 +23,7 @@ import type { ModalApi } from "libs/with_modal_hoc";
 import messages from "messages";
 import type React from "react";
 import { useRef, useState } from "react";
+import { ModalWidth } from "theme";
 import type { APIOrganization } from "types/api_types";
 import { PowerPlanUpgradeCard, TeamPlanUpgradeCard } from "./plan_upgrade_cards";
 import {
@@ -62,7 +63,7 @@ function extendPricingPlan(modal: ModalApi, organization: APIOrganization) {
       Toast.success(messages["organization.plan.upgrage_request_sent"]);
     },
     icon: <FieldTimeOutlined style={{ color: "var(--ant-color-primary)" }} />,
-    width: 1000,
+    width: ModalWidth.ExtraLarge,
     content: (
       <div>
         <p style={{ marginRight: "30%" }}>
@@ -113,8 +114,9 @@ function UpgradeUserQuotaModal({ destroy }: { destroy: () => void }) {
       okText={"Buy more Users"}
       onOk={handleUserUpgrade}
       onCancel={destroy}
-      width={800}
+      width={ModalWidth.Large}
       open
+      mask={{ closable: false }}
     >
       <div className="drawing-upgrade-users">
         <p style={{ marginRight: "30%" }}>
@@ -157,8 +159,9 @@ function UpgradeStorageQuotaModal({ destroy }: { destroy: () => void }) {
       okText={"Buy more Storage Space"}
       onOk={handleStorageUpgrade}
       onCancel={destroy}
-      width={800}
+      width={ModalWidth.Large}
       open
+      mask={{ closable: false }}
     >
       <div className="drawing-upgrade-storage">
         <p style={{ marginRight: "30%" }}>
@@ -204,7 +207,7 @@ function UpgradeAiPlanModal({ destroy }: { destroy: () => void }) {
       okText="Buy AI Add-on"
       onOk={handleSubmit}
       onCancel={destroy}
-      width={800}
+      width={ModalWidth.Large}
       open
     >
       <div className="drawing-upgrade-ai-addon">
@@ -341,7 +344,7 @@ function UpgradePricingPlanModal({
           <RocketOutlined style={{ color: "var(--ant-color-primary)" }} /> {title}
         </>
       }
-      width={800}
+      width={ModalWidth.Large}
       onCancel={destroy}
       footer={
         <>
@@ -401,8 +404,9 @@ function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
       okText="Request an Email Quote"
       onOk={handleOrderCredits}
       onCancel={destroy}
-      width={800}
+      width={ModalWidth.Large}
       open
+      mask={{ closable: false }}
     >
       <div className="drawing-upgrade-users">
         <p style={{ marginRight: "5%" }}>

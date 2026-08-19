@@ -21,7 +21,13 @@ const AddNewLayoutModal: React.FC<Props> = ({ addLayout, isOpen, onCancel }) => 
   }, []);
 
   return (
-    <Modal title="Add a new layout" open={isOpen} onOk={onConfirm} onCancel={onCancel}>
+    <Modal
+      title="Add a new layout"
+      open={isOpen}
+      onOk={onConfirm}
+      onCancel={onCancel}
+      mask={{ closable: false }}
+    >
       <Input
         placeholder="Layout Name"
         value={value}

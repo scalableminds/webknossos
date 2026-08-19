@@ -60,7 +60,7 @@ const _UserScriptsModalView: React.FC<UserScriptsModalViewProps> = ({ onOK, isOp
         void loadScript(script);
       } else {
         modal.confirm({
-          content: messages["add_script.confirm_change"],
+          title: messages["add_script.confirm_change"],
           onOk: () => loadScript(script),
         });
       }
@@ -90,6 +90,7 @@ const _UserScriptsModalView: React.FC<UserScriptsModalViewProps> = ({ onOK, isOp
       cancelText="Close"
       onOk={handleClick}
       onCancel={onOK}
+      mask={{ closable: false }}
     >
       <Spin spinning={isLoading}>
         <Select

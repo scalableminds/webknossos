@@ -225,7 +225,6 @@ function _MergeModalView({ isOpen, onOk }: Props) {
       title="Merge Annotations"
       open={isOpen}
       onCancel={onOk}
-      width={500}
       footer={
         <Flex justify="flex-end" align="center" gap={12}>
           <Tooltip
@@ -248,6 +247,7 @@ function _MergeModalView({ isOpen, onOk }: Props) {
           </Tooltip>
         </Flex>
       }
+      mask={{ closable: false }}
     >
       <Spin spinning={isUploading}>
         <Flex vertical gap={16} style={{ marginBottom: 12 }}>

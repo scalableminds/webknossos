@@ -137,7 +137,6 @@ function TaskListView({ initialFieldValues }: Props) {
     modal.confirm({
       title: "Manual Task Assignment",
       icon: <UserAddOutlined />,
-      width: 500,
       content: (
         <>
           <div>Please, select a user to manually assign this task to:</div>

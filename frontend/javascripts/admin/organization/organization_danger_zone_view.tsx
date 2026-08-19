@@ -35,7 +35,6 @@ export function OrganizationDangerZoneView() {
       ),
       okText: <>Yes, delete this organization now and log me out.</>,
       okType: "danger",
-      width: 500,
     });
 
     if (isDeleteConfirmed) {

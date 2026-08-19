@@ -1,7 +1,8 @@
-import { Alert, Button, Col, Input, Modal, Row } from "antd";
+import { Alert, Col, Input, Modal, Row } from "antd";
 import Markdown from "libs/markdown_adapter";
 import type React from "react";
 import { Fragment, useEffect, useState } from "react";
+import { ModalWidth } from "theme";
 
 function getFirstLine(comment: string) {
   const newLineIndex = comment.indexOf("\n");
@@ -52,14 +53,12 @@ export function MarkdownModal({
       title={`Edit ${label}`}
       open={isOpen}
       onCancel={onOk}
+      onOk={onConfirm}
       closable={true}
-      width={700}
-      footer={[
-        <Button type="primary" key="back" onClick={onConfirm}>
-          OK
-        </Button>,
-      ]}
+      width={ModalWidth.Large}
+      footer={(_, { OkBtn }) => <OkBtn />}
       destroyOnHidden
+      mask={{ closable: false }}
     >
       <Alert
         title={

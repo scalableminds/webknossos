@@ -13,6 +13,7 @@ import {
   getSomeMagInfoForDataset,
   getUntransformedDatasetBoundingBox,
 } from "viewer/model/accessors/dataset_accessor";
+import { getTransformedDatasetBoundingBox } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import { dispatchGetNewIdAsync } from "viewer/model/actions/actions";
@@ -66,6 +67,7 @@ type Props = {
 function GenerateBoundingBoxesModalInner({ isOpen, onClose, magnification, jobType }: Props) {
   const dispatch = useDispatch();
   const dataset = useWkSelector((state) => state.dataset);
+  const nativelyRenderedLayerName = useWkSelector((state) => state.datasetConfiguration.nativelyRenderedLayerName);
   const annotation = useWkSelector((state) => state.annotation);
   const { userBoundingBoxes: existingBoundingBoxes } = getSomeTracing(annotation);
 
@@ -146,7 +148,7 @@ function GenerateBoundingBoxesModalInner({ isOpen, onClose, magnification, jobTy
         // Restrict sampling to a selected bounding box if one is chosen, otherwise the whole dataset.
         const samplingBbox = restrictToBox
           ? new BoundingBox(restrictToBox.boundingBox)
-          : getUntransformedDatasetBoundingBox(dataset);
+          : getTransformedDatasetBoundingBox(dataset, nativelyRenderedLayerName);
         const { min, max } = samplingBbox;
 
         const placementMax: Vector3 = V3.sub(max, sizeInMag1);

@@ -168,13 +168,8 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
   ): Fox[DatasetArray] =
     for {
       groupVaultPath <- dataVaultService.vaultPathFor(meshFileKey.attachment)
-      zarrArray <- Zarr3Array.open(
+      zarrArray <- Zarr3Array.openForAttachment(
         groupVaultPath / zarrArrayName,
-        DataSourceId("dummy", "unused"),
-        "layer",
-        None,
-        None,
-        None,
         chunkCacheService.sharedChunkContentsCache
       )
     } yield zarrArray

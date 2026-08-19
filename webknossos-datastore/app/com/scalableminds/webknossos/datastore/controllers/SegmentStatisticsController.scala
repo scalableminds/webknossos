@@ -69,6 +69,7 @@ class SegmentStatisticsController @Inject() (
             case Empty                            => Fox.successful(Seq.empty)
             case f: Failure                       => f.toFox
           }
+          // returns array (empty or one element) because Option/null is awkward in toplevel json
         } yield Ok(Json.toJson(segmentStatisticsFileInfosSeq))
       }
     }
@@ -98,9 +99,9 @@ class SegmentStatisticsController @Inject() (
             mappingNameForMeshFile = None,
             omitMissing = false
           )
-          topLeftsNested: Seq[Array[Vec3Int]] <- Fox.serialCombined(segmentIds)(sId =>
-            segmentIndexFileService.readSegmentIndex(segmentIndexFileKey, sId)
-          )
+          topLeftsNested: Seq[Array[Vec3Int]] <- segmentIndexFileKey.attachment.combinedOverSegmentIdsWithAutoBatching(
+            segmentIds
+          )(sId => segmentIndexFileService.readSegmentIndex(segmentIndexFileKey, sId))
           topLefts: Array[Vec3Int] = topLeftsNested.toArray.flatten
           bucketPositions = segmentIndexFileService.topLeftsToDistinctTargetMagBucketPositions(
             topLefts,
@@ -138,9 +139,10 @@ class SegmentStatisticsController @Inject() (
                 mappingNameForMeshFile = None,
                 omitMissing = true // assume agglomerate ids not present in the mapping belong to user-brushed segments
               )
-              topLeftsNested: Seq[Array[Vec3Int]] <- Fox.serialCombined(segmentIds)(sId =>
-                segmentIndexFileService.readSegmentIndex(segmentIndexFileKey, sId)
-              )
+              topLeftsNested: Seq[Array[Vec3Int]] <- segmentIndexFileKey.attachment
+                .combinedOverSegmentIdsWithAutoBatching(segmentIds)(sId =>
+                  segmentIndexFileService.readSegmentIndex(segmentIndexFileKey, sId)
+                )
               topLefts: Array[Vec3Int] = topLeftsNested.toArray.flatten
               bucketPositions = segmentIndexFileService.topLeftsToDistinctTargetMagBucketPositions(
                 topLefts,

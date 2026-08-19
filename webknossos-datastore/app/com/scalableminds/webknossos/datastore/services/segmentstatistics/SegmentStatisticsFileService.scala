@@ -98,13 +98,20 @@ class SegmentStatisticsFileService @Inject() (
       dataLayer: DataLayer
   ): Box[SegmentStatisticsFileKey] =
     for {
-      attachment <- Box.fromOption(dataLayer.attachments.flatMap(_.segmentStatistics))
+      attachment <- Box.fromOption(
+        dataLayer.attachments.flatMap(_.segmentStatistics)
+      ) ?~> Msg.SegmentStatisticsFile.notFound
       _ <- Box.fromBool(attachment.path.isAbsolute) ?~> Msg.SegmentStatisticsFile.pathNotAbsolute
     } yield SegmentStatisticsFileKey(
       dataSourceId,
       dataLayer.name,
       attachment
     )
+
+  private def readSegmentStatisticsFileAttributes(
+      segmentStatisticsFileKey: SegmentStatisticsFileKey
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[SegmentStatisticsFileAttributes] =
+    attributesCache.getOrLoad(segmentStatisticsFileKey, key => readSegmentStatisticsFileAttributesImpl(key))
 
   private def readSegmentStatisticsFileAttributesImpl(
       segmentStatisticsFileKey: SegmentStatisticsFileKey
@@ -124,11 +131,6 @@ class SegmentStatisticsFileService @Inject() (
       )
     } yield segmentStatisticsFileAttributes
 
-  private def readSegmentStatisticsFileAttributes(
-      segmentStatisticsFileKey: SegmentStatisticsFileKey
-  )(using ec: ExecutionContext, tc: TokenContext): Fox[SegmentStatisticsFileAttributes] =
-    attributesCache.getOrLoad(segmentStatisticsFileKey, key => readSegmentStatisticsFileAttributesImpl(key))
-
   private def openZarrArray(segmentStatisticsFileKey: SegmentStatisticsFileKey, zarrArrayName: String)(using
       ec: ExecutionContext,
       tc: TokenContext
@@ -144,13 +146,8 @@ class SegmentStatisticsFileService @Inject() (
   ): Fox[DatasetArray] =
     for {
       groupVaultPath <- dataVaultService.vaultPathFor(segmentStatisticsFileKey.attachment)
-      zarrArray <- Zarr3Array.open(
+      zarrArray <- Zarr3Array.openForAttachment(
         groupVaultPath / zarrArrayName,
-        DataSourceId("dummy", "unused"),
-        "layer",
-        None,
-        None,
-        None,
         chunkCacheService.sharedChunkContentsCache
       )
     } yield zarrArray
@@ -181,22 +178,12 @@ class SegmentStatisticsFileService @Inject() (
       _ <- Fox.fromBool(metrics.contains(metric)) ?~> Msg.SegmentStatisticsFile.metricNotAvailable(metric)
     } yield ()
 
-  // Reads are batched (parallel) for remote storage, where per-read latency dominates, and serial for local
-  // storage, where parallel reads would only add contention without saving wall-clock time.
-  private def combinedOverSegmentIds[B](segmentStatisticsFileKey: SegmentStatisticsFileKey, segmentIds: Seq[Long])(
-      f: Long => Fox[B]
-  )(implicit ec: ExecutionContext): Fox[Seq[B]] =
-    if (segmentStatisticsFileKey.attachment.path.isRemote)
-      Fox.batchCombined(segmentIds, parallelity = 32)(f)
-    else
-      Fox.serialCombined(segmentIds)(f)
-
   private def resolveMappingName(
       segmentStatisticsFileKey: SegmentStatisticsFileKey
   )(using ec: ExecutionContext, tc: TokenContext): Fox[Option[String]] =
     for {
       attributes <- readSegmentStatisticsFileAttributes(segmentStatisticsFileKey)
-      mappingName = attributes.mappingName.filter(_.nonEmpty) // Emptystring to None
+      mappingName = attributes.mappingName.filter(_.nonEmpty) // Emptystring means no mapping. Convert to None
     } yield mappingName
 
   private def resolveMagAndMappingName(segmentStatisticsFileKey: SegmentStatisticsFileKey, dataLayer: DataLayer)(using
@@ -205,9 +192,7 @@ class SegmentStatisticsFileService @Inject() (
   ): Fox[(Vec3Int, Option[String])] =
     for {
       attributes <- readSegmentStatisticsFileAttributes(segmentStatisticsFileKey)
-      mag <- attributes.mag
-        .orElse(dataLayer.finestMag)
-        .toFox ?~> "Could not determine mag for segment statistics file, layer has no mags"
+      mag <- attributes.mag.orElse(dataLayer.finestMag).toFox ?~> Msg.SegmentStatisticsFile.cannotDetermineMag
       mappingName <- resolveMappingName(segmentStatisticsFileKey)
     } yield (mag, mappingName)
 
@@ -219,7 +204,7 @@ class SegmentStatisticsFileService @Inject() (
   ): Fox[Boolean] =
     for {
       fileMappingName <- resolveMappingName(segmentStatisticsFileKey)
-    } yield fileMappingName != requestedMappingName.filter(_.nonEmpty)
+    } yield fileMappingName != requestedMappingName.filter(_.nonEmpty) // Emptystring means no mapping. Convert to None
 
   def checkMagAndMappingNameMatch(
       segmentStatisticsFileKey: SegmentStatisticsFileKey,
@@ -244,6 +229,7 @@ class SegmentStatisticsFileService @Inject() (
         } else {
           Fox.failure(
             Msg.SegmentStatisticsFile.mappingNameMismatch(
+              // Emptystring means no mapping. Convert to None
               requestedMappingName.filter(_.nonEmpty).getOrElse("(none)"),
               fileMappingName.getOrElse("(none)")
             )
@@ -266,8 +252,12 @@ class SegmentStatisticsFileService @Inject() (
   def getCovarianceMatrices(segmentStatisticsFileKey: SegmentStatisticsFileKey, segmentIds: Seq[Long])(using
       ec: ExecutionContext,
       tc: TokenContext
-  ): Fox[Seq[Array[Array[Float]]]] =
-    combinedOverSegmentIds(segmentStatisticsFileKey, segmentIds)(readCovarianceMatrix(segmentStatisticsFileKey, _))
+  ): Fox[Seq[Array[Array[Float]]]] = for {
+    _ <- checkMetricAvailable(segmentStatisticsFileKey, SegmentStatisticsFileService.keyCovarianceMatrix)
+    covarianceMatrices <- segmentStatisticsFileKey.attachment.combinedOverSegmentIdsWithAutoBatching(segmentIds)(
+      readCovarianceMatrix(segmentStatisticsFileKey, _)
+    )
+  } yield covarianceMatrices
 
   private def readMaxDistance(segmentStatisticsFileKey: SegmentStatisticsFileKey, segmentId: Long)(using
       ec: ExecutionContext,
@@ -282,14 +272,19 @@ class SegmentStatisticsFileService @Inject() (
   def getMaxDistances(segmentStatisticsFileKey: SegmentStatisticsFileKey, segmentIds: Seq[Long])(using
       ec: ExecutionContext,
       tc: TokenContext
-  ): Fox[Seq[Float]] =
-    combinedOverSegmentIds(segmentStatisticsFileKey, segmentIds)(readMaxDistance(segmentStatisticsFileKey, _))
+  ): Fox[Seq[Float]] = for {
+    _ <- checkMetricAvailable(segmentStatisticsFileKey, SegmentStatisticsFileService.keyMaxDistances)
+    maxDistances <- segmentStatisticsFileKey.attachment.combinedOverSegmentIdsWithAutoBatching(segmentIds)(
+      readMaxDistance(segmentStatisticsFileKey, _)
+    )
+  } yield maxDistances
 
   private def readCenterOfMass(segmentStatisticsFileKey: SegmentStatisticsFileKey, segmentId: Long)(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[Array[Float]] =
     for {
+      _ <- checkMetricAvailable(segmentStatisticsFileKey, SegmentStatisticsFileService.keyCenterOfMass)
       centerOfMassArray <- openZarrArray(segmentStatisticsFileKey, SegmentStatisticsFileService.keyCenterOfMass)
       multiArray <- centerOfMassArray.readAsMultiArray(offset = Array(segmentId, 0L), shape = Array(1, 3))
       centerOfMass <- tryo(Array.tabulate(3)(i => multiArray.getFloat(multiArray.getIndex.set(Array(0, i))))).toFox
@@ -299,13 +294,16 @@ class SegmentStatisticsFileService @Inject() (
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[Seq[Array[Float]]] =
-    combinedOverSegmentIds(segmentStatisticsFileKey, segmentIds)(readCenterOfMass(segmentStatisticsFileKey, _))
+    segmentStatisticsFileKey.attachment.combinedOverSegmentIdsWithAutoBatching(segmentIds)(
+      readCenterOfMass(segmentStatisticsFileKey, _)
+    )
 
   private def readVolume(segmentStatisticsFileKey: SegmentStatisticsFileKey, segmentId: Long)(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[Long] =
     for {
+      _ <- checkMetricAvailable(segmentStatisticsFileKey, SegmentStatisticsFileService.keyVolumes)
       volumesArray <- openZarrArray(segmentStatisticsFileKey, SegmentStatisticsFileService.keyVolumes)
       multiArray <- volumesArray.readAsMultiArray(offset = segmentId, shape = 1)
       // the underlying dtype of volumes may vary, but getLong will auto-convert to long.
@@ -318,7 +316,9 @@ class SegmentStatisticsFileService @Inject() (
   ): Fox[Seq[Long]] =
     for {
       _ <- checkMetricAvailable(segmentStatisticsFileKey, SegmentStatisticsFileService.keyVolumes)
-      volumes <- combinedOverSegmentIds(segmentStatisticsFileKey, segmentIds)(readVolume(segmentStatisticsFileKey, _))
+      volumes <- segmentStatisticsFileKey.attachment.combinedOverSegmentIdsWithAutoBatching(segmentIds)(
+        readVolume(segmentStatisticsFileKey, _)
+      )
     } yield volumes
 
   def getVolumesInRequestedMag(
@@ -373,12 +373,6 @@ class SegmentStatisticsFileService @Inject() (
       combined <- SegmentStatisticsMath.weightedCenterOfMass(centerOfMasses, volumes).toFox
     } yield combined.map(_.toFloat)
 
-  /** Combines the covariance matrices of several (oversegmentation) segments into the covariance matrix of their union,
-    * via the parallel axis theorem: each segment’s covariance is shifted from its own center of mass to the combined
-    * center of mass (adding the outer product of that offset with itself), then volume-weighted-averaged. This is exact
-    * (not an approximation), as long as the given segments are disjoint (do not overlap). If a single segment id is
-    * given, this just returns its own covariance matrix.
-    */
   def getCombinedCovarianceMatrix(
       segmentStatisticsFileKey: SegmentStatisticsFileKey,
       dataLayer: DataLayer,
@@ -407,7 +401,7 @@ class SegmentStatisticsFileService @Inject() (
   ): Fox[Seq[Float]] =
     for {
       _ <- checkMetricAvailable(segmentStatisticsFileKey, SegmentStatisticsFileService.keySphericities)
-      sphericities <- combinedOverSegmentIds(segmentStatisticsFileKey, segmentIds)(
+      sphericities <- segmentStatisticsFileKey.attachment.combinedOverSegmentIdsWithAutoBatching(segmentIds)(
         readSphericity(segmentStatisticsFileKey, _)
       )
     } yield sphericities
@@ -428,7 +422,7 @@ class SegmentStatisticsFileService @Inject() (
   ): Fox[Seq[Float]] =
     for {
       _ <- checkMetricAvailable(segmentStatisticsFileKey, SegmentStatisticsFileService.keySurfaceAreas)
-      surfaceAreas <- combinedOverSegmentIds(segmentStatisticsFileKey, segmentIds)(
+      surfaceAreas <- segmentStatisticsFileKey.attachment.combinedOverSegmentIdsWithAutoBatching(segmentIds)(
         readSurfaceArea(segmentStatisticsFileKey, _)
       )
     } yield surfaceAreas
@@ -438,9 +432,7 @@ class SegmentStatisticsFileService @Inject() (
   )(using ec: ExecutionContext, tc: TokenContext): Fox[Boolean] =
     for {
       idsArray <- openZarrArray(segmentStatisticsFileKey, SegmentStatisticsFileService.keyIds)
-      length <- idsArray.datasetShape
-        .flatMap(_.headOption)
-        .toFox ?~> "Could not determine length of ids array in segment statistics file"
+      length <- idsArray.datasetShape.flatMap(_.headOption).toFox ?~> Msg.SegmentStatisticsFile.idsLengthUnavailable
       isDense <-
         if (length == 0) Fox.successful(false)
         else

@@ -806,6 +806,7 @@ object Msg {
     val pathNotAbsolute = "Path of segment index file is ambiguous, must be absolute."
   }
   object SegmentStatisticsFile {
+    val notFound = "Could not find a registered segment statistics file for this layer."
     val pathNotAbsolute = "Path of segment statistics file is ambiguous, must be absolute."
     val readGroupHeaderFailed = "Could not read segment statistics file zarr group file."
     val parseAttributesFailed = "Could not parse segment statistics file attributes from zarr group file."
@@ -821,9 +822,12 @@ object Msg {
       s"Requesting a different mapping is only supported for segment statistics files calculated on unmapped data, but this file was computed for mapping “$fileMappingName”."
     def formatVersionTooOld(formatVersion: Long, minimumSupportedVersion: Long): String =
       s"Segment statistics file has format version $formatVersion, but at least $minimumSupportedVersion is required."
-    val idsNotDense = "Segment statistics file does not have dense ids. Only files with dense ids are supported."
+    val idsNotDense: String =
+      "Segment statistics file does not have dense ids. Only files with dense ids are supported."
+    val idsLengthUnavailable: String = "Could not determine length of ids array in segment statistics file"
     def metricNotAvailable(metric: String): String =
       s"Segment statistics file does not contain the metric “$metric”."
+    val cannotDetermineMag: String = "Could not determine mag for segment statistics file, layer has no mags."
   }
   object Zarr {
     def invalidChunkCoordinates(coordinates: String): String =

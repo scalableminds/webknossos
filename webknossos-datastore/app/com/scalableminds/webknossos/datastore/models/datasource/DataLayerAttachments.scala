@@ -3,12 +3,14 @@ package com.scalableminds.webknossos.datastore.models.datasource
 import com.scalableminds.util.box.{Box, Full}
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.io.PathUtils
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType.LayerAttachmentType
 import org.apache.commons.io.FilenameUtils
 import play.api.libs.json.{Format, Json}
 
 import java.nio.file.{Files, Path}
+import scala.concurrent.ExecutionContext
 
 case class DataLayerAttachments(
     meshes: Seq[LayerAttachment] = Seq.empty,
@@ -188,6 +190,16 @@ case class LayerAttachment(
     this.copy(path = this.path.relativizedIn(dataSourcePath))
 
   def withoutCredential: LayerAttachment = this.copy(credentialId = None)
+
+  // Reads are batched (parallel) for remote storage, where per-read latency dominates, and serial for local
+  // storage, where parallel reads would only add contention without saving wall-clock time.
+  def combinedOverSegmentIdsWithAutoBatching[B](segmentIds: Seq[Long])(
+      f: Long => Fox[B]
+  )(implicit ec: ExecutionContext): Fox[Seq[B]] =
+    if (path.isRemote)
+      Fox.batchCombined(segmentIds, parallelity = 32)(f)
+    else
+      Fox.serialCombined(segmentIds)(f)
 }
 
 object LayerAttachment {

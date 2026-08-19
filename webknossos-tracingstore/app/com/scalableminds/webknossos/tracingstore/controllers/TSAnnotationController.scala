@@ -72,8 +72,6 @@ class TSAnnotationController @Inject() (
       }
     }
 
-  private val slowUpdateTimingStatsLogThreshold: FiniteDuration = 1 second
-
   def update(annotationId: ObjectId): Action[List[UpdateActionGroup]] =
     Action.fox(validateJson[List[UpdateActionGroup]]) { implicit request =>
       log() {
@@ -86,14 +84,19 @@ class TSAnnotationController @Inject() (
             val requestStart = Instant.now
             for {
               _ <- annotationTransactionService.handleUpdateGroups(annotationId, request.body)
-              _ = logger.info(
-                s"Annotation update for $annotationId took ${formatDuration(Instant.since(requestStart))}. ${stats.summary}"
-              )
+              _ = logIfSlow(annotationId, requestStart, stats)
             } yield Ok
           }
         }
       }
     }
+
+  private def logIfSlow(annotationId: ObjectId, requestStart: Instant, stats: UpdateTimingStats): Unit = {
+    val duration = Instant.since(requestStart)
+    if (duration > (1 minute)) {
+      logger.warn(s"Slow annotation update for $annotationId took ${formatDuration(duration)}. ${stats.summary}")
+    }
+  }
 
   def updateActionLog(
       annotationId: ObjectId,

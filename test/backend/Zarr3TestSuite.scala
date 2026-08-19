@@ -67,7 +67,7 @@ class Zarr3TestSuite extends AsyncWordSpec {
 
     "parsing a sharded zarr.json" should {
 
-      // Captured from a webknossos-written zarr v3 segmentation mag: an outer 256³ shard split into
+      // Captured from a zarr v3 segmentation mag: an outer 256³ shard split into
       // 32³ inner chunks, transposed to F order, with a crc32c-checksummed shard index.
       val shardedJson =
         """{"chunk_grid":{"configuration":{"chunk_shape":[1,256,256,256]},"name":"regular"},
@@ -131,8 +131,7 @@ class Zarr3TestSuite extends AsyncWordSpec {
 
     "dimension_names are absent" should {
       "read no dimension names" in {
-        // Captured from a webknossos-written 1-dimensional zarr v3 array (a segment statistics attachment),
-        // which states neither dimension_names nor a chunk key separator.
+        // Captured from a segment statistics attachment
         val json =
           """{"chunk_grid":{"configuration":{"chunk_shape":[134217728]},"name":"regular"},
              "chunk_key_encoding":{"name":"default"},
@@ -317,7 +316,6 @@ class Zarr3TestSuite extends AsyncWordSpec {
       }
 
       "reject a codec whose configuration cannot be read" in {
-        // Malformed codec configurations used to be dropped silently
         val json = """{
           "shape": [64], "data_type": "uint8", "zarr_format": 3,
           "chunk_grid": {"configuration": {"chunk_shape": [8]}, "name": "regular"},

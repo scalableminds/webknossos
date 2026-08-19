@@ -44,7 +44,6 @@ class ZarrHeaderTestSuite extends AsyncWordSpec {
     "parsing a .zarray written by zarr-python" should {
 
       // Captured from the “raw” layer of a zarr v2 dataset produced by a python pipeline
-      // (zarr-python 2.x default output, pretty-printed, blosc-compressed, no dimension_separator).
       val zarrayJson = """{
           "chunks": [82, 82, 82],
           "compressor": {

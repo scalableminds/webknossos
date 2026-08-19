@@ -112,8 +112,7 @@ class S3UriUtilsTestSuite extends AsyncWordSpec {
     "the bucket name contains dots" should {
 
       "still classify a short style uri as path style" in {
-        // Pinning current behavior: an s3:// uri states either a bucket or an endpoint in its host slot, and a
-        // dotted bucket name is indistinguishable from an endpoint host, so the endpoint reading wins here.
+        // A dotted bucket name is indistinguishable from an endpoint host, the endpoint reading wins here.
         // Such buckets can be addressed in virtual hosted style instead, see above.
         val dottedBucket = uri("s3://my.bucket.name/dataset/color")
         assert(S3UriUtils.hostBucketFromUri(dottedBucket).contains("dataset"))

@@ -11,11 +11,10 @@ import type {
   APIMeshFileInfo,
   EditableLayerProperties,
 } from "types/api_types";
-import type { Vector3 } from "viewer/constants";
+import type { MappingType, Vector3 } from "viewer/constants";
 import Constants from "viewer/constants";
 import type {
   Annotation,
-  MappingType,
   MipLayerConfig,
   UserBoundingBox,
   UserBoundingBoxWithoutId,

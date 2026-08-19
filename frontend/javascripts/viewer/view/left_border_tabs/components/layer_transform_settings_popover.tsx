@@ -135,7 +135,7 @@ export function LayerTransformSettingsContent({
   const queryClient = useQueryClient();
   const [isSaving, setIsSaving] = useState(false);
   const dataset = useWkSelector((state) => state.dataset);
-  const datasetBbox = useMemo(() => getDatasetBoundingBox(dataset), [dataset]);
+  const datasetBbox = getDatasetBoundingBox(dataset);
   const translationSettingLimits = useMemo<[number, number, number]>(
     () => [
       datasetBbox.max[0] - datasetBbox.min[0],

@@ -196,7 +196,7 @@ class JobService @Inject() (
       } yield ()
     } else Fox.successful(())
 
-  def cleanUpUploadArtifactsIfNeeded(jobBeforeChange: Job, jobAfterChange: Job): Unit = {
+  def cleanUpUploadFilesIfNeeded(jobBeforeChange: Job, jobAfterChange: Job): Unit = {
     val jobJustEnded =
       jobBeforeChange.state != jobAfterChange.state &&
         Set(JobState.SUCCESS, JobState.FAILURE, JobState.CANCELLED).contains(jobAfterChange.state)
@@ -207,7 +207,7 @@ class JobService @Inject() (
         directoryName <- commandArgs.get("dataset_directory_name").map(_.as[String]).toFox
         dataStore <- dataStoreDAO.findOneByName(jobAfterChange._dataStore)(using GlobalAccessContext)
         remoteClient = new WKRemoteDataStoreClient(dataStore, rpc)
-        _ <- remoteClient.cleanUpUploadArtifacts(organizationId, directoryName)
+        _ <- remoteClient.cleanUpUploadFiles(organizationId, directoryName, jobAfterChange._id.id)
       } yield ()
     }
   }

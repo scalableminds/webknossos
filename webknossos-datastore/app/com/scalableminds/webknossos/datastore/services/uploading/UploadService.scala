@@ -214,29 +214,20 @@ class UploadService @Inject() (
       orgaDir <- baseDirService.getOneLocalForOrga(organizationId, requireAllowsUpload = true)
     } yield orgaDir.resolve(forConversionDir).resolve(directoryName)
 
-  // Hard-deletes a temporary upload artifact directory, logging (but never throwing/propagating) on failure.
-  // Cleanup is always best-effort: it must never block or fail the upload/job-status flow that triggers it.
-  private def deleteArtifactDirLogged(path: Path, description: String): Unit =
-    PathUtils.deleteDirectoryRecursively(path) match {
-      case Full(_)    => ()
-      case f: Failure =>
-        logger.warn(s"Could not delete $description at $path: ${formatFailureChain(f, includeStackTraces = true)}")
-      case Empty =>
-        logger.warn(s"Could not delete $description at $path: unknown error")
-    }
+  private def convertingDirectoryFor(organizationId: String, jobId: String): Box[Path] =
+    for {
+      orgaDir <- baseDirService.getOneLocalForOrga(organizationId, requireAllowsUpload = true)
+    } yield orgaDir.resolve(convertingDir).resolve(jobId)
 
-  // Called once a needsConversion=true upload's convert_to_wkw job has reached a terminal state (reported by
-  // webknossos, which tracks job completion). Deletes the .forConversion staging dir that the worker job read
-  // from, if configured to do so. Safe no-op if it no longer exists. This must never fail: the datastore route
-  // calling this always reports success back to webknossos, regardless of the outcome, since a leftover temp
-  // artifact is not worth blocking or retrying the job-status-update flow over.
-  def cleanUpUploadArtifactsAfterConversion(organizationId: String, directoryName: String): Fox[Unit] =
-    Fox.successful {
-      if (dataStoreConfig.Datastore.Upload.deleteTemporaryArtifactsAfterUpload) {
-        forConversionDirectoryFor(organizationId, directoryName).foreach { forConversionPath =>
-          logger.info(s"Deleting conversion staging dir at $forConversionPath after conversion job finished.")
-          deleteArtifactDirLogged(forConversionPath, "conversion staging dir")
-        }
+  def cleanUpUploadFilesAfterConvertJob(organizationId: String, directoryName: String, jobId: String): Unit =
+    if (dataStoreConfig.Datastore.Upload.deleteTemporaryFilesAfterUpload) {
+      forConversionDirectoryFor(organizationId, directoryName).foreach { forConversionPath =>
+        logger.info(s"Deleting conversion staging dir at $forConversionPath after conversion job finished.")
+        PathUtils.deleteDirectoryRecursively(forConversionPath)
+      }
+      convertingDirectoryFor(organizationId, jobId).foreach { convertingPath =>
+        logger.info(s"Deleting worker scratch dir at $convertingPath after conversion job finished.")
+        PathUtils.deleteDirectoryRecursively(convertingPath)
       }
     }
 
@@ -448,9 +439,7 @@ class UploadService @Inject() (
       _ = logger.info(s"Finishing ${uploadFullName(UploadDomain.dataset, uploadId, datasetId, dataSourceId)}...")
       linkedLayerIdentifiers <- datasetUploadMetadataStore.findLinkedLayerIdentifiers(uploadId)
       uploadDir <- uploadDirectoryFor(dataSourceId.organizationId, uploadId, UploadDomain.dataset).toFox
-      // If configured to delete temporary upload artifacts anyway, skip making this backup copy in the first
-      // place, rather than making it and immediately deleting it again.
-      _ <- Fox.runIf(!dataStoreConfig.Datastore.Upload.deleteTemporaryArtifactsAfterUpload) {
+      _ <- Fox.runIf(!dataStoreConfig.Datastore.Upload.deleteTemporaryFilesAfterUpload) {
         for {
           uploadBackupDir <- uploadBackupDirectoryFor(dataSourceId.organizationId, uploadId).toFox
           _ <- backupRawUploadedData(uploadDir, uploadBackupDir, datasetId).toFox
@@ -844,20 +833,17 @@ class UploadService @Inject() (
     } yield filesToDelete
   }
 
-  // On a failed upload, the partially unpacked/processed data at unpackToDir is either hard-deleted (if configured
-  // to clean up temporary upload artifacts) or moved to .trash (today's default, kept for manual recovery/debugging).
-  // Applies uniformly to all upload domains (dataset, mag, attachment), since they all share cleanUpOnFailure.
   private def deleteFailedUploadDir(
       datasetId: ObjectId,
       unpackToDir: Path,
       dataSourceId: DataSourceId,
       reason: String
   ): Unit =
-    if (dataStoreConfig.Datastore.Upload.deleteTemporaryArtifactsAfterUpload) {
-      logger.info(s"Deleting failed-upload directory $unpackToDir ($reason, deleteTemporaryArtifactsAfterUpload=true)")
-      deleteArtifactDirLogged(unpackToDir, "failed-upload directory")
+    if (dataStoreConfig.Datastore.Upload.deleteTemporaryFilesAfterUpload) {
+      logger.info(s"Deleting failed-upload directory $unpackToDir because $reason.")
+      PathUtils.deleteDirectoryRecursively(unpackToDir)
     } else {
-      localDatasetDeletionService.deleteOnDisk(
+      localDatasetDeletionService.moveToTrash(
         datasetId,
         unpackToDir,
         dataSourceId.organizationId,

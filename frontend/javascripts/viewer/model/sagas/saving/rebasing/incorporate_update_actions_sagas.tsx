@@ -325,7 +325,14 @@ export function* tryToIncorporateActions(
               const setMappingsChannel =
                 yield* actionChannel<SetLayerMappingsAction>("SET_LAYER_MAPPINGS");
               yield* put(ensureLayerMappingsAreLoadedAction(actionTracingId));
-              yield* take(setMappingsChannel);
+              while (true) {
+                if (
+                  ((yield* take(setMappingsChannel)) as SetLayerMappingsAction).layerName ===
+                  actionTracingId
+                ) {
+                  break;
+                }
+              }
               // Re-read volumeDataLayer as new mapping info might have arrived.
               volumeDataLayer = yield* select((state) =>
                 getSegmentationLayerByName(state.dataset, actionTracingId),

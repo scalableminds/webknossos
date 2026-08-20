@@ -33,11 +33,7 @@ export const FailedIncorporateActionsReturnValue: ApplyingUpdateResults = {
   },
 };
 export const UnrecoverableIncorporateActionsReturnValue: ApplyingUpdateResults = {
-  success: false,
-  artifactInfos: {
-    meshIdsToRemovePerLayer: new Map(),
-    meshesToLoadPerLayer: new Map(),
-  },
+  ...FailedIncorporateActionsReturnValue,
   terminatesPolling: true,
 };
 export const SuccessEmptyIncorporateActionsReturnValue: ApplyingUpdateResults = {

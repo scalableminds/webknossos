@@ -1,4 +1,5 @@
 import {
+  CopyOutlined,
   DeleteOutlined,
   EllipsisOutlined,
   EyeOutlined,
@@ -11,6 +12,8 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { clearCache, deleteDatasetOnDisk, getDataset } from "admin/rest_api";
 import { App, type MenuProps, Typography } from "antd";
+import type { useAppProps } from "antd/es/app/context";
+import { applyViewConfigurationToDatasetsInFolder } from "dashboard/advanced_dataset/apply_view_configuration";
 import CreateExplorativeModal from "dashboard/advanced_dataset/create_explorative_modal";
 import Toast from "libs/toast";
 import window from "libs/window";
@@ -289,10 +292,12 @@ export function getDatasetActionContextMenu({
   reloadDataset,
   datasets,
   hideContextMenu,
+  modal,
 }: {
   reloadDataset: (arg0: string) => Promise<void>;
   datasets: APIDatasetCompact[];
   hideContextMenu: () => void;
+  modal: useAppProps["modal"];
 }): MenuProps {
   if (datasets.length !== 1) {
     return getNoActionsAvailableMenu(hideContextMenu);
@@ -306,33 +311,60 @@ export function getDatasetActionContextMenu({
     },
     mode: "vertical",
     items: [
-      dataset.isActive
-        ? {
-            key: "view",
-            label: "View",
-            onClick: () => {
-              window.location.href = getViewDatasetURL(dataset);
-            },
-          }
-        : null,
-      dataset.isEditable
-        ? {
-            key: "edit",
-            label: "Open Settings",
-            onClick: () => {
-              window.location.href = `/datasets/${getReadableURLPart(dataset)}/edit`;
-            },
-          }
-        : null,
-
       {
-        key: "reload",
-        label: "Reload",
-        onClick: async () => {
-          const fullDataset = await getDataset(dataset.id);
-          return dataset.isActive ? onClearCache(fullDataset, reloadDataset) : null;
-        },
+        key: "dataset-group",
+        type: "group",
+        label: "This Dataset",
+        children: [
+          dataset.isActive
+            ? {
+                key: "view",
+                icon: <EyeOutlined className="icon-margin-right" />,
+                label: "View",
+                onClick: () => {
+                  window.location.href = getViewDatasetURL(dataset);
+                },
+              }
+            : null,
+          dataset.isEditable
+            ? {
+                key: "edit",
+                icon: <SettingOutlined className="icon-margin-right" />,
+                label: "Open Settings",
+                onClick: () => {
+                  window.location.href = `/datasets/${getReadableURLPart(dataset)}/edit`;
+                },
+              }
+            : null,
+          {
+            key: "reload",
+            icon: <ReloadOutlined className="icon-margin-right" />,
+            label: "Reload",
+            onClick: async () => {
+              const fullDataset = await getDataset(dataset.id);
+              return dataset.isActive ? onClearCache(fullDataset, reloadDataset) : null;
+            },
+          },
+        ],
       },
+      ...(dataset.isEditable && dataset.isActive
+        ? ([
+            { key: "whole-folder-divider", type: "divider" },
+            {
+              key: "folder-group",
+              type: "group",
+              label: "Whole Folder",
+              children: [
+                {
+                  key: "apply-view-configuration",
+                  icon: <CopyOutlined className="icon-margin-right" />,
+                  label: "Apply View Configuration to All Datasets in this Folder",
+                  onClick: () => applyViewConfigurationToDatasetsInFolder(dataset, modal),
+                },
+              ],
+            },
+          ] as NonNullable<MenuProps["items"]>)
+        : []),
     ],
   };
 }

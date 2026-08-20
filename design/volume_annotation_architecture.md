@@ -260,7 +260,7 @@ interface Rasterizer {
 Responsibilities, in order:
 
 1. Compute the candidate voxel set: bucket-align the shape's bounding box at the source mag, clip against `ctx.editableBoundingBox` and the layer bounding box.
-2. Test containment per voxel (distance-to-center for a disk, point-in-polygon for a contour, connectivity for a fill).
+2. Test containment per voxel (distance-to-path for a brush, point-in-polygon for a contour, connectivity for a fill).
 3. Apply the **overwrite predicate**.
 
 ```ts
@@ -275,7 +275,7 @@ function makeOverwritePredicate(ctx: EditContext, reader: VoxelReader): Overwrit
 A sketch of the brush case, to make the shape of the work concrete:
 
 ```ts
-function rasterizeSweptDisk(
+function rasterizeBrush(
   shape: Extract<AnalyticShape, { kind: "brush" }>,
   ctx: EditContext,
   reader: VoxelReader,

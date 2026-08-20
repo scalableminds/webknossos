@@ -44,7 +44,7 @@ The four questions this doc was written to answer:
 
 1. **Geometry first, voxels second.** Tools describe *what the user meant*; a separate stage turns that into voxel writes. This is what makes "annotate at any mag" tractable — we rasterize once and derive everything else, rather than reconciling N independently-rasterized grids.
 
-2. **The finest mag is the source of truth; coarser mags are a derived view.** Every edit, whatever mag it was authored at, resolves into finest-mag writes, and only finest-mag diffs are authoritative for undo. Coarser mags are derived *at edit time* by projecting the same writes — cheaply and locally, without reading data.
+2. **The finest mag is the source of truth; coarser mags are a derived view.** Every edit, whatever mag it was authored at, resolves into finest-mag writes. Coarser mags are derived *at edit time* by projecting the same writes — cheaply and locally, without reading data — and their diffs are then logged and replayed exactly like the finest mag's (§5.4).
 
    The projection is deliberately not a faithful downsample, and because it depends on write order it cannot be reconstructed after the fact. Coarse mags will therefore drift from what a fresh downsampling of the finest mag would produce. **This is an accepted trade-off, for now.** It buys a propagation step that needs no data access and no bucket loads, which is what makes editing at coarse mags viable at all (§5.4). Coarse mags are a display approximation; the finest mag is what the annotation *means*. If exactness at coarse mags ever becomes a requirement, the fix is a background re-derivation pass, not a change to the editing path.
 
@@ -125,15 +125,15 @@ class VoxelMask {
 }
 
 /**
- * Writes for one bucket. Almost every transaction is single-valued — one brush
- * stroke, one fill, one interpolation all write a single activeSegmentId — so
- * the default shape is a mask plus one value, and no per-voxel value is stored.
- * A bucket upgrades to `mixed` only if a second value is written into it
- * (undo replay, proofreading operations).
+ * Writes for one bucket: which voxels were touched, and the single value being
+ * written. A transaction is always single-valued — one brush stroke, one fill,
+ * one interpolation each write one activeSegmentId, and mag propagation
+ * preserves values — so no per-voxel value is ever stored.
  */
-type BucketWrites =
-  | { kind: "uniform"; mask: VoxelMask; value: SegmentId }
-  | { kind: "mixed"; values: Map<VoxelIndex, SegmentId> };
+interface BucketWrites {
+  mask: VoxelMask;
+  value: SegmentId;
+}
 
 /** Voxel writes across buckets — the output of rasterization and propagation. */
 type VoxelWriteSet = Map<BucketKey, { address: BucketAddress; writes: BucketWrites }>;
@@ -141,9 +141,11 @@ type VoxelWriteSet = Map<BucketKey, { address: BucketAddress; writes: BucketWrit
 
 `VoxelWriteSet` is deliberately the *only* currency exchanged between the rasterizer, the mag propagation service and the transaction. Every tool, at every mag, produces one of these, and nothing downstream needs to know which tool produced it.
 
-**Why a mask and not `Map<VoxelIndex, SegmentId>`.** The per-voxel map is the obvious encoding and it does not survive contact with the numbers. The mag-16 stroke in §6.2 implies ~8.2 M finest-mag writes; at V8's ~40–50 bytes per `Map` entry that is ~370 MB of hash-table overhead, versus ~1 MB for 250 buckets' worth of 4 KB masks. It also pays a per-voxel value slot for a degree of freedom that single-valued transactions never use. The mask form additionally makes §5.6's run extraction a word scan instead of a sort.
+**Why a mask and not `Map<VoxelIndex, SegmentId>`.** The per-voxel map is the obvious encoding and it does not survive contact with the numbers. The mag-16 stroke in §6.2 implies ~8.2 M finest-mag writes; at V8's ~40–50 bytes per `Map` entry that is ~370 MB of hash-table overhead, versus ~1 MB for 250 buckets' worth of 4 KB masks. It also pays a per-voxel value slot for a degree of freedom nothing uses. The mask form additionally makes §5.6's run extraction a word scan instead of a sort.
 
-A third, sparse form (a short index list) would beat a 4 KB mask for buckets the stroke merely grazes at its edges. Worth adding if profiling says edge buckets dominate; not worth the branch until then.
+**Why there is no multi-valued variant.** Nothing produces one. Tools are single-valued by construction; propagation preserves values; undo folds stored runs directly into bucket arrays (§5.7) rather than building a write set; and undo is communicated to the backend as a skip marker rather than as a compensating diff (§5.8), so no "restore these various old values" write set is ever assembled. The one genuinely multi-valued structure in the design is `before`, which is a plain `Map` applied straight to a bucket array and never becomes a `BucketWrites`.
+
+A sparse form (a short index list) would beat a 4 KB mask for buckets the stroke merely grazes at its edges. Worth adding if profiling says edge buckets dominate; not worth the branch until then.
 
 ---
 
@@ -178,7 +180,7 @@ A third, sparse form (a short index list) would beat a 4 KB mask for buckets the
    │  B: → coarser mags   │                      │
    └──────┬───────────────┘
           │ TransactionDiff (finest-mag = authoritative,
-          ▼                   coarser = derived)
+          ▼                   every mag logged alike)
      ┌────┴──────────────────────────┐
      ▼                               ▼
 ┌──────────────┐            ┌──────────────────┐
@@ -234,9 +236,6 @@ interface BucketWriter {
   mark(index: VoxelIndex): void;
   /** The hot path. Runs are runs along x (see VoxelIndex), i.e. scanlines. */
   markRun(start: VoxelIndex, length: number): void;
-  /** Escape hatch: writes a value other than the writer's, upgrading the
-   *  bucket to `mixed`. Used by undo replay and proofreading, not by tools. */
-  write(index: VoxelIndex, value: SegmentId): void;
   /** Dense current content, if resident. Read once, then index directly —
    *  this is how the overwrite predicate avoids a global lookup per voxel. */
   readonly current: BigUint64Array | undefined;
@@ -467,7 +466,16 @@ If the layer's finest mag is not mag 1 (some datasets start coarser), "finest ma
 
 #### What is authoritative
 
-Only **finest-mag** diffs are authoritative *for undo*. Coarser-mag diffs produced by Step B are marked `derived: true` and are not replayed by undo (§5.7) — after an undo the affected coarse buckets are re-projected from the finest mag instead. Folding a coarse bucket's diff log with one entry skipped does not generally equal projecting the resulting finest-mag content, because written-value-wins is order-dependent and not invertible.
+**Every mag's diffs go into the log and are replayed identically.** There is no distinction between "authored" and "derived" entries at replay time: a coarse bucket's content is the fold of its own log, exactly like a finest-mag bucket's.
+
+The tempting alternative is to treat only finest-mag diffs as authoritative and, after an undo, re-project the affected coarse buckets from the rebuilt finest-mag content. Don't. It is worse in four ways:
+
+- It needs a rule that does not exist. Written-value-wins is defined over a *sequence of writes*; re-deriving from static content is a downsample, which needs some other rule (majority, any-non-zero, …) that nothing else in this design specifies.
+- It requires the finest-mag buckets to be resident, so undoing from a history panel after panning away would have to fetch them.
+- It breaks convergence under collaboration: a client that re-projects and a client that replays compute different coarse content from the same history.
+- It is the only thing that would ever need a multi-valued write set, since the rebuilt content carries arbitrary prior values (§4).
+
+Replaying is also the more principled choice. Folding a coarse log with one entry skipped does not equal a fresh downsample of the finest mag — but principle 2 already declares that equality a non-goal. Coarse mags *are* the projection of the write sequence, and skipping one entry of that sequence yields exactly the projection the rule prescribes.
 
 **All mags' diffs are sent to the backend, which applies them verbatim per mag and never resamples.** This is the same division of labour as today, where `updateBucket` ships per-mag bucket data and the backend stores what it is given; only the payload changes from a whole bucket to a diff.
 
@@ -489,7 +497,7 @@ Unchanged in spirit from today: one `32³` typed array per resident `(bucketPosi
 interface WorkingDataCube extends VoxelReader {
   // getResident / peek are inherited from VoxelReader; neither triggers a fetch.
   isResident(address: BucketAddress): boolean;
-  /** Applies a whole bucket's writes at once — mask runs for `uniform`. */
+  /** Applies a whole bucket's writes at once, walking the mask's runs. */
   applyWrites(address: BucketAddress, writes: BucketWrites): void;
   markDirtyForGpu(address: BucketAddress): void;
 }
@@ -508,14 +516,15 @@ Two constraints the new model adds:
 interface VoxelRun {
   start: VoxelIndex;
   length: number;
+  /** A single SegmentId for a constant run — which is every run a transaction
+   *  produces, since transactions are single-valued (§4). The per-voxel array
+   *  is reached for only by `before`, which holds arbitrary prior values. */
   values: SegmentId | BigUint64Array;
 }
 
 interface BucketDiff {
   address: BucketAddress;
   runs: VoxelRun[];
-  /** true for coarse-mag diffs produced by mag propagation (§5.4). */
-  derived: boolean;
   /** Pre-transaction values, if known. Optional — see §5.7. */
   before?: VoxelRun[];
 }
@@ -527,6 +536,8 @@ interface TransactionDiff {
   sequence: number;
   timestamp: number;
   toolName: string;                       // diagnostics only, not load-bearing
+  /** The mag the user authored at; every other mag's diffs are projections. */
+  sourceMagIndex: MagIndex;               // diagnostics only, not load-bearing
   bucketDiffs: BucketDiff[];
   /**
    * Non-voxel changes belonging to the same interaction: a newly created
@@ -538,21 +549,16 @@ interface TransactionDiff {
 }
 ```
 
-Building the diff from the write set falls out of the representation. For the `uniform` case — nearly all transactions — it is a word scan over the mask with no sort and no per-voxel value lookup:
+Building the diff from the write set falls out of the representation — a word scan over the mask, with no sort and no per-voxel value lookup:
 
 ```ts
 function toRuns(writes: BucketWrites): VoxelRun[] {
-  if (writes.kind === "uniform") {
-    // VoxelMask.runs() walks 1024 words, emitting maximal spans of set bits.
-    return [...writes.mask.runs()].map(({ start, length }) => ({
-      start, length, values: writes.value,          // constant run: one value
-    }));
-  }
-  return groupSortedIndices(writes.values);          // `mixed`: sort, then group
+  // VoxelMask.runs() walks 1024 words, emitting maximal spans of set bits.
+  return [...writes.mask.runs()].map(({ start, length }) => ({
+    start, length, values: writes.value,            // constant run: one value
+  }));
 }
 ```
-
-That is also why the `values: SegmentId | BigUint64Array` union in `VoxelRun` exists: a `uniform` bucket can only ever produce constant runs, so the per-voxel array is reached for only by `mixed` buckets.
 
 No-op writes (`newValue === oldValue`, knowable for resident buckets) are dropped before this step, so a stroke that repaints voxels already carrying the active segment ID produces no diff at all for those voxels.
 
@@ -600,7 +606,7 @@ function rebuild(log: BucketLog): BigUint64Array {
 
 **Undo(T):** mark T's entries `skipped` in each bucket log it touched, then `rebuild` those buckets. Entries *after* T — whether this user's or, later, a collaborator's — are replayed normally, so their effects survive. There is no inverse being computed and applied; only forward folding with one entry removed. **Redo(T):** clear the flag, rebuild again.
 
-Then re-project the coarse mags for the affected region (§5.4), rather than replaying the `derived: true` diffs, for the reason given at the end of §5.4. And revert `sideEffects` through the normal update-action mechanism.
+"Each bucket log it touched" includes the coarse-mag buckets, which replay exactly like the finest-mag ones (§5.4). Nothing is re-projected and no voxel data is read, so undo works whether or not the affected buckets are resident. `sideEffects` are reverted through the normal update-action mechanism.
 
 **`before` is not what makes forward-only undo work** — forward replay never reads it. It is optional, and worth keeping for three narrower reasons:
 
@@ -643,7 +649,22 @@ interface UpdateBucketDiffAction {
  *     else:          uint64 value × length
  */
 const CONST_FLAG = 0x8000_0000;
+
+/**
+ * Undo is transmitted as a marker, not as data. The backend already holds T's
+ * diff and everything after it, so it can re-fold on its own.
+ */
+interface UndoTransactionAction {
+  name: "undoTransaction" | "redoTransaction";
+  value: { actionTracingId: string; transactionId: TransactionId };
+}
 ```
+
+**Why undo is a marker and not a compensating diff.** The obvious alternative is to emit a normal forward transaction that restores the old values. It fails on two counts. It needs absolute prior values for every touched bucket — but undoing a mag-16 stroke means ~250 finest-mag buckets that were never resident and for which the client has no baseline, so it would have to fetch them all just to describe the undo. And those restored values are arbitrary and multi-valued, which is the one thing that would force a multi-valued write set back into §4.
+
+A marker has neither problem: it is O(1) regardless of how many buckets T touched, and a collaborator receiving it performs the identical skip-and-refold, so client, peer and server stay in agreement by construction.
+
+The update stream stays append-only — an undo appends a marker, it does not rewrite history. "Version N" still means "fold the first N actions", with the fold honouring whatever skip markers appear among them. Redo appends a second marker; for a given transaction, the last marker wins.
 
 Encoding notes:
 
@@ -651,7 +672,8 @@ Encoding notes:
 - **Block fills encode very compactly**, which is what makes coarse-mag editing viable: the drive-down of one mag-16 voxel into a finest-mag bucket is a solid `16×16×16` block, i.e. 256 constant runs of length 16 — about 4 KB before compression, versus 256 KB for the full bucket.
 - **One action per touched bucket; one versioned group per transaction.** This gives the backend (and later, other clients) the transaction boundary explicitly instead of making it infer grouping from timing.
 - **Ordering and idempotency.** Transactions are submitted in `sequence` order and are idempotent on retry, so a reconnect can safely resend the tail of the queue.
-- **Backend counterpart.** This requires the tracingstore to accept per-bucket diffs and fold them into the bucket's stored content rather than overwriting wholesale. That is the change that actually unlocks multi-user diff composition; without it, two users' concurrent edits to one bucket still resolve as last-writer-wins over the entire bucket. It is the *only* change required: diffs arrive for every mag and are applied verbatim to that mag, so the backend never resamples and needs no notion of the mag pyramid (§5.4).
+- **Backend counterpart.** Two changes are needed. First, accept per-bucket diffs and fold them into the bucket's stored content rather than overwriting wholesale — that is what unlocks multi-user diff composition; without it, two users' concurrent edits to one bucket still resolve as last-writer-wins over the entire bucket. Second, retain the per-bucket diff log and support re-folding it with entries skipped, which is what `undoTransaction` requires. The backend still never resamples and needs no notion of the mag pyramid: diffs arrive for every mag and are applied verbatim to that mag (§5.4).
+- **The two horizons are coupled.** The backend's materialization/squashing point must stay at or behind the undo horizon. If T gets folded into a materialized base, it can no longer be skipped and becomes un-undoable. This is the same constraint as local checkpoints in §5.7 — one rule, enforced on both sides.
 
 ---
 
@@ -688,7 +710,7 @@ The user paints stroke `T1` (segment 5) over a region, then stroke `T2` (segment
 
 - `T2` is the newest transaction on every bucket it touched → **fast path**: write `T2.before` back. Done, O(voxels in T2).
 - Had the user instead undone `T1` (via a history panel), the slow path runs: mark `T1`'s entries skipped in each affected bucket log, rebuild from the nearest checkpoint replaying `T2` but not `T1`. Voxels that `T2` painted stay segment 7; voxels only `T1` touched revert to their pre-`T1` value. Under the old snapshot-restore model, `T2`'s overlapping work would have been silently destroyed.
-- Affected coarse mags are re-projected from the rebuilt finest-mag content.
+- The coarse-mag bucket logs are folded the same way, skipping `T1`'s entries — no re-projection, and no need for the finest-mag buckets to be resident.
 
 ---
 
@@ -700,7 +722,8 @@ Not implemented here, but the shape is deliberately compatible:
 - The per-bucket ordered log with last-write-wins folding is already the merge structure. A remote `TransactionDiff` is handled exactly like an undo replay: insert its entries at the right sequence position in the affected bucket logs and re-fold.
 - `TransactionDiff.sequence` is today just local chronological order. Making it a *total* order across users needs either server-assigned sequence numbers (simple, costs a round-trip) or a logical clock (no round-trip, more complexity). Either slots into the existing `sequence` field without changing the model.
 - `BucketDiff.before` becomes useful here: comparing it against local state detects genuine conflicts rather than assuming last-writer-wins is always acceptable.
-- Undo becomes "skip *my* transaction, keep everyone else's", which is exactly what the forward-replay model already does.
+- Undo becomes "skip *my* transaction, keep everyone else's", which is exactly what the forward-replay model already does. Because it travels as a marker rather than as data (§5.8), a peer applies it by performing the identical skip-and-refold, so no reconciliation step is needed.
+- Convergence holds at every mag, not just the finest: all parties fold the same ordered per-mag diffs, and none of them re-derive coarse content locally.
 
 ---
 
@@ -718,6 +741,8 @@ Not implemented here, but the shape is deliberately compatible:
 | Send only finest-mag diffs; let the backend derive coarse mags | Written-value-wins is order-dependent, so a backend seeing only final state cannot reproduce it under any derivation rule. Coarse mags would visibly change on reload. Sending all mags costs ~15–35% more payload and avoids this entirely. |
 | Keep diffs at their authoring mag, never normalize | No single source of truth; reading mag *k* requires folding diffs authored at every other mag, with ill-defined ordering between them. |
 | Snapshot-then-diff per bucket instead of a write set | Cannot represent writes to non-resident buckets, and costs O(bucket) per touched bucket even for a 5-voxel edit. |
+| Re-project coarse mags from the finest mag after an undo, instead of replaying their logs | Needs a downsample rule nothing specifies, requires the finest-mag buckets to be resident, breaks convergence between a re-projecting and a replaying client, and is the only thing that would force multi-valued write sets. |
+| Transmit undo as a compensating diff that restores the old values | Needs absolute prior values for every touched bucket — including the hundreds of non-resident ones a coarse-mag stroke writes — and those values are multi-valued. A skip marker is O(1) and needs no data (§5.8). |
 
 ---
 
@@ -728,5 +753,5 @@ Not implemented here, but the shape is deliberately compatible:
 - **Commit-time spike on coarse-mag strokes.** The run-oriented drive-down (§5.4) already reduces the mag-16 case from ~8.2 M per-voxel writes to ~32 K `markRun` calls over ~1 MB of masks, so the naive blow-up is gone. What remains unmeasured is whether ~32 K run emissions plus the resulting encode still land as a perceptible hitch on pointer-up. If they do, the lever is *not* the mid-stroke throttle — the expansion is inherent to drawing at a coarse mag, and per-sample propagation would only repeat it. It would instead be keeping the drive-down fully symbolic: carry `(box, value)` fills through to §5.8's encoder and never build masks for non-resident finest-mag buckets at all. Measure before building.
 - **Checkpoint interval *k*.** Too small → memory and storage overhead; too large → slow replay and slow eviction. Start around 20–50 entries per bucket and tune empirically. Interacts with the undo horizon.
 - **Where does the rasterizer run?** It is a pure function of `(intent, context, reader)`, which makes it a good Web Worker candidate for large strokes. Not needed for correctness; the blocker is giving a worker a cheap read view of resident buckets (`SharedArrayBuffer`, probably).
-- **Coarse mags diverge from a fresh downsampling, permanently.** Not drift between client and server — the backend applies the client's per-mag diffs verbatim, so reload is faithful (§5.4). But because written-value-wins is order-dependent, the stored coarse mags are a function of *how* the region was edited, and no later pass can reconstruct them from the finest mag. Principle 2 accepts this. If it ever stops being acceptable, the answer is a background re-derivation job that rewrites coarse mags from the finest mag on a schedule — which would also settle what "correct" means at coarse mags, a question this doc does not answer. Note that adopting a data-derivable rule instead would re-couple propagation to bucket residency; see §5.4.
+- **Coarse mags diverge from a fresh downsampling, permanently.** Not drift between client and server, and not drift between collaborators: every party folds the same ordered per-mag diffs, so everyone agrees (§5.4). But because written-value-wins is order-dependent, the stored coarse mags are a function of *how* a region was edited, and no later pass can reconstruct them from the finest mag. Principle 2 accepts this. If it stops being acceptable, the answer is a background re-derivation job on a schedule — which would first have to settle what "correct" means at coarse mags, a question this doc does not answer. Adopting a data-derivable rule instead would re-couple propagation to bucket residency and reintroduce multi-valued write sets; see §5.4.
 - **Undo across a reload.** The log is currently in-memory. Persisting it (IndexedDB) would let undo survive a refresh, but raises the question of what "undo" means once the backend has already accepted the transaction. Probably out of scope, but worth deciding explicitly rather than by omission.

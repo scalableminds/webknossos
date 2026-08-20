@@ -36,7 +36,7 @@ The four questions this doc was written to answer:
 
 **What is the intermediary representation?** A per-transaction **write map**: `bucketAddress → (voxelIndex → newSegmentId)`, last-write-wins. This is the pivot point of the whole design. It coalesces repeated writes within a stroke for free, it can hold writes for buckets that are *not* in memory, and it is trivially convertible to both "apply to a live bucket" and "encode as a diff".
 
-**Who downsamples, and how is the diff encoded?** The `MagPropagationService` runs at commit time. It maps the write map from the source mag down to the finest mag (block replication) and then projects it up into each coarser mag (any-hit-wins). It propagates the *write set*, never whole buckets — recomputing a coarse bucket from its finest-mag children is infeasible (a mag-16 bucket has 4096 mag-1 children). The diff is encoded as run-length-grouped voxel runs over the bucket's flat index space, one `updateBucketDiff` update-action per touched bucket, all actions of a transaction submitted as one versioned group.
+**Who downsamples, and how is the diff encoded?** The `MagPropagationService` runs at commit time. It maps the write map from the source mag down to the finest mag (block replication) and then projects it up into each coarser mag (written-value-wins, with background treated as an ordinary value). It propagates the *write set*, never whole buckets — recomputing a coarse bucket from its finest-mag children is infeasible (a mag-16 bucket has 4096 mag-1 children) — and it reads no voxel data at all. The diff is encoded as run-length-grouped voxel runs over the bucket's flat index space, one `updateBucketDiff` update-action per touched bucket, for every mag; all actions of a transaction are submitted as one versioned group, and the backend applies them verbatim without resampling.
 
 ---
 
@@ -44,7 +44,9 @@ The four questions this doc was written to answer:
 
 1. **Geometry first, voxels second.** Tools describe *what the user meant*; a separate stage turns that into voxel writes. This is what makes "annotate at any mag" tractable — we rasterize once and derive everything else, rather than reconciling N independently-rasterized grids.
 
-2. **The finest mag is the source of truth; coarser mags are a derived view.** Every edit, whatever mag it was authored at, resolves into finest-mag writes. Only finest-mag diffs are logged as authoritative and saved as such. Coarser mags exist for rendering and are always recomputable.
+2. **The finest mag is the source of truth; coarser mags are a derived view.** Every edit, whatever mag it was authored at, resolves into finest-mag writes, and only finest-mag diffs are authoritative for undo. Coarser mags are derived *at edit time* by projecting the same writes — cheaply and locally, without reading data.
+
+   The projection is deliberately not a faithful downsample, and because it depends on write order it cannot be reconstructed after the fact. Coarse mags will therefore drift from what a fresh downsampling of the finest mag would produce. **This is an accepted trade-off, for now.** It buys a propagation step that needs no data access and no bucket loads, which is what makes editing at coarse mags viable at all (§5.4). Coarse mags are a display approximation; the finest mag is what the annotation *means*. If exactness at coarse mags ever becomes a requirement, the fix is a background re-derivation pass, not a change to the editing path.
 
 3. **Diffs are the unit of truth; buckets are a materialized cache.** A bucket's content is *defined* as "checkpoint + ordered diffs". The `32³` typed array in memory is a fold of that definition, kept around because the GPU needs it.
 
@@ -190,7 +192,7 @@ type DataDependentShape =
   | { kind: "mask"; origin: Vector3; size: Vector3; bits: Uint8Array };
 ```
 
-The split matters. Analytic shapes really are mag-independent — the same brush stroke rasterized at mag 1 and mag 4 describes the same physical region. Data-dependent shapes are **not**: a flood fill seeded at the same point yields a different region at mag 1 than at mag 4, because connectivity is evaluated on different data. So `EditIntent` coordinates are expressed in *source-mag* voxel space and `sourceMagIndex` is part of the intent's meaning, not an incidental detail. (The earlier framing of "all intents are mag-1-space geometry" was wrong for this half of the tools.)
+The split matters. Analytic shapes really are mag-independent — the same brush stroke rasterized at mag 1 and mag 4 describes the same physical region. Data-dependent shapes are **not**: a flood fill seeded at the same point yields a different region at mag 1 than at mag 4, because connectivity is evaluated on different data. So `EditIntent` coordinates are expressed in *source-mag* voxel space and `sourceMagIndex` is part of the intent's meaning, not an incidental detail. Framing all intents as mag-1-space geometry would be wrong for this half of the tools.
 
 Adding a tool means adding an `EditIntent` variant and a rasterization case — nothing else in the system changes.
 
@@ -318,12 +320,8 @@ interface MagPropagationService {
   /** Step A: source mag → finest mag. Pure block replication. */
   driveDownToFinest(writes: VoxelWriteSet, ctx: EditContext): VoxelWriteSet;
 
-  /** Step B: finest mag → every coarser mag. Any-hit-wins projection. */
-  propagateUp(
-    finestWrites: VoxelWriteSet,
-    ctx: EditContext,
-    reader: VoxelReader,
-  ): VoxelWriteSet;
+  /** Step B: finest mag → every coarser mag. Pure; reads no voxel data. */
+  propagateUp(finestWrites: VoxelWriteSet, ctx: EditContext): VoxelWriteSet;
 }
 ```
 
@@ -358,8 +356,8 @@ For each coarser mag `m`, a finest-mag voxel `p` belongs to coarse voxel `⌊p /
 
 ```ts
 /**
- * Any-hit-wins: if any newly written finest-mag voxel in the block is non-zero,
- * the coarse voxel takes that value.
+ * Written-value-wins: a written finest-mag voxel sets its coarse voxel to that
+ * value. Background (0n) is not special — it is just another segment ID.
  */
 function projectUp(
   finest: Iterable<[Vector3, SegmentId]>,
@@ -370,44 +368,37 @@ function projectUp(
     const coarse: Vector3 = [
       Math.floor(p[0] / m[0]), Math.floor(p[1] / m[1]), Math.floor(p[2] / m[2]),
     ];
-    if (value !== 0n) {
-      addWrite(out, coarse, { ...ctx, sourceMagIndex: magIndex }, value);
-    } else {
-      markEraseCandidate(out, coarse, magIndex);   // see below
-    }
+    addWrite(out, coarse, { ...ctx, sourceMagIndex: magIndex }, value);
   }
   return out;
 }
 ```
 
-Two things about this rule are worth stating explicitly, because they are choices, not consequences:
+Three things about this rule are worth stating explicitly, because they are choices, not consequences:
 
-- **It is a dilation, not a true downsample.** Majority vote (the textbook downsampling rule) would make thin structures disappear entirely at coarse mags — a 1-voxel-wide process annotated at mag 1 would be invisible the moment the user zooms out, which is unacceptable for tracing work. Any-hit-wins keeps it visible. The price is that mag *N* is not exactly `downsample(finest mag)`; it is slightly thicker. This matches what webKnossos does today and should stay.
-- **We propagate the write set, not the bucket.** The natural-sounding alternative — "recompute each affected coarse bucket from its finest-mag children" — is infeasible: a mag-16 bucket covers `512³` finest-mag voxels, i.e. `16·16·16 = 4096` finest-mag buckets. (An earlier draft of this doc claimed a coarse bucket has 8 children; the correct count is the product of the per-axis ratio, so a `2-2-1` bucket has 4 children and a `16-16-16` bucket has 4096.) Propagating the write set touches only the voxels the user actually edited and requires no additional loads.
+- **Background is not a special value.** Erasing is painting with `0n`, and it projects like any other value: one erased finest-mag voxel clears its whole coarse voxel. The tempting alternative — "only clear the coarse voxel if *all* its finest-mag siblings are now background" — is more faithful but needs a read of every sibling, which drags bucket residency back into a step that otherwise needs no data at all. Not worth it for a display-only approximation. This is also what webKnossos does today (`downsampleVoxelMap` any-hits a 0/1 *mask*, and `applyVoxelMap` then writes the segment ID — zero included — into every masked voxel at every mag).
+- **The result is a dilation in both directions, not a true downsample.** Paint overstates presence at coarse mags; erase overstates absence. Majority vote (the textbook rule) would instead make thin structures disappear entirely — a 1-voxel-wide process annotated at mag 1 would be invisible the moment the user zooms out, which is unacceptable for tracing work. The upside of written-value-wins is predictability: whatever you just did is visible at every zoom level.
+- **We propagate the write set, not the bucket.** The natural-sounding alternative — "recompute each affected coarse bucket from its finest-mag children" — is infeasible: a mag-16 bucket covers `512³` finest-mag voxels, i.e. `16·16·16 = 4096` finest-mag buckets. (The child count is the product of the per-axis ratio — a `2-2-1` bucket has 4 children, a `16-16-16` bucket has 4096.) Propagating the write set touches only the voxels the user actually edited and requires no additional loads.
 
-**Erase is the one asymmetric case.** Clearing a finest-mag voxel should only clear the coarse voxel if *all* finest-mag voxels in its block are now background — which requires reading the siblings. In practice this resolves cleanly:
-
-- Erasing at a coarse mag: the drive-down already zeroed the entire block, so the block is definitionally all-background. Exact, no reads.
-- Erasing at the finest mag: the sibling voxels live in the bucket we just wrote, which is by definition resident. Exact, no fetches.
-- Anything else (siblings not resident): apply optimistically and flag the coarse bucket `needsRederivation`, so it is refetched/recomputed the next time it is needed rather than trusted.
-
-```ts
-interface BucketFlags {
-  /** Coarse-mag content may be stale w.r.t. the finest mag; refetch when needed. */
-  needsRederivation: boolean;
-}
-```
+Because background is not special, **mag propagation reads no data whatsoever** — it is a pure function of `(writeSet, magList)`. That is why `propagateUp` above takes no `VoxelReader`, and it is what makes principle 4 hold end-to-end: no step between pointer input and diff can be forced to load a bucket.
 
 If the layer's finest mag is not mag 1 (some datasets start coarser), "finest mag" means index 0 throughout — nothing else changes.
 
 #### What is authoritative
 
-Only **finest-mag** diffs are authoritative. Coarser-mag diffs produced by Step B are marked `derived: true`; they exist so the user sees a consistent pyramid immediately, and they are *not* replayed by undo (§5.7) — after an undo the affected coarse buckets are re-derived from the finest mag instead. This avoids a subtle inconsistency: folding a coarse bucket's diff log with one entry skipped does not generally equal projecting the resulting finest-mag content, because any-hit-wins is not invertible.
+Only **finest-mag** diffs are authoritative *for undo*. Coarser-mag diffs produced by Step B are marked `derived: true` and are not replayed by undo (§5.7) — after an undo the affected coarse buckets are re-projected from the finest mag instead. Folding a coarse bucket's diff log with one entry skipped does not generally equal projecting the resulting finest-mag content, because written-value-wins is order-dependent and not invertible.
 
-Whether derived diffs are *sent to the backend* is a deployment choice:
+**All mags' diffs are sent to the backend, which applies them verbatim per mag and never resamples.** This is the same division of labour as today, where `updateBucket` ships per-mag bucket data and the backend stores what it is given; only the payload changes from a whole bucket to a diff.
 
-- **Recommended:** send only finest-mag diffs; let the backend derive coarser mags authoritatively (it has all the data and does not have to guess about residency). Smallest payload, no client/server drift by construction.
-- **Fallback:** send all mags' diffs, as today. No backend change to the downsampling path, but the client's approximation becomes what is persisted.
+The alternative — send only finest-mag diffs and let the backend derive the coarser mags — is tempting for payload size but does not actually work here, and the reason is worth spelling out because it constrains the projection rule:
+
+- Written-value-wins is **order-dependent**: it is a function of the sequence of writes, not of the final voxel data.
+- A backend deriving coarse mags from stored finest-mag data only ever sees final state, so it cannot reproduce an order-dependent rule under *any* choice of derivation rule.
+- The result would be coarse mags that visibly change on reload.
+
+So the projection rule and the save strategy are coupled: a simple order-dependent rule requires sending all mags; a data-derivable rule (majority vote, any-non-zero, …) would permit finest-mag-only payloads but drags back the per-voxel sibling reads this design just removed, and pins client and server to an identical rule forever.
+
+Sending all mags is cheap. Coarse-mag diffs shrink geometrically with the pyramid, so the total is roughly `1.15×` the finest-mag diff for a 3D stroke and `~1.33×` for a thin/2D one — a small price for eliminating drift by construction and for asking the backend only to fold diffs (which requirement 3 needs regardless) rather than to fold *and* derive.
 
 ### 5.5 `WorkingDataCube`
 
@@ -532,9 +523,9 @@ function rebuild(log: BucketLog): BigUint64Array {
 
 **Undo(T):** mark T's entries `skipped` in each bucket log it touched, then `rebuild` those buckets. Entries *after* T — whether this user's or, later, a collaborator's — are replayed normally, so their effects survive. There is no inverse being computed and applied; only forward folding with one entry removed. **Redo(T):** clear the flag, rebuild again.
 
-Then re-derive the coarse mags for the affected region (§5.4), rather than replaying the `derived: true` diffs, for the reason given at the end of §5.4. And revert `sideEffects` through the normal update-action mechanism.
+Then re-project the coarse mags for the affected region (§5.4), rather than replaying the `derived: true` diffs, for the reason given at the end of §5.4. And revert `sideEffects` through the normal update-action mechanism.
 
-**Correction to an earlier draft:** that draft claimed `oldValues` are "what makes forward-only undo possible". They are not — forward replay never reads them. They are optional, and worth keeping for three narrower reasons:
+**`before` is not what makes forward-only undo work** — forward replay never reads it. It is optional, and worth keeping for three narrower reasons:
 
 1. **Fast-path undo.** If T is the newest transaction touching a bucket, undo is just "write `before` back", which is O(voxels changed) instead of a checkpoint replay. This is the overwhelmingly common case in single-user editing, so the fast path carries almost all real traffic.
 2. **`abort()`** (Escape during a stroke) uses them.
@@ -583,7 +574,7 @@ Encoding notes:
 - **Block fills encode very compactly**, which is what makes coarse-mag editing viable: the drive-down of one mag-16 voxel into a finest-mag bucket is a solid `16×16×16` block, i.e. 256 constant runs of length 16 — about 4 KB before compression, versus 256 KB for the full bucket.
 - **One action per touched bucket; one versioned group per transaction.** This gives the backend (and later, other clients) the transaction boundary explicitly instead of making it infer grouping from timing.
 - **Ordering and idempotency.** Transactions are submitted in `sequence` order and are idempotent on retry, so a reconnect can safely resend the tail of the queue.
-- **Backend counterpart.** This requires the tracingstore to accept per-bucket diffs and fold them into the bucket's authoritative content rather than overwriting wholesale. That is the change that actually unlocks multi-user diff composition; without it, two users' concurrent edits to one bucket still resolve as last-writer-wins over the entire bucket.
+- **Backend counterpart.** This requires the tracingstore to accept per-bucket diffs and fold them into the bucket's stored content rather than overwriting wholesale. That is the change that actually unlocks multi-user diff composition; without it, two users' concurrent edits to one bucket still resolve as last-writer-wins over the entire bucket. It is the *only* change required: diffs arrive for every mag and are applied verbatim to that mag, so the backend never resamples and needs no notion of the mag pyramid (§5.4).
 
 ---
 
@@ -598,7 +589,13 @@ Encoding notes:
 5. **Pointer-up → commit.** Mag propagation runs *once*, over the whole accumulated write map: Step A is a no-op (already at the finest mag); Step B projects into every coarser mag and those writes are applied to resident coarse buckets too.
 6. The write map becomes a `TransactionDiff` (no-ops dropped, runs grouped), appended to the undo log and enqueued for save.
 
-Note this is a change from the earlier draft, which ran mag propagation on *every pointer-move*. Deferring it to commit is both cheaper (one pass over the coalesced write set instead of one per sample) and simpler. The cost is that a second viewport showing a coarser mag lags until pointer-up; if that turns out to matter, propagate to *visible* mags only on a throttle during the stroke, and do the full pyramid at commit.
+Running mag propagation on *every pointer-move* was considered and discarded: it does strictly more total work, since overlapping samples get re-propagated, for no correctness benefit.
+
+Two costs come with that choice. A second viewport showing a different mag lags until pointer-up. And the propagation work lands as a spike on pointer-up rather than being spread across the stroke, which may read as a hitch even though the total CPU cost is lower.
+
+**Both are tunable without touching the architecture.** Propagation is a pure function `VoxelWriteSet → VoxelWriteSet` applied to the cube, not to the diff, and — because drive-down and written-value-wins are both per-voxel maps — it distributes over the write set: `propagate(A ∪ B) == propagate(A) ∪ propagate(B)`. So running it mid-stroke on a throttle, for visible mags only, produces exactly the same result as running it once at commit. The throttle interval is a free parameter, including "never", which is the default above.
+
+The spike is worst for coarse-mag strokes, and there the throttle is the wrong lever — see §9.
 
 ### 6.2 Brush stroke at mag 16
 
@@ -614,7 +611,7 @@ The user paints stroke `T1` (segment 5) over a region, then stroke `T2` (segment
 
 - `T2` is the newest transaction on every bucket it touched → **fast path**: write `T2.before` back. Done, O(voxels in T2).
 - Had the user instead undone `T1` (via a history panel), the slow path runs: mark `T1`'s entries skipped in each affected bucket log, rebuild from the nearest checkpoint replaying `T2` but not `T1`. Voxels that `T2` painted stay segment 7; voxels only `T1` touched revert to their pre-`T1` value. Under the old snapshot-restore model, `T2`'s overlapping work would have been silently destroyed.
-- Affected coarse mags are re-derived from the rebuilt finest-mag content.
+- Affected coarse mags are re-projected from the rebuilt finest-mag content.
 
 ---
 
@@ -639,7 +636,9 @@ Not implemented here, but the shape is deliberately compatible:
 | Undo as full-bucket snapshot restore | Same problem, worse: silently reverts *all* later edits to the bucket, not just the undone ones. |
 | Rasterize the shape independently at each mag | N× the work, and the per-mag results disagree at boundaries, leaving the pyramid inconsistent in a way no downsampling can fix. |
 | Recompute each coarse bucket from its finest-mag children | Infeasible: a mag-16 bucket has 4096 finest-mag children. Propagate the *write set* instead. |
-| Majority-vote downsampling into coarse mags | Thin structures vanish when zooming out. Any-hit-wins keeps them visible; the resulting slight dilation is the accepted price. |
+| Majority-vote downsampling into coarse mags | Thin structures vanish when zooming out. Written-value-wins keeps them visible; the resulting dilation is the accepted price. |
+| Treat background as special when projecting (clear a coarse voxel only if all finest-mag siblings are background) | More faithful, but requires reading every sibling — which re-couples mag propagation to bucket residency and forces loads during coarse-mag strokes. |
+| Send only finest-mag diffs; let the backend derive coarse mags | Written-value-wins is order-dependent, so a backend seeing only final state cannot reproduce it under any derivation rule. Coarse mags would visibly change on reload. Sending all mags costs ~15–35% more payload and avoids this entirely. |
 | Keep diffs at their authoring mag, never normalize | No single source of truth; reading mag *k* requires folding diffs authored at every other mag, with ill-defined ordering between them. |
 | Snapshot-then-diff per bucket instead of a write map | Cannot represent writes to non-resident buckets, and costs O(bucket) per touched bucket even for a 5-voxel edit. |
 
@@ -649,7 +648,8 @@ Not implemented here, but the shape is deliberately compatible:
 
 - **Flood fill and unloaded data.** Fill needs the connected region resident to be correct. Options: block on fetches with a progress indicator, fill progressively as buckets arrive, or bound the fill to a region and refuse beyond it. Needs a UX decision — this is the one tool where "diffs for non-resident buckets" does not save us, because the *region itself* depends on data we do not have.
 - **Interaction with mappings / agglomerates.** Proofreading edits operate on mapped IDs, and `EditContext.activeSegmentId` is then an agglomerate ID rather than a stored one. Where the mapping is resolved (before rasterization? at apply time?) is unresolved and deserves its own section.
+- **Commit-time spike on coarse-mag strokes, and symbolic drive-down.** At mag 1 the commit-time propagation pass is small (no drive-down; project-up is O(voxels × mags)) and a throttled mid-stroke preview is enough to smooth it. At mag 16 it is not: drive-down expands ×4096, so a 2000-voxel stroke becomes ~8.2 M `Map` entries at pointer-up. Spreading that across the stroke does not help — the expansion is inherent and per-sample propagation would only multiply it. The real lever is to keep the drive-down **symbolic**: represent it as a list of `(box, value)` fills rather than expanding per voxel, and materialize only for buckets that are actually resident. The `toRuns` encoder already emits near-optimal output for block fills, so this is mostly a matter of not expanding eagerly in `driveDown` (the sketch in §5.4 does, for readability). Worth measuring before building.
 - **Checkpoint interval *k*.** Too small → memory and storage overhead; too large → slow replay and slow eviction. Start around 20–50 entries per bucket and tune empirically. Interacts with the undo horizon.
 - **Where does the rasterizer run?** It is a pure function of `(intent, context, reader)`, which makes it a good Web Worker candidate for large strokes. Not needed for correctness; the blocker is giving a worker a cheap read view of resident buckets (`SharedArrayBuffer`, probably).
-- **Client/server drift in coarse mags** if the "send only finest-mag diffs" option is chosen: the client's any-hit-wins approximation and the backend's derivation must agree, or coarse mags visibly change on reload. Either pin both to the same rule, or accept the drift (today's implementation already has this property).
+- **Coarse mags diverge from a fresh downsampling, permanently.** Not drift between client and server — the backend applies the client's per-mag diffs verbatim, so reload is faithful (§5.4). But because written-value-wins is order-dependent, the stored coarse mags are a function of *how* the region was edited, and no later pass can reconstruct them from the finest mag. Principle 2 accepts this. If it ever stops being acceptable, the answer is a background re-derivation job that rewrites coarse mags from the finest mag on a schedule — which would also settle what "correct" means at coarse mags, a question this doc does not answer. Note that adopting a data-derivable rule instead would re-couple propagation to bucket residency; see §5.4.
 - **Undo across a reload.** The log is currently in-memory. Persisting it (IndexedDB) would let undo survive a refresh, but raises the question of what "undo" means once the backend has already accepted the transaction. Probably out of scope, but worth deciding explicitly rather than by omission.

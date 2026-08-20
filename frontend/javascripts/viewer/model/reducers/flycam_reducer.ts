@@ -16,11 +16,9 @@ import type { Action } from "viewer/model/actions/actions";
 import Dimensions from "viewer/model/dimensions";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import type { WebknossosState } from "viewer/store";
-import {
-  getUnifiedAdditionalCoordinates,
-} from "../accessors/dataset_accessor";
-import type { MoveFlycamOrthoAction, MovePlaneFlycamOrthoAction } from "../actions/flycam_actions";
+import { getUnifiedAdditionalCoordinates } from "../accessors/dataset_accessor";
 import { getTransformedDatasetBoundingBox } from "../accessors/dataset_layer_transformation_accessor";
+import type { MoveFlycamOrthoAction, MovePlaneFlycamOrthoAction } from "../actions/flycam_actions";
 
 function cloneMatrix(m: Matrix4x4): Matrix4x4 {
   return [
@@ -146,7 +144,10 @@ function clampPositionToDatasetBounds(state: WebknossosState, moveDelta: Vector3
     return state;
   }
 
-  const { min, max } = getTransformedDatasetBoundingBox(dataset, state.datasetConfiguration.nativelyRenderedLayerName);
+  const { min, max } = getTransformedDatasetBoundingBox(
+    dataset,
+    state.datasetConfiguration.nativelyRenderedLayerName,
+  );
   const matrix = cloneMatrix(state.flycam.currentMatrix);
 
   for (let i = 0; i < 3; i++) {

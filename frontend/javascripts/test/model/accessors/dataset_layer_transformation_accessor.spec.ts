@@ -7,6 +7,7 @@ import {
   extractPivotFromTransforms,
   extractSRTFromTransforms,
   hasValidLiveTransformationPattern,
+  makeTranslationMatrix,
   rebaseTranslationToPivot,
   type SRTValues,
 } from "viewer/model/accessors/dataset_layer_transformation_accessor";
@@ -217,5 +218,16 @@ describe("Live layer transforms", () => {
     const transforms = buildLiveTransforms([1, 1, 1], [0, 0, 0], [0, 0, 0], PIVOT);
     expect(hasValidLiveTransformationPattern(transforms.slice(0, 5))).toBe(false);
     expect(extractPivotFromTransforms(transforms.slice(0, 5))).toBeNull();
+  });
+
+  it("should reject a chain whose enclosing translations are not the same pivot", () => {
+    // The pivot is read from the first matrix only, so a chain that moves back to a different point
+    // is not described by that pivot and must not be edited as if it were.
+    const transforms = buildLiveTransforms([2, 2, 2], [0, 0, 0], [0, 0, 0], PIVOT);
+    const asymmetric = [...transforms];
+    asymmetric[6] = makeTranslationMatrix(PIVOT[0] + 50, PIVOT[1], PIVOT[2]);
+
+    expect(hasValidLiveTransformationPattern(transforms)).toBe(true);
+    expect(hasValidLiveTransformationPattern(asymmetric)).toBe(false);
   });
 });

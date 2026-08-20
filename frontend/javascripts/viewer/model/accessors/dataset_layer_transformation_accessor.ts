@@ -650,9 +650,19 @@ export const DEFAULT_SRT: SRTValues = {
   translation: [0, 0, 0],
 };
 
+// Returns true when the two translations enclosing the chain are opposites of each other, i.e. they
+// move to and back from a single pivot. Only then does the pivot the editor extracts from the first
+// matrix describe the whole chain.
+function isSymmetricPivotPair(fromPivot: AffineTransformation, toPivot: AffineTransformation) {
+  const from = extractTranslationFromMatrix(fromPivot);
+  const to = extractTranslationFromMatrix(toPivot);
+  return from.every((value, i) => Math.abs(value + to[i]) <= EPSILON);
+}
+
 // Returns true when the transform list is in a format editable by the live SRT editor:
 // null/empty (no transforms) or exactly the 7-affine pattern: translation, scale,
-// rotX, rotY, rotZ, translation, translation.
+// rotX, rotY, rotZ, translation, translation, where the first and the last translation move to and
+// back from the same pivot.
 export function hasValidLiveTransformationPattern(
   transforms: CoordinateTransformation[] | null | undefined,
 ): boolean {
@@ -667,7 +677,8 @@ export function hasValidLiveTransformationPattern(
     isRotationOnly(t[3]) &&
     isRotationOnly(t[4]) &&
     isTranslationOnly(t[5]) &&
-    isTranslationOnly(t[6])
+    isTranslationOnly(t[6]) &&
+    isSymmetricPivotPair(t[0], t[6])
   );
 }
 

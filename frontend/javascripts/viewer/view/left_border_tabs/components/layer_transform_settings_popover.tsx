@@ -5,10 +5,9 @@ import { getDataset, updateDatasetPartial } from "admin/rest_api";
 import { Button, Divider, Flex, InputNumber, Popover, Slider, Tooltip, Typography } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useCallback, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import type { APIDataLayer, APISkeletonLayer } from "types/api_types";
-import { getUntransformedDatasetBoundingBox } from "viewer/model/accessors/dataset_accessor";
 import type { Vector3 } from "viewer/constants";
 import {
   getLayerBoundingBox,
@@ -22,9 +21,15 @@ import {
   rebaseTranslationToPivot,
   type SRTValues,
 } from "viewer/model/accessors/dataset_layer_transformation_accessor";
+import { getViewportExtentInVoxelPerAxis } from "viewer/model/accessors/view_mode_accessor";
 import { setLayerTransformsAction } from "viewer/model/actions/dataset_actions";
-import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
-import { niceStep, reanchorWindow, type SliderWindow } from "./layer_transform_slider_scaling";
+import {
+  getTranslationSliderConfig,
+  MIN_SCALE,
+  RelativeSlider,
+  SCALE_SLIDER_CONFIG,
+  TRANSLATION_SLIDER_STEP,
+} from "./relative_slider";
 
 // Fetches the dataset from the backend and extracts the stored SRT values for a single layer.
 // isValid is false when the layer has no transforms or transforms incompatible with this editor.
@@ -61,143 +66,9 @@ function withRebasedTranslation(
   return { ...srt, translation: rebaseTranslationToPivot(srt, fromPivot, toPivot) };
 }
 
-const SCALE_MIN = 0.0001;
-const SCALE_STEP = 0.01;
-const DEFAULT_SCALE_MAXIMA: Vector3 = [10, 10, 10];
-
-const AXES = [0, 1, 2] as const;
-
-// Extends limit in steps of increment until value fits strictly within it. This is what makes the
-// sliders adaptive: committing a value at the very end of a slider extends its range by one more
-// default range, so the user can keep going.
-function growLimitToFit(limit: number, value: number, increment: number): number {
-  if (!Number.isFinite(value) || increment <= 0) {
-    return limit;
-  }
-  const magnitude = Math.abs(value);
-  if (magnitude < limit) {
-    return limit;
-  }
-  // One extra increment keeps the value strictly inside the limit, as before.
-  const steps = Math.floor((magnitude - limit) / increment) + 1;
-  return limit + steps * increment;
-}
-
-// Grows the per-axis limits so that all values fit, using the default limits as the increment.
-// Returns the original array if nothing changed.
-function growLimitsToFit(limits: Vector3, values: Vector3, defaultLimits: Vector3): Vector3 {
-  const grown = limits.map((limit, i) =>
-    growLimitToFit(limit, values[i], defaultLimits[i]),
-  ) as Vector3;
-  return grown.every((limit, i) => limit === limits[i]) ? limits : grown;
-}
-
-// Derives the step size and the visible range of the translation sliders from the current zoom.
-// state.flycam.zoomStep is base voxels per screen pixel, so one step corresponds to roughly one
-// pixel on screen at any zoom, and the window spans about one viewport worth of movement.
-// While isFrozen is set (i.e. a slider is being dragged), nothing is recomputed, so that the slider
-// never rescales under the cursor; the pending zoom is applied once the drag ends.
-function useZoomAdaptiveTranslationScaling(
-  translation: Vector3,
-  layerName: string,
-  isFrozen: boolean,
-) {
-  // The current values are also read through a ref, so that reanchoring on a zoom change does not
-  // have to re-run whenever the user moves a slider.
-  const translationRef = useRef(translation);
-  translationRef.current = translation;
-  const zoomStep = useWkSelector((state) => state.flycam.zoomStep);
-  const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
-  // Per-axis voxels per screen pixel. The base voxel factors account for anisotropic voxel sizes,
-  // so that a dataset with thick z slices gets a correspondingly smaller z step.
-  const [factorX, factorY, factorZ] = getBaseVoxelFactorsInUnit(voxelSize);
-
-  const steps = useMemo(
-    () =>
-      [factorX, factorY, factorZ].map((factor) =>
-        niceStep(zoomStep * factor),
-      ) as unknown as Vector3,
-    [zoomStep, factorX, factorY, factorZ],
-  );
-  const widths = useMemo(
-    () =>
-      [factorX, factorY, factorZ].map(
-        (factor) => constants.VIEWPORT_WIDTH * zoomStep * factor,
-      ) as unknown as Vector3,
-    [zoomStep, factorX, factorY, factorZ],
-  );
-
-  const [windows, setWindows] = useState<SliderWindow[]>(() =>
-    AXES.map((axis) =>
-      reanchorWindow(null, translationRef.current[axis], widths[axis], steps[axis]),
-    ),
-  );
-
-  // Recentering on a layer switch, rather than keeping the previous layer's handle position.
-  const lastLayerRef = useRef(layerName);
-
-  useEffect(() => {
-    if (isFrozen) {
-      return;
-    }
-    const isNewLayer = lastLayerRef.current !== layerName;
-    lastLayerRef.current = layerName;
-    setWindows((previous) =>
-      AXES.map((axis) =>
-        reanchorWindow(
-          isNewLayer ? null : (previous[axis] ?? null),
-          translationRef.current[axis],
-          widths[axis],
-          steps[axis],
-        ),
-      ),
-    );
-  }, [widths, steps, isFrozen, layerName]);
-
-  // Keep the window on the value. Resetting a row restores a stored value that can lie far outside
-  // the current window, and it does not go through the commit handler below, so the slider would
-  // otherwise show a range that no longer contains its own value – and the next drag would snap the
-  // value to the window's edge. While a slider is dragged its value cannot leave the window, which
-  // makes this a no-op then.
-  useEffect(() => {
-    if (isFrozen) {
-      return;
-    }
-    setWindows((previous) => {
-      const next = previous.map((window, axis) => {
-        const value = translation[axis];
-        if (value >= window.min && value <= window.max) {
-          return window;
-        }
-        return reanchorWindow(null, value, window.max - window.min, steps[axis]);
-      });
-      return next.every((window, axis) => window === previous[axis]) ? previous : next;
-    });
-  }, [translation, steps, isFrozen]);
-
-  // Once a value is committed at the very edge of the window, slide the window so that the value is
-  // centered again. Without this the user could not keep dragging in the same direction.
-  const recenterIfAtEdge = useCallback(
-    (axis: 0 | 1 | 2, value: number) => {
-      setWindows((previous) => {
-        const current = previous[axis];
-        if (current == null) {
-          return previous;
-        }
-        const isAtEdge = value <= current.min + steps[axis] || value >= current.max - steps[axis];
-        if (!isAtEdge) {
-          return previous;
-        }
-        const next = [...previous];
-        next[axis] = reanchorWindow(null, value, current.max - current.min, steps[axis]);
-        return next;
-      });
-    },
-    [steps],
-  );
-
-  return { steps, windows, recenterIfAtEdge };
-}
+// Step of the number input next to the scaling slider. The slider itself works in log space, see
+// SCALE_SLIDER_CONFIG.
+const SCALE_INPUT_STEP = 0.01;
 
 function SectionLabel({ children }: { children: ReactNode }) {
   return (
@@ -206,6 +77,31 @@ function SectionLabel({ children }: { children: ReactNode }) {
     </Typography.Title>
   );
 }
+
+// Rows that do not show the value on a slider bring their own, e.g. the relative translation
+// sliders. Those have no min/max, since their range is not the range of the value.
+type AxisSliderRowSliderProps =
+  | { sliderNode: ReactNode; min?: never; max?: never }
+  | { sliderNode?: never; min: number; max: number };
+
+type AxisSliderRowProps = {
+  label: string;
+  value: number;
+  storedValue: number;
+  // Lower bound of the number input. Defaults to the slider's min; pass null to leave it unbounded.
+  inputMin?: number | null;
+  step: number;
+  onChange: (v: number) => void;
+  // Called once a value is actually committed, i.e. the slider is released or the number input is
+  // confirmed – as opposed to onChange, which also fires continuously while dragging.
+  onCommit?: (v: number) => void;
+  resetDisabled: boolean;
+  // Custom reset handler. Defaults to onChange(storedValue); used when resetting the row needs to
+  // restore more than the displayed value (e.g. the rotation row also restores the flip sign).
+  onReset?: () => void;
+  onFlip?: () => void;
+  isFlipped?: boolean;
+} & AxisSliderRowSliderProps;
 
 function AxisSliderRow({
   label,
@@ -217,54 +113,28 @@ function AxisSliderRow({
   step,
   onChange,
   onCommit,
-  onDraggingChange,
   resetDisabled,
   onReset,
   onFlip,
   isFlipped,
-}: {
-  label: string;
-  value: number;
-  storedValue: number;
-  min: number;
-  max: number;
-  // Lower bound of the number input. Defaults to the slider's min; pass null to leave it unbounded.
-  inputMin?: number | null;
-  step: number;
-  onChange: (v: number) => void;
-  // Called once a value is actually committed, i.e. the slider is released or the number input is
-  // confirmed – as opposed to onChange, which also fires continuously while dragging.
-  onCommit?: (v: number) => void;
-  // Reports whether the slider (not the number input) is currently being dragged, so that callers
-  // can keep the slider's range stable for the duration of the drag.
-  onDraggingChange?: (isDragging: boolean) => void;
-  resetDisabled: boolean;
-  // Custom reset handler. Defaults to onChange(storedValue); used when resetting the row needs to
-  // restore more than the displayed value (e.g. the rotation row also restores the flip sign).
-  onReset?: () => void;
-  onFlip?: () => void;
-  isFlipped?: boolean;
-}) {
+  sliderNode,
+}: AxisSliderRowProps) {
   return (
     <Flex align="center" gap={6} style={{ marginBottom: 4 }}>
       <Typography.Text strong style={{ width: 12, flexShrink: 0 }}>
         {label}
       </Typography.Text>
-      <Slider
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(v) => {
-          onDraggingChange?.(true);
-          onChange(v);
-        }}
-        onChangeComplete={(v) => {
-          onCommit?.(v);
-          onDraggingChange?.(false);
-        }}
-        style={{ flex: 1 }}
-      />
+      {sliderNode ?? (
+        <Slider
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          onChange={onChange}
+          onChangeComplete={(v) => onCommit?.(v)}
+          style={{ flex: 1 }}
+        />
+      )}
       <div style={{ width: 28, flexShrink: 0 }}>
         {onFlip != null && (
           <Tooltip title={isFlipped ? "Axis is flipped – click to unflip" : "Flip axis"}>
@@ -283,9 +153,8 @@ function AxisSliderRow({
       </div>
       <InputNumber
         // Deliberately unbounded at the top: typing a value beyond the slider's current maximum
-        // extends the slider range (see onCommit) instead of being clamped to it. inputMin is null
-        // for rows whose slider range is only a window onto a larger space (the translation rows),
-        // so that an absolute value outside the window can still be typed.
+        // extends the slider range (see onCommit) instead of being clamped to it. Rows without a
+        // slider range (the translation rows) leave the input unbounded in both directions.
         min={inputMin ?? undefined}
         step={step}
         value={value}
@@ -368,53 +237,25 @@ export function LayerTransformSettingsContent({
   );
 
   const srtFromStore = useMemo((): SRTValues => {
-    if (!transforms || transforms.length === 0) return DEFAULT_SRT;
+    // Reading the transforms is only safe for the editable pattern: an incompatible list of the same
+    // length can hold e.g. a thin-plate-spline entry, which has no matrix to extract from. The
+    // component renders an explanation instead of the sliders in that case (see below), but hooks
+    // cannot be skipped, so the guard has to live here as well.
+    if (!isCompatible || !transforms || transforms.length === 0) return DEFAULT_SRT;
     return withRebasedTranslation(
       extractSRTFromTransforms(transforms),
       extractPivotFromTransforms(transforms),
       pivot,
     );
-  }, [transforms, pivot]);
+  }, [transforms, pivot, isCompatible]);
 
-  // The scaling range adapts to the values in use: committing a value at the end of a slider extends
-  // its range, so that the user can go further. The range is only extended once a value is actually
-  // committed (the slider is released or the number input is confirmed) and never while dragging,
-  // so that the slider does not rescale under the cursor.
-  const [scaleMaxima, setScaleMaxima] = useState<Vector3>(() =>
-    growLimitsToFit(DEFAULT_SCALE_MAXIMA, srtFromStore.scale, DEFAULT_SCALE_MAXIMA),
+  // The translation sliders reach one viewport extent in either direction, so the translation one
+  // slider action can apply follows the zoom level.
+  const viewportExtent = useWkSelector(getViewportExtentInVoxelPerAxis);
+  const translationSliderConfigs = useMemo(
+    () => viewportExtent.map(getTranslationSliderConfig),
+    [viewportExtent],
   );
-
-  // Values are read through a ref so that refitting does not re-run on every slider movement.
-  const srtRef = useRef(srtFromStore);
-  srtRef.current = srtFromStore;
-
-  // The translation sliders follow the zoom instead of the dataset extent, see the hook.
-  const [isDraggingSlider, setIsDraggingSlider] = useState(false);
-  const {
-    steps: translationSteps,
-    windows: translationWindows,
-    recenterIfAtEdge,
-  } = useZoomAdaptiveTranslationScaling(srtFromStore.translation, layer.name, isDraggingSlider);
-
-  // Refit when the edited layer changes, so that values stored outside the default range are shown
-  // correctly instead of appearing clamped to the end of the slider.
-  useEffect(() => {
-    setScaleMaxima(
-      growLimitsToFit(DEFAULT_SCALE_MAXIMA, srtRef.current.scale, DEFAULT_SCALE_MAXIMA),
-    );
-  }, [layer.name]);
-
-  const growScaleMaximumForAxis = useCallback((axis: 0 | 1 | 2, value: number) => {
-    setScaleMaxima((maxima) => {
-      const grown = growLimitToFit(maxima[axis], value, DEFAULT_SCALE_MAXIMA[axis]);
-      if (grown === maxima[axis]) {
-        return maxima;
-      }
-      const newMaxima = [...maxima] as Vector3;
-      newMaxima[axis] = grown;
-      return newMaxima;
-    });
-  }, []);
 
   const handleChange = useCallback(
     (newSRT: SRTValues) => {
@@ -500,6 +341,12 @@ export function LayerTransformSettingsContent({
     handleChange({ scale: newScale, rotation, translation });
   };
 
+  // The scaling row shows and edits only the magnitude; the flip orientation (the sign of the scale)
+  // is kept as it is, since the flip toggle lives in the rotation row.
+  const updateScaleMagnitude = (axis: 0 | 1 | 2, magnitude: number) => {
+    updateScale(axis, magnitude * (scale[axis] < 0 ? -1 : 1));
+  };
+
   const updateRotation = (axis: 0 | 1 | 2, v: number) => {
     const newRotation = [...rotation] as [number, number, number];
     newRotation[axis] = v;
@@ -533,14 +380,18 @@ export function LayerTransformSettingsContent({
           label={axis}
           value={translation[i]}
           storedValue={storedSRT.translation[i]}
-          min={translationWindows[i].min}
-          max={translationWindows[i].max}
-          // Allow inputting values outside the slider's range, since we allow any translation but the slider can only show a window onto a larger translation space.
+          // Any translation can be typed, the slider only applies increments to it.
           inputMin={null}
-          step={translationSteps[i]}
+          step={TRANSLATION_SLIDER_STEP}
           onChange={(v) => updateTranslation(i as 0 | 1 | 2, v)}
-          onCommit={(v) => recenterIfAtEdge(i as 0 | 1 | 2, v)}
-          onDraggingChange={setIsDraggingSlider}
+          sliderNode={
+            <RelativeSlider
+              value={translation[i]}
+              config={translationSliderConfigs[i]}
+              onChange={(v) => updateTranslation(i as 0 | 1 | 2, v)}
+              ariaLabel={`Translate ${axis}`}
+            />
+          }
           resetDisabled={isFetchingStored}
         />
       ))}
@@ -568,13 +419,17 @@ export function LayerTransformSettingsContent({
           label={axis}
           value={Math.abs(scale[i])}
           storedValue={Math.abs(storedSRT.scale[i])}
-          min={SCALE_MIN}
-          max={scaleMaxima[i]}
-          step={SCALE_STEP}
-          // The slider shows only the magnitude; keep the current flip orientation here. Resetting
-          // the flip is handled by the rotation row, where the flip toggle lives.
-          onChange={(v) => updateScale(i as 0 | 1 | 2, v * (scale[i] < 0 ? -1 : 1))}
-          onCommit={(v) => growScaleMaximumForAxis(i as 0 | 1 | 2, v)}
+          inputMin={MIN_SCALE}
+          step={SCALE_INPUT_STEP}
+          onChange={(v) => updateScaleMagnitude(i as 0 | 1 | 2, v)}
+          sliderNode={
+            <RelativeSlider
+              value={Math.abs(scale[i])}
+              config={SCALE_SLIDER_CONFIG}
+              onChange={(v) => updateScaleMagnitude(i as 0 | 1 | 2, v)}
+              ariaLabel={`Scale ${axis}`}
+            />
+          }
           resetDisabled={isFetchingStored}
         />
       ))}

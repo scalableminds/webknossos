@@ -153,8 +153,8 @@ function AxisSliderRow({
         )}
       </div>
       <InputNumber
-        // Deliberately unbounded at the top: typing a value beyond the slider's current maximum
-        // extends the slider range (see onCommit) instead of being clamped to it. Rows without a
+        // Deliberately unbounded at the top: the relative sliders apply increments and do not
+        // constrain the value, so a typed value is never clamped to a slider range. Rows without a
         // slider range (the translation rows) leave the input unbounded in both directions.
         min={inputMin ?? undefined}
         step={step}

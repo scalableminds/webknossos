@@ -5,7 +5,7 @@ This feature allows you to combine layers from previously added datasets to crea
 During composition, transforms can optionally be defined in case the datasets are not in the same coordinate system.
 There are three different ways to compose a new dataset:
 
-1. Combine datasets by selecting from existing datasets. No transforms between these datasets will be added. If the selected datasets have different voxel sizes, the new dataset uses the finest of them and each layer keeps its physical size. For the case that the differing voxel sizes cannot be expressed as mags, a "Respect voxel size" option is offered, which scales each layer with a transform instead.
+1. Combine datasets by selecting from existing datasets. No transforms between these datasets will be added.
 2. Create landmark annotations (using the skeleton tool) for each dataset. Then, these datasets can be combined while transforming one dataset to match the other.
 3. Similar to (2), two datasets can be combined while respecting landmarks that were generated with BigWarp.
 

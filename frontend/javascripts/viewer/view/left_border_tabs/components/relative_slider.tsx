@@ -1,5 +1,5 @@
 import { Slider } from "antd";
-import { type CSSProperties, useCallback, useRef, useState } from "react";
+import { type CSSProperties, useCallback, useLayoutEffect, useRef, useState } from "react";
 
 // Used when translation slider range cannot be inferred, e.g. because the
 // viewport extent it should be inferred from does not exist because the viewport
@@ -169,7 +169,11 @@ export function RelativeSlider({
   // over and over.
   const baseRef = useRef<number | null>(null);
   const valueRef = useRef(value);
-  valueRef.current = value;
+  // Synced after the commit rather than during render, so that a render React discards cannot make
+  // the next action start from a value that was never committed.
+  useLayoutEffect(() => {
+    valueRef.current = value;
+  }, [value]);
 
   const activeConfig = frozenConfig ?? config;
 

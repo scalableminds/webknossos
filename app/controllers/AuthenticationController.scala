@@ -36,7 +36,7 @@ import play.api.mvc.*
 import play.silhouette.api.actions.SecuredRequest
 import play.silhouette.api.services.AuthenticatorResult
 import play.silhouette.api.util.{Credentials, PasswordInfo}
-import play.silhouette.api.{LoginInfo, Silhouette}
+import play.silhouette.api.Silhouette
 import play.silhouette.impl.providers.CredentialsProvider
 import security.*
 import telemetry.SlackNotificationService
@@ -337,20 +337,27 @@ class AuthenticationController @Inject() (
       )
     } yield user
 
-  private def authenticateInner(loginInfo: LoginInfo)(implicit header: RequestHeader): Fox[Result] =
+  private def loginUser(
+      userId: ObjectId,
+      label: String,
+      redirectToDashboard: Boolean = false,
+      skipEmailVerification: Boolean = false
+  )(implicit
+      header: RequestHeader
+  ): Fox[Result] =
     for {
-      userOpt <- Fox.fromFuture(userService.retrieve(loginInfo)) ??~> Msg.User.invalidCredentials
-      user <- userOpt.toFox ??~> Msg.User.invalidCredentials
+      user <- userService.findOneCached(userId)(using GlobalAccessContext) ??~> Msg.User.invalidCredentials
       _ <- Fox.fromBool(!user.isDeactivated) ?~> Msg.User.isDeactivated
-      authenticator <- Fox.fromFuture(combinedAuthenticatorService.create(loginInfo))
-      value <- Fox.fromFuture(combinedAuthenticatorService.init(authenticator))
-      resultWithCookie <- Fox.fromFuture(combinedAuthenticatorService.embed(value, Ok))
-      _ <- Fox.runIf(conf.WebKnossos.User.EmailVerification.activated)(
+      authenticator <- Fox.fromFuture(combinedAuthenticatorService.create(LoginInfoAdapter.loginInfoFromUserId(userId)))
+      cookie <- Fox.fromFuture(combinedAuthenticatorService.init(authenticator))
+      redirectResult = if (redirectToDashboard) Redirect("/dashboard") else Ok
+      resultWithCookie <- Fox.fromFuture(combinedAuthenticatorService.embed(cookie, redirectResult))
+      _ <- Fox.runIf(!skipEmailVerification && conf.WebKnossos.User.EmailVerification.activated)(
         emailVerificationService.assertEmailVerifiedOrResendVerificationMail(user)(using GlobalAccessContext, ec)
       )
       _ <- multiUserDAO.updateLastLoggedInIdentity(user._multiUser, user._id)(using GlobalAccessContext)
       _ = userDAO.updateLastActivity(user._id)(using GlobalAccessContext)
-      _ = logger.info(f"User ${user._id} authenticated.")
+      _ = logger.info(f"User ${user._id} logged in via $label.")
     } yield resultWithCookie
 
   def authenticate: Action[AnyContent] = Action.fox { implicit request =>
@@ -364,10 +371,10 @@ class AuthenticationController @Inject() (
             user <- userService.userFromMultiUserEmail(email)(using
               GlobalAccessContext
             ) ??~> Msg.User.invalidCredentials
-            loginInfo <- Fox.fromFuture(
+            _ <- Fox.fromFuture(
               credentialsProvider.authenticate(Credentials(user._id.toString, formValues.password))
             ) ??~> Msg.User.invalidCredentials
-            resultWithCookie <- authenticateInner(loginInfo)
+            resultWithCookie <- loginUser(user._id, "password form")
           } yield resultWithCookie
       )
   }
@@ -400,8 +407,7 @@ class AuthenticationController @Inject() (
   )(implicit request: SecuredRequest[WkEnv, AnyContent]): Future[AuthenticatorResult] =
     for {
       _ <- combinedAuthenticatorService.discard(request.authenticator, Ok) // to logout the admin
-      loginInfo = LoginInfo(CredentialsProvider.ID, targetUserId.id)
-      authenticator <- combinedAuthenticatorService.create(loginInfo)
+      authenticator <- combinedAuthenticatorService.create(LoginInfoAdapter.loginInfoFromUserId(targetUserId))
       cookie <- combinedAuthenticatorService.init(authenticator)
       result <- combinedAuthenticatorService.embed(cookie, Redirect("/dashboard")) // to login the new user
     } yield result
@@ -508,7 +514,7 @@ class AuthenticationController @Inject() (
       user <- userService.userFromMultiUserEmail(email)(using GlobalAccessContext)
       multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
       resetPasswordToken <- Fox.fromFuture(
-        bearerTokenAuthenticatorService.createAndInit(user.loginInfo, TokenType.ResetPassword, deleteOld = true)
+        bearerTokenAuthenticatorService.createAndInit(user._id, TokenType.ResetPassword, deleteOld = true)
       )
       _ = Mailer ! Send(defaultMails.resetPasswordMail(multiUser.fullName, email, resetPasswordToken))
     } yield ()
@@ -555,12 +561,12 @@ class AuthenticationController @Inject() (
 
   def getToken: Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
-      token <- Fox.fromFuture(combinedAuthenticatorService.findOrCreateToken(request.identity.loginInfo))
+      token <- Fox.fromFuture(combinedAuthenticatorService.findOrCreateTokenForUser(request.identity._id))
     } yield Ok(Json.obj("token" -> token.id))
   }
 
   def deleteToken(): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
-    Fox.fromFuture(combinedAuthenticatorService.findTokenByLoginInfo(request.identity.loginInfo)).flatMap {
+    Fox.fromFuture(combinedAuthenticatorService.findTokenForUser(request.identity._id)).flatMap {
       case Some(token) =>
         Fox.fromFuture(combinedAuthenticatorService.discard(token, Ok(Json.obj("messages" -> Msg.User.Token.deleted))))
       case _ => Fox.successful(Ok)
@@ -687,8 +693,7 @@ class AuthenticationController @Inject() (
         _ <- Fox.fromBool((oldSignCount == 0 && newSignCount == 0) || (oldSignCount < newSignCount)) ??~>
           Msg.Passkeys.unauthorized ~> UNAUTHORIZED
         userId <- multiUser._lastLoggedInIdentity.toFox
-        loginInfo = LoginInfo("credentials", userId.toString)
-        resultWithCookie <- authenticateInner(loginInfo)
+        resultWithCookie <- loginUser(userId, "passkey/webauthn")
       } yield resultWithCookie
   }
 
@@ -805,32 +810,14 @@ class AuthenticationController @Inject() (
     }
   }
 
-  private def loginUser(loginInfo: LoginInfo)(implicit request: Request[AnyContent]): Fox[Result] =
-    Fox.fromFuture(userService.retrieve(loginInfo)).flatMap {
-      case Some(user) if !user.isDeactivated =>
-        for {
-          authenticator: CombinedAuthenticator <- Fox.fromFuture(combinedAuthenticatorService.create(loginInfo))
-          value: Cookie <- Fox.fromFuture(combinedAuthenticatorService.init(authenticator))
-          result: AuthenticatorResult <- Fox.fromFuture(
-            combinedAuthenticatorService.embed(value, Redirect("/dashboard"))
-          )
-          _ <- multiUserDAO.updateLastLoggedInIdentity(user._multiUser, user._id)(using GlobalAccessContext)
-          _ = logger.info(f"User ${user._id} logged in.")
-          _ = userDAO.updateLastActivity(user._id)(using GlobalAccessContext)
-        } yield result
-      case None =>
-        Fox.successful(BadRequest(Msg.User.invalidCredentials))
-      case Some(_) => Fox.successful(BadRequest(Msg.User.isDeactivated))
-    }
-
   // Is called after user was successfully authenticated
   private def loginOrSignupViaOidc(
       openIdConnectUserInfo: OpenIdConnectUserInfo
   ): Request[AnyContent] => Fox[Result] = { implicit request: Request[AnyContent] =>
     userService.userFromMultiUserEmail(openIdConnectUserInfo.email)(using GlobalAccessContext).shiftBox.flatMap {
       case Full(user) =>
-        val loginInfo = LoginInfo("credentials", user._id.toString)
-        loginUser(loginInfo)
+        // Email verification is skipped here, assuming the OIDC provider already verified the email.
+        loginUser(user._id, label = "OIDC single sign-on", redirectToDashboard = true, skipEmailVerification = true)
       case Empty =>
         for {
           organization: Organization <- organizationService.findOneByInviteOrDefault(None)(using GlobalAccessContext)
@@ -843,9 +830,14 @@ class AuthenticationController @Inject() (
             None,
             isEmailVerified = true
           ) // Assuming email verification was done by OIDC provider
+          _ = logger.info(s"New user ${user._id} created via first OIDC single sign-on")
           // After registering, also login
-          loginInfo = LoginInfo("credentials", user._id.toString)
-          loginResult <- loginUser(loginInfo)
+          loginResult <- loginUser(
+            user._id,
+            label = "OIDC single sign-on",
+            redirectToDashboard = true,
+            skipEmailVerification = true
+          )
         } yield loginResult
       case _ => Fox.successful(InternalServerError)
     }

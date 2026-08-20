@@ -88,16 +88,9 @@ function DuplicateAnnotationModalInner({
       }}
       footer={openAnnotationButton}
       onCancel={handleClose}
+      title={copyToOwnAccount ? "Copy Annotation To My Account" : "Duplicate Annotation"}
     >
-      <div
-        style={{
-          fontSize: 20,
-          paddingTop: 13,
-          textAlign: "center",
-        }}
-      >
-        {modalContent}
-      </div>
+      {modalContent}
     </Modal>
   );
 }

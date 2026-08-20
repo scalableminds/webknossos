@@ -11,6 +11,7 @@ import max from "lodash-es/max";
 import min from "lodash-es/min";
 import union from "lodash-es/union";
 import { useState } from "react";
+import { ModalWidth } from "theme";
 import type { APIUser, ExperienceDomainList } from "types/api_types";
 
 const { Column } = Table;
@@ -242,7 +243,7 @@ function ExperienceModalView({
       onCancel={onCancel}
       onOk={updateAllUsers}
       okText={"Save"}
-      width={multipleUsers ? 800 : 600}
+      width={ModalWidth.Large}
     >
       <Table
         size="small"

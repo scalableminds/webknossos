@@ -1,5 +1,6 @@
 import { Button, Modal } from "antd";
 import messages from "messages";
+import { ModalWidth } from "theme";
 
 type Props = {
   onJustDeleteGroup: () => void;
@@ -18,7 +19,7 @@ export default function DeleteGroupModalView({
       title={messages["tracing.group_deletion_message"]}
       onOk={onJustDeleteGroup}
       onCancel={onCancel}
-      width={620}
+      width={ModalWidth.Medium}
       footer={[
         <Button key="submit-all" danger onClick={onDeleteGroupAndChildren}>
           Remove group including all children

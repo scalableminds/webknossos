@@ -48,6 +48,7 @@ import messages from "messages";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
+import { ModalWidth } from "theme";
 import type {
   APIAnnotationType,
   APIAnnotationVisibility,
@@ -436,10 +437,10 @@ function _ShareModalView(props: Props) {
     <Modal
       title="Share this annotation"
       open={isOpen}
-      width={800}
+      width={ModalWidth.Large}
       onOk={onOk}
       onCancel={onOk}
-      cancelButtonProps={{ style: { display: "none" } }}
+      footer={(_, { OkBtn }) => <OkBtn />} // exclude cancel button
     >
       <Row>
         <Col

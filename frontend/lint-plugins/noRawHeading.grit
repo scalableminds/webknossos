@@ -1,4 +1,4 @@
-language js
+language js(typescript,jsx)
 
 or {
   `<h1 $_>$_</h1>`,

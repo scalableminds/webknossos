@@ -509,6 +509,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     const { isRetrying, isFinishing, uploadProgress, isUploading } = this.state;
     return (
       <Modal
+        title="Dataset Upload"
         open={isUploading}
         keyboard={false}
         mask={{ closable: false }}
@@ -594,6 +595,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
           console.error(e);
           ErrorHandling.notify(e as Error);
           this.props.modal.error({
+            title: "Invalid ZIP File",
             content: messages["dataset.upload_invalid_zip"],
           });
           const form = this.formRef.current;
@@ -616,6 +618,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
     if (containsExtension("nml")) {
       this.props.modal.error({
+        title: "Archive Contains an NML File",
         content: messages["dataset.upload_zip_with_nml"],
       });
     }
@@ -654,6 +657,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         zipFile: [],
       });
       this.props.modal.info({
+        title: "Conversion Required",
         content: (
           <div>
             The selected dataset does not seem to be in the Zarr or WKW format. Please convert the

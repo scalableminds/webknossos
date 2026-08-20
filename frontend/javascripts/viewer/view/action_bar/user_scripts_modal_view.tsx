@@ -60,7 +60,7 @@ const _UserScriptsModalView: React.FC<UserScriptsModalViewProps> = ({ onOK, isOp
         void loadScript(script);
       } else {
         modal.confirm({
-          content: messages["add_script.confirm_change"],
+          title: messages["add_script.confirm_change"],
           onOk: () => loadScript(script),
         });
       }

@@ -225,7 +225,6 @@ function _MergeModalView({ isOpen, onOk }: Props) {
       title="Merge Annotations"
       open={isOpen}
       onCancel={onOk}
-      width={500}
       footer={
         <Flex justify="flex-end" align="center" gap={12}>
           <Tooltip

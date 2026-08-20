@@ -7,10 +7,8 @@ import type { APIUser } from "types/api_types";
 
 export type Theme = "light" | "dark";
 
-// This file is the single source of truth for WEBKNOSSOS' *color values* and for the handful of
-// non-color design decisions that antd expresses as tokens (see `ModalToken` / `ModalWidth`
-// below). Raw hex codes belong here (and only here). Color conversion helpers live in
-// libs/colors.ts.
+// This file is the single source of truth for WEBKNOSSOS' *color values*. Raw hex codes belong
+// here (and only here). Color conversion helpers live in libs/colors.ts.
 //
 // When a component needs a color, prefer these options in order:
 //

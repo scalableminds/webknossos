@@ -185,7 +185,8 @@ To enable simultaneous editing:
 Current limitations of simultaneous editing:
 
 - **Only the [proofreading tool](../proofreading/proofreading_tool.md) is supported.** While simultaneous editing is enabled, regular skeleton editing and volume brushing/tracing tools are disabled for all collaborators; only merging/splitting agglomerates via proofreading remains possible.
-- **Undo/redo is disabled.** Use "Restore Older Version" from the dropdown next to the `Save` button instead. Note that restoring an older version discards any pending changes of all collaborators and forces them to reload the annotation.
+- **Adding, deleting, or converting annotation layers is disabled.** This includes adding a new volume or skeleton annotation layer, deleting a layer, converting a read-only segmentation layer into an editable one, merging a volume layer with its fallback layer, and importing a volume tracing. These changes cannot be safely combined with other collaborators' concurrent edits. The corresponding buttons are shown as disabled with an explanation. If you need to make such a change, ask the annotation's owner to temporarily disable simultaneous editing in the sharing settings, perform the change, and enable it again afterward — or, if you are the owner, do this yourself.
+- **Undo/redo is disabled.** Use "Restore Older Version" from the dropdown next to the `Save` button instead. Since restoring an older version discards any pending changes of all collaborators, you will be asked to confirm before it happens. Once confirmed, WEBKNOSSOS reloads the annotation for every collaborator who currently has it open, including yourself.
 - Support for further annotation types (e.g., bounding boxes, general skeleton and volume annotation) is planned but not yet available.
 
 Even with simultaneous editing enabled, we recommend coordinating with your collaborators (e.g., by working on separate areas of the dataset) to avoid confusing conflicts.

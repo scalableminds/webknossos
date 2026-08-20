@@ -1,3 +1,4 @@
+import { Button } from "antd";
 import Toast from "libs/toast";
 import { addToNestedMap, addToSetMap } from "libs/utils";
 import { actionChannel, call, put } from "typed-redux-saga";
@@ -11,6 +12,11 @@ import {
   isMeshLoaded,
 } from "viewer/model/accessors/volumetracing_accessor";
 import {
+  editAnnotationLayerAction,
+  setAnnotationDescriptionAction,
+  setIsUpdatingAnnotationCurrentlyAllowedAction,
+} from "viewer/model/actions/annotation_actions";
+import {
   ensureLayerMappingsAreLoadedAction,
   type SetLayerMappingsAction,
 } from "viewer/model/actions/dataset_actions";
@@ -20,6 +26,7 @@ import { applySkeletonUpdateActionsFromServerAction } from "viewer/model/actions
 import {
   applyVolumeUpdateActionsFromServerAction,
   setHasEditableMappingAction,
+  setHasSegmentIndexAction,
   setMappingIsLockedAction,
 } from "viewer/model/actions/volumetracing_actions";
 import { globalPositionToBucketPositionWithMag } from "viewer/model/helpers/position_converter";
@@ -35,14 +42,31 @@ import {
   type PreservedMeshDisplayProps,
 } from "../../volume/proofreading/segment_and_mesh_refresh_sagas";
 import {
-  type ApplyingUpdateArtifacts,
+  type ApplyingUpdateResults,
   FailedIncorporateActionsReturnValue,
+  UnrecoverableIncorporateActionsReturnValue,
 } from "./applying_update_artifacts";
+
+const ANNOTATION_REVERTED_TOAST_KEY = "annotation_reverted_warning";
+const ANNOTATION_STRUCTURE_CHANGED_TOAST_KEY = "annotation_structure_changed_warning";
+
+function* lockAnnotationAndShowReloadToast(toastKey: string, message: string) {
+  yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
+  Toast.error(message, {
+    sticky: true,
+    key: toastKey,
+    customFooter: (
+      <Button type="primary" size="small" onClick={() => window.location.reload()}>
+        Reload Page
+      </Button>
+    ),
+  });
+}
 
 export function* tryToIncorporateActions(
   newerActions: APIUpdateActionBatch[],
   areUnsavedChangesOfUser: boolean,
-): Saga<{ success: boolean; artifactInfos: ApplyingUpdateArtifacts }> {
+): Saga<ApplyingUpdateResults> {
   // After all actions were incorporated, volume buckets and hdf5 mappings
   // are reloaded (if they exist and necessary). This is done as a
   // "finalization step", because it requires that the newest version is set
@@ -315,8 +339,21 @@ export function* tryToIncorporateActions(
               const setMappingsChannel =
                 yield* actionChannel<SetLayerMappingsAction>("SET_LAYER_MAPPINGS");
               yield* put(ensureLayerMappingsAreLoadedAction(actionTracingId));
-              yield* take(setMappingsChannel);
+              while (true) {
+                if (
+                  ((yield* take(setMappingsChannel)) as SetLayerMappingsAction).layerName ===
+                  actionTracingId
+                ) {
+                  break;
+                }
+              }
+              // Re-read volumeDataLayer as new mapping info might have arrived.
+              volumeDataLayer = yield* select((state) =>
+                getSegmentationLayerByName(state.dataset, actionTracingId),
+              );
             }
+            // The mapping's type isn't part of the updateMappingName action. On an ambiguous naming
+            // (mapping of type JSON and AGGLOMERATE exist for the given name) AGGLOMERATE wins.
             mappingType =
               (volumeDataLayer.agglomerates ?? []).indexOf(mappingName) >= 0
                 ? ("AGGLOMERATE" as const)
@@ -334,23 +371,75 @@ export function* tryToIncorporateActions(
           }
           break;
         }
+
+        /////////////
+        // Annotation-level metadata
+        /////////////
+        case "updateLayerMetadata": {
+          const { tracingId, layerName } = action.value;
+          yield* put(editAnnotationLayerAction(tracingId, { name: layerName }));
+          break;
+        }
+        case "updateMetadataOfAnnotation": {
+          yield* put(setAnnotationDescriptionAction(action.value.description));
+          break;
+        }
+        case "addSegmentIndex": {
+          yield* put(setHasSegmentIndexAction(action.value.actionTracingId));
+          break;
+        }
+        case "revertToVersion": {
+          if (areUnsavedChangesOfUser) {
+            // This is the current user's own pending revert (queued via the "Restore"
+            // button), being reapplied on top of a concurrent rebase. Local Redux state
+            // cannot cheaply reflect "what the tracing looks like after reverting"
+            // without reloading, so we don't try -- just let this pass through
+            // unchanged so it still gets persisted to the backend. The initiating
+            // session force-reloads itself once that save succeeds (see
+            // version_list.tsx's handleRestoreVersion).
+            break;
+          }
+          // A revert authored by someone else arrived via fast-forward. There's no
+          // cheap way to represent the reverted state locally, so lock out further
+          // local edits and ask this session to reload.
+          yield* call(
+            lockAnnotationAndShowReloadToast,
+            ANNOTATION_REVERTED_TOAST_KEY,
+            "This annotation was just reverted to an earlier version by another user. " +
+              "Your local session is now out of sync and further changes can no longer be saved. Please reload the page.",
+          );
+          yield* call(finalize);
+          return UnrecoverableIncorporateActionsReturnValue;
+        }
+
         /*
-         * Currently NOT supported:
+         * Not allowed to be forwarded / replayed:
          */
-        // TODO (#9052): These actions should be supported if applied from own save queue!
+        // These actions are only supported while live collab is turned off. The owner will therefore never forward such actions here and
+        // other users just viewing the annotation while the owner does high level annotation specific changes via update actions must reload.
+        // See #9917.
 
         // High-level annotation specific
         case "addLayerToAnnotation":
-        case "addSegmentIndex":
         case "createTracing":
         case "deleteLayerFromAnnotation":
         case "importVolumeTracing":
-        case "revertToVersion":
-        case "updateLayerMetadata":
-        case "updateMetadataOfAnnotation":
 
         // Volume
-        case "removeFallbackLayer":
+        case "removeFallbackLayer": {
+          // Unlike the legacy actions below, this is a documented, expected occurrence (see
+          // #9917): reload is required and further local edits must be prevented, just like
+          // for a foreign revertToVersion above.
+          console.error("Cannot apply action", action.name);
+          yield* call(
+            lockAnnotationAndShowReloadToast,
+            ANNOTATION_STRUCTURE_CHANGED_TOAST_KEY,
+            "The layers of this annotation were just changed by another user. Your local session is " +
+              "now out of sync and further changes can no longer be saved. Please reload the page.",
+          );
+          yield* call(finalize);
+          return UnrecoverableIncorporateActionsReturnValue;
+        }
 
         // Legacy! The following actions are legacy actions and don't
         // need to be supported.

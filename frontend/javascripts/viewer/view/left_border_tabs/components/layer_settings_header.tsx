@@ -40,6 +40,7 @@ import {
   APIJobCommand,
 } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
+import { mayEditAnnotationLayerSetWithDisallowReason } from "viewer/model/accessors/annotation_accessor";
 import {
   getLayerBoundingBox,
   getLayerByName,
@@ -128,6 +129,9 @@ export default function LayerSettingsHeader({
     state.activeUser != null ? isUserAdminOrManager(state.activeUser) : false,
   );
   const isSuperUser = useWkSelector((state) => state.activeUser?.isSuperUser || false);
+  const { mayEditLayerSet, reasonForCantEditLayerSet } = useWkSelector((state) =>
+    mayEditAnnotationLayerSetWithDisallowReason(state),
+  );
   const histogramData = useWkSelector((state) => state.temporaryConfiguration.histogramData);
   const datasetConfiguration = useWkSelector((state) => state.datasetConfiguration);
   const task = useWkSelector((state) => state.task);
@@ -393,14 +397,24 @@ export default function LayerSettingsHeader({
   const getMergeWithFallbackLayerItem = (): ItemType => ({
     key: "mergeWithFallbackLayerButton",
     icon: <MergeCellsOutlined />,
-    label: "Merge this volume annotation with its fallback layer",
+    disabled: !mayEditLayerSet,
+    label: (
+      <FastTooltip title={mayEditLayerSet ? undefined : reasonForCantEditLayerSet}>
+        <span>Merge this volume annotation with its fallback layer</span>
+      </FastTooltip>
+    ),
     onClick: () => onSetLayerToMergeWithFallback(layer),
   });
 
   const getDeleteAnnotationLayerItem = (): ItemType => ({
     key: "deleteAnnotationLayer",
     icon: <DeleteOutlined />,
-    label: "Delete this annotation layer",
+    disabled: !mayEditLayerSet,
+    label: (
+      <FastTooltip title={mayEditLayerSet ? undefined : reasonForCantEditLayerSet}>
+        <span>Delete this annotation layer</span>
+      </FastTooltip>
+    ),
     onClick: () => {
       const tracingId = "tracingId" in layer ? layer.tracingId : null;
       if (tracingId != null) {
@@ -607,7 +621,11 @@ export default function LayerSettingsHeader({
         <LayerInfoIconWithTooltip layer={layer} dataset={dataset} />
         {canBeMadeEditable ? (
           <FastTooltip
-            title="Make this segmentation editable by adding a Volume Annotation Layer."
+            title={
+              mayEditLayerSet
+                ? "Make this segmentation editable by adding a Volume Annotation Layer."
+                : reasonForCantEditLayerSet
+            }
             placement="left"
           >
             <HoverIconButton
@@ -616,6 +634,7 @@ export default function LayerSettingsHeader({
               size="small"
               icon={<LockOutlined />}
               hoveredIcon={<UnlockOutlined />}
+              disabled={!mayEditLayerSet}
               onClick={() => {
                 onShowAddVolumeLayerModal(layer.name);
               }}

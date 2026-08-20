@@ -10,12 +10,11 @@ import Constants, {
   type Vector3,
 } from "viewer/constants";
 import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
+import { getLayerByName, getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import {
-  getDatasetBoundingBox,
-  getLayerByName,
-  getMagInfo,
-} from "viewer/model/accessors/dataset_accessor";
-import { getTransformsForLayer } from "viewer/model/accessors/dataset_layer_transformation_accessor";
+  getTransformedDatasetBoundingBox,
+  getTransformsForLayer,
+} from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { enforceActiveVolumeTracing } from "viewer/model/accessors/volumetracing_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
@@ -66,7 +65,12 @@ export function* getBoundingBoxForViewport(
     ),
   };
 
-  const datasetBoundingBox = yield* select((state) => getDatasetBoundingBox(state.dataset));
+  const datasetBoundingBox = yield* select((state) =>
+    getTransformedDatasetBoundingBox(
+      state.dataset,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    ),
+  );
   return new BoundingBox(currentViewportBounding).intersectedWith(datasetBoundingBox);
 }
 

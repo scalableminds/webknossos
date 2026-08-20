@@ -69,7 +69,7 @@ The information is JSON-encoded in the URL fragment and has the following format
   <summary>URL Fragment Format</summary>
   
   ```javascript
-  type MappingType = "JSON" | "HDF5";
+  type MappingType = "JSON" | "AGGLOMERATE";
   type ViewMode = "orthogonal" | "flight";
   type Vector3 = [number, number, number];
   // For datasets with more than 3 dimensions

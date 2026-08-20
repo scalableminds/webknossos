@@ -159,23 +159,19 @@ function* applyNewestMissingUpdateActions(
     return SuccessEmptyIncorporateActionsReturnValue;
   }
   const mayEdit = yield* select((state) => mayEditAnnotation(state));
-  let terminatesPolling = false;
-  try {
-    const {
-      success,
-      artifactInfos,
-      terminatesPolling: unrecoverable,
-    } = yield* tryToIncorporateActions(actions, false);
-    // Updates the annotation state used for future rebase operation to the current state with the missingUpdateActions applied.
-    yield* put(finishedApplyingMissingUpdatesAction()); // knownServerState := annotation
-    if (success) {
-      yield* call(updatePendingProofreadingOperationInfo);
-      return { success: true, artifactInfos };
-    }
-    terminatesPolling = unrecoverable ?? false;
-  } catch (exc) {
-    // Afterwards, the user will be asked to reload the page.
-    console.error("Error during application of update actions", exc);
+  // Note: any exception thrown here is intentionally not caught. It propagates to
+  // performRebasingIfNecessary's outer try/catch, which terminates polling -- the same
+  // way a hard error in reapplyUpdateActionsFromSaveQueue is already handled, since that
+  // function has no local try/catch either.
+  const { success, artifactInfos, terminatesPolling } = yield* tryToIncorporateActions(
+    actions,
+    false,
+  );
+  // Updates the annotation state used for future rebase operation to the current state with the missingUpdateActions applied.
+  yield* put(finishedApplyingMissingUpdatesAction()); // knownServerState := annotation
+  if (success) {
+    yield* call(updatePendingProofreadingOperationInfo);
+    return { success: true, artifactInfos };
   }
 
   if (terminatesPolling) {

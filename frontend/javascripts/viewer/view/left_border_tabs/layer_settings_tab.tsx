@@ -22,7 +22,7 @@ import type { ValueOf } from "types/type_utils";
 import { ControlModeEnum, MappingStatusEnum } from "viewer/constants";
 import {
   getReasonForCantChangeAnnotationLayerSet,
-  mayChangeAnnotationLayerSet,
+  mayEditAnnotationLayerSet,
 } from "viewer/model/accessors/annotation_accessor";
 import {
   getDefaultValueRangeOfLayer,
@@ -471,7 +471,7 @@ const mapStateToProps = (state: WebknossosState) => ({
   // the whole annotation would re-render the entire settings panel on every
   // skeleton/volume mutation (e.g., each placed node or brush stroke).
   isUpdatingCurrentlyAllowed: state.annotation.isUpdatingCurrentlyAllowed,
-  mayChangeAnnotationLayerSet: mayChangeAnnotationLayerSet(state),
+  mayChangeAnnotationLayerSet: mayEditAnnotationLayerSet(state),
   reasonForCantChangeAnnotationLayerSet: getReasonForCantChangeAnnotationLayerSet(state),
   annotationType: state.annotation.annotationType,
   hasSkeletonLayer: state.annotation.skeleton != null,

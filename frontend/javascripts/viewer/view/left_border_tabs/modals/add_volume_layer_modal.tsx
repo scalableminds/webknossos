@@ -16,10 +16,7 @@ import { useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import type { APIDataset, APISegmentationLayer } from "types/api_types";
 import { MappingStatusEnum } from "viewer/constants";
-import {
-  getReasonForCantChangeAnnotationLayerSet,
-  mayChangeAnnotationLayerSet,
-} from "viewer/model/accessors/annotation_accessor";
+import { mayEditAnnotationLayerSetWithDisallowReason } from "viewer/model/accessors/annotation_accessor";
 import {
   getLayerByName,
   getMagInfo,
@@ -123,8 +120,9 @@ export default function AddVolumeLayerModal({
   >(preselectedLayerName);
   const dispatch = useDispatch();
   const annotation = useWkSelector((state) => state.annotation);
-  const mayChangeLayerSet = useWkSelector(mayChangeAnnotationLayerSet);
-  const reasonForCantChangeLayerSet = useWkSelector(getReasonForCantChangeAnnotationLayerSet);
+  const { mayEditLayerSet, reasonForCantEditLayerSet } = useWkSelector((state) =>
+    mayEditAnnotationLayerSetWithDisallowReason(state),
+  );
   const allReadableLayerNames = useMemo(
     () => getAllReadableLayerNames(dataset, annotation),
     [dataset, annotation],
@@ -263,12 +261,12 @@ export default function AddVolumeLayerModal({
         setMagIndices={setMagIndices}
       />
       <Row justify="center" align="middle">
-        <FastTooltip title={reasonForCantChangeLayerSet}>
+        <FastTooltip title={reasonForCantEditLayerSet}>
           <AsyncButton
             onClick={handleAddVolumeLayer}
             type="primary"
             icon={<PlusOutlined />}
-            disabled={!mayChangeLayerSet}
+            disabled={!mayEditLayerSet}
           >
             Add Volume Annotation Layer
           </AsyncButton>

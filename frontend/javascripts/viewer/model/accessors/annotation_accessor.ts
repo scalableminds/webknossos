@@ -128,7 +128,7 @@ export function getReasonForCantEditSkeletonTree(
   return undefined;
 }
 
-export function mayChangeAnnotationLayerSet(state: WebknossosState): boolean {
+export function mayEditAnnotationLayerSet(state: WebknossosState): boolean {
   // Adding, deleting, converting (making writable) or merging annotation layers
   // changes the tracing's set of layers, which cannot be represented as an
   // incorporable diff during a concurrent rebase (see #9052). These actions are
@@ -148,8 +148,16 @@ export function getReasonForCantChangeAnnotationLayerSet(
   if (isConcurrentCollaborationMode(state)) {
     return messages["tracing.layer_management_disabled_in_live_collab"](isAnnotationOwner(state));
   }
-
   return undefined;
+}
+
+export function mayEditAnnotationLayerSetWithDisallowReason(state: WebknossosState) {
+  const mayEditLayerSet = mayEditAnnotationLayerSet(state);
+  if (mayEditLayerSet) {
+    return { mayEditLayerSet, reasonForCantEditLayerSet: undefined };
+  }
+  const reasonForCantEditLayerSet = getReasonForCantChangeAnnotationLayerSet(state);
+  return { mayEditLayerSet, reasonForCantEditLayerSet };
 }
 
 export function mayEditAnnotationViewConfig(state: WebknossosState) {

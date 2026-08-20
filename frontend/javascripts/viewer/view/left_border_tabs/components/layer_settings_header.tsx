@@ -40,10 +40,7 @@ import {
   APIJobCommand,
 } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
-import {
-  getReasonForCantChangeAnnotationLayerSet,
-  mayChangeAnnotationLayerSet,
-} from "viewer/model/accessors/annotation_accessor";
+import { mayEditAnnotationLayerSetWithDisallowReason } from "viewer/model/accessors/annotation_accessor";
 import {
   getLayerBoundingBox,
   getLayerByName,
@@ -132,8 +129,9 @@ export default function LayerSettingsHeader({
     state.activeUser != null ? isUserAdminOrManager(state.activeUser) : false,
   );
   const isSuperUser = useWkSelector((state) => state.activeUser?.isSuperUser || false);
-  const mayChangeLayerSet = useWkSelector(mayChangeAnnotationLayerSet);
-  const reasonForCantChangeLayerSet = useWkSelector(getReasonForCantChangeAnnotationLayerSet);
+  const { mayEditLayerSet, reasonForCantEditLayerSet } = useWkSelector((state) =>
+    mayEditAnnotationLayerSetWithDisallowReason(state),
+  );
   const histogramData = useWkSelector((state) => state.temporaryConfiguration.histogramData);
   const datasetConfiguration = useWkSelector((state) => state.datasetConfiguration);
   const task = useWkSelector((state) => state.task);
@@ -399,9 +397,9 @@ export default function LayerSettingsHeader({
   const getMergeWithFallbackLayerItem = (): ItemType => ({
     key: "mergeWithFallbackLayerButton",
     icon: <MergeCellsOutlined />,
-    disabled: !mayChangeLayerSet,
+    disabled: !mayEditLayerSet,
     label: (
-      <FastTooltip title={mayChangeLayerSet ? undefined : reasonForCantChangeLayerSet}>
+      <FastTooltip title={mayEditLayerSet ? undefined : reasonForCantEditLayerSet}>
         <span>Merge this volume annotation with its fallback layer</span>
       </FastTooltip>
     ),
@@ -411,9 +409,9 @@ export default function LayerSettingsHeader({
   const getDeleteAnnotationLayerItem = (): ItemType => ({
     key: "deleteAnnotationLayer",
     icon: <DeleteOutlined />,
-    disabled: !mayChangeLayerSet,
+    disabled: !mayEditLayerSet,
     label: (
-      <FastTooltip title={mayChangeLayerSet ? undefined : reasonForCantChangeLayerSet}>
+      <FastTooltip title={mayEditLayerSet ? undefined : reasonForCantEditLayerSet}>
         <span>Delete this annotation layer</span>
       </FastTooltip>
     ),
@@ -624,9 +622,9 @@ export default function LayerSettingsHeader({
         {canBeMadeEditable ? (
           <FastTooltip
             title={
-              mayChangeLayerSet
+              mayEditLayerSet
                 ? "Make this segmentation editable by adding a Volume Annotation Layer."
-                : reasonForCantChangeLayerSet
+                : reasonForCantEditLayerSet
             }
             placement="left"
           >
@@ -636,7 +634,7 @@ export default function LayerSettingsHeader({
               size="small"
               icon={<LockOutlined />}
               hoveredIcon={<UnlockOutlined />}
-              disabled={!mayChangeLayerSet}
+              disabled={!mayEditLayerSet}
               onClick={() => {
                 onShowAddVolumeLayerModal(layer.name);
               }}

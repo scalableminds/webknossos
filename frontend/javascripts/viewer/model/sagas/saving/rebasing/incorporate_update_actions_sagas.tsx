@@ -48,6 +48,20 @@ import {
 } from "./applying_update_artifacts";
 
 const ANNOTATION_REVERTED_TOAST_KEY = "annotation_reverted_warning";
+const ANNOTATION_STRUCTURE_CHANGED_TOAST_KEY = "annotation_structure_changed_warning";
+
+function* lockAnnotationAndShowReloadToast(toastKey: string, message: string) {
+  yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
+  Toast.error(message, {
+    sticky: true,
+    key: toastKey,
+    customFooter: (
+      <Button type="primary" size="small" onClick={() => window.location.reload()}>
+        Reload Page
+      </Button>
+    ),
+  });
+}
 
 export function* tryToIncorporateActions(
   newerActions: APIUpdateActionBatch[],
@@ -388,19 +402,11 @@ export function* tryToIncorporateActions(
           // A revert authored by someone else arrived via fast-forward. There's no
           // cheap way to represent the reverted state locally, so lock out further
           // local edits and ask this session to reload.
-          yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
-          Toast.error(
+          yield* call(
+            lockAnnotationAndShowReloadToast,
+            ANNOTATION_REVERTED_TOAST_KEY,
             "This annotation was just reverted to an earlier version by another user. " +
               "Your local session is now out of sync and further changes can no longer be saved. Please reload the page.",
-            {
-              sticky: true,
-              key: ANNOTATION_REVERTED_TOAST_KEY,
-              customFooter: (
-                <Button type="primary" size="small" onClick={() => window.location.reload()}>
-                  Reload Page
-                </Button>
-              ),
-            },
           );
           yield* call(finalize);
           return UnrecoverableIncorporateActionsReturnValue;
@@ -420,7 +426,20 @@ export function* tryToIncorporateActions(
         case "importVolumeTracing":
 
         // Volume
-        case "removeFallbackLayer":
+        case "removeFallbackLayer": {
+          // Unlike the legacy actions below, this is a documented, expected occurrence (see
+          // #9917): reload is required and further local edits must be prevented, just like
+          // for a foreign revertToVersion above.
+          console.error("Cannot apply action", action.name);
+          yield* call(
+            lockAnnotationAndShowReloadToast,
+            ANNOTATION_STRUCTURE_CHANGED_TOAST_KEY,
+            "The layers of this annotation were just changed by another user. Your local session is " +
+              "now out of sync and further changes can no longer be saved. Please reload the page.",
+          );
+          yield* call(finalize);
+          return UnrecoverableIncorporateActionsReturnValue;
+        }
 
         // Legacy! The following actions are legacy actions and don't
         // need to be supported.

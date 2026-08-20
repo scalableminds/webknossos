@@ -7,7 +7,7 @@ import { isFileExtensionEqualTo, promiseAllWithErrors, stripFileExtension } from
 import last from "lodash-es/last";
 import {
   getReasonForCantChangeAnnotationLayerSet,
-  mayChangeAnnotationLayerSet,
+  mayEditAnnotationLayerSet,
 } from "viewer/model/accessors/annotation_accessor";
 import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import { getActiveSegmentationTracing } from "viewer/model/accessors/volumetracing_accessor";
@@ -177,7 +177,7 @@ export async function importTracingFiles(files: Array<File>, options: NmlImportO
             const storeState = Store.getState();
             const { annotation, dataset } = storeState;
 
-            if (!mayChangeAnnotationLayerSet(storeState)) {
+            if (!mayEditAnnotationLayerSet(storeState)) {
               throw new VolumeImportError(
                 getReasonForCantChangeAnnotationLayerSet(storeState) ??
                   "Importing volume data is currently not allowed.",

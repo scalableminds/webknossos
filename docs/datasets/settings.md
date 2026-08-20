@@ -160,8 +160,8 @@ A few things to keep in mind:
 
 - Only datasets that you are allowed to edit are changed. Datasets in subfolders and datasets that currently cannot be loaded are skipped.
 - Layer settings are copied on a best-effort basis: they are only applied to layers that carry the same name and belong to the same category (color or segmentation). Layers that exist only in the target dataset keep their current settings.
-- The dataset-wide settings, such as position, zoom, rotation, and blend mode, are always copied. Since the default position is given in voxel coordinates, it may not point at a meaningful location in datasets that have a different size.
-- The action affects the datasets' defaults for all users and cannot be undone.
+- The dataset-wide settings, such as position, zoom, rotation, and blend mode, are always copied. Note that the default position may be placed outside of a dataset's bounding box for datasets that have a different size.
+- The action affects the datasets' defaults for all users.
 
 
 ## Delete Tab

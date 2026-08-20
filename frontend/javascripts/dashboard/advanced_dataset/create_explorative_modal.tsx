@@ -182,6 +182,8 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
   }, [dataset]);
 
   let modalContent = <Spin />;
+  // Rendered in the modal footer; stays null while the dataset is still loading.
+  let createAnnotationButton: React.ReactNode = null;
 
   if (dataset !== null) {
     const segmentationLayers = getSegmentationLayers(dataset);
@@ -213,6 +215,18 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
           setMagIndices={setUserDefinedMagIndices}
         />
       ) : null;
+    createAnnotationButton = (
+      <Link
+        to={`/datasets/${dataset.id}/createExplorative/${annotationType}/?minMag=${Math.max(
+          ...magInfo.getMagByIndexOrThrow(lowMagIndex),
+        )}&maxMag=${Math.max(
+          ...magInfo.getMagByIndexOrThrow(highMagIndex),
+        )}${fallbackLayerGetParameter}`}
+        title="Create new annotation with selected properties"
+      >
+        <Button type="primary">Create Annotation</Button>
+      </Link>
+    );
     modalContent = (
       <React.Fragment>
         <div
@@ -237,24 +251,6 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
         ) : null}
 
         {magSlider}
-        <div
-          style={{
-            textAlign: "right",
-          }}
-        >
-          <Link
-            to={`/datasets/${dataset.id}/createExplorative/${annotationType}/?minMag=${Math.max(
-              ...magInfo.getMagByIndexOrThrow(lowMagIndex),
-            )}&maxMag=${Math.max(
-              ...magInfo.getMagByIndexOrThrow(highMagIndex),
-            )}${fallbackLayerGetParameter}`}
-            title="Create new annotation with selected properties"
-          >
-            <Button size="large" type="primary">
-              Create Annotation
-            </Button>
-          </Link>
-        </div>
       </React.Fragment>
     );
   }
@@ -263,7 +259,7 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
     <Modal
       title={`Create New Annotation for Dataset “${dataset?.name || datasetId}”`}
       open
-      footer={null}
+      footer={createAnnotationButton}
       onCancel={onClose}
     >
       {modalContent}

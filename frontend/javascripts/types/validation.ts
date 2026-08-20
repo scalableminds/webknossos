@@ -5,6 +5,7 @@ import ViewConfigurationSchema from "types/schemas/dataset_view_configuration.sc
 import DatasourceSchema from "types/schemas/datasource.schema";
 import UrlStateSchema from "types/schemas/url_state.schema";
 import UserSettingsSchema from "types/schemas/user_settings.schema";
+import { normalizeMappingType } from "viewer/constants";
 
 const validator = new jsonschema.Validator();
 // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{ definitions: { "types::Vector3... Remove this comment to see the full error message
@@ -72,8 +73,7 @@ export const validateUrlStateJSON = (value: string) => {
   return cloneDeepWith(json, (value, key) => {
     if (key === "mappingType") {
       if (value == null) return null;
-      const caseFixed = typeof value === "string" ? value.toUpperCase() : value;
-      return caseFixed === "JSON" ? "JSON" : "HDF5";
+      return normalizeMappingType(value);
     }
     if (key === "segmentId") {
       // Accepts both the legacy plain-number encoding and the unsigned-decimal string

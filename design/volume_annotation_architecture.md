@@ -112,8 +112,18 @@ interface EditContext {
 
 // ── The central intermediary representation ─────────────────────────────────
 
-/** 32_768 bits = 1024 words = 4 KB per bucket. */
+/** One bit per voxel: 32_768 bits = 1024 words = 4 KB per bucket. */
 class VoxelMask {
+  /**
+   * A "word" is one Uint32 holding the flags of 32 consecutive voxels, so
+   * voxel `i` lives at bit `i & 31` of word `i >>> 5`.
+   *
+   * Because VoxelIndex is `x + y*32 + z*1024` and BUCKET_WIDTH is also 32,
+   * a word is exactly one x-row of the bucket: word `w` covers the row at
+   * `y = w & 31, z = w >>> 5`. That alignment is what makes `markRun` cheap —
+   * a scanline never straddles a word boundary, so filling one is a single
+   * store rather than a read-modify-write of two.
+   */
   private words = new Uint32Array(BUCKET_VOXEL_COUNT / 32);
   mark(i: VoxelIndex): void;
   /** Word-wise fill; the hot path. `start..start+length` must stay in-bucket. */

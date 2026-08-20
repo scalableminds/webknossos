@@ -221,22 +221,34 @@ function performDiffAnnotation(
   prevTdCamera: CameraData,
   tdCamera: CameraData,
 ): Array<UpdateActionWithoutIsolationRequirement> {
-  let actions: Array<UpdateActionWithoutIsolationRequirement> = [];
-
   if (prevFlycam !== flycam) {
-    actions = actions.concat(
+    return [
       updateCameraAnnotation(
         getFlooredPosition(flycam),
         flycam.additionalCoordinates,
         getRotationInDegrees(flycam),
         flycam.zoomStep,
       ),
-    );
+    ];
+  } else if (prevTdCamera !== tdCamera) {
+    // We only emit updateTdCamera actions when the flycam properties did *not* change.
+    // The update action itself doesn't contain any properties (so, nothing is actually
+    // mutated in the database). The action only exists for time tracking (if users
+    // interact with the 3D viewport, this should be time-tracked).
+    // When updateCameraAnnotation is already emitted, an additional updateTdCamera
+    // doesn't provide any value.
+    // Additional background:
+    // The reason why we don't want to emit both actions is that the current compaction
+    // mechanism for update actions (see compact_save_queue.ts) only compacts version
+    // groups where *either* one updateCamera OR one updateTdCamera action exists.
+    // The compaction could be adapted, but as stated before: there is no value in
+    // emitting an additional updateTdCamera action here.
+    // This change became necessary with the introduction of the perspective camera,
+    // with which each movement of the current position (the flycam) also triggers
+    // a subtle update to the 3D camera properties (because of how the perspective
+    // camera is anchored/re-positioned).
+    return [updateTdCamera()];
   }
 
-  if (prevTdCamera !== tdCamera) {
-    actions = actions.concat(updateTdCamera());
-  }
-
-  return actions;
+  return [];
 }

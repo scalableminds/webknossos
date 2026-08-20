@@ -85,7 +85,7 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
 
   private def urlEncode(text: String) = UriEncoding.encodePathSegment(text, "UTF-8")
 
-  def fetchStorageReports(organizationId: String, paths: List[String]): Fox[PathStorageUsageResponse] =
+  def fetchStorageReports(organizationId: String, paths: Seq[String]): Fox[PathStorageUsageResponse] =
     rpc(s"${dataStore.url}/data/datasets/measureUsedStorage/${urlEncode(organizationId)}")
       .addQueryParam("token", RpcTokenHolder.webknossosToken)
       .silent

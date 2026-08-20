@@ -4,7 +4,7 @@ import com.google.auth.oauth2.ServiceAccountCredentials
 import com.google.cloud.storage.Storage.BlobSourceOption
 import com.google.cloud.storage.{BlobId, BlobInfo, Storage, StorageException, StorageOptions}
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.box.Box
+import com.scalableminds.util.box.{Box, Full}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.storage.{CredentializedUPath, GoogleServiceAccountCredential}
@@ -12,9 +12,10 @@ import Box.tryo
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import org.apache.commons.lang3.builder.HashCodeBuilder
 
-import java.io.ByteArrayInputStream
+import java.io.{ByteArrayInputStream, EOFException, IOException}
 import java.net.URI
 import java.nio.ByteBuffer
+import java.nio.channels.ReadableByteChannel
 import scala.concurrent.ExecutionContext
 import scala.jdk.CollectionConverters.{IterableHasAsScala, IteratorHasAsScala}
 
@@ -50,32 +51,38 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
           range match {
             case r: StartEndExclusiveByteRange =>
               val blobReader = storage.reader(blobId)
-              blobReader.seek(r.start)
-              blobReader.limit(r.end)
-              val bb = ByteBuffer.allocateDirect(r.length)
-              blobReader.read(bb)
-              val arr = new Array[Byte](r.length)
-              bb.position(0)
-              bb.get(arr)
-              Fox.successful(arr)
+              try {
+                blobReader.seek(r.start)
+                blobReader.limit(r.end)
+                val bb = ByteBuffer.allocateDirect(r.length)
+                readFully(blobReader, bb)
+                val arr = new Array[Byte](r.length)
+                bb.position(0)
+                bb.get(arr)
+                Fox.successful(arr)
+              } finally blobReader.close()
             case SuffixLengthByteRange(l) =>
               val blobReader = storage.reader(blobId)
-              blobReader.seek(-l)
-              val bb = ByteBuffer.allocateDirect(l)
-              blobReader.read(bb)
-              val arr = new Array[Byte](l)
-              bb.position(0)
-              bb.get(arr)
-              Fox.successful(arr)
+              try {
+                blobReader.seek(-l)
+                val bb = ByteBuffer.allocateDirect(l)
+                readFully(blobReader, bb)
+                val arr = new Array[Byte](l)
+                bb.position(0)
+                bb.get(arr)
+                Fox.successful(arr)
+              } finally blobReader.close()
             case CompleteByteRange() =>
               Fox.successful(storage.readAllBytes(bucket, objName, BlobSourceOption.shouldReturnRawInputStream(true)))
           }
         catch {
-          case s: StorageException =>
-            if (s.getCode == 404)
-              Fox.empty
-            else Fox.failure(s.getMessage)
-          case t: Throwable => Fox.failure(t.getMessage)
+          case s: StorageException => storageExceptionToFox(s)
+          case e: IOException      =>
+            e.getCause match {
+              case s: StorageException => storageExceptionToFox(s)
+              case _                   => Fox.failure(e.getMessage, Full(e))
+            }
+          case t: Throwable => Fox.failure(t.getMessage, Full(t))
         }
       blobInfo: BlobInfo <- tryo(
         storage.get(
@@ -112,6 +119,18 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
       ) // no currentDirectory(); Do deep recursive listing
       totalSize <- tryo(blobs.iterateAll().iterator().asScala.map(_.getSize).foldLeft(0L)(_ + _))
     } yield totalSize).toFox
+
+  private def readFully(channel: ReadableByteChannel, buffer: ByteBuffer): Unit =
+    while (buffer.hasRemaining) {
+      val bytesRead = channel.read(buffer)
+      if (bytesRead == -1)
+        throw new EOFException(
+          s"Unexpected end of stream while reading from GCS: got ${buffer.position} of ${buffer.capacity} requested bytes"
+        )
+    }
+
+  private def storageExceptionToFox(s: StorageException)(using ec: ExecutionContext): Fox[Array[Byte]] =
+    if (s.getCode == 404) Fox.empty else Fox.failure(s.getMessage, Full(s))
 
   private def getUri = uri
   private def getCredential = credential

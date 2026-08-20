@@ -71,113 +71,6 @@ function withRebasedTranslation(
 // SCALE_SLIDER_CONFIG.
 const SCALE_INPUT_STEP = 0.01;
 
-// Derives the step size and the visible range of the translation sliders from the current zoom.
-// state.flycam.zoomStep is base voxels per screen pixel, so one step corresponds to roughly one
-// pixel on screen at any zoom, and the window spans about one viewport worth of movement.
-// While isFrozen is set (i.e. a slider is being dragged), nothing is recomputed, so that the slider
-// never rescales under the cursor; the pending zoom is applied once the drag ends.
-function useZoomAdaptiveTranslationScaling(
-  translation: Vector3,
-  layerName: string,
-  isFrozen: boolean,
-) {
-  // The current values are also read through a ref, so that reanchoring on a zoom change does not
-  // have to re-run whenever the user moves a slider.
-  const translationRef = useRef(translation);
-  translationRef.current = translation;
-  const zoomStep = useWkSelector((state) => state.flycam.zoomStep);
-  const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
-  // Per-axis voxels per screen pixel. The base voxel factors account for anisotropic voxel sizes,
-  // so that a dataset with thick z slices gets a correspondingly smaller z step.
-  const [factorX, factorY, factorZ] = getBaseVoxelFactorsInUnit(voxelSize);
-
-  const steps = useMemo(
-    () =>
-      [factorX, factorY, factorZ].map((factor) =>
-        niceStep(zoomStep * factor),
-      ) as unknown as Vector3,
-    [zoomStep, factorX, factorY, factorZ],
-  );
-  const widths = useMemo(
-    () =>
-      [factorX, factorY, factorZ].map(
-        (factor) => constants.VIEWPORT_WIDTH * zoomStep * factor,
-      ) as unknown as Vector3,
-    [zoomStep, factorX, factorY, factorZ],
-  );
-
-  const [windows, setWindows] = useState<SliderWindow[]>(() =>
-    AXES.map((axis) =>
-      reanchorWindow(null, translationRef.current[axis], widths[axis], steps[axis]),
-    ),
-  );
-
-  // Recentering on a layer switch, rather than keeping the previous layer's handle position.
-  const lastLayerRef = useRef(layerName);
-
-  useEffect(() => {
-    if (isFrozen) {
-      return;
-    }
-    const isNewLayer = lastLayerRef.current !== layerName;
-    lastLayerRef.current = layerName;
-    setWindows((previous) =>
-      AXES.map((axis) =>
-        reanchorWindow(
-          isNewLayer ? null : (previous[axis] ?? null),
-          translationRef.current[axis],
-          widths[axis],
-          steps[axis],
-        ),
-      ),
-    );
-  }, [widths, steps, isFrozen, layerName]);
-
-  // Keep the window on the value. Resetting a row restores a stored value that can lie far outside
-  // the current window, and it does not go through the commit handler below, so the slider would
-  // otherwise show a range that no longer contains its own value – and the next drag would snap the
-  // value to the window's edge. While a slider is dragged its value cannot leave the window, which
-  // makes this a no-op then.
-  useEffect(() => {
-    if (isFrozen) {
-      return;
-    }
-    setWindows((previous) => {
-      const next = previous.map((window, axis) => {
-        const value = translation[axis];
-        if (value >= window.min && value <= window.max) {
-          return window;
-        }
-        return reanchorWindow(null, value, window.max - window.min, steps[axis]);
-      });
-      return next.every((window, axis) => window === previous[axis]) ? previous : next;
-    });
-  }, [translation, steps, isFrozen]);
-
-  // Once a value is committed at the very edge of the window, slide the window so that the value is
-  // centered again. Without this the user could not keep dragging in the same direction.
-  const recenterIfAtEdge = useCallback(
-    (axis: 0 | 1 | 2, value: number) => {
-      setWindows((previous) => {
-        const current = previous[axis];
-        if (current == null) {
-          return previous;
-        }
-        const isAtEdge = value <= current.min + steps[axis] || value >= current.max - steps[axis];
-        if (!isAtEdge) {
-          return previous;
-        }
-        const next = [...previous];
-        next[axis] = reanchorWindow(null, value, current.max - current.min, steps[axis]);
-        return next;
-      });
-    },
-    [steps],
-  );
-
-  return { steps, windows, recenterIfAtEdge };
-}
-
 function SectionLabel({ children }: { children: ReactNode }) {
   return (
     <Typography.Title level={5} style={{ marginBottom: 4 }}>
@@ -203,9 +96,6 @@ type AxisSliderRowProps = {
   // Called once a value is actually committed, i.e. the slider is released or the number input is
   // confirmed – as opposed to onChange, which also fires continuously while dragging.
   onCommit?: (v: number) => void;
-  // Reports whether the slider (not the number input) is currently being dragged, so that callers
-  // can keep the slider's range stable for the duration of the drag.
-  onDraggingChange?: (isDragging: boolean) => void;
   resetDisabled: boolean;
   // Custom reset handler. Defaults to onChange(storedValue); used when resetting the row needs to
   // restore more than the displayed value (e.g. the rotation row also restores the flip sign).
@@ -359,14 +249,6 @@ export function LayerTransformSettingsContent({
       pivot,
     );
   }, [transforms, pivot, isCompatible]);
-
-  // The translation sliders reach one viewport extent in either direction, so the translation one
-  // slider action can apply follows the zoom level.
-  const viewportExtent = useWkSelector(getViewportExtentInVoxelPerAxis);
-  const translationSliderConfigs = useMemo(
-    () => viewportExtent.map(getTranslationSliderConfig),
-    [viewportExtent],
-  );
 
   // The translation sliders reach one viewport extent in either direction, so the translation one
   // slider action can apply follows the zoom level.

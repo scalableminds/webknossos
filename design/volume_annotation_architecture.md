@@ -5,224 +5,649 @@ Scope: how the **frontend** represents, edits, undoes and saves volume (segmenta
 
 This document intentionally does not try to stay close to the current implementation. It proposes a design from first principles, given the constraints below, so that we have a "north star" to compare the existing architecture against. A follow-up doc can define an incremental migration path.
 
-## 1. Givens & Requirements (recap)
+Code in this document is illustrative TypeScript — signatures and sketches meant to pin down responsibilities and data flow, not copy-pasteable implementations.
+
+---
+
+## 1. Givens & Requirements
 
 **Data model**
-- Volume data is chunked into buckets, `32³` voxels each. Each voxel value is a segment ID.
-- Coarser levels of detail ("mags") are downsampled versions of mag 1, with independent per-axis factors (e.g. `2-2-1`).
-- The frontend never holds the whole dataset in memory; buckets are paged in/out from the backend on demand.
+- Volume data is chunked into buckets of `32³` voxels. Each voxel value is a segment ID (`uint64`, i.e. `bigint` in JS; `0` = background).
+- Coarser levels of detail ("mags") are downsampled versions of the finest mag, with independent per-axis factors (e.g. `2-2-1`).
+- The frontend never holds the whole layer in memory; buckets are paged in/out from the backend on demand.
 
 **Requirements**
 1. Users can annotate at any mag, with brush, polygon/trace, fill, and interpolation-between-sections tools.
-2. An edit made at one mag is automatically reflected at all other mags.
-3. Saved changes are diffs against the previous bucket state, not full snapshots — this is a prerequisite for future collaborative (multi-user, concurrent) editing, where diffs from different users need to compose instead of clobbering each other.
+2. An edit made at one mag is reflected at all other mags.
+3. Saved changes are diffs against the previous bucket state, not full bucket snapshots — a prerequisite for future collaborative editing, where diffs from different users must compose rather than clobber each other.
 4. One user interaction (e.g. one brush stroke) = one transaction = one bundle of per-bucket diffs.
-5. Every transaction must be undoable/redoable. Undo must not silently discard a collaborator's edits that happened in between.
+5. Every transaction is undoable/redoable, and undo must not silently discard edits (own or others') that happened after it.
 6. An "overwrite mode" governs whether painting may overwrite already-labeled voxels or only empty (background) ones.
 
-## 2. Design Principles
+---
 
-- **Geometry first, voxels second.** Tools never write voxels directly. They describe *what the user meant* (a stroke, a polygon, a seed point) in continuous, mag-independent space. A separate stage turns that description into voxel writes. This is what makes "annotate at any mag, propagate to all mags" tractable: we're not reconciling N independently-rasterized voxel grids, we rasterize once and derive the rest.
-- **Mag 1 is the source of truth; every other mag is a projection of it.** All edits, regardless of which mag the user was looking at, ultimately resolve into mag-1 voxel writes. Every other mag's bucket content is *derived* (downsampled) from mag 1. This turns "propagate edit to all mags" into a single, uniform algorithm instead of one case per direction.
-- **Diffs are the atomic unit of state, not snapshots.** A bucket's authoritative content is defined as "checkpoint + ordered diffs since checkpoint", forever. Snapshots are just a performance/memory optimization (a cached fold of the diff log), never a special case that diffs must be reconciled against.
-- **Undo replays forward, it never inverts on top of live state.** Undoing transaction *T* means: recompute the bucket as if *T* had never been in the log, by replaying the surrounding diffs — not by subtracting *T*'s effect from whatever the bucket currently looks like. This is what keeps undo safe once other actors (or your own later actions) may have touched the same voxels.
+## 2. Answers in Brief
 
-## 3. Component Overview
+The four questions this doc was written to answer:
+
+**What happens when a user draws?** A tool converts pointer input into a declarative *edit intent* (a swept disk, a polygon, a flood-fill spec). A single `VolumeTransaction` is opened on pointer-down and stays open until pointer-up. On each pointer-move the intent grows, the incremental part is rasterized at the mag the user is looking at, and the resulting voxel writes are recorded into the transaction (and applied to resident buckets so the user sees them immediately). On pointer-up the transaction commits: mag propagation runs, the accumulated write map becomes a set of per-bucket diffs, and those go to the undo log and the save queue.
+
+**Who draws the circular brush into the data?** A single `Rasterizer` — the one component that knows how to turn geometry into voxel indices. Tools never touch buckets; buckets never know about brushes. The Rasterizer also owns the overwrite-mode filter, because that filter is a per-voxel decision made against current data, which is exactly its job.
+
+**What is the intermediary representation?** A per-transaction **write map**: `bucketAddress → (voxelIndex → newSegmentId)`, last-write-wins. This is the pivot point of the whole design. It coalesces repeated writes within a stroke for free, it can hold writes for buckets that are *not* in memory, and it is trivially convertible to both "apply to a live bucket" and "encode as a diff".
+
+**Who downsamples, and how is the diff encoded?** The `MagPropagationService` runs at commit time. It maps the write map from the source mag down to the finest mag (block replication) and then projects it up into each coarser mag (any-hit-wins). It propagates the *write set*, never whole buckets — recomputing a coarse bucket from its finest-mag children is infeasible (a mag-16 bucket has 4096 mag-1 children). The diff is encoded as run-length-grouped voxel runs over the bucket's flat index space, one `updateBucketDiff` update-action per touched bucket, all actions of a transaction submitted as one versioned group.
+
+---
+
+## 3. Design Principles
+
+1. **Geometry first, voxels second.** Tools describe *what the user meant*; a separate stage turns that into voxel writes. This is what makes "annotate at any mag" tractable — we rasterize once and derive everything else, rather than reconciling N independently-rasterized grids.
+
+2. **The finest mag is the source of truth; coarser mags are a derived view.** Every edit, whatever mag it was authored at, resolves into finest-mag writes. Only finest-mag diffs are logged as authoritative and saved as such. Coarser mags exist for rendering and are always recomputable.
+
+3. **Diffs are the unit of truth; buckets are a materialized cache.** A bucket's content is *defined* as "checkpoint + ordered diffs". The `32³` typed array in memory is a fold of that definition, kept around because the GPU needs it.
+
+4. **A diff may exist for a bucket that is not in memory.** This falls out of (3) and is what makes coarse-mag editing scale: drawing at mag 16 implies writes to hundreds of finest-mag buckets, and we must be able to record them without materializing 64 MB of typed arrays. Recording a write must never force a bucket load.
+
+5. **Undo replays forward; it never inverts against live state.** Undoing transaction *T* recomputes affected buckets as if *T* had never been in the log — not by subtracting *T*'s effect from whatever the bucket looks like now. This is what keeps undo correct once other actors, or your own later actions, have touched the same voxels.
+
+6. **Keep diffs in the most compact faithful representation.** A coarse-mag stroke is a small amount of *information* even when it implies millions of finest-mag voxels. Materialize into voxel arrays only for buckets that are actually resident.
+
+---
+
+## 4. Core Types
+
+```ts
+// ── Coordinates & identifiers ───────────────────────────────────────────────
+
+type Vector3 = [number, number, number];
+type AdditionalCoordinate = { name: string; value: number };
+
+/** Downsampling factor per axis relative to the finest mag, e.g. [2, 2, 1]. */
+type Mag = Vector3;
+
+/** Index into the layer's ordered mag list. 0 === finest mag. */
+type MagIndex = number;
+
+/** uint64 on the wire, therefore bigint in JS. 0n === background. */
+type SegmentId = bigint;
+
+/** [bucketX, bucketY, bucketZ, magIndex, additionalCoordinates] */
+type BucketAddress = readonly [
+  number, number, number, MagIndex, AdditionalCoordinate[] | null,
+];
+
+/** Stable string form so BucketAddress can be a Map key. */
+type BucketKey = string & { readonly __brand: "BucketKey" };
+
+const BUCKET_WIDTH = 32;
+const BUCKET_VOXEL_COUNT = BUCKET_WIDTH ** 3; // 32_768
+
+/**
+ * Flat offset inside a bucket: `x + y * 32 + z * 1024` — x varies fastest.
+ * (Matters for run-length encoding: runs are runs along x. See §5.8.)
+ */
+type VoxelIndex = number;
+
+// ── Transaction context ─────────────────────────────────────────────────────
+
+type OverwriteMode = "overwrite-all" | "overwrite-empty-only";
+
+/** Everything that is constant for the duration of one user interaction. */
+interface EditContext {
+  layerId: string;
+  /** The mag the user is looking at. The only mag the rasterizer ever runs at. */
+  sourceMagIndex: MagIndex;
+  sourceMag: Mag;
+  /** Fixed for the whole transaction (4D/5D datasets). Part of every address. */
+  additionalCoordinates: AdditionalCoordinate[] | null;
+  activeSegmentId: SegmentId;
+  overwriteMode: OverwriteMode;
+  /** Annotation-level restriction; the rasterizer clips against it. */
+  editableBoundingBox: BoundingBox | null;
+}
+
+// ── The central intermediary representation ─────────────────────────────────
+
+/** Voxel writes for one bucket. Last write wins per index. */
+type BucketWrites = Map<VoxelIndex, SegmentId>;
+
+/** Voxel writes across buckets — the output of rasterization and propagation. */
+type VoxelWriteSet = Map<BucketKey, { address: BucketAddress; writes: BucketWrites }>;
+```
+
+`VoxelWriteSet` is deliberately the *only* currency exchanged between the rasterizer, the mag propagation service and the transaction. Every tool, at every mag, produces one of these, and nothing downstream needs to know which tool produced it.
+
+---
+
+## 5. Components
 
 ```
- Pointer / keyboard input
-        │
-        ▼
- ┌───────────────┐   continuous, mag-independent   ┌───────────────┐
- │  Tool          │ ───────────────────────────────▶│ Edit Buffer    │
- │ (Brush, Trace,  │        geometry primitive       │ (per-          │
- │  Fill, Interp.) │                                  │ transaction)   │
- └───────────────┘                                  └───────┬───────┘
-                                                             │ rasterize @ source mag
-                                                             ▼
-                                                     ┌───────────────┐
-                                                     │  Rasterizer    │
-                                                     │ (shape → voxel │
-                                                     │  writes, obeys │
-                                                     │  overwrite     │
-                                                     │  mode)         │
-                                                     └───────┬───────┘
-                                                             │ voxel writes @ source mag
-                                                             ▼
-                                                     ┌───────────────┐
-                                                     │ Mag           │
-                                                     │ Propagation   │◀── reads/writes ──┐
-                                                     │ Service       │                    │
-                                                     └───────┬───────┘                    │
-                                                             │ touched buckets, all mags   │
-                                                             ▼                             │
-                                                     ┌───────────────┐                    │
-                                                     │ Working Data  │────────────────────┘
-                                                     │ Cube (Buckets)│  (GPU textures read from here
-                                                     └───────┬───────┘   for live rendering)
-                                                             │ before/after per bucket
-                                                             ▼
-                                                     ┌───────────────┐
-                                                     │ Diff Engine   │
-                                                     └───────┬───────┘
-                                                             │ TransactionDiff
-                                                             ▼
-                                        ┌────────────────────┴────────────────────┐
-                                        ▼                                         ▼
-                              ┌───────────────────┐                    ┌───────────────────┐
-                              │ Undo/Redo Log      │                    │ Save Queue         │
-                              │ (per-bucket event   │                    │ (encode + batch,   │
-                              │  log + checkpoints) │                    │  send to backend)  │
-                              └───────────────────┘                    └───────────────────┘
+   pointer / keyboard
+          │
+          ▼
+   ┌──────────────┐
+   │    Tool      │  brush · contour · fill · interpolate
+   └──────┬───────┘
+          │ EditIntent (declarative, source-mag-relative)
+          ▼
+   ┌──────────────┐        reads current values
+   │  Rasterizer  │◀─────────────────────────────┐
+   │  + overwrite │                              │
+   │    predicate │                              │
+   └──────┬───────┘                              │
+          │ VoxelWriteSet @ source mag           │
+          ▼                                      │
+   ┌──────────────────────┐                      │
+   │ VolumeTransaction    │──── apply writes ───▶│
+   │ (write map, per      │                      │
+   │  bucket, LWW)        │                ┌─────┴────────────┐
+   └──────┬───────────────┘                │ WorkingDataCube  │
+          │ on commit                      │ (resident        │
+          ▼                                │  buckets → GPU)  │
+   ┌──────────────────────┐                └─────┬────────────┘
+   │ MagPropagation       │──── apply writes ───▶│
+   │  A: → finest mag     │                      │
+   │  B: → coarser mags   │                      │
+   └──────┬───────────────┘
+          │ TransactionDiff (finest-mag = authoritative,
+          ▼                   coarser = derived)
+     ┌────┴──────────────────────────┐
+     ▼                               ▼
+┌──────────────┐            ┌──────────────────┐
+│ Undo/Redo    │            │ Save Queue       │
+│ Log          │            │ (encode, batch,  │
+│ (per-bucket, │            │  send)           │
+│  checkpoints)│            └──────────────────┘
+└──────────────┘
 ```
 
-## 4. Components in Detail
+### 5.1 Tools → `EditIntent`
 
-### 4.1 Tools
+A tool's only job is to turn input events plus viewer state into a declarative description of the edit. It never touches a `Bucket`.
 
-Each tool (Brush, Polygon/Trace, Fill, Interpolate, ...) is only responsible for turning pointer/keyboard input plus current viewer state (active viewport plane, current mag, brush size, active segment ID, overwrite mode) into a **geometry primitive**, expressed in continuous mag-1 voxel coordinates (floats), independent of any particular mag's voxel grid:
+```ts
+type EditIntent = AnalyticShape | DataDependentShape;
 
-- Brush: a sequence of `{center: Vec3f, radiusNm}` samples along the pointer path (a "swept disk/sphere"), tagged with the viewport's normal (2D tools only paint within one slice's plane, extruded by half a voxel in the source mag).
-- Polygon/Trace: a closed 2D polygon in-plane, or in "3D trace" the mesh of a closed line drawn while moving along z.
-- Fill: a seed point + a source mag at which connectivity is evaluated + optionally a bounding box limiting flood fill.
-- Interpolate: two labeled reference sections (already-drawn slices) + the set of intermediate section indices to synthesize.
+/** Fully determined by geometry — no voxel reads needed to know the region. */
+type AnalyticShape =
+  | { kind: "sweptDisk";
+      /** Path samples in source-mag voxel coordinates (floats). */
+      samples: Array<{ center: Vector3; radius: number }>;
+      /** null => 3D sphere brush; otherwise paint one slice along this axis. */
+      planeAxis: 0 | 1 | 2 | null }
+  | { kind: "polygon"; vertices: Vector3[]; planeAxis: 0 | 1 | 2 }
+  | { kind: "box"; min: Vector3; max: Vector3 };
 
-None of these tools touch `Bucket` objects. This separation is what lets us later add tools (e.g. a "magic wand"/AI-assisted tool) without teaching them anything about bucket/mag bookkeeping — they just need to emit geometry or a target voxel set.
-
-### 4.2 Edit Buffer (transaction scope)
-
-While a transaction is in progress (mouse down → move → up, or a single click for Fill), the tool keeps appending to an **Edit Buffer**: an accumulating, mag-1-space description of the interaction so far. This buffer exists so that:
-
-- The UI can render a live preview (an overlay) without mutating authoritative voxel data yet — this makes "Escape to cancel a stroke" free.
-- We have one clear point in time — buffer finalization — at which rasterization happens, rather than rasterizing (and diffing, and propagating) on every single mouse-move event.
-
-In practice, for performance, the buffer *does* rasterize and apply incrementally per mouse-move (so the brush paints live), but conceptually it is still one open transaction until pointer-up; intermediate voxel writes within the same transaction are coalesced (see 4.6) so they produce one diff per bucket, not one per mouse-move sample.
-
-### 4.3 Rasterizer
-
-The Rasterizer is a pure, tool-agnostic function:
-
-```
-rasterize(shape: GeometryPrimitive, targetMag: Vector3, activeSegmentId, overwriteMode, cube: WorkingDataCube)
-  → VoxelWriteSet   // { bucketAddress → [(voxelIndexInBucket, newValue)] }
+/** Region depends on the data itself; must be resolved against the cube. */
+type DataDependentShape =
+  | { kind: "floodFill"; seed: Vector3; is3D: boolean; bounds: BoundingBox | null }
+  | { kind: "sliceInterpolation"; axis: 0 | 1 | 2; sliceA: number; sliceB: number }
+  /** Escape hatch for ML/quick-select tools that produce a mask directly. */
+  | { kind: "mask"; origin: Vector3; size: Vector3; bits: Uint8Array };
 ```
 
-It is the single place in the whole system that knows how to turn "a sphere of radius r centered at p" or "a polygon" into a concrete set of voxel indices. It:
+The split matters. Analytic shapes really are mag-independent — the same swept disk rasterized at mag 1 and mag 4 describes the same physical region. Data-dependent shapes are **not**: a flood fill seeded at the same point yields a different region at mag 1 than at mag 4, because connectivity is evaluated on different data. So `EditIntent` coordinates are expressed in *source-mag* voxel space and `sourceMagIndex` is part of the intent's meaning, not an incidental detail. (The earlier framing of "all intents are mag-1-space geometry" was wrong for this half of the tools.)
 
-1. Computes which buckets, at `targetMag`, intersect the shape's bounding box.
-2. For each candidate voxel, tests shape containment (distance-to-center for brush, point-in-polygon for trace, connectivity/flood for fill).
-3. Applies the **overwrite-mode filter**: reads the voxel's *current* value from the working data cube and only includes the voxel in the output if the mode allows overwriting it (`paint-all` → always; `paint-empty-only` → only if current value is background/`0`).
+Adding a tool means adding an `EditIntent` variant and a rasterization case — nothing else in the system changes.
 
-`targetMag` here is always the mag the user is actually looking at (the "source mag" of the transaction) — this is the only mag the Rasterizer ever runs against. Every other mag's content is produced by the Mag Propagation Service (4.4), never by re-rasterizing the same geometry a second time at a different resolution. This avoids a whole class of bugs where a circle rasterized independently at mag 1 and mag 2 disagree at the boundary — there is exactly one rasterization per transaction, everything else is a deterministic function of it.
+### 5.2 `VolumeTransaction` — the write map
 
-### 4.4 Mag Propagation Service
+One transaction per user interaction. It is a write recorder, not a snapshot differ.
 
-Given a `VoxelWriteSet` at the source mag, this service is responsible for making every other mag consistent, using one uniform algorithm — because mag 1 is defined as the source of truth (Section 2):
+```ts
+class VolumeTransaction {
+  readonly id: TransactionId;
+  readonly ctx: EditContext;
 
-**Step A — Drive down to mag 1 (only needed if source mag ≠ mag 1).**
-Each written source-mag voxel corresponds to an axis-aligned block of `factor.x × factor.y × factor.z` mag-1 voxels (where `factor` is the source mag's downsampling factor). The service replicates the new value into every voxel of that block. This is lossless information-wise in the sense that it's fully determined by the edit (no data needs to be fetched to do it) — but it does mean that, deliberately, drawing at a coarse mag produces "blocky" mag-1 geometry. That's an accepted, expected tradeoff of annotating at low resolution, not a bug.
+  /** The intermediary representation. Last write wins per (bucket, voxel). */
+  private writes = new Map<BucketKey, { address: BucketAddress; writes: BucketWrites }>();
 
-**Step B — Propagate up from mag 1 through the rest of the pyramid.**
-Now that mag 1 reflects the edit, every coarser mag bucket that overlaps the edited region is recomputed from its mag-1 children using the dataset's normal downsampling rule (e.g. majority vote for segmentations). A mag-`N` bucket's value depends on all of its children down to mag 1 (e.g. a mag-2 bucket depends on 8 mag-1 buckets, given `32³` buckets and a `2-2-1`-per-axis pyramid growing by 2 in each doubling step). If a required child bucket isn't loaded yet, the service fetches it (it's needed for correct rendering at that mag anyway, so this isn't extra cost we wouldn't otherwise pay) before finalizing that coarser bucket's diff. Recomputation is scoped to the (small) set of buckets that overlap the edited region's bounding box — not the whole layer.
+  /** Pre-transaction values, recorded on first touch — only for resident buckets. */
+  private before = new Map<BucketKey, Map<VoxelIndex, SegmentId>>();
 
-Both steps run inside the same transaction. Every bucket touched by either step becomes part of the same `TransactionDiff` (4.6) — satisfying "each interaction results in one transaction containing all diffs of all affected buckets", regardless of which mag the user actually drew in.
+  /**
+   * Record a write. Does NOT require the bucket to be resident (principle 4).
+   * If it is resident, the value is also written through to the live array so
+   * the GPU picks it up on the next texture update.
+   */
+  record(address: BucketAddress, index: VoxelIndex, value: SegmentId): void;
 
-If mag 1 doesn't exist for a given layer (some datasets start at a coarser mag), substitute "finest available mag" everywhere above.
+  /** Merge a whole VoxelWriteSet (from rasterizer or mag propagation). */
+  recordAll(writeSet: VoxelWriteSet): void;
 
-### 4.5 Working Data Cube
+  /** Finalize: run mag propagation, drop no-ops, build the diff. */
+  commit(propagation: MagPropagationService): TransactionDiff;
 
-This is the in-memory, mutable representation used for rendering — one `Bucket` (`32³` typed array of segment IDs) per loaded `(bucketPosition, mag)`, exactly as today. It is populated lazily from the backend and evicted under memory pressure. GPU textures are updated directly from bucket contents for instant visual feedback; no separate "render representation" is needed beyond what already exists.
-
-The only addition needed here for the new editing model: each bucket must support a cheap way to answer "what did voxel *i* look like right before this transaction started" — see 4.6.
-
-### 4.6 Diff Engine
-
-At the start of a transaction, before any voxel is mutated, the Diff Engine lazily snapshots the *pre-transaction* content of any bucket the moment it's first touched (a plain array copy — buckets are at most tens to a few hundred KB, and only a handful of buckets are touched per interaction, so this is cheap; no need for per-voxel copy-on-write bookkeeping).
-
-At transaction end, for every touched bucket, the engine diffs `before` vs. `after` and produces a **BucketDiff**:
-
-```
-BucketDiff {
-  bucketAddress: (x, y, z, mag)
-  changedIndices: number[]     // flat index within the 32³ bucket, ascending
-  oldValues: TypedArray        // same length as changedIndices
-  newValues: TypedArray
+  /** Restore every touched resident bucket from `before`. Used for Escape. */
+  abort(): void;
 }
 ```
 
-Both `oldValues` and `newValues` are kept — this costs nothing extra (both are already known) and is exactly what makes forward-only undo/redo possible (4.7) without ever inverting a diff against arbitrary future state.
+Why a write map rather than "snapshot the bucket, mutate freely, diff at the end":
 
-All `BucketDiff`s produced by the interaction (across every touched mag, from both the direct rasterization and the mag propagation step) are bundled into one:
+- Repeated writes to the same voxel during a stroke coalesce automatically — a brush that passes over the same voxel 40 times produces one entry.
+- It works for non-resident buckets, which snapshot-and-diff cannot (there is nothing to snapshot).
+- Its size is proportional to the edit, not to the number of touched buckets. A stroke that grazes 300 buckets and writes 5 voxels in each costs 1500 entries, not 300 × 32768.
 
-```
-TransactionDiff {
-  transactionId
-  layerId
-  timestamp
-  toolName            // for analytics/debugging, not semantically load-bearing
-  bucketDiffs: BucketDiff[]
+`before` is only populated for resident buckets and is only used for `abort()` (and for the fast-path undo in §5.7). It is *not* needed for forward replay — see the correction in §5.7.
+
+**Cancel is not free, but it is cheap.** Because we do apply writes live (the user must see the stroke), cancelling means restoring the touched voxels from `before`, not "throwing away an untouched buffer". That is O(number of written voxels), which is fine.
+
+### 5.3 Rasterizer
+
+The single place that turns geometry into voxel indices.
+
+```ts
+/** Read-only view over the cube; keeps the rasterizer decoupled from storage. */
+interface VoxelReader {
+  /** Current value at a voxel in `magIndex` grid coords. */
+  peek(voxel: Vector3, magIndex: MagIndex): SegmentId | undefined; // undefined = not resident
+}
+
+interface Rasterizer {
+  /**
+   * Rasterize `shape` at ctx.sourceMagIndex. Always the source mag — never
+   * called a second time for another mag (see §5.4).
+   */
+  rasterize(shape: EditIntent, ctx: EditContext, reader: VoxelReader): VoxelWriteSet;
 }
 ```
 
-This is the unit that gets pushed to the Undo/Redo Log and to the Save Queue.
+Responsibilities, in order:
 
-### 4.7 Undo/Redo Log
+1. Compute the candidate voxel set: bucket-align the shape's bounding box at the source mag, clip against `ctx.editableBoundingBox` and the layer bounding box.
+2. Test containment per voxel (distance-to-center for a disk, point-in-polygon for a contour, connectivity for a fill).
+3. Apply the **overwrite predicate**.
 
-Requirement recap: undo must work per-transaction, and must not silently discard concurrent (or your own later) edits to the same voxels — ruling out "restore a full snapshot from before the transaction".
+```ts
+type OverwritePredicate = (voxel: Vector3) => boolean;
 
-**Model: a per-bucket, ordered event log, not a single global stack of inverses.**
-
-- For each bucket, maintain the ordered list of `BucketDiff`s (in transaction order) that have ever touched it, plus an occasional full-content **checkpoint** (see below).
-- The *current* content of a bucket is defined as: take the nearest checkpoint at or before the log's head, then apply each subsequent diff's `newValues` at its `changedIndices`, in order. (In practice we don't recompute this on every read — the live `Bucket` array in the Working Data Cube already holds the folded-forward result — but this definition is what undo/redo operates against conceptually.)
-- **Undo(T):** mark `T` as "skipped" in the log. Recompute only the buckets `T` touched, by starting at their nearest checkpoint and replaying every non-skipped diff in order up to the current head (which naturally includes any transactions that happened after `T`, whether from this user or, in a future collaborative mode, from someone else). Since diffs record explicit `newValues` (last-write-wins per voxel, ordered by transaction sequence), this replay is fully deterministic regardless of what `T` did — there is no "inverse" being computed or applied, only forward folding with one entry removed. This is the forward-only property the requirement asked for.
-- **Redo(T):** unmark `T` as skipped, replay again the same way.
-- Because the replay is scoped to exactly the buckets `T` touched (tracked directly on the `TransactionDiff`), cost is proportional to "buckets touched by T" × "diffs since the last checkpoint for those buckets", not to the whole layer's history.
-- **Checkpoints** exist purely to bound how far back a replay has to go, and to bound memory (old diffs before a checkpoint that nothing can ever undo past can be discarded). A checkpoint is taken periodically per bucket (e.g. every *k* diffs touching it, or when it's about to be evicted from memory and its full log would otherwise need to be persisted) and is just the bucket's folded content at that point, i.e. a normal full-bucket snapshot. Concretely: undo history has a bounded horizon (e.g. "the last 100 actions", matching typical editor UX), which sets *k*.
-- Locally, the undo/redo *stack* the UI exposes (Ctrl+Z / Ctrl+Shift+Z) is just an ordered list of this user's own `TransactionDiff`s; "undo" always targets the most recent non-skipped entry, "redo" the most recently skipped one — that part is unchanged from a conventional editor. What's different is *how* undoing an entry is realized underneath.
-
-This model is deliberately the same shape a future collaborative log would need (a per-key/per-bucket ordered log of writes with last-write-wins folding), so adopting it now avoids a rewrite later — see Section 6.
-
-### 4.8 Save Queue / Backend Sync
-
-`TransactionDiff`s are queued and flushed to the backend periodically (as today), but the wire payload changes from "full bucket snapshot" to "bucket diff":
-
-```
-updateBucketDiff (new update-action kind) {
-  actionTracingId
-  bucketAddress: (x, y, z, mag)
-  changedVoxels: [{ startIndex, values: [...] }, ...]   // run-length grouped, see below
+function makeOverwritePredicate(ctx: EditContext, reader: VoxelReader): OverwritePredicate {
+  if (ctx.overwriteMode === "overwrite-all") return () => true;
+  return (voxel) => (reader.peek(voxel, ctx.sourceMagIndex) ?? 0n) === 0n;
 }
+```
+
+A sketch of the brush case, to make the shape of the work concrete:
+
+```ts
+function rasterizeSweptDisk(
+  shape: Extract<AnalyticShape, { kind: "sweptDisk" }>,
+  ctx: EditContext,
+  reader: VoxelReader,
+): VoxelWriteSet {
+  const out: VoxelWriteSet = new Map();
+  const allowed = makeOverwritePredicate(ctx, reader);
+
+  for (const [a, b] of consecutivePairs(shape.samples)) {
+    // Capsule (swept disk/sphere) from a to b, in source-mag voxel space.
+    const bbox = capsuleBoundingBox(a, b).clipTo(ctx.editableBoundingBox);
+
+    for (const voxel of iterateVoxels(bbox, shape.planeAxis)) {
+      if (distanceToSegment(voxel, a.center, b.center) > lerpRadius(a, b, voxel)) continue;
+      if (!allowed(voxel)) continue;
+      addWrite(out, voxel, ctx, ctx.activeSegmentId);
+    }
+  }
+  return out;
+}
+
+function addWrite(
+  out: VoxelWriteSet, voxel: Vector3, ctx: EditContext, value: SegmentId,
+): void {
+  const address = bucketAddressOf(voxel, ctx.sourceMagIndex, ctx.additionalCoordinates);
+  const key = bucketKey(address);
+  let entry = out.get(key);
+  if (entry == null) { entry = { address, writes: new Map() }; out.set(key, entry); }
+  entry.writes.set(voxelIndexOf(voxel), value);
+}
+```
+
+**The rasterizer runs exactly once per transaction, at the source mag.** Every other mag's content is derived by §5.4, never by re-rasterizing the same geometry at a different resolution. Rasterizing independently per mag would (a) cost N× and (b) produce boundary disagreements — a circle rasterized at mag 1 and a circle rasterized at mag 2 do not agree about their edges, so the pyramid would be internally inconsistent in a way no downsampling rule could repair.
+
+Erasing is not a special case: it is a rasterization with `activeSegmentId = 0n` and `overwriteMode = "overwrite-all"`.
+
+### 5.4 `MagPropagationService`
+
+```ts
+interface MagPropagationService {
+  /** Step A: source mag → finest mag. Pure block replication. */
+  driveDownToFinest(writes: VoxelWriteSet, ctx: EditContext): VoxelWriteSet;
+
+  /** Step B: finest mag → every coarser mag. Any-hit-wins projection. */
+  propagateUp(
+    finestWrites: VoxelWriteSet,
+    ctx: EditContext,
+    reader: VoxelReader,
+  ): VoxelWriteSet;
+}
+```
+
+#### Step A — drive down to the finest mag
+
+A source-mag voxel `q` covers the axis-aligned block of finest-mag voxels `[q · s, (q+1) · s)` where `s = ctx.sourceMag`. Replicate the value across the block:
+
+```ts
+function* driveDown(writes: VoxelWriteSet, s: Mag): Iterable<[Vector3, SegmentId]> {
+  for (const { address, writes: bw } of writes.values()) {
+    for (const [index, value] of bw) {
+      const q = globalVoxelOf(address, index);              // source-mag grid
+      const base: Vector3 = [q[0] * s[0], q[1] * s[1], q[2] * s[2]];
+      for (let dz = 0; dz < s[2]; dz++)
+        for (let dy = 0; dy < s[1]; dy++)
+          for (let dx = 0; dx < s[0]; dx++)
+            yield [[base[0] + dx, base[1] + dy, base[2] + dz], value];
+    }
+  }
+}
+```
+
+This needs no reads and no bucket loads, and it is exact: drawing at a coarse mag *means* producing blocky finest-mag geometry. That is the accepted cost of annotating at low resolution.
+
+**Overwrite mode is evaluated at the source mag only — deliberately.** The predicate already ran in §5.3 against source-mag values; the drive-down writes unconditionally. The consequence is real and should be documented in the UI: in `overwrite-empty-only` mode at mag 4, a coarse voxel that reads as empty may still contain labeled finest-mag voxels, and those get overwritten. The alternative — re-evaluating the predicate per finest-mag voxel — would require the finest-mag buckets to be resident, i.e. it would turn every coarse-mag brush stroke into hundreds of bucket fetches. Evaluating at the source mag is also arguably the better semantics: the user's intent ("don't paint over that segment") is formed from what they can actually see.
+
+**Write amplification is the thing to watch here.** At mag `16-16-16`, each source voxel expands to 4096 finest-mag voxels. A stroke covering ~2000 mag-16 voxels implies ~8.2 M finest-mag voxels spanning ~250 finest-mag buckets. Materializing those as typed arrays would be ~64 MB. We do not: per principle 4, writes are recorded against bucket addresses whether or not the bucket is resident, and per principle 6 the diff for such a bucket run-length-encodes to a handful of kilobytes because it is a solid block fill. Non-resident buckets are never loaded just to be written; when they are later fetched, the backend has already folded the diff in (and any not-yet-saved local diffs are applied on load).
+
+#### Step B — project up into coarser mags
+
+For each coarser mag `m`, a finest-mag voxel `p` belongs to coarse voxel `⌊p / m⌋`. Many finest-mag voxels collapse into one coarse voxel, so a rule is needed:
+
+```ts
+/**
+ * Any-hit-wins: if any newly written finest-mag voxel in the block is non-zero,
+ * the coarse voxel takes that value.
+ */
+function projectUp(
+  finest: Iterable<[Vector3, SegmentId]>,
+  m: Mag, magIndex: MagIndex, ctx: EditContext,
+): VoxelWriteSet {
+  const out: VoxelWriteSet = new Map();
+  for (const [p, value] of finest) {
+    const coarse: Vector3 = [
+      Math.floor(p[0] / m[0]), Math.floor(p[1] / m[1]), Math.floor(p[2] / m[2]),
+    ];
+    if (value !== 0n) {
+      addWrite(out, coarse, { ...ctx, sourceMagIndex: magIndex }, value);
+    } else {
+      markEraseCandidate(out, coarse, magIndex);   // see below
+    }
+  }
+  return out;
+}
+```
+
+Two things about this rule are worth stating explicitly, because they are choices, not consequences:
+
+- **It is a dilation, not a true downsample.** Majority vote (the textbook downsampling rule) would make thin structures disappear entirely at coarse mags — a 1-voxel-wide process annotated at mag 1 would be invisible the moment the user zooms out, which is unacceptable for tracing work. Any-hit-wins keeps it visible. The price is that mag *N* is not exactly `downsample(finest mag)`; it is slightly thicker. This matches what webKnossos does today and should stay.
+- **We propagate the write set, not the bucket.** The natural-sounding alternative — "recompute each affected coarse bucket from its finest-mag children" — is infeasible: a mag-16 bucket covers `512³` finest-mag voxels, i.e. `16·16·16 = 4096` finest-mag buckets. (An earlier draft of this doc claimed a coarse bucket has 8 children; the correct count is the product of the per-axis ratio, so a `2-2-1` bucket has 4 children and a `16-16-16` bucket has 4096.) Propagating the write set touches only the voxels the user actually edited and requires no additional loads.
+
+**Erase is the one asymmetric case.** Clearing a finest-mag voxel should only clear the coarse voxel if *all* finest-mag voxels in its block are now background — which requires reading the siblings. In practice this resolves cleanly:
+
+- Erasing at a coarse mag: the drive-down already zeroed the entire block, so the block is definitionally all-background. Exact, no reads.
+- Erasing at the finest mag: the sibling voxels live in the bucket we just wrote, which is by definition resident. Exact, no fetches.
+- Anything else (siblings not resident): apply optimistically and flag the coarse bucket `needsRederivation`, so it is refetched/recomputed the next time it is needed rather than trusted.
+
+```ts
+interface BucketFlags {
+  /** Coarse-mag content may be stale w.r.t. the finest mag; refetch when needed. */
+  needsRederivation: boolean;
+}
+```
+
+If the layer's finest mag is not mag 1 (some datasets start coarser), "finest mag" means index 0 throughout — nothing else changes.
+
+#### What is authoritative
+
+Only **finest-mag** diffs are authoritative. Coarser-mag diffs produced by Step B are marked `derived: true`; they exist so the user sees a consistent pyramid immediately, and they are *not* replayed by undo (§5.7) — after an undo the affected coarse buckets are re-derived from the finest mag instead. This avoids a subtle inconsistency: folding a coarse bucket's diff log with one entry skipped does not generally equal projecting the resulting finest-mag content, because any-hit-wins is not invertible.
+
+Whether derived diffs are *sent to the backend* is a deployment choice:
+
+- **Recommended:** send only finest-mag diffs; let the backend derive coarser mags authoritatively (it has all the data and does not have to guess about residency). Smallest payload, no client/server drift by construction.
+- **Fallback:** send all mags' diffs, as today. No backend change to the downsampling path, but the client's approximation becomes what is persisted.
+
+### 5.5 `WorkingDataCube`
+
+Unchanged in spirit from today: one `32³` typed array per resident `(bucketPosition, magIndex, additionalCoordinates)`, lazily fetched, evicted under memory pressure, feeding GPU textures directly.
+
+```ts
+interface WorkingDataCube extends VoxelReader {
+  isResident(address: BucketAddress): boolean;
+  /** Never triggers a fetch. Returns undefined if not resident. */
+  getResident(address: BucketAddress): BigUint64Array | undefined;
+  applyWrites(address: BucketAddress, writes: BucketWrites): void;
+  markDirtyForGpu(address: BucketAddress): void;
+}
+```
+
+Two constraints the new model adds:
+
+- **Eviction must respect pending state.** A bucket with unsaved diffs, or whose diff log is still needed by the undo horizon, cannot simply be dropped. Either keep it, or persist its log (checkpoint + entries) alongside the eviction — the log, not the array, is the thing that must survive.
+- **Load must fold pending local diffs.** A bucket fetched from the backend may predate diffs this client has recorded but not yet saved. On load, apply the pending entries from its log before handing the array to the GPU.
+
+### 5.6 Diff types
+
+```ts
+/** A run of consecutive voxel indices. `values` is a single SegmentId when the
+ *  run is constant (the common case for painting), otherwise one per voxel. */
+interface VoxelRun {
+  start: VoxelIndex;
+  length: number;
+  values: SegmentId | BigUint64Array;
+}
+
+interface BucketDiff {
+  address: BucketAddress;
+  runs: VoxelRun[];
+  /** true for coarse-mag diffs produced by mag propagation (§5.4). */
+  derived: boolean;
+  /** Pre-transaction values, if known. Optional — see §5.7. */
+  before?: VoxelRun[];
+}
+
+interface TransactionDiff {
+  id: TransactionId;
+  layerId: string;
+  /** Monotonic per client. Becomes the merge key in collaborative mode (§7). */
+  sequence: number;
+  timestamp: number;
+  toolName: string;                       // diagnostics only, not load-bearing
+  bucketDiffs: BucketDiff[];
+  /**
+   * Non-voxel changes belonging to the same interaction: a newly created
+   * segment, largestSegmentId bumps, mapping locking, etc. Carried here so that
+   * "one interaction = one transaction" holds for the whole annotation state,
+   * not just for voxels — and so undo restores them together.
+   */
+  sideEffects: UpdateAction[];
+}
+```
+
+Building the diff from the write map is a straightforward grouping pass:
+
+```ts
+function toRuns(writes: BucketWrites): VoxelRun[] {
+  const indices = [...writes.keys()].sort((a, b) => a - b);
+  const runs: VoxelRun[] = [];
+  let i = 0;
+  while (i < indices.length) {
+    const start = indices[i];
+    let length = 1;
+    while (i + length < indices.length && indices[i + length] === start + length) length++;
+    const slice = indices.slice(i, i + length).map((ix) => writes.get(ix)!);
+    const constant = slice.every((v) => v === slice[0]);
+    runs.push({ start, length, values: constant ? slice[0] : BigUint64Array.from(slice) });
+    i += length;
+  }
+  return runs;
+}
+```
+
+No-op writes (`newValue === oldValue`, knowable for resident buckets) are dropped before this step, so a stroke that repaints voxels already carrying the active segment ID produces no diff at all for those voxels.
+
+### 5.7 Undo/Redo Log
+
+Requirement: per-transaction undo that does not discard edits that happened afterwards — which rules out "restore the bucket snapshot from before the transaction".
+
+**Model: a per-bucket ordered event log, not a global stack of inverses.**
+
+```ts
+interface BucketLogEntry {
+  sequence: number;
+  transactionId: TransactionId;
+  runs: VoxelRun[];
+  skipped: boolean;              // set by undo, cleared by redo
+}
+
+interface BucketLog {
+  /** Folded content at `checkpoint.sequence`; bounds how far replay must go. */
+  checkpoint: { sequence: number; data: BigUint64Array } | null;
+  entries: BucketLogEntry[];     // ascending by sequence
+}
+
+interface UndoLog {
+  append(diff: TransactionDiff): void;
+  undo(id: TransactionId): void;
+  redo(id: TransactionId): void;
+}
+```
+
+A bucket's content is *defined* as: nearest checkpoint, then apply every non-skipped entry's runs in sequence order. The live typed array is a cached fold of exactly this.
+
+```ts
+function rebuild(log: BucketLog): BigUint64Array {
+  const data = log.checkpoint
+    ? log.checkpoint.data.slice()
+    : new BigUint64Array(BUCKET_VOXEL_COUNT);   // or the fetched backend state
+  for (const entry of log.entries) {
+    if (entry.skipped) continue;
+    for (const run of entry.runs) applyRun(data, run);
+  }
+  return data;
+}
+```
+
+**Undo(T):** mark T's entries `skipped` in each bucket log it touched, then `rebuild` those buckets. Entries *after* T — whether this user's or, later, a collaborator's — are replayed normally, so their effects survive. There is no inverse being computed and applied; only forward folding with one entry removed. **Redo(T):** clear the flag, rebuild again.
+
+Then re-derive the coarse mags for the affected region (§5.4), rather than replaying the `derived: true` diffs, for the reason given at the end of §5.4. And revert `sideEffects` through the normal update-action mechanism.
+
+**Correction to an earlier draft:** that draft claimed `oldValues` are "what makes forward-only undo possible". They are not — forward replay never reads them. They are optional, and worth keeping for three narrower reasons:
+
+1. **Fast-path undo.** If T is the newest transaction touching a bucket, undo is just "write `before` back", which is O(voxels changed) instead of a checkpoint replay. This is the overwhelmingly common case in single-user editing, so the fast path carries almost all real traffic.
+2. **`abort()`** (Escape during a stroke) uses them.
+3. **Conflict detection** later: comparing a remote diff's `before` against local state reveals concurrent edits to the same voxels, which is what a merge policy needs.
+
+They are never sent to the backend — the backend's version history already reconstructs prior state for its own purposes.
+
+**Cost.** Replay is scoped to exactly the buckets T touched (recorded on the `TransactionDiff`) and to the entries since their checkpoints — not to the layer's whole history.
+
+**Checkpoints** exist only to bound replay length and memory. Take one per bucket every *k* entries, and when a bucket is about to be evicted with a long log. Entries older than the undo horizon (e.g. the last 100 user actions, matching normal editor UX) can be folded into the checkpoint and dropped. *k* on the order of 20–50 is a reasonable starting point; see §9.
+
+The UI-level undo stack is unchanged from a conventional editor: an ordered list of this client's `TransactionDiff`s, with `undo` targeting the newest non-skipped one. Only the *realization* of an undo differs.
+
+### 5.8 Save Queue / Backend Sync
+
+`TransactionDiff`s are queued and flushed with the same debounce-and-batch behaviour as today's push queue; what changes is the payload — a diff instead of a whole bucket.
+
+```ts
+interface UpdateBucketDiffAction {
+  name: "updateBucketDiff";
+  value: {
+    actionTracingId: string;
+    position: Vector3;                       // bucket position
+    mag: Vector3;
+    additionalCoordinates: AdditionalCoordinate[] | null;
+    /** base64 of the binary run encoding below. */
+    runs: string;
+  };
+}
+
+/**
+ * Binary run encoding, little-endian:
+ *   uint32  runCount
+ *   repeat runCount times:
+ *     uint32  startIndex        // flat voxel index within the 32³ bucket
+ *     uint32  length | CONST_FLAG
+ *     if CONST_FLAG: uint64 value          (one value for the whole run)
+ *     else:          uint64 value × length
+ */
+const CONST_FLAG = 0x8000_0000;
 ```
 
 Encoding notes:
-- `changedIndices` are grouped into runs (`startIndex, length`) before serialization — brush and trace edits produce spatially clustered, often-contiguous changes in flat bucket order, so this is typically a large size reduction over a flat index list, on top of whichever general-purpose compression (e.g. gzip) the transport already applies.
-- One `updateBucketDiff` action per touched bucket; all actions from one `TransactionDiff` are submitted together as one versioned update group — this is what gives the backend (and, later, other clients) "one transaction = one atomic bundle of diffs" rather than having to infer grouping after the fact.
-- `oldValues` are **not** sent to the backend — the backend's own version history already lets it reconstruct "before" for its own audit/versioning needs; sending it would be redundant. `oldValues` only need to exist client-side, for local undo.
-- This does require a backend-side change (accepting/storing per-bucket diffs and folding them into the bucket's authoritative content, instead of overwriting wholesale) — out of scope for this doc, but it's the necessary counterpart, and is what unlocks future multi-user diff composition instead of last-writer-wins-on-the-whole-bucket.
 
-## 5. Walkthrough: brush stroke, drawn at mag 1
+- **Runs are runs along x**, because the flat index is `x + y·32 + z·1024`. A brush stroke in an XY viewport therefore run-encodes very well; the same stroke in a YZ viewport (x constant) degenerates to length-1 runs. Worth knowing before over-claiming the win — but the `CONST_FLAG` path still saves the per-voxel value bytes in both cases, and general-purpose compression on the transport handles the rest.
+- **Block fills encode very compactly**, which is what makes coarse-mag editing viable: the drive-down of one mag-16 voxel into a finest-mag bucket is a solid `16×16×16` block, i.e. 256 constant runs of length 16 — about 4 KB before compression, versus 256 KB for the full bucket.
+- **One action per touched bucket; one versioned group per transaction.** This gives the backend (and later, other clients) the transaction boundary explicitly instead of making it infer grouping from timing.
+- **Ordering and idempotency.** Transactions are submitted in `sequence` order and are idempotent on retry, so a reconnect can safely resend the tail of the queue.
+- **Backend counterpart.** This requires the tracingstore to accept per-bucket diffs and fold them into the bucket's authoritative content rather than overwriting wholesale. That is the change that actually unlocks multi-user diff composition; without it, two users' concurrent edits to one bucket still resolve as last-writer-wins over the entire bucket.
 
-1. Pointer-down on the brush tool. A new transaction opens; an empty Edit Buffer is created for it.
-2. On each pointer-move, the tool appends a `{center, radius}` sample (in mag-1 nm coordinates) to the buffer and immediately asks the **Rasterizer** to rasterize just the incremental swept region (previous center → new center) at the current mag (mag 1 here). The Rasterizer walks candidate voxels, checks sphere/disk containment, checks the overwrite-mode filter against the Working Data Cube's current values, and returns a `VoxelWriteSet`.
-3. The **Mag Propagation Service** takes that `VoxelWriteSet`. Since the source mag is mag 1, Step A (drive down to mag 1) is a no-op. Step B recomputes every coarser-mag bucket overlapping the edited region from its mag-1 children (fetching any not-yet-loaded sibling children as needed) and writes the result into those buckets in the Working Data Cube too.
-4. The Working Data Cube's buckets (mag 1 and all coarser mags touched) are updated in place; the GPU textures for currently-visible buckets are refreshed, so the user sees the stroke and its effect on other zoomed-out views immediately.
-5. This repeats on every pointer-move; the Diff Engine's pre-transaction snapshots (taken lazily on first touch per bucket, once for the whole transaction) are untouched by the repetition — only the "after" state keeps changing.
-6. Pointer-up ends the transaction. The Diff Engine diffs every touched bucket's snapshot against its now-final content, producing one `BucketDiff` each, bundled into a `TransactionDiff`.
-7. The `TransactionDiff` is pushed onto the local undo stack, and enqueued in the Save Queue, which encodes each `BucketDiff` (run-length grouped) and flushes it (batched with other pending transactions, as today) as one versioned group of `updateBucketDiff` actions.
+---
 
-Drawing at mag 4 instead only changes step 3: Step A now does real work (replicating each written mag-4 voxel into its `4×4×4`, or whatever the mag's factor is, block of mag-1 voxels) before Step B runs unchanged.
+## 6. Worked Examples
 
-## 6. Relationship to Future Collaborative Editing
+### 6.1 Brush stroke at the finest mag
 
-This design doesn't implement multi-user concurrent editing, but is shaped so that adding it later doesn't require re-architecting:
+1. **Pointer-down.** `VolumeTransaction` opens with an `EditContext` snapshotting the active segment ID, overwrite mode, source mag and additional coordinates. An empty `sweptDisk` intent is created.
+2. **Pointer-move.** The tool appends a `{center, radius}` sample. Only the *incremental* capsule (previous center → new center) is rasterized, at the source mag. The rasterizer applies the overwrite predicate and returns a `VoxelWriteSet`.
+3. **Record + display.** `transaction.recordAll(writeSet)` merges it into the write map and writes through to resident buckets; their GPU textures are refreshed. The user sees the stroke immediately.
+4. Steps 2–3 repeat. Overlapping samples coalesce in the write map at no cost.
+5. **Pointer-up → commit.** Mag propagation runs *once*, over the whole accumulated write map: Step A is a no-op (already at the finest mag); Step B projects into every coarser mag and those writes are applied to resident coarse buckets too.
+6. The write map becomes a `TransactionDiff` (no-ops dropped, runs grouped), appended to the undo log and enqueued for save.
 
-- Diffs are already the unit of truth, not snapshots (Section 2), so a remote peer's diff and a local diff are the same kind of object.
-- The per-bucket event log (4.7) with last-write-wins-by-sequence folding is already the right data structure for merging local and remote diffs — a remote `TransactionDiff` arriving is handled exactly like replaying a diff during undo/redo: insert it into the affected buckets' logs at the correct sequence position and re-fold.
-- The one open problem this doc deliberately leaves for later is establishing a total order across *different users'* transactions (today, "transaction sequence" is trivially just local chronological order for a single user). That needs either a server-assigned sequence number per bucket (simple, requires a round-trip) or a CRDT-style logical clock (no round-trip, more complexity). The `BucketDiff` format above already has room for a `baseVersion`/logical-clock field to be added without breaking the model.
+Note this is a change from the earlier draft, which ran mag propagation on *every pointer-move*. Deferring it to commit is both cheaper (one pass over the coalesced write set instead of one per sample) and simpler. The cost is that a second viewport showing a coarser mag lags until pointer-up; if that turns out to matter, propagate to *visible* mags only on a throttle during the stroke, and do the full pyramid at commit.
 
-## 7. Open Questions / Tradeoffs
+### 6.2 Brush stroke at mag 16
 
-- **Fill tool and unloaded data.** Flood fill needs the whole connected region loaded to produce a correct result; drawing at a mag where the relevant neighborhood spans many not-yet-loaded buckets means either blocking on fetches or accepting a partial fill. Needs a UX decision (spinner + progressive fill vs. hard requirement to pre-load).
-- **Mag propagation cost for very large strokes.** Step B's bucket recomputation is bounded by the edited bounding box, but a big brush at mag 1 with many coarser mags can still touch a lot of buckets. Likely fine in practice (same order of magnitude as today's "affected bucket" set), but worth profiling.
-- **Checkpoint interval tuning.** Too frequent → memory/storage overhead; too infrequent → expensive undo replay and slow eviction. Needs empirical tuning once implemented; can start conservative (e.g. checkpoint every 50 diffs per bucket) and adjust.
-- **Where does the Rasterizer run?** It's a pure function of (shape, mag, working cube slice), which makes it a reasonable candidate for a Web Worker to keep the main thread free during large strokes. Not required for correctness, called out as a later perf option.
+Identical, except at commit:
+
+- Step A expands ~2000 mag-16 voxels into ~8.2 M finest-mag voxels across ~250 finest-mag buckets. Almost none of those buckets are resident (the user is zoomed out); no fetches are triggered. Their writes live only in the write map and then in the diff, run-encoded as block fills.
+- Step B projects those finest-mag writes into mags 1…N. The mag-16 buckets the user is actually looking at were already updated live in step 3, and Step B's projection agrees with them (both derive from the same writes), so there is no visible re-flicker.
+- The save payload is a few hundred `updateBucketDiff` actions of a few KB each — not 64 MB of bucket data.
+
+### 6.3 Undo with an intervening transaction
+
+The user paints stroke `T1` (segment 5) over a region, then stroke `T2` (segment 7) partially overlapping it, then presses Ctrl+Z.
+
+- `T2` is the newest transaction on every bucket it touched → **fast path**: write `T2.before` back. Done, O(voxels in T2).
+- Had the user instead undone `T1` (via a history panel), the slow path runs: mark `T1`'s entries skipped in each affected bucket log, rebuild from the nearest checkpoint replaying `T2` but not `T1`. Voxels that `T2` painted stay segment 7; voxels only `T1` touched revert to their pre-`T1` value. Under the old snapshot-restore model, `T2`'s overlapping work would have been silently destroyed.
+- Affected coarse mags are re-derived from the rebuilt finest-mag content.
+
+---
+
+## 7. Toward Collaborative Editing
+
+Not implemented here, but the shape is deliberately compatible:
+
+- Diffs, not snapshots, are the unit of truth, so a remote peer's diff and a local one are the same object.
+- The per-bucket ordered log with last-write-wins folding is already the merge structure. A remote `TransactionDiff` is handled exactly like an undo replay: insert its entries at the right sequence position in the affected bucket logs and re-fold.
+- `TransactionDiff.sequence` is today just local chronological order. Making it a *total* order across users needs either server-assigned sequence numbers (simple, costs a round-trip) or a logical clock (no round-trip, more complexity). Either slots into the existing `sequence` field without changing the model.
+- `BucketDiff.before` becomes useful here: comparing it against local state detects genuine conflicts rather than assuming last-writer-wins is always acceptable.
+- Undo becomes "skip *my* transaction, keep everyone else's", which is exactly what the forward-replay model already does.
+
+---
+
+## 8. Rejected Alternatives
+
+| Alternative | Why not |
+|---|---|
+| Send full bucket snapshots (today's model) | Simple, but two users' edits to one bucket can only resolve as last-writer-wins over the whole bucket. Blocks requirement 3. |
+| Undo as a stack of inverse diffs applied to live state | Correct only if nothing else touched those voxels in between. Breaks under collaboration and even under some local redo orderings. |
+| Undo as full-bucket snapshot restore | Same problem, worse: silently reverts *all* later edits to the bucket, not just the undone ones. |
+| Rasterize the shape independently at each mag | N× the work, and the per-mag results disagree at boundaries, leaving the pyramid inconsistent in a way no downsampling can fix. |
+| Recompute each coarse bucket from its finest-mag children | Infeasible: a mag-16 bucket has 4096 finest-mag children. Propagate the *write set* instead. |
+| Majority-vote downsampling into coarse mags | Thin structures vanish when zooming out. Any-hit-wins keeps them visible; the resulting slight dilation is the accepted price. |
+| Keep diffs at their authoring mag, never normalize | No single source of truth; reading mag *k* requires folding diffs authored at every other mag, with ill-defined ordering between them. |
+| Snapshot-then-diff per bucket instead of a write map | Cannot represent writes to non-resident buckets, and costs O(bucket) per touched bucket even for a 5-voxel edit. |
+
+---
+
+## 9. Open Questions
+
+- **Flood fill and unloaded data.** Fill needs the connected region resident to be correct. Options: block on fetches with a progress indicator, fill progressively as buckets arrive, or bound the fill to a region and refuse beyond it. Needs a UX decision — this is the one tool where "diffs for non-resident buckets" does not save us, because the *region itself* depends on data we do not have.
+- **Interaction with mappings / agglomerates.** Proofreading edits operate on mapped IDs, and `EditContext.activeSegmentId` is then an agglomerate ID rather than a stored one. Where the mapping is resolved (before rasterization? at apply time?) is unresolved and deserves its own section.
+- **Checkpoint interval *k*.** Too small → memory and storage overhead; too large → slow replay and slow eviction. Start around 20–50 entries per bucket and tune empirically. Interacts with the undo horizon.
+- **Where does the rasterizer run?** It is a pure function of `(intent, context, reader)`, which makes it a good Web Worker candidate for large strokes. Not needed for correctness; the blocker is giving a worker a cheap read view of resident buckets (`SharedArrayBuffer`, probably).
+- **Client/server drift in coarse mags** if the "send only finest-mag diffs" option is chosen: the client's any-hit-wins approximation and the backend's derivation must agree, or coarse mags visibly change on reload. Either pin both to the same rule, or accept the drift (today's implementation already has this property).
+- **Undo across a reload.** The log is currently in-memory. Persisting it (IndexedDB) would let undo survive a refresh, but raises the question of what "undo" means once the backend has already accepted the transaction. Probably out of scope, but worth deciding explicitly rather than by omission.

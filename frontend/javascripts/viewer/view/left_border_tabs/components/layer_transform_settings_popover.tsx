@@ -423,6 +423,7 @@ export function LayerTransformSettingsContent({
           inputMin={MIN_SCALE}
           step={SCALE_INPUT_STEP}
           onChange={(v) => updateScaleMagnitude(i as 0 | 1 | 2, v)}
+          onCommit={(v) => updateScaleMagnitude(i as 0 | 1 | 2, Math.max(MIN_SCALE, Math.abs(v)))}
           sliderNode={
             <RelativeSlider
               value={Math.abs(scale[i])}

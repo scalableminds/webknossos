@@ -1,5 +1,5 @@
 import ErrorHandling from "libs/error_handling";
-import { castForArrayType, mod } from "libs/utils";
+import { castForArrayType, mod, sleep } from "libs/utils";
 import window from "libs/window";
 import noop from "lodash-es/noop";
 import throttle from "lodash-es/throttle";
@@ -30,6 +30,11 @@ export enum BucketStateEnum {
 export type BucketStateEnumType = keyof typeof BucketStateEnum;
 
 const WARNING_THROTTLE_THRESHOLD = 10000;
+
+// Number of additional attempts ensureLoaded() makes to load a bucket after its request
+// failed (e.g. due to a backend error, a network error or an aborted request caused by a
+// concurrent reload), before giving up and throwing an error.
+const DEFAULT_ENSURE_LOADED_RETRY_COUNT = 3;
 
 const warnMergeWithoutPendingOperations = throttle(() => {
   ErrorHandling.notify(
@@ -838,28 +843,52 @@ export class DataBucket {
     }
   };
 
-  async ensureLoaded(): Promise<void> {
-    let needsToAwaitBucket = false;
+  async ensureLoaded(maxRetries: number = DEFAULT_ENSURE_LOADED_RETRY_COUNT): Promise<void> {
+    const ensureLoadedInner = async (currentRetryCount: number) => {
+      let needsToAwaitBucket = false;
 
-    if (this.isRequested()) {
-      needsToAwaitBucket = true;
-    } else if (this.needsRequest()) {
-      this.addToPullQueueWithHighestPriority();
-      this.cube.pullQueue.pull();
-      needsToAwaitBucket = true;
-    } else if (this.isMissing()) {
-      // Awaiting is not necessary.
-    }
+      if (this.isRequested()) {
+        needsToAwaitBucket = true;
+      } else if (this.needsRequest()) {
+        this.addToPullQueueWithHighestPriority();
+        this.cube.pullQueue.pull();
+        needsToAwaitBucket = true;
+      } else if (this.isMissing()) {
+        // Awaiting is not necessary.
+      }
 
-    if (needsToAwaitBucket) {
-      await new Promise((resolve) => {
-        this.once("bucketLoaded", resolve);
-        this.once("bucketMissing", resolve);
-        // Treat failure like missing to not block callers waiting for ensureLoaded to resolve
-        // as a failure not necessarily auto re-requests the bucket from the backend.
-        this.once("bucketRequestFailed", resolve);
-      });
-    }
+      if (needsToAwaitBucket) {
+        const didRequestFail = await new Promise<boolean>((resolve) => {
+          const unbindFunctions: (() => void)[] = [];
+          const clearAndResolve = (success: boolean) => {
+            unbindFunctions.forEach((fn) => {
+              fn();
+            });
+            resolve(success);
+          };
+          unbindFunctions.push(this.once("bucketLoaded", () => clearAndResolve(false)));
+          unbindFunctions.push(this.once("bucketMissing", () => clearAndResolve(false)));
+          unbindFunctions.push(this.once("bucketRequestFailed", () => clearAndResolve(true)));
+        });
+
+        if (didRequestFail) {
+          // The request failed. This covers a backend failure, a network error and a request
+          // that was aborted (e.g. because a concurrent reload called pullQueue.abortRequests()).
+          // Thus, we should retry now.
+          if (currentRetryCount >= maxRetries) {
+            throw new Error(
+              `Bucket ${this.zoomedAddress.join(",")} could not be loaded after ${maxRetries} retries.`,
+            );
+          }
+          const nextRetryCount = currentRetryCount + 1;
+          // Exponential backoff before retry: 400ms -> 800ms -> 1600ms.
+          await sleep(2 ** nextRetryCount * 200);
+          await ensureLoadedInner(nextRetryCount);
+          return;
+        }
+      }
+    };
+    await ensureLoadedInner(0);
 
     // Bucket has been loaded by now or was loaded already
     if (this.isMissing()) {

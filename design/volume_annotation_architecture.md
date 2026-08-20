@@ -30,7 +30,7 @@ Code in this document is illustrative TypeScript — signatures and sketches mea
 
 The four questions this doc was written to answer:
 
-**What happens when a user draws?** A tool converts pointer input into a declarative *edit intent* (a swept disk, a polygon, a flood-fill spec). A single `VolumeTransaction` is opened on pointer-down and stays open until pointer-up. On each pointer-move the intent grows, the incremental part is rasterized at the mag the user is looking at, and the resulting voxel writes are recorded into the transaction (and applied to resident buckets so the user sees them immediately). On pointer-up the transaction commits: mag propagation runs, the accumulated write map becomes a set of per-bucket diffs, and those go to the undo log and the save queue.
+**What happens when a user draws?** A tool converts pointer input into a declarative *edit intent* (a brush stroke, a polygon, a flood-fill spec). A single `VolumeTransaction` is opened on pointer-down and stays open until pointer-up. On each pointer-move the intent grows, the incremental part is rasterized at the mag the user is looking at, and the resulting voxel writes are recorded into the transaction (and applied to resident buckets so the user sees them immediately). On pointer-up the transaction commits: mag propagation runs, the accumulated write map becomes a set of per-bucket diffs, and those go to the undo log and the save queue.
 
 **Who draws the circular brush into the data?** A single `Rasterizer` — the one component that knows how to turn geometry into voxel indices. Tools never touch buckets; buckets never know about brushes. The Rasterizer also owns the overwrite-mode filter, because that filter is a per-voxel decision made against current data, which is exactly its job.
 
@@ -172,9 +172,11 @@ type EditIntent = AnalyticShape | DataDependentShape;
 
 /** Fully determined by geometry — no voxel reads needed to know the region. */
 type AnalyticShape =
-  | { kind: "sweptDisk";
-      /** Path samples in source-mag voxel coordinates (floats). */
-      samples: Array<{ center: Vector3; radius: number }>;
+  | { kind: "brush";
+      /** Pointer path in source-mag voxel coordinates (floats). */
+      path: Vector3[];
+      /** Constant for the whole stroke — brush size cannot change mid-stroke. */
+      radius: number;
       /** null => 3D sphere brush; otherwise paint one slice along this axis. */
       planeAxis: 0 | 1 | 2 | null }
   | { kind: "polygon"; vertices: Vector3[]; planeAxis: 0 | 1 | 2 }
@@ -188,7 +190,7 @@ type DataDependentShape =
   | { kind: "mask"; origin: Vector3; size: Vector3; bits: Uint8Array };
 ```
 
-The split matters. Analytic shapes really are mag-independent — the same swept disk rasterized at mag 1 and mag 4 describes the same physical region. Data-dependent shapes are **not**: a flood fill seeded at the same point yields a different region at mag 1 than at mag 4, because connectivity is evaluated on different data. So `EditIntent` coordinates are expressed in *source-mag* voxel space and `sourceMagIndex` is part of the intent's meaning, not an incidental detail. (The earlier framing of "all intents are mag-1-space geometry" was wrong for this half of the tools.)
+The split matters. Analytic shapes really are mag-independent — the same brush stroke rasterized at mag 1 and mag 4 describes the same physical region. Data-dependent shapes are **not**: a flood fill seeded at the same point yields a different region at mag 1 than at mag 4, because connectivity is evaluated on different data. So `EditIntent` coordinates are expressed in *source-mag* voxel space and `sourceMagIndex` is part of the intent's meaning, not an incidental detail. (The earlier framing of "all intents are mag-1-space geometry" was wrong for this half of the tools.)
 
 Adding a tool means adding an `EditIntent` variant and a rasterization case — nothing else in the system changes.
 
@@ -274,19 +276,19 @@ A sketch of the brush case, to make the shape of the work concrete:
 
 ```ts
 function rasterizeSweptDisk(
-  shape: Extract<AnalyticShape, { kind: "sweptDisk" }>,
+  shape: Extract<AnalyticShape, { kind: "brush" }>,
   ctx: EditContext,
   reader: VoxelReader,
 ): VoxelWriteSet {
   const out: VoxelWriteSet = new Map();
   const allowed = makeOverwritePredicate(ctx, reader);
 
-  for (const [a, b] of consecutivePairs(shape.samples)) {
-    // Capsule (swept disk/sphere) from a to b, in source-mag voxel space.
-    const bbox = capsuleBoundingBox(a, b).clipTo(ctx.editableBoundingBox);
+  for (const [a, b] of consecutivePairs(shape.path)) {
+    // Capsule: everything within `radius` of the segment a→b, in source-mag space.
+    const bbox = capsuleBoundingBox(a, b, shape.radius).clipTo(ctx.editableBoundingBox);
 
     for (const voxel of iterateVoxels(bbox, shape.planeAxis)) {
-      if (distanceToSegment(voxel, a.center, b.center) > lerpRadius(a, b, voxel)) continue;
+      if (distanceToSegment(voxel, a, b) > shape.radius) continue;
       if (!allowed(voxel)) continue;
       addWrite(out, voxel, ctx, ctx.activeSegmentId);
     }
@@ -589,8 +591,8 @@ Encoding notes:
 
 ### 6.1 Brush stroke at the finest mag
 
-1. **Pointer-down.** `VolumeTransaction` opens with an `EditContext` snapshotting the active segment ID, overwrite mode, source mag and additional coordinates. An empty `sweptDisk` intent is created.
-2. **Pointer-move.** The tool appends a `{center, radius}` sample. Only the *incremental* capsule (previous center → new center) is rasterized, at the source mag. The rasterizer applies the overwrite predicate and returns a `VoxelWriteSet`.
+1. **Pointer-down.** `VolumeTransaction` opens with an `EditContext` snapshotting the active segment ID, overwrite mode, source mag and additional coordinates. An empty `brush` intent is created, with the brush radius fixed for the stroke.
+2. **Pointer-move.** The tool appends a point to the path. Only the *incremental* capsule (previous point → new point) is rasterized, at the source mag. The rasterizer applies the overwrite predicate and returns a `VoxelWriteSet`.
 3. **Record + display.** `transaction.recordAll(writeSet)` merges it into the write map and writes through to resident buckets; their GPU textures are refreshed. The user sees the stroke immediately.
 4. Steps 2–3 repeat. Overlapping samples coalesce in the write map at no cost.
 5. **Pointer-up → commit.** Mag propagation runs *once*, over the whole accumulated write map: Step A is a no-op (already at the finest mag); Step B projects into every coarser mag and those writes are applied to resident coarse buckets too.

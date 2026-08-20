@@ -884,7 +884,7 @@ export function hasAgglomerateMapping(state: WebknossosState) {
     return AGGLOMERATE_STATES.NO_MAPPING;
   }
 
-  if (mappingType !== "HDF5") {
+  if (mappingType !== "AGGLOMERATE") {
     return AGGLOMERATE_STATES.NO_AGGLOMERATE_FILE_ACTIVE;
   }
 

@@ -276,22 +276,30 @@ describe("Volume Tracing", () => {
     await dispatchUndoAsync(Store.dispatch);
     await dispatchUndoAsync(Store.dispatch);
     await assertInitialState();
+    const pendingReloads = [];
+    // Note that the reloads below are deliberately *not* awaited, because the point of this
+    // part of the test is that undo/redo and the reads in the assertions interleave with a
+    // reload (i.e. buckets are discarded while they are being loaded).
+    // Awaiting them would additionally make the assertions unsatisfiable: an awaited reload
+    // saves the annotation and then discards all buckets, and the mocked datastore always
+    // responds with zeros (see createBucketResponseFunction above) instead of the saved data.
     // Reload all buckets, "redo" and assert flood-filled state
-    api.data.reloadAllBuckets();
+    pendingReloads.push(api.data.reloadAllBuckets());
     await dispatchRedoAsync(Store.dispatch);
     await assertFloodFilledState();
-    // Reload all buckets, "undo" and assert flood-filled state
-    api.data.reloadAllBuckets();
+    // Reload all buckets, "undo" and assert initial state
+    pendingReloads.push(api.data.reloadAllBuckets());
     await dispatchUndoAsync(Store.dispatch);
     await assertInitialState();
     // "Redo", reload all buckets and assert flood-filled state
     await dispatchRedoAsync(Store.dispatch);
-    api.data.reloadAllBuckets();
+    pendingReloads.push(api.data.reloadAllBuckets());
     await assertFloodFilledState();
-    // "Undo", reload all buckets and assert flood-filled state
+    // "Undo", reload all buckets and assert initial state
     await dispatchUndoAsync(Store.dispatch);
-    api.data.reloadAllBuckets();
+    pendingReloads.push(api.data.reloadAllBuckets());
     await assertInitialState();
+    await Promise.all(pendingReloads);
   });
 
   it<WebknossosTestContext>("Brushing/Tracing with a new segment id should update the bucket data", async ({

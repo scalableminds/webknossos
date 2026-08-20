@@ -1,5 +1,6 @@
 import { adaptViewConfigurationToDataset } from "dashboard/advanced_dataset/apply_view_configuration";
 import type { APIDatasetCompact } from "types/api_types";
+import { BLEND_MODES } from "viewer/constants";
 import type { DatasetConfiguration, DatasetLayerConfiguration } from "viewer/store";
 import { describe, expect, it } from "vitest";
 
@@ -22,11 +23,15 @@ function makeLayerConfiguration(alpha: number): DatasetLayerConfiguration {
 
 const SOURCE_DATASET = makeDataset("source", ["color", "extraColor"], ["segmentation"]);
 
-const SOURCE_CONFIGURATION = {
+const SOURCE_CONFIGURATION: DatasetConfiguration = {
   fourBit: true,
   interpolation: true,
   position: [1, 2, 3],
   zoom: 4,
+  renderMissingDataBlack: true,
+  loadingStrategy: "BEST_QUALITY_FIRST",
+  segmentationPatternOpacity: 60,
+  blendMode: BLEND_MODES.Cover,
   layers: {
     color: makeLayerConfiguration(50),
     extraColor: makeLayerConfiguration(60),
@@ -34,7 +39,7 @@ const SOURCE_CONFIGURATION = {
   },
   colorLayerOrder: ["extraColor", "color"],
   nativelyRenderedLayerName: "extraColor",
-} as unknown as DatasetConfiguration;
+};
 
 describe("adaptViewConfigurationToDataset", () => {
   it("should copy the whole configuration if the layers match", () => {

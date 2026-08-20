@@ -382,7 +382,6 @@ export function InviteUsersModal({
           setSelectedPermission={setSelectedPermission}
           userIsAdmin={true}
           onlyEditingSingleUser={true}
-          renderSubtitlesWithDivider={true}
         />
       </Fragment>
     );

@@ -146,7 +146,7 @@ function AcceptTermsOfServiceModal({
       title="Terms of Services"
       closable={!acceptanceInfo.acceptanceDeadlinePassed}
       onCancel={acceptanceInfo.acceptanceDeadlinePassed ? noop : closeModal}
-      width={ModalWidth.Large}
+      width={ModalWidth.ExtraLarge}
       mask={{ closable: false }}
       footer={[
         <OrganizationSwitchMenu

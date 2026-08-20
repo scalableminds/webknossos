@@ -243,8 +243,7 @@ function ExperienceModalView({
       onCancel={onCancel}
       onOk={updateAllUsers}
       okText={"Save"}
-      width={multipleUsers ? ModalWidth.Large : ModalWidth.Medium}
-      mask={{ closable: false }}
+      width={ModalWidth.Large}
     >
       <Table
         size="small"

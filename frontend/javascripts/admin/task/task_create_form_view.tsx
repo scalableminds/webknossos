@@ -14,7 +14,6 @@ import {
   Button,
   Col,
   Divider,
-  Flex,
   Form,
   Input,
   InputNumber,
@@ -22,6 +21,7 @@ import {
   type RadioChangeEvent,
   Row,
   Select,
+  Space,
   Spin,
   Tooltip,
   Typography,
@@ -211,6 +211,16 @@ export function handleTaskCreationResponse(
     </Button>
   );
 
+  const downloadSuccessfulTasksButton = (
+    <Button
+      onClick={() => downloadTasksAsCSV(successfulTasks)}
+      type="primary"
+      icon={<DownloadOutlined />}
+    >
+      Download task info as CSV
+    </Button>
+  );
+
   modal.info({
     title: `${successfulTasks.length} ${pluralize("task", successfulTasks.length)} successfully created, ${failedTasks.length} ${pluralize("task", failedTasks.length)} failed. ${warnings.length} ${pluralize("warning", warnings.length)}.`,
     content: (
@@ -218,15 +228,6 @@ export function handleTaskCreationResponse(
         {warningsContent}
         {successfulTasks.length > 0 ? (
           <div>
-            <Flex justify="center" style={{ margin: 20 }}>
-              <Button
-                onClick={() => downloadTasksAsCSV(successfulTasks)}
-                type="primary"
-                icon={<DownloadOutlined />}
-              >
-                Download task info as CSV
-              </Button>
-            </Flex>
             <Typography.Text strong>Successful Tasks:</Typography.Text>
             <div style={displayResultsStyle}>{successfulTasksContent}</div>
           </div>
@@ -243,12 +244,13 @@ export function handleTaskCreationResponse(
       </div>
     ),
     footer:
-      failedTasks.length > 0
+      successfulTasks.length > 0 || failedTasks.length > 0
         ? (_, { OkBtn }) => (
-            <Flex justify="space-between" align="center">
-              {downloadFailedTasksButton}
+            <Space>
+              {successfulTasks.length > 0 ? downloadSuccessfulTasksButton : null}
+              {failedTasks.length > 0 ? downloadFailedTasksButton : null}
               <OkBtn />
-            </Flex>
+            </Space>
           )
         : undefined,
     width: ModalWidth.Large,

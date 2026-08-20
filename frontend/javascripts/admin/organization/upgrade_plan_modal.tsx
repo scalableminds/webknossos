@@ -1,10 +1,4 @@
-import {
-  DatabaseOutlined,
-  FieldTimeOutlined,
-  RobotOutlined,
-  RocketOutlined,
-  UserAddOutlined,
-} from "@ant-design/icons";
+import { FieldTimeOutlined, RobotOutlined } from "@ant-design/icons";
 import {
   sendExtendPricingPlanEmail,
   sendOrderCreditsEmail,
@@ -106,17 +100,12 @@ function UpgradeUserQuotaModal({ destroy }: { destroy: () => void }) {
 
   return (
     <Modal
-      title={
-        <>
-          <UserAddOutlined style={{ color: "var(--ant-color-primary)" }} /> Upgrade User Quota
-        </>
-      }
+      title="Upgrade User Quota"
       okText={"Buy more Users"}
       onOk={handleUserUpgrade}
       onCancel={destroy}
       width={ModalWidth.Large}
       open
-      mask={{ closable: false }}
     >
       <div className="drawing-upgrade-users">
         <p style={{ marginRight: "30%" }}>
@@ -151,17 +140,12 @@ function UpgradeStorageQuotaModal({ destroy }: { destroy: () => void }) {
 
   return (
     <Modal
-      title={
-        <>
-          <DatabaseOutlined style={{ color: "var(--ant-color-primary)" }} /> Upgrade Storage Space
-        </>
-      }
+      title="Upgrade Storage Space"
       okText={"Buy more Storage Space"}
       onOk={handleStorageUpgrade}
       onCancel={destroy}
       width={ModalWidth.Large}
       open
-      mask={{ closable: false }}
     >
       <div className="drawing-upgrade-storage">
         <p style={{ marginRight: "30%" }}>
@@ -339,11 +323,7 @@ function UpgradePricingPlanModal({
   return (
     <Modal
       open
-      title={
-        <>
-          <RocketOutlined style={{ color: "var(--ant-color-primary)" }} /> {title}
-        </>
-      }
+      title={title}
       width={ModalWidth.Large}
       onCancel={destroy}
       footer={
@@ -406,7 +386,6 @@ function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
       onCancel={destroy}
       width={ModalWidth.Large}
       open
-      mask={{ closable: false }}
     >
       <div className="drawing-upgrade-users">
         <p style={{ marginRight: "5%" }}>

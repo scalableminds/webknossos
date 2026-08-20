@@ -4,6 +4,7 @@ import { deleteOrganization } from "admin/api/organization";
 import { App, Button, Typography } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { useState } from "react";
+import { ModalWidth } from "theme";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 
 export function OrganizationDangerZoneView() {
@@ -16,6 +17,7 @@ export function OrganizationDangerZoneView() {
   async function handleDeleteButtonClicked(): Promise<void> {
     const isDeleteConfirmed = await modal.confirm({
       title: "Danger Zone",
+      width: ModalWidth.Medium,
       content: (
         <div>
           <Typography.Title level={4} type="danger">

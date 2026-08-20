@@ -228,13 +228,7 @@ export default function AddVolumeLayerModal({
   };
 
   return (
-    <Modal
-      title="Add Volume Annotation Layer"
-      footer={null}
-      onCancel={onCancel}
-      open
-      mask={{ closable: false }}
-    >
+    <Modal title="Add Volume Annotation Layer" footer={null} onCancel={onCancel} open>
       Layer Name:{" "}
       <InputComponent
         size="small"

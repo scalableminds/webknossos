@@ -440,7 +440,7 @@ function _ShareModalView(props: Props) {
       width={ModalWidth.Large}
       onOk={onOk}
       onCancel={onOk}
-      footer={(_, { OkBtn }) => <OkBtn />}
+      footer={(_, { OkBtn }) => <OkBtn />} // exclude cancel button
     >
       <Row>
         <Col

@@ -247,7 +247,6 @@ function _MergeModalView({ isOpen, onOk }: Props) {
           </Tooltip>
         </Flex>
       }
-      mask={{ closable: false }}
     >
       <Spin spinning={isUploading}>
         <Flex vertical gap={16} style={{ marginBottom: 12 }}>

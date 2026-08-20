@@ -503,7 +503,6 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
           paddingRight: 8, // prevents scrollbar overlap
         },
       }}
-      mask={{ closable: false }}
     >
       <CollisionWarningAlert shortcutCollisions={shortcutCollisions} />
       <KeyboardLayoutApiNotice />

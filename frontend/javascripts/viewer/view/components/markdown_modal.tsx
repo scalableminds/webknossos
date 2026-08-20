@@ -56,9 +56,8 @@ export function MarkdownModal({
       onOk={onConfirm}
       closable={true}
       width={ModalWidth.Large}
-      footer={(_, { OkBtn }) => <OkBtn />}
+      footer={(_, { OkBtn }) => <OkBtn />} // exclude cancel button
       destroyOnHidden
-      mask={{ closable: false }}
     >
       <Alert
         title={

@@ -43,7 +43,7 @@ const NewTaskDescriptionModal: React.FC<Props> = ({ description, destroy, title 
       onOk={handleOk}
       onCancel={handleOk}
       okButtonProps={{ loading: !mayClose, disabled: !mayClose }}
-      footer={(_, { OkBtn }) => <OkBtn />}
+      footer={(_, { OkBtn }) => <OkBtn />} // no cancel button
     >
       <Markdown>{description}</Markdown>
     </Modal>

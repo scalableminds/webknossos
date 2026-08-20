@@ -90,7 +90,6 @@ const _UserScriptsModalView: React.FC<UserScriptsModalViewProps> = ({ onOK, isOp
       cancelText="Close"
       onOk={handleClick}
       onCancel={onOK}
-      mask={{ closable: false }}
     >
       <Spin spinning={isLoading}>
         <Select

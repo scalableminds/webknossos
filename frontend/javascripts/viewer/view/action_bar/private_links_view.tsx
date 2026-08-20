@@ -439,7 +439,7 @@ function _PrivateLinksModal({
       onCancel={onOk}
       onOk={onOk}
       okButtonProps={{ loading: isBusy }}
-      footer={(_, { OkBtn }) => <OkBtn />}
+      footer={(_, { OkBtn }) => <OkBtn />} // exclude cancel button
     >
       <PrivateLinksView annotationId={annotationId} />
     </Modal>

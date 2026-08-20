@@ -650,15 +650,6 @@ export const DEFAULT_SRT: SRTValues = {
   translation: [0, 0, 0],
 };
 
-// Returns true when the two translations enclosing the chain are opposites of each other, i.e. they
-// move to and back from a single pivot. Only then does the pivot the editor extracts from the first
-// matrix describe the whole chain.
-function isSymmetricPivotPair(fromPivot: AffineTransformation, toPivot: AffineTransformation) {
-  const from = extractTranslationFromMatrix(fromPivot);
-  const to = extractTranslationFromMatrix(toPivot);
-  return from.every((value, i) => Math.abs(value + to[i]) <= EPSILON);
-}
-
 // Returns true when the transform list is in a format editable by the live SRT editor:
 // null/empty (no transforms) or exactly the 7-affine pattern: translation, scale,
 // rotX, rotY, rotZ, translation, translation, where the first and the last translation move to and
@@ -670,6 +661,15 @@ export function hasValidLiveTransformationPattern(
   if (transforms.length !== EXPECTED_LIVE_TRANSFORMATION_LENGTH) return false;
   if (!transforms.every((t) => t.type === "affine")) return false;
   const t = transforms as AffineTransformation[];
+
+  // The first and last matrix are the translations from/to the pivot point (the point we rotate/scale around).
+  // Those translations must be inverse of each other.
+  const fromPivot = extractTranslationFromMatrix(t[0]);
+  const toPivot = extractTranslationFromMatrix(t[6]);
+  const isSymmetricPivotPair = fromPivot.every(
+    (value, i) => Math.abs(value + toPivot[i]) <= EPSILON,
+  );
+
   return (
     isTranslationOnly(t[0]) &&
     isScaleOnly(t[1]) &&
@@ -678,7 +678,7 @@ export function hasValidLiveTransformationPattern(
     isRotationOnly(t[4]) &&
     isTranslationOnly(t[5]) &&
     isTranslationOnly(t[6]) &&
-    isSymmetricPivotPair(t[0], t[6])
+    isSymmetricPivotPair
   );
 }
 
@@ -743,10 +743,12 @@ export function extractPivotFromTransforms(transforms: CoordinateTransformation[
 
 // Returns the translation that expresses the same overall transform around a different pivot.
 //
-// The chain is T(pivot) * T(t) * R * S * T(-pivot), so as a point map it is
+// With T being translation, R being rotation and S being scaling,
+// the chain is T(pivot) * T(t) * R * S * T(-pivot), so as a point map it is
 //   M x = A (x - pivot) + pivot + t   with the linear part A = R * S.
 // A carries no pivot information, which is why the rotation and the scale stay untouched and the
-// whole difference is absorbed by the translation. Matching the total translation for a new pivot q
+// whole difference is absorbed by the translation. Matching the total translation for an old pivot p
+// and a new pivot q
 //   (I - A) q + t' = (I - A) p + t
 // gives the result below. See docs in the spec: t' = t + (I - A)(p - q).
 export function rebaseTranslationToPivot(

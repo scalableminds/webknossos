@@ -1,16 +1,17 @@
 import { Slider } from "antd";
 import { type CSSProperties, useCallback, useRef, useState } from "react";
 
-// Used when the viewport extent is not usable yet (before the viewports are laid out, or in a view
-// mode without ortho viewports), so that the translation slider is always draggable.
-export const FALLBACK_SLIDER_RANGE = 100;
+// Used when translation slider range cannot be inferred, e.g. because the
+// viewport extent it should be inferred from does not exist because the viewport
+// is currently not rendered.
+export const FALLBACK_TRANSLATION_SLIDER_RANGE = 100;
 
 // Translations are always applied in whole voxels, by the slider as well as by the number input next
 // to it. The rail is only about a hundred pixels wide, so a step of one voxel is finer than the
 // pointer can resolve and never quantizes a drag.
 export const TRANSLATION_SLIDER_STEP = 1;
 
-// The smallest scaling that can be reached, by the slider as well as by the number input.
+// The smallest scaling that can be reached, by the scale slider as well as by the scale number input.
 export const MIN_SCALE = 0.0001;
 
 // The scaling slider works in log10 space, so that shrinking and enlarging a layer are symmetric
@@ -19,10 +20,14 @@ const SCALE_SLIDER_RANGE = 1;
 // About 2.3% per step, fine enough that a drag is not visibly quantized.
 const SCALE_SLIDER_STEP = 0.01;
 
-// Ranges from this value on are labeled with an exponent, so that the labels stay short.
+// Ranges from this value on are labeled with an exponent (2e4 instead of 4000), so that the labels stay short.
 const MIN_EXPONENT_FOR_LABEL = 3;
 
 const MARK_LABEL_STYLE: CSSProperties = { fontSize: 10, whiteSpace: "nowrap" };
+
+// The mark labels are rendered below the rail. Antd reserves room for a full-size label there, which
+// would make every row noticeably taller, so the smaller labels of this slider get their own margin.
+const MARK_LABEL_MARGIN = 15;
 
 export type SliderMarks = Record<number, { style: CSSProperties; label: string }>;
 
@@ -34,6 +39,8 @@ export type RelativeSliderConfig = {
   range: number;
   step: number;
   marks: SliderMarks;
+  // how to turn its handle's position/offset into a new value (relative to the original base value)
+  //  e.g. addition for the translation slider and multiplication for the scale slider
   apply: (base: number, offset: number) => number;
   // Describes a handle position in the slider's tooltip.
   formatOffset: (offset: number) => string;
@@ -50,20 +57,21 @@ function decomposeToSingleDigit(value: number): { mantissa: number; exponent: nu
 
 // Turns a viewport extent into a usable slider range, rounded to a single significant digit (e.g.
 // 1253 becomes 1000) so that the largest increase/decrease one slider action can apply is a round
-// number that fits into the slider's labels.
-// getViewportExtentInVoxelPerAxis floors its result at 1 when a viewport has a zero-sized rect, so
-// an extent of 1 means "no laid-out ortho viewport" rather than a genuinely one-voxel-wide viewport.
-// A non-finite range would make the slider compute NaN offsets, which makes its handle disappear.
-export function sanitizeSliderRange(extentInVoxel: number): number {
+// number (round numbers are easier to display as slider labels).
+export function translationSliderRangeFromViewportExtent(extentInVoxel: number): number {
+  // getViewportExtentInVoxelPerAxis floors its result at 1 when a viewport has a zero-sized rect, so
+  // an extent of 1 means "no laid-out ortho viewport" rather than a genuinely one-voxel-wide viewport.
+  // So we use a fallback in that case.
   if (!Number.isFinite(extentInVoxel) || extentInVoxel <= 1) {
-    return FALLBACK_SLIDER_RANGE;
+    return FALLBACK_TRANSLATION_SLIDER_RANGE;
   }
   const { mantissa, exponent } = decomposeToSingleDigit(extentInVoxel);
   return mantissa * 10 ** exponent;
 }
 
-// Formats a slider range for its label. Large ranges are written with an exponent instead
-// of with thousands separators, which are easy to misread as a decimal point in the small label font.
+// Formats a slider's range min/max to be shown as label.
+// Large values are written in scientific notation (e.g. 2e4 instead of 40000)
+// since this makes them easier to display/read with the limited space available.
 export function formatSliderRange(range: number): string {
   const { mantissa, exponent } = decomposeToSingleDigit(range);
   return exponent >= MIN_EXPONENT_FOR_LABEL ? `${mantissa}e${exponent}` : String(range);
@@ -85,9 +93,9 @@ function buildMarks(range: number, minLabel: string, maxLabel: string): SliderMa
   };
 }
 
-// Applies a slider offset to the value the current slider action started from. Rounding keeps the
-// float dust of the summation out of the number input.
-export function applyRelativeDelta(base: number, delta: number): number {
+// Applies a slider offset to the value the current translation slider action started from.
+// Rounding keeps the float dust of the summation out of the number input.
+export function applyRelativeTranslationDelta(base: number, delta: number): number {
   if (!Number.isFinite(base)) {
     return Number.isFinite(delta) ? delta : 0;
   }
@@ -112,13 +120,13 @@ export function applyRelativeFactor(base: number, logOffset: number): number {
 // The translation slider reaches one viewport extent in either direction, so the translation one
 // slider action can apply follows the zoom level.
 export function getTranslationSliderConfig(extentInVoxel: number): RelativeSliderConfig {
-  const range = sanitizeSliderRange(extentInVoxel);
+  const range = translationSliderRangeFromViewportExtent(extentInVoxel);
   const label = formatSliderRange(range);
   return {
     range,
     step: TRANSLATION_SLIDER_STEP,
     marks: buildMarks(range, `-${label}`, `+${label}`),
-    apply: applyRelativeDelta,
+    apply: applyRelativeTranslationDelta,
     formatOffset: (offset) => (offset > 0 ? `+${offset}` : String(offset)),
   };
 }
@@ -133,10 +141,6 @@ export const SCALE_SLIDER_CONFIG: RelativeSliderConfig = {
   // e.g. "×0.25" or "×4".
   formatOffset: (logOffset) => `×${Number((10 ** logOffset).toPrecision(2))}`,
 };
-
-// The mark labels are rendered below the rail. Antd reserves room for a full-size label there, which
-// would make every row noticeably taller, so the smaller labels of this slider get their own margin.
-const MARK_LABEL_MARGIN = 15;
 
 // A slider that does not show a value but changes it: its handle rests in the center and moving it
 // applies an increment to the value, in the way its config describes. Releasing the handle moves it

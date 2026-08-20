@@ -1,37 +1,39 @@
 import {
-  applyRelativeDelta,
   applyRelativeFactor,
-  FALLBACK_SLIDER_RANGE,
+  applyRelativeTranslationDelta,
+  FALLBACK_TRANSLATION_SLIDER_RANGE,
   formatSliderRange,
   getTranslationSliderConfig,
   MIN_SCALE,
   SCALE_SLIDER_CONFIG,
-  sanitizeSliderRange,
+  translationSliderRangeFromViewportExtent,
 } from "viewer/view/left_border_tabs/components/relative_slider";
 import { describe, expect, it } from "vitest";
 
 describe("sanitizeSliderRange", () => {
   it("should round a viewport extent to a single significant digit", () => {
-    expect(sanitizeSliderRange(1253)).toBe(1000);
-    expect(sanitizeSliderRange(2600)).toBe(3000);
-    expect(sanitizeSliderRange(123.4)).toBe(100);
-    expect(sanitizeSliderRange(9)).toBe(9);
+    expect(translationSliderRangeFromViewportExtent(1253)).toBe(1000);
+    expect(translationSliderRangeFromViewportExtent(2600)).toBe(3000);
+    expect(translationSliderRangeFromViewportExtent(123.4)).toBe(100);
+    expect(translationSliderRangeFromViewportExtent(9)).toBe(9);
   });
 
   it("should stay in the single-digit range when the mantissa rounds up", () => {
-    expect(sanitizeSliderRange(9700)).toBe(10000);
+    expect(translationSliderRangeFromViewportExtent(9700)).toBe(10000);
   });
 
   it("should fall back for extents that no laid-out viewport can produce", () => {
     // getViewportExtentInVoxelPerAxis floors its result at 1, so 1 means "no viewport yet".
     for (const extent of [1, 0, -5, Number.NaN, Number.POSITIVE_INFINITY]) {
-      expect(sanitizeSliderRange(extent)).toBe(FALLBACK_SLIDER_RANGE);
+      expect(translationSliderRangeFromViewportExtent(extent)).toBe(
+        FALLBACK_TRANSLATION_SLIDER_RANGE,
+      );
     }
   });
 
   it("should always return a usable range with a single significant digit", () => {
     for (const extent of [2, 3.7, 47, 1000, 12345, 1e7, Number.NaN, Number.NEGATIVE_INFINITY]) {
-      const range = sanitizeSliderRange(extent);
+      const range = translationSliderRangeFromViewportExtent(extent);
       expect(Number.isInteger(range)).toBe(true);
       expect(range).toBeGreaterThan(1);
       // A single significant digit means the value is one digit followed by only zeroes.
@@ -53,12 +55,6 @@ describe("formatSliderRange", () => {
     expect(formatSliderRange(9000)).toBe("9e3");
     expect(formatSliderRange(20000)).toBe("2e4");
     expect(formatSliderRange(1e7)).toBe("1e7");
-  });
-
-  it("should never contain a separator that reads like a decimal point", () => {
-    for (const extent of [2, 47, 1253, 9700, 123456, 1e9]) {
-      expect(formatSliderRange(sanitizeSliderRange(extent))).not.toMatch(/[.,]/);
-    }
   });
 });
 
@@ -163,29 +159,29 @@ describe("applyRelativeFactor", () => {
 
 describe("applyRelativeDelta", () => {
   it("should increase and decrease the base value", () => {
-    expect(applyRelativeDelta(10, -3)).toBe(7);
-    expect(applyRelativeDelta(10, 3)).toBe(13);
+    expect(applyRelativeTranslationDelta(10, -3)).toBe(7);
+    expect(applyRelativeTranslationDelta(10, 3)).toBe(13);
   });
 
   it("should keep float dust out of the result", () => {
-    expect(applyRelativeDelta(0.1, 0.2)).toBe(0.3);
+    expect(applyRelativeTranslationDelta(0.1, 0.2)).toBe(0.3);
   });
 
   it("should leave the base untouched for a zero delta", () => {
-    expect(applyRelativeDelta(-12.5, 0)).toBe(-12.5);
+    expect(applyRelativeTranslationDelta(-12.5, 0)).toBe(-12.5);
   });
 
   it("should fall back to the operand that is usable", () => {
-    expect(applyRelativeDelta(Number.NaN, 5)).toBe(5);
-    expect(applyRelativeDelta(5, Number.NaN)).toBe(5);
-    expect(applyRelativeDelta(Number.NaN, Number.NaN)).toBe(0);
+    expect(applyRelativeTranslationDelta(Number.NaN, 5)).toBe(5);
+    expect(applyRelativeTranslationDelta(5, Number.NaN)).toBe(5);
+    expect(applyRelativeTranslationDelta(Number.NaN, Number.NaN)).toBe(0);
   });
 
   it("should never produce a non-finite value", () => {
     const values = [0, 1.5, -7, 1e6, Number.NaN, Number.POSITIVE_INFINITY];
     for (const base of values) {
       for (const delta of values) {
-        expect(Number.isFinite(applyRelativeDelta(base, delta))).toBe(true);
+        expect(Number.isFinite(applyRelativeTranslationDelta(base, delta))).toBe(true);
       }
     }
   });

@@ -11,6 +11,7 @@ import type { APIDataLayer, APISkeletonLayer } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import {
   getLayerBoundingBox,
+  getUntransformedDatasetBoundingBox,
 } from "viewer/model/accessors/dataset_accessor";
 import {
   buildLiveTransforms,

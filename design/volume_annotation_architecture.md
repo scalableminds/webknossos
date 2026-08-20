@@ -30,13 +30,13 @@ Code in this document is illustrative TypeScript — signatures and sketches mea
 
 The four questions this doc was written to answer:
 
-**What happens when a user draws?** A tool converts pointer input into a declarative *edit intent* (a brush stroke, a polygon, a flood-fill spec). A single `VolumeTransaction` is opened on pointer-down and stays open until pointer-up. On each pointer-move the intent grows, the incremental part is rasterized at the mag the user is looking at, and the resulting voxel writes are recorded into the transaction (and applied to resident buckets so the user sees them immediately). On pointer-up the transaction commits: mag propagation runs, the accumulated write map becomes a set of per-bucket diffs, and those go to the undo log and the save queue.
+**What happens when a user draws?** A tool converts pointer input into a declarative *edit intent* (a brush stroke, a polygon, a flood-fill spec). A single `VolumeTransaction` is opened on pointer-down and stays open until pointer-up. On each pointer-move the intent grows, the incremental part is rasterized at the mag the user is looking at, and the resulting voxel writes are recorded into the transaction (and applied to resident buckets so the user sees them immediately). On pointer-up the transaction commits: mag propagation runs, the accumulated write set becomes a set of per-bucket diffs, and those go to the undo log and the save queue.
 
 **Who draws the circular brush into the data?** A single `Rasterizer` — the one component that knows how to turn geometry into voxel indices. Tools never touch buckets; buckets never know about brushes. The Rasterizer also owns the overwrite-mode filter, because that filter is a per-voxel decision made against current data, which is exactly its job.
 
-**What is the intermediary representation?** A per-transaction **write map**: `bucketAddress → (voxelIndex → newSegmentId)`, last-write-wins. This is the pivot point of the whole design. It coalesces repeated writes within a stroke for free, it can hold writes for buckets that are *not* in memory, and it is trivially convertible to both "apply to a live bucket" and "encode as a diff".
+**What is the intermediary representation?** A per-transaction **write set**: `bucketAddress → (bitmask of touched voxels + the segment ID being written)`, last-write-wins. This is the pivot point of the whole design. It coalesces repeated writes within a stroke for free, it can hold writes for buckets that are *not* in memory, and it converts trivially to both "apply to a live bucket" and "encode as a diff". Tools fill it through a bucket-scoped, run-oriented cursor, so no step of the pipeline pays a per-voxel function call or address computation.
 
-**Who downsamples, and how is the diff encoded?** The `MagPropagationService` runs at commit time. It maps the write map from the source mag down to the finest mag (block replication) and then projects it up into each coarser mag (written-value-wins, with background treated as an ordinary value). It propagates the *write set*, never whole buckets — recomputing a coarse bucket from its finest-mag children is infeasible (a mag-16 bucket has 4096 mag-1 children) — and it reads no voxel data at all. The diff is encoded as run-length-grouped voxel runs over the bucket's flat index space, one `updateBucketDiff` update-action per touched bucket, for every mag; all actions of a transaction are submitted as one versioned group, and the backend applies them verbatim without resampling.
+**Who downsamples, and how is the diff encoded?** The `MagPropagationService` runs at commit time. It maps the write set from the source mag down to the finest mag (block replication) and then projects it up into each coarser mag (written-value-wins, with background treated as an ordinary value). It propagates the *write set*, never whole buckets — recomputing a coarse bucket from its finest-mag children is infeasible (a mag-16 bucket has 4096 mag-1 children) — and it reads no voxel data at all. The diff is encoded as run-length-grouped voxel runs over the bucket's flat index space, one `updateBucketDiff` update-action per touched bucket, for every mag; all actions of a transaction are submitted as one versioned group, and the backend applies them verbatim without resampling.
 
 ---
 
@@ -112,14 +112,38 @@ interface EditContext {
 
 // ── The central intermediary representation ─────────────────────────────────
 
-/** Voxel writes for one bucket. Last write wins per index. */
-type BucketWrites = Map<VoxelIndex, SegmentId>;
+/** 32_768 bits = 1024 words = 4 KB per bucket. */
+class VoxelMask {
+  private words = new Uint32Array(BUCKET_VOXEL_COUNT / 32);
+  mark(i: VoxelIndex): void;
+  /** Word-wise fill; the hot path. `start..start+length` must stay in-bucket. */
+  markRun(start: VoxelIndex, length: number): void;
+  has(i: VoxelIndex): boolean;
+  /** Ascending runs of consecutive set bits, found by word scan. */
+  runs(): Iterable<{ start: VoxelIndex; length: number }>;
+  get count(): number;
+}
+
+/**
+ * Writes for one bucket. Almost every transaction is single-valued — one brush
+ * stroke, one fill, one interpolation all write a single activeSegmentId — so
+ * the default shape is a mask plus one value, and no per-voxel value is stored.
+ * A bucket upgrades to `mixed` only if a second value is written into it
+ * (undo replay, proofreading operations).
+ */
+type BucketWrites =
+  | { kind: "uniform"; mask: VoxelMask; value: SegmentId }
+  | { kind: "mixed"; values: Map<VoxelIndex, SegmentId> };
 
 /** Voxel writes across buckets — the output of rasterization and propagation. */
 type VoxelWriteSet = Map<BucketKey, { address: BucketAddress; writes: BucketWrites }>;
 ```
 
 `VoxelWriteSet` is deliberately the *only* currency exchanged between the rasterizer, the mag propagation service and the transaction. Every tool, at every mag, produces one of these, and nothing downstream needs to know which tool produced it.
+
+**Why a mask and not `Map<VoxelIndex, SegmentId>`.** The per-voxel map is the obvious encoding and it does not survive contact with the numbers. The mag-16 stroke in §6.2 implies ~8.2 M finest-mag writes; at V8's ~40–50 bytes per `Map` entry that is ~370 MB of hash-table overhead, versus ~1 MB for 250 buckets' worth of 4 KB masks. It also pays a per-voxel value slot for a degree of freedom that single-valued transactions never use. The mask form additionally makes §5.6's run extraction a word scan instead of a sort.
+
+A third, sparse form (a short index list) would beat a 4 KB mask for buckets the stroke merely grazes at its edges. Worth adding if profiling says edge buckets dominate; not worth the branch until then.
 
 ---
 
@@ -143,7 +167,7 @@ type VoxelWriteSet = Map<BucketKey, { address: BucketAddress; writes: BucketWrit
           ▼                                      │
    ┌──────────────────────┐                      │
    │ VolumeTransaction    │──── apply writes ───▶│
-   │ (write map, per      │                      │
+   │ (write set, per      │                      │
    │  bucket, LWW)        │                ┌─────┴────────────┐
    └──────┬───────────────┘                │ WorkingDataCube  │
           │ on commit                      │ (resident        │
@@ -196,29 +220,45 @@ The split matters. Analytic shapes really are mag-independent — the same brush
 
 Adding a tool means adding an `EditIntent` variant and a rasterization case — nothing else in the system changes.
 
-### 5.2 `VolumeTransaction` — the write map
+### 5.2 `VolumeTransaction` — the write set
 
 One transaction per user interaction. It is a write recorder, not a snapshot differ.
 
 ```ts
+/**
+ * Bucket-scoped write cursor. Obtained once per (bucket, value), then written
+ * to in a tight loop. Nothing in here computes a bucket address or a BucketKey:
+ * that work happened once, in `writerFor`.
+ */
+interface BucketWriter {
+  mark(index: VoxelIndex): void;
+  /** The hot path. Runs are runs along x (see VoxelIndex), i.e. scanlines. */
+  markRun(start: VoxelIndex, length: number): void;
+  /** Escape hatch: writes a value other than the writer's, upgrading the
+   *  bucket to `mixed`. Used by undo replay and proofreading, not by tools. */
+  write(index: VoxelIndex, value: SegmentId): void;
+  /** Dense current content, if resident. Read once, then index directly —
+   *  this is how the overwrite predicate avoids a global lookup per voxel. */
+  readonly current: BigUint64Array | undefined;
+}
+
 class VolumeTransaction {
   readonly id: TransactionId;
   readonly ctx: EditContext;
 
-  /** The intermediary representation. Last write wins per (bucket, voxel). */
   private writes = new Map<BucketKey, { address: BucketAddress; writes: BucketWrites }>();
 
   /** Pre-transaction values, recorded on first touch — only for resident buckets. */
   private before = new Map<BucketKey, Map<VoxelIndex, SegmentId>>();
 
   /**
-   * Record a write. Does NOT require the bucket to be resident (principle 4).
-   * If it is resident, the value is also written through to the live array so
-   * the GPU picks it up on the next texture update.
+   * Open a write cursor for one bucket. Does NOT require the bucket to be
+   * resident (principle 4). Resident buckets are also written through to the
+   * live array so the GPU picks the change up on the next texture update.
    */
-  record(address: BucketAddress, index: VoxelIndex, value: SegmentId): void;
+  writerFor(address: BucketAddress, value: SegmentId): BucketWriter;
 
-  /** Merge a whole VoxelWriteSet (from rasterizer or mag propagation). */
+  /** Merge a whole VoxelWriteSet (from mag propagation, or a remote peer). */
   recordAll(writeSet: VoxelWriteSet): void;
 
   /** Finalize: run mag propagation, drop no-ops, build the diff. */
@@ -229,11 +269,13 @@ class VolumeTransaction {
 }
 ```
 
-Why a write map rather than "snapshot the bucket, mutate freely, diff at the end":
+**The API is bucket-scoped on purpose, independently of how `BucketWrites` is represented.** A per-voxel `record(address, index, value)` would be the more obvious signature, but it pushes address-to-key computation into every rasterizer inner loop, and it shapes all calling code into a per-voxel style — so changing the representation later would become a call-site migration across every tool rather than a swap behind an interface. `writerFor` + `markRun` costs nothing extra today and keeps the mask, a sparse list, or a slice-oriented buffer interchangeable.
 
-- Repeated writes to the same voxel during a stroke coalesce automatically — a brush that passes over the same voxel 40 times produces one entry.
-- It works for non-resident buckets, which snapshot-and-diff cannot (there is nothing to snapshot).
-- Its size is proportional to the edit, not to the number of touched buckets. A stroke that grazes 300 buckets and writes 5 voxels in each costs 1500 entries, not 300 × 32768.
+Why a write set at all, rather than "snapshot the bucket, mutate freely, diff at the end":
+
+- Repeated writes to the same voxel during a stroke coalesce for free — a brush passing over the same voxel 40 times sets the same bit 40 times.
+- It works for non-resident buckets, which snapshot-and-diff cannot: there is nothing to snapshot.
+- Its cost is bounded by *touched buckets* × 4 KB, not by touched buckets × 256 KB, and it never materializes a bucket that was not already resident.
 
 `before` is only populated for resident buckets and is only used for `abort()` (and for the fast-path undo in §5.7). It is *not* needed for forward replay.
 
@@ -246,68 +288,81 @@ The single place that turns geometry into voxel indices.
 ```ts
 /** Read-only view over the cube; keeps the rasterizer decoupled from storage. */
 interface VoxelReader {
-  /** Current value at a voxel in `magIndex` grid coords. */
-  peek(voxel: Vector3, magIndex: MagIndex): SegmentId | undefined; // undefined = not resident
+  /** Dense content of a resident bucket, or undefined. Fetch once per bucket,
+   *  then index directly — never call this per voxel. */
+  getResident(address: BucketAddress): BigUint64Array | undefined;
+  /** Random access for data-dependent shapes (flood fill's neighbour walk).
+   *  Convenient but ~two orders of magnitude slower than indexing `current`. */
+  peek(voxel: Vector3, magIndex: MagIndex): SegmentId | undefined;
 }
 
 interface Rasterizer {
   /**
-   * Rasterize `shape` at ctx.sourceMagIndex. Always the source mag — never
-   * called a second time for another mag (see §5.4).
+   * Rasterize `shape` at ctx.sourceMagIndex, writing through `tx`. Always the
+   * source mag — never called a second time for another mag (see §5.4).
    */
-  rasterize(shape: EditIntent, ctx: EditContext, reader: VoxelReader): VoxelWriteSet;
+  rasterize(shape: EditIntent, ctx: EditContext, tx: VolumeTransaction): void;
 }
 ```
 
 Responsibilities, in order:
 
-1. Compute the candidate voxel set: bucket-align the shape's bounding box at the source mag, clip against `ctx.editableBoundingBox` and the layer bounding box.
-2. Test containment per voxel (distance-to-path for a brush, point-in-polygon for a contour, connectivity for a fill).
-3. Apply the **overwrite predicate**.
+1. Compute the candidate region: the shape's bounding box at the source mag, clipped against `ctx.editableBoundingBox` and the layer bounding box, then **split by bucket**.
+2. Per bucket, scanline the shape: for each row, produce the x-intervals it covers (a single interval for convex shapes, several for a polygon).
+3. Apply the **overwrite predicate**, which splits an interval into sub-intervals.
 
-```ts
-type OverwritePredicate = (voxel: Vector3) => boolean;
-
-function makeOverwritePredicate(ctx: EditContext, reader: VoxelReader): OverwritePredicate {
-  if (ctx.overwriteMode === "overwrite-all") return () => true;
-  return (voxel) => (reader.peek(voxel, ctx.sourceMagIndex) ?? 0n) === 0n;
-}
-```
-
-A sketch of the brush case, to make the shape of the work concrete:
+The bucket split comes first, and that ordering is the whole point: bucket address, `BucketKey` and the writer are resolved once per bucket, and the inner loop touches nothing but integers and a `Uint32Array`.
 
 ```ts
 function rasterizeBrush(
   shape: Extract<AnalyticShape, { kind: "brush" }>,
   ctx: EditContext,
-  reader: VoxelReader,
-): VoxelWriteSet {
-  const out: VoxelWriteSet = new Map();
-  const allowed = makeOverwritePredicate(ctx, reader);
-
+  tx: VolumeTransaction,
+): void {
   for (const [a, b] of consecutivePairs(shape.path)) {
     // Capsule: everything within `radius` of the segment a→b, in source-mag space.
     const bbox = capsuleBoundingBox(a, b, shape.radius).clipTo(ctx.editableBoundingBox);
 
-    for (const voxel of iterateVoxels(bbox, shape.planeAxis)) {
-      if (distanceToSegment(voxel, a, b) > shape.radius) continue;
-      if (!allowed(voxel)) continue;
-      addWrite(out, voxel, ctx, ctx.activeSegmentId);
+    for (const { address, localBox } of bucketsIntersecting(bbox, ctx)) {
+      const w = tx.writerFor(address, ctx.activeSegmentId);   // once per bucket
+
+      for (const { y, z } of rowsOf(localBox, shape.planeAxis)) {
+        const rowStart = y * BUCKET_WIDTH + z * BUCKET_WIDTH ** 2;  // x === 0
+
+        for (const [x0, x1] of capsuleRowSpans(a, b, shape.radius, y, z, localBox)) {
+          emitSpan(w, rowStart + x0, x1 - x0 + 1, ctx);
+        }
+      }
     }
   }
-  return out;
 }
 
-function addWrite(
-  out: VoxelWriteSet, voxel: Vector3, ctx: EditContext, value: SegmentId,
-): void {
-  const address = bucketAddressOf(voxel, ctx.sourceMagIndex, ctx.additionalCoordinates);
-  const key = bucketKey(address);
-  let entry = out.get(key);
-  if (entry == null) { entry = { address, writes: new Map() }; out.set(key, entry); }
-  entry.writes.set(voxelIndexOf(voxel), value);
+/** Applies the overwrite predicate to a contiguous span, emitting sub-runs. */
+function emitSpan(w: BucketWriter, start: VoxelIndex, length: number, ctx: EditContext): void {
+  if (ctx.overwriteMode === "overwrite-all") {
+    w.markRun(start, length);              // fast path: word-wise fill, no reads
+    return;
+  }
+  const current = w.current;
+  if (current == null) {
+    // Not resident: nothing to test against. See §5.4 on why this is acceptable.
+    w.markRun(start, length);
+    return;
+  }
+  let runStart = -1;
+  for (let i = start; i < start + length; i++) {
+    if (current[i] === 0n) {
+      if (runStart < 0) runStart = i;
+    } else if (runStart >= 0) {
+      w.markRun(runStart, i - runStart);
+      runStart = -1;
+    }
+  }
+  if (runStart >= 0) w.markRun(runStart, start + length - runStart);
 }
 ```
+
+Three things this buys over the per-voxel formulation. The overwrite predicate reads `current[i]` — a direct typed-array index — instead of resolving a global coordinate to a bucket on every voxel. `overwrite-all`, the common mode, does no reads at all and fills whole words. And a solid interior row costs one `markRun` regardless of its length, which is what makes the block fills of §5.4's drive-down cheap.
 
 **The rasterizer runs exactly once per transaction, at the source mag.** Every other mag's content is derived by §5.4, never by re-rasterizing the same geometry at a different resolution. Rasterizing independently per mag would (a) cost N× and (b) produce boundary disagreements — a circle rasterized at mag 1 and a circle rasterized at mag 2 do not agree about their edges, so the pyramid would be internally inconsistent in a way no downsampling rule could repair.
 
@@ -330,25 +385,40 @@ interface MagPropagationService {
 A source-mag voxel `q` covers the axis-aligned block of finest-mag voxels `[q · s, (q+1) · s)` where `s = ctx.sourceMag`. Replicate the value across the block:
 
 ```ts
-function* driveDown(writes: VoxelWriteSet, s: Mag): Iterable<[Vector3, SegmentId]> {
+function driveDown(writes: VoxelWriteSet, s: Mag, ctx: EditContext): VoxelWriteSet {
+  const out = new WriteSetBuilder(FINEST_MAG_INDEX, ctx);
+
   for (const { address, writes: bw } of writes.values()) {
-    for (const [index, value] of bw) {
-      const q = globalVoxelOf(address, index);              // source-mag grid
-      const base: Vector3 = [q[0] * s[0], q[1] * s[1], q[2] * s[2]];
+    const origin = originVoxelOf(address);                   // source-mag grid
+    for (const { start, length, value } of runsOf(bw)) {
+      const [x, y, z] = voxelOffsetOf(start);
+      const base: Vector3 = [
+        (origin[0] + x) * s[0], (origin[1] + y) * s[1], (origin[2] + z) * s[2],
+      ];
+      // A run of `length` source voxels becomes a solid block, emitted as one
+      // run of `length * s[0]` per (dy, dz) — not length * s[0]*s[1]*s[2] writes.
       for (let dz = 0; dz < s[2]; dz++)
         for (let dy = 0; dy < s[1]; dy++)
-          for (let dx = 0; dx < s[0]; dx++)
-            yield [[base[0] + dx, base[1] + dy, base[2] + dz], value];
+          out.markRun([base[0], base[1] + dy, base[2] + dz], length * s[0], value);
     }
   }
+  return out.build();
 }
 ```
 
 This needs no reads and no bucket loads, and it is exact: drawing at a coarse mag *means* producing blocky finest-mag geometry. That is the accepted cost of annotating at low resolution.
 
+Note the loop nest is over `s[1] * s[2]`, not `s[0] * s[1] * s[2] * length` — the x extent is handled by `markRun`. That is the difference between ~32 K run emissions and ~8.2 M individual writes for the mag-16 case below.
+
 **Overwrite mode is evaluated at the source mag only — deliberately.** The predicate already ran in §5.3 against source-mag values; the drive-down writes unconditionally. The consequence is real and should be documented in the UI: in `overwrite-empty-only` mode at mag 4, a coarse voxel that reads as empty may still contain labeled finest-mag voxels, and those get overwritten. The alternative — re-evaluating the predicate per finest-mag voxel — would require the finest-mag buckets to be resident, i.e. it would turn every coarse-mag brush stroke into hundreds of bucket fetches. Evaluating at the source mag is also arguably the better semantics: the user's intent ("don't paint over that segment") is formed from what they can actually see.
 
-**Write amplification is the thing to watch here.** At mag `16-16-16`, each source voxel expands to 4096 finest-mag voxels. A stroke covering ~2000 mag-16 voxels implies ~8.2 M finest-mag voxels spanning ~250 finest-mag buckets. Materializing those as typed arrays would be ~64 MB. We do not: per principle 4, writes are recorded against bucket addresses whether or not the bucket is resident, and per principle 6 the diff for such a bucket run-length-encodes to a handful of kilobytes because it is a solid block fill. Non-resident buckets are never loaded just to be written; when they are later fetched, the backend has already folded the diff in (and any not-yet-saved local diffs are applied on load).
+**Write amplification is the thing to watch here.** At mag `16-16-16`, each source voxel expands to 4096 finest-mag voxels. A stroke covering ~2000 mag-16 voxels implies ~8.2 M finest-mag voxels spanning ~250 finest-mag buckets. Three things keep that affordable:
+
+- Those buckets are not materialized as `32³` typed arrays (~64 MB). Per principle 4, writes are recorded against bucket addresses whether or not the bucket is resident; per §4 a touched bucket costs a 4 KB mask, so ~1 MB in total.
+- The work is `markRun` calls, not per-voxel writes — ~32 K of them rather than 8.2 M, since each fills a whole scanline of a block.
+- The resulting diff run-length-encodes to a few kilobytes per bucket, because a block fill is exactly what §5.8's encoding is good at.
+
+Non-resident buckets are never loaded just to be written; when they are later fetched, the backend has already folded the diff in, and any not-yet-saved local diffs are applied on load.
 
 #### Step B — project up into coarser mags
 
@@ -358,21 +428,32 @@ For each coarser mag `m`, a finest-mag voxel `p` belongs to coarse voxel `⌊p /
 /**
  * Written-value-wins: a written finest-mag voxel sets its coarse voxel to that
  * value. Background (0n) is not special — it is just another segment ID.
+ *
+ * Run-oriented like the rasterizer: a finest-mag run along x projects to a
+ * coarse run along x, so the whole pyramid is built without ever visiting an
+ * individual voxel.
  */
 function projectUp(
-  finest: Iterable<[Vector3, SegmentId]>,
-  m: Mag, magIndex: MagIndex, ctx: EditContext,
+  finest: VoxelWriteSet, m: Mag, magIndex: MagIndex, ctx: EditContext,
 ): VoxelWriteSet {
-  const out: VoxelWriteSet = new Map();
-  for (const [p, value] of finest) {
-    const coarse: Vector3 = [
-      Math.floor(p[0] / m[0]), Math.floor(p[1] / m[1]), Math.floor(p[2] / m[2]),
-    ];
-    addWrite(out, coarse, { ...ctx, sourceMagIndex: magIndex }, value);
+  const out = new WriteSetBuilder(magIndex, ctx);
+
+  for (const { address, writes } of finest.values()) {
+    const origin = originVoxelOf(address);                   // finest-mag grid
+    for (const { start, length, value } of runsOf(writes)) {
+      const [x, y, z] = voxelOffsetOf(start);
+      const cy = Math.floor((origin[1] + y) / m[1]);
+      const cz = Math.floor((origin[2] + z) / m[2]);
+      const cx0 = Math.floor((origin[0] + x) / m[0]);
+      const cx1 = Math.floor((origin[0] + x + length - 1) / m[0]);
+      out.markRun([cx0, cy, cz], cx1 - cx0 + 1, value);      // may span buckets
+    }
   }
-  return out;
+  return out.build();
 }
 ```
+
+`WriteSetBuilder` is the propagation-side counterpart of `BucketWriter`: it caches the current bucket and only re-resolves the address when a run crosses a bucket boundary.
 
 Three things about this rule are worth stating explicitly, because they are choices, not consequences:
 
@@ -406,9 +487,9 @@ Unchanged in spirit from today: one `32³` typed array per resident `(bucketPosi
 
 ```ts
 interface WorkingDataCube extends VoxelReader {
+  // getResident / peek are inherited from VoxelReader; neither triggers a fetch.
   isResident(address: BucketAddress): boolean;
-  /** Never triggers a fetch. Returns undefined if not resident. */
-  getResident(address: BucketAddress): BigUint64Array | undefined;
+  /** Applies a whole bucket's writes at once — mask runs for `uniform`. */
   applyWrites(address: BucketAddress, writes: BucketWrites): void;
   markDirtyForGpu(address: BucketAddress): void;
 }
@@ -457,25 +538,21 @@ interface TransactionDiff {
 }
 ```
 
-Building the diff from the write map is a straightforward grouping pass:
+Building the diff from the write set falls out of the representation. For the `uniform` case — nearly all transactions — it is a word scan over the mask with no sort and no per-voxel value lookup:
 
 ```ts
 function toRuns(writes: BucketWrites): VoxelRun[] {
-  const indices = [...writes.keys()].sort((a, b) => a - b);
-  const runs: VoxelRun[] = [];
-  let i = 0;
-  while (i < indices.length) {
-    const start = indices[i];
-    let length = 1;
-    while (i + length < indices.length && indices[i + length] === start + length) length++;
-    const slice = indices.slice(i, i + length).map((ix) => writes.get(ix)!);
-    const constant = slice.every((v) => v === slice[0]);
-    runs.push({ start, length, values: constant ? slice[0] : BigUint64Array.from(slice) });
-    i += length;
+  if (writes.kind === "uniform") {
+    // VoxelMask.runs() walks 1024 words, emitting maximal spans of set bits.
+    return [...writes.mask.runs()].map(({ start, length }) => ({
+      start, length, values: writes.value,          // constant run: one value
+    }));
   }
-  return runs;
+  return groupSortedIndices(writes.values);          // `mixed`: sort, then group
 }
 ```
+
+That is also why the `values: SegmentId | BigUint64Array` union in `VoxelRun` exists: a `uniform` bucket can only ever produce constant runs, so the per-voxel array is reached for only by `mixed` buckets.
 
 No-op writes (`newValue === oldValue`, knowable for resident buckets) are dropped before this step, so a stroke that repaints voxels already carrying the active segment ID produces no diff at all for those voxels.
 
@@ -583,11 +660,11 @@ Encoding notes:
 ### 6.1 Brush stroke at the finest mag
 
 1. **Pointer-down.** `VolumeTransaction` opens with an `EditContext` snapshotting the active segment ID, overwrite mode, source mag and additional coordinates. An empty `brush` intent is created, with the brush radius fixed for the stroke.
-2. **Pointer-move.** The tool appends a point to the path. Only the *incremental* capsule (previous point → new point) is rasterized, at the source mag. The rasterizer applies the overwrite predicate and returns a `VoxelWriteSet`.
-3. **Record + display.** `transaction.recordAll(writeSet)` merges it into the write map and writes through to resident buckets; their GPU textures are refreshed. The user sees the stroke immediately.
-4. Steps 2–3 repeat. Overlapping samples coalesce in the write map at no cost.
-5. **Pointer-up → commit.** Mag propagation runs *once*, over the whole accumulated write map: Step A is a no-op (already at the finest mag); Step B projects into every coarser mag and those writes are applied to resident coarse buckets too.
-6. The write map becomes a `TransactionDiff` (no-ops dropped, runs grouped), appended to the undo log and enqueued for save.
+2. **Pointer-move.** The tool appends a point to the path. Only the *incremental* capsule (previous point → new point) is rasterized, at the source mag. The rasterizer walks it bucket by bucket, opening one `BucketWriter` per bucket and emitting scanline runs through the overwrite predicate.
+3. **Record + display.** Those runs land in the transaction's write set and are written through to resident buckets; their GPU textures are refreshed. The user sees the stroke immediately.
+4. Steps 2–3 repeat. Overlapping samples coalesce in the write set at no cost.
+5. **Pointer-up → commit.** Mag propagation runs *once*, over the whole accumulated write set: Step A is a no-op (already at the finest mag); Step B projects into every coarser mag and those writes are applied to resident coarse buckets too.
+6. The write set becomes a `TransactionDiff` (no-ops dropped, runs grouped), appended to the undo log and enqueued for save.
 
 Running mag propagation on *every pointer-move* was considered and discarded: it does strictly more total work, since overlapping samples get re-propagated, for no correctness benefit.
 
@@ -601,7 +678,7 @@ The spike is worst for coarse-mag strokes, and there the throttle is the wrong l
 
 Identical, except at commit:
 
-- Step A expands ~2000 mag-16 voxels into ~8.2 M finest-mag voxels across ~250 finest-mag buckets. Almost none of those buckets are resident (the user is zoomed out); no fetches are triggered. Their writes live only in the write map and then in the diff, run-encoded as block fills.
+- Step A expands ~2000 mag-16 voxels into ~8.2 M finest-mag voxels across ~250 finest-mag buckets. Almost none of those buckets are resident (the user is zoomed out); no fetches are triggered. Their writes live only as 4 KB masks in the write set, then in the diff, run-encoded as block fills.
 - Step B projects those finest-mag writes into mags 1…N. The mag-16 buckets the user is actually looking at were already updated live in step 3, and Step B's projection agrees with them (both derive from the same writes), so there is no visible re-flicker.
 - The save payload is a few hundred `updateBucketDiff` actions of a few KB each — not 64 MB of bucket data.
 
@@ -640,7 +717,7 @@ Not implemented here, but the shape is deliberately compatible:
 | Treat background as special when projecting (clear a coarse voxel only if all finest-mag siblings are background) | More faithful, but requires reading every sibling — which re-couples mag propagation to bucket residency and forces loads during coarse-mag strokes. |
 | Send only finest-mag diffs; let the backend derive coarse mags | Written-value-wins is order-dependent, so a backend seeing only final state cannot reproduce it under any derivation rule. Coarse mags would visibly change on reload. Sending all mags costs ~15–35% more payload and avoids this entirely. |
 | Keep diffs at their authoring mag, never normalize | No single source of truth; reading mag *k* requires folding diffs authored at every other mag, with ill-defined ordering between them. |
-| Snapshot-then-diff per bucket instead of a write map | Cannot represent writes to non-resident buckets, and costs O(bucket) per touched bucket even for a 5-voxel edit. |
+| Snapshot-then-diff per bucket instead of a write set | Cannot represent writes to non-resident buckets, and costs O(bucket) per touched bucket even for a 5-voxel edit. |
 
 ---
 
@@ -648,7 +725,7 @@ Not implemented here, but the shape is deliberately compatible:
 
 - **Flood fill and unloaded data.** Fill needs the connected region resident to be correct. Options: block on fetches with a progress indicator, fill progressively as buckets arrive, or bound the fill to a region and refuse beyond it. Needs a UX decision — this is the one tool where "diffs for non-resident buckets" does not save us, because the *region itself* depends on data we do not have.
 - **Interaction with mappings / agglomerates.** Proofreading edits operate on mapped IDs, and `EditContext.activeSegmentId` is then an agglomerate ID rather than a stored one. Where the mapping is resolved (before rasterization? at apply time?) is unresolved and deserves its own section.
-- **Commit-time spike on coarse-mag strokes, and symbolic drive-down.** At mag 1 the commit-time propagation pass is small (no drive-down; project-up is O(voxels × mags)) and a throttled mid-stroke preview is enough to smooth it. At mag 16 it is not: drive-down expands ×4096, so a 2000-voxel stroke becomes ~8.2 M `Map` entries at pointer-up. Spreading that across the stroke does not help — the expansion is inherent and per-sample propagation would only multiply it. The real lever is to keep the drive-down **symbolic**: represent it as a list of `(box, value)` fills rather than expanding per voxel, and materialize only for buckets that are actually resident. The `toRuns` encoder already emits near-optimal output for block fills, so this is mostly a matter of not expanding eagerly in `driveDown` (the sketch in §5.4 does, for readability). Worth measuring before building.
+- **Commit-time spike on coarse-mag strokes.** The run-oriented drive-down (§5.4) already reduces the mag-16 case from ~8.2 M per-voxel writes to ~32 K `markRun` calls over ~1 MB of masks, so the naive blow-up is gone. What remains unmeasured is whether ~32 K run emissions plus the resulting encode still land as a perceptible hitch on pointer-up. If they do, the lever is *not* the mid-stroke throttle — the expansion is inherent to drawing at a coarse mag, and per-sample propagation would only repeat it. It would instead be keeping the drive-down fully symbolic: carry `(box, value)` fills through to §5.8's encoder and never build masks for non-resident finest-mag buckets at all. Measure before building.
 - **Checkpoint interval *k*.** Too small → memory and storage overhead; too large → slow replay and slow eviction. Start around 20–50 entries per bucket and tune empirically. Interacts with the undo horizon.
 - **Where does the rasterizer run?** It is a pure function of `(intent, context, reader)`, which makes it a good Web Worker candidate for large strokes. Not needed for correctness; the blocker is giving a worker a cheap read view of resident buckets (`SharedArrayBuffer`, probably).
 - **Coarse mags diverge from a fresh downsampling, permanently.** Not drift between client and server — the backend applies the client's per-mag diffs verbatim, so reload is faithful (§5.4). But because written-value-wins is order-dependent, the stored coarse mags are a function of *how* the region was edited, and no later pass can reconstruct them from the finest mag. Principle 2 accepts this. If it ever stops being acceptable, the answer is a background re-derivation job that rewrites coarse mags from the finest mag on a schedule — which would also settle what "correct" means at coarse mags, a question this doc does not answer. Note that adopting a data-derivable rule instead would re-couple propagation to bucket residency; see §5.4.

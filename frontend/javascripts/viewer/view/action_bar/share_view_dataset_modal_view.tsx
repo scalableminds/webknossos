@@ -19,7 +19,11 @@ function _ShareViewDatasetModalView(props: Props) {
   const sharingToken = useDatasetSharingToken(dataset);
   const longUrl = getUrl(sharingToken, !dataset.isPublic);
 
-  const { baseUrl: zarrBaseUrl, copyLayerUrlMenu } = useZarrLinkMenu(null);
+  const {
+    baseUrl: zarrBaseUrl,
+    copyLayerUrlMenu,
+    isLoading: isZarrLinkLoading,
+  } = useZarrLinkMenu(null);
 
   return (
     <Modal
@@ -72,15 +76,16 @@ function _ShareViewDatasetModalView(props: Props) {
                 style={{
                   width: "calc(78% + 32px)",
                 }}
-                value={zarrBaseUrl}
+                value={isZarrLinkLoading ? "Loading…" : zarrBaseUrl}
                 readOnly
               />
-              <Dropdown menu={copyLayerUrlMenu}>
+              <Dropdown menu={copyLayerUrlMenu} disabled={isZarrLinkLoading}>
                 <Button
                   style={{
                     width: "15%",
                   }}
                   icon={<CopyOutlined />}
+                  disabled={isZarrLinkLoading}
                 >
                   Copy
                 </Button>

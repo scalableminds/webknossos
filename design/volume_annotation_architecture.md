@@ -24,6 +24,34 @@ Code in this document is illustrative TypeScript — signatures and sketches mea
 5. Every transaction is undoable/redoable, and undo must not silently discard edits (own or others') that happened after it.
 6. An "overwrite mode" governs whether painting may overwrite already-labeled voxels or only empty (background) ones.
 
+### 1.1 Terminology: bucket states and *residency*
+
+This doc uses **resident** throughout. It is not today's vocabulary, so here is what it means and how it maps onto the states buckets actually have.
+
+Two independent questions decide a bucket's state: *is there a `32³` array for it in memory?* and *does that array reflect the backend's content?*
+
+| State | Array in memory | Contents authoritative | Can record diffs | Can render |
+|---|---|---|---|---|
+| **absent** | no | — | **yes** | no |
+| **pending** | yes, zero-filled + local writes | no — backend data has not arrived | **yes** | local edits only |
+| **resident** | yes | yes | **yes** | yes |
+
+> **resident** = the array exists *and* holds the backend's content with all known diffs folded in.
+
+Orthogonal to all three: **dirty** — the bucket has diffs not yet acknowledged by the backend. In this design that is simply "its log has unsaved entries", which is what §5.5's eviction rule keys off. A fourth case, the out-of-bounds *null bucket*, never reaches the write set at all: the rasterizer's clipping step (§5.3, step 1) discards those addresses.
+
+**Why the pending/resident split matters.** Four things in this design read bucket state, and they need different guarantees:
+
+- *Recording a diff* needs nothing. Any of the three states works — this is principle 4, and it is what makes coarse-mag editing viable.
+- *Write-through for display* needs an array to exist, so `absent` must first become `pending`. Whether the backend data has arrived is irrelevant; the merge on arrival sorts it out.
+- *The overwrite predicate* (§5.3) and *`before` capture* (§5.2) need **authoritative** content, so `pending` is not good enough. A pending bucket's array is zero-filled, and reading it would report "everything is background" — under `overwrite-empty-only` that means painting over data that turns out to be labeled. `VoxelReader.getResident` therefore returns `undefined` for pending buckets, deliberately, so a placeholder can never be mistaken for real content.
+
+**How this relates to the current implementation.** Today, brushing over unloaded data always instantiates the bucket (cheap), writes into the zero-filled array, marks it dirty, and merges when the backend data arrives. That is exactly the `absent → pending → resident` path above, and it stays valid here — with one change:
+
+**Materialization on write becomes optional, driven by visibility.** Today it is unconditional. It cannot stay unconditional, because a single mag-16 stroke implies writes to ~250 finest-mag buckets the user is not looking at (§6.2); instantiating all of them costs ~64 MB to no purpose. The rule is: materialize on write only if the bucket is visible or about to be. Otherwise record the diff against its address and leave it `absent`.
+
+The merge-on-arrival step generalizes too: "fold this bucket's pending log entries on load" (§5.5) is the same fold the undo log already performs (§5.7), so the temporal-bucket merge and undo replay become one mechanism instead of two.
+
 ---
 
 ## 2. Answers in Brief
@@ -297,8 +325,10 @@ The single place that turns geometry into voxel indices.
 ```ts
 /** Read-only view over the cube; keeps the rasterizer decoupled from storage. */
 interface VoxelReader {
-  /** Dense content of a resident bucket, or undefined. Fetch once per bucket,
-   *  then index directly — never call this per voxel. */
+  /** Dense content of a resident bucket. Fetch once per bucket, then index
+   *  directly — never call this per voxel. Returns undefined for `absent` AND
+   *  for `pending` buckets (§1.1): a zero-filled placeholder must never be
+   *  mistaken for "all background". Never triggers a fetch. */
   getResident(address: BucketAddress): BigUint64Array | undefined;
   /** Random access for data-dependent shapes (flood fill's neighbour walk).
    *  Convenient but ~two orders of magnitude slower than indexing `current`. */
@@ -354,7 +384,8 @@ function emitSpan(w: BucketWriter, start: VoxelIndex, length: number, ctx: EditC
   }
   const current = w.current;
   if (current == null) {
-    // Not resident: nothing to test against. See §5.4 on why this is acceptable.
+    // Absent or pending (§1.1): no authoritative content to test against, so
+    // paint optimistically. Same reasoning as §5.4's source-mag-only predicate.
     w.markRun(start, length);
     return;
   }
@@ -501,22 +532,26 @@ Sending all mags is cheap. Coarse-mag diffs shrink geometrically with the pyrami
 
 ### 5.5 `WorkingDataCube`
 
-Unchanged in spirit from today: one `32³` typed array per resident `(bucketPosition, magIndex, additionalCoordinates)`, lazily fetched, evicted under memory pressure, feeding GPU textures directly.
+Unchanged in spirit from today: one `32³` typed array per materialized `(bucketPosition, magIndex, additionalCoordinates)`, lazily fetched, evicted under memory pressure, feeding GPU textures directly.
 
 ```ts
 interface WorkingDataCube extends VoxelReader {
   // getResident / peek are inherited from VoxelReader; neither triggers a fetch.
-  isResident(address: BucketAddress): boolean;
+  state(address: BucketAddress): "absent" | "pending" | "resident";   // §1.1
+  /** Allocates a zero-filled array (absent → pending) and starts a fetch.
+   *  Called on write only when the bucket is visible or about to be. */
+  materialize(address: BucketAddress): void;
   /** Applies a whole bucket's writes at once, walking the mask's runs. */
   applyWrites(address: BucketAddress, writes: BucketWrites): void;
   markDirtyForGpu(address: BucketAddress): void;
 }
 ```
 
-Two constraints the new model adds:
+Three constraints the new model adds:
 
-- **Eviction must respect pending state.** A bucket with unsaved diffs, or whose diff log is still needed by the undo horizon, cannot simply be dropped. Either keep it, or persist its log (checkpoint + entries) alongside the eviction — the log, not the array, is the thing that must survive.
-- **Load must fold pending local diffs.** A bucket fetched from the backend may predate diffs this client has recorded but not yet saved. On load, apply the pending entries from its log before handing the array to the GPU.
+- **Eviction must respect unsaved state.** A bucket with unsaved diffs, or whose diff log is still needed by the undo horizon, cannot simply be dropped. Either keep it, or persist its log (checkpoint + entries) alongside the eviction — the log, not the array, is the thing that must survive.
+- **Load must fold local diffs.** A bucket arriving from the backend may predate diffs this client recorded while it was `absent` or `pending`. On load, fold that bucket's log entries over the fetched data before handing the array to the GPU. This is the generalization of today's temporal-bucket merge (§1.1), and it is the same fold `rebuild` performs in §5.7.
+- **Materialization is a rendering decision, not a writing one.** Writes never force it (principle 4). The cube materializes a bucket because something needs to *display* it — which is why a mag-16 stroke leaves its ~250 finest-mag buckets `absent` while the mag-16 buckets on screen become `resident`.
 
 ### 5.6 Diff types
 

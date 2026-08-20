@@ -10,7 +10,7 @@ import {
 } from "viewer/view/left_border_tabs/components/relative_slider";
 import { describe, expect, it } from "vitest";
 
-describe("sanitizeSliderRange", () => {
+describe("translationSliderRangeFromViewportExtent", () => {
   it("should round a viewport extent to a single significant digit", () => {
     expect(translationSliderRangeFromViewportExtent(1253)).toBe(1000);
     expect(translationSliderRangeFromViewportExtent(2600)).toBe(3000);
@@ -157,7 +157,7 @@ describe("applyRelativeFactor", () => {
   });
 });
 
-describe("applyRelativeDelta", () => {
+describe("applyRelativeTranslationDelta", () => {
   it("should increase and decrease the base value", () => {
     expect(applyRelativeTranslationDelta(10, -3)).toBe(7);
     expect(applyRelativeTranslationDelta(10, 3)).toBe(13);

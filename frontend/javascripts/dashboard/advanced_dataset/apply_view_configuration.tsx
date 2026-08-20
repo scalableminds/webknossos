@@ -130,7 +130,7 @@ export async function applyViewConfigurationToDatasetsInFolder(
         </Typography.Paragraph>
         <Typography.Paragraph type="secondary">
           Layer settings are only copied to layers of the same name and category. Layers which don't
-          exist in {sourceDataset.name} are left untouched. 
+          exist in {sourceDataset.name} are left untouched.
         </Typography.Paragraph>
       </>
     ),

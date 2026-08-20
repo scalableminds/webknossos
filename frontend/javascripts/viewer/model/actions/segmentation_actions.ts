@@ -1,6 +1,5 @@
 import type { AdditionalCoordinate } from "types/api_types";
-import type { Vector3 } from "viewer/constants";
-import type { MappingType } from "viewer/store";
+import type { MappingType, Vector3 } from "viewer/constants";
 
 export type AdHocMeshInfo = {
   mappingName: string | null | undefined;

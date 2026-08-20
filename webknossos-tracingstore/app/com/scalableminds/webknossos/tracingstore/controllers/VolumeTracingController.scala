@@ -29,7 +29,7 @@ import com.scalableminds.webknossos.datastore.models.{
 }
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
-import com.scalableminds.webknossos.datastore.services.mesh.FullMeshRequest
+import com.scalableminds.webknossos.datastore.services.mesh.{FullMeshRequest, MappingType}
 import com.scalableminds.webknossos.tracingstore.annotation.{AnnotationTransactionService, TSAnnotationService}
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
@@ -424,7 +424,7 @@ class VolumeTracingController @Inject() (
               lod = None,
               segmentId = segmentId,
               mappingName = baseMappingName,
-              mappingType = baseMappingName.map(_ => "HDF5"),
+              mappingType = baseMappingName.map(_ => MappingType.AGGLOMERATE),
               editableMappingTracingId =
                 None, // This param is used only when loading meshes from static meshfiles. Here, the underlying load bucket function will apply the editable mapping if there is one.
               annotationVersion = None,

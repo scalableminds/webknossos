@@ -235,7 +235,7 @@ Why a write map rather than "snapshot the bucket, mutate freely, diff at the end
 - It works for non-resident buckets, which snapshot-and-diff cannot (there is nothing to snapshot).
 - Its size is proportional to the edit, not to the number of touched buckets. A stroke that grazes 300 buckets and writes 5 voxels in each costs 1500 entries, not 300 × 32768.
 
-`before` is only populated for resident buckets and is only used for `abort()` (and for the fast-path undo in §5.7). It is *not* needed for forward replay — see the correction in §5.7.
+`before` is only populated for resident buckets and is only used for `abort()` (and for the fast-path undo in §5.7). It is *not* needed for forward replay.
 
 **Cancel is not free, but it is cheap.** Because we do apply writes live (the user must see the stroke), cancelling means restoring the touched voxels from `before`, not "throwing away an untouched buffer". That is O(number of written voxels), which is fine.
 

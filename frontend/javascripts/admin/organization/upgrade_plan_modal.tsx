@@ -1,4 +1,4 @@
-import { FieldTimeOutlined, RobotOutlined } from "@ant-design/icons";
+import { FieldTimeOutlined } from "@ant-design/icons";
 import {
   sendExtendPricingPlanEmail,
   sendOrderCreditsEmail,
@@ -183,11 +183,7 @@ function UpgradeAiPlanModal({ destroy }: { destroy: () => void }) {
 
   return (
     <Modal
-      title={
-        <>
-          <RobotOutlined style={{ color: "var(--ant-color-primary)" }} /> AI Add-on
-        </>
-      }
+      title="AI Add-on"
       okText="Buy AI Add-on"
       onOk={handleSubmit}
       onCancel={destroy}

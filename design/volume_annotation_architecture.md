@@ -299,13 +299,22 @@ type AnalyticShape =
   | { kind: "box"; min: Vector3; max: Vector3 };
 
 /**
- * An explicit dense region: one bit per voxel over an axis-aligned box, in
- * source-mag voxel space. Emitted directly by ML and quick-select tools, whose
- * models naturally produce a small dense patch and which should not have to
- * know about buckets. Rasterizable, because the region is already known — it
- * merely happens to have been derived from data at some earlier point.
+ * An explicit dense region over an axis-aligned box, in source-mag voxel
+ * space. Emitted directly by ML and quick-select tools, whose models naturally
+ * produce a small dense patch and which should not have to know about buckets.
+ * Rasterizable, because the region is already known — it merely happens to
+ * have been derived from data at some earlier point.
+ *
+ * `selected` holds **one byte per voxel** (0 = outside, non-zero = inside),
+ * indexed `x + y * size[0] + z * size[0] * size[1]`, with `x` fastest.
+ * Length is exactly `size[0] * size[1] * size[2]`.
  */
-type MaskShape = { kind: "mask"; origin: Vector3; size: Vector3; bits: Uint8Array };
+type MaskShape = {
+  kind: "mask";
+  origin: Vector3;
+  size: Vector3;
+  selected: Uint8Array;
+};
 
 /**
  * Region discovered by reading the data, across buckets that may not be
@@ -319,6 +328,19 @@ type DataDependentShape =
 A second, cross-cutting distinction: analytic shapes are mag-independent — the same brush stroke rasterized at mag 1 and mag 4 describes the same physical region. Mask and data-dependent shapes are **not**: a flood fill seeded at the same point yields a different region at mag 1 than at mag 4, because connectivity is evaluated on different data. So `EditIntent` coordinates are expressed in *source-mag* voxel space and `sourceMagIndex` is part of the intent's meaning, not an incidental detail. Framing all intents as mag-1-space geometry would be wrong for every variant except `AnalyticShape`. Note this cuts across the rasterizable/data-dependent split rather than following it: `MaskShape` is rasterizable but very much mag-specific.
 
 Adding a tool means adding an `EditIntent` variant and one producer case — nothing else in the system changes.
+
+**Why `MaskShape` is a byte array while `VoxelMask` (§4) is a packed `Uint32Array`.** They are solving different problems, and the divergence is deliberate.
+
+`VoxelMask` is an internal hot-path structure. It is always exactly `32³` bits, `markRun` fills whole words, `runs()` scans them, and one word maps exactly onto one x-row of a bucket. The word width is load-bearing; nothing about it would survive a different representation.
+
+`MaskShape` is an **interchange** format, and its constraints come from whoever hands it to us:
+
+- **Alignment.** `new Uint32Array(buffer, byteOffset, …)` throws unless `byteOffset` is 4-aligned. A patch arriving as a slice of a WASM heap, a worker transfer, or a fetch response often is not. `Uint8Array` has no such constraint.
+- **Interop.** It is the lingua franca for binary in JS — what `postMessage`, WASM memory views and network responses already give you, without a copy or a re-view.
+- **Byte order.** Reinterpreting wider typed arrays as bytes is platform-endian-dependent; a byte array has one unambiguous meaning across a worker or WASM boundary.
+- **Simplicity at the producer.** One byte per voxel is what a thresholded model output looks like anyway, and it spares every tool author the bit-packing convention.
+
+The cost is 8× the memory of a packed bitset — 256 KB rather than 32 KB for a `512×512` patch — and it is paid only transiently, by tools that fire once per click rather than once per pointer-move. Packing it is a straightforward later optimization (§10.2) that touches only the producers and the mask-to-write-set conversion.
 
 #### Two producers, one output
 
@@ -369,7 +391,7 @@ async function resolveFloodFill(shape, ctx, reader, signal): Promise<VoxelWriteS
 
 Note `out.has(v)` doubles as the **visited** set. A flood fill only enqueues voxels matching the seed value, so visited and painted coincide, and the write set *is* the traversal state — no second allocation.
 
-**Why not resolve to a dense `MaskShape` first.** Because a fill with `bounds: null` has no known extent, so a bbox-and-bits mask would mean either allocating the worst case up front (unbounded — the layer's maximum extent), computing the bbox by walking twice, or reallocating as the frontier grows. All of that to then convert into per-bucket masks, which is what `VoxelWriteSet` already is. Per-bucket `VoxelMask`s allocate 4 KB only for buckets actually touched, which is also what production does today.
+**Why not resolve to a dense `MaskShape` first.** Because a fill with `bounds: null` has no known extent, so a dense box-shaped mask would mean either allocating the worst case up front (unbounded — the layer's maximum extent), computing the bbox by walking twice, or reallocating as the frontier grows. All of that to then convert into per-bucket masks, which is what `VoxelWriteSet` already is. Per-bucket `VoxelMask`s allocate 4 KB only for buckets actually touched, which is also what production does today.
 
 That overhead is negligible in context: 4 KB of mask against the 256 KB of bucket data the fill had to load in order to visit that bucket at all — about 1.5%. The data is the real cost, which is why bounding a fill is still an open question (§9) and not something this structure solves.
 
@@ -1148,6 +1170,17 @@ Measure first. The transport is compressed, and 314 near-identical records with 
 
 Note this does not help the CPU side: filling the mask for a YZ stroke is bit-at-a-time, because `markRun`'s word-fill only applies along x (§4). For a brush dab that is a few hundred OR operations — negligible, and O(voxels) either way.
 
-### 10.2 Others, tracked in §9
+### 10.2 Pack `MaskShape.selected` into a bitset
+
+`MaskShape` carries one byte per voxel (§5.1), which is 8× a packed bitset — 256 KB rather than 32 KB for a `512×512` patch, and 16 MB rather than 2 MB for a `256³` volume patch. Simplicity was chosen over density because the format is an interchange boundary: byte arrays impose no alignment constraint on the producer, have unambiguous byte order across worker and WASM boundaries, and match what a thresholded model output already looks like.
+
+Packing it is a contained change — the producers, and the loop that converts a mask into a `VoxelWriteSet`. Nothing else reads `selected`. Two caveats if it is done:
+
+- The bit addressing must be specified, not assumed: index `x + y·size[0] + z·size[0]·size[1]`, LSB-first within each byte, is the obvious convention but two implementations will otherwise disagree about it.
+- It cannot reuse `VoxelMask`. That class is fixed at `32³` and its word/x-row alignment is meaningful only inside a bucket; a mask over an arbitrary box shares none of that.
+
+Worth doing when a tool starts producing large 3D patches. For the 2D patches quick-select emits today, the absolute numbers are small and transient — the mask is discarded as soon as it becomes a write set.
+
+### 10.3 Others, tracked in §9
 
 Two further performance items are open questions rather than designed improvements, and are listed in §9: keeping the upsample fully symbolic to flatten the commit-time spike on coarse-mag strokes, and moving the rasterizer into a Web Worker.

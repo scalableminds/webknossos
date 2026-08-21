@@ -267,6 +267,16 @@ function DAGView({
       nodes={nodes}
       edges={edges}
       fitView
+      // The DAG is read-only, so none of React Flow's keyboard interactions
+      // (delete, multi-select, box-select, zoom activation) are needed. Passing null
+      // also keeps React Flow from registering its document-level key listeners. Those
+      // call isInputDOMNode(), which assumes event.target is an Element and therefore
+      // throws for the synthetic keyup events that keystrokes dispatches on `document`
+      // when the window loses focus while a key is held.
+      deleteKeyCode={null}
+      multiSelectionKeyCode={null}
+      selectionKeyCode={null}
+      zoomActivationKeyCode={null}
       fitViewOptions={{ maxZoom: 1.5 }}
       minZoom={0.3}
       maxZoom={2}

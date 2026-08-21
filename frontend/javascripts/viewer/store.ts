@@ -663,8 +663,17 @@ type ConnectomeData = {
   readonly activeAgglomerateIds: Array<bigint>;
   readonly skeleton: SkeletonTracing | null | undefined;
 };
-export type MinCutPartitions = { 1: bigint[]; 2: bigint[]; agglomerateId: bigint | null };
-
+export type MinCutPartitions =
+  | {
+      partitionA: bigint[];
+      partitionB: bigint[];
+      agglomerateId: bigint;
+    }
+  | {
+      partitionA: [];
+      partitionB: [];
+      agglomerateId: null;
+    };
 export type LocalMeshesInfo =
   | Record<LayerNameAsKey, Record<BigIntAsKey, MeshInformation> | undefined>
   | undefined;

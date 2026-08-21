@@ -84,18 +84,22 @@ export function useMultiCutToolOptions(
 
   if (!minCutPartitions) return [];
 
-  const isSegmentInPartition1 = minCutPartitions[1].includes(unmappedSegmentId);
-  const isSegmentInPartition2 = minCutPartitions[2].includes(unmappedSegmentId);
+  const isSegmentInPartition1 = (minCutPartitions.partitionA as bigint[]).includes(
+    unmappedSegmentId,
+  );
+  const isSegmentInPartition2 = (minCutPartitions.partitionB as bigint[]).includes(
+    unmappedSegmentId,
+  );
   const togglePartition1Verb = isSegmentInPartition1 ? "Remove" : "Add";
   const togglePartition2Verb = isSegmentInPartition2 ? "Remove" : "Add";
   const doBothPartitionsHaveEntries =
-    minCutPartitions[1].length > 0 && minCutPartitions[2].length > 0;
+    minCutPartitions.partitionA.length > 0 && minCutPartitions.partitionB.length > 0;
 
   return [
     {
       key: "mark-as-partition-1",
       onClick: () =>
-        dispatch(toggleSegmentInPartitionAction(unmappedSegmentId, 1, mappedSegmentId)),
+        dispatch(toggleSegmentInPartitionAction(unmappedSegmentId, "partitionA", mappedSegmentId)),
       label: (
         <>
           {togglePartition1Verb} {segmentOrSuperVoxel} ({segmentIdLabel}) to Partition 1{" "}
@@ -106,7 +110,7 @@ export function useMultiCutToolOptions(
     {
       key: "mark-as-partition-2",
       onClick: () =>
-        dispatch(toggleSegmentInPartitionAction(unmappedSegmentId, 2, mappedSegmentId)),
+        dispatch(toggleSegmentInPartitionAction(unmappedSegmentId, "partitionB", mappedSegmentId)),
       label: (
         <>
           {togglePartition2Verb} {segmentOrSuperVoxel} ({segmentIdLabel}) to Partition 2{" "}

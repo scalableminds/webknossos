@@ -17,10 +17,11 @@ import {
   IdentityTransform,
   type NestedMatrix4,
   type Vector3,
+  Vector3Indices,
   type Vector4,
 } from "viewer/constants";
 import type { WebknossosState } from "viewer/store";
-import type BoundingBox from "../bucket_data_handling/bounding_box";
+import BoundingBox from "../bucket_data_handling/bounding_box";
 import {
   chainTransforms,
   createAffineTransformFromMatrix,
@@ -30,7 +31,7 @@ import {
   type Transform,
   transformPointUnscaled,
 } from "../helpers/transformation_helpers";
-import { getLayerByName } from "./dataset_accessor";
+import { getDataLayers, getLayerBoundingBox, getLayerByName } from "./dataset_accessor";
 
 const IDENTITY_MATRIX = [
   [1, 0, 0, 0],
@@ -580,6 +581,54 @@ export function layerToGlobalTransformedPosition(
     return transformPointUnscaled(layerTransforms)(layerPos);
   }
   return layerPos;
+}
+
+// Unlike getUntransformedDatasetBoundingBox (dataset_accessor.ts), this variant takes each
+// layer's coordinate transforms (relative to nativelyRenderedLayerName) into account. Since
+// different layers can have different transforms, the axis-aligned extent has to be computed
+// per layer (by transforming its 8 corners) before taking the union across layers.
+function _getTransformedDatasetBoundingBox(
+  dataset: APIDataset,
+  nativelyRenderedLayerName: string | null,
+): BoundingBox {
+  const min: Vector3 = [
+    Number.POSITIVE_INFINITY,
+    Number.POSITIVE_INFINITY,
+    Number.POSITIVE_INFINITY,
+  ];
+  const max: Vector3 = [
+    Number.NEGATIVE_INFINITY,
+    Number.NEGATIVE_INFINITY,
+    Number.NEGATIVE_INFINITY,
+  ];
+
+  for (const dataLayer of getDataLayers(dataset)) {
+    const layerBox = getLayerBoundingBox(dataset, dataLayer.name);
+    const transform = getTransformsForLayerOrNull(dataset, dataLayer, nativelyRenderedLayerName);
+    const corners = new BoundingBox(layerBox).getCorners();
+    const transformedCorners = transform ? corners.map(transformPointUnscaled(transform)) : corners;
+
+    for (const corner of transformedCorners) {
+      for (const i of Vector3Indices) {
+        min[i] = Math.min(min[i], corner[i]);
+        max[i] = Math.max(max[i], corner[i]);
+      }
+    }
+  }
+
+  return new BoundingBox({
+    min,
+    max,
+  });
+}
+
+export const getTransformedDatasetBoundingBox = memoizeOne(_getTransformedDatasetBoundingBox);
+
+export function getTransformedDatasetCenter(
+  dataset: APIDataset,
+  nativelyRenderedLayerName: string | null,
+): Vector3 {
+  return getTransformedDatasetBoundingBox(dataset, nativelyRenderedLayerName).getCenter();
 }
 
 // The live SRT transform format uses exactly 7 affine matrices in this order:

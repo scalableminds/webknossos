@@ -24,9 +24,43 @@ Code in this document is illustrative TypeScript — signatures and sketches mea
 5. Every transaction is undoable/redoable, and undo must not silently discard edits (own or others') that happened after it.
 6. An "overwrite mode" governs whether painting may overwrite already-labeled voxels or only empty (background) ones.
 
-### 1.1 Terminology: bucket states and *residency*
+### 1.1 Terminology
 
-This doc uses **resident** throughout. It is not today's vocabulary, so here is what it means and how it maps onto the states buckets actually have.
+Two words this doc leans on heavily and that are not today's vocabulary.
+
+#### Folding
+
+To **fold** a bucket is to reduce an ordered sequence of diff entries onto a base array, producing the bucket's content. The name is the functional `fold`/`reduce`: a base value, a sequence, and a combining step. (`BucketLogEntry` and `VoxelRun` are defined in §5.7 and §5.6; only their shape matters here.)
+
+```ts
+function fold(
+  base: BigUint64Array,
+  entries: BucketLogEntry[],          // ascending by sequence
+  include: (e: BucketLogEntry) => boolean,
+): BigUint64Array {
+  const data = base.slice();
+  for (const entry of entries) {
+    if (!include(entry)) continue;
+    for (const run of entry.runs) applyRun(data, run);   // absolute writes
+  }
+  return data;
+}
+```
+
+Everything rests on the runs being **absolute writes** — "voxel `i` becomes `v`", not "voxel `i` changes by `v`". A later entry simply overwrites an earlier one wherever they touch the same voxel, so replaying in sequence order is exactly what "last-write-wins" means mechanically. It is also why folding never has to invert anything and never has to run backwards: to remove an entry's effect you re-fold without it (principle 5), rather than computing its opposite.
+
+The same loop serves both callers; only the base and the filter differ:
+
+| Caller | Base | Filter |
+|---|---|---|
+| undo / redo (§5.7) | nearest local checkpoint | skip entries marked `skipped` |
+| bucket load (§5.5) | freshly fetched backend data | skip entries that data already contains |
+
+Per principle 3 the fold *is* the definition of a bucket's content; the `32³` array held in memory is a cached result of one, kept because the GPU needs an array rather than a log.
+
+#### Residency
+
+This doc also uses **resident** throughout. Here is what it means and how it maps onto the states buckets actually have.
 
 Two independent questions decide a bucket's state: *is there a `32³` array for it in memory?* and *does that array reflect the backend's content?*
 

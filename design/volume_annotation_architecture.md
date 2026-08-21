@@ -798,6 +798,78 @@ What is left, once the size argument is discarded, is narrow but solid: runs are
 - **Backend counterpart.** Two changes are needed. First, accept per-bucket diffs and fold them into the bucket's stored content rather than overwriting wholesale — that is what unlocks multi-user diff composition; without it, two users' concurrent edits to one bucket still resolve as last-writer-wins over the entire bucket. Second, retain the per-bucket diff log and support re-folding it with entries skipped, which is what `undoTransaction` requires. The backend still never resamples and needs no notion of the mag pyramid: diffs arrive for every mag and are applied verbatim to that mag (§5.4).
 - **The two horizons are coupled.** The backend's materialization/squashing point must stay at or behind the undo horizon. If T gets folded into a materialized base, it can no longer be skipped and becomes un-undoable. This is the same constraint as local checkpoints in §5.7 — one rule, enforced on both sides.
 
+### 5.9 Sequence: one brush stroke
+
+Pointer-down through pointer-up, showing which component does what and which structure crosses each boundary.
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor U as User
+  participant B as BrushTool
+  participant T as VolumeTransaction
+  participant R as Rasterizer
+  participant C as WorkingDataCube
+  participant P as MagPropagationService
+  participant L as UndoLog
+  participant S as SaveQueue
+  participant K as Backend
+
+  U->>B: pointer-down
+  B->>B: freeze EditContext
+  Note right of B: sourceMagIndex, activeSegmentId,<br/>overwriteMode, additionalCoordinates,<br/>editableBoundingBox
+  B->>T: open(EditContext)
+  Note right of B: EditIntent { kind: "brush",<br/>path: [p0], radius, planeAxis }
+
+  loop each pointer-move
+    U->>B: pointer-move(pN)
+    B->>B: path.push(pN)
+    B->>R: rasterize(capsule prev→pN, ctx, tx)
+    Note over R: clip to bbox, split by bucket
+    loop each intersecting bucket
+      R->>T: writerFor(address, activeSegmentId)
+      T->>C: getResident(address)
+      C-->>T: BigUint64Array, or undefined if absent/pending
+      T-->>R: BucketWriter
+      opt overwrite-empty-only AND resident
+        R->>R: split each scanline where current[i] is not 0n
+      end
+      R->>T: markRun(start, length) per scanline
+      Note over T: VoxelMask bit-fill,<br/>4 KB per touched bucket
+      T->>C: applyWrites(address, BucketWrites)
+      C->>C: markDirtyForGpu
+    end
+    C-->>U: stroke visible at the source mag
+  end
+
+  U->>B: pointer-up
+  B->>T: commit(propagation)
+  T->>P: propagate(sourceWrites, ctx)
+  Note over P: Step A: upsample source → finest<br/>Step B: downsample source → coarsest<br/>one adjacent level at a time
+  P-->>T: writes per mag (MagIndex to VoxelWriteSet)
+  T->>C: applyWrites(...) for resident buckets only
+  T->>T: toRuns() per bucket
+  Note right of T: TransactionDiff { id, sequence,<br/>sourceMagIndex, bucketDiffs, sideEffects }
+  T->>L: append(TransactionDiff)
+  T->>S: enqueue(TransactionDiff)
+  S->>S: debounce, batch, encode runs, base64
+  S->>K: one versioned group of updateBucketDiff actions
+```
+
+Two things the diagram makes visible that the prose does not. The `getResident` call returning `undefined` is the *normal* case for a coarse-mag stroke — most touched buckets are `absent` (§1.1), the overwrite predicate is skipped for them, and no fetch is triggered. And mag propagation appears exactly once, after pointer-up, not inside the move loop (§6.1).
+
+What crosses each boundary:
+
+| Structure | Produced by | Consumed by | Defined in |
+|---|---|---|---|
+| `EditContext` | BrushTool, at pointer-down | everything downstream | §4 |
+| `EditIntent` | BrushTool, growing per move | Rasterizer | §5.1 |
+| `BucketWriter` | VolumeTransaction, one per bucket | Rasterizer's inner loop | §5.2 |
+| `BucketWrites` (mask + value) | accumulated in the transaction | cube, `toRuns` | §4 |
+| `VoxelWriteSet` | Rasterizer, then propagation | transaction, cube | §4 |
+| `TransactionDiff` | `commit()` | UndoLog, SaveQueue | §5.6 |
+| `UpdateBucketDiffAction[]` | SaveQueue encoder | backend | §5.8 |
+
 ---
 
 ## 6. Worked Examples

@@ -1,5 +1,7 @@
 import type { QueryKey, UseQueryOptions } from "@tanstack/react-query";
 import { useQuery } from "@tanstack/react-query";
+import type { ApiResult } from "admin/api/api_result";
+import { unwrapOrThrow } from "admin/api/api_result";
 import { handleGenericError } from "libs/error_handling";
 import { isPlainObject } from "lodash-es";
 import debounce from "lodash-es/debounce";
@@ -298,11 +300,6 @@ export function useIsMounted() {
 }
 
 /**
- * Hook that provides type-safe access to the Webknossos Redux store.
- * @param fn - Selector function that receives the Webknossos state
- * @returns Selected state value
- */
-/**
  * Wrapper around `useQuery` that automatically calls `handleGenericError` when the query fails.
  * This ensures the user sees a toast notification for any unhandled query error.
  * Pass `fallbackMessage` to override the default generic error message.
@@ -349,6 +346,30 @@ export function useQueryWithErrorHandling<
   return result;
 }
 
+/**
+ * Wrapper around `useQuery` for rest_api.ts functions that return an `ApiResult`
+ * (see libs/api_result.ts) and already retry internally. Unwraps the ApiResult so
+ * `data`/`error` behave like a normal useQuery result, and disables useQuery's own
+ * retry — the retrying already happened inside the queryFn, so retrying again here
+ * would compound backoff on top of backoff.
+ */
+export function useApi<TData, TQueryKey extends QueryKey = QueryKey>(
+  options: Omit<UseQueryOptions<TData, Error, TData, TQueryKey>, "queryFn" | "retry"> & {
+    queryFn: () => Promise<ApiResult<TData>>;
+  },
+) {
+  return useQuery({
+    ...options,
+    queryFn: async () => unwrapOrThrow(await options.queryFn()),
+    retry: false,
+  });
+}
+
+/**
+ * Hook that provides type-safe access to the Webknossos Redux store.
+ * @param fn - Selector function that receives the Webknossos state
+ * @returns Selected state value
+ */
 export function useWkSelector<T>(fn: (state: WebknossosState) => T, equalityFn?: EqualityFn<T>): T {
   return useSelector(fn, equalityFn);
 }

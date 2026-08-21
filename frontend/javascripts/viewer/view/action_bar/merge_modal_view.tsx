@@ -20,7 +20,7 @@ import {
   theme,
 } from "antd";
 import { makeComponentLazy } from "libs/react_helpers";
-import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
+import { useApi, useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import { animationFrame, sleep } from "libs/utils";
@@ -95,7 +95,7 @@ function MergeModalViewInner({ isOpen, onOk }: Props) {
     data: fetchedAnnotationData,
     isFetching: isFetchingAnnotation,
     status: annotationQueryStatus,
-  } = useQueryWithErrorHandling({
+  } = useApi({
     queryKey: ["unversionedAnnotation", extractedAnnotationId],
     queryFn: () =>
       getUnversionedAnnotationInformation(extractedAnnotationId!, {

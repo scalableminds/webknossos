@@ -313,18 +313,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@biomejs/biome@npm:^2.3.13":
-  version: 2.3.13
-  resolution: "@biomejs/biome@npm:2.3.13"
+"@biomejs/biome@npm:^2.5.8":
+  version: 2.5.8
+  resolution: "@biomejs/biome@npm:2.5.8"
   dependencies:
-    "@biomejs/cli-darwin-arm64": "npm:2.3.13"
-    "@biomejs/cli-darwin-x64": "npm:2.3.13"
-    "@biomejs/cli-linux-arm64": "npm:2.3.13"
-    "@biomejs/cli-linux-arm64-musl": "npm:2.3.13"
-    "@biomejs/cli-linux-x64": "npm:2.3.13"
-    "@biomejs/cli-linux-x64-musl": "npm:2.3.13"
-    "@biomejs/cli-win32-arm64": "npm:2.3.13"
-    "@biomejs/cli-win32-x64": "npm:2.3.13"
+    "@biomejs/cli-darwin-arm64": "npm:2.5.8"
+    "@biomejs/cli-darwin-x64": "npm:2.5.8"
+    "@biomejs/cli-linux-arm64": "npm:2.5.8"
+    "@biomejs/cli-linux-arm64-musl": "npm:2.5.8"
+    "@biomejs/cli-linux-x64": "npm:2.5.8"
+    "@biomejs/cli-linux-x64-musl": "npm:2.5.8"
+    "@biomejs/cli-win32-arm64": "npm:2.5.8"
+    "@biomejs/cli-win32-x64": "npm:2.5.8"
   dependenciesMeta:
     "@biomejs/cli-darwin-arm64":
       optional: true
@@ -344,62 +344,62 @@ __metadata:
       optional: true
   bin:
     biome: bin/biome
-  checksum: 10c0/920c44c755ab8efa2114b441baf74b8f5fae8e6ad98a301ce02228f546d20ef6ab7c33b990b0a4acd1ffc8f5985ae839cf1fec59a6f169732a0f86c14308728b
+  checksum: 10c0/244e17bc70d25cbbf0838ffc32e472a64ab4e19093c9603aa9e266b1f99a00d5b64590a52678a84ae60ac71e0f268efe437b16852e4c08ddce28131dd35847f3
   languageName: node
   linkType: hard
 
-"@biomejs/cli-darwin-arm64@npm:2.3.13":
-  version: 2.3.13
-  resolution: "@biomejs/cli-darwin-arm64@npm:2.3.13"
+"@biomejs/cli-darwin-arm64@npm:2.5.8":
+  version: 2.5.8
+  resolution: "@biomejs/cli-darwin-arm64@npm:2.5.8"
   conditions: os=darwin & cpu=arm64
   languageName: node
   linkType: hard
 
-"@biomejs/cli-darwin-x64@npm:2.3.13":
-  version: 2.3.13
-  resolution: "@biomejs/cli-darwin-x64@npm:2.3.13"
+"@biomejs/cli-darwin-x64@npm:2.5.8":
+  version: 2.5.8
+  resolution: "@biomejs/cli-darwin-x64@npm:2.5.8"
   conditions: os=darwin & cpu=x64
   languageName: node
   linkType: hard
 
-"@biomejs/cli-linux-arm64-musl@npm:2.3.13":
-  version: 2.3.13
-  resolution: "@biomejs/cli-linux-arm64-musl@npm:2.3.13"
+"@biomejs/cli-linux-arm64-musl@npm:2.5.8":
+  version: 2.5.8
+  resolution: "@biomejs/cli-linux-arm64-musl@npm:2.5.8"
   conditions: os=linux & cpu=arm64 & libc=musl
   languageName: node
   linkType: hard
 
-"@biomejs/cli-linux-arm64@npm:2.3.13":
-  version: 2.3.13
-  resolution: "@biomejs/cli-linux-arm64@npm:2.3.13"
+"@biomejs/cli-linux-arm64@npm:2.5.8":
+  version: 2.5.8
+  resolution: "@biomejs/cli-linux-arm64@npm:2.5.8"
   conditions: os=linux & cpu=arm64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@biomejs/cli-linux-x64-musl@npm:2.3.13":
-  version: 2.3.13
-  resolution: "@biomejs/cli-linux-x64-musl@npm:2.3.13"
+"@biomejs/cli-linux-x64-musl@npm:2.5.8":
+  version: 2.5.8
+  resolution: "@biomejs/cli-linux-x64-musl@npm:2.5.8"
   conditions: os=linux & cpu=x64 & libc=musl
   languageName: node
   linkType: hard
 
-"@biomejs/cli-linux-x64@npm:2.3.13":
-  version: 2.3.13
-  resolution: "@biomejs/cli-linux-x64@npm:2.3.13"
+"@biomejs/cli-linux-x64@npm:2.5.8":
+  version: 2.5.8
+  resolution: "@biomejs/cli-linux-x64@npm:2.5.8"
   conditions: os=linux & cpu=x64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@biomejs/cli-win32-arm64@npm:2.3.13":
-  version: 2.3.13
-  resolution: "@biomejs/cli-win32-arm64@npm:2.3.13"
+"@biomejs/cli-win32-arm64@npm:2.5.8":
+  version: 2.5.8
+  resolution: "@biomejs/cli-win32-arm64@npm:2.5.8"
   conditions: os=win32 & cpu=arm64
   languageName: node
   linkType: hard
 
-"@biomejs/cli-win32-x64@npm:2.3.13":
-  version: 2.3.13
-  resolution: "@biomejs/cli-win32-x64@npm:2.3.13"
+"@biomejs/cli-win32-x64@npm:2.5.8":
+  version: 2.5.8
+  resolution: "@biomejs/cli-win32-x64@npm:2.5.8"
   conditions: os=win32 & cpu=x64
   languageName: node
   linkType: hard
@@ -13822,7 +13822,7 @@ __metadata:
     "@airbrake/browser": "npm:^2.1.7"
     "@ant-design/colors": "npm:^8.0.1"
     "@ant-design/icons": "npm:^6.3.2"
-    "@biomejs/biome": "npm:^2.3.13"
+    "@biomejs/biome": "npm:^2.5.8"
     "@dnd-kit/core": "npm:^6.1.0"
     "@dnd-kit/sortable": "npm:^8.0.0"
     "@github/webauthn-json": "npm:^2.1.1"

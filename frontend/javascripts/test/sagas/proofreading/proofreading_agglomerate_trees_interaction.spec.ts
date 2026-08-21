@@ -164,60 +164,60 @@ describe("Proofreading (With Agglomerate Tree interactions)", () => {
     await task.toPromise();
   });
 
-  describe.each([
-    false,
-    true,
-  ])("With shouldSaveAfterLoadingTrees=%s", (shouldSaveAfterLoadingTrees: boolean) => {
-    it("should merge two agglomerate trees optimistically, perform the merge proofreading action and incorporate a new merge action from backend", async (context: WebknossosTestContext) => {
-      const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
-      backendMock.planMultipleVersionInjections(9, mergeSegment5And6WithAgglomerateTree1And4);
+  describe.each([false, true])(
+    "With shouldSaveAfterLoadingTrees=%s",
+    (shouldSaveAfterLoadingTrees: boolean) => {
+      it("should merge two agglomerate trees optimistically, perform the merge proofreading action and incorporate a new merge action from backend", async (context: WebknossosTestContext) => {
+        const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+        backendMock.planMultipleVersionInjections(9, mergeSegment5And6WithAgglomerateTree1And4);
 
-      const { annotation } = Store.getState();
-      const { tracingId } = annotation.volumes[0];
+        const { annotation } = Store.getState();
+        const { tracingId } = annotation.volumes[0];
 
-      const task = startSaga(function* task() {
-        yield performMergeTreesProofreading(context, shouldSaveAfterLoadingTrees, false);
-        const injectedMergeUpdates = context.receivedDataPerSaveRequest.slice(4, 8);
-        assertUpdatesMatchInjectedUpdates(
-          injectedMergeUpdates,
-          mergeSegment5And6WithAgglomerateTree1And4,
-          9,
-        );
+        const task = startSaga(function* task() {
+          yield performMergeTreesProofreading(context, shouldSaveAfterLoadingTrees, false);
+          const injectedMergeUpdates = context.receivedDataPerSaveRequest.slice(4, 8);
+          assertUpdatesMatchInjectedUpdates(
+            injectedMergeUpdates,
+            mergeSegment5And6WithAgglomerateTree1And4,
+            9,
+          );
 
-        const latestUpdateActionRequestPayload = getNestedUpdateActions(context).slice(-4)!;
-        yield expect(latestUpdateActionRequestPayload).toMatchFileSnapshot(
-          "./__snapshots__/proofreading_agglomerate_trees_interaction.spec.ts/merge_trees_simple.json",
-        );
+          const latestUpdateActionRequestPayload = getNestedUpdateActions(context).slice(-4)!;
+          yield expect(latestUpdateActionRequestPayload).toMatchFileSnapshot(
+            "./__snapshots__/proofreading_agglomerate_trees_interaction.spec.ts/merge_trees_simple.json",
+          );
 
-        yield expectSegmentList(tracingId, [
-          {
-            id: 1n,
+          yield expectSegmentList(tracingId, [
+            {
+              id: 1n,
 
-            anchorPosition: [3, 3, 3],
-          },
-        ]);
+              anchorPosition: [3, 3, 3],
+            },
+          ]);
 
-        const finalMapping = yield* select(
-          (state) =>
-            getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-        );
+          const finalMapping = yield* select(
+            (state) =>
+              getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+          );
 
-        expect(finalMapping).toEqual(
-          new Map([
-            [1n, 1n],
-            [2n, 1n],
-            [3n, 1n],
-            [4n, 1n],
-            [5n, 1n],
-            [6n, 1n],
-            [7n, 1n],
-          ]),
-        );
+          expect(finalMapping).toEqual(
+            new Map([
+              [1n, 1n],
+              [2n, 1n],
+              [3n, 1n],
+              [4n, 1n],
+              [5n, 1n],
+              [6n, 1n],
+              [7n, 1n],
+            ]),
+          );
+        });
+
+        await task.toPromise();
       });
-
-      await task.toPromise();
-    });
-  });
+    },
+  );
 
   it("should not merge two agglomerate trees if interfering merge makes it a no-op.", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());

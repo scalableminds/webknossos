@@ -690,13 +690,15 @@ interface UpdateBucketDiffAction {
     position: Vector3;                       // bucket position
     mag: Vector3;
     additionalCoordinates: AdditionalCoordinate[] | null;
-    /** base64 of the binary run encoding below. */
-    runs: string;
+    /** The binary run encoding below. Stays binary in memory; it is base64'd
+     *  only when serialized, and only because the update stream is JSON. */
+    runs: Uint8Array;
   };
 }
 
 /**
- * Binary run encoding, little-endian. Every run in a bucket carries the same
+ * Binary run encoding for UpdateBucketDiffAction.runs.
+ * Little-endian. Every run in a bucket carries the same
  * value — transactions are single-valued (§4), and `beforeCommitted` is never
  * sent — so the value is hoisted into the header and a run is just 4 bytes:
  *
@@ -705,6 +707,10 @@ interface UpdateBucketDiffAction {
  *   repeat runCount times:
  *     uint16  startIndex      // flat voxel index in the 32³ bucket (< 32768)
  *     uint16  length          // a whole-bucket fill is a single run
+ *
+ * Encoded and decoded through a DataView: the field widths are mixed, and
+ * DataView takes an explicit `littleEndian` argument, so the format does not
+ * silently inherit the platform's byte order the way a typed-array view would.
  */
 
 /**
@@ -738,6 +744,7 @@ The real comparison is against three specific alternatives:
 What is left, once the size argument is discarded, is narrow but solid: runs are the rasterizer's **native output** (it emits scanline spans, so no conversion step exists in either direction), they need no materialization, they stay synchronous in memory, and both client and backend **apply them as range writes** rather than decompressing a blob and scattering per voxel.
 - **Runs are runs along x**, because the flat index is `x + y·32 + z·1024`. XY and XZ strokes both scan along x and encode well. A YZ stroke (x constant) is the one bad case: y steps by 32 and z by 1024, so every run degenerates to length 1 — a radius-10 disk becomes ~314 runs instead of ~20. See §10 if that turns out to matter.
 - **Block fills encode very compactly**, which is what makes coarse-mag editing viable: the drive-down of one mag-16 voxel into a finest-mag bucket is a solid `16×16×16` block, i.e. 256 runs of length 16 — about 1 KB, versus 256 KB for the full bucket.
+- **base64 is a transport artifact, not part of the format.** `runs` is a `Uint8Array` everywhere it is built, stored in the log, and applied. It becomes a string only at the JSON boundary, because the update stream is a heterogeneous array of JSON actions and JSON cannot carry binary. Apply it last, after compression, as `wkstore_adapter.ts` does today (LZ4 in a worker, then base64) — the 33% expansion then lands on an already-compressed payload rather than on the raw bytes. If the update stream ever moves to a binary framing (multipart, CBOR, protobuf), the base64 step disappears and nothing else about the format changes.
 - **One action per touched bucket; one versioned group per transaction.** This gives the backend (and later, other clients) the transaction boundary explicitly instead of making it infer grouping from timing.
 - **Ordering and idempotency.** Transactions are submitted in `sequence` order and are idempotent on retry, so a reconnect can safely resend the tail of the queue.
 - **Backend counterpart.** Two changes are needed. First, accept per-bucket diffs and fold them into the bucket's stored content rather than overwriting wholesale — that is what unlocks multi-user diff composition; without it, two users' concurrent edits to one bucket still resolve as last-writer-wins over the entire bucket. Second, retain the per-bucket diff log and support re-folding it with entries skipped, which is what `undoTransaction` requires. The backend still never resamples and needs no notion of the mag pyramid: diffs arrive for every mag and are applied verbatim to that mag (§5.4).

@@ -44,7 +44,7 @@ Orthogonal to all three: **dirty** — the bucket has diffs not yet acknowledged
 
 - *Recording a diff* needs nothing. Any of the three states works — this is principle 4, and it is what makes coarse-mag editing viable.
 - *Write-through for display* needs an array to exist, so `absent` must first become `pending`. Whether the backend data has arrived is irrelevant; the merge on arrival sorts it out.
-- *The overwrite predicate* (§5.3) and *`before` capture* (§5.2) need **authoritative** content, so `pending` is not good enough. A pending bucket's array is zero-filled, and reading it would report "everything is background" — under `overwrite-empty-only` that means painting over data that turns out to be labeled. `VoxelReader.getResident` therefore returns `undefined` for pending buckets, deliberately, so a placeholder can never be mistaken for real content.
+- *The overwrite predicate* (§5.3) and *`beforeAccumulating` capture* (§5.2) need **authoritative** content, so `pending` is not good enough. A pending bucket's array is zero-filled, and reading it would report "everything is background" — under `overwrite-empty-only` that means painting over data that turns out to be labeled. `VoxelReader.getResident` therefore returns `undefined` for pending buckets, deliberately, so a placeholder can never be mistaken for real content.
 
 **How this relates to the current implementation.** Today, brushing over unloaded data always instantiates the bucket (cheap), writes into the zero-filled array, marks it dirty, and merges when the backend data arrives. That is exactly the `absent → pending → resident` path above, and it stays valid here — with one change:
 
@@ -181,7 +181,7 @@ type VoxelWriteSet = Map<BucketKey, { address: BucketAddress; writes: BucketWrit
 
 **Why a mask and not `Map<VoxelIndex, SegmentId>`.** The per-voxel map is the obvious encoding and it does not survive contact with the numbers. The mag-16 stroke in §6.2 implies ~8.2 M finest-mag writes; at V8's ~40–50 bytes per `Map` entry that is ~370 MB of hash-table overhead, versus ~1 MB for 250 buckets' worth of 4 KB masks. It also pays a per-voxel value slot for a degree of freedom nothing uses. The mask form additionally makes §5.6's run extraction a word scan instead of a sort.
 
-**Why there is no multi-valued variant.** Nothing produces one. Tools are single-valued by construction; propagation preserves values; undo folds stored runs directly into bucket arrays (§5.7) rather than building a write set; and undo is communicated to the backend as a skip marker rather than as a compensating diff (§5.8), so no "restore these various old values" write set is ever assembled. The one genuinely multi-valued structure in the design is `before`, which is a plain `Map` applied straight to a bucket array and never becomes a `BucketWrites`.
+**Why there is no multi-valued variant.** Nothing produces one. Tools are single-valued by construction; propagation preserves values; undo folds stored runs directly into bucket arrays (§5.7) rather than building a write set; and undo is communicated to the backend as a skip marker rather than as a compensating diff (§5.8), so no "restore these various old values" write set is ever assembled. The one genuinely multi-valued data in the design is the pre-transaction values (`beforeAccumulating` / `beforeCommitted`, §5.2), which are never a `BucketWrites`.
 
 A sparse form (a short index list) would beat a 4 KB mask for buckets the stroke merely grazes at its edges. Worth adding if profiling says edge buckets dominate; not worth the branch until then.
 
@@ -286,7 +286,7 @@ class VolumeTransaction {
   private writes = new Map<BucketKey, { address: BucketAddress; writes: BucketWrites }>();
 
   /** Pre-transaction values, recorded on first touch — only for resident buckets. */
-  private before = new Map<BucketKey, Map<VoxelIndex, SegmentId>>();
+  private beforeAccumulating = new Map<BucketKey, Map<VoxelIndex, SegmentId>>();
 
   /**
    * Open a write cursor for one bucket. Does NOT require the bucket to be
@@ -301,7 +301,7 @@ class VolumeTransaction {
   /** Finalize: run mag propagation, drop no-ops, build the diff. */
   commit(propagation: MagPropagationService): TransactionDiff;
 
-  /** Restore every touched resident bucket from `before`. Used for Escape. */
+  /** Restore every touched resident bucket from `beforeAccumulating`. */
   abort(): void;
 }
 ```
@@ -314,9 +314,20 @@ Why a write set at all, rather than "snapshot the bucket, mutate freely, diff at
 - It works for non-resident buckets, which snapshot-and-diff cannot: there is nothing to snapshot.
 - Its cost is bounded by *touched buckets* × 4 KB, not by touched buckets × 256 KB, and it never materializes a bucket that was not already resident.
 
-`before` is only populated for resident buckets and is only used for `abort()` (and for the fast-path undo in §5.7). It is *not* needed for forward replay.
+**`beforeAccumulating` and `beforeCommitted` are the same information at two lifecycle stages**, mirroring the write side exactly:
 
-**Cancel is not free, but it is cheap.** Because we do apply writes live (the user must see the stroke), cancelling means restoring the touched voxels from `before`, not "throwing away an untouched buffer". That is O(number of written voxels), which is fine.
+| | accumulating (live, in the transaction) | committed (frozen, on the diff) |
+|---|---|---|
+| new values | `BucketWrites` — mask + one value | `BucketDiff.runs` |
+| old values | `beforeAccumulating` — `Map<VoxelIndex, SegmentId>` | `BucketDiff.beforeCommitted` — `VoxelRun[]` |
+
+The shapes differ because the stages have different access patterns. While the stroke is open, values are recorded lazily on first touch of each voxel and arrive in whatever order the brush wanders, so the accumulator needs O(1) "have I already recorded this one?" checks — a `Map`. At commit the same run-grouping pass that builds `runs` freezes it into `beforeCommitted`, which from then on is only iterated in order.
+
+The rows differ from each other because new values are single-valued and compress to mask-plus-value, whereas old values are arbitrary (`3, 5, 0`, …) and need one per voxel. That is the sole reason `VoxelRun.values` has a `BigUint64Array` arm.
+
+Both are populated only for resident buckets, and **neither is required for correctness** — forward replay never reads them (§5.7). `beforeAccumulating` exists so `abort()` is cheap; `beforeCommitted` exists so the common case of undoing your most recent action can skip a checkpoint replay.
+
+**Cancel is not free, but it is cheap.** Because we do apply writes live (the user must see the stroke), cancelling means restoring the touched voxels from `beforeAccumulating`, not "throwing away an untouched buffer". That is O(number of written voxels), which is fine.
 
 ### 5.3 Rasterizer
 
@@ -563,7 +574,7 @@ interface VoxelRun {
   length: number;
   /** A single SegmentId for a constant run — which is every run a transaction
    *  produces, since transactions are single-valued (§4). The per-voxel array
-   *  is reached for only by `before`, which holds arbitrary prior values. */
+   *  is reached for only by `beforeCommitted`, which holds prior values. */
   values: SegmentId | BigUint64Array;
 }
 
@@ -571,7 +582,7 @@ interface BucketDiff {
   address: BucketAddress;
   runs: VoxelRun[];
   /** Pre-transaction values, if known. Optional — see §5.7. */
-  before?: VoxelRun[];
+  beforeCommitted?: VoxelRun[];
 }
 
 interface TransactionDiff {
@@ -653,11 +664,11 @@ function rebuild(log: BucketLog): BigUint64Array {
 
 "Each bucket log it touched" includes the coarse-mag buckets, which replay exactly like the finest-mag ones (§5.4). Nothing is re-projected and no voxel data is read, so undo works whether or not the affected buckets are resident. `sideEffects` are reverted through the normal update-action mechanism.
 
-**`before` is not what makes forward-only undo work** — forward replay never reads it. It is optional, and worth keeping for three narrower reasons:
+**`beforeCommitted` is not what makes forward-only undo work** — forward replay never reads it. It is optional, and worth keeping for three narrower reasons:
 
-1. **Fast-path undo.** If T is the newest transaction touching a bucket, undo is just "write `before` back", which is O(voxels changed) instead of a checkpoint replay. This is the overwhelmingly common case in single-user editing, so the fast path carries almost all real traffic.
+1. **Fast-path undo.** If T is the newest transaction touching a bucket, undo is just "write `beforeCommitted` back", which is O(voxels changed) instead of a checkpoint replay. This is the overwhelmingly common case in single-user editing, so the fast path carries almost all real traffic.
 2. **`abort()`** (Escape during a stroke) uses them.
-3. **Conflict detection** later: comparing a remote diff's `before` against local state reveals concurrent edits to the same voxels, which is what a merge policy needs.
+3. **Conflict detection** later: comparing a remote diff's `beforeCommitted` against local state reveals concurrent edits to the same voxels, which is what a merge policy needs.
 
 They are never sent to the backend — the backend's version history already reconstructs prior state for its own purposes.
 
@@ -753,7 +764,7 @@ Identical, except at commit:
 
 The user paints stroke `T1` (segment 5) over a region, then stroke `T2` (segment 7) partially overlapping it, then presses Ctrl+Z.
 
-- `T2` is the newest transaction on every bucket it touched → **fast path**: write `T2.before` back. Done, O(voxels in T2).
+- `T2` is the newest transaction on every bucket it touched → **fast path**: write `T2.beforeCommitted` back. Done, O(voxels in T2).
 - Had the user instead undone `T1` (via a history panel), the slow path runs: mark `T1`'s entries skipped in each affected bucket log, rebuild from the nearest checkpoint replaying `T2` but not `T1`. Voxels that `T2` painted stay segment 7; voxels only `T1` touched revert to their pre-`T1` value. Under the old snapshot-restore model, `T2`'s overlapping work would have been silently destroyed.
 - The coarse-mag bucket logs are folded the same way, skipping `T1`'s entries — no re-projection, and no need for the finest-mag buckets to be resident.
 
@@ -766,7 +777,7 @@ Not implemented here, but the shape is deliberately compatible:
 - Diffs, not snapshots, are the unit of truth, so a remote peer's diff and a local one are the same object.
 - The per-bucket ordered log with last-write-wins folding is already the merge structure. A remote `TransactionDiff` is handled exactly like an undo replay: insert its entries at the right sequence position in the affected bucket logs and re-fold.
 - `TransactionDiff.sequence` is today just local chronological order. Making it a *total* order across users needs either server-assigned sequence numbers (simple, costs a round-trip) or a logical clock (no round-trip, more complexity). Either slots into the existing `sequence` field without changing the model.
-- `BucketDiff.before` becomes useful here: comparing it against local state detects genuine conflicts rather than assuming last-writer-wins is always acceptable.
+- `BucketDiff.beforeCommitted` becomes useful here: comparing it against local state detects genuine conflicts rather than assuming last-writer-wins is always acceptable.
 - Undo becomes "skip *my* transaction, keep everyone else's", which is exactly what the forward-replay model already does. Because it travels as a marker rather than as data (§5.8), a peer applies it by performing the identical skip-and-refold, so no reconciliation step is needed.
 - Convergence holds at every mag, not just the finest: all parties fold the same ordered per-mag diffs, and none of them re-derive coarse content locally.
 

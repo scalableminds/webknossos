@@ -696,15 +696,16 @@ interface UpdateBucketDiffAction {
 }
 
 /**
- * Binary run encoding, little-endian:
+ * Binary run encoding, little-endian. Every run in a bucket carries the same
+ * value — transactions are single-valued (§4), and `beforeCommitted` is never
+ * sent — so the value is hoisted into the header and a run is just 4 bytes:
+ *
+ *   uint64  value             // the segment ID this transaction writes
  *   uint32  runCount
  *   repeat runCount times:
- *     uint32  startIndex        // flat voxel index within the 32³ bucket
- *     uint32  length | CONST_FLAG
- *     if CONST_FLAG: uint64 value          (one value for the whole run)
- *     else:          uint64 value × length
+ *     uint16  startIndex      // flat voxel index in the 32³ bucket (< 32768)
+ *     uint16  length          // a whole-bucket fill is a single run
  */
-const CONST_FLAG = 0x8000_0000;
 
 /**
  * Undo is transmitted as a marker, not as data. The backend already holds T's
@@ -724,8 +725,9 @@ The update stream stays append-only — an undo appends a marker, it does not re
 
 Encoding notes:
 
-- **Runs are runs along x**, because the flat index is `x + y·32 + z·1024`. A brush stroke in an XY viewport therefore run-encodes very well; the same stroke in a YZ viewport (x constant) degenerates to length-1 runs. Worth knowing before over-claiming the win — but the `CONST_FLAG` path still saves the per-voxel value bytes in both cases, and general-purpose compression on the transport handles the rest.
-- **Block fills encode very compactly**, which is what makes coarse-mag editing viable: the drive-down of one mag-16 voxel into a finest-mag bucket is a solid `16×16×16` block, i.e. 256 constant runs of length 16 — about 4 KB before compression, versus 256 KB for the full bucket.
+- **Runs are not primarily a compression trick.** The transport is compressed anyway, and gzip handles repetitive records well, so runs should not be justified on wire bytes. They earn their place for four other reasons: they are the rasterizer's *native output* (it emits scanline spans, so no conversion step exists); they let a diff describe a bucket that was never materialized, which a dense payload cannot (principle 4); they are what lives in the in-memory undo log, where no transport compression applies; and both sides apply them as range writes rather than per-voxel scatter.
+- **Runs are runs along x**, because the flat index is `x + y·32 + z·1024`. XY and XZ strokes both scan along x and encode well. A YZ stroke (x constant) is the one bad case: y steps by 32 and z by 1024, so every run degenerates to length 1 — a radius-10 disk becomes ~314 runs instead of ~20. See §10 if that turns out to matter.
+- **Block fills encode very compactly**, which is what makes coarse-mag editing viable: the drive-down of one mag-16 voxel into a finest-mag bucket is a solid `16×16×16` block, i.e. 256 runs of length 16 — about 1 KB, versus 256 KB for the full bucket.
 - **One action per touched bucket; one versioned group per transaction.** This gives the backend (and later, other clients) the transaction boundary explicitly instead of making it infer grouping from timing.
 - **Ordering and idempotency.** Transactions are submitted in `sequence` order and are idempotent on retry, so a reconnect can safely resend the tail of the queue.
 - **Backend counterpart.** Two changes are needed. First, accept per-bucket diffs and fold them into the bucket's stored content rather than overwriting wholesale — that is what unlocks multi-user diff composition; without it, two users' concurrent edits to one bucket still resolve as last-writer-wins over the entire bucket. Second, retain the per-bucket diff log and support re-folding it with entries skipped, which is what `undoTransaction` requires. The backend still never resamples and needs no notion of the mag pyramid: diffs arrive for every mag and are applied verbatim to that mag (§5.4).
@@ -811,3 +813,31 @@ Not implemented here, but the shape is deliberately compatible:
 - **Where does the rasterizer run?** It is a pure function of `(intent, context, reader)`, which makes it a good Web Worker candidate for large strokes. Not needed for correctness; the blocker is giving a worker a cheap read view of resident buckets (`SharedArrayBuffer`, probably).
 - **Coarse mags diverge from a fresh downsampling, permanently.** Not drift between client and server, and not drift between collaborators: every party folds the same ordered per-mag diffs, so everyone agrees (§5.4). But because written-value-wins is order-dependent, the stored coarse mags are a function of *how* a region was edited, and no later pass can reconstruct them from the finest mag. Principle 2 accepts this. If it stops being acceptable, the answer is a background re-derivation job on a schedule — which would first have to settle what "correct" means at coarse mags, a question this doc does not answer. Adopting a data-derivable rule instead would re-couple propagation to bucket residency and reintroduce multi-valued write sets; see §5.4.
 - **Undo across a reload.** The log is currently in-memory. Persisting it (IndexedDB) would let undo survive a refresh, but raises the question of what "undo" means once the backend has already accepted the transaction. Probably out of scope, but worth deciding explicitly rather than by omission.
+
+---
+
+## 10. Potential Performance Improvements
+
+Deliberately out of the baseline design. Each is a local change behind an existing interface, and none should be built before the corresponding cost has been measured.
+
+### 10.1 Sub-box + bitmask payload for YZ strokes and block fills
+
+The run encoding (§5.8) has one bad shape and one wasteful one. A YZ-plane stroke produces only length-1 runs, because x — the fast axis — is constant in that plane. And a drive-down block fill produces hundreds of short runs describing what is really just a box.
+
+Both are fixed by the same thing: let a bucket's payload be an axis-aligned sub-box plus, optionally, a bitmask over that box. A one-byte header selects the shape, and the encoder picks whichever is smallest.
+
+| Case | `RUNS` @ 4 B/run | `BOX` / `BOX_MASK` |
+|---|---|---|
+| YZ disk, r = 10 | ~314 runs → 1256 B | bbox `1×21×21` → 6 B + 56 B mask = **62 B** |
+| XY disk, r = 10 | ~20 runs → 80 B | 62 B |
+| mag-16 drive-down, full bucket | ~2048 runs → 8 KB | solid box → **6 B** |
+
+This is preferable to the more obvious fix of adding a **stride** to each run (`start, count, stride`, so a YZ column becomes one strided run). Strides help only the YZ case and do nothing for block fills; they require detecting stride patterns during `VoxelMask.runs()`, which is an awkward word scan; and extracting a sub-box bitmask from the mask is simpler than either.
+
+Measure first. The transport is compressed, and 314 near-identical records with starts in arithmetic progression compress extremely well — the gap after gzip is likely far smaller than the raw numbers suggest. The in-memory undo log is the place where the raw size genuinely matters, since no transport compression applies there.
+
+Note this does not help the CPU side: filling the mask for a YZ stroke is bit-at-a-time, because `markRun`'s word-fill only applies along x (§4). For a brush dab that is a few hundred OR operations — negligible, and O(voxels) either way.
+
+### 10.2 Others, tracked in §9
+
+Two further performance items are open questions rather than designed improvements, and are listed in §9: keeping the drive-down fully symbolic to flatten the commit-time spike on coarse-mag strokes, and moving the rasterizer into a Web Worker.

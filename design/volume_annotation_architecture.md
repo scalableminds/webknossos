@@ -92,7 +92,7 @@ Things this design deliberately does *not* support. Each is argued where it come
 
 - **Mag lists that are not a chain.** Every mag must be an integer multiple of the next-finer one, so that the list is totally ordered by resolution. A layer offering both `4-4-1` and `2-2-2` would violate this — neither divides the other, since one is finer in x/y and the other in z — and mag propagation (§5.4) would have no defined path between them. Standard pyramids, including anisotropic ones like `1-1-1, 2-2-1, 4-4-2`, are chains and are fine. Today's resampling does not support the non-chain case either, so this is not a regression.
 - **Coarse mags exactly matching a re-downsampling of the finest mag.** They are derived from the write sequence and are order-dependent; see principle 2 and §9.
-- **Sub-source-mag precision for `overwrite-empty-only`.** The predicate is evaluated at the mag the user is looking at, so finer detail hidden inside a coarse voxel can be overwritten; see §5.4.
+- **`overwrite-empty-only` as a guarantee about data the user cannot see.** The predicate is evaluated against resident source-mag content only, so it protects neither finer detail hidden inside a coarse voxel nor buckets that have not finished loading. It is a guard against overwriting what is on screen, not an invariant over the layer; see §5.4.
 - **Multi-valued transactions.** One user interaction writes one segment ID. This is relied on by the write-set representation (§4) and by the equivalence argument in §5.4.
 
 ---
@@ -438,8 +438,9 @@ function emitSpan(w: BucketWriter, start: VoxelIndex, length: number, ctx: EditC
   }
   const current = w.current;
   if (current == null) {
-    // Absent or pending (§1.1): no authoritative content to test against, so
-    // paint optimistically. Same reasoning as §5.4's source-mag-only predicate.
+    // Absent or pending (§1.1): no authoritative content to test against.
+    // Paint optimistically — overwrite mode protects what is visible, and an
+    // unloaded bucket renders as background. See §5.4.
     w.markRun(start, length);
     return;
   }
@@ -544,7 +545,14 @@ This needs no reads and no bucket loads, and it is exact: drawing at a coarse ma
 
 Note the loop nest is over `f[1] * f[2]`, not `f[0] * f[1] * f[2] * length` — the x extent is handled by `markRun`. Compounded across the chain, that is the difference between ~32 K run emissions and ~8.2 M individual writes for the mag-16 case below.
 
-**Overwrite mode is evaluated at the source mag only — deliberately.** The predicate already ran in §5.3 against source-mag values; the upsample writes unconditionally. The consequence is real and should be documented in the UI: in `overwrite-empty-only` mode at mag 4, a coarse voxel that reads as empty may still contain labeled finest-mag voxels, and those get overwritten. The alternative — re-evaluating the predicate per finest-mag voxel — would require the finest-mag buckets to be resident, i.e. it would turn every coarse-mag brush stroke into hundreds of bucket fetches. Evaluating at the source mag is also arguably the better semantics: the user's intent ("don't paint over that segment") is formed from what they can actually see.
+**Overwrite mode is evaluated against what the user can see, and nothing else.** The predicate runs once, in §5.3, against resident source-mag data. Two consequences follow from the same principle, and both are deliberate:
+
+- *Finer detail is not protected.* The upsample writes unconditionally, so in `overwrite-empty-only` at mag 4, a coarse voxel that reads as empty may still contain labeled finest-mag voxels, and those get overwritten. Re-evaluating the predicate per finest-mag voxel would require those buckets to be resident — turning every coarse-mag stroke into hundreds of fetches.
+- *Not-yet-loaded data is not protected.* Where the source-mag bucket is `absent` or `pending`, there is no authoritative content to test, and `emitSpan` paints optimistically rather than skipping the span.
+
+The unifying rule is that `overwrite-empty-only` protects what is *visible*, not what exists. Data hidden inside a coarse voxel and data that has not arrived yet are both invisible to the user, and in the second case the viewport is literally rendering background — so painting is what the user sees themselves doing. Failing the other way, skipping unloaded spans, would punch holes into a stroke over a region that looks empty, contradicting the display for the sake of a guarantee the mode never made.
+
+The honest cost is a timing race: the same stroke over the same region gives different results depending on whether the fetch had landed. The window is small, because source-mag buckets are by definition the ones on screen and therefore already being fetched, but it is real. Mitigation belongs in the UI — indicate that a region is still loading — rather than in the editing path, where the alternatives are stalling the brush or deferring the transaction's outcome until the network responds.
 
 **Write amplification is the thing to watch here.** At mag `16-16-16`, each source voxel expands to 4096 finest-mag voxels. A stroke covering ~2000 mag-16 voxels implies ~8.2 M finest-mag voxels spanning ~250 finest-mag buckets. Three things keep that affordable:
 

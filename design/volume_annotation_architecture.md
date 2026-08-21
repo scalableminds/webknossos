@@ -50,7 +50,7 @@ Orthogonal to all three: **dirty** — the bucket has diffs not yet acknowledged
 
 **Materialization on write becomes optional, driven by visibility.** Today it is unconditional. It cannot stay unconditional, because a single mag-16 stroke implies writes to ~250 finest-mag buckets the user is not looking at (§6.2); instantiating all of them costs ~64 MB to no purpose. The rule is: materialize on write only if the bucket is visible or about to be. Otherwise record the diff against its address and leave it `absent`.
 
-The merge-on-arrival step generalizes too: "fold this bucket's pending log entries on load" (§5.5) is the same fold the undo log already performs (§5.7), so the temporal-bucket merge and undo replay become one mechanism instead of two.
+The merge-on-arrival step generalizes too: folding a bucket's journal entries onto freshly fetched data (§5.5) is the same fold undo performs (§5.7), differing only in its starting point — so the temporal-bucket merge and undo replay become one mechanism instead of two.
 
 ### 1.2 Non-requirements
 
@@ -609,8 +609,42 @@ interface WorkingDataCube extends VoxelReader {
 Three constraints the new model adds:
 
 - **Eviction must respect unsaved state.** A bucket with unsaved diffs, or whose diff log is still needed by the undo horizon, cannot simply be dropped. Either keep it, or persist its log (checkpoint + entries) alongside the eviction — the log, not the array, is the thing that must survive.
-- **Load must fold local diffs.** A bucket arriving from the backend may predate diffs this client recorded while it was `absent` or `pending`. On load, fold that bucket's log entries over the fetched data before handing the array to the GPU. This is the generalization of today's temporal-bucket merge (§1.1), and it is the same fold `rebuild` performs in §5.7.
+- **Load must fold local diffs, and the journal owns that fold.** See below.
 - **Materialization is a rendering decision, not a writing one.** Writes never force it (principle 4). The cube materializes a bucket because something needs to *display* it — which is why a mag-16 stroke leaves its ~250 finest-mag buckets `absent` while the mag-16 buckets on screen become `resident`.
+
+#### When a fetched bucket arrives
+
+The cube does not merge anything itself. Principle 3 says the journal holds the truth and the array is a materialized fold of it, so the journal performs the fold and the cube installs the result:
+
+```ts
+// WorkingDataCube, on the fetch completing
+receiveData(address: BucketAddress, backendData: BigUint64Array, dataVersion: number) {
+  const folded = journal.foldOntoFetched(address, backendData, dataVersion);
+  this.install(address, folded);        // pending → resident
+  this.markDirtyForGpu(address);
+}
+```
+
+Note what this does *not* do: it does not try to reconcile the zero-filled placeholder that a `pending` bucket was carrying. The fetched data replaces the array outright and the journal's entries are re-folded on top. Merging two partially-written arrays would be both harder and wrong; re-folding from a known base is neither. Today's `mergeDataWithBackendDataInPlace` works the same way — `set(backendData)` first, then replay `pendingOperations`.
+
+**Which entries get folded is the part that needs care.** "All of this bucket's entries" is the obvious answer and it is wrong. Fold only those the fetched data does not already contain:
+
+```ts
+foldOntoFetched(address, backendData, dataVersion) {
+  const data = backendData.slice();
+  for (const entry of this.logFor(address).entries) {
+    if (entry.skipped) continue;
+    // Unsaved, or saved after the server produced this data.
+    if (entry.acknowledgedAtVersion != null && entry.acknowledgedAtVersion <= dataVersion) continue;
+    for (const run of entry.runs) applyRun(data, run);
+  }
+  return data;
+}
+```
+
+For a single client, folding everything would happen to be harmless: the entries are absolute writes replayed in sequence order, so re-applying them idempotently reproduces the same result. It breaks as soon as a second writer exists. Suppose our `T1` sets voxel `p = 5`, a collaborator's later `T2` sets `p = 7`, and we never received `T2`. The fetched data correctly reads `p = 7`; blindly replaying our `T1` on top rewrites it to `5`, resurrecting a superseded write. Version-gating avoids this because `T1` is already contained in the fetched data and is therefore skipped.
+
+This also means the fetch response must carry the version its data reflects, and `BucketLogEntry` gains an `acknowledgedAtVersion` — set when the save queue receives the ack, `null` while the entry is still unsaved (§5.7).
 
 ### 5.6 Diff types
 
@@ -666,7 +700,7 @@ function toRuns(writes: BucketWrites): VoxelRun[] {
 
 No-op writes (`newValue === oldValue`, knowable for resident buckets) are dropped before this step, so a stroke that repaints voxels already carrying the active segment ID produces no diff at all for those voxels.
 
-### 5.7 Undo/Redo Log
+### 5.7 `BucketJournal` — undo/redo and the per-bucket log
 
 Requirement: per-transaction undo that does not discard edits that happened afterwards — which rules out "restore the bucket snapshot from before the transaction".
 
@@ -678,6 +712,8 @@ interface BucketLogEntry {
   transactionId: TransactionId;
   runs: VoxelRun[];
   skipped: boolean;              // set by undo, cleared by redo
+  /** Server version this entry was acked at; null while unsaved (§5.5). */
+  acknowledgedAtVersion: number | null;
 }
 
 interface BucketLog {
@@ -686,12 +722,25 @@ interface BucketLog {
   entries: BucketLogEntry[];     // ascending by sequence
 }
 
-interface UndoLog {
+/**
+ * Owns the per-bucket logs. Despite the undo/redo methods this is not an
+ * undo-specific structure — it is where bucket content is *defined*
+ * (principle 3), with three consumers:
+ *   1. undo/redo      — fold with an entry skipped        (§5.7)
+ *   2. load           — fold onto freshly fetched data    (§5.5)
+ *   3. save           — hand entries to the queue, record acks (§5.8)
+ */
+interface BucketJournal {
   append(diff: TransactionDiff): void;
   undo(id: TransactionId): void;
   redo(id: TransactionId): void;
+  foldOntoFetched(
+    address: BucketAddress, backendData: BigUint64Array, dataVersion: number,
+  ): BigUint64Array;
 }
 ```
+
+The two folds differ only in their base. Undo starts from a local checkpoint and replays every non-skipped entry after it; load starts from freshly fetched backend data and replays only entries that data does not already contain. Same loop, same `applyRun`, different starting point and filter.
 
 A bucket's content is *defined* as: nearest checkpoint, then apply every non-skipped entry's runs in sequence order. The live typed array is a cached fold of exactly this.
 
@@ -811,7 +860,7 @@ sequenceDiagram
   participant R as Rasterizer
   participant C as WorkingDataCube
   participant P as MagPropagationService
-  participant L as UndoLog
+  participant L as BucketJournal
   participant S as SaveQueue
   participant K as Backend
 
@@ -867,7 +916,7 @@ What crosses each boundary:
 | `BucketWriter` | VolumeTransaction, one per bucket | Rasterizer's inner loop | §5.2 |
 | `BucketWrites` (mask + value) | accumulated in the transaction | cube, `toRuns` | §4 |
 | `VoxelWriteSet` | Rasterizer, then propagation | transaction, cube | §4 |
-| `TransactionDiff` | `commit()` | UndoLog, SaveQueue | §5.6 |
+| `TransactionDiff` | `commit()` | BucketJournal, SaveQueue | §5.6 |
 | `UpdateBucketDiffAction[]` | SaveQueue encoder | backend | §5.8 |
 
 ---
@@ -881,7 +930,7 @@ What crosses each boundary:
 3. **Record + display.** Those runs land in the transaction's write set and are written through to resident buckets; their GPU textures are refreshed. The user sees the stroke immediately.
 4. Steps 2–3 repeat. Overlapping samples coalesce in the write set at no cost.
 5. **Pointer-up → commit.** Mag propagation runs *once*, over the whole accumulated write set. Step A is a no-op — the source mag already *is* the finest — so the walk only goes outward: mag 1 → 2 → 4 → …, each level downsampled from the one before it. Those writes are applied to resident coarse buckets too.
-6. The write set becomes a `TransactionDiff` (no-ops dropped, runs grouped), appended to the undo log and enqueued for save.
+6. The write set becomes a `TransactionDiff` (no-ops dropped, runs grouped), appended to the `BucketJournal` and enqueued for save.
 
 Running mag propagation on *every pointer-move* was considered and discarded: it does strictly more total work, since overlapping samples get re-propagated, for no correctness benefit.
 

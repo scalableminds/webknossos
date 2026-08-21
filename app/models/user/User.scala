@@ -1,6 +1,6 @@
 package models.user
 
-import play.silhouette.api.{Identity, LoginInfo}
+import play.silhouette.api.Identity
 import com.scalableminds.util.accesscontext.*
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, JsonHelper}

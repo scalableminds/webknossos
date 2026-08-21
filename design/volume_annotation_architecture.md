@@ -295,13 +295,62 @@ type AnalyticShape =
 type DataDependentShape =
   | { kind: "floodFill"; seed: Vector3; is3D: boolean; bounds: BoundingBox | null }
   | { kind: "sliceInterpolation"; axis: 0 | 1 | 2; sliceA: number; sliceB: number }
-  /** Escape hatch for ML/quick-select tools that produce a mask directly. */
-  | { kind: "mask"; origin: Vector3; size: Vector3; bits: Uint8Array };
+  | MaskShape;
+
+/**
+ * An explicit region: one bit per voxel over an axis-aligned box, in
+ * source-mag voxel space. It appears in two roles — ML and quick-select tools
+ * emit it directly as an intent, and it is what resolving a floodFill or
+ * sliceInterpolation produces (§5.1, "Resolving data-dependent intents").
+ */
+type MaskShape = { kind: "mask"; origin: Vector3; size: Vector3; bits: Uint8Array };
+
+/**
+ * What the Rasterizer accepts (§5.3): shapes it can turn into voxels using
+ * only the bucket it is currently writing. MaskShape is the fixed point of
+ * resolution — resolving one is the identity — which is why it belongs to
+ * both unions.
+ */
+type ResolvedShape = AnalyticShape | MaskShape;
 ```
 
 The split matters. Analytic shapes really are mag-independent — the same brush stroke rasterized at mag 1 and mag 4 describes the same physical region. Data-dependent shapes are **not**: a flood fill seeded at the same point yields a different region at mag 1 than at mag 4, because connectivity is evaluated on different data. So `EditIntent` coordinates are expressed in *source-mag* voxel space and `sourceMagIndex` is part of the intent's meaning, not an incidental detail. Framing all intents as mag-1-space geometry would be wrong for this half of the tools.
 
 Adding a tool means adding an `EditIntent` variant and a rasterization case — nothing else in the system changes.
+
+#### Resolving data-dependent intents
+
+Flood fill cannot be rasterized the way a brush can. Its region is discovered by walking the data, the walk crosses bucket boundaries, and buckets it reaches may not be loaded — so it must `await`. That would poison the rasterizer, which is synchronous, pure, side-effect-free and (per §10) a Web Worker candidate precisely because of those properties.
+
+So data-dependent intents get a **resolution** phase of their own, before rasterization:
+
+```
+EditIntent  ──resolve (async, data-dependent only)──▶  ResolvedShape  ──rasterize (sync)──▶  VoxelWriteSet
+```
+
+`ResolvedShape` (declared above, alongside `EditIntent`) is `AnalyticShape | MaskShape`. Analytic intents pass through untouched — resolution is the identity for them, and the brush's per-pointer-move path stays entirely synchronous. Data-dependent intents collapse to the `mask` variant that already exists as the ML/quick-select escape hatch. The rasterizer therefore only ever sees shapes it can handle without reading anything but the buckets it is already writing to.
+
+```ts
+interface ShapeResolver {
+  /** The only component in the design permitted to await a bucket load. */
+  resolve(intent: EditIntent, ctx: EditContext, signal: AbortSignal): Promise<ResolvedShape>;
+}
+
+/** Loading reader, distinct from §5.3's non-fetching VoxelReader. */
+interface LoadingVoxelReader {
+  ensureLoaded(address: BucketAddress): Promise<BigUint64Array>;
+}
+```
+
+A flood fill then reads as an ordinary graph traversal: read the seed's segment ID, walk 6- or 26-connected neighbours with that ID, `await ensureLoaded(...)` whenever the frontier crosses into a bucket that is not resident, and stop at the intent's `bounds`. The output is a mask over the visited region.
+
+**The transaction opens after resolution, not before.** A flood fill click resolves first — potentially over hundreds of milliseconds and many fetches — and only then opens a `VolumeTransaction`, rasterizes the mask, propagates and commits, all synchronously. This keeps an invariant worth having: **a transaction never spans an `await`.** Sequence numbers stay meaningful, no other transaction can interleave with a half-built one, and the commit path is the same for every tool.
+
+The cost is that a long resolution can be based on data that changed underneath it — a collaborator's edit landing mid-walk yields a region computed against a mix of old and new state. Passing an `AbortSignal` lets the UI cancel a resolution that has been overtaken; making the result *transactionally* consistent would require snapshot isolation over the fetch set, which is well beyond what this buys.
+
+`sliceInterpolation` resolves the same way, reading the two reference sections and synthesizing masks for the intermediate ones. Quick-select and ML tools skip resolution entirely by emitting `mask` directly.
+
+Note this leaves §9's flood-fill open question exactly where it was: resolution makes the *awaiting* well-structured, but it does not answer how many buckets a fill may pull in, or what to show while it does.
 
 ### 5.2 `VolumeTransaction` — the write set
 
@@ -384,17 +433,18 @@ interface VoxelReader {
    *  for `pending` buckets (§1.1): a zero-filled placeholder must never be
    *  mistaken for "all background". Never triggers a fetch. */
   getResident(address: BucketAddress): BigUint64Array | undefined;
-  /** Random access for data-dependent shapes (flood fill's neighbour walk).
-   *  Convenient but ~two orders of magnitude slower than indexing `current`. */
-  peek(voxel: Vector3, magIndex: MagIndex): SegmentId | undefined;
 }
+// One method, deliberately. Per-voxel random access lived here for flood fill's
+// neighbour walk; that moved to the ShapeResolver (§5.1), which needs an async
+// loading reader instead. Nothing left in the rasterizer reads outside the
+// bucket it is currently writing.
 
 interface Rasterizer {
   /**
    * Rasterize `shape` at ctx.sourceMagIndex, writing through `tx`. Always the
    * source mag — never called a second time for another mag (see §5.4).
    */
-  rasterize(shape: EditIntent, ctx: EditContext, tx: VolumeTransaction): void;
+  rasterize(shape: ResolvedShape, ctx: EditContext, tx: VolumeTransaction): void;
 }
 ```
 
@@ -637,7 +687,8 @@ Unchanged in spirit from today: one `32³` typed array per materialized `(bucket
 
 ```ts
 interface WorkingDataCube extends VoxelReader {
-  // getResident / peek are inherited from VoxelReader; neither triggers a fetch.
+  // getResident is inherited from VoxelReader and never triggers a fetch;
+  // ShapeResolver's loading reads go through a separate path (§5.1).
   state(address: BucketAddress): "absent" | "pending" | "resident";   // §1.1
   /** Allocates a zero-filled array (absent → pending) and starts a fetch.
    *  Called on write only when the bucket is visible or about to be. */

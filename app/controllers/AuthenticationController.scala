@@ -816,7 +816,7 @@ class AuthenticationController @Inject() (
   ): Request[AnyContent] => Fox[Result] = { implicit request: Request[AnyContent] =>
     userService.userFromMultiUserEmail(openIdConnectUserInfo.email)(using GlobalAccessContext).shiftBox.flatMap {
       case Full(user) =>
-        // Email verification is skipped here, assuming the OIDC provider already verified the email.
+// Assuming email verification was done by OIDC provider
         loginUser(user._id, label = "OIDC single sign-on", redirectToDashboard = true, skipEmailVerification = true)
       case Empty =>
         for {

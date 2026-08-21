@@ -52,6 +52,15 @@ Orthogonal to all three: **dirty** — the bucket has diffs not yet acknowledged
 
 The merge-on-arrival step generalizes too: "fold this bucket's pending log entries on load" (§5.5) is the same fold the undo log already performs (§5.7), so the temporal-bucket merge and undo replay become one mechanism instead of two.
 
+### 1.2 Non-requirements
+
+Things this design deliberately does *not* support. Each is argued where it comes up; they are collected here so the constraints are visible up front rather than discovered in a subsection.
+
+- **Mag lists that are not a chain.** Every mag must be an integer multiple of the next-finer one, so that the list is totally ordered by resolution. A layer offering both `4-4-1` and `2-2-2` would violate this — neither divides the other, since one is finer in x/y and the other in z — and mag propagation (§5.4) would have no defined path between them. Standard pyramids, including anisotropic ones like `1-1-1, 2-2-1, 4-4-2`, are chains and are fine. Today's resampling does not support the non-chain case either, so this is not a regression.
+- **Coarse mags exactly matching a re-downsampling of the finest mag.** They are derived from the write sequence and are order-dependent; see principle 2 and §9.
+- **Sub-source-mag precision for `overwrite-empty-only`.** The predicate is evaluated at the mag the user is looking at, so finer detail hidden inside a coarse voxel can be overwritten; see §5.4.
+- **Multi-valued transactions.** One user interaction writes one segment ID. This is relied on by the write-set representation (§4) and by the equivalence argument in §5.4.
+
 ---
 
 ## 2. Answers in Brief
@@ -64,7 +73,7 @@ The four questions this doc was written to answer:
 
 **What is the intermediary representation?** A per-transaction **write set**: `bucketAddress → (bitmask of touched voxels + the segment ID being written)`, last-write-wins. This is the pivot point of the whole design. It coalesces repeated writes within a stroke for free, it can hold writes for buckets that are *not* in memory, and it converts trivially to both "apply to a live bucket" and "encode as a diff". Tools fill it through a bucket-scoped, run-oriented cursor, so no step of the pipeline pays a per-voxel function call or address computation.
 
-**Who downsamples, and how is the diff encoded?** The `MagPropagationService` runs at commit time. It upsamples the write set from the source mag to the finest mag (block replication) and then downsamples it into each coarser mag (written-value-wins, with background treated as an ordinary value). It propagates the *write set*, never whole buckets — recomputing a coarse bucket from its finest-mag children is infeasible (a mag-16 bucket has 4096 mag-1 children) — and it reads no voxel data at all. The diff is encoded as run-length-grouped voxel runs over the bucket's flat index space, one `updateBucketDiff` update-action per touched bucket, for every mag; all actions of a transaction are submitted as one versioned group, and the backend applies them verbatim without resampling.
+**Who downsamples, and how is the diff encoded?** The `MagPropagationService` runs at commit time. Starting from the write set at the mag the user drew in, it walks the pyramid outward one level at a time: upsampling (block replication) toward the finest mag, and downsampling (written-value-wins, with background treated as an ordinary value) toward the coarsest. It propagates the *write set*, never whole buckets — recomputing a coarse bucket from its finest-mag children is infeasible (a mag-16 bucket has 4096 mag-1 children) — and it reads no voxel data at all. The diff is encoded as run-length-grouped voxel runs over the bucket's flat index space, one `updateBucketDiff` update-action per touched bucket, for every mag; all actions of a transaction are submitted as one versioned group, and the backend applies them verbatim without resampling.
 
 ---
 
@@ -72,7 +81,7 @@ The four questions this doc was written to answer:
 
 1. **Geometry first, voxels second.** Tools describe *what the user meant*; a separate stage turns that into voxel writes. This is what makes "annotate at any mag" tractable — we rasterize once and derive everything else, rather than reconciling N independently-rasterized grids.
 
-2. **The finest mag is the source of truth; coarser mags are a derived view.** Every edit, whatever mag it was authored at, resolves into finest-mag writes. Coarser mags are derived *at edit time* by downsampling the same writes — cheaply and locally, without reading data — and their diffs are then logged and replayed exactly like the finest mag's (§5.4).
+2. **The finest mag is the source of truth; coarser mags are a derived view.** Every edit, whatever mag it was authored at, resolves into finest-mag writes at full fidelity. Coarser mags are derived *at edit time* by downsampling the same writes — cheaply and locally, without reading data — and their diffs are then logged and replayed exactly like the finest mag's (§5.4). "Derived" describes the pyramid as a whole; mechanically each level is resampled from its neighbour rather than from mag 1, which for single-valued writes amounts to the same thing (§5.4).
 
    Crucially, we downsample the **writes**, at edit time — not the stored content, after the fact. Those are different operations with different results: the write-set downsampling is order-dependent, so it cannot be reconstructed later, and coarse mags will drift from what re-downsampling the finest mag afterwards would produce. **This is an accepted trade-off, for now.** It buys a propagation step that needs no data access and no bucket loads, which is what makes editing at coarse mags viable at all (§5.4). Coarse mags are a display approximation; the finest mag is what the annotation *means*. If exactness at coarse mags ever becomes a requirement, the fix is a background re-derivation pass, not a change to the editing path.
 
@@ -423,44 +432,74 @@ Erasing is not a special case: it is a rasterization with `activeSegmentId = 0n`
 
 Three terms, used consistently from here on:
 
-- **Propagation** — the umbrella process: everything this service does, both steps together.
-- **Upsample** (Step A) — source mag → finest mag. Increases resolution, so one source voxel becomes a block of `s[0]·s[1]·s[2]` finest-mag voxels. One-to-many; no conflicts possible.
-- **Downsample** (Step B) — finest mag → *every* other mag. Decreases resolution, so many finest-mag voxels collapse onto one coarse voxel. Many-to-one, which means a rule is needed to decide which value survives.
+- **Propagation** — the umbrella process: everything this service does, both directions together.
+- **Upsample** (Step A) — walk from the source mag toward the finest, one level at a time, emitting a write set at each. Increases resolution, so one voxel becomes a block. One-to-many; no conflicts possible.
+- **Downsample** (Step B) — walk from the source mag toward the coarsest, one level at a time, emitting a write set at each. Decreases resolution, so many voxels collapse onto one. Many-to-one, which means a rule is needed to decide which value survives.
 
-Step B starts from the finest mag, not from the source mag, and that is the point of routing everything through the finest mag in the first place. Drawing at mag 4 must still update mag 2, which is coarser than the finest mag but *finer* than the source — a source-relative Step B would skip it entirely. Starting at the finest mag covers every other mag uniformly, including the source mag itself; the value it re-derives there agrees with what the rasterizer already wrote, since both follow from the same writes.
+Both walks start at the **source mag** — the mag the user drew in — and move outward through *adjacent* mags. Between neighbours the factor is small (typically 2 per axis), and every mag in the list is visited exactly once: those finer than the source by Step A, those coarser by Step B.
 
 Note these are the same terms, in the same directions, as `upsampleVoxelMap` / `downsampleVoxelMap` in today's `volume_annotation_sampling.ts`. Beware that they run *opposite* to mag index: upsampling moves toward mag 1, downsampling away from it. Sampling direction is stated in terms of resolution throughout this doc, never in terms of "up" or "down" the mag list.
 
 ```ts
 interface MagPropagationService {
-  /** Step A: source mag → finest mag. Pure block replication. */
-  upsampleToFinest(writes: VoxelWriteSet, ctx: EditContext): VoxelWriteSet;
+  /**
+   * Source mag → every other mag, walking the pyramid outward in both
+   * directions. Pure; reads no voxel data. Requires the mag list to be a
+   * chain (§1.2).
+   */
+  propagate(
+    sourceWrites: VoxelWriteSet, ctx: EditContext,
+  ): Map<MagIndex, VoxelWriteSet>;
+}
 
-  /** Step B: finest mag → every coarser mag. Pure; reads no voxel data. */
-  downsampleToCoarser(finestWrites: VoxelWriteSet, ctx: EditContext): VoxelWriteSet;
+// Sketch of the walk. `relativeFactor(a, b)` is the per-axis ratio between
+// two adjacent mags — normally [2,2,1] or [2,2,2], never the ratio to mag 1.
+function propagate(sourceWrites: VoxelWriteSet, ctx: EditContext) {
+  const out = new Map([[ctx.sourceMagIndex, sourceWrites]]);
+
+  let writes = sourceWrites;                                   // Step A: finer
+  for (let i = ctx.sourceMagIndex; i > FINEST_MAG_INDEX; i--) {
+    writes = upsampleOneLevel(writes, relativeFactor(mags[i], mags[i - 1]), i - 1, ctx);
+    out.set(i - 1, writes);
+  }
+
+  writes = sourceWrites;                                       // Step B: coarser
+  for (let i = ctx.sourceMagIndex; i < mags.length - 1; i++) {
+    writes = downsampleOneLevel(writes, relativeFactor(mags[i], mags[i + 1]), i + 1, ctx);
+    out.set(i + 1, writes);
+  }
+  return out;
 }
 ```
 
-#### Step A — upsample to the finest mag
+**Why cascade rather than deriving every mag from the finest one.** A hub model — upsample straight to the finest mag, then downsample from there into every other mag — produces *identical* results, because the writes are single-valued (§4) and block replication composes: a mag-4 voxel `q=3` upsampled directly to mag 1 gives the block `[12,16)`, and `⌊12/8⌋ = ⌊15/8⌋ = 1` is the same mag-8 voxel that `⌊3/2⌋` gives by cascading. The cascade is preferred because it is cheaper and more obvious, not because the hub is wrong.
 
-A source-mag voxel `q` covers the axis-aligned block of finest-mag voxels `[q · s, (q+1) · s)` where `s = ctx.sourceMag`. Replicate the value across the block:
+Cheaper because each step works from the nearest, smallest write set rather than from the largest one. Drawing at mag 16, a hub model would derive mag 32 by iterating the ~32 K-run finest-mag set; cascading derives it from the ~2000-voxel mag-16 set. For mag-1 strokes the two are identical, since source *is* finest.
+
+The cascade's one requirement is that adjacent mags divide each other, i.e. that the mag list forms a chain. That is a declared non-requirement to violate (§1.2). It also depends on transactions being single-valued: with multi-valued writes, collapsing in stages and collapsing once could disagree, so the equivalence above would no longer hold.
+
+#### Step A — upsample toward the finest mag
+
+A voxel `q` at one level covers the axis-aligned block `[q · f, (q+1) · f)` at the next finer level, where `f` is the *relative* factor between the two adjacent mags. Replicate the value across the block:
 
 ```ts
-function upsample(writes: VoxelWriteSet, s: Mag, ctx: EditContext): VoxelWriteSet {
-  const out = new WriteSetBuilder(FINEST_MAG_INDEX, ctx);
+function upsampleOneLevel(
+  writes: VoxelWriteSet, f: Mag, targetMagIndex: MagIndex, ctx: EditContext,
+): VoxelWriteSet {
+  const out = new WriteSetBuilder(targetMagIndex, ctx);
 
   for (const { address, writes: bw } of writes.values()) {
-    const origin = originVoxelOf(address);                   // source-mag grid
+    const origin = originVoxelOf(address);                   // this level's grid
     for (const { start, length, value } of runsOf(bw)) {
       const [x, y, z] = voxelOffsetOf(start);
       const base: Vector3 = [
-        (origin[0] + x) * s[0], (origin[1] + y) * s[1], (origin[2] + z) * s[2],
+        (origin[0] + x) * f[0], (origin[1] + y) * f[1], (origin[2] + z) * f[2],
       ];
-      // A run of `length` source voxels becomes a solid block, emitted as one
-      // run of `length * s[0]` per (dy, dz) — not length * s[0]*s[1]*s[2] writes.
-      for (let dz = 0; dz < s[2]; dz++)
-        for (let dy = 0; dy < s[1]; dy++)
-          out.markRun([base[0], base[1] + dy, base[2] + dz], length * s[0], value);
+      // A run of `length` voxels becomes a solid block, emitted as one run of
+      // `length * f[0]` per (dy, dz) — not length * f[0]*f[1]*f[2] writes.
+      for (let dz = 0; dz < f[2]; dz++)
+        for (let dy = 0; dy < f[1]; dy++)
+          out.markRun([base[0], base[1] + dy, base[2] + dz], length * f[0], value);
     }
   }
   return out.build();
@@ -469,7 +508,7 @@ function upsample(writes: VoxelWriteSet, s: Mag, ctx: EditContext): VoxelWriteSe
 
 This needs no reads and no bucket loads, and it is exact: drawing at a coarse mag *means* producing blocky finest-mag geometry. That is the accepted cost of annotating at low resolution.
 
-Note the loop nest is over `s[1] * s[2]`, not `s[0] * s[1] * s[2] * length` — the x extent is handled by `markRun`. That is the difference between ~32 K run emissions and ~8.2 M individual writes for the mag-16 case below.
+Note the loop nest is over `f[1] * f[2]`, not `f[0] * f[1] * f[2] * length` — the x extent is handled by `markRun`. Compounded across the chain, that is the difference between ~32 K run emissions and ~8.2 M individual writes for the mag-16 case below.
 
 **Overwrite mode is evaluated at the source mag only — deliberately.** The predicate already ran in §5.3 against source-mag values; the upsample writes unconditionally. The consequence is real and should be documented in the UI: in `overwrite-empty-only` mode at mag 4, a coarse voxel that reads as empty may still contain labeled finest-mag voxels, and those get overwritten. The alternative — re-evaluating the predicate per finest-mag voxel — would require the finest-mag buckets to be resident, i.e. it would turn every coarse-mag brush stroke into hundreds of bucket fetches. Evaluating at the source mag is also arguably the better semantics: the user's intent ("don't paint over that segment") is formed from what they can actually see.
 
@@ -481,32 +520,31 @@ Note the loop nest is over `s[1] * s[2]`, not `s[0] * s[1] * s[2] * length` — 
 
 Non-resident buckets are never loaded just to be written; when they are later fetched, the backend has already folded the diff in, and any not-yet-saved local diffs are applied on load.
 
-#### Step B — downsample into coarser mags
+#### Step B — downsample toward the coarsest mag
 
-For each coarser mag `m`, a finest-mag voxel `p` belongs to coarse voxel `⌊p / m⌋`. Many finest-mag voxels collapse into one coarse voxel, so a rule is needed:
+At each step, a voxel `p` belongs to coarse voxel `⌊p / f⌋` at the next coarser level, where `f` is again the relative factor between adjacent mags. Many voxels collapse into one, so a rule is needed:
 
 ```ts
 /**
- * Written-value-wins: a written finest-mag voxel sets its coarse voxel to that
- * value. Background (0n) is not special — it is just another segment ID.
+ * Written-value-wins: a written voxel sets its coarse voxel to that value.
+ * Background (0n) is not special — it is just another segment ID.
  *
- * Run-oriented like the rasterizer: a finest-mag run along x downsamples to a
- * coarse run along x, so the whole pyramid is built without ever visiting an
- * individual voxel.
+ * Run-oriented like the rasterizer: a run along x downsamples to a run along
+ * x, so the whole pyramid is built without ever visiting an individual voxel.
  */
-function downsample(
-  finest: VoxelWriteSet, m: Mag, magIndex: MagIndex, ctx: EditContext,
+function downsampleOneLevel(
+  writes: VoxelWriteSet, f: Mag, targetMagIndex: MagIndex, ctx: EditContext,
 ): VoxelWriteSet {
-  const out = new WriteSetBuilder(magIndex, ctx);
+  const out = new WriteSetBuilder(targetMagIndex, ctx);
 
-  for (const { address, writes } of finest.values()) {
-    const origin = originVoxelOf(address);                   // finest-mag grid
-    for (const { start, length, value } of runsOf(writes)) {
+  for (const { address, writes: bw } of writes.values()) {
+    const origin = originVoxelOf(address);                   // this level's grid
+    for (const { start, length, value } of runsOf(bw)) {
       const [x, y, z] = voxelOffsetOf(start);
-      const cy = Math.floor((origin[1] + y) / m[1]);
-      const cz = Math.floor((origin[2] + z) / m[2]);
-      const cx0 = Math.floor((origin[0] + x) / m[0]);
-      const cx1 = Math.floor((origin[0] + x + length - 1) / m[0]);
+      const cy = Math.floor((origin[1] + y) / f[1]);
+      const cz = Math.floor((origin[2] + z) / f[2]);
+      const cx0 = Math.floor((origin[0] + x) / f[0]);
+      const cx1 = Math.floor((origin[0] + x + length - 1) / f[0]);
       out.markRun([cx0, cy, cz], cx1 - cx0 + 1, value);      // may span buckets
     }
   }
@@ -522,7 +560,7 @@ Three things about this rule are worth stating explicitly, because they are choi
 - **The downsampling rule is written-value-wins, and it dilates in both directions.** Paint overstates presence at coarse mags; erase overstates absence. Majority vote — the textbook rule, and what "downsampling" might otherwise be assumed to mean here — would instead make thin structures disappear entirely — a 1-voxel-wide process annotated at mag 1 would be invisible the moment the user zooms out, which is unacceptable for tracing work. The upside of written-value-wins is predictability: whatever you just did is visible at every zoom level.
 - **We propagate the write set, not the bucket.** The natural-sounding alternative — "recompute each affected coarse bucket from its finest-mag children" — is infeasible: a mag-16 bucket covers `512³` finest-mag voxels, i.e. `16·16·16 = 4096` finest-mag buckets. (The child count is the product of the per-axis ratio — a `2-2-1` bucket has 4 children, a `16-16-16` bucket has 4096.) Propagating the write set touches only the voxels the user actually edited and requires no additional loads.
 
-Because background is not special, **mag propagation reads no data whatsoever** — it is a pure function of `(writeSet, magList)`. That is why `downsampleToCoarser` above takes no `VoxelReader`, and it is what makes principle 4 hold end-to-end: no step between pointer input and diff can be forced to load a bucket.
+Because background is not special, **mag propagation reads no data whatsoever** — it is a pure function of `(writeSet, magList)`. That is why `propagate` above takes no `VoxelReader`, and it is what makes principle 4 hold end-to-end: no step between pointer input and diff can be forced to load a bucket.
 
 If the layer's finest mag is not mag 1 (some datasets start coarser), "finest mag" means index 0 throughout — nothing else changes.
 
@@ -770,7 +808,7 @@ What is left, once the size argument is discarded, is narrow but solid: runs are
 2. **Pointer-move.** The tool appends a point to the path. Only the *incremental* capsule (previous point → new point) is rasterized, at the source mag. The rasterizer walks it bucket by bucket, opening one `BucketWriter` per bucket and emitting scanline runs through the overwrite predicate.
 3. **Record + display.** Those runs land in the transaction's write set and are written through to resident buckets; their GPU textures are refreshed. The user sees the stroke immediately.
 4. Steps 2–3 repeat. Overlapping samples coalesce in the write set at no cost.
-5. **Pointer-up → commit.** Mag propagation runs *once*, over the whole accumulated write set: Step A is a no-op (already at the finest mag); Step B downsamples into every coarser mag and those writes are applied to resident coarse buckets too.
+5. **Pointer-up → commit.** Mag propagation runs *once*, over the whole accumulated write set. Step A is a no-op — the source mag already *is* the finest — so the walk only goes outward: mag 1 → 2 → 4 → …, each level downsampled from the one before it. Those writes are applied to resident coarse buckets too.
 6. The write set becomes a `TransactionDiff` (no-ops dropped, runs grouped), appended to the undo log and enqueued for save.
 
 Running mag propagation on *every pointer-move* was considered and discarded: it does strictly more total work, since overlapping samples get re-propagated, for no correctness benefit.
@@ -785,8 +823,8 @@ The spike is worst for coarse-mag strokes, and there the throttle is the wrong l
 
 Identical, except at commit:
 
-- Step A expands ~2000 mag-16 voxels into ~8.2 M finest-mag voxels across ~250 finest-mag buckets. Almost none of those buckets are resident (the user is zoomed out); no fetches are triggered. Their writes live only as 4 KB masks in the write set, then in the diff, run-encoded as block fills.
-- Step B downsamples those finest-mag writes into every coarser mag — mag 2, 4, … 16, … — including mag 16 itself and the mags *between* the finest and the source. The mag-16 buckets the user is actually looking at were already updated live in step 3, and Step B's downsampling agrees with them (both derive from the same writes), so there is no visible re-flicker.
+- Step A walks mag 16 → 8 → 4 → 2 → 1, expanding ~2000 mag-16 voxels into ~8.2 M finest-mag voxels across ~250 finest-mag buckets (the intermediate levels are emitted on the way and are far smaller). Almost none of those buckets are resident (the user is zoomed out); no fetches are triggered. Their writes live only as 4 KB masks in the write set, then in the diff, run-encoded as block fills.
+- Step B walks the other way from mag 16 — to mag 32, 64, … — each level derived from the small set one step finer, never from the 8.2 M-voxel finest set. The mag-16 buckets the user is looking at were already written by the rasterizer in step 3 and are simply carried through as the walk's starting point, so there is no visible re-flicker.
 - The save payload is a few hundred `updateBucketDiff` actions of a few KB each — not 64 MB of bucket data.
 
 ### 6.3 Undo with an intervening transaction
@@ -835,7 +873,7 @@ Not implemented here, but the shape is deliberately compatible:
 
 - **Flood fill and unloaded data.** Fill needs the connected region resident to be correct. Options: block on fetches with a progress indicator, fill progressively as buckets arrive, or bound the fill to a region and refuse beyond it. Needs a UX decision — this is the one tool where "diffs for non-resident buckets" does not save us, because the *region itself* depends on data we do not have.
 - **Interaction with mappings / agglomerates.** Proofreading edits operate on mapped IDs, and `EditContext.activeSegmentId` is then an agglomerate ID rather than a stored one. Where the mapping is resolved (before rasterization? at apply time?) is unresolved and deserves its own section.
-- **Commit-time spike on coarse-mag strokes.** The run-oriented upsample (§5.4) already reduces the mag-16 case from ~8.2 M per-voxel writes to ~32 K `markRun` calls over ~1 MB of masks, so the naive blow-up is gone. What remains unmeasured is whether ~32 K run emissions plus the resulting encode still land as a perceptible hitch on pointer-up. If they do, the lever is *not* the mid-stroke throttle — the expansion is inherent to drawing at a coarse mag, and per-sample propagation would only repeat it. It would instead be keeping the upsample fully symbolic: carry `(box, value)` fills through to §5.8's encoder and never build masks for non-resident finest-mag buckets at all. Measure before building.
+- **Commit-time spike on coarse-mag strokes.** Two things already blunt this. The run-oriented upsample (§5.4) reduces the mag-16 case from ~8.2 M per-voxel writes to ~32 K `markRun` calls over ~1 MB of masks; and cascading means the *downsample* side never touches that large set at all, deriving each coarser level from the small one beside it. What remains is the upsample chain, which is irreducible — the finest level genuinely has 8.2 M voxels in it. What is unmeasured is whether ~32 K run emissions plus the resulting encode land as a perceptible hitch on pointer-up. If they do, the lever is *not* the mid-stroke throttle — the expansion is inherent to drawing at a coarse mag, and per-sample propagation would only repeat it. It would instead be keeping the upsample fully symbolic: carry `(box, value)` fills through to §5.8's encoder and never build masks for non-resident finest-mag buckets at all. Measure before building.
 - **Checkpoint interval *k*.** Too small → memory and storage overhead; too large → slow replay and slow eviction. Start around 20–50 entries per bucket and tune empirically. Interacts with the undo horizon.
 - **Where does the rasterizer run?** It is a pure function of `(intent, context, reader)`, which makes it a good Web Worker candidate for large strokes. Not needed for correctness; the blocker is giving a worker a cheap read view of resident buckets (`SharedArrayBuffer`, probably).
 - **Coarse mags diverge from re-downsampling the finest mag, permanently.** Not drift between client and server, and not drift between collaborators: every party folds the same ordered per-mag diffs, so everyone agrees (§5.4). But because written-value-wins is order-dependent, the stored coarse mags are a function of *how* a region was edited, and no later pass can reconstruct them from the finest mag. Principle 2 accepts this. If it stops being acceptable, the answer is a background re-derivation job on a schedule — which would first have to settle what "correct" means at coarse mags, a question this doc does not answer. Adopting a data-derivable rule instead would re-couple propagation to bucket residency and reintroduce multi-valued write sets; see §5.4.

@@ -193,6 +193,12 @@ class PlaneMaterialFactory {
       positionOffset: {
         value: new ThreeVector3(0, 0, 0),
       },
+      // Passed so that in case of no ortho rotation and not flight mode the exact w component
+      // can be taken for layer coordinates as due to back and forth calculation of voxel size
+      // this might result in numeric imprecision rendering the wrong slice.
+      globalPosition: {
+        value: new ThreeVector3(0, 0, 0),
+      },
       zoomValue: {
         value: 1,
       },
@@ -611,6 +617,12 @@ class PlaneMaterialFactory {
         (storeState) => isRotated(storeState.flycam),
         (isRotated) => {
           this.uniforms.isFlycamRotated.value = isRotated;
+        },
+      ),
+      listenToStoreProperty(
+        (storeState) => getPosition(storeState.flycam),
+        (flycamPos) => {
+          this.uniforms.globalPosition.value = flycamPos;
         },
       ),
       listenToStoreProperty(

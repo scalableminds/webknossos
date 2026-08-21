@@ -33,7 +33,9 @@ const worldCoordToUVW: ShaderModule = {
       vec3 worldCoordUVW = transDim(worldCoord.xyz);
       vec3 positionOffsetUVW = transDim(positionOffset);
 
-      if (isFlightMode()) {
+      bool isInFlightMode = isFlightMode();
+
+      if (isInFlightMode) {
         vec4 modelCoords = inverseMatrix(savedModelMatrix) * worldCoord;
         float sphericalRadius = sphericalCapRadius;
 
@@ -51,6 +53,13 @@ const worldCoordToUVW: ShaderModule = {
       // We subtract the potential offset of the plane and then
       // need to multiply by voxelSizeFactorInvertedUVW because the threejs scene is scaled.
       worldCoordUVW = (worldCoordUVW - positionOffsetUVW) * voxelSizeFactorInvertedUVW;
+
+      // There might be numerical imprecisions here in w coord direction of the viewport.
+      // Thus, in case we are sure that it is constant and should match the global coordinate, 
+      // we just use that one here to void rendering a wrong slice in such a case.
+      if(!isInFlightMode && !isFlycamRotated){
+        worldCoordUVW.z = transDim(globalPosition).z;
+      }
 
 
       return worldCoordUVW;

@@ -26,7 +26,7 @@ Code in this document is illustrative TypeScript — signatures and sketches mea
 
 ### 1.1 Terminology
 
-Two words this doc leans on heavily and that are not today's vocabulary.
+Three words this doc leans on heavily and that are not today's vocabulary.
 
 #### Folding
 
@@ -57,6 +57,17 @@ The same loop serves both callers; only the base and the filter differ:
 | bucket load (§5.5) | freshly fetched backend data | skip entries that data already contains |
 
 Per principle 3 the fold *is* the definition of a bucket's content; the `32³` array held in memory is a cached result of one, kept because the GPU needs an array rather than a log.
+
+#### Authoritative
+
+Something is **authoritative** when it *defines* content rather than holding a copy of it — everything else is a derived cache that may be discarded and rebuilt. The word appears in two scopes in this doc, answering different questions.
+
+*Which representation defines the content.* Two claims, both in §3:
+
+- **The journal is authoritative over the arrays** (principle 3). A bucket's content is *defined* as checkpoint plus ordered entries; the `32³` array in memory is a fold of that definition, kept only because the GPU needs an array. Evicting an array costs nothing but time; losing the journal loses the edit.
+- **The finest mag is authoritative over the coarser ones** (principle 2). Every edit lands there at full fidelity, while coarser mags are lossy, order-dependent approximations produced for display. This concerns *fidelity only* — it does not mean coarse mags are second-class in the log, because every mag's diffs are logged and replayed identically (§5.4).
+
+*Whether a particular bucket array holds real data.* Independently of the above, an array is authoritative when its bytes are the backend's content with all known diffs folded in — as opposed to the zero-filled placeholder a bucket carries while its fetch is in flight. This is exactly the `resident` versus `pending` distinction below, and it is what `VoxelReader.getResident` reports by returning `undefined`. Code that must not mistake "not loaded yet" for "empty" needs authority in this sense: the overwrite predicate (§5.3) and `beforeAccumulating` capture (§5.2).
 
 #### Residency
 
@@ -257,11 +268,11 @@ A sparse form (a short index list) would beat a 4 KB mask for buckets the stroke
           ▼                                │  buckets → GPU)  │
    ┌──────────────────────┐                └─────┬────────────┘
    │ MagPropagation       │──── apply writes ───▶│
-   │  A: → finest mag     │                      │
-   │  B: → coarser mags   │                      │
+   │  A: upsample→finest  │                      │
+   │  B: downsample→coarse│                      │
    └──────┬───────────────┘
-          │ TransactionDiff (finest-mag = authoritative,
-          ▼                   every mag logged alike)
+          │ TransactionDiff (finest mag = full fidelity;
+          ▼                   every mag logged and replayed alike)
      ┌────┴──────────────────────────┐
      ▼                               ▼
 ┌──────────────┐            ┌──────────────────┐

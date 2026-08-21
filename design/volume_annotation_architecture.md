@@ -277,7 +277,14 @@ A sparse form (a short index list) would beat a 4 KB mask for buckets the stroke
 A tool's only job is to turn input events plus viewer state into a declarative description of the edit. It never touches a `Bucket`.
 
 ```ts
-type EditIntent = AnalyticShape | DataDependentShape;
+/**
+ * Two families, split by *how the intent becomes voxels* — synchronously from
+ * a region we already know, or asynchronously by reading data to discover one.
+ */
+type EditIntent = RasterizableShape | DataDependentShape;
+
+/** Region already known; the Rasterizer converts it synchronously (§5.3). */
+type RasterizableShape = AnalyticShape | MaskShape;
 
 /** Fully determined by geometry — no voxel reads needed to know the region. */
 type AnalyticShape =
@@ -291,60 +298,82 @@ type AnalyticShape =
   | { kind: "polygon"; vertices: Vector3[]; planeAxis: 0 | 1 | 2 }
   | { kind: "box"; min: Vector3; max: Vector3 };
 
-/** Region depends on the data itself; must be resolved against the cube. */
-type DataDependentShape =
-  | { kind: "floodFill"; seed: Vector3; is3D: boolean; bounds: BoundingBox | null }
-  | { kind: "sliceInterpolation"; axis: 0 | 1 | 2; sliceA: number; sliceB: number }
-  | MaskShape;
-
 /**
- * An explicit region: one bit per voxel over an axis-aligned box, in
- * source-mag voxel space. It appears in two roles — ML and quick-select tools
- * emit it directly as an intent, and it is what resolving a floodFill or
- * sliceInterpolation produces (§5.1, "Resolving data-dependent intents").
+ * An explicit dense region: one bit per voxel over an axis-aligned box, in
+ * source-mag voxel space. Emitted directly by ML and quick-select tools, whose
+ * models naturally produce a small dense patch and which should not have to
+ * know about buckets. Rasterizable, because the region is already known — it
+ * merely happens to have been derived from data at some earlier point.
  */
 type MaskShape = { kind: "mask"; origin: Vector3; size: Vector3; bits: Uint8Array };
 
 /**
- * What the Rasterizer accepts (§5.3): shapes it can turn into voxels using
- * only the bucket it is currently writing. MaskShape is the fixed point of
- * resolution — resolving one is the identity — which is why it belongs to
- * both unions.
+ * Region discovered by reading the data, across buckets that may not be
+ * loaded. Handled by the ShapeResolver, not the Rasterizer — see below.
  */
-type ResolvedShape = AnalyticShape | MaskShape;
+type DataDependentShape =
+  | { kind: "floodFill"; seed: Vector3; is3D: boolean; bounds: BoundingBox | null }
+  | { kind: "sliceInterpolation"; axis: 0 | 1 | 2; sliceA: number; sliceB: number };
 ```
 
-The split matters. Analytic shapes really are mag-independent — the same brush stroke rasterized at mag 1 and mag 4 describes the same physical region. Data-dependent shapes are **not**: a flood fill seeded at the same point yields a different region at mag 1 than at mag 4, because connectivity is evaluated on different data. So `EditIntent` coordinates are expressed in *source-mag* voxel space and `sourceMagIndex` is part of the intent's meaning, not an incidental detail. Framing all intents as mag-1-space geometry would be wrong for this half of the tools.
+A second, cross-cutting distinction: analytic shapes are mag-independent — the same brush stroke rasterized at mag 1 and mag 4 describes the same physical region. Mask and data-dependent shapes are **not**: a flood fill seeded at the same point yields a different region at mag 1 than at mag 4, because connectivity is evaluated on different data. So `EditIntent` coordinates are expressed in *source-mag* voxel space and `sourceMagIndex` is part of the intent's meaning, not an incidental detail. Framing all intents as mag-1-space geometry would be wrong for every variant except `AnalyticShape`. Note this cuts across the rasterizable/data-dependent split rather than following it: `MaskShape` is rasterizable but very much mag-specific.
 
-Adding a tool means adding an `EditIntent` variant and a rasterization case — nothing else in the system changes.
+Adding a tool means adding an `EditIntent` variant and one producer case — nothing else in the system changes.
 
-#### Resolving data-dependent intents
+#### Two producers, one output
 
-Flood fill cannot be rasterized the way a brush can. Its region is discovered by walking the data, the walk crosses bucket boundaries, and buckets it reaches may not be loaded — so it must `await`. That would poison the rasterizer, which is synchronous, pure, side-effect-free and (per §10) a Web Worker candidate precisely because of those properties.
-
-So data-dependent intents get a **resolution** phase of their own, before rasterization:
+Both families end at the same place, a `VoxelWriteSet` (§4). They differ only in whether getting there can block:
 
 ```
-EditIntent  ──resolve (async, data-dependent only)──▶  ResolvedShape  ──rasterize (sync)──▶  VoxelWriteSet
+RasterizableShape  ──Rasterizer.rasterize (sync)───────▶  VoxelWriteSet
+DataDependentShape ──ShapeResolver.resolve (async)─────▶  VoxelWriteSet
 ```
-
-`ResolvedShape` (declared above, alongside `EditIntent`) is `AnalyticShape | MaskShape`. Analytic intents pass through untouched — resolution is the identity for them, and the brush's per-pointer-move path stays entirely synchronous. Data-dependent intents collapse to the `mask` variant that already exists as the ML/quick-select escape hatch. The rasterizer therefore only ever sees shapes it can handle without reading anything but the buckets it is already writing to.
 
 ```ts
 interface ShapeResolver {
   /** The only component in the design permitted to await a bucket load. */
-  resolve(intent: EditIntent, ctx: EditContext, signal: AbortSignal): Promise<ResolvedShape>;
+  resolve(
+    shape: DataDependentShape, ctx: EditContext, signal: AbortSignal,
+  ): Promise<VoxelWriteSet>;
 }
 
-/** Loading reader, distinct from §5.3's non-fetching VoxelReader. */
+/** Loading reader, distinct from §5.3's deliberately non-fetching VoxelReader. */
 interface LoadingVoxelReader {
   ensureLoaded(address: BucketAddress): Promise<BigUint64Array>;
 }
 ```
 
-A flood fill then reads as an ordinary graph traversal: read the seed's segment ID, walk 6- or 26-connected neighbours with that ID, `await ensureLoaded(...)` whenever the frontier crosses into a bucket that is not resident, and stop at the intent's `bounds`. The output is a mask over the visited region.
+Flood fill cannot be rasterized the way a brush can: its region is discovered by walking the data, the walk crosses bucket boundaries, and buckets it reaches may not be loaded, so it must `await`. Putting that in the rasterizer would cost the properties that make the rasterizer worth having — synchronous, pure, side-effect-free, and therefore a Web Worker candidate (§10).
 
-**The transaction opens after resolution, not before.** A flood fill click resolves first — potentially over hundreds of milliseconds and many fetches — and only then opens a `VolumeTransaction`, rasterizes the mask, propagates and commits, all synchronously. This keeps an invariant worth having: **a transaction never spans an `await`.** Sequence numbers stay meaningful, no other transaction can interleave with a half-built one, and the commit path is the same for every tool.
+**The resolver produces a write set directly; there is no intermediate shape.** For these tools, resolution and rasterization are the same step — once the walk finishes there is nothing left to convert. A traversal naturally works bucket by bucket (load a bucket, mark voxels, move on), which is exactly the shape of a `VoxelWriteSet`, so it can write into one as it goes:
+
+```ts
+async function resolveFloodFill(shape, ctx, reader, signal): Promise<VoxelWriteSet> {
+  const out = new WriteSetBuilder(ctx.sourceMagIndex, ctx);
+  const seedValue = (await reader.ensureLoaded(bucketOf(shape.seed)))[indexOf(shape.seed)];
+  const queue = [shape.seed];
+
+  while (queue.length > 0) {
+    signal.throwIfAborted();
+    const v = queue.pop();
+    if (!inBounds(v, shape.bounds)) continue;
+    const data = await reader.ensureLoaded(bucketOf(v));       // the only await
+    if (data[indexOf(v)] !== seedValue) continue;
+    if (out.has(v)) continue;                                  // visited check
+    out.mark(v, ctx.activeSegmentId);
+    queue.push(...neighbours(v, shape.is3D));
+  }
+  return out.build();
+}
+```
+
+Note `out.has(v)` doubles as the **visited** set. A flood fill only enqueues voxels matching the seed value, so visited and painted coincide, and the write set *is* the traversal state — no second allocation.
+
+**Why not resolve to a dense `MaskShape` first.** Because a fill with `bounds: null` has no known extent, so a bbox-and-bits mask would mean either allocating the worst case up front (unbounded — the layer's maximum extent), computing the bbox by walking twice, or reallocating as the frontier grows. All of that to then convert into per-bucket masks, which is what `VoxelWriteSet` already is. Per-bucket `VoxelMask`s allocate 4 KB only for buckets actually touched, which is also what production does today.
+
+That overhead is negligible in context: 4 KB of mask against the 256 KB of bucket data the fill had to load in order to visit that bucket at all — about 1.5%. The data is the real cost, which is why bounding a fill is still an open question (§9) and not something this structure solves.
+
+**The transaction opens after resolution, not before.** A flood fill click resolves first — potentially over hundreds of milliseconds and many fetches — and only then opens a `VolumeTransaction`, hands it the finished write set via `recordAll`, propagates and commits, all synchronously. This keeps an invariant worth having: **a transaction never spans an `await`.** Sequence numbers stay meaningful, no other transaction can interleave with a half-built one, and the commit path is the same for every tool.
 
 The cost is that a long resolution can be based on data that changed underneath it — a collaborator's edit landing mid-walk yields a region computed against a mix of old and new state. Passing an `AbortSignal` lets the UI cancel a resolution that has been overtaken; making the result *transactionally* consistent would require snapshot isolation over the fetch set, which is well beyond what this buys.
 
@@ -444,7 +473,7 @@ interface Rasterizer {
    * Rasterize `shape` at ctx.sourceMagIndex, writing through `tx`. Always the
    * source mag — never called a second time for another mag (see §5.4).
    */
-  rasterize(shape: ResolvedShape, ctx: EditContext, tx: VolumeTransaction): void;
+  rasterize(shape: RasterizableShape, ctx: EditContext, tx: VolumeTransaction): void;
 }
 ```
 

@@ -618,12 +618,14 @@ class PlaneMaterialFactory {
         (isRotated) => {
           this.uniforms.isFlycamRotated.value = isRotated;
         },
+        true,
       ),
       listenToStoreProperty(
         (storeState) => getPosition(storeState.flycam),
         (flycamPos) => {
           this.uniforms.globalPosition.value = flycamPos;
         },
+        true,
       ),
       listenToStoreProperty(
         (storeState) => getRotationInRadian(storeState.flycam),

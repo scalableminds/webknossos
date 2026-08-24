@@ -52,6 +52,27 @@ class NeuroglancerUriExplorerTestSuite extends AnyWordSpec with ExploreLayerUtil
       val result = NeuroglancerUriExplorer.parseFragmentAsJson("not-json-at-all")
       assert(result.isEmpty)
     }
+
+    "parse a raw, entirely unencoded fragment (as a freshly copied Neuroglancer link looks)" in {
+      val result = NeuroglancerUriExplorer.parseFragmentAsJson(stateJson)
+      assert(result == Full(stateJsonObj))
+    }
+
+    "preserve a literal '+' character instead of turning it into a space" in {
+      // Regression test: URLDecoder.decode applies form semantics by default, where "+" means space.
+      // Neuroglancer never encodes a space as "+" (it uses "%20"), and signed cloud-storage URLs
+      // frequently contain a literal "+", so decoding must not silently mangle it.
+      val jsonWithPlus = """{"layers":[{"source":"precomputed://gs://bucket/a+b","name":"seg"}]}"""
+      val encodedOnce = encodeUriComponentLike(jsonWithPlus)
+      val result = NeuroglancerUriExplorer.parseFragmentAsJson(encodedOnce)
+      assert(result == Full(Json.parse(jsonWithPlus).as[JsObject]))
+    }
+
+    "fail gracefully (instead of throwing) for a malformed percent escape" in {
+      // A lone "%" not followed by two hex digits makes URLDecoder.decode throw IllegalArgumentException.
+      val result = NeuroglancerUriExplorer.parseFragmentAsJson("%7B%22a%22:%22b%zz%22%7D")
+      assert(result.isEmpty)
+    }
   }
 
   "ExploreLayerUtils.escapeExtraFragmentHashes" should {

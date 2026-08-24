@@ -11,8 +11,8 @@ import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfigu
 import com.scalableminds.webknossos.datastore.models.datasource.{LayerViewConfiguration, StaticLayer}
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.scalableminds.util.box.{Box, Failure, Full}
+import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.webknossos.datastore.helpers.UPath
-import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.*
 
 import java.net.{URI, URLDecoder}
@@ -29,14 +29,29 @@ object NeuroglancerUriExplorer {
       case _                  => Failure("URI has no matching fragment part")
     }
 
-  // Some tools double-percent-encode neuroglancer uris (e.g. "%2522" instead of "%22"). Decode once,
-  // and if the result is not valid JSON, try decoding a second time before giving up.
-  def parseFragmentAsJson(rawFragment: String): Box[JsObject] = {
-    val decodedOnce = URLDecoder.decode(rawFragment, StandardCharsets.UTF_8)
-    JsonHelper
-      .parseAs[JsObject](decodedOnce)
-      .orElse(JsonHelper.parseAs[JsObject](URLDecoder.decode(decodedOnce, StandardCharsets.UTF_8)))
-  }
+  // URLDecoder.decode applies application/x-www-form-urlencoded semantics: it turns literal "+" into a
+  // space and throws IllegalArgumentException on malformed escapes (e.g. a lone "%"). Neither is
+  // appropriate here: Neuroglancer never encodes a space as "+" (it uses "%20"), so a literal "+" in a
+  // uri (fairly common in signed cloud-storage query strings) must be preserved, not silently mangled.
+  // We pre-escape it to "%2B" so it always round-trips, and wrap decoding in `tryo` so a malformed
+  // escape yields a Failure instead of an uncaught exception.
+  private def decodePreservingPlus(s: String): Box[String] =
+    tryo(URLDecoder.decode(s.replace("+", "%2B"), StandardCharsets.UTF_8))
+
+  // Some tools double-percent-encode neuroglancer uris (e.g. "%2522" instead of "%22"). We first try the
+  // fragment as-is, then try decoding once, then twice.
+  def parseFragmentAsJson(rawFragment: String): Box[JsObject] =
+    JsonHelper.parseAs[JsObject](rawFragment).orElse {
+      for {
+        decodedOnce <- decodePreservingPlus(rawFragment)
+        parsed <- JsonHelper.parseAs[JsObject](decodedOnce).orElse {
+          for {
+            decodedTwice <- decodePreservingPlus(decodedOnce)
+            parsedTwice <- JsonHelper.parseAs[JsObject](decodedTwice)
+          } yield parsedTwice
+        }
+      } yield parsed
+    }
 
   // A Neuroglancer layer's "source" field can be a plain string, an object with a "url" field,
   // or an array of either. We recurse into the first entry of arrays and unwrap "url" from objects.
@@ -52,7 +67,6 @@ object NeuroglancerUriExplorer {
 
 class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val ec: ExecutionContext)
     extends RemoteLayerExplorer
-    with LazyLogging
     with ExploreLayerUtils {
   override def name: String = "Neuroglancer URI Explorer"
 
@@ -64,7 +78,6 @@ class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val e
         .extractRawFragment(remotePath.toString)
         .toFox ?~> "URI has no matching fragment part"
       spec <- NeuroglancerUriExplorer.parseFragmentAsJson(rawFragment).toFox ?~> "Did not find JSON object in URI"
-      _ = logger.error(spec.toString)
       layerSpecs <- JsonHelper.as[JsArray](spec \ "layers").toFox
       _ <- Fox.fromBool(credentialId.isEmpty) ?~> "Neuroglancer URI Explorer does not support credentials"
       exploredLayers = layerSpecs.value.map(exploreNeuroglancerLayer).toList

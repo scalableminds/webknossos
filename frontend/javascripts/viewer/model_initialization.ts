@@ -51,7 +51,6 @@ import UrlManager, {
 import {
   determineAllowedModes,
   getDataLayers,
-  getDatasetCenter,
   getSegmentationLayers,
   getUnifiedAdditionalCoordinates,
   hasSegmentation,
@@ -106,7 +105,10 @@ import {
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_persistence";
 import type { KeyboardShortcutsMap } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
 import { getUserStateForTracing } from "./model/accessors/annotation_accessor";
-import { doAllLayersHaveTheSameRotation } from "./model/accessors/dataset_layer_transformation_accessor";
+import {
+  doAllLayersHaveTheSameRotation,
+  getTransformedDatasetCenter,
+} from "./model/accessors/dataset_layer_transformation_accessor";
 import { setVersionNumberAction } from "./model/actions/save_actions";
 import {
   convertBoundingBoxProtoToObject,
@@ -141,7 +143,11 @@ export async function initialize(
     if (initialMaybeCompoundType != null) {
       annotation = await getAnnotationCompoundInformation(annotationId, initialMaybeCompoundType);
     } else {
-      let unversionedAnnotation = await getUnversionedAnnotationInformation(annotationId);
+      const unversionedAnnotationResult = await getUnversionedAnnotationInformation(annotationId);
+      if (!unversionedAnnotationResult.ok) {
+        throw new Error(`Could not load annotation: ${unversionedAnnotationResult.error.message}`);
+      }
+      let unversionedAnnotation = unversionedAnnotationResult.value;
       annotationProto = await getAnnotationProto(
         unversionedAnnotation.tracingStore.url,
         unversionedAnnotation.id,
@@ -700,7 +706,10 @@ function determineDefaultState(
   // no default position, compute the center of the dataset
   const { dataset, datasetConfiguration } = Store.getState();
   const defaultPosition = datasetConfiguration.position;
-  let position = getDatasetCenter(dataset);
+  let position = getTransformedDatasetCenter(
+    dataset,
+    datasetConfiguration.nativelyRenderedLayerName,
+  );
   let additionalCoordinates = null;
 
   // someTracing should only be used if no userState exists (this is the case

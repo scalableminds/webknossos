@@ -114,12 +114,16 @@ class DataSourceMirrorService @Inject() (
         updatedCumsum <- Fox.runOptional(attachments.cumsum)(
           writeMirrorAttachment(_, LayerAttachmentType.cumsum, layerDir)
         )
+        updatedSegmentStatistics <- Fox.runOptional(attachments.segmentStatistics)(
+          writeMirrorAttachment(_, LayerAttachmentType.segmentStatistics, layerDir)
+        )
       } yield DataLayerAttachments(
         meshes = updatedMeshes,
         agglomerates = updatedAgglomerates,
         segmentIndex = updatedSegmentIndex,
         connectomes = updatedConnectomes,
-        cumsum = updatedCumsum
+        cumsum = updatedCumsum,
+        segmentStatistics = updatedSegmentStatistics
       )
     }
 

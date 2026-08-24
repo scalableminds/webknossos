@@ -13,6 +13,27 @@ import type { BucketWrites } from "./write_set";
 
 export type BucketState = "absent" | "pending" | "resident";
 
+/**
+ * The narrow surface a VolumeTransaction needs. Kept separate from
+ * WorkingDataCube so a real backing store can be substituted — see
+ * `integration/wk_cube_adapter.ts`.
+ */
+export interface TransactionCube {
+  /** Dense content of a resident bucket, or undefined. Never fetches. */
+  getResident(address: BucketAddress): BigUint64Array | undefined;
+  /** Apply a bucket's writes at once, walking the mask's runs. */
+  applyWrites(address: BucketAddress, writes: BucketWrites): void;
+  /**
+   * A predicate telling the overwrite filter whether a voxel is background, or
+   * null when the bucket has no authoritative content to test against.
+   *
+   * This is a probe rather than a raw array because real buckets may hold any
+   * element class, and only the owner of the data knows how to compare against
+   * background without materializing a converted copy.
+   */
+  backgroundProbe(address: BucketAddress): ((index: number) => boolean) | null;
+}
+
 /** What the cube fetches from. Tests supply an in-memory implementation. */
 export interface BackendLike {
   fetchBucket(address: BucketAddress): Promise<{ data: BigUint64Array; version: number }>;
@@ -36,7 +57,7 @@ interface CubeEntry {
  *   - On load, the journal folds local entries over the fetched data. The cube
  *     does not merge anything itself.
  */
-export class WorkingDataCube {
+export class WorkingDataCube implements TransactionCube {
   private readonly buckets = new Map<BucketKey, CubeEntry>();
   /** Buckets whose texture would need re-uploading. Tests assert on this. */
   readonly gpuDirty = new Set<BucketKey>();
@@ -135,6 +156,12 @@ export class WorkingDataCube {
       data.fill(writes.value, start, start + length);
     }
     this.gpuDirty.add(bucketKey(address));
+  }
+
+  backgroundProbe(address: BucketAddress): ((index: number) => boolean) | null {
+    const data = this.getResident(address);
+    if (data == null) return null;
+    return (index: number) => data[index] === 0n;
   }
 
   /** Overwrite a bucket's content outright (undo rebuild). */

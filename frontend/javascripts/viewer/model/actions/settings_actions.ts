@@ -1,11 +1,10 @@
 import Deferred from "libs/async/deferred";
 import type { APIHistogramData } from "types/api_types";
-import type { ControlMode, Vector3, ViewMode } from "viewer/constants";
+import type { ControlMode, MappingType, Vector3, ViewMode } from "viewer/constants";
 import type {
   DatasetConfiguration,
   DatasetLayerConfiguration,
   Mapping,
-  MappingType,
   TemporaryConfiguration,
   UserConfiguration,
 } from "viewer/store";

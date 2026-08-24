@@ -7,7 +7,7 @@ import {
   LockOutlined,
   ScanOutlined,
 } from "@ant-design/icons";
-import { Flex, Input, type MenuProps, Switch } from "antd";
+import { Flex, Input, type MenuProps, Space, Switch } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { rgbToHex } from "libs/colors";
 import { useWkSelector } from "libs/react_hooks";
@@ -17,10 +17,15 @@ import messages from "messages";
 import { useEffect, useState } from "react";
 import type { Vector3, Vector6 } from "viewer/constants";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
+import { getTransformedDatasetBoundingBox } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { api } from "viewer/singletons";
 import ButtonComponent from "../../components/button_component";
-import ColorSetting from "./color_setting";
-import { MipInlineButton, useMipContextMenuItems } from "./mip_menu_helpers";
+import ColorSetting from "../../left_border_tabs/components/color_setting";
+import {
+  MipInlineButton,
+  useMipContextMenuItems,
+} from "../../left_border_tabs/components/mip_menu_helpers";
+import BoundingBoxSlidersButton from "./bounding_box_sliders_button";
 
 type UserBoundingBoxInputProps = {
   bboxId: number;
@@ -62,6 +67,10 @@ const READ_ONLY_INPUT_STYLE: React.CSSProperties = {
   cursor: "text",
 };
 
+function computeText(vector: Vector6) {
+  return vector.join(", ");
+}
+
 export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
   const {
     bboxId,
@@ -91,6 +100,12 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
   const [name, setName] = useState(propName);
 
   const visibleSegmentationLayer = useWkSelector((state) => getVisibleSegmentationLayer(state));
+  const datasetBoundingBox = useWkSelector((state) =>
+    getTransformedDatasetBoundingBox(
+      state.dataset,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    ),
+  );
   const mipContextMenuItems = useMipContextMenuItems(bboxId, propValue, onHideContextMenu);
 
   useEffect(() => {
@@ -105,10 +120,6 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
       setName(propName);
     }
   }, [propName]);
-
-  function computeText(vector: Vector6) {
-    return vector.join(", ");
-  }
 
   const handleBlur = () => {
     setIsEditing(false);
@@ -216,54 +227,47 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
     <div
       onContextMenu={(evt) => onOpenContextMenu(getContextMenu(), evt, bboxId)}
       onClick={onHideContextMenu}
+      style={{
+        display: "grid",
+        gridTemplateColumns: "auto 1fr auto",
+        alignItems: "center",
+        columnGap: 8,
+        rowGap: 6,
+        marginTop: 10,
+        marginBottom: 10,
+      }}
     >
-      <Flex
-        gap="middle"
-        justify="flex-start"
-        style={{
-          marginTop: 10,
-          marginBottom: 10,
-        }}
+      <Flex gap="middle" justify="space-between" align="center">
+        <Switch
+          size="small"
+          onChange={onVisibilityChange}
+          checked={isVisible}
+          // To prevent centering the bounding box on every edit (e.g. upon visibility change)
+          // the click events are stopped from propagating to the parent div.
+          onClick={(_value, e) => e.stopPropagation()}
+        />
+      </Flex>
+
+      <FastTooltip
+        title={isReadOnly ? READ_ONLY_TOOLTIP : disabled ? editingDisallowedExplanation : null}
       >
-        <Flex gap="middle" justify="space-between" align="center">
-          <Switch
-            size="small"
-            onChange={onVisibilityChange}
-            checked={isVisible}
-            // To prevent centering the bounding box on every edit (e.g. upon visibility change)
-            // the click events are stopped from propagating to the parent div.
-            onClick={(_value, e) => e.stopPropagation()}
-          />
-          <FastTooltip title={!isReadOnly && disabled ? editingDisallowedExplanation : null}>
-            <ColorSetting
-              value={rgbToHex(upscaledColor)}
-              onChange={handleColorChange}
-              // The color of a read-only layer bounding box is a client-side display setting and
-              // therefore stays editable even when the annotation cannot be updated.
-              disabled={!isReadOnly && disabled}
-            />
-          </FastTooltip>
-        </Flex>
-        <FastTooltip
-          title={isReadOnly ? READ_ONLY_TOOLTIP : disabled ? editingDisallowedExplanation : null}
-          style={{ flexGrow: 1 }}
-        >
-          <Input
-            defaultValue={name}
-            placeholder="Bounding Box Name"
-            size="small"
-            value={name}
-            onChange={(evt: React.ChangeEvent<HTMLInputElement>) => {
-              setName(evt.target.value);
-            }}
-            onPressEnter={handleNameChanged}
-            onBlur={handleNameChanged}
-            disabled={!isReadOnly && disabled}
-            readOnly={isReadOnly}
-            style={isReadOnly ? READ_ONLY_INPUT_STYLE : undefined}
-            onClick={(e) => e.stopPropagation()}
-          />
-        </FastTooltip>
+        <Input
+          defaultValue={name}
+          placeholder="Bounding Box Name"
+          size="small"
+          value={name}
+          onChange={(evt: React.ChangeEvent<HTMLInputElement>) => {
+            setName(evt.target.value);
+          }}
+          onPressEnter={handleNameChanged}
+          onBlur={handleNameChanged}
+          disabled={!isReadOnly && disabled}
+          readOnly={isReadOnly}
+          style={isReadOnly ? READ_ONLY_INPUT_STYLE : undefined}
+          onClick={(e) => e.stopPropagation()}
+        />
+      </FastTooltip>
+      <Flex gap="middle" align="center">
         <MipInlineButton bboxId={bboxId} />
         {isReadOnly ? (
           <ButtonComponent
@@ -288,20 +292,19 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
           />
         )}
       </Flex>
-      <Flex
-        style={{
-          marginBottom: 10,
-        }}
-        align="flex-start"
-        gap="middle"
-        justify="flex-start"
+      <FastTooltip
+        title={!isReadOnly && disabled ? editingDisallowedExplanation : null}
+        style={{ gridColumn: 1, gridRow: 2, display: "flex", justifyContent: "center" }}
       >
-        <FastTooltip
-          style={{ flex: "0 0 60px" }}
-          title="The top-left corner of the bounding box followed by the width, height, and depth."
-        >
-          <label> Bounds: </label>
-        </FastTooltip>
+        <ColorSetting
+          value={rgbToHex(upscaledColor)}
+          onChange={handleColorChange}
+          // The color of a read-only layer bounding box is a client-side display setting and
+          // therefore stays editable even when the annotation cannot be updated.
+          disabled={!isReadOnly && disabled}
+        />
+      </FastTooltip>
+      <Space.Compact size="small" style={{ gridColumn: 2, gridRow: 2, width: "100%" }}>
         <FastTooltip
           title={
             isReadOnly
@@ -325,13 +328,27 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
             readOnly={isReadOnly}
             style={isReadOnly ? READ_ONLY_INPUT_STYLE : undefined}
             onClick={(e) => e.stopPropagation()}
+            suffix={
+              !isReadOnly && (
+                <BoundingBoxSlidersButton
+                  value={propValue}
+                  datasetBoundingBox={datasetBoundingBox}
+                  onBoundingChange={onBoundingChange}
+                  disabled={disabled}
+                  editingDisallowedExplanation={editingDisallowedExplanation}
+                />
+              )
+            }
           />
         </FastTooltip>
-        {/* onOpenContextMenu needs event from div*/}
-        <div onClick={(evt) => onOpenContextMenu(getContextMenu(), evt, bboxId)}>
-          <ButtonComponent type="text" size="small" icon={<EllipsisOutlined />} />
-        </div>
-      </Flex>
+      </Space.Compact>
+      {/* onOpenContextMenu needs event from div*/}
+      <div
+        style={{ gridColumn: 3, gridRow: 2 }}
+        onClick={(evt) => onOpenContextMenu(getContextMenu(), evt, bboxId)}
+      >
+        <ButtonComponent type="text" size="small" icon={<EllipsisOutlined />} />
+      </div>
     </div>
   );
 }

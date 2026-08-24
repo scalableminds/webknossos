@@ -13,7 +13,7 @@ import play.api.libs.json.{Json, OFormat}
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-case class PathStorageUsageRequest(paths: List[String])
+case class PathStorageUsageRequest(paths: Seq[String])
 object PathStorageUsageRequest {
   implicit val jsonFormat: OFormat[PathStorageUsageRequest] = Json.format[PathStorageUsageRequest]
 }
@@ -26,7 +26,7 @@ object PathStorageReport {
   implicit val jsonFormat: OFormat[PathStorageReport] = Json.format[PathStorageReport]
 }
 
-case class PathStorageUsageResponse(reports: List[PathStorageReport])
+case class PathStorageUsageResponse(reports: Seq[PathStorageReport])
 object PathStorageUsageResponse {
   implicit val jsonFormat: OFormat[PathStorageUsageResponse] = Json.format[PathStorageUsageResponse]
 }
@@ -39,10 +39,10 @@ class DSUsedStorageService @Inject() (
     managedS3Service: ManagedS3Service
 ) extends LazyLogging {
 
-  def measureStorageForPaths(paths: List[String], organizationId: String)(implicit
+  def measureStorageForPaths(paths: Seq[String], organizationId: String)(implicit
       ec: ExecutionContext,
       tc: TokenContext
-  ): Fox[List[PathStorageReport]] =
+  ): Fox[Seq[PathStorageReport]] =
     for {
       // Keep track of original path as its UPath might be normalized and turned into an absolute path.
       // The original path is needed in the returned storage reports to enable the core backend matching with the

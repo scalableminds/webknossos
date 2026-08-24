@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { ApiResult } from "admin/api/api_result";
 import { unwrapOrThrow } from "admin/api/api_result";
 import { handleGenericError } from "libs/error_handling";
+import { isPlainObject } from "lodash-es";
 import debounce from "lodash-es/debounce";
 import noop from "lodash-es/noop";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -10,6 +11,7 @@ import { type EqualityFn, useSelector } from "react-redux";
 import { useLocation } from "react-router-dom";
 import constants from "viewer/constants";
 import type { WebknossosState } from "viewer/store";
+import { bigIntReplacer } from "./bigint_helpers";
 import { KEYBOARD_BUTTON_LOOP_INTERVAL } from "./input";
 
 /**
@@ -308,7 +310,32 @@ export function useQueryWithErrorHandling<
   TData = TQueryFnData,
   TQueryKey extends QueryKey = QueryKey,
 >(options: UseQueryOptions<TQueryFnData, TError, TData, TQueryKey>, fallbackMessage?: string) {
-  const result = useQuery(options);
+  const result = useQuery({
+    queryKeyHashFn: (queryKey) => {
+      return JSON.stringify(queryKey, (key, val) => {
+        // react-query cannot hash bigints by default which is why we take care of these
+        // here. Since this value won't be sent to the backend (this is only the hashed
+        // query key), we don't need to use the unsignedBigIntReplacer which creates
+        // a wrapper for each bigint.
+        if (typeof val === "bigint") {
+          return bigIntReplacer(key, val);
+        }
+        // The following is basically react-query's default queryKeyHashFn implementation:
+        // https://github.com/TanStack/query/blob/34f7ceed09c10e4a3aa2df31a106ddf02ec4e787/packages/query-core/src/utils.ts#L232
+        if (isPlainObject(val)) {
+          const obj = val as Record<string, unknown>;
+          return Object.keys(obj)
+            .sort()
+            .reduce((result: Record<string, unknown>, key: string) => {
+              result[key] = obj[key];
+              return result;
+            }, {});
+        }
+        return val;
+      });
+    },
+    ...options,
+  });
 
   useEffect(() => {
     if (result.error != null) {

@@ -85,7 +85,7 @@ class TokenDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def findOneByUserIdAndType(userId: ObjectId, tokenType: TokenType): Fox[Token] =
     for {
       r <- run(q"""SELECT $columns from $existingCollectionName
-            WHERE userId = $userId
+            WHERE _user = $userId
             AND tokenType = $tokenType""".as[TokensRow])
       parsed <- parseFirst(r, "userIdAndType")
     } yield parsed

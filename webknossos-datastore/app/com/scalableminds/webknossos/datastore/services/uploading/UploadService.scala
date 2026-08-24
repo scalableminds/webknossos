@@ -1058,7 +1058,7 @@ class UploadService @Inject() (
     for {
       _ <- PathUtils.ensureDirectoryBox(unpackToDir.getParent).toFox ?~> "dataset.import.fileAccessDenied"
       shallowFileList <- PathUtils.listFiles(uploadDir, silent = false).toFox
-      excludeFromPrefix = LayerCategory.values.map(_.toString).toList
+      layerDirNames = LayerCategory.values.map(_.toString).toList
       isSingleZip = shallowFileList.length == 1 && shallowFileList.headOption.exists(f =>
         ZipEntryUPath.relevantFileExtensions.exists(f.toString.toLowerCase.endsWith)
       )
@@ -1074,7 +1074,7 @@ class UploadService @Inject() (
                 includeHiddenFiles = false,
                 hiddenFilesWhitelist = List(".zarray", ".zattrs"),
                 truncateCommonPrefix = true,
-                Some(excludeFromPrefix)
+                Some(layerDirNames)
               )
               .toFox
             _ <- Fox.fromBool(unpackToDir.toFile.exists()) ?~> Msg.Dataset.Upload.noFiles
@@ -1087,14 +1087,10 @@ class UploadService @Inject() (
             _ = logger.info(
               s"Detected $uploadDomain root during finishUpload of $datasetId from ${deepFileList.length} files in $uploadDir with commonPrefixPreliminary=$commonPrefixPreliminary"
             )
-            strippedPrefix = PathUtils.cutOffPathAtLastOccurrenceOf(commonPrefixPreliminary, excludeFromPrefix)
-            commonPrefix = PathUtils.removeSingleFileNameFromPrefix(
-              strippedPrefix,
-              deepFileList.map(_.getFileName.toString)
-            )
-            _ <- Fox.fromBool(commonPrefix.startsWith(uploadDir)) ?~> Msg.Dataset.Upload.datasetRootDetectionFailed
+            commonRootDir = PathUtils.findCommonRootDirectory(deepFileList, layerDirNames)
+            _ <- Fox.fromBool(commonRootDir.startsWith(uploadDir)) ?~> Msg.Dataset.Upload.datasetRootDetectionFailed
             _ <- tryo(
-              FileUtils.moveDirectory(new File(commonPrefix.toString), new File(unpackToDir.toString))
+              FileUtils.moveDirectory(new File(commonRootDir.toString), new File(unpackToDir.toString))
             ).toFox ?~> Msg.Dataset.Upload.moveToTargetFailed
           } yield ()
         }

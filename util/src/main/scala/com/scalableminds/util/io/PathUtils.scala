@@ -155,18 +155,20 @@ object PathUtils extends LazyLogging {
         Failure(errorMsg)
     }
 
-  /*
-   * removes the end of a path, starting at the last element that contains any of cutOffList
-   *    example:  /path/to/color/layer/that/is/named/color/and/has/files
-   *    becomes  /path/to/color/layer/that/is/named
-   *    if "color" is in cutOffList
-   * Note that the caller should pass a path that is relative to the directory the search should be
-   * limited to, so that no element outside of it can accidentally match.
-   */
-  def cutOffPathAtLastOccurrenceOf(path: Path, cutOffList: List[String]): Path = {
+  // Longest common prefix of paths, truncated so it doesn't reach past a boundaryDirNames match,
+  // with a lone remaining filename stripped off.
+  def findCommonRootDirectory(paths: List[Path], boundaryDirNames: List[String]): Path = {
+    val longestCommonPrefix = commonPrefix(paths)
+    val truncatedAtLastBoundary = cutOffPathAtLastOccurrenceOf(longestCommonPrefix, boundaryDirNames)
+    removeSingleFileNameFromPrefix(truncatedAtLastBoundary, paths.map(_.getFileName.toString))
+  }
+
+  // Cuts path off right before the last element matching boundaryDirNames (path should be relative
+  // to the directory the search is limited to, so unrelated elements can't accidentally match).
+  private def cutOffPathAtLastOccurrenceOf(path: Path, boundaryDirNames: List[String]): Path = {
     var lastCutOffIndex = -1
     path.iterator().asScala.zipWithIndex.foreach { case (subPath, idx) =>
-      cutOffList.foreach { e =>
+      boundaryDirNames.foreach { e =>
         if (subPath.toString.contains(e)) {
           lastCutOffIndex = idx
         }
@@ -183,8 +185,8 @@ object PathUtils extends LazyLogging {
     }
   }
 
-  // Remove a single file name from previously computed common prefix
-  def removeSingleFileNameFromPrefix(prefix: Path, fileNames: List[String]): Path = {
+  // Strips prefix's last name if it is in fact fileNames' one lone entry (i.e. commonPrefix of a single file).
+  private def removeSingleFileNameFromPrefix(prefix: Path, fileNames: List[String]): Path = {
     def isFileNameInPrefix(prefix: Path, fileName: String) = prefix.endsWith(Path.of(fileName).getFileName)
 
     fileNames match {

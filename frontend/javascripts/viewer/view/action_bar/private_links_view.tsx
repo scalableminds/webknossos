@@ -152,7 +152,7 @@ export function useZarrLinkMenu(maybeAccessToken: string | null) {
     {
       queryKey: ["buildInfo"],
       queryFn: getBuildInfo,
-      staleTime: Number.POSITIVE_INFINITY,
+      refetchOnMount: "always",
     },
     "Could not fetch the server's build information.",
   );

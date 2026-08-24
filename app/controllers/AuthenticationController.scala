@@ -9,7 +9,6 @@ import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.webauthn4j.data.attestation.statement.COSEAlgorithmIdentifier
 import com.webauthn4j.data.client.Origin
-import com.webauthn4j.data.client.challenge.Challenge
 import com.webauthn4j.data.{
   AuthenticationParameters,
   PublicKeyCredentialParameters,
@@ -52,141 +51,35 @@ import scala.concurrent.duration.*
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters.*
 
-/** Object reference: https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions
-  *
-  * Omitted:
-  *   - `attestation` and `attestationFormat`, because attestation is not implemented.
-  *   - `extensions` no extensions in use.
-  */
-case class WebAuthnPublicKeyCredentialCreationOptions(
-    authenticatorSelection: WebAuthnCreationOptionsAuthenticatorSelection,
-    attestation: String = "none",
-    challenge: String,
-    excludeCredentials: Array[WebAuthnCreationOptionsExcludeCredentials],
-    pubKeyCredParams: Array[WebAuthnCreationOptionsPubKeyParam],
-    timeout: Int, // timeout in milliseconds
-    rp: WebAuthnCreationOptionsRelyingParty,
-    user: WebAuthnCreationOptionsUser
-)
-object WebAuthnPublicKeyCredentialCreationOptions {
-  implicit val jsonFormat: OFormat[WebAuthnPublicKeyCredentialCreationOptions] =
-    Json.format[WebAuthnPublicKeyCredentialCreationOptions]
-}
-
-/** Object reference:
-  * https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions#authenticatorselection
-  *
-  * Omitted:
-  *   - `authenticatorAttachment` no forced authenticator.
-  *   - `userVerifiaction` not implemented on our side.
-  *   - `hints` no restrictions.
-  */
-case class WebAuthnCreationOptionsAuthenticatorSelection(
-    requireResidentKey: Boolean = true,
-    residentKey: String = "required",
-    userVerification: String = "preferred"
-)
-object WebAuthnCreationOptionsAuthenticatorSelection {
-  implicit val jsonFormat: OFormat[WebAuthnCreationOptionsAuthenticatorSelection] =
-    Json.format[WebAuthnCreationOptionsAuthenticatorSelection]
-}
-
-/** Object reference:
-  * https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions#excludecredentials
-  *
-  * Omitted:
-  *   - `transports` not restricted by us.
-  */
-case class WebAuthnCreationOptionsExcludeCredentials(
-    id: String,
-    `type`: String = "public-key" // must be set to "public-key"
-)
-object WebAuthnCreationOptionsExcludeCredentials {
-  implicit val jsonFormat: OFormat[WebAuthnCreationOptionsExcludeCredentials] =
-    Json.format[WebAuthnCreationOptionsExcludeCredentials]
-}
-
-/** Object reference:
-  * https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions#pubkeycredparams
-  */
-case class WebAuthnCreationOptionsPubKeyParam(
-    alg: Int,
-    `type`: String = "public-key" // must be set to "public-key"
-)
-object WebAuthnCreationOptionsPubKeyParam {
-  implicit val jsonFormat: OFormat[WebAuthnCreationOptionsPubKeyParam] = Json.format[WebAuthnCreationOptionsPubKeyParam]
-}
-
-/** Object reference: https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions#rp
-  */
-case class WebAuthnCreationOptionsRelyingParty(
-    id: String, // Should be set to the hostname
-    name: String
-)
-object WebAuthnCreationOptionsRelyingParty {
-  implicit val jsonFormat: OFormat[WebAuthnCreationOptionsRelyingParty] =
-    Json.format[WebAuthnCreationOptionsRelyingParty]
-}
-
-case class WebAuthnChallenge(data: Array[Byte]) extends Challenge {
-  def getValue: Array[Byte] = data
-}
-
-/** Object reference: https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions#user
-  */
-case class WebAuthnCreationOptionsUser(
-    displayName: String,
-    id: String,
-    name: String
-)
-object WebAuthnCreationOptionsUser {
-  implicit val jsonFormat: OFormat[WebAuthnCreationOptionsUser] = Json.format[WebAuthnCreationOptionsUser]
-}
-
-/** Object reference: https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialRequestOptions
-  *
-  * Omitted:
-  *   - allowCredentials: Not necessary, because we use client discoverable credentials
-  *   - extensions: Not used
-  */
-case class WebAuthnPublicKeyCredentialRequestOptions(
-    challenge: String,
-    timeout: Option[Long] = None, // In milliseconds
-    rpId: Option[String] = None, // Relying party ID
-    userVerification: Option[String] = Some("preferred"), // "required", "preferred", "discouraged"
-    hints: Option[Seq[String]] = None // UI hints for the user-agent
-)
-object WebAuthnPublicKeyCredentialRequestOptions {
-  implicit val jsonFormat: OFormat[WebAuthnPublicKeyCredentialRequestOptions] =
-    Json.format[WebAuthnPublicKeyCredentialRequestOptions]
-}
-
-/** Custom carrier object. Contains name of the key to register and a key instance of PublicKeyCredentialType
-  * (https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredential).
-  */
-case class WebAuthnRegistration(name: String, key: JsValue)
-object WebAuthnRegistration {
-  implicit val jsonFormat: OFormat[WebAuthnRegistration] = Json.format[WebAuthnRegistration]
-}
-
-/** Wrapper of PublicKeyCredential (https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredential).
-  */
-case class WebAuthnAuthentication(key: JsValue)
-object WebAuthnAuthentication {
-  implicit val jsonFormat: OFormat[WebAuthnAuthentication] = Json.format[WebAuthnAuthentication]
-}
-
-/** Custom object for WebAuthnCredential's id and name.
-  */
-case class WebAuthnKeyDescriptor(id: ObjectId, name: String)
-object WebAuthnKeyDescriptor {
-  implicit val jsonFormat: OFormat[WebAuthnKeyDescriptor] = Json.format[WebAuthnKeyDescriptor]
-}
-
 case class CreateOrganizationWithExistingUserParams(userId: ObjectId, newOrganizationName: String)
 object CreateOrganizationWithExistingUserParams {
   implicit val jsonFormat: OFormat[CreateOrganizationWithExistingUserParams] =
     Json.format[CreateOrganizationWithExistingUserParams]
+}
+
+case class CreateUserInOrganizationParameters(
+    firstName: String,
+    lastName: String,
+    email: String,
+    password: Option[String],
+    autoActivate: Option[Boolean]
+)
+
+object CreateUserInOrganizationParameters {
+  implicit val jsonFormat: OFormat[CreateUserInOrganizationParameters] =
+    Json.format[CreateUserInOrganizationParameters]
+}
+
+case class InviteParameters(
+    recipients: Seq[String],
+    autoActivate: Boolean,
+    isAdmin: Boolean,
+    isDatasetManager: Boolean,
+    teamMemberships: Seq[TeamMembership]
+)
+
+object InviteParameters {
+  implicit val jsonReads: Reads[InviteParameters] = Json.reads[InviteParameters]
 }
 
 class AuthenticationController @Inject() (
@@ -607,7 +500,7 @@ class AuthenticationController @Inject() (
             nonce <- values.get("nonce").flatMap(_.headOption).toFox ?~> "Nonce is missing"
             returnUrl <- values.get("return_sso_url").flatMap(_.headOption).toFox ?~> "Return url is missing"
             multiUser <- multiUserDAO.findOne(user._multiUser)
-            _ = logger.info(f"User ${user._id} logged in via SSO.")
+            _ = logger.info(f"User ${user._id} logged in to discuss.webknossos.org via WK SSO.")
           } yield {
             val returnPayload =
               s"nonce=$nonce&" +
@@ -969,19 +862,6 @@ class AuthenticationController @Inject() (
       )
     } yield ()
 
-  case class CreateUserInOrganizationParameters(
-      firstName: String,
-      lastName: String,
-      email: String,
-      password: Option[String],
-      autoActivate: Option[Boolean]
-  )
-
-  object CreateUserInOrganizationParameters {
-    implicit val jsonFormat: OFormat[CreateUserInOrganizationParameters] =
-      Json.format[CreateUserInOrganizationParameters]
-  }
-
   def createUserInOrganization(organizationId: String): Action[CreateUserInOrganizationParameters] =
     sil.SecuredAction.fox(validateJson[CreateUserInOrganizationParameters]) { implicit request =>
       for {
@@ -1072,18 +952,6 @@ class AuthenticationController @Inject() (
       _ <- tokenDAO.deleteDataStoreTokensForMultiUser(request.identity._multiUser)
     } yield Ok
   }
-}
-
-case class InviteParameters(
-    recipients: Seq[String],
-    autoActivate: Boolean,
-    isAdmin: Boolean,
-    isDatasetManager: Boolean,
-    teamMemberships: Seq[TeamMembership]
-)
-
-object InviteParameters {
-  implicit val jsonReads: Reads[InviteParameters] = Json.reads[InviteParameters]
 }
 
 trait AuthForms {

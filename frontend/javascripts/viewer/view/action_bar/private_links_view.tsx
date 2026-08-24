@@ -162,8 +162,8 @@ export function useZarrLinkMenu(maybeAccessToken: string | null) {
     apiVersion == null
       ? null
       : maybeAccessToken
-        ? `${dataStoreURL}/data/v${apiVersion}/annotations/zarr/${maybeAccessToken}`
-        : `${dataStoreURL}/data/v${apiVersion}/zarr/${dataset.id}`;
+        ? `${dataStoreURL}/data/v${apiVersion}/annotations/zarr3/${maybeAccessToken}`
+        : `${dataStoreURL}/data/v${apiVersion}/zarr3/${dataset.id}`;
 
   const copyTokenToClipboard = ({ key: layerName }: { key: string }) => {
     if (baseUrl == null) {
@@ -341,9 +341,7 @@ function HumanizedDuration({ expirationDate }: { expirationDate: dayjs.Dayjs }) 
         // expiration date at 08:00, moment.to() would round the duration and
         // render "2 days" which is confusing if the user selected (in 1 day).
         // Therefore, we pin the time at each date to 23:59 UTC.
-        now
-          .endOf("day")
-          .to(expirationDate.endOf("day"));
+        now.endOf("day").to(expirationDate.endOf("day"));
   return (
     <span style={{ color: "var(--ant-color-text-secondary)", marginLeft: 4 }}>{duration}</span>
   );
@@ -434,7 +432,7 @@ function PrivateLinksView({ annotationId }: { annotationId: string }) {
   );
 }
 
-function _PrivateLinksModal({
+function PrivateLinksModalInner({
   isOpen,
   onOk,
   annotationId,
@@ -470,4 +468,4 @@ function _PrivateLinksModal({
   );
 }
 
-export const PrivateLinksModal = makeComponentLazy(_PrivateLinksModal);
+export const PrivateLinksModal = makeComponentLazy(PrivateLinksModalInner);

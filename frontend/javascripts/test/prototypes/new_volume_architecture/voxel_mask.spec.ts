@@ -47,11 +47,19 @@ describe("new volume architecture — VoxelMask", () => {
     expect(runsOf(mask)).toEqual([[0, 32]]);
   });
 
-  it("marks runs spanning several words", () => {
+  it("splits runs at word boundaries, because a word is one x-row", () => {
     const mask = new VoxelMask();
-    mask.markRun(30, 70); // crosses three words
+    mask.markRun(30, 70); // crosses four words
     expect(mask.count).toBe(70);
-    expect(runsOf(mask)).toEqual([[30, 70]]);
+    // Not [[30, 70]]: a run must never span rows, or mag propagation would
+    // project it as a 70-voxel x-extent and streak across rows it never
+    // touched. See VoxelMask.runs().
+    expect(runsOf(mask)).toEqual([
+      [30, 2],
+      [32, 32],
+      [64, 32],
+      [96, 4],
+    ]);
   });
 
   it("counts overlapping runs only once", () => {
@@ -59,7 +67,10 @@ describe("new volume architecture — VoxelMask", () => {
     mask.markRun(10, 20);
     mask.markRun(15, 20); // overlaps 15..29
     expect(mask.count).toBe(25); // 10..34
-    expect(runsOf(mask)).toEqual([[10, 25]]);
+    expect(runsOf(mask)).toEqual([
+      [10, 22],
+      [32, 3],
+    ]);
   });
 
   it("merges adjacent runs and separates disjoint ones", () => {
@@ -102,6 +113,22 @@ describe("new volume architecture — VoxelMask", () => {
     mask.mark(100);
     mask.markRun(200, 2);
     expect([...mask.indices()]).toEqual([5, 6, 7, 100, 200, 201]);
+  });
+
+  it("never yields a run that crosses a row, however the mask was filled", () => {
+    // Fill several complete rows plus a partial one. Naively merging set bits
+    // would collapse these into one enormous run.
+    const mask = new VoxelMask();
+    mask.markRun(voxelIndexOf(0, 0, 0), BUCKET_WIDTH * 3 + 7);
+
+    const runs = [...mask.runs()];
+    expect(runs).toHaveLength(4);
+    for (const { start, length } of runs) {
+      const row = Math.floor(start / BUCKET_WIDTH);
+      const lastRow = Math.floor((start + length - 1) / BUCKET_WIDTH);
+      expect(lastRow).toBe(row);
+    }
+    expect(runs.reduce((sum, run) => sum + run.length, 0)).toBe(BUCKET_WIDTH * 3 + 7);
   });
 
   it("reports nothing for an empty mask", () => {

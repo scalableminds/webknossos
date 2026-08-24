@@ -63,31 +63,37 @@ export class VoxelMask {
     }
   }
 
-  /** Ascending maximal runs of set bits, found by scanning words. */
+  /**
+   * Ascending runs of set bits, found by scanning words.
+   *
+   * Runs never cross a word boundary, and since a word is exactly one x-row
+   * (see above) that means **every run is an x-run**. Callers rely on this:
+   * mag propagation multiplies and divides a run's length as an x-extent, and
+   * merging two full rows into one 64-long "run" would make it project into a
+   * horizontal streak spanning rows it never touched.
+   *
+   * The cost is that a solid bucket yields 1024 runs rather than 1. Worth it;
+   * a merged-run variant for the wire encoding can be added separately if the
+   * size ever matters.
+   */
   *runs(): Generator<{ start: VoxelIndex; length: number }> {
-    let runStart = -1;
     for (let word = 0; word < WORD_COUNT; word++) {
       const value = this.words[word];
-      if (value === 0) {
-        if (runStart >= 0) {
-          yield { start: runStart, length: word * WORD_BITS - runStart };
-          runStart = -1;
-        }
-        continue;
-      }
+      if (value === 0) continue;
+      const base = word * WORD_BITS;
+      let runStart = -1;
       for (let bit = 0; bit < WORD_BITS; bit++) {
-        const isSet = (value & (1 << bit)) !== 0;
-        const index = word * WORD_BITS + bit;
-        if (isSet && runStart < 0) {
-          runStart = index;
-        } else if (!isSet && runStart >= 0) {
+        const index = base + bit;
+        if ((value & (1 << bit)) !== 0) {
+          if (runStart < 0) runStart = index;
+        } else if (runStart >= 0) {
           yield { start: runStart, length: index - runStart };
           runStart = -1;
         }
       }
-    }
-    if (runStart >= 0) {
-      yield { start: runStart, length: BUCKET_VOXEL_COUNT - runStart };
+      if (runStart >= 0) {
+        yield { start: runStart, length: base + WORD_BITS - runStart };
+      }
     }
   }
 

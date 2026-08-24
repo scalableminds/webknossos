@@ -163,7 +163,9 @@ function importTestCsvFiles() {
         // connection startup instead, so the -c string only ever contains the COPY.
         env: {
           ...process.env,
-          PGOPTIONS: "-c session_replication_role=replica",
+          PGOPTIONS: process.env.PGOPTIONS
+            ? `${process.env.PGOPTIONS} -c session_replication_role=replica`
+            : "-c session_replication_role=replica",
         },
       },
     );

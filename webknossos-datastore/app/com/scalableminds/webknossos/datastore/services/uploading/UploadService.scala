@@ -1074,7 +1074,7 @@ class UploadService @Inject() (
                 includeHiddenFiles = false,
                 hiddenFilesWhitelist = List(".zarray", ".zattrs"),
                 truncateCommonPrefix = true,
-                Some(layerDirNames)
+                boundaryDirNames = Some(layerDirNames)
               )
               .toFox
             _ <- Fox.fromBool(unpackToDir.toFile.exists()) ?~> Msg.Dataset.Upload.noFiles

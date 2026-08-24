@@ -32,11 +32,20 @@ class PathUtilsTestSuite extends AsyncWordSpec {
 
     "truncate at the last, not the first, boundary match" in {
       val paths = List(
-        Path.of("upload/color/1/color_meta/x.wkw"),
-        Path.of("upload/color/1/color_meta/y.wkw")
+        Path.of("upload/color/1/color/x.wkw"),
+        Path.of("upload/color/1/color/y.wkw")
       )
       val root = PathUtils.findCommonRootDirectory(paths, List("color"))
       assert(root == Path.of("upload/color/1"))
+    }
+
+    "not match a directory name that merely contains a boundary name as a substring" in {
+      val paths = List(
+        Path.of("upload/color_meta/1/x.wkw"),
+        Path.of("upload/color_meta/1/y.wkw")
+      )
+      val root = PathUtils.findCommonRootDirectory(paths, List("color"))
+      assert(root == Path.of("upload/color_meta/1"))
     }
 
   }

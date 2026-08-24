@@ -163,18 +163,18 @@ object PathUtils extends LazyLogging {
     removeSingleFileNameFromPrefix(truncatedAtLastBoundary, paths.map(_.getFileName.toString))
   }
 
-  // Cuts path off right before the last element matching boundaryDirNames (path should be relative
-  // to the directory the search is limited to, so unrelated elements can't accidentally match).
+  // Cuts path off right before the last element that exactly matches a name in boundaryDirNames (path
+  // should be relative to the directory the search is limited to, so unrelated elements can't accidentally match).
   private def cutOffPathAtLastOccurrenceOf(path: Path, boundaryDirNames: List[String]): Path = {
-    var lastCutOffIndex = -1
-    path.iterator().asScala.zipWithIndex.foreach { case (subPath, idx) =>
-      boundaryDirNames.foreach { e =>
-        if (subPath.toString.contains(e)) {
-          lastCutOffIndex = idx
-        }
-      }
-    }
-    lastCutOffIndex match {
+    val lastMatchingIndex = path
+      .iterator()
+      .asScala
+      .zipWithIndex
+      .collect { case (subPath, idx) if boundaryDirNames.contains(subPath.toString) => idx }
+      .toList
+      .lastOption
+      .getOrElse(-1)
+    lastMatchingIndex match {
       case -1 => path
       // subpath(0, 0) is forbidden, therefore we handle this special case ourselves
       case 0 => Path.of("")

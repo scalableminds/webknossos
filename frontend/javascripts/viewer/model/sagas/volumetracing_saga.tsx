@@ -70,6 +70,7 @@ import {
 import listenToMinCut from "viewer/model/sagas/volume/min_cut_saga";
 import listenToQuickSelect from "viewer/model/sagas/volume/quick_select/quick_select_saga";
 import { deleteSegmentDataVolumeAction } from "viewer/model/sagas/volume/update_actions";
+import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import type SectionLabeler from "viewer/model/volumetracing/section_labeling";
 import type { TransformedSectionLabeler } from "viewer/model/volumetracing/section_labeling";
 import { api, Model } from "viewer/singletons";
@@ -274,11 +275,18 @@ export function* editVolumeLayerAsync(): Saga<never> {
         volumeTracing.tracingId,
       );
       const brushSize = yield* select((state) => state.userConfiguration.brushSize);
+      const voxelSize = yield* select((state) => state.dataset.dataSource.scale);
       const dimIndices = Dimensions.getIndices(startEditingAction.planeId);
       const planeAxis = dimIndices[2] as 0 | 1 | 2;
-      // The prototype's brush has one scalar radius, so in-plane anisotropy is
-      // not modelled; use the first in-plane axis.
-      const radius = Math.round(brushSize / 2) / labeledMag[dimIndices[0]];
+      // brushSize is a diameter in "base voxels" — units of the finest axis of
+      // the voxel size. Converting it to a per-axis voxel radius therefore
+      // folds in both the voxel size (so the brush is a sphere in physical
+      // space, not an ellipsoid) and the mag.
+      const baseVoxelFactors = getBaseVoxelFactorsInUnit(voxelSize);
+      const unzoomedRadius = Math.round(brushSize / 2);
+      const radius: Vector3 = [0, 1, 2].map(
+        (axis) => (unzoomedRadius * baseVoxelFactors[axis]) / labeledMag[axis],
+      ) as Vector3;
       spikeDriver = new BrushDriver(
         {
           cube: spikeLayer.cube,

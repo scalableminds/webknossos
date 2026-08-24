@@ -22,12 +22,17 @@ import {
 
 const SEGMENT: SegmentId = 7n;
 
+/** An isotropic per-axis radius, for datasets with cubic voxels. */
+function iso(radius: number): Vector3 {
+  return [radius, radius, radius];
+}
+
 /**
  * Reference implementation of the brush region, deliberately written the naive
  * way: no buckets, no masks, no runs. The pipeline under test has to agree with
  * it, which is what makes the bucket-splitting and run-encoding meaningful.
  */
-function referenceStroke(path: Vector3[], radius: number, planeAxis: 0 | 1 | 2): Set<string> {
+function referenceStroke(path: Vector3[], radius: Vector3, planeAxis: 0 | 1 | 2): Set<string> {
   const slice = Math.floor(path[0][planeAxis]);
   const painted = new Set<string>();
   const axes = [0, 1, 2].filter((axis) => axis !== planeAxis);
@@ -41,18 +46,18 @@ function referenceStroke(path: Vector3[], radius: number, planeAxis: 0 | 1 | 2):
       let dot = 0;
       let lengthSquared = 0;
       for (const axis of axes) {
-        const d = to[axis] - from[axis];
-        dot += (voxel[axis] + 0.5 - from[axis]) * d;
+        const d = (to[axis] - from[axis]) / radius[axis];
+        dot += ((voxel[axis] + 0.5 - from[axis]) / radius[axis]) * d;
         lengthSquared += d * d;
       }
       const t = lengthSquared === 0 ? 0 : Math.max(0, Math.min(1, dot / lengthSquared));
       let distanceSquared = 0;
       for (const axis of axes) {
         const closest = from[axis] + t * (to[axis] - from[axis]);
-        const delta = voxel[axis] + 0.5 - closest;
+        const delta = (voxel[axis] + 0.5 - closest) / radius[axis];
         distanceSquared += delta * delta;
       }
-      if (Math.sqrt(distanceSquared) <= radius) inside = true;
+      if (distanceSquared <= 1) inside = true;
     }
     if (inside) painted.add(keyOf(voxel));
   }
@@ -71,13 +76,13 @@ describe("new volume architecture — brush", () => {
       [20, 16, 5],
     ];
 
-    session.beginBrushStroke(ctx, path[0], 3, 2);
+    session.beginBrushStroke(ctx, path[0], iso(3), 2);
     session.extendBrushStroke(path[1]);
     session.extendBrushStroke(path[2]);
     const diff = session.endBrushStroke();
 
     // ── source mag matches an independent, bucket-unaware reference ──
-    const expected = referenceStroke(path, 3, 2);
+    const expected = referenceStroke(path, iso(3), 2);
     const actual = new Set(
       paintedVoxels(cube, [0, 0, 0], [32, 32, 32], SEGMENT).map((voxel) => keyOf(voxel)),
     );
@@ -126,7 +131,7 @@ describe("new volume architecture — brush", () => {
     await materialize(cube, buckets);
 
     // Radius 25 at (48,48): bucket (1,1) has rows filled across its full width.
-    session.beginBrushStroke(editContext({ activeSegmentId: SEGMENT }), [48, 48, 5], 25, 2);
+    session.beginBrushStroke(editContext({ activeSegmentId: SEGMENT }), [48, 48, 5], iso(25), 2);
     session.endBrushStroke();
 
     const scanMin: Vector3 = [0, 0, 0];
@@ -147,19 +152,64 @@ describe("new volume architecture — brush", () => {
     }
   });
 
+  it("paints a physical sphere, not a voxel sphere, when voxels are anisotropic", async () => {
+    // Voxel size 11x11x28 nm: a physically round brush must reach ~11/28 as far
+    // in z as in x/y. A scalar radius would paint a circle in the XY viewport
+    // and ellipses in XZ/YZ — the bug this per-axis radius exists to avoid.
+    const { cube, session } = createHarness();
+    const buckets: BucketAddress[] = [];
+    for (let magIndex = 0; magIndex < MAGS.length; magIndex++) {
+      for (let bz = 0; bz < 2; bz++) buckets.push([0, 0, bz, magIndex]);
+    }
+    await materialize(cube, buckets);
+
+    const radiusNm = 110;
+    const voxelSize: Vector3 = [11, 11, 28];
+    const radius = voxelSize.map((nm) => radiusNm / nm) as Vector3; // [10, 10, ~3.93]
+
+    // A 3D brush (planeAxis null) so the z extent is actually exercised.
+    const center: Vector3 = [16, 16, 16];
+    session.beginBrushStroke(editContext({ activeSegmentId: SEGMENT }), center, radius, null);
+    session.endBrushStroke();
+
+    const painted = paintedVoxels(cube, [0, 0, 0], [32, 32, 32], SEGMENT, 0);
+    expect(painted.length).toBeGreaterThan(100);
+
+    // Every painted voxel is inside the sphere in *physical* space...
+    for (const voxel of painted) {
+      const distanceNm = Math.hypot(
+        (voxel[0] + 0.5 - center[0]) * voxelSize[0],
+        (voxel[1] + 0.5 - center[1]) * voxelSize[1],
+        (voxel[2] + 0.5 - center[2]) * voxelSize[2],
+      );
+      expect(distanceNm).toBeLessThanOrEqual(radiusNm + 1e-9);
+    }
+
+    // ...and the extents differ per axis, in proportion to the voxel size.
+    const extent = (axis: 0 | 1 | 2) => {
+      const values = painted.map((voxel) => voxel[axis]);
+      return Math.max(...values) - Math.min(...values) + 1;
+    };
+    expect(extent(0)).toBe(extent(1)); // x and y share a voxel size
+    expect(extent(2)).toBeLessThan(extent(0)); // z is coarser, so fewer voxels
+    // ~2*10 in x/y against ~2*3.93 in z.
+    expect(extent(0)).toBeGreaterThanOrEqual(19);
+    expect(extent(2)).toBeLessThanOrEqual(9);
+  });
+
   it("coalesces overlapping pointer-moves into one transaction", async () => {
     const { cube, session } = createHarness();
     await materialize(cube, originBuckets(MAGS.length));
     const ctx = editContext();
 
     // Repeatedly re-paint the same spot; the write set should not grow.
-    session.beginBrushStroke(ctx, [16, 16, 5], 2, 2);
+    session.beginBrushStroke(ctx, [16, 16, 5], iso(2), 2);
     for (let i = 0; i < 20; i++) session.extendBrushStroke([16, 16, 5]);
     const diff = session.endBrushStroke();
 
     const single = createHarness();
     await materialize(single.cube, originBuckets(MAGS.length));
-    single.session.beginBrushStroke(editContext(), [16, 16, 5], 2, 2);
+    single.session.beginBrushStroke(editContext(), [16, 16, 5], iso(2), 2);
     const singleDiff = single.session.endBrushStroke();
 
     expect(countDiffVoxels(diff)).toBe(countDiffVoxels(singleDiff));
@@ -171,7 +221,7 @@ describe("new volume architecture — brush", () => {
 
     // Draw a single dab at mag 1 (2-2-1) and check the mag-0 blocks.
     const ctx = editContext({ sourceMagIndex: 1, activeSegmentId: SEGMENT });
-    session.beginBrushStroke(ctx, [8, 8, 4], 1.2, 2);
+    session.beginBrushStroke(ctx, [8, 8, 4], iso(1.2), 2);
     const diff = session.endBrushStroke();
 
     const mag1Painted = paintedVoxels(cube, [0, 0, 0], [32, 32, 32], SEGMENT, 1);
@@ -199,7 +249,7 @@ describe("new volume architecture — brush", () => {
     // Deliberately materialize nothing.
     const ctx = editContext({ sourceMagIndex: 0, activeSegmentId: SEGMENT });
 
-    session.beginBrushStroke(ctx, [16, 16, 5], 3, 2);
+    session.beginBrushStroke(ctx, [16, 16, 5], iso(3), 2);
     const diff = session.endBrushStroke();
 
     expect(backend.fetched).toHaveLength(0);
@@ -222,7 +272,7 @@ describe("new volume architecture — brush", () => {
     expect(cube.peek([16, 16, 5], 0)).toBe(3n);
 
     const ctx = editContext({ overwriteMode: "overwrite-empty-only", activeSegmentId: SEGMENT });
-    session.beginBrushStroke(ctx, [16, 16, 5], 3, 2);
+    session.beginBrushStroke(ctx, [16, 16, 5], iso(3), 2);
     session.endBrushStroke();
 
     // The occupied voxel survives; its neighbours are painted.
@@ -236,9 +286,9 @@ describe("new volume architecture — brush", () => {
     await materialize(cube, originBuckets(MAGS.length));
 
     // T1 paints segment 5 over a disk; T2 paints segment 9 over part of it.
-    session.beginBrushStroke(editContext({ activeSegmentId: 5n }), [16, 16, 5], 4, 2);
+    session.beginBrushStroke(editContext({ activeSegmentId: 5n }), [16, 16, 5], iso(4), 2);
     const t1 = session.endBrushStroke();
-    session.beginBrushStroke(editContext({ activeSegmentId: 9n }), [18, 16, 5], 2, 2);
+    session.beginBrushStroke(editContext({ activeSegmentId: 9n }), [18, 16, 5], iso(2), 2);
     session.endBrushStroke();
 
     const onlyT1: Vector3 = [13, 16, 5]; // inside T1's disk, outside T2's
@@ -265,7 +315,7 @@ describe("new volume architecture — brush", () => {
   it("round-trips a bucket diff through the binary encoding", async () => {
     const { cube, session } = createHarness();
     await materialize(cube, originBuckets(MAGS.length));
-    session.beginBrushStroke(editContext(), [16, 16, 5], 3, 2);
+    session.beginBrushStroke(editContext(), [16, 16, 5], iso(3), 2);
     const diff = session.endBrushStroke();
 
     for (const bucketDiff of diff.bucketDiffs) {

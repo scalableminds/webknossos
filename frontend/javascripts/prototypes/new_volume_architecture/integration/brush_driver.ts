@@ -21,8 +21,11 @@ export interface BrushDriverOptions {
   segmentId: SegmentId;
   overwriteMode: OverwriteMode;
   additionalCoordinates: AdditionalCoordinate[] | null;
-  /** Brush radius, already expressed in source-mag voxels. */
-  radius: number;
+  /**
+   * Per-axis brush radius in source-mag voxels. Callers fold both the voxel
+   * size and the mag into this, so the rasterizer needs neither.
+   */
+  radius: Vector3;
   /** Viewport normal: 0 = YZ, 1 = XZ, 2 = XY. */
   planeAxis: 0 | 1 | 2;
 }

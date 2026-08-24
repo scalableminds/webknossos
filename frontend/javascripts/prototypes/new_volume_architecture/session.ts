@@ -21,7 +21,7 @@ export class VolumeEditingSession {
     tx: VolumeTransaction;
     ctx: EditContext;
     path: Vector3[];
-    radius: number;
+    radius: Vector3;
     planeAxis: 0 | 1 | 2 | null;
   } | null = null;
 
@@ -58,7 +58,8 @@ export class VolumeEditingSession {
   beginBrushStroke(
     ctx: EditContext,
     start: Vector3,
-    radius: number,
+    /** Per-axis radius in source-mag voxels (§ intents.ts). */
+    radius: Vector3,
     planeAxis: 0 | 1 | 2 | null = 2,
   ): void {
     if (this.stroke != null) throw new Error("A brush stroke is already open");

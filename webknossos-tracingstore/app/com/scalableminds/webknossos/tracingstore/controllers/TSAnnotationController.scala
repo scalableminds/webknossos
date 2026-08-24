@@ -7,6 +7,7 @@ import com.scalableminds.util.box.{Empty, Failure, Full}
 import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.objectid.ObjectId
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.Annotation.{
@@ -24,7 +25,8 @@ import com.scalableminds.webknossos.tracingstore.annotation.{
   AnnotationTransactionService,
   ResetToBaseAnnotationAction,
   TSAnnotationService,
-  UpdateActionGroup
+  UpdateActionGroup,
+  UpdateTimingStats
 }
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.*
@@ -35,6 +37,7 @@ import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.*
 
 case class MergedFromIdsRequest(
     annotationIds: Seq[ObjectId],
@@ -72,18 +75,28 @@ class TSAnnotationController @Inject() (
   def update(annotationId: ObjectId): Action[List[UpdateActionGroup]] =
     Action.fox(validateJson[List[UpdateActionGroup]]) { implicit request =>
       log() {
-        logTime(slackNotificationService.noticeSlowRequest) {
+        logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 1 minute) {
           accessTokenService.validateAccessFromTokenContext(
             UserAccessRequest.writeAnnotation(annotationId),
             useCaching = false
           ) {
+            given stats: UpdateTimingStats = new UpdateTimingStats
+            val requestStart = Instant.now
             for {
               _ <- annotationTransactionService.handleUpdateGroups(annotationId, request.body)
+              _ = logIfSlow(annotationId, requestStart, stats)
             } yield Ok
           }
         }
       }
     }
+
+  private def logIfSlow(annotationId: ObjectId, requestStart: Instant, stats: UpdateTimingStats): Unit = {
+    val duration = Instant.since(requestStart)
+    if (duration > (1 minute)) {
+      logger.warn(s"Slow annotation update for $annotationId took ${formatDuration(duration)}. ${stats.summary}")
+    }
+  }
 
   def updateActionLog(
       annotationId: ObjectId,

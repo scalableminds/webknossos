@@ -110,4 +110,8 @@ describe("Volume Interpolation", () => {
   it<WebknossosTestContext>("should interpolate a segment for a uint64 volume layer", async (context) => {
     await runInterpolationTest(context, "uint64");
   });
+
+  it<WebknossosTestContext>("should interpolate a segment for a int64 volume layer", async (context) => {
+    await runInterpolationTest(context, "int64");
+  });
 });

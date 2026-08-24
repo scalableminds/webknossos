@@ -378,8 +378,8 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
   let firstSlice: NdArray<TypedArrayWithoutBigInt>;
   let lastSlice: NdArray<TypedArrayWithoutBigInt>;
 
-  const isBigUint64 = inputNd.data instanceof BigUint64Array;
-  if (isBigUint64) {
+  const isBigInt = inputNd.data instanceof BigUint64Array || inputNd.data instanceof BigInt64Array;
+  if (isBigInt) {
     // For BigUint64 arrays, we want to convert as early as possible to Float32, since
     // the cwise operations don't generalize across all members of TypedArray.
     // Float values are more than enough, because the interpolation process only

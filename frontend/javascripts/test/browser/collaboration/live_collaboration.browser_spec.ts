@@ -124,7 +124,9 @@ describe("Live Collaboration", () => {
       // Activate HDF5 mapping
       await page.evaluate(
         (mappingName: string) =>
-          window.webknossos.apiReady().then((api) => api.data.activateMapping(mappingName, "HDF5")),
+          window.webknossos
+            .apiReady()
+            .then((api) => api.data.activateMapping(mappingName, "AGGLOMERATE")),
         HDF5_MAPPING_NAME,
       );
       await waitForMappingEnabled(page);

@@ -263,6 +263,20 @@ class BoundingBox {
       max: V3.add(this.max, offset),
     });
   }
+
+  getCorners(): Vector3[] {
+    const { min, max } = this;
+    return [
+      [min[0], min[1], min[2]],
+      [max[0], min[1], min[2]],
+      [min[0], max[1], min[2]],
+      [max[0], max[1], min[2]],
+      [min[0], min[1], max[2]],
+      [max[0], min[1], max[2]],
+      [min[0], max[1], max[2]],
+      [max[0], max[1], max[2]],
+    ];
+  }
 }
 
 export default BoundingBox;

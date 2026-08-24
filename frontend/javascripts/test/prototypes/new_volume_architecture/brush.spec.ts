@@ -111,6 +111,42 @@ describe("new volume architecture — brush", () => {
     expect(mag0Runs).toBe(expected.size);
   });
 
+  it("does not streak across rows when a stroke fills entire bucket rows", async () => {
+    // Regression: VoxelMask.runs() used to merge set bits across word
+    // boundaries. A word is one x-row, so a stroke filling a row edge-to-edge
+    // produced a "run" spanning rows, which mag propagation then projected as
+    // a long x-extent — visible as horizontal streaks in the coarser mags.
+    const { cube, session } = createHarness();
+    const buckets: BucketAddress[] = [];
+    for (let magIndex = 0; magIndex < MAGS.length; magIndex++) {
+      for (let bx = 0; bx < 4; bx++) {
+        for (let by = 0; by < 4; by++) buckets.push([bx, by, 0, magIndex]);
+      }
+    }
+    await materialize(cube, buckets);
+
+    // Radius 25 at (48,48): bucket (1,1) has rows filled across its full width.
+    session.beginBrushStroke(editContext({ activeSegmentId: SEGMENT }), [48, 48, 5], 25, 2);
+    session.endBrushStroke();
+
+    const scanMin: Vector3 = [0, 0, 0];
+    const scanMax: Vector3 = [128, 128, 8];
+    const painted = paintedVoxels(cube, scanMin, scanMax, SEGMENT, 0);
+    expect(painted.length).toBeGreaterThan(1000);
+
+    for (let magIndex = 1; magIndex < MAGS.length; magIndex++) {
+      const mag = MAGS.get(magIndex);
+      // A coarse voxel is painted exactly when some mag-0 voxel in its block is.
+      const expectedCoarse = new Set(painted.map((voxel) => keyOf(toMagVoxel(voxel, mag))));
+      const actualCoarse = new Set(
+        paintedVoxels(cube, scanMin, scanMax, SEGMENT, magIndex).map(keyOf),
+      );
+      // Equality in both directions: no missing voxels, and crucially no extra
+      // ones streaking off to the side.
+      expect(actualCoarse).toEqual(expectedCoarse);
+    }
+  });
+
   it("coalesces overlapping pointer-moves into one transaction", async () => {
     const { cube, session } = createHarness();
     await materialize(cube, originBuckets(MAGS.length));

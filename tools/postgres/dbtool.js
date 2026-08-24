@@ -155,12 +155,6 @@ function importTestCsvFiles() {
       ],
       {
         input: fs.readFileSync(path.join(csvFolder, filename)),
-        // Setting session_replication_role via a leading `SET` statement in the same
-        // -c string as the COPY is unreliable: psql doesn't consistently relay the
-        // piped stdin into the COPY when it isn't the sole statement, which can abort
-        // the connection with "unexpected COPY_IN result" / "unexpected EOF on client
-        // connection" on the server side. Setting it via PGOPTIONS applies it at
-        // connection startup instead, so the -c string only ever contains the COPY.
         env: {
           ...process.env,
           PGOPTIONS: process.env.PGOPTIONS

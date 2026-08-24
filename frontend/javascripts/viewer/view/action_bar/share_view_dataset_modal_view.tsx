@@ -13,7 +13,7 @@ type Props = {
   onOk: () => any;
 };
 
-function _ShareViewDatasetModalView(props: Props) {
+function ShareViewDatasetModalViewInner(props: Props) {
   const { isOpen, onOk } = props;
   const dataset = useWkSelector((state) => state.dataset);
   const sharingToken = useDatasetSharingToken(dataset);
@@ -101,5 +101,5 @@ function _ShareViewDatasetModalView(props: Props) {
   );
 }
 
-const ShareViewDatasetModalView = makeComponentLazy(_ShareViewDatasetModalView);
+const ShareViewDatasetModalView = makeComponentLazy(ShareViewDatasetModalViewInner);
 export default ShareViewDatasetModalView;

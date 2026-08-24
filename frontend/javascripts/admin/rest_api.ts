@@ -1,3 +1,5 @@
+import type { ApiResult, RetryOptions } from "admin/api/api_result";
+import { requestResult } from "admin/api/api_result";
 import dayjs from "dayjs";
 import update from "immutability-helper";
 import { toBigInt } from "libs/bigint_helpers";
@@ -86,7 +88,7 @@ import {
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 import type { DatasourceConfiguration } from "types/schemas/datasource.types";
 import type { ArbitraryObject, EmptyObject } from "types/type_utils";
-import type { AnnotationTypeFilterEnum, LOG_LEVELS, Vector3 } from "viewer/constants";
+import type { AnnotationTypeFilterEnum, LOG_LEVELS, MappingType, Vector3 } from "viewer/constants";
 import Constants, { AnnotationStateFilterEnum } from "viewer/constants";
 import type BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import {
@@ -102,7 +104,6 @@ import {
 import type {
   DatasetConfiguration,
   Mapping,
-  MappingType,
   PartialDatasetConfiguration,
   SaveQueueEntry,
   StoreAnnotation,
@@ -634,14 +635,21 @@ export function duplicateAnnotation(
 export async function getUnversionedAnnotationInformation(
   annotationId: string,
   options: RequestOptions = {},
-): Promise<APIAnnotation> {
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<APIAnnotation>> {
   const infoUrl = `/api/annotations/${annotationId}/info?timestamp=${Date.now()}`;
-  const annotationWithMessages = await Request.receiveJSON(infoUrl, options);
+  return requestResult(
+    async (adaptedOpts) => {
+      const annotationWithMessages = await Request.receiveJSON(infoUrl, adaptedOpts);
 
-  // Extract the potential messages property before returning the task to avoid
-  // failing e2e tests in annotations.e2e.ts
-  const { messages: _messages, ...annotation } = annotationWithMessages;
-  return annotation;
+      // Extract the potential messages property before returning the task to avoid
+      // failing e2e tests in annotations.e2e.ts
+      const { messages: _messages, ...annotation } = annotationWithMessages;
+      return annotation;
+    },
+    options,
+    retryOptions,
+  );
 }
 
 export async function getAnnotationCompoundInformation(

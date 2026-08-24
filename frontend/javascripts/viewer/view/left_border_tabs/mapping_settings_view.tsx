@@ -5,6 +5,7 @@ import { localeCompareBy } from "libs/utils";
 import messages from "messages";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
+import type { MappingType } from "viewer/constants";
 import { ControlModeEnum, MappingStatusEnum } from "viewer/constants";
 import { isAnnotationOwner, mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import {
@@ -22,7 +23,6 @@ import {
   setMappingAction,
   setMappingEnabledAction,
 } from "viewer/model/actions/settings_actions";
-import type { MappingType } from "viewer/store";
 import SwitchSetting from "./components/switch_setting";
 
 type Props = {
@@ -100,7 +100,7 @@ function MappingSettingsView({ layerName }: Props) {
         packedMappingNameWithCategory,
       );
 
-      if (mappingType !== "JSON" && mappingType !== "HDF5") {
+      if (mappingType !== "JSON" && mappingType !== "AGGLOMERATE") {
         throw new Error("Invalid mapping type");
       }
 
@@ -196,12 +196,12 @@ function MappingSettingsView({ layerName }: Props) {
     const agglomerateOptions = availableAgglomerates
       .slice()
       .sort(localeCompareBy((s) => s))
-      .map((s) => toOption(s, "HDF5"));
+      .map((s) => toOption(s, "AGGLOMERATE"));
 
     if (useGroups) {
       return [
         { label: "JSON", options: mappingOptions },
-        { label: "HDF5", options: agglomerateOptions },
+        { label: "AGGLOMERATE", options: agglomerateOptions },
       ];
     }
 

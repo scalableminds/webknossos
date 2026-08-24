@@ -54,9 +54,11 @@ const worldCoordToUVW: ShaderModule = {
       // need to multiply by voxelSizeFactorInvertedUVW because the threejs scene is scaled.
       worldCoordUVW = (worldCoordUVW - positionOffsetUVW) * voxelSizeFactorInvertedUVW;
 
-      // There might be numerical imprecisions here in w coord direction of the viewport.
-      // Thus, in case we are sure that it is constant and should match the global coordinate, 
-      // we just use that one here to void rendering a wrong slice in such a case.
+      // Numerical imprecision in floating point calculation might cause the w component to be off by one.
+      // E.g. if the w component is an integer w = 1.0 in voxel space, the floating point operation via * voxelSizeFactorInvertedUVW
+      // which transforms the global coordinates back to voxel space, might end up with w=0.9999, which is wrong.
+      // But we know that for unrotated none flight mode planes this is constant.
+      // Thus, in this case we can copy over the matching coordinate from the globalPosition uniform to obtain a correct w component.
       if(!isInFlightMode && !isFlycamRotated){
         worldCoordUVW.z = transDim(globalPosition).z;
       }

@@ -23,7 +23,9 @@ function ShareViewDatasetModalViewInner(props: Props) {
     baseUrl: zarrBaseUrl,
     copyLayerUrlMenu,
     isLoading: isZarrLinkLoading,
+    isUnavailable: isZarrLinkUnavailable,
   } = useZarrLinkMenu(null);
+  const isZarrLinkDisabled = isZarrLinkLoading || isZarrLinkUnavailable;
 
   return (
     <Modal
@@ -76,16 +78,22 @@ function ShareViewDatasetModalViewInner(props: Props) {
                 style={{
                   width: "calc(78% + 32px)",
                 }}
-                value={isZarrLinkLoading ? "Loading…" : zarrBaseUrl}
+                value={
+                  isZarrLinkLoading
+                    ? "Loading…"
+                    : isZarrLinkUnavailable
+                      ? "Unavailable"
+                      : zarrBaseUrl
+                }
                 readOnly
               />
-              <Dropdown menu={copyLayerUrlMenu} disabled={isZarrLinkLoading}>
+              <Dropdown menu={copyLayerUrlMenu} disabled={isZarrLinkDisabled}>
                 <Button
                   style={{
                     width: "15%",
                   }}
                   icon={<CopyOutlined />}
-                  disabled={isZarrLinkLoading}
+                  disabled={isZarrLinkDisabled}
                 >
                   Copy
                 </Button>

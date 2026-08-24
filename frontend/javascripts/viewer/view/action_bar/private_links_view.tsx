@@ -165,6 +165,9 @@ export function useZarrLinkMenu(maybeAccessToken: string | null) {
         ? `${dataStoreURL}/data/v${apiVersion}/annotations/zarr3/${maybeAccessToken}`
         : `${dataStoreURL}/data/v${apiVersion}/zarr3/${dataset.id}`;
 
+  const isLoading = buildInfoQuery.isLoading;
+  const isUnavailable = !isLoading && baseUrl == null;
+
   const copyTokenToClipboard = ({ key: layerName }: { key: string }) => {
     if (baseUrl == null) {
       return;
@@ -192,16 +195,25 @@ export function useZarrLinkMenu(maybeAccessToken: string | null) {
     ],
   };
 
-  return { baseUrl: baseUrl ?? "", copyLayerUrlMenu, isLoading: baseUrl == null };
+  return {
+    baseUrl: baseUrl ?? "",
+    copyLayerUrlMenu,
+    isLoading,
+    isUnavailable,
+    error: buildInfoQuery.error,
+  };
 }
 
 function UrlInput({ linkItem }: { linkItem: ZarrPrivateLink }) {
-  const { baseUrl, copyLayerUrlMenu, isLoading } = useZarrLinkMenu(linkItem.accessToken);
+  const { baseUrl, copyLayerUrlMenu, isLoading, isUnavailable } = useZarrLinkMenu(
+    linkItem.accessToken,
+  );
+  const isDisabled = isLoading || isUnavailable;
 
   return (
     <Space.Compact className="no-borders" block>
       <Input
-        value={isLoading ? "Loading…" : baseUrl}
+        value={isLoading ? "Loading…" : isUnavailable ? "Unavailable" : baseUrl}
         size="small"
         style={{
           width: "90%",
@@ -212,12 +224,12 @@ function UrlInput({ linkItem }: { linkItem: ZarrPrivateLink }) {
         disabled
       />
 
-      <Dropdown menu={copyLayerUrlMenu} disabled={isLoading}>
+      <Dropdown menu={copyLayerUrlMenu} disabled={isDisabled}>
         <Button
           size="small"
           icon={<CopyOutlined />}
           style={{ background: "transparent" }}
-          disabled={isLoading}
+          disabled={isDisabled}
         />
       </Dropdown>
     </Space.Compact>

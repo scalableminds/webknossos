@@ -15,8 +15,19 @@ export type AnalyticShape =
       kind: "brush";
       /** Pointer path in source-mag voxel coordinates (floats). */
       path: Vector3[];
-      /** Constant for the whole stroke — brush size cannot change mid-stroke. */
-      radius: number;
+      /**
+       * Per-axis radius in source-mag voxels, constant for the whole stroke.
+       *
+       * Per-axis rather than scalar because the brush is a sphere in *physical*
+       * space, and a voxel is generally not a cube. With a voxel size of
+       * 11×11×28 nm, a 100 nm radius is ~9 voxels in x and y but only ~3.5 in
+       * z, so a scalar radius would paint an ellipse in every viewport except
+       * the one whose two in-plane axes happen to be equally scaled.
+       *
+       * The mag factor is folded in here too, so the rasterizer needs no
+       * knowledge of either voxel size or mag.
+       */
+      radius: Vector3;
       /** null => 3D sphere brush; otherwise paint one slice along this axis. */
       planeAxis: 0 | 1 | 2 | null;
     }

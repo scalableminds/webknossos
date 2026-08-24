@@ -53,11 +53,11 @@ function rasterizeBrush(
   }
 }
 
-/** Everything within `radius` of the segment from → to, at the source mag. */
+/** Everything within the per-axis `radius` of the segment from → to. */
 function rasterizeCapsule(
   from: Vector3,
   to: Vector3,
-  radius: number,
+  radius: Vector3,
   planeAxis: 0 | 1 | 2 | null,
   ctx: EditContext,
   tx: VolumeTransaction,
@@ -68,14 +68,8 @@ function rasterizeCapsule(
   forEachBucketRow(box, ctx, (address, rowY, rowZ, xStart, xEnd) => {
     const writer = tx.writerFor(address, ctx.activeSegmentId);
     const rowBase = rowBaseIndex(address, rowY, rowZ);
-    emitSpansAlongRow(
-      writer,
-      rowBase,
-      address,
-      xStart,
-      xEnd,
-      ctx,
-      (x) => distanceToSegment([x + 0.5, rowY + 0.5, rowZ + 0.5], from, to, planeAxis) <= radius,
+    emitSpansAlongRow(writer, rowBase, address, xStart, xEnd, ctx, (x) =>
+      isInsideCapsule([x + 0.5, rowY + 0.5, rowZ + 0.5], from, to, radius, planeAxis),
     );
   });
 }
@@ -204,7 +198,7 @@ function emitSpansAlongRow(
 function capsuleBoundingBox(
   from: Vector3,
   to: Vector3,
-  radius: number,
+  radius: Vector3,
   planeAxis: 0 | 1 | 2 | null,
 ): BoundingBox {
   const min: Vector3 = [0, 0, 0];
@@ -216,8 +210,8 @@ function capsuleBoundingBox(
       min[axis] = slice;
       max[axis] = slice + 1;
     } else {
-      min[axis] = Math.floor(Math.min(from[axis], to[axis]) - radius);
-      max[axis] = Math.ceil(Math.max(from[axis], to[axis]) + radius) + 1;
+      min[axis] = Math.floor(Math.min(from[axis], to[axis]) - radius[axis]);
+      max[axis] = Math.ceil(Math.max(from[axis], to[axis]) + radius[axis]) + 1;
     }
   }
   return { min, max };
@@ -237,19 +231,27 @@ function clipBox(box: BoundingBox, clip: BoundingBox | null): BoundingBox | null
   return { min, max };
 }
 
-/** Distance from a point to a segment, ignoring the plane axis for 2D brushes. */
-function distanceToSegment(
+/**
+ * Whether a point lies within the capsule swept from `from` to `to`.
+ *
+ * Coordinates are divided by the per-axis radius first, which turns the
+ * anisotropic capsule into a unit-radius one — equivalent to testing a sphere
+ * in physical space rather than an ellipsoid in voxel space. The plane axis is
+ * dropped entirely for 2D brushes, which paint a single slice.
+ */
+function isInsideCapsule(
   point: Vector3,
   from: Vector3,
   to: Vector3,
+  radius: Vector3,
   planeAxis: 0 | 1 | 2 | null,
-): number {
+): boolean {
   let dot = 0;
   let lengthSquared = 0;
   for (let axis = 0; axis < 3; axis++) {
     if (axis === planeAxis) continue;
-    const d = to[axis] - from[axis];
-    dot += (point[axis] - from[axis]) * d;
+    const d = (to[axis] - from[axis]) / radius[axis];
+    dot += ((point[axis] - from[axis]) / radius[axis]) * d;
     lengthSquared += d * d;
   }
   const t = lengthSquared === 0 ? 0 : Math.max(0, Math.min(1, dot / lengthSquared));
@@ -258,10 +260,10 @@ function distanceToSegment(
   for (let axis = 0; axis < 3; axis++) {
     if (axis === planeAxis) continue;
     const closest = from[axis] + t * (to[axis] - from[axis]);
-    const delta = point[axis] - closest;
+    const delta = (point[axis] - closest) / radius[axis];
     distanceSquared += delta * delta;
   }
-  return Math.sqrt(distanceSquared);
+  return distanceSquared <= 1;
 }
 
 export { isInBoundingBox };

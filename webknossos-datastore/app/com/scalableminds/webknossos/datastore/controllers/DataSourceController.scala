@@ -300,7 +300,7 @@ class DataSourceController @Inject() (
           dataSource <- dsRemoteWebknossosClient.getDataSource(datasetId) ~> NOT_FOUND
           dataSourceId = dataSource.id
           _ <- localDatasetDeletionService
-            .deleteOnDisk(
+            .moveToTrash(
               datasetId,
               Path.of(rootPath),
               dataSourceId.organizationId,

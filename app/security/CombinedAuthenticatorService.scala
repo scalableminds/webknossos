@@ -61,11 +61,11 @@ case class CombinedAuthenticatorService(
   override def create(loginInfo: LoginInfo)(implicit request: RequestHeader): Future[CombinedAuthenticator] =
     cookieAuthenticatorService.create(loginInfo).map(CombinedAuthenticator(_))
 
-  private def createToken(userId: ObjectId): Future[CombinedAuthenticator] = {
-    val tokenAuthenticator = tokenAuthenticatorService.create(userId, TokenType.Authentication)
-    tokenAuthenticator.map(tokenAuthenticatorService.init(_, TokenType.Authentication, deleteOld = true))
-    tokenAuthenticator.map(CombinedAuthenticator(_))
-  }
+  private def createToken(userId: ObjectId): Future[CombinedAuthenticator] =
+    for {
+      tokenAuthenticator <- tokenAuthenticatorService.create(userId, TokenType.Authentication)
+      _ <- tokenAuthenticatorService.init(tokenAuthenticator, TokenType.Authentication, deleteOld = true)
+    } yield CombinedAuthenticator(tokenAuthenticator)
 
   def findOrCreateTokenForUser(userId: ObjectId): Future[CombinedAuthenticator] =
     findTokenForUser(userId).flatMap {

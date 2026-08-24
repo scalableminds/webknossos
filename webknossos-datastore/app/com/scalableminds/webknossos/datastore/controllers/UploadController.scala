@@ -235,4 +235,14 @@ class UploadController @Inject() (
       } yield result
     }
 
+  /* Called by wk after convert_to_wkw job ends */
+  def cleanUpUploadFiles(organizationId: String, directoryName: String, jobId: String): Action[AnyContent] =
+    Action.fox { implicit request =>
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
+        for {
+          _ <- Fox.successful(uploadService.cleanUpUploadFilesAfterConvertJob(organizationId, directoryName, jobId))
+        } yield Ok
+      }
+    }
+
 }

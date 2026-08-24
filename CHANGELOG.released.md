@@ -35,7 +35,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - The details sidebar in the dashboard now stays on-screen when scrolling. [#9912](https://github.com/scalableminds/webknossos/pull/9912)
 
 ### Fixed
-- Fixed a potential bug in the live collaboration mode where user-local skeleton tracing state could be incorrectly reset when a changes from other users were applied. [#9773](https://github.com/scalableminds/webknossos/pull/9773)
+- Fixed a potential bug in the live collaboration mode where user-local skeleton tracing state could be incorrectly reset when changes from other users were applied. [#9773](https://github.com/scalableminds/webknossos/pull/9773)
 - Fixed unnecessary re-renders and recomputations in the viewer UI (info tab, layer settings, bounding box tab, abstract tree tab, save button, action bar, version history). The version history list is now virtualized, so long histories render much faster. [#9798](https://github.com/scalableminds/webknossos/pull/9798)
 - Fixed that enabling Maximum Intensity Projection (MIP) for a hidden bounding box (layer or user bounding box) did not render anything in the 3D viewport. The bounding box is now made visible automatically as soon as a MIP layer is enabled for it. [#9802](https://github.com/scalableminds/webknossos/pull/9802)
 - Fixed a bug where revoking the user auth token would lead to running worker jobs failing. They now use a separate token. [#9815](https://github.com/scalableminds/webknossos/pull/9815)

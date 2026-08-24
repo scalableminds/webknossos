@@ -177,19 +177,18 @@ function emitSpansAlongRow(
   ctx: EditContext,
   contains: (x: number) => boolean,
 ): void {
-  const current = writer.current;
   // overwrite-all needs no reads at all. For absent and pending buckets there
   // is no authoritative content to test against, so paint optimistically:
   // overwrite mode protects what is visible, and those buckets render as
   // background.
-  const checkOverwrite = ctx.overwriteMode === "overwrite-empty-only" && current != null;
+  const isBackground = ctx.overwriteMode === "overwrite-empty-only" ? writer.isBackground : null;
   const bucketOriginX = address[0] * BUCKET_WIDTH;
 
   let runStart = -1;
   for (let x = xStart; x < xEnd; x++) {
     const localX = x - bucketOriginX;
     const index = rowBase + localX;
-    const accepted = contains(x) && (!checkOverwrite || current[index] === 0n);
+    const accepted = contains(x) && (isBackground == null || isBackground(index));
     if (accepted) {
       if (runStart < 0) runStart = index;
     } else if (runStart >= 0) {

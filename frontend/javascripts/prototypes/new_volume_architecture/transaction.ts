@@ -1,4 +1,4 @@
-import type { WorkingDataCube } from "./cube";
+import type { TransactionCube } from "./cube";
 import { bucketDiffsOf, type TransactionDiff, type TransactionId } from "./diff";
 import { propagate } from "./mag_propagation";
 import {
@@ -22,11 +22,11 @@ export interface BucketWriter {
   mark(index: VoxelIndex): void;
   markRun(start: VoxelIndex, length: number): void;
   /**
-   * Dense current content, if the bucket is resident. Read once, then index
-   * directly — this is how the overwrite predicate avoids a global lookup per
-   * voxel. Undefined for absent and pending buckets alike.
+   * Whether a voxel currently holds background, resolved once per bucket. Null
+   * when the bucket has no authoritative content to test against — absent and
+   * pending buckets alike — in which case the overwrite filter is skipped.
    */
-  readonly current: BigUint64Array | undefined;
+  readonly isBackground: ((index: VoxelIndex) => boolean) | null;
 }
 
 /**
@@ -47,7 +47,7 @@ export class VolumeTransaction {
   constructor(
     readonly id: TransactionId,
     readonly ctx: EditContext,
-    private readonly cube: WorkingDataCube,
+    private readonly cube: TransactionCube,
     private readonly mags: MagList,
   ) {}
 
@@ -70,6 +70,7 @@ export class VolumeTransaction {
     const entry = this.entryFor(address, value);
     const key = bucketKey(address);
     const current = this.cube.getResident(address);
+    const isBackground = this.cube.backgroundProbe(address);
 
     let before = this.beforeAccumulating.get(key);
     if (before == null && current != null) {
@@ -83,9 +84,7 @@ export class VolumeTransaction {
     };
 
     return {
-      get current() {
-        return current;
-      },
+      isBackground,
       mark(index: VoxelIndex) {
         captureBefore(index);
         entry.writes.mask.mark(index);

@@ -1,10 +1,11 @@
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import messages from "messages";
+import { BrushDriver } from "prototypes/new_volume_architecture/integration/brush_driver";
 import type { Channel } from "redux-saga";
 import type { ActionPattern } from "redux-saga/effects";
 import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
-import type { ContourMode, OverwriteMode } from "viewer/constants";
+import type { ContourMode, OverwriteMode, Vector3 } from "viewer/constants";
 import { ContourModeEnum, OrthoViews, OverwriteModeEnum } from "viewer/constants";
 import { getSegmentIdInfoForPosition } from "viewer/controller/combinations/volume_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
@@ -57,6 +58,7 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import { markVolumeTransactionEnd } from "viewer/model/bucket_data_handling/bucket";
 import { getSegmentIdRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
+import Dimensions from "viewer/model/dimensions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select, take } from "viewer/model/sagas/effect_generators";
 import type { OperationContext } from "viewer/model/sagas/operation_context_saga";
@@ -78,6 +80,26 @@ import { type BooleanBox, createSectionLabeler, labelWithVoxelBuffer2D } from ".
 import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
 
 const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
+
+/**
+ * SPIKE TOGGLE — route brushing through the new volume architecture
+ * (frontend/javascripts/prototypes/new_volume_architecture) instead of the
+ * VoxelBuffer2D path.
+ *
+ * Dirty on purpose: buckets are mutated in place, nothing reaches the save
+ * queue or the undo stack, and the trace/fill tools are unaffected (they still
+ * use the old path). Flip to false to restore the original behaviour.
+ *
+ * Disabled under test, because the existing brush integration specs assert on
+ * the update actions this path deliberately does not emit. The spike has its
+ * own coverage in test/prototypes/new_volume_architecture.
+ */
+const USE_NEW_VOLUME_ARCHITECTURE = !process.env.IS_TESTING;
+
+/** Global (mag-1) layer-space position -> source-mag voxel coordinates. */
+function toMagVoxel(position: Vector3, mag: Vector3): Vector3 {
+  return [position[0] / mag[0], position[1] / mag[1], position[2] / mag[2]];
+}
 
 function* watchVolumeTracingAsync(): Saga<void> {
   yield* call(ensureWkInitialized);
@@ -243,7 +265,38 @@ export function* editVolumeLayerAsync(): Saga<never> {
     );
     const initialViewport = yield* select((state) => state.viewModeData.plane.activeViewport);
 
-    if (isBrushTool(activeTool)) {
+    // ── SPIKE: new volume architecture, brush only ───────────────────────────
+    let spikeDriver: BrushDriver | null = null;
+
+    if (USE_NEW_VOLUME_ARCHITECTURE && isBrushTool(activeTool)) {
+      const spikeLayer = yield* call(
+        [Model, Model.getSegmentationTracingLayer],
+        volumeTracing.tracingId,
+      );
+      const brushSize = yield* select((state) => state.userConfiguration.brushSize);
+      const dimIndices = Dimensions.getIndices(startEditingAction.planeId);
+      const planeAxis = dimIndices[2] as 0 | 1 | 2;
+      // The prototype's brush has one scalar radius, so in-plane anisotropy is
+      // not modelled; use the first in-plane axis.
+      const radius = Math.round(brushSize / 2) / labeledMag[dimIndices[0]];
+      spikeDriver = new BrushDriver(
+        {
+          cube: spikeLayer.cube,
+          denseMags: spikeLayer.cube.magInfo.getDenseMags(),
+          magIndex: labeledZoomStep,
+          segmentId: contourTracingMode === ContourModeEnum.DELETE ? 0n : activeCellId,
+          overwriteMode:
+            overwriteMode === OverwriteModeEnum.OVERWRITE_EMPTY
+              ? "overwrite-empty-only"
+              : "overwrite-all",
+          additionalCoordinates: additionalCoordinates ?? null,
+          radius,
+          planeAxis,
+        },
+        toMagVoxel(startEditingAction.positionInLayerSpace, labeledMag),
+      );
+      wroteVoxelsBox.value = true;
+    } else if (isBrushTool(activeTool)) {
       yield* call(
         labelWithVoxelBuffer2D,
         currentSectionLabeler.getCircleVoxelBuffer2D(startEditingAction.positionInLayerSpace),
@@ -292,6 +345,14 @@ export function* editVolumeLayerAsync(): Saga<never> {
         currentSectionLabeler.updateArea(addToContourListAction.positionInLayerSpace);
       }
 
+      if (spikeDriver != null) {
+        // One incremental capsule per pointer-move; the transaction's write set
+        // coalesces overlap, and mag propagation is deferred to pointer-up.
+        spikeDriver.extend(toMagVoxel(addToContourListAction.positionInLayerSpace, labeledMag));
+        lastPosition = addToContourListAction.positionInLayerSpace;
+        continue;
+      }
+
       if (isBrushTool(activeTool)) {
         const rectangleVoxelBuffer2D = currentSectionLabeler.getRectangleVoxelBuffer2D(
           lastPosition,
@@ -324,15 +385,23 @@ export function* editVolumeLayerAsync(): Saga<never> {
       lastPosition = addToContourListAction.positionInLayerSpace;
     }
 
-    yield* call(
-      finishSectionLabeler,
-      currentSectionLabeler,
-      activeTool,
-      contourTracingMode,
-      overwriteMode,
-      labeledZoomStep,
-      wroteVoxelsBox,
-    );
+    if (spikeDriver != null) {
+      // Pointer-up: mag propagation runs once over the coalesced write set.
+      const stats = spikeDriver.finish();
+      console.info(
+        `[spike] brush: ${stats.voxels} voxels across ${stats.buckets} buckets, mags [${stats.mags.join(", ")}], ${stats.durationMs.toFixed(1)} ms`,
+      );
+    } else {
+      yield* call(
+        finishSectionLabeler,
+        currentSectionLabeler,
+        activeTool,
+        contourTracingMode,
+        overwriteMode,
+        labeledZoomStep,
+        wroteVoxelsBox,
+      );
+    }
     // Update the position of the current segment to the last position of the most recent annotation stroke.
     yield* put(
       updateSegmentAction(

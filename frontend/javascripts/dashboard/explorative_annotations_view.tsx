@@ -21,7 +21,7 @@ import {
   getReadableAnnotations,
   reOpenAnnotation,
 } from "admin/rest_api";
-import { Modal, Space, Spin, Table, Tag } from "antd";
+import { Space, Spin, Table, Tag } from "antd";
 import type { SearchProps } from "antd/es/input";
 import type { ColumnType } from "antd/lib/table/interface";
 import { AsyncLink } from "components/async_clickables";
@@ -30,11 +30,12 @@ import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
 import TextWithDescription from "components/text_with_description";
 import update from "immutability-helper";
+import { stringToTagColor } from "libs/colors";
 import { handleGenericError } from "libs/error_handling";
-import { stringToColor } from "libs/format_utils";
 import Persistence from "libs/persistence";
 import Toast from "libs/toast";
-import { compareBy, filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
+import { compareBy, filterWithSearchQueryAND, localeCompareBy, scrollToTop } from "libs/utils";
+import { type WithModalProps, withModal } from "libs/with_modal_hoc";
 import compact from "lodash-es/compact";
 import intersection from "lodash-es/intersection";
 import keyBy from "lodash-es/keyBy";
@@ -74,7 +75,7 @@ type Props = {
   userId: string | null | undefined;
   isAdminView: boolean;
   activeUser: APIUser;
-};
+} & WithModalProps;
 type State = {
   shouldShowArchivedAnnotations: boolean;
   archivedModeState: AnnotationModeState;
@@ -397,7 +398,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
       return;
     }
 
-    Modal.confirm({
+    this.props.modal.confirm({
       content: `Are you sure you want to archive ${selectedAnnotations.length} explorative annotations matching the current search query / tags? Note that annotations that you don't own are ignored.`,
       onOk: async () => {
         const selectedAnnotationIds = selectedAnnotations.map((t) => t.id);
@@ -508,7 +509,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
 
   renderNameWithDescription(annotation: APIAnnotationInfo) {
     return (
-      <div style={{ color: annotation.name ? "inherit" : "#7c7c7c" }}>
+      <div style={{ color: annotation.name ? "inherit" : "var(--ant-color-text-secondary)" }}>
         <TextWithDescription
           isEditable={this.isAnnotationEditable(annotation)}
           value={annotation.name ? annotation.name : "Unnamed Annotation"}
@@ -535,7 +536,8 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
       if (!this.props.isAdminView && owner.id === this.props.activeUser.id) {
         return (
           <span>
-            {formatUserName(owner)} <span style={{ color: "#7c7c7c" }}>(you)</span>
+            {formatUserName(owner)}{" "}
+            <span style={{ color: "var(--ant-color-text-secondary)" }}>(you)</span>
           </span>
         );
       }
@@ -623,7 +625,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
         render: (owner: APIUser | null, annotation: APIAnnotationInfo) => {
           const ownerName = owner != null ? renderOwner(owner) : null;
           const teamTags = annotation.teams.map((t) => (
-            <Tag key={t.id} color={stringToColor(t.name)} variant="outlined">
+            <Tag key={t.id} color={stringToTagColor(t.name)} variant="outlined">
               {t.name}
             </Tag>
           ));
@@ -708,6 +710,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
         rowKey="id"
         pagination={{
           defaultPageSize: 50,
+          onChange: scrollToTop,
         }}
         className="large-table"
         scroll={{
@@ -772,4 +775,4 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
   }
 }
 
-export default ExplorativeAnnotationsView;
+export default withModal(ExplorativeAnnotationsView);

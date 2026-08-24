@@ -20,15 +20,15 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr3.{NgffZarr3GroupH
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.VoxelPosition
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType, AnnotationSource}
-import com.scalableminds.webknossos.datastore.models.datasource._
+import com.scalableminds.webknossos.datastore.models.datasource.*
 import com.scalableminds.webknossos.datastore.models.requests.{
   Cuboid,
   DataServiceDataRequest,
   DataServiceRequestSettings
 }
-import com.scalableminds.webknossos.datastore.services._
+import com.scalableminds.webknossos.datastore.services.*
 import play.api.libs.json.{JsValue, Json}
-import play.api.mvc._
+import play.api.mvc.*
 
 import java.nio.file.Path
 import scala.concurrent.ExecutionContext

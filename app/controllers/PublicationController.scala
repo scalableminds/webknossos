@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 
 import models.dataset.{PublicationDAO, PublicationService}
-import play.api.libs.json._
+import play.api.libs.json.*
 import play.api.mvc.{Action, AnyContent}
 import security.WkEnv
 import com.scalableminds.util.objectid.ObjectId

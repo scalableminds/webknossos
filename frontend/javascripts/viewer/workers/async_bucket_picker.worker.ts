@@ -3,7 +3,7 @@ import type { Matrix4x4 } from "libs/mjs";
 import type { Vector3, Vector4, ViewMode } from "viewer/constants";
 import constants from "viewer/constants";
 import determineBucketsForFlight from "viewer/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
-import determineBucketsForOblique from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
+import determineBucketsForPlane from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
 import type { LoadingStrategy, PlaneRects } from "viewer/store";
 import { expose } from "./comlink_core";
 
@@ -60,18 +60,7 @@ function pick(
     });
   };
 
-  if (viewMode === constants.MODE_ARBITRARY_PLANE) {
-    determineBucketsForOblique(
-      viewMode,
-      loadingStrategy,
-      denseMags,
-      position,
-      enqueueFunction,
-      matrix,
-      logZoomStep,
-      rects,
-    );
-  } else if (viewMode === constants.MODE_ARBITRARY) {
+  if (viewMode === constants.MODE_FLIGHT) {
     determineBucketsForFlight(
       denseMags,
       position,
@@ -81,8 +70,7 @@ function pick(
       logZoomStep,
     );
   } else {
-    determineBucketsForOblique(
-      viewMode,
+    determineBucketsForPlane(
       loadingStrategy,
       denseMags,
       position,

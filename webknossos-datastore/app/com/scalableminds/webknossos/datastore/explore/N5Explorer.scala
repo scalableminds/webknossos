@@ -11,7 +11,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   StaticLayer,
   StaticSegmentationLayer
 }
-import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.box.Box.tryo
 
 import scala.concurrent.ExecutionContext
 

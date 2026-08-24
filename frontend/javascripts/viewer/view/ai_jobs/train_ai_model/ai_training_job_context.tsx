@@ -19,9 +19,13 @@ import type { Vector3 } from "viewer/constants";
 import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
 import { getUserBoundingBoxesFromState } from "viewer/model/accessors/tracing_accessor";
 import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
-import type { UserBoundingBox } from "viewer/store";
+import type { UserBoundingBox, VolumeTracing } from "viewer/store";
 import { fetchAnnotationInfo } from "../hooks/fetch_annotation_infos";
-import { getIntersectingMagList } from "../utils";
+import {
+  getGroundTruthLayerBoundingBox,
+  getIntersectingMagList,
+  getOutOfBoundsBoundingBoxes,
+} from "../utils";
 import type { AiTrainingTask } from "./ai_training_model_selector";
 
 export interface AiTrainingAnnotationSelection {
@@ -31,6 +35,7 @@ export interface AiTrainingAnnotationSelection {
   groundTruthLayer?: string;
   magnification?: Vector3;
   userBoundingBoxes: UserBoundingBox[];
+  volumeTracings?: VolumeTracing[];
   volumeTracingMags?: Record<string, { mag: Vector3 }[]>;
 }
 
@@ -140,6 +145,7 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
           annotation: initialFullAnnotation.annotation,
           userBoundingBoxes: userBoundingBoxes,
           dataset: currentDataset,
+          volumeTracings: initialFullAnnotation.volumeTracings,
           volumeTracingMags: initialFullAnnotation.volumeTracingMags,
         }),
       ]);
@@ -179,10 +185,23 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
   const areSelectionsValid = selectedAnnotations.every(
     (s) => s.imageDataLayer && s.groundTruthLayer && s.magnification,
   );
+  // All user bounding boxes must lie within the volume (ground truth) layer's bounding box,
+  // otherwise the training would fail because no ground truth data exists for the box.
+  const areBoundingBoxesWithinVolumeLayer = selectedAnnotations.every((s) => {
+    const groundTruthLayerBoundingBox = getGroundTruthLayerBoundingBox(
+      s.annotation,
+      s.groundTruthLayer,
+      s.volumeTracings,
+    );
+    return (
+      getOutOfBoundsBoundingBoxes(s.userBoundingBoxes, groundTruthLayerBoundingBox).length === 0
+    );
+  });
   const areParametersValid = every([
     modelName,
     selectedJobType,
     areSelectionsValid,
+    areBoundingBoxesWithinVolumeLayer,
     selectedAnnotations.length > 0,
   ]);
 

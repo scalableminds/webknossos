@@ -6,10 +6,10 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 
 import javax.inject.Inject
-import models.annotation._
+import models.annotation.*
 import models.task.{TaskDAO, TaskTypeDAO}
 import models.user.{User, UserService}
-import models.annotation.AnnotationState._
+import models.annotation.AnnotationState.*
 import com.scalableminds.util.objectid.ObjectId
 import models.dataset.{DatasetDAO, DatasetService}
 
@@ -50,7 +50,8 @@ class TaskTypeInformationHandler @Inject() (
         datasetId,
         AnnotationType.CompoundTaskType,
         finishedAnnotations,
-        taskBoundingBoxes
+        taskBoundingBoxes,
+        remapSegmentIds = true
       ) ?~> Msg.Annotation.Merge.failedCompound
     } yield mergedAnnotation
 

@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(173);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(180);
 COMMIT TRANSACTION;
 
 
@@ -179,7 +179,7 @@ CREATE TABLE webknossos.dataset_layer_additionalAxes(
    index INT NOT NULL
 );
 
-CREATE TYPE webknossos.LAYER_ATTACHMENT_TYPE AS ENUM ('agglomerate', 'connectome', 'segmentIndex', 'mesh', 'cumsum');
+CREATE TYPE webknossos.LAYER_ATTACHMENT_TYPE AS ENUM ('agglomerate', 'connectome', 'segmentIndex', 'mesh', 'cumsum', 'segmentStatistics');
 CREATE TYPE webknossos.LAYER_ATTACHMENT_DATAFORMAT AS ENUM ('hdf5', 'zarr3', 'json', 'neuroglancerPrecomputed');
 CREATE TABLE webknossos.dataset_layer_attachments(
   _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
@@ -190,6 +190,7 @@ CREATE TABLE webknossos.dataset_layer_attachments(
   hasLocalData BOOLEAN NOT NULL DEFAULT FALSE,
   type webknossos.LAYER_ATTACHMENT_TYPE NOT NULL,
   dataFormat webknossos.LAYER_ATTACHMENT_DATAFORMAT NOT NULL,
+  credentialId TEXT,
   uploadToPathIsPending BOOLEAN NOT NULL DEFAULT FALSE,
   uploadIsPending BOOLEAN NOT NULL DEFAULT FALSE,
   PRIMARY KEY(_dataset, layerName, name, type)
@@ -287,7 +288,7 @@ CREATE TABLE webknossos.scripts(
   CHECK (gist ~* '^https?://[a-z0-9\-_\.]+.*$')
 );
 
-CREATE TYPE webknossos.TASKTYPE_MODES AS ENUM ('orthogonal', 'flight', 'oblique', 'volume');
+CREATE TYPE webknossos.TASKTYPE_MODES AS ENUM ('orthogonal', 'flight', 'volume');
 CREATE TYPE webknossos.TASKTYPE_TRACINGTYPES AS ENUM ('skeleton', 'volume', 'hybrid');
 CREATE TABLE webknossos.taskTypes(
   _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
@@ -295,7 +296,7 @@ CREATE TABLE webknossos.taskTypes(
   _team TEXT CONSTRAINT _team_objectId CHECK (_team ~ '^[0-9a-f]{24}$') NOT NULL,
   summary TEXT NOT NULL,
   description TEXT NOT NULL,
-  settings_allowedModes webknossos.TASKTYPE_MODES[] NOT NULL DEFAULT '{orthogonal, flight, oblique}',
+  settings_allowedModes webknossos.TASKTYPE_MODES[] NOT NULL DEFAULT '{orthogonal, flight}',
   settings_preferredMode webknossos.TASKTYPE_MODES DEFAULT 'orthogonal',
   settings_branchPointsAllowed BOOLEAN NOT NULL,
   settings_somaClickingAllowed BOOLEAN NOT NULL,
@@ -394,6 +395,15 @@ CREATE TABLE webknossos.organization_plan_updates(
   includedStorage BIGINT DEFAULT NULL,
   includedStorageChanged BOOLEAN NOT NULL, -- bool is necessary because set to null is distinct from did not change
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT validOrganizationId CHECK (_organization ~* '^[A-Za-z0-9\-_. ]+$')
+);
+
+CREATE TABLE webknossos.organization_planExpiryReminders(
+  _organization TEXT NOT NULL,
+  paidUntil TIMESTAMPTZ NOT NULL, -- the expiry date the reminder was sent for, so that extending the plan re-arms the reminders
+  leadTimeDays INT NOT NULL,
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (_organization, paidUntil, leadTimeDays),
   CONSTRAINT validOrganizationId CHECK (_organization ~* '^[A-Za-z0-9\-_. ]+$')
 );
 
@@ -559,7 +569,7 @@ CREATE TABLE webknossos.webauthnCredentials(
 );
 
 
-CREATE TYPE webknossos.TOKEN_TYPES AS ENUM ('Authentication', 'DataStore', 'ResetPassword');
+CREATE TYPE webknossos.TOKEN_TYPES AS ENUM ('Authentication', 'DataStore', 'ResetPassword', 'Job');
 CREATE TYPE webknossos.USER_LOGININFO_PROVDERIDS AS ENUM ('credentials');
 CREATE TABLE webknossos.tokens(
   _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
@@ -666,8 +676,9 @@ CREATE TABLE webknossos.credentials(
 CREATE TABLE webknossos.folders(
     _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
     name TEXT NOT NULL CHECK (name !~ '/'),
-    isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
     metadata JSONB  NOT NULL DEFAULT '[]',
+    created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
     CONSTRAINT metadataIsJsonArray CHECK(jsonb_typeof(metadata) = 'array')
 );
 
@@ -923,9 +934,21 @@ CREATE INDEX ON webknossos.annotation_privateLinks(accessToken);
 CREATE INDEX ON webknossos.shortLinks(key);
 CREATE INDEX ON webknossos.credit_transactions(credit_state);
 CREATE INDEX ON webknossos.dataset_mags(COALESCE(realPath, path));
+CREATE INDEX ON webknossos.tokens(value);
+CREATE INDEX ON webknossos.tokens(loginInfo_providerID, loginInfo_providerKey, tokenType);
+CREATE INDEX ON webknossos.tokens(expirationDateTime);
 CREATE INDEX ON webknossos.dataset_layer_attachments(path);
 CREATE INDEX ON webknossos.organization_usedStorage_mags(_organization);
 CREATE INDEX ON webknossos.organization_usedStorage_attachments(_organization);
+CREATE INDEX ON webknossos.user_team_roles(_team);
+CREATE INDEX ON webknossos.dataset_allowedTeams(_team);
+CREATE INDEX ON webknossos.folder_allowedTeams(_team);
+CREATE INDEX ON webknossos.annotation_sharedTeams(_team);
+CREATE INDEX ON webknossos.folder_paths(_descendant);
+CREATE INDEX ON webknossos.jobs(state, _dataStore, created);
+CREATE INDEX ON webknossos.jobs(_worker);
+CREATE INDEX ON webknossos.credit_transactions(_paid_job);
+CREATE INDEX ON webknossos.credit_transactions(_organization);
 
 ALTER TABLE webknossos.annotations
   ADD CONSTRAINT task_ref FOREIGN KEY(_task) REFERENCES webknossos.tasks(_id) ON DELETE SET NULL DEFERRABLE,
@@ -1019,6 +1042,8 @@ ALTER TABLE webknossos.organization_usedStorage_mags
 ALTER TABLE webknossos.organization_usedStorage_attachments
   ADD CONSTRAINT attachments_ref FOREIGN KEY (_dataset, layerName, name, type) REFERENCES webknossos.dataset_layer_attachments(_dataset, layerName, name, type) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.organization_plan_updates
+  ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.organization_planExpiryReminders
   ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.dataset_layer_coordinateTransformations
   ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) DEFERRABLE;

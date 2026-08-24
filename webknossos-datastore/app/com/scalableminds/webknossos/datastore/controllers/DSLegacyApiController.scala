@@ -2,16 +2,12 @@ package com.scalableminds.webknossos.datastore.controllers
 
 import com.scalableminds.util.Msg
 import com.google.inject.Inject
+import com.scalableminds.util.box.Full
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, Full}
+import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.zarr.Zarr3OutputHelper
-import com.scalableminds.webknossos.datastore.models.{
-  RawCuboidRequest,
-  WebknossosAdHocMeshRequest,
-  WebknossosDataRequest
-}
-import com.scalableminds.webknossos.datastore.models.datasource.{UnusableDataSource, UsableDataSource}
-import com.scalableminds.webknossos.datastore.services.mesh.FullMeshRequest
+import com.scalableminds.webknossos.datastore.helpers.UnsignedLong
 import com.scalableminds.webknossos.datastore.services.uploading.{
   DatasetUploadInfo,
   LinkedLayerIdentifier,
@@ -20,14 +16,13 @@ import com.scalableminds.webknossos.datastore.services.uploading.{
 }
 import com.scalableminds.webknossos.datastore.services.{
   DSRemoteWebknossosClient,
-  DataSourceService,
   DataStoreAccessTokenService,
-  DatasetCache,
   UserAccessRequest
 }
+import play.api.http.HttpEntity
 import play.api.libs.Files
-import play.api.libs.json.{JsObject, Json, OFormat}
-import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers, RawBuffer, Result}
+import play.api.libs.json.{JsObject, JsValue, Json, OFormat}
+import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers, Result}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -112,18 +107,32 @@ object ReserveUploadInformationV13 {
 class DSLegacyApiController @Inject() (
     accessTokenService: DataStoreAccessTokenService,
     remoteWebknossosClient: DSRemoteWebknossosClient,
-    binaryDataController: BinaryDataController,
     zarrStreamingController: ZarrStreamingController,
+    dataProxyController: DataProxyController,
     meshController: DSMeshController,
-    dataSourceController: DataSourceController,
-    dataSourceService: DataSourceService,
-    datasetCache: DatasetCache,
+    config: DataStoreConfig,
     uploadController: UploadController
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with Zarr3OutputHelper {
 
   override def allowRemoteOrigin: Boolean = true
+
+  def proxyDatasourceV14(datasetId: ObjectId): Action[AnyContent] = Action.async { implicit request =>
+    withDowngradedLargestSegmentIds(dataProxyController.proxyDatasource(datasetId)(request))
+  }
+
+  def requestDataSourceV14(datasetId: ObjectId, zarrVersion: Int): Action[AnyContent] = Action.async {
+    implicit request =>
+      withDowngradedLargestSegmentIds(zarrStreamingController.requestDataSource(datasetId, zarrVersion)(request))
+  }
+
+  def dataSourceWithAnnotationPrivateLinkV14(accessTokenOrId: String, zarrVersion: Int): Action[AnyContent] =
+    Action.async { implicit request =>
+      withDowngradedLargestSegmentIds(
+        zarrStreamingController.dataSourceWithAnnotationPrivateLink(accessTokenOrId, zarrVersion)(request)
+      )
+    }
 
   def testChunkV13(resumableChunkNumber: Int, resumableIdentifier: String): Action[AnyContent] =
     uploadController.testChunk(resumableChunkNumber, resumableIdentifier, UploadDomain.dataset.toString)
@@ -262,368 +271,24 @@ class DSLegacyApiController @Inject() (
       }
     }
 
-  def requestViaWebknossosV9(
-      organizationId: String,
-      datasetDirectoryName: String,
-      dataLayerName: String
-  ): Action[List[WebknossosDataRequest]] = Action.async(validateJson[List[WebknossosDataRequest]]) { implicit request =>
-    withResolvedDatasetId(organizationId, datasetDirectoryName) { datasetId =>
-      binaryDataController.requestViaWebknossos(datasetId, dataLayerName)(request)
+  // For API versions <= 14, largestSegmentId must keep being written as a plain JsNumber (rather than the
+  // UnsignedLong bigint envelope) whenever that does not lose precision, for backwards compatibility with
+  // clients that do not understand that newer format (see UnsignedLong.scala). This mirrors the analogous
+  // shim in controllers.LegacyApiController of the webknossos app.
+  private def withDowngradedLargestSegmentIds(result: Future[Result]): Future[Result] =
+    result.map { r =>
+      if (r.header.status == OK) {
+        r.body match {
+          case HttpEntity.Strict(data, _) =>
+            JsonHelper.parseAs[JsValue](data.toArray) match {
+              case Full(jsValue) =>
+                val downgraded =
+                  JsonHelper.patchKeyRecursively(jsValue, "largestSegmentId")(UnsignedLong.downgradeToPlainNumberIfSafe)
+                Ok(downgraded).copy(header = r.header)
+              case _ => r
+            }
+          case _ => r
+        }
+      } else r
     }
-  }
-
-  def requestRawCuboidV9(
-      organizationId: String,
-      datasetDirectoryName: String,
-      dataLayerName: String,
-      // Mag1 coordinates of the top-left corner of the bounding box
-      x: Int,
-      y: Int,
-      z: Int,
-      // Target-mag size of the bounding box
-      width: Int,
-      height: Int,
-      depth: Int,
-      // Mag in three-component format (e.g. 1-1-1 or 16-16-8)
-      mag: String,
-      // If true, use lossy compression by sending only half-bytes of the data
-      halfByte: Boolean,
-      mappingName: Option[String]
-  ): Action[AnyContent] = Action.async { implicit request =>
-    withResolvedDatasetId(organizationId, datasetDirectoryName) { datasetId =>
-      binaryDataController.requestRawCuboid(
-        datasetId,
-        dataLayerName,
-        x,
-        y,
-        z,
-        width,
-        height,
-        depth,
-        mag,
-        halfByte,
-        mappingName
-      )(request)
-    }
-  }
-
-  def requestRawCuboidPostV9(
-      organizationId: String,
-      datasetDirectoryName: String,
-      dataLayerName: String
-  ): Action[RawCuboidRequest] = Action.async(validateJson[RawCuboidRequest]) { implicit request =>
-    withResolvedDatasetId(organizationId, datasetDirectoryName) { datasetId =>
-      binaryDataController.requestRawCuboidPost(
-        datasetId,
-        dataLayerName
-      )(request)
-    }
-  }
-
-  def requestViaKnossosV9(
-      organizationId: String,
-      datasetDirectoryName: String,
-      dataLayerName: String,
-      mag: Int,
-      x: Int,
-      y: Int,
-      z: Int,
-      cubeSize: Int
-  ): Action[AnyContent] = Action.async { implicit request =>
-    withResolvedDatasetId(organizationId, datasetDirectoryName) { datasetId =>
-      binaryDataController.requestViaKnossos(
-        datasetId,
-        dataLayerName,
-        mag,
-        x,
-        y,
-        z,
-        cubeSize
-      )(request)
-    }
-  }
-
-  def thumbnailJpegV9(
-      organizationId: String,
-      datasetDirectoryName: String,
-      dataLayerName: String,
-      x: Int,
-      y: Int,
-      z: Int,
-      width: Int,
-      height: Int,
-      mag: String,
-      mappingName: Option[String],
-      intensityMin: Option[Double],
-      intensityMax: Option[Double],
-      color: Option[String],
-      invertColor: Option[Boolean]
-  ): Action[RawBuffer] = Action.async(parse.raw) { implicit request =>
-    withResolvedDatasetId(organizationId, datasetDirectoryName) { datasetId =>
-      binaryDataController.thumbnailJpeg(
-        datasetId,
-        dataLayerName,
-        x,
-        y,
-        z,
-        width,
-        height,
-        mag,
-        mappingName,
-        intensityMin,
-        intensityMax,
-        color,
-        invertColor
-      )(request)
-    }
-  }
-
-  def mappingJsonV9(
-      organizationId: String,
-      datasetDirectoryName: String,
-      dataLayerName: String,
-      mappingName: String
-  ): Action[AnyContent] = Action.async { implicit request =>
-    withResolvedDatasetId(organizationId, datasetDirectoryName) { datasetId =>
-      binaryDataController.mappingJson(
-        datasetId,
-        dataLayerName,
-        mappingName
-      )(request)
-    }
-  }
-
-  /** Handles ad-hoc mesh requests.
-    */
-  def requestAdHocMeshV9(
-      organizationId: String,
-      datasetDirectoryName: String,
-      dataLayerName: String
-  ): Action[WebknossosAdHocMeshRequest] =
-    Action.async(validateJson[WebknossosAdHocMeshRequest]) { implicit request =>
-      withResolvedDatasetId(organizationId, datasetDirectoryName) { datasetId =>
-        binaryDataController.requestAdHocMesh(
-          datasetId,
-          dataLayerName
-        )(request)
-      }
-    }
-
-  def findDataV9(organizationId: String, datasetDirectoryName: String, dataLayerName: String): Action[AnyContent] =
-    Action.async { implicit request =>
-      withResolvedDatasetId(organizationId, datasetDirectoryName) { datasetId =>
-        binaryDataController.findData(
-          datasetId,
-          dataLayerName
-        )(request)
-      }
-    }
-
-  def histogramV9(organizationId: String, datasetDirectoryName: String, dataLayerName: String): Action[AnyContent] =
-    Action.async { implicit request =>
-      withResolvedDatasetId(organizationId, datasetDirectoryName) { datasetId =>
-        binaryDataController.histogram(
-          datasetId,
-          dataLayerName
-        )(request)
-      }
-    }
-
-  // ZARR ROUTES
-
-  def requestZAttrsV9(
-      organizationId: String,
-      datasetDirectoryName: String,
-      dataLayerName: String = ""
-  ): Action[AnyContent] = Action.async { implicit request =>
-    withResolvedDatasetId(organizationId, datasetDirectoryName) { datasetId =>
-      zarrStreamingController.requestZAttrs(datasetId, dataLayerName)(request)
-    }
-  }
-
-  def requestZarrJsonV9(
-      organizationId: String,
-      datasetDirectoryName: String,
-      dataLayerName: String = ""
-  ): Action[AnyContent] = Action.async { implicit request =>
-    withResolvedDatasetId(organizationId, datasetDirectoryName) { datasetId =>
-      zarrStreamingController.requestZarrJson(datasetId, dataLayerName)(request)
-    }
-  }
-
-  /** Zarr-specific datasource-properties.json file for a datasource. Note that the result here is not necessarily equal
-    * to the file used in the underlying storage.
-    */
-  def requestDataSourceV9(
-      organizationId: String,
-      datasetDirectoryName: String,
-      zarrVersion: Int
-  ): Action[AnyContent] = Action.async { implicit request =>
-    withResolvedDatasetId(organizationId, datasetDirectoryName) { datasetId =>
-      zarrStreamingController.requestDataSource(datasetId, zarrVersion)(request)
-    }
-  }
-
-  def requestRawZarrCubeV9(
-      organizationId: String,
-      datasetDirectoryName: String,
-      dataLayerName: String,
-      mag: String,
-      coordinates: String
-  ): Action[AnyContent] = Action.async { implicit request =>
-    withResolvedDatasetId(organizationId, datasetDirectoryName) { datasetId =>
-      zarrStreamingController.requestRawZarrCube(
-        datasetId,
-        dataLayerName,
-        mag,
-        coordinates
-      )(request)
-    }
-  }
-
-  def requestZArrayV9(
-      organizationId: String,
-      datasetDirectoryName: String,
-      dataLayerName: String,
-      mag: String
-  ): Action[AnyContent] = Action.async { implicit request =>
-    withResolvedDatasetId(organizationId, datasetDirectoryName) { datasetId =>
-      zarrStreamingController.requestZArray(datasetId, dataLayerName, mag)(request)
-    }
-  }
-
-  def requestZarrJsonForMagV9(
-      organizationId: String,
-      datasetDirectoryName: String,
-      dataLayerName: String,
-      mag: String
-  ): Action[AnyContent] = Action.async { implicit request =>
-    withResolvedDatasetId(organizationId, datasetDirectoryName) { datasetId =>
-      zarrStreamingController.requestZarrJsonForMag(datasetId, dataLayerName, mag)(request)
-    }
-  }
-
-  def requestDataLayerDirectoryContentsV9(
-      organizationId: String,
-      datasetDirectoryName: String,
-      dataLayerName: String,
-      zarrVersion: Int
-  ): Action[AnyContent] = Action.async { implicit request =>
-    withResolvedDatasetId(organizationId, datasetDirectoryName) { datasetId =>
-      zarrStreamingController.requestDataLayerDirectoryContents(datasetId, dataLayerName, zarrVersion)(request)
-    }
-  }
-
-  def requestDataLayerMagDirectoryContentsV9(
-      organizationId: String,
-      datasetDirectoryName: String,
-      dataLayerName: String,
-      mag: String,
-      zarrVersion: Int
-  ): Action[AnyContent] = Action.async { implicit request =>
-    withResolvedDatasetId(organizationId, datasetDirectoryName) { datasetId =>
-      zarrStreamingController.requestDataLayerMagDirectoryContents(datasetId, dataLayerName, mag, zarrVersion)(request)
-    }
-  }
-
-  def requestDataSourceDirectoryContentsV9(
-      organizationId: String,
-      datasetDirectoryName: String,
-      zarrVersion: Int
-  ): Action[AnyContent] = Action.async { implicit request =>
-    withResolvedDatasetId(organizationId, datasetDirectoryName) { datasetId =>
-      zarrStreamingController.requestDataSourceDirectoryContents(datasetId, zarrVersion)(request)
-    }
-  }
-
-  def requestZGroupV9(
-      organizationId: String,
-      datasetDirectoryName: String,
-      dataLayerName: String = ""
-  ): Action[AnyContent] =
-    Action.async { implicit request =>
-      withResolvedDatasetId(organizationId, datasetDirectoryName) { datasetId =>
-        zarrStreamingController.requestZGroup(datasetId, dataLayerName)(request)
-      }
-    }
-
-  // MESH ROUTES
-
-  def loadFullMeshStl(
-      organizationId: String,
-      datasetDirectoryName: String,
-      dataLayerName: String
-  ): Action[FullMeshRequest] =
-    Action.async(validateJson[FullMeshRequest]) { implicit request =>
-      withResolvedDatasetId(organizationId, datasetDirectoryName) { datasetId =>
-        meshController.loadFullMeshStl(datasetId, dataLayerName)(request)
-      }
-    }
-
-  // ACTIONS
-
-  def reloadDatasourceV9(
-      organizationId: String,
-      datasetDirectoryName: String,
-      layerName: Option[String]
-  ): Action[AnyContent] = {
-    def loadFromDisk(): Fox[Result] = {
-      // Dataset is not present in DB. This can be because reload was called after a dataset was written into the directory
-      val dataSource = dataSourceService.dataSourceFromDir(
-        dataSourceService.dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName),
-        organizationId,
-        resolvePaths = true
-      )
-      dataSource match {
-        case UsableDataSource(_, _, _, _, _) =>
-          for {
-            _ <- remoteWebknossosClient.reportDataSource(dataSource)
-          } yield Ok(Json.toJson(dataSource))
-        case UnusableDataSource(_, _, status, _, _) =>
-          Fox.failure(s"Dataset not found in DB or in directory: $status, cannot reload.") ~> NOT_FOUND
-      }
-    }
-
-    Action.fox { implicit request =>
-      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.administrateDatasets(organizationId)) {
-        for {
-          datasetIdOpt: Option[ObjectId] <- Fox.fromFuture(
-            remoteWebknossosClient.getDatasetId(organizationId, datasetDirectoryName).toFutureOption
-          )
-          result <- datasetIdOpt match {
-            case Some(datasetId) =>
-              // Dataset is present in DB
-              for {
-                dataSourceOpt: Option[UsableDataSource] <- Fox.fromFuture(
-                  datasetCache.getById(datasetId).toFutureOption
-                )
-                // The dataset may be unusable (in which case dataSourceOpt will be None)
-                r <- dataSourceOpt match {
-                  case Some(_) =>
-                    Fox.fromFuture(dataSourceController.reload(organizationId, datasetId, layerName)(request))
-                  // Load from disk if the dataset is not usable in the DB
-                  case None => loadFromDisk()
-                }
-              } yield r
-            case None =>
-              loadFromDisk()
-          }
-        } yield result
-      }
-    }
-  }
-
-  private def withResolvedDatasetId(organizationId: String, datasetDirectoryName: String)(
-      block: ObjectId => Future[Result]
-  ): Future[Result] =
-    for {
-      datasetIdBox <- remoteWebknossosClient.getDatasetId(organizationId, datasetDirectoryName).futureBox
-      result <- datasetIdBox match {
-        case Full(datasetId) => block(datasetId)
-        case _               =>
-          Future.successful(
-            Forbidden("Token may be expired, consider reloading. Access forbidden: No read access on dataset")
-          )
-      }
-    } yield result
 }

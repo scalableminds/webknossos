@@ -5,8 +5,7 @@ import com.scalableminds.util.tools.ConfigReader
 import com.typesafe.config.Config
 import play.api.Configuration
 
-import java.nio.file.Path
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 class DataStoreConfig @Inject() (configuration: Configuration) extends ConfigReader {
   override val raw: Configuration = configuration
@@ -22,7 +21,7 @@ class DataStoreConfig @Inject() (configuration: Configuration) extends ConfigRea
       val uri: String = get[String]("datastore.webKnossos.uri")
       val pingInterval: FiniteDuration = get[FiniteDuration]("datastore.webKnossos.pingInterval")
     }
-    val baseDirectory: Path = Path.of(get[String]("datastore.baseDirectory")).toAbsolutePath
+    val baseDirectories: List[Config] = getList[Config]("datastore.baseDirectories")
     val localDirectoryWhitelist: List[String] = getList[String]("datastore.localDirectoryWhitelist")
     val writeVirtualDatasetsMirror: Boolean = get[Boolean]("datastore.writeVirtualDatasetsMirror")
     object WatchFileSystem {
@@ -63,22 +62,8 @@ class DataStoreConfig @Inject() (configuration: Configuration) extends ConfigRea
     object DataVaults {
       val credentials: List[Config] = getList[Config]("datastore.dataVaults.credentials")
     }
-    object S3Upload {
-      val enabled: Boolean = get[Boolean]("datastore.s3Upload.enabled")
-      val objectKeyPrefix: String = get[String]("datastore.s3Upload.objectKeyPrefix")
-      val credentialName: String = get[String]("datastore.s3Upload.credentialName")
-    }
-    val children: List[Object] = List(
-      WebKnossos,
-      WatchFileSystem,
-      Cache,
-      AdHocMesh,
-      Redis,
-      AgglomerateTree,
-      AgglomerateGraph,
-      DataVaults,
-      S3Upload
-    )
+    val children: List[Object] =
+      List(WebKnossos, WatchFileSystem, Cache, AdHocMesh, Redis, AgglomerateTree, AgglomerateGraph, DataVaults)
   }
 
   object SlackNotifications {

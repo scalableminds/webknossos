@@ -24,7 +24,7 @@ class TSSlackNotificationService @Inject() (rpc: RPC, config: TracingStoreConfig
     if (!msg.contains("UNAVAILABLE")) { // Filter out expected errors during fossildb restart
       slackClient.warn(
         title = "Error during fossildb write",
-        msg = s"$requestType request to FossilDB failed: ${msg}"
+        msg = s"$requestType request to FossilDB failed: $msg"
       )
     }
 

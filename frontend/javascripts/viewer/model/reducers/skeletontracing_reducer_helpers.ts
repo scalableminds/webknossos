@@ -1,8 +1,9 @@
 import update from "immutability-helper";
 import ColorGenerator from "libs/color_generator";
+import { colorObjectToRGBArray } from "libs/colors";
 import DiffableMap from "libs/diffable_map";
 import { V3 } from "libs/mjs";
-import { colorObjectToRGBArray, point3ToVector3, zeroPad } from "libs/utils";
+import { point3ToVector3, zeroPad } from "libs/utils";
 import compact from "lodash-es/compact";
 import first from "lodash-es/first";
 import isEmpty from "lodash-es/isEmpty";
@@ -54,7 +55,10 @@ import {
 } from "viewer/model/types/tree_types";
 import type { RestrictionsAndSettings, SkeletonTracing, WebknossosState } from "viewer/store";
 
-import { mapGroups } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
+import {
+  MISSING_GROUP_ID,
+  mapGroups,
+} from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import { max, maxBy, min } from "../helpers/iterator_utils";
 
 export function generateTreeName(state: WebknossosState, timestamp: number, treeId: number) {
@@ -512,8 +516,8 @@ export function createTree(
   let groupId = null;
 
   if (addToActiveGroup) {
-    const groupIdOfActiveTree = getActiveTree(skeletonTracing)?.groupId;
-    const groupIdOfActiveGroup = getActiveTreeGroup(skeletonTracing)?.groupId;
+    const groupIdOfActiveTree = getActiveTree(state)?.groupId;
+    const groupIdOfActiveGroup = getActiveTreeGroup(state)?.groupId;
     groupId = groupIdOfActiveTree ?? groupIdOfActiveGroup;
   }
 
@@ -544,7 +548,7 @@ export function getOrCreateTree(
   timestamp: number,
   type?: TreeType | null | undefined,
 ): Tree | null {
-  const tree = getTree(skeletonTracing, treeId, type);
+  const tree = getTree(state, treeId, type);
   if (tree != null) {
     return tree;
   }
@@ -575,6 +579,7 @@ export function addTreesAndGroups(
   trees: MutableTreeMap,
   treeGroups: MutableTreeGroup[],
   assignNewGroupId: boolean = true,
+  targetGroupId: number = MISSING_GROUP_ID,
 ): [MutableTreeMap, TreeGroup[], number] | null {
   const hasInvalidTreeIds = trees
     .keys()
@@ -584,7 +589,8 @@ export function addTreesAndGroups(
     skeletonTracing.trees.size() > 0 ||
     skeletonTracing.treeGroups.length > 0 ||
     hasInvalidTreeIds ||
-    hasInvalidNodeIds;
+    hasInvalidNodeIds ||
+    targetGroupId !== MISSING_GROUP_ID;
 
   if (!needsReassignedIds) {
     // Without reassigning ids, the code is considerably faster.
@@ -649,6 +655,10 @@ export function addTreesAndGroups(
     // or keep the old group id if the tree should be assigned to an existing group.
     if (tree.groupId != null && assignNewGroupId) {
       tree.groupId = groupIdMap[tree.groupId];
+    } else if (tree.groupId == null && targetGroupId !== MISSING_GROUP_ID) {
+      // The tree was at the root of the imported hierarchy. Nest it into the selected
+      // target group instead of adding it to the root of the existing tree hierarchy.
+      tree.groupId = targetGroupId;
     }
     tree.treeId = newTreeId;
 

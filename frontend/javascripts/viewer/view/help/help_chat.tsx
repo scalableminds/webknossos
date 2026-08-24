@@ -3,6 +3,7 @@ import features from "features";
 
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
+import { getUid } from "libs/uid_generator";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { ColorWKBlue } from "theme";
 import type { APIUser } from "types/api_types";
@@ -34,7 +35,7 @@ function loadSessionId(): string {
   const stored = sessionStorage.getItem(STORAGE_SESSION_KEY);
   if (stored) return stored;
 
-  const id = crypto.randomUUID();
+  const id = getUid();
   sessionStorage.setItem(STORAGE_SESSION_KEY, id);
 
   return id;
@@ -81,7 +82,8 @@ function ChatMessageBubble({
     fontSize: 13,
     lineHeight: 1.4,
     background: message.role === "user" ? ColorWKBlue : "var(--ant-color-bg-layout)",
-    color: message.role === "user" ? "#fff" : "var(--ant-color-text)",
+    // The user bubble always has the (solid) WK blue background, hence the light text color.
+    color: message.role === "user" ? "var(--ant-color-text-light-solid)" : "var(--ant-color-text)",
     whiteSpace: message.role === "user" ? "pre-line" : "normal",
     borderBottomRightRadius: message.role === "user" ? 2 : 12,
     borderBottomLeftRadius: message.role === "assistant" ? 2 : 12,

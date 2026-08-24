@@ -29,7 +29,7 @@ import type {
   TracingType,
 } from "types/api_types";
 import type { BoundingBoxMinMaxType, BoundingBoxObject } from "types/bounding_box";
-import { ensureExactKeys } from "types/type_utils";
+import { type BigIntAsKey, ensureExactKeys, type LayerNameAsKey } from "types/type_utils";
 import type {
   AdditionalCoordinate,
   BLEND_MODES,
@@ -38,6 +38,7 @@ import type {
   ControlModeEnum,
   FillMode,
   MappingStatus,
+  MappingType,
   OrthoView,
   OrthoViewWithoutTD,
   OverwriteMode,
@@ -58,6 +59,7 @@ import AnnotationReducer from "viewer/model/reducers/annotation_reducer";
 import ConnectomeReducer from "viewer/model/reducers/connectome_reducer";
 import DatasetReducer from "viewer/model/reducers/dataset_reducer";
 import FlycamReducer from "viewer/model/reducers/flycam_reducer";
+import { withRebaseEditGuard } from "viewer/model/reducers/rebase_edit_guard";
 import SaveReducer from "viewer/model/reducers/save_reducer";
 import SettingsReducer from "viewer/model/reducers/settings_reducer";
 import SkeletonTracingReducer from "viewer/model/reducers/skeletontracing_reducer";
@@ -72,6 +74,7 @@ import type { Toolkit } from "./model/accessors/tool_accessor";
 import type { OperationId } from "./model/actions/operation_context_actions";
 import { eventEmitterMiddleware } from "./model/helpers/event_emitter_middleware";
 import FlycamInfoCacheReducer from "./model/reducers/flycam_info_cache_reducer";
+import MipBBoxReducer from "./model/reducers/mip_bbox_reducer";
 import OperationContextReducer from "./model/reducers/operation_context_reducer";
 import OrganizationReducer from "./model/reducers/organization_reducer";
 import ProofreadingReducer from "./model/reducers/proofreading_reducer";
@@ -98,6 +101,12 @@ export type UserBoundingBoxWithoutId = {
   name: string;
   color: Vector3;
   isVisible: boolean;
+};
+
+export type MipLayerConfig = {
+  layerName: string;
+  zoomStep: number;
+  isLoading: boolean;
 };
 export type UserBoundingBox = UserBoundingBoxWithoutId & {
   id: number;
@@ -155,15 +164,25 @@ export type SkeletonTracing = TracingBase & {
   readonly type: "skeleton";
   readonly trees: TreeMap;
   readonly treeGroups: Array<TreeGroup>;
-  readonly activeTreeId: number | null | undefined;
   readonly activeNodeId: number | null | undefined;
-  readonly activeGroupId: number | null | undefined;
   readonly cachedMaxNodeId: number;
+};
+// LocalSkeletonState holds user-local skeleton state that is not persisted
+// on the server. It deliberately lives outside of state.annotation.skeleton
+// so that it is not affected by the snapshot/restore machinery used while
+// rebasing in live collaboration mode (compare with LocalSegmentationState).
+// Note that activeTreeId and activeGroupId live here (unlike their sibling
+// activeNodeId) because they are not persisted on the server. The
+// activeTreeId is kept consistent with the activeNodeId (the active node,
+// if set, is always part of the active tree).
+export type LocalSkeletonState = {
+  readonly activeTreeId: number | null | undefined;
+  readonly activeGroupId: number | null | undefined;
   readonly navigationList: NavigationList;
   readonly showSkeletons: boolean;
 };
 export type Segment = {
-  readonly id: number;
+  readonly id: bigint;
   readonly name: string | null | undefined;
   readonly anchorPosition?: Vector3 | null | undefined; // in layer space
   readonly additionalCoordinates?: AdditionalCoordinate[] | undefined | null;
@@ -186,7 +205,7 @@ export const SegmentPropertiesWithoutUserState = ensureExactKeys<SegmentWithoutU
   "metadata",
 ] as const) as unknown as Array<keyof SegmentWithoutUserState>;
 
-export type SegmentMap = DiffableMap<number, Segment>;
+export type SegmentMap = DiffableMap<bigint, Segment>;
 
 export type LabelAction = {
   centroid: Vector3; // centroid of the label action
@@ -196,16 +215,16 @@ export type LabelAction = {
 export type SegmentJournalEntry = {
   entryIndex: number;
   type: "MERGE_SEGMENTS_ITEMS";
-  agglomerateId1: number; // aka source
-  agglomerateId2: number; // aka target; will be swallowed by source
-  segmentId1: number; // the unmapped ID (supervoxel) that belongs to agglomerateId1
-  segmentId2: number; // the unmapped ID (supervoxel) that belongs to agglomerateId2
+  agglomerateId1: bigint; // aka source
+  agglomerateId2: bigint; // aka target; will be swallowed by source
+  segmentId1: bigint; // the unmapped ID (supervoxel) that belongs to agglomerateId1
+  segmentId2: bigint; // the unmapped ID (supervoxel) that belongs to agglomerateId2
 };
 
 // Note that VolumeTracing should only contain state that is persisted on the
 // server (i.e., state that is synced via the save queue). This is important
 // because the VolumeTracing objects are stashed and restored from
-// RebaseRelevantAnnotationState during rebasing (see save_saga.tsx). Any
+// RebaseRelevantAnnotationState during rebasing (see rebasing_sagas.ts). Any
 // state that is not synced would be reset to the last synced version on
 // every rewinding rebase (see #9559). Local-only state belongs into
 // `state.localSegmentationStateByLayer` instead.
@@ -216,8 +235,8 @@ export type VolumeTracing = TracingBase & {
   // for non-annotation volume layers.
   readonly segments: SegmentMap;
   readonly segmentGroups: Array<SegmentGroup>;
-  readonly largestSegmentId: number | null;
-  readonly activeCellId: number;
+  readonly largestSegmentId: bigint | null;
+  readonly activeCellId: bigint;
   readonly fallbackLayer?: string;
   readonly mappingName?: string | null | undefined;
   readonly hasEditableMapping?: boolean;
@@ -345,7 +364,8 @@ export type UserConfiguration = {
   readonly isMultiSplitActive: boolean;
   readonly brushSize: number;
   readonly clippingDistance: number;
-  readonly clippingDistanceArbitrary: number;
+  readonly clippingDistanceFlight: number;
+  readonly clipSkeletonToCurrentSection: boolean;
   readonly crosshairSize: number;
   readonly displayCrosshair: boolean;
   readonly displayScalebars: boolean;
@@ -369,7 +389,7 @@ export type UserConfiguration = {
   readonly sphericalCapRadius: number;
   readonly tdViewDisplayPlanes: TDViewDisplayMode;
   readonly tdViewDisplayDatasetBorders: boolean;
-  readonly tdViewDisplayLayerBorders: boolean;
+  readonly tdViewUsePerspectiveCamera: boolean;
   readonly gpuMemoryFactor: number;
   // For volume (and hybrid) annotations, this mode specifies
   // how volume annotations overwrite existing voxels.
@@ -385,6 +405,8 @@ export type UserConfiguration = {
   readonly erasePreference: "ERASE_BRUSH" | "ERASE_TRACE";
   readonly writePreference: "BRUSH" | "TRACE";
   readonly measurementPreference: "LINE_MEASUREMENT" | "AREA_MEASUREMENT";
+  readonly mipRaymarchingSteps: number;
+  readonly mipDepthWrite: boolean;
 };
 export type RecommendedConfiguration = Partial<
   UserConfiguration &
@@ -400,7 +422,6 @@ export type Mapping = Map<number, number> | Map<bigint, bigint>;
 export type NumberLike = number | bigint;
 export type NumberLikeMap = Map<NumberLike, NumberLike>;
 
-export type MappingType = "JSON" | "HDF5";
 export type ActiveMappingInfo = {
   readonly mappingName: string | null | undefined;
   readonly mapping: Mapping | null | undefined;
@@ -416,8 +437,8 @@ export type TemporaryConfiguration = {
   readonly flightmodeRecording: boolean;
   readonly controlMode: ControlMode;
   readonly mousePosition: Vector2 | null | undefined;
-  readonly hoveredSegmentId: number | null;
-  readonly hoveredUnmappedSegmentId: number | null;
+  readonly hoveredSegmentId: bigint | null;
+  readonly hoveredUnmappedSegmentId: bigint | null;
   readonly activeMappingByLayer: Record<string, ActiveMappingInfo>;
   readonly isMergerModeEnabled: boolean;
   readonly gpuSetup: {
@@ -432,6 +453,10 @@ export type TemporaryConfiguration = {
   readonly preferredQualityForMeshPrecomputation: number;
   readonly preferredQualityForMeshAdHocComputation: number;
   readonly lastVisibleSegmentationLayerName: string | null | undefined;
+  // Display state for the read-only bounding boxes of the dataset's layers, keyed by layer name (one
+  // entry per layer). These are client-only (not persisted) and fall back to visible/derived color.
+  readonly layerBoundingBoxVisibilities: Record<string, boolean>;
+  readonly layerBoundingBoxColors: Record<string, Vector3>;
 };
 export type Script = APIScript;
 export type Task = APITask;
@@ -496,8 +521,8 @@ export type RebaseRelevantAnnotationState = {
 // This info is also stored in ProofreadingPostProcessingInfo.
 
 export type ProofreadingActionMappingInfo = {
-  agglomerateId: number;
-  unmappedId: number;
+  agglomerateId: bigint;
+  unmappedId: bigint;
   position?: Vector3;
 };
 
@@ -554,12 +579,12 @@ type PlaneModeData = {
   readonly tdCamera: CameraData;
   readonly inputCatcherRects: PlaneRects;
 };
-type ArbitraryModeData = {
+type FlightModeData = {
   readonly inputCatcherRect: Rect;
 };
 export type ViewModeData = {
   readonly plane: PlaneModeData;
-  readonly arbitrary: ArbitraryModeData;
+  readonly flight: FlightModeData;
 };
 export type BorderOpenStatus = {
   left: boolean;
@@ -569,12 +594,12 @@ export type Theme = "light" | "dark";
 export type ContextMenuInfo = {
   readonly contextMenuPosition: Readonly<[number, number]> | null | undefined;
   readonly clickedNodeId: number | null | undefined;
-  readonly meshId: number | null | undefined;
+  readonly meshId: bigint | null | undefined;
   readonly meshIntersectionPosition: Vector3 | null | undefined;
   readonly clickedBoundingBoxId: number | null | undefined;
   readonly globalPosition: Vector3 | null | undefined;
   readonly viewport: OrthoView | null | undefined;
-  readonly unmappedSegmentId?: number | null;
+  readonly unmappedSegmentId?: bigint | null;
 };
 type UiInformation = {
   readonly globalProgress: number; // 0 to 1
@@ -610,9 +635,11 @@ type UiInformation = {
   readonly voxelPipetteToolInfo: { pinnedPosition: Vector3 | null };
   readonly navbarHeight: number;
   readonly contextInfo: ContextMenuInfo;
+  // Frontend-only, not persisted to server
+  readonly mipBBoxSettings: Record<number, MipLayerConfig[]>;
 };
 type BaseMeshInformation = {
-  readonly segmentId: number;
+  readonly segmentId: bigint;
   readonly seedPosition: Vector3;
   readonly seedAdditionalCoordinates?: AdditionalCoordinate[] | null;
   readonly isLoading: boolean;
@@ -633,13 +660,18 @@ type ConnectomeData = {
   readonly availableConnectomeFiles: Array<APIConnectomeFile> | null | undefined;
   readonly currentConnectomeFile: APIConnectomeFile | null | undefined;
   readonly pendingConnectomeFileName: string | null | undefined;
-  readonly activeAgglomerateIds: Array<number>;
+  readonly activeAgglomerateIds: Array<bigint>;
   readonly skeleton: SkeletonTracing | null | undefined;
 };
-export type MinCutPartitions = { 1: number[]; 2: number[]; agglomerateId: number | null };
+export type MinCutPartitions = { 1: bigint[]; 2: bigint[]; agglomerateId: bigint | null };
+
 export type LocalMeshesInfo =
-  | Record<string, Record<number, MeshInformation> | undefined>
+  | Record<LayerNameAsKey, Record<BigIntAsKey, MeshInformation> | undefined>
   | undefined;
+
+// A single entry of the id reservation mechanism (see id_reservation_saga.ts). `used`
+// marks whether the id has already been assigned to a newly created item.
+export type IdReservation = { id: number; used: boolean };
 
 // LocalSegmentationState holds per-layer segmentation state that is not
 // persisted on the server (in contrast to the VolumeTracing which must only
@@ -658,7 +690,7 @@ export type LocalSegmentationState = {
   readonly segments: SegmentMap;
   // Note that segments that are not in the segment tab could be stored as selected.
   // To get only available segments or group, use getSelectedIds() in volumetracing_accessor.
-  readonly selectedIds: { segments: number[]; group: number | null };
+  readonly selectedIds: { segments: bigint[]; group: number | null };
   readonly connectomeData: ConnectomeData;
   // Whether unregistered segments are not rendered needs to be in LocalSegmentationState
   // as the server provides an initial value (see INITIALIZE_VOLUMETRACING),
@@ -667,13 +699,13 @@ export type LocalSegmentationState = {
   readonly minCutPartitions: MinCutPartitions;
   // The fields below are only relevant for volume tracing layers
   // (i.e., the layerName key of this state is a tracingId).
-  readonly activeUnmappedSegmentId: number | null | undefined;
+  readonly activeUnmappedSegmentId: bigint | null | undefined;
   // lastLabelActions[0] is the most recent one
   readonly lastLabelActions: Array<LabelAction>;
   readonly contourTracingMode: ContourMode;
   // Stores points of the currently drawn region in layer-space coordinates.
   readonly contourList: Array<Vector3>;
-  readonly idReservations: Record<"SegmentGroup" | "Segment", { id: number; used: boolean }[]>;
+  readonly idReservations: Record<"SegmentGroup", IdReservation[]>;
   // The position of the "proofreading marker" (a cross) is stored separately.
   // In earlier versions, the anchor position of the current segment was simply used.
   // However, the anchor position can be updated by another user (in collab mode) which
@@ -681,9 +713,20 @@ export type LocalSegmentationState = {
   // Note, that it is intentional that the marker position is stored here (in the
   // user-local, per-layer state) instead of within the VolumeTracing. The VolumeTracing
   // objects are stashed and restored from RebaseRelevantAnnotationState during rebasing
-  // (see save_saga.tsx). Storing the marker position there would reset it to the position
+  // (see rebasing_sagas.ts). Storing the marker position there would reset it to the position
   // of the last synced version on every rewinding rebase (see #9559).
   readonly proofreadingMarkerPosition: Vector3 | undefined;
+};
+
+// LocalAnnotationState holds local, non-persisted state that applies to the whole annotation
+// (in contrast to LocalSegmentationState, which is scoped to a single segmentation layer, and
+// in contrast to StoreAnnotation, which mirrors the persisted/synced annotation and is stashed
+// and restored during rebasing, see rebasing_sagas.ts).
+export type LocalAnnotationState = {
+  // Bounding boxes are shared/mirrored across all tracings of an annotation (see
+  // updateUserBoundingBoxes in annotation_reducer.ts), so their id reservations are
+  // tracked here on the annotation level instead of per segmentation layer.
+  readonly idReservationsForBoundingBoxes: IdReservation[];
 };
 
 export type StoreDataset = APIDataset & {
@@ -724,16 +767,17 @@ export type WebknossosState = {
   readonly save: SaveState;
   readonly flycam: Flycam;
   readonly flycamInfoCache: {
+    // Maps from layerName to the zoom thresholds for each mag.
     readonly maximumZoomForAllMags: Record<string, number[]>;
   };
   readonly viewModeData: ViewModeData;
   readonly activeUser: APIUser | null | undefined;
   readonly activeOrganization: APIOrganization | null;
   readonly uiInformation: UiInformation;
-  readonly localSegmentationStateByLayer: Record<
-    string, // layerName
-    LocalSegmentationState
-  >;
+  readonly localSegmentationStateByLayer: Record<LayerNameAsKey, LocalSegmentationState>;
+  // question to reviewer: Maybe put this somewhere else in the store :thinking:?
+  readonly localSkeletonState: LocalSkeletonState;
+  readonly localAnnotationState: LocalAnnotationState;
   readonly operationContext: OperationContextState;
 };
 const sagaMiddleware = createSagaMiddleware();
@@ -754,11 +798,12 @@ export const combinedReducer = reduceReducers(
   UiReducer,
   ConnectomeReducer,
   OrganizationReducer,
+  MipBBoxReducer,
   OperationContextReducer,
 ) as Reducer;
 
 const store = createStore<WebknossosState, Action>(
-  enableBatching(combinedReducer as any),
+  enableBatching(withRebaseEditGuard(combinedReducer) as any),
   defaultState,
   applyMiddleware(
     actionLoggerMiddleware,

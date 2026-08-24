@@ -303,7 +303,7 @@ describe("wkstore_adapter", () => {
     expect(buffer2).toEqual({ type: "empty" });
   });
 
-  it<TestContext>("sendToStore: Request Handling should send the correct request parameters", () => {
+  it<TestContext>("sendToStore: Request Handling should send the correct request parameters", async () => {
     const data = new Uint8Array(Constants.BUCKET_SIZE);
     const bucket1 = new DataBucket(
       "uint8",
@@ -331,6 +331,8 @@ describe("wkstore_adapter", () => {
 
     getBucketData.mockReturnValue(data);
 
+    const base64Data = (await byteArraysToLz4Base64([data]))[0];
+
     const expectedSaveQueueItems: PushSaveQueueTransaction = {
       type: "PUSH_SAVE_QUEUE_TRANSACTION",
       items: [
@@ -342,7 +344,7 @@ describe("wkstore_adapter", () => {
             additionalCoordinates: undefined,
             mag: [1, 1, 1],
             cubeSize: 32,
-            base64Data: byteArraysToLz4Base64([data])[0],
+            base64Data,
           },
         },
         {
@@ -353,7 +355,7 @@ describe("wkstore_adapter", () => {
             additionalCoordinates: undefined,
             mag: [2, 2, 2],
             cubeSize: 32,
-            base64Data: byteArraysToLz4Base64([data])[0],
+            base64Data,
           },
         },
       ],

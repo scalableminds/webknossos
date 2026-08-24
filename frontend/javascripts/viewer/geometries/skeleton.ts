@@ -159,28 +159,9 @@ class Skeleton {
 
     this.nodeShader?.destroy();
     this.edgeShader?.destroy();
-  }
 
-  reset(skeletonTracing: SkeletonTracing) {
-    // Remove all existing geometries
-    this.rootGroup.remove(...this.rootGroup.children);
-    this.pickingNode.remove(...this.pickingNode.children);
-    const { trees } = skeletonTracing;
-
-    const nodeCount = sum(trees.values().map((tree) => tree.nodes.size()));
-    const edgeCount = sum(trees.values().map((tree) => tree.edges.size()));
-
-    this.treeColorTexture = new DataTexture(
-      new Float32Array(COLOR_TEXTURE_WIDTH * COLOR_TEXTURE_WIDTH * 4),
-      COLOR_TEXTURE_WIDTH,
-      COLOR_TEXTURE_WIDTH,
-      RGBAFormat,
-      FloatType,
-    );
-    this.nodeShader = new NodeShader(this.treeColorTexture);
-    this.edgeShader = new EdgeShader(this.treeColorTexture);
-
-    // delete actual GPU buffers in case there were any
+    // Delete the actual GPU buffers. Otherwise, they would leak as three.js
+    // only frees them on an explicit dispose() call.
     if (this.nodes != null) {
       for (const nodes of this.nodes.buffers) {
         nodes.geometry.dispose();
@@ -192,6 +173,45 @@ class Skeleton {
         edges.geometry.dispose();
       }
     }
+  }
+
+  reset(skeletonTracing: SkeletonTracing) {
+    // Remove all existing geometries
+    this.rootGroup.remove(...this.rootGroup.children);
+    this.pickingNode.remove(...this.pickingNode.children);
+    const { trees } = skeletonTracing;
+
+    const nodeCount = sum(trees.values().map((tree) => tree.nodes.size()));
+    const edgeCount = sum(trees.values().map((tree) => tree.edges.size()));
+
+    // delete actual GPU buffers in case there were any
+    if (this.treeColorTexture != null) {
+      this.treeColorTexture.dispose();
+    }
+    this.nodeShader?.destroy();
+    this.edgeShader?.destroy();
+    if (this.nodes != null) {
+      this.nodes.material.dispose();
+      for (const nodes of this.nodes.buffers) {
+        nodes.geometry.dispose();
+      }
+    }
+    if (this.edges != null) {
+      this.edges.material.dispose();
+      for (const edges of this.edges.buffers) {
+        edges.geometry.dispose();
+      }
+    }
+
+    this.treeColorTexture = new DataTexture(
+      new Float32Array(COLOR_TEXTURE_WIDTH * COLOR_TEXTURE_WIDTH * 4),
+      COLOR_TEXTURE_WIDTH,
+      COLOR_TEXTURE_WIDTH,
+      RGBAFormat,
+      FloatType,
+    );
+    this.nodeShader = new NodeShader(this.treeColorTexture);
+    this.edgeShader = new EdgeShader(this.treeColorTexture);
 
     // create new buffers
     this.nodes = this.initializeBufferCollection(
@@ -494,7 +514,7 @@ class Skeleton {
     let { activeNodeId } = skeletonTracing;
     activeNodeId = activeNodeId == null ? -1 : activeNodeId;
 
-    let { activeTreeId } = skeletonTracing;
+    let { activeTreeId } = state.localSkeletonState;
     activeTreeId = activeTreeId == null ? -1 : activeTreeId;
 
     const nodeUniforms = this.nodes.material.uniforms;
@@ -512,6 +532,17 @@ class Skeleton {
 
   getAllNodes(): Object3D[] {
     return this.nodes.buffers.map((buffer) => buffer.mesh);
+  }
+
+  // Updates the section-clipping uniforms on the node and edge shaders. This is
+  // called once per render pass (per viewport), see SceneController.updateSceneForCam.
+  // clippingAxis is the perpendicular axis of the rendered viewport (0/1/2), or
+  // -1 to disable section clipping for this pass.
+  setSectionClippingUniforms(clippingAxis: number, flycamPosition: Vector3): void {
+    for (const uniforms of [this.nodes.material.uniforms, this.edges.material.uniforms]) {
+      uniforms.clippingAxis.value = clippingAxis;
+      uniforms.currentSectionFlycamPosition.value = flycamPosition;
+    }
   }
 
   getRootGroup(): Object3D {

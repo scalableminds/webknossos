@@ -10,9 +10,9 @@ import com.scalableminds.webknossos.schema.Tables.{Tasks, TasksRow, GetResultTas
 import com.scalableminds.webknossos.tracingstore.tracings.NamedBoundingBox
 
 import javax.inject.Inject
-import models.annotation._
+import models.annotation.*
 import models.user.Experience
-import slick.jdbc.PostgresProfile.api._
+import slick.jdbc.PostgresProfile.api.*
 import slick.jdbc.TransactionIsolation.Serializable
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 
@@ -313,23 +313,17 @@ class TaskDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       _ <- assertUpdateAccess(id)
       query = q"UPDATE $collectionName SET totalInstances = $newTotalInstances WHERE _id = $id".asUpdate
-      _ <- run(
-        query.withTransactionIsolation(Serializable),
-        retryCount = 50,
-        retryIfErrorContains = List(transactionSerializationError)
-      )
+      _ <- runAsSerializableTransaction(query)
     } yield ()
 
   def incrementTotalInstancesOfAllWithProject(projectId: ObjectId, delta: Long)(using ctx: DBAccessContext): Fox[Unit] =
     for {
       accessQuery <- readAccessQuery
-      _ <- run(
+      _ <- runAsSerializableTransaction(
         q"""UPDATE webknossos.tasks
             SET totalInstances = totalInstances + $delta
             WHERE _project = $projectId
-            AND $accessQuery""".asUpdate.withTransactionIsolation(Serializable),
-        retryCount = 50,
-        retryIfErrorContains = List(transactionSerializationError)
+            AND $accessQuery""".asUpdate
       )
     } yield ()
 

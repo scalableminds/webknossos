@@ -13,7 +13,7 @@ import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import { getAntdTheme } from "theme";
 import type { BorderTabType, OrthoView } from "viewer/constants";
-import { ArbitraryViews, BorderTabs, OrthoViews } from "viewer/constants";
+import { BorderTabs, FlightViews, OrthoViews } from "viewer/constants";
 import {
   isUserInterfaceBlocked,
   mayEditAnnotation,
@@ -34,12 +34,12 @@ import ControlsAndRenderingSettingsTab from "viewer/view/left_border_tabs/contro
 import LayerSettingsTab from "viewer/view/left_border_tabs/layer_settings_tab";
 import RecordingSwitch from "viewer/view/recording_switch";
 import AbstractTreeTab from "viewer/view/right_border_tabs/abstract_tree_tab";
-import BoundingBoxTab from "viewer/view/right_border_tabs/bounding_box_tab";
+import BoundingBoxTab from "viewer/view/right_border_tabs/bounding_box_tab/bounding_box_tab";
 import CommentTabView from "viewer/view/right_border_tabs/comment_tab/comment_tab_view";
 import ConnectomeView from "viewer/view/right_border_tabs/connectome_tab/connectome_view";
 import DatasetInfoTabView from "viewer/view/right_border_tabs/dataset_info_tab_view";
-import SegmentsView from "viewer/view/right_border_tabs/segments_tab/segments_view";
-import SkeletonTabView from "viewer/view/right_border_tabs/trees_tab/skeleton_tab_view";
+import SegmentsView from "viewer/view/right_border_tabs/segments_tab/segments_tab_view";
+import SkeletonTabView from "viewer/view/right_border_tabs/skeleton_tab/skeleton_tab_view";
 import Statusbar from "viewer/view/statusbar";
 import TDViewControls from "viewer/view/td_view_controls";
 import BorderToggleButton from "../components/border_toggle_button";
@@ -176,7 +176,7 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
   openRightBorderTabById(tabType: BorderTabType) {
     const rightBorderId = "right-border-tab-container";
     const node = this.state.model.getNodeById(rightBorderId);
-    if (!node || node.getType() !== "tab") return;
+    if (node?.getType() !== "tab") return;
 
     const isRightOpen = getBorderOpenStatus(this.state.model).right;
     if (!isRightOpen) this.toggleBorder("right");
@@ -390,9 +390,9 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
         );
       }
 
-      case ArbitraryViews.arbitraryViewport: {
+      case FlightViews.flightViewport: {
         return (
-          <InputCatcher isBlocked={isBlocked} viewportID={ArbitraryViews.arbitraryViewport}>
+          <InputCatcher isBlocked={isBlocked} viewportID={FlightViews.flightViewport}>
             {isUpdateTracingAllowed ? <RecordingSwitch /> : null}
           </InputCatcher>
         );

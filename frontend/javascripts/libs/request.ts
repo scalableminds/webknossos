@@ -1,3 +1,4 @@
+import { bigIntReviver, unsignedBigIntReplacer } from "libs/bigint_helpers";
 import handleStatus from "libs/handle_http_status";
 import defaultsDeep from "lodash-es/defaultsDeep";
 import isArrayBuffer from "lodash-es/isArrayBuffer";
@@ -33,6 +34,10 @@ export type RequestOptionsBase<T> = {
   showErrorToast?: boolean;
   timeout?: number;
   useWebworkerForArrayBuffer?: boolean;
+  // Lets a caller cancel the request. Only honored for the plain fetch() path
+  // (i.e. not when useWebworkerForArrayBuffer is set -- AbortSignal can't be
+  // handed across the comlink worker boundary).
+  signal?: AbortSignal;
 };
 export type RequestOptions = RequestOptionsBase<Record<string, string>>;
 export type RequestOptionsWithData<T> = RequestOptions & {
@@ -70,7 +75,7 @@ class Request {
     let body =
       isString(options.data) || isArrayBuffer(options.data)
         ? options.data
-        : JSON.stringify(options.data);
+        : JSON.stringify(options.data, unsignedBigIntReplacer);
 
     if (options.compress) {
       body = await compress(body);
@@ -252,24 +257,68 @@ class Request {
     // @ts-expect-error ts-migrate(2322) FIXME: Type 'Headers' is not assignable to type 'Record<s... Remove this comment to see the full error message
     options.headers = headers;
     let fetchPromise;
+    // Set (synchronously, before the abort it triggers can possibly propagate)
+    // when our own timeout -- not a caller-supplied signal -- caused the abort,
+    // so the shared catch below can deterministically normalize it to a plain
+    // Timeout error.
+    let didTimeOut = false;
 
     if (options.useWebworkerForArrayBuffer) {
       fetchPromise = options.extractHeaders
         ? fetchBufferWithHeaders(url, options)
         : fetchBufferViaWorker(url, options);
     } else {
-      fetchPromise = fetch(url, options).then((response) => handleStatus(response));
+      // Actually cancel the underlying fetch (not just abandon the promise) when
+      // either a caller-supplied signal fires, or options.timeout elapses. Both
+      // are funneled into one internal controller so fetch() only ever sees a
+      // single combined signal.
+      const abortController = new AbortController();
+      const externalSignal = options.signal;
+      if (externalSignal != null) {
+        if (externalSignal.aborted) {
+          abortController.abort(externalSignal.reason);
+        } else {
+          externalSignal.addEventListener("abort", () =>
+            abortController.abort(externalSignal.reason),
+          );
+        }
+      }
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
+      if (options.timeout != null) {
+        timeoutId = setTimeout(() => {
+          didTimeOut = true;
+          abortController.abort();
+        }, options.timeout);
+      }
+
+      fetchPromise = fetch(url, { ...options, signal: abortController.signal }).then((response) =>
+        handleStatus(response),
+      );
 
       if (responseDataHandler != null) {
         fetchPromise = fetchPromise.then(responseDataHandler);
       }
+      if (timeoutId != null) {
+        // Capture the non-null variable for TS:
+        const idToClear = timeoutId;
+        fetchPromise = fetchPromise.finally(() => clearTimeout(idToClear));
+      }
     }
 
-    fetchPromise = fetchPromise.catch((error: any) =>
-      handleError(url, options.showErrorToast || false, !options.doNotInvestigate, error),
-    );
+    fetchPromise = fetchPromise.catch((error: any) => {
+      if (didTimeOut) {
+        // Skip handleError entirely for our own timeout, same as before
+        // AbortController was introduced here: no toast/ping/url-suffix for a
+        // plain client-side timeout.
+        throw new Error("Timeout");
+      }
+      return handleError(url, options.showErrorToast || false, !options.doNotInvestigate, error);
+    });
 
-    if (options.timeout != null) {
+    if (options.useWebworkerForArrayBuffer && options.timeout != null) {
+      // The webworker path has no AbortController wiring (a signal can't cross
+      // the comlink boundary), so it can't be cancelled -- fall back to the old
+      // abandon-the-promise race, which at least stops the caller from waiting.
       return Promise.race([fetchPromise, this.timeoutPromise(options.timeout)]).then((result) => {
         if (result === "timeout") {
           throw new Error("Timeout");
@@ -277,9 +326,8 @@ class Request {
           return result;
         }
       });
-    } else {
-      return fetchPromise;
     }
+    return fetchPromise;
   };
 
   timeoutPromise = (timeout: number): Promise<string> =>
@@ -292,7 +340,7 @@ class Request {
       if (responseText.length === 0) {
         return {};
       } else {
-        return JSON.parse(responseText);
+        return JSON.parse(responseText, bigIntReviver);
       }
     });
 }

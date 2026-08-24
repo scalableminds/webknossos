@@ -4,16 +4,14 @@ import {
   getSegmentIdForPosition,
   getSegmentIdForPositionAsync,
 } from "viewer/controller/combinations/volume_handlers";
+import { hasConnectomeFile } from "viewer/model/accessors/connectome_accessor";
 import {
   getMappingInfo,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
 import { globalToLayerTransformedPosition } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { calculateGlobalPos } from "viewer/model/accessors/view_mode_accessor";
-import {
-  hasAgglomerateMapping,
-  hasConnectomeFile,
-} from "viewer/model/accessors/volumetracing_accessor";
+import { hasAgglomerateMapping } from "viewer/model/accessors/volumetracing_accessor";
 import { setActiveConnectomeAgglomerateIdsAction } from "viewer/model/actions/connectome_actions";
 import {
   loadAgglomerateTreeAtPositionAction,
@@ -61,7 +59,7 @@ export function loadAgglomerateTreeAtPosition(position: Vector3): void {
 
 // loadAgglomerateTreeAtPosition should be preferred as it allows to use the up-to-date agglomerate id at the given position.
 // Is needed in live-collab scenario.
-export function loadAgglomerateTreeFromId(agglomerateId: number): void {
+export function loadAgglomerateTreeFromId(agglomerateId: bigint): void {
   const agglomerateTreeLoadingInfo = getAgglomerateTreeLoadingInfo();
 
   if (agglomerateTreeLoadingInfo) {

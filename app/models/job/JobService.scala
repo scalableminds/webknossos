@@ -2,9 +2,10 @@ package models.job
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.box.Full
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.webknossos.datastore.models.VoxelSize
-import models.dataset.Dataset
+import models.dataset.{Dataset, DatasetDAO}
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
@@ -12,12 +13,12 @@ import com.scalableminds.util.tools.Fox.toFox
 import com.typesafe.scalalogging.LazyLogging
 import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
 import models.analytics.{AnalyticsService, FailedJobEvent, RunJobEvent}
-import models.dataset.DatasetDAO
 import models.job.JobCommand.JobCommand
-import models.organization.{CreditTransactionService, OrganizationDAO}
+import models.organization.{CreditTransactionService, OrganizationDAO, OrganizationService}
 import models.user.{MultiUserDAO, User, UserDAO, UserService}
-import com.scalableminds.util.tools.Full
+import com.scalableminds.webknossos.datastore.helpers.UPath
 import org.apache.pekko.actor.ActorSystem
+import play.api.http.Status.FORBIDDEN
 import play.api.libs.json.{JsObject, JsValue, Json}
 import security.WkSilhouetteEnvironment
 import telemetry.SlackNotificationService
@@ -35,6 +36,7 @@ class JobService @Inject() (
     jobDAO: JobDAO,
     workerDAO: WorkerDAO,
     organizationDAO: OrganizationDAO,
+    organizationService: OrganizationService,
     datasetDAO: DatasetDAO,
     defaultMails: DefaultMails,
     analyticsService: AnalyticsService,
@@ -225,13 +227,12 @@ class JobService @Inject() (
   def parameterWrites(job: Job)(using ctx: DBAccessContext): Fox[JsObject] =
     for {
       owner <- userDAO.findOne(job._owner)
-      userAuthToken <- Fox.fromFuture(
-        wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(owner.loginInfo)
-      )
+      userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
+        .createAndInitJobTokenForUser(owner)
     } yield Json.obj(
       "job_id" -> job._id.id,
       "command" -> job.command,
-      "job_kwargs" -> (job.args ++ Json.obj("user_auth_token" -> userAuthToken.id))
+      "job_kwargs" -> (job.args ++ Json.obj("user_auth_token" -> userAuthToken))
     )
 
   def submitJob(command: JobCommand, commandArgs: JsObject, owner: User, dataStoreName: String): Fox[Job] =
@@ -240,17 +241,36 @@ class JobService @Inject() (
       _ <- Fox.assertTrue(
         jobIsSupportedByAvailableWorkers(command, dataStoreName)
       ) ?~> Msg.Job.noWorkerForDatastoreAndJob
+      _ <- assertStorageNotExceededFor(command, owner)
       job = Job(ObjectId.generate, owner._id, dataStoreName, command, commandArgs)
       _ <- jobDAO.insertOne(job)
       _ = analyticsService.track(RunJobEvent(owner, command))
     } yield job
 
-  def submitConvertToWkwJob(dataset: Dataset, user: User, voxelSize: VoxelSize): Fox[Unit] =
+  private def assertStorageNotExceededFor(command: JobCommand, owner: User): Fox[Unit] =
+    for {
+      _ <- Fox.runIf(JobCommand.jobsWritingToStorage.contains(command)) {
+        for {
+          organization <- organizationDAO.findOne(owner._organization)(using
+            GlobalAccessContext
+          ) ?~> Msg.Organization.notFound(owner._organization)
+          _ <- organizationService.assertUsedStorageNotExceeded(organization) ?~> Msg.Job.storageExceeded ~> FORBIDDEN
+        } yield ()
+      }
+    } yield ()
+
+  def submitConvertToWkwJob(
+      dataset: Dataset,
+      user: User,
+      voxelSize: VoxelSize,
+      organizationBaseDirectory: UPath
+  ): Fox[Unit] =
     for {
       organization <- organizationDAO.findOne(dataset._organization)(using GlobalAccessContext) ?~> Msg.Organization
         .notFound(dataset._organization)
       commandArgs = Json.obj(
         "organization_id" -> organization._id,
+        "organization_base_directory" -> organizationBaseDirectory,
         "organization_display_name" -> organization.name,
         "dataset_name" -> dataset.name,
         "dataset_id" -> dataset._id,
@@ -277,6 +297,7 @@ class JobService @Inject() (
     for {
       isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
       _ <- Fox.fromBool(isTeamManagerOrAdmin || user.isDatasetManager) ?~> Msg.Job.paidNoAdminOrManager
+      _ <- assertStorageNotExceededFor(command, user)
       costInMilliCredits <- calculateJobCostInMilliCredits(jobBoundingBoxInTargetMag, command)
       _ <- Fox.assertTrue(
         creditTransactionService.hasEnoughCredits(user._organization, costInMilliCredits)

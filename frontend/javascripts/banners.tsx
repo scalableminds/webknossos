@@ -121,7 +121,15 @@ export function MaintenanceBanner() {
   );
 
   const pollMaintenances = useCallback(async () => {
-    const newScheduledMaintenances = await listCurrentAndUpcomingMaintenances();
+    let newScheduledMaintenances;
+    try {
+      newScheduledMaintenances = await listCurrentAndUpcomingMaintenances();
+    } catch {
+      // Only log to the console. The user will be notified by other failing requests
+      // if the network or server is offline.
+      console.warn("Couldn't load maintenance information.");
+      return;
+    }
 
     const upcomingMaintenances = newScheduledMaintenances
       .filter((maintenance) => maintenance.startTime > Date.now())

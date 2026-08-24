@@ -1,6 +1,7 @@
 package backend
 
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.{Box, Empty, EmptyBox, Failure, Full}
 import com.scalableminds.util.tools.Fox
 import org.scalatest.wordspec.AsyncWordSpec
 
@@ -21,18 +22,17 @@ import com.scalableminds.webknossos.datastore.storage.{
   GoogleServiceAccountCredential,
   S3ClientPool
 }
-import com.scalableminds.util.tools.{Box, Empty, EmptyBox, Failure, Full}
 import com.scalableminds.webknossos.datastore.helpers.UPath
-import org.scalatest.Assertion
+import org.scalatest.{Assertion, ParallelTestExecution}
 import play.api.libs.json.JsString
 import play.api.test.WsTestClient
 
 import java.nio.charset.StandardCharsets
 import java.util.UUID
 import scala.concurrent.ExecutionContext
-import scala.concurrent.ExecutionContext.{global => globalExecutionContext}
+import scala.concurrent.ExecutionContext.global as globalExecutionContext
 
-class DataVaultTestSuite extends AsyncWordSpec {
+class DataVaultTestSuite extends AsyncWordSpec with ParallelTestExecution {
 
   val emptyTokenContext: TokenContext = TokenContext(None)
   val dummyDataStoreHost = "example.com"
@@ -109,12 +109,27 @@ class DataVaultTestSuite extends AsyncWordSpec {
               case _ => fail()
             }
 
-        "return empty box" when {
+        "return empty box, not failure" when {
           "requesting a non-existent object" in
             (vaultPath / s"non-existent-key${UUID.randomUUID}")
               .readBytes()(using globalExecutionContext, emptyTokenContext)
               .futureBox
               .map(assertBoxEmpty)
+
+          "requesting a byte range from an object that does not exist (404)" in {
+            val upath =
+              UPath.fromStringUnsafe("gs://iarpa_microns/minnie/minnie65/seg_m1300/8.0x8.0x40.0/03b1e.shard")
+            val vaultPath = new VaultPath(
+              upath,
+              GoogleCloudDataVault
+                .create(CredentializedUPath(upath, None))
+                .getOrElse(fail("Failed to create GoogleCloudDataVault"))
+            )
+            vaultPath
+              .readBytes(ByteRange.startEndExclusive(0, 1024))(using globalExecutionContext, emptyTokenContext)
+              .futureBox
+              .map(assertBoxEmpty)
+          }
         }
         "return failure" when {
           "requesting invalid range" in
@@ -137,6 +152,23 @@ class DataVaultTestSuite extends AsyncWordSpec {
               )
             (vaultPath / dataKey)
               .readBytes(ByteRange.startEndExclusive(-10, 10))(using globalExecutionContext, emptyTokenContext)
+              .futureBox
+              .map(assertBoxFailure)
+          }
+
+          "requesting a byte range that extends past the object's actual end" in {
+            val dataKey = "32_32_40/15360-15424_8384-8448_3520-3584"
+            val realObjectSize = 127808
+            val upath = UPath.fromStringUnsafe(s"gs://neuroglancer-fafb-data/fafb_v14/fafb_v14_orig/$dataKey")
+            val vaultPath = new VaultPath(
+              upath,
+              GoogleCloudDataVault
+                .create(CredentializedUPath(upath, None))
+                .getOrElse(fail("Failed to create GoogleCloudDataVault"))
+            )
+            val overreachingRange = ByteRange.startEndExclusive(realObjectSize - 100, realObjectSize + 1000)
+            vaultPath
+              .readBytes(overreachingRange)(using globalExecutionContext, emptyTokenContext)
               .futureBox
               .map(assertBoxFailure)
           }
@@ -318,7 +350,7 @@ class DataVaultTestSuite extends AsyncWordSpec {
                   .create(CredentializedUPath(upath, None), clientPool)(using globalExecutionContext)
                   .getOrElse(fail("Failed to create S3DataVault"))
               )
-            vaultPath.listDirectory(maxItems = 3)(using globalExecutionContext).futureBox.map {
+            vaultPath.listDirectory(maxItems = 3)(using globalExecutionContext, emptyTokenContext).futureBox.map {
               case Full(result) =>
                 assert(result.length == 3)
                 assert(
@@ -334,16 +366,19 @@ class DataVaultTestSuite extends AsyncWordSpec {
 
         "return failure" when {
           "requesting directory listing on non-existent bucket" in {
-            val nonExistentUpath =
+            val nonExistentUPath =
               UPath.fromStringUnsafe(f"s3://non-existent-bucket${UUID.randomUUID}/non-existent-object/")
             WsTestClient.withClient { ws =>
               val clientPool = new S3ClientPool(ws)
               val s3DataVault =
                 S3DataVault
-                  .create(CredentializedUPath(nonExistentUpath, None), clientPool)(using globalExecutionContext)
+                  .create(CredentializedUPath(nonExistentUPath, None), clientPool)(using globalExecutionContext)
                   .getOrElse(fail("Failed to create S3DataVault"))
-              val vaultPath = new VaultPath(nonExistentUpath, s3DataVault)
-              vaultPath.listDirectory(maxItems = 5)(using globalExecutionContext).futureBox.map(assertBoxFailure)
+              val vaultPath = new VaultPath(nonExistentUPath, s3DataVault)
+              vaultPath
+                .listDirectory(maxItems = 5)(using globalExecutionContext, emptyTokenContext)
+                .futureBox
+                .map(assertBoxFailure)
             }
           }
         }
@@ -353,33 +388,34 @@ class DataVaultTestSuite extends AsyncWordSpec {
 
     "using vault path" when {
       class MockDataVault extends DataVault {
-        override def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(using
+        override def readBytesPlusEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(using
             ec: ExecutionContext,
             tc: TokenContext
         ): Fox[(Array[Byte], Encoding.Value, Option[String])] = ???
 
-        override def listDirectory(path: VaultPath, maxItems: Int)(implicit
-            ec: ExecutionContext
-        ): Fox[List[VaultPath]] = ???
+        override def listDirectory(path: VaultPath, maxItems: Int)(using
+            ec: ExecutionContext,
+            tc: TokenContext
+        ): Fox[Seq[VaultPath]] = ???
 
         override def getUsedStorageBytes(path: VaultPath)(using ec: ExecutionContext, tc: TokenContext): Fox[Long] =
           ???
       }
 
       "Uri has no trailing slash" should {
-        val someUpath = UPath.fromStringUnsafe("protocol://host/a/b")
-        val somePath = new VaultPath(someUpath, new MockDataVault)
+        val someUPath = UPath.fromStringUnsafe("protocol://host/a/b")
+        val somePath = new VaultPath(someUPath, new MockDataVault)
 
         "resolve child" in {
           val childPath = somePath / "c"
-          assert(childPath.toRemoteUri.map(_.toString) == Full(s"${someUpath.toString}/c"))
+          assert(childPath.toRemoteUri.map(_.toString) == Full(s"${someUPath.toString}/c"))
         }
 
         "get parent" in
           assert((somePath / "..").toString == "protocol://host/a")
 
         "get directory" in
-          assert((somePath / ".").toString == someUpath.toString)
+          assert((somePath / ".").toString == someUPath.toString)
 
         "handle sequential parameters" in
           assert((somePath / "c" / "d" / "e").toString == "protocol://host/a/b/c/d/e")
@@ -390,18 +426,18 @@ class DataVaultTestSuite extends AsyncWordSpec {
         }
       }
       "Uri has trailing slash" should {
-        val trailingSlashUpath = UPath.fromStringUnsafe("protocol://host/a/b/")
-        val trailingSlashPath = new VaultPath(trailingSlashUpath, new MockDataVault)
+        val trailingSlashUPath = UPath.fromStringUnsafe("protocol://host/a/b/")
+        val trailingSlashPath = new VaultPath(trailingSlashUPath, new MockDataVault)
         "resolve child" in {
           val childPath = trailingSlashPath / "c"
-          assert(childPath.toRemoteUri.map(_.toString) == Full(s"${trailingSlashUpath.toString}c"))
+          assert(childPath.toRemoteUri.map(_.toString) == Full(s"${trailingSlashUPath.toString}c"))
         }
 
         "get parent" in
           assert((trailingSlashPath / "..").toString == "protocol://host/a")
 
         "get directory" in
-          assert((trailingSlashPath / ".").toString == trailingSlashUpath.toString.dropRight(1))
+          assert((trailingSlashPath / ".").toString == trailingSlashUPath.toString.dropRight(1))
       }
 
       "comparing two" should {

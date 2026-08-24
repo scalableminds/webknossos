@@ -28,7 +28,6 @@ import {
   getMappingInfo,
   getSegmentationLayerByName,
   getSegmentationLayers,
-  getVisibleOrLastSegmentationLayer,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
 import {
@@ -54,7 +53,7 @@ import type {
 import {
   getGroupByIdWithSubgroups,
   MISSING_GROUP_ID,
-} from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
+} from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import { setSelectedSegmentsOrGroupAction } from "../actions/volumetracing_actions";
 import { MagInfo } from "../helpers/mag_info";
 
@@ -217,7 +216,7 @@ export function getServerVolumeTracings(
   return volumeTracings;
 }
 
-export function getActiveCellId(volumeTracing: VolumeTracing): number {
+export function getActiveCellId(volumeTracing: VolumeTracing): bigint {
   const { activeCellId } = volumeTracing;
   return activeCellId;
 }
@@ -225,7 +224,7 @@ export function getActiveCellId(volumeTracing: VolumeTracing): number {
 export function getActiveUnmappedSegmentId(
   state: WebknossosState,
   volumeTracing: VolumeTracing | null | undefined,
-): number | null | undefined {
+): bigint | null | undefined {
   if (volumeTracing == null) {
     return null;
   }
@@ -250,9 +249,19 @@ const MAG_THRESHOLDS_FOR_ZOOM: Partial<Record<AnnotationToolId, number>> = {
   [AnnotationTool.FILL_CELL.id]: 1,
 };
 
-export function isVolumeAnnotationDisallowedForZoom(tool: AnnotationTool, state: WebknossosState) {
+export type VolumeAnnotationZoomState =
+  | { isDisabled: false }
+  | { isDisabled: true; reason: "needs_zoom_in" | "needs_zoom_out" };
+
+export function isVolumeAnnotationDisallowedForZoom(
+  tool: AnnotationTool,
+  state: WebknossosState,
+): VolumeAnnotationZoomState {
   if (state.annotation.volumes.length === 0) {
-    return true;
+    // Volume annotation is not possible, but that's not because of an invalid
+    // zoom state. The call site should handle such cases differently (e.g.,
+    // the toolbar has more disabled-rules for this in place.)
+    return { isDisabled: false };
   }
 
   const threshold = MAG_THRESHOLDS_FOR_ZOOM[tool.id];
@@ -260,22 +269,25 @@ export function isVolumeAnnotationDisallowedForZoom(tool: AnnotationTool, state:
   if (threshold == null) {
     // If there is no threshold for the provided tool, it doesn't need to be
     // disabled.
-    return false;
+    return { isDisabled: false };
   }
 
   const activeSegmentation = getActiveSegmentationTracing(state);
   if (!activeSegmentation) {
-    return true;
+    // Volume annotation is not possible, but that's not because of an invalid
+    // zoom state. Also see volumes.length === 0 for the same reasoning.
+    return { isDisabled: false };
   }
 
   const volumeMags = getMagInfoOfActiveSegmentationTracingLayer(state);
   const finestExistingMagIndex = volumeMags.getFinestMagIndex();
-  // The current mag is too high for the tool
-  // because too many voxels could be annotated at the same time.
-  const isZoomStepTooHigh =
-    getActiveMagIndexForLayer(state, activeSegmentation.tracingId) >
-    threshold + finestExistingMagIndex;
-  return isZoomStepTooHigh;
+
+  // Simply check whether the mag currently rendered for the volume tracing layer may be
+  // annotated in given the tool's threshold. If it is too coarse, too many voxels would
+  // be labeled at once, so the user has to zoom in.
+  const renderedVolumeMagIndex = getActiveMagIndexForLayer(state, activeSegmentation.tracingId);
+  const isZoomStepTooHigh = renderedVolumeMagIndex > threshold + finestExistingMagIndex;
+  return isZoomStepTooHigh ? { isDisabled: true, reason: "needs_zoom_in" } : { isDisabled: false };
 }
 
 const MAX_BRUSH_SIZE_FOR_MAG1 = 300;
@@ -471,7 +483,7 @@ export function getSegmentJournalForLayer(
 // there that are not visible in the segments view tab.
 // The returned segment and group ids are all visible in the segments view tab.
 function _getSelectedIds(state: WebknossosState): {
-  segments: number[];
+  segments: bigint[];
   group: number | null;
   maybeUpdateStoreAction: (() => void) | null;
 } {
@@ -733,7 +745,7 @@ export function getLabelActionFromPreviousSlice(
 }
 
 export function getSegmentName(
-  segment: { id: number; name?: string | undefined | null },
+  segment: { id: bigint; name?: string | undefined | null },
   fallbackToIdOnly: boolean = false,
 ): string {
   const fallback = fallbackToIdOnly ? `${segment.id}` : `Segment ${segment.id}`;
@@ -743,7 +755,7 @@ export function getSegmentName(
 
 function getMeshOpacity(
   state: WebknossosState,
-  segmentId: number,
+  segmentId: bigint,
   layerName: string,
 ): number | undefined {
   const additionalCoords = state.flycam.additionalCoordinates;
@@ -751,13 +763,13 @@ function getMeshOpacity(
   const localSegmentationState = state.localSegmentationStateByLayer[layerName];
   if (localSegmentationState?.meshes == null) return undefined;
   const meshData = localSegmentationState.meshes[additionalCoordinateKey];
-  if (meshData == null || meshData[segmentId] == null) return undefined;
-  return meshData[segmentId].opacity;
+  if (meshData == null || meshData[segmentId.toString()] == null) return undefined;
+  return meshData[segmentId.toString()].opacity;
 }
 
 export function isMeshLoaded(
   state: WebknossosState,
-  segmentId: number,
+  segmentId: bigint,
   layerName: string,
 ): boolean {
   const additionalCoords = state.flycam.additionalCoordinates;
@@ -765,12 +777,12 @@ export function isMeshLoaded(
   const localSegmentationState = state.localSegmentationStateByLayer[layerName];
   if (localSegmentationState?.meshes == null) return false;
   const meshData = localSegmentationState.meshes[additionalCoordinateKey];
-  if (meshData == null || meshData[segmentId] == null) return false;
-  return meshData[segmentId] != null;
+  if (meshData == null || meshData[segmentId.toString()] == null) return false;
+  return meshData[segmentId.toString()] != null;
 }
 
-export function getAllLoadedMeshes(state: WebknossosState, layerName: string): Set<number> {
-  const loadedMeshIds = new Set<number>();
+export function getAllLoadedMeshes(state: WebknossosState, layerName: string): Set<bigint> {
+  const loadedMeshIds = new Set<bigint>();
   const additionalCoords = state.flycam.additionalCoordinates;
   const additionalCoordinateKey = getAdditionalCoordinatesAsString(additionalCoords);
   const localSegmentationState = state.localSegmentationStateByLayer[layerName];
@@ -786,7 +798,7 @@ export function getAllLoadedMeshes(state: WebknossosState, layerName: string): S
 // Output is in [0,1] for R, G, B, and A
 export function getSegmentColorAsRGBA(
   state: WebknossosState,
-  mappedId: number,
+  mappedId: bigint,
   layerName?: string | null | undefined,
 ): Vector4 {
   const segmentationLayer = getRequestedOrVisibleSegmentationLayer(state, layerName);
@@ -811,7 +823,7 @@ export function getSegmentColorAsRGBA(
 // Output is in [0,1] for H, S, L, and A
 export function getSegmentColorAsHSLA(
   state: WebknossosState,
-  mappedId: number,
+  mappedId: bigint,
   layerName?: string | null | undefined,
 ): Vector4 {
   const [r, g, b, a] = getSegmentColorAsRGBA(state, mappedId, layerName);
@@ -846,38 +858,6 @@ const AGGLOMERATE_STATES = {
   },
 };
 
-const CONNECTOME_STATES = {
-  NO_SEGMENTATION: {
-    value: false,
-    reason: "A segmentation layer needs to be visible to load the synapses of a segment.",
-  },
-  NO_CONNECTOME_FILE: {
-    value: false,
-    reason: "A connectome file needs to be available to load the synapses of a segment.",
-  },
-  YES: {
-    value: true,
-    reason: "",
-  },
-};
-
-export function hasConnectomeFile(state: WebknossosState) {
-  const segmentationLayer = getVisibleOrLastSegmentationLayer(state);
-
-  if (segmentationLayer == null) {
-    return CONNECTOME_STATES.NO_SEGMENTATION;
-  }
-
-  const { currentConnectomeFile } =
-    state.localSegmentationStateByLayer[segmentationLayer.name].connectomeData;
-
-  if (currentConnectomeFile == null) {
-    return CONNECTOME_STATES.NO_CONNECTOME_FILE;
-  }
-
-  return CONNECTOME_STATES.YES;
-}
-
 export type AgglomerateState = (typeof AGGLOMERATE_STATES)[keyof typeof AGGLOMERATE_STATES];
 
 export function hasAgglomerateMapping(state: WebknossosState) {
@@ -904,7 +884,7 @@ export function hasAgglomerateMapping(state: WebknossosState) {
     return AGGLOMERATE_STATES.NO_MAPPING;
   }
 
-  if (mappingType !== "HDF5") {
+  if (mappingType !== "AGGLOMERATE") {
     return AGGLOMERATE_STATES.NO_AGGLOMERATE_FILE_ACTIVE;
   }
 
@@ -945,7 +925,7 @@ export function getMeshInfoForSegment(
   state: WebknossosState,
   additionalCoordinates: AdditionalCoordinate[] | null,
   layerName: string,
-  segmentId: number,
+  segmentId: bigint,
 ) {
   const meshesForAddCoords = getMeshesForAdditionalCoordinates(
     state,
@@ -953,7 +933,7 @@ export function getMeshInfoForSegment(
     layerName,
   );
   if (meshesForAddCoords == null) return null;
-  return meshesForAddCoords[segmentId];
+  return meshesForAddCoords[segmentId.toString()];
 }
 
 export function needsLocalHdf5Mapping(state: WebknossosState, layerName: string) {

@@ -14,7 +14,7 @@ import {
   isRotated,
 } from "viewer/model/accessors/flycam_accessor";
 import { FlycamActions } from "viewer/model/actions/flycam_actions";
-import { PrefetchStrategyArbitrary } from "viewer/model/bucket_data_handling/prefetch_strategy_arbitrary";
+import { PrefetchStrategyFlight } from "viewer/model/bucket_data_handling/prefetch_strategy_arbitrary";
 import {
   ContentTypes as PrefetchContentTypes,
   PrefetchStrategySkeleton,
@@ -31,7 +31,7 @@ import { ensureWkInitialized } from "./ready_sagas";
 
 const PREFETCH_THROTTLE_TIME = 50;
 const DIRECTION_VECTOR_SMOOTHER = 0.125;
-const prefetchStrategiesArbitrary = [new PrefetchStrategyArbitrary()];
+const prefetchStrategiesFlight = [new PrefetchStrategyFlight()];
 const prefetchStrategiesPlane = [new PrefetchStrategySkeleton(), new PrefetchStrategyVolume()];
 
 export function* watchDataRelevantChanges(): Saga<void> {
@@ -81,7 +81,7 @@ export function* triggerDataPrefetching(previousProperties: Record<string, any>)
       if (isPlaneMode) {
         yield* call(prefetchForPlaneMode, dataLayer, previousProperties);
       } else {
-        yield* call(prefetchForArbitraryMode, dataLayer, previousProperties);
+        yield* call(prefetchForFlightMode, dataLayer, previousProperties);
       }
     }
   }
@@ -182,7 +182,7 @@ export function* prefetchForPlaneMode(
     previousProperties.lastBucketPickerTick = currentBucketPickerTick;
   }
 }
-export function* prefetchForArbitraryMode(
+export function* prefetchForFlightMode(
   layer: DataLayer,
   previousProperties: Record<string, any>,
 ): Saga<void> {
@@ -206,7 +206,7 @@ export function* prefetchForArbitraryMode(
     currentBucketPickerTick !== lastBucketPickerTick &&
     (matrix !== lastMatrix || zoomStep !== lastZoomStep)
   ) {
-    for (const strategy of prefetchStrategiesArbitrary) {
+    for (const strategy of prefetchStrategiesFlight) {
       if (
         strategy.forContentType(tracingTypes) &&
         strategy.inVelocityRange(lastConnectionStats.avgDownloadSpeedInBytesPerS) &&

@@ -3,11 +3,12 @@ package com.scalableminds.webknossos.datastore.datavault
 import com.aayushatharva.brotli4j.Brotli4jLoader
 import com.aayushatharva.brotli4j.decoder.BrotliInputStream
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.Box
 import com.scalableminds.util.io.ZipIO
-import com.scalableminds.util.tools.{Box, Fox, JsonHelper}
+import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.Box.tryo
+import Box.tryo
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import org.apache.commons.lang3.builder.HashCodeBuilder
 import play.api.libs.json.Reads
@@ -22,7 +23,7 @@ class VaultPath(upath: UPath, dataVault: DataVault) extends LazyLogging {
       byteRange: ByteRange = ByteRange.complete
   )(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
-      (bytes, encoding, rangeHeader) <- dataVault.readBytesEncodingAndRangeHeader(
+      (bytes, encoding, rangeHeader) <- dataVault.readBytesPlusEncodingAndRangeHeader(
         this,
         byteRange
       ) ?-> "Failed to read from vault path"
@@ -32,14 +33,14 @@ class VaultPath(upath: UPath, dataVault: DataVault) extends LazyLogging {
   def readBytesEncodingAndRangeHeader(
       byteRange: ByteRange = ByteRange.complete
   )(using ec: ExecutionContext, tc: TokenContext): Fox[(Array[Byte], Encoding.Value, Option[String])] =
-    dataVault.readBytesEncodingAndRangeHeader(this, byteRange) ?-> "Failed to read from vault path"
+    dataVault.readBytesPlusEncodingAndRangeHeader(this, byteRange) ?-> "Failed to read from vault path"
 
   def getUsedStorageBytes(using ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     dataVault.getUsedStorageBytes(this)
 
   def readLastBytes(byteCount: Int)(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
-      (bytes, encoding, _) <- dataVault.readBytesEncodingAndRangeHeader(
+      (bytes, encoding, _) <- dataVault.readBytesPlusEncodingAndRangeHeader(
         this,
         SuffixLengthByteRange(byteCount)
       ) ?-> "Failed to read from vault path"
@@ -53,7 +54,7 @@ class VaultPath(upath: UPath, dataVault: DataVault) extends LazyLogging {
       case Encoding.`identity` => Fox.successful(bytes)
     }
 
-  def listDirectory(maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
+  def listDirectory(maxItems: Int)(using ec: ExecutionContext, tc: TokenContext): Fox[Seq[VaultPath]] =
     dataVault.listDirectory(this, maxItems)
 
   private def decodeBrotli(bytes: Array[Byte]) = {

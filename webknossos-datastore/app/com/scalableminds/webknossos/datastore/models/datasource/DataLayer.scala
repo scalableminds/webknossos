@@ -1,19 +1,14 @@
 package com.scalableminds.webknossos.datastore.models.datasource
 
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.webknossos.datastore.dataformats.{
-  BucketProvider,
-  DatasetArrayBucketProvider,
-  MagLocator,
-  MappingProvider
-}
+import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DatasetArrayBucketProvider, MagLocator}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
-import com.scalableminds.webknossos.datastore.helpers.UPath
-import ucar.ma2.{Array => MultiArray}
+import com.scalableminds.webknossos.datastore.helpers.{UPath, UnsignedLong}
+import ucar.ma2.Array as MultiArray
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
-import play.api.libs.json._
+import play.api.libs.json.*
 
 trait DataLayer {
   def name: String
@@ -183,7 +178,6 @@ trait SegmentationLayer extends DataLayer {
   def mappings: Option[Set[String]]
 
   def category: LayerCategory.Value = LayerCategory.segmentation
-  lazy val mappingProvider: MappingProvider = new MappingProvider(this)
 }
 
 case class StaticColorLayer(
@@ -270,7 +264,7 @@ object StaticSegmentationLayer {
         }
         dataFormat <- (json \ "dataFormat").validate[DataFormat.Value]
         name <- (json \ "name").validate[String]
-        largestSegmentId <- (json \ "largestSegmentId").validateOpt[Long]
+        largestSegmentId <- (json \ "largestSegmentId").validateOpt[UnsignedLong]
         mappings <- (json \ "mappings").validateOpt[Set[String]]
         boundingBox <- (json \ "boundingBox").validate[BoundingBox]
         elementClass <- (json \ "elementClass").validate[ElementClass.Value]
@@ -290,11 +284,14 @@ object StaticSegmentationLayer {
         coordinateTransformations.filter(_.nonEmpty),
         additionalAxes,
         attachments,
-        largestSegmentId,
+        largestSegmentId.map(_.toLong),
         mappings
       )
 
-    def writes(layer: StaticSegmentationLayer): JsValue =
-      Json.writes[StaticSegmentationLayer].writes(layer)
+    def writes(layer: StaticSegmentationLayer): JsValue = {
+      val base = Json.writes[StaticSegmentationLayer].writes(layer).as[JsObject] - "largestSegmentId"
+      layer.largestSegmentId.map(v => base + ("largestSegmentId" -> Json.toJson(UnsignedLong(v)))).getOrElse(base)
+    }
   }
+
 }

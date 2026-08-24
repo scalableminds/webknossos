@@ -5,7 +5,7 @@ import com.google.gson.stream.JsonReader
 import com.scalableminds.util.time.Instant
 import com.typesafe.scalalogging.LazyLogging
 
-import java.io._
+import java.io.*
 import java.util
 import scala.annotation.tailrec
 import scala.collection.mutable

@@ -2,14 +2,14 @@ package utils
 
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.ConfigReader
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.LazyLogging
 import play.api.Configuration
 import security.CertificateValidationService
 
 import javax.inject.Inject
-import scala.concurrent.duration._
-import scala.jdk.CollectionConverters._
+import scala.concurrent.duration.*
+import scala.jdk.CollectionConverters.*
 
 class WkConf @Inject() (configuration: Configuration, certificateValidationService: CertificateValidationService)
     extends ConfigReader
@@ -79,6 +79,13 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
       val children: List[User.type] = List(User)
     }
 
+    object PricingPlanExpiryReminder {
+      val enabled: Boolean = get[Boolean]("webKnossos.pricingPlanExpiryReminder.enabled")
+      val leadTimesDays: List[Int] = getList[Int]("webKnossos.pricingPlanExpiryReminder.leadTimesDays")
+      val trialLeadTimesDays: List[Int] = getList[Int]("webKnossos.pricingPlanExpiryReminder.trialLeadTimesDays")
+      val tickerInterval: FiniteDuration = get[FiniteDuration]("webKnossos.pricingPlanExpiryReminder.tickerInterval")
+    }
+
     object SampleOrganization {
       val enabled: Boolean = get[Boolean]("webKnossos.sampleOrganization.enabled")
 
@@ -124,7 +131,16 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
       val children: List[UploadToPaths.type] = List(UploadToPaths)
     }
     val children: List[Object] =
-      List(User, Tasks, Cache, SampleOrganization, FetchUsedStorage, TermsOfService, Datasets)
+      List(
+        User,
+        Tasks,
+        Cache,
+        PricingPlanExpiryReminder,
+        SampleOrganization,
+        FetchUsedStorage,
+        TermsOfService,
+        Datasets
+      )
   }
 
   object SingleSignOn {
@@ -165,7 +181,7 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
     val key: String = get[String]("datastore.key")
     val name: String = get[String]("datastore.name")
     val publicUri: Option[String] = getOptional[String]("datastore.publicUri")
-    val baseDirectory: Option[String] = getOptional[String]("datastore.baseDirectory")
+    val baseDirectories: List[Config] = getList[Config]("datastore.baseDirectories")
   }
 
   object Tracingstore {
@@ -209,6 +225,7 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
     object TokenAuthenticator {
       val resetPasswordExpiry: FiniteDuration = get[FiniteDuration]("silhouette.tokenAuthenticator.resetPasswordExpiry")
       val dataStoreExpiry: FiniteDuration = get[FiniteDuration]("silhouette.tokenAuthenticator.dataStoreExpiry")
+      val jobExpiry: FiniteDuration = get[FiniteDuration]("silhouette.tokenAuthenticator.jobExpiry")
       val authenticatorExpiry: FiniteDuration = get[FiniteDuration]("silhouette.tokenAuthenticator.authenticatorExpiry")
       val authenticatorIdleTimeout: FiniteDuration =
         get[FiniteDuration]("silhouette.tokenAuthenticator.authenticatorIdleTimeout")
@@ -273,6 +290,9 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
 
     object Loki {
       val uri: String = get[String]("voxelytics.loki.uri")
+      val tenant: String = get[String]("voxelytics.loki.tenant")
+      val user: String = get[String]("voxelytics.loki.user")
+      val password: String = get[String]("voxelytics.loki.password")
       val startupTimeout: FiniteDuration = get[FiniteDuration]("voxelytics.loki.startupTimeout")
     }
 

@@ -4,13 +4,13 @@ import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.typesafe.scalalogging.{LazyLogging, Logger}
-import com.scalableminds.util.tools.Box.tryo
-import play.api.libs.json._
+import com.scalableminds.util.box.Box.tryo
+import play.api.libs.json.*
 
 import java.time.{ZoneId, ZonedDateTime}
 import java.time.format.DateTimeFormatter
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.{DurationLong, FiniteDuration}
+import scala.concurrent.duration.{DurationInt, DurationLong, FiniteDuration}
 
 case class Instant(epochMillis: Long) extends Ordered[Instant] {
   override def toString: String = DateTimeFormatter.ISO_INSTANT.format(toJavaInstant)
@@ -28,6 +28,10 @@ case class Instant(epochMillis: Long) extends Ordered[Instant] {
   def -(duration: FiniteDuration): Instant = Instant(epochMillis - duration.toMillis)
 
   def -(other: Instant): FiniteDuration = (epochMillis - other.epochMillis) milliseconds
+
+  // Full days from this instant until the other one, rounded up (6.5 days yield 7). Negative if the other one is past.
+  def daysUntil(other: Instant): Long =
+    math.ceil((other.epochMillis - epochMillis).toDouble / (1 day).toMillis).toLong
 
   def isPast: Boolean = this < Instant.now
 

@@ -1,5 +1,6 @@
 import { saveAs } from "file-saver";
 import ErrorHandling from "libs/error_handling";
+import importDynamic from "libs/import_dynamic";
 import exportToStl from "libs/stl_exporter";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -19,7 +20,7 @@ import {
 import { withoutServerSpecificFields } from "viewer/model/reducers/update_action_application/shared_update_helper";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
-import { stlMeshConstants } from "viewer/view/right_border_tabs/segments_tab/segments_view";
+import { stlMeshConstants } from "viewer/view/right_border_tabs/segments_tab/segments_view_helper";
 import { getAdditionalCoordinatesAsString } from "../../accessors/flycam_accessor";
 import type { FlycamAction } from "../../actions/flycam_actions";
 import type {
@@ -56,7 +57,7 @@ export function* releaseMeshWorker() {
   yield put(meshLoadingTokenChannel, "token");
 }
 
-function* downloadMeshCellById(cellName: string, segmentId: number, layerName: string): Saga<void> {
+function* downloadMeshCellById(cellName: string, segmentId: bigint, layerName: string): Saga<void> {
   const { segmentMeshController } = getSceneController();
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   const geometry = segmentMeshController.getMeshGeometryInBestLOD(
@@ -84,13 +85,17 @@ function* downloadMeshCellById(cellName: string, segmentId: number, layerName: s
 }
 
 function* downloadMeshCellsAsZIP(
-  segments: Array<{ segmentName: string; segmentId: number; layerName: string }>,
+  segments: Array<{ segmentName: string; segmentId: bigint; layerName: string }>,
 ): Saga<void> {
   const { segmentMeshController } = getSceneController();
-  const { BlobReader, BlobWriter, ZipWriter } = yield* call(() => import("@zip.js/zip.js"));
-  const zipWriter = new ZipWriter(new BlobWriter("application/zip"));
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   try {
+    // Load the import within the try block so that a failed import
+    // is also handled gracefully by the catch below.
+    const { BlobReader, BlobWriter, ZipWriter } = yield* call(() =>
+      importDynamic(() => import("@zip.js/zip.js")),
+    );
+    const zipWriter = new ZipWriter(new BlobWriter("application/zip"));
     const addFileToZipWriterPromises = segments.map((element) => {
       const geometry = segmentMeshController.getMeshGeometryInBestLOD(
         element.segmentId,
@@ -118,14 +123,16 @@ function* downloadMeshCellsAsZIP(
   }
 }
 
-const getSTLBlob = (geometry: Group, segmentId: number): Blob => {
+const getSTLBlob = (geometry: Group, segmentId: bigint): Blob => {
   const stlDataViews = exportToStl(geometry);
   // Encode mesh and cell id property
   const { meshMarker, segmentIdIndex } = stlMeshConstants;
   meshMarker.forEach((marker, index) => {
     stlDataViews[0].setUint8(index, marker);
   });
-  stlDataViews[0].setUint32(segmentIdIndex, segmentId, true);
+  // The STL format field is a fixed 32-bit width, so ids beyond 2^32 are truncated to
+  // their low 32 bits here. This is a genuine binary-format limit, not a JS-precision issue.
+  stlDataViews[0].setUint32(segmentIdIndex, Number(BigInt.asUintN(32, segmentId)), true);
   return new Blob(stlDataViews);
 };
 
@@ -184,7 +191,7 @@ export function* handleAdditionalCoordinateUpdate(): Saga<never> {
       for (const [layerName, recordsForOneLayer] of Object.entries(recordsOfLayers)) {
         const segmentIds = Object.keys(recordsForOneLayer);
         for (const segmentIdAsString of segmentIds) {
-          const segmentId = Number.parseInt(segmentIdAsString, 10);
+          const segmentId = BigInt(segmentIdAsString);
           yield* put(
             updateMeshVisibilityAction(
               layerName,
@@ -231,10 +238,10 @@ function* handleSegmentColorChangeFromOtherUsers(
       const { actionTracingId } = updateAction.value;
       const actionWithoutMetaInfo = withoutServerSpecificFields(updateAction);
       const segmentUpdateInfo = actionWithoutMetaInfo.value;
-      if (
-        segmentMeshController.hasMesh(segmentUpdateInfo.id, actionTracingId, additionalCoordinates)
-      ) {
-        segmentMeshController.setMeshColor(segmentUpdateInfo.id, actionTracingId);
+      // Legacy persisted actions may still have a plain number here instead of bigint.
+      const segmentId = BigInt(segmentUpdateInfo.id);
+      if (segmentMeshController.hasMesh(segmentId, actionTracingId, additionalCoordinates)) {
+        segmentMeshController.setMeshColor(segmentId, actionTracingId);
       }
     }
   }

@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
-import com.scalableminds.util.tools.{Box, Full, ParamFailure}
+import com.scalableminds.util.box.{Box, Full, ParamFailure}
 import com.scalableminds.webknossos.datastore.models.datasource.{ElementClass, UsableDataSource}
 import play.api.libs.json.Json
 
@@ -44,7 +44,7 @@ trait DataSourceValidation {
         dataSource.segmentationLayers.forall { layer =>
           ElementClass.largestSegmentIdIsInRange(layer.largestSegmentId, layer.elementClass)
         },
-        "Largest segment id exceeds range (must be nonnegative, within element class range, and < 2^53)."
+        "Largest segment id exceeds range (must be nonnegative and within the element class's value range)."
       ),
       check(
         dataSource.dataLayers.map(_.name).distinct.length == dataSource.dataLayers.length,

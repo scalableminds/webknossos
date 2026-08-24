@@ -6,6 +6,7 @@ import {
   getDefaultLayerViewConfiguration,
 } from "types/schemas/dataset_view_configuration.schema";
 import { validateObjectWithType } from "types/validation";
+import { normalizeMappingType } from "viewer/constants";
 import { getDefaultValueRangeOfLayer, isColorLayer } from "viewer/model/accessors/dataset_accessor";
 
 const eliminateErrors = (
@@ -89,6 +90,11 @@ export const enforceValidatedDatasetViewConfiguration = (
           delete existingLayerConfig.intensityRange;
         } else if (existingLayerConfig.intensityRange == null && !isOptional) {
           existingLayerConfig.intensityRange = getDefaultValueRangeOfLayer(dataset, layer.name);
+        }
+        if (existingLayerConfig.mapping != null) {
+          // View configurations that were stored before the agglomerate mapping type was
+          // renamed can still contain "HDF5".
+          existingLayerConfig.mapping.type = normalizeMappingType(existingLayerConfig.mapping.type);
         }
         // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         newLayerConfig[layer.name] = existingLayerConfig;

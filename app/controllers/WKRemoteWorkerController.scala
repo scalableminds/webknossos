@@ -2,6 +2,7 @@ package controllers
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.box.{Empty, Failure, Full}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
@@ -10,10 +11,9 @@ import models.dataset.DatasetDAO
 import models.job.JobCommand.JobCommand
 
 import javax.inject.Inject
-import models.job._
+import models.job.*
 import models.organization.CreditTransactionService
 import models.voxelytics.VoxelyticsDAO
-import com.scalableminds.util.tools.{Empty, Failure, Full}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import utils.WkConf

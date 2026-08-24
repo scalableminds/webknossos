@@ -1,11 +1,11 @@
 import com.scalableminds.util.Msg
 import play.silhouette.api.actions.SecuredErrorHandler
 
-import javax.inject._
+import javax.inject.*
 import play.api.http.DefaultHttpErrorHandler
-import play.api._
+import play.api.*
 import play.api.mvc.Results.{Forbidden, Unauthorized}
-import play.api.mvc._
+import play.api.mvc.*
 import play.api.routing.Router
 
 import scala.concurrent.Future

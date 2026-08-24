@@ -7,7 +7,7 @@ import models.dataset.{DataStore, Dataset}
 import models.job.JobCommand.JobCommand
 import models.organization.Organization
 import models.user.User
-import play.api.libs.json._
+import play.api.libs.json.*
 import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.ExecutionContext

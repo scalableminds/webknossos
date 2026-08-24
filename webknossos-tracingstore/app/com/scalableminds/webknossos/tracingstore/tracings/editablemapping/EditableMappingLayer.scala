@@ -20,7 +20,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   ElementClass,
   SegmentationLayer
 }
-import ucar.ma2.{Array => MultiArray}
+import ucar.ma2.Array as MultiArray
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService

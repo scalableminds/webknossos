@@ -57,7 +57,7 @@ const initialState = {
     },
   },
   task: {
-    id: 1,
+    id: 1n,
   },
   annotation: {
     type: "skeleton",
@@ -76,7 +76,6 @@ const initialState = {
     annotationType: "Explorational",
     name: "",
     tracingId,
-    activeTreeId: 1,
     activeNodeId: null,
     restrictions: {
       branchPointsAllowed: true,
@@ -117,11 +116,11 @@ describe("Save Saga", () => {
     const saveQueue = createSaveQueueFromUpdateActions(
       [
         [updateActiveNode(initialState.annotation)],
-        [updateActiveSegmentId(3, initialState.annotation.tracingId)],
+        [updateActiveSegmentId(3n, initialState.annotation.tracingId)],
         [updateCameraAnnotation([1, 2, 3], null, [1, 2, 3], 1)],
 
         [updateActiveNode(initialState.annotation)],
-        [updateActiveSegmentId(4, initialState.annotation.tracingId)],
+        [updateActiveSegmentId(4n, initialState.annotation.tracingId)],
         [updateCameraAnnotation([2, 2, 3], null, [1, 2, 3], 1)],
       ],
       TIMESTAMP,
@@ -135,7 +134,7 @@ describe("Save Saga", () => {
         [
           updateSegmentPartialVolumeAction(
             {
-              id: 3,
+              id: 3n,
               color: [1, 2, 3],
             },
             VOLUME_TRACING_ID,
@@ -144,7 +143,7 @@ describe("Save Saga", () => {
         [
           updateSegmentPartialVolumeAction(
             {
-              id: 3,
+              id: 3n,
               name: "3 some name",
             },
             VOLUME_TRACING_ID,
@@ -153,7 +152,7 @@ describe("Save Saga", () => {
         [
           updateSegmentPartialVolumeAction(
             {
-              id: 4,
+              id: 4n,
               color: [1, 2, 4],
             },
             VOLUME_TRACING_ID,
@@ -162,7 +161,7 @@ describe("Save Saga", () => {
         [
           updateSegmentPartialVolumeAction(
             {
-              id: 4,
+              id: 4n,
               name: "4 some name",
               anchorPosition: [1, 2, 3],
             },
@@ -172,7 +171,7 @@ describe("Save Saga", () => {
         [
           updateSegmentPartialVolumeAction(
             {
-              id: 3,
+              id: 3n,
               name: "3 some name (changed)",
             },
             VOLUME_TRACING_ID,
@@ -186,7 +185,7 @@ describe("Save Saga", () => {
     expect(compactedQueue[0].actions).toEqual([
       updateSegmentPartialVolumeAction(
         {
-          id: 3,
+          id: 3n,
           color: [1, 2, 3],
           name: "3 some name",
         },
@@ -196,7 +195,7 @@ describe("Save Saga", () => {
     expect(compactedQueue[1].actions).toEqual([
       updateSegmentPartialVolumeAction(
         {
-          id: 4,
+          id: 4n,
           name: "4 some name",
           color: [1, 2, 4],
           anchorPosition: [1, 2, 3],
@@ -207,7 +206,7 @@ describe("Save Saga", () => {
     expect(compactedQueue[2].actions).toEqual([
       updateSegmentPartialVolumeAction(
         {
-          id: 3,
+          id: 3n,
           name: "3 some name (changed)",
         },
         VOLUME_TRACING_ID,

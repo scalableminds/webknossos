@@ -1,9 +1,10 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
+import com.scalableminds.util.box.Box
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.ZipIO
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Fox, JsonHelper}
+import com.scalableminds.util.box.Box.tryo
+import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataFormatHelper, WKWFile}
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.{BloscCodec, BloscCodecConfiguration, Zarr3ArrayHeader}

@@ -1,9 +1,9 @@
 package security
 
+import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 
 import java.security.{KeyFactory, PublicKey}
 import pdi.jwt.{JwtJson, JwtOptions}
@@ -18,9 +18,9 @@ import scala.util.Properties
 class CertificateValidationService @Inject() (implicit ec: ExecutionContext) extends LazyLogging {
 
   // The publicKeyBox is empty if no public key is provided, Failure if decoding the public key failed or Full if there is a valid public key.
-  private lazy val publicKeyBox: Box[PublicKey] = Box(webknossos.BuildInfo.toMap.get("certificatePublicKey")).flatMap {
+  private lazy val publicKeyBox: Box[PublicKey] = webknossos.BuildInfo.toMap.get("certificatePublicKey") match {
     case Some(value: String) => deserializePublicKey(value)
-    case None                => Empty
+    case _                   => Empty
   }
 
   private lazy val cache: AlfuCache[String, (Boolean, Long)] = AlfuCache(timeToLive = 1 hour)

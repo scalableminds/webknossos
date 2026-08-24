@@ -1,9 +1,10 @@
 import { convertNumberTo64BitTuple } from "libs/utils";
 import type { NumberLike } from "viewer/store";
-import { AbstractCuckooTable, EMPTY_KEY_VALUE } from "./abstract_cuckoo_table";
+import { AbstractCuckooTable } from "./abstract_cuckoo_table";
 
-const EMPTY_KEY = [EMPTY_KEY_VALUE, EMPTY_KEY_VALUE] as Value;
-const EMPTY_VALUE = [EMPTY_KEY_VALUE, EMPTY_KEY_VALUE] as Value;
+// See EMPTY_KEY_VALUE definition in abstract super class for an explanation.
+const EMPTY_KEY = [0, 0] as Value;
+const EMPTY_VALUE = [0, 0] as Value;
 
 // This module defines a cuckoo table that can map from a 64-bit key to 64-bit value.
 // Both key and value are stored as a tuple of: [High-32-Bits, Low-32-Bits]

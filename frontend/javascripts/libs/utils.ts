@@ -17,7 +17,7 @@ import zipObject from "lodash-es/zipObject";
 import type { APIDataset, APIUser, MapEntries } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { ArbitraryObject, Comparator } from "types/type_utils";
-import type { ColorObject, Point3, TypedArray, Vector3, Vector4, Vector6 } from "viewer/constants";
+import type { Point3, TypedArray, Vector3, Vector4, Vector6 } from "viewer/constants";
 import type { TreeGroup } from "viewer/model/types/tree_types";
 import type { BoundingBoxObject, Mapping, NumberLike, SegmentGroup } from "viewer/store";
 
@@ -152,6 +152,19 @@ export function jsonStringify(json: Record<string, any>) {
   return JSON.stringify(json, null, "  ");
 }
 
+export function scrollToTop(): void {
+  scrollContainerToTop(null);
+}
+
+/**
+ * Smoothly scrolls the given container to the top (falling back to the
+ * window if the ref isn't set yet). For pages whose content scrolls inside a
+ * fixed-height, `overflow: auto` container rather than the window.
+ */
+export function scrollContainerToTop(container: HTMLElement | null | undefined): void {
+  (container ?? window).scrollTo({ top: 0, behavior: "smooth" });
+}
+
 export function clamp(min: number, value: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
@@ -171,71 +184,8 @@ export function roundTo(value: number, digits: number): number {
   return Math.round(value * digitMultiplier) / digitMultiplier;
 }
 
-function intToHex(int: number, digits: number = 6): string {
-  return ("0".repeat(digits) + int.toString(16)).slice(-digits);
-}
-
-export function rgbToInt(color: Vector3): number {
-  return (color[0] << 16) + (color[1] << 8) + color[2];
-}
-
-export function rgbToHex(color: Vector3): string {
-  return `#${color.map((int) => intToHex(Math.round(int), 2)).join("")}`;
-}
-
-export function hexToRgb(hex: string): Vector3 {
-  const bigint = Number.parseInt(hex.slice(1), 16);
-  const r = (bigint >> 16) & 255;
-  const g = (bigint >> 8) & 255;
-  const b = bigint & 255;
-  return [r, g, b];
-}
-/**
- * Converts an HSL color value to RGB. Conversion formula
- * adapted from http://en.wikipedia.org/wiki/HSL_color_space.
- * Assumes h, s, l, and a are contained in the set [0, 1] and
- * returns r, g, b, and a in the set [0, 1].
- *
- * Taken from:
- * https://stackoverflow.com/a/9493060
- */
-function _hslaToRgba(hsla: Vector4): Vector4 {
-  const [h, s, l, a] = hsla;
-  let r: number;
-  let g: number;
-  let b: number;
-
-  if (s === 0) {
-    r = g = b = l; // achromatic
-  } else {
-    const hue2rgb = function hue2rgb(p: number, q: number, t: number) {
-      if (t < 0) t += 1;
-      if (t > 1) t -= 1;
-      if (t < 1 / 6) return p + (q - p) * 6 * t;
-      if (t < 1 / 2) return q;
-      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
-      return p;
-    };
-
-    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-    const p = 2 * l - q;
-    r = hue2rgb(p, q, h + 1 / 3);
-    g = hue2rgb(p, q, h);
-    b = hue2rgb(p, q, h - 1 / 3);
-  }
-
-  return [r, g, b, a];
-}
-
-export function colorObjectToRGBArray({ r, g, b }: ColorObject): Vector3 {
-  return [r, g, b];
-}
-
-export function getRandomColor(): Vector3 {
-  // Generate three values between 0 and 1 that multiplied with 255 will be integers.
-  const randomColor = [0, 1, 2].map(() => Math.floor(Math.random() * 256) / 255);
-  return randomColor as any as Vector3;
-}
+// Color conversion helpers (rgbToHex, hexToRgb, stringToNormalizedRgbColor, …) live in
+// libs/colors.ts.
 
 export function computeBoundingBoxFromArray(bb: Vector6): BoundingBoxMinMaxType {
   const [x, y, z, width, height, depth] = bb;
@@ -518,6 +468,15 @@ export function sleep(timeout: number): Promise<void> {
   });
 }
 
+/**
+ * Strips a single trailing extension from a file name (e.g. "tracing.nml" -> "tracing").
+ * File names without an extension and dotfiles are returned unchanged.
+ */
+export function stripFileExtension(fileName: string): string {
+  const dotIndex = fileName.lastIndexOf(".");
+  return dotIndex > 0 ? fileName.slice(0, dotIndex) : fileName;
+}
+
 export function isFileExtensionEqualTo(
   fileName: string | null | undefined,
   extensionOrExtensions: string | Array<string>,
@@ -560,12 +519,10 @@ function _busyWaitDevHelper(time: number) {
   }
 }
 
-export function animationFrame(maxTimeout?: number): Promise<number | undefined> {
-  const rafPromise: Promise<ReturnType<typeof window.requestAnimationFrame>> = new Promise(
-    (resolve) => {
-      window.requestAnimationFrame(resolve);
-    },
-  );
+export function animationFrame(maxTimeout?: number): Promise<undefined> {
+  const rafPromise = new Promise<undefined>((resolve) => {
+    window.requestAnimationFrame(() => resolve(undefined));
+  });
 
   if (maxTimeout == null) {
     return rafPromise;
@@ -573,6 +530,31 @@ export function animationFrame(maxTimeout?: number): Promise<number | undefined>
 
   const timeoutPromise = sleep(maxTimeout) as Promise<undefined>;
   return Promise.race([rafPromise, timeoutPromise]);
+}
+
+// Waits until the user is actually attentive, i.e., they moved the mouse or pressed a key.
+// This is more reliable than the Page Visibility API, which can still report the page as visible
+// even when another OS window fully covers it.
+// Devices without a mouse/trackpad (e.g. tablets) never fire mousemove, so an animation frame is
+// used as a fallback there. This is checked via "any-pointer: fine" rather than touch support, since
+// convertible devices (e.g. 2-in-1 laptops) can have both a touchscreen and a mouse attached.
+export function ensureUserIsAttentive(): Promise<void> {
+  const hasFinePointer = window.matchMedia?.("(any-pointer: fine)").matches ?? true;
+  if (!hasFinePointer) {
+    return animationFrame();
+  }
+
+  return new Promise((resolve) => {
+    const onUserActivity = () => {
+      window.removeEventListener("mousemove", onUserActivity);
+      window.removeEventListener("keydown", onUserActivity);
+      window.removeEventListener("wheel", onUserActivity);
+      resolve();
+    };
+    window.addEventListener("mousemove", onUserActivity);
+    window.addEventListener("keydown", onUserActivity);
+    window.addEventListener("wheel", onUserActivity);
+  });
 }
 
 export function diffArrays<T>(
@@ -905,10 +887,12 @@ function convertDecToBase256(num: number): Vector4 {
   return map4((el) => sign * el, [r, g, b, a]);
 }
 
-export function castForArrayType(uncastNumber: number, data: TypedArray): number | bigint {
-  return data instanceof BigUint64Array || data instanceof BigInt64Array
-    ? BigInt(uncastNumber)
-    : uncastNumber;
+export function castForArrayType(uncastNumber: NumberLike, data: TypedArray): NumberLike {
+  const needsBigInt = data instanceof BigUint64Array || data instanceof BigInt64Array;
+  if (needsBigInt) {
+    return typeof uncastNumber === "bigint" ? uncastNumber : BigInt(uncastNumber);
+  }
+  return typeof uncastNumber === "number" ? uncastNumber : Number(uncastNumber);
 }
 
 function _convertNumberTo64Bit(num: number | bigint | null): [Vector4, Vector4] {
@@ -1281,13 +1265,23 @@ export function isNumberMap(x: Map<NumberLike, NumberLike>): x is Map<number, nu
 }
 
 export function getAdaptToTypeFunction(mapping: Mapping | null | undefined) {
-  return mapping && isNumberMap(mapping) ? (el: number) => el : (el: number) => BigInt(el);
+  // Segment/agglomerate ids are always bigint scalars now; adapt to whichever key type the
+  // given mapping actually uses (number for smaller element classes, bigint for uint64).
+  return mapping && isNumberMap(mapping)
+    ? (el: NumberLike) => Number(el)
+    : (el: NumberLike) => BigInt(el);
 }
 
-export function getAdaptToTypeFunctionFromList<T extends number | bigint>(list: Array<T>) {
-  return list[0] == null || Boolean(typeof list[0] === "number")
-    ? (el: NumberLike) => el
-    : (el: NumberLike) => BigInt(el);
+// Adapts a bigint (as returned by parseProtoListOfLong, which always decodes ids as
+// bigint to preserve full uint64 precision on the wire) back to whichever type `list`
+// uses, so callers working with number-keyed (smaller element class) mappings get
+// numbers back, and callers working with bigint-keyed (uint64) mappings get bigints.
+export function getAdaptToTypeFunctionFromList<T extends number | bigint>(
+  list: Array<T>,
+): (el: bigint) => NumberLike {
+  return list[0] == null || typeof list[0] === "number"
+    ? (el: bigint) => Number(el)
+    : (el: bigint) => el;
 }
 
 export function isBigInt(x: NumberLike): x is bigint {

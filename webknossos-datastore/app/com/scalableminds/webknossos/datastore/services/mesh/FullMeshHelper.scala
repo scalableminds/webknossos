@@ -1,9 +1,9 @@
 package com.scalableminds.webknossos.datastore.services.mesh
 
+import com.scalableminds.util.box.Box
 import com.scalableminds.util.geometry.{Vec3Float, Vec3Int}
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Box
-import com.scalableminds.util.tools.Box.tryo
+import Box.tryo
 import com.scalableminds.webknossos.datastore.draco.NativeDracoToStlConverter
 import com.scalableminds.webknossos.datastore.models.VoxelPosition
 import com.typesafe.scalalogging.LazyLogging
@@ -74,7 +74,7 @@ trait FullMeshHelper extends LazyLogging {
     val outputNumBytesLong = 80L + 4L + chunkBytesTotal
     if (outputNumBytesLong > Int.MaxValue)
       throw new IllegalStateException(
-        s"Mesh is too large to combine into a single STL buffer: $outputNumBytesLong bytes (${numFacesLong} faces). " +
+        s"Mesh is too large to combine into a single STL buffer: $outputNumBytesLong bytes ($numFacesLong faces). " +
           "Use per-chunk surface area computation instead."
       )
     val constantStlHeader = Array.fill[Byte](80)(0)

@@ -3,6 +3,7 @@ import type React from "react";
 import { createRoot } from "react-dom/client";
 import { Provider } from "react-redux";
 import GlobalThemeProvider from "theme_provider";
+import { Store } from "viewer/singletons";
 
 type DestroyFunction = () => void; // The returned promise gets resolved once the element is destroyed.
 
@@ -10,34 +11,30 @@ export default function renderIndependently(
   getComponent: (arg0: DestroyFunction) => React.ReactElement<React.ComponentProps<any>, any>,
 ): Promise<void> {
   return new Promise((resolve) => {
-    // Avoid circular imports
-    import("viewer/throttled_store").then((_Store) => {
-      const Store = _Store.default;
-      const div = document.createElement("div");
-      const react_root = createRoot(div);
+    const div = document.createElement("div");
+    const react_root = createRoot(div);
 
-      if (!document.body) {
-        resolve();
-        return;
+    if (!document.body) {
+      resolve();
+      return;
+    }
+
+    document.body.appendChild(div);
+
+    function destroy() {
+      react_root.unmount();
+
+      if (div.parentNode) {
+        div.parentNode.removeChild(div);
       }
 
-      document.body.appendChild(div);
+      resolve();
+    }
 
-      function destroy() {
-        react_root.unmount();
-
-        if (div.parentNode) {
-          div.parentNode.removeChild(div);
-        }
-
-        resolve();
-      }
-
-      react_root.render(
-        <Provider store={Store}>
-          <GlobalThemeProvider isMainProvider={false}>{getComponent(destroy)}</GlobalThemeProvider>
-        </Provider>,
-      );
-    });
+    react_root.render(
+      <Provider store={Store}>
+        <GlobalThemeProvider isMainProvider={false}>{getComponent(destroy)}</GlobalThemeProvider>
+      </Provider>,
+    );
   });
 }

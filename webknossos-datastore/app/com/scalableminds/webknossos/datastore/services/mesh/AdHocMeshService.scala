@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.services.mesh
 
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.{Box, Failure}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Float, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
@@ -15,16 +16,15 @@ import com.scalableminds.webknossos.datastore.models.requests.{
 import com.scalableminds.webknossos.datastore.services.mcubes.MarchingCubes
 import com.scalableminds.webknossos.datastore.services.BinaryDataService
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.{Box, Failure}
 import com.scalableminds.webknossos.datastore.services.mapping.MappingService
 import org.apache.pekko.actor.{Actor, ActorRef, ActorSystem, Props}
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.routing.RoundRobinPool
 import org.apache.pekko.util.Timeout
 
-import java.nio._
+import java.nio.*
 import scala.collection.mutable
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.concurrent.{Await, ExecutionContext}
 import scala.reflect.ClassTag
 
@@ -37,7 +37,7 @@ case class AdHocMeshRequest(
     voxelSizeFactor: Vec3Double, // assumed to be in dataset’s unit
     tokenContext: TokenContext,
     mapping: Option[String] = None,
-    mappingType: Option[String] = None,
+    mappingType: Option[MappingType.Value] = None,
     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
     annotationVersion: Option[Long],
     findNeighbors: Boolean = true
@@ -118,7 +118,7 @@ class AdHocMeshService(
       request.mapping match {
         case Some(mappingName) =>
           request.mappingType match {
-            case Some("JSON") =>
+            case Some(MappingType.JSON) =>
               mappingService.applyMapping(
                 DataServiceMappingRequest(request.dataSourceId, request.dataLayer, mappingName),
                 data,
@@ -134,7 +134,7 @@ class AdHocMeshService(
       request.mapping match {
         case Some(_) =>
           request.mappingType match {
-            case Some("HDF5") =>
+            case Some(MappingType.AGGLOMERATE) =>
               binaryDataService.agglomerateServiceOpt.map { agglomerateService =>
                 val dataRequest = DataServiceDataRequest(
                   request.datasetId,
@@ -200,8 +200,10 @@ class AdHocMeshService(
       request.dataSourceId,
       request.dataLayer,
       cuboid,
-      DataServiceRequestSettings.default
-        .copy(additionalCoordinates = request.additionalCoordinates, version = request.annotationVersion)
+      DataServiceRequestSettings(
+        additionalCoordinates = request.additionalCoordinates,
+        version = request.annotationVersion
+      )
     )
 
     val dataDimensions = Vec3Int(cuboid.width, cuboid.height, cuboid.depth)

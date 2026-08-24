@@ -1,7 +1,8 @@
 package com.scalableminds.webknossos.datastore.services
 
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.tools.{Fox, Full}
+import com.scalableminds.util.box.Full
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.helpers.UPath
@@ -12,7 +13,7 @@ import play.api.libs.json.{Json, OFormat}
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-case class PathStorageUsageRequest(paths: List[String])
+case class PathStorageUsageRequest(paths: Seq[String])
 object PathStorageUsageRequest {
   implicit val jsonFormat: OFormat[PathStorageUsageRequest] = Json.format[PathStorageUsageRequest]
 }
@@ -25,7 +26,7 @@ object PathStorageReport {
   implicit val jsonFormat: OFormat[PathStorageReport] = Json.format[PathStorageReport]
 }
 
-case class PathStorageUsageResponse(reports: List[PathStorageReport])
+case class PathStorageUsageResponse(reports: Seq[PathStorageReport])
 object PathStorageUsageResponse {
   implicit val jsonFormat: OFormat[PathStorageUsageResponse] = Json.format[PathStorageUsageResponse]
 }
@@ -38,11 +39,10 @@ class DSUsedStorageService @Inject() (
     managedS3Service: ManagedS3Service
 ) extends LazyLogging {
 
-  def measureStorageForPaths(paths: List[String], organizationId: String)(implicit
+  def measureStorageForPaths(paths: Seq[String], organizationId: String)(implicit
       ec: ExecutionContext,
       tc: TokenContext
-  ): Fox[List[PathStorageReport]] = {
-    val organizationDirectory = config.Datastore.baseDirectory.resolve(organizationId)
+  ): Fox[Seq[PathStorageReport]] =
     for {
       // Keep track of original path as its UPath might be normalized and turned into an absolute path.
       // The original path is needed in the returned storage reports to enable the core backend matching with the
@@ -50,18 +50,9 @@ class DSUsedStorageService @Inject() (
       pathPairs <- Fox.serialCombined(paths) { path =>
         UPath.fromString(path).toFox.map(upath => PathPair(path, upath))
       }
-      pathPairsWithAbsoluteUpath = pathPairs.map(pathPair =>
-        pathPair.upath.toLocalPath match {
-          case Full(localPath) =>
-            pathPair.copy(
-              upath = UPath.fromLocalPath(organizationDirectory.resolve(localPath).normalize().toAbsolutePath)
-            )
-          case _ => pathPair
-        }
-      )
-      // Check to only measure remote paths that are part of a vault that is configured.
-      (pathPairsToMeasure, _absoluteUpathsToSkip) = pathPairsWithAbsoluteUpath.partition(path =>
-        path.upath.isLocal || managedS3Service.pathIsInManagedS3(path.upath)
+      // Skip remote paths not in our managed S3 and local non-absolute paths (those should never occur)
+      pathPairsToMeasure = pathPairs.filter(pair =>
+        (pair.upath.isLocal && pair.upath.isAbsolute) || managedS3Service.pathIsInManagedS3(pair.upath)
       )
       vaultPathsForPathPairsToMeasure <- Fox.serialCombined(pathPairsToMeasure)(pathPair =>
         dataVaultService.vaultPathFor(pathPair.upath)
@@ -86,5 +77,4 @@ class DSUsedStorageService @Inject() (
         )
       )
     } yield successfulStorageUsedBoxes
-  }
 }

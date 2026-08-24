@@ -127,3 +127,6 @@ public/index.html
 tsconfig.tsbuildinfo
 
 .claude
+diffy-report.html
+
+local.sbt

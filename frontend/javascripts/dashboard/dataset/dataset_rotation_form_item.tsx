@@ -16,13 +16,13 @@ import { useCallback, useEffect, useMemo } from "react";
 import type { AffineTransformation, APIDataLayer } from "types/api_types";
 import {
   AXIS_TO_TRANSFORM_INDEX,
-  EXPECTED_TRANSFORMATION_LENGTH,
-  fromCenterToOrigin,
-  fromOriginToCenter,
+  EXPECTED_SETTINGS_TRANSFORMATION_LENGTH,
+  fromCenterToOriginAsAffine,
+  fromOriginToCenterAsAffine,
   getRotationMatrixAroundAxis,
   IDENTITY_TRANSFORM,
   type RotationAndMirroringSettings,
-  transformationEqualsAffineIdentityTransform,
+  settingsTransformationEqualsAffineIdentityTransform,
 } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import { FormItemWithInfo } from "./helper_components";
@@ -65,7 +65,7 @@ const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
   useEffect(() => {
     if (
       datasetBoundingBox == null ||
-      dataLayers[0].coordinateTransformations?.length !== EXPECTED_TRANSFORMATION_LENGTH ||
+      dataLayers[0].coordinateTransformations?.length !== EXPECTED_SETTINGS_TRANSFORMATION_LENGTH ||
       !form
     ) {
       return;
@@ -107,17 +107,22 @@ const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
       const rotationMatrix = getRotationMatrixAroundAxis(axis, rotationValues);
       const dataLayersWithUpdatedTransforms: APIDataLayer[] = dataLayers.map((layer) => {
         let transformations = layer.coordinateTransformations;
-        if (transformations == null || transformations.length !== EXPECTED_TRANSFORMATION_LENGTH) {
+        if (
+          transformations == null ||
+          transformations.length !== EXPECTED_SETTINGS_TRANSFORMATION_LENGTH
+        ) {
           transformations = [
-            fromCenterToOrigin(datasetBoundingBox),
+            fromCenterToOriginAsAffine(datasetBoundingBox),
             IDENTITY_TRANSFORM,
             IDENTITY_TRANSFORM,
             IDENTITY_TRANSFORM,
-            fromOriginToCenter(datasetBoundingBox),
+            fromOriginToCenterAsAffine(datasetBoundingBox),
           ];
         }
         transformations[AXIS_TO_TRANSFORM_INDEX[axis]] = rotationMatrix;
-        const updatedTransformations = transformationEqualsAffineIdentityTransform(transformations)
+        const updatedTransformations = settingsTransformationEqualsAffineIdentityTransform(
+          transformations,
+        )
           ? null
           : transformations;
 
@@ -235,10 +240,10 @@ export function getRotationalTransformation(
   },
 ): AffineTransformation[] {
   return [
-    fromCenterToOrigin(datasetBoundingBox),
+    fromCenterToOriginAsAffine(datasetBoundingBox),
     getRotationMatrixAroundAxis("x", rotationValues["x"]),
     getRotationMatrixAroundAxis("y", rotationValues["y"]),
     getRotationMatrixAroundAxis("z", rotationValues["z"]),
-    fromOriginToCenter(datasetBoundingBox),
+    fromOriginToCenterAsAffine(datasetBoundingBox),
   ];
 }

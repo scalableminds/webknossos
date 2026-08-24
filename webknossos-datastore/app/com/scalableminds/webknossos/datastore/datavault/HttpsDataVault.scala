@@ -1,8 +1,9 @@
 package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.{Box, Full}
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.tools.{Box, Fox, Full}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.storage.{
   DataVaultCredential,
@@ -30,7 +31,7 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
 
   private lazy val dataStoreAuthority = new URI(dataStoreHost).getAuthority
 
-  override def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(using
+  override def readBytesPlusEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[(Array[Byte], Encoding.Value, Option[String])] =
@@ -50,9 +51,12 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
         else Fox.failure(s"Https read failed for uri $uri: ${response.status} ${response.statusText}")
     } yield result
 
-  override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
+  override def listDirectory(path: VaultPath, maxItems: Int)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Seq[VaultPath]] =
     // HTTP file listing is currently not supported.
-    Fox.successful(List.empty)
+    Fox.successful(Seq.empty)
 
   override def getUsedStorageBytes(path: VaultPath)(using ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     // paid HTTP file storage is not supported.
@@ -135,12 +139,10 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
   }
 
   private def getBasicAuthCredential: Option[HttpBasicAuthCredential] =
-    credential.flatMap { c =>
-      c match {
-        case h: HttpBasicAuthCredential   => Some(h)
-        case l: LegacyDataVaultCredential => Some(l.toBasicAuth)
-        case _                            => None
-      }
+    credential.flatMap {
+      case h: HttpBasicAuthCredential   => Some(h)
+      case l: LegacyDataVaultCredential => Some(l.toBasicAuth)
+      case _                            => None
     }
 
   private def getCredential = credential
@@ -159,13 +161,13 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
 object HttpsDataVault {
 
   /** Factory method to create a new HttpsDataVault instance.
-    * @param credentializedUpath
+    * @param credentializedUPath
     * @param ws
     * @param dataStoreHost
     *   The host of the local data store that this vault is accessing. This is used to determine if a user token should
     *   be applied in requests.
     * @return
     */
-  def create(credentializedUpath: CredentializedUPath, ws: WSClient, dataStoreHost: String): Box[HttpsDataVault] =
-    Full(new HttpsDataVault(credentializedUpath.credential, ws, dataStoreHost))
+  def create(credentializedUPath: CredentializedUPath, ws: WSClient, dataStoreHost: String): Box[HttpsDataVault] =
+    Full(new HttpsDataVault(credentializedUPath.credential, ws, dataStoreHost))
 }

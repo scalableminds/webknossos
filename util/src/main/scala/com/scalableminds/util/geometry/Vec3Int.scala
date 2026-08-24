@@ -1,8 +1,8 @@
 package com.scalableminds.util.geometry
 
-import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
-import play.api.libs.json.Json._
-import play.api.libs.json._
+import com.scalableminds.util.tools.StringNumberConversions.toIntOpt
+import play.api.libs.json.Json.*
+import play.api.libs.json.*
 
 case class Vec3Int(x: Int, y: Int, z: Int) {
   def scale(s: Int): Vec3Int =

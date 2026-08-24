@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore
 import org.apache.pekko.actor.ActorSystem
 import com.google.inject.AbstractModule
 import com.google.inject.name.Names
-import com.scalableminds.webknossos.datastore.services._
+import com.scalableminds.webknossos.datastore.services.*
 import com.scalableminds.webknossos.datastore.services.connectome.{
   ConnectomeFileService,
   Hdf5ConnectomeFileService,
@@ -28,6 +28,7 @@ import com.scalableminds.webknossos.datastore.services.segmentindex.{
   SegmentIndexFileService,
   ZarrSegmentIndexFileService
 }
+import com.scalableminds.webknossos.datastore.services.segmentstatistics.SegmentStatisticsFileService
 import com.scalableminds.webknossos.datastore.services.uploading.UploadService
 import com.scalableminds.webknossos.datastore.storage.{DataVaultService, S3ClientPoolHolder, DataStoreRedisStore}
 
@@ -56,6 +57,7 @@ class DataStoreModule extends AbstractModule {
     bind(classOf[ZarrAgglomerateService]).asEagerSingleton()
     bind(classOf[Hdf5AgglomerateService]).asEagerSingleton()
     bind(classOf[SegmentIndexFileService]).asEagerSingleton()
+    bind(classOf[SegmentStatisticsFileService]).asEagerSingleton()
     bind(classOf[ZarrSegmentIndexFileService]).asEagerSingleton()
     bind(classOf[Hdf5SegmentIndexFileService]).asEagerSingleton()
     bind(classOf[ConnectomeFileService]).asEagerSingleton()

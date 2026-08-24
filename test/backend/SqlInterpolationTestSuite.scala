@@ -6,7 +6,7 @@ import models.job.JobState
 import org.scalatest.wordspec.AsyncWordSpec
 import play.api.libs.json.Json
 import com.scalableminds.util.objectid.ObjectId
-import utils.sql._
+import utils.sql.*
 
 import scala.concurrent.duration.DurationInt
 

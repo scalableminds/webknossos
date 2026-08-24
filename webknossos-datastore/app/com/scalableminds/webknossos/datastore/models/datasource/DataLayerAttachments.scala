@@ -1,23 +1,27 @@
 package com.scalableminds.webknossos.datastore.models.datasource
 
+import com.scalableminds.util.box.{Box, Full}
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.io.PathUtils
-import com.scalableminds.util.tools.{Box, Full}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType.LayerAttachmentType
 import org.apache.commons.io.FilenameUtils
 import play.api.libs.json.{Format, Json}
 
 import java.nio.file.{Files, Path}
+import scala.concurrent.ExecutionContext
 
 case class DataLayerAttachments(
     meshes: Seq[LayerAttachment] = Seq.empty,
     agglomerates: Seq[LayerAttachment] = Seq.empty,
     segmentIndex: Option[LayerAttachment] = None,
     connectomes: Seq[LayerAttachment] = Seq.empty,
-    cumsum: Option[LayerAttachment] = None
+    cumsum: Option[LayerAttachment] = None,
+    segmentStatistics: Option[LayerAttachment] = None
 ) {
-  def allAttachments: Seq[LayerAttachment] = meshes ++ agglomerates ++ segmentIndex ++ connectomes ++ cumsum
+  def allAttachments: Seq[LayerAttachment] =
+    meshes ++ agglomerates ++ segmentIndex ++ connectomes ++ cumsum ++ segmentStatistics
   def isEmpty: Boolean = allAttachments.isEmpty
 
   def mergeWithPrecedence(other: DataLayerAttachments): DataLayerAttachments =
@@ -26,7 +30,8 @@ case class DataLayerAttachments(
       agglomerates = if (this.agglomerates.isEmpty) other.agglomerates else this.agglomerates,
       segmentIndex = this.segmentIndex.orElse(other.segmentIndex),
       connectomes = if (this.connectomes.isEmpty) other.connectomes else this.connectomes,
-      cumsum = this.cumsum.orElse(other.cumsum)
+      cumsum = this.cumsum.orElse(other.cumsum),
+      segmentStatistics = this.segmentStatistics.orElse(other.segmentStatistics)
     )
 
   // Drop those attachments whose name is not in other’s matching collection.
@@ -36,7 +41,8 @@ case class DataLayerAttachments(
       agglomerates = agglomerates.filter(a => other.agglomerates.exists(_.name == a.name)),
       segmentIndex = segmentIndex.filter(a => other.segmentIndex.exists(_.name == a.name)),
       connectomes = connectomes.filter(a => other.connectomes.exists(_.name == a.name)),
-      cumsum = cumsum.filter(a => other.cumsum.exists(_.name == a.name))
+      cumsum = cumsum.filter(a => other.cumsum.exists(_.name == a.name)),
+      segmentStatistics = segmentStatistics.filter(a => other.segmentStatistics.exists(_.name == a.name))
     )
     if (filtered.isEmpty) None else Some(filtered)
   }
@@ -49,16 +55,18 @@ case class DataLayerAttachments(
       case LayerAttachmentType.segmentIndex => this.copy(segmentIndex = Some(attachment))
       case LayerAttachmentType.connectome   =>
         this.copy(connectomes = this.connectomes :+ attachment)
-      case LayerAttachmentType.cumsum => this.copy(cumsum = Some(attachment))
+      case LayerAttachmentType.cumsum            => this.copy(cumsum = Some(attachment))
+      case LayerAttachmentType.segmentStatistics => this.copy(segmentStatistics = Some(attachment))
     }
 
   def getByTypeAndName(attachmentType: LayerAttachmentType, name: String): Option[LayerAttachment] =
     attachmentType match {
-      case LayerAttachmentType.mesh         => meshes.find(_.name == name)
-      case LayerAttachmentType.agglomerate  => agglomerates.find(_.name == name)
-      case LayerAttachmentType.segmentIndex => segmentIndex.find(_.name == name)
-      case LayerAttachmentType.connectome   => connectomes.find(_.name == name)
-      case LayerAttachmentType.cumsum       => cumsum.find(_.name == name)
+      case LayerAttachmentType.mesh              => meshes.find(_.name == name)
+      case LayerAttachmentType.agglomerate       => agglomerates.find(_.name == name)
+      case LayerAttachmentType.segmentIndex      => segmentIndex.find(_.name == name)
+      case LayerAttachmentType.connectome        => connectomes.find(_.name == name)
+      case LayerAttachmentType.cumsum            => cumsum.find(_.name == name)
+      case LayerAttachmentType.segmentStatistics => segmentStatistics.find(_.name == name)
     }
 
   def getByTypeAndNameAlwaysReturnSingletons(
@@ -66,11 +74,12 @@ case class DataLayerAttachments(
       name: String
   ): Option[LayerAttachment] =
     attachmentType match {
-      case LayerAttachmentType.mesh         => meshes.find(_.name == name)
-      case LayerAttachmentType.agglomerate  => agglomerates.find(_.name == name)
-      case LayerAttachmentType.segmentIndex => segmentIndex
-      case LayerAttachmentType.connectome   => connectomes.find(_.name == name)
-      case LayerAttachmentType.cumsum       => cumsum
+      case LayerAttachmentType.mesh              => meshes.find(_.name == name)
+      case LayerAttachmentType.agglomerate       => agglomerates.find(_.name == name)
+      case LayerAttachmentType.segmentIndex      => segmentIndex
+      case LayerAttachmentType.connectome        => connectomes.find(_.name == name)
+      case LayerAttachmentType.cumsum            => cumsum
+      case LayerAttachmentType.segmentStatistics => segmentStatistics
     }
 
   def mapped(attachmentMapping: LayerAttachment => LayerAttachment): DataLayerAttachments =
@@ -79,7 +88,8 @@ case class DataLayerAttachments(
       agglomerates = agglomerates.map(attachmentMapping(_)),
       segmentIndex = segmentIndex.map(attachmentMapping(_)),
       connectomes = connectomes.map(attachmentMapping(_)),
-      cumsum = cumsum.map(attachmentMapping(_))
+      cumsum = cumsum.map(attachmentMapping(_)),
+      segmentStatistics = segmentStatistics.map(attachmentMapping(_))
     )
 
   def mappedWithType(
@@ -90,7 +100,8 @@ case class DataLayerAttachments(
       agglomerates = agglomerates.map(attachmentMapping(_, LayerAttachmentType.agglomerate)),
       segmentIndex = segmentIndex.map(attachmentMapping(_, LayerAttachmentType.segmentIndex)),
       connectomes = connectomes.map(attachmentMapping(_, LayerAttachmentType.connectome)),
-      cumsum = cumsum.map(attachmentMapping(_, LayerAttachmentType.cumsum))
+      cumsum = cumsum.map(attachmentMapping(_, LayerAttachmentType.cumsum)),
+      segmentStatistics = segmentStatistics.map(attachmentMapping(_, LayerAttachmentType.segmentStatistics))
     )
 
   def renameByMap(renamingMap: Map[(LayerAttachmentType, String), String]): DataLayerAttachments =
@@ -102,7 +113,10 @@ case class DataLayerAttachments(
         segmentIndex.map(a => a.copy(name = renamingMap.getOrElse((LayerAttachmentType.segmentIndex, a.name), a.name))),
       connectomes =
         connectomes.map(a => a.copy(name = renamingMap.getOrElse((LayerAttachmentType.connectome, a.name), a.name))),
-      cumsum = cumsum.map(a => a.copy(name = renamingMap.getOrElse((LayerAttachmentType.cumsum, a.name), a.name)))
+      cumsum = cumsum.map(a => a.copy(name = renamingMap.getOrElse((LayerAttachmentType.cumsum, a.name), a.name))),
+      segmentStatistics = segmentStatistics.map(a =>
+        a.copy(name = renamingMap.getOrElse((LayerAttachmentType.segmentStatistics, a.name), a.name))
+      )
     )
 
   def resolvedIn(dataSourcePath: UPath): DataLayerAttachments =
@@ -137,19 +151,20 @@ object LayerAttachmentDataformat extends ExtendedEnumeration {
 
 object LayerAttachmentType extends ExtendedEnumeration {
   type LayerAttachmentType = Value
-  val mesh, agglomerate, segmentIndex, connectome, cumsum = Value
+  val mesh, agglomerate, segmentIndex, connectome, cumsum, segmentStatistics = Value
 
   def defaultDirectoryNameFor(attachmentType: LayerAttachmentType): String = attachmentType match {
-    case LayerAttachmentType.mesh         => MeshFileInfo.directoryName
-    case LayerAttachmentType.agglomerate  => AgglomerateFileInfo.directoryName
-    case LayerAttachmentType.segmentIndex => SegmentIndexFileInfo.directoryName
-    case LayerAttachmentType.connectome   => ConnectomeFileInfo.directoryName
-    case LayerAttachmentType.cumsum       => CumsumFileInfo.directoryName
+    case LayerAttachmentType.mesh              => MeshFileInfo.directoryName
+    case LayerAttachmentType.agglomerate       => AgglomerateFileInfo.directoryName
+    case LayerAttachmentType.segmentIndex      => SegmentIndexFileInfo.directoryName
+    case LayerAttachmentType.connectome        => ConnectomeFileInfo.directoryName
+    case LayerAttachmentType.cumsum            => CumsumFileInfo.directoryName
+    case LayerAttachmentType.segmentStatistics => SegmentStatisticsFileInfo.directoryName
   }
 
   def isSingletonAttachment(attachmentType: LayerAttachmentType): Boolean = attachmentType match {
-    case LayerAttachmentType.segmentIndex | LayerAttachmentType.cumsum => true
-    case _                                                             => false
+    case LayerAttachmentType.segmentIndex | LayerAttachmentType.cumsum | LayerAttachmentType.segmentStatistics => true
+    case _                                                                                                     => false
   }
 
 }
@@ -175,6 +190,16 @@ case class LayerAttachment(
     this.copy(path = this.path.relativizedIn(dataSourcePath))
 
   def withoutCredential: LayerAttachment = this.copy(credentialId = None)
+
+  // Reads are batched (parallel) for remote storage, where per-read latency dominates, and serial for local
+  // storage, where parallel reads would only add contention without saving wall-clock time.
+  def combinedOverSegmentIdsWithAutoBatching[B](segmentIds: Seq[Long])(
+      f: Long => Fox[B]
+  )(implicit ec: ExecutionContext): Fox[Seq[B]] =
+    if (path.isRemote)
+      Fox.batchCombined(segmentIds, parallelity = 32)(f)
+    else
+      Fox.serialCombined(segmentIds)(f)
 }
 
 object LayerAttachment {
@@ -246,4 +271,8 @@ object CumsumFileInfo {
 
   def scanForCumsumFile(layerDirectory: Path): Option[LayerAttachment] =
     LayerAttachment.scanForFiles(layerDirectory, directoryName, scanDataFormat).headOption
+}
+
+object SegmentStatisticsFileInfo {
+  val directoryName = "segmentStatistics"
 }

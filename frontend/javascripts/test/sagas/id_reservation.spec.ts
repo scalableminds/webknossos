@@ -4,8 +4,10 @@ import {
   setupWebknossosForTestingWithRestrictions,
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
+import { getIdReservationsForBoundingBoxes } from "viewer/model/accessors/tracing_accessor";
 import { getIdReservationsForSegmentationLayer } from "viewer/model/accessors/volumetracing_accessor";
 import { dispatchGetNewIdAsync, setIdReservationsAction } from "viewer/model/actions/actions";
+import { setUserBoundingBoxesAction } from "viewer/model/actions/annotation_actions";
 import { setSegmentGroupsAction } from "viewer/model/actions/volumetracing_actions";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { Store } from "viewer/singletons";
@@ -136,75 +138,75 @@ describe("ID reservation saga (concurrent collaboration mode)", () => {
     await task.toPromise();
   });
 
-  it.for([
-    [0],
-    [20],
-  ])("should replenish the buffer after an ID is returned when the remaining count falls below the threshold (delay=%i)", async ([
-    // We use an artificial delay to also test whether dispatchGetNewIdAsync correctly
-    // awaits ongoing replenishment requests
-    delay,
-  ], context: TestContext) => {
-    const { mocks } = context as WebknossosTestContext;
-    const { tracingId } = Store.getState().annotation.volumes[0];
+  it.for([[0], [20]])(
+    "should replenish the buffer after an ID is returned when the remaining count falls below the threshold (delay=%i)",
+    async ([
+      // We use an artificial delay to also test whether dispatchGetNewIdAsync correctly
+      // awaits ongoing replenishment requests
+      delay,
+    ], context: TestContext) => {
+      const { mocks } = context as WebknossosTestContext;
+      const { tracingId } = Store.getState().annotation.volumes[0];
 
-    // 2 usable reservations: 2 < IDEAL_ID_BUFFER_SIZE / 2 (2.5), so replenishment fires after the
-    // first use. But replenishment is async — it runs concurrently with the next request.
-    Store.dispatch(
-      setIdReservationsAction(tracingId, "SegmentGroup", [
-        { id: 199, used: true },
-        { id: 200, used: false },
-        { id: 201, used: false },
-      ]),
-    );
-
-    mockReserveIdsEndpoint(mocks, [300, 301, 302, 303], delay);
-
-    const task = startSaga(function* task() {
-      const id1 = yield call(() =>
-        dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
+      // 2 usable reservations: 2 < IDEAL_ID_BUFFER_SIZE / 2 (2.5), so replenishment fires after the
+      // first use. But replenishment is async — it runs concurrently with the next request.
+      Store.dispatch(
+        setIdReservationsAction(tracingId, "SegmentGroup", [
+          { id: 199, used: true },
+          { id: 200, used: false },
+          { id: 201, used: false },
+        ]),
       );
-      expect(id1).toBe(200);
 
-      const id2 = yield call(() =>
-        dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
-      );
-      expect(id2).toBe(201);
+      mockReserveIdsEndpoint(mocks, [300, 301, 302, 303], delay);
 
-      // Buffer is now empty; this request must wait for the replenishment saga to complete.
-      // After it returns, we are guaranteed that the replenishment has finished.
-      const id3 = yield call(() =>
-        dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
-      );
-      expect(id3).toBe(300);
-
-      const reservations = getIdReservationsForSegmentationLayer(
-        Store.getState(),
-        tracingId,
-      ).SegmentGroup;
-      expect(reservations).toEqual([
-        { id: 201, used: true },
-        { id: 300, used: true },
-        { id: 301, used: false },
-        { id: 302, used: false },
-        { id: 303, used: false },
-      ]);
-
-      const reserveIdsCalls = vi
-        .mocked(mocks.Request.sendJSONReceiveJSON)
-        .mock.calls.filter(([url]) => url.includes("/reserveIds"));
-      expect(reserveIdsCalls).toHaveLength(1);
-
-      const allReleasedIds = vi
-        .mocked(mocks.Request.sendJSONReceiveJSON)
-        .mock.calls.filter(([url]) => url.includes("/reserveIds"))
-        .flatMap(
-          ([, options]) => (options.data as Record<string, unknown>).idsToRelease as number[],
+      const task = startSaga(function* task() {
+        const id1 = yield call(() =>
+          dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
         );
-      expect(allReleasedIds).toEqual([199, 200]);
-    });
+        expect(id1).toBe(200);
 
-    await task.toPromise();
-  });
+        const id2 = yield call(() =>
+          dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
+        );
+        expect(id2).toBe(201);
+
+        // Buffer is now empty; this request must wait for the replenishment saga to complete.
+        // After it returns, we are guaranteed that the replenishment has finished.
+        const id3 = yield call(() =>
+          dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
+        );
+        expect(id3).toBe(300);
+
+        const reservations = getIdReservationsForSegmentationLayer(
+          Store.getState(),
+          tracingId,
+        ).SegmentGroup;
+        expect(reservations).toEqual([
+          { id: 201, used: true },
+          { id: 300, used: true },
+          { id: 301, used: false },
+          { id: 302, used: false },
+          { id: 303, used: false },
+        ]);
+
+        const reserveIdsCalls = vi
+          .mocked(mocks.Request.sendJSONReceiveJSON)
+          .mock.calls.filter(([url]) => url.includes("/reserveIds"));
+        expect(reserveIdsCalls).toHaveLength(1);
+
+        const allReleasedIds = vi
+          .mocked(mocks.Request.sendJSONReceiveJSON)
+          .mock.calls.filter(([url]) => url.includes("/reserveIds"))
+          .flatMap(
+            ([, options]) => (options.data as Record<string, unknown>).idsToRelease as number[],
+          );
+        expect(allReleasedIds).toEqual([199, 200]);
+      });
+
+      await task.toPromise();
+    },
+  );
 
   it("should include pre-existing used IDs in idsToRelease", async (context: WebknossosTestContext) => {
     const { mocks } = context;
@@ -374,6 +376,67 @@ describe("ID reservation saga (concurrent collaboration mode)", () => {
 
     await task.toPromise();
   });
+
+  it("should fetch new IDs for the BoundingBox domain, using the skeleton tracing id", async (context: WebknossosTestContext) => {
+    const { mocks } = context;
+    // Bounding boxes are mirrored across all tracings of an annotation, so the skeleton
+    // tracing id should work just as well as a volume tracing id for this domain.
+    const { tracingId } = Store.getState().annotation.skeleton!;
+
+    mockReserveIdsEndpoint(mocks, [500, 501, 502, 503, 504]);
+
+    const task = startSaga(function* task() {
+      const id = yield call(() => dispatchGetNewIdAsync(Store.dispatch, tracingId, "BoundingBox"));
+
+      expect(id).toBe(500);
+
+      const reservations = getIdReservationsForBoundingBoxes(Store.getState());
+      expect(reservations).toEqual([
+        { id: 500, used: true },
+        { id: 501, used: false },
+        { id: 502, used: false },
+        { id: 503, used: false },
+        { id: 504, used: false },
+      ]);
+    });
+
+    await task.toPromise();
+  });
+
+  it("should skip 'unused' BoundingBox reservation IDs for which bounding boxes already exist", async () => {
+    const { tracingId } = Store.getState().annotation.skeleton!;
+
+    Store.dispatch(
+      setUserBoundingBoxesAction([
+        {
+          id: 5,
+          name: "Existing bbox",
+          color: [1, 1, 1],
+          isVisible: true,
+          boundingBox: { min: [0, 0, 0], max: [1, 1, 1] },
+        },
+      ]),
+    );
+
+    Store.dispatch(
+      setIdReservationsAction(tracingId, "BoundingBox", [
+        { id: 5, used: false },
+        { id: 15, used: false },
+        { id: 20, used: false },
+        { id: 25, used: false },
+        { id: 30, used: false },
+      ]),
+    );
+
+    const task = startSaga(function* task() {
+      const id = yield call(() => dispatchGetNewIdAsync(Store.dispatch, tracingId, "BoundingBox"));
+
+      // ID 5 is filtered because a bounding box with that id already exists.
+      expect(id).toBe(15);
+    });
+
+    await task.toPromise();
+  });
 });
 
 describe("ID reservation saga (exclusive collaboration mode)", () => {
@@ -447,6 +510,32 @@ describe("ID reservation saga (exclusive collaboration mode)", () => {
         dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
       );
       expect(id14).toBe(14);
+    });
+
+    await task.toPromise();
+  });
+
+  it("should assign new BoundingBox IDs, using the skeleton tracing id", async () => {
+    const { tracingId } = Store.getState().annotation.skeleton!;
+
+    const task = startSaga(function* task() {
+      Store.dispatch(
+        setUserBoundingBoxesAction([
+          {
+            id: 5,
+            name: "Existing bbox",
+            color: [1, 1, 1],
+            isVisible: true,
+            boundingBox: { min: [0, 0, 0], max: [1, 1, 1] },
+          },
+        ]),
+      );
+
+      const id6 = yield call(() => dispatchGetNewIdAsync(Store.dispatch, tracingId, "BoundingBox"));
+      expect(id6).toBe(6);
+
+      const id7 = yield call(() => dispatchGetNewIdAsync(Store.dispatch, tracingId, "BoundingBox"));
+      expect(id7).toBe(7);
     });
 
     await task.toPromise();

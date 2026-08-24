@@ -1,9 +1,9 @@
 package com.scalableminds.webknossos.datastore.services.mapping
 
 import ch.systemsx.cisd.hdf5.{HDF5DataSet, HDF5FactoryProvider, IHDF5Reader}
+import com.scalableminds.util.box.{Box, Failure, Full}
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Failure, Full}
+import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{
@@ -18,7 +18,7 @@ import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, SkeletonTra
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.services.DataConverter
-import com.scalableminds.webknossos.datastore.storage._
+import com.scalableminds.webknossos.datastore.storage.*
 
 import java.nio.file.Files
 import java.nio.{ByteBuffer, ByteOrder, LongBuffer}
@@ -275,7 +275,8 @@ class Hdf5AgglomerateService @Inject() (config: DataStoreConfig) extends DataCon
       val middle = rangeStart + (rangeEnd - rangeStart) / 2
       val segmentIdAtMiddle: Long = reader.uint64().readArrayBlockWithOffset(keyAgglomerateToSegments, 1, middle)(0)
       if (segmentIdAtMiddle == segmentId) Full(middle)
-      else if (segmentIdAtMiddle < segmentId) binarySearchForSegment(middle + 1L, rangeEnd, segmentId, reader)
+      else if (java.lang.Long.compareUnsigned(segmentIdAtMiddle, segmentId) < 0)
+        binarySearchForSegment(middle + 1L, rangeEnd, segmentId, reader)
       else binarySearchForSegment(rangeStart, middle - 1L, segmentId, reader)
     }
 

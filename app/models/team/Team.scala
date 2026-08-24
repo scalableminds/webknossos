@@ -13,7 +13,7 @@ import models.organization.{Organization, OrganizationDAO}
 import models.project.ProjectDAO
 import models.task.TaskTypeDAO
 import models.user.User
-import play.api.libs.json._
+import play.api.libs.json.*
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import com.scalableminds.util.objectid.ObjectId
 
@@ -209,7 +209,7 @@ class TeamDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     val insertQueries = allowedTeams.map(teamId => q"""INSERT INTO webknossos.dataset_allowedTeams(_dataset, _team)
              VALUES($datasetId, $teamId)""".asUpdate)
 
-    replaceSequentiallyAsTransaction(clearQuery, insertQueries)
+    runAsSerializableTransaction(clearQuery +: insertQueries)
   }
 
   def updateAllowedTeamsForFolder(folderId: ObjectId, allowedTeams: List[ObjectId]): Fox[Unit] = {
@@ -217,16 +217,21 @@ class TeamDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     val insertQueries = allowedTeams.map(teamId => q"""INSERT INTO webknossos.folder_allowedTeams(_folder, _team)
              VALUES($folderId, $teamId)""".asUpdate)
 
-    replaceSequentiallyAsTransaction(clearQuery, insertQueries)
+    runAsSerializableTransaction(clearQuery +: insertQueries)
   }
 
-  def removeTeamFromAllDatasetsAndFolders(teamId: ObjectId): Fox[Unit] =
-    for {
-      _ <- run(q"DELETE FROM webknossos.dataset_allowedTeams WHERE _team = $teamId".asUpdate)
-      _ <- run(q"DELETE FROM webknossos.folder_allowedTeams WHERE _team = $teamId".asUpdate)
-    } yield ()
-
   override def deleteOne(teamId: ObjectId)(using ctx: DBAccessContext): Fox[Unit] =
-    deleteOneWithNameSuffix(teamId)
+    for {
+      _ <- assertDeleteAccess(teamId)
+      queries = List(
+        deleteOneWithNameSuffixQuery(teamId),
+        q"DELETE FROM webknossos.user_team_roles WHERE _team = $teamId".asUpdate,
+        q"DELETE FROM webknossos.invite_team_roles WHERE _team = $teamId".asUpdate,
+        q"DELETE FROM webknossos.annotation_sharedTeams WHERE _team = $teamId".asUpdate,
+        q"DELETE FROM webknossos.dataset_allowedTeams WHERE _team = $teamId".asUpdate,
+        q"DELETE FROM webknossos.folder_allowedTeams WHERE _team = $teamId".asUpdate
+      )
+      _ <- runAsSerializableTransaction(queries)
+    } yield ()
 
 }

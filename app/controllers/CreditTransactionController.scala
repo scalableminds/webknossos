@@ -17,7 +17,7 @@ import models.organization.{
   OrganizationDAO
 }
 import models.user.UserService
-import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.box.Box.tryo
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 import play.silhouette.api.Silhouette

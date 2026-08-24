@@ -2,11 +2,14 @@ package controllers
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.box.Empty
 import com.scalableminds.util.collections.SequenceUtils
+import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, TextUtils}
 import com.scalableminds.util.tools.Fox.toFox
+import com.scalableminds.util.tools.StringNumberConversions.toDoubleOpt
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
@@ -17,7 +20,7 @@ import com.scalableminds.webknossos.datastore.models.annotation.{
   AnnotationLayerType,
   FetchedAnnotationLayer
 }
-import com.scalableminds.webknossos.datastore.models.datasource._
+import com.scalableminds.webknossos.datastore.models.datasource.*
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingId, TracingType}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
@@ -30,18 +33,16 @@ import com.typesafe.scalalogging.LazyLogging
 import files.WkTempFileService
 
 import javax.inject.Inject
-import com.scalableminds.util.tools.Empty
 import models.analytics.{AnalyticsService, DownloadAnnotationEvent, UploadAnnotationEvent}
-import models.annotation.AnnotationState._
-import models.annotation._
+import models.annotation.AnnotationState.*
+import models.annotation.*
 import models.annotation.nml.NmlResults.NmlParseResult
 import models.annotation.nml.{NmlResults, NmlWriter}
-import models.dataset._
+import models.dataset.*
 import models.organization.OrganizationDAO
 import models.project.ProjectDAO
-import models.task._
-import models.user._
-import org.apache.pekko.actor.ActorSystem
+import models.task.*
+import models.user.*
 import org.apache.pekko.stream.Materializer
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.Json
@@ -82,7 +83,6 @@ class AnnotationIOController @Inject() (
     with ProtoGeometryConversions
     with AnnotationLayerPrecedence
     with LazyLogging {
-  implicit val actorSystem: ActorSystem = ActorSystem()
 
   private val volumeDataZipFormatForCompoundAnnotations = VolumeDataZipFormat.wkw
 
@@ -97,6 +97,12 @@ class AnnotationIOController @Inject() (
         - If "false": in merged annotation, rename trees with the respective file name as prefix
       - As optional form parameter: description [String]
         - If set, this will be the description of the resulting annotation, overwriting any description specified in NML files.
+      - As optional form parameter: fallbackEditPosition [String], e.g. "1,2,3"
+        - If set, this will be used as the editPosition for annotations that do not specify their own.
+      - As optional form parameter: fallbackEditRotation [String], e.g. "1,2,3"
+        - If set, this will be used as the editRotation for annotations that do not specify their own.
+      - As optional form parameter: fallbackZoomLevel [String], e.g. "1.5"
+        - If set, this will be used as the zoomLevel for annotations that do not specify their own.
      Returns:
         JSON object containing annotation information about the newly created annotation, including the assigned id
    */
@@ -108,12 +114,28 @@ class AnnotationIOController @Inject() (
         val overwritingDatasetId: Option[String] =
           request.body.dataParts.get("datasetId").flatMap(_.headOption)
         val overwritingDescription: Option[String] = request.body.dataParts.get("description").flatMap(_.headOption)
+        val fallbackEditPositionRaw: Option[String] =
+          request.body.dataParts.get("fallbackEditPosition").flatMap(_.headOption)
+        val fallbackEditRotationRaw: Option[String] =
+          request.body.dataParts.get("fallbackEditRotation").flatMap(_.headOption)
+        val fallbackZoomLevelRaw: Option[String] =
+          request.body.dataParts.get("fallbackZoomLevel").flatMap(_.headOption)
         val userOrganizationId = request.identity._organization
         val attachedFiles = request.body.files.map(f => (f.ref.path.toFile, f.filename))
         for {
+          fallbackEditPosition <- Fox.runOptional(fallbackEditPositionRaw)(p => Vec3Int.fromUriLiteral(p).toFox)
+          fallbackEditRotation <- Fox.runOptional(fallbackEditRotationRaw)(r => Vec3Double.fromUriLiteral(r).toFox)
+          fallbackZoomLevel <- Fox.runOptional(fallbackZoomLevelRaw)(z => z.toDoubleOpt.toFox)
           parsedFiles <- annotationUploadService.extractFromFiles(
             attachedFiles,
-            SharedParsingParameters(useZipName = true, overwritingDatasetId, userOrganizationId)
+            SharedParsingParameters(
+              useZipName = true,
+              overwritingDatasetId,
+              userOrganizationId,
+              fallbackEditPosition = fallbackEditPosition,
+              fallbackEditRotation = fallbackEditRotation,
+              fallbackZoomLevel = fallbackZoomLevel
+            )
           )
           parsedFilesWrapped = annotationUploadService.wrapOrPrefixGroups(
             parsedFiles.parseResults,
@@ -509,8 +531,7 @@ class AnnotationIOController @Inject() (
         )
         nmlTemporaryFile = tempFileService.create()
         temporaryFileStream = new BufferedOutputStream(new FileOutputStream(new File(nmlTemporaryFile.toString)))
-        _ <- nmlStream.writeTo(temporaryFileStream)
-        _ = temporaryFileStream.close()
+        _ <- Fox.withCleanup(nmlStream.writeTo(temporaryFileStream))(temporaryFileStream.close())
       } yield nmlTemporaryFile
 
     def volumeOrHybridToTemporaryFile(
@@ -564,20 +585,21 @@ class AnnotationIOController @Inject() (
         )
         temporaryFile = tempFileService.create()
         zipper = ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(new File(temporaryFile.toString))))
-        _ <- zipper.addFileFromNamedStream(nmlStream, suffix = ".nml") ?~> Msg.Annotation.Download.zipNmlFailed
-        _ = fetchedVolumeLayers.zipWithIndex.map { case (volumeLayer, index) =>
-          volumeLayer.volumeDataOpt.foreach { volumeData =>
-            val dataZipName = volumeLayer.volumeDataZipName(index, fetchedVolumeLayers.length == 1)
-            zipper.stream.setLevel(Deflater.BEST_SPEED)
-            zipper.addFileFromBytes(dataZipName, volumeData)
+        _ <- Fox.withCleanup(for {
+          _ <- zipper.addFileFromNamedStream(nmlStream, suffix = ".nml") ?~> Msg.Annotation.Download.zipNmlFailed
+          _ = fetchedVolumeLayers.zipWithIndex.foreach { case (volumeLayer, index) =>
+            volumeLayer.volumeDataOpt.foreach { volumeData =>
+              val dataZipName = volumeLayer.volumeDataZipName(index, fetchedVolumeLayers.length == 1)
+              zipper.stream.setLevel(Deflater.BEST_SPEED)
+              zipper.addFileFromBytes(dataZipName, volumeData)
+            }
+            volumeLayer.editedMappingEdgesOpt.foreach { editedEdgesData =>
+              val editedEdgesZipName = volumeLayer.editedMappingEdgesZipName(index, fetchedVolumeLayers.length == 1)
+              zipper.stream.setLevel(Deflater.BEST_SPEED)
+              zipper.addFileFromBytes(editedEdgesZipName, editedEdgesData)
+            }
           }
-          volumeLayer.editedMappingEdgesOpt.foreach { editedEdgesData =>
-            val editedEdgesZipName = volumeLayer.editedMappingEdgesZipName(index, fetchedVolumeLayers.length == 1)
-            zipper.stream.setLevel(Deflater.BEST_SPEED)
-            zipper.addFileFromBytes(editedEdgesZipName, editedEdgesData)
-          }
-        }
-        _ = zipper.close()
+        } yield ())(zipper.close())
       } yield temporaryFile
 
     def annotationToTemporaryFile(

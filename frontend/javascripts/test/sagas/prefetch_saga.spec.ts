@@ -2,7 +2,7 @@ import { call } from "redux-saga/effects";
 import constants from "viewer/constants";
 import Model from "viewer/model";
 import {
-  prefetchForArbitraryMode,
+  prefetchForFlightMode,
   prefetchForPlaneMode,
   triggerDataPrefetching,
 } from "viewer/model/sagas/prefetch_saga";
@@ -30,14 +30,14 @@ describe("Prefetch Saga", () => {
     const saga = triggerDataPrefetching(previousProperties);
     saga.next(); // select viewMode
 
-    saga.next(constants.MODE_ARBITRARY); // Model.getAllLayers
+    saga.next(constants.MODE_FLIGHT); // Model.getAllLayers
 
     saga.next(allLayers); // shouldPrefetchForDataLayer
 
     expectValueDeepEqual(
       expect,
       saga.next(true),
-      call(prefetchForArbitraryMode as any, allLayers[0], previousProperties),
+      call(prefetchForFlightMode as any, allLayers[0], previousProperties),
     );
     // Saga should not be over as there are multiple layers
     expect(saga.next().done).toBe(false);

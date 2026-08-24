@@ -17,7 +17,6 @@ import type {
 } from "viewer/model/types/tree_types";
 import type {
   BoundingBoxObject,
-  NumberLike,
   SegmentGroup,
   UserBoundingBox,
   UserBoundingBoxWithOptIsVisible,
@@ -30,6 +29,15 @@ export type NodeWithTreeId = {
 
 // This type is meant to contain only the properties that have changed
 type PartialBoundingBoxWithoutVisibility = Partial<Omit<UserBoundingBox, "isVisible">>;
+
+// Marks a single id field as "bigint now, but older persisted update actions (created before
+// this field was migrated to bigint) may still have a plain number here". Widens the field's
+// type for whoever reads it back (e.g. from the update-action log) while the action creator's
+// own parameter stays bigint-only, so newly-constructed actions may only contain big int.
+// It's purelya type-level marker (the value is passed through unchanged at runtime).
+function asBigIntOrNumber<T extends bigint>(value: T): T | number {
+  return value;
+}
 
 export type UpdateTreeUpdateAction = ReturnType<typeof updateTree> | ReturnType<typeof createTree>;
 export type DeleteTreeUpdateAction = ReturnType<typeof deleteTree>;
@@ -44,7 +52,6 @@ export type DeleteNodeUpdateAction = ReturnType<typeof deleteNode>;
 export type CreateEdgeUpdateAction = ReturnType<typeof createEdge>;
 export type DeleteEdgeUpdateAction = ReturnType<typeof deleteEdge>;
 export type UpdateActiveNodeUpdateAction = ReturnType<typeof updateActiveNode>;
-export type UpdateActiveTreeUpdateAction = ReturnType<typeof updateActiveTree>;
 type LEGACY_UpdateSkeletonTracingUpdateAction = ReturnType<typeof LEGACY_updateSkeletonTracing>;
 type LEGACY_UpdateVolumeTracingUpdateAction = ReturnType<typeof LEGACY_updateVolumeTracingAction>;
 export type UpdateActiveSegmentIdUpdateAction = ReturnType<typeof updateActiveSegmentId>;
@@ -144,7 +151,6 @@ type _ApplicableSkeletonUpdateAction =
   | UpdateUserBoundingBoxInSkeletonTracingAction
   | UpdateUserBoundingBoxVisibilityInSkeletonTracingAction
   | DeleteUserBoundingBoxInSkeletonTracingAction
-  | UpdateActiveTreeUpdateAction
   // User specific actions
   | UpdateActiveNodeUpdateAction
   | UpdateTreeVisibilityUpdateAction
@@ -191,7 +197,6 @@ const ApplicableSkeletonUpdateActionNamesHelper: Record<
   updateActiveNode: true,
   updateTreeVisibility: true,
   updateTreeGroupVisibility: true,
-  updateActiveTree: true,
 };
 export const ApplicableSkeletonUpdateActionNamesHelperNamesList = Object.keys(
   ApplicableSkeletonUpdateActionNamesHelper,
@@ -237,7 +242,6 @@ export type UpdateActionWithoutIsolationRequirement =
   | LEGACY_UpdateUserBoundingBoxesInSkeletonTracingUpdateAction
   | LEGACY_UpdateUserBoundingBoxesInVolumeTracingUpdateAction
   | UpdateActiveNodeUpdateAction
-  | UpdateActiveTreeUpdateAction
   | UpdateActiveSegmentIdUpdateAction
   | UpdateLargestSegmentIdVolumeAction
   | UpdateVolumeBucketDataHasChangedUpdateAction
@@ -289,7 +293,9 @@ type CreateTracingUpdateAction = {
 type ImportVolumeTracingUpdateAction = {
   name: "importVolumeTracing";
   value: {
-    largestSegmentId: number;
+    // bigint | number: this type is only ever read, never constructed by frontend code, so it
+    // must reflect that older persisted actions may still have a plain number here.
+    largestSegmentId: bigint | number;
   };
 };
 // This update action is only created by the backend
@@ -564,47 +570,6 @@ export function updateActiveNode(tracing: {
   } as const;
 }
 
-// This action should never be sent to the backend: (tracking issue #9044)
-// - The backend does not recognize this action type.
-// - The annotation proto in the backend does not have the `activeTreeId` property for a `skeletonTracing`.
-//
-// Purpose:
-// This action exists only to keep track of the `activeTreeId` in the frontend during rebasing.
-//
-// Background:
-// There is a mismatch between frontend redux store actions and backend update actions.
-// The store action `createTree` sets both `activeNodeId` and `activeTreeId`,
-// but the corresponding update action `createTree` from the backend does not.
-// Instead additional update actions are needed to reflect the changes to `activeNodeId` and `activeTreeId`.
-//
-// Why we can’t simply fix this:
-// If we modified the backend `createTree` update action to also apply `activeNodeId` and `activeTreeId`,
-// it would break other logic — for example, the `deleteEdge` store action maps to multiple update actions:
-//   1. `createTree`
-//   2. `moveTreeComponents`
-//   3. `deleteEdge`
-// In that sequence, the `createTree` update action must **not** set `activeNodeId` or `activeTreeId`
-// if an edge was deleted where the active node was not involved. e.g. via frontend api calls or so.
-//
-// Therefore, this special frontend-only update action is used to track whether the `activeTreeId` should change.
-// Thus, the redux action `createTree` maps to the update actions `createTree`, `updateActiveNode` and `updateActiveTree`.
-// (Note: `activeNodeId` changes are already handled by the `updateActiveNode` action, which *is* supported by the backend.)
-export function updateActiveTree(tracing: {
-  tracingId: string;
-  activeTreeId: number | null | undefined;
-  activeNodeId: number | null | undefined;
-}) {
-  return {
-    name: "updateActiveTree",
-    value: {
-      actionTracingId: tracing.tracingId,
-      activeTree: tracing.activeTreeId,
-      activeNode: tracing.activeNodeId,
-      isFrontendOnly: true,
-    },
-  } as const;
-}
-
 export function moveTreeComponent(
   sourceTreeId: number,
   targetTreeId: number,
@@ -636,27 +601,34 @@ function LEGACY_updateVolumeTracingAction(
     name: "updateVolumeTracing",
     value: {
       actionTracingId: tracing.tracingId,
-      activeSegmentId: tracing.activeCellId,
+      activeSegmentId: asBigIntOrNumber(tracing.activeCellId),
       editPosition: position,
       editPositionAdditionalCoordinates,
       editRotation: rotation,
-      largestSegmentId: tracing.largestSegmentId,
+      largestSegmentId:
+        tracing.largestSegmentId != null ? asBigIntOrNumber(tracing.largestSegmentId) : null,
       hideUnregisteredSegments,
       zoomLevel,
     },
   } as const;
 }
 
-export function updateLargestSegmentId(largestSegmentId: number | null, actionTracingId: string) {
-  return { name: "updateLargestSegmentId", value: { largestSegmentId, actionTracingId } } as const;
+export function updateLargestSegmentId(largestSegmentId: bigint | null, actionTracingId: string) {
+  return {
+    name: "updateLargestSegmentId",
+    value: {
+      largestSegmentId: largestSegmentId != null ? asBigIntOrNumber(largestSegmentId) : null,
+      actionTracingId,
+    },
+  } as const;
 }
 
-export function updateActiveSegmentId(activeSegmentId: number, actionTracingId: string) {
+export function updateActiveSegmentId(activeSegmentId: bigint, actionTracingId: string) {
   return {
     name: "updateActiveSegmentId",
     value: {
       actionTracingId,
-      activeSegmentId,
+      activeSegmentId: asBigIntOrNumber(activeSegmentId),
     },
   } as const;
 }
@@ -828,7 +800,7 @@ export function updateUserBoundingBoxVisibilityInSkeletonTracing(
 }
 
 export function createSegmentVolumeAction(
-  id: number,
+  id: bigint,
   anchorPosition: Vector3 | null | undefined,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   name: string | null | undefined,
@@ -842,7 +814,7 @@ export function createSegmentVolumeAction(
     name: "createSegment",
     value: {
       actionTracingId,
-      id,
+      id: asBigIntOrNumber(id),
       anchorPosition,
       additionalCoordinates,
       name,
@@ -855,7 +827,7 @@ export function createSegmentVolumeAction(
 }
 
 export function LEGACY_updateSegmentVolumeAction(
-  id: number,
+  id: bigint,
   anchorPosition: Vector3 | null | undefined,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   name: string | null | undefined,
@@ -869,7 +841,7 @@ export function LEGACY_updateSegmentVolumeAction(
     name: "updateSegment",
     value: {
       actionTracingId,
-      id,
+      id: asBigIntOrNumber(id),
       anchorPosition,
       additionalCoordinates,
       name,
@@ -883,7 +855,7 @@ export function LEGACY_updateSegmentVolumeAction(
 
 export function updateSegmentPartialVolumeAction(
   shape: {
-    id: number;
+    id: bigint;
     anchorPosition?: Vector3 | null | undefined;
     additionalCoordinates?: AdditionalCoordinate[] | undefined | null;
     name?: string | null | undefined;
@@ -898,12 +870,13 @@ export function updateSegmentPartialVolumeAction(
     value: {
       actionTracingId,
       ...shape,
+      id: asBigIntOrNumber(shape.id),
     },
   } as const;
 }
 
 export function updateMetadataOfSegmentUpdateAction(
-  id: number,
+  id: bigint,
   upsertEntriesByKey: Array<MetadataEntryProto>,
   removeEntriesByKey: Array<string>,
   actionTracingId: string,
@@ -911,7 +884,7 @@ export function updateMetadataOfSegmentUpdateAction(
   return {
     name: "updateMetadataOfSegment",
     value: {
-      id,
+      id: asBigIntOrNumber(id),
       upsertEntriesByKey: enforceValidMetadata(upsertEntriesByKey),
       removeEntriesByKey,
       actionTracingId,
@@ -953,14 +926,14 @@ export function deleteSegmentGroupUpdateAction(groupId: number, actionTracingId:
 }
 
 export function updateSegmentVisibilityVolumeAction(
-  id: number,
+  id: bigint,
   isVisible: boolean,
   actionTracingId: string,
 ) {
   return {
     name: "updateSegmentVisibility",
     value: {
-      id,
+      id: asBigIntOrNumber(id),
       actionTracingId,
       isVisible,
     },
@@ -968,39 +941,39 @@ export function updateSegmentVisibilityVolumeAction(
 }
 
 export function mergeSegmentItemsVolumeAction(
-  agglomerateId1: number,
-  agglomerateId2: number,
-  segmentId1: number,
-  segmentId2: number,
+  agglomerateId1: bigint,
+  agglomerateId2: bigint,
+  segmentId1: bigint,
+  segmentId2: bigint,
   actionTracingId: string,
 ) {
   return {
     name: "mergeSegmentItems",
     value: {
       actionTracingId,
-      agglomerateId1, // aka "source"
-      agglomerateId2, // aka "target"; will be "swallowed" by source
-      segmentId1, // the unmapped ID (supervoxel) that belongs to agglomerateId1
-      segmentId2, // the unmapped ID (supervoxel) that belongs to agglomerateId2
+      agglomerateId1: asBigIntOrNumber(agglomerateId1), // aka "source"
+      agglomerateId2: asBigIntOrNumber(agglomerateId2), // aka "target"; will be "swallowed" by source
+      segmentId1: asBigIntOrNumber(segmentId1), // the unmapped ID (supervoxel) that belongs to agglomerateId1
+      segmentId2: asBigIntOrNumber(segmentId2), // the unmapped ID (supervoxel) that belongs to agglomerateId2
     },
   } as const;
 }
 
-export function deleteSegmentVolumeAction(id: number, actionTracingId: string) {
+export function deleteSegmentVolumeAction(id: bigint, actionTracingId: string) {
   return {
     name: "deleteSegment",
     value: {
       actionTracingId,
-      id,
+      id: asBigIntOrNumber(id),
     },
   } as const;
 }
-export function deleteSegmentDataVolumeAction(id: number, actionTracingId: string) {
+export function deleteSegmentDataVolumeAction(id: bigint, actionTracingId: string) {
   return {
     name: "deleteSegmentData",
     value: {
       actionTracingId,
-      id,
+      id: asBigIntOrNumber(id),
     },
   } as const;
 }
@@ -1157,9 +1130,9 @@ export function updateMappingName(
   } as const;
 }
 export function splitAgglomerate(
-  segmentId1: NumberLike, // will keep its agglomerate id
-  segmentId2: NumberLike, // will get a new agglomerate id
-  agglomerateId: NumberLike,
+  segmentId1: bigint, // will keep its agglomerate id
+  segmentId2: bigint, // will get a new agglomerate id
+  agglomerateId: bigint,
   actionTracingId: string,
 ): {
   /*
@@ -1171,11 +1144,13 @@ export function splitAgglomerate(
   name: "splitAgglomerate";
   value: {
     actionTracingId: string;
-    segmentId1: number | undefined;
-    segmentId2: number | undefined;
+    // bigint | number (not just bigint): older persisted update actions may still have a plain
+    // number here, since they predate these fields' migration to bigint.
+    segmentId1: bigint | number | undefined;
+    segmentId2: bigint | number | undefined;
     // agglomerateId is needed in live collab setting to notice changes of loaded agglomerates done by other users.
     // Kept up-to-date in save queue by updateSaveQueueEntriesToStateAfterRebase saga. It may be undefined in old update actions.
-    agglomerateId?: number | undefined;
+    agglomerateId?: bigint | number | undefined;
     // For backwards compatibility reasons,
     // older segments are defined using their positions (and mag)
     // instead of their unmapped ids.
@@ -1188,18 +1163,17 @@ export function splitAgglomerate(
     name: "splitAgglomerate",
     value: {
       actionTracingId,
-      // TODO: Proper 64 bit support (#6921)
-      segmentId1: Number(segmentId1),
-      segmentId2: Number(segmentId2),
-      agglomerateId: Number(agglomerateId),
+      segmentId1,
+      segmentId2,
+      agglomerateId,
     },
   } as const;
 }
 export function mergeAgglomerate(
-  segmentId1: NumberLike, // source
-  segmentId2: NumberLike, // target (will be "swallowed" by source)
-  agglomerateId1: NumberLike,
-  agglomerateId2: NumberLike,
+  segmentId1: bigint, // source
+  segmentId2: bigint, // target (will be "swallowed" by source)
+  agglomerateId1: bigint,
+  agglomerateId2: bigint,
   actionTracingId: string,
 ): {
   /*
@@ -1209,12 +1183,14 @@ export function mergeAgglomerate(
   name: "mergeAgglomerate";
   value: {
     actionTracingId: string;
-    segmentId1: number | undefined;
-    segmentId2: number | undefined;
+    // bigint | number (not just bigint): older persisted update actions may still have a plain
+    // number here, since they predate these fields' migration to bigint.
+    segmentId1: bigint | number | undefined;
+    segmentId2: bigint | number | undefined;
     // agglomerateId1 and agglomerateId2 are needed in live collab setting to notice changes of loaded agglomerates done by other users.
     // Kept up-to-date in save queue by updateSaveQueueEntriesToStateAfterRebase saga. Might be undefined in case of old update actions.
-    agglomerateId1?: number;
-    agglomerateId2?: number;
+    agglomerateId1?: bigint | number;
+    agglomerateId2?: bigint | number;
     // For backwards compatibility reasons,
     // older segments are defined using their positions (and mag)
     // instead of their unmapped ids.
@@ -1227,11 +1203,10 @@ export function mergeAgglomerate(
     name: "mergeAgglomerate",
     value: {
       actionTracingId,
-      // TODO: Proper 64 bit support (#6921)
-      segmentId1: Number(segmentId1),
-      segmentId2: Number(segmentId2),
-      agglomerateId1: Number(agglomerateId1),
-      agglomerateId2: Number(agglomerateId2),
+      segmentId1,
+      segmentId2,
+      agglomerateId1,
+      agglomerateId2,
     },
   } as const;
 }

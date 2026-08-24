@@ -1,8 +1,9 @@
 package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.{Box, Empty, Full, Failure as BoxFailure}
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Box, Empty, Fox, Full, Failure => BoxFailure}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.storage.{
   CredentializedUPath,
@@ -14,7 +15,7 @@ import com.scalableminds.webknossos.datastore.helpers.{S3UriUtils, UPath}
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.lang3.builder.HashCodeBuilder
 
-import scala.util.{Failure => TryFailure, Success => TrySuccess}
+import scala.util.{Failure as TryFailure, Success as TrySuccess}
 import software.amazon.awssdk.core.ResponseBytes
 import software.amazon.awssdk.core.async.AsyncResponseTransformer
 import software.amazon.awssdk.services.s3.S3AsyncClient
@@ -32,7 +33,7 @@ import java.net.URI
 import java.util.concurrent.CompletionException
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters.CollectionHasAsScala
-import scala.jdk.FutureConverters._
+import scala.jdk.FutureConverters.*
 
 class S3DataVault(
     s3AccessKeyCredential: Option[S3AccessKeyCredential],
@@ -100,7 +101,7 @@ class S3DataVault(
         Future.successful(BoxFailure(exception.getMessage, Full(exception), Empty))
     })
 
-  override def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(using
+  override def readBytesPlusEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[(Array[Byte], Encoding.Value, Option[String])] =
@@ -128,7 +129,10 @@ class S3DataVault(
       encoding <- Encoding.fromRfc7231String(encodingString).toFox
     } yield (bytes, encoding, rangeHeader)
 
-  override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
+  override def listDirectory(path: VaultPath, maxItems: Int)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Seq[VaultPath]] =
     for {
       prefixKey <- S3UriUtils.objectKeyFromVaultPath(path).toFox
       s3SubPrefixKeys <- getObjectSummaries(bucketName, prefixKey, maxItems)
@@ -196,16 +200,16 @@ class S3DataVault(
 }
 
 object S3DataVault {
-  def create(credentializedUpath: CredentializedUPath, s3ClientPool: S3ClientPool)(implicit
+  def create(credentializedUPath: CredentializedUPath, s3ClientPool: S3ClientPool)(implicit
       ec: ExecutionContext
   ): Box[S3DataVault] = {
-    val credential = credentializedUpath.credential.flatMap {
+    val credential = credentializedUPath.credential.flatMap {
       case f: S3AccessKeyCredential     => Some(f)
       case f: LegacyDataVaultCredential => Some(f.toS3AccessKey)
       case _                            => None
     }
     for {
-      remoteUri <- credentializedUpath.upath.toRemoteUri
+      remoteUri <- credentializedUPath.upath.toRemoteUri
     } yield new S3DataVault(credential, remoteUri, s3ClientPool, ec)
   }
 

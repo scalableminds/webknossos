@@ -88,6 +88,17 @@ class NodeShader {
       viewMode: {
         value: 0,
       },
+      // When >= 0, nodes are culled unless they lie on the currently visible
+      // section. The value is the perpendicular axis of the rendered viewport
+      // (0 = x, 1 = y, 2 = z). -1 disables section clipping (e.g. for the 3D
+      // viewport or while the camera/dataset is rotated/transformed). It is set
+      // per render pass, see SceneController.updateSceneForCam.
+      clippingAxis: {
+        value: -1,
+      },
+      currentSectionFlycamPosition: {
+        value: [0, 0, 0],
+      },
     };
 
     for (const coord of additionalCoordinates ?? []) {
@@ -197,6 +208,8 @@ uniform int isPicking; // bool indicates whether we are currently rendering for 
 uniform int isTouch; // bool that is used during picking and indicates whether the picking was triggered by a touch event
 uniform float highlightCommentedNodes;
 uniform float viewMode;
+uniform int clippingAxis;
+uniform vec3 currentSectionFlycamPosition;
 
 uniform mat4 transform;
 
@@ -286,6 +299,18 @@ void main() {
     // Nodes are rendered in the center of a voxel.
     vec3 positionWithOffset = position + vec3(0.5);
 
+    // Optionally cull nodes that are not on the currently visible section.
+    // Section clipping happens in voxel/section space (integers), so it is
+    // robust against the half-voxel rendering offset and floating point issues.
+    if (clippingAxis >= 0) {
+      float sectionStart = floor(currentSectionFlycamPosition[clippingAxis]);
+      float perpCoord = positionWithOffset[clippingAxis];
+      if (perpCoord < sectionStart || perpCoord >= sectionStart + 1.0) {
+        gl_Position = vec4(-1.0, -1.0, -1.0, -1.0);
+        return;
+      }
+    }
+
     <% if (tpsTransform != null) { %>
       vec3 tpsOffset = calculateTpsOffsetForSkeleton(positionWithOffset);
       vec4 transformedCoord = vec4(positionWithOffset + tpsOffset, 1.);
@@ -330,7 +355,7 @@ void main() {
         : v_innerPointSize * 1.5;
       gl_PointSize = v_outerPointSize;
 
-      // Shift hue to further highlight active node in arbitrary mode.
+      // Shift hue to further highlight active node in flight mode.
       color = shiftHue(color, isOrthogonalMode ? 0. : 0.15);
     }
 

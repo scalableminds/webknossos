@@ -34,6 +34,7 @@ import {
   Table,
   Tag,
   Tooltip,
+  Typography,
 } from "antd";
 import LinkButton from "components/link_button";
 import dayjs from "dayjs";
@@ -41,7 +42,7 @@ import features from "features";
 import { copyToClipboard } from "libs/clipboard";
 import Persistence from "libs/persistence";
 import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
-import { filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
+import { filterWithSearchQueryAND, localeCompareBy, scrollToTop } from "libs/utils";
 import { location } from "libs/window";
 import keyBy from "lodash-es/keyBy";
 import React, { type Key, useState } from "react";
@@ -365,6 +366,7 @@ function UserListView() {
           rowSelection={rowSelection}
           pagination={{
             defaultPageSize: 50,
+            onChange: scrollToTop,
           }}
           onChange={(_pagination, filters) => {
             // @ts-expect-error ts-migrate(2322) FIXME: Type 'FilterValue' is not assignable to type '("tr... Remove this comment to see the full error(message)
@@ -499,13 +501,14 @@ function UserListView() {
                 </Tooltip>
               ) : (
                 <Tooltip title="Account is not activated">
-                  <CloseCircleOutlined
-                    className="icon-margin-right"
-                    style={{
-                      fontSize: 20,
-                      color: "#e84749",
-                    }}
-                  />
+                  <Typography.Text type="danger">
+                    <CloseCircleOutlined
+                      className="icon-margin-right"
+                      style={{
+                        fontSize: 20,
+                      }}
+                    />
+                  </Typography.Text>
                 </Tooltip>
               );
 
@@ -520,13 +523,14 @@ function UserListView() {
                 </Tooltip>
               ) : (
                 <Tooltip title="Email is not verified">
-                  <MailOutlined
-                    className="icon-margin-right"
-                    style={{
-                      fontSize: 20,
-                      color: "#e84749",
-                    }}
-                  />
+                  <Typography.Text type="danger">
+                    <MailOutlined
+                      className="icon-margin-right"
+                      style={{
+                        fontSize: 20,
+                      }}
+                    />
+                  </Typography.Text>
                 </Tooltip>
               );
 

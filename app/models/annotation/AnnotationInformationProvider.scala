@@ -2,12 +2,12 @@ package models.annotation
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.box.Full
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import models.annotation.AnnotationType.AnnotationType
 import models.annotation.handler.AnnotationInformationHandlerSelector
 import models.user.User
-import com.scalableminds.util.tools.Full
 import com.scalableminds.util.objectid.ObjectId
 
 import javax.inject.Inject

@@ -41,6 +41,16 @@ class EdgeShader {
       treeColors: {
         value: treeColorTexture,
       },
+      // When >= 0, edge fragments are discarded unless they lie on the currently
+      // visible section. The value is the perpendicular axis of the rendered
+      // viewport (0 = x, 1 = y, 2 = z). -1 disables section clipping. It is set
+      // per render pass, see SceneController.updateSceneForCam.
+      clippingAxis: {
+        value: -1,
+      },
+      currentSectionFlycamPosition: {
+        value: [0, 0, 0],
+      },
     };
 
     const dataset = Store.getState().dataset;
@@ -148,6 +158,9 @@ in float treeId;
 <% }) %>
 
 out float alpha;
+// Passed to the fragment shader so edges can be clipped partway along their
+// length to the currently visible section (in voxel coordinates).
+out vec3 v_position;
 
 void main() {
     alpha = 1.0;
@@ -175,6 +188,7 @@ void main() {
 
     // As nodes are rendered in the center of a voxel, so are edges.
     vec3 positionWithOffset = position + vec3(0.5);
+    v_position = positionWithOffset;
 
     <% if (tpsTransform != null) { %>
       vec3 tpsOffset = calculateTpsOffsetForSkeleton(positionWithOffset);
@@ -198,13 +212,30 @@ void main() {
   getFragmentShader(): string {
     return `
 precision highp float;
+precision highp int;
+
+uniform int clippingAxis;
+uniform vec3 currentSectionFlycamPosition;
 
 out vec4 fragColor;
 in vec3 color;
 in float alpha;
+in vec3 v_position;
 
 void main()
 {
+    // Clip the edge to the currently visible section. Because v_position is
+    // interpolated linearly across the edge (orthographic projection), this
+    // discards exactly the part of the edge that lies outside the section,
+    // yielding a partially rendered edge instead of an all-or-nothing one.
+    if (clippingAxis >= 0) {
+      float sectionStart = floor(currentSectionFlycamPosition[clippingAxis]);
+      float perpCoord = v_position[clippingAxis];
+      if (perpCoord < sectionStart || perpCoord >= sectionStart + 1.0) {
+        discard;
+      }
+    }
+
     fragColor = vec4(color, alpha);
 }`;
   }

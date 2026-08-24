@@ -1,17 +1,12 @@
-import tsconfigPaths from "vite-tsconfig-paths";
 import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
+import babel from "@rolldown/plugin-babel";
+import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import svgr from "vite-plugin-svgr";
-import wasm from "vite-plugin-wasm";
-import analyzer from "vite-bundle-analyzer";
 import viteProtobufPlugin from "./frontend/vite/vite-plugin-protobuf";
 import replaceSvgColorWithCurrentColor from "./frontend/vite/vite-plugin-replace-svg-color";
 
 import path from "node:path";
-import fs from "node:fs";
 
-// This alias is mostly for resolves in LESS-files
-// Code-related resolves are handled by "paths" in tsconfig.ts, tsconfigPaths-plugin respectively
 const alias = {
   "@images": path.resolve(__dirname, "frontend/assets/images"),
   "@wasm": path.resolve(__dirname, "frontend/assets/wasm"),
@@ -19,14 +14,11 @@ const alias = {
 
 // https://vite.dev/config/
 export const viteConfig = {
-  // publicDir: "/assets",
-  resolve: { alias },
+  resolve: { alias, tsconfigPaths: true },
   plugins: [
-    // analyzer(), // Enable/Disable vite bundle analyzer for inspecting the output bundle
-    react({
-      babel: {
-        plugins: ["babel-plugin-react-compiler"],
-      },
+    react(),
+    babel({
+      presets: [reactCompilerPreset()],
     }),
     svgr({
       svgrOptions: {
@@ -47,33 +39,23 @@ export const viteConfig = {
         },
       },
     }),
-    tsconfigPaths(),
-    wasm(),
     viteProtobufPlugin({
       protoDir: "webknossos-datastore/proto",
     }),
   ],
+  devtools: {
+    enabled: false,
+  },
   optimizeDeps: {
     exclude: ["three-mesh-bvh"],
   },
   build: {
-    copyPublicDir: true, // copy all /assets (images, etc.) to public/assets
     outDir: "public", // note: /public is handled by the backend/Play framework for asset delivery
     emptyOutDir: true,
     sourcemap: true,
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (id.includes("node_modules/html2canvas")) {
-            return "html2canvas";
-          }
-        },
-      },
-    },
   },
   worker: {
-    format: "es",
-    plugins: () => [wasm(), tsconfigPaths()],
+    format: "es" as const,
   },
   server: {
     port: 9000,

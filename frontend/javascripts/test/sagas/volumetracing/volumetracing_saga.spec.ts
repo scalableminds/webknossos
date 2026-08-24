@@ -42,12 +42,12 @@ const dummyActiveMapping: ActiveMappingInfo = {
   mappingColors: [],
   hideUnmappedIds: false,
   mappingStatus: "ENABLED",
-  mappingType: "HDF5",
+  mappingType: "AGGLOMERATE",
 };
 
 const ensureMaybeMappingIsLockedReturnValueDummy = { isMappingLockedIfNeeded: true };
 
-const ACTIVE_CELL_ID = 5;
+const ACTIVE_CELL_ID = 5n;
 const setActiveCell = setActiveCellAction(ACTIVE_CELL_ID);
 const startEditing = startEditingAction([0, 0, 0], OrthoViews.PLANE_XY);
 const addToContourList = addToContourListAction;
@@ -92,7 +92,7 @@ describe("VolumeTracingSaga", () => {
         name: "updateActiveSegmentId",
         value: {
           actionTracingId: volumeTracing.tracingId,
-          activeSegmentId: 5,
+          activeSegmentId: 5n,
         },
       });
     });

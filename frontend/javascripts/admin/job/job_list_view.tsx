@@ -18,13 +18,18 @@ import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
-import { confirmAsync } from "dashboard/dataset/helper_components";
 import features from "features";
 import { formatMilliCreditsString, formatWkLibsNdBBox } from "libs/format_utils";
 import Persistence from "libs/persistence";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { compareBy, filterWithSearchQueryAND, localeCompareBy, pluralize } from "libs/utils";
+import {
+  compareBy,
+  filterWithSearchQueryAND,
+  localeCompareBy,
+  pluralize,
+  scrollToTop,
+} from "libs/utils";
 import capitalize from "lodash-es/capitalize";
 import type * as React from "react";
 import { useEffect, useState } from "react";
@@ -32,8 +37,9 @@ import { Link } from "react-router-dom";
 import { type APIJob, APIJobCommand } from "types/api_types";
 import { getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 
-// Unfortunately, the twoToneColor (nor the style) prop don't support
-// CSS variables.
+// Kept as literals: antd derives the second tone from the first via a color library at render
+// time, so neither the twoToneColor nor the style prop can resolve a CSS variable here. These
+// values are antd's dark-algorithm status colors, which are legible on both backgrounds.
 export const TOOLTIP_MESSAGES_AND_ICONS = {
   UNKNOWN: {
     tooltip:
@@ -79,7 +85,7 @@ export const getShowTrainingDataLink = (
         modal.info({
           title: "Training Data",
           closable: true,
-          maskClosable: true,
+          mask: { closable: true },
           content: (
             <div>
               The following annotations were used during training:
@@ -369,7 +375,7 @@ function JobListView() {
       return (
         <AsyncLink
           onClick={async () => {
-            const isDeleteConfirmed = await confirmAsync({
+            const isDeleteConfirmed = await modal.confirm({
               title: <p>Are you sure you want to cancel job {job.id}?</p>,
               okText: "Yes, cancel job",
               cancelText: "No, keep it",
@@ -544,6 +550,7 @@ function JobListView() {
           rowKey="id"
           pagination={{
             defaultPageSize: 50,
+            onChange: scrollToTop,
           }}
         >
           <Column

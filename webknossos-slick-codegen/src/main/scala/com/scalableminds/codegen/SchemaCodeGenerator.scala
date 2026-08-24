@@ -4,7 +4,7 @@ import org.slf4j.LoggerFactory
 import slick.basic.DatabaseConfig
 import slick.codegen.SourceCodeGenerator
 import slick.jdbc.JdbcProfile
-import slick.{model => slickModel}
+import slick.model as slickModel
 
 import java.io.{BufferedWriter, File, FileOutputStream, OutputStreamWriter}
 import java.net.URI

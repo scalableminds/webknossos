@@ -35,7 +35,8 @@ import {
  * trees in sync.
  *
  * When a split operation is done, the agglomerate mapping is always refresh via
- * calling `splitAgglomerateInMapping`. This function automatically takes care of
+ * calling `splitAgglomeratesInMapping` (or its single-agglomerate wrapper
+ * `splitAgglomerateInMapping`). This function automatically takes care of
  * updating the agglomerate trees when its syncAgglomerateTrees parameter is set to true.
  * So no extra special care needed.
  *
@@ -73,7 +74,7 @@ function* agglomerateTreesToSkeleton(trees: Tree[]): Saga<SkeletonTracing> {
 // Loads the given all agglomerate trees with the ids contained in agglomerateIds
 // into a temporary skeleton tracing object. Not existing trees are excluded.
 function* getAgglomerateTreesAsSkeleton(
-  agglomerateIds: number[],
+  agglomerateIds: bigint[],
   editableMappingTracingId: string,
   baseMappingName: string,
 ) {
@@ -100,7 +101,7 @@ function* getAgglomerateTreesAsSkeleton(
 // Their node ids and tree ids are then remapped according to the positionToIdMap and treeIds.
 // This helps to keep the ids consistent when diffing with the agglomerate trees currently loaded.
 function* getAllAgglomerateTreesFromServerAndRemap(
-  agglomerateIds: number[],
+  agglomerateIds: bigint[],
   positionToIdMap: PositionToIdMap,
   treeIds: number[],
   tracingId: string,
@@ -237,9 +238,9 @@ function* updateAffectedAgglomerateTrees(
 // This function is needed to synchronize the agglomerate trees which need to be updated
 // in case they are present in the skeleton tracing.
 export function* syncAgglomerateTreesAfterMergeAction(
-  sourceAgglomerateIdBeforeMerge: number,
-  targetAgglomerateIdBeforeMerge: number,
-  newSourceAgglomerateId: number,
+  sourceAgglomerateIdBeforeMerge: bigint,
+  targetAgglomerateIdBeforeMerge: bigint,
+  newSourceAgglomerateId: bigint,
   tracingId: string,
 ): Saga<void> {
   const { skeletonTracing, editableMapping, activeMapping } = yield* call(
@@ -290,11 +291,11 @@ export function* syncAgglomerateTreesAfterMergeAction(
 
 // This function should be called after a successful split proofreading interaction to update
 // the potentially loaded agglomerate tree.
-// This is automatically done correct when reloading the mapping after a split via splitAgglomerateInMapping.
+// This is automatically done correct when reloading the mapping after a split via splitAgglomeratesInMapping.
 // But the callee needs to tell the function to update the trees via the syncAgglomerateTrees parameter.
 export function* syncAgglomerateTreesAfterSplitAction(
-  newAgglomerateIds: number[],
-  oldAgglomerateIds: number[],
+  newAgglomerateIds: bigint[],
+  oldAgglomerateIds: bigint[],
   tracingId: string,
 ): Saga<void> {
   const { skeletonTracing, editableMapping, activeMapping } = yield* call(

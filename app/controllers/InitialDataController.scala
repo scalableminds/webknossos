@@ -3,6 +3,7 @@ package controllers
 import com.scalableminds.util.Msg
 import play.silhouette.api.{LoginInfo, Silhouette}
 import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.box.Full
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
@@ -10,13 +11,12 @@ import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import models.aimodels.{AiModel, AiModelCategory, AiModelDAO, AiModelService}
 import models.annotation.{TracingStore, TracingStoreDAO}
-import models.dataset._
+import models.dataset.*
 import models.folder.{Folder, FolderDAO, FolderService}
 import models.project.{Project, ProjectDAO}
 import models.task.{TaskType, TaskTypeDAO}
-import models.team._
-import models.user._
-import com.scalableminds.util.tools.Full
+import models.team.*
+import models.user.*
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.helpers.UPath
@@ -34,7 +34,7 @@ import play.api.libs.json.{JsArray, Json}
 import utils.{StoreModules, WkConf}
 
 import javax.inject.Inject
-import models.organization.{Organization, OrganizationDAO, OrganizationService, PricingPlan, AiPlan}
+import models.organization.{AiPlan, Organization, OrganizationDAO, OrganizationService, PricingPlan}
 import play.api.mvc.{Action, AnyContent}
 import security.{Token, TokenDAO, TokenType, WkEnv}
 
@@ -81,7 +81,8 @@ class InitialDataService @Inject() (
   private val defaultUserEmail2 = conf.WebKnossos.SampleOrganization.User.email2
   private val defaultUserPassword = conf.WebKnossos.SampleOrganization.User.password
   private val defaultUserToken = conf.WebKnossos.SampleOrganization.User.token
-  private val additionalInformation = """**Sample Organization**
+  private val additionalInformation =
+    """**Sample Organization**
 
 Sample Street 123
 Sampletown
@@ -164,6 +165,7 @@ Samplecountry
   )
   private val defaultDataStore =
     DataStore(conf.Datastore.name, conf.Http.uri, conf.Datastore.publicUri.getOrElse(conf.Http.uri), conf.Datastore.key)
+
   private val defaultAiModel = AiModel(
     _id = ObjectId("66544a56d20000af0e42ba0f"),
     _organization = Some(defaultOrganization._id),
@@ -426,7 +428,7 @@ Samplecountry
       _ <- insertPublication()
       _ <- insertDataset()
       _ <- insertRemoteNDDataset()
-      _ <- insertAiModel()
+      _ <- insertCustomAiModel()
 
     } yield ()
 
@@ -534,39 +536,48 @@ Samplecountry
     } else Fox.successful(())
   }
 
-  private def insertDataset(): Fox[Unit] = datasetDAO.findOne(defaultDataset._id).shiftBox.flatMap { maybeDataset =>
-    if (maybeDataset.isEmpty) {
-      for {
-        _ <- datasetDAO.insertOne(defaultDataset)
-        _ <- datasetLayerDAO.updateLayers(defaultDataset._id, defaultDataSource)
-      } yield ()
-    } else Fox.successful(())
-  }
-
-  private def insertRemoteNDDataset(): Fox[Unit] =
-    datasetDAO.findOne(remoteNDZarrDataset._id).shiftBox.flatMap { maybeDataset =>
-      if (maybeDataset.isEmpty) {
-        for {
-          _ <- datasetDAO.insertOne(remoteNDZarrDataset)
-          _ <- datasetLayerDAO.updateLayers(remoteNDZarrDataset._id, remoteNDZarrDataSource)
-        } yield ()
-      } else Fox.successful(())
+  private def insertDataset(): Fox[?] =
+    Fox.runIf(storeModules.localDataStoreEnabled) {
+      datasetDAO.findOne(defaultDataset._id).shiftBox.flatMap { maybeDataset =>
+        if (maybeDataset.isEmpty) {
+          for {
+            _ <- datasetDAO.insertOne(defaultDataset)
+            _ <- datasetLayerDAO.updateLayers(defaultDataset._id, defaultDataSource)
+          } yield ()
+        } else Fox.successful(())
+      }
     }
 
-  private def insertModelIfAbsent(model: AiModel): Fox[Unit] =
-    aiModelDAO.findOne(model._id).shiftBox.flatMap {
-      case Full(_) => Fox.successful(())
-      case _       => aiModelDAO.insertOne(model)
+  private def insertRemoteNDDataset(): Fox[?] =
+    Fox.runIf(storeModules.localDataStoreEnabled) {
+      datasetDAO.findOne(remoteNDZarrDataset._id).shiftBox.flatMap { maybeDataset =>
+        if (maybeDataset.isEmpty) {
+          for {
+            _ <- datasetDAO.insertOne(remoteNDZarrDataset)
+            _ <- datasetLayerDAO.updateLayers(remoteNDZarrDataset._id, remoteNDZarrDataSource)
+          } yield ()
+        } else Fox.successful(())
+      }
     }
 
-  private def insertAiModel(): Fox[Unit] = insertModelIfAbsent(defaultAiModel)
+  private def insertAiModelIfAbsent(model: AiModel): Fox[?] =
+    // For custom instances with no local datastore the default ai models must be inserted into the DB manually.
+    // Give them the datastore that the worker also has access to.
+    Fox.runIf(storeModules.localDataStoreEnabled) {
+      aiModelDAO.findOne(model._id).shiftBox.flatMap {
+        case Full(_) => Fox.successful(())
+        case _       => aiModelDAO.insertOne(model)
+      }
+    }
+
+  private def insertCustomAiModel(): Fox[?] = insertAiModelIfAbsent(defaultAiModel)
 
   private def insertPretrainedAiModels(): Fox[Unit] =
     for {
-      _ <- insertModelIfAbsent(pretrainedNeuronModel)
-      _ <- insertModelIfAbsent(pretrainedMitochondriaModel)
-      _ <- insertModelIfAbsent(pretrainedNucleiModel)
-      _ <- insertModelIfAbsent(pretrainedSomaModel)
+      _ <- insertAiModelIfAbsent(pretrainedNeuronModel)
+      _ <- insertAiModelIfAbsent(pretrainedMitochondriaModel)
+      _ <- insertAiModelIfAbsent(pretrainedNucleiModel)
+      _ <- insertAiModelIfAbsent(pretrainedSomaModel)
     } yield ()
 
   def insertLocalDataStoreIfEnabled(): Fox[Unit] =

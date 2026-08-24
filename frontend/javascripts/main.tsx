@@ -1,5 +1,5 @@
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
-import { QueryClient } from "@tanstack/react-query";
+import { defaultShouldDehydrateQuery, QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import "admin/datastore_health_check";
 import { getActiveUser } from "admin/rest_api";
@@ -102,6 +102,7 @@ async function initApp() {
   ErrorHandling.initialize({
     throwAssertions: false,
   });
+
   message.config({ top: 30 });
   checkBrowserFeatures();
   const containerElement = document.getElementById("main-container");
@@ -133,7 +134,15 @@ async function initApp() {
         <Provider store={Store}>
           <PersistQueryClientProvider
             client={reactQueryClient}
-            persistOptions={{ persister: localStoragePersister }}
+            persistOptions={{
+              persister: localStoragePersister,
+              dehydrateOptions: {
+                // Queries can opt out of being persisted to localStorage by setting
+                // meta.persist to false, e.g. for large viewer data.
+                shouldDehydrateQuery: (query) =>
+                  defaultShouldDehydrateQuery(query) && query.meta?.persist !== false,
+              },
+            }}
           >
             {/* The DnDProvider is necessary for the TreeHierarchyView. Otherwise, the view may crash in
           certain conditions. See https://github.com/scalableminds/webknossos/issues/5568 for context.

@@ -8,15 +8,13 @@ import com.scalableminds.webknossos.schema.Tables.{Jobs, JobsRow, GetResultJobsR
 import models.job.JobState.JobState
 import models.job.JobCommand.JobCommand
 import play.api.libs.json.{JsObject, Json, OFormat}
-import slick.jdbc.PostgresProfile.api._
-import slick.jdbc.TransactionIsolation.Serializable
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceStatus
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 case class Job(
     _id: ObjectId,
@@ -377,11 +375,7 @@ class JobDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
           WHERE j._id = subquery._id
           """.asUpdate
       for {
-        _ <- run(
-          query.withTransactionIsolation(Serializable),
-          retryCount = 50,
-          retryIfErrorContains = List(transactionSerializationError)
-        )
+        _ <- runAsSerializableTransaction(query)
       } yield ()
     }
 

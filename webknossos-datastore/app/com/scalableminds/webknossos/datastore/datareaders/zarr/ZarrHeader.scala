@@ -17,7 +17,7 @@ import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDat
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 import play.api.libs.json.Json.WithDefaultValues
-import play.api.libs.json._
+import play.api.libs.json.*
 
 case class ZarrHeader(
     zarr_format: Int, // format version number

@@ -1,7 +1,7 @@
 package models.user
 
-import com.fasterxml.jackson.core.`type`.TypeReference
-import com.fasterxml.jackson.annotation._
+import tools.jackson.core.`type`.TypeReference
+import com.fasterxml.jackson.annotation.*
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{JsonHelper, Fox}
@@ -13,15 +13,15 @@ import com.scalableminds.webknossos.schema.Tables.{
 }
 import com.webauthn4j.converter.AttestedCredentialDataConverter
 import com.webauthn4j.converter.util.ObjectConverter
-import com.webauthn4j.credential.{CredentialRecordImpl => WebAuthnCredentialRecord}
-import com.webauthn4j.data.attestation.statement._
+import com.webauthn4j.credential.CredentialRecordImpl as WebAuthnCredentialRecord
+import com.webauthn4j.data.attestation.statement.*
 import com.webauthn4j.data.extension.authenticator.{
   AuthenticationExtensionsAuthenticatorOutputs,
   RegistrationExtensionAuthenticatorOutput
 }
-import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.box.Box.tryo
 import utils.sql.{SQLDAO, SqlClient}
-import play.api.libs.json._
+import play.api.libs.json.*
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -34,7 +34,7 @@ case class WebAuthnCredential(
     isDeleted: Boolean
 ) {
   def serializeAttestedCredential(objectConverter: ObjectConverter): Array[Byte] = {
-    val converter = new AttestedCredentialDataConverter(objectConverter);
+    val converter = new AttestedCredentialDataConverter(objectConverter)
     converter.convert(credentialRecord.getAttestedCredentialData)
   }
 
@@ -42,12 +42,12 @@ case class WebAuthnCredential(
     val envelope = new AttestationStatementEnvelope()
     envelope.fmt = credentialRecord.getAttestationStatement.getFormat
     envelope.attestationStatement = credentialRecord.getAttestationStatement
-    val rawJson = objectConverter.getJsonConverter.writeValueAsString(envelope)
+    val rawJson = objectConverter.getJsonMapper.writeValueAsString(envelope)
     JsonHelper.parseAs[JsObject](rawJson).toFox
   }
 
   def serializedExtensions(converter: ObjectConverter)(implicit ec: ExecutionContext): Fox[JsObject] = {
-    val rawJson = converter.getJsonConverter.writeValueAsString(credentialRecord.getAuthenticatorExtensions)
+    val rawJson = converter.getJsonMapper.writeValueAsString(credentialRecord.getAuthenticatorExtensions)
     JsonHelper.parseAs[JsObject](rawJson).toFox
   }
 }
@@ -84,7 +84,7 @@ class WebAuthnCredentialDAO @Inject() (sqlClient: SqlClient)(implicit ec: Execut
 
   protected def parse(r: WebauthncredentialsRow): Fox[WebAuthnCredential] = {
     val objectConverter = new ObjectConverter()
-    val converter = objectConverter.getJsonConverter
+    val converter = objectConverter.getJsonMapper
     val attestedCredentialDataConverter = new AttestedCredentialDataConverter(objectConverter)
     for {
       attestedCredential <- tryo(attestedCredentialDataConverter.convert(r.serializedattestedcredential)).toFox
@@ -147,8 +147,8 @@ class WebAuthnCredentialDAO @Inject() (sqlClient: SqlClient)(implicit ec: Execut
       _ <- run(
         q"""INSERT INTO $existingCollectionName (_id, _multiUser, credentialId, name, userVerified, backupEligible, backupState,
                                                  serializedAttestationStatement, serializedAttestedCredential, serializedExtensions, signatureCount)
-                       VALUES(${c._id}, ${c._multiUser}, ${credentialId}, ${c.name}, ${userVerified}, ${backupEligible}, ${backupState}, ${serializedAttestationStatement},
-                         ${serializedAttestedCredential}, ${serializedAuthenticatorExtensions}, ${c.credentialRecord.getCounter.toInt})""".asUpdate
+                       VALUES(${c._id}, ${c._multiUser}, $credentialId, ${c.name}, $userVerified, $backupEligible, $backupState, $serializedAttestationStatement,
+                         $serializedAttestedCredential, $serializedAuthenticatorExtensions, ${c.credentialRecord.getCounter.toInt})""".asUpdate
       )
     } yield ()
   }
@@ -163,7 +163,7 @@ class WebAuthnCredentialDAO @Inject() (sqlClient: SqlClient)(implicit ec: Execut
   def removeById(id: ObjectId, multiUser: ObjectId): Fox[Unit] =
     for {
       _ <- run(
-        q"""UPDATE $existingCollectionName SET isDeleted = true WHERE _id = ${id} AND _multiUser=${multiUser}""".asUpdate
+        q"""UPDATE $existingCollectionName SET isDeleted = true WHERE _id = $id AND _multiUser=$multiUser""".asUpdate
       )
     } yield ()
 

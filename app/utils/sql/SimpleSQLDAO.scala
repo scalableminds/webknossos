@@ -3,7 +3,7 @@ package utils.sql
 import com.scalableminds.util.tools.{Fox, TextUtils}
 import com.typesafe.scalalogging.LazyLogging
 import slick.dbio.{DBIO, DBIOAction, Effect, NoStream}
-import slick.jdbc.PostgresProfile.api._
+import slick.jdbc.PostgresProfile.api.*
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.sql.SqlAction
 import slick.util.{Dumpable, TreePrinter}
@@ -70,17 +70,26 @@ class SimpleSQLDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContex
     new String(os.toByteArray, StandardCharsets.UTF_8)
   }
 
-  def replaceSequentiallyAsTransaction(
-      clearQuery: SqlAction[Int, NoStream, Effect],
-      insertQueries: Seq[SqlAction[Int, NoStream, Effect]]
-  ): Fox[Unit] = {
-    val composedQuery = DBIO.sequence(List(clearQuery) ++ insertQueries)
+  /* Runs queries in a single serializable transaction, so that either all or none of them are applied.
+   * Serializable isolation also guards against concurrent transactions. */
+  protected def runAsSerializableTransaction(queries: Seq[SqlAction[Int, NoStream, Effect]]): Fox[Unit] =
     for {
       _ <- run(
-        composedQuery.transactionally.withTransactionIsolation(Serializable),
+        DBIO.sequence(queries.toList).transactionally.withTransactionIsolation(Serializable),
         retryCount = 50,
         retryIfErrorContains = List(transactionSerializationError, cacheLookupFailedForTypeError)
       )
     } yield ()
-  }
+
+  /* Runs queries in a single serializable transaction, so that either all or none of them are applied.
+   * Serializable isolation also guards against concurrent transactions. */
+  protected def runAsSerializableTransaction(query: SqlAction[Int, NoStream, Effect]): Fox[Unit] =
+    for {
+      _ <- run(
+        query.transactionally.withTransactionIsolation(Serializable),
+        retryCount = 50,
+        retryIfErrorContains = List(transactionSerializationError, cacheLookupFailedForTypeError)
+      )
+    } yield ()
+
 }

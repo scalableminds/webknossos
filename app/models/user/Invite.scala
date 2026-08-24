@@ -13,7 +13,7 @@ import javax.inject.Inject
 import models.organization.OrganizationDAO
 import models.team.TeamMembership
 import security.RandomIDGenerator
-import slick.jdbc.PostgresProfile.api._
+import slick.jdbc.PostgresProfile.api.*
 import utils.sql.{SQLDAO, SqlClient}
 import utils.WkConf
 

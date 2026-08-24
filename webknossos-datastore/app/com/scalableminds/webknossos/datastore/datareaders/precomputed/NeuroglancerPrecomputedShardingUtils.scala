@@ -1,13 +1,13 @@
 package com.scalableminds.webknossos.datastore.datareaders.precomputed
 
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.Box
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.datavault.{ByteRange, StartEndExclusiveByteRange, VaultPath}
-import com.scalableminds.util.tools.Box
-import com.scalableminds.util.tools.Box.tryo
+import Box.tryo
 
 import java.nio.{ByteBuffer, ByteOrder}
 import scala.concurrent.ExecutionContext
@@ -58,11 +58,16 @@ trait NeuroglancerPrecomputedShardingUtils {
   }
 
   private def decodeMinishardIndex(bytes: Array[Byte]) =
-    shardingSpecification.minishard_index_encoding match {
-      case "gzip" => ZipIO.gunzip(bytes)
-      case _      => bytes
-
-    }
+    // An empty minishard index is a legitimate, expected state: cloud-volume/neuroglancer sharded writers skip
+    // writing chunks that are entirely background, so a minishard can genuinely contain zero chunks. Attempting to
+    // gunzip-decode zero bytes would throw (GZIPInputStream reads its header eagerly), so short-circuit here instead
+    // of letting that exception surface as a hard failure below.
+    if (bytes.isEmpty) bytes
+    else
+      shardingSpecification.minishard_index_encoding match {
+        case "gzip" => ZipIO.gunzip(bytes)
+        case _      => bytes
+      }
 
   private def parseMinishardIndex(input: Array[Byte]): Box[Array[(Long, Long, Long)]] = tryo {
     val bytes = decodeMinishardIndex(input)
@@ -71,42 +76,47 @@ trait NeuroglancerPrecomputedShardingUtils {
      The decoded "minishard index" is a binary string of 24*n bytes, specifying a contiguous C-order array of [3, n]
       uint64le values.
      */
-    val n = bytes.length / 24
-    val buf = ByteBuffer.allocate(bytes.length)
-    buf.put(bytes)
+    if (bytes.isEmpty) {
+      // Minishard with zero chunks
+      Array.empty[(Long, Long, Long)]
+    } else {
+      val n = bytes.length / 24
+      val buf = ByteBuffer.allocate(bytes.length)
+      buf.put(bytes)
 
-    val longArray = new Array[Long](n * 3)
-    buf.position(0)
-    buf.order(ByteOrder.LITTLE_ENDIAN)
-    buf.asLongBuffer().get(longArray)
-    // longArray is row major / C-order
-    /*
-     From: https://github.com/google/neuroglancer/blob/233fc39b07a0480a8e1c90fc5ca835330a0bf287/src/datasource/precomputed/sharded.md#minishard-index-format
-     Values array[0, 0], ..., array[0, n-1] specify the chunk IDs in the minishard, and are delta encoded, such that
-     array[0, 0] is equal to the ID of the first chunk, and the ID of chunk i is equal to the sum
-     of array[0, 0], ..., array[0, i].
-     */
-    val chunkIds = new Array[Long](n)
-    chunkIds(0) = longArray(0)
-    for (i <- 1 until n)
-      chunkIds(i) = longArray(i) + chunkIds(i - 1)
-    /*
-     From: https://github.com/google/neuroglancer/blob/233fc39b07a0480a8e1c90fc5ca835330a0bf287/src/datasource/precomputed/sharded.md#minishard-index-format
-     The size of the data for chunk i is stored as array[2, i].
-     Values array[1, 0], ..., array[1, n-1] specify the starting offsets in the shard file of the data corresponding to
-     each chunk, and are also delta encoded relative to the end of the prior chunk, such that the starting offset of the
-     first chunk is equal to shard_index_end + array[1, 0], and the starting offset of chunk i is the sum of
-     shard_index_end + array[1, 0], ..., array[1, i] and array[2, 0], ..., array[2, i-1].
-     */
-    val chunkSizes = longArray.slice(2 * n, 3 * n)
-    val chunkStartOffsets = new Array[Long](n)
-    chunkStartOffsets(0) = longArray(n)
-    for (i <- 1 until n) {
-      val startOffsetIndex = i + n
-      chunkStartOffsets(i) = chunkStartOffsets(i - 1) + longArray(startOffsetIndex) + chunkSizes(i - 1)
+      val longArray = new Array[Long](n * 3)
+      buf.position(0)
+      buf.order(ByteOrder.LITTLE_ENDIAN)
+      buf.asLongBuffer().get(longArray)
+      // longArray is row major / C-order
+      /*
+       From: https://github.com/google/neuroglancer/blob/233fc39b07a0480a8e1c90fc5ca835330a0bf287/src/datasource/precomputed/sharded.md#minishard-index-format
+       Values array[0, 0], ..., array[0, n-1] specify the chunk IDs in the minishard, and are delta encoded, such that
+       array[0, 0] is equal to the ID of the first chunk, and the ID of chunk i is equal to the sum
+       of array[0, 0], ..., array[0, i].
+       */
+      val chunkIds = new Array[Long](n)
+      chunkIds(0) = longArray(0)
+      for (i <- 1 until n)
+        chunkIds(i) = longArray(i) + chunkIds(i - 1)
+      /*
+       From: https://github.com/google/neuroglancer/blob/233fc39b07a0480a8e1c90fc5ca835330a0bf287/src/datasource/precomputed/sharded.md#minishard-index-format
+       The size of the data for chunk i is stored as array[2, i].
+       Values array[1, 0], ..., array[1, n-1] specify the starting offsets in the shard file of the data corresponding to
+       each chunk, and are also delta encoded relative to the end of the prior chunk, such that the starting offset of the
+       first chunk is equal to shard_index_end + array[1, 0], and the starting offset of chunk i is the sum of
+       shard_index_end + array[1, 0], ..., array[1, i] and array[2, 0], ..., array[2, i-1].
+       */
+      val chunkSizes = longArray.slice(2 * n, 3 * n)
+      val chunkStartOffsets = new Array[Long](n)
+      chunkStartOffsets(0) = longArray(n)
+      for (i <- 1 until n) {
+        val startOffsetIndex = i + n
+        chunkStartOffsets(i) = chunkStartOffsets(i - 1) + longArray(startOffsetIndex) + chunkSizes(i - 1)
+      }
+
+      chunkIds.lazyZip(chunkStartOffsets).lazyZip(chunkSizes).toArray
     }
-
-    chunkIds.lazyZip(chunkStartOffsets).lazyZip(chunkSizes).toArray
   }
 
   def getMinishardIndex(shardPath: VaultPath, minishardNumber: Int)(using
@@ -132,9 +142,10 @@ trait NeuroglancerPrecomputedShardingUtils {
       ec: ExecutionContext
   ): Fox[StartEndExclusiveByteRange] =
     for {
+      // A chunk id absent from an (otherwise successfully read) means fill value, so we use ?->, passing through empty
       chunkSpecification <- minishardIndex
         .find(_._1 == chunkId)
-        .toFox ?~> s"Could not find chunk id $chunkId in minishard index"
+        .toFox ?-> s"Could not find chunk id $chunkId in minishard index"
       chunkStart = (shardIndexRange.end) + chunkSpecification._2
       chunkEnd = (shardIndexRange.end) + chunkSpecification._2 + chunkSpecification._3
     } yield ByteRange.startEndExclusive(chunkStart, chunkEnd)

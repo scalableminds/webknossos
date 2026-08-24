@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingTyp
 import com.scalableminds.webknossos.tracingstore.tracings.volume.MagRestrictions
 import models.annotation.{AnnotationSettings, TracingMode}
 import models.team.TeamDAO
-import play.api.libs.json._
+import play.api.libs.json.*
 import utils.sql.{EnumerationArrayValue, SQLDAO, SqlClient}
 
 import javax.inject.Inject

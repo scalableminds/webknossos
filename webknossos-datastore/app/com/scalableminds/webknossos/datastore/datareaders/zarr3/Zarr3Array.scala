@@ -9,8 +9,8 @@ import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkReade
 import com.scalableminds.webknossos.datastore.datavault.{ByteRange, StartEndExclusiveByteRange, VaultPath}
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataSourceId}
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.Box.tryo
-import ucar.ma2.{Array => MultiArray}
+import com.scalableminds.util.box.Box.tryo
+import ucar.ma2.Array as MultiArray
 
 import scala.concurrent.ExecutionContext
 
@@ -42,6 +42,12 @@ object Zarr3Array extends LazyLogging {
         )
       ).toFox ?~> "Could not open zarr3 array"
     } yield array
+
+  def openForAttachment(
+      path: VaultPath,
+      sharedChunkContentsCache: AlfuCache[String, MultiArray]
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Zarr3Array] =
+    open(path, DataSourceId("dummy", "unused"), "layer", None, None, None, sharedChunkContentsCache)
 }
 
 class Zarr3Array(
@@ -65,7 +71,7 @@ class Zarr3Array(
     )
     with LazyLogging {
 
-  override protected def getChunkFilename(chunkIndex: Array[Int]): String =
+  override protected def getChunkFilename(chunkIndex: Array[Long]): String =
     if (header.chunk_key_encoding.name == "default") {
       s"c${header.dimension_separator.toString}${super.getChunkFilename(chunkIndex)}"
     } else {
@@ -119,13 +125,14 @@ class Zarr3Array(
   private lazy val chunksPerShard = indexShape.product
   private def shardIndexEntryLength = 16
 
-  private def getChunkIndexInShardIndex(chunkIndex: Array[Int], shardCoordinates: Array[Int]): Int = {
+  private def getChunkIndexInShardIndex(chunkIndex: Array[Long], shardCoordinates: Array[Long]): Int = {
     val shardOffset = shardCoordinates.zip(indexShape).map { case (sc, is) => sc * is }
-    indexShape.tails.toList
+    val indexWithinShard = indexShape.tails.toList
       .dropRight(1)
       .zipWithIndex
-      .map { case (shape, i) => shape.tail.product * (chunkIndex(i) - shardOffset(i)) }
+      .map { case (shape, i) => shape.tail.product.toLong * (chunkIndex(i) - shardOffset(i)) }
       .sum
+    Math.toIntExact(indexWithinShard)
   }
 
   private def readAndParseShardIndex(
@@ -173,16 +180,16 @@ class Zarr3Array(
       .toArray
   }
 
-  private def chunkIndexToShardIndex(chunkIndex: Array[Int]) =
+  private def chunkIndexToShardIndex(chunkIndex: Array[Long]) =
     ChunkUtils.computeChunkIndices(
       header.datasetShape,
       header.outerChunkShape,
       header.chunkShape,
-      chunkIndex.zip(header.chunkShape).map { case (i, s) => i.toLong * s }
+      chunkIndex.zip(header.chunkShape).map { case (i, s) => i * s }
     )
 
   override protected def getShardedChunkPathAndRange(
-      chunkIndex: Array[Int]
+      chunkIndex: Array[Long]
   )(using ec: ExecutionContext, tc: TokenContext): Fox[(VaultPath, StartEndExclusiveByteRange)] =
     for {
       shardCoordinates <- chunkIndexToShardIndex(chunkIndex).headOption.toFox

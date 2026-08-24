@@ -18,15 +18,15 @@ import com.scalableminds.webknossos.tracingstore.tracings.{TracingId, TracingTyp
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, CreateAnnotationEvent, OpenAnnotationEvent}
 import models.annotation.AnnotationState.Cancelled
-import models.annotation._
+import models.annotation.*
 import models.dataset.{DatasetDAO, DatasetService}
 import models.project.ProjectDAO
 import models.task.{TaskDAO, TaskService}
 import models.team.{TeamDAO, TeamService}
-import models.user.time._
+import models.user.time.*
 import models.user.{User, UserDAO, UserService}
 import org.apache.pekko.util.Timeout
-import play.api.libs.json._
+import play.api.libs.json.*
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import play.silhouette.api.Silhouette
 import security.{URLSharing, UserAwareRequestLogging, WkEnv}
@@ -35,7 +35,7 @@ import utils.WkConf
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 case class ReserveIdParameters(
     domain: AnnotationIdDomain,
@@ -154,7 +154,13 @@ class AnnotationController @Inject() (
     }
   }
 
-  def merge(typ: String, id: ObjectId, mergedTyp: String, mergedId: ObjectId): Action[AnyContent] =
+  def merge(
+      typ: String,
+      id: ObjectId,
+      mergedTyp: String,
+      mergedId: ObjectId,
+      remapSegmentIds: Option[Boolean]
+  ): Action[AnyContent] =
     sil.SecuredAction.fox { implicit request =>
       for {
         annotationA <- provider.provideAnnotation(typ, id, request.identity) ?~> Msg.Annotation.notFound ~> NOT_FOUND
@@ -166,7 +172,8 @@ class AnnotationController @Inject() (
         mergedAnnotation <- annotationMerger.mergeTwo(
           annotationA,
           annotationB,
-          request.identity
+          request.identity,
+          remapSegmentIds.getOrElse(true)
         ) ?~> Msg.Annotation.Merge.failed
         restrictions = annotationRestrictionDefaults.defaultsFor(mergedAnnotation)
         _ <- restrictions.allowAccess(request.identity) ?~> Msg.Annotation.Merge.noAccessOnMerged ~> FORBIDDEN
@@ -179,11 +186,16 @@ class AnnotationController @Inject() (
       } yield JsonOk(js, Msg.Annotation.Merge.success)
     }
 
-  def mergeWithoutType(id: ObjectId, mergedTyp: String, mergedId: ObjectId): Action[AnyContent] =
+  def mergeWithoutType(
+      id: ObjectId,
+      mergedTyp: String,
+      mergedId: ObjectId,
+      remapSegmentIds: Option[Boolean]
+  ): Action[AnyContent] =
     sil.SecuredAction.fox { implicit request =>
       for {
         annotation <- provider.provideAnnotation(id, request.identity) ?~> Msg.Annotation.notFound ~> NOT_FOUND
-        result <- Fox.fromFuture(merge(annotation.typ.toString, id, mergedTyp, mergedId)(request))
+        result <- Fox.fromFuture(merge(annotation.typ.toString, id, mergedTyp, mergedId, remapSegmentIds)(request))
       } yield result
     }
 

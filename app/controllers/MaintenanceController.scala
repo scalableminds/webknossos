@@ -13,7 +13,7 @@ import utils.sql.{SQLDAO, SqlClient}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import com.scalableminds.webknossos.schema.Tables.{Maintenances, MaintenancesRow, GetResultMaintenancesRow}
 import security.WkEnv
 

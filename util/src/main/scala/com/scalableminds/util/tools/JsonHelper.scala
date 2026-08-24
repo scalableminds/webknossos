@@ -1,16 +1,18 @@
 package com.scalableminds.util.tools
 
+import com.scalableminds.util.box.{Box, Empty, Failure, Full}
+
 import java.io.FileNotFoundException
-import java.nio.file._
+import java.nio.file.*
 import com.scalableminds.util.io.FileIO
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.Box.tryo
-import play.api.libs.json._
-import play.api.libs.json.Reads._
-import play.api.libs.json.Writes._
+import com.scalableminds.util.box.Box.tryo
+import play.api.libs.json.*
+import play.api.libs.json.Reads.*
+import play.api.libs.json.Writes.*
 
 import java.nio.charset.StandardCharsets
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.io.{BufferedSource, Source}
 
 object JsonHelper extends LazyLogging {
@@ -20,8 +22,8 @@ object JsonHelper extends LazyLogging {
 
   def parseAs[T: Reads](s: String): Box[T] =
     for {
-      jsValue <- tryo(Json.parse(s)) ?~ "Failed to parse json"
-      validated <- as[T](jsValue) ?~ "Failed to validate json against schema"
+      jsValue <- tryo(Json.parse(s)) ?~> "Failed to parse json"
+      validated <- as[T](jsValue) ?~> "Failed to validate json against schema"
     } yield validated
 
   def as[T: Reads](jsReadable: JsReadable): Box[T] =
@@ -106,6 +108,21 @@ object JsonHelper extends LazyLogging {
         Json.toJson(processedAsMap)
       case JsArray(fields) =>
         Json.toJson(fields.map(value => removeKeyRecursively(value, keysToRemove)))
+      case _ => jsValue
+    }
+
+  // Applies patch to the value of every field named key, anywhere in the json tree (not recursing into
+  // the patched value itself, since it is expected to be a leaf/terminal value for that key).
+  def patchKeyRecursively(jsValue: JsValue, key: String)(patch: JsValue => JsValue): JsValue =
+    jsValue match {
+      case JsObject(fields) =>
+        val processedAsMap = fields.view.map {
+          case (k, value) if k == key => k -> patch(value)
+          case (k, value)             => k -> patchKeyRecursively(value, key)(patch)
+        }.toMap
+        Json.toJson(processedAsMap)
+      case JsArray(fields) =>
+        Json.toJson(fields.map(value => patchKeyRecursively(value, key)(patch)))
       case _ => jsValue
     }
 }

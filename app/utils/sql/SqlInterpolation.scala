@@ -4,7 +4,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Double}
 import com.scalableminds.util.time.Instant
 import play.api.libs.json.{JsValue, Json}
 import slick.dbio.{Effect, NoStream}
-import slick.jdbc._
+import slick.jdbc.*
 import slick.sql.{SqlAction, SqlStreamingAction}
 import slick.util.DumpInfo
 import com.scalableminds.util.objectid.ObjectId

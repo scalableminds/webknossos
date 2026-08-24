@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
 import com.scalableminds.webknossos.datastore.datareaders.zarr.NgffMetadataV0_5
-import play.api.libs.json._
+import play.api.libs.json.*
 
 case class NgffZarr3GroupHeader(
     zarr_format: Int, // must be 3

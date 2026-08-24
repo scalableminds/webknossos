@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
+import com.scalableminds.util.box.Full
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.SegmentToAgglomerateProto.SegmentToAgglomerateChunkProto
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ReversionHelper
@@ -8,7 +9,6 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
   KeyValueStoreConversions,
   VersionedKeyValuePair
 }
-import com.scalableminds.util.tools.Full
 
 import scala.annotation.tailrec
 

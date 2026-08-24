@@ -1,4 +1,5 @@
 import features from "features";
+import { handleGenericError } from "libs/error_handling";
 import type { ModifierKeys, MouseBindingMap } from "libs/input";
 import { V3 } from "libs/mjs";
 import { clamp } from "libs/utils";
@@ -56,11 +57,13 @@ import {
   handlePickCell,
 } from "viewer/controller/combinations/volume_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
+import { isSkeletonLayerVisible } from "viewer/model/accessors/skeletontracing_accessor";
 import {
   AnnotationTool,
   type AnnotationToolId,
   isBrushTool,
 } from "viewer/model/accessors/tool_accessor";
+import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import { calculateGlobalPos } from "viewer/model/accessors/view_mode_accessor";
 import {
   enforceActiveVolumeTracing,
@@ -69,10 +72,7 @@ import {
   getMaximumBrushSize,
   getSegmentColorAsHSLA,
 } from "viewer/model/accessors/volumetracing_accessor";
-import {
-  addUserBoundingBoxAction,
-  finishedResizingUserBoundingBoxAction,
-} from "viewer/model/actions/annotation_actions";
+import { finishedResizingUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
 import {
   minCutAgglomerateWithPositionAction,
   proofreadAtPosition,
@@ -102,10 +102,11 @@ import {
   hideBrushAction,
   interpolateSegmentationLayerAction,
 } from "viewer/model/actions/volumetracing_actions";
+import { reserveIdAndAddBoundingBox } from "viewer/model/helpers/bounding_box_creation_helpers";
 import { api } from "viewer/singletons";
 import Store, { type UserConfiguration } from "viewer/store";
 import { getDefaultBrushSizes } from "viewer/view/action_bar/tools/brush_presets";
-import type ArbitraryView from "viewer/view/arbitrary_view";
+import type FlightModeView from "viewer/view/arbitrary_view";
 import type { KeyboardShortcutHandlerMap } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
 import { showToastWarningForLargestSegmentIdMissing } from "viewer/view/largest_segment_id_modal";
 import type PlaneView from "viewer/view/plane_view";
@@ -162,7 +163,7 @@ export class MoveToolController extends ToolController {
       scroll: (delta: number, type: ModifierKeys | null | undefined) => {
         switch (type) {
           case null: {
-            moveW(delta, true);
+            moveW(delta, true, false, true);
             break;
           }
 
@@ -413,7 +414,7 @@ export class SkeletonToolController extends ToolController {
   }
 
   static onLeftClick(
-    planeView: PlaneView | ArbitraryView,
+    planeView: PlaneView | FlightModeView,
     position: Point2,
     shiftPressed: boolean,
     altPressed: boolean,
@@ -423,6 +424,11 @@ export class SkeletonToolController extends ToolController {
     allowNodeCreation: boolean = true,
   ): void {
     const { useLegacyBindings, continuousNodeCreation } = Store.getState().userConfiguration;
+    const showSkeleton = isSkeletonLayerVisible(Store.getState());
+    if (!showSkeleton) {
+      // Don't do anything in case the skeleton layer is disabled or does not exist.
+      return;
+    }
 
     if (continuousNodeCreation && allowNodeCreation && !useLegacyBindings) {
       handleCreateNodeFromEvent(position, ctrlPressed);
@@ -784,6 +790,8 @@ export class EraseToolController extends VolumeToolController {
   static onToolDeselected() {}
 }
 
+// Not inheriting from VolumeToolController by design as no shortcuts like
+// `c` -> create new cell should be supported in this tool for now.
 export class VoxelPipetteToolController extends ToolController {
   static getPlaneMouseControls(_planeId: OrthoView): MouseBindingMap {
     return {
@@ -870,6 +878,18 @@ export class BoundingBoxToolController extends ToolController {
     let secondarySelectedEdge: SelectedEdge | null | undefined = null;
     // Accumulator for fractional movement that gets lost to rounding
     let movementAccumulator: Vector3 = [0, 0, 0];
+    // True while a new bounding box's id is being reserved asynchronously (see
+    // createBoundingBoxAndGetEdges). Without this, leftDownMove would fall through to
+    // panning the view for the duration of the reservation, since primarySelectedEdge
+    // is not set yet at that point.
+    let isCreatingBoundingBox = false;
+    // Tracks the mouse position while isCreatingBoundingBox is true, so the box can be
+    // resized to reflect any dragging that happened while its id was still being reserved
+    // (otherwise it would be stuck at its initial 1x1x1 size).
+    let latestPosDuringCreation: Point2 | null = null;
+    // Whether the left mouse button is still held down. A quick click can release it
+    // before the async id reservation resolves.
+    let isMouseStillDown = false;
     return {
       leftDownMove: (
         delta: Point2,
@@ -877,6 +897,10 @@ export class BoundingBoxToolController extends ToolController {
         _id: string | null | undefined,
         event: MouseEvent,
       ) => {
+        if (isCreatingBoundingBox) {
+          latestPosDuringCreation = pos;
+          return;
+        }
         if (primarySelectedEdge == null) {
           handleMovePlane(delta);
           return;
@@ -892,15 +916,48 @@ export class BoundingBoxToolController extends ToolController {
           handleResizingBoundingBox(pos, planeId, primarySelectedEdge, secondarySelectedEdge);
         }
       },
-      leftMouseDown: (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
+      leftMouseDown: async (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
+        isMouseStillDown = true;
+        if (isCreatingBoundingBox) {
+          // A previous leftMouseDown is still awaiting its id reservation. Since mouse
+          // events aren't serialized by the input framework, ignore this reentrant call
+          // instead of starting a second, concurrent bounding box creation.
+          latestPosDuringCreation = pos;
+          return;
+        }
         let hoveredEdgesInfo = getClosestHoveredBoundingBox(pos, planeId);
 
         if (hoveredEdgesInfo) {
           [primarySelectedEdge, secondarySelectedEdge] = hoveredEdgesInfo;
         } else {
-          hoveredEdgesInfo = createBoundingBoxAndGetEdges(pos, planeId);
+          isCreatingBoundingBox = true;
+          latestPosDuringCreation = pos;
+          try {
+            hoveredEdgesInfo = await createBoundingBoxAndGetEdges(pos, planeId);
+          } finally {
+            isCreatingBoundingBox = false;
+          }
           if (hoveredEdgesInfo) {
             [primarySelectedEdge, secondarySelectedEdge] = hoveredEdgesInfo;
+            if (latestPosDuringCreation != null) {
+              // Catch up on any dragging that happened while the id was being reserved.
+              handleResizingBoundingBox(
+                latestPosDuringCreation,
+                planeId,
+                primarySelectedEdge,
+                secondarySelectedEdge,
+              );
+            }
+            if (!isMouseStillDown) {
+              // The mouse was already released before the box was created (e.g. a quick
+              // click). Finish the resize immediately instead of leaving it in an
+              // active-drag state that would only be cleaned up on the next mouse-up.
+              Store.dispatch(finishedResizingUserBoundingBoxAction(primarySelectedEdge.boxId));
+              primarySelectedEdge = null;
+              secondarySelectedEdge = null;
+            }
+          } else {
+            isCreatingBoundingBox = false;
           }
         }
         if (primarySelectedEdge) {
@@ -908,6 +965,7 @@ export class BoundingBoxToolController extends ToolController {
         }
       },
       leftMouseUp: () => {
+        isMouseStillDown = false;
         if (primarySelectedEdge) {
           Store.dispatch(finishedResizingUserBoundingBoxAction(primarySelectedEdge.boxId));
         }
@@ -947,8 +1005,14 @@ export class BoundingBoxToolController extends ToolController {
     };
     return {
       CREATE_BOUNDING_BOX: {
-        onPressed: () => {
-          Store.dispatch(addUserBoundingBoxAction());
+        onPressed: async () => {
+          try {
+            const tracingId = getSomeTracing(Store.getState().annotation).tracingId;
+            // Queued behind any active rebase (see reserveIdAndAddBoundingBox).
+            await reserveIdAndAddBoundingBox(Store.dispatch, tracingId);
+          } catch (error) {
+            handleGenericError(error as Error, "Could not create a new bounding box.");
+          }
         },
       },
       TOGGLE_CURSOR_STATE_FOR_MOVING: {
@@ -1359,7 +1423,7 @@ export class ProofreadToolController extends ToolController {
     if (isMultiSplitActive && ctrlOrMetaKey) {
       const unmappedSegmentId = getUnmappedSegmentIdForPosition(globalPosition);
       const mappedSegmentId = getSegmentIdForPosition(globalPosition);
-      if (unmappedSegmentId === 0 || mappedSegmentId === 0) {
+      if (unmappedSegmentId === 0n || mappedSegmentId === 0n) {
         // No valid ids were found, ignore action.
         return;
       }

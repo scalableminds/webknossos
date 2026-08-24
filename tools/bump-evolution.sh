@@ -8,7 +8,7 @@ EVOLUTIONS_DIR="schema/evolutions"
 SCHEMA_FILE="schema/schema.sql"
 
 # pick the evolution added on this branch that is not in master
-BRANCH_FILE=$(git diff master --name-only --diff-filter=A \
+BRANCH_FILE=$(git fetch origin master > /dev/null 2>&1; git diff origin/master --name-only --diff-filter=A \
   | { grep -E "^schema/evolutions/[0-9]+-.*\.sql$" || true; } \
   | { grep -v "/reversions/" || true; } \
   | head -1)

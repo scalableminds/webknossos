@@ -21,7 +21,7 @@ The position control allows precise navigation within your dataset. You can:
 
 - Enter specific coordinates to jump directly to any location
 - Copy position values by clicking on the pushpin icon.
-- Adjust camera rotation in flight or oblique modes
+- Adjust camera rotation in flight mode
 - The position information is automatically included when sharing your view with colleagues
 - Quick Share: Generate an immediate sharing link that includes your current view settings. This is ideal for rapid collaboration or when you need to quickly show something to a colleague.
 

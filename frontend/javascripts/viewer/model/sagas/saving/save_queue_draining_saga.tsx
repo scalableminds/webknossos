@@ -12,7 +12,10 @@ import memoizeOne from "memoize-one";
 import messages from "messages";
 import { actionChannel, call, delay, flush, put, race, take } from "typed-redux-saga";
 import { ControlModeEnum } from "viewer/constants";
-import { maySendSaveRequest } from "viewer/model/accessors/annotation_accessor";
+import {
+  isConcurrentCollaborationMode,
+  maySendSaveRequest,
+} from "viewer/model/accessors/annotation_accessor";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import {
   type OperationId,
@@ -234,8 +237,7 @@ export function* sendSaveRequestToServer(
    */
 
   const fullSaveQueue = yield* select((state) => state.save.queue);
-  const withoutFEOnlyActions = filterOutFrontendOnlySupportedActions(fullSaveQueue);
-  const saveQueue = sliceAppropriateBatchCount(withoutFEOnlyActions);
+  const saveQueue = sliceAppropriateBatchCount(fullSaveQueue);
   let compactedSaveQueue = compactSaveQueue(saveQueue);
   const version = yield* select((state) => state.annotation.version);
   const annotationId = yield* select((state) => state.annotation.annotationId);
@@ -342,7 +344,7 @@ export function* sendSaveRequestToServer(
 }
 
 function allowAdditionalOperation(pendingId: OperationId, state: WebknossosState) {
-  if (state.annotation.collaborationMode === "Concurrent") {
+  if (isConcurrentCollaborationMode(state)) {
     // In concurrent collab mode, we forbid users from editing during saving
     // because editing would interfere with rebase operations. No new operations
     // should be started.
@@ -431,16 +433,6 @@ function sliceAppropriateBatchCount(batches: Array<SaveQueueEntry>): Array<SaveQ
   }
 
   return slicedBatches;
-}
-
-function filterOutFrontendOnlySupportedActions(
-  updateActionsBatches: Array<SaveQueueEntry>,
-): Array<SaveQueueEntry> {
-  const batchesWithoutFrontendOnlyActions = updateActionsBatches.map((batch) => ({
-    ...batch,
-    actions: batch.actions.filter((a) => !("isFrontendOnly" in a.value && a.value.isFrontendOnly)),
-  }));
-  return batchesWithoutFrontendOnlyActions;
 }
 
 export function addVersionNumbers(

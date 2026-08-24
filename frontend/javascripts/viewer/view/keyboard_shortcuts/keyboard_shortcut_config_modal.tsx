@@ -93,6 +93,46 @@ const KeyboardShortcutDomainTable: React.FC<KeyboardShortcutDomainTableProps> = 
   );
 };
 
+type EmptyShortcutCellProps = {
+  shortcutId: KeyboardShortcutId;
+  isEditable: boolean;
+  onRestoreDefault: (shortcutId: KeyboardShortcutId) => void;
+};
+
+// Rendered when a shortcut currently has no key sequence assigned. Shortcuts that ship without
+// a default binding have nothing to restore — showing the rollback button would be a no-op, so
+// a hint is shown instead which points at the add button next to it.
+const EmptyShortcutCell: React.FC<EmptyShortcutCellProps> = ({
+  shortcutId,
+  isEditable,
+  onRestoreDefault,
+}) => {
+  if (!ALL_KEYBOARD_SHORTCUT_META_INFOS[shortcutId].hasDefaultBindings()) {
+    return (
+      <FastTooltip title="This action has no default key binding. Use the plus button to assign one.">
+        <Text italic type="secondary">
+          No default binding — set your own
+        </Text>
+      </FastTooltip>
+    );
+  }
+  return (
+    <>
+      <Text italic type="secondary">
+        No shortcut configured
+      </Text>
+      <FastTooltip title="Restore default shortcut">
+        <Button
+          type="text"
+          icon={<RollbackOutlined />}
+          disabled={!isEditable}
+          onClick={() => onRestoreDefault(shortcutId)}
+        />
+      </FastTooltip>
+    </>
+  );
+};
+
 export default function KeyboardShortcutConfigModal({ isOpen, onClose }: ShortcutConfigModalProps) {
   const dispatch = useDispatch();
   const activeUser = useWkSelector((state) => state.activeUser);
@@ -112,8 +152,8 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
   );
   const [localShortcutConfig, setLocalShortcutConfig] = useState(keyboardShortcutsConfigFromStore);
   const shortcutCollisions = useMemo(
-    () => checkCollisionsInShortcutMap(localShortcutConfig),
-    [localShortcutConfig],
+    () => checkCollisionsInShortcutMap(localShortcutConfig, unmodifiedLayoutMap),
+    [localShortcutConfig, unmodifiedLayoutMap],
   );
 
   const [jsonString, setJsonString] = useState(() => JSON.stringify(localShortcutConfig, null, 2));
@@ -126,20 +166,16 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
   };
 
   const handleRemoveComboChain = (shortcutId: KeyboardShortcutId, comboChain: string[][]) => {
-    setLocalShortcutConfig((prevConfig) => {
-      const updatedCombos = prevConfig[shortcutId].filter((c) => c !== comboChain);
-      const updatedConfig = { ...prevConfig, [shortcutId]: updatedCombos };
-      updateLocalShortcutConfig(updatedConfig);
-      return updatedConfig;
+    updateLocalShortcutConfig({
+      ...localShortcutConfig,
+      [shortcutId]: localShortcutConfig[shortcutId].filter((c) => c !== comboChain),
     });
   };
 
   const handleRestoreDefaultForShortcut = (shortcutId: KeyboardShortcutId) => {
-    const defaultCombos = getAllDefaultKeyboardShortcuts()[shortcutId];
-    setLocalShortcutConfig((prevConfig) => {
-      const updatedConfig = { ...prevConfig, [shortcutId]: defaultCombos };
-      updateLocalShortcutConfig(updatedConfig);
-      return updatedConfig;
+    updateLocalShortcutConfig({
+      ...localShortcutConfig,
+      [shortcutId]: getAllDefaultKeyboardShortcuts()[shortcutId],
     });
   };
 
@@ -201,19 +237,11 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
         <>
           <div className="keyboard-shortcuts-container">
             {combos.length === 0 ? (
-              <>
-                <Text italic style={{ color: "var(--ant-color-text-secondary)" }}>
-                  No shortcut configured
-                </Text>
-                <FastTooltip title="Restore default shortcut">
-                  <Button
-                    type="text"
-                    icon={<RollbackOutlined />}
-                    disabled={!isEditable}
-                    onClick={() => handleRestoreDefaultForShortcut(record.shortcutId)}
-                  />
-                </FastTooltip>
-              </>
+              <EmptyShortcutCell
+                shortcutId={record.shortcutId}
+                isEditable={isEditable}
+                onRestoreDefault={handleRestoreDefaultForShortcut}
+              />
             ) : (
               combos.map((comboChain, index) => (
                 <div key={index} className="single-keyboard-shortcut-container">
@@ -336,14 +364,12 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
     }
   };
   const handleCancel = () => {
-    setLocalShortcutConfig(keyboardShortcutsConfigFromStore);
-    setJsonString(JSON.stringify(keyboardShortcutsConfigFromStore, null, 2));
-    setJsonError(null);
+    updateLocalShortcutConfig(keyboardShortcutsConfigFromStore);
     onClose();
   };
 
   const onReset = () => {
-    setLocalShortcutConfig(getAllDefaultKeyboardShortcuts());
+    updateLocalShortcutConfig(getAllDefaultKeyboardShortcuts());
   };
 
   const shortcutsTabItems: TabsProps["items"] = [

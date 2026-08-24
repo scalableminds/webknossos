@@ -1,11 +1,10 @@
 import Deferred from "libs/async/deferred";
 import type { APIHistogramData } from "types/api_types";
-import type { ControlMode, ViewMode } from "viewer/constants";
+import type { ControlMode, MappingType, Vector3, ViewMode } from "viewer/constants";
 import type {
   DatasetConfiguration,
   DatasetLayerConfiguration,
   Mapping,
-  MappingType,
   TemporaryConfiguration,
   UserConfiguration,
 } from "viewer/store";
@@ -19,6 +18,10 @@ type UpdateDatasetSettingAction = ReturnType<typeof updateDatasetSettingAction>;
 export type UpdateTemporarySettingAction = ReturnType<typeof updateTemporarySettingAction>;
 export type ToggleTemporarySettingAction = ReturnType<typeof toggleTemporarySettingAction>;
 export type UpdateLayerSettingAction = ReturnType<typeof updateLayerSettingAction>;
+export type SetLayerBoundingBoxVisibilityAction = ReturnType<
+  typeof setLayerBoundingBoxVisibilityAction
+>;
+export type SetLayerBoundingBoxColorAction = ReturnType<typeof setLayerBoundingBoxColorAction>;
 export type InitializeSettingsAction = ReturnType<typeof initializeSettingsAction>;
 export type SetViewModeAction = ReturnType<typeof setViewModeAction>;
 type SetHistogramDataForLayerAction = ReturnType<typeof setHistogramDataForLayerAction>;
@@ -47,6 +50,8 @@ export type SettingAction =
   | ToggleTemporarySettingAction
   | InitializeSettingsAction
   | UpdateLayerSettingAction
+  | SetLayerBoundingBoxVisibilityAction
+  | SetLayerBoundingBoxColorAction
   | SetViewModeAction
   | SetFlightmodeRecordingAction
   | SetControlModeAction
@@ -110,6 +115,20 @@ export const updateLayerSettingAction = <Key extends keyof DatasetLayerConfigura
     layerName,
     propertyName,
     value,
+  }) as const;
+
+export const setLayerBoundingBoxVisibilityAction = (layerName: string, isVisible: boolean) =>
+  ({
+    type: "SET_LAYER_BOUNDING_BOX_VISIBILITY",
+    layerName,
+    isVisible,
+  }) as const;
+
+export const setLayerBoundingBoxColorAction = (layerName: string, color: Vector3) =>
+  ({
+    type: "SET_LAYER_BOUNDING_BOX_COLOR",
+    layerName,
+    color,
   }) as const;
 
 export const initializeSettingsAction = (

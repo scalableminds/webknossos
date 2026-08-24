@@ -144,12 +144,30 @@ export default class WkDev {
     console.log(`Registered ${segmentIdToPosition.size} segments.`);
   }
 
-  createManyTrees(treeCount: number = 2000) {
+  createManyTrees(
+    treeCount: number = 2000,
+    withNodes: boolean = false,
+    withComments: boolean = false,
+    nodesPerTree: number = 10,
+  ) {
     const api = this.api;
 
     console.log("Creating", treeCount, "trees...");
     for (let i = 0; i < treeCount; i++) {
-      api.tracing.createTree();
+      const treeId = api.tracing.createTree();
+      if (!withNodes) {
+        continue;
+      }
+      for (let n = 0; n < nodesPerTree; n++) {
+        api.tracing.createNode([n, n, n]);
+        if (!withComments) {
+          continue;
+        }
+        const nodeId = api.tracing.getActiveNodeId();
+        if (nodeId != null) {
+          api.tracing.setCommentForNode(`Comment ${n}`, nodeId, treeId);
+        }
+      }
     }
     console.log("Created", treeCount, "trees.");
   }
@@ -215,6 +233,8 @@ export default class WkDev {
 
   async benchmarkRotate(n: number = 10) {
     // Dynamic import to avoid circular imports.
+    // Bare import is allowed here (whitelisted in tools/check-no-bare-dynamic-imports.js):
+    // benchmark-only; cyclic dep via importDynamic is not worth it here and a failed import is acceptable.
     const { rotate3DViewTo } = await import("viewer/controller/camera_controller");
 
     const animateAsPromise = (plane: OrthoView) => {

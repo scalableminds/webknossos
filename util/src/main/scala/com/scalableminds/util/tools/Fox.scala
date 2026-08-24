@@ -1,6 +1,8 @@
 package com.scalableminds.util.tools
 
-import scala.concurrent.duration._
+import com.scalableminds.util.box.{Box, Empty, Failure, Full, ParamFailure}
+
+import scala.concurrent.duration.*
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Success, Try}
 
@@ -18,7 +20,7 @@ object Fox {
 
   extension [T](o: Option[T])
     def toFox(using ec: ExecutionContext): Fox[T] =
-      new Fox(Future.successful(Box(o)))
+      new Fox(Future.successful(Box.fromOption(o)))
 
   def fromBool(b: Boolean)(implicit ec: ExecutionContext): Fox[Unit] =
     if (b) Fox.successful(())
@@ -55,6 +57,13 @@ object Fox {
   ): Fox[Nothing] =
     new Fox(Future.successful(ParamFailure(message, ex, chain, param)))
 
+  /** Runs `cleanup` once `fox` completes, whether it succeeds, fails, or throws synchronously while being constructed.
+    * Takes `fox` by name so that a synchronous exception is caught and does not skip `cleanup`, which a plain
+    * `andThen(cleanup)` would do if `fox` itself throws before `andThen` can be attached.
+    */
+  def withCleanup[A](fox: => Fox[A])(cleanup: => Unit)(implicit ec: ExecutionContext): Fox[A] =
+    Fox.fromFutureBox(Fox.successful(()).flatMap(_ => fox).futureBox.andThen { case _ => cleanup })
+
   // run serially, return individual results in list of box
   def serialSequence[A, B](seq: Seq[A])(f: A => Fox[B])(implicit ec: ExecutionContext): Future[List[Box[B]]] = {
     def runNext(remaining: List[A], results: List[Box[B]]): Future[List[Box[B]]] =
@@ -75,12 +84,7 @@ object Fox {
 
   def combined[T](seq: Seq[Fox[T]])(implicit ec: ExecutionContext): Fox[List[T]] =
     new Fox(Future.sequence(seq.map(_.futureBox)).map { results =>
-      results.find(_.isEmpty) match {
-        case Some(Empty)            => Empty
-        case Some(failure: Failure) => failure
-        case _                      =>
-          Full(results.map(_.getOrThrow("An exception should never be thrown, all boxes must be full")).toList)
-      }
+      Box.combined(results).map(_.toList)
     })
 
   // Run serially, fail on the first failure
@@ -242,32 +246,20 @@ object Fox {
 }
 
 class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
-  private val self: Fox[A] = this
 
-  // Add error message in case of Failure and Empty (wrapping Empty in a Failure)
-  def ?~>(s: String): Fox[A] =
-    new Fox(futureBox.map(_ ?~! s))
+  /** Add error message in case of Failure and Empty (wrapping Empty in a Failure) */
+  def ?~>(msg: String): Fox[A] =
+    new Fox(futureBox.map(_ ?~> msg))
 
-  // Add error message only in case of Failure, pass through Empty
-  def ?->(s: String): Fox[A] =
-    Fox.fromFutureBox {
-      futureBox.map {
-        case Full(value) => Full(value)
-        case f: Failure  => f ?~! s
-        case Empty       => Empty
-      }
-    }
+  /** Add error message only in case of Failure, pass through Empty */
+  def ?->(msg: String): Fox[A] =
+    new Fox(futureBox.map(_ ?-> msg))
 
-  // Overwrite error message in case of Failure and Empty (wrapping Empty in a Failure).
-  def ??~>(s: String): Fox[A] =
-    Fox.fromFutureBox {
-      futureBox.map {
-        case Full(value) => Full(value)
-        case _           => Failure(s)
-      }
-    }
+  /** Overwrite error message in case of Failure and Empty (wrapping Empty in a Failure). */
+  def ??~>(msg: String): Fox[A] =
+    new Fox(futureBox.map(_ ??~> msg))
 
-  // Add http error code in case of Failure or Empty (wrapping Empty in a Failure)
+  /** Add http error code in case of Failure or Empty (wrapping Empty in a Failure) */
   def ~>(errorCode: Int): Fox[A] =
     new Fox(futureBox.map(_ ~> errorCode))
 
@@ -317,9 +309,6 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
       }
     }
 
-  def andThen[U](pf: PartialFunction[Try[Box[A]], U])(implicit ec: ExecutionContext): Fox[A] =
-    Fox.fromFutureBox(futureBox.andThen(pf))
-
   /*
    * Returns new Fox[Box[A]] that is always successful, such that the original’s box is shifted “inwards”.
    * Use to access the box.
@@ -332,7 +321,7 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
   def toFutureOrThrowException(justification: String): Future[A] =
     for {
       box: Box[A] <- this.futureBox
-    } yield box.getOrThrow(justification)
+    } yield box.get(justification)
 
   def toFutureWithEmptyToFailure: Future[A] =
     (for {
@@ -348,7 +337,7 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
   @deprecated(message = "Do not use this in production code", since = "forever")
   def get(justification: String, awaitTimeout: FiniteDuration = 10 seconds): A = {
     val box = await(justification, awaitTimeout)
-    box.getOrThrow(justification)
+    box.get(justification)
   }
 
   /** Awaits the future and returns the box.
@@ -372,22 +361,5 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
       case Empty       => Full(fillValue)
       case f: Failure  => f
     })
-
-  /** Makes Fox play with Scala 2.8 for comprehensions
-    */
-  def withFilter(p: A => Boolean): WithFilter = new WithFilter(p)
-
-  /** Makes Fox play with Scala 2.8 for comprehension
-    */
-  class WithFilter(p: A => Boolean) {
-    def map[B](f: A => B): Fox[B] = self.filter(p).map(f)
-
-    def flatMap[B](f: A => Fox[B]): Fox[B] = self.filter(p).flatMap(f)
-
-    def foreach[U](f: A => U): Unit = self.filter(p).foreach(f)
-
-    def withFilter(q: A => Boolean): WithFilter =
-      new WithFilter(x => p(x) && q(x))
-  }
 
 }

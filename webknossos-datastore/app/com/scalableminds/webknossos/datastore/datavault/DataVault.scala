@@ -6,12 +6,12 @@ import com.scalableminds.util.tools.Fox
 import scala.concurrent.ExecutionContext
 
 trait DataVault {
-  def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(using
+  def readBytesPlusEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[(Array[Byte], Encoding.Value, Option[String])]
 
-  def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]]
+  def listDirectory(path: VaultPath, maxItems: Int)(using ec: ExecutionContext, tc: TokenContext): Fox[Seq[VaultPath]]
 
   def getUsedStorageBytes(path: VaultPath)(using ec: ExecutionContext, tc: TokenContext): Fox[Long]
 }

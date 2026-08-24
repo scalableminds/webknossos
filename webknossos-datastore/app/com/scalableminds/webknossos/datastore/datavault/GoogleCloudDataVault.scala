@@ -4,16 +4,18 @@ import com.google.auth.oauth2.ServiceAccountCredentials
 import com.google.cloud.storage.Storage.BlobSourceOption
 import com.google.cloud.storage.{BlobId, BlobInfo, Storage, StorageException, StorageOptions}
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.tools.{Box, Fox}
+import com.scalableminds.util.box.{Box, Full}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.storage.{CredentializedUPath, GoogleServiceAccountCredential}
-import com.scalableminds.util.tools.Box.tryo
+import Box.tryo
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import org.apache.commons.lang3.builder.HashCodeBuilder
 
-import java.io.ByteArrayInputStream
+import java.io.{ByteArrayInputStream, EOFException, IOException}
 import java.net.URI
 import java.nio.ByteBuffer
+import java.nio.channels.ReadableByteChannel
 import scala.concurrent.ExecutionContext
 import scala.jdk.CollectionConverters.{IterableHasAsScala, IteratorHasAsScala}
 
@@ -37,7 +39,7 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
   // dashes, excluding chars that may be part of the bucket name (e.g. underscore).
   private lazy val bucket: String = uri.getAuthority
 
-  override def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(using
+  override def readBytesPlusEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[(Array[Byte], Encoding.Value, Option[String])] =
@@ -49,32 +51,38 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
           range match {
             case r: StartEndExclusiveByteRange =>
               val blobReader = storage.reader(blobId)
-              blobReader.seek(r.start)
-              blobReader.limit(r.end)
-              val bb = ByteBuffer.allocateDirect(r.length)
-              blobReader.read(bb)
-              val arr = new Array[Byte](r.length)
-              bb.position(0)
-              bb.get(arr)
-              Fox.successful(arr)
+              try {
+                blobReader.seek(r.start)
+                blobReader.limit(r.end)
+                val bb = ByteBuffer.allocateDirect(r.length)
+                readFully(blobReader, bb)
+                val arr = new Array[Byte](r.length)
+                bb.position(0)
+                bb.get(arr)
+                Fox.successful(arr)
+              } finally blobReader.close()
             case SuffixLengthByteRange(l) =>
               val blobReader = storage.reader(blobId)
-              blobReader.seek(-l)
-              val bb = ByteBuffer.allocateDirect(l)
-              blobReader.read(bb)
-              val arr = new Array[Byte](l)
-              bb.position(0)
-              bb.get(arr)
-              Fox.successful(arr)
+              try {
+                blobReader.seek(-l)
+                val bb = ByteBuffer.allocateDirect(l)
+                readFully(blobReader, bb)
+                val arr = new Array[Byte](l)
+                bb.position(0)
+                bb.get(arr)
+                Fox.successful(arr)
+              } finally blobReader.close()
             case CompleteByteRange() =>
               Fox.successful(storage.readAllBytes(bucket, objName, BlobSourceOption.shouldReturnRawInputStream(true)))
           }
         catch {
-          case s: StorageException =>
-            if (s.getCode == 404)
-              Fox.empty
-            else Fox.failure(s.getMessage)
-          case t: Throwable => Fox.failure(t.getMessage)
+          case s: StorageException => storageExceptionToFox(s)
+          case e: IOException      =>
+            e.getCause match {
+              case s: StorageException => storageExceptionToFox(s)
+              case _                   => Fox.failure(e.getMessage, Full(e))
+            }
+          case t: Throwable => Fox.failure(t.getMessage, Full(t))
         }
       blobInfo: BlobInfo <- tryo(
         storage.get(
@@ -88,16 +96,19 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
         .toFox ?~> "could not get encoding"
     } yield (bytes, encoding, Option(blobInfo.getSize).flatMap(size => range.toContentRangeHeaderWithLength(size)))
 
-  override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
+  override def listDirectory(path: VaultPath, maxItems: Int)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Seq[VaultPath]] =
     (for {
       objName <- getObjectName(path)
       blobs <- tryo(
         storage.list(bucket, Storage.BlobListOption.prefix(objName), Storage.BlobListOption.currentDirectory())
       )
       subDirectories <- tryo(blobs.getValues.asScala.toList.filter(_.isDirectory).take(maxItems))
-      paths <- subDirectories.map { dirBlob =>
+      paths <- Box.combined(subDirectories) { dirBlob =>
         UPath.fromString(s"${uri.getScheme}://$bucket/${dirBlob.getBlobId.getName}").map(new VaultPath(_, this))
-      }.toSingleBox("Invalid UPath")
+      }
     } yield paths).toFox
 
   override def getUsedStorageBytes(path: VaultPath)(using ec: ExecutionContext, tc: TokenContext): Fox[Long] =
@@ -108,6 +119,18 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
       ) // no currentDirectory(); Do deep recursive listing
       totalSize <- tryo(blobs.iterateAll().iterator().asScala.map(_.getSize).foldLeft(0L)(_ + _))
     } yield totalSize).toFox
+
+  private def readFully(channel: ReadableByteChannel, buffer: ByteBuffer): Unit =
+    while (buffer.hasRemaining) {
+      val bytesRead = channel.read(buffer)
+      if (bytesRead == -1)
+        throw new EOFException(
+          s"Unexpected end of stream while reading from GCS: got ${buffer.position} of ${buffer.capacity} requested bytes"
+        )
+    }
+
+  private def storageExceptionToFox(s: StorageException)(using ec: ExecutionContext): Fox[Array[Byte]] =
+    if (s.getCode == 404) Fox.empty else Fox.failure(s.getMessage, Full(s))
 
   private def getUri = uri
   private def getCredential = credential
@@ -128,9 +151,9 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
 }
 
 object GoogleCloudDataVault {
-  def create(credentializedUpath: CredentializedUPath): Box[GoogleCloudDataVault] =
+  def create(credentializedUPath: CredentializedUPath): Box[GoogleCloudDataVault] =
     for {
-      credential <- tryo(credentializedUpath.credential.map(f => f.asInstanceOf[GoogleServiceAccountCredential]))
-      remoteUri <- credentializedUpath.upath.toRemoteUri
+      credential <- tryo(credentializedUPath.credential.map(f => f.asInstanceOf[GoogleServiceAccountCredential]))
+      remoteUri <- credentializedUPath.upath.toRemoteUri
     } yield new GoogleCloudDataVault(remoteUri, credential)
 }

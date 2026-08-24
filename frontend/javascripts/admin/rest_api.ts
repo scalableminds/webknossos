@@ -1,5 +1,8 @@
+import type { ApiResult, RetryOptions } from "admin/api/api_result";
+import { requestResult } from "admin/api/api_result";
 import dayjs from "dayjs";
 import update from "immutability-helper";
+import { toBigInt } from "libs/bigint_helpers";
 import type { RequestOptions, RequestOptionsWithData } from "libs/request";
 import Request from "libs/request";
 import ResumableUpload from "libs/resumable_upload/resumable_upload";
@@ -85,7 +88,7 @@ import {
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 import type { DatasourceConfiguration } from "types/schemas/datasource.types";
 import type { ArbitraryObject, EmptyObject } from "types/type_utils";
-import type { AnnotationTypeFilterEnum, LOG_LEVELS, Vector3 } from "viewer/constants";
+import type { AnnotationTypeFilterEnum, LOG_LEVELS, MappingType, Vector3 } from "viewer/constants";
 import Constants, { AnnotationStateFilterEnum } from "viewer/constants";
 import type BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import {
@@ -101,8 +104,6 @@ import {
 import type {
   DatasetConfiguration,
   Mapping,
-  MappingType,
-  NumberLike,
   PartialDatasetConfiguration,
   SaveQueueEntry,
   StoreAnnotation,
@@ -634,14 +635,21 @@ export function duplicateAnnotation(
 export async function getUnversionedAnnotationInformation(
   annotationId: string,
   options: RequestOptions = {},
-): Promise<APIAnnotation> {
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<APIAnnotation>> {
   const infoUrl = `/api/annotations/${annotationId}/info?timestamp=${Date.now()}`;
-  const annotationWithMessages = await Request.receiveJSON(infoUrl, options);
+  return requestResult(
+    async (adaptedOpts) => {
+      const annotationWithMessages = await Request.receiveJSON(infoUrl, adaptedOpts);
 
-  // Extract the potential messages property before returning the task to avoid
-  // failing e2e tests in annotations.e2e.ts
-  const { messages: _messages, ...annotation } = annotationWithMessages;
-  return annotation;
+      // Extract the potential messages property before returning the task to avoid
+      // failing e2e tests in annotations.e2e.ts
+      const { messages: _messages, ...annotation } = annotationWithMessages;
+      return annotation;
+    },
+    options,
+    retryOptions,
+  );
 }
 
 export async function getAnnotationCompoundInformation(
@@ -913,7 +921,7 @@ export const hasSegmentIndexInDataStoreCached = memoize(hasSegmentIndexInDataSto
 export function getSegmentVolumes(
   layerSourceInfo: LayerSourceInfo,
   mag: Vector3,
-  segmentIds: Array<number>,
+  segmentIds: Array<bigint>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
   annotationVersion: number | undefined,
@@ -929,7 +937,7 @@ export function getSegmentVolumes(
 
 type SegmentStatisticsParametersMeshBased = {
   mag: Vector3;
-  segmentIds: number[];
+  segmentIds: bigint[];
   mappingName?: string | null;
   additionalCoordinates?: AdditionalCoordinate[] | null;
   meshFileName?: string | null;
@@ -940,7 +948,7 @@ export function getSegmentSurfaceArea(
   layerSourceInfo: LayerSourceInfo,
   mag: Vector3,
   meshFileName: string | undefined | null,
-  segmentIds: Array<number>,
+  segmentIds: Array<bigint>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
   annotationVersion: number | undefined,
@@ -968,7 +976,7 @@ export function getSegmentSurfaceArea(
 export function getSegmentBoundingBoxes(
   layerSourceInfo: LayerSourceInfo,
   mag: Vector3,
-  segmentIds: Array<number>,
+  segmentIds: Array<bigint>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
   annotationVersion: number | undefined,
@@ -987,8 +995,8 @@ export async function importVolumeTracing(
   volumeTracing: VolumeTracing,
   dataFile: File,
   version: number,
-): Promise<number> {
-  return doWithToken((token) =>
+): Promise<bigint> {
+  const largestSegmentId: bigint = await doWithToken((token) =>
     Request.sendMultipartFormReceiveJSON(
       `${annotation.tracingStore.url}/tracings/volume/${volumeTracing.tracingId}/importVolumeData?token=${token}`,
       {
@@ -999,12 +1007,17 @@ export async function importVolumeTracing(
       },
     ),
   );
+  return largestSegmentId;
 }
 
 export async function downloadWithFilename(downloadUrl: string) {
   const link = document.createElement("a");
   link.href = downloadUrl;
   link.rel = "noopener";
+  // Without this, the browser treats the click as a top-level navigation until the
+  // Content-Disposition header arrives, firing beforeunload and releasing the annotation
+  // mutex. The download attribute marks it as a forced download upfront.
+  link.download = "";
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -1097,6 +1110,7 @@ export async function reserveIdsForAnnotation(
 }
 
 // ### Datasets
+
 export async function getDatasets(
   isUnreported: boolean | null | undefined = null,
   folderId: string | null = null,
@@ -1129,7 +1143,9 @@ export async function getDatasets(
 }
 
 export async function getActiveDatasetsOfMyOrganization(): Promise<Array<APIDataset>> {
-  const datasets = await Request.receiveJSON("/api/datasets?isActive=true&onlyMyOrganization=true");
+  const datasets: Array<APIDataset> = await Request.receiveJSON(
+    "/api/datasets?isActive=true&onlyMyOrganization=true",
+  );
   assertResponseLimit(datasets);
   return datasets;
 }
@@ -1188,7 +1204,7 @@ export type DatasetUpdater = {
   dataSource?: APIDataSource;
 };
 
-export function updateDatasetPartial(
+export async function updateDatasetPartial(
   datasetId: string,
   updater: Partial<DatasetUpdater>,
   options: RequestOptions = {},
@@ -1516,7 +1532,7 @@ export async function isDatasetNameValid(datasetName: string): Promise<string | 
   }
 }
 
-export function updateDatasetTeams(
+export async function updateDatasetTeams(
   datasetId: string,
   newTeams: Array<string>,
   options: RequestOptions = {},
@@ -1703,7 +1719,7 @@ export function getPositionForSegmentInAgglomerate(
   datasetId: string,
   layerName: string,
   mappingName: string,
-  segmentId: number,
+  segmentId: bigint,
 ): Promise<Vector3> {
   return doWithToken(async (token) => {
     const params = new URLSearchParams({
@@ -1921,9 +1937,7 @@ export function getExistingExperienceDomains(): Promise<ExperienceDomainList> {
 }
 
 export async function isInMaintenance(): Promise<boolean> {
-  const allMaintenances: Array<MaintenanceInfo> = await Request.receiveJSON(
-    "/api/maintenances/listCurrentAndUpcoming",
-  );
+  const allMaintenances: Array<MaintenanceInfo> = await listCurrentAndUpcomingMaintenances();
   const currentEpoch = Date.now();
   const currentMaintenance = allMaintenances.find(
     (maintenance) => maintenance.startTime < currentEpoch,
@@ -1952,7 +1966,7 @@ type MeshRequest = {
   positionWithPadding: Vector3;
   additionalCoordinates: AdditionalCoordinate[] | undefined;
   mag: Vector3;
-  segmentId: number; // Segment to build mesh for
+  segmentId: bigint; // Segment to build mesh for
   // The cubeSize is in voxels in mag <mag>
   cubeSize: Vector3;
   scaleFactor: Vector3;
@@ -2012,7 +2026,7 @@ export function computeAdHocMesh(
 
 export function getBucketPositionsForAdHocMesh(
   layerSourceInfo: LayerSourceInfo,
-  segmentId: number,
+  segmentId: bigint,
   cubeSize: Vector3,
   mag: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
@@ -2045,7 +2059,7 @@ export function getAgglomerateTreeAsSkeletonTracing(
   dataset: APIDataset,
   layerName: string,
   mappingId: string,
-  agglomerateId: number,
+  agglomerateId: bigint,
 ): Promise<ArrayBuffer> {
   return doWithToken((token) =>
     Request.receiveArraybuffer(
@@ -2065,13 +2079,15 @@ async function _getAgglomeratesForSegmentsHelper<T extends number | bigint>(
   url: string,
   extraParams: URLSearchParams,
 ): Promise<Mapping> {
-  if (segmentIds.size === 0) {
+  // Segment id 0 represents unlabeled/background voxels and is never a real segment. It must
+  // never be requested from the server or end up as a 0 -> 0 entry in the resulting mapping: 0 is
+  // reserved as the "empty" sentinel in the GPU-side cuckoo table and is rejected as a key there.
+  const filteredSegmentIds = new Set([...segmentIds].filter((id) => id !== 0 && id !== 0n));
+  if (filteredSegmentIds.size === 0) {
     return new Map();
   }
-  const sortedSegmentIdArray = [...segmentIds].sort(<T extends NumberLike>(a: T, b: T) =>
-    Number(a - b),
-  );
-  const segmentIdBuffer = serializeProtoListOfLong<T>(sortedSegmentIdArray);
+  const sortedSegmentIdArray = [...filteredSegmentIds].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  const segmentIdBuffer = serializeProtoListOfLong(sortedSegmentIdArray.map(toBigInt));
   const listArrayBuffer = await doWithToken((token) => {
     const params = new URLSearchParams(extraParams);
     params.set("token", token);
@@ -2135,7 +2151,7 @@ export function getAgglomeratesForSegmentsFromTracingstore<T extends number | bi
 export function getEditableAgglomerateTreeAsSkeletonTracing(
   tracingStoreUrl: string,
   tracingId: string,
-  agglomerateId: number,
+  agglomerateId: bigint,
   version: number,
 ): Promise<ArrayBuffer> {
   return doWithToken((token) => {
@@ -2190,7 +2206,7 @@ export function getSynapsesOfAgglomerates(
   dataset: APIDataset,
   layerName: string,
   connectomeFile: string,
-  agglomerateIds: Array<number>,
+  agglomerateIds: Array<bigint>,
 ): Promise<
   Array<{
     in: Array<number>;
@@ -2210,14 +2226,14 @@ export function getSynapsesOfAgglomerates(
   );
 }
 
-function getSynapseSourcesOrDestinations(
+async function getSynapseSourcesOrDestinations(
   dataStoreUrl: string,
   dataset: APIDataset,
   layerName: string,
   connectomeFile: string,
   synapseIds: Array<number>,
   srcOrDst: "src" | "dst",
-): Promise<Array<number>> {
+): Promise<Array<bigint>> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
       `${dataStoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/connectomes/synapses/${srcOrDst}?token=${token}`,
@@ -2231,12 +2247,12 @@ function getSynapseSourcesOrDestinations(
   );
 }
 
-export function getSynapseSources(...args: any): Promise<Array<number>> {
+export function getSynapseSources(...args: any): Promise<Array<bigint>> {
   // @ts-expect-error ts-migrate(2556) FIXME: Expected 6 arguments, but got 1 or more.
   return getSynapseSourcesOrDestinations(...args, "src");
 }
 
-export function getSynapseDestinations(...args: any): Promise<Array<number>> {
+export function getSynapseDestinations(...args: any): Promise<Array<bigint>> {
   // @ts-expect-error ts-migrate(2556) FIXME: Expected 6 arguments, but got 1 or more.
   return getSynapseSourcesOrDestinations(...args, "dst");
 }
@@ -2287,18 +2303,18 @@ export function getSynapseTypes(
 export type MinCutTargetEdge = {
   position1: Vector3;
   position2: Vector3;
-  segmentId1: number;
-  segmentId2: number;
+  segmentId1: bigint;
+  segmentId2: bigint;
 };
 export async function getEdgesForAgglomerateMinCut(
   tracingStoreUrl: string,
   tracingId: string,
   version: number,
   segmentsInfo: {
-    partition1: NumberLike[];
-    partition2: NumberLike[];
+    partition1: bigint[];
+    partition2: bigint[];
     mag: Vector3;
-    agglomerateId: NumberLike;
+    agglomerateId: bigint;
     editableMappingId: string;
   },
 ): Promise<Array<MinCutTargetEdge>> {
@@ -2308,14 +2324,10 @@ export async function getEdgesForAgglomerateMinCut(
         `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphMinCut?token=${token}`,
         {
           data: {
-            ...segmentsInfo,
-            // TODO: Proper 64 bit support (#6921)
             // For a normal min-cut, the id at which the proofreading marker is at
             // will be put into partition1. The right-clicked segment/mesh will be
             // in partition2.
-            partition1: segmentsInfo.partition1.map(Number),
-            partition2: segmentsInfo.partition2.map(Number),
-            agglomerateId: Number(segmentsInfo.agglomerateId),
+            ...segmentsInfo,
             version,
           },
         },
@@ -2325,8 +2337,8 @@ export async function getEdgesForAgglomerateMinCut(
 }
 
 export type NeighborInfo = {
-  segmentId: number;
-  neighbors: Array<{ segmentId: number; position: Vector3 }>;
+  segmentId: bigint;
+  neighbors: Array<{ segmentId: bigint; position: Vector3 }>;
 };
 
 export async function getNeighborsForAgglomerateNode(
@@ -2334,9 +2346,9 @@ export async function getNeighborsForAgglomerateNode(
   tracingId: string,
   version: number,
   segmentInfo: {
-    segmentId: NumberLike;
+    segmentId: bigint;
     mag: Vector3;
-    agglomerateId: NumberLike;
+    agglomerateId: bigint;
     editableMappingId: string;
   },
 ): Promise<NeighborInfo> {
@@ -2348,9 +2360,6 @@ export async function getNeighborsForAgglomerateNode(
           data: {
             version,
             ...segmentInfo,
-            // TODO: Proper 64 bit support (#6921)
-            segmentId: Number(segmentInfo.segmentId),
-            agglomerateId: Number(segmentInfo.agglomerateId),
           },
         },
       ),

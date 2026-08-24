@@ -1,17 +1,17 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.scalableminds.util.Msg
+import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer}
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition, WebknossosDataRequest}
-import com.scalableminds.webknossos.tracingstore.tracings._
+import com.scalableminds.webknossos.tracingstore.tracings.*
 import com.typesafe.scalalogging.LazyLogging
 import net.jpountz.lz4.{LZ4Compressor, LZ4Factory, LZ4FastDecompressor}
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
+import com.scalableminds.util.box.Box.tryo
 
 import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
@@ -193,7 +193,7 @@ trait VolumeTracingBucketHelper
     for {
       bucketKeyValueBoxesFromFossil <-
         if (volumeLayer.isTemporaryTracing) {
-          Fox.successful(temporaryTracingService.getVolumeBuckets(bucketKeys).map(Box(_)))
+          Fox.successful(temporaryTracingService.getVolumeBuckets(bucketKeys).map(Box.fromOption))
         } else {
           volumeDataStore.getMultipleKeysByList(bucketKeys, version)(wrapInBox).map(_.map(_.map(_.value)))
         }

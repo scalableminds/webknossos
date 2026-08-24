@@ -44,6 +44,9 @@ The `Segments` tab is for managing volume annotations. It lists all the segments
 
 The `BBoxes` tab lists all the bounding boxes in the annotation and is the central place to manage them. It provides an alternative to drawing boxes with the `Bounding Box` tool from the [toolbar](./toolbar.md).
 
+Watch this short video for an overview of the bounding box tool:
+![youtube-video](https://www.youtube.com/embed/2mgqDvUZ9Dk)
+
 ### Creating Bounding Boxes
 
 The buttons at the top of the tab let you:
@@ -55,7 +58,7 @@ The buttons at the top of the tab let you:
 
 Each entry in the list provides inline controls to:
 
-- **Adjust the bounds:** Edit the six values defining the box — the top-left corner (x, y, z) followed by its width, height, and depth in voxels.
+- **Adjust the bounds:** Edit the six values defining the box — the top-left corner (x, y, z) followed by its width, height, and depth in voxels. Alternatively, click the sliders icon next to the bounds field to fine-tune the position and size with sliders.
 - **Change the color:** Click the color swatch to assign a new color to the box.
 - **Toggle visibility:** Use the checkbox to show or hide the box in the viewports.
 - **Rename:** Give the box a descriptive name.
@@ -74,6 +77,19 @@ Right-click a bounding box for additional actions:
 ### Finding a Bounding Box
 
 Use the search button at the top of the tab, or press ++ctrl++ / ++cmd++ + ++shift++ + ++f++, to find a bounding box by name in long lists.
+
+### Maximum Intensity Projection (MIP)
+
+Each bounding box can be rendered as a **Maximum Intensity Projection (MIP)** in the 3D viewport. A MIP casts rays through the volume and displays the highest intensity value encountered along each ray, producing a useful projection for structures (especially useful for light-microscopy datasets).
+
+To enable MIP for a bounding box, right-click it in the bounding box tab and choose **Render as MIP**, then select a layer and magnification. Multiple layers can be active on the same bounding box at once; their projections are blended additively using each layer's configured color and opacity.
+
+Once loaded, the MIP rendering appears in the 3D viewport. Shift-clicking on a MIP projection navigates to the maximum-intensity voxel along the click ray.
+
+Use the MIP icon button in the toolbar of the bounding box tab to open the **Maximum Intensity Projection (MIP) Settings** popover, which provides the following controls:
+
+- **Ray marching steps:** Controls the number of samples taken along each ray. Higher values produce a smoother, more accurate projection at the cost of GPU performance.
+- **Depth-correct rendering:** When enabled, MIP volumes interact correctly with mesh depth — meshes can occlude or be occluded by the MIP content. Disable this for better performance if depth sorting with meshes is not needed.
 
 ## Abstract Tree Tab
 

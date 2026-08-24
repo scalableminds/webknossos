@@ -1,9 +1,9 @@
 package com.scalableminds.webknossos.datastore.models.datasource
 
 import com.scalableminds.util.Msg
+import com.scalableminds.util.box.{Box, Failure, Full}
 import com.scalableminds.webknossos.datastore.geometry.{AdditionalAxisProto, Vec2IntProto}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
-import com.scalableminds.util.tools.{Box, Failure, Full}
 import play.api.libs.json.{Format, Json}
 
 // bounds: lower bound inclusive, upper bound exclusive

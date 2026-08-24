@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.tracingstore.controllers
 
 import com.scalableminds.util.Msg
 import com.google.inject.Inject
+import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
@@ -9,6 +10,7 @@ import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
 import com.scalableminds.webknossos.datastore.controllers.Controller
+import com.scalableminds.webknossos.datastore.helpers.UnsignedLong
 import com.scalableminds.webknossos.datastore.services.{EditableMappingSegmentListResult, UserAccessRequest}
 import com.scalableminds.webknossos.tracingstore.{
   TSRemoteDatastoreClient,
@@ -23,7 +25,6 @@ import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   NeighborsParameters
 }
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
-import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import com.scalableminds.webknossos.tracingstore.tracings.KeyValueStoreConversions
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
@@ -73,7 +74,11 @@ class EditableMappingController @Inject() (
               case f: Failure             => f.toFox ?~> Msg.Annotation.EditableMapping.getAgglomerateGraphFailed
             }
             agglomerateIdIsPresent = agglomerateGraphBox.isDefined
-          } yield Ok(Json.toJson(EditableMappingSegmentListResult(segmentIds.toList, agglomerateIdIsPresent)))
+          } yield Ok(
+            Json.toJson(
+              EditableMappingSegmentListResult(segmentIds.toList.map(UnsignedLong(_)), agglomerateIdIsPresent)
+            )
+          )
         }
       }
     }
@@ -95,7 +100,9 @@ class EditableMappingController @Inject() (
               tracingId,
               remoteFallbackLayer
             ) ?~> Msg.Annotation.EditableMapping.getAgglomerateIdsForSegmentsFailed
-            agglomerateIdsSorted = relevantMapping.toSeq.sortBy(_._1).map(_._2)
+            agglomerateIdsSorted = relevantMapping.toSeq
+              .sortBy(_._1)(using Ordering.fromLessThan((a, b) => java.lang.Long.compareUnsigned(a, b) < 0))
+              .map(_._2)
           } yield Ok(ListOfLong(agglomerateIdsSorted).toByteArray)
         }
       }
@@ -142,7 +149,9 @@ class EditableMappingController @Inject() (
               request.body,
               remoteFallbackLayer
             )
-          } yield Ok(Json.obj("segmentId" -> segmentId, "neighbors" -> Json.toJson(edges)))
+          } yield Ok(
+            Json.obj("segmentId" -> UnsignedLong(segmentId), "neighbors" -> Json.toJson(edges))
+          )
         }
       }
     }

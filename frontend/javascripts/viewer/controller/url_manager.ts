@@ -1,3 +1,4 @@
+import { bigIntReplacer } from "libs/bigint_helpers";
 import ErrorHandling from "libs/error_handling";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
@@ -12,19 +13,18 @@ import type { AdditionalCoordinate, APIDataset } from "types/api_types";
 import { type APIAnnotationType, APICompoundTypeEnum } from "types/api_types";
 import type { Mutable } from "types/type_utils";
 import { validateUrlStateJSON } from "types/validation";
-import type { Vector3, ViewMode } from "viewer/constants";
+import type { MappingType, Vector3, ViewMode } from "viewer/constants";
 import constants, { MappingStatusEnum, ViewModeValues } from "viewer/constants";
+import { applyState } from "viewer/controller/apply_url_state";
 import { getPosition } from "viewer/model/accessors/flycam_accessor";
-import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { getMeshesForCurrentAdditionalCoordinates } from "viewer/model/accessors/volumetracing_accessor";
 import {
   additionalCoordinateToKeyValue,
   parseAdditionalCoordinateKey,
 } from "viewer/model/helpers/nml_helpers";
-import { applyState } from "viewer/model_initialization";
 import type {
+  CameraData,
   DatasetLayerConfiguration,
-  MappingType,
   MeshInformation,
   WebknossosState,
 } from "viewer/store";
@@ -34,7 +34,7 @@ const MAX_UPDATE_INTERVAL = 1000;
 const MINIMUM_VALID_CSV_LENGTH = 5;
 
 type BaseMeshUrlDescriptor = {
-  readonly segmentId: number;
+  readonly segmentId: bigint;
   readonly seedPosition: Vector3;
   readonly seedAdditionalCoordinates?: AdditionalCoordinate[];
 };
@@ -56,6 +56,10 @@ export type DirectLayerSpecificProps = Mutable<
     >
   >
 >;
+export type TdCameraUrlState = Pick<
+  CameraData,
+  "position" | "up" | "left" | "right" | "top" | "bottom"
+>;
 export type UrlStateByLayer = Record<
   string,
   {
@@ -66,11 +70,11 @@ export type UrlStateByLayer = Record<
     mappingInfo?: {
       mappingName: string;
       mappingType: MappingType;
-      agglomerateIdsToImport?: Array<number>;
+      agglomerateIdsToImport?: Array<bigint>;
     };
     connectomeInfo?: {
       connectomeName: string;
-      agglomerateIdsToImport?: Array<number>;
+      agglomerateIdsToImport?: Array<bigint>;
     };
   } & DirectLayerSpecificProps
 >;
@@ -114,7 +118,7 @@ export function getUpdatedPathnameWithNewDatasetName(
 }
 
 // If the type of UrlManagerState changes, the following files need to be updated:
-// docs/sharing.md#sharing-link-format
+// docs/sharing/annotation_sharing.md#sharing-link-format
 // frontend/javascripts/types/schemas/url_state.schema.ts
 export type UrlManagerState = {
   position?: Vector3;
@@ -125,6 +129,9 @@ export type UrlManagerState = {
   stateByLayer?: UrlStateByLayer;
   additionalCoordinates?: AdditionalCoordinate[] | null;
   nativelyRenderedLayerName?: string | null;
+  clippingDistance?: number;
+  clipSkeletonToCurrentSection?: boolean;
+  tdCamera?: TdCameraUrlState;
 };
 export type PartialUrlManagerState = Partial<UrlManagerState>;
 
@@ -204,7 +211,9 @@ class UrlManager {
     // State json format:
     // { "position": Vector3, "mode": number, "zoomStep": number, ...}
     try {
-      return validateUrlStateJSON(urlHash);
+      // Oblique mode was removed; migrate old URLs that reference it to orthogonal.
+      const migratedHash = urlHash.replace(/"mode"\s*:\s*"oblique"/, '"mode":"orthogonal"');
+      return validateUrlStateJSON(migratedHash);
     } catch (e) {
       Toast.error(messages["tracing.invalid_json_url_hash"]);
       console.error(e);
@@ -362,8 +371,7 @@ class UrlManager {
 
     const annotation = state.annotation;
     if (annotation.skeleton != null) {
-      const skeletonTracing = enforceSkeletonTracing(annotation);
-      const { showSkeletons } = skeletonTracing;
+      const { showSkeletons } = state.localSkeletonState;
       const layerName = "Skeleton";
 
       stateByLayer[layerName] = {
@@ -378,15 +386,38 @@ class UrlManager {
             stateByLayer,
           }
         : {};
+    const { clippingDistance, clipSkeletonToCurrentSection } = state.userConfiguration;
+
+    const tdCamera = state.viewModeData.plane.tdCamera;
+    // The td camera defaults to a degenerate, zero-sized frustum until it is
+    // initialized by the CameraController. Omit it in that case to avoid
+    // encoding meaningless zeros.
+    const tdCameraOptional =
+      tdCamera.left !== tdCamera.right && tdCamera.top !== tdCamera.bottom
+        ? {
+            tdCamera: {
+              position: map3((e) => roundTo(e, 2), tdCamera.position),
+              up: map3((e) => roundTo(e, 2), tdCamera.up),
+              left: roundTo(tdCamera.left, 2),
+              right: roundTo(tdCamera.right, 2),
+              top: roundTo(tdCamera.top, 2),
+              bottom: roundTo(tdCamera.bottom, 2),
+            },
+          }
+        : {};
+
     return {
       position,
       mode,
       zoomStep,
       additionalCoordinates: state.flycam.additionalCoordinates,
       nativelyRenderedLayerName: state.datasetConfiguration.nativelyRenderedLayerName,
+      clippingDistance,
+      clipSkeletonToCurrentSection,
       ...rotation,
       ...activeNodeOptional,
       ...stateByLayerOptional,
+      ...tdCameraOptional,
     };
   }
 
@@ -410,7 +441,7 @@ class UrlManager {
 
   buildUrlHashJson(state: WebknossosState): string {
     const urlState = this.getUrlState(state);
-    return encodeUrlHash(JSON.stringify(urlState));
+    return encodeUrlHash(JSON.stringify(urlState, bigIntReplacer));
   }
 
   buildUrl(): string {

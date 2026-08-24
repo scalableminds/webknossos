@@ -26,7 +26,7 @@ import {
   findGroup,
   mapGroups,
   moveGroupsHelper,
-} from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
+} from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import { updateUserBoundingBox } from "../annotation_reducer";
 import {
   setLargestSegmentIdReducer,
@@ -72,30 +72,33 @@ function applySingleAction(
   switch (ua.name) {
     case "updateLargestSegmentId": {
       const volumeTracing = getVolumeTracingById(state.annotation, actionTracingId);
-      return setLargestSegmentIdReducer(state, volumeTracing, ua.value.largestSegmentId);
+      const largestSegmentId =
+        ua.value.largestSegmentId != null ? BigInt(ua.value.largestSegmentId) : null;
+      return setLargestSegmentIdReducer(state, volumeTracing, largestSegmentId);
     }
     case "updateVolumeBucketDataHasChanged": {
       // The updateVolumeBucketDataHasChanged update action can only set the flag to true. Never to false.
       return VolumeTracingReducer(state, setVolumeBucketDataHasChangedAction(actionTracingId));
     }
     case "createSegment": {
-      const segment = ua.value;
+      const { id, ...segmentProps } = ua.value;
       return VolumeTracingReducer(
         state,
-        updateSegmentAction(segment.id, segment, actionTracingId, actionTimestamp, false),
+        updateSegmentAction(BigInt(id), segmentProps, actionTracingId, actionTimestamp, false),
       );
     }
     case "updateSegmentPartial": {
-      const segment = ua.value;
+      const { id, ...segmentProps } = ua.value;
       return VolumeTracingReducer(
         state,
-        updateSegmentAction(segment.id, segment, actionTracingId, actionTimestamp, false),
+        updateSegmentAction(BigInt(id), segmentProps, actionTracingId, actionTimestamp, false),
       );
     }
     case "updateMetadataOfSegment": {
       const { id, upsertEntriesByKey, removeEntriesByKey } = ua.value;
+      const segmentId = BigInt(id);
       const segments = getSegmentsForLayer(state, actionTracingId);
-      const segment = segments.getNullable(id);
+      const segment = segments.getNullable(segmentId);
       if (segment == null) {
         throw new Error(`Cannot find segment with id ${id} during application of update action.`);
       }
@@ -116,23 +119,29 @@ function applySingleAction(
 
       return VolumeTracingReducer(
         state,
-        updateSegmentAction(id, { metadata: newMetadata }, actionTracingId, actionTimestamp, false),
+        updateSegmentAction(
+          segmentId,
+          { metadata: newMetadata },
+          actionTracingId,
+          actionTimestamp,
+          false,
+        ),
       );
     }
     case "mergeSegmentItems": {
       return VolumeTracingReducer(
         state,
         mergeSegmentItemsAction(
-          ua.value.agglomerateId1,
-          ua.value.agglomerateId2,
-          ua.value.segmentId1,
-          ua.value.segmentId2,
+          BigInt(ua.value.agglomerateId1),
+          BigInt(ua.value.agglomerateId2),
+          BigInt(ua.value.segmentId1),
+          BigInt(ua.value.segmentId2),
           actionTracingId,
         ),
       );
     }
     case "deleteSegment": {
-      return VolumeTracingReducer(state, removeSegmentAction(ua.value.id, actionTracingId));
+      return VolumeTracingReducer(state, removeSegmentAction(BigInt(ua.value.id), actionTracingId));
     }
     case "upsertSegmentGroup": {
       const { groupId, newParentId, name, ...props } = ua.value;
@@ -239,7 +248,7 @@ function applySingleAction(
       return VolumeTracingReducer(
         state,
         updateSegmentAction(
-          ua.value.id,
+          BigInt(ua.value.id),
           { isVisible: ua.value.isVisible },
           actionTracingId,
           actionTimestamp,
@@ -248,7 +257,7 @@ function applySingleAction(
       );
     }
     case "updateActiveSegmentId": {
-      return VolumeTracingReducer(state, setActiveCellAction(ua.value.activeSegmentId));
+      return VolumeTracingReducer(state, setActiveCellAction(BigInt(ua.value.activeSegmentId)));
     }
     case "updateSegmentGroupVisibility": {
       const { groupId, isVisible } = ua.value;

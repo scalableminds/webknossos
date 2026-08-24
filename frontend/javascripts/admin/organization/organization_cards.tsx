@@ -1,93 +1,18 @@
-import {
-  CrownOutlined,
-  FieldTimeOutlined,
-  PlusCircleOutlined,
-  RobotOutlined,
-} from "@ant-design/icons";
-import { Alert, Button, Card, Col, Row, Space } from "antd";
+import { FieldTimeOutlined, PlusCircleOutlined, RobotOutlined } from "@ant-design/icons";
+import { Alert, App, Button, Card, Col, Row, Space } from "antd";
 import FormattedDate from "components/formatted_date";
 import dayjs from "dayjs";
 import { useWkSelector } from "libs/react_hooks";
 import type { APIOrganization } from "types/api_types";
 import Constants from "viewer/constants";
+import { PowerPlanUpgradeCard, TeamPlanUpgradeCard } from "./plan_upgrade_cards";
 import {
   aiAddonFeatures,
   hasPricingPlanExpired,
   isUserAllowedToRequestUpgrades,
   PricingPlanEnum,
-  powerPlanFeatures,
-  teamPlanFeatures,
 } from "./pricing_plan_utils";
 import UpgradePricingPlanModal from "./upgrade_plan_modal";
-
-export function TeamPlanUpgradeCard({ teamUpgradeCallback }: { teamUpgradeCallback: () => void }) {
-  return (
-    <Card
-      title={
-        <Space size="small">
-          <CrownOutlined style={{ color: "var(--ant-color-primary)" }} />
-          {PricingPlanEnum.Team} Plan
-        </Space>
-      }
-      styles={{ body: { minHeight: 220 } }}
-      actions={[
-        <Button
-          type="primary"
-          onClick={teamUpgradeCallback}
-          key="buy-teamupgrade-button"
-          icon={<PlusCircleOutlined />}
-        >
-          Buy Upgrade
-        </Button>,
-      ]}
-    >
-      <ul>
-        {teamPlanFeatures.map((feature) => (
-          <li key={feature.slice(0, 10)}>{feature}</li>
-        ))}
-      </ul>
-    </Card>
-  );
-}
-
-export function PowerPlanUpgradeCard({
-  powerUpgradeCallback,
-  description,
-}: {
-  powerUpgradeCallback: () => void;
-  description?: string;
-}) {
-  return (
-    <Card
-      title={
-        <Space size="small">
-          <CrownOutlined style={{ color: "var(--ant-color-primary)" }} />
-          {PricingPlanEnum.Power} Plan
-        </Space>
-      }
-      styles={{ body: { minHeight: 220 } }}
-      actions={[
-        <Button
-          type="primary"
-          onClick={powerUpgradeCallback}
-          key="buy-power-upgrade-button"
-          icon={<PlusCircleOutlined />}
-        >
-          Buy Upgrade
-        </Button>,
-      ]}
-    >
-      <div>
-        {description ? <p>{description}</p> : null}
-        <ul>
-          {powerPlanFeatures.map((feature) => (
-            <li key={feature.slice(0, 10)}>{feature}</li>
-          ))}
-        </ul>
-      </div>
-    </Card>
-  );
-}
 
 export function AiAddonUpgradeCard() {
   return (
@@ -162,6 +87,8 @@ export function PlanUpgradeCard({ organization }: { organization: APIOrganizatio
 }
 
 export function PlanExpirationCard({ organization }: { organization: APIOrganization }) {
+  const { modal } = App.useApp();
+
   if (organization.paidUntil === Constants.MAXIMUM_DATE_TIMESTAMP) return null;
 
   return (
@@ -175,7 +102,7 @@ export function PlanExpirationCard({ organization }: { organization: APIOrganiza
           <Button
             type="primary"
             icon={<FieldTimeOutlined />}
-            onClick={() => UpgradePricingPlanModal.extendPricingPlan(organization)}
+            onClick={() => UpgradePricingPlanModal.extendPricingPlan(modal, organization)}
           >
             Extend Now
           </Button>
@@ -188,6 +115,7 @@ export function PlanExpirationCard({ organization }: { organization: APIOrganiza
 export function PlanExceededAlert({ organization }: { organization: APIOrganization }) {
   const hasPlanExpired = hasPricingPlanExpired(organization);
   const activeUser = useWkSelector((state) => state.activeUser);
+  const { modal } = App.useApp();
 
   const message = hasPlanExpired
     ? "Your WEBKNOSSOS plan has expired. Renew your plan now to avoid being downgraded, users being blocked, and losing access to features."
@@ -196,7 +124,7 @@ export function PlanExceededAlert({ organization }: { organization: APIOrganizat
     <Button
       size="small"
       type="primary"
-      onClick={() => UpgradePricingPlanModal.extendPricingPlan(organization)}
+      onClick={() => UpgradePricingPlanModal.extendPricingPlan(modal, organization)}
     >
       Extend Plan Now
     </Button>
@@ -223,6 +151,7 @@ export function PlanExceededAlert({ organization }: { organization: APIOrganizat
 
 export function PlanAboutToExceedAlert({ organization }: { organization: APIOrganization }) {
   const activeUser = useWkSelector((state) => state.activeUser);
+  const { modal } = App.useApp();
   const isAboutToExpire =
     dayjs.duration(dayjs(organization.paidUntil).diff(dayjs())).asWeeks() <= 6 &&
     !hasPricingPlanExpired(organization);
@@ -232,7 +161,7 @@ export function PlanAboutToExceedAlert({ organization }: { organization: APIOrga
       <Button
         size="small"
         type="primary"
-        onClick={() => UpgradePricingPlanModal.extendPricingPlan(organization)}
+        onClick={() => UpgradePricingPlanModal.extendPricingPlan(modal, organization)}
       >
         Extend Plan Now
       </Button>

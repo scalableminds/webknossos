@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.services.mesh
 
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.Full
 import com.scalableminds.webknossos.datastore.services.{
   BinaryDataServiceHolder,
   DSRemoteTracingstoreClient,
@@ -9,7 +10,6 @@ import com.scalableminds.webknossos.datastore.services.{
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId}
-import com.scalableminds.util.tools.Full
 
 import scala.concurrent.ExecutionContext
 
@@ -61,7 +61,7 @@ trait MeshMappingHelper {
           )
           segmentIds <-
             if (segmentIdsResult.agglomerateIdIsPresent)
-              Fox.successful(segmentIdsResult.segmentIds)
+              Fox.successful(segmentIdsResult.segmentIds.map(_.toLong))
             else // the agglomerate id is not present in the editable mapping. Fetch its info from the base mapping.
               for {
                 agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox

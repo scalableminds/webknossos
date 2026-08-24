@@ -16,13 +16,13 @@ First, a _Task Type_ needs to be created:
       | Display Name                              | Key                        | Default Value           | Comment                                 |
       |--------------------------------------------|----------------------------|------------------------|-----------------------------------------|
       | Clipping Distance                         | `clippingDistance`           | 80                     | orthogonal mode                         |
+      | Only Show Nodes of Current Section        | `clipSkeletonToCurrentSection` | false                | orthogonal mode; always false when camera or dataset is rotated/transformed |
       | Move Value (nm/s)                         | `moveValue`                  | 500                    | orthogonal mode                         |
       | Show Scalebars                            | `displayScalebars`           | false                  |                                         |
       | Single-node-tree mode (Soma clicking)      | `newNodeNewTree`             | false                  |                                         |
       | Auto-center Nodes                         | `centerNewNode`              | true                   |                                         |
       | Plane Display Mode in 3D View              | `tdViewDisplayPlanes`        | WIREFRAME              | NONE or WIREFRAME or DATA               |
       | Display Dataset Borders in 3D View         | `tdViewDisplayDatasetBorders`| true                   |                                         |
-      | Display Layer Borders in 3D View           | `tdViewDisplayLayerBorders`  | false                  |                                         |
       | d/f-Switching                             | `dynamicSpaceDirection`      | true                   |                                         |
       | Highlight Commented Nodes                  | `highlightCommentedNodes`    | false                  |                                         |
       | Override Node Radius                       | `overrideNodeRadius`         | true                   |                                         |
@@ -37,8 +37,8 @@ First, a _Task Type_ needs to be created:
       | Zoom                                       | `zoom`                       | 0.8                    |                                         |
       | Render Missing Data Black                  | `renderMissingDataBlack`     | false                  |                                         |
       | Loading Strategy                           | `loadingStrategy`            | BEST_QUALITY_FIRST     | BEST_QUALITY_FIRST or PROGRESSIVE_QUALITY|
-      | Clipping Distance                          | `clippingDistanceArbitrary`  | 60                     | flight/oblique mode                     |
-      | Move Value (nm/s)                          | `moveValue3d`                | 600                    | flight/oblique mode                     |
+      | Clipping Distance                          | `clippingDistanceFlight`     | 60                     | flight mode                             |
+      | Move Value (nm/s)                          | `moveValue3d`                | 600                    | flight mode                             |
       | Mouse Rotation                             | `mouseRotateValue`           | 0.001                  |                                         |
       | Keyboard Rotation                          | `rotateValue`                | 0.01                   |                                         |
       | Sphere Radius                              | `sphericalCapRadius`         | 500                    |                                         |

@@ -23,7 +23,7 @@ import {
   createGroupToTreesMap,
   getGroupByIdWithSubgroups,
   MISSING_GROUP_ID,
-} from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
+} from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 
 type GroupNode = {
   children: GroupNode[];
@@ -95,13 +95,12 @@ function findCommonAncestor(
 
   let commonPath: number[] | null = null;
 
-  const getAncestor = (itemId: number) => itemIdMap.getNullable(itemId);
   for (const toggleAction of toggleActions) {
-    const ancestorPath = getAncestorPath(
-      getAncestor(
-        "treeId" in toggleAction.value ? toggleAction.value.treeId : toggleAction.value.id,
-      )?.groupId,
-    );
+    const ancestor =
+      "treeId" in toggleAction.value
+        ? (itemIdMap as TreeMap).getNullable(toggleAction.value.treeId)
+        : (itemIdMap as SegmentMap).getNullable(BigInt(toggleAction.value.id));
+    const ancestorPath = getAncestorPath(ancestor?.groupId);
 
     if (commonPath == null) {
       commonPath = ancestorPath;

@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.services.connectome
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.collections.SequenceUtils
-import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.datareaders.DatasetArray
@@ -192,13 +192,8 @@ class ZarrConnectomeFileService @Inject() (dataVaultService: DataVaultService, c
       _ =>
         for {
           groupVaultPath <- dataVaultService.vaultPathFor(connectomeFileKey.attachment)
-          zarrArray <- Zarr3Array.open(
+          zarrArray <- Zarr3Array.openForAttachment(
             groupVaultPath / zarrArrayName,
-            DataSourceId("dummy", "unused"),
-            "layer",
-            None,
-            None,
-            None,
             chunkCacheService.sharedChunkContentsCache
           )
         } yield zarrArray

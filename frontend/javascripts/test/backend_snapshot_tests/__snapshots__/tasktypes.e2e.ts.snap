@@ -40,7 +40,6 @@ exports[`Task Types API (E2E) > getTaskType() 1`] = `
   "settings": {
     "allowedModes": [
       "orthogonal",
-      "oblique",
       "flight",
     ],
     "branchPointsAllowed": true,
@@ -65,7 +64,6 @@ exports[`Task Types API (E2E) > getTaskTypes() 1`] = `
     "settings": {
       "allowedModes": [
         "orthogonal",
-        "oblique",
         "flight",
       ],
       "branchPointsAllowed": true,
@@ -86,7 +84,6 @@ exports[`Task Types API (E2E) > getTaskTypes() 1`] = `
     "settings": {
       "allowedModes": [
         "orthogonal",
-        "oblique",
         "flight",
       ],
       "branchPointsAllowed": true,
@@ -116,7 +113,6 @@ exports[`Task Types API (E2E) > updateTaskType() 1`] = `
   "settings": {
     "allowedModes": [
       "orthogonal",
-      "oblique",
       "flight",
     ],
     "branchPointsAllowed": true,
@@ -145,7 +141,6 @@ exports[`Task Types API (E2E) > updateTaskType() 2`] = `
   "settings": {
     "allowedModes": [
       "orthogonal",
-      "oblique",
       "flight",
     ],
     "branchPointsAllowed": true,

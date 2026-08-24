@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.services.mapping
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
@@ -19,11 +19,11 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3Array
 import com.scalableminds.webknossos.datastore.datareaders.{DatasetArray, MultiArrayUtils}
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, NodeDefaults, SkeletonTracingDefaults}
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, ElementClass}
+import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.datastore.services.DSChunkCacheService
 import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, DataVaultService}
 import com.typesafe.scalalogging.LazyLogging
-import ucar.ma2.{Array => MultiArray}
+import ucar.ma2.Array as MultiArray
 
 import javax.inject.Inject
 import scala.collection.compat.immutable.ArraySeq
@@ -67,13 +67,8 @@ class ZarrAgglomerateService @Inject() (
     for {
       groupVaultPath <- dataVaultService.vaultPathFor(agglomerateFileKey.attachment)
       segmentToAgglomeratePath = groupVaultPath / zarrArrayName
-      zarrArray <- Zarr3Array.open(
+      zarrArray <- Zarr3Array.openForAttachment(
         segmentToAgglomeratePath,
-        DataSourceId("dummy", "unused"),
-        "layer",
-        None,
-        None,
-        None,
         chunkCacheService.sharedChunkContentsCache
       )
     } yield zarrArray
@@ -314,7 +309,7 @@ class ZarrAgglomerateService @Inject() (
         segmentIndex <-
           if (segmentIdAtMiddle == segmentId)
             Fox.successful(middle)
-          else if (segmentIdAtMiddle < segmentId) {
+          else if (java.lang.Long.compareUnsigned(segmentIdAtMiddle, segmentId) < 0) {
             binarySearchForSegment(middle + 1L, rangeEnd, segmentId, agglomerateToSegments)
           } else binarySearchForSegment(rangeStart, middle - 1L, segmentId, agglomerateToSegments)
       } yield segmentIndex

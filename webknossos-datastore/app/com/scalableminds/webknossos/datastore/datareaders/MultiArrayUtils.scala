@@ -1,10 +1,10 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
 import ArrayDataType.ArrayDataType
+import com.scalableminds.util.box.{Box, Failure, Full}
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.{Box, Failure, Full}
-import com.scalableminds.util.tools.Box.tryo
-import ucar.ma2.{IndexIterator, InvalidRangeException, Range, Array => MultiArray, DataType => MADataType}
+import Box.tryo
+import ucar.ma2.{IndexIterator, InvalidRangeException, Range, Array as MultiArray, DataType as MADataType}
 
 import java.util
 
@@ -106,6 +106,7 @@ object MultiArrayUtils extends LazyLogging {
     val targetShape: Array[Int] = target.getShape
     val sourceRanges = new util.ArrayList[Range]
     val targetRanges = new util.ArrayList[Range]
+    var hasOverlap = true
     for (dimension <- offset.indices) {
       val dimOffset = offset(dimension)
       var sourceFirst = 0
@@ -120,16 +121,117 @@ object MultiArrayUtils extends LazyLogging {
       val maxSSteps = sourceShape(dimension) - sourceFirst
       val maxTSteps = targetShape(dimension) - targetFirst
       val maxSteps = Math.min(maxSSteps, maxTSteps)
-      val sourceLast = sourceFirst + maxSteps
-      val targetLast = targetFirst + maxSteps
-      sourceRanges.add(new Range(sourceFirst, sourceLast - 1))
-      targetRanges.add(new Range(targetFirst, targetLast - 1))
+      // A non-positive maxSteps means source and target do not overlap at all in this dimension.
+      // This can happen if the image array does not match the layer bbox exactly.
+      // One legitimate case for this is downsampling pyramids where the in-mag bbox extent is rounded
+      // down in the source data, but wk attempts reading with the rounded-up extent.
+      // There is nothing to copy in that case.
+      if (maxSteps <= 0) {
+        hasOverlap = false
+      } else {
+        val sourceLast = sourceFirst + maxSteps
+        val targetLast = targetFirst + maxSteps
+        sourceRanges.add(new Range(sourceFirst, sourceLast - 1))
+        targetRanges.add(new Range(targetFirst, targetLast - 1))
+      }
     }
-    val sourceRangeIterator = source.getRangeIterator(sourceRanges)
-    val targetRangeIterator = target.getRangeIterator(targetRanges)
-    val elementType = source.getElementType
-    val setter = createValueSetter(elementType)
-    while (sourceRangeIterator.hasNext) setter.set(sourceRangeIterator, targetRangeIterator)
+    if (hasOverlap) {
+      if (canCopyViaContiguousRuns(source, target, sourceRanges)) {
+        copyRangeViaContiguousRuns(source, target, sourceRanges, targetRanges)
+      } else {
+        val sourceRangeIterator = source.getRangeIterator(sourceRanges)
+        val targetRangeIterator = target.getRangeIterator(targetRanges)
+        val elementType = source.getElementType
+        val setter = createValueSetter(elementType)
+        while (sourceRangeIterator.hasNext) setter.set(sourceRangeIterator, targetRangeIterator)
+      }
+    }
+  }
+
+  private def hasUnitStrideInLastDimension(array: MultiArray): Boolean = {
+    val rank = array.getRank
+    if (rank == 0) false
+    else if (array.getShape()(rank - 1) < 2) true
+    else {
+      val index = array.getIndex
+      val zero = new Array[Int](rank)
+      index.set(zero)
+      val offsetAtZero = index.currentElement()
+      val one = zero.clone()
+      one(rank - 1) = 1
+      index.set(one)
+      index.currentElement() - offsetAtZero == 1
+    }
+  }
+
+  private def canCopyViaContiguousRuns(
+      source: MultiArray,
+      target: MultiArray,
+      sourceRanges: util.ArrayList[Range]
+  ): Boolean =
+    sourceRanges.size > 0 &&
+      source.getElementType == target.getElementType &&
+      hasUnitStrideInLastDimension(source) &&
+      hasUnitStrideInLastDimension(target)
+
+  // Copies one contiguous run (the full extent of the last dimension's range) per combination of the
+  // remaining ("outer") dimensions, using System.arraycopy for each run instead of a per-element iterator.
+  // Requires canCopyViaContiguousRuns to hold, so the last dimension is guaranteed stride-1 in both arrays.
+  private def copyRangeViaContiguousRuns(
+      source: MultiArray,
+      target: MultiArray,
+      sourceRanges: util.ArrayList[Range],
+      targetRanges: util.ArrayList[Range]
+  ): Unit = {
+    val rank = sourceRanges.size
+    val sourceStorage = source.getStorage
+    val targetStorage = target.getStorage
+    val sourceIndex = source.getIndex
+    val targetIndex = target.getIndex
+    val runLength = sourceRanges.get(rank - 1).length
+    val outerDims = rank - 1
+
+    // Current position in each dimension, starting at the range's first index; the last dimension's
+    // index is left at its range start, since a whole run starting there is copied in one go.
+    val sourceIdx = Array.tabulate(rank)(d => sourceRanges.get(d).first)
+    val targetIdx = Array.tabulate(rank)(d => targetRanges.get(d).first)
+
+    def copyRun(): Unit = {
+      sourceIndex.set(sourceIdx)
+      targetIndex.set(targetIdx)
+      System.arraycopy(
+        sourceStorage,
+        sourceIndex.currentElement(),
+        targetStorage,
+        targetIndex.currentElement(),
+        runLength
+      )
+    }
+
+    copyRun()
+    // Enumerate every combination of the outer dimensions' indices:
+    // step the rightmost (least significant) outer dimension by one; once it exceeds its range, reset it
+    // and carry the increment into the next dimension to its left, and so on. One run is copied per
+    // combination, until incrementing would carry past the leftmost (most significant) dimension.
+    val leastSignificantOuterDim = outerDims - 1
+    var hasMore = leastSignificantOuterDim >= 0
+    while (hasMore) {
+      var d = leastSignificantOuterDim
+      var carry = true
+      while (carry && d >= 0) {
+        sourceIdx(d) += 1
+        targetIdx(d) += 1
+        if (sourceIdx(d) > sourceRanges.get(d).last) {
+          sourceIdx(d) = sourceRanges.get(d).first
+          targetIdx(d) = targetRanges.get(d).first
+          d -= 1
+        } else {
+          carry = false
+        }
+      }
+      if (carry) hasMore = false
+      else copyRun()
+    }
   }
 
   private def createValueSetter(elementType: Class[?]): MultiArrayUtils.ValueSetter =

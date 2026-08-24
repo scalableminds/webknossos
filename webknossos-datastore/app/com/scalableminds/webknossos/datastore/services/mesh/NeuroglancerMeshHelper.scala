@@ -1,9 +1,10 @@
 package com.scalableminds.webknossos.datastore.services.mesh
 
 import com.google.common.io.LittleEndianDataInputStream
+import com.scalableminds.util.box.Box
 import com.scalableminds.util.geometry.{Vec3Float, Vec3Int}
-import com.scalableminds.util.tools.Box
-import com.scalableminds.util.tools.Box.tryo
+import Box.tryo
+import com.scalableminds.webknossos.datastore.helpers.UnsignedLong
 import play.api.libs.json.{Json, OFormat}
 
 import java.io.ByteArrayInputStream
@@ -87,7 +88,12 @@ object NeuroglancerSegmentManifest {
   }
 }
 
-case class MeshChunk(position: Vec3Float, byteOffset: Long, byteSize: Int, unmappedSegmentId: Option[Long] = None)
+case class MeshChunk(
+    position: Vec3Float,
+    byteOffset: Long,
+    byteSize: Int,
+    unmappedSegmentId: UnsignedLong
+)
 
 object MeshChunk {
   implicit val jsonFormat: OFormat[MeshChunk] = Json.format[MeshChunk]
@@ -112,7 +118,7 @@ object WebknossosSegmentInfo {
       meshFormat: String,
       chunkScale: Array[Double] = Array(1.0, 1.0, 1.0)
   ): Box[WebknossosSegmentInfo] =
-    Box(chunkInfos.headOption).flatMap { firstChunkInfo =>
+    Box.fromOption(chunkInfos.headOption).flatMap { firstChunkInfo =>
       tryo {
         WebknossosSegmentInfo(
           meshFormat = meshFormat,
@@ -168,7 +174,7 @@ trait NeuroglancerMeshHelper {
         position = globalPosition, // This position is in Voxel Space
         byteOffset = meshByteStartOffset + getChunkByteOffset(lod, currentChunk),
         byteSize = segmentInfo.chunkByteSizes(lod)(currentChunk).toInt, // size must be int32 to fit in java array
-        unmappedSegmentId = Some(segmentId)
+        unmappedSegmentId = UnsignedLong(segmentId)
       )
     }
 

@@ -120,7 +120,7 @@ export default function* maintainMaximumZoomForAllMagsSaga(): Saga<void> {
         // to be recalculate on each move. At least, for orthogonal mode, the actual matrix
         // should only differ in its translation which can be ignored for gauging the maximum
         // zoom here.
-        // However, for oblique and flight mode this is not really accurate. As a heuristic,
+        // However, for flight mode this is not really accurate. As a heuristic,
         // this already proved to be fine, though.
         dummyFlycamMatrix,
       );

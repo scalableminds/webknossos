@@ -1,12 +1,12 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
 import com.google.inject.Inject
+import com.scalableminds.util.box.Full
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.geometry.{ColorProto, NamedBoundingBoxProto => ProtoBox}
-import com.scalableminds.util.tools.Full
+import com.scalableminds.webknossos.datastore.geometry.{ColorProto, NamedBoundingBoxProto as ProtoBox}
 import scalapb.GeneratedMessage
 
 import scala.concurrent.ExecutionContext

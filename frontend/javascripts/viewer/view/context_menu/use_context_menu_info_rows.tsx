@@ -26,7 +26,7 @@ import { CopyIconWithTooltip } from "./copy_icon_with_tooltip";
 import { getInfoMenuItem, positionToString } from "./helpers";
 import { useSegmentStatistics } from "./use_segment_statistics";
 
-export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAtPosition: number) {
+export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAtPosition: bigint) {
   const {
     globalPosition,
     contextMenuPosition,
@@ -47,10 +47,11 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
   // Thus the segment id is always unambiguous / clearly defined.
   const clickedSegmentOrMeshId =
     maybeClickedMeshId != null ? maybeClickedMeshId : segmentIdAtPosition;
-  const wasSegmentOrMeshClicked = clickedSegmentOrMeshId !== 0;
+  const wasSegmentOrMeshClicked = clickedSegmentOrMeshId !== 0n;
 
   const skeletonTracing = useWkSelector((state) => state.annotation.skeleton);
   const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
+  const activeTreeId = useWkSelector((state) => state.localSkeletonState.activeTreeId);
   const additionalCoordinates = useWkSelector(
     (state) => state.flycam.additionalCoordinates || undefined,
   );
@@ -77,7 +78,7 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
   let nodeContextMenuNode: MutableNode | null = null;
 
   if (skeletonTracing != null && maybeClickedNodeId != null) {
-    const treeAndNode = getTreeAndNode(skeletonTracing, maybeClickedNodeId);
+    const treeAndNode = getTreeAndNode(skeletonTracing, activeTreeId, maybeClickedNodeId);
     if (treeAndNode) {
       nodeContextMenuTree = treeAndNode[0];
       nodeContextMenuNode = treeAndNode[1];
@@ -89,7 +90,7 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
 
   const positionToMeasureDistanceTo =
     nodeContextMenuNode != null ? clickedNodesPosition : globalPosition;
-  const activeNode = skeletonTracing != null ? getActiveNode(skeletonTracing) : null;
+  const activeNode = skeletonTracing != null ? getActiveNode(skeletonTracing, activeTreeId) : null;
 
   const getActiveNodePosition = () => {
     if (activeNode == null) {
@@ -186,7 +187,7 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
         <Space size="small">
           <Icon component={IconCell} />
           {`Segment ID: ${clickedSegmentOrMeshId}`}
-          <CopyIconWithTooltip value={clickedSegmentOrMeshId} label="segment ID" />
+          <CopyIconWithTooltip value={clickedSegmentOrMeshId.toString()} label="segment ID" />
         </Space>,
       ),
     );

@@ -14,7 +14,7 @@ import {
   mayEditAnnotation,
 } from "viewer/model/accessors/annotation_accessor";
 import {
-  getSupportedValueRangeOfLayer,
+  getElementClass,
   isInSupportedValueRangeForLayer,
 } from "viewer/model/accessors/dataset_accessor";
 import {
@@ -43,7 +43,6 @@ import {
   updateTemporarySettingAction,
   updateUserSettingAction,
 } from "viewer/model/actions/settings_actions";
-import { setToolAction } from "viewer/model/actions/ui_actions";
 import type {
   ClickSegmentAction,
   CreateCellAction,
@@ -57,6 +56,7 @@ import {
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import { markVolumeTransactionEnd } from "viewer/model/bucket_data_handling/bucket";
+import { getSegmentIdRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select, take } from "viewer/model/sagas/effect_generators";
 import type { OperationContext } from "viewer/model/sagas/operation_context_saga";
@@ -141,7 +141,8 @@ function* warnAboutInvalidSegmentId(): Saga<void> {
       volumeTracing.tracingId,
     );
     if (!isInSupportedValueRangeForLayer(dataset, segmentationLayer.name, requestedSegmentId)) {
-      const validRange = getSupportedValueRangeOfLayer(dataset, segmentationLayer.name);
+      const elementClass = getElementClass(dataset, segmentationLayer.name);
+      const validRange = getSegmentIdRangeForElementClass(elementClass);
       Toast.warning(messages["tracing.segment_id_out_of_bounds"](requestedSegmentId, validRange));
     }
   }
@@ -178,11 +179,11 @@ export function* editVolumeLayerAsync(): Saga<never> {
     const isDrawing = contourTracingMode === ContourModeEnum.DRAW;
     const activeTool = yield* select((state) => state.uiInformation.activeTool);
     // Depending on the tool, annotation in higher zoom steps might be disallowed.
-    const isZoomStepTooHighForAnnotating = yield* select((state) =>
+    const zoomStateForAnnotating = yield* select((state) =>
       isVolumeAnnotationDisallowedForZoom(activeTool, state),
     );
 
-    if (isZoomStepTooHighForAnnotating) {
+    if (zoomStateForAnnotating.isDisabled) {
       continue;
     }
 
@@ -211,7 +212,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
       continue;
     }
 
-    if (isDrawing && activeCellId === 0) {
+    if (isDrawing && activeCellId === 0n) {
       yield* call(
         [Toast, Toast.warning],
         "The current segment ID is 0. Please change the active segment ID via the status bar, by creating a new segment from the toolbar or by selecting an existing one via context menu.",
@@ -268,7 +269,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
       };
       if (finishEditingAction) break;
 
-      if (!addToContourListAction || addToContourListAction.type !== "ADD_TO_CONTOUR_LIST") {
+      if (addToContourListAction?.type !== "ADD_TO_CONTOUR_LIST") {
         throw new Error("Unexpected action. Satisfy typescript.");
       }
 
@@ -387,22 +388,6 @@ export function* finishSectionLabeler(
   yield* put(registerLabelPointAction(sectionLabeler.getUnzoomedCentroid()));
 }
 
-function* ensureToolIsAllowedInMag(): Saga<void> {
-  yield* takeWithBatchActionSupport("INITIALIZE_VOLUMETRACING");
-
-  while (true) {
-    yield* take(["ZOOM_IN", "ZOOM_OUT", "ZOOM_BY_DELTA", "SET_ZOOM_STEP"]);
-    const isMagTooLow = yield* select((state) => {
-      const { activeTool } = state.uiInformation;
-      return isVolumeAnnotationDisallowedForZoom(activeTool, state);
-    });
-
-    if (isMagTooLow) {
-      yield* put(setToolAction(AnnotationTool.MOVE));
-    }
-  }
-}
-
 function* ensureSegmentExists(
   action: AddAdHocMeshAction | AddPrecomputedMeshAction | SetActiveCellAction | ClickSegmentAction,
 ): Saga<void> {
@@ -417,7 +402,7 @@ function* ensureSegmentExists(
   const layerName = layer.name;
   const segmentId = action.segmentId;
 
-  if (segmentId === 0 || segmentId == null) {
+  if (segmentId === 0n || segmentId == null) {
     return;
   }
 
@@ -489,7 +474,7 @@ function* updateHoveredSegmentId(): Saga<void> {
   const { mapped: id, unmapped: unmappedId } =
     globalMousePosition != null
       ? getSegmentIdInfoForPosition(globalMousePosition)
-      : { mapped: 0, unmapped: 0 };
+      : { mapped: 0n, unmapped: 0n };
 
   const oldHoveredSegmentId = yield* select(
     (store) => store.temporaryConfiguration.hoveredSegmentId,
@@ -613,7 +598,6 @@ function* handleDeleteSegmentData(
 
 export default [
   editVolumeLayerAsync,
-  ensureToolIsAllowedInMag,
   floodFill,
   watchVolumeTracingAsync,
   maintainSegmentsMap,

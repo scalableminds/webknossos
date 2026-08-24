@@ -103,7 +103,7 @@ export type APIColorLayer = APIDataLayerBase & {
 };
 export type APISegmentationLayer = APIDataLayerBase & {
   readonly category: "segmentation";
-  readonly largestSegmentId: number | undefined;
+  readonly largestSegmentId: bigint | undefined;
   readonly mappings?: Array<string>;
   readonly agglomerates?: Array<string>;
   readonly fallbackLayer?: string | null | undefined;
@@ -244,6 +244,7 @@ type MutableAPIDatasetBase = MutableAPIDataSourceId & {
   publication: null | undefined;
   tags: Array<string>;
   usedStorageBytes: number;
+  uploaderFullName: string | null | undefined;
 };
 type APIDatasetBase = Readonly<MutableAPIDatasetBase>;
 export type MutableAPIDataset = MutableAPIDatasetBase & {
@@ -385,7 +386,7 @@ export type APIRestrictions = {
   // allowSave might be false even though allowUpdate and isUpdatingCurrentlyAllowed are true (e.g., see sandbox annotations)
   readonly allowSave?: boolean;
 };
-export type APIAllowedMode = "orthogonal" | "oblique" | "flight";
+export type APIAllowedMode = "orthogonal" | "flight";
 export type APIMagRestrictions = {
   min?: number;
   max?: number;
@@ -932,7 +933,7 @@ export type ServerBoundingBoxMinMaxTypeTuple = {
 };
 
 export type TreeAgglomerateInfo = {
-  agglomerateId: number;
+  agglomerateId: bigint;
   // Note: The editable mapping's id is always equal to the id of it associated volume tracing.
   tracingId?: string | undefined;
   mappingName?: string | undefined;
@@ -968,7 +969,7 @@ export type MetadataEntryProto = {
   stringListValue?: string[];
 };
 type ServerSegment = {
-  segmentId: number;
+  segmentId: bigint;
   name: string | null | undefined;
   anchorPosition: Point3 | null | undefined;
   additionalCoordinates: AdditionalCoordinate[] | null;
@@ -997,7 +998,7 @@ export type ServerTracingBase = {
   zoomLevel: number;
 };
 
-export type MapEntries<K extends number | string | symbol, V> = Array<{ id: K; value: V }>;
+export type MapEntries<K extends number | string | symbol | bigint, V> = Array<{ id: K; value: V }>;
 
 export type SkeletonUserState = {
   userId: string;
@@ -1023,10 +1024,10 @@ export type ServerSkeletonTracing = ServerTracingBase & {
 
 export type VolumeUserState = {
   userId: string;
-  activeSegmentId?: number;
+  activeSegmentId?: bigint;
   // The following properties are the values of a
   // id->boolean dictionary.
-  segmentVisibilities: MapEntries<number, boolean>;
+  segmentVisibilities: MapEntries<bigint, boolean>;
   segmentGroupExpandedStates: MapEntries<number, boolean>;
   boundingBoxVisibilities: MapEntries<number, boolean>;
 };
@@ -1036,13 +1037,13 @@ export type ServerVolumeTracing = ServerTracingBase & {
   // tracing from the back-end (by `getTracingForAnnotationType`)
   // This is done to simplify the selection for the type.
   typ: "Volume";
-  activeSegmentId?: number; // only use as a fallback if userStates is empty
+  activeSegmentId?: bigint; // only use as a fallback if userStates is empty
   boundingBox: BoundingBoxProto;
   elementClass: ElementClass;
   fallbackLayer?: string;
   segments: Array<ServerSegment>;
   segmentGroups: Array<SegmentGroup> | null | undefined;
-  largestSegmentId: number;
+  largestSegmentId: bigint;
   // `mags` will be undefined for legacy annotations
   // which were created before the multi-magnification capabilities
   // were added to volume tracings. Also see:
@@ -1316,6 +1317,7 @@ export type FlatFolderTreeItem = {
   parent: string | null;
   metadata: APIMetadataEntry[];
   isEditable: boolean;
+  created: number;
 };
 
 // Frontend type of FlatFolderTreeItem with inferred nested structure.
@@ -1326,6 +1328,7 @@ export type FolderItem = {
   children: FolderItem[];
   isEditable: boolean;
   metadata: APIMetadataEntry[];
+  created: number;
   // Can be set so that the antd tree component can disable
   // individual folder items.
   disabled?: boolean;
@@ -1338,6 +1341,7 @@ export type Folder = {
   allowedTeamsCumulative: APITeam[];
   metadata: APIMetadataEntry[];
   isEditable: boolean;
+  created: number;
 };
 
 export type FolderUpdater = {

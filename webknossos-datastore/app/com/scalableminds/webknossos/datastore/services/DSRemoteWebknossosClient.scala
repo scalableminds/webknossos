@@ -30,17 +30,18 @@ import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{Json, OFormat}
 
+import java.nio.file.Path
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 case class DataStoreStatus(ok: Boolean, url: String)
 object DataStoreStatus {
   implicit val jsonFormat: OFormat[DataStoreStatus] = Json.format[DataStoreStatus]
 }
 
-case class DataSourceWithPathInfo(dataSource: DataSource, rootPath: Option[String], rootRealPath: Option[String])
-object DataSourceWithPathInfo {
-  implicit val jsonFormat: OFormat[DataSourceWithPathInfo] = Json.format[DataSourceWithPathInfo]
+case class DataSourceWithRootPathInfo(dataSource: DataSource, rootPath: Option[String], rootRealPath: Option[String])
+object DataSourceWithRootPathInfo {
+  implicit val jsonFormat: OFormat[DataSourceWithRootPathInfo] = Json.format[DataSourceWithRootPathInfo]
 }
 
 case class TracingStoreInfo(name: String, url: String)
@@ -129,7 +130,10 @@ class DSRemoteWebknossosClient @Inject() (
       .addQueryParam("key", dataStoreKey)
       .postJson[ReportAttachmentUploadParameters](parameters)
 
-  def reportDataSources(dataSourcesWithPathInfo: List[DataSourceWithPathInfo], organizationId: Option[String]): Fox[?] =
+  def reportDataSources(
+      dataSourcesWithPathInfo: Seq[DataSourceWithRootPathInfo],
+      organizationId: Option[String]
+  ): Fox[?] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources")
       .addQueryParam("key", dataStoreKey)
       .addQueryParam("organizationId", organizationId)
@@ -247,4 +251,12 @@ class DSRemoteWebknossosClient @Inject() (
           .getWithJsonResponse[ObjectId] ?~> "Failed to get dataset id from remote webknossos"
     )
 
+  def getLocalRootPathOrEmpty(datasetId: ObjectId): Fox[Path] =
+    for {
+      rootPathStr <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/findDatasetLocalRootPath")
+        .addQueryParam("key", dataStoreKey)
+        .addQueryParam("datasetId", datasetId)
+        .getWithJsonResponse[String] ?~> "Failed to get data source root path remote webknossos"
+      rootPath <- if (rootPathStr.isEmpty) Fox.empty else Fox.successful(Path.of(rootPathStr))
+    } yield rootPath
 }

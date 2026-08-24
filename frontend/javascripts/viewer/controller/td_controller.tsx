@@ -14,7 +14,9 @@ import {
   type Point2,
   type Vector3,
 } from "viewer/constants";
-import CameraController from "viewer/controller/camera_controller";
+import CameraController, {
+  updatePerspectiveCameraFromOrthographic,
+} from "viewer/controller/camera_controller";
 import { handleOpenContextMenu } from "viewer/controller/combinations/skeleton_handlers";
 import {
   ProofreadToolController,
@@ -107,7 +109,10 @@ function maybeGetActiveNodeFromProps(props: Props) {
 class TDController extends PureComponent<Props> {
   controls!: typeof TrackballControls;
   mouseController!: InputMouse;
-  oldUnitPos!: Vector3;
+  // Set in componentDidMount. Until then it is null, and setTargetAndFixPosition is a
+  // no-op, because CameraController (a child that mounts first) may already call
+  // setTargetAndFixPosition() via its store listeners before this is initialized.
+  oldUnitPos: Vector3 | null = null;
   isStarted: boolean = false;
 
   componentDidMount() {
@@ -121,15 +126,18 @@ class TDController extends PureComponent<Props> {
     if (
       maybeGetActiveNodeFromProps(this.props) !== maybeGetActiveNodeFromProps(prevProps) &&
       maybeGetActiveNodeFromProps(this.props) !== INVALID_ACTIVE_NODE_ID &&
-      this.props.annotation &&
-      this.props.annotation.skeleton
+      this.props.annotation?.skeleton
     ) {
       // The rotation center of this viewport is not updated to the new position after selecting a node in the viewport.
       // This happens because the selection of the node does not trigger a call to setTargetAndFixPosition directly.
       // Thus we do it manually whenever the active node changes.
-      const activeNode = getActiveNode(this.props.annotation.skeleton);
+      const state = Store.getState();
+      const activeNode = getActiveNode(
+        state.annotation.skeleton,
+        state.localSkeletonState.activeTreeId,
+      );
       if (activeNode) {
-        this.setTargetAndFixPosition(getNodePosition(activeNode, Store.getState()));
+        this.setTargetAndFixPosition(getNodePosition(activeNode, state));
       }
     }
   }
@@ -185,6 +193,24 @@ class TDController extends PureComponent<Props> {
     }
 
     this.controls.update(true);
+    this.updateTDViewPerspectiveCamera();
+  };
+
+  updateTDViewPerspectiveCamera = () => {
+    // The perspective camera is derived from the orthographic camera which is the
+    // single source of truth for the 3D viewport. This needs to happen after
+    // this.controls.update() since only then the orthographic camera has its
+    // final orientation (via lookAt(target)).
+    // In flight mode, no planeView exists and the 3D viewport stays orthographic.
+    const perspectiveCamera = this.props.planeView?.getTDViewPerspectiveCamera();
+    if (perspectiveCamera == null || this.controls == null) {
+      return;
+    }
+    updatePerspectiveCameraFromOrthographic(
+      this.props.cameras[OrthoViews.TDView],
+      perspectiveCamera,
+      this.controls.target,
+    );
   };
 
   getTDViewMouseControls(): Record<string, any> {
@@ -233,6 +259,16 @@ class TDController extends PureComponent<Props> {
         }
 
         const intersection = this.getMeshIntersection(pos);
+
+        // Shift-click on MIP volume: navigate to max-intensity voxel along the click ray
+        if (event.shiftKey && !ctrlOrMetaPressed && intersection == null) {
+          const mipHit = this.props.planeView.performMipHitTest([pos.x, pos.y]);
+          if (mipHit != null) {
+            Store.dispatch(setPositionAction(V3.divide3(mipHit, this.props.voxelSize.factor)));
+          }
+          return;
+        }
+
         if (intersection == null) {
           return;
         }
@@ -318,13 +354,18 @@ class TDController extends PureComponent<Props> {
     if (hitResult == null) {
       return null;
     }
-    const meshId: number | null = hitResult ? get(hitResult.node.parent, "segmentId", null) : null;
-    const unmappedSegmentId: number | null = hitResult?.unmappedSegmentId || null;
+    const meshId: bigint | null = hitResult ? get(hitResult.node.parent, "segmentId", null) : null;
+    const unmappedSegmentId: bigint | null = hitResult?.unmappedSegmentId || null;
     const meshClickedPosition = hitResult ? hitResult.point : null;
     return { meshId, unmappedSegmentId, meshClickedPosition, hitPosition: hitResult.point };
   }
 
   setTargetAndFixPosition = (position?: Vector3): void => {
+    if (this.oldUnitPos == null) {
+      // Not mounted yet (see the field declaration). Skip until componentDidMount
+      // has initialized oldUnitPos.
+      return;
+    }
     const { flycam } = Store.getState();
     const { controls } = this;
     position = position || getPosition(flycam);
@@ -382,7 +423,9 @@ class TDController extends PureComponent<Props> {
     const setCameraAction = userTriggered
       ? setTDCameraAction
       : setTDCameraWithoutTimeTrackingAction;
-    // Write threeJS camera into store
+    // Write threeJS camera into store. This dispatch is handled synchronously and routes
+    // back through CameraController.updateTDCamera -> onCameraPositionChanged (updateControls),
+    // which also calls updateTDViewPerspectiveCamera(), so no separate call is needed here.
     Store.dispatch(setCameraAction(threeCameraToCameraData(tdCamera)));
   };
 

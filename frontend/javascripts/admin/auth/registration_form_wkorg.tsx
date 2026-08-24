@@ -9,6 +9,7 @@ import { memo, useRef } from "react";
 import { useDispatch } from "react-redux";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
+import { HoneypotFormItem } from "./honeypot_form_item";
 import { TOSCheckFormItem } from "./tos_check_form_item";
 
 const FormItem = Form.Item;
@@ -62,6 +63,7 @@ function RegistrationFormWKOrg(props: Props) {
 
   return (
     <Form onFinish={onFinish} form={form}>
+      <HoneypotFormItem />
       <Row gutter={8}>
         <Col span={12}>
           <FormItem

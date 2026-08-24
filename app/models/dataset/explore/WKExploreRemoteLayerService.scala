@@ -17,7 +17,7 @@ import models.dataset.{DataStore, DataStoreDAO, WKRemoteDataStoreClient}
 import models.dataset.credential.CredentialService
 import models.organization.OrganizationDAO
 import models.user.User
-import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.box.Box.tryo
 import play.api.libs.json.{Json, OFormat}
 import security.WkSilhouetteEnvironment
 import com.scalableminds.util.objectid.ObjectId
@@ -40,6 +40,8 @@ object WKExploreRemoteLayerParameters {
 
 case class ExploreAndAddRemoteDatasetParameters(
     remoteUri: String,
+    credentialIdentifier: Option[String],
+    credentialSecret: Option[String],
     datasetName: String,
     folderId: Option[ObjectId],
     folderPath: Option[String],
@@ -106,7 +108,10 @@ class WKExploreRemoteLayerService @Inject() (
       requestingUser: User
   )(implicit ec: ExecutionContext): Fox[Option[ObjectId]] =
     for {
-      uri <- tryo(new URI(removeHeaderFileNamesFromUriSuffix(layerUri))).toFox ?~> s"Received invalid URI: $layerUri"
+      // For zip entry paths (e.g. s3://…/archive.zip|zip:inner/path), credentials apply to the whole zip file.
+      uri <- tryo(
+        new URI(removeHeaderFileNamesFromUriSuffix(layerUri.takeWhile(_ != '|')))
+      ).toFox ?~> s"Received invalid URI: $layerUri"
       credentialOpt = credentialService.createCredentialOpt(
         uri,
         credentialIdentifier,

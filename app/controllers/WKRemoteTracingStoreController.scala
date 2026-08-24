@@ -13,8 +13,8 @@ import com.scalableminds.webknossos.tracingstore.AnnotationUpdatesReport
 import com.scalableminds.webknossos.tracingstore.annotation.AnnotationLayerParameters
 import com.scalableminds.webknossos.tracingstore.tracings.TracingId
 import models.analytics.{AnalyticsService, UpdateAnnotationEvent, UpdateAnnotationViewOnlyEvent}
-import models.annotation.AnnotationState._
-import models.annotation._
+import models.annotation.AnnotationState.*
+import models.annotation.*
 import models.dataset.{DatasetDAO, DatasetService}
 import models.user.UserDAO
 import models.user.time.TimeSpanService

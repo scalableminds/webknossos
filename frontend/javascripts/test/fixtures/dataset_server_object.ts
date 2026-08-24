@@ -43,7 +43,7 @@ const sampleSegmentationLayer: APISegmentationLayer = {
     { mag: [16, 16, 16] },
   ],
   elementClass: "uint32",
-  largestSegmentId: 1000000000,
+  largestSegmentId: 1000000000n,
   mappings: [
     "larger5um1",
     "axons",
@@ -120,6 +120,7 @@ function createDataset(dataLayers: Array<APIColorLayer | APISegmentationLayer>):
     sortingKey: 1727252521746,
     publication: null,
     usedStorageBytes: 0,
+    uploaderFullName: null,
   };
 }
 

@@ -21,7 +21,7 @@ import play.api.libs.json.Json
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 class AnnotationTransactionService @Inject() (
     handledGroupIdStore: TracingStoreRedisStore,
@@ -85,7 +85,7 @@ class AnnotationTransactionService @Inject() (
       annotationId: ObjectId,
       previousVersionFox: Fox[Long],
       updateGroup: UpdateActionGroup
-  )(using ec: ExecutionContext, tc: TokenContext): Fox[Long] =
+  )(using ec: ExecutionContext, tc: TokenContext, stats: UpdateTimingStats): Fox[Long] =
     for {
       previousCommittedVersion: Long <- previousVersionFox
       result <-
@@ -120,7 +120,8 @@ class AnnotationTransactionService @Inject() (
   // and commit them all.
   private def commitWithPending(annotationId: ObjectId, updateGroup: UpdateActionGroup)(using
       ec: ExecutionContext,
-      tc: TokenContext
+      tc: TokenContext,
+      stats: UpdateTimingStats
   ): Fox[Long] =
     for {
       previousActionGroupsToCommit <- getAllUncommittedFor(annotationId, updateGroup.transactionId)
@@ -203,8 +204,10 @@ class AnnotationTransactionService @Inject() (
 
   def handleUpdateGroups(annotationId: ObjectId, updateGroups: List[UpdateActionGroup])(using
       ec: ExecutionContext,
-      tc: TokenContext
-  ): Fox[Long] =
+      tc: TokenContext,
+      stats: UpdateTimingStats = new UpdateTimingStats
+  ): Fox[Long] = {
+    stats.recordRequestShape(updateGroups)
     if (updateGroups.forall(_.transactionGroupCount == 1)) {
       commitUpdates(annotationId, updateGroups)
     } else {
@@ -213,11 +216,13 @@ class AnnotationTransactionService @Inject() (
           handleUpdateGroupOfTransaction(annotationId, currentCommittedVersionFox, updateGroup)
       }
     }
+  }
 
   // Perform version check and commit the passed updates
   private def commitUpdates(annotationId: ObjectId, updateGroups: List[UpdateActionGroup])(using
       ec: ExecutionContext,
-      tc: TokenContext
+      tc: TokenContext,
+      stats: UpdateTimingStats
   ): Fox[Long] =
     for {
       _ <- reportUpdates(annotationId, updateGroups)
@@ -226,7 +231,7 @@ class AnnotationTransactionService @Inject() (
         previousVersion.flatMap { (prevVersion: Long) =>
           if (prevVersion + 1 == updateGroup.version) {
             for {
-              _ <- handleUpdateGroup(annotationId, updateGroup)
+              _ <- stats.time("handleUpdateGroup")(handleUpdateGroup(annotationId, updateGroup))
               _ <- saveToHandledGroupIdStore(
                 annotationId,
                 updateGroup.transactionId,
@@ -255,7 +260,8 @@ class AnnotationTransactionService @Inject() (
 
   private def handleUpdateGroup(annotationId: ObjectId, updateActionGroup: UpdateActionGroup)(using
       ec: ExecutionContext,
-      tc: TokenContext
+      tc: TokenContext,
+      stats: UpdateTimingStats
   ): Fox[Unit] =
     for {
       updateActionsProcessed <- Fox.successful(preprocessActionsForStorage(updateActionGroup))
@@ -263,24 +269,29 @@ class AnnotationTransactionService @Inject() (
         updateActionsProcessed.length <= 1000000
       ) ?~> "Annotation update transactions with more than 1M update actions are not currently supported"
       updateActionsJson = Json.toJson(updateActionsProcessed)
-      _ <- tracingDataStore.annotationUpdates.put(
-        annotationId.toString,
-        updateActionGroup.version,
-        jsonToBytes(updateActionsJson)
+      _ <- stats.time("annotationUpdates.put")(
+        tracingDataStore.annotationUpdates.put(
+          annotationId.toString,
+          updateActionGroup.version,
+          jsonToBytes(updateActionsJson)
+        )
       )
       bucketMutatingActions = findBucketMutatingActions(updateActionGroup)
+      _ = stats.count("volumeBucketMutatingActions", bucketMutatingActions.length)
       actionsGrouped: Map[String, List[BucketMutatingVolumeUpdateAction]] = bucketMutatingActions.groupBy(
         _.actionTracingId
       )
       _ <- Fox.serialCombined(actionsGrouped.keys.toList) { volumeTracingId =>
         for {
-          tracing <- annotationService.findVolume(annotationId, volumeTracingId)
-          _ <- volumeTracingService.applyBucketMutatingActions(
-            volumeTracingId,
-            annotationId,
-            tracing,
-            actionsGrouped(volumeTracingId),
-            updateActionGroup.version
+          tracing <- stats.time("findVolume")(annotationService.findVolume(annotationId, volumeTracingId))
+          _ <- stats.time("applyBucketMutatingActions")(
+            volumeTracingService.applyBucketMutatingActions(
+              volumeTracingId,
+              annotationId,
+              tracing,
+              actionsGrouped(volumeTracingId),
+              updateActionGroup.version
+            )
           )
         } yield ()
       }

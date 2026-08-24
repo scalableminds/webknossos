@@ -1,7 +1,7 @@
 package models.user
 
 import play.silhouette.api.{Identity, LoginInfo}
-import com.scalableminds.util.accesscontext._
+import com.scalableminds.util.accesscontext.*
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
@@ -16,11 +16,10 @@ import com.scalableminds.webknossos.schema.Tables.{
 }
 
 import javax.inject.Inject
-import models.team._
-import play.api.libs.json._
+import models.team.*
+import play.api.libs.json.*
 import slick.jdbc.GetResult
-import slick.jdbc.PostgresProfile.api._
-import slick.jdbc.TransactionIsolation.Serializable
+import slick.jdbc.PostgresProfile.api.*
 import utils.sql.{SQLDAO, SimpleSQLDAO, SqlClient, SqlToken}
 import com.scalableminds.util.objectid.ObjectId
 import models.organization.PricingPlan
@@ -205,7 +204,7 @@ class UserDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
   // Necessary since a tuple can only have 22 elements
   implicit def GetResultUserCompactInfo: GetResult[UserCompactInfo] =
     prs => {
-      import prs._
+      import prs.*
       UserCompactInfo(
         _id = <<[ObjectId],
         _multiUserId = <<[ObjectId],
@@ -559,8 +558,12 @@ class UserDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
       })
     } yield teamMemberships
 
+  // Re-selecting the team id from teams_ ensures the team is not marked as isDeleted = true.
   private def insertTeamMembershipQuery(userId: ObjectId, teamMembership: TeamMembership) =
-    q"INSERT INTO webknossos.user_team_roles(_user, _team, isTeamManager) VALUES($userId, ${teamMembership.teamId}, ${teamMembership.isTeamManager})".asUpdate
+    q"""INSERT INTO webknossos.user_team_roles(_user, _team, isTeamManager)
+        SELECT $userId, t._id, ${teamMembership.isTeamManager}
+        FROM webknossos.teams_ t
+        WHERE t._id = ${teamMembership.teamId}""".asUpdate
 
   def updateTeamMembershipsForUser(userId: ObjectId, teamMemberships: Seq[TeamMembership])(using
       ctx: DBAccessContext
@@ -577,11 +580,6 @@ class UserDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       _ <- assertUpdateAccess(userId)
       _ <- run(insertTeamMembershipQuery(userId, teamMembership))
-    } yield ()
-
-  def removeTeamFromAllUsers(teamId: ObjectId): Fox[Unit] =
-    for {
-      _ <- run(q"DELETE FROM webknossos.user_team_roles WHERE _team = $teamId".asUpdate)
     } yield ()
 
   def findTeamMemberDifference(potentialSubteam: ObjectId, superteams: List[ObjectId]): Fox[List[User]] =
@@ -663,11 +661,7 @@ class UserDatasetConfigurationDAO @Inject() (sqlClient: SqlClient, userDAO: User
                         AND _dataset = $datasetId""".asUpdate
       insertQuery = q"""INSERT INTO webknossos.user_datasetConfigurations(_user, _dataset, viewConfiguration)
                         VALUES($userId, $datasetId, ${Json.toJson(configuration)})""".asUpdate
-      _ <- run(
-        DBIO.sequence(List(deleteQuery, insertQuery)).transactionally.withTransactionIsolation(Serializable),
-        retryCount = 50,
-        retryIfErrorContains = List(transactionSerializationError)
-      )
+      _ <- runAsSerializableTransaction(List(deleteQuery, insertQuery))
     } yield ()
 }
 
@@ -707,10 +701,6 @@ class UserDatasetLayerConfigurationDAO @Inject() (sqlClient: SqlClient, userDAO:
       insertQuery =
         q"""INSERT INTO webknossos.user_datasetLayerConfigurations(_user, _dataset, layerName, viewConfiguration)
                         VALUES($userId, $datasetId, $layerName, ${Json.toJson(viewConfiguration)})""".asUpdate
-      _ <- run(
-        DBIO.sequence(List(deleteQuery, insertQuery)).transactionally.withTransactionIsolation(Serializable),
-        retryCount = 50,
-        retryIfErrorContains = List(transactionSerializationError)
-      )
+      _ <- runAsSerializableTransaction(List(deleteQuery, insertQuery))
     } yield ()
 }

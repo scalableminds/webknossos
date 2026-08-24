@@ -8,7 +8,8 @@ import { Col, Collapse, Row, Spin, Table, Tag, Tooltip, Typography } from "antd"
 import type { ColumnsType } from "antd/es/table";
 import FastTooltip from "components/fast_tooltip";
 import { ZeroStorageReasonList } from "dashboard/storage_info";
-import { formatCountToDataAmountUnit, stringToColor } from "libs/format_utils";
+import { stringToTagColor } from "libs/colors";
+import { formatCountToDataAmountUnit } from "libs/format_utils";
 import capitalize from "lodash-es/capitalize";
 import groupBy from "lodash-es/groupBy";
 import sumBy from "lodash-es/sumBy";
@@ -161,7 +162,7 @@ const DatasetSettingsStorageTabWithDataset = ({ dataset }: { dataset: APIDataset
             tooltip="When browsing this dataset, requests go via this server."
             style={{ height: "100%" }}
             content={
-              <Tag color={stringToColor(dataset.dataStore.name)} variant="outlined">
+              <Tag color={stringToTagColor(dataset.dataStore.name)} variant="outlined">
                 {dataset.dataStore.name}
               </Tag>
             }
@@ -193,11 +194,19 @@ const DatasetSettingsStorageTabWithDataset = ({ dataset }: { dataset: APIDataset
             tooltip="How this dataset was imported to WEBKNOSSOS"
             style={{ height: "100%" }}
             content={
-              dataset.creationType != null ? (
-                <Text code>{dataset.creationType}</Text>
-              ) : (
-                <Text>(unknown)</Text>
-              )
+              <>
+                {dataset.creationType != null ? (
+                  <Text code>{dataset.creationType}</Text>
+                ) : (
+                  <Text>(unknown)</Text>
+                )}
+                {dataset.uploaderFullName != null && (
+                  <>
+                    <br />
+                    <Text type="secondary">Uploaded by {dataset.uploaderFullName}</Text>
+                  </>
+                )}
+              </>
             }
           />
         </Col>
@@ -235,7 +244,7 @@ const DatasetSettingsStorageTabWithDataset = ({ dataset }: { dataset: APIDataset
                     </>
                   )}
                   {"on data store server "}
-                  <Tag color={stringToColor(dataset.dataStore.name)} variant="outlined">
+                  <Tag color={stringToTagColor(dataset.dataStore.name)} variant="outlined">
                     {dataset.dataStore.name}
                   </Tag>
                 </>

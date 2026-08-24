@@ -16,14 +16,14 @@ import extend from "lodash-es/extend";
 import isEqual from "lodash-es/isEqual";
 import size from "lodash-es/size";
 import messages from "messages";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { APIDataLayer, APIDataSource, APIDataset, MutableAPIDataset } from "types/api_types";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 import type { DataLayerWithTransformations } from "types/schemas/datasource.types";
 import {
   doAllLayersHaveTheSameRotation,
-  EXPECTED_TRANSFORMATION_LENGTH,
+  EXPECTED_SETTINGS_TRANSFORMATION_LENGTH,
   getRotationSettingsFromTransformationIn90DegreeSteps,
 } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import type { DatasetConfiguration } from "viewer/store";
@@ -60,7 +60,7 @@ export function getRotationFromCoordinateTransformations(
     let initialDatasetRotationSettings: DatasetRotationAndMirroringSettings;
     if (
       !firstLayerTransformations ||
-      firstLayerTransformations.length !== EXPECTED_TRANSFORMATION_LENGTH
+      firstLayerTransformations.length !== EXPECTED_SETTINGS_TRANSFORMATION_LENGTH
     ) {
       initialDatasetRotationSettings = NULLED_DS_ROTATION_SETTINGS;
     } else {
@@ -99,9 +99,6 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
     APIDataSource | null | undefined
   >(null);
 
-  onComplete = onComplete ? onComplete : () => navigate("/dashboard");
-  onCancel = onCancel ? onCancel : () => navigate("/dashboard");
-
   const fetchData = useCallback(async (): Promise<string | undefined> => {
     try {
       setIsLoading(true);
@@ -132,7 +129,6 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
       });
 
       form.setFieldsValue({
-        // @ts-expect-error Mismatch between APIDataSource and MutableAPIDataset
         dataSource,
       });
 
@@ -312,7 +308,11 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
       queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
     }
 
-    onComplete();
+    if (onComplete) {
+      onComplete();
+    } else {
+      navigate("/dashboard");
+    }
   }, [
     datasetId,
     datasetDefaultConfiguration,
@@ -322,6 +322,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
     isEditingMode,
     queryClient,
     onComplete,
+    navigate,
     form.getFieldsValue,
   ]);
 
@@ -363,8 +364,12 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
   }, []);
 
   const handleCancel = useCallback(() => {
-    onCancel();
-  }, [onCancel]);
+    if (onCancel) {
+      onCancel();
+    } else {
+      navigate("/dashboard");
+    }
+  }, [onCancel, navigate]);
 
   useBeforeUnload(hasUnsavedChanges, messages["dataset.leave_with_unsaved_changes"]);
 
@@ -380,19 +385,34 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
     }
   }, [fetchData, formProp]);
 
-  const contextValue: DatasetSettingsContextValue = {
-    form,
-    isLoading,
-    dataset,
-    datasetId,
-    datasetDefaultConfiguration,
-    isEditingMode,
-    handleSubmit,
-    handleCancel,
-    onValuesChange,
-    getFormValidationSummary,
-    hasFormErrors,
-  };
+  const contextValue: DatasetSettingsContextValue = useMemo(
+    () => ({
+      form,
+      isLoading,
+      dataset,
+      datasetId,
+      datasetDefaultConfiguration,
+      isEditingMode,
+      handleSubmit,
+      handleCancel,
+      onValuesChange,
+      getFormValidationSummary,
+      hasFormErrors,
+    }),
+    [
+      form,
+      isLoading,
+      dataset,
+      datasetId,
+      datasetDefaultConfiguration,
+      isEditingMode,
+      handleSubmit,
+      handleCancel,
+      onValuesChange,
+      getFormValidationSummary,
+      hasFormErrors,
+    ],
+  );
 
   return (
     <DatasetSettingsContext.Provider value={contextValue}>

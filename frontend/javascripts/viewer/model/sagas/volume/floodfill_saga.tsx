@@ -1,8 +1,10 @@
 import LinkButton from "components/link_button";
+import { toBigInt } from "libs/bigint_helpers";
+import { getRandomColor } from "libs/colors";
+import { handleGenericError } from "libs/error_handling";
 import { V2, V3 } from "libs/mjs";
 import createProgressCallback, { type ProgressCallback } from "libs/progress_callback";
 import Toast from "libs/toast";
-import { getRandomColor } from "libs/utils";
 import sortBy from "lodash-es/sortBy";
 import { call, put, takeEvery } from "typed-redux-saga";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
@@ -10,11 +12,13 @@ import type { FillMode, LabeledVoxelsMap, OrthoView, Vector2, Vector3 } from "vi
 import Constants, { FillModeEnum, Unicode } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
-import { getDatasetBoundingBox, getMagInfo } from "viewer/model/accessors/dataset_accessor";
+import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
+import { getTransformedDatasetBoundingBox } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getDisabledInfoForTools } from "viewer/model/accessors/disabled_tool_accessor";
 import { getActiveMagIndexForLayer } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool, Toolkit } from "viewer/model/accessors/tool_accessor";
 import { enforceActiveVolumeTracing } from "viewer/model/accessors/volumetracing_accessor";
+import { dispatchGetNewIdAsync } from "viewer/model/actions/actions";
 import { addUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
 import {
   type FloodFillAction,
@@ -27,8 +31,11 @@ import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import { createOperationContext } from "viewer/model/sagas/operation_context_saga";
 import { requestBucketModificationInVolumeTracing } from "viewer/model/sagas/saga_helpers";
-import { Model } from "viewer/singletons";
-import { getUserBoundingBoxesThatContainPosition } from "../../accessors/tracing_accessor";
+import { Model, Store } from "viewer/singletons";
+import {
+  getSomeTracing,
+  getUserBoundingBoxesThatContainPosition,
+} from "../../accessors/tracing_accessor";
 import { applyLabeledVoxelMapToAllMissingMags } from "./helpers";
 
 const NO_FLOODFILL_BBOX_TOAST_KEY = "NO_FLOODFILL_BBOX";
@@ -114,7 +121,12 @@ function* getBoundingBoxForFloodFillWhenUnrestricted(
     currentViewportBounding.max[thirdDimension] = position[thirdDimension] + numberOfSlices;
   }
 
-  const datasetBoundingBox = yield* select((state) => getDatasetBoundingBox(state.dataset));
+  const datasetBoundingBox = yield* select((state) =>
+    getTransformedDatasetBoundingBox(
+      state.dataset,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    ),
+  );
   const { min: clippedMin, max: clippedMax } = new BoundingBox(
     currentViewportBounding,
   ).intersectedWith(datasetBoundingBox);
@@ -179,11 +191,8 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
   const magInfo = yield* call(getMagInfo, segmentationLayer.mags);
   const labeledZoomStep = magInfo.getClosestExistingIndex(requestedZoomStep);
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
-  const oldSegmentIdAtSeed = cube.getDataValue(
-    seedPosition,
-    additionalCoordinates,
-    null,
-    labeledZoomStep,
+  const oldSegmentIdAtSeed = toBigInt(
+    cube.getDataValue(seedPosition, additionalCoordinates, null, labeledZoomStep),
   );
 
   if (activeCellId === oldSegmentIdAtSeed) {
@@ -349,8 +358,8 @@ function* notifyUserAboutResult(
   progressCallback: ProgressCallback,
   fillMode: FillMode,
   coveredBoundingBox: BoundingBoxMinMaxType,
-  oldSegmentIdAtSeed: number,
-  activeCellId: number,
+  oldSegmentIdAtSeed: bigint,
+  activeCellId: bigint,
   seedPosition: Vector3,
 ) {
   let showSuccessMsg = false;
@@ -393,16 +402,31 @@ function* notifyUserAboutResult(
         },
       );
       if (createNewBoundingBox) {
-        yield* put(
-          addUserBoundingBoxAction({
-            boundingBox: coveredBoundingBox,
-            name: `Limits of flood-fill (source_id=${oldSegmentIdAtSeed}, target_id=${activeCellId}, seed=${seedPosition.join(
-              ",",
-            )}, timestamp=${Date.now()})`,
-            color: getRandomColor(),
-            isVisible: true,
-          }),
-        );
+        try {
+          const tracingStoringBBoxes = yield* select((state) => getSomeTracing(state.annotation));
+          const id = yield* call(
+            dispatchGetNewIdAsync,
+            Store.dispatch,
+            tracingStoringBBoxes.tracingId,
+            "BoundingBox",
+          );
+          yield* put(
+            addUserBoundingBoxAction(
+              {
+                boundingBox: coveredBoundingBox,
+                name: `Limits of flood-fill (source_id=${oldSegmentIdAtSeed}, target_id=${activeCellId}, seed=${seedPosition.join(
+                  ",",
+                )}, timestamp=${Date.now()})`,
+                color: getRandomColor(),
+                isVisible: true,
+              },
+              undefined,
+              id,
+            ),
+          );
+        } catch (error) {
+          handleGenericError(error as Error, "Could not create a bounding box for the flood-fill.");
+        }
       }
     } else {
       showSuccessMsg = true;

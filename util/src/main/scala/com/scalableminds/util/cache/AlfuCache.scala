@@ -1,9 +1,9 @@
 package com.scalableminds.util.cache
 
 import com.github.benmanes.caffeine.cache.{AsyncCache, Caffeine, RemovalCause, RemovalListener, Weigher}
+import com.scalableminds.util.box.{Box, Failure}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
-import com.scalableminds.util.tools.{Box, Failure}
 
 import java.util.concurrent.{CompletableFuture, Executor, TimeUnit}
 import java.util.function.BiFunction
@@ -11,7 +11,7 @@ import scala.jdk.FunctionWrappers.AsJavaBiFunction
 import scala.jdk.FutureConverters.{CompletionStageOps, FutureOps}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 class AlfuCache[K, V](store: AsyncCache[K, Box[V]]) {
 

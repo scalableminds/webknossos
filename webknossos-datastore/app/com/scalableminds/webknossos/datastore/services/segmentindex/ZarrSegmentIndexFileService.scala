@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.services.segmentindex
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.datareaders.DatasetArray
@@ -14,7 +14,7 @@ import com.scalableminds.webknossos.datastore.services.{
   DSChunkCacheService,
   VoxelyticsZarrArtifactUtils
 }
-import ucar.ma2.{Array => MultiArray}
+import ucar.ma2.Array as MultiArray
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import play.api.libs.json.{JsResult, JsValue, Reads}
 
@@ -79,7 +79,7 @@ class ZarrSegmentIndexFileService @Inject() (dataVaultService: DataVaultService,
     for {
       attributes <- readSegmentIndexFileAttributes(segmentIndexFileKey)
       hashBucketOffsetsArray <- openZarrArray(segmentIndexFileKey, keyHashBucketOffsets)
-      bucketIndex = attributes.applyHashFunction(segmentId) % attributes.nHashBuckets
+      bucketIndex = java.lang.Long.remainderUnsigned(attributes.applyHashFunction(segmentId), attributes.nHashBuckets)
       bucketRange <- hashBucketOffsetsArray.readAsMultiArray(offset = bucketIndex, shape = 2)
       bucketStart <- tryo(bucketRange.getLong(0)).toFox
       bucketEnd <- tryo(bucketRange.getLong(1)).toFox
@@ -140,13 +140,8 @@ class ZarrSegmentIndexFileService @Inject() (dataVaultService: DataVaultService,
   ): Fox[DatasetArray] =
     for {
       groupVaultPath <- dataVaultService.vaultPathFor(segmentIndexFileKey.attachment)
-      zarrArray <- Zarr3Array.open(
+      zarrArray <- Zarr3Array.openForAttachment(
         groupVaultPath / zarrArrayName,
-        DataSourceId("dummy", "unused"),
-        "layer",
-        None,
-        None,
-        None,
         chunkCacheService.sharedChunkContentsCache
       )
     } yield zarrArray

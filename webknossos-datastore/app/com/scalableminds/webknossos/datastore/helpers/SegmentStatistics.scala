@@ -1,20 +1,20 @@
 package com.scalableminds.webknossos.datastore.helpers
 
+import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
-import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
-import com.scalableminds.util.tools.Box.tryo
+import Box.tryo
 import play.api.libs.json.{Json, OFormat}
 
 import scala.concurrent.ExecutionContext
 
 case class SegmentStatisticsParameters(
     mag: Vec3Int,
-    segmentIds: List[Long],
+    segmentIds: List[UnsignedLong],
     mappingName: Option[String],
     additionalCoordinates: Option[Seq[AdditionalCoordinate]],
     annotationVersion: Option[Long]
@@ -24,7 +24,7 @@ object SegmentStatisticsParameters {
 }
 case class SegmentStatisticsParametersMeshBased(
     mag: Vec3Int,
-    segmentIds: List[Long],
+    segmentIds: List[UnsignedLong],
     mappingName: Option[String],
     additionalCoordinates: Option[Seq[AdditionalCoordinate]],
     meshFileName: Option[String],

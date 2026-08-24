@@ -9,7 +9,14 @@ import {
   throwTransferHandlerWithResponseSupport,
 } from "viewer/workers/headers_transfer_handler";
 
-const isNodeContext = typeof process !== "undefined" && process.title !== "browser";
+// Detect a real Node.js context (e.g. Vitest) via `process.versions.node`.
+// Note: we must NOT rely on `typeof process === "undefined"` here. Since Vite 8,
+// the env shim that Vite injects into module workers materializes the `define`
+// values (including `process.env`) as real globals, so a partial `process` object
+// (`{ env: {} }`) exists inside web workers. Checking `process.versions.node` keeps
+// this false in the browser/worker while staying true under Node.
+const isNodeContext =
+  typeof process !== "undefined" && process.versions != null && process.versions.node != null;
 
 export const wrap = !isNodeContext ? ComlinkWrap : (null as any);
 export const transferHandlers = !isNodeContext ? ComlinkTransferHandlers : new Map();

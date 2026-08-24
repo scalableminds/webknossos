@@ -2,6 +2,7 @@ package models.annotation
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.box.{Box, Full}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.objectid.ObjectId
@@ -9,12 +10,12 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, TextUtils}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.Annotation.{AnnotationLayerProto, AnnotationProto}
-import com.scalableminds.webknossos.datastore.SkeletonTracing._
+import com.scalableminds.webknossos.datastore.SkeletonTracing.*
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.geometry.ColorProto
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryConversions, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.VoxelSize
-import com.scalableminds.webknossos.datastore.models.annotation._
+import com.scalableminds.webknossos.datastore.models.annotation.*
 import com.scalableminds.webknossos.datastore.models.datasource.{
   AdditionalAxis,
   ElementClass,
@@ -32,17 +33,16 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
 }
 import com.typesafe.scalalogging.LazyLogging
 import files.WkTempFileService
-import models.annotation.AnnotationState._
+import models.annotation.AnnotationState.*
 import models.annotation.AnnotationType.AnnotationType
 import models.annotation.handler.SavedTracingInformationHandler
 import models.annotation.nml.NmlWriter
-import models.dataset._
+import models.dataset.*
 import models.organization.OrganizationDAO
 import models.project.ProjectDAO
 import models.task.{Task, TaskDAO, TaskService, TaskTypeDAO}
 import models.team.{TeamDAO, TeamService}
 import models.user.{MultiUserDAO, User, UserDAO, UserService}
-import com.scalableminds.util.tools.{Box, Full}
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.Materializer
 import play.api.libs.json.{JsNull, JsObject, JsValue, Json}
@@ -445,7 +445,9 @@ class AnnotationService @Inject() (
           }.headOption
         } else None
       _ <- Fox.fromBool(
-        fallbackLayer.forall(_.largestSegmentId.exists(_ >= 0L))
+        fallbackLayer.forall(layer =>
+          ElementClass.largestSegmentIdIsInRange(layer.largestSegmentId, layer.elementClass)
+        )
       ) ?~> Msg.Annotation.Volume.invalidLargestSegmentId
 
       volumeTracing <- createVolumeTracing(
@@ -706,8 +708,7 @@ class AnnotationService @Inject() (
               ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(new File(subZip.toString))))
             volumeDataOpt.foreach(volumeData => subZipper.addFileFromBytes(nml.name + "_data.zip", volumeData))
             for {
-              _ <- subZipper.addFileFromNamedStream(nml, suffix = ".nml")
-              _ = subZipper.close()
+              _ <- Fox.withCleanup(subZipper.addFileFromNamedStream(nml, suffix = ".nml"))(subZipper.close())
               _ = zipper.addFileFromTemporaryFile(nml.name + ".zip", subZip)
               res <- addToZip(tail)
             } yield res
@@ -718,10 +719,7 @@ class AnnotationService @Inject() (
           Fox.successful(true)
       }
 
-    addToZip(nmls).map { _ =>
-      zipper.close()
-      zipped
-    }
+    Fox.withCleanup(addToZip(nmls))(zipper.close()).map(_ => zipped)
   }
 
   def transferAnnotationToUser(typ: String, id: ObjectId, userId: ObjectId, issuingUser: User)(using

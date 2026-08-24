@@ -1,4 +1,3 @@
-import { presetPalettes } from "@ant-design/colors";
 import dayjs from "dayjs";
 import calendar from "dayjs/plugin/calendar";
 import customParseFormat from "dayjs/plugin/customParseFormat";
@@ -20,7 +19,7 @@ import {
   type Vector6,
 } from "viewer/constants";
 import type { BoundingBoxObject } from "viewer/store";
-import { hexToRgb, map3, roundTo } from "./utils";
+import { map3, roundTo } from "./utils";
 
 dayjs.extend(updateLocale);
 dayjs.extend(duration);
@@ -44,16 +43,6 @@ dayjs.updateLocale("en", {
 });
 
 const { ThinSpace, MultiplicationSymbol } = Unicode;
-const COLOR_MAP: Array<string> = [
-  "#575AFF",
-  "#8086FF",
-  "#2A0FC6",
-  "#40bfd2",
-  "#b92779",
-  "#FF7BA6",
-  "#FF9364",
-  "#750790",
-];
 
 export const UnitsMap: Record<UnitShort, number> = {
   ym: 1e-15,
@@ -108,32 +97,7 @@ function getFactorToNextSmallestCommonUnit(
   return [conversionFactor, commonUnit];
 }
 
-// Specifying a preset color makes an antd <Tag/> appear more lightweight, see https://ant.design/components/tag/
-const COLOR_MAP_ANTD = Object.keys(presetPalettes);
-export function stringToColor(string: string): string {
-  const hash = hashString(string, COLOR_MAP.length);
-  return COLOR_MAP[hash];
-}
-export function stringToAntdColorPreset(string: string): keyof typeof presetPalettes {
-  const hash = hashString(string, COLOR_MAP_ANTD.length);
-  return COLOR_MAP_ANTD[hash];
-}
-export function stringToAntdColorPresetRgb(string: string): Vector3 {
-  const presetString = stringToAntdColorPreset(string);
-  // This will be a hex code, see https://www.npmjs.com/package/@ant-design/colors
-  // @ts-expect-error
-  return hexToRgb(presetPalettes[presetString].primary);
-}
-
-function hashString(string: string, max: number): number {
-  let hash = 0;
-
-  for (let i = 0; i < string.length; i++) {
-    hash += string.charCodeAt(i);
-  }
-
-  return hash % max;
-}
+// String → color helpers (stringToTagColor, stringToAntdColorPreset, …) live in libs/colors.ts.
 
 export function formatTuple(tuple: (Array<number> | Vector3 | Vector6) | null | undefined) {
   if (tuple != null && tuple.length > 0) {
@@ -500,29 +464,24 @@ export function formatCPU(cpuShare: number) {
   return `${(cpuShare * 100).toFixed(0)}%`;
 }
 
-function _formatBytes(nbytes: number) {
+export function formatBytes(nbytes: number, precision = 0) {
   if (nbytes == null || !Number.isFinite(nbytes)) {
     return "";
   }
   if (nbytes > 2 ** 50) {
-    // Pebibyte
-    return `${(nbytes / 2 ** 50).toPrecision(4)} PiB`;
+    return `${(nbytes / 2 ** 50).toFixed(precision)} PiB`;
   }
   if (nbytes > 2 ** 40) {
-    // Tebibyte
-    return `${(nbytes / 2 ** 40).toPrecision(4)} TiB`;
+    return `${(nbytes / 2 ** 40).toFixed(precision)} TiB`;
   }
   if (nbytes > 2 ** 30) {
-    // Gibibyte
-    return `${(nbytes / 2 ** 30).toPrecision(4)} GiB`;
+    return `${(nbytes / 2 ** 30).toFixed(precision)} GiB`;
   }
   if (nbytes > 2 ** 20) {
-    // Mebibyte
-    return `${(nbytes / 2 ** 20).toPrecision(4)} MiB`;
+    return `${(nbytes / 2 ** 20).toFixed(precision)} MiB`;
   }
   if (nbytes > 2 ** 10) {
-    // Kibibyte
-    return `${(nbytes / 2 ** 10).toPrecision(4)} KiB`;
+    return `${(nbytes / 2 ** 10).toFixed(precision)} KiB`;
   }
   return `${nbytes} B`;
 }

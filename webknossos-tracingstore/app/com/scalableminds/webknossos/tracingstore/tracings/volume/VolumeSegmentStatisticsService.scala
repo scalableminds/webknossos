@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.Box
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
@@ -12,7 +13,6 @@ import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, Elem
 import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.Box
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext

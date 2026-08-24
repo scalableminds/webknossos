@@ -10,7 +10,7 @@ import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.Result
 import play.api.mvc.Results.Forbidden
 
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.concurrent.ExecutionContext
 
 object AccessMode extends ExtendedEnumeration {

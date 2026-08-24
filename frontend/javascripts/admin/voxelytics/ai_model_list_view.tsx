@@ -26,7 +26,7 @@ import Markdown from "libs/markdown_adapter";
 import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { filterWithSearchQueryAND } from "libs/utils";
+import { filterWithSearchQueryAND, scrollToTop } from "libs/utils";
 import uniq from "lodash-es/uniq";
 import type { Key } from "react";
 import { useState } from "react";
@@ -144,7 +144,7 @@ export default function AiModelListView() {
         <Spin spinning={isFetching} size="large">
           <Table
             rowKey={(run: AiModel) => `${run.id}`}
-            pagination={{ pageSize: 100 }}
+            pagination={{ pageSize: 100, onChange: scrollToTop }}
             columns={columns}
             dataSource={filterWithSearchQueryAND(
               aiModels,

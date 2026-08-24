@@ -12,7 +12,8 @@ import { deleteDatasetOnDisk } from "admin/rest_api";
 import { Button, Modal, Progress, Result, Space, Spin, Tag, Tooltip, Typography } from "antd";
 import FormattedId from "components/formatted_id";
 import features from "features";
-import { formatCountToDataAmountUnit, stringToColor } from "libs/format_utils";
+import { stringToTagColor } from "libs/colors";
+import { formatCountToDataAmountUnit } from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
@@ -21,6 +22,7 @@ import keyBy from "lodash-es/keyBy";
 import uniq from "lodash-es/uniq";
 import { useEffect, useState } from "react";
 import type { APIDatasetCompact, Folder } from "types/api_types";
+import Constants from "viewer/constants";
 import {
   DatasetExtentRow,
   OwningOrganizationRow,
@@ -66,7 +68,9 @@ export function DetailsSidebar({
   }, [selectedDatasets, context.activeFolderId]);
 
   return (
-    <div style={{ width: 300, padding: 16 }}>
+    <div
+      style={{ width: 300, padding: 16, position: "sticky", top: Constants.DEFAULT_NAVBAR_HEIGHT }}
+    >
       {selectedDatasets.length === 1 ? (
         <DatasetDetails selectedDataset={selectedDatasets[0]} />
       ) : selectedDatasets.length > 1 ? (
@@ -116,14 +120,14 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
 
   return (
     <>
-      <h4 style={{ wordBreak: "break-all" }}>
+      <Typography.Title level={4} style={{ wordBreak: "break-all" }}>
         {isFetching ? (
           <LoadingOutlined style={{ marginRight: 4 }} />
         ) : (
           <FileOutlined style={{ marginRight: 4 }} />
         )}{" "}
         {selectedDataset.name}
-      </h4>
+      </Typography.Title>
       {renderOrganization()}
       <Spin spinning={fullDataset == null}>
         {selectedDataset.isActive && (
@@ -164,10 +168,17 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
           {fullDataset && <DatasetLayerTags dataset={fullDataset} />}
         </div>
 
+        {fullDataset?.uploaderFullName != null && (
+          <div style={{ marginBottom: 4 }}>
+            <div className="sidebar-label">Uploaded By</div>
+            <div>{fullDataset.uploaderFullName}</div>
+          </div>
+        )}
+
         <div style={{ marginBottom: 4 }}>
           <div className="sidebar-label">Datastore</div>
           {fullDataset && (
-            <Tag color={stringToColor(fullDataset.dataStore.name)} variant="outlined">
+            <Tag color={stringToTagColor(fullDataset.dataStore.name)} variant="outlined">
               {fullDataset.dataStore.name}
             </Tag>
           )}
@@ -389,7 +400,7 @@ function FolderDetails({
     <>
       {folder ? (
         <div style={{ textAlign: "left" }}>
-          <h4 style={{ wordBreak: "break-all" }}>
+          <Typography.Title level={4} style={{ wordBreak: "break-all" }}>
             <span
               style={{
                 float: "right",
@@ -405,7 +416,7 @@ function FolderDetails({
             </span>
             <FolderOpenOutlined style={{ marginRight: 8 }} />
             {folder.name}
-          </h4>
+          </Typography.Title>
           <p>
             This folder contains{" "}
             <Tooltip title="This number is independent of any filters that might be applied to the current view (e.g., only showing available datasets)">
@@ -455,7 +466,7 @@ function FolderTeamTags({ folder }: { folder: Folder }) {
                 whiteSpace: "nowrap",
                 textOverflow: "ellipsis",
               }}
-              color={stringToColor(team.name)}
+              color={stringToTagColor(team.name)}
               variant="outlined"
             >
               {team.name}

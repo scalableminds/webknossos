@@ -99,13 +99,18 @@ POST          /datasets/:datasetId/layers/:dataLayerName/connectomes/synapses   
 # Ad-Hoc Meshing
 POST          /datasets/:datasetId/layers/:dataLayerName/adHocMesh                                                    @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.requestAdHocMesh(datasetId: ObjectId, dataLayerName: String)
 
-# Segment-Index files
-GET           /datasets/:datasetId/layers/:dataLayerName/hasSegmentIndex                                              @com.scalableminds.webknossos.datastore.controllers.DataSourceController.checkSegmentIndexFile(datasetId: ObjectId, dataLayerName: String)
-POST          /datasets/:datasetId/layers/:dataLayerName/segmentIndex                                                 @com.scalableminds.webknossos.datastore.controllers.DataSourceController.querySegmentIndex(datasetId: ObjectId, dataLayerName: String)
-POST          /datasets/:datasetId/layers/:dataLayerName/segmentIndex/:segmentId                                      @com.scalableminds.webknossos.datastore.controllers.DataSourceController.getSegmentIndex(datasetId: ObjectId, dataLayerName: String, segmentId: String)
-POST          /datasets/:datasetId/layers/:dataLayerName/segmentStatistics/volume                                     @com.scalableminds.webknossos.datastore.controllers.DataSourceController.getSegmentVolume(datasetId: ObjectId, dataLayerName: String)
-POST          /datasets/:datasetId/layers/:dataLayerName/segmentStatistics/boundingBox                                @com.scalableminds.webknossos.datastore.controllers.DataSourceController.getSegmentBoundingBox(datasetId: ObjectId, dataLayerName: String)
-POST          /datasets/:datasetId/layers/:dataLayerName/segmentStatistics/surfaceArea                                @com.scalableminds.webknossos.datastore.controllers.DataSourceController.getSegmentSurfaceArea(datasetId: ObjectId, dataLayerName: String)
+# Segment Index and Segment Statistics files
+GET           /datasets/:datasetId/layers/:dataLayerName/hasSegmentIndex                                              @com.scalableminds.webknossos.datastore.controllers.SegmentStatisticsController.checkSegmentIndexFile(datasetId: ObjectId, dataLayerName: String)
+GET           /datasets/:datasetId/layers/:dataLayerName/segmentStatisticsFile                                        @com.scalableminds.webknossos.datastore.controllers.SegmentStatisticsController.segmentStatisticsFileInfo(datasetId: ObjectId, dataLayerName: String)
+POST          /datasets/:datasetId/layers/:dataLayerName/segmentIndex                                                 @com.scalableminds.webknossos.datastore.controllers.SegmentStatisticsController.querySegmentIndex(datasetId: ObjectId, dataLayerName: String)
+POST          /datasets/:datasetId/layers/:dataLayerName/segmentIndex/:segmentId                                      @com.scalableminds.webknossos.datastore.controllers.SegmentStatisticsController.getSegmentIndex(datasetId: ObjectId, dataLayerName: String, segmentId: String)
+POST          /datasets/:datasetId/layers/:dataLayerName/segmentStatistics/volume                                     @com.scalableminds.webknossos.datastore.controllers.SegmentStatisticsController.getSegmentVolume(datasetId: ObjectId, dataLayerName: String)
+POST          /datasets/:datasetId/layers/:dataLayerName/segmentStatistics/boundingBox                                @com.scalableminds.webknossos.datastore.controllers.SegmentStatisticsController.getSegmentBoundingBox(datasetId: ObjectId, dataLayerName: String)
+POST          /datasets/:datasetId/layers/:dataLayerName/segmentStatistics/surfaceArea                                @com.scalableminds.webknossos.datastore.controllers.SegmentStatisticsController.getSegmentSurfaceArea(datasetId: ObjectId, dataLayerName: String)
+POST          /datasets/:datasetId/layers/:dataLayerName/segmentStatistics/covarianceMatrix                           @com.scalableminds.webknossos.datastore.controllers.SegmentStatisticsController.getSegmentCovarianceMatrix(datasetId: ObjectId, dataLayerName: String)
+POST          /datasets/:datasetId/layers/:dataLayerName/segmentStatistics/maxDistance                                @com.scalableminds.webknossos.datastore.controllers.SegmentStatisticsController.getSegmentMaxDistance(datasetId: ObjectId, dataLayerName: String)
+POST          /datasets/:datasetId/layers/:dataLayerName/segmentStatistics/centerOfMass                               @com.scalableminds.webknossos.datastore.controllers.SegmentStatisticsController.getSegmentCenterOfMass(datasetId: ObjectId, dataLayerName: String)
+POST          /datasets/:datasetId/layers/:dataLayerName/segmentStatistics/sphericity                                 @com.scalableminds.webknossos.datastore.controllers.SegmentStatisticsController.getSegmentSphericity(datasetId: ObjectId, dataLayerName: String)
 
 # Uploads: Datasets, mags, attachments
 GET           /datasets/upload/:uploadDomain                                                                          @com.scalableminds.webknossos.datastore.controllers.UploadController.testChunk(resumableChunkNumber: Int, resumableIdentifier: String, uploadDomain: String)
@@ -118,18 +123,20 @@ POST          /datasets/upload/:uploadDomain/finishUpload                       
 POST          /datasets/upload/:uploadDomain/cancelUpload                                                             @com.scalableminds.webknossos.datastore.controllers.UploadController.cancelUpload(uploadDomain: String, uploadId: String)
 
 # DataSource management
-GET           /datasets/baseDirAbsolute                                                                               @com.scalableminds.webknossos.datastore.controllers.DataSourceController.baseDirAbsolute
+GET           /datasets/getOneBaseDirForOrgaAbsolute                                                                  @com.scalableminds.webknossos.datastore.controllers.DataSourceController.getOneBaseDirForOrgaAbsolute(organizationId: String)
 POST          /datasets/measureUsedStorage/:organizationId                                                            @com.scalableminds.webknossos.datastore.controllers.DataSourceController.measureUsedStorage(organizationId: String)
-PUT           /datasets/:datasetId                                                                                    @com.scalableminds.webknossos.datastore.controllers.DataSourceController.updateOnDisk(datasetId: ObjectId)
-DELETE        /datasets/:datasetId/deleteOnDisk                                                                       @com.scalableminds.webknossos.datastore.controllers.DataSourceController.deleteOnDisk(datasetId: ObjectId)
+PUT           /datasets/:datasetId                                                                                    @com.scalableminds.webknossos.datastore.controllers.DataSourceController.updateOnDisk(datasetId: ObjectId, rootPath: String)
+DELETE        /datasets/:datasetId/deleteOnDisk                                                                       @com.scalableminds.webknossos.datastore.controllers.DataSourceController.deleteOnDisk(datasetId: ObjectId, rootPath: String)
 DELETE        /datasets/deletePaths                                                                                   @com.scalableminds.webknossos.datastore.controllers.DataSourceController.deletePaths()
 POST          /datasets/exploreRemote                                                                                 @com.scalableminds.webknossos.datastore.controllers.DataSourceController.exploreRemoteDataset()
 POST          /datasets/validatePaths                                                                                 @com.scalableminds.webknossos.datastore.controllers.DataSourceController.validatePaths()
 POST          /datasets/writeMirrors                                                                                  @com.scalableminds.webknossos.datastore.controllers.DataSourceController.writeMirrors(failOnError: Boolean)
 DELETE        /datasets/:datasetId                                                                                    @com.scalableminds.webknossos.datastore.controllers.DataSourceController.invalidateCache(datasetId: ObjectId)
 
+GET           /getOrganizationBaseDirectory                                                                           @com.scalableminds.webknossos.datastore.controllers.DataSourceController.getOrganizationBaseDirectory(organizationId: String, requireAllowsUpload: Boolean, requireLocal: Boolean)
+
 # Actions
-POST          /triggers/checkInboxBlocking                                                                            @com.scalableminds.webknossos.datastore.controllers.DataSourceController.triggerInboxCheckBlocking(organizationId: Option[String])
+POST          /triggers/checkInboxBlocking                                                                            @com.scalableminds.webknossos.datastore.controllers.DataSourceController.scanBaseDirectories(organizationId: Option[String])
 POST          /triggers/createOrganizationDirectory                                                                   @com.scalableminds.webknossos.datastore.controllers.DataSourceController.createOrganizationDirectory(organizationId: String)
 POST          /triggers/reload/:organizationId/:datasetId                                                             @com.scalableminds.webknossos.datastore.controllers.DataSourceController.reload(organizationId: String, datasetId: ObjectId, layerName: Option[String])
 POST          /triggers/scanRealPathsForVirtual                                                                       @com.scalableminds.webknossos.datastore.controllers.DataSourceController.scanRealPathsForVirtual()

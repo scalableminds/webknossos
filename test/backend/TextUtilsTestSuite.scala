@@ -1,7 +1,7 @@
 package backend
 
+import com.scalableminds.util.box.{Failure, Full}
 import com.scalableminds.util.tools.TextUtils
-import com.scalableminds.util.tools.{Failure, Full}
 import org.scalatest.wordspec.AsyncWordSpec
 
 class TextUtilsTestSuite extends AsyncWordSpec {

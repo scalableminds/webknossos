@@ -14,7 +14,7 @@ import models.organization.CreditState.CreditState
 import models.organization.CreditTransactionState.TransactionState
 import slick.dbio.DBIO
 import slick.jdbc.GetResult
-import slick.jdbc.PostgresProfile.api._
+import slick.jdbc.PostgresProfile.api.*
 import slick.jdbc.TransactionIsolation.Serializable
 import telemetry.SlackNotificationService
 import utils.WkConf
@@ -73,7 +73,7 @@ class CreditTransactionDAO @Inject() (
 
   implicit val getCreditTransactions: GetResult[CreditTransaction] =
     prs => {
-      import prs._
+      import prs.*
       val transactionId = <<[ObjectId]
       val organizationId = <<[String]
       val relatedTransaction = <<?[ObjectId]

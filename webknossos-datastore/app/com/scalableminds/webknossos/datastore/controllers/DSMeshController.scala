@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.controllers
 import com.google.inject.Inject
 import com.scalableminds.util.Msg
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.webknossos.datastore.services._
+import com.scalableminds.webknossos.datastore.services.*
 import com.scalableminds.webknossos.datastore.services.mesh.{
   DSFullMeshService,
   FullMeshRequest,
@@ -65,7 +65,7 @@ class DSMeshController @Inject() (
             targetMappingName,
             editableMappingTracingId,
             request.body.annotationVersion,
-            request.body.segmentId,
+            request.body.segmentId.toLong,
             mappingNameForMeshFile,
             omitMissing = false
           )

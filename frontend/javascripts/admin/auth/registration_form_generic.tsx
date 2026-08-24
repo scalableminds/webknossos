@@ -11,6 +11,7 @@ import type { APIOrganization } from "types/api_types";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import { setHasOrganizationsAction } from "viewer/model/actions/ui_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
+import { HoneypotFormItem } from "./honeypot_form_item";
 import { TOSCheckFormItem } from "./tos_check_form_item";
 
 const FormItem = Form.Item;
@@ -115,6 +116,7 @@ function RegistrationFormGeneric(props: Props) {
       <React.Fragment>
         {tokenField}
         {organizationFields}
+        <HoneypotFormItem />
       </React.Fragment>
     );
   };

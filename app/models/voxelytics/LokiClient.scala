@@ -4,11 +4,11 @@ import com.scalableminds.util.mvc.MimeTypes
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
-import com.scalableminds.webknossos.datastore.rpc.RPC
+import com.scalableminds.webknossos.datastore.rpc.{RPC, RPCRequest}
 import com.typesafe.scalalogging.LazyLogging
 import models.voxelytics.VoxelyticsLogLevel.VoxelyticsLogLevel
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Failure, Full}
+import com.scalableminds.util.box.Box.tryo
+import com.scalableminds.util.box.{Failure, Full}
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.pattern.after
 import play.api.http.{HeaderNames, Status}
@@ -16,7 +16,7 @@ import play.api.libs.json.{JsArray, JsObject, JsValue, Json}
 import utils.WkConf
 
 import javax.inject.Inject
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.concurrent.{ExecutionContext, Future}
 import scala.math.Ordering.Implicits.infixOrderingOps
 
@@ -26,6 +26,11 @@ class LokiClient @Inject() (wkConf: WkConf, rpc: RPC, val actorSystem: ActorSyst
 
   private lazy val conf = wkConf.Voxelytics.Loki
   private lazy val enabled = wkConf.Features.voxelyticsEnabled && conf.uri.nonEmpty
+
+  private def withAuth(request: RPCRequest): RPCRequest = {
+    val withTenant = if (conf.tenant.nonEmpty) request.addHttpHeader("X-Scope-OrgID", conf.tenant) else request
+    if (conf.user.nonEmpty || conf.password.nonEmpty) withTenant.withBasicAuth(conf.user, conf.password) else withTenant
+  }
 
   private val POLLING_INTERVAL = 1 second
   private val LOG_TIME_BATCH_INTERVAL = 1 days
@@ -48,7 +53,7 @@ class LokiClient @Inject() (wkConf: WkConf, rpc: RPC, val actorSystem: ActorSyst
       } yield ()
 
     for {
-      responseBox <- Fox.fromFuture(rpc(s"${conf.uri}/ready").request.withMethod("GET").execute()).shiftBox
+      responseBox <- Fox.fromFuture(withAuth(rpc(s"${conf.uri}/ready")).request.withMethod("GET").execute()).shiftBox
       isServerAvailable <- responseBox match {
         case Full(response) if Status.isSuccessful(response.status) =>
           Fox.successful(true)
@@ -166,7 +171,7 @@ class LokiClient @Inject() (wkConf: WkConf, rpc: RPC, val actorSystem: ActorSyst
           .mkString("&")
       for {
         _ <- serverStartupFox
-        res <- rpc(s"${conf.uri}/loki/api/v1/query_range?$queryString").silent.getWithJsonResponse[JsValue]
+        res <- withAuth(rpc(s"${conf.uri}/loki/api/v1/query_range?$queryString")).silent.getWithJsonResponse[JsValue]
         logEntries <- tryo(
           (res \ "data" \ "result")
             .as[List[JsValue]]
@@ -253,7 +258,7 @@ class LokiClient @Inject() (wkConf: WkConf, rpc: RPC, val actorSystem: ActorSyst
             "values" -> JsArray(values)
           )
         )
-        _ <- rpc(s"${conf.uri}/loki/api/v1/push").silent
+        _ <- withAuth(rpc(s"${conf.uri}/loki/api/v1/push")).silent
           .addHttpHeader(HeaderNames.CONTENT_TYPE, jsonMimeType)
           .postJson[JsValue](Json.obj("streams" -> streams))
       } yield ()

@@ -57,7 +57,7 @@ const initialState = {
     spaceDirectionOrtho: [1, 1, 1],
   },
   temporaryConfiguration: {
-    viewMode: "oblique",
+    viewMode: "flight",
   },
 };
 

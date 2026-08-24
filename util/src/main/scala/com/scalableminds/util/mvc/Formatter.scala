@@ -1,11 +1,12 @@
 package com.scalableminds.util.mvc
 
+import com.scalableminds.util.box.{Box, Failure, Full, ParamFailure}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.TextUtils
-import com.scalableminds.util.tools.{Box, Failure, Full, ParamFailure}
 
 import java.text.SimpleDateFormat
-import java.util.Date
+import java.time.format.DateTimeFormatter
+import java.util.{Date, Locale}
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.FiniteDuration
 
@@ -17,6 +18,10 @@ trait Formatter {
     val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm")
     sdf.format(date)
   }
+
+  // Day without time, spelled out for user-facing texts such as emails, e.g. “1 September 2026”
+  protected def formatDateOnly(instant: Instant): String =
+    DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.ENGLISH).format(instant.toZonedDateTime)
 
   protected def formatDateForFilename(date: Date): String = {
     val sdf = new SimpleDateFormat("YYYY-MM-dd_HH-mm")

@@ -29,8 +29,6 @@ import {
   type APIAnnotationType,
   type APIAnnotationVisibility,
   type APIAvailableTasksReport,
-  type APIBuildInfoDatastore,
-  type APIBuildInfoTracingstore,
   type APIBuildInfoWk,
   type APICompoundType,
   type APIConnectomeFile,
@@ -1898,16 +1896,6 @@ export function pingHealthEndpoint(url: string, path: "tracings" | "data"): Prom
 // ### BuildInfo webknossos
 export function getBuildInfo(): Promise<APIBuildInfoWk> {
   return Request.receiveJSON("/api/buildinfo", {
-    doNotInvestigate: true,
-    mode: "cors",
-  });
-}
-
-// ### BuildInfo datastore/tracingstore
-export function getDataOrTracingStoreBuildInfo(
-  dataOrTracingStoreUrl: string,
-): Promise<APIBuildInfoDatastore | APIBuildInfoTracingstore> {
-  return Request.receiveJSON(`${dataOrTracingStoreUrl}/api/buildinfo`, {
     doNotInvestigate: true,
     mode: "cors",
   });

@@ -148,8 +148,8 @@ export function useZarrLinkMenu(maybeAccessToken: string | null) {
   const dataLayers = getDataLayers(dataset);
 
   const baseUrl = maybeAccessToken
-    ? `${dataStoreURL}/data/annotations/zarr/${maybeAccessToken}`
-    : `${dataStoreURL}/data/zarr/${dataset.id}`;
+    ? `${dataStoreURL}/data/annotations/zarr3/${maybeAccessToken}`
+    : `${dataStoreURL}/data/zarr3/${dataset.id}`;
 
   const copyTokenToClipboard = ({ key: layerName }: { key: string }) => {
     copyToClipboard(`${baseUrl}/${layerName}`, "URL");

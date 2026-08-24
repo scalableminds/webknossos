@@ -393,27 +393,28 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     firstSlice = ndarray(new Float32Array(firstSliceBigInt.size), firstSliceBigInt.shape);
     lastSlice = ndarray(new Float32Array(lastSliceBigInt.size), lastSliceBigInt.shape);
 
-    const activeCellIdBig = BigInt(activeCellId);
     // Calculate firstSlice = firstSliceBigInt[...] == activeCellId
     isEqualFromBigUint64(
       firstSlice,
       firstSliceBigInt as NdArray<BigUint64Array<ArrayBuffer>>,
-      activeCellIdBig,
+      activeCellId,
     );
     // Calculate lastSlice = lastSliceBigInt[...] == activeCellId
     isEqualFromBigUint64(
       lastSlice,
       lastSliceBigInt as NdArray<BigUint64Array<ArrayBuffer>>,
-      activeCellIdBig,
+      activeCellId,
     );
   } else {
     firstSlice = inputNd.pick(null, null, 0) as NdArray<TypedArrayWithoutBigInt>;
     lastSlice = inputNd.pick(null, null, interpolationDepth) as NdArray<TypedArrayWithoutBigInt>;
 
-    // Calculate firstSlice = firstSlice[...] == activeCellId
-    isEqual(firstSlice, activeCellId);
-    // Calculate lastSlice = lastSlice[...] == activeCellId
-    isEqual(lastSlice, activeCellId);
+    const activeCellIdNumber = Number(activeCellId);
+
+    // Calculate firstSlice = firstSlice[...] == activeCellIdNumber
+    isEqual(firstSlice, activeCellIdNumber);
+    // Calculate lastSlice = lastSlice[...] == activeCellIdNumber
+    isEqual(lastSlice, activeCellIdNumber);
   }
 
   if (!isNonZero(firstSlice) || !isNonZero(lastSlice)) {

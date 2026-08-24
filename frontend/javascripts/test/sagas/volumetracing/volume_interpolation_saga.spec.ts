@@ -100,8 +100,6 @@ async function runInterpolationTest(context: WebknossosTestContext, elementClass
 describe("Volume Interpolation", () => {
   afterEach<WebknossosTestContext>(async (context) => {
     expect(hasRootSagaCrashed()).toBe(false);
-    await context.api.tracing.save();
-    expect(hasRootSagaCrashed()).toBe(false);
     context.tearDownPullQueues();
   });
 

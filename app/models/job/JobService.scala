@@ -5,7 +5,7 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.box.Full
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.webknossos.datastore.models.VoxelSize
-import models.dataset.{Dataset, DatasetDAO}
+import models.dataset.{Dataset, DatasetDAO, DataStoreDAO, WKRemoteDataStoreClient}
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
@@ -17,6 +17,7 @@ import models.job.JobCommand.JobCommand
 import models.organization.{CreditTransactionService, OrganizationDAO, OrganizationService}
 import models.user.{MultiUserDAO, User, UserDAO, UserService}
 import com.scalableminds.webknossos.datastore.helpers.UPath
+import com.scalableminds.webknossos.datastore.rpc.RPC
 import org.apache.pekko.actor.ActorSystem
 import play.api.http.Status.FORBIDDEN
 import play.api.libs.json.{JsObject, JsValue, Json}
@@ -43,7 +44,9 @@ class JobService @Inject() (
     userService: UserService,
     creditTransactionService: CreditTransactionService,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-    slackNotificationService: SlackNotificationService
+    slackNotificationService: SlackNotificationService,
+    dataStoreDAO: DataStoreDAO,
+    rpc: RPC
 )(implicit ec: ExecutionContext)
     extends LazyLogging
     with Formatter {
@@ -192,6 +195,22 @@ class JobService @Inject() (
         _ <- datasetDAO.deleteDataset(dataset._id)
       } yield ()
     } else Fox.successful(())
+
+  def cleanUpUploadFilesIfNeeded(jobBeforeChange: Job, jobAfterChange: Job): Unit = {
+    val jobJustEnded =
+      jobBeforeChange.state != jobAfterChange.state &&
+        Set(JobState.SUCCESS, JobState.FAILURE, JobState.CANCELLED).contains(jobAfterChange.state)
+    Fox.runIf(jobAfterChange.command == JobCommand.convert_to_wkw && jobJustEnded) {
+      for {
+        commandArgs = jobAfterChange.args.value
+        organizationId <- commandArgs.get("organization_id").map(_.as[String]).toFox
+        directoryName <- commandArgs.get("dataset_directory_name").map(_.as[String]).toFox
+        dataStore <- dataStoreDAO.findOneByName(jobAfterChange._dataStore)(using GlobalAccessContext)
+        remoteClient = new WKRemoteDataStoreClient(dataStore, rpc)
+        _ <- remoteClient.cleanUpUploadFiles(organizationId, directoryName, jobAfterChange._id.id)
+      } yield ()
+    }
+  }
 
   def publicWrites(job: Job)(using ctx: DBAccessContext): Fox[JsValue] =
     for {

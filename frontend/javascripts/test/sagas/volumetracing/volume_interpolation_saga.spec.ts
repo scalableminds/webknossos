@@ -19,7 +19,21 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import Store from "viewer/store";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, type TestContext, vi } from "vitest";
+
+// All ElementClass values that are valid for segmentation layers. uint24 is rejected
+// explicitly (see model_initialization.ts), and float/double have no segment id range
+// (see getSegmentIdRangeForElementClass).
+const SEGMENTATION_ELEMENT_CLASSES: ElementClass[] = [
+  "uint8",
+  "uint16",
+  "uint32",
+  "uint64",
+  "int8",
+  "int16",
+  "int32",
+  "int64",
+];
 
 // The interpolation saga runs asynchronously (it fetches bucket data). Since it
 // doesn't offer a completion callback, wait until it deregisters itself from
@@ -103,15 +117,10 @@ describe("Volume Interpolation", () => {
     context.tearDownPullQueues();
   });
 
-  it<WebknossosTestContext>("should interpolate a segment for a uint32 volume layer", async (context) => {
-    await runInterpolationTest(context, "uint32");
-  });
-
-  it<WebknossosTestContext>("should interpolate a segment for a uint64 volume layer", async (context) => {
-    await runInterpolationTest(context, "uint64");
-  });
-
-  it<WebknossosTestContext>("should interpolate a segment for a int64 volume layer", async (context) => {
-    await runInterpolationTest(context, "int64");
-  });
+  it.for(SEGMENTATION_ELEMENT_CLASSES)(
+    "should interpolate a segment for a %s volume layer",
+    async (elementClass, context: TestContext) => {
+      await runInterpolationTest(context as WebknossosTestContext, elementClass);
+    },
+  );
 });

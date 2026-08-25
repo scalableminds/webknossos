@@ -4,7 +4,7 @@
  * the proofreading saga is directly responsible for filling the queue.
  */
 import { buffers } from "redux-saga";
-import { actionChannel, call, flush, put, race, take, throttle } from "typed-redux-saga";
+import { actionChannel, call, flush, put, race, take } from "typed-redux-saga";
 import { mayAddToSaveQueue } from "viewer/model/accessors/annotation_accessor";
 import { selectTracing } from "viewer/model/accessors/tracing_accessor";
 import { FlycamActions } from "viewer/model/actions/flycam_actions";

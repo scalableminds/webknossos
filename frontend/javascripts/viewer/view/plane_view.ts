@@ -43,7 +43,6 @@ import {
   getActiveUnmappedSegmentId,
 } from "viewer/model/accessors/volumetracing_accessor";
 import { uiReadyAction } from "viewer/model/actions/actions";
-import { setLayerHasSegmentIndexAction } from "viewer/model/actions/dataset_actions";
 import { updateTemporarySettingAction } from "viewer/model/actions/settings_actions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import Store from "viewer/store";
@@ -476,10 +475,6 @@ class PlaneView {
         console.error(error);
         ErrorHandling.notify(error);
       });
-
-    console.log("DISPATCH setLayerHasSegmentIndexAction");
-    Store.dispatch(setLayerHasSegmentIndexAction("segmentation", true));
-
     window.addEventListener("resize", this.resizeThrottled);
     this.unsubscribeFunctions.push(
       listenToStoreProperty(

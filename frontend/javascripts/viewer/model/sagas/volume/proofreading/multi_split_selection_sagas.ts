@@ -45,6 +45,10 @@ function resolveMultiCutSelectionFromMapping(
     const agglomerateId = mappingWrapper.getAsBigInt(segmentId);
     if (agglomerateId != null) {
       agglomerateIds.add(agglomerateId);
+    } else {
+      // One segment wasn't included in the mapping. The caller should ensure to fetch any missing mapping data and include it in the passed mapping.
+      // If the backend cannot map one of the requested segment / we got no entry, we cannot resolved this correctly.
+      return { type: "unresolved" };
     }
   }
 
@@ -122,10 +126,10 @@ export function* reconcileMultiCutSelectionAfterForeignSplit(
   const minCutPartitions = yield* select(
     (state) => state.localSegmentationStateByLayer[tracingId]?.minCutPartitions,
   );
-  const hasNoActiveMultiMincut =
+  const hasNoActiveMultiMinCut =
     minCutPartitions?.agglomerateId == null ||
     minCutPartitions.partitionA.length + minCutPartitions.partitionB.length === 0;
-  if (hasNoActiveMultiMincut || !oldAgglomerateIds.has(minCutPartitions?.agglomerateId)) {
+  if (hasNoActiveMultiMinCut || !oldAgglomerateIds.has(minCutPartitions?.agglomerateId)) {
     return;
   }
 

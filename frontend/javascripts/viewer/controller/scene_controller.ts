@@ -778,8 +778,7 @@ class SceneController {
     // Destroy the old cubes to free their geometries/materials (see setUserBoundingBoxes).
     if (this.layerBoundingBoxes != null) {
       for (const cube of Object.values(this.layerBoundingBoxes)) {
-        // this.deferUntilCompileReady(() => cube.destroy());
-        cube.destroy();
+        this.deferUntilCompileReady(() => cube.destroy());
       }
     }
     const newLayerBoundingBoxGroup = new Group();

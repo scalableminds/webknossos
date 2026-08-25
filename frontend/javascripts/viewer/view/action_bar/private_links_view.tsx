@@ -16,6 +16,7 @@ import {
 import {
   createPrivateLink,
   deletePrivateLink,
+  getBuildInfo,
   getPrivateLinksByAnnotation,
   updatePrivateLink,
 } from "admin/rest_api";
@@ -40,7 +41,7 @@ import FormattedDate from "components/formatted_date";
 import dayjs from "dayjs";
 import { copyToClipboard } from "libs/clipboard";
 import { makeComponentLazy } from "libs/react_helpers";
-import { useWkSelector } from "libs/react_hooks";
+import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import type { ZarrPrivateLink } from "types/api_types";
 import { getDataLayers } from "viewer/model/accessors/dataset_accessor";
@@ -147,11 +148,30 @@ export function useZarrLinkMenu(maybeAccessToken: string | null) {
   const dataStoreURL = dataset.dataStore.url;
   const dataLayers = getDataLayers(dataset);
 
-  const baseUrl = maybeAccessToken
-    ? `${dataStoreURL}/data/annotations/zarr/${maybeAccessToken}`
-    : `${dataStoreURL}/data/zarr/${dataset.id}`;
+  const buildInfoQuery = useQueryWithErrorHandling(
+    {
+      queryKey: ["buildInfo"],
+      queryFn: getBuildInfo,
+      refetchOnMount: "always",
+    },
+    "Could not fetch the server's build information.",
+  );
+  const apiVersion = buildInfoQuery.data?.httpApiVersioning.currentApiVersion;
+
+  const baseUrl =
+    apiVersion == null
+      ? null
+      : maybeAccessToken
+        ? `${dataStoreURL}/data/v${apiVersion}/annotations/zarr3/${maybeAccessToken}`
+        : `${dataStoreURL}/data/v${apiVersion}/zarr3/${dataset.id}`;
+
+  const isLoading = buildInfoQuery.isLoading;
+  const isUnavailable = !isLoading && baseUrl == null;
 
   const copyTokenToClipboard = ({ key: layerName }: { key: string }) => {
+    if (baseUrl == null) {
+      return;
+    }
     copyToClipboard(`${baseUrl}/${layerName}`, "URL");
   };
 
@@ -175,16 +195,25 @@ export function useZarrLinkMenu(maybeAccessToken: string | null) {
     ],
   };
 
-  return { baseUrl, copyLayerUrlMenu };
+  return {
+    baseUrl: baseUrl ?? "",
+    copyLayerUrlMenu,
+    isLoading,
+    isUnavailable,
+    error: buildInfoQuery.error,
+  };
 }
 
 function UrlInput({ linkItem }: { linkItem: ZarrPrivateLink }) {
-  const { baseUrl, copyLayerUrlMenu } = useZarrLinkMenu(linkItem.accessToken);
+  const { baseUrl, copyLayerUrlMenu, isLoading, isUnavailable } = useZarrLinkMenu(
+    linkItem.accessToken,
+  );
+  const isDisabled = isLoading || isUnavailable;
 
   return (
     <Space.Compact className="no-borders" block>
       <Input
-        value={baseUrl}
+        value={isLoading ? "Loading…" : isUnavailable ? "Unavailable" : baseUrl}
         size="small"
         style={{
           width: "90%",
@@ -195,8 +224,13 @@ function UrlInput({ linkItem }: { linkItem: ZarrPrivateLink }) {
         disabled
       />
 
-      <Dropdown menu={copyLayerUrlMenu}>
-        <Button size="small" icon={<CopyOutlined />} style={{ background: "transparent" }} />
+      <Dropdown menu={copyLayerUrlMenu} disabled={isDisabled}>
+        <Button
+          size="small"
+          icon={<CopyOutlined />}
+          style={{ background: "transparent" }}
+          disabled={isDisabled}
+        />
       </Dropdown>
     </Space.Compact>
   );
@@ -319,9 +353,7 @@ function HumanizedDuration({ expirationDate }: { expirationDate: dayjs.Dayjs }) 
         // expiration date at 08:00, moment.to() would round the duration and
         // render "2 days" which is confusing if the user selected (in 1 day).
         // Therefore, we pin the time at each date to 23:59 UTC.
-        now
-          .endOf("day")
-          .to(expirationDate.endOf("day"));
+        now.endOf("day").to(expirationDate.endOf("day"));
   return (
     <span style={{ color: "var(--ant-color-text-secondary)", marginLeft: 4 }}>{duration}</span>
   );
@@ -412,7 +444,7 @@ function PrivateLinksView({ annotationId }: { annotationId: string }) {
   );
 }
 
-function _PrivateLinksModal({
+function PrivateLinksModalInner({
   isOpen,
   onOk,
   annotationId,
@@ -448,4 +480,4 @@ function _PrivateLinksModal({
   );
 }
 
-export const PrivateLinksModal = makeComponentLazy(_PrivateLinksModal);
+export const PrivateLinksModal = makeComponentLazy(PrivateLinksModalInner);

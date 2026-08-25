@@ -269,7 +269,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
       };
       if (finishEditingAction) break;
 
-      if (!addToContourListAction || addToContourListAction.type !== "ADD_TO_CONTOUR_LIST") {
+      if (addToContourListAction?.type !== "ADD_TO_CONTOUR_LIST") {
         throw new Error("Unexpected action. Satisfy typescript.");
       }
 

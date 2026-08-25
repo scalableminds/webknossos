@@ -16,7 +16,13 @@ class TracingStoreConfig @Inject() (configuration: Configuration) extends Config
     val name: String = get[String]("tracingstore.name")
     // SPIKE: guards the volume-versioning benchmark endpoint. Off by default,
     // because a run writes gigabytes into FossilDB.
-    val enableBenchmarkEndpoint: Boolean = get[Boolean]("tracingstore.enableBenchmarkEndpoint")
+    //
+    // getOptional, not get: standalone-tracingstore.conf and any deployed
+    // config define their own `tracingstore` block without inheriting
+    // application.conf, so a required key here would throw while this object is
+    // initialised and stop the tracingstore from booting at all.
+    val enableBenchmarkEndpoint: Boolean =
+      getOptional[Boolean]("tracingstore.enableBenchmarkEndpoint").getOrElse(false)
     object WebKnossos {
       val uri: String = get[String]("tracingstore.webKnossos.uri")
     }

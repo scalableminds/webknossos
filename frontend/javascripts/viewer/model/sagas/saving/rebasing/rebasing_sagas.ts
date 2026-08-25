@@ -38,7 +38,7 @@ import { rewriteSaveQueueEntriesForReapplying } from "./rewrite_for_reapplying_s
 
 const SAVING_CONFLICT_TOAST_KEY = "save_conflicts_warning";
 
-export type RebasingSuccessInfo = { successful: boolean; shouldTerminate: boolean };
+export type RebasingSuccessInfo = { successful: boolean };
 
 export function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
   const collaborationMode = yield* select((state) => state.annotation.collaborationMode);
@@ -47,7 +47,7 @@ export function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
 
   if (!hasRemoteUnseenChanges) {
     // Neither a rebase nor a fast-forward is necessary since there are no remote changes to incorporate.
-    return { successful: true, shouldTerminate: false };
+    return { successful: true };
   }
 
   // Ensure tracings were diffed so that the save queue can be inspected afterwards.
@@ -66,7 +66,7 @@ export function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
       new Error("Full rebase needed even though collaborationMode is not Concurrent."),
     );
     Toast.error("Could not save this annotation. Please refresh the page.");
-    return { successful: false, shouldTerminate: true };
+    return { successful: false };
   }
   const annotationBeforeRebase = yield* select((state) => state.annotation);
   if (hasLocalUnsavedChanges) {
@@ -84,7 +84,7 @@ export function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
   try {
     const applyingResult = yield* call(applyNewestMissingUpdateActions, missingUpdateActions);
     if (!applyingResult.success) {
-      return { successful: false, shouldTerminate: applyingResult.terminatesPolling ?? false };
+      return { successful: false };
     }
     yield* call(resolveApplyingUpdateArtifacts, applyingResult.artifactInfos);
     if (hasLocalUnsavedChanges) {
@@ -94,20 +94,16 @@ export function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
       // emitter of these updates (e.g., the proofreading saga) is responsible for handling
       // such updates.
       // TODO #9711: Refactor this?
-      const {
-        success,
-        artifactInfos: _artifactInfos,
-        terminatesPolling,
-      } = yield* call(
+      const { success, artifactInfos: _artifactInfos } = yield* call(
         reapplyUpdateActionsFromSaveQueue, // isRebasingOrForwarding := false (in happy case)
         missingUpdateActions,
         annotationBeforeRebase,
       );
       if (!success) {
-        return { successful: false, shouldTerminate: terminatesPolling ?? false };
+        return { successful: false };
       }
     }
-    return { successful: true, shouldTerminate: false };
+    return { successful: true };
   } catch (exception) {
     // If the rebasing fails for some reason, we don't want to crash the entire
     // saga.
@@ -119,8 +115,7 @@ export function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
       "An unrecoverable error occurred while synchronizing this annotation. Please refresh the page.",
       { sticky: true },
     );
-    // A hard error was thrown. Terminate this saga.
-    return { successful: false, shouldTerminate: true };
+    return { successful: false };
   } finally {
     // isRebasingOrForwarding := false
     yield* put(
@@ -163,21 +158,12 @@ function* applyNewestMissingUpdateActions(
   // performRebasingIfNecessary's outer try/catch, which terminates polling -- the same
   // way a hard error in reapplyUpdateActionsFromSaveQueue is already handled, since that
   // function has no local try/catch either.
-  const { success, artifactInfos, terminatesPolling } = yield* tryToIncorporateActions(
-    actions,
-    false,
-  );
+  const { success, artifactInfos } = yield* tryToIncorporateActions(actions, false);
   // Updates the annotation state used for future rebase operation to the current state with the missingUpdateActions applied.
   yield* put(finishedApplyingMissingUpdatesAction()); // knownServerState := annotation
   if (success) {
     yield* call(updatePendingProofreadingOperationInfo);
     return { success: true, artifactInfos };
-  }
-
-  if (terminatesPolling) {
-    // A dedicated, more specific toast was already shown at the point of failure
-    // (e.g., for an incorporated revertToVersion action).
-    return { ...FailedIncorporateActionsReturnValue, terminatesPolling: true };
   }
 
   const hasPendingUpdates = (yield* select((state) => state.save.queue)).length > 0;
@@ -225,15 +211,11 @@ function* reapplyUpdateActionsFromSaveQueue(
       updatedSaveQueue,
       currentVersion,
     );
-    const {
-      success: successfullyAppliedSaveQueueUpdates,
-      artifactInfos,
-      terminatesPolling,
-    } = yield* tryToIncorporateActions(saveQueueAsServerUpdateActionBatches, true);
+    const { success: successfullyAppliedSaveQueueUpdates, artifactInfos } =
+      yield* tryToIncorporateActions(saveQueueAsServerUpdateActionBatches, true);
     if (successfullyAppliedSaveQueueUpdates) {
       return { success: true, artifactInfos };
     }
-    return { ...FailedIncorporateActionsReturnValue, terminatesPolling };
   }
   return FailedIncorporateActionsReturnValue;
 }

@@ -12,6 +12,7 @@ import { TreeTypeEnum } from "viewer/constants";
 import type { Tree } from "viewer/model/types/tree_types";
 import type { StoreAnnotation, WebknossosState } from "viewer/store";
 import { sum } from "../helpers/iterator_utils";
+import type { DisabledInfo } from "./disabled_tool_accessor";
 
 export function mayEditAnnotationProperties(state: WebknossosState) {
   const { owner, restrictions } = state.annotation;
@@ -151,13 +152,11 @@ export function getReasonForCantChangeAnnotationLayerSet(
   return undefined;
 }
 
-export function mayEditAnnotationLayerSetWithDisallowReason(state: WebknossosState) {
-  const mayEditLayerSet = mayEditAnnotationLayerSet(state);
-  if (mayEditLayerSet) {
-    return { mayEditLayerSet, reasonForCantEditLayerSet: undefined };
-  }
-  const reasonForCantEditLayerSet = getReasonForCantChangeAnnotationLayerSet(state);
-  return { mayEditLayerSet, reasonForCantEditLayerSet };
+export function isEditingAnnotationLayerSetDisabled(state: WebknossosState): DisabledInfo {
+  return {
+    isDisabled: !mayEditAnnotationLayerSet(state),
+    explanation: getReasonForCantChangeAnnotationLayerSet(state) ?? "",
+  };
 }
 
 export function mayEditAnnotationViewConfig(state: WebknossosState) {

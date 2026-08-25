@@ -20,9 +20,6 @@ export type ApplyingUpdateArtifacts = {
 export type ApplyingUpdateResults = {
   success: boolean;
   artifactInfos: ApplyingUpdateArtifacts;
-  // Set when the failure is unrecoverable without a page reload (e.g., a revertToVersion
-  // action was incorporated), so that callers can stop polling instead of retrying forever.
-  terminatesPolling?: boolean;
 };
 
 export const FailedIncorporateActionsReturnValue: ApplyingUpdateResults = {
@@ -31,10 +28,6 @@ export const FailedIncorporateActionsReturnValue: ApplyingUpdateResults = {
     meshIdsToRemovePerLayer: new Map(),
     meshesToLoadPerLayer: new Map(),
   },
-};
-export const UnrecoverableIncorporateActionsReturnValue: ApplyingUpdateResults = {
-  ...FailedIncorporateActionsReturnValue,
-  terminatesPolling: true,
 };
 export const SuccessEmptyIncorporateActionsReturnValue: ApplyingUpdateResults = {
   success: true,

@@ -488,8 +488,7 @@ export const setMappingIsLockedAction = (tracingId: string) =>
   }) as const;
 
 // Not save-relevant on purpose: addSegmentIndex is only ever produced by the backend
-// (see AddSegmentIndexUpdateAction), never authored locally, so this must not be diffed
-// back into an update action nor dropped by the rebase edit guard.
+// and can thus only be forwarded via live updating / in live collab.
 export const setHasSegmentIndexAction = (tracingId: string) =>
   ({
     type: "SET_HAS_SEGMENT_INDEX",

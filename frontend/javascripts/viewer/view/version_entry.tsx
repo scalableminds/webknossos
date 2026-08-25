@@ -687,7 +687,7 @@ export default function VersionEntry({
     "version-entry-indented": isIndented,
   });
   async function handleRestoreClick() {
-    // In a live collab scenario let the user confirm the restoring an older version.
+    // In a live collab scenario let the user confirm the restoring of an older version.
     if (initialAllowUpdate && isInConcurrentCollabMode) {
       const confirmed = await modal.confirm({
         title: "Restore this version?",

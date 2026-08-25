@@ -44,7 +44,6 @@ import {
 import {
   type ApplyingUpdateResults,
   FailedIncorporateActionsReturnValue,
-  UnrecoverableIncorporateActionsReturnValue,
 } from "./applying_update_artifacts";
 
 const ANNOTATION_REVERTED_TOAST_KEY = "annotation_reverted_warning";
@@ -340,10 +339,8 @@ export function* tryToIncorporateActions(
                 yield* actionChannel<SetLayerMappingsAction>("SET_LAYER_MAPPINGS");
               yield* put(ensureLayerMappingsAreLoadedAction(actionTracingId));
               while (true) {
-                if (
-                  ((yield* take(setMappingsChannel)) as SetLayerMappingsAction).layerName ===
-                  actionTracingId
-                ) {
+                const action = (yield* take(setMappingsChannel)) as SetLayerMappingsAction;
+                if (action.layerName === actionTracingId) {
                   break;
                 }
               }
@@ -409,7 +406,7 @@ export function* tryToIncorporateActions(
               "Your local session is now out of sync and further changes can no longer be saved. Please reload the page.",
           );
           yield* call(finalize);
-          return UnrecoverableIncorporateActionsReturnValue;
+          return FailedIncorporateActionsReturnValue;
         }
 
         /*
@@ -427,10 +424,9 @@ export function* tryToIncorporateActions(
 
         // Volume
         case "removeFallbackLayer": {
-          // Unlike the legacy actions below, this is a documented, expected occurrence (see
-          // #9917): reload is required and further local edits must be prevented, just like
+          // When a fallback layer is removed, a reload is required and further local edits must be prevented, just like
           // for a foreign revertToVersion above.
-          console.error("Cannot apply action", action.name);
+          console.warn("Cannot forward layer set changing action", action.name);
           yield* call(
             lockAnnotationAndShowReloadToast,
             ANNOTATION_STRUCTURE_CHANGED_TOAST_KEY,
@@ -438,7 +434,7 @@ export function* tryToIncorporateActions(
               "now out of sync and further changes can no longer be saved. Please reload the page.",
           );
           yield* call(finalize);
-          return UnrecoverableIncorporateActionsReturnValue;
+          return FailedIncorporateActionsReturnValue;
         }
 
         // Legacy! The following actions are legacy actions and don't
@@ -450,7 +446,7 @@ export function* tryToIncorporateActions(
         case "updateUserBoundingBoxesInSkeletonTracing":
         case "updateSegmentGroups":
         case "updateUserBoundingBoxesInVolumeTracing": {
-          console.error("Cannot apply action", action.name);
+          console.error("Cannot apply legacy action", action.name);
           yield* call(finalize);
           return FailedIncorporateActionsReturnValue;
         }

@@ -16,7 +16,7 @@ import { useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import type { APIDataset, APISegmentationLayer } from "types/api_types";
 import { MappingStatusEnum } from "viewer/constants";
-import { mayEditAnnotationLayerSetWithDisallowReason } from "viewer/model/accessors/annotation_accessor";
+import { isEditingAnnotationLayerSetDisabled } from "viewer/model/accessors/annotation_accessor";
 import {
   getLayerByName,
   getMagInfo,
@@ -120,8 +120,8 @@ export default function AddVolumeLayerModal({
   >(preselectedLayerName);
   const dispatch = useDispatch();
   const annotation = useWkSelector((state) => state.annotation);
-  const { mayEditLayerSet, reasonForCantEditLayerSet } = useWkSelector((state) =>
-    mayEditAnnotationLayerSetWithDisallowReason(state),
+  const { isDisabled: mayNotEditLayerSet, explanation: reasonForCantEditLayerSet } = useWkSelector(
+    (state) => isEditingAnnotationLayerSetDisabled(state),
   );
   const allReadableLayerNames = useMemo(
     () => getAllReadableLayerNames(dataset, annotation),
@@ -266,7 +266,7 @@ export default function AddVolumeLayerModal({
             onClick={handleAddVolumeLayer}
             type="primary"
             icon={<PlusOutlined />}
-            disabled={!mayEditLayerSet}
+            disabled={mayNotEditLayerSet}
           >
             Add Volume Annotation Layer
           </AsyncButton>

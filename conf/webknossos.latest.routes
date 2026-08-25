@@ -339,12 +339,6 @@ GET           /publications/:id                                                 
 POST          /shortLinks                                                                       controllers.ShortLinkController.create()
 GET           /shortLinks/byKey/:key                                                            controllers.ShortLinkController.getByKey(key: String)
 
-# Remote Dataset Credentials
-POST          /credentials/httpBasicAuth                                                        controllers.CredentialController.createHttpBasicAuthCredential()
-POST          /credentials/s3AccessKey                                                          controllers.CredentialController.createS3AccessKeyCredential()
-POST          /credentials/googleServiceAccount                                                 controllers.CredentialController.createGoogleServiceAccountCredential()
-POST          /credentials/xAuthToken                                                           controllers.CredentialController.createXAuthTokenCredential()
-
 # Email verification
 POST          /verifyEmail/:key                                                                 controllers.EmailVerificationController.verify(key: String)
 POST          /verifyEmail                                                                      controllers.EmailVerificationController.requestVerificationMail()

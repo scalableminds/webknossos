@@ -15,19 +15,13 @@ import scala.concurrent.ExecutionContext
 /** SPIKE — exposes the volume versioning benchmark so it can be run against a deployed tracingstore rather than only
   * locally.
   *
-  * Gated twice, because a run writes real data into the shared FossilDB and RocksDB compaction amplifies that
-  * several-fold:
+  * Guarded by `?key=` matching `tracingstore.key`, the secret the tracingstore already shares with webKnossos. That is
+  * the only gate: this is a spike endpoint for a throwaway test instance and is not intended to reach production.
   *
-  *   1. `tracingstore.enableBenchmarkEndpoint` must be true. It defaults to false, so a tracingstore that was not
-  *      deliberately configured for benchmarking refuses regardless of credentials. This is the real guard.
-  *   2. `?key=` must match `tracingstore.key`, the secret the tracingstore already shares with webKnossos.
+  * A run writes real data into the shared FossilDB — several GiB, amplified further by RocksDB compaction — so it is
+  * capped in VolumeVersioningBenchmarkService.Params, holds a single-run lock, and always cleans up after itself.
   *
-  * The usual `UserAccessRequest.webknossos` gate would be stronger, but it requires the webknossos-internal token,
-  * which is impractical to obtain for a manual curl. Given the endpoint is off by default, the shared key is the better
-  * trade for something driven by hand.
-  *
-  * Parameters are query parameters so they can be tweaked without redeploying. They are capped in
-  * VolumeVersioningBenchmarkService.Params.
+  * Parameters are query parameters so they can be tweaked without redeploying.
   */
 class TSBenchmarkController @Inject() (
     benchmarkService: VolumeVersioningBenchmarkService,
@@ -41,13 +35,7 @@ class TSBenchmarkController @Inject() (
     MessageDigest.isEqual(a.getBytes("UTF-8"), b.getBytes("UTF-8"))
 
   private def authorized(key: Option[String])(block: => Result): Result =
-    if (!config.Tracingstore.enableBenchmarkEndpoint)
-      Forbidden(
-        Json.obj(
-          "error" -> "Benchmark endpoint is disabled. Set tracingstore.enableBenchmarkEndpoint=true to enable it."
-        )
-      )
-    else if (!key.exists(constantTimeEquals(_, config.Tracingstore.key)))
+    if (!key.exists(constantTimeEquals(_, config.Tracingstore.key)))
       Forbidden(Json.obj("error" -> "Missing or wrong ?key= (must equal tracingstore.key)."))
     else block
 

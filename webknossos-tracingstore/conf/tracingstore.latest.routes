@@ -3,9 +3,10 @@
 # Health endpoint
 GET         /health                                                                 @com.scalableminds.webknossos.tracingstore.controllers.Application.health
 
-# SPIKE: volume versioning benchmark. Disabled unless tracingstore.enableBenchmarkEndpoint=true.
+# SPIKE: volume versioning benchmark. Requires ?key= matching tracingstore.key.
 # Writes gigabytes into FossilDB and cleans up afterwards. Runs synchronously and can take
 # minutes at larger parameters, so mind any proxy read timeouts in front of the tracingstore.
+# Not intended for production; remove before merging.
 POST        /benchmark/volumeVersioning                                             @com.scalableminds.webknossos.tracingstore.controllers.TSBenchmarkController.volumeVersioning(key: Option[String], buckets: Option[Int], versions: Option[Int], snapshotInterval: Option[Int], bytesPerVoxel: Option[Int], runsPerDiff: Option[Int], runLength: Option[Int], readRounds: Option[Int])
 POST        /benchmark/volumeVersioning/cleanup                                     @com.scalableminds.webknossos.tracingstore.controllers.TSBenchmarkController.volumeVersioningCleanup(key: Option[String])
 

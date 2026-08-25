@@ -125,9 +125,14 @@ class AnnotationTransactionService @Inject() (
   ): Fox[Long] =
     for {
       previousActionGroupsToCommit <- getAllUncommittedFor(annotationId, updateGroup.transactionId)
-      _ <- Fox.fromBool(
-        previousActionGroupsToCommit.exists(_.transactionGroupIndex == 0) || updateGroup.transactionGroupCount == 1
-      ) ?~> "Trying to commit a transaction without a group that has transactionGroupIndex 0."
+      // The last group (updateGroup itself) is not part of previousActionGroupsToCommit, so all indices
+      // from 0 until (but excluding) its own index are expected to have been found.
+      expectedPreviousIndices = (0 until updateGroup.transactionGroupIndex).toSet
+      actualPreviousIndices = previousActionGroupsToCommit.map(_.transactionGroupIndex).toSet
+      missingIndices = (expectedPreviousIndices -- actualPreviousIndices).toList.sorted
+      errorMessage = s"Trying to commit transaction ${updateGroup.transactionId} for annotation $annotationId, " +
+        s"but previous group(s) with index ${missingIndices.mkString(", ")} are missing."
+      _ <- Fox.fromBool(missingIndices.isEmpty) ?~> errorMessage
       concatenatedGroup = concatenateUpdateGroupsOfTransaction(previousActionGroupsToCommit, updateGroup)
       commitResult <- commitUpdates(annotationId, List(concatenatedGroup))
       _ <- removeAllUncommittedFor(annotationId, updateGroup.transactionId)

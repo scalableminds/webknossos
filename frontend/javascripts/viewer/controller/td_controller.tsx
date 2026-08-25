@@ -126,8 +126,7 @@ class TDController extends PureComponent<Props> {
     if (
       maybeGetActiveNodeFromProps(this.props) !== maybeGetActiveNodeFromProps(prevProps) &&
       maybeGetActiveNodeFromProps(this.props) !== INVALID_ACTIVE_NODE_ID &&
-      this.props.annotation &&
-      this.props.annotation.skeleton
+      this.props.annotation?.skeleton
     ) {
       // The rotation center of this viewport is not updated to the new position after selecting a node in the viewport.
       // This happens because the selection of the node does not trigger a call to setTargetAndFixPosition directly.
@@ -355,8 +354,8 @@ class TDController extends PureComponent<Props> {
     if (hitResult == null) {
       return null;
     }
-    const meshId: number | null = hitResult ? get(hitResult.node.parent, "segmentId", null) : null;
-    const unmappedSegmentId: number | null = hitResult?.unmappedSegmentId || null;
+    const meshId: bigint | null = hitResult ? get(hitResult.node.parent, "segmentId", null) : null;
+    const unmappedSegmentId: bigint | null = hitResult?.unmappedSegmentId || null;
     const meshClickedPosition = hitResult ? hitResult.point : null;
     return { meshId, unmappedSegmentId, meshClickedPosition, hitPosition: hitResult.point };
   }

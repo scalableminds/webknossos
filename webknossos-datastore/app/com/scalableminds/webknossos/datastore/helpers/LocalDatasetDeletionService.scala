@@ -10,7 +10,7 @@ import scala.annotation.tailrec
 
 class LocalDatasetDeletionService @Inject() extends LazyLogging with DirectoryConstants {
 
-  def deleteOnDisk(
+  def moveToTrash(
       datasetId: ObjectId,
       path: Path,
       organizationId: String,

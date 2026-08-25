@@ -10,8 +10,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.*
 import com.scalableminds.webknossos.datastore.datavault.{FileSystemDataVault, VaultPath}
-import com.scalableminds.webknossos.datastore.helpers.UPath
-import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
+import com.scalableminds.webknossos.datastore.helpers.{UPath, UnsignedLong}
 import com.scalableminds.webknossos.tracingstore.TSChunkCacheService
 import com.scalableminds.webknossos.tracingstore.annotation.UpdateAction
 import com.scalableminds.webknossos.tracingstore.files.TsTempFileService
@@ -193,22 +192,12 @@ class EditableMappingIOService @Inject() (
         )
         .toFox
       unzippedVaultPath = new VaultPath(UPath.fromLocalPath(unzippedDir), FileSystemDataVault.create)
-      editedEdgesZarrArray <- Zarr3Array.open(
+      editedEdgesZarrArray <- Zarr3Array.openForAttachment(
         unzippedVaultPath / "edges/",
-        DataSourceId("dummy", "unused"),
-        "layer",
-        None,
-        None,
-        None,
         chunkCacheService.sharedChunkContentsCache
       )
-      edgeIsAdditionZarrArray <- Zarr3Array.open(
+      edgeIsAdditionZarrArray <- Zarr3Array.openForAttachment(
         unzippedVaultPath / "edgeIsAddition/",
-        DataSourceId("dummy", "unused"),
-        "layer",
-        None,
-        None,
-        None,
         chunkCacheService.sharedChunkContentsCache
       )
       numEdges <- editedEdgesZarrArray.datasetShape.flatMap(_.headOption).toFox
@@ -227,12 +216,12 @@ class EditableMappingIOService @Inject() (
   ): EditableMappingUpdateAction =
     if (edgeIsAddition) {
       MergeAgglomerateUpdateAction(
-        agglomerateId1 = Some(0),
-        agglomerateId2 = Some(0),
+        agglomerateId1 = Some(UnsignedLong(0)),
+        agglomerateId2 = Some(UnsignedLong(0)),
         segmentPosition1 = None,
         segmentPosition2 = None,
-        segmentId1 = Some(edgeSrc),
-        segmentId2 = Some(edgeDst),
+        segmentId1 = Some(UnsignedLong(edgeSrc)),
+        segmentId2 = Some(UnsignedLong(edgeDst)),
         mag = Some(Vec3Int.ones), // unused, as we do not look up segment ids by positions
         actionTracingId = tracingId,
         actionTimestamp = Some(timestamp),
@@ -241,11 +230,11 @@ class EditableMappingIOService @Inject() (
       )
     } else {
       SplitAgglomerateUpdateAction(
-        agglomerateId = Some(0),
+        agglomerateId = Some(UnsignedLong(0)),
         segmentPosition1 = None,
         segmentPosition2 = None,
-        segmentId1 = Some(edgeSrc),
-        segmentId2 = Some(edgeDst),
+        segmentId1 = Some(UnsignedLong(edgeSrc)),
+        segmentId2 = Some(UnsignedLong(edgeDst)),
         mag = Some(Vec3Int.ones), // unused, as we do not look up segment ids by positions
         actionTracingId = tracingId,
         actionTimestamp = Some(timestamp),

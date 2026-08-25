@@ -98,15 +98,15 @@ const zoomedOut = {
   viewOverride: "512,256,16,0,2.0",
 };
 
-const selectiveSegmentIdByDtype: Partial<Record<DType, number>> = {
-  uint8: 122,
-  int8: -6,
-  uint16: 33280,
-  int16: -527,
-  uint32: 2181570682,
-  int32: 34087034,
-  uint64: 4575085335741433,
-  int64: -142971416741958,
+const selectiveSegmentIdByDtype: Partial<Record<DType, bigint>> = {
+  uint8: 122n,
+  int8: -6n,
+  uint16: 33280n,
+  int16: -527n,
+  uint32: 2181570682n,
+  int32: 34087034n,
+  uint64: 4575085335741433n,
+  int64: -142971416741958n,
 };
 
 type Spec = {

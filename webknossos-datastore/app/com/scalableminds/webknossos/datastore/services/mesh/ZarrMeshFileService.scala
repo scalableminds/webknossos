@@ -133,7 +133,8 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
       meshFileAttributes: MeshFileAttributes,
       segmentId: Long
   )(using ec: ExecutionContext, tc: TokenContext): Fox[(Long, Long)] = {
-    val bucketIndex = meshFileAttributes.applyHashFunction(segmentId) % meshFileAttributes.nBuckets
+    val bucketIndex =
+      java.lang.Long.remainderUnsigned(meshFileAttributes.applyHashFunction(segmentId), meshFileAttributes.nBuckets)
     for {
       bucketOffsetsArray <- openZarrArray(meshFileKey, keyBucketOffsets)
       bucketRange <- bucketOffsetsArray.readAsMultiArray(offset = bucketIndex, shape = 2)
@@ -167,13 +168,8 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
   ): Fox[DatasetArray] =
     for {
       groupVaultPath <- dataVaultService.vaultPathFor(meshFileKey.attachment)
-      zarrArray <- Zarr3Array.open(
+      zarrArray <- Zarr3Array.openForAttachment(
         groupVaultPath / zarrArrayName,
-        DataSourceId("dummy", "unused"),
-        "layer",
-        None,
-        None,
-        None,
         chunkCacheService.sharedChunkContentsCache
       )
     } yield zarrArray

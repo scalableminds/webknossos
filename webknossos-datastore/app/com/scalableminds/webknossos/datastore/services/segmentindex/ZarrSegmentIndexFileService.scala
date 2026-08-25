@@ -79,7 +79,7 @@ class ZarrSegmentIndexFileService @Inject() (dataVaultService: DataVaultService,
     for {
       attributes <- readSegmentIndexFileAttributes(segmentIndexFileKey)
       hashBucketOffsetsArray <- openZarrArray(segmentIndexFileKey, keyHashBucketOffsets)
-      bucketIndex = attributes.applyHashFunction(segmentId) % attributes.nHashBuckets
+      bucketIndex = java.lang.Long.remainderUnsigned(attributes.applyHashFunction(segmentId), attributes.nHashBuckets)
       bucketRange <- hashBucketOffsetsArray.readAsMultiArray(offset = bucketIndex, shape = 2)
       bucketStart <- tryo(bucketRange.getLong(0)).toFox
       bucketEnd <- tryo(bucketRange.getLong(1)).toFox
@@ -140,13 +140,8 @@ class ZarrSegmentIndexFileService @Inject() (dataVaultService: DataVaultService,
   ): Fox[DatasetArray] =
     for {
       groupVaultPath <- dataVaultService.vaultPathFor(segmentIndexFileKey.attachment)
-      zarrArray <- Zarr3Array.open(
+      zarrArray <- Zarr3Array.openForAttachment(
         groupVaultPath / zarrArrayName,
-        DataSourceId("dummy", "unused"),
-        "layer",
-        None,
-        None,
-        None,
         chunkCacheService.sharedChunkContentsCache
       )
     } yield zarrArray

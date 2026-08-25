@@ -8,7 +8,7 @@ import Toast from "libs/toast";
 import { type ReactNode, useCallback, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import type { APIDataLayer, APISkeletonLayer } from "types/api_types";
-import { getDatasetBoundingBox } from "viewer/model/accessors/dataset_accessor";
+import { getUntransformedDatasetBoundingBox } from "viewer/model/accessors/dataset_accessor";
 import {
   buildLiveTransforms,
   DEFAULT_SRT,
@@ -135,7 +135,7 @@ export function LayerTransformSettingsContent({
   const queryClient = useQueryClient();
   const [isSaving, setIsSaving] = useState(false);
   const dataset = useWkSelector((state) => state.dataset);
-  const datasetBbox = useMemo(() => getDatasetBoundingBox(dataset), [dataset]);
+  const datasetBbox = getUntransformedDatasetBoundingBox(dataset);
   const translationSettingLimits = useMemo<[number, number, number]>(
     () => [
       datasetBbox.max[0] - datasetBbox.min[0],
@@ -368,9 +368,12 @@ export function LayerTransformSettingsPopover({
       <span>
         <Typography.Title level={4}>Layer Transforms</Typography.Title>
       </span>
-      <CloseOutlined
-        style={{ cursor: "pointer", fontSize: 12, color: "var(--ant-color-text-secondary)" }}
+      <Button
+        type="text"
+        size="small"
+        icon={<CloseOutlined />}
         onClick={onClose}
+        aria-label="Close layer transform settings"
       />
     </Flex>
   );

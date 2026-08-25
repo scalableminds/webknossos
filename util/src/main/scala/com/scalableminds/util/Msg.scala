@@ -363,6 +363,8 @@ object Msg {
     val updateStatusFailed: String = "Could not update job status."
     val workerNotFound: String = "Could not find this worker in the database."
     val submitFailed: String = "Could not submit job."
+    val storageExceeded: String =
+      "Cannot start this job because the storage quota of the organization is exceeded, so its results could not be stored. Please free up storage or upgrade your plan."
     object TrainModel {
       val wrongOrga: String = "Training AI models is only allowed for datasets of your own organization."
       val submitFailed: String = "Could not start the AI model training job."
@@ -802,6 +804,30 @@ object Msg {
   }
   object SegmentIndexFile {
     val pathNotAbsolute = "Path of segment index file is ambiguous, must be absolute."
+  }
+  object SegmentStatisticsFile {
+    val notFound = "Could not find a registered segment statistics file for this layer."
+    val pathNotAbsolute = "Path of segment statistics file is ambiguous, must be absolute."
+    val readGroupHeaderFailed = "Could not read segment statistics file zarr group file."
+    val parseAttributesFailed = "Could not parse segment statistics file attributes from zarr group file."
+    val combinedCenterOfMassZeroVolume =
+      "Cannot compute combined center of mass, total volume of segments is zero."
+    val combinedCovarianceMatrixZeroVolume =
+      "Cannot compute combined covariance matrix, total volume of segments is zero."
+    def magTooFine(requestedMag: String, fileMag: String): String =
+      s"Requested mag $requestedMag is finer than mag $fileMag of segment statistics file. Only the same mag or coarser mags are supported."
+    def mappingNameMismatch(requestedMappingName: String, fileMappingName: String): String =
+      s"Requested mapping name “$requestedMappingName” does not match mapping name “$fileMappingName” of segment statistics file."
+    def remappingRequiresUnmappedFile(fileMappingName: String): String =
+      s"Requesting a different mapping is only supported for segment statistics files calculated on unmapped data, but this file was computed for mapping “$fileMappingName”."
+    def formatVersionTooOld(formatVersion: Long, minimumSupportedVersion: Long): String =
+      s"Segment statistics file has format version $formatVersion, but at least $minimumSupportedVersion is required."
+    val idsNotDense: String =
+      "Segment statistics file does not have dense ids. Only files with dense ids are supported."
+    val idsLengthUnavailable: String = "Could not determine length of ids array in segment statistics file"
+    def metricNotAvailable(metric: String): String =
+      s"Segment statistics file does not contain the metric “$metric”."
+    val cannotDetermineMag: String = "Could not determine mag for segment statistics file, layer has no mags."
   }
   object Zarr {
     def invalidChunkCoordinates(coordinates: String): String =

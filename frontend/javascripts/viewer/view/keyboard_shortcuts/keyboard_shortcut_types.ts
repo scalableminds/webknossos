@@ -77,6 +77,12 @@ export class KeyboardShortcutMetaInfo {
     public domain: KeyboardShortcutDomain,
   ) {}
 
+  // Some shortcuts intentionally ship without a default binding. The user has to assign
+  // a key themselves; there is nothing to restore for them.
+  hasDefaultBindings(): boolean {
+    return this.defaultBindings.length > 0;
+  }
+
   getCollisionDomain(): KeyboardShortcutCollisionDomain {
     switch (this.domain) {
       case "GENERAL":

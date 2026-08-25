@@ -5,7 +5,7 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.box.Full
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.webknossos.datastore.models.VoxelSize
-import models.dataset.{Dataset, DatasetDAO}
+import models.dataset.{Dataset, DatasetDAO, DataStoreDAO, WKRemoteDataStoreClient}
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
@@ -14,10 +14,12 @@ import com.typesafe.scalalogging.LazyLogging
 import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
 import models.analytics.{AnalyticsService, FailedJobEvent, RunJobEvent}
 import models.job.JobCommand.JobCommand
-import models.organization.{CreditTransactionService, OrganizationDAO}
+import models.organization.{CreditTransactionService, OrganizationDAO, OrganizationService}
 import models.user.{MultiUserDAO, User, UserDAO, UserService}
 import com.scalableminds.webknossos.datastore.helpers.UPath
+import com.scalableminds.webknossos.datastore.rpc.RPC
 import org.apache.pekko.actor.ActorSystem
+import play.api.http.Status.FORBIDDEN
 import play.api.libs.json.{JsObject, JsValue, Json}
 import security.WkSilhouetteEnvironment
 import telemetry.SlackNotificationService
@@ -35,13 +37,16 @@ class JobService @Inject() (
     jobDAO: JobDAO,
     workerDAO: WorkerDAO,
     organizationDAO: OrganizationDAO,
+    organizationService: OrganizationService,
     datasetDAO: DatasetDAO,
     defaultMails: DefaultMails,
     analyticsService: AnalyticsService,
     userService: UserService,
     creditTransactionService: CreditTransactionService,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-    slackNotificationService: SlackNotificationService
+    slackNotificationService: SlackNotificationService,
+    dataStoreDAO: DataStoreDAO,
+    rpc: RPC
 )(implicit ec: ExecutionContext)
     extends LazyLogging
     with Formatter {
@@ -191,6 +196,22 @@ class JobService @Inject() (
       } yield ()
     } else Fox.successful(())
 
+  def cleanUpUploadFilesIfNeeded(jobBeforeChange: Job, jobAfterChange: Job): Unit = {
+    val jobJustEnded =
+      jobBeforeChange.state != jobAfterChange.state &&
+        Set(JobState.SUCCESS, JobState.FAILURE, JobState.CANCELLED).contains(jobAfterChange.state)
+    Fox.runIf(jobAfterChange.command == JobCommand.convert_to_wkw && jobJustEnded) {
+      for {
+        commandArgs = jobAfterChange.args.value
+        organizationId <- commandArgs.get("organization_id").map(_.as[String]).toFox
+        directoryName <- commandArgs.get("dataset_directory_name").map(_.as[String]).toFox
+        dataStore <- dataStoreDAO.findOneByName(jobAfterChange._dataStore)(using GlobalAccessContext)
+        remoteClient = new WKRemoteDataStoreClient(dataStore, rpc)
+        _ <- remoteClient.cleanUpUploadFiles(organizationId, directoryName, jobAfterChange._id.id)
+      } yield ()
+    }
+  }
+
   def publicWrites(job: Job)(using ctx: DBAccessContext): Fox[JsValue] =
     for {
       owner <- userDAO.findOne(job._owner) ?~> Msg.User.notFound
@@ -224,13 +245,12 @@ class JobService @Inject() (
   def parameterWrites(job: Job)(using ctx: DBAccessContext): Fox[JsObject] =
     for {
       owner <- userDAO.findOne(job._owner)
-      userAuthToken <- Fox.fromFuture(
-        wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(owner.loginInfo)
-      )
+      userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
+        .createAndInitJobTokenForUser(owner)
     } yield Json.obj(
       "job_id" -> job._id.id,
       "command" -> job.command,
-      "job_kwargs" -> (job.args ++ Json.obj("user_auth_token" -> userAuthToken.id))
+      "job_kwargs" -> (job.args ++ Json.obj("user_auth_token" -> userAuthToken))
     )
 
   def submitJob(command: JobCommand, commandArgs: JsObject, owner: User, dataStoreName: String): Fox[Job] =
@@ -239,10 +259,23 @@ class JobService @Inject() (
       _ <- Fox.assertTrue(
         jobIsSupportedByAvailableWorkers(command, dataStoreName)
       ) ?~> Msg.Job.noWorkerForDatastoreAndJob
+      _ <- assertStorageNotExceededFor(command, owner)
       job = Job(ObjectId.generate, owner._id, dataStoreName, command, commandArgs)
       _ <- jobDAO.insertOne(job)
       _ = analyticsService.track(RunJobEvent(owner, command))
     } yield job
+
+  private def assertStorageNotExceededFor(command: JobCommand, owner: User): Fox[Unit] =
+    for {
+      _ <- Fox.runIf(JobCommand.jobsWritingToStorage.contains(command)) {
+        for {
+          organization <- organizationDAO.findOne(owner._organization)(using
+            GlobalAccessContext
+          ) ?~> Msg.Organization.notFound(owner._organization)
+          _ <- organizationService.assertUsedStorageNotExceeded(organization) ?~> Msg.Job.storageExceeded ~> FORBIDDEN
+        } yield ()
+      }
+    } yield ()
 
   def submitConvertToWkwJob(
       dataset: Dataset,
@@ -282,6 +315,7 @@ class JobService @Inject() (
     for {
       isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
       _ <- Fox.fromBool(isTeamManagerOrAdmin || user.isDatasetManager) ?~> Msg.Job.paidNoAdminOrManager
+      _ <- assertStorageNotExceededFor(command, user)
       costInMilliCredits <- calculateJobCostInMilliCredits(jobBoundingBoxInTargetMag, command)
       _ <- Fox.assertTrue(
         creditTransactionService.hasEnoughCredits(user._organization, costInMilliCredits)

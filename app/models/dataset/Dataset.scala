@@ -56,7 +56,6 @@ import play.api.libs.json.*
 import slick.dbio.DBIO
 import slick.jdbc.GetResult
 import slick.jdbc.PostgresProfile.api.*
-import slick.jdbc.TransactionIsolation.Serializable
 import slick.sql.SqlAction
 import utils.sql.{SQLDAO, SimpleSQLDAO, SqlClient, SqlToken}
 
@@ -917,34 +916,28 @@ class DatasetMagDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
       organizationId: String,
       dataStoreId: String,
       datasetIdOpt: Option[ObjectId]
-  ): Fox[List[DataSourceMagRow]] =
+  ): Fox[Seq[DataSourceMagRow]] =
     for {
       storageRelevantMags <- run(q"""
-            WITH ranked AS (
-              SELECT
-                ds._id AS dataset_id, mag.dataLayerName, mag.mag, mag.path, mag.realPath, mag.hasLocalData,
-                ds._organization, ds._dataStore, ds.directoryName,
-                -- rn is the rank of the mags with the same path. It is used to deduplicate mags with the same path to
-                -- count each physical mag only once. Filtering is done below.
-                ROW_NUMBER() OVER (
-                  PARTITION BY COALESCE(mag.realPath, mag.path)
-                  ORDER BY ds.created ASC
-                ) AS rn
-              FROM webknossos.dataset_mags AS mag
-              JOIN webknossos.datasets AS ds
-                ON mag._dataset = ds._id
-            )
             SELECT
-              dataset_id, dataLayerName, mag, path, realPath, hasLocalData, _organization, directoryName
-            FROM ranked
-            -- Filter !after! grouping mags with the same path,
-            -- so mags shared between organizations are deduplicated properly using rn.
-            WHERE rn = 1
-              AND ranked._organization = $organizationId
-              AND ranked._dataStore = $dataStoreId
-              ${datasetIdOpt.map(datasetId => q"AND ranked.dataset_id = $datasetId").getOrElse(q"")};
+              ds._id, mag.dataLayerName, mag.mag, mag.path, mag.realPath, mag.hasLocalData,
+              ds._organization, ds.directoryName
+            FROM webknossos.dataset_mags AS mag
+            JOIN webknossos.datasets AS ds ON mag._dataset = ds._id
+            WHERE ds._organization = $organizationId
+              AND ds._dataStore = $dataStoreId
+              ${datasetIdOpt.map(datasetId => q"AND mag._dataset = $datasetId").getOrElse(q"")}
+              -- mags with neither path nor realPath are never storage relevant. Exclude explicitly to avoid effects of NULL
+              AND (mag.path IS NOT NULL OR mag.realPath IS NOT NULL)
+              AND NOT EXISTS ( -- omit mags already counted for other datasets (cross-orga)
+                SELECT 1
+                FROM webknossos.dataset_mags AS mag2
+                JOIN webknossos.datasets AS ds2 ON mag2._dataset = ds2._id
+                WHERE COALESCE(mag2.realPath, mag2.path) = COALESCE(mag.realPath, mag.path)
+                  AND (ds2.created < ds.created OR (ds2.created = ds.created AND ds2._id < ds._id))
+              );
             """.as[DataSourceMagRow])
-    } yield storageRelevantMags.toList
+    } yield storageRelevantMags
 
   def updateMags(datasetId: ObjectId, dataLayers: List[StaticLayer]): Fox[Unit] = {
     val clearQuery =
@@ -958,23 +951,35 @@ class DatasetMagDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
            """.asUpdate
       }
     }
-    replaceSequentiallyAsTransaction(clearQuery, insertQueries)
+    runAsSerializableTransaction(clearQuery +: insertQueries)
   }
 
   // Note: also see attachments
   def updateMagRealPathsForDataset(datasetId: ObjectId, realPathInfos: Seq[RealPathInfo]): Fox[Unit] =
     for {
-      _ <- Fox.successful(())
-      updateQueries = realPathInfos.map(realPathInfo => q"""UPDATE webknossos.dataset_mags
+      // Reduce number of queries by checking what actually changed first.
+      currentRows <- run(
+        q"""SELECT path, realPath, hasLocalData
+            FROM webknossos.dataset_mags
+            WHERE _dataset = $datasetId""".as[(Option[String], Option[String], Boolean)]
+      )
+      currentByPath = currentRows.collect { case (Some(path), realPath, hasLocalData) =>
+        path -> (realPath, hasLocalData)
+      }.toMap
+      changedRealPathInfos = realPathInfos.filter { realPathInfo =>
+        currentByPath.get(realPathInfo.path.toString) match {
+          case Some((currentRealPath, currentHasLocalData)) =>
+            !currentRealPath.contains(
+              realPathInfo.realPath.toString
+            ) || currentHasLocalData != realPathInfo.hasLocalData
+          case None => false // No matching row exists, no UPDATE needed.
+        }
+      }
+      updateQueries = changedRealPathInfos.map(realPathInfo => q"""UPDATE webknossos.dataset_mags
             SET realPath = ${realPathInfo.realPath}, hasLocalData = ${realPathInfo.hasLocalData}
             WHERE _dataset = $datasetId
             AND path = ${realPathInfo.path}""".asUpdate)
-      composedQuery = DBIO.sequence(updateQueries)
-      _ <- run(
-        composedQuery.transactionally.withTransactionIsolation(Serializable),
-        retryCount = 50,
-        retryIfErrorContains = List(transactionSerializationError)
-      )
+      _ <- if (updateQueries.nonEmpty) runAsSerializableTransaction(updateQueries) else Fox.successful(())
     } yield ()
 
   implicit def GetResultDataSourceMagRow: GetResult[DataSourceMagRow] =
@@ -1341,13 +1346,8 @@ class DatasetLastUsedTimesDAO @Inject() (sqlClient: SqlClient)(implicit ec: Exec
       q"DELETE FROM webknossos.dataset_lastUsedTimes WHERE _dataset = $datasetId AND _user = $userId".asUpdate
     val insertQuery =
       q"INSERT INTO webknossos.dataset_lastUsedTimes(_dataset, _user, lastUsedTime) VALUES($datasetId, $userId, NOW())".asUpdate
-    val composedQuery = DBIO.sequence(List(clearQuery, insertQuery))
     for {
-      _ <- run(
-        composedQuery.transactionally.withTransactionIsolation(Serializable),
-        retryCount = 50,
-        retryIfErrorContains = List(transactionSerializationError)
-      )
+      _ <- runAsSerializableTransaction(List(clearQuery, insertQuery))
     } yield ()
   }
 }
@@ -1370,7 +1370,7 @@ class DatasetLayerAttachmentDAO @Inject() (sqlClient: SqlClient)(implicit ec: Ex
       dataFormat <- LayerAttachmentDataformat.fromString(row.dataformat).toFox ?~> "Could not parse data format"
       realPathWithFallback = if (useRealPaths) row.realpath.getOrElse(row.path) else row.path
       path <- UPath.fromString(realPathWithFallback).toFox
-    } yield LayerAttachment(row.name, path, dataFormat)
+    } yield LayerAttachment(row.name, path, dataFormat, row.credentialid)
 
   private def parseAttachments(rows: List[DatasetLayerAttachmentsRow], useRealPaths: Boolean): Fox[AttachmentWrapper] =
     for {
@@ -1388,12 +1388,16 @@ class DatasetLayerAttachmentDAO @Inject() (sqlClient: SqlClient)(implicit ec: Ex
       cumsumFiles <- Fox.serialCombined(rows.filter(_.`type` == LayerAttachmentType.cumsum.toString))(
         parseAttachmentRow(_, useRealPaths)
       )
+      segmentStatisticsFiles <- Fox.serialCombined(
+        rows.filter(_.`type` == LayerAttachmentType.segmentStatistics.toString)
+      )(parseAttachmentRow(_, useRealPaths))
     } yield AttachmentWrapper(
       agglomerates = agglomerateFiles,
       connectomes = connectomeFiles,
       segmentIndex = segmentIndexFiles.headOption,
       meshes = meshFiles,
-      cumsum = cumsumFiles.headOption
+      cumsum = cumsumFiles.headOption,
+      segmentStatistics = segmentStatisticsFiles.headOption
     )
 
   def findAllForDatasetAndDataLayerName(
@@ -1403,7 +1407,7 @@ class DatasetLayerAttachmentDAO @Inject() (sqlClient: SqlClient)(implicit ec: Ex
   ): Fox[AttachmentWrapper] =
     for {
       rows <- run(
-        q"""SELECT _dataset, layerName, name, path, realpath, hasLocalData, type, dataFormat, uploadToPathIsPending, uploadIsPending
+        q"""SELECT _dataset, layerName, name, path, realpath, hasLocalData, type, dataFormat, credentialId, uploadToPathIsPending, uploadIsPending
                 FROM webknossos.dataset_layer_attachments
                 WHERE _dataset = $datasetId
                 AND layerName = $layerName
@@ -1416,9 +1420,9 @@ class DatasetLayerAttachmentDAO @Inject() (sqlClient: SqlClient)(implicit ec: Ex
   def updateAttachments(datasetId: ObjectId, dataLayers: List[StaticLayer]): Fox[Unit] = {
     def insertQuery(attachment: LayerAttachment, layerName: String, attachmentType: LayerAttachmentType.Value) = {
       val query =
-        q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, name, path, type, dataFormat, uploadToPathIsPending, uploadIsPending)
+        q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, name, path, type, dataFormat, credentialId, uploadToPathIsPending, uploadIsPending)
           VALUES($datasetId, $layerName, ${attachment.name}, ${attachment.path}, $attachmentType::webknossos.LAYER_ATTACHMENT_TYPE,
-          ${attachment.dataFormat}::webknossos.LAYER_ATTACHMENT_DATAFORMAT, ${false}, ${false})"""
+          ${attachment.dataFormat}::webknossos.LAYER_ATTACHMENT_DATAFORMAT, ${attachment.credentialId}, ${false}, ${false})"""
       query.asUpdate
     }
 
@@ -1437,28 +1441,40 @@ class DatasetLayerAttachmentDAO @Inject() (sqlClient: SqlClient)(implicit ec: Ex
             insertQuery(mesh, layer.name, LayerAttachmentType.mesh)
           } ++ attachments.cumsum.map { cumsumFile =>
             insertQuery(cumsumFile, layer.name, LayerAttachmentType.cumsum)
+          } ++ attachments.segmentStatistics.map { segmentStatistics =>
+            insertQuery(segmentStatistics, layer.name, LayerAttachmentType.segmentStatistics)
           }
         case None =>
           List.empty
       }
     }
-    replaceSequentiallyAsTransaction(clearQuery, insertQueries)
+    runAsSerializableTransaction(clearQuery +: insertQueries)
   }
 
   // Note: also see mags.
   def updateAttachmentRealPathsForDataset(datasetId: ObjectId, realPathInfos: Seq[RealPathInfo]): Fox[Unit] =
     for {
-      _ <- Fox.successful(())
-      updateQueries = realPathInfos.map(realPathInfo => q"""UPDATE webknossos.dataset_layer_attachments
+      // Reduce number of queries by checking what actually changed first.
+      currentRows <- run(
+        q"""SELECT path, realPath, hasLocalData
+            FROM webknossos.dataset_layer_attachments
+            WHERE _dataset = $datasetId""".as[(String, Option[String], Boolean)]
+      )
+      currentByPath = currentRows.map { case (path, realPath, hasLocalData) => path -> (realPath, hasLocalData) }.toMap
+      changedRealPathInfos = realPathInfos.filter { realPathInfo =>
+        currentByPath.get(realPathInfo.path.toString) match {
+          case Some((currentRealPath, currentHasLocalData)) =>
+            !currentRealPath.contains(
+              realPathInfo.realPath.toString
+            ) || currentHasLocalData != realPathInfo.hasLocalData
+          case None => false // No matching row exists, no UPDATE needed.
+        }
+      }
+      updateQueries = changedRealPathInfos.map(realPathInfo => q"""UPDATE webknossos.dataset_layer_attachments
             SET realPath = ${realPathInfo.realPath}, hasLocalData = ${realPathInfo.hasLocalData}
             WHERE _dataset = $datasetId
             AND path = ${realPathInfo.path}""".asUpdate)
-      composedQuery = DBIO.sequence(updateQueries)
-      _ <- run(
-        composedQuery.transactionally.withTransactionIsolation(Serializable),
-        retryCount = 50,
-        retryIfErrorContains = List(transactionSerializationError)
-      )
+      _ <- if (updateQueries.nonEmpty) runAsSerializableTransaction(updateQueries) else Fox.successful(())
     } yield ()
 
   def insertWithUploadToPathPending(
@@ -1537,7 +1553,7 @@ class DatasetLayerAttachmentDAO @Inject() (sqlClient: SqlClient)(implicit ec: Ex
   ): Fox[LayerAttachment] =
     for {
       rows <- run(
-        q"""SELECT _dataset, layerName, name, path, realpath, hasLocalData, type, dataFormat, uploadToPathIsPending, uploadIsPending
+        q"""SELECT _dataset, layerName, name, path, realpath, hasLocalData, type, dataFormat, credentialId, uploadToPathIsPending, uploadIsPending
                       FROM webknossos.dataset_layer_attachments
                       WHERE _dataset = $datasetId
                       AND layerName = $layerName
@@ -1558,7 +1574,7 @@ class DatasetLayerAttachmentDAO @Inject() (sqlClient: SqlClient)(implicit ec: Ex
   ): Fox[LayerAttachment] =
     for {
       rows <- run(
-        q"""SELECT _dataset, layerName, name, path, realpath, hasLocalData, type, dataFormat, uploadToPathIsPending, uploadIsPending
+        q"""SELECT _dataset, layerName, name, path, realpath, hasLocalData, type, dataFormat, credentialId, uploadToPathIsPending, uploadIsPending
                       FROM webknossos.dataset_layer_attachments
                       WHERE _dataset = $datasetId
                       AND layerName = $layerName
@@ -1630,33 +1646,24 @@ class DatasetLayerAttachmentDAO @Inject() (sqlClient: SqlClient)(implicit ec: Ex
       organizationId: String,
       dataStoreId: String,
       datasetIdOpt: Option[ObjectId]
-  ): Fox[List[StorageRelevantDataLayerAttachment]] =
+  ): Fox[Seq[StorageRelevantDataLayerAttachment]] =
     for {
       storageRelevantAttachments <- run(q"""
-          WITH ranked AS (
-            SELECT
-              att._dataset, att.layerName, att.name, att.path, att.type, ds._organization, ds._dataStore, ds.directoryName,
-              -- rn is the rank of the attachments with the same path. It is used to deduplicate attachments with the same path
-               -- to count each physical attachment only once. Filtering is done below.
-              ROW_NUMBER() OVER (
-                PARTITION BY COALESCE(att.realPath, att.path)
-                ORDER BY ds.created ASC
-              ) AS rn
-            FROM webknossos.dataset_layer_attachments AS att
-            JOIN webknossos.datasets AS ds
-              ON att._dataset = ds._id
-          )
-          SELECT
-            _dataset, layerName, name, path, type, _organization, directoryName
-          FROM ranked
-          -- Filter !after! grouping attachments with the same path,
-          -- so attachments shared between organizations are deduplicated properly using rn.
-          WHERE ranked.rn = 1
-            AND ranked._organization = $organizationId
-            AND ranked._dataStore = $dataStoreId
-            ${datasetIdOpt.map(datasetId => q"AND ranked._dataset = $datasetId").getOrElse(q"")};
+          SELECT att._dataset, att.layerName, att.name, att.path, att.type, ds._organization, ds.directoryName
+          FROM webknossos.dataset_layer_attachments AS att
+          JOIN webknossos.datasets AS ds ON att._dataset = ds._id
+          WHERE ds._organization = $organizationId
+            AND ds._dataStore = $dataStoreId
+            ${datasetIdOpt.map(datasetId => q"AND att._dataset = $datasetId").getOrElse(q"")}
+            AND NOT EXISTS ( -- omit mags already counted for other datasets (cross-orga)
+              SELECT 1
+              FROM webknossos.dataset_layer_attachments AS att2
+              JOIN webknossos.datasets AS ds2 ON att2._dataset = ds2._id
+              WHERE COALESCE(att2.realPath, att2.path) = COALESCE(att.realPath, att.path)
+                AND (ds2.created < ds.created OR (ds2.created = ds.created AND ds2._id < ds._id))
+            );
            """.as[StorageRelevantDataLayerAttachment])
-    } yield storageRelevantAttachments.toList
+    } yield storageRelevantAttachments
 
   // Note equivalent in DatasetMagsDAO
   def findAttachmentPathsUsedOnlyByThisDataset(datasetId: ObjectId): Fox[Seq[UPath]] =
@@ -1753,7 +1760,7 @@ class DatasetCoordinateTransformationsDAO @Inject() (sqlClient: SqlClient)(impli
               """.asUpdate
       }
     }
-    replaceSequentiallyAsTransaction(clearQuery, insertQueries)
+    runAsSerializableTransaction(clearQuery +: insertQueries)
   }
 }
 
@@ -1782,6 +1789,6 @@ class DatasetLayerAdditionalAxesDAO @Inject() (sqlClient: SqlClient)(implicit ec
               """.asUpdate
       }
     }
-    replaceSequentiallyAsTransaction(clearQuery, insertQueries)
+    runAsSerializableTransaction(clearQuery +: insertQueries)
   }
 }

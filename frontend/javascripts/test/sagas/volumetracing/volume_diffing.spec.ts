@@ -28,7 +28,7 @@ import {
 } from "./segment_group_fixtures";
 
 const createSegment = (
-  id: number,
+  id: bigint,
   groupId: number | null,
   metadata: MetadataEntryProto[],
 ): Segment => ({
@@ -47,7 +47,7 @@ const tracingId = "someTracingId";
 
 describe("diffMetadataOfSegments for volume tracings", () => {
   it("diffMetadataOfSegments should detect added, changed and removed metadata", () => {
-    const segment1 = createSegment(1, 0, [
+    const segment1 = createSegment(1n, 0, [
       { key: "keyToDelete", stringValue: "string 0" },
       {
         key: "keyToChange1",
@@ -173,54 +173,52 @@ describe("diffSegmentGroups for volume tracings", () => {
 describe("uncachedDiffSegmentLists should diff segment lists", () => {
   // Each list defines which segment items should already exist before
   // the merge is executed.
-  describe.for([
-    [],
-    [id1, id2],
-    [id1],
-    [id2],
-  ])("mergeSegment actions should be detected during diffing", (segmentItemsToCreateInSetup) => {
-    test(`with prepared segments: [${segmentItemsToCreateInSetup}]`, () => {
-      let newState = initialState;
-      if (segmentItemsToCreateInSetup.includes(id1)) {
-        newState = VolumeTracingReducer(newState, createSegment1);
-      }
-      if (segmentItemsToCreateInSetup.includes(id2)) {
-        newState = VolumeTracingReducer(newState, createSegment2);
-      }
-      const stateBeforeMerge = newState;
-      newState = VolumeTracingReducer(
-        newState,
-        mergeSegmentItemsAction(id1, id2, id1, id2, VOLUME_TRACING_ID),
-      );
-      const stateAfterMerge = newState;
+  describe.for([[], [id1, id2], [id1], [id2]])(
+    "mergeSegment actions should be detected during diffing",
+    (segmentItemsToCreateInSetup) => {
+      test(`with prepared segments: [${segmentItemsToCreateInSetup}]`, () => {
+        let newState = initialState;
+        if (segmentItemsToCreateInSetup.includes(id1)) {
+          newState = VolumeTracingReducer(newState, createSegment1);
+        }
+        if (segmentItemsToCreateInSetup.includes(id2)) {
+          newState = VolumeTracingReducer(newState, createSegment2);
+        }
+        const stateBeforeMerge = newState;
+        newState = VolumeTracingReducer(
+          newState,
+          mergeSegmentItemsAction(id1, id2, id1, id2, VOLUME_TRACING_ID),
+        );
+        const stateAfterMerge = newState;
 
-      const prevVolumeTracing = stateBeforeMerge.annotation.volumes[0];
-      const volumeTracing = stateAfterMerge.annotation.volumes[0];
+        const prevVolumeTracing = stateBeforeMerge.annotation.volumes[0];
+        const volumeTracing = stateAfterMerge.annotation.volumes[0];
 
-      const updateActions = Array.from(
-        uncachedDiffSegmentLists(
-          VOLUME_TRACING_ID,
-          prevVolumeTracing.segments,
-          volumeTracing.segments,
-          prevVolumeTracing.segmentJournal,
-          volumeTracing.segmentJournal,
-        ),
-      );
+        const updateActions = Array.from(
+          uncachedDiffSegmentLists(
+            VOLUME_TRACING_ID,
+            prevVolumeTracing.segments,
+            volumeTracing.segments,
+            prevVolumeTracing.segmentJournal,
+            volumeTracing.segmentJournal,
+          ),
+        );
 
-      expect(updateActions).toEqual([
-        {
-          name: "mergeSegmentItems",
-          value: {
-            actionTracingId: VOLUME_TRACING_ID,
-            agglomerateId1: id1,
-            agglomerateId2: id2,
-            segmentId1: id1,
-            segmentId2: id2,
+        expect(updateActions).toEqual([
+          {
+            name: "mergeSegmentItems",
+            value: {
+              actionTracingId: VOLUME_TRACING_ID,
+              agglomerateId1: id1,
+              agglomerateId2: id2,
+              segmentId1: id1,
+              segmentId2: id2,
+            },
           },
-        },
-      ]);
-    });
-  });
+        ]);
+      });
+    },
+  );
 
   test("mergeSegments should be detected along with another segment update", () => {
     let newState = initialState;
@@ -296,7 +294,7 @@ describe("uncachedDiffSegmentLists should diff segment lists", () => {
         name: "updateMetadataOfSegment",
         value: {
           actionTracingId: VOLUME_TRACING_ID,
-          id: 1,
+          id: 1n,
           removeEntriesByKey: ["someKey2"],
           upsertEntriesByKey: [
             { key: "someKey1-1", stringValue: "someStringValue - segment 1 - changed" },

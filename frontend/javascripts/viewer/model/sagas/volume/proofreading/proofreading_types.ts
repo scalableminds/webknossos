@@ -4,21 +4,21 @@ import type { ActiveMappingInfo, Mapping, VolumeTracing } from "viewer/store";
 
 export type Preparation = {
   agglomerateFileMag: Vector3;
-  getDataValue: (position: Vector3, overrideMapping?: Mapping | null) => Promise<number>;
-  mapSegmentId: (segmentId: number, overrideMapping?: Mapping | null) => number;
-  getMappedAndUnmapped: (position: Vector3) => Saga<{ agglomerateId: number; unmappedId: number }>;
+  getDataValue: (position: Vector3, overrideMapping?: Mapping | null) => Promise<bigint>;
+  mapSegmentId: (segmentId: bigint, overrideMapping?: Mapping | null) => bigint;
+  getMappedAndUnmapped: (position: Vector3) => Saga<{ agglomerateId: bigint; unmappedId: bigint }>;
   activeMapping: ActiveMappingInfo;
   volumeTracing: VolumeTracing & { mappingName: string };
   annotationVersion: number;
 };
 
-export type IdInfo = { agglomerateId: number; unmappedId: number; position: Vector3 };
+export type IdInfo = { agglomerateId: bigint; unmappedId: bigint; position: Vector3 };
 export type IdInfoOpt = {
-  agglomerateId: number;
-  unmappedId: number;
+  agglomerateId: bigint;
+  unmappedId: bigint;
   position: Vector3 | undefined;
 };
-export type IdInfoWithoutPosition = { agglomerateId: number; unmappedId: number };
+export type IdInfoWithoutPosition = { agglomerateId: bigint; unmappedId: bigint };
 
 export type GatheredInfos =
   | {

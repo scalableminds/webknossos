@@ -151,13 +151,16 @@ function importTestCsvFiles() {
       [
         PG_CONFIG.url,
         "-c",
-        `SET session_replication_role = replica; COPY webknossos.${filename.slice(
-          0,
-          -4,
-        )} FROM STDOUT WITH CSV HEADER QUOTE ''''`,
+        `COPY webknossos.${filename.slice(0, -4)} FROM STDIN WITH CSV HEADER QUOTE ''''`,
       ],
       {
         input: fs.readFileSync(path.join(csvFolder, filename)),
+        env: {
+          ...process.env,
+          PGOPTIONS: process.env.PGOPTIONS
+            ? `${process.env.PGOPTIONS} -c session_replication_role=replica`
+            : "-c session_replication_role=replica",
+        },
       },
     );
   }
@@ -390,7 +393,6 @@ function applyEvolutions() {
       ]);
     }
     console.log("✨✨ Successfully applied the evolutions");
-    updateRefreshStamp();
   } else {
     console.log("There are no evolutions that can be applied.");
   }

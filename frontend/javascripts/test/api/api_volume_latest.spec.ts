@@ -27,8 +27,8 @@ describe("API Volume", () => {
   });
 
   it<WebknossosTestContext>("setActiveCell should set the active segment id", ({ api }) => {
-    api.tracing.setActiveCell(27);
-    expect(api.tracing.getActiveCellId()).toBe(27);
+    api.tracing.setActiveCell(27n);
+    expect(api.tracing.getActiveCellId()).toBe(27n);
   });
 
   it<WebknossosTestContext>("getAnnotationTool should get the current tool", ({ api }) => {
@@ -64,7 +64,7 @@ describe("API Volume", () => {
         [1, 2, 3],
         [7, 8, 9],
       ],
-      34,
+      34n,
     );
 
     // The specified voxels should be labeled with the new value

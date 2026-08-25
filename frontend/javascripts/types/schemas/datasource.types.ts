@@ -79,7 +79,9 @@ export type DataLayer = {
     }
   | {
       category: "segmentation";
-      largestSegmentId: number | null;
+      // Encoded as an unsigned-decimal string because uint64 segment ids can exceed the JS
+      // safe-integer range (the backend serializes this via UnsignedLongJson.writes).
+      largestSegmentId: string | null;
       mappings: Array<string>;
     }
 ) &

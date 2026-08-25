@@ -1,10 +1,8 @@
 import type { SceneControllerType } from "./scene_controller";
 
 let sceneController: SceneControllerType | null | undefined = null;
-// Tracks the in-flight destroy() of the previously active SceneController, so that
-// initializeSceneController() can wait for it to fully finish (including its own wait
-// for a pending shader compile) before a new SceneController starts reusing the shared
-// WebGLRenderer. See SceneController.destroy() for why this matters.
+// In-flight destroy() of the previous SceneController; see initializeSceneController()
+// for why we await it before constructing a new one.
 let pendingTeardown: Promise<void> | null = null;
 
 export default function getSceneController(): SceneControllerType {

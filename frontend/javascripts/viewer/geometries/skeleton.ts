@@ -123,11 +123,8 @@ class Skeleton {
   nodeShader: NodeShader | undefined;
   edgeShader: EdgeShader | undefined;
 
-  // Disposal of the materials/textures/geometries below must not happen while a
-  // renderer.compileAsync() poll (see SceneController.deferUntilCompileReady) might still be
-  // tracking them, since three.js crashes internally if a tracked material is disposed out
-  // from under it. Defaults to immediate execution for callers (e.g. tests) that don't have a
-  // SceneController to guard against this.
+  // See SceneController.deferUntilCompileReady for why disposal below must go through this.
+  // Defaults to immediate execution for callers (e.g. tests) without a SceneController.
   private deferGpuDispose: (dispose: () => void) => void;
 
   constructor(

@@ -456,8 +456,7 @@ class PlaneView {
       scene,
       this.nonTdCameras[OrthoViews.PLANE_XY],
     );
-    // Registered so that SceneController.destroy() can wait for this to settle before
-    // disposing GPU resources (three.js's compileAsync has no cancellation API).
+    // See SceneController.waitForPendingCompiles for why this needs to be tracked.
     sceneController.registerPendingCompile(compileAsyncPromise);
     compileAsyncPromise
       .then(() => {

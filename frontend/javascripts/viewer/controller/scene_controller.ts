@@ -140,10 +140,8 @@ class SceneController {
     (entries: MipEnabledBBox[]) => this.updateMipVolumes(entries),
     300,
   );
-  // Tracks in-flight renderer.compileAsync() calls (registered by PlaneView/ArbitraryView).
-  // three.js's compileAsync has no cancellation API and crashes internally if a tracked
-  // material is disposed while it's still polling, so destroy() waits for these to settle
-  // (bounded by a timeout) before disposing any GPU resources.
+  // In-flight renderer.compileAsync() calls, registered by PlaneView/ArbitraryView.
+  // See waitForPendingCompiles() for why these need to be tracked.
   private pendingCompilePromises: Set<Promise<unknown>> = new Set();
 
   // Created as instance properties to avoid creating objects in each update call.
@@ -776,8 +774,6 @@ class SceneController {
     const layers = getDataLayers(dataset);
     const { layerBoundingBoxVisibilities, layerBoundingBoxColors } = state.temporaryConfiguration;
 
-    console.log("updateLayerBoundingBoxes");
-
     // Destroy the old cubes to free their geometries/materials (see setUserBoundingBoxes).
     if (this.layerBoundingBoxes != null) {
       for (const cube of Object.values(this.layerBoundingBoxes)) {
@@ -895,8 +891,7 @@ class SceneController {
     this.forEachTaskCube((cube) => cube.setVisibility(true));
   }
 
-  // Registers a pending renderer.compileAsync() promise (see PlaneView/ArbitraryView.start()),
-  // so that destroy() can wait for it before disposing GPU resources.
+  // Registers a pending renderer.compileAsync() promise; see PlaneView/ArbitraryView.start().
   registerPendingCompile(promise: Promise<unknown>): void {
     this.pendingCompilePromises.add(promise);
     promise.finally(() => {
@@ -904,14 +899,13 @@ class SceneController {
     });
   }
 
-  // three.js's compileAsync() polls internally via an uncancellable setTimeout loop until
-  // all materials report their shader program is ready, with no way to query or abort it
-  // from the outside. If we dispose a tracked material (or the renderer) while that poll
-  // is still in flight, the next tick crashes ("Cannot read properties of undefined
-  // (reading 'isReady')") because three.js's internal bookkeeping for that material is
-  // gone. So we wait for any pending compiles to settle before disposing anything below.
-  // The timeout is a safety net in case the GPU context is already lost and the poll would
-  // otherwise never resolve.
+  // three.js's compileAsync() polls internally via an uncancellable setTimeout loop until all
+  // materials report their shader program is ready. If a tracked material (or the renderer) is
+  // disposed while that poll is still in flight, the next tick crashes ("Cannot read properties
+  // of undefined (reading 'isReady')"), since three.js's internal bookkeeping for that material
+  // is gone. So any GPU-resource disposal that could race a pending compile must wait for it
+  // first (see deferUntilCompileReady()). The timeout below is a safety net in case the GPU
+  // context is already lost and the poll would otherwise never resolve.
   private async waitForPendingCompiles(timeoutMs = 5000): Promise<void> {
     if (this.pendingCompilePromises.size === 0) {
       return;
@@ -922,14 +916,10 @@ class SceneController {
     ]);
   }
 
-  // Disposal of any three.js material/geometry/texture that might currently be part of a
-  // scene snapshot tracked by an in-flight renderer.compileAsync() call must go through this
-  // (rather than disposing directly), since compileAsync's polling loop crashes if a tracked
-  // material is disposed out from under it (see waitForPendingCompiles() above). This isn't
-  // only relevant at teardown: e.g. bounding box cubes get destroyed-and-recreated during
-  // completely normal operation (a mapping/segment-index finishing loading shortly after the
-  // annotation opened, while the very first compileAsync is still warming up shaders), so the
-  // guard has to live at the point of disposal, not just be sequenced once in destroy().
+  // Guards GPU-resource disposal against the compileAsync race described in
+  // waitForPendingCompiles(). Needed at the point of disposal rather than sequenced once in
+  // destroy(), since e.g. bounding box cubes get destroyed-and-recreated during normal
+  // operation too (not just teardown).
   deferUntilCompileReady(dispose: () => void): void {
     if (this.pendingCompilePromises.size === 0) {
       dispose();
@@ -939,9 +929,8 @@ class SceneController {
   }
 
   async destroy(): Promise<void> {
-    // Wait first, before any disposal below (including skeleton removal), since none of it
-    // is safe to run while a compileAsync poll for this SceneController's own materials is
-    // still in flight.
+    // See waitForPendingCompiles(); must happen before any disposal below, including
+    // skeleton removal.
     await this.waitForPendingCompiles();
 
     // @ts-expect-error
@@ -1081,10 +1070,8 @@ class SceneController {
 
 export type SceneControllerType = SceneController;
 export async function initializeSceneController(): Promise<void> {
-  // Wait for the previous SceneController's teardown (if any) to fully finish before
-  // constructing a new one, since they share the same WebGLRenderer singleton. Otherwise
-  // a new SceneController could start rendering with a renderer that the old teardown is
-  // still in the process of disposing (see SceneController.destroy()).
+  // Wait for the previous SceneController's teardown to finish first, since both share the
+  // same WebGLRenderer singleton (see SceneController.destroy()).
   await waitForPendingSceneControllerTeardown();
   const controller = new SceneController();
   setSceneController(controller);

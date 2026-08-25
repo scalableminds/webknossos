@@ -3,6 +3,12 @@
 # Health endpoint
 GET         /health                                                                 @com.scalableminds.webknossos.tracingstore.controllers.Application.health
 
+# SPIKE: volume versioning benchmark. Disabled unless tracingstore.enableBenchmarkEndpoint=true.
+# Writes gigabytes into FossilDB and cleans up afterwards. Runs synchronously and can take
+# minutes at larger parameters, so mind any proxy read timeouts in front of the tracingstore.
+POST        /benchmark/volumeVersioning                                             @com.scalableminds.webknossos.tracingstore.controllers.TSBenchmarkController.volumeVersioning(key: Option[String], buckets: Option[Int], versions: Option[Int], snapshotInterval: Option[Int], bytesPerVoxel: Option[Int], runsPerDiff: Option[Int], runLength: Option[Int], readRounds: Option[Int])
+POST        /benchmark/volumeVersioning/cleanup                                     @com.scalableminds.webknossos.tracingstore.controllers.TSBenchmarkController.volumeVersioningCleanup(key: Option[String])
+
 # Annotations (concerns AnnotationProto, not annotation info as stored in postgres)
 POST        /annotation/save                                                        @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.save(annotationId: ObjectId)
 GET         /annotation/:annotationId                                               @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.get(annotationId: ObjectId, version: Option[Long])

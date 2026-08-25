@@ -1,5 +1,5 @@
 import { exploreRemoteDataset } from "admin/rest_api";
-import { Col, Collapse, Form, type FormInstance, Input, Radio, Row } from "antd";
+import { Col, Collapse, Form, type FormInstance, Input, Radio, Row, Tag } from "antd";
 import type { RcFile, UploadChangeParam, UploadFile } from "antd/lib/upload";
 import { AsyncButton } from "components/async_clickables";
 import { formatScale } from "libs/format_utils";
@@ -317,7 +317,12 @@ export const AddRemoteLayer: React.FC<AddRemoteLayerProps> = ({
         <RadioGroup value={authMode} onChange={(e) => setAuthMode(e.target.value)}>
           <Radio value="none">{authLabel.none}</Radio>
           <Radio value="basic">{authLabel.show}</Radio>
-          {canUseXAuthToken && <Radio value="token">{authLabel.token}</Radio>}
+          {canUseXAuthToken && (
+            <Radio value="token">
+              {authLabel.token}
+              <Tag style={{ marginInlineStart: 8 }}>Super user</Tag>
+            </Radio>
+          )}
         </RadioGroup>
       </FormItem>
 

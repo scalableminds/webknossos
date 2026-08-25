@@ -128,9 +128,6 @@ export function* reconcileMultiCutSelectionAfterForeignSplit(
   if (hasNoActiveMultiMincut || !oldAgglomerateIds.has(minCutPartitions?.agglomerateId)) {
     return;
   }
-  if (!oldAgglomerateIds.has(minCutPartitions?.agglomerateId)) {
-    return;
-  }
 
   let mapping = mappingWithSplitApplied;
   const missingSegmentIds = findUnresolvedSupervoxelIds(mapping, minCutPartitions);
@@ -171,6 +168,7 @@ export function* reconcileMultiCutSelectionAfterForeignSplit(
     yield* put(setMultiCutAgglomerateIdAction(resolution.agglomerateId));
   }
   // resolution.type === "unresolved" here means the backend didn't return an agglomerate id for
-  // one of the segments even after the explicit fetch (e.g. it no longer exists). Left as-is;
-  // performPartitionedMinCut's pre-commit check remains the final safety net for this edge case.
+  // one of the segments even after the explicit fetch (e.g. it no longer exists).
+  // This should never occur => Leave it as-is.
+  // performPartitionedMinCut's initial assertions remains the final safety net for this edge case.
 }

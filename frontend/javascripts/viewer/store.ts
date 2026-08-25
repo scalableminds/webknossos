@@ -663,6 +663,7 @@ type ConnectomeData = {
   readonly activeAgglomerateIds: Array<bigint>;
   readonly skeleton: SkeletonTracing | null | undefined;
 };
+export const MinCutPartitionKeys = ["partitionA", "partitionB"] as const;
 export type MinCutPartitions =
   | {
       partitionA: bigint[];

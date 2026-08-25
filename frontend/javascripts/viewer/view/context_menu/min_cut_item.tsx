@@ -84,12 +84,12 @@ export function useMultiCutToolOptions(
 
   if (!minCutPartitions) return [];
 
-  const isSegmentInPartition1 = (minCutPartitions.partitionA as bigint[]).includes(
-    unmappedSegmentId,
-  );
-  const isSegmentInPartition2 = (minCutPartitions.partitionB as bigint[]).includes(
-    unmappedSegmentId,
-  );
+  let isSegmentInPartition1 = false;
+  let isSegmentInPartition2 = false;
+  if (minCutPartitions.agglomerateId != null) {
+    isSegmentInPartition1 = minCutPartitions.partitionA.includes(unmappedSegmentId);
+    isSegmentInPartition2 = minCutPartitions.partitionB.includes(unmappedSegmentId);
+  }
   const togglePartition1Verb = isSegmentInPartition1 ? "Remove" : "Add";
   const togglePartition2Verb = isSegmentInPartition2 ? "Remove" : "Add";
   const doBothPartitionsHaveEntries =

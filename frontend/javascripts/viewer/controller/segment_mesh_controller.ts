@@ -33,7 +33,7 @@ import {
   getSegmentColorAsHSLA,
 } from "viewer/model/accessors/volumetracing_accessor";
 import { NO_LOD_MESH_INDEX } from "viewer/model/sagas/meshes/common_mesh_saga";
-import Store, { type MinCutPartitions } from "viewer/store";
+import Store, { MinCutPartitionKeys, type MinCutPartitions } from "viewer/store";
 import type { BufferGeometryWithInfo } from "./mesh_helpers";
 
 // Add the raycast function. Assumes the BVH is available on
@@ -719,7 +719,7 @@ export default class SegmentMeshController {
 
       const highlightRanges: HighlightState = [];
       if (vertexSegmentMapping && minCutPartitions) {
-        for (const partitionName of ["partitionA", "partitionB"] as const) {
+        for (const partitionName of MinCutPartitionKeys) {
           const partitionColor = PARTITION_COLORS[partitionName];
           for (const segmentId of minCutPartitions[partitionName]) {
             const containsSegmentId = vertexSegmentMapping.containsSegmentId(segmentId);

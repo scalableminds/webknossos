@@ -347,6 +347,11 @@ export function getDatasetActionContextMenu({
           },
         ],
       },
+      // The following menu entry mutates all other datasets in the folder (and not the clicked one).
+      // Strictly speaking, the permission check would need to verify that at least one
+      // of these datasets can be edited by the current user.
+      // However, as a heuristic, we just check whether the current dataset is editable (by the
+      // current user). Thus, a user with no edit rights anywhere won't see this entry at all.
       ...(dataset.isEditable && dataset.isActive
         ? ([
             { key: "whole-folder-divider", type: "divider" },

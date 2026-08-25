@@ -776,7 +776,7 @@ class SceneController {
     const layers = getDataLayers(dataset);
     const { layerBoundingBoxVisibilities, layerBoundingBoxColors } = state.temporaryConfiguration;
 
-    console.log("updateLayerBoundingBoxes")
+    console.log("updateLayerBoundingBoxes");
 
     // Destroy the old cubes to free their geometries/materials (see setUserBoundingBoxes).
     if (this.layerBoundingBoxes != null) {

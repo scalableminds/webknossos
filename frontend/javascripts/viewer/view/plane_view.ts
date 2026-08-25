@@ -452,7 +452,7 @@ class PlaneView {
     this.resize();
     performance.mark(PerformanceMarkEnum.SHADER_COMPILE);
     // The shader is the same for all three viewports, so it doesn't matter which camera is used.
-    console.log("compileAsync: START")
+    console.log("compileAsync: START");
     const compileAsyncPromise = renderer.compileAsync(
       scene,
       this.nonTdCameras[OrthoViews.PLANE_XY],
@@ -462,7 +462,7 @@ class PlaneView {
     sceneController.registerPendingCompile(compileAsyncPromise);
     compileAsyncPromise
       .then(() => {
-        console.log("compileAsync: END")
+        console.log("compileAsync: END");
         // Counter-intuitively this is not the moment where the webgl program is fully compiled.
         // There is another stall once render or getProgramInfoLog is called, since not all work is done yet.
         // Only once that is done, the compilation process is fully finished, see `renderFunction`.

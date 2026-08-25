@@ -49,12 +49,11 @@ export function* setupSavingForAnnotation(
   while (true) {
     let prevFlycam = yield* select((state) => state.flycam);
     let prevTdCamera = yield* select((state) => state.viewModeData.plane.tdCamera);
-    yield* race({
-      flycam: throttle(1000, FlycamActions, function* (action) {
-        return action;
-      }),
-      other: take([...ViewModeSaveRelevantActions, ...SkeletonTracingSaveRelevantActions]),
-    });
+    yield* take([
+      ...FlycamActions,
+      ...ViewModeSaveRelevantActions,
+      ...SkeletonTracingSaveRelevantActions,
+    ]);
 
     const shouldDiff = yield* select(mayAddToSaveQueue);
     if (!shouldDiff) {

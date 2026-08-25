@@ -206,76 +206,77 @@ describe("Update Action Application for VolumeTracing", () => {
       ? [hardcodedBeforeVersionIndex]
       : range(0, userActions.length);
 
-  describe.each(
-    compactionModes,
-  )("[Compaction=%s]: should re-apply update actions from complex diff and get same state", (withCompaction) => {
-    describe.each(beforeVersionIndices)("From v=%i", (beforeVersionIndex: number) => {
-      const afterVersionIndices =
-        hardcodedAfterVersionIndex != null
-          ? [hardcodedAfterVersionIndex]
-          : range(beforeVersionIndex, userActions.length + 1);
+  describe.each(compactionModes)(
+    "[Compaction=%s]: should re-apply update actions from complex diff and get same state",
+    (withCompaction) => {
+      describe.each(beforeVersionIndices)("From v=%i", (beforeVersionIndex: number) => {
+        const afterVersionIndices =
+          hardcodedAfterVersionIndex != null
+            ? [hardcodedAfterVersionIndex]
+            : range(beforeVersionIndex, userActions.length + 1);
 
-      test.each(afterVersionIndices)("To v=%i", (afterVersionIndex: number) => {
-        // The update actions are applied on the initialState which produces new states.
-        // The "timeline" is as follows:
-        //         initialState
-        //              ↓
-        // [actions until beforeVersionIndex]
-        //              ↓
-        //            state2
-        //              ↓
-        // [actions between before and afterVersionIndex]
-        //              ↓
-        //            state3
-        //
-        // state2 and state3 are diffed and that diff is applied again on state2.
-        // The result is compared against state3 again.
-        const state2WithActiveCell = applyActions(
-          initialState,
-          userActions.slice(0, beforeVersionIndex),
-        );
+        test.each(afterVersionIndices)("To v=%i", (afterVersionIndex: number) => {
+          // The update actions are applied on the initialState which produces new states.
+          // The "timeline" is as follows:
+          //         initialState
+          //              ↓
+          // [actions until beforeVersionIndex]
+          //              ↓
+          //            state2
+          //              ↓
+          // [actions between before and afterVersionIndex]
+          //              ↓
+          //            state3
+          //
+          // state2 and state3 are diffed and that diff is applied again on state2.
+          // The result is compared against state3 again.
+          const state2WithActiveCell = applyActions(
+            initialState,
+            userActions.slice(0, beforeVersionIndex),
+          );
 
-        const state2WithoutActiveBoundingBox = applyActions(state2WithActiveCell, [
-          setActiveUserBoundingBoxId(null),
-        ]);
+          const state2WithoutActiveBoundingBox = applyActions(state2WithActiveCell, [
+            setActiveUserBoundingBoxId(null),
+          ]);
 
-        const actionsToApply = userActions.slice(beforeVersionIndex, afterVersionIndex + 1);
-        let state3 = applyActions(
-          state2WithActiveCell,
-          actionsToApply.concat([setActiveUserBoundingBoxId(null)]),
-        );
-        expect(state2WithoutActiveBoundingBox !== state3).toBeTruthy();
+          const actionsToApply = userActions.slice(beforeVersionIndex, afterVersionIndex + 1);
+          let state3 = applyActions(
+            state2WithActiveCell,
+            actionsToApply.concat([setActiveUserBoundingBoxId(null)]),
+          );
+          expect(state2WithoutActiveBoundingBox !== state3).toBeTruthy();
 
-        const volumeTracing2 = enforceVolumeTracing(state2WithoutActiveBoundingBox);
-        const volumeTracing3 = enforceVolumeTracing(state3);
+          const volumeTracing2 = enforceVolumeTracing(state2WithoutActiveBoundingBox);
+          const volumeTracing3 = enforceVolumeTracing(state3);
 
-        const updateActionsBeforeCompaction = Array.from(
-          diffVolumeTracing(volumeTracing2, volumeTracing3),
-        );
-        const maybeCompact = withCompaction
-          ? compactUpdateActions
-          : (updateActions: UpdateActionWithoutIsolationRequirement[]) => updateActions;
-        const updateActions = addMissingTimestampProp(
-          maybeCompact(updateActionsBeforeCompaction, volumeTracing2, volumeTracing3),
-        );
+          const updateActionsBeforeCompaction = Array.from(
+            diffVolumeTracing(volumeTracing2, volumeTracing3),
+          );
+          const maybeCompact = withCompaction
+            ? compactUpdateActions
+            : (updateActions: UpdateActionWithoutIsolationRequirement[]) => updateActions;
+          const updateActions = addMissingTimestampProp(
+            maybeCompact(updateActionsBeforeCompaction, volumeTracing2, volumeTracing3),
+          );
 
-        for (const action of updateActions) {
-          seenActionTypes.add(action.name);
-        }
+          for (const action of updateActions) {
+            seenActionTypes.add(action.name);
+          }
 
-        const reappliedNewState = transformStateAsReadOnly(
-          state2WithoutActiveBoundingBox,
-          (state) =>
-            applyActions(state, [
-              applyVolumeUpdateActionsFromServerAction(updateActions),
-              setActiveUserBoundingBoxId(null),
-            ]),
-        );
+          const reappliedNewState = transformStateAsReadOnly(
+            state2WithoutActiveBoundingBox,
+            (state) =>
+              applyActions(state, [
+                applyVolumeUpdateActionsFromServerAction(updateActions),
+                setActiveUserBoundingBoxId(null),
+              ]),
+          );
 
-        expect(reappliedNewState.annotation.volumes[0]).toEqual(state3.annotation.volumes[0]);
+          expect(reappliedNewState.annotation.volumes[0]).toEqual(state3.annotation.volumes[0]);
+        });
       });
-    });
-  });
+    },
+  );
 
   it("should be able to apply basic group editing actions", () => {
     const state1 = applyActions(initialState, [setSegmentGroupsAction(SEGMENT_GROUPS, tracingId)]);

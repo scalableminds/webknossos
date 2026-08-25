@@ -97,7 +97,7 @@ class ReportDAO @Inject() (sqlClient: SqlClient, annotationDAO: AnnotationDAO)(i
             FROM filteredProjects p
             JOIN webknossos.tasks_ t ON p._id = t._project
             LEFT JOIN (
-              SElECT ${annotationDAO.columns}
+              SELECT ${annotationDAO.columns}
               FROM webknossos.annotations_ a
               WHERE a.state = 'Active'
               AND a.typ = 'Task'

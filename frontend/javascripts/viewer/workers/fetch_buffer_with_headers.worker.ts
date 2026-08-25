@@ -1,9 +1,9 @@
 import handleStatus from "libs/handle_http_status";
+import type { RequestOptions } from "libs/request";
 import { expose, transfer } from "./comlink_core";
 
 function fetchBufferWithHeaders(
   url: RequestInfo,
-  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'RequestOptions'.
   options?: RequestOptions,
 ): Promise<{
   buffer: ArrayBuffer;

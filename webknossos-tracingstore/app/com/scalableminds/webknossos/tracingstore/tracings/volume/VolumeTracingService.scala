@@ -23,6 +23,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis,
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.services.*
 import com.scalableminds.webknossos.datastore.services.mesh.{AdHocMeshRequest, AdHocMeshService, AdHocMeshServiceHolder}
+import com.scalableminds.webknossos.tracingstore.annotation.UpdateTimingStats
 import com.scalableminds.webknossos.tracingstore.files.TsTempFileService
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.*
@@ -99,7 +100,7 @@ class VolumeTracingService @Inject() (
       bucketBytes: Array[Byte],
       previousBucketBytesBox: Box[Array[Byte]],
       editableMappingTracingId: Option[String]
-  ): Fox[Unit] =
+  )(using stats: UpdateTimingStats = new UpdateTimingStats): Fox[Unit] =
     volumeSegmentIndexService.updateFromBucket(
       volumeLayer: VolumeTracingLayer,
       segmentIndexBuffer,
@@ -115,7 +116,7 @@ class VolumeTracingService @Inject() (
       tracing: VolumeTracing,
       updateActions: List[BucketMutatingVolumeUpdateAction],
       newVersion: Long
-  )(using tc: TokenContext): Fox[Unit] =
+  )(using tc: TokenContext, stats: UpdateTimingStats): Fox[Unit] =
     for {
       // warning, may be called multiple times with the same version number (due to transaction management).
       // frontend ensures that each bucket is only updated once per transaction
@@ -123,6 +124,7 @@ class VolumeTracingService @Inject() (
       volumeLayer = volumeTracingLayer(annotationId, tracingId, tracing, includeFallbackDataIfAvailable = true)
       fallbackLayerOpt <- getFallbackLayer(annotationId, tracing)
       mappingName <- getMappingNameUnlessEditable(volumeLayer.tracing)
+      _ = stats.count("volume.bucketMutatingActions", updateActions.length)
       segmentIndexBuffer = new VolumeSegmentIndexBuffer(
         tracingId,
         elementClassFromProto(tracing.elementClass),
@@ -133,7 +135,8 @@ class VolumeTracingService @Inject() (
         fallbackLayerOpt,
         AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes),
         temporaryTracingService,
-        tc
+        tc,
+        stats = stats
       )
       volumeBucketBuffer = new VolumeBucketBuffer(
         newVersion,
@@ -142,21 +145,25 @@ class VolumeTracingService @Inject() (
         temporaryTracingService,
         false
       )(using ec)
-      _ <- Fox.runIf(volumeLayer.tracing.getHasSegmentIndex)(volumeBucketBuffer.prefill(updateActions.flatMap {
-        case a: UpdateBucketVolumeAction => Some(a.bucketPosition)
-        case _                           => None
-      }) ?~> Msg.Annotation.ApplyUpdate.prefillBucketBufferFailed)
-      _ <- Fox.serialCombined(updateActions) {
+      _ <- stats.time("volume.prefillBucketBuffer")(
+        Fox.runIf(volumeLayer.tracing.getHasSegmentIndex)(volumeBucketBuffer.prefill(updateActions.flatMap {
+          case a: UpdateBucketVolumeAction => Some(a.bucketPosition)
+          case _                           => None
+        }) ?~> Msg.Annotation.ApplyUpdate.prefillBucketBufferFailed)
+      )
+      _ <- stats.time("volume.bucketLoop")(Fox.serialCombined(updateActions) {
         case a: UpdateBucketVolumeAction =>
           if (tracing.getHasEditableMapping) {
             Fox.failure("Cannot mutate volume data in annotation with editable mapping.")
           } else
-            updateBucket(
-              tracingId,
-              volumeLayer,
-              a,
-              segmentIndexBuffer,
-              volumeBucketBuffer
+            stats.time("volume.updateBucket")(
+              updateBucket(
+                tracingId,
+                volumeLayer,
+                a,
+                segmentIndexBuffer,
+                volumeBucketBuffer
+              )
             ) ?~> "Failed to save volume data."
         case a: DeleteSegmentDataVolumeAction =>
           if (!tracing.getHasSegmentIndex) {
@@ -171,9 +178,9 @@ class VolumeTracingService @Inject() (
               newVersion
             ) ?~> "Failed to delete segment data."
         case _ => Fox.failure("Unknown bucket-mutating action.")
-      }
-      _ <- volumeBucketBuffer.flush()
-      _ <- segmentIndexBuffer.flush()
+      })
+      _ <- stats.time("volume.bucketBufferFlush")(volumeBucketBuffer.flush())
+      _ <- stats.time("volume.segmentIndexBufferFlush")(segmentIndexBuffer.flush())
     } yield ()
 
   private def updateBucket(
@@ -182,7 +189,7 @@ class VolumeTracingService @Inject() (
       action: UpdateBucketVolumeAction,
       segmentIndexBuffer: VolumeSegmentIndexBuffer,
       volumeBucketBuffer: VolumeBucketBuffer
-  ): Fox[Unit] =
+  )(using stats: UpdateTimingStats): Fox[Unit] =
     for {
       _ <- Fox.fromBool(
         !action.bucketPosition.hasNegativeComponent
@@ -192,17 +199,21 @@ class VolumeTracingService @Inject() (
         action.mag
       ) ?~> s"Received a mag-${action.mag.toMagLiteral(allowScalar = true)} bucket, which is invalid for this annotation."
 
-      actionBucketData <- action.base64Data.map(Base64.getDecoder.decode).toFox
+      actionBucketData <- stats.time("volume.decode")(action.base64Data.map(Base64.getDecoder.decode).toFox)
       _ <- Fox.runIf(volumeLayer.tracing.getHasSegmentIndex) {
         for {
-          previousBucketBytes <- volumeBucketBuffer.getWithFallback(action.bucketPosition).shiftBox
-          _ <- updateSegmentIndex(
-            volumeLayer,
-            segmentIndexBuffer,
-            action.bucketPosition,
-            actionBucketData,
-            previousBucketBytes,
-            editableMappingTracingId(volumeLayer.tracing, tracingId)
+          previousBucketBytes <- stats.time("volume.bufferGetWithFallback")(
+            volumeBucketBuffer.getWithFallback(action.bucketPosition).shiftBox
+          )
+          _ <- stats.time("volume.updateSegmentIndex")(
+            updateSegmentIndex(
+              volumeLayer,
+              segmentIndexBuffer,
+              action.bucketPosition,
+              actionBucketData,
+              previousBucketBytes,
+              editableMappingTracingId(volumeLayer.tracing, tracingId)
+            )
           ) ?~> "failed to update segment index"
         } yield ()
       }

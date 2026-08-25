@@ -116,12 +116,6 @@ export default {
   "datastore.health": template(
     "The datastore server at <%- url %> does not seem to be available. Please check back in five minutes.",
   ),
-  "datastore.version.too_new": template(
-    "The datastore server at (<%- url %>) supplies a newer API version (<%- suppliedDatastoreApiVersion %>) than this WEBKNOSSOS expects (<%- expectedDatastoreApiVersion %>). Please contact your admins to upgrade this WEBKNOSSOS instance",
-  ),
-  "datastore.version.too_old": template(
-    "The datastore server at (<%- url %>) supplies an older API version (<%- suppliedDatastoreApiVersion %>) than this WEBKNOSSOS expects (<%- expectedDatastoreApiVersion %>). Please contact the admins of the remote data store to upgrade.",
-  ),
   "save.failed_simultaneous_tracing": `The annotation couldn't be saved because there was a conflict (annotation was edited either by someone else or in another browser tab).
 
 A reload is necessary to return to a valid state.`,

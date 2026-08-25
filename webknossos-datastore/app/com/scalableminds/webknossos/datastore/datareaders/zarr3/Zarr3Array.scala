@@ -42,6 +42,12 @@ object Zarr3Array extends LazyLogging {
         )
       ).toFox ?~> "Could not open zarr3 array"
     } yield array
+
+  def openForAttachment(
+      path: VaultPath,
+      sharedChunkContentsCache: AlfuCache[String, MultiArray]
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Zarr3Array] =
+    open(path, DataSourceId("dummy", "unused"), "layer", None, None, None, sharedChunkContentsCache)
 }
 
 class Zarr3Array(

@@ -163,7 +163,7 @@ function* showToastIfSegmentOfOtherAgglomerateWasSelected(
     return;
   }
   const layerData = yield* select((state) => state.localSegmentationStateByLayer[layerName]);
-  if (!layerData || !layerData.minCutPartitions) {
+  if (!layerData?.minCutPartitions) {
     return;
   }
   const minCutPartitions = layerData.minCutPartitions;

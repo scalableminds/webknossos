@@ -16,7 +16,7 @@ export const handleError = async (
   requestedUrl: string,
   showErrorToast: boolean,
   doInvestigate: boolean,
-  error: Response | Error,
+  error: Response | Error | DOMException,
 ): Promise<void> => {
   if (doInvestigate) {
     // Check whether this request failed due to a problematic datastore
@@ -93,6 +93,14 @@ export const handleError = async (
     return Promise.reject(
       new Error(`Request failed with status ${error.status} for ${requestedUrl}: ${text}`),
     );
+  }
+
+  // DOMException (e.g. an aborted fetch, whether via a caller-supplied signal or
+  // an options.timeout-triggered abort in request.ts) isn't an Error subclass and
+  // its .message shouldn't be mutated -- just propagate it as-is so callers can
+  // still detect it via error.name === "AbortError".
+  if (error instanceof DOMException) {
+    return Promise.reject(error);
   }
 
   error.message += ` - Url: ${requestedUrl}`;

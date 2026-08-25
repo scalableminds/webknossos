@@ -343,6 +343,7 @@ GET           /shortLinks/byKey/:key                                            
 POST          /credentials/httpBasicAuth                                                        controllers.CredentialController.createHttpBasicAuthCredential()
 POST          /credentials/s3AccessKey                                                          controllers.CredentialController.createS3AccessKeyCredential()
 POST          /credentials/googleServiceAccount                                                 controllers.CredentialController.createGoogleServiceAccountCredential()
+POST          /credentials/xAuthToken                                                           controllers.CredentialController.createXAuthTokenCredential()
 
 # Email verification
 POST          /verifyEmail/:key                                                                 controllers.EmailVerificationController.verify(key: String)

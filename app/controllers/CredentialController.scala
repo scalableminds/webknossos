@@ -6,7 +6,8 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.storage.{
   GoogleServiceAccountCredential,
   HttpBasicAuthCredential,
-  S3AccessKeyCredential
+  S3AccessKeyCredential,
+  XAuthTokenCredential
 }
 import models.dataset.credential.CredentialDAO
 import play.api.libs.json.{JsValue, Json, OFormat}
@@ -34,6 +35,12 @@ case class GoogleServiceAccountCredentialParameters(name: String, secretJson: Js
 object GoogleServiceAccountCredentialParameters {
   implicit val jsonFormat: OFormat[GoogleServiceAccountCredentialParameters] =
     Json.format[GoogleServiceAccountCredentialParameters]
+}
+
+case class XAuthTokenCredentialParameters(name: String, tokenValue: String)
+
+object XAuthTokenCredentialParameters {
+  implicit val jsonFormat: OFormat[XAuthTokenCredentialParameters] = Json.format[XAuthTokenCredentialParameters]
 }
 
 class CredentialController @Inject() (credentialDAO: CredentialDAO, sil: Silhouette[WkEnv])(implicit
@@ -87,6 +94,23 @@ class CredentialController @Inject() (credentialDAO: CredentialDAO, sil: Silhoue
           GoogleServiceAccountCredential(
             request.body.name,
             request.body.secretJson,
+            Some(request.identity._id.toString),
+            Some(request.identity._organization)
+          )
+        ) ?~> Msg.DataVault.createCredentialFailed
+      } yield Ok(Json.toJson(_id))
+    }
+
+  def createXAuthTokenCredential: Action[XAuthTokenCredentialParameters] =
+    sil.SecuredAction.fox(validateJson[XAuthTokenCredentialParameters]) { implicit request =>
+      val _id = ObjectId.generate
+      for {
+        _ <- Fox.fromBool(request.identity.isAdmin) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- credentialDAO.insertOne(
+          _id,
+          XAuthTokenCredential(
+            request.body.name,
+            request.body.tokenValue,
             Some(request.identity._id.toString),
             Some(request.identity._organization)
           )

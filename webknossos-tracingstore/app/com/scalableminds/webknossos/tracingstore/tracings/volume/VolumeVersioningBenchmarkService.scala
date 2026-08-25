@@ -13,24 +13,18 @@ import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import scala.util.Random
 
-/**
- * SPIKE — compares two ways of versioning volume bucket data in FossilDB:
- *
- *   old  every version stores the full 32³ bucket. Reads are a single Get,
- *        since FossilDB already returns the newest value at-or-below a
- *        requested version.
- *   new  every version stores only an RLE diff, plus a full snapshot every
- *        `snapshotInterval` versions. Reads fetch the newest snapshot ≤ X, the
- *        diffs in (snapshot, X], and fold them.
- *
- * Not wired into any product code path. It writes into the `volumeData`
- * collection — collections are fixed at FossilDB startup, so a dedicated one is
- * not an option — under a per-run key prefix that is deleted again afterwards.
- *
- * It opens its own gRPC channel rather than reusing FossilDBClient, because it
- * needs DeleteAllByPrefix for cleanup and that is deliberately not part of the
- * shared client's API.
- */
+/** SPIKE — compares two ways of versioning volume bucket data in FossilDB:
+  *
+  * old every version stores the full 32³ bucket. Reads are a single Get, since FossilDB already returns the newest
+  * value at-or-below a requested version. new every version stores only an RLE diff, plus a full snapshot every
+  * `snapshotInterval` versions. Reads fetch the newest snapshot ≤ X, the diffs in (snapshot, X], and fold them.
+  *
+  * Not wired into any product code path. It writes into the `volumeData` collection — collections are fixed at FossilDB
+  * startup, so a dedicated one is not an option — under a per-run key prefix that is deleted again afterwards.
+  *
+  * It opens its own gRPC channel rather than reusing FossilDBClient, because it needs DeleteAllByPrefix for cleanup and
+  * that is deliberately not part of the shared client's API.
+  */
 class VolumeVersioningBenchmarkService @Inject() (config: TracingStoreConfig) extends LazyLogging {
 
   /** Only one run at a time: concurrent runs would contend and skew each other. */
@@ -63,7 +57,7 @@ class VolumeVersioningBenchmarkService @Inject() (config: TracingStoreConfig) ex
         Right(result)
       } catch {
         case e: Exception =>
-          logger.error(s"Volume versioning benchmark failed", e)
+          logger.error("Volume versioning benchmark failed", e)
           Left(s"${e.getClass.getSimpleName}: ${e.getMessage}")
       } finally {
         // Always sweep, including after a failure — this writes into a shared
@@ -298,10 +292,9 @@ class VolumeVersioningBenchmarkService @Inject() (config: TracingStoreConfig) ex
   }
 }
 
-/**
- * The pure parts: parameter validation and the diff codec. Kept off the
- * injected class so tests can exercise them without a Play Configuration.
- */
+/** The pure parts: parameter validation and the diff codec. Kept off the injected class so tests can exercise them
+  * without a Play Configuration.
+  */
 object VolumeVersioningBenchmarkService {
 
   private[volume] val Collection = "volumeData"
@@ -324,16 +317,16 @@ object VolumeVersioningBenchmarkService {
     def bucketBytes: Int = VoxelsPerBucket * bytesPerVoxel
     def diffBytes: Int = 8 + 4 + runsPerDiff * 4
     def totalWrites: Long = buckets.toLong * versions
+
     /** Bytes the old scheme will write. The main safety limit. */
     def oldSchemeBytes: Long = totalWrites * bucketBytes
   }
 
   object Params {
-    /**
-     * Caps exist because this writes real data into a shared FossilDB and
-     * RocksDB compaction amplifies it several-fold. A 50k-write run produced
-     * ~6 GB logical and drove ~15 GB of physical writes during local testing.
-     */
+
+    /** Caps exist because this writes real data into a shared FossilDB and RocksDB compaction amplifies it
+      * several-fold. A 50k-write run produced ~6 GB logical and drove ~15 GB of physical writes during local testing.
+      */
     private val MaxTotalBytes: Long = 4L * 1024 * 1024 * 1024
 
     def fromQuery(

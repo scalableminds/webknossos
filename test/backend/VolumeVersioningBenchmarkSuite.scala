@@ -5,14 +5,13 @@ import org.scalatest.wordspec.AnyWordSpec
 
 import java.nio.{ByteBuffer, ByteOrder}
 
-/**
- * Correctness tests for the diff codec behind the volume versioning benchmark
- * (POST /tracings/benchmark/volumeVersioning). A benchmark that folds diffs
- * incorrectly would measure the wrong work, so the codec is pinned down here.
- *
- * The benchmark itself is not run from a test — it needs a live FossilDB and
- * writes gigabytes into it. Run it against a deployed tracingstore instead.
- */
+/** Correctness tests for the diff codec behind the volume versioning benchmark (POST
+  * /tracings/benchmark/volumeVersioning). A benchmark that folds diffs incorrectly would measure the wrong work, so the
+  * codec is pinned down here.
+  *
+  * The benchmark itself is not run from a test — it needs a live FossilDB and writes gigabytes into it. Run it against
+  * a deployed tracingstore instead.
+  */
 class VolumeVersioningBenchmarkSuite extends AnyWordSpec {
 
   private val BytesPerVoxel = 4

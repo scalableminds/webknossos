@@ -12,27 +12,23 @@ import java.security.MessageDigest
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-/**
- * SPIKE — exposes the volume versioning benchmark so it can be run against a
- * deployed tracingstore rather than only locally.
- *
- * Gated twice, because a run writes real data into the shared FossilDB and
- * RocksDB compaction amplifies that several-fold:
- *
- *   1. `tracingstore.enableBenchmarkEndpoint` must be true. It defaults to
- *      false, so a tracingstore that was not deliberately configured for
- *      benchmarking refuses regardless of credentials. This is the real guard.
- *   2. `?key=` must match `tracingstore.key`, the secret the tracingstore
- *      already shares with webKnossos.
- *
- * The usual `UserAccessRequest.webknossos` gate would be stronger, but it
- * requires the webknossos-internal token, which is impractical to obtain for a
- * manual curl. Given the endpoint is off by default, the shared key is the
- * better trade for something driven by hand.
- *
- * Parameters are query parameters so they can be tweaked without redeploying.
- * They are capped in VolumeVersioningBenchmarkService.Params.
- */
+/** SPIKE — exposes the volume versioning benchmark so it can be run against a deployed tracingstore rather than only
+  * locally.
+  *
+  * Gated twice, because a run writes real data into the shared FossilDB and RocksDB compaction amplifies that
+  * several-fold:
+  *
+  *   1. `tracingstore.enableBenchmarkEndpoint` must be true. It defaults to false, so a tracingstore that was not
+  *      deliberately configured for benchmarking refuses regardless of credentials. This is the real guard.
+  *   2. `?key=` must match `tracingstore.key`, the secret the tracingstore already shares with webKnossos.
+  *
+  * The usual `UserAccessRequest.webknossos` gate would be stronger, but it requires the webknossos-internal token,
+  * which is impractical to obtain for a manual curl. Given the endpoint is off by default, the shared key is the better
+  * trade for something driven by hand.
+  *
+  * Parameters are query parameters so they can be tweaked without redeploying. They are capped in
+  * VolumeVersioningBenchmarkService.Params.
+  */
 class TSBenchmarkController @Inject() (
     benchmarkService: VolumeVersioningBenchmarkService,
     config: TracingStoreConfig
@@ -68,7 +64,7 @@ class TSBenchmarkController @Inject() (
     log() {
       Fox.successful(authorized(key) {
         Params.fromQuery(buckets, versions, snapshotInterval, bytesPerVoxel, runsPerDiff, runLength, readRounds) match {
-          case Left(error) => BadRequest(Json.obj("error" -> error))
+          case Left(error)   => BadRequest(Json.obj("error" -> error))
           case Right(params) =>
             // Runs synchronously and can take minutes at larger parameters.
             benchmarkService.run(params) match {

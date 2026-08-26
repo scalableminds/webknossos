@@ -189,9 +189,14 @@ class AnnotationTransactionService @Inject() (
         actions = allActionGroups.flatMap(_.actions),
         stats = lastActionGroup.stats, // the latest stats do count
         info = lastActionGroup.info, // frontend sets this identically for all groups of transaction
-        transactionId = f"${lastActionGroup.transactionId}-concatenated",
+        // Keep the last group's own transactionId/transactionGroupIndex (rather than inventing a new
+        // identity for the concatenated group) so that commitUpdates saves the "handled" marker under
+        // the same key a retry of this exact request would look up. Otherwise, a retried request for an
+        // already-committed multi-group transaction would always be rejected as a conflict, even though
+        // nothing was lost.
+        transactionId = lastActionGroup.transactionId,
         transactionGroupCount = 1,
-        transactionGroupIndex = 0
+        transactionGroupIndex = lastActionGroup.transactionGroupIndex
       )
     }
 

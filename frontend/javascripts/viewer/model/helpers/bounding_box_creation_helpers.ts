@@ -9,8 +9,11 @@ import type { UserBoundingBoxWithoutId } from "viewer/store";
 
 // Resolves once no rebase/forwarding is active. If none is active, resolves immediately; otherwise
 // it subscribes to the store and resolves as soon as isRebasingOrForwarding flips back to false
-// (then unsubscribes). This is used to defer bounding box creation so it isn't dropped by the
-// rebase edit guard (see rebase_edit_guard.ts).
+// (then unsubscribes). This is used to defer local edits that would otherwise be dropped or lost
+// while a rebase/forwarding round is in progress -- e.g. bounding box creation (which would be
+// dropped by the rebase edit guard, see rebase_edit_guard.ts) and annotation-layer-name/
+// description edits (which the save-queue diffing saga in save_queue_filling_saga.ts would
+// silently ignore and then lose once it resets its baseline after the rebase finishes).
 export function waitUntilRebaseFinished(): Promise<void> {
   if (!getIsRebasingOrForwarding(Store.getState())) {
     return Promise.resolve();

@@ -65,6 +65,7 @@ import {
   reloadHistogramAction,
   updateLayerSettingAction,
 } from "viewer/model/actions/settings_actions";
+import { waitUntilRebaseFinished } from "viewer/model/helpers/bounding_box_creation_helpers";
 import { deleteAnnotationLayer } from "viewer/model/sagas/volume/update_actions";
 import { api, Model } from "viewer/singletons";
 import type { DatasetLayerConfiguration, VolumeTracing } from "viewer/store";
@@ -587,7 +588,10 @@ export default function LayerSettingsHeader({
                 value={readableName}
                 isInvalid={!readableLayerNameValidationResult.isValid}
                 trimValue
-                onChange={(newName) => {
+                onChange={async (newName) => {
+                  // Defer the actual rename until any active rebase/forwarding has
+                  // finished, so a rename submitted mid-rebase isn't lost.
+                  await waitUntilRebaseFinished();
                   dispatch(
                     editAnnotationLayerAction(volumeDescriptor.tracingId, {
                       name: newName,

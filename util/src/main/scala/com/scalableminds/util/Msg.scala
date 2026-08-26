@@ -849,7 +849,6 @@ object Msg {
   }
   object DataVault {
     val setupFailed: String = "Could not set up remote file system access."
-    val createCredentialFailed: String = "Could not set up remote file system credential."
     val credentialInsertFailed: String = "Could not store credential for remote file system access."
   }
   object Voxelytics {

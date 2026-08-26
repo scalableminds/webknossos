@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(180);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(181);
 COMMIT TRANSACTION;
 
 

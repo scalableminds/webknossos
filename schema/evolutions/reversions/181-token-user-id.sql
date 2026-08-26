@@ -1,6 +1,6 @@
 START TRANSACTION;
 
-do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 180 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
+do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 181 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
 
 CREATE TYPE webknossos.USER_LOGININFO_PROVDERIDS AS ENUM ('credentials');
 
@@ -21,6 +21,6 @@ ALTER TABLE webknossos.tokens DROP COLUMN _user;
 
 CREATE VIEW webknossos.tokens_ AS SELECT * FROM webknossos.tokens WHERE NOT isDeleted;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 179;
+UPDATE webknossos.releaseInformation SET schemaVersion = 180;
 
 COMMIT TRANSACTION;

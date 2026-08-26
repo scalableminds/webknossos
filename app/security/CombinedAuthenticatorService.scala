@@ -1,5 +1,6 @@
 package security
 
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import play.silhouette.api.*
 import play.silhouette.api.crypto.Base64AuthenticatorEncoder
@@ -60,17 +61,17 @@ case class CombinedAuthenticatorService(
   override def create(loginInfo: LoginInfo)(implicit request: RequestHeader): Future[CombinedAuthenticator] =
     cookieAuthenticatorService.create(loginInfo).map(CombinedAuthenticator(_))
 
-  private def createToken(loginInfo: LoginInfo): Future[CombinedAuthenticator] = {
-    val tokenAuthenticator = tokenAuthenticatorService.create(loginInfo, TokenType.Authentication)
-    tokenAuthenticator.map(tokenAuthenticatorService.init(_, TokenType.Authentication, deleteOld = true))
-    tokenAuthenticator.map(CombinedAuthenticator(_))
-  }
+  private def createToken(userId: ObjectId): Future[CombinedAuthenticator] =
+    for {
+      tokenAuthenticator <- tokenAuthenticatorService.create(userId, TokenType.Authentication)
+      _ <- tokenAuthenticatorService.init(tokenAuthenticator, TokenType.Authentication, deleteOld = true)
+    } yield CombinedAuthenticator(tokenAuthenticator)
 
-  def findOrCreateToken(loginInfo: LoginInfo): Future[CombinedAuthenticator] =
-    findTokenByLoginInfo(loginInfo).flatMap {
+  def findOrCreateTokenForUser(userId: ObjectId): Future[CombinedAuthenticator] =
+    findTokenForUser(userId).flatMap {
       case Some(token) => Future.successful(token)
       case _           =>
-        createToken(loginInfo)
+        createToken(userId)
     }
 
   override def retrieve[B](implicit request: ExtractableRequest[B]): Future[Option[CombinedAuthenticator]] =
@@ -96,8 +97,8 @@ case class CombinedAuthenticatorService(
     }
 
   // only called in token case
-  def findTokenByLoginInfo(loginInfo: LoginInfo): Future[Option[CombinedAuthenticator]] =
-    tokenDao.findOneByLoginInfo(loginInfo, TokenType.Authentication).map(opt => opt.map(CombinedAuthenticator(_)))
+  def findTokenForUser(userId: ObjectId): Future[Option[CombinedAuthenticator]] =
+    tokenDao.findOneForUserAndType(userId, TokenType.Authentication).map(opt => opt.map(CombinedAuthenticator(_)))
 
   // only called in the cookie case
   override def init(authenticator: CombinedAuthenticator)(implicit request: RequestHeader): Future[Cookie] =

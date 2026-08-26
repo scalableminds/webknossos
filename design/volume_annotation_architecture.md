@@ -1173,16 +1173,21 @@ The stream stays **append-only**: an invalidation is appended, never a rewrite. 
 
 ### 7.2 Storage layout
 
-Two FossilDB collections, split by lifecycle:
+Three FossilDB collections, split by lifecycle:
 
 | collection | key | value | written |
 |---|---|---|---|
 | `volumeUpdateActions` | per bucket | the runs of one transaction | every version that touches the bucket |
 | `volumeData` | per bucket | full LZ4-compressed bucket | only at *materialized* versions |
+| `volumeTombstones` | per annotation | the invalidated version | only when a version is invalidated |
 
-Both are versioned by FossilDB, and both rely on the same primitive: `Get(key, version)` returns the newest entry at or below `version`, and `GetMultipleVersions(key, from, to)` returns a range. That is precisely "find the base, then the diffs since".
+The third is a **derived index**, not a new source of truth. The `invalidateUpdateActionsFromVersion` action itself lives in `annotationUpdates` alongside every other update action, exactly as today — that is where the annotation's history belongs. But §7.5 has to consult "which versions are invalidated as of X" on *every bucket read*, and answering that from `annotationUpdates` would mean fetching and JSON-parsing every version group up to X. A separate key — FossilDB-versioned at the version the tombstone was appended, holding the version it invalidates — turns that into one `GetMultipleVersions` returning a handful of entries, small enough to cache per annotation.
 
-Splitting collections rather than key-prefixing matters because the two have very different sizes and access patterns, and RocksDB keeps per-column-family memtables and block cache accounting. Note FossilDB fixes its collection list at startup (`-c skeletons,volumeData,…`), so adding one is a deployment change, not just a code change.
+It is keyed per annotation rather than per tracing because versions are annotation-scoped: `annotationUpdates` is keyed by annotation id, and every tracing's buckets are versioned in that same namespace.
+
+All three are versioned by FossilDB, and all three rely on the same primitive: `Get(key, version)` returns the newest entry at or below `version`, and `GetMultipleVersions(key, from, to)` returns a range. That is precisely "find the base, then the diffs since" — and, for tombstones, "every invalidation so far".
+
+Splitting collections rather than key-prefixing matters for two reasons. The three have very different sizes and access patterns, and RocksDB keeps per-column-family memtables and block-cache accounting. And the existing code prefix-scans a tracing's buckets (`buildKeyPrefix(tracingId)`), so a non-bucket key sharing that prefix would pollute those scans. Note FossilDB fixes its collection list at startup (`-c skeletons,volumeData,…`), so adding collections is a deployment change, not just a code change.
 
 **Not every version is materialized.** The interval is the main tuning knob, measured by `VolumeVersioningBenchmarkService` (tracingstore, exposed at `POST /tracings/benchmark/volumeVersioning`); candidate policies, in increasing order of sophistication:
 
@@ -1198,7 +1203,7 @@ Per `updateBucketPartial`, in the common case:
 2. Update the segment index (see §7.6 — today this dominates, and it is where the work should go).
 3. If the version is a materialization point, materialize (below). Otherwise nothing.
 
-`invalidateUpdateActionsFromVersion` appends its tombstone. It writes nothing else — which materializations that invalidates is decided at read time, not at write time (§7.5).
+`invalidateUpdateActionsFromVersion` appends its tombstone to `volumeTombstones`, in addition to landing in `annotationUpdates` like any other action. It writes nothing else — which materializations it invalidates is decided at read time, not at write time (§7.5).
 
 ### 7.4 Reading, and materialization
 
@@ -1270,7 +1275,7 @@ Tombstones appended at or before *S* are already reflected in it, which is why t
 
 ```
 read(bucket, X):
-  tombs = tombstones appended at or before X   // one annotation-wide key, cached
+  tombs = GetMultipleVersions(volumeTombstones, annotationId, 0, X)   // cached
   inv   = { t.invalidatedVersion : t ∈ tombs }
   S     = newest materialization ≤ X
   while S exists and ∃ t ∈ tombs with S < t.version ≤ X and t.invalidatedVersion ≤ S:
@@ -1282,7 +1287,7 @@ read(bucket, X):
 
 For bucket C at X = 10: the newest materialization is v7, but the tombstone at v10 names v6 ≤ 7, so v7 is rejected and we backtrack to v1. No tombstone names a version ≤ 1, so v1 is the base. Fold v3, v4, v5, **skip v6**, then fold v8 and v9.
 
-**Tombstones belong in their own annotation-wide key**, not in each bucket's stream. An invalidation is a property of the annotation, and duplicating it per bucket would mean writing to buckets the transaction never touched. It also keeps the algorithm cheap: read a small tombstone list first, decide the base, then fetch only the actions you will actually fold. If tombstones lived in the bucket streams you would have to load every action just to discover which ones to drop.
+**Tombstones live in `volumeTombstones` (§7.2), keyed per annotation** — not in each bucket's stream. An invalidation is a property of the annotation, and duplicating it per bucket would mean writing to buckets the transaction never touched. It also keeps the algorithm cheap: `GetMultipleVersions(volumeTombstones, annotationId, 0, X)` returns the whole tombstone list in one call, so the base is decided before any action is fetched. If tombstones lived in the bucket streams you would have to load every action just to discover which ones to drop.
 
 **Backtracking is the cost, and it is unbounded** — in the worst case a read after an invalidation walks back to version 0. The mitigation is to materialize eagerly straight after applying a tombstone, so the expensive fold is paid once by the invalidating transaction rather than repeatedly by every subsequent reader. That makes invalidation the one case where synchronous materialization is clearly worth it, whatever policy §7.2 settles on for the ordinary path.
 

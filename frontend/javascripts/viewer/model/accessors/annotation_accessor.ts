@@ -12,8 +12,8 @@ import { TreeTypeEnum } from "viewer/constants";
 import type { Tree } from "viewer/model/types/tree_types";
 import type { StoreAnnotation, WebknossosState } from "viewer/store";
 import { sum } from "../helpers/iterator_utils";
-import type { DisabledInfo } from "./disabled_tool_accessor";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
+import type { DisabledInfo } from "./disabled_tool_accessor";
 
 export function mayEditAnnotationProperties(state: WebknossosState) {
   const { owner, restrictions } = state.annotation;
@@ -160,7 +160,9 @@ function _isEditingAnnotationLayerSetDisabled(state: WebknossosState): DisabledI
   };
 }
 
-export const isEditingAnnotationLayerSetDisabled = reuseInstanceOnEquality(_isEditingAnnotationLayerSetDisabled);
+export const isEditingAnnotationLayerSetDisabled = reuseInstanceOnEquality(
+  _isEditingAnnotationLayerSetDisabled,
+);
 
 export function mayEditAnnotationViewConfig(state: WebknossosState) {
   // All users that are allowed to update the annotation have their own view

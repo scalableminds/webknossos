@@ -97,7 +97,7 @@ export function* setupSavingForAnnotationMetadata(
   );
 
   // Listen to rebasing / forwarding finishing actions to reset the annotation and don't diff changes
-  // created due to applying foreign update actions. 
+  // created due to applying foreign update actions.
   const finishedRebaseActionBuffer = buffers.expanding<Action>();
   const finishedRebaseActionChannel = yield* actionChannel(
     ["FINISHED_REBASING", "FINISH_FORWARDING_UPDATE_ACTIONS"],

@@ -10,7 +10,7 @@ import fileLightIcon from "@images/file-light.png";
 import folderThumbnailIcon from "@images/folder-thumbnail.svg";
 import inactiveDatasetThumbnail from "@images/inactive-dataset-thumbnail.svg";
 import type { DatasetUpdater } from "admin/rest_api";
-import { Dropdown, type MenuProps, Space, Table, Tag, Tooltip } from "antd";
+import { App, Dropdown, type MenuProps, Space, Table, Tag, Tooltip } from "antd";
 import type {
   ColumnType,
   FilterValue,
@@ -109,6 +109,7 @@ type ContextMenuProps = {
 
 function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
   const inputRef = useContext(ContextMenuContext);
+  const { modal } = App.useApp();
   const {
     datasets,
     reloadDataset,
@@ -127,6 +128,7 @@ function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
         hideContextMenu,
         datasets,
         reloadDataset,
+        modal,
       });
     } else if (folder != null) {
       menu = generateSettingsForFolder(folder, datasetCollectionContext, true);

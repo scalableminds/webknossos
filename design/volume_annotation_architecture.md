@@ -1155,18 +1155,21 @@ case class UpdateBucketPartialVolumeAction(
 
 Note this breaks the length-based heuristic in `VolumeBucketCompression`, which today infers "already compressed" from `data.length != expectedUncompressedBucketSize`. A runs payload could coincidentally be bucket-sized. Whatever stores these needs an explicit marker rather than a length check.
 
-**`invalidateUpdateActionsFromVersion`** is the tombstone. It marks every action at or after `fromVersion` as skipped, which is how undo (§5.8's `undoTransaction`) and revert-to-version are realised server-side:
+**`invalidateUpdateActionsFromVersion`** is the tombstone, and it is how undo (§5.8's `undoTransaction`) is realised server-side. This action invalidates **the update actions belonging to exactly one version** — read the name as "the update actions *originating from* version V", not "everything from V onwards".
 
 ```scala
 case class InvalidateUpdateActionsFromVersionAction(
     actionTracingId: String,
-    fromVersion: Long,
+    /** The single version whose update actions are invalidated. */
+    invalidatedVersion: Long,
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None
 ) extends VolumeUpdateAction
 ```
 
-Two consequences worth stating up front. The stream stays **append-only** — invalidation is itself an appended action, not a rewrite. And **any materialized bucket at a version ≥ `fromVersion` is now wrong** and must be discarded or ignored, because it folded actions that are no longer valid. How that bookkeeping is stored — a validity range per tracing, or a check against the newest tombstone at read time — is unresolved (§10).
+Single-version is the right granularity because it matches what undo means in §5.7: one transaction is skipped, everything around it still applies. Undoing several transactions appends several tombstones. It also keeps the frontend and backend models identical, so a peer replaying the stream reaches the same state by the same rule.
+
+The stream stays **append-only**: an invalidation is appended, never a rewrite. What it does to materialized buckets that already folded the now-invalid actions is the subject of §7.5.
 
 ### 7.2 Storage layout
 
@@ -1185,17 +1188,17 @@ Splitting collections rather than key-prefixing matters because the two have ver
 
 - every k-th version (simple, predictable, materializes buckets nobody reads),
 - ad hoc on read, then cached (materializes exactly what is wanted, but the first reader pays),
-- a background service (see §7.5) that materializes when there is spare capacity.
+- a background service (see §7.6) that materializes when there is spare capacity.
 
 ### 7.3 Ingestion
 
 Per `updateBucketPartial`, in the common case:
 
 1. Append the runs to `volumeUpdateActions` at the transaction's version. **That is the whole hot path** — no read, no decompress, no fold, no recompress.
-2. Update the segment index (see §7.5 — today this dominates, and it is where the work should go).
+2. Update the segment index (see §7.6 — today this dominates, and it is where the work should go).
 3. If the version is a materialization point, materialize (below). Otherwise nothing.
 
-`invalidateUpdateActionsFromVersion` appends its tombstone and invalidates materializations at or after `fromVersion`.
+`invalidateUpdateActionsFromVersion` appends its tombstone. It writes nothing else — which materializations that invalidates is decided at read time, not at write time (§7.5).
 
 ### 7.4 Reading, and materialization
 
@@ -1233,7 +1236,59 @@ Reading each bucket at version 10:
 
 The read cost therefore depends on how many *touched* versions lie between the base and *X* for that bucket, not on how far the annotation as a whole has advanced. A materialization policy keyed on the global version number would materialize bucket B nine times for no reason; one keyed on per-bucket action count would not.
 
-### 7.5 Performance: the segment index is the real bottleneck
+### 7.5 Invalidation and the folding base
+
+§7.4 glossed over what a tombstone does to the materializations that precede it. Take bucket C, and suppose version 10 carries `invalidateUpdateActionsFromVersion(6)` — invalidating the update actions of version 6, and only those:
+
+```
+                                    version ───▶
+              1    2    3    4    5    6    7    8    9   10
+           ┌────┬────┬────┬────┬────┬────┬────┬────┬────┬────┐
+ bucket C  │ ▣  │    │ ●  │ ●  │ ●  │ ✗  │ ▣! │ ●  │ ●  │ ⊘  │
+           └────┴────┴────┴────┴────┴────┴────┴────┴────┴────┘
+
+  ⊘   invalidateUpdateActionsFromVersion(6), appended at v10
+  ✗   the update actions of v6, now invalidated — v7 onwards are untouched
+  ▣!  materialization that folded v6 and is therefore no longer a usable base
+```
+
+Note what is *not* invalidated: v8 and v9 still apply. Only one version is dropped, so the fold has a hole in it rather than a truncation.
+
+**The semantics that make this tractable.** A tombstone is itself a versioned entry in an append-only stream, so **a read at version X honours exactly the tombstones appended at or before X**. A read at v7 does not see the tombstone at v10, and therefore still yields the pre-undo content — which is what the version history UI asks for when it shows you v7. The v7 materialization is *not* wrong; it is the correct answer to a question nobody stopped asking.
+
+That is the argument against deleting it on invalidation. "Valid" and "usable as a folding base" are different properties, and the second depends on the *read* version: the same v7 entry is a fine base at X = 8 and unusable at X = 10. It therefore cannot be a flag stored on the materialization at all. Deleting would throw away correct, expensive-to-recompute data and break historical reads, to fix a problem that only exists for reads after the tombstone.
+
+**The rule.** Let `inv(X)` be the set of versions invalidated by tombstones appended at or before X. A materialization at version *S* is a usable base for a read at *X* iff every version it folded is still valid at *X* — equivalently, iff no tombstone appended in *(S, X]* names a version at or before *S*:
+
+```
+usable(S, X)  ⟺  ∄ t ∈ tombstones :  S < t.version ≤ X  ∧  t.invalidatedVersion ≤ S
+```
+
+Tombstones appended at or before *S* are already reflected in it, which is why the range starts at *S*.
+
+**The algorithm**, replacing step 1 of §7.4:
+
+```
+read(bucket, X):
+  tombs = tombstones appended at or before X   // one annotation-wide key, cached
+  inv   = { t.invalidatedVersion : t ∈ tombs }
+  S     = newest materialization ≤ X
+  while S exists and ∃ t ∈ tombs with S < t.version ≤ X and t.invalidatedVersion ≤ S:
+      S = newest materialization < S           // backtrack
+  base    = materialization at S, or an empty bucket if none survives
+  actions = GetMultipleVersions(volumeUpdateActions, key(bucket), S+1, X)
+  fold    every action whose version ∉ inv
+```
+
+For bucket C at X = 10: the newest materialization is v7, but the tombstone at v10 names v6 ≤ 7, so v7 is rejected and we backtrack to v1. No tombstone names a version ≤ 1, so v1 is the base. Fold v3, v4, v5, **skip v6**, then fold v8 and v9.
+
+**Tombstones belong in their own annotation-wide key**, not in each bucket's stream. An invalidation is a property of the annotation, and duplicating it per bucket would mean writing to buckets the transaction never touched. It also keeps the algorithm cheap: read a small tombstone list first, decide the base, then fetch only the actions you will actually fold. If tombstones lived in the bucket streams you would have to load every action just to discover which ones to drop.
+
+**Backtracking is the cost, and it is unbounded** — in the worst case a read after an invalidation walks back to version 0. The mitigation is to materialize eagerly straight after applying a tombstone, so the expensive fold is paid once by the invalidating transaction rather than repeatedly by every subsequent reader. That makes invalidation the one case where synchronous materialization is clearly worth it, whatever policy §7.2 settles on for the ordinary path.
+
+**Redo** is the inverse and needs a decision: either append a re-validating action, or treat a tombstone as itself invalidatable by a later tombstone naming *its* version. The second is more uniform — everything is an action, and undo-of-undo is just another tombstone — but it makes `inv(X)` a fold over the tombstone list rather than a set union, since a tombstone may itself be invalid. Unresolved (§10).
+
+### 7.6 Performance: the segment index is the real bottleneck
 
 The benchmark — `VolumeVersioningBenchmarkService` (tracingstore, exposed at `POST /tracings/benchmark/volumeVersioning`) — compares the two storage schemes **in isolation, with no segment index update at all**. That is its central limitation, and it cuts in the diff scheme's favour once corrected — because the cost it omits is the one that dominates in production, and it is shared by both schemes.
 
@@ -1309,8 +1364,8 @@ Not implemented here, but the shape is deliberately compatible:
 - **Checkpoint interval *k*.** Too small → memory and storage overhead; too large → slow replay and slow eviction. Start around 20–50 entries per bucket and tune empirically. Interacts with the undo horizon.
 - **Where does the rasterizer run?** It is a pure function of `(intent, context, reader)`, which makes it a good Web Worker candidate for large strokes. Not needed for correctness; the blocker is giving a worker a cheap read view of resident buckets (`SharedArrayBuffer`, probably).
 - **Coarse mags diverge from re-downsampling the finest mag, permanently.** Not drift between client and server, and not drift between collaborators: every party folds the same ordered per-mag diffs, so everyone agrees (§5.4). But because written-value-wins is order-dependent, the stored coarse mags are a function of *how* a region was edited, and no later pass can reconstruct them from the finest mag. Principle 2 accepts this. If it stops being acceptable, the answer is a background re-derivation job on a schedule — which would first have to settle what "correct" means at coarse mags, a question this doc does not answer. Adopting a data-derivable rule instead would re-couple propagation to bucket residency and reintroduce multi-valued write sets; see §5.4.
-- **How tombstone validity is stored and checked (§7.1).** `invalidateUpdateActionsFromVersion` has to be consulted on every read, and it invalidates materialized buckets at or after its `fromVersion`. Whether that is a per-tracing validity range, a marker checked at read time, or eager deletion of the affected materializations is undecided — and it interacts with the materialization policy, since eager deletion is cheap only if materializations are rare.
-- **Is an over-approximating segment index acceptable to every consumer (§7.5)?** Skipping removal detection turns the current bottleneck into a single append, at the cost of an index that sometimes claims a segment is in a bucket it has left. Consumers must already tolerate a fetched bucket not containing the wanted segment, but that should be verified against each one — mesh generation, statistics aggregation, and the segment list — rather than assumed.
+- **How is redo expressed (§7.5)?** Either a re-validating action, or a tombstone that names another tombstone's version. The second is more uniform but makes the invalidated-version set a fold over the tombstone list rather than a plain union, since a tombstone may itself have been invalidated. The choice also decides whether undo/redo cycles grow the stream without bound.
+- **Is an over-approximating segment index acceptable to every consumer (§7.6)?** Skipping removal detection turns the current bottleneck into a single append, at the cost of an index that sometimes claims a segment is in a bucket it has left. Consumers must already tolerate a fetched bucket not containing the wanted segment, but that should be verified against each one — mesh generation, statistics aggregation, and the segment list — rather than assumed.
 - **Materialization policy (§7.2).** Every k-th version is simplest but wrong-shaped: version numbers are global while bucket streams are sparse, so it materializes untouched buckets repeatedly and under-materializes hot ones. Keying on per-bucket action count is the obvious fix; ad-hoc-on-read and a background service are the other candidates.
 - **Undo across a reload.** The log is currently in-memory. Persisting it (IndexedDB) would let undo survive a refresh, but raises the question of what "undo" means once the backend has already accepted the transaction. Probably out of scope, but worth deciding explicitly rather than by omission.
 

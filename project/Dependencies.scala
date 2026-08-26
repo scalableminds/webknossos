@@ -7,7 +7,7 @@ object Dependencies {
     Seq(
       Resolver.typesafeRepo("releases"),
       "Unidata UCAR" at "https://artifacts.unidata.ucar.edu/content/repositories/unidata-releases/", // ucar deps
-      "SciJava Public" at "https://maven.scijava.org/content/repositories/public/", // cisd deps
+      // "SciJava Public" at "https://maven.scijava.org/content/repositories/public/", // cisd deps
       "webknossos-maven" at "https://static.webknossos.org/maven/" // backup to fetch cisd deps in case SciJava is down
     )
 

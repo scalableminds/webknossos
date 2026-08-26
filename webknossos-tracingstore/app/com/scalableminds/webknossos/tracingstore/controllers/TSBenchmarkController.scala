@@ -47,11 +47,21 @@ class TSBenchmarkController @Inject() (
       bytesPerVoxel: Option[Int],
       runsPerDiff: Option[Int],
       runLength: Option[Int],
-      readRounds: Option[Int]
+      readRounds: Option[Int],
+      cuboidsPerBucket: Option[Int]
   ): Action[AnyContent] = Action.fox { implicit request =>
     log() {
       Fox.successful(authorized(key) {
-        Params.fromQuery(buckets, versions, snapshotInterval, bytesPerVoxel, runsPerDiff, runLength, readRounds) match {
+        Params.fromQuery(
+          buckets,
+          versions,
+          snapshotInterval,
+          bytesPerVoxel,
+          runsPerDiff,
+          runLength,
+          readRounds,
+          cuboidsPerBucket
+        ) match {
           case Left(error)   => BadRequest(Json.obj("error" -> error))
           case Right(params) =>
             // Runs synchronously and can take minutes at larger parameters.

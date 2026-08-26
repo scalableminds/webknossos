@@ -62,18 +62,18 @@ class VolumeVersioningBenchmarkSuite extends AnyWordSpec {
 
   "Benchmark parameters" should {
     "reject a run that would write more than the cap" in {
-      val result = Benchmark.Params.fromQuery(Some(10000), Some(10000), None, None, None, None, None)
+      val result = Benchmark.Params.fromQuery(Some(10000), Some(10000), None, None, None, None, None, None)
       assert(result.isLeft, "an oversized run must be refused")
     }
 
     "reject nonsensical values" in {
-      assert(Benchmark.Params.fromQuery(Some(0), None, None, None, None, None, None).isLeft)
-      assert(Benchmark.Params.fromQuery(None, None, None, Some(3), None, None, None).isLeft, "bytesPerVoxel 3")
-      assert(Benchmark.Params.fromQuery(None, None, None, None, None, Some(99), None).isLeft, "runLength > 32")
+      assert(Benchmark.Params.fromQuery(Some(0), None, None, None, None, None, None, None).isLeft)
+      assert(Benchmark.Params.fromQuery(None, None, None, Some(3), None, None, None, None).isLeft, "bytesPerVoxel 3")
+      assert(Benchmark.Params.fromQuery(None, None, None, None, None, Some(99), None, None).isLeft, "runLength > 32")
     }
 
     "accept defaults" in {
-      val result = Benchmark.Params.fromQuery(None, None, None, None, None, None, None)
+      val result = Benchmark.Params.fromQuery(None, None, None, None, None, None, None, None)
       assert(result.isRight, s"defaults must be valid, got $result")
     }
   }

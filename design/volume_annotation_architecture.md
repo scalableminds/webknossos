@@ -359,7 +359,7 @@ Adding a tool means adding an `EditIntent` variant and one producer case — not
 - **Byte order.** Reinterpreting wider typed arrays as bytes is platform-endian-dependent; a byte array has one unambiguous meaning across a worker or WASM boundary.
 - **Simplicity at the producer.** One byte per voxel is what a thresholded model output looks like anyway, and it spares every tool author the bit-packing convention.
 
-The cost is 8× the memory of a packed bitset — 256 KB rather than 32 KB for a `512×512` patch — and it is paid only transiently, by tools that fire once per click rather than once per pointer-move. Packing it is a straightforward later optimization (§10.2) that touches only the producers and the mask-to-write-set conversion.
+The cost is 8× the memory of a packed bitset — 256 KB rather than 32 KB for a `512×512` patch — and it is paid only transiently, by tools that fire once per click rather than once per pointer-move. Packing it is a straightforward later optimization (§11.2) that touches only the producers and the mask-to-write-set conversion.
 
 #### Two producers, one output
 
@@ -384,7 +384,7 @@ interface LoadingVoxelReader {
 }
 ```
 
-Flood fill cannot be rasterized the way a brush can: its region is discovered by walking the data, the walk crosses bucket boundaries, and buckets it reaches may not be loaded, so it must `await`. Putting that in the rasterizer would cost the properties that make the rasterizer worth having — synchronous, pure, side-effect-free, and therefore a Web Worker candidate (§10).
+Flood fill cannot be rasterized the way a brush can: its region is discovered by walking the data, the walk crosses bucket boundaries, and buckets it reaches may not be loaded, so it must `await`. Putting that in the rasterizer would cost the properties that make the rasterizer worth having — synchronous, pure, side-effect-free, and therefore a Web Worker candidate (§11).
 
 **The resolver produces a write set directly; there is no intermediate shape.** For these tools, resolution and rasterization are the same step — once the walk finishes there is nothing left to convert. A traversal naturally works bucket by bucket (load a bucket, mark voxels, move on), which is exactly the shape of a `VoxelWriteSet`, so it can write into one as it goes:
 
@@ -412,7 +412,7 @@ Note `out.has(v)` doubles as the **visited** set. A flood fill only enqueues vox
 
 **Why not resolve to a dense `MaskShape` first.** Because a fill with `bounds: null` has no known extent, so a dense box-shaped mask would mean either allocating the worst case up front (unbounded — the layer's maximum extent), computing the bbox by walking twice, or reallocating as the frontier grows. All of that to then convert into per-bucket masks, which is what `VoxelWriteSet` already is. Per-bucket `VoxelMask`s allocate 4 KB only for buckets actually touched, which is also what production does today.
 
-That overhead is negligible in context: 4 KB of mask against the 256 KB of bucket data the fill had to load in order to visit that bucket at all — about 1.5%. The data is the real cost, which is why bounding a fill is still an open question (§9) and not something this structure solves.
+That overhead is negligible in context: 4 KB of mask against the 256 KB of bucket data the fill had to load in order to visit that bucket at all — about 1.5%. The data is the real cost, which is why bounding a fill is still an open question (§10) and not something this structure solves.
 
 **The transaction opens after resolution, not before.** A flood fill click resolves first — potentially over hundreds of milliseconds and many fetches — and only then opens a `VolumeTransaction`, hands it the finished write set via `recordAll`, propagates and commits, all synchronously. This keeps an invariant worth having: **a transaction never spans an `await`.** Sequence numbers stay meaningful, no other transaction can interleave with a half-built one, and the commit path is the same for every tool.
 
@@ -420,7 +420,7 @@ The cost is that a long resolution can be based on data that changed underneath 
 
 `sliceInterpolation` resolves the same way, reading the two reference sections and synthesizing masks for the intermediate ones. Quick-select and ML tools skip resolution entirely by emitting `mask` directly.
 
-Note this leaves §9's flood-fill open question exactly where it was: resolution makes the *awaiting* well-structured, but it does not answer how many buckets a fill may pull in, or what to show while it does.
+Note this leaves §10's flood-fill open question exactly where it was: resolution makes the *awaiting* well-structured, but it does not answer how many buckets a fill may pull in, or what to show while it does.
 
 ### 5.2 `VolumeTransaction` — the write set
 
@@ -842,7 +842,7 @@ interface BucketDiff {
 interface TransactionDiff {
   id: TransactionId;
   layerId: string;
-  /** Monotonic per client. Becomes the merge key in collaborative mode (§7). */
+  /** Monotonic per client. Becomes the merge key in collaborative mode (§8). */
   sequence: number;
   timestamp: number;
   toolName: string;                       // diagnostics only, not load-bearing
@@ -1007,12 +1007,12 @@ Encoding notes:
 The real comparison is against three specific alternatives:
 
 - **A dense `32³` array of segment IDs, gzipped.** This is the one runs clearly beat, and the reason is materialization, not size: producing it means allocating 256 KB per touched bucket, including the ~520 non-resident finest-mag buckets a mag-16 stroke writes to (§5.4). That is ~134 MB to describe one stroke, and it breaks principle 4 outright.
-- **A `32³` *bitmask* plus one value, gzipped.** This one is genuinely competitive and does *not* require materialization — the mask is 4 KB, we already build one (§4), and a sparse mask gzips down to very little. The trade is fixed versus proportional cost: a bucket the stroke merely grazes costs 5 runs (20 B) but a full 4 KB mask, while a densely-written bucket costs a fixed 4 KB as a mask but up to 8 KB as runs. So neither wins universally — which is precisely why the box/bitmask payload is kept on the table in §10.1 rather than dismissed.
+- **A `32³` *bitmask* plus one value, gzipped.** This one is genuinely competitive and does *not* require materialization — the mask is 4 KB, we already build one (§4), and a sparse mask gzips down to very little. The trade is fixed versus proportional cost: a bucket the stroke merely grazes costs 5 runs (20 B) but a full 4 KB mask, while a densely-written bucket costs a fixed 4 KB as a mask but up to 8 KB as runs. So neither wins universally — which is precisely why the box/bitmask payload is kept on the table in §11.1 rather than dismissed.
 - **Compressing the in-memory representation.** Also viable, and not hypothetical: `frontend/javascripts/viewer/model/bucket_data_handling/bucket_snapshot.ts` does exactly this today, gzipping bucket clones for undo snapshots. The cost is not CPU but **asynchrony** — encode and decode become promises, and that file's comments document the resulting race conditions and redundant-compression caveats. Runs are small enough to keep uncompressed, so `rebuild` (§5.7) stays a tight synchronous fold and log entries stay directly inspectable.
 
 What is left, once the size argument is discarded, is narrow but solid: runs are the rasterizer's **native output** (it emits scanline spans, so no conversion step exists in either direction), they need no materialization, they stay synchronous in memory, and both client and backend **apply them as range writes** rather than decompressing a blob and scattering per voxel.
-- **Runs are runs along x**, because the flat index is `x + y·32 + z·1024`. XY and XZ strokes both scan along x and encode well. A YZ stroke (x constant) is the one bad case: y steps by 32 and z by 1024, so every run degenerates to length 1 — a radius-10 disk becomes ~314 runs instead of ~20. See §10 if that turns out to matter.
-- **Block fills encode compactly**, which is part of what makes coarse-mag editing viable: the upsample of one mag-16 voxel into a finest-mag bucket is a solid `16×16×16` block, i.e. 256 runs of length 16 — about 1 KB against 256 KB for the full bucket. Note runs cannot merge across rows (§4), so a *fully* written bucket costs 1024 runs (4 KB) rather than one; §10.1 is the lever if that ever matters.
+- **Runs are runs along x**, because the flat index is `x + y·32 + z·1024`. XY and XZ strokes both scan along x and encode well. A YZ stroke (x constant) is the one bad case: y steps by 32 and z by 1024, so every run degenerates to length 1 — a radius-10 disk becomes ~314 runs instead of ~20. See §11 if that turns out to matter.
+- **Block fills encode compactly**, which is part of what makes coarse-mag editing viable: the upsample of one mag-16 voxel into a finest-mag bucket is a solid `16×16×16` block, i.e. 256 runs of length 16 — about 1 KB against 256 KB for the full bucket. Note runs cannot merge across rows (§4), so a *fully* written bucket costs 1024 runs (4 KB) rather than one; §11.1 is the lever if that ever matters.
 - **base64 is a transport artifact, not part of the format.** `runs` is a `Uint8Array` everywhere it is built, stored in the log, and applied. It becomes a string only at the JSON boundary, because the update stream is a heterogeneous array of JSON actions and JSON cannot carry binary. Apply it last, after compression, as `wkstore_adapter.ts` does today (LZ4 in a worker, then base64) — the 33% expansion then lands on an already-compressed payload rather than on the raw bytes. If the update stream ever moves to a binary framing (multipart, CBOR, protobuf), the base64 step disappears and nothing else about the format changes.
 - **One action per touched bucket; one versioned group per transaction.** This gives the backend (and later, other clients) the transaction boundary explicitly instead of making it infer grouping from timing.
 - **Ordering and idempotency.** Transactions are submitted in `sequence` order and are idempotent on retry, so a reconnect can safely resend the tail of the queue.
@@ -1130,7 +1130,146 @@ The user paints stroke `T1` (segment 5) over a region, then stroke `T2` (segment
 
 ---
 
-## 7. Toward Collaborative Editing
+## 7. Backend Changes
+
+The frontend design above implies a matching change in the tracingstore. This section covers what that is; it is deliberately less settled than §5, and the open items are called out as such.
+
+### 7.1 Two new update actions
+
+**`updateBucketPartial`** replaces `updateBucket` on the write path. It carries runs instead of a whole bucket:
+
+```scala
+case class UpdateBucketPartialVolumeAction(
+    actionTracingId: String,
+    position: Vec3Int,                 // bucket position
+    mag: Vec3Int,
+    additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+    /** base64 of the binary run encoding (§5.8). Deliberately *not* LZ4'd —
+      * RLE is already a compression, and a few hundred (start, length) pairs
+      * give LZ4 almost nothing to work with. */
+    runs: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None
+) extends BucketMutatingVolumeUpdateAction
+```
+
+Note this breaks the length-based heuristic in `VolumeBucketCompression`, which today infers "already compressed" from `data.length != expectedUncompressedBucketSize`. A runs payload could coincidentally be bucket-sized. Whatever stores these needs an explicit marker rather than a length check.
+
+**`invalidateUpdateActionsFromVersion`** is the tombstone. It marks every action at or after `fromVersion` as skipped, which is how undo (§5.8's `undoTransaction`) and revert-to-version are realised server-side:
+
+```scala
+case class InvalidateUpdateActionsFromVersionAction(
+    actionTracingId: String,
+    fromVersion: Long,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None
+) extends VolumeUpdateAction
+```
+
+Two consequences worth stating up front. The stream stays **append-only** — invalidation is itself an appended action, not a rewrite. And **any materialized bucket at a version ≥ `fromVersion` is now wrong** and must be discarded or ignored, because it folded actions that are no longer valid. How that bookkeeping is stored — a validity range per tracing, or a check against the newest tombstone at read time — is unresolved (§10).
+
+### 7.2 Storage layout
+
+Two FossilDB collections, split by lifecycle:
+
+| collection | key | value | written |
+|---|---|---|---|
+| `volumeUpdateActions` | per bucket | the runs of one transaction | every version that touches the bucket |
+| `volumeData` | per bucket | full LZ4-compressed bucket | only at *materialized* versions |
+
+Both are versioned by FossilDB, and both rely on the same primitive: `Get(key, version)` returns the newest entry at or below `version`, and `GetMultipleVersions(key, from, to)` returns a range. That is precisely "find the base, then the diffs since".
+
+Splitting collections rather than key-prefixing matters because the two have very different sizes and access patterns, and RocksDB keeps per-column-family memtables and block cache accounting. Note FossilDB fixes its collection list at startup (`-c skeletons,volumeData,…`), so adding one is a deployment change, not just a code change.
+
+**Not every version is materialized.** The interval is the main tuning knob, measured by `VolumeVersioningBenchmarkService` (tracingstore, exposed at `POST /tracings/benchmark/volumeVersioning`); candidate policies, in increasing order of sophistication:
+
+- every k-th version (simple, predictable, materializes buckets nobody reads),
+- ad hoc on read, then cached (materializes exactly what is wanted, but the first reader pays),
+- a background service (see §7.5) that materializes when there is spare capacity.
+
+### 7.3 Ingestion
+
+Per `updateBucketPartial`, in the common case:
+
+1. Append the runs to `volumeUpdateActions` at the transaction's version. **That is the whole hot path** — no read, no decompress, no fold, no recompress.
+2. Update the segment index (see §7.5 — today this dominates, and it is where the work should go).
+3. If the version is a materialization point, materialize (below). Otherwise nothing.
+
+`invalidateUpdateActionsFromVersion` appends its tombstone and invalidates materializations at or after `fromVersion`.
+
+### 7.4 Reading, and materialization
+
+Reading bucket *B* at version *X*:
+
+1. `Get(volumeData, key(B), X)` → the newest materialized bucket at or below *X*, at some version *S*. Decompress it.
+2. `GetMultipleVersions(volumeUpdateActions, key(B), S+1, X)` → every action since.
+3. Drop actions covered by a tombstone, then fold the remaining runs onto the base.
+
+Materializing at version *X* is exactly the same procedure followed by an LZ4 compress and a `Put` into `volumeData`. It is not free — the benchmark above measures it at 25–52% of ingestion time (interval 10 to 50) when it runs synchronously every k-th version, which is the main argument for moving it off the write path.
+
+**Versions are sparse, per bucket.** This is the part that trips people up: an update action touches only the buckets that transaction actually edited, so bucket version streams advance independently. One bucket can sit at version 1 while its neighbour is at 500.
+
+```
+                                    version ───▶
+              1    2    3    4    5    6    7    8    9   10
+           ┌────┬────┬────┬────┬────┬────┬────┬────┬────┬────┐
+ bucket A  │ ▣  │ ●  │    │ ●  │ ▣  │    │    │ ●  │    │ ▣  │
+           ├────┼────┼────┼────┼────┼────┼────┼────┼────┼────┤
+ bucket B  │ ▣  │    │    │    │    │    │    │    │    │    │
+           ├────┼────┼────┼────┼────┼────┼────┼────┼────┼────┤
+ bucket C  │ ▣  │    │ ●  │ ●  │ ●  │ ●  │ ▣  │ ●  │ ●  │    │
+           └────┴────┴────┴────┴────┴────┴────┴────┴────┴────┘
+
+  ●  updateBucketPartial touched this bucket at this version
+  ▣  materialized bucket stored in `volumeData` at this version
+     blank — this bucket was not touched at this version
+```
+
+Reading each bucket at version 10:
+
+- **A** — newest ▣ ≤ 10 is at v10. Zero actions to fold; one `Get`, one decompress.
+- **B** — newest ▣ ≤ 10 is at v1, and there are no actions after it. Also zero folds. A bucket nobody has edited costs the same as under today's scheme, however old the annotation gets.
+- **C** — newest ▣ ≤ 10 is at v7, so fold the actions at v8 and v9. Note v10 is *not* in C's stream at all: the range query returns two entries, not three.
+
+The read cost therefore depends on how many *touched* versions lie between the base and *X* for that bucket, not on how far the annotation as a whole has advanced. A materialization policy keyed on the global version number would materialize bucket B nine times for no reason; one keyed on per-bucket action count would not.
+
+### 7.5 Performance: the segment index is the real bottleneck
+
+The benchmark — `VolumeVersioningBenchmarkService` (tracingstore, exposed at `POST /tracings/benchmark/volumeVersioning`) — compares the two storage schemes **in isolation, with no segment index update at all**. That is its central limitation, and it cuts in the diff scheme's favour once corrected — because the cost it omits is the one that dominates in production, and it is shared by both schemes.
+
+Today `VolumeSegmentIndexService.updateFromBucket` does the following per updated bucket:
+
+1. decompress the new bucket bytes,
+2. **read the previous bucket** (an extra fetch),
+3. `collectSegmentIds` over both — two full 32³ scans,
+4. `additions = new \ prev`, `removals = prev \ new`,
+5. write an index entry per addition and per removal.
+
+So the current write path already pays a read, two full-bucket scans and a set diff per bucket. Against that, the difference between appending 1.2 KB of runs and writing a 5.5 KB compressed bucket is small. **The relative penalty it measures (~1.4× ingestion, with realistic LZ4-compressible content) should shrink substantially once this shared cost is included** — though that needs measuring, not assuming.
+
+#### Decoupling, in three steps
+
+1. **Update the index only when materializing.** The index then lags the newest version by at most one materialization interval, which is acceptable for the things that read it.
+2. **Update it only when its contents are needed.** Materialization stops being the trigger; the first reader of the index for a region pays for bringing it up to date.
+3. **A background service** that consumes pending work when the tracingstore has spare capacity, so neither writers nor readers pay in the common case.
+
+Each step is independently shippable, and each strictly reduces work on the hot path.
+
+#### Additions are free; removals are the expensive half
+
+There is a sharper optimization available, and it is specific to the diff scheme.
+
+An `updateBucketPartial` is **single-valued** — one transaction writes one segment id (§4). So the set of possible *additions* to the segment index is known from the action itself, with **no read and no scan**: it is that one id. Steps 1–3 above exist entirely to compute *removals*.
+
+Removals require knowing that a segment id no longer appears anywhere in the bucket, which genuinely needs the full before-and-after. But **completely erasing a segment from a bucket is rare** — most strokes overwrite part of a segment, leaving some of it behind. So the proposal is to **skip the removal computation entirely** and update the index from the action's value alone.
+
+The resulting error is one-sided and benign: the index becomes an **over-approximation**, claiming a segment is present in a bucket it has since vanished from. It never *misses* a bucket that does contain the segment. Consumers already have to tolerate a bucket that turns out not to contain the segment they were looking for; the cost is a wasted bucket fetch, not a wrong answer. And code that scans a segment exhaustively anyway — segment statistics aggregation being the obvious case — can prune the stale entry when it notices, so the index self-heals where it matters.
+
+That turns the current bottleneck into an append of one `(segmentId, bucket)` pair per action. Whether the over-approximation is acceptable for every consumer of the index is the thing to check before building it (§10).
+
+---
+
+## 8. Toward Collaborative Editing
 
 Not implemented here, but the shape is deliberately compatible:
 
@@ -1143,7 +1282,7 @@ Not implemented here, but the shape is deliberately compatible:
 
 ---
 
-## 8. Rejected Alternatives
+## 9. Rejected Alternatives
 
 | Alternative | Why not |
 |---|---|
@@ -1162,7 +1301,7 @@ Not implemented here, but the shape is deliberately compatible:
 
 ---
 
-## 9. Open Questions
+## 10. Open Questions
 
 - **Flood fill and unloaded data.** Fill needs the connected region resident to be correct. Options: block on fetches with a progress indicator, fill progressively as buckets arrive, or bound the fill to a region and refuse beyond it. Needs a UX decision — this is the one tool where "diffs for non-resident buckets" does not save us, because the *region itself* depends on data we do not have.
 - **Interaction with mappings / agglomerates.** Proofreading edits operate on mapped IDs, and `EditContext.activeSegmentId` is then an agglomerate ID rather than a stored one. Where the mapping is resolved (before rasterization? at apply time?) is unresolved and deserves its own section.
@@ -1170,15 +1309,18 @@ Not implemented here, but the shape is deliberately compatible:
 - **Checkpoint interval *k*.** Too small → memory and storage overhead; too large → slow replay and slow eviction. Start around 20–50 entries per bucket and tune empirically. Interacts with the undo horizon.
 - **Where does the rasterizer run?** It is a pure function of `(intent, context, reader)`, which makes it a good Web Worker candidate for large strokes. Not needed for correctness; the blocker is giving a worker a cheap read view of resident buckets (`SharedArrayBuffer`, probably).
 - **Coarse mags diverge from re-downsampling the finest mag, permanently.** Not drift between client and server, and not drift between collaborators: every party folds the same ordered per-mag diffs, so everyone agrees (§5.4). But because written-value-wins is order-dependent, the stored coarse mags are a function of *how* a region was edited, and no later pass can reconstruct them from the finest mag. Principle 2 accepts this. If it stops being acceptable, the answer is a background re-derivation job on a schedule — which would first have to settle what "correct" means at coarse mags, a question this doc does not answer. Adopting a data-derivable rule instead would re-couple propagation to bucket residency and reintroduce multi-valued write sets; see §5.4.
+- **How tombstone validity is stored and checked (§7.1).** `invalidateUpdateActionsFromVersion` has to be consulted on every read, and it invalidates materialized buckets at or after its `fromVersion`. Whether that is a per-tracing validity range, a marker checked at read time, or eager deletion of the affected materializations is undecided — and it interacts with the materialization policy, since eager deletion is cheap only if materializations are rare.
+- **Is an over-approximating segment index acceptable to every consumer (§7.5)?** Skipping removal detection turns the current bottleneck into a single append, at the cost of an index that sometimes claims a segment is in a bucket it has left. Consumers must already tolerate a fetched bucket not containing the wanted segment, but that should be verified against each one — mesh generation, statistics aggregation, and the segment list — rather than assumed.
+- **Materialization policy (§7.2).** Every k-th version is simplest but wrong-shaped: version numbers are global while bucket streams are sparse, so it materializes untouched buckets repeatedly and under-materializes hot ones. Keying on per-bucket action count is the obvious fix; ad-hoc-on-read and a background service are the other candidates.
 - **Undo across a reload.** The log is currently in-memory. Persisting it (IndexedDB) would let undo survive a refresh, but raises the question of what "undo" means once the backend has already accepted the transaction. Probably out of scope, but worth deciding explicitly rather than by omission.
 
 ---
 
-## 10. Potential Performance Improvements
+## 11. Potential Performance Improvements
 
 Deliberately out of the baseline design. Each is a local change behind an existing interface, and none should be built before the corresponding cost has been measured.
 
-### 10.1 Sub-box + bitmask payload for YZ strokes and block fills
+### 11.1 Sub-box + bitmask payload for YZ strokes and block fills
 
 The run encoding (§5.8) has one bad shape and one wasteful one. A YZ-plane stroke produces only length-1 runs, because x — the fast axis — is constant in that plane. And an upsampled block fill produces hundreds of short runs describing what is really just a box.
 
@@ -1198,7 +1340,7 @@ Measure first. The transport is compressed, and 314 near-identical records with 
 
 Note this does not help the CPU side: filling the mask for a YZ stroke is bit-at-a-time, because `markRun`'s word-fill only applies along x (§4). For a brush dab that is a few hundred OR operations — negligible, and O(voxels) either way.
 
-### 10.2 Pack `MaskShape.selected` into a bitset
+### 11.2 Pack `MaskShape.selected` into a bitset
 
 `MaskShape` carries one byte per voxel (§5.1), which is 8× a packed bitset — 256 KB rather than 32 KB for a `512×512` patch, and 16 MB rather than 2 MB for a `256³` volume patch. Simplicity was chosen over density because the format is an interchange boundary: byte arrays impose no alignment constraint on the producer, have unambiguous byte order across worker and WASM boundaries, and match what a thresholded model output already looks like.
 
@@ -1209,6 +1351,6 @@ Packing it is a contained change — the producers, and the loop that converts a
 
 Worth doing when a tool starts producing large 3D patches. For the 2D patches quick-select emits today, the absolute numbers are small and transient — the mask is discarded as soon as it becomes a write set.
 
-### 10.3 Others, tracked in §9
+### 11.3 Others, tracked in §10
 
-Two further performance items are open questions rather than designed improvements, and are listed in §9: keeping the upsample fully symbolic to flatten the commit-time spike on coarse-mag strokes, and moving the rasterizer into a Web Worker.
+Two further performance items are open questions rather than designed improvements, and are listed in §10: keeping the upsample fully symbolic to flatten the commit-time spike on coarse-mag strokes, and moving the rasterizer into a Web Worker.

@@ -400,11 +400,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           <>
             <Divider />
             <Row justify="center" align="middle">
-              <FastTooltip title={this.props.changeAnnotationLayerSet.explanation}>
+              <FastTooltip title={this.props.changeLayerSetDisabledInfo.explanation}>
                 <Button
                   onClick={this.showAddVolumeLayerModal}
                   icon={<PlusOutlined />}
-                  disabled={this.props.changeAnnotationLayerSet.isDisabled}
+                  disabled={this.props.changeLayerSetDisabledInfo.isDisabled}
                 >
                   Add Volume Annotation Layer
                 </Button>
@@ -415,14 +415,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
         {this.props.isUpdatingCurrentlyAllowed && canBeMadeHybrid ? (
           <Row justify="center" align="middle">
-            <FastTooltip title={this.props.changeAnnotationLayerSet.explanation}>
+            <FastTooltip title={this.props.changeLayerSetDisabledInfo.explanation}>
               <Button
                 onClick={this.addSkeletonAnnotationLayer}
                 style={{
                   marginTop: 10,
                 }}
                 icon={<PlusOutlined />}
-                disabled={this.props.changeAnnotationLayerSet.isDisabled}
+                disabled={this.props.changeLayerSetDisabledInfo.isDisabled}
               >
                 Add Skeleton Annotation Layer
               </Button>
@@ -468,7 +468,7 @@ const mapStateToProps = (state: WebknossosState) => ({
   // the whole annotation would re-render the entire settings panel on every
   // skeleton/volume mutation (e.g., each placed node or brush stroke).
   isUpdatingCurrentlyAllowed: state.annotation.isUpdatingCurrentlyAllowed,
-  changeAnnotationLayerSet: isEditingAnnotationLayerSetDisabled(state),
+  changeLayerSetDisabledInfo: isEditingAnnotationLayerSetDisabled(state),
   annotationType: state.annotation.annotationType,
   hasSkeletonLayer: state.annotation.skeleton != null,
   controlMode: state.temporaryConfiguration.controlMode,

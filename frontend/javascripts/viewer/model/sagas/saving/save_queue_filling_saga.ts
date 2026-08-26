@@ -61,6 +61,7 @@ export function* setupSavingForAnnotation(
       ...ViewModeSaveRelevantActions,
       ...SkeletonTracingSaveRelevantActions,
     ]);
+
     const shouldDiff = yield* select(mayAddToSaveQueue);
     if (!shouldDiff) {
       // Note that we completely ignore changes if adding to save queue

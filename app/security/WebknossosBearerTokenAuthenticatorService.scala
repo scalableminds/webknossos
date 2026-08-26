@@ -36,7 +36,7 @@ class WebknossosBearerTokenAuthenticatorService(
   val dataStoreExpiry: FiniteDuration = conf.Silhouette.TokenAuthenticator.dataStoreExpiry
   private val jobExpiry: FiniteDuration = conf.Silhouette.TokenAuthenticator.jobExpiry
 
-  def create(loginInfo: LoginInfo, tokenType: TokenType): Future[BearerTokenAuthenticator] = {
+  def create(userId: ObjectId, tokenType: TokenType): Future[BearerTokenAuthenticator] = {
     val expiry: FiniteDuration = tokenType match {
       case TokenType.Authentication => settings.authenticatorExpiry
       case TokenType.ResetPassword  => resetPasswordExpiry
@@ -47,15 +47,18 @@ class WebknossosBearerTokenAuthenticatorService(
     idGenerator.generate.map { id =>
       BearerTokenAuthenticator(
         id = id,
-        loginInfo = loginInfo,
+        loginInfo = loginInfoFromUserId(userId),
         lastUsedDateTime = clock.now,
         expirationDateTime = Instant.in(expiry).toZonedDateTime,
         idleTimeout = settings.authenticatorIdleTimeout
       )
     }.recover { case e =>
-      throw new AuthenticatorCreationException(CreateError.format(ID, loginInfo), Some(e))
+      throw new AuthenticatorCreationException(CreateError.format(ID, loginInfoFromUserId(userId)), Some(e))
     }
   }
+
+  private def loginInfoFromUserId(userId: ObjectId) =
+    LoginInfo("credentials", userId.toString)
 
   def init(authenticator: BearerTokenAuthenticator, tokenType: TokenType, deleteOld: Boolean): Future[String] =
     repository
@@ -68,14 +71,14 @@ class WebknossosBearerTokenAuthenticatorService(
       }
 
   def createAndInitDataStoreTokenForUser(user: User): Fox[String] =
-    Fox.fromFuture(createAndInit(user.loginInfo, TokenType.DataStore, deleteOld = false))
+    Fox.fromFuture(createAndInit(user._id, TokenType.DataStore, deleteOld = false))
 
   def createAndInitJobTokenForUser(user: User): Fox[String] =
-    Fox.fromFuture(createAndInit(user.loginInfo, TokenType.Job, deleteOld = false))
+    Fox.fromFuture(createAndInit(user._id, TokenType.Job, deleteOld = false))
 
-  def createAndInit(loginInfo: LoginInfo, tokenType: TokenType, deleteOld: Boolean): Future[String] =
+  def createAndInit(userId: ObjectId, tokenType: TokenType, deleteOld: Boolean): Future[String] =
     for {
-      tokenAuthenticator <- create(loginInfo, tokenType)
+      tokenAuthenticator <- create(userId, tokenType)
       tokenId <- init(tokenAuthenticator, tokenType, deleteOld)
     } yield tokenId
 

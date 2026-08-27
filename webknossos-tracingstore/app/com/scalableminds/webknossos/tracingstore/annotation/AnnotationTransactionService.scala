@@ -207,17 +207,19 @@ class AnnotationTransactionService @Inject() (
       ec: ExecutionContext,
       tc: TokenContext,
       stats: UpdateTimingStats = new UpdateTimingStats
-  ): Fox[Long] = {
-    stats.recordRequestShape(updateGroups)
-    if (updateGroups.forall(_.transactionGroupCount == 1)) {
-      commitUpdates(annotationId, updateGroups)
-    } else {
-      updateGroups.foldLeft(annotationService.currentMaterializableVersion(annotationId)) {
-        (currentCommittedVersionFox, updateGroup) =>
-          handleUpdateGroupOfTransaction(annotationId, currentCommittedVersionFox, updateGroup)
+  ): Fox[Long] = for {
+    _ <- handledGroupIdStore.checkHealth
+    _ = stats.recordRequestShape(updateGroups)
+    newVersion <-
+      if (updateGroups.forall(_.transactionGroupCount == 1)) {
+        commitUpdates(annotationId, updateGroups)
+      } else {
+        updateGroups.foldLeft(annotationService.currentMaterializableVersion(annotationId)) {
+          (currentCommittedVersionFox, updateGroup) =>
+            handleUpdateGroupOfTransaction(annotationId, currentCommittedVersionFox, updateGroup)
+        }
       }
-    }
-  }
+  } yield newVersion
 
   // Perform version check and commit the passed updates
   private def commitUpdates(annotationId: ObjectId, updateGroups: List[UpdateActionGroup])(using

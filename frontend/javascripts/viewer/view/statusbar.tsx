@@ -460,44 +460,56 @@ function Statusbar() {
   // popover menu as soon as they don't fit anymore, so that all other elements
   // remain reachable.
   const containerRef = useRef<HTMLSpanElement>(null);
-  const shortcutsSlotRef = useRef<HTMLSpanElement>(null);
+  const leftRef = useRef<HTMLSpanElement>(null);
+  const infosRef = useRef<HTMLSpanElement>(null);
+  const rightRef = useRef<HTMLSpanElement>(null);
   const measureRef = useRef<HTMLSpanElement>(null);
   const [isShortcutsCollapsed, setIsShortcutsCollapsed] = useState(false);
 
   useLayoutEffect(() => {
     const container = containerRef.current;
-    const shortcutsSlot = shortcutsSlotRef.current;
+    const left = leftRef.current;
+    const infos = infosRef.current;
+    const right = rightRef.current;
     const measurer = measureRef.current;
-    if (container == null || shortcutsSlot == null || measurer == null) {
+    if (container == null || left == null || infos == null || right == null || measurer == null) {
       return;
     }
 
     const recompute = () => {
-      // measurer always contains the full (non-collapsed) shortcuts info so that
-      // the required width can be determined even while it is currently collapsed.
-      const restWidth = container.scrollWidth - shortcutsSlot.offsetWidth;
-      const neededWidth = restWidth + measurer.offsetWidth;
+      // Each group's own (margin-excluding) offsetWidth is summed up here, rather than
+      // e.g. deriving it from container.scrollWidth minus the shortcuts width. That's
+      // because Infos is right-aligned via `margin-left: auto`, which always expands to
+      // fill any free space -- so container.scrollWidth would equal clientWidth whenever
+      // there's no overflow, regardless of whether the shortcuts are actually collapsed.
+      // That would make it impossible to detect that there's enough room to re-expand
+      // them once collapsed. measurer always contains the full (non-collapsed) shortcuts
+      // info so that the required width can be determined even while collapsed.
+      const neededWidth =
+        left.offsetWidth + measurer.offsetWidth + infos.offsetWidth + right.offsetWidth;
       setIsShortcutsCollapsed(neededWidth > container.clientWidth);
     };
     recompute();
 
     const resizeObserver = new ResizeObserver(recompute);
     resizeObserver.observe(container);
-    resizeObserver.observe(shortcutsSlot);
+    resizeObserver.observe(infos);
     resizeObserver.observe(measurer);
     return () => resizeObserver.disconnect();
   }, []);
 
   return (
     <span className="statusbar" ref={containerRef}>
-      <BorderToggleButton side="left" inFooter />
-      <span ref={shortcutsSlotRef} style={{ display: "inline-flex" }}>
-        {isShortcutsCollapsed ? <ShortcutsOverflowMenu /> : <ShortcutsInfo />}
+      <span ref={leftRef} style={{ display: "inline-flex" }}>
+        <BorderToggleButton side="left" inFooter />
       </span>
-      <span style={{ display: "inline-flex", marginLeft: "auto" }}>
+      {isShortcutsCollapsed ? <ShortcutsOverflowMenu /> : <ShortcutsInfo />}
+      <span ref={infosRef} style={{ display: "inline-flex", marginLeft: "auto" }}>
         <Infos />
       </span>
-      <BorderToggleButton side="right" inFooter />
+      <span ref={rightRef} style={{ display: "inline-flex" }}>
+        <BorderToggleButton side="right" inFooter />
+      </span>
       <span ref={measureRef} className="statusbar-measurer" aria-hidden="true">
         <ShortcutsInfo />
       </span>

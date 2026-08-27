@@ -283,8 +283,7 @@ describe("DType Dataset Rendering", () => {
           // BigInt. The hoveredSegmentId action's value is stringified here and
           // turned back into a BigInt inside the browser context right before dispatching.
           const serializableActions = actions.map((action) =>
-            action.type === "UPDATE_TEMPORARY_SETTING" &&
-            action.propertyName === "hoveredSegmentId"
+            action.type === "UPDATE_TEMPORARY_SETTING" && action.propertyName === "hoveredSegmentId"
               ? { ...action, value: action.value?.toString() ?? null }
               : action,
           );

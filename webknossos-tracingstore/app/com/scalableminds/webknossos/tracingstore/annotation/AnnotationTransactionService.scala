@@ -176,9 +176,10 @@ class AnnotationTransactionService @Inject() (
         actions = allActionGroups.flatMap(_.actions),
         stats = lastActionGroup.stats, // the latest stats do count
         info = lastActionGroup.info, // frontend sets this identically for all groups of transaction
-        transactionId = f"${lastActionGroup.transactionId}-concatenated",
+        transactionId = lastActionGroup.transactionId, // needed for correct handledGroup lookup in case of retry
         transactionGroupCount = 1,
-        transactionGroupIndex = 0
+        transactionGroupIndex =
+          lastActionGroup.transactionGroupIndex // needed for correct handledGroup lookup in case of retry
       )
     }
 

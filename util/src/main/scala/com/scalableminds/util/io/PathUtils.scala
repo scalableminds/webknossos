@@ -160,7 +160,7 @@ object PathUtils extends LazyLogging {
   def findCommonRootDirectory(paths: List[Path], boundaryDirNames: List[String]): Path = {
     val longestCommonPrefix = commonPrefix(paths)
     val truncatedAtLastBoundary = cutOffPathAtLastOccurrenceOf(longestCommonPrefix, boundaryDirNames)
-    removeSingleFileNameFromPrefix(truncatedAtLastBoundary, paths.map(_.getFileName.toString))
+    removeSingleFileNameFromPrefix(truncatedAtLastBoundary, paths)
   }
 
   // Cuts path off right before the last element that exactly matches a name in boundaryDirNames (path
@@ -185,16 +185,12 @@ object PathUtils extends LazyLogging {
     }
   }
 
-  // Strips prefix's last name if it is in fact fileNames' one lone entry (i.e. commonPrefix of a single file).
-  private def removeSingleFileNameFromPrefix(prefix: Path, fileNames: List[String]): Path = {
-    def isFileNameInPrefix(prefix: Path, fileName: String) = prefix.endsWith(Path.of(fileName).getFileName)
-
-    fileNames match {
-      case head :: tail if tail.isEmpty && isFileNameInPrefix(prefix, head) =>
-        removeOneName(prefix)
-      case _ => prefix
+  // Strips prefix's last name if it is in fact paths' one lone entry's file name (i.e. commonPrefix of a single file).
+  private def removeSingleFileNameFromPrefix(prefix: Path, paths: List[Path]): Path =
+    paths match {
+      case singlePath :: Nil if prefix.endsWith(singlePath.getFileName) => removeOneName(prefix)
+      case _                                                            => prefix
     }
-  }
 
   private def removeOneName(path: Path): Path =
     if (path.getNameCount == 1) {

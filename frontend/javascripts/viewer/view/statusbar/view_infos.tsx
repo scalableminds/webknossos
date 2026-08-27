@@ -156,7 +156,7 @@ function SegmentAndMousePosition() {
   );
 }
 
-export default function Infos() {
+export default function ViewInfos() {
   const isSkeletonAnnotation = useWkSelector((state) => state.annotation.skeleton != null);
   const activeVolumeTracing = useWkSelector((state) => getActiveSegmentationTracing(state));
 

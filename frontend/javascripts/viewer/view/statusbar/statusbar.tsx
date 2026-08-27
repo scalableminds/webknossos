@@ -8,7 +8,7 @@ import {
   useShortcutItems,
 } from "./control_infos";
 import { useOverflowMeasurement } from "./use_overflow_measurement";
-import Infos from "./view_infos";
+import ViewInfos from "./view_infos";
 
 // Keeps a visible gap between the (right-aligned) shortcut hints and Infos, matching
 // the existing spacing convention of .info-element/.shortcut-info-element.
@@ -53,7 +53,7 @@ function Statusbar() {
         <MoreShortcutsButton hiddenItems={hiddenItems} allHidden={visibleCount === 0} />
       ) : null}
       <span ref={infosRef} style={{ display: "inline-flex", marginLeft: "auto" }}>
-        <Infos />
+        <ViewInfos />
       </span>
       <span ref={rightRef} style={{ display: "inline-flex" }}>
         <BorderToggleButton side="right" inFooter />

@@ -5,14 +5,14 @@ import IconStatusbarMouseLeftDrag from "@images/icons/icon-statusbar-mouse-left-
 import IconStatusbarMouseRight from "@images/icons/icon-statusbar-mouse-right.svg?react";
 import IconStatusbarMouseRightDrag from "@images/icons/icon-statusbar-mouse-right-drag.svg?react";
 import IconStatusbarMouseWheel from "@images/icons/icon-statusbar-mouse-wheel.svg?react";
-import { Space, Typography } from "antd";
+import { Popover, Space, Typography } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { formatCountToDataAmountUnit } from "libs/format_utils";
 import { V3 } from "libs/mjs";
 import { useInterval } from "libs/react_helpers";
 import { useKeyPress, useWkSelector } from "libs/react_hooks";
 import messages from "messages";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
@@ -235,6 +235,31 @@ function ShortcutsInfo() {
   );
 }
 
+function ShortcutsOverflowMenu() {
+  return (
+    <Popover
+      trigger="click"
+      placement="top"
+      content={
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 6,
+            maxWidth: 280,
+          }}
+        >
+          <ShortcutsInfo />
+        </div>
+      }
+    >
+      <span className="shortcut-info-element" style={{ cursor: "pointer" }}>
+        <MoreOutlined /> Shortcuts
+      </span>
+    </Popover>
+  );
+}
+
 function SegmentInfo() {
   const visibleSegmentationLayer = useWkSelector((state) => getVisibleSegmentationLayer(state));
   const hasVisibleSegmentation = visibleSegmentationLayer != null;
@@ -429,12 +454,53 @@ function SegmentAndMousePosition() {
 }
 
 function Statusbar() {
+  // The statusbar can run out of horizontal space (e.g. on 13" laptops). Since the
+  // shortcut hints are the least essential elements (as opposed to e.g. the "Active
+  // Segment" input, which is not just informational), they are collapsed into a
+  // popover menu as soon as they don't fit anymore, so that all other elements
+  // remain reachable.
+  const containerRef = useRef<HTMLSpanElement>(null);
+  const shortcutsSlotRef = useRef<HTMLSpanElement>(null);
+  const measureRef = useRef<HTMLSpanElement>(null);
+  const [isShortcutsCollapsed, setIsShortcutsCollapsed] = useState(false);
+
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    const shortcutsSlot = shortcutsSlotRef.current;
+    const measurer = measureRef.current;
+    if (container == null || shortcutsSlot == null || measurer == null) {
+      return;
+    }
+
+    const recompute = () => {
+      // measurer always contains the full (non-collapsed) shortcuts info so that
+      // the required width can be determined even while it is currently collapsed.
+      const restWidth = container.scrollWidth - shortcutsSlot.offsetWidth;
+      const neededWidth = restWidth + measurer.offsetWidth;
+      setIsShortcutsCollapsed(neededWidth > container.clientWidth);
+    };
+    recompute();
+
+    const resizeObserver = new ResizeObserver(recompute);
+    resizeObserver.observe(container);
+    resizeObserver.observe(shortcutsSlot);
+    resizeObserver.observe(measurer);
+    return () => resizeObserver.disconnect();
+  }, []);
+
   return (
-    <span className="statusbar">
+    <span className="statusbar" ref={containerRef}>
       <BorderToggleButton side="left" inFooter />
-      <ShortcutsInfo />
-      <Infos />
+      <span ref={shortcutsSlotRef} style={{ display: "inline-flex" }}>
+        {isShortcutsCollapsed ? <ShortcutsOverflowMenu /> : <ShortcutsInfo />}
+      </span>
+      <span style={{ display: "inline-flex", marginLeft: "auto" }}>
+        <Infos />
+      </span>
       <BorderToggleButton side="right" inFooter />
+      <span ref={measureRef} className="statusbar-measurer" aria-hidden="true">
+        <ShortcutsInfo />
+      </span>
     </span>
   );
 }

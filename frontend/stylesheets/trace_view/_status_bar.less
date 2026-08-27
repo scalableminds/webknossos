@@ -3,7 +3,14 @@
   margin-right: 25px;
   font-size: 14px;
   display: flex;
-  flex-wrap: wrap;
+  // Kept as nowrap (rather than wrap), and with white-space: nowrap below, so that
+  // overflow can be measured reliably via scrollWidth/clientWidth (see statusbar.tsx),
+  // which drives collapsing the shortcut hints into an overflow menu once they don't
+  // fit anymore. Without white-space: nowrap, flex items would shrink and their text
+  // would wrap onto multiple lines instead of producing a measurable horizontal
+  // overflow, breaking both the layout and the overflow measurement.
+  flex-wrap: nowrap;
+  white-space: nowrap;
   overflow: hidden;
 
   .info-element {
@@ -19,10 +26,26 @@
 
   .shortcut-info-element {
     margin-left: 20px;
+    white-space: nowrap;
   }
 
   .ant-typography kbd {
     // increase brightness/contrast for <Typography.Text keyboard>...</Typography.Text>
     background-color: rgb(150 150 150 / 37%);
+  }
+
+  .statusbar-measurer {
+    // display: inline-flex (rather than the default block) is essential here: it makes
+    // the hidden measurer's children lay out exactly like the visible shortcutsSlot
+    // (also inline-flex), so that flex items (e.g. the "Ctrl+P" hint's <div>) hug their
+    // content instead of stretching to fill the block container, which would otherwise
+    // throw off the measured width.
+    display: inline-flex;
+    position: absolute;
+    visibility: hidden;
+    white-space: nowrap;
+    pointer-events: none;
+    top: 0;
+    left: 0;
   }
 }

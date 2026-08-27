@@ -67,10 +67,7 @@ export function useOverflowMeasurement({
       // container.scrollWidth would equal clientWidth whenever there's no overflow,
       // regardless of how many items are currently shown, making it impossible to
       // detect that there's enough room to show more of them.
-      const fixedWidth = fixedRefs.reduce(
-        (sum, ref) => sum + (ref.current?.offsetWidth ?? 0),
-        0,
-      );
+      const fixedWidth = fixedRefs.reduce((sum, ref) => sum + (ref.current?.offsetWidth ?? 0), 0);
       const availableForItems = container.clientWidth - fixedWidth - minGap;
       const triggerWidth = Math.max(
         ...triggerMeasureRefs.map((ref) => ref.current?.offsetWidth ?? 0),
@@ -78,9 +75,7 @@ export function useOverflowMeasurement({
       );
 
       const currentItemKeys = itemKeysRef.current;
-      const itemWidths = currentItemKeys.map(
-        (key) => itemRefs.current.get(key)?.offsetWidth ?? 0,
-      );
+      const itemWidths = currentItemKeys.map((key) => itemRefs.current.get(key)?.offsetWidth ?? 0);
       const totalItemsWidth = itemWidths.reduce((sum, width) => sum + width, 0);
 
       let count: number;

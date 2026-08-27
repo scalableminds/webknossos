@@ -54,9 +54,9 @@ const moreIconStyle = {
   height: 14,
   color: lineColor,
 };
-const moreLinkStyle = {
-  marginLeft: 25,
-};
+// Keeps a visible gap between the (right-aligned) shortcut hints and Infos, matching
+// the existing spacing convention of .info-element/.shortcut-info-element.
+const MIN_GAP_BEFORE_INFOS = 20;
 
 type ShortcutItem = {
   key: string;
@@ -143,7 +143,7 @@ function getMoreShortcutsItems(): ShortcutItem[] {
     {
       key: "commands",
       node: (
-        <div style={{ marginLeft: 25 }}>
+        <div className="shortcut-info-element">
           <Text keyboard>Ctrl + P</Text> Commands
         </div>
       ),
@@ -155,16 +155,19 @@ function getMoreShortcutsItems(): ShortcutItem[] {
   ];
 }
 
+// Note: this item's spacing (and that of the "commands" item above) relies on the
+// scoped `.statusbar .shortcut-info-element` CSS rule, which only applies to elements
+// that are actual DOM descendants of `.statusbar`. When shown inside the "More" popover
+// (which antd renders into a portal outside of `.statusbar`), that rule doesn't apply,
+// so these items render flush-left there instead of picking up stray margin.
 const moreShortcutsLink = (
   <a
     target="_blank"
     href="https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html"
     rel="noopener noreferrer"
-    style={moreLinkStyle}
+    className="shortcut-info-element"
   >
-    <FastTooltip title="More Shortcuts">
-      <MoreOutlined rotate={90} style={moreIconStyle} />
-    </FastTooltip>
+    <MoreOutlined rotate={90} style={moreIconStyle} /> Shortcut Documentation
   </a>
 );
 
@@ -563,24 +566,37 @@ function Statusbar() {
       // no overflow, regardless of how many shortcut items are currently shown, making it
       // impossible to detect that there's enough room to show more of them.
       const fixedWidth = left.offsetWidth + infos.offsetWidth + right.offsetWidth;
-      const availableForShortcuts = container.clientWidth - fixedWidth;
+      // Reserved so that the shortcuts area never butts directly up against Infos --
+      // without this, unlucky container widths could make e.g. "More" and "Segment 0"
+      // touch, since Infos is only pushed away by whatever space is left over.
+      const availableForShortcuts = container.clientWidth - fixedWidth - MIN_GAP_BEFORE_INFOS;
       const moreButtonWidth = measureMore.offsetWidth;
 
       const currentItems = itemsRef.current;
-      let usedWidth = 0;
-      let count = 0;
-      for (let i = 0; i < currentItems.length; i++) {
-        const itemWidth = itemRefs.current.get(currentItems[i].key)?.offsetWidth ?? 0;
-        const isLastItem = i === currentItems.length - 1;
-        // Reserve space for the "More" button unless this is the last item -- showing
-        // an item that isn't the last one only helps if a "More" button (linking to the
-        // remaining, hidden items) still fits next to it.
-        const reserve = isLastItem ? 0 : moreButtonWidth;
-        if (usedWidth + itemWidth + reserve > availableForShortcuts) {
-          break;
+      const itemWidths = currentItems.map(
+        (item) => itemRefs.current.get(item.key)?.offsetWidth ?? 0,
+      );
+      const totalItemsWidth = itemWidths.reduce((sum, width) => sum + width, 0);
+
+      let count: number;
+      if (totalItemsWidth <= availableForShortcuts) {
+        // Everything fits -- no "More" button needed.
+        count = currentItems.length;
+      } else {
+        // A "More" button will be shown, so its width is reserved up front (rather than
+        // only between individual items) -- otherwise, if zero items end up fitting,
+        // nothing would have verified that the "More" button alone still leaves the
+        // minimum gap before Infos.
+        const budget = availableForShortcuts - moreButtonWidth;
+        let usedWidth = 0;
+        count = 0;
+        for (let i = 0; i < itemWidths.length; i++) {
+          if (usedWidth + itemWidths[i] > budget) {
+            break;
+          }
+          usedWidth += itemWidths[i];
+          count++;
         }
-        usedWidth += itemWidth;
-        count++;
       }
       setVisibleCount(count);
     };

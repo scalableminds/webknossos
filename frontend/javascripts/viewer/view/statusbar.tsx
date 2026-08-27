@@ -1,4 +1,4 @@
-import Icon, { DownloadOutlined, MoreOutlined } from "@ant-design/icons";
+import Icon, { DownloadOutlined, FileTextOutlined, MoreOutlined } from "@ant-design/icons";
 import IconStatusbarDownsampling from "@images/icons/icon-statusbar-downsampling.svg?react";
 import IconStatusbarMouseLeft from "@images/icons/icon-statusbar-mouse-left.svg?react";
 import IconStatusbarMouseLeftDrag from "@images/icons/icon-statusbar-mouse-left-drag.svg?react";
@@ -102,7 +102,11 @@ function getLeftClickItems(actionDescriptor: ActionDescriptor): ShortcutItem[] {
       key: "left-drag",
       node: (
         <Space size="small" className="shortcut-info-element">
-          <Icon component={IconStatusbarMouseLeftDrag} aria-label="Mouse Left Drag" />
+          <Icon
+            className="statusbar-drag-icon"
+            component={IconStatusbarMouseLeftDrag}
+            aria-label="Mouse Left Drag"
+          />
           {actionDescriptor.leftDrag}
         </Space>
       ),
@@ -129,7 +133,11 @@ function getRightClickItems(actionDescriptor: ActionDescriptor): ShortcutItem[] 
       key: "right-drag",
       node: (
         <Space size="small" className="shortcut-info-element">
-          <Icon component={IconStatusbarMouseRightDrag} aria-label="Mouse Right Drag" />
+          <Icon
+            className="statusbar-drag-icon"
+            component={IconStatusbarMouseRightDrag}
+            aria-label="Mouse Right Drag"
+          />
           {actionDescriptor.rightDrag}
         </Space>
       ),
@@ -167,7 +175,7 @@ const moreShortcutsLink = (
     rel="noopener noreferrer"
     className="shortcut-info-element statusbar-doc-link"
   >
-    <MoreOutlined rotate={90} style={moreIconStyle} /> Shortcut Documentation
+    <FileTextOutlined style={moreIconStyle} /> Shortcut Documentation
   </a>
 );
 
@@ -206,7 +214,11 @@ function useShortcutItems(): ShortcutItem[] {
               key: "move",
               node: (
                 <span className="shortcut-info-element">
-                  <Icon component={IconStatusbarMouseLeftDrag} aria-label="Mouse Left Drag" />
+                  <Icon
+                    className="statusbar-drag-icon"
+                    component={IconStatusbarMouseLeftDrag}
+                    aria-label="Mouse Left Drag"
+                  />
                   Move
                 </span>
               ),
@@ -277,7 +289,11 @@ function useShortcutItems(): ShortcutItem[] {
       key: "rotate-3d",
       node: (
         <Space size="small" className="shortcut-info-element">
-          <Icon component={IconStatusbarMouseRightDrag} aria-label="Mouse Right" />
+          <Icon
+            className="statusbar-drag-icon"
+            component={IconStatusbarMouseRightDrag}
+            aria-label="Mouse Right"
+          />
           Rotate 3D View
         </Space>
       ),
@@ -295,7 +311,7 @@ const MoreButtonLabel = React.forwardRef<
   React.HTMLAttributes<HTMLSpanElement> & { label: string }
 >(({ label, ...props }, ref) => (
   <span {...props} ref={ref} className="shortcut-info-element" style={{ cursor: "pointer" }}>
-    <MoreOutlined /> {label}
+    <FileTextOutlined /> {label}
   </span>
 ));
 MoreButtonLabel.displayName = "MoreButtonLabel";
@@ -319,6 +335,7 @@ function MoreShortcutsButton({
       placement="top"
       content={
         <div
+          className="statusbar-overflow-content"
           style={{
             display: "flex",
             flexDirection: "column",

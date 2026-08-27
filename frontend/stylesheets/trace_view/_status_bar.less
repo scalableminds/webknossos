@@ -64,3 +64,13 @@
     text-decoration: underline;
   }
 }
+
+.statusbar-overflow-content {
+  // The left/right-drag icons have their mouse glyph off-center (to make room for the
+  // drag arrow), which reads fine inline in the statusbar but looks visually
+  // mis-aligned against the other icons when stacked in this vertical list -- nudge
+  // them back towards center here only.
+  .statusbar-drag-icon {
+    transform: translateX(2px);
+  }
+}

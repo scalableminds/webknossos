@@ -261,18 +261,23 @@ export function useShortcutItems(): ShortcutItem[] {
   ];
 }
 
-// forwardRef (and spreading ...props) is required here because antd's Popover clones
-// its child to inject the click handler and a positioning ref directly onto it -- a
-// plain function component would silently drop both, leaving the trigger unclickable.
-export const MoreButtonLabel = React.forwardRef<
-  HTMLSpanElement,
-  React.HTMLAttributes<HTMLSpanElement> & { label: string }
->(({ label, ...props }, ref) => (
-  <span {...props} ref={ref} className="shortcut-info-element" style={{ cursor: "pointer" }}>
-    <FileTextOutlined /> {label}
-  </span>
-));
-MoreButtonLabel.displayName = "MoreButtonLabel";
+// Forwarding ...props and ref is required here because antd's Popover clones its child
+// to inject the click handler and a positioning ref directly onto it -- a component that
+// doesn't forward both would silently drop them, leaving the trigger unclickable.
+export function MoreButtonLabel({
+  label,
+  ref,
+  ...props
+}: React.HTMLAttributes<HTMLSpanElement> & {
+  label: string;
+  ref?: React.Ref<HTMLSpanElement>;
+}) {
+  return (
+    <span {...props} ref={ref} className="shortcut-info-element" style={{ cursor: "pointer" }}>
+      <FileTextOutlined /> {label}
+    </span>
+  );
+}
 
 // "More" implies there's something in addition to what's already visible, which is
 // misleading once every hint has been hidden -- in that case, the trigger IS the only

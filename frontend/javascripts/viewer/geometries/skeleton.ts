@@ -123,11 +123,17 @@ class Skeleton {
   nodeShader: NodeShader | undefined;
   edgeShader: EdgeShader | undefined;
 
+  // See SceneController.deferUntilCompileReady for why disposal below must go through this.
+  // Defaults to immediate execution for callers (e.g. tests) without a SceneController.
+  private deferGpuDispose: (dispose: () => void) => void;
+
   constructor(
     skeletonTracingSelectorFn: (state: WebknossosState) => SkeletonTracing | null,
     supportsPicking: boolean,
+    deferGpuDispose: (dispose: () => void) => void = (dispose) => dispose(),
   ) {
     this.supportsPicking = supportsPicking;
+    this.deferGpuDispose = deferGpuDispose;
     this.rootGroup = new Group();
     this.pickingNode = new Object3D();
     const skeletonTracing = skeletonTracingSelectorFn(Store.getState());
@@ -150,29 +156,37 @@ class Skeleton {
     this.stopStoreListening();
     this.stopStoreListening = () => {};
 
-    this.treeColorTexture.dispose();
+    const oldTreeColorTexture = this.treeColorTexture;
+    const oldNodes = this.nodes;
+    const oldEdges = this.edges;
+    const oldNodeShader = this.nodeShader;
+    const oldEdgeShader = this.edgeShader;
     // @ts-expect-error
     this.treeColorTexture = undefined;
 
-    this.nodes.material.dispose();
-    this.edges.material.dispose();
+    this.deferGpuDispose(() => {
+      oldTreeColorTexture.dispose();
 
-    this.nodeShader?.destroy();
-    this.edgeShader?.destroy();
+      oldNodes.material.dispose();
+      oldEdges.material.dispose();
 
-    // Delete the actual GPU buffers. Otherwise, they would leak as three.js
-    // only frees them on an explicit dispose() call.
-    if (this.nodes != null) {
-      for (const nodes of this.nodes.buffers) {
-        nodes.geometry.dispose();
+      oldNodeShader?.destroy();
+      oldEdgeShader?.destroy();
+
+      // Delete the actual GPU buffers. Otherwise, they would leak as three.js
+      // only frees them on an explicit dispose() call.
+      if (oldNodes != null) {
+        for (const nodes of oldNodes.buffers) {
+          nodes.geometry.dispose();
+        }
       }
-    }
 
-    if (this.edges != null) {
-      for (const edges of this.edges.buffers) {
-        edges.geometry.dispose();
+      if (oldEdges != null) {
+        for (const edges of oldEdges.buffers) {
+          edges.geometry.dispose();
+        }
       }
-    }
+    });
   }
 
   reset(skeletonTracing: SkeletonTracing) {
@@ -185,23 +199,30 @@ class Skeleton {
     const edgeCount = sum(trees.values().map((tree) => tree.edges.size()));
 
     // delete actual GPU buffers in case there were any
-    if (this.treeColorTexture != null) {
-      this.treeColorTexture.dispose();
-    }
-    this.nodeShader?.destroy();
-    this.edgeShader?.destroy();
-    if (this.nodes != null) {
-      this.nodes.material.dispose();
-      for (const nodes of this.nodes.buffers) {
-        nodes.geometry.dispose();
+    const oldTreeColorTexture = this.treeColorTexture;
+    const oldNodeShader = this.nodeShader;
+    const oldEdgeShader = this.edgeShader;
+    const oldNodes = this.nodes;
+    const oldEdges = this.edges;
+    this.deferGpuDispose(() => {
+      if (oldTreeColorTexture != null) {
+        oldTreeColorTexture.dispose();
       }
-    }
-    if (this.edges != null) {
-      this.edges.material.dispose();
-      for (const edges of this.edges.buffers) {
-        edges.geometry.dispose();
+      oldNodeShader?.destroy();
+      oldEdgeShader?.destroy();
+      if (oldNodes != null) {
+        oldNodes.material.dispose();
+        for (const nodes of oldNodes.buffers) {
+          nodes.geometry.dispose();
+        }
       }
-    }
+      if (oldEdges != null) {
+        oldEdges.material.dispose();
+        for (const edges of oldEdges.buffers) {
+          edges.geometry.dispose();
+        }
+      }
+    });
 
     this.treeColorTexture = new DataTexture(
       new Float32Array(COLOR_TEXTURE_WIDTH * COLOR_TEXTURE_WIDTH * 4),

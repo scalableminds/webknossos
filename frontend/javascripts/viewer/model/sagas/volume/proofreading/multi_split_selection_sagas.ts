@@ -173,6 +173,12 @@ export function* reconcileMultiCutSelectionAfterForeignSplit(
   }
   // resolution.type === "unresolved" here means the backend didn't return an agglomerate id for
   // one of the segments even after the explicit fetch (e.g. it no longer exists).
-  // This should never occur => Leave it as-is.
-  // performPartitionedMinCut's initial assertions remains the final safety net for this edge case.
+  // This should never occur => Leave it as-is as incorrect multi split partitions are not dramatic.
+  // performPartitionedMinCut's initial assertions still check right before splitting whether the partitions are valid.
+  if (resolution.type === "unresolved") {
+    // Still log this error.
+    console.error(
+      "Could not resolve mapping for all segments of the current mulit part mincut partitions during resolving a foreign split action.",
+    );
+  }
 }

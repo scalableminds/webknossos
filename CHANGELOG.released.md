@@ -7,6 +7,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
+## [26.09.1](https://github.com/scalableminds/webknossos/releases/tag/26.09.1) - 2026-08-27
+[Commits](https://github.com/scalableminds/webknossos/compare/26.09.0...26.09.1)
+
+### Fixed
+- Fixed volume interpolation for non-uint64 volume tracings. [#9928](https://github.com/scalableminds/webknossos/pull/9928)
+- Fixed rare crash when opening an annotation (mostly when loaded in a background tab). [#9869](https://github.com/scalableminds/webknossos/pull/9869)
+- Fixed a bug where pinging a datastore's health endpoint could throw an error, because a version check relied on a `datastoreApiVersion` field that the backend has stopped sending. Removed the stale field and check. [#9923](https://github.com/scalableminds/webknossos/pull/9923)
+
 ## [26.09.0](https://github.com/scalableminds/webknossos/releases/tag/26.09.0) - 2026-08-21
 [Commits](https://github.com/scalableminds/webknossos/compare/26.08.1...26.09.0)
 

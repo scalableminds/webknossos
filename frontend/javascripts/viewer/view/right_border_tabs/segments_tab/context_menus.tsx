@@ -289,6 +289,7 @@ export function useSegmentContextMenuBuilder(
           return;
         }
         modal.confirm({
+          title: "Delete Segment Data",
           content: `Are you sure you want to delete the data of segment ${getSegmentName(
             segment,
             true,

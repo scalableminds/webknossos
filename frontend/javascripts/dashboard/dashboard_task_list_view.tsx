@@ -145,7 +145,7 @@ class DashboardTaskListView extends PureComponent<Props, State> {
 
   confirmFinish(task: APITaskWithAnnotation) {
     this.props.modal.confirm({
-      content: messages["annotation.finish"],
+      title: messages["annotation.finish"],
       onOk: async () => {
         const { annotation } = task;
         const changedAnnotationWithTask = await finishTask(annotation.id);
@@ -278,7 +278,7 @@ class DashboardTaskListView extends PureComponent<Props, State> {
 
   resetTask(annotation: APIAnnotation) {
     this.props.modal.confirm({
-      content: messages["task.confirm_reset"],
+      title: messages["task.confirm_reset"],
       cancelText: messages.no,
       okText: messages.yes,
       onOk: async () => {
@@ -291,7 +291,7 @@ class DashboardTaskListView extends PureComponent<Props, State> {
   cancelAnnotation(annotation: APIAnnotation) {
     const annotationId = annotation.id;
     this.props.modal.confirm({
-      content: messages["annotation.delete"],
+      title: messages["annotation.delete"],
       cancelText: messages.no,
       okText: messages.yes,
       onOk: async () => {
@@ -307,17 +307,14 @@ class DashboardTaskListView extends PureComponent<Props, State> {
     if (this.state.unfinishedModeState.tasks.length === 0) {
       this.getNewTask();
     } else {
-      let modalContent = messages["task.request_new"];
       const likelyNextTask = await peekNextTasks();
 
-      if (likelyNextTask != null) {
-        modalContent += `\n${messages["task.peek_next"]({
-          projectName: likelyNextTask.projectName,
-        })}`;
-      }
-
       this.props.modal.confirm({
-        content: modalContent,
+        title: messages["task.request_new"],
+        content:
+          likelyNextTask != null
+            ? messages["task.peek_next"]({ projectName: likelyNextTask.projectName })
+            : undefined,
         onOk: () => this.getNewTask(),
       });
     }

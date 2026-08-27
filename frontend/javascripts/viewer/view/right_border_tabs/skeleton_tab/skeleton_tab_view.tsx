@@ -41,6 +41,9 @@ function ExportProgressModal({ pendingExport }: { pendingExport: "nml" | "csv" |
       title={lastExportRef.current === "csv" ? "Preparing CSV" : "Preparing NML"}
       closable={false}
       footer={null}
+      // The body is a bare Spin, so the dialog stays tight around it instead of opening a
+      // mostly-empty 520px box.
+      // biome-ignore lint/plugin: deliberately off the ModalWidth scale, see above
       width={200}
       style={{
         textAlign: "center",

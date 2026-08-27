@@ -3,6 +3,7 @@ import { Modal } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { computeArrayFromBoundingBox } from "libs/utils";
 import { useCallback } from "react";
+import { ModalWidth } from "theme";
 import type { APIDataLayer } from "types/api_types";
 import { APIJobCommand } from "types/api_types";
 import {
@@ -121,7 +122,7 @@ export function MaterializeVolumeAnnotationModal({
     <Modal
       onCancel={handleClose}
       open
-      width={700}
+      width={ModalWidth.Large}
       footer={null}
       title="Volume Annotation Materialization"
     >

@@ -23,7 +23,10 @@
       "!binaryData"
     ]
   },
-  "plugins": ["frontend/lint-plugins/noRawHeading.grit"],
+  "plugins": [
+    "frontend/lint-plugins/noRawHeading.grit",
+    "frontend/lint-plugins/noRawModalWidth.grit"
+  ],
   "assist": {
     "actions": {
       "source": {

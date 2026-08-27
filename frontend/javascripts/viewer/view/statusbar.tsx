@@ -56,7 +56,11 @@ const moreIconStyle = {
 };
 const moreLinkStyle = {
   marginLeft: 25,
-  marginRight: "auto",
+};
+
+type ShortcutItem = {
+  key: string;
+  node: React.ReactNode;
 };
 
 function getPosString(
@@ -67,72 +71,89 @@ function getPosString(
   return V3.floor(pos).concat(additionalCoordinates).join(",");
 }
 
-function ZoomShortcut() {
-  return (
-    <span key="zoom" className="shortcut-info-element">
-      <Text keyboard>{AltOrOptionKey}</Text>
-      +
-      <Icon component={IconStatusbarMouseWheel} aria-label="Mouse Wheel" /> Zoom in/out
-    </span>
-  );
+function getZoomShortcutItem(): ShortcutItem {
+  return {
+    key: "zoom",
+    node: (
+      <span className="shortcut-info-element">
+        <Text keyboard>{AltOrOptionKey}</Text>
+        +
+        <Icon component={IconStatusbarMouseWheel} aria-label="Mouse Wheel" /> Zoom in/out
+      </span>
+    ),
+  };
 }
 
-function LeftClickShortcut({ actionDescriptor }: { actionDescriptor: ActionDescriptor }) {
-  const leftClick =
-    actionDescriptor.leftClick != null ? (
-      <Space size="small" className="shortcut-info-element">
-        <Icon component={IconStatusbarMouseLeft} aria-label="Mouse Left Click" />
-        {actionDescriptor.leftClick}
-      </Space>
-    ) : null;
-  const leftDrag =
-    actionDescriptor.leftDrag != null ? (
-      <Space size="small" className="shortcut-info-element">
-        <Icon component={IconStatusbarMouseLeftDrag} aria-label="Mouse Left Drag" />
-        {actionDescriptor.leftDrag}
-      </Space>
-    ) : null;
-  return (
-    <span>
-      {leftClick}
-      {leftDrag}
-    </span>
-  );
+function getLeftClickItems(actionDescriptor: ActionDescriptor): ShortcutItem[] {
+  const items: ShortcutItem[] = [];
+  if (actionDescriptor.leftClick != null) {
+    items.push({
+      key: "left-click",
+      node: (
+        <Space size="small" className="shortcut-info-element">
+          <Icon component={IconStatusbarMouseLeft} aria-label="Mouse Left Click" />
+          {actionDescriptor.leftClick}
+        </Space>
+      ),
+    });
+  }
+  if (actionDescriptor.leftDrag != null) {
+    items.push({
+      key: "left-drag",
+      node: (
+        <Space size="small" className="shortcut-info-element">
+          <Icon component={IconStatusbarMouseLeftDrag} aria-label="Mouse Left Drag" />
+          {actionDescriptor.leftDrag}
+        </Space>
+      ),
+    });
+  }
+  return items;
 }
 
-function RightClickShortcut({ actionDescriptor }: { actionDescriptor: ActionDescriptor }) {
-  const rightClick =
-    actionDescriptor.rightClick != null ? (
-      <Space size="small" className="shortcut-info-element">
-        <Icon component={IconStatusbarMouseRight} aria-label="Mouse Right Click" />
-        {actionDescriptor.rightClick}
-      </Space>
-    ) : null;
-  const rightDrag =
-    actionDescriptor.rightDrag != null ? (
-      <Space size="small" className="shortcut-info-element">
-        <Icon component={IconStatusbarMouseRightDrag} aria-label="Mouse Right Drag" />
-        {actionDescriptor.rightDrag}
-      </Space>
-    ) : null;
-  return (
-    <React.Fragment>
-      {rightClick}
-      {rightDrag}
-    </React.Fragment>
-  );
+function getRightClickItems(actionDescriptor: ActionDescriptor): ShortcutItem[] {
+  const items: ShortcutItem[] = [];
+  if (actionDescriptor.rightClick != null) {
+    items.push({
+      key: "right-click",
+      node: (
+        <Space size="small" className="shortcut-info-element">
+          <Icon component={IconStatusbarMouseRight} aria-label="Mouse Right Click" />
+          {actionDescriptor.rightClick}
+        </Space>
+      ),
+    });
+  }
+  if (actionDescriptor.rightDrag != null) {
+    items.push({
+      key: "right-drag",
+      node: (
+        <Space size="small" className="shortcut-info-element">
+          <Icon component={IconStatusbarMouseRightDrag} aria-label="Mouse Right Drag" />
+          {actionDescriptor.rightDrag}
+        </Space>
+      ),
+    });
+  }
+  return items;
 }
 
-const getMoreShortcutsInfo = () => {
-  return (
-    <>
-      <div style={{ marginLeft: 25 }}>
-        <Text keyboard>Ctrl + P</Text> Commands
-      </div>
-      {moreShortcutsLink}
-    </>
-  );
-};
+function getMoreShortcutsItems(): ShortcutItem[] {
+  return [
+    {
+      key: "commands",
+      node: (
+        <div style={{ marginLeft: 25 }}>
+          <Text keyboard>Ctrl + P</Text> Commands
+        </div>
+      ),
+    },
+    {
+      key: "more-link",
+      node: moreShortcutsLink,
+    },
+  ];
+}
 
 const moreShortcutsLink = (
   <a
@@ -147,7 +168,7 @@ const moreShortcutsLink = (
   </a>
 );
 
-function ShortcutsInfo() {
+function useShortcutItems(): ShortcutItem[] {
   const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
   const userConfiguration = useWkSelector((state) => state.userConfiguration);
   const isPlaneMode = useWkSelector((state) => getIsPlaneMode(state));
@@ -160,7 +181,7 @@ function ShortcutsInfo() {
   );
 
   if (!isPlaneMode) {
-    let actionDescriptor = null;
+    let actionDescriptor: ActionDescriptor | null = null;
     if (hasSkeleton && isShiftPressed) {
       actionDescriptor = getToolControllerForAnnotationTool(
         AnnotationTool.SKELETON,
@@ -174,31 +195,51 @@ function ShortcutsInfo() {
       );
     }
 
-    return (
-      <React.Fragment>
-        {actionDescriptor != null ? (
-          <LeftClickShortcut actionDescriptor={actionDescriptor} />
-        ) : (
-          <span className="shortcut-info-element">
-            <Icon component={IconStatusbarMouseLeftDrag} aria-label="Mouse Left Drag" />
-            Move
-          </span>
-        )}
-        <Space size="small" className="shortcut-info-element">
-          <Text keyboard>Space</Text>
-          Trace forward
-        </Space>
-        <Space size="small" className="shortcut-info-element">
-          <Text keyboard>Ctrl + Space</Text>
-          Trace backward
-        </Space>
-        <Space size="small" className="shortcut-info-element">
-          <Text keyboard>◀ / ▶</Text>
-          Rotation
-        </Space>
-        {getMoreShortcutsInfo()}
-      </React.Fragment>
+    const items: ShortcutItem[] =
+      actionDescriptor != null
+        ? getLeftClickItems(actionDescriptor)
+        : [
+            {
+              key: "move",
+              node: (
+                <span className="shortcut-info-element">
+                  <Icon component={IconStatusbarMouseLeftDrag} aria-label="Mouse Left Drag" />
+                  Move
+                </span>
+              ),
+            },
+          ];
+    items.push(
+      {
+        key: "trace-forward",
+        node: (
+          <Space size="small" className="shortcut-info-element">
+            <Text keyboard>Space</Text>
+            Trace forward
+          </Space>
+        ),
+      },
+      {
+        key: "trace-backward",
+        node: (
+          <Space size="small" className="shortcut-info-element">
+            <Text keyboard>Ctrl + Space</Text>
+            Trace backward
+          </Space>
+        ),
+      },
+      {
+        key: "rotation",
+        node: (
+          <Space size="small" className="shortcut-info-element">
+            <Text keyboard>◀ / ▶</Text>
+            Rotation
+          </Space>
+        ),
+      },
+      ...getMoreShortcutsItems(),
     );
+    return items;
   }
 
   const adaptedTool = adaptActiveToolToShortcuts(
@@ -217,25 +258,45 @@ function ShortcutsInfo() {
     isTDViewportActive,
   );
 
-  return (
-    <React.Fragment>
-      <LeftClickShortcut actionDescriptor={actionDescriptor} />
-      <RightClickShortcut actionDescriptor={actionDescriptor} />
-      <Space size="small" className="shortcut-info-element">
-        <Icon component={IconStatusbarMouseWheel} aria-label="Mouse Wheel" />
-        {isAltPressed || isControlOrMetaPressed ? "Zoom in/out" : "Move along 3rd axis"}
-      </Space>
-      <Space size="small" className="shortcut-info-element">
-        <Icon component={IconStatusbarMouseRightDrag} aria-label="Mouse Right" />
-        Rotate 3D View
-      </Space>
-      <ZoomShortcut />
-      {getMoreShortcutsInfo()}
-    </React.Fragment>
-  );
+  return [
+    ...getLeftClickItems(actionDescriptor),
+    ...getRightClickItems(actionDescriptor),
+    {
+      key: "wheel",
+      node: (
+        <Space size="small" className="shortcut-info-element">
+          <Icon component={IconStatusbarMouseWheel} aria-label="Mouse Wheel" />
+          {isAltPressed || isControlOrMetaPressed ? "Zoom in/out" : "Move along 3rd axis"}
+        </Space>
+      ),
+    },
+    {
+      key: "rotate-3d",
+      node: (
+        <Space size="small" className="shortcut-info-element">
+          <Icon component={IconStatusbarMouseRightDrag} aria-label="Mouse Right" />
+          Rotate 3D View
+        </Space>
+      ),
+    },
+    getZoomShortcutItem(),
+    ...getMoreShortcutsItems(),
+  ];
 }
 
-function ShortcutsOverflowMenu() {
+// forwardRef (and spreading ...props) is required here because antd's Popover clones
+// its child to inject the click handler and a positioning ref directly onto it -- a
+// plain function component would silently drop both, leaving the trigger unclickable.
+const MoreButtonLabel = React.forwardRef<HTMLSpanElement, React.HTMLAttributes<HTMLSpanElement>>(
+  (props, ref) => (
+    <span {...props} ref={ref} className="shortcut-info-element" style={{ cursor: "pointer" }}>
+      <MoreOutlined /> More
+    </span>
+  ),
+);
+MoreButtonLabel.displayName = "MoreButtonLabel";
+
+function MoreShortcutsButton({ hiddenItems }: { hiddenItems: ShortcutItem[] }) {
   return (
     <Popover
       trigger="click"
@@ -249,13 +310,13 @@ function ShortcutsOverflowMenu() {
             maxWidth: 280,
           }}
         >
-          <ShortcutsInfo />
+          {hiddenItems.map((item) => (
+            <React.Fragment key={item.key}>{item.node}</React.Fragment>
+          ))}
         </div>
       }
     >
-      <span className="shortcut-info-element" style={{ cursor: "pointer" }}>
-        <MoreOutlined /> Shortcuts
-      </span>
+      <MoreButtonLabel />
     </Popover>
   );
 }
@@ -456,62 +517,118 @@ function SegmentAndMousePosition() {
 function Statusbar() {
   // The statusbar can run out of horizontal space (e.g. on 13" laptops). Since the
   // shortcut hints are the least essential elements (as opposed to e.g. the "Active
-  // Segment" input, which is not just informational), they are collapsed into a
-  // popover menu as soon as they don't fit anymore, so that all other elements
-  // remain reachable.
+  // Segment" input, which is not just informational), as many of them as fit are shown
+  // individually, with the rest tucked behind a "More" popover, so that all other
+  // elements remain reachable.
+  const items = useShortcutItems();
+  // Read via a ref inside recompute() (rather than closing over `items`) so the
+  // ResizeObserver doesn't need to be torn down and reconnected on every render --
+  // `items` is a new array/JSX identity on every render (e.g. on every key press).
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+
   const containerRef = useRef<HTMLSpanElement>(null);
   const leftRef = useRef<HTMLSpanElement>(null);
   const infosRef = useRef<HTMLSpanElement>(null);
   const rightRef = useRef<HTMLSpanElement>(null);
-  const measureRef = useRef<HTMLSpanElement>(null);
-  const [isShortcutsCollapsed, setIsShortcutsCollapsed] = useState(false);
+  const measureRowRef = useRef<HTMLSpanElement>(null);
+  const measureMoreRef = useRef<HTMLSpanElement>(null);
+  const itemRefs = useRef<Map<string, HTMLSpanElement>>(new Map());
+
+  const [visibleCount, setVisibleCount] = useState(items.length);
 
   useLayoutEffect(() => {
     const container = containerRef.current;
     const left = leftRef.current;
     const infos = infosRef.current;
     const right = rightRef.current;
-    const measurer = measureRef.current;
-    if (container == null || left == null || infos == null || right == null || measurer == null) {
+    const measureRow = measureRowRef.current;
+    const measureMore = measureMoreRef.current;
+    if (
+      container == null ||
+      left == null ||
+      infos == null ||
+      right == null ||
+      measureRow == null ||
+      measureMore == null
+    ) {
       return;
     }
 
     const recompute = () => {
-      // Each group's own (margin-excluding) offsetWidth is summed up here, rather than
-      // e.g. deriving it from container.scrollWidth minus the shortcuts width. That's
-      // because Infos is right-aligned via `margin-left: auto`, which always expands to
-      // fill any free space -- so container.scrollWidth would equal clientWidth whenever
-      // there's no overflow, regardless of whether the shortcuts are actually collapsed.
-      // That would make it impossible to detect that there's enough room to re-expand
-      // them once collapsed. measurer always contains the full (non-collapsed) shortcuts
-      // info so that the required width can be determined even while collapsed.
-      const neededWidth =
-        left.offsetWidth + measurer.offsetWidth + infos.offsetWidth + right.offsetWidth;
-      setIsShortcutsCollapsed(neededWidth > container.clientWidth);
+      // Each group's own (margin-excluding) offsetWidth is used here, rather than e.g.
+      // deriving it from container.scrollWidth minus the shortcuts width. That's because
+      // Infos is right-aligned via `margin-left: auto`, which always expands to fill any
+      // free space -- so container.scrollWidth would equal clientWidth whenever there's
+      // no overflow, regardless of how many shortcut items are currently shown, making it
+      // impossible to detect that there's enough room to show more of them.
+      const fixedWidth = left.offsetWidth + infos.offsetWidth + right.offsetWidth;
+      const availableForShortcuts = container.clientWidth - fixedWidth;
+      const moreButtonWidth = measureMore.offsetWidth;
+
+      const currentItems = itemsRef.current;
+      let usedWidth = 0;
+      let count = 0;
+      for (let i = 0; i < currentItems.length; i++) {
+        const itemWidth = itemRefs.current.get(currentItems[i].key)?.offsetWidth ?? 0;
+        const isLastItem = i === currentItems.length - 1;
+        // Reserve space for the "More" button unless this is the last item -- showing
+        // an item that isn't the last one only helps if a "More" button (linking to the
+        // remaining, hidden items) still fits next to it.
+        const reserve = isLastItem ? 0 : moreButtonWidth;
+        if (usedWidth + itemWidth + reserve > availableForShortcuts) {
+          break;
+        }
+        usedWidth += itemWidth;
+        count++;
+      }
+      setVisibleCount(count);
     };
     recompute();
 
     const resizeObserver = new ResizeObserver(recompute);
     resizeObserver.observe(container);
     resizeObserver.observe(infos);
-    resizeObserver.observe(measurer);
+    resizeObserver.observe(measureRow);
     return () => resizeObserver.disconnect();
   }, []);
+
+  const hiddenItems = items.slice(visibleCount);
 
   return (
     <span className="statusbar" ref={containerRef}>
       <span ref={leftRef} style={{ display: "inline-flex" }}>
         <BorderToggleButton side="left" inFooter />
       </span>
-      {isShortcutsCollapsed ? <ShortcutsOverflowMenu /> : <ShortcutsInfo />}
+      {items.slice(0, visibleCount).map((item) => (
+        <React.Fragment key={item.key}>{item.node}</React.Fragment>
+      ))}
+      {hiddenItems.length > 0 ? <MoreShortcutsButton hiddenItems={hiddenItems} /> : null}
       <span ref={infosRef} style={{ display: "inline-flex", marginLeft: "auto" }}>
         <Infos />
       </span>
       <span ref={rightRef} style={{ display: "inline-flex" }}>
         <BorderToggleButton side="right" inFooter />
       </span>
-      <span ref={measureRef} className="statusbar-measurer" aria-hidden="true">
-        <ShortcutsInfo />
+      <span ref={measureRowRef} className="statusbar-measurer" aria-hidden="true">
+        {items.map((item) => (
+          <span
+            key={item.key}
+            ref={(el) => {
+              if (el) {
+                itemRefs.current.set(item.key, el);
+              } else {
+                itemRefs.current.delete(item.key);
+              }
+            }}
+            style={{ display: "inline-flex" }}
+          >
+            {item.node}
+          </span>
+        ))}
+        <span ref={measureMoreRef} style={{ display: "inline-flex" }}>
+          <MoreButtonLabel />
+        </span>
       </span>
     </span>
   );

@@ -1,8 +1,9 @@
 import { exploreRemoteDataset } from "admin/rest_api";
-import { Col, Collapse, Form, type FormInstance, Input, Radio, Row } from "antd";
+import { Col, Collapse, Form, type FormInstance, Input, Radio, Row, Tag } from "antd";
 import type { RcFile, UploadChangeParam, UploadFile } from "antd/lib/upload";
 import { AsyncButton } from "components/async_clickables";
 import { formatScale } from "libs/format_utils";
+import { useWkSelector } from "libs/react_hooks";
 import { readFileAsText } from "libs/read_file";
 import Toast from "libs/toast";
 import isEqual from "lodash-es/isEqual";
@@ -99,12 +100,14 @@ export const AddRemoteLayer: React.FC<AddRemoteLayerProps> = ({
   preferredVoxelSize,
 }) => {
   const datasourceUrl: string | null = Form.useWatch("url", form);
+  const activeUser = useWkSelector((state) => state.activeUser);
 
   // State
   const [exploreLog, setExploreLog] = useState<string | null>(null);
-  const [showCredentialsFields, setShowCredentialsFields] = useState<boolean>(false);
+  const [authMode, setAuthMode] = useState<"none" | "basic" | "token">("none");
   const [usernameOrAccessKey, setUsernameOrAccessKey] = useState<string>("");
   const [passwordOrSecretKey, setPasswordOrSecretKey] = useState<string>("");
+  const [tokenValue, setTokenValue] = useState<string>("");
   const [selectedProtocol, setSelectedProtocol] = useState<Protocol>("https");
   const [fileList, setFileList] = useState<FileList>([]);
   const [isExploring, setIsExploring] = useState<boolean>(false);
@@ -116,9 +119,12 @@ export const AddRemoteLayer: React.FC<AddRemoteLayerProps> = ({
       show: selectedProtocol === "https" ? "Basic authentication" : "With credentials",
       username: selectedProtocol === "https" ? "Username" : "Access Key ID",
       password: selectedProtocol === "https" ? "Password" : "Secret Access Key",
+      token: "X-Auth-Token",
     }),
     [selectedProtocol],
   );
+
+  const canUseXAuthToken = selectedProtocol === "https" && activeUser?.isSuperUser;
 
   const instructionText = useMemo(() => {
     const baseText =
@@ -171,7 +177,7 @@ export const AddRemoteLayer: React.FC<AddRemoteLayerProps> = ({
 
     let credentials = null;
 
-    if (showCredentialsFields) {
+    if (authMode === "basic") {
       if (selectedProtocol === "gs") {
         const parsedCredentials =
           fileList.length > 0 ? await parseCredentials(fileList[0]?.originFileObj) : null;
@@ -188,6 +194,11 @@ export const AddRemoteLayer: React.FC<AddRemoteLayerProps> = ({
           pass: passwordOrSecretKey,
         };
       }
+    } else if (authMode === "token" && tokenValue) {
+      credentials = {
+        username: "",
+        pass: tokenValue,
+      };
     }
 
     return {
@@ -200,11 +211,12 @@ export const AddRemoteLayer: React.FC<AddRemoteLayerProps> = ({
     datasourceUrl,
     uploadableDatastores,
     form,
-    showCredentialsFields,
+    authMode,
     selectedProtocol,
     fileList,
     usernameOrAccessKey,
     passwordOrSecretKey,
+    tokenValue,
     preferredVoxelSize,
   ]);
 
@@ -270,7 +282,11 @@ export const AddRemoteLayer: React.FC<AddRemoteLayerProps> = ({
   useEffect(() => {
     setUsernameOrAccessKey("");
     setPasswordOrSecretKey("");
+    setTokenValue("");
     setFileList([]);
+    setAuthMode((currentAuthMode) =>
+      currentAuthMode === "token" && selectedProtocol !== "https" ? "none" : currentAuthMode,
+    );
   }, [selectedProtocol]);
 
   return (
@@ -298,16 +314,19 @@ export const AddRemoteLayer: React.FC<AddRemoteLayerProps> = ({
       </FormItem>
 
       <FormItem label="Authentication">
-        <RadioGroup
-          value={showCredentialsFields ? "show" : "hide"}
-          onChange={(e) => setShowCredentialsFields(e.target.value === "show")}
-        >
-          <Radio value="hide">{authLabel.none}</Radio>
-          <Radio value="show">{authLabel.show}</Radio>
+        <RadioGroup value={authMode} onChange={(e) => setAuthMode(e.target.value)}>
+          <Radio value="none">{authLabel.none}</Radio>
+          <Radio value="basic">{authLabel.show}</Radio>
+          {canUseXAuthToken && (
+            <Radio value="token">
+              {authLabel.token}
+              <Tag style={{ marginInlineStart: 8 }}>Super user</Tag>
+            </Radio>
+          )}
         </RadioGroup>
       </FormItem>
 
-      {showCredentialsFields &&
+      {authMode === "basic" &&
         (selectedProtocol === "gs" ? (
           <GoogleAuthFormItem fileList={fileList} handleChange={handleFileChange} />
         ) : (
@@ -342,6 +361,25 @@ export const AddRemoteLayer: React.FC<AddRemoteLayerProps> = ({
             </Col>
           </Row>
         ))}
+
+      {authMode === "token" && canUseXAuthToken && (
+        <Row gutter={8}>
+          <Col span={12}>
+            <FormItem
+              label={authLabel.token}
+              hasFeedback
+              rules={[{ required: true, message: `${authLabel.token} is required` }]}
+              validateFirst
+            >
+              <Password
+                value={tokenValue}
+                onChange={(e) => setTokenValue(e.target.value)}
+                placeholder="Enter X-Auth-Token value"
+              />
+            </FormItem>
+          </Col>
+        </Row>
+      )}
 
       {exploreLog && (
         <Row gutter={8} style={{ marginTop: 16 }}>

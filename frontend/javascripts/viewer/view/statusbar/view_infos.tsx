@@ -157,6 +157,7 @@ function SegmentAndMousePosition() {
 }
 
 export default function ViewInfos() {
+  /* Shows dataset- or annotation-specific infos in the status bar (right side) */
   const isSkeletonAnnotation = useWkSelector((state) => state.annotation.skeleton != null);
   const activeVolumeTracing = useWkSelector((state) => getActiveSegmentationTracing(state));
 

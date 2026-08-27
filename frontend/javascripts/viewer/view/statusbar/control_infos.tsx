@@ -137,6 +137,7 @@ const moreShortcutsLink = (
 );
 
 export function useShortcutItems(): ShortcutItem[] {
+  /* Exposes shortcut/control hints that are shown in the status bar (left side) */
   const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
   const userConfiguration = useWkSelector((state) => state.userConfiguration);
   const isPlaneMode = useWkSelector((state) => getIsPlaneMode(state));

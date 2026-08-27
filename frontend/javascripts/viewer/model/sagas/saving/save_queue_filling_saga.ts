@@ -5,7 +5,10 @@
  */
 import { buffers } from "redux-saga";
 import { actionChannel, call, flush, put, race, take } from "typed-redux-saga";
-import { mayAddToSaveQueue } from "viewer/model/accessors/annotation_accessor";
+import {
+  mayAddToSaveQueue,
+  mayEditAnnotationProperties,
+} from "viewer/model/accessors/annotation_accessor";
 import { selectTracing } from "viewer/model/accessors/tracing_accessor";
 import { FlycamActions } from "viewer/model/actions/flycam_actions";
 import {
@@ -20,6 +23,7 @@ import {
   VolumeTracingSaveRelevantActions,
 } from "viewer/model/actions/volumetracing_actions";
 import compactUpdateActions from "viewer/model/helpers/compaction/compact_update_actions";
+import { diffAnnotationMetadata } from "viewer/model/sagas/diffing/annotation_metadata_diffing";
 import { diffVolumeTracing } from "viewer/model/sagas/diffing/volume_diffing";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
@@ -39,7 +43,10 @@ import type {
 } from "viewer/store";
 import { getFlooredPosition, getRotationInDegrees } from "../../accessors/flycam_accessor";
 import type { Action } from "../../actions/actions";
-import type { BatchedAnnotationInitializationAction } from "../../actions/annotation_actions";
+import {
+  AnnotationMetadataSaveRelevantActions,
+  type BatchedAnnotationInitializationAction,
+} from "../../actions/annotation_actions";
 
 export function* setupSavingForAnnotation(
   _action: BatchedAnnotationInitializationAction,
@@ -74,6 +81,64 @@ export function* setupSavingForAnnotation(
 
     prevFlycam = flycam;
     prevTdCamera = tdCamera;
+  }
+}
+
+export function* setupSavingForAnnotationMetadata(
+  _action: BatchedAnnotationInitializationAction,
+): Saga<never> {
+  yield* call(ensureWkInitialized);
+
+  let prevAnnotation = yield* select((state) => state.annotation);
+
+  const annotationActionBuffer = buffers.expanding<Action>();
+  const annotationActionChannel = yield* actionChannel(
+    AnnotationMetadataSaveRelevantActions,
+    annotationActionBuffer,
+  );
+
+  // Listen to rebasing / forwarding finishing actions to reset the annotation and don't diff changes
+  // created due to applying foreign update actions.
+  const finishedRebaseActionBuffer = buffers.expanding<Action>();
+  const finishedRebaseActionChannel = yield* actionChannel(
+    ["FINISHED_REBASING", "FINISH_FORWARDING_UPDATE_ACTIONS"],
+    finishedRebaseActionBuffer,
+  );
+
+  while (true) {
+    // See setupSavingForTracingType below for why a finished rebase/forwarding round is
+    // prioritized: it needs to reset prevAnnotation before any further diffing happens.
+    const [finishedRebaseAction] = yield* race([
+      take(finishedRebaseActionChannel),
+      take(annotationActionChannel),
+    ]);
+    if (finishedRebaseAction != null) {
+      yield* flush(finishedRebaseActionChannel);
+      prevAnnotation = yield* select((state) => state.annotation);
+      continue;
+    }
+
+    // We are about to diff old and new annotation metadata. All buffered actions in
+    // annotationActionBuffer can be flushed away, because it won't make sense to diff
+    // again when the annotation cannot have changed without a new channel entry.
+    annotationActionBuffer.flush();
+
+    const allowSave = yield* select(mayAddToSaveQueue);
+    if (!allowSave) {
+      // Note that we completely ignore changes if adding to save queue is not allowed
+      // (e.g. while a rebase/forwarding round is incorporating a replayed change).
+      continue;
+    }
+
+    const annotation = yield* select((state) => state.annotation);
+    const mayEditProperties = yield* select(mayEditAnnotationProperties);
+    const items = Array.from(diffAnnotationMetadata(prevAnnotation, annotation, mayEditProperties));
+
+    if (items.length > 0) {
+      yield* put(pushSaveQueueTransaction(items));
+    }
+
+    prevAnnotation = annotation;
   }
 }
 

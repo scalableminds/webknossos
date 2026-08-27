@@ -165,7 +165,7 @@ const moreShortcutsLink = (
     target="_blank"
     href="https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html"
     rel="noopener noreferrer"
-    className="shortcut-info-element"
+    className="shortcut-info-element statusbar-doc-link"
   >
     <MoreOutlined rotate={90} style={moreIconStyle} /> Shortcut Documentation
   </a>
@@ -290,16 +290,29 @@ function useShortcutItems(): ShortcutItem[] {
 // forwardRef (and spreading ...props) is required here because antd's Popover clones
 // its child to inject the click handler and a positioning ref directly onto it -- a
 // plain function component would silently drop both, leaving the trigger unclickable.
-const MoreButtonLabel = React.forwardRef<HTMLSpanElement, React.HTMLAttributes<HTMLSpanElement>>(
-  (props, ref) => (
-    <span {...props} ref={ref} className="shortcut-info-element" style={{ cursor: "pointer" }}>
-      <MoreOutlined /> More
-    </span>
-  ),
-);
+const MoreButtonLabel = React.forwardRef<
+  HTMLSpanElement,
+  React.HTMLAttributes<HTMLSpanElement> & { label: string }
+>(({ label, ...props }, ref) => (
+  <span {...props} ref={ref} className="shortcut-info-element" style={{ cursor: "pointer" }}>
+    <MoreOutlined /> {label}
+  </span>
+));
 MoreButtonLabel.displayName = "MoreButtonLabel";
 
-function MoreShortcutsButton({ hiddenItems }: { hiddenItems: ShortcutItem[] }) {
+// "More" implies there's something in addition to what's already visible, which is
+// misleading once every hint has been hidden -- in that case, the trigger IS the only
+// way to reach the hints, so it's labeled to describe its content instead.
+const MORE_LABEL = "More";
+const ALL_HIDDEN_LABEL = "Controls";
+
+function MoreShortcutsButton({
+  hiddenItems,
+  allHidden,
+}: {
+  hiddenItems: ShortcutItem[];
+  allHidden: boolean;
+}) {
   return (
     <Popover
       trigger="click"
@@ -319,7 +332,7 @@ function MoreShortcutsButton({ hiddenItems }: { hiddenItems: ShortcutItem[] }) {
         </div>
       }
     >
-      <MoreButtonLabel />
+      <MoreButtonLabel label={allHidden ? ALL_HIDDEN_LABEL : MORE_LABEL} />
     </Popover>
   );
 }
@@ -536,6 +549,7 @@ function Statusbar() {
   const rightRef = useRef<HTMLSpanElement>(null);
   const measureRowRef = useRef<HTMLSpanElement>(null);
   const measureMoreRef = useRef<HTMLSpanElement>(null);
+  const measureAllHiddenRef = useRef<HTMLSpanElement>(null);
   const itemRefs = useRef<Map<string, HTMLSpanElement>>(new Map());
 
   const [visibleCount, setVisibleCount] = useState(items.length);
@@ -547,13 +561,15 @@ function Statusbar() {
     const right = rightRef.current;
     const measureRow = measureRowRef.current;
     const measureMore = measureMoreRef.current;
+    const measureAllHidden = measureAllHiddenRef.current;
     if (
       container == null ||
       left == null ||
       infos == null ||
       right == null ||
       measureRow == null ||
-      measureMore == null
+      measureMore == null ||
+      measureAllHidden == null
     ) {
       return;
     }
@@ -570,7 +586,10 @@ function Statusbar() {
       // without this, unlucky container widths could make e.g. "More" and "Segment 0"
       // touch, since Infos is only pushed away by whatever space is left over.
       const availableForShortcuts = container.clientWidth - fixedWidth - MIN_GAP_BEFORE_INFOS;
-      const moreButtonWidth = measureMore.offsetWidth;
+      // The trigger's label (and thus its width) depends on whether it ends up being the
+      // only thing shown, which is exactly what this calculation determines -- so the
+      // wider of the two possible labels is reserved to be safe regardless of outcome.
+      const moreButtonWidth = Math.max(measureMore.offsetWidth, measureAllHidden.offsetWidth);
 
       const currentItems = itemsRef.current;
       const itemWidths = currentItems.map(
@@ -619,7 +638,9 @@ function Statusbar() {
       {items.slice(0, visibleCount).map((item) => (
         <React.Fragment key={item.key}>{item.node}</React.Fragment>
       ))}
-      {hiddenItems.length > 0 ? <MoreShortcutsButton hiddenItems={hiddenItems} /> : null}
+      {hiddenItems.length > 0 ? (
+        <MoreShortcutsButton hiddenItems={hiddenItems} allHidden={visibleCount === 0} />
+      ) : null}
       <span ref={infosRef} style={{ display: "inline-flex", marginLeft: "auto" }}>
         <Infos />
       </span>
@@ -643,7 +664,10 @@ function Statusbar() {
           </span>
         ))}
         <span ref={measureMoreRef} style={{ display: "inline-flex" }}>
-          <MoreButtonLabel />
+          <MoreButtonLabel label={MORE_LABEL} />
+        </span>
+        <span ref={measureAllHiddenRef} style={{ display: "inline-flex" }}>
+          <MoreButtonLabel label={ALL_HIDDEN_LABEL} />
         </span>
       </span>
     </span>

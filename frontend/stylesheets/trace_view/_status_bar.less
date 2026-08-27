@@ -49,3 +49,18 @@
     left: 0;
   }
 }
+
+// Not scoped under .statusbar: antd's Popover renders its content into a portal
+// (typically appended to document.body), so this needs to apply regardless of where
+// in the DOM the link ends up.
+.statusbar-doc-link,
+.statusbar-doc-link:visited {
+  color: rgba(255, 255, 255, 0.67);
+  text-decoration: none;
+
+  &:hover,
+  &:focus {
+    color: rgba(255, 255, 255, 0.67);
+    text-decoration: underline;
+  }
+}

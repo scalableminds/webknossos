@@ -1,21 +1,21 @@
-import _ from "lodash";
+import { PushpinOutlined } from "@ant-design/icons";
 import { Button } from "antd";
 import Deferred from "libs/async/deferred";
 import { estimateAffineMatrix4x4 } from "libs/estimate_affine";
-import { useEffect, useRef, useState } from "react";
-import type { Tree } from "viewer/model/types/tree_types";
-import { Identity4x4, type Vector3, IdentityTransform } from "viewer/constants";
-import { parseNml } from "viewer/model/helpers/nml_helpers";
 import { M4x4 } from "libs/mjs";
 import { useInterval } from "libs/react_helpers";
-import { PushpinOutlined } from "@ant-design/icons";
+import _ from "lodash";
+import { Matrix4x4 } from "mjs";
+import { useEffect, useRef, useState } from "react";
+import { Identity4x4, IdentityTransform, type Vector3 } from "viewer/constants";
+import { parseNml } from "viewer/model/helpers/nml_helpers";
 import {
   createAffineTransform,
   invertTransform,
-  Transform,
+  type Transform,
   transformPointUnscaled,
 } from "viewer/model/helpers/transformation_helpers";
-import { Matrix4x4 } from "mjs";
+import type { Tree } from "viewer/model/types/tree_types";
 
 const deferredsByMessageId: Record<string, Deferred<unknown, unknown>> = {};
 

@@ -1,46 +1,53 @@
 package com.scalableminds.webknossos.datastore.services
 
-import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Box, Fox, FoxImplicits}
-import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.cache.AlfuCache
+import com.scalableminds.util.box.Box
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.helpers.{PathSchemes, S3UriUtils, UPath}
 import com.scalableminds.webknossos.datastore.storage.{
   CredentialConfigReader,
   DataVaultCredential,
-  S3AccessKeyCredential
+  S3AccessKeyCredential,
+  S3ClientPoolHolder
 }
 import com.typesafe.scalalogging.LazyLogging
-import software.amazon.awssdk.core.checksums.RequestChecksumCalculation
-import software.amazon.awssdk.regions.Region
-import software.amazon.awssdk.services.s3.S3AsyncClient
-import software.amazon.awssdk.services.s3.model.{
-  Delete,
-  DeleteObjectsRequest,
-  DeleteObjectsResponse,
-  ListObjectsV2Request,
-  ObjectIdentifier
-}
 import software.amazon.awssdk.transfer.s3.S3TransferManager
 
 import java.net.URI
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
-import scala.jdk.CollectionConverters._
-import scala.jdk.FutureConverters._
+import scala.concurrent.duration.DurationInt
 
-class ManagedS3Service @Inject()(config: DataStoreConfig) extends FoxImplicits with LazyLogging {
+class ManagedS3Service @Inject() (
+    config: DataStoreConfig,
+    baseDirService: BaseDirService,
+    s3ClientPoolHolder: S3ClientPoolHolder
+)(implicit ec: ExecutionContext)
+    extends LazyLogging {
+
+  private val transferManagerCache: AlfuCache[(URI, S3AccessKeyCredential), S3TransferManager] =
+    AlfuCache(
+      timeToIdle = 356.days,
+      timeToLive = 356.days,
+      onRemovalFn = Some { (_, managerBox) =>
+        managerBox.foreach(_.close())
+      }
+    )
 
   def pathIsInManagedS3(path: UPath): Boolean =
     path.getScheme.contains(PathSchemes.schemeS3) && globalCredentials.exists(c =>
-      UPath.fromString(c.name).map(path.startsWith).getOrElse(false))
+      UPath.fromString(c.name).map(path.startsWith).getOrElse(false)
+    )
 
   def findGlobalCredentialFor(pathOpt: Option[UPath]): Option[S3AccessKeyCredential] =
     pathOpt.flatMap(findGlobalCredentialFor)
 
   private def findGlobalCredentialFor(path: UPath): Option[S3AccessKeyCredential] =
     globalCredentials.collectFirst {
-      case credential: S3AccessKeyCredential if path.toString.startsWith(credential.name) => credential
+      case credential: S3AccessKeyCredential if UPath.fromString(credential.name).exists(path.startsWith) =>
+        credential
     }
 
   private lazy val globalCredentials: Seq[DataVaultCredential] = {
@@ -51,125 +58,29 @@ class ManagedS3Service @Inject()(config: DataStoreConfig) extends FoxImplicits w
     res
   }
 
-  private lazy val s3UploadCredentialOpt: Option[S3AccessKeyCredential] =
-    globalCredentials.collectFirst {
-      case credential: S3AccessKeyCredential if config.Datastore.S3Upload.credentialName == credential.name =>
-        credential
-    }
+  def isS3UploadEnabled(organizationId: String): Boolean =
+    s3UploadBaseDir(organizationId).isDefined
 
-  lazy val s3UploadBucketOpt: Option[String] =
-    // by convention, the credentialName is the S3 URI so we can extract the bucket from it.
-    S3UriUtils.hostBucketFromUri(new URI(config.Datastore.S3Upload.credentialName))
+  def s3UploadBaseDir(organizationId: String): Box[UPath] =
+    baseDirService.getOneForOrga(organizationId, requireS3 = true, requireAllowsUpload = true)
 
-  private lazy val s3UploadEndpoint: URI =
-    endpointForCredentialName(config.Datastore.S3Upload.credentialName)
-
-  private def endpointForCredentialName(credentialName: String) = {
-    // by convention, the credentialName is the S3 URI so we can extract the endpoint from it.
-    val credentialUri = new URI(credentialName)
-    new URI(
-      "https",
-      null,
-      credentialUri.getHost,
-      -1,
-      null,
-      null,
-      null
+  private def transferManagerForEndpoint(
+      s3UploadEndpoint: URI,
+      credential: S3AccessKeyCredential
+  ): Fox[S3TransferManager] =
+    transferManagerCache.getOrLoad(
+      (s3UploadEndpoint, credential),
+      _ =>
+        for {
+          client <- s3ClientPoolHolder.s3ClientPool.getS3Client(Some(credential), s3UploadEndpoint, isForUpload = true)
+          transferManager = S3TransferManager.builder().transferDirectoryMaxConcurrency(30).s3Client(client).build()
+        } yield transferManager
     )
-  }
 
-  private lazy val s3UploadClientBox: Box[S3AsyncClient] = for {
-    s3UploadCredential <- Box(s3UploadCredentialOpt)
-    client <- buildClient(s3UploadEndpoint, s3UploadCredential)
-  } yield client
-
-  private def buildClient(endpoint: URI, credential: S3AccessKeyCredential): Box[S3AsyncClient] =
-    tryo(
-      S3AsyncClient
-        .builder()
-        .credentialsProvider(credential.toCredentialsProvider)
-        .crossRegionAccessEnabled(true)
-        .forcePathStyle(true)
-        .endpointOverride(endpoint)
-        .region(Region.US_EAST_1)
-        // Disabling checksum calculation prevents files being stored with Content Encoding "aws-chunked".
-        .requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)
-        .build())
-
-  lazy val s3UploadTransferManagerBox: Box[S3TransferManager] = for {
-    client <- s3UploadClientBox
-  } yield S3TransferManager.builder().s3Client(client).build()
-
-  def deletePaths(paths: Seq[UPath])(implicit ec: ExecutionContext): Fox[Unit] = {
-    val pathsByBucket: Map[Option[String], Seq[UPath]] = paths.groupBy(S3UriUtils.hostBucketFromUpath)
-    for {
-      _ <- Fox.serialCombined(pathsByBucket.keys) { bucket: Option[String] =>
-        deleteS3PathsOnBucket(bucket, pathsByBucket(bucket))
-      }
-    } yield ()
-  }
-
-  private def deleteS3PathsOnBucket(bucketOpt: Option[String], paths: Seq[UPath])(
-      implicit ec: ExecutionContext): Fox[Unit] =
-    for {
-      bucket <- bucketOpt.toFox ?~> "Could not determine S3 bucket from UPath"
-      firstPath <- paths.headOption.toFox // groupBy of the caller guarantees that this is not called with empty list.
-      credential <- findGlobalCredentialFor(firstPath).toFox // Convention is that the credentials are per bucket, so we can reuse this for all paths
-      endpoint = endpointForCredentialName(credential.name)
-      s3Client <- buildClient(endpoint, credential).toFox
-      prefixes <- Fox.combined(paths.map(path => S3UriUtils.objectKeyFromUri(path.toRemoteUriUnsafe).toFox))
-      keys: Seq[String] <- Fox.serialCombined(prefixes)(listKeysAtPrefix(s3Client, bucket, _)).map(_.flatten)
-      uniqueKeys = keys.distinct
-      _ = logger.info(s"Deleting ${uniqueKeys.length} objects from managed S3 bucket $bucket...")
-      before = Instant.now
-      _ <- Fox.serialCombined(uniqueKeys.grouped(1000).toSeq)(deleteBatch(s3Client, bucket, _)).map(_ => ())
-      _ = Instant.logSince(before,
-                           s"Successfully deleted ${uniqueKeys.length} objects from managed S3 bucket $bucket.",
-                           logger)
-    } yield ()
-
-  private def deleteBatch(s3Client: S3AsyncClient, bucket: String, keys: Seq[String])(
-      implicit ec: ExecutionContext): Fox[DeleteObjectsResponse] =
-    if (keys.isEmpty) Fox.empty
-    else {
-      Fox.fromFuture(
-        s3Client
-          .deleteObjects(
-            DeleteObjectsRequest
-              .builder()
-              .bucket(bucket)
-              .delete(
-                Delete
-                  .builder()
-                  .objects(
-                    keys.map(k => ObjectIdentifier.builder().key(k).build()).asJava
-                  )
-                  .build()
-              )
-              .build()
-          )
-          .asScala)
-    }
-
-  private def listKeysAtPrefix(s3Client: S3AsyncClient, bucket: String, prefix: String)(
-      implicit ec: ExecutionContext): Fox[Seq[String]] = {
-    def listRecursive(continuationToken: Option[String], acc: Seq[String]): Fox[Seq[String]] = {
-      val builder = ListObjectsV2Request.builder().bucket(bucket).prefix(prefix).maxKeys(1000)
-      continuationToken.foreach(builder.continuationToken)
-      val request = builder.build()
-      for {
-        response <- Fox.fromFuture(s3Client.listObjectsV2(request).asScala)
-        keys = response.contents().asScala.map(_.key())
-        allKeys = acc ++ keys
-        result <- if (response.isTruncated) {
-          listRecursive(Option(response.nextContinuationToken()), allKeys)
-        } else {
-          Fox.successful(allKeys)
-        }
-      } yield result
-    }
-
-    listRecursive(None, Seq())
-  }
+  def transferManager(targetPath: UPath): Fox[S3TransferManager] = for {
+    endpoint <- S3UriUtils.endpointFromUPath(targetPath).toFox
+    credential <- findGlobalCredentialFor(targetPath).toFox
+    transferManager <- transferManagerForEndpoint(endpoint, credential)
+  } yield transferManager
 
 }

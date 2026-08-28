@@ -5,32 +5,41 @@ import {
   CloseCircleTwoTone,
   DownloadOutlined,
   EyeOutlined,
-  InfoCircleOutlined,
   LoadingOutlined,
   PlayCircleOutlined,
   QuestionCircleTwoTone,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import AdminPage from "admin/admin_page";
 import { cancelJob, getJobs, retryJob } from "admin/rest_api";
-import { Input, Modal, Spin, Table, Tooltip, Typography } from "antd";
+import { App, Input, Space, Spin, Table, Tooltip } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
-import { confirmAsync } from "dashboard/dataset/helper_components";
-import { formatCreditsString, formatWkLibsNdBBox } from "libs/format_utils";
+import FormattedId from "components/formatted_id";
+import LinkButton from "components/link_button";
+import features from "features";
+import { formatMilliCreditsString, formatWkLibsNdBBox } from "libs/format_utils";
 import Persistence from "libs/persistence";
-import { useInterval } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import _ from "lodash";
+import {
+  compareBy,
+  filterWithSearchQueryAND,
+  localeCompareBy,
+  pluralize,
+  scrollToTop,
+} from "libs/utils";
+import capitalize from "lodash-es/capitalize";
 import type * as React from "react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { type APIJob, APIJobType, type APIUserBase } from "types/api_types";
-import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
+import { type APIJob, APIJobCommand } from "types/api_types";
+import { getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 
-// Unfortunately, the twoToneColor (nor the style) prop don't support
-// CSS variables.
+// Kept as literals: antd derives the second tone from the first via a color library at render
+// time, so neither the twoToneColor nor the style prop can resolve a CSS variable here. These
+// values are antd's dark-algorithm status colors, which are legible on both backgrounds.
 export const TOOLTIP_MESSAGES_AND_ICONS = {
   UNKNOWN: {
     tooltip:
@@ -64,19 +73,23 @@ const { Column } = Table;
 const { Search } = Input;
 
 export const getShowTrainingDataLink = (
+  modal: ReturnType<typeof App.useApp>["modal"],
   trainingAnnotations: {
     annotationId: string;
   }[],
 ) => {
   return trainingAnnotations == null ? null : trainingAnnotations.length > 1 ? (
-    <a
-      href="#"
+    <LinkButton
+      icon={<EyeOutlined />}
       onClick={() => {
-        Modal.info({
+        modal.info({
+          title: "Training Data",
+          closable: true,
+          mask: { closable: true },
           content: (
             <div>
               The following annotations were used during training:
-              <ul>
+              <ul style={{ padding: 15 }}>
                 {trainingAnnotations.map((annotation: { annotationId: string }, index: number) => (
                   <li key={`annotation_${index}`}>
                     <a
@@ -95,15 +108,16 @@ export const getShowTrainingDataLink = (
       }}
     >
       Show Training Data
-    </a>
+    </LinkButton>
   ) : (
-    <a
+    <LinkButton
+      icon={<EyeOutlined />}
       href={`/annotations/${trainingAnnotations[0].annotationId}`}
       target="_blank"
       rel="noreferrer noopener"
     >
       Show Training Data
-    </a>
+    </LinkButton>
   );
 };
 
@@ -122,36 +136,56 @@ const persistence = new Persistence<Pick<State, "searchQuery">>(
 export function JobState({ job }: { job: APIJob }) {
   const { tooltip, icon } = TOOLTIP_MESSAGES_AND_ICONS[job.state];
 
-  const jobStateNormalized = _.capitalize(job.state.toLowerCase());
+  const jobStateNormalized = capitalize(job.state.toLowerCase());
 
   return (
     <Tooltip title={tooltip}>
-      <span>{icon}</span>
-      {jobStateNormalized}
+      <Space size={2}>
+        {icon}
+        {jobStateNormalized}
+      </Space>
     </Tooltip>
   );
 }
 
+// Helper function to get a friendly name for job types
+export function getJobTypeName(command: APIJobCommand): string {
+  const jobTypeNames: Record<string, string> = {
+    [APIJobCommand.CONVERT_TO_WKW]: "Convert to WKW",
+    [APIJobCommand.EXPORT_TIFF]: "Export TIFF",
+    [APIJobCommand.RENDER_ANIMATION]: "Render Animation",
+    [APIJobCommand.COMPUTE_MESH_FILE]: "Compute Mesh",
+    [APIJobCommand.COMPUTE_SEGMENT_INDEX_FILE]: "Compute Segment Index",
+    [APIJobCommand.FIND_LARGEST_SEGMENT_ID]: "Find Largest Segment ID",
+    [APIJobCommand.DEPRECATED_INFER_NUCLEI]: "AI Nuclei Inference",
+    [APIJobCommand.INFER_NEURONS]: "AI Neuron Inference",
+    [APIJobCommand.INFER_MITOCHONDRIA]: "AI Mitochondria Inference",
+    [APIJobCommand.INFER_INSTANCES]: "AI Instance Segmentation",
+    [APIJobCommand.ALIGN_SECTIONS]: "Align Sections",
+    [APIJobCommand.MATERIALIZE_VOLUME_ANNOTATION]: "Materialize Annotation",
+    [APIJobCommand.TRAIN_NEURON_MODEL]: "Train Neuron Model",
+    [APIJobCommand.TRAIN_INSTANCE_MODEL]: "Train Instance Model",
+    [APIJobCommand.DEPRECATED_TRAIN_MODEL]: "Train Model (Legacy)",
+    [APIJobCommand.DEPRECATED_INFER_WITH_MODEL]: "AI Inference (Legacy)",
+  };
+  return jobTypeNames[command] || command;
+}
+
 function JobListView() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [jobs, setJobs] = useState<APIJob[]>([]);
+  const queryClient = useQueryClient();
+  const { modal } = App.useApp();
+  const { data: jobs, isLoading } = useQuery({
+    queryKey: ["jobs"],
+    queryFn: () => getJobs(),
+    refetchInterval: refreshInterval,
+  });
   const [searchQuery, setSearchQuery] = useState("");
   const isCurrentUserSuperUser = useWkSelector((state) => state.activeUser?.isSuperUser);
 
   useEffect(() => {
-    fetchData();
     const { searchQuery } = persistence.load();
     setSearchQuery(searchQuery || "");
-    setIsLoading(false);
   }, []);
-
-  async function fetchData() {
-    setJobs(await getJobs());
-  }
-
-  useInterval(async () => {
-    setJobs(await getJobs());
-  }, refreshInterval);
 
   useEffect(() => {
     persistence.persist({ searchQuery });
@@ -163,162 +197,192 @@ function JobListView() {
 
   function getLinkToDataset(job: APIJob) {
     // prefer updated link over legacy link.
-    if (job.datasetId != null)
-      return `/datasets/${getReadableURLPart({ name: job.datasetName || "unknown_name", id: job.datasetId })}/view`;
-    if (job.organizationId != null && (job.datasetName != null || job.datasetDirectoryName != null))
-      return `/datasets/${job.organizationId}/${job.datasetDirectoryName || job.datasetName}/view`;
+    if (job.args.datasetId != null)
+      return getViewDatasetURL({
+        name: job.args.datasetName || "unknown_name",
+        id: job.args.datasetId,
+      });
+    if (
+      job.organizationId != null &&
+      (job.args.datasetName != null || job.args.datasetDirectoryName != null)
+    )
+      return `/datasets/${job.organizationId}/${job.args.datasetDirectoryName || job.args.datasetName}/view`;
     return null;
   }
 
   function renderDescription(__: any, job: APIJob) {
     const linkToDataset = getLinkToDataset(job);
-    if (job.type === APIJobType.CONVERT_TO_WKW && job.datasetName) {
-      return <span>{`Conversion to WKW of ${job.datasetName}`}</span>;
-    } else if (job.type === APIJobType.EXPORT_TIFF && linkToDataset != null) {
+    const layerName = job.args.annotationLayerName || job.args.layerName;
+
+    if (job.command === APIJobCommand.CONVERT_TO_WKW && job.args.datasetName) {
+      return <span>{`Conversion to WKW of ${job.args.datasetName}`}</span>;
+    } else if (job.command === APIJobCommand.EXPORT_TIFF && linkToDataset != null) {
       const labelToAnnotationOrDataset =
-        job.annotationId != null ? (
-          <Link to={`/annotations/${job.annotationId}`}>
-            annotation of dataset {job.datasetName}
+        job.args.annotationId != null ? (
+          <Link to={`/annotations/${job.args.annotationId}`}>
+            annotation of dataset {job.args.datasetName}
           </Link>
         ) : (
-          <Link to={linkToDataset}>dataset {job.datasetName}</Link>
+          <Link to={linkToDataset}>dataset {job.args.datasetName}</Link>
         );
-      const layerLabel = job.annotationLayerName || job.layerName;
       return (
         <span>
-          Tiff export of layer {layerLabel} from {labelToAnnotationOrDataset} (Bounding Box{" "}
-          {job.ndBoundingBox ? formatWkLibsNdBBox(job.ndBoundingBox) : job.boundingBox})
+          Tiff export of layer {layerName} from {labelToAnnotationOrDataset} (Bounding Box{" "}
+          {job.args.ndBoundingBox
+            ? formatWkLibsNdBBox(job.args.ndBoundingBox)
+            : job.args.boundingBox}
+          )
         </span>
       );
-    } else if (job.type === APIJobType.RENDER_ANIMATION && linkToDataset != null) {
+    } else if (job.command === APIJobCommand.RENDER_ANIMATION && linkToDataset != null) {
       return (
         <span>
-          Animation rendering for layer {job.layerName} of dataset{" "}
-          <Link to={linkToDataset}>{job.datasetName}</Link>
+          Animation rendering for layer {layerName} of dataset{" "}
+          <Link to={linkToDataset}>{job.args.datasetName}</Link>
         </span>
       );
-    } else if (job.type === APIJobType.COMPUTE_MESH_FILE && linkToDataset != null) {
+    } else if (job.command === APIJobCommand.COMPUTE_MESH_FILE && linkToDataset != null) {
       return (
         <span>
-          Mesh file computation for <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
+          Mesh file computation for <Link to={linkToDataset}>{job.args.datasetName}</Link>{" "}
         </span>
       );
-    } else if (job.type === APIJobType.COMPUTE_SEGMENT_INDEX_FILE && linkToDataset != null) {
+    } else if (job.command === APIJobCommand.COMPUTE_SEGMENT_INDEX_FILE && linkToDataset != null) {
       return (
         <span>
-          Segment index file computation for <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
+          Segment index file computation for <Link to={linkToDataset}>
+            {job.args.datasetName}
+          </Link>{" "}
         </span>
       );
     } else if (
-      job.type === APIJobType.FIND_LARGEST_SEGMENT_ID &&
+      job.command === APIJobCommand.FIND_LARGEST_SEGMENT_ID &&
       linkToDataset != null &&
-      job.layerName
+      layerName
     ) {
       return (
         <span>
-          Largest segment id detection for layer {job.layerName} of{" "}
-          <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
-        </span>
-      );
-    } else if (job.type === APIJobType.INFER_NUCLEI && linkToDataset != null && job.layerName) {
-      return (
-        <span>
-          Nuclei inferral for layer {job.layerName} of{" "}
-          <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
+          Largest segment id detection for layer {layerName} of{" "}
+          <Link to={linkToDataset}>{job.args.datasetName}</Link>{" "}
         </span>
       );
     } else if (
-      job.type === APIJobType.INFER_NEURONS &&
+      job.command === APIJobCommand.DEPRECATED_INFER_NUCLEI &&
       linkToDataset != null &&
-      job.layerName &&
-      job.modelId == null
+      layerName
     ) {
       return (
         <span>
-          AI Neuron inferral for layer <i>{job.layerName}</i> of{" "}
-          <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
+          Nuclei inferral for layer {layerName} of{" "}
+          <Link to={linkToDataset}>{job.args.datasetName}</Link>{" "}
         </span>
       );
     } else if (
-      (job.type === APIJobType.DEPRECATED_INFER_WITH_MODEL ||
-        job.type === APIJobType.INFER_NEURONS) &&
+      job.command === APIJobCommand.INFER_NEURONS &&
+      linkToDataset != null &&
+      layerName &&
+      job.args.modelId == null
+    ) {
+      return (
+        <span>
+          AI Neuron inferral for layer <i>{layerName}</i> of{" "}
+          <Link to={linkToDataset}>{job.args.datasetName}</Link>{" "}
+        </span>
+      );
+    } else if (
+      (job.command === APIJobCommand.DEPRECATED_INFER_WITH_MODEL ||
+        job.command === APIJobCommand.INFER_NEURONS) &&
       linkToDataset != null
     ) {
       return (
         <span>
-          Run AI segmentation with custom model on <Link to={linkToDataset}>{job.datasetName}</Link>
+          Run AI segmentation with custom model on{" "}
+          <Link to={linkToDataset}>{job.args.datasetName}</Link>
         </span>
       );
     } else if (
-      job.type === APIJobType.INFER_MITOCHONDRIA &&
+      job.command === APIJobCommand.INFER_MITOCHONDRIA &&
       linkToDataset != null &&
-      job.layerName
+      layerName
     ) {
       return (
         <span>
-          AI Mitochondria inferral for layer <i>{job.layerName}</i> of{" "}
-          <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
+          AI Mitochondria inferral for layer <i>{layerName}</i> of{" "}
+          <Link to={linkToDataset}>{job.args.datasetName}</Link>{" "}
         </span>
       );
-    } else if (job.type === APIJobType.INFER_INSTANCES && linkToDataset != null && job.layerName) {
+    } else if (
+      job.command === APIJobCommand.INFER_INSTANCES &&
+      linkToDataset != null &&
+      layerName
+    ) {
       return (
         <span>
-          AI instance segmentation for layer <i>{job.layerName}</i> of{" "}
-          <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
+          AI instance segmentation for layer <i>{layerName}</i> of{" "}
+          <Link to={linkToDataset}>{job.args.datasetName}</Link>{" "}
         </span>
       );
-    } else if (job.type === APIJobType.ALIGN_SECTIONS && linkToDataset != null && job.layerName) {
+    } else if (job.command === APIJobCommand.ALIGN_SECTIONS && linkToDataset != null && layerName) {
       return (
         <span>
-          Align sections for layer <i>{job.layerName}</i> of{" "}
-          <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
+          Align sections for layer <i>{layerName}</i> of{" "}
+          <Link to={linkToDataset}>{job.args.datasetName}</Link>{" "}
         </span>
       );
-    } else if (job.type === APIJobType.MATERIALIZE_VOLUME_ANNOTATION && linkToDataset != null) {
+    } else if (
+      job.command === APIJobCommand.MATERIALIZE_VOLUME_ANNOTATION &&
+      linkToDataset != null
+    ) {
       return (
         <span>
-          Materialize annotation for {job.layerName ? ` layer ${job.layerName} of ` : " "}
-          <Link to={linkToDataset}>{job.datasetName}</Link>
-          {job.mergeSegments
+          Materialize annotation for {layerName ? ` layer ${layerName} of ` : " "}
+          <Link to={linkToDataset}>{job.args.datasetName}</Link>
+          {job.args.mergeSegments
             ? ". This includes merging the segments that were merged via merger mode."
             : null}
         </span>
       );
     } else if (
-      job.type === APIJobType.TRAIN_NEURON_MODEL ||
-      job.type === APIJobType.TRAIN_INSTANCE_MODEL ||
-      job.type === APIJobType.DEPRECATED_TRAIN_MODEL
+      job.command === APIJobCommand.TRAIN_NEURON_MODEL ||
+      job.command === APIJobCommand.TRAIN_INSTANCE_MODEL ||
+      job.command === APIJobCommand.DEPRECATED_TRAIN_MODEL
     ) {
-      const numberOfTrainingAnnotations = job.trainingAnnotations?.length || 0;
+      const numberOfTrainingAnnotations = job.args.trainingAnnotations?.length || 0;
       const modelName =
-        job.type === APIJobType.TRAIN_NEURON_MODEL || job.type === APIJobType.DEPRECATED_TRAIN_MODEL
+        job.command === APIJobCommand.TRAIN_NEURON_MODEL ||
+        job.command === APIJobCommand.DEPRECATED_TRAIN_MODEL
           ? "neuron model"
           : "instance model";
       return (
         <span>
-          {`Train ${modelName} on ${numberOfTrainingAnnotations} ${Utils.pluralize("annotation", numberOfTrainingAnnotations)}. `}
-          {getShowTrainingDataLink(job.trainingAnnotations)}
+          {`Train ${modelName} on ${numberOfTrainingAnnotations} ${pluralize("annotation", numberOfTrainingAnnotations)}. `}
+          {getShowTrainingDataLink(modal, job.args.trainingAnnotations)}
         </span>
       );
     } else {
-      return <span>{job.type}</span>;
+      return <span>{job.command}</span>;
     }
+  }
+
+  function renderWorkflowLink(__: any, job: APIJob) {
+    return job.voxelyticsWorkflowHash != null ? (
+      <Link to={`/workflows/${job.voxelyticsWorkflowHash}`}>Workflow</Link>
+    ) : null;
   }
 
   function renderActions(__: any, job: APIJob) {
     if (job.state === "PENDING" || job.state === "STARTED") {
       return (
         <AsyncLink
-          href="#"
           onClick={async () => {
-            const isDeleteConfirmed = await confirmAsync({
+            const isDeleteConfirmed = await modal.confirm({
               title: <p>Are you sure you want to cancel job {job.id}?</p>,
               okText: "Yes, cancel job",
               cancelText: "No, keep it",
             });
 
             if (isDeleteConfirmed) {
-              cancelJob(job.id).then(() => fetchData());
+              cancelJob(job.id).then(() => queryClient.invalidateQueries({ queryKey: ["jobs"] }));
             }
           }}
           icon={<CloseCircleOutlined className="icon-margin-right" />}
@@ -326,73 +390,89 @@ function JobListView() {
           Cancel
         </AsyncLink>
       );
-    } else if ((job.state === "FAILURE" || job.state === "CANCELLED") && isCurrentUserSuperUser) {
-      return (
-        <Tooltip title="Restarts the workflow from the failed task, skipping and reusing artifacts from preceding tasks that were already successful.">
-          <AsyncLink
-            href="#"
-            onClick={async () => {
-              try {
-                await retryJob(job.id);
-                await fetchData();
-                Toast.success("Job is being retried");
-              } catch (e) {
-                console.error("Could not retry job", e);
-                Toast.error("Failed to start retrying the job");
-              }
-            }}
-            icon={<PlayCircleOutlined className="icon-margin-right" />}
-          >
-            Retry
-          </AsyncLink>
-        </Tooltip>
-      );
+    } else if (job.state === "FAILURE" || job.state === "CANCELLED") {
+      // Regular users may retry a job once. Super users may always retry.
+      const canRetry = isCurrentUserSuperUser || job.lastRetry == null;
+      if (canRetry) {
+        return (
+          <Tooltip title="Restarts the workflow from the failed task, skipping and reusing artifacts from preceding tasks that were already successful.">
+            <AsyncLink
+              onClick={async () => {
+                try {
+                  await retryJob(job.id);
+                  await queryClient.invalidateQueries({ queryKey: ["jobs"] });
+                  Toast.success("Job is being retried");
+                } catch (e) {
+                  console.error("Could not retry job", e);
+                  Toast.error("Failed to start retrying the job");
+                }
+              }}
+              icon={<PlayCircleOutlined className="icon-margin-right" />}
+            >
+              Retry
+            </AsyncLink>
+          </Tooltip>
+        );
+      }
+      if (job.state === "FAILURE") {
+        const failureMessage = features().isWkorgInstance ? (
+          <>
+            Please contact our <a href="mailto:support@webknossos.org">support team</a> for help.
+          </>
+        ) : (
+          "Please contact an administrator for help."
+        );
+        return (
+          <Tooltip title="This job has already been retried once and failed again. This is likely a persistent failure.">
+            <span>{failureMessage}</span>
+          </Tooltip>
+        );
+      }
+      return null;
     } else if (
-      job.type === APIJobType.CONVERT_TO_WKW ||
-      job.type === APIJobType.COMPUTE_SEGMENT_INDEX_FILE ||
-      job.type === APIJobType.ALIGN_SECTIONS
+      job.command === APIJobCommand.CONVERT_TO_WKW ||
+      job.command === APIJobCommand.COMPUTE_SEGMENT_INDEX_FILE ||
+      job.command === APIJobCommand.ALIGN_SECTIONS
     ) {
       return (
         <span>
           {job.resultLink && (
             <Link to={job.resultLink} title="View Dataset">
-              <EyeOutlined className="icon-margin-right" />
-              View
+              <LinkButton icon={<EyeOutlined />}>View</LinkButton>
             </Link>
           )}
         </span>
       );
-    } else if (job.type === APIJobType.EXPORT_TIFF) {
+    } else if (job.command === APIJobCommand.EXPORT_TIFF) {
       return (
         <span>
           {job.resultLink && (
-            <a href={job.resultLink} title="Download">
-              <DownloadOutlined className="icon-margin-right" />
+            <LinkButton href={job.resultLink} icon={<DownloadOutlined />}>
               Download
-            </a>
+            </LinkButton>
           )}
         </span>
       );
-    } else if (job.type === APIJobType.RENDER_ANIMATION) {
+    } else if (job.command === APIJobCommand.RENDER_ANIMATION) {
       return (
         <span>
           {job.resultLink && (
-            <a href={job.resultLink} title="Download">
-              <DownloadOutlined className="icon-margin-right" />
+            <LinkButton href={job.resultLink} icon={<DownloadOutlined />}>
               Download
-            </a>
+            </LinkButton>
           )}
         </span>
       );
-    } else if (job.type === "find_largest_segment_id") {
-      return <span>{job.result}</span>;
+    } else if (job.command === APIJobCommand.FIND_LARGEST_SEGMENT_ID) {
+      return <span>{job.returnValue}</span>;
     } else if (
-      job.type === APIJobType.INFER_NUCLEI ||
-      job.type === APIJobType.INFER_NEURONS ||
-      job.type === APIJobType.MATERIALIZE_VOLUME_ANNOTATION ||
-      job.type === APIJobType.COMPUTE_MESH_FILE ||
-      job.type === APIJobType.DEPRECATED_INFER_WITH_MODEL ||
-      job.type === APIJobType.INFER_MITOCHONDRIA
+      job.command === APIJobCommand.DEPRECATED_INFER_NUCLEI ||
+      job.command === APIJobCommand.INFER_NEURONS ||
+      job.command === APIJobCommand.MATERIALIZE_VOLUME_ANNOTATION ||
+      job.command === APIJobCommand.COMPUTE_MESH_FILE ||
+      job.command === APIJobCommand.DEPRECATED_INFER_WITH_MODEL ||
+      job.command === APIJobCommand.INFER_MITOCHONDRIA ||
+      job.command === APIJobCommand.INFER_INSTANCES
     ) {
       return (
         <span>
@@ -405,13 +485,13 @@ function JobListView() {
         </span>
       );
     } else if (
-      job.type === APIJobType.TRAIN_NEURON_MODEL ||
-      job.type === APIJobType.DEPRECATED_TRAIN_MODEL
+      job.command === APIJobCommand.TRAIN_NEURON_MODEL ||
+      job.command === APIJobCommand.DEPRECATED_TRAIN_MODEL
     ) {
       return (
         <span>
           {job.state === "SUCCESS" &&
-            "The model may now be selected from the “AI Analysis“ button when viewing a dataset."}
+            'The model may now be selected from the "AI Analysis" button when viewing a dataset.'}
         </span>
       );
     } else {
@@ -419,11 +499,11 @@ function JobListView() {
       return (
         <span>
           {job.resultLink && (
-            <a href={job.resultLink} title="Result">
+            <LinkButton href={job.resultLink} icon={<DownloadOutlined />}>
               Result
-            </a>
+            </LinkButton>
           )}
-          {job.result && <p>{job.result}</p>}
+          {job.returnValue && <p>{job.returnValue}</p>}
         </span>
       );
     }
@@ -433,93 +513,105 @@ function JobListView() {
     return <JobState job={job} />;
   }
 
+  // Get unique job types and states for filter options
+  const uniqueJobTypes = Array.from(new Set(jobs?.map((job) => job.command) || [])).sort();
+  const uniqueStates = Array.from(new Set(jobs?.map((job) => job.state) || [])).sort();
+
+  const jobTypeFilters = uniqueJobTypes.map((command) => ({
+    text: getJobTypeName(command),
+    value: command,
+  }));
+
+  const stateFilters = uniqueStates.map((state) => ({
+    text: capitalize(state.toLowerCase()),
+    value: state,
+  }));
+
   return (
-    <div className="container">
-      <div className="pull-right">
-        <Search
-          style={{
-            width: 200,
-          }}
-          onChange={handleSearch}
-          value={searchQuery}
-        />
-      </div>
-      <h3>Jobs</h3>
-      <Typography.Paragraph type="secondary">
-        Some actions such as dataset conversions or export as Tiff files require some time for
-        processing in the background.
-        <a
-          href="https://docs.webknossos.org/webknossos/automation/jobs.html"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Tooltip title="Read more in the documentation">
-            <InfoCircleOutlined style={{ marginLeft: 10 }} />
-          </Tooltip>
-        </a>
-        <br />
-        WEBKNOSSOS will notify you via email when a job has finished or reload this page to track
-        progress.
-      </Typography.Paragraph>
-      <div
-        className="clearfix"
-        style={{
-          margin: "20px 0px",
-        }}
-      />
+    <AdminPage
+      title="Jobs"
+      descriptionURI="https://docs.webknossos.org/webknossos/automation/jobs.html"
+      description={
+        <>
+          Some actions such as dataset conversions or TIFF exports require background processing.
+          <br />
+          WEBKNOSSOS notifies you by email once background jobs finish.
+        </>
+      }
+      search={<Search allowClear onChange={handleSearch} value={searchQuery} />}
+    >
       <Spin spinning={isLoading} size="large">
         <Table
-          dataSource={Utils.filterWithSearchQueryAND(jobs, ["datasetName"], searchQuery)}
+          dataSource={filterWithSearchQueryAND(
+            jobs || [],
+            [(job) => job.args.datasetName || ""],
+            searchQuery,
+          )}
           rowKey="id"
           pagination={{
             defaultPageSize: 50,
-          }}
-          style={{
-            marginTop: 30,
-            marginBottom: 30,
+            onChange: scrollToTop,
           }}
         >
           <Column
             title="Job Id"
             dataIndex="id"
             key="id"
-            sorter={Utils.localeCompareBy<APIJob>((job) => job.id)}
+            width={120}
+            render={(id) => <FormattedId id={id} />}
+            sorter={localeCompareBy<APIJob>((job) => job.id)}
           />
-          <Column title="Description" key="datasetName" render={renderDescription} />
           <Column
-            title="Created at"
-            key="createdAt"
-            render={(job) => <FormattedDate timestamp={job.createdAt} />}
-            sorter={Utils.compareBy<APIJob>((job) => job.createdAt)}
-            defaultSortOrder="descend"
+            title="Description"
+            key="datasetName"
+            render={renderDescription}
+            sorter={localeCompareBy<APIJob>((job) => job.command)}
+            filters={jobTypeFilters}
+            onFilter={(value, record: APIJob) => record.command === value}
           />
           <Column
             title="Owner"
-            dataIndex="owner"
             key="owner"
-            sorter={Utils.localeCompareBy<APIJob>((job) => job.owner.lastName)}
-            render={(owner: APIUserBase) => (
+            sorter={localeCompareBy<APIJob>((job) => job.ownerLastName)}
+            render={(job: APIJob) => (
               <>
-                <div>{owner.email ? `${owner.lastName}, ${owner.firstName}` : "-"}</div>
-                <div>{owner.email ? `(${owner.email})` : "-"}</div>
+                <div>{`${job.ownerLastName}, ${job.ownerFirstName}`}</div>
+                <div>{`(${job.ownerEmail})`}</div>
               </>
             )}
           />
           <Column
-            title="State"
-            key="state"
-            render={renderState}
-            sorter={Utils.localeCompareBy<APIJob>((job) => job.state)}
+            title="Cost in Credits"
+            key="costInMilliCredits"
+            align="right"
+            render={(job: APIJob) =>
+              job.costInMilliCredits ? formatMilliCreditsString(job.costInMilliCredits) : "-"
+            }
           />
           <Column
-            title="Cost in Credits"
-            key="creditCost"
-            render={(job: APIJob) => (job.creditCost ? formatCreditsString(job.creditCost) : "-")}
+            title="Date"
+            key="createdAt"
+            width={190}
+            render={(job) => <FormattedDate timestamp={job.created} />}
+            sorter={compareBy<APIJob>((job) => job.created)}
+            defaultSortOrder="descend"
+          />
+          {isCurrentUserSuperUser ? (
+            <Column title="Voxelytics" key="workflow" width={150} render={renderWorkflowLink} />
+          ) : null}
+          <Column
+            title="State"
+            key="state"
+            width={120}
+            render={renderState}
+            sorter={localeCompareBy<APIJob>((job) => job.state)}
+            filters={stateFilters}
+            onFilter={(value, record: APIJob) => record.state === value}
           />
           <Column title="Action" key="actions" fixed="right" width={150} render={renderActions} />
         </Table>
       </Spin>
-    </div>
+    </AdminPage>
   );
 }
 

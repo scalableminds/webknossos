@@ -1,8 +1,8 @@
-import {
+import Icon, {
   ArrowsAltOutlined,
   BackwardOutlined,
-  CodeSandboxOutlined,
   CodepenOutlined,
+  CodeSandboxOutlined,
   DeleteOutlined,
   EditOutlined,
   EyeOutlined,
@@ -14,13 +14,16 @@ import {
   ShrinkOutlined,
   VideoCameraOutlined,
 } from "@ant-design/icons";
-import { Avatar, Button, List } from "antd";
-import _ from "lodash";
-import * as React from "react";
-
+import HideSkeletonEdgesIcon from "@images/icons/icon-hide-skeleton-edges.svg?react";
+import { App, Avatar, Button, List } from "antd";
 import classNames from "classnames";
 import FormattedDate from "components/formatted_date";
 import { useWkSelector } from "libs/react_hooks";
+import groupBy from "lodash-es/groupBy";
+import max from "lodash-es/max";
+import type React from "react";
+import { Fragment } from "react";
+import { isConcurrentCollaborationMode } from "viewer/model/accessors/annotation_accessor";
 import { formatUserName, getContributorById } from "viewer/model/accessors/user_accessor";
 import { getReadableNameByVolumeTracingId } from "viewer/model/accessors/volumetracing_accessor";
 import type {
@@ -36,14 +39,18 @@ import type {
   DeleteEdgeUpdateAction,
   DeleteNodeUpdateAction,
   DeleteSegmentDataUpdateAction,
+  DeleteSegmentGroupUpdateAction,
   DeleteSegmentUpdateAction,
   DeleteTreeUpdateAction,
   DeleteUserBoundingBoxInSkeletonTracingAction,
   DeleteUserBoundingBoxInVolumeTracingAction,
   LEGACY_MergeTreeUpdateAction,
+  LEGACY_UpdateSegmentGroupsUpdateAction,
+  LEGACY_UpdateSegmentUpdateAction,
   LEGACY_UpdateUserBoundingBoxesInSkeletonTracingUpdateAction,
   LEGACY_UpdateUserBoundingBoxesInVolumeTracingUpdateAction,
   MergeAgglomerateUpdateAction,
+  MergeSegmentItemsUpdateAction,
   MoveTreeComponentUpdateAction,
   RevertToVersionUpdateAction,
   ServerUpdateAction,
@@ -56,24 +63,27 @@ import type {
   UpdateLargestSegmentIdVolumeAction,
   UpdateMappingNameUpdateAction,
   UpdateMetadataOfAnnotationUpdateAction,
+  UpdateMetadataOfSegmentUpdateAction,
   UpdateNodeUpdateAction,
-  UpdateSegmentGroupVisibilityVolumeAction,
   UpdateSegmentGroupsExpandedStateUpdateAction,
-  UpdateSegmentGroupsUpdateAction,
-  UpdateSegmentUpdateAction,
+  UpdateSegmentGroupVisibilityVolumeAction,
+  UpdateSegmentPartialUpdateAction,
   UpdateSegmentVisibilityVolumeAction,
   UpdateTreeEdgesVisibilityUpdateAction,
-  UpdateTreeGroupVisibilityUpdateAction,
   UpdateTreeGroupsExpandedStateAction,
+  UpdateTreeGroupVisibilityUpdateAction,
   UpdateTreeUpdateAction,
   UpdateTreeVisibilityUpdateAction,
   UpdateUserBoundingBoxInSkeletonTracingAction,
   UpdateUserBoundingBoxInVolumeTracingAction,
   UpdateUserBoundingBoxVisibilityInSkeletonTracingAction,
   UpdateUserBoundingBoxVisibilityInVolumeTracingAction,
+  UpdateVolumeBucketDataHasChangedUpdateAction,
+  UpsertSegmentGroupUpdateAction,
 } from "viewer/model/sagas/volume/update_actions";
 import type { StoreAnnotation } from "viewer/store";
-import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+import { MISSING_GROUP_ID } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
+
 type Description = {
   description: string;
   icon: React.ReactNode;
@@ -232,7 +242,7 @@ const descriptionFns: Record<
     };
   },
   updateSegmentGroups: (
-    firstAction: AsServerAction<UpdateSegmentGroupsUpdateAction>,
+    firstAction: AsServerAction<LEGACY_UpdateSegmentGroupsUpdateAction>,
     _actionCount: number,
     annotation: StoreAnnotation,
   ): Description => {
@@ -242,6 +252,34 @@ const descriptionFns: Record<
     );
     return {
       description: `Updated the segment groups of layer ${layerName}.`,
+      icon: <EditOutlined />,
+    };
+  },
+  deleteSegmentGroup: (
+    firstAction: AsServerAction<DeleteSegmentGroupUpdateAction>,
+    _actionCount: number,
+    annotation: StoreAnnotation,
+  ): Description => {
+    const layerName = maybeGetReadableVolumeTracingName(
+      annotation,
+      firstAction.value.actionTracingId,
+    );
+    return {
+      description: `Deleted the segment group with id ${firstAction.value.groupId} of layer ${layerName}.`,
+      icon: <DeleteOutlined />,
+    };
+  },
+  upsertSegmentGroup: (
+    firstAction: AsServerAction<UpsertSegmentGroupUpdateAction>,
+    _actionCount: number,
+    annotation: StoreAnnotation,
+  ): Description => {
+    const layerName = maybeGetReadableVolumeTracingName(
+      annotation,
+      firstAction.value.actionTracingId,
+    );
+    return {
+      description: `Added/changed the segment group with id ${firstAction.value.groupId} of layer ${layerName}.`,
       icon: <EditOutlined />,
     };
   },
@@ -287,7 +325,7 @@ const descriptionFns: Record<
     action: AsServerAction<UpdateTreeEdgesVisibilityUpdateAction>,
   ): Description => ({
     description: `Updated the visibility of the edges of the tree with id ${action.value.treeId}.`,
-    icon: <img src="/assets/images/hide-skeleton-edges-icon.svg" alt="Hide Tree Edges Icon" />,
+    icon: <Icon component={HideSkeletonEdgesIcon} aria-label="Hide Tree Edges Icon" />,
   }),
   updateTreeGroupVisibility: (
     action: AsServerAction<UpdateTreeGroupVisibilityUpdateAction>,
@@ -324,7 +362,7 @@ const descriptionFns: Record<
     };
   },
   updateSegment: (
-    firstAction: AsServerAction<UpdateSegmentUpdateAction>,
+    firstAction: AsServerAction<LEGACY_UpdateSegmentUpdateAction>,
     _actionCount: number,
     annotation: StoreAnnotation,
   ): Description => {
@@ -333,8 +371,44 @@ const descriptionFns: Record<
       firstAction.value.actionTracingId,
     );
     return {
-      description: `Updated the segment with id ${firstAction.value.id} in the segments list  of layer ${layerName}.`,
+      description: `Updated the segment with id ${firstAction.value.id} in the segments list of layer ${layerName}.`,
       icon: <EditOutlined />,
+    };
+  },
+  updateSegmentPartial: (
+    firstAction: AsServerAction<UpdateSegmentPartialUpdateAction>,
+    _actionCount: number,
+    annotation: StoreAnnotation,
+  ): Description => {
+    const layerName = maybeGetReadableVolumeTracingName(
+      annotation,
+      firstAction.value.actionTracingId,
+    );
+    return {
+      description: `Updated the segment with id ${firstAction.value.id} in the segments list of layer ${layerName}.`,
+      icon: <EditOutlined />,
+    };
+  },
+  updateMetadataOfSegment: (
+    action: AsServerAction<UpdateMetadataOfSegmentUpdateAction>,
+  ): Description => {
+    return {
+      description: `Updated metadata of segment with id: ${action.value.id}`,
+      icon: <EditOutlined />,
+    };
+  },
+  mergeSegmentItems: (
+    firstAction: AsServerAction<MergeSegmentItemsUpdateAction>,
+    _actionCount: number,
+    annotation: StoreAnnotation,
+  ): Description => {
+    const layerName = maybeGetReadableVolumeTracingName(
+      annotation,
+      firstAction.value.actionTracingId,
+    );
+    return {
+      description: `Merged segment with id ${firstAction.value.agglomerateId2} into segment ${firstAction.value.agglomerateId1} from the segments list of layer ${layerName}.`,
+      icon: <DeleteOutlined />,
     };
   },
   deleteSegment: (
@@ -447,6 +521,16 @@ const descriptionFns: Record<
       icon: <NumberOutlined />,
     };
   },
+  updateVolumeBucketDataHasChanged: (
+    action: AsServerAction<UpdateVolumeBucketDataHasChangedUpdateAction>,
+  ): Description => {
+    return {
+      description: action.value.volumeBucketDataHasChanged
+        ? "Edited the volume data."
+        : "Reset volume data to an unmodified state.",
+      icon: <EditOutlined />,
+    };
+  },
   updateSegmentGroupsExpandedState: (
     action: AsServerAction<UpdateSegmentGroupsExpandedStateUpdateAction>,
   ): Description => {
@@ -513,7 +597,7 @@ function getDescriptionForBatch(
   actions: Array<ServerUpdateAction>,
   annotation: StoreAnnotation,
 ): Description {
-  const groupedUpdateActions = _.groupBy(actions, "name");
+  const groupedUpdateActions = groupBy(actions, "name");
 
   const moveTreeComponentUAs = groupedUpdateActions.moveTreeComponent;
 
@@ -590,23 +674,36 @@ export default function VersionEntry({
   onRestoreVersion,
   onPreviewVersion,
 }: Props) {
-  const lastTimestamp = _.max(actions.map((action) => action.value.actionTimestamp));
+  const lastTimestamp = max(actions.map((action) => action.value.actionTimestamp));
   const contributors = useWkSelector((state) => state.annotation.contributors);
   const activeUser = useWkSelector((state) => state.activeUser);
   const owner = useWkSelector((state) => state.annotation.owner);
   const annotation = useWkSelector((state) => state.annotation);
+  const isInConcurrentCollabMode = useWkSelector((state) => isConcurrentCollaborationMode(state));
+  const { modal } = App.useApp();
 
   const liClassName = classNames("version-entry", {
     "active-version-entry": isActive,
     "version-entry-indented": isIndented,
   });
+  async function handleRestoreClick() {
+    // In a live collab scenario let the user confirm the restoring of an older version.
+    if (initialAllowUpdate && isInConcurrentCollabMode) {
+      const confirmed = await modal.confirm({
+        title: "Restore this version?",
+        content:
+          "This annotation is being edited collaboratively. Restoring this version will force a hard reload " +
+          "of WEBKNOSSOS for all users currently editing it -- including you -- and any unsaved changes will be lost. " +
+          "Do you want to continue?",
+        okText: "Yes, restore this version",
+        okType: "danger",
+      });
+      if (!confirmed) return;
+    }
+    onRestoreVersion(version);
+  }
   const restoreButton = (
-    <Button
-      size="small"
-      key="restore-button"
-      type="primary"
-      onClick={() => onRestoreVersion(version)}
-    >
+    <Button size="small" key="restore-button" type="primary" onClick={handleRestoreClick}>
       {initialAllowUpdate ? "Restore" : "Download"}
     </Button>
   );
@@ -627,16 +724,16 @@ export default function VersionEntry({
     >
       <List.Item.Meta
         title={
-          <React.Fragment>
+          <Fragment>
             Version {version} (
             {lastTimestamp != null && <FormattedDate timestamp={lastTimestamp} format="HH:mm" />})
-          </React.Fragment>
+          </Fragment>
         }
         /* @ts-expect-error ts-migrate(2322) FIXME: Type '{ title: Element; onClick: () => Promise<voi... Remove this comment to see the full error message */
         onClick={() => onPreviewVersion(version)}
         avatar={<Avatar size="small" icon={icon} />}
         description={
-          <React.Fragment>
+          <Fragment>
             {isNewest ? (
               <>
                 <i>Newest version</i> <br />
@@ -644,7 +741,7 @@ export default function VersionEntry({
             ) : null}
             {description}
             <div>Authored by {authorName}</div>
-          </React.Fragment>
+          </Fragment>
         }
       />
     </List.Item>

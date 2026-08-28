@@ -1,0 +1,1 @@
+The dbtool writes a stampfile here, which is watched by the scala dev setup to determine whether the generated sql access classes need to be re-generated.

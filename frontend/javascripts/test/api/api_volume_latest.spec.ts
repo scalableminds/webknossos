@@ -1,15 +1,15 @@
+import window from "libs/window";
 import {
   createBucketResponseFunction,
   setupWebknossosForTesting,
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
-import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
-import window from "libs/window";
-import {
-  tracing as TRACING,
-  annotation as ANNOTATION,
-} from "../fixtures/volumetracing_server_objects";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  annotation as ANNOTATION,
+  tracing as TRACING,
+} from "../fixtures/volumetracing_server_objects";
 
 describe("API Volume", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
@@ -27,8 +27,8 @@ describe("API Volume", () => {
   });
 
   it<WebknossosTestContext>("setActiveCell should set the active segment id", ({ api }) => {
-    api.tracing.setActiveCell(27);
-    expect(api.tracing.getActiveCellId()).toBe(27);
+    api.tracing.setActiveCell(27n);
+    expect(api.tracing.getActiveCellId()).toBe(27n);
   });
 
   it<WebknossosTestContext>("getAnnotationTool should get the current tool", ({ api }) => {
@@ -64,7 +64,7 @@ describe("API Volume", () => {
         [1, 2, 3],
         [7, 8, 9],
       ],
-      34,
+      34n,
     );
 
     // The specified voxels should be labeled with the new value

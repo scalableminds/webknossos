@@ -1,63 +1,75 @@
-import {
+import Icon, {
   BarChartOutlined,
-  BellOutlined,
+  ExperimentOutlined,
   HomeOutlined,
+  LoadingOutlined,
   QuestionCircleOutlined,
+  ScheduleOutlined,
   SwapOutlined,
   TeamOutlined,
   UserOutlined,
 } from "@ant-design/icons";
+import WkLogoIcon from "@images/wk-logo.svg?react";
+import { getUsersOrganizations, switchToOrganization } from "admin/api/organization";
+import LoginForm from "admin/auth/login_form";
+import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import {
+  getBuildInfo,
+  logoutUser,
+  sendAnalyticsEvent,
+  updateNovelUserExperienceInfos,
+} from "admin/rest_api";
+import type { MenuProps } from "antd";
 import {
   Avatar,
   Badge,
-  Button,
   ConfigProvider,
+  Flex,
   Input,
   type InputRef,
   Layout,
   Menu,
   Popover,
+  Spin,
   type SubMenuProps,
   Tag,
   Tooltip,
 } from "antd";
-import classnames from "classnames";
-import type React from "react";
-import { useEffect, useRef, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-
-import LoginForm from "admin/auth/login_form";
-import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
-import {
-  getBuildInfo,
-  getUsersOrganizations,
-  logoutUser,
-  sendAnalyticsEvent,
-  switchToOrganization,
-  updateNovelUserExperienceInfos,
-} from "admin/rest_api";
 import type { ItemType, MenuItemType, SubMenuType } from "antd/es/menu/interface";
 import { MaintenanceBanner, UpgradeVersionBanner } from "banners";
+import classnames from "classnames";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import features from "features";
 import { useFetch, useInterval } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
+import { TAB_SESSION_ID as SESSION_ID } from "libs/tab_session_id";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import {
+  filterWithSearchQueryAND,
+  isUserAdmin,
+  isUserAdminOrManager,
+  isUserAdminOrTeamManager,
+} from "libs/utils";
 import window, { location } from "libs/window";
 import messages from "messages";
-import type { MenuClickEventHandler } from "rc-menu/lib/interface";
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
+import { useDispatch } from "react-redux";
+import { Link, useLocation } from "react-router-dom";
 import { getAntdTheme } from "theme";
 import type { APIOrganizationCompact, APIUser, APIUserCompact } from "types/api_types";
 import constants from "viewer/constants";
 import {
+  isAnnotationEditableByNonOwners,
   isAnnotationFromDifferentOrganization as isAnnotationFromDifferentOrganizationAccessor,
   isAnnotationOwner as isAnnotationOwnerAccessor,
+  mayEditAnnotation,
 } from "viewer/model/accessors/annotation_accessor";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
+import { retryMutexAcquisitionNowAction } from "viewer/model/actions/save_actions";
 import { logoutUserAction, setActiveUserAction } from "viewer/model/actions/user_actions";
-import Store from "viewer/store";
-import { HelpModal } from "viewer/view/help_modal";
+import { Store } from "viewer/singletons";
+import { HelpModal } from "viewer/view/help/help_modal";
 import { PortalTarget } from "viewer/view/layouting/portal_utils";
 
 const { Header } = Layout;
@@ -87,6 +99,8 @@ function useOlvy() {
         showHeader: true,
         // only applies when widget type is embed. you cannot hide header for modal and sidebar widgets
         showUnreadIndicator: false,
+        // Kept as a literal: this is configuration handed to the third-party Olvy widget, which
+        // renders in its own iframe and cannot resolve our CSS variables.
         unreadIndicatorColor: "#cc1919",
         unreadIndicatorPosition: "top-right",
       },
@@ -130,16 +144,10 @@ function UserInitials({
   isMultiMember: boolean;
 }) {
   const { firstName, lastName } = activeUser;
-
   const initialOf = (str: string) => str.slice(0, 1).toUpperCase();
 
   return (
-    <div
-      style={{
-        position: "relative",
-        display: "flex",
-      }}
-    >
+    <div>
       <Avatar
         className="hover-effect-via-opacity"
         style={{
@@ -175,47 +183,16 @@ function getCollapsibleMenuTitle(
 }
 
 export function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser) {
-  const isAdmin = Utils.isUserAdmin(activeUser);
-  const isAdminOrTeamManager = Utils.isUserAdminOrTeamManager(activeUser);
+  const isAdmin = isUserAdmin(activeUser);
+  const isAdminOrTeamManager = isUserAdminOrTeamManager(activeUser);
   const organization = activeUser.organization;
 
   const adminstrationSubMenuItems = isAdminOrTeamManager
     ? [
         { key: "/users", label: <Link to="/users">Users</Link> },
         { key: "/teams", label: <Link to="/teams">Teams</Link> },
-        {
-          key: "/projects",
-          label: (
-            <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-              <Link to="/projects">Projects</Link>
-            </PricingEnforcedSpan>
-          ),
-        },
-        {
-          key: "/tasks",
-          label: (
-            <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-              <Link to="/tasks">Tasks</Link>
-            </PricingEnforcedSpan>
-          ),
-        },
-        {
-          key: "/taskTypes",
-          label: (
-            <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-              <Link to="/taskTypes">Task Types</Link>
-            </PricingEnforcedSpan>
-          ),
-        },
-        { key: "/scripts", label: <Link to="/scripts">Scripts</Link> },
       ]
     : [];
-
-  if (features().jobsEnabled)
-    adminstrationSubMenuItems.push({
-      key: "/jobs",
-      label: <Link to="/jobs">Processing Jobs</Link>,
-    });
 
   if (isAdmin) {
     adminstrationSubMenuItems.push({
@@ -223,18 +200,6 @@ export function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser)
       label: <Link to={`/organizations/${organization}`}>Organization</Link>,
     });
   }
-  if (activeUser.isSuperUser) {
-    adminstrationSubMenuItems.push({
-      key: "/aiModels",
-      label: <Link to={"/aiModels"}>AI Models</Link>,
-    });
-  }
-
-  if (features().voxelyticsEnabled)
-    adminstrationSubMenuItems.push({
-      key: "/workflows",
-      label: <Link to="/workflows">Voxelytics</Link>,
-    });
 
   if (adminstrationSubMenuItems.length === 0) {
     return null;
@@ -252,24 +217,79 @@ export function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser)
   };
 }
 
-function getStatisticsSubMenu(collapse: boolean): SubMenuType {
+export function getAnalysisSubMenu(collapse: boolean) {
+  const analysisSubMenuItems = [];
+
+  if (features().jobsEnabled) {
+    analysisSubMenuItems.push({
+      key: "/jobs",
+      label: <Link to="/jobs">Processing Jobs</Link>,
+    });
+    analysisSubMenuItems.push({
+      key: "/aiModels",
+      label: <Link to={"/aiModels"}>AI Models</Link>,
+    });
+  }
+
+  if (features().voxelyticsEnabled) {
+    analysisSubMenuItems.push({
+      key: "/workflows",
+      label: <Link to="/workflows">Voxelytics</Link>,
+    });
+  }
+
+  if (analysisSubMenuItems.length === 0) {
+    return null;
+  }
+
   return {
-    key: "statisticMenu",
+    key: "analysisMenu",
     className: collapse ? "hide-on-small-screen" : "",
     label: getCollapsibleMenuTitle(
-      "Statistics",
-      <BarChartOutlined className="icon-margin-right" />,
+      "Analysis",
+      <ExperimentOutlined className="icon-margin-right" />,
+      collapse,
+    ),
+    children: analysisSubMenuItems,
+  };
+}
+
+function getTaskManagementSubMenu(collapse: boolean): SubMenuType {
+  return {
+    key: "taskManagementMenu",
+    className: collapse ? "hide-on-small-screen" : "",
+    label: getCollapsibleMenuTitle(
+      "Task Management",
+      <ScheduleOutlined className="icon-margin-right" />,
       collapse,
     ),
     children: [
       {
-        key: "/timetracking",
+        key: "/projects",
         label: (
           <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-            <Link to="/timetracking">Time Tracking</Link>
+            <Link to="/projects">Annotation Projects</Link>
           </PricingEnforcedSpan>
         ),
       },
+      {
+        key: "/tasks",
+        label: (
+          <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+            <Link to="/tasks">Tasks</Link>
+          </PricingEnforcedSpan>
+        ),
+      },
+      {
+        key: "/taskTypes",
+        label: (
+          <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+            <Link to="/taskTypes">Task Types</Link>
+          </PricingEnforcedSpan>
+        ),
+      },
+      { key: "/scripts", label: <Link to="/scripts">Scripts</Link> },
+      { type: "divider" },
       {
         key: "/reports/projectProgress",
         label: (
@@ -286,6 +306,14 @@ function getStatisticsSubMenu(collapse: boolean): SubMenuType {
           </PricingEnforcedSpan>
         ),
       },
+      {
+        key: "/timetracking",
+        label: (
+          <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+            <Link to="/timetracking">Time Tracking</Link>
+          </PricingEnforcedSpan>
+        ),
+      },
     ],
   };
 }
@@ -295,14 +323,15 @@ function getTimeTrackingMenu(collapse: boolean): MenuItemType {
     key: "timeStatisticMenu",
 
     label: (
-      <Link
-        to="/timetracking"
-        style={{
-          fontWeight: 400,
-        }}
-      >
-        {getCollapsibleMenuTitle("Time Tracking", <BarChartOutlined />, collapse)}
-      </Link>
+      <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+        <Link to="/timetracking">
+          {getCollapsibleMenuTitle(
+            "Time Tracking",
+            <BarChartOutlined className="icon-margin-right" />,
+            collapse,
+          )}
+        </Link>
+      </PricingEnforcedSpan>
     ),
   };
 }
@@ -313,7 +342,7 @@ function getHelpSubMenu(
   isAuthenticated: boolean,
   isAdminOrManager: boolean,
   collapse: boolean,
-  openHelpModal: MenuClickEventHandler,
+  openHelpModal: MenuProps["onClick"],
 ) {
   const polledVersionString =
     polledVersion != null && polledVersion !== version
@@ -374,7 +403,7 @@ function getHelpSubMenu(
     helpSubMenuItems.push({
       key: "contact",
       label: (
-        <a target="_blank" href="mailto:hello@webknossos.org" rel="noopener noreferrer">
+        <a target="_blank" href="mailto:support@webknossos.org" rel="noopener noreferrer">
           Email Us
         </a>
       ),
@@ -383,7 +412,7 @@ function getHelpSubMenu(
     helpSubMenuItems.push({
       key: "credits",
       label: (
-        <a target="_blank" href="https://webknossos.org" rel="noopener noreferrer">
+        <a target="_blank" href="https://home.webknossos.org/about-us" rel="noopener noreferrer">
           About & Credits
         </a>
       ),
@@ -415,6 +444,7 @@ function getHelpSubMenu(
 
   return {
     key: HELP_MENU_KEY,
+    className: "hide-on-small-screen",
     label: getCollapsibleMenuTitle(
       "Help",
       <QuestionCircleOutlined className="icon-margin-right" />,
@@ -444,18 +474,10 @@ function getDashboardSubMenu(collapse: boolean): SubMenuType {
   };
 }
 
-function NotificationIcon({
-  activeUser,
-  navbarHeight,
-}: {
-  activeUser: APIUser;
-  navbarHeight: number;
-}) {
-  const maybeUnreadReleaseCount = useOlvyUnreadReleasesCount(activeUser);
-
+function getWhatsNewMenuEntry(activeUser: APIUser, maybeUnreadReleaseCount: number | null) {
   const handleShowWhatsNewView = () => {
     const [newUserSync] = updateNovelUserExperienceInfos(activeUser, {
-      lastViewedWhatsNewTimestamp: new Date().getTime(),
+      lastViewedWhatsNewTimestamp: Date.now(),
     });
     Store.dispatch(setActiveUserAction(newUserSync));
     sendAnalyticsEvent("open_whats_new_view");
@@ -467,22 +489,20 @@ function NotificationIcon({
     }
   };
 
-  return (
-    <div
-      style={{
-        position: "relative",
-        display: "flex",
-        marginRight: 12,
-        paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
-      }}
-    >
-      <Tooltip title="See what's new in WEBKNOSSOS" placement="bottomLeft">
-        <Badge count={maybeUnreadReleaseCount || 0} size="small">
-          <Button onClick={handleShowWhatsNewView} shape="circle" icon={<BellOutlined />} />
-        </Badge>
-      </Tooltip>
-    </div>
-  );
+  return {
+    key: "whatsNew",
+    label: (
+      <Badge
+        className="navbar-whats-new-badge"
+        count={maybeUnreadReleaseCount || 0}
+        size="small"
+        offset={[10, 0]}
+      >
+        What's new
+      </Badge>
+    ),
+    onClick: handleShowWhatsNewView,
+  };
 }
 
 export const switchTo = async (org: APIOrganizationCompact) => {
@@ -504,7 +524,11 @@ function OrganizationFilterInput({
   onChange,
   isVisible,
   onPressEnter,
-}: { onChange: (val: string) => void; isVisible: boolean; onPressEnter: () => void }) {
+}: {
+  onChange: (val: string) => void;
+  isVisible: boolean;
+  onPressEnter: () => void;
+}) {
   const ref = useRef<InputRef>(null);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Biome doesn't understand that ref.current is accessed?
@@ -554,8 +578,9 @@ function LoggedInAvatar({
     activeOrganization != null ? activeOrganization.name || activeOrganization.id : organizationId;
   const [organizationFilter, onChangeOrganizationFilter] = useState("");
   const [openKeys, setOpenKeys] = useState<string[]>([]);
+  const maybeUnreadReleaseCount = useOlvyUnreadReleasesCount(activeUser);
 
-  const filteredOrganizations = Utils.filterWithSearchQueryAND(
+  const filteredOrganizations = filterWithSearchQueryAND(
     switchableOrganizations,
     ["name", "id"],
     organizationFilter,
@@ -590,6 +615,7 @@ function LoggedInAvatar({
       style={{
         paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
         lineHeight: `${constants.DEFAULT_NAVBAR_HEIGHT}px`,
+        marginInlineStart: "10px",
       }}
       theme="dark"
       subMenuCloseDelay={subMenuCloseDelay}
@@ -613,14 +639,13 @@ function LoggedInAvatar({
               label: orgName,
               disabled: true,
             },
-            {
-              type: "divider",
-            },
+            { type: "divider" },
+            getWhatsNewMenuEntry(activeUser, maybeUnreadReleaseCount),
             {
               key: "account",
               label: <Link to="/account">Account Settings</Link>,
             },
-            activeOrganization && Utils.isUserAdmin(activeUser)
+            activeOrganization && isUserAdmin(activeUser)
               ? {
                   key: "manage-organization",
                   label: <Link to={"/organization/overview"}>Organization Settings</Link>,
@@ -680,7 +705,6 @@ function AnonymousAvatar() {
         className="hover-effect-via-opacity"
         icon={<UserOutlined />}
         style={{
-          marginLeft: 8,
           marginTop: bannerHeight,
         }}
       />
@@ -695,46 +719,69 @@ async function getVersion() {
 
 function AnnotationLockedByUserTag({
   blockedByUser,
+  blockedBySessionId,
   activeUser,
 }: {
   blockedByUser: APIUserCompact | null | undefined;
+  blockedBySessionId: string | null | undefined;
   activeUser: APIUser;
 }) {
-  let content;
+  const dispatch = useDispatch();
+  const [isRetrying, setIsRetrying] = useState(false);
+
+  const handleOnClick = () => {
+    if (blockedByUser == null) {
+      location.reload();
+    } else {
+      dispatch(retryMutexAcquisitionNowAction());
+      setIsRetrying(true);
+      setTimeout(() => setIsRetrying(false), 1000);
+    }
+  };
+
+  const retryTooltipSuffix = " Click to retry acquiring the lock immediately.";
+  let tooltipTitle: string;
+  let tagLabel: React.ReactNode;
+
   if (blockedByUser == null) {
-    content = (
-      <Tooltip title={messages["annotation.acquiringMutexFailed.noUser"]}>
-        <Tag color="warning" className="flex-center-child">
-          Locked by unknown user.
+    tooltipTitle = messages["annotation.reloadToEditWithMutex"];
+    tagLabel = "Please reload the page.";
+  } else if (blockedByUser.id === activeUser.id && blockedBySessionId === SESSION_ID) {
+    tooltipTitle = messages["annotation.acquiringMutexSucceeded"];
+    tagLabel = "Locked by you. Reload to edit.";
+    return (
+      <Tooltip title={tooltipTitle}>
+        <Tag color="success" variant="outlined">
+          {tagLabel}
         </Tag>
       </Tooltip>
     );
   } else if (blockedByUser.id === activeUser.id) {
-    content = (
-      <Tooltip title={messages["annotation.acquiringMutexSucceeded"]}>
-        <Tag color="success" className="flex-center-child">
-          Locked by you. Reload to edit.
-        </Tag>
-      </Tooltip>
-    );
+    tooltipTitle =
+      messages["annotation.acquiringMutexFailed.sameUserDifferentSession"] + retryTooltipSuffix;
+    tagLabel = "Locked by you in another tab.";
   } else {
     const blockingUserName = `${blockedByUser.firstName} ${blockedByUser.lastName}`;
-    content = (
-      <Tooltip
-        title={messages["annotation.acquiringMutexFailed"]({
-          userName: blockingUserName,
-        })}
-      >
-        <Tag color="warning" className="flex-center-child">
-          Locked by {blockingUserName}
-        </Tag>
-      </Tooltip>
-    );
+    tooltipTitle =
+      messages["annotation.acquiringMutexFailed"]({ userName: blockingUserName }) +
+      retryTooltipSuffix;
+    tagLabel = `Locked by ${blockingUserName}`;
   }
+
   return (
-    <span style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
-      {content}
-    </span>
+    <Tooltip title={tooltipTitle}>
+      <Tag color="warning" variant="outlined" style={{ cursor: "pointer" }} onClick={handleOnClick}>
+        {isRetrying ? (
+          <Spin
+            indicator={
+              <LoadingOutlined spin style={{ color: "var(--ant-color-warning)", marginRight: 4 }} />
+            }
+            size="small"
+          />
+        ) : null}
+        {tagLabel}
+      </Tag>
+    </Tooltip>
   );
 }
 
@@ -744,38 +791,67 @@ function AnnotationLockedByOwnerTag(props: { annotationOwnerName: string; isOwne
     : "";
   const tooltipMessage =
     messages["tracing.read_only_mode_notification"](true, props.isOwner) + unlockHintForOwners;
+
   return (
     <Tooltip title={tooltipMessage}>
-      <Tag color="warning" className="flex-center-child">
+      <Tag color="warning" variant="outlined">
         Locked by {props.annotationOwnerName}
       </Tag>
     </Tooltip>
   );
 }
 
-function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
-  const activeUser = useWkSelector((state) => state.activeUser);
-  const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
-  const hasOrganizations = useWkSelector((state) => state.uiInformation.hasOrganizations);
-  const othersMayEdit = useWkSelector((state) => state.annotation.othersMayEdit);
-  const blockedByUser = useWkSelector((state) => state.annotation.blockedByUser);
-  const allowUpdate = useWkSelector((state) => state.annotation.restrictions.allowUpdate);
+function AnnotationLockedTag(): React.ReactElement | null {
+  const isSavingDisabled = useWkSelector((state) => state.save.isSavingDisabled);
+  const othersMayEdit = useWkSelector((state) => isAnnotationEditableByNonOwners(state.annotation));
+  const allowUpdate = useWkSelector(mayEditAnnotation);
   const isLockedByOwner = useWkSelector((state) => state.annotation.isLockedByOwner);
+  const isAnnotationFromDifferentOrganization = useWkSelector((state) =>
+    isAnnotationFromDifferentOrganizationAccessor(state),
+  );
+  const blockedByUser = useWkSelector((state) => state.save.mutexState.blockedByUser);
+  const blockedBySessionId = useWkSelector((state) => state.save.mutexState.blockedBySessionId);
+  const activeUser = useWkSelector((state) => state.activeUser);
   const annotationOwnerName = useWkSelector((state) =>
     formatUserName(state.activeUser, state.annotation.owner),
   );
   const isAnnotationOwner = useWkSelector((state) => isAnnotationOwnerAccessor(state));
-  const isAnnotationFromDifferentOrganization = useWkSelector((state) =>
-    isAnnotationFromDifferentOrganizationAccessor(state),
-  );
-  const navbarHeight = useWkSelector((state) => state.uiInformation.navbarHeight);
 
+  if (isSavingDisabled || activeUser == null) return null;
+
+  if (othersMayEdit && !allowUpdate && !isLockedByOwner && !isAnnotationFromDifferentOrganization) {
+    return (
+      <AnnotationLockedByUserTag
+        key="locked-by-user-tag"
+        blockedByUser={blockedByUser}
+        blockedBySessionId={blockedBySessionId}
+        activeUser={activeUser}
+      />
+    );
+  } else if (isLockedByOwner) {
+    return (
+      <AnnotationLockedByOwnerTag
+        key="locked-by-owner-tag"
+        annotationOwnerName={annotationOwnerName}
+        isOwner={isAnnotationOwner}
+      />
+    );
+  }
+  return null;
+}
+
+function Navbar() {
+  const dispatch = useDispatch();
+  const activeUser = useWkSelector((state) => state.activeUser);
+  const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
+  const hasOrganizations = useWkSelector((state) => state.uiInformation.hasOrganizations);
+  const navbarHeight = useWkSelector((state) => state.uiInformation.navbarHeight);
   const historyLocation = useLocation();
 
   const handleLogout = async (event: React.SyntheticEvent) => {
     event.preventDefault();
     const redirectUrl = await logoutUser();
-    Store.dispatch(logoutUserAction());
+    dispatch(logoutUserAction());
     // Hard navigation
     location.href = redirectUrl;
   };
@@ -795,9 +871,9 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
     isHelpMenuOpen,
   );
 
-  const _isAuthenticated = isAuthenticated && activeUser != null;
-
-  const isAdminOrManager = activeUser != null ? Utils.isUserAdminOrManager(activeUser) : false;
+  const isAuthenticated = activeUser != null;
+  const isAdminOrTeamManager = isUserAdminOrTeamManager(activeUser);
+  const isAdminOrManager = isUserAdminOrManager(activeUser);
   const collapseAllNavItems = isInAnnotationView;
   const hideNavbarLogin = features().hideNavbarLogin || !hasOrganizations;
   const menuItems: ItemType[] = [
@@ -807,60 +883,37 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
         <Link
           to="/dashboard"
           style={{
-            fontWeight: 400,
             verticalAlign: "middle",
           }}
         >
-          {getCollapsibleMenuTitle("WEBKNOSSOS", <span className="logo" />, collapseAllNavItems)}
+          {getCollapsibleMenuTitle(
+            "WEBKNOSSOS",
+            <Icon component={WkLogoIcon} className="logo icon-margin-right" />,
+            collapseAllNavItems,
+          )}
         </Link>
       ),
     },
   ];
   const trailingNavItems = [];
 
-  if (_isAuthenticated) {
+  if (isAuthenticated) {
     const loggedInUser: APIUser = activeUser;
     menuItems.push(getDashboardSubMenu(collapseAllNavItems));
+    menuItems.push(getAnalysisSubMenu(collapseAllNavItems));
 
-    if (isAdminOrManager && activeUser != null) {
+    if (isUserAdminOrTeamManager(activeUser)) {
+      menuItems.push(getTaskManagementSubMenu(collapseAllNavItems));
+    }
+
+    if (isAdminOrTeamManager && activeUser != null) {
       menuItems.push(getAdministrationSubMenu(collapseAllNavItems, activeUser));
-      if (Utils.isUserAdminOrTeamManager(activeUser)) {
-        menuItems.push(getStatisticsSubMenu(collapseAllNavItems));
-      }
     } else {
       menuItems.push(getTimeTrackingMenu(collapseAllNavItems));
     }
 
-    if (
-      othersMayEdit &&
-      !allowUpdate &&
-      !isLockedByOwner &&
-      !isAnnotationFromDifferentOrganization
-    ) {
-      trailingNavItems.push(
-        <AnnotationLockedByUserTag
-          key="locked-by-user-tag"
-          blockedByUser={blockedByUser}
-          activeUser={activeUser}
-        />,
-      );
-    }
-    if (isLockedByOwner) {
-      trailingNavItems.push(
-        <AnnotationLockedByOwnerTag
-          key="locked-by-owner-tag"
-          annotationOwnerName={annotationOwnerName}
-          isOwner={isAnnotationOwner}
-        />,
-      );
-    }
-    trailingNavItems.push(
-      <NotificationIcon
-        key="notification-icon"
-        activeUser={loggedInUser}
-        navbarHeight={navbarHeight}
-      />,
-    );
+    trailingNavItems.push(<AnnotationLockedTag key="annotation-locked-tag" />);
+
     trailingNavItems.push(
       <LoggedInAvatar
         key="logged-in-avatar"
@@ -871,7 +924,7 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
     );
   }
 
-  if (!(_isAuthenticated || hideNavbarLogin)) {
+  if (!(isAuthenticated || hideNavbarLogin)) {
     trailingNavItems.push(<AnonymousAvatar key="anonymous-avatar" />);
   }
 
@@ -879,7 +932,7 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
     getHelpSubMenu(
       version,
       polledVersion,
-      _isAuthenticated,
+      isAuthenticated,
       isAdminOrManager,
       collapseAllNavItems,
       () => setIsHelpModalOpen(true),
@@ -932,15 +985,9 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
         }}
       />
       <ConfigProvider theme={getAntdTheme("dark")}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "flex-end",
-            marginRight: 12,
-          }}
-        >
+        <Flex align="center" justify="flex-end" gap="small">
           {trailingNavItems}
-        </div>
+        </Flex>
       </ConfigProvider>
     </Header>
   );

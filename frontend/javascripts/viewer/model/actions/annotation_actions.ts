@@ -1,25 +1,26 @@
 import Deferred from "libs/async/deferred";
-import _ from "lodash";
+import noop from "lodash-es/noop";
 import type { Dispatch } from "redux";
 import { batchActions } from "redux-batched-actions";
 import type {
+  AdditionalCoordinate,
+  AnnotationCollaborationMode,
   APIAnnotationVisibility,
   APIDataLayer,
   APIDataset,
   APIMeshFileInfo,
-  APIUserCompact,
   EditableLayerProperties,
 } from "types/api_types";
-import type { AdditionalCoordinate } from "types/api_types";
-import type { Vector3 } from "viewer/constants";
+import type { MappingType, Vector3 } from "viewer/constants";
 import Constants from "viewer/constants";
 import type {
   Annotation,
-  MappingType,
+  MipLayerConfig,
   UserBoundingBox,
   UserBoundingBoxWithoutId,
   UserBoundingBoxWithoutIdMaybe,
 } from "viewer/store";
+import type { Action } from "./actions";
 import type { InitializeSkeletonTracingAction } from "./skeletontracing_actions";
 import type {
   InitializeEditableMappingAction,
@@ -50,8 +51,9 @@ export type SetAnnotationNameAction = ReturnType<typeof setAnnotationNameAction>
 type SetAnnotationVisibilityAction = ReturnType<typeof setAnnotationVisibilityAction>;
 export type EditAnnotationLayerAction = ReturnType<typeof editAnnotationLayerAction>;
 export type SetAnnotationDescriptionAction = ReturnType<typeof setAnnotationDescriptionAction>;
-type SetAnnotationAllowUpdateAction = ReturnType<typeof setAnnotationAllowUpdateAction>;
-type SetBlockedByUserAction = ReturnType<typeof setBlockedByUserAction>;
+type SetAnnotationAllowUpdateAction = ReturnType<
+  typeof setIsUpdatingAnnotationCurrentlyAllowedAction
+>;
 type SetUserBoundingBoxesAction = ReturnType<typeof setUserBoundingBoxesAction>;
 type FinishedResizingUserBoundingBoxAction = ReturnType<
   typeof finishedResizingUserBoundingBoxAction
@@ -60,6 +62,10 @@ type AddUserBoundingBoxesAction = ReturnType<typeof addUserBoundingBoxesAction>;
 export type AddNewUserBoundingBox = ReturnType<typeof addUserBoundingBoxAction>;
 export type ChangeUserBoundingBoxAction = ReturnType<typeof changeUserBoundingBoxAction>;
 type DeleteUserBoundingBox = ReturnType<typeof deleteUserBoundingBoxAction>;
+export type SetMipForBBoxAction = ReturnType<typeof setMipForBBoxAction>;
+export type RemoveMipForBBoxAction = ReturnType<typeof removeMipForBBoxAction>;
+export type RemoveMipLayerForBBoxAction = ReturnType<typeof removeMipLayerForBBoxAction>;
+export type LoadMipAction = ReturnType<typeof loadMipAction>;
 export type UpdateMeshVisibilityAction = ReturnType<typeof updateMeshVisibilityAction>;
 export type UpdateMeshOpacityAction = ReturnType<typeof updateMeshOpacityAction>;
 export type MaybeFetchMeshFilesAction = ReturnType<typeof maybeFetchMeshFilesAction>;
@@ -74,12 +80,7 @@ export type UpdateCurrentMeshFileAction = ReturnType<typeof updateCurrentMeshFil
 export type RemoveMeshAction = ReturnType<typeof removeMeshAction>;
 export type AddAdHocMeshAction = ReturnType<typeof addAdHocMeshAction>;
 export type AddPrecomputedMeshAction = ReturnType<typeof addPrecomputedMeshAction>;
-export type SetOthersMayEditForAnnotationAction = ReturnType<
-  typeof setOthersMayEditForAnnotationAction
->;
-export type ShowManyBucketUpdatesWarningAction = ReturnType<
-  typeof showManyBucketUpdatesWarningAction
->;
+export type SetCollaborationModeAction = ReturnType<typeof setCollaborationModeAction>;
 
 export type AnnotationActionTypes =
   | InitializeAnnotationAction
@@ -89,7 +90,6 @@ export type AnnotationActionTypes =
   | EditAnnotationLayerAction
   | SetAnnotationDescriptionAction
   | SetAnnotationAllowUpdateAction
-  | SetBlockedByUserAction
   | SetUserBoundingBoxesAction
   | ChangeUserBoundingBoxAction
   | FinishedResizingUserBoundingBoxAction
@@ -110,7 +110,11 @@ export type AnnotationActionTypes =
   | RemoveMeshAction
   | AddAdHocMeshAction
   | AddPrecomputedMeshAction
-  | SetOthersMayEditForAnnotationAction;
+  | SetCollaborationModeAction
+  | SetMipForBBoxAction
+  | RemoveMipForBBoxAction
+  | RemoveMipLayerForBBoxAction
+  | LoadMipAction;
 
 export type UserBoundingBoxAction =
   | SetUserBoundingBoxesAction
@@ -119,7 +123,7 @@ export type UserBoundingBoxAction =
   | AddUserBoundingBoxesAction
   | FinishedResizingUserBoundingBoxAction;
 
-export const AllUserBoundingBoxActions = [
+export const AllUserBoundingBoxActions: Action["type"][] = [
   "SET_USER_BOUNDING_BOXES",
   "ADD_NEW_USER_BOUNDING_BOX",
   "CHANGE_USER_BOUNDING_BOX",
@@ -127,6 +131,15 @@ export const AllUserBoundingBoxActions = [
   "DELETE_USER_BOUNDING_BOX",
   "ADD_USER_BOUNDING_BOXES",
 ];
+
+// Actions whose effect on annotation-level metadata (layer names, description) should be
+// diffed into the save queue, mirroring SkeletonTracingSaveRelevantActions /
+// VolumeTracingSaveRelevantActions.
+export const AnnotationMetadataSaveRelevantActions: Action["type"][] = [
+  "EDIT_ANNOTATION_LAYER",
+  "SET_ANNOTATION_DESCRIPTION",
+];
+
 export const initializeAnnotationAction = (annotation: Annotation) =>
   ({
     type: "INITIALIZE_ANNOTATION",
@@ -167,16 +180,10 @@ export const setAnnotationDescriptionAction = (description: string) =>
     description,
   }) as const;
 
-export const setAnnotationAllowUpdateAction = (allowUpdate: boolean) =>
+export const setIsUpdatingAnnotationCurrentlyAllowedAction = (currentlyAllowUpdate: boolean) =>
   ({
     type: "SET_ANNOTATION_ALLOW_UPDATE",
-    allowUpdate,
-  }) as const;
-
-export const setBlockedByUserAction = (blockedByUser: APIUserCompact | null | undefined) =>
-  ({
-    type: "SET_BLOCKED_BY_USER",
-    blockedByUser,
+    currentlyAllowUpdate,
   }) as const;
 
 // Strictly speaking this is no annotation action but a tracing action, as the boundingBox is saved with
@@ -201,13 +208,17 @@ export const finishedResizingUserBoundingBoxAction = (id: number) =>
   }) as const;
 
 export const addUserBoundingBoxAction = (
-  newBoundingBox?: Partial<UserBoundingBoxWithoutId> | null | undefined,
-  center?: Vector3,
+  newBoundingBox: Partial<UserBoundingBoxWithoutId> | null | undefined,
+  center: Vector3 | undefined,
+  // Callers must reserve an id up front (e.g., via dispatchGetNewIdAsync with the
+  // "BoundingBox" domain) to avoid id collisions in collaborative annotations.
+  id: number,
 ) =>
   ({
     type: "ADD_NEW_USER_BOUNDING_BOX",
     newBoundingBox,
     center,
+    id,
   }) as const;
 
 export const deleteUserBoundingBoxAction = (id: number) =>
@@ -216,15 +227,49 @@ export const deleteUserBoundingBoxAction = (id: number) =>
     id,
   }) as const;
 
-export const addUserBoundingBoxesAction = (userBoundingBoxes: Array<UserBoundingBox>) =>
+export const setMipForBBoxAction = (id: number, config: MipLayerConfig) =>
+  ({
+    type: "SET_MIP_FOR_BBOX",
+    id,
+    config,
+  }) as const;
+
+export const removeMipForBBoxAction = (id: number) =>
+  ({
+    type: "REMOVE_MIP_FOR_BBOX",
+    id,
+  }) as const;
+
+export const removeMipLayerForBBoxAction = (id: number, layerName: string) =>
+  ({
+    type: "REMOVE_MIP_LAYER_FOR_BBOX",
+    id,
+    layerName,
+  }) as const;
+
+// Dispatched by scene_controller when a new MIP layer slot is ready for data download.
+// The MIP saga picks this up, downloads the data, and calls volume.receiveLayerData.
+export const loadMipAction = (bboxId: number, bbox: UserBoundingBox, config: MipLayerConfig) =>
+  ({
+    type: "LOAD_MIP",
+    bboxId,
+    bbox,
+    config,
+  }) as const;
+
+export const addUserBoundingBoxesAction = (
+  userBoundingBoxes: Array<UserBoundingBox>,
+  boundingBoxIds: number[],
+) =>
   ({
     type: "ADD_USER_BOUNDING_BOXES",
     userBoundingBoxes,
+    boundingBoxIds,
   }) as const;
 
 export const updateMeshVisibilityAction = (
   layerName: string,
-  id: number,
+  id: bigint,
   visibility: boolean,
   additionalCoordinates?: AdditionalCoordinate[] | undefined | null,
 ) =>
@@ -236,7 +281,7 @@ export const updateMeshVisibilityAction = (
     additionalCoordinates,
   }) as const;
 
-export const updateMeshOpacityAction = (layerName: string, id: number, opacity: number) =>
+export const updateMeshOpacityAction = (layerName: string, id: bigint, opacity: number) =>
   ({
     type: "UPDATE_MESH_OPACITY",
     id,
@@ -249,7 +294,7 @@ export const maybeFetchMeshFilesAction = (
   dataset: APIDataset,
   mustRequest: boolean,
   autoActivate: boolean = true,
-  callback: (meshes: Array<APIMeshFileInfo>) => void = _.noop,
+  callback: (meshes: Array<APIMeshFileInfo>) => void = noop,
 ) =>
   ({
     type: "MAYBE_FETCH_MESH_FILES",
@@ -262,7 +307,7 @@ export const maybeFetchMeshFilesAction = (
 
 export const triggerMeshDownloadAction = (
   segmentName: string,
-  segmentId: number,
+  segmentId: bigint,
   layerName: string,
 ) =>
   ({
@@ -273,7 +318,7 @@ export const triggerMeshDownloadAction = (
   }) as const;
 
 export const triggerMeshesDownloadAction = (
-  segmentsArray: Array<{ segmentName: string; segmentId: number; layerName: string }>,
+  segmentsArray: Array<{ segmentName: string; segmentId: bigint; layerName: string }>,
 ) =>
   ({
     type: "TRIGGER_MESHES_DOWNLOAD",
@@ -285,21 +330,21 @@ export const refreshMeshesAction = () =>
     type: "REFRESH_MESHES",
   }) as const;
 
-export const refreshMeshAction = (layerName: string, segmentId: number) =>
+export const refreshMeshAction = (layerName: string, segmentId: bigint) =>
   ({
     type: "REFRESH_MESH",
     layerName,
     segmentId,
   }) as const;
 
-export const startedLoadingMeshAction = (layerName: string, segmentId: number) =>
+export const startedLoadingMeshAction = (layerName: string, segmentId: bigint) =>
   ({
     type: "STARTED_LOADING_MESH",
     layerName,
     segmentId,
   }) as const;
 
-export const finishedLoadingMeshAction = (layerName: string, segmentId: number) =>
+export const finishedLoadingMeshAction = (layerName: string, segmentId: bigint) =>
   ({
     type: "FINISHED_LOADING_MESH",
     layerName,
@@ -323,7 +368,7 @@ export const updateCurrentMeshFileAction = (
     meshFileName,
   }) as const;
 
-export const removeMeshAction = (layerName: string, segmentId: number) =>
+export const removeMeshAction = (layerName: string, segmentId: bigint) =>
   ({
     type: "REMOVE_MESH",
     layerName,
@@ -332,12 +377,13 @@ export const removeMeshAction = (layerName: string, segmentId: number) =>
 
 export const addAdHocMeshAction = (
   layerName: string,
-  segmentId: number,
+  segmentId: bigint,
   seedPosition: Vector3,
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
   mappingType: MappingType | null | undefined,
   opacity: number | undefined,
+  isVisible: boolean | undefined,
 ) =>
   ({
     type: "ADD_AD_HOC_MESH",
@@ -348,16 +394,18 @@ export const addAdHocMeshAction = (
     mappingName,
     mappingType,
     opacity: opacity ?? Constants.DEFAULT_MESH_OPACITY,
+    isVisible: isVisible ?? true,
   }) as const;
 
 export const addPrecomputedMeshAction = (
   layerName: string,
-  segmentId: number,
+  segmentId: bigint,
   seedPosition: Vector3,
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   meshFileName: string,
   mappingName: string | null | undefined,
   opacity: number | undefined,
+  isVisible: boolean | undefined,
 ) =>
   ({
     type: "ADD_PRECOMPUTED_MESH",
@@ -368,12 +416,13 @@ export const addPrecomputedMeshAction = (
     meshFileName,
     mappingName,
     opacity: opacity ?? Constants.DEFAULT_MESH_OPACITY,
+    isVisible: isVisible ?? true,
   }) as const;
 
-export const setOthersMayEditForAnnotationAction = (othersMayEdit: boolean) =>
+export const setCollaborationModeAction = (collaborationMode: AnnotationCollaborationMode) =>
   ({
-    type: "SET_OTHERS_MAY_EDIT_FOR_ANNOTATION",
-    othersMayEdit,
+    type: "SET_COLLABORATION_MODE",
+    collaborationMode,
   }) as const;
 
 export const showManyBucketUpdatesWarningAction = () =>

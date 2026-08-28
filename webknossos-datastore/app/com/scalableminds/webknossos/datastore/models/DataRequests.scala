@@ -2,8 +2,10 @@ package com.scalableminds.webknossos.datastore.models
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.geometry.AdditionalCoordinateProto
+import com.scalableminds.webknossos.datastore.helpers.UnsignedLong
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceRequestSettings}
+import com.scalableminds.webknossos.datastore.services.mesh.MappingType
 import play.api.libs.json.{Json, OFormat}
 
 trait AbstractDataRequest {
@@ -18,7 +20,7 @@ case class DataRequest(
     width: Int,
     height: Int,
     depth: Int,
-    settings: DataServiceRequestSettings = DataServiceRequestSettings.default
+    settings: DataServiceRequestSettings = DataServiceRequestSettings()
 ) extends AbstractDataRequest {
 
   def cuboid(dataLayer: DataLayer): Cuboid = Cuboid(position, width, height, depth)
@@ -49,11 +51,12 @@ case class WebknossosAdHocMeshRequest(
     position: Vec3Int, // In mag1
     mag: Vec3Int,
     cubeSize: Vec3Int, // In target mag
-    segmentId: Long,
+    segmentId: UnsignedLong,
     voxelSizeFactorInUnit: Vec3Double, // assumed to be in dataset’s unit
     mapping: Option[String] = None,
-    mappingType: Option[String] = None,
+    mappingType: Option[MappingType.Value] = None,
     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
+    annotationVersion: Option[Long],
     findNeighbors: Boolean = true
 ) {
   def cuboid: Cuboid =
@@ -81,17 +84,11 @@ object RawCuboidRequest {
   implicit val jsonFormat: OFormat[RawCuboidRequest] = Json.format[RawCuboidRequest]
 }
 
-object DataRequestCollection {
-  type DataRequestCollection = List[AbstractDataRequest]
-
-  implicit def requestToCollection(request: AbstractDataRequest): DataRequestCollection = List(request)
-}
-
 case class AdditionalCoordinate(
     name: String,
     value: Int
 ) {
-  override def toString = s"$name=$value"
+  override def toString: String = s"$name=$value"
 }
 
 object AdditionalCoordinate {

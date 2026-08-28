@@ -1,18 +1,31 @@
 import update from "immutability-helper";
 import ColorGenerator from "libs/color_generator";
+import { colorObjectToRGBArray } from "libs/colors";
 import DiffableMap from "libs/diffable_map";
 import { V3 } from "libs/mjs";
-import * as Utils from "libs/utils";
-import _ from "lodash";
+import { point3ToVector3, zeroPad } from "libs/utils";
+import compact from "lodash-es/compact";
+import first from "lodash-es/first";
+import isEmpty from "lodash-es/isEmpty";
+import last from "lodash-es/last";
+import lodashMax from "lodash-es/max";
+import random from "lodash-es/random";
+import sortedIndex from "lodash-es/sortedIndex";
+import without from "lodash-es/without";
 import type {
+  AdditionalCoordinate,
   MetadataEntryProto,
   ServerBranchPoint,
   ServerNode,
   ServerSkeletonTracingTree,
+  TreeAgglomerateInfo,
 } from "types/api_types";
-import type { AdditionalCoordinate } from "types/api_types";
-import { type TreeType, TreeTypeEnum, type Vector3 } from "viewer/constants";
-import Constants, { NODE_ID_REF_REGEX } from "viewer/constants";
+import Constants, {
+  NODE_ID_REF_REGEX,
+  type TreeType,
+  TreeTypeEnum,
+  type Vector3,
+} from "viewer/constants";
 import {
   enforceSkeletonTracing,
   findTreeByNodeId,
@@ -21,7 +34,6 @@ import {
   getActiveTreeGroup,
   getSkeletonTracing,
   getTree,
-  mapGroups,
   mapGroupsToGenerator,
 } from "viewer/model/accessors/skeletontracing_accessor";
 import EdgeCollection from "viewer/model/edge_collection";
@@ -43,6 +55,10 @@ import {
 } from "viewer/model/types/tree_types";
 import type { RestrictionsAndSettings, SkeletonTracing, WebknossosState } from "viewer/store";
 
+import {
+  MISSING_GROUP_ID,
+  mapGroups,
+} from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import { max, maxBy, min } from "../helpers/iterator_utils";
 
 export function generateTreeName(state: WebknossosState, timestamp: number, treeId: number) {
@@ -63,7 +79,7 @@ export function generateTreeName(state: WebknossosState, timestamp: number, tree
     prefix = `task_${state.task.id}_${user}_`;
   }
 
-  return `${prefix}${Utils.zeroPad(treeId, 3)}`;
+  return `${prefix}${zeroPad(treeId, 3)}`;
 }
 function getMinimumNodeId(trees: TreeMap | MutableTreeMap): number {
   const minNodeId = min(trees.values().flatMap((tree) => tree.nodes.map((n) => n.id)));
@@ -93,7 +109,7 @@ function getNearestTreeId(treeId: number, trees: TreeMap): number {
 
   // Uses a binary search to determine the lowest index at which treeId should be inserted into sortedTreeIds in order to maintain its sort order.
   // This corresponds to the original index of the deleted treeId.
-  const originalIndex = _.sortedIndex(sortedTreeIds, treeId);
+  const originalIndex = sortedIndex(sortedTreeIds, treeId);
 
   const higherOrNearestId = Math.min(originalIndex, sortedTreeIds.length - 1);
   return sortedTreeIds[higherOrNearestId];
@@ -152,10 +168,10 @@ export function createNode(
     bitDepth: state.datasetConfiguration.fourBit ? 4 : 8,
     interpolation: state.datasetConfiguration.interpolation,
   };
-  // Create a new edge
   if (activeNode == null) {
     return [node, tree.edges];
   }
+  // Create a new edge
   const newEdge = {
     source: activeNode.id,
     target: nextNewId,
@@ -329,7 +345,7 @@ function splitTreeByNodes(
   let intermediateState = state;
 
   // For each new tree root create a new tree
-  const cutTrees: MutableTree[] = _.compact(
+  const cutTrees: MutableTree[] = compact(
     // Sort the treeRootIds, so the tree connected to the node with the lowest id will remain the original tree (treeId, name, timestamp)
     newTreeRootIds
       .slice()
@@ -361,6 +377,7 @@ function splitTreeByNodes(
             type: activeTree.type,
             edgesAreVisible: true,
             metadata: activeTree.metadata,
+            agglomerateInfo: activeTree.agglomerateInfo,
           };
         } else {
           // Create new tree
@@ -368,8 +385,11 @@ function splitTreeByNodes(
             intermediateState,
             timestamp,
             true,
-            undefined,
+            activeTree.name,
             activeTree.type,
+            activeTree.edgesAreVisible,
+            [],
+            activeTree.agglomerateInfo,
           );
 
           // Cast to mutable tree type since we want to mutably do the split
@@ -429,8 +449,7 @@ export function createBranchPoint(
   const { branchPointsAllowed } = restrictions;
   if (!branchPointsAllowed) return null;
 
-  const doesBranchPointExistAlready = _.some(
-    tree.branchPoints,
+  const doesBranchPointExistAlready = tree.branchPoints.some(
     (branchPoint) => branchPoint.nodeId === node.id,
   );
 
@@ -452,24 +471,24 @@ export function deleteBranchPoint(
   const { branchPointsAllowed } = restrictions;
   const { trees } = skeletonTracing;
 
-  const hasBranchPoints = trees.values().some((tree) => !_.isEmpty(tree.branchPoints));
+  const hasBranchPoints = trees.values().some((tree) => !isEmpty(tree.branchPoints));
   if (!branchPointsAllowed || !hasBranchPoints) return null;
 
   // Find most recent branchpoint across all trees
   const treeWithLastBranchpoint = maxBy(
-    trees.values().filter((tree) => !_.isEmpty(tree.branchPoints)),
-    (tree: Tree) => _.last(tree.branchPoints)?.timestamp ?? 0,
+    trees.values().filter((tree) => !isEmpty(tree.branchPoints)),
+    (tree: Tree) => last(tree.branchPoints)?.timestamp ?? 0,
   );
 
   if (treeWithLastBranchpoint == null) {
     return null;
   }
   const branchPoints = treeWithLastBranchpoint.branchPoints;
-  const lastBranchPoint = _.last(branchPoints);
+  const lastBranchPoint = last(branchPoints);
 
   if (branchPoints && lastBranchPoint) {
     // Delete branchpoint
-    const newBranchPoints = _.without(branchPoints, lastBranchPoint);
+    const newBranchPoints = without(branchPoints, lastBranchPoint);
 
     return [newBranchPoints, treeWithLastBranchpoint.treeId, lastBranchPoint.nodeId];
   }
@@ -485,6 +504,7 @@ export function createTree(
   type: TreeType = TreeTypeEnum.DEFAULT,
   edgesAreVisible: boolean = true,
   metadata: MetadataEntryProto[] = [],
+  agglomerateInfo?: TreeAgglomerateInfo | undefined,
 ): Tree | null {
   const skeletonTracing = getSkeletonTracing(state.annotation);
   if (skeletonTracing == null) {
@@ -496,8 +516,8 @@ export function createTree(
   let groupId = null;
 
   if (addToActiveGroup) {
-    const groupIdOfActiveTree = getActiveTree(skeletonTracing)?.groupId;
-    const groupIdOfActiveGroup = getActiveTreeGroup(skeletonTracing)?.groupId;
+    const groupIdOfActiveTree = getActiveTree(state)?.groupId;
+    const groupIdOfActiveGroup = getActiveTreeGroup(state)?.groupId;
     groupId = groupIdOfActiveTree ?? groupIdOfActiveGroup;
   }
 
@@ -516,6 +536,7 @@ export function createTree(
     type,
     edgesAreVisible,
     metadata,
+    agglomerateInfo,
   };
   return tree;
 }
@@ -527,7 +548,7 @@ export function getOrCreateTree(
   timestamp: number,
   type?: TreeType | null | undefined,
 ): Tree | null {
-  const tree = getTree(skeletonTracing, treeId, type);
+  const tree = getTree(state, treeId, type);
   if (tree != null) {
     return tree;
   }
@@ -558,6 +579,7 @@ export function addTreesAndGroups(
   trees: MutableTreeMap,
   treeGroups: MutableTreeGroup[],
   assignNewGroupId: boolean = true,
+  targetGroupId: number = MISSING_GROUP_ID,
 ): [MutableTreeMap, TreeGroup[], number] | null {
   const hasInvalidTreeIds = trees
     .keys()
@@ -567,7 +589,8 @@ export function addTreesAndGroups(
     skeletonTracing.trees.size() > 0 ||
     skeletonTracing.treeGroups.length > 0 ||
     hasInvalidTreeIds ||
-    hasInvalidNodeIds;
+    hasInvalidNodeIds ||
+    targetGroupId !== MISSING_GROUP_ID;
 
   if (!needsReassignedIds) {
     // Without reassigning ids, the code is considerably faster.
@@ -632,6 +655,10 @@ export function addTreesAndGroups(
     // or keep the old group id if the tree should be assigned to an existing group.
     if (tree.groupId != null && assignNewGroupId) {
       tree.groupId = groupIdMap[tree.groupId];
+    } else if (tree.groupId == null && targetGroupId !== MISSING_GROUP_ID) {
+      // The tree was at the root of the imported hierarchy. Nest it into the selected
+      // target group instead of adding it to the root of the existing tree hierarchy.
+      tree.groupId = targetGroupId;
     }
     tree.treeId = newTreeId;
 
@@ -658,10 +685,10 @@ export function deleteTrees(
 
   if (newTrees.size() > 0 && !suppressActivatingNextNode) {
     // Setting the tree active whose id is the next highest compared to the ids of the deleted trees.
-    const maximumTreeId = _.max(treeIds) || Constants.MIN_TREE_ID;
+    const maximumTreeId = lodashMax(treeIds) || Constants.MIN_TREE_ID;
     newActiveTreeId = getNearestTreeId(maximumTreeId, newTrees);
 
-    const firstKey = _.first(newTrees.getOrThrow(newActiveTreeId).nodes.keys().toArray());
+    const firstKey = first(newTrees.getOrThrow(newActiveTreeId).nodes.keys().toArray());
     newActiveNodeId = firstKey != null ? Number(firstKey) : null;
   }
 
@@ -719,7 +746,7 @@ export function mergeTrees(
 }
 
 export function shuffleTreeColor(skeletonTracing: SkeletonTracing, tree: Tree): [Tree, number] {
-  const randomId = _.random(0, 10000, false);
+  const randomId = random(0, 10000, false);
 
   return setTreeColorIndex(skeletonTracing, tree, randomId);
 }
@@ -768,9 +795,11 @@ export function deleteComment(
 export function toggleAllTreesReducer(
   state: WebknossosState,
   skeletonTracing: SkeletonTracing,
+  shouldBecomeVisible?: boolean,
 ): WebknossosState {
   // Let's make all trees visible if there is one invisible tree
-  const shouldBecomeVisible = skeletonTracing.trees.values().some((tree) => !tree.isVisible);
+  shouldBecomeVisible =
+    shouldBecomeVisible ?? skeletonTracing.trees.values().some((tree) => !tree.isVisible);
 
   const newTrees = skeletonTracing.trees.clone();
   for (const [treeId, tree] of skeletonTracing.trees.entries()) {
@@ -860,9 +889,9 @@ export function setExpandedTreeGroups(
 function serverNodeToMutableNode(n: ServerNode): MutableNode {
   return {
     id: n.id,
-    untransformedPosition: Utils.point3ToVector3(n.position),
+    untransformedPosition: point3ToVector3(n.position),
     additionalCoordinates: n.additionalCoordinates,
-    rotation: Utils.point3ToVector3(n.rotation),
+    rotation: point3ToVector3(n.rotation),
     bitDepth: n.bitDepth,
     viewport: n.viewport,
     mag: n.mag,
@@ -899,15 +928,16 @@ export function createMutableTreeMapFromTreeArray(
         ),
         color:
           tree.color != null
-            ? Utils.colorObjectToRGBArray(tree.color)
+            ? colorObjectToRGBArray(tree.color)
             : ColorGenerator.distinctColorForId(tree.treeId),
-        branchPoints: _.map(tree.branchPoints, serverBranchPointToMutableBranchPoint),
+        branchPoints: tree.branchPoints.map(serverBranchPointToMutableBranchPoint),
         isVisible: tree.isVisible != null ? tree.isVisible : true,
         timestamp: tree.createdTimestamp,
         groupId: tree.groupId,
         type: tree.type != null ? tree.type : TreeTypeEnum.DEFAULT,
         edgesAreVisible: tree.edgesAreVisible != null ? tree.edgesAreVisible : true,
         metadata: tree.metadata,
+        agglomerateInfo: tree.agglomerateInfo,
       }),
     );
   }

@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.datavault
 
+import com.scalableminds.util.box.{Box, Failure, Full}
 import com.scalableminds.util.enumeration.ExtendedEnumeration
-import com.scalableminds.util.tools.{Box, Failure, Full}
 
 // Lists the encodings supported by VaultPath.readBytes
 object Encoding extends ExtendedEnumeration {
@@ -18,5 +18,12 @@ object Encoding extends ExtendedEnumeration {
       case "identity" => Full(identity)
       case ""         => Full(identity)
       case _          => Failure(s"Unsupported encoding: $s")
+    }
+
+  def toRfc7231String(e: Encoding.Value): Option[String] =
+    e match {
+      case Encoding.gzip     => Some("gzip")
+      case Encoding.brotli   => Some("br")
+      case Encoding.identity => None
     }
 }

@@ -5,11 +5,11 @@ import type { MagInfo } from "./mag_info";
 
 export function globalPositionToBucketPosition(
   [x, y, z]: Vector3,
-  mags: Array<Vector3>,
+  denseMags: Array<Vector3>,
   magIndex: number,
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
 ): BucketAddress {
-  const mag = magIndex < mags.length ? mags[magIndex] : upsampleMag(mags, magIndex);
+  const mag = magIndex < denseMags.length ? denseMags[magIndex] : upsampleMag(denseMags, magIndex);
   return [
     Math.floor(x / (constants.BUCKET_WIDTH * mag[0])),
     Math.floor(y / (constants.BUCKET_WIDTH * mag[1])),
@@ -64,7 +64,7 @@ export function globalPositionToBucketPositionFloat(
     magIndex,
   ];
 }
-export function upsampleMag(mags: Array<Vector3>, magIndex: number): Vector3 {
+function upsampleMag(mags: Array<Vector3>, magIndex: number): Vector3 {
   const lastMagIndex = mags.length - 1;
   const lastMag = mags[lastMagIndex];
   const multiplier = Math.pow(2, magIndex - lastMagIndex);
@@ -82,7 +82,7 @@ export function bucketPositionToGlobalAddress(
     z * constants.BUCKET_WIDTH * mag[2],
   ];
 }
-export function getMagFactors(magA: Vector3, magB: Vector3): Vector3 {
+function getMagFactors(magA: Vector3, magB: Vector3): Vector3 {
   return [magA[0] / magB[0], magA[1] / magB[1], magA[2] / magB[2]];
 }
 export function zoomedPositionToZoomedAddress(
@@ -101,10 +101,9 @@ export function zoomedPositionToZoomedAddress(
 export function zoomedAddressToZoomedPosition([x, y, z, _]: BucketAddress): Vector3 {
   return [x * constants.BUCKET_WIDTH, y * constants.BUCKET_WIDTH, z * constants.BUCKET_WIDTH];
 }
-// TODO: zoomedAddressToAnotherZoomStep usages should be converted to zoomedAddressToAnotherZoomStepWithInfo
+// TODO (#4838): zoomedAddressToAnotherZoomStep usages should be converted to zoomedAddressToAnotherZoomStepWithInfo
 // Note that this is not trivial since zoomedAddressToAnotherZoomStepWithInfo will throw on not existing
 // mag indices (in contrast to zoomedAddressToAnotherZoomStep).
-// See: https://github.com/scalableminds/webknossos/issues/4838
 export function zoomedAddressToAnotherZoomStep(
   [x, y, z, magIndex]: Vector4,
   mags: Array<Vector3>,

@@ -1,4 +1,3 @@
-import _ from "lodash";
 import {
   DoubleSide,
   Matrix4,
@@ -16,6 +15,7 @@ import PlaneMaterialFactory, {
 import { getZoomedMatrix } from "viewer/model/accessors/flycam_accessor";
 import shaderEditor from "viewer/model/helpers/shader_editor";
 import Store from "viewer/store";
+
 // Let's set up our trianglesplane.
 // It serves as a "canvas" where the brain images
 // are drawn.
@@ -29,15 +29,15 @@ import Store from "viewer/store";
 // attached to bend surface.
 // The result is then projected on a flat surface.
 const renderDebuggerPlane = false;
-type ArbitraryMeshes = {
+type FlightModeMeshes = {
   mainPlane: Mesh;
   debuggerPlane: Mesh | null | undefined;
 };
 
 const flipYRotationMatrix = new Matrix4().makeRotationY(Math.PI);
 
-class ArbitraryPlane {
-  meshes: ArbitraryMeshes;
+class FlightModePlane {
+  meshes: FlightModeMeshes;
   plane!: Mesh<PlaneGeometry, PlaneShaderMaterial, Object3DEventMap>;
   isDirty: boolean;
   stopStoreListening: () => void;
@@ -58,7 +58,7 @@ class ArbitraryPlane {
   }
 
   addToScene(scene: Scene) {
-    _.values(this.meshes).forEach((mesh) => {
+    Object.values(this.meshes).forEach((mesh) => {
       if (mesh) {
         scene.add(mesh);
       }
@@ -99,7 +99,7 @@ class ArbitraryPlane {
         mesh.matrixWorldNeedsUpdate = true;
       };
 
-      _.values(this.meshes).forEach(updateMesh);
+      Object.values(this.meshes).forEach(updateMesh);
 
       this.isDirty = false;
       getSceneController().update(this);
@@ -110,7 +110,7 @@ class ArbitraryPlane {
     this.plane.material.updateUseInterpolation();
   };
 
-  createMeshes(): ArbitraryMeshes {
+  createMeshes(): FlightModeMeshes {
     const adaptPlane = <M extends ShaderMaterial>(_plane: Mesh<PlaneGeometry, M>) => {
       _plane.rotation.x = Math.PI;
       _plane.matrixAutoUpdate = false;
@@ -184,8 +184,16 @@ class ArbitraryPlane {
 
   destroy() {
     this.stopStoreListening();
+    // Disposes the plane material, too.
     this.materialFactory.destroy();
+
+    for (const mesh of Object.values(this.meshes)) {
+      if (mesh != null) {
+        mesh.geometry.dispose();
+        (mesh.material as ShaderMaterial).dispose();
+      }
+    }
   }
 }
 
-export default ArbitraryPlane;
+export default FlightModePlane;

@@ -1,8 +1,8 @@
 package com.scalableminds.util.geometry
 
-import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
-import play.api.libs.json.Json._
-import play.api.libs.json._
+import com.scalableminds.util.tools.StringNumberConversions.toIntOpt
+import play.api.libs.json.Json.*
+import play.api.libs.json.*
 
 case class Vec3Int(x: Int, y: Int, z: Int) {
   def scale(s: Int): Vec3Int =
@@ -37,7 +37,7 @@ case class Vec3Int(x: Int, y: Int, z: Int) {
 
   override def toString: String = s"($x, $y, $z)"
 
-  def toMagLiteral(allowScalar: Boolean = false): String =
+  def toMagLiteral(allowScalar: Boolean): String =
     if (allowScalar && isIsotropic) s"$x" else s"$x-$y-$z"
 
   def toUriLiteral: String = s"$x,$y,$z"
@@ -76,7 +76,10 @@ case class Vec3Int(x: Int, y: Int, z: Int) {
   def alignWithGridFloor(gridCellSize: Vec3Int): Vec3Int =
     this / gridCellSize * gridCellSize
 
-  def sorted: Vec3Int = Vec3Int.fromList(toList.sorted).get
+  def sorted: Vec3Int = {
+    val sortedList = toList.sorted
+    Vec3Int(sortedList.head, sortedList(1), sortedList(2))
+  }
 
   def hasNegativeComponent: Boolean = x < 0 || y < 0 || z < 0
 
@@ -95,12 +98,12 @@ object Vec3Int {
   def fromMagLiteral(s: String, allowScalar: Boolean = false): Option[Vec3Int] =
     s.toIntOpt match {
       case Some(scalar) if allowScalar => Some(Vec3Int.full(scalar))
-      case _ =>
+      case _                           =>
         s match {
           case magLiteralRegex(x, y, z) =>
-            try {
+            try
               Some(Vec3Int(Integer.parseInt(x), Integer.parseInt(y), Integer.parseInt(z)))
-            } catch {
+            catch {
               case _: NumberFormatException => None
             }
           case _ =>
@@ -110,9 +113,9 @@ object Vec3Int {
 
   def fromUriLiteral(s: String): Option[Vec3Int] = s match {
     case uriLiteralRegex(x, y, z) =>
-      try {
+      try
         Some(Vec3Int(Integer.parseInt(x), Integer.parseInt(y), Integer.parseInt(z)))
-      } catch {
+      catch {
         case _: NumberFormatException => None
       }
     case _ => None

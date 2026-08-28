@@ -1,19 +1,19 @@
 import { getSystemColorTheme } from "theme";
 import type { APIAnnotationType, APIAnnotationVisibility } from "types/api_types";
 import { defaultDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
+import constants from "viewer/constants";
 import Constants, {
   ControlModeEnum,
+  FillModeEnum,
   OrthoViews,
   OverwriteModeEnum,
-  FillModeEnum,
   TDViewDisplayModeEnum,
-  InterpolationModeEnum,
   UnitLong,
   ViewModeValues,
 } from "viewer/constants";
-import constants from "viewer/constants";
 import { AnnotationTool, Toolkit } from "viewer/model/accessors/tool_accessor";
 import type { WebknossosState } from "viewer/store";
+import { getAllDefaultKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
 
 const defaultViewportRect = {
   top: 0,
@@ -26,7 +26,6 @@ const initialAnnotationInfo = {
   restrictions: {
     branchPointsAllowed: false,
     allowUpdate: false,
-    initialAllowUpdate: false,
     allowSave: false,
     allowFinish: false,
     allowAccess: true,
@@ -58,7 +57,8 @@ const defaultState: WebknossosState = {
     isMultiSplitActive: false,
     brushSize: 50,
     clippingDistance: 50,
-    clippingDistanceArbitrary: 64,
+    clippingDistanceFlight: 64,
+    clipSkeletonToCurrentSection: false,
     crosshairSize: 0.1,
     displayCrosshair: true,
     displayScalebars: true,
@@ -82,12 +82,11 @@ const defaultState: WebknossosState = {
     sphericalCapRadius: Constants.DEFAULT_SPHERICAL_CAP_RADIUS,
     tdViewDisplayPlanes: TDViewDisplayModeEnum.DATA,
     tdViewDisplayDatasetBorders: true,
-    tdViewDisplayLayerBorders: false,
+    tdViewUsePerspectiveCamera: true,
     gpuMemoryFactor: Constants.DEFAULT_GPU_MEMORY_FACTOR,
     overwriteMode: OverwriteModeEnum.OVERWRITE_ALL,
     fillMode: FillModeEnum._2D,
     isFloodfillRestrictedToBoundingBox: false,
-    interpolationMode: InterpolationModeEnum.INTERPOLATE,
     useLegacyBindings: false,
     quickSelect: {
       useHeuristic: false,
@@ -102,6 +101,30 @@ const defaultState: WebknossosState = {
     renderWatermark: true,
     antialiasRendering: false,
     activeToolkit: Toolkit.ALL_TOOLS,
+    erasePreference: "ERASE_BRUSH",
+    writePreference: "BRUSH",
+    measurementPreference: "LINE_MEASUREMENT",
+    mipRaymarchingSteps: 128,
+    mipDepthWrite: false,
+    timestampsForTools: {
+      [AnnotationTool.MOVE.id]: 0,
+      [AnnotationTool.BRUSH.id]: 0,
+      [AnnotationTool.ERASE_BRUSH.id]: 0,
+      [AnnotationTool.TRACE.id]: 0,
+      [AnnotationTool.ERASE_TRACE.id]: 0,
+      [AnnotationTool.SKELETON.id]: 0,
+      [AnnotationTool.BOUNDING_BOX.id]: 0,
+      [AnnotationTool.AREA_MEASUREMENT.id]: 0,
+      [AnnotationTool.QUICK_SELECT.id]: 0,
+      [AnnotationTool.FILL_CELL.id]: 0,
+      [AnnotationTool.PROOFREAD.id]: 0,
+      [AnnotationTool.LINE_MEASUREMENT.id]: 0,
+      [AnnotationTool.VOXEL_PIPETTE.id]: 0,
+    },
+  },
+  keyboardConfiguration: {
+    shortcutsConfig: getAllDefaultKeyboardShortcuts(),
+    unmodifiedLayoutMap: new Map(),
   },
   temporaryConfiguration: {
     viewMode: Constants.MODE_PLANE_TRACING,
@@ -109,8 +132,8 @@ const defaultState: WebknossosState = {
     flightmodeRecording: false,
     controlMode: ControlModeEnum.VIEW,
     mousePosition: null,
-    hoveredSegmentId: 0,
-    hoveredUnmappedSegmentId: 0,
+    hoveredSegmentId: 0n,
+    hoveredUnmappedSegmentId: 0n,
     activeMappingByLayer: {},
     isMergerModeEnabled: false,
     gpuSetup: {
@@ -122,6 +145,8 @@ const defaultState: WebknossosState = {
     preferredQualityForMeshPrecomputation: 2,
     preferredQualityForMeshAdHocComputation: 2,
     lastVisibleSegmentationLayerName: null,
+    layerBoundingBoxVisibilities: {},
+    layerBoundingBoxColors: {},
   },
   task: null,
   dataset: {
@@ -154,6 +179,7 @@ const defaultState: WebknossosState = {
     owningOrganization: "",
     description: null,
     directoryName: "Loading",
+    isVirtual: false,
     allowedTeams: [],
     allowedTeamsCumulative: [],
     logoUrl: null,
@@ -161,6 +187,7 @@ const defaultState: WebknossosState = {
     sortingKey: 123,
     publication: null,
     usedStorageBytes: 0,
+    uploaderFullName: null,
   },
   annotation: {
     ...initialAnnotationInfo,
@@ -178,22 +205,32 @@ const defaultState: WebknossosState = {
     owner: null,
     isLockedByOwner: false,
     contributors: [],
-    othersMayEdit: false,
-    blockedByUser: null,
+    collaborationMode: "OwnerOnly",
     annotationLayers: [],
     version: 0,
     earliestAccessibleVersion: 0,
     stats: {},
     organization: "",
+    isUpdatingCurrentlyAllowed: initialAnnotationInfo.restrictions.allowUpdate,
   },
   save: {
     queue: [],
-    isBusy: false,
+    isSavingDisabled: false,
     lastSaveTimestamp: 0,
     progressInfo: {
       processedActionCount: 0,
       totalActionCount: 0,
     },
+    mutexState: { hasAnnotationMutex: false, blockedByUser: null, blockedBySessionId: null },
+    rebaseRelevantServerAnnotationState: {
+      annotationDescription: "",
+      annotationVersion: 1,
+      skeleton: undefined,
+      volumes: [],
+      mappingDataByLayer: {},
+      isRebasingOrForwarding: false,
+    },
+    proofreadingPostProcessingInfo: null,
   },
   flycam: {
     zoomStep: 1.3,
@@ -229,7 +266,7 @@ const defaultState: WebknossosState = {
         TDView: defaultViewportRect,
       },
     },
-    arbitrary: {
+    flight: {
       inputCatcherRect: defaultViewportRect,
     },
   },
@@ -241,12 +278,15 @@ const defaultState: WebknossosState = {
     activeUserBoundingBoxId: null,
     showDropzoneModal: false,
     showVersionRestore: false,
+    isRestoringVersion: false,
     showDownloadModal: false,
     showAddScriptModal: false,
     showMergeAnnotationModal: false,
     showZarrPrivateLinksModal: false,
+    showKeyboardShortcutConfigModal: false,
     showPythonClientModal: false,
-    aIJobModalState: "invisible",
+    showDuplicateAnnotationModal: false,
+    aIJobDrawerState: "invisible",
     showRenderAnimationModal: false,
     showShareModal: false,
     storedLayouts: {},
@@ -258,10 +298,8 @@ const defaultState: WebknossosState = {
       left: false,
     },
     theme: getSystemColorTheme(),
-    busyBlockingInfo: {
-      isBusy: false,
-    },
-    isWkReady: false,
+    isWkInitialized: false,
+    isUiReady: false,
     quickSelectState: "inactive",
     areQuickSelectSettingsOpen: false,
     measurementToolInfo: {
@@ -282,7 +320,24 @@ const defaultState: WebknossosState = {
       viewport: null,
       unmappedSegmentId: null,
     },
+    mipBBoxSettings: {},
   },
-  localSegmentationData: {},
+  localSegmentationStateByLayer: {},
+  localSkeletonState: {
+    activeTreeId: null,
+    activeGroupId: null,
+    navigationList: {
+      list: [],
+      activeIndex: -1,
+    },
+    showSkeletons: true,
+  },
+  localAnnotationState: {
+    idReservationsForBoundingBoxes: [],
+  },
+  operationContext: {
+    activeOperations: [],
+    childOperations: [],
+  },
 };
 export default defaultState;

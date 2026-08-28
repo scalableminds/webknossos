@@ -1,8 +1,9 @@
 import { CaretDownOutlined, CaretRightOutlined } from "@ant-design/icons";
 import { Avatar, List } from "antd";
 import FormattedDate from "components/formatted_date";
-import _ from "lodash";
-import * as React from "react";
+import last from "lodash-es/last";
+import max from "lodash-es/max";
+import { Component, Fragment } from "react";
 import type { APIUpdateActionBatch } from "types/api_types";
 import VersionEntry from "viewer/view/version_entry";
 
@@ -11,11 +12,12 @@ type Props = {
   initialAllowUpdate: boolean;
   newestVersion: number;
   activeVersion: number;
+  // The expansion state is controlled by the parent so that it survives the
+  // virtualized list unmounting off-screen groups.
+  expanded: boolean;
+  onSetExpanded: (expanded: boolean) => void;
   onRestoreVersion: (arg0: number) => Promise<void>;
   onPreviewVersion: (arg0: number) => Promise<void>;
-};
-type State = {
-  expanded: boolean;
 };
 
 function GroupHeader({
@@ -27,8 +29,8 @@ function GroupHeader({
   expanded: boolean;
   batches: APIUpdateActionBatch[];
 }) {
-  const lastTimestamp = _.max(batches[0].value.map((action) => action.value.actionTimestamp)) || 0;
-  const lastVersion = _.last(batches)?.version || 0;
+  const lastTimestamp = max(batches[0].value.map((action) => action.value.actionTimestamp)) || 0;
+  const lastVersion = last(batches)?.version || 0;
   return (
     <List.Item
       style={{
@@ -39,10 +41,10 @@ function GroupHeader({
     >
       <List.Item.Meta
         title={
-          <React.Fragment>
+          <Fragment>
             {lastVersion} to {batches[0].version} (
             <FormattedDate timestamp={lastTimestamp} format="HH:mm" />)
-          </React.Fragment>
+          </Fragment>
         }
         avatar={
           <Avatar size="small" icon={expanded ? <CaretDownOutlined /> : <CaretRightOutlined />} />
@@ -51,29 +53,26 @@ function GroupHeader({
     </List.Item>
   );
 }
-export default class VersionEntryGroup extends React.Component<Props, State> {
-  state: State = {
-    expanded: false,
-  };
+// Returns whether the given group contains the active version. Used by the
+// parent to decide the default expansion state for a group.
+export function isActiveVersionInGroup(
+  batches: APIUpdateActionBatch[],
+  activeVersion: number,
+): boolean {
+  const newestBatch = batches.at(0);
+  const oldestBatch = batches.at(-1);
+  return (
+    newestBatch != null &&
+    oldestBatch != null &&
+    oldestBatch.version <= activeVersion &&
+    activeVersion <= newestBatch.version
+  );
+}
 
+export default class VersionEntryGroup extends Component<Props> {
   toggleExpand = () => {
-    this.setState((prevState) => ({
-      expanded: !prevState.expanded,
-    }));
+    this.props.onSetExpanded(!this.props.expanded);
   };
-
-  componentDidMount() {
-    const newestBatch = this.props.batches.at(0);
-    const oldestBatch = this.props.batches.at(-1);
-    if (
-      newestBatch &&
-      oldestBatch &&
-      oldestBatch.version <= this.props.activeVersion &&
-      this.props.activeVersion <= newestBatch.version
-    ) {
-      this.setState({ expanded: true });
-    }
-  }
 
   render() {
     const {
@@ -81,21 +80,18 @@ export default class VersionEntryGroup extends React.Component<Props, State> {
       initialAllowUpdate,
       newestVersion,
       activeVersion,
+      expanded,
       onRestoreVersion,
       onPreviewVersion,
     } = this.props;
 
     const containsMultipleBatches = batches.length > 1;
     return (
-      <React.Fragment>
+      <Fragment>
         {containsMultipleBatches ? (
-          <GroupHeader
-            toggleExpand={this.toggleExpand}
-            expanded={this.state.expanded}
-            batches={batches}
-          />
+          <GroupHeader toggleExpand={this.toggleExpand} expanded={expanded} batches={batches} />
         ) : null}
-        {this.state.expanded || !containsMultipleBatches
+        {expanded || !containsMultipleBatches
           ? batches.map((batch) => (
               <VersionEntry
                 initialAllowUpdate={initialAllowUpdate}
@@ -110,7 +106,7 @@ export default class VersionEntryGroup extends React.Component<Props, State> {
               />
             ))
           : null}
-      </React.Fragment>
+      </Fragment>
     );
   }
 }

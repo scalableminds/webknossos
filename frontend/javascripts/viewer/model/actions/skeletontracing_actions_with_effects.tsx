@@ -1,20 +1,17 @@
 import { Modal } from "antd";
 import renderIndependently from "libs/render_independently";
+import type { ModalApi } from "libs/with_modal_hoc";
 import messages from "messages";
-import {
-  enforceSkeletonTracing,
-  getTree,
-  getTreeAndNode,
-} from "viewer/model/accessors/skeletontracing_accessor";
+import { getTree, getTreeAndNode } from "viewer/model/accessors/skeletontracing_accessor";
 import type { WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import RemoveTreeModal from "viewer/view/remove_tree_modal";
 import {
   type DeleteNodeAction,
   type DeleteTreeAction,
-  type NoAction,
   deleteNodeAction,
   deleteTreeAction,
+  type NoAction,
   noAction,
 } from "./skeletontracing_actions";
 
@@ -30,11 +27,15 @@ export const deleteNodeAsUserAction = (
   nodeId?: number,
   treeId?: number,
 ): DeleteNodeAction | NoAction | DeleteTreeAction => {
-  const skeletonTracing = enforceSkeletonTracing(state.annotation);
-  const treeAndNode = getTreeAndNode(skeletonTracing, nodeId, treeId);
+  const treeAndNode = getTreeAndNode(
+    state.annotation.skeleton,
+    state.localSkeletonState.activeTreeId,
+    nodeId,
+    treeId,
+  );
 
   if (!treeAndNode) {
-    const tree = getTree(skeletonTracing, treeId);
+    const tree = getTree(state, treeId);
     if (!tree) return noAction();
 
     // If the tree is empty, it will be deleted
@@ -60,8 +61,8 @@ export const deleteNodeAsUserAction = (
 };
 
 // Let the user confirm the deletion of the initial node (node with id 1) of a task
-function confirmDeletingInitialNode(treeId: number) {
-  Modal.confirm({
+function confirmDeletingInitialNode(modal: ModalApi, treeId: number) {
+  modal.confirm({
     title: messages["tracing.delete_tree_with_initial_node"],
     onOk: () => {
       Store.dispatch(deleteTreeAction(treeId));
@@ -69,14 +70,15 @@ function confirmDeletingInitialNode(treeId: number) {
   });
 }
 
-export const handleDeleteTreeByUser = (treeId?: number) => {
+// Takes the themed modal API (obtained via App.useApp()), since the static Modal.confirm
+// doesn't pick up the surrounding ConfigProvider theme.
+export const handleDeleteTreeByUser = (modal: ModalApi, treeId?: number) => {
   const state = Store.getState();
-  const skeletonTracing = enforceSkeletonTracing(state.annotation);
-  const tree = getTree(skeletonTracing, treeId);
+  const tree = getTree(state, treeId);
   if (!tree) return;
 
   if (state.task != null && tree.nodes.has(1)) {
-    confirmDeletingInitialNode(tree.treeId);
+    confirmDeletingInitialNode(modal, tree.treeId);
   } else if (state.userConfiguration.hideTreeRemovalWarning) {
     Store.dispatch(deleteTreeAction(tree.treeId));
   } else {

@@ -2,12 +2,18 @@ import Deferred from "libs/async/deferred";
 import Date from "libs/date";
 import { getUid } from "libs/uid_generator";
 import type { Dispatch } from "redux";
+import type { APIUserCompact } from "types/api_types";
+import type { OperationContext } from "viewer/model/sagas/operation_context_saga";
 import type {
   UpdateAction,
   UpdateActionWithIsolationRequirement,
   UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/volume/update_actions";
+import type { ProofreadingPostProcessingInfo, SaveQueueEntry, StoreAnnotation } from "viewer/store";
 export type SaveQueueType = "skeleton" | "volume" | "mapping";
+
+import { areSetsEqual } from "libs/utils";
+import compact from "lodash-es/compact";
 
 export type PushSaveQueueTransaction = {
   type: "PUSH_SAVE_QUEUE_TRANSACTION";
@@ -15,10 +21,9 @@ export type PushSaveQueueTransaction = {
   transactionId: string;
 };
 export type NotifyAboutUpdatedBucketsAction = ReturnType<typeof notifyAboutUpdatedBucketsAction>;
-type SaveNowAction = ReturnType<typeof saveNowAction>;
+export type SaveNowAction = ReturnType<typeof saveNowAction>;
 export type ShiftSaveQueueAction = ReturnType<typeof shiftSaveQueueAction>;
-type DiscardSaveQueuesAction = ReturnType<typeof discardSaveQueuesAction>;
-export type SetSaveBusyAction = ReturnType<typeof setSaveBusyAction>;
+type DiscardSaveQueueAction = ReturnType<typeof discardSaveQueueAction>;
 export type SetLastSaveTimestampAction = ReturnType<typeof setLastSaveTimestampAction>;
 export type SetVersionNumberAction = ReturnType<typeof setVersionNumberAction>;
 export type UndoAction = ReturnType<typeof undoAction>;
@@ -27,21 +32,68 @@ type DisableSavingAction = ReturnType<typeof disableSavingAction>;
 export type EnsureTracingsWereDiffedToSaveQueueAction = ReturnType<
   typeof ensureTracingsWereDiffedToSaveQueueAction
 >;
+export type EnsureHasNewestVersionAction = ReturnType<typeof ensureHasNewestVersionAction>;
+export type SetIsMutexAcquiredAction = ReturnType<typeof setIsMutexAcquiredAction>;
+export type SetUserHoldingMutexAction = ReturnType<typeof setUserHoldingMutexAction>;
+export type SubscribeToAnnotationMutexAction = ReturnType<typeof subscribeToAnnotationMutexAction>;
+export type UnsubscribeFromAnnotationMutexAction = ReturnType<
+  typeof unsubscribeFromAnnotationMutexAction
+>;
+export type SnapshotAnnotationStateForNextRebaseAction = ReturnType<
+  typeof snapshotAnnotationStateForNextRebaseAction
+>;
+export type RewindForRebaseAction = ReturnType<typeof rewindForRebaseAction>;
+export type FinishedRebaseAction = ReturnType<typeof finishedRebaseAction>;
+export type StartForwardingUpdateActionsAction = ReturnType<
+  typeof startForwardingUpdateActionsAction
+>;
+export type FinishForwardingUpdateActionsAction = ReturnType<
+  typeof finishForwardingUpdateActionsAction
+>;
+export type UpdateMappingRebaseInformationAction = ReturnType<
+  typeof snapshotMappingDataForNextRebaseAction
+>;
+export type FinishedApplyingMissingUpdatesAction = ReturnType<
+  typeof finishedApplyingMissingUpdatesAction
+>;
+export type SetPendingProofreadingOperationInfoAction = ReturnType<
+  typeof setPendingProofreadingOperationInfoAction
+>;
+export type ReplaceSaveQueueAction = ReturnType<typeof replaceSaveQueueAction>;
+export type ExitingAnnotationAction = ReturnType<typeof exitingAnnotationAction>;
+export type RetryMutexAcquisitionNowAction = ReturnType<typeof retryMutexAcquisitionNowAction>;
 
 export type SaveAction =
   | PushSaveQueueTransaction
   | SaveNowAction
   | ShiftSaveQueueAction
+  | DiscardSaveQueueAction
   | NotifyAboutUpdatedBucketsAction
-  | DiscardSaveQueuesAction
-  | SetSaveBusyAction
   | SetLastSaveTimestampAction
   | SetVersionNumberAction
   | UndoAction
   | RedoAction
   | DisableSavingAction
-  | EnsureTracingsWereDiffedToSaveQueueAction;
+  | EnsureTracingsWereDiffedToSaveQueueAction
+  | EnsureHasNewestVersionAction
+  | SetIsMutexAcquiredAction
+  | SetUserHoldingMutexAction
+  | SubscribeToAnnotationMutexAction
+  | UnsubscribeFromAnnotationMutexAction
+  | SnapshotAnnotationStateForNextRebaseAction
+  | RewindForRebaseAction
+  | FinishedRebaseAction
+  | StartForwardingUpdateActionsAction
+  | FinishForwardingUpdateActionsAction
+  | UpdateMappingRebaseInformationAction
+  | FinishedApplyingMissingUpdatesAction
+  | SetPendingProofreadingOperationInfoAction
+  | ReplaceSaveQueueAction
+  | ExitingAnnotationAction
+  | RetryMutexAcquisitionNowAction;
 
+// The following actions can be used to "push" update actions into the local save queue
+// of the Store.
 // The action creators pushSaveQueueTransaction and pushSaveQueueTransactionIsolated
 // are typed so that update actions that need isolation are isolated in a group each.
 // From this point on, we can assume that the groups fulfill the isolation requirement.
@@ -66,9 +118,15 @@ export const pushSaveQueueTransactionIsolated = (
 export const notifyAboutUpdatedBucketsAction = (count: number) =>
   ({ type: "NOTIFY_ABOUT_UPDATED_BUCKETS", count }) as const;
 
-export const saveNowAction = () =>
+export const saveNowAction = (operationContext?: OperationContext) =>
   ({
     type: "SAVE_NOW",
+    operationContext,
+  }) as const;
+
+export const exitingAnnotationAction = () =>
+  ({
+    type: "EXITING_ANNOTATION",
   }) as const;
 
 export const shiftSaveQueueAction = (count: number) =>
@@ -77,15 +135,9 @@ export const shiftSaveQueueAction = (count: number) =>
     count,
   }) as const;
 
-export const discardSaveQueuesAction = () =>
+export const discardSaveQueueAction = () =>
   ({
-    type: "DISCARD_SAVE_QUEUES",
-  }) as const;
-
-export const setSaveBusyAction = (isBusy: boolean) =>
-  ({
-    type: "SET_SAVE_BUSY",
-    isBusy,
+    type: "DISCARD_SAVE_QUEUE",
   }) as const;
 
 export const setLastSaveTimestampAction = () =>
@@ -132,8 +184,139 @@ export const dispatchRedoAsync = async (dispatch: Dispatch<any>): Promise<void> 
 };
 
 // See Model.ensureSavedState for an explanation of this action.
-export const ensureTracingsWereDiffedToSaveQueueAction = (callback: (tracingId: string) => void) =>
-  ({
+export const ensureTracingsWereDiffedToSaveQueueAction = (
+  callback: (tracingId: string) => void,
+) => {
+  return {
     type: "ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE",
     callback,
+  } as const;
+};
+
+export const dispatchEnsureTracingsWereDiffedToSaveQueueAction = async (
+  dispatch: Dispatch<any>,
+  annotation: StoreAnnotation,
+): Promise<void> => {
+  // All skeleton and volume tracings should respond to the dispatched action.
+  const tracingIds = new Set(
+    compact([annotation.skeleton?.tracingId, ...annotation.volumes.map((t) => t.tracingId)]),
+  );
+  const reportedTracingIds = new Set();
+  const deferred = new Deferred();
+  function callback(tracingId: string) {
+    reportedTracingIds.add(tracingId);
+    if (areSetsEqual(tracingIds, reportedTracingIds)) {
+      deferred.resolve(null);
+    }
+  }
+
+  if (tracingIds.size > 0) {
+    dispatch(ensureTracingsWereDiffedToSaveQueueAction(callback));
+    await deferred.promise();
+  }
+};
+
+export const ensureHasNewestVersionAction = (
+  callback: () => void,
+  operationContext?: OperationContext,
+) =>
+  ({
+    type: "ENSURE_HAS_NEWEST_VERSION",
+    callback,
+    operationContext,
   }) as const;
+
+export const dispatchEnsureHasNewestVersionAsync = async (
+  dispatch: Dispatch<any>,
+  operationContext?: OperationContext,
+): Promise<void> => {
+  const readyDeferred = new Deferred();
+  const action = ensureHasNewestVersionAction(() => readyDeferred.resolve(null), operationContext);
+  dispatch(action);
+  await readyDeferred.promise();
+};
+
+export const setIsMutexAcquiredAction = (isMutexAcquired: boolean) =>
+  ({
+    type: "SET_IS_MUTEX_ACQUIRED",
+    isMutexAcquired,
+  }) as const;
+
+export const setUserHoldingMutexAction = (
+  blockedByUser: APIUserCompact | null | undefined,
+  blockedBySessionId?: string | null,
+) =>
+  ({
+    type: "SET_USER_HOLDING_MUTEX",
+    blockedByUser,
+    blockedBySessionId,
+  }) as const;
+
+export const subscribeToAnnotationMutexAction = (subscriptionId: number, callerId: string) =>
+  ({
+    type: "SUBSCRIBE_TO_ANNOTATION_MUTEX",
+    subscriptionId,
+    callerId,
+  }) as const;
+
+// TODO #9389: The action is not really needed currently. This might change
+// when the mutex state is moved to the store, though (as suggested in the linked issue).
+export const unsubscribeFromAnnotationMutexAction = (subscriptionId: number) =>
+  ({
+    type: "UNSUBSCRIBE_FROM_ANNOTATION_MUTEX",
+    subscriptionId,
+  }) as const;
+
+export const snapshotAnnotationStateForNextRebaseAction = () =>
+  ({
+    type: "SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE",
+  }) as const;
+
+export const rewindForRebaseAction = () =>
+  ({
+    // Sets the annotation in the store to the info stored in RebaseRelevantAnnotationState.
+    type: "REWIND_FOR_REBASE",
+  }) as const;
+
+export const finishedRebaseAction = () =>
+  ({
+    type: "FINISHED_REBASING",
+  }) as const;
+
+export const startForwardingUpdateActionsAction = () =>
+  ({
+    type: "START_FORWARDING_UPDATE_ACTIONS",
+  }) as const;
+
+export const finishForwardingUpdateActionsAction = () =>
+  ({
+    type: "FINISH_FORWARDING_UPDATE_ACTIONS",
+  }) as const;
+
+export const snapshotMappingDataForNextRebaseAction = (volumeLayerIdToUpdate: string) =>
+  // This action updates the mapping rebase information for the given volume layer.
+  // Should be triggered whenever the mapping is changed in sync with the backend.
+  // E.g. when new parts of the partial mapping are loaded from the backend.
+  // Never when the mapping is changed by the user via actions as these are not in sync
+  // with the backend and only data in sync with the backend is allowed to be part of the rebase state.
+  ({
+    type: "SNAPSHOT_MAPPING_DATA_FOR_NEXT_REBASE_ACTION",
+    volumeLayerIdToUpdate,
+  }) as const;
+export const finishedApplyingMissingUpdatesAction = () =>
+  ({
+    type: "FINISHED_APPLYING_MISSING_UPDATES",
+  }) as const;
+export const setPendingProofreadingOperationInfoAction = (
+  proofreadingPostProcessingInfo: ProofreadingPostProcessingInfo | null | undefined,
+) =>
+  ({
+    type: "SET_PENDING_PROOFREADING_OPERATION_INFO",
+    proofreadingPostProcessingInfo,
+  }) as const;
+
+export const replaceSaveQueueAction = (newSaveQueue: SaveQueueEntry[]) =>
+  ({ type: "REPLACE_SAVE_QUEUE", newSaveQueue }) as const;
+
+export const retryMutexAcquisitionNowAction = () =>
+  ({ type: "RETRY_MUTEX_ACQUISITION_NOW" }) as const;

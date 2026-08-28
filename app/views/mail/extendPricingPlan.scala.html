@@ -1,9 +1,8 @@
-@( name: String, additionalFooter: String )
+@(name: String, additionalFooter: String, organizationName: String)
 
 @emailBaseTemplate(additionalFooter) {
 <p>Hi @{name}</p>
-<p>Thank you for requesting to extend your current WEBKNOSSOS plan. Our sales team will be in contact with
-  you shortly with a formal offer.</p>
-
+<p>Thank you for your interest in extending your WEBKNOSSOS plan. Our sales team will contact you shortly.</p>
+<p>Organization: @organizationName</p>
 <p>With best regards,<br />the WEBKNOSSOS team</p>
 }

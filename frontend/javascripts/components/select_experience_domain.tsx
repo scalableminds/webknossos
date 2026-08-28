@@ -42,14 +42,14 @@ const SelectExperienceDomain: React.FC<Props> = ({
     setCurrentlyEnteredDomain(domain);
   };
 
-  let options = getUnusedDomains();
+  let selectableDomains = getUnusedDomains();
 
   if (
     allowCreation &&
-    !options.includes(currentlyEnteredDomain) &&
+    !selectableDomains.includes(currentlyEnteredDomain) &&
     currentlyEnteredDomain.trim() !== ""
   ) {
-    options = [...options, currentlyEnteredDomain];
+    selectableDomains = [...selectableDomains, currentlyEnteredDomain];
   }
 
   return (
@@ -60,7 +60,7 @@ const SelectExperienceDomain: React.FC<Props> = ({
       <Select
         showSearch
         value={value}
-        optionFilterProp="children"
+        optionFilterProp="label"
         notFoundContent={notFoundContent}
         style={{
           width: `${width}%`,
@@ -70,11 +70,8 @@ const SelectExperienceDomain: React.FC<Props> = ({
         onSelect={onSelect}
         onChange={onChange}
         onSearch={onSearch}
-      >
-        {options.map((domain) => (
-          <Select.Option key={domain}>{domain}</Select.Option>
-        ))}
-      </Select>
+        options={selectableDomains.map((domain) => ({ value: domain, label: domain }))}
+      />
     </Tooltip>
   );
 };

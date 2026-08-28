@@ -1,13 +1,13 @@
 package backend
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
-import com.scalableminds.webknossos.datastore.SkeletonTracing._
-import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
-import com.scalableminds.webknossos.tracingstore.tracings._
-import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating._
-import org.scalatestplus.play._
+import com.scalableminds.webknossos.datastore.SkeletonTracing.*
+import com.scalableminds.webknossos.datastore.helpers.{TreeAgglomerateInfo, UnsignedLong}
+import com.scalableminds.webknossos.tracingstore.tracings.*
+import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.*
+import org.scalatest.wordspec.AsyncWordSpec
 
-class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
+class SkeletonUpdateActionsUnitTestSuite extends AsyncWordSpec {
 
   private def applyUpdateAction(action: SkeletonUpdateAction): SkeletonTracing =
     action.applyOn(Dummies.skeletonTracing)
@@ -29,9 +29,17 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
         timestamp = Dummies.timestamp,
         comments = List[UpdateActionComment](),
         groupId = None,
-        isVisible = Option(true),
-        edgesAreVisible = Option(true),
-        actionTracingId = Dummies.tracingId
+        isVisible = Some(true),
+        edgesAreVisible = Some(true),
+        actionTracingId = Dummies.tracingId,
+        `type` = Some(TreeType.AGGLOMERATE),
+        metadata = Some(
+          List(
+            MetadataEntry("myKey", numberValue = Some(5.0)),
+            MetadataEntry("anotherKey", stringListValue = Some(Seq("hello", "there")))
+          )
+        ),
+        agglomerateInfo = Some(TreeAgglomerateInfo(UnsignedLong(1), Some(Dummies.tracingId), None))
       )
       val result = applyUpdateAction(createTreeAction)
 
@@ -43,6 +51,9 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
       assert(tree.name === createTreeAction.name)
       assert(tree.isVisible == createTreeAction.isVisible)
       assert(tree.edgesAreVisible == createTreeAction.edgesAreVisible)
+      assert(tree.`type` == createTreeAction.`type`.map(TreeType.toProto))
+      assert(tree.metadata == MetadataEntry.toProtoMultiple(createTreeAction.metadata))
+      assert(tree.agglomerateInfo == createTreeAction.agglomerateInfo.map(_.toProto))
     }
   }
 
@@ -52,10 +63,7 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
       val result = applyUpdateAction(deleteTreeAction)
 
       assert(result.trees.length == Dummies.skeletonTracing.trees.length - 1)
-      result.trees.find(_.treeId == deleteTreeAction.id) match {
-        case Some(_) => throw new Exception
-        case None    =>
-      }
+      assert(!result.trees.exists(_.treeId == deleteTreeAction.id))
     }
   }
 
@@ -69,10 +77,15 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
         branchPoints = List(UpdateActionBranchPoint(0, Dummies.timestamp)),
         comments = List[UpdateActionComment](),
         groupId = None,
+        `type` = Some(TreeType.AGGLOMERATE),
         metadata = Some(
-          List(MetadataEntry("myKey", numberValue = Some(5.0)),
-               MetadataEntry("anotherKey", stringListValue = Some(Seq("hello", "there"))))),
-        actionTracingId = Dummies.tracingId
+          List(
+            MetadataEntry("myKey", numberValue = Some(5.0)),
+            MetadataEntry("anotherKey", stringListValue = Some(Seq("hello", "there")))
+          )
+        ),
+        actionTracingId = Dummies.tracingId,
+        agglomerateInfo = Some(TreeAgglomerateInfo(UnsignedLong(1), Some(Dummies.tracingId), None))
       )
       val result = applyUpdateAction(updateTreeAction)
 
@@ -82,9 +95,9 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
       assert(tree.createdTimestamp == Dummies.timestamp)
       assert(tree.comments == updateTreeAction.comments)
       assert(tree.name == updateTreeAction.name)
-      assert(
-        tree.metadata == List(MetadataEntryProto("myKey", numberValue = Some(5.0)),
-                              MetadataEntryProto("anotherKey", stringListValue = Seq("hello", "there"))))
+      assert(tree.`type` == updateTreeAction.`type`.map(TreeType.toProto))
+      assert(tree.metadata == MetadataEntry.toProtoMultiple(updateTreeAction.metadata))
+      assert(tree.agglomerateInfo == updateTreeAction.agglomerateInfo.map(_.toProto))
     }
   }
 
@@ -111,10 +124,12 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
   "MoveTreeComponentSkeletonAction" should {
     "move the specified (separate) nodes" in {
       val moveTreeComponentSkeletonAction =
-        new MoveTreeComponentSkeletonAction(Dummies.comp1Nodes.map(_.id).toList,
-                                            sourceId = 3,
-                                            targetId = 4,
-                                            actionTracingId = Dummies.tracingId)
+        new MoveTreeComponentSkeletonAction(
+          Dummies.comp1Nodes.map(_.id).toList,
+          sourceId = 3,
+          targetId = 4,
+          actionTracingId = Dummies.tracingId
+        )
       val result = moveTreeComponentSkeletonAction.applyOn(Dummies.componentSkeletonTracing)
 
       assert(result.trees.length == Dummies.componentSkeletonTracing.trees.length)
@@ -161,12 +176,12 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
       val createNodeSkeletonAction = new CreateNodeSkeletonAction(
         newNode.id,
         Vec3Int(newNode.position.x, newNode.position.y, newNode.position.z),
-        Option(Vec3Double(newNode.rotation.x, newNode.rotation.y, newNode.rotation.z)),
-        Option(newNode.radius),
-        Option(newNode.viewport),
-        Option(newNode.mag),
-        Option(newNode.bitDepth),
-        Option(newNode.interpolation),
+        Some(Vec3Double(newNode.rotation.x, newNode.rotation.y, newNode.rotation.z)),
+        Some(newNode.radius),
+        Some(newNode.viewport),
+        Some(newNode.mag),
+        Some(newNode.bitDepth),
+        Some(newNode.interpolation),
         treeId = 1,
         Dummies.timestamp,
         None,
@@ -187,12 +202,12 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
       val updateNodeSkeletonAction = new UpdateNodeSkeletonAction(
         newNode.id,
         Vec3Int(newNode.position.x, newNode.position.y, newNode.position.z),
-        Option(Vec3Double(newNode.rotation.x, newNode.rotation.y, newNode.rotation.z)),
-        Option(newNode.radius),
-        Option(newNode.viewport),
-        Option(newNode.mag),
-        Option(newNode.bitDepth),
-        Option(newNode.interpolation),
+        Some(Vec3Double(newNode.rotation.x, newNode.rotation.y, newNode.rotation.z)),
+        Some(newNode.radius),
+        Some(newNode.viewport),
+        Some(newNode.mag),
+        Some(newNode.bitDepth),
+        Some(newNode.interpolation),
         treeId = 1,
         Dummies.timestamp,
         actionTracingId = Dummies.tracingId
@@ -212,12 +227,12 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
       val createNodeSkeletonAction = new CreateNodeSkeletonAction(
         newNode.id,
         Vec3Int(newNode.position.x, newNode.position.y, newNode.position.z),
-        Option(Vec3Double(newNode.rotation.x, newNode.rotation.y, newNode.rotation.z)),
-        Option(newNode.radius),
-        Option(newNode.viewport),
-        Option(newNode.mag),
-        Option(newNode.bitDepth),
-        Option(newNode.interpolation),
+        Some(Vec3Double(newNode.rotation.x, newNode.rotation.y, newNode.rotation.z)),
+        Some(newNode.radius),
+        Some(newNode.viewport),
+        Some(newNode.mag),
+        Some(newNode.bitDepth),
+        Some(newNode.interpolation),
         treeId = 1,
         Dummies.timestamp,
         actionTracingId = Dummies.tracingId
@@ -246,10 +261,13 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
       val updatedNameNested = "Axon 3 updated"
       val updateTreeGroupsSkeletonAction = new UpdateTreeGroupsSkeletonAction(
         List(
-          UpdateActionTreeGroup(updatedNameTop,
-                                1,
-                                Some(true),
-                                List(UpdateActionTreeGroup(updatedNameNested, 3, Some(false), List())))),
+          UpdateActionTreeGroup(
+            updatedNameTop,
+            1,
+            Some(true),
+            List(UpdateActionTreeGroup(updatedNameNested, 3, Some(false), List()))
+          )
+        ),
         actionTracingId = Dummies.tracingId
       )
       val result = applyUpdateAction(updateTreeGroupsSkeletonAction)

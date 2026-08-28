@@ -1,6 +1,6 @@
 package com.scalableminds.util.geometry
 
-import com.scalableminds.util.tools.Math.ceilDiv
+import com.scalableminds.util.tools.MathUtils.ceilDiv
 import play.api.libs.json.{JsObject, Json}
 
 case class BoundingBox(topLeft: Vec3Int, width: Int, height: Int, depth: Int) {
@@ -25,10 +25,13 @@ case class BoundingBox(topLeft: Vec3Int, width: Int, height: Int, depth: Int) {
     )
     if (newTopLeft.x < newBottomRight.x && newTopLeft.y < newBottomRight.y && newTopLeft.z < newBottomRight.z) {
       Some(
-        BoundingBox(newTopLeft,
-                    newBottomRight.x - newTopLeft.x,
-                    newBottomRight.y - newTopLeft.y,
-                    newBottomRight.z - newTopLeft.z))
+        BoundingBox(
+          newTopLeft,
+          newBottomRight.x - newTopLeft.x,
+          newBottomRight.y - newTopLeft.y,
+          newBottomRight.z - newTopLeft.z
+        )
+      )
     } else None
   }
 
@@ -83,7 +86,7 @@ case class BoundingBox(topLeft: Vec3Int, width: Int, height: Int, depth: Int) {
 
 object BoundingBox {
 
-  import play.api.libs.json._
+  import play.api.libs.json.*
 
   private val literalPattern =
     "\\s*((?:\\-)?[0-9]+),\\s*((?:\\-)?[0-9]+),\\s*((?:\\-)?[0-9]+)\\s*,\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*".r
@@ -94,15 +97,16 @@ object BoundingBox {
   def fromLiteral(s: String): Option[BoundingBox] =
     s match {
       case literalPattern(minX, minY, minZ, width, height, depth) =>
-        try {
+        try
           Some(
             BoundingBox(
               Vec3Int(Integer.parseInt(minX), Integer.parseInt(minY), Integer.parseInt(minZ)),
               Integer.parseInt(width),
               Integer.parseInt(height),
               Integer.parseInt(depth)
-            ))
-        } catch {
+            )
+          )
+        catch {
           case _: NumberFormatException => None
         }
       case _ =>
@@ -124,7 +128,7 @@ object BoundingBox {
   def union(bbs: List[BoundingBox]): BoundingBox =
     bbs match {
       case head :: tail =>
-        tail.foldLeft(head)(_ union _)
+        tail.foldLeft(head)(_ `union` _)
       case _ =>
         BoundingBox.empty
     }
@@ -133,7 +137,7 @@ object BoundingBox {
     bbs match {
       case head :: tail =>
         tail.foldLeft[Option[BoundingBox]](Some(head)) { (aOpt, b) =>
-          aOpt.flatMap(_ intersection b)
+          aOpt.flatMap(_ `intersection` b)
         }
       case _ =>
         None

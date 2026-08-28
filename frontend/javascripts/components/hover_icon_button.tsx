@@ -1,8 +1,8 @@
-import type { ButtonProps } from "antd";
 import type React from "react";
-import { cloneElement, useState } from "react";
+import { useState } from "react";
+import ButtonComponent from "viewer/view/components/button_component";
 
-export type HoverButtonProps = Omit<ButtonProps, "icon"> & {
+export type HoverButtonProps = React.ComponentProps<typeof ButtonComponent> & {
   icon: React.ReactElement<any>;
   hoveredIcon: React.ReactElement<any>;
 };
@@ -10,23 +10,25 @@ export type HoverButtonProps = Omit<ButtonProps, "icon"> & {
 export function HoverIconButton(props: HoverButtonProps) {
   const [isMouseOver, setIsMouseOver] = useState<boolean>(false);
 
-  const onMouseEnter = (event: React.MouseEvent<HTMLElement, MouseEvent>) => {
+  const onMouseEnter = (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
     setIsMouseOver(true);
     if (props.onMouseEnter != null) {
       props.onMouseEnter(event);
     }
   };
-  const onMouseLeave = (event: React.MouseEvent<HTMLElement, MouseEvent>) => {
+  const onMouseLeave = (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
     setIsMouseOver(false);
     if (props.onMouseLeave != null) {
       props.onMouseLeave(event);
     }
   };
-  const { hoveredIcon, ...restProps } = props;
-  return cloneElement(isMouseOver ? hoveredIcon : props.icon, {
-    ...restProps,
-    onMouseEnter,
-    onMouseLeave,
-  });
+  const { hoveredIcon, icon, ...restProps } = props;
+  return (
+    <ButtonComponent
+      {...restProps}
+      icon={isMouseOver ? hoveredIcon : icon}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    />
+  );
 }
-export default {};

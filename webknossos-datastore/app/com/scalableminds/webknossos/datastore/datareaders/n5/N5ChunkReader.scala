@@ -1,14 +1,15 @@
 package com.scalableminds.webknossos.datastore.datareaders.n5
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.Box
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.datareaders.{ChunkReader, DatasetHeader}
-import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import com.scalableminds.webknossos.datastore.datavault.{ByteRange, VaultPath}
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.Box
-import com.scalableminds.util.tools.Box.tryo
+import Box.tryo
 
-import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
 // N5 allows for a 'varmode' which means that the number of elements in the chunk can deviate from the set chunk size.
@@ -20,9 +21,10 @@ class N5ChunkReader(header: DatasetHeader) extends ChunkReader(header) with Lazy
 
   private val dataExtractor: N5DataExtractor = new N5DataExtractor
 
-  override protected def readChunkBytesAndShape(path: VaultPath, range: Option[NumericRange[Long]])(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[(Array[Byte], Option[Array[Int]])] = {
+  override protected def readChunkBytesAndShape(path: VaultPath, range: ByteRange)(implicit
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[(Array[Byte], Option[Array[Int]])] = {
 
     def processBytes(bytes: Array[Byte], expectedElementCount: Int): Box[Array[Byte]] =
       for {
@@ -35,7 +37,7 @@ class N5ChunkReader(header: DatasetHeader) extends ChunkReader(header) with Lazy
     for {
       bytes <- path.readBytes(range)
       (blockHeader, data) <- dataExtractor.readBytesAndHeader(bytes).toFox
-      paddedChunkBytes <- processBytes(data, blockHeader.blockSize.product).toFox ?~> "chunk.decompress.failed"
+      paddedChunkBytes <- processBytes(data, blockHeader.blockSize.product).toFox ?~> Msg.Dataset.Chunk.decompressFailed
     } yield (paddedChunkBytes, Some(blockHeader.blockSize))
   }
 }

@@ -1,12 +1,13 @@
 import { DeleteOutlined } from "@ant-design/icons";
 import {
-  type WebAuthnKeyDescriptor,
   doWebAuthnRegistration,
   listWebAuthnKeys,
   removeWebAuthnKey,
+  type WebAuthnKeyDescriptor,
 } from "admin/api/webauthn";
 import { Button, Input, Modal, Table } from "antd";
 import Toast from "libs/toast";
+import { scrollToTop } from "libs/utils";
 import { useEffect, useState } from "react";
 
 function PasskeysView() {
@@ -78,6 +79,7 @@ function PasskeysView() {
         rowKey="id"
         pagination={{
           hideOnSinglePage: true,
+          onChange: scrollToTop,
         }}
         showHeader={false}
       />

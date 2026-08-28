@@ -1,13 +1,19 @@
-import _ from "lodash";
+import size from "lodash-es/size";
+import messages from "messages";
 import type {
+  APIAnnotationInfo,
   APIAnnotationUserState,
   APIUserBase,
   SkeletonUserState,
   VolumeUserState,
 } from "types/api_types";
-import type { EmptyObject } from "types/globals";
+import type { EmptyObject } from "types/type_utils";
+import { TreeTypeEnum } from "viewer/constants";
+import type { Tree } from "viewer/model/types/tree_types";
 import type { StoreAnnotation, WebknossosState } from "viewer/store";
 import { sum } from "../helpers/iterator_utils";
+import { reuseInstanceOnEquality } from "./accessor_helpers";
+import type { DisabledInfo } from "./disabled_tool_accessor";
 
 export function mayEditAnnotationProperties(state: WebknossosState) {
   const { owner, restrictions } = state.annotation;
@@ -22,6 +28,149 @@ export function mayEditAnnotationProperties(state: WebknossosState) {
   );
 }
 
+export function mayEditAnnotation(state: WebknossosState) {
+  // The following properties can/should be *ignored*:
+  // - isLockedByOwner
+  //   - because isUpdatingCurrentlyAllowed is initialized while respecting
+  //     annotation.restrictions.allowUpdate (which in turn respects isLockedByOwner).
+  // - showVersionRestore
+  //   - because isUpdatingCurrentlyAllowed will be set to false while the version view is open
+  // - annotation.restrictions.allowSave
+  //   - because in sandbox mode, one can edit things but not save them
+  //
+  // isUpdatingCurrentlyAllowed itself is initialized using the backend-provided
+  // allowUpdate value (so, it contains ownership/permission checks).
+  // The frontend updates isUpdatingCurrentlyAllowed when collaboration mode, mutex ownership
+  // and other factors (mainly, opened version restore view) change.
+  return state.annotation.isUpdatingCurrentlyAllowed;
+}
+
+export function mayAddToSaveQueue(state: WebknossosState): boolean {
+  /*
+   * This function is used to answer whether we may diff the current
+   * annotation state with the previous one to fill the save queue
+   * with update actions.
+   */
+  return (
+    // allowSave is initialized with allowUpdate and may be overridden when
+    // saving is disabled (via DISABLE_SAVING action).
+    Boolean(state.annotation.restrictions.allowSave) &&
+    !state.uiInformation.showVersionRestore &&
+    // The mayEditAnnotation accessor should prevent "proper" modifications to the annotation.
+    // However, view-related changes (e.g., camera movement) are still allowed and are
+    // stored in the annotation. Therefore, we still need to check isUpdatingCurrentlyAllowed
+    // to avoid that those changes are tried to be saved.
+    state.annotation.isUpdatingCurrentlyAllowed &&
+    // Ignore changes while rebasing or forwarding new backend actions as during this time actions
+    // are simply replayed on top of the server's state.
+    // Therefore, these actions were already added to the save queue or originate from the server itself
+    // and should not be added again.
+    !state.save.rebaseRelevantServerAnnotationState.isRebasingOrForwarding
+  );
+}
+
+export function maySendSaveRequest(state: WebknossosState) {
+  /*
+   * This function is used to answer whether we may send the current content of the
+   * save queue to the server.
+   * The implementation is currently identical to mayAddToSaveQueue, but the reasoning
+   * is a bit different and also the implementations might diverge in the future.
+   */
+
+  return Boolean(
+    state.annotation.restrictions.allowSave &&
+      (!state.uiInformation.showVersionRestore || state.uiInformation.isRestoringVersion) &&
+      // Ignore changes while rebasing or forwarding as this manipulates the save queue
+      // (and for sending save requests, we also manipulate the save queue).
+      !state.save.rebaseRelevantServerAnnotationState.isRebasingOrForwarding,
+  );
+}
+
+export function isConcurrentCollaborationMode(state: WebknossosState) {
+  // "Live collaboration" / "simultaneous editing": multiple users edit the same
+  // annotation at the same time. In this mode, normal skeleton editing is forbidden
+  // because it would interfere with concurrent edits/rebasing. Only proofreading
+  // (which operates on agglomerate trees) is allowed.
+  return state.annotation.collaborationMode === "Concurrent";
+}
+
+export function isAgglomerateTree(tree: Tree | null | undefined): boolean {
+  return tree?.type === TreeTypeEnum.AGGLOMERATE;
+}
+
+export function mayEditSkeletonTree(state: WebknossosState, tree: Tree | null | undefined) {
+  // Whether the given existing tree may be mutated. In concurrent collaboration
+  // mode, only agglomerate trees (i.e. proofreading) may be edited.
+  if (!mayEditAnnotation(state)) {
+    return false;
+  }
+  if (!isConcurrentCollaborationMode(state)) {
+    return true;
+  }
+  return isAgglomerateTree(tree);
+}
+
+export function getReasonForCantEditSkeletonTree(
+  state: WebknossosState,
+  tree: Tree | null | undefined,
+): string | undefined {
+  // If mayEditSkeletonTree is false, getReasonForCantEditSkeletonTree will provide a human-readable reason for that. Otherwise, undefined will be returned.
+  const isConcurrentCollabMode = isConcurrentCollaborationMode(state);
+  const isActiveTreeAgglomerate = isAgglomerateTree(tree);
+
+  if (!mayEditAnnotation(state)) {
+    const isAnnotationLockedByUser = state.annotation.isLockedByOwner;
+    const isOwner = isAnnotationOwner(state);
+    return messages["tracing.read_only_mode_notification"](isAnnotationLockedByUser, isOwner);
+  }
+  if (isConcurrentCollabMode && !isActiveTreeAgglomerate) {
+    return messages["tracing.skeleton_editing_disabled_in_live_collab"];
+  }
+
+  return undefined;
+}
+
+export function mayEditAnnotationLayerSet(state: WebknossosState): boolean {
+  // Adding, deleting, converting (making writable) or merging annotation layers
+  // changes the tracing's set of layers, which cannot be represented as an
+  // incorporable diff during a concurrent rebase (see #9052). These actions are
+  // therefore disallowed while simultaneous editing is enabled.
+  return mayEditAnnotation(state) && !isConcurrentCollaborationMode(state);
+}
+
+export function getReasonForCantChangeAnnotationLayerSet(
+  state: WebknossosState,
+): string | undefined {
+  // If mayChangeAnnotationLayerSet is false, this provides a human-readable reason for that. Otherwise, undefined will be returned.
+  if (!mayEditAnnotation(state)) {
+    const isAnnotationLockedByUser = state.annotation.isLockedByOwner;
+    const isOwner = isAnnotationOwner(state);
+    return messages["tracing.read_only_mode_notification"](isAnnotationLockedByUser, isOwner);
+  }
+  if (isConcurrentCollaborationMode(state)) {
+    return messages["tracing.layer_management_disabled_in_live_collab"](isAnnotationOwner(state));
+  }
+  return undefined;
+}
+
+function _isEditingAnnotationLayerSetDisabled(state: WebknossosState): DisabledInfo {
+  return {
+    isDisabled: !mayEditAnnotationLayerSet(state),
+    explanation: getReasonForCantChangeAnnotationLayerSet(state) ?? "",
+  };
+}
+
+export const isEditingAnnotationLayerSetDisabled = reuseInstanceOnEquality(
+  _isEditingAnnotationLayerSetDisabled,
+);
+
+export function mayEditAnnotationViewConfig(state: WebknossosState) {
+  // All users that are allowed to update the annotation have their own view
+  // config and can thus update it. This is independent of the collaboration
+  // mode and annotation mutexes.
+  return state.annotation.restrictions.allowUpdate;
+}
+
 export function isAnnotationOwner(state: WebknossosState) {
   const activeUser = state.activeUser;
   const owner = state.annotation.owner;
@@ -33,6 +182,10 @@ export function isAnnotationFromDifferentOrganization(state: WebknossosState) {
   const activeUser = state.activeUser;
 
   return !!(activeUser && activeUser?.organization !== state.annotation.organization);
+}
+
+export function isAnnotationEditableByNonOwners(annotation: StoreAnnotation | APIAnnotationInfo) {
+  return annotation.collaborationMode !== "OwnerOnly";
 }
 
 export type SkeletonTracingStats = {
@@ -59,7 +212,7 @@ export function getStats(annotation: StoreAnnotation): TracingStats {
       treeCount: skeleton.trees.size(),
       nodeCount: sum(skeleton.trees.values().map((tree) => tree.nodes.size())),
       edgeCount: sum(skeleton.trees.values().map((tree) => tree.edges.size())),
-      branchPointCount: sum(skeleton.trees.values().map((tree) => _.size(tree.branchPoints))),
+      branchPointCount: sum(skeleton.trees.values().map((tree) => size(tree.branchPoints))),
     };
   }
   return stats;
@@ -116,4 +269,47 @@ export function getUserStateForTracing<
   }
 
   return undefined;
+}
+
+export function isSaving(state: WebknossosState): boolean {
+  return state.operationContext.activeOperations
+    .concat(state.operationContext.childOperations)
+    .some((op) => op.id === "SAVE");
+}
+
+export function isSavingOrRebasing(state: WebknossosState): boolean {
+  return isSaving(state) || getIsRebasingOrForwarding(state);
+}
+
+export function getIsRebasingOrForwarding(state: WebknossosState): boolean {
+  // True while the save saga is rewinding/forwarding the annotation to incorporate remote
+  // changes. During this window, user edits that would be diffed to the save queue must not
+  // touch the annotation state (see rebase_edit_guard.ts), because they would be silently
+  // dropped and never saved.
+  return state.save.rebaseRelevantServerAnnotationState.isRebasingOrForwarding;
+}
+
+export function isUserInterfaceBlocked(state: WebknossosState): boolean {
+  if (!mayEditAnnotation(state)) {
+    // The user is not allowed to edit the annotation, anyway. No need to block the UI
+    // (would also be annoying because it would turn the cursor into a spinner when the
+    // annotation is updating to remote changes).
+    return false;
+  }
+
+  const { activeOperations } = state.operationContext;
+  if (activeOperations.length === 0) {
+    // No operation is going on anyway.
+    return false;
+  }
+  if (state.annotation.collaborationMode !== "Concurrent") {
+    // The current user is the only one that is allowed to edit the annotation currently.
+    // If the only active operation is a save operation, the UI should not be blocked.
+    // Reminder: in concurrent collab mode, we forbid users from editing during saving
+    // because editing would interfere with rebase operations.
+    const isOnlySaveOperation = activeOperations.length === 1 && activeOperations[0].id === "SAVE";
+    return !isOnlySaveOperation;
+  }
+  // At least one operation is ongoing and should block the user.
+  return true;
 }

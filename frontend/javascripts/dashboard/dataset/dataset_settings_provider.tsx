@@ -11,24 +11,29 @@ import { Form, type FormInstance } from "antd";
 import dayjs from "dayjs";
 import { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
-import _ from "lodash";
+import cloneDeep from "lodash-es/cloneDeep";
+import extend from "lodash-es/extend";
+import isEqual from "lodash-es/isEqual";
+import size from "lodash-es/size";
 import messages from "messages";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { APIDataSource, APIDataset, MutableAPIDataset } from "types/api_types";
+import type { APIDataLayer, APIDataSource, APIDataset, MutableAPIDataset } from "types/api_types";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
+import type { DataLayerWithTransformations } from "types/schemas/datasource.types";
 import {
-  EXPECTED_TRANSFORMATION_LENGTH,
   doAllLayersHaveTheSameRotation,
+  EXPECTED_SETTINGS_TRANSFORMATION_LENGTH,
   getRotationSettingsFromTransformationIn90DegreeSteps,
 } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import type { DatasetConfiguration } from "viewer/store";
 import type { DatasetRotationAndMirroringSettings } from "./dataset_rotation_form_item";
+import type { DatasetSettingsFormData } from "./dataset_settings_context";
 import {
   DatasetSettingsContext,
   type DatasetSettingsContextValue,
 } from "./dataset_settings_context";
-import type { DatasetSettingsFormData } from "./dataset_settings_context";
+import { TransformationsMode } from "./dataset_settings_data_tab";
 import { hasFormError } from "./helper_components";
 import useBeforeUnload from "./useBeforeUnload_hook";
 
@@ -41,6 +46,12 @@ type DatasetSettingsProviderProps = {
   form?: FormInstance<DatasetSettingsFormData>;
 };
 
+const NULLED_AXIS_ROTATION_SETTING = { rotationInDegrees: 0, isMirrored: false };
+const NULLED_DS_ROTATION_SETTINGS = {
+  x: NULLED_AXIS_ROTATION_SETTING,
+  y: NULLED_AXIS_ROTATION_SETTING,
+  z: NULLED_AXIS_ROTATION_SETTING,
+};
 export function getRotationFromCoordinateTransformations(
   dataSource: APIDataSource,
 ): DatasetRotationAndMirroringSettings | undefined {
@@ -49,10 +60,9 @@ export function getRotationFromCoordinateTransformations(
     let initialDatasetRotationSettings: DatasetRotationAndMirroringSettings;
     if (
       !firstLayerTransformations ||
-      firstLayerTransformations.length !== EXPECTED_TRANSFORMATION_LENGTH
+      firstLayerTransformations.length !== EXPECTED_SETTINGS_TRANSFORMATION_LENGTH
     ) {
-      const nulledSetting = { rotationInDegrees: 0, isMirrored: false };
-      initialDatasetRotationSettings = { x: nulledSetting, y: nulledSetting, z: nulledSetting };
+      initialDatasetRotationSettings = NULLED_DS_ROTATION_SETTINGS;
     } else {
       initialDatasetRotationSettings = {
         x: getRotationSettingsFromTransformationIn90DegreeSteps(firstLayerTransformations[1], "x"),
@@ -89,13 +99,10 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
     APIDataSource | null | undefined
   >(null);
 
-  onComplete = onComplete ? onComplete : () => navigate("/dashboard");
-  onCancel = onCancel ? onCancel : () => navigate("/dashboard");
-
   const fetchData = useCallback(async (): Promise<string | undefined> => {
     try {
       setIsLoading(true);
-      let fetchedDataset = await getDataset(datasetId);
+      let fetchedDataset = await getDataset(datasetId, null, undefined, false);
       const dataSource = fetchedDataset.dataSource;
 
       setSavedDataSourceOnServer(dataSource);
@@ -105,7 +112,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
       }
 
       if (fetchedDataset.dataSource.status?.includes("Error")) {
-        const datasetClone = _.cloneDeep(fetchedDataset) as any as MutableAPIDataset;
+        const datasetClone = cloneDeep(fetchedDataset) as any as MutableAPIDataset;
         datasetClone.dataSource.status = fetchedDataset.dataSource.status;
         fetchedDataset = datasetClone as APIDataset;
       }
@@ -116,19 +123,49 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
           isPublic: fetchedDataset.isPublic || false,
           description: fetchedDataset.description || undefined,
           allowedTeams: fetchedDataset.allowedTeams || [],
-          // @ts-ignore: The Antd DatePicker component requires a daysjs date object instead of plain number timestamp
+          // @ts-expect-error: The Antd DatePicker component requires a daysjs date object instead of plain number timestamp
           sortingKey: dayjs(fetchedDataset.sortingKey as any as Dayjs),
         },
       });
 
       form.setFieldsValue({
-        // @ts-ignore Mismatch between APIDataSource and MutableAPIDataset
         dataSource,
       });
 
+      const initialRotationSettings = getRotationFromCoordinateTransformations(dataSource);
+
       form.setFieldsValue({
-        datasetRotation: getRotationFromCoordinateTransformations(dataSource),
+        datasetRotation: initialRotationSettings,
       });
+
+      // This reads the coordinate transformations from the backend, thus it does not
+      // need to be updated when the user changes rotation settings in the form.
+      const isRotationOnlyInBackend = doAllLayersHaveTheSameRotation(dataSource.dataLayers);
+      form.setFieldValue("isRotationOnly", isRotationOnlyInBackend);
+
+      const dataLayersWithTransformations: DataLayerWithTransformations[] =
+        dataSource.dataLayers.map((layer: APIDataLayer) => ({
+          name: layer.name,
+          coordinateTransformations: layer.coordinateTransformations || [],
+        }));
+      const layersWithCoordTransformationsJSON = JSON.stringify(
+        dataLayersWithTransformations,
+        null,
+        2,
+      );
+      form.setFieldsValue({
+        coordinateTransformations: layersWithCoordTransformationsJSON,
+      });
+
+      let initialTransformationsMode;
+      if (initialRotationSettings === NULLED_DS_ROTATION_SETTINGS) {
+        initialTransformationsMode = TransformationsMode.NONE;
+      } else if (isRotationOnlyInBackend) {
+        initialTransformationsMode = TransformationsMode.SIMPLE;
+      } else {
+        initialTransformationsMode = TransformationsMode.ADVANCED;
+      }
+      form.setFieldValue("transformationsMode", initialTransformationsMode);
 
       const fetchedDatasetDefaultConfiguration = await getDatasetDefaultConfiguration(datasetId);
       enforceValidatedDatasetViewConfiguration(
@@ -155,7 +192,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
       setIsLoading(false);
       form.validateFields();
     }
-  }, [datasetId, form.setFieldsValue, form.validateFields]);
+  }, [datasetId, form.setFieldsValue, form.validateFields, form.setFieldValue]);
 
   const getFormValidationSummary = useCallback((): Record<
     "data" | "general" | "defaultConfig",
@@ -189,7 +226,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
 
   const didDatasourceChange = useCallback(
     (dataSource: Record<string, any>) => {
-      return !_.isEqual(dataSource, savedDataSourceOnServer || {});
+      return !isEqual(dataSource, savedDataSourceOnServer || {});
     },
     [savedDataSourceOnServer],
   );
@@ -211,7 +248,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
   const isOnlyDatasourceIncorrectAndNotEdited = useCallback(() => {
     const validationSummary = getFormValidationSummary();
 
-    if (_.size(validationSummary) === 1 && validationSummary.data) {
+    if (size(validationSummary) === 1 && validationSummary.data) {
       try {
         const dataSource = form.getFieldValue("dataSource");
         const didNotEditDatasource = !didDatasourceChange(dataSource);
@@ -251,7 +288,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
     if (datasetDefaultConfiguration != null) {
       await updateDatasetDefaultConfiguration(
         datasetId,
-        _.extend({}, datasetDefaultConfiguration, formValues.defaultConfiguration, {
+        extend({}, datasetDefaultConfiguration, formValues.defaultConfiguration, {
           layers: JSON.parse(formValues.defaultConfigurationLayersJson),
         }),
       );
@@ -271,7 +308,11 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
       queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
     }
 
-    onComplete();
+    if (onComplete) {
+      onComplete();
+    } else {
+      navigate("/dashboard");
+    }
   }, [
     datasetId,
     datasetDefaultConfiguration,
@@ -281,6 +322,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
     isEditingMode,
     queryClient,
     onComplete,
+    navigate,
     form.getFieldsValue,
   ]);
 
@@ -317,16 +359,17 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
     form.validateFields().then(submitForm).catch(handleValidationFailed);
   }, [form, submitForm, handleValidationFailed]);
 
-  const onValuesChange = useCallback(
-    (_changedValues: DatasetSettingsFormData, _allValues: DatasetSettingsFormData) => {
-      setHasUnsavedChanges(true);
-    },
-    [],
-  );
+  const onValuesChange = useCallback(() => {
+    setHasUnsavedChanges(true);
+  }, []);
 
   const handleCancel = useCallback(() => {
-    onCancel();
-  }, [onCancel]);
+    if (onCancel) {
+      onCancel();
+    } else {
+      navigate("/dashboard");
+    }
+  }, [onCancel, navigate]);
 
   useBeforeUnload(hasUnsavedChanges, messages["dataset.leave_with_unsaved_changes"]);
 
@@ -342,19 +385,34 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
     }
   }, [fetchData, formProp]);
 
-  const contextValue: DatasetSettingsContextValue = {
-    form,
-    isLoading,
-    dataset,
-    datasetId,
-    datasetDefaultConfiguration,
-    isEditingMode,
-    handleSubmit,
-    handleCancel,
-    onValuesChange,
-    getFormValidationSummary,
-    hasFormErrors,
-  };
+  const contextValue: DatasetSettingsContextValue = useMemo(
+    () => ({
+      form,
+      isLoading,
+      dataset,
+      datasetId,
+      datasetDefaultConfiguration,
+      isEditingMode,
+      handleSubmit,
+      handleCancel,
+      onValuesChange,
+      getFormValidationSummary,
+      hasFormErrors,
+    }),
+    [
+      form,
+      isLoading,
+      dataset,
+      datasetId,
+      datasetDefaultConfiguration,
+      isEditingMode,
+      handleSubmit,
+      handleCancel,
+      onValuesChange,
+      getFormValidationSummary,
+      hasFormErrors,
+    ],
+  );
 
   return (
     <DatasetSettingsContext.Provider value={contextValue}>

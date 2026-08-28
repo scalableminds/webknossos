@@ -1,21 +1,24 @@
 import update from "immutability-helper";
 import type { Matrix4x4 } from "libs/mjs";
 import { M4x4, V3 } from "libs/mjs";
-import * as Utils from "libs/utils";
-import _ from "lodash";
+import { clamp, map3, mod } from "libs/utils";
 import { Euler, Matrix4, Vector3 as ThreeVector3 } from "three";
+import type { VoxelSize } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import {
-  ZOOM_STEP_INTERVAL,
   getRotationInDegrees,
   getRotationInRadian,
   getValidZoomRangeForUser,
+  rotateOnAxis,
+  ZOOM_STEP_INTERVAL,
 } from "viewer/model/accessors/flycam_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import Dimensions from "viewer/model/dimensions";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import type { WebknossosState } from "viewer/store";
 import { getUnifiedAdditionalCoordinates } from "../accessors/dataset_accessor";
+import { getTransformedDatasetBoundingBox } from "../accessors/dataset_layer_transformation_accessor";
+import type { MoveFlycamOrthoAction, MovePlaneFlycamOrthoAction } from "../actions/flycam_actions";
 
 function cloneMatrix(m: Matrix4x4): Matrix4x4 {
   return [
@@ -38,10 +41,6 @@ function cloneMatrix(m: Matrix4x4): Matrix4x4 {
   ];
 }
 
-export function rotateOnAxis(currentMatrix: Matrix4x4, angle: number, axis: Vector3): Matrix4x4 {
-  return M4x4.rotate(angle, axis, currentMatrix, []);
-}
-
 // Avoid creating new THREE object for some actions.
 const flycamRotationEuler = new Euler();
 const flycamRotationMatrix = new Matrix4();
@@ -62,7 +61,7 @@ function rotateOnAxisWithDistance(
 }
 
 function keepRotationInBounds(rotation: Vector3): Vector3 {
-  const rotationInBounds = Utils.map3((v) => Utils.mod(Math.round(v), 360), rotation);
+  const rotationInBounds = map3((v) => mod(Math.round(v), 360), rotation);
   return rotationInBounds;
 }
 
@@ -100,15 +99,8 @@ function rotateReducer(
   });
 }
 
-export function getMatrixScale(voxelSize: Vector3): Vector3 {
-  const scale = [1 / voxelSize[0], 1 / voxelSize[1], 1 / voxelSize[2]];
-  const maxScale = Math.max(scale[0], scale[1], scale[2]);
-  const multi = 1 / maxScale;
-  return [multi * scale[0], multi * scale[1], multi * scale[2]];
-}
-
-function resetMatrix(matrix: Matrix4x4, voxelSize: Vector3) {
-  const scale = getMatrixScale(voxelSize);
+function resetMatrix(matrix: Matrix4x4, voxelSize: VoxelSize) {
+  const scale = getBaseVoxelFactorsInUnit(voxelSize);
   // Save position
   const position = [matrix[12], matrix[13], matrix[14]];
   // Reset rotation. The default rotation of 180 degree around z is applied.
@@ -138,11 +130,46 @@ function moveReducer(state: WebknossosState, vector: Vector3): WebknossosState {
   });
 }
 
+// Below this magnitude, a delta component is considered floating-point noise (e.g. from
+// rotating by 180 degrees, where Math.sin(Math.PI) is not exactly 0) rather than an
+// intentional move along that axis.
+const MOVED_AXIS_EPSILON = 1e-7;
+
+// Only clamps the axes that this move actually changed, so an axis that is already
+// out-of-bounds from a previous (unclamped) pan/keyboard move is left alone.
+function clampPositionToDatasetBounds(state: WebknossosState, moveDelta: Vector3): WebknossosState {
+  const { dataset } = state;
+
+  if (dataset == null) {
+    return state;
+  }
+
+  const { min, max } = getTransformedDatasetBoundingBox(
+    dataset,
+    state.datasetConfiguration.nativelyRenderedLayerName,
+  );
+  const matrix = cloneMatrix(state.flycam.currentMatrix);
+
+  for (let i = 0; i < 3; i++) {
+    if (Math.abs(moveDelta[i]) > MOVED_AXIS_EPSILON) {
+      matrix[12 + i] = clamp(min[i], matrix[12 + i], max[i]);
+    }
+  }
+
+  return update(state, {
+    flycam: {
+      currentMatrix: {
+        $set: matrix,
+      },
+    },
+  });
+}
+
 export function zoomReducer(state: WebknossosState, zoomStep: number): WebknossosState {
   const [min, max] = getValidZoomRangeForUser(state);
-  let newZoomStep = Utils.clamp(min, zoomStep, max);
+  let newZoomStep = clamp(min, zoomStep, max);
 
-  if (isNaN(newZoomStep)) {
+  if (Number.isNaN(newZoomStep)) {
     newZoomStep = 1;
   }
 
@@ -157,7 +184,7 @@ export function zoomReducer(state: WebknossosState, zoomStep: number): Webknosso
 }
 export function setDirectionReducer(state: WebknossosState, direction: Vector3) {
   const previousSpaceDirectionOrtho = state.flycam.spaceDirectionOrtho;
-  const spaceDirectionOrtho = Utils.map3((el, index) => {
+  const spaceDirectionOrtho = map3((el, index) => {
     if (el === 0) {
       return previousSpaceDirectionOrtho[index];
     }
@@ -178,10 +205,10 @@ export function setDirectionReducer(state: WebknossosState, direction: Vector3) 
 
 // The way rotations are currently handled / interpreted is quirky. See here for more information:
 // https://www.notion.so/scalableminds/3D-Rotations-3D-Scene-210b51644c6380c2a4a6f5f3c069738a?source=copy_link#22bb51644c63800fb874e717e49da7bc
-export function setRotationReducer(state: WebknossosState, rotation: Vector3) {
+function setRotationReducer(state: WebknossosState, rotation: Vector3) {
   if (state.dataset != null) {
     const [x, y, z] = rotation;
-    let matrix = resetMatrix(state.flycam.currentMatrix, state.dataset.dataSource.scale.factor);
+    let matrix = resetMatrix(state.flycam.currentMatrix, state.dataset.dataSource.scale);
     matrix = rotateOnAxis(matrix, (-z * Math.PI) / 180, [0, 0, 1]);
     matrix = rotateOnAxis(matrix, (-y * Math.PI) / 180, [0, 1, 0]);
     matrix = rotateOnAxis(matrix, (-x * Math.PI) / 180, [1, 0, 0]);
@@ -200,13 +227,54 @@ export function setRotationReducer(state: WebknossosState, rotation: Vector3) {
   return state;
 }
 
+function handleMoveFlycamOrtho(
+  state: WebknossosState,
+  action: MovePlaneFlycamOrthoAction | MoveFlycamOrthoAction,
+  { transposeToPlane, useDatasetScale }: { transposeToPlane: boolean; useDatasetScale: boolean },
+): WebknossosState {
+  const { dataset, flycam } = state;
+
+  const { planeId, increaseSpeedWithZoom } = action;
+  const vector =
+    transposeToPlane && planeId != null
+      ? Dimensions.transDim(action.vector, planeId)
+      : action.vector;
+  const flycamRotation = getRotationInRadian(flycam);
+
+  flycamRotationMatrix.makeRotationFromEuler(flycamRotationEuler.set(...flycamRotation, "ZYX"));
+  let deltaInWorldV3 = deltaInWorld
+    .set(...vector)
+    .applyMatrix4(flycamRotationMatrix)
+    .toArray();
+
+  if (
+    planeId != null &&
+    state.userConfiguration.dynamicSpaceDirection &&
+    action.useDynamicSpaceDirection
+  ) {
+    // Change direction of the value connected to space, based on the last direction
+    deltaInWorldV3 = V3.multiply(deltaInWorldV3, state.flycam.spaceDirectionOrtho);
+  }
+
+  const zoomFactor = increaseSpeedWithZoom ? flycam.zoomStep : 1;
+  const scaleFactor: Vector3 = useDatasetScale
+    ? getBaseVoxelFactorsInUnit(dataset.dataSource.scale)
+    : [1, 1, 1];
+  let deltaInWorldZoomed = V3.multiply(V3.scale(deltaInWorldV3, zoomFactor), scaleFactor);
+
+  const newState = moveReducer(state, deltaInWorldZoomed);
+  return action.clampToDatasetBounds
+    ? clampPositionToDatasetBounds(newState, deltaInWorldZoomed)
+    : newState;
+}
+
 function FlycamReducer(state: WebknossosState, action: Action): WebknossosState {
   switch (action.type) {
     case "SET_DATASET": {
       return update(state, {
         flycam: {
           currentMatrix: {
-            $set: resetMatrix(state.flycam.currentMatrix, action.dataset.dataSource.scale.factor),
+            $set: resetMatrix(state.flycam.currentMatrix, action.dataset.dataSource.scale),
           },
           rotation: {
             $set: [0, 0, 0],
@@ -235,15 +303,15 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
       const matrix = cloneMatrix(state.flycam.currentMatrix);
       const { position } = action;
 
-      if (action.dimensionToSkip !== 0 && !isNaN(position[0])) {
+      if (action.dimensionToSkip !== 0 && !Number.isNaN(position[0])) {
         matrix[12] = action.position[0];
       }
 
-      if (action.dimensionToSkip !== 1 && !isNaN(position[1])) {
+      if (action.dimensionToSkip !== 1 && !Number.isNaN(position[1])) {
         matrix[13] = action.position[1];
       }
 
-      if (action.dimensionToSkip !== 2 && !isNaN(position[2])) {
+      if (action.dimensionToSkip !== 2 && !Number.isNaN(position[2])) {
         matrix[14] = action.position[2];
       }
 
@@ -268,7 +336,7 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
       let { values } = action;
 
       const existingAdditionalCoordinates = state.flycam.additionalCoordinates;
-      values = Utils.values(unifiedAdditionalCoordinates).map(({ name, bounds }, index) => {
+      values = Object.values(unifiedAdditionalCoordinates).map(({ name, bounds }, index) => {
         const fallbackValue =
           (existingAdditionalCoordinates != null
             ? existingAdditionalCoordinates[index]?.value
@@ -278,7 +346,7 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
           if (specifiedValue) {
             return {
               name,
-              value: Utils.clamp(bounds[0], specifiedValue.value, bounds[1]),
+              value: clamp(bounds[0], specifiedValue.value, bounds[1]),
             };
           }
         }
@@ -324,62 +392,17 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
     }
 
     case "MOVE_FLYCAM_ORTHO": {
-      const vector = _.clone(action.vector);
-
-      const { planeId } = action;
-
-      const flycamRotation = getRotationInRadian(state.flycam);
-      flycamRotationMatrix.makeRotationFromEuler(flycamRotationEuler.set(...flycamRotation, "ZYX"));
-      let deltaInWorldV3 = deltaInWorld
-        .set(...vector)
-        .applyMatrix4(flycamRotationMatrix)
-        .toArray();
-
-      // if planeID is given, use it to manipulate z
-      if (
-        planeId != null &&
-        state.userConfiguration.dynamicSpaceDirection &&
-        action.useDynamicSpaceDirection
-      ) {
-        // change direction of the value connected to space, based on the last direction
-        deltaInWorldV3 = V3.multiply(deltaInWorldV3, state.flycam.spaceDirectionOrtho);
-      }
-
-      return moveReducer(state, deltaInWorldV3);
+      return handleMoveFlycamOrtho(state, action, {
+        transposeToPlane: false,
+        useDatasetScale: false,
+      });
     }
 
     case "MOVE_PLANE_FLYCAM_ORTHO": {
-      const { dataset, flycam } = state;
-
-      if (dataset != null) {
-        const { planeId, increaseSpeedWithZoom } = action;
-        const vector = Dimensions.transDim(action.vector, planeId);
-        const flycamRotation = getRotationInRadian(flycam);
-
-        flycamRotationMatrix.makeRotationFromEuler(
-          flycamRotationEuler.set(...flycamRotation, "ZYX"),
-        );
-        deltaInWorld.set(...vector).applyMatrix4(flycamRotationMatrix);
-        const zoomFactor = increaseSpeedWithZoom ? flycam.zoomStep : 1;
-        const scaleFactor = getBaseVoxelFactorsInUnit(dataset.dataSource.scale);
-        let deltaInWorldZoomed = V3.multiply(
-          V3.scale(deltaInWorld.toArray(), zoomFactor),
-          scaleFactor,
-        );
-
-        if (
-          planeId != null &&
-          state.userConfiguration.dynamicSpaceDirection &&
-          action.useDynamicSpaceDirection
-        ) {
-          // Change direction of the value connected to space, based on the last direction
-          deltaInWorldZoomed = V3.multiply(deltaInWorldZoomed, state.flycam.spaceDirectionOrtho);
-        }
-
-        return moveReducer(state, deltaInWorldZoomed);
-      }
-
-      return state;
+      return handleMoveFlycamOrtho(state, action, {
+        transposeToPlane: true,
+        useDatasetScale: true,
+      });
     }
 
     case "YAW_FLYCAM":

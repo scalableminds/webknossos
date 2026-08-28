@@ -1,0 +1,81 @@
+import { Select, type SelectProps } from "antd";
+import { rgbToHex } from "libs/colors";
+import { formatVoxels } from "libs/format_utils";
+import { computeArrayFromBoundingBox } from "libs/utils";
+import type React from "react";
+import { type ReactElement, useCallback } from "react";
+import type { ArrayElement } from "types/type_utils";
+import type { Vector3 } from "viewer/constants";
+import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
+import type { UserBoundingBox } from "viewer/store";
+
+function UserBoundingBoxOption({
+  bbox,
+  showVolume,
+}: {
+  bbox: UserBoundingBox | null | undefined;
+  showVolume: boolean;
+}) {
+  if (!bbox) {
+    return null;
+  }
+
+  const upscaledColor = bbox.color.map((colorPart) => colorPart * 255) as any as Vector3;
+  const colorAsHexString = rgbToHex(upscaledColor);
+  const volumeInVx = new BoundingBox(bbox.boundingBox).getVolume();
+  return (
+    <>
+      <div
+        className="color-display-wrapper"
+        style={{
+          backgroundColor: colorAsHexString,
+          marginTop: -2,
+          marginRight: 6,
+        }}
+      />
+      {bbox.name} ({computeArrayFromBoundingBox(bbox.boundingBox).join(", ")}
+      {showVolume ? `, ${formatVoxels(volumeInVx)}` : ""})
+    </>
+  );
+}
+
+export function BoundingBoxSelection({
+  userBoundingBoxes,
+  setSelectedBoundingBoxId,
+  showVolume = false,
+  style,
+  value,
+}: {
+  userBoundingBoxes: UserBoundingBox[];
+  setSelectedBoundingBoxId?: (boundingBoxId: number | null) => void;
+  showVolume?: boolean;
+  style?: React.CSSProperties;
+  value: number | null;
+}): ReactElement {
+  const filterOption = useCallback(
+    (input: string, option?: ArrayElement<SelectProps["options"]>) =>
+      // @ts-expect-error: option.label is a React component / React.Node
+      String(option?.label?.key ?? "")
+        .toLowerCase()
+        .indexOf(input.toLowerCase()) >= 0,
+    [],
+  );
+
+  const options: SelectProps["options"] = userBoundingBoxes.map((userBB) => ({
+    value: userBB.id,
+    label: <UserBoundingBoxOption key={userBB.name} bbox={userBB} showVolume={showVolume} />,
+  }));
+
+  return (
+    <Select
+      showSearch={{ filterOption: filterOption, optionFilterProp: "children" }}
+      placeholder="Select a bounding box"
+      options={options}
+      disabled={userBoundingBoxes.length < 1}
+      onSelect={setSelectedBoundingBoxId}
+      style={style}
+      value={value}
+      popupMatchSelectWidth={false}
+    />
+  );
+}

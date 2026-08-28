@@ -10,18 +10,21 @@ import com.scalableminds.webknossos.datastore.models.datasource.StaticLayer
 import javax.inject.Inject
 import models.dataset.{Dataset, DatasetDAO, DatasetLayerDAO, DatasetService, ThumbnailCachingService}
 import models.user.{User, UserDatasetConfigurationDAO, UserDatasetLayerConfigurationDAO}
-import play.api.libs.json._
+import play.api.libs.json.*
 
 import scala.concurrent.ExecutionContext
 
-class DatasetConfigurationService @Inject()(datasetService: DatasetService,
-                                            userDatasetConfigurationDAO: UserDatasetConfigurationDAO,
-                                            userDatasetLayerConfigurationDAO: UserDatasetLayerConfigurationDAO,
-                                            datasetDAO: DatasetDAO,
-                                            thumbnailCachingService: ThumbnailCachingService,
-                                            datasetDataLayerDAO: DatasetLayerDAO)(implicit ec: ExecutionContext) {
+class DatasetConfigurationService @Inject() (
+    datasetService: DatasetService,
+    userDatasetConfigurationDAO: UserDatasetConfigurationDAO,
+    userDatasetLayerConfigurationDAO: UserDatasetLayerConfigurationDAO,
+    datasetDAO: DatasetDAO,
+    thumbnailCachingService: ThumbnailCachingService,
+    datasetDataLayerDAO: DatasetLayerDAO
+)(implicit ec: ExecutionContext) {
   def getDatasetViewConfigurationForUserAndDataset(requestedVolumeIds: List[String], user: User, datasetId: ObjectId)(
-      implicit ctx: DBAccessContext): Fox[DatasetViewConfiguration] =
+      using ctx: DBAccessContext
+  ): Fox[DatasetViewConfiguration] =
     for {
 
       dataset <- datasetDAO.findOne(datasetId)
@@ -31,8 +34,9 @@ class DatasetConfigurationService @Inject()(datasetService: DatasetService,
       layerConfigurations <- getLayerConfigurations(datasetLayers, requestedVolumeIds, dataset, Some(user))
     } yield buildCompleteDatasetConfiguration(datasetViewConfiguration, layerConfigurations)
 
-  def getDatasetViewConfigurationForDataset(requestedVolumeIds: List[String], datasetId: ObjectId)(
-      implicit ctx: DBAccessContext): Fox[DatasetViewConfiguration] =
+  def getDatasetViewConfigurationForDataset(requestedVolumeIds: List[String], datasetId: ObjectId)(using
+      ctx: DBAccessContext
+  ): Fox[DatasetViewConfiguration] =
     for {
       dataset <- datasetDAO.findOne(datasetId)
       datasetViewConfiguration = getDatasetViewConfigurationFromDefaultAndAdmin(dataset)
@@ -46,8 +50,9 @@ class DatasetConfigurationService @Inject()(datasetService: DatasetService,
     defaultVC ++ adminVC
   }
 
-  def getCompleteAdminViewConfiguration(datasetId: ObjectId)(
-      implicit ctx: DBAccessContext): Fox[DatasetViewConfiguration] =
+  def getCompleteAdminViewConfiguration(
+      datasetId: ObjectId
+  )(using ctx: DBAccessContext): Fox[DatasetViewConfiguration] =
     for {
       dataset <- datasetDAO.findOne(datasetId)
       datasetViewConfiguration = getDatasetViewConfigurationFromDefaultAndAdmin(dataset)
@@ -55,10 +60,12 @@ class DatasetConfigurationService @Inject()(datasetService: DatasetService,
       layerConfigurations = getAllLayerAdminViewConfigForDataset(datasetLayers).view.mapValues(Json.toJson(_)).toMap
     } yield buildCompleteDatasetConfiguration(datasetViewConfiguration, layerConfigurations)
 
-  private def mergeLayerConfigurations(allLayerNames: List[String],
-                                       existingLayerVCs: Map[String, LayerViewConfiguration],
-                                       adminLayerVCs: Map[String, LayerViewConfiguration],
-                                       defaultVCs: Map[String, LayerViewConfiguration]): Map[String, JsValue] =
+  private def mergeLayerConfigurations(
+      allLayerNames: List[String],
+      existingLayerVCs: Map[String, LayerViewConfiguration],
+      adminLayerVCs: Map[String, LayerViewConfiguration],
+      defaultVCs: Map[String, LayerViewConfiguration]
+  ): Map[String, JsValue] =
     allLayerNames.map { name =>
       val defaultVC = defaultVCs.getOrElse(name, Map.empty)
       val adminVC = adminLayerVCs.getOrElse(name, Map.empty)
@@ -66,21 +73,26 @@ class DatasetConfigurationService @Inject()(datasetService: DatasetService,
       (name, Json.toJson(defaultVC ++ adminVC ++ existingVC))
     }.toMap
 
-  private def buildCompleteDatasetConfiguration(datasetConfiguration: Map[String, JsValue],
-                                                layerConfigurations: Map[String, JsValue]): DatasetViewConfiguration =
+  private def buildCompleteDatasetConfiguration(
+      datasetConfiguration: Map[String, JsValue],
+      layerConfigurations: Map[String, JsValue]
+  ): DatasetViewConfiguration =
     datasetConfiguration + ("layers" -> Json.toJson(layerConfigurations))
 
   private def getAllLayerDefaultViewConfigForDataset(
-      dataLayers: List[StaticLayer]): Map[String, LayerViewConfiguration] =
+      dataLayers: List[StaticLayer]
+  ): Map[String, LayerViewConfiguration] =
     dataLayers.flatMap(dl => dl.defaultViewConfiguration.map(c => (dl.name, c))).toMap
 
   private def getAllLayerAdminViewConfigForDataset(dataLayers: List[StaticLayer]): Map[String, LayerViewConfiguration] =
     dataLayers.flatMap(dl => dl.adminViewConfiguration.map(c => (dl.name, c))).toMap
 
-  private def getLayerConfigurations(datasetLayers: List[StaticLayer],
-                                     requestedVolumeIds: List[String],
-                                     dataset: Dataset,
-                                     userOpt: Option[User] = None): Fox[Map[String, JsValue]] = {
+  private def getLayerConfigurations(
+      datasetLayers: List[StaticLayer],
+      requestedVolumeIds: List[String],
+      dataset: Dataset,
+      userOpt: Option[User] = None
+  ): Fox[Map[String, JsValue]] = {
     val allLayerNames = datasetLayers.map(_.name) ++ requestedVolumeIds
     (userOpt match {
       case Some(user) =>
@@ -93,8 +105,9 @@ class DatasetConfigurationService @Inject()(datasetService: DatasetService,
     }
   }
 
-  def updateAdminViewConfigurationFor(dataset: Dataset, rawAdminViewConfiguration: DatasetViewConfiguration)(
-      implicit ctx: DBAccessContext): Fox[Unit] = {
+  def updateAdminViewConfigurationFor(dataset: Dataset, rawAdminViewConfiguration: DatasetViewConfiguration)(using
+      ctx: DBAccessContext
+  ): Fox[Unit] = {
     val datasetViewConfiguration = rawAdminViewConfiguration - "layers"
     val layerViewConfigurations =
       rawAdminViewConfiguration
@@ -105,9 +118,8 @@ class DatasetConfigurationService @Inject()(datasetService: DatasetService,
     for {
       _ <- thumbnailCachingService.removeFromCache(dataset._id)
       _ <- datasetDAO.updateAdminViewConfiguration(dataset._id, datasetViewConfiguration)
-      _ <- Fox.serialCombined(layerViewConfigurations.toList) {
-        case (name, adminViewConfiguration) =>
-          datasetDataLayerDAO.updateLayerAdminViewConfiguration(dataset._id, name, adminViewConfiguration)
+      _ <- Fox.serialCombined(layerViewConfigurations.toList) { case (name, adminViewConfiguration) =>
+        datasetDataLayerDAO.updateLayerAdminViewConfiguration(dataset._id, name, adminViewConfiguration)
       }
     } yield ()
   }

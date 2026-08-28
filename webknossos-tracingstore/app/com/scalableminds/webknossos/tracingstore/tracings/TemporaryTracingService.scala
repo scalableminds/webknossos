@@ -1,7 +1,8 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -15,13 +16,14 @@ import scala.concurrent.duration.DurationInt
 
 // This services holds temporary stores, meant for temporary tracings only (e.g. compound projects)
 // They cannot be used for download or updating/versioning
-class TemporaryTracingService @Inject()(skeletonStore: TemporaryTracingStore[SkeletonTracing],
-                                        volumeStore: TemporaryTracingStore[VolumeTracing],
-                                        volumeDataStore: TemporaryTracingStore[Array[Byte]],
-                                        annotationStore: TemporaryTracingStore[AnnotationProto],
-                                        segmentIndexStore: TemporaryTracingStore[Set[Vec3IntProto]],
-                                        temporaryTracingIdStore: TracingStoreRedisStore)(implicit ec: ExecutionContext)
-    extends FoxImplicits {
+class TemporaryTracingService @Inject() (
+    skeletonStore: TemporaryTracingStore[SkeletonTracing],
+    volumeStore: TemporaryTracingStore[VolumeTracing],
+    volumeDataStore: TemporaryTracingStore[Array[Byte]],
+    annotationStore: TemporaryTracingStore[AnnotationProto],
+    segmentIndexStore: TemporaryTracingStore[Set[Vec3IntProto]],
+    temporaryTracingIdStore: TracingStoreRedisStore
+)(implicit ec: ExecutionContext) {
 
   implicit def skeletonTracingCompanion: GeneratedMessageCompanion[SkeletonTracing] = SkeletonTracing
   implicit def volumeTracingCompanion: GeneratedMessageCompanion[VolumeTracing] = VolumeTracing
@@ -87,8 +89,10 @@ class TemporaryTracingService @Inject()(skeletonStore: TemporaryTracingStore[Ske
     Fox.successful(())
   }
 
-  def saveVolumeSegmentIndexBuffer(tracingId: String,
-                                   bucketPositionsBySegmentId: Seq[(String, Set[Vec3IntProto])]): Fox[Unit] = {
+  def saveVolumeSegmentIndexBuffer(
+      tracingId: String,
+      bucketPositionsBySegmentId: Seq[(String, Set[Vec3IntProto])]
+  ): Fox[Unit] = {
     segmentIndexStore.insertAll(bucketPositionsBySegmentId, Some(temporaryStoreTimeout))
     registerTracingId(tracingId)
     Fox.successful(())

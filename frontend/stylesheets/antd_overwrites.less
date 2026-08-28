@@ -1,31 +1,20 @@
-// Whenever possible try to customize antd v5 components through their "Design Tokens" and builtin theming
+// Whenever possible try to customize antd v6 components through their "Design Tokens" and builtin theming
 // See theme.tsx for details
 // https://ant.design/docs/react/customize-theme
 
-h1 {
-  font-size: 36px;
-}
-h2 {
-  font-size: 30px;
-}
-h3 {
-  font-size: 24px;
-}
-h4 {
-  font-size: 18px;
-}
-h5 {
-  font-size: 14px;
-}
+// Heading sizes for h1-h5 now come from the Typography design tokens in theme.ts.
+// h6 has no <Typography.Title> equivalent (antd only supports level 1-5), so the
+// size for markdown-rendered <h6> elements still has to be set here.
 h6 {
   font-size: 12px;
 }
+
 p {
   margin: 0 0 10px;
 }
 
-.ant-layout-sider,
-.ant-collapse-borderless,
+// antd defaults this to `colorBgLayout` (#f5f5f5 in light mode); WEBKNOSSOS wants the
+// plain base background. 
 .ant-layout {
   background-color: var(--ant-color-bg-base);
 }
@@ -34,6 +23,7 @@ p {
   padding: 0 20px;
 
   @media @smartphones {
+
     & .ant-menu-item,
     & .ant-menu-submenu-title {
       padding: 0;
@@ -42,11 +32,7 @@ p {
   }
 }
 
-.ant-notification {
-  width: auto;
-  max-width: 80vw;
-}
-
+// Toast notifications
 .ant-notification-notice {
   iframe {
     border: none;
@@ -56,16 +42,8 @@ p {
     resize: both;
   }
 
+  // Custom error animation for toast notifications
   &.ant-notification-notice-error {
-    background-color: #f2dede;
-    border-color: #ebccd1;
-    color: #a94442;
-    .ant-notification-notice-message,
-    .ant-collapse-header,
-    .ant-notification-notice-close,
-    .ant-collapse-content-box {
-      color: #a94442;
-    }
     .ant-notification-notice-icon {
       animation-name: alert-wiggle;
       animation-duration: 5s;
@@ -78,57 +56,51 @@ p {
     0% {
       transform: translateX(0px) translateY(0px);
     }
+
     2% {
       transform: translateX(8px) translateY(-8px);
     }
+
     4% {
       transform: translateX(-8px) translateY(8px);
     }
+
     6% {
       transform: translateX(8px) translateY(-8px);
     }
+
     8% {
       transform: translateX(-8px) translateY(8px);
     }
+
     10% {
       transform: translateX(8px) translateY(-8px);
     }
+
     12% {
       transform: translateX(-8px) translateY(8px);
     }
+
     14% {
       transform: translateX(8px) translateY(-8px);
     }
+
     16% {
       transform: translateX(-8px) translateY(8px);
     }
+
     18% {
       transform: translateX(8px) translateY(-8px);
     }
+
     20% {
       transform: translateX(0px) translateY(0px);
     }
   }
 }
 
-.ant-notification-notice-message {
-  white-space: pre-wrap;
-
-  .ant-notification-notice-message-single-line-auto-margin {
-    // This fixes a too large margin-top for the notification content in Firefox
-    float: left;
-  }
-}
-
-.ant-table-small > .ant-table-content > .ant-table-body > table > .ant-table-tbody > tr > td {
-  padding: 1px 8px;
-}
 .large-table {
   word-break: break-word;
-}
-
-.ant-table-scroll > .ant-table-body {
-  overflow-x: auto !important;
 }
 
 .ant-table-column-title {
@@ -145,30 +117,10 @@ label.ant-checkbox-wrapper {
   transition: none;
 }
 
-// Remove Chinese Quote font, which is messing up our quotes
-.ant-alert {
-  font-family: @font-family;
-}
-.ant-alert-message {
-  margin-left: 5px;
-}
-
 .ant-alert-banner {
   position: absolute;
   z-index: 1000;
   width: 100%;
-}
-.ant-card {
-  font-family: @font-family;
-}
-
-.ant-radio-button-wrapper.aIJobSelection {
-  width: auto; 
-  height: auto; 
-  padding: 0px; 
-  div.ant-card-body {
-    line-height: 0.9;
-  }
 }
 
 .antd-no-border-list .ant-list-item {
@@ -176,20 +128,11 @@ label.ant-checkbox-wrapper {
 }
 
 .collapsed-nav-header .ant-menu:not(.right-navbar) {
+
   .ant-menu-item,
   .ant-menu-submenu-title,
   li.ant-menu-submenu {
     padding: 0 4px !important;
-  }
-
-  .anticon {
-    margin-right: 0;
-  }
-}
-
-.ant-steps-icon {
-  .anticon {
-    margin-right: 0;
   }
 }
 
@@ -202,21 +145,14 @@ label.ant-checkbox-wrapper {
 // Custom component `LinkButton` renders a button that looks like a link.
 // Antd’s `button type="link"` only gets us halfway there, though, hence, this:
 .link-button {
-  border: 0;
-  padding: 0;
-  height: initial;
-}
-.link-button > .anticon + span,
-.link-button > span + .anticon {
-  margin-left: initial;
+  border: 0 !important;
+  padding: 0 !important;
+  height: initial !important;
 }
 
-.hide-checkbox-selection {
-  .ant-table-selection,
-  .ant-table-selection-col,
-  .ant-table-selection-column {
-    display: none;
-  }
+.link-button>.anticon+span,
+.link-button>span+.anticon {
+  margin-left: initial;
 }
 
 #segment-list {
@@ -232,15 +168,22 @@ label.ant-checkbox-wrapper {
     width: 100%;
   }
 }
+
 .ant-tree-directory .ant-tree-title {
-  // Make the directory tree element full-width (subtract the width of the
-  // directory icon)
-  width: calc(100% - 24px);
+  // Make the directory tree element full-width. The folder icon is rendered inside the title
+  // itself (see folder_tree.tsx), so no extra width needs to be reserved for it.
+  width: 100%;
   display: flex;
+  min-width: 0;
+}
+
+// When none of the folders have subfolders, every expand/collapse caret is a no-op and just
+// wastes horizontal space. Collapse that column so the folder icons start at the very left.
+.folder-tree-flat .ant-tree-switcher-noop {
+  display: none;
 }
 
 .ant-tree-directory {
-  background: transparent;
   display: flex;
 }
 
@@ -251,21 +194,17 @@ label.ant-checkbox-wrapper {
   padding: 0 !important;
 }
 
-.ant-tree.ant-tree-directory .ant-tree-treenode-selected:hover::before,
-.ant-tree.ant-tree-directory .ant-tree-treenode-selected::before {
-  border-radius: 4px;
-}
-
 .anticon.anticon-sync.anticon-spin {
   line-height: 0;
 }
 
-.ant-table-empty .ant-table-tbody > tr.ant-table-placeholder,
+.ant-table-empty .ant-table-tbody>tr.ant-table-placeholder,
 .ant-list-empty-text {
-  color: var(--ant-color-text-tertiary)
+  color: var(--ant-color-text-tertiary);
 }
 
 .action-bar {
+
   // UI for additional coordinates should always be in dark mode
   // since it is located in the navbar's action bar.
   .ant-input-group-addon {
@@ -275,20 +214,11 @@ label.ant-checkbox-wrapper {
   }
 }
 
-.ant-dropdown-menu-item-icon.fa-icon {
-  margin-right: 5px;
-}
-
-.ant-dropdown-menu-item-icon > svg {
+.ant-dropdown-menu-item-icon>svg {
   width: 15px;
 }
 
-.ant-message,
-.ant-message * {
-  pointer-events: none;
-}
-
-.ant-radio-button-wrapper-disabled:first-child{
+.ant-radio-button-wrapper-disabled:first-child {
   opacity: 0.5;
 }
 

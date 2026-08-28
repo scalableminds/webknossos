@@ -1,9 +1,11 @@
 import jsonschema from "jsonschema";
-import _ from "lodash";
+import { toBigInt } from "libs/bigint_helpers";
+import cloneDeepWith from "lodash-es/cloneDeepWith";
 import ViewConfigurationSchema from "types/schemas/dataset_view_configuration.schema";
 import DatasourceSchema from "types/schemas/datasource.schema";
 import UrlStateSchema from "types/schemas/url_state.schema";
 import UserSettingsSchema from "types/schemas/user_settings.schema";
+import { normalizeMappingType } from "viewer/constants";
 
 const validator = new jsonschema.Validator();
 // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{ definitions: { "types::Vector3... Remove this comment to see the full error message
@@ -31,7 +33,7 @@ const validateWithSchemaSync = (type: string, value: string) => {
       );
     }
   } catch (e) {
-    // @ts-ignore
+    // @ts-expect-error
     throw new Error(`Invalid JSON: ${e.message}`);
   }
 };
@@ -62,13 +64,24 @@ export const validateLayerViewConfigurationObjectJSON = validateWithSchema(
   "types::LayerViewConfigurationObject",
 );
 
+export const validateTransformationsJSON = validateWithSchema(
+  "types::DataLayerWithTransformations",
+);
+
 export const validateUrlStateJSON = (value: string) => {
   const json = validateWithSchemaSync("types::UrlManagerState", value);
-  return _.cloneDeepWith(json, (value, key) => {
+  return cloneDeepWith(json, (value, key) => {
     if (key === "mappingType") {
       if (value == null) return null;
-      const caseFixed = typeof value === "string" ? value.toUpperCase() : value;
-      return caseFixed === "JSON" ? "JSON" : "HDF5";
+      return normalizeMappingType(value);
+    }
+    if (key === "segmentId") {
+      // Accepts both the legacy plain-number encoding and the unsigned-decimal string
+      // encoding (needed for ids that exceed the JS Number safe-integer range).
+      return toBigInt(value);
+    }
+    if (key === "agglomerateIdsToImport" && Array.isArray(value)) {
+      return value.map(toBigInt);
     }
     // let lodash handle everything else
     return undefined;

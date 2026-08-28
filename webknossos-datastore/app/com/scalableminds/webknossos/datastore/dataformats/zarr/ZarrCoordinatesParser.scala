@@ -1,47 +1,35 @@
 package com.scalableminds.webknossos.datastore.dataformats.zarr
 
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.Msg
+import com.scalableminds.util.box.Box.tryo
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
-import play.api.http.Status.NOT_FOUND
-import play.api.i18n.{Messages, MessagesProvider}
 
 import scala.concurrent.ExecutionContext
 
-object ZarrCoordinatesParser extends FoxImplicits {
+object ZarrCoordinatesParser {
 
   def parseNDimensionalDotCoordinates(
       coordinates: String,
       reorderedAdditionalAxesOpt: Option[Seq[AdditionalAxis]]
-  )(implicit ec: ExecutionContext, m: MessagesProvider): Fox[(Int, Int, Int, Option[List[AdditionalCoordinate]])] = {
-    val ndCoordinatesRx = "^\\s*([0-9]+)\\.([0-9]+)\\.([0-9]+)(\\.([0-9]+))+\\s*$".r
-
+  )(implicit ec: ExecutionContext): Fox[(Int, Int, Int, Option[List[AdditionalCoordinate]])] =
     for {
-      parsedCoordinates <- ndCoordinatesRx
-        .findFirstIn(coordinates)
-        .map(m => m.split('.').map(coord => Integer.parseInt(coord)))
-        .toFox ?~>
-        Messages("zarr.invalidChunkCoordinates") ~> NOT_FOUND
-      channelCoordinate <- parsedCoordinates.headOption.toFox ~> NOT_FOUND
-      _ <- Fox.fromBool(channelCoordinate == 0) ?~> "zarr.invalidFirstChunkCoord" ~> NOT_FOUND
-      _ <- Fox.fromBool(parsedCoordinates.length >= 4) ?~> "zarr.notEnoughCoordinates" ~> NOT_FOUND
-      (x, y, z) = (parsedCoordinates(parsedCoordinates.length - 3),
-                   parsedCoordinates(parsedCoordinates.length - 2),
-                   parsedCoordinates(parsedCoordinates.length - 1))
+      split <- tryo(coordinates.split('.')).toFox
+      ints <- Fox.serialCombined(split)(intLiteral => tryo(Integer.parseInt(intLiteral)).toFox)
+      channelCoordinate <- ints.headOption.toFox
+      _ <- Fox.fromBool(channelCoordinate == 0) ?~> Msg.Zarr.invalidFirstChunkCoord
+      _ <- Fox.fromBool(ints.length >= 4) ?~> Msg.Zarr.notEnoughCoordinates
+      (x, y, z) = (ints(ints.length - 3), ints(ints.length - 2), ints.last)
       reorderedAdditionalAxes = reorderedAdditionalAxesOpt.getOrElse(List.empty)
-      _ <- Fox.fromBool(reorderedAdditionalAxes.length == parsedCoordinates.length - 4) ?~> "zarr.invalidAdditionalCoordinates" ~> NOT_FOUND
-      requestContainsAdditionalCoordinates = parsedCoordinates.length > 4
-      additionalCoordinates = if (requestContainsAdditionalCoordinates)
-        Some(
-          parsedCoordinates
-            .slice(1, parsedCoordinates.length - 3)
-            .zipWithIndex
-            .map({
-              case (coordinate, index) =>
-                new AdditionalCoordinate(name = reorderedAdditionalAxes(index).name, value = coordinate)
-            })
-            .toList)
-      else None
+      _ <- Fox.fromBool(reorderedAdditionalAxes.length == ints.length - 4) ?~> Msg.Zarr.invalidAdditionalCoordinates
+      requestContainsAdditionalCoordinates = ints.length > 4
+      additionalCoordinates =
+        if (requestContainsAdditionalCoordinates)
+          Some(ints.slice(1, ints.length - 3).zipWithIndex.map { case (coordinate, index) =>
+            new AdditionalCoordinate(name = reorderedAdditionalAxes(index).name, value = coordinate)
+          })
+        else None
     } yield (x, y, z, additionalCoordinates)
-  }
 }

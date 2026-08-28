@@ -1,38 +1,61 @@
+import Icon from "@ant-design/icons";
+import IconSidebarLeft from "@images/icons/icon-sidebar-left.svg?react";
+import IconSidebarRight from "@images/icons/icon-sidebar-right.svg?react";
 import { Button } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { V2 } from "libs/mjs";
-import { useState } from "react";
-import { connect } from "react-redux";
-import type { BorderOpenStatus, WebknossosState } from "viewer/store";
-type OwnProps = {
-  onClick: () => void;
+import { useWkSelector } from "libs/react_hooks";
+import {
+  type ComponentType,
+  type MouseEventHandler,
+  type SVGProps,
+  useCallback,
+  useState,
+} from "react";
+import { LayoutEvents, layoutEmitter } from "viewer/view/layouting/layout_persistence";
+
+type Props = {
   side: "left" | "right";
   inFooter?: boolean;
 };
-type StateProps = {
-  borderOpenStatus: BorderOpenStatus;
-};
-type Props = OwnProps & StateProps;
+
 const DRAG_THRESHOLD = 5;
+const ICON_MAP: Record<string, ComponentType<SVGProps<SVGSVGElement>>> = {
+  "icon-sidebar-left": IconSidebarLeft,
+  "icon-sidebar-right": IconSidebarRight,
+};
 
-const TOOLTIP_STYLE = { height: 24 };
+function BorderToggleButton({ side, inFooter }: Props) {
+  const borderOpenStatus = useWkSelector((state) => state.uiInformation.borderOpenStatus);
+  const [lastTouchPosition, setLastTouchPosition] = useState([0, 0]);
 
-function BorderToggleButton(props: Props) {
-  const { onClick, side, borderOpenStatus, inFooter } = props;
+  const onClick = useCallback(() => {
+    layoutEmitter.emit(LayoutEvents.toggleBorder, side);
+  }, [side]);
+
   const placement = side === "left" ? "top-end" : "top-start";
-  const iconKind = borderOpenStatus[side] ? "hide" : "show";
   const tooltipTitle = `${borderOpenStatus[side] ? "Hide" : "Open"} ${side} sidebar (${
     side === "left" ? "K" : "L"
   })`;
   const className = `${side}-border-button no-hover-highlighting ${
     inFooter === true ? "footer-button" : "flexlayout__tab_toolbar_button"
   }`;
-  const imageClass = `center-item-using-flex icon-sidebar-toggle icon-sidebar-${iconKind}-${side}-${
-    inFooter ? "dark" : "bright"
-  }`;
-  const [lastTouchPosition, setLastTouchPosition] = useState([0, 0]);
+  const iconName = `icon-sidebar-${side}`;
+
+  const onClickHandler = useCallback<MouseEventHandler<HTMLButtonElement>>(
+    (event) => {
+      if (event != null) {
+        event.currentTarget.blur(); // this will only blur the the wrapped icon <div> element
+        event.currentTarget.parentElement?.blur(); // this will only blur the <button> element
+      }
+
+      onClick();
+    },
+    [onClick],
+  );
+
   return (
-    <FastTooltip title={tooltipTitle} placement={placement} style={TOOLTIP_STYLE}>
+    <FastTooltip title={tooltipTitle} placement={placement} asChild>
       <Button
         className={className}
         size="small"
@@ -46,16 +69,7 @@ function BorderToggleButton(props: Props) {
           Additionally, we need to detect whether the user has dragged a tab
           across screen (to move a tab). In that case, onTouchEnd does nothing.
         */
-        onClick={(event) => {
-          if (event != null) {
-            // @ts-expect-error ts-migrate(2339) FIXME: Property 'blur' does not exist on type 'EventTarge... Remove this comment to see the full error message
-            event.target.blur(); // this will only blur the the wrapped icon <div> element
-            // @ts-expect-error ts-migrate(2339) FIXME: Property 'blur' does not exist on type 'EventTarge... Remove this comment to see the full error message
-            event.target.parentElement.blur(); // this will only blur the <button> element
-          }
-
-          onClick();
-        }}
+        onClick={onClickHandler}
         onMouseDown={(evt) => {
           evt.stopPropagation();
         }}
@@ -71,18 +85,10 @@ function BorderToggleButton(props: Props) {
             onClick();
           }
         }}
-      >
-        <div className={imageClass} />
-      </Button>
+        icon={<Icon component={ICON_MAP[iconName]} />}
+      />
     </FastTooltip>
   );
 }
 
-function mapStateToProps(state: WebknossosState) {
-  return {
-    borderOpenStatus: state.uiInformation.borderOpenStatus,
-  };
-}
-
-const connector = connect(mapStateToProps);
-export default connector(BorderToggleButton);
+export default BorderToggleButton;

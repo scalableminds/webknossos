@@ -1,12 +1,13 @@
 import { SyncOutlined } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
+import { useQuery } from "@tanstack/react-query";
+import AdminPage from "admin/admin_page";
 import { getVoxelyticsWorkflows } from "admin/rest_api";
-import { Button, Input, Progress, Table, Tooltip } from "antd";
+import { Button, Input, Progress, Spin, Table, Tooltip } from "antd";
 import { formatCountToDataAmountUnit, formatDateMedium, formatNumber } from "libs/format_utils";
 import Persistence from "libs/persistence";
-import { usePolling } from "libs/react_hooks";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import { filterWithSearchQueryAND, scrollToTop } from "libs/utils";
 import type React from "react";
 import { type Key, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
@@ -15,7 +16,7 @@ import {
   type VoxelyticsWorkflowListing,
   type VoxelyticsWorkflowListingRun,
 } from "types/api_types";
-import { VX_POLLING_INTERVAL, runStateToStatus } from "./utils";
+import { runStateToStatus, VX_POLLING_INTERVAL } from "./utils";
 
 const { Search } = Input;
 
@@ -59,8 +60,6 @@ type RenderRunInfo = Omit<VoxelyticsWorkflowListingRun, "userFirstName" | "userL
 };
 
 export default function WorkflowListView() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [workflows, setWorkflows] = useState<Array<VoxelyticsWorkflowListing>>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
   function handleSearch(event: React.ChangeEvent<HTMLInputElement>): void {
@@ -70,30 +69,32 @@ export default function WorkflowListView() {
   useEffect(() => {
     const { searchQuery } = persistence.load();
     setSearchQuery(searchQuery || "");
-    loadData();
   }, []);
 
   useEffect(() => {
     persistence.persist({ searchQuery });
   }, [searchQuery]);
 
-  async function loadData() {
-    setIsLoading(true);
-    try {
-      const _workflows = (await getVoxelyticsWorkflows()).map(parseWorkflowInfo);
-      setWorkflows(_workflows);
-    } catch (err) {
-      Toast.error("Could not load workflow list.");
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  usePolling(async () => {
-    // initial data fetch is done above, thus only load data here if it is polled repeatedly
-    if (VX_POLLING_INTERVAL != null) loadData();
-  }, VX_POLLING_INTERVAL);
+  const {
+    data: workflows = [],
+    isLoading,
+    refetch,
+    isFetching,
+  } = useQuery({
+    queryKey: ["voxelyticsWorkflows"],
+    queryFn: async () => {
+      try {
+        return await getVoxelyticsWorkflows();
+      } catch (err) {
+        Toast.error("Could not load workflow list.");
+        console.error(err);
+        throw err;
+      }
+    },
+    // We use the select to transform the data because it is run on cached and fetched data
+    select: (data) => data.map(parseWorkflowInfo),
+    refetchInterval: VX_POLLING_INTERVAL ?? false,
+  });
 
   const getUserDisplayName = (run: VoxelyticsWorkflowListingRun) => {
     return run.userFirstName != null || run.userLastName != null
@@ -101,7 +102,7 @@ export default function WorkflowListView() {
       : run.hostUserName;
   };
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies(getUserDisplayName):
+  // biome-ignore lint/correctness/useExhaustiveDependencies(getUserDisplayName): omitted to maintain stability as the function does not capture reactive state
   const renderRuns: Array<RenderRunInfo> = useMemo(
     () =>
       workflows.map((workflow) => ({
@@ -170,110 +171,109 @@ export default function WorkflowListView() {
   }
 
   return (
-    <div className="container voxelytics-view">
-      <div className="pull-right">
-        <Button onClick={() => loadData()} style={{ marginRight: 20 }}>
-          <SyncOutlined spin={isLoading} /> Refresh
+    <AdminPage
+      title="Voxelytics Workflows"
+      description="Inspect workflow runs, progress, and storage footprint over time."
+      actions={
+        <Button onClick={() => refetch()} icon={<SyncOutlined spin={isFetching} />}>
+          Refresh
         </Button>
-        <Search
-          style={{
-            width: 200,
-          }}
-          onChange={handleSearch}
-          value={searchQuery}
-        />
-      </div>
-      <h3>Voxelytics Workflows</h3>
-      <Table
-        bordered
-        rowKey={(run: RenderRunInfo) => `${run.id}-${run.workflowHash}`}
-        pagination={{ pageSize: 100 }}
-        columns={[
-          {
-            title: "Workflow",
-            key: "workflow",
-            render: (run: RenderRunInfo) =>
-              run.id === "" ? (
-                <Link to={`/workflows/${run.workflowHash}`}>
-                  {run.workflowName} ({run.workflowHash})
-                </Link>
-              ) : (
-                <Link to={`/workflows/${run.workflowHash}?runId=${encodeURIComponent(run.id)}`}>
-                  {run.name}
-                </Link>
+      }
+      search={<Search allowClear onChange={handleSearch} value={searchQuery} />}
+    >
+      <Spin spinning={isLoading} size="large">
+        <Table
+          bordered
+          rowKey={(run: RenderRunInfo) => `${run.id}-${run.workflowHash}`}
+          pagination={{ pageSize: 100, onChange: scrollToTop }}
+          columns={[
+            {
+              title: "Workflow",
+              key: "workflow",
+              render: (run: RenderRunInfo) =>
+                run.id === "" ? (
+                  <Link to={`/workflows/${run.workflowHash}`}>
+                    {run.workflowName} ({run.workflowHash})
+                  </Link>
+                ) : (
+                  <Link to={`/workflows/${run.workflowHash}/run/${encodeURIComponent(run.id)}`}>
+                    {run.name}
+                  </Link>
+                ),
+            },
+            {
+              title: "User",
+              key: "userName",
+              dataIndex: "userDisplayName",
+              filters: uniqueify(renderRuns.map((run) => run.userDisplayName)).map((username) => ({
+                text: username || "",
+                value: username || "",
+              })),
+              onFilter: (value: Key | boolean, run: RenderRunInfo) =>
+                run.userDisplayName?.startsWith(String(value)) || false,
+              filterSearch: true,
+            },
+            {
+              title: "Host",
+              dataIndex: "hostName",
+              key: "host",
+              filters: uniqueify(renderRuns.map((run) => run.hostName)).map((hostname) => ({
+                text: hostname,
+                value: hostname,
+              })),
+              onFilter: (value: Key | boolean, run: RenderRunInfo) =>
+                run.hostName.startsWith(String(value)),
+              filterSearch: true,
+            },
+            {
+              title: "Progress",
+              key: "progress",
+              width: 200,
+              render: renderProgress,
+            },
+            {
+              title: "File Size",
+              key: "fileSize",
+              width: 200,
+              render: (run: RenderRunInfo) => (
+                <Tooltip
+                  overlay={
+                    <>
+                      {formatCountToDataAmountUnit(run.taskCounts.fileSize)} •{" "}
+                      {formatNumber(run.taskCounts.inodeCount)} inodes
+                      <br />
+                      Note: manual changes on disk are not reflected here
+                    </>
+                  }
+                >
+                  {formatCountToDataAmountUnit(run.taskCounts.fileSize)}
+                </Tooltip>
               ),
-          },
-          {
-            title: "User",
-            key: "userName",
-            dataIndex: "userDisplayName",
-            filters: uniqueify(renderRuns.map((run) => run.userDisplayName)).map((username) => ({
-              text: username || "",
-              value: username || "",
-            })),
-            onFilter: (value: Key | boolean, run: RenderRunInfo) =>
-              run.userDisplayName?.startsWith(String(value)) || false,
-            filterSearch: true,
-          },
-          {
-            title: "Host",
-            dataIndex: "hostName",
-            key: "host",
-            filters: uniqueify(renderRuns.map((run) => run.hostName)).map((hostname) => ({
-              text: hostname,
-              value: hostname,
-            })),
-            onFilter: (value: Key | boolean, run: RenderRunInfo) =>
-              run.hostName.startsWith(String(value)),
-            filterSearch: true,
-          },
-          {
-            title: "Progress",
-            key: "progress",
-            width: 200,
-            render: renderProgress,
-          },
-          {
-            title: "File Size",
-            key: "fileSize",
-            width: 200,
-            render: (run: RenderRunInfo) => (
-              <Tooltip
-                overlay={
-                  <>
-                    {formatCountToDataAmountUnit(run.taskCounts.fileSize)} •{" "}
-                    {formatNumber(run.taskCounts.inodeCount)} inodes
-                    <br />
-                    Note: manual changes on disk are not reflected here
-                  </>
-                }
-              >
-                {formatCountToDataAmountUnit(run.taskCounts.fileSize)}
-              </Tooltip>
-            ),
-            sorter: (a: RenderRunInfo, b: RenderRunInfo) =>
-              a.taskCounts.fileSize - b.taskCounts.fileSize,
-          },
-          {
-            title: "Begin",
-            key: "begin",
-            defaultSortOrder: "descend",
-            sorter: (a: RenderRunInfo, b: RenderRunInfo) =>
-              (a.beginTime?.getTime() ?? Number.POSITIVE_INFINITY) -
-              (b.beginTime?.getTime() ?? Number.POSITIVE_INFINITY),
-            render: (run: RenderRunInfo) => run.beginTime && formatDateMedium(run.beginTime),
-          },
-          {
-            title: "End",
-            key: "end",
-            sorter: (a: RenderRunInfo, b: RenderRunInfo) =>
-              (a.endTime?.getTime() ?? Number.POSITIVE_INFINITY) -
-              (b.endTime?.getTime() ?? Number.POSITIVE_INFINITY),
-            render: (run: RenderRunInfo) => run.endTime && formatDateMedium(run.endTime),
-          },
-        ]}
-        dataSource={Utils.filterWithSearchQueryAND(renderRuns, ["workflowName"], searchQuery)}
-      />
-    </div>
+              sorter: (a: RenderRunInfo, b: RenderRunInfo) =>
+                a.taskCounts.fileSize - b.taskCounts.fileSize,
+            },
+            {
+              title: "Begin",
+              key: "begin",
+              defaultSortOrder: "descend",
+              sorter: (a: RenderRunInfo, b: RenderRunInfo) =>
+                (a.beginTime?.getTime() ?? Number.POSITIVE_INFINITY) -
+                (b.beginTime?.getTime() ?? Number.POSITIVE_INFINITY),
+              render: (run: RenderRunInfo) => run.beginTime && formatDateMedium(run.beginTime),
+            },
+            {
+              title: "End",
+              key: "end",
+              sorter: (a: RenderRunInfo, b: RenderRunInfo) =>
+                (a.endTime?.getTime() ?? Number.POSITIVE_INFINITY) -
+                (b.endTime?.getTime() ?? Number.POSITIVE_INFINITY),
+              render: (run: RenderRunInfo) => run.endTime && formatDateMedium(run.endTime),
+            },
+          ]}
+          dataSource={filterWithSearchQueryAND(renderRuns, ["workflowName"], searchQuery)}
+          locale={{ emptyText: null }}
+        />
+      </Spin>
+    </AdminPage>
   );
 }

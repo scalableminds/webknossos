@@ -1,5 +1,5 @@
 import { LinkOutlined } from "@ant-design/icons";
-import { Button, Card, Tooltip } from "antd";
+import { Button, Card, Flex, Tooltip, Typography } from "antd";
 import classNames from "classnames";
 import { formatScale } from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
@@ -53,11 +53,13 @@ function getDisplayName(item: PublicationItem): string {
 function getExtendedDetails(item: PublicationItem): ExtendedDatasetDetails {
   const { dataSource, metadata } = item.dataset;
   const details = {} as DatasetDetails;
+
   metadata?.forEach((entry) => {
     if (entry.key === "species" || entry.key === "brainRegion" || entry.key === "acquisition") {
       details[entry.key] = entry.value.toString();
     }
   });
+
   return {
     ...details,
     scale: formatScale(dataSource.scale, 0),
@@ -104,12 +106,11 @@ function ThumbnailOverlay({ details }: { details: ExtendedDatasetDetails }) {
       >
         {details.name}
       </div>
-      <div
+      <Flex
+        align="flex-end"
+        justify="space-between"
         style={{
           marginTop: "auto",
-          display: "flex",
-          alignItems: "flex-end",
-          justifyContent: "space-between",
           color: "rgba(200,200,200,0.85)",
         }}
       >
@@ -119,7 +120,7 @@ function ThumbnailOverlay({ details }: { details: ExtendedDatasetDetails }) {
           <br />
           {details.extent}
         </div>
-      </div>
+      </Flex>
     </div>
   );
 }
@@ -213,16 +214,15 @@ function PublicationCard({ publication, showDetailedLink }: Props) {
         },
       }}
       className="publication-item-card"
-      bordered={false}
+      variant="borderless"
     >
-      <div
+      <Flex
         style={{
-          display: "flex",
           height: "100%",
         }}
       >
         <div className="publication-description">
-          <h3 className="container-with-hidden-icon">
+          <Typography.Title level={3} className="container-with-hidden-icon">
             {publication.title}
             {showDetailedLink ? (
               <Link to={`/publications/${publication.id}`}>
@@ -230,7 +230,7 @@ function PublicationCard({ publication, showDetailedLink }: Props) {
                   <LinkOutlined
                     style={{
                       fontSize: 16,
-                      color: "#555",
+                      color: "var(--ant-color-text-secondary)",
                       marginBottom: 18,
                       marginLeft: 8,
                     }}
@@ -239,7 +239,7 @@ function PublicationCard({ publication, showDetailedLink }: Props) {
                 </Tooltip>
               </Link>
             ) : null}
-          </h3>
+          </Typography.Title>
           <div className="publication-description-body nice-scrollbar">
             <Markdown>{publication.description}</Markdown>
           </div>
@@ -249,7 +249,7 @@ function PublicationCard({ publication, showDetailedLink }: Props) {
           sortedItems={sortedItems}
           setActiveItem={setActiveItem}
         />
-      </div>
+      </Flex>
     </Card>
   );
 }
@@ -275,12 +275,11 @@ function PublicationThumbnail({
 
   return (
     <div className="dataset-thumbnail">
-      <div
+      <Flex
+        align="flex-end"
         style={{
           position: "relative",
           height: "100%",
-          display: "flex",
-          alignItems: "flex-end",
         }}
       >
         <Link to={getUrl(activeItem)} className="absolute">
@@ -308,7 +307,7 @@ function PublicationThumbnail({
             setActiveItem={setActiveItem}
           />
         )}
-      </div>
+      </Flex>
     </div>
   );
 }

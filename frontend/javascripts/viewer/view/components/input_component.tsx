@@ -1,8 +1,8 @@
 import { Input, type InputProps, type InputRef } from "antd";
 import FastTooltip from "components/fast_tooltip";
-import _ from "lodash";
+import noop from "lodash-es/noop";
 import type React from "react";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from "react";
 
 /*
  * A lightweight wrapper around <Input> which:
@@ -15,11 +15,12 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
  *   while it's focused (mainly necessary when mutating the value on arrow-keypresses)
  */
 
-function InputComponent(props: InputProps) {
+const InputComponent: React.FC<InputProps & { ref?: React.Ref<InputRef> }> = (props) => {
   const {
+    ref,
     title,
     style,
-    onChange = _.noop,
+    onChange = noop,
     onFocus,
     onBlur,
     onKeyDown,
@@ -29,6 +30,9 @@ function InputComponent(props: InputProps) {
   } = props;
   const inputRef = useRef<InputRef>(null);
   const [currentValue, setCurrentValue] = useState(value);
+
+  // Expose the internal ref to parent components when a ref is provided
+  useImperativeHandle(ref, () => inputRef.current as InputRef, []);
 
   useEffect(() => {
     setCurrentValue(value);
@@ -104,6 +108,5 @@ function InputComponent(props: InputProps) {
   ) : (
     input
   );
-}
-
+};
 export default InputComponent;

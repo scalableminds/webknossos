@@ -2,20 +2,31 @@ import update from "immutability-helper";
 import ColorGenerator from "libs/color_generator";
 import DiffableMap from "libs/diffable_map";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import _ from "lodash";
+import { zeroPad } from "libs/utils";
+import clamp from "lodash-es/clamp";
+import identity from "lodash-es/identity";
+import orderBy from "lodash-es/orderBy";
+import uniqBy from "lodash-es/uniqBy";
 import type { MetadataEntryProto } from "types/api_types";
 import { userSettings } from "types/schemas/user_settings.schema";
 import { TreeTypeEnum } from "viewer/constants";
 import {
   areGeometriesTransformed,
+  enforceSkeletonTracing,
   findTreeByNodeId,
   getSkeletonTracing,
   getTree,
   getTreeAndNode,
+  getTreesWithType,
 } from "viewer/model/accessors/skeletontracing_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import type { Action } from "viewer/model/actions/actions";
+import {
+  type SkeletonActionPolicy,
+  type SkeletonCollabPolicy,
+  type SkeletonTracingAction,
+  skeletonActionPolicies,
+} from "viewer/model/actions/skeletontracing_actions";
 import {
   applyUserStateToGroups,
   convertServerAdditionalAxesToFrontEnd,
@@ -46,22 +57,99 @@ import {
   toggleAllTreesReducer,
   toggleTreeGroupReducer,
 } from "viewer/model/reducers/skeletontracing_reducer_helpers";
-import { type TreeGroup, TreeMap } from "viewer/model/types/tree_types";
+import { type Tree, type TreeGroup, TreeMap } from "viewer/model/types/tree_types";
 import type { SkeletonTracing, WebknossosState } from "viewer/store";
 import {
-  GroupTypeEnum,
   additionallyExpandGroup,
+  findGroup,
+  GroupTypeEnum,
   getNodeKey,
-} from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
-import { getUserStateForTracing } from "../accessors/annotation_accessor";
+  MISSING_GROUP_ID,
+  mapGroups,
+} from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
+import {
+  getUserStateForTracing,
+  isAgglomerateTree,
+  isConcurrentCollaborationMode,
+} from "../accessors/annotation_accessor";
 import { max, maxBy } from "../helpers/iterator_utils";
 import { applySkeletonUpdateActionsFromServer } from "./update_action_application/skeleton";
+
+// Resolves the existing tree(s) that the given mutation would affect. Only actions classified as
+// `collab: "onlyAgglomerateTree"` in `skeletonActionPolicies` are handled here; for those, the
+// collab guard allows the mutation only if all affected trees are agglomerate trees.
+function resolveAffectedTrees(
+  action: Action,
+  // The state is needed in addition to the skeletonTracing, because the active tree
+  // (which is the fallback for actions without an explicit treeId) lives in localSkeletonState.
+  state: WebknossosState,
+  skeletonTracing: SkeletonTracing,
+): Array<Tree | null | undefined> {
+  switch (action.type) {
+    case "SET_TREE_NAME":
+    case "SET_TREE_METADATA":
+    case "SET_TREE_AGGLOMERATE_INFO_ID":
+    case "SET_EDGES_ARE_VISIBLE":
+    case "SET_TREE_GROUP":
+    case "DELETE_TREE":
+      return [getTree(state, action.treeId)];
+    case "DELETE_TREES":
+      return action.treeIds.map((treeId) => getTree(state, treeId));
+    case "DELETE_EDGE":
+    case "MERGE_TREES":
+      // Proofreading dispatches these with initiator "PROOFREADING" on agglomerate trees. The
+      // user-initiated variants during proofreading return early in the respective case bodies.
+      return [
+        findTreeByNodeId(skeletonTracing.trees, action.sourceNodeId),
+        findTreeByNodeId(skeletonTracing.trees, action.targetNodeId),
+      ];
+    case "ADD_TREES_AND_GROUPS":
+      // Allowed only when importing agglomerate trees (e.g. the proofreading agglomerate import).
+      return Array.from(action.trees.values());
+    default:
+      // An action not classified as "onlyAgglomerateTree" should never reach this helper.
+      return [];
+  }
+}
+
+// In concurrent collaboration ("live collaboration") mode, normal skeleton editing must be
+// forbidden because it would interfere with concurrent edits/rebasing. Only proofreading, which
+// operates on agglomerate trees, is allowed. The collab policy comes from `skeletonActionPolicies`.
+function isCollabModeMutationAllowed(
+  collab: SkeletonCollabPolicy,
+  action: Action,
+  state: WebknossosState,
+  skeletonTracing: SkeletonTracing,
+): boolean {
+  switch (collab) {
+    case "allow":
+      return true;
+    case "block":
+      return false;
+    case "onlyAgglomerateTree": {
+      const affectedTrees = resolveAffectedTrees(action, state, skeletonTracing);
+      return affectedTrees.length > 0 && affectedTrees.every(isAgglomerateTree);
+    }
+    default: {
+      const _exhaustiveCheck: never = collab;
+      return false;
+    }
+  }
+}
 
 function SkeletonTracingReducer(
   state: WebknossosState,
   action: Action,
   ignoreAllowUpdate: boolean = false,
 ): WebknossosState {
+  /**
+   * INITIALIZE_SKELETONTRACING is handled as a special case here without any
+   * permission checks. The action should always be handled and is also the only one
+   * that can deal with a not pre-existing skeleton tracing which is why
+   * it is not part of the big switch-block below.
+   * After that, a permission + collaboration gate guards the mutations in the second switch.
+   * Whether an action needs update permission is declared centrally in `skeletonActionPolicies`.
+   */
   if (action.type === "INITIALIZE_SKELETONTRACING") {
     const userState = getUserStateForTracing(
       action.tracing,
@@ -118,18 +206,11 @@ function SkeletonTracingReducer(
       type: "skeleton",
       activeNodeId,
       cachedMaxNodeId,
-      activeTreeId,
-      activeGroupId: null,
       trees,
       treeGroups,
       tracingId: action.tracing.id,
       boundingBox: convertServerBoundingBoxToFrontend(action.tracing.boundingBox),
       userBoundingBoxes,
-      navigationList: {
-        list: [],
-        activeIndex: -1,
-      },
-      showSkeletons: true,
       additionalAxes: convertServerAdditionalAxesToFrontEnd(action.tracing.additionalAxes),
     };
 
@@ -142,6 +223,24 @@ function SkeletonTracingReducer(
           $set: null,
         },
       },
+      save: {
+        rebaseRelevantServerAnnotationState: {
+          skeleton: {
+            $set: skeletonTracing,
+          },
+        },
+      },
+      localSkeletonState: {
+        $set: {
+          activeTreeId,
+          activeGroupId: null,
+          navigationList: {
+            list: [],
+            activeIndex: -1,
+          },
+          showSkeletons: true,
+        },
+      },
     });
   }
 
@@ -150,10 +249,32 @@ function SkeletonTracingReducer(
     return state;
   }
 
-  /**
-   * ATTENTION: The actions that should be executed regardless of whether allowUpdate is true or false
-   * should be added here!
-   */
+  // Permission + collaboration gate, driven by the action's policy in `skeletonActionPolicies`.
+  // Actions without a policy (non-skeleton/saga-only) or without `needsUpdatePermission` skip the
+  // gate and are handled below (or ignored via the switch's default).
+  const policy: SkeletonActionPolicy | undefined =
+    skeletonActionPolicies[action.type as SkeletonTracingAction["type"]];
+  // Updates that originate from the server (ignoreAllowUpdate) must still be applied.
+  if (!ignoreAllowUpdate && policy?.needsUpdatePermission) {
+    // The current action does not originate from the server and needs a permission check.
+    const { isUpdatingCurrentlyAllowed } = state.annotation;
+    if (!isUpdatingCurrentlyAllowed) {
+      // Since editing is not allowed currently (e.g., opened in read-only mode), ignore the action.
+      return state;
+    }
+    // Now, the action may be handled except for when the concurrent collaboration mode
+    // is active. In that case, we delegate the check to isCollabModeMutationAllowed
+    // which checks that only agglomerate trees may be mutated (because proofreading is
+    // currently the only mode that supports live collaboration).
+    if (
+      isConcurrentCollaborationMode(state) &&
+      !isCollabModeMutationAllowed(policy.collab, action, state, skeletonTracing)
+    ) {
+      return state;
+    }
+  }
+
+  const { restrictions } = state.annotation;
   switch (action.type) {
     case "SET_ACTIVE_NODE": {
       const { nodeId } = action;
@@ -165,12 +286,14 @@ function SkeletonTracingReducer(
               activeNodeId: {
                 $set: null,
               },
-              activeTreeId: {
-                $set: null,
-              },
-              activeGroupId: {
-                $set: null,
-              },
+            },
+          },
+          localSkeletonState: {
+            activeTreeId: {
+              $set: null,
+            },
+            activeGroupId: {
+              $set: null,
             },
           },
         });
@@ -184,12 +307,14 @@ function SkeletonTracingReducer(
               activeNodeId: {
                 $set: nodeId,
               },
-              activeTreeId: {
-                $set: tree.treeId,
-              },
-              activeGroupId: {
-                $set: null,
-              },
+            },
+          },
+          localSkeletonState: {
+            activeTreeId: {
+              $set: tree.treeId,
+            },
+            activeGroupId: {
+              $set: null,
             },
           },
         });
@@ -200,12 +325,17 @@ function SkeletonTracingReducer(
 
     case "SET_NODE_RADIUS": {
       const { radius, nodeId, treeId } = action;
-      const clampedRadius = Utils.clamp(
+      const clampedRadius = clamp(
         userSettings.nodeRadius.minimum,
         radius,
         userSettings.nodeRadius.maximum,
       );
-      const treeAndNode = getTreeAndNode(skeletonTracing, nodeId, treeId);
+      const treeAndNode = getTreeAndNode(
+        skeletonTracing,
+        state.localSkeletonState.activeTreeId,
+        nodeId,
+        treeId,
+      );
       if (treeAndNode == null) {
         return state;
       }
@@ -239,11 +369,9 @@ function SkeletonTracingReducer(
     case "SET_SHOW_SKELETONS": {
       const { showSkeletons } = action;
       return update(state, {
-        annotation: {
-          skeleton: {
-            showSkeletons: {
-              $set: showSkeletons,
-            },
+        localSkeletonState: {
+          showSkeletons: {
+            $set: showSkeletons,
           },
         },
       });
@@ -251,7 +379,7 @@ function SkeletonTracingReducer(
 
     case "SET_ACTIVE_TREE": {
       const { trees } = skeletonTracing;
-      const tree = getTree(skeletonTracing, action.treeId);
+      const tree = getTree(state, action.treeId);
       if (tree == null) {
         return state;
       }
@@ -263,12 +391,14 @@ function SkeletonTracingReducer(
             activeNodeId: {
               $set: newActiveNodeId,
             },
-            activeTreeId: {
-              $set: tree.treeId,
-            },
-            activeGroupId: {
-              $set: null,
-            },
+          },
+        },
+        localSkeletonState: {
+          activeTreeId: {
+            $set: tree.treeId,
+          },
+          activeGroupId: {
+            $set: null,
           },
         },
       });
@@ -291,12 +421,14 @@ function SkeletonTracingReducer(
             activeNodeId: {
               $set: newActiveNodeId,
             },
-            activeTreeId: {
-              $set: treeWithMatchingName.treeId,
-            },
-            activeGroupId: {
-              $set: null,
-            },
+          },
+        },
+        localSkeletonState: {
+          activeTreeId: {
+            $set: treeWithMatchingName.treeId,
+          },
+          activeGroupId: {
+            $set: null,
           },
         },
       });
@@ -309,9 +441,11 @@ function SkeletonTracingReducer(
             activeNodeId: {
               $set: null,
             },
-            activeTreeId: {
-              $set: null,
-            },
+          },
+        },
+        localSkeletonState: {
+          activeTreeId: {
+            $set: null,
           },
         },
       });
@@ -324,12 +458,14 @@ function SkeletonTracingReducer(
             activeNodeId: {
               $set: null,
             },
-            activeTreeId: {
-              $set: null,
-            },
-            activeGroupId: {
-              $set: action.groupId,
-            },
+          },
+        },
+        localSkeletonState: {
+          activeTreeId: {
+            $set: null,
+          },
+          activeGroupId: {
+            $set: action.groupId,
           },
         },
       });
@@ -337,23 +473,22 @@ function SkeletonTracingReducer(
 
     case "DESELECT_ACTIVE_TREE_GROUP": {
       return update(state, {
-        annotation: {
-          skeleton: {
-            activeGroupId: {
-              $set: null,
-            },
+        localSkeletonState: {
+          activeGroupId: {
+            $set: null,
           },
         },
       });
     }
 
     case "SELECT_NEXT_TREE": {
-      const { activeTreeId, trees } = skeletonTracing;
-      if (_.values(trees).length === 0) return state;
+      const { trees } = skeletonTracing;
+      const { activeTreeId } = state.localSkeletonState;
+      if (trees.size() === 0) return state;
       const increaseDecrease = action.forward ? 1 : -1;
       const orderAttribute = state.userConfiguration.sortTreesByName ? "name" : "timestamp";
 
-      const treeIds = _.orderBy(trees.values().toArray(), [orderAttribute]).map((t) => t.treeId);
+      const treeIds = orderBy(trees.values().toArray(), [orderAttribute]).map((t) => t.treeId);
 
       // default to the first tree
       const activeTreeIdIndex = activeTreeId != null ? treeIds.indexOf(activeTreeId) : 0;
@@ -367,15 +502,17 @@ function SkeletonTracingReducer(
       return update(state, {
         annotation: {
           skeleton: {
-            activeTreeId: {
-              $set: newActiveTreeId,
-            },
             activeNodeId: {
               $set: newActiveNodeId,
             },
-            activeGroupId: {
-              $set: null,
-            },
+          },
+        },
+        localSkeletonState: {
+          activeTreeId: {
+            $set: newActiveTreeId,
+          },
+          activeGroupId: {
+            $set: null,
           },
         },
       });
@@ -383,7 +520,7 @@ function SkeletonTracingReducer(
 
     case "SET_TREE_COLOR_INDEX": {
       const { colorIndex } = action;
-      const tree = getTree(skeletonTracing, action.treeId);
+      const tree = getTree(state, action.treeId);
       if (tree == null) {
         return state;
       }
@@ -408,7 +545,7 @@ function SkeletonTracingReducer(
 
     case "SET_TREE_COLOR": {
       const { color, treeId } = action;
-      const tree = getTree(skeletonTracing, treeId);
+      const tree = getTree(state, treeId);
       if (tree == null) {
         return state;
       }
@@ -427,7 +564,7 @@ function SkeletonTracingReducer(
     }
 
     case "SHUFFLE_TREE_COLOR": {
-      const tree = getTree(skeletonTracing, action.treeId);
+      const tree = getTree(state, action.treeId);
       if (tree == null) {
         return state;
       }
@@ -452,7 +589,7 @@ function SkeletonTracingReducer(
 
     case "SET_TREE_TYPE": {
       const { treeType, treeId } = action;
-      const tree = getTree(skeletonTracing, treeId);
+      const tree = getTree(state, treeId);
       if (tree == null) {
         return state;
       }
@@ -475,7 +612,7 @@ function SkeletonTracingReducer(
 
       const newTrees = skeletonTracing.trees.clone();
       for (const tree of skeletonTracing.trees.values()) {
-        // @ts-ignore newColors.shift() can be undefined
+        // @ts-expect-error newColors.shift() can be undefined
         newTrees.mutableSet(tree.treeId, { ...tree, color: newColors.shift() });
       }
 
@@ -502,7 +639,7 @@ function SkeletonTracingReducer(
 
     case "TOGGLE_TREE": {
       const { treeId } = action;
-      const tree = getTree(skeletonTracing, treeId);
+      const tree = getTree(state, treeId);
       if (tree == null) {
         return state;
       }
@@ -525,7 +662,7 @@ function SkeletonTracingReducer(
 
     case "SET_TREE_VISIBILITY": {
       const { treeId, isVisible } = action;
-      const tree = getTree(skeletonTracing, treeId);
+      const tree = getTree(state, treeId);
       if (tree == null) {
         return state;
       }
@@ -565,7 +702,7 @@ function SkeletonTracingReducer(
       const expandedGroups = additionallyExpandGroup(
         skeletonTracing.treeGroups,
         tree.groupId,
-        _.identity,
+        identity,
       );
       if (expandedGroups == null) {
         return state;
@@ -578,7 +715,7 @@ function SkeletonTracingReducer(
     }
 
     case "TOGGLE_INACTIVE_TREES": {
-      const { activeGroupId } = skeletonTracing;
+      const { activeGroupId } = state.localSkeletonState;
 
       if (activeGroupId != null) {
         // Toggle all trees
@@ -597,7 +734,7 @@ function SkeletonTracingReducer(
         );
       }
 
-      const activeTree = getTree(skeletonTracing);
+      const activeTree = getTree(state);
       if (activeTree == null) {
         return state;
       }
@@ -629,15 +766,13 @@ function SkeletonTracingReducer(
     case "UPDATE_NAVIGATION_LIST": {
       const { list, activeIndex } = action;
       return update(state, {
-        annotation: {
-          skeleton: {
-            navigationList: {
-              list: {
-                $set: list,
-              },
-              activeIndex: {
-                $set: activeIndex,
-              },
+        localSkeletonState: {
+          navigationList: {
+            list: {
+              $set: list,
+            },
+            activeIndex: {
+              $set: activeIndex,
             },
           },
         },
@@ -663,22 +798,10 @@ function SkeletonTracingReducer(
         (state: WebknossosState, action: Action) => SkeletonTracingReducer(state, action, true),
         actions,
         state,
+        action.ignoreUnsupportedActionTypes,
       );
     }
 
-    default: // pass
-  }
-
-  /**
-   * ATTENTION: The following actions are only executed if allowUpdate is true!
-   */
-  const { restrictions } = state.annotation;
-  const { allowUpdate } = restrictions;
-  if (!(allowUpdate || ignoreAllowUpdate)) {
-    return state;
-  }
-
-  switch (action.type) {
     case "CREATE_NODE": {
       if (areGeometriesTransformed(state)) {
         // Don't create nodes if the skeleton layer is rendered with transforms.
@@ -719,7 +842,9 @@ function SkeletonTracingReducer(
         },
       });
       const activeNodeId = action.dontActivate ? skeletonTracing.activeNodeId : node.id;
-      const activeTreeId = action.dontActivate ? skeletonTracing.activeTreeId : tree.treeId;
+      const activeTreeId = action.dontActivate
+        ? state.localSkeletonState.activeTreeId
+        : tree.treeId;
 
       const newTrees = skeletonTracing.trees.set(tree.treeId, newTree);
 
@@ -732,15 +857,17 @@ function SkeletonTracingReducer(
             activeNodeId: {
               $set: activeNodeId,
             },
-            activeGroupId: {
-              $set: null,
-            },
             cachedMaxNodeId: {
               $set: node.id,
             },
-            activeTreeId: {
-              $set: activeTreeId,
-            },
+          },
+        },
+        localSkeletonState: {
+          activeTreeId: {
+            $set: activeTreeId,
+          },
+          activeGroupId: {
+            $set: null,
           },
         },
       });
@@ -748,7 +875,13 @@ function SkeletonTracingReducer(
 
     case "DELETE_NODE": {
       const { timestamp, nodeId, treeId } = action;
-      const treeAndNode = getTreeAndNode(skeletonTracing, nodeId, treeId, TreeTypeEnum.DEFAULT);
+      const treeAndNode = getTreeAndNode(
+        skeletonTracing,
+        state.localSkeletonState.activeTreeId,
+        nodeId,
+        treeId,
+        TreeTypeEnum.DEFAULT,
+      );
       if (treeAndNode == null) {
         return state;
       }
@@ -769,15 +902,17 @@ function SkeletonTracingReducer(
             activeNodeId: {
               $set: newActiveNodeId,
             },
-            activeTreeId: {
-              $set: newActiveTreeId,
-            },
-            activeGroupId: {
-              $set: null,
-            },
             cachedMaxNodeId: {
               $set: newMaxNodeId,
             },
+          },
+        },
+        localSkeletonState: {
+          activeTreeId: {
+            $set: newActiveTreeId,
+          },
+          activeGroupId: {
+            $set: null,
           },
         },
       });
@@ -790,10 +925,29 @@ function SkeletonTracingReducer(
         return state;
       }
       const isProofreadingActive = state.uiInformation.activeTool === AnnotationTool.PROOFREAD;
+      if (isProofreadingActive && action.initiator === "USER") {
+        // Ignore this action as proofreading is active and the action originates from the user.
+        // The proofreading saga will take care of replaying the same action but with initiator = "PROOFREADING"
+        // to perform the desired tree manipulation.
+        return state;
+      }
+
       const treeType = isProofreadingActive ? TreeTypeEnum.AGGLOMERATE : TreeTypeEnum.DEFAULT;
 
-      const sourceTree = getTreeAndNode(skeletonTracing, sourceNodeId, null, treeType);
-      const targetTree = getTreeAndNode(skeletonTracing, targetNodeId, null, treeType);
+      const sourceTree = getTreeAndNode(
+        skeletonTracing,
+        state.localSkeletonState.activeTreeId,
+        sourceNodeId,
+        null,
+        treeType,
+      );
+      const targetTree = getTreeAndNode(
+        skeletonTracing,
+        state.localSkeletonState.activeTreeId,
+        targetNodeId,
+        null,
+        treeType,
+      );
       if (sourceTree == null || targetTree == null) {
         return state;
       }
@@ -820,9 +974,11 @@ function SkeletonTracingReducer(
             trees: {
               $set: trees,
             },
-            activeTreeId: {
-              $set: newActiveTreeId,
-            },
+          },
+        },
+        localSkeletonState: {
+          activeTreeId: {
+            $set: newActiveTreeId,
           },
         },
       });
@@ -834,7 +990,13 @@ function SkeletonTracingReducer(
         return state;
       }
       const { position, nodeId, treeId } = action;
-      const treeAndNode = getTreeAndNode(skeletonTracing, nodeId, treeId, TreeTypeEnum.DEFAULT);
+      const treeAndNode = getTreeAndNode(
+        skeletonTracing,
+        state.localSkeletonState.activeTreeId,
+        nodeId,
+        treeId,
+        TreeTypeEnum.DEFAULT,
+      );
       if (treeAndNode == null) {
         return state;
       }
@@ -870,7 +1032,12 @@ function SkeletonTracingReducer(
 
     case "CREATE_BRANCHPOINT": {
       const { timestamp, nodeId, treeId } = action;
-      const treeAndNode = getTreeAndNode(skeletonTracing, nodeId, treeId);
+      const treeAndNode = getTreeAndNode(
+        skeletonTracing,
+        state.localSkeletonState.activeTreeId,
+        nodeId,
+        treeId,
+      );
       if (treeAndNode == null) {
         return state;
       }
@@ -918,12 +1085,14 @@ function SkeletonTracingReducer(
             activeNodeId: {
               $set: newActiveNodeId,
             },
-            activeTreeId: {
-              $set: treeId,
-            },
-            activeGroupId: {
-              $set: null,
-            },
+          },
+        },
+        localSkeletonState: {
+          activeTreeId: {
+            $set: treeId,
+          },
+          activeGroupId: {
+            $set: null,
           },
         },
       });
@@ -931,7 +1100,7 @@ function SkeletonTracingReducer(
 
     case "DELETE_BRANCHPOINT_BY_ID": {
       const { nodeId, treeId } = action;
-      const tree = getTree(skeletonTracing, treeId);
+      const tree = getTree(state, treeId);
       if (tree == null) {
         return state;
       }
@@ -973,25 +1142,28 @@ function SkeletonTracingReducer(
             activeNodeId: {
               $set: null,
             },
-            activeTreeId: {
-              $set: tree.treeId,
-            },
-            activeGroupId: {
-              $set: null,
-            },
+          },
+        },
+        localSkeletonState: {
+          activeTreeId: {
+            $set: tree.treeId,
+          },
+          activeGroupId: {
+            $set: null,
           },
         },
       });
     }
 
     case "ADD_TREES_AND_GROUPS": {
-      const { trees, treeGroups, assignNewGroupId } = action;
+      const { trees, treeGroups, assignNewGroupId, targetGroupId } = action;
       const treesWithNames = ensureTreeNames(state, trees);
       const treesResult = addTreesAndGroups(
         skeletonTracing,
         treesWithNames,
         treeGroups,
         assignNewGroupId,
+        targetGroupId,
       );
       if (treesResult == null) {
         return state;
@@ -1008,12 +1180,24 @@ function SkeletonTracingReducer(
       }
 
       const newTrees = DiffableMap.merge(skeletonTracing.trees, updatedTrees);
+      // Nest the newly added groups into the selected target group (if it still exists),
+      // falling back to adding them at the root of the hierarchy otherwise.
+      const targetGroupExists =
+        targetGroupId !== MISSING_GROUP_ID &&
+        findGroup(skeletonTracing.treeGroups, targetGroupId) != null;
+      const newTreeGroups = targetGroupExists
+        ? mapGroups(skeletonTracing.treeGroups, (group) =>
+            group.groupId === targetGroupId
+              ? { ...group, children: group.children.concat(updatedTreeGroups) }
+              : group,
+          )
+        : skeletonTracing.treeGroups.concat(updatedTreeGroups);
 
       return update(state, {
         annotation: {
           skeleton: {
             treeGroups: {
-              $push: updatedTreeGroups,
+              $set: newTreeGroups,
             },
             trees: {
               $set: newTrees,
@@ -1032,7 +1216,7 @@ function SkeletonTracingReducer(
       let treeIds: number[] = [];
 
       if (action.type === "DELETE_TREE") {
-        const tree = getTree(skeletonTracing, action.treeId);
+        const tree = getTree(state, action.treeId);
         if (tree != null) {
           treeIds = [tree.treeId];
         }
@@ -1052,18 +1236,20 @@ function SkeletonTracingReducer(
             trees: {
               $set: trees,
             },
-            activeTreeId: {
-              $set: newActiveTreeId,
-            },
             activeNodeId: {
               $set: newActiveNodeId,
-            },
-            activeGroupId: {
-              $set: null,
             },
             cachedMaxNodeId: {
               $set: newMaxNodeId,
             },
+          },
+        },
+        localSkeletonState: {
+          activeTreeId: {
+            $set: newActiveTreeId,
+          },
+          activeGroupId: {
+            $set: null,
           },
         },
       });
@@ -1083,18 +1269,20 @@ function SkeletonTracingReducer(
             trees: {
               $set: newTreeMap,
             },
-            activeTreeId: {
-              $set: newTree.treeId,
-            },
             activeNodeId: {
-              $set: null,
-            },
-            activeGroupId: {
               $set: null,
             },
             treeGroups: {
               $set: [],
             },
+          },
+        },
+        localSkeletonState: {
+          activeTreeId: {
+            $set: newTree.treeId,
+          },
+          activeGroupId: {
+            $set: null,
           },
         },
       });
@@ -1103,6 +1291,13 @@ function SkeletonTracingReducer(
     case "MERGE_TREES": {
       const { sourceNodeId, targetNodeId } = action;
       const isProofreadingActive = state.uiInformation.activeTool === AnnotationTool.PROOFREAD;
+      if (isProofreadingActive && action.initiator === "USER") {
+        // Ignore this action as proofreading is active and the action originates from the user.
+        // The proofreading saga will take care of replaying the same action but with initiator = "PROOFREADING"
+        // to perform the desired tree manipulation.
+        return state;
+      }
+
       const treeType = isProofreadingActive ? TreeTypeEnum.AGGLOMERATE : TreeTypeEnum.DEFAULT;
       const oldTrees = skeletonTracing.trees;
       const mergeResult = mergeTrees(oldTrees, sourceNodeId, targetNodeId, treeType);
@@ -1121,24 +1316,26 @@ function SkeletonTracingReducer(
             activeNodeId: {
               $set: newActiveNodeId,
             },
-            activeTreeId: {
-              $set: newActiveTreeId,
-            },
-            activeGroupId: {
-              $set: null,
-            },
+          },
+        },
+        localSkeletonState: {
+          activeTreeId: {
+            $set: newActiveTreeId,
+          },
+          activeGroupId: {
+            $set: null,
           },
         },
       });
     }
 
     case "SET_TREE_NAME": {
-      const tree = getTree(skeletonTracing, action.treeId);
+      const tree = getTree(state, action.treeId);
       if (tree == null) {
         return state;
       }
 
-      const defaultName = `Tree${Utils.zeroPad(tree.treeId, 3)}`;
+      const defaultName = `Tree${zeroPad(tree.treeId, 3)}`;
       const newTrees = skeletonTracing.trees.set(tree.treeId, {
         ...tree,
         name: action.name || defaultName,
@@ -1156,7 +1353,7 @@ function SkeletonTracingReducer(
     }
 
     case "SET_TREE_METADATA": {
-      const tree = getTree(skeletonTracing, action.treeId);
+      const tree = getTree(state, action.treeId);
       if (tree == null) {
         return state;
       }
@@ -1177,8 +1374,63 @@ function SkeletonTracingReducer(
       });
     }
 
+    case "SET_TREE_AGGLOMERATE_INFO_ID": {
+      const tree = getTree(state, action.treeId);
+      if (tree == null || tree.agglomerateInfo == null) {
+        return state;
+      }
+
+      const newTrees = skeletonTracing.trees.set(tree.treeId, {
+        ...tree,
+        agglomerateInfo: { ...tree.agglomerateInfo, agglomerateId: action.agglomerateId },
+      });
+
+      return update(state, {
+        annotation: {
+          skeleton: {
+            trees: {
+              $set: newTrees,
+            },
+          },
+        },
+      });
+    }
+
+    case "SET_TREES_AGGLOMERATE_INFO_TRACING_ID": {
+      const agglomerateTrees = getTreesWithType(
+        enforceSkeletonTracing(state.annotation),
+        TreeTypeEnum.AGGLOMERATE,
+      );
+      const newTrees = agglomerateTrees
+        .values()
+        .reduce((currentTrees: TreeMap, agglomerateTree: Tree) => {
+          const updatedTree =
+            agglomerateTree.agglomerateInfo != null
+              ? {
+                  ...agglomerateTree,
+                  agglomerateInfo: {
+                    agglomerateId: agglomerateTree.agglomerateInfo.agglomerateId,
+                    tracingId: action.newAgglomerateMappingTracingId,
+                    mappingId: null,
+                  },
+                }
+              : agglomerateTree;
+          return currentTrees.set(agglomerateTree.treeId, updatedTree);
+        }, skeletonTracing.trees);
+
+      return update(state, {
+        annotation: {
+          skeleton: {
+            trees: {
+              $set: newTrees,
+            },
+          },
+        },
+      });
+    }
+
     case "SET_EDGES_ARE_VISIBLE": {
-      const tree = getTree(skeletonTracing, action.treeId);
+      const tree = getTree(state, action.treeId);
       if (tree == null) {
         return state;
       }
@@ -1201,7 +1453,12 @@ function SkeletonTracingReducer(
 
     case "CREATE_COMMENT": {
       const { commentText, nodeId, treeId } = action;
-      const treeAndNode = getTreeAndNode(skeletonTracing, nodeId, treeId);
+      const treeAndNode = getTreeAndNode(
+        skeletonTracing,
+        state.localSkeletonState.activeTreeId,
+        nodeId,
+        treeId,
+      );
       if (treeAndNode == null) {
         return state;
       }
@@ -1229,7 +1486,12 @@ function SkeletonTracingReducer(
     }
 
     case "DELETE_COMMENT": {
-      const treeAndNode = getTreeAndNode(skeletonTracing, action.nodeId, action.treeId);
+      const treeAndNode = getTreeAndNode(
+        skeletonTracing,
+        state.localSkeletonState.activeTreeId,
+        action.nodeId,
+        action.treeId,
+      );
       if (treeAndNode == null) {
         return state;
       }
@@ -1278,7 +1540,7 @@ function SkeletonTracingReducer(
 
     case "SET_TREE_GROUP": {
       const { treeId, groupId } = action;
-      const tree = getTree(skeletonTracing, treeId);
+      const tree = getTree(state, treeId);
       if (tree == null) {
         return state;
       }
@@ -1307,23 +1569,30 @@ function SkeletonTracingReducer(
 export function sanitizeMetadata(metadata: MetadataEntryProto[]) {
   // Workaround for stringList values that are [], even though they
   // should be null. This workaround is necessary because protobuf cannot
-  // distinguish between an empty list and an not existent property.
+  // distinguish between an empty list and a not existent property.
   // Therefore, we clean this up here.
-  return metadata.map((prop) => {
-    // If stringList value is defined, but it's an empty array, it should
-    // be switched to undefined
-    const needsCorrection =
-      prop.stringListValue != null &&
-      prop.stringListValue.length === 0 &&
-      (prop.stringValue != null || prop.numberValue != null || prop.boolValue != null);
-    if (needsCorrection) {
-      return {
-        ...prop,
-        stringListValue: undefined,
-      };
-    }
-    return prop;
-  });
+  // Additionally, we ensure uniqueness of the metadata keys just to be
+  // extra safe. Actually, duplicate keys should never be saved to the back-end,
+  // as duplicate keys will collapse during diffing and only one of the entries
+  // will survive.
+  return uniqBy(
+    metadata.map((prop) => {
+      // If stringList value is defined, but it's an empty array, it should
+      // be switched to undefined
+      const needsCorrection =
+        prop.stringListValue != null &&
+        prop.stringListValue.length === 0 &&
+        (prop.stringValue != null || prop.numberValue != null || prop.boolValue != null);
+      if (needsCorrection) {
+        return {
+          ...prop,
+          stringListValue: undefined,
+        };
+      }
+      return prop;
+    }),
+    (entry) => entry.key,
+  );
 }
 
 export default SkeletonTracingReducer;

@@ -1,6 +1,6 @@
 import update from "immutability-helper";
-import { initialSkeletonTracing, colorLayer } from "./hybridtracing_object";
 import defaultState from "viewer/default_state";
+import { colorLayer, initialSkeletonTracing } from "./hybridtracing_object";
 
 export const initialState = update(defaultState, {
   annotation: {
@@ -9,6 +9,11 @@ export const initialState = update(defaultState, {
     },
     readOnly: {
       $set: null,
+    },
+  },
+  localSkeletonState: {
+    activeTreeId: {
+      $set: 1,
     },
   },
   dataset: {

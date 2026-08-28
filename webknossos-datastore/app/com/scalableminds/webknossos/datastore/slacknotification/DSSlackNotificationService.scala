@@ -5,15 +5,17 @@ import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 
-class DSSlackNotificationService @Inject()(rpc: RPC, config: DataStoreConfig) extends LazyLogging {
-  private lazy val slackClient = new SlackClient(rpc,
-                                                 config.SlackNotifications.uri,
-                                                 name = s"WEBKNOSSOS datastore at ${config.Http.uri}",
-                                                 config.SlackNotifications.verboseLoggingEnabled)
+class DSSlackNotificationService @Inject() (rpc: RPC, config: DataStoreConfig) extends LazyLogging {
+  private lazy val slackClient = new SlackClient(
+    rpc,
+    config.SlackNotifications.uri,
+    name = s"WEBKNOSSOS datastore at ${config.Http.uri}",
+    config.SlackNotifications.verboseLoggingEnabled
+  )
 
   def noticeSlowRequest(msg: String): Unit =
     slackClient.info(
-      title = s"Slow request",
+      title = "Slow request",
       msg = msg
     )
 
@@ -25,13 +27,13 @@ class DSSlackNotificationService @Inject()(rpc: RPC, config: DataStoreConfig) ex
 
   def noticeFailedUploadRequest(msg: String): Unit =
     slackClient.warn(
-      title = "Failed upload request",
+      title = "Failed dataset upload request",
       msg = msg
     )
 
-  def noticeTooLargeUploadChunkRequest(msg: String): Unit =
+  def noticeTooLargeUploadRequest(msg: String): Unit =
     slackClient.warn(
-      title = "Too large total upload",
+      title = "Too large dataset upload",
       msg = msg
     )
 }

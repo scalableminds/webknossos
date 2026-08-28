@@ -1,9 +1,11 @@
 import app from "app";
-import type UpdatableTexture from "libs/UpdatableTexture";
 import type { CuckooTableVec5 } from "libs/cuckoo/cuckoo_table_vec5";
+import type UpdatableTexture from "libs/UpdatableTexture";
 import { waitForCondition } from "libs/utils";
 import window from "libs/window";
-import _ from "lodash";
+import noop from "lodash-es/noop";
+import range from "lodash-es/range";
+import uniqBy from "lodash-es/uniqBy";
 import type { DataTexture } from "three";
 import type { ElementClass } from "types/api_types";
 import { WkDevFlags } from "viewer/api/wk_dev";
@@ -58,11 +60,11 @@ function maybePadRgbData(src: TypedArray, elementClass: ElementClass) {
   let idx = 0;
   let srcIdx = 0;
   while (srcIdx < 3 * constants.BUCKET_SIZE) {
-    // @ts-ignore BigInt is not a problem as this code here only handles uint24 data
+    // @ts-expect-error BigInt is not a problem as this code here only handles uint24 data
     tmpPaddingBuffer[idx++] = src[srcIdx++];
-    // @ts-ignore BigInt is not a problem as this code here only handles uint24 data
+    // @ts-expect-error BigInt is not a problem as this code here only handles uint24 data
     tmpPaddingBuffer[idx++] = src[srcIdx++];
-    // @ts-ignore BigInt is not a problem as this code here only handles uint24 data
+    // @ts-expect-error BigInt is not a problem as this code here only handles uint24 data
     tmpPaddingBuffer[idx++] = src[srcIdx++];
     tmpPaddingBuffer[idx++] = 255;
   }
@@ -93,6 +95,8 @@ export default class TextureBucketManager {
   packingDegree: number;
   elementClass: ElementClass;
   isDestroyed: boolean = false;
+  private areTexturesReady: boolean = false;
+  private isWriterQueueProcessingScheduled: boolean = false;
 
   constructor(textureWidth: number, dataTextureCount: number, elementClass: ElementClass) {
     // If there is one byte per voxel, we pack 4 bytes into one texel (packingDegree = 4)
@@ -102,7 +106,7 @@ export default class TextureBucketManager {
     this.maximumCapacity = getBucketCapacity(dataTextureCount, textureWidth, this.packingDegree);
     this.textureWidth = textureWidth;
     this.dataTextureCount = dataTextureCount;
-    this.freeIndexSet = new Set(_.range(this.maximumCapacity));
+    this.freeIndexSet = new Set(range(this.maximumCapacity));
     this.dataTextures = [];
   }
 
@@ -111,7 +115,23 @@ export default class TextureBucketManager {
       () =>
         this.lookUpCuckooTable?._texture.isInitialized() && this.dataTextures[0].isInitialized(),
     );
+    this.areTexturesReady = true;
     this.processWriterQueue();
+  }
+
+  // Schedules a processWriterQueue call for the next animation frame (if
+  // none is scheduled yet). The queue processing is event-driven (triggered
+  // by new writerQueue entries) instead of an unconditional rAF loop so that
+  // the tab can idle when there is nothing to write.
+  private scheduleWriterQueueProcessing() {
+    if (this.isWriterQueueProcessingScheduled || !this.areTexturesReady || this.isDestroyed) {
+      return;
+    }
+    this.isWriterQueueProcessingScheduled = true;
+    window.requestAnimationFrame(() => {
+      this.isWriterQueueProcessingScheduled = false;
+      this.processWriterQueue();
+    });
   }
 
   clear() {
@@ -184,12 +204,17 @@ export default class TextureBucketManager {
       // Avoid new requestAnimationFrame
       return;
     }
+    if (this.writerQueue.length === 0) {
+      // Nothing to do. The loop will be restarted when new entries are
+      // enqueued (see scheduleWriterQueueProcessing).
+      return;
+    }
     // uniqBy removes multiple write-buckets-requests for the same index.
     // It preserves the first occurrence of each duplicate, which is why
     // this queue has to be filled from the front (via unshift) und read from the
     // back (via pop). This ensures that the newest bucket "wins" if there are
     // multiple buckets for the same index.
-    this.writerQueue = _.uniqBy(this.writerQueue, (el) => el._index);
+    this.writerQueue = uniqBy(this.writerQueue, (el) => el._index);
     const maxTimePerFrame = 16;
     const startingTime = performance.now();
     const packedBucketSize = this.getPackedBucketSize();
@@ -254,9 +279,10 @@ export default class TextureBucketManager {
       app.vent.emit("rerender");
     }
 
-    window.requestAnimationFrame(() => {
-      this.processWriterQueue();
-    });
+    if (this.writerQueue.length > 0) {
+      // The time budget was exhausted. Continue in the next frame.
+      this.scheduleWriterQueueProcessing();
+    }
   }
 
   getTextures(): Array<DataTexture | UpdatableTexture> {
@@ -313,11 +339,12 @@ export default class TextureBucketManager {
         bucket,
         _index,
       });
+      this.scheduleWriterQueueProcessing();
     };
 
     enqueueBucket(index);
-    let unlistenToLoadedFn = _.noop;
-    let unlistenToLabeledFn = _.noop;
+    let unlistenToLoadedFn = noop;
+    let unlistenToLabeledFn = noop;
 
     const updateBucketData = () => {
       // Check that the bucket is still in the data texture.
@@ -348,7 +375,7 @@ export default class TextureBucketManager {
       texture.dispose();
     }
     this.dataTextures = [];
-    // @ts-ignore
+    // @ts-expect-error
     this.lookUpCuckooTable = null;
     this.isDestroyed = true;
     this.activeBucketToIndexMap = new Map();

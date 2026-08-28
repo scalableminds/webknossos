@@ -1,13 +1,13 @@
 import type { ActionPattern } from "redux-saga/effects";
 import { call, put, takeEvery } from "typed-redux-saga";
 import getSceneController from "viewer/controller/scene_controller_provider";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import { getActiveTree } from "../accessors/skeletontracing_accessor";
 import { Toolkit } from "../accessors/tool_accessor";
 import type { Action } from "../actions/actions";
 import { setTreeEdgeVisibilityAction } from "../actions/skeletontracing_actions";
-import { ensureWkReady } from "./ready_sagas";
+import { ensureWkInitialized } from "./ready_sagas";
 import { takeWithBatchActionSupport } from "./saga_helpers";
 
 // The clean up function removes the surface from the scene controller.
@@ -51,7 +51,7 @@ function* updateSplitBoundaryMesh() {
 
   const sceneController = yield* call(getSceneController);
 
-  const activeTree = yield* select((state) => getActiveTree(state.annotation.skeleton));
+  const activeTree = yield* select((state) => getActiveTree(state));
 
   if (activeTree?.treeId !== temporarilyChangedTreeInfo?.treeId) {
     // The active tree changed.
@@ -82,11 +82,11 @@ function* updateSplitBoundaryMesh() {
   }
 }
 
-export function* splitBoundaryMeshSaga(): Saga<void> {
+function* splitBoundaryMeshSaga(): Saga<void> {
   cleanUpFn = null;
   temporarilyChangedTreeInfo = null;
   yield* takeWithBatchActionSupport("INITIALIZE_SKELETONTRACING");
-  yield* ensureWkReady();
+  yield* ensureWkInitialized();
 
   // Call once for initial rendering
   yield* call(updateSplitBoundaryMesh);

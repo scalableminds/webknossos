@@ -1,29 +1,35 @@
+import { getRandomColor } from "libs/colors";
+import { handleGenericError } from "libs/error_handling";
 import { V3 } from "libs/mjs";
 import createProgressCallback from "libs/progress_callback";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
 import window from "libs/window";
-import _ from "lodash";
+import memoize from "lodash-es/memoize";
+import range from "lodash-es/range";
+import zip from "lodash-es/zip";
 import { call, put } from "typed-redux-saga";
-import type { APISegmentationLayer } from "types/api_types";
-import type { AdditionalCoordinate } from "types/api_types";
+import type { AdditionalCoordinate, APISegmentationLayer } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { TypedArray, Vector3 } from "viewer/constants";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
+import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import {
   enforceActiveVolumeTracing,
   getActiveSegmentationTracingLayer,
 } from "viewer/model/accessors/volumetracing_accessor";
-import type { Action } from "viewer/model/actions/actions";
+import { dispatchGetNewIdAsync } from "viewer/model/actions/actions";
 import { addUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
-import { finishAnnotationStrokeAction } from "viewer/model/actions/volumetracing_actions";
+import {
+  finishAnnotationStrokeAction,
+  type PerformMinCutAction,
+} from "viewer/model/actions/volumetracing_actions";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import type { MagInfo } from "viewer/model/helpers/mag_info";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
-import { takeEveryUnlessBusy } from "viewer/model/sagas/saga_helpers";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
+import { takeEveryInOperationContext } from "viewer/model/sagas/saga_helpers";
 import type { MutableNode, Node } from "viewer/model/types/tree_types";
-import { api } from "viewer/singletons";
+import { api, Store } from "viewer/singletons";
 
 // By default, a new bounding box is created around
 // the seed nodes with a padding. Within the bounding box
@@ -98,7 +104,9 @@ const NEIGHBOR_LOOKUP: Vector3[] = [
   [1, 0, 0],
 ];
 // neighborToIndex is a mapping from neighbor to neighbor index (e.g., neighbor [0, -1, 0] ==> idx=1)
-const neighborToIndex = new Map(_.zip(NEIGHBOR_LOOKUP, _.range(NEIGHBOR_LOOKUP.length)));
+const neighborToIndex = new Map(
+  zip(NEIGHBOR_LOOKUP, range(NEIGHBOR_LOOKUP.length)) as Array<[Vector3, number]>,
+);
 
 function getNeighborIdx(neighbor: Vector3): number {
   const neighborIdx = neighborToIndex.get(neighbor);
@@ -152,7 +160,7 @@ function _getNeighborsFromBitMask(bitMask: number): { ingoing: Vector3[]; outgoi
   return neighbors;
 }
 
-const getNeighborsFromBitMask = _.memoize(_getNeighborsFromBitMask);
+const getNeighborsFromBitMask = memoize(_getNeighborsFromBitMask);
 
 // Functions to add/remove edges which mutate the bitmask.
 function addOutgoingEdge(edgeBuffer: Uint16Array, idx: number, neighborIdx: number) {
@@ -196,11 +204,7 @@ type LL = (vec: Vector3) => number;
 // the min-cut in better mags. As a result, the cut is initially drawn
 // "with broad/fast strokes" and the final details are solved in higher
 // mags.
-function* performMinCut(action: Action): Saga<void> {
-  if (action.type !== "PERFORM_MIN_CUT") {
-    throw new Error("Satisfy typescript.");
-  }
-
+function* performMinCut(action: PerformMinCutAction): Saga<void> {
   const skeleton = yield* select((store) => store.annotation.skeleton);
 
   if (!skeleton) {
@@ -252,17 +256,35 @@ function* performMinCut(action: Action): Saga<void> {
         ),
       ),
     };
+    let newBBoxId: number;
+    try {
+      const tracingStoringBBoxes = yield* select((state) => getSomeTracing(state.annotation));
+      newBBoxId = yield* call(
+        dispatchGetNewIdAsync,
+        Store.dispatch,
+        tracingStoringBBoxes.tracingId,
+        "BoundingBox",
+      );
+    } catch (error) {
+      handleGenericError(
+        error as Error,
+        "Could not create a bounding box for the min-cut operation.",
+      );
+      return;
+    }
     yield* put(
-      addUserBoundingBoxAction({
-        boundingBox: newBBox,
-        name: `Bounding box used for splitting cell (seedA=(${nodes[0].untransformedPosition.join(
-          ",",
-        )}), seedB=(${nodes[1].untransformedPosition.join(
-          ",",
-        )}), timestamp=${new Date().getTime()})`,
-        color: Utils.getRandomColor(),
-        isVisible: true,
-      }),
+      addUserBoundingBoxAction(
+        {
+          boundingBox: newBBox,
+          name: `Bounding box used for splitting cell (seedA=(${nodes[0].untransformedPosition.join(
+            ",",
+          )}), seedB=(${nodes[1].untransformedPosition.join(",")}), timestamp=${Date.now()})`,
+          color: getRandomColor(),
+          isVisible: true,
+        },
+        undefined,
+        newBBoxId,
+      ),
     );
     boundingBoxObj = newBBox;
   }
@@ -817,16 +839,16 @@ function labelDeletedEdges(
                   for (let dx = 0; dx < targetMag[0]; dx++) {
                     api.data.labelVoxels(
                       [V3.add(position, [dx, dy, dz])],
-                      0,
+                      0n,
                       additionalCoordinates,
                     );
                   }
                 }
               }
 
-              // @ts-ignore
+              // @ts-expect-error
               if (window.visualizeRemovedVoxelsOnMinCut) {
-                // @ts-ignore
+                // @ts-expect-error
                 window.addVoxelMesh(position, targetMag);
               }
             }
@@ -838,5 +860,8 @@ function labelDeletedEdges(
 }
 
 export default function* listenToMinCut(): Saga<void> {
-  yield* takeEveryUnlessBusy("PERFORM_MIN_CUT", performMinCut, "Min-cut is being computed.");
+  yield* takeEveryInOperationContext("PERFORM_MIN_CUT", performMinCut, {
+    id: "MIN_CUT",
+    description: "Min-cut is being computed.",
+  });
 }

@@ -1,4 +1,4 @@
-import { type Emitter, createNanoEvents } from "nanoevents";
+import { createNanoEvents, type Emitter } from "nanoevents";
 
 type ActionPayload = {
   type: string;

@@ -1,4 +1,4 @@
-import _ from "lodash";
+import pick from "lodash-es/pick";
 import { layerViewConfiguration } from "./dataset_view_configuration.schema";
 
 export default {
@@ -28,18 +28,22 @@ export default {
       ],
     },
     "types::ViewMode": {
-      enum: ["orthogonal", "oblique", "flight", "volume"],
+      enum: ["orthogonal", "flight", "volume"],
     },
     "types::MappingType": {
       type: ["string", "null"],
-      default: "HDF5",
-      description: "If value is 'JSON', it is kept. Any other string is treated as 'HDF5'.",
+      default: "AGGLOMERATE",
+      description:
+        "If value is 'JSON', it is kept. Any other string (e.g., the legacy value 'HDF5') is treated as 'AGGLOMERATE'.",
     },
     "types::Mesh": {
       type: "object",
       properties: {
+        // A number is the legacy encoding (kept for permanent backward-compatibility with old
+        // shared URLs); a string is the unsigned-decimal encoding used for ids that may exceed
+        // the JS Number safe-integer range.
         segmentId: {
-          type: "number",
+          type: ["number", "string"],
         },
         seedPosition: {
           $ref: "#/definitions/types::Vector3",
@@ -94,6 +98,31 @@ export default {
       additionalProperties: false,
       required: ["isPrecomputed"],
     },
+    "types::TdCamera": {
+      type: "object",
+      properties: {
+        position: {
+          $ref: "#/definitions/types::Vector3",
+        },
+        up: {
+          $ref: "#/definitions/types::Vector3",
+        },
+        left: {
+          type: "number",
+        },
+        right: {
+          type: "number",
+        },
+        top: {
+          type: "number",
+        },
+        bottom: {
+          type: "number",
+        },
+      },
+      additionalProperties: false,
+      required: ["position", "up", "left", "right", "top", "bottom"],
+    },
     "types::UrlStateByLayer": {
       type: "object",
       additionalProperties: {
@@ -112,7 +141,7 @@ export default {
                 type: "array",
                 items: [
                   {
-                    type: "number",
+                    type: ["number", "string"],
                   },
                 ],
               },
@@ -153,7 +182,7 @@ export default {
                 type: "array",
                 items: [
                   {
-                    type: "number",
+                    type: ["number", "string"],
                   },
                 ],
               },
@@ -161,7 +190,7 @@ export default {
             additionalProperties: false,
             required: ["connectomeName"],
           },
-          ..._.pick(layerViewConfiguration, [
+          ...pick(layerViewConfiguration, [
             "isDisabled",
             "intensityRange",
             "color",
@@ -198,6 +227,15 @@ export default {
         },
         nativelyRenderedLayerName: {
           type: ["string", "null"],
+        },
+        clippingDistance: {
+          type: "number",
+        },
+        clipSkeletonToCurrentSection: {
+          type: "boolean",
+        },
+        tdCamera: {
+          $ref: "#/definitions/types::TdCamera",
         },
       },
       additionalProperties: false,

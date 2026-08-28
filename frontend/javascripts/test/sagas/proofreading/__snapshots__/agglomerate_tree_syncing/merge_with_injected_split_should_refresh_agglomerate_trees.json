@@ -1,0 +1,69 @@
+[
+  [
+    {
+      "name": "mergeAgglomerate",
+      "value": {
+        "actionTracingId": "volumeTracingId",
+        "agglomerateId1": 4n,
+        "agglomerateId2": 1n,
+        "segmentId1": 4n,
+        "segmentId2": 1n,
+      },
+    },
+  ],
+  [
+    {
+      "name": "mergeSegmentItems",
+      "value": {
+        "actionTracingId": "volumeTracingId",
+        "agglomerateId1": 4n,
+        "agglomerateId2": 1n,
+        "segmentId1": 4n,
+        "segmentId2": 1n,
+      },
+    },
+  ],
+  [
+    {
+      "name": "updateSegmentPartial",
+      "value": {
+        "actionTracingId": "volumeTracingId",
+        "anchorPosition": [
+          4,
+          4,
+          4,
+        ],
+        "id": 4n,
+      },
+    },
+  ],
+  [
+    {
+      "name": "moveTreeComponent",
+      "value": {
+        "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        "nodeIds": [
+          4,
+        ],
+        "sourceId": 3,
+        "targetId": 5,
+      },
+    },
+    {
+      "name": "deleteTree",
+      "value": {
+        "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        "id": 3,
+      },
+    },
+    {
+      "name": "createEdge",
+      "value": {
+        "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        "source": 9,
+        "target": 4,
+        "treeId": 5,
+      },
+    },
+  ],
+]

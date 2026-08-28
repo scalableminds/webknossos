@@ -1,8 +1,9 @@
 package controllers
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.objectid.ObjectId
 import play.silhouette.api.Silhouette
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import models.shortlinks.{ShortLink, ShortLinkDAO}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
@@ -12,26 +13,25 @@ import utils.WkConf
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class ShortLinkController @Inject()(shortLinkDAO: ShortLinkDAO, sil: Silhouette[WkEnv], wkConf: WkConf)(
-    implicit ec: ExecutionContext,
-    val bodyParsers: PlayBodyParsers)
-    extends Controller
-    with FoxImplicits {
+class ShortLinkController @Inject() (shortLinkDAO: ShortLinkDAO, sil: Silhouette[WkEnv], wkConf: WkConf)(implicit
+    ec: ExecutionContext,
+    val bodyParsers: PlayBodyParsers
+) extends Controller {
 
-  def create: Action[String] = sil.UserAwareAction.async(validateJson[String]) { implicit request =>
+  def create: Action[String] = sil.UserAwareAction.fox(validateJson[String]) { implicit request =>
     val longLink = request.body
     val _id = ObjectId.generate
     val key = RandomIDGenerator.generateBlocking(12)
     for {
       _ <- Fox.fromBool(longLink.startsWith(wkConf.Http.uri)) ?~> "Could not generate short link: URI does not match"
-      _ <- shortLinkDAO.insertOne(ShortLink(_id, key, longLink)) ?~> "create.failed"
+      _ <- shortLinkDAO.insertOne(ShortLink(_id, key, longLink)) ?~> "Could not create short link."
       inserted <- shortLinkDAO.findOne(_id)
     } yield Ok(Json.toJson(inserted))
   }
 
-  def getByKey(key: String): Action[AnyContent] = Action.async { implicit request =>
+  def getByKey(key: String): Action[AnyContent] = Action.fox { _ =>
     for {
-      shortLink <- shortLinkDAO.findOneByKey(key) ?~> "shortLink.notFound"
+      shortLink <- shortLinkDAO.findOneByKey(key) ?~> Msg.shortLinkNotFound
     } yield Ok(Json.toJson(shortLink))
   }
 }

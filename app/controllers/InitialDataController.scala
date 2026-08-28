@@ -1,25 +1,28 @@
 package controllers
 
-import play.silhouette.api.{LoginInfo, Silhouette}
+import com.scalableminds.util.Msg
+import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.box.Full
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
-import models.aimodels.{AiModel, AiModelCategory, AiModelDAO}
+import models.aimodels.{AiModel, AiModelCategory, AiModelDAO, AiModelService}
 import models.annotation.{TracingStore, TracingStoreDAO}
-import models.dataset._
+import models.dataset.*
 import models.folder.{Folder, FolderDAO, FolderService}
 import models.project.{Project, ProjectDAO}
 import models.task.{TaskType, TaskTypeDAO}
-import models.team._
-import models.user._
-import com.scalableminds.util.tools.Full
+import models.team.*
+import models.user.*
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
+import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import com.scalableminds.webknossos.datastore.models.datasource.{
+  AdditionalAxis,
   DataFormat,
   DataSourceId,
   ElementClass,
@@ -31,53 +34,55 @@ import play.api.libs.json.{JsArray, Json}
 import utils.{StoreModules, WkConf}
 
 import javax.inject.Inject
-import models.organization.{Organization, OrganizationDAO, OrganizationService}
+import models.organization.{AiPlan, Organization, OrganizationDAO, OrganizationService, PricingPlan}
 import play.api.mvc.{Action, AnyContent}
 import security.{Token, TokenDAO, TokenType, WkEnv}
 
 import scala.concurrent.ExecutionContext
 
-class InitialDataController @Inject()(initialDataService: InitialDataService, sil: Silhouette[WkEnv])(
-    implicit ec: ExecutionContext)
-    extends Controller
-    with FoxImplicits {
+class InitialDataController @Inject() (initialDataService: InitialDataService, sil: Silhouette[WkEnv])(implicit
+    ec: ExecutionContext
+) extends Controller {
 
-  def triggerInsert: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+  def triggerInsert: Action[AnyContent] = sil.UserAwareAction.fox { _ =>
     for {
       _ <- initialDataService.insert
     } yield Ok
   }
 }
 
-class InitialDataService @Inject()(userService: UserService,
-                                   userDAO: UserDAO,
-                                   datasetDAO: DatasetDAO,
-                                   datasetLayerDAO: DatasetLayerDAO,
-                                   multiUserDAO: MultiUserDAO,
-                                   userExperiencesDAO: UserExperiencesDAO,
-                                   taskTypeDAO: TaskTypeDAO,
-                                   dataStoreDAO: DataStoreDAO,
-                                   folderDAO: FolderDAO,
-                                   aiModelDAO: AiModelDAO,
-                                   folderService: FolderService,
-                                   tracingStoreDAO: TracingStoreDAO,
-                                   teamDAO: TeamDAO,
-                                   tokenDAO: TokenDAO,
-                                   projectDAO: ProjectDAO,
-                                   publicationDAO: PublicationDAO,
-                                   organizationDAO: OrganizationDAO,
-                                   storeModules: StoreModules,
-                                   organizationService: OrganizationService,
-                                   conf: WkConf)(implicit ec: ExecutionContext)
-    extends FoxImplicits
-    with LazyLogging {
+class InitialDataService @Inject() (
+    userService: UserService,
+    userDAO: UserDAO,
+    datasetDAO: DatasetDAO,
+    datasetLayerDAO: DatasetLayerDAO,
+    multiUserDAO: MultiUserDAO,
+    userExperiencesDAO: UserExperiencesDAO,
+    taskTypeDAO: TaskTypeDAO,
+    dataStoreDAO: DataStoreDAO,
+    folderDAO: FolderDAO,
+    aiModelDAO: AiModelDAO,
+    aiModelService: AiModelService,
+    folderService: FolderService,
+    tracingStoreDAO: TracingStoreDAO,
+    teamDAO: TeamDAO,
+    tokenDAO: TokenDAO,
+    projectDAO: ProjectDAO,
+    publicationDAO: PublicationDAO,
+    organizationDAO: OrganizationDAO,
+    storeModules: StoreModules,
+    organizationService: OrganizationService,
+    conf: WkConf
+)(implicit ec: ExecutionContext)
+    extends LazyLogging {
   implicit val ctx: GlobalAccessContext.type = GlobalAccessContext
 
   private val defaultUserEmail = conf.WebKnossos.SampleOrganization.User.email
   private val defaultUserEmail2 = conf.WebKnossos.SampleOrganization.User.email2
   private val defaultUserPassword = conf.WebKnossos.SampleOrganization.User.password
   private val defaultUserToken = conf.WebKnossos.SampleOrganization.User.token
-  private val additionalInformation = """**Sample Organization**
+  private val additionalInformation =
+    """**Sample Organization**
 
 Sample Street 123
 Sampletown
@@ -88,9 +93,10 @@ Samplecountry
     Organization(
       "sample_organization",
       additionalInformation,
-      "/assets/images/logo.svg",
+      "/images/logo.svg",
       "Sample Organization",
       PricingPlan.Custom,
+      Some(AiPlan.Power_AI),
       None,
       None,
       None,
@@ -106,6 +112,8 @@ Samplecountry
     multiUserId,
     defaultUserEmail,
     userService.createPasswordInfo(defaultUserPassword),
+    "Sample",
+    "User",
     isSuperUser = conf.WebKnossos.SampleOrganization.User.isSuperUser,
     isEmailVerified = true
   )
@@ -113,11 +121,8 @@ Samplecountry
     userId,
     multiUserId,
     defaultOrganization._id,
-    "Sample",
-    "User",
     Instant.now,
     Json.obj(),
-    userService.createLoginInfo(userId),
     isAdmin = true,
     isOrganizationOwner = true,
     isDatasetManager = true,
@@ -129,6 +134,8 @@ Samplecountry
     multiUserId2,
     defaultUserEmail2,
     userService.createPasswordInfo(defaultUserPassword),
+    "Non-Admin",
+    "User",
     isSuperUser = false,
     isEmailVerified = true
   )
@@ -136,11 +143,8 @@ Samplecountry
     userId2,
     multiUserId2,
     defaultOrganization._id,
-    "Non-Admin",
-    "User",
     Instant.now,
     Json.obj(),
-    userService.createLoginInfo(userId2),
     isAdmin = false,
     isOrganizationOwner = false,
     isDatasetManager = false,
@@ -154,21 +158,94 @@ Samplecountry
     Some("https://static.webknossos.org/images/icon-only.svg"),
     Some("Dummy Title that is usually very long and contains highly scientific terms"),
     Some(
-      "This is a wonderful dummy publication, it has authors, it has a link, it has a doi number, those could go here.\nLorem [ipsum](https://github.com/scalableminds/webknossos) dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.")
+      "This is a wonderful dummy publication, it has authors, it has a link, it has a doi number, those could go here.\nLorem [ipsum](https://github.com/scalableminds/webknossos) dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua."
+    )
   )
   private val defaultDataStore =
     DataStore(conf.Datastore.name, conf.Http.uri, conf.Datastore.publicUri.getOrElse(conf.Http.uri), conf.Datastore.key)
+
   private val defaultAiModel = AiModel(
-    ObjectId("66544a56d20000af0e42ba0f"),
-    defaultOrganization._id,
-    List(),
-    defaultDataStore.name,
-    defaultUser._id,
-    None,
-    List.empty,
-    "sample_ai_model",
-    Some("Works if model files are manually placed at binaryData/sample_organization/66544a56d20000af0e42ba0f/"),
-    Some(AiModelCategory.em_neurons)
+    _id = ObjectId("66544a56d20000af0e42ba0f"),
+    _organization = Some(defaultOrganization._id),
+    _sharedOrganizations = List(),
+    _dataStore = defaultDataStore.name,
+    _user = Some(defaultUser._id),
+    _trainingJob = None,
+    _trainingAnnotations = List.empty,
+    path = None,
+    uploadToPathIsPending = false,
+    name = "sample_ai_model",
+    comment =
+      Some("Works if model files are manually placed at binaryData/sample_organization/66544a56d20000af0e42ba0f/"),
+    category = Some(AiModelCategory.em_neurons)
+  )
+  private val pretrainedNeuronModel = AiModel(
+    _id = aiModelService.pretrainedNeuronModelId,
+    _organization = None,
+    _sharedOrganizations = List(),
+    _dataStore = defaultDataStore.name,
+    _user = None,
+    _trainingJob = None,
+    _trainingAnnotations = List.empty,
+    path = None,
+    uploadToPathIsPending = false,
+    name = "Neuron Segmentation",
+    comment = Some(
+      "Advanced neuron segmentation and reconstruction pipeline. Optimized for dense neuronal tissue from SEM, FIB-SEM, SBEM, Multi-SEM microscopes."
+    ),
+    category = Some(AiModelCategory.em_neurons),
+    isSuperUserOnly = false,
+    isPretrained = true
+  )
+  private val pretrainedMitochondriaModel = AiModel(
+    _id = aiModelService.pretrainedMitochondriaModelId,
+    _organization = None,
+    _sharedOrganizations = List(),
+    _dataStore = defaultDataStore.name,
+    _user = None,
+    _trainingJob = None,
+    _trainingAnnotations = List.empty,
+    path = None,
+    uploadToPathIsPending = false,
+    name = "Mitochondria Detection",
+    comment = Some(
+      "Instance segmentation model for mitochondria detection. Optimized for EM data. Powered by [MitoNet (Conrad & Narayan 2022)](https://volume-em.github.io/empanada)."
+    ),
+    category = Some(AiModelCategory.em_mitochondria),
+    isSuperUserOnly = false,
+    isPretrained = true
+  )
+  private val pretrainedNucleiModel = AiModel(
+    _id = aiModelService.pretrainedNucleiModelId,
+    _organization = None,
+    _sharedOrganizations = List(),
+    _dataStore = defaultDataStore.name,
+    _user = None,
+    _trainingJob = None,
+    _trainingAnnotations = List.empty,
+    path = None,
+    uploadToPathIsPending = false,
+    name = "Nuclei Detection",
+    comment = Some("Instance segmentation model for nuclei detection. Optimized for EM data."),
+    category = Some(AiModelCategory.em_nuclei),
+    isSuperUserOnly = true,
+    isPretrained = true
+  )
+  private val pretrainedSomaModel = AiModel(
+    _id = aiModelService.pretrainedSomataModelId,
+    _organization = None,
+    _sharedOrganizations = List(),
+    _dataStore = defaultDataStore.name,
+    _user = None,
+    _trainingJob = None,
+    _trainingAnnotations = List.empty,
+    path = None,
+    uploadToPathIsPending = false,
+    name = "Soma Detection",
+    comment = Some("Instance segmentation model for soma detection. Optimized for EM data."),
+    category = Some(AiModelCategory.em_somata),
+    isSuperUserOnly = true,
+    isPretrained = true
   )
   private val defaultDataSource = UsableDataSource(
     id = DataSourceId("l4_sample_remote", defaultOrganization._id),
@@ -232,7 +309,7 @@ Samplecountry
               Some(UPath.fromStringUnsafe("https://static.webknossos.org/data/zarr_v3/l4_sample/segmentation/16-16-4"))
           )
         ),
-        largestSegmentId = Some(2504697),
+        largestSegmentId = Some(2504697)
       )
     ),
     scale = VoxelSize(Vec3Double(11.239999771118164, 11.239999771118164, 28), LengthUnit.nanometer)
@@ -258,6 +335,73 @@ Samplecountry
     sharingToken = None,
     status = "",
     logoUrl = None,
+    metadata = Json.arr(
+      Json.obj("key" -> "species", "type" -> "string", "value" -> "mouse"),
+      Json.obj("key" -> "acquisition", "type" -> "string", "value" -> "SBEM")
+    )
+  )
+
+  private val remoteNDZarrDataSource = UsableDataSource(
+    id = DataSourceId("tubhiswt-4D", defaultOrganization._id),
+    dataLayers = List(
+      StaticColorLayer(
+        name = "channel0",
+        dataFormat = DataFormat.zarr,
+        boundingBox = BoundingBox(Vec3Int(0, 0, 0), 512, 512, 10),
+        elementClass = ElementClass.uint8,
+        additionalAxes = Some(Seq(AdditionalAxis("t", Seq(0, 43), 0))),
+        mags = List(
+          MagLocator(
+            mag = Vec3Int(1, 1, 1),
+            axisOrder = Some(AxisOrder(4, 3, Some(2), Some(1))),
+            channelIndex = Some(0),
+            path = Some(UPath.fromStringUnsafe("s3://gs-public-zarr-archive/tubhiswt-4D.ome.zarr/0/0"))
+          )
+        )
+      ),
+      StaticColorLayer(
+        name = "channel1",
+        dataFormat = DataFormat.zarr,
+        boundingBox = BoundingBox(Vec3Int(0, 0, 0), 512, 512, 10),
+        elementClass = ElementClass.uint8,
+        additionalAxes = Some(Seq(AdditionalAxis("t", Seq(0, 43), 0))),
+        mags = List(
+          MagLocator(
+            mag = Vec3Int(1, 1, 1),
+            axisOrder = Some(AxisOrder(4, 3, Some(2), Some(1))),
+            channelIndex = Some(1),
+            path = Some(UPath.fromStringUnsafe("s3://gs-public-zarr-archive/tubhiswt-4D.ome.zarr/0/1"))
+          )
+        )
+      )
+    ),
+    scale = VoxelSize(Vec3Double(1, 1, 1), LengthUnit.nanometer)
+  )
+
+  private val remoteNDZarrDataset = Dataset(
+    _id = ObjectId("05c85a876c4c979ef53752b4"),
+    _dataStore = defaultDataStore.name,
+    _organization = defaultOrganization._id,
+    _publication = None,
+    _uploader = Some(defaultUser._id),
+    _folder = defaultOrganization._rootFolder,
+    inboxSourceHash = Some(remoteNDZarrDataSource.hashCode()),
+    defaultViewConfiguration = None,
+    adminViewConfiguration = None,
+    description = Some("Remote OME-Zarr dataset from S3"),
+    directoryName = remoteNDZarrDataSource.id.directoryName,
+    isPublic = true,
+    isUsable = true,
+    isVirtual = true,
+    name = "tubhiswt-4D OME-Zarr",
+    voxelSize = Some(remoteNDZarrDataSource.scale),
+    sharingToken = None,
+    status = "",
+    logoUrl = None,
+    metadata = Json.arr(
+      Json.obj("key" -> "source", "type" -> "string", "value" -> "s3://gs-public-zarr-archive/tubhiswt-4D.ome.zarr/0"),
+      Json.obj("key" -> "format", "type" -> "string", "value" -> "ome-zarr")
+    )
   )
 
   def insert: Fox[Unit] =
@@ -266,6 +410,8 @@ Samplecountry
       _ <- updateLocalTracingStorePublicUri()
       _ <- insertLocalDataStoreIfEnabled()
       _ <- insertLocalTracingStoreIfEnabled()
+      _ <- insertPretrainedAiModels()
+      // All insert calls below this assertion are only executed in the dev setup (where initialDataEnabled is true)!
       _ <- assertInitialDataEnabled
       _ <- organizationService.assertNoOrganizationsPresent
       _ <- insertRootFolder()
@@ -279,47 +425,53 @@ Samplecountry
       _ <- insertProject()
       _ <- insertPublication()
       _ <- insertDataset()
-      _ <- insertAiModel()
+      _ <- insertRemoteNDDataset()
+      _ <- insertCustomAiModel()
+
     } yield ()
 
   private def assertInitialDataEnabled: Fox[Unit] =
     for {
-      _ <- Fox.fromBool(conf.WebKnossos.SampleOrganization.enabled) ?~> "initialData.notEnabled"
+      _ <- Fox.fromBool(conf.WebKnossos.SampleOrganization.enabled) ?~> Msg.initialDataNotEnabled
     } yield ()
 
   private def insertRootFolder(): Fox[Unit] =
     folderDAO.findOne(defaultOrganization._rootFolder).shiftBox.flatMap {
       case Full(_) => Fox.successful(())
-      case _ =>
+      case _       =>
         folderDAO.insertAsRoot(Folder(defaultOrganization._rootFolder, folderService.defaultRootName, JsArray.empty))
     }
 
-  private def insertDefaultUser(userEmail: String,
-                                multiUser: MultiUser,
-                                user: User,
-                                isTeamManager: Boolean): Fox[Unit] =
+  private def insertDefaultUser(
+      userEmail: String,
+      multiUser: MultiUser,
+      user: User,
+      isTeamManager: Boolean
+  ): Fox[Unit] =
     userService.userFromMultiUserEmail(userEmail).shiftBox.flatMap {
       case Full(_) => Fox.successful(())
-      case _ =>
+      case _       =>
         for {
           _ <- multiUserDAO.insertOne(multiUser)
           _ <- userDAO.insertOne(user)
           _ <- userExperiencesDAO.updateExperiencesForUser(user, Map("sampleExp" -> 10))
-          _ <- userDAO.insertTeamMembership(user._id,
-                                            TeamMembership(organizationTeam._id, isTeamManager = isTeamManager))
-          _ = logger.info("Inserted default user")
+          _ <- userDAO.insertTeamMembership(
+            user._id,
+            TeamMembership(organizationTeam._id, isTeamManager = isTeamManager)
+          )
+          _ = logger.info(s"Inserted default user $userEmail")
         } yield ()
     }
 
   private def insertToken(): Fox[Unit] = {
     val expiryTime = conf.Silhouette.TokenAuthenticator.authenticatorExpiry
-    tokenDAO.findOneByLoginInfo("credentials", defaultUser._id.id, TokenType.Authentication).shiftBox.flatMap {
+    tokenDAO.findOneByUserIdAndType(defaultUser._id, TokenType.Authentication).shiftBox.flatMap {
       case Full(_) => Fox.successful(())
-      case _ =>
+      case _       =>
         val newToken = Token(
           ObjectId.generate,
           defaultUserToken,
-          LoginInfo("credentials", defaultUser._id.id),
+          defaultUser._id,
           Instant.now,
           Instant.in(expiryTime),
           None,
@@ -332,7 +484,7 @@ Samplecountry
   private def insertOrganization(): Fox[Unit] =
     organizationDAO.findOne(defaultOrganization._id).shiftBox.flatMap {
       case Full(_) => Fox.successful(())
-      case _ =>
+      case _       =>
         organizationDAO.insertOne(defaultOrganization)
     }
 
@@ -361,14 +513,16 @@ Samplecountry
     projectDAO.findAll.flatMap { projects =>
       if (projects.isEmpty) {
         userService.userFromMultiUserEmail(defaultUserEmail).flatMap { user =>
-          val project = Project(ObjectId.generate,
-                                organizationTeam._id,
-                                user._id,
-                                "sampleProject",
-                                100,
-                                paused = false,
-                                Some(5400000),
-                                isBlacklistedFromReport = false)
+          val project = Project(
+            ObjectId.generate,
+            organizationTeam._id,
+            user._id,
+            "sampleProject",
+            100,
+            paused = false,
+            Some(5400000),
+            isBlacklistedFromReport = false
+          )
           for { _ <- projectDAO.insertOne(project, defaultOrganization._id) } yield ()
         }
       } else Fox.successful(())
@@ -380,20 +534,49 @@ Samplecountry
     } else Fox.successful(())
   }
 
-  private def insertDataset(): Fox[Unit] = datasetDAO.findOne(defaultDataset._id).shiftBox.flatMap { maybeDataset =>
-    if (maybeDataset.isEmpty) {
-      for {
-        _ <- datasetDAO.insertOne(defaultDataset)
-        _ <- datasetLayerDAO.updateLayers(defaultDataset._id, defaultDataSource)
-      } yield ()
-    } else Fox.successful(())
-  }
+  private def insertDataset(): Fox[?] =
+    Fox.runIf(storeModules.localDataStoreEnabled) {
+      datasetDAO.findOne(defaultDataset._id).shiftBox.flatMap { maybeDataset =>
+        if (maybeDataset.isEmpty) {
+          for {
+            _ <- datasetDAO.insertOne(defaultDataset)
+            _ <- datasetLayerDAO.updateLayers(defaultDataset._id, defaultDataSource)
+          } yield ()
+        } else Fox.successful(())
+      }
+    }
 
-  private def insertAiModel(): Fox[Unit] = aiModelDAO.findAll.flatMap { aiModels =>
-    if (aiModels.isEmpty) {
-      aiModelDAO.insertOne(defaultAiModel)
-    } else Fox.successful(())
-  }
+  private def insertRemoteNDDataset(): Fox[?] =
+    Fox.runIf(storeModules.localDataStoreEnabled) {
+      datasetDAO.findOne(remoteNDZarrDataset._id).shiftBox.flatMap { maybeDataset =>
+        if (maybeDataset.isEmpty) {
+          for {
+            _ <- datasetDAO.insertOne(remoteNDZarrDataset)
+            _ <- datasetLayerDAO.updateLayers(remoteNDZarrDataset._id, remoteNDZarrDataSource)
+          } yield ()
+        } else Fox.successful(())
+      }
+    }
+
+  private def insertAiModelIfAbsent(model: AiModel): Fox[?] =
+    // For custom instances with no local datastore the default ai models must be inserted into the DB manually.
+    // Give them the datastore that the worker also has access to.
+    Fox.runIf(storeModules.localDataStoreEnabled) {
+      aiModelDAO.findOne(model._id).shiftBox.flatMap {
+        case Full(_) => Fox.successful(())
+        case _       => aiModelDAO.insertOne(model)
+      }
+    }
+
+  private def insertCustomAiModel(): Fox[?] = insertAiModelIfAbsent(defaultAiModel)
+
+  private def insertPretrainedAiModels(): Fox[Unit] =
+    for {
+      _ <- insertAiModelIfAbsent(pretrainedNeuronModel)
+      _ <- insertAiModelIfAbsent(pretrainedMitochondriaModel)
+      _ <- insertAiModelIfAbsent(pretrainedNucleiModel)
+      _ <- insertAiModelIfAbsent(pretrainedSomaModel)
+    } yield ()
 
   def insertLocalDataStoreIfEnabled(): Fox[Unit] =
     if (storeModules.localDataStoreEnabled) {
@@ -411,10 +594,13 @@ Samplecountry
         if (maybeStore.isEmpty) {
           logger.info("Inserting local tracingstore")
           tracingStoreDAO.insertOne(
-            TracingStore(conf.Tracingstore.name,
-                         conf.Http.uri,
-                         conf.Tracingstore.publicUri.getOrElse(conf.Http.uri),
-                         conf.Tracingstore.key))
+            TracingStore(
+              conf.Tracingstore.name,
+              conf.Http.uri,
+              conf.Tracingstore.publicUri.getOrElse(conf.Http.uri),
+              conf.Tracingstore.key
+            )
+          )
         } else Fox.successful(())
       }
     } else Fox.successful(())
@@ -444,5 +630,7 @@ Samplecountry
     } else Fox.successful(())
 
   private def createOrganizationDirectory(): Fox[Unit] =
-    organizationService.createOrganizationDirectory(defaultOrganization._id, RpcTokenHolder.webknossosToken) ?~> "organization.directoryCreation.failed"
+    organizationService.createOrganizationDirectory(
+      defaultOrganization._id
+    ) ?~> Msg.Organization.Create.directoryCreateFailed
 }

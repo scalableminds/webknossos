@@ -15,7 +15,7 @@ You can try the OME-Zarr support with the following datasets. Load them in WEBKN
     - `https://static.webknossos.org/data/l4_sample/`
     - Source: Dense connectomic reconstruction in layer 4 of the somatosensory cortex. Motta et al. Science 2019. [10.1126/science.aay3134](https://doi.org/10.1126/science.aay3134)
 
-## Zarr Folder Structure
+## Zarr Folder Structure (v0.4)
 WEBKNOSSOS expects the following file structure for OME-Zarr (v0.4) datasets:
 
 ```
@@ -63,11 +63,11 @@ WEBKNOSSOS expects the following file structure for OME-Zarr (v0.4) datasets:
                 └── n
 ```
 
-See [OME-Zarr 0.4 spec](https://ngff.openmicroscopy.org/latest/index.html#image-layout) for details.
+See [OME-Zarr 0.4 spec](https://ngff.openmicroscopy.org/specifications/0.4/index.html#on-disk-or-in-cloud-layout) for details.
 
 ### Zarr Folder Structure (v0.5)
 
-For OME-Zarr (v0.5) datasets, the structure is slightly different (See [OME-Zarr 0.5 spec](https://ngff--242.org.readthedocs.build/latest/index.html#image-layout)):
+For OME-Zarr (v0.5) datasets, the structure is slightly different (See [OME-Zarr 0.5 spec](https://ngff.openmicroscopy.org/specifications/0.5/index.html)):
 
 ```
 ├── 123.zarr                  # One OME-Zarr image (id=123).
@@ -166,7 +166,7 @@ Read the full example in the WEBKNOSSOS [Python library documentation](https://d
 ## Time-Series and N-Dimensional Datasets
 
 WEBKNOSSOS also supports loading n-dimensional datasets, e.g. 4D = time series of 3D microscopy.
-This feature in currently only supported for Zarr dataset due to their flexbile structure and design for n-dimensional data.
+This feature is currently only supported for Zarr datasets due to their flexible structure and design for n-dimensional data.
 
 ## Performance Considerations
 To get the best streaming performance for Zarr datasets consider the following settings.

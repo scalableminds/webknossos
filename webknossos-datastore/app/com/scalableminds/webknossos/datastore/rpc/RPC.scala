@@ -6,7 +6,7 @@ import play.api.libs.ws.WSClient
 
 import scala.concurrent.ExecutionContext
 
-class RPC @Inject()(ws: WSClient)(implicit ec: ExecutionContext) {
+class RPC @Inject() (ws: WSClient)(implicit ec: ExecutionContext) {
 
   private val requestCounter: AtomicInteger = new AtomicInteger()
 

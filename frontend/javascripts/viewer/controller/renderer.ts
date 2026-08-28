@@ -1,23 +1,33 @@
 import { notifyAboutDisposedRenderer } from "libs/UpdatableTexture";
-import { document } from "libs/window";
+import { document, location } from "libs/window";
 import { WebGLRenderer } from "three";
 import { Store } from "viewer/singletons";
+import type { WebknossosState } from "viewer/store";
 
 let renderer: WebGLRenderer | null = null;
 
+// True while the current webglcontextlost was caused by destroyRenderer() (our own
+// teardown) rather than a real GPU crash. Set when we force the loss, cleared once a
+// new renderer (fresh context) is created — so a later genuine loss is reported normally.
+let wasContextLossForcedByTeardown = false;
+
+export function wasContextLossForced(): boolean {
+  return wasContextLossForcedByTeardown;
+}
+
 export function destroyRenderer(): void {
-  if (renderer == null) {
-    return;
-  }
+  if (renderer == null) return;
   renderer.dispose();
+  wasContextLossForcedByTeardown = true;
+  renderer.forceContextLoss();
   renderer = null;
   notifyAboutDisposedRenderer();
 }
 
-function getRenderer(): WebGLRenderer {
-  if (renderer != null) {
-    return renderer;
-  }
+export function getRenderer(): WebGLRenderer {
+  if (renderer != null) return renderer;
+  // A fresh context is being created, so any future context loss is genuine again.
+  wasContextLossForcedByTeardown = false;
 
   const renderCanvasElement = document.getElementById("render-canvas");
   renderer = (
@@ -43,6 +53,32 @@ function getRenderer(): WebGLRenderer {
   return renderer;
 }
 
+export function getWebGlAnalyticsInformation(state: WebknossosState) {
+  const interpolationEnabled = state.datasetConfiguration.interpolation;
+
+  const info = {
+    url: location.href,
+    userAgent: navigator?.userAgent,
+    platform: navigator?.platform,
+    interpolationEnabled,
+    vendor: null,
+    renderer: null,
+  };
+
+  const canvas = document.createElement("canvas");
+  const gl = canvas.getContext("webgl2");
+
+  if (gl != null) {
+    const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
+    if (debugInfo != null) {
+      info.vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
+      info.renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+    }
+  }
+
+  return info;
+}
+
 if (typeof window !== "undefined") {
   // Call window.testContextLoss() in the console
   // to test the context loss recovery.
@@ -55,9 +91,6 @@ if (typeof window !== "undefined") {
     ext.loseContext();
     setTimeout(() => ext.restoreContext(), 2500);
   }
-  // @ts-ignore
+  // @ts-expect-error
   window.testContextLoss = testContextLoss;
 }
-
-export { getRenderer };
-export default {};

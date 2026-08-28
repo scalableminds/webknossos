@@ -1,33 +1,34 @@
-import type React from "react";
-import { type Key, useCallback, useEffect, useRef, useState } from "react";
-import { type ConnectDropTarget, type DropTargetMonitor, useDrop } from "react-dnd";
-import { DraggableDatasetType } from "../advanced_dataset/dataset_table";
 import {
-  type DatasetCollectionContextValue,
-  useDatasetCollectionContext,
-} from "../dataset/dataset_collection_context";
-
-import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
+  DeleteOutlined,
+  EditOutlined,
+  FolderOpenOutlined,
+  FolderOutlined,
+  PlusOutlined,
+} from "@ant-design/icons";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
-import { Dropdown, type MenuProps, Modal, Tree } from "antd";
+import { App, Dropdown, type MenuProps, Tree } from "antd";
 import type { DataNode, DirectoryTreeProps } from "antd/lib/tree";
 import classNames from "classnames";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import Toast from "libs/toast";
 import memoizeOne from "memoize-one";
+import type React from "react";
+import { type Key, useCallback, useEffect, useRef, useState } from "react";
+import { type ConnectDropTarget, type DropTargetMonitor, useDrop } from "react-dnd";
 import type { FolderItem } from "types/api_types";
-import type { ArbitraryObject } from "types/globals";
+import type { ArbitraryObject } from "types/type_utils";
+import { DraggableDatasetType } from "../advanced_dataset/dnd_types";
+import {
+  type DatasetCollectionContextValue,
+  useDatasetCollectionContext,
+} from "../dataset/dataset_collection_context";
 
 const { DirectoryTree } = Tree;
 
 const isNodeDraggable = (node: DataNode): boolean => (node as FolderItem).isEditable;
 const draggableConfig = { icon: false, nodeDraggable: isNodeDraggable };
 
-export function FolderTreeSidebar({
-  setFolderIdForEditModal,
-}: {
-  setFolderIdForEditModal: (value: string | null) => void;
-}) {
+export function FolderTreeSidebar() {
   const [treeData, setTreeData] = useState<FolderItem[]>([]);
   const context = useDatasetCollectionContext();
   const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
@@ -77,6 +78,8 @@ export function FolderTreeSidebar({
     accept: DraggableDatasetType,
     collect: (monitor: DropTargetMonitor) => monitor.canDrop(),
   });
+  // Workaround for React 19 and react-dnd 16 https://github.com/react-dnd/react-dnd/issues/3655
+  const dropRef = useDropRef(drop);
 
   const onSelect: DirectoryTreeProps["onSelect"] = useCallback(
     (keys: React.Key[], { nativeEvent }: { nativeEvent: MouseEvent }) => {
@@ -103,10 +106,21 @@ export function FolderTreeSidebar({
   };
   const titleRender = useCallback(
     (nodeData: FolderItem) => {
-      return generateTitle(context, nodeData, setFolderIdForEditModal);
+      return (
+        <ItemTitle
+          context={context}
+          folder={nodeData}
+          isExpanded={expandedKeys.includes(nodeData.key)}
+        />
+      );
     },
-    [context, setFolderIdForEditModal],
+    [context, expandedKeys],
   );
+
+  // When no folder has subfolders, the expand/collapse carets are all no-ops. In that case we
+  // collapse the (otherwise empty) caret column via the folder-tree-flat class so that the
+  // folder icons align to the start of each entry instead of leaving a gap.
+  const isFlatTree = treeData.every((node) => node.children == null || node.children.length === 0);
 
   const onDrop = useCallback(
     ({
@@ -160,7 +174,8 @@ export function FolderTreeSidebar({
       className={isDraggingDataset ? "highlight-folder-sidebar" : ""}
     >
       <div
-        ref={drop}
+        ref={dropRef}
+        className={classNames("folder-tree-structure", { "folder-tree-flat": isFlatTree })}
         style={{
           marginRight: 4,
           borderRadius: 2,
@@ -178,6 +193,7 @@ export function FolderTreeSidebar({
         ) : null}
         <DirectoryTree
           blockNode
+          showIcon={false}
           expandAction="doubleClick"
           selectedKeys={nullableIdToArray(context.activeFolderId)}
           draggable={isDraggingDataset ? false : draggableConfig}
@@ -209,7 +225,6 @@ export function FolderTreeSidebar({
 export function generateSettingsForFolder(
   folder: FolderItem,
   context: DatasetCollectionContextValue,
-  editFolder: () => void,
   isSubfolder: boolean = false,
 ) {
   const { key: id, isEditable } = folder;
@@ -218,7 +233,11 @@ export function generateSettingsForFolder(
   }
 
   function createFolder(): void {
-    context.showCreateFolderPrompt(id);
+    context.setFolderModalState({ mode: "create", parentFolderId: id });
+  }
+
+  function editFolder(): void {
+    context.setFolderModalState({ mode: "edit", folderId: id });
   }
 
   const newFolderText = isSubfolder ? "New Subfolder" : "New Folder";
@@ -257,18 +276,22 @@ export function generateSettingsForFolder(
   };
 }
 
-function generateTitle(
-  context: DatasetCollectionContextValue,
-  folder: FolderItem,
-  setFolderIdForEditModal: (folderId: string) => void,
-) {
-  const { key: id, title, isEditable } = folder;
+type ItemTitleProps = {
+  context: DatasetCollectionContextValue;
+  folder: FolderItem;
+  isExpanded: boolean;
+};
 
-  function editFolder(): void {
-    setFolderIdForEditModal(id);
-  }
+const ItemTitle: React.FC<ItemTitleProps> = (props) => {
+  const { context, folder, isExpanded } = props;
+  const { key: id, title, isEditable, children } = folder;
 
-  const menu = generateSettingsForFolder(folder, context, editFolder);
+  const menu = generateSettingsForFolder(folder, context);
+  // We render the folder icon ourselves (instead of relying on DirectoryTree's showIcon) so that
+  // it lives inside the drop target and context-menu trigger. This way right-clicking (and
+  // dropping datasets) works on the icon, too, not just on the folder name.
+  const hasSubfolders = children != null && children.length > 0;
+  const FolderIcon = hasSubfolders && isExpanded ? FolderOpenOutlined : FolderOutlined;
 
   return (
     <Dropdown
@@ -281,16 +304,21 @@ function generateTitle(
       autoDestroy
       trigger={["contextMenu"]}
     >
-      <FolderItemAsDropTarget folderId={id} isEditable={isEditable}>
-        {title}
-      </FolderItemAsDropTarget>
+      {/* this div is needed to make Dropdown and react-dnd work */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <FolderItemAsDropTarget folderId={id} isEditable={isEditable}>
+          <FolderIcon className="folder-item-icon" />
+          <span className="folder-item-name">{title}</span>
+        </FolderItemAsDropTarget>
+      </div>
     </Dropdown>
   );
-}
+};
 
 export type DnDDropItemProps = {
   datasetId: string;
 } & ArbitraryObject;
+
 export function useDatasetDrop(
   folderId: string,
   canDrop: boolean,
@@ -303,6 +331,7 @@ export function useDatasetDrop(
 ] {
   const context = useDatasetCollectionContext();
   const { selectedDatasets, setSelectedDatasets } = context;
+  const { modal } = App.useApp();
   const [collectedProps, drop] = useDrop<
     DnDDropItemProps,
     void,
@@ -322,7 +351,7 @@ export function useDatasetDrop(
         }
 
         // Show a modal so that the user cannot do anything else while the datasets are being moved.
-        const modal = Modal.info({
+        const progressModal = modal.info({
           title: "Moving Datasets",
           content: `Preparing to move ${selectedDatasets.length} datasets...`,
           onCancel: (_close) => {},
@@ -335,7 +364,7 @@ export function useDatasetDrop(
           selectedDatasets.map((ds) =>
             context.queries.updateDatasetMutation.mutateAsync([ds.id, { folderId }]).then(() => {
               successCounter++;
-              modal.update({
+              progressModal.update({
                 content: `Already moved ${successCounter} of ${selectedDatasets.length} datasets.`,
               });
             }),
@@ -354,7 +383,7 @@ export function useDatasetDrop(
             // The datasets are not in the active folder anymore. Clear the selection to avoid
             // that stale instances are mutated during the next bulk action.
             setSelectedDatasets([]);
-            modal.destroy();
+            progressModal.destroy();
           });
       } else {
         const dataset = context.datasets.find((ds) => ds.id === item.datasetId);
@@ -372,6 +401,7 @@ export function useDatasetDrop(
       isOver: monitor.isOver(),
     }),
   });
+
   return [collectedProps, drop];
 }
 
@@ -384,13 +414,16 @@ function FolderItemAsDropTarget(props: {
   const { folderId, className, isEditable, ...restProps } = props;
   const [collectedProps, drop] = useDatasetDrop(folderId, isEditable);
 
+  // Workaround for React 19 and react-dnd 16 https://github.com/react-dnd/react-dnd/issues/3655
+  const dropRef = useDropRef(drop);
+
   const { canDrop, isOver } = collectedProps;
   return (
     <div
       className={classNames("folder-item", className, {
         "valid-drop-target": isOver && canDrop,
       })}
-      ref={drop}
+      ref={dropRef}
       style={{ cursor: "pointer" }}
       {...restProps}
     >
@@ -433,4 +466,16 @@ function deriveExpandedTrees(
   }
 
   return Array.from(newExpandedKeySet);
+}
+
+function useDropRef(drop: (element: HTMLDivElement) => void) {
+  // Source: https://github.com/react-dnd/react-dnd/issues/3670
+  return useCallback(
+    (element: HTMLDivElement | null) => {
+      if (element) {
+        drop(element);
+      }
+    },
+    [drop],
+  );
 }

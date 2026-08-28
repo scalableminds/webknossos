@@ -1,10 +1,11 @@
 import { Notifier } from "@airbrake/browser";
 import Toast from "libs/toast";
 import window, { document, location } from "libs/window";
-import _ from "lodash";
+import pick from "lodash-es/pick";
 import messages from "messages";
-import type { APIUser } from "types/api_types";
+import type { APIUser, ServerErrorMessage } from "types/api_types";
 import { getActionLog } from "viewer/model/helpers/action_logger_middleware";
+
 // Note that if you set this value to true for debugging airbrake reporting,
 // you also need to set the values for projectID and projectKey in application.conf
 const LOG_LOCAL_ERRORS = false;
@@ -20,6 +21,7 @@ const BLACKLISTED_ERROR_MESSAGES = [
   "Uncaught TypeError: Cannot read property 'path' of null",
   "WebGLContextLost",
 ];
+
 type ErrorHandlingOptions = {
   throwAssertions: boolean;
 };
@@ -38,6 +40,30 @@ class ErrorWithParams extends Error {
 // When the thrown error is coming from the server, our request module
 // will show the error to the user.
 // If some other error occurred, this function will tell the user so.
+
+/**
+ * Extracts a human-readable message from an error thrown by the request module.
+ * Server errors are rejected as plain objects with a `messages` array (see
+ * handle_request_error_helper) and therefore don't carry a usable `.message`.
+ */
+export function extractServerErrorMessage(error: unknown, fallback?: string): string {
+  if (error != null && typeof error === "object" && "messages" in error) {
+    const serverMessages = (error as { messages?: Array<ServerErrorMessage> }).messages;
+    const errorTexts = (serverMessages ?? [])
+      .map((message) => message.error)
+      .filter((text): text is string => text != null);
+
+    if (errorTexts.length > 0) {
+      return errorTexts.join(" ");
+    }
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return fallback ?? "An unknown error occurred.";
+}
 
 export function handleGenericError(
   error: Error & {
@@ -103,14 +129,13 @@ class ErrorHandling {
 
   initializeAirbrake() {
     // read Airbrake config from DOM
-    // config is inject from backend
+    // config is injected from backend for production builds
     const scriptTag = document.querySelector("[data-airbrake-project-id]");
-    if (!scriptTag) throw new Error("failed to initialize airbrake");
-    // @ts-ignore
-    const { dataset } = scriptTag;
-    const projectId = dataset.airbrakeProjectId;
-    const projectKey = dataset.airbrakeProjectKey;
-    const envName = dataset.airbrakeEnvironmentName;
+    // @ts-expect-error
+    const { dataset } = scriptTag || { dataset: {} };
+    const projectId = dataset.airbrakeProjectId || "projectIdNotFound";
+    const projectKey = dataset.airbrakeProjectKey || "projectKeyNotFound";
+    const envName = dataset.airbrakeEnvironmentName || "development";
     this.airbrake = new Notifier({
       projectId,
       projectKey,
@@ -158,7 +183,7 @@ class ErrorHandling {
 
     // Report Content Security Policy (CSP) errors
     document.addEventListener("securitypolicyviolation", (e: SecurityPolicyViolationEvent) => {
-      const additionalProperties = _.pick(e, [
+      const additionalProperties = pick(e, [
         "blockedURI",
         "violatedDirective",
         "originalPolicy",
@@ -213,7 +238,7 @@ class ErrorHandling {
     optParams: Record<string, any> = {},
     severity: "error" | "warning" = "error",
   ) {
-    if (process.env.IS_TESTING) {
+    if (import.meta.env.MODE === "test") {
       return;
     }
 
@@ -299,7 +324,7 @@ class ErrorHandling {
   setCurrentUser(user: APIUser) {
     this.airbrake.addFilter((notice) => {
       notice.context = notice.context || {};
-      notice.context.user = _.pick(user, ["id", "email", "firstName", "lastName", "isActive"]);
+      notice.context.user = pick(user, ["id", "email", "firstName", "lastName", "isActive"]);
       return notice;
     });
   }

@@ -1,15 +1,23 @@
-import { useEffectOnlyOnce, useKeyPress } from "libs/react_hooks";
-import { useWkSelector } from "libs/react_hooks";
-import { waitForCondition } from "libs/utils";
-import _ from "lodash";
+import eraserPointedSolidBorderCursor from "@images/cursors/eraser-pointed-solid-border.svg";
+import eraserSolidBorderCursor from "@images/cursors/eraser-solid-border.svg";
+import eyeDropperSolidBorderCursor from "@images/cursors/eye-dropper-solid-border.svg";
+import fillPointedSolidBorderCursor from "@images/cursors/fill-pointed-solid-border.svg";
+import lassoPointedSolidBorderCursor from "@images/cursors/lasso-pointed-solid-border.svg";
+import paintBrushSolidBorderCursor from "@images/cursors/paint-brush-solid-border.svg";
+import rulerPointedBorderCursor from "@images/cursors/ruler-pointed-border.svg";
+import { useEffectOnlyOnce, useKeyPress, useWkSelector } from "libs/react_hooks";
+import { sleep, waitForCondition } from "libs/utils";
+import isEqual from "lodash-es/isEqual";
 import type * as React from "react";
 import { useRef } from "react";
 import type { Rect, Viewport, ViewportRects } from "viewer/constants";
-import { ArbitraryViewport, ArbitraryViews, OrthoViews } from "viewer/constants";
-import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/tool_accessor";
-import { adaptActiveToolToShortcuts } from "viewer/model/accessors/tool_accessor";
+import { FlightViewport, FlightViews, OrthoViews } from "viewer/constants";
+import {
+  AnnotationTool,
+  type AnnotationToolId,
+  adaptActiveToolToShortcuts,
+} from "viewer/model/accessors/tool_accessor";
 import { setInputCatcherRects } from "viewer/model/actions/view_mode_actions";
-import type { BusyBlockingInfo } from "viewer/store";
 import Store from "viewer/store";
 import makeRectRelativeToCanvas from "viewer/view/layouting/layout_canvas_adapter";
 import Scalebar from "viewer/view/scalebar";
@@ -62,12 +70,30 @@ function adaptInputCatcher(inputCatcherDOM: HTMLElement, makeQuadratic: boolean)
 }
 
 const renderedInputCatchers = new Map();
+
 export async function initializeInputCatcherSizes() {
   // In an interval of 100 ms we check whether the input catchers can be initialized
   const pollInterval = 100;
-  await waitForCondition(() => renderedInputCatchers.size > 0, pollInterval);
+  await waitForCondition(() => {
+    if (renderedInputCatchers.size === 0) {
+      return false;
+    }
+    if (renderedInputCatchers.has("TDView")) {
+      // If (and only if) the 3D viewport is visible (e.g., it might be invisible
+      // due to another tab being maximized), we need to do an isNaN check here
+      // to await proper initialization.
+      // Otherwise, the initial zoom value of the 3D viewport would be flaky.
+      const { tdCamera } = Store.getState().viewModeData.plane;
+      return !Number.isNaN(tdCamera.left);
+    }
+
+    return true;
+  }, pollInterval);
+  // Without this sleep, maximized viewports are not rendered correctly on page load.
+  await sleep(50);
   recalculateInputCatcherSizes();
 }
+
 export function recalculateInputCatcherSizes() {
   const viewportRects: Record<string, Rect> = {
     PLANE_XY: emptyViewportRect,
@@ -77,7 +103,7 @@ export function recalculateInputCatcherSizes() {
   };
 
   for (const [viewportID, inputCatcher] of renderedInputCatchers.entries()) {
-    const makeQuadratic = viewportID === ArbitraryViewport;
+    const makeQuadratic = viewportID === FlightViewport;
     const rect = adaptInputCatcher(inputCatcher, makeQuadratic);
     viewportRects[viewportID] = rect;
   }
@@ -88,7 +114,7 @@ export function recalculateInputCatcherSizes() {
   // we want to avoid the following set action, as the corresponding reducer
   // will re-calculate the zoom ranges for the available magnifications
   // (which is expensive and unnecessary).
-  if (!_.isEqual(viewportRects, Store.getState().viewModeData.plane.inputCatcherRects)) {
+  if (!isEqual(viewportRects, Store.getState().viewModeData.plane.inputCatcherRects)) {
     Store.dispatch(setInputCatcherRects(viewportRects as ViewportRects));
   }
 }
@@ -96,29 +122,29 @@ export function recalculateInputCatcherSizes() {
 const cursorForTool: Record<AnnotationToolId, string> = {
   MOVE: "move",
   SKELETON: "crosshair",
-  BRUSH: "url(/assets/images/paint-brush-solid-border.svg) 0 10,auto",
-  ERASE_BRUSH: "url(/assets/images/eraser-solid-border.svg) 0 8,auto",
-  TRACE: "url(/assets/images/lasso-pointed-solid-border.svg) 0 14,auto",
-  ERASE_TRACE: "url(/assets/images/eraser-pointed-solid-border.svg) 0 16,auto",
-  FILL_CELL: "url(/assets/images/fill-pointed-solid-border.svg) 0 16,auto",
-  VOXEL_PIPETTE: "url(/assets/images/eye-dropper-solid-border.svg) 0 12,auto",
+  BRUSH: `url("${paintBrushSolidBorderCursor}") 0 10,auto`,
+  ERASE_BRUSH: `url("${eraserSolidBorderCursor}") 0 8,auto`,
+  TRACE: `url("${lassoPointedSolidBorderCursor}") 0 14,auto`,
+  ERASE_TRACE: `url("${eraserPointedSolidBorderCursor}") 0 16,auto`,
+  FILL_CELL: `url("${fillPointedSolidBorderCursor}") 0 16,auto`,
+  VOXEL_PIPETTE: `url("${eyeDropperSolidBorderCursor}") 0 12,auto`,
   BOUNDING_BOX: "copy",
   QUICK_SELECT: "crosshair",
   PROOFREAD: "crosshair",
-  LINE_MEASUREMENT: "url(/assets/images/ruler-pointed-border.svg) 0 14,auto",
-  AREA_MEASUREMENT: "url(/assets/images/lasso-pointed-solid-border.svg) 0 14,auto",
+  LINE_MEASUREMENT: `url("${rulerPointedBorderCursor}") 0 14,auto`,
+  AREA_MEASUREMENT: `url("${lassoPointedSolidBorderCursor}") 0 14,auto`,
 };
 
 function InputCatcher({
   viewportID,
   children,
   displayScalebars,
-  busyBlockingInfo,
+  isBlocked,
 }: {
   viewportID: Viewport;
   children?: React.ReactNode;
   displayScalebars?: boolean;
-  busyBlockingInfo: BusyBlockingInfo;
+  isBlocked: boolean;
 }) {
   const domElementRef = useRef<HTMLElement | null>(null);
   useEffectOnlyOnce(() => {
@@ -137,7 +163,7 @@ function InputCatcher({
   const isAltPressed = useKeyPress("Alt");
 
   const adaptedTool =
-    viewportID === ArbitraryViews.arbitraryViewport
+    viewportID === FlightViews.flightViewport
       ? AnnotationTool.SKELETON
       : viewportID === OrthoViews.TDView
         ? AnnotationTool.MOVE
@@ -156,7 +182,7 @@ function InputCatcher({
       <div
         className="flexlayout-dont-overflow"
         onContextMenu={ignoreContextMenu}
-        style={{ cursor: busyBlockingInfo.isBusy ? "wait" : cursorForTool[adaptedTool.id] }}
+        style={{ cursor: isBlocked ? "wait" : cursorForTool[adaptedTool.id] }}
       >
         <div
           id={`inputcatcher_${viewportID}`}
@@ -170,13 +196,13 @@ function InputCatcher({
             // Disable inputs while WK is busy. However, keep the custom cursor and the ignoreContextMenu handler
             // which is why those are defined at the outer element.
             // Note that due to race conditions a pointer event might still get through even
-            // though WK is busy. Especially sagas should use takeEveryUnlessBusy or should
-            // explicitly check for the busy state.
-            pointerEvents: busyBlockingInfo.isBusy ? "none" : "auto",
+            // though an operation is in progress. Sagas should use takeEveryInOperationContext
+            // or createOperationContext to guard against this.
+            pointerEvents: isBlocked ? "none" : "auto",
           }}
         >
           <ViewportStatusIndicator />
-          {displayScalebars && viewportID !== "arbitraryViewport" ? (
+          {displayScalebars && viewportID !== FlightViewport ? (
             <Scalebar viewportID={viewportID} />
           ) : null}
           {children}

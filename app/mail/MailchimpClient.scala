@@ -14,7 +14,7 @@ import utils.WkConf
 
 import scala.concurrent.ExecutionContext
 
-class MailchimpClient @Inject()(wkConf: WkConf, rpc: RPC, multiUserDAO: MultiUserDAO) extends LazyLogging {
+class MailchimpClient @Inject() (wkConf: WkConf, rpc: RPC, multiUserDAO: MultiUserDAO) extends LazyLogging {
 
   private lazy val conf = wkConf.Mail.Mailchimp
 
@@ -23,7 +23,7 @@ class MailchimpClient @Inject()(wkConf: WkConf, rpc: RPC, multiUserDAO: MultiUse
       val emailMd5 = SCrypt.md5(multiUser.email)
       logger.info(s"Registering user ${user._id} for Mailchimp, tag=${MailchimpTag.format(tag)}")
       for {
-        _ <- registerUser(user.firstName, user.lastName, multiUser.email, emailMd5)
+        _ <- registerUser(multiUser.firstName, multiUser.lastName, multiUser.email, emailMd5)
         _ <- tagByEmailMd5(emailMd5, tag)
       } yield ()
       ()
@@ -36,7 +36,7 @@ class MailchimpClient @Inject()(wkConf: WkConf, rpc: RPC, multiUserDAO: MultiUse
       "status" -> "subscribed",
       "merge_fields" -> Json.obj(
         "FNAME" -> firstName,
-        "LNAME" -> lastName,
+        "LNAME" -> lastName
       )
     )
     rpc(uri).silent.withBasicAuth(conf.user, conf.password).putJson(userBody)
@@ -45,7 +45,7 @@ class MailchimpClient @Inject()(wkConf: WkConf, rpc: RPC, multiUserDAO: MultiUse
   def tagUser(user: User, tag: MailchimpTag): Unit =
     if (conf.host.nonEmpty) {
       for {
-        multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
+        multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
         _ = tagMultiUser(multiUser, tag)
       } yield ()
       ()

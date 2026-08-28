@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
-import com.scalableminds.util.tools.{Box, Full, ParamFailure}
+import com.scalableminds.util.box.{Box, Full, ParamFailure}
 import com.scalableminds.webknossos.datastore.models.datasource.{ElementClass, UsableDataSource}
 import play.api.libs.json.Json
 
@@ -28,21 +28,23 @@ trait DataSourceValidation {
     val errors = List(
       check(dataSource.scale.factor.isStrictlyPositive, "Voxel size (scale) is negative in at least one dimension."),
       check(magsXIsSorted && magsYIsSorted && magsZIsSorted, "Mags do not monotonically increase in all dimensions."),
-      check(magsSorted.forall(magsOfLayer => magsOfLayer.length == magsOfLayer.distinct.length),
-            "There are duplicate mags in a layer."),
+      check(
+        magsSorted.forall(magsOfLayer => magsOfLayer.length == magsOfLayer.distinct.length),
+        "There are duplicate mags in a layer."
+      ),
       check(dataSource.dataLayers.nonEmpty, "No layers."),
       check(dataSource.dataLayers.forall(!_.boundingBox.isEmpty), "Empty bounding box in a layer."),
       check(
         dataSource.segmentationLayers.forall { layer =>
           ElementClass.segmentationElementClasses.contains(layer.elementClass)
         },
-        s"Invalid element class for a segmentation layer."
+        "Invalid element class for a segmentation layer."
       ),
       check(
         dataSource.segmentationLayers.forall { layer =>
           ElementClass.largestSegmentIdIsInRange(layer.largestSegmentId, layer.elementClass)
         },
-        "Largest segment id exceeds range (must be nonnegative, within element class range, and < 2^53)."
+        "Largest segment id exceeds range (must be nonnegative and within the element class's value range)."
       ),
       check(
         dataSource.dataLayers.map(_.name).distinct.length == dataSource.dataLayers.length,

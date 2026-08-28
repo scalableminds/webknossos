@@ -4,44 +4,22 @@
 <p>Hi @{name},</p>
 
 <p>
-  Your dataset @{datasetName} is ready for exploration.
-  WEBKNOSSOS has successfully uploaded and converted the dataset.
-  Click the button below to open the dataset or find it amongst your other datasets in the WEBKNOSSOS dashboard.
+  Your dataset <i>@{datasetName}</i> has been successfully converted and uploaded in WEBKNOSSOS. 
+
+  Click the button below to open the dataset, or find it in your selected dataset folder on the WEBKNOSSOS dashboard.
 </p>
 
-<div style="text-align: center;">
-  <a href="@{jobLink}" style="
-      color: #fff;
-      padding: 4px 15px;
-      height: 32px;
-      background: #5660ff;
-      border: 1px solid #808cff;
-      text-align: center;
-      font-weight: 400;
-      font-size: 14px;
-      line-height: 2.1;
-      text-decoration: none;
-      border-radius: 4px;
-      display: inline-block;
-    ">
-    Open in WEBKNOSSOS
-  </a>
-</div>
+@emailButton("Open dataset in WEBKNOSSOS", jobLink)
 
 <p>
-  Did you know that we offer services for <a href="https://webknossos.org/services/alignment">dataset alignment & stitching</a> and <a href="https://webknossos.org/services/automated-segmentation">AI image segmentation</a> to kickstart your research?
+  Align your dataset directly in WEBKNOSSOS to prepare it for downstream analysis. Our <a href="https://youtu.be/Rt3uG31r2bI?si=9es-5LVi2lCvmSMG">step-by-step tutorial</a> will guide you through the process.
 </p>
-<div style="text-align: center; margin-top: 10px; margin-bottom: 6px;">
-  <img src="https://static.webknossos.org/mails/email-alignment-preview.600.jpg"
-    alt="A preview of the alignment services for a WEBKNOSSOS dataset"
-    style="width: 300px; height: 150px;" />
-</div>
-
-<div style="text-align: center; margin-bottom: 20px;">
-  <img src="https://static.webknossos.org/mails/email-segmentation-preview.600.jpg"
-    alt="A preview of a full, automated segmentation of a WEBKNOSSOS dataset"
-    style="width: 300px; height: 150px;" />
-</div>
+@emailImage(
+  src = "https://static.webknossos.org/mails/email-alignment-preview.gif",
+  alt = "A preview of the alignment services for a WEBKNOSSOS dataset",
+  width = 300,
+  height = 300
+)
 
 <p>With best regards,<br />the WEBKNOSSOS team</p>
 }

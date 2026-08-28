@@ -1,12 +1,15 @@
+import { PlusOutlined, TeamOutlined } from "@ant-design/icons";
 import { getEditableTeams, getTeams } from "admin/rest_api";
-import { Select } from "antd";
-import { useEffectOnlyOnce } from "libs/react_hooks";
+import CreateTeamModalView from "admin/team/create_team_modal_view";
+import { Button, Divider, Select } from "antd";
+import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import _ from "lodash";
-import { useCallback, useEffect, useState } from "react";
+import { isUserAdminOrManager } from "libs/utils";
+import compact from "lodash-es/compact";
+import unionBy from "lodash-es/unionBy";
+import type { ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { APITeam } from "types/api_types";
-
-const { Option } = Select;
 
 type TeamSelectionComponentProps = {
   value?: APITeam | Array<APITeam>;
@@ -14,7 +17,10 @@ type TeamSelectionComponentProps = {
   afterFetchedTeams?: (arg0: Array<APITeam>) => void;
   mode?: "tags" | "multiple" | undefined;
   allowNonEditableTeams?: boolean;
+  // Allow admins/managers to create a new team without leaving this component.
+  allowManagingTeams?: boolean;
   disabled?: boolean;
+  prefix?: ReactNode;
 };
 
 function TeamSelectionComponent({
@@ -23,15 +29,20 @@ function TeamSelectionComponent({
   afterFetchedTeams,
   mode,
   allowNonEditableTeams,
+  allowManagingTeams = true,
   disabled,
+  prefix,
 }: TeamSelectionComponentProps) {
   const [possibleTeams, setPossibleTeams] = useState<APITeam[]>([]);
-  const [selectedTeams, setSelectedTeams] = useState<APITeam[]>(value ? _.flatten([value]) : []);
+  const [selectedTeams, setSelectedTeams] = useState<APITeam[]>(value ? [value].flat() : []);
   const [isFetchingData, setIsFetchingData] = useState(false);
+  const [isCreateTeamModalOpen, setIsCreateTeamModalOpen] = useState(false);
+  const activeUser = useWkSelector((state) => state.activeUser);
+  const canCreateTeams = allowManagingTeams === true && isUserAdminOrManager(activeUser);
 
   // Sync selectedTeams with value
   useEffect(() => {
-    setSelectedTeams(value ? _.flatten([value]) : []);
+    setSelectedTeams(value ? [value].flat() : []);
   }, [value]);
 
   // Fetch teams on mount
@@ -55,40 +66,94 @@ function TeamSelectionComponent({
   }
 
   const getAllTeams = useCallback((): APITeam[] => {
-    return _.unionBy(possibleTeams, selectedTeams, (t) => t.id);
+    return unionBy(possibleTeams, selectedTeams, (t) => t.id);
   }, [possibleTeams, selectedTeams]);
+
+  const teamOptions = useMemo(
+    () =>
+      getAllTeams().map((team) => ({
+        value: team.id,
+        label: team.name,
+        disabled: possibleTeams.find((t) => t.id === team.id) == null,
+      })),
+    [getAllTeams, possibleTeams],
+  );
 
   const onSelectTeams = (selectedTeamIdsOrId: string | Array<string>) => {
     const selectedTeamIds = Array.isArray(selectedTeamIdsOrId)
       ? selectedTeamIdsOrId
       : [selectedTeamIdsOrId];
     const allTeams = getAllTeams();
-    const selectedTeams = _.compact(selectedTeamIds.map((id) => allTeams.find((t) => t.id === id)));
+    const selectedTeams = compact(selectedTeamIds.map((id) => allTeams.find((t) => t.id === id)));
     if (onChange) {
       onChange(Array.isArray(selectedTeamIdsOrId) ? selectedTeams : selectedTeams[0]);
     }
     setSelectedTeams(selectedTeams);
   };
 
+  const onTeamCreated = (newTeam: APITeam) => {
+    setIsCreateTeamModalOpen(false);
+    setPossibleTeams((teams) => unionBy(teams, [newTeam], (t) => t.id));
+    const newSelectedTeams =
+      mode === "multiple" ? unionBy(selectedTeams, [newTeam], (t) => t.id) : [newTeam];
+    setSelectedTeams(newSelectedTeams);
+    if (onChange) {
+      onChange(mode === "multiple" ? newSelectedTeams : newTeam);
+    }
+  };
+
   return (
-    <Select
-      showSearch
-      mode={mode}
-      style={{ width: "100%" }}
-      placeholder={mode && mode === "multiple" ? "Select Teams" : "Select a Team"}
-      optionFilterProp="children"
-      onChange={onSelectTeams}
-      value={selectedTeams.map((t) => t.id)}
-      filterOption
-      disabled={disabled ?? false}
-      loading={isFetchingData}
-    >
-      {getAllTeams().map((team) => (
-        <Option disabled={possibleTeams.find((t) => t.id === team.id) == null} key={team.id}>
-          {team.name}
-        </Option>
-      ))}
-    </Select>
+    <>
+      <Select
+        mode={mode}
+        style={{ width: "100%" }}
+        placeholder={mode && mode === "multiple" ? "Select Teams" : "Select a Team"}
+        showSearch={{ optionFilterProp: "label", filterOption: true }}
+        onChange={onSelectTeams}
+        value={selectedTeams.map((t) => t.id)}
+        disabled={disabled ?? false}
+        loading={isFetchingData}
+        prefix={prefix}
+        popupRender={
+          canCreateTeams
+            ? (menu) => (
+                <>
+                  {menu}
+                  <Divider style={{ margin: "4px 0" }} />
+                  <Button
+                    type="text"
+                    icon={<PlusOutlined />}
+                    style={{ width: "100%", textAlign: "left" }}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => setIsCreateTeamModalOpen(true)}
+                  >
+                    Create new team
+                  </Button>
+                  <Button
+                    type="text"
+                    icon={<TeamOutlined />}
+                    href="/teams"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ width: "100%", textAlign: "left" }}
+                    onMouseDown={(e) => e.preventDefault()}
+                  >
+                    Add users to teams …
+                  </Button>
+                </>
+              )
+            : undefined
+        }
+        options={teamOptions}
+      />
+      {canCreateTeams && (
+        <CreateTeamModalView
+          isOpen={isCreateTeamModalOpen}
+          onOk={onTeamCreated}
+          onCancel={() => setIsCreateTeamModalOpen(false)}
+        />
+      )}
+    </>
   );
 }
 

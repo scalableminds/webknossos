@@ -6,7 +6,7 @@ import play.api.mvc.{Action, AnyContent}
 
 import javax.inject.Inject
 
-class StandaloneDatastore @Inject()() extends Controller with ApiVersioning {
+class StandaloneDatastore @Inject() () extends Controller with ApiVersioning {
 
   def buildInfo: Action[AnyContent] = Action {
     addNoCacheHeaderFallback(
@@ -14,8 +14,10 @@ class StandaloneDatastore @Inject()() extends Controller with ApiVersioning {
         Ok(
           Json.obj(
             "webknossosDatastore" -> Json.toJson(webknossosDatastore.BuildInfo.toMap.view.mapValues(_.toString).toMap),
-            "httpApiVersioning" -> apiVersioningInfo,
-          ))
-      ))
+            "httpApiVersioning" -> apiVersioningInfo
+          )
+        )
+      )
+    )
   }
 }

@@ -1,16 +1,17 @@
 import {
-  type ServerVolumeTracing,
-  type APIAnnotation,
   AnnotationLayerEnum,
+  type APIAnnotation,
   type APITracingStoreAnnotation,
+  type ServerVolumeTracing,
 } from "types/api_types";
+import dummyUser from "./dummy_user";
 
-const TRACING_ID = "volumeTracingId";
+export const VOLUME_TRACING_ID = "volumeTracingId";
 
 // this is a uint16 segmentation layer
 export const tracing: ServerVolumeTracing = {
   typ: "Volume",
-  activeSegmentId: 10000,
+  activeSegmentId: 10000n,
   boundingBox: {
     topLeft: {
       x: 0,
@@ -38,8 +39,8 @@ export const tracing: ServerVolumeTracing = {
   },
   additionalAxes: [],
   elementClass: "uint16",
-  id: TRACING_ID,
-  largestSegmentId: 21890,
+  id: VOLUME_TRACING_ID,
+  largestSegmentId: 21890n,
   zoomLevel: 0,
   mags: [
     { x: 1, y: 1, z: 1 },
@@ -51,9 +52,11 @@ export const tracing: ServerVolumeTracing = {
   ],
   userStates: [],
   fallbackLayer: "segmentation",
+  hasSegmentIndex: true,
 };
 
 export const annotation: APIAnnotation = {
+  owner: dummyUser,
   datasetId: "66f3c82966010034942e9740",
   description: "",
   state: "Active",
@@ -69,11 +72,12 @@ export const annotation: APIAnnotation = {
     allowUpdate: true,
     allowFinish: true,
     allowDownload: true,
+    allowSave: true,
   },
   annotationLayers: [
     {
       name: "some volume name",
-      tracingId: TRACING_ID,
+      tracingId: VOLUME_TRACING_ID,
       typ: AnnotationLayerEnum.Volume,
       stats: {},
     },
@@ -102,7 +106,7 @@ export const annotation: APIAnnotation = {
   tags: ["ROI2017_wkw", "volume"],
   tracingTime: 0,
   contributors: [],
-  othersMayEdit: false,
+  collaborationMode: "OwnerOnly",
   isLockedByOwner: false,
 };
 
@@ -112,7 +116,7 @@ export const annotationProto: APITracingStoreAnnotation = {
   earliestAccessibleVersion: 0,
   annotationLayers: [
     {
-      tracingId: TRACING_ID,
+      tracingId: VOLUME_TRACING_ID,
       name: "some volume name",
       typ: AnnotationLayerEnum.Volume,
     },

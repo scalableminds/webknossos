@@ -1,135 +1,206 @@
 package com.scalableminds.webknossos.datastore.storage
 
-import com.redis._
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.box.Box.tryo
+import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import com.typesafe.scalalogging.LazyLogging
+import io.lettuce.core.{
+  ClientOptions,
+  RedisURI,
+  ScanArgs,
+  ScanCursor,
+  SocketOptions,
+  TimeoutOptions,
+  RedisClient as LettuceClient
+}
+import io.lettuce.core.codec.StringCodec
+import io.lettuce.core.api.StatefulRedisConnection
+import io.lettuce.core.api.async.RedisAsyncCommands
+import play.api.inject.ApplicationLifecycle
+import play.api.libs.json.{Json, Reads, Writes}
 
-import scala.concurrent.ExecutionContext
+import java.time.Duration as JDuration
+import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.{ExecutionContext, Future}
+import scala.jdk.CollectionConverters.*
+import scala.jdk.FutureConverters.*
 
 trait RedisTemporaryStore extends LazyLogging {
   implicit def ec: ExecutionContext
   protected def address: String
   protected def port: Int
-  lazy val authority: String = f"$address:$port"
-  private lazy val r = new RedisClient(address, port)
+  protected def lifecycle: ApplicationLifecycle
 
-  def find(id: String): Fox[Option[String]] =
-    withExceptionHandler {
-      r.get(id)
+  private val connectionTimeout: JDuration = JDuration.ofSeconds(1)
+  private val commandTimeout: JDuration = JDuration.ofMinutes(1)
+
+  lazy val authority: String = s"$address:$port"
+
+  private lazy val redisUri: RedisURI = RedisURI.Builder.redis(address, port).withTimeout(commandTimeout).build()
+
+  private lazy val redisClient: LettuceClient = {
+    val client = LettuceClient.create(redisUri)
+    client.setOptions(
+      ClientOptions
+        .builder()
+        .socketOptions(SocketOptions.builder().connectTimeout(connectionTimeout).build())
+        .timeoutOptions(TimeoutOptions.builder().fixedTimeout(commandTimeout).build())
+        .build()
+    )
+    client
+  }
+
+  private lazy val connection: StatefulRedisConnection[String, String] = {
+    val conn = redisClient
+      .connectAsync(StringCodec.UTF8, redisUri)
+      .toCompletableFuture
+      .orTimeout(connectionTimeout.toSeconds, TimeUnit.SECONDS)
+      .get()
+    lifecycle.addStopHook { () =>
+      Future {
+        conn.close()
+        redisClient.shutdown()
+      }(using scala.concurrent.ExecutionContext.global)
     }
+    conn
+  }
 
-  def findLong(id: String): Fox[Option[Long]] =
-    withExceptionHandler {
-      r.get(id).map(s => s.toLong)
-    }
+  private lazy val commands: RedisAsyncCommands[String, String] = connection.async()
 
-  def removeAllConditional(pattern: String): Fox[Unit] =
-    withExceptionHandler {
-      val keysOpt: Option[List[Option[String]]] = r.keys(pattern)
-      keysOpt.foreach { keys: Seq[Option[String]] =>
-        keys.flatMap { key: Option[String] =>
-          key.flatMap(r.del(_))
-        }
-      }
-    }
-
-  def findAllConditional(pattern: String): Fox[Seq[String]] =
-    withExceptionHandler {
-      val keysOpt: Option[List[Option[String]]] = r.keys(pattern)
-      keysOpt.map { keys: Seq[Option[String]] =>
-        keys.flatMap { key: Option[String] =>
-          key.flatMap(r.get(_))
-        }
-      }.getOrElse(Seq())
-    }
-
-  def keys(pattern: String): Fox[List[String]] =
-    withExceptionHandler {
-      r.keys(pattern).map(_.flatten).getOrElse(List())
-    }
-
-  def insertKey(id: String, expirationOpt: Option[FiniteDuration] = None): Fox[Unit] =
-    insert(id, "", expirationOpt)
-
-  def insert(id: String, value: String, expirationOpt: Option[FiniteDuration] = None): Fox[Unit] =
-    withExceptionHandler {
-      expirationOpt
-        .map(
-          expiration => r.setex(id, expiration.toSeconds, value)
-        )
-        .getOrElse(
-          r.set(id, value)
-        )
-    }
-
-  def insertLong(id: String, value: Long, expirationOpt: Option[FiniteDuration] = None): Fox[Unit] =
-    withExceptionHandler {
-      expirationOpt
-        .map(
-          expiration => r.setex(id, expiration.toSeconds, value)
-        )
-        .getOrElse(
-          r.set(id, value)
-        )
-    }
-
-  def contains(id: String): Fox[Boolean] =
-    withExceptionHandler {
-      r.exists(id)
-    }
-
-  def remove(id: String): Fox[Unit] =
-    withExceptionHandler {
-      r.del(id)
-    }
-
-  def increaseBy(id: String, value: Long): Fox[Option[Long]] =
-    withExceptionHandler {
-      r.incrby(id, value)
-    }
-
-  def checkHealth(implicit ec: ExecutionContext): Fox[Unit] =
-    try {
-      val reply = r.ping
-      if (!reply.contains("PONG")) throw new Exception(reply.getOrElse("No Reply"))
-      Fox.successful(())
-    } catch {
+  // Wraps access to `commands`, which initializes lazily. If Redis is down at first access,
+  // the lazy val throws synchronously; catching it here returns Fox.failure and leaves the lazy
+  // val un-initialized so the next call retries. Once the initial connection succeeds, Lettuce
+  // handles reconnection internally, so transient outages are recovered automatically.
+  private def withCommands[B](f: RedisAsyncCommands[String, String] => Fox[B]): Fox[B] =
+    try f(commands) ?-> "Redis access failure"
+    catch {
       case e: Exception =>
-        logger.error(s"Redis health check failed at $address:$port (reply: ${e.getMessage})")
-        Fox.failure(s"Redis health check failed")
-    }
-
-  def withExceptionHandler[B](f: => B): Fox[B] =
-    try {
-      r.synchronized {
-        Fox.successful(f)
-      }
-    } catch {
-      case e: Exception =>
-        val msg = "Redis access exception: " + e.getMessage
+        val msg = s"Redis access exception on $authority: ${e.getMessage}"
         logger.error(msg)
         Fox.failure(msg)
     }
 
-  def insertIntoSet(id: String, value: String): Fox[Boolean] =
-    withExceptionHandler {
-      r.sadd(id, value).getOrElse(0L) > 0
+  def find(id: String): Fox[String] =
+    withCommands { cmd =>
+      Fox.fromFuture(cmd.get(id).asScala).flatMap { v =>
+        if (v == null) Fox.empty else Fox.successful(v)
+      }
+    }
+
+  def findLong(id: String): Fox[Long] =
+    withCommands { cmd =>
+      Fox.fromFuture(cmd.get(id).asScala).flatMap { v =>
+        if (v == null) Fox.empty else tryo(v.toLong).toFox
+      }
+    }
+
+  private val scanBatchSize = 1000L
+
+  // Uses SCAN instead of KEYS, since KEYS blocks the (single-threaded) Redis server for O(keyspace size),
+  // while SCAN only does O(scanBatchSize) work per call and yields to other clients in between.
+  private def scanKeys(cmd: RedisAsyncCommands[String, String], pattern: String): Fox[Seq[String]] = {
+    val scanArgs = ScanArgs.Builder.matches(pattern).limit(scanBatchSize)
+    val buffer = scala.collection.mutable.ArrayBuffer.empty[String]
+    def scanNextRecursive(cursor: ScanCursor): Fox[Seq[String]] =
+      Fox.fromFuture(cmd.scan(cursor, scanArgs).asScala).flatMap { result =>
+        buffer ++= result.getKeys.asScala
+        if (result.isFinished) Fox.successful(buffer.toSeq) else scanNextRecursive(result)
+      }
+    scanNextRecursive(ScanCursor.INITIAL)
+  }
+
+  def removeAllConditional(pattern: String): Fox[Unit] =
+    withCommands { cmd =>
+      for {
+        keysList <- scanKeys(cmd, pattern)
+        _ <- Fox.runIf(keysList.nonEmpty)(Fox.fromFuture(cmd.del(keysList*).asScala))
+      } yield ()
+    }
+
+  def findAllConditional(pattern: String): Fox[Seq[String]] =
+    withCommands { cmd =>
+      for {
+        keysList <- scanKeys(cmd, pattern)
+        values <-
+          if (keysList.isEmpty)
+            Fox.successful(Seq.empty)
+          else
+            Fox.fromFuture(
+              cmd.mget(keysList*).asScala.map(_.asScala.filter(_.hasValue).map(_.getValue).toSeq)
+            )
+      } yield values
+    }
+
+  def keys(pattern: String): Fox[Seq[String]] =
+    withCommands(cmd => scanKeys(cmd, pattern))
+
+  def insertKey(id: String, expiryOpt: Option[FiniteDuration] = None): Fox[Unit] =
+    insert(id, "", expiryOpt)
+
+  def insert(id: String, value: String, expiryOpt: Option[FiniteDuration] = None): Fox[Unit] =
+    withCommands { cmd =>
+      val stage = expiryOpt match {
+        case Some(expiry) => cmd.setex(id, expiry.toSeconds, value)
+        case None         => cmd.set(id, value)
+      }
+      Fox.fromFuture(stage.asScala.map(_ => ()))
+    }
+
+  def insertLong(id: String, value: Long, expiryOpt: Option[FiniteDuration] = None): Fox[Unit] =
+    insert(id, value.toString, expiryOpt)
+
+  def contains(id: String): Fox[Boolean] =
+    withCommands(cmd => Fox.fromFuture(cmd.exists(id).asScala.map(_.longValue > 0)))
+
+  def remove(id: String): Fox[Unit] =
+    withCommands(cmd => Fox.fromFuture(cmd.del(id).asScala.map(_ => ())))
+
+  // Set or update expiry duration for an existing key
+  def expire(id: String, expiry: FiniteDuration): Fox[Unit] =
+    withCommands(cmd => Fox.fromFuture(cmd.expire(id, expiry.toSeconds).asScala.map(_ => ())))
+
+  // Seconds until id expires. -1 if id has no expiry, -2 if id does not exist.
+  def ttlSeconds(id: String): Fox[Long] =
+    withCommands(cmd => Fox.fromFuture(cmd.ttl(id).asScala.map(_.longValue)))
+
+  def checkHealth: Fox[Unit] =
+    withCommands { cmd =>
+      Fox
+        .fromFuture(
+          cmd.ping().toCompletableFuture.orTimeout(connectionTimeout.toSeconds, TimeUnit.SECONDS).asScala
+        )
+        .flatMap { reply =>
+          if (reply == "PONG") Fox.successful(()) else Fox.failure(s"Unexpected Redis ping reply: $reply")
+        }
+    } ?-> "Redis health check failed."
+
+  def insertIntoSet(id: String, value: String, expiryOpt: Option[FiniteDuration] = None): Fox[Boolean] =
+    withCommands { cmd =>
+      for {
+        wasAdded <- Fox.fromFuture(cmd.sadd(id, value).asScala.map(_.longValue > 0))
+        _ <- Fox.runOptional(expiryOpt)(expiry => Fox.fromFuture(cmd.expire(id, expiry.toSeconds).asScala))
+      } yield wasAdded
     }
 
   def isContainedInSet(id: String, value: String): Fox[Boolean] =
-    withExceptionHandler {
-      r.sismember(id, value)
-    }
+    withCommands(cmd => Fox.fromFuture(cmd.sismember(id, value).asScala.map(_.booleanValue)))
 
   def removeFromSet(id: String, value: String): Fox[Boolean] =
-    withExceptionHandler {
-      r.srem(id, value).getOrElse(0L) > 0
-    }
+    withCommands(cmd => Fox.fromFuture(cmd.srem(id, value).asScala.map(_.longValue > 0)))
 
   def findSet(id: String): Fox[Set[String]] =
-    withExceptionHandler {
-      r.smembers(id).map(_.flatten).getOrElse(Set.empty)
-    }
+    withCommands(cmd => Fox.fromFuture(cmd.smembers(id).asScala.map(_.asScala.toSet)))
+
+  def findParsed[T: Reads](key: String)(implicit ec: ExecutionContext): Fox[T] =
+    for {
+      objectString <- find(key)
+      parsed <- JsonHelper.parseAs[T](objectString).toFox
+    } yield parsed
+
+  def insertSerialized[T: Writes](key: String, value: T, expiryOpt: Option[FiniteDuration] = None): Fox[Unit] = {
+    val serialized = Json.stringify(Json.toJson(value))
+    insert(key, serialized, expiryOpt)
+  }
 
 }

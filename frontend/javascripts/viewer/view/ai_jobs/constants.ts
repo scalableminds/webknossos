@@ -1,0 +1,47 @@
+import alignExample from "@images/align-example.png";
+import materializeVolumeAnnotationExample from "@images/materialize-volume-annotation-example.jpg";
+import mitoInferralExample from "@images/mito-inferral-example.jpg";
+import neuronInferralExample from "@images/neuron-inferral-example.jpg";
+import { APIJobCommand } from "types/api_types";
+import type { Vector3 } from "viewer/constants";
+
+export type StartAiJobDrawerState =
+  | "open_ai_training"
+  | "open_ai_inference"
+  | "open_ai_alignment"
+  | "invisible";
+
+// "materialize_volume_annotation" is only used in this module
+export const jobNameToImagePath = {
+  infer_neurons: neuronInferralExample,
+  infer_mitochondria: mitoInferralExample,
+  align_sections: alignExample,
+  materialize_volume_annotation: materializeVolumeAnnotationExample,
+  invisible: "",
+  infer_with_model: "",
+} as const;
+
+// Jobs that store their results in the organization’s WEBKNOSSOS storage. The backend refuses to
+// start these while the organization’s storage quota is exceeded. Keep in sync with
+// JobCommand.jobsWritingToStorage in the backend.
+export const JOB_COMMANDS_WRITING_TO_STORAGE: ReadonlySet<APIJobCommand> = new Set([
+  APIJobCommand.ALIGN_SECTIONS,
+  APIJobCommand.COMPUTE_MESH_FILE,
+  APIJobCommand.COMPUTE_SEGMENT_INDEX_FILE,
+  APIJobCommand.INFER_INSTANCES,
+  APIJobCommand.INFER_MITOCHONDRIA,
+  APIJobCommand.INFER_NEURONS,
+  APIJobCommand.MATERIALIZE_VOLUME_ANNOTATION,
+]);
+
+// The following minimal bounding box extents are based on the default model that is used for neuron and mitochondria segmentation.
+// Thus when changing the default model, consider changing these values as well.
+// See https://github.com/scalableminds/webknossos/issues/8198#issuecomment-2782684436
+export const MIN_BBOX_EXTENT: Record<
+  APIJobCommand.INFER_NEURONS | APIJobCommand.INFER_MITOCHONDRIA | APIJobCommand.INFER_INSTANCES,
+  Vector3
+> = {
+  [APIJobCommand.INFER_NEURONS]: [16, 16, 4],
+  [APIJobCommand.INFER_INSTANCES]: [4, 4, 4],
+  [APIJobCommand.INFER_MITOCHONDRIA]: [4, 4, 4],
+};

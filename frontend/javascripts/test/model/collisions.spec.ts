@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
 import traverse from "viewer/model/bucket_data_handling/bucket_traversals";
+import { describe, expect, it } from "vitest";
 
 describe("Traversal", () => {
   it("diagonal line", () => {

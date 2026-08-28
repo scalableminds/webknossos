@@ -1,19 +1,19 @@
-import _ from "lodash";
-import { getBitDepth, getByteCountFromLayer } from "viewer/model/accessors/dataset_accessor";
-import { byteArraysToLz4Base64 } from "viewer/workers/byte_arrays_to_lz4_base64.worker";
-import datasetServerObject from "test/fixtures/dataset_server_object";
-import { vi, describe, it, expect, beforeEach } from "vitest";
-import { MagInfo } from "viewer/model/helpers/mag_info";
-import type { APIDataLayer } from "types/api_types";
-import type { PushSaveQueueTransaction } from "viewer/model/actions/save_actions";
-import { requestWithFallback } from "viewer/model/bucket_data_handling/wkstore_adapter";
-import { DataBucket } from "viewer/model/bucket_data_handling/bucket";
-import PushQueue from "viewer/model/bucket_data_handling/pushqueue";
 import Request from "libs/request";
-import type DataCube from "viewer/model/bucket_data_handling/data_cube";
+import range from "lodash-es/range";
+import datasetServerObject from "test/fixtures/dataset_server_object";
+import type { APIDataLayer } from "types/api_types";
 import type { BucketAddress } from "viewer/constants";
-import Store from "viewer/store";
 import Constants from "viewer/constants";
+import { getBitDepth, getByteCountFromLayer } from "viewer/model/accessors/dataset_accessor";
+import type { PushSaveQueueTransaction } from "viewer/model/actions/save_actions";
+import { DataBucket } from "viewer/model/bucket_data_handling/bucket";
+import type DataCube from "viewer/model/bucket_data_handling/data_cube";
+import PushQueue from "viewer/model/bucket_data_handling/pushqueue";
+import { requestWithFallback } from "viewer/model/bucket_data_handling/wkstore_adapter";
+import { MagInfo } from "viewer/model/helpers/mag_info";
+import Store from "viewer/store";
+import { byteArraysToLz4Base64 } from "viewer/workers/byte_arrays_to_lz4_base64.worker";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { dataSource } = datasetServerObject;
 let _fourBit = false;
@@ -30,7 +30,7 @@ const mockedCube = {
     [1, 1, 1],
     [2, 2, 2],
   ]),
-  triggerBucketDataChanged: () => {},
+  triggerRenderedBucketDataChanged: () => {},
 } as any as DataCube;
 
 vi.mock("viewer/store", () => ({
@@ -98,8 +98,8 @@ describe("wkstore_adapter", () => {
 
     const fourBitFactor = _fourBit && layer.category === "color" ? 0.5 : 1;
     const byteCount = fourBitFactor * getByteCountFromLayer(layer) * Constants.BUCKET_SIZE;
-    const bucketData1 = _.range(0, byteCount).map((i) => i % 256);
-    const bucketData2 = _.range(0, byteCount).map((i) => (2 * i) % 256);
+    const bucketData1 = range(0, byteCount).map((i) => i % 256);
+    const bucketData2 = range(0, byteCount).map((i) => (2 * i) % 256);
 
     const responseBuffer = new Uint8Array(bucketData1.concat(bucketData2));
 
@@ -109,6 +109,8 @@ describe("wkstore_adapter", () => {
         Promise.resolve({
           buffer: responseBuffer.buffer,
           headers: {
+            "empty-bucket-indices": "[]",
+            "failure-bucket-indices": "[]",
             "missing-buckets": "[]",
           },
         }),
@@ -141,6 +143,8 @@ describe("wkstore_adapter", () => {
         Promise.resolve({
           buffer: responseBuffer.buffer,
           headers: {
+            "empty-bucket-indices": "[]",
+            "failure-bucket-indices": "[]",
             "missing-buckets": "[]",
           },
         }),
@@ -155,10 +159,9 @@ describe("wkstore_adapter", () => {
         }),
       );
 
-    const buffers = await requestWithFallback(colorLayer, batch);
-    const [buffer1, buffer2] = buffers;
-    expect(buffer1).toEqual(bucketData1);
-    expect(buffer2).toEqual(bucketData2);
+    const [buffer1, buffer2] = await requestWithFallback(colorLayer, batch);
+    expect(buffer1).toEqual({ type: "data", data: bucketData1 });
+    expect(buffer2).toEqual({ type: "data", data: bucketData2 });
     expect(RequestMock.sendJSONReceiveArraybufferWithHeaders).toHaveBeenCalledTimes(2);
 
     expect(RequestMock.sendJSONReceiveArraybufferWithHeaders).toHaveBeenCalledWith(
@@ -251,7 +254,56 @@ describe("wkstore_adapter", () => {
     setFourBit(false);
   });
 
-  it<TestContext>("sendToStore: Request Handling should send the correct request parameters", () => {
+  function mockResponse(buffer: ArrayBuffer, headers: Record<string, string>) {
+    vi.mocked(Request)
+      .sendJSONReceiveArraybufferWithHeaders.mockReset()
+      .mockReturnValue(Promise.resolve({ buffer, headers }));
+  }
+
+  it<TestContext>("requestWithFallback: marks buckets reported as empty", async ({
+    colorLayer,
+  }) => {
+    const { batch, bucketData1 } = prepare(colorLayer);
+    // Only the first bucket has data; the second one is empty.
+    mockResponse(bucketData1.buffer, {
+      "empty-bucket-indices": "[1]",
+      "failure-bucket-indices": "[]",
+      "missing-buckets": "[1]",
+    });
+    const [buffer1, buffer2] = await requestWithFallback(colorLayer, batch);
+    expect(buffer1).toEqual({ type: "data", data: bucketData1 });
+    expect(buffer2).toEqual({ type: "empty" });
+  });
+
+  it<TestContext>("requestWithFallback: marks buckets reported as failures", async ({
+    colorLayer,
+  }) => {
+    const { batch, bucketData1 } = prepare(colorLayer);
+    // Only the first bucket has data; the second one could not be read.
+    mockResponse(bucketData1.buffer, {
+      "empty-bucket-indices": "[]",
+      "failure-bucket-indices": "[1]",
+      "missing-buckets": "[1]",
+    });
+    const [buffer1, buffer2] = await requestWithFallback(colorLayer, batch);
+    expect(buffer1).toEqual({ type: "data", data: bucketData1 });
+    expect(buffer2).toEqual({ type: "failure" });
+  });
+
+  it<TestContext>("requestWithFallback: treats legacy missing-buckets header as empty", async ({
+    colorLayer,
+  }) => {
+    const { batch, bucketData1 } = prepare(colorLayer);
+    // Older datastores only send the combined legacy header.
+    mockResponse(bucketData1.buffer, {
+      "missing-buckets": "[1]",
+    });
+    const [buffer1, buffer2] = await requestWithFallback(colorLayer, batch);
+    expect(buffer1).toEqual({ type: "data", data: bucketData1 });
+    expect(buffer2).toEqual({ type: "empty" });
+  });
+
+  it<TestContext>("sendToStore: Request Handling should send the correct request parameters", async () => {
     const data = new Uint8Array(Constants.BUCKET_SIZE);
     const bucket1 = new DataBucket(
       "uint8",
@@ -279,6 +331,8 @@ describe("wkstore_adapter", () => {
 
     getBucketData.mockReturnValue(data);
 
+    const base64Data = (await byteArraysToLz4Base64([data]))[0];
+
     const expectedSaveQueueItems: PushSaveQueueTransaction = {
       type: "PUSH_SAVE_QUEUE_TRANSACTION",
       items: [
@@ -290,7 +344,7 @@ describe("wkstore_adapter", () => {
             additionalCoordinates: undefined,
             mag: [1, 1, 1],
             cubeSize: 32,
-            base64Data: byteArraysToLz4Base64([data])[0],
+            base64Data,
           },
         },
         {
@@ -301,7 +355,7 @@ describe("wkstore_adapter", () => {
             additionalCoordinates: undefined,
             mag: [2, 2, 2],
             cubeSize: 32,
-            base64Data: byteArraysToLz4Base64([data])[0],
+            base64Data,
           },
         },
       ],
@@ -310,7 +364,7 @@ describe("wkstore_adapter", () => {
 
     const pushQueue = new PushQueue(mockedCube, tracingId);
 
-    // @ts-ignore pushTransaction is a private method
+    // @ts-expect-error pushTransaction is a private method
     return pushQueue.pushTransaction(batch).then(() => {
       expect(Store.dispatch).toHaveBeenCalledTimes(2);
       expect(Store.dispatch).toHaveBeenCalledWith(expectedSaveQueueItems);

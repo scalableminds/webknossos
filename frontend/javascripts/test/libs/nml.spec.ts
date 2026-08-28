@@ -1,19 +1,22 @@
-import _ from "lodash";
 import update from "immutability-helper";
-import type { SkeletonTracing, WebknossosState } from "viewer/store";
-import type { Node } from "viewer/model/types/tree_types";
-import defaultState from "viewer/default_state";
 import DiffableMap from "libs/diffable_map";
-import EdgeCollection from "viewer/model/edge_collection";
-import { findGroup } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
-import { describe, it, expect } from "vitest";
+import cloneDeep from "lodash-es/cloneDeep";
+import extend from "lodash-es/extend";
+import size from "lodash-es/size";
+import sortBy from "lodash-es/sortBy";
 import { TreeTypeEnum } from "viewer/constants";
-import { addTreesAndGroupsAction } from "viewer/model/actions/skeletontracing_actions";
-import { serializeToNml, getNmlName, parseNml } from "viewer/model/helpers/nml_helpers";
-import SkeletonTracingReducer from "viewer/model/reducers/skeletontracing_reducer";
+import defaultState from "viewer/default_state";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
-import { annotation as TASK_ANNOTATION } from "../fixtures/tasktracing_server_objects";
+import { addTreesAndGroupsAction } from "viewer/model/actions/skeletontracing_actions";
+import EdgeCollection from "viewer/model/edge_collection";
+import { getNmlName, parseNml, serializeToNml } from "viewer/model/helpers/nml_helpers";
+import SkeletonTracingReducer from "viewer/model/reducers/skeletontracing_reducer";
+import type { Node } from "viewer/model/types/tree_types";
+import type { SkeletonTracing, WebknossosState } from "viewer/store";
+import { findGroup } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
+import { describe, expect, it } from "vitest";
 import { buildInfo as BUILD_INFO } from "../fixtures/build_info";
+import { annotation as TASK_ANNOTATION } from "../fixtures/tasktracing_server_objects";
 
 const createDummyNode = (id: number): Node => ({
   bitDepth: 8,
@@ -137,9 +140,7 @@ const initialSkeletonTracing: SkeletonTracing = {
       isExpanded: true,
     },
   ],
-  activeTreeId: 1,
   activeNodeId: 1,
-  activeGroupId: null,
   boundingBox: {
     min: [0, 0, 0],
     max: [500, 500, 500],
@@ -156,15 +157,10 @@ const initialSkeletonTracing: SkeletonTracing = {
       isVisible: true,
     },
   ],
-  navigationList: {
-    list: [],
-    activeIndex: -1,
-  },
-  showSkeletons: true,
   additionalAxes: [],
 };
 
-const initialState: WebknossosState = _.extend({}, defaultState, {
+const initialState: WebknossosState = extend({}, defaultState, {
   dataset: {
     ...defaultState.dataset,
     name: "Test Dataset",
@@ -181,8 +177,13 @@ const initialState: WebknossosState = _.extend({}, defaultState, {
     skeleton: initialSkeletonTracing,
     annotationType: "Explorational",
     annotationId: "annotationId",
+    isUpdatingCurrentlyAllowed: true,
   },
   task: TASK_ANNOTATION.task,
+  localSkeletonState: {
+    ...defaultState.localSkeletonState,
+    activeTreeId: 1,
+  },
 });
 
 async function testThatParserThrowsWithState(invalidState: WebknossosState, key: string) {
@@ -749,15 +750,55 @@ describe("NML", () => {
     await testThatParserThrowsWithState(duplicateGroupIdState, "duplicateGroupId");
   });
 
+  it("NML parser should correctly parse groups written as self-closing tags", async () => {
+    // Groups can appear as self-closing XML tags (e.g. <group id="1" name="Axon 1" />)
+    // instead of paired open/close tags (e.g. <group id="1" name="Axon 1"></group>).
+    // Before the fix, the tagclose event fired for self-closing tags would incorrectly
+    // pop the parent group from the stack, corrupting the group hierarchy.
+    const nmlWithSelfClosingGroups = `\
+<?xml version="1.0" encoding="UTF-8"?>
+<things>
+  <parameters>
+    <experiment name="Test Dataset" />
+  </parameters>
+  <groups>
+    <group id="1" name="matches">
+      <group id="2" name="z_2600">
+        <group id="0" name="matches_in_plane_31200" />
+        <group id="3" name="matches_in_plane_31201" />
+        <group id="4" name="matches_in_plane_31201" />
+      </group>
+    </group>
+  </groups>
+</things>`;
+
+    const { treeGroups } = await parseNml(nmlWithSelfClosingGroups);
+
+    // Top-level groups should be group 1
+    expect(treeGroups.map((g) => g.groupId)).toEqual([1]);
+
+    // Group 1 should have group 2 as a child (not be flattened to the top level)
+    const group1 = treeGroups.find((g) => g.groupId === 1);
+    expect(group1).toBeDefined();
+    expect(group1!.children.map((c) => c.groupId)).toEqual([2]);
+
+    // Group 2 should have one child
+    const group2 = group1!.children.find((g) => g.groupId === 2);
+    expect(group2).toBeDefined();
+    expect(group2!.children.map((c) => c.groupId)).toEqual([0, 3, 4]);
+  });
+
   it("addTreesAndGroups reducer should assign new node and tree ids", () => {
-    const action = addTreesAndGroupsAction(_.cloneDeep(initialSkeletonTracing.trees), []);
+    const action = addTreesAndGroupsAction(cloneDeep(initialSkeletonTracing.trees), []);
     const newState = SkeletonTracingReducer(initialState, action);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
     // This should be unchanged / sanity check
     expect(newState.annotation.name).toBe(initialState.annotation.name);
-    expect(newSkeletonTracing.activeTreeId).toBe(initialSkeletonTracing.activeTreeId);
+    expect(newState.localSkeletonState.activeTreeId).toBe(
+      initialState.localSkeletonState.activeTreeId,
+    );
 
     // New node and tree ids should have been assigned
     expect(newSkeletonTracing.trees.size()).toBe(4);
@@ -769,7 +810,7 @@ describe("NML", () => {
     expect(newSkeletonTracing.trees.getOrThrow(4).nodes.size()).toBe(3);
     expect(newSkeletonTracing.trees.getOrThrow(4).nodes.getOrThrow(12).id).toBe(12);
 
-    const getSortedEdges = (edges: EdgeCollection) => _.sortBy(edges.toArray(), "source");
+    const getSortedEdges = (edges: EdgeCollection) => sortBy(edges.toArray(), "source");
 
     // And node ids in edges, branchpoints and comments should have been replaced
     expect(getSortedEdges(newSkeletonTracing.trees.getOrThrow(3).edges)).toEqual([
@@ -818,8 +859,8 @@ describe("NML", () => {
 
   it("addTreesAndGroups reducer should assign new group ids", () => {
     const action = addTreesAndGroupsAction(
-      _.cloneDeep(initialSkeletonTracing.trees),
-      _.cloneDeep(initialSkeletonTracing.treeGroups),
+      cloneDeep(initialSkeletonTracing.trees),
+      cloneDeep(initialSkeletonTracing.treeGroups),
     );
     const newState = SkeletonTracingReducer(initialState, action);
     expect(newState).not.toBe(initialState);
@@ -827,10 +868,12 @@ describe("NML", () => {
 
     // This should be unchanged / sanity check
     expect(newState.annotation.name).toBe(initialState.annotation.name);
-    expect(newSkeletonTracing.activeTreeId).toBe(initialSkeletonTracing.activeTreeId);
+    expect(newState.localSkeletonState.activeTreeId).toBe(
+      initialState.localSkeletonState.activeTreeId,
+    );
 
     // New node and tree ids should have been assigned
-    expect(_.size(newSkeletonTracing.treeGroups)).toBe(4);
+    expect(size(newSkeletonTracing.treeGroups)).toBe(4);
     expect(newSkeletonTracing.treeGroups[2].groupId).not.toBe(
       newSkeletonTracing.treeGroups[0].groupId,
     );
@@ -841,6 +884,98 @@ describe("NML", () => {
     expect(newSkeletonTracing.trees.getOrThrow(4).groupId).toBe(
       newSkeletonTracing.treeGroups[3].groupId,
     );
+  });
+
+  it("addTreesAndGroups reducer should nest newly imported ungrouped trees into the given target group", () => {
+    const newTrees = new DiffableMap([
+      [
+        100,
+        {
+          treeId: 100,
+          name: "ImportedTree",
+          nodes: new DiffableMap([[50, createDummyNode(50)]]),
+          timestamp: 0,
+          branchPoints: [],
+          edges: EdgeCollection.loadFromArray([]),
+          comments: [],
+          color: [0, 0, 0] as [number, number, number],
+          isVisible: true,
+          groupId: null,
+          type: TreeTypeEnum.DEFAULT,
+          edgesAreVisible: true,
+          metadata: [],
+        },
+      ],
+    ]);
+
+    // Target group 1 ("Axon 1") already exists in the initial tracing.
+    const action = addTreesAndGroupsAction(newTrees, [], undefined, true, 1);
+    const newState = SkeletonTracingReducer(initialState, action);
+    const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
+
+    // No new top-level groups were pushed, since no groups were imported.
+    expect(newSkeletonTracing.treeGroups.map((g) => g.groupId)).toEqual([1, 2]);
+
+    const importedTree = newSkeletonTracing.trees
+      .values()
+      .find((tree) => tree.name === "ImportedTree");
+    expect(importedTree?.groupId).toBe(1);
+  });
+
+  it("addTreesAndGroups reducer should nest newly imported top-level groups into the given target group", () => {
+    const newTrees = new DiffableMap([
+      [
+        100,
+        {
+          treeId: 100,
+          name: "ImportedGroupedTree",
+          nodes: new DiffableMap([[50, createDummyNode(50)]]),
+          timestamp: 0,
+          branchPoints: [],
+          edges: EdgeCollection.loadFromArray([]),
+          comments: [],
+          color: [0, 0, 0] as [number, number, number],
+          isVisible: true,
+          groupId: 10,
+          type: TreeTypeEnum.DEFAULT,
+          edgesAreVisible: true,
+          metadata: [],
+        },
+      ],
+    ]);
+    const newTreeGroups = [{ groupId: 10, name: "ImportedGroup", children: [] }];
+
+    // Target group 1 ("Axon 1") already exists in the initial tracing and already has one child ("Blah").
+    const action = addTreesAndGroupsAction(newTrees, newTreeGroups, undefined, true, 1);
+    const newState = SkeletonTracingReducer(initialState, action);
+    const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
+
+    // The imported group was nested into group 1 instead of being pushed to the root.
+    expect(newSkeletonTracing.treeGroups.map((g) => g.groupId)).toEqual([1, 2]);
+
+    const targetGroup = findGroup(newSkeletonTracing.treeGroups, 1);
+    expect(targetGroup?.children.map((g) => g.name).sort()).toEqual(["Blah", "ImportedGroup"]);
+
+    const importedGroup = targetGroup?.children.find((g) => g.name === "ImportedGroup");
+    const importedTree = newSkeletonTracing.trees
+      .values()
+      .find((tree) => tree.name === "ImportedGroupedTree");
+    expect(importedTree?.groupId).toBe(importedGroup?.groupId);
+  });
+
+  it("addTreesAndGroups reducer should fall back to the root group if the given target group no longer exists", () => {
+    const action = addTreesAndGroupsAction(
+      cloneDeep(initialSkeletonTracing.trees),
+      cloneDeep(initialSkeletonTracing.treeGroups),
+      undefined,
+      true,
+      999, // does not exist in the initial tracing
+    );
+    const newState = SkeletonTracingReducer(initialState, action);
+    const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
+
+    // Same as the default (no targetGroupId) behavior: new groups are pushed to the root.
+    expect(size(newSkeletonTracing.treeGroups)).toBe(4);
   });
 
   it("addTreesAndGroups reducer should replace nodeId references in comments when changing nodeIds", () => {
@@ -864,7 +999,7 @@ describe("NML", () => {
       comments: testComments,
     });
 
-    const action = addTreesAndGroupsAction(_.cloneDeep(newTrees), []);
+    const action = addTreesAndGroupsAction(cloneDeep(newTrees), []);
     const newState = SkeletonTracingReducer(initialState, action);
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
 
@@ -916,18 +1051,18 @@ describe("NML", () => {
     expect(parsedTrees.getOrThrow(3).nodes.has(1)).toBe(true);
     expect(parsedTrees.getOrThrow(3).nodes.has(2)).toBe(false);
     expect(parsedTrees.getOrThrow(3).nodes.has(7)).toBe(false);
-    expect(_.size(parsedTrees.getOrThrow(3).branchPoints)).toBe(1);
-    expect(_.size(parsedTrees.getOrThrow(3).comments)).toBe(1);
+    expect(size(parsedTrees.getOrThrow(3).branchPoints)).toBe(1);
+    expect(size(parsedTrees.getOrThrow(3).comments)).toBe(1);
     expect(parsedTrees.getOrThrow(4).nodes.has(2)).toBe(true);
     expect(parsedTrees.getOrThrow(5).nodes.has(7)).toBe(true);
-    expect(_.size(parsedTrees.getOrThrow(5).branchPoints)).toBe(1);
+    expect(size(parsedTrees.getOrThrow(5).branchPoints)).toBe(1);
 
     // Check that the split up trees were wrapped in a group
     // which was inserted into the original tree's group
     const parentGroup = findGroup(parsedTreeGroups, 3);
     if (parentGroup == null)
       throw Error("Assertion Error: Serialized group is missing after parsing.");
-    expect(_.size(parentGroup.children)).toBe(1);
+    expect(size(parentGroup.children)).toBe(1);
     expect(parentGroup.children[0].name).toBe("TestTree-0");
   });
 });

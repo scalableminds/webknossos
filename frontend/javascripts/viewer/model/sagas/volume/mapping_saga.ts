@@ -6,12 +6,12 @@ import {
   getMappingsForDatasetLayer,
 } from "admin/rest_api";
 import { message } from "antd";
+import { toBigInt } from "libs/bigint_helpers";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import { fastDiffSetAndMap, sleep } from "libs/utils";
-import _ from "lodash";
+import min from "lodash-es/min";
 import { buffers, eventChannel } from "redux-saga";
-import type { ActionPattern } from "redux-saga/effects";
 import {
   actionChannel,
   all,
@@ -25,60 +25,69 @@ import {
   takeEvery,
   takeLatest,
 } from "typed-redux-saga";
-import type { APIDataLayer, APIMapping } from "types/api_types";
-import { MappingStatusEnum } from "viewer/constants";
+import type { APIDataLayer, APIDataset, APIMapping } from "types/api_types";
+import { MappingStatusEnum, type MappingType } from "viewer/constants";
+import { getSegmentIdForPositionAsync } from "viewer/controller/combinations/volume_handlers";
 import {
   getLayerByName,
   getMappingInfo,
   getSegmentationLayers,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
+import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
   type BucketRetrievalSource,
+  getActiveCellId,
+  getActiveSegmentationTracingLayer,
   getBucketRetrievalSourceFn,
   getEditableMappingForVolumeTracingId,
   needsLocalHdf5Mapping as getNeedsLocalHdf5Mapping,
+  getVolumeTracingByLayerName,
   isMappingActivationAllowed,
+  isZoomThresholdExceededForAgglomerateMapping,
 } from "viewer/model/accessors/volumetracing_accessor";
 import {
   type EnsureLayerMappingsAreLoadedAction,
   setLayerMappingsAction,
 } from "viewer/model/actions/dataset_actions";
+import { snapshotMappingDataForNextRebaseAction } from "viewer/model/actions/save_actions";
 import type {
   OptionalMappingProperties,
   SetMappingAction,
+  SetMappingDataAction,
 } from "viewer/model/actions/settings_actions";
 import {
   clearMappingAction,
   finishMappingInitializationAction,
   setMappingAction,
+  setMappingDataAction,
 } from "viewer/model/actions/settings_actions";
 import {
   MAPPING_MESSAGE_KEY,
   setCacheResultForDiffMappings,
 } from "viewer/model/bucket_data_handling/mappings";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import { jsHsv2rgb } from "viewer/shaders/utils.glsl";
-import { api } from "viewer/singletons";
-import { Model } from "viewer/singletons";
+import { api, Model } from "viewer/singletons";
 import type {
   ActiveMappingInfo,
+  EditableMapping,
   Mapping,
-  MappingType,
   NumberLike,
   NumberLikeMap,
+  StoreAnnotation,
 } from "viewer/store";
-import type { Action } from "../../actions/actions";
-import { updateSegmentAction } from "../../actions/volumetracing_actions";
+import { setActiveCellAction, updateSegmentAction } from "../../actions/volumetracing_actions";
 import type DataCube from "../../bucket_data_handling/data_cube";
 import { listenToStoreProperty } from "../../helpers/listener_helpers";
-import { ensureWkReady } from "../ready_sagas";
+import { ensureWkInitialized } from "../ready_sagas";
+import { waitUntilNoActiveOperations } from "../saga_helpers";
 
 type APIMappings = Record<string, APIMapping>;
 type Container<T> = { value: T };
 
-const BUCKET_WATCHING_THROTTLE_DELAY = process.env.IS_TESTING ? 5 : 500;
+const BUCKET_WATCHING_THROTTLE_DELAY = import.meta.env.MODE === "test" ? 5 : 50;
 
 const takeLatestMappingChange = (
   oldActiveMappingByLayer: Container<Record<string, ActiveMappingInfo>>,
@@ -136,14 +145,36 @@ const takeLatestMappingChange = (
   });
 };
 
+// There are two distinct ways the active mapping ends up in the store. Keeping them apart matters:
+//
+// (1) ACTIVATING a mapping is always a TWO-PHASE process:
+//      Phase 1: setMappingAction configures which mapping becomes active (its name + type). It does
+//               NOT carry the mapping data. Normally the mapping saga reacts to it, loads the data
+//               from the server and dispatches setMappingDataAction itself. If the caller already
+//               holds the data (front-end API / merger mode supplying a custom mapping under the
+//               synthetic name "<custom mapping>"), it passes dataIsProvidedExternally so the saga
+//               skips loading and the caller dispatches setMappingDataAction itself.
+//      Phase 2: setMappingDataAction carries the actual mapping data (the Map). It triggers the
+//               texture update and finishMappingInitializationAction (status ACTIVATING -> ENABLED).
+//
+// (2) UPDATING the data of an already-active mapping only needs setMappingDataAction ON ITS OWN —
+//     there is NO setMappingAction, because the mapping (name + type) is already configured. This
+//     is used by proofreading split/merge and save/rebase, which recompute the mapping locally and
+//     re-publish it. setMappingDataAction therefore never carries a name/type: it always refers to
+//     the mapping that setMappingAction configured (phase 1) or that is already active.
+
 export default function* watchActivatedMappings(): Saga<void> {
   const oldActiveMappingByLayer = {
     value: yield* select((state) => state.temporaryConfiguration.activeMappingByLayer),
   };
-  // Buffer actions since they might be dispatched before WK_READY
+  // Buffer the activation requests since they might be dispatched before WK_INITIALIZED.
+  // Only SET_MAPPING (the activation request, phase 1 of case (1) above) is handled here.
+  // SET_MAPPING_DATA (the actual mapping data — phase 2 of an activation, or a standalone data
+  // update as in case (2)) is handled by finishMappingActivation below.
   const setMappingActionChannel = yield* actionChannel("SET_MAPPING");
-  yield* call(ensureWkReady);
+  yield* call(ensureWkInitialized);
   yield* takeLatest(setMappingActionChannel, handleSetMapping, oldActiveMappingByLayer);
+  yield* takeLatest("SET_MAPPING_DATA", finishMappingActivation);
   yield* takeEvery(
     "ENSURE_LAYER_MAPPINGS_ARE_LOADED",
     function* handler(action: EnsureLayerMappingsAreLoadedAction) {
@@ -154,11 +185,47 @@ export default function* watchActivatedMappings(): Saga<void> {
       }
     },
   );
+  yield* takeEvery("DEBUG__RELOAD_HDF5_MAPPING", reloadHdf5Mapping);
   const segmentationLayers = yield* select((state) => getSegmentationLayers(state.dataset));
   for (const layer of segmentationLayers) {
     // The following saga will fork internally.
     yield* takeLatestMappingChange(oldActiveMappingByLayer, layer.name);
   }
+  // Keep RebaseRelevantAnnotationState updated.
+  yield* takeEvery(["SET_MAPPING", "SET_MAPPING_DATA"], keepMappingInfoInUpdated);
+}
+
+function* clearActiveMapping(volumeTracingId: string) {
+  const newMapping = new Map();
+
+  yield* put(setMappingDataAction(volumeTracingId, newMapping, false));
+}
+
+function* reloadHdf5Mapping() {
+  /*
+   * currently only exists for debugging purposes. can be invoked via
+   *   webknossos.DEV.store.dispatch({type: "DEBUG__RELOAD_HDF5_MAPPING"})
+   */
+  const volumeTracingLayer = yield* select((state) => getActiveSegmentationTracingLayer(state));
+
+  const actionTracingId = volumeTracingLayer?.tracingId;
+  if (actionTracingId == null) {
+    return;
+  }
+  const layerName = actionTracingId;
+  const mappingInfo = yield* select((state) =>
+    getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
+  );
+  const dataset = yield* select((state) => state.dataset);
+  const layerInfo = getLayerByName(dataset, layerName);
+  const { mappingName } = mappingInfo;
+
+  if (mappingName == null) {
+    throw new Error("Could not apply splitAgglomerate because no active mapping was found.");
+  }
+
+  yield* call(clearActiveMapping, actionTracingId);
+  yield* call(updateLocalHdf5Mapping, layerName, layerInfo, mappingName);
 }
 
 const isAgglomerate = (mapping: ActiveMappingInfo) => {
@@ -194,6 +261,7 @@ function* reloadData(
   if (isAgglomerate(mapping) && !needsLocalHdf5Mapping) {
     if (mapping.mappingStatus === MappingStatusEnum.ACTIVATING) {
       yield* put(finishMappingInitializationAction(layerName));
+      yield* put(snapshotMappingDataForNextRebaseAction(layerName));
       message.destroy(MAPPING_MESSAGE_KEY);
     } else if (mapping.mappingStatus === MappingStatusEnum.ENABLED) {
       // If the mapping is already enabled (happens when an annotation was loaded initially
@@ -205,13 +273,16 @@ function* reloadData(
   oldActiveMappingByLayer.value = activeMappingByLayer;
 }
 
-function createBucketDataChangedChannel(dataCube: DataCube) {
+function createRenderedBucketDataChangedChannel(dataCube: DataCube) {
   return eventChannel((emit) => {
-    const bucketDataChangedHandler = () => {
-      emit("BUCKET_DATA_CHANGED");
+    const renderedBucketDataChangedHandler = () => {
+      emit("RENDERED_BUCKET_DATA_CHANGED");
     };
 
-    const unbind = dataCube.emitter.on("bucketDataChanged", bucketDataChangedHandler);
+    const unbind = dataCube.emitter.on(
+      "renderedBucketDataChanged",
+      renderedBucketDataChangedHandler,
+    );
     return unbind;
   }, buffers.sliding<string>(1));
 }
@@ -233,7 +304,7 @@ function* watchChangedBucketsForLayer(layerName: string): Saga<never> {
    * saga in an interruptible manner. See comments below for some rationale.
    */
   const dataCube = yield* call([Model, Model.getCubeByLayerName], layerName);
-  const bucketChannel = yield* call(createBucketDataChangedChannel, dataCube);
+  const bucketChannel = yield* call(createRenderedBucketDataChangedChannel, dataCube);
 
   // Also update the local hdf5 mapping by inspecting all already existing
   // buckets (likely, there are none yet because all buckets were reloaded, but
@@ -242,7 +313,7 @@ function* watchChangedBucketsForLayer(layerName: string): Saga<never> {
 
   while (true) {
     yield take(bucketChannel);
-    // We received a BUCKET_DATA_CHANGED event. `startInterruptibleUpdateMapping` needs
+    // We received a RENDERED_BUCKET_DATA_CHANGED event. `startInterruptibleUpdateMapping` needs
     // to be invoked.
     // However, let's throttle¹ this by waiting and then discarding all other events
     // that might have accumulated in between.
@@ -279,17 +350,18 @@ function* watchChangedBucketsForLayer(layerName: string): Saga<never> {
     // Updating the HDF5 mapping is an async task which requires communication with
     // the back-end. If the front-end does a proofreading operation in parallel,
     // there is a risk of a race condition. Therefore, we cancel the updateHdf5
-    // saga as soon as WK enters a busy state and retry afterwards.
+    // saga as soon as an operation starts and retry afterwards.
+    // Theoretically, the take on REGISTER_OPERATION could be narrowed down
+    // so that we only cancel when its a proofreading operation or rebasing operation.
+    // However, for now the wide `take` should be okay, too.
     while (true) {
-      let isBusy = yield* select((state) => state.uiInformation.busyBlockingInfo.isBusy);
-      if (!isBusy) {
+      const isBlocked = yield* select(
+        (state) => state.operationContext.activeOperations.length > 0,
+      );
+      if (!isBlocked) {
         const { cancel } = yield* race({
           updateHdf5: call(updateLocalHdf5Mapping, layerName, layerInfo, mappingName),
-          cancel: take(
-            ((action: Action) =>
-              action.type === "SET_BUSY_BLOCKING_INFO_ACTION" &&
-              action.value.isBusy) as ActionPattern,
-          ),
+          cancel: take("REGISTER_OPERATION"),
         });
         if (!cancel) {
           return;
@@ -297,16 +369,7 @@ function* watchChangedBucketsForLayer(layerName: string): Saga<never> {
         console.log("Cancelled updateHdf5");
       }
 
-      isBusy = yield* select((state) => state.uiInformation.busyBlockingInfo.isBusy);
-      if (isBusy) {
-        // Wait until WK is not busy anymore.
-        yield* take(
-          ((action: Action) =>
-            action.type === "SET_BUSY_BLOCKING_INFO_ACTION" &&
-            !action.value.isBusy) as ActionPattern,
-        );
-      }
-
+      yield* waitUntilNoActiveOperations();
       console.log("Retrying updateHdf5...");
     }
   }
@@ -357,13 +420,8 @@ function* handleSetMapping(
   oldActiveMappingByLayer: Container<Record<string, ActiveMappingInfo>>,
   action: SetMappingAction,
 ): Saga<void> {
-  const {
-    layerName,
-    mappingName,
-    mappingType,
-    mapping: existingMapping,
-    showLoadingIndicator,
-  } = action;
+  const { layerName, mappingName, mappingType, showLoadingIndicator, dataIsProvidedExternally } =
+    action;
 
   // Editable mappings cannot be disabled or switched for now
   const isEditableMappingActivationAllowed = yield* select((state) =>
@@ -374,15 +432,12 @@ function* handleSetMapping(
   if (mappingName == null) {
     return;
   }
-  if (existingMapping != null) {
-    // A fully fledged mapping object was already passed
-    // (e.g., via the front-end API).
-    // Only the custom colors have to be configured, if they
-    // were passed.
-    if (action.mappingColors) {
-      const classes = convertMappingObjectToEquivalenceClasses(existingMapping);
-      yield* call(setCustomColors, action, classes, layerName);
-    }
+
+  if (dataIsProvidedExternally) {
+    // The caller supplies the mapping data directly via a follow-up setMappingDataAction (e.g. the
+    // front-end API / merger mode), so there is nothing to load from the server here. The
+    // SET_MAPPING reducer already configured name/type/status; finishMappingActivation completes
+    // the activation once the data action arrives.
     return;
   }
 
@@ -427,6 +482,54 @@ function* handleSetMapping(
   }
 }
 
+function* finishMappingActivation(action: SetMappingDataAction): Saga<void> {
+  // Runs on every SET_MAPPING_DATA, i.e. for phase 2 of an activation (case 1) as well as for a
+  // standalone data update of an already-active mapping (case 2). The mapping data has already
+  // been stored in the store (by the SET_MAPPING_DATA reducer). Here we update
+  // the mapping textures (a no-op if the layer's textures have not been set up yet, e.g. in tests
+  // without a GPU) and finish the activation (status ACTIVATING -> ENABLED).
+  const { layerName, mapping, mappingColors, isMergerModeMapping } = action;
+
+  // The SetMappingDataAction only updates the mapping data. The mapping's name and type are already configured.
+  // So we read them from the current active mapping.
+  const activeMapping = yield* select((state) =>
+    getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
+  );
+
+  // Mirror the gate of the SET_MAPPING_DATA reducer.
+  const isActivationAllowed = yield* select((state) =>
+    isMappingActivationAllowed(state, activeMapping.mappingName, layerName, !!isMergerModeMapping),
+  );
+  if (!isActivationAllowed) {
+    return;
+  }
+
+  // Only proceed if the reducer actually applied this exact mapping and the activation is still
+  // in progress. This skips superseded/rejected actions and avoids double-finishing.
+  if (
+    activeMapping.mapping !== mapping ||
+    activeMapping.mappingStatus !== MappingStatusEnum.ACTIVATING
+  ) {
+    return;
+  }
+
+  // Apply custom colors if they were passed directly (e.g. via the front-end API). For JSON
+  // mappings the colors are applied in handleSetJsonMapping instead (using the server-provided
+  // class ordering), which is why those dispatches don't carry mappingColors.
+  if (mappingColors != null && mappingColors.length > 0) {
+    const classes = convertMappingObjectToEquivalenceClasses(mapping);
+    yield* call(setCustomColors, action, classes, layerName);
+  }
+
+  const mappings = Model.getLayerByName(layerName).mappings;
+  if (mappings != null) {
+    yield* call([mappings, mappings.updateMappingTextures], mapping);
+  }
+
+  yield* put(finishMappingInitializationAction(layerName));
+  message.destroy(MAPPING_MESSAGE_KEY);
+}
+
 function* handleSetHdf5Mapping(
   layerName: string,
   layerInfo: APIDataLayer,
@@ -442,31 +545,38 @@ function* handleSetHdf5Mapping(
   }
 }
 
-export function* updateLocalHdf5Mapping(
+function* updateLocalHdf5Mapping(
   layerName: string,
   layerInfo: APIDataLayer,
   mappingName: string,
 ): Saga<void> {
-  const dataset = yield* select((state) => state.dataset);
-  const annotation = yield* select((state) => state.annotation);
-  // If there is a fallbackLayer, request mappings for that instead of the tracing segmentation layer
-  const mappingLayerName =
-    "fallbackLayer" in layerInfo && layerInfo.fallbackLayer != null
-      ? layerInfo.fallbackLayer
-      : layerName;
-
-  const editableMapping = yield* select((state) =>
-    getEditableMappingForVolumeTracingId(state, layerName),
+  const previousMapping = yield* select(
+    (store) => store.temporaryConfiguration.activeMappingByLayer[layerName].mapping,
   );
+  const previousMappingOrEmpty = previousMapping || (new Map() as Mapping);
+
+  const isZoomThresholdExceeded = yield* select((state) =>
+    isZoomThresholdExceededForAgglomerateMapping(state, layerName),
+  );
+
+  if (isZoomThresholdExceeded) {
+    // We do not try to look up all segment ids because these are usually too many
+    // in coarse magnifications.
+    // A toast will be shown to the user in the warnAboutSegmentationZoom saga.
+    if (previousMapping == null) {
+      // If an annotation with activated mapping is loaded (on page load) with an exceeded zoom threshold,
+      // we set an empty mapping object. This needs to be done to let the mapping activation conclude
+      // (compare finishMappingActivation in mapping_saga.ts).
+      // In cases where a mapping is already set and the zoom threshold is exceeded, it is not changed
+      // to avoid useless updates to the cuckoo textures. Once the threshold is no longer exceeded, the mapping
+      // will be updated again.
+      yield* put(setMappingDataAction(layerName, new Map(), true));
+    }
+    return;
+  }
 
   const cube = Model.getCubeByLayerName(layerName);
-  const segmentIds = cube.getValueSetForAllBuckets();
-
-  const previousMapping = yield* select(
-    (store) =>
-      store.temporaryConfiguration.activeMappingByLayer[layerName].mapping ||
-      (new Map() as Mapping),
-  );
+  const segmentIds = cube.getValueSetForAllAccessedBuckets();
 
   const {
     aWithoutB: newSegmentIds,
@@ -476,28 +586,17 @@ export function* updateLocalHdf5Mapping(
     // that without any problems. This is done later to
     // avoid duplicating data for performance reasons.
     intersection: mutableRemainingEntries,
-  } = fastDiffSetAndMap(segmentIds as Set<NumberLike>, previousMapping);
+  } = fastDiffSetAndMap(segmentIds as Set<NumberLike>, previousMappingOrEmpty);
 
   let newEntries;
   try {
-    newEntries =
-      editableMapping != null
-        ? yield* call(
-            getAgglomeratesForSegmentsFromTracingstore,
-            annotation.tracingStore.url,
-            editableMapping.tracingId,
-            Array.from(newSegmentIds),
-            annotation.annotationId,
-            annotation.version,
-          )
-        : yield* call(
-            getAgglomeratesForSegmentsFromDatastore,
-            dataset.dataStore.url,
-            dataset,
-            mappingLayerName,
-            mappingName,
-            Array.from(newSegmentIds),
-          );
+    newEntries = yield* call(
+      getAgglomeratesForSegmentIds,
+      layerName,
+      layerInfo,
+      mappingName,
+      newSegmentIds,
+    );
   } catch (exception) {
     console.error("Could not load agglomerate ids for segments due to", exception);
     Toast.error(
@@ -510,21 +609,110 @@ export function* updateLocalHdf5Mapping(
   // new mapping. See the definition of mutableRemainingEntries.
   const mapping = mutableRemainingEntries as Mapping;
   for (const [key, val] of newEntries.entries()) {
-    // @ts-ignore
+    // @ts-expect-error
     mapping.set(key, val);
   }
 
-  setCacheResultForDiffMappings(previousMapping, mapping, {
+  setCacheResultForDiffMappings(previousMappingOrEmpty, mapping, {
     changed: [],
     onlyA: deletedValues,
     onlyB: newSegmentIds,
   });
 
-  yield* put(setMappingAction(layerName, mappingName, "HDF5", { mapping }));
-  if (process.env.IS_TESTING) {
-    // in test context, the mapping.ts code is not executed (which is usually responsible
-    // for finishing the initialization).
-    yield put(finishMappingInitializationAction(layerName));
+  yield* put(setMappingDataAction(layerName, mapping, true));
+
+  yield* call(adaptActiveSegmentToProofreadingMarker, layerName);
+}
+
+export async function fetchAgglomeratesForSegmentIds(
+  dataset: APIDataset,
+  annotation: StoreAnnotation,
+  editableMapping: EditableMapping | null | undefined,
+  layerName: string,
+  layerInfo: APIDataLayer,
+  mappingName: string,
+  newSegmentIds: Set<NumberLike>,
+): Promise<Mapping> {
+  // If there is a fallbackLayer, request mappings for that instead of the tracing segmentation layer
+  const mappingLayerName =
+    "fallbackLayer" in layerInfo && layerInfo.fallbackLayer != null
+      ? layerInfo.fallbackLayer
+      : layerName;
+
+  return editableMapping != null
+    ? getAgglomeratesForSegmentsFromTracingstore(
+        annotation.tracingStore.url,
+        editableMapping.tracingId,
+        newSegmentIds,
+        annotation.annotationId,
+        annotation.version,
+      )
+    : getAgglomeratesForSegmentsFromDatastore(
+        dataset.dataStore.url,
+        dataset,
+        mappingLayerName,
+        mappingName,
+        newSegmentIds,
+      );
+}
+
+export function* getAgglomeratesForSegmentIds(
+  layerName: string,
+  layerInfo: APIDataLayer,
+  mappingName: string,
+  newSegmentIds: Set<NumberLike>,
+) {
+  const dataset = yield* select((state) => state.dataset);
+  const annotation = yield* select((state) => state.annotation);
+  const editableMapping = yield* select((state) =>
+    getEditableMappingForVolumeTracingId(state, layerName),
+  );
+  return yield* call(() =>
+    fetchAgglomeratesForSegmentIds(
+      dataset,
+      annotation,
+      editableMapping,
+      layerName,
+      layerInfo,
+      mappingName,
+      newSegmentIds,
+    ),
+  );
+}
+
+function* adaptActiveSegmentToProofreadingMarker(layerName: string) {
+  const annotation = yield* select((state) => state.annotation);
+
+  const volumeTracing = getVolumeTracingByLayerName(annotation, layerName);
+  if (!volumeTracing) {
+    return;
+  }
+
+  const activeTool = yield* select((state) => state.uiInformation.activeTool);
+
+  if (activeTool !== AnnotationTool.PROOFREAD) {
+    return;
+  }
+
+  const proofreadingMarkerPosition = yield* select(
+    (state) => state.localSegmentationStateByLayer[layerName]?.proofreadingMarkerPosition,
+  );
+  if (proofreadingMarkerPosition) {
+    const agglomerateId = yield* call(getSegmentIdForPositionAsync, proofreadingMarkerPosition);
+    const activeSegmentId = yield* call(getActiveCellId, volumeTracing);
+
+    if (activeSegmentId !== agglomerateId) {
+      yield put(setActiveCellAction(agglomerateId, proofreadingMarkerPosition));
+      // TODO #9456: Look for a solution that this toast notification does not appear frequently in live collab scenario.
+      // yield* call(() =>
+      //   Toast.info(
+      //     `The active segment id was automatically changed from ${activeSegmentId} to ${agglomerateId}, because the agglomerate id at the proofreading marker changed.`,
+      //   ),
+      // );
+      console.log(
+        `The active segment id was automatically changed from ${activeSegmentId} to ${agglomerateId}, because the agglomerate id at the proofreading marker changed.`,
+      );
+    }
   }
 }
 
@@ -545,7 +733,7 @@ function* handleSetJsonMapping(
       `${exception}`,
     );
     console.error(exception);
-    yield* put(setMappingAction(layerName, null, mappingType));
+    yield* put(setMappingAction(layerName, null, mappingType, false));
     return;
   }
   const fetchedMapping = fetchedMappings[mappingName];
@@ -564,17 +752,20 @@ function* handleSetJsonMapping(
   }
 
   console.timeEnd("MappingSaga JSON");
-  yield* put(setMappingAction(layerName, mappingName, mappingType, mappingProperties));
+  // The custom colors (if any) were already applied above, so they are not passed again here
+  // (finishMappingActivation would otherwise re-apply them based on a possibly different class
+  // ordering).
+  yield* put(setMappingDataAction(layerName, mapping, false, { hideUnmappedIds }));
 }
 
 function convertMappingObjectToEquivalenceClasses(existingMapping: Mapping) {
-  const classesByRepresentative: Record<number, number[]> = {};
+  const classesByRepresentative: Record<string, NumberLike[]> = {};
   for (let [unmapped, mapped] of existingMapping.entries()) {
-    // TODO: Proper 64 bit support (#6921)
-    unmapped = Number(unmapped);
-    mapped = Number(mapped);
-    classesByRepresentative[mapped] = classesByRepresentative[mapped] || [];
-    classesByRepresentative[mapped].push(Number(unmapped));
+    // Regardless of number or bigint, convert to string so that it can be used as a
+    // key in both cases.
+    const mappedStr = mapped.toString();
+    classesByRepresentative[mappedStr] = classesByRepresentative[mappedStr] || [];
+    classesByRepresentative[mappedStr].push(unmapped);
   }
   const classes = Object.values(classesByRepresentative);
   return classes;
@@ -582,7 +773,7 @@ function convertMappingObjectToEquivalenceClasses(existingMapping: Mapping) {
 
 function* setCustomColors(
   mappingProperties: OptionalMappingProperties,
-  classes: number[][],
+  classes: NumberLike[][],
   layerName: string,
 ) {
   if (mappingProperties.mapping == null || mappingProperties.mappingColors == null) {
@@ -598,8 +789,7 @@ function* setCustomColors(
 
     const hueValue = mappingProperties.mappingColors[classIdx];
     const color = jsHsv2rgb(360 * hueValue, 1, 1);
-    // TODO: Proper 64 bit support (#6921)
-    yield* put(updateSegmentAction(Number(representativeId), { color }, layerName));
+    yield* put(updateSegmentAction(toBigInt(representativeId), { color }, layerName));
 
     classIdx++;
   }
@@ -642,7 +832,7 @@ function buildMappingObject(mappingName: string, fetchedMappings: APIMappings): 
     );
 
     for (const mappingClass of mapping.classes) {
-      const minId = _.min(mappingClass);
+      const minId = min(mappingClass);
       if (minId == null) {
         // The class is empty and can be ignored
         continue;
@@ -707,9 +897,18 @@ function* ensureMappingsAreLoadedAndRequestedMappingExists(
       duration: 10,
     });
     console.error(errorMessage);
-    yield* put(setMappingAction(layerName, null, mappingType));
+    yield* put(setMappingAction(layerName, null, mappingType, true, {}));
+
     return false;
   }
 
   return true;
+}
+
+// On every SET_MAPPING / SET_MAPPING_DATA make sure that, in case it only updates the mapping with
+// info already stored on the server, the RebaseRelevantAnnotationState is updated as well.
+function* keepMappingInfoInUpdated(action: SetMappingAction | SetMappingDataAction) {
+  if (action.isVersionStoredOnServer) {
+    yield put(snapshotMappingDataForNextRebaseAction(action.layerName));
+  }
 }

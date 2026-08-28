@@ -3,11 +3,11 @@ import { Button } from "antd";
 import renderIndependently from "libs/render_independently";
 import Toast from "libs/toast";
 import { clamp } from "libs/utils";
-import _ from "lodash";
 import messages from "messages";
 import React from "react";
 import { call, delay, put, take } from "typed-redux-saga";
 import type { APITaskType } from "types/api_types";
+import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import { getSegmentationLayers } from "viewer/model/accessors/dataset_accessor";
 import {
   getValidTaskZoomRange,
@@ -21,12 +21,12 @@ import {
 } from "viewer/model/actions/settings_actions";
 import { setMergerModeEnabledAction } from "viewer/model/actions/skeletontracing_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import Store, { type RecommendedConfiguration } from "viewer/store";
 import NewTaskDescriptionModal from "viewer/view/new_task_description_modal";
 import RecommendedConfigurationModal from "viewer/view/recommended_configuration_modal";
-import { ensureWkReady } from "./ready_sagas";
+import { ensureWkInitialized } from "./ready_sagas";
 
 function* maybeShowNewTaskTypeModal(taskType: APITaskType): Saga<void> {
   // Users can acquire new tasks directly in the tracing view. Occasionally,
@@ -47,40 +47,45 @@ function* maybeShowNewTaskTypeModal(taskType: APITaskType): Saga<void> {
 
 function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
   const { recommendedConfiguration } = taskType;
-  if (recommendedConfiguration == null || _.size(recommendedConfiguration) === 0) return;
+  if (recommendedConfiguration == null || Object.keys(recommendedConfiguration).length === 0)
+    return;
   const userConfiguration = yield* select((state) => state.userConfiguration);
   const datasetConfiguration = yield* select((state) => state.datasetConfiguration);
   const zoomStep = yield* select((state) => state.flycam.zoomStep);
   const segmentationLayers = yield* select((state) => getSegmentationLayers(state.dataset));
 
-  const configurationDifference = _.find(recommendedConfiguration, (value, _key) => {
-    const key = _key as keyof RecommendedConfiguration;
-    if (key === "zoom" && zoomStep !== value) {
-      return true;
-    } else if (key === "segmentationOpacity") {
-      const opacities = _.uniq(
-        segmentationLayers.map((layer) => datasetConfiguration.layers[layer.name].alpha),
-      );
-
-      // If there are different opacity values for the segmentation layers, the recommendation
-      // differs. Otherwise, we compare the one opacity value with the recommended one.
-      if (opacities.length > 1 || opacities[0] !== value) {
+  const hasConfigurationDifference = Object.entries(recommendedConfiguration).some(
+    ([_key, value]) => {
+      const key = _key as keyof RecommendedConfiguration;
+      if (key === "zoom" && zoomStep !== value) {
         return true;
-      } else {
-        return false;
+      } else if (key === "segmentationOpacity") {
+        const opacities = [
+          ...new Set(
+            segmentationLayers.map((layer) => datasetConfiguration.layers[layer.name].alpha),
+          ),
+        ];
+
+        // If there are different opacity values for the segmentation layers, the recommendation
+        // differs. Otherwise, we compare the one opacity value with the recommended one.
+        if (opacities.length > 1 || opacities[0] !== value) {
+          return true;
+        } else {
+          return false;
+        }
+        // @ts-expect-error
+      } else if (key in userConfiguration && userConfiguration[key] !== value) {
+        return true;
+        // @ts-expect-error
+      } else if (key in datasetConfiguration && datasetConfiguration[key] !== value) {
+        return true;
       }
-      // @ts-ignore
-    } else if (key in userConfiguration && userConfiguration[key] !== value) {
-      return true;
-      // @ts-ignore
-    } else if (key in datasetConfiguration && datasetConfiguration[key] !== value) {
-      return true;
-    }
 
-    return false;
-  });
+      return false;
+    },
+  );
 
-  if (configurationDifference == null) return;
+  if (!hasConfigurationDifference) return;
   let confirmed = false;
   // The renderIndependently call returns a promise that is only resolved
   // once destroy is called. yield* will wait until the returned promise is resolved.
@@ -109,14 +114,14 @@ function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
           }
         }
       } else if (key in userConfiguration) {
-        // @ts-ignore
+        // @ts-expect-error
         yield* put(updateUserSettingAction(key, recommendedConfiguration[key]));
       } else if (key in datasetConfiguration) {
-        // @ts-ignore
+        // @ts-expect-error
         yield* put(updateDatasetSettingAction(key, recommendedConfiguration[key]));
       } else {
         console.warn(
-          // @ts-ignore
+          // @ts-expect-error
           `Cannot apply recommended default for key/value: ${key}/${recommendedConfiguration[key]}`,
         );
       }
@@ -131,10 +136,10 @@ function* maybeActivateMergerMode(taskType: APITaskType): Saga<void> {
 }
 
 export default function* watchTasksAsync(): Saga<void> {
-  yield* call(ensureWkReady);
+  yield* call(ensureWkInitialized);
   const task = yield* select((state) => state.task);
   const activeUser = yield* select((state) => state.activeUser);
-  const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
+  const allowUpdate = yield* select(mayEditAnnotation);
   if (task == null || activeUser == null || !allowUpdate) return;
   yield* call(maybeActivateMergerMode, task.type);
   const { lastTaskTypeId } = activeUser;
@@ -149,7 +154,7 @@ export default function* watchTasksAsync(): Saga<void> {
 }
 export function* warnAboutMagRestriction(): Saga<void> {
   function* warnMaybe(): Saga<void> {
-    const { allowUpdate } = yield* select((state) => state.annotation.restrictions);
+    const allowUpdate = yield* select(mayEditAnnotation);
 
     if (!allowUpdate) {
       // If updates are not allowed in general, we return here, since we don't
@@ -202,7 +207,7 @@ export function* warnAboutMagRestriction(): Saga<void> {
     }
   }
 
-  yield* call(ensureWkReady);
+  yield* call(ensureWkInitialized);
   // Wait before showing the initial warning. Due to initialization lag it may only be visible very briefly, otherwise.
   yield* delay(5000);
   yield* warnMaybe();

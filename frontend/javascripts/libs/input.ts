@@ -1,13 +1,25 @@
+import {
+  type BrowserKeyComboEventProps,
+  bindKeyCombo,
+  type KeyEvent,
+  unbindKeyCombo,
+} from "@rwh/keystrokes";
+import Hammer from "hammerjs";
 import Date from "libs/date";
-import Hammer from "libs/hammerjs_wrapper";
-// @ts-expect-error ts-migrate(2306) FIXME: ... Remove this comment to see the full error message
-import KeyboardJS from "libs/keyboard";
-import * as Utils from "libs/utils";
+import { initializeKeystrokes } from "libs/keystrokes_options";
 import window, { document } from "libs/window";
-import _ from "lodash";
-import { type Emitter, createNanoEvents } from "nanoevents";
-import type { Point2 } from "viewer/constants";
+import extend from "lodash-es/extend";
+import { createNanoEvents, type Emitter } from "nanoevents";
+import type { ValueOf } from "types/type_utils";
+import type { OrthoView, Point2 } from "viewer/constants";
 import constants from "viewer/constants";
+import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
+import { addEventListenerWithDelegation, isNoEditableElementFocused } from "./utils";
+
+// Must run before anything binds a key combo: the global Keystrokes instance is
+// created lazily on the first bind and picks up the options set at that point.
+initializeKeystrokes();
+
 // This is the main Input implementation.
 // Although all keys, buttons and sensor are mapped in
 // the controller, this is were the magic happens.
@@ -18,116 +30,188 @@ import constants from "viewer/constants";
 // Each input method is contained in its own module. We tried to
 // provide similar public interfaces for the input methods.
 // In most cases the heavy lifting is done by libraries in the background.
+
 export const KEYBOARD_BUTTON_LOOP_INTERVAL = 1000 / constants.FPS;
 const MOUSE_MOVE_DELTA_THRESHOLD = 5;
+
+// Keyboard related types
 export type ModifierKeys = "alt" | "shift" | "ctrlOrMeta";
-type KeyboardKey = string;
-type MouseButton = string;
-type KeyboardHandler = (event: KeyboardEvent) => void | Promise<void>;
-// Callable Object, see https://www.typescriptlang.org/docs/handbook/2/functions.html#call-signatures
-type KeyboardLoopHandler = {
-  (arg0: number, isOriginalEvent: boolean): void;
+
+//  ---- Type definitions used to interface with Keyboard classes -----
+
+// The format used by keystrokes to define upon which key pressed to trigger an action / handler:
+// e.g.: "a" or "control > y, r".
+export type KeystrokesKeyComboStr = string;
+export type KeyboardNoLoopHandlerFn = (event: KeyboardEvent) => void | Promise<void>;
+export type KeyboardNoLoopHandler = {
+  onPressed: KeyboardNoLoopHandlerFn;
+  onReleased?: KeyboardNoLoopHandlerFn;
+};
+export type KeyComboToNoLoopHandlerMap = Record<KeystrokesKeyComboStr, KeyboardNoLoopHandler>;
+
+// KeyboardLoop types
+export type KeyboardLoopHandlerFn = {
+  // Callable Object, see https://www.typescriptlang.org/docs/handbook/2/functions.html#call-signatures
+  (arg0: number, isOriginalEvent: boolean, event: KeyboardEvent): void;
   delayed?: boolean;
   lastTime?: number | null | undefined;
   customAdditionalDelayFn?: () => number;
 };
-type KeyboardBindingPress = [KeyboardKey, KeyboardHandler, KeyboardHandler];
-type KeyboardBindingDownUp = [KeyboardKey, KeyboardHandler, KeyboardHandler];
-type KeyBindingMap = Record<KeyboardKey, KeyboardHandler>;
-type KeyBindingLoopMap = Record<KeyboardKey, KeyboardLoopHandler>;
-export type MouseBindingMap = Record<MouseButton, MouseHandler>;
+export type KeyboardLoopHandler = {
+  onPressedWithRepeat: KeyboardLoopHandlerFn;
+  onReleased?: KeyboardLoopHandlerFn;
+  // When true the handler uses the user-configured keyboard delay from the store.
+  delayed?: boolean;
+};
+export type KeyComboToLoopHandlerMap = Record<KeystrokesKeyComboStr, KeyboardLoopHandler>;
+export type KeyboardHandler = KeyboardLoopHandler | KeyboardNoLoopHandler;
+
+// Mouse related types
+type MouseClickEvents =
+  | "leftClick"
+  | "rightClick"
+  | "leftDoubleClick"
+  | "middleClick"
+  | "leftMouseDown"
+  | "rightMouseDown"
+  | "leftMouseUp"
+  | "rightMouseUp";
+type MouseMoveEvents = "mouseMove" | "leftDownMove" | "middleDownMove" | "rightDownMove";
+type MouseScrollEvents = "scroll";
+type MouseHoverEvents = "over" | "out";
 type MouseButtonWhich = 1 | 2 | 3;
 type MouseButtonString = "left" | "middle" | "right";
+type HammerJSEvents = "pinch";
+type MouseMoveEventHandler = (
+  delta: Point2,
+  position: Point2,
+  id: OrthoView,
+  event: MouseEvent,
+) => void;
+type MouseClickEventHandler = (
+  position: Point2,
+  id: OrthoView,
+  event: MouseEvent,
+  isTouch: boolean,
+) => void;
+type MouseScrollEventHandler = (
+  deltaYorX: number,
+  modifier: ModifierKeys | null | undefined,
+) => void;
+type MouseHoverEventHandler = () => void;
 export type MouseHandler =
-  | ((deltaYorX: number, modifier: ModifierKeys | null | undefined) => void)
-  | ((position: Point2, id: string, event: MouseEvent, isTouch: boolean) => void)
-  | ((delta: Point2, position: Point2, id: string, event: MouseEvent) => void);
-type HammerJsEvent = {
-  center: Point2;
-  pointers: Array<Record<string, any>>;
-  scale: number;
-  srcEvent: MouseEvent;
-};
+  | MouseMoveEventHandler
+  | MouseClickEventHandler
+  | MouseScrollEventHandler
+  | MouseHoverEventHandler;
+export type HammerJSHandler = (delta: number, center: Point2) => void;
+type FullMouseBindingMap = Record<MouseClickEvents, MouseClickEventHandler> &
+  Record<MouseMoveEvents, MouseMoveEventHandler> &
+  Record<MouseScrollEvents, MouseScrollEventHandler> &
+  Record<MouseHoverEvents, MouseHoverEventHandler> &
+  Record<HammerJSEvents, HammerJSHandler>;
+export type MouseEventHandler = ValueOf<FullMouseBindingMap>;
+export type MouseBindingMap = Partial<FullMouseBindingMap>;
 
-// Workaround: KeyboardJS fires event for "C" even if you press
-// "Ctrl + C".
-function shouldIgnore(event: KeyboardEvent, key: KeyboardKey) {
-  const bindingHasCtrl = key.toLowerCase().indexOf("ctrl") !== -1;
-  const bindingHasShift = key.toLowerCase().indexOf("shift") !== -1;
-  const bindingHasSuper = key.toLowerCase().indexOf("super") !== -1;
-  const bindingHasCommand = key.toLowerCase().indexOf("command") !== -1;
-  const eventHasCtrl = event.ctrlKey;
-  const eventHasShift = event.shiftKey;
-  const eventHasSuper = event.metaKey;
+// A binding without a modifier must not fire when that modifier is held, so that
+// e.g. "c" does not trigger while the user presses "Ctrl + C".
+function shouldIgnore(event: KeyboardEvent, key: KeystrokesKeyComboStr) {
+  const normalizedKey = key.toLowerCase();
+  const bindingHasCtrl = normalizedKey.includes("control");
+  const bindingHasShift = normalizedKey.includes("shift");
+  const bindingHasMeta = normalizedKey.includes("meta");
   return (
-    (eventHasCtrl && !bindingHasCtrl) ||
-    (eventHasShift && !bindingHasShift) ||
-    (eventHasSuper && !(bindingHasSuper || bindingHasCommand))
+    (event.ctrlKey && !bindingHasCtrl) ||
+    (event.shiftKey && !bindingHasShift) ||
+    (event.metaKey && !bindingHasMeta)
   );
 }
 
-// This keyboard hook directly passes a keycombo and callback
-// to the underlying KeyboadJS library to do its dirty work.
-// Pressing a button will only fire an event once.
-const EXTENDED_COMMAND_KEYS = "ctrl + k";
-const EXTENDED_COMMAND_DURATION = 3000;
-export class InputKeyboardNoLoop {
-  bindings: Array<KeyboardBindingPress> = [];
+// Keyboard class capable of handling both one-call (no-looped) and continuous (looped) shortcuts.
+// Dispatch is implicit: handlers with `onPressed` fire once per key press; handlers with
+// `onPressedWithRepeat` fire continuously at ~60 fps while the key is held.
+// Loop handlers with `delayed: true` apply the user-configured keyboard delay from the store.
+
+function findEventInKeystrokeComboEvent(
+  keyEvents: KeyEvent<KeyboardEvent, BrowserKeyComboEventProps>[],
+  finalKeyEvent: KeyEvent<KeyboardEvent, BrowserKeyComboEventProps>,
+): KeyboardEvent | undefined {
+  if (finalKeyEvent.originalEvent) {
+    return finalKeyEvent.originalEvent;
+  }
+  return keyEvents.find((event) => event.originalEvent)?.originalEvent;
+}
+
+// Internal types for interfacing with the keystrokes library.
+type KeystrokesHandlerArgs = {
+  keyCombo: string;
+  keyEvents: KeyEvent<KeyboardEvent, BrowserKeyComboEventProps>[];
+  finalKeyEvent: KeyEvent<KeyboardEvent, BrowserKeyComboEventProps>;
+};
+type KeystrokesHandler = (event: KeystrokesHandlerArgs) => void;
+type NoLoopKeystrokesBinding = {
+  onPressed?: KeystrokesHandler;
+  onReleased?: KeystrokesHandler;
+  preventRepeatByDefault: boolean;
+};
+type LoopKeystrokesBinding = {
+  onPressedWithRepeat: KeystrokesHandler;
+  onReleased?: KeystrokesHandler;
+};
+
+export class InputKeyboard {
+  keyCallbackMap: KeyComboToLoopHandlerMap = {};
+  keyPressedCount: number = 0;
+  bindings: Record<KeystrokesKeyComboStr, NoLoopKeystrokesBinding | LoopKeystrokesBinding> = {};
   isStarted: boolean = true;
+  delay: number = 0;
+  unsubscribeDelay: (() => void) | null = null;
   supportInputElements: boolean = false;
-  hasExtendedBindings: boolean = false;
-  cancelExtendedModeTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  isPreventBrowserSearchbarShortcutActive: boolean = false;
 
   constructor(
-    initialBindings: KeyBindingMap,
+    initialBindings: Record<KeystrokesKeyComboStr, KeyboardHandler>,
     options?: {
       supportInputElements?: boolean;
     },
-    extendedCommands?: KeyBindingMap,
-    keyUpBindings?: KeyBindingMap,
   ) {
     if (options) {
       this.supportInputElements = options.supportInputElements || this.supportInputElements;
     }
 
-    if (extendedCommands != null && initialBindings[EXTENDED_COMMAND_KEYS] != null) {
-      console.warn(
-        `Extended commands are enabled, but the keybinding for it is already in use. Please change the keybinding for '${EXTENDED_COMMAND_KEYS}'.`,
+    const hasDelayedHandler = Object.values(initialBindings).some(
+      (h) => "delayed" in h && h.delayed,
+    );
+    if (hasDelayedHandler) {
+      this.unsubscribeDelay = listenToStoreProperty(
+        (state) => state.userConfiguration.keyboardDelay,
+        (delay) => {
+          this.delay = delay;
+        },
+        true,
       );
     }
 
-    if (extendedCommands) {
-      this.hasExtendedBindings = true;
+    // Auto focuses the browsers search bar in some browser & os setups.
+    // control + k is used by the default tool switching commands and
+    // thus focusing the search bar in the browser is explicitly prevented here.
+    const usesShortcutToFastFocusBrowserSearchbar = Object.keys(initialBindings).some(
+      (keyCombo) => {
+        const normalizedKeyCombo = keyCombo.toLowerCase();
+        return (
+          normalizedKeyCombo.includes("control + k") || normalizedKeyCombo.includes("meta + k")
+        );
+      },
+    );
+    if (usesShortcutToFastFocusBrowserSearchbar) {
       document.addEventListener("keydown", this.preventBrowserSearchbarShortcut);
-      this.attach(EXTENDED_COMMAND_KEYS, this.toggleExtendedMode);
-      // Add empty callback in extended mode to deactivate the extended mode via the same EXTENDED_COMMAND_KEYS.
-      this.attach(EXTENDED_COMMAND_KEYS, _.noop, _.noop, true);
-      for (const key of Object.keys(extendedCommands)) {
-        const callback = extendedCommands[key];
-        this.attach(key, callback, _.noop, true);
-      }
+      this.isPreventBrowserSearchbarShortcutActive = true;
     }
 
-    for (const key of Object.keys(initialBindings)) {
-      const callback = initialBindings[key];
-      const keyUpCallback = keyUpBindings != null ? keyUpBindings[key] : _.noop;
-      this.attach(key, callback, keyUpCallback);
+    for (const [keyCombo, handler] of Object.entries(initialBindings)) {
+      this._attach(keyCombo, handler);
     }
   }
-
-  toggleExtendedMode = (evt: KeyboardEvent) => {
-    evt.preventDefault();
-    const isInExtendedMode = KeyboardJS.getContext() === "extended";
-    if (isInExtendedMode) {
-      this.cancelExtendedModeTimeout();
-      KeyboardJS.setContext("default");
-      return;
-    }
-    KeyboardJS.setContext("extended");
-    this.cancelExtendedModeTimeoutId = setTimeout(() => {
-      KeyboardJS.setContext("default");
-    }, EXTENDED_COMMAND_DURATION);
-  };
 
   preventBrowserSearchbarShortcut = (evt: KeyboardEvent) => {
     if ((evt.ctrlKey || evt.metaKey) && evt.key === "k") {
@@ -136,205 +220,164 @@ export class InputKeyboardNoLoop {
     }
   };
 
-  cancelExtendedModeTimeout() {
-    if (this.cancelExtendedModeTimeoutId != null) {
-      clearTimeout(this.cancelExtendedModeTimeoutId);
-      this.cancelExtendedModeTimeoutId = null;
-    }
-  }
-
-  attach(
-    key: KeyboardKey,
-    keyDownCallback: KeyboardHandler,
-    keyUpCallback: KeyboardHandler = _.noop,
-    isExtendedCommand: boolean = false,
+  private _attach(
+    keyCombo: KeystrokesKeyComboStr,
+    handler: KeyboardNoLoopHandler | KeyboardLoopHandler,
   ) {
-    const binding = [
-      key,
-      (event: KeyboardEvent) => {
-        if (!this.isStarted) {
-          return;
-        }
-
-        if (!this.supportInputElements && !Utils.isNoElementFocussed()) {
-          return;
-        }
-
-        if (shouldIgnore(event, key)) {
-          return;
-        }
-        const isInExtendedMode = KeyboardJS.getContext() === "extended";
-        if (isInExtendedMode) {
-          this.cancelExtendedModeTimeout();
-          KeyboardJS.setContext("default");
-        }
-
-        if (!event.repeat) {
-          keyDownCallback(event);
-        } else {
-          event.preventDefault();
-          event.stopPropagation();
-        }
-      },
-      (event: KeyboardEvent) => {
-        keyUpCallback(event);
-      },
-    ];
-    if (isExtendedCommand) {
-      KeyboardJS.withContext("extended", () => {
-        KeyboardJS.bind(...binding);
-      });
+    if ("onPressed" in handler) {
+      this._attachNoLoop(keyCombo, handler);
     } else {
-      KeyboardJS.withContext("default", () => {
-        KeyboardJS.bind(...binding);
-      });
-    }
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(string | ((...args: any[]) => v... Remove this comment to see the full error message
-    return this.bindings.push(binding);
-  }
-
-  destroy() {
-    this.isStarted = false;
-
-    for (const binding of this.bindings) {
-      KeyboardJS.unbind(...binding);
-    }
-    if (this.hasExtendedBindings) {
-      document.removeEventListener("keydown", this.preventBrowserSearchbarShortcut);
+      this._attachLoop(keyCombo, handler);
     }
   }
-}
-// This module is "main" keyboard handler.
-// It is able to handle key-presses and will continuously
-// fire the attached callback.
-export class InputKeyboard {
-  keyCallbackMap: KeyBindingLoopMap = {};
-  keyPressedCount: number = 0;
-  bindings: Array<KeyboardBindingDownUp> = [];
-  isStarted: boolean = true;
-  delay: number = 0;
-  supportInputElements: boolean = false;
 
-  constructor(
-    initialBindings: KeyBindingLoopMap,
-    options?: {
-      delay?: number;
-      supportInputElements?: boolean;
-    },
+  _attachNoLoop(
+    combo: KeystrokesKeyComboStr,
+    { onPressed, onReleased: onRelease }: KeyboardNoLoopHandler,
   ) {
-    if (options) {
-      this.delay = options.delay != null ? options.delay : this.delay;
-      this.supportInputElements = options.supportInputElements || this.supportInputElements;
-    }
+    const onPressedGuarded = ({ keyEvents, finalKeyEvent }: KeystrokesHandlerArgs) => {
+      if (!this.isStarted || (!this.supportInputElements && !isNoEditableElementFocused())) {
+        return;
+      }
+      const event = findEventInKeystrokeComboEvent(keyEvents, finalKeyEvent);
+      if (!event || shouldIgnore(event, combo)) {
+        return;
+      }
 
-    for (const key of Object.keys(initialBindings)) {
-      const callback = initialBindings[key];
-      this.attach(key, callback);
-    }
+      if (!event.repeat) {
+        onPressed(event);
+      } else {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+    const onReleasedInterfaceAdjusted = onRelease
+      ? ({ keyEvents, finalKeyEvent }: KeystrokesHandlerArgs) => {
+          const event = findEventInKeystrokeComboEvent(keyEvents, finalKeyEvent);
+          if (!event) {
+            return;
+          }
+          onRelease(event);
+        }
+      : () => {};
+
+    const binding: NoLoopKeystrokesBinding = {
+      onPressed: onPressedGuarded,
+      onReleased: onReleasedInterfaceAdjusted,
+      preventRepeatByDefault: false,
+    };
+    bindKeyCombo(combo, binding);
+    this.bindings[combo] = binding;
   }
 
-  attach(key: KeyboardKey, callback: KeyboardLoopHandler) {
+  _attachLoop(keyCombo: KeystrokesKeyComboStr, handler: KeyboardLoopHandler) {
     let delayTimeoutId: ReturnType<typeof setTimeout> | null = null;
-    const binding: KeyboardBindingDownUp = [
-      key,
-      (event: KeyboardEvent) => {
-        // When first pressed, insert the callback into
-        // keyCallbackMap and start the buttonLoop.
-        // Then, ignore any other events fired from the operating
-        // system, because we're using our own loop.
-        // When control key is pressed, everything is ignored, because
-        // if there is any browser action attached to this (as with Ctrl + S)
-        // KeyboardJS does not receive the up event.
-        if (!this.isStarted) {
-          return;
-        }
+    const { onPressedWithRepeat, onReleased, delayed } = handler;
 
-        if (this.keyCallbackMap[key] != null) {
-          return;
-        }
+    const onPressedWithRepeatGuarded = ({ keyEvents, finalKeyEvent }: KeystrokesHandlerArgs) => {
+      const event = findEventInKeystrokeComboEvent(keyEvents, finalKeyEvent);
+      if (!event) {
+        return;
+      }
+      // When first pressed, insert the callback into keyCallbackMap and start the
+      // buttonLoop. Ignore any subsequent OS-level repeat events since we drive our own loop.
+      // When control key is pressed, everything is ignored, because if there is any browser
+      // action attached to this (as with Ctrl + S) KeyboardJS does not receive the up event.
+      if (
+        !this.isStarted ||
+        this.keyCallbackMap[keyCombo] != null ||
+        (!this.supportInputElements && !isNoEditableElementFocused()) ||
+        shouldIgnore(event, keyCombo)
+      ) {
+        return;
+      }
 
-        if (!Utils.isNoElementFocussed()) {
-          return;
-        }
+      onPressedWithRepeat(1, true, event);
+      onPressedWithRepeat.lastTime = null;
+      onPressedWithRepeat.delayed = true;
+      this.keyCallbackMap[keyCombo] = handler;
+      this.keyPressedCount++;
 
-        if (shouldIgnore(event, key)) {
-          return;
-        }
+      if (this.keyPressedCount === 1) {
+        this.buttonLoop(event);
+      }
 
-        callback(1, true);
-        // reset lastTime
-        callback.lastTime = null;
-        callback.delayed = true;
-        this.keyCallbackMap[key] = callback;
-        this.keyPressedCount++;
+      const baseDelay = delayed ? this.delay : 0;
+      const totalDelay =
+        baseDelay +
+        (onPressedWithRepeat.customAdditionalDelayFn != null
+          ? onPressedWithRepeat.customAdditionalDelayFn()
+          : 0);
 
-        if (this.keyPressedCount === 1) {
-          this.buttonLoop();
-        }
+      if (totalDelay >= 0) {
+        delayTimeoutId = setTimeout(() => {
+          onPressedWithRepeat.delayed = false;
+          onPressedWithRepeat.lastTime = Date.now();
+        }, totalDelay);
+      }
+    };
 
-        const totalDelay =
-          this.delay +
-          (callback.customAdditionalDelayFn != null ? callback.customAdditionalDelayFn() : 0);
+    const onReleaseGuarded = ({ keyEvents, finalKeyEvent }: KeystrokesHandlerArgs) => {
+      if (!this.isStarted) {
+        return;
+      }
 
-        if (totalDelay >= 0) {
-          delayTimeoutId = setTimeout(() => {
-            callback.delayed = false;
-            callback.lastTime = new Date().getTime();
-          }, totalDelay);
-        }
-      },
-      () => {
-        if (!this.isStarted) {
-          return;
-        }
+      if (this.keyCallbackMap[keyCombo] != null) {
+        this.keyPressedCount--;
+        delete this.keyCallbackMap[keyCombo];
+      }
 
-        if (this.keyCallbackMap[key] != null) {
-          this.keyPressedCount--;
-          delete this.keyCallbackMap[key];
-        }
+      if (delayTimeoutId != null) {
+        clearTimeout(delayTimeoutId);
+        delayTimeoutId = null;
+      }
+      const event = findEventInKeystrokeComboEvent(keyEvents, finalKeyEvent);
+      if (onReleased != null && event != null) {
+        onReleased(1, true, event);
+      }
+    };
 
-        if (delayTimeoutId != null) {
-          clearTimeout(delayTimeoutId);
-          delayTimeoutId = null;
-        }
-      },
-    ];
-    KeyboardJS.withContext("default", () => {
-      KeyboardJS.bind(...binding);
-    });
-    this.bindings.push(binding);
+    const binding: LoopKeystrokesBinding = {
+      onPressedWithRepeat: onPressedWithRepeatGuarded,
+      onReleased: onReleaseGuarded,
+    };
+    bindKeyCombo(keyCombo, binding);
+    this.bindings[keyCombo] = binding;
   }
 
-  // In order to continuously fire callbacks we have to loop
-  // through all the buttons that a marked as "pressed".
-  buttonLoop() {
+  // Continuously fires callbacks for all currently held loop keys.
+  buttonLoop(originalEvent: KeyboardEvent) {
     if (!this.isStarted) {
       return;
     }
 
     if (this.keyPressedCount > 0) {
       for (const key of Object.keys(this.keyCallbackMap)) {
-        const callback = this.keyCallbackMap[key];
+        const { onPressedWithRepeat } = this.keyCallbackMap[key];
 
-        if (!callback.delayed) {
-          const curTime = new Date().getTime();
+        if (!onPressedWithRepeat.delayed) {
+          const curTime = Date.now();
           // If no lastTime, assume that desired FPS is met
-          const lastTime = callback.lastTime || curTime - 1000 / constants.FPS;
+          const lastTime = onPressedWithRepeat.lastTime || curTime - 1000 / constants.FPS;
           const elapsed = curTime - lastTime;
-          callback.lastTime = curTime;
-          callback((elapsed / 1000) * constants.FPS, false);
+          onPressedWithRepeat.lastTime = curTime;
+          onPressedWithRepeat((elapsed / 1000) * constants.FPS, false, originalEvent);
         }
       }
 
-      setTimeout(() => this.buttonLoop(), KEYBOARD_BUTTON_LOOP_INTERVAL);
+      setTimeout(() => this.buttonLoop(originalEvent), KEYBOARD_BUTTON_LOOP_INTERVAL);
     }
   }
 
   destroy() {
     this.isStarted = false;
 
-    for (const binding of this.bindings) {
-      KeyboardJS.unbind(...binding);
+    for (const [keyCombo, binding] of Object.entries(this.bindings)) {
+      unbindKeyCombo(keyCombo, binding);
+    }
+    this.unsubscribeDelay?.();
+    if (this.isPreventBrowserSearchbarShortcutActive) {
+      document.removeEventListener("keydown", this.preventBrowserSearchbarShortcut);
     }
   }
 }
@@ -418,7 +461,7 @@ let isDragging = false;
 export class InputMouse {
   emitter: Emitter;
   targetId: string;
-  hammerManager: typeof Hammer;
+  hammerManager: HammerManager;
   id: string;
   leftMouseButton: InputMouseButton;
   middleMouseButton: InputMouseButton;
@@ -429,7 +472,7 @@ export class InputMouse {
   position: Point2 | null | undefined = null;
   triggeredByTouch: boolean = false;
   delegatedEvents: {
-    string?: (...args: Array<any>) => any;
+    string?: (...args: any[]) => any;
   };
 
   ignoreScrollingWhileDragging: boolean;
@@ -462,27 +505,12 @@ export class InputMouse {
     document.addEventListener("dblclick", this.doubleClick);
 
     this.delegatedEvents = {
-      ...Utils.addEventListenerWithDelegation(
-        document,
-        "mousedown",
-        targetSelector,
-        this.mouseDown,
-      ),
-      ...Utils.addEventListenerWithDelegation(
-        document,
-        "mouseover",
-        targetSelector,
-        this.mouseOver,
-      ),
-      ...Utils.addEventListenerWithDelegation(document, "mouseout", targetSelector, this.mouseOut),
-      ...Utils.addEventListenerWithDelegation(
-        document,
-        "touchstart",
-        targetSelector,
-        this.mouseOver,
-      ),
-      ...Utils.addEventListenerWithDelegation(document, "touchend", targetSelector, this.mouseOut),
-      ...Utils.addEventListenerWithDelegation(document, "wheel", targetSelector, this.mouseWheel, {
+      ...addEventListenerWithDelegation(document, "mousedown", targetSelector, this.mouseDown),
+      ...addEventListenerWithDelegation(document, "mouseover", targetSelector, this.mouseOver),
+      ...addEventListenerWithDelegation(document, "mouseout", targetSelector, this.mouseOut),
+      ...addEventListenerWithDelegation(document, "touchstart", targetSelector, this.mouseOver),
+      ...addEventListenerWithDelegation(document, "touchend", targetSelector, this.mouseOut),
+      ...addEventListenerWithDelegation(document, "wheel", targetSelector, this.mouseWheel, {
         passive: false,
       }),
     };
@@ -496,11 +524,11 @@ export class InputMouse {
     this.hammerManager.get("pinch").set({
       enable: true,
     });
-    this.hammerManager.on("panstart", (evt: HammerJsEvent) => this.mouseDown(evt.srcEvent));
-    this.hammerManager.on("panmove", (evt: HammerJsEvent) => this.mouseMove(evt.srcEvent));
-    this.hammerManager.on("panend", (evt: HammerJsEvent) => this.mouseUp(evt.srcEvent));
-    this.hammerManager.on("pinchstart", (evt: HammerJsEvent) => this.pinchStart(evt));
-    this.hammerManager.on("pinch", (evt: HammerJsEvent) => this.pinch(evt));
+    this.hammerManager.on("panstart", (evt) => this.mouseDown(evt.srcEvent as MouseEvent));
+    this.hammerManager.on("panmove", (evt) => this.mouseMove(evt.srcEvent as MouseEvent));
+    this.hammerManager.on("panend", (evt) => this.mouseUp(evt.srcEvent as MouseEvent));
+    this.hammerManager.on("pinchstart", (evt) => this.pinchStart(evt));
+    this.hammerManager.on("pinch", (evt) => this.pinch(evt));
     this.hammerManager.on("pinchend", () => this.pinchEnd());
 
     for (const [eventName, eventHandler] of Object.entries(initialBindings)) {
@@ -530,7 +558,7 @@ export class InputMouse {
     // target (as an example, this avoids that mouse events
     // for input catchers are dispatched when a modal is above
     // the input catchers).
-    // @ts-ignore The `id` property exists on DOM elements
+    // @ts-expect-error The `id` property exists on DOM elements
     if (event?.target?.id !== this.targetId) {
       return false;
     }
@@ -628,7 +656,7 @@ export class InputMouse {
     return false;
   }
 
-  pinchStart = (evt: HammerJsEvent) => {
+  pinchStart = (evt: HammerInput) => {
     this.lastScale = evt.scale;
     // Save position so we can zoom to the pinch start position
     // Calculate gesture center ourself as there is a bug in the HammerJS calculation
@@ -638,7 +666,7 @@ export class InputMouse {
     });
   };
 
-  pinch = (evt: HammerJsEvent): void => {
+  pinch = (evt: HammerInput): void => {
     // Abort pinch gesture if another finger is added to the gesture
     if (evt.pointers.length > 2) this.pinchEnd();
 
@@ -706,7 +734,7 @@ export class InputMouse {
     };
     // Don't use {...boundingRect, }, because boundingRect is a DOMRect
     // which isn't compatible with the spreading, apparently.
-    return _.extend({}, boundingRect, {
+    return extend({}, boundingRect, {
       left: boundingRect.left + window.scrollX,
       top: boundingRect.top + window.scrollY,
     });

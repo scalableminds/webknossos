@@ -1,25 +1,23 @@
-import { call, put, take } from "typed-redux-saga";
+import { type ActionPattern, delay, fork } from "redux-saga/effects";
+import { call, put, take, takeEvery } from "typed-redux-saga";
 import { getToolControllerForAnnotationTool } from "viewer/controller/combinations/tool_controls";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { AnnotationTool, MeasurementTools, Toolkit } from "viewer/model/accessors/tool_accessor";
 import {
   type CycleToolAction,
-  type SetToolAction,
   hideMeasurementTooltipAction,
+  type SetToolAction,
   setIsMeasuringAction,
 } from "viewer/model/actions/ui_actions";
 import { getNextTool } from "viewer/model/reducers/reducer_helpers";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
-import { ensureWkReady } from "./ready_sagas";
-
-import { type ActionPattern, delay, fork } from "redux-saga/effects";
-import { takeEvery } from "typed-redux-saga";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import { getDisabledInfoForTools } from "../accessors/disabled_tool_accessor";
 import { Toolkits } from "../accessors/tool_accessor";
 import type { Action } from "../actions/actions";
 import { updateUserSettingAction } from "../actions/settings_actions";
 import { setToolAction } from "../actions/ui_actions";
+import { ensureWkInitialized } from "./ready_sagas";
 
 function* ensureActiveToolIsInToolkit() {
   const activeToolkit = yield* select((state) => state.userConfiguration.activeToolkit);
@@ -41,10 +39,12 @@ function* switchAwayFromDisabledTool(): Saga<never> {
   let disabledInfosForTools = yield* select(getDisabledInfoForTools);
   let activeTool = yield* select((state) => state.uiInformation.activeTool);
   while (true) {
-    // Ensure that no volume-tool is selected when being in merger mode.
-    // Even though the volume toolbar is disabled, the user can still cycle through
-    // the tools via the w shortcut. In that case, the effect-hook is re-executed
-    // and the tool is switched to MOVE.
+    // Check the active tool and the disabled info object to decide
+    // whether
+    // - to switch to MOVE tool(because the current tool is disabled) or
+    // - to switch back to a previous tool which got available again
+    // - to forget about the previous tool (when the user changed the tool
+    //   on their own) to avoid unexpected tool switching.
     const disabledInfoForCurrentTool = disabledInfosForTools[activeTool.id];
     const isLastForcefullyDisabledToolAvailable =
       lastForcefullyDisabledTool != null &&
@@ -83,6 +83,7 @@ function* switchAwayFromDisabledTool(): Saga<never> {
         continueWaiting = false;
       }
     }
+    // The active tool or the disabled info changed. Start from the beginning.
   }
 }
 
@@ -110,7 +111,7 @@ export function* watchToolDeselection(): Saga<never> {
   }
 }
 
-export function* watchToolReset(): Saga<never> {
+function* watchToolReset(): Saga<never> {
   while (true) {
     yield* take("ESCAPE");
     const activeTool = yield* select((state) => state.uiInformation.activeTool);
@@ -130,8 +131,37 @@ export function* watchToolReset(): Saga<never> {
   }
 }
 
+function* updateToolTimestamp(setToolAction: SetToolAction): Saga<void> {
+  const newTool = setToolAction.tool;
+  const toolTimestamps = yield* select((state) => state.userConfiguration.timestampsForTools);
+  const updatedTimestamps = {
+    ...toolTimestamps,
+    [newTool.id]: Date.now(),
+  };
+  yield* put(updateUserSettingAction("timestampsForTools", updatedTimestamps));
+}
+
+function* rememberToolPreferences({ tool }: SetToolAction): Saga<void> {
+  switch (tool.id) {
+    case AnnotationTool.BRUSH.id:
+    case AnnotationTool.TRACE.id:
+      yield* put(updateUserSettingAction("writePreference", tool.id));
+      return;
+    case AnnotationTool.ERASE_BRUSH.id:
+    case AnnotationTool.ERASE_TRACE.id:
+      yield* put(updateUserSettingAction("erasePreference", tool.id));
+      return;
+    case AnnotationTool.LINE_MEASUREMENT.id:
+    case AnnotationTool.AREA_MEASUREMENT.id:
+      yield* put(updateUserSettingAction("measurementPreference", tool.id));
+      return;
+    default:
+      return;
+  }
+}
+
 export default function* toolSaga() {
-  yield* call(ensureWkReady);
+  yield* call(ensureWkInitialized);
 
   const isViewMode = yield* select((state) => state.annotation.annotationType === "View");
   if (isViewMode) {
@@ -148,4 +178,6 @@ export default function* toolSaga() {
     ] as ActionPattern,
     ensureActiveToolIsInToolkit,
   );
+  yield* takeEvery("SET_TOOL", updateToolTimestamp);
+  yield* takeEvery("SET_TOOL", rememberToolPreferences);
 }

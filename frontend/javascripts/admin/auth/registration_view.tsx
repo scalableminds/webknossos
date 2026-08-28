@@ -1,7 +1,7 @@
+import { getDefaultOrganization } from "admin/api/organization";
 import RegistrationFormGeneric from "admin/auth/registration_form_generic";
 import RegistrationFormWKOrg from "admin/auth/registration_form_wkorg";
-import { getDefaultOrganization } from "admin/rest_api";
-import { Card, Col, Row, Spin } from "antd";
+import { Card, Col, Row, Spin, Typography } from "antd";
 import features from "features";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
@@ -74,7 +74,7 @@ function RegistrationViewGeneric() {
       >
         We could not find a default organization to sign up for.
         <br /> Please check your link or contact{" "}
-        <a href="mailto:hello@webknossos.org">hello@webknossos.org</a> for help on setting up
+        <a href="mailto:support@webknossos.org">support@webknossos.org</a> for help on setting up
         webKnossos.
       </Card>
     );
@@ -85,7 +85,7 @@ function RegistrationViewGeneric() {
       <Row justify="center" align="middle" className="login-view">
         <Col>
           <Card className="login-content drawing-signup" style={{ maxWidth: 1000 }}>
-            <h3>Sign Up</h3>
+            <Typography.Title level={3}>Sign Up</Typography.Title>
             {content}
             <Link to="/auth/login">Already have an account? Login instead.</Link>
           </Card>
@@ -101,7 +101,7 @@ function RegistrationViewWkOrg() {
     <Row justify="center" align="middle" className="login-view">
       <Col>
         <Card className="login-content drawing-signup" style={{ maxWidth: 1000 }}>
-          <h3>Sign Up</h3>
+          <Typography.Title level={3}>Sign Up</Typography.Title>
           <RegistrationFormWKOrg
             onRegistered={() => {
               navigate("/dashboard");

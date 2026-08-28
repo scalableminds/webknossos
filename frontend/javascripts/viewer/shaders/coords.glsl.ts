@@ -26,14 +26,16 @@ export const getAbsoluteCoords: ShaderModule = {
   `,
 };
 
-export const worldCoordToUVW: ShaderModule = {
+const worldCoordToUVW: ShaderModule = {
   requirements: [getW, isFlightMode],
   code: `
     vec3 worldCoordToUVW(vec4 worldCoord) {
       vec3 worldCoordUVW = transDim(worldCoord.xyz);
       vec3 positionOffsetUVW = transDim(positionOffset);
 
-      if (isFlightMode()) {
+      bool isInFlightMode = isFlightMode();
+
+      if (isInFlightMode) {
         vec4 modelCoords = inverseMatrix(savedModelMatrix) * worldCoord;
         float sphericalRadius = sphericalCapRadius;
 
@@ -51,6 +53,15 @@ export const worldCoordToUVW: ShaderModule = {
       // We subtract the potential offset of the plane and then
       // need to multiply by voxelSizeFactorInvertedUVW because the threejs scene is scaled.
       worldCoordUVW = (worldCoordUVW - positionOffsetUVW) * voxelSizeFactorInvertedUVW;
+
+      // Numerical imprecision in floating point calculation might cause the w component to be off by one.
+      // E.g. if the w component is an integer w = 1.0 in voxel space, the floating point operation via * voxelSizeFactorInvertedUVW
+      // which transforms the global coordinates back to voxel space, might end up with w=0.9999, which is wrong.
+      // But we know that for unrotated none flight mode planes this is constant.
+      // Thus, in this case we can copy over the matching coordinate from the globalPosition uniform to obtain a correct w component.
+      if(!isInFlightMode && !isFlycamRotated){
+        worldCoordUVW.z = transDim(globalPosition).z;
+      }
 
 
       return worldCoordUVW;
@@ -78,7 +89,7 @@ export const getUnrotatedWorldCoordUVW: ShaderModule = {
 
 export const isOutsideOfBoundingBox: ShaderModule = {
   code: `
-    bool isOutsideOfBoundingBox(vec3 worldCoordUVW) {
+    bool isOutsideOfBoundingBox(vec3 worldCoordUVW, vec3 bboxMin, vec3 bboxMax) {
       vec3 worldCoord = transDim(worldCoordUVW);
       return (
         worldCoord.x < bboxMin.x || worldCoord.y < bboxMin.y || worldCoord.z < bboxMin.z ||

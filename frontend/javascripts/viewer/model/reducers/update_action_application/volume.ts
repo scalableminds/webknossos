@@ -1,98 +1,269 @@
-import { getVolumeTracingById } from "viewer/model/accessors/volumetracing_accessor";
+import keyBy from "lodash-es/keyBy";
+import type { MetadataEntryProto } from "types/api_types";
 import {
+  getSegmentsForLayer,
+  getVolumeTracingById,
+} from "viewer/model/accessors/volumetracing_accessor";
+import { changeUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
+import {
+  mergeSegmentItemsAction,
   removeSegmentAction,
+  setActiveCellAction,
   setSegmentGroupsAction,
+  setVolumeBucketDataHasChangedAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
-import type { ApplicableVolumeUpdateAction } from "viewer/model/sagas/volume/update_actions";
-import type { Segment, WebknossosState } from "viewer/store";
-import type { VolumeTracingReducerAction } from "../volumetracing_reducer";
-import { setLargestSegmentIdReducer } from "../volumetracing_reducer_helpers";
+import type {
+  AddUserBoundingBoxInVolumeTracingAction,
+  ApplicableVolumeServerUpdateAction,
+  DeleteUserBoundingBoxInVolumeTracingAction,
+  UpdateUserBoundingBoxInVolumeTracingAction,
+} from "viewer/model/sagas/volume/update_actions";
+import type { WebknossosState } from "viewer/store";
+import {
+  createGroupHelper,
+  deepFilter,
+  findGroup,
+  mapGroups,
+  moveGroupsHelper,
+} from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
+import { updateUserBoundingBox } from "../annotation_reducer";
+import {
+  setLargestSegmentIdReducer,
+  setSegmentGroups,
+  toggleSegmentGroupReducer,
+  type VolumeTracingReducerAction,
+} from "../volumetracing_reducer_helpers";
 import {
   applyAddUserBoundingBox,
   applyDeleteUserBoundingBox,
   applyUpdateUserBoundingBox,
 } from "./bounding_box";
+import { withoutServerSpecificFields } from "./shared_update_helper";
 
 export function applyVolumeUpdateActionsFromServer(
-  actions: ApplicableVolumeUpdateAction[],
+  actions: ApplicableVolumeServerUpdateAction[],
   state: WebknossosState,
   VolumeTracingReducer: (
     state: WebknossosState,
     action: VolumeTracingReducerAction,
   ) => WebknossosState,
+  ignoreUnsupportedActionTypes: boolean,
 ): WebknossosState {
   let newState = state;
   for (const ua of actions) {
-    newState = applySingleAction(ua, newState, VolumeTracingReducer);
+    newState = applySingleAction(ua, newState, VolumeTracingReducer, ignoreUnsupportedActionTypes);
   }
 
   return newState;
 }
 
 function applySingleAction(
-  ua: ApplicableVolumeUpdateAction,
+  serverUpdateAction: ApplicableVolumeServerUpdateAction,
   state: WebknossosState,
   VolumeTracingReducer: (
     state: WebknossosState,
     action: VolumeTracingReducerAction,
   ) => WebknossosState,
+  ignoreUnsupportedActionTypes: boolean,
 ): WebknossosState {
+  const { actionTracingId, actionTimestamp } = serverUpdateAction.value;
+  const ua = withoutServerSpecificFields(serverUpdateAction);
   switch (ua.name) {
     case "updateLargestSegmentId": {
-      const volumeTracing = getVolumeTracingById(state.annotation, ua.value.actionTracingId);
-      return setLargestSegmentIdReducer(state, volumeTracing, ua.value.largestSegmentId);
+      const volumeTracing = getVolumeTracingById(state.annotation, actionTracingId);
+      const largestSegmentId =
+        ua.value.largestSegmentId != null ? BigInt(ua.value.largestSegmentId) : null;
+      return setLargestSegmentIdReducer(state, volumeTracing, largestSegmentId);
     }
-    case "createSegment":
-    case "updateSegment": {
-      const { actionTracingId, ...originalSegment } = ua.value;
-      const { anchorPosition, ...segmentWithoutAnchor } = originalSegment;
-      const segment: Partial<Segment> = {
-        somePosition: anchorPosition ?? undefined,
-        ...segmentWithoutAnchor,
-      };
+    case "updateVolumeBucketDataHasChanged": {
+      // The updateVolumeBucketDataHasChanged update action can only set the flag to true. Never to false.
+      return VolumeTracingReducer(state, setVolumeBucketDataHasChangedAction(actionTracingId));
+    }
+    case "createSegment": {
+      const { id, ...segmentProps } = ua.value;
       return VolumeTracingReducer(
         state,
-        updateSegmentAction(originalSegment.id, segment, actionTracingId),
+        updateSegmentAction(BigInt(id), segmentProps, actionTracingId, actionTimestamp, false),
+      );
+    }
+    case "updateSegmentPartial": {
+      const { id, ...segmentProps } = ua.value;
+      return VolumeTracingReducer(
+        state,
+        updateSegmentAction(BigInt(id), segmentProps, actionTracingId, actionTimestamp, false),
+      );
+    }
+    case "updateMetadataOfSegment": {
+      const { id, upsertEntriesByKey, removeEntriesByKey } = ua.value;
+      const segmentId = BigInt(id);
+      const segments = getSegmentsForLayer(state, actionTracingId);
+      const segment = segments.getNullable(segmentId);
+      if (segment == null) {
+        throw new Error(`Cannot find segment with id ${id} during application of update action.`);
+      }
+      const { metadata } = segment;
+
+      const removeKeySet = new Set(removeEntriesByKey);
+      const upsertDict = keyBy(upsertEntriesByKey, "key");
+
+      const metadataEntries = metadata.map(
+        (item) => [item.key, item] as [string, MetadataEntryProto],
+      );
+
+      const newMetadata = metadataEntries
+        // Only keep the items that should not be removed or changed
+        .filter(([key]) => !removeKeySet.has(key) && upsertDict[key] == null)
+        .map(([_key, item]) => item)
+        .concat(upsertEntriesByKey);
+
+      return VolumeTracingReducer(
+        state,
+        updateSegmentAction(
+          segmentId,
+          { metadata: newMetadata },
+          actionTracingId,
+          actionTimestamp,
+          false,
+        ),
+      );
+    }
+    case "mergeSegmentItems": {
+      return VolumeTracingReducer(
+        state,
+        mergeSegmentItemsAction(
+          BigInt(ua.value.agglomerateId1),
+          BigInt(ua.value.agglomerateId2),
+          BigInt(ua.value.segmentId1),
+          BigInt(ua.value.segmentId2),
+          actionTracingId,
+        ),
       );
     }
     case "deleteSegment": {
-      return VolumeTracingReducer(
-        state,
-        removeSegmentAction(ua.value.id, ua.value.actionTracingId),
-      );
+      return VolumeTracingReducer(state, removeSegmentAction(BigInt(ua.value.id), actionTracingId));
     }
-    case "updateSegmentGroups": {
-      return VolumeTracingReducer(
-        state,
-        setSegmentGroupsAction(ua.value.segmentGroups, ua.value.actionTracingId),
+    case "upsertSegmentGroup": {
+      const { groupId, newParentId, name, ...props } = ua.value;
+      const maybeNewName = name != null ? { name } : {};
+      const volumeTracing = getVolumeTracingById(state.annotation, actionTracingId);
+      const oldSegmentGroups = volumeTracing.segmentGroups;
+
+      const existingGroup = findGroup(oldSegmentGroups, groupId);
+      let newSegmentGroups;
+      if (existingGroup) {
+        newSegmentGroups = mapGroups(oldSegmentGroups, (group) =>
+          group.groupId === ua.value.groupId
+            ? {
+                ...group,
+                ...props,
+                ...maybeNewName,
+              }
+            : group,
+        );
+
+        if ("newParentId" in ua.value) {
+          newSegmentGroups = moveGroupsHelper(newSegmentGroups, groupId, ua.value.newParentId);
+        }
+      } else {
+        newSegmentGroups = createGroupHelper(
+          oldSegmentGroups,
+          ua.value.name ?? null,
+          groupId,
+          newParentId ?? null,
+        );
+      }
+
+      return VolumeTracingReducer(state, setSegmentGroupsAction(newSegmentGroups, actionTracingId));
+    }
+    case "deleteSegmentGroup": {
+      const volumeTracing = getVolumeTracingById(state.annotation, actionTracingId);
+      const oldSegmentGroups = volumeTracing.segmentGroups;
+
+      const newSegmentGroups = deepFilter(
+        oldSegmentGroups,
+        (group) => group.groupId !== ua.value.groupId,
       );
+
+      return VolumeTracingReducer(state, setSegmentGroupsAction(newSegmentGroups, actionTracingId));
     }
     case "updateUserBoundingBoxInVolumeTracing": {
       return applyUpdateUserBoundingBox(
         state,
-        getVolumeTracingById(state.annotation, ua.value.actionTracingId),
-        ua,
+        getVolumeTracingById(state.annotation, actionTracingId),
+        ua as UpdateUserBoundingBoxInVolumeTracingAction,
       );
     }
     case "addUserBoundingBoxInVolumeTracing": {
       return applyAddUserBoundingBox(
         state,
-        getVolumeTracingById(state.annotation, ua.value.actionTracingId),
-        ua,
+        getVolumeTracingById(state.annotation, actionTracingId),
+        ua as AddUserBoundingBoxInVolumeTracingAction,
       );
     }
     case "deleteUserBoundingBoxInVolumeTracing": {
       return applyDeleteUserBoundingBox(
         state,
-        getVolumeTracingById(state.annotation, ua.value.actionTracingId),
-        ua,
+        getVolumeTracingById(state.annotation, actionTracingId),
+        ua as DeleteUserBoundingBoxInVolumeTracingAction,
       );
     }
-    case "updateSegmentGroupsExpandedState":
+
+    // These update actions below are user specific and only need to be applied
+    // if these actions originate from the current user (this happens when rebasing such actions).
+    case "updateSegmentGroupsExpandedState": {
+      const { areExpanded, groupIds } = ua.value;
+      const { segmentGroups } = getVolumeTracingById(state.annotation, actionTracingId);
+      const currentlyExpandedSegmentGroupIds = new Set(
+        Object.values(segmentGroups)
+          .filter((g) => g.isExpanded)
+          .map((g) => g.groupId),
+      );
+      const groupIdSet = new Set(groupIds);
+      const newExpandedGroupIds = areExpanded
+        ? currentlyExpandedSegmentGroupIds.union(groupIdSet)
+        : currentlyExpandedSegmentGroupIds.difference(groupIdSet);
+      const newGroups = mapGroups(segmentGroups, (group) => {
+        const shouldBeExpanded = newExpandedGroupIds.has(group.groupId);
+        if (shouldBeExpanded !== group.isExpanded) {
+          return {
+            ...group,
+            isExpanded: shouldBeExpanded,
+          };
+        } else {
+          return group;
+        }
+      });
+      return setSegmentGroups(state, actionTracingId, newGroups);
+    }
     case "updateUserBoundingBoxVisibilityInVolumeTracing": {
-      // These update actions are user specific and don't need to be incorporated here
-      // because they are from another user.
+      return updateUserBoundingBox(
+        state,
+        changeUserBoundingBoxAction(ua.value.boundingBoxId, {
+          isVisible: ua.value.isVisible,
+        }),
+      );
+    }
+    case "updateSegmentVisibility": {
+      return VolumeTracingReducer(
+        state,
+        updateSegmentAction(
+          BigInt(ua.value.id),
+          { isVisible: ua.value.isVisible },
+          actionTracingId,
+          actionTimestamp,
+          false,
+        ),
+      );
+    }
+    case "updateActiveSegmentId": {
+      return VolumeTracingReducer(state, setActiveCellAction(BigInt(ua.value.activeSegmentId)));
+    }
+    case "updateSegmentGroupVisibility": {
+      const { groupId, isVisible } = ua.value;
+      if (groupId != null) {
+        return toggleSegmentGroupReducer(state, actionTracingId, groupId, isVisible);
+      }
       return state;
     }
     default: {
@@ -102,6 +273,9 @@ function applySingleAction(
 
   ua satisfies never;
 
+  if (ignoreUnsupportedActionTypes) {
+    return state;
+  }
   // Satisfy TS.
   throw new Error("Reached unexpected part of function.");
 }

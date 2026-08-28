@@ -1,4 +1,5 @@
-import { InboxOutlined, ReloadOutlined, WarningOutlined } from "@ant-design/icons";
+import { DownloadOutlined, InboxOutlined, ReloadOutlined } from "@ant-design/icons";
+import AdminPage from "admin/admin_page";
 import { createTaskFromNML, createTasks, getTask, updateTask } from "admin/api/tasks";
 import {
   getActiveDatasetsOfMyOrganization,
@@ -7,19 +8,13 @@ import {
   getTaskTypes,
   getUnversionedAnnotationInformation,
 } from "admin/rest_api";
-import type {
-  NewNmlTask,
-  NewTask,
-  TaskCreationResponse,
-  TaskCreationResponseContainer,
-} from "admin/task/task_create_bulk_view";
-import { NUM_TASKS_PER_BATCH, normalizeFileEvent } from "admin/task/task_create_bulk_view";
 import {
+  Alert,
   App,
   Button,
-  Card,
   Col,
   Divider,
+  Flex,
   Form,
   Input,
   InputNumber,
@@ -29,6 +24,8 @@ import {
   Select,
   Spin,
   Tooltip,
+  Typography,
+  theme,
   Upload,
   type UploadFile,
 } from "antd";
@@ -37,15 +34,26 @@ import { AsyncButton } from "components/async_clickables";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import SelectExperienceDomain from "components/select_experience_domain";
 import { saveAs } from "file-saver";
-import { coalesce, tryToAwaitPromise } from "libs/utils";
+import { coalesce, pluralize, tryToAwaitPromise } from "libs/utils";
 import { Vector3Input, Vector6Input } from "libs/vector_input";
-import _ from "lodash";
+import isEqual from "lodash-es/isEqual";
+import isNil from "lodash-es/isNil";
+import omit from "lodash-es/omit";
+import omitBy from "lodash-es/omitBy";
+import uniq from "lodash-es/uniq";
 import messages from "messages";
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { APIDataset, APIProject, APIScript, APITask, APITaskType } from "types/api_types";
 import type { Vector3, Vector6 } from "viewer/constants";
 import type { BoundingBoxObject } from "viewer/store";
+import type {
+  NewNmlTask,
+  NewTask,
+  TaskCreationResponse,
+  TaskCreationResponseContainer,
+} from "./task_create_utils";
+import { NUM_TASKS_PER_BATCH, normalizeFileEvent } from "./task_create_utils";
 
 const FormItem = Form.Item;
 const RadioGroup = Radio.Group;
@@ -58,19 +66,19 @@ const maxDisplayedTasksCount = 50;
 const TASK_CSV_HEADER =
   "taskId,datasetName,datasetId,taskTypeId,experienceDomain,minExperience,x,y,z,rotX,rotY,rotZ,instances,minX,minY,minZ,width,height,depth,project,scriptId,creationInfo";
 
-export enum SpecificationEnum {
+enum SpecificationEnum {
   Manual = "Manual",
   Nml = "Nml",
   BaseAnnotation = "BaseAnnotation",
 }
 type Specification = keyof typeof SpecificationEnum;
 
-export function taskToShortText(task: APITask) {
+function taskToShortText(task: APITask) {
   const { id, creationInfo, editPosition } = task;
   return `${id},${creationInfo || "null"},(${editPosition.join(",")})`;
 }
 
-export function taskToText(task: APITask) {
+function taskToText(task: APITask) {
   const {
     id,
     datasetName,
@@ -108,7 +116,7 @@ export function downloadTasksAsCSV(tasks: Array<APITask>) {
   const lastCreationTime = Math.max(...tasks.map((task) => task.created));
   const currentDateAsString = formatDateInLocalTimeZone(lastCreationTime, "YYYY-MM-DD_HH-mm");
 
-  const allProjectNames = _.uniq(tasks.map((task) => task.projectName)).join("_");
+  const allProjectNames = uniq(tasks.map((task) => task.projectName)).join("_");
 
   const allTasksAsStrings = tasks.map((task) => taskToText(task)).join("\n");
   const csv = [TASK_CSV_HEADER, allTasksAsStrings].join("\n");
@@ -128,9 +136,7 @@ export function handleTaskCreationResponse(
   const successfulTasks: APITask[] = [];
   const failedTasks: string[] = [];
   let teamName: string | null = null;
-  const subHeadingStyle: React.CSSProperties = {
-    fontWeight: "bold",
-  };
+
   const displayResultsStyle: React.CSSProperties = {
     maxHeight: 300,
     overflow: "auto",
@@ -148,7 +154,7 @@ export function handleTaskCreationResponse(
     }
   });
 
-  const allProjectNames = _.uniq(successfulTasks.map((task) => task.projectName));
+  const allProjectNames = uniq(successfulTasks.map((task) => task.projectName));
 
   if (allProjectNames.length > 1) {
     warnings.push(
@@ -159,62 +165,54 @@ export function handleTaskCreationResponse(
   const warningsContent =
     warnings.length > 0 ? (
       <div>
-        <div style={subHeadingStyle}>
-          <WarningOutlined
-            style={{
-              color: "var(--ant-color-warning)",
-            }}
-          />{" "}
-          There were warnings during task creation:
-        </div>
-        <div
-          style={{
-            whiteSpace: "pre-line",
-          }}
-        >
-          {warnings.join("\n")}
-        </div>
+        <Alert
+          showIcon
+          type="warning"
+          title="There were warnings during task creation"
+          description={warnings.join("\n")}
+        />
       </div>
     ) : null;
 
   const failedTasksAsString = failedTasks.join("");
   const successfulTasksContent =
     successfulTasks.length <= maxDisplayedTasksCount ? (
-      <pre>
-        taskId,filename,position
-        <br />
-        {successfulTasks.map((task) => taskToShortText(task)).join("\n")}
-      </pre>
+      <Typography.Paragraph>
+        <pre>
+          taskId,filename,position
+          <br />
+          {successfulTasks.map((task) => taskToShortText(task)).join("\n")}
+        </pre>
+      </Typography.Paragraph>
     ) : (
       "Too many tasks to show, please use the CSV download above for a full list."
     );
   const failedTasksContent =
     failedTasks.length <= maxDisplayedTasksCount ? (
-      <pre>{failedTasksAsString}</pre>
+      <Typography.Paragraph>
+        <pre>{failedTasksAsString}</pre>
+      </Typography.Paragraph>
     ) : (
       "Too many failed tasks to show, please use the CSV download for a full list."
     );
-  const successPlural = successfulTasks.length === 1 ? "" : "s";
-  const warningsPlural = warnings.length === 1 ? "" : "s";
+
   modal.info({
-    title: `${successfulTasks.length} task${successPlural} successfully created, ${failedTasks.length} failed. ${warnings.length} warning${warningsPlural}.`,
+    title: `${successfulTasks.length} ${pluralize("task", successfulTasks.length)} successfully created, ${failedTasks.length} ${pluralize("task", failedTasks.length)} failed. ${warnings.length} ${pluralize("warning", warnings.length)}.`,
     content: (
       <div>
         {warningsContent}
         {successfulTasks.length > 0 ? (
           <div>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                margin: 20,
-              }}
-            >
-              <Button onClick={() => downloadTasksAsCSV(successfulTasks)} type="primary">
+            <Flex justify="center" style={{ margin: 20 }}>
+              <Button
+                onClick={() => downloadTasksAsCSV(successfulTasks)}
+                type="primary"
+                icon={<DownloadOutlined />}
+              >
                 Download task info as CSV
               </Button>
-            </div>
-            <div style={subHeadingStyle}> Successful Tasks: </div>
+            </Flex>
+            <Typography.Text strong>Successful Tasks:</Typography.Text>
             <div style={displayResultsStyle}>{successfulTasksContent}</div>
           </div>
         ) : null}
@@ -222,10 +220,9 @@ export function handleTaskCreationResponse(
           <React.Fragment>
             <Divider />
             <div>
-              <div
+              <Flex
+                justify="center"
                 style={{
-                  display: "flex",
-                  justifyContent: "center",
                   margin: 20,
                 }}
               >
@@ -236,14 +233,13 @@ export function handleTaskCreationResponse(
                     });
                     saveAs(blob, "failed-tasks.csv");
                   }}
+                  icon={<DownloadOutlined />}
                 >
                   Download failed task info as CSV
                 </Button>
-              </div>
-              <div style={subHeadingStyle}> Failed Tasks:</div>
+              </Flex>
+              <Typography.Text strong>Failed Tasks:</Typography.Text>
               <div style={displayResultsStyle}> {failedTasksContent}</div>
-              <br />
-              <br />
             </div>
           </React.Fragment>
         ) : null}
@@ -253,26 +249,17 @@ export function handleTaskCreationResponse(
   });
 }
 
-export function CreateResourceButton({ text, link }: { text: string; link: string }) {
+function CreateResourceButton({ text, link }: { text: string; link: string }) {
   return (
-    <Col span={4} style={{ marginTop: 11 }}>
+    <Col span={4} style={{ marginBottom: "var(--ant-form-item-margin-bottom)" }}>
       <Button block href={link} target="_blank" rel="noreferrer">
-        <span
-          style={{
-            display: "block",
-            overflow: "hidden",
-            whiteSpace: "nowrap",
-            textOverflow: "ellipsis",
-          }}
-        >
-          {text}
-        </span>
+        {text}
       </Button>
     </Col>
   );
 }
 
-export function ReloadResourceButton({
+function ReloadResourceButton({
   tooltip,
   onReload,
 }: {
@@ -280,9 +267,9 @@ export function ReloadResourceButton({
   onReload: () => Promise<void>;
 }) {
   return (
-    <Col flex="40px">
+    <Col flex="40px" style={{ marginBottom: "var(--ant-form-item-margin-bottom)" }}>
       <Tooltip title={tooltip}>
-        <AsyncButton style={{ marginTop: 7 }} icon={<ReloadOutlined />} onClick={onReload} />
+        <AsyncButton icon={<ReloadOutlined />} onClick={onReload} />
       </Tooltip>
     </Col>
   );
@@ -303,10 +290,11 @@ type FormValues = {
   neededExperience: NewTask["neededExperience"];
 };
 
-function TaskCreateFormView() {
+function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
   const { taskId } = useParams();
   const navigate = useNavigate();
   const { modal } = App.useApp();
+  const { token } = theme.useToken();
   const [form] = Form.useForm<FormValues>();
 
   const [datasets, setDatasets] = useState<APIDataset[]>([]);
@@ -349,7 +337,7 @@ function TaskCreateFormView() {
         pendingInstances: task.status.pending,
       });
 
-      const validFormValues = _.omitBy(defaultValues, _.isNil);
+      const validFormValues = omitBy(defaultValues, isNil);
 
       // The task type is not needed for the form and leads to antd errors if it contains null values
       const { type, ...neededFormValues } = validFormValues;
@@ -374,7 +362,7 @@ function TaskCreateFormView() {
     if (taskId != null) {
       // either update an existing task
       const newTask = {
-        ..._.omit(formValues, "nmlFiles", "baseAnnotation"),
+        ...omit(formValues, "nmlFiles", "baseAnnotation"),
         boundingBox,
       };
       const confirmedTask = await updateTask(taskId, newTask);
@@ -397,7 +385,7 @@ function TaskCreateFormView() {
             const batchOfNmls = nmlFiles.slice(i, i + NUM_TASKS_PER_BATCH);
 
             const newTask: NewNmlTask = {
-              ..._.omit(formValues, "baseAnnotation"),
+              ...omit(formValues, "baseAnnotation"),
               boundingBox,
             };
             const response = await createTaskFromNML(newTask, batchOfNmls);
@@ -414,7 +402,7 @@ function TaskCreateFormView() {
               : formValues.baseAnnotation;
 
           const newTask = {
-            ..._.omit(formValues, "nmlFiles", "baseAnnotation"),
+            ...omit(formValues, "nmlFiles", "baseAnnotation"),
             boundingBox,
             baseAnnotation,
           };
@@ -426,7 +414,7 @@ function TaskCreateFormView() {
 
         handleTaskCreationResponse(modal, {
           tasks: taskResponses,
-          warnings: _.uniq(warnings),
+          warnings: uniq(warnings),
         });
       } finally {
         setIsUploading(false);
@@ -481,16 +469,14 @@ function TaskCreateFormView() {
                     return Promise.resolve();
                   }
 
-                  const annotationResponse = await tryToAwaitPromise(
-                    getUnversionedAnnotationInformation(value, {
-                      showErrorToast: false,
-                    }),
-                  );
+                  const annotationResponse = await getUnversionedAnnotationInformation(value, {
+                    showErrorToast: false,
+                  });
 
-                  if (annotationResponse?.dataSetName != null) {
+                  if (annotationResponse.ok) {
                     form.setFieldsValue({
-                      datasetName: annotationResponse.dataSetName,
-                      datasetId: annotationResponse.datasetId,
+                      datasetName: annotationResponse.value.dataSetName,
+                      datasetId: annotationResponse.value.datasetId,
                     });
                     return Promise.resolve();
                   }
@@ -503,7 +489,7 @@ function TaskCreateFormView() {
 
                   if (
                     taskResponse?.datasetId != null &&
-                    _.isEqual(taskResponse.status, {
+                    isEqual(taskResponse.status, {
                       pending: 0,
                       active: 0,
                       finished: 1,
@@ -529,7 +515,7 @@ function TaskCreateFormView() {
           </FormItem>
         ) : null}
 
-        <Row gutter={8} align="middle" wrap={false}>
+        <Row gutter={8} align="bottom" wrap={false}>
           <Col flex="auto">
             <FormItem
               name="datasetId"
@@ -542,13 +528,12 @@ function TaskCreateFormView() {
               ]}
             >
               <Select
-                showSearch
                 placeholder={
                   specificationType === SpecificationEnum.BaseAnnotation
                     ? "The dataset is inferred from the base annotation."
                     : "Select a Dataset"
                 }
-                optionFilterProp="label"
+                showSearch={{ optionFilterProp: "label" }}
                 style={fullWidth}
                 disabled={isEditingMode || specificationType === SpecificationEnum.BaseAnnotation}
                 loading={isFetchingData}
@@ -598,212 +583,222 @@ function TaskCreateFormView() {
   const isEditingMode = taskId != null;
   const titleLabel = isEditingMode ? `Update Task ${taskId || ""}` : "Create Task";
   const instancesLabel = isEditingMode ? "Remaining Instances" : "Task Instances";
-  return (
+
+  const content = (
     <div
-      className="container"
       style={{
-        paddingTop: 20,
+        padding: token.paddingLG,
       }}
     >
       <Spin spinning={isUploading}>
-        <Card title={<h3>{titleLabel}</h3>}>
-          <Form
-            onFinish={onFinish}
-            layout="vertical"
-            form={form}
-            initialValues={{
-              editPosition: [0, 0, 0],
-              editRotation: [0, 0, 0],
-            }}
-          >
-            <Row gutter={8} align="middle" wrap={false}>
-              <Col flex="auto">
-                <FormItem
-                  name="taskTypeId"
-                  label="Task Type"
-                  hasFeedback
-                  rules={[
-                    {
-                      required: true,
-                    },
-                  ]}
-                >
-                  <Select
-                    showSearch
-                    placeholder="Select a Task Type"
-                    optionFilterProp="label"
-                    style={fullWidth}
-                    disabled={isEditingMode}
-                    loading={isFetchingData}
-                    options={taskTypes.map((taskType: APITaskType) => ({
-                      value: taskType.id,
-                      label: taskType.summary,
-                    }))}
-                  />
-                </FormItem>
-              </Col>
-              <ReloadResourceButton
-                tooltip="Reload to show new Task Types"
-                onReload={async () => setTaskTypes(await getTaskTypes())}
-              />
-              <CreateResourceButton text="Create new Task Type" link="/taskTypes/create" />
-            </Row>
-
-            <Row gutter={8} align="middle" wrap={false}>
-              <Col span={10}>
-                <FormItem
-                  name={["neededExperience", "domain"]}
-                  label="Experience Domain"
-                  hasFeedback
-                  rules={[
-                    {
-                      required: true,
-                    },
-                  ]}
-                >
-                  <SelectExperienceDomain
-                    disabled={isEditingMode}
-                    placeholder="Select an Experience Domain"
-                    notFoundContent={messages["task.domain_does_not_exist"]}
-                    width={100}
-                    allowCreation
-                  />
-                </FormItem>
-              </Col>
-              <Col flex="auto">
-                <FormItem
-                  name={["neededExperience", "value"]}
-                  label="Experience Value"
-                  hasFeedback
-                  rules={[
-                    {
-                      required: true,
-                    },
-                    {
-                      type: "number",
-                    },
-                  ]}
-                >
-                  <InputNumber style={fullWidth} disabled={isEditingMode} />
-                </FormItem>
-              </Col>
-              <CreateResourceButton text="Assign Experience" link="/users" />
-            </Row>
-
-            <FormItem
-              name="pendingInstances"
-              label={instancesLabel}
-              hasFeedback
-              rules={[
-                {
-                  required: true,
-                },
-                {
-                  type: "number",
-                },
-              ]}
-            >
-              <InputNumber style={fullWidth} min={0} />
-            </FormItem>
-
-            <Row gutter={8} align="middle" wrap={false}>
-              <Col flex="auto">
-                <FormItem
-                  name="projectName"
-                  label="Project"
-                  hasFeedback
-                  rules={[
-                    {
-                      required: true,
-                    },
-                  ]}
-                >
-                  <Select
-                    showSearch
-                    placeholder="Select a Project"
-                    optionFilterProp="label"
-                    style={fullWidth}
-                    disabled={isEditingMode}
-                    loading={isFetchingData}
-                    options={projects.map((project: APIProject) => ({
-                      value: project.name,
-                      label: project.name,
-                    }))}
-                  />
-                </FormItem>
-              </Col>
-              <ReloadResourceButton
-                tooltip="Reload to show new Projects"
-                onReload={async () => setProjects(await getProjects())}
-              />
-              <CreateResourceButton text="Create new Project" link="/projects/create" />
-            </Row>
-
-            <Row gutter={8} align="middle" wrap={false}>
-              <Col flex="auto">
-                <FormItem name="scriptId" label="Script" hasFeedback>
-                  <Select
-                    showSearch
-                    placeholder="Select a Script"
-                    optionFilterProp="label"
-                    style={fullWidth}
-                    disabled={isEditingMode}
-                    loading={isFetchingData}
-                    options={scripts.map((script: APIScript) => ({
-                      value: script.id,
-                      label: script.name,
-                    }))}
-                  />
-                </FormItem>
-              </Col>
-              <ReloadResourceButton
-                tooltip="Reload to show new Scripts"
-                onReload={async () => setScripts(await getScripts())}
-              />
-              <CreateResourceButton text="Create new Script" link="/scripts/create" />
-            </Row>
-
-            <FormItem
-              name="boundingBox"
-              label="Bounding Box"
-              extra="topLeft.x, topLeft.y, topLeft.z, width, height, depth"
-              hasFeedback
-            >
-              <Vector6Input disabled={isEditingMode} />
-            </FormItem>
-
-            <FormItem label="Task Specification" hasFeedback>
-              <RadioGroup
-                value={specificationType}
-                onChange={(evt: RadioChangeEvent) =>
-                  setSpecificationType(
-                    coalesce(SpecificationEnum, evt.target.value) || specificationType,
-                  )
-                }
+        <Form
+          onFinish={onFinish}
+          layout="vertical"
+          form={form}
+          initialValues={{
+            editPosition: [0, 0, 0],
+            editRotation: [0, 0, 0],
+          }}
+        >
+          <Row gutter={8} align="bottom" wrap={false}>
+            <Col flex="auto">
+              <FormItem
+                name="taskTypeId"
+                label="Task Type"
+                hasFeedback
+                rules={[
+                  {
+                    required: true,
+                  },
+                ]}
               >
-                <Radio value={SpecificationEnum.Manual} disabled={isEditingMode}>
-                  Manual Specification
-                </Radio>
-                <Radio value={SpecificationEnum.Nml} disabled={isEditingMode}>
-                  Upload NML File
-                </Radio>
-                <Radio value={SpecificationEnum.BaseAnnotation} disabled={isEditingMode}>
-                  Use Annotation ID as Base
-                </Radio>
-              </RadioGroup>
-            </FormItem>
+                <Select
+                  placeholder="Select a Task Type"
+                  showSearch={{ optionFilterProp: "label" }}
+                  style={fullWidth}
+                  disabled={isEditingMode}
+                  loading={isFetchingData}
+                  options={taskTypes.map((taskType: APITaskType) => ({
+                    value: taskType.id,
+                    label: taskType.summary,
+                  }))}
+                />
+              </FormItem>
+            </Col>
+            <ReloadResourceButton
+              tooltip="Reload to show new Task Types"
+              onReload={async () => setTaskTypes(await getTaskTypes())}
+            />
+            <CreateResourceButton text="Create new Task Type" link="/taskTypes/create" />
+          </Row>
 
-            {renderSpecification()}
+          <Row gutter={8} align="bottom" wrap={false}>
+            <Col span={10}>
+              <FormItem
+                name={["neededExperience", "domain"]}
+                label="Experience Domain"
+                hasFeedback
+                rules={[
+                  {
+                    required: true,
+                  },
+                ]}
+              >
+                <SelectExperienceDomain
+                  disabled={isEditingMode}
+                  placeholder="Select an Experience Domain"
+                  notFoundContent={messages["task.domain_does_not_exist"]}
+                  width={100}
+                  allowCreation
+                />
+              </FormItem>
+            </Col>
+            <Col flex="auto">
+              <FormItem
+                name={["neededExperience", "value"]}
+                label="Experience Value"
+                hasFeedback
+                rules={[
+                  {
+                    required: true,
+                  },
+                  {
+                    type: "number",
+                  },
+                ]}
+              >
+                <InputNumber style={fullWidth} disabled={isEditingMode} />
+              </FormItem>
+            </Col>
+            <CreateResourceButton text="Assign Experience" link="/users" />
+          </Row>
 
-            <FormItem>
-              <Button type="primary" htmlType="submit">
-                {titleLabel}
-              </Button>
-            </FormItem>
-          </Form>
-        </Card>
+          <FormItem
+            name="pendingInstances"
+            label={instancesLabel}
+            hasFeedback
+            rules={[
+              {
+                required: true,
+              },
+              {
+                type: "number",
+              },
+            ]}
+          >
+            <InputNumber style={fullWidth} min={0} />
+          </FormItem>
+
+          <Row gutter={8} align="bottom" wrap={false}>
+            <Col flex="auto">
+              <FormItem
+                name="projectName"
+                label="Project"
+                hasFeedback
+                rules={[
+                  {
+                    required: true,
+                  },
+                ]}
+              >
+                <Select
+                  showSearch={{ optionFilterProp: "label" }}
+                  placeholder="Select a Project"
+                  style={fullWidth}
+                  disabled={isEditingMode}
+                  loading={isFetchingData}
+                  options={projects.map((project: APIProject) => ({
+                    value: project.name,
+                    label: project.name,
+                  }))}
+                />
+              </FormItem>
+            </Col>
+            <ReloadResourceButton
+              tooltip="Reload to show new Projects"
+              onReload={async () => setProjects(await getProjects())}
+            />
+            <CreateResourceButton text="Create new Project" link="/projects/create" />
+          </Row>
+
+          <Row gutter={8} align="bottom" wrap={false}>
+            <Col flex="auto">
+              <FormItem name="scriptId" label="Script" hasFeedback>
+                <Select
+                  showSearch={{ optionFilterProp: "label" }}
+                  placeholder="Select a Script"
+                  style={fullWidth}
+                  disabled={isEditingMode}
+                  loading={isFetchingData}
+                  options={scripts.map((script: APIScript) => ({
+                    value: script.id,
+                    label: script.name,
+                  }))}
+                />
+              </FormItem>
+            </Col>
+            <ReloadResourceButton
+              tooltip="Reload to show new Scripts"
+              onReload={async () => setScripts(await getScripts())}
+            />
+            <CreateResourceButton text="Create new Script" link="/scripts/create" />
+          </Row>
+
+          <FormItem
+            name="boundingBox"
+            label="Bounding Box"
+            extra="topLeft.x, topLeft.y, topLeft.z, width, height, depth"
+            hasFeedback
+          >
+            <Vector6Input disabled={isEditingMode} />
+          </FormItem>
+
+          <FormItem label="Task Specification" hasFeedback>
+            <RadioGroup
+              value={specificationType}
+              onChange={(evt: RadioChangeEvent) =>
+                setSpecificationType(
+                  coalesce(SpecificationEnum, evt.target.value) || specificationType,
+                )
+              }
+            >
+              <Radio value={SpecificationEnum.Manual} disabled={isEditingMode}>
+                Manual Specification
+              </Radio>
+              <Radio value={SpecificationEnum.Nml} disabled={isEditingMode}>
+                Upload NML File
+              </Radio>
+              <Radio value={SpecificationEnum.BaseAnnotation} disabled={isEditingMode}>
+                Use Annotation ID as Base
+              </Radio>
+            </RadioGroup>
+          </FormItem>
+
+          {renderSpecification()}
+
+          <FormItem>
+            <Button type="primary" htmlType="submit">
+              {titleLabel}
+            </Button>
+          </FormItem>
+        </Form>
       </Spin>
     </div>
+  );
+
+  if (embedded) {
+    return content;
+  }
+
+  return (
+    <AdminPage
+      title={titleLabel}
+      descriptionURI="https://docs.webknossos.org/webknossos/tasks_projects/tasks.html"
+      description="Create or update task metadata, assignment settings, and task specification details."
+      contentMaxWidth={960}
+    >
+      {content}
+    </AdminPage>
   );
 }
 

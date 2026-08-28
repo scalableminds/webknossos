@@ -3,6 +3,7 @@ import app from "app";
 import type { WebKnossosModel } from "viewer/model";
 import createApiLatest, { type ApiInterface } from "./api_latest";
 import WkDev from "./wk_dev";
+
 const latestVersion = 3;
 
 class ApiLoader {
@@ -14,7 +15,7 @@ class ApiLoader {
 
   constructor(webKnossosModel: WebKnossosModel) {
     this.readyPromise = new Promise((resolve) => {
-      app.vent.on("webknossos:ready", resolve);
+      app.vent.on("webknossos:initialized", resolve);
     });
     this.model = webKnossosModel;
     this.DEV = new WkDev(this);
@@ -35,7 +36,7 @@ class ApiLoader {
    * });
    */
   apiReady(version: number = latestVersion): Promise<ApiInterface> {
-    if (!process.env.IS_TESTING) {
+    if (import.meta.env.MODE !== "test") {
       if (version !== latestVersion) {
         console.warn(`
           Attention! You requested api version ${version} which is

@@ -1,0 +1,685 @@
+import {
+  CompressOutlined,
+  CopyOutlined,
+  ExclamationCircleOutlined,
+  GlobalOutlined,
+  LockOutlined,
+  ShareAltOutlined,
+  TeamOutlined,
+} from "@ant-design/icons";
+import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import {
+  createShortLink,
+  editAnnotation,
+  getDatasetSharingToken,
+  getSharingTokenFromUrlParameters,
+  getTeamsForSharedAnnotation,
+  sendAnalyticsEvent,
+  setCollaborationModeForAnnotation,
+  updateTeamsForSharedAnnotation,
+} from "admin/rest_api";
+import {
+  Alert,
+  Button,
+  Checkbox,
+  type CheckboxChangeEvent,
+  Col,
+  Input,
+  Modal,
+  Radio,
+  type RadioChangeEvent,
+  Row,
+  Space,
+  Tag,
+  Tooltip,
+} from "antd";
+import { AsyncButton } from "components/async_clickables";
+import FastTooltip from "components/fast_tooltip";
+import { PricingEnforcedBlur } from "components/pricing_enforcers";
+import { DividerWithSubtitle } from "dashboard/dataset/helper_components";
+import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
+import { copyToClipboard } from "libs/clipboard";
+import { makeComponentLazy } from "libs/react_helpers";
+import { useWkSelector } from "libs/react_hooks";
+import Toast from "libs/toast";
+import { location } from "libs/window";
+import isEqual from "lodash-es/isEqual";
+import messages from "messages";
+import type React from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useDispatch } from "react-redux";
+import type {
+  APIAnnotationType,
+  APIAnnotationVisibility,
+  APIDataset,
+  APITeam,
+} from "types/api_types";
+import { ControlModeEnum } from "viewer/constants";
+import UrlManager from "viewer/controller/url_manager";
+import {
+  isAnnotationEditableByNonOwners,
+  mayEditAnnotationProperties,
+} from "viewer/model/accessors/annotation_accessor";
+import { formatUserName } from "viewer/model/accessors/user_accessor";
+import { hasEditableMapping } from "viewer/model/accessors/volumetracing_accessor";
+import {
+  setAnnotationVisibilityAction,
+  setCollaborationModeAction,
+} from "viewer/model/actions/annotation_actions";
+import { setShareModalVisibilityAction } from "viewer/model/actions/ui_actions";
+import Store from "viewer/store";
+
+const RadioGroup = Radio.Group;
+const sharingActiveNode = true;
+type Props = {
+  isOpen: boolean;
+  onOk: () => void;
+  annotationType: APIAnnotationType;
+  annotationId: string;
+};
+
+function Hint({ children, style }: { children: React.ReactNode; style: React.CSSProperties }) {
+  return (
+    <div
+      style={{
+        ...style,
+        marginTop: 4,
+        marginBottom: 12,
+        fontSize: 12,
+        color: "var(--ant-color-text-secondary)",
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function useDatasetSharingToken(dataset: APIDataset) {
+  const activeUser = useWkSelector((state) => state.activeUser);
+  const [datasetToken, setDatasetToken] = useState("");
+
+  const getAndSetToken = async () => {
+    // If the current URL contains a token, we can simply use
+    // that as a sharing token. Otherwise, users who are currently
+    // visiting a sharing URL might not be able to use the share button,
+    // because they might not have permissions to GET the dataset's
+    // sharing token.
+    const urlToken = getSharingTokenFromUrlParameters();
+    if (urlToken != null) {
+      setDatasetToken(urlToken);
+      return;
+    }
+    if (!activeUser) {
+      return;
+    }
+    try {
+      const sharingToken = await getDatasetSharingToken(dataset.id, {
+        doNotInvestigate: true,
+      });
+      setDatasetToken(sharingToken);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Update token once dataset or user changes.
+  useEffect(() => {
+    getAndSetToken();
+  }, [dataset, activeUser]);
+  return datasetToken;
+}
+
+export function getUrl(sharingToken: string, includeToken: boolean) {
+  const { pathname, origin } = location;
+  const hash = UrlManager.buildUrlHashJson(Store.getState());
+  const query = includeToken ? `?token=${sharingToken}` : "";
+  const url = `${origin}${pathname}${query}#${hash}`;
+  return url;
+}
+
+function copyUrlToClipboard(url: string) {
+  copyToClipboard(url, "URL");
+}
+
+export function ShareButton(props: { dataset: APIDataset; style?: Record<string, any> }) {
+  const { dataset, style } = props;
+  const sharingToken = useDatasetSharingToken(props.dataset);
+  const annotationVisibility = useWkSelector((state) => state.annotation.visibility);
+  const controlMode = useWkSelector((state) => state.temporaryConfiguration.controlMode);
+  const dispatch = useDispatch();
+
+  const isViewMode = controlMode === ControlModeEnum.VIEW;
+  const isSandboxMode = controlMode === ControlModeEnum.SANDBOX;
+  const isTraceMode = controlMode === ControlModeEnum.TRACE;
+  const annotationIsPublic = annotationVisibility === "Public";
+  // For annotations, a token is included if the annotation is configured to be public, but the
+  // dataset is not public. For datasets or sandboxes, a token is included if the dataset is not public.
+  const includeToken = !dataset.isPublic && (isViewMode || isSandboxMode || annotationIsPublic);
+
+  const createAndCopySharingUrl = async () => {
+    // Copy the url on-demand as it constantly changes
+    const url = getUrl(sharingToken, includeToken);
+    const shortLink = await createShortLink(url);
+
+    copyUrlToClipboard(`${location.origin}/links/${shortLink.key}`);
+
+    if (isTraceMode && !annotationIsPublic) {
+      // For public annotations and in dataset view mode, the link will work for all users.
+      // Otherwise, show a warning that the link may not work for all users.
+      Toast.warning(
+        <>
+          The sharing link can only be opened by users who have the correct permissions to see this
+          dataset/annotation. Please open the{" "}
+          <a href="#" onClick={() => dispatch(setShareModalVisibilityAction(true))}>
+            share dialog
+          </a>{" "}
+          if you want to configure this.
+        </>,
+      );
+    }
+
+    if (isSandboxMode) {
+      Toast.warning(
+        "For sandboxes, changes are neither saved nor shared. If you want to share the changes in this sandbox" +
+          " use the 'Copy To My Account' functionality and share the resulting annotation.",
+      );
+    }
+  };
+
+  return (
+    <AsyncButton
+      icon={<ShareAltOutlined />}
+      title={messages["tracing.copy_sharing_link"]}
+      onClick={createAndCopySharingUrl}
+      style={style}
+    />
+  );
+}
+
+const LEFT_COL_STYLE = {
+  lineHeight: "22px",
+  paddingRight: 6,
+};
+
+function ShareModalViewInner(props: Props) {
+  const { isOpen, onOk, annotationType, annotationId } = props;
+  const dispatch = useDispatch();
+
+  const dataset = useWkSelector((state) => state.dataset);
+  const annotation = useWkSelector((state) => state.annotation);
+  const activeUser = useWkSelector((state) => state.activeUser);
+  const isAnnotationLockedByUser = annotation.isLockedByOwner;
+
+  const annotationVisibility = annotation.visibility;
+  const [visibility, setVisibility] = useState(annotationVisibility);
+  const [isChangingInProgress, setIsChangingInProgress] = useState(false);
+  const [sharedTeams, setSharedTeams] = useState<APITeam[]>([]);
+  const sharingToken = useDatasetSharingToken(dataset);
+
+  const othersMayEdit = isAnnotationEditableByNonOwners(annotation);
+  const allowConcurrentEditing = annotation.collaborationMode === "Concurrent";
+  const [newOthersMayEdit, setNewOthersMayEdit] = useState(othersMayEdit);
+  const [newAllowConcurrentEditing, setNewAllowConcurrentEditing] =
+    useState(allowConcurrentEditing);
+
+  useEffect(() => {
+    // Sync properties in case they changed from the outside.
+    setNewOthersMayEdit(othersMayEdit);
+    setNewAllowConcurrentEditing(allowConcurrentEditing);
+  }, [othersMayEdit, allowConcurrentEditing]);
+
+  const hasUpdatePermissions = useWkSelector(mayEditAnnotationProperties);
+  const annotationHasEditableMapping = useWkSelector(hasEditableMapping);
+  useEffect(() => setVisibility(annotationVisibility), [annotationVisibility]);
+
+  const fetchAndSetSharedTeams = async () => {
+    if (!activeUser) {
+      return;
+    }
+    const fetchedSharedTeams = await getTeamsForSharedAnnotation(annotationType, annotationId);
+    setSharedTeams(fetchedSharedTeams);
+  };
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Refetch once annotation or user changes.
+  useEffect(() => {
+    fetchAndSetSharedTeams();
+  }, [annotationType, annotationId, activeUser]);
+
+  const reportSuccessfulChange = (newVisibility: APIAnnotationVisibility) => {
+    const randomKeyToAllowDuplicates = Math.random().toString(36).substring(0, 5);
+    Toast.success(messages["annotation.shared_teams_edited"], {
+      timeout: 3500,
+      key: randomKeyToAllowDuplicates,
+    });
+
+    sendAnalyticsEvent("share_annotation", {
+      visibility: newVisibility,
+    });
+  };
+
+  const reportFailedChange = () => {
+    const randomKeyToAllowDuplicates = Math.random().toString(36).substring(0, 5);
+    Toast.error(messages["annotation.shared_teams_edited_failed"], {
+      timeout: 3500,
+      key: randomKeyToAllowDuplicates,
+    });
+  };
+
+  const handleCheckboxChange = async (event: RadioChangeEvent) => {
+    const newVisibility = event.target.value as any as APIAnnotationVisibility;
+    if (newVisibility === visibility || !hasUpdatePermissions) {
+      return;
+    }
+    setIsChangingInProgress(true);
+    setVisibility(newVisibility as any as APIAnnotationVisibility);
+    try {
+      await editAnnotation(annotationId, annotationType, {
+        visibility: newVisibility,
+      });
+      dispatch(setAnnotationVisibilityAction(newVisibility));
+      reportSuccessfulChange(newVisibility);
+    } catch (e) {
+      console.error("Failed to update the annotations visibility.", e);
+      // Resetting the visibility to the old value as the request failed
+      // so the user still sees the settings currently saved in the backend.
+      setVisibility(visibility as any as APIAnnotationVisibility);
+      reportFailedChange();
+    } finally {
+      setIsChangingInProgress(false);
+    }
+  };
+
+  const handleSharedTeamsChange = async (value: APITeam | APITeam[]) => {
+    const newTeams = [value].flat();
+    if (isEqual(newTeams, sharedTeams)) {
+      return;
+    }
+    setIsChangingInProgress(true);
+    setSharedTeams(newTeams);
+    try {
+      await updateTeamsForSharedAnnotation(
+        annotationType,
+        annotationId,
+        newTeams.map((team) => team.id),
+      );
+      reportSuccessfulChange(visibility);
+    } catch (e) {
+      console.error("Failed to update the annotations shared teams.", e);
+      // Resetting the shared teams to the old value as the request failed
+      // so the user still sees the settings currently saved in the backend.
+      setSharedTeams(sharedTeams);
+      reportFailedChange();
+    } finally {
+      setIsChangingInProgress(false);
+    }
+  };
+
+  const handleOthersCanEditCheckboxChange = async (event: RadioChangeEvent) => {
+    const value = event.target.value;
+    if (typeof value !== "boolean") {
+      throw new Error("Form element should return boolean value.");
+    }
+
+    if (value === newOthersMayEdit || !hasUpdatePermissions) {
+      return;
+    }
+
+    setIsChangingInProgress(true);
+    setNewOthersMayEdit(value);
+    const collaborationMode = !value
+      ? "OwnerOnly"
+      : newAllowConcurrentEditing
+        ? "Concurrent"
+        : "Exclusive";
+    try {
+      await setCollaborationModeForAnnotation(annotationId, annotationType, collaborationMode);
+      dispatch(setCollaborationModeAction(collaborationMode));
+      reportSuccessfulChange(visibility);
+    } catch (e) {
+      console.error("Failed to update the edit option for others.", e);
+      setNewOthersMayEdit(othersMayEdit);
+      reportFailedChange();
+    } finally {
+      setIsChangingInProgress(false);
+    }
+  };
+
+  const handleConcurrentEditingCheckboxChange = async (event: CheckboxChangeEvent) => {
+    const value = event.target.checked;
+    if (value && !hasEditableMapping(Store.getState())) {
+      Toast.warning(
+        "Concurrent editing is currently only supported for proofreading annotations. Please select a mapping and perform one proofreading action. Afterwards, you may select the Concurrent mode.",
+      );
+      return;
+    }
+    if (!hasUpdatePermissions) {
+      return;
+    }
+
+    setIsChangingInProgress(true);
+    setNewAllowConcurrentEditing(value);
+
+    if (value !== allowConcurrentEditing) {
+      const collaborationMode = !newOthersMayEdit
+        ? "OwnerOnly"
+        : value
+          ? "Concurrent"
+          : "Exclusive";
+      try {
+        await setCollaborationModeForAnnotation(annotationId, annotationType, collaborationMode);
+        dispatch(setCollaborationModeAction(collaborationMode));
+        reportSuccessfulChange(visibility);
+      } catch (e) {
+        console.error("Failed to update the concurrent editing option.", e);
+        setNewAllowConcurrentEditing(allowConcurrentEditing);
+        reportFailedChange();
+      } finally {
+        setIsChangingInProgress(false);
+      }
+    }
+  };
+
+  const maybeShowWarning = () => {
+    let message;
+    if (isAnnotationLockedByUser) {
+      message = `You can't change the visibility of this annotation because it is locked by ${formatUserName(
+        activeUser,
+        annotation.owner,
+      )}.`;
+    } else if (!hasUpdatePermissions) {
+      message = "You don't have the permission to edit the visibility of this annotation.";
+    } else if (!dataset.isPublic && visibility === "Public") {
+      message =
+        "The dataset of this annotation is not public. The Sharing Link will make the dataset accessible to everyone you share it with.";
+    } else if (visibility === "Private") {
+      message =
+        "The annotation is currently private, so Team Sharing is disabled and only admins and team managers can use the Sharing Link.";
+    }
+
+    return message != null ? (
+      <Alert
+        style={{
+          marginBottom: 18,
+        }}
+        title={message}
+        type="warning"
+        showIcon
+      />
+    ) : null;
+  };
+
+  const iconMap = {
+    Public: <GlobalOutlined />,
+    Internal: <TeamOutlined />,
+    Private: <LockOutlined />,
+  };
+  const includeToken = !dataset.isPublic && visibility === "Public";
+  const longUrl = getUrl(sharingToken, includeToken);
+
+  const concurrentDisabledReason = useMemo(() => {
+    if (!hasUpdatePermissions) {
+      return "You don't have the permissions to change this setting. Ask the owner to change it instead.";
+    }
+    if (!newOthersMayEdit) {
+      return "Can only be enabled when “Everybody who can view” is enabled.";
+    }
+    if (isChangingInProgress) {
+      return "A change of the settings is currently being saved.";
+    }
+    if (!annotationHasEditableMapping) {
+      return "The annotation needs to have at least one saved proofreading action. Enable a mapping and use the proofreading tool for that.";
+    }
+    return null;
+  }, [hasUpdatePermissions, newOthersMayEdit, isChangingInProgress, annotationHasEditableMapping]);
+
+  return (
+    <Modal
+      title="Share this annotation"
+      open={isOpen}
+      width={800}
+      onOk={onOk}
+      onCancel={onOk}
+      cancelButtonProps={{ style: { display: "none" } }}
+    >
+      <Row>
+        <Col
+          span={6}
+          style={{
+            ...LEFT_COL_STYLE,
+            marginTop: 6,
+          }}
+        >
+          Sharing Link
+        </Col>
+        <Col span={18}>
+          <CopyableSharingLink isVisible={isOpen} longUrl={longUrl} />
+          <Hint
+            style={{
+              margin: "4px 9px 12px 4px",
+            }}
+          >
+            {messages["tracing.sharing_modal_basic_information"](sharingActiveNode)}
+          </Hint>
+        </Col>
+      </Row>
+      <DividerWithSubtitle>
+        <Space>
+          {iconMap[visibility]}
+          Visibility
+        </Space>
+      </DividerWithSubtitle>
+      {maybeShowWarning()}
+      <Row style={{ marginBottom: 16 }}>
+        <Col span={6} style={LEFT_COL_STYLE}>
+          <div>Who can view this annotation?</div>
+          <p
+            style={{
+              fontSize: 12,
+              color: "var(--ant-color-text-secondary)",
+              lineHeight: "var(--ant-line-height)",
+              marginRight: 8,
+            }}
+          >
+            Users with access will also be able to see who else has modified the annotation.
+          </p>
+        </Col>
+        <Col span={18}>
+          <RadioGroup
+            onChange={handleCheckboxChange}
+            value={visibility}
+            disabled={isChangingInProgress}
+          >
+            <Radio value="Private" disabled={!hasUpdatePermissions}>
+              Private
+            </Radio>
+            <Hint
+              style={{
+                marginLeft: 24,
+              }}
+            >
+              Only you and your team manager can view this annotation.
+            </Hint>
+
+            <Radio value="Internal" disabled={!hasUpdatePermissions}>
+              Internal
+            </Radio>
+            <Hint
+              style={{
+                marginLeft: 24,
+              }}
+            >
+              All users in your organization{" "}
+              {dataset.isPublic ? "" : "who have access to this dataset"} can view this annotation
+              and copy it to their accounts to edit it.
+            </Hint>
+
+            <Radio value="Public" disabled={!hasUpdatePermissions}>
+              Public
+            </Radio>
+            <Hint
+              style={{
+                marginLeft: 24,
+              }}
+            >
+              Anyone with the link can see this annotation without having to log in.
+            </Hint>
+          </RadioGroup>
+        </Col>
+      </Row>
+      <Row>
+        <Col span={6} style={LEFT_COL_STYLE}>
+          For which teams should this annotation be listed?
+        </Col>
+        <Col span={18}>
+          <TeamSelectionComponent
+            mode="multiple"
+            allowNonEditableTeams
+            value={sharedTeams}
+            onChange={handleSharedTeamsChange}
+            disabled={!hasUpdatePermissions || visibility === "Private" || isChangingInProgress}
+          />
+          <Hint
+            style={{
+              margin: "6px 12px",
+            }}
+          >
+            Choose the teams to share your annotation with. Members of these teams can see this
+            annotation in their Annotations tab.
+          </Hint>
+        </Col>
+      </Row>
+      <DividerWithSubtitle>
+        <Space>
+          <ShareAltOutlined />
+          Editing
+        </Space>
+      </DividerWithSubtitle>
+      <PricingEnforcedBlur requiredPricingPlan={PricingPlanEnum.Team}>
+        <Row style={{ marginBottom: 16 }}>
+          <Col span={6} style={LEFT_COL_STYLE}>
+            Who can edit this annotation?
+          </Col>
+          <Col span={18}>
+            <RadioGroup
+              onChange={handleOthersCanEditCheckboxChange}
+              value={newOthersMayEdit}
+              disabled={isChangingInProgress}
+            >
+              <Radio value={false} disabled={!hasUpdatePermissions}>
+                No, keep it read-only
+              </Radio>
+              <Hint
+                style={{
+                  marginLeft: 24,
+                }}
+              >
+                Only the owner can edit the content of this annotation.
+              </Hint>
+
+              <Radio value={true} disabled={!hasUpdatePermissions}>
+                Everybody who can view
+              </Radio>
+              <Hint
+                style={{
+                  marginLeft: 24,
+                }}
+              >
+                All users in your organization who may view this annotation can also edit it. Note
+                that you should coordinate the collaboration, because parallel changes to this
+                annotation will result in a conflict.
+              </Hint>
+            </RadioGroup>
+          </Col>
+        </Row>
+        <Row>
+          <Col span={6} style={LEFT_COL_STYLE}>
+            Can users edit simultaneously?
+          </Col>
+          <Col span={18}>
+            <FastTooltip title={concurrentDisabledReason ?? null}>
+              <Checkbox
+                checked={newAllowConcurrentEditing}
+                onChange={handleConcurrentEditingCheckboxChange}
+                disabled={concurrentDisabledReason != null}
+              >
+                Yes, allow simultaneous editing
+                <FastTooltip title="Currently not recommended for production use. Requires at least one saved proofreading action.">
+                  <Tag
+                    style={{ marginLeft: 4 }}
+                    color="warning"
+                    icon={<ExclamationCircleOutlined />}
+                    variant="outlined"
+                  >
+                    Experimental
+                  </Tag>
+                </FastTooltip>
+              </Checkbox>
+            </FastTooltip>
+            <Hint
+              style={{
+                marginLeft: 24,
+              }}
+            >
+              When enabled, users can edit the annotation in parallel. This feature is experimental
+              and is currently limited to the proofreading tool (
+              <b>skeleton and brushing will be disabled</b>). When disabled, only one user can edit
+              at the same time. We recommend to coordinate the collaboration with your peers to
+              avoid being blocked.
+            </Hint>
+          </Col>
+        </Row>
+      </PricingEnforcedBlur>
+    </Modal>
+  );
+}
+
+export function CopyableSharingLink({
+  isVisible,
+  longUrl,
+}: {
+  isVisible: boolean;
+  longUrl: string;
+}) {
+  const [shortUrl, setShortUrl] = useState<string | null>(null);
+
+  const [showShortLink, setShowShortLink] = useState(true);
+  useEffect(() => {
+    if (!isVisible || !showShortLink) {
+      // Don't create new shortlinks when the user does not want/need them.
+      // Set short url to null to avoid keeping a stale value.
+      setShortUrl(null);
+      return;
+    }
+
+    createShortLink(longUrl).then((shortLink) => {
+      setShortUrl(`${location.origin}/links/${shortLink.key}`);
+    });
+  }, [longUrl, isVisible, showShortLink]);
+  const linkToCopy = showShortLink ? shortUrl || longUrl : longUrl;
+
+  return (
+    <Space.Compact block>
+      <Tooltip title="When enabled, the link is shortened automatically.">
+        <Button
+          type={showShortLink ? "primary" : "default"}
+          onClick={() => setShowShortLink(!showShortLink)}
+          style={{ padding: "0px 8px" }}
+          icon={<CompressOutlined />}
+        />
+      </Tooltip>
+      <Input
+        style={{
+          width: "78%",
+        }}
+        value={linkToCopy}
+        readOnly
+      />
+      <Button onClick={() => copyUrlToClipboard(linkToCopy)} icon={<CopyOutlined />}>
+        Copy
+      </Button>
+    </Space.Compact>
+  );
+}
+
+const ShareModalView = makeComponentLazy(ShareModalViewInner);
+export default ShareModalView;

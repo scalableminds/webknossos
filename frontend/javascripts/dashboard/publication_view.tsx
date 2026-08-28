@@ -1,28 +1,33 @@
+import { useQuery } from "@tanstack/react-query";
 import { getPublications } from "admin/rest_api";
-import { Input, List, Spin } from "antd";
+import { Flex, Input, List, Spin } from "antd";
 import PublicationCard from "dashboard/publication_card";
 import { handleGenericError } from "libs/error_handling";
-import * as Utils from "libs/utils";
+import { compareBy, filterWithSearchQueryAND } from "libs/utils";
 import type React from "react";
-import { memo, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import type { APIPublication } from "types/api_types";
+
 const { Search } = Input;
+
 export function PublicationViewWithHeader() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [publications, setPublications] = useState<Array<APIPublication>>([]);
   const [searchQuery, setSearchQuery] = useState("");
+
+  const {
+    data: publications = [],
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["publications"],
+    queryFn: getPublications,
+    refetchOnWindowFocus: false,
+  });
+
   useEffect(() => {
-    (async () => {
-      try {
-        setIsLoading(true);
-        setPublications(await getPublications());
-      } catch (error) {
-        handleGenericError(error as Error);
-      } finally {
-        setIsLoading(false);
-      }
-    })();
-  }, []);
+    if (error) {
+      handleGenericError(error as Error);
+    }
+  }, [error]);
 
   function handleSearch(event: React.ChangeEvent<HTMLInputElement>) {
     setSearchQuery(event.target.value);
@@ -32,28 +37,19 @@ export function PublicationViewWithHeader() {
     <Search
       style={{
         width: 200,
-        float: "right",
       }}
-      placeholder="Search Publication"
+      placeholder="Search Publications"
       onChange={handleSearch}
       value={searchQuery}
     />
   );
   return (
     <div>
-      <div className="pull-right">{publications.length > 0 && search}</div>
-      <div
-        className="clearfix"
-        style={{
-          margin: "20px 0px",
-        }}
-      />
+      <Flex justify="flex-end">{publications.length > 0 && search}</Flex>
       <Spin size="large" spinning={isLoading}>
         <div
           style={{
             minHeight: "100px",
-            paddingLeft: 10,
-            paddingRight: 10,
           }}
         >
           <PublicationView publications={publications} searchQuery={searchQuery} />
@@ -68,7 +64,7 @@ type Props = {
 };
 
 function PublicationView(props: Props) {
-  const filteredPublications = Utils.filterWithSearchQueryAND(
+  const filteredPublications = filterWithSearchQueryAND(
     props.publications,
     [
       (model) => model.description,
@@ -77,7 +73,7 @@ function PublicationView(props: Props) {
         model.datasets.flatMap((dataset) => [dataset.name, dataset.description, dataset.metadata]),
     ],
     props.searchQuery,
-  ).sort(Utils.compareBy<APIPublication>((publication) => publication.publicationDate, false));
+  ).sort(compareBy<APIPublication>((publication) => publication.publicationDate, false));
 
   return (
     <List
@@ -85,7 +81,7 @@ function PublicationView(props: Props) {
       locale={{
         emptyText: "No featured publications.",
       }}
-      className="antd-no-border-list"
+      className="antd-no-border-list publication-list"
       renderItem={(publication) => (
         <List.Item key={publication.id}>
           <PublicationCard publication={publication} showDetailedLink />
@@ -94,5 +90,3 @@ function PublicationView(props: Props) {
     />
   );
 }
-
-export default memo<Props>(PublicationView);

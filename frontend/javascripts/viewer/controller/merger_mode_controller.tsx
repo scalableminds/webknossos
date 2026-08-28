@@ -3,6 +3,7 @@ import { connect } from "react-redux";
 import { disableMergerMode, enableMergerMode } from "viewer/merger_mode";
 import type { WebknossosState } from "viewer/store";
 import MergerModeModalView from "viewer/view/merger_mode_modal_view";
+
 type MergerModeControllerProps = {
   isMergerModeEnabled: boolean;
 };

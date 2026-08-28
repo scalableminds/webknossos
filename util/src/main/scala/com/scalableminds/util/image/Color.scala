@@ -1,9 +1,9 @@
 package com.scalableminds.util.image
 
-import com.scalableminds.util.tools.ExtendedTypes._
-import com.scalableminds.util.tools.Box.tryo
-import play.api.libs.json.Json._
-import play.api.libs.json.{Format, JsValue, _}
+import com.scalableminds.util.box.Box.tryo
+import com.scalableminds.util.tools.MathUtils
+import play.api.libs.json.{Format, JsArray, JsError, JsPath, JsResult, JsSuccess, JsValue, Json, JsonValidationError}
+import Json.fromJson
 
 case class Color(r: Double, g: Double, b: Double, a: Double) {
   def toHtml: String = "#%02x%02x%02x".format((r * 255).toInt, (g * 255).toInt, (b * 255).toInt)
@@ -11,32 +11,32 @@ case class Color(r: Double, g: Double, b: Double, a: Double) {
 }
 
 object Color {
-  lazy val RED = Color(1, 0, 0, 1)
+  lazy val RED: Color = Color(1, 0, 0, 1)
 
-  def jet(value: Float) = {
+  def jet(value: Float): Color = {
     val fourValue = value / 64.0
     Color(
-      math.min(fourValue - 1.5, -fourValue + 4.5).clamp(0, 1),
-      math.min(fourValue - 0.5, -fourValue + 3.5).clamp(0, 1),
-      math.min(fourValue + 0.5, -fourValue + 2.5).clamp(0, 1),
+      MathUtils.clamp(math.min(fourValue - 1.5, -fourValue + 4.5), 0, 1),
+      MathUtils.clamp(math.min(fourValue - 0.5, -fourValue + 3.5), 0, 1),
+      MathUtils.clamp(math.min(fourValue + 0.5, -fourValue + 2.5), 0, 1),
       1
     )
   }
 
   def fromHTML(htmlCode: String): Option[Color] =
-    tryo({
+    tryo {
       val code = if (!htmlCode.startsWith("#")) s"#$htmlCode" else htmlCode
       val r = Integer.valueOf(code.substring(1, 3), 16) / 255d
       val g = Integer.valueOf(code.substring(3, 5), 16) / 255d
       val b = Integer.valueOf(code.substring(5, 7), 16) / 255d
       Color(r, g, b, 0)
-    }).toOption
+    }.toOption
 
   implicit object ColorFormat extends Format[Color] {
 
-    def writes(c: Color) = if (c.a == 1) Json.arr(c.r, c.g, c.b) else Json.arr(c.r, c.g, c.b, c.a)
+    def writes(c: Color): JsValue = if (c.a == 1) Json.arr(c.r, c.g, c.b) else Json.arr(c.r, c.g, c.b, c.a)
 
-    def reads(json: JsValue) = json match {
+    def reads(json: JsValue): JsResult[Color] = json match {
       case JsArray(ts) =>
         val c = ts.map(fromJson[Float](_)).flatMap(_.asOpt)
         if (c.size != ts.size)

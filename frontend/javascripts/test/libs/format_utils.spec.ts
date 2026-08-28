@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest";
-import { UnitShort, Unicode } from "viewer/constants";
 import { formatNumberToArea, formatNumberToLength, formatNumberToVolume } from "libs/format_utils";
+import { Unicode, UnitShort } from "viewer/constants";
+import { describe, expect, it } from "vitest";
 
 const { ThinSpace } = Unicode;
 

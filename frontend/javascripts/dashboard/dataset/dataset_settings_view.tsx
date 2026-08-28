@@ -4,20 +4,18 @@ import {
   ExclamationCircleOutlined,
   ExportOutlined,
   FileTextOutlined,
+  FolderOutlined,
   SettingOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
-import { Alert, Breadcrumb, Button, Form, Layout, Menu, Tooltip } from "antd";
+import { Alert, Breadcrumb, Button, Form, Layout, Menu, Space, Tooltip, Typography } from "antd";
 import type { ItemType } from "antd/es/menu/interface";
 import { useDatasetSettingsContext } from "dashboard/dataset/dataset_settings_context";
-
 import features from "features";
-import { useWkSelector } from "libs/react_hooks";
 import messages from "messages";
 import type React from "react";
 import { useCallback } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { Unicode } from "viewer/constants";
 import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
 
 const { Sider, Content } = Layout;
@@ -29,6 +27,7 @@ const BREADCRUMB_LABELS = {
   sharing: "Sharing & Permissions",
   metadata: "Metadata",
   defaultConfig: "View Configuration",
+  storage: "Storage Details",
   delete: "Delete Dataset",
 };
 
@@ -44,7 +43,6 @@ const DatasetSettingsView: React.FC = () => {
     getFormValidationSummary,
     hasFormErrors,
   } = useDatasetSettingsContext();
-  const isUserAdmin = useWkSelector((state) => state.activeUser?.isAdmin || false);
   const location = useLocation();
   const navigate = useNavigate();
   const selectedKey =
@@ -67,14 +65,14 @@ const DatasetSettingsView: React.FC = () => {
         status === notImportedYetStatus ? (
           <Alert
             key="dataSourceStatus"
-            message={<span>{messages["dataset.missing_datasource_json"]}</span>}
+            title={<span>{messages["dataset.missing_datasource_json"]}</span>}
             type="error"
             showIcon
           />
         ) : (
           <Alert
             key="dataSourceStatus"
-            message={
+            title={
               <span>
                 {messages["dataset.invalid_datasource_json"]}
                 <br />
@@ -95,7 +93,7 @@ const DatasetSettingsView: React.FC = () => {
       messageElements.push(
         <Alert
           key="dataSourceStatus"
-          message={<span>{messages["dataset.import_complete"]}</span>}
+          title={<span>{messages["dataset.import_complete"]}</span>}
           type="success"
           showIcon
         />,
@@ -120,11 +118,9 @@ const DatasetSettingsView: React.FC = () => {
     isEditingMode || (dataset != null && dataset.dataSource.status == null) ? "Save" : "Import";
   const errorIcon = (
     <Tooltip title="Some fields in this tab require your attention.">
-      <ExclamationCircleOutlined
-        style={{
-          color: "var(--ant-color-error)",
-        }}
-      />
+      <Typography.Text type="danger">
+        <ExclamationCircleOutlined />
+      </Typography.Text>
     </Tooltip>
   );
 
@@ -154,7 +150,12 @@ const DatasetSettingsView: React.FC = () => {
           icon: formErrors.defaultConfig ? errorIcon : <SettingOutlined />,
           label: "View Configuration",
         },
-        isUserAdmin && features().allowDeleteDatasets
+        {
+          key: "storage",
+          icon: <FolderOutlined />,
+          label: "Storage Details",
+        },
+        features().allowDeleteDatasets
           ? {
               key: "delete",
               icon: <DeleteOutlined />,
@@ -231,11 +232,12 @@ const DatasetSettingsView: React.FC = () => {
               marginTop: 8,
             }}
           >
-            <Button type="primary" htmlType="submit">
-              {confirmString}
-            </Button>
-            {Unicode.NonBreakingSpace}
-            <Button onClick={handleCancel}>Cancel</Button>
+            <Space>
+              <Button type="primary" htmlType="submit">
+                {confirmString}
+              </Button>
+              <Button onClick={handleCancel}>Cancel</Button>
+            </Space>
           </FormItem>
         </Form>
       </Content>

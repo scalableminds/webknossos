@@ -11,48 +11,54 @@ import play.silhouette.impl.authenticators.{
   BearerTokenAuthenticatorSettings
 }
 import com.scalableminds.util.accesscontext.GlobalAccessContext
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import models.user.{User, UserService}
 import TokenType.TokenType
+import com.scalableminds.util.Msg
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import utils.WkConf
 
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.concurrent.{ExecutionContext, Future}
 
-class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticatorSettings,
-                                                repository: BearerTokenAuthenticatorRepository,
-                                                idGenerator: IDGenerator,
-                                                clock: Clock,
-                                                userService: UserService,
-                                                conf: WkConf)(implicit override val executionContext: ExecutionContext)
-    extends BearerTokenAuthenticatorService(settings, repository, idGenerator, clock)
-    with FoxImplicits {
+class WebknossosBearerTokenAuthenticatorService(
+    settings: BearerTokenAuthenticatorSettings,
+    repository: BearerTokenAuthenticatorRepository,
+    idGenerator: IDGenerator,
+    clock: Clock,
+    userService: UserService,
+    conf: WkConf
+)(implicit override val executionContext: ExecutionContext)
+    extends BearerTokenAuthenticatorService(settings, repository, idGenerator, clock) {
 
-  private val resetPasswordExpiry: FiniteDuration =
-    conf.Silhouette.TokenAuthenticator.resetPasswordExpiry.toMillis millis
-  val dataStoreExpiry: FiniteDuration = conf.Silhouette.TokenAuthenticator.dataStoreExpiry.toMillis millis
+  private val resetPasswordExpiry: FiniteDuration = conf.Silhouette.TokenAuthenticator.resetPasswordExpiry
+  val dataStoreExpiry: FiniteDuration = conf.Silhouette.TokenAuthenticator.dataStoreExpiry
+  private val jobExpiry: FiniteDuration = conf.Silhouette.TokenAuthenticator.jobExpiry
 
-  def create(loginInfo: LoginInfo, tokenType: TokenType): Future[BearerTokenAuthenticator] = {
+  def create(userId: ObjectId, tokenType: TokenType): Future[BearerTokenAuthenticator] = {
     val expiry: FiniteDuration = tokenType match {
       case TokenType.Authentication => settings.authenticatorExpiry
       case TokenType.ResetPassword  => resetPasswordExpiry
       case TokenType.DataStore      => dataStoreExpiry
+      case TokenType.Job            => jobExpiry
       case _                        => throw new Exception("Cannot create an authenticator without a valid TokenType")
     }
     idGenerator.generate.map { id =>
       BearerTokenAuthenticator(
         id = id,
-        loginInfo = loginInfo,
+        loginInfo = loginInfoFromUserId(userId),
         lastUsedDateTime = clock.now,
         expirationDateTime = Instant.in(expiry).toZonedDateTime,
         idleTimeout = settings.authenticatorIdleTimeout
       )
-    }.recover {
-      case e => throw new AuthenticatorCreationException(CreateError.format(ID, loginInfo), Some(e))
+    }.recover { case e =>
+      throw new AuthenticatorCreationException(CreateError.format(ID, loginInfoFromUserId(userId)), Some(e))
     }
   }
+
+  private def loginInfoFromUserId(userId: ObjectId) =
+    LoginInfo("credentials", userId.toString)
 
   def init(authenticator: BearerTokenAuthenticator, tokenType: TokenType, deleteOld: Boolean): Future[String] =
     repository
@@ -60,25 +66,28 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
       .map { a =>
         a.id
       }
-      .recover {
-        case e => throw new AuthenticatorInitializationException(InitError.format(ID, authenticator), Some(e))
+      .recover { case e =>
+        throw new AuthenticatorInitializationException(InitError.format(ID, authenticator), Some(e))
       }
 
   def createAndInitDataStoreTokenForUser(user: User): Fox[String] =
-    Fox.fromFuture(createAndInit(user.loginInfo, TokenType.DataStore, deleteOld = false))
+    Fox.fromFuture(createAndInit(user._id, TokenType.DataStore, deleteOld = false))
 
-  def createAndInit(loginInfo: LoginInfo, tokenType: TokenType, deleteOld: Boolean): Future[String] =
+  def createAndInitJobTokenForUser(user: User): Fox[String] =
+    Fox.fromFuture(createAndInit(user._id, TokenType.Job, deleteOld = false))
+
+  def createAndInit(userId: ObjectId, tokenType: TokenType, deleteOld: Boolean): Future[String] =
     for {
-      tokenAuthenticator <- create(loginInfo, tokenType)
+      tokenAuthenticator <- create(userId, tokenType)
       tokenId <- init(tokenAuthenticator, tokenType, deleteOld)
     } yield tokenId
 
   def userForToken(tokenValue: String): Fox[User] =
     for {
-      tokenAuthenticator <- repository.findOneByValue(tokenValue) ?~> "auth.invalidToken"
-      _ <- Fox.fromBool(tokenAuthenticator.isValid) ?~> "auth.invalidToken"
-      idValidated <- ObjectId.fromString(tokenAuthenticator.loginInfo.providerKey) ?~> "auth.invalidToken"
-      user <- userService.findOneCached(idValidated)(GlobalAccessContext)
+      tokenAuthenticator <- repository.findOneByValue(tokenValue) ?~> Msg.User.Token.invalid
+      _ <- Fox.fromBool(tokenAuthenticator.isValid) ?~> Msg.User.Token.invalid
+      idValidated <- ObjectId.fromString(tokenAuthenticator.loginInfo.providerKey) ?~> Msg.User.Token.invalid
+      user <- userService.findOneCached(idValidated)(using GlobalAccessContext)
     } yield user
 
   def userForTokenOpt(tokenOpt: Option[String]): Fox[User] = tokenOpt match {
@@ -91,4 +100,7 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
 
   def removeExpiredTokens(): Fox[Unit] =
     repository.deleteAllExpired()
+
+  def hardDeleteOldTokens(): Fox[Unit] =
+    repository.hardDeleteOldTokens()
 }

@@ -1,10 +1,15 @@
-import { CloseOutlined } from "@ant-design/icons";
+import Icon, { CloseOutlined } from "@ant-design/icons";
+import IconAnnotate from "@images/backgrounds/annotate.svg?react";
+import IconImportOwnData from "@images/backgrounds/import-own-data.svg?react";
+import IconInviteColleagues from "@images/backgrounds/invite-colleagues.svg?react";
+import IconOpenDemo from "@images/backgrounds/open-demo.svg?react";
 import { InviteUsersModal } from "admin/onboarding";
-import { Button, Tooltip } from "antd";
+import { Button, Tooltip, Typography } from "antd";
 import { getDemoDatasetUrl } from "features";
 import renderIndependently from "libs/render_independently";
 import { isUserAdminOrDatasetManager, isUserAdminOrTeamManager } from "libs/utils";
-import * as React from "react";
+import type React from "react";
+import { Fragment } from "react";
 import { Link } from "react-router-dom";
 import type { APIUser } from "types/api_types";
 
@@ -19,13 +24,13 @@ type WhatsNextActionProps = {
 
 const WhatsNextAction = ({ title, description, icon, onClick, href, to }: WhatsNextActionProps) => {
   const content = (
-    <React.Fragment>
+    <Fragment>
       {icon}
       <div className="label">
-        <h2>{title}</h2>
+        <Typography.Title level={2}>{title}</Typography.Title>
         <p>{description}</p>
       </div>
-    </React.Fragment>
+    </Fragment>
   );
 
   if (to != null) {
@@ -66,15 +71,14 @@ export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps)
         }}
       >
         <Tooltip title="Don't show this again" placement="left">
-          <Button type="text" onClick={onDismiss}>
+          <Button type="text" onClick={onDismiss} icon={<CloseOutlined />} iconPlacement="end">
             Close
-            <CloseOutlined />
           </Button>
         </Tooltip>
       </div>
       <div className="welcome-header-content">
         <div className="text-and-button-container">
-          <h1>Welcome to WEBKNOSSOS</h1>
+          <Typography.Title level={1}>Welcome to WEBKNOSSOS</Typography.Title>
           <p className="subtitle">
             Congratulations on your new WEBKNOSSOS account! To hit the ground running, we recommend
             the following steps to you:
@@ -84,7 +88,7 @@ export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps)
               title="Open a Demo Dataset"
               description="Have a look at a public dataset to experience WEBKNOSSOS in action."
               href={getDemoDatasetUrl()}
-              icon={<i className="icon-open-demo" />}
+              icon={<Icon component={IconOpenDemo} className="welcome-header-icon" aria-hidden />}
             />
 
             {isUserAdminOrDatasetManager(activeUser) ? (
@@ -92,21 +96,29 @@ export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps)
                 title="Import Your Own Data"
                 description="Directly upload your data as a zip file."
                 to="/datasets/upload"
-                icon={<i className="icon-import-own-data" />}
+                icon={
+                  <Icon component={IconImportOwnData} className="welcome-header-icon" aria-hidden />
+                }
               />
             ) : null}
 
             <WhatsNextAction
               title="Learn How To Create Annotations"
               description="Watch a short video to see how data can be annotated with WEBKNOSSOS."
-              icon={<i className="icon-annotate" />}
+              icon={<Icon component={IconAnnotate} className="welcome-header-icon" aria-hidden />}
               href="https://www.youtube.com/watch?v=iw2C7XB6wP4"
             />
             {isUserAdminOrTeamManager(activeUser) ? (
               <WhatsNextAction
                 title="Invite Your Colleagues"
                 description="Send email invites to your colleagues and ask them to join your organization."
-                icon={<i className="icon-invite-colleagues" />}
+                icon={
+                  <Icon
+                    component={IconInviteColleagues}
+                    className="welcome-header-icon"
+                    aria-hidden
+                  />
+                }
                 onClick={() => {
                   renderIndependently((destroy) => (
                     <InviteUsersModal organizationId={activeUser.organization} destroy={destroy} />

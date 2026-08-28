@@ -1,8 +1,9 @@
-import { Tag, Tooltip } from "antd";
-import { stringToColor } from "libs/format_utils";
+import { Space, Tag, Tooltip } from "antd";
+import { stringToTagColor } from "libs/colors";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
 import { type MouseEventHandler, useEffect } from "react";
+
 type LabelProps = {
   tag: string;
   kind: string;
@@ -16,9 +17,11 @@ type FilterProps = {
   setTags: (arg0: Array<string>) => void;
   localStorageSavingKey: string;
 };
+
 const LOCKED_TAG_COLOR = "var(--ant-color-warning)";
+
 export default function CategorizationLabel({ tag, kind, onClick, onClose, closable }: LabelProps) {
-  const color = tag === "locked" ? LOCKED_TAG_COLOR : stringToColor(tag);
+  const color = tag === "locked" ? LOCKED_TAG_COLOR : stringToTagColor(tag);
   return (
     <Tooltip title={`Click to only show ${kind} with this tag.`}>
       <Tag
@@ -26,6 +29,7 @@ export default function CategorizationLabel({ tag, kind, onClick, onClose, closa
         onClick={onClick}
         onClose={onClose}
         closable={closable}
+        variant="outlined"
         style={{
           cursor: "pointer",
         }}
@@ -35,6 +39,7 @@ export default function CategorizationLabel({ tag, kind, onClick, onClose, closa
     </Tooltip>
   );
 }
+
 export function CategorizationSearch({
   itemName,
   searchTags,
@@ -71,19 +76,23 @@ export function CategorizationSearch({
 
   return (
     <div style={{ marginBottom: 8 }}>
-      <span style={{ marginRight: 6 }}>Only showing {itemName} with these tags:</span>
-      {searchTags.map((tag) => (
-        <Tag
-          key={tag}
-          color={stringToColor(tag)}
-          onClose={() => {
-            removeTag(tag);
-          }}
-          closable
-        >
-          {tag}
-        </Tag>
-      ))}
+      <Space>
+        Only showing {itemName} with these tags:
+        <Space>
+          {searchTags.map((tag) => (
+            <Tag
+              key={tag}
+              color={stringToTagColor(tag)}
+              onClose={() => {
+                removeTag(tag);
+              }}
+              closable
+            >
+              {tag}
+            </Tag>
+          ))}
+        </Space>
+      </Space>
     </div>
   );
 }

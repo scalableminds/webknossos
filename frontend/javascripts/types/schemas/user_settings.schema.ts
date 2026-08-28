@@ -1,10 +1,5 @@
 import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
-import {
-  FillModeEnum,
-  InterpolationModeEnum,
-  OverwriteModeEnum,
-  TDViewDisplayModeEnum,
-} from "viewer/constants";
+import { FillModeEnum, OverwriteModeEnum, TDViewDisplayModeEnum } from "viewer/constants";
 import { getMaximumBrushSize } from "viewer/model/accessors/volumetracing_accessor";
 
 export const userSettings = {
@@ -13,10 +8,13 @@ export const userSettings = {
     minimum: 1,
     maximum: 12000,
   },
-  clippingDistanceArbitrary: {
+  clippingDistanceFlight: {
     type: "number",
     minimum: 1,
     maximum: 127,
+  },
+  clipSkeletonToCurrentSection: {
+    type: "boolean",
   },
   crosshairSize: {
     type: "number",
@@ -104,7 +102,7 @@ export const userSettings = {
   tdViewDisplayDatasetBorders: {
     type: "boolean",
   },
-  tdViewDisplayLayerBorders: {
+  tdViewUsePerspectiveCamera: {
     type: "boolean",
   },
   hideTreeRemovalWarning: {
@@ -141,11 +139,15 @@ export const userSettings = {
     type: "string",
     enum: Object.values(FillModeEnum),
   },
-  interpolationMode: {
-    type: "string",
-    enum: Object.values(InterpolationModeEnum),
-  },
   useLegacyBindings: {
+    type: "boolean",
+  },
+  mipRaymarchingSteps: {
+    type: "number",
+    minimum: 16,
+    maximum: 512,
+  },
+  mipDepthWrite: {
     type: "boolean",
   },
   ...baseDatasetViewConfiguration,

@@ -1,8 +1,8 @@
 import {
-  type ServerSkeletonTracing,
-  type APIAnnotation,
   AnnotationLayerEnum,
+  type APIAnnotation,
   type APITracingStoreAnnotation,
+  type ServerSkeletonTracing,
 } from "types/api_types";
 import { ViewModeValues } from "viewer/constants";
 
@@ -173,7 +173,7 @@ export const annotation: APIAnnotation = {
     ],
   },
   contributors: [],
-  othersMayEdit: false,
+  collaborationMode: "OwnerOnly",
   isLockedByOwner: false,
   teams: [
     {

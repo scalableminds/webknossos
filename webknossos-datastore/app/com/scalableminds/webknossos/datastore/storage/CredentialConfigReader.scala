@@ -16,6 +16,7 @@ class CredentialConfigReader(underlyingConfig: Config) extends ConfigReader {
         case CredentialType.S3AccessKey          => getAsS3
         case CredentialType.HttpBasicAuth        => getAsHttpsBasicAuth
         case CredentialType.GoogleServiceAccount => getAsGoogleServiceAccount
+        case CredentialType.HttpToken            => getAsXAuthToken
         // Keep in sync with parse methods in CredentialDAO
         case _ => None
       }
@@ -26,39 +27,47 @@ class CredentialConfigReader(underlyingConfig: Config) extends ConfigReader {
       name <- getOptional[String]("name")
       keyId <- getOptional[String]("identifier")
       key <- getOptional[String]("secret")
-    } yield
-      S3AccessKeyCredential(
-        name,
-        keyId,
-        key,
-        None,
-        None
-      )
+    } yield S3AccessKeyCredential(
+      name,
+      keyId,
+      key,
+      None,
+      None
+    )
 
   private def getAsHttpsBasicAuth: Option[HttpBasicAuthCredential] =
     for {
       name <- getOptional[String]("name")
       username <- getOptional[String]("identifier")
       password <- getOptional[String]("secret")
-    } yield
-      HttpBasicAuthCredential(
-        name,
-        username,
-        password,
-        None,
-        None
-      )
+    } yield HttpBasicAuthCredential(
+      name,
+      username,
+      password,
+      None,
+      None
+    )
 
   private def getAsGoogleServiceAccount: Option[GoogleServiceAccountCredential] =
     for {
       name <- getOptional[String]("name")
       secret <- getOptional[String]("secret")
       secretJson <- JsonHelper.parseAs[JsValue](secret).toOption
-    } yield
-      GoogleServiceAccountCredential(
-        name,
-        secretJson,
-        None,
-        None
-      )
+    } yield GoogleServiceAccountCredential(
+      name,
+      secretJson,
+      None,
+      None
+    )
+
+  private def getAsXAuthToken: Option[XAuthTokenCredential] =
+    for {
+      name <- getOptional[String]("name")
+      tokenValue <- getOptional[String]("secret")
+    } yield XAuthTokenCredential(
+      name,
+      tokenValue,
+      None,
+      None
+    )
 }

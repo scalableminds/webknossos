@@ -1,6 +1,8 @@
 import app from "app";
+import ErrorHandling from "libs/error_handling";
+import Toast from "libs/toast";
 import window from "libs/window";
-import _ from "lodash";
+import throttle from "lodash-es/throttle";
 import {
   Matrix4,
   Object3D,
@@ -10,18 +12,19 @@ import {
 } from "three";
 import TWEEN from "tween.js";
 import type { OrthoViewMap, Vector3, Viewport } from "viewer/constants";
-import Constants, { ARBITRARY_CAM_DISTANCE, ArbitraryViewport, OrthoViews } from "viewer/constants";
+import Constants, { FLIGHT_CAM_DISTANCE, FlightViewport, OrthoViews } from "viewer/constants";
 import getSceneController, {
   getSceneControllerOrNull,
 } from "viewer/controller/scene_controller_provider";
-import type ArbitraryPlane from "viewer/geometries/arbitrary_plane";
+import type FlightModePlane from "viewer/geometries/arbitrary_plane";
 import { getZoomedMatrix } from "viewer/model/accessors/flycam_accessor";
 import { getInputCatcherRect } from "viewer/model/accessors/view_mode_accessor";
+import { uiReadyAction } from "viewer/model/actions/actions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import Store from "viewer/store";
 import {
   getGroundTruthLayoutRect,
-  show3DViewportInArbitrary,
+  show3DViewportInFlightMode,
 } from "viewer/view/layouting/default_layout_configs";
 import { clearCanvas, renderToTexture, setupRenderArea } from "viewer/view/rendering_utils";
 
@@ -31,13 +34,13 @@ type GeometryLike = {
 
 const flipYRotationMatrix = new Matrix4().makeRotationY(Math.PI);
 
-class ArbitraryView {
+class FlightModeView {
   cameras: OrthoViewMap<OrthographicCamera>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'plane' has no initializer and is not def... Remove this comment to see the full error message
-  plane: ArbitraryPlane;
-  animate: () => void;
+  plane: FlightModePlane;
   setClippingDistance: (value: number) => void;
   needsRerender: boolean;
+  private isRerenderScheduled: boolean = false;
   additionalInfo: string = "";
   isRunning: boolean = false;
   animationRequestId: number | null | undefined = null;
@@ -50,16 +53,18 @@ class ArbitraryView {
   group: Object3D;
   cameraPosition: Vector3;
   unsubscribeFunctions: Array<() => void> = [];
+  // Created as an instance property to avoid allocating a new Matrix4 in
+  // every rendered frame (see renderFunction).
+  private cameraPositionMatrix = new Matrix4();
 
   constructor() {
-    this.animate = this.animateImpl.bind(this);
     this.setClippingDistance = this.setClippingDistanceImpl.bind(this);
 
     const { scene } = getSceneController();
     // Initialize main js components
     this.camera = new PerspectiveCamera(45, 1, 50, 1000);
     // This name can be used to retrieve the camera from the scene
-    this.camera.name = ArbitraryViewport;
+    this.camera.name = FlightViewport;
     this.camera.matrixAutoUpdate = false;
     scene.add(this.camera);
     const tdCamera = new OrthographicCamera(0, 0, 0, 0);
@@ -74,7 +79,7 @@ class ArbitraryView {
       PLANE_YZ: dummyCamera,
       PLANE_XZ: dummyCamera,
     };
-    this.cameraPosition = [0, 0, ARBITRARY_CAM_DISTANCE];
+    this.cameraPosition = [0, 0, FLIGHT_CAM_DISTANCE];
     this.needsRerender = true;
   }
 
@@ -86,6 +91,11 @@ class ArbitraryView {
     if (!this.isRunning) {
       this.isRunning = true;
 
+      // We only measure the time to first render in orthogonal
+      // mode. If flight mode is active during page load, the navigation
+      // timings are no longer accurate and should not be used.
+      window.measuredTimeToFirstRender = true;
+
       this.unsubscribeFunctions.push(
         app.vent.on("rerender", () => {
           this.needsRerender = true;
@@ -93,19 +103,35 @@ class ArbitraryView {
       );
       this.unsubscribeFunctions.push(
         Store.subscribe(() => {
-          // Render in the next frame after the change propagated everywhere
-          window.requestAnimationFrame(() => {
-            this.needsRerender = true;
-          });
+          this.scheduleRerender();
         }),
       );
 
       this.group = new Object3D();
       this.group.add(this.camera);
-      getSceneController().rootGroup.add(this.group);
+      const sceneController = getSceneController();
+      const { rootGroup, renderer, scene } = sceneController;
+      rootGroup.add(this.group);
       this.resizeImpl();
-      // start the rendering loop
-      this.animationRequestId = window.requestAnimationFrame(this.animate);
+
+      const compileAsyncPromise = renderer.compileAsync(scene, this.camera);
+      // See SceneController.waitForPendingCompiles for why this needs to be tracked.
+      sceneController.registerPendingCompile(compileAsyncPromise);
+      compileAsyncPromise
+        .then(() => {
+          // Counter-intuitively this is not the moment where the webgl program is fully compiled.
+          // There is another stall once render or getProgramInfoLog is called, since not all work is done yet.
+          // Only once that is done, the compilation process is fully finished, see `renderFunction`.
+          this.animate();
+          Store.dispatch(uiReadyAction());
+        })
+        .catch((error) => {
+          // This code will not be hit if there are shader compilation errors. To react to those, see https://github.com/mrdoob/three.js/pull/25679
+          Toast.error(`An unexpected error occurred while compiling the WebGL shaders: ${error}`);
+          console.error(error);
+          ErrorHandling.notify(error);
+        });
+
       // Dont forget to handle window resizing!
       window.addEventListener("resize", this.resizeThrottled);
       this.unsubscribeFunctions.push(
@@ -141,12 +167,26 @@ class ArbitraryView {
     }
   }
 
-  animateImpl(): void {
+  animate(): void {
     if (!this.isRunning) {
       return;
     }
+
     this.renderFunction();
-    this.animationRequestId = window.requestAnimationFrame(this.animate);
+    this.animationRequestId = window.requestAnimationFrame(() => this.animate());
+  }
+
+  // Sets needsRerender in the next animation frame. At most one callback is
+  // queued at a time, so high-frequency callers don't pile up closures.
+  scheduleRerender(): void {
+    if (this.isRerenderScheduled) {
+      return;
+    }
+    this.isRerenderScheduled = true;
+    window.requestAnimationFrame(() => {
+      this.isRerenderScheduled = false;
+      this.needsRerender = true;
+    });
   }
 
   renderFunction() {
@@ -174,7 +214,7 @@ class ArbitraryView {
         m[3], m[7], m[11], m[15],
       );
       camera.matrix.multiply(flipYRotationMatrix);
-      camera.matrix.multiply(new Matrix4().makeTranslation(...this.cameraPosition));
+      camera.matrix.multiply(this.cameraPositionMatrix.makeTranslation(...this.cameraPosition));
       camera.matrixWorldNeedsUpdate = true;
       clearCanvas(renderer);
       const storeState = Store.getState();
@@ -193,9 +233,9 @@ class ArbitraryView {
         this.plane.meshes.debuggerPlane.visible = false;
       }
 
-      renderViewport(ArbitraryViewport, camera);
+      renderViewport(FlightViewport, camera);
 
-      if (show3DViewportInArbitrary) {
+      if (show3DViewportInFlightMode) {
         if (this.plane.meshes.debuggerPlane != null) {
           this.plane.meshes.debuggerPlane.visible = true;
         }
@@ -218,7 +258,7 @@ class ArbitraryView {
     // passed to the GPU but were not used.
     // It can be used within the orthogonal bucket picker for example.
     //
-    // import * as Utils from "libs/utils";
+    // import { diffArrays } from "libs/utils";
     // import type { Vector4 } from "viewer/constants";
     // const makeBucketId = ([x, y, z], logZoomStep) => [x, y, z, logZoomStep].join(",");
     // const unpackBucketId = (str): Vector4 =>
@@ -227,7 +267,7 @@ class ArbitraryView {
     //     .map(el => parseInt(el))
     //     .map((el, idx) => (idx < 3 ? el : 0));
     // function diff(traversedBuckets, lastRenderedBuckets) {
-    //     const bucketDiff = Utils.diffArrays(traversedBuckets.map(makeBucketId), lastRenderedBuckets.map(makeBucketId));
+    //     const bucketDiff = diffArrays(traversedBuckets.map(makeBucketId), lastRenderedBuckets.map(makeBucketId));
     //
     //     bucketDiff.onlyA.forEach(bucketAddress => {
     //       const bucket = cube.getOrCreateBucket(unpackBucketId(bucketAddress));
@@ -240,7 +280,7 @@ class ArbitraryView {
     // }
     // diff(traversedBuckets, getRenderedBucketsDebug());
     this.plane.materialFactory.uniforms.renderBucketIndices.value = true;
-    const buffer = renderToTexture(ArbitraryViewport);
+    const buffer = renderToTexture(FlightViewport);
     this.plane.materialFactory.uniforms.renderBucketIndices.value = false;
     let index = 0;
     const usedBucketSet = new Set();
@@ -267,7 +307,7 @@ class ArbitraryView {
     geometry.addToScene(this.group);
   }
 
-  setArbitraryPlane(p: ArbitraryPlane) {
+  setFlightModePlane(p: FlightModePlane) {
     this.plane = p;
   }
 
@@ -285,10 +325,10 @@ class ArbitraryView {
   };
 
   // throttle resize to avoid annoying flickering
-  resizeThrottled = _.throttle(this.resizeImpl, Constants.RESIZE_THROTTLE_TIME);
+  resizeThrottled = throttle(this.resizeImpl, Constants.RESIZE_THROTTLE_TIME);
 
   setClippingDistanceImpl(value: number): void {
-    this.camera.near = ARBITRARY_CAM_DISTANCE - value;
+    this.camera.near = FLIGHT_CAM_DISTANCE - value;
     this.camera.updateProjectionMatrix();
   }
 
@@ -301,4 +341,4 @@ class ArbitraryView {
   }
 }
 
-export default ArbitraryView;
+export default FlightModeView;

@@ -1,9 +1,9 @@
 package backend
 
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.MurmurHash3
-import org.scalatestplus.play.PlaySpec
+import org.scalatest.wordspec.AsyncWordSpec
 
-class MurmurHashTestSuite extends PlaySpec {
+class MurmurHashTestSuite extends AsyncWordSpec {
 
   "Murmur hash" should {
     "return the correct hash" in {

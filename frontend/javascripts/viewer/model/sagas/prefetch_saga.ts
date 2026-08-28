@@ -2,7 +2,11 @@ import { call, throttle } from "typed-redux-saga";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Vector3 } from "viewer/constants";
 import constants from "viewer/constants";
-import { getMagInfo, isLayerVisible } from "viewer/model/accessors/dataset_accessor";
+import {
+  getLayerByName,
+  getMagInfo,
+  isLayerVisible,
+} from "viewer/model/accessors/dataset_accessor";
 import {
   getActiveMagIndexForLayer,
   getAreasFromState,
@@ -10,7 +14,7 @@ import {
   isRotated,
 } from "viewer/model/accessors/flycam_accessor";
 import { FlycamActions } from "viewer/model/actions/flycam_actions";
-import { PrefetchStrategyArbitrary } from "viewer/model/bucket_data_handling/prefetch_strategy_arbitrary";
+import { PrefetchStrategyFlight } from "viewer/model/bucket_data_handling/prefetch_strategy_arbitrary";
 import {
   ContentTypes as PrefetchContentTypes,
   PrefetchStrategySkeleton,
@@ -18,19 +22,20 @@ import {
 } from "viewer/model/bucket_data_handling/prefetch_strategy_plane";
 import { getGlobalDataConnectionInfo } from "viewer/model/data_connection_info";
 import type DataLayer from "viewer/model/data_layer";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import { Model } from "viewer/singletons";
 import type { WebknossosState } from "viewer/store";
-import { ensureWkReady } from "./ready_sagas";
+import { getTransformsForLayerOrNull } from "../accessors/dataset_layer_transformation_accessor";
+import { ensureWkInitialized } from "./ready_sagas";
 
 const PREFETCH_THROTTLE_TIME = 50;
 const DIRECTION_VECTOR_SMOOTHER = 0.125;
-const prefetchStrategiesArbitrary = [new PrefetchStrategyArbitrary()];
+const prefetchStrategiesFlight = [new PrefetchStrategyFlight()];
 const prefetchStrategiesPlane = [new PrefetchStrategySkeleton(), new PrefetchStrategyVolume()];
 
 export function* watchDataRelevantChanges(): Saga<void> {
-  yield* call(ensureWkReady);
+  yield* call(ensureWkInitialized);
 
   const previousProperties = {};
   // Initiate the prefetching once and then only for data relevant changes
@@ -44,11 +49,18 @@ export function* watchDataRelevantChanges(): Saga<void> {
 }
 
 function* shouldPrefetchForDataLayer(dataLayer: DataLayer): Saga<boolean> {
-  // There is no need to prefetch data for layers that are not visible
   return yield* select((state) => {
     const isNotRotated = !isRotated(state.flycam);
+    const hasNoTransforms =
+      getTransformsForLayerOrNull(
+        state.dataset,
+        getLayerByName(state.dataset, dataLayer.name, true),
+        state.datasetConfiguration.nativelyRenderedLayerName,
+      ) == null;
     return (
       isNotRotated &&
+      hasNoTransforms &&
+      // There is no need to prefetch data for layers that are not visible
       isLayerVisible(
         state.dataset,
         dataLayer.name,
@@ -69,7 +81,7 @@ export function* triggerDataPrefetching(previousProperties: Record<string, any>)
       if (isPlaneMode) {
         yield* call(prefetchForPlaneMode, dataLayer, previousProperties);
       } else {
-        yield* call(prefetchForArbitraryMode, dataLayer, previousProperties);
+        yield* call(prefetchForFlightMode, dataLayer, previousProperties);
       }
     }
   }
@@ -170,7 +182,7 @@ export function* prefetchForPlaneMode(
     previousProperties.lastBucketPickerTick = currentBucketPickerTick;
   }
 }
-export function* prefetchForArbitraryMode(
+export function* prefetchForFlightMode(
   layer: DataLayer,
   previousProperties: Record<string, any>,
 ): Saga<void> {
@@ -194,7 +206,7 @@ export function* prefetchForArbitraryMode(
     currentBucketPickerTick !== lastBucketPickerTick &&
     (matrix !== lastMatrix || zoomStep !== lastZoomStep)
   ) {
-    for (const strategy of prefetchStrategiesArbitrary) {
+    for (const strategy of prefetchStrategiesFlight) {
       if (
         strategy.forContentType(tracingTypes) &&
         strategy.inVelocityRange(lastConnectionStats.avgDownloadSpeedInBytesPerS) &&
@@ -229,4 +241,3 @@ export function* prefetchForArbitraryMode(
   previousProperties.lastZoomStep = zoomStep;
   previousProperties.lastBucketPickerTick = currentBucketPickerTick;
 }
-export default {};

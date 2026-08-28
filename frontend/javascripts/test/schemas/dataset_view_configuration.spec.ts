@@ -1,9 +1,8 @@
-import _ from "lodash";
-import { describe, it, expect } from "vitest";
-import { validateObjectWithType } from "types/validation";
-import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
-
+import cloneDeep from "lodash-es/cloneDeep";
 import DATASET from "test/fixtures/dataset_server_object";
+import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
+import { validateObjectWithType } from "types/validation";
+import { describe, expect, it } from "vitest";
 
 const datasetViewConfigurationType = "types::DatasetViewConfiguration";
 const CORRECT_DATASET_CONFIGURATION: Record<any, any> = {
@@ -24,7 +23,7 @@ describe("Dataset View Configuration Validator", () => {
   });
 
   it("should report no errors for valid configuration (with optional values)", () => {
-    const validConfiguration = _.cloneDeep(CORRECT_DATASET_CONFIGURATION);
+    const validConfiguration = cloneDeep(CORRECT_DATASET_CONFIGURATION);
 
     validConfiguration.zoom = 3;
     validConfiguration.position = [1, 1, 1];
@@ -36,7 +35,7 @@ describe("Dataset View Configuration Validator", () => {
   });
 
   it("should report 1 error for additional property", () => {
-    const additionalPropertiesObject = _.cloneDeep(CORRECT_DATASET_CONFIGURATION);
+    const additionalPropertiesObject = cloneDeep(CORRECT_DATASET_CONFIGURATION);
 
     additionalPropertiesObject.additionalProperty = 1;
 
@@ -46,7 +45,7 @@ describe("Dataset View Configuration Validator", () => {
   });
 
   it("should report 1 error for missing property", () => {
-    const missingPropertiesObject = _.cloneDeep(CORRECT_DATASET_CONFIGURATION);
+    const missingPropertiesObject = cloneDeep(CORRECT_DATASET_CONFIGURATION);
 
     delete missingPropertiesObject.layers;
 
@@ -56,7 +55,7 @@ describe("Dataset View Configuration Validator", () => {
   });
 
   it("should report 1 error for wrong type", () => {
-    const wrongTypeObject = _.cloneDeep(CORRECT_DATASET_CONFIGURATION);
+    const wrongTypeObject = cloneDeep(CORRECT_DATASET_CONFIGURATION);
 
     wrongTypeObject.fourBit = 1;
 
@@ -84,7 +83,7 @@ describe("Dataset View Configuration Validator", () => {
   });
 
   it("validated view configuration should not add missing property, when optional", () => {
-    const validatedConfiguration = _.cloneDeep(CORRECT_DATASET_CONFIGURATION);
+    const validatedConfiguration = cloneDeep(CORRECT_DATASET_CONFIGURATION);
 
     delete validatedConfiguration.fourBit;
     enforceValidatedDatasetViewConfiguration(validatedConfiguration, DATASET, true);
@@ -93,7 +92,7 @@ describe("Dataset View Configuration Validator", () => {
   });
 
   it("validated should correctly remove nested additional property for known field", () => {
-    const validatedConfiguration = _.cloneDeep(CORRECT_DATASET_CONFIGURATION);
+    const validatedConfiguration = cloneDeep(CORRECT_DATASET_CONFIGURATION);
 
     validatedConfiguration.fourBit = {
       deeply: "nested",
@@ -106,7 +105,7 @@ describe("Dataset View Configuration Validator", () => {
   });
 
   it("validated should correctly remove nested additional property for unknown field", () => {
-    const validatedConfiguration = _.cloneDeep(CORRECT_DATASET_CONFIGURATION);
+    const validatedConfiguration = cloneDeep(CORRECT_DATASET_CONFIGURATION);
 
     validatedConfiguration.test = {
       deeply: "nested",

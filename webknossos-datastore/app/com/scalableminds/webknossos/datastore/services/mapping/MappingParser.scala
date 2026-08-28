@@ -2,30 +2,29 @@ package com.scalableminds.webknossos.datastore.services.mapping
 
 import com.google.gson.JsonParseException
 import com.google.gson.stream.JsonReader
+import com.scalableminds.util.box.{Box, Failure}
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Box, Failure}
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayerMapping
 import com.typesafe.scalalogging.LazyLogging
 
-import java.io._
+import java.io.*
 import java.nio.file.Path
 import scala.collection.mutable
 
 object MappingParser extends LazyLogging {
 
   def parse[T](r: Reader, fromLongFn: Long => T): Box[DataLayerMapping[T]] =
-    try {
-      Box(parseImpl(r, fromLongFn))
-    } catch {
+    try
+      Box.fromOption(parseImpl(r, fromLongFn))
+    catch {
       case e: JsonParseException =>
         logger.error(s"Parse exception while parsing mapping: ${e.getMessage}.")
         Failure(e.getMessage)
       case e: Exception =>
         logger.error(s"Unknown exception while parsing mapping: ${e.getMessage}.")
         Failure(e.getMessage)
-    } finally {
+    } finally
       r.close()
-    }
 
   def parse[T](p: Path, fromLongFn: Long => T): Box[DataLayerMapping[T]] =
     parse(new FileReader(new File(p.toString)), fromLongFn)
@@ -41,7 +40,7 @@ object MappingParser extends LazyLogging {
     var classesOpt: Option[Map[T, T]] = None
 
     jsonReader.beginObject()
-    while (jsonReader.hasNext) {
+    while (jsonReader.hasNext)
       jsonReader.nextName() match {
         case "name" =>
           nameOpt = Some(jsonReader.nextString())
@@ -50,17 +49,14 @@ object MappingParser extends LazyLogging {
         case _ =>
           jsonReader.skipValue()
       }
-    }
     jsonReader.endObject()
 
-    Instant.logSince(before, s"JSON Mapping parsing", logger)
+    Instant.logSince(before, "JSON Mapping parsing", logger)
 
     for {
       name <- nameOpt
       classes <- classesOpt
-    } yield {
-      DataLayerMapping(name, classes)
-    }
+    } yield DataLayerMapping(name, classes)
   }
 
   private def parseClasses[T](jsonReader: JsonReader, fromLongFn: Long => T): Map[T, T] = {

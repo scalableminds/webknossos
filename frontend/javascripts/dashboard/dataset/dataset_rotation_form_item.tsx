@@ -1,19 +1,28 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
-import { Col, Form, type FormInstance, InputNumber, Row, Slider, Tooltip, Typography } from "antd";
+import {
+  Col,
+  Form,
+  type FormInstance,
+  InputNumber,
+  Row,
+  Slider,
+  Space,
+  Tooltip,
+  Typography,
+} from "antd";
 import FormItem from "antd/es/form/FormItem";
 import Checkbox, { type CheckboxChangeEvent } from "antd/lib/checkbox/Checkbox";
 import { useCallback, useEffect, useMemo } from "react";
-import type { APIDataLayer } from "types/api_types";
+import type { AffineTransformation, APIDataLayer } from "types/api_types";
 import {
   AXIS_TO_TRANSFORM_INDEX,
-  EXPECTED_TRANSFORMATION_LENGTH,
+  EXPECTED_SETTINGS_TRANSFORMATION_LENGTH,
+  fromCenterToOriginAsAffine,
+  fromOriginToCenterAsAffine,
+  getRotationMatrixAroundAxis,
   IDENTITY_TRANSFORM,
   type RotationAndMirroringSettings,
-  doAllLayersHaveTheSameRotation,
-  fromCenterToOrigin,
-  fromOriginToCenter,
-  getRotationMatrixAroundAxis,
-  transformationEqualsAffineIdentityTransform,
+  settingsTransformationEqualsAffineIdentityTransform,
 } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import { FormItemWithInfo } from "./helper_components";
@@ -25,8 +34,10 @@ type AxisRotationFormItemProps = {
   axis: "x" | "y" | "z";
 };
 
-function getDatasetBoundingBoxFromLayers(layers: APIDataLayer[]): BoundingBox | undefined {
-  if (!layers || layers.length === 0) {
+export function getDatasetBoundingBoxFromLayers(
+  layers: APIDataLayer[] | undefined,
+): BoundingBox | undefined {
+  if (layers == null || layers.length === 0) {
     return undefined;
   }
   let datasetBoundingBox = BoundingBox.fromBoundBoxObject(layers[0].boundingBox);
@@ -38,7 +49,7 @@ function getDatasetBoundingBoxFromLayers(layers: APIDataLayer[]): BoundingBox | 
   return datasetBoundingBox;
 }
 
-export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
+const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
   form,
   axis,
 }: AxisRotationFormItemProps) => {
@@ -54,7 +65,7 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
   useEffect(() => {
     if (
       datasetBoundingBox == null ||
-      dataLayers[0].coordinateTransformations?.length !== EXPECTED_TRANSFORMATION_LENGTH ||
+      dataLayers[0].coordinateTransformations?.length !== EXPECTED_SETTINGS_TRANSFORMATION_LENGTH ||
       !form
     ) {
       return;
@@ -64,13 +75,7 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
       y: RotationAndMirroringSettings;
       z: RotationAndMirroringSettings;
     } = form.getFieldValue(["datasetRotation"]);
-    const transformations = [
-      fromCenterToOrigin(datasetBoundingBox),
-      getRotationMatrixAroundAxis("x", rotationValues["x"]),
-      getRotationMatrixAroundAxis("y", rotationValues["y"]),
-      getRotationMatrixAroundAxis("z", rotationValues["z"]),
-      fromOriginToCenter(datasetBoundingBox),
-    ];
+    const transformations = getRotationalTransformation(datasetBoundingBox, rotationValues);
     const dataLayersWithUpdatedTransforms = dataLayers.map((layer) => {
       return {
         ...layer,
@@ -102,17 +107,22 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
       const rotationMatrix = getRotationMatrixAroundAxis(axis, rotationValues);
       const dataLayersWithUpdatedTransforms: APIDataLayer[] = dataLayers.map((layer) => {
         let transformations = layer.coordinateTransformations;
-        if (transformations == null || transformations.length !== EXPECTED_TRANSFORMATION_LENGTH) {
+        if (
+          transformations == null ||
+          transformations.length !== EXPECTED_SETTINGS_TRANSFORMATION_LENGTH
+        ) {
           transformations = [
-            fromCenterToOrigin(datasetBoundingBox),
+            fromCenterToOriginAsAffine(datasetBoundingBox),
             IDENTITY_TRANSFORM,
             IDENTITY_TRANSFORM,
             IDENTITY_TRANSFORM,
-            fromOriginToCenter(datasetBoundingBox),
+            fromOriginToCenterAsAffine(datasetBoundingBox),
           ];
         }
         transformations[AXIS_TO_TRANSFORM_INDEX[axis]] = rotationMatrix;
-        const updatedTransformations = transformationEqualsAffineIdentityTransform(transformations)
+        const updatedTransformations = settingsTransformationEqualsAffineIdentityTransform(
+          transformations,
+        )
           ? null
           : transformations;
 
@@ -131,7 +141,7 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
         <FormItemWithInfo
           name={["datasetRotation", axis, "rotationInDegrees"]}
           label={`${axis.toUpperCase()} Axis Rotation`}
-          info={`Change the datasets rotation around the ${axis}-axis.`}
+          info={`Change the dataset's rotation in 90 degree steps around the ${axis}-axis.`}
           colon={false}
         >
           <Slider min={0} max={270} step={90} onChange={setMatrixRotationsForAllLayer} />
@@ -143,16 +153,7 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
           colon={false}
           label=" " /* Whitespace label is needed for correct formatting*/
         >
-          <InputNumber
-            min={0}
-            max={270}
-            step={90}
-            precision={0}
-            onChange={(value: number | null) =>
-              // InputNumber might be called with null, so we need to check for that.
-              value != null && setMatrixRotationsForAllLayer(value)
-            }
-          />
+          <InputNumber readOnly variant="borderless" />
         </FormItem>
       </Col>
       <Col span={4} style={{ marginRight: -12 }}>
@@ -186,12 +187,7 @@ export type DatasetRotationAndMirroringSettings = {
 export const AxisRotationSettingForDataset: React.FC<AxisRotationSettingForDatasetProps> = ({
   form,
 }: AxisRotationSettingForDatasetProps) => {
-  // form -> dataSource -> dataLayers can be undefined in case of the add remote dataset form which is initially empty.
-  const dataLayers: APIDataLayer[] | undefined = form?.getFieldValue(["dataSource", "dataLayers"]);
-  const isRotationOnly = useMemo(
-    () => (dataLayers ? doAllLayersHaveTheSameRotation(dataLayers) : false),
-    [dataLayers],
-  );
+  const isRotationOnly: boolean = form?.getFieldValue(["isRotationOnly"]) || false;
   if (!isRotationOnly) {
     return (
       <Tooltip
@@ -206,15 +202,22 @@ export const AxisRotationSettingForDataset: React.FC<AxisRotationSettingForDatas
               <li>Rotation around the z-axis</li>
               <li>Translation back to the original position</li>
             </ul>
-            To easily enable this setting, delete all coordinateTransformations of all layers in the
-            advanced tab, save and reload the dataset settings.
+            To easily enable this setting, delete all coordinateTransformations of all layers by
+            choosing "Transformation Mode: None" in the dropdown above, save and reload the dataset
+            settings.
           </div>
         }
       >
-        <Text type="secondary">
-          Setting a dataset's rotation is only supported when all layers have the same rotation
-          transformation. <InfoCircleOutlined />
-        </Text>
+        <Space orientation="vertical" size="small">
+          <Text type="secondary">
+            Setting a dataset's rotation is only supported when all layers have the same rotation
+            transformation. <InfoCircleOutlined />
+          </Text>
+          <Text type="secondary">
+            To enable this setting, choose "Transformation Mode: None" in the dropdown above, save
+            and reload the dataset settings.
+          </Text>
+        </Space>
       </Tooltip>
     );
   }
@@ -227,3 +230,20 @@ export const AxisRotationSettingForDataset: React.FC<AxisRotationSettingForDatas
     </div>
   );
 };
+
+export function getRotationalTransformation(
+  datasetBoundingBox: BoundingBox,
+  rotationValues: {
+    x: RotationAndMirroringSettings;
+    y: RotationAndMirroringSettings;
+    z: RotationAndMirroringSettings;
+  },
+): AffineTransformation[] {
+  return [
+    fromCenterToOriginAsAffine(datasetBoundingBox),
+    getRotationMatrixAroundAxis("x", rotationValues["x"]),
+    getRotationMatrixAroundAxis("y", rotationValues["y"]),
+    getRotationMatrixAroundAxis("z", rotationValues["z"]),
+    fromOriginToCenterAsAffine(datasetBoundingBox),
+  ];
+}

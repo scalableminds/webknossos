@@ -1,4 +1,4 @@
-import _ from "lodash";
+import template from "lodash-es/template";
 import type { Vector4 } from "viewer/constants";
 import type {
   DatasetConfiguration,
@@ -15,11 +15,12 @@ export type RecommendedConfiguration = Partial<
 
 export const settings: Partial<Record<keyof RecommendedConfiguration, string>> = {
   clippingDistance: "Clipping Distance",
+  clipSkeletonToCurrentSection: "Only Show Nodes of Current Section",
   displayCrosshair: "Show Crosshairs",
   displayScalebars: "Show Scalebars",
   dynamicSpaceDirection: "d/f-Switching",
   keyboardDelay: "Keyboard delay (ms)",
-  moveValue: "Move Value (nm/s)",
+  moveValue: "Move Value",
   newNodeNewTree: "Single-node-tree mode (Soma clicking)",
   centerNewNode: "Auto-center Nodes",
   applyNodeRotationOnActivation: "Auto-rotate to Nodes",
@@ -28,13 +29,12 @@ export const settings: Partial<Record<keyof RecommendedConfiguration, string>> =
   particleSize: "Particle Size",
   tdViewDisplayPlanes: "Plane Display Mode in 3D View",
   tdViewDisplayDatasetBorders: "Display Dataset Borders in 3D View",
-  tdViewDisplayLayerBorders: "Display Layer Borders in 3D View",
   fourBit: "4 Bit",
   interpolation: "Interpolation",
   segmentationOpacity: "Segmentation Opacity",
   zoom: "Zoom",
   renderMissingDataBlack: "Render Missing Data Black",
-  clippingDistanceArbitrary: "Clipping Distance",
+  clippingDistanceFlight: "Clipping Distance",
   mouseRotateValue: "Mouse Rotation",
   rotateValue: "Keyboard Rotation",
   sphericalCapRadius: "Sphere Radius",
@@ -51,6 +51,8 @@ export const settings: Partial<Record<keyof RecommendedConfiguration, string>> =
   colorLayerOrder: "Color Layer Order",
 };
 export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, string>> = {
+  clipSkeletonToCurrentSection:
+    "When enabled, only skeleton nodes and edges that lie on the currently visible section are shown, ignoring the clipping distance. Only available when neither the camera nor the dataset is rotated or transformed.",
   segmentationPatternOpacity:
     "The opacity of the pattern overlaid on any segmentation layer for improved contrast.",
   loadingStrategy: `You can choose between loading the best quality first
@@ -79,11 +81,11 @@ export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, st
   zoom: "Zoom in or out in the data viewports.",
   displayScalebars: "Show a scale in the lower-right corner of each viewport.",
   blendMode:
-    "Set the blend mode for the dataset. The additive mode (default) adds the data values of all color layers. In cover mode, color layers are rendered on top of each other so that the data values of lower color layers are hidden by values of higher layers. Cover mode enables reordering of color layers.",
+    "Set the blend mode for the dataset. The additive mode (default) adds the data values of all color layers. In cover mode, color layers are rendered on top of each other so that the data values of lower color layers are hidden by values of higher layers. Cover (black as transparent) works like cover mode, but black voxels are treated as transparent so they do not occlude lower layers. Cover modes enable reordering of color layers.",
   renderWatermark: "Show a WEBKNOSSOS logo in the lower-left corner of each screenshot.",
   antialiasRendering: "Antialias rendering (can impact performance)",
   colorLayerOrder:
-    "Set the order in which color layers are rendered. This setting is only relevant if the cover blend mode is active.",
+    "Set the order in which color layers are rendered. This setting is only relevant if one of the cover blend modes is active.",
 };
 
 export const layerViewConfigurations: Partial<Record<keyof DatasetLayerConfiguration, string>> = {
@@ -111,14 +113,8 @@ export default {
     "An unknown error occurred. Please try again or check the console for more details.",
   offline:
     "The communication to the server failed. This can happen when you are offline or when the server is down. Retrying...",
-  "datastore.health": _.template(
+  "datastore.health": template(
     "The datastore server at <%- url %> does not seem to be available. Please check back in five minutes.",
-  ),
-  "datastore.version.too_new": _.template(
-    "The datastore server at (<%- url %>) supplies a newer API version (<%- suppliedDatastoreApiVersion %>) than this WEBKNOSSOS expects (<%- expectedDatastoreApiVersion %>). Please contact your admins to upgrade this WEBKNOSSOS instance",
-  ),
-  "datastore.version.too_old": _.template(
-    "The datastore server at (<%- url %>) supplies an older API version (<%- suppliedDatastoreApiVersion %>) than this WEBKNOSSOS expects (<%- expectedDatastoreApiVersion %>). Please contact the admins of the remote data store to upgrade.",
   ),
   "save.failed_simultaneous_tracing": `The annotation couldn't be saved because there was a conflict (annotation was edited either by someone else or in another browser tab).
 
@@ -134,18 +130,18 @@ A reload is necessary to return to a valid state.`,
     "There is no action that could be undone. However, if you want to restore an earlier version of this annotation, use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
   "undo.no_redo": "There is no action that could be redone.",
   "undo.no_undo_during_proofread":
-    "Undo is not supported during proofreading yet. Please use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
-  "undo.no_redo_during_proofread":
-    "Redo is not supported during proofreading yet. Please use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
+    "Undo/redo is not supported during proofreading yet. Please use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
+  "undo.no_undo_in_live_collab":
+    "Undo/redo is not supported when live collaboration ('simultaneous editing') is enabled. Please use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button. Note that this discards pending changes from collaborators of this annotation and forces them to reload the page.",
   "undo.import_volume_tracing":
     "Importing a volume annotation cannot be undone. However, if you want to restore an earlier version of this annotation, use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
   "download.wait": "Please wait...",
   "download.close_window": "You may close this window after the download has started.",
-  "download.python_do_not_share": _.template(
+  "download.python_do_not_share": template(
     "These snippets are pre-configured and contain your personal access token and <%- typeName %> meta data. Do not share this information with anyone you do not trust!",
   ),
-  "download.export_as_tiff": _.template(
-    "Export this <%- typeName %> as TIFF image(s). This may take a few moments depending on the size of your configured export.",
+  "download.export_as_tiff": template(
+    "Export your <%- typeName %> as TIFF images. Large exports may take a few minutes.",
   ),
   "add_script.confirm_change": "This will replace the code you have written. Continue?",
   "data.enabled_render_missing_data_black":
@@ -181,8 +177,8 @@ instead. Only enable this option if you understand its effect. All layers will n
   ),
   "tracing.copy_cell_id": "Hit CTRL + I to copy the currently hovered segment id",
   "tracing.segment_id_out_of_bounds": (
-    requestedId: number,
-    validRange: readonly [number, number],
+    requestedId: bigint,
+    validRange: readonly [bigint, bigint],
   ) =>
     `Cannot create a segment with id=${requestedId} because it is not between ${validRange[0]} and ${validRange[1]}.`,
 
@@ -196,20 +192,23 @@ instead. Only enable this option if you understand its effect. All layers will n
     "The volume annotation would be changed by this action. This is not allowed while merger mode is active.",
   "tracing.segmentation_zoom_warning":
     "Segmentation data and volume annotation is only fully supported at a smaller zoom level.",
-  "tracing.uint64_segmentation_warning":
-    "This is an unsigned 64-bit segmentation. The displayed ids are truncated to 53 bits. Thus, they might not match the ids on the server.",
   "tracing.segmentation_zoom_warning_agglomerate":
-    "Segmentation data which is mapped using an agglomerate file cannot be rendered in this magnification. Please zoom in further.",
+    "Segmentation data which is mapped using an agglomerate file cannot be rendered correctly in this magnification. Please zoom in further.",
   "tracing.no_access": "You are not allowed to access this annotation.",
   "tracing.compound_project_not_found":
     "It looks like this project does not have a single task completed. Make sure that at least one task of this project is finished to view it.",
-  "tracing.no_allowed_mode": "There was no valid allowed annotation mode specified.",
+  "tracing.no_allowed_mode":
+    "There was no valid allowed annotation mode specified. Defaulting to orthogonal mode.",
   "tracing.read_only_mode_notification": (isAnnotationLockedByUser: boolean, isOwner: boolean) =>
     isAnnotationLockedByUser
       ? `This annotation is in read-only mode and cannot be updated. It is currently locked by ${
           isOwner ? "you" : "the owner"
         }.`
       : "This annotation is in read-only mode and cannot be updated.",
+  "tracing.skeleton_editing_disabled_in_live_collab":
+    "Skeleton editing is disabled because simultaneous editing is enabled in the sharing settings. Currently, only agglomerate trees (created in proofreading mode) may be edited.",
+  "tracing.layer_management_disabled_in_live_collab": (isOwner: boolean) =>
+    `Adding, deleting or converting annotation layers is disabled because simultaneous editing is enabled in the sharing settings. Please ${isOwner ? "" : "ask the owner to "}disable simultaneous editing, perform this change, and enable it again afterwards.`,
   "tracing.volume_missing_segmentation": "Volume is allowed, but segmentation does not exist.",
   "tracing.volume_layer_name_duplication":
     "This layer name already exists! Please change it to resolve duplicates.",
@@ -225,7 +224,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.delete_tree": "Do you really want to delete the whole tree?",
   "tracing.delete_tree_with_initial_node":
     "The tree(s) you want to delete contain(s) the initial node. Do you really want to proceed with the deletion?",
-  "tracing.delete_multiple_trees": _.template(
+  "tracing.delete_multiple_trees": template(
     "You have <%- countOfTrees %> trees selected, do you really want to delete all those trees?",
   ),
   "tracing.group_deletion_message": "Do you want to delete the selected group?",
@@ -245,22 +244,21 @@ instead. Only enable this option if you understand its effect. All layers will n
     "You cannot place nodes outside of a segment in merger mode.",
   "tracing.not_mesh_available_to_download":
     "There is no mesh for the active segment id available to download.",
-  "tracing.mesh_listing_failed": (segmentId: number) =>
+  "tracing.mesh_listing_failed": (segmentId: bigint) =>
     `A precomputed mesh could not be loaded for segment ${segmentId}. You may want to use ad-hoc meshing instead. More information was printed to the browser's console.`,
   "tracing.area_to_fill_is_too_big":
     "The area you want to fill is too big. Please annotate the area in multiple strokes.",
-  "tracing.agglomerate_skeleton.no_cell":
-    "Clicked on the background. Please click on a segment to load a skeleton.",
-  "tracing.agglomerate_skeleton.no_mapping":
-    "Activate an agglomerate file mapping to load a skeleton for a segment.",
-  "tracing.agglomerate_skeleton.no_agglomerate_file_active":
-    "Loading a skeleton for a segment only works with agglomerate file mappings.",
-  "tracing.agglomerate_skeleton.no_agglomerate_files_loaded_yet":
-    "Checking for agglomerate files...",
-  "tracing.agglomerate_skeleton.no_agglomerate_file_available":
-    "No agglomerate file mapping is available for this segmentation layer. Please reach out to hello@webknossos.org to get help with generating one.",
-  "tracing.agglomerate_skeleton.no_skeleton_tracing":
-    "Loading a skeleton for a segment only works in skeleton or hybrid tracings.",
+  "tracing.agglomerate_tree.no_cell":
+    "Clicked on the background. Please click on a segment to load an agglomerate tree.",
+  "tracing.agglomerate_tree.no_mapping":
+    "Activate an agglomerate file mapping to load an agglomerate tree for a segment.",
+  "tracing.agglomerate_tree.no_agglomerate_file_active":
+    "Loading an agglomerate tree for a segment only works with agglomerate file mappings.",
+  "tracing.agglomerate_tree.no_agglomerate_files_loaded_yet": "Checking for agglomerate files...",
+  "tracing.agglomerate_tree.no_agglomerate_file_available":
+    "No agglomerate file mapping is available for this segmentation layer. Please reach out to support@webknossos.org to get help with generating one.",
+  "tracing.agglomerate_tree.no_skeleton_tracing":
+    "Loading an agglomerate tree for a segment only works in skeleton or hybrid tracings.",
   "tracing.skeletons_are_hidden_warning":
     'All trees are currently hidden. You can disable this by toggling the "Skeleton" layer in the layer settings in the left sidebar.',
   "tracing.invalid_json_url_hash":
@@ -279,7 +277,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     "The WebGL context was lost. Please ensure that your graphics card driver is up to date to avoid such crashes. If this message keeps appearing, you can also try to lower the data rendering quality in the settings. Restarting your browser might also help.",
   "webgl.context_recovery":
     "The WebGL context has been recovered. If you experience unusual behavior, consider reloading the page.",
-  "webgl.too_many_active_layers": _.template(
+  "webgl.too_many_active_layers": template(
     "Your hardware cannot render all layers of this dataset simultaneously. Please ensure that not more than <%- maximumLayerCountToRender %> layers are enabled in the left sidebar settings.",
   ),
   "task.user_script_retrieval_error": "Unable to retrieve script",
@@ -287,7 +285,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "task.no_description": "You are now annotating a new task with no description.",
   "task.delete": "Do you really want to delete this task?",
   "task.request_new": "Do you really want another task?",
-  "task.peek_next": _.template(
+  "task.peek_next": template(
     "The next task will most likely be part of project <%- projectName %>",
   ),
   "task.confirm_reset": "Do you really want to reset this task?",
@@ -300,13 +298,17 @@ instead. Only enable this option if you understand its effect. All layers will n
   "annotation.undoFinish.confirm": "Are you sure you want to reopen your old task?",
   "annotation.undoFinish.content":
     "If you reopen your old annotation, the current annotation will not be finished or cancelled. Instead, it will remain open and you can find it in the dashboard to continue annotating.",
-  "annotation.acquiringMutexFailed": _.template(
+  "annotation.acquiringMutexFailed": template(
     "This annotation is currently being edited by <%- userName %>. To avoid conflicts, you can only view it. If you want to edit it, please ask <%- userName %> to finish their work first.",
   ),
   "annotation.acquiringMutexFailed.noUser":
     "This annotation is currently being edited by someone else. To avoid conflicts, you can only view it at the moment.",
+  "annotation.acquiringMutexFailed.sameUserDifferentSession":
+    "This annotation is already open in another browser tab. To avoid conflicts, you can only view it here. Please close the other tab or switch to it to continue editing.",
   "annotation.acquiringMutexSucceeded":
     "This annotation is not being edited anymore and available for editing. Reload the page to see its newest version and to edit it.",
+  "annotation.reloadToEditWithMutex":
+    "Please reload the page to see its newest version and to edit it.",
   "annotation.unlock.success":
     "The annotation was successfully unlocked. Reloading this annotation ...",
   "annotation.lock.success":
@@ -317,13 +319,16 @@ instead. Only enable this option if you understand its effect. All layers will n
   "proofreading.multi_cut.no_valid_agglomerate":
     "No agglomerate for the selected segments could be found. Please retry with a new selection.",
   "proofreading.multi_cut.split_failed": "Could not determine a valid split. Operation failed.",
+  "proofreading.post_processing_info_not_found":
+    "Could not retrieve updated post processing information necessary for processing this proofreading operation. Please try again.",
+
   "task.bulk_create_invalid":
     "Can not parse task specification. It includes at least one invalid task.",
   "task.recommended_configuration": "The author of this task suggests to use these settings:",
-  "dataset.clear_cache_success": _.template(
+  "dataset.clear_cache_success": template(
     "The dataset <%- datasetName %> was reloaded successfully.",
   ),
-  "dataset.delete_success": _.template(
+  "dataset.delete_success": template(
     "The dataset <%- datasetName %> was successfully deleted on disk. Redirecting to dashboard...",
   ),
   "task.no_tasks_to_download": "There are no tasks available to download.",
@@ -376,8 +381,6 @@ instead. Only enable this option if you understand its effect. All layers will n
     `The layer "${layerName}" was defined as ${elementClass}. This format is not officially supported. Please convert the layer to a supported format.`,
   "dataset.unsupported_segmentation_class_uint24":
     "The segmentation layer was defined as uint24. This format is not supported for segmentations. Please convert the layer to a supported format.",
-  "dataset.is_scratch":
-    "This dataset location is marked as 'scratch' and meant for testing only. Please move this dataset to a permanent storage location and reimport it.",
   "dataset.z1_downsampling_hint":
     "The currently rendered quality is not optimal due to the available magnifications and the viewport arrangement. To improve the quality try to increase the size of the XY viewport (e.g. by maximizing it).",
   "dataset.mag_explanation":
@@ -392,7 +395,8 @@ instead. Only enable this option if you understand its effect. All layers will n
   "annotation.shared_teams_edited": "Successfully updated the sharing options for the annotation",
   "annotation.shared_teams_edited_failed":
     "Updating the sharing options for the annotation failed. Please retry or see the error message in the console.",
-  "annotation.download": "The following annotation data is available for download immediately.",
+  "annotation.download":
+    "Volume data can be exported alongside the skeleton in Zarr or WKW format, or you can grab just the skeleton as an NML file. Select a format below — larger annotations may take a moment to prepare.",
   "annotation.export_no_worker":
     "This WEBKNOSSOS instance is not configured to run export jobs. To learn more about this feature please contact us at ",
   "annotation.register_for_token": "Please log in to get an access token for the script below.",
@@ -431,7 +435,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "auth.reset_token_not_supplied":
     "There was no token found in the URL. Check your E-Mails to get the correct URL.",
   "auth.reset_email_notification":
-    "An email with instructions to reset your password has been send to you.",
+    "If an account exists for this email, you will receive an email with instructions to reset your password shortly.",
   "auth.reset_pw_confirmation": "Your password was successfully changed",
   "auth.account_created":
     "Your account has been created. An administrator is going to unlock you soon.",
@@ -476,20 +480,22 @@ instead. Only enable this option if you understand its effect. All layers will n
   "users.multiple_selected_users":
     "You selected more than one user. To change the organization permissions of users you need to select them individually.",
   "users.change_permissions_title": "Do you really want to change the permissions of this user?",
-  "users.revoke_all_permissions": _.template(
+  "users.revoke_all_permissions": template(
     "<%- userName %> is about lose all administrative privileges and any extra access permissions to datasets. As a regular WEBKNOSSOS member, access to datasets will be determined by the user's team memberships.",
   ),
-  "users.set_dataset_manager": _.template(
+  "users.set_dataset_manager": template(
     "<%- userName %> is about to become a dataset manager and will be able to access and edit all datasets within this organization.",
   ),
-  "users.set_admin": _.template(
+  "users.set_admin": template(
     "<%- userName %> is about to become an admin for this organization with full read/write access to all datasets and management capabilities for all users, projects, and tasks.",
   ),
   "users.change_email_title": "Do you really want to change the email?",
-  "users.change_email": _.template(
+  "users.change_email": template(
     "Do you really want to change the email to '<%- newEmail %>' ? The corresponding user will be logged out and unsaved changes might be lost.",
   ),
   "users.change_email_confirmation": "The email has been changed",
+  "users.failed_parsing_keyboard_shortcuts_config":
+    "The keyboard shortcut information could not be parsed properly. Falling back to default keyboard shortcuts.",
   "mapping.too_big":
     "The mapping contains too many values, currently only up to 2^24 values are supported.",
   "mapping.unsupported_layer": "Mappings can only be enabled for segmentation layers.",

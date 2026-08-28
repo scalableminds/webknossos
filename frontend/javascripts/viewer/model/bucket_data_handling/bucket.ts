@@ -1,11 +1,11 @@
 import ErrorHandling from "libs/error_handling";
-import { castForArrayType, mod } from "libs/utils";
+import { castForArrayType, mod, sleep } from "libs/utils";
 import window from "libs/window";
-import _ from "lodash";
-import { type Emitter, createNanoEvents } from "nanoevents";
+import noop from "lodash-es/noop";
+import throttle from "lodash-es/throttle";
+import { createNanoEvents, type Emitter } from "nanoevents";
 import { Color } from "three";
-import type { BucketDataArray, ElementClass } from "types/api_types";
-import type { AdditionalCoordinate } from "types/api_types";
+import type { AdditionalCoordinate, BucketDataArray, ElementClass } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { BucketAddress, Vector3 } from "viewer/constants";
 import Constants from "viewer/constants";
@@ -31,13 +31,18 @@ export type BucketStateEnumType = keyof typeof BucketStateEnum;
 
 const WARNING_THROTTLE_THRESHOLD = 10000;
 
-const warnMergeWithoutPendingOperations = _.throttle(() => {
+// Number of additional attempts ensureLoaded() makes to load a bucket after its request
+// failed (e.g. due to a backend error, a network error or an aborted request caused by a
+// concurrent reload), before giving up and throwing an error.
+const DEFAULT_ENSURE_LOADED_RETRY_COUNT = 3;
+
+const warnMergeWithoutPendingOperations = throttle(() => {
   ErrorHandling.notify(
     new Error("Bucket.merge() was called with an empty list of pending operations."),
   );
 }, WARNING_THROTTLE_THRESHOLD);
 
-const warnAwaitedMissingBucket = _.throttle(() => {
+const warnAwaitedMissingBucket = throttle(() => {
   ErrorHandling.notify(new Error("Awaited missing bucket"));
 }, WARNING_THROTTLE_THRESHOLD);
 
@@ -73,7 +78,7 @@ export type Bucket = DataBucket | NullBucket;
 // This set saves whether a bucket is already added to the current undo volume batch
 // and gets cleared when a volume transaction is ended (marked by the action
 // FINISH_ANNOTATION_STROKE).
-export const bucketsAlreadyInUndoState: Set<Bucket> = new Set();
+const bucketsAlreadyInUndoState: Set<Bucket> = new Set();
 export function markVolumeTransactionEnd() {
   bucketsAlreadyInUndoState.clear();
 }
@@ -110,7 +115,8 @@ export class DataBucket {
   dirtyCount: number = 0;
   pendingOperations: Array<PendingOperation> = [];
   state: BucketStateEnumType;
-  private accessed: boolean;
+  accessed: boolean;
+  previousAccessed: boolean;
   data: BucketDataArray | null | undefined;
   temporalBucketManager: TemporalBucketManager;
   cube: DataCube;
@@ -140,12 +146,13 @@ export class DataBucket {
     this.state = BucketStateEnum.UNREQUESTED;
     this.dirty = false;
     this.accessed = false;
+    this.previousAccessed = false;
     this.data = null;
 
     if (this.cube.isSegmentation) {
-      this.throttledTriggerLabeled = _.throttle(() => this.trigger("bucketLabeled"), 10);
+      this.throttledTriggerLabeled = throttle(() => this.trigger("bucketLabeled"), 10);
     } else {
-      this.throttledTriggerLabeled = _.noop;
+      this.throttledTriggerLabeled = noop;
     }
   }
 
@@ -393,6 +400,8 @@ export class DataBucket {
       throw new Error("Bucket.getData() called, but data does not exist (anymore).");
     }
 
+    this.markAsNeeded();
+
     return data;
   }
 
@@ -402,14 +411,23 @@ export class DataBucket {
     this.pendingOperations = newPendingOperations;
     this.dirty = true;
     this.endDataMutation();
-    this.cube.triggerBucketDataChanged();
+    if (this.accessed) this.cube.triggerRenderedBucketDataChanged();
   }
 
   markAsNeeded(): void {
+    // Compare to the previous value, not the current one. This is because during rendering
+    // all buckets are marked as unneeded and then all needed buckets are marked as such afterwards.
+    // So to find out whether this bucket was actually unneeded before, the previous value is decisive.
+    if (!this.previousAccessed) this.cube.triggerRenderedBucketDataChanged();
+
+    this.previousAccessed = this.accessed;
     this.accessed = true;
   }
 
   markAsUnneeded(): void {
+    if (this.previousAccessed) this.cube.triggerRenderedBucketDataChanged();
+
+    this.previousAccessed = this.accessed;
     this.accessed = false;
   }
 
@@ -467,13 +485,13 @@ export class DataBucket {
 
   applyVoxelMap(
     voxelMap: Uint8Array,
-    segmentId: number,
+    segmentId: bigint,
     get3DAddress: (arg0: number, arg1: number, arg2: Vector3 | Float32Array) => void,
     sliceOffset: number,
     thirdDimensionIndex: 0 | 1 | 2, // If shouldOverwrite is false, a voxel is only overwritten if
     // its old value is equal to overwritableValue.
     shouldOverwrite: boolean = true,
-    overwritableValue: number = 0,
+    overwritableValue: bigint = 0n,
   ): boolean {
     const data = this.getOrCreateData();
 
@@ -511,19 +529,20 @@ export class DataBucket {
   _applyVoxelMapInPlace(
     data: BucketDataArray,
     voxelMap: Uint8Array,
-    uncastSegmentId: number,
+    uncastSegmentId: bigint,
     get3DAddress: (arg0: number, arg1: number, arg2: Vector3 | Float32Array) => void,
     sliceOffset: number,
     thirdDimensionIndex: 0 | 1 | 2,
     // If shouldOverwrite is false, a voxel is only overwritten if
     // its old value is equal to overwritableValue.
     shouldOverwrite: boolean = true,
-    overwritableValue: number = 0,
+    overwritableValue: bigint = 0n,
   ): boolean {
     const out = new Float32Array(3);
     let wroteVoxels = false;
 
     const segmentId = castForArrayType(uncastSegmentId, data);
+    const castOverwritableValue = castForArrayType(overwritableValue, data);
 
     const limits = {
       u: { min: 0, max: Constants.BUCKET_WIDTH as number },
@@ -563,9 +582,9 @@ export class DataBucket {
 
           // The voxelToLabel is already within the bucket and in the correct magnification.
           const voxelAddress = this.cube.getVoxelIndexByVoxelOffset(voxelToLabel);
-          const currentSegmentId = Number(data[voxelAddress]);
+          const currentSegmentId = data[voxelAddress];
 
-          if (shouldOverwrite || (!shouldOverwrite && currentSegmentId === overwritableValue)) {
+          if (shouldOverwrite || (!shouldOverwrite && currentSegmentId === castOverwritableValue)) {
             data[voxelAddress] = segmentId;
             wroteVoxels = true;
           }
@@ -590,14 +609,30 @@ export class DataBucket {
     }
   }
 
-  markAsFailed(isMissing: boolean): void {
+  // The bucket is not present on the datastore. It transitions to MISSING and stays there.
+  markAsMissing(): void {
+    this.markAsUnavailable(BucketStateEnum.MISSING, "bucketMissing");
+  }
+
+  // The bucket's request could not be read (e.g. transient error or a failure bucket). It
+  // transitions back to UNREQUESTED so that it may be requested again later.
+  markAsFailed(): void {
+    this.markAsUnavailable(BucketStateEnum.UNREQUESTED, "bucketRequestFailed");
+  }
+
+  private markAsUnavailable(
+    nextState: BucketStateEnum.MISSING | BucketStateEnum.UNREQUESTED,
+    event: "bucketMissing" | "bucketRequestFailed",
+  ): void {
     switch (this.state) {
       case BucketStateEnum.REQUESTED: {
-        this.state = isMissing ? BucketStateEnum.MISSING : BucketStateEnum.UNREQUESTED;
+        this.state = nextState;
 
-        if (isMissing) {
-          this.trigger("bucketMissing");
-        }
+        // Notify awaiters (see ensureLoaded). Emitting an event on both outcomes is
+        // important because a failure bucket falls back to UNREQUESTED and is only
+        // re-requested when it is dirty. Without it, a caller awaiting a non-dirty failure
+        // bucket (e.g. getDataForBoundingBox) would hang forever.
+        this.trigger(event);
 
         break;
       }
@@ -616,7 +651,7 @@ export class DataBucket {
 
     if (data.length !== channelCount * Constants.BUCKET_SIZE) {
       const debugInfo = // Disable this conditional if you need verbose output here.
-        process.env.IS_TESTING
+        import.meta.env.MODE === "test"
           ? " (<omitted>)"
           : {
               arrayBuffer,
@@ -651,7 +686,7 @@ export class DataBucket {
 
         this.state = BucketStateEnum.LOADED;
         this.trigger("bucketLoaded", data);
-        this.cube.triggerBucketDataChanged();
+        if (this.accessed) this.cube.triggerRenderedBucketDataChanged();
         break;
       }
 
@@ -666,14 +701,22 @@ export class DataBucket {
 
   private ensureValueSet(): asserts this is { cachedValueSet: Set<number> | Set<bigint> } {
     if (this.cachedValueSet == null) {
-      // @ts-ignore The Set constructor accepts null and BigUint64Arrays just fine.
-      this.cachedValueSet = new Set(this.data);
+      // @ts-expect-error The Set constructor accepts null and BigUint64Arrays just fine.
+      this.cachedValueSet = new Set<number | bigint>(this.data);
+      if (this.cube.isSegmentation) {
+        // We always remove segment 0 from the value set because it should be ignored for all known
+        // use cases (e.g., when populating a mapping).
+        // @ts-expect-error Removing 0 will always work (regardless of the actual type).
+        this.cachedValueSet.delete(0);
+        // @ts-expect-error Removing 0n will always work (regardless of the actual type).
+        this.cachedValueSet.delete(0n);
+      }
     }
   }
 
   containsValue(value: number | bigint): boolean {
     this.ensureValueSet();
-    // @ts-ignore The Set has function accepts number | bigint values just fine, regardless of what's in it.
+    // @ts-expect-error The Set has function accepts number | bigint values just fine, regardless of what's in it.
     return this.cachedValueSet.has(value);
   }
 
@@ -750,7 +793,7 @@ export class DataBucket {
     const zoomStep = getActiveMagIndexForLayer(Store.getState(), this.cube.layerName);
 
     if (this.zoomedAddress[3] === zoomStep) {
-      // @ts-ignore
+      // @ts-expect-error
       this.visualizedMesh = window.addBucketMesh(
         bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.magInfo),
         this.zoomedAddress[3],
@@ -762,7 +805,7 @@ export class DataBucket {
 
   unvisualize() {
     if (this.visualizedMesh != null) {
-      // @ts-ignore
+      // @ts-expect-error
       window.removeBucketMesh(this.visualizedMesh);
       this.visualizedMesh = null;
     }
@@ -800,25 +843,52 @@ export class DataBucket {
     }
   };
 
-  async ensureLoaded(): Promise<void> {
-    let needsToAwaitBucket = false;
+  async ensureLoaded(maxRetries: number = DEFAULT_ENSURE_LOADED_RETRY_COUNT): Promise<void> {
+    const ensureLoadedInner = async (currentRetryCount: number) => {
+      let needsToAwaitBucket = false;
 
-    if (this.isRequested()) {
-      needsToAwaitBucket = true;
-    } else if (this.needsRequest()) {
-      this.addToPullQueueWithHighestPriority();
-      this.cube.pullQueue.pull();
-      needsToAwaitBucket = true;
-    } else if (this.isMissing()) {
-      // Awaiting is not necessary.
-    }
+      if (this.isRequested()) {
+        needsToAwaitBucket = true;
+      } else if (this.needsRequest()) {
+        this.addToPullQueueWithHighestPriority();
+        this.cube.pullQueue.pull();
+        needsToAwaitBucket = true;
+      } else if (this.isMissing()) {
+        // Awaiting is not necessary.
+      }
 
-    if (needsToAwaitBucket) {
-      await new Promise((resolve) => {
-        this.once("bucketLoaded", resolve);
-        this.once("bucketMissing", resolve);
-      });
-    }
+      if (needsToAwaitBucket) {
+        const didRequestFail = await new Promise<boolean>((resolve) => {
+          const unbindFunctions: (() => void)[] = [];
+          const clearAndResolve = (success: boolean) => {
+            unbindFunctions.forEach((fn) => {
+              fn();
+            });
+            resolve(success);
+          };
+          unbindFunctions.push(this.once("bucketLoaded", () => clearAndResolve(false)));
+          unbindFunctions.push(this.once("bucketMissing", () => clearAndResolve(false)));
+          unbindFunctions.push(this.once("bucketRequestFailed", () => clearAndResolve(true)));
+        });
+
+        if (didRequestFail) {
+          // The request failed. This covers a backend failure, a network error and a request
+          // that was aborted (e.g. because a concurrent reload called pullQueue.abortRequests()).
+          // Thus, we should retry now.
+          if (currentRetryCount >= maxRetries) {
+            throw new Error(
+              `Bucket ${this.zoomedAddress.join(",")} could not be loaded after ${maxRetries} retries.`,
+            );
+          }
+          const nextRetryCount = currentRetryCount + 1;
+          // Exponential backoff before retry: 400ms -> 800ms -> 1600ms.
+          await sleep(2 ** nextRetryCount * 200);
+          await ensureLoadedInner(nextRetryCount);
+          return;
+        }
+      }
+    };
+    await ensureLoadedInner(0);
 
     // Bucket has been loaded by now or was loaded already
     if (this.isMissing()) {

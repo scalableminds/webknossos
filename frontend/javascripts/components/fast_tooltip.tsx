@@ -1,6 +1,5 @@
 import { generateRandomId } from "libs/utils";
-import type React from "react";
-import { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Tooltip as ReactTooltip } from "react-tooltip";
 
 /*
@@ -49,7 +48,7 @@ export type FastTooltipPlacement =
   | "left-end";
 
 // See docstring above for context.
-const uniqueKeyToDynamicRenderer: Record<string, () => React.ReactElement> = {};
+const uniqueKeyToDynamicRenderer: Record<string, () => React.ReactElement | null> = {};
 
 export default function FastTooltip({
   title,
@@ -64,6 +63,7 @@ export default function FastTooltip({
   style,
   variant,
   dynamicRenderer,
+  asChild,
 }: {
   title?: string | null | undefined;
   children?: React.ReactNode;
@@ -76,10 +76,23 @@ export default function FastTooltip({
   className?: string; // class name attached to the wrapper
   style?: React.CSSProperties; // style attached to the wrapper
   variant?: "dark" | "light" | "success" | "warning" | "error" | "info";
-  dynamicRenderer?: () => React.ReactElement;
+  dynamicRenderer?: () => React.ReactElement | null;
+  // When true, forwards data-tooltip-* attributes directly onto the child element
+  // instead of wrapping it in a span. Use when the child is absolutely positioned
+  // and the wrapper span would end up in the wrong place (e.g. off-screen).
+  asChild?: boolean;
 }) {
   const Tag = wrapper || "span";
   const [uniqueKeyForDynamic, setUniqueDynamicId] = useState<string | undefined>(undefined);
+
+  // Keep a ref to the latest dynamicRenderer so that the registered renderer
+  // always uses current props/closure values instead of the mount-time ones.
+  // The registry only invokes it when the tooltip is actually opened (on hover),
+  // so updating the ref in an effect (after commit) is sufficient.
+  const dynamicRendererRef = useRef(dynamicRenderer);
+  useEffect(() => {
+    dynamicRendererRef.current = dynamicRenderer;
+  });
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: a new unique id should only be created on mount
   useEffect(() => {
@@ -87,12 +100,14 @@ export default function FastTooltip({
       return;
     }
     const uniqueKey = generateRandomId(16);
-    uniqueKeyToDynamicRenderer[uniqueKey] = dynamicRenderer;
+    // Register a stable wrapper that delegates to the latest renderer via the ref.
+    uniqueKeyToDynamicRenderer[uniqueKey] = () => dynamicRendererRef.current?.() ?? null;
     setUniqueDynamicId(uniqueKey);
     return () => {
-      if (uniqueKeyForDynamic) {
-        delete uniqueKeyToDynamicRenderer[uniqueKeyForDynamic];
-      }
+      // Clean up via the locally created key. Using the state value here would
+      // leak entries because it is still undefined when this cleanup closure is
+      // created on mount.
+      delete uniqueKeyToDynamicRenderer[uniqueKey];
     };
   }, []);
 
@@ -104,14 +119,25 @@ export default function FastTooltip({
     return ROOT_TOOLTIP_IDS.DEFAULT;
   };
 
+  const tooltipProps = {
+    "data-tooltip-id": getId(),
+    "data-tooltip-content": title,
+    "data-tooltip-place": placement || "top",
+    "data-tooltip-html": html,
+    "data-unique-key": uniqueKeyForDynamic,
+    "data-tooltip-variant": variant,
+  };
+
+  if (asChild && React.isValidElement(children)) {
+    return React.cloneElement(
+      children as React.ReactElement<Record<string, unknown>>,
+      tooltipProps,
+    );
+  }
+
   return (
     <Tag
-      data-tooltip-id={getId()}
-      data-tooltip-content={title}
-      data-tooltip-place={placement || "top"}
-      data-tooltip-html={html}
-      data-unique-key={uniqueKeyForDynamic}
-      data-tooltip-variant={variant}
+      {...tooltipProps}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       className={className}

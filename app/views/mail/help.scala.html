@@ -3,11 +3,11 @@
 @emailBaseTemplate(additionalFooter) {
 <p>Hi WEBKNOSSOS team</p>
 <p>I have a question or feedback for you:</p>
-<p>
+<p style="white-space: pre-wrap">
   @{message}
 </p>
 
-<p>Current URL: @{currentUrl}</p>
+<p>Current URL: <a href="@{currentUrl}">@{currentUrl}</a></p>
 
 <p>With best regards,<br />@{name} from @{organizationName}</p>
 }

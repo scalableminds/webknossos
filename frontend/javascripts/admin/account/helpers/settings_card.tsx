@@ -1,5 +1,5 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
-import { Card, Flex, Popover, Typography } from "antd";
+import { Card, Flex, Popover, Space, Typography } from "antd";
 
 export type SettingsCardProps = {
   title: string;
@@ -14,21 +14,23 @@ export function SettingsCard({ title, content, tooltip, action, style }: Setting
     <Card style={{ minHeight: 105, ...style }}>
       <Typography.Text type="secondary" style={{ fontSize: 14 }}>
         <Flex justify="space-between">
-          <div>
+          <Space size="small">
             {title}
 
             {tooltip != null ? (
               <Popover
                 content={tooltip}
-                overlayInnerStyle={{
-                  maxWidth: 250,
-                  wordWrap: "break-word",
+                styles={{
+                  container: {
+                    maxWidth: 250,
+                    wordWrap: "break-word",
+                  },
                 }}
               >
-                <InfoCircleOutlined style={{ marginLeft: 8 }} />
+                <InfoCircleOutlined />
               </Popover>
             ) : null}
-          </div>
+          </Space>
           {action}
         </Flex>
       </Typography.Text>

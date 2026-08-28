@@ -104,7 +104,7 @@ export function Slider(props: SliderProps) {
       if (onResetToDefault != null) {
         onResetToDefault();
       } else {
-        // @ts-ignore Argument of type 'number | number[]' is not assignable to parameter of type 'number'.
+        // @ts-expect-error Argument of type 'number | number[]' is not assignable to parameter of type 'number'.
         //TypeScript doesn't understand that onChange always takes the type of defaultValue.
         onChange(defaultValue);
       }

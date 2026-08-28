@@ -7,6 +7,7 @@ import { startFindLargestSegmentIdJob } from "admin/rest_api";
 import {
   Button,
   Col,
+  Flex,
   Form,
   type FormInstance,
   Input,
@@ -17,50 +18,137 @@ import {
   Tooltip,
 } from "antd";
 import { FormItemWithInfo } from "dashboard/dataset/helper_components";
+import { copyToClipboard } from "libs/clipboard";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { BoundingBoxInput, Vector3Input } from "libs/vector_input";
 import type React from "react";
 import { cloneElement, useEffect } from "react";
-import { type APIDataLayer, type APIDataset, APIJobType } from "types/api_types";
-import type { DataLayer } from "types/schemas/datasource.types";
-import { syncValidator } from "types/validation";
+import { type APIDataLayer, type APIDataset, APIJobCommand } from "types/api_types";
+import type { DataLayer, DataLayerWithTransformations } from "types/schemas/datasource.types";
+import { syncValidator, validateTransformationsJSON } from "types/validation";
 import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
-import { getSupportedValueRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
+import type { RotationAndMirroringSettings } from "viewer/model/accessors/dataset_layer_transformation_accessor";
+import { getSegmentIdRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import type { BoundingBoxObject } from "viewer/store";
-import { AxisRotationSettingForDataset } from "./dataset_rotation_form_item";
+import {
+  AxisRotationSettingForDataset,
+  getDatasetBoundingBoxFromLayers,
+  getRotationalTransformation,
+} from "./dataset_rotation_form_item";
 import { useDatasetSettingsContext } from "./dataset_settings_context";
 
 export default function DatasetSettingsDataTab() {
   const { dataset, form } = useDatasetSettingsContext();
-  const dataSource = Form.useWatch("dataSource", { form, preserve: true });
 
   return (
     <div>
       <SettingsTitle title="Data Source" description="Configure the data source" />
-
-      <SimpleDatasetForm dataset={dataset} form={form} dataSource={dataSource} />
+      <SimpleDatasetForm dataset={dataset} form={form} />
     </div>
   );
+}
+
+function parseAsBigInt(value: string) {
+  if (value == null || value === "") {
+    return { error: null, parsed: null };
+  }
+  let parsed: bigint;
+  try {
+    parsed = BigInt(value);
+  } catch {
+    return { error: true, parsed: null };
+  }
+  return { error: null, parsed };
 }
 
 function copyDatasetID(datasetId: string | null | undefined) {
   if (!datasetId) {
     return;
   }
-  navigator.clipboard.writeText(datasetId);
-  Toast.success("Dataset ID copied.");
+  copyToClipboard(datasetId, "dataset ID");
 }
 
 const LEFT_COLUMN_ITEMS_WIDTH = 408;
 const COPY_ICON_BUTTON_WIDTH = 32;
+const MARGIN_BOTTOM: React.CSSProperties = {
+  marginBottom: 24,
+};
+
+function AdvancedDatasetTransformationsCard() {
+  return (
+    <SettingsCard
+      title="Transformation Configuration"
+      content={
+        <Form.Item
+          name={["coordinateTransformations"]}
+          label={
+            <Space size="small">
+              Coordinate Transformations JSON.
+              <a
+                href="https://docs.webknossos.org/webknossos/datasets/settings.html"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Read more about the format
+              </a>
+            </Space>
+          }
+          rules={[
+            {
+              validator: (rule, value) =>
+                value !== "" ? validateTransformationsJSON(rule, value) : Promise.resolve(),
+            },
+          ]}
+        >
+          <Input.TextArea autoSize={{ minRows: 10, maxRows: 20 }} />
+        </Form.Item>
+      }
+      style={MARGIN_BOTTOM}
+    />
+  );
+}
+
+function DatasetTransformationSettingsCard({
+  transformationsMode,
+  form,
+}: {
+  transformationsMode: TransformationsMode;
+  form: FormInstance;
+}) {
+  switch (transformationsMode) {
+    case TransformationsMode.SIMPLE:
+      return (
+        <SettingsCard
+          title="Axis Rotation"
+          style={MARGIN_BOTTOM}
+          content={
+            <Row gutter={[24, 24]}>
+              <Col span={24}>
+                <AxisRotationSettingForDataset form={form} />
+              </Col>
+            </Row>
+          }
+        />
+      );
+    case TransformationsMode.ADVANCED:
+      return <AdvancedDatasetTransformationsCard />;
+    case TransformationsMode.NONE:
+    default:
+      return null;
+  }
+}
+
+export enum TransformationsMode {
+  NONE = "none",
+  SIMPLE = "simple",
+  ADVANCED = "advanced",
+}
 
 function SimpleDatasetForm({
-  dataSource,
   form,
   dataset,
 }: {
-  dataSource: Record<string, any>;
   form: FormInstance;
   dataset: APIDataset | null | undefined;
 }) {
@@ -76,15 +164,88 @@ function SimpleDatasetForm({
       },
     });
   };
-  const marginBottom: React.CSSProperties = {
-    marginBottom: 24,
-  };
+
+  const transformationItems = [
+    { value: TransformationsMode.NONE, label: "None" },
+    { value: TransformationsMode.SIMPLE, label: "Simple" },
+    { value: TransformationsMode.ADVANCED, label: "Advanced" },
+  ];
+
+  const dataSource: Record<string, any> = Form.useWatch("dataSource", { form, preserve: true });
+  const transformationsMode: TransformationsMode = Form.useWatch(["transformationsMode"], form);
+  const coordinateTransformationsJSON: string = Form.useWatch(["coordinateTransformations"], form);
+
+  // If the transformation mode changes, the currently visible transformation settings need to be set
+  // in the internal datalayer model of the form.
+  useEffect(() => {
+    // Prevent unnecessary re-renders by not having the dataSource, which
+    // might be changed below, as a dependency
+    const currentDataSource: Record<string, any> = form.getFieldValue("dataSource");
+    if (currentDataSource == null || currentDataSource.dataLayers?.length === 0) return;
+    if (transformationsMode === TransformationsMode.NONE) {
+      const dataLayersWithUpdatedTransforms = currentDataSource.dataLayers.map(
+        (layer: DataLayer) => {
+          return {
+            ...layer,
+            coordinateTransformations: [],
+          };
+        },
+      );
+      form.setFieldValue(["dataSource", "dataLayers"], dataLayersWithUpdatedTransforms);
+      return;
+    }
+    if (form.getFieldError(["coordinateTransformations"]).length > 0) {
+      return;
+    }
+    if (transformationsMode === TransformationsMode.SIMPLE) {
+      const isRotationOnly = form.getFieldValue(["isRotationOnly"]);
+      if (!isRotationOnly) return;
+      const rotationValues: {
+        x: RotationAndMirroringSettings;
+        y: RotationAndMirroringSettings;
+        z: RotationAndMirroringSettings;
+      } = form.getFieldValue(["datasetRotation"]);
+      const datasetBoundingBox = getDatasetBoundingBoxFromLayers(currentDataSource.dataLayers);
+      // This won't happen because we check that there are more than 0 layers,
+      // so this is just to satisfy the type checker.
+      if (datasetBoundingBox == null) {
+        throw new Error("Dataset bounding box is undefined. Cannot apply transformations.");
+      }
+      const transformations = getRotationalTransformation(datasetBoundingBox, rotationValues);
+      const dataLayersWithUpdatedTransforms = currentDataSource.dataLayers.map(
+        (layer: DataLayer) => {
+          return {
+            ...layer,
+            coordinateTransformations: transformations,
+          };
+        },
+      );
+      form.setFieldValue(["dataSource", "dataLayers"], dataLayersWithUpdatedTransforms);
+    }
+    if (transformationsMode === TransformationsMode.ADVANCED) {
+      if (coordinateTransformationsJSON == null) return;
+      const layersWithCoordTransformations: DataLayerWithTransformations[] =
+        coordinateTransformationsJSON === "" ? [] : JSON.parse(coordinateTransformationsJSON);
+      const dataLayersWithUpdatedTransforms = currentDataSource.dataLayers.map(
+        (layer: DataLayer) => {
+          const coordinateTransformation = layersWithCoordTransformations?.find(
+            (ct) => ct.name === layer.name,
+          );
+          return {
+            ...layer,
+            coordinateTransformations: coordinateTransformation?.coordinateTransformations || [],
+          };
+        },
+      );
+      form.setFieldValue(["dataSource", "dataLayers"], dataLayersWithUpdatedTransforms);
+    }
+  }, [coordinateTransformationsJSON, form, transformationsMode]);
 
   return (
     <div>
       <SettingsCard
         title="General Dataset Settings"
-        style={marginBottom}
+        style={MARGIN_BOTTOM}
         content={
           <Row gutter={[24, 24]}>
             <Col span={24} xl={12}>
@@ -135,6 +296,19 @@ function SimpleDatasetForm({
                     <Button onClick={() => copyDatasetID(dataset?.id)} icon={<CopyOutlined />} />
                   </Tooltip>
                 </Space.Compact>
+              </FormItemWithInfo>
+              <FormItemWithInfo
+                name={["transformationsMode"]}
+                label="Transformation Mode"
+                info={
+                  <>
+                    You can remove all transformations by selecting "None", add rotational and
+                    mirroring transformations in "Simple" mode, or define custom transformations per
+                    layer in "Advanced" mode.
+                  </>
+                }
+              >
+                <Select options={transformationItems} style={{ width: LEFT_COLUMN_ITEMS_WIDTH }} />
               </FormItemWithInfo>
             </Col>
             <Col span={24} xl={12}>
@@ -190,17 +364,7 @@ function SimpleDatasetForm({
         }
       />
 
-      <SettingsCard
-        title="Axis Rotation"
-        style={marginBottom}
-        content={
-          <Row gutter={[24, 24]}>
-            <Col span={24}>
-              <AxisRotationSettingForDataset form={form} />
-            </Col>
-          </Row>
-        }
-      />
+      <DatasetTransformationSettingsCard transformationsMode={transformationsMode} form={form} />
 
       {dataSource?.dataLayers?.map((layer: DataLayer, idx: number) => (
         // the layer name may change in this view, the order does not, so idx is the right key choice here
@@ -208,7 +372,7 @@ function SimpleDatasetForm({
           <Col span={24}>
             <SettingsCard
               title={`Layer: ${layer.name}`}
-              style={marginBottom}
+              style={MARGIN_BOTTOM}
               content={
                 <SimpleLayerForm
                   dataset={dataset}
@@ -249,7 +413,13 @@ function SimpleLayerForm({
   const layerCategorySavedOnServer = dataset?.dataSource.dataLayers[index]?.category;
   const isStoredAsSegmentationLayer = layerCategorySavedOnServer === "segmentation";
   const isSegmentation = category === "segmentation";
-  const valueRange = getSupportedValueRangeForElementClass(layer.elementClass);
+  // The (bigint) range of valid segment ids. Only integer element classes have one; float/double
+  // layers cannot be segmentation layers, so valueRange stays null for them.
+  const hasSegmentIdRange =
+    isSegmentation && layer.elementClass !== "float" && layer.elementClass !== "double";
+  const valueRange = hasSegmentIdRange
+    ? getSegmentIdRangeForElementClass(layer.elementClass)
+    : null;
 
   const mayLayerBeRemoved = dataLayers?.length > 1;
 
@@ -274,8 +444,8 @@ function SimpleLayerForm({
       );
     },
     initialJobKeyExtractor: (job) =>
-      job.type === "find_largest_segment_id" && job.datasetName === dataset?.name
-        ? (job.datasetName ?? "largest_segment_id")
+      job.command === "find_largest_segment_id" && job.args.datasetName === dataset?.name
+        ? (job.args.datasetName ?? "largest_segment_id")
         : null,
   });
   const activeJob = runningJobs[0];
@@ -287,7 +457,7 @@ function SimpleLayerForm({
           Toast.info(
             "A job was scheduled to compute the largest segment ID. It will be automatically updated for the dataset. You may close this tab now.",
           );
-          return [job.datasetName ?? "largest_segment_id", job.id] as [string, string];
+          return [job.args.datasetName ?? "largest_segment_id", job.id] as [string, string];
         }
       : null;
 
@@ -347,9 +517,12 @@ function SimpleLayerForm({
               }}
               info="The data format of the layer."
             >
-              <Select disabled value={layer.dataFormat} style={{ width: 120 }}>
-                <Select.Option value={layer.dataFormat}>{layer.dataFormat}</Select.Option>
-              </Select>
+              <Select
+                disabled
+                value={layer.dataFormat}
+                style={{ width: 120 }}
+                options={[{ value: layer.dataFormat, label: layer.dataFormat }]}
+              />
             </FormItemWithInfo>
             <FormItemWithInfo
               label="Data Type"
@@ -358,9 +531,12 @@ function SimpleLayerForm({
               }}
               info="The data type (sometimes called dtype) of the layer."
             >
-              <Select disabled value={layer.elementClass} style={{ width: 120 }}>
-                <Select.Option value={layer.elementClass}>{layer.elementClass}</Select.Option>
-              </Select>
+              <Select
+                disabled
+                value={layer.elementClass}
+                style={{ width: 120 }}
+                options={[{ value: layer.elementClass, label: layer.elementClass }]}
+              />
             </FormItemWithInfo>
             {"numChannels" in layer ? (
               <FormItemWithInfo
@@ -370,9 +546,12 @@ function SimpleLayerForm({
                 }}
                 info="The channel count of the layer."
               >
-                <Select disabled value={layer.numChannels} style={{ width: 120 }}>
-                  <Select.Option value={layer.numChannels}>{layer.numChannels}</Select.Option>
-                </Select>
+                <Select
+                  disabled
+                  value={layer.numChannels}
+                  style={{ width: 120 }}
+                  options={[{ value: layer.numChannels, label: layer.numChannels }]}
+                />
               </FormItemWithInfo>
             ) : null}
           </Space>
@@ -390,13 +569,11 @@ function SimpleLayerForm({
               allowClear
               value={getMags(layer).map((mag) => mag.toString())}
               style={{ width: LEFT_COLUMN_ITEMS_WIDTH }}
-            >
-              {getMags(layer).map((mag) => (
-                <Select.Option key={mag.toString()} value={mag.toString()}>
-                  {typeof mag === "number" ? mag : mag.join("-")}
-                </Select.Option>
-              ))}
-            </Select>
+              options={getMags(layer).map((mag) => ({
+                value: mag.toString(),
+                label: typeof mag === "number" ? mag : mag.join("-"),
+              }))}
+            />
           </FormItemWithInfo>
         </Col>
         <Col span={24} xl={12}>
@@ -449,15 +626,16 @@ function SimpleLayerForm({
               style={{
                 width: 300,
               }}
-            >
-              <Select.Option value="color">Color / grayscale</Select.Option>
-              <Select.Option value="segmentation">Segmentation</Select.Option>
-            </Select>
+              options={[
+                { value: "color", label: "Color / grayscale" },
+                { value: "segmentation", label: "Segmentation" },
+              ]}
+            />
           </Form.Item>
 
           {isSegmentation ? (
             <div>
-              <div style={{ display: "flex", alignItems: "end" }}>
+              <Flex align="flex-end">
                 <FormItemWithInfo
                   name={["dataSource", "dataLayers", index, "largestSegmentId"]}
                   label="Largest segment ID"
@@ -469,27 +647,40 @@ function SimpleLayerForm({
                   }
                   rules={[
                     {
-                      validator: (_rule, value) =>
-                        value == null ||
-                        value === "" ||
-                        (value >= valueRange[0] && value <= valueRange[1] && value !== 0)
+                      validator: (_rule, value) => {
+                        const { parsed, error } = parseAsBigInt(value);
+                        if (error) {
+                          return Promise.reject(
+                            new Error("The largest segmentation ID must be a whole number."),
+                          );
+                        }
+                        if (parsed == null || valueRange == null) {
+                          return Promise.resolve();
+                        }
+                        return parsed >= valueRange[0] && parsed <= valueRange[1] && parsed !== 0n
                           ? Promise.resolve()
                           : Promise.reject(
                               new Error(
                                 `The largest segmentation ID must be between ${valueRange[0]} and ${valueRange[1]} and not 0. You can also leave this field empty, but annotating this layer later will only be possible with manually chosen segment IDs.`,
                               ),
-                            ),
+                            );
+                      },
                     },
                     {
                       warningOnly: true,
-                      validator: (_rule, value) =>
-                        value != null && value === valueRange[1]
+                      validator: (_rule, value) => {
+                        const { parsed, error } = parseAsBigInt(value);
+                        if (error || parsed == null || valueRange == null) {
+                          return Promise.resolve();
+                        }
+                        return parsed === valueRange[1]
                           ? Promise.reject(
                               new Error(
                                 `The largest segmentation ID has already reached the maximum possible value of ${valueRange[1]}. Annotations of this dataset cannot create new segments.`,
                               ),
                             )
-                          : Promise.resolve(),
+                          : Promise.resolve();
+                      },
                     },
                     {
                       warningOnly: true,
@@ -505,17 +696,10 @@ function SimpleLayerForm({
                   ]}
                 >
                   <DelegatePropsToFirstChild>
-                    <InputNumber
-                      // @ts-ignore returning undefined does work without problems
-                      parser={(value: string | undefined) => {
-                        if (value == null || value === "") {
-                          return undefined;
-                        }
-                        return Number.parseInt(value, 10);
-                      }}
-                    />
+                    {/* stringMode keeps full precision for uint64 segment ids (beyond 2**53). */}
+                    <InputNumber stringMode precision={0} />
                     {dataset?.dataStore.jobsSupportedByAvailableWorkers.includes(
-                      APIJobType.FIND_LARGEST_SEGMENT_ID,
+                      APIJobCommand.FIND_LARGEST_SEGMENT_ID,
                     ) ? (
                       <Tooltip
                         title={
@@ -543,14 +727,14 @@ function SimpleLayerForm({
                         </Button>
                       </Tooltip>
                     ) : (
-                      <></>
+                      <span></span>
                     )}
                   </DelegatePropsToFirstChild>
                 </FormItemWithInfo>
-              </div>
+              </Flex>
               {mostRecentSuccessfulJob && (
                 <div style={{ marginTop: -6 }}>
-                  Output of most recent job: {mostRecentSuccessfulJob.result}
+                  Output of most recent job: {mostRecentSuccessfulJob.returnValue}
                 </div>
               )}
             </div>

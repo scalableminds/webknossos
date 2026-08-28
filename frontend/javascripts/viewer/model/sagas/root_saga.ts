@@ -6,7 +6,7 @@ import AnnotationSagas from "viewer/model/sagas/annotation_saga";
 import toolSaga from "viewer/model/sagas/annotation_tool_saga";
 import listenToClipHistogramSaga from "viewer/model/sagas/clip_histogram_saga";
 import DatasetSagas from "viewer/model/sagas/dataset_saga";
-import type { Saga } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
 import loadHistogramDataSaga from "viewer/model/sagas/load_histogram_data_saga";
 import { watchDataRelevantChanges } from "viewer/model/sagas/prefetch_saga";
 import ReadySagas from "viewer/model/sagas/ready_sagas";
@@ -16,16 +16,19 @@ import SkeletontracingSagas from "viewer/model/sagas/skeletontracing_saga";
 import watchTasksAsync, { warnAboutMagRestriction } from "viewer/model/sagas/task_saga";
 import UndoSaga from "viewer/model/sagas/undo_saga";
 import MappingSaga from "viewer/model/sagas/volume/mapping_saga";
-import ProofreadSaga from "viewer/model/sagas/volume/proofread_saga";
+import ProofreadSaga from "viewer/model/sagas/volume/proofreading/proofread_saga";
 import VolumetracingSagas from "viewer/model/sagas/volumetracing_saga";
 import type { EscalateErrorAction } from "../actions/actions";
-import { setIsWkReadyAction } from "../actions/ui_actions";
+import { setIsWkInitializedAction } from "../actions/ui_actions";
 import maintainMaximumZoomForAllMagsSaga from "./flycam_info_cache_saga";
+import idReservationSaga from "./id_reservation_saga";
 import manyBucketUpdatesWarningSaga from "./many_bucket_updates_warning_saga";
 import adHocMeshSaga from "./meshes/ad_hoc_mesh_saga";
 import commonMeshSaga, { handleAdditionalCoordinateUpdate } from "./meshes/common_mesh_saga";
 import precomputedMeshSaga from "./meshes/precomputed_mesh_saga";
-import { toggleErrorHighlighting } from "./saving/save_queue_draining";
+import mipSaga from "./mip_saga";
+import { resetOperationContextOnWkReady } from "./operation_context_saga";
+import { toggleErrorHighlighting } from "./saving/save_queue_draining_saga";
 import splitBoundaryMeshSaga from "./split_boundary_mesh_saga";
 import { warnIfEmailIsUnverified } from "./user_saga";
 
@@ -40,7 +43,7 @@ export default function* rootSaga(): Saga<void> {
     });
     yield* cancel(task);
     if (restart) {
-      yield* put(setIsWkReadyAction(false));
+      yield* put(setIsWkInitializedAction(false));
     }
     if (doCancel) {
       // No restart, leave the while-true-loop
@@ -90,12 +93,15 @@ function* restartableSaga(): Saga<void> {
       call(splitBoundaryMeshSaga),
       call(toolSaga),
       call(manyBucketUpdatesWarningSaga),
+      call(idReservationSaga),
+      call(mipSaga),
+      call(resetOperationContextOnWkReady),
     ]);
   } catch (err: any) {
     rootSagaCrashed = true;
     console.error("The sagas crashed because of the following error:", err);
 
-    if (!process.env.IS_TESTING) {
+    if (import.meta.env.MODE !== "test") {
       ErrorHandling.notifyWithPrefix(err, "Root saga crashed: ");
 
       // Hide potentially old error highlighting which mentions a retry mechanism.

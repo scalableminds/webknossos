@@ -43,10 +43,11 @@ export const clearProofreadingByProducts = () =>
   }) as const;
 
 export const proofreadMergeAction = (
-  position: Vector3 | null,
-  segmentId?: number | null,
-  agglomerateId?: number | null,
+  position: Vector3 | null, // the clicked target position (if data viewports were used)
+  segmentId?: bigint | null, // the target segment id (if 3D viewport was used)
+  agglomerateId?: bigint | null, // the target agglomerate id (if 3D viewport was used)
 ) =>
+  // Note that the source ID is derived by the active segment ID and is NOT encoded in this action.
   ({
     type: "PROOFREAD_MERGE",
     position,
@@ -62,9 +63,13 @@ export const minCutAgglomerateAction = (sourceNodeId: number, targetNodeId: numb
   }) as const;
 
 export const minCutAgglomerateWithPositionAction = (
+  // This action encodes which target supervoxel should be cut off from the
+  // "active supervoxel" (that is marked by the proofreading marker).
+  // Either, provide the target via the clicked position...
   position: Vector3 | null,
-  segmentId?: number | null,
-  agglomerateId?: number | null,
+  // ...or specify the unmapped and mapped id of the clicked supervoxel
+  segmentId?: bigint | null,
+  agglomerateId?: bigint | null,
 ) =>
   ({
     type: "MIN_CUT_AGGLOMERATE",
@@ -76,8 +81,8 @@ export const minCutAgglomerateWithPositionAction = (
 export const cutAgglomerateFromNeighborsAction = (
   position: Vector3 | null,
   tree?: Tree | null,
-  segmentId?: number | null,
-  agglomerateId?: number | null,
+  segmentId?: bigint | null,
+  agglomerateId?: bigint | null,
 ) =>
   ({
     type: "CUT_AGGLOMERATE_FROM_NEIGHBORS",
@@ -88,9 +93,9 @@ export const cutAgglomerateFromNeighborsAction = (
   }) as const;
 
 export const toggleSegmentInPartitionAction = (
-  unmappedSegmentId: number,
+  unmappedSegmentId: bigint,
   partition: 1 | 2,
-  agglomerateId: number,
+  agglomerateId: bigint,
 ) =>
   ({
     type: "TOGGLE_SEGMENT_IN_PARTITION",

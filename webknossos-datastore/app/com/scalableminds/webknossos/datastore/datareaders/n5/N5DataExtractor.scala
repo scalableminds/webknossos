@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.datareaders.n5
 
-import com.scalableminds.util.tools.Box
-import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.box.Box
+import Box.tryo
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, DataInputStream, InputStream}
 
@@ -20,9 +20,7 @@ class N5DataExtractor {
     val os = new ByteArrayOutputStream()
     val bytes = new Array[Byte](4096)
     var read = in.read(bytes)
-    while ({
-      read >= 0
-    }) {
+    while (read >= 0) {
       if (read > 0) {
         os.write(bytes, 0, read)
       }
@@ -40,9 +38,8 @@ class N5DataExtractor {
       val dimensionCount = inputStream.readShort // number of dimensions
       // block sizes
       val blockSize = new Array[Int](dimensionCount)
-      for (d <- 0 until dimensionCount) {
+      for (d <- 0 until dimensionCount)
         blockSize(d) = inputStream.readInt
-      }
       if (mode == 0) numElements = blockSize.product // default mode
       else numElements = inputStream.readInt // varlength mode (end of block)
       N5BlockHeader(blockSize, numElements)

@@ -1,7 +1,10 @@
 import update from "immutability-helper";
 import Date from "libs/date";
-import _ from "lodash";
-import { type TracingStats, getStats } from "viewer/model/accessors/annotation_accessor";
+import chunk from "lodash-es/chunk";
+import isEqual from "lodash-es/isEqual";
+import mapValues from "lodash-es/mapValues";
+import sumBy from "lodash-es/sumBy";
+import { getStats, type TracingStats } from "viewer/model/accessors/annotation_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import { getActionLog } from "viewer/model/helpers/action_logger_middleware";
 import { updateKey, updateKey2 } from "viewer/model/helpers/deep_update";
@@ -41,7 +44,7 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
         throw new Error("Tried to save something even though user is not logged in.");
       }
 
-      const updateActionChunks = _.chunk(items, MAXIMUM_ACTION_COUNT_PER_BATCH);
+      const updateActionChunks = chunk(items, MAXIMUM_ACTION_COUNT_PER_BATCH);
 
       const transactionGroupCount = updateActionChunks.length;
       const actionLogInfo = JSON.stringify(getActionLog().slice(-10));
@@ -70,7 +73,7 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
         oldQueue.length > 0 &&
         newQueue.length > 0 &&
         newQueue.at(-1)?.actions.some((action) => NOT_IDEMPOTENT_ACTIONS.includes(action.name)) &&
-        _.isEqual(oldQueue.at(-1)?.actions, newQueue.at(-1)?.actions)
+        isEqual(oldQueue.at(-1)?.actions, newQueue.at(-1)?.actions)
       ) {
         console.warn(
           "Redundant saving was detected.",
@@ -102,7 +105,7 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
       if (count > 0) {
         const queue = state.save.queue;
 
-        const processedQueueActionCount = _.sumBy(
+        const processedQueueActionCount = sumBy(
           queue.slice(0, count),
           (batch) => batch.actions.length,
         );
@@ -132,7 +135,7 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
       return state;
     }
 
-    case "DISCARD_SAVE_QUEUES": {
+    case "DISCARD_SAVE_QUEUE": {
       return update(state, {
         save: {
           queue: {
@@ -150,11 +153,12 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
-    case "SET_SAVE_BUSY": {
+    case "REPLACE_SAVE_QUEUE": {
+      // Only used during rebasing to update save queue entries in case their data was outdated and needed syncing with the newest backend version.
       return update(state, {
         save: {
-          isBusy: {
-            $set: action.isBusy,
+          queue: {
+            $set: action.newSaveQueue,
           },
         },
       });
@@ -176,8 +180,135 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
         return state;
       }
 
-      return updateKey2(state, "annotation", "restrictions", {
-        allowSave: false,
+      return update(state, {
+        annotation: { restrictions: { allowSave: { $set: false } } },
+        save: { isSavingDisabled: { $set: true } },
+      });
+    }
+
+    case "SET_IS_MUTEX_ACQUIRED": {
+      const { isMutexAcquired } = action;
+      return updateKey2(state, "save", "mutexState", {
+        hasAnnotationMutex: isMutexAcquired,
+      });
+    }
+
+    case "SET_USER_HOLDING_MUTEX": {
+      const { blockedByUser, blockedBySessionId } = action;
+      return updateKey2(state, "save", "mutexState", {
+        blockedByUser,
+        blockedBySessionId: blockedBySessionId ?? null,
+      });
+    }
+
+    case "REWIND_FOR_REBASE": {
+      const rebaseInfo = state.save.rebaseRelevantServerAnnotationState;
+      // Only the mapping data is part of the rebase baseline. All other ActiveMappingInfo
+      // fields are local view state that no update action carries, so we keep their live
+      // values and only replace the mapping data for the layers that have a snapshot entry (see #9559).
+      const restoredMappingByLayer = mapValues(
+        state.temporaryConfiguration.activeMappingByLayer,
+        (liveMappingInfo, layerName) =>
+          layerName in rebaseInfo.mappingDataByLayer
+            ? { ...liveMappingInfo, mapping: rebaseInfo.mappingDataByLayer[layerName] }
+            : liveMappingInfo,
+      );
+      return update(state, {
+        annotation: {
+          version: {
+            $set: rebaseInfo.annotationVersion,
+          },
+          description: {
+            $set: rebaseInfo.annotationDescription,
+          },
+          skeleton: {
+            $set: rebaseInfo.skeleton,
+          },
+          volumes: { $set: rebaseInfo.volumes },
+        },
+        temporaryConfiguration: {
+          activeMappingByLayer: {
+            $set: restoredMappingByLayer,
+          },
+        },
+        save: {
+          rebaseRelevantServerAnnotationState: {
+            isRebasingOrForwarding: { $set: true },
+          },
+        },
+      });
+    }
+
+    case "START_FORWARDING_UPDATE_ACTIONS": {
+      return update(state, {
+        save: {
+          rebaseRelevantServerAnnotationState: {
+            isRebasingOrForwarding: { $set: true },
+          },
+        },
+      });
+    }
+
+    case "FINISHED_REBASING":
+    case "FINISH_FORWARDING_UPDATE_ACTIONS": {
+      return update(state, {
+        save: {
+          rebaseRelevantServerAnnotationState: {
+            isRebasingOrForwarding: { $set: false },
+          },
+        },
+      });
+    }
+
+    case "SNAPSHOT_MAPPING_DATA_FOR_NEXT_REBASE_ACTION": {
+      const mappingInfoOfLayer =
+        state.temporaryConfiguration.activeMappingByLayer[action.volumeLayerIdToUpdate];
+      return update(state, {
+        save: {
+          rebaseRelevantServerAnnotationState: {
+            mappingDataByLayer: {
+              [action.volumeLayerIdToUpdate]: {
+                $set: mappingInfoOfLayer?.mapping,
+              },
+            },
+          },
+        },
+      });
+    }
+
+    case "SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE":
+    case "FINISHED_APPLYING_MISSING_UPDATES": {
+      return update(state, {
+        save: {
+          rebaseRelevantServerAnnotationState: {
+            annotationDescription: {
+              $set: state.annotation.description,
+            },
+            annotationVersion: {
+              $set: state.annotation.version,
+            },
+            mappingDataByLayer: {
+              $set: mapValues(
+                state.temporaryConfiguration.activeMappingByLayer,
+                (mappingInfo) => mappingInfo.mapping,
+              ),
+            },
+            skeleton: {
+              $set: state.annotation.skeleton,
+            },
+            volumes: {
+              $set: state.annotation.volumes,
+            },
+          },
+        },
+      });
+    }
+
+    case "SET_PENDING_PROOFREADING_OPERATION_INFO": {
+      return update(state, {
+        save: {
+          proofreadingPostProcessingInfo: { $set: action.proofreadingPostProcessingInfo },
+        },
       });
     }
 

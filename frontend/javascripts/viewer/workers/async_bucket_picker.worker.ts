@@ -3,9 +3,9 @@ import type { Matrix4x4 } from "libs/mjs";
 import type { Vector3, Vector4, ViewMode } from "viewer/constants";
 import constants from "viewer/constants";
 import determineBucketsForFlight from "viewer/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
-import determineBucketsForOblique from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
+import determineBucketsForPlane from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
 import type { LoadingStrategy, PlaneRects } from "viewer/store";
-import { expose } from "./comlink_wrapper";
+import { expose } from "./comlink_core";
 
 type PriorityItem = {
   bucketAddress: Vector4;
@@ -40,7 +40,7 @@ function dequeueToArrayBuffer(bucketQueue: PriorityQueue<PriorityItem>): ArrayBu
 
 function pick(
   viewMode: ViewMode,
-  mags: Array<Vector3>,
+  denseMags: Array<Vector3>,
   position: Vector3,
   sphericalCapRadius: number,
   matrix: Matrix4x4,
@@ -60,20 +60,9 @@ function pick(
     });
   };
 
-  if (viewMode === constants.MODE_ARBITRARY_PLANE) {
-    determineBucketsForOblique(
-      viewMode,
-      loadingStrategy,
-      mags,
-      position,
-      enqueueFunction,
-      matrix,
-      logZoomStep,
-      rects,
-    );
-  } else if (viewMode === constants.MODE_ARBITRARY) {
+  if (viewMode === constants.MODE_FLIGHT) {
     determineBucketsForFlight(
-      mags,
+      denseMags,
       position,
       sphericalCapRadius,
       enqueueFunction,
@@ -81,10 +70,9 @@ function pick(
       logZoomStep,
     );
   } else {
-    determineBucketsForOblique(
-      viewMode,
+    determineBucketsForPlane(
       loadingStrategy,
-      mags,
+      denseMags,
       position,
       enqueueFunction,
       matrix,

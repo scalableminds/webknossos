@@ -21,6 +21,14 @@ export default {
       minItems: 3,
       maxItems: 3,
     },
+    "types::Vector4": {
+      type: "array",
+      items: {
+        type: "number",
+      },
+      minItems: 4,
+      maxItems: 4,
+    },
     "types::BoundingBox": {
       type: "object",
       properties: {
@@ -358,8 +366,12 @@ export default {
                   const: "segmentation",
                 },
                 largestSegmentId: {
-                  type: ["number", "null"],
-                  minimum: 1,
+                  // Unsigned-decimal string (see datasource.types.ts): uint64 ids can exceed the
+                  // JS safe-integer range, and jsonschema validates JSON.parse output which never
+                  // yields a bigint. The pattern preserves the former `minimum: 1` intent
+                  // (a positive integer, no leading zeros).
+                  type: ["string", "null"],
+                  pattern: "^[1-9][0-9]*$",
                 },
                 mappings: {
                   type: "array",
@@ -439,6 +451,74 @@ export default {
         },
       },
       required: ["id", "dataLayers", "scale"],
+    },
+    "types::CoordinateTransformations": {
+      items: {
+        anyOf: [
+          {
+            properties: {
+              matrix: {
+                items: {
+                  $ref: "#/definitions/types::Vector4",
+                },
+                maxItems: 4,
+                minItems: 4,
+                type: "array",
+              },
+              type: {
+                const: "affine",
+                type: "string",
+              },
+            },
+            type: "object",
+            required: ["type", "matrix"],
+          },
+          {
+            properties: {
+              correspondences: {
+                properties: {
+                  source: {
+                    items: {
+                      $ref: "#/definitions/types::Vector3",
+                    },
+                    type: "array",
+                  },
+                  target: {
+                    items: {
+                      $ref: "#/definitions/types::Vector3",
+                    },
+                    type: "array",
+                  },
+                },
+                type: "object",
+                required: ["source", "target"],
+              },
+              type: {
+                const: "thin_plate_spline",
+                type: "string",
+              },
+            },
+            type: "object",
+            required: ["type", "correspondences"],
+          },
+        ],
+      },
+      type: "array",
+    },
+    "types::DataLayerWithTransformations": {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          name: {
+            type: "string",
+          },
+          coordinateTransformations: {
+            $ref: "#/definitions/types::CoordinateTransformations",
+          },
+        },
+        required: ["name"],
+      },
     },
   },
 };

@@ -1,5 +1,5 @@
 # [WEBKNOSSOS](https://webknossos.org/)
-<img align="right" src="https://raw.githubusercontent.com/scalableminds/webknossos/master/public/images/logo-icon-only.svg" alt="WEBKNOSSOS Logo" width="150" />
+<img align="right" src="https://raw.githubusercontent.com/scalableminds/webknossos/master/assets/images/wk-logo.svg" alt="WEBKNOSSOS Logo" width="150" />
 WEBKNOSSOS is an open-source tool for annotating and exploring large 3D image datasets.
 
 * Fly through your data for fast skeletonization and proofreading
@@ -7,7 +7,7 @@ WEBKNOSSOS is an open-source tool for annotating and exploring large 3D image da
 * Scale data reconstruction projects with crowdsourcing workflows
 * Share datasets and annotations with collaborating scientists
 
-[Start using WEBKNOSSOS](https://webknossos.org) - [On your own server](https://docs.webknossos.org/webknossos/open_source/installation.html) - [User Documentation](https://docs.webknossos.org) - [Contact us](mailto:hello@webknossos.org)
+[Start using WEBKNOSSOS](https://webknossos.org) - [On your own server](https://docs.webknossos.org/webknossos/open_source/installation.html) - [User Documentation](https://docs.webknossos.org) - [Contact us](mailto:support@webknossos.org)
 
 [![](https://img.shields.io/circleci/project/github/scalableminds/webknossos/master.svg?logo=circleci)](https://circleci.com/gh/scalableminds/webknossos)
 [![](https://img.shields.io/github/release/scalableminds/webknossos.svg)](https://github.com/scalableminds/webknossos/releases/latest)
@@ -59,7 +59,7 @@ We welcome community feedback and contributions! We are happy to have
 
 For details on community contributions, please refer to our [Contributing guide](./Contributing_Guide.md).
 
-Contact us at [hello@webknossos.org](mailto:hello@webknossos.org).
+Contact us at [support@webknossos.org](mailto:support@webknossos.org).
 
 [scalable minds](https://scalableminds.com) offers commercial hosting, support and development services for WEBKNOSSOS.
 
@@ -73,7 +73,6 @@ WEBKNOSSOS was inspired by [KNOSSOS](https://knossos.app).
 ### Thanks
 * [Browser Stack](https://www.browserstack.com/) for letting us test WEBKNOSSOS on a variety of different devices
   <a href="https://www.browserstack.com/"><img src="https://avatars.githubusercontent.com/u/1119453?s=200&v=4" width=100 alt="Browserstack Logo" align="right"></a>
-* [CircleCI](https://circleci.com/gh/scalableminds/webknossos) for letting us run builds and tests on their CI
 
 # License
 AGPLv3

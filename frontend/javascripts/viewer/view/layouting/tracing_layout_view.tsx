@@ -3,11 +3,11 @@ import app from "app";
 import ErrorHandling from "libs/error_handling";
 import Request from "libs/request";
 import Toast from "libs/toast";
-import { document, location } from "libs/window";
+import window, { document, location } from "libs/window";
 import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
-import _ from "lodash";
+import debounce from "lodash-es/debounce";
 import messages from "messages";
-import * as React from "react";
+import { Fragment, PureComponent } from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import { NavAndStatusBarTheme } from "theme";
@@ -16,39 +16,41 @@ import CrossOriginApi from "viewer/api/cross_origin_api";
 import Constants, { type Vector3 } from "viewer/constants";
 import type { ControllerStatus } from "viewer/controller";
 import WebKnossosController from "viewer/controller";
+import { applyState } from "viewer/controller/apply_url_state";
 import MergerModeController from "viewer/controller/merger_mode_controller";
 import { destroySceneController } from "viewer/controller/scene_controller_provider";
 import UrlManager from "viewer/controller/url_manager";
+import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import { is2dDataset } from "viewer/model/accessors/dataset_accessor";
+import { getPosition, getRotationInDegrees } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool, MeasurementTools } from "viewer/model/accessors/tool_accessor";
-import { cancelSagaAction } from "viewer/model/actions/actions";
-import { resetStoreAction } from "viewer/model/actions/actions";
+import { cancelSagaAction, resetStoreAction } from "viewer/model/actions/actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import rootSaga from "viewer/model/sagas/root_saga";
-import { applyState } from "viewer/model_initialization";
-import { Store } from "viewer/singletons";
-import { Model } from "viewer/singletons";
-import { type Theme, type TraceOrViewCommand, type WebknossosState, startSaga } from "viewer/store";
+import { Model, Store } from "viewer/singletons";
+import { startSaga, type Theme, type TraceOrViewCommand, type WebknossosState } from "viewer/store";
 import ActionBarView from "viewer/view/action_bar_view";
-import WkContextMenu from "viewer/view/context_menu";
+import { AiJobsDrawer } from "viewer/view/ai_jobs/ai_jobs_drawer";
+import WkContextMenu from "viewer/view/context_menu/wk_context_menu";
 import DistanceMeasurementTooltip from "viewer/view/distance_measurement_tooltip";
 import {
   initializeInputCatcherSizes,
   recalculateInputCatcherSizes,
 } from "viewer/view/input_catcher";
 import {
-  LayoutEvents,
   getLastActiveLayout,
   getLayoutConfig,
+  LayoutEvents,
   layoutEmitter,
   setActiveLayout,
   storeLayoutConfig,
 } from "viewer/view/layouting/layout_persistence";
 import { RenderToPortal } from "viewer/view/layouting/portal_utils";
-import NmlUploadZoneContainer from "viewer/view/nml_upload_zone_container";
-import PresentModernControls from "viewer/view/novel_user_experiences/01-present-modern-controls";
+import NmlUploadZoneContainer, {
+  type NmlImportOptions,
+} from "viewer/view/nml_upload/nml_upload_zone_container";
 import WelcomeToast from "viewer/view/novel_user_experiences/welcome_toast";
-import { importTracingFiles } from "viewer/view/right-border-tabs/trees_tab/skeleton_tab_view";
+import { importTracingFiles } from "viewer/view/right_border_tabs/skeleton_tab/import_tracing_files";
 import TracingView from "viewer/view/tracing_view";
 import VersionView from "viewer/view/version_view";
 import TabTitle from "../components/tab_title_component";
@@ -78,7 +80,7 @@ type State = {
 };
 const canvasAndLayoutContainerID = "canvasAndLayoutContainer";
 
-class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
+class TracingLayoutView extends PureComponent<PropsWithRouter, State> {
   lastTouchTimeStamp: number | null = null;
 
   static getDerivedStateFromError() {
@@ -130,6 +132,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       // For super users, we don't enforce a page reload.
       // They'll act as a guinea pig for this performance
       // improvement for now.
+      window.measuredTimeToFirstRender = false;
       return;
     }
 
@@ -148,7 +151,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
 
     const refreshMessageContainer = document.createElement("div");
     refreshMessageContainer.style.display = "grid";
-    // @ts-ignore
+    // @ts-expect-error
     refreshMessageContainer.style["place-items"] = "center";
     refreshMessageContainer.style.height = "75vh";
 
@@ -230,7 +233,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     }
   };
 
-  debouncedOnLayoutChange = _.debounce(() => this.onLayoutChange(), Constants.RESIZE_THROTTLE_TIME);
+  debouncedOnLayoutChange = debounce(() => this.onLayoutChange(), Constants.RESIZE_THROTTLE_TIME);
 
   saveCurrentLayout = (layoutName?: string) => {
     const layoutKey = determineLayout(
@@ -289,7 +292,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       UrlManager.updateToHash(pastedText.slice(hashPos + 1));
     } else {
       const numbers = pastedText.split(",").map(Number);
-      if (numbers.length === 3 && !numbers.some(isNaN)) {
+      if (numbers.length === 3 && !numbers.some(Number.isNaN)) {
         applyState({ position: numbers as Vector3 });
       }
     }
@@ -320,21 +323,24 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
 
     const createNewTracing = async (
       files: Array<File>,
-      createGroupForEachFile: boolean,
+      { createGroupForEachFile }: NmlImportOptions,
     ): Promise<void> => {
+      const { flycam } = Store.getState();
       const response = await Request.sendMultipartFormReceiveJSON("/api/annotations/upload", {
         data: {
           nmlFile: files,
           createGroupForEachFile,
           datasetId: this.props.datasetId,
+          fallbackEditPosition: getPosition(flycam).map(Math.round).join(","),
+          fallbackEditRotation: getRotationInDegrees(flycam).join(","),
+          fallbackZoomLevel: flycam.zoomStep,
         },
       });
       this.props.navigate(`/annotations/${response.annotation.typ}/${response.annotation.id}`);
     };
 
     return (
-      <React.Fragment>
-        <PresentModernControls />
+      <Fragment>
         {this.state.showFloatingMobileButtons && <FloatingMobileControls />}
 
         {status === "loaded" && <WkContextMenu />}
@@ -403,16 +409,18 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                 )}
                 {status !== "failedLoading" && <TracingView />}
                 {status === "loaded" ? (
-                  <React.Fragment>
+                  <Fragment>
                     <FlexLayoutWrapper
                       onLayoutChange={this.onLayoutChange}
                       layoutKey={layoutType}
                       layoutName={activeLayoutName}
                     />
                     <WelcomeToast />
-                  </React.Fragment>
+                  </Fragment>
                 ) : null}
               </div>
+              <AiJobsDrawer isOpen={this.props.aiJobDrawerState !== "invisible"} />
+
               {this.props.showVersionRestore ? (
                 <Sider id="version-restore-sider" width={400} theme={this.props.UITheme}>
                   <VersionView />
@@ -421,7 +429,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
             </Layout>
           </Layout>
         </NmlUploadZoneContainer>
-      </React.Fragment>
+      </Fragment>
     );
   }
 }
@@ -436,7 +444,7 @@ function mapStateToProps(state: WebknossosState) {
   return {
     viewMode: state.temporaryConfiguration.viewMode,
     autoSaveLayouts: state.userConfiguration.autoSaveLayouts,
-    isUpdateTracingAllowed: state.annotation.restrictions.allowUpdate,
+    isUpdateTracingAllowed: mayEditAnnotation(state),
     showVersionRestore: state.uiInformation.showVersionRestore,
     storedLayouts: state.uiInformation.storedLayouts,
     datasetId: state.dataset.id,
@@ -446,7 +454,7 @@ function mapStateToProps(state: WebknossosState) {
     activeTool: state.uiInformation.activeTool,
     additionalCoordinates: state.flycam.additionalCoordinates,
     UITheme: state.uiInformation.theme,
-    isWkReady: state.uiInformation.isWkReady,
+    aiJobDrawerState: state.uiInformation.aIJobDrawerState,
   };
 }
 

@@ -21,6 +21,8 @@ function UiReducer(state: WebknossosState, action: Action): WebknossosState {
           theme: state.uiInformation.theme,
           storedLayouts: state.uiInformation.storedLayouts,
           navbarHeight: state.uiInformation.navbarHeight,
+          isWkInitialized: false,
+          isUiReady: false,
         },
       };
     }
@@ -34,6 +36,11 @@ function UiReducer(state: WebknossosState, action: Action): WebknossosState {
     case "SET_VERSION_RESTORE_VISIBILITY": {
       return updateKey(state, "uiInformation", {
         showVersionRestore: action.active,
+      });
+    }
+    case "SET_IS_RESTORING_VERSION": {
+      return updateKey(state, "uiInformation", {
+        isRestoringVersion: action.isRestoring,
       });
     }
 
@@ -103,9 +110,9 @@ function UiReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
-    case "SET_AI_JOB_MODAL_STATE": {
+    case "SET_AI_JOB_DRAWER_STATE": {
       return updateKey(state, "uiInformation", {
-        aIJobModalState: action.state,
+        aIJobDrawerState: action.state,
       });
     }
 
@@ -127,29 +134,32 @@ function UiReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
+    case "SET_KEYBOARD_SHORTCUT_CONFIG_MODAL_VISIBILITY": {
+      return updateKey(state, "uiInformation", {
+        showKeyboardShortcutConfigModal: action.visible,
+      });
+    }
+
+    case "SET_DUPLICATE_ANNOTATION_MODAL_VISIBILITY": {
+      return updateKey(state, "uiInformation", {
+        showDuplicateAnnotationModal: action.visible,
+      });
+    }
+
     case "SET_CREATE_ANIMATION_MODAL_VISIBILITY": {
       return updateKey(state, "uiInformation", {
         showRenderAnimationModal: action.visible,
       });
     }
 
-    case "SET_BUSY_BLOCKING_INFO_ACTION": {
-      if (action.value.isBusy && state.uiInformation.busyBlockingInfo.isBusy) {
-        throw new Error(
-          "Busy-mutex violated. Cannot set isBusy to true, as it is already set to true.",
-        );
-      }
-
-      return updateKey(state, "uiInformation", {
-        busyBlockingInfo: action.value,
-      });
+    case "SET_IS_WK_INITIALIZED": {
+      return updateKey(state, "uiInformation", { isWkInitialized: action.isInitialized });
     }
-
-    case "SET_IS_WK_READY": {
-      return updateKey(state, "uiInformation", { isWkReady: action.isReady });
+    case "WK_INITIALIZED": {
+      return updateKey(state, "uiInformation", { isWkInitialized: true });
     }
-    case "WK_READY": {
-      return updateKey(state, "uiInformation", { isWkReady: true });
+    case "UI_READY": {
+      return updateKey(state, "uiInformation", { isUiReady: true });
     }
 
     case "SET_QUICK_SELECT_STATE": {

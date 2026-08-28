@@ -1,11 +1,16 @@
-import { DownloadOutlined, MoreOutlined, WarningOutlined } from "@ant-design/icons";
+import Icon, { DownloadOutlined, MoreOutlined } from "@ant-design/icons";
+import IconStatusbarDownsampling from "@images/icons/icon-statusbar-downsampling.svg?react";
+import IconStatusbarMouseLeft from "@images/icons/icon-statusbar-mouse-left.svg?react";
+import IconStatusbarMouseLeftDrag from "@images/icons/icon-statusbar-mouse-left-drag.svg?react";
+import IconStatusbarMouseRight from "@images/icons/icon-statusbar-mouse-right.svg?react";
+import IconStatusbarMouseRightDrag from "@images/icons/icon-statusbar-mouse-right-drag.svg?react";
+import IconStatusbarMouseWheel from "@images/icons/icon-statusbar-mouse-wheel.svg?react";
+import { Space, Typography } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { formatCountToDataAmountUnit } from "libs/format_utils";
 import { V3 } from "libs/mjs";
 import { useInterval } from "libs/react_helpers";
-import { useKeyPress } from "libs/react_hooks";
-import { useWkSelector } from "libs/react_hooks";
-import message from "messages";
+import { useKeyPress, useWkSelector } from "libs/react_hooks";
 import messages from "messages";
 import React, { useCallback, useState } from "react";
 import { useDispatch } from "react-redux";
@@ -19,7 +24,6 @@ import {
 import {
   getMappingInfoOrNull,
   getVisibleSegmentationLayer,
-  hasVisibleUint64Segmentation,
 } from "viewer/model/accessors/dataset_accessor";
 import { getActiveMagInfo } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool, adaptActiveToolToShortcuts } from "viewer/model/accessors/tool_accessor";
@@ -37,11 +41,13 @@ import {
   setActiveTreeAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import { setActiveCellAction } from "viewer/model/actions/volumetracing_actions";
-import { getSupportedValueRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
+import { getSegmentIdRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import { getGlobalDataConnectionInfo } from "viewer/model/data_connection_info";
 import { Store } from "viewer/singletons";
-import { NumberInputPopoverSetting } from "viewer/view/components/setting_input_views";
-import { CommandPalette } from "./components/command_palette";
+import BorderToggleButton from "./components/border_toggle_button";
+import { NumberInputPopoverSetting } from "./left_border_tabs/components/number_input_popover_setting";
+
+const { Text } = Typography;
 
 const lineColor = "rgba(255, 255, 255, 0.67)";
 const moreIconStyle = {
@@ -64,31 +70,9 @@ function getPosString(
 function ZoomShortcut() {
   return (
     <span key="zoom" className="shortcut-info-element">
-      <span
-        key="zoom-i"
-        className="keyboard-key-icon-small"
-        style={{
-          borderColor: lineColor,
-          marginTop: -1,
-        }}
-      >
-        {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
-        <span
-          style={{
-            position: "relative",
-            top: -2,
-          }}
-        >
-          {AltOrOptionKey}
-        </span>
-      </span>{" "}
+      <Text keyboard>{AltOrOptionKey}</Text>
       +
-      <img
-        className="keyboard-mouse-icon"
-        src="/assets/images/icon-statusbar-mouse-wheel.svg"
-        alt="Mouse Wheel"
-      />
-      Zoom in/out
+      <Icon component={IconStatusbarMouseWheel} aria-label="Mouse Wheel" /> Zoom in/out
     </span>
   );
 }
@@ -96,25 +80,17 @@ function ZoomShortcut() {
 function LeftClickShortcut({ actionDescriptor }: { actionDescriptor: ActionDescriptor }) {
   const leftClick =
     actionDescriptor.leftClick != null ? (
-      <span className="shortcut-info-element">
-        <img
-          className="keyboard-mouse-icon"
-          src="/assets/images/icon-statusbar-mouse-left.svg"
-          alt="Mouse Left Click"
-        />
+      <Space size="small" className="shortcut-info-element">
+        <Icon component={IconStatusbarMouseLeft} aria-label="Mouse Left Click" />
         {actionDescriptor.leftClick}
-      </span>
+      </Space>
     ) : null;
   const leftDrag =
     actionDescriptor.leftDrag != null ? (
-      <span className="shortcut-info-element">
-        <img
-          className="keyboard-mouse-icon"
-          src="/assets/images/icon-statusbar-mouse-left-drag.svg"
-          alt="Mouse Left Drag"
-        />
+      <Space size="small" className="shortcut-info-element">
+        <Icon component={IconStatusbarMouseLeftDrag} aria-label="Mouse Left Drag" />
         {actionDescriptor.leftDrag}
-      </span>
+      </Space>
     ) : null;
   return (
     <span>
@@ -127,25 +103,17 @@ function LeftClickShortcut({ actionDescriptor }: { actionDescriptor: ActionDescr
 function RightClickShortcut({ actionDescriptor }: { actionDescriptor: ActionDescriptor }) {
   const rightClick =
     actionDescriptor.rightClick != null ? (
-      <span className="shortcut-info-element">
-        <img
-          className="keyboard-mouse-icon"
-          src="/assets/images/icon-statusbar-mouse-right.svg"
-          alt="Mouse Right Click"
-        />
+      <Space size="small" className="shortcut-info-element">
+        <Icon component={IconStatusbarMouseRight} aria-label="Mouse Right Click" />
         {actionDescriptor.rightClick}
-      </span>
+      </Space>
     ) : null;
   const rightDrag =
     actionDescriptor.rightDrag != null ? (
-      <span className="shortcut-info-element">
-        <img
-          className="keyboard-mouse-icon"
-          src="/assets/images/icon-statusbar-mouse-right-drag.svg"
-          alt="Mouse Right Drag"
-        />
+      <Space size="small" className="shortcut-info-element">
+        <Icon component={IconStatusbarMouseRightDrag} aria-label="Mouse Right Drag" />
         {actionDescriptor.rightDrag}
-      </span>
+      </Space>
     ) : null;
   return (
     <React.Fragment>
@@ -158,7 +126,9 @@ function RightClickShortcut({ actionDescriptor }: { actionDescriptor: ActionDesc
 const getMoreShortcutsInfo = () => {
   return (
     <>
-      <CommandPalette label={<div style={{ marginLeft: 25 }}>[Ctrl+P] Commands</div>} />
+      <div style={{ marginLeft: 25 }}>
+        <Text keyboard>Ctrl + P</Text> Commands
+      </div>
       {moreShortcutsLink}
     </>
   );
@@ -209,120 +179,23 @@ function ShortcutsInfo() {
         {actionDescriptor != null ? (
           <LeftClickShortcut actionDescriptor={actionDescriptor} />
         ) : (
-          <span
-            className="shortcut-info-element"
-            style={{
-              textTransform: "capitalize",
-            }}
-          >
-            <img
-              className="keyboard-mouse-icon"
-              src="/assets/images/icon-statusbar-mouse-left-drag.svg"
-              alt="Mouse Left Drag"
-            />
+          <span className="shortcut-info-element">
+            <Icon component={IconStatusbarMouseLeftDrag} aria-label="Mouse Left Drag" />
             Move
           </span>
         )}
-
-        <span className="shortcut-info-element">
-          <span
-            key="space-forward-i"
-            className="keyboard-key-icon-small"
-            style={{
-              borderColor: lineColor,
-              marginTop: -1,
-            }}
-          >
-            {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
-            <span
-              style={{
-                position: "relative",
-                top: -2,
-              }}
-            >
-              Space
-            </span>
-          </span>{" "}
+        <Space size="small" className="shortcut-info-element">
+          <Text keyboard>Space</Text>
           Trace forward
-        </span>
-        <span className="shortcut-info-element">
-          <span
-            key="ctrl-back-i"
-            className="keyboard-key-icon-small"
-            style={{
-              borderColor: lineColor,
-              marginTop: -1,
-            }}
-          >
-            {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
-            <span
-              style={{
-                position: "relative",
-                top: -2,
-              }}
-            >
-              CTRL
-            </span>
-          </span>{" "}
-          <span
-            key="space-back-i"
-            className="keyboard-key-icon-small"
-            style={{
-              borderColor: lineColor,
-              marginTop: -1,
-            }}
-          >
-            {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
-            <span
-              style={{
-                position: "relative",
-                top: -2,
-              }}
-            >
-              Space
-            </span>
-          </span>{" "}
+        </Space>
+        <Space size="small" className="shortcut-info-element">
+          <Text keyboard>Ctrl + Space</Text>
           Trace backward
-        </span>
-        <span className="shortcut-info-element">
-          <span
-            key="arrow-left-i"
-            className="keyboard-key-icon-small"
-            style={{
-              borderColor: lineColor,
-              marginTop: -1,
-            }}
-          >
-            {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
-            <span
-              style={{
-                position: "relative",
-                top: -2,
-              }}
-            >
-              ◀
-            </span>
-          </span>{" "}
-          <span
-            key="arrow-right-i"
-            className="keyboard-key-icon-small"
-            style={{
-              borderColor: lineColor,
-              marginTop: -1,
-            }}
-          >
-            {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
-            <span
-              style={{
-                position: "relative",
-                top: -2,
-              }}
-            >
-              ▶
-            </span>
-          </span>{" "}
+        </Space>
+        <Space size="small" className="shortcut-info-element">
+          <Text keyboard>◀ / ▶</Text>
           Rotation
-        </span>
+        </Space>
         {getMoreShortcutsInfo()}
       </React.Fragment>
     );
@@ -348,22 +221,14 @@ function ShortcutsInfo() {
     <React.Fragment>
       <LeftClickShortcut actionDescriptor={actionDescriptor} />
       <RightClickShortcut actionDescriptor={actionDescriptor} />
-      <span className="shortcut-info-element">
-        <img
-          className="keyboard-mouse-icon"
-          src="/assets/images/icon-statusbar-mouse-wheel.svg"
-          alt="Mouse Wheel"
-        />
+      <Space size="small" className="shortcut-info-element">
+        <Icon component={IconStatusbarMouseWheel} aria-label="Mouse Wheel" />
         {isAltPressed || isControlOrMetaPressed ? "Zoom in/out" : "Move along 3rd axis"}
-      </span>
-      <span className="shortcut-info-element">
-        <img
-          className="keyboard-mouse-icon"
-          src="/assets/images/icon-statusbar-mouse-right-drag.svg"
-          alt="Mouse Right"
-        />
+      </Space>
+      <Space size="small" className="shortcut-info-element">
+        <Icon component={IconStatusbarMouseRightDrag} aria-label="Mouse Right" />
         Rotate 3D View
-      </span>
+      </Space>
       <ZoomShortcut />
       {getMoreShortcutsInfo()}
     </React.Fragment>
@@ -395,23 +260,6 @@ function SegmentInfo() {
   return <span className="info-element">Segment {idString}</span>;
 }
 
-function maybeLabelWithSegmentationWarning(isUint64SegmentationVisible: boolean, label: string) {
-  return isUint64SegmentationVisible ? (
-    <React.Fragment>
-      {label}{" "}
-      <FastTooltip title={message["tracing.uint64_segmentation_warning"]}>
-        <WarningOutlined
-          style={{
-            color: "var(--ant-color-warning)",
-          }}
-        />
-      </FastTooltip>
-    </React.Fragment>
-  ) : (
-    label
-  );
-}
-
 function Infos() {
   const isSkeletonAnnotation = useWkSelector((state) => state.annotation.skeleton != null);
   const activeVolumeTracing = useWkSelector((state) => getActiveSegmentationTracing(state));
@@ -421,12 +269,12 @@ function Infos() {
     state.annotation.skeleton ? state.annotation.skeleton.activeNodeId : null,
   );
   const activeTreeId = useWkSelector((state) =>
-    state.annotation.skeleton ? state.annotation.skeleton.activeTreeId : null,
+    state.annotation.skeleton ? state.localSkeletonState.activeTreeId : null,
   );
   const dispatch = useDispatch();
 
   const onChangeActiveCellId = useCallback(
-    (id: number) => dispatch(setActiveCellAction(id)),
+    (id: bigint) => dispatch(setActiveCellAction(id)),
     [dispatch],
   );
   const onChangeActiveNodeId = useCallback(
@@ -446,10 +294,8 @@ function Infos() {
     }
     const segmentationLayer = getSegmentationLayerForTracing(state, activeVolumeTracing);
     const elementClass = segmentationLayer.elementClass;
-    return getSupportedValueRangeForElementClass(elementClass);
+    return getSegmentIdRangeForElementClass(elementClass);
   });
-
-  const isUint64SegmentationVisible = useWkSelector(hasVisibleUint64Segmentation);
 
   return (
     <React.Fragment>
@@ -460,14 +306,11 @@ function Infos() {
       {activeVolumeTracing != null && validSegmentIdRange != null ? (
         <span className="info-element">
           <NumberInputPopoverSetting
-            value={activeCellId}
-            label={maybeLabelWithSegmentationWarning(isUint64SegmentationVisible, "Active Segment")}
+            value={activeCellId ?? null}
+            label="Active Segment"
             min={validSegmentIdRange[0]}
             max={validSegmentIdRange[1]}
-            detailedLabel={maybeLabelWithSegmentationWarning(
-              isUint64SegmentationVisible,
-              "Change Active Segment ID",
-            )}
+            detailedLabel="Change Active Segment ID"
             onChange={onChangeActiveCellId}
           />
         </span>
@@ -553,11 +396,7 @@ function MagnificationInfo() {
 
   return (
     <span className="info-element">
-      <img
-        src="/assets/images/icon-statusbar-downsampling.svg"
-        className="mag-status-bar-icon"
-        alt="Magnification"
-      />{" "}
+      <Icon component={IconStatusbarDownsampling} aria-label="Magnification" />{" "}
       <FastTooltip dynamicRenderer={renderMagTooltipContent} placement="top">
         {representativeMag.join("-")}
         {isActiveMagGlobal ? "" : "*"}{" "}
@@ -592,8 +431,10 @@ function SegmentAndMousePosition() {
 function Statusbar() {
   return (
     <span className="statusbar">
+      <BorderToggleButton side="left" inFooter />
       <ShortcutsInfo />
       <Infos />
+      <BorderToggleButton side="right" inFooter />
     </span>
   );
 }

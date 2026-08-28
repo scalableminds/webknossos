@@ -1,18 +1,19 @@
 package com.scalableminds.webknossos.datastore.services.mesh
 
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.Full
 import com.scalableminds.webknossos.datastore.services.{
   BinaryDataServiceHolder,
   DSRemoteTracingstoreClient,
   DSRemoteWebknossosClient
 }
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId}
-import com.scalableminds.util.tools.Full
 
 import scala.concurrent.ExecutionContext
 
-trait MeshMappingHelper extends FoxImplicits {
+trait MeshMappingHelper {
 
   protected val dsRemoteWebknossosClient: DSRemoteWebknossosClient
   protected val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient
@@ -23,10 +24,11 @@ trait MeshMappingHelper extends FoxImplicits {
       dataLayer: DataLayer,
       targetMappingName: Option[String],
       editableMappingTracingId: Option[String],
+      annotationVersionOpt: Option[Long],
       agglomerateId: Long,
       mappingNameForMeshFile: Option[String],
       omitMissing: Boolean // If true, failing lookups in the agglomerate file will just return empty list.
-  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[Seq[Long]] =
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Seq[Long]] =
     (targetMappingName, editableMappingTracingId) match {
       case (None, None) =>
         // No mapping selected, assume id matches meshFile
@@ -51,17 +53,21 @@ trait MeshMappingHelper extends FoxImplicits {
         // use the mappingName (here the editable mapping’s base mapping) to look it up from file.
         for {
           tracingstoreUri <- dsRemoteWebknossosClient.getTracingstoreUri
-          segmentIdsResult <- dsRemoteTracingstoreClient.getEditableMappingSegmentIdsForAgglomerate(tracingstoreUri,
-                                                                                                    tracingId,
-                                                                                                    agglomerateId)
-          segmentIds <- if (segmentIdsResult.agglomerateIdIsPresent)
-            Fox.successful(segmentIdsResult.segmentIds)
-          else // the agglomerate id is not present in the editable mapping. Fetch its info from the base mapping.
-            for {
-              agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-              agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSourceId, dataLayer, mappingName)
-              localSegmentIds <- agglomerateService.segmentIdsForAgglomerateId(agglomerateFileKey, agglomerateId)
-            } yield localSegmentIds
+          segmentIdsResult <- dsRemoteTracingstoreClient.getEditableMappingSegmentIdsForAgglomerate(
+            tracingstoreUri,
+            tracingId,
+            annotationVersionOpt,
+            agglomerateId
+          )
+          segmentIds <-
+            if (segmentIdsResult.agglomerateIdIsPresent)
+              Fox.successful(segmentIdsResult.segmentIds.map(_.toLong))
+            else // the agglomerate id is not present in the editable mapping. Fetch its info from the base mapping.
+              for {
+                agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
+                agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSourceId, dataLayer, mappingName)
+                localSegmentIds <- agglomerateService.segmentIdsForAgglomerateId(agglomerateFileKey, agglomerateId)
+              } yield localSegmentIds
         } yield segmentIds
       case _ => Fox.failure("Cannot determine segment ids for editable mapping without base mapping")
     }

@@ -1,7 +1,7 @@
 import { map3 } from "libs/utils";
-import _ from "lodash";
+import once from "lodash-es/once";
 import messages from "messages";
-import type { Writeable } from "types/globals";
+import type { Writeable } from "types/type_utils";
 import type { BucketAddress, LabeledVoxelsMap, Vector3 } from "viewer/constants";
 import constants from "viewer/constants";
 import type { Bucket } from "viewer/model/bucket_data_handling/bucket";
@@ -41,7 +41,7 @@ function upsampleVoxelMap(
     thirdDimensionVoxelValue / targetMag[dimensionIndices[2]] / constants.BUCKET_WIDTH,
   );
 
-  const warnAboutCouldNotCreate = _.once((zoomedAddress) => {
+  const warnAboutCouldNotCreate = once((zoomedAddress) => {
     console.warn(messages["sampling.could_not_get_or_create_bucket"](zoomedAddress));
   });
 
@@ -170,7 +170,7 @@ function downsampleVoxelMap(
   const scaleToSource = map3((val, index) => val / sourceMag[index], targetMag);
   const scaleToGoal = map3((val, index) => val / targetMag[index], sourceMag);
 
-  const warnAboutCouldNotCreate = _.once((zoomedAddress) => {
+  const warnAboutCouldNotCreate = once((zoomedAddress) => {
     console.warn(messages["sampling.could_not_get_or_create_bucket"](zoomedAddress));
   });
 
@@ -304,13 +304,13 @@ export default function sampleVoxelMapToMagnification(
 export function applyVoxelMap(
   labeledVoxelMap: LabeledVoxelsMap,
   dataCube: DataCube,
-  segmentId: number,
+  segmentId: bigint,
   get3DAddress: (arg0: number, arg1: number, arg2: Vector3 | Float32Array) => void,
   numberOfSlicesToApply: number,
   thirdDimensionIndex: 0 | 1 | 2, // If shouldOverwrite is false, a voxel is only overwritten if
   // its old value is equal to overwritableValue.
   shouldOverwrite: boolean = true,
-  overwritableValue: number = 0,
+  overwritableValue: bigint = 0n,
 ): boolean {
   function preprocessBucket(bucket: Bucket) {
     if (bucket.type === "null") {

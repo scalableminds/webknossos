@@ -1,6 +1,6 @@
 import { UnitLong, UnitShort } from "viewer/constants";
 import { convertVoxelSizeToUnit } from "viewer/model/scaleinfo";
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 
 describe("Format Utils", () => {
   it("Test conversion of VoxelSize in unit to nm", () => {

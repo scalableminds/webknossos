@@ -1,20 +1,25 @@
 import Deferred from "libs/async/deferred";
 import type { Dispatch } from "redux";
 import { batchActions } from "redux-batched-actions";
-import type { BucketDataArray, ServerEditableMapping, ServerVolumeTracing } from "types/api_types";
-import type { AdditionalCoordinate } from "types/api_types";
+import type {
+  AdditionalCoordinate,
+  BucketDataArray,
+  ServerEditableMapping,
+  ServerVolumeTracing,
+} from "types/api_types";
 import type { ContourMode, OrthoView, Vector2, Vector3 } from "viewer/constants";
 import type { QuickSelectGeometry } from "viewer/geometries/helper_geometries";
 import { AllUserBoundingBoxActions } from "viewer/model/actions/annotation_actions";
-import type { NumberLike, Segment, SegmentGroup, SegmentMap } from "viewer/store";
+import type { Segment, SegmentGroup, SegmentMap } from "viewer/store";
 import type BucketSnapshot from "../bucket_data_handling/bucket_snapshot";
-import type { ApplicableVolumeUpdateAction } from "../sagas/volume/update_actions";
+import type { ApplicableVolumeServerUpdateAction } from "../sagas/volume/update_actions";
+import type { Action } from "./actions";
 
 export type InitializeVolumeTracingAction = ReturnType<typeof initializeVolumeTracingAction>;
 export type InitializeEditableMappingAction = ReturnType<typeof initializeEditableMappingAction>;
 export type CreateCellAction = ReturnType<typeof createCellAction>;
 type StartEditingAction = ReturnType<typeof startEditingAction>;
-type AddToLayerAction = ReturnType<typeof addToLayerAction>;
+type AddToContourListAction = ReturnType<typeof addToContourListAction>;
 export type FloodFillAction = ReturnType<typeof floodFillAction>;
 export type PerformMinCutAction = ReturnType<typeof performMinCutAction>;
 type FinishEditingAction = ReturnType<typeof finishEditingAction>;
@@ -25,8 +30,12 @@ export type SetHideUnregisteredSegmentsAction = ReturnType<
 // A simple "click segment" is dispatched when clicking
 // with the MOVE tool. Currently, this has the side-effect
 // of adding the clicked segment to the segment list (if one
-// exists and if it's not already there)
+// exists and if it's not already there). Additionally,
+// the parent groups are expanded in the sidebar.
 export type ClickSegmentAction = ReturnType<typeof clickSegmentAction>;
+export type UpdateProofreadingMarkerPositionAction = ReturnType<
+  typeof updateProofreadingMarkerPositionAction
+>;
 export type InterpolateSegmentationLayerAction = ReturnType<
   typeof interpolateSegmentationLayerAction
 >;
@@ -43,17 +52,21 @@ export type SetLargestSegmentIdAction = ReturnType<typeof setLargestSegmentIdAct
 export type SetSelectedSegmentsOrGroupAction = ReturnType<typeof setSelectedSegmentsOrGroupAction>;
 export type SetSegmentsAction = ReturnType<typeof setSegmentsAction>;
 export type UpdateSegmentAction = ReturnType<typeof updateSegmentAction>;
+export type MergeSegmentItemsAction = ReturnType<typeof mergeSegmentItemsAction>;
 export type RemoveSegmentAction = ReturnType<typeof removeSegmentAction>;
 export type DeleteSegmentDataAction = ReturnType<typeof deleteSegmentDataAction>;
 export type SetSegmentGroupsAction = ReturnType<typeof setSegmentGroupsAction>;
+export type AddSegmentGroupAction = ReturnType<typeof addSegmentGroupAction>;
 export type SetExpandedSegmentGroupsAction = ReturnType<typeof setExpandedSegmentGroupsAction>;
 export type ToggleSegmentGroupAction = ReturnType<typeof toggleSegmentGroupAction>;
 export type ToggleAllSegmentsAction = ReturnType<typeof toggleAllSegmentsAction>;
 export type SetHasEditableMappingAction = ReturnType<typeof setHasEditableMappingAction>;
 export type SetMappingIsLockedAction = ReturnType<typeof setMappingIsLockedAction>;
+export type SetHasSegmentIndexAction = ReturnType<typeof setHasSegmentIndexAction>;
 export type SetVolumeBucketDataHasChangedAction = ReturnType<
   typeof setVolumeBucketDataHasChangedAction
 >;
+
 export type ApplyVolumeUpdateActionsFromServerAction = ReturnType<
   typeof applyVolumeUpdateActionsFromServerAction
 >;
@@ -80,13 +93,14 @@ export type VolumeTracingAction =
   | InitializeVolumeTracingAction
   | CreateCellAction
   | StartEditingAction
-  | AddToLayerAction
+  | AddToContourListAction
   | FloodFillAction
   | PerformMinCutAction
   | FinishEditingAction
   | SetActiveCellAction
   | SetHideUnregisteredSegmentsAction
   | ClickSegmentAction
+  | UpdateProofreadingMarkerPositionAction
   | RegisterLabelPointAction
   | ResetContourAction
   | FinishAnnotationStrokeAction
@@ -96,9 +110,11 @@ export type VolumeTracingAction =
   | SetContourTracingModeAction
   | SetSegmentsAction
   | UpdateSegmentAction
+  | MergeSegmentItemsAction
   | RemoveSegmentAction
   | DeleteSegmentDataAction
   | SetSegmentGroupsAction
+  | AddSegmentGroupAction
   | SetExpandedSegmentGroupsAction
   | ToggleSegmentGroupAction
   | ToggleAllSegmentsAction
@@ -108,6 +124,7 @@ export type VolumeTracingAction =
   | SetSelectedSegmentsOrGroupAction
   | SetHasEditableMappingAction
   | SetMappingIsLockedAction
+  | SetHasSegmentIndexAction
   | InitializeEditableMappingAction
   | ComputeQuickSelectForRectAction
   | ComputeQuickSelectForPointAction
@@ -118,29 +135,30 @@ export type VolumeTracingAction =
   | BatchUpdateGroupsAndSegmentsAction
   | ApplyVolumeUpdateActionsFromServerAction;
 
-export const VolumeTracingSaveRelevantActions = [
+export const VolumeTracingSaveRelevantActions: Action["type"][] = [
   "CREATE_CELL",
   "SET_ACTIVE_CELL",
   "FINISH_ANNOTATION_STROKE",
   "UPDATE_SEGMENT",
   "SET_SEGMENT_GROUPS",
+  "ADD_SEGMENT_GROUP",
   "SET_EXPANDED_SEGMENT_GROUPS",
   "REMOVE_SEGMENT",
+  "MERGE_SEGMENTS_ITEMS",
   "SET_SEGMENTS",
   ...AllUserBoundingBoxActions,
-  // Note that the following three actions are defined in settings_actions.ts
+  // Note that the following four actions are defined in settings_actions.ts
   "SET_MAPPING",
+  "SET_MAPPING_DATA",
   "SET_MAPPING_ENABLED",
-  "FINISH_MAPPING_INITIALIZATION_ACTION",
+  "FINISH_MAPPING_INITIALIZATION",
   "BATCH_UPDATE_GROUPS_AND_SEGMENTS",
   "SET_HAS_EDITABLE_MAPPING",
   "SET_MAPPING_IS_LOCKED",
   "TOGGLE_SEGMENT_GROUP",
   "TOGGLE_ALL_SEGMENTS",
-  "SET_HIDE_UNREGISTERED_SEGMENTS",
+  "SET_VOLUME_BUCKET_DATA_HAS_CHANGED",
 ];
-
-export const VolumeTracingUndoRelevantActions = ["START_EDITING", "COPY_SEGMENTATION_LAYER"];
 
 export const initializeVolumeTracingAction = (tracing: ServerVolumeTracing) =>
   ({
@@ -159,34 +177,38 @@ export const initializeEditableMappingAction = (mapping: ServerEditableMapping) 
  * has dealt with the case where the maximum segment id is not set. In that case,
  * the create cell action should not be exposed via the UI.
  */
-export const createCellAction = (activeCellId: number, largestSegmentId: number) => {
+export const createCellAction = (activeCellId: bigint, largestSegmentId: bigint) => {
   // The largestSegmentId is only updated if a voxel using that id was annotated. Therefore, it can happen
   // that the activeCellId is larger than the largestSegmentId. Choose the larger of the two ids increased by one.
   const newSegmentId =
-    largestSegmentId && largestSegmentId > activeCellId ? largestSegmentId + 1 : activeCellId + 1;
+    largestSegmentId && largestSegmentId > activeCellId ? largestSegmentId + 1n : activeCellId + 1n;
   return {
     type: "CREATE_CELL",
     newSegmentId,
   } as const;
 };
 
-export const startEditingAction = (position: Vector3, planeId: OrthoView) =>
+export const startEditingAction = (positionInLayerSpace: Vector3, planeId: OrthoView) =>
   ({
     type: "START_EDITING",
-    position,
+    positionInLayerSpace,
     planeId,
   }) as const;
 
-export const addToLayerAction = (position: Vector3) =>
+export const addToContourListAction = (positionInLayerSpace: Vector3) =>
   ({
-    type: "ADD_TO_LAYER",
-    position,
+    type: "ADD_TO_CONTOUR_LIST",
+    positionInLayerSpace,
   }) as const;
 
-export const floodFillAction = (position: Vector3, planeId: OrthoView, callback?: () => void) =>
+export const floodFillAction = (
+  positionInLayerSpace: Vector3,
+  planeId: OrthoView,
+  callback?: () => void,
+) =>
   ({
     type: "FLOOD_FILL",
-    position,
+    positionInLayerSpace,
     planeId,
     callback,
   }) as const;
@@ -204,16 +226,16 @@ export const finishEditingAction = () =>
   }) as const;
 
 export const setActiveCellAction = (
-  segmentId: number,
-  somePosition?: Vector3, // in layer space
-  someAdditionalCoordinates?: AdditionalCoordinate[] | null,
-  activeUnmappedSegmentId?: number | null,
+  segmentId: bigint,
+  anchorPosition?: Vector3 | null, // in layer space
+  additionalCoordinates?: AdditionalCoordinate[] | null,
+  activeUnmappedSegmentId?: bigint | null,
 ) =>
   ({
     type: "SET_ACTIVE_CELL",
     segmentId,
-    somePosition,
-    someAdditionalCoordinates,
+    anchorPosition,
+    additionalCoordinates,
     activeUnmappedSegmentId,
   }) as const;
 
@@ -225,21 +247,31 @@ export const setHideUnregisteredSegmentsAction = (value: boolean, layerName?: st
   }) as const;
 
 export const clickSegmentAction = (
-  segmentId: number,
-  somePosition: Vector3,
-  someAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
+  segmentId: bigint,
+  anchorPosition: Vector3,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   layerName?: string,
 ) =>
   ({
     type: "CLICK_SEGMENT",
     segmentId,
-    somePosition,
-    someAdditionalCoordinates,
+    anchorPosition,
+    additionalCoordinates,
+    layerName,
+  }) as const;
+
+export const updateProofreadingMarkerPositionAction = (
+  position: Vector3 | undefined,
+  layerName: string,
+) =>
+  ({
+    type: "UPDATE_PROOFREADING_MARKER_POSITION",
+    position,
     layerName,
   }) as const;
 
 export const setSelectedSegmentsOrGroupAction = (
-  selectedSegments: number[],
+  selectedSegments: bigint[],
   selectedGroup: number | null,
   layerName: string,
 ) =>
@@ -258,19 +290,23 @@ export const setSegmentsAction = (segments: SegmentMap, layerName: string) =>
   }) as const;
 
 export const updateSegmentAction = (
-  segmentId: NumberLike,
+  segmentId: bigint,
   segment: Partial<Segment>,
   layerName: string,
   timestamp: number = Date.now(),
   createsNewUndoState: boolean = false,
 ) => {
+  /*
+   * Action to update properties of a segment item. This action
+   * can (and should) also be used to create a new segment item.
+   * There is no dedicated "createSegmentAction".
+   */
   if (segmentId == null) {
     throw new Error("Segment ID must not be null.");
   }
   return {
     type: "UPDATE_SEGMENT",
-    // TODO: Proper 64 bit support (#6921)
-    segmentId: Number(segmentId),
+    segmentId,
     segment,
     layerName,
     timestamp,
@@ -278,21 +314,38 @@ export const updateSegmentAction = (
   } as const;
 };
 
+export const mergeSegmentItemsAction = (
+  sourceAgglomerateId: bigint,
+  targetAgglomerateId: bigint,
+  sourceSegmentId: bigint,
+  targetSegmentId: bigint,
+  layerName: string,
+  timestamp: number = Date.now(),
+) =>
+  ({
+    type: "MERGE_SEGMENTS_ITEMS",
+    sourceAgglomerateId,
+    targetAgglomerateId,
+    sourceSegmentId,
+    targetSegmentId,
+    layerName,
+    timestamp,
+  }) as const;
+
 export const removeSegmentAction = (
-  segmentId: NumberLike,
+  segmentId: bigint,
   layerName: string,
   timestamp: number = Date.now(),
 ) =>
   ({
     type: "REMOVE_SEGMENT",
-    // TODO: Proper 64 bit support (#6921)
-    segmentId: Number(segmentId),
+    segmentId,
     layerName,
     timestamp,
   }) as const;
 
 export const deleteSegmentDataAction = (
-  segmentId: number,
+  segmentId: bigint,
   layerName: string,
   callback?: () => void,
   timestamp: number = Date.now(),
@@ -315,6 +368,20 @@ export const setSegmentGroupsAction = (
     segmentGroups,
     layerName,
     calledFromUndoSaga,
+  }) as const;
+
+export const addSegmentGroupAction = (
+  volumeTracingId: string,
+  id: number,
+  name: string | null = null,
+  parentGroupId: number | null = -1,
+) =>
+  ({
+    type: "ADD_SEGMENT_GROUP",
+    volumeTracingId,
+    id,
+    name,
+    parentGroupId,
   }) as const;
 
 export const setExpandedSegmentGroupsAction = (
@@ -391,7 +458,7 @@ export const importVolumeTracingAction = () =>
     type: "IMPORT_VOLUMETRACING",
   }) as const;
 
-export const setLargestSegmentIdAction = (segmentId: number) =>
+export const setLargestSegmentIdAction = (segmentId: bigint) =>
   ({
     type: "SET_LARGEST_SEGMENT_ID",
     segmentId,
@@ -399,11 +466,11 @@ export const setLargestSegmentIdAction = (segmentId: number) =>
 
 export const dispatchFloodfillAsync = async (
   dispatch: Dispatch<any>,
-  position: Vector3,
+  positionInLayerSpace: Vector3,
   planeId: OrthoView,
 ): Promise<void> => {
   const readyDeferred = new Deferred();
-  const action = floodFillAction(position, planeId, () => readyDeferred.resolve(null));
+  const action = floodFillAction(positionInLayerSpace, planeId, () => readyDeferred.resolve(null));
   dispatch(action);
   await readyDeferred.promise();
 };
@@ -417,6 +484,14 @@ export const setHasEditableMappingAction = (tracingId: string) =>
 export const setMappingIsLockedAction = (tracingId: string) =>
   ({
     type: "SET_MAPPING_IS_LOCKED",
+    tracingId,
+  }) as const;
+
+// Not save-relevant on purpose: addSegmentIndex is only ever produced by the backend
+// and can thus only be forwarded via live updating / in live collab.
+export const setHasSegmentIndexAction = (tracingId: string) =>
+  ({
+    type: "SET_HAS_SEGMENT_INDEX",
     tracingId,
   }) as const;
 
@@ -478,9 +553,11 @@ export const setVolumeBucketDataHasChangedAction = (tracingId: string) =>
   }) as const;
 
 export const applyVolumeUpdateActionsFromServerAction = (
-  actions: Array<ApplicableVolumeUpdateAction>,
+  actions: Array<ApplicableVolumeServerUpdateAction>,
+  ignoreUnsupportedActionTypes: boolean = false,
 ) =>
   ({
     type: "APPLY_VOLUME_UPDATE_ACTIONS_FROM_SERVER",
     actions,
+    ignoreUnsupportedActionTypes,
   }) as const;

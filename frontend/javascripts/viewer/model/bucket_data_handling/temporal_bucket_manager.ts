@@ -1,4 +1,4 @@
-import _ from "lodash";
+import without from "lodash-es/without";
 import type { DataBucket } from "viewer/model/bucket_data_handling/bucket";
 import type PullQueue from "viewer/model/bucket_data_handling/pullqueue";
 import type PushQueue from "viewer/model/bucket_data_handling/pushqueue";
@@ -38,10 +38,12 @@ class TemporalBucketManager {
           this.pushQueue.insert(bucket);
         }
 
-        this.loadedPromises = _.without(this.loadedPromises, loadedPromise);
+        this.loadedPromises = without(this.loadedPromises, loadedPromise);
         return resolve();
       };
 
+      // No "bucketRequestFailed" here: These buckets are dirty, so the pull queue retries
+      // them until the real backend data is read and merged (resolving as empty could lose data).
       bucket.on("bucketLoaded", onLoadedOrMissingHandler);
       bucket.on("bucketMissing", onLoadedOrMissingHandler);
     });

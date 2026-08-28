@@ -4,15 +4,17 @@ import {
   hasSegmentIndexInDataStoreCached,
   sendAnalyticsEvent,
 } from "admin/rest_api";
-import ThreeDMap from "libs/ThreeDMap";
 import ErrorHandling from "libs/error_handling";
 import { V3 } from "libs/mjs";
+import ThreeDMap from "libs/ThreeDMap";
 import Toast from "libs/toast";
 import { sleep } from "libs/utils";
-import _ from "lodash";
+import get from "lodash-es/get";
+import set from "lodash-es/set";
 import type { ActionPattern } from "redux-saga/effects";
 import { actionChannel, call, put, race, take, takeEvery } from "typed-redux-saga";
 import type { AdditionalCoordinate } from "types/api_types";
+import type { BigIntAsKey } from "types/type_utils";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Vector3 } from "viewer/constants";
 import { MappingStatusEnum } from "viewer/constants";
@@ -29,10 +31,10 @@ import {
 } from "viewer/model/accessors/volumetracing_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import {
-  type RefreshMeshAction,
-  type RemoveMeshAction,
   addAdHocMeshAction,
   finishedLoadingMeshAction,
+  type RefreshMeshAction,
+  type RemoveMeshAction,
   removeMeshAction,
   startedLoadingMeshAction,
 } from "viewer/model/actions/annotation_actions";
@@ -46,12 +48,13 @@ import type { LayerSourceInfo } from "viewer/model/bucket_data_handling/wkstore_
 import type DataLayer from "viewer/model/data_layer";
 import type { MagInfo } from "viewer/model/helpers/mag_info";
 import { zoomedAddressToAnotherZoomStepWithInfo } from "viewer/model/helpers/position_converter";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import { Model } from "viewer/singletons";
 import Store, { type StoreDataset, type VolumeTracing } from "viewer/store";
 import { getAdditionalCoordinatesAsString } from "../../accessors/flycam_accessor";
-import { ensureSceneControllerReady, ensureWkReady } from "../ready_sagas";
+import { ensureSceneControllerInitialized, ensureWkInitialized } from "../ready_sagas";
+import { acquireMeshWorker, releaseMeshWorker } from "./common_mesh_saga";
 
 const MAX_RETRY_COUNT = 5;
 const RETRY_WAIT_TIME = 5000;
@@ -61,28 +64,28 @@ const MESH_CHUNK_THROTTLE_DELAY = 500;
 // In order to avoid, that a huge amount of chunks is downloaded at full speed,
 // we artificially throttle the download speed after the first MESH_CHUNK_THROTTLE_LIMIT
 // requests for each segment.
-const batchCounterPerSegment: Record<number, number> = {};
+const batchCounterPerSegment: Record<BigIntAsKey, number> = {};
 const MESH_CHUNK_THROTTLE_LIMIT = 50;
 
 // Maps from additional coordinates, layerName and segmentId to a ThreeDMap that stores for each chunk
 // (at x, y, z) position whether the mesh chunk was loaded.
-const adhocMeshesMapByLayer: Record<string, Record<string, Map<number, ThreeDMap<boolean>>>> = {};
+const adhocMeshesMapByLayer: Record<string, Record<string, Map<bigint, ThreeDMap<boolean>>>> = {};
 
 function marchingCubeSizeInTargetMag(): Vector3 {
   return WkDevFlags.meshing.marchingCubeSizeInTargetMag;
 }
-const modifiedCells: Set<number> = new Set();
+const modifiedCells: Set<bigint> = new Set();
 
 function getOrAddMapForSegment(
   layerName: string,
-  segmentId: number,
+  segmentId: bigint,
   additionalCoordinates?: AdditionalCoordinate[] | null,
 ): ThreeDMap<boolean> {
   const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
 
   const keys = [additionalCoordKey, layerName];
   // create new map if adhocMeshesMapByLayer[additionalCoordinatesString][layerName] doesn't exist yet.
-  _.set(adhocMeshesMapByLayer, keys, _.get(adhocMeshesMapByLayer, keys, new Map()));
+  set(adhocMeshesMapByLayer, keys, get(adhocMeshesMapByLayer, keys, new Map()));
   const meshesMap = adhocMeshesMapByLayer[additionalCoordKey][layerName];
   const maybeMap = meshesMap.get(segmentId);
 
@@ -95,7 +98,7 @@ function getOrAddMapForSegment(
   return maybeMap;
 }
 
-export function* removeMesh(action: RemoveMeshAction, removeFromScene: boolean = true): Saga<void> {
+function* removeMesh(action: RemoveMeshAction, removeFromScene: boolean = true): Saga<void> {
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
   const { layerName } = action;
@@ -109,7 +112,7 @@ export function* removeMesh(action: RemoveMeshAction, removeFromScene: boolean =
 
 function removeMapForSegment(
   layerName: string,
-  segmentId: number,
+  segmentId: bigint,
   additionalCoordinateKey: string,
 ): void {
   if (
@@ -192,6 +195,7 @@ function* loadAdHocMeshFromAction(action: LoadAdHocMeshAction): Saga<void> {
     );
   } catch (exc) {
     Toast.error(`The mesh for segment ${action.segmentId} could not be loaded. Please try again.`);
+    console.log("Exception when loading ad-hoc mesh for segment", action.segmentId, ":", exc);
     ErrorHandling.notify(exc as any);
   }
 }
@@ -238,14 +242,14 @@ function* getInfoForMeshLoading(
 function* loadAdHocMesh(
   seedPosition: Vector3,
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
-  segmentId: number,
+  segmentId: bigint,
   removeExistingMesh: boolean = false,
   layerName: string,
   maybeExtraInfo?: AdHocMeshInfo,
 ): Saga<void> {
   const layer = Model.getLayerByName(layerName);
 
-  if (segmentId === 0) {
+  if (segmentId === 0n) {
     return;
   }
 
@@ -254,7 +258,7 @@ function* loadAdHocMesh(
   const meshExtraInfo = yield* call(getMeshExtraInfo, layer.name, maybeExtraInfo);
 
   const { zoomStep, magInfo } = yield* call(getInfoForMeshLoading, layer, meshExtraInfo);
-  batchCounterPerSegment[segmentId] = 0;
+  batchCounterPerSegment[segmentId.toString()] = 0;
 
   // If a REMOVE_MESH action is dispatched and consumed
   // here before loadFullAdHocMesh is finished, the latter saga
@@ -283,7 +287,7 @@ function* loadAdHocMesh(
 }
 
 function removeMeshWithoutVoxels(
-  segmentId: number,
+  segmentId: bigint,
   layerName: string,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
 ) {
@@ -316,7 +320,7 @@ function* getUsePositionsFromSegmentIndex(
 
 function* loadFullAdHocMesh(
   layer: DataLayer,
-  segmentId: number,
+  segmentId: bigint,
   position: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   zoomStep: number,
@@ -325,7 +329,7 @@ function* loadFullAdHocMesh(
   removeExistingMesh: boolean,
 ): Saga<void> {
   let isInitialRequest = true;
-  const { mappingName, mappingType, opacity } = meshExtraInfo;
+  const { mappingName, mappingType, opacity, isVisible } = meshExtraInfo;
   const clippedPosition = clipPositionToCubeBoundary(position, zoomStep, magInfo);
   yield* put(
     addAdHocMeshAction(
@@ -336,106 +340,117 @@ function* loadFullAdHocMesh(
       mappingName,
       mappingType,
       opacity,
+      isVisible,
     ),
   );
   yield* put(startedLoadingMeshAction(layer.name, segmentId));
 
-  const cubeSize = marchingCubeSizeInTargetMag();
-  const dataset = yield* select((state) => state.dataset);
-  const mag = magInfo.getMagByIndexOrThrow(zoomStep);
+  // Limit the number of segments meshed concurrently. Acquiring here (after the
+  // loading indicator is shown) means the UI reflects the pending load immediately.
+  yield call(acquireMeshWorker);
+  try {
+    const cubeSize = marchingCubeSizeInTargetMag();
+    const dataset = yield* select((state) => state.dataset);
+    const mag = magInfo.getMagByIndexOrThrow(zoomStep);
 
-  const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
-  const annotation = yield* select((state) => state.annotation);
-  const visibleSegmentationLayer = yield* select((state) => getVisibleSegmentationLayer(state));
-  if (visibleSegmentationLayer == null) {
-    throw new Error(
-      "Loading the ad-hoc mesh failed because the visible segmentation layer must not be null.",
+    const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
+    const annotation = yield* select((state) => state.annotation);
+    const visibleSegmentationLayer = yield* select((state) => getVisibleSegmentationLayer(state));
+    if (visibleSegmentationLayer == null) {
+      throw new Error(
+        "Loading the ad-hoc mesh failed because the visible segmentation layer must not be null.",
+      );
+    }
+    // Fetch from datastore if no volumetracing ...
+    let forceUsingDataStore = volumeTracing == null || visibleSegmentationLayer.tracingId == null;
+    if (meshExtraInfo.useDataStore != null) {
+      // ... except if the caller specified whether to use the data store ...
+      forceUsingDataStore = meshExtraInfo.useDataStore;
+    } else if (volumeTracing?.hasEditableMapping) {
+      // ... or if an editable mapping is active.
+      forceUsingDataStore = false;
+    }
+
+    // Segment stats can only be used for segmentation layers that have a segment index
+    // and that don't have editable mappings.
+    const usePositionsFromSegmentIndex = yield* call(
+      getUsePositionsFromSegmentIndex,
+      volumeTracing,
+      dataset,
+      layer.name,
+      visibleSegmentationLayer.tracingId,
     );
-  }
-  // Fetch from datastore if no volumetracing ...
-  let forceUsingDataStore = volumeTracing == null || visibleSegmentationLayer.tracingId == null;
-  if (meshExtraInfo.useDataStore != null) {
-    // ... except if the caller specified whether to use the data store ...
-    forceUsingDataStore = meshExtraInfo.useDataStore;
-  } else if (volumeTracing?.hasEditableMapping) {
-    // ... or if an editable mapping is active.
-    forceUsingDataStore = false;
-  }
 
-  // Segment stats can only be used for segmentation layers that have a segment index
-  // and that don't have editable mappings.
-  const usePositionsFromSegmentIndex = yield* call(
-    getUsePositionsFromSegmentIndex,
-    volumeTracing,
-    dataset,
-    layer.name,
-    visibleSegmentationLayer.tracingId,
-  );
+    const layerSourceInfo: LayerSourceInfo = {
+      dataset,
+      annotation,
+      tracingId: visibleSegmentationLayer.tracingId,
+      segmentationLayerName:
+        visibleSegmentationLayer.fallbackLayer ?? visibleSegmentationLayer.name,
+      useDataStore: forceUsingDataStore,
+    };
 
-  const layerSourceInfo: LayerSourceInfo = {
-    dataset,
-    annotation,
-    tracingId: visibleSegmentationLayer.tracingId,
-    segmentationLayerName: visibleSegmentationLayer.fallbackLayer ?? visibleSegmentationLayer.name,
-    useDataStore: forceUsingDataStore,
-  };
+    let positionsToRequest = usePositionsFromSegmentIndex
+      ? yield* getChunkPositionsFromSegmentIndex(
+          layerSourceInfo,
+          segmentId,
+          cubeSize,
+          mag,
+          clippedPosition,
+          additionalCoordinates,
+          mappingName,
+          annotation.version,
+        )
+      : [clippedPosition];
 
-  let positionsToRequest = usePositionsFromSegmentIndex
-    ? yield* getChunkPositionsFromSegmentIndex(
-        layerSourceInfo,
+    if (positionsToRequest.length === 0) {
+      //if no positions are requested, remove the mesh,
+      //so that the old one isn't displayed anymore
+      yield* put(removeMeshAction(layer.name, segmentId));
+    }
+    while (positionsToRequest.length > 0) {
+      const currentPosition = positionsToRequest.shift();
+      if (currentPosition == null) {
+        throw new Error("Satisfy typescript");
+      }
+      const neighbors = yield* call(
+        maybeLoadMeshChunk,
+        layer,
         segmentId,
-        cubeSize,
-        mag,
-        clippedPosition,
-        additionalCoordinates,
-        mappingName,
-      )
-    : [clippedPosition];
+        currentPosition,
+        zoomStep,
+        meshExtraInfo,
+        magInfo,
+        isInitialRequest,
+        removeExistingMesh && isInitialRequest,
+        layerSourceInfo,
+        !usePositionsFromSegmentIndex,
+      );
+      isInitialRequest = false;
 
-  if (positionsToRequest.length === 0) {
-    //if no positions are requested, remove the mesh,
-    //so that the old one isn't displayed anymore
-    yield* put(removeMeshAction(layer.name, segmentId));
-  }
-  while (positionsToRequest.length > 0) {
-    const currentPosition = positionsToRequest.shift();
-    if (currentPosition == null) {
-      throw new Error("Satisfy typescript");
+      // If we are using the positions from the segment index, the backend will
+      // send an empty neighbors array, as it's not necessary to have them.
+      if (usePositionsFromSegmentIndex && neighbors.length > 0) {
+        throw new Error("Retrieved neighbor positions even though these were not requested.");
+      }
+      positionsToRequest = positionsToRequest.concat(neighbors);
     }
-    const neighbors = yield* call(
-      maybeLoadMeshChunk,
-      layer,
-      segmentId,
-      currentPosition,
-      zoomStep,
-      meshExtraInfo,
-      magInfo,
-      isInitialRequest,
-      removeExistingMesh && isInitialRequest,
-      layerSourceInfo,
-      !usePositionsFromSegmentIndex,
-    );
-    isInitialRequest = false;
 
-    // If we are using the positions from the segment index, the backend will
-    // send an empty neighbors array, as it's not necessary to have them.
-    if (usePositionsFromSegmentIndex && neighbors.length > 0) {
-      throw new Error("Retrieved neighbor positions even though these were not requested.");
-    }
-    positionsToRequest = positionsToRequest.concat(neighbors);
+    yield* put(finishedLoadingMeshAction(layer.name, segmentId));
+  } finally {
+    yield* call(releaseMeshWorker);
   }
-
-  yield* put(finishedLoadingMeshAction(layer.name, segmentId));
 }
 
 function* getChunkPositionsFromSegmentIndex(
   layerSourceInfo: LayerSourceInfo,
-  segmentId: number,
+  segmentId: bigint,
   cubeSize: Vector3,
   mag: Vector3,
   clippedPosition: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
   mappingName: string | null | undefined,
+  tracingVersion: number,
 ) {
   const targetMagPositions = yield* call(
     getBucketPositionsForAdHocMesh,
@@ -445,18 +460,19 @@ function* getChunkPositionsFromSegmentIndex(
     mag,
     additionalCoordinates,
     mappingName,
+    tracingVersion,
   );
   const mag1Positions = targetMagPositions.map((pos) => V3.scale3(pos, mag));
   return sortByDistanceTo(mag1Positions, clippedPosition) as Vector3[];
 }
 
-function hasMeshChunkExceededThrottleLimit(segmentId: number): boolean {
-  return batchCounterPerSegment[segmentId] > MESH_CHUNK_THROTTLE_LIMIT;
+function hasMeshChunkExceededThrottleLimit(segmentId: bigint): boolean {
+  return batchCounterPerSegment[segmentId.toString()] > MESH_CHUNK_THROTTLE_LIMIT;
 }
 
 function* maybeLoadMeshChunk(
   layer: DataLayer,
-  segmentId: number,
+  segmentId: bigint,
   clippedPosition: Vector3,
   zoomStep: number,
   meshExtraInfo: AdHocMeshInfo,
@@ -467,13 +483,26 @@ function* maybeLoadMeshChunk(
   findNeighbors: boolean,
 ): Saga<Vector3[]> {
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
+  const annotationVersion = yield* select((state) => state.annotation.version);
   const threeDMap = getOrAddMapForSegment(layer.name, segmentId, additionalCoordinates);
   const mag = magInfo.getMagByIndexOrThrow(zoomStep);
-  const paddedPosition = V3.toArray(V3.sub(clippedPosition, mag));
-  const paddedPositionWithinLayer =
-    layer.cube.boundingBox.clipPositionIntoBoundingBox(paddedPosition);
 
-  if (threeDMap.get(paddedPositionWithinLayer)) {
+  /*
+  Both cube position and cubeSize are padded. This is to achieve two effects:
+  (1) An overlap of 1vx (target mag) is added between cubes to fill visible gaps in the
+      mesh chunk grid.
+  (2) Cubes directly at dataset layer borders should actually extend by 1vx (target mag)
+     *beyond* the layer border so that marchingCubes can add closing surfaces for segments
+     that touch the layer borders.
+  To achieve both, all positions are moved by 1vx towards topleft and all sizes increased by 1.
+  Additionally, cubes that touch a lower layer border are increased by 1 again in that direction.
+  Note that this process can result in negative positions at the topleft layer border.
+  This is expected and the backend will handle it, adding the closing surface.
+  */
+  const paddedPosition = V3.sub(clippedPosition, mag);
+  const paddedCubeSize = getPaddedCubeSizeInTargetMag(paddedPosition, mag, layer);
+
+  if (threeDMap.get(paddedPosition)) {
     return [];
   }
 
@@ -481,8 +510,8 @@ function* maybeLoadMeshChunk(
     yield* call(sleep, MESH_CHUNK_THROTTLE_DELAY);
   }
 
-  batchCounterPerSegment[segmentId]++;
-  threeDMap.set(paddedPositionWithinLayer, true);
+  batchCounterPerSegment[segmentId.toString()]++;
+  threeDMap.set(paddedPosition, true);
   const scaleFactor = yield* select((state) => state.dataset.dataSource.scale.factor);
 
   if (isInitialRequest) {
@@ -495,8 +524,6 @@ function* maybeLoadMeshChunk(
 
   const { segmentMeshController } = getSceneController();
 
-  const cubeSize = marchingCubeSizeInTargetMag();
-
   while (retryCount < MAX_RETRY_COUNT) {
     try {
       const { buffer: responseBuffer, neighbors } = yield* call(
@@ -506,13 +533,14 @@ function* maybeLoadMeshChunk(
         },
         layerSourceInfo,
         {
-          positionWithPadding: paddedPositionWithinLayer,
+          positionWithPadding: paddedPosition,
           additionalCoordinates: additionalCoordinates || undefined,
           mag,
           segmentId,
-          cubeSize,
+          cubeSize: paddedCubeSize,
           scaleFactor,
           findNeighbors,
+          annotationVersion,
           ...meshExtraInfo,
         },
       );
@@ -548,6 +576,29 @@ function* maybeLoadMeshChunk(
   }
 
   return [];
+}
+
+function getPaddedCubeSizeInTargetMag(
+  paddedPosition: Vector3,
+  mag: Vector3,
+  layer: DataLayer,
+): Vector3 {
+  let cubeSize = marchingCubeSizeInTargetMag();
+
+  // Always increase cubeSize by 1,1,1 to fill grid gaps
+  cubeSize = V3.add(cubeSize, [1, 1, 1]);
+
+  // If a cube precisely touches a lower layer border, increase its size in that direction
+  // by 1 again, to provide a closing surface on that layer border.
+  // Note that the paddedPosition already takes care of the upper layer borders
+  const cubeBottomRight = V3.add(paddedPosition, V3.scale3(cubeSize, mag));
+  const layerBottomRight = layer.cube.boundingBox.max;
+  for (let dimension = 0; dimension < 3; dimension++) {
+    if (cubeBottomRight[dimension] === layerBottomRight[dimension]) {
+      cubeSize[dimension] += 1;
+    }
+  }
+  return cubeSize;
 }
 
 function* markEditedCellAsDirty(): Saga<void> {
@@ -624,6 +675,7 @@ function* refreshMesh(action: RefreshMeshAction): Saga<void> {
         meshInfo.seedAdditionalCoordinates,
         meshInfo.meshFileName,
         meshInfo.opacity,
+        meshInfo.isVisible,
         layerName,
       ),
     );
@@ -645,7 +697,7 @@ function* refreshMesh(action: RefreshMeshAction): Saga<void> {
 }
 
 function* refreshMeshWithMap(
-  segmentId: number,
+  segmentId: bigint,
   threeDMap: ThreeDMap<boolean>,
   layerName: string,
   additionalCoordinates: AdditionalCoordinate[] | null,
@@ -698,11 +750,11 @@ function* refreshMeshWithMap(
 }
 
 export default function* adHocMeshSaga(): Saga<void> {
-  // Buffer actions since they might be dispatched before WK_READY
+  // Buffer actions since they might be dispatched before WK_INITIALIZED
   const loadAdHocMeshActionChannel = yield* actionChannel("LOAD_AD_HOC_MESH_ACTION");
 
-  yield* call(ensureSceneControllerReady);
-  yield* call(ensureWkReady);
+  yield* call(ensureSceneControllerInitialized);
+  yield* call(ensureWkInitialized);
   yield* takeEvery(loadAdHocMeshActionChannel, loadAdHocMeshFromAction);
   yield* takeEvery("REMOVE_MESH", removeMesh);
   yield* takeEvery("REFRESH_MESHES", refreshMeshes);

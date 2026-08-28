@@ -1,6 +1,7 @@
 package models.annotation
 
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import models.annotation.AnnotationType.AnnotationType
 import com.scalableminds.util.objectid.ObjectId
 
@@ -13,7 +14,7 @@ case class AnnotationIdentifier(annotationType: AnnotationType, identifier: Obje
 
 }
 
-object AnnotationIdentifier extends FoxImplicits {
+object AnnotationIdentifier {
 
   def parse(typ: String, id: ObjectId)(implicit ec: ExecutionContext): Fox[AnnotationIdentifier] =
     for {

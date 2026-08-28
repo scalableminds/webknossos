@@ -4,7 +4,7 @@ import { OrthoViews, type Vector3 } from "viewer/constants";
 import { getLayerByName } from "viewer/model/accessors/dataset_accessor";
 import type { ClipHistogramAction } from "viewer/model/actions/settings_actions";
 import { updateLayerSettingAction } from "viewer/model/actions/settings_actions";
-import type { Saga } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
 import { api } from "viewer/singletons";
 import Store from "viewer/store";
 import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
@@ -54,11 +54,11 @@ async function getClippingValues(
     ]);
     dataForAllViewPorts = new TypedArrayClass(cuboidXY.length + cuboidXZ.length + cuboidYZ.length);
     // If getViewportData returned a BigUint array, dataForAllViewPorts will be an BigUint array, too.
-    // @ts-ignore
+    // @ts-expect-error
     dataForAllViewPorts.set(cuboidXY);
-    // @ts-ignore
+    // @ts-expect-error
     dataForAllViewPorts.set(cuboidXZ, cuboidXY.length);
-    // @ts-ignore
+    // @ts-expect-error
     dataForAllViewPorts.set(cuboidYZ, cuboidXY.length + cuboidXZ.length);
   } catch (exception) {
     console.error("Could not clip histogram due to", exception);

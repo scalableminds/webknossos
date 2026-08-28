@@ -1,10 +1,11 @@
 import { V3 } from "libs/mjs";
 import { values } from "libs/utils";
-import _ from "lodash";
+import min from "lodash-es/min";
+import pick from "lodash-es/pick";
 import { Euler, Matrix4, Scene, Vector3 as ThreeVector3 } from "three";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { OrthoView, Point2, Vector3, Viewport } from "viewer/constants";
-import { OrthoBaseRotations, OrthoViewToNumber, OrthoViews } from "viewer/constants";
+import { OrthoBaseRotations, OrthoViews, OrthoViewToNumber } from "viewer/constants";
 import { getClosestHoveredBoundingBox } from "viewer/controller/combinations/bounding_box_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { getEnabledColorLayers } from "viewer/model/accessors/dataset_accessor";
@@ -23,13 +24,14 @@ import {
   getSkeletonTracing,
   getTreeAndNode,
   getTreeAndNodeOrNull,
+  isSkeletonSectionClippingActive,
   untransformNodePosition,
 } from "viewer/model/accessors/skeletontracing_accessor";
 import {
-  type PositionWithRounding,
   calculateGlobalPos,
   calculateMaybeGlobalPos,
   getInputCatcherRect,
+  type PositionWithRounding,
 } from "viewer/model/accessors/view_mode_accessor";
 import { setDirectionAction } from "viewer/model/actions/flycam_actions";
 import {
@@ -48,46 +50,52 @@ import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import type { Edge, Node, Tree } from "viewer/model/types/tree_types";
 import { api } from "viewer/singletons";
 import Store from "viewer/store";
-import type ArbitraryView from "viewer/view/arbitrary_view";
+import type FlightModeView from "viewer/view/arbitrary_view";
 import type PlaneView from "viewer/view/plane_view";
 import { renderToTexture } from "viewer/view/rendering_utils";
 
 export function handleMergeTrees(
-  view: PlaneView | ArbitraryView,
+  view: PlaneView | FlightModeView,
   position: Point2,
   plane: Viewport,
   isTouch: boolean,
 ) {
   const nodeId = maybeGetNodeIdFromPosition(view, position, plane, isTouch);
-  const skeletonTracing = enforceSkeletonTracing(Store.getState().annotation);
 
   // otherwise we have hit the background and do nothing
   if (nodeId != null && nodeId > 0) {
-    const activeNode = getActiveNode(skeletonTracing);
+    const state = Store.getState();
+    const activeNode = getActiveNode(
+      state.annotation.skeleton,
+      state.localSkeletonState.activeTreeId,
+    );
     if (activeNode) {
       Store.dispatch(mergeTreesAction(activeNode.id, nodeId));
     }
   }
 }
 export function handleDeleteEdge(
-  view: PlaneView | ArbitraryView,
+  view: PlaneView | FlightModeView,
   position: Point2,
   plane: Viewport,
   isTouch: boolean,
 ) {
   const nodeId = maybeGetNodeIdFromPosition(view, position, plane, isTouch);
-  const skeletonTracing = enforceSkeletonTracing(Store.getState().annotation);
 
   // otherwise we have hit the background and do nothing
   if (nodeId != null && nodeId > 0) {
-    const activeNode = getActiveNode(skeletonTracing);
+    const state = Store.getState();
+    const activeNode = getActiveNode(
+      state.annotation.skeleton,
+      state.localSkeletonState.activeTreeId,
+    );
     if (activeNode) {
       Store.dispatch(deleteEdgeAction(activeNode.id, nodeId));
     }
   }
 }
 export function handleSelectNode(
-  view: PlaneView | ArbitraryView,
+  view: PlaneView | FlightModeView,
   position: Point2,
   plane: Viewport,
   isTouch: boolean,
@@ -132,9 +140,9 @@ export function handleOpenContextMenu(
   plane: OrthoView,
   isTouch: boolean,
   event: MouseEvent,
-  meshId?: number | null | undefined,
+  meshId?: bigint | null | undefined,
   meshIntersectionPosition?: Vector3 | null | undefined,
-  unmappedSegmentId?: number | null | undefined,
+  unmappedSegmentId?: bigint | null | undefined,
 ) {
   const state = Store.getState();
   const { activeViewport } = state.viewModeData.plane;
@@ -189,7 +197,11 @@ export function moveNode(
   const skeletonTracing = getSkeletonTracing(state.annotation);
   if (!skeletonTracing) return;
 
-  const treeAndNode = getTreeAndNode(skeletonTracing, nodeId);
+  const treeAndNode = getTreeAndNode(
+    skeletonTracing,
+    state.localSkeletonState.activeTreeId,
+    nodeId,
+  );
   if (!treeAndNode) return;
 
   const [activeTree, activeNode] = treeAndNode;
@@ -238,10 +250,15 @@ export function moveNode(
 }
 
 export function finishNodeMovement(nodeId: number) {
-  const skeletonTracing = getSkeletonTracing(Store.getState().annotation);
+  const state = Store.getState();
+  const skeletonTracing = getSkeletonTracing(state.annotation);
   if (!skeletonTracing) return;
 
-  const treeAndNode = getTreeAndNode(skeletonTracing, nodeId);
+  const treeAndNode = getTreeAndNode(
+    skeletonTracing,
+    state.localSkeletonState.activeTreeId,
+    nodeId,
+  );
   if (!treeAndNode) return;
 
   const [activeTree, node] = treeAndNode;
@@ -293,8 +310,10 @@ export function getOptionsForCreateSkeletonNode(
 ) {
   const state = Store.getState();
   const additionalCoordinates = state.flycam.additionalCoordinates;
-  const skeletonTracing = enforceSkeletonTracing(state.annotation);
-  const activeNode = getActiveNode(skeletonTracing);
+  const activeNode = getActiveNode(
+    state.annotation.skeleton,
+    state.localSkeletonState.activeTreeId,
+  );
   const initialViewportRotation =
     OrthoBaseRotations[activeViewport || state.viewModeData.plane.activeViewport];
   const rotationInDegree = getFlycamRotationWithAppendedRotation(
@@ -338,12 +357,12 @@ export function createSkeletonNode(
   let state = Store.getState();
   const enabledColorLayers = getEnabledColorLayers(state.dataset, state.datasetConfiguration);
   const activeMagIndices = getActiveMagIndicesForLayers(state);
-  const activeMagIndicesOfEnabledColorLayers = _.pick(
+  const activeMagIndicesOfEnabledColorLayers = pick(
     activeMagIndices,
     enabledColorLayers.map((l) => l.name),
   );
   const finestMagIdx =
-    _.min(values(activeMagIndicesOfEnabledColorLayers)) || _.min(values(activeMagIndices)) || 0;
+    min(values(activeMagIndicesOfEnabledColorLayers)) || min(values(activeMagIndices)) || 0;
 
   Store.dispatch(
     createNodeAction(
@@ -369,10 +388,20 @@ export function createSkeletonNode(
     // Note that the new node isn't necessarily active
     const newNodeId = newSkeleton.cachedMaxNodeId;
 
-    const treeAndNode = getTreeAndNode(newSkeleton, newNodeId, newSkeleton.activeTreeId);
+    const treeAndNode = getTreeAndNode(
+      newSkeleton,
+      null,
+      newNodeId,
+      state.localSkeletonState.activeTreeId,
+    );
     if (!treeAndNode) return;
 
-    api.tracing.centerPositionAnimated(position.floating, skipCenteringAnimationInThirdDimension);
+    api.tracing.centerPositionAnimated(
+      position.floating,
+      skipCenteringAnimationInThirdDimension,
+      undefined,
+      true,
+    );
   }
 
   if (branchpoint) {
@@ -381,8 +410,11 @@ export function createSkeletonNode(
 }
 
 function updateTraceDirection(position: Vector3) {
-  const skeletonTracing = enforceSkeletonTracing(Store.getState().annotation);
-  const activeNode = getActiveNode(skeletonTracing);
+  const state = Store.getState();
+  const activeNode = getActiveNode(
+    state.annotation.skeleton,
+    state.localSkeletonState.activeTreeId,
+  );
   if (activeNode != null) {
     const activeNodePosition = getNodePosition(activeNode, Store.getState());
     return Store.dispatch(
@@ -402,7 +434,7 @@ export function moveAlongDirection(reverse: boolean = false): void {
   api.tracing.centerPositionAnimated(newPosition, false);
 }
 export function maybeGetNodeIdFromPosition(
-  planeView: PlaneView | ArbitraryView,
+  planeView: PlaneView | FlightModeView,
   position: Point2,
   plane: Viewport,
   isTouch: boolean,
@@ -411,7 +443,7 @@ export function maybeGetNodeIdFromPosition(
   const { skeletons } = SceneController;
 
   // Unfortunately, we cannot import the Skeleton class here to set the correct type, due to cyclic dependencies
-  const skeletonsWhichSupportPicking = _.values(skeletons).filter(
+  const skeletonsWhichSupportPicking = values(skeletons).filter(
     (skeleton) => skeleton.supportsPicking,
   );
 
@@ -425,11 +457,22 @@ export function maybeGetNodeIdFromPosition(
   // render the clicked viewport with picking enabled
   // we need a dedicated pickingScene, since we only want to render all nodes and no planes / bounding box / edges etc.
   const pickingNode = skeleton.startPicking(isTouch);
+  // Replicate the section clipping used during normal rendering so that nodes which
+  // are culled to the current section cannot be picked (the dedicated picking scene
+  // does not go through SceneController.updateSceneForCam).
+  const pickingState = Store.getState();
+  const clippingAxis =
+    isSkeletonSectionClippingActive(pickingState) &&
+    plane !== OrthoViews.TDView &&
+    plane !== "flightViewport"
+      ? Dimensions.getIndices(plane)[2]
+      : -1;
+  skeleton.setSectionClippingUniforms(clippingAxis, getPosition(pickingState.flycam));
   const pickingScene = new Scene();
   pickingScene.add(pickingNode);
   const camera = planeView.getCameraForPlane(plane);
 
-  let { width, height } = getInputCatcherRect(Store.getState(), plane);
+  let { width, height } = getInputCatcherRect(pickingState, plane);
   width = Math.round(width);
   height = Math.round(height);
   const buffer = renderToTexture(plane, pickingScene, camera, true);
@@ -477,8 +520,13 @@ function getPrecedingNodeFromTree(
 }
 
 export function toSubsequentNode(): void {
-  const tracing = enforceSkeletonTracing(Store.getState().annotation);
-  const { navigationList, activeNodeId, activeTreeId } = tracing;
+  const state = Store.getState();
+  const tracing = getSkeletonTracing(state.annotation);
+  if (!tracing) {
+    return;
+  }
+  const { navigationList, activeTreeId } = state.localSkeletonState;
+  const { activeNodeId } = tracing;
   if (activeNodeId == null) return;
   const isValidList =
     activeNodeId === navigationList.list[navigationList.activeIndex] && navigationList.list.length;
@@ -495,7 +543,7 @@ export function toSubsequentNode(): void {
     Store.dispatch(updateNavigationListAction(navigationList.list, navigationList.activeIndex + 1));
   } else {
     // search for subsequent node in tree
-    const { tree, node } = getTreeAndNodeOrNull(tracing, activeNodeId, activeTreeId);
+    const { tree, node } = getTreeAndNodeOrNull(state, activeNodeId, activeTreeId);
     if (!tree || !node) return;
     const nextNodeId = getSubsequentNodeFromTree(
       tree,
@@ -513,8 +561,13 @@ export function toSubsequentNode(): void {
   }
 }
 export function toPrecedingNode(): void {
-  const tracing = enforceSkeletonTracing(Store.getState().annotation);
-  const { navigationList, activeNodeId, activeTreeId } = tracing;
+  const state = Store.getState();
+  const tracing = getSkeletonTracing(state.annotation);
+  if (!tracing) {
+    return;
+  }
+  const { navigationList, activeTreeId } = state.localSkeletonState;
+  const { activeNodeId } = tracing;
   if (activeNodeId == null) return;
   const isValidList =
     activeNodeId === navigationList.list[navigationList.activeIndex] && navigationList.list.length;
@@ -525,7 +578,7 @@ export function toPrecedingNode(): void {
     Store.dispatch(updateNavigationListAction(navigationList.list, navigationList.activeIndex - 1));
   } else {
     // search for preceding node in tree
-    const { tree, node } = getTreeAndNodeOrNull(tracing, activeNodeId, activeTreeId);
+    const { tree, node } = getTreeAndNodeOrNull(state, activeNodeId, activeTreeId);
     if (!tree || !node) return;
     const nextNodeId = getPrecedingNodeFromTree(
       tree,

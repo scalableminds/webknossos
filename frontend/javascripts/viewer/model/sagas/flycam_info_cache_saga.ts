@@ -1,16 +1,15 @@
-import _ from "lodash";
+import memoize from "lodash-es/memoize";
 import memoizeOne from "memoize-one";
 import type { Matrix4x4 } from "mjs";
 import { buffers } from "redux-saga";
 import { actionChannel, put } from "typed-redux-saga";
 import type { OrthoViewRects, Vector3, ViewMode } from "viewer/constants";
 import constants from "viewer/constants";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { call, select, take } from "viewer/model/sagas/effect-generators";
-import type { WebknossosState } from "viewer/store";
-import type { LoadingStrategy } from "viewer/store";
-import AsyncGetMaximumZoomForAllMags from "viewer/workers/async_get_maximum_zoom_for_all_mags.worker";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { call, select, take } from "viewer/model/sagas/effect_generators";
+import type { LoadingStrategy, WebknossosState } from "viewer/store";
 import { createWorker } from "viewer/workers/comlink_wrapper";
+import type AsyncGetMaximumZoomForAllMags from "../../workers/async_get_maximum_zoom_for_all_mags.worker";
 import { getDataLayers, getMagInfo } from "../accessors/dataset_accessor";
 import {
   getTransformsForLayer,
@@ -20,11 +19,13 @@ import { _getDummyFlycamMatrix } from "../accessors/flycam_accessor";
 import { getViewportRects } from "../accessors/view_mode_accessor";
 import type { Action } from "../actions/actions";
 import { setMaximumZoomForAllMagsForLayerAction } from "../actions/flycam_info_cache_actions";
-import { ensureWkReady } from "./ready_sagas";
+import { ensureWkInitialized } from "./ready_sagas";
 
-const asyncGetMaximumZoomForAllMags = createWorker(AsyncGetMaximumZoomForAllMags);
+const asyncGetMaximumZoomForAllMags = createWorker<typeof AsyncGetMaximumZoomForAllMags>(
+  "async_get_maximum_zoom_for_all_mags.worker.ts",
+);
 
-const getComputeFunction = _.memoize((_layerName: string) => {
+const getComputeFunction = memoize((_layerName: string) => {
   // The argument _layerName is not used in this function, but
   // we want to have one memoized function per layer name which
   // is why the argument is still needed.
@@ -63,7 +64,7 @@ export default function* maintainMaximumZoomForAllMagsSaga(): Saga<void> {
   // would still complete its computation and the result value
   // can still be useful because the next computation
   // might be able to use the memoization result).
-  const channel = yield actionChannel(
+  const channel = yield* actionChannel(
     [
       // These actions *might* affect the values of the parameters
       // that are given to getZoomLevelsFn. If they don't affect the
@@ -79,7 +80,7 @@ export default function* maintainMaximumZoomForAllMagsSaga(): Saga<void> {
     buffers.sliding<Action>(1),
   );
 
-  yield* call(ensureWkReady);
+  yield* call(ensureWkInitialized);
   while (true) {
     yield* take(channel);
     const state: WebknossosState = yield* select((state) => state);
@@ -100,7 +101,7 @@ export default function* maintainMaximumZoomForAllMagsSaga(): Saga<void> {
         ).affineMatrix,
       );
 
-      const dummyFlycamMatrix = _getDummyFlycamMatrix(state.dataset.dataSource.scale.factor);
+      const dummyFlycamMatrix = _getDummyFlycamMatrix(state.dataset.dataSource.scale);
 
       const zoomLevels = yield* call(
         getZoomLevelsFn,
@@ -119,7 +120,7 @@ export default function* maintainMaximumZoomForAllMagsSaga(): Saga<void> {
         // to be recalculate on each move. At least, for orthogonal mode, the actual matrix
         // should only differ in its translation which can be ignored for gauging the maximum
         // zoom here.
-        // However, for oblique and flight mode this is not really accurate. As a heuristic,
+        // However, for flight mode this is not really accurate. As a heuristic,
         // this already proved to be fine, though.
         dummyFlycamMatrix,
       );

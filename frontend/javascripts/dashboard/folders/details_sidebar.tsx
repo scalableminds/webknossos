@@ -1,27 +1,33 @@
 import {
-  CopyOutlined,
+  DeleteOutlined,
   EditOutlined,
   FileOutlined,
   FolderOpenOutlined,
   LoadingOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
-import { useQuery } from "@tanstack/react-query";
-import { getOrganization } from "admin/rest_api";
-import { Result, Spin, Tag, Tooltip } from "antd";
-import { formatCountToDataAmountUnit, stringToColor } from "libs/format_utils";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { getOrganization } from "admin/api/organization";
+import { deleteDatasetOnDisk } from "admin/rest_api";
+import { Button, Modal, Progress, Result, Space, Spin, Tag, Tooltip, Typography } from "antd";
+import FormattedId from "components/formatted_id";
+import features from "features";
+import { stringToTagColor } from "libs/colors";
+import { formatCountToDataAmountUnit } from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { pluralize } from "libs/utils";
-import _ from "lodash";
-import { useEffect } from "react";
+import keyBy from "lodash-es/keyBy";
+import uniq from "lodash-es/uniq";
+import { useEffect, useState } from "react";
 import type { APIDatasetCompact, Folder } from "types/api_types";
+import Constants from "viewer/constants";
 import {
   DatasetExtentRow,
   OwningOrganizationRow,
   VoxelSizeRow,
-} from "viewer/view/right-border-tabs/dataset_info_tab_view";
+} from "viewer/view/right_border_tabs/dataset_info_tab_view";
 import { DatasetLayerTags, DatasetTags, TeamTags } from "../advanced_dataset/dataset_table";
 import { useDatasetCollectionContext } from "../dataset/dataset_collection_context";
 import { SEARCH_RESULTS_LIMIT, useDatasetQuery, useFolderQuery } from "../dataset/queries";
@@ -35,7 +41,6 @@ export function DetailsSidebar({
   // The folder ID to display details for. This can be the active folder selected in the tree view
   // or a selected subfolder in the dataset table.
   folderId,
-  setFolderIdForEditModal,
   displayedFolderEqualsActiveFolder,
 }: {
   selectedDatasets: APIDatasetCompact[];
@@ -43,7 +48,6 @@ export function DetailsSidebar({
   folderId: string | null;
   datasetCount: number;
   searchQuery: string | null;
-  setFolderIdForEditModal: (value: string | null) => void;
   displayedFolderEqualsActiveFolder: boolean;
 }) {
   const context = useDatasetCollectionContext();
@@ -64,7 +68,9 @@ export function DetailsSidebar({
   }, [selectedDatasets, context.activeFolderId]);
 
   return (
-    <div style={{ width: 300, padding: 16 }}>
+    <div
+      style={{ width: 300, padding: 16, position: "sticky", top: Constants.DEFAULT_NAVBAR_HEIGHT }}
+    >
       {selectedDatasets.length === 1 ? (
         <DatasetDetails selectedDataset={selectedDatasets[0]} />
       ) : selectedDatasets.length > 1 ? (
@@ -76,7 +82,6 @@ export function DetailsSidebar({
           folderId={folderId}
           folder={folder}
           datasetCount={datasetCount}
-          setFolderIdForEditModal={setFolderIdForEditModal}
           error={error}
           displayedFolderEqualsActiveFolder={displayedFolderEqualsActiveFolder}
         />
@@ -115,14 +120,14 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
 
   return (
     <>
-      <h4 style={{ wordBreak: "break-all" }}>
+      <Typography.Title level={4} style={{ wordBreak: "break-all" }}>
         {isFetching ? (
           <LoadingOutlined style={{ marginRight: 4 }} />
         ) : (
           <FileOutlined style={{ marginRight: 4 }} />
         )}{" "}
         {selectedDataset.name}
-      </h4>
+      </Typography.Title>
       {renderOrganization()}
       <Spin spinning={fullDataset == null}>
         {selectedDataset.isActive && (
@@ -163,10 +168,17 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
           {fullDataset && <DatasetLayerTags dataset={fullDataset} />}
         </div>
 
+        {fullDataset?.uploaderFullName != null && (
+          <div style={{ marginBottom: 4 }}>
+            <div className="sidebar-label">Uploaded By</div>
+            <div>{fullDataset.uploaderFullName}</div>
+          </div>
+        )}
+
         <div style={{ marginBottom: 4 }}>
           <div className="sidebar-label">Datastore</div>
           {fullDataset && (
-            <Tag color={stringToColor(fullDataset.dataStore.name)}>
+            <Tag color={stringToTagColor(fullDataset.dataStore.name)} variant="outlined">
               {fullDataset.dataStore.name}
             </Tag>
           )}
@@ -175,16 +187,8 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
         <div style={{ marginBottom: 4 }}>
           <div className="sidebar-label">ID</div>
           {fullDataset && (
-            <Tag>
-              {fullDataset.id.substring(0, 10)}...{" "}
-              <Tooltip title="Copy Dataset ID">
-                <CopyOutlined
-                  onClick={() => {
-                    navigator.clipboard.writeText(fullDataset.id);
-                    Toast.success("Dataset ID copied.");
-                  }}
-                />
-              </Tooltip>
+            <Tag variant="outlined">
+              <FormattedId id={fullDataset.id} />
             </Tag>
           )}
         </div>
@@ -223,10 +227,127 @@ function DatasetsDetails({
   selectedDatasets: APIDatasetCompact[];
   datasetCount: number;
 }) {
+  const queryClient = useQueryClient();
+  const [progressInPercent, setProgressInPercent] = useState(0);
+  const [showConfirmDeleteModal, setShowConfirmDeleteModal] = useState(false);
+  const deletableDatasets = selectedDatasets.filter((ds) => ds.isEditable);
+  const numberOfUndeletableDatasets = selectedDatasets.length - deletableDatasets.length;
+
+  const updateAndInvalidateQueries = (deletedIds: string[]) => {
+    const uniqueFolderIds = uniq(deletableDatasets.map((ds) => ds.folderId));
+    uniqueFolderIds.forEach((folderId) => {
+      queryClient.setQueryData(
+        ["datasetsByFolder", folderId],
+        (oldItems: APIDatasetCompact[] | undefined) => {
+          if (oldItems == null) {
+            return oldItems;
+          }
+          return oldItems.filter((item) => !deletedIds.includes(item.id));
+        },
+      );
+    });
+    queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
+  };
+
+  const deleteDatasetsMutation = useMutation({
+    mutationFn: async (datasets: APIDatasetCompact[]) => {
+      const deletedIds: string[] = [];
+      for (let i = 0; i < datasets.length; i++) {
+        const dataset = datasets[i];
+        try {
+          await deleteDatasetOnDisk(dataset.id);
+          deletedIds.push(dataset.id);
+          setProgressInPercent(Math.round(((i + 1) / datasets.length) * 100));
+        } catch (_e) {
+          Toast.error(`Failed to delete dataset ${dataset.name}.`);
+        }
+      }
+      return deletedIds;
+    },
+    onSuccess: (deletedIds) => {
+      updateAndInvalidateQueries(deletedIds);
+      setShowConfirmDeleteModal(false);
+      setProgressInPercent(0);
+
+      if (deletedIds.length > 0) {
+        Toast.success(
+          `Successfully deleted ${deletedIds.length} ${pluralize("dataset", deletedIds.length)}.`,
+        );
+      }
+    },
+  });
+
+  const deleteDatasets = () => {
+    deleteDatasetsMutation.mutate(deletableDatasets);
+  };
+
+  const okayButton = (
+    <Button type="primary" danger onClick={deleteDatasets}>
+      Delete
+    </Button>
+  );
+
+  const onCancel = () => {
+    if (!deleteDatasetsMutation.isPending) {
+      setShowConfirmDeleteModal(false);
+    }
+  };
+
+  const cancelButton = <Button onClick={onCancel}>Cancel</Button>;
+
+  // TODO (#9061): Delete once soft-delete is implemented.
+  const cantBeUndoneMessage = (
+    <Typography.Text type="warning" strong>
+      This action cannot be undone.
+    </Typography.Text>
+  );
+
+  const deletableDatasetString = `${deletableDatasets.length} ${pluralize("dataset", deletableDatasets.length)}`;
+
+  const confirmModal = (
+    <Modal
+      open={showConfirmDeleteModal}
+      title="Delete Datasets"
+      footer={deleteDatasetsMutation.isPending ? null : [cancelButton, okayButton]}
+      onCancel={onCancel}
+    >
+      {deleteDatasetsMutation.isPending ? (
+        <Progress percent={progressInPercent} />
+      ) : (
+        <>
+          Are you sure you want to delete the following {deletableDatasetString}?
+          <ul>
+            {deletableDatasets.map((dataset) => (
+              <li key={dataset.id}>{dataset.name}</li>
+            ))}
+          </ul>
+          {numberOfUndeletableDatasets > 0 && (
+            <div>
+              The remaining {numberOfUndeletableDatasets} selected{" "}
+              {pluralize("dataset", numberOfUndeletableDatasets)} cannot be deleted, e.g. because
+              you do not have sufficient permissions.
+            </div>
+          )}
+          {cantBeUndoneMessage}
+        </>
+      )}
+    </Modal>
+  );
+
   return (
     <div style={{ textAlign: "center" }}>
-      Selected {selectedDatasets.length} of {datasetCount} datasets. Move them to another folder
-      with drag and drop.
+      <Space orientation="vertical" size="large">
+        <div>
+          Selected {selectedDatasets.length} of {datasetCount} datasets. Move them to another folder
+          with drag and drop.
+        </div>
+        {deletableDatasets.length > 0 && features().allowDeleteDatasets && (
+          <Button onClick={() => setShowConfirmDeleteModal(true)} icon={<DeleteOutlined />}>
+            Delete {deletableDatasetString}
+          </Button>
+        )}
+      </Space>
+      {confirmModal}
     </div>
   );
 }
@@ -255,17 +376,16 @@ function FolderDetails({
   folderId,
   folder,
   datasetCount,
-  setFolderIdForEditModal,
   error,
   displayedFolderEqualsActiveFolder,
 }: {
   folderId: string | null;
   folder: Folder | undefined;
   datasetCount: number;
-  setFolderIdForEditModal: (id: string | null) => void;
   error: unknown;
   displayedFolderEqualsActiveFolder: boolean;
 }) {
+  const context = useDatasetCollectionContext();
   let message = getMaybeSelectMessage(datasetCount);
   if (!displayedFolderEqualsActiveFolder) {
     message =
@@ -280,7 +400,7 @@ function FolderDetails({
     <>
       {folder ? (
         <div style={{ textAlign: "left" }}>
-          <h4 style={{ wordBreak: "break-all" }}>
+          <Typography.Title level={4} style={{ wordBreak: "break-all" }}>
             <span
               style={{
                 float: "right",
@@ -290,11 +410,13 @@ function FolderDetails({
                 color: "var(--ant-color-text-secondary)",
               }}
             >
-              <EditOutlined onClick={() => setFolderIdForEditModal(folder.id)} />
+              <EditOutlined
+                onClick={() => context.setFolderModalState({ mode: "edit", folderId: folder.id })}
+              />
             </span>
             <FolderOpenOutlined style={{ marginRight: 8 }} />
             {folder.name}
-          </h4>
+          </Typography.Title>
           <p>
             This folder contains{" "}
             <Tooltip title="This number is independent of any filters that might be applied to the current view (e.g., only showing available datasets)">
@@ -320,12 +442,12 @@ function FolderDetails({
 
 function FolderTeamTags({ folder }: { folder: Folder }) {
   if (folder.allowedTeamsCumulative.length === 0) {
-    return <Tag>Administrators & Dataset Managers</Tag>;
+    return <Tag variant="outlined">Administrators & Dataset Managers</Tag>;
   }
-  const allowedTeamsById = _.keyBy(folder.allowedTeams, "id");
+  const allowedTeamsById = keyBy(folder.allowedTeams, "id");
 
   return (
-    <>
+    <Space>
       {folder.allowedTeamsCumulative.map((team) => {
         const isCumulative = !allowedTeamsById[team.id];
         return (
@@ -344,7 +466,8 @@ function FolderTeamTags({ folder }: { folder: Folder }) {
                 whiteSpace: "nowrap",
                 textOverflow: "ellipsis",
               }}
-              color={stringToColor(team.name)}
+              color={stringToTagColor(team.name)}
+              variant="outlined"
             >
               {team.name}
               {isCumulative ? "*" : ""}
@@ -352,6 +475,6 @@ function FolderTeamTags({ folder }: { folder: Folder }) {
           </Tooltip>
         );
       })}
-    </>
+    </Space>
   );
 }

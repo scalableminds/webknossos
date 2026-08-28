@@ -1,13 +1,16 @@
 package models.dataset
 
-import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.Msg
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.explore.ExploreLayerUtils
 import com.scalableminds.webknossos.datastore.models.VoxelSize
-import com.scalableminds.webknossos.datastore.models.datasource._
+import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType.LayerAttachmentType
+import com.scalableminds.webknossos.datastore.models.datasource.*
 import models.user.User
-import play.api.i18n.MessagesProvider
 import play.api.libs.json.{Json, OFormat}
 
 import javax.inject.Inject
@@ -25,77 +28,107 @@ object ComposeRequest {
   implicit val composeRequestFormat: OFormat[ComposeRequest] = Json.format[ComposeRequest]
 }
 case class ComposeRequestLayer(
-    datasetId: ObjectId,
-    sourceName: String,
-    newName: String,
-    transformations: Seq[CoordinateTransformation]
+    sourceDatasetId: ObjectId,
+    sourceLayerName: String,
+    targetLayerName: String,
+    transformations: Option[Seq[CoordinateTransformation]]
 )
 
 object ComposeRequestLayer {
   implicit val composeLayerFormat: OFormat[ComposeRequestLayer] = Json.format[ComposeRequestLayer]
 }
 
-class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDAO, datasetService: DatasetService)(
-    implicit ec: ExecutionContext)
-    extends ExploreLayerUtils
-    with FoxImplicits {
+case class ComposeAddMagRequest(
+    sourceDatasetId: ObjectId,
+    sourceLayerName: String,
+    targetLayerName: String,
+    sourceMag: Vec3Int,
+    targetMag: Option[Vec3Int] // None means use sourceMag
+)
 
-  def composeDataset(composeRequest: ComposeRequest, user: User)(
-      implicit ctx: DBAccessContext,
-      mp: MessagesProvider): Fox[(UsableDataSource, ObjectId)] =
+object ComposeAddMagRequest {
+  implicit val jsonFormat: OFormat[ComposeAddMagRequest] = Json.format[ComposeAddMagRequest]
+}
+
+case class ComposeAddAttachmentRequest(
+    sourceDatasetId: ObjectId,
+    sourceLayerName: String,
+    targetLayerName: String,
+    attachmentType: LayerAttachmentType,
+    sourceAttachmentName: String,
+    targetAttachmentName: Option[String] // None means use sourceAttachmentName
+)
+
+object ComposeAddAttachmentRequest {
+  implicit val jsonFormat: OFormat[ComposeAddAttachmentRequest] = Json.format[ComposeAddAttachmentRequest]
+}
+
+class ComposeService @Inject() (datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDAO, datasetService: DatasetService)(
+    implicit ec: ExecutionContext
+) extends ExploreLayerUtils {
+
+  def composeDataset(composeRequest: ComposeRequest, user: User)(using
+      ctx: DBAccessContext
+  ): Fox[(UsableDataSource, ObjectId)] =
     for {
-      _ <- Fox.assertTrue(isComposable(composeRequest)) ?~> "Datasets are not composable, they are not on the same data store"
+      _ <- Fox.assertTrue(
+        isComposable(composeRequest)
+      ) ?~> "Datasets are not composable, they are not on the same data store"
       dataSource <- createDatasource(composeRequest, composeRequest.newDatasetName, composeRequest.organizationId)
       dataStore <- dataStoreDAO.findOneWithUploadsAllowed
-      dataset <- datasetService.createAndSetUpDataset(composeRequest.newDatasetName,
-                                                      dataStore,
-                                                      dataSource,
-                                                      Some(composeRequest.targetFolderId),
-                                                      user,
-                                                      isVirtual = true)
-
+      dataset <- datasetService.createAndSetUpDataset(
+        composeRequest.newDatasetName,
+        dataStore,
+        dataSource,
+        Some(composeRequest.targetFolderId),
+        user,
+        isVirtual = true,
+        creationType = DatasetCreationType.Compose,
+        importURLOpt = None
+      )
     } yield (dataSource, dataset._id)
 
-  private def getLayerFromComposeLayer(composeLayer: ComposeRequestLayer)(
-      implicit ctx: DBAccessContext,
-      mp: MessagesProvider): Fox[(StaticLayer, VoxelSize)] =
+  private def getLayerFromComposeLayer(
+      composeLayer: ComposeRequestLayer
+  )(using ctx: DBAccessContext): Fox[(StaticLayer, VoxelSize)] =
     for {
-      dataset <- datasetDAO.findOne(composeLayer.datasetId) ?~> "Dataset not found"
+      dataset <- datasetDAO.findOne(composeLayer.sourceDatasetId) ?~> "Dataset not found"
       usableDataSource <- datasetService.usableDataSourceFor(dataset)
-      layer <- usableDataSource.dataLayers.find(_.name == composeLayer.sourceName).toFox
-      applyCoordinateTransformations = (cOpt: Option[List[CoordinateTransformation]]) =>
+      layer <- usableDataSource.dataLayers.find(_.name == composeLayer.sourceLayerName).toFox
+      applyCoordinateTransformations = (cOpt: Option[Seq[CoordinateTransformation]]) =>
         cOpt match {
-          case Some(c) => Some(c ++ composeLayer.transformations.toList)
-          case None    => Some(composeLayer.transformations.toList)
-      }
-      editedLayer = layer.mapped(name = composeLayer.newName,
-                                 coordinateTransformations =
-                                   applyCoordinateTransformations(layer.coordinateTransformations))
+          case Some(c) => Some(c ++ composeLayer.transformations.getOrElse(Seq.empty))
+          case None    => Some(composeLayer.transformations.getOrElse(Seq.empty))
+        }
+      editedLayer = layer.mapped(
+        name = composeLayer.targetLayerName,
+        coordinateTransformations = applyCoordinateTransformations(layer.coordinateTransformations)
+      )
     } yield (editedLayer, usableDataSource.scale)
 
-  private def isComposable(composeRequest: ComposeRequest)(implicit ctx: DBAccessContext): Fox[Boolean] =
+  private def isComposable(composeRequest: ComposeRequest)(using ctx: DBAccessContext): Fox[Boolean] =
     // Check that all datasets are on the same data store
     // Using virtual datasets, we should also be able to compose datasets using non-file paths from different data
     // stores, however, the data store is only stored for each dataset and not per mag.
     for {
       _ <- Fox.fromBool(composeRequest.layers.nonEmpty) ?~> "Cannot compose dataset with no layers"
-      datasetIds = composeRequest.layers.map(_.datasetId).distinct
+      datasetIds = composeRequest.layers.map(_.sourceDatasetId).distinct
       datasets <- Fox.serialCombined(datasetIds)(datasetDAO.findOne(_))
       dataStores = datasets.map(_._dataStore)
-    } yield {
-      dataStores.distinct.size == 1
-    }
+    } yield dataStores.distinct.size == 1
 
   private def createDatasource(composeRequest: ComposeRequest, datasetDirectoryName: String, organizationId: String)(
-      implicit ctx: DBAccessContext,
-      mp: MessagesProvider): Fox[UsableDataSource] =
+      using ctx: DBAccessContext
+  ): Fox[UsableDataSource] =
     for {
       layersAndVoxelSizes <- Fox.serialCombined(composeRequest.layers.toList)(getLayerFromComposeLayer)
-      (layers, voxelSize) <- if (composeRequest.layers.forall(_.transformations.isEmpty)) {
-        adaptLayersAndVoxelSize(layersAndVoxelSizes, None)
-      } else {
-        Fox.successful(layersAndVoxelSizes.map(_._1), composeRequest.voxelSize)
-      }
+      voxelSizesDiffer = layersAndVoxelSizes.map(_._2).distinct.length > 1
+      (layers, voxelSize) <-
+        if (composeRequest.layers.forall(_.transformations.isEmpty) && voxelSizesDiffer) {
+          adaptLayersAndVoxelSize(layersAndVoxelSizes, None)
+        } else {
+          Fox.successful(layersAndVoxelSizes.map(_._1), composeRequest.voxelSize)
+        }
       dataSource = UsableDataSource(
         DataSourceId(datasetDirectoryName, organizationId),
         layers,
@@ -103,5 +136,106 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
         None
       )
     } yield dataSource
+
+  def addLayer(targetDatasetId: ObjectId, request: ComposeRequestLayer)(using ctx: DBAccessContext): Fox[Unit] =
+    for {
+      targetDataset <- datasetDAO.findOne(targetDatasetId) ?~> Msg.Dataset.notFound(targetDatasetId)
+      _ <- Fox.fromBool(targetDataset.isVirtual) ?~> Msg.Dataset.Compose.inPlaceMustBeVirtual
+      targetDataSource <- datasetService.usableDataSourceFor(targetDataset)
+      _ <- Fox.fromBool(
+        !targetDataSource.dataLayers.exists(_.name == request.targetLayerName)
+      ) ?~> Msg.Dataset.Layer.duplicateNames
+      sourceDataset <- datasetDAO.findOne(request.sourceDatasetId) ?~> Msg.Dataset.notFound(request.sourceDatasetId)
+      _ <- Fox.fromBool(
+        targetDataset._dataStore == sourceDataset._dataStore
+      ) ?~> Msg.Dataset.Compose.differingDataStores
+      sourceDataSource <- datasetService.usableDataSourceFor(sourceDataset)
+      sourceLayer <- sourceDataSource.getDataLayer(request.sourceLayerName).toFox ?~> Msg.Dataset.Layer
+        .notFound(request.sourceLayerName)
+      updatedDataSource = targetDataSource.copy(
+        dataLayers = targetDataSource.dataLayers :+ sourceLayer.mapped(name = request.targetLayerName)
+      )
+      _ <- datasetDAO.updateDataSource(
+        targetDatasetId,
+        targetDataset._dataStore,
+        updatedDataSource.hashCode(),
+        updatedDataSource,
+        isUsable = true
+      )(using GlobalAccessContext)
+      dataStoreClient <- datasetService.clientFor(targetDataset)
+      _ <- dataStoreClient.invalidateDatasetInDSCache(targetDatasetId)
+    } yield ()
+
+  def addMag(targetDatasetId: ObjectId, request: ComposeAddMagRequest)(using ctx: DBAccessContext): Fox[Unit] =
+    for {
+      targetDataset <- datasetDAO.findOne(targetDatasetId) ?~> Msg.Dataset.notFound(targetDatasetId)
+      _ <- Fox.fromBool(targetDataset.isVirtual) ?~> Msg.Dataset.Compose.inPlaceMustBeVirtual
+      targetDataSource <- datasetService.usableDataSourceFor(targetDataset)
+      targetLayer <- targetDataSource.getDataLayer(request.targetLayerName).toFox ?~> Msg.Dataset.Layer
+        .notFound(request.targetLayerName)
+      sourceDataset <- datasetDAO.findOne(request.sourceDatasetId) ?~> Msg.Dataset.notFound(request.sourceDatasetId)
+      _ <- Fox.fromBool(
+        targetDataset._dataStore == sourceDataset._dataStore
+      ) ?~> Msg.Dataset.Compose.differingDataStores
+      sourceDataSource <- datasetService.usableDataSourceFor(sourceDataset)
+      sourceLayer <- sourceDataSource.getDataLayer(request.sourceLayerName).toFox ?~> Msg.Dataset.Layer
+        .notFound(request.sourceLayerName)
+      sourceMag <- sourceLayer.mags.find(_.mag == request.sourceMag).toFox ?~> Msg.Dataset.Layer
+        .magNotFound(sourceLayer.name, request.sourceMag.toMagLiteral(allowScalar = true))
+      adaptedMag = sourceMag.copy(mag = request.targetMag.getOrElse(sourceMag.mag))
+      updatedLayer = targetLayer.mapped(newMags = Some((targetLayer.mags :+ adaptedMag).sortBy(_.mag.maxDim)))
+      _ <- Fox.fromBool(
+        updatedLayer.mags.distinctBy(_.mag.maxDim).length == updatedLayer.mags.length
+      ) ?~> Msg.Dataset.Compose.duplicateMag
+      updatedLayers = targetDataSource.dataLayers.map(l => if (l.name == request.targetLayerName) updatedLayer else l)
+      updatedDataSource = targetDataSource.copy(dataLayers = updatedLayers)
+      _ <- datasetDAO.updateDataSource(
+        targetDatasetId,
+        targetDataset._dataStore,
+        updatedDataSource.hashCode(),
+        updatedDataSource,
+        isUsable = true
+      )(using GlobalAccessContext)
+      dataStoreClient <- datasetService.clientFor(targetDataset)
+      _ <- dataStoreClient.invalidateDatasetInDSCache(targetDatasetId)
+    } yield ()
+
+  def addAttachment(targetDatasetId: ObjectId, request: ComposeAddAttachmentRequest)(using
+      ctx: DBAccessContext
+  ): Fox[Unit] =
+    for {
+      targetDataset <- datasetDAO.findOne(targetDatasetId) ?~> Msg.Dataset.notFound(targetDatasetId)
+      _ <- Fox.fromBool(targetDataset.isVirtual) ?~> Msg.Dataset.Compose.inPlaceMustBeVirtual
+      targetDataSource <- datasetService.usableDataSourceFor(targetDataset)
+      targetLayer <- targetDataSource.getDataLayer(request.targetLayerName).toFox ?~> Msg.Dataset.Layer
+        .notFound(request.targetLayerName)
+      sourceDataset <- datasetDAO.findOne(request.sourceDatasetId) ?~> Msg.Dataset.notFound(request.sourceDatasetId)
+      _ <- Fox.fromBool(
+        targetDataset._dataStore == sourceDataset._dataStore
+      ) ?~> Msg.Dataset.Compose.differingDataStores
+      sourceDataSource <- datasetService.usableDataSourceFor(sourceDataset)
+      sourceLayer <- sourceDataSource.getDataLayer(request.sourceLayerName).toFox ?~> Msg.Dataset.Layer
+        .notFound(request.sourceLayerName)
+      targetAttachments = targetLayer.attachments.getOrElse(DataLayerAttachments())
+      sourceAttachment <- sourceLayer.attachments
+        .getOrElse(DataLayerAttachments())
+        .getByTypeAndName(request.attachmentType, request.sourceAttachmentName)
+        .toFox ?~> Msg.Dataset.Layer.attachmentNotFound(sourceLayer.name, request.sourceAttachmentName)
+      adaptedAttachment = sourceAttachment.copy(name = request.targetAttachmentName.getOrElse(sourceAttachment.name))
+      updatedAttachments = targetAttachments.withAdded(adaptedAttachment, request.attachmentType)
+      _ <- Fox.fromBool(!updatedAttachments.containsDuplicateNames) ?~> "Attachment renamings create name collisions."
+      updatedLayer = targetLayer.withAttachments(updatedAttachments)
+      updatedLayers = targetDataSource.dataLayers.map(l => if (l.name == request.targetLayerName) updatedLayer else l)
+      updatedDataSource = targetDataSource.copy(dataLayers = updatedLayers)
+      _ <- datasetDAO.updateDataSource(
+        targetDatasetId,
+        targetDataset._dataStore,
+        updatedDataSource.hashCode(),
+        updatedDataSource,
+        isUsable = true
+      )(using GlobalAccessContext)
+      dataStoreClient <- datasetService.clientFor(targetDataset)
+      _ <- dataStoreClient.invalidateDatasetInDSCache(targetDatasetId)
+    } yield ()
 
 }

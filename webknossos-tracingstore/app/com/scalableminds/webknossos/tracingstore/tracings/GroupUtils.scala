@@ -14,13 +14,19 @@ abstract class TracingItemGroup() {
 }
 
 object GroupUtils {
+  def getMaximumTreeGroupId(treeGroups: Seq[TreeGroup]): Int =
+    if (treeGroups.isEmpty) 0
+    else Math.max(treeGroups.map(_.groupId).max, getMaximumTreeGroupId(treeGroups.flatMap(_.children)))
+
+  def getMaximumSegmentGroupId(segmentGroups: Seq[SegmentGroup]): Int =
+    if (segmentGroups.isEmpty) 0
+    else Math.max(segmentGroups.map(_.groupId).max, getMaximumSegmentGroupId(segmentGroups.flatMap(_.children)))
 
   type FunctionalGroupMapping = Function[Int, Int]
 
   private def calculateGroupMapping(groupsA: Seq[TracingItemGroup], groupsB: Seq[TracingItemGroup]): Int => Int = {
     val groupIdOffset = calculateGroupIdOffset(groupsA, groupsB)
-    (groupId: Int) =>
-      groupId + groupIdOffset
+    (groupId: Int) => groupId + groupIdOffset
   }
 
   private def maxGroupIdRecursive(groups: Seq[TracingItemGroup]): Int =
@@ -39,12 +45,15 @@ object GroupUtils {
       math.max(targetGroupMaxId + 1 - sourceGroupMinId, 0)
     }
 
-  private def mergeGroups(groupsA: Seq[TracingItemGroup],
-                          groupsB: Seq[TracingItemGroup],
-                          groupMappingA: FunctionalGroupMapping): Seq[TracingItemGroup] = {
+  private def mergeGroups(
+      groupsA: Seq[TracingItemGroup],
+      groupsB: Seq[TracingItemGroup],
+      groupMappingA: FunctionalGroupMapping
+  ): Seq[TracingItemGroup] = {
     def applyGroupMappingRecursive(groups: Seq[TracingItemGroup]): Seq[TracingItemGroup] =
       groups.map(group =>
-        group.withGroupId(groupMappingA(group.groupId)).withChildren(applyGroupMappingRecursive(group.children)))
+        group.withGroupId(groupMappingA(group.groupId)).withChildren(applyGroupMappingRecursive(group.children))
+      )
 
     applyGroupMappingRecursive(groupsA) ++ groupsB
   }
@@ -72,15 +81,20 @@ object GroupUtils {
   def calculateSegmentGroupMapping(groupsA: Seq[SegmentGroup], groupsB: Seq[SegmentGroup]): FunctionalGroupMapping =
     calculateGroupMapping(groupsA.map(sg => new SegmentItemGroup(sg)), groupsB.map(sg => new SegmentItemGroup(sg)))
 
-  def mergeTreeGroups(groupsA: Seq[TreeGroup],
-                      groupsB: Seq[TreeGroup],
-                      groupMappingA: FunctionalGroupMapping): Seq[TreeGroup] =
-    mergeGroups(groupsA.map(tg => new TreeItemGroup(tg)), groupsB.map(tg => new TreeItemGroup(tg)), groupMappingA)
-      .map(tig => tig.inner.asInstanceOf[TreeGroup])
+  def mergeTreeGroups(
+      groupsA: Seq[TreeGroup],
+      groupsB: Seq[TreeGroup],
+      groupMappingA: FunctionalGroupMapping
+  ): Seq[TreeGroup] =
+    mergeGroups(groupsA.map(tg => new TreeItemGroup(tg)), groupsB.map(tg => new TreeItemGroup(tg)), groupMappingA).map(
+      tig => tig.inner.asInstanceOf[TreeGroup]
+    )
 
-  def mergeSegmentGroups(groupsA: Seq[SegmentGroup],
-                         groupsB: Seq[SegmentGroup],
-                         groupMappingA: FunctionalGroupMapping): Seq[SegmentGroup] =
+  def mergeSegmentGroups(
+      groupsA: Seq[SegmentGroup],
+      groupsB: Seq[SegmentGroup],
+      groupMappingA: FunctionalGroupMapping
+  ): Seq[SegmentGroup] =
     mergeGroups(groupsA.map(tg => new SegmentItemGroup(tg)), groupsB.map(tg => new SegmentItemGroup(tg)), groupMappingA)
       .map(tig => tig.inner.asInstanceOf[SegmentGroup])
 
@@ -95,7 +109,8 @@ object GroupUtils {
 
   def getAllChildrenSegmentGroups(rootGroup: SegmentGroup): Seq[SegmentGroup] =
     getAllChildrenGroups(new SegmentItemGroup(rootGroup)).map((tg: TracingItemGroup) =>
-      tg.inner.asInstanceOf[SegmentGroup])
+      tg.inner.asInstanceOf[SegmentGroup]
+    )
 
 }
 

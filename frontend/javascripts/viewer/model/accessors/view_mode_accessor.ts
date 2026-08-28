@@ -1,5 +1,5 @@
 import { V3 } from "libs/mjs";
-import _ from "lodash";
+import max from "lodash-es/max";
 import memoizeOne from "memoize-one";
 import { Euler, Matrix4, Vector3 as ThreeVector3 } from "three";
 import type {
@@ -13,7 +13,7 @@ import type {
   Viewport,
 } from "viewer/constants";
 import constants, {
-  ArbitraryViewport,
+  FlightViewport,
   OrthoViews,
   OrthoViewValuesWithoutTDView,
 } from "viewer/constants";
@@ -36,8 +36,8 @@ export function getTDViewZoom(state: WebknossosState) {
   return scaleX;
 }
 export function getInputCatcherRect(state: WebknossosState, viewport: Viewport): Rect {
-  if (viewport === ArbitraryViewport) {
-    return state.viewModeData.arbitrary.inputCatcherRect;
+  if (viewport === FlightViewport) {
+    return state.viewModeData.flight.inputCatcherRect;
   } else {
     return state.viewModeData.plane.inputCatcherRects[viewport];
   }
@@ -105,6 +105,7 @@ function _calculateMaybeGlobalPos(
   state: WebknossosState,
   clickPos: Point2,
   planeIdOpt?: OrthoView | null | undefined,
+  useRound: boolean = false,
 ): PositionWithRounding | null | undefined {
   let roundedPosition: Vector3, floatingPosition: Vector3;
   const planeId = planeIdOpt || state.viewModeData.plane.activeViewport;
@@ -127,6 +128,7 @@ function _calculateMaybeGlobalPos(
 
   const globalFloatingPosition = scaledRotatedPosition.applyMatrix4(flycamPositionMatrix);
   floatingPosition = globalFloatingPosition.toArray() as Vector3;
+  const discretize = useRound ? Math.round : Math.floor;
 
   // Regarding round and floor in the following code:
   // The objective is to obtain integer positional values here that correspond "the most" to clicked input
@@ -137,8 +139,8 @@ function _calculateMaybeGlobalPos(
   switch (planeId) {
     case OrthoViews.PLANE_XY: {
       roundedPosition = [
-        Math.round(globalFloatingPosition.x),
-        Math.round(globalFloatingPosition.y),
+        discretize(globalFloatingPosition.x),
+        discretize(globalFloatingPosition.y),
         Math.floor(globalFloatingPosition.z),
       ];
       break;
@@ -147,17 +149,17 @@ function _calculateMaybeGlobalPos(
     case OrthoViews.PLANE_YZ: {
       roundedPosition = [
         Math.floor(globalFloatingPosition.x),
-        Math.round(globalFloatingPosition.y),
-        Math.round(globalFloatingPosition.z),
+        discretize(globalFloatingPosition.y),
+        discretize(globalFloatingPosition.z),
       ];
       break;
     }
 
     case OrthoViews.PLANE_XZ: {
       roundedPosition = [
-        Math.round(globalFloatingPosition.x),
+        discretize(globalFloatingPosition.x),
         Math.floor(globalFloatingPosition.y),
-        Math.round(globalFloatingPosition.z),
+        discretize(globalFloatingPosition.z),
       ];
       break;
     }
@@ -255,24 +257,23 @@ function _calculateMaybeGlobalDelta(
 
   switch (planeId) {
     case OrthoViews.PLANE_XY: {
-      position = [Math.round(diffX * planeRatio[0]), Math.round(diffY * planeRatio[1]), 0];
+      position = [diffX * planeRatio[0], diffY * planeRatio[1], 0];
       break;
     }
 
     case OrthoViews.PLANE_YZ: {
-      position = [0, Math.round(diffY * planeRatio[1]), Math.round(diffX * planeRatio[2])];
+      position = [0, diffY * planeRatio[1], diffX * planeRatio[2]];
       break;
     }
 
     case OrthoViews.PLANE_XZ: {
-      position = [Math.round(diffX * planeRatio[0]), 0, Math.round(diffY * planeRatio[2])];
+      position = [diffX * planeRatio[0], 0, diffY * planeRatio[2]];
       break;
     }
 
     default:
       return null;
   }
-
   return position;
 }
 
@@ -280,10 +281,11 @@ function _calculateGlobalPos(
   state: WebknossosState,
   clickPos: Point2,
   planeId?: OrthoView | null | undefined,
+  useRound: boolean = false,
 ): PositionWithRounding {
-  const positions = _calculateMaybeGlobalPos(state, clickPos, planeId);
+  const positions = _calculateMaybeGlobalPos(state, clickPos, planeId, useRound);
 
-  if (!positions || !positions.rounded) {
+  if (!positions?.rounded) {
     console.error("Trying to calculate the global position, but no data viewport is active.");
     return { rounded: [0, 0, 0], floating: [0, 0, 0] };
   }
@@ -334,22 +336,55 @@ function _calculateGlobalDelta(
   return position;
 }
 
-export function getDisplayedDataExtentInPlaneMode(state: WebknossosState) {
+function _getViewportExtentInVoxelPerAxis(state: WebknossosState): Vector3 {
+  /* Returns, for each axis (x, y, z), how many voxels are currently visible along that axis in
+   * the ortho viewports that show it (the maximum of the two relevant viewports), corrected
+   * for anisotropic voxel sizes so the result is expressed in mag1 voxels, comparable to
+   * bounding box/position coordinates.
+   */
   const planeRatio = getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale);
-  const curGlobalCenterPos = getPosition(state.flycam);
   const extents = OrthoViewValuesWithoutTDView.map((orthoView) =>
     getPlaneExtentInVoxelFromStore(state, state.flycam.zoomStep, orthoView),
   );
   const [xyExtent, yzExtent, xzExtent] = extents;
   const minExtent = 1;
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'val1' implicitly has an 'any' type.
-  const getMinExtent = (val1, val2) =>
-    _.min([val1, val2].filter((v) => v >= minExtent)) || minExtent;
+  const getMaxExtent = (val1: number, val2: number) =>
+    max([val1, val2].filter((v) => v >= minExtent)) || minExtent;
 
-  const xMinExtent = getMinExtent(xyExtent[0], xzExtent[0]) * planeRatio[0];
-  const yMinExtent = getMinExtent(xyExtent[1], yzExtent[1]) * planeRatio[1];
-  const zMinExtent = getMinExtent(xzExtent[1], yzExtent[0]) * planeRatio[2];
+  return [
+    Math.ceil(getMaxExtent(xyExtent[0], xzExtent[0]) * planeRatio[0]),
+    Math.ceil(getMaxExtent(xyExtent[1], yzExtent[1]) * planeRatio[1]),
+    Math.ceil(getMaxExtent(xzExtent[1], yzExtent[0]) * planeRatio[2]),
+  ];
+}
+
+export const getViewportExtentInVoxelPerAxis = reuseInstanceOnEquality(
+  _getViewportExtentInVoxelPerAxis,
+);
+
+function _getViewportBoundsInVoxel(state: WebknossosState): { min: Vector3; max: Vector3 } {
+  /* Returns, per axis, the [min, max] range that is currently visible in the viewports (i.e.
+   * the flycam position +/- half of getViewportExtentInVoxelPerAxis), in mag1 voxels.
+   */
+  const center = getPosition(state.flycam);
+  const halfExtent = _getViewportExtentInVoxelPerAxis(state).map((extent) => extent / 2) as Vector3;
+  return {
+    min: V3.floor(V3.sub(center, halfExtent)),
+    max: V3.ceil(V3.add(center, halfExtent)),
+  };
+}
+
+export const getViewportBoundsInVoxel = reuseInstanceOnEquality(_getViewportBoundsInVoxel);
+
+export function getExtentForNewBoundingBox(state: WebknossosState) {
+  /*
+   * Uses the current viewport extents to return the bounds for a new bounding box,
+   * so that this bounding box is centered in the viewports and takes up 50% of the
+   * extent (per axis).
+   */
+  const curGlobalCenterPos = getPosition(state.flycam);
+  const [xMinExtent, yMinExtent, zMinExtent] = getViewportExtentInVoxelPerAxis(state);
   // The new bounding box should cover half of what is displayed in the viewports.
   // As the flycam position is taken as a center, the factor is halved again, resulting in a 0.25.
   const extentFactor = 0.25;
@@ -374,7 +409,7 @@ export const getGlobalMousePositionFloating = reuseInstanceOnEquality(
   _getGlobalMousePositionFloating,
 );
 
-export function getViewMode(state: WebknossosState): ViewMode {
+function getViewMode(state: WebknossosState): ViewMode {
   return state.temporaryConfiguration.viewMode;
 }
 export function isPlaneMode(state: WebknossosState): boolean {
@@ -398,5 +433,3 @@ export function getPlaneExtentInVoxelFromStore(
   const { width, height } = getInputCatcherRect(state, planeID);
   return [width * zoomStep, height * zoomStep];
 }
-
-export default {};

@@ -1,21 +1,22 @@
 package models.annotation.handler
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.DBAccessContext
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 
 import javax.inject.Inject
-import models.annotation._
+import models.annotation.*
 import models.task.TaskDAO
 import models.user.{User, UserService}
-import models.annotation.AnnotationState._
+import models.annotation.AnnotationState.*
 import models.project.ProjectDAO
 import com.scalableminds.util.objectid.ObjectId
 import models.dataset.{DatasetDAO, DatasetService}
-import play.api.i18n.MessagesProvider
 
 import scala.concurrent.ExecutionContext
 
-class TaskInformationHandler @Inject()(
+class TaskInformationHandler @Inject() (
     taskDAO: TaskDAO,
     annotationDAO: AnnotationDAO,
     userService: UserService,
@@ -23,44 +24,43 @@ class TaskInformationHandler @Inject()(
     projectDAO: ProjectDAO,
     val datasetService: DatasetService,
     val datasetDAO: DatasetDAO,
-    val annotationDataSourceTemporaryStore: AnnotationDataSourceTemporaryStore)(implicit val ec: ExecutionContext)
-    extends AnnotationInformationHandler
-    with FoxImplicits {
+    val annotationDataSourceTemporaryStore: AnnotationDataSourceTemporaryStore
+)(implicit val ec: ExecutionContext)
+    extends AnnotationInformationHandler {
 
-  override def provideAnnotation(taskId: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext,
-                                                                          mp: MessagesProvider): Fox[Annotation] =
+  override def provideAnnotation(taskId: ObjectId, userOpt: Option[User])(using ctx: DBAccessContext): Fox[Annotation] =
     for {
-      task <- taskDAO.findOne(taskId) ?~> "task.notFound"
+      task <- taskDAO.findOne(taskId) ?~> Msg.Task.notFound(taskId)
       annotations <- annotationDAO.findAllByTaskIdAndType(task._id, AnnotationType.Task)
       finishedAnnotations = annotations.filter(_.state == Finished)
       _ <- assertAllOnSameDataset(finishedAnnotations)
-      _ <- assertNonEmpty(finishedAnnotations) ?~> "task.noAnnotations"
-      user <- userOpt.toFox ?~> "user.notAuthorised"
+      _ <- assertNonEmpty(finishedAnnotations) ?~> Msg.Task.noAnnotations
+      user <- userOpt.toFox ?~> Msg.User.notAuthenticated
       project <- projectDAO.findOne(task._project)
       datasetId <- finishedAnnotations.headOption.map(_._dataset).toFox
       _ <- registerDataSourceInTemporaryStore(taskId, datasetId)
       taskBoundingBoxes <- taskDAO.findTaskBoundingBoxesByAnnotationIds(annotations.map(_._id))
-      mergedAnnotation <- annotationMerger.mergeN(task._id,
-                                                  toTemporaryStore = true,
-                                                  user._id,
-                                                  datasetId,
-                                                  project._team,
-                                                  AnnotationType.CompoundTask,
-                                                  finishedAnnotations,
-                                                  taskBoundingBoxes) ?~> "annotation.merge.failed.compound"
+      mergedAnnotation <- annotationMerger.mergeN(
+        task._id,
+        toTemporaryStore = true,
+        user._id,
+        datasetId,
+        AnnotationType.CompoundTask,
+        finishedAnnotations,
+        taskBoundingBoxes,
+        remapSegmentIds = true
+      ) ?~> Msg.Annotation.Merge.failedCompound
     } yield mergedAnnotation
 
-  def restrictionsFor(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions] =
+  def restrictionsFor(taskId: ObjectId)(using ctx: DBAccessContext): Fox[AnnotationRestrictions] =
     for {
-      task <- taskDAO.findOne(taskId) ?~> "task.notFound"
+      task <- taskDAO.findOne(taskId) ?~> Msg.Task.notFound(taskId)
       project <- projectDAO.findOne(task._project)
-    } yield {
-      new AnnotationRestrictions {
-        override def allowAccess(userOption: Option[User]): Fox[Boolean] =
-          (for {
-            user <- userOption.toFox
-            allowed <- userService.isTeamManagerOrAdminOf(user, project._team)
-          } yield allowed).orElse(Fox.successful(false))
-      }
+    } yield new AnnotationRestrictions {
+      override def allowAccess(userOption: Option[User]): Fox[Boolean] =
+        (for {
+          user <- userOption.toFox
+          allowed <- userService.isTeamManagerOrAdminOf(user, project._team)
+        } yield allowed).orElse(Fox.successful(false))
     }
 }

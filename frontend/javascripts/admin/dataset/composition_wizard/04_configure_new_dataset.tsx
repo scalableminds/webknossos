@@ -6,6 +6,7 @@ import {
 } from "admin/dataset/dataset_components";
 import { createDatasetComposition, updateDatasetPartial } from "admin/rest_api";
 import {
+  App,
   Button,
   Checkbox,
   Col,
@@ -13,34 +14,44 @@ import {
   type FormInstance,
   Input,
   List,
-  Modal,
   Row,
   Tooltip,
 } from "antd";
 import { FormItemWithInfo } from "dashboard/dataset/helper_components";
 import FolderSelection from "dashboard/folders/folder_selection";
+import ErrorHandling from "libs/error_handling";
 import { estimateAffineMatrix4x4 } from "libs/estimate_affine";
 import { formatNumber } from "libs/format_utils";
-import { useEffectOnlyOnce } from "libs/react_hooks";
-import { useWkSelector } from "libs/react_hooks";
-import Toast, { guardedWithErrorToast } from "libs/toast";
-import * as Utils from "libs/utils";
-import _ from "lodash";
+import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
+import Toast from "libs/toast";
+import { isUserAdminOrDatasetManager } from "libs/utils";
+import uniqBy from "lodash-es/uniqBy";
 import messages from "messages";
 import React, { useState } from "react";
 import type { APIDataLayer, APIDataset, APITeam, LayerLink } from "types/api_types";
 import { syncValidator } from "types/validation";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Vector3 } from "viewer/constants";
-import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
+import { getReadableURLPart, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import { flatToNestedMatrix } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { checkLandmarksForThinPlateSpline } from "viewer/model/helpers/transformation_helpers";
 import type { WizardComponentProps } from "./common";
 
 const FormItem = Form.Item;
 
+async function guardedWithErrorToast(fn: () => Promise<any>) {
+  try {
+    await fn();
+  } catch (error) {
+    Toast.error("An unexpected error occurred. Please check the console for details");
+    console.error(error);
+    ErrorHandling.notify(error as Error);
+  }
+}
+
 export function ConfigureNewDataset(props: WizardComponentProps) {
   const formRef = React.useRef<FormInstance<any>>(null);
+  const { modal } = App.useApp();
 
   const onPrev = () => {
     props.setWizardContext((oldContext) => ({
@@ -51,7 +62,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
 
   const [isLoading, setIsLoading] = useState(false);
   const activeUser = useWkSelector((state) => state.activeUser);
-  const isDatasetManagerOrAdmin = Utils.isUserAdminOrDatasetManager(activeUser);
+  const isDatasetManagerOrAdmin = isUserAdminOrDatasetManager(activeUser);
   const [form] = Form.useForm();
   const [selectedTeams, setSelectedTeams] = useState<APITeam | Array<APITeam>>([]);
 
@@ -66,15 +77,15 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
 
   const handleTransformImport = async () => {
     const newLinks: LayerLink[] = (
-      _.flatMap(linkedDatasets, (dataset) =>
+      linkedDatasets.flatMap((dataset) =>
         dataset.dataSource.dataLayers.map((layer) => [dataset, layer]),
       ) as [APIDataset, APIDataLayer][]
     ).map(
       ([dataset, dataLayer]): LayerLink => ({
-        datasetId: dataset.id,
-        datasetName: dataset.name,
-        sourceName: dataLayer.name,
-        newName: dataLayer.name,
+        sourceDatasetId: dataset.id,
+        sourceDatasetName: dataset.name,
+        sourceLayerName: dataLayer.name,
+        targetLayerName: dataLayer.name,
         transformations: [],
       }),
     );
@@ -116,7 +127,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
         checkLandmarksForThinPlateSpline(sourcePoints, targetPoints);
       }
       return layers.map((layer) => {
-        const areDatasetsIdentical = layer.datasetId === linkedDatasets[0].id;
+        const areDatasetsIdentical = layer.sourceDatasetId === linkedDatasets[0].id;
         return {
           ...layer,
           // The first dataset will be transformed to match the second.
@@ -138,7 +149,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
       layersWithTransforms = withTransforms(layersWithoutTransforms, sourcePoints, targetPoints);
     } catch (exception) {
       const tryAugmentation = await new Promise((resolve) => {
-        Modal.confirm({
+        modal.confirm({
           title: "Augment landmarks?",
           content:
             "The provided landmarks can't be used for affine estimation, possibly " +
@@ -173,11 +184,11 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
         layers: layersWithTransforms,
       });
 
-      const uniqueDatasets = _.uniqBy(layersWithoutTransforms, (layer) => layer.datasetId);
+      const uniqueDatasets = uniqBy(layersWithoutTransforms, (layer) => layer.sourceDatasetId);
       const datasetMarkdownLinks = uniqueDatasets
         .map(
           (el) =>
-            `- [${el.datasetName}](/datasets/${getReadableURLPart({ name: el.datasetName, id: el.datasetId })})`,
+            `- [${el.sourceDatasetName}](/datasets/${getReadableURLPart({ name: el.sourceDatasetName, id: el.sourceDatasetId })})`,
         )
         .join("\n");
 
@@ -259,8 +270,8 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
                   // the layer name may change in this view, the order does not, so idx is the right key choice here
                   <List.Item key={`layer-${idx}`}>
                     <LinkedLayerForm
-                      datasetId={layer.datasetId}
-                      datasetName={layer.datasetName}
+                      datasetId={layer.sourceDatasetId}
+                      datasetName={layer.sourceDatasetName}
                       layer={layer}
                       index={idx}
                       onRemoveLayer={onRemoveLayer}
@@ -337,7 +348,7 @@ function LinkedLayerForm({
       <Row gutter={48}>
         <Col span={24} xl={12}>
           <FormItemWithInfo
-            name={["layers", index, "newName"]}
+            name={["layers", index, "targetLayerName"]}
             label="Name"
             style={{
               marginBottom: 24,
@@ -352,8 +363,8 @@ function LinkedLayerForm({
               {
                 validator: syncValidator(
                   (value: string) =>
-                    layers.filter((someLayer: LayerLink) => someLayer.newName === value).length <=
-                    1,
+                    layers.filter((someLayer: LayerLink) => someLayer.targetLayerName === value)
+                      .length <= 1,
                   "Layer names must be unique.",
                 ),
               },
@@ -372,13 +383,13 @@ function LinkedLayerForm({
             info="This is the layer which will be linked into the new dataset."
           >
             <a
-              href={`/datasets/${getReadableURLPart({ name: datasetName, id: datasetId })}/view`}
+              href={getViewDatasetURL({ name: datasetName, id: datasetId })}
               target="_blank"
               rel="noreferrer"
             >
               {datasetName}
             </a>{" "}
-            / {layer.sourceName}
+            / {layer.sourceLayerName}
           </FormItemWithInfo>
         </Col>
       </Row>

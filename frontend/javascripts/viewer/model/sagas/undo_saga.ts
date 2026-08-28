@@ -1,6 +1,7 @@
 import createProgressCallback from "libs/progress_callback";
 import Toast from "libs/toast";
 import messages from "messages";
+import type { Channel } from "redux-saga";
 import { actionChannel, call, delay, put, take } from "typed-redux-saga";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
@@ -19,30 +20,31 @@ import {
 import type { RedoAction, UndoAction } from "viewer/model/actions/save_actions";
 import type { SkeletonTracingAction } from "viewer/model/actions/skeletontracing_actions";
 import {
-  SkeletonTracingSaveRelevantActions,
   centerActiveNodeAction,
+  SkeletonTracingSaveRelevantActions,
   setSkeletonTracingAction,
 } from "viewer/model/actions/skeletontracing_actions";
-import { setBusyBlockingInfoAction } from "viewer/model/actions/ui_actions";
 import {
   type AddBucketToUndoAction,
   type BatchUpdateGroupsAndSegmentsAction,
+  cancelQuickSelectAction,
   type FinishAnnotationStrokeAction,
   type ImportVolumeTracingAction,
   type RemoveSegmentAction,
   type SetSegmentGroupsAction,
-  type UpdateSegmentAction,
-  cancelQuickSelectAction,
   setSegmentGroupsAction,
   setSegmentsAction,
+  type UpdateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
+import { createOperationContext } from "viewer/model/sagas/operation_context_saga";
 import { UNDO_HISTORY_SIZE } from "viewer/model/sagas/saving/save_saga_constants";
 import { Model } from "viewer/singletons";
 import type { SegmentGroup, SegmentMap, SkeletonTracing, UserBoundingBox } from "viewer/store";
+import { isConcurrentCollaborationMode } from "../accessors/annotation_accessor";
 import type BucketSnapshot from "../bucket_data_handling/bucket_snapshot";
-import { ensureWkReady } from "./ready_sagas";
+import { ensureWkInitialized } from "./ready_sagas";
 
 const UndoRedoRelevantBoundingBoxActions = AllUserBoundingBoxActions.filter(
   (action) => action !== "SET_USER_BOUNDING_BOXES",
@@ -120,7 +122,7 @@ function unpackRelevantActionForUndo(action: Action): RelevantActionsForUndoRedo
     return {
       batchUpdateGroupsAndSegments: action,
     };
-  } else if (UndoRedoRelevantBoundingBoxActions.includes(action.type)) {
+  } else if ((UndoRedoRelevantBoundingBoxActions as string[]).includes(action.type)) {
     return {
       userBoundingBoxAction: action as any as UserBoundingBoxAction,
     };
@@ -134,7 +136,7 @@ function unpackRelevantActionForUndo(action: Action): RelevantActionsForUndoRedo
   throw new Error("Could not unpack redux action from channel");
 }
 
-export function* manageUndoStates(): Saga<never> {
+function* manageUndoStates(): Saga<never> {
   // At its core, this saga maintains an undo and redo stack to implement
   // undo/redo functionality.
   const undoStack: Array<UndoState> = [];
@@ -159,7 +161,7 @@ export function* manageUndoStates(): Saga<never> {
     }
   > = {};
 
-  yield* call(ensureWkReady);
+  yield* call(ensureWkInitialized);
 
   // Initialization of the local state variables from above.
   prevSkeletonTracingOrNull = yield* select((state) => state.annotation.skeleton);
@@ -199,7 +201,7 @@ export function* manageUndoStates(): Saga<never> {
     return true;
   }
 
-  const channel = yield* actionChannel([
+  const channel: Channel<Action> = yield* actionChannel([
     ...SkeletonTracingSaveRelevantActions,
     ...UndoRedoRelevantBoundingBoxActions,
     "ADD_BUCKET_TO_UNDO",
@@ -247,56 +249,70 @@ export function* manageUndoStates(): Saga<never> {
       } as WarnUndoState);
     } else if (undo) {
       if (!(yield* call(areCurrentBucketSnapshotsEmpty))) {
-        yield* call([Toast, Toast.warning], "Cannot redo at the moment. Please try again.");
+        yield* call([Toast, Toast.warning], "Cannot undo at the moment. Please try again.");
         continue;
       }
       const wasInterpreted = yield* call(maybeInterpretUndoAsDiscardUiAction);
       if (!wasInterpreted) {
-        previousAction = null;
-        yield* call(
-          applyStateOfStack,
-          undoStack,
-          redoStack,
-          prevSkeletonTracingOrNull,
-          prevUserBoundingBoxes,
-          "undo",
-        );
+        const ctx = yield* createOperationContext({
+          id: "UNDO",
+          description: "Undo is being performed.",
+          behaviorWhenDisallowed: "ignore",
+        });
+        if (ctx != null) {
+          yield* ctx.execute(function* () {
+            previousAction = null;
+            yield* call(
+              applyStateOfStack,
+              undoStack,
+              redoStack,
+              prevSkeletonTracingOrNull,
+              prevUserBoundingBoxes,
+              "undo",
+            );
 
-        // Since the current segments map changed, we need to update our reference to it.
-        // Note that we don't need to do this for currentBucketSnapshots, as this
-        // was and is empty, anyway (due to the constraint we checked above).
-        yield* call(setPrevSegmentsAndGroupsToCurrent);
+            // Since the current segments map changed, we need to update our reference to it.
+            // Note that we don't need to do this for currentBucketSnapshots, as this
+            // was and is empty, anyway (due to the constraint we checked above).
+            yield* call(setPrevSegmentsAndGroupsToCurrent);
+          });
+        }
       }
 
       if (undo.callback != null) {
         undo.callback();
       }
-
-      yield* put(setBusyBlockingInfoAction(false));
     } else if (redo) {
       if (!(yield* call(areCurrentBucketSnapshotsEmpty))) {
         yield* call([Toast, Toast.warning], "Cannot redo at the moment. Please try again.");
         continue;
       }
 
-      previousAction = null;
-      yield* call(
-        applyStateOfStack,
-        redoStack,
-        undoStack,
-        prevSkeletonTracingOrNull,
-        prevUserBoundingBoxes,
-        "redo",
-      );
+      const ctx = yield* createOperationContext({
+        id: "REDO",
+        description: "Redo is being performed.",
+        behaviorWhenDisallowed: "ignore",
+      });
+      if (ctx != null) {
+        yield* ctx.execute(function* () {
+          previousAction = null;
+          yield* call(
+            applyStateOfStack,
+            redoStack,
+            undoStack,
+            prevSkeletonTracingOrNull,
+            prevUserBoundingBoxes,
+            "redo",
+          );
 
-      // See undo branch for an explanation.
-      yield* call(setPrevSegmentsAndGroupsToCurrent);
+          // See undo branch for an explanation.
+          yield* call(setPrevSegmentsAndGroupsToCurrent);
+        });
+      }
 
       if (redo.callback != null) {
         redo.callback();
       }
-
-      yield* put(setBusyBlockingInfoAction(false));
     } else {
       // The received action in this branch potentially causes a new
       // entry on the undo stack because the annotation was edited.
@@ -558,23 +574,18 @@ function* applyStateOfStack(
   }
 
   const activeTool = yield* select((state) => state.uiInformation.activeTool);
-  if (activeTool === AnnotationTool.PROOFREAD) {
-    const warningMessage =
-      direction === "undo"
-        ? messages["undo.no_undo_during_proofread"]
-        : messages["undo.no_redo_during_proofread"];
-    Toast.warning(warningMessage);
+  const isLiveCollaboration = yield* select(isConcurrentCollaborationMode);
+  const notSupportedWarning =
+    activeTool === AnnotationTool.PROOFREAD
+      ? messages["undo.no_undo_during_proofread"]
+      : isLiveCollaboration
+        ? messages["undo.no_undo_in_live_collab"]
+        : null;
+  if (notSupportedWarning) {
+    Toast.warning(notSupportedWarning);
     return;
   }
 
-  const busyBlockingInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
-
-  if (busyBlockingInfo.isBusy) {
-    console.warn(`Ignoring ${direction} request (reason: ${busyBlockingInfo.reason || "null"})`);
-    return;
-  }
-
-  yield* put(setBusyBlockingInfoAction(true, `${direction} is being performed.`));
   const stateToRestore = sourceStack.pop();
   if (stateToRestore == null) {
     // Emptiness of stack was already checked above. Satisfy typescript.

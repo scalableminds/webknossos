@@ -37,7 +37,7 @@ The active node is always highlighted with a circle and can be moved by dragging
 
 ### Tool Modes
 
-The following additional modes are available for the skeleton tool beyond the basic functionality:
+The following additional modes are available for the skeleton tool beyond the basic functionality. These modes can be toggled via buttons from the toolbar at the top of the screen when the skeleton tool is active:
 
 ![New Tree Mode](./images/new-tree-modifier.jpg){align=left width="60"} 
 **Create new Tree**
@@ -45,12 +45,12 @@ The following additional modes are available for the skeleton tool beyond the ba
 - Starts a fresh tree structure
 - Useful when annotating multiple separate structures
 
-![Single Node Tree Mode Mode](./images/single-node-tree-mode-modifier.jpg){align=left width="60"} 
+![Single Node Tree Mode](./images/single-node-tree-mode-modifier.jpg){align=left width="60"} 
 **Single Node Tree Mode**
 
 - When enabled, creates a new tree for each placed node
 - Perfect for marking individual objects (e.g., cell nuclei)
-- Also known as "Soma-clicking mode"
+- Also known as "soma-clicking mode"
 
 ![Merger Mode](./images/merger-mode-modifier.jpg){align=left width="60"} 
 **Merger Mode**

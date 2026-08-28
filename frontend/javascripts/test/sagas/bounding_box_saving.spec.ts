@@ -1,11 +1,11 @@
 import { AnnotationLayerEnum } from "types/api_types";
 import { removeSubsequentUpdateBBoxActions } from "viewer/model/helpers/compaction/compact_save_queue";
-import { diffBoundingBoxes } from "viewer/model/helpers/diff_helpers";
+import { diffBoundingBoxes } from "viewer/model/sagas/diffing/bounding_box_diffing";
 import {
-  updateUserBoundingBoxInSkeletonTracing,
   type UpdateUserBoundingBoxInSkeletonTracingAction,
-  updateUserBoundingBoxInVolumeTracing,
   type UpdateUserBoundingBoxInVolumeTracingAction,
+  updateUserBoundingBoxInSkeletonTracing,
+  updateUserBoundingBoxInVolumeTracing,
 } from "viewer/model/sagas/volume/update_actions";
 import type { SaveQueueEntry, UserBoundingBox } from "viewer/store";
 import { describe, expect, it } from "vitest";
@@ -262,7 +262,7 @@ describe("Bounding box diffing and compaction", () => {
     expect(volumeActionBatch.actions[0].name).toBe("updateUserBoundingBoxInVolumeTracing");
 
     const volumeActionValue = (
-      volumeActionBatch?.actions[0] as UpdateUserBoundingBoxInVolumeTracingAction
+      volumeActionBatch.actions[0] as UpdateUserBoundingBoxInVolumeTracingAction
     ).value;
     expect(volumeActionValue).not.toBeNull();
     if (volumeActionValue == null) {
@@ -277,7 +277,7 @@ describe("Bounding box diffing and compaction", () => {
     });
 
     const skeletonActionValue = (
-      skeletonActionBatch?.actions[0] as UpdateUserBoundingBoxInSkeletonTracingAction
+      skeletonActionBatch.actions[0] as UpdateUserBoundingBoxInSkeletonTracingAction
     ).value;
     expect(skeletonActionValue).not.toBeNull();
     if (skeletonActionValue == null) {

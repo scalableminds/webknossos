@@ -1,9 +1,9 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
-import { Form, Modal, Tooltip } from "antd";
+import type { FieldError } from "@rc-component/form/es/interface";
+import { Divider, Form, Tooltip } from "antd";
 import type { FormItemProps, Rule } from "antd/lib/form";
 import type { NamePath } from "antd/lib/form/interface";
-import sum from "lodash/sum";
-import type { FieldError } from "rc-field-form/es/interface";
+import sum from "lodash-es/sum";
 
 const FormItem = Form.Item;
 
@@ -53,22 +53,6 @@ export const FormItemWithInfo = ({
   </FormItem>
 );
 
-export const confirmAsync = (opts: Record<string, any>): Promise<boolean> => {
-  return new Promise((resolve) => {
-    Modal.confirm({
-      ...opts,
-
-      onOk() {
-        resolve(true);
-      },
-
-      onCancel() {
-        resolve(false);
-      },
-    });
-  });
-};
-
 export const hasFormError = (formErrors: FieldError[], key: string): boolean => {
   // Find the number of errors for form fields whose path starts with key
   const errorsForKey = formErrors.map((errorObj) =>
@@ -76,3 +60,7 @@ export const hasFormError = (formErrors: FieldError[], key: string): boolean => 
   );
   return sum(errorsForKey) > 0;
 };
+
+export const DividerWithSubtitle = ({ children }: { children: React.ReactNode }) => (
+  <Divider style={{ margin: "18px 0" }}>{children}</Divider>
+);

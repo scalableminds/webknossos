@@ -7,24 +7,31 @@ import Constants, {
   type OrthoView,
   type OverwriteMode,
   OverwriteModeEnum,
-  type Vector2,
   type Vector3,
 } from "viewer/constants";
-import { getDatasetBoundingBox, getMagInfo } from "viewer/model/accessors/dataset_accessor";
-import { getFlooredPosition } from "viewer/model/accessors/flycam_accessor";
+import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
+import { getLayerByName, getMagInfo } from "viewer/model/accessors/dataset_accessor";
+import {
+  getTransformedDatasetBoundingBox,
+  getTransformsForLayer,
+} from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { enforceActiveVolumeTracing } from "viewer/model/accessors/volumetracing_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
 import Dimensions, { type DimensionMap } from "viewer/model/dimensions";
 import type { MagInfo } from "viewer/model/helpers/mag_info";
 import { zoomedPositionToZoomedAddress } from "viewer/model/helpers/position_converter";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import { getHalfViewportExtentsInVx } from "viewer/model/sagas/saga_selectors";
+import type SectionLabeler from "viewer/model/volumetracing/section_labeling";
+import {
+  TransformedSectionLabeler,
+  type VoxelBuffer2D,
+} from "viewer/model/volumetracing/section_labeling";
 import sampleVoxelMapToMagnification, {
   applyVoxelMap,
 } from "viewer/model/volumetracing/volume_annotation_sampling";
-import VolumeLayer, { type VoxelBuffer2D } from "viewer/model/volumetracing/volumelayer";
 import { Model } from "viewer/singletons";
 import type { BoundingBoxObject, VolumeTracing } from "viewer/store";
 
@@ -58,7 +65,12 @@ export function* getBoundingBoxForViewport(
     ),
   };
 
-  const datasetBoundingBox = yield* select((state) => getDatasetBoundingBox(state.dataset));
+  const datasetBoundingBox = yield* select((state) =>
+    getTransformedDatasetBoundingBox(
+      state.dataset,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    ),
+  );
   return new BoundingBox(currentViewportBounding).intersectedWith(datasetBoundingBox);
 }
 
@@ -81,12 +93,12 @@ export function applyLabeledVoxelMapToAllMissingMags(
   dimensionIndices: DimensionMap,
   magInfo: MagInfo,
   segmentationCube: DataCube,
-  segmentId: number,
+  segmentId: bigint,
   thirdDimensionOfSlice: number, // this value is specified in global (mag1) coords
   // If shouldOverwrite is false, a voxel is only overwritten if
   // its old value is equal to overwritableValue.
   shouldOverwrite: boolean,
-  overwritableValue: number = 0,
+  overwritableValue: bigint = 0n,
 ): void {
   const thirdDim = dimensionIndices[2];
 
@@ -172,7 +184,7 @@ export function* labelWithVoxelBuffer2D(
   viewport: OrthoView,
   wroteVoxelsBox?: BooleanBox,
 ): Saga<void> {
-  const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
+  const allowUpdate = yield* select(mayEditAnnotation);
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   if (!allowUpdate) return;
   if (voxelBuffer.isEmpty()) return;
@@ -188,11 +200,8 @@ export function* labelWithVoxelBuffer2D(
   const magInfo = yield* call(getMagInfo, segmentationLayer.mags);
   const labeledMag = magInfo.getMagByIndexOrThrow(labeledZoomStep);
 
-  const get3DCoordinateFromLocal2D = ([x, y]: Vector2) =>
-    voxelBuffer.get3DCoordinate([x + voxelBuffer.minCoord2d[0], y + voxelBuffer.minCoord2d[1]]);
-
-  const topLeft3DCoord = get3DCoordinateFromLocal2D([0, 0]);
-  const bottomRight3DCoord = get3DCoordinateFromLocal2D([voxelBuffer.width, voxelBuffer.height]);
+  const topLeft3DCoord = voxelBuffer.getTopLeft3DCoord();
+  const bottomRight3DCoord = voxelBuffer.getBottomRight3DCoord();
   // Since the bottomRight3DCoord is exclusive for the described bounding box,
   // the third dimension has to be increased by one (otherwise, the volume of the bounding
   // box would be empty)
@@ -201,6 +210,7 @@ export function* labelWithVoxelBuffer2D(
     min: topLeft3DCoord,
     max: bottomRight3DCoord,
   });
+
   for (const boundingBoxChunk of outerBoundingBox.chunkIntoBuckets()) {
     const { min, max } = boundingBoxChunk;
     const bucketZoomedAddress = zoomedPositionToZoomedAddress(
@@ -216,19 +226,13 @@ export function* labelWithVoxelBuffer2D(
     const labelMapOfBucket = new Uint8Array(Constants.BUCKET_WIDTH ** 2);
     currentLabeledVoxelMap.set(bucketZoomedAddress, labelMapOfBucket);
 
-    // globalA (first dim) and globalB (second dim) are global coordinates
+    // globalA (first dim) and globalB (second dim) are global coordinates in layer-space.
+    // They are "global" in the sense that they are not bucket-local coordinates.
     // which can be used to index into the 2D slice of the VoxelBuffer2D (when subtracting the minCoord2d)
     // and the LabeledVoxelMap
     for (let globalA = min[dimensionIndices[0]]; globalA < max[dimensionIndices[0]]; globalA++) {
       for (let globalB = min[dimensionIndices[1]]; globalB < max[dimensionIndices[1]]; globalB++) {
-        if (
-          voxelBuffer.map[
-            voxelBuffer.linearizeIndex(
-              globalA - voxelBuffer.minCoord2d[0],
-              globalB - voxelBuffer.minCoord2d[1],
-            )
-          ]
-        ) {
+        if (voxelBuffer.getValueFromGlobal(globalA, globalB)) {
           labelMapOfBucket[
             (globalA % Constants.BUCKET_WIDTH) * Constants.BUCKET_WIDTH +
               (globalB % Constants.BUCKET_WIDTH)
@@ -246,8 +250,8 @@ export function* labelWithVoxelBuffer2D(
   const numberOfSlices = 1;
   const thirdDim = dimensionIndices[2];
   const isDeleting = contourTracingMode === ContourModeEnum.DELETE;
-  const newCellIdValue = isDeleting ? 0 : activeCellId;
-  const overwritableValue = isDeleting ? activeCellId : 0;
+  const newCellIdValue = isDeleting ? 0n : activeCellId;
+  const overwritableValue = isDeleting ? activeCellId : 0n;
   const wroteVoxels = applyVoxelMap(
     currentLabeledVoxelMap,
     cube,
@@ -281,13 +285,24 @@ export function* labelWithVoxelBuffer2D(
   }
 }
 
-export function* createVolumeLayer(
+export function* createSectionLabeler(
   volumeTracing: VolumeTracing,
   planeId: OrthoView,
   labeledMags: Vector3,
-  thirdDimValue?: number,
-): Saga<VolumeLayer> {
-  const position = yield* select((state) => getFlooredPosition(state.flycam));
-  thirdDimValue = thirdDimValue ?? position[Dimensions.thirdDimensionForPlane(planeId)];
-  return new VolumeLayer(volumeTracing.tracingId, planeId, thirdDimValue, labeledMags);
+  getThirdDimValue: (thirdDim: number) => number,
+): Saga<SectionLabeler | TransformedSectionLabeler> {
+  const dataset = yield* select((state) => state.dataset);
+  const datasetConfiguration = yield* select((state) => state.datasetConfiguration);
+
+  const { nativelyRenderedLayerName } = datasetConfiguration;
+  const layer = getLayerByName(dataset, volumeTracing.tracingId);
+  const segmentationTransforms = getTransformsForLayer(dataset, layer, nativelyRenderedLayerName);
+
+  return new TransformedSectionLabeler(
+    volumeTracing.tracingId,
+    planeId,
+    getThirdDimValue,
+    labeledMags,
+    segmentationTransforms,
+  );
 }

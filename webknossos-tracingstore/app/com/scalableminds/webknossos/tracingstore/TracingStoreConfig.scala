@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.scalableminds.util.tools.ConfigReader
 import play.api.Configuration
 
-class TracingStoreConfig @Inject()(configuration: Configuration) extends ConfigReader {
+class TracingStoreConfig @Inject() (configuration: Configuration) extends ConfigReader {
   override val raw: Configuration = configuration
 
   object Http {
@@ -28,7 +28,7 @@ class TracingStoreConfig @Inject()(configuration: Configuration) extends ConfigR
     object Cache {
       val chunkCacheMaxSizeBytes: Long = get[Long]("tracingstore.cache.chunkCacheMaxSizeBytes")
     }
-    val children = List(WebKnossos, Fossildb, Redis, Cache)
+    val children: List[Object] = List(WebKnossos, Fossildb, Redis, Cache)
   }
 
   object SlackNotifications {
@@ -36,5 +36,5 @@ class TracingStoreConfig @Inject()(configuration: Configuration) extends ConfigR
     val verboseLoggingEnabled: Boolean = get[Boolean]("slackNotifications.verboseLoggingEnabled")
   }
 
-  val children = List(Http, Tracingstore, SlackNotifications)
+  val children: List[Object] = List(Http, Tracingstore, SlackNotifications)
 }

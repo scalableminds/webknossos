@@ -1,5 +1,6 @@
-import { getDefaultOrganization, getOperatorData } from "admin/rest_api";
-import { Card, Col, Row } from "antd";
+import { getDefaultOrganization } from "admin/api/organization";
+import { getOperatorData } from "admin/rest_api";
+import { Card, Col, Row, Typography } from "antd";
 import Markdown from "libs/markdown_adapter";
 import type React from "react";
 import { useEffect, useState } from "react";
@@ -34,7 +35,7 @@ export const Imprint: React.FC = () => {
     <div className="container" id="impressum">
       <Row>
         <Col offset={6} span={12}>
-          <h2>Imprint</h2>
+          <Typography.Title level={2}>Imprint</Typography.Title>
           <Card>
             <Markdown>{operatorData}</Markdown>
           </Card>
@@ -56,7 +57,7 @@ export const Privacy: React.FC = () => {
     <div className="container text">
       <Row>
         <Col offset={6} span={12}>
-          <h2>Privacy Statement</h2>
+          <Typography.Title level={2}>Privacy Statement</Typography.Title>
 
           <p>
             WEBKNOSSOS is a team-based open-source tool for exploring and collaboratively annotating
@@ -67,7 +68,7 @@ export const Privacy: React.FC = () => {
             external services are used and other privacy-related information.
           </p>
 
-          <h3>Definitions</h3>
+          <Typography.Title level={3}>Definitions</Typography.Title>
           <ul>
             <li>
               &quot;<strong>WEBKNOSSOS</strong>&quot; is the application that can be used for
@@ -124,17 +125,17 @@ export const Privacy: React.FC = () => {
             </li>
           </ul>
 
-          <h3>Data controller</h3>
+          <Typography.Title level={3}>Data controller</Typography.Title>
           {defaultOrganization != null ? (
             <div key={defaultOrganization.id}>
               <Markdown>{defaultOrganization.additionalInformation}</Markdown>
             </div>
           ) : null}
 
-          <h3>Data processor</h3>
+          <Typography.Title level={3}>Data processor</Typography.Title>
           <Markdown>{operatorData}</Markdown>
 
-          <h3>Your Data</h3>
+          <Typography.Title level={3}>Your Data</Typography.Title>
           <ul>
             <li>
               In order to provide the WEBKNOSSOS application, several external services are used.
@@ -213,7 +214,7 @@ export const Privacy: React.FC = () => {
             </li>
           </ul>
 
-          <h3>Your rights</h3>
+          <Typography.Title level={3}>Your rights</Typography.Title>
           <ul>
             <li>
               If you wish to confirm, access, update/correct or request deletion of your personal
@@ -234,7 +235,7 @@ export const Privacy: React.FC = () => {
               such a request, please contact us.
             </li>
           </ul>
-          <h3>Legal basis</h3>
+          <Typography.Title level={3}>Legal basis</Typography.Title>
           <p>
             Art. 6(1) lit. a GDPR serves as the legal basis for processing operations for which we
             obtain consent for a specific processing purpose. If the processing of personal data is
@@ -251,7 +252,7 @@ export const Privacy: React.FC = () => {
             In case of a hosted WEBKNOSSOS service, the processing is performed by the processor on
             behalf of the controller.
           </p>
-          <h3>Data security</h3>
+          <Typography.Title level={3}>Data security</Typography.Title>
           <p>
             The processor has implemented a number of technological and organizational measures in
             order to maintain the safety and integrity of your data.
@@ -276,7 +277,7 @@ export const Privacy: React.FC = () => {
               Suppliers and integrated services are evaluated and inspected on a regular basis.
             </li>
           </ul>
-          <h3>Changes</h3>
+          <Typography.Title level={3}>Changes</Typography.Title>
           <p>
             We reserve the right to update or modify this Privacy Policy from time to time without
             prior notice. Please review this document especially before you provide any information.

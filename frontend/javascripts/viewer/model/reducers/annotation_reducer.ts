@@ -1,16 +1,20 @@
 import update from "immutability-helper";
+import { getRandomColor } from "libs/colors";
 import { V3 } from "libs/mjs";
-import * as Utils from "libs/utils";
-import _ from "lodash";
+import isEqual from "lodash-es/isEqual";
+import reduce from "lodash-es/reduce";
+import uniqWith from "lodash-es/uniqWith";
 import type { AdditionalCoordinate } from "types/api_types";
+import defaultState from "viewer/default_state";
 import { maybeGetSomeTracing } from "viewer/model/accessors/tracing_accessor";
-import { getDisplayedDataExtentInPlaneMode } from "viewer/model/accessors/view_mode_accessor";
+import { getExtentForNewBoundingBox } from "viewer/model/accessors/view_mode_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import { updateKey, updateKey2 } from "viewer/model/helpers/deep_update";
 import type { MeshInformation, UserBoundingBox, WebknossosState } from "viewer/store";
-import { getDatasetBoundingBox } from "../accessors/dataset_accessor";
+import { getTransformedDatasetBoundingBox } from "../accessors/dataset_layer_transformation_accessor";
 import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
 import { getMeshesForAdditionalCoordinates } from "../accessors/volumetracing_accessor";
+import type { ChangeUserBoundingBoxAction } from "../actions/annotation_actions";
 import BoundingBox from "../bucket_data_handling/bounding_box";
 
 const updateAnnotation = (
@@ -56,6 +60,45 @@ const updateUserBoundingBoxes = (
   });
 };
 
+export const updateUserBoundingBox = (
+  state: WebknossosState,
+  action: ChangeUserBoundingBoxAction,
+) => {
+  const tracing = maybeGetSomeTracing(state.annotation);
+
+  if (tracing == null) {
+    return state;
+  }
+
+  const updatedUserBoundingBoxes = tracing.userBoundingBoxes.map((bbox) => {
+    if (bbox.id === action.id) {
+      const newBox = {
+        ...bbox,
+        ...action.newProps,
+      };
+      if (action.newProps.boundingBox != null) {
+        // If the boundingBox min/max properties are changed, ensure
+        // that these are integer (otherwise, the backend will reject
+        // the update actions).
+        const { boundingBox } = action.newProps;
+        newBox.boundingBox = {
+          ...boundingBox,
+          min: boundingBox.min.some((el) => Math.floor(el) !== el)
+            ? V3.floor(boundingBox.min)
+            : boundingBox.min,
+          max: boundingBox.max.some((el) => Math.floor(el) !== el)
+            ? V3.floor(boundingBox.max)
+            : boundingBox.max,
+        };
+      }
+      return newBox;
+    }
+
+    return bbox;
+  });
+  return updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
+};
+
 const maybeAddAdditionalCoordinatesToMeshState = (
   state: WebknossosState,
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
@@ -64,10 +107,10 @@ const maybeAddAdditionalCoordinatesToMeshState = (
   if (getMeshesForAdditionalCoordinates(state, additionalCoordinates, layerName) == null) {
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
     return update(state, {
-      localSegmentationData: {
+      localSegmentationStateByLayer: {
         [layerName]: {
           meshes: {
-            [additionalCoordKey]: { $set: [] },
+            [additionalCoordKey]: { $set: {} },
           },
         },
       },
@@ -79,7 +122,31 @@ const maybeAddAdditionalCoordinatesToMeshState = (
 function AnnotationReducer(state: WebknossosState, action: Action): WebknossosState {
   switch (action.type) {
     case "INITIALIZE_ANNOTATION": {
-      return updateAnnotation(state, {
+      const resetStoreState = update(state, {
+        save: {
+          // rebaseRelevantServerAnnotationState stores rebasing relevant information of the annotation.
+          // It always is in sync with the latest known version on the server. After initializing it is the current version.
+          // mappingDataByLayer entries are initialized automatically when the mappings are loaded by the saga.
+          rebaseRelevantServerAnnotationState: {
+            annotationVersion: {
+              $set: action.annotation.version,
+            },
+            annotationDescription: {
+              $set: action.annotation.description,
+            },
+            mappingDataByLayer: {
+              $set: {},
+            },
+          },
+        },
+        // Also reset localAnnotationState. Note that localSegmentationStateByLayer is reset in the reducer
+        // that handles SET_DATASET.
+        localAnnotationState: {
+          $set: defaultState.localAnnotationState,
+        },
+      });
+
+      return updateAnnotation(resetStoreState, {
         // Clear all tracings. These will be initialized in corresponding
         // initialization actions.
         mappings: [],
@@ -124,16 +191,9 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
     }
 
     case "SET_ANNOTATION_ALLOW_UPDATE": {
-      const { allowUpdate } = action;
-      return updateKey2(state, "annotation", "restrictions", {
-        allowUpdate,
-      });
-    }
-
-    case "SET_BLOCKED_BY_USER": {
-      const { blockedByUser } = action;
+      const { currentlyAllowUpdate } = action;
       return updateKey(state, "annotation", {
-        blockedByUser,
+        isUpdatingCurrentlyAllowed: currentlyAllowUpdate,
       });
     }
 
@@ -142,21 +202,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
     }
 
     case "CHANGE_USER_BOUNDING_BOX": {
-      const tracing = maybeGetSomeTracing(state.annotation);
-
-      if (tracing == null) {
-        return state;
-      }
-
-      const updatedUserBoundingBoxes = tracing.userBoundingBoxes.map((bbox) =>
-        bbox.id === action.id
-          ? {
-              ...bbox,
-              ...action.newProps,
-            }
-          : bbox,
-      );
-      const updatedState = updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
+      const updatedState = updateUserBoundingBox(state, action);
       return updateKey(updatedState, "uiInformation", {
         activeUserBoundingBoxId: action.id,
       });
@@ -170,10 +216,9 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
       }
 
       const { userBoundingBoxes } = tracing;
-      const highestBoundingBoxId = Math.max(0, ...userBoundingBoxes.map((bb) => bb.id));
-      const boundingBoxId = highestBoundingBoxId + 1;
+      const boundingBoxId = action.id;
 
-      const { min, max, halfBoxExtent } = getDisplayedDataExtentInPlaneMode(state);
+      const { min, max, halfBoxExtent } = getExtentForNewBoundingBox(state);
       const newBoundingBoxTemplate: UserBoundingBox = {
         boundingBox: {
           min,
@@ -181,7 +226,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         },
         id: boundingBoxId,
         name: `Bounding box ${boundingBoxId}`,
-        color: Utils.getRandomColor(),
+        color: getRandomColor(),
         isVisible: true,
       };
 
@@ -202,7 +247,10 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
       }
 
       // Ensure the new bounding box is within the dataset bounding box.
-      const datasetBoundingBox = getDatasetBoundingBox(state.dataset);
+      const datasetBoundingBox = getTransformedDatasetBoundingBox(
+        state.dataset,
+        state.datasetConfiguration.nativelyRenderedLayerName,
+      );
       const newBoundingBox = new BoundingBox(newUserBoundingBox.boundingBox);
       const newBoundingBoxWithinDataset = newBoundingBox.intersectedWith(datasetBoundingBox);
       // Only update the bounding box if the bounding box overlaps with the dataset bounds.
@@ -219,23 +267,23 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
     }
 
     case "ADD_USER_BOUNDING_BOXES": {
+      const { userBoundingBoxes, boundingBoxIds } = action;
       const tracing = maybeGetSomeTracing(state.annotation);
-
-      if (tracing == null) {
+      const hasEqualAmountOfIds = userBoundingBoxes.length === boundingBoxIds.length;
+      if (tracing == null || !hasEqualAmountOfIds) {
         return state;
       }
 
-      const highestBoundingBoxId = Math.max(0, ...tracing.userBoundingBoxes.map((bb) => bb.id));
-      const additionalUserBoundingBoxes = action.userBoundingBoxes.map((bb, index) => ({
+      const additionalUserBoundingBoxes = userBoundingBoxes.map((bb, index) => ({
         ...bb,
-        id: highestBoundingBoxId + index + 1,
+        id: boundingBoxIds[index],
       }));
-      const mergedUserBoundingBoxes = _.uniqWith(
+      const mergedUserBoundingBoxes = uniqWith(
         [...tracing.userBoundingBoxes, ...additionalUserBoundingBoxes],
         (bboxWithId1, bboxWithId2) => {
           const { id: _id1, ...bbox1 } = bboxWithId1;
           const { id: _id2, ...bbox2 } = bboxWithId2;
-          return _.isEqual(bbox1, bbox2);
+          return isEqual(bbox1, bbox2);
         },
       );
       return updateUserBoundingBoxes(state, mergedUserBoundingBoxes);
@@ -264,11 +312,11 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
       const { layerName, id, visibility, additionalCoordinates } = action;
       const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
       return update(state, {
-        localSegmentationData: {
+        localSegmentationStateByLayer: {
           [layerName]: {
             meshes: {
               [additionalCoordKey]: {
-                [id]: {
+                [id.toString()]: {
                   isVisible: {
                     $set: visibility,
                   },
@@ -282,10 +330,10 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
 
     case "UPDATE_MESH_OPACITY": {
       const { layerName, id, opacity } = action;
-      const meshDict = state.localSegmentationData[layerName].meshes;
+      const meshDict = state.localSegmentationStateByLayer[layerName].meshes;
       if (meshDict == null) return state;
       const currentAdditionalCoordinates = Object.keys(meshDict || {});
-      const updatedMeshes = _.reduce(
+      const updatedMeshes = reduce(
         currentAdditionalCoordinates,
         (updatedMeshesDict, additionalCoordKey) => {
           const meshes = updatedMeshesDict[additionalCoordKey];
@@ -293,7 +341,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
           return {
             ...updatedMeshesDict,
             [additionalCoordKey]: update(meshes, {
-              [id]: {
+              [id.toString()]: {
                 opacity: {
                   $set: opacity,
                 },
@@ -304,7 +352,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         meshDict,
       );
       return update(state, {
-        localSegmentationData: {
+        localSegmentationStateByLayer: {
           [layerName]: {
             meshes: {
               $set: updatedMeshes,
@@ -316,7 +364,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
 
     case "REMOVE_MESH": {
       const { layerName, segmentId } = action;
-      const newMeshes: Record<string, Record<number, MeshInformation>> = {};
+      const newMeshes: Record<string, Record<string, MeshInformation>> = {};
       const additionalCoordinates = state.flycam.additionalCoordinates;
       const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
       const maybeMeshes = getMeshesForAdditionalCoordinates(
@@ -324,14 +372,18 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         additionalCoordinates,
         layerName,
       );
-      if (maybeMeshes == null || maybeMeshes[segmentId] == null) {
+      if (maybeMeshes == null || maybeMeshes[segmentId.toString()] == null) {
         // No meshes exist for the segment id. No need to do anything.
+        console.log("Could not find mesh", segmentId, "which was requested to be removed");
         return state;
       }
-      const { [segmentId]: _, ...remainingMeshes } = maybeMeshes as Record<number, MeshInformation>;
+      const { [segmentId.toString()]: _, ...remainingMeshes } = maybeMeshes as Record<
+        string,
+        MeshInformation
+      >;
       newMeshes[additionalCoordKey] = remainingMeshes;
       return update(state, {
-        localSegmentationData: {
+        localSegmentationStateByLayer: {
           [layerName]: {
             meshes: {
               $merge: newMeshes,
@@ -351,13 +403,14 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         mappingName,
         mappingType,
         opacity,
+        isVisible,
       } = action;
       const meshInfo: MeshInformation = {
         segmentId: segmentId,
         seedPosition,
         seedAdditionalCoordinates,
         isLoading: false,
-        isVisible: true,
+        isVisible,
         isPrecomputed: false,
         opacity,
         mappingName,
@@ -373,11 +426,11 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
       );
 
       const updatedKey = update(stateWithCurrentAddCoords, {
-        localSegmentationData: {
+        localSegmentationStateByLayer: {
           [layerName]: {
             meshes: {
               [additionalCoordKey]: {
-                [segmentId]: {
+                [segmentId.toString()]: {
                   $set: meshInfo,
                 },
               },
@@ -397,13 +450,14 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         meshFileName,
         mappingName,
         opacity,
+        isVisible,
       } = action;
       const meshInfo: MeshInformation = {
         segmentId: segmentId,
         seedPosition,
         seedAdditionalCoordinates,
         isLoading: false,
-        isVisible: true,
+        isVisible,
         isPrecomputed: true,
         opacity,
         meshFileName,
@@ -418,11 +472,11 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         layerName,
       );
       const updatedKey = update(stateWithCurrentAddCoords, {
-        localSegmentationData: {
+        localSegmentationStateByLayer: {
           [layerName]: {
             meshes: {
               [additionalCoordKey]: {
-                [segmentId]: {
+                [segmentId.toString()]: {
                   $set: meshInfo,
                 },
               },
@@ -439,11 +493,11 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         state.flycam.additionalCoordinates,
       );
       const updatedKey = update(state, {
-        localSegmentationData: {
+        localSegmentationStateByLayer: {
           [layerName]: {
             meshes: {
               [additionalCoordKey]: {
-                [segmentId]: {
+                [segmentId.toString()]: {
                   isLoading: {
                     $set: true,
                   },
@@ -462,11 +516,11 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         state.flycam.additionalCoordinates,
       );
       const updatedKey = update(state, {
-        localSegmentationData: {
+        localSegmentationStateByLayer: {
           [layerName]: {
             meshes: {
               [additionalCoordKey]: {
-                [segmentId]: {
+                [segmentId.toString()]: {
                   isLoading: {
                     $set: false,
                   },
@@ -481,31 +535,41 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
 
     case "UPDATE_MESH_FILE_LIST": {
       const { layerName, meshFiles } = action;
-      return updateKey2(state, "localSegmentationData", layerName, {
+      return updateKey2(state, "localSegmentationStateByLayer", layerName, {
         availableMeshFiles: meshFiles,
       });
     }
 
     case "UPDATE_CURRENT_MESH_FILE": {
       const { layerName, meshFileName } = action;
-      const availableMeshFiles = state.localSegmentationData[layerName].availableMeshFiles;
+      const availableMeshFiles = state.localSegmentationStateByLayer[layerName].availableMeshFiles;
       if (availableMeshFiles == null) return state;
       const meshFile = availableMeshFiles.find((el) => el.name === meshFileName);
-      return updateKey2(state, "localSegmentationData", layerName, {
+      return updateKey2(state, "localSegmentationStateByLayer", layerName, {
         currentMeshFile: meshFile,
       });
     }
 
     case "SET_SELECTED_SEGMENTS_OR_GROUP": {
       const { selectedSegments, selectedGroup, layerName } = action;
-      return updateKey2(state, "localSegmentationData", layerName, {
+      return updateKey2(state, "localSegmentationStateByLayer", layerName, {
         selectedIds: { segments: selectedSegments, group: selectedGroup },
       });
     }
 
-    case "SET_OTHERS_MAY_EDIT_FOR_ANNOTATION": {
+    case "SET_COLLABORATION_MODE": {
       return updateKey(state, "annotation", {
-        othersMayEdit: action.othersMayEdit,
+        collaborationMode: action.collaborationMode,
+      });
+    }
+
+    case "SET_ID_RESERVATIONS": {
+      // BoundingBox reservations are annotation-wide (bounding boxes are mirrored across all
+      // tracings, see updateUserBoundingBoxes above), unlike SegmentGroup/Segment reservations
+      // which are handled per segmentation layer in volumetracing_reducer.ts.
+      if (action.domain !== "BoundingBox") return state;
+      return updateKey(state, "localAnnotationState", {
+        idReservationsForBoundingBoxes: action.reservations,
       });
     }
 

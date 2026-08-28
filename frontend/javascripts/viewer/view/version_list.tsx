@@ -1,3 +1,4 @@
+import VirtualList from "@rc-component/virtual-list";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import {
   downloadAnnotation,
@@ -9,29 +10,39 @@ import { Button, List, Spin } from "antd";
 import dayjs from "dayjs";
 import { handleGenericError } from "libs/error_handling";
 import { useFetch } from "libs/react_helpers";
-import { useEffectOnlyOnce } from "libs/react_hooks";
-import { useWkSelector } from "libs/react_hooks";
+import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
 import { chunkIntoTimeWindows } from "libs/utils";
-import _ from "lodash";
-import { useEffect, useState } from "react";
+import flattenDepth from "lodash-es/flattenDepth";
+import groupBy from "lodash-es/groupBy";
+import isEqual from "lodash-es/isEqual";
+import isString from "lodash-es/isString";
+import mapValues from "lodash-es/mapValues";
+import max from "lodash-es/max";
+import { useEffect, useMemo, useState } from "react";
+import AutoSizer from "react-virtualized-auto-sizer";
 import type { APIUpdateActionBatch } from "types/api_types";
-import { getCreationTimestamp } from "viewer/model/accessors/annotation_accessor";
-import { setAnnotationAllowUpdateAction } from "viewer/model/actions/annotation_actions";
+import {
+  getCreationTimestamp,
+  isConcurrentCollaborationMode,
+} from "viewer/model/accessors/annotation_accessor";
+import { setIsUpdatingAnnotationCurrentlyAllowedAction } from "viewer/model/actions/annotation_actions";
 import {
   pushSaveQueueTransactionIsolated,
   setVersionNumberAction,
 } from "viewer/model/actions/save_actions";
-import { setVersionRestoreVisibilityAction } from "viewer/model/actions/ui_actions";
 import {
-  type ServerUpdateAction,
+  setIsRestoringVersionAction,
+  setVersionRestoreVisibilityAction,
+} from "viewer/model/actions/ui_actions";
+import {
   revertToVersion,
+  type ServerUpdateAction,
   serverCreateTracing,
 } from "viewer/model/sagas/volume/update_actions";
-import { Model } from "viewer/singletons";
-import { api } from "viewer/singletons";
+import { api, Model } from "viewer/singletons";
 import type { StoreAnnotation } from "viewer/store";
 import Store from "viewer/store";
-import VersionEntryGroup from "viewer/view/version_entry_group";
+import VersionEntryGroup, { isActiveVersionInGroup } from "viewer/view/version_entry_group";
 
 // This used to be 5000 but we had logs where lots of UPDATE_BUCKET
 // update actions existed in one batch. The JSON payload exceeded a length
@@ -51,7 +62,8 @@ type GroupedAndChunkedVersions = Record<string, Array<Array<APIUpdateActionBatch
 const VERSION_LIST_PLACEHOLDER = {
   emptyText: "No versions created yet.",
 };
-export async function previewVersion(version?: number) {
+
+async function previewVersion(version?: number) {
   const state = Store.getState();
   const { controlMode } = state.temporaryConfiguration;
   const { annotationId, tracingStore, annotationLayers } = state.annotation;
@@ -59,7 +71,7 @@ export async function previewVersion(version?: number) {
   const annotationProto = await getAnnotationProto(tracingStore.url, annotationId, version);
 
   if (
-    !_.isEqual(
+    !isEqual(
       annotationProto.annotationLayers.map((l) => l.tracingId),
       annotationLayers.map((l) => l.tracingId),
     )
@@ -74,7 +86,7 @@ export async function previewVersion(version?: number) {
   }
 
   await api.tracing.restart(null, annotationId, controlMode, version, false, false);
-  Store.dispatch(setAnnotationAllowUpdateAction(false));
+  Store.dispatch(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
   const segmentationLayersToReload = [];
 
   segmentationLayersToReload.push(...Model.getSegmentationTracingLayers());
@@ -91,12 +103,24 @@ async function handleRestoreVersion(
   version: number,
 ) {
   if (props.initialAllowUpdate) {
-    const newestVersion = _.max(versions.map((batch) => batch.version)) || 0;
+    const newestVersion = max(versions.map((batch) => batch.version)) || 0;
     Store.dispatch(setVersionNumberAction(newestVersion));
     Store.dispatch(pushSaveQueueTransactionIsolated(revertToVersion(version)));
-    await Model.ensureSavedState();
+    Store.dispatch(setIsRestoringVersionAction(true));
+    try {
+      await Model.ensureSavedState();
+    } finally {
+      Store.dispatch(setIsRestoringVersionAction(false));
+    }
+    if (isConcurrentCollaborationMode(Store.getState())) {
+      // Safety measure in live collab mode: Enforce everything is in sync with the backend via hard reload.
+      // The saving above might have caused a local rebasing which might have lead to an unexpected state.
+      window.location.reload();
+      return;
+    }
     Store.dispatch(setVersionRestoreVisibilityAction(false));
-    Store.dispatch(setAnnotationAllowUpdateAction(true));
+    const initialAllowUpdate = Store.getState().annotation.restrictions.allowUpdate;
+    Store.dispatch(setIsUpdatingAnnotationCurrentlyAllowedAction(initialAllowUpdate));
   } else {
     const { annotationType, annotationId, volumes } = Store.getState().annotation;
     const includesVolumeFallbackData = volumes.some((volume) => volume.fallbackLayer != null);
@@ -108,27 +132,27 @@ export const handleCloseRestoreView = async () => {
   // This will load the newest version of both skeleton and volume tracings
   await previewVersion();
   Store.dispatch(setVersionRestoreVisibilityAction(false));
-  const { initialAllowUpdate } = Store.getState().annotation.restrictions;
-  Store.dispatch(setAnnotationAllowUpdateAction(initialAllowUpdate));
+  const initialAllowUpdate = Store.getState().annotation.restrictions.allowUpdate;
+  Store.dispatch(setIsUpdatingAnnotationCurrentlyAllowedAction(initialAllowUpdate));
 };
 
-const getGroupedAndChunkedVersions = _.memoize(
-  (versions: Array<APIUpdateActionBatch>): GroupedAndChunkedVersions => {
-    // This function first groups the versions by day, where the key is the output of the moment calendar function.
-    // Then, the versions for each day are chunked into x-minute intervals,
-    // so that the actions of one chunk are all from within one x-minute interval.
-    const groupedVersions = _.groupBy(versions, (batch) =>
-      dayjs.utc(_.max(batch.value.map((action) => action.value.actionTimestamp))).calendar(null),
-    );
+function getGroupedAndChunkedVersions(
+  versions: Array<APIUpdateActionBatch>,
+): GroupedAndChunkedVersions {
+  // This function first groups the versions by day, where the key is the output of the moment calendar function.
+  // Then, the versions for each day are chunked into x-minute intervals,
+  // so that the actions of one chunk are all from within one x-minute interval.
+  const groupedVersions = groupBy(versions, (batch) =>
+    dayjs.utc(max(batch.value.map((action) => action.value.actionTimestamp))).calendar(null),
+  );
 
-    const getBatchTime = (batch: APIUpdateActionBatch): number =>
-      _.max(batch.value.map((action: ServerUpdateAction) => action.value.actionTimestamp)) || 0;
+  const getBatchTime = (batch: APIUpdateActionBatch): number =>
+    max(batch.value.map((action: ServerUpdateAction) => action.value.actionTimestamp)) || 0;
 
-    return _.mapValues(groupedVersions, (versionsOfOneDay) =>
-      chunkIntoTimeWindows(versionsOfOneDay, getBatchTime, 5),
-    );
-  },
-);
+  return mapValues(groupedVersions, (versionsOfOneDay) =>
+    chunkIntoTimeWindows(versionsOfOneDay, getBatchTime, 5),
+  );
+}
 
 async function getUpdateActionLogPage(
   annotation: StoreAnnotation,
@@ -194,9 +218,7 @@ async function getUpdateActionLogPage(
 function VersionList() {
   const tracingStoreUrl = useWkSelector((state) => state.annotation.tracingStore.url);
   const annotationId = useWkSelector((state) => state.annotation.annotationId);
-  const initialAllowUpdate = useWkSelector(
-    (state) => state.annotation.restrictions.initialAllowUpdate,
-  );
+  const initialAllowUpdate = useWkSelector((state) => state.annotation.restrictions.allowUpdate);
   const newestVersion = useFetch(
     async () => {
       if (annotationId === "") {
@@ -220,35 +242,42 @@ function VersionList() {
 }
 
 function InnerVersionList(props: Props & { newestVersion: number; initialAllowUpdate: boolean }) {
-  const annotation = useWkSelector((state) => state.annotation);
+  // Select only the needed fields (instead of the whole annotation) to avoid
+  // re-rendering the version list on unrelated annotation mutations.
+  const annotationId = useWkSelector((state) => state.annotation.annotationId);
+  const activeVersion = useWkSelector((state) => state.annotation.version);
+  const earliestAccessibleVersion = useWkSelector(
+    (state) => state.annotation.earliestAccessibleVersion,
+  );
   const queryClient = useQueryClient();
   // Remember the version with which the version view was opened (
   // the active version could change by the actions of the user).
   // Based on this version, the page numbers are calculated.
   const { newestVersion } = props;
-  const [initialVersion] = useState(annotation.version);
+  const [initialVersion] = useState(activeVersion);
 
   // true if another version is being restored or previewed
   const [isChangingVersion, setIsChangingVersion] = useState(false);
+
+  const [expandedGroups, setExpandedGroups] = useState<Record<number, boolean>>({});
 
   function fetchPaginatedVersions({ pageParam }: { pageParam?: number }) {
     if (pageParam == null) {
       pageParam = Math.floor((newestVersion - initialVersion) / ENTRIES_PER_PAGE);
     }
-    const { url: tracingStoreUrl } = Store.getState().annotation.tracingStore;
-    const { annotationId, earliestAccessibleVersion } = Store.getState().annotation;
+    const { annotation } = Store.getState();
 
     return getUpdateActionLogPage(
       annotation,
-      tracingStoreUrl,
-      annotationId,
-      earliestAccessibleVersion,
+      annotation.tracingStore.url,
+      annotation.annotationId,
+      annotation.earliestAccessibleVersion,
       newestVersion,
       pageParam,
     );
   }
 
-  const queryKey = ["versions", annotation.annotationId];
+  const queryKey = ["versions", annotationId];
 
   useEffectOnlyOnce(() => {
     // Remove all previous existent queries so that the content of this view
@@ -259,7 +288,7 @@ function InnerVersionList(props: Props & { newestVersion: number; initialAllowUp
       queryKey: queryKey,
     });
     // Will be set back by handleRestoreVersion or handleCloseRestoreView
-    Store.dispatch(setAnnotationAllowUpdateAction(false));
+    Store.dispatch(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
   });
 
   const {
@@ -281,12 +310,17 @@ function InnerVersionList(props: Props & { newestVersion: number; initialAllowUp
     getNextPageParam: (lastPage) => lastPage.nextPage,
     getPreviousPageParam: (lastPage) => lastPage.previousPage,
   });
-  const flattenedVersions = _.flatten(versions?.pages.map((page) => page.data) || []);
-  const groupedAndChunkedVersions = getGroupedAndChunkedVersions(flattenedVersions);
-  const batchesAndDateStrings: Array<string | APIUpdateActionBatch[]> = _.flattenDepth(
-    Object.entries(groupedAndChunkedVersions) as any,
-    2,
+  // The useInfiniteQuery result is stable per fetch, so these memos only
+  // recompute when new pages arrive (grouping thousands of versions is
+  // not cheap).
+  const flattenedVersions = useMemo(
+    () => versions?.pages.flatMap((page) => page.data) || [],
+    [versions],
   );
+  const batchesAndDateStrings: Array<string | APIUpdateActionBatch[]> = useMemo(() => {
+    const groupedAndChunkedVersions = getGroupedAndChunkedVersions(flattenedVersions);
+    return flattenDepth(Object.entries(groupedAndChunkedVersions) as any, 2);
+  }, [flattenedVersions]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Needs investigation whether fetchNextPage should be added to the dependencies.
   useEffect(() => {
@@ -326,7 +360,7 @@ function InnerVersionList(props: Props & { newestVersion: number; initialAllowUp
   };
 
   return (
-    <div>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       {hasPreviousPage && (
         <div className="flex-center-child">
           <Button
@@ -337,51 +371,78 @@ function InnerVersionList(props: Props & { newestVersion: number; initialAllowUp
           </Button>
         </div>
       )}
-      {flattenedVersions && (
-        <List
-          dataSource={batchesAndDateStrings}
-          loading={isFetching || isChangingVersion}
-          locale={VERSION_LIST_PLACEHOLDER}
-          renderItem={(batchesOrDateString) =>
-            _.isString(batchesOrDateString) ? (
-              <List.Item className="version-section">
-                <div
-                  style={{
-                    margin: "auto",
-                  }}
+      <div style={{ flex: "1 1 auto", minHeight: 0 }}>
+        <AutoSizer disableWidth>
+          {({ height }) => (
+            <List loading={isFetching || isChangingVersion} locale={VERSION_LIST_PLACEHOLDER}>
+              {batchesAndDateStrings.length > 0 ? (
+                // Virtualize the version entries so that long histories don't
+                // render thousands of DOM nodes at once. The item heights vary
+                // (date sections, collapsible groups); VirtualList measures the
+                // actual heights, itemHeight is only an initial estimate.
+                <VirtualList
+                  data={batchesAndDateStrings}
+                  height={height}
+                  itemHeight={40}
+                  itemKey={(batchesOrDateString) =>
+                    isString(batchesOrDateString)
+                      ? batchesOrDateString
+                      : batchesOrDateString[0].version
+                  }
                 >
-                  {batchesOrDateString}
-                </div>
-              </List.Item>
-            ) : (
-              <VersionEntryGroup
-                batches={batchesOrDateString}
-                initialAllowUpdate={props.initialAllowUpdate}
-                newestVersion={flattenedVersions[0].version}
-                activeVersion={annotation.version}
-                onRestoreVersion={async (version) => {
-                  executeUnlessSwitchingVersions(() =>
-                    handleRestoreVersion(props, flattenedVersions, version),
-                  );
-                }}
-                onPreviewVersion={async (version) => {
-                  executeUnlessSwitchingVersions(() => previewVersion(version));
-                }}
-                key={batchesOrDateString[0].version}
-              />
-            )
-          }
-        />
-      )}
+                  {(batchesOrDateString) => (
+                    <div>
+                      {isString(batchesOrDateString) ? (
+                        <List.Item className="version-section">
+                          <div
+                            style={{
+                              margin: "auto",
+                            }}
+                          >
+                            {batchesOrDateString}
+                          </div>
+                        </List.Item>
+                      ) : (
+                        <VersionEntryGroup
+                          batches={batchesOrDateString}
+                          initialAllowUpdate={props.initialAllowUpdate}
+                          newestVersion={flattenedVersions[0].version}
+                          activeVersion={activeVersion}
+                          expanded={
+                            expandedGroups[batchesOrDateString[0].version] ??
+                            isActiveVersionInGroup(batchesOrDateString, activeVersion)
+                          }
+                          onSetExpanded={(expanded) => {
+                            const groupKey = batchesOrDateString[0].version;
+                            setExpandedGroups((prev) => ({ ...prev, [groupKey]: expanded }));
+                          }}
+                          onRestoreVersion={async (version) => {
+                            executeUnlessSwitchingVersions(() =>
+                              handleRestoreVersion(props, flattenedVersions, version),
+                            );
+                          }}
+                          onPreviewVersion={async (version) => {
+                            executeUnlessSwitchingVersions(() => previewVersion(version));
+                          }}
+                        />
+                      )}
+                    </div>
+                  )}
+                </VirtualList>
+              ) : null}
+            </List>
+          )}
+        </AutoSizer>
+      </div>
       {hasNextPage ? (
         <div style={{ display: "flex", justifyContent: "center", margin: 12 }}>
           <Button onClick={() => fetchNextPage()} disabled={!hasNextPage || isFetchingNextPage}>
             {isFetchingNextPage ? "Loading more..." : "Load More"}
           </Button>
         </div>
-      ) : annotation.earliestAccessibleVersion > 0 ? (
+      ) : earliestAccessibleVersion > 0 ? (
         <div style={{ textAlign: "center", marginTop: 8, marginBottom: 4 }}>
-          Cannot show versions earlier than {annotation.earliestAccessibleVersion}.
+          Cannot show versions earlier than {earliestAccessibleVersion}.
         </div>
       ) : null}
     </div>

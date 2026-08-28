@@ -5,7 +5,7 @@ import DatasetSelectionComponent, {
 } from "dashboard/dataset/dataset_selection_component";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import { useState } from "react";
-import { type WizardComponentProps, tryToFetchDatasetsByNameOrId } from "./common";
+import { tryToFetchDatasetsByNameOrId, type WizardComponentProps } from "./common";
 
 export default function SelectDatasets({ wizardContext, setWizardContext }: WizardComponentProps) {
   const [datasetValues, setDatasetValues] = useState<DatasetSelectionValue[]>([]);
@@ -50,7 +50,7 @@ export default function SelectDatasets({ wizardContext, setWizardContext }: Wiza
   return (
     <div>
       <p>
-        Select the datasets that you want to combine or doublecheck the pre-selected datasets. Note
+        Select the datasets that you want to combine or doublecheck the preselected datasets. Note
         that the order of the datasets is important and needs to be equal to the order of the files
         from the upload.
       </p>

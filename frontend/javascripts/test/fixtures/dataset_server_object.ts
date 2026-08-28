@@ -1,5 +1,5 @@
-import { UnitLong } from "viewer/constants";
 import type { APIColorLayer, APIDataset, APISegmentationLayer } from "types/api_types";
+import { UnitLong } from "viewer/constants";
 
 const sampleColorLayer: APIColorLayer = {
   name: "color",
@@ -23,6 +23,7 @@ const sampleColorLayer: APIColorLayer = {
 };
 
 export const sampleHdf5AgglomerateName = "sampleHdf5Mapping";
+export const sampleMappingFileName = "sampleMappingFile";
 // this is a uint32 segmentation layer
 const sampleSegmentationLayer: APISegmentationLayer = {
   name: "segmentation",
@@ -42,7 +43,7 @@ const sampleSegmentationLayer: APISegmentationLayer = {
     { mag: [16, 16, 16] },
   ],
   elementClass: "uint32",
-  largestSegmentId: 1000000000,
+  largestSegmentId: 1000000000n,
   mappings: [
     "larger5um1",
     "axons",
@@ -108,15 +109,18 @@ function createDataset(dataLayers: Array<APIColorLayer | APISegmentationLayer>):
     created: 1502288550432,
     isEditable: true,
     directoryName: "ROI2017_wkw",
+    isVirtual: false,
+    creationType: "Upload",
     isUnreported: false,
     tags: [],
     folderId: "66f3c82466010002752e972c",
     metadata: [],
-    logoUrl: "/assets/images/logo.svg",
+    logoUrl: "/images/logo.svg",
     lastUsedByUser: 1727268949322,
     sortingKey: 1727252521746,
     publication: null,
     usedStorageBytes: 0,
+    uploaderFullName: null,
   };
 }
 

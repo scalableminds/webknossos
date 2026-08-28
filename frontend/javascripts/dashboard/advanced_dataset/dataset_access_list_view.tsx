@@ -1,9 +1,10 @@
 import { getDatasetAccessList } from "admin/rest_api";
 import { Spin, Tag } from "antd";
+import { stringToTagColor } from "libs/colors";
 import { handleGenericError } from "libs/error_handling";
-import { stringToColor } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
-import * as React from "react";
+import type React from "react";
+import { useState } from "react";
 import type { APIDataset, APIUser } from "types/api_types";
 
 type Props = {
@@ -11,7 +12,7 @@ type Props = {
 };
 
 const DatasetAccessListView = ({ dataset }: Props) => {
-  const [isLoading, setIsLoading] = React.useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const datasetUsers = useFetch(
     () => {
@@ -45,7 +46,7 @@ const DatasetAccessListView = ({ dataset }: Props) => {
           ]
         : [];
       const teamTags = user.teams.map((team) => (
-        <Tag color={stringToColor(team.name)} key={`${user.id}-${team.id}`}>
+        <Tag color={stringToTagColor(team.name)} key={`${user.id}-${team.id}`}>
           {team.name}
         </Tag>
       ));

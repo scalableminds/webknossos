@@ -1,5 +1,4 @@
-import {
-  CopyOutlined,
+import Icon, {
   DownloadOutlined,
   FolderOpenOutlined,
   InboxOutlined,
@@ -8,9 +7,9 @@ import {
   PlusOutlined,
   TeamOutlined,
   UnlockOutlined,
-  UploadOutlined,
   UserOutlined,
 } from "@ant-design/icons";
+import ReadOnlyIcon from "@images/icons/icon-read-only.svg?react";
 import { PropTypes } from "@scalableminds/prop-types";
 import {
   downloadAnnotation,
@@ -22,21 +21,31 @@ import {
   getReadableAnnotations,
   reOpenAnnotation,
 } from "admin/rest_api";
-import { Button, Card, Col, Input, Modal, Row, Spin, Table, Tag, Tooltip } from "antd";
-import type { SearchProps } from "antd/lib/input";
+import { Space, Spin, Table, Tag } from "antd";
+import type { SearchProps } from "antd/es/input";
 import type { ColumnType } from "antd/lib/table/interface";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
+import FormattedId from "components/formatted_id";
+import LinkButton from "components/link_button";
 import TextWithDescription from "components/text_with_description";
 import update from "immutability-helper";
+import { stringToTagColor } from "libs/colors";
 import { handleGenericError } from "libs/error_handling";
-import { formatHash, stringToColor } from "libs/format_utils";
 import Persistence from "libs/persistence";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import _ from "lodash";
+import { compareBy, filterWithSearchQueryAND, localeCompareBy, scrollToTop } from "libs/utils";
+import { type WithModalProps, withModal } from "libs/with_modal_hoc";
+import compact from "lodash-es/compact";
+import intersection from "lodash-es/intersection";
+import keyBy from "lodash-es/keyBy";
+import mapValues from "lodash-es/mapValues";
+import partial from "lodash-es/partial";
+import uniqBy from "lodash-es/uniqBy";
+import without from "lodash-es/without";
 import messages from "messages";
-import * as React from "react";
+import type React from "react";
+import { PureComponent } from "react";
 import { Link } from "react-router-dom";
 import {
   type APIAnnotationInfo,
@@ -45,18 +54,16 @@ import {
   annotationToCompact,
 } from "types/api_types";
 import { AnnotationContentTypes } from "viewer/constants";
+import { isAnnotationEditableByNonOwners } from "viewer/model/accessors/annotation_accessor";
 import { getVolumeDescriptors } from "viewer/model/accessors/volumetracing_accessor";
-import { setDropzoneModalVisibilityAction } from "viewer/model/actions/ui_actions";
-import Store from "viewer/store";
 import CategorizationLabel, {
   CategorizationSearch,
 } from "viewer/view/components/categorization_label";
 import EditableTextIcon from "viewer/view/components/editable_text_icon";
-import { RenderToPortal } from "viewer/view/layouting/portal_utils";
-import { AnnotationStats } from "viewer/view/right-border-tabs/dataset_info_tab_view";
-import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
+import { AnnotationStats } from "viewer/view/right_border_tabs/dataset_info_tab_view";
+import { DashboardEmptyAnnotationsPlaceholder } from "./dashboard_empty_annotations_placeholder";
+import { DashboardTopBar } from "./dashboard_top_bar";
 
-const { Search } = Input;
 const pageLength: number = 1000;
 
 type AnnotationModeState = {
@@ -68,7 +75,7 @@ type Props = {
   userId: string | null | undefined;
   isAdminView: boolean;
   activeUser: APIUser;
-};
+} & WithModalProps;
 type State = {
   shouldShowArchivedAnnotations: boolean;
   archivedModeState: AnnotationModeState;
@@ -86,18 +93,11 @@ const persistence = new Persistence<PartialState>(
   "explorativeList",
 );
 
-const READ_ONLY_ICON = (
-  <span className="fa-stack fa-1x">
-    <i className="fas fa-pen fa-stack-1x" />
-    <i className="fas fa-slash fa-stack-1x" />
-  </span>
-);
-
 function formatUserName(user: APIUserCompact) {
   return `${user.firstName} ${user.lastName}`;
 }
 
-class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
+class ExplorativeAnnotationsView extends PureComponent<Props, State> {
   state: State = {
     shouldShowArchivedAnnotations: false,
     archivedModeState: {
@@ -207,7 +207,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           // If the user archives a annotation, the annotation is already moved to the archived
           // state. Switching to the archived tab for the first time, will download the annotation
           // again which is why we need to deduplicate here.
-          annotations: _.uniqBy(
+          annotations: uniqBy(
             previousAnnotations.concat(annotations),
             (annotation) => annotation.id,
           ),
@@ -308,7 +308,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           </Link>
           <br />
           <AsyncLink
-            href="#"
             onClick={() => {
               const hasVolumeAnnotation = getVolumeDescriptors(annotation).length > 0;
               return downloadAnnotation(id, typ, hasVolumeAnnotation);
@@ -321,7 +320,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             <>
               <br />
               <AsyncLink
-                href="#"
                 onClick={() => this.finishOrReopenAnnotation("finish", annotation)}
                 icon={<InboxOutlined key="inbox" className="icon-margin-right" />}
                 disabled={annotation.isLockedByOwner}
@@ -337,7 +335,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             <>
               <br />
               <AsyncLink
-                href="#"
                 onClick={() => this.setLockedState(annotation, !annotation.isLockedByOwner)}
                 icon={
                   annotation.isLockedByOwner ? (
@@ -357,7 +354,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       return (
         <div>
           <AsyncLink
-            href="#"
             onClick={() => this.finishOrReopenAnnotation("reopen", annotation)}
             icon={<FolderOpenOutlined key="folder" className="icon-margin-right" />}
           >
@@ -402,7 +398,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       return;
     }
 
-    Modal.confirm({
+    this.props.modal.confirm({
       content: `Are you sure you want to archive ${selectedAnnotations.length} explorative annotations matching the current search query / tags? Note that annotations that you don't own are ignored.`,
       onOk: async () => {
         const selectedAnnotationIds = selectedAnnotations.map((t) => t.id);
@@ -419,10 +415,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           },
           unarchivedModeState: {
             ...prevState.unarchivedModeState,
-            annotations: _.without(
-              prevState.unarchivedModeState.annotations,
-              ...selectedAnnotations,
-            ),
+            annotations: without(prevState.unarchivedModeState.annotations, ...selectedAnnotations),
           },
         }));
       },
@@ -461,7 +454,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             }
           } else {
             // remove the tag from an annotation
-            const newTags = _.without(t.tags, tag);
+            const newTags = without(t.tags, tag);
 
             newAnnotation = update(t, {
               tags: {
@@ -484,39 +477,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     });
   };
 
-  getEmptyListPlaceholder = () => {
-    return this.state.isLoading ? null : (
-      <Row gutter={32} justify="center" style={{ padding: 50 }}>
-        <Col span="6">
-          <Card
-            bordered={false}
-            cover={
-              <div style={{ display: "flex", justifyContent: "center" }}>
-                <i className="drawing drawing-empty-list-annotations" />
-              </div>
-            }
-            style={{ background: "transparent" }}
-          >
-            <Card.Meta
-              title="Create an Annotation"
-              style={{ textAlign: "center" }}
-              description={
-                <>
-                  <p>Create your first annotation by opening a dataset from the datasets page.</p>
-                  <Link to="/dashboard/datasets">
-                    <Button type="primary" style={{ marginTop: 30 }}>
-                      Open Datasets Page
-                    </Button>
-                  </Link>
-                </>
-              }
-            />
-          </Card>
-        </Col>
-      </Row>
-    );
-  };
-
   handleOnSearch: SearchProps["onSearch"] = (value, _event) => {
     if (value !== "") {
       this.addTagToSearch(value);
@@ -532,7 +492,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     // (e.g., filtering by owner in the column header).
     // Use `this.currentPageData` if you need all currently visible
     // items of the active page.
-    const filteredAnnotations = Utils.filterWithSearchQueryAND(
+    const filteredAnnotations = filterWithSearchQueryAND(
       this.getCurrentAnnotations(),
       ["id", "name", "modified", "tags", "owner"],
       this.state.searchQuery,
@@ -544,36 +504,12 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       return filteredAnnotations;
     }
 
-    return filteredAnnotations.filter((el) => _.intersection(this.state.tags, el.tags).length > 0);
-  }
-
-  renderIdAndCopyButton(annotation: APIAnnotationInfo) {
-    const copyIdToClipboard = async () => {
-      await navigator.clipboard.writeText(annotation.id);
-      Toast.success("ID copied to clipboard");
-    };
-
-    return (
-      <div>
-        <Tooltip title="Copy long ID" placement="bottom">
-          <Button
-            onClick={copyIdToClipboard}
-            icon={<CopyOutlined />}
-            style={{
-              boxShadow: "none",
-              backgroundColor: "transparent",
-              borderColor: "transparent",
-            }}
-          />
-        </Tooltip>
-        {formatHash(annotation.id)}
-      </div>
-    );
+    return filteredAnnotations.filter((el) => intersection(this.state.tags, el.tags).length > 0);
   }
 
   renderNameWithDescription(annotation: APIAnnotationInfo) {
     return (
-      <div style={{ color: annotation.name ? "inherit" : "#7c7c7c" }}>
+      <div style={{ color: annotation.name ? "inherit" : "var(--ant-color-text-secondary)" }}>
         <TextWithDescription
           isEditable={this.isAnnotationEditable(annotation)}
           value={annotation.name ? annotation.name : "Unnamed Annotation"}
@@ -586,30 +522,34 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   }
 
   isAnnotationEditable(annotation: APIAnnotationInfo): boolean {
-    return annotation.owner?.id === this.props.activeUser.id || annotation.othersMayEdit;
+    return (
+      annotation.owner?.id === this.props.activeUser.id ||
+      isAnnotationEditableByNonOwners(annotation)
+    );
   }
 
   renderTable() {
     const filteredAndSortedAnnotations = this._getSearchFilteredAnnotations().sort(
-      Utils.compareBy<APIAnnotationInfo>((annotation) => annotation.modified, false),
+      compareBy<APIAnnotationInfo>((annotation) => annotation.modified, false),
     );
     const renderOwner = (owner: APIUser) => {
       if (!this.props.isAdminView && owner.id === this.props.activeUser.id) {
         return (
           <span>
-            {formatUserName(owner)} <span style={{ color: "#7c7c7c" }}>(you)</span>
+            {formatUserName(owner)}{" "}
+            <span style={{ color: "var(--ant-color-text-secondary)" }}>(you)</span>
           </span>
         );
       }
       return formatUserName(owner);
     };
 
-    const ownerFilters = _.uniqBy(
+    const ownerFilters = uniqBy(
       // Prepend user's name to the front so that this is listed at the top
       [
         { formattedName: formatUserName(this.props.activeUser), id: this.props.activeUser.id },
       ].concat(
-        _.compact(
+        compact(
           filteredAndSortedAnnotations.map((annotation) =>
             annotation.owner != null
               ? { formattedName: formatUserName(annotation.owner), id: annotation.owner.id }
@@ -619,8 +559,8 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       ),
       "id",
     ).map(({ formattedName, id }) => ({ text: formattedName, value: id }));
-    const teamFilters = _.uniqBy(
-      _.flatMap(filteredAndSortedAnnotations, (annotation) => annotation.teams),
+    const teamFilters = uniqBy(
+      filteredAndSortedAnnotations.flatMap((annotation) => annotation.teams),
       "id",
     ).map((team) => ({ text: team.name, value: team.id }));
 
@@ -637,37 +577,38 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       },
     ];
 
-    if (filteredAndSortedAnnotations.length === 0) {
-      return this.getEmptyListPlaceholder();
+    if (filteredAndSortedAnnotations.length === 0 && !this.state.isLoading) {
+      return <DashboardEmptyAnnotationsPlaceholder />;
     }
 
-    const disabledColor = { color: "var(--ant-color-text-disabled)" };
     const columns: ColumnType<APIAnnotationInfo>[] = [
       {
         title: "ID",
         dataIndex: "id",
-        width: 100,
+        width: 120,
         render: (__: any, annotation: APIAnnotationInfo) => (
           <>
-            <div className="monospace-id">{this.renderIdAndCopyButton(annotation)}</div>
+            <FormattedId id={annotation.id} />
 
             {!this.isAnnotationEditable(annotation) ? (
-              <div style={disabledColor}>{READ_ONLY_ICON} read-only</div>
+              <LinkButton disabled icon={<Icon component={ReadOnlyIcon} />}>
+                read-only
+              </LinkButton>
             ) : null}
             {annotation.isLockedByOwner ? (
-              <div style={disabledColor}>
-                <LockOutlined style={{ marginLeft: 8, marginRight: 8 }} /> locked
-              </div>
+              <LinkButton disabled icon={<LockOutlined />}>
+                locked
+              </LinkButton>
             ) : null}
           </>
         ),
-        sorter: Utils.localeCompareBy((annotation) => annotation.id),
+        sorter: localeCompareBy((annotation) => annotation.id),
       },
       {
         title: "Name",
         width: 280,
         dataIndex: "name",
-        sorter: Utils.localeCompareBy((annotation) => annotation.name),
+        sorter: localeCompareBy((annotation) => annotation.name),
         render: (_name: string, annotation: APIAnnotationInfo) =>
           this.renderNameWithDescription(annotation),
       },
@@ -680,28 +621,28 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         onFilter: (value: React.Key | boolean, annotation: APIAnnotationInfo) =>
           (annotation.owner != null && annotation.owner.id === value.toString()) ||
           annotation.teams.some((team) => team.id === value),
-        sorter: Utils.localeCompareBy((annotation) => annotation.owner?.firstName || ""),
+        sorter: localeCompareBy((annotation) => annotation.owner?.firstName || ""),
         render: (owner: APIUser | null, annotation: APIAnnotationInfo) => {
           const ownerName = owner != null ? renderOwner(owner) : null;
           const teamTags = annotation.teams.map((t) => (
-            <Tag key={t.id} color={stringToColor(t.name)}>
+            <Tag key={t.id} color={stringToTagColor(t.name)} variant="outlined">
               {t.name}
             </Tag>
           ));
 
           return (
-            <>
-              <div>
-                <UserOutlined className="icon-margin-right" />
+            <Space orientation="vertical" size="small">
+              <Space align="start">
+                <UserOutlined />
                 {ownerName}
-              </div>
-              <div className="flex-container">
-                <div className="flex-item" style={{ flexGrow: 0 }}>
-                  {teamTags.length > 0 ? <TeamOutlined className="icon-margin-right" /> : null}
-                </div>
-                <div className="flex-item">{teamTags}</div>
-              </div>
-            </>
+              </Space>
+              <Space align="start">
+                {teamTags.length > 0 ? <TeamOutlined /> : null}
+                <Space wrap size="small">
+                  {teamTags}
+                </Space>
+              </Space>
+            </Space>
           );
         },
       },
@@ -710,8 +651,8 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         width: 150,
         render: (__: any, annotation: APIAnnotationInfo) => (
           <AnnotationStats
-            stats={_.mapValues(
-              _.keyBy(annotation.annotationLayers, (layer) => layer.tracingId),
+            stats={mapValues(
+              keyBy(annotation.annotationLayers, (layer) => layer.tracingId),
               (layer) => layer.stats,
             )}
             asInfoBlock={false}
@@ -723,13 +664,13 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         title: "Tags",
         dataIndex: "tags",
         render: (tags: Array<string>, annotation: APIAnnotationInfo) => (
-          <div>
+          <Space wrap>
             {tags.map((tag) => (
               <CategorizationLabel
                 key={tag}
                 kind="annotations"
-                onClick={_.partial(this.addTagToSearch, tag)}
-                onClose={_.partial(this.editTagFromAnnotation, annotation, false, tag)}
+                onClick={partial(this.addTagToSearch, tag)}
+                onClose={partial(this.editTagFromAnnotation, annotation, false, tag)}
                 tag={tag}
                 closable={
                   !(tag === annotation.dataSetName || AnnotationContentTypes.includes(tag)) &&
@@ -740,17 +681,17 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             {this.state.shouldShowArchivedAnnotations ? null : (
               <EditableTextIcon
                 icon={<PlusOutlined />}
-                onChange={_.partial(this.editTagFromAnnotation, annotation, true)}
+                onChange={partial(this.editTagFromAnnotation, annotation, true)}
               />
             )}
-          </div>
+          </Space>
         ),
       },
       {
-        title: "Modification Date",
+        title: "Last Modified",
         dataIndex: "modified",
         width: 200,
-        sorter: Utils.compareBy<APIAnnotationInfo>((annotation) => annotation.modified),
+        sorter: compareBy<APIAnnotationInfo>((annotation) => annotation.modified),
         render: (modified) => <FormattedDate timestamp={modified} />,
       },
       {
@@ -769,6 +710,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         rowKey="id"
         pagination={{
           defaultPageSize: 50,
+          onChange: scrollToTop,
         }}
         className="large-table"
         scroll={{
@@ -789,25 +731,10 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     );
   }
 
-  renderSearchTags() {
-    return (
-      <CategorizationSearch
-        itemName="annotations"
-        searchTags={this.state.tags}
-        setTags={(tags) =>
-          this.setState({
-            tags,
-          })
-        }
-        localStorageSavingKey="lastDashboardSearchTags"
-      />
-    );
-  }
-
   render() {
     return (
       <div>
-        <TopBar
+        <DashboardTopBar
           isAdminView={this.props.isAdminView}
           handleOnSearch={this.handleOnSearch}
           handleSearchChanged={this.handleSearchChanged}
@@ -816,7 +743,16 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           shouldShowArchivedAnnotations={this.state.shouldShowArchivedAnnotations}
           archiveAll={this.archiveAll}
         />
-        {this.renderSearchTags()}
+        <CategorizationSearch
+          itemName="annotations"
+          searchTags={this.state.tags}
+          setTags={(tags) =>
+            this.setState({
+              tags,
+            })
+          }
+          localStorageSavingKey="lastDashboardSearchTags"
+        />
         <Spin spinning={this.state.isLoading} size="large" style={{ marginTop: 4 }}>
           {this.renderTable()}
         </Spin>
@@ -839,69 +775,4 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   }
 }
 
-function TopBar({
-  isAdminView,
-  handleOnSearch,
-  handleSearchChanged,
-  searchQuery,
-  toggleShowArchived,
-  shouldShowArchivedAnnotations,
-  archiveAll,
-}: {
-  isAdminView: boolean;
-  handleOnSearch: SearchProps["onSearch"];
-  handleSearchChanged: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  searchQuery: string;
-  toggleShowArchived: () => void;
-  shouldShowArchivedAnnotations: boolean;
-  archiveAll: () => void;
-}) {
-  const activeTab = React.useContext(ActiveTabContext);
-  const renderingTab = React.useContext(RenderingTabContext);
-
-  const marginRight = {
-    marginRight: 8,
-  };
-  const search = (
-    <Search
-      style={{
-        width: 200,
-        float: "right",
-      }}
-      onSearch={handleOnSearch}
-      onChange={handleSearchChanged}
-      value={searchQuery}
-    />
-  );
-
-  const content = isAdminView ? (
-    search
-  ) : (
-    <div className="pull-right">
-      <Button
-        icon={<UploadOutlined />}
-        style={marginRight}
-        onClick={() => Store.dispatch(setDropzoneModalVisibilityAction(true))}
-      >
-        Upload Annotation(s)
-      </Button>
-      <Button onClick={toggleShowArchived} style={marginRight}>
-        Show {shouldShowArchivedAnnotations ? "Open" : "Archived"} Annotations
-      </Button>
-      {!shouldShowArchivedAnnotations ? (
-        <Button onClick={archiveAll} style={marginRight}>
-          Archive All
-        </Button>
-      ) : null}
-      {search}
-    </div>
-  );
-
-  return (
-    <RenderToPortal portalId="dashboard-TabBarExtraContent">
-      {activeTab === renderingTab ? content : null}
-    </RenderToPortal>
-  );
-}
-
-export default ExplorativeAnnotationsView;
+export default withModal(ExplorativeAnnotationsView);

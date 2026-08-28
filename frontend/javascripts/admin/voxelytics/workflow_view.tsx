@@ -1,13 +1,12 @@
-import { getVoxelyticsWorkflow, isWorkflowAccessibleBySwitching } from "admin/rest_api";
+import { useQuery } from "@tanstack/react-query";
+import { isWorkflowAccessibleBySwitching } from "admin/api/organization";
+import { getVoxelyticsWorkflow } from "admin/rest_api";
 import BrainSpinner, { BrainSpinnerWithError } from "components/brain_spinner";
-import { usePolling, useSearchParams } from "libs/react_hooks";
-import { useWkSelector } from "libs/react_hooks";
-import Toast from "libs/toast";
-import _ from "lodash";
+import { useSearchParams, useWkSelector } from "libs/react_hooks";
+import sortBy from "lodash-es/sortBy";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import {
-  type APIOrganization,
   VoxelyticsRunState,
   type VoxelyticsTaskConfig,
   type VoxelyticsTaskConfigWithHierarchy,
@@ -21,12 +20,6 @@ import {
 import TabTitle from "viewer/view/components/tab_title_component";
 import TaskListView from "./task_list_view";
 import { VX_POLLING_INTERVAL } from "./utils";
-
-type LoadingState =
-  | { status: "PENDING" }
-  | { status: "READY" }
-  | { status: "LOADING" }
-  | { status: "FAILED"; error: Error; organizationToSwitchTo?: APIOrganization };
 
 function lexicographicalTopologicalSort(
   nodes: Array<VoxelyticsWorkflowDagNode>,
@@ -318,12 +311,10 @@ function shouldCollapseId(id: string, expandedKeys: Record<string, boolean>): [s
 }
 
 export default function WorkflowView() {
-  const { workflowName = "" } = useParams();
+  const { workflowHash = "", runId } = useParams();
   const { metatask } = useSearchParams();
   const user = useWkSelector((state) => state.activeUser);
 
-  const [loadingState, setLoadingState] = useState<LoadingState>({ status: "PENDING" });
-  const [report, setReport] = useState<VoxelyticsWorkflowReport | null>(null);
   // expandedMetaTaskKeys holds the meta tasks which should be expanded
   // in the left-side DAG. The right-side task listing will always show
   // all tasks (but in a hierarchical manner if meta tasks exist).
@@ -337,42 +328,41 @@ export default function WorkflowView() {
     // is relevant when "expanding" the DAG. Therefore, we make sure
     // that nested meta tasks come after the high-level meta tasks.
     const sortedKeys = Object.fromEntries(
-      _.sortBy(
-        Array.from(Object.entries(newExpandedMetaTaskKeys)),
-        ([key]) => key.split("@").length,
-      ),
+      sortBy(Array.from(Object.entries(newExpandedMetaTaskKeys)), ([key]) => key.split("@").length),
     );
     setExpandedMetaTaskKeys(sortedKeys);
   };
 
-  async function loadData() {
-    try {
-      setLoadingState({ status: "LOADING" });
-      let _report = parseReport(await getVoxelyticsWorkflow(workflowName, null));
-      if (metatask != null) {
-        // If a meta task is passed via a GET parameter,
-        // the entire report is filtered so that only the tasks of the given
-        // meta task are shown (left-hand as well as right-hand side).
-        _report = selectMetaTask(_report, metatask);
-      }
-      setReport(_report);
-      setLoadingState({ status: "READY" });
-    } catch (err) {
-      try {
-        const organization =
-          user != null ? await isWorkflowAccessibleBySwitching(workflowName) : null;
-        setLoadingState({
-          status: "FAILED",
-          organizationToSwitchTo: organization ?? undefined,
-          error: err as Error,
-        });
-      } catch (accessibleBySwitchingError) {
-        Toast.error("Could not load workflow report.");
-        console.error(accessibleBySwitchingError);
-        setLoadingState({ status: "FAILED", error: accessibleBySwitchingError as Error });
-      }
-    }
-  }
+  const {
+    data: report,
+    isFetching: isLoading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: ["voxelyticsWorkflow", workflowHash],
+    queryFn: async () => await getVoxelyticsWorkflow(workflowHash, null),
+    // If a meta task is passed via a URL parameter, the entire report is filtered so that only the
+    // tasks of the given meta task are shown (left-hand as well as right-hand side).
+    select: (data) => {
+      const parsedReport = parseReport(data);
+      return metatask != null ? selectMetaTask(parsedReport, metatask) : parsedReport;
+    },
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      return data == null || data.runs.some((run) => run.state === VoxelyticsRunState.RUNNING)
+        ? (VX_POLLING_INTERVAL ?? false)
+        : false;
+    },
+    staleTime: 0, // disable caching
+    gcTime: 0, // disable garbage collection
+    retry: false,
+  });
+
+  const { data: accessibleOrganization } = useQuery({
+    queryKey: ["voxelyticsWorkflowAccess", workflowHash],
+    queryFn: () => isWorkflowAccessibleBySwitching(workflowHash),
+    enabled: isError && user != null,
+  });
 
   useEffect(() => {
     if (report != null) {
@@ -394,19 +384,11 @@ export default function WorkflowView() {
     [report],
   );
 
-  usePolling(
-    loadData,
-    // Only poll while the workflow is still running
-    report == null || report.runs.some((run) => run.state === VoxelyticsRunState.RUNNING)
-      ? VX_POLLING_INTERVAL
-      : null,
-  );
-
-  if (loadingState.status === "FAILED" && user != null) {
+  if (isError && user != null) {
     return (
       <BrainSpinnerWithError
         gotUnhandledError={false}
-        organizationToSwitchTo={loadingState.organizationToSwitchTo}
+        organizationToSwitchTo={accessibleOrganization ?? undefined}
         entity="workflow"
       />
     );
@@ -424,8 +406,9 @@ export default function WorkflowView() {
         expandedMetaTaskKeys={expandedMetaTaskKeys}
         onToggleExpandedMetaTaskKey={handleToggleExpandedMetaTaskKey}
         openMetatask={metatask}
-        onReload={loadData}
-        isLoading={loadingState.status === "LOADING"}
+        runId={runId ?? null}
+        onReload={refetch}
+        isLoading={isLoading}
       />
     </div>
   );

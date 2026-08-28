@@ -13,9 +13,11 @@ object ThinPlateSplineCorrespondences {
   implicit val jsonFormat: OFormat[ThinPlateSplineCorrespondences] = Json.format[ThinPlateSplineCorrespondences]
 }
 
-case class CoordinateTransformation(`type`: CoordinateTransformationType,
-                                    matrix: Option[List[List[Double]]],
-                                    correspondences: Option[ThinPlateSplineCorrespondences] = None)
+case class CoordinateTransformation(
+    `type`: CoordinateTransformationType,
+    matrix: Option[List[List[Double]]],
+    correspondences: Option[ThinPlateSplineCorrespondences] = None
+)
 
 object CoordinateTransformation {
   implicit val jsonFormat: OFormat[CoordinateTransformation] = Json.format[CoordinateTransformation]

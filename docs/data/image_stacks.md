@@ -108,4 +108,4 @@ Read the full example in the WEBKNOSSOS [Python library documentation](https://d
 
 ---
 
-[Please contact us](mailto:hello@webknossos.org) or [write a post in our support forum](https://forum.image.sc/tag/webknossos), if you have any issues with converting your datasets.
+[Please contact us](mailto:support@webknossos.org) or [write a post in our support forum](https://forum.image.sc/tag/webknossos), if you have any issues with converting your datasets.

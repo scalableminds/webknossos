@@ -1,9 +1,9 @@
 import app from "app";
+import { rgbToInt, stringToNormalizedRgbColor } from "libs/colors";
+import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
 import window from "libs/window";
-import _ from "lodash";
-
+import debounce from "lodash-es/debounce";
 import {
   BoxGeometry,
   BufferGeometry,
@@ -17,6 +17,7 @@ import {
   Mesh,
   MeshBasicMaterial,
   type Object3D,
+  type Ray,
   Scene,
   Vector3 as ThreeVector3,
   type WebGLRenderer,
@@ -31,8 +32,11 @@ import constants, {
   TDViewDisplayModeEnum,
 } from "viewer/constants";
 import { destroyRenderer, getRenderer } from "viewer/controller/renderer";
-import { setSceneController } from "viewer/controller/scene_controller_provider";
-import type ArbitraryPlane from "viewer/geometries/arbitrary_plane";
+import {
+  setSceneController,
+  waitForPendingSceneControllerTeardown,
+} from "viewer/controller/scene_controller_provider";
+import type FlightModePlane from "viewer/geometries/arbitrary_plane";
 import computeSplitBoundaryMeshWithSplines from "viewer/geometries/compute_split_boundary_mesh_with_splines";
 import Cube from "viewer/geometries/cube";
 import {
@@ -40,19 +44,19 @@ import {
   LineMeasurementGeometry,
   QuickSelectGeometry,
 } from "viewer/geometries/helper_geometries";
+import { MipVolume } from "viewer/geometries/mip_volume";
 import Plane from "viewer/geometries/plane";
 import Skeleton from "viewer/geometries/skeleton";
 import { reuseInstanceOnEquality } from "viewer/model/accessors/accessor_helpers";
 import {
   getDataLayers,
-  getDatasetBoundingBox,
   getLayerBoundingBox,
   getLayerByName,
-  getLayerNameToIsDisabled,
   getSegmentationLayers,
   getVisibleSegmentationLayers,
 } from "viewer/model/accessors/dataset_accessor";
 import {
+  getTransformedDatasetBoundingBox,
   getTransformsForLayer,
   getTransformsForLayerOrNull,
   getTransformsForSkeletonLayer,
@@ -62,15 +66,33 @@ import {
   getPosition,
   getRotationInRadian,
 } from "viewer/model/accessors/flycam_accessor";
-import { getSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
-import { getSomeTracing, getTaskBoundingBoxes } from "viewer/model/accessors/tracing_accessor";
+import {
+  getSkeletonTracing,
+  isSkeletonLayerVisible,
+  isSkeletonSectionClippingActive,
+} from "viewer/model/accessors/skeletontracing_accessor";
+import {
+  getMipEnabledBBoxes,
+  getSomeTracing,
+  getTaskBoundingBoxes,
+  type MipEnabledBBox,
+} from "viewer/model/accessors/tracing_accessor";
 import { getPlaneScalingFactor } from "viewer/model/accessors/view_mode_accessor";
-import { sceneControllerReadyAction } from "viewer/model/actions/actions";
+import { sceneControllerInitializedAction } from "viewer/model/actions/actions";
+import {
+  loadMipAction,
+  removeMipLayerForBBoxAction,
+} from "viewer/model/actions/annotation_actions";
 import Dimensions from "viewer/model/dimensions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import type { Transform } from "viewer/model/helpers/transformation_helpers";
 import { Model } from "viewer/singletons";
-import type { SkeletonTracing, UserBoundingBox, WebknossosState } from "viewer/store";
+import type {
+  MipLayerConfig,
+  SkeletonTracing,
+  UserBoundingBox,
+  WebknossosState,
+} from "viewer/store";
 import Store from "viewer/store";
 import type CustomLOD from "./custom_lod";
 import SegmentMeshController from "./segment_mesh_controller";
@@ -81,36 +103,46 @@ BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
 Mesh.prototype.raycast = acceleratedRaycast;
 
 const CUBE_COLOR = 0x999999;
-const LAYER_CUBE_COLOR = 0xffff99;
 
 const getVisibleSegmentationLayerNames = reuseInstanceOnEquality((storeState: WebknossosState) =>
   getVisibleSegmentationLayers(storeState).map((l) => l.name),
 );
 
 class SceneController {
-  skeletons: Record<number, Skeleton> = {};
-  isPlaneVisible: OrthoViewMap<boolean>;
-  clippingDistanceInUnit: number;
-  datasetBoundingBox!: Cube;
-  userBoundingBoxGroup!: Group;
-  layerBoundingBoxGroup!: Group;
-  userBoundingBoxes!: Array<Cube>;
-  layerBoundingBoxes!: { [layerName: string]: Cube };
-  annotationToolsGeometryGroup!: Group;
-  highlightedBBoxId: number | null | undefined;
-  taskCubeByTracingId: Record<string, Cube | null | undefined> = {};
-  contour!: ContourGeometry;
-  quickSelectGeometry!: QuickSelectGeometry;
-  lineMeasurementGeometry!: LineMeasurementGeometry;
-  areaMeasurementGeometry!: ContourGeometry;
-  planes!: OrthoViewWithoutTDMap<Plane>;
-  rootNode!: Group;
-  renderer!: WebGLRenderer;
-  scene!: Scene;
-  rootGroup!: Group;
-  segmentMeshController: SegmentMeshController;
-  storePropertyUnsubscribers: Array<() => void>;
-  splitBoundaryMesh: Mesh | null = null;
+  public skeletons: Record<number, Skeleton> = {};
+  private isPlaneVisible: OrthoViewMap<boolean>;
+  private clippingDistanceInUnit: number;
+  private datasetBoundingBox!: Cube;
+  private userBoundingBoxGroup!: Group;
+  private layerBoundingBoxGroup!: Group;
+  private userBoundingBoxes!: Array<Cube>;
+  private layerBoundingBoxes!: { [layerName: string]: Cube };
+  private annotationToolsGeometryGroup!: Group;
+  private highlightedBBoxId: number | null | undefined;
+  private taskCubeByTracingId: Record<string, Cube | null | undefined> = {};
+  public contour!: ContourGeometry;
+  public quickSelectGeometry!: QuickSelectGeometry;
+  public lineMeasurementGeometry!: LineMeasurementGeometry;
+  public areaMeasurementGeometry!: ContourGeometry;
+  private planes!: OrthoViewWithoutTDMap<Plane>;
+  private rootNode!: Group;
+  public renderer!: WebGLRenderer;
+  public scene!: Scene;
+  public rootGroup!: Group;
+  public segmentMeshController: SegmentMeshController;
+  private storePropertyUnsubscribers: Array<() => void>;
+  private splitBoundaryMesh: Mesh | null = null;
+  private mipVolumes = new Map<
+    number,
+    { volume: MipVolume; configs: MipLayerConfig[]; bbox: UserBoundingBox }
+  >();
+  private debouncedUpdateMipVolumes = debounce(
+    (entries: MipEnabledBBox[]) => this.updateMipVolumes(entries),
+    300,
+  );
+  // In-flight renderer.compileAsync() calls, registered by PlaneView/ArbitraryView.
+  // See waitForPendingCompiles() for why these need to be tracked.
+  private pendingCompilePromises: Set<Promise<unknown>> = new Set();
 
   // Created as instance properties to avoid creating objects in each update call.
   private rotatedPositionOffsetVector = new ThreeVector3();
@@ -149,7 +181,7 @@ class SceneController {
     // proportional to the actual size in nm.
     // For some reason, all objects have to be put into a group object. Changing
     // scene.scale does not have an effect.
-    // The dimension(s) with the highest mag will not be distorted.
+    // The dimension(s) with the highest resolution will not be distorted.
     this.rootGroup.scale.copy(
       new ThreeVector3(...Store.getState().dataset.dataSource.scale.factor),
     );
@@ -159,7 +191,7 @@ class SceneController {
   setupDebuggingMethods() {
     // These methods are attached to window, since we would run into circular import errors
     // otherwise.
-    // @ts-ignore
+    // @ts-expect-error
     window.addBucketMesh = (
       position: Vector3,
       zoomStep: number,
@@ -185,7 +217,7 @@ class SceneController {
       return cube;
     };
 
-    // @ts-ignore
+    // @ts-expect-error
     window.addVoxelMesh = (position: Vector3, _cubeLength: Vector3, optColor?: string) => {
       // Shrink voxels a bit so that it's easier to identify individual voxels.
       const cubeLength = _cubeLength.map((el) => el * 0.9);
@@ -206,7 +238,7 @@ class SceneController {
     let renderedLines: Line[] = [];
 
     // Utility function for visual debugging
-    // @ts-ignore
+    // @ts-expect-error
     window.addLine = (a: Vector3, b: Vector3) => {
       const material = new LineBasicMaterial({
         color: 0x0000ff,
@@ -221,7 +253,7 @@ class SceneController {
     };
 
     // Utility function for visual debugging
-    // @ts-ignore
+    // @ts-expect-error
     window.removeLines = () => {
       for (const line of renderedLines) {
         this.rootNode.remove(line);
@@ -230,7 +262,7 @@ class SceneController {
       renderedLines = [];
     };
 
-    // @ts-ignore
+    // @ts-expect-error
     window.removeBucketMesh = (mesh: LineSegments) => this.rootNode.remove(mesh);
   }
 
@@ -241,7 +273,10 @@ class SceneController {
     this.annotationToolsGeometryGroup = new Group();
     const state = Store.getState();
     // Cubes
-    const { min, max } = getDatasetBoundingBox(state.dataset);
+    const { min, max } = getTransformedDatasetBoundingBox(
+      state.dataset,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    );
     this.datasetBoundingBox = new Cube({
       min,
       max,
@@ -265,7 +300,7 @@ class SceneController {
     this.planes[OrthoViews.PLANE_XZ].setBaseRotation(OrthoBaseRotations[OrthoViews.PLANE_XZ]);
 
     const planeGroup = new Group();
-    for (const plane of _.values(this.planes)) {
+    for (const plane of Object.values(this.planes)) {
       planeGroup.add(...plane.getMeshes());
     }
     // Apply the inverse dataset scale factor to all planes to remove the scaling of the root group
@@ -334,11 +369,91 @@ class SceneController {
     return this.splitBoundaryMesh;
   }
 
+  private updateMipVolumes(storeMipEntries: MipEnabledBBox[]): void {
+    // storeMipEntries are the MIP entries that are stored in the redux store.
+    // These are synced with the MIPs held by the SceneController in this function.
+    const storeMipsById = new Map(storeMipEntries.map((e) => [e.bbox.id, e]));
+
+    // Remove volumes whose bbox changed (need full recreation)
+    for (const [bboxId, { volume, bbox: storedBbox }] of this.mipVolumes) {
+      const storeMip = storeMipsById.get(bboxId);
+      const bb = storedBbox.boundingBox;
+      const bboxChanged =
+        storeMip == null ||
+        !V3.equals(storeMip.bbox.boundingBox.min, bb.min) ||
+        !V3.equals(storeMip.bbox.boundingBox.max, bb.max);
+      if (bboxChanged) {
+        this.rootNode.remove(volume.mesh);
+        this.deferUntilCompileReady(() => volume.dispose());
+        this.mipVolumes.delete(bboxId);
+      }
+    }
+
+    for (const { bbox, configs } of storeMipEntries) {
+      const mag1Bbox = { min: bbox.boundingBox.min, max: bbox.boundingBox.max };
+
+      if (!this.mipVolumes.has(bbox.id)) {
+        // New bbox: create volume and add all layers
+        const volume = new MipVolume(mag1Bbox);
+        const { mipRaymarchingSteps, mipDepthWrite } = Store.getState().userConfiguration;
+        volume.setNumSteps(mipRaymarchingSteps);
+        volume.setDepthWrite(mipDepthWrite);
+        this.rootNode.add(volume.mesh);
+        this.mipVolumes.set(bbox.id, { volume, configs, bbox });
+      }
+
+      const sceneMip = this.mipVolumes.get(bbox.id)!;
+      sceneMip.bbox = bbox; // keep bbox reference current (e.g. isVisible changes)
+      const { volume } = sceneMip;
+      const oldConfigs = sceneMip.configs;
+
+      // Remove layers that are no longer in the new configs
+      const newLayerNames = new Set(configs.map((c) => c.layerName));
+      const oldLayerNames = new Set(oldConfigs.map((c) => c.layerName));
+      const removedLayerNames = oldLayerNames.difference(newLayerNames);
+      for (const layerName of removedLayerNames) {
+        volume.removeLayer(layerName);
+      }
+
+      // Add layers that are new
+      for (const config of configs) {
+        if (volume.hasLayer(config.layerName)) continue;
+        if (volume.addLayer(config)) {
+          Store.dispatch(loadMipAction(bbox.id, bbox, config));
+        } else {
+          // addLayer already showed an error toast (e.g. unsupported element class).
+          // Remove the entry so it doesn't stay stuck in isLoading forever.
+          Store.dispatch(removeMipLayerForBBoxAction(bbox.id, config.layerName));
+        }
+      }
+
+      sceneMip.configs = configs;
+    }
+    app.vent.emit("rerender");
+  }
+
+  getMipHitPosition(ray: Ray): ThreeVector3 | null {
+    for (const { volume, bbox } of this.mipVolumes.values()) {
+      if (!bbox.isVisible) continue;
+      const pos = volume.findMaxIntensityPosition(ray);
+      if (pos != null) return pos;
+    }
+    return null;
+  }
+
+  getMipVolumeEntry(
+    bboxId: number,
+  ): { volume: MipVolume; configs: MipLayerConfig[]; bbox: UserBoundingBox } | undefined {
+    return this.mipVolumes.get(bboxId);
+  }
+
   addSkeleton(
     skeletonTracingSelector: (arg0: WebknossosState) => SkeletonTracing | null,
     supportsPicking: boolean,
   ): number {
-    const skeleton = new Skeleton(skeletonTracingSelector, supportsPicking);
+    const skeleton = new Skeleton(skeletonTracingSelector, supportsPicking, (dispose) =>
+      this.deferUntilCompileReady(dispose),
+    );
     const skeletonGroup = skeleton.getRootGroup();
     this.skeletons[skeletonGroup.id] = skeleton;
     this.rootNode.add(skeletonGroup);
@@ -368,7 +483,11 @@ class SceneController {
     for (const [tracingId, _boundingBox] of Object.entries(this.taskCubeByTracingId)) {
       let taskCube = this.taskCubeByTracingId[tracingId];
       if (taskCube != null) {
-        taskCube.getMeshes().forEach((mesh) => this.rootNode.remove(mesh));
+        taskCube.getMeshes().forEach((mesh) => {
+          this.rootNode.remove(mesh);
+        });
+
+        this.deferUntilCompileReady(() => taskCube.destroy());
       }
       this.taskCubeByTracingId[tracingId] = null;
     }
@@ -386,9 +505,11 @@ class SceneController {
         showCrossSections: true,
         isHighlighted: false,
       });
-      taskCube.getMeshes().forEach((mesh) => this.rootNode.add(mesh));
+      taskCube.getMeshes().forEach((mesh) => {
+        this.rootNode.add(mesh);
+      });
 
-      if (constants.MODES_ARBITRARY.includes(viewMode)) {
+      if (viewMode === constants.MODE_FLIGHT) {
         taskCube?.setVisibility(false);
       }
 
@@ -408,21 +529,27 @@ class SceneController {
     // This method is called for each of the four cams. Even
     // though they are all looking at the same scene, some
     // things have to be changed for each cam.
-    const { datasetConfiguration, userConfiguration, flycam } = Store.getState();
-    const { tdViewDisplayPlanes, tdViewDisplayDatasetBorders, tdViewDisplayLayerBorders } =
-      userConfiguration;
+    const state = Store.getState();
+    const { dataset, userConfiguration, flycam } = state;
+    const { tdViewDisplayPlanes, tdViewDisplayDatasetBorders } = userConfiguration;
+
+    // Section clipping renders only the skeleton on the currently visible section.
+    // It is performed in the node/edge shaders (in voxel/section space) and is only
+    // possible when neither the camera nor the skeleton layer is rotated/transformed.
+    // Otherwise we fall back to the regular distance-based clipping.
+    const isSectionClippingActive = isSkeletonSectionClippingActive(state);
     // Only set the visibility of the dataset bounding box for the TDView.
     // This has to happen before updateForCam is called as otherwise cross section visibility
     // might be changed unintentionally.
     this.datasetBoundingBox.setVisibility(id !== OrthoViews.TDView || tdViewDisplayDatasetBorders);
     this.datasetBoundingBox.updateForCam(id);
-    this.userBoundingBoxes.forEach((bbCube) => bbCube.updateForCam(id));
-    const layerNameToIsDisabled = getLayerNameToIsDisabled(datasetConfiguration);
-    Object.keys(this.layerBoundingBoxes).forEach((layerName) => {
-      const bbCube = this.layerBoundingBoxes[layerName];
-      const visible =
-        id === OrthoViews.TDView && tdViewDisplayLayerBorders && !layerNameToIsDisabled[layerName];
-      bbCube.setVisibility(visible);
+    this.userBoundingBoxes.forEach((bbCube) => {
+      bbCube.updateForCam(id);
+    });
+    // Layer bounding box visibility is kept in sync via a store subscription (see
+    // updateLayerBoundingBoxVisibilities), so here we only refine the per-cam cross-section
+    // visibility, like for user bounding boxes.
+    Object.values(this.layerBoundingBoxes).forEach((bbCube) => {
       bbCube.updateForCam(id);
     });
 
@@ -432,11 +559,23 @@ class SceneController {
     if (this.splitBoundaryMesh != null) {
       this.splitBoundaryMesh.visible = id === OrthoViews.TDView;
     }
+    for (const { volume, bbox } of this.mipVolumes.values()) {
+      volume.mesh.visible = id === OrthoViews.TDView && bbox.isVisible;
+    }
     this.annotationToolsGeometryGroup.visible = id !== OrthoViews.TDView;
     this.lineMeasurementGeometry.updateForCam(id);
 
     const originalPosition = getPosition(flycam);
     const rotation = getRotationInRadian(flycam);
+
+    // Tell the skeleton shaders which section to clip to for this render pass. The
+    // 3D viewport (and any unsafe state) disables section clipping via clippingAxis -1.
+    const clippingAxis =
+      isSectionClippingActive && id !== OrthoViews.TDView ? Dimensions.getIndices(id)[2] : -1;
+    for (const skeleton of Object.values(this.skeletons)) {
+      skeleton.setSectionClippingUniforms(clippingAxis, originalPosition);
+    }
+
     if (id !== OrthoViews.TDView) {
       for (const planeId of OrthoViewValuesWithoutTDView) {
         if (planeId === id) {
@@ -447,11 +586,17 @@ class SceneController {
           const ind = Dimensions.getIndices(planeId);
           // Offset the plane so the user can see the skeletonTracing behind the plane.
           // The offset is passed to the shader as a uniform to be subtracted from the position to render the correct data.
+          // When section clipping is active, ensure the offset is at least one full
+          // perpendicular voxel so that the (precise) shader-side clipping is never
+          // overruled by the data plane occluding on-section nodes/edges.
+          const effectiveClippingDistanceInUnit = isSectionClippingActive
+            ? Math.max(this.clippingDistanceInUnit, dataset.dataSource.scale.factor[ind[2]])
+            : this.clippingDistanceInUnit;
           const unrotatedPositionOffset = [0, 0, 0] as Vector3;
           unrotatedPositionOffset[ind[2]] =
             planeId === OrthoViews.PLANE_XY
-              ? Math.floor(this.clippingDistanceInUnit)
-              : Math.floor(-this.clippingDistanceInUnit);
+              ? Math.floor(effectiveClippingDistanceInUnit)
+              : Math.floor(-effectiveClippingDistanceInUnit);
           this.rotatedPositionOffsetVector
             .set(...unrotatedPositionOffset)
             .applyEuler(this.flycamRotationEuler);
@@ -478,7 +623,7 @@ class SceneController {
     }
   };
 
-  update(optArbitraryPlane?: ArbitraryPlane): void {
+  update(optFlightModePlane?: FlightModePlane): void {
     const state = Store.getState();
     const { flycam } = state;
     const globalPosition = getPosition(flycam);
@@ -491,8 +636,8 @@ class SceneController {
       );
     }
 
-    if (!optArbitraryPlane) {
-      for (const currentPlane of _.values<Plane>(this.planes)) {
+    if (!optFlightModePlane) {
+      for (const currentPlane of Object.values(this.planes)) {
         const [scaleX, scaleY] = getPlaneScalingFactor(state, flycam, currentPlane.planeID);
         const isVisible = scaleX > 0 && scaleY > 0;
 
@@ -510,7 +655,7 @@ class SceneController {
   }
 
   setDisplayCrosshair(value: boolean): void {
-    for (const plane of _.values(this.planes)) {
+    for (const plane of Object.values(this.planes)) {
       plane.setDisplayCrosshair(value);
     }
 
@@ -523,7 +668,7 @@ class SceneController {
   }
 
   setInterpolation(value: boolean): void {
-    for (const plane of _.values(this.planes)) {
+    for (const plane of Object.values(this.planes)) {
       plane.setLinearInterpolationEnabled(value);
     }
 
@@ -535,6 +680,9 @@ class SceneController {
   }
 
   setUserBoundingBoxes(bboxes: Array<UserBoundingBox>): void {
+    for (const cube of this.userBoundingBoxes) {
+      this.deferUntilCompileReady(() => cube.destroy());
+    }
     const newUserBoundingBoxGroup = new Group();
     this.userBoundingBoxes = bboxes.map(({ boundingBox, isVisible, color, id }) => {
       const { min, max } = boundingBox;
@@ -542,13 +690,15 @@ class SceneController {
       const bbCube = new Cube({
         min,
         max,
-        color: Utils.rgbToInt(bbColor),
+        color: rgbToInt(bbColor),
         showCrossSections: true,
         id,
         isHighlighted: this.highlightedBBoxId === id,
       });
       bbCube.setVisibility(isVisible);
-      bbCube.getMeshes().forEach((mesh) => newUserBoundingBoxGroup.add(mesh));
+      bbCube.getMeshes().forEach((mesh) => {
+        newUserBoundingBoxGroup.add(mesh);
+      });
       return bbCube;
     });
     this.rootNode.remove(this.userBoundingBoxGroup);
@@ -559,7 +709,6 @@ class SceneController {
   private applyTransformToGroup(transform: Transform, group: Group | CustomLOD) {
     if (transform.affineMatrix) {
       const matrix = new Matrix4();
-      // @ts-ignore
       matrix.set(...transform.affineMatrix);
       // We need to disable matrixAutoUpdate as otherwise the update to the matrix will be lost.
       group.matrixAutoUpdate = false;
@@ -567,7 +716,13 @@ class SceneController {
     }
   }
 
-  updateUserBoundingBoxesAndMeshesAccordingToTransforms(): void {
+  updateGeometriesToTransforms(): void {
+    /*
+     * The following geometries are updated in accordance to the current transforms:
+     * - user bounding boxes
+     * - meshes
+     * - annotation specific geometries (e.g., the contour)
+     */
     const state = Store.getState();
     const tracingStoringUserBBoxes = getSomeTracing(state.annotation);
     const transformForBBoxes =
@@ -597,6 +752,8 @@ class SceneController {
       transformForMeshes,
       this.segmentMeshController.meshesLayerLODRootGroup,
     );
+
+    this.applyTransformToGroup(transformForMeshes, this.annotationToolsGeometryGroup);
   }
 
   updateMeshesAccordingToLayerVisibility(): void {
@@ -615,19 +772,30 @@ class SceneController {
     const state = Store.getState();
     const dataset = state.dataset;
     const layers = getDataLayers(dataset);
+    const { layerBoundingBoxVisibilities, layerBoundingBoxColors } = state.temporaryConfiguration;
 
+    // Destroy the old cubes to free their geometries/materials (see setUserBoundingBoxes).
+    if (this.layerBoundingBoxes != null) {
+      for (const cube of Object.values(this.layerBoundingBoxes)) {
+        this.deferUntilCompileReady(() => cube.destroy());
+      }
+    }
     const newLayerBoundingBoxGroup = new Group();
     this.layerBoundingBoxes = Object.fromEntries(
       layers.map((layer) => {
         const boundingBox = getLayerBoundingBox(dataset, layer.name);
         const { min, max } = boundingBox;
+        const color = layerBoundingBoxColors[layer.name] ?? stringToNormalizedRgbColor(layer.name);
         const bbCube = new Cube({
           min,
           max,
-          color: LAYER_CUBE_COLOR,
-          showCrossSections: false,
+          color: rgbToInt([color[0] * 255, color[1] * 255, color[2] * 255]),
+          // Show the bounding box in the 2D plane viewports as well (not just the 3D viewport), so it
+          // is visible where users usually work and the visibility/color controls have a visible effect.
+          showCrossSections: true,
           isHighlighted: false,
         });
+        bbCube.setVisibility(layerBoundingBoxVisibilities[layer.name] ?? false);
         bbCube.getMeshes().forEach((mesh) => {
           const transformMatrix = getTransformsForLayerOrNull(
             dataset,
@@ -636,7 +804,6 @@ class SceneController {
           )?.affineMatrix;
           if (transformMatrix) {
             const matrix = new Matrix4();
-            // @ts-ignore
             matrix.set(...transformMatrix);
             mesh.applyMatrix4(matrix);
           }
@@ -648,6 +815,25 @@ class SceneController {
     this.rootNode.remove(this.layerBoundingBoxGroup);
     this.layerBoundingBoxGroup = newLayerBoundingBoxGroup;
     this.rootNode.add(this.layerBoundingBoxGroup);
+  }
+
+  updateDatasetBoundingBoxToTransforms(): void {
+    const state = Store.getState();
+    const { min, max } = getTransformedDatasetBoundingBox(
+      state.dataset,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    );
+    this.datasetBoundingBox.setCorners(min, max);
+  }
+
+  // Visibility is a cheap per-cube flag (unlike the color, which is baked in at construction), so a
+  // visibility change only updates the existing cubes instead of rebuilding them. updateSceneForCam
+  // then refines the per-cam cross-section visibility on the next render.
+  updateLayerBoundingBoxVisibilities(visibilities: Record<string, boolean>): void {
+    for (const [layerName, bbCube] of Object.entries(this.layerBoundingBoxes)) {
+      bbCube.setVisibility(visibilities[layerName] ?? false);
+    }
+    app.vent.emit("rerender");
   }
 
   highlightUserBoundingBox(bboxId: number | null | undefined): void {
@@ -681,7 +867,7 @@ class SceneController {
   }
 
   stopPlaneMode(): void {
-    for (const plane of _.values(this.planes)) {
+    for (const plane of Object.values(this.planes)) {
       plane.setVisible(false);
     }
 
@@ -695,7 +881,7 @@ class SceneController {
   }
 
   startPlaneMode(): void {
-    for (const plane of _.values(this.planes)) {
+    for (const plane of Object.values(this.planes)) {
       plane.setVisible(true);
     }
 
@@ -705,16 +891,57 @@ class SceneController {
     this.forEachTaskCube((cube) => cube.setVisibility(true));
   }
 
-  destroy() {
-    // @ts-ignore
+  // Registers a pending renderer.compileAsync() promise; see PlaneView/ArbitraryView.start().
+  registerPendingCompile(promise: Promise<unknown>): void {
+    this.pendingCompilePromises.add(promise);
+    promise.finally(() => {
+      this.pendingCompilePromises.delete(promise);
+    });
+  }
+
+  // three.js's compileAsync() polls internally via an uncancellable setTimeout loop until all
+  // materials report their shader program is ready. If a tracked material (or the renderer) is
+  // disposed while that poll is still in flight, the next tick crashes ("Cannot read properties
+  // of undefined (reading 'isReady')"), since three.js's internal bookkeeping for that material
+  // is gone. So any GPU-resource disposal that could race a pending compile must wait for it
+  // first (see deferUntilCompileReady()). The timeout below is a safety net in case the GPU
+  // context is already lost and the poll would otherwise never resolve.
+  private async waitForPendingCompiles(timeoutMs = 5000): Promise<void> {
+    if (this.pendingCompilePromises.size === 0) {
+      return;
+    }
+    await Promise.race([
+      Promise.allSettled(Array.from(this.pendingCompilePromises)),
+      new Promise((resolve) => setTimeout(resolve, timeoutMs)),
+    ]);
+  }
+
+  // Guards GPU-resource disposal against the compileAsync race described in
+  // waitForPendingCompiles(). Needed at the point of disposal rather than sequenced once in
+  // destroy(), since e.g. bounding box cubes get destroyed-and-recreated during normal
+  // operation too (not just teardown).
+  deferUntilCompileReady(dispose: () => void): void {
+    if (this.pendingCompilePromises.size === 0) {
+      dispose();
+      return;
+    }
+    this.waitForPendingCompiles().then(dispose);
+  }
+
+  async destroy(): Promise<void> {
+    // See waitForPendingCompiles(); must happen before any disposal below, including
+    // skeleton removal.
+    await this.waitForPendingCompiles();
+
+    // @ts-expect-error
     window.addBucketMesh = undefined;
-    // @ts-ignore
+    // @ts-expect-error
     window.addVoxelMesh = undefined;
-    // @ts-ignore
+    // @ts-expect-error
     window.addLine = undefined;
-    // @ts-ignore
+    // @ts-expect-error
     window.removeLines = undefined;
-    // @ts-ignore
+    // @ts-expect-error
     window.removeBucketMesh = undefined;
 
     for (const skeletonId of Object.keys(this.skeletons)) {
@@ -726,16 +953,36 @@ class SceneController {
     }
     this.storePropertyUnsubscribers = [];
 
+    this.debouncedUpdateMipVolumes.cancel();
+    for (const { volume } of this.mipVolumes.values()) {
+      this.rootNode.remove(volume.mesh);
+      volume.dispose();
+    }
+    this.mipVolumes.clear();
+
+    this.segmentMeshController.destroy();
+
+    this.contour.destroy();
+    this.quickSelectGeometry.destroy();
+    this.lineMeasurementGeometry.destroy();
+    this.areaMeasurementGeometry.destroy();
+
     destroyRenderer();
-    // @ts-ignore
+    // @ts-expect-error
     this.renderer = null;
 
     this.datasetBoundingBox.destroy();
-    this.userBoundingBoxes.forEach((cube) => cube.destroy());
-    Object.values(this.layerBoundingBoxes).forEach((cube) => cube.destroy());
-    this.forEachTaskCube((cube) => cube.destroy());
+    this.userBoundingBoxes.forEach((cube) => {
+      cube.destroy();
+    });
+    Object.values(this.layerBoundingBoxes).forEach((cube) => {
+      cube.destroy();
+    });
+    this.forEachTaskCube((cube) => {
+      cube.destroy();
+    });
 
-    for (const plane of _.values(this.planes)) {
+    for (const plane of Object.values(this.planes)) {
       plane.destroy();
     }
 
@@ -762,13 +1009,27 @@ class SceneController {
       ),
       listenToStoreProperty(
         (storeState) => getDataLayers(storeState.dataset),
+        () => {
+          this.updateLayerBoundingBoxes();
+          this.updateDatasetBoundingBoxToTransforms();
+        },
+      ),
+      // The color is baked into the cubes at construction, so a color change requires rebuilding
+      // them, whereas a visibility change (below) only needs to flip a per-cube flag.
+      listenToStoreProperty(
+        (storeState) => storeState.temporaryConfiguration.layerBoundingBoxColors,
         () => this.updateLayerBoundingBoxes(),
+      ),
+      listenToStoreProperty(
+        (storeState) => storeState.temporaryConfiguration.layerBoundingBoxVisibilities,
+        (visibilities) => this.updateLayerBoundingBoxVisibilities(visibilities),
       ),
       listenToStoreProperty(
         (storeState) => storeState.datasetConfiguration.nativelyRenderedLayerName,
         () => {
           this.updateLayerBoundingBoxes();
-          this.updateUserBoundingBoxesAndMeshesAccordingToTransforms();
+          this.updateGeometriesToTransforms();
+          this.updateDatasetBoundingBoxToTransforms();
         },
       ),
       listenToStoreProperty(getVisibleSegmentationLayerNames, () =>
@@ -780,9 +1041,27 @@ class SceneController {
         true,
       ),
       listenToStoreProperty(
-        (storeState) =>
-          storeState.annotation.skeleton ? storeState.annotation.skeleton.showSkeletons : false,
+        (storeState) => isSkeletonLayerVisible(storeState),
         (showSkeletons) => this.setSkeletonGroupVisibility(showSkeletons),
+        true,
+      ),
+      listenToStoreProperty(getMipEnabledBBoxes, this.debouncedUpdateMipVolumes, true),
+      listenToStoreProperty(
+        (state) => state.userConfiguration.mipRaymarchingSteps,
+        (numSteps) => {
+          for (const { volume } of this.mipVolumes.values()) {
+            volume.setNumSteps(numSteps);
+          }
+        },
+        true,
+      ),
+      listenToStoreProperty(
+        (state) => state.userConfiguration.mipDepthWrite,
+        (enabled) => {
+          for (const { volume } of this.mipVolumes.values()) {
+            volume.setDepthWrite(enabled);
+          }
+        },
         true,
       ),
     ];
@@ -790,13 +1069,15 @@ class SceneController {
 }
 
 export type SceneControllerType = SceneController;
-export function initializeSceneController() {
+export async function initializeSceneController(): Promise<void> {
+  // Wait for the previous SceneController's teardown to finish first, since both share the
+  // same WebGLRenderer singleton (see SceneController.destroy()).
+  await waitForPendingSceneControllerTeardown();
   const controller = new SceneController();
   setSceneController(controller);
   controller.initialize();
-  Store.dispatch(sceneControllerReadyAction());
+  Store.dispatch(sceneControllerInitializedAction());
 }
 
 // Please use scene_controller_provider to get a reference to SceneController. This avoids
 // problems with circular dependencies.
-export default {};

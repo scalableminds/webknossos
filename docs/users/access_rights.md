@@ -20,7 +20,7 @@ There are four different roles for WEBKNOSSOS users divided into global, organiz
 
 Only *Admins* and *Team Managers* can see/access the `Admin` menu options in the navigation bar.
 
-By default, each newly uploaded datasets can only be accessed by `Admins` and `Dataset Managers` without any restrictions. Make sure to add or remove one or more teams to a dataset for fine-grained access controls while/after uploading. Otherwise, regular `Members` or `Team Managers` might not be able to see a dataset in their dashboard, let alone create annotations for them. `Team Managers` can also upload datasets via the UI and assign teams during this step. 
+By default, each newly uploaded dataset can only be accessed by `Admins` and `Dataset Managers` without any restrictions. Make sure to add or remove one or more teams to a dataset for fine-grained access controls while/after uploading. Otherwise, regular `Members` or `Team Managers` might not be able to see a dataset in their dashboard, let alone create annotations for them. `Team Managers` can also upload datasets via the UI and assign teams during this step. 
 
 For more information regarding (public) dataset sharing and access rights (especially with outside collaborators), [see the guide on sharing datasets](../sharing/dataset_sharing.md)
 
@@ -31,8 +31,12 @@ For more information regarding (public) dataset sharing and access rights (espec
 | Access datasets of other teams                      	| Yes   	| Yes             	| No           	| No          	|
 | Edit datasets of own teams                       	| Yes   	| Yes             	| Yes          	| No          	|
 | Edit datasets of other teams                     	| Yes   	| Yes             	| No           	| No          	|
+| Delete datasets of own teams                       	| Yes   	| Yes             	| Yes          	| No          	|
+| Delete datasets of other teams                     	| Yes   	| Yes             	| No           	| No          	|
 | Access all users of own teams                       	| Yes   	| Yes             	| Yes          	| Yes         	|
 | Access all users of other teams                     	| Yes   	| Yes             	| Yes          	| No          	|
+| Change own username                              	| Yes   	| Yes             	| Yes          	| Yes         	|
+| Change other users' username¹                    	| Yes   	| No              	| No           	| No          	|
 | Assign/remove team membership to own teams       	| Yes   	| No              	| Yes          	| No          	|
 | Make other users team manager of own teams   	| Yes   	| No              	| Yes          	| No          	|
 | Make other users team manager of other teams   	| Yes   	| No              	| No           	| No          	|
@@ -45,3 +49,5 @@ For more information regarding (public) dataset sharing and access rights (espec
 | Set team access permissions for datasets    	| Yes   	| Yes              	| Yes          	| No          	|
 | Get tasks again after canceling an instance     	| Yes   	| No              	| Yes          	| No          	|
 | Access to wK Statistics Menu  	| Yes   	| No              	| Yes          	| No          	|
+
+¹Not available on webknossos.org.

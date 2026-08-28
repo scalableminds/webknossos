@@ -1,5 +1,7 @@
 package com.scalableminds.util.tools
 
+import com.scalableminds.util.box.{Box, Failure, Full}
+
 import java.io.{PrintWriter, StringWriter}
 import scala.concurrent.ExecutionContext
 
@@ -61,15 +63,26 @@ object TextUtils {
     sw.toString
   }
 
-  def parseCommaSeparated[T](commaSeparatedStrOpt: Option[String])(parseEntry: String => Fox[T])(
-      implicit ec: ExecutionContext): Fox[List[T]] =
+  def parseCommaSeparated[T](
+      commaSeparatedStrOpt: Option[String]
+  )(parseEntry: String => Fox[T])(implicit ec: ExecutionContext): Fox[List[T]] =
     commaSeparatedStrOpt match {
       case None                                                 => Fox.successful(List.empty)
       case Some(commaSeparatedStr) if commaSeparatedStr.isEmpty => Fox.successful(List.empty)
-      case Some(commaSeparatedStr) =>
+      case Some(commaSeparatedStr)                              =>
         Fox.serialCombined(commaSeparatedStr.split(",").toList)(entry => parseEntry(entry))
     }
 
   def pluralize(string: String, amount: Int): String =
     if (amount == 1) string else s"${string}s"
+
+  def renderTemplateReplacements(template: String, replacements: (String, String)*): Box[String] =
+    replacements.toSeq.foldLeft[Box[String]](Full(template)) {
+      case (Full(currentTemplate), (replacementSrc, replacementDst)) =>
+        if (currentTemplate.contains(replacementSrc)) Full(currentTemplate.replace(replacementSrc, replacementDst))
+        else Failure(s"Expected “$replacementSrc” in template.")
+      case (f: Failure, _) => f
+      case _               => Failure("Unknown error rendering template replacements.")
+    }
+
 }

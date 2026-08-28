@@ -1,21 +1,21 @@
-FROM eclipse-temurin:21-jammy
+FROM eclipse-temurin:21-jre-jammy
 
 RUN apt-get update \
   && apt-get -y install libbrotli1 libdraco4 \
   && rm -rf /var/lib/apt/lists/*
 
-RUN mkdir -p /webknossos-datastore \
+RUN mkdir -p /webknossos-datastore/binaryData \
   && groupadd -g 1000 -r webknossos \
-  && useradd -u 1000 -r -g webknossos webknossos
+  && useradd -u 1000 -r -g webknossos webknossos \
+  && chown -R webknossos:webknossos /webknossos-datastore
 
 WORKDIR /webknossos-datastore
 
 VOLUME /webknossos-datastore/binaryData /tmp
 
-COPY target/universal/stage .
+COPY --chown=webknossos:webknossos target/universal/stage .
 
-RUN chown -R webknossos . \
-  && chmod +x bin/webknossos-datastore \
+RUN chmod +x bin/webknossos-datastore \
   && chmod go+w .
 
 RUN echo '#!/bin/bash\numask 002\nbin/webknossos-datastore "$@"\n' > /docker-entrypoint.sh \
@@ -30,4 +30,4 @@ HEALTHCHECK \
 EXPOSE 9090
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD ["-J-Xmx20G", "-J-Xms1G", "-Dconfig.file=conf/standalone-datastore.conf", "-Dlogger.file=conf/logback-docker.xml", "-Dlogback.configurationFile=conf/logback-docker.xml", "-Dhttp.port=9090", "-Dhttp.address=0.0.0.0"]
+CMD ["-J-Xmx20G", "-J-Xms1G", "-Dconfig.file=conf/standalone-datastore.conf", "-Dlogger.file=conf/logback.xml", "-Dlogback.configurationFile=conf/logback.xml", "-Dhttp.port=9090", "-Dhttp.address=0.0.0.0"]

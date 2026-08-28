@@ -1,22 +1,36 @@
+import type { ApiResult, RetryOptions } from "admin/api/api_result";
+import { requestResult } from "admin/api/api_result";
 import dayjs from "dayjs";
-import { V3 } from "libs/mjs";
+import update from "immutability-helper";
+import { toBigInt } from "libs/bigint_helpers";
 import type { RequestOptions, RequestOptionsWithData } from "libs/request";
 import Request from "libs/request";
+import ResumableUpload from "libs/resumable_upload/resumable_upload";
 import type { Message } from "libs/toast";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import window, { location } from "libs/window";
-import _ from "lodash";
-import messages from "messages";
-import ResumableJS from "resumablejs";
 import {
+  getAdaptToTypeFunctionFromList,
+  millisecondsToMinutes,
+  minutesToMilliseconds,
+  parseMaybe,
+  retryAsyncFunction,
+} from "libs/utils";
+import window from "libs/window";
+import memoize from "lodash-es/memoize";
+import zip from "lodash-es/zip";
+import messages from "messages";
+import {
+  type AdditionalCoordinate,
+  type AnnotationCollaborationMode,
+  type AnnotationIdDomain,
+  type AnnotationLayerDescriptor,
+  AnnotationLayerEnum,
+  type AnnotationViewConfiguration,
   type APIAnnotation,
   type APIAnnotationInfo,
   type APIAnnotationType,
   type APIAnnotationVisibility,
   type APIAvailableTasksReport,
-  type APIBuildInfoDatastore,
-  type APIBuildInfoTracingstore,
   type APIBuildInfoWk,
   type APICompoundType,
   type APIConnectomeFile,
@@ -32,8 +46,6 @@ import {
   type APIMaybeUnimportedDataset,
   type APIMeshFileInfo,
   type APIOrganization,
-  type APIOrganizationCompact,
-  type APIPricingPlanStatus,
   type APIProject,
   type APIProjectCreator,
   type APIProjectProgressReport,
@@ -43,6 +55,7 @@ import {
   type APIScript,
   type APIScriptCreator,
   type APIScriptUpdater,
+  type APIStorageDetailEntry,
   type APITaskType,
   type APITeam,
   type APITimeInterval,
@@ -56,10 +69,6 @@ import {
   type APIUserCompact,
   type APIUserLoggedTime,
   type APIUserTheme,
-  type AdditionalCoordinate,
-  type AnnotationLayerDescriptor,
-  AnnotationLayerEnum,
-  type AnnotationViewConfiguration,
   type ExperienceDomainList,
   type LayerLink,
   type MaintenanceInfo,
@@ -74,15 +83,15 @@ import {
   type VoxelyticsWorkflowReport,
   type ZarrPrivateLink,
 } from "types/api_types";
-import type { ArbitraryObject } from "types/globals";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 import type { DatasourceConfiguration } from "types/schemas/datasource.types";
-import type { AnnotationTypeFilterEnum, LOG_LEVELS, Vector3 } from "viewer/constants";
-import Constants, { ControlModeEnum, AnnotationStateFilterEnum } from "viewer/constants";
+import type { ArbitraryObject, EmptyObject } from "types/type_utils";
+import type { AnnotationTypeFilterEnum, LOG_LEVELS, MappingType, Vector3 } from "viewer/constants";
+import Constants, { AnnotationStateFilterEnum } from "viewer/constants";
 import type BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import {
-  type LayerSourceInfo,
   getDataOrTracingStoreUrl,
+  type LayerSourceInfo,
 } from "viewer/model/bucket_data_handling/wkstore_helper";
 import {
   parseProtoAnnotation,
@@ -93,22 +102,21 @@ import {
 import type {
   DatasetConfiguration,
   Mapping,
-  MappingType,
-  NumberLike,
   PartialDatasetConfiguration,
   SaveQueueEntry,
   StoreAnnotation,
-  TraceOrViewCommand,
   UserConfiguration,
   VolumeTracing,
 } from "viewer/store";
+import type { KeyboardShortcutsMap } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
 import { assertResponseLimit } from "./api/api_utils";
 import { getDatasetIdFromNameAndOrganization } from "./api/disambiguate_legacy_routes";
-import { doWithToken } from "./api/token";
+import { getOrganization } from "./api/organization";
+import { doWithToken, refreshToken } from "./api/token";
 
-export * from "./api/token";
 export * from "./api/jobs";
 export * as meshApi from "./api/mesh";
+export * from "./api/token";
 
 type NewTeam = {
   readonly name: string;
@@ -162,8 +170,8 @@ export async function logoutUserEverywhere(): Promise<void> {
   await Request.receiveJSON("/api/auth/logoutEverywhere", { method: "POST" });
 }
 
-export async function getUsers(): Promise<Array<APIUser>> {
-  const users = await Request.receiveJSON("/api/users");
+export async function getUsers(options: RequestOptions = {}): Promise<Array<APIUser>> {
+  const users = await Request.receiveJSON("/api/users", options);
   assertResponseLimit(users);
   return users;
 }
@@ -321,10 +329,13 @@ export function updateTaskType(taskTypeId: string, taskType: APITaskType): Promi
 }
 
 // ### Teams
-export async function getTeams(): Promise<Array<APITeam>> {
-  const teams = await Request.receiveJSON("/api/teams", {
-    doNotInvestigate: true,
-  });
+export async function getTeams(options?: RequestOptions): Promise<Array<APITeam>> {
+  const teams = await Request.receiveJSON(
+    "/api/teams",
+    options ?? {
+      doNotInvestigate: true,
+    },
+  );
   assertResponseLimit(teams);
   return teams;
 }
@@ -352,7 +363,7 @@ export function deleteTeam(teamId: string): Promise<void> {
 // ### Projects
 function transformProject<T extends APIProject | APIProjectWithStatus>(response: T): T {
   return Object.assign({}, response, {
-    expectedTime: Utils.millisecondsToMinutes(response.expectedTime),
+    expectedTime: millisecondsToMinutes(response.expectedTime),
   });
 }
 
@@ -397,7 +408,7 @@ export function deleteProject(projectId: string): Promise<void> {
 }
 export function createProject(project: APIProjectCreator): Promise<APIProject> {
   const transformedProject = Object.assign({}, project, {
-    expectedTime: Utils.minutesToMilliseconds(project.expectedTime),
+    expectedTime: minutesToMilliseconds(project.expectedTime),
   });
   return Request.sendJSONReceiveJSON("/api/projects", {
     data: transformedProject,
@@ -405,7 +416,7 @@ export function createProject(project: APIProjectCreator): Promise<APIProject> {
 }
 export function updateProject(projectId: string, project: APIProjectUpdater): Promise<APIProject> {
   const transformedProject = Object.assign({}, project, {
-    expectedTime: Utils.minutesToMilliseconds(project.expectedTime),
+    expectedTime: minutesToMilliseconds(project.expectedTime),
   });
   return Request.sendJSONReceiveJSON(`/api/projects/${projectId}`, {
     method: "PUT",
@@ -537,15 +548,17 @@ export function editLockedState(
   );
 }
 
-export function setOthersMayEditForAnnotation(
+export function setCollaborationModeForAnnotation(
   annotationId: string,
   annotationType: APIAnnotationType,
-  othersMayEdit: boolean,
+  collaborationMode: AnnotationCollaborationMode,
+  options?: RequestOptions,
 ): Promise<void> {
   return Request.receiveJSON(
-    `/api/annotations/${annotationType}/${annotationId}/othersMayEdit?othersMayEdit=${othersMayEdit}`,
+    `/api/annotations/${annotationType}/${annotationId}/collaborationMode?collaborationMode=${collaborationMode}`,
     {
       method: "PATCH",
+      ...options,
     },
   );
 }
@@ -615,17 +628,26 @@ export function duplicateAnnotation(
   });
 }
 
+// Note: The returned annotation object contains viewConfiguration. An arbitrary object which should be schema checked before used.
+// Currently, the only location where this is needed is during initialization.
 export async function getUnversionedAnnotationInformation(
   annotationId: string,
   options: RequestOptions = {},
-): Promise<APIAnnotation> {
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<APIAnnotation>> {
   const infoUrl = `/api/annotations/${annotationId}/info?timestamp=${Date.now()}`;
-  const annotationWithMessages = await Request.receiveJSON(infoUrl, options);
+  return requestResult(
+    async (adaptedOpts) => {
+      const annotationWithMessages = await Request.receiveJSON(infoUrl, adaptedOpts);
 
-  // Extract the potential messages property before returning the task to avoid
-  // failing e2e tests in annotations.e2e.ts
-  const { messages: _messages, ...annotation } = annotationWithMessages;
-  return annotation;
+      // Extract the potential messages property before returning the task to avoid
+      // failing e2e tests in annotations.e2e.ts
+      const { messages: _messages, ...annotation } = annotationWithMessages;
+      return annotation;
+    },
+    options,
+    retryOptions,
+  );
 }
 
 export async function getAnnotationCompoundInformation(
@@ -727,14 +749,41 @@ export async function getTracingsForAnnotation(
 
 export async function acquireAnnotationMutex(
   annotationId: string,
-): Promise<{ canEdit: boolean; blockedByUser: APIUserCompact | undefined | null }> {
-  const { canEdit, blockedByUser } = await Request.receiveJSON(
-    `/api/annotations/${annotationId}/acquireMutex`,
+  sessionId: string,
+): Promise<{
+  canEdit: boolean;
+  // If the mutex could not be rejected, the following two properties contain
+  // which user (and which session id) is responsible. The current user might
+  // be blocking the mutex in another session (then, the session id will be
+  // different from the current one).
+  blockedByUser: APIUserCompact | undefined | null;
+  blockedBySessionId: string | undefined | null;
+}> {
+  const { canEdit, blockedByUser, blockedBySessionId } = await Request.receiveJSON(
+    `/api/annotations/${annotationId}/acquireMutex?${new URLSearchParams({ sessionId })}`,
     {
       method: "POST",
     },
   );
-  return { canEdit, blockedByUser };
+  return { canEdit, blockedByUser, blockedBySessionId };
+}
+
+export async function releaseAnnotationMutex(
+  annotationId: string,
+  sessionId: string,
+): Promise<void> {
+  await Request.receiveJSON(
+    `/api/annotations/${annotationId}/releaseMutex?${new URLSearchParams({ sessionId })}`,
+    {
+      method: "POST",
+    },
+  );
+}
+
+export function releaseAnnotationMutexWithBeacon(annotationId: string, sessionId: string): boolean {
+  return navigator.sendBeacon(
+    `/api/annotations/${annotationId}/releaseMutex?${new URLSearchParams({ sessionId })}`,
+  );
 }
 
 export async function getTracingForAnnotationType(
@@ -761,7 +810,7 @@ export async function getTracingForAnnotationType(
   });
   const tracing = parseProtoTracing(tracingArrayBuffer, tracingType);
 
-  if (!process.env.IS_TESTING) {
+  if (import.meta.env.MODE !== "test") {
     // Log to console as the decoded tracing is hard to inspect in the devtools otherwise.
     console.log(`Parsed protobuf ${tracingType} tracing:`, tracing);
   }
@@ -772,9 +821,9 @@ export async function getTracingForAnnotationType(
   // on the tracing's structure.
   tracing.typ = typ;
 
-  // @ts-ignore Remove datasetName and organizationId as these should not be used in the front-end, anymore.
+  // @ts-expect-error Remove datasetName and organizationId as these should not be used in the front-end, anymore.
   delete tracing.datasetName;
-  // @ts-ignore
+  // @ts-expect-error
   delete tracing.organizationId;
 
   return tracing;
@@ -797,8 +846,10 @@ export function getUpdateActionLog(
     if (newestVersion != null) {
       params.set("newestVersion", newestVersion.toString());
     }
-    const log: APIUpdateActionBatch[] = await Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/annotation/${annotationId}/updateActionLog?${params}`,
+    const log: APIUpdateActionBatch[] = await retryAsyncFunction(() =>
+      Request.receiveJSON(
+        `${tracingStoreUrl}/tracings/annotation/${annotationId}/updateActionLog?${params}`,
+      ),
     );
 
     if (sortAscending) {
@@ -812,10 +863,12 @@ export function getNewestVersionForAnnotation(
   tracingStoreUrl: string,
   annotationId: string,
 ): Promise<number> {
-  return doWithToken((token) =>
-    Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/annotation/${annotationId}/newestVersion?token=${token}`,
-    ).then((obj) => obj.version),
+  return retryAsyncFunction(() =>
+    doWithToken((token) =>
+      Request.receiveJSON(
+        `${tracingStoreUrl}/tracings/annotation/${annotationId}/newestVersion?token=${token}`,
+      ).then((obj) => obj.version),
+    ),
   );
 }
 
@@ -840,7 +893,7 @@ export async function getAnnotationProto(
     );
   });
   const annotationProto = parseProtoAnnotation(annotationArrayBuffer);
-  if (!process.env.IS_TESTING) {
+  if (import.meta.env.MODE !== "test") {
     // Log to console as the decoded annotationProto is hard to inspect in the devtools otherwise.
     console.log("Parsed protobuf annotation:", annotationProto);
   }
@@ -859,21 +912,22 @@ export function hasSegmentIndexInDataStore(
   );
 }
 
-export const hasSegmentIndexInDataStoreCached = _.memoize(hasSegmentIndexInDataStore, (...args) =>
+export const hasSegmentIndexInDataStoreCached = memoize(hasSegmentIndexInDataStore, (...args) =>
   args.join("::"),
 );
 
 export function getSegmentVolumes(
   layerSourceInfo: LayerSourceInfo,
   mag: Vector3,
-  segmentIds: Array<number>,
+  segmentIds: Array<bigint>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
+  annotationVersion: number | undefined,
 ): Promise<number[]> {
   const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(`${requestUrl}/segmentStatistics/volume?token=${token}`, {
-      data: { additionalCoordinates, mag, segmentIds, mappingName },
+      data: { additionalCoordinates, mag, segmentIds, mappingName, annotationVersion },
       method: "POST",
     }),
   );
@@ -881,19 +935,21 @@ export function getSegmentVolumes(
 
 type SegmentStatisticsParametersMeshBased = {
   mag: Vector3;
-  segmentIds: number[];
+  segmentIds: bigint[];
   mappingName?: string | null;
   additionalCoordinates?: AdditionalCoordinate[] | null;
   meshFileName?: string | null;
+  annotationVersion: number | undefined;
 };
 
 export function getSegmentSurfaceArea(
   layerSourceInfo: LayerSourceInfo,
   mag: Vector3,
   meshFileName: string | undefined | null,
-  segmentIds: Array<number>,
+  segmentIds: Array<bigint>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
+  annotationVersion: number | undefined,
 ): Promise<number[]> {
   const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   return doWithToken((token) => {
@@ -903,6 +959,7 @@ export function getSegmentSurfaceArea(
       mappingName,
       additionalCoordinates,
       meshFileName,
+      annotationVersion,
     };
     return Request.sendJSONReceiveJSON(
       `${requestUrl}/segmentStatistics/surfaceArea?token=${token}`,
@@ -917,14 +974,15 @@ export function getSegmentSurfaceArea(
 export function getSegmentBoundingBoxes(
   layerSourceInfo: LayerSourceInfo,
   mag: Vector3,
-  segmentIds: Array<number>,
+  segmentIds: Array<bigint>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
+  annotationVersion: number | undefined,
 ): Promise<Array<{ topLeft: Vector3; width: number; height: number; depth: number }>> {
   const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(`${requestUrl}/segmentStatistics/boundingBox?token=${token}`, {
-      data: { additionalCoordinates, mag, segmentIds, mappingName },
+      data: { additionalCoordinates, mag, segmentIds, mappingName, annotationVersion },
       method: "POST",
     }),
   );
@@ -935,8 +993,8 @@ export async function importVolumeTracing(
   volumeTracing: VolumeTracing,
   dataFile: File,
   version: number,
-): Promise<number> {
-  return doWithToken((token) =>
+): Promise<bigint> {
+  const largestSegmentId: bigint = await doWithToken((token) =>
     Request.sendMultipartFormReceiveJSON(
       `${annotation.tracingStore.url}/tracings/volume/${volumeTracing.tracingId}/importVolumeData?token=${token}`,
       {
@@ -947,12 +1005,17 @@ export async function importVolumeTracing(
       },
     ),
   );
+  return largestSegmentId;
 }
 
 export async function downloadWithFilename(downloadUrl: string) {
   const link = document.createElement("a");
   link.href = downloadUrl;
   link.rel = "noopener";
+  // Without this, the browser treats the click as a top-level navigation until the
+  // Content-Disposition header arrives, firing beforeunload and releasing the annotation
+  // mutex. The download attribute marks it as a forced download upfront.
+  link.download = "";
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -991,7 +1054,61 @@ export async function downloadAnnotation(
   await downloadWithFilename(downloadUrl);
 }
 
+export async function getIdReservationsForAnnotation(
+  annotationId: string,
+  tracingId: string,
+  domain: AnnotationIdDomain,
+) {
+  const params = new URLSearchParams({ tracingId, domain });
+
+  const ids: number[] = await Request.receiveJSON(
+    `/api/annotations/${annotationId}/reservedIds?${params}`,
+  );
+  return ids;
+}
+
+export async function reserveIdsForAnnotation(
+  annotationId: string,
+  tracingId: string,
+  domain: AnnotationIdDomain,
+  numberOfIdsToReserve: number,
+  idsToRelease: number[] = [],
+): Promise<number[]> {
+  /*
+   * Will reserve new ids for the specified domain.
+   */
+  if (numberOfIdsToReserve <= 0) {
+    // Otherwise, the backend cannot reliably use the largest id
+    // in a domain as a starting point to generate new ids.
+    // For example:
+    // User 1 has reservations for ids 1 and 2.
+    // User 2 has reservations for ids 3 and 4 and releases
+    // these (without reserving new ones).
+    // Then, the known maximum is 2 (instead of 4).
+    throw new Error("Must reserve at least 1 id");
+  }
+  if (numberOfIdsToReserve > Constants.IDEAL_ID_BUFFER_SIZE) {
+    throw new Error(
+      `Tried to request too many ids. numberOfIdsToReserve (${numberOfIdsToReserve} > ${Constants.IDEAL_ID_BUFFER_SIZE})`,
+    );
+  }
+  const ids: number[] = await Request.sendJSONReceiveJSON(
+    `/api/annotations/${annotationId}/reserveIds`,
+    {
+      data: {
+        domain,
+        tracingId,
+        numberOfIdsToReserve,
+        idsToRelease,
+      },
+      method: "POST",
+    },
+  );
+  return ids;
+}
+
 // ### Datasets
+
 export async function getDatasets(
   isUnreported: boolean | null | undefined = null,
   folderId: string | null = null,
@@ -1024,22 +1141,39 @@ export async function getDatasets(
 }
 
 export async function getActiveDatasetsOfMyOrganization(): Promise<Array<APIDataset>> {
-  const datasets = await Request.receiveJSON("/api/datasets?isActive=true&onlyMyOrganization=true");
+  const datasets: Array<APIDataset> = await Request.receiveJSON(
+    "/api/datasets?isActive=true&onlyMyOrganization=true",
+  );
   assertResponseLimit(datasets);
   return datasets;
 }
 
-export function getDataset(
+export async function getDataset(
   datasetId: string,
   sharingToken?: string | null | undefined,
   options: RequestOptions = {},
+  filterZeroMagLayers: boolean = true,
 ): Promise<APIDataset> {
   const params = new URLSearchParams();
   if (sharingToken != null) {
     params.set("sharingToken", String(sharingToken));
   }
 
-  return Request.receiveJSON(`/api/datasets/${datasetId}?${params}`, options);
+  const dataset: APIDataset = await Request.receiveJSON(
+    `/api/datasets/${datasetId}?${params}`,
+    options,
+  );
+
+  if (!filterZeroMagLayers || !("dataLayers" in (dataset.dataSource ?? {}))) {
+    return dataset;
+  }
+  return update(dataset, {
+    dataSource: {
+      dataLayers: {
+        $set: dataset.dataSource.dataLayers.filter((layer) => layer.mags.length > 0),
+      },
+    },
+  });
 }
 
 export async function getDatasetLegacy(
@@ -1068,13 +1202,15 @@ export type DatasetUpdater = {
   dataSource?: APIDataSource;
 };
 
-export function updateDatasetPartial(
+export async function updateDatasetPartial(
   datasetId: string,
-  updater: DatasetUpdater,
+  updater: Partial<DatasetUpdater>,
+  options: RequestOptions = {},
 ): Promise<APIDataset> {
   return Request.sendJSONReceiveJSON(`/api/datasets/${datasetId}/updatePartial`, {
     method: "PATCH",
     data: updater,
+    ...options,
   });
 }
 
@@ -1145,7 +1281,10 @@ export function createDatasetComposition(
   );
 }
 
-export function createResumableUpload(datastoreUrl: string, uploadId: string): Promise<any> {
+export function createResumableUpload(
+  datastoreUrl: string,
+  uploadId: string,
+): Promise<ResumableUpload> {
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'file' implicitly has an 'any' type.
   const generateUniqueIdentifier = (file) => {
     if (file.path == null) {
@@ -1158,42 +1297,88 @@ export function createResumableUpload(datastoreUrl: string, uploadId: string): P
     return `${uploadId}/${file.path || file.name}`;
   };
 
-  return doWithToken(
-    (token) =>
-      // @ts-expect-error ts-migrate(2739) FIXME: Type 'Resumable' is missing the following properti... Remove this comment to see the full error message
-      new ResumableJS({
-        testChunks: true,
-        target: `${datastoreUrl}/data/datasets?token=${token}`,
-        chunkSize: 10 * 1024 * 1024, // 10MB
-        permanentErrors: [400, 403, 404, 409, 415, 500, 501],
-        simultaneousUploads: 3,
-        chunkRetryInterval: 2000,
-        maxChunkRetries: undefined,
-        xhrTimeout: 10 * 60 * 1000, // 10m
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '(file: any) => string' is not assignable to ... Remove this comment to see the full error message
-        generateUniqueIdentifier,
-      }),
-  );
+  return doWithToken(async (initialToken) => {
+    let activeToken = initialToken;
+    const handleInvalidToken = async () => {
+      const newToken = await refreshToken();
+      activeToken = newToken;
+    };
+
+    const resumable = new ResumableUpload({
+      testChunks: true,
+      target: `${datastoreUrl}/data/datasets/upload/dataset`,
+      query: function () {
+        return {
+          token: activeToken,
+        };
+      },
+      chunkSize: 10 * 1024 * 1024, // 10MB
+      simultaneousUploads: 3,
+      chunkRetryInterval: 2000,
+      maxChunkRetries: undefined,
+      fetchTimeout: 10 * 60 * 1000, // 10m
+      generateUniqueIdentifier,
+      // The following errors only tell Resumable-upload to not
+      // retry automatically when they appear.
+      // 403 is explicitly listed because we want to get a fileError
+      // event. Then, we can invalidate the token and trigger
+      // a retry ourselves (see below).
+      permanentErrors: [400, 403, 404, 409, 415, 501],
+    });
+
+    let lastFileErrorTimestamp: number | null = null;
+    resumable.addEventListener("fileError", (event: Event) => {
+      const { file, message } = (event as CustomEvent).detail;
+      // When a file could not be uploaded, assume that the token is invalid. Then,
+      // refresh the token (unless we already did this in the last hour) and
+      // retry the file upload.
+      const ONE_HOUR_MS = 3600 * 1000;
+      if (lastFileErrorTimestamp == null || Date.now() - lastFileErrorTimestamp > ONE_HOUR_MS) {
+        handleInvalidToken()
+          .then(() => {
+            file.retry();
+          })
+          .catch(() => {
+            // Note that "terminalFileError" is an event which is only triggered by WK
+            // and not by the ResumableUpload library itself.
+            resumable.dispatchFromDetail({ type: "terminalFileError", file, message });
+          });
+      } else {
+        resumable.dispatchFromDetail({ type: "terminalFileError", file, message });
+      }
+
+      lastFileErrorTimestamp = Date.now();
+    });
+
+    return resumable;
+  });
 }
-type ReserveUploadInformation = {
+
+type ResumableUploadInfo = {
   uploadId: string;
-  name: string;
-  directoryName: string;
-  newDatasetId: string;
-  organization: string;
   totalFileCount: number;
   filePaths: Array<string>;
-  initialTeams: Array<string>;
+  totalFileSizeInBytes: number;
+};
+type DatasetUploadInfo = {
+  resumableUploadInfo: ResumableUploadInfo;
+  datasetName: string;
+  organizationId: string;
+  layersToLink: Array<null>; // Always set as empty by frontend, only used by libs
+  initialTeamIds: Array<string>;
   folderId: string | null;
+  needsConversion: boolean;
+  voxelSizeFactor: Vector3 | undefined;
+  voxelSizeUnit: string | undefined;
 };
 
 export function reserveDatasetUpload(
   datastoreHost: string,
-  reserveUploadInformation: ReserveUploadInformation,
+  datasetUploadInfo: DatasetUploadInfo,
 ): Promise<void> {
   return doWithToken((token) =>
-    Request.sendJSONReceiveJSON(`/data/datasets/reserveUpload?token=${token}`, {
-      data: reserveUploadInformation,
+    Request.sendJSONReceiveJSON(`/data/datasets/upload/dataset/reserveUpload?token=${token}`, {
+      data: datasetUploadInfo,
       host: datastoreHost,
     }),
   );
@@ -1214,7 +1399,7 @@ export function getUnfinishedUploads(
 ): Promise<UnfinishedUpload[]> {
   return doWithToken(async (token) => {
     const unfinishedUploads = (await Request.receiveJSON(
-      `/data/datasets/getUnfinishedUploads?token=${token}&organizationName=${organizationName}`,
+      `/data/datasets/upload/dataset/unfinishedUploads?token=${token}&organizationName=${organizationName}`,
       {
         host: datastoreHost,
       },
@@ -1227,29 +1412,34 @@ type NewDatasetReply = {
   newDatasetId: string;
 };
 
+type FinishUploadReply = {
+  datasetId: string;
+};
+
 export function finishDatasetUpload(
   datastoreHost: string,
-  uploadInformation: ArbitraryObject,
-): Promise<NewDatasetReply> {
+  uploadId: string,
+): Promise<FinishUploadReply> {
   return doWithToken((token) =>
-    Request.sendJSONReceiveJSON(`/data/datasets/finishUpload?token=${token}`, {
-      data: uploadInformation,
-      host: datastoreHost,
-    }),
+    Request.receiveJSON(
+      `/data/datasets/upload/dataset/finishUpload?uploadId=${uploadId}&token=${token}`,
+      {
+        host: datastoreHost,
+        method: "POST",
+      },
+    ),
   );
 }
 
-export function cancelDatasetUpload(
-  datastoreHost: string,
-  cancelUploadInformation: {
-    uploadId: string;
-  },
-): Promise<void> {
+export function cancelDatasetUpload(datastoreHost: string, uploadId: string): Promise<void> {
   return doWithToken((token) =>
-    Request.sendJSONReceiveJSON(`/data/datasets/cancelUpload?token=${token}`, {
-      data: cancelUploadInformation,
-      host: datastoreHost,
-    }),
+    Request.receiveJSON(
+      `/data/datasets/upload/dataset/cancelUpload?uploadId=${uploadId}&token=${token}`,
+      {
+        host: datastoreHost,
+        method: "POST",
+      },
+    ),
   );
 }
 
@@ -1289,22 +1479,33 @@ export async function exploreRemoteDataset(
   return { dataSource, report };
 }
 
+export async function findDatasetByImportUrl(importUrl: string): Promise<APIDataset | null> {
+  return await Request.receiveJSON(
+    `/api/datasets/findByImportURL?importURL=${encodeURIComponent(importUrl)}`,
+  );
+}
+
 type StoreRemoteDatasetArgs = {
   dataStoreName: string;
   dataSource: APIDataSource;
   folderId?: string | null;
+  importUrl?: string | null;
 };
 
 export async function storeRemoteDataset(
   dataStoreName: string,
   datasetName: string,
   dataSource: APIDataSource,
+  importUrl: string | null | undefined,
   folderId: string | null,
 ): Promise<NewDatasetReply> {
   const payload: StoreRemoteDatasetArgs = {
     dataSource,
-    dataStoreName: dataStoreName,
+    dataStoreName,
   };
+  if (importUrl) {
+    payload["importUrl"] = importUrl;
+  }
   if (folderId) {
     payload["folderId"] = folderId;
   }
@@ -1329,14 +1530,20 @@ export async function isDatasetNameValid(datasetName: string): Promise<string | 
   }
 }
 
-export function updateDatasetTeams(
+export async function updateDatasetTeams(
   datasetId: string,
   newTeams: Array<string>,
+  options: RequestOptions = {},
 ): Promise<APIDataset> {
   return Request.sendJSONReceiveJSON(`/api/datasets/${datasetId}/teams`, {
     method: "PATCH",
     data: newTeams,
+    ...options,
   });
+}
+
+export function getDatasetUsedStorageDetails(datasetId: string): Promise<APIStorageDetailEntry[]> {
+  return Request.receiveJSON(`/api/datasets/${datasetId}/usedStorageDetails`);
 }
 
 export async function triggerDatasetCheck(
@@ -1356,7 +1563,7 @@ export async function triggerDatasetCheck(
   });
 }
 
-export async function triggerDatasetClearCache(
+async function triggerDatasetClearCache(
   datastoreHost: string,
   dataSourceId: APIDataSourceId,
   datasetId: string,
@@ -1384,7 +1591,7 @@ export async function deleteDatasetOnDisk(datasetId: string): Promise<void> {
   });
 }
 
-export async function triggerDatasetClearThumbnailCache(datasetId: string): Promise<void> {
+async function triggerDatasetClearThumbnailCache(datasetId: string): Promise<void> {
   await Request.triggerRequest(`/api/datasets/${datasetId}/clearThumbnailCache`, {
     method: "PUT",
   });
@@ -1510,7 +1717,7 @@ export function getPositionForSegmentInAgglomerate(
   datasetId: string,
   layerName: string,
   mappingName: string,
-  segmentId: number,
+  segmentId: bigint,
 ): Promise<Vector3> {
   return doWithToken(async (token) => {
     const params = new URLSearchParams({
@@ -1555,24 +1762,17 @@ export async function getDatastores(): Promise<APIDataStore[]> {
   return datastores;
 }
 
-export const getDataStoresCached = _.memoize(getDatastores);
+export const getDataStoresCached = memoize(getDatastores);
 
-export function getTracingstore(): Promise<APITracingStore> {
+function getTracingstore(): Promise<APITracingStore> {
   return Request.receiveJSON("/api/tracingstore");
 }
 
-export const getTracingStoreCached = _.memoize(getTracingstore);
+export const getTracingStoreCached = memoize(getTracingstore);
 
 // ### Active User
 export function getActiveUser(options?: RequestOptions): Promise<APIUser> {
   return Request.receiveJSON("/api/user", options);
-}
-
-export function getOrganizationPayingForActiveUser(
-  activeUserId: string,
-  options?: RequestOptions,
-): Promise<string> {
-  return Request.receiveJSON(`/api/user/${activeUserId}/payingOrganization`, options);
 }
 
 export function getUserConfiguration(): Promise<UserConfiguration> {
@@ -1585,6 +1785,17 @@ export function updateUserConfiguration(
   return Request.sendJSONReceiveJSON("/api/user/userConfiguration", {
     method: "PUT",
     data: userConfiguration,
+  });
+}
+
+export function getKeyboardShortcutsConfig(): Promise<Partial<KeyboardShortcutsMap> | EmptyObject> {
+  return Request.receiveJSON("/api/user/keyboardShortcutsConfig");
+}
+
+export function updateKeyboardShortcutsConfig(shortcuts: KeyboardShortcutsMap): Promise<void> {
+  return Request.sendJSONReceiveJSON("/api/user/keyboardShortcutsConfig", {
+    method: "PUT",
+    data: shortcuts,
   });
 }
 
@@ -1681,163 +1892,6 @@ export async function getAvailableTasksReport(
   return availableTasksData;
 }
 
-// ### Organizations
-export async function getDefaultOrganization(): Promise<APIOrganization | null> {
-  // Only returns an organization if the WEBKNOSSOS instance only has one organization
-  return Request.receiveJSON("/api/organizations/default");
-}
-
-export function joinOrganization(inviteToken: string): Promise<void> {
-  return Request.triggerRequest(`/api/auth/joinOrganization/${inviteToken}`, {
-    method: "POST",
-  });
-}
-
-export async function switchToOrganization(organizationId: string): Promise<void> {
-  await Request.triggerRequest(`/api/auth/switchOrganization/${organizationId}`, {
-    method: "POST",
-  });
-  location.reload();
-}
-
-export async function getUsersOrganizations(): Promise<Array<APIOrganizationCompact>> {
-  const organizations: APIOrganizationCompact[] = await Request.receiveJSON(
-    "/api/organizations?compact=true",
-  );
-  const scmOrganization = organizations.find((org) => org.id === "scalable_minds");
-  if (scmOrganization == null) {
-    return organizations;
-  }
-  // Move scalableminds organization to the front so it appears in the organization switcher
-  // at the top.
-  return [scmOrganization, ...organizations.filter((org) => org.id !== scmOrganization.id)];
-}
-
-export function getOrganizationByInvite(inviteToken: string): Promise<APIOrganization> {
-  return Request.receiveJSON(`/api/organizations/byInvite/${inviteToken}`, {
-    showErrorToast: false,
-  });
-}
-
-export function sendInvitesForOrganization(
-  recipients: Array<string>,
-  autoActivate: boolean,
-): Promise<void> {
-  return Request.sendJSONReceiveJSON("/api/auth/sendInvites", {
-    method: "POST",
-    data: {
-      recipients,
-      autoActivate,
-    },
-  });
-}
-
-export async function getOrganization(organizationId: string): Promise<APIOrganization> {
-  const organization = await Request.receiveJSON(`/api/organizations/${organizationId}`);
-  return {
-    ...organization,
-    paidUntil: organization.paidUntil ?? Constants.MAXIMUM_DATE_TIMESTAMP,
-    includedStorageBytes: organization.includedStorageBytes ?? Number.POSITIVE_INFINITY,
-    includedUsers: organization.includedUsers ?? Number.POSITIVE_INFINITY,
-  };
-}
-
-export async function checkAnyOrganizationExists(): Promise<boolean> {
-  return !(await Request.receiveJSON("/api/organizationsIsEmpty"));
-}
-
-export async function deleteOrganization(organizationId: string): Promise<void> {
-  return Request.triggerRequest(`/api/organizations/${organizationId}`, {
-    method: "DELETE",
-  });
-}
-
-export async function updateOrganization(
-  organizationId: string,
-  name: string,
-  newUserMailingList: string,
-): Promise<APIOrganization> {
-  const updatedOrganization = await Request.sendJSONReceiveJSON(
-    `/api/organizations/${organizationId}`,
-    {
-      method: "PATCH",
-      data: {
-        name,
-        newUserMailingList,
-      },
-    },
-  );
-
-  return {
-    ...updatedOrganization,
-    paidUntil: updatedOrganization.paidUntil ?? Constants.MAXIMUM_DATE_TIMESTAMP,
-    includedStorageBytes: updatedOrganization.includedStorageBytes ?? Number.POSITIVE_INFINITY,
-    includedUsers: updatedOrganization.includedUsers ?? Number.POSITIVE_INFINITY,
-  };
-}
-
-export async function isDatasetAccessibleBySwitching(
-  commandType: TraceOrViewCommand,
-): Promise<APIOrganization | null | undefined> {
-  if (commandType.type === ControlModeEnum.TRACE) {
-    return Request.receiveJSON(
-      `/api/auth/accessibleBySwitching?annotationId=${commandType.annotationId}`,
-      {
-        showErrorToast: false,
-      },
-    );
-  } else {
-    return Request.receiveJSON(
-      `/api/auth/accessibleBySwitching?datasetId=${commandType.datasetId}`,
-      {
-        showErrorToast: false,
-      },
-    );
-  }
-}
-
-export async function isWorkflowAccessibleBySwitching(
-  workflowHash: string,
-): Promise<APIOrganization | null> {
-  return Request.receiveJSON(`/api/auth/accessibleBySwitching?workflowHash=${workflowHash}`);
-}
-
-export async function sendUpgradePricingPlanEmail(requestedPlan: string): Promise<void> {
-  return Request.receiveJSON(`/api/pricing/requestUpgrade?requestedPlan=${requestedPlan}`, {
-    method: "POST",
-  });
-}
-
-export async function sendExtendPricingPlanEmail(): Promise<void> {
-  return Request.receiveJSON("/api/pricing/requestExtension", {
-    method: "POST",
-  });
-}
-
-export async function sendUpgradePricingPlanUserEmail(requestedUsers: number): Promise<void> {
-  return Request.receiveJSON(`/api/pricing/requestUsers?requestedUsers=${requestedUsers}`, {
-    method: "POST",
-  });
-}
-
-export async function sendUpgradePricingPlanStorageEmail(requestedStorage: number): Promise<void> {
-  return Request.receiveJSON(`/api/pricing/requestStorage?requestedStorage=${requestedStorage}`, {
-    method: "POST",
-  });
-}
-
-export async function sendOrderCreditsEmail(requestedCredits: number): Promise<void> {
-  return Request.receiveJSON(`/api/pricing/requestCredits?requestedCredits=${requestedCredits}`, {
-    method: "POST",
-  });
-}
-
-export async function getPricingPlanStatus(): Promise<APIPricingPlanStatus> {
-  return Request.receiveJSON("/api/pricing/status");
-}
-
-export const cachedGetPricingPlanStatus = _.memoize(getPricingPlanStatus);
-
 // ### Health
 export function pingHealthEndpoint(url: string, path: "tracings" | "data"): Promise<void> {
   const healthEndpoint = `${url}/${path}/health`;
@@ -1851,16 +1905,6 @@ export function pingHealthEndpoint(url: string, path: "tracings" | "data"): Prom
 // ### BuildInfo webknossos
 export function getBuildInfo(): Promise<APIBuildInfoWk> {
   return Request.receiveJSON("/api/buildinfo", {
-    doNotInvestigate: true,
-    mode: "cors",
-  });
-}
-
-// ### BuildInfo datastore/tracingstore
-export function getDataOrTracingStoreBuildInfo(
-  dataOrTracingStoreUrl: string,
-): Promise<APIBuildInfoDatastore | APIBuildInfoTracingstore> {
-  return Request.receiveJSON(`${dataOrTracingStoreUrl}/api/buildinfo`, {
     doNotInvestigate: true,
     mode: "cors",
   });
@@ -1881,9 +1925,7 @@ export function getExistingExperienceDomains(): Promise<ExperienceDomainList> {
 }
 
 export async function isInMaintenance(): Promise<boolean> {
-  const allMaintenances: Array<MaintenanceInfo> = await Request.receiveJSON(
-    "/api/maintenances/listCurrentAndUpcoming",
-  );
+  const allMaintenances: Array<MaintenanceInfo> = await listCurrentAndUpcomingMaintenances();
   const currentEpoch = Date.now();
   const currentMaintenance = allMaintenances.find(
     (maintenance) => maintenance.startTime < currentEpoch,
@@ -1895,12 +1937,12 @@ export async function listCurrentAndUpcomingMaintenances(): Promise<Array<Mainte
   return Request.receiveJSON("/api/maintenances/listCurrentAndUpcoming");
 }
 
-export function setMaintenance(bool: boolean): Promise<void> {
+function setMaintenance(bool: boolean): Promise<void> {
   return Request.triggerRequest("/api/maintenance", {
     method: bool ? "POST" : "DELETE",
   });
 }
-// @ts-ignore
+// @ts-expect-error
 window.setMaintenance = setMaintenance;
 
 // Meshes
@@ -1912,13 +1954,14 @@ type MeshRequest = {
   positionWithPadding: Vector3;
   additionalCoordinates: AdditionalCoordinate[] | undefined;
   mag: Vector3;
-  segmentId: number; // Segment to build mesh for
+  segmentId: bigint; // Segment to build mesh for
   // The cubeSize is in voxels in mag <mag>
   cubeSize: Vector3;
   scaleFactor: Vector3;
   mappingName: string | null | undefined;
   mappingType: MappingType | null | undefined;
   findNeighbors: boolean;
+  annotationVersion: number;
 };
 
 export function computeAdHocMesh(
@@ -1952,7 +1995,7 @@ export function computeAdHocMesh(
           // is added here to the position and bbox size.
           position: positionWithPadding, // position is in mag1
           additionalCoordinates,
-          cubeSize: V3.toArray(V3.add(cubeSize, [1, 1, 1])), //cubeSize is in target mag
+          cubeSize, // cubeSize is in target mag
           // Name and type of mapping to apply before building mesh (optional)
           mapping: mappingName,
           voxelSizeFactorInUnit: scaleFactor,
@@ -1961,7 +2004,7 @@ export function computeAdHocMesh(
         },
       },
     );
-    const neighbors = (Utils.parseMaybe(headers.neighbors) as number[] | null) || [];
+    const neighbors = (parseMaybe(headers.neighbors) as number[] | null) || [];
     return {
       buffer,
       neighbors,
@@ -1971,11 +2014,12 @@ export function computeAdHocMesh(
 
 export function getBucketPositionsForAdHocMesh(
   layerSourceInfo: LayerSourceInfo,
-  segmentId: number,
+  segmentId: bigint,
   cubeSize: Vector3,
   mag: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
   mappingName: string | null | undefined,
+  annotationVersion: number,
 ): Promise<Vector3[]> {
   const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   return doWithToken(async (token) => {
@@ -1989,6 +2033,7 @@ export function getBucketPositionsForAdHocMesh(
           mag,
           additionalCoordinates,
           mappingName,
+          annotationVersion,
         },
         method: "POST",
       },
@@ -1997,16 +2042,16 @@ export function getBucketPositionsForAdHocMesh(
   });
 }
 
-export function getAgglomerateSkeleton(
+export function getAgglomerateTreeAsSkeletonTracing(
   dataStoreUrl: string,
   dataset: APIDataset,
   layerName: string,
   mappingId: string,
-  agglomerateId: number,
+  agglomerateId: bigint,
 ): Promise<ArrayBuffer> {
   return doWithToken((token) =>
     Request.receiveArraybuffer(
-      `${dataStoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/agglomerates/${mappingId}/skeleton/${agglomerateId}?token=${token}`, // The webworker code cannot do proper error handling and always expects an array buffer from the server.
+      `${dataStoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/agglomerates/${mappingId}/tree/${agglomerateId}?token=${token}`, // The webworker code cannot do proper error handling and always expects an array buffer from the server.
       // The webworker code cannot do proper error handling and always expects an array buffer from the server.
       // However, the server might send an error json instead of an array buffer. Therefore, don't use the webworker code.
       {
@@ -2017,105 +2062,101 @@ export function getAgglomerateSkeleton(
   );
 }
 
-export async function getAgglomeratesForSegmentsFromDatastore<T extends number | bigint>(
-  dataStoreUrl: string,
-  dataset: APIDataset,
-  layerName: string,
-  mappingId: string,
-  segmentIds: Array<T>,
+async function _getAgglomeratesForSegmentsHelper<T extends number | bigint>(
+  segmentIds: Set<T>,
+  url: string,
+  extraParams: URLSearchParams,
 ): Promise<Mapping> {
-  if (segmentIds.length === 0) {
+  // Segment id 0 represents unlabeled/background voxels and is never a real segment. It must
+  // never be requested from the server or end up as a 0 -> 0 entry in the resulting mapping: 0 is
+  // reserved as the "empty" sentinel in the GPU-side cuckoo table and is rejected as a key there.
+  const filteredSegmentIds = new Set([...segmentIds].filter((id) => id !== 0 && id !== 0n));
+  if (filteredSegmentIds.size === 0) {
     return new Map();
   }
-  const segmentIdBuffer = serializeProtoListOfLong<T>(segmentIds);
-  const listArrayBuffer: ArrayBuffer = await doWithToken((token) => {
-    const params = new URLSearchParams({ token });
-    return Utils.retryAsyncFunction(() =>
-      Request.receiveArraybuffer(
-        `${dataStoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments?${params}`,
-        {
-          method: "POST",
-          body: segmentIdBuffer,
-          headers: {
-            "Content-Type": "application/octet-stream",
-          },
-        },
-      ),
-    );
-  });
-  // Ensure that the values are bigint if the keys are bigint
-  const adaptToType = Utils.isBigInt(segmentIds[0])
-    ? (el: NumberLike) => BigInt(el)
-    : (el: NumberLike) => el;
-  const keyValues = _.zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType));
-  // @ts-ignore
-  return new Map(keyValues);
-}
-
-export async function getAgglomeratesForSegmentsFromTracingstore<T extends number | bigint>(
-  tracingStoreUrl: string,
-  tracingId: string,
-  segmentIds: Array<T>,
-  annotationId: string,
-  version?: number | null | undefined,
-): Promise<Mapping> {
-  if (segmentIds.length === 0) {
-    return new Map();
-  }
-  const params = new URLSearchParams({ annotationId });
-  if (version != null) {
-    params.set("version", version.toString());
-  }
-  const segmentIdBuffer = serializeProtoListOfLong<T>(
-    // The tracing store expects the ids to be sorted
-    segmentIds.sort(<T extends NumberLike>(a: T, b: T) => Number(a - b)),
-  );
-  const listArrayBuffer: ArrayBuffer = await doWithToken((token) => {
+  const sortedSegmentIdArray = [...filteredSegmentIds].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  const segmentIdBuffer = serializeProtoListOfLong(sortedSegmentIdArray.map(toBigInt));
+  const listArrayBuffer = await doWithToken((token) => {
+    const params = new URLSearchParams(extraParams);
     params.set("token", token);
-    return Utils.retryAsyncFunction(() =>
-      Request.receiveArraybuffer(
-        `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments?${params}`,
-        {
-          method: "POST",
-          body: segmentIdBuffer,
-          headers: {
-            "Content-Type": "application/octet-stream",
-          },
-          showErrorToast: false,
-        },
-      ),
+    return retryAsyncFunction(() =>
+      Request.receiveArraybuffer(`${url}?${params}`, {
+        method: "POST",
+        body: segmentIdBuffer,
+        headers: { "Content-Type": "application/octet-stream" },
+        showErrorToast: false,
+      }),
     );
   });
 
   // Ensure that the values are bigint if the keys are bigint
-  const adaptToType = Utils.isBigInt(segmentIds[0])
-    ? (el: NumberLike) => BigInt(el)
-    : (el: NumberLike) => el;
+  const adaptToType = getAdaptToTypeFunctionFromList(sortedSegmentIdArray);
+  const mappedIds = parseProtoListOfLong(listArrayBuffer).map(adaptToType);
 
-  const keyValues = _.zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType));
-  // @ts-ignore
+  if (sortedSegmentIdArray.length !== mappedIds.length) {
+    throw new Error(
+      "Unexpected mismatch of keys and values while mapping segment ids using tracing store.",
+    );
+  }
+
+  const keyValues = zip(sortedSegmentIdArray, mappedIds);
+  // @ts-expect-error
   return new Map(keyValues);
 }
 
-export function getEditableAgglomerateSkeleton(
+export function getAgglomeratesForSegmentsFromDatastore<T extends number | bigint>(
+  dataStoreUrl: string,
+  dataset: APIDataset,
+  layerName: string,
+  mappingId: string,
+  segmentIds: Set<T>,
+): Promise<Mapping> {
+  return _getAgglomeratesForSegmentsHelper(
+    segmentIds,
+    `${dataStoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments`,
+    new URLSearchParams(),
+  );
+}
+
+export function getAgglomeratesForSegmentsFromTracingstore<T extends number | bigint>(
   tracingStoreUrl: string,
   tracingId: string,
-  agglomerateId: number,
+  segmentIds: Set<T>,
+  annotationId: string,
+  version: number,
+): Promise<Mapping> {
+  const extraParams = new URLSearchParams({ annotationId });
+  if (version != null) {
+    extraParams.set("version", version.toString());
+  }
+  return _getAgglomeratesForSegmentsHelper(
+    segmentIds,
+    `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments`,
+    extraParams,
+  );
+}
+
+export function getEditableAgglomerateTreeAsSkeletonTracing(
+  tracingStoreUrl: string,
+  tracingId: string,
+  agglomerateId: bigint,
+  version: number,
 ): Promise<ArrayBuffer> {
-  return doWithToken((token) =>
-    Request.receiveArraybuffer(
-      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateSkeleton/${agglomerateId}?token=${token}`,
+  return doWithToken((token) => {
+    const params = new URLSearchParams({ token, version: version.toString() });
+    return Request.receiveArraybuffer(
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateTree/${agglomerateId}?${params}`,
       // The webworker code cannot do proper error handling and always expects an array buffer from the server.
       // However, the server might send an error json instead of an array buffer. Therefore, don't use the webworker code.
       {
         useWebworkerForArrayBuffer: false,
         showErrorToast: false,
       },
-    ),
-  );
+    );
+  });
 }
 
-export async function getMeshfilesForDatasetLayer(
+export async function getMeshFilesForDatasetLayer(
   dataStoreUrl: string,
   dataset: APIDataset,
   layerName: string,
@@ -2153,7 +2194,7 @@ export function getSynapsesOfAgglomerates(
   dataset: APIDataset,
   layerName: string,
   connectomeFile: string,
-  agglomerateIds: Array<number>,
+  agglomerateIds: Array<bigint>,
 ): Promise<
   Array<{
     in: Array<number>;
@@ -2173,14 +2214,14 @@ export function getSynapsesOfAgglomerates(
   );
 }
 
-function getSynapseSourcesOrDestinations(
+async function getSynapseSourcesOrDestinations(
   dataStoreUrl: string,
   dataset: APIDataset,
   layerName: string,
   connectomeFile: string,
   synapseIds: Array<number>,
   srcOrDst: "src" | "dst",
-): Promise<Array<number>> {
+): Promise<Array<bigint>> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
       `${dataStoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/connectomes/synapses/${srcOrDst}?token=${token}`,
@@ -2194,12 +2235,12 @@ function getSynapseSourcesOrDestinations(
   );
 }
 
-export function getSynapseSources(...args: any): Promise<Array<number>> {
+export function getSynapseSources(...args: any): Promise<Array<bigint>> {
   // @ts-expect-error ts-migrate(2556) FIXME: Expected 6 arguments, but got 1 or more.
   return getSynapseSourcesOrDestinations(...args, "src");
 }
 
-export function getSynapseDestinations(...args: any): Promise<Array<number>> {
+export function getSynapseDestinations(...args: any): Promise<Array<bigint>> {
   // @ts-expect-error ts-migrate(2556) FIXME: Expected 6 arguments, but got 1 or more.
   return getSynapseSourcesOrDestinations(...args, "dst");
 }
@@ -2250,31 +2291,32 @@ export function getSynapseTypes(
 export type MinCutTargetEdge = {
   position1: Vector3;
   position2: Vector3;
-  segmentId1: number;
-  segmentId2: number;
+  segmentId1: bigint;
+  segmentId2: bigint;
 };
 export async function getEdgesForAgglomerateMinCut(
   tracingStoreUrl: string,
   tracingId: string,
+  version: number,
   segmentsInfo: {
-    partition1: NumberLike[];
-    partition2: NumberLike[];
+    partition1: bigint[];
+    partition2: bigint[];
     mag: Vector3;
-    agglomerateId: NumberLike;
+    agglomerateId: bigint;
     editableMappingId: string;
   },
 ): Promise<Array<MinCutTargetEdge>> {
   return doWithToken((token) =>
-    Utils.retryAsyncFunction(() =>
+    retryAsyncFunction(() =>
       Request.sendJSONReceiveJSON(
         `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphMinCut?token=${token}`,
         {
           data: {
+            // For a normal min-cut, the id at which the proofreading marker is at
+            // will be put into partition1. The right-clicked segment/mesh will be
+            // in partition2.
             ...segmentsInfo,
-            // TODO: Proper 64 bit support (#6921)
-            partition1: segmentsInfo.partition1.map(Number),
-            partition2: segmentsInfo.partition2.map(Number),
-            agglomerateId: Number(segmentsInfo.agglomerateId),
+            version,
           },
         },
       ),
@@ -2283,30 +2325,29 @@ export async function getEdgesForAgglomerateMinCut(
 }
 
 export type NeighborInfo = {
-  segmentId: number;
-  neighbors: Array<{ segmentId: number; position: Vector3 }>;
+  segmentId: bigint;
+  neighbors: Array<{ segmentId: bigint; position: Vector3 }>;
 };
 
 export async function getNeighborsForAgglomerateNode(
   tracingStoreUrl: string,
   tracingId: string,
+  version: number,
   segmentInfo: {
-    segmentId: NumberLike;
+    segmentId: bigint;
     mag: Vector3;
-    agglomerateId: NumberLike;
+    agglomerateId: bigint;
     editableMappingId: string;
   },
 ): Promise<NeighborInfo> {
   return doWithToken((token) =>
-    Utils.retryAsyncFunction(() =>
+    retryAsyncFunction(() =>
       Request.sendJSONReceiveJSON(
         `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphNeighbors?token=${token}`,
         {
           data: {
+            version,
             ...segmentInfo,
-            // TODO: Proper 64 bit support (#6921)
-            segmentId: Number(segmentInfo.segmentId),
-            agglomerateId: Number(segmentInfo.agglomerateId),
           },
         },
       ),
@@ -2362,7 +2403,7 @@ export async function getSamMask(
 }
 
 // ### Short links
-export const createShortLink = _.memoize(
+export const createShortLink = memoize(
   (longLink: string): Promise<ShortLink> =>
     Request.sendJSONReceiveJSON("/api/shortLinks", {
       method: "POST",
@@ -2460,15 +2501,10 @@ export function deleteWorkflow(workflowHash: string): Promise<void> {
 
 // ### Help / Feedback userEmail
 export function sendHelpEmail(message: string) {
-  return Request.receiveJSON(
-    `/api/helpEmail?${new URLSearchParams({
-      message,
-      currentUrl: window.location.href,
-    })}`,
-    {
-      method: "POST",
-    },
-  );
+  return Request.sendJSONReceiveJSON(`/api/helpEmail`, {
+    method: "POST",
+    data: { message, currentUrl: window.location.href },
+  });
 }
 
 export function requestSingleSignOnLogin() {

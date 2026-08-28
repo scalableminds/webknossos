@@ -17,7 +17,7 @@ import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDat
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 import play.api.libs.json.Json.WithDefaultValues
-import play.api.libs.json._
+import play.api.libs.json.*
 
 case class ZarrHeader(
     zarr_format: Int, // format version number
@@ -44,7 +44,9 @@ case class ZarrHeader(
     compressor.map(ZarrCompressorFactory.create).getOrElse(ZarrCompressorFactory.nullCompressor)
 
   lazy val resolvedDataType: ArrayDataType =
-    ArrayDataType.fromString(dtype.filter(char => char != '>' && char != '<' & char != '|')).get
+    ArrayDataType
+      .fromString(dtype.filter(char => char != '>' && char != '<' & char != '|'))
+      .getOrElse(throw new IllegalArgumentException(s"Unsupported zarr 2 dataType: $dtype"))
 
   lazy val voxelOffset: Array[Int] = Array.fill(rank)(0)
 }
@@ -52,9 +54,8 @@ case class ZarrHeader(
 object ZarrHeader extends JsonImplicits {
   val FILENAME_DOT_ZARRAY = ".zarray"
 
-  /***
-    * This function is used for exposing webknossos layers as zarr layers via the API.
-    * It therefore defaults to the necessary defaults for webknossos data layers.
+  /** * This function is used for exposing webknossos layers as zarr layers via the API. It therefore defaults to the
+    * necessary defaults for webknossos data layers.
     */
   def fromLayer(dataLayer: DataLayer, mag: Vec3Int): ZarrHeader = {
     val cubeLength = DataLayer.bucketLength
@@ -63,9 +64,9 @@ object ZarrHeader extends JsonImplicits {
     val compressor = None
 
     val additionalAxesShapeEntries =
-      dataLayer.additionalAxes.map(axes => axes.map(_.bounds(1)).toArray).getOrElse(Array.empty)
+      dataLayer.additionalAxes.map(axes => axes.map(_.bounds(1)).toArray).getOrElse(Array.empty[Int])
     val additionalAxesChunksEntries =
-      dataLayer.additionalAxes.map(axes => axes.map(_ => 1).toArray).getOrElse(Array.empty)
+      dataLayer.additionalAxes.map(axes => axes.map(_ => 1).toArray).getOrElse(Array.empty[Int])
 
     val shape = Array(channels) ++ additionalAxesShapeEntries ++ Array(
       // Zarr can't handle data sets that don't start at 0, so we extend the shape to include "true" coords
@@ -76,12 +77,14 @@ object ZarrHeader extends JsonImplicits {
 
     val chunks = Array(channels) ++ additionalAxesChunksEntries ++ Array(cubeLength, cubeLength, cubeLength)
 
-    ZarrHeader(zarr_format = 2,
-               shape = shape.map(_.toLong),
-               chunks = chunks,
-               compressor = compressor,
-               dtype = dtype,
-               order = ArrayOrder.F)
+    ZarrHeader(
+      zarr_format = 2,
+      shape = shape.map(_.toLong),
+      chunks = chunks,
+      compressor = compressor,
+      dtype = dtype,
+      order = ArrayOrder.F
+    )
   }
 
   implicit object ZarrHeaderFormat extends Format[ZarrHeader] {

@@ -10,7 +10,7 @@ import { Scene, Vector3 } from "three";
 //   (see https://github.com/scalableminds/webknossos/pull/7074.)
 
 class ChunkedDataView {
-  views: DataView[];
+  views: DataView<ArrayBuffer>[];
   offset: number;
 
   constructor(initialBufferLength: number) {
@@ -19,7 +19,7 @@ class ChunkedDataView {
     this.offset = 0;
   }
 
-  get currentDataView() {
+  get currentDataView(): DataView<ArrayBuffer> {
     return this.views[this.views.length - 1];
   }
 
@@ -190,10 +190,10 @@ class STLExporter {
   }
 }
 
-export default function exportToStl(mesh: any): DataView[] {
+export default function exportToStl(mesh: any): DataView<ArrayBuffer>[] {
   const exporter = new STLExporter();
   const dataViews = exporter.parse(mesh, {
     binary: true,
-  }) as DataView[];
+  }) as DataView<ArrayBuffer>[];
   return dataViews;
 }

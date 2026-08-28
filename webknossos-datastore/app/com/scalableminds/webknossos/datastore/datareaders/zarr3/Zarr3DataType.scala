@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDat
 object Zarr3DataType extends ExtendedEnumeration {
   type Zarr3DataType = Value
   val bool, int8, int16, int32, int64, uint8, uint16, uint32, uint64, float16, float32, float64, complex64, complex128,
-  raw, extension = Value
+      raw, extension = Value
 
   // https://zarr-specs.readthedocs.io/en/latest/v3/core/v3.0.html#core-data-types
 

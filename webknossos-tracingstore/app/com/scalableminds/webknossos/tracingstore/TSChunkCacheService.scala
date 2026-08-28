@@ -8,6 +8,6 @@ import jakarta.inject.Inject
  * configured to be pretty small to not waste RAM. When more usages are added, remove this comment and increase the
  * size in application.conf
  */
-class TSChunkCacheService @Inject()(config: TracingStoreConfig) extends ChunkCacheService {
+class TSChunkCacheService @Inject() (config: TracingStoreConfig) extends ChunkCacheService {
   protected val maxSizeBytes: Long = config.Tracingstore.Cache.chunkCacheMaxSizeBytes
 }

@@ -1,12 +1,7 @@
 import { CloseOutlined } from "@ant-design/icons";
-import { Alert, Button } from "antd";
-import * as React from "react";
+import { Alert, Button, Typography } from "antd";
+import { Fragment } from "react";
 import VersionList, { handleCloseRestoreView } from "viewer/view/version_list";
-
-export type Versions = {
-  skeleton?: number | null | undefined;
-  volumes?: Record<string, number>;
-};
 
 function VersionView() {
   return (
@@ -23,14 +18,15 @@ function VersionView() {
           padding: "0px 5px",
         }}
       >
-        <h4
+        <Typography.Title
+          level={4}
           style={{
             display: "inline-block",
             marginLeft: 4,
           }}
         >
           Version History
-        </h4>
+        </Typography.Title>
         <Button
           className="close-button"
           style={{
@@ -49,12 +45,12 @@ function VersionView() {
         >
           <Alert
             type="info"
-            message={
-              <React.Fragment>
+            title={
+              <Fragment>
                 You are currently previewing older versions of this annotation. Either restore a
                 version by selecting it or close this view to continue annotating. The shown
                 annotation is in <b>read-only</b> mode as long as this view is opened.
-              </React.Fragment>
+              </Fragment>
             }
           />
         </div>

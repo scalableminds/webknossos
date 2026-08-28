@@ -13,17 +13,19 @@ import utils.WkConf
 
 import scala.concurrent.ExecutionContext
 
-class RequestHandler @Inject()(webCommands: WebCommands,
-                               optionalDevContext: OptionalDevContext,
-                               router: Router,
-                               errorHandler: HttpErrorHandler,
-                               httpConfiguration: HttpConfiguration,
-                               aboutPageRedirectController: AboutPageRedirectController,
-                               filters: HttpFilters,
-                               val cspConfig: CSPConfig,
-                               conf: WkConf,
-                               assets: Assets,
-                               sitemapController: SitemapController)(implicit ec: ExecutionContext)
+class RequestHandler @Inject() (
+    webCommands: WebCommands,
+    optionalDevContext: OptionalDevContext,
+    router: Router,
+    errorHandler: HttpErrorHandler,
+    httpConfiguration: HttpConfiguration,
+    aboutPageRedirectController: AboutPageRedirectController,
+    filters: HttpFilters,
+    val cspConfig: CSPConfig,
+    conf: WkConf,
+    assets: Assets,
+    sitemapController: SitemapController
+)(implicit ec: ExecutionContext)
     extends DefaultHttpRequestHandler(
       webCommands,
       optionalDevContext,
@@ -47,23 +49,20 @@ class RequestHandler @Inject()(webCommands: WebCommands,
       super.routeRequest(request)
     } else if (request.uri.matches("^(/assets/).*(worker.js).*$")) {
       Some(assetWithCsp(request))
-    } else if (request.uri.matches("^(/assets/).*$")) {
+    } else if (request.uri.matches("^(/assets/|/images/|/wasm/).*$")) {
       Some(asset(request))
     } else if (request.uri.matches("""^/sitemap.xml$""") && conf.Features.isWkorgInstance) {
       Some(sitemapController.getSitemap(conf.Http.uri))
     } else if (request.uri.matches("^/sw\\.(.*)\\.js$") && conf.Features.isWkorgInstance) {
-      Some(Action { Ok("").as("text/javascript") })
+      Some(Action(Ok("").as("text/javascript")))
     } else if (request.uri == "/favicon.ico") {
-      Some(Action { NotFound })
+      Some(Action(NotFound))
     } else Some(aboutPageRedirectController.redirectToAboutPageOrSendMainView)
 
   private def assetWithCsp(requestHeader: RequestHeader) = Action.async { implicit request =>
     addCspHeader(asset(requestHeader))
   }
 
-  private def asset(requestHeader: RequestHeader) = {
-    val path = requestHeader.path.replaceFirst("^(/assets/)", "")
-    assets.at(path = "/public", file = path)
-  }
-
+  private def asset(requestHeader: RequestHeader) =
+    assets.at(path = "/public", file = requestHeader.path)
 }

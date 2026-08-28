@@ -4,56 +4,121 @@ import com.google.inject.Inject
 import play.silhouette.api.Silhouette
 import play.silhouette.api.actions.UserAwareRequest
 import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.box.Box
 import com.scalableminds.util.mvc.CspHeaders
-import com.scalableminds.util.tools.Fox
-import models.user.{MultiUserDAO, Theme}
-import opengraph.OpenGraphService
+import com.scalableminds.util.tools.{Fox, TextUtils}
+import com.scalableminds.util.tools.Fox.toFox
+import models.user.{MultiUser, MultiUserDAO, Theme}
+import opengraph.{OpenGraphService, OpenGraphTags}
 import play.api.mvc.{Action, AnyContent}
 import play.filters.csp.CSPConfig
 import security.WkEnv
 import utils.WkConf
+import play.twirl.api.HtmlFormat
+import play.api.Environment
 
+import scala.io.Source
 import scala.concurrent.ExecutionContext
 import scala.util.matching.Regex
 
-class AboutPageRedirectController @Inject()(conf: WkConf,
-                                            sil: Silhouette[WkEnv],
-                                            val cspConfig: CSPConfig,
-                                            multiUserDAO: MultiUserDAO,
-                                            openGraphService: OpenGraphService)(implicit ec: ExecutionContext)
+class AboutPageRedirectController @Inject() (
+    conf: WkConf,
+    sil: Silhouette[WkEnv],
+    val cspConfig: CSPConfig,
+    multiUserDAO: MultiUserDAO,
+    openGraphService: OpenGraphService,
+    environment: Environment
+)(implicit ec: ExecutionContext)
     extends Controller
     with CspHeaders {
 
-  def redirectToAboutPageOrSendMainView: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+  def redirectToAboutPageOrSendMainView: Action[AnyContent] = sil.UserAwareAction.fox { implicit request =>
     if (matchesRedirectRoute(request)) {
       val status = if (request.uri == "/") SEE_OTHER else MOVED_PERMANENTLY
       Fox.successful(Redirect(conf.AboutPageRedirect.prefix + request.uri, status = status))
     } else {
+      // The main view references the content-hashed asset URLs of the current build, which are deleted
+      // as soon as a new version is deployed. "no-cache" (the fallback in ExtendedController) would still
+      // let the browser replay a stored copy without revalidating (history navigation, session/tab
+      // restore), making it request assets that no longer exist. "no-store" prevents that.
       for {
         multiUserOpt <- Fox.runOptional(request.identity)(user =>
-          multiUserDAO.findOne(user._multiUser)(GlobalAccessContext))
+          multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
+        )
         openGraphTags <- openGraphService.getOpenGraphTags(
           request.path,
-          request.getQueryString("sharingToken").orElse(request.getQueryString("token")))
-
-      } yield
-        addCspHeader(
-          Ok(
-            views.html.main(
-              conf,
-              multiUserOpt.map(_.selectedTheme).getOrElse(Theme.auto).toString,
-              openGraphTags.title,
-              openGraphTags.description,
-              openGraphTags.image
-            )
-          )
+          request.getQueryString("sharingToken").orElse(request.getQueryString("token"))
         )
+        mainViewTemplate <- mainViewTemplateOpt.toFox ?~> "Could not load main view template"
+        mainView <- renderMainViewFromTemplate(
+          mainViewTemplate,
+          multiUserOpt,
+          openGraphTags
+        ).toFox ?~> "Could not render main view template"
+      } yield addCspHeader(Ok(mainView).as("text/html").withHeaders(CACHE_CONTROL -> "no-store"))
     }
   }
 
+  private def renderMainViewFromTemplate(
+      mainViewTemplate: String,
+      multiUserOpt: Option[MultiUser],
+      openGraphTags: OpenGraphTags
+  ): Box[String] = {
+    val themeName = multiUserOpt.map(_.selectedTheme).getOrElse(Theme.auto).toString
+    TextUtils.renderTemplateReplacements(
+      mainViewTemplate,
+      """<meta name="commit-hash" content="" />""" -> s"""<meta name="commit-hash" content="${webknossos.BuildInfo.commitHash}" />""",
+      """<meta name="selected-theme" content="" />""" -> s"""<meta name="selected-theme" content="$themeName" />""",
+      "<!-- INJECT_THEME_CSS -->" -> renderThemeCss(multiUserOpt),
+      "<!-- INJECT_OPENGRAPH_METADATA -->" -> renderOpenGraphMetadata(openGraphTags),
+      "<!-- INJECT_WKORG_METADATA -->" -> wkOrgMetadata,
+      "<!-- INJECT_AIRBRAKE_CONFIG -->" -> airbrakeConfig,
+      // The loading indicator in index.html title is only meant for development setup.
+      "<title>Loading | WEBKNOSSOS</title>" -> "<title>WEBKNOSSOS</title>"
+    )
+  }
+
+  private def renderThemeCss(multiUserOpt: Option[MultiUser]): String =
+    multiUserOpt.map(_.selectedTheme) match {
+      case Some(Theme.dark)  => "<style>html { background: black }</style>"
+      case Some(Theme.light) => ""
+      case _                 =>
+        "<style>@media (prefers-color-scheme: dark) { html { background: black } }</style>"
+    }
+
+  private def renderOpenGraphMetadata(openGraphTags: OpenGraphTags): String =
+    List(
+      openGraphTags.title.map(t => s"""<meta property="og:title" content="${HtmlFormat.escape(t)}" />"""),
+      openGraphTags.description.map(d => s"""<meta property="og:description" content="${HtmlFormat.escape(d)}" />"""),
+      openGraphTags.image.map(i => s"""<meta property="og:image" content="${HtmlFormat.escape(i)}" />""")
+    ).flatten.mkString("\n    ")
+
+  private lazy val wkOrgMetadata: String =
+    if (conf.Features.isWkorgInstance) {
+      """<meta
+      name="description"
+      content="Annotate and explore large 3D datasets with WEBKNOSSOS. Fast neurite skeletonization. 3D voxel painting. Collaboration, sharing and crowdsourcing."
+    />
+    <meta
+      name="keywords"
+      content="connectomics, data annotation, image segmentation, electron microscopy, light microscopy, fluorescence microscopy, skeletonization, webknossos"
+    />"""
+    } else ""
+
+  private lazy val airbrakeConfig: String =
+    s"""<script
+      data-airbrake-project-id="${conf.Airbrake.projectID}"
+      data-airbrake-project-key="${conf.Airbrake.projectKey}"
+      data-airbrake-environment-name="${conf.Airbrake.environment}"
+    ></script>"""
+
+  private lazy val mainViewTemplateOpt: Option[String] =
+    environment.resourceAsStream("public/index.html").map(is => Source.fromInputStream(is).mkString)
+
   private def matchesRedirectRoute(request: UserAwareRequest[WkEnv, AnyContent]): Boolean =
     conf.Features.isWkorgInstance && conf.AboutPageRedirect.routes.exists(route =>
-      matchesRouteWithWildcard(route, request.path)) && (request.identity.isEmpty || request.uri != "/")
+      matchesRouteWithWildcard(route, request.path)
+    ) && (request.identity.isEmpty || request.uri != "/")
 
   private def matchesRouteWithWildcard(routeWithWildcard: String, actualRequest: String): Boolean = {
     val wildcardRegex = "^" + Regex.quote(routeWithWildcard).replace("*", "\\E.*\\Q") + "$"

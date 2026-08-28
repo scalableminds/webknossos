@@ -6,13 +6,15 @@ import scala.collection.mutable
 
 object MarchingCubes {
 
-  def marchingCubes[T](data: Array[T],
-                       dataDimensions: Vec3Int,
-                       boundingBox: BoundingBox,
-                       segmentId: T,
-                       offset: Vec3Float,
-                       scale: Vec3Float,
-                       vertexBuffer: mutable.ArrayBuffer[Float]): Unit = {
+  def marchingCubes[T](
+      data: Array[T],
+      dataDimensions: Vec3Int,
+      boundingBox: BoundingBox,
+      segmentId: T,
+      offset: Vec3Float,
+      scale: Vec3Float,
+      vertexBuffer: mutable.ArrayBuffer[Float]
+  ): Unit = {
 
     def getVoxelData(x: Int, y: Int, z: Int): T =
       data(x + (dataDimensions.x * y) + (dataDimensions.x * dataDimensions.y * z))

@@ -3,7 +3,7 @@ import { useWkSelector } from "libs/react_hooks";
 import renderIndependently from "libs/render_independently";
 import Toast from "libs/toast";
 import { mayUserEditDataset } from "libs/utils";
-import * as React from "react";
+import { useState } from "react";
 import { useDispatch } from "react-redux";
 import type { APISegmentationLayer } from "types/api_types";
 import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
@@ -15,7 +15,7 @@ import {
   createCellAction,
   setLargestSegmentIdAction,
 } from "viewer/model/actions/volumetracing_actions";
-import { getSupportedValueRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
+import { getSegmentIdRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import type { VolumeTracing } from "viewer/store";
 import Store from "viewer/throttled_store";
 
@@ -45,25 +45,25 @@ export function showToastWarningForLargestSegmentIdMissing(volumeTracing: Volume
   );
 }
 
-export default function EnterLargestSegmentIdModal({
+function EnterLargestSegmentIdModal({
   segmentationLayer,
   destroy,
 }: {
   segmentationLayer: APISegmentationLayer;
   destroy: (...args: Array<any>) => any;
 }) {
-  const [largestSegmentId, setLargestSegmentId] = React.useState<number | null>(0);
+  const [largestSegmentId, setLargestSegmentId] = useState<bigint | null>(0n);
   const activeUser = useWkSelector((state) => state.activeUser);
   const dataset = useWkSelector((state) => state.dataset);
   const activeCellId =
     useWkSelector(
       (state) =>
         getVolumeTracingByLayerName(state.annotation, segmentationLayer.name)?.activeCellId,
-    ) || 0;
+    ) || 0n;
 
   const dispatch = useDispatch();
   const handleOk = () => {
-    if (largestSegmentId == null || largestSegmentId < 1) {
+    if (largestSegmentId == null || largestSegmentId < 1n) {
       Toast.warning("Please enter a segment id greater than 0.");
       return;
     }
@@ -85,9 +85,7 @@ export default function EnterLargestSegmentIdModal({
     editString
   );
 
-  const [minValue, maxValue] = getSupportedValueRangeForElementClass(
-    segmentationLayer.elementClass,
-  );
+  const [minValue, maxValue] = getSegmentIdRangeForElementClass(segmentationLayer.elementClass);
 
   return (
     <Modal open title="Enter Largest Segment ID" onOk={handleOk} onCancel={handleCancel}>
@@ -102,12 +100,24 @@ export default function EnterLargestSegmentIdModal({
         would be safe to use, please input it below:
       </p>
       <div style={{ display: "grid", placeItems: "center" }}>
-        <InputNumber
+        <InputNumber<string>
           size="large"
-          min={minValue}
-          max={maxValue}
-          value={largestSegmentId}
-          onChange={setLargestSegmentId}
+          stringMode
+          precision={0}
+          min={minValue.toString()}
+          max={maxValue.toString()}
+          value={largestSegmentId != null ? largestSegmentId.toString() : null}
+          onChange={(val) => {
+            if (val == null || val === "") {
+              setLargestSegmentId(null);
+              return;
+            }
+            try {
+              setLargestSegmentId(BigInt(val));
+            } catch {
+              // Ignore intermediate, non-integer input while the user is still typing.
+            }
+          }}
         />
       </div>
 

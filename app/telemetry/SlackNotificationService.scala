@@ -8,12 +8,14 @@ import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import utils.WkConf
 
-class SlackNotificationService @Inject()(rpc: RPC, config: WkConf) extends LazyLogging {
+class SlackNotificationService @Inject() (rpc: RPC, config: WkConf) extends LazyLogging {
 
-  private lazy val slackClient = new SlackClient(rpc,
-                                                 config.SlackNotifications.uri,
-                                                 name = s"WEBKNOSSOS at ${config.Http.uri}",
-                                                 config.SlackNotifications.verboseLoggingEnabled)
+  private lazy val slackClient = new SlackClient(
+    rpc,
+    config.SlackNotifications.uri,
+    name = s"WEBKNOSSOS at ${config.Http.uri}",
+    config.SlackNotifications.verboseLoggingEnabled
+  )
 
   def warnWithException(title: String, ex: Throwable, msg: String): Unit =
     slackClient.warn(
@@ -55,5 +57,11 @@ class SlackNotificationService @Inject()(rpc: RPC, config: WkConf) extends LazyL
     slackClient.info(
       title = "Slow request",
       msg = msg
+    )
+
+  def noticeStartup(version: String): Unit =
+    slackClient.info(
+      title = "Startup",
+      msg = s"WEBKNOSSOS version `$version` started"
     )
 }

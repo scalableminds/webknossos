@@ -6,7 +6,7 @@ import {
 import { call } from "typed-redux-saga";
 import type { Vector3 } from "viewer/constants";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
-import { tryToIncorporateActions } from "viewer/model/sagas/saving/save_saga";
+import { tryToIncorporateActions } from "viewer/model/sagas/saving/rebasing/incorporate_update_actions_sagas";
 import { startSaga } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -54,25 +54,28 @@ describe("Volume Tracing with remote updates", () => {
         createBucketResponseFunction({ volumeTracingId: "uint16", color: "uint8" }, newCellId, 5),
       );
 
-      yield tryToIncorporateActions([
-        {
-          version: 1,
-          value: [
-            {
-              name: "updateBucket",
-              value: {
-                actionTracingId: "volumeTracingId",
-                actionTimestamp: 0,
-                position,
-                additionalCoordinates: undefined,
-                mag: [1, 1, 1],
-                cubeSize: 1024,
-                base64Data: undefined, // The server will not send this, either.
+      yield tryToIncorporateActions(
+        [
+          {
+            version: 1,
+            value: [
+              {
+                name: "updateBucket",
+                value: {
+                  actionTracingId: "volumeTracingId",
+                  actionTimestamp: 0,
+                  position,
+                  additionalCoordinates: undefined,
+                  mag: [1, 1, 1],
+                  cubeSize: 1024,
+                  base64Data: undefined, // The server will not send this, either.
+                },
               },
-            },
-          ],
-        },
-      ]);
+            ],
+          },
+        ],
+        false,
+      );
 
       expect(yield call(() => api.data.getDataValue(volumeTracingLayerName, position))).toBe(
         newCellId,

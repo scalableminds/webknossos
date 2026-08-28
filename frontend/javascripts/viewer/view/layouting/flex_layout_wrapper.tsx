@@ -1,21 +1,27 @@
 import { sendAnalyticsEvent } from "admin/rest_api";
-import { Layout } from "antd";
-import FastTooltip from "components/fast_tooltip";
+import { ConfigProvider, Layout } from "antd";
 import features from "features";
-import * as FlexLayout from "flexlayout-react";
-import type { BorderNode, TabNode, TabSetNode } from "flexlayout-react";
-import { InputKeyboardNoLoop } from "libs/input";
+import type { Action, BorderNode, TabNode, TabSetNode } from "flexlayout-react";
+import { Actions, DockLocation, Layout as FlexLayoutComponent, Model } from "flexlayout-react";
+import { InputKeyboard } from "libs/input";
 import Toast from "libs/toast";
-import _ from "lodash";
+import cloneDeep from "lodash-es/cloneDeep";
 import messages from "messages";
-import * as React from "react";
+import type React from "react";
+import { Fragment, PureComponent } from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
+import { getAntdTheme } from "theme";
 import type { BorderTabType, OrthoView } from "viewer/constants";
-import { ArbitraryViews, BorderTabs, OrthoViews } from "viewer/constants";
+import { BorderTabs, FlightViews, OrthoViews } from "viewer/constants";
+import {
+  isUserInterfaceBlocked,
+  mayEditAnnotation,
+} from "viewer/model/accessors/annotation_accessor";
 import { setBorderOpenStatusAction } from "viewer/model/actions/ui_actions";
 import { setViewportAction } from "viewer/model/actions/view_mode_actions";
-import type { BorderOpenStatus, BusyBlockingInfo, WebknossosState } from "viewer/store";
+import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
+import type { BorderOpenStatus, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import InputCatcher from "viewer/view/input_catcher";
 import type { LayoutKeys } from "viewer/view/layouting/default_layout_configs";
@@ -24,35 +30,41 @@ import {
   getTabDescriptorForBorderTab,
   resetDefaultLayouts,
 } from "viewer/view/layouting/default_layout_configs";
-import ControlsAndRenderingSettingsTab from "viewer/view/left-border-tabs/controls_and_rendering_settings_tab";
-import LayerSettingsTab from "viewer/view/left-border-tabs/layer_settings_tab";
+import ControlsAndRenderingSettingsTab from "viewer/view/left_border_tabs/controls_and_rendering_settings_tab";
+import LayerSettingsTab from "viewer/view/left_border_tabs/layer_settings_tab";
 import RecordingSwitch from "viewer/view/recording_switch";
-import AbstractTreeTab from "viewer/view/right-border-tabs/abstract_tree_tab";
-import BoundingBoxTab from "viewer/view/right-border-tabs/bounding_box_tab";
-import CommentTabView from "viewer/view/right-border-tabs/comment_tab/comment_tab_view";
-import ConnectomeView from "viewer/view/right-border-tabs/connectome_tab/connectome_view";
-import DatasetInfoTabView from "viewer/view/right-border-tabs/dataset_info_tab_view";
-import SegmentsView from "viewer/view/right-border-tabs/segments_tab/segments_view";
-import SkeletonTabView from "viewer/view/right-border-tabs/trees_tab/skeleton_tab_view";
+import AbstractTreeTab from "viewer/view/right_border_tabs/abstract_tree_tab";
+import BoundingBoxTab from "viewer/view/right_border_tabs/bounding_box_tab/bounding_box_tab";
+import CommentTabView from "viewer/view/right_border_tabs/comment_tab/comment_tab_view";
+import ConnectomeView from "viewer/view/right_border_tabs/connectome_tab/connectome_view";
+import DatasetInfoTabView from "viewer/view/right_border_tabs/dataset_info_tab_view";
+import SegmentsView from "viewer/view/right_border_tabs/segments_tab/segments_tab_view";
+import SkeletonTabView from "viewer/view/right_border_tabs/skeleton_tab/skeleton_tab_view";
 import Statusbar from "viewer/view/statusbar";
 import TDViewControls from "viewer/view/td_view_controls";
 import BorderToggleButton from "../components/border_toggle_button";
+import type {
+  KeyboardShortcutHandlerMap,
+  KeyboardShortcutsMap,
+} from "../keyboard_shortcuts/keyboard_shortcut_types";
+import { buildKeyBindingsFromConfig } from "../keyboard_shortcuts/keyboard_shortcut_utils";
 import {
   adjustModelToBorderOpenStatus,
   getBorderOpenStatus,
   getMaximizedItemId,
   getPositionStatusOf,
 } from "./flex_layout_helper";
-import { LayoutEvents, getLayoutConfig, layoutEmitter } from "./layout_persistence";
+import { getLayoutConfig, LayoutEvents, layoutEmitter } from "./layout_persistence";
 
 const { Footer } = Layout;
 
-type Model = InstanceType<typeof FlexLayout.Model>;
-type Action = InstanceType<typeof FlexLayout.Action>;
+// type Model = InstanceType<typeof Model>;
+// type Action = InstanceType<typeof Actions>;
+
 type StateProps = {
   displayScalebars: boolean;
   isUpdateTracingAllowed: boolean;
-  busyBlockingInfo: BusyBlockingInfo;
+  isBlocked: boolean;
 };
 type OwnProps = {
   layoutKey: LayoutKeys;
@@ -70,8 +82,9 @@ type State = {
 const ignoredLayoutChangesByAnalytics = ["FlexLayout_SetActiveTabset", "FlexLayout_SelectTab"];
 type BorderOpenStatusKeys = keyof BorderOpenStatus;
 
-class FlexLayoutWrapper extends React.PureComponent<Props, State> {
+class FlexLayoutWrapper extends PureComponent<Props, State> {
   unbindListeners: Array<() => void>;
+  keyboard?: InputKeyboard;
   // This variable stores the border open status that should be active, when no main tab is maximized.
   // It is used to compare with the actual border open status that is stored in the store.
   borderOpenStatusWhenNotMaximized: BorderOpenStatus = {
@@ -87,7 +100,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     this.unbindListeners = [];
     this.addListeners();
     this.borderOpenStatusWhenNotMaximized = getBorderOpenStatus(model);
-    props.setBorderOpenStatus(_.cloneDeep(this.borderOpenStatusWhenNotMaximized));
+    props.setBorderOpenStatus(cloneDeep(this.borderOpenStatusWhenNotMaximized));
     this.updateToModelStateAndAdjustIt(model);
     this.state = {
       model,
@@ -114,6 +127,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
 
   componentWillUnmount() {
     this.unbindAllListeners();
+    this.keyboard?.destroy();
   }
 
   addListeners() {
@@ -147,27 +161,29 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   }
 
   unbindAllListeners() {
-    this.unbindListeners.forEach((unbind) => unbind());
+    this.unbindListeners.forEach((unbind) => {
+      unbind();
+    });
   }
 
   loadCurrentModel() {
     const { layoutName, layoutKey } = this.props;
     const layout = getLayoutConfig(layoutKey, layoutName);
-    const model = FlexLayout.Model.fromJson(layout);
+    const model = Model.fromJson(layout);
     return model;
   }
 
   openRightBorderTabById(tabType: BorderTabType) {
     const rightBorderId = "right-border-tab-container";
     const node = this.state.model.getNodeById(rightBorderId);
-    if (!node || node.getType() !== "tab") return;
+    if (node?.getType() !== "tab") return;
 
     const isRightOpen = getBorderOpenStatus(this.state.model).right;
     if (!isRightOpen) this.toggleBorder("right");
 
     const rightBorderModel = (node as TabNode).getExtraData().model;
     if (rightBorderModel == null) return;
-    rightBorderModel.doAction(FlexLayout.Actions.selectTab(tabType.id));
+    rightBorderModel.doAction(Actions.selectTab(tabType.id));
   }
 
   adaptModelToConditionalTabs(model: Model) {
@@ -193,7 +209,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
 
     if (node && !showConnectomeTab) {
       // Tab exists, but shouldn't. Delete it.
-      rightBorderModel.doAction(FlexLayout.Actions.deleteTab(connectomeTabDescriptor.id));
+      rightBorderModel.doAction(Actions.deleteTab(connectomeTabDescriptor.id));
     } else if (!node && showConnectomeTab) {
       // Tab does not exist, but should. Add it next to the info tab.
       const datasetInfoTabId = BorderTabs.DatasetInfoTabView.id;
@@ -206,10 +222,10 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
 
       const targetId = infoTabNode.getParent().getId();
       rightBorderModel.doAction(
-        FlexLayout.Actions.addNode(
+        Actions.addNode(
           connectomeTabDescriptor,
           targetId, // Don't create a new tab set, but add it to the existing one.
-          FlexLayout.DockLocation.CENTER,
+          DockLocation.CENTER,
           -1, // Add it to the end.
           false, // Don't focus it.
         ),
@@ -247,23 +263,40 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       return;
     }
 
-    const toggleMaximiseAction = FlexLayout.Actions.maximizeToggle(activeNode.getId());
+    const toggleMaximiseAction = Actions.maximizeToggle(activeNode.getId());
     model.doAction(toggleMaximiseAction);
     this.onAction(toggleMaximiseAction);
   };
 
-  attachKeyboardShortcuts() {
-    const keyboardNoLoop = new InputKeyboardNoLoop(
-      {
-        ".": this.toggleMaximize,
-        k: () => this.toggleBorder("left"),
-        l: () => this.toggleBorder("right"),
+  getLayoutKeyboardShortcuts(): Partial<KeyboardShortcutHandlerMap> {
+    return {
+      MAXIMIZE: { onPressed: this.toggleMaximize },
+      TOGGLE_LEFT_BORDER: {
+        onPressed: () => this.toggleBorder("left"),
       },
-      {
-        supportInputElements: false,
+      TOGGLE_RIGHT_BORDER: {
+        onPressed: () => this.toggleBorder("right"),
       },
+    };
+  }
+
+  reloadLayoutKeyboardShortcuts(keyboardShortcutsConfig: KeyboardShortcutsMap) {
+    if (this.keyboard) {
+      this.keyboard.destroy();
+    }
+    const keyboardControls = buildKeyBindingsFromConfig(
+      keyboardShortcutsConfig,
+      this.getLayoutKeyboardShortcuts(),
     );
-    return () => keyboardNoLoop.destroy();
+    this.keyboard = new InputKeyboard(keyboardControls);
+  }
+
+  attachKeyboardShortcuts() {
+    return listenToStoreProperty(
+      (state) => state.keyboardConfiguration.shortcutsConfig,
+      (keyboardShortcutsConfig) => this.reloadLayoutKeyboardShortcuts(keyboardShortcutsConfig),
+      true,
+    );
   }
 
   // Taken from the FlexLayout examples.
@@ -338,39 +371,28 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   }
 
   renderViewport(id: string): React.ReactNode | null | undefined {
-    const { displayScalebars, isUpdateTracingAllowed, busyBlockingInfo } = this.props;
+    const { displayScalebars, isUpdateTracingAllowed, isBlocked } = this.props;
 
     switch (id) {
       case OrthoViews.PLANE_XY:
       case OrthoViews.PLANE_YZ:
       case OrthoViews.PLANE_XZ: {
         return (
-          <InputCatcher
-            busyBlockingInfo={busyBlockingInfo}
-            viewportID={id}
-            displayScalebars={displayScalebars}
-          />
+          <InputCatcher isBlocked={isBlocked} viewportID={id} displayScalebars={displayScalebars} />
         );
       }
 
       case OrthoViews.TDView: {
         return (
-          <InputCatcher
-            busyBlockingInfo={busyBlockingInfo}
-            viewportID={id}
-            displayScalebars={displayScalebars}
-          >
+          <InputCatcher isBlocked={isBlocked} viewportID={id} displayScalebars={displayScalebars}>
             <TDViewControls />
           </InputCatcher>
         );
       }
 
-      case ArbitraryViews.arbitraryViewport: {
+      case FlightViews.flightViewport: {
         return (
-          <InputCatcher
-            busyBlockingInfo={busyBlockingInfo}
-            viewportID={ArbitraryViews.arbitraryViewport}
-          >
+          <InputCatcher isBlocked={isBlocked} viewportID={FlightViews.flightViewport}>
             {isUpdateTracingAllowed ? <RecordingSwitch /> : null}
           </InputCatcher>
         );
@@ -387,24 +409,19 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     let { model } = node.getExtraData();
 
     if (model == null) {
-      model = FlexLayout.Model.fromJson(node.getConfig().model);
+      model = Model.fromJson(node.getConfig().model);
       node.getExtraData().model = model;
     }
 
     return (
-      <FlexLayout.Layout
+      <FlexLayoutComponent
         model={model}
         factory={(...args) => this.layoutFactory(...args)}
-        titleFactory={(renderedNode) => (
-          <FastTooltip title={BorderTabs[renderedNode.getId()].description}>
-            {renderedNode.getName()}{" "}
-          </FastTooltip>
-        )}
         onModelChange={() => {
           // Update / inform parent layout about the changes.
           // This will trigger the parents onModelChange and this will then save the model changes.
           this.state.model.doAction(
-            FlexLayout.Actions.updateNodeAttributes(node.getId(), {
+            Actions.updateNodeAttributes(node.getId(), {
               config: {
                 model: node.getExtraData().model.toJson(),
               },
@@ -439,11 +456,11 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   }
 
   onLayoutChange = () => {
-    const currentLayoutModel = _.cloneDeep(this.state.model.toJson());
+    const currentLayoutModel = cloneDeep(this.state.model.toJson());
 
     // Workaround so that onLayoutChange is called after the update of flexlayout.
     // Calling the method without a timeout results in incorrect calculation of the viewport positions for the rendering.
-    setTimeout(() => this.props.onLayoutChange(currentLayoutModel, this.props.layoutName), 1);
+    setTimeout(() => this.props.onLayoutChange(currentLayoutModel, this.props.layoutName), 50);
   };
 
   onMaximizeToggle = () => {
@@ -451,7 +468,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     const isMaximizing = this.maximizedItemId != null;
     // If a tab is maximized, this.borderOpenStatusWhenNotMaximized will not change and therefore save the BorderOpenStatus before maximizing.
     Object.entries(this.borderOpenStatusWhenNotMaximized).forEach(
-      // @ts-ignore Typescript doesn't infer the type of side to "left" | "right" but only string, instead
+      // @ts-expect-error Typescript doesn't infer the type of side to "left" | "right" but only string, instead
       ([side, isOpen]: [BorderOpenStatusKeys, boolean]) => {
         if (
           (isOpen && isMaximizing) ||
@@ -486,7 +503,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
           const toggledViewportId = node.getChildren()[0].getId();
 
           if (toggledViewportId in OrthoViews) {
-            // @ts-ignore Typescript doesn't agree that toggledViewportId exists in OrthoViews
+            // @ts-expect-error Typescript doesn't agree that toggledViewportId exists in OrthoViews
             this.props.setActiveViewport(OrthoViews[toggledViewportId]);
           }
         }
@@ -505,7 +522,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   toggleBorder(side: BorderOpenStatusKeys, toggleInternalState: boolean = true) {
     // The most recent version of borderOpenStatus is needed as two border toggles might be executed directly after another.
     // If borderOpenStatus was passed via props, the first update  of borderOpenStatus will overwritten by the second update.
-    const borderOpenStatusCopy = _.cloneDeep(Store.getState().uiInformation.borderOpenStatus);
+    const borderOpenStatusCopy = cloneDeep(Store.getState().uiInformation.borderOpenStatus);
 
     borderOpenStatusCopy[side] = !borderOpenStatusCopy[side];
     this.props.setBorderOpenStatus(borderOpenStatusCopy);
@@ -515,49 +532,29 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       this.borderOpenStatusWhenNotMaximized[side] = !this.borderOpenStatusWhenNotMaximized[side];
     }
 
-    this.state.model.doAction(FlexLayout.Actions.selectTab(`${side}-border-tab-container`));
+    this.state.model.doAction(Actions.selectTab(`${side}-border-tab-container`));
     this.onLayoutChange();
   }
 
   onRenderTabSet = (
     tabSetNode: TabSetNode | BorderNode,
     renderValues: {
+      leading?: React.ReactNode;
       buttons: Array<React.ReactNode>;
+      stickyButtons: Array<React.ReactNode>;
       headerContent?: React.ReactNode;
     },
   ) => {
-    const { isTopMost, isRightMost } = getPositionStatusOf(tabSetNode);
+    const { isTopMost, isRightMost, isLeftMost } = getPositionStatusOf(tabSetNode);
 
     if (isTopMost && isRightMost) {
       renderValues.buttons.push(
-        <BorderToggleButton
-          side="right"
-          onClick={() => this.toggleBorder("right")}
-          key="right-border-toggle-button-top"
-        />,
+        <BorderToggleButton side="right" key="right-border-toggle-button-top" />,
       );
     }
-  };
 
-  onRenderTab = (tabNode: TabNode, renderValues: Record<string, any>) => {
-    const parent = tabNode.getParent();
-
-    if (parent?.getType() !== "tabset") {
-      // Do not consider borders, only tabsets in the center layout.
-      return;
-    }
-
-    const parentTabSetNode = parent;
-
-    if (parentTabSetNode.getChildren()[0].getId() === tabNode.getId()) {
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Node' is not assignable to param... Remove this comment to see the full error message
-      const { isTopMost, isLeftMost } = getPositionStatusOf(parentTabSetNode);
-
-      if (isTopMost && isLeftMost) {
-        renderValues.leading = (
-          <BorderToggleButton side="left" onClick={() => this.toggleBorder("left")} />
-        );
-      }
+    if (isTopMost && isLeftMost) {
+      renderValues.leading = <BorderToggleButton side="left" />;
     }
   };
 
@@ -575,24 +572,23 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   render() {
     const { model } = this.state;
     return (
-      <React.Fragment>
+      <Fragment>
         <div className="flex-layout-container">
-          <FlexLayout.Layout
+          <FlexLayoutComponent
             model={model}
             factory={(...args) => this.layoutFactory(...args)}
             onModelChange={() => this.onLayoutChange()}
             onAction={this.onAction}
             onRenderTabSet={this.onRenderTabSet}
-            onRenderTab={this.onRenderTab}
             classNameMapper={this.classNameMapper}
           />
         </div>
-        <Footer className="statusbar-footer">
-          <BorderToggleButton side="left" onClick={() => this.toggleBorder("left")} inFooter />
-          <BorderToggleButton side="right" onClick={() => this.toggleBorder("right")} inFooter />
-          <Statusbar />
-        </Footer>
-      </React.Fragment>
+        <ConfigProvider theme={getAntdTheme("dark")}>
+          <Footer className="statusbar-footer">
+            <Statusbar />
+          </Footer>
+        </ConfigProvider>
+      </Fragment>
     );
   }
 }
@@ -600,8 +596,8 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
 function mapStateToProps(state: WebknossosState): StateProps {
   return {
     displayScalebars: state.userConfiguration.displayScalebars,
-    isUpdateTracingAllowed: state.annotation.restrictions.allowUpdate,
-    busyBlockingInfo: state.uiInformation.busyBlockingInfo,
+    isUpdateTracingAllowed: mayEditAnnotation(state),
+    isBlocked: isUserInterfaceBlocked(state),
   };
 }
 

@@ -9,13 +9,7 @@
   </appender>
 
   <logger name="play" level="WARN" />
-  <logger name="application" level="TRACE" />
-  <logger name="com.scalableminds" level="TRACE" />
-  <logger name="frontend" level="INFO" />
-  <logger name="oxalis" level="DEBUG" />
-  <logger name="controllers" level="DEBUG" />
   <logger name="controllers.AssetsConfiguration" level="INFO" />
-  <logger name="models" level="DEBUG" />
   <logger name="org.apache.pekko.event" level="WARN" />
 
   <root level="INFO">

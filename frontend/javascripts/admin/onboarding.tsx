@@ -1,4 +1,4 @@
-import {
+import Icon, {
   ClockCircleOutlined,
   CloudUploadOutlined,
   CodeOutlined,
@@ -12,25 +12,42 @@ import {
   UserAddOutlined,
   UserOutlined,
 } from "@ant-design/icons";
+import BuildingIcon from "@images/icons/icon-building.svg?react";
 import { useQuery } from "@tanstack/react-query";
 import RegistrationFormGeneric from "admin/auth/registration_form_generic";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import { maxIncludedUsersInPersonalPlan } from "admin/organization/pricing_plan_utils";
-import { getDatastores, sendInvitesForOrganization } from "admin/rest_api";
-import { Alert, AutoComplete, Button, Card, Col, Form, Input, Modal, Row, Steps } from "antd";
+import { getDatastores, getEditableTeams } from "admin/rest_api";
+import {
+  Alert,
+  AutoComplete,
+  Button,
+  Card,
+  Col,
+  Form,
+  Input,
+  Modal,
+  Row,
+  Steps,
+  Typography,
+} from "antd";
 import CreditsFooter from "components/credits_footer";
 import LinkButton from "components/link_button";
 import { DatasetSettingsProvider } from "dashboard/dataset/dataset_settings_provider";
 import DatasetSettingsView from "dashboard/dataset/dataset_settings_view";
+import { DividerWithSubtitle } from "dashboard/dataset/helper_components";
 import features from "features";
+import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import type React from "react";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import type { APITeamMembership } from "types/api_types";
 import Store from "viewer/store";
+import { sendInvitesForOrganization } from "./api/organization";
+import { PERMISSIONS, PermissionsAndTeamsComponent } from "./user/permissions_and_teams_modal_view";
 
-const { Step } = Steps;
 const FormItem = Form.Item;
 
 function StepHeader({
@@ -141,7 +158,7 @@ type OptionCardProps = {
   action: React.ReactNode;
   height: number;
 };
-export function OptionCard({ icon, header, children, action, height }: OptionCardProps) {
+function OptionCard({ icon, header, children, action, height }: OptionCardProps) {
   return (
     <div
       style={{
@@ -149,7 +166,7 @@ export function OptionCard({ icon, header, children, action, height }: OptionCar
       }}
     >
       <Card
-        bordered={false}
+        variant="borderless"
         styles={{
           body: {
             textAlign: "center",
@@ -179,7 +196,8 @@ export function OptionCard({ icon, header, children, action, height }: OptionCar
         >
           {icon}
         </div>
-        <h1
+        <Typography.Title
+          level={1}
           style={{
             fontSize: 20,
             lineHeight: "22px",
@@ -187,7 +205,7 @@ export function OptionCard({ icon, header, children, action, height }: OptionCar
           }}
         >
           {header}
-        </h1>
+        </Typography.Title>
         <p
           style={{
             fontSize: 14,
@@ -219,11 +237,32 @@ export function InviteUsersModal({
   currentUserCount?: number;
   maxUserCountPerOrganization?: number;
 }) {
+  const teams = useFetch(getEditableTeams, [], []);
   const [inviteesString, setInviteesString] = useState("");
+  const [selectedTeams, setSelectedTeams] = useState<Record<string, APITeamMembership>>({});
+  const [selectedPermission, setSelectedPermission] = useState<PERMISSIONS>(PERMISSIONS.member);
   const isOrganizationLimitAlreadyReached = useMemo(
     () => currentUserCount >= maxUserCountPerOrganization,
     [currentUserCount, maxUserCountPerOrganization],
   );
+
+  const defaultTeam = useMemo(() => teams.find((t) => t.isOrganizationTeam), [teams]);
+
+  const setDefaultTeam = useCallback(() => {
+    if (defaultTeam != null) {
+      setSelectedTeams({
+        [defaultTeam.name]: {
+          id: defaultTeam.id,
+          name: defaultTeam.name,
+          isTeamManager: false,
+        },
+      });
+    }
+  }, [defaultTeam]);
+
+  useEffect(() => {
+    setDefaultTeam();
+  }, [setDefaultTeam]);
 
   const extractEmailAddresses = useCallback(
     (): string[] =>
@@ -234,16 +273,43 @@ export function InviteUsersModal({
     [inviteesString],
   );
 
+  const resetFields = useCallback(() => {
+    setInviteesString("");
+    setDefaultTeam();
+    setSelectedPermission(PERMISSIONS.member);
+  }, [setDefaultTeam]);
+
   const sendInvite = useCallback(async () => {
     const addresses = extractEmailAddresses();
+    if (addresses.length === 0) {
+      Toast.error("Please provide at least one valid email address.");
+      return;
+    }
 
-    await sendInvitesForOrganization(addresses, true);
+    const isAdmin = selectedPermission === PERMISSIONS.admin;
+    const isDatasetManager = selectedPermission === PERMISSIONS.datasetManager;
+    const selectedTeamsForInvite = Object.values(selectedTeams);
+
+    await sendInvitesForOrganization(
+      addresses,
+      true,
+      isAdmin,
+      isDatasetManager,
+      selectedTeamsForInvite,
+    );
     Toast.success("An invitation was sent to the provided email addresses.");
 
-    setInviteesString("");
+    resetFields();
     if (handleVisibleChange != null) handleVisibleChange(false);
     if (destroy != null) destroy();
-  }, [destroy, extractEmailAddresses, handleVisibleChange]);
+  }, [
+    destroy,
+    extractEmailAddresses,
+    handleVisibleChange,
+    selectedPermission,
+    selectedTeams,
+    resetFields,
+  ]);
 
   const doNewUsersExceedLimit =
     currentUserCount + extractEmailAddresses().length > maxUserCountPerOrganization;
@@ -251,7 +317,8 @@ export function InviteUsersModal({
   const onCancel = useCallback(() => {
     if (handleVisibleChange != null) handleVisibleChange(false);
     if (destroy != null) destroy();
-  }, [destroy, handleVisibleChange]);
+    resetFields();
+  }, [destroy, handleVisibleChange, resetFields]);
 
   const handleInviteesStringChange = useCallback((evt: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInviteesString(evt.target.value);
@@ -281,11 +348,7 @@ export function InviteUsersModal({
           Share datasets, collaboratively work on annotations, and organize complex analysis
           projects.
         </p>
-        <p>Multiple email addresses should be separated with a comma, a space or a new line.</p>
-        <p>
-          Note that new users have limited access permissions by default. Please doublecheck their
-          roles and team assignments after they join your organization.
-        </p>
+        <p>All invited users will be assigned the permissions and roles specified below.</p>
         {isOrganizationLimitAlreadyReached ? (
           <p>
             As your organization has reached its user limit, you can only invite guests to your
@@ -294,6 +357,14 @@ export function InviteUsersModal({
           </p>
         ) : null}
         {exceedingUserLimitAlert}
+        <DividerWithSubtitle>
+          <Typography.Title level={5}>
+            <b>Invitee Email Addresses</b>
+          </Typography.Title>
+        </DividerWithSubtitle>
+        <p style={{ marginTop: -10 }}>
+          Multiple email addresses should be separated with a comma, a space or a new line.
+        </p>
         <Input.TextArea
           spellCheck={false}
           autoSize={{
@@ -301,7 +372,16 @@ export function InviteUsersModal({
           }}
           onChange={handleInviteesStringChange}
           placeholder={"jane@example.com\njoe@example.com"}
-          defaultValue={inviteesString}
+          value={inviteesString}
+        />
+        <PermissionsAndTeamsComponent
+          selectedTeams={selectedTeams}
+          setSelectedTeams={setSelectedTeams}
+          selectedPermission={selectedPermission}
+          setSelectedPermission={setSelectedPermission}
+          userIsAdmin={true}
+          onlyEditingSingleUser={true}
+          renderSubtitlesWithDivider={true}
         />
       </Fragment>
     );
@@ -311,6 +391,8 @@ export function InviteUsersModal({
     inviteesString,
     isOrganizationLimitAlreadyReached,
     organizationId,
+    selectedPermission,
+    selectedTeams,
   ]);
 
   return (
@@ -454,7 +536,7 @@ function OnboardingView() {
             of Springfield&rdquo;, &ldquo;Simpsons Lab&rdquo;, &ldquo;Neuroscience Department&rdquo;
           </Fragment>
         }
-        icon={<i className="far fa-building icon-big" />}
+        icon={<Icon component={BuildingIcon} />}
       >
         <OrganizationForm onComplete={onCreateOrganizationComplete} />
       </StepHeader>
@@ -524,14 +606,14 @@ function OnboardingView() {
             open
             width="85%"
             footer={null}
-            maskClosable={false}
+            mask={{ closable: false }}
             onCancel={hideDatasetUploadModal}
           >
             <DatasetUploadView datastores={datastores} onUploaded={onDatasetUploaded} withoutCard />
           </Modal>
         )}
         {datasetIdToImport != null && (
-          <Modal open width="85%" footer={null} maskClosable={false} onCancel={advanceStep}>
+          <Modal open width="85%" footer={null} mask={{ closable: false }} onCancel={advanceStep}>
             <DatasetSettingsProvider
               isEditingMode={false}
               datasetId={datasetIdToImport}
@@ -626,7 +708,7 @@ function OnboardingView() {
             learn more.
           </FeatureCard>
           <FeatureCard header="Contact Us" icon={<CustomerServiceOutlined />}>
-            <a href="mailto:hello@webknossos.org">Get in touch</a> or{" "}
+            <a href="mailto:support@webknossos.org">Get in touch</a> or{" "}
             <a
               href="https://forum.image.sc/tag/webknossos"
               target="_blank"
@@ -685,11 +767,8 @@ function OnboardingView() {
               style={{
                 height: 25,
               }}
-            >
-              {availableSteps.map(({ title }) => (
-                <Step title={title} key={title} />
-              ))}
-            </Steps>
+              items={availableSteps.map(({ title }) => ({ title, key: title }))}
+            />
           </Col>
         </Row>
         <div

@@ -1,7 +1,7 @@
 import handleStatus from "libs/handle_http_status";
-import { expose } from "./comlink_wrapper";
+import type { RequestOptions } from "libs/request";
+import { expose } from "./comlink_core";
 
-// @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'RequestOptions'.
 function fetchBufferViaWebworker(url: RequestInfo, options?: RequestOptions): Promise<ArrayBuffer> {
   return fetch(url, options)
     .then(handleStatus)

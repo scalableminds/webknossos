@@ -1,36 +1,64 @@
+import { sendAnalyticsEvent } from "admin/rest_api";
 import app from "app";
+import ErrorHandling from "libs/error_handling";
+import Toast from "libs/toast";
 import VisibilityAwareRaycaster from "libs/visibility_aware_raycaster";
 import window from "libs/window";
-import _ from "lodash";
+import throttle from "lodash-es/throttle";
 import {
   DirectionalLight,
   OrthographicCamera,
+  PerspectiveCamera,
   Vector2 as ThreeVector2,
   Vector3 as ThreeVector3,
 } from "three";
 import TWEEN from "tween.js";
-import type { OrthoViewMap, Vector2, Vector3, Viewport } from "viewer/constants";
-import Constants, { OrthoViewColors, OrthoViewValues, OrthoViews } from "viewer/constants";
+import type {
+  OrthoViewMap,
+  OrthoViewWithoutTDMap,
+  Vector2,
+  Vector3,
+  Viewport,
+} from "viewer/constants";
+import Constants, {
+  FlightViewport,
+  OrthoViewColors,
+  OrthoViews,
+  OrthoViewValues,
+  OrthoViewValuesWithoutTDView,
+  PerformanceMarkEnum,
+  TDViewPerspectiveCameraName,
+  TDViewPerspectiveFov,
+} from "viewer/constants";
 import type { VertexSegmentMapping } from "viewer/controller/mesh_helpers";
+import { getWebGlAnalyticsInformation } from "viewer/controller/renderer";
 import getSceneController, {
   getSceneControllerOrNull,
 } from "viewer/controller/scene_controller_provider";
 import type { MeshSceneNode, SceneGroupForMeshes } from "viewer/controller/segment_mesh_controller";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { getInputCatcherRect } from "viewer/model/accessors/view_mode_accessor";
-import { getActiveSegmentationTracing } from "viewer/model/accessors/volumetracing_accessor";
+import {
+  getActiveSegmentationTracing,
+  getActiveUnmappedSegmentId,
+} from "viewer/model/accessors/volumetracing_accessor";
+import { uiReadyAction } from "viewer/model/actions/actions";
 import { updateTemporarySettingAction } from "viewer/model/actions/settings_actions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import Store from "viewer/store";
 import { getGroundTruthLayoutRect } from "viewer/view/layouting/default_layout_configs";
-import { clearCanvas, setupRenderArea } from "viewer/view/rendering_utils";
+import {
+  clearCanvas,
+  getActiveTDViewCameraName,
+  setupRenderArea,
+} from "viewer/view/rendering_utils";
 
 const LIGHT_INTENSITY = 10;
 
 type RaycasterHit = {
   node: MeshSceneNode;
   indexRange: Vector2 | null;
-  unmappedSegmentId: number | null;
+  unmappedSegmentId: bigint | null;
   point: Vector3;
 } | null;
 
@@ -40,7 +68,6 @@ const createDirLight = (
   intensity: number,
   camera: OrthographicCamera,
 ) => {
-  // @ts-ignore
   const dirLight = new DirectionalLight(0x888888, intensity);
   dirLight.position.set(...position);
   camera.add(dirLight);
@@ -57,52 +84,98 @@ const MESH_HOVER_THROTTLING_DELAY = 50;
 let oldRaycasterHit: RaycasterHit = null;
 
 class PlaneView {
-  cameras: OrthoViewMap<OrthographicCamera>;
-  running: boolean;
+  // Orthographic cameras of the three plane viewports.
+  nonTdCameras: OrthoViewWithoutTDMap<OrthographicCamera>;
+  // The 3D viewport can be rendered with either an orthographic or a perspective
+  // camera. The orthographic camera is the source of truth; the perspective camera
+  // is derived from it (see updatePerspectiveCameraFromOrthographic).
+  tdCameras: {
+    ORTHOGRAPHIC: OrthographicCamera;
+    PERSPECTIVE: PerspectiveCamera;
+  };
+  // Combined view of the orthographic cameras, handed to the camera controllers as a
+  // prop. Kept as a stable reference so the PureComponents don't re-render each frame.
+  private cameras: OrthoViewMap<OrthographicCamera>;
+  isRunning: boolean = false;
   needsRerender: boolean;
+  private isRerenderScheduled: boolean = false;
   unsubscribeFunctions: Array<() => void> = [];
 
   constructor() {
-    this.running = false;
     const { scene } = getSceneController();
     // Initialize main js components
-    const cameras = {} as OrthoViewMap<OrthographicCamera>;
+    const nonTdCameras = {} as OrthoViewWithoutTDMap<OrthographicCamera>;
 
-    for (const plane of OrthoViewValues) {
+    for (const plane of OrthoViewValuesWithoutTDView) {
       // Let's set up cameras
       // No need to set any properties, because the cameras controller will deal with that
-      cameras[plane] = new OrthographicCamera(0, 0, 0, 0);
+      nonTdCameras[plane] = new OrthographicCamera(0, 0, 0, 0);
       // This name can be used to retrieve the camera from the scene
-      cameras[plane].name = plane;
-      scene.add(cameras[plane]);
+      nonTdCameras[plane].name = plane;
+      scene.add(nonTdCameras[plane]);
     }
-    this.cameras = cameras;
+    this.nonTdCameras = nonTdCameras;
 
-    createDirLight([10, 10, 10], [0, 0, 10], LIGHT_INTENSITY, this.cameras[OrthoViews.TDView]);
-    createDirLight([-10, 10, 10], [0, 0, 10], LIGHT_INTENSITY, this.cameras[OrthoViews.TDView]);
-    this.cameras[OrthoViews.PLANE_XY].position.z = -1;
-    this.cameras[OrthoViews.PLANE_YZ].position.x = 1;
-    this.cameras[OrthoViews.PLANE_XZ].position.y = 1;
-    this.cameras[OrthoViews.TDView].position.copy(new ThreeVector3(10, 10, -10));
-    this.cameras[OrthoViews.PLANE_XY].up = new ThreeVector3(0, -1, 0);
-    this.cameras[OrthoViews.PLANE_YZ].up = new ThreeVector3(0, -1, 0);
-    this.cameras[OrthoViews.PLANE_XZ].up = new ThreeVector3(0, 0, -1);
-    this.cameras[OrthoViews.TDView].up = new ThreeVector3(0, 0, -1);
+    const tdOrthographicCamera = new OrthographicCamera(0, 0, 0, 0);
+    tdOrthographicCamera.name = OrthoViews.TDView;
+    scene.add(tdOrthographicCamera);
+    // The perspective camera for the 3D viewport is derived from the orthographic
+    // TDView camera (see updatePerspectiveCameraFromOrthographic) and is used for
+    // rendering and raycasting when the tdViewUsePerspectiveCamera setting is active.
+    const tdPerspectiveCamera = new PerspectiveCamera(TDViewPerspectiveFov, 1, 1, 8000000);
+    tdPerspectiveCamera.name = TDViewPerspectiveCameraName;
+    scene.add(tdPerspectiveCamera);
+    this.tdCameras = { ORTHOGRAPHIC: tdOrthographicCamera, PERSPECTIVE: tdPerspectiveCamera };
 
-    for (const plane of OrthoViewValues) {
-      this.cameras[plane].lookAt(new ThreeVector3(0, 0, 0));
+    this.cameras = { ...this.nonTdCameras, [OrthoViews.TDView]: this.tdCameras.ORTHOGRAPHIC };
+
+    createDirLight([10, 10, 10], [0, 0, 10], LIGHT_INTENSITY, tdOrthographicCamera);
+    createDirLight([-10, 10, 10], [0, 0, 10], LIGHT_INTENSITY, tdOrthographicCamera);
+    this.nonTdCameras[OrthoViews.PLANE_XY].position.z = -1;
+    this.nonTdCameras[OrthoViews.PLANE_YZ].position.x = 1;
+    this.nonTdCameras[OrthoViews.PLANE_XZ].position.y = 1;
+    tdOrthographicCamera.position.copy(new ThreeVector3(10, 10, -10));
+    this.nonTdCameras[OrthoViews.PLANE_XY].up = new ThreeVector3(0, -1, 0);
+    this.nonTdCameras[OrthoViews.PLANE_YZ].up = new ThreeVector3(0, -1, 0);
+    this.nonTdCameras[OrthoViews.PLANE_XZ].up = new ThreeVector3(0, 0, -1);
+    tdOrthographicCamera.up = new ThreeVector3(0, 0, -1);
+    // Give the perspective camera a valid initial transform (matching the orthographic
+    // TDView camera) so that it can be rendered even before its projection has been
+    // derived from a real orthographic frustum (see updatePerspectiveCameraFromOrthographic).
+    tdPerspectiveCamera.position.copy(tdOrthographicCamera.position);
+    tdPerspectiveCamera.up.copy(tdOrthographicCamera.up);
+
+    for (const camera of [
+      ...Object.values(this.nonTdCameras),
+      tdOrthographicCamera,
+      tdPerspectiveCamera,
+    ]) {
+      camera.lookAt(new ThreeVector3(0, 0, 0));
     }
 
     this.needsRerender = true;
   }
 
   animate(): void {
-    if (!this.running) {
+    if (!this.isRunning) {
       return;
     }
 
     this.renderFunction();
     window.requestAnimationFrame(() => this.animate());
+  }
+
+  // Sets needsRerender in the next animation frame. At most one callback is
+  // queued at a time, so high-frequency callers don't pile up closures.
+  scheduleRerender(): void {
+    if (this.isRerenderScheduled) {
+      return;
+    }
+    this.isRerenderScheduled = true;
+    window.requestAnimationFrame(() => {
+      this.isRerenderScheduled = false;
+      this.needsRerender = true;
+    });
   }
 
   renderFunction(forceRender: boolean = false): void {
@@ -134,7 +207,11 @@ class PlaneView {
 
         if (width > 0 && height > 0) {
           setupRenderArea(renderer, left, top, width, height, OrthoViewColors[plane]);
-          renderer.render(scene, this.cameras[plane]);
+          renderer.render(scene, this.getCameraForPlane(plane));
+
+          if (!window.measuredTimeToFirstRender) {
+            this.measureTimeToFirstRender();
+          }
         }
       }
 
@@ -142,126 +219,153 @@ class PlaneView {
     }
   }
 
-  performMeshHitTest = _.throttle((mousePosition: [number, number]): RaycasterHit => {
-    const storeState = Store.getState();
-    const sceneController = getSceneController();
-    const { segmentMeshController } = sceneController;
-    const { meshesLayerLODRootGroup } = segmentMeshController;
-    const tdViewport = getInputCatcherRect(storeState, "TDView");
-    const { hoveredSegmentId } = storeState.temporaryConfiguration;
-
-    // Outside of the 3D viewport, we don't do mesh hit tests
-    if (storeState.viewModeData.plane.activeViewport !== OrthoViews.TDView) {
-      if (hoveredSegmentId !== 0) {
-        // Reset hoveredSegmentId if we are outside of the 3D viewport,
-        // since that id takes precedence over the shader-calculated cell id
-        // under the mouse cursor
-        Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", 0));
-      }
-
-      return null;
-    }
-
-    // Perform ray casting
+  // Converts a TDView mouse position to NDC coordinates and points the shared
+  // raycaster at it. Used by both mesh and MIP hit testing.
+  private setRaycasterFromTDMouse(mousePosition: [number, number]): void {
+    const tdViewport = getInputCatcherRect(Store.getState(), "TDView");
     const mouse = new ThreeVector2(
       (mousePosition[0] / tdViewport.width) * 2 - 1,
       ((mousePosition[1] / tdViewport.height) * 2 - 1) * -1,
     );
-    raycaster.setFromCamera(mouse, this.cameras[OrthoViews.TDView]);
-    const intersectableObjects = meshesLayerLODRootGroup.children;
-    // The second parameter of intersectObjects is set to true to ensure that
-    // the groups which contain the actual meshes are traversed.
-    const intersections = raycaster.intersectObjects(intersectableObjects, true);
-    const face = intersections.length > 0 ? intersections[0].face : null;
-    const hitObject = intersections.length > 0 ? (intersections[0].object as MeshSceneNode) : null;
-    let unmappedSegmentId = null;
-    let highlightEntry = null;
+    raycaster.setFromCamera(mouse, this.getActiveTDViewCamera());
+  }
 
-    if (hitObject && face) {
-      if ("vertexSegmentMapping" in hitObject.geometry) {
-        const vertexSegmentMapping = hitObject.geometry
-          .vertexSegmentMapping as VertexSegmentMapping;
-        unmappedSegmentId = vertexSegmentMapping.getUnmappedSegmentIdForPosition(face.a);
-        const indexRange = vertexSegmentMapping.getRangeForUnmappedSegmentId(unmappedSegmentId);
-        if (indexRange) {
-          highlightEntry = { range: indexRange, color: undefined };
-        }
-      }
-    }
-
-    // Check whether we are hitting the same object as before, since we can return early
-    // in this case.
-    if (storeState.uiInformation.activeTool === AnnotationTool.PROOFREAD) {
-      if (hitObject == null && oldRaycasterHit == null) {
-        return null;
-      }
-      if (unmappedSegmentId != null && unmappedSegmentId === oldRaycasterHit?.unmappedSegmentId) {
-        return oldRaycasterHit;
-      }
-    } else {
-      // In proofreading, there is no highlighting of parts of the meshes.
-      // If the parent group is identical, we can reuse the old hit object.
-      if (hitObject?.parent === oldRaycasterHit?.node.parent) {
-        return oldRaycasterHit;
-      }
-    }
-
-    // Undo highlighting of old hit
-    this.clearLastMeshHitTest();
-
-    oldRaycasterHit =
-      hitObject != null
-        ? {
-            node: hitObject,
-            indexRange: highlightEntry?.range || null,
-            unmappedSegmentId,
-            point: intersections[0].point.toArray(),
-          }
-        : null;
-
-    // Highlight new hit
-    if (hitObject?.parent != null) {
-      segmentMeshController.updateMeshAppearance(
-        hitObject,
-        true,
-        undefined,
-        undefined,
-        highlightEntry ? [highlightEntry] : "full",
-      );
-
-      Store.dispatch(
-        updateTemporarySettingAction(
-          "hoveredSegmentId",
-          (hitObject.parent as SceneGroupForMeshes).segmentId,
-        ),
-      );
-      return oldRaycasterHit;
-    } else {
-      Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", null));
-      return null;
-    }
-  }, MESH_HOVER_THROTTLING_DELAY);
-
-  clearLastMeshHitTest = () => {
-    if (oldRaycasterHit?.node.parent != null) {
+  performMeshHitTest = throttle(
+    (mousePosition: [number, number], allowMeshReuseOptimization: boolean = true): RaycasterHit => {
+      const storeState = Store.getState();
       const sceneController = getSceneController();
       const { segmentMeshController } = sceneController;
-      segmentMeshController.updateMeshAppearance(
+      const { meshesLayerLODRootGroup } = segmentMeshController;
+      const { hoveredSegmentId } = storeState.temporaryConfiguration;
+
+      // Outside of the 3D viewport, we don't do mesh hit tests
+      if (storeState.viewModeData.plane.activeViewport !== OrthoViews.TDView) {
+        if (hoveredSegmentId !== 0n) {
+          // Reset hoveredSegmentId if we are outside of the 3D viewport,
+          // since that id takes precedence over the shader-calculated cell id
+          // under the mouse cursor
+          Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", 0n));
+        }
+
+        return null;
+      }
+
+      // Perform ray casting
+      this.setRaycasterFromTDMouse(mousePosition);
+      const intersectableObjects = meshesLayerLODRootGroup.children;
+      // The second parameter of intersectObjects is set to true to ensure that
+      // the groups which contain the actual meshes are traversed.
+      const intersections = raycaster.intersectObjects(intersectableObjects, true);
+      const face = intersections.length > 0 ? intersections[0].face : null;
+      const hitObject =
+        intersections.length > 0 ? (intersections[0].object as MeshSceneNode) : null;
+      let unmappedSegmentId = null;
+      let highlightEntry = null;
+
+      if (hitObject && face) {
+        if ("vertexSegmentMapping" in hitObject.geometry) {
+          const vertexSegmentMapping = hitObject.geometry
+            .vertexSegmentMapping as VertexSegmentMapping;
+          unmappedSegmentId = vertexSegmentMapping.getUnmappedSegmentIdForPosition(face.a);
+          const indexRange = vertexSegmentMapping.getRangeForUnmappedSegmentId(unmappedSegmentId);
+          if (indexRange) {
+            highlightEntry = { range: indexRange, color: undefined };
+          }
+        }
+      }
+
+      // Check whether we are hitting the same object as before, since we can return early
+      // in this case, if not explicitly disabled by the allowMeshReuseOptimization parameter.
+      if (storeState.uiInformation.activeTool === AnnotationTool.PROOFREAD) {
+        if (hitObject == null && oldRaycasterHit == null) {
+          return null;
+        }
+        if (
+          allowMeshReuseOptimization &&
+          unmappedSegmentId != null &&
+          unmappedSegmentId === oldRaycasterHit?.unmappedSegmentId
+        ) {
+          return oldRaycasterHit;
+        }
+      }
+      // Outside of proofreading, there is no highlighting of parts of the meshes.
+      // If the parent group is identical, we can reuse the old hit object.
+      else if (allowMeshReuseOptimization && hitObject?.parent === oldRaycasterHit?.node?.parent) {
+        return oldRaycasterHit;
+      }
+
+      // Undo highlighting of old hit
+      this.clearLastMeshHitTest();
+
+      oldRaycasterHit =
+        hitObject != null
+          ? {
+              node: hitObject,
+              indexRange: highlightEntry?.range || null,
+              unmappedSegmentId,
+              point: intersections[0].point.toArray(),
+            }
+          : null;
+
+      // Highlight new hit
+      if (hitObject?.parent != null) {
+        segmentMeshController.updateMeshAppearance(
+          hitObject,
+          true,
+          undefined,
+          undefined,
+          highlightEntry ? [highlightEntry] : "full",
+        );
+
+        Store.dispatch(
+          updateTemporarySettingAction(
+            "hoveredSegmentId",
+            (hitObject.parent as SceneGroupForMeshes).segmentId,
+          ),
+        );
+        return oldRaycasterHit;
+      } else {
+        Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", null));
+        return null;
+      }
+    },
+    MESH_HOVER_THROTTLING_DELAY,
+  );
+
+  performMipHitTest(mousePosition: [number, number]): Vector3 | null {
+    const storeState = Store.getState();
+    if (storeState.viewModeData.plane.activeViewport !== OrthoViews.TDView) return null;
+    this.setRaycasterFromTDMouse(mousePosition);
+    const worldPos = getSceneController().getMipHitPosition(raycaster.ray);
+    return worldPos != null ? (worldPos.toArray() as Vector3) : null;
+  }
+
+  clearLastMeshHitTest = () => {
+    if (oldRaycasterHit == null) {
+      return;
+    }
+    // Only update the appearance if the mesh is still part of the scene
+    // graph. In any case, clear the module-level reference as it would
+    // otherwise pin the (potentially huge) geometry of a removed mesh
+    // indefinitely (even across annotation sessions).
+    if (oldRaycasterHit.node.parent != null) {
+      const sceneController = getSceneControllerOrNull();
+      sceneController?.segmentMeshController.updateMeshAppearance(
         oldRaycasterHit.node,
         false,
         undefined,
         undefined,
         null,
       );
-      oldRaycasterHit = null;
     }
+    oldRaycasterHit = null;
   };
 
   draw(): void {
     app.vent.emit("rerender");
   }
 
-  resizeThrottled = _.throttle((): void => {
+  resizeThrottled = throttle((): void => {
     // throttle resize to avoid annoying flickering
     this.resize();
   }, Constants.RESIZE_THROTTLE_TIME);
@@ -282,16 +386,37 @@ class PlaneView {
     return this.cameras;
   }
 
+  getTDViewPerspectiveCamera(): PerspectiveCamera {
+    return this.tdCameras.PERSPECTIVE;
+  }
+
+  getActiveTDViewCamera(): OrthographicCamera | PerspectiveCamera {
+    const cameraName = getActiveTDViewCameraName(
+      Store.getState().userConfiguration.tdViewUsePerspectiveCamera,
+    );
+    return cameraName === TDViewPerspectiveCameraName
+      ? this.tdCameras.PERSPECTIVE
+      : this.tdCameras.ORTHOGRAPHIC;
+  }
+
   stop(): void {
-    this.running = false;
+    this.isRunning = false;
 
     const sceneController = getSceneControllerOrNull();
     if (sceneController != null) {
-      for (const plane of OrthoViewValues) {
-        sceneController.scene.remove(this.cameras[plane]);
+      for (const camera of [
+        ...Object.values(this.nonTdCameras),
+        this.tdCameras.ORTHOGRAPHIC,
+        this.tdCameras.PERSPECTIVE,
+      ]) {
+        sceneController.scene.remove(camera);
       }
     }
     this.resizeThrottled.cancel();
+    // Cancel a potential trailing invocation which would otherwise run
+    // after teardown, and release the reference to the last hit mesh.
+    this.performMeshHitTest.cancel();
+    this.clearLastMeshHitTest();
     window.removeEventListener("resize", this.resizeThrottled);
 
     for (const fn of this.unsubscribeFunctions) {
@@ -302,7 +427,7 @@ class PlaneView {
 
   start(): void {
     const sceneController = getSceneController();
-    const { segmentMeshController } = sceneController;
+    const { segmentMeshController, renderer, scene } = sceneController;
 
     this.unsubscribeFunctions.push(
       app.vent.on("rerender", () => {
@@ -319,16 +444,34 @@ class PlaneView {
 
     this.unsubscribeFunctions.push(
       Store.subscribe(() => {
-        // Render in the next frame after the change propagated everywhere
-        window.requestAnimationFrame(() => {
-          this.needsRerender = true;
-        });
+        this.scheduleRerender();
       }),
     );
 
-    this.running = true;
+    this.isRunning = true;
     this.resize();
-    this.animate();
+    performance.mark(PerformanceMarkEnum.SHADER_COMPILE);
+    // The shader is the same for all three viewports, so it doesn't matter which camera is used.
+    const compileAsyncPromise = renderer.compileAsync(
+      scene,
+      this.nonTdCameras[OrthoViews.PLANE_XY],
+    );
+    // See SceneController.waitForPendingCompiles for why this needs to be tracked.
+    sceneController.registerPendingCompile(compileAsyncPromise);
+    compileAsyncPromise
+      .then(() => {
+        // Counter-intuitively this is not the moment where the webgl program is fully compiled.
+        // There is another stall once render or getProgramInfoLog is called, since not all work is done yet.
+        // Only once that is done, the compilation process is fully finished, see `renderFunction`.
+        this.animate();
+        Store.dispatch(uiReadyAction());
+      })
+      .catch((error) => {
+        // This code will not be hit if there are shader compilation errors. To react to those, see https://github.com/mrdoob/three.js/pull/25679
+        Toast.error(`An unexpected error occurred while compiling the WebGL shaders: ${error}`);
+        console.error(error);
+        ErrorHandling.notify(error);
+      });
     window.addEventListener("resize", this.resizeThrottled);
     this.unsubscribeFunctions.push(
       listenToStoreProperty(
@@ -348,7 +491,7 @@ class PlaneView {
           // activeUnmappedSegmentId is null so that no supervoxel
           // is highlighted.
           return storeState.uiInformation.activeTool === AnnotationTool.PROOFREAD
-            ? segmentationTracing.activeUnmappedSegmentId
+            ? getActiveUnmappedSegmentId(storeState, segmentationTracing)
             : null;
         },
         (activeUnmappedSegmentId) =>
@@ -366,7 +509,8 @@ class PlaneView {
             return null;
           }
           return storeState.uiInformation.activeTool === AnnotationTool.PROOFREAD
-            ? storeState.localSegmentationData[segmentationTracing.tracingId].minCutPartitions
+            ? storeState.localSegmentationStateByLayer[segmentationTracing.tracingId]
+                .minCutPartitions
             : null;
         },
         (minCutPartitions) =>
@@ -376,11 +520,43 @@ class PlaneView {
     );
   }
 
-  getCameraForPlane(plane: Viewport) {
-    if (plane === "arbitraryViewport") {
-      throw new Error("Cannot access camera for arbitrary viewport.");
+  measureTimeToFirstRender() {
+    // We cannot use performance.getEntriesByType("navigation")[0].startTime, because the page might be loaded
+    // much earlier. It is not reloaded when opening a dataset or annotation from the dashboard and also might
+    // not be reloaded when navigating from the tracing view back to the dashboard.
+    // Therefore, we use performance.mark in the router to mark the start time ourselves. The downside of that
+    // is that the time for the initial resource loading is not included, then.
+    let timeToFirstRenderInMs, timeToCompileShaderInMs;
+    if (performance.getEntriesByName(PerformanceMarkEnum.TRACING_VIEW_LOAD, "mark").length > 0) {
+      timeToFirstRenderInMs = Math.round(
+        performance.measure("tracing_view_load_duration", PerformanceMarkEnum.TRACING_VIEW_LOAD)
+          .duration,
+      );
+      console.log(`Time to first render was ${timeToFirstRenderInMs} ms.`);
     }
-    return this.getCameras()[plane];
+    if (performance.getEntriesByName(PerformanceMarkEnum.SHADER_COMPILE, "mark").length > 0) {
+      timeToCompileShaderInMs = Math.round(
+        performance.measure("shader_compile_duration", PerformanceMarkEnum.SHADER_COMPILE).duration,
+      );
+      console.log(`Time to compile shaders was ${timeToCompileShaderInMs} ms.`);
+    }
+
+    sendAnalyticsEvent("time_to_first_render", {
+      ...getWebGlAnalyticsInformation(Store.getState()),
+      timeToFirstRenderInMs,
+      timeToCompileShaderInMs,
+    });
+    window.measuredTimeToFirstRender = true;
+  }
+
+  getCameraForPlane(plane: Viewport): OrthographicCamera | PerspectiveCamera {
+    if (plane === FlightViewport) {
+      throw new Error("Cannot access camera for flight viewport.");
+    }
+    if (plane === OrthoViews.TDView) {
+      return this.getActiveTDViewCamera();
+    }
+    return this.nonTdCameras[plane];
   }
 }
 

@@ -1,12 +1,22 @@
-import * as Utils from "libs/utils";
-import type { APIMagRestrictions, AdditionalCoordinate, MetadataEntryProto } from "types/api_types";
-import type { Vector3 } from "viewer/constants";
+import { computeBoundingBoxObjectFromBoundingBox } from "libs/utils";
+import type {
+  AdditionalCoordinate,
+  APIMagRestrictions,
+  MetadataEntryProto,
+  TreeAgglomerateInfo,
+} from "types/api_types";
+import type { TreeType, Vector3 } from "viewer/constants";
 import type { SendBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import { convertUserBoundingBoxFromFrontendToServer } from "viewer/model/reducers/reducer_helpers";
-import type { Node, Tree, TreeGroup } from "viewer/model/types/tree_types";
+import type {
+  MutableBranchPoint,
+  MutableCommentType,
+  Node,
+  Tree,
+  TreeGroup,
+} from "viewer/model/types/tree_types";
 import type {
   BoundingBoxObject,
-  NumberLike,
   SegmentGroup,
   UserBoundingBox,
   UserBoundingBoxWithOptIsVisible,
@@ -19,6 +29,15 @@ export type NodeWithTreeId = {
 
 // This type is meant to contain only the properties that have changed
 type PartialBoundingBoxWithoutVisibility = Partial<Omit<UserBoundingBox, "isVisible">>;
+
+// Marks a single id field as "bigint now, but older persisted update actions (created before
+// this field was migrated to bigint) may still have a plain number here". Widens the field's
+// type for whoever reads it back (e.g. from the update-action log) while the action creator's
+// own parameter stays bigint-only, so newly-constructed actions may only contain big int.
+// It's purelya type-level marker (the value is passed through unchanged at runtime).
+function asBigIntOrNumber<T extends bigint>(value: T): T | number {
+  return value;
+}
 
 export type UpdateTreeUpdateAction = ReturnType<typeof updateTree> | ReturnType<typeof createTree>;
 export type DeleteTreeUpdateAction = ReturnType<typeof deleteTree>;
@@ -36,15 +55,25 @@ export type UpdateActiveNodeUpdateAction = ReturnType<typeof updateActiveNode>;
 type LEGACY_UpdateSkeletonTracingUpdateAction = ReturnType<typeof LEGACY_updateSkeletonTracing>;
 type LEGACY_UpdateVolumeTracingUpdateAction = ReturnType<typeof LEGACY_updateVolumeTracingAction>;
 export type UpdateActiveSegmentIdUpdateAction = ReturnType<typeof updateActiveSegmentId>;
+export type UpdateVolumeBucketDataHasChangedUpdateAction = ReturnType<
+  typeof updateVolumeBucketDataHasChanged
+>;
 export type UpdateLargestSegmentIdVolumeAction = ReturnType<typeof updateLargestSegmentId>;
 export type CreateSegmentUpdateAction = ReturnType<typeof createSegmentVolumeAction>;
-export type UpdateSegmentUpdateAction = ReturnType<typeof updateSegmentVolumeAction>;
+export type LEGACY_UpdateSegmentUpdateAction = ReturnType<typeof LEGACY_updateSegmentVolumeAction>;
+export type UpdateSegmentPartialUpdateAction = ReturnType<typeof updateSegmentPartialVolumeAction>;
+export type UpdateMetadataOfSegmentUpdateAction = ReturnType<
+  typeof updateMetadataOfSegmentUpdateAction
+>;
+export type UpsertSegmentGroupUpdateAction = ReturnType<typeof upsertSegmentGroupUpdateAction>;
+export type DeleteSegmentGroupUpdateAction = ReturnType<typeof deleteSegmentGroupUpdateAction>;
 export type UpdateSegmentVisibilityVolumeAction = ReturnType<
   typeof updateSegmentVisibilityVolumeAction
 >;
 export type UpdateSegmentGroupVisibilityVolumeAction = ReturnType<
   typeof updateSegmentGroupVisibilityVolumeAction
 >;
+export type MergeSegmentItemsUpdateAction = ReturnType<typeof mergeSegmentItemsVolumeAction>;
 export type DeleteSegmentUpdateAction = ReturnType<typeof deleteSegmentVolumeAction>;
 export type DeleteSegmentDataUpdateAction = ReturnType<typeof deleteSegmentDataVolumeAction>;
 export type LEGACY_UpdateUserBoundingBoxesInSkeletonTracingUpdateAction = ReturnType<
@@ -78,7 +107,7 @@ export type UpdateUserBoundingBoxVisibilityInVolumeTracingAction = ReturnType<
   typeof updateUserBoundingBoxVisibilityInVolumeTracing
 >;
 export type UpdateBucketUpdateAction = ReturnType<typeof updateBucket>;
-export type UpdateSegmentGroupsUpdateAction = ReturnType<typeof updateSegmentGroups>;
+export type LEGACY_UpdateSegmentGroupsUpdateAction = ReturnType<typeof LEGACY_updateSegmentGroups>;
 export type UpdateSegmentGroupsExpandedStateUpdateAction = ReturnType<
   typeof updateSegmentGroupsExpandedState
 >;
@@ -106,7 +135,7 @@ export type UpdateAction =
   | UpdateActionWithoutIsolationRequirement
   | UpdateActionWithIsolationRequirement;
 
-export type ApplicableSkeletonUpdateAction =
+type _ApplicableSkeletonUpdateAction =
   | UpdateTreeUpdateAction
   | UpdateNodeUpdateAction
   | CreateNodeUpdateAction
@@ -121,19 +150,79 @@ export type ApplicableSkeletonUpdateAction =
   | AddUserBoundingBoxInSkeletonTracingAction
   | UpdateUserBoundingBoxInSkeletonTracingAction
   | UpdateUserBoundingBoxVisibilityInSkeletonTracingAction
-  | DeleteUserBoundingBoxInSkeletonTracingAction;
+  | DeleteUserBoundingBoxInSkeletonTracingAction
+  // User specific actions
+  | UpdateActiveNodeUpdateAction
+  | UpdateTreeVisibilityUpdateAction
+  | UpdateTreeGroupVisibilityUpdateAction
+  | UpdateUserBoundingBoxVisibilityInSkeletonTracingAction
+  | UpdateTreeGroupsExpandedStateAction;
+
+export type ApplicableSkeletonServerUpdateAction = AsServerAction<_ApplicableSkeletonUpdateAction>;
+export type ApplicableVolumeServerUpdateAction = AsServerAction<ApplicableVolumeUpdateAction>;
+
+export type WithoutServerSpecificFields<T extends { value: Record<string, any> }> = T extends any
+  ? Omit<T, "value"> & {
+      value: Omit<T["value"], "actionTimestamp" | "actionTracingId" | "actionAuthorId" | "info">;
+    }
+  : never;
+
+export type ApplicableSkeletonUpdateAction =
+  WithoutServerSpecificFields<ApplicableSkeletonServerUpdateAction>;
+
+// This helper dict exists so that we can ensure via typescript that
+// the list contains all members of ApplicableSkeletonUpdateAction. As soon as
+// ApplicableSkeletonUpdateAction is extended with another action, TS will complain
+// if the following dictionary doesn't contain that action.
+const ApplicableSkeletonUpdateActionNamesHelper: Record<
+  ApplicableSkeletonUpdateAction["name"],
+  true
+> = {
+  updateTree: true,
+  createTree: true,
+  updateNode: true,
+  createNode: true,
+  createEdge: true,
+  deleteTree: true,
+  deleteEdge: true,
+  deleteNode: true,
+  moveTreeComponent: true,
+  updateTreeGroups: true,
+  updateTreeGroupsExpandedState: true,
+  updateTreeEdgesVisibility: true,
+  addUserBoundingBoxInSkeletonTracing: true,
+  updateUserBoundingBoxInSkeletonTracing: true,
+  updateUserBoundingBoxVisibilityInSkeletonTracing: true,
+  deleteUserBoundingBoxInSkeletonTracing: true,
+  updateActiveNode: true,
+  updateTreeVisibility: true,
+  updateTreeGroupVisibility: true,
+};
+export const ApplicableSkeletonUpdateActionNamesHelperNamesList = Object.keys(
+  ApplicableSkeletonUpdateActionNamesHelper,
+);
 
 export type ApplicableVolumeUpdateAction =
   | UpdateLargestSegmentIdVolumeAction
-  | UpdateSegmentUpdateAction
+  | UpdateVolumeBucketDataHasChangedUpdateAction
+  | UpdateSegmentPartialUpdateAction
+  | UpdateMetadataOfSegmentUpdateAction
+  | UpsertSegmentGroupUpdateAction
+  | DeleteSegmentGroupUpdateAction
   | CreateSegmentUpdateAction
+  | MergeSegmentItemsUpdateAction
   | DeleteSegmentUpdateAction
-  | UpdateSegmentGroupsUpdateAction
   | AddUserBoundingBoxInVolumeTracingAction
   | UpdateUserBoundingBoxInVolumeTracingAction
   | DeleteUserBoundingBoxInVolumeTracingAction
   | UpdateSegmentGroupsExpandedStateUpdateAction
-  | UpdateUserBoundingBoxVisibilityInVolumeTracingAction;
+  | UpdateUserBoundingBoxVisibilityInVolumeTracingAction
+  // User specific actions
+  | UpdateActiveSegmentIdUpdateAction
+  | UpdateSegmentVisibilityVolumeAction
+  | UpdateSegmentGroupVisibilityVolumeAction
+  | UpdateUserBoundingBoxInVolumeTracingAction
+  | UpdateSegmentGroupsExpandedStateUpdateAction;
 
 export type UpdateActionWithIsolationRequirement =
   | RevertToVersionUpdateAction
@@ -155,6 +244,7 @@ export type UpdateActionWithoutIsolationRequirement =
   | UpdateActiveNodeUpdateAction
   | UpdateActiveSegmentIdUpdateAction
   | UpdateLargestSegmentIdVolumeAction
+  | UpdateVolumeBucketDataHasChangedUpdateAction
   | AddUserBoundingBoxInSkeletonTracingAction
   | AddUserBoundingBoxInVolumeTracingAction
   | DeleteUserBoundingBoxInSkeletonTracingAction
@@ -164,15 +254,20 @@ export type UpdateActionWithoutIsolationRequirement =
   | UpdateUserBoundingBoxVisibilityInSkeletonTracingAction
   | UpdateUserBoundingBoxVisibilityInVolumeTracingAction
   | CreateSegmentUpdateAction
-  | UpdateSegmentUpdateAction
+  | LEGACY_UpdateSegmentUpdateAction
+  | UpdateSegmentPartialUpdateAction
+  | UpdateMetadataOfSegmentUpdateAction
+  | UpsertSegmentGroupUpdateAction
+  | DeleteSegmentGroupUpdateAction
   | UpdateSegmentVisibilityVolumeAction
+  | MergeSegmentItemsUpdateAction
   | DeleteSegmentUpdateAction
   | DeleteSegmentDataUpdateAction
   | UpdateBucketUpdateAction
   | UpdateTreeVisibilityUpdateAction
   | UpdateTreeEdgesVisibilityUpdateAction
   | UpdateTreeGroupVisibilityUpdateAction
-  | UpdateSegmentGroupsUpdateAction
+  | LEGACY_UpdateSegmentGroupsUpdateAction
   | UpdateSegmentGroupsExpandedStateUpdateAction
   | UpdateSegmentGroupVisibilityVolumeAction
   | UpdateTreeGroupsUpdateAction
@@ -198,7 +293,9 @@ type CreateTracingUpdateAction = {
 type ImportVolumeTracingUpdateAction = {
   name: "importVolumeTracing";
   value: {
-    largestSegmentId: number;
+    // bigint | number: this type is only ever read, never constructed by frontend code, so it
+    // must reflect that older persisted actions may still have a plain number here.
+    largestSegmentId: bigint | number;
   };
 };
 // This update action is only created by the backend
@@ -213,6 +310,7 @@ type AddServerValuesFn<T extends { value: any }> = (arg0: T) => T & {
   value: T["value"] & {
     actionTimestamp: number;
     actionAuthorId?: string;
+    info?: string;
   };
 };
 
@@ -228,7 +326,28 @@ export type ServerUpdateAction = AsServerAction<
   | CreateTracingUpdateAction
 >;
 
-export function createTree(tree: Tree, actionTracingId: string) {
+export function createTree(
+  tree: Tree,
+  actionTracingId: string,
+): {
+  name: "createTree";
+  value: {
+    actionTracingId: string;
+    id: number;
+    updatedId: undefined | number;
+    color: Vector3;
+    name: string;
+    timestamp: number;
+    comments: Readonly<MutableCommentType>[];
+    branchPoints: Readonly<MutableBranchPoint>[];
+    groupId: number | undefined | null;
+    isVisible: boolean;
+    type: TreeType;
+    edgesAreVisible: boolean;
+    metadata: MetadataEntryProto[];
+    agglomerateInfo?: TreeAgglomerateInfo;
+  };
+} {
   return {
     name: "createTree",
     value: {
@@ -245,6 +364,7 @@ export function createTree(tree: Tree, actionTracingId: string) {
       type: tree.type,
       edgesAreVisible: tree.edgesAreVisible,
       metadata: enforceValidMetadata(tree.metadata),
+      agglomerateInfo: tree.agglomerateInfo,
     },
   } as const;
 }
@@ -263,7 +383,7 @@ export function updateTree(tree: Tree, actionTracingId: string) {
     value: {
       actionTracingId,
       id: tree.treeId,
-      updatedId: tree.treeId,
+      updatedId: undefined,
       color: tree.color,
       name: tree.name,
       timestamp: tree.timestamp,
@@ -274,6 +394,7 @@ export function updateTree(tree: Tree, actionTracingId: string) {
       type: tree.type,
       edgesAreVisible: tree.edgesAreVisible,
       metadata: enforceValidMetadata(tree.metadata),
+      agglomerateInfo: tree.agglomerateInfo,
     },
   } as const;
 }
@@ -468,39 +589,57 @@ export function moveTreeComponent(
 
 // This action only exists for legacy reasons. Old annotations may have this
 // action in the action log. Don't use it.
-export function LEGACY_updateVolumeTracingAction(
+function LEGACY_updateVolumeTracingAction(
   tracing: VolumeTracing,
   position: Vector3,
   editPositionAdditionalCoordinates: AdditionalCoordinate[] | null,
   rotation: Vector3,
   zoomLevel: number,
+  hideUnregisteredSegments: boolean,
 ) {
   return {
     name: "updateVolumeTracing",
     value: {
       actionTracingId: tracing.tracingId,
-      activeSegmentId: tracing.activeCellId,
+      activeSegmentId: asBigIntOrNumber(tracing.activeCellId),
       editPosition: position,
       editPositionAdditionalCoordinates,
       editRotation: rotation,
-      largestSegmentId: tracing.largestSegmentId,
-      hideUnregisteredSegments: tracing.hideUnregisteredSegments,
+      largestSegmentId:
+        tracing.largestSegmentId != null ? asBigIntOrNumber(tracing.largestSegmentId) : null,
+      hideUnregisteredSegments,
       zoomLevel,
     },
   } as const;
 }
 
-export function updateLargestSegmentId(largestSegmentId: number | null, actionTracingId: string) {
-  return { name: "updateLargestSegmentId", value: { largestSegmentId, actionTracingId } } as const;
+export function updateLargestSegmentId(largestSegmentId: bigint | null, actionTracingId: string) {
+  return {
+    name: "updateLargestSegmentId",
+    value: {
+      largestSegmentId: largestSegmentId != null ? asBigIntOrNumber(largestSegmentId) : null,
+      actionTracingId,
+    },
+  } as const;
 }
 
-export function updateActiveSegmentId(activeSegmentId: number, actionTracingId: string) {
+export function updateActiveSegmentId(activeSegmentId: bigint, actionTracingId: string) {
   return {
     name: "updateActiveSegmentId",
     value: {
       actionTracingId,
-      activeSegmentId,
+      activeSegmentId: asBigIntOrNumber(activeSegmentId),
     },
+  } as const;
+}
+
+export function updateVolumeBucketDataHasChanged(
+  volumeBucketDataHasChanged: boolean,
+  actionTracingId: string,
+) {
+  return {
+    name: "updateVolumeBucketDataHasChanged",
+    value: { volumeBucketDataHasChanged, actionTracingId },
   } as const;
 }
 
@@ -614,7 +753,7 @@ function _updateUserBoundingBoxHelper(
   const { boundingBox, ...rest } = updatedProps;
   const updatedPropsForServer =
     boundingBox != null
-      ? { ...rest, boundingBox: Utils.computeBoundingBoxObjectFromBoundingBox(boundingBox) }
+      ? { ...rest, boundingBox: computeBoundingBoxObjectFromBoundingBox(boundingBox) }
       : (updatedProps as Omit<PartialBoundingBoxWithoutVisibility, "boundingBox">);
   return {
     boundingBoxId,
@@ -661,8 +800,9 @@ export function updateUserBoundingBoxVisibilityInSkeletonTracing(
 }
 
 export function createSegmentVolumeAction(
-  id: number,
+  id: bigint,
   anchorPosition: Vector3 | null | undefined,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   name: string | null | undefined,
   color: Vector3 | null,
   groupId: number | null | undefined,
@@ -674,33 +814,7 @@ export function createSegmentVolumeAction(
     name: "createSegment",
     value: {
       actionTracingId,
-      id,
-      anchorPosition,
-      name,
-      color,
-      groupId,
-      metadata: enforceValidMetadata(metadata),
-      creationTime,
-    },
-  } as const;
-}
-
-export function updateSegmentVolumeAction(
-  id: number,
-  anchorPosition: Vector3 | null | undefined,
-  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
-  name: string | null | undefined,
-  color: Vector3 | null,
-  groupId: number | null | undefined,
-  metadata: Array<MetadataEntryProto>,
-  actionTracingId: string,
-  creationTime: number | null | undefined = Date.now(),
-) {
-  return {
-    name: "updateSegment",
-    value: {
-      actionTracingId,
-      id,
+      id: asBigIntOrNumber(id),
       anchorPosition,
       additionalCoordinates,
       name,
@@ -712,36 +826,154 @@ export function updateSegmentVolumeAction(
   } as const;
 }
 
+export function LEGACY_updateSegmentVolumeAction(
+  id: bigint,
+  anchorPosition: Vector3 | null | undefined,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
+  name: string | null | undefined,
+  color: Vector3 | null,
+  groupId: number | null | undefined,
+  metadata: Array<MetadataEntryProto>,
+  actionTracingId: string,
+  creationTime: number | null | undefined,
+) {
+  return {
+    name: "updateSegment",
+    value: {
+      actionTracingId,
+      id: asBigIntOrNumber(id),
+      anchorPosition,
+      additionalCoordinates,
+      name,
+      color,
+      groupId,
+      metadata: enforceValidMetadata(metadata),
+      creationTime,
+    },
+  } as const;
+}
+
+export function updateSegmentPartialVolumeAction(
+  shape: {
+    id: bigint;
+    anchorPosition?: Vector3 | null | undefined;
+    additionalCoordinates?: AdditionalCoordinate[] | undefined | null;
+    name?: string | null | undefined;
+    color?: Vector3 | null;
+    groupId?: number | null | undefined;
+    creationTime?: number | null | undefined;
+  },
+  actionTracingId: string,
+) {
+  return {
+    name: "updateSegmentPartial",
+    value: {
+      actionTracingId,
+      ...shape,
+      id: asBigIntOrNumber(shape.id),
+    },
+  } as const;
+}
+
+export function updateMetadataOfSegmentUpdateAction(
+  id: bigint,
+  upsertEntriesByKey: Array<MetadataEntryProto>,
+  removeEntriesByKey: Array<string>,
+  actionTracingId: string,
+) {
+  return {
+    name: "updateMetadataOfSegment",
+    value: {
+      id: asBigIntOrNumber(id),
+      upsertEntriesByKey: enforceValidMetadata(upsertEntriesByKey),
+      removeEntriesByKey,
+      actionTracingId,
+    },
+  } as const;
+}
+
+export function upsertSegmentGroupUpdateAction(
+  groupId: number,
+  properties: {
+    // If not set, the name is not updated. A group must always have a name.
+    name?: string;
+    // Includes moving the groups current subgroups.
+    newParentId?: number | null | undefined;
+  },
+  actionTracingId: string,
+) {
+  return {
+    name: "upsertSegmentGroup",
+    value: {
+      groupId,
+      actionTracingId,
+      ...properties,
+    },
+  } as const;
+}
+
+export function deleteSegmentGroupUpdateAction(groupId: number, actionTracingId: string) {
+  /*
+   * Will delete the specified group including all its subgroups.
+   */
+  return {
+    name: "deleteSegmentGroup",
+    value: {
+      groupId,
+      actionTracingId,
+    },
+  } as const;
+}
+
 export function updateSegmentVisibilityVolumeAction(
-  id: number,
+  id: bigint,
   isVisible: boolean,
   actionTracingId: string,
 ) {
   return {
     name: "updateSegmentVisibility",
     value: {
-      id,
+      id: asBigIntOrNumber(id),
       actionTracingId,
       isVisible,
     },
   } as const;
 }
 
-export function deleteSegmentVolumeAction(id: number, actionTracingId: string) {
+export function mergeSegmentItemsVolumeAction(
+  agglomerateId1: bigint,
+  agglomerateId2: bigint,
+  segmentId1: bigint,
+  segmentId2: bigint,
+  actionTracingId: string,
+) {
+  return {
+    name: "mergeSegmentItems",
+    value: {
+      actionTracingId,
+      agglomerateId1: asBigIntOrNumber(agglomerateId1), // aka "source"
+      agglomerateId2: asBigIntOrNumber(agglomerateId2), // aka "target"; will be "swallowed" by source
+      segmentId1: asBigIntOrNumber(segmentId1), // the unmapped ID (supervoxel) that belongs to agglomerateId1
+      segmentId2: asBigIntOrNumber(segmentId2), // the unmapped ID (supervoxel) that belongs to agglomerateId2
+    },
+  } as const;
+}
+
+export function deleteSegmentVolumeAction(id: bigint, actionTracingId: string) {
   return {
     name: "deleteSegment",
     value: {
       actionTracingId,
-      id,
+      id: asBigIntOrNumber(id),
     },
   } as const;
 }
-export function deleteSegmentDataVolumeAction(id: number, actionTracingId: string) {
+export function deleteSegmentDataVolumeAction(id: bigint, actionTracingId: string) {
   return {
     name: "deleteSegmentData",
     value: {
       actionTracingId,
-      id,
+      id: asBigIntOrNumber(id),
     },
   } as const;
 }
@@ -767,7 +999,10 @@ export function updateBucket(
   } as const;
 }
 
-export function updateSegmentGroups(segmentGroups: Array<SegmentGroup>, actionTracingId: string) {
+export function LEGACY_updateSegmentGroups(
+  segmentGroups: Array<SegmentGroup>,
+  actionTracingId: string,
+) {
   return {
     name: "updateSegmentGroups",
     value: {
@@ -895,71 +1130,83 @@ export function updateMappingName(
   } as const;
 }
 export function splitAgglomerate(
-  agglomerateId: NumberLike,
-  segmentId1: NumberLike,
-  segmentId2: NumberLike,
-  mag: Vector3,
+  segmentId1: bigint, // will keep its agglomerate id
+  segmentId2: bigint, // will get a new agglomerate id
+  agglomerateId: bigint,
   actionTracingId: string,
 ): {
+  /*
+   * Removes the edges between segmentId1 and segmentId2 that exist in the agglomerate graph.
+   * If the edge removal leads to an actual split of the two agglomerates,
+   * the agglomerate that belongs to segmentId1 will keep its agglomerate id.
+   * The other agglomerate will be assigned a new id (largestAgglomerateId + 1).
+   */
   name: "splitAgglomerate";
   value: {
     actionTracingId: string;
-    agglomerateId: number; // Unused in back-end.
-    segmentId1: number | undefined;
-    segmentId2: number | undefined;
+    // bigint | number (not just bigint): older persisted update actions may still have a plain
+    // number here, since they predate these fields' migration to bigint.
+    segmentId1: bigint | number | undefined;
+    segmentId2: bigint | number | undefined;
+    // agglomerateId is needed in live collab setting to notice changes of loaded agglomerates done by other users.
+    // Kept up-to-date in save queue by updateSaveQueueEntriesToStateAfterRebase saga. It may be undefined in old update actions.
+    agglomerateId?: bigint | number | undefined;
     // For backwards compatibility reasons,
     // older segments are defined using their positions (and mag)
     // instead of their unmapped ids.
     segmentPosition1?: Vector3 | undefined;
     segmentPosition2?: Vector3 | undefined;
-    mag: Vector3;
+    mag?: Vector3; // Unused in back-end but may exist in older update actions
   };
 } {
   return {
     name: "splitAgglomerate",
     value: {
       actionTracingId,
-      // TODO: Proper 64 bit support (#6921)
-      agglomerateId: Number(agglomerateId),
-      segmentId1: Number(segmentId1),
-      segmentId2: Number(segmentId2),
-      mag,
+      segmentId1,
+      segmentId2,
+      agglomerateId,
     },
   } as const;
 }
 export function mergeAgglomerate(
-  agglomerateId1: NumberLike,
-  agglomerateId2: NumberLike,
-  segmentId1: NumberLike,
-  segmentId2: NumberLike,
-  mag: Vector3,
+  segmentId1: bigint, // source
+  segmentId2: bigint, // target (will be "swallowed" by source)
+  agglomerateId1: bigint,
+  agglomerateId2: bigint,
   actionTracingId: string,
 ): {
+  /*
+   * Merges the agglomerates that belong to segmentId1 and segmentId2.
+   * The agglomerate that belongs to segmentId1 will keep its agglomerate id.
+   */
   name: "mergeAgglomerate";
   value: {
     actionTracingId: string;
-    agglomerateId1: number; // unused in backend
-    agglomerateId2: number; // unused in backend
-    segmentId1: number | undefined;
-    segmentId2: number | undefined;
+    // bigint | number (not just bigint): older persisted update actions may still have a plain
+    // number here, since they predate these fields' migration to bigint.
+    segmentId1: bigint | number | undefined;
+    segmentId2: bigint | number | undefined;
+    // agglomerateId1 and agglomerateId2 are needed in live collab setting to notice changes of loaded agglomerates done by other users.
+    // Kept up-to-date in save queue by updateSaveQueueEntriesToStateAfterRebase saga. Might be undefined in case of old update actions.
+    agglomerateId1?: bigint | number;
+    agglomerateId2?: bigint | number;
     // For backwards compatibility reasons,
     // older segments are defined using their positions (and mag)
     // instead of their unmapped ids.
     segmentPosition1?: Vector3 | undefined;
     segmentPosition2?: Vector3 | undefined;
-    mag: Vector3;
+    mag?: Vector3;
   };
 } {
   return {
     name: "mergeAgglomerate",
     value: {
       actionTracingId,
-      // TODO: Proper 64 bit support (#6921)
-      agglomerateId1: Number(agglomerateId1),
-      agglomerateId2: Number(agglomerateId2),
-      segmentId1: Number(segmentId1),
-      segmentId2: Number(segmentId2),
-      mag,
+      segmentId1,
+      segmentId2,
+      agglomerateId1,
+      agglomerateId2,
     },
   } as const;
 }

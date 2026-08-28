@@ -1,71 +1,75 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.Box
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
-import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, ProtoGeometryImplicits, SegmentStatistics}
+import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, ProtoGeometryConversions, SegmentStatistics}
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, WebknossosDataRequest}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.Box
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTracingService,
-                                               annotationService: TSAnnotationService,
-                                               volumeSegmentIndexService: VolumeSegmentIndexService,
-                                               editableMappingService: EditableMappingService)
-    extends ProtoGeometryImplicits
+class VolumeSegmentStatisticsService @Inject() (
+    volumeTracingService: VolumeTracingService,
+    annotationService: TSAnnotationService,
+    volumeSegmentIndexService: VolumeSegmentIndexService,
+    editableMappingService: EditableMappingService
+) extends ProtoGeometryConversions
     with LazyLogging
     with SegmentStatistics {
 
   protected lazy val bucketScanner = new NativeBucketScanner()
 
   // Returns the segment volume (=number of voxels) in the target mag
-  def getSegmentVolume(annotationId: ObjectId,
-                       tracingId: String,
-                       segmentId: Long,
-                       mag: Vec3Int,
-                       mappingName: Option[String],
-                       additionalCoordinates: Option[Seq[AdditionalCoordinate]])(implicit ec: ExecutionContext,
-                                                                                 tc: TokenContext): Fox[Long] =
+  def getSegmentVolume(
+      annotationId: ObjectId,
+      tracingId: String,
+      segmentId: Long,
+      mag: Vec3Int,
+      mappingName: Option[String],
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+      annotationVersion: Option[Long]
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     calculateSegmentVolume(
       segmentId,
       mag,
       additionalCoordinates,
-      getBucketPositions(annotationId, tracingId, mappingName, additionalCoordinates),
-      getDataForBucketPositions(annotationId, tracingId)
+      getBucketPositions(annotationId, tracingId, mappingName, additionalCoordinates, annotationVersion),
+      getDataForBucketPositions(annotationId, annotationVersion, tracingId)
     )
 
-  def getSegmentBoundingBox(annotationId: ObjectId,
-                            tracingId: String,
-                            segmentId: Long,
-                            mag: Vec3Int,
-                            mappingName: Option[String],
-                            additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[BoundingBox] =
+  def getSegmentBoundingBox(
+      annotationId: ObjectId,
+      tracingId: String,
+      segmentId: Long,
+      mag: Vec3Int,
+      mappingName: Option[String],
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+      annotationVersion: Option[Long]
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[BoundingBox] =
     calculateSegmentBoundingBox(
       segmentId,
       mag,
       additionalCoordinates,
-      getBucketPositions(annotationId, tracingId, mappingName, additionalCoordinates),
-      getDataForBucketPositions(annotationId, tracingId)
+      getBucketPositions(annotationId, tracingId, mappingName, additionalCoordinates, annotationVersion),
+      getDataForBucketPositions(annotationId, annotationVersion, tracingId)
     )
 
-  private def getDataForBucketPositions(annotationId: ObjectId, tracingId: String)(
+  private def getDataForBucketPositions(annotationId: ObjectId, annotationVersion: Option[Long], tracingId: String)(
       bucketPositions: Seq[Vec3Int],
       mag: Vec3Int,
-      additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
-      implicit tc: TokenContext,
-      ec: ExecutionContext): Fox[(Seq[Box[Array[Byte]]], ElementClass.Value)] =
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]]
+  )(using tc: TokenContext, ec: ExecutionContext): Fox[(Seq[Box[Array[Byte]]], ElementClass.Value)] =
     for {
-      tracing <- annotationService.findVolume(annotationId, tracingId) ?~> "tracing.notFound"
+      tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Msg.Annotation.notFound
       dataRequests = bucketPositions.map { position =>
         WebknossosDataRequest(
           position = position * mag * DataLayer.bucketLength,
@@ -73,29 +77,33 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
           cubeSize = DataLayer.bucketLength,
           fourBit = Some(false),
           applyAgglomerate = None,
-          version = None,
+          version = annotationVersion,
           additionalCoordinates = additionalCoordinates
         )
       }.toList
-      bucketDataBoxes <- if (tracing.getHasEditableMapping) {
-        val mappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
-        editableMappingService.volumeDataBucketBoxes(mappingLayer, dataRequests)
-      } else
-        volumeTracingService.dataBucketBoxes(annotationId,
-                                             tracingId,
-                                             tracing,
-                                             dataRequests,
-                                             includeFallbackDataIfAvailable = true)
+      bucketDataBoxes <-
+        if (tracing.getHasEditableMapping) {
+          val mappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
+          editableMappingService.volumeDataBucketBoxes(mappingLayer, dataRequests)
+        } else
+          volumeTracingService.dataBucketBoxes(
+            annotationId,
+            tracingId,
+            tracing,
+            dataRequests,
+            includeFallbackDataIfAvailable = true
+          )
     } yield (bucketDataBoxes, elementClassFromProto(tracing.elementClass))
 
-  private def getBucketPositions(annotationId: ObjectId,
-                                 tracingId: String,
-                                 mappingName: Option[String],
-                                 additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
-      segmentId: Long,
-      mag: Vec3Int)(implicit ec: ExecutionContext, tc: TokenContext) =
+  private def getBucketPositions(
+      annotationId: ObjectId,
+      tracingId: String,
+      mappingName: Option[String],
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+      annotationVersion: Option[Long]
+  )(segmentId: Long, mag: Vec3Int)(using ec: ExecutionContext, tc: TokenContext) =
     for {
-      tracing <- annotationService.findVolume(annotationId, tracingId) ?~> "tracing.notFound"
+      tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Msg.Annotation.notFound
       fallbackLayer <- volumeTracingService.getFallbackLayer(annotationId, tracing)
       allBucketPositions: Set[Vec3IntProto] <- volumeSegmentIndexService.getSegmentToBucketIndex(
         tracing,
@@ -105,6 +113,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
         mag,
         mappingName,
         editableMappingTracingId = volumeTracingService.editableMappingTracingId(tracing, tracingId),
+        annotationVersion.getOrElse(tracing.version),
         additionalCoordinates
       )
     } yield allBucketPositions

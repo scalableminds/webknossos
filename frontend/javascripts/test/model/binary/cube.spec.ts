@@ -1,13 +1,12 @@
-import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontracing_server_objects";
 import { sleep } from "libs/utils";
-import { describe, it, expect, beforeEach, vi } from "vitest";
 import datasetServerObject from "test/fixtures/dataset_server_object";
-import { MagInfo } from "viewer/model/helpers/mag_info";
+import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontracing_server_objects";
 import type { Vector3, Vector4 } from "viewer/constants";
-import { assertNonNullBucket, type DataBucket } from "viewer/model/bucket_data_handling/bucket";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
+import { assertNonNullBucket, type DataBucket } from "viewer/model/bucket_data_handling/bucket";
 import DataCube from "viewer/model/bucket_data_handling/data_cube";
-import runAsync from "test/helpers/run-async";
+import { MagInfo } from "viewer/model/helpers/mag_info";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("viewer/store", () => ({
   default: {
@@ -78,6 +77,12 @@ describe("DataCube", () => {
         this.queue.push(item);
       }
 
+      abortRequests() {
+        // Mirrors the real pull queue: aborting an in-flight request does not synchronously
+        // transition the affected bucket out of the REQUESTED state (that only happens later,
+        // once the aborted fetch rejects).
+      }
+
       async pull() {
         // If the pull happens synchronously, the bucketLoaded promise
         // in Bucket.ensureLoaded() is created too late. Therefore,
@@ -131,20 +136,84 @@ describe("DataCube", () => {
     expect(cube.buckets.length).toBe(1);
   });
 
+  it<TestContext>("ensureLoaded() should retry and load fresh data after a request failure", async ({
+    cube,
+  }) => {
+    // A request can fail for several reasons (backend failure, network error, or the request
+    // being aborted, e.g. because a concurrent reload called pullQueue.abortRequests()). In all
+    // of these cases, the bucket falls back to UNREQUESTED (see markAsFailed). Since the caller
+    // asked for the bucket to be loaded, ensureLoaded() must not settle for that empty bucket;
+    // it has to retry the request (the default PullQueueMock, set up in beforeEach, always
+    // succeeds) so that the caller ends up with real data instead of silently reading zeroes.
+    const bucket = cube.getOrCreateBucket([0, 0, 0, 0, []]);
+    assertNonNullBucket(bucket);
+
+    // Simulate the pull queue having requested the bucket...
+    bucket.markAsRequested();
+    const ensureLoadedPromise = bucket.ensureLoaded();
+
+    // ...and the request failing (e.g. due to an aborted request during a reload).
+    bucket.markAsFailed();
+    await ensureLoadedPromise;
+
+    expect(bucket.isLoaded()).toBe(true);
+    expect(bucket.hasData()).toBe(true);
+  });
+
+  it<TestContext>("ensureLoaded() should throw once the retry limit is exceeded", async ({
+    cube,
+  }) => {
+    // If the bucket's request keeps failing (e.g. a persistent backend or network error),
+    // ensureLoaded() must not retry forever. It should give up after a bounded number of
+    // retries and reject instead of hanging indefinitely.
+    const bucket = cube.getOrCreateBucket([0, 0, 0, 0, []]);
+    assertNonNullBucket(bucket);
+
+    let pullCount = 0;
+    const alwaysFailingPullQueue = {
+      add: () => {},
+      pull: async () => {
+        pullCount++;
+        // Mirrors the real pull queue: the bucketRequestFailed listeners in ensureLoaded()
+        // must already be registered by the time the event fires (see the default
+        // PullQueueMock above for the same reasoning).
+        await sleep(0);
+        if (bucket.needsRequest()) {
+          bucket.markAsRequested();
+        }
+        if (bucket.isRequested()) {
+          bucket.markAsFailed();
+        }
+      },
+      abortRequests: () => {},
+      clear: () => {},
+      destroy: () => {},
+    };
+    cube.initializeWithQueues(
+      alwaysFailingPullQueue as any,
+      { insert: vi.fn(), push: vi.fn() } as any,
+    );
+
+    // Passing an explicit, small maxRetries (instead of relying on the default) pins down
+    // the exact retry boundary and verifies that maxRetries is threaded through the
+    // recursive calls: one initial attempt plus exactly one retry, then ensureLoaded()
+    // must give up.
+    await expect(bucket.ensureLoaded(1)).rejects.toThrow();
+    expect(pullCount).toBe(2);
+    expect(bucket.hasData()).toBe(false);
+  });
+
   it<TestContext>("Voxel Labeling should request buckets when temporal buckets are created", async ({
     cube,
     pullQueue,
   }) => {
     cube._labelVoxelInResolution_DEPRECATED([1, 1, 1], null, 42, 0, null);
 
-    return runAsync([
-      () => {
-        expect(pullQueue.processedQueue[0]).toEqual({
-          bucket: [0, 0, 0, 0, []],
-          priority: -1,
-        });
-      },
-    ]);
+    await sleep(100);
+    expect(pullQueue.processedQueue[0]).toEqual({
+      bucket: [0, 0, 0, 0, []],
+      priority: -1,
+    });
   });
 
   it<TestContext>("Voxel Labeling should push buckets after they were pulled", async ({
@@ -152,14 +221,9 @@ describe("DataCube", () => {
     pushQueue,
   }) => {
     await cube._labelVoxelInResolution_DEPRECATED([1, 1, 1], null, 42, 0, null);
-
     const bucket = cube.getBucket([0, 0, 0, 0, []]);
 
-    return runAsync([
-      () => {
-        expect(pushQueue.insert).toHaveBeenCalledWith(bucket);
-      },
-    ]);
+    expect(pushQueue.insert).toHaveBeenCalledWith(bucket);
   });
 
   it<TestContext>("Voxel Labeling should push buckets immediately if they are pulled already", async ({
@@ -172,11 +236,7 @@ describe("DataCube", () => {
     bucket.receiveData(new Uint8Array(4 * 32 ** 3));
     await cube._labelVoxelInResolution_DEPRECATED([0, 0, 0], null, 42, 0, null);
 
-    return runAsync([
-      () => {
-        expect(pushQueue.insert).toHaveBeenCalledWith(bucket);
-      },
-    ]);
+    expect(pushQueue.insert).toHaveBeenCalledWith(bucket);
   });
 
   it<TestContext>("Voxel Labeling should only instantiate one bucket when labeling the same bucket twice", async ({
@@ -239,13 +299,83 @@ describe("DataCube", () => {
     ]);
   });
 
+  it<TestContext>("removeAllBuckets() should keep a bucket whose request is still in flight", ({
+    cube,
+  }) => {
+    // A reload aborts in-flight pull-queue requests, but abortion only settles asynchronously
+    // once the aborted fetch actually rejects. removeAllBuckets() must therefore keep such a
+    // bucket around (mayBeGarbageCollected() returns false while REQUESTED) instead of
+    // destroying it outright, since a fresh bucket could otherwise be created at the same
+    // address while the old request is still in flight.
+    const bucket = cube.getOrCreateBucket([0, 0, 0, 0, []]);
+    assertNonNullBucket(bucket);
+    bucket.markAsRequested();
+
+    expect(bucket.mayBeGarbageCollected(false)).toBe(false);
+
+    cube.removeAllBuckets();
+
+    expect(cube.buckets.length).toBe(1);
+    expect(cube.getBucket([0, 0, 0, 0, []])).toBe(bucket);
+    expect(bucket.isRequested()).toBe(true);
+  });
+
+  it<TestContext>("getLoadedBucket() should retry and return fresh data after a concurrent reload aborts the pending request", async ({
+    cube,
+  }) => {
+    // Reproduces the original race condition: a read is awaiting a bucket that is still
+    // REQUESTED when a reload happens. The reload aborts the in-flight request (but keeps the
+    // bucket itself, see the test above), so once the aborted request rejects, the very same
+    // bucket is marked as failed. ensureLoaded() (used internally by getLoadedBucket()) must not
+    // settle for that empty bucket; it has to retry loading it so that the caller ends up with
+    // the freshly reloaded data instead of silently reading zeroes.
+    const address: Vector4 = [0, 0, 0, 0];
+    let requestCount = 0;
+
+    const controllablePullQueue = {
+      add: () => {},
+      pull: async () => {
+        requestCount++;
+        const bucket = cube.getBucket(address);
+        if (bucket.type !== "data" || !bucket.needsRequest()) {
+          return;
+        }
+        bucket.markAsRequested();
+        // Mirrors the real pull queue: the request resolves asynchronously.
+        await sleep(0);
+
+        if (requestCount === 1) {
+          // Simulate a concurrent reload aborting this (the first) request.
+          bucket.markAsFailed();
+        } else {
+          bucket.receiveData(new Uint8Array(4 * 32 ** 3));
+        }
+      },
+      abortRequests: () => {},
+      clear: () => {},
+      destroy: () => {},
+    };
+    cube.initializeWithQueues(
+      controllablePullQueue as any,
+      { insert: vi.fn(), push: vi.fn() } as any,
+    );
+
+    const bucket = await cube.getLoadedBucket(address);
+    assertNonNullBucket(bucket);
+    // The same bucket object is retried and ends up loaded (there is no need to reload a
+    // fresh bucket at that address, since it was never destroyed by the reload).
+    expect(bucket).toBe(cube.getBucket(address));
+    expect(bucket.hasData()).toBe(true);
+    expect(requestCount).toBe(2);
+  });
+
   it<TestContext>("Garbage Collection should grow beyond soft limit if necessary", ({ cube }) => {
     cube.BUCKET_COUNT_SOFT_LIMIT = 3;
     const b1 = cube.getOrCreateBucket([0, 0, 0, 0, []]);
     const b2 = cube.getOrCreateBucket([1, 1, 1, 0]);
     const b3 = cube.getOrCreateBucket([2, 2, 2, 0]);
     // No bucket may be collected.
-    [b1, b2, b3].map((b) => {
+    [b1, b2, b3].forEach((b) => {
       assertNonNullBucket(b);
       b.markAsRequested();
     });

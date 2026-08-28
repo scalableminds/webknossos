@@ -1,6 +1,7 @@
 import { M4x4 } from "libs/mjs";
 import type TPS3D from "libs/thin_plate_spline";
-import _ from "lodash";
+import range from "lodash-es/range";
+import template from "lodash-es/template";
 import { type DataTexture, GLSL3, RawShaderMaterial } from "three";
 import { ViewModeValues, ViewModeValuesIndices } from "viewer/constants";
 import type { Uniforms } from "viewer/geometries/materials/plane_material_factory";
@@ -87,13 +88,24 @@ class NodeShader {
       viewMode: {
         value: 0,
       },
+      // When >= 0, nodes are culled unless they lie on the currently visible
+      // section. The value is the perpendicular axis of the rendered viewport
+      // (0 = x, 1 = y, 2 = z). -1 disables section clipping (e.g. for the 3D
+      // viewport or while the camera/dataset is rotated/transformed). It is set
+      // per render pass, see SceneController.updateSceneForCam.
+      clippingAxis: {
+        value: -1,
+      },
+      currentSectionFlycamPosition: {
+        value: [0, 0, 0],
+      },
     };
 
-    _.each(additionalCoordinates, (_val, idx) => {
-      this.uniforms[`currentAdditionalCoord_${idx}`] = {
+    for (const coord of additionalCoordinates ?? []) {
+      this.uniforms[`currentAdditionalCoord_${coord.name}`] = {
         value: 0,
       };
-    });
+    }
 
     this.storePropertyUnsubscribers = [
       listenToStoreProperty(
@@ -112,9 +124,9 @@ class NodeShader {
       listenToStoreProperty(
         (storeState) => storeState.flycam.additionalCoordinates,
         (additionalCoordinates) => {
-          _.each(additionalCoordinates, (coord, idx) => {
-            this.uniforms[`currentAdditionalCoord_${idx}`].value = coord.value;
-          });
+          for (const coord of additionalCoordinates ?? []) {
+            this.uniforms[`currentAdditionalCoord_${coord.name}`].value = coord.value;
+          }
         },
         true,
       ),
@@ -177,7 +189,7 @@ class NodeShader {
   getVertexShader(): string {
     const { additionalCoordinates } = Store.getState().flycam;
 
-    return _.template(`
+    return template(`
 precision highp float;
 precision highp int;
 
@@ -196,6 +208,8 @@ uniform int isPicking; // bool indicates whether we are currently rendering for 
 uniform int isTouch; // bool that is used during picking and indicates whether the picking was triggered by a touch event
 uniform float highlightCommentedNodes;
 uniform float viewMode;
+uniform int clippingAxis;
+uniform vec3 currentSectionFlycamPosition;
 
 uniform mat4 transform;
 
@@ -204,8 +218,8 @@ uniform mat4 transform;
   <%= generateCalculateTpsOffsetFunction("Skeleton", true) %>
 <% } %>
 
-<% _.range(additionalCoordinateLength).map((idx) => { %>
-  uniform float currentAdditionalCoord_<%= idx %>;
+<% additionalCoordinates.map((coord) => { %>
+  uniform float currentAdditionalCoord_<%= coord.name %>;
 <% }) %>
 
 uniform sampler2D treeColors;
@@ -213,8 +227,8 @@ uniform sampler2D treeColors;
 in float radius;
 in vec3 position;
 
-<% _.range(additionalCoordinateLength).map((idx) => { %>
-  in float additionalCoord_<%= idx %>;
+<% additionalCoordinates.map((coord) => { %>
+  in float additionalCoord_<%= coord.name %>;
 <% }) %>
 
 
@@ -254,8 +268,8 @@ vec3 shiftHue(vec3 color, float shiftValue) {
 }
 
 void main() {
-    <% _.range(additionalCoordinateLength).map((idx) => { %>
-      if (additionalCoord_<%= idx %> != currentAdditionalCoord_<%= idx %>) {
+    <% additionalCoordinates.map((coord) => { %>
+      if (!isnan(additionalCoord_<%= coord.name %>) && additionalCoord_<%= coord.name %> != currentAdditionalCoord_<%= coord.name %>) {
         return;
       }
     <% }) %>
@@ -282,11 +296,26 @@ void main() {
       return;
     }
 
+    // Nodes are rendered in the center of a voxel.
+    vec3 positionWithOffset = position + vec3(0.5);
+
+    // Optionally cull nodes that are not on the currently visible section.
+    // Section clipping happens in voxel/section space (integers), so it is
+    // robust against the half-voxel rendering offset and floating point issues.
+    if (clippingAxis >= 0) {
+      float sectionStart = floor(currentSectionFlycamPosition[clippingAxis]);
+      float perpCoord = positionWithOffset[clippingAxis];
+      if (perpCoord < sectionStart || perpCoord >= sectionStart + 1.0) {
+        gl_Position = vec4(-1.0, -1.0, -1.0, -1.0);
+        return;
+      }
+    }
+
     <% if (tpsTransform != null) { %>
-      vec3 tpsOffset = calculateTpsOffsetForSkeleton(position);
-      vec4 transformedCoord = vec4(position + tpsOffset, 1.);
+      vec3 tpsOffset = calculateTpsOffsetForSkeleton(positionWithOffset);
+      vec4 transformedCoord = vec4(positionWithOffset + tpsOffset, 1.);
     <% } else { %>
-      vec4 transformedCoord = transform * vec4(position, 1.);
+      vec4 transformedCoord = transform * vec4(positionWithOffset, 1.);
     <% } %>
     gl_Position = projectionMatrix * modelViewMatrix * transformedCoord;
 
@@ -326,7 +355,7 @@ void main() {
         : v_innerPointSize * 1.5;
       gl_PointSize = v_outerPointSize;
 
-      // Shift hue to further highlight active node in arbitrary mode.
+      // Shift hue to further highlight active node in flight mode.
       color = shiftHue(color, isOrthogonalMode ? 0. : 0.15);
     }
 
@@ -347,10 +376,11 @@ void main() {
     }
 
 }`)({
-      additionalCoordinateLength: (additionalCoordinates || []).length,
+      additionalCoordinates: additionalCoordinates || [],
       tpsTransform: this.scaledTps,
       generateTpsInitialization,
       generateCalculateTpsOffsetFunction,
+      range,
     });
   }
 

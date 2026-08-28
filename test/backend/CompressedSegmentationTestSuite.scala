@@ -2,11 +2,11 @@ package backend
 
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.compressedsegmentation.CompressedSegmentation64
-import org.scalatestplus.play.PlaySpec
+import org.scalatest.wordspec.AsyncWordSpec
 
 import java.nio.{ByteBuffer, ByteOrder}
 
-class CompressedSegmentationTestSuite extends PlaySpec {
+class CompressedSegmentationTestSuite extends AsyncWordSpec {
 
   "Compressed segmentation" when {
 

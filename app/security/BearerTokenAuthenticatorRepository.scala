@@ -1,11 +1,11 @@
 package security
 
-import play.silhouette.api.LoginInfo
 import play.silhouette.api.repositories.AuthenticatorRepository
 import play.silhouette.impl.authenticators.BearerTokenAuthenticator
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import TokenType.TokenType
+import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -22,11 +22,12 @@ class BearerTokenAuthenticatorRepository(tokenDAO: TokenDAO)(implicit ec: Execut
     (for {
       _ <- tokenDAO.updateLastUsedDateTime(
         newAuthenticator.id,
-        Instant.fromZonedDateTime(newAuthenticator.lastUsedDateTime),
+        Instant.fromZonedDateTime(newAuthenticator.lastUsedDateTime)
       )
       updated <- findOneByValue(newAuthenticator.id)
     } yield updated).toFutureOrThrowException(
-      "Could not update Token. Throwing exception because update cannot return a box, as defined by Silhouette trait AuthenticatorDAO")
+      "Could not update Token. Throwing exception because update cannot return a box, as defined by Silhouette trait AuthenticatorDAO"
+    )
 
   override def remove(value: String): Future[Unit] =
     for {
@@ -39,27 +40,31 @@ class BearerTokenAuthenticatorRepository(tokenDAO: TokenDAO)(implicit ec: Execut
       tokenAuthenticator <- tokenSQL.toBearerTokenAuthenticator
     } yield tokenAuthenticator
 
-  def findOneByLoginInfo(loginInfo: LoginInfo, tokenType: TokenType): Future[Option[BearerTokenAuthenticator]] =
+  def findOneForUserAndType(userId: ObjectId, tokenType: TokenType): Future[Option[BearerTokenAuthenticator]] =
     (for {
-      tokenSQL <- tokenDAO.findOneByLoginInfo(loginInfo.providerID, loginInfo.providerKey, tokenType)
+      tokenSQL <- tokenDAO.findOneByUserIdAndType(userId, tokenType)
       tokenAuthenticator <- tokenSQL.toBearerTokenAuthenticator
     } yield tokenAuthenticator).toFutureOption
 
-  def add(authenticator: BearerTokenAuthenticator,
-          tokenType: TokenType,
-          deleteOld: Boolean = true): Future[BearerTokenAuthenticator] = {
-    if (deleteOld) {
-      removeByLoginInfoIfPresent(authenticator.loginInfo, tokenType)
-    }
+  def add(
+      authenticator: BearerTokenAuthenticator,
+      tokenType: TokenType,
+      deleteOld: Boolean = true
+  ): Future[BearerTokenAuthenticator] =
     for {
+      _ <-
+        if (deleteOld) removeByUserIdIfPresent(LoginInfoAdapter.userIdFromLoginInfo(authenticator.loginInfo), tokenType)
+        else Future.successful(())
       _ <- insert(authenticator, tokenType).futureBox
     } yield authenticator
-  }
 
-  private def removeByLoginInfoIfPresent(loginInfo: LoginInfo, tokenType: TokenType): Unit =
+  private def removeByUserIdIfPresent(userId: ObjectId, tokenType: TokenType): Future[Unit] =
     for {
-      oldOpt <- findOneByLoginInfo(loginInfo, tokenType)
-      _ = oldOpt.foreach(old => remove(old.id))
+      oldOpt <- findOneForUserAndType(userId, tokenType)
+      _ <- oldOpt match {
+        case Some(old) => remove(old.id)
+        case None      => Future.successful(())
+      }
     } yield ()
 
   private def insert(authenticator: BearerTokenAuthenticator, tokenType: TokenType): Fox[Unit] =
@@ -70,5 +75,8 @@ class BearerTokenAuthenticatorRepository(tokenDAO: TokenDAO)(implicit ec: Execut
 
   def deleteAllExpired(): Fox[Unit] =
     tokenDAO.deleteAllExpired()
+
+  def hardDeleteOldTokens(): Fox[Unit] =
+    tokenDAO.hardDeleteOldTokens()
 
 }

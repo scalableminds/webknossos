@@ -1,15 +1,16 @@
 package com.scalableminds.util.time
 
 import com.scalableminds.util.mvc.Formatter
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.typesafe.scalalogging.{LazyLogging, Logger}
-import com.scalableminds.util.tools.Box.tryo
-import play.api.libs.json._
+import com.scalableminds.util.box.Box.tryo
+import play.api.libs.json.*
 
 import java.time.{ZoneId, ZonedDateTime}
 import java.time.format.DateTimeFormatter
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.{DurationLong, FiniteDuration}
+import scala.concurrent.duration.{DurationInt, DurationLong, FiniteDuration}
 
 case class Instant(epochMillis: Long) extends Ordered[Instant] {
   override def toString: String = DateTimeFormatter.ISO_INSTANT.format(toJavaInstant)
@@ -28,6 +29,10 @@ case class Instant(epochMillis: Long) extends Ordered[Instant] {
 
   def -(other: Instant): FiniteDuration = (epochMillis - other.epochMillis) milliseconds
 
+  // Full days from this instant until the other one, rounded up (6.5 days yield 7). Negative if the other one is past.
+  def daysUntil(other: Instant): Long =
+    math.ceil((other.epochMillis - epochMillis).toDouble / (1 day).toMillis).toLong
+
   def isPast: Boolean = this < Instant.now
 
   override def compare(that: Instant): Int =
@@ -44,7 +49,7 @@ case class Instant(epochMillis: Long) extends Ordered[Instant] {
   def weekyear: Int = toZonedDateTime.get(java.time.temporal.IsoFields.WEEK_BASED_YEAR)
 }
 
-object Instant extends FoxImplicits with LazyLogging with Formatter {
+object Instant extends LazyLogging with Formatter {
   def now: Instant = Instant(System.currentTimeMillis())
 
   def max: Instant = Instant(253370761200000L)
@@ -69,8 +74,11 @@ object Instant extends FoxImplicits with LazyLogging with Formatter {
 
   def nowFox(implicit ec: ExecutionContext): Fox[Instant] = Fox.successful(Instant.now)
 
-  def logSince(before: Instant, label: String, l: Logger = logger): Unit =
-    l.info(f"$label took ${formatDuration(Instant.since(before))}")
+  def logSince(before: Instant, label: String, l: Logger = logger, includeRawMillis: Boolean = false): Unit = {
+    val duration = Instant.since(before)
+    val rawMillisStr = if (includeRawMillis) s" (${duration.toMillis}ms)" else ""
+    l.info(f"$label took ${formatDuration(duration)}$rawMillisStr")
+  }
 
   def fromString(instantLiteral: String): Option[Instant] =
     fromIsoString(instantLiteral).orElse(fromEpochMillisString(instantLiteral))

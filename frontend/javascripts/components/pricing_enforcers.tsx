@@ -1,22 +1,22 @@
 import { LockOutlined } from "@ant-design/icons";
 import {
-  type PricingPlanEnum,
   getFeatureNotAvailableInPlanMessage,
   isFeatureAllowedByPricingPlan,
+  isUserAllowedToRequestUpgrades,
+  type PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
-import { isUserAllowedToRequestUpgrades } from "admin/organization/pricing_plan_utils";
 import UpgradePricingPlanModal from "admin/organization/upgrade_plan_modal";
 import { Alert, Button, type ButtonProps, Col, Popover, Result, Row } from "antd";
 import type { PopoverProps } from "antd/lib";
 import type { TooltipPlacement } from "antd/lib/tooltip";
+import { rgbToHex } from "libs/colors";
 import { useWkSelector } from "libs/react_hooks";
-import { rgbToHex } from "libs/utils";
-import _ from "lodash";
+import noop from "lodash-es/noop";
 import React from "react";
 import { Link } from "react-router-dom";
 import type { APIOrganization, APIUser } from "types/api_types";
 import { PRIMARY_COLOR } from "viewer/constants";
-import { SwitchSetting } from "viewer/view/components/setting_input_views";
+import SwitchSetting from "viewer/view/left_border_tabs/components/switch_setting";
 
 const PRIMARY_COLOR_HEX = rgbToHex(PRIMARY_COLOR);
 
@@ -132,9 +132,8 @@ export const PricingEnforcedButton: React.FunctionComponent<RequiredPricingProps
       activeOrganization={activeOrganization}
       placement="bottom"
     >
-      <Button {...buttonProps} disabled>
+      <Button {...buttonProps} disabled icon={<LockOutlined />} iconPlacement="end">
         {children}
-        <LockOutlined style={{ marginLeft: 5 }} />
       </Button>
     </PricingEnforcedPopover>
   );
@@ -160,17 +159,17 @@ export const PricingEnforcedSwitchSetting: React.FunctionComponent<
       activeOrganization={activeOrganization}
       placement="top"
     >
-      {/* The react element <></> is needed as a wrapper as otherwise
+      {/* The  <div></div> element is needed as a wrapper as otherwise
       the PricingEnforcedPopover will not be rendered. */}
-      <>
+      <div>
         <SwitchSetting
           label={label}
           value={defaultValue}
-          onChange={_.noop}
+          onChange={noop}
           disabled
           postSwitchIcon={<LockOutlined style={{ marginLeft: 5 }} />}
         />
-      </>
+      </div>
     </PricingEnforcedPopover>
   );
 };
@@ -226,7 +225,7 @@ export const PricingEnforcedBlur = ({
         >
           <Alert
             showIcon
-            message={getFeatureNotAvailableInPlanMessage(
+            title={getFeatureNotAvailableInPlanMessage(
               requiredPricingPlan,
               activeOrganization,
               activeUser,

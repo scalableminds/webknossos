@@ -5,9 +5,8 @@ import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.helpers.{IntervalScheduler, UPath}
@@ -16,21 +15,33 @@ import com.scalableminds.webknossos.datastore.models.annotation.AnnotationSource
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.uploading.{
+  AttachmentUploadAdditionalInfo,
+  AttachmentUploadInfo,
+  DatasetUploadAdditionalInfo,
+  DatasetUploadInfo,
+  MagUploadAdditionalInfo,
+  MagUploadInfo,
+  ReportAttachmentUploadParameters,
   ReportDatasetUploadParameters,
-  ReserveAdditionalInformation,
-  ReserveUploadInformation
+  ReportMagUploadParameters
 }
 import com.scalableminds.webknossos.datastore.storage.DataVaultCredential
 import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{Json, OFormat}
 
+import java.nio.file.Path
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 case class DataStoreStatus(ok: Boolean, url: String)
 object DataStoreStatus {
   implicit val jsonFormat: OFormat[DataStoreStatus] = Json.format[DataStoreStatus]
+}
+
+case class DataSourceWithRootPathInfo(dataSource: DataSource, rootPath: Option[String], rootRealPath: Option[String])
+object DataSourceWithRootPathInfo {
+  implicit val jsonFormat: OFormat[DataSourceWithRootPathInfo] = Json.format[DataSourceWithRootPathInfo]
 }
 
 case class TracingStoreInfo(name: String, url: String)
@@ -38,23 +49,29 @@ object TracingStoreInfo {
   implicit val jsonFormat: OFormat[TracingStoreInfo] = Json.format[TracingStoreInfo]
 }
 
-case class DataSourcePathInfo(dataSourceId: DataSourceId, magPathInfos: List[MagPathInfo])
+case class DataSourcePathInfo(
+    dataSourceId: DataSourceId,
+    magPathInfos: Seq[RealPathInfo],
+    attachmentPathInfos: Seq[RealPathInfo]
+) {
+  def nonEmpty: Boolean = magPathInfos.nonEmpty || attachmentPathInfos.nonEmpty
+}
 
 object DataSourcePathInfo {
   implicit val jsonFormat: OFormat[DataSourcePathInfo] = Json.format[DataSourcePathInfo]
 }
 
-case class MagPathInfo(layerName: String, mag: Vec3Int, path: UPath, realPath: UPath, hasLocalData: Boolean)
+case class RealPathInfo(path: UPath, realPath: UPath, hasLocalData: Boolean)
 
-object MagPathInfo {
-  implicit val jsonFormat: OFormat[MagPathInfo] = Json.format[MagPathInfo]
+object RealPathInfo {
+  implicit val jsonFormat: OFormat[RealPathInfo] = Json.format[RealPathInfo]
 }
 
 trait RemoteWebknossosClient {
-  def requestUserAccess(accessRequest: UserAccessRequest)(implicit tc: TokenContext): Fox[UserAccessAnswer]
+  def requestUserAccess(accessRequest: UserAccessRequest)(using tc: TokenContext): Fox[UserAccessAnswer]
 }
 
-class DSRemoteWebknossosClient @Inject()(
+class DSRemoteWebknossosClient @Inject() (
     rpc: RPC,
     config: DataStoreConfig,
     val lifecycle: ApplicationLifecycle,
@@ -62,8 +79,7 @@ class DSRemoteWebknossosClient @Inject()(
 )(implicit val ec: ExecutionContext)
     extends RemoteWebknossosClient
     with IntervalScheduler
-    with LazyLogging
-    with FoxImplicits {
+    with LazyLogging {
 
   private val dataStoreKey: String = config.Datastore.key
   private val dataStoreName: String = config.Datastore.name
@@ -75,72 +91,99 @@ class DSRemoteWebknossosClient @Inject()(
 
   def tick(): Fox[Unit] = reportStatus().map(_ => ())
 
-  private def reportStatus(): Fox[_] =
+  private def reportStatus(): Fox[?] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/status")
       .addQueryParam("key", dataStoreKey)
       .patchJson(DataStoreStatus(ok = true, dataStoreUri))
 
-  def reportDataSource(dataSource: DataSource): Fox[_] =
+  // Only used for legacy refresh
+  def reportDataSource(dataSource: DataSource): Fox[?] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasource")
       .addQueryParam("key", dataStoreKey)
       .putJson(dataSource)
 
-  def getUnfinishedUploadsForUser(organizationName: String)(implicit tc: TokenContext): Fox[List[UnfinishedUpload]] =
+  def getUnfinishedUploadsForUser(organizationName: String)(using tc: TokenContext): Fox[List[UnfinishedUpload]] =
     for {
-      unfinishedUploads <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/getUnfinishedUploadsForUser")
+      unfinishedUploads <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/getUnfinishedDatasetUploadsForUser")
         .addQueryParam("key", dataStoreKey)
         .addQueryParam("organizationName", organizationName)
         .withTokenFromContext
         .getWithJsonResponse[List[UnfinishedUpload]]
     } yield unfinishedUploads
 
-  def reportUpload(datasetId: ObjectId, parameters: ReportDatasetUploadParameters)(implicit tc: TokenContext): Fox[_] =
+  def reportDatasetUpload(datasetId: ObjectId, parameters: ReportDatasetUploadParameters)(using
+      tc: TokenContext
+  ): Fox[?] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/reportDatasetUpload")
       .addQueryParam("key", dataStoreKey)
       .addQueryParam("datasetId", datasetId)
       .withTokenFromContext
       .postJson[ReportDatasetUploadParameters](parameters)
 
-  def reportDataSources(dataSources: List[DataSource], organizationId: Option[String]): Fox[_] =
+  def reportMagUpload(parameters: ReportMagUploadParameters): Fox[?] =
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/reportMagUpload")
+      .addQueryParam("key", dataStoreKey)
+      .postJson[ReportMagUploadParameters](parameters)
+
+  def reportAttachmentUpload(parameters: ReportAttachmentUploadParameters): Fox[?] =
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/reportAttachmentUpload")
+      .addQueryParam("key", dataStoreKey)
+      .postJson[ReportAttachmentUploadParameters](parameters)
+
+  def reportDataSources(
+      dataSourcesWithPathInfo: Seq[DataSourceWithRootPathInfo],
+      organizationId: Option[String]
+  ): Fox[?] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources")
       .addQueryParam("key", dataStoreKey)
       .addQueryParam("organizationId", organizationId)
       .silent
-      .putJson(dataSources)
+      .putJson(dataSourcesWithPathInfo)
 
-  def reportRealPaths(dataSourcePaths: List[DataSourcePathInfo]): Fox[_] =
-    rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/paths")
+  def reportRealPaths(dataSourcePaths: Seq[DataSourcePathInfo]): Fox[?] =
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/realpaths")
       .addQueryParam("key", dataStoreKey)
       .silent
       .putJson(dataSourcePaths)
 
-  def reserveDataSourceUpload(info: ReserveUploadInformation)(
-      implicit tc: TokenContext): Fox[ReserveAdditionalInformation] =
-    for {
-      reserveUploadInfo <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/reserveUpload")
-        .addQueryParam("key", dataStoreKey)
-        .withTokenFromContext
-        .postJsonWithJsonResponse[ReserveUploadInformation, ReserveAdditionalInformation](info)
-    } yield reserveUploadInfo
+  def reserveDatasetUpload(info: DatasetUploadInfo)(using tc: TokenContext): Fox[DatasetUploadAdditionalInfo] =
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/reserveDatasetUpload")
+      .addQueryParam("key", dataStoreKey)
+      .withTokenFromContext
+      .postJsonWithJsonResponse[DatasetUploadInfo, DatasetUploadAdditionalInfo](info)
 
-  def updateDataSource(dataSource: DataSource, datasetId: ObjectId)(implicit tc: TokenContext): Fox[_] =
+  def reserveMagUpload(info: MagUploadInfo)(using tc: TokenContext): Fox[MagUploadAdditionalInfo] =
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/reserveMagUpload")
+      .addQueryParam("key", dataStoreKey)
+      .withTokenFromContext
+      .postJsonWithJsonResponse[MagUploadInfo, MagUploadAdditionalInfo](info)
+
+  def reserveAttachmentUpload(
+      info: AttachmentUploadInfo
+  )(using tc: TokenContext): Fox[AttachmentUploadAdditionalInfo] =
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/reserveAttachmentUpload")
+      .addQueryParam("key", dataStoreKey)
+      .withTokenFromContext
+      .postJsonWithJsonResponse[AttachmentUploadInfo, AttachmentUploadAdditionalInfo](info)
+
+  def updateDataSource(dataSource: DataSource, datasetId: ObjectId)(using tc: TokenContext): Fox[?] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/${datasetId.toString}")
       .addQueryParam("key", dataStoreKey)
       .withTokenFromContext
       .putJson(dataSource)
 
-  def deleteDataset(datasetId: ObjectId): Fox[_] =
+  def deleteDataset(datasetId: ObjectId): Fox[?] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/deleteDataset")
       .addQueryParam("key", dataStoreKey)
       .postJson(datasetId)
 
-  def getJobExportProperties(jobId: String): Fox[JobExportProperties] =
+  def getJobExportProperties(jobId: ObjectId): Fox[JobExportProperties] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/jobExportProperties")
       .addQueryParam("jobId", jobId)
       .addQueryParam("key", dataStoreKey)
       .getWithJsonResponse[JobExportProperties]
 
-  override def requestUserAccess(accessRequest: UserAccessRequest)(implicit tc: TokenContext): Fox[UserAccessAnswer] =
+  override def requestUserAccess(accessRequest: UserAccessRequest)(using tc: TokenContext): Fox[UserAccessAnswer] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/validateUserAccess")
       .addQueryParam("key", dataStoreKey)
       .withTokenFromContext
@@ -163,7 +206,7 @@ class DSRemoteWebknossosClient @Inject()(
   private lazy val annotationSourceCache: AlfuCache[(String, Option[String]), AnnotationSource] =
     AlfuCache(timeToLive = 5 seconds, timeToIdle = 5 seconds)
 
-  def getAnnotationSource(accessToken: String)(implicit tc: TokenContext): Fox[AnnotationSource] =
+  def getAnnotationSource(accessToken: String)(using tc: TokenContext): Fox[AnnotationSource] =
     annotationSourceCache.getOrLoad(
       (accessToken, tc.userTokenOpt),
       _ =>
@@ -207,4 +250,13 @@ class DSRemoteWebknossosClient @Inject()(
           .addQueryParam("datasetDirectoryName", datasetDirectoryName)
           .getWithJsonResponse[ObjectId] ?~> "Failed to get dataset id from remote webknossos"
     )
+
+  def getLocalRootPathOrEmpty(datasetId: ObjectId): Fox[Path] =
+    for {
+      rootPathStr <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/findDatasetLocalRootPath")
+        .addQueryParam("key", dataStoreKey)
+        .addQueryParam("datasetId", datasetId)
+        .getWithJsonResponse[String] ?~> "Failed to get data source root path remote webknossos"
+      rootPath <- if (rootPathStr.isEmpty) Fox.empty else Fox.successful(Path.of(rootPathStr))
+    } yield rootPath
 }

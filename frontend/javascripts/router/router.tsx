@@ -1,9 +1,12 @@
+import AccountSettingsView from "admin/account/account_settings_view";
 import AcceptInviteView from "admin/auth/accept_invite_view";
 import FinishResetPasswordView from "admin/auth/finish_reset_password_view";
 import LoginView from "admin/auth/login_view";
 import RegistrationView from "admin/auth/registration_view";
 import StartResetPasswordView from "admin/auth/start_reset_password_view";
+import VerifyEmailView from "admin/auth/verify_email_view";
 import DatasetAddView from "admin/dataset/dataset_add_view";
+import { DatasetURLImport, datasetURLImportLoader } from "admin/dataset/dataset_url_import";
 import JobListView from "admin/job/job_list_view";
 import OrganizationView from "admin/organization/organization_view";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
@@ -13,6 +16,7 @@ import ScriptCreateView from "admin/scripts/script_create_view";
 import ScriptListView from "admin/scripts/script_list_view";
 import AvailableTasksReportView from "admin/statistic/available_tasks_report_view";
 import ProjectProgressReportView from "admin/statistic/project_progress_report_view";
+import TimeTrackingOverview from "admin/statistic/time_tracking_overview";
 import TaskCreateFormView from "admin/task/task_create_form_view";
 import TaskCreateView from "admin/task/task_create_view";
 import TaskListView from "admin/task/task_list_view";
@@ -20,44 +24,43 @@ import TaskTypeCreateView from "admin/tasktype/task_type_create_view";
 import TaskTypeListView from "admin/tasktype/task_type_list_view";
 import TeamListView from "admin/team/team_list_view";
 import UserListView from "admin/user/user_list_view";
+import AiModelListView from "admin/voxelytics/ai_model_list_view";
 import { Layout } from "antd";
+import ErrorBoundary from "components/error_boundary";
 import { Imprint, Privacy } from "components/legal";
 import SecuredRoute from "components/secured_route";
 import DashboardView from "dashboard/dashboard_view";
 import PublicationDetailView from "dashboard/publication_details_view";
+import loadable from "libs/lazy_loader";
 import Navbar from "navbar";
 import {
+  createBrowserRouter,
+  createRoutesFromElements,
   Navigate,
   Outlet,
   Route,
-  createBrowserRouter,
-  createRoutesFromElements,
   redirect,
 } from "react-router-dom";
-
-import AccountSettingsView from "admin/account/account_settings_view";
-import VerifyEmailView from "admin/auth/verify_email_view";
-import { DatasetURLImport } from "admin/dataset/dataset_url_import";
-import TimeTrackingOverview from "admin/statistic/time_tracking_overview";
-import AiModelListView from "admin/voxelytics/ai_model_list_view";
-import ErrorBoundary from "components/error_boundary";
-import loadable from "libs/lazy_loader";
-import type { EmptyObject } from "types/globals";
+import type { EmptyObject } from "types/type_utils";
 import { CommandPalette } from "viewer/view/components/command_palette";
 
 const { Content } = Layout;
+
 import AccountAuthTokenView from "admin/account/account_auth_token_view";
 import AccountProfileView from "admin/account/account_profile_view";
 import AccountSecurityView from "admin/account/account_security_view";
+import { OrganizationCreditActivityView } from "admin/organization/organization_credit_activity_view";
 import { OrganizationDangerZoneView } from "admin/organization/organization_danger_zone_view";
 import { OrganizationNotificationsView } from "admin/organization/organization_notifications_view";
 import { OrganizationOverviewView } from "admin/organization/organization_overview_view";
+import { OrganizationPlanActivityView } from "admin/organization/organization_plan_activity_view";
 import DatasetSettingsDataTab from "dashboard/dataset/dataset_settings_data_tab";
 import DatasetSettingsDeleteTab from "dashboard/dataset/dataset_settings_delete_tab";
 import DatasetSettingsMetadataTab from "dashboard/dataset/dataset_settings_metadata_tab";
 import DatasetSettingsSharingTab from "dashboard/dataset/dataset_settings_sharing_tab";
+import DatasetSettingsStorageTab from "dashboard/dataset/dataset_settings_storage_tab";
 import DatasetSettingsViewConfigTab from "dashboard/dataset/dataset_settings_viewconfig_tab";
-import { useWkSelector } from "libs/react_hooks";
+import AlignDatasetsView from "viewer/view/layouting/align_datasets_view";
 import { PageNotFoundView } from "./page_not_found_view";
 import {
   AnnotationsRouteWrapper,
@@ -75,7 +78,6 @@ import {
   TracingViewRouteWrapper,
   UserDetailsRouteWrapper,
 } from "./route_wrappers";
-import AlignDatasetsView from "viewer/view/layouting/align_datasets_view";
 
 const AsyncWorkflowView = loadable<EmptyObject>(() => import("admin/voxelytics/workflow_view"));
 const AsyncWorkflowListView = loadable<EmptyObject>(
@@ -83,15 +85,10 @@ const AsyncWorkflowListView = loadable<EmptyObject>(
 );
 
 function RootLayout() {
-  const isAuthenticated = useWkSelector((state) => state.activeUser != null);
-  const isAdminView = useWkSelector((state) => !state.uiInformation.isInAnnotationView);
-
   return (
     <Layout style={{ height: "100%" }}>
-      {/* TODO: always show command palette; remove logic from router
-      within tracing view, the command palette is rendered in the status bar. */}
-      {isAuthenticated && isAdminView && <CommandPalette label={null} />}
-      <Navbar isAuthenticated={isAuthenticated} />
+      <CommandPalette />
+      <Navbar />
       <Content>
         <ErrorBoundary>
           <Outlet />
@@ -141,6 +138,7 @@ const routes = createRoutesFromElements(
     />
     <Route
       path="/import"
+      loader={datasetURLImportLoader}
       element={
         <SecuredRoute requiresAdminOrManagerRole>
           <DatasetURLImport />
@@ -282,6 +280,7 @@ const routes = createRoutesFromElements(
       <Route path="sharing" element={<DatasetSettingsSharingTab />} />
       <Route path="metadata" element={<DatasetSettingsMetadataTab />} />
       <Route path="defaultConfig" element={<DatasetSettingsViewConfigTab />} />
+      <Route path="storage" element={<DatasetSettingsStorageTab />} />
       <Route path="delete" element={<DatasetSettingsDeleteTab />} />
     </Route>
     <Route
@@ -371,6 +370,8 @@ const routes = createRoutesFromElements(
       <Route index element={<Navigate to="overview" replace />} />
       <Route path="overview" element={<OrganizationOverviewView />} />
       <Route path="notifications" element={<OrganizationNotificationsView />} />
+      <Route path="credit-activity" element={<OrganizationCreditActivityView />} />
+      <Route path="planupdates" element={<OrganizationPlanActivityView />} />
       <Route path="delete" element={<OrganizationDangerZoneView />} />
     </Route>
     <Route
@@ -453,7 +454,28 @@ const routes = createRoutesFromElements(
       }
     />
     <Route
-      path="/workflows/:workflowName"
+      path="/workflows/:workflowHash"
+      loader={({ params, request }) => {
+        const url = new URL(request.url);
+        const runId = url.searchParams.get("runId");
+        if (runId) {
+          url.searchParams.delete("runId");
+          const search = url.searchParams.toString();
+
+          return redirect(
+            `/workflows/${params.workflowHash}/run/${encodeURIComponent(runId)}${search ? `?${search}` : ""}`,
+          );
+        }
+        return null;
+      }}
+      element={
+        <SecuredRoute>
+          <AsyncWorkflowView />
+        </SecuredRoute>
+      }
+    />
+    <Route
+      path="/workflows/:workflowHash/run/:runId"
       element={
         <SecuredRoute>
           <AsyncWorkflowView />

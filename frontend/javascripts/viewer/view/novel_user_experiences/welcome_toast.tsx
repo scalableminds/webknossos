@@ -1,60 +1,111 @@
-import { App, Button, ConfigProvider } from "antd";
+import drawingWavingPerson from "@images/backgrounds/waving-person.svg";
+import WKLogoIcon from "@images/wk-logo.svg?react";
+import { Button, ConfigProvider, Flex, notification, Space, Typography } from "antd";
 import type { NotificationInstance } from "antd/es/notification/interface";
 import features from "features";
-import { useEffectOnlyOnce } from "libs/react_hooks";
-import { useWkSelector } from "libs/react_hooks";
+import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
-import { ColorWKBlue, ColorWKBlueZircon, getAntdTheme } from "theme";
+import defaultsDeep from "lodash-es/defaultsDeep";
+import { ColorWhite, ColorWKBlue, getAntdTheme } from "theme";
 
-const lightThemaWithCyanButton = {
-  ...getAntdTheme("light"),
-  token: { colorPrimary: ColorWKBlueZircon },
-  components: { Button: { primaryColor: ColorWKBlue } },
-};
+// White buttons with blue text/border to stand out against the wk-blue background.
+// The toast background is always wk-blue, so these three shades are deliberately literal and must
+// NOT be replaced by theme tokens – they have to stay white/near-white in both themes.
+const darkThemeWithWhiteButtons = defaultsDeep(
+  {
+    components: {
+      Button: {
+        colorPrimary: ColorWhite,
+        colorPrimaryHover: "#e6e6e6",
+        colorPrimaryActive: "#d9d9d9",
+        primaryColor: ColorWKBlue,
+      },
+    },
+  },
+  getAntdTheme("dark"),
+);
 
 function showWelcomeToast(notification: NotificationInstance) {
   notification.open({
-    className: "webknossos-welcome-toast",
     duration: 0,
     placement: "bottomRight",
-    icon: <i className="logo" />,
-    message: "Welcome to WEBKNOSSOS",
+    title: (
+      <Flex justify="space-between" align="flex-start" gap="middle">
+        <Typography.Title level={4}>Welcome to WEBKNOSSOS</Typography.Title>
+        <WKLogoIcon
+          width={64}
+          height={64}
+          style={{
+            filter: "brightness(4)",
+            flexShrink: 0,
+          }}
+        />
+      </Flex>
+    ),
     description: (
-      <div>
-        <p>
+      <Space orientation="vertical" size="middle">
+        <Typography.Paragraph>
           WEBKNOSSOS is a web-based platform for visualization, annotation, and sharing of
           large-scale 3D image datasets.
-        </p>
-        <p>Try out the annotation features and upload your own data with a free account.</p>
-        <div>
-          <ConfigProvider theme={lightThemaWithCyanButton}>
-            <Button type="primary" href="/auth/signup" target="_blank" rel="noopener noreferrer">
-              Create a free account
+        </Typography.Paragraph>
+        <Typography.Paragraph style={{ width: "90%" }}>
+          Try out the annotation features and upload your own data with a free account.
+        </Typography.Paragraph>
+        <Flex gap="middle">
+          <Button
+            type="primary"
+            href="/auth/signup"
+            target="_blank"
+            rel="noopener noreferrer"
+            block
+          >
+            Create a free account
+          </Button>
+          <span style={{ position: "relative" }}>
+            <img
+              src={drawingWavingPerson}
+              alt="waving person"
+              style={{
+                height: 100,
+                position: "absolute",
+                top: 4,
+                right: 0,
+                transform: "translate(15%, -104%)",
+                pointerEvents: "none",
+              }}
+            />
+            <Button
+              href="https://webknossos.org/features"
+              target="_blank"
+              rel="noopener noreferrer"
+              type="primary"
+              ghost
+            >
+              Learn more
             </Button>
-            <span className="drawing-welcome-guy">
-              <Button
-                href="https://webknossos.org/features"
-                target="_blank"
-                rel="noopener noreferrer"
-                type="primary"
-                ghost
-                style={{
-                  marginLeft: 12,
-                }}
-              >
-                Learn More
-              </Button>
-            </span>
-          </ConfigProvider>
-        </div>
-      </div>
+          </span>
+        </Flex>
+      </Space>
     ),
+    styles: {
+      root: {
+        padding: 34,
+        backgroundColor: ColorWKBlue,
+      },
+      description: {
+        marginInlineStart: 0,
+      },
+      title: {
+        marginBottom: 20,
+        color: ColorWhite,
+      },
+    },
   });
 }
 
 export default function WelcomeToast() {
   const activeUser = useWkSelector((state) => state.activeUser);
-  const { notification } = App.useApp();
+  const [api, contextHolder] = notification.useNotification();
 
   useEffectOnlyOnce(() => {
     if (!features().isWkorgInstance) {
@@ -67,7 +118,7 @@ export default function WelcomeToast() {
 
     if (activeUser == null && hasSeenToast == null) {
       // Only if the user is not logged in and has never seen the toast before, we show it here.
-      showWelcomeToast(notification);
+      showWelcomeToast(api);
     }
 
     // Even if the toast wasn't opened above, we set the hasSeen bit, since the decision to not
@@ -75,5 +126,5 @@ export default function WelcomeToast() {
     // should also *not* appear after a registered user logs out.
     UserLocalStorage.setItem("novelUserExperienceInfos.hasSeenWelcomeToast", "true", false);
   });
-  return null;
+  return <ConfigProvider theme={darkThemeWithWhiteButtons}>{contextHolder}</ConfigProvider>;
 }

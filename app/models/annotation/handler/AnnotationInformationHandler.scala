@@ -1,23 +1,25 @@
 package models.annotation.handler
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 
 import javax.inject.Inject
 import models.annotation.AnnotationType.AnnotationType
-import models.annotation._
+import models.annotation.*
 import models.user.User
 import com.scalableminds.util.objectid.ObjectId
 import models.dataset.{DatasetDAO, DatasetService}
-import play.api.i18n.MessagesProvider
 
 import scala.annotation.{nowarn, tailrec}
 import scala.concurrent.ExecutionContext
 
-class AnnotationInformationHandlerSelector @Inject()(projectInformationHandler: ProjectInformationHandler,
-                                                     taskInformationHandler: TaskInformationHandler,
-                                                     taskTypeInformationHandler: TaskTypeInformationHandler,
-                                                     savedTracingInformationHandler: SavedTracingInformationHandler) {
+class AnnotationInformationHandlerSelector @Inject() (
+    projectInformationHandler: ProjectInformationHandler,
+    taskInformationHandler: TaskInformationHandler,
+    taskTypeInformationHandler: TaskTypeInformationHandler,
+    savedTracingInformationHandler: SavedTracingInformationHandler
+) {
   val informationHandlers: Map[AnnotationType, AnnotationInformationHandler] = Map(
     AnnotationType.CompoundProject -> projectInformationHandler,
     AnnotationType.CompoundTask -> taskInformationHandler,
@@ -25,7 +27,7 @@ class AnnotationInformationHandlerSelector @Inject()(projectInformationHandler: 
   ).withDefaultValue(savedTracingInformationHandler)
 }
 
-trait AnnotationInformationHandler extends FoxImplicits {
+trait AnnotationInformationHandler {
 
   def datasetDAO: DatasetDAO
   def datasetService: DatasetService
@@ -35,14 +37,13 @@ trait AnnotationInformationHandler extends FoxImplicits {
 
   def useCache: Boolean = true
 
-  def provideAnnotation(identifier: ObjectId, user: Option[User])(implicit ctx: DBAccessContext,
-                                                                  mp: MessagesProvider): Fox[Annotation]
+  def provideAnnotation(identifier: ObjectId, user: Option[User])(using ctx: DBAccessContext): Fox[Annotation]
 
   @nowarn // suppress warning about unused implicit ctx, as it is used in subclasses
-  def nameForAnnotation(t: Annotation)(implicit ctx: DBAccessContext): Fox[String] =
+  def nameForAnnotation(t: Annotation)(using ctx: DBAccessContext): Fox[String] =
     Fox.successful(t.id)
 
-  def restrictionsFor(identifier: ObjectId)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions]
+  def restrictionsFor(identifier: ObjectId)(using ctx: DBAccessContext): Fox[AnnotationRestrictions]
 
   def assertAllOnSameDataset(annotations: List[Annotation]): Fox[Boolean] = {
     @tailrec
@@ -53,7 +54,7 @@ trait AnnotationInformationHandler extends FoxImplicits {
       }
 
     annotations match {
-      case List() => Fox.successful(true)
+      case List()    => Fox.successful(true)
       case head :: _ =>
         if (allOnSameDatasetIter(annotations, head._dataset))
           Fox.successful(true)
@@ -66,10 +67,10 @@ trait AnnotationInformationHandler extends FoxImplicits {
     if (seq.isEmpty) Fox.failure("no annotations")
     else Fox.successful(())
 
-  protected def registerDataSourceInTemporaryStore(temporaryAnnotationId: ObjectId, datasetId: ObjectId)(
-      implicit mp: MessagesProvider): Fox[Unit] =
+  protected def registerDataSourceInTemporaryStore(temporaryAnnotationId: ObjectId, datasetId: ObjectId): Fox[Unit] =
     for {
-      dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation"
+      dataset <- datasetDAO.findOne(datasetId)(using GlobalAccessContext) ?~> Msg.Dataset
+        .notFoundForAnnotation(datasetId, temporaryAnnotationId)
       dataSource <- datasetService.usableDataSourceFor(dataset)
       _ = annotationDataSourceTemporaryStore.store(temporaryAnnotationId, dataSource, datasetId)
     } yield ()

@@ -1,13 +1,14 @@
 package controllers
 
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.typesafe.config.ConfigRenderOptions
 import mail.{DefaultMails, Send}
 import models.organization.OrganizationDAO
-import models.user.UserService
+import models.user.MultiUserDAO
 import org.apache.pekko.actor.ActorSystem
-import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, Result}
+import play.api.libs.json.{Json, OFormat}
+import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
 import play.silhouette.api.Silhouette
 import security.{CertificateValidationService, WkEnv}
 import utils.sql.{SimpleSQLDAO, SqlClient}
@@ -16,14 +17,24 @@ import utils.{BuildInfoService, WkConf}
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class Application @Inject()(actorSystem: ActorSystem,
-                            userService: UserService,
-                            buildInfoService: BuildInfoService,
-                            organizationDAO: OrganizationDAO,
-                            conf: WkConf,
-                            defaultMails: DefaultMails,
-                            sil: Silhouette[WkEnv],
-                            certificateValidationService: CertificateValidationService)(implicit ec: ExecutionContext)
+case class HelpEmailParameters(
+    message: String,
+    currentUrl: String
+)
+object HelpEmailParameters {
+  implicit val jsonFormat: OFormat[HelpEmailParameters] = Json.format[HelpEmailParameters]
+}
+
+class Application @Inject() (
+    actorSystem: ActorSystem,
+    multiUserDAO: MultiUserDAO,
+    buildInfoService: BuildInfoService,
+    organizationDAO: OrganizationDAO,
+    conf: WkConf,
+    defaultMails: DefaultMails,
+    sil: Silhouette[WkEnv],
+    certificateValidationService: CertificateValidationService
+)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
   private lazy val Mailer =
@@ -38,7 +49,8 @@ class Application @Inject()(actorSystem: ActorSystem,
 
   // This only changes on server restart, so we can cache the full result.
   private lazy val cachedFeaturesResult: Result = addNoCacheHeaderFallback(
-    Ok(conf.raw.underlying.getConfig("features").resolve.root.render(ConfigRenderOptions.concise())).as(jsonMimeType))
+    Ok(conf.raw.underlying.getConfig("features").resolve.root.render(ConfigRenderOptions.concise())).as(jsonMimeType)
+  )
 
   def features: Action[AnyContent] = sil.UserAwareAction {
     cachedFeaturesResult
@@ -48,19 +60,22 @@ class Application @Inject()(actorSystem: ActorSystem,
     addNoCacheHeaderFallback(Ok("Ok"))
   }
 
-  def checkCertificate: Action[AnyContent] = Action.async { implicit request =>
+  def checkCertificate: Action[AnyContent] = Action.fox { _ =>
     certificateValidationService.checkCertificateCached().map {
       case (true, expiresAt)  => Ok(Json.obj("isValid" -> true, "expiresAt" -> expiresAt))
       case (false, expiresAt) => BadRequest(Json.obj("isValid" -> false, "expiresAt" -> expiresAt))
     }
   }
 
-  def helpEmail(message: String, currentUrl: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {
-      organization <- organizationDAO.findOne(request.identity._organization)
-      userEmail <- userService.emailFor(request.identity)
-      _ = Mailer ! Send(defaultMails.helpMail(request.identity, userEmail, organization.name, message, currentUrl))
-    } yield Ok
+  def helpEmail(): Action[HelpEmailParameters] = sil.SecuredAction.fox(validateJson[HelpEmailParameters]) {
+    implicit request =>
+      for {
+        organization <- organizationDAO.findOne(request.identity._organization)
+        multiUser <- multiUserDAO.findOne(request.identity._multiUser)
+        _ = Mailer ! Send(
+          defaultMails.helpMail(multiUser, organization.name, request.body.message, request.body.currentUrl)
+        )
+      } yield Ok
   }
 
   def getSecurityTxt: Action[AnyContent] = Action {
@@ -73,9 +88,8 @@ class Application @Inject()(actorSystem: ActorSystem,
 
 }
 
-class ReleaseInformationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
-    extends SimpleSQLDAO(sqlClient)
-    with FoxImplicits {
+class ReleaseInformationDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
+    extends SimpleSQLDAO(sqlClient) {
   def getSchemaVersion(implicit ec: ExecutionContext): Fox[Int] =
     for {
       rList <- run(q"SELECT schemaVersion FROM webknossos.releaseInformation".as[Int])

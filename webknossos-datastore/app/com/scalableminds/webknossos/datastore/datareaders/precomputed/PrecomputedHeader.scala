@@ -13,11 +13,13 @@ import play.api.libs.json.Json.WithDefaultValues
 
 import java.nio.ByteOrder
 
-case class PrecomputedHeader(`type`: String,
-                             data_type: String,
-                             num_channels: Int,
-                             scales: List[PrecomputedScale],
-                             mesh: Option[String]) {
+case class PrecomputedHeader(
+    `type`: String,
+    data_type: String,
+    num_channels: Int,
+    scales: List[PrecomputedScale],
+    mesh: Option[String]
+) {
 
   def getScale(key: String): Option[PrecomputedScale] =
     scales.find(s => s.key == key)
@@ -27,14 +29,16 @@ case class PrecomputedHeader(`type`: String,
   def meshPath: String = mesh.getOrElse("mesh")
 }
 
-case class PrecomputedScale(key: String,
-                            size: Array[Long],
-                            resolution: Array[Double],
-                            chunk_sizes: Array[Array[Int]],
-                            encoding: String,
-                            voxel_offset: Option[Array[Int]],
-                            compressed_segmentation_block_size: Option[Vec3Int],
-                            sharding: Option[ShardingSpecification]) {
+case class PrecomputedScale(
+    key: String,
+    size: Array[Long],
+    resolution: Array[Double],
+    chunk_sizes: Array[Array[Int]],
+    encoding: String,
+    voxel_offset: Option[Array[Int]],
+    compressed_segmentation_block_size: Option[Vec3Int],
+    sharding: Option[ShardingSpecification]
+) {
 
   // From the neuroglancer specification (https://github.com/google/neuroglancer/blob/master/src/neuroglancer/datasource/precomputed/volume.md#info-json-file-specification)
   // > "chunk_sizes": Array of 3-element [x, y, z] arrays of integers specifying the x, y, and z dimensions in voxels of each supported chunk size. Typically just a single chunk size will be specified as [[x, y, z]].
@@ -58,37 +62,47 @@ case class PrecomputedScaleHeader(precomputedScale: PrecomputedScale, precompute
   override lazy val byteOrder: ByteOrder = ByteOrder.LITTLE_ENDIAN
 
   override def resolvedDataType: ArrayDataType =
-    PrecomputedDataType.toArrayDataType(PrecomputedDataType.fromString(precomputedHeader.data_type.toLowerCase).get)
+    PrecomputedDataType.toArrayDataType(
+      PrecomputedDataType
+        .fromString(precomputedHeader.data_type.toLowerCase)
+        .getOrElse(
+          throw new IllegalArgumentException(
+            s"Unsupported NeuroglancerPrecomputed dataType: ${precomputedHeader.data_type}"
+          )
+        )
+    )
 
   lazy val compressorImpl: Compressor = PrecomputedCompressorFactory.create(this)
 
-  override def chunkShapeAtIndex(chunkIndex: Array[Int]): Array[Int] =
+  override def chunkShapeAtIndex(chunkIndex: Array[Long]): Array[Int] =
     chunkIndexToNDimensionalBoundingBox(chunkIndex).map(dim => dim._2 - dim._1)
 
   override def voxelOffset: Array[Int] = precomputedScale.voxel_offset.getOrElse(Array(0, 0, 0))
 
-  def chunkIndexToNDimensionalBoundingBox(chunkIndex: Array[Int]): Array[(Int, Int)] =
-    chunkIndex.zipWithIndex.map(chunkIndexWithDim => {
+  // Neuroglancer precomputed chunk grids are bounded spatial voxel coordinates, so narrowing back to Int here is safe.
+  def chunkIndexToNDimensionalBoundingBox(chunkIndex: Array[Long]): Array[(Int, Int)] =
+    chunkIndex.zipWithIndex.map { chunkIndexWithDim =>
       val (chunkIndexAtDim, dim) = chunkIndexWithDim
       val beginOffset = voxelOffset(dim) + chunkIndexAtDim * precomputedScale.primaryChunkShape(dim)
       val endOffset = voxelOffset(dim) + ((chunkIndexAtDim + 1) * precomputedScale.primaryChunkShape(dim))
-        .min(precomputedScale.size(dim).toInt)
-      (beginOffset, endOffset)
-    })
+        .min(precomputedScale.size(dim))
+      (beginOffset.toInt, endOffset.toInt)
+    }
 
   def gridSize: Array[Int] = chunkShape.zip(precomputedScale.size).map { case (c, s) => (s.toDouble / c).ceil.toInt }
 
   override def isSharded: Boolean = precomputedScale.sharding.isDefined
 }
 
-case class ShardingSpecification(`@type`: String,
-                                 preshift_bits: Long,
-                                 hash: String,
-                                 minishard_bits: Int,
-                                 shard_bits: Long,
-                                 minishard_index_encoding: String = "raw",
-                                 data_encoding: String = "raw")
-    extends ByteUtils {
+case class ShardingSpecification(
+    `@type`: String,
+    preshift_bits: Long,
+    hash: String,
+    minishard_bits: Int,
+    shard_bits: Long,
+    minishard_index_encoding: String = "raw",
+    data_encoding: String = "raw"
+) extends ByteUtils {
 
   def hashFunction(input: Long): Long =
     hash match {
@@ -97,7 +111,7 @@ case class ShardingSpecification(`@type`: String,
       case _                     => throw new IllegalArgumentException(s"Unsupported hash function: $hash")
     }
 
-  private lazy val minishardMask = {
+  private lazy val minishardMask =
     if (minishard_bits == 0) {
       0
     } else {
@@ -108,17 +122,19 @@ case class ShardingSpecification(`@type`: String,
       }
       minishardMask
     }
-  }
 
   private lazy val shardMask = {
-    val oneMask = 0xFFFFFFFFFFFFFFFFL
+    val oneMask = 0xffffffffffffffffL
     val cursor = minishard_bits + shard_bits
     val shardMask = ~((oneMask >> cursor) << cursor)
     shardMask & (~minishardMask)
   }
 
   def getMinishardInfo(chunkHash: Long): (Long, Long) = {
-    val rawChunkIdentifier = chunkHash >> preshift_bits
+    // Neuroglancer sharded ids are unsigned 64-bit, so this must be an unsigned shift: chunkHash can be
+    // a uint64 segment id >= 2^63, and a signed >> would sign-extend garbage bits into rawChunkIdentifier,
+    // which (for a non-identity hash function) then propagates into a wrong shard/minishard.
+    val rawChunkIdentifier = chunkHash >>> preshift_bits
     val chunkIdentifier = hashFunction(rawChunkIdentifier)
     val minishardNumber = chunkIdentifier & minishardMask
     val shardNumber = (chunkIdentifier & shardMask) >> minishard_bits

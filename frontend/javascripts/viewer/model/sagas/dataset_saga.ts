@@ -1,13 +1,13 @@
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import { sleep } from "libs/utils";
-import { sum } from "lodash";
+import sum from "lodash-es/sum";
 import messages from "messages";
 import { call, put, takeEvery, takeLatest } from "typed-redux-saga";
 import { Identity4x4 } from "viewer/constants";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
-import { hasSegmentIndex } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
+import { hasSegmentIndex } from "viewer/view/right_border_tabs/segments_tab/segments_view_helper";
 import {
   getEnabledLayers,
   getLayerByName,
@@ -25,9 +25,9 @@ import {
   type EnsureSegmentIndexIsLoadedAction,
   setLayerHasSegmentIndexAction,
 } from "../actions/dataset_actions";
-import { ensureWkReady } from "./ready_sagas";
+import { ensureWkInitialized } from "./ready_sagas";
 
-export function* watchMaximumRenderableLayers(): Saga<void> {
+function* watchMaximumRenderableLayers(): Saga<void> {
   function* warnMaybe(): Saga<void> {
     const maximumLayerCountToRender = yield* select(
       (state) => state.temporaryConfiguration.gpuSetup.maximumLayerCountToRender,
@@ -51,11 +51,11 @@ export function* watchMaximumRenderableLayers(): Saga<void> {
     }
   }
 
-  yield* takeEvery(["WK_READY", "UPDATE_LAYER_SETTING", "UPDATE_DATASET_SETTING"], warnMaybe);
+  yield* takeEvery(["WK_INITIALIZED", "UPDATE_LAYER_SETTING", "UPDATE_DATASET_SETTING"], warnMaybe);
 }
 
 let userClosedWarning = false;
-export function* watchZ1Downsampling(): Saga<void> {
+function* watchZ1Downsampling(): Saga<void> {
   function* maybeShowWarning(): Saga<void> {
     if (userClosedWarning) {
       return;
@@ -152,8 +152,8 @@ export function* watchZ1Downsampling(): Saga<void> {
     }
   }
 
-  yield* call(ensureWkReady);
-  // Once WK is ready, a correct maximumZoomForAllMags attribute is computed
+  yield* call(ensureWkInitialized);
+  // Once WK is initialized, a correct maximumZoomForAllMags attribute is computed
   // asynchronously. During that time, we don't want to show any warning.
   // Therefore, we sleep a little bit here.
   yield* call(sleep, 1000);
@@ -171,7 +171,7 @@ export function* watchZ1Downsampling(): Saga<void> {
   );
 }
 
-export function* ensureSegmentIndexIsLoaded(): Saga<void> {
+function* ensureSegmentIndexIsLoaded(): Saga<void> {
   function* maybeFetchHasSegmentIndex(action: EnsureSegmentIndexIsLoadedAction): Saga<void> {
     const { layerName } = action;
     const dataset = yield* select((state) => state.dataset);

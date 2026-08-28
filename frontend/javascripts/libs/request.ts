@@ -1,16 +1,23 @@
+import { bigIntReviver, unsignedBigIntReplacer } from "libs/bigint_helpers";
 import handleStatus from "libs/handle_http_status";
-import _ from "lodash";
-import type { ArbitraryObject } from "types/globals";
+import defaultsDeep from "lodash-es/defaultsDeep";
+import isArrayBuffer from "lodash-es/isArrayBuffer";
+import isObject from "lodash-es/isObject";
+import isString from "lodash-es/isString";
+import map from "lodash-es/map";
+import type { ArbitraryObject } from "types/type_utils";
 import urljoin from "url-join";
 import { createWorker } from "viewer/workers/comlink_wrapper";
-import CompressWorker from "viewer/workers/compress.worker";
-import FetchBufferWorker from "viewer/workers/fetch_buffer.worker";
-import FetchBufferWithHeadersWorker from "viewer/workers/fetch_buffer_with_headers.worker";
+import type Compress from "../viewer/workers/compress.worker";
+import type FetchBuffer from "../viewer/workers/fetch_buffer.worker";
+import type FetchBufferWithHeaders from "../viewer/workers/fetch_buffer_with_headers.worker";
 import { handleError } from "./handle_request_error_helper";
 
-const fetchBufferViaWorker = createWorker(FetchBufferWorker);
-const fetchBufferWithHeaders = createWorker(FetchBufferWithHeadersWorker);
-const compress = createWorker(CompressWorker);
+const fetchBufferViaWorker = createWorker<typeof FetchBuffer>("fetch_buffer.worker.ts");
+const fetchBufferWithHeaders = createWorker<typeof FetchBufferWithHeaders>(
+  "fetch_buffer_with_headers.worker.ts",
+);
+const compress = createWorker<typeof Compress>("compress.worker.ts");
 
 type method = "GET" | "POST" | "DELETE" | "HEAD" | "OPTIONS" | "PUT" | "PATCH";
 
@@ -27,6 +34,10 @@ export type RequestOptionsBase<T> = {
   showErrorToast?: boolean;
   timeout?: number;
   useWebworkerForArrayBuffer?: boolean;
+  // Lets a caller cancel the request. Only honored for the plain fetch() path
+  // (i.e. not when useWebworkerForArrayBuffer is set -- AbortSignal can't be
+  // handed across the comlink worker boundary).
+  signal?: AbortSignal;
 };
 export type RequestOptions = RequestOptionsBase<Record<string, string>>;
 export type RequestOptionsWithData<T> = RequestOptions & {
@@ -39,7 +50,7 @@ class Request {
   receiveJSON = (url: string, options: RequestOptions = {}): Promise<any> =>
     this.triggerRequest(
       url,
-      _.defaultsDeep(options, {
+      defaultsDeep(options, {
         headers: {
           Accept: "application/json",
         },
@@ -62,9 +73,9 @@ class Request {
     }
 
     let body =
-      _.isString(options.data) || _.isArrayBuffer(options.data)
+      isString(options.data) || isArrayBuffer(options.data)
         ? options.data
-        : JSON.stringify(options.data);
+        : JSON.stringify(options.data, unsignedBigIntReplacer);
 
     if (options.compress) {
       body = await compress(body);
@@ -78,7 +89,7 @@ class Request {
       }
     }
 
-    return _.defaultsDeep(options, {
+    return defaultsDeep(options, {
       method: "POST",
       body,
       headers: {
@@ -143,7 +154,7 @@ class Request {
     const body = options.data instanceof FormData ? options.data : toFormData(options.data);
     return this.receiveJSON(
       url,
-      _.defaultsDeep(options, {
+      defaultsDeep(options, {
         method: "POST",
         body,
       }),
@@ -158,7 +169,7 @@ class Request {
   ): Promise<any> =>
     this.receiveJSON(
       url,
-      _.defaultsDeep(options, {
+      defaultsDeep(options, {
         method: "POST",
         body: options.data,
         headers: {
@@ -170,7 +181,7 @@ class Request {
   receiveArraybuffer = (url: string, options: RequestOptions = {}): Promise<any> =>
     this.triggerRequest(
       url,
-      _.defaultsDeep(options, {
+      defaultsDeep(options, {
         headers: {
           Accept: "application/octet-stream",
           "Access-Control-Request-Headers": "content-type, missing-buckets",
@@ -213,7 +224,7 @@ class Request {
       showErrorToast: true,
       params: null,
     };
-    options = _.defaultsDeep(options, defaultOptions);
+    options = defaultsDeep(options, defaultOptions);
 
     if (options.host) {
       url = urljoin(options.host, url);
@@ -224,10 +235,10 @@ class Request {
       let appendix;
       const { params } = options;
 
-      if (_.isString(params)) {
+      if (isString(params)) {
         appendix = params;
-      } else if (_.isObject(params)) {
-        appendix = _.map(params, (value: string, key: string) => `${key}=${value}`).join("&");
+      } else if (isObject(params)) {
+        appendix = map(params, (value: string, key: string) => `${key}=${value}`).join("&");
       } else {
         throw new Error("options.params is expected to be a string or object for a request!");
       }
@@ -246,24 +257,68 @@ class Request {
     // @ts-expect-error ts-migrate(2322) FIXME: Type 'Headers' is not assignable to type 'Record<s... Remove this comment to see the full error message
     options.headers = headers;
     let fetchPromise;
+    // Set (synchronously, before the abort it triggers can possibly propagate)
+    // when our own timeout -- not a caller-supplied signal -- caused the abort,
+    // so the shared catch below can deterministically normalize it to a plain
+    // Timeout error.
+    let didTimeOut = false;
 
     if (options.useWebworkerForArrayBuffer) {
       fetchPromise = options.extractHeaders
         ? fetchBufferWithHeaders(url, options)
         : fetchBufferViaWorker(url, options);
     } else {
-      fetchPromise = fetch(url, options).then((response) => handleStatus(response));
+      // Actually cancel the underlying fetch (not just abandon the promise) when
+      // either a caller-supplied signal fires, or options.timeout elapses. Both
+      // are funneled into one internal controller so fetch() only ever sees a
+      // single combined signal.
+      const abortController = new AbortController();
+      const externalSignal = options.signal;
+      if (externalSignal != null) {
+        if (externalSignal.aborted) {
+          abortController.abort(externalSignal.reason);
+        } else {
+          externalSignal.addEventListener("abort", () =>
+            abortController.abort(externalSignal.reason),
+          );
+        }
+      }
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
+      if (options.timeout != null) {
+        timeoutId = setTimeout(() => {
+          didTimeOut = true;
+          abortController.abort();
+        }, options.timeout);
+      }
+
+      fetchPromise = fetch(url, { ...options, signal: abortController.signal }).then((response) =>
+        handleStatus(response),
+      );
 
       if (responseDataHandler != null) {
         fetchPromise = fetchPromise.then(responseDataHandler);
       }
+      if (timeoutId != null) {
+        // Capture the non-null variable for TS:
+        const idToClear = timeoutId;
+        fetchPromise = fetchPromise.finally(() => clearTimeout(idToClear));
+      }
     }
 
-    fetchPromise = fetchPromise.catch((error) =>
-      handleError(url, options.showErrorToast || false, !options.doNotInvestigate, error),
-    );
+    fetchPromise = fetchPromise.catch((error: any) => {
+      if (didTimeOut) {
+        // Skip handleError entirely for our own timeout, same as before
+        // AbortController was introduced here: no toast/ping/url-suffix for a
+        // plain client-side timeout.
+        throw new Error("Timeout");
+      }
+      return handleError(url, options.showErrorToast || false, !options.doNotInvestigate, error);
+    });
 
-    if (options.timeout != null) {
+    if (options.useWebworkerForArrayBuffer && options.timeout != null) {
+      // The webworker path has no AbortController wiring (a signal can't cross
+      // the comlink boundary), so it can't be cancelled -- fall back to the old
+      // abandon-the-promise race, which at least stops the caller from waiting.
       return Promise.race([fetchPromise, this.timeoutPromise(options.timeout)]).then((result) => {
         if (result === "timeout") {
           throw new Error("Timeout");
@@ -271,9 +326,8 @@ class Request {
           return result;
         }
       });
-    } else {
-      return fetchPromise;
     }
+    return fetchPromise;
   };
 
   timeoutPromise = (timeout: number): Promise<string> =>
@@ -286,7 +340,7 @@ class Request {
       if (responseText.length === 0) {
         return {};
       } else {
-        return JSON.parse(responseText);
+        return JSON.parse(responseText, bigIntReviver);
       }
     });
 }
@@ -294,4 +348,3 @@ class Request {
 const requestSingleton = new Request();
 
 export default requestSingleton;
-export type RequestType = typeof requestSingleton;

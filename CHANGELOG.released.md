@@ -7,6 +7,495 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
+## [26.09.0](https://github.com/scalableminds/webknossos/releases/tag/26.09.0) - 2026-08-21
+[Commits](https://github.com/scalableminds/webknossos/compare/26.08.1...26.09.0)
+
+### Highlights
+- Added support for (un)signed int64 segmentations. Note that even signed segmentations only fully support positive segment ids. While negative ids can be rendered, interacting with them (including annotating them) is not supported. [#9765](https://github.com/scalableminds/webknossos/pull/9765)
+- Sharing links now also restore the camera of the 3D viewport (position, rotation and zoom) as it was when the link was created. The projection type (perspective vs. orthographic) is not part of this, since it is a per-user setting. [#9868](https://github.com/scalableminds/webknossos/pull/9868)
+- Added a new sliders-button to the bounding box tab so that the user can change the position and extent of a bounding box with sliders. [#9897](https://github.com/scalableminds/webknossos/pull/9897)
+- The 3D viewport now renders with a perspective camera by default. The projection can be switched between perspective and orthographic in the settings dropdown of the 3D viewport. Note that the scalebar of the 3D viewport is only exact at the rotation-center depth when the perspective projection is active. [#9764](https://github.com/scalableminds/webknossos/pull/9764)
+
+
+### Added
+- When drag’n’dropping an NML/annotation without editPosition/editRotation into an open dataset (view mode), the imported annotation will take the current editPosition/editRotation as fallback. [#9817](https://github.com/scalableminds/webknossos/pull/9817)
+- Imported skeleton annotations (NML/zip) can now be put into a specific existing tree group instead of always being added at the root of the tree hierarchy. When a single file is imported, the name of the newly created group can be edited. The design of the modal was updated to accommodate this change. [#9825](https://github.com/scalableminds/webknossos/pull/9825)
+- The "Custom Configuration" input for AI jobs now supports list values (e.g. `1, 2, 3`) and lists of value groups (e.g. `[0, 0, 0], [10, 10, 10]`) in addition to single values. [#9871](https://github.com/scalableminds/webknossos/pull/9871)
+- Added a keyboard shortcut to navigate the first additional axis / 4th dimension (e.g. t axis). The shortcut has no default binding and needs to be manually set by the user via the keyboard shortcuts modal. [#9877](https://github.com/scalableminds/webknossos/pull/9877)
+- When an organization is upgraded to a higher pricing plan, its owner and all admins now receive an email highlighting the features unlocked by the new plan. Upgrades that skip a tier (e.g. Personal to Power) list the highlights of the skipped tiers as well. [#9885](https://github.com/scalableminds/webknossos/pull/9885)
+- Organizations whose pricing plan is about to expire now get a reminder email. It is sent to the organization owner and all admins 30, 14 and 7 days before the expiry date and contains the plan name, the expiry date and a link to renew. Trial plans get a single reminder 7 days before expiry. The lead times can be configured via `webKnossos.pricingPlanExpiryReminder.leadTimesDays` and `webKnossos.pricingPlanExpiryReminder.trialLeadTimesDays`, and the reminders can be turned off via `webKnossos.pricingPlanExpiryReminder.enabled`. [#9886](https://github.com/scalableminds/webknossos/pull/9886)
+- Added configurable keyboard shortcuts for centering the 3D viewport and rotating it to the XY, YZ, XZ or diagonal orientation. They have no default key binding and can be assigned in the keyboard shortcut settings. [#9895](https://github.com/scalableminds/webknossos/pull/9895)
+
+### Changed
+- Long dropdowns, e.g. the mesh file and resolution selection in the Segments tab, are now rendered virtualized so that only the visible entries are added to the DOM. [#9848](https://github.com/scalableminds/webknossos/pull/9848)
+- Changed the name of the mapping type "HDF5" to "AGGLOMERATE" as this type of mapping information can already be stored in zarr format. Thus, having it named HDF5 does no longer make sense. The legacy value "HDF5" is still accepted by the routes and is converted to "AGGLOMERATE" automatically. [#9856](https://github.com/scalableminds/webknossos/pull/9856)
+- Content-hashed frontend assets are now cached indefinitely by the browser instead of for one hour. [#9862](https://github.com/scalableminds/webknossos/pull/9862)
+- Jobs that store their results in WEBKNOSSOS (AI inference, section alignment, mesh file and segment index file computation, volume annotation materialization) can no longer be started while the organization’s storage quota is exceeded. Previously, such jobs ran to completion and only failed when uploading their results. The corresponding buttons are now disabled with an explanatory message. [#9884](https://github.com/scalableminds/webknossos/pull/9884)
+- Improved that user notifications don't auto-close anymore when the user is not active on the WEBKNOSSOS page. [#9887](https://github.com/scalableminds/webknossos/pull/9887)
+- The details sidebar in the dashboard now stays on-screen when scrolling. [#9912](https://github.com/scalableminds/webknossos/pull/9912)
+
+### Fixed
+- Fixed a potential bug in the live collaboration mode where user-local skeleton tracing state could be incorrectly reset when changes from other users were applied. [#9773](https://github.com/scalableminds/webknossos/pull/9773)
+- Fixed unnecessary re-renders and recomputations in the viewer UI (info tab, layer settings, bounding box tab, abstract tree tab, save button, action bar, version history). The version history list is now virtualized, so long histories render much faster. [#9798](https://github.com/scalableminds/webknossos/pull/9798)
+- Fixed that enabling Maximum Intensity Projection (MIP) for a hidden bounding box (layer or user bounding box) did not render anything in the 3D viewport. The bounding box is now made visible automatically as soon as a MIP layer is enabled for it. [#9802](https://github.com/scalableminds/webknossos/pull/9802)
+- Fixed a bug where revoking the user auth token would lead to running worker jobs failing. They now use a separate token. [#9815](https://github.com/scalableminds/webknossos/pull/9815)
+- Fixed a bug where the looked-up segment id at a position could be stale (e.g. after splits/merges during proofreading, when additional coordinates changed or when the visible segmentation layer changed), because the lookup was memoized only on the position. [#9818](https://github.com/scalableminds/webknossos/pull/9818)
+- Fixed that the initial zoom value of a dataset or annotation could lie outside of the valid zoom range (e.g., zoomed in further than the finest available magnification allows). The zoom value is now clamped as soon as the valid zoom range is known. [#9821](https://github.com/scalableminds/webknossos/pull/9821)
+- Fixed a race condition where reading data (e.g. via the JS API's `getDataValue`) right after reloading buckets could intermittently return empty data, because a concurrent reload could abort the bucket's pending request without the read retrying it. [#9822](https://github.com/scalableminds/webknossos/pull/9822)
+- Fixed that a user could become a member of an already deleted team when joining via an invite link that was created before the team was deleted. Deleting a team now also removes its pending invite roles. [#9827](https://github.com/scalableminds/webknossos/pull/9827)
+- Fixed keyboard shortcuts silently breaking during an annotation session. After typing a shifted punctuation character such as `?` or `:` into any text field (comment, tree or segment name, search box), every single-key shortcut — `1`, `2`, `3`, `b`, `j`, `c`, space, the arrow keys — stopped working until the browser window lost and regained focus. [#9834](https://github.com/scalableminds/webknossos/pull/9834)
+- Fixed `Cmd + S`, `Cmd + Z` and `Cmd + Y` not working on macOS. Because saving never ran, `Cmd + S` also opened the browser's "Save Page" dialog. [#9834](https://github.com/scalableminds/webknossos/pull/9834)
+- Fixed <kbd>Esc</kbd> not doing anything in plane mode, which meant an in-progress quick select could not be cancelled. [#9834](https://github.com/scalableminds/webknossos/pull/9834)
+- Fixed a partially typed `Ctrl + K` shortcut staying armed indefinitely, so that the next single key pressed — however much later — switched the tool instead of triggering its own shortcut. [#9834](https://github.com/scalableminds/webknossos/pull/9834)
+- Fixed shortcuts on punctuation keys being displayed incorrectly in the info tab, and shortcut collisions not being reported when re-recording a key that a default shortcut already used. [#9834](https://github.com/scalableminds/webknossos/pull/9834)
+- Fixed the raw JSON view of the keyboard shortcut settings falling out of sync with the table view after resetting to defaults. [#9834](https://github.com/scalableminds/webknossos/pull/9834)
+- Fixed an issue where tree visibility in the viewports could become out of sync with the visibility setting in the Trees tab. [#9835](https://github.com/scalableminds/webknossos/pull/9835)
+- Fixes a bug that single file uploads with "color" or "segmentation" in their name yielded errors. [#9844](https://github.com/scalableminds/webknossos/pull/9844)
+- Fixed that various confirmation and info dialogs were not rendered with the active WEBKNOSSOS theme (e.g. in dark mode). [#9846](https://github.com/scalableminds/webknossos/pull/9846)
+- Fixed several hardcoded colors that did not adapt to the dark theme. Greys, status colors and borders in the annotation list, dataset table, publication cards, user and job lists, the voxelytics workflow view, the project progress report, the shortcut recorder and the help chat now use the theme tokens and are legible in both the light and the dark theme. [#9850](https://github.com/scalableminds/webknossos/pull/9850)
+- Fixed the delete buttons in the dataset and annotation metadata tables not appearing greyed out while a save was in progress or in read-only annotations. [#9857](https://github.com/scalableminds/webknossos/pull/9857)
+- Fixed the date filter icon in the organization credit activity table not being highlighted while a filter was active. [#9857](https://github.com/scalableminds/webknossos/pull/9857)
+- Fixed the close button of the layer transform settings popover not being reachable via keyboard. [#9857](https://github.com/scalableminds/webknossos/pull/9857)
+- Fixed the background grid and the default node colors of the minimap in the Voxelytics workflow graph not being applied. [#9859](https://github.com/scalableminds/webknossos/pull/9859)
+- Fixed the edge labels of a selected task in the Voxelytics workflow graph not being highlighted. [#9859](https://github.com/scalableminds/webknossos/pull/9859)
+- Fixed a small bug leading to an error toast if the browser autofill feature is used in input fields. [#9860](https://github.com/scalableminds/webknossos/pull/9860)
+- Fixed that WEBKNOSSOS could render without any styling after a new version was deployed, which previously required a hard reload (Ctrl/Cmd + Shift + R) to recover from. [#9862](https://github.com/scalableminds/webknossos/pull/9862)
+- Fixed that the calendar icon of the date filter in the organization's credit activity table did not get highlighted while a date range filter was active. [#9863](https://github.com/scalableminds/webknossos/pull/9863)
+- Fixed loading attachments like mesh files for remote datasets with user-supplied credentials. Existing datasets may need to be re-imported for this fix to reach them. [#9873](https://github.com/scalableminds/webknossos/pull/9873)
+- Fixed a "415 Unsupported Media Type" error when cancelling a dataset upload. [#9880](https://github.com/scalableminds/webknossos/pull/9880)
+- Fixed a regression which caused too many versions to be saved in the annotation history. [#9905](https://github.com/scalableminds/webknossos/pull/9905)
+- Fixed agglomerate loading in connectome tab. [#9909](https://github.com/scalableminds/webknossos/pull/9909)
+- Fixed that the dataset's bounding box did not adapt to layer transformations. [#9912](https://github.com/scalableminds/webknossos/pull/9912)
+
+## [26.08.1](https://github.com/scalableminds/webknossos/releases/tag/26.08.1) - 2026-08-03
+[Commits](https://github.com/scalableminds/webknossos/compare/26.08.0...26.08.1)
+
+### Fixed
+- Fixed keyboard shortcuts silently breaking during an annotation session. After typing a shifted punctuation character such as `?` or `:` into any text field (comment, tree or segment name, search box), every single-key shortcut — `1`, `2`, `3`, `b`, `j`, `c`, space, the arrow keys — stopped working until the browser window lost and regained focus. [#9834](https://github.com/scalableminds/webknossos/pull/9834)
+- Fixed `Cmd + S`, `Cmd + Z` and `Cmd + Y` not working on macOS. Because saving never ran, `Cmd + S` also opened the browser's "Save Page" dialog. [#9834](https://github.com/scalableminds/webknossos/pull/9834)
+- Fixed <kbd>Esc</kbd> not doing anything in plane mode, which meant an in-progress quick select could not be cancelled. [#9834](https://github.com/scalableminds/webknossos/pull/9834)
+- Fixed a partially typed `Ctrl + K` shortcut staying armed indefinitely, so that the next single key pressed — however much later — switched the tool instead of triggering its own shortcut. [#9834](https://github.com/scalableminds/webknossos/pull/9834)
+- Fixed shortcuts on punctuation keys being displayed incorrectly in the info tab, and shortcut collisions not being reported when re-recording a key that a default shortcut already used. [#9834](https://github.com/scalableminds/webknossos/pull/9834)
+- Fixed the raw JSON view of the keyboard shortcut settings falling out of sync with the table view after resetting to defaults. [#9834](https://github.com/scalableminds/webknossos/pull/9834)
+
+## [26.08.0](https://github.com/scalableminds/webknossos/releases/tag/26.08.0) - 2026-07-22
+[Commits](https://github.com/scalableminds/webknossos/compare/26.07.03...26.08.0)
+
+### Highlights
+- Added Maximum Intensity Projection (MIP) rendering for bounding boxes in the 3D viewport. Right-click any bounding box and choose "Render as MIP" to project a data layer through the volume, displaying the highest intensity value along each ray. [#9584](https://github.com/scalableminds/webknossos/pull/9584)
+- Added the option to edit the transforms of a layer live while viewing or annotating the data. [#9664](https://github.com/scalableminds/webknossos/pull/9664)
+- The bounding box tab now also lists the dataset layers' bounding boxes as read-only entries at the end of the list (below the editable user bounding boxes). Their name and bounds cannot be edited, but their visibility and color of the rendered outline can be toggled, and they can be navigated to, used to register their segments, and exported. They are shown even when only viewing a dataset (without an annotation). [#9276](https://github.com/scalableminds/webknossos/pull/9276)
+
+
+### Added
+- The bounding box tab now also lists the dataset layers' bounding boxes as read-only entries at the end of the list (below the editable user bounding boxes). Their name and bounds cannot be edited, but their visibility and color of the rendered outline can be toggled, and they can be navigated to, used to register their segments, and exported. They are shown even when only viewing a dataset (without an annotation). [#9276](https://github.com/scalableminds/webknossos/pull/9276)
+- Dataset layer bounding boxes can now also be rendered as a Maximum Intensity Projection (MIP), just like user-defined bounding boxes. [#9276](https://github.com/scalableminds/webknossos/pull/9276)
+- When merging annotations, users can now select to keep the segment IDs unchanged instead of remapping them. [#9537](https://github.com/scalableminds/webknossos/pull/9537)
+- Reworked the merge annotations modal, adding explanations and clearer UI flow. [#9537](https://github.com/scalableminds/webknossos/pull/9537)
+- Added Maximum Intensity Projection (MIP) rendering for bounding boxes in the 3D viewport. Right-click any bounding box and choose "Render as MIP" to project a data layer through the volume, displaying the highest intensity value along each ray. [#9584](https://github.com/scalableminds/webknossos/pull/9584)
+- Added support for per-organization base directory configuration. [#9663](https://github.com/scalableminds/webknossos/pull/9663)
+- Added the option to edit the transforms of a layer live while viewing or annotating the data. [#9664](https://github.com/scalableminds/webknossos/pull/9664)
+- Upgraded backend dependencies for added stability and performance (redis database client, objectId generation). [#9691](https://github.com/scalableminds/webknossos/pull/9691)
+- Added an experimental "live collaboration" mode that can be enabled in the "Share" dialog of an annotation. When enabled, multiple users can work in parallel on the same annotation. Note that this feature only allows to use the proofreading tool at the moment. [#9726](https://github.com/scalableminds/webknossos/pull/9726)
+- Added a "Only Show Nodes of Current Section" toggle for skeleton annotations. When enabled (and neither the camera nor the dataset is rotated or transformed), only skeleton nodes and edges on the currently visible section are rendered—without requiring any manual clipping distance tuning. Edges crossing a section boundary are rendered only for the portion within the current section. [#9736](https://github.com/scalableminds/webknossos/pull/9736)
+- Added support for supplying credentials in the `exploreAndAddRemote` route called by the python client. [#9749](https://github.com/scalableminds/webknossos/pull/9749)
+- Added protection against uploads of malformed zips. [#9769](https://github.com/scalableminds/webknossos/pull/9769)
+- Dataset uploader is now shown in the sidebar, to users in the same organization. [#9784](https://github.com/scalableminds/webknossos/pull/9784)
+- Folders now store their creation time. [#9789](https://github.com/scalableminds/webknossos/pull/9789)
+- When switching the page in paginated tables, the view now scrolls back to the top. [#9791](https://github.com/scalableminds/webknossos/pull/9791)
+- Added configuration for LokiClient (tenant, user, password). [#9805](https://github.com/scalableminds/webknossos/pull/9805)
+- Added creation date for existing folders. [#9808](https://github.com/scalableminds/webknossos/pull/9808)
+
+### Changed
+- Renamed the "arbitrary" mode concept to "flight mode" throughout the codebase. The `clippingDistanceArbitrary` user setting has been renamed to `clippingDistanceFlight`. [#9565](https://github.com/scalableminds/webknossos/pull/9565)
+- When loading meshes for many segments at once, at most 4 segment meshes are loaded simultaneously now. This makes the first meshes fully visible earlier and bounds the memory pressure of in-flight mesh chunk buffers. [#9684](https://github.com/scalableminds/webknossos/pull/9684)
+- Improved email template for "Help" emails by linkifying the current URL. [#9700](https://github.com/scalableminds/webknossos/pull/9700)
+- Redesigned the "Create Animation" modal with a two-column layout, a camera-position dropdown, segmented resolution control, and clearer option labels. Added a "Video duration" setting (Fast/Standard/Slow) and a "Hide image data" option to render only meshes and skeletons. [#9701](https://github.com/scalableminds/webknossos/pull/9701)
+- When using live collaboration for proofreading, restrictions to skeleton editing and undo functionality are now properly enforced. [#9732](https://github.com/scalableminds/webknossos/pull/9732)
+- Volume annotation will only work if the current magnification exists in the volume tracing. Mainly, this affects volume annotations that were created with the "Restrict magnifications" option. Magnifications which were excluded during creation cannot be annotated. This change prevents users from doing unneeded annotation work (because the current zoom level is too detailed for the actually existing magnifications). [#9747](https://github.com/scalableminds/webknossos/pull/9747)
+- Removed all known cyclic module dependencies in the frontend. The cyclic dependency check now also covers the web worker dependency graphs and fails on any newly introduced cycle. [#9760](https://github.com/scalableminds/webknossos/pull/9760)
+
+### Fixed
+- Fixed a bug in the (not-yet-released) live collaboration mode where the proofreading marker and other local volume tracing state was incorrectly reset when a rebase was triggered. [#9654](https://github.com/scalableminds/webknossos/pull/9654)
+- Failures while loading dynamically imported frontend modules (e.g., after a new WEBKNOSSOS version was deployed or due to network problems) are now handled more gracefully. Instead of crashing, the user is asked to reload the page. [#9662](https://github.com/scalableminds/webknossos/pull/9662)
+- Removed meshes now properly free their GPU memory. [#9684](https://github.com/scalableminds/webknossos/pull/9684)
+- If merging the chunks of a large mesh fails (e.g., due to memory pressure), the unmerged mesh chunks are kept and rendered instead of failing with an error. [#9684](https://github.com/scalableminds/webknossos/pull/9684)
+- Failed mesh chunk requests no longer show an error toast for each retried attempt. [#9684](https://github.com/scalableminds/webknossos/pull/9684)
+- Fixed that the opacity of agglomerate meshes was reset to the default when the meshes were reloaded after an agglomerate merge/split, including when such changes are synced from other users during live collaboration. [#9699](https://github.com/scalableminds/webknossos/pull/9699)
+- Fixed that agglomerate meshes were sometimes not refreshed when an agglomerate split performed by another user was applied during live collaboration (the newly split-off agglomerate's mesh was not loaded). [#9699](https://github.com/scalableminds/webknossos/pull/9699)
+- Fixed a bug where command palette could not toggle some config values in specific circumstances (e.g. show crosshairs). [#9702](https://github.com/scalableminds/webknossos/pull/9702)
+- When training an AI model, bounding boxes that lie (partially) outside of the ground-truth volume layer's bounding box are now flagged with an error and prevent the training from being started, as such boxes would otherwise cause the training to fail. [#9707](https://github.com/scalableminds/webknossos/pull/9707)
+- Improved the error messages shown when importing a volume annotation ZIP fails, e.g. because the annotation has no editable volume layer or because the mags of the imported data don't match. Previously, a generic "could not be parsed" message was shown instead of the actual reason. [#9708](https://github.com/scalableminds/webknossos/pull/9708)
+- Fixed the spinner on the refresh button in the voxelytics workflow task list. [#9712](https://github.com/scalableminds/webknossos/pull/9712)
+- Fixed a bug where the failed bucket loading could not be distinguished from black data, leading to wrong displayed data and wrong volume annotation data. [#9716](https://github.com/scalableminds/webknossos/pull/9716)
+- Re-enabled volume tool keyboard shortcuts for the fill tool. For example, pressing `c` now creates a new segment again. [#9720](https://github.com/scalableminds/webknossos/pull/9720)
+- Fixed that auxiliary helping meshes during proofreading were removed upon a proofreading action if the option to auto reload them was turned off. They are now preserved and still auto updated. [#9730](https://github.com/scalableminds/webknossos/pull/9730)
+- Fixed that the visibility of agglomerate meshes was reset to the default (visible) when the meshes were reloaded after an agglomerate merge/split, including when such changes are synced from other users during live collaboration. See #9699 as a related PR. [#9731](https://github.com/scalableminds/webknossos/pull/9731)
+- Fixed a crash when the network request failed that checks whether WEBKNOSSOS is in maintenance mode. [#9739](https://github.com/scalableminds/webknossos/pull/9739)
+- Fixed an issue with importing remote datasets that have spaces in their URLs. [#9746](https://github.com/scalableminds/webknossos/pull/9746)
+- Fixed that a previously disabled tool wasn't automatically re-enabled if it became available again (e.g., because of adapting the zoom level). [#9747](https://github.com/scalableminds/webknossos/pull/9747)
+- Fixed that the collapsed tools in the tool bar only showed its dropdown menu when the icon was hovered. Now the dropdown shows when hovering any part of the button. [#9755](https://github.com/scalableminds/webknossos/pull/9755)
+- Fixed a concurrency bug when two users created a bounding box in the same annotation at the same time (only possible with the experimental live collaboration feature). [#9756](https://github.com/scalableminds/webknossos/pull/9756)
+- The bounding box tool can now be used in the experimental live collaboration mode. Bounding box creation is deferred while the annotation is synchronizing with remote changes (a spinner is shown) so that no changes are lost. [#9756](https://github.com/scalableminds/webknossos/pull/9756)
+- Fixed a bug where downloading an annotation would incorrectly trigger a "This annotation is currently being edited by someone else" toast for shared/collaborative annotations. [#9768](https://github.com/scalableminds/webknossos/pull/9768)
+- Fixed a bug where dataset deletion would fail if task annotations that were already marked as deleted still referenced it. [#9774](https://github.com/scalableminds/webknossos/pull/9774)
+- The toast informing the user that the annotation write-lock could not be acquired for more than 30 seconds in live collaboration mode now automatically closes once the write-lock has been acquired. [#9779](https://github.com/scalableminds/webknossos/pull/9779)
+- The timeout that limits how long a user may hold the annotation write-lock in live collaboration mode now starts only once the write-lock has actually been acquired. Previously, this timeout could start too early. [#9779](https://github.com/scalableminds/webknossos/pull/9779)
+- Fixed that volume annotation was disabled when zooming in beyond the finest magnification of the dataset. Now when the finest existing magnification is rendered and equals the dataset wide finest mag, the user can still annotate. [#9781](https://github.com/scalableminds/webknossos/pull/9781)
+- Fixed a bug where custom configuration settings for neuron/instance AI inferral jobs were not applied unless the Evaluation Settings option was toggled first. [#9787](https://github.com/scalableminds/webknossos/pull/9787)
+- Fixed a bug where clicking in the 3D viewport could jump the position to a skeleton node even though the skeleton layer was disabled and no nodes were visible. [#9792](https://github.com/scalableminds/webknossos/pull/9792)
+- Fixed a bug where requesting data for a bounding box (e.g. when rendering a bounding box as MIP) could hang indefinitely if the datastore reported one of the requested buckets as a failure. Such buckets are now treated as empty instead of leaving the request unresolved. [#9795](https://github.com/scalableminds/webknossos/pull/9795)
+- Fixed a bug in the Maximum Intensity Projection (MIP) feature where the projection and its estimated download size could extend beyond a layer's bounding box. MIP is now restricted to the layer's actual data extent. [#9796](https://github.com/scalableminds/webknossos/pull/9796)
+- Fixed that WEBKNOSSOS short links (e.g. `/links/:key`) could not be used to specify groundtruth annotations when training an AI model. Also fixed that the input validator for this field rejected plain annotation/task IDs. [#9797](https://github.com/scalableminds/webknossos/pull/9797)
+- Fixed a bug where webknossos would attempt to load some chunks outside of the dataset in rare cases, producing permanent errors there. [#9800](https://github.com/scalableminds/webknossos/pull/9800)
+- Fixed that volume annotation could be disabled at zoom levels where the volume tracing layer was actually rendered in an editable magnification (e.g. when the segmentation layer's finest magnification is coarser than another layer's, or when magnifications were restricted). Editing is now allowed whenever the magnification currently rendered for the volume tracing layer is fine enough for the active tool. Effectively reverts #9747. [#9804](https://github.com/scalableminds/webknossos/pull/9804)
+
+### Removed
+- Removed Oblique view mode. The orthogonal mode viewports can be rotated freely, making oblique mode redundant. [#9565](https://github.com/scalableminds/webknossos/pull/9565)
+
+## [26.07.03](https://github.com/scalableminds/webknossos/releases/tag/26.07.03) - 2026-07-13
+[Commits](https://github.com/scalableminds/webknossos/compare/26.07.2...26.07.03)
+
+### Fixed
+- Fixed a bug where old registerKeyHandler frontend api calls failed due to lacking backwards compatibility to the old interface. The old format is now supported again. [#9783](https://github.com/scalableminds/webknossos/pull/9783)
+
+## [26.07.2](https://github.com/scalableminds/webknossos/releases/tag/26.07.2) - 2026-06-29
+[Commits](https://github.com/scalableminds/webknossos/compare/26.07.0...26.07.2)
+
+### Fixed
+- Fixed that WEBKNOSSOS wouldn't load without https (or in very old browsers) by shimming crypto.randomUUID. [#9735](https://github.com/scalableminds/webknossos/pull/9735)
+
+## [26.07.1]
+This release was skipped for technical reasons.
+
+## [26.07.0](https://github.com/scalableminds/webknossos/releases/tag/26.07.0) - 2026-06-23
+[Commits](https://github.com/scalableminds/webknossos/compare/26.06.0...26.07.0)
+
+### Highlights
+- Keyboard shortcuts are configurable now. They are displayed in a new shortcuts dialog (together with mouse shortcuts which are not editable). [#9081](https://github.com/scalableminds/webknossos/pull/9081)
+- Team members are now managed directly in the team list: expanding a team row shows its members with inline remove buttons and an "Add user" typeahead, replacing the previous "Add / Remove Users" modal. The team table also shows a sortable member count column. [#9687](https://github.com/scalableminds/webknossos/pull/9687)
+- Added a storage details page to the dataset settings, listing technical details about the dataset storage location, as well as a breakdown of used storage by layer (if storage scanning is enabled). [#9650](https://github.com/scalableminds/webknossos/pull/9650)
+
+
+### Added
+- Added routes for uploading attachments and mags to existing datasets via the python libs client. [#9402](https://github.com/scalableminds/webknossos/pull/9402)
+- Added the option to write on-disk mirrors for virtual datasets. Enable this in the datastore config `datastore.writeVirtualDatasetsMirror=true` [#9512](https://github.com/scalableminds/webknossos/pull/9512)
+- Annotation Mutex mechanism now prevents editing the same annotation in multiple tabs as the same user. This avoids update conflicts. [#9561](https://github.com/scalableminds/webknossos/pull/9561)
+- Upgraded the server code to Scala 3 for improved stability and performance. [#9583](https://github.com/scalableminds/webknossos/pull/9583)
+- Dataset voxel size and extent can now be clicked to copy the value to the clipboard in csv-friendly format. [#9596](https://github.com/scalableminds/webknossos/pull/9596)
+- The "Generate Bounding Boxes" tool can now optionally restrict the sampling space to an existing bounding box. [#9656](https://github.com/scalableminds/webknossos/pull/9656)
+- Added support for the gzip compression for zarr2 datasets. [#9667](https://github.com/scalableminds/webknossos/pull/9667)
+
+### Changed
+- Unified that nuclei and soma AI models use the same code/API for instance inference. [#9477](https://github.com/scalableminds/webknossos/pull/9477)
+- Remote datasets opened via the /import route are now automatically deduplicated. If there is already an imported dataset with the URL, this dataset is opened automatically. [#9516](https://github.com/scalableminds/webknossos/pull/9516)
+- Dates in admin tables are now formatted in a human-friendly way, e.g. hiding the year if it is the current one. [#9596](https://github.com/scalableminds/webknossos/pull/9596)
+- Users joining an organization by invite no longer automatically join the organization’s default team, instead they get exactly the team memberships specified in the invite. [#9618](https://github.com/scalableminds/webknossos/pull/9618)
+- Upgraded typescript to version 6.0.3 [#9623](https://github.com/scalableminds/webknossos/pull/9623)
+- The view configuration of an annotation is now stored per user (instead of per annotation). Thus, if the owner disables a layer in a shared editable annotation, this does not transfer over to other users who have already seen the annotation. [#9626](https://github.com/scalableminds/webknossos/pull/9626)
+- Changed that Team managers are allowed to start AI jobs. [#9657](https://github.com/scalableminds/webknossos/pull/9657)
+- Updated the sidebar hide/show icons. [#9681](https://github.com/scalableminds/webknossos/pull/9681)
+- Failed or cancelled jobs can now be retried once by all users (previously only by super users). If a job fails again after a retry, users are hinted to contact an administrator for help. [#9685](https://github.com/scalableminds/webknossos/pull/9685)
+- Consolidated the task system in the navbar under a new "Task Management" menu, grouping Annotation Projects, Tasks, Task Types, Scripts, Project Progress, Available Task Assignments and Time Tracking. The "Administration" menu now only covers Users, Teams and Organization, and "Projects" was renamed to "Annotation Projects" to reduce ambiguity. [#9686](https://github.com/scalableminds/webknossos/pull/9686)
+- The help chat button can no longer be permanently dismissed. Users who had previously dismissed it will see it again after the database migration (170-remove-hasDiscardedHelpButton). [#9694](https://github.com/scalableminds/webknossos/pull/9694)
+- Creating a folder on the dashboard now opens a modal that also allows setting the allowed teams up front. Admins and managers can create a new team inline without leaving the dialog. [#9695](https://github.com/scalableminds/webknossos/pull/9695)
+
+### Fixed
+- Fixed that "Disable Saving" wasn't always respected correctly. [#9550](https://github.com/scalableminds/webknossos/pull/9550)
+- Fixed various issues with experimental collaborative proofreading. [#9573](https://github.com/scalableminds/webknossos/pull/9573)
+- Fixed a bug where the organization’s default team was not preselected in the invite modal if it was not named “Default”. [#9618](https://github.com/scalableminds/webknossos/pull/9618)
+- Fixed regression which disallowed editing for annotations that enabled collaborative editing. [#9627](https://github.com/scalableminds/webknossos/pull/9627)
+- Make the datastore healthcheck more robust. [#9634](https://github.com/scalableminds/webknossos/pull/9634)
+- Fixed a regression which caused navigation-related shortcuts to only be available in the skeleton tool. [#9638](https://github.com/scalableminds/webknossos/pull/9638)
+- Fixed an issue where edges could be stored redundantly, which could lead to missing edges in rare circumstances. [#9648](https://github.com/scalableminds/webknossos/pull/9648)
+- Fixed rare race condition in collaboratively used annotations which could lead to undefined behavior. [#9653](https://github.com/scalableminds/webknossos/pull/9653)
+- Fixed that route /api/v1/aiModels/:id/voxelSize is available for all users [#9658](https://github.com/scalableminds/webknossos/pull/9658)
+- Fixed that a user's session mutex could theoretically by released from another session of the same user. [#9661](https://github.com/scalableminds/webknossos/pull/9661)
+- Fixed description of keyboard shortcut "j". It did not include that the deletion of the branch point includes jumping to the branch point. [#9680](https://github.com/scalableminds/webknossos/pull/9680)
+
+## [26.06.0](https://github.com/scalableminds/webknossos/releases/tag/26.06.0) - 2026-05-27
+[Commits](https://github.com/scalableminds/webknossos/compare/26.05.2...26.06.0)
+
+### Highlights
+- Added new functions to the JavaScript API: `setCameraRotation`, `downloadScreenshot`, `captureScreenshots`, and `downloadScreenshotsAsZip` (the last two can be used together to download many screenshots in one go). [`#9599`](https://github.com/scalableminds/webknossos/pull/9599)
+
+### Added
+- Added the experimental feature (only available for super-users) to concurrently edit an annotation. This feature can be enabled via the Share dialog for an annotation. Only the proofreading tool will be available in that mode, currently. [#9297](https://github.com/scalableminds/webknossos/pull/9297)
+- Added "Create Group" button to the skeleton and segment tabs. [#9592](https://github.com/scalableminds/webknossos/pull/9592)
+
+### Changed
+- Unified the wording of various error messages. [#9566](https://github.com/scalableminds/webknossos/pull/9566)
+- Improved the icons for the measurement tools. [#9569](https://github.com/scalableminds/webknossos/pull/9569)
+- Enabled AI features for dataset managers and disabled them for members who are only team managers. [#9575](https://github.com/scalableminds/webknossos/pull/9575)
+
+### Fixed
+- Fixed that shortcuts weren't working when the tree/segment list is focussed. [#9567](https://github.com/scalableminds/webknossos/pull/9567)
+- When creating a new annotation from the dataset table in the dashboard, the volume annotation layer gets the name of the fallback layer instead of always "Volume". [`#9571`](https://github.com/scalableminds/webknossos/pull/9571)
+- Fixed an issue where the context menu would not trigger for skeletons and segments tab entries. Made entries full width for larger click targets. [#9592](https://github.com/scalableminds/webknossos/pull/9592)
+
+## [26.05.2](https://github.com/scalableminds/webknossos/releases/tag/26.05.2) - 2026-05-07
+[Commits](https://github.com/scalableminds/webknossos/compare/26.05.1...26.05.2)
+
+### Fixed
+- Fixed that shortcuts weren't working when the tree/segment list is focussed. [#9567](https://github.com/scalableminds/webknossos/pull/9567)
+
+## [26.05.1](https://github.com/scalableminds/webknossos/releases/tag/26.05.1) - 2026-05-05
+[Commits](https://github.com/scalableminds/webknossos/compare/26.05.0...26.05.1)
+
+### Added
+- Added documentation about proofreading tools: multi-split tool, split from all neighbors, and proofreading via agglomerate trees. Moreover, agglomerate skeletons were renamed to agglomerate trees. [#9542](https://github.com/scalableminds/webknossos/pull/9542)
+
+### Fixed
+- Fixed that the owner was unable to edit the annotation's properties when another user is active annotating the shared annotation. [#9554](https://github.com/scalableminds/webknossos/pull/9554)
+- Fixed reading zarr3 meshfiles with more than 2^32 hash buckets. [#9555](https://github.com/scalableminds/webknossos/pull/9555)
+- Fix fast importing / viewing remote datasets via /import?url=<url>. [#9557](https://github.com/scalableminds/webknossos/pull/9557)
+- Fixed a regression that showed an error message when renaming a tree/segment item/group via double-click. [#9558](https://github.com/scalableminds/webknossos/pull/9558)
+- Fixed the proofreading crosshair not rendering correctly in the YZ and XZ viewports (only XY was correct). [#9560](https://github.com/scalableminds/webknossos/pull/9560)
+
+## [26.05.0](https://github.com/scalableminds/webknossos/releases/tag/26.05.0) - 2026-05-04
+[Commits](https://github.com/scalableminds/webknossos/compare/26.04.1...26.05.0)
+
+### Highlights
+- Added a new blend mode (Settings Sidebar > Data Rendering) called "Cover (black as transparent)". The new mode behaves like "Cover", but treats black data as transparent. This behavior is especially helpful for multi-modality datasets. [#9492](https://github.com/scalableminds/webknossos/pull/9492)
+
+### Added
+- Auto-reloading of meshes upon applying mapping changes from other users. Part of the Live Collaboration feature [#9102](https://github.com/scalableminds/webknossos/pull/9102)
+- Auto-reloading of agglomerate skeletons upon own mapping changes. Part of the Live Collaboration feature [#9102](https://github.com/scalableminds/webknossos/pull/9102)
+- Enabled anti-aliasing for screenshots. [#9363](https://github.com/scalableminds/webknossos/pull/9363)
+- Added a recovery option after WebGL crash to reduce hardware utilization and reload. [#9437](https://github.com/scalableminds/webknossos/pull/9437)
+- Show progress modal when duplicating or copying annotations. [#9478](https://github.com/scalableminds/webknossos/pull/9478)
+- Added AI agent integration for support questions. [#9511](https://github.com/scalableminds/webknossos/pull/9511)
+- Virtual Datasets with disk-local paths now also get their realpaths scanned. [#9518](https://github.com/scalableminds/webknossos/pull/9518)
+- Parallelized meshfile chunk info loading in case the underlying data is on object storage, reducing wait times before mesh loading starts. [#9520](https://github.com/scalableminds/webknossos/pull/9520)
+- Dataset uploads that trigger a conversion job now do so in one request, avoiding some dropped requests due to timeouts. [#9538](https://github.com/scalableminds/webknossos/pull/9538)
+- Dataset search in the dashboard now also finds datasets if only the directoryName matches. [#9548](https://github.com/scalableminds/webknossos/pull/9548)
+
+### Changed
+- Compacted and filtered monthly credit transactions to reduce the size of the credit activity in the frontend UI. [#9435](https://github.com/scalableminds/webknossos/pull/9435)
+- Use HTTP/2 for object storage requests when loading from Hetzner servers. [#9475](https://github.com/scalableminds/webknossos/pull/9475)
+- Adjusted adhoc mesh generation to use parallel requests for loading neighboring chunks. [#9475](https://github.com/scalableminds/webknossos/pull/9475)
+- Improved robustness when network connectivity is unstable. [#9551](https://github.com/scalableminds/webknossos/pull/9551)
+- Updated revoking credit transaction comments to include the month and year of the grant matching the format used by new revoking transactions. [#9435](https://github.com/scalableminds/webknossos/pull/9435)
+
+### Fixed
+- Fixed that jumping to a mesh's position was off. [#9461](https://github.com/scalableminds/webknossos/pull/9461)
+- Fixed automatic dataset extraction from NML files when composing datasets with landmarks. [#9466](https://github.com/scalableminds/webknossos/pull/9466)
+- Fixed prefetching problems for transformed layers by disabling prefetching in that case (for now, at least). [#9470](https://github.com/scalableminds/webknossos/pull/9470)
+- Fixed rendering of datasets with heavy transforms. [#9473](https://github.com/scalableminds/webknossos/pull/9473)
+- Adapted adhoc mesh chunk sizes to match data loading chunk sizes. [#9475](https://github.com/scalableminds/webknossos/pull/9475)
+- The sibling-tool dropdown (for example, Brush and Trace) now opens when hovering anywhere over the tool button. [#9486](https://github.com/scalableminds/webknossos/pull/9486)
+- Fixed a bug where the publication list route for logged-out users would be empty [#9515](https://github.com/scalableminds/webknossos/pull/9515)
+- Fixed a race condition for dataset uploads in the ResumableUpload lib. [#9517](https://github.com/scalableminds/webknossos/pull/9517)
+- Fixed the import of skeleton trees which could lead to an incorrect hierarchy if nested groups were present. [#9535](https://github.com/scalableminds/webknossos/pull/9535)
+- Fixed that dataset deletion was offered in the dashboard even when disabled in the config. The backend still correctly rejected it. [#9536](https://github.com/scalableminds/webknossos/pull/9536)
+- Fixed inconsistent display of segment statistics in right-click context menu [#9545](https://github.com/scalableminds/webknossos/pull/9545)
+- Fixed incorrect ASSERT statement in the enforce_non_negative_balance function. [#9435](https://github.com/scalableminds/webknossos/pull/9435)
+
+## [26.04.1](https://github.com/scalableminds/webknossos/releases/tag/26.04.1) - 2026-04-23
+[Commits](https://github.com/scalableminds/webknossos/compare/26.04.0...26.04.1)
+
+### Fixed
+- Fixed incorrectly rendered viewports after changing the viewer layout. [#9480](https://github.com/scalableminds/webknossos/pull/9480)
+- Fixed a layout issue when an annotation or dataset was opened with a maximized viewport. [#9505](https://github.com/scalableminds/webknossos/pull/9505)
+
+## [26.04.0](https://github.com/scalableminds/webknossos/releases/tag/26.04.0) - 2026-04-07
+[Commits](https://github.com/scalableminds/webknossos/compare/26.03.0...26.04.0)
+
+### Highlights
+- Users can now configure advanced transformations of dataset layers in the dataset settings. Affine and thin plate spline transformations can be specified in JSON format. [#9236](https://github.com/scalableminds/webknossos/pull/9236)
+- Added command palette actions to copy the auth token and organization ID to the clipboard. [#9341](https://github.com/scalableminds/webknossos/pull/9341)
+
+### Added
+- Custom AI Models can now be published to and read from managed S3 storage. [#9150](https://github.com/scalableminds/webknossos/pull/9150)
+- Added `vite` for the frontend build process. [#9188](https://github.com/scalableminds/webknossos/pull/9188)
+- Added new scripts in ./tools/segmentation-id-modification that allow incrementing IDs in segmentation layers and agglomerate files (useful for testing compatibility with certain dtypes). [#9313](https://github.com/scalableminds/webknossos/pull/9313)
+- When uploading multiple volume annotations at once, the resulting merged annotation now has a segment list (was previously always empty). [#9360](https://github.com/scalableminds/webknossos/pull/9360)
+- Added several API routes for adapting datasets from the python client. [#9375](https://github.com/scalableminds/webknossos/pull/9375)
+- Uploading NMLs that only mention dataset name (not directoryName, not id) is now allowed, if the name is unique in the organization. [#9397](https://github.com/scalableminds/webknossos/pull/9397)
+- It is now possible to switch organizations via the command palette. [#9409](https://github.com/scalableminds/webknossos/pull/9409)
+- Added breadcrumb for navigation above Dashboard > Datasets when inside a folder. [#9415](https://github.com/scalableminds/webknossos/pull/9415)
+- Added readable error message in case a dataset upload request fails because the zip only contains dotfiles or no files at all. [#9429](https://github.com/scalableminds/webknossos/pull/9429)
+- Added skeletons to Create Animation job. [#9430](https://github.com/scalableminds/webknossos/pull/9430)
+
+### Changed
+- Segment items can now be edited by multiple users at the same time (when the annotation is set up for collaborative use). [#9124](https://github.com/scalableminds/webknossos/pull/9124)
+- When proofreading, segment items are now always created for new agglomerates. In the past, this only happened when the automatic meshing feature was enabled. [#9124](https://github.com/scalableminds/webknossos/pull/9124)
+- Replace Resumable.js with our implementation of a Resumable Upload library. [#9259](https://github.com/scalableminds/webknossos/pull/9259)
+- Updated the docs for AI Segmentation and Jobs. [#9317](https://github.com/scalableminds/webknossos/pull/9317)
+- Skeleton nodes and edges are now rendered centered within voxels instead of at the upper left corner. Mouse positions in viewports are now floored, so the position in the status bar remains constant while moving within a single voxel. The accuracy of bounding box dragging behaviour was improved. [#9318](https://github.com/scalableminds/webknossos/pull/9318)
+- The content within the navigation bar in the annotation view now adapts to more narrow screens without requiring scrollbars. Also, removed the option to extrude between two annotated slices when interpolating. [#9351](https://github.com/scalableminds/webknossos/pull/9351)
+- Improved segmentation loading performance during proofreading. [#9384](https://github.com/scalableminds/webknossos/pull/9384)
+- When zooming out too far in proofreading annotations, the unmapped segmentation will be shown (instead of a partial mapped segmentation). [#9386](https://github.com/scalableminds/webknossos/pull/9386)
+
+### Fixed
+- Fixed a bug where starting inference jobs would not use the correct mag to calculate the cost, making some jobs unnecessarily expensive. [#9304](https://github.com/scalableminds/webknossos/pull/9304)
+- Fixed bug when proofreading with IDs > 2^32 in uint64 segmentations. [#9313](https://github.com/scalableminds/webknossos/pull/9313)
+- Fixed bounding box mag alignment check in AI model training modal. [#9338](https://github.com/scalableminds/webknossos/pull/9338)
+- Fixed regression that broke volume interpolation and non-ai quick select. [#9339](https://github.com/scalableminds/webknossos/pull/9339)
+- Fixed a bug where dataset zarr streaming requests would sometimes be answered with 404 in error cases that should have been 500 or 400. This caused zarr clients to interpret the errored chunks as fill-value chunks instead of retrying. Annotation zarr streaming was not affected. [#9352](https://github.com/scalableminds/webknossos/pull/9352)
+- Fixed that the split boundary wasn't correct in certain cases. [#9388](https://github.com/scalableminds/webknossos/pull/9388)
+- Fixed a bug where zarr streaming for certain rare data types would yield wrong data. [#9392](https://github.com/scalableminds/webknossos/pull/9392)
+- Fixed the "View" link in the "Jobs" list for neuron inferrals with split merger evaluations. [#9395](https://github.com/scalableminds/webknossos/pull/9395)
+- Fixed a bug where dataset uploads would sometimes fail for instances where S3 upload is used. [#9396](https://github.com/scalableminds/webknossos/pull/9396)
+- Fixed issues with voxelytics reports showing outdated information for workflows consisting of multiple or repeated runs. [#9400](https://github.com/scalableminds/webknossos/pull/9400)
+- Fixed rendering crashes when ND annotations have inconsistent coordinates (e.g., some node positions did not specify a value for an ND coordinate). [#9406](https://github.com/scalableminds/webknossos/pull/9406)
+- Fixed a bug where the initial operation of a proofreading annotation failed if it was a split action. [#9412](https://github.com/scalableminds/webknossos/pull/9412)
+- Fixed the voxelytics workflow viewer crashing when accessing the linked artifact results of another workflow. [#9414](https://github.com/scalableminds/webknossos/pull/9414)
+- Fixed intermittent disappearing search bar in annotation dashboard caused by race condition in React portal usage. [#9426](https://github.com/scalableminds/webknossos/pull/9426)
+- Fixed correct credit spending on retrying a failed/cancelled job. [#9432](https://github.com/scalableminds/webknossos/pull/9432)
+- Fixed a bug in dataset upload where the datastore URI was discarded and requests were always sent to the WEBKNOSSOS base URI. [#9436](https://github.com/scalableminds/webknossos/pull/9436)
+- Fixed a bug where starting AI runs with custom instance models would fail. [#9444](https://github.com/scalableminds/webknossos/pull/9444)
+- Fixed a bug where applied update actions from the backend were replayed leading to duplicated update actions. [#9445](https://github.com/scalableminds/webknossos/pull/9445)
+
+### Removed
+- Removed webpack from frontend build process. [#9188](https://github.com/scalableminds/webknossos/pull/9188)
+
+## [26.03.0](https://github.com/scalableminds/webknossos/releases/tag/26.03.0) - 2026-02-23
+[Commits](https://github.com/scalableminds/webknossos/compare/26.01.0...26.03.0)
+
+### Highlights
+- Multiple bounding boxes can now be selected and deleted in bulk. Next to that, single bounding box deletion is more accessible. [#9191](https://github.com/scalableminds/webknossos/pull/9191)
+- Added a separate CSV file with information about the visible trees to the skeleton export. [#9205](https://github.com/scalableminds/webknossos/pull/9205)
+
+### Added
+- Datasets and annotations can be opened from the command palette. [#9087](https://github.com/scalableminds/webknossos/pull/9087)
+- Users can now change their username in their account settings. Next to that, admins can change other users' usernames (except on webknossos.org). [#9104](https://github.com/scalableminds/webknossos/pull/9104)
+- Optimized memory and runtime performance for volume annotation merging, allowing larger annotations to be merged. [#9165](https://github.com/scalableminds/webknossos/pull/9165)
+- Multiple bounding boxes can now be selected and deleted in bulk. Next to that, single bounding box deletion is more accessible. [#9191](https://github.com/scalableminds/webknossos/pull/9191)
+- Added API routes to add new layers and mags to existing wk datasets. [#9193](https://github.com/scalableminds/webknossos/pull/9193)
+- Dataset layers can now be renamed. Caution: may invalidate some URIs and break existing annotations. [#9193](https://github.com/scalableminds/webknossos/pull/9193)
+- Added a separate CSV file with information about the visible trees to the skeleton export. [#9205](https://github.com/scalableminds/webknossos/pull/9205)
+- Added filters to job list view. [#9232](https://github.com/scalableminds/webknossos/pull/9232)
+- Added datastore routes to proxy mag and attachment requests to the underlying storage. [#9247](https://github.com/scalableminds/webknossos/pull/9247)
+- Added AI plans for organizations. Those are in addition to the normal pricing plans. Training AI models is now only supported if your organization has an AI plan. [#9250](https://github.com/scalableminds/webknossos/pull/9250)
+- Added a new sub page to the organization page to show updates to the subscription plan. [#9264](https://github.com/scalableminds/webknossos/pull/9264)
+- Organization admins can now list credit transactions of their organization. [#9269](https://github.com/scalableminds/webknossos/pull/9269)
+- Updated server dependencies for improved performance and stability [#9295](https://github.com/scalableminds/webknossos/pull/9295)
+- Added superuser-only route to create organization with an existing user. [#9301](https://github.com/scalableminds/webknossos/pull/9301)
+- Added the option to disable inserting the organization directory for the paths selected during the uploadToPaths protocol: New config option `webKnossos.datasets.uploadToPaths.insertOrganizationDirectory` (default true) [#9321](https://github.com/scalableminds/webknossos/pull/9321)
+- Allow configuring a limit `datastore.agglomerateGraph.maxEdges` that can differ from `datastore.agglomerateSkeleton.maxEdges`. Previously the skeleton limit would be used for graphs too. [#9322](https://github.com/scalableminds/webknossos/pull/9322)
+
+### Changed
+- An organization's credits are now stored in milli credits as integers. Moreover, paying jobs via credits is now enabled. [#9073](https://github.com/scalableminds/webknossos/pull/9073)
+- Replaced our keyboardjs implementation with the official keyboardjs from NPM. [#9146](https://github.com/scalableminds/webknossos/pull/9146)
+- Increased the limits for (a) the bounding box size when performing a floodfill and (b) the section count when using the quick-select tool. [#9155](https://github.com/scalableminds/webknossos/pull/9155)
+- The size limit check for dataset uploads is now in place again. [#9183](https://github.com/scalableminds/webknossos/pull/9183)
+- Updated segments stats view to load values in parallel. [#9185](https://github.com/scalableminds/webknossos/pull/9185)
+- Replace NML parser library `saxophone` with `sax-ts` [#9190](https://github.com/scalableminds/webknossos/pull/9190)
+- Rendering datasets with heterogeneous magnifications was improved. In particular, zooming into a particular layer is now supported even if the fine magnifications don't exist. [#9202](https://github.com/scalableminds/webknossos/pull/9202)
+- Updated all lodash imports [#9207](https://github.com/scalableminds/webknossos/pull/9207)
+- Improved the AI Analysis UI. Inform about not enough credits. Restrict custom ai model selector to max 3 items. [#9219](https://github.com/scalableminds/webknossos/pull/9219)
+- When deleting local datasets, referenced image data outside of the datastore’s configured `baseDirectory` is not deleted. [#9231](https://github.com/scalableminds/webknossos/pull/9231)
+- Updated React to version 19.2. [#9235](https://github.com/scalableminds/webknossos/pull/9235)
+- Added small improvements to make the dataset upload more robust. [#9258](https://github.com/scalableminds/webknossos/pull/9258)
+- Updated the UI of the skeletons, comments, and segments tabs. [#9265](https://github.com/scalableminds/webknossos/pull/9265)
+- When starting an AI instance inference, the parameter "seed generator distance threshold" is now optional and empty by default. [#9273](https://github.com/scalableminds/webknossos/pull/9273)
+- Managed S3 paths are no longer deleted by WEBKNOSSOS directly, but by an external deletion service. Decreases wait times when users click delete dataset in the UI. [#9274](https://github.com/scalableminds/webknossos/pull/9274)
+- When zooming out too far in proofreading annotations, the segmentation will be hidden and the user will be warned now. In the past, the rendering of segmentations was very slow when zoomed out too far which is why this is avoided now altogether. The reason for this is that the amount of segmentation IDs that need to be mapped grows with the zoom level. [#9289](https://github.com/scalableminds/webknossos/pull/9289)
+- The “recent conversions” banner in the dashboard no longer shows jobs for datasets that have since then been deleted. [#9293](https://github.com/scalableminds/webknossos/pull/9293)
+- In AI model training, total credits are boldly highlighted and image data and ground truth layers are selected per default [#9298](https://github.com/scalableminds/webknossos/pull/9298)
+
+### Fixed
+- Fixed a bug where dataset compose would fail if none of the input datasets’ layers had a mag 1, despite all having the same voxel size [#9181](https://github.com/scalableminds/webknossos/pull/9181)
+- Fixed a bug in starting AI instance segmentation model training where the selected Max Distance (now named Instance Diameter) was not respected. [#9194](https://github.com/scalableminds/webknossos/pull/9194)
+- Added navigation entries for jobs, workflows and AI models to the command palette. [#9197](https://github.com/scalableminds/webknossos/pull/9197)
+- Fixed a regression of PR #9146 where keyboard shortcuts were triggered twice [#9200](https://github.com/scalableminds/webknossos/pull/9200)
+- Fixed a bug where dataset uploads would sometimes fail due to expiring tokens. The frontend now automatically refreshes the token. [#9203](https://github.com/scalableminds/webknossos/pull/9203)
+- Fixed sluggish import for dataset selector in Compose views. [#9210](https://github.com/scalableminds/webknossos/pull/9210)
+- Fixed a bug where some uploaded datasets were rejected as having invalid paths, even when their paths were fine. [#9212](https://github.com/scalableminds/webknossos/pull/9212)
+- Fixed a bug where dataset uploads with hdf5 attachments not mentioned in the datasource-properties.json would wrongly be rejected [#9261](https://github.com/scalableminds/webknossos/pull/9261)
+- Fixed a bug where volume annotation saving would fail in specific circumstances. [#9267](https://github.com/scalableminds/webknossos/pull/9267)
+- Fixed a bug where there would be errors during the status update for failed or cancelled free worker jobs (model training). [#9271](https://github.com/scalableminds/webknossos/pull/9271)
+- Fixed a bug where gzip-compressed data could not be loaded from Google Cloud Storage [#9282](https://github.com/scalableminds/webknossos/pull/9282)
+- Fixed that the loading state of meshes was shown incorrectly in the segments tab. [#9284](https://github.com/scalableminds/webknossos/pull/9284)
+- Fixed that theme couldn't be switched to "auto" (System-default) in account settings. [#9298](https://github.com/scalableminds/webknossos/pull/9298)
+- Fixed word break for long layer names in Layer Setting Tab. [#9298](https://github.com/scalableminds/webknossos/pull/9298)
+- Fixed layout of publication detail page. [#9299](https://github.com/scalableminds/webknossos/pull/9299)
+
+### Removed
+- Removed <PresentModernControls> component [#9251](https://github.com/scalableminds/webknossos/pull/9251)
+
+## [26.01.0](https://github.com/scalableminds/webknossos/releases/tag/26.01.0) - 2026-01-07
+[Commits](https://github.com/scalableminds/webknossos/compare/25.12.0...26.01.0)
+
+### Highlights
+- Multiple datasets can be deleted at once. This can be done by selecting the datasets in the dashboard and clicking "Delete datasets" in the sidebar. [#9107](https://github.com/scalableminds/webknossos/pull/9107)
+- Added a new "Analysis" menu to the navbar and moved the AI Models, Processing Jobs and Voxelytics pages to it. [#9091](https://github.com/scalableminds/webknossos/pull/9091)
+
+### Added
+- Added the possibility to set teams and roles already when inviting new users. [#9062](https://github.com/scalableminds/webknossos/pull/9062)
+- Added caching to improve performance for segment statistics (volume, area, bounding box) of static segmentation layers. [#9113](https://github.com/scalableminds/webknossos/pull/9113)
+- When a dataset with a pending conversion job is deleted by the user, that job is now cancelled, so the user won’t get a failed job notification and server compute power is saved. [#9116](https://github.com/scalableminds/webknossos/pull/9116)
+- Added support for reading segmentation data compressed with the “compresso” algorithm. [#9126](https://github.com/scalableminds/webknossos/pull/9126)
+- Added explicit units to some layer and annotation settings, such as the node radius or the particle size. [#9127](https://github.com/scalableminds/webknossos/pull/9127)
+- Superusers can now edit organization pricing plans via API. [#9129](https://github.com/scalableminds/webknossos/pull/9129)
+- Added MacOS supported trigger extended keyboard shortcuts with CMD + K [#9161](https://github.com/scalableminds/webknossos/pull/9161)
+
+### Changed
+- Redesigned the UI for starting AI jobs for running and training models and alignment. [#8873](https://github.com/scalableminds/webknossos/pull/8873)
+- Updated ant design UI library from version 5 to version 6. [#9117](https://github.com/scalableminds/webknossos/pull/9117)
+- Reduced the delay with which maintenance and version information is loaded from the server. That information is used to potentially display banners to the user. [#9132](https://github.com/scalableminds/webknossos/pull/9132)
+- Replaced a CSS-in-JS flexbox styles with antd <Flex> components [#9156](https://github.com/scalableminds/webknossos/pull/9156)
+
+### Fixed
+- Fixed rendering issues for extremely anisotropic datasets. [#9114](https://github.com/scalableminds/webknossos/pull/9114)
+- Fixed spacing for various UI elements in many views. [#9117](https://github.com/scalableminds/webknossos/pull/9117)
+- Pressing enter while editing text input during having multi-split enabled in proofreading tool no longer tries to trigger the multi-split. [#9136](https://github.com/scalableminds/webknossos/pull/9136)
+- Fixed spacing and layout of the task creation form. [#9142](https://github.com/scalableminds/webknossos/pull/9142)
+- Fixed that some ad-hoc meshes that touch the dataset layer edges wouldn’t have closing edges there. [#9143](https://github.com/scalableminds/webknossos/pull/9143)
+- Avoid rendering issues and shader crashes when using interpolation on Windows. [#9144](https://github.com/scalableminds/webknossos/pull/9144)
+- Fixed a bug where layer attachment URIs would be incorrect when adding a remote webknossos dataset [#9149](https://github.com/scalableminds/webknossos/pull/9149)
+- Fixed a crash when switching tools with keyboard shortcuts W and Shift + W [#9153](https://github.com/scalableminds/webknossos/pull/9153)
+- Fixed a bug where the password reset flow occasionally wrongly invalidated the new token immediately. [#9162](https://github.com/scalableminds/webknossos/pull/9162)
+- Fixed several issues with tag spacings after Antd v6 update. [#9166](https://github.com/scalableminds/webknossos/pull/9166)
+- Fixed welcome toast design after antd v6 update. [#9174](https://github.com/scalableminds/webknossos/pull/9174)
+- Fixed a rare stack overflow error when parsing large objects from the database. [#9177](https://github.com/scalableminds/webknossos/pull/9177)
+- Fixed floodfill progress notification not being dismissable. [#9178](https://github.com/scalableminds/webknossos/pull/9178)
+
+## [25.12.0](https://github.com/scalableminds/webknossos/releases/tag/25.12.0) - 2025-12-03
+[Commits](https://github.com/scalableminds/webknossos/compare/25.11.0...25.12.0)
+
+### Highlights
+- Generalized the old "Segment Picker" tool to be a "Voxel Pipette" tool which can show the data values for all visible layers in a tooltip. The old behavior for activating a segment id can still be achieved by pressing shift. [#8989](https://github.com/scalableminds/webknossos/pull/8989)
+
+### Added
+- Added first step of enabling possibility to do live proofreading update with multiple users in shared editable annotations. However, this is disabled until feature is complete. [#8723](https://github.com/scalableminds/webknossos/pull/8723)
+- Datasets stored on managed S3 can now also be deleted there. [#8924](https://github.com/scalableminds/webknossos/pull/8924)
+- Show a warning when many chunks of data in an annotation are updated in a short period of time. The warning suggests creating an annotation (or an annotation layer) that excludes the finest magnification(s) to reduce server load. [#8961](https://github.com/scalableminds/webknossos/pull/8961)
+- Added an optional `meshOpacity` parameter to `api.data.setSegmentColor`, allowing callers to set a segment's mesh opacity. [#9011](https://github.com/scalableminds/webknossos/pull/9011)
+- Added registering attachment realpaths next to mag realpaths. [#9019](https://github.com/scalableminds/webknossos/pull/9019)
+- Display used storage for each owned dataset in the dashboard's dataset table. [#9025](https://github.com/scalableminds/webknossos/pull/9025)
+- Unified display of ids, allowing single-click copy. [#9068](https://github.com/scalableminds/webknossos/pull/9068)
+- Added link to workflow report to job list (superusers only for now). [#9068](https://github.com/scalableminds/webknossos/pull/9068)
+- Speed up loading of job list. [#9068](https://github.com/scalableminds/webknossos/pull/9068)
+- It is now possible to reset all segment colors in a group via the context menu in the segment list. [#9072](https://github.com/scalableminds/webknossos/pull/9072)
+
+### Changed
+- Deleting datasets on disk whose layers are still referenced by symlinks of other datasets is now blocked. [#8924](https://github.com/scalableminds/webknossos/pull/8924)
+- Generalized the old "Segment Picker" tool to be a "Voxel Pipette" tool which can show the data values for all visible layers in a tooltip. When old behavior for activating a segment id can still be achieved by pressing shift. [#8989](https://github.com/scalableminds/webknossos/pull/8989)
+- The datastore config option `reportUsedStorage.enabled` was removed. To enable storage scan, set it in postgres directly. [#9024](https://github.com/scalableminds/webknossos/pull/9024)
+- To improve performance, the use of Float32Arrays was omitted in favor of plain Arrays in our self-adjusted mjs module. [#9059](https://github.com/scalableminds/webknossos/pull/9059)
+- Automatically disable the interpolation setting in case of WebGL context losses, to try again with a more simple shader. [#9070](https://github.com/scalableminds/webknossos/pull/9070)
+- Compile shader code asynchronously to avoid some lag during page load. [#9070](https://github.com/scalableminds/webknossos/pull/9070)
+- Changed the wording in the DatasetUploadView to favor Zarr over WKW. [#9077](https://github.com/scalableminds/webknossos/pull/9077)
+- When clients with disk access request the data paths from webknossos, it now yields resolved realpaths where possible. [#9097](https://github.com/scalableminds/webknossos/pull/9097)
+
+### Fixed
+- Double-clicking a registered segment now stores its position in the segment's layer coordinate system, preserving correct behaviour when layer transforms are in use. [#9017](https://github.com/scalableminds/webknossos/pull/9017)
+- Fixed that scanning realpaths of dataset mags would stop if a single mag didn’t exist. [#9019](https://github.com/scalableminds/webknossos/pull/9019)
+- Fixed that a new dataset would not properly get storage-scanned immediately after its upload. [#9022](https://github.com/scalableminds/webknossos/pull/9022)
+- Fixed dataset deletion for data stored on managed s3 buckets different from the one currently selected for dataset upload. [#9047](https://github.com/scalableminds/webknossos/pull/9047)
+- Fixed that "black data" outside of a layer's bounding box could hide other layer's data when the blend mode "cover" was used. [#9054](https://github.com/scalableminds/webknossos/pull/9054)
+- Fixed broken link in docs. [#9066](https://github.com/scalableminds/webknossos/pull/9066)
+- Fixed loading indicators for job and workflow lists. [#9068](https://github.com/scalableminds/webknossos/pull/9068)
+- Fixed that the UI freezes shortly when applying newest updates of a shared annotation. Introduced in [#8723](https://github.com/scalableminds/webknossos/pull/8723) [#9084](https://github.com/scalableminds/webknossos/pull/9084)
+- Fixed a regression that caused volume annotation to not work when the annotation was configured with "Others may edit". [#9088](https://github.com/scalableminds/webknossos/pull/9088)
+- Fixed inactive users being listed in Team list view. [#9094](https://github.com/scalableminds/webknossos/pull/9094)
+- Fixed loading state spinner for Jobs and VX Workflow list views [#9095](https://github.com/scalableminds/webknossos/pull/9095)
+- Fixed unnecessary page movements for some Download/Action buttons in various admin list views. [#9098](https://github.com/scalableminds/webknossos/pull/9098)
+- Fixed manual task assignment to users in task list view. [#9099](https://github.com/scalableminds/webknossos/pull/9099)
+- Fixed a caching issue with the VX workflow overview page. [#9109](https://github.com/scalableminds/webknossos/pull/9109)
+
 ## [25.11.0](https://github.com/scalableminds/webknossos/releases/tag/25.11.0) - 2025-10-27
 [Commits](https://github.com/scalableminds/webknossos/compare/25.10.0...25.11.0)
 
@@ -34,18 +523,18 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Clicking `Focus Tree in Skeleton Tab` or `Focus in Segment List` will not only focus the clicked tree/segment, but also open the right tab if it was not open already. [#8917](https://github.com/scalableminds/webknossos/pull/8917)
 - Renamed Basic plan to Personal plan. [#8951](https://github.com/scalableminds/webknossos/pull/8951)
 - Improved the error message when loading an unusable dataset or an annotation for an unusable dataset [#8956](https://github.com/scalableminds/webknossos/pull/8956)
-- Changed the pre-selected default format for volume annotation downloads from WKW to Zarr. [#8970](https://github.com/scalableminds/webknossos/pull/8970)
+- Changed the preselected default format for volume annotation downloads from WKW to Zarr. [#8970](https://github.com/scalableminds/webknossos/pull/8970)
 - The tracingstore route `/mapping/:tracingId/agglomerateGraph/:agglomerateId` used by the python client now returns the static fallback agglomerate graph from the datastore in case of volume annotation layers with no editable mapping. [#9013](https://github.com/scalableminds/webknossos/pull/9013)
 
 ### Fixed
-- Changed that WEBKNOSSOS takes mapping types more friendly and defaults back to HDF5 in case the type is unkown. [#8880](https://github.com/scalableminds/webknossos/pull/8880)
+- Changed that WEBKNOSSOS takes mapping types more friendly and defaults back to HDF5 in case the type is unknown. [#8880](https://github.com/scalableminds/webknossos/pull/8880)
 - Fixed a bug where exploring remote datasets served by WEBKNOSSOS would yield invalid paths. [#8897](https://github.com/scalableminds/webknossos/pull/8897)
 - Fixed multiple mesh related frontend API function (setMeshVisibility, removeMesh, and resetMeshes). Moreover, the mesh visibility is now applied even when changed during loading the mesh. [#8936](https://github.com/scalableminds/webknossos/pull/8936)
 - Fixed WebGL crashes for datasets with many layers and sped up shader compilation time. [#8950](https://github.com/scalableminds/webknossos/pull/8950)
 - Fixed spelling of super-voxel to supervoxel. [#8952](https://github.com/scalableminds/webknossos/pull/8952)
 - Fixed public zarr sharing links autogenerated by in the frontend. [#8977](https://github.com/scalableminds/webknossos/pull/8977)
 - Fixed that WEBKNOSSOS sent too many requests when the alignment analysis dialog was open. [#8978](https://github.com/scalableminds/webknossos/pull/8978)
-- Fixed a bug where storage scans for dataset mags & attachments used accross multiple organizations would count some paths twice. [#8981](https://github.com/scalableminds/webknossos/pull/8981)
+- Fixed a bug where storage scans for dataset mags & attachments used across multiple organizations would count some paths twice. [#8981](https://github.com/scalableminds/webknossos/pull/8981)
 - Fixed a regression where the old (api v10) manualUpload flow would not correctly register datasets. [#8984](https://github.com/scalableminds/webknossos/pull/8984)
 - Fixed ad-hoc mesh loading and jumping to registered segments for transformed datasets. [#8992](https://github.com/scalableminds/webknossos/pull/8992)
 - The modal to create a new team now always displays an empty input field when opened, preventing any previously entered text from appearing. [#9009](https://github.com/scalableminds/webknossos/pull/9009)
@@ -121,7 +610,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Changed that the d/f switching setting no longer affects movements other than moving via the d/f keyboard shortcuts. [#8786](https://github.com/scalableminds/webknossos/pull/8786)
 - Explicitly scanning datasets on disk is now faster for multi-organization setups. [#8791](https://github.com/scalableminds/webknossos/pull/8791)
 - Integrated "Change Email" functionality into Account Settings [#8840](https://github.com/scalableminds/webknossos/pull/8840)
-- When adding a new dataset from UI modal, the organization's default team is now automatically pre-selected for dataset access permissions. [#8847](https://github.com/scalableminds/webknossos/pull/8847)
+- When adding a new dataset from UI modal, the organization's default team is now automatically preselected for dataset access permissions. [#8847](https://github.com/scalableminds/webknossos/pull/8847)
 - Zarr streaming a volume annotation will now respond with errors (500) if the underlying data encountered errors. [#8853](https://github.com/scalableminds/webknossos/pull/8853)
 - datasource-properties.jsons with wkwResolutions now do not need the cubeLength parameter anymore. [#8854](https://github.com/scalableminds/webknossos/pull/8854)
 - Added protection against server outages by limiting the number of update actions in an annotation update transaction to 1000000. [#8866](https://github.com/scalableminds/webknossos/pull/8866)
@@ -874,7 +1363,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added the option to convert agglomerate skeletons to freely modifiable skeletons in the context menu of the Skeleton tab. [#7537](https://github.com/scalableminds/webknossos/pull/7537)
 - The annotation list in the dashboard now also shows segment counts of volume annotations (after they have been edited). [#7548](https://github.com/scalableminds/webknossos/pull/7548)
 - The buildinfo route now reports the supported HTTP API versions. [#7581](https://github.com/scalableminds/webknossos/pull/7581)
-- After deleting specific teams, projects and task types, their names can now be re-used when creating new ones. [#7573](https://github.com/scalableminds/webknossos/pull/7573)
+- After deleting specific teams, projects and task types, their names can now be reused when creating new ones. [#7573](https://github.com/scalableminds/webknossos/pull/7573)
 
 ### Changed
 - Improved loading speed of the annotation list. [#7410](https://github.com/scalableminds/webknossos/pull/7410)

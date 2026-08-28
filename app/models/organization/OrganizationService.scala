@@ -1,36 +1,46 @@
 package models.organization
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.box.Failure
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import com.scalableminds.util.tools.{Fox, TextUtils}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
+import controllers.RpcTokenHolder
+import mail.{DefaultMails, Send}
+import org.apache.pekko.actor.ActorSystem
 
 import javax.inject.Inject
 import models.dataset.{DataStore, DataStoreDAO}
 import models.folder.{Folder, FolderDAO, FolderService}
-import models.team.{PricingPlan, Team, TeamDAO}
+import models.team.{Team, TeamDAO}
 import models.user.{Invite, MultiUserDAO, User, UserDAO, UserService}
-import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsArray, JsObject, Json}
 import utils.WkConf
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
-                                    multiUserDAO: MultiUserDAO,
-                                    userDAO: UserDAO,
-                                    teamDAO: TeamDAO,
-                                    creditTransactionDAO: CreditTransactionDAO,
-                                    dataStoreDAO: DataStoreDAO,
-                                    folderDAO: FolderDAO,
-                                    folderService: FolderService,
-                                    userService: UserService,
-                                    rpc: RPC,
-                                    conf: WkConf)(implicit ec: ExecutionContext)
-    extends FoxImplicits
-    with LazyLogging {
+class OrganizationService @Inject() (
+    organizationDAO: OrganizationDAO,
+    multiUserDAO: MultiUserDAO,
+    userDAO: UserDAO,
+    teamDAO: TeamDAO,
+    creditTransactionDAO: CreditTransactionDAO,
+    dataStoreDAO: DataStoreDAO,
+    folderDAO: FolderDAO,
+    folderService: FolderService,
+    userService: UserService,
+    defaultMails: DefaultMails,
+    rpc: RPC,
+    conf: WkConf,
+    actorSystem: ActorSystem
+)(implicit ec: ExecutionContext)
+    extends LazyLogging {
+
+  private lazy val Mailer = actorSystem.actorSelection("/user/mailActor")
 
   def compactWrites(organization: Organization): JsObject =
     Json.obj(
@@ -38,8 +48,9 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       "name" -> organization.name
     )
 
-  def publicWrites(organization: Organization, requestingUser: Option[User] = None)(
-      implicit ctx: DBAccessContext): Fox[JsObject] = {
+  def publicWrites(organization: Organization, requestingUser: Option[User] = None)(using
+      ctx: DBAccessContext
+  ): Fox[JsObject] = {
 
     val adminOnlyInfo = if (requestingUser.exists(_.isAdminOf(organization._id))) {
       Json.obj(
@@ -50,71 +61,86 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     } else Json.obj()
     for {
       usedStorageBytes <- organizationDAO.getUsedStorage(organization._id)
-      ownerBox <- userDAO.findOwnerByOrg(organization._id).shiftBox
-      creditBalanceOpt <- Fox.runIf(requestingUser.exists(_._organization == organization._id))(
-        creditTransactionDAO.getCreditBalance(organization._id))
-      ownerNameOpt = ownerBox.toOption.map(o => s"${o.firstName} ${o.lastName}")
-    } yield
-      Json.obj(
-        "id" -> organization._id,
-        "name" -> organization._id, // Included for backwards compatibility
-        "additionalInformation" -> organization.additionalInformation,
-        "enableAutoVerify" -> organization.enableAutoVerify,
-        "name" -> organization.name,
-        "pricingPlan" -> organization.pricingPlan,
-        "paidUntil" -> organization.paidUntil,
-        "includedUsers" -> organization.includedUsers,
-        "includedStorageBytes" -> organization.includedStorageBytes,
-        "usedStorageBytes" -> usedStorageBytes,
-        "ownerName" -> ownerNameOpt,
-        "creditBalance" -> creditBalanceOpt.map(_.toString)
-      ) ++ adminOnlyInfo
+      ownerMultiUserBox <- multiUserDAO.findMultiUserOfOrganizationOwner(organization._id).shiftBox
+      milliCreditBalanceOpt <- Fox.runIf(requestingUser.exists(_._organization == organization._id))(
+        creditTransactionDAO.getMilliCreditBalance(organization._id)
+      )
+      ownerNameOpt = ownerMultiUserBox.toOption.map(o => o.fullName)
+    } yield Json.obj(
+      "id" -> organization._id,
+      "name" -> organization._id, // Included for backwards compatibility
+      "additionalInformation" -> organization.additionalInformation,
+      "enableAutoVerify" -> organization.enableAutoVerify,
+      "name" -> organization.name,
+      "pricingPlan" -> organization.pricingPlan,
+      "aiPlan" -> organization.aiPlan,
+      "paidUntil" -> organization.paidUntil,
+      "includedUsers" -> organization.includedUsers,
+      "includedStorageBytes" -> organization.includedStorageBytes,
+      "usedStorageBytes" -> usedStorageBytes,
+      "ownerName" -> ownerNameOpt,
+      "milliCreditBalance" -> milliCreditBalanceOpt
+    ) ++ adminOnlyInfo
   }
 
-  def findOneByInviteOrDefault(inviteOpt: Option[Invite])(implicit ctx: DBAccessContext): Fox[Organization] =
+  def assertUsedStorageNotExceeded(
+      organization: Organization,
+      additionalRequestedStorage: Option[Long] = None
+  ): Fox[Unit] =
+    for {
+      usedStorageBytes <- organizationDAO.getUsedStorage(organization._id)
+      _ <- Fox.runOptional(organization.includedStorageBytes)(includedStorage =>
+        Fox.fromBool(usedStorageBytes + additionalRequestedStorage.getOrElse(0L) <= includedStorage)
+      ) ?~> Msg.Organization.storageExceeded
+    } yield ()
+
+  def findOneByInviteOrDefault(inviteOpt: Option[Invite])(using ctx: DBAccessContext): Fox[Organization] =
     inviteOpt match {
-      case Some(invite) => organizationDAO.findOne(invite._organization) ?~> "organization.notFound.byInvite"
-      case None =>
+      case Some(invite) => organizationDAO.findOne(invite._organization) ?~> Msg.Organization.notFoundByInvite
+      case None         =>
         for {
-          allOrganizations <- organizationDAO.findAll
-          _ <- Fox.fromBool(allOrganizations.length == 1) ?~> "organization.ambiguous"
+          allOrganizations <- organizationDAO.findAll(using GlobalAccessContext)
+          _ <- Fox.fromBool(allOrganizations.length == 1) ?~> Msg.Organization.ambiguous
           defaultOrganization <- allOrganizations.headOption.toFox
         } yield defaultOrganization
     }
 
   def assertMayCreateOrganization(requestingUser: Option[User]): Fox[Unit] = {
-    val activatedInConfig = Fox.fromBool(conf.Features.isWkorgInstance) ?~> "allowOrganizationCreation.notEnabled"
-    val userIsSuperUser = requestingUser.toFox.flatMap(
-      user =>
-        multiUserDAO
-          .findOne(user._multiUser)(GlobalAccessContext)
-          .flatMap(multiUser => Fox.fromBool(multiUser.isSuperUser)))
+    val activatedInConfig =
+      Fox.fromBool(conf.Features.isWkorgInstance) ?~> Msg.Organization.organizationCreationNotEnabled
+    val userIsSuperUser = requestingUser.toFox.flatMap(user =>
+      multiUserDAO
+        .findOne(user._multiUser)(using GlobalAccessContext)
+        .flatMap(multiUser => Fox.fromBool(multiUser.isSuperUser))
+    )
 
     // If at least one of the conditions is fulfilled, success is returned.
     for {
       fulls <- Fox.fromFuture(
-        Fox.sequenceOfFulls[Unit](List(assertNoOrganizationsPresent, activatedInConfig, userIsSuperUser)))
+        Fox.sequenceOfFulls[Unit](List(assertNoOrganizationsPresent, activatedInConfig, userIsSuperUser))
+      )
       _ <- Fox.fromBool(fulls.nonEmpty)
     } yield ()
   }
 
   def assertNoOrganizationsPresent: Fox[Unit] =
     for {
-      organizations <- organizationDAO.findAll(GlobalAccessContext)
-      _ <- Fox.fromBool(organizations.isEmpty) ?~> "organizationsNotEmpty"
+      organizations <- organizationDAO.findAll(using GlobalAccessContext)
+      _ <- Fox.fromBool(organizations.isEmpty) ?~> Msg.Organization.notEmpty
     } yield ()
 
   def createOrganization(organizationIdOpt: Option[String], organizationName: String): Fox[Organization] =
     for {
-      normalizedName <- TextUtils.normalizeStrong(organizationName).toFox ?~> "organization.id.invalid"
+      normalizedName <- TextUtils.normalizeStrong(organizationName).toFox ?~> Msg.Organization.idInvalid
       organizationId = organizationIdOpt
         .flatMap(TextUtils.normalizeStrong)
         .getOrElse(normalizedName)
         .replaceAll(" ", "_")
-      existingOrganization <- organizationDAO.findOne(organizationId)(GlobalAccessContext).shiftBox
-      _ <- Fox.fromBool(existingOrganization.isEmpty) ?~> "organization.id.alreadyInUse"
-      initialPricingParameters = if (conf.Features.isWkorgInstance) (PricingPlan.Personal, Some(1), Some(50000000000L))
-      else (PricingPlan.Custom, None, None)
+      existingOrganization <- organizationDAO.findOne(organizationId)(using GlobalAccessContext).shiftBox
+      _ <- Fox.fromBool(existingOrganization.isEmpty) ?~> Msg.Organization.idTaken
+      initialPricingParameters =
+        if (conf.Features.isWkorgInstance) (PricingPlan.Personal, Some(1), Some(50000000000L))
+        else (PricingPlan.Custom, None, None)
       organizationRootFolder = Folder(ObjectId.generate, folderService.defaultRootName, JsArray.empty)
 
       organization = Organization(
@@ -124,66 +150,102 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         organizationName,
         initialPricingParameters._1,
         None,
+        None,
         initialPricingParameters._2,
         initialPricingParameters._3,
         organizationRootFolder._id
       )
       organizationTeam = Team(ObjectId.generate, organization._id, "Default", isOrganizationTeam = true)
-      _ <- folderDAO.insertAsRoot(organizationRootFolder)
+      _ <- folderDAO.insertAsRoot(organizationRootFolder) ?~> Msg.Organization.folderCreateFailed
       _ <- organizationDAO.insertOne(organization)
       _ <- teamDAO.insertOne(organizationTeam)
     } yield organization
 
-  def createOrganizationDirectory(organizationId: String, dataStoreToken: String): Fox[Unit] = {
+  def createOrganizationDirectory(organizationId: String): Fox[Unit] = {
     def sendRPCToDataStore(dataStore: DataStore) =
       rpc(s"${dataStore.url}/data/triggers/createOrganizationDirectory")
-        .addQueryParam("token", dataStoreToken)
+        .addQueryParam("token", RpcTokenHolder.webknossosToken)
         .addQueryParam("organizationId", organizationId)
         .postEmpty()
         .futureBox
 
     for {
-      datastores <- dataStoreDAO.findAll(GlobalAccessContext)
+      datastores <- dataStoreDAO.findAll(using GlobalAccessContext)
       _ <- Fox.fromFuture(Future.sequence(datastores.map(sendRPCToDataStore)))
     } yield ()
   }
 
-  def assertUsersCanBeAdded(organizationId: String, usersToAddCount: Int = 1)(implicit ctx: DBAccessContext,
-                                                                              ec: ExecutionContext): Fox[Unit] =
+  def assertUsersCanBeAdded(organizationId: String, usersToAddCount: Int = 1)(using
+      ctx: DBAccessContext,
+      ec: ExecutionContext
+  ): Fox[Unit] =
     for {
       organization <- organizationDAO.findOne(organizationId)
       userCount <- userDAO.countAllForOrganization(organizationId)
       _ <- Fox.runOptional(organization.includedUsers)(includedUsers =>
-        Fox.fromBool(userCount + usersToAddCount <= includedUsers))
+        Fox.fromBool(userCount + usersToAddCount <= includedUsers)
+      )
     } yield ()
 
-  private def fallbackOnOwnerEmail(possiblyEmptyEmail: String, organization: Organization)(
-      implicit ctx: DBAccessContext): Fox[String] =
+  private def fallbackOnOwnerEmail(possiblyEmptyEmail: String, organization: Organization): Fox[String] =
     if (possiblyEmptyEmail.nonEmpty) {
       Fox.successful(possiblyEmptyEmail)
     } else {
       for {
-        owner <- userDAO.findOwnerByOrg(organization._id)
-        ownerEmail <- userService.emailFor(owner)
-      } yield ownerEmail
+        ownerMultiUser <- multiUserDAO.findMultiUserOfOrganizationOwner(organization._id)
+      } yield ownerMultiUser.email
     }
 
-  def newUserMailRecipient(organization: Organization)(implicit ctx: DBAccessContext): Fox[String] =
+  def newUserMailRecipient(organization: Organization): Fox[String] =
     fallbackOnOwnerEmail(organization.newUserMailingList, organization)
 
-  def acceptTermsOfService(organizationId: String, version: Int)(implicit ctx: DBAccessContext,
-                                                                 m: MessagesProvider): Fox[Unit] =
+  def acceptTermsOfService(organizationId: String, version: Int)(using ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- Fox.fromBool(conf.WebKnossos.TermsOfService.enabled) ?~> "termsOfService.notEnabled"
+      _ <- Fox.fromBool(conf.WebKnossos.TermsOfService.enabled) ?~> Msg.Organization.TermsOfService.notEnabled
       requiredVersion = conf.WebKnossos.TermsOfService.version
-      _ <- Fox.fromBool(version == requiredVersion) ?~> Messages("termsOfService.versionMismatch",
-                                                                 requiredVersion,
-                                                                 version)
+      _ <- Fox.fromBool(version == requiredVersion) ?~> Msg.Organization.TermsOfService
+        .versionMismatch(requiredVersion, version)
       _ <- organizationDAO.acceptTermsOfService(organizationId, version, Instant.now)
     } yield ()
 
-  // Currently disabled as in the credit system trail phase all organizations should be able to start paid jobs.
-  // See tracking issue: https://github.com/scalableminds/webknossos/issues/8458
-  def assertOrganizationHasPaidPlan(organizationId: String): Fox[Unit] = Fox.successful(())
+  /** Notifies the organization owner and all of its admins that the organization was moved to a higher pricing tier,
+    * highlighting the features they gained. Does nothing if the plan change was not an upgrade. Never fails, as the
+    * plan update it belongs to has already been persisted by then. Failures are logged instead.
+    */
+  def sendPricingPlanUpgradeMails(
+      organization: Organization,
+      previousPlan: PricingPlan.PricingPlan,
+      newPlan: PricingPlan.PricingPlan
+  ): Fox[Unit] =
+    for {
+      resultBox <- Fox
+        .runOptional(PricingPlanFeatures.unlockedBy(previousPlan, newPlan))(unlockedFeatures =>
+          for {
+            recipients <- multiUserDAO.findMultiUsersOfOrganizationOwnerAndAdmins(organization._id)
+            _ = recipients.foreach(recipient =>
+              Mailer ! Send(defaultMails.pricingPlanUpgradedMail(recipient, organization.name, unlockedFeatures))
+            )
+            _ = logger.info(
+              s"Notified ${recipients.length} owner/admins of organization ${organization._id} about the pricing plan upgrade from $previousPlan to $newPlan."
+            )
+          } yield ()
+        )
+        .shiftBox
+      _ = resultBox match {
+        case Failure(msg, _, _) =>
+          logger.warn(
+            s"Could not notify owner/admins of organization ${organization._id} about the pricing plan upgrade from $previousPlan to $newPlan: $msg"
+          )
+        case _ => ()
+      }
+    } yield ()
+
+  def assertIsSuperUserOrOrganizationHasAiPlan(organization: Organization, user: User)(using
+      ctx: DBAccessContext
+  ): Fox[Unit] =
+    for {
+      isSuperUser <- userService.isSuperUser(user._multiUser)
+      _ <- Fox.runIf(!isSuperUser)(Fox.fromBool(organization.aiPlan.isDefined)) ?~> Msg.Job.Credits.noAiPlan
+    } yield ()
 
 }

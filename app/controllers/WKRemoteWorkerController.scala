@@ -1,46 +1,54 @@
 package controllers
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.box.{Empty, Failure, Full}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import models.aimodels.AiInferenceDAO
 import models.dataset.DatasetDAO
 import models.job.JobCommand.JobCommand
 
 import javax.inject.Inject
-import models.job._
+import models.job.*
 import models.organization.CreditTransactionService
 import models.voxelytics.VoxelyticsDAO
-import com.scalableminds.util.tools.{Empty, Failure, Full}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import utils.WkConf
 
 import scala.concurrent.ExecutionContext
 
-class WKRemoteWorkerController @Inject()(jobDAO: JobDAO,
-                                         jobService: JobService,
-                                         workerDAO: WorkerDAO,
-                                         creditTransactionService: CreditTransactionService,
-                                         voxelyticsDAO: VoxelyticsDAO,
-                                         aiInferenceDAO: AiInferenceDAO,
-                                         datasetDAO: DatasetDAO,
-                                         wkConf: WkConf)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+class WKRemoteWorkerController @Inject() (
+    jobDAO: JobDAO,
+    jobService: JobService,
+    workerDAO: WorkerDAO,
+    creditTransactionService: CreditTransactionService,
+    voxelyticsDAO: VoxelyticsDAO,
+    aiInferenceDAO: AiInferenceDAO,
+    datasetDAO: DatasetDAO,
+    wkConf: WkConf
+)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
-  def requestJobs(key: String): Action[AnyContent] = Action.async { implicit request =>
+  def requestJobs(key: String, workerVersion: Option[String]): Action[AnyContent] = Action.fox { _ =>
     for {
-      worker <- workerDAO.findOneByKey(key) ?~> "job.worker.notFound"
+      worker <- workerDAO.findOneByKey(key) ?~> Msg.Job.workerNotFound
       _ = workerDAO.updateHeartBeat(worker._id)
+      _ = if (workerVersion != worker.lastReportedVersion)
+        workerVersion.map(workerDAO.updateLastReportedVersion(worker._id, _))
       _ <- reserveNextJobs(worker, pendingIterationCount = 10)
       assignedUnfinishedJobs: List[Job] <- jobDAO.findAllUnfinishedByWorker(worker._id)
       jobsToCancel: List[Job] <- jobDAO.findAllCancellingByWorker(worker._id)
       // make sure that the jobs to run have not already just been cancelled
       assignedUnfinishedJobsFiltered = assignedUnfinishedJobs.filter(j =>
-        !jobsToCancel.map(_._id).toSet.contains(j._id))
+        !jobsToCancel.map(_._id).toSet.contains(j._id)
+      )
       assignedUnfinishedJs <- Fox.serialCombined(assignedUnfinishedJobsFiltered)(
-        jobService.parameterWrites(_)(GlobalAccessContext))
-      toCancelJs <- Fox.serialCombined(jobsToCancel)(jobService.parameterWrites(_)(GlobalAccessContext))
+        jobService.parameterWrites(_)(using GlobalAccessContext)
+      )
+      toCancelJs <- Fox.serialCombined(jobsToCancel)(jobService.parameterWrites(_)(using GlobalAccessContext))
     } yield Ok(Json.obj("to_run" -> assignedUnfinishedJs, "to_cancel" -> toCancelJs))
   }
 
@@ -50,57 +58,69 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO,
       unfinishedLowPriorityCount <- jobDAO.countUnfinishedByWorker(worker._id, JobCommand.lowPriorityJobs)
       pendingHighPriorityCount <- jobDAO.countUnassignedPendingForDataStore(
         worker._dataStore,
-        JobCommand.highPriorityJobs.intersect(worker.supportedJobCommands))
+        JobCommand.highPriorityJobs.intersect(worker.supportedJobCommands)
+      )
       pendingLowPriorityCount <- jobDAO.countUnassignedPendingForDataStore(
         worker._dataStore,
-        JobCommand.lowPriorityJobs.intersect(worker.supportedJobCommands))
-      mayAssignHighPriorityJob = unfinishedHighPriorityCount < worker.maxParallelHighPriorityJobs && pendingHighPriorityCount > 0
-      mayAssignLowPriorityJob = unfinishedLowPriorityCount < worker.maxParallelLowPriorityJobs && pendingLowPriorityCount > 0
+        JobCommand.lowPriorityJobs.intersect(worker.supportedJobCommands)
+      )
+      mayAssignHighPriorityJob =
+        unfinishedHighPriorityCount < worker.maxParallelHighPriorityJobs && pendingHighPriorityCount > 0
+      mayAssignLowPriorityJob =
+        unfinishedLowPriorityCount < worker.maxParallelLowPriorityJobs && pendingLowPriorityCount > 0
       currentlyAssignableJobCommands = assignableJobCommands(mayAssignHighPriorityJob, mayAssignLowPriorityJob)
         .intersect(worker.supportedJobCommands)
-      _ <- if ((!mayAssignHighPriorityJob && !mayAssignLowPriorityJob) || pendingIterationCount == 0)
-        Fox.successful(())
-      else {
-        jobDAO.reserveNextJob(worker, currentlyAssignableJobCommands).flatMap { _ =>
-          reserveNextJobs(worker, pendingIterationCount - 1)
+      _ <-
+        if ((!mayAssignHighPriorityJob && !mayAssignLowPriorityJob) || pendingIterationCount == 0)
+          Fox.successful(())
+        else {
+          jobDAO.reserveNextJob(worker, currentlyAssignableJobCommands).flatMap { _ =>
+            reserveNextJobs(worker, pendingIterationCount - 1)
+          }
         }
-      }
     } yield ()
 
-  private def assignableJobCommands(mayAssignHighPriorityJob: Boolean,
-                                    mayAssignLowPriorityJob: Boolean): Set[JobCommand] = {
+  private def assignableJobCommands(
+      mayAssignHighPriorityJob: Boolean,
+      mayAssignLowPriorityJob: Boolean
+  ): Set[JobCommand] = {
     val lowPriorityOrEmpty = if (mayAssignLowPriorityJob) JobCommand.lowPriorityJobs else Set()
     val highPriorityOrEmpty = if (mayAssignHighPriorityJob) JobCommand.highPriorityJobs else Set()
     lowPriorityOrEmpty ++ highPriorityOrEmpty
   }
 
-  def updateJobStatus(key: String, id: ObjectId): Action[JobStatus] = Action.async(validateJson[JobStatus]) {
+  def updateJobStatus(key: String, id: ObjectId): Action[JobStatus] = Action.fox(validateJson[JobStatus]) {
     implicit request =>
       for {
-        _ <- workerDAO.findOneByKey(key) ?~> "job.worker.notFound"
-        jobBeforeChange <- jobDAO.findOne(id)(GlobalAccessContext)
-        _ <- jobDAO.updateStatus(id, request.body) ?~> "job.updateStatus.failed"
-        jobAfterChange <- jobDAO.findOne(id)(GlobalAccessContext) ?~> "job.notFound"
+        _ <- workerDAO.findOneByKey(key) ?~> Msg.Job.workerNotFound
+        jobBeforeChange <- jobDAO.findOne(id)(using GlobalAccessContext)
+        _ <- jobDAO.updateStatus(id, request.body) ?~> Msg.Job.updateStatusFailed
+        jobAfterChange <- jobDAO.findOne(id)(using GlobalAccessContext) ?~> Msg.Job.notFound
         _ = jobService.trackStatusChange(jobBeforeChange, jobAfterChange)
-        _ <- jobService.cleanUpIfFailed(jobAfterChange) ?~> "job.cleanup.failed"
+        _ <- jobService.cleanUpIfFailed(jobAfterChange) ?~> Msg.Job.cleanupFailed
+        _ = jobService.cleanUpUploadFilesIfNeeded(jobBeforeChange, jobAfterChange)
         _ <- Fox.runIf(request.body.state == JobState.SUCCESS) {
-          creditTransactionService
-            .completeTransactionOfJob(jobAfterChange._id)(GlobalAccessContext) ?~> "job.creditTransaction.failed"
+          creditTransactionService.completeTransactionOfJob(jobAfterChange._id)(using
+            GlobalAccessContext
+          ) ?~> Msg.Job.Credits.failed
         }
         _ <- Fox.runIf(
-          jobAfterChange.state != request.body.state && (request.body.state == JobState.FAILURE || request.body.state == JobState.CANCELLED)) {
-          creditTransactionService
-            .refundTransactionForJob(jobAfterChange._id)(GlobalAccessContext) ?~> "job.creditTransaction.refund.failed"
+          jobBeforeChange.state != request.body.state && (request.body.state == JobState.FAILURE || request.body.state == JobState.CANCELLED)
+        ) {
+          creditTransactionService.refundTransactionForJob(
+            jobBeforeChange._id,
+            isCancelled = request.body.state == JobState.CANCELLED
+          )(using GlobalAccessContext) ?~> Msg.Job.Credits.refundFailed
         }
       } yield Ok
   }
 
-  def attachVoxelyticsWorkflow(key: String, id: ObjectId): Action[String] = Action.async(validateJson[String]) {
+  def attachVoxelyticsWorkflow(key: String, id: ObjectId): Action[String] = Action.fox(validateJson[String]) {
     implicit request =>
       for {
-        _ <- workerDAO.findOneByKey(key) ?~> "job.worker.notFound"
-        _ <- Fox.fromBool(wkConf.Features.voxelyticsEnabled) ?~> "voxelytics.disabled"
-        organizationId <- jobDAO.organizationIdForJobId(id) ?~> "job.notFound"
+        _ <- workerDAO.findOneByKey(key) ?~> Msg.Job.workerNotFound
+        _ <- Fox.fromBool(wkConf.Features.voxelyticsEnabled) ?~> Msg.Voxelytics.notEnabled
+        organizationId <- jobDAO.organizationIdForJobId(id) ?~> Msg.Job.notFound
         workflowHash = request.body
         existingWorkflowBox <- voxelyticsDAO.findWorkflowByHashAndOrganization(organizationId, workflowHash).shiftBox
         _ <- existingWorkflowBox match {
@@ -113,13 +133,13 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO,
   }
 
   def attachDatasetToInference(key: String, id: ObjectId): Action[String] =
-    Action.async(validateJson[String]) { implicit request =>
+    Action.fox(validateJson[String]) { implicit request =>
       implicit val ctx: DBAccessContext = GlobalAccessContext
       for {
-        _ <- workerDAO.findOneByKey(key) ?~> "job.worker.notFound"
-        organizationId <- jobDAO.organizationIdForJobId(id) ?~> "job.notFound"
+        _ <- workerDAO.findOneByKey(key) ?~> Msg.Job.workerNotFound
+        organizationId <- jobDAO.organizationIdForJobId(id) ?~> Msg.Job.notFound
         dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(request.body, organizationId)
-        aiInference <- aiInferenceDAO.findOneByJobId(id) ?~> "aiInference.notFound"
+        aiInference <- aiInferenceDAO.findOneByJobId(id) ?~> Msg.AiInference.notFound
         _ <- aiInferenceDAO.updateDataset(aiInference._id, dataset._id)
       } yield Ok
     }

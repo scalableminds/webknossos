@@ -1,4 +1,6 @@
-import _ from "lodash";
+import flow from "lodash-es/flow";
+import isEqual from "lodash-es/isEqual";
+import without from "lodash-es/without";
 import type {
   UpdateUserBoundingBoxInSkeletonTracingAction,
   UpdateUserBoundingBoxInVolumeTracingAction,
@@ -21,7 +23,7 @@ function removeAllButLastUpdateActiveItemAndCameraAction(
     (batch) => batch.actions.length === 1 && batch.actions[0].name === "updateCamera",
   );
 
-  return _.without(
+  return without(
     updateActionsBatches,
     ...updateActiveNodeOnlyBatches.slice(0, -1),
     ...updateActiveSegmentIdOnlyBatches.slice(0, -1),
@@ -35,7 +37,7 @@ function removeAllButLastUpdateTdCameraAction(updateActionsBatches: Array<SaveQu
   const updateTracingOnlyBatches = updateActionsBatches.filter(
     (batch) => batch.actions.length === 1 && batch.actions[0].name === "updateTdCamera",
   );
-  return _.without(updateActionsBatches, ...updateTracingOnlyBatches.slice(0, -1));
+  return without(updateActionsBatches, ...updateTracingOnlyBatches.slice(0, -1));
 }
 
 function removeSubsequentUpdateTreeActions(updateActionsBatches: Array<SaveQueueEntry>) {
@@ -57,7 +59,7 @@ function removeSubsequentUpdateTreeActions(updateActionsBatches: Array<SaveQueue
     }
   }
 
-  return _.without(updateActionsBatches, ...obsoleteUpdateActions);
+  return without(updateActionsBatches, ...obsoleteUpdateActions);
 }
 
 function removeSubsequentUpdateNodeActions(updateActionsBatches: Array<SaveQueueEntry>) {
@@ -79,7 +81,7 @@ function removeSubsequentUpdateNodeActions(updateActionsBatches: Array<SaveQueue
     }
   }
 
-  return _.without(updateActionsBatches, ...obsoleteUpdateActions);
+  return without(updateActionsBatches, ...obsoleteUpdateActions);
 }
 
 export function removeSubsequentUpdateBBoxActions(updateActionsBatches: Array<SaveQueueEntry>) {
@@ -89,6 +91,7 @@ export function removeSubsequentUpdateBBoxActions(updateActionsBatches: Array<Sa
     string,
     UpdateUserBoundingBoxInSkeletonTracingAction | UpdateUserBoundingBoxInVolumeTracingAction
   > = {};
+
   const relevantActions = [];
   for (let i = updateActionsBatches.length - 1; i >= 0; i--) {
     const currentActions = updateActionsBatches[i].actions;
@@ -106,7 +109,7 @@ export function removeSubsequentUpdateBBoxActions(updateActionsBatches: Array<Sa
         previousAction == null ||
         previousAction.name !== currentAction.name ||
         previousAction.value.boundingBoxId !== currentAction.value.boundingBoxId ||
-        !_.isEqual(
+        !isEqual(
           new Set(Object.keys(previousAction.value)),
           new Set(Object.keys(currentAction.value)),
         )
@@ -121,29 +124,69 @@ export function removeSubsequentUpdateBBoxActions(updateActionsBatches: Array<Sa
   return relevantActions;
 }
 
-function removeSubsequentUpdateSegmentActions(updateActionsBatches: Array<SaveQueueEntry>) {
-  const obsoleteUpdateActions = [];
+function removeSubsequentUpdateSegmentActions(
+  updateActionsBatches: SaveQueueEntry[],
+): SaveQueueEntry[] {
+  /*
+   * Multiple updateSegmentPartial actions are merged if they
+   * are consecutive and refer to the same segment.
+   * The most important use case for this is when using the color
+   * picker for changing a segment's color as this emits update
+   * actions on each change.
+   */
+  const result: SaveQueueEntry[] = [];
 
-  // If two updateSegment update actions for the same segment id follow one another, the first one is obsolete
-  for (let i = 0; i < updateActionsBatches.length - 1; i++) {
-    const actions1 = updateActionsBatches[i].actions;
-    const actions2 = updateActionsBatches[i + 1].actions;
+  let i = 0;
+  while (i < updateActionsBatches.length) {
+    const currentBatch = updateActionsBatches[i];
+    const currentActions = currentBatch.actions;
 
-    if (
-      actions1.length === 1 &&
-      actions1[0].name === "updateSegment" &&
-      actions2.length === 1 &&
-      actions2[0].name === "updateSegment" &&
-      actions1[0].value.id === actions2[0].value.id
-    ) {
-      obsoleteUpdateActions.push(updateActionsBatches[i]);
+    // Merging of subsequent update actions is only done
+    // when a batch contains exactly one updateSegmentPartial action.
+    const currentAction = currentActions[0];
+    if (currentActions.length === 1 && currentAction.name === "updateSegmentPartial") {
+      let mergedValue = { ...currentAction.value };
+      let j = i + 1;
+
+      // Merge all following same-id updates
+      while (j < updateActionsBatches.length) {
+        const nextActions = updateActionsBatches[j].actions;
+        const nextAction = nextActions[0];
+
+        if (
+          nextActions.length === 1 &&
+          nextAction.name === "updateSegmentPartial" &&
+          nextAction.value.id === currentAction.value.id &&
+          nextAction.value.actionTracingId === currentAction.value.actionTracingId
+        ) {
+          mergedValue = { ...mergedValue, ...nextAction.value };
+          j++;
+        } else {
+          break;
+        }
+      }
+
+      result.push({
+        ...currentBatch,
+        actions: [
+          {
+            name: "updateSegmentPartial",
+            value: mergedValue,
+          },
+        ],
+      });
+
+      i = j;
+    } else {
+      result.push(currentBatch);
+      i++;
     }
   }
 
-  return _.without(updateActionsBatches, ...obsoleteUpdateActions);
+  return result;
 }
 
-const compactAll = _.flow([
+const compactAll = flow([
   removeAllButLastUpdateActiveItemAndCameraAction,
   removeAllButLastUpdateTdCameraAction,
   removeSubsequentUpdateNodeActions,

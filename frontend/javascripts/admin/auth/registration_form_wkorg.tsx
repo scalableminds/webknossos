@@ -6,9 +6,10 @@ import { useFetch } from "libs/react_helpers";
 import Request from "libs/request";
 import messages from "messages";
 import { memo, useRef } from "react";
+import { useDispatch } from "react-redux";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
-import Store from "viewer/throttled_store";
+import { HoneypotFormItem } from "./honeypot_form_item";
 import { TOSCheckFormItem } from "./tos_check_form_item";
 
 const FormItem = Form.Item;
@@ -31,6 +32,7 @@ function generateOrganizationId() {
 }
 
 function RegistrationFormWKOrg(props: Props) {
+  const dispatch = useDispatch();
   const [form] = Form.useForm();
   const organizationId = useRef(generateOrganizationId());
   const terms = useFetch(getTermsOfService, null, []);
@@ -54,13 +56,14 @@ function RegistrationFormWKOrg(props: Props) {
       email: formValues.email,
       password: formValues.password.password1,
     });
-    Store.dispatch(setActiveUserAction(user));
-    Store.dispatch(setActiveOrganizationAction(organization));
+    dispatch(setActiveUserAction(user));
+    dispatch(setActiveOrganizationAction(organization));
     props.onRegistered(true);
   }
 
   return (
     <Form onFinish={onFinish} form={form}>
+      <HoneypotFormItem />
       <Row gutter={8}>
         <Col span={12}>
           <FormItem

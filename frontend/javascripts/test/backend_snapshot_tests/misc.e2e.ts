@@ -1,0 +1,47 @@
+// biome-ignore assist/source/organizeImports: test setup and mocking needs to be loaded first
+import {
+  replaceVolatileValues,
+  resetDatabase,
+  setUserAuthToken,
+  tokenUserA,
+  writeTypeCheckingFile,
+} from "test/e2e_setup";
+import { getActiveUser, getDatastores, getFeatureToggles } from "admin/rest_api";
+import { beforeAll, describe, it } from "vitest";
+
+describe("Misc APIs (E2E) ", () => {
+  beforeAll(async () => {
+    // Reset database and change token
+    resetDatabase();
+    setUserAuthToken(tokenUserA);
+  });
+
+  it("datastores()", async ({ expect }) => {
+    const datastores = await getDatastores();
+
+    writeTypeCheckingFile(datastores, "datastore", "APIDataStore", {
+      isArray: true,
+    });
+
+    expect(datastores).toMatchSnapshot();
+  });
+
+  it("activeUser()", async ({ expect }) => {
+    const activeUser = await getActiveUser();
+
+    writeTypeCheckingFile(activeUser, "activeUser", "APIUser");
+    // replaceVolatileValues should not be needed here since the database is freshly reset
+    // and the tests are executed serially. However, for unknown reasons the lastActivity
+    // property still varies since ava was upgraded from v3 to v4.
+
+    expect(replaceVolatileValues(activeUser)).toMatchSnapshot();
+  });
+
+  it("getFeatureToggles()", async ({ expect }) => {
+    const features = await getFeatureToggles();
+
+    writeTypeCheckingFile(features, "feature-toggles", "APIFeatureToggles");
+
+    expect(features).toMatchSnapshot();
+  });
+});

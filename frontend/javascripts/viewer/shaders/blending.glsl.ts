@@ -34,3 +34,20 @@ export const getBlendLayersCover: ShaderModule = {
     }
   `,
 };
+
+export const getBlendLayersCoverBlackAsTransparent: ShaderModule = {
+  requirements: [getBlendLayersCover],
+  code: `
+    // Like blendLayersCover, but treats black voxels (RGB = 0) as transparent.
+    vec4 blendLayersCoverBlackAsTransparent(
+      vec4 current_color,
+      vec4 layer_color,
+      bool used_fallback_color
+    ) {
+      // If all RGB channels are zero, the voxel is black and should be treated as transparent.
+      float is_black = float(layer_color.r == 0.0 && layer_color.g == 0.0 && layer_color.b == 0.0);
+      layer_color.a = layer_color.a * (1.0 - is_black);
+      return blendLayersCover(current_color, layer_color, used_fallback_color);
+    }
+  `,
+};

@@ -28,7 +28,7 @@ export function isPositionStillInPlane(
 
 export function getTooltipPosition(
   isNotPinned: boolean,
-  tooltipRef: RefObject<HTMLElement>,
+  tooltipRef: RefObject<HTMLElement | null>,
   viewportRect: Rect,
   tooltipPosition: Vector2,
 ) {

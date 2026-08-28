@@ -1,5 +1,7 @@
 import { orderPointsWithMST } from "libs/order_points_with_mst";
-import _ from "lodash";
+import compact from "lodash-es/compact";
+import groupBy from "lodash-es/groupBy";
+import omitBy from "lodash-es/omitBy";
 import {
   BufferGeometry,
   CatmullRomCurve3,
@@ -48,17 +50,17 @@ export default function computeSplitBoundaryMeshWithSplines(points: Vector3[]): 
    */
   const splines: Object3D[] = [];
 
-  const unfilteredPointsByZ = _.groupBy(points, (p) => p[2]);
-  const pointsByZ = _.omitBy(unfilteredPointsByZ, (value) => value.length < 2);
+  const unfilteredPointsByZ = groupBy(points, (p) => p[2]);
+  const pointsByZ = omitBy(unfilteredPointsByZ, (value) => value.length < 2);
 
   const zValues = Object.keys(pointsByZ)
     .map((el) => Number(el))
-    .sort();
+    .sort((a, b) => a - b);
 
   const minZ = Math.min(...zValues);
   const maxZ = Math.max(...zValues);
 
-  if (minZ === maxZ) {
+  if (minZ === maxZ && zValues.length > 0) {
     // All nodes are in the same section. Duplicate them to the next
     // and previous section to get a surface with a depth.
     return computeSplitBoundaryMeshWithSplines([
@@ -71,7 +73,7 @@ export default function computeSplitBoundaryMeshWithSplines(points: Vector3[]): 
   const curvesByZ: Record<number, CatmullRomCurve3> = {};
 
   // Create curves for existing z-values
-  const curves = _.compact(
+  const curves = compact(
     zValues.map((zValue, curveIdx) => {
       let adaptedZ = zValue;
       // We make the surface a bit larger by offsetting points in Z

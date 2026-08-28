@@ -7,6 +7,7 @@ import type { VoxelSize } from "types/api_types";
 // Please note that some manual changes to the schema are required.
 type Vector2 = [number, number];
 type Vector3 = [number, number, number];
+type Vector4 = [number, number, number, number];
 
 type BoundingBox = {
   topLeft: Vector3;
@@ -32,7 +33,19 @@ type BaseRemoteLayer = {
     index: number;
     bounds: Vector2;
   }>;
+  coordinateTransformations?: Array<AffineTransformation | ThinPlateSplineTransformation>;
 };
+
+type AffineTransformation = {
+  type: "affine";
+  matrix: [Vector4, Vector4, Vector4, Vector4];
+};
+
+type ThinPlateSplineTransformation = {
+  type: "thin_plate_spline";
+  correspondences: { source: Array<Vector3>; target: Array<Vector3> };
+};
+
 type DataLayerZarrPartial = BaseRemoteLayer & {
   dataFormat: "zarr";
 };
@@ -66,7 +79,9 @@ export type DataLayer = {
     }
   | {
       category: "segmentation";
-      largestSegmentId: number | null;
+      // Encoded as an unsigned-decimal string because uint64 segment ids can exceed the JS
+      // safe-integer range (the backend serializes this via UnsignedLongJson.writes).
+      largestSegmentId: string | null;
       mappings: Array<string>;
     }
 ) &
@@ -77,6 +92,10 @@ export type DataLayer = {
     | DataLayerPrecomputedPartial
     | DataLayerZarr3Partial
   );
+
+export type DataLayerWithTransformations = Pick<DataLayer, "name"> &
+  Pick<BaseRemoteLayer, "coordinateTransformations">;
+
 export type DatasourceConfiguration = {
   id: {
     name: string;

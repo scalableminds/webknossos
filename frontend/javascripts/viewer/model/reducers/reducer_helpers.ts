@@ -1,8 +1,15 @@
-import * as Utils from "libs/utils";
+import { colorObjectToRGBArray, getRandomColor } from "libs/colors";
+import {
+  computeBoundingBoxFromBoundingBoxObject,
+  computeBoundingBoxObjectFromBoundingBox,
+  mapEntriesToMap,
+  mapGroupsDeep,
+  point3ToVector3,
+} from "libs/utils";
 import type {
-  APIAnnotation,
   AdditionalAxis,
   AdditionalAxisProto,
+  APIAnnotation,
   BoundingBoxProto,
   SkeletonUserState,
   UserBoundingBoxProto,
@@ -29,7 +36,7 @@ import type { Tree, TreeGroup } from "../types/tree_types";
 function convertServerBoundingBoxToBoundingBoxMinMaxType(
   boundingBox: BoundingBoxProto,
 ): BoundingBoxMinMaxType {
-  const min = Utils.point3ToVector3(boundingBox.topLeft);
+  const min = point3ToVector3(boundingBox.topLeft);
   const max: Vector3 = [
     min[0] + boundingBox.width,
     min[1] + boundingBox.height,
@@ -56,7 +63,7 @@ export function convertUserBoundingBoxFromUpdateActionToFrontend(
   } = bboxValue;
   const maybeBoundingBoxValue =
     boundingBox != null
-      ? { boundingBox: Utils.computeBoundingBoxFromBoundingBoxObject(boundingBox) }
+      ? { boundingBox: computeBoundingBoxFromBoundingBoxObject(boundingBox) }
       : {};
 
   return {
@@ -69,14 +76,14 @@ export function convertUserBoundingBoxesFromServerToFrontend(
   boundingBoxes: Array<UserBoundingBoxProto>,
   userState: SkeletonUserState | VolumeUserState | undefined,
 ): Array<UserBoundingBox> {
-  const idToVisible = userState ? Utils.mapEntriesToMap(userState.boundingBoxVisibilities) : {};
+  const idToVisible = userState ? mapEntriesToMap(userState.boundingBoxVisibilities) : {};
 
   return boundingBoxes.map((bb) => {
     const { color, id, name, isVisible, boundingBox } = bb;
     const convertedBoundingBox = convertServerBoundingBoxToBoundingBoxMinMaxType(boundingBox);
     return {
       boundingBox: convertedBoundingBox,
-      color: color ? Utils.colorObjectToRGBArray(color) : Utils.getRandomColor(),
+      color: color ? colorObjectToRGBArray(color) : getRandomColor(),
       id,
       name: name || `Bounding box ${id}`,
       isVisible: idToVisible[id] ?? isVisible ?? true,
@@ -88,7 +95,7 @@ export function convertUserBoundingBoxFromFrontendToServer(
   boundingBox: UserBoundingBoxWithOptIsVisible,
 ): UserBoundingBoxForServer {
   const { boundingBox: bb, ...rest } = boundingBox;
-  return { ...rest, boundingBox: Utils.computeBoundingBoxObjectFromBoundingBox(bb) };
+  return { ...rest, boundingBox: computeBoundingBoxObjectFromBoundingBox(bb) };
 }
 
 export function convertFrontendBoundingBoxToServer(
@@ -107,7 +114,7 @@ export function convertBoundingBoxProtoToObject(boundingBox: BoundingBoxProto): 
     width: boundingBox.width,
     height: boundingBox.height,
     depth: boundingBox.depth,
-    topLeft: Utils.point3ToVector3(boundingBox.topLeft),
+    topLeft: point3ToVector3(boundingBox.topLeft),
   };
 }
 
@@ -128,15 +135,20 @@ export function convertServerAnnotationToFrontendAnnotation(
     owner,
     contributors,
     organization,
-    othersMayEdit,
+    collaborationMode,
     isLockedByOwner,
     annotationLayers,
   } = annotation;
   const restrictions = {
     ...annotation.restrictions,
     ...annotation.settings,
-    initialAllowUpdate: annotation.restrictions.allowUpdate,
   };
+
+  const isUpdatingCurrentlyAllowed =
+    // If the collab mode is exclusive, the user may only edit once a mutex was acquired.
+    // the mutex saga will update isUpdatingCurrentlyAllowed then.
+    annotation.restrictions.allowUpdate && annotation.collaborationMode !== "Exclusive";
+
   return {
     annotationId,
     restrictions,
@@ -153,9 +165,9 @@ export function convertServerAnnotationToFrontendAnnotation(
     tracingStore,
     owner,
     contributors,
-    othersMayEdit,
+    collaborationMode,
     annotationLayers,
-    blockedByUser: null,
+    isUpdatingCurrentlyAllowed,
   };
 }
 
@@ -168,19 +180,12 @@ export function convertServerAdditionalAxesToFrontEnd(
   }));
 }
 
-export function isToolAvailable(
-  state: WebknossosState,
+function isToolAvailable(
   disabledToolInfo: Record<AnnotationToolId, DisabledInfo>,
   tool: AnnotationTool,
 ) {
   const { isDisabled } = disabledToolInfo[tool.id];
-  if (isDisabled) {
-    return false;
-  }
-  if (!state.annotation.restrictions.allowUpdate) {
-    return Toolkits.READ_ONLY_TOOLS.includes(tool);
-  }
-  return true;
+  return !isDisabled;
 }
 
 export function getNextTool(state: WebknossosState): AnnotationTool | null {
@@ -196,7 +201,7 @@ export function getNextTool(state: WebknossosState): AnnotationTool | null {
   ) {
     const newTool = tools[newToolIndex % tools.length];
 
-    if (isToolAvailable(state, disabledToolInfo, newTool)) {
+    if (isToolAvailable(disabledToolInfo, newTool)) {
       return newTool;
     }
   }
@@ -217,7 +222,7 @@ export function getPreviousTool(state: WebknossosState): AnnotationTool | null {
   ) {
     const newTool = tools[(tools.length + newToolIndex) % tools.length];
 
-    if (isToolAvailable(state, disabledToolInfo, newTool)) {
+    if (isToolAvailable(disabledToolInfo, newTool)) {
       return newTool;
     }
   }
@@ -231,7 +236,7 @@ export function setToolReducer(state: WebknossosState, tool: AnnotationTool) {
   }
 
   const disabledToolInfo = getDisabledInfoForTools(state);
-  if (!isToolAvailable(state, disabledToolInfo, tool)) {
+  if (!isToolAvailable(disabledToolInfo, tool)) {
     console.log(`Cannot switch to ${tool.readableName} because it's not available.`);
     return state;
   }
@@ -254,8 +259,8 @@ export function applyUserStateToGroups<Group extends TreeGroup | SegmentGroup>(
       ? userState.segmentGroupExpandedStates
       : userState.treeGroupExpandedStates;
 
-  const groupIdToExpanded: Record<number, boolean> = Utils.mapEntriesToMap(expandedStates);
-  return Utils.mapGroupsDeep(groups, (group: Group, children): Group => {
+  const groupIdToExpanded: Record<number, boolean> = mapEntriesToMap(expandedStates);
+  return mapGroupsDeep(groups, (group: Group, children): Group => {
     return {
       ...group,
       isExpanded: groupIdToExpanded[group.groupId] ?? group.isExpanded,
@@ -272,7 +277,7 @@ export function getApplyUserStateToTreeFn(
   }
 
   const visibilities = userState.treeVisibilities;
-  const treeIdToExpanded: Record<number, boolean> = Utils.mapEntriesToMap(visibilities);
+  const treeIdToExpanded: Record<number, boolean> = mapEntriesToMap(visibilities);
   return (tree) => {
     return {
       ...tree,

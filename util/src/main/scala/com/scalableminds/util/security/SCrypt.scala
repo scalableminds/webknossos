@@ -3,32 +3,21 @@ package com.scalableminds.util.security
 import java.nio.charset.StandardCharsets
 import at.favre.lib.crypto.bcrypt.BCrypt
 
-/**
-  * Making BCrypt look prettier
+/** Making BCrypt look prettier
   */
 object SCrypt {
 
   import java.security.MessageDigest
 
-  /**
-    * For readability.
+  /** For readability.
     */
-  type PlainPassword = String
-  type PasswordHash = String
+  private type PlainPassword = String
+  private type PasswordHash = String
 
-  /**
-    * Useful salting default
+  /** @param rounds
+    *   this is the base of log2 of the number of salting rounds. Legal values are >=4, sane values are leq 20
     */
-  val QuickAndWeak = 6
-  val GoodEnough = 10
-  val RatherTough = 14
-  val PrettyInsane = 18
-
-  /**
-    *
-    * @param rounds this is the base of log2 of the number of salting rounds. Legal values are >=4, sane values are leq 20
-    */
-  def hashPassword(password: PlainPassword, rounds: Int = GoodEnough): PasswordHash = {
+  def hashPassword(password: PlainPassword, rounds: Int = 10): PasswordHash = {
 
     if (rounds < 4 || rounds > 20)
       throw new IllegalArgumentException("""As the number of operations grows
@@ -46,4 +35,7 @@ object SCrypt {
 
   def md5(s: String): String =
     MessageDigest.getInstance("MD5").digest(s.getBytes).map("%02X".format(_)).mkString
+
+  def sha256Hex(s: String): String =
+    MessageDigest.getInstance("SHA-256").digest(s.getBytes(StandardCharsets.UTF_8)).map("%02x".format(_)).mkString
 }

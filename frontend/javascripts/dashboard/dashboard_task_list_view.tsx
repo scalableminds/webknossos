@@ -9,25 +9,26 @@ import {
   UserAddOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
-import { Button, Card, Col, List, Modal, Row, Space, Tag, Tooltip } from "antd";
-import Markdown from "libs/markdown_adapter";
-import * as React from "react";
-import { connect } from "react-redux";
-import { Link } from "react-router-dom";
-
 import { finishTask, peekNextTasks, requestTask } from "admin/api/tasks";
 import { deleteAnnotation, downloadAnnotation, resetAnnotation } from "admin/rest_api";
+import { Button, Card, Col, List, Row, Space, Tag, Tooltip, Typography } from "antd";
 import classNames from "classnames";
 import { AsyncButton, AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
+import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
 import TransferTaskModal from "dashboard/transfer_task_modal";
 import { handleGenericError } from "libs/error_handling";
+import Markdown from "libs/markdown_adapter";
 import Persistence from "libs/persistence";
 import Request from "libs/request";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import { compareBy, scrollToTop } from "libs/utils";
+import { type WithModalProps, withModal } from "libs/with_modal_hoc";
 import messages from "messages";
+import { PureComponent, useContext } from "react";
+import { connect } from "react-redux";
+import { Link } from "react-router-dom";
 import type { APIAnnotation, APITaskWithAnnotation, APIUser } from "types/api_types";
 import { getSkeletonDescriptor } from "viewer/model/accessors/skeletontracing_accessor";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
@@ -38,7 +39,7 @@ import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 
 const pageLength: number = 1000;
 
-export type TaskModeState = {
+type TaskModeState = {
   tasks: Array<APITaskWithAnnotation>;
   loadedAllTasks: boolean;
   lastLoadedPage: number;
@@ -50,7 +51,7 @@ type OwnProps = {
 type StateProps = {
   activeUser: APIUser;
 };
-type Props = OwnProps & StateProps;
+type Props = OwnProps & StateProps & WithModalProps;
 
 type State = {
   showFinishedTasks: boolean;
@@ -96,7 +97,7 @@ const convertAnnotationToTaskWithAnnotationType = (
   return newTask;
 };
 
-class DashboardTaskListView extends React.PureComponent<Props, State> {
+class DashboardTaskListView extends PureComponent<Props, State> {
   state: State = {
     showFinishedTasks: false,
     isLoading: false,
@@ -115,7 +116,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
   };
 
   componentDidMount() {
-    // @ts-ignore
+    // @ts-expect-error
     this.setState(persistence.load());
     this.fetchNextPage(0);
   }
@@ -143,7 +144,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
   };
 
   confirmFinish(task: APITaskWithAnnotation) {
-    Modal.confirm({
+    this.props.modal.confirm({
       content: messages["annotation.finish"],
       onOk: async () => {
         const { annotation } = task;
@@ -236,7 +237,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         Finished
       </div>
     ) : (
-      <Space direction="vertical" size={1}>
+      <Space orientation="vertical" size={1}>
         <Link to={`/annotations/${annotation.id}`}>{label}</Link>
         {isAdmin || this.props.isAdminView ? (
           <LinkButton onClick={() => this.openTransferModal(annotation.id)} icon={<TeamOutlined />}>
@@ -246,7 +247,6 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         {isAdmin ? (
           <>
             <AsyncLink
-              href="#"
               onClick={() => {
                 const isVolumeIncluded = getVolumeDescriptors(annotation).length > 0;
                 return downloadAnnotation(annotation.id, "Task", isVolumeIncluded);
@@ -277,7 +277,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
   };
 
   resetTask(annotation: APIAnnotation) {
-    Modal.confirm({
+    this.props.modal.confirm({
       content: messages["task.confirm_reset"],
       cancelText: messages.no,
       okText: messages.yes,
@@ -290,7 +290,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
 
   cancelAnnotation(annotation: APIAnnotation) {
     const annotationId = annotation.id;
-    Modal.confirm({
+    this.props.modal.confirm({
       content: messages["annotation.delete"],
       cancelText: messages.no,
       okText: messages.yes,
@@ -316,7 +316,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         })}`;
       }
 
-      Modal.confirm({
+      this.props.modal.confirm({
         content: modalContent,
         onOk: () => this.getNewTask(),
       });
@@ -371,7 +371,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
       <Row gutter={32} justify="center">
         <Col span="7">
           <Card
-            bordered={false}
+            variant="borderless"
             cover={<i className="drawing drawing-empty-list-tasks" style={{ translate: "15%" }} />}
             style={{ maxWidth: 460 }}
           >
@@ -389,18 +389,18 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
                         Tasks are a powerful way to distribute annotation jobs among groups of users
                         as part of the WEBKNOSSOS project management.{" "}
                       </p>
-                      <a
-                        href="https://docs.webknossos.org/webknossos/tasks_projects/index.html"
-                        rel="noopener noreferrer"
-                        target="_blank"
-                      >
-                        <Button>Learn more</Button>
-                      </a>
-                      <Link to="/tasks">
-                        <Button type="primary" style={{ marginLeft: 20 }}>
-                          Create new Tasks
+                      <Space size="middle">
+                        <Button
+                          href="https://docs.webknossos.org/webknossos/tasks_projects/index.html"
+                          rel="noopener noreferrer"
+                          target="_blank"
+                        >
+                          Learn more
                         </Button>
-                      </Link>
+                        <Link to="/tasks">
+                          <Button type="primary">Create new Tasks</Button>
+                        </Link>
+                      </Space>
                     </>
                   )}
                 </>
@@ -414,7 +414,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
 
   renderTaskList() {
     const tasks = this.getCurrentTasks().sort(
-      Utils.compareBy<APITaskWithAnnotation>(
+      compareBy<APITaskWithAnnotation>(
         (task) => (this.state.showFinishedTasks ? task.annotation.modified : task.created),
         false,
       ),
@@ -424,35 +424,34 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     });
 
     const TaskCardTitle = ({ task }: { task: APITaskWithAnnotation }) => (
-      <React.Fragment>
-        <span
-          style={{
-            marginRight: 8,
-          }}
-        >
+      <Space>
+        <span>
           {task.projectName} (<FormattedDate timestamp={task.created} />)
         </span>
-        {getSkeletonDescriptor(task.annotation) == null ? null : <Tag color="green">skeleton</Tag>}
+        {getSkeletonDescriptor(task.annotation) == null ? null : (
+          <Tag color="green" variant="outlined">
+            skeleton
+          </Tag>
+        )}
         {getVolumeDescriptors(task.annotation).length === 0 ? null : (
-          <Tag color="orange">volume</Tag>
+          <Tag color="orange" variant="outlined">
+            volume
+          </Tag>
         )}
         {task.type.settings.allowedModes.map((mode) => (
-          <Tag key={mode}>{mode}</Tag>
+          <Tag key={mode} variant="outlined">
+            {mode}
+          </Tag>
         ))}
-      </React.Fragment>
+      </Space>
     );
 
     const TaskCard = (task: APITaskWithAnnotation) =>
       this.state.showFinishedTasks ? (
-        <Card
-          key={task.id}
-          style={{
-            margin: "10px",
-          }}
-        >
+        <Card key={task.id}>
           <Row gutter={16}>
             <Col span={7}>
-              <b>Task ID:</b> {task.id}
+              <b>Task ID:</b> <FormattedId id={task.id} />
             </Col>
             <Col span={7}>
               <b>Project:</b> {task.projectName}
@@ -464,13 +463,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
           </Row>
         </Card>
       ) : (
-        <Card
-          key={task.id}
-          title={<TaskCardTitle task={task} />}
-          style={{
-            margin: "10px",
-          }}
-        >
+        <Card key={task.id} title={<TaskCardTitle task={task} />}>
           <Row gutter={16}>
             <Col span={16}>
               <div className={descriptionClassName}>
@@ -483,7 +476,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
                   marginBottom: 14,
                 }}
               >
-                <b>Task ID:</b> {task.id}
+                <b>Task ID:</b> <FormattedId id={task.id} />
                 <br />
                 <b>Task Type:</b> {task.type.summary}
               </p>
@@ -498,6 +491,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         dataSource={tasks}
         pagination={{
           defaultPageSize: 50,
+          onChange: scrollToTop,
         }}
         loading={this.state.isLoading}
         renderItem={TaskCard}
@@ -518,9 +512,9 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
           toggleShowFinished={this.toggleShowFinished}
           getFinishVerb={this.getFinishVerb}
         />
-        <h3 id="tasksHeadline" className="TestTasksHeadline">
-          {this.state.showFinishedTasks ? "My Finished Tasks" : null}
-        </h3>
+        {this.state.showFinishedTasks ? (
+          <Typography.Title level={3}>My Finished Tasks</Typography.Title>
+        ) : null}
         {this.renderTaskList()}
         <div
           style={{
@@ -564,11 +558,11 @@ function TopBar({
   toggleShowFinished: () => void;
   getFinishVerb: () => string;
 }) {
-  const activeTab = React.useContext(ActiveTabContext);
-  const renderingTab = React.useContext(RenderingTabContext);
+  const activeTab = useContext(ActiveTabContext);
+  const renderingTab = useContext(RenderingTabContext);
 
   const content = (
-    <div className="pull-right">
+    <Space>
       <AsyncButton
         type="primary"
         icon={<UserAddOutlined />}
@@ -577,15 +571,8 @@ function TopBar({
       >
         Get a New Task
       </AsyncButton>
-      <Button
-        onClick={toggleShowFinished}
-        style={{
-          marginLeft: 20,
-        }}
-      >
-        Show {getFinishVerb()} Tasks Only
-      </Button>
-    </div>
+      <Button onClick={toggleShowFinished}>Show {getFinishVerb()} Tasks Only</Button>
+    </Space>
   );
 
   return (
@@ -600,4 +587,4 @@ const mapStateToProps = (state: WebknossosState): StateProps => ({
 });
 
 const connector = connect(mapStateToProps);
-export default connector(DashboardTaskListView);
+export default connector(withModal(DashboardTaskListView));

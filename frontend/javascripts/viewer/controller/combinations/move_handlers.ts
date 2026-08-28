@@ -1,6 +1,6 @@
 import { V3 } from "libs/mjs";
 import type { OrthoView, Point2, Vector3 } from "viewer/constants";
-import { OrthoViewValuesWithoutTDView, OrthoViews } from "viewer/constants";
+import { OrthoViews, OrthoViewValuesWithoutTDView } from "viewer/constants";
 import { is2dDataset } from "viewer/model/accessors/dataset_accessor";
 import { getActiveMagInfo } from "viewer/model/accessors/flycam_accessor";
 import { calculateGlobalPos, getInputCatcherRect } from "viewer/model/accessors/view_mode_accessor";
@@ -22,24 +22,31 @@ export function setMousePosition(position: Point2 | null | undefined): void {
     Store.dispatch(setMousePositionAction(null));
   }
 }
+
 export function handleOverViewport(planeId: OrthoView): void {
   Store.dispatch(setViewportAction(planeId));
 }
-export const movePlane = (v: Vector3, increaseSpeedWithZoom: boolean = true) => {
+
+const movePlane = (v: Vector3, increaseSpeedWithZoom: boolean = true) => {
   const { activeViewport } = Store.getState().viewModeData.plane;
   Store.dispatch(movePlaneFlycamOrthoAction(v, activeViewport, increaseSpeedWithZoom));
 };
+
 export const handleMovePlane = (delta: Point2) => movePlane([-delta.x, -delta.y, 0]);
+
 export const moveU = (deltaU: number): void => {
   movePlane([deltaU, 0, 0]);
 };
+
 export const moveV = (deltaV: number): void => {
   movePlane([0, deltaV, 0]);
 };
+
 export const moveW = (
   deltaW: number,
   oneSlide: boolean,
   useDynamicSpaceDirection: boolean = false,
+  clampToDatasetBounds: boolean = false,
 ): void => {
   const state = Store.getState();
   if (is2dDataset(state.dataset)) {
@@ -53,8 +60,8 @@ export const moveW = (
 
   if (oneSlide) {
     // The following logic might not always make sense when having layers
-    // that are transformed each. Todo: Rethink / adapt the logic once
-    // problems occur. Tracked in #6926.
+    // that are transformed each. Todo (#6926): Rethink / adapt the logic once
+    // problems occur.
     const { representativeMag } = getActiveMagInfo(state);
     const wDim = Dimensions.getIndices(activeViewport)[2];
     const wStep = (representativeMag || [1, 1, 1])[wDim];
@@ -63,6 +70,7 @@ export const moveW = (
         Dimensions.transDim([0, 0, Math.sign(deltaW) * Math.max(1, wStep)], activeViewport),
         activeViewport,
         useDynamicSpaceDirection,
+        clampToDatasetBounds,
       ),
     );
   } else {
@@ -71,6 +79,7 @@ export const moveW = (
     );
   }
 };
+
 export function moveWhenAltIsPressed(delta: Point2, position: Point2, _id: any, event: MouseEvent) {
   // Always set the correct mouse position. Otherwise, using alt + mouse move and
   // alt + scroll won't result in the correct zoomToMouse behavior.
@@ -80,6 +89,7 @@ export function moveWhenAltIsPressed(delta: Point2, position: Point2, _id: any, 
     handleMovePlane(delta);
   }
 }
+
 export const zoom = (value: number, zoomToMouse: boolean) => {
   const { activeViewport } = Store.getState().viewModeData.plane;
 
@@ -113,7 +123,8 @@ export function zoomPlanes(value: number, zoomToMouse: boolean): void {
     finishZoom(oldMousePosition);
   }
 }
-export function zoomTDView(value: number): void {
+
+function zoomTDView(value: number): void {
   const zoomToPosition = null;
   const { width, height } = getInputCatcherRect(Store.getState(), OrthoViews.TDView);
   Store.dispatch(zoomTDViewAction(value, zoomToPosition, width, height));

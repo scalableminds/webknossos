@@ -23,7 +23,7 @@ TEMPLATE = """### Added
 - This is an example. You may delete a section if it would become empty.
 
 ### Postgres Evolutions
-- This is an example. You may delete a section if it would become empty. Use something like this as the format for this entry: [131-more-indices-on-users.sql](conf/evolutions/131-more-indices-on-users.sql)
+- This is an example. You may delete a section if it would become empty. Use something like this as the format for this entry: [131-more-indices-on-users.sql](schema/evolutions/131-more-indices-on-users.sql)
 """
 
 

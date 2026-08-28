@@ -5,7 +5,7 @@
 
 * [Oracle JDK 21](https://www.oracle.com/technetwork/java/javase/downloads/index.html) or [Eclipse Temurin JDK 21](https://adoptium.net/temurin/releases/) (full JDK, JRE is not enough)
 * [sbt](https://www.scala-sbt.org/)
-* [PostgreSQL 10+](https://www.postgresql.org/)
+* [PostgreSQL 12+](https://www.postgresql.org/)
 * [Redis 5+](https://redis.io/)
 * [Brotli](https://github.com/google/brotli)
 * [Draco](https://github.com/google/draco)
@@ -24,15 +24,18 @@
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
 # Install git, node.js, postgres, sbt, gfind, gsed, draco
-brew install openjdk draco openssl git node postgresql sbt findutils coreutils gnu-sed redis brotli wget
+brew install openjdk@21 draco openssl git node postgresql sbt findutils coreutils gnu-sed redis brotli wget cmake
 
 # Set env variables for openjdk and openssl
 # You probably want to add these lines manually to avoid conflicts in your zshrc
-echo 'export JAVA_HOME=/opt/homebrew/opt/openjdk/libexec/openjdk.jdk/Contents/Home' >> ~/.zshrc
-echo 'export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"' >> ~/.zshrc
+echo 'export JAVA_HOME="/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home"' >> ~/.zshrc
+echo 'export PATH="$JAVA_HOME/bin:$PATH"' >> ~/.zshrc
 echo 'export PATH="/opt/homebrew/opt/openssl/bin:$PATH"' >> ~/.zshrc
 echo 'export LDFLAGS="-L/opt/homebrew/opt/openssl/lib"' >> ~/.zshrc
 echo 'export CPPFLAGS="-I/opt/homebrew/opt/openssl/include"' >> ~/.zshrc
+
+# Enforce sbt using openjdk version 21.
+mkdir -p ~/.config/sbt && echo "-java-home /opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home" > ~/.config/sbt/sbtopts && cat ~/.config/sbt/sbtopts
 
 # Start postgres and redis
 brew services start postgresql
@@ -46,6 +49,7 @@ psql -c "ALTER USER postgres WITH SUPERUSER;"
 psql -c "GRANT ALL PRIVILEGES ON DATABASE webknossos TO postgres;"
 
 # Enable corepack for nodeJs and yarn
+npm install -g corepack 
 corepack enable
 
 # Checkout the WEBKNOSSOS git repository
@@ -104,7 +108,7 @@ On older Ubuntu distributions: Please make sure to have the correct versions of 
 ### PostgreSQL
 
 * Install PostgreSQL from [https://www.postgresql.org/download/](https://www.postgresql.org/download/)
-* PostgreSQL version **10+ is required**
+* PostgreSQL version **12+ is required**
 
 ### Redis
 
@@ -155,7 +159,7 @@ yarn fix-frontend
 yarn format-backend
 
 # Frontend type checking
-yarn tsc
+yarn typecheck
 
 # Frontend tests
 yarn test
@@ -165,3 +169,13 @@ docker compose run e2e-tests
 ```
 
 For more commands, see the `scripts` section in [package.json](package.json).
+
+## Passkeys
+
+Passkeys are only supported with HTTPS. You can generate self-signed certificates for local development with `./tools/proxy/gen-ssl-dev-certs.sh`. 
+
+You must also update `conf/application.conf`:
+- Set `http.uri` to `https://localhost:<port>`
+- Set `features.passkeysEnabled` to `true`
+
+You must also update your `vite.config.ts`: Comment in the `server.https` related lines.

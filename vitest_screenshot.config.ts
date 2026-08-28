@@ -5,6 +5,6 @@ export default defineConfig({
   ...config,
   test: {
     ...config.test,
-    include: ["./frontend/javascripts/test/puppeteer/*.screenshot.ts"],
+    include: ["./frontend/javascripts/test/browser/*.screenshot.ts"],
   },
 });

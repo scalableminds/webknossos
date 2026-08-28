@@ -1,11 +1,12 @@
 import { CopyOutlined, ExportOutlined } from "@ant-design/icons";
 import { getVoxelyticsArtifactChecksums } from "admin/rest_api";
 import { Button, Card, message } from "antd";
+import { copyToClipboard } from "libs/clipboard";
 import { formatCountToDataAmountUnit } from "libs/format_utils";
 import { JSONTree } from "react-json-tree";
 import { Link } from "react-router-dom";
 import type { VoxelyticsArtifactConfig } from "types/api_types";
-import { copyToClipboad, isObjectEmpty, useTheme } from "./utils";
+import { isObjectEmpty, useTheme } from "./utils";
 
 export function renderArtifactPath(artifact: VoxelyticsArtifactConfig) {
   return (
@@ -22,7 +23,7 @@ export function renderArtifactPath(artifact: VoxelyticsArtifactConfig) {
       <CopyOutlined
         style={{ top: 10, right: 10, position: "absolute" }}
         onClick={() => {
-          copyToClipboad(artifact.path);
+          copyToClipboard(artifact.path);
         }}
       />
     </div>
@@ -128,13 +129,11 @@ function ArtifactsView({
       <>
         <span>
           {artifact.foreignWorkflow != null ? (
-            <>
-              <Link
-                to={`/workflows/${artifact.foreignWorkflow[0]}?runId=${artifact.foreignWorkflow[1]}`}
-              >
-                {artifactName} <ExportOutlined />
-              </Link>
-            </>
+            <Link
+              to={`/workflows/${artifact.foreignWorkflow[0]}?runId=${artifact.foreignWorkflow[1]}`}
+            >
+              {artifactName} <ExportOutlined />
+            </Link>
           ) : (
             artifactName
           )}

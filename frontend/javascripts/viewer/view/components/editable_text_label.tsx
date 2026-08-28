@@ -1,12 +1,12 @@
 import { CheckOutlined, EditOutlined } from "@ant-design/icons";
-import { Input, type InputProps, Space } from "antd";
+import { Button, Input, Space } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import Markdown from "libs/markdown_adapter";
 import Toast from "libs/toast";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { MarkdownModal } from "viewer/view/components/markdown_modal";
-import type { ValidationResult } from "../left-border-tabs/modals/add_volume_layer_modal";
+import type { ValidationResult } from "../left_border_tabs/modals/add_volume_layer_modal";
 
 type Rule = {
   message?: string;
@@ -14,6 +14,7 @@ type Rule = {
   min?: number;
   validator?: (arg0: string) => ValidationResult;
 };
+
 export type EditableTextLabelProp = {
   value: string;
   onChange: (newValue: string) => any;
@@ -21,6 +22,9 @@ export type EditableTextLabelProp = {
   rows?: number;
   markdown?: boolean;
   label: string;
+  // Shown (as display text and input placeholder) when `value` is empty. It is
+  // never persisted through `onChange` — only user-entered text is.
+  placeholder?: string;
   margin?: number | string;
   onClick?: () => void;
   disableEditing?: boolean;
@@ -33,6 +37,7 @@ export type EditableTextLabelProp = {
   onRenameStart?: (() => void) | undefined;
   onRenameEnd?: (() => void) | undefined;
 };
+
 function EditableTextLabel(props: EditableTextLabelProp) {
   const {
     value: propValue,
@@ -41,7 +46,7 @@ function EditableTextLabel(props: EditableTextLabelProp) {
     rows = 1,
     markdown,
     label,
-    margin,
+    placeholder,
     onClick,
     disableEditing,
     hideEditIcon,
@@ -131,35 +136,32 @@ function EditableTextLabel(props: EditableTextLabelProp) {
     }
   };
 
-  const iconStyle = {
-    cursor: "pointer",
-    marginLeft: 5,
-  };
-  const currentMargin = margin != null ? margin : "0 10px";
-  const inputComponentProps: InputProps = {
-    value: value,
-    onChange: handleInputChangeFromEvent,
-    onPressEnter: handleOnChange,
-    style: {
-      width: width != null ? width : "calc(100% - 24px)",
-      margin: currentMargin,
-    },
-    size: "small",
-    autoFocus: true,
-  };
   const isInvalidStyleMaybe = isInvalid ? { color: "var(--ant-color-error)" } : {};
 
   if (isEditing) {
     return rows === 1 ? (
-      <Space.Compact block>
-        <Input {...inputComponentProps} onBlur={() => handleOnChange()} />
+      <Space.Compact block size="small">
+        <Input
+          value={value}
+          placeholder={placeholder}
+          onChange={handleInputChangeFromEvent}
+          onPressEnter={handleOnChange}
+          style={{
+            width: width != null ? width : "calc(100% - 24px)",
+          }}
+          size="small"
+          autoFocus={true}
+          onBlur={() => handleOnChange()}
+        />
         <FastTooltip key="save" title={`Save ${label}`} placement="bottom">
-          <CheckOutlined
-            style={iconStyle}
+          <Button
+            type="primary"
             onClick={(evt) => {
               evt.stopPropagation();
               handleOnChange();
             }}
+            size="small"
+            icon={<CheckOutlined />}
           />
         </FastTooltip>
       </Space.Compact>
@@ -172,42 +174,31 @@ function EditableTextLabel(props: EditableTextLabelProp) {
         label={label}
       />
     );
-  } else {
-    return (
-      <div
-        style={{
-          margin: currentMargin,
-          display: "inline-flex",
-          alignItems: "center",
-        }}
-        className={onClick != null ? "clickable-text" : undefined}
-        onClick={onClick}
-        onDoubleClick={onRename}
-        onContextMenu={onContextMenu}
-      >
-        {markdown ? (
-          <span style={isInvalidStyleMaybe}>
-            <Markdown className="flex-item">{value}</Markdown>
-          </span>
-        ) : (
-          <span style={isInvalidStyleMaybe}>{value}</span>
-        )}
-        {disableEditing || hideEditIcon ? null : (
-          <FastTooltip key="edit" title={`Edit ${label}`} placement="bottom">
-            <EditOutlined
-              className={iconClassName + " " + (markdown ? "flex-item" : "")}
-              style={{
-                ...iconStyle,
-                display: "inline",
-                whiteSpace: "nowrap",
-              }}
-              onClick={onRename}
-            />
-          </FastTooltip>
-        )}
-      </div>
-    );
   }
+
+  return (
+    <Space onClick={onClick} onDoubleClick={onRename} onContextMenu={onContextMenu} size={4}>
+      {markdown ? (
+        <span style={isInvalidStyleMaybe}>
+          <Markdown>{value}</Markdown>
+        </span>
+      ) : (
+        <span style={isInvalidStyleMaybe}>{value.trim() ? value : placeholder}</span>
+      )}
+      {disableEditing || hideEditIcon ? null : (
+        <FastTooltip key="edit" title={`Edit ${label}`} placement="bottom">
+          <Button
+            onClick={onRename}
+            size="small"
+            color="default"
+            variant="text"
+            icon={<EditOutlined />}
+            className={iconClassName}
+          />
+        </FastTooltip>
+      )}
+    </Space>
+  );
 }
 
 export default EditableTextLabel;

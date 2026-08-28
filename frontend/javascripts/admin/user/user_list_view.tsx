@@ -11,26 +11,47 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
+import { useQueryClient } from "@tanstack/react-query";
+import AdminPage from "admin/admin_page";
+import ChangeUsernameView from "admin/auth/change_username_view";
 import { InviteUsersModal } from "admin/onboarding";
 import { getActiveUserCount } from "admin/organization/pricing_plan_utils";
 import { getEditableUsers, updateUser } from "admin/rest_api";
 import { renderTeamRolesAndPermissionsForUser } from "admin/team/team_list_view";
 import ExperienceModalView from "admin/user/experience_modal_view";
 import PermissionsAndTeamsModalView from "admin/user/permissions_and_teams_modal_view";
-import { Alert, App, Button, Col, Input, Row, Spin, Table, Tag, Tooltip } from "antd";
+import {
+  Alert,
+  App,
+  Button,
+  Col,
+  Flex,
+  Input,
+  Modal,
+  Row,
+  Space,
+  Spin,
+  Table,
+  Tag,
+  Tooltip,
+  Typography,
+} from "antd";
 import LinkButton from "components/link_button";
 import dayjs from "dayjs";
+import features from "features";
+import { copyToClipboard } from "libs/clipboard";
 import Persistence from "libs/persistence";
-import { useWkSelector } from "libs/react_hooks";
-import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
+import { filterWithSearchQueryAND, localeCompareBy, scrollToTop } from "libs/utils";
 import { location } from "libs/window";
-import _ from "lodash";
-import React, { type Key, useEffect, useState } from "react";
+import keyBy from "lodash-es/keyBy";
+import React, { type Key, useState } from "react";
+import { useDispatch } from "react-redux";
 import { Link } from "react-router-dom";
 import type { APITeamMembership, APIUser, ExperienceMap } from "types/api_types";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
+import { setActiveUserAction } from "viewer/model/actions/user_actions";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -50,48 +71,38 @@ const persistence = new Persistence<{
 
 function UserListView() {
   const { modal } = App.useApp();
+  const dispatch = useDispatch();
+  const queryClient = useQueryClient();
 
   const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
   const activeOrganization = useWkSelector((state) =>
     enforceActiveOrganization(state.activeOrganization),
   );
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [users, setUsers] = useState<APIUser[]>([]);
+  const { data: users = [], isFetching: isLoading } = useQueryWithErrorHandling({
+    queryKey: ["editableUsers"],
+    queryFn: getEditableUsers,
+    refetchOnWindowFocus: false,
+  });
+
   const [selectedUserIds, setSelectedUserIds] = useState<Key[]>([]);
   const [isExperienceModalOpen, setIsExperienceModalOpen] = useState(false);
   const [isTeamRoleModalOpen, setIsTeamRoleModalOpen] = useState(false);
-  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
-  const [activationFilter, setActivationFilter] = useState<ActivationFilterType>(["activated"]);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(() => location.hash === "#invite");
+  const [activationFilter, setActivationFilter] = useState<ActivationFilterType>(
+    () => persistence.load().activationFilter || ["activated"],
+  );
+  const [searchQuery, setSearchQuery] = useState(() => persistence.load().searchQuery || "");
   const [singleSelectedUser, setSingleSelectedUser] = useState<APIUser | null | undefined>(null);
+  const [userToEdit, setUserToEdit] = useState<APIUser | null>(null);
   const [domainToEdit, setDomainToEdit] = useState<string | null | undefined>(null);
-
-  useEffect(() => {
-    const { searchQuery, activationFilter } = persistence.load();
-    setSearchQuery(searchQuery || "");
-    setActivationFilter(activationFilter || ["activated"]);
-    fetchData();
-
-    if (location.hash === "#invite") {
-      setIsInviteModalOpen(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    persistence.persist({ searchQuery, activationFilter });
-  }, [searchQuery, activationFilter]);
-
-  async function fetchData(): Promise<void> {
-    setIsLoading(true);
-    setUsers(await getEditableUsers());
-    setIsLoading(false);
-  }
+  const [editNameModalOpen, setEditNameModalOpen] = useState(false);
 
   async function activateUser(selectedUser: APIUser, isActive: boolean = true) {
     const newUser = await updateUser({ ...selectedUser, isActive });
-    const newUsers = users.map((user) => (selectedUser.id === user.id ? newUser : user));
-    setUsers(newUsers);
+    queryClient.setQueryData(["editableUsers"], (currentUsers: APIUser[]) =>
+      currentUsers.map((user) => (selectedUser.id === user.id ? newUser : user)),
+    );
 
     if (!isActive) {
       // Don't ask the user for the team permissions
@@ -116,26 +127,31 @@ function UserListView() {
   }
 
   function handleUsersChange(updatedUsers: Array<APIUser>): void {
-    setUsers(updatedUsers);
+    queryClient.setQueryData(["editableUsers"], updatedUsers);
     setIsExperienceModalOpen(false);
     setIsTeamRoleModalOpen(false);
   }
 
   function closeExperienceModal(updatedUsers: Array<APIUser>): void {
-    const updatedUsersMap = _.keyBy(updatedUsers, (u) => u.id);
+    const updatedUsersMap = keyBy(updatedUsers, (u) => u.id);
 
     setIsExperienceModalOpen(false);
-    setUsers((users) => users.map((user) => updatedUsersMap[user.id] || user));
+    queryClient.setQueryData(["editableUsers"], (currentUsers: APIUser[]) =>
+      currentUsers.map((user) => updatedUsersMap[user.id] || user),
+    );
     setSingleSelectedUser(null);
     setSelectedUserIds((singleSelectedUser) => (singleSelectedUser == null ? [] : selectedUserIds));
   }
 
   function handleSearch(event: React.ChangeEvent<HTMLInputElement>): void {
-    setSearchQuery(event.target.value);
+    const newSearchQuery = event.target.value;
+    setSearchQuery(newSearchQuery);
+    persistence.persist({ searchQuery: newSearchQuery, activationFilter });
   }
 
   function handleDismissActivationFilter(): void {
     setActivationFilter([]);
+    persistence.persist({ searchQuery, activationFilter: [] });
   }
 
   function renderNewUsersAlert() {
@@ -171,14 +187,11 @@ function UserListView() {
 
     return newInactiveUsers.length ? (
       <Alert
-        message={newInactiveUsersHeader}
+        title={newInactiveUsersHeader}
         description={newInactiveUsersList}
         type="info"
         icon={<UserOutlined className="icon-margin-right" />}
         showIcon
-        style={{
-          marginTop: 20,
-        }}
       />
     ) : null;
   }
@@ -194,13 +207,10 @@ function UserListView() {
     );
     return isLoading ? null : (
       <Alert
-        message="Invite more users"
+        title="Invite more users"
         description={noUsersMessage}
         type="info"
         showIcon
-        style={{
-          marginTop: 20,
-        }}
         action={
           <Button type="primary" onClick={inviteUsersCallback}>
             Invite Users
@@ -213,7 +223,7 @@ function UserListView() {
   function renderUpgradePlanAlert() {
     return (
       <Alert
-        message="You reached the maximum number of users"
+        title="You reached the maximum number of users"
         description={
           <>
             Your organization has reached the maximum number of users allowed in your current plan.
@@ -226,9 +236,6 @@ function UserListView() {
         }
         type="warning"
         showIcon
-        style={{
-          marginTop: 20,
-        }}
         action={
           <Link to={`/organizations/${activeUser.organization}`}>
             <Button type="primary">Upgrade Plan</Button>
@@ -269,87 +276,88 @@ function UserListView() {
     selectedRowKeys: selectedUserIds,
   };
   const activationFilterWarning = activationFilter.includes("activated") ? (
-    <Tag closable onClose={handleDismissActivationFilter} color="blue">
+    <Tag closable onClose={handleDismissActivationFilter} color="blue" variant="outlined">
       Show Active Users Only
     </Tag>
   ) : null;
-  const marginRight = {
-    marginRight: 20,
-  };
+
   const noOtherUsers = users.length < 2;
   const isNewUserInvitesDisabled = getActiveUserCount(users) >= activeOrganization.includedUsers;
+  const mayChangeNameForUsers = features().isWkorgInstance === false && activeUser.isAdmin;
 
   return (
-    <div className="container test-UserListView">
-      <h3>Users</h3>
-
-      <div
-        style={{
-          marginBottom: 20,
-        }}
-      >
-        {hasRowsSelected ? (
-          <span style={marginRight}>{selectedUserIds.length} selected user(s)</span>
-        ) : null}
-        <Button
-          onClick={() => setIsTeamRoleModalOpen(true)}
-          icon={<TeamOutlined />}
-          disabled={!hasRowsSelected}
-          style={marginRight}
-        >
-          Edit Teams &amp; Permissions
-        </Button>
-        <Button
-          onClick={() => {
-            setIsExperienceModalOpen(true);
-          }}
-          icon={<TrophyOutlined />}
-          disabled={!hasRowsSelected}
-          style={marginRight}
-        >
-          Change Experience
-        </Button>
-        <Button
-          icon={<UserAddOutlined />}
-          style={marginRight}
-          onClick={() => setIsInviteModalOpen(true)}
-        >
-          Invite {isNewUserInvitesDisabled ? "Guests" : "Users"}
-        </Button>
-        <InviteUsersModal
-          currentUserCount={getActiveUserCount(users)}
-          maxUserCountPerOrganization={activeOrganization.includedUsers}
-          isOpen={isInviteModalOpen}
-          organizationId={activeUser.organization}
-          handleVisibleChange={(visible) => {
-            setIsInviteModalOpen(visible);
-          }}
-        />
-      </div>
-      <div
-        style={{
-          marginBottom: 20,
-        }}
-      >
-        {activationFilterWarning}
-        <Search
-          style={{
-            width: 200,
-            float: "right",
-          }}
-          onChange={handleSearch}
-          value={searchQuery}
-        />
-        <div className="clearfix" />
-      </div>
-
-      {isNewUserInvitesDisabled ? renderUpgradePlanAlert() : null}
-      {noOtherUsers && !isNewUserInvitesDisabled ? renderInviteUsersAlert() : null}
-      {renderNewUsersAlert()}
-
+    <AdminPage
+      title="Users"
+      descriptionURI="https://docs.webknossos.org/webknossos/users/index.html"
+      description="Manage members, permissions, and activation status in your organization."
+      actions={
+        <Space wrap size="middle">
+          {hasRowsSelected ? <span>{selectedUserIds.length} selected user(s)</span> : null}
+          <Button
+            onClick={() => setIsTeamRoleModalOpen(true)}
+            icon={<TeamOutlined />}
+            disabled={!hasRowsSelected}
+          >
+            Edit Teams &amp; Permissions
+          </Button>
+          <Button
+            onClick={() => {
+              setIsExperienceModalOpen(true);
+            }}
+            icon={<TrophyOutlined />}
+            disabled={!hasRowsSelected}
+          >
+            Change Experience
+          </Button>
+          <Button icon={<UserAddOutlined />} onClick={() => setIsInviteModalOpen(true)}>
+            Invite {isNewUserInvitesDisabled ? "Guests" : "Users"}
+          </Button>
+          <InviteUsersModal
+            currentUserCount={getActiveUserCount(users)}
+            maxUserCountPerOrganization={activeOrganization.includedUsers}
+            isOpen={isInviteModalOpen}
+            organizationId={activeUser.organization}
+            handleVisibleChange={(visible) => {
+              setIsInviteModalOpen(visible);
+            }}
+          />
+          {userToEdit != null ? (
+            <Modal
+              destroyOnHidden
+              title="Change Name"
+              open={editNameModalOpen}
+              footer={null}
+              onCancel={() => setEditNameModalOpen(false)}
+            >
+              <ChangeUsernameView
+                onClose={() => setEditNameModalOpen(false)}
+                user={userToEdit}
+                setEditedUser={(editedUser: APIUser) => {
+                  queryClient.setQueryData(["editableUsers"], (currentUsers: APIUser[]) =>
+                    currentUsers.map((user) => (editedUser.id === user.id ? editedUser : user)),
+                  );
+                  if (activeUser.id === editedUser.id) {
+                    dispatch(setActiveUserAction(editedUser));
+                  }
+                }}
+              />
+            </Modal>
+          ) : null}
+        </Space>
+      }
+      search={<Search allowClear onChange={handleSearch} value={searchQuery} />}
+      alerts={
+        <Space orientation="vertical" style={{ width: "100%" }}>
+          {activationFilterWarning}
+          {isNewUserInvitesDisabled ? renderUpgradePlanAlert() : null}
+          {noOtherUsers && !isNewUserInvitesDisabled ? renderInviteUsersAlert() : null}
+          {renderNewUsersAlert()}
+        </Space>
+      }
+    >
       <Spin size="large" spinning={isLoading}>
         <Table
-          dataSource={Utils.filterWithSearchQueryAND(
+          dataSource={filterWithSearchQueryAND(
             users,
             ["firstName", "lastName", "email", "teams", (user) => Object.keys(user.experiences)],
             searchQuery,
@@ -358,14 +366,15 @@ function UserListView() {
           rowSelection={rowSelection}
           pagination={{
             defaultPageSize: 50,
+            onChange: scrollToTop,
           }}
-          style={{
-            marginTop: 30,
-          }}
-          onChange={(_pagination, filters) =>
+          onChange={(_pagination, filters) => {
             // @ts-expect-error ts-migrate(2322) FIXME: Type 'FilterValue' is not assignable to type '("tr... Remove this comment to see the full error(message)
-            setActivationFilter(filters.isActive != null ? filters.isActive : [])
-          }
+            const newFilter: ActivationFilterType =
+              filters.isActive != null ? filters.isActive : [];
+            setActivationFilter(newFilter);
+            persistence.persist({ searchQuery, activationFilter: newFilter });
+          }}
           onRow={(user) => ({
             onClick: () => onSelectUserRow(user.id),
           })}
@@ -379,55 +388,21 @@ function UserListView() {
             dataIndex="lastName"
             key="lastName"
             width={200}
-            sorter={Utils.localeCompareBy<APIUser>((user) => user.lastName)}
+            sorter={localeCompareBy<APIUser>((user) => user.lastName)}
           />
           <Column
             title="First Name"
             dataIndex="firstName"
             key="firstName"
             width={200}
-            sorter={Utils.localeCompareBy<APIUser>((user) => user.firstName)}
+            sorter={localeCompareBy<APIUser>((user) => user.firstName)}
           />
           <Column
             title="Email"
             dataIndex="email"
             key="email"
             width={320}
-            sorter={Utils.localeCompareBy<APIUser>((user) => user.email)}
-          />
-          <Column
-            title="Experiences"
-            dataIndex="experiences"
-            key="experiences"
-            width={250}
-            render={(experiences: ExperienceMap, user: APIUser) =>
-              _.map(experiences, (value, domain) => (
-                <Tag key={`experience_${user.id}_${domain}`}>
-                  <span
-                    onClick={(evt) => {
-                      evt.stopPropagation();
-                      // If no user is selected, set singleSelectedUser. Otherwise,
-                      // open the modal so that all selected users are edited.
-                      setSingleSelectedUser(selectedUserIds.length > 0 ? null : user);
-                      setDomainToEdit(domain);
-                      setIsExperienceModalOpen(true);
-                    }}
-                  >
-                    {domain} : {value}
-                  </span>
-                  <CopyOutlined
-                    style={{
-                      margin: "0 0 0 5px",
-                    }}
-                    onClick={async (evt) => {
-                      evt.stopPropagation();
-                      await navigator.clipboard.writeText(domain);
-                      Toast.success(`"${domain}" copied to clipboard`);
-                    }}
-                  />
-                </Tag>
-              ))
-            }
+            sorter={localeCompareBy<APIUser>((user) => user.email)}
           />
           <Column
             title="Teams - Role"
@@ -437,6 +412,41 @@ function UserListView() {
             render={(_teams: APITeamMembership[], user: APIUser) =>
               renderTeamRolesAndPermissionsForUser(user)
             }
+          />
+          <Column
+            title="Experiences"
+            dataIndex="experiences"
+            key="experiences"
+            width={250}
+            render={(experiences: ExperienceMap, user: APIUser) => (
+              <Space wrap>
+                {Object.entries(experiences).map(([domain, value]) => (
+                  <Tag key={`experience_${user.id}_${domain}`} variant="outlined">
+                    <span
+                      onClick={(evt) => {
+                        evt.stopPropagation();
+                        // If no user is selected, set singleSelectedUser. Otherwise,
+                        // open the modal so that all selected users are edited.
+                        setSingleSelectedUser(selectedUserIds.length > 0 ? null : user);
+                        setDomainToEdit(domain);
+                        setIsExperienceModalOpen(true);
+                      }}
+                    >
+                      {domain} : {value}
+                    </span>
+                    <CopyOutlined
+                      style={{
+                        margin: "0 0 0 5px",
+                      }}
+                      onClick={(evt) => {
+                        evt.stopPropagation();
+                        copyToClipboard(domain, "experience domain", true);
+                      }}
+                    />
+                  </Tag>
+                ))}
+              </Space>
+            )}
           />
           <Column
             title="Status"
@@ -464,7 +474,7 @@ function UserListView() {
             filtered
             filteredValue={activationFilter}
             filterMultiple
-            // @ts-ignore
+            // @ts-expect-error
             onFilter={(
               value: "activated" | "deactivated" | "verified" | "unverified",
               user: APIUser,
@@ -491,13 +501,14 @@ function UserListView() {
                 </Tooltip>
               ) : (
                 <Tooltip title="Account is not activated">
-                  <CloseCircleOutlined
-                    className="icon-margin-right"
-                    style={{
-                      fontSize: 20,
-                      color: "#e84749",
-                    }}
-                  />
+                  <Typography.Text type="danger">
+                    <CloseCircleOutlined
+                      className="icon-margin-right"
+                      style={{
+                        fontSize: 20,
+                      }}
+                    />
+                  </Typography.Text>
                 </Tooltip>
               );
 
@@ -512,13 +523,14 @@ function UserListView() {
                 </Tooltip>
               ) : (
                 <Tooltip title="Email is not verified">
-                  <MailOutlined
-                    className="icon-margin-right"
-                    style={{
-                      fontSize: 20,
-                      color: "#e84749",
-                    }}
-                  />
+                  <Typography.Text type="danger">
+                    <MailOutlined
+                      className="icon-margin-right"
+                      style={{
+                        fontSize: 20,
+                      }}
+                    />
+                  </Typography.Text>
                 </Tooltip>
               );
 
@@ -536,11 +548,22 @@ function UserListView() {
             width={175}
             fixed="right"
             render={(__, user: APIUser) => (
-              <span>
+              <Flex vertical align="start">
                 <Link to={`/users/${user.id}/details`}>
                   <LinkButton icon={<UserOutlined />}>Show Annotations</LinkButton>
                 </Link>
-                <br />
+                {mayChangeNameForUsers ? (
+                  <LinkButton
+                    icon={<UserOutlined />}
+                    onClick={(event) => {
+                      setUserToEdit(user);
+                      setEditNameModalOpen(true);
+                      event.stopPropagation();
+                    }}
+                  >
+                    Change Name
+                  </LinkButton>
+                ) : null}
                 {user.isActive ? (
                   activeUser.isAdmin ? (
                     <LinkButton
@@ -564,7 +587,7 @@ function UserListView() {
                     Activate User
                   </LinkButton>
                 )}
-              </span>
+              </Flex>
             )}
           />
         </Table>
@@ -590,7 +613,7 @@ function UserListView() {
         onCancel={() => setIsTeamRoleModalOpen(false)}
         activeUser={activeUser}
       />
-    </div>
+    </AdminPage>
   );
 }
 

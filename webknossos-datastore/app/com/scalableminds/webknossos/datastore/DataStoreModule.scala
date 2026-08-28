@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore
 import org.apache.pekko.actor.ActorSystem
 import com.google.inject.AbstractModule
 import com.google.inject.name.Names
-import com.scalableminds.webknossos.datastore.services._
+import com.scalableminds.webknossos.datastore.services.*
 import com.scalableminds.webknossos.datastore.services.connectome.{
   ConnectomeFileService,
   Hdf5ConnectomeFileService,
@@ -17,6 +17,7 @@ import com.scalableminds.webknossos.datastore.services.mapping.{
 }
 import com.scalableminds.webknossos.datastore.services.mesh.{
   AdHocMeshServiceHolder,
+  DSFullMeshService,
   Hdf5MeshFileService,
   MeshFileService,
   NeuroglancerPrecomputedMeshFileService,
@@ -27,8 +28,9 @@ import com.scalableminds.webknossos.datastore.services.segmentindex.{
   SegmentIndexFileService,
   ZarrSegmentIndexFileService
 }
+import com.scalableminds.webknossos.datastore.services.segmentstatistics.SegmentStatisticsFileService
 import com.scalableminds.webknossos.datastore.services.uploading.UploadService
-import com.scalableminds.webknossos.datastore.storage.DataVaultService
+import com.scalableminds.webknossos.datastore.storage.{DataVaultService, S3ClientPoolHolder, DataStoreRedisStore}
 
 class DataStoreModule extends AbstractModule {
 
@@ -55,6 +57,7 @@ class DataStoreModule extends AbstractModule {
     bind(classOf[ZarrAgglomerateService]).asEagerSingleton()
     bind(classOf[Hdf5AgglomerateService]).asEagerSingleton()
     bind(classOf[SegmentIndexFileService]).asEagerSingleton()
+    bind(classOf[SegmentStatisticsFileService]).asEagerSingleton()
     bind(classOf[ZarrSegmentIndexFileService]).asEagerSingleton()
     bind(classOf[Hdf5SegmentIndexFileService]).asEagerSingleton()
     bind(classOf[ConnectomeFileService]).asEagerSingleton()
@@ -62,6 +65,9 @@ class DataStoreModule extends AbstractModule {
     bind(classOf[Hdf5ConnectomeFileService]).asEagerSingleton()
     bind(classOf[NeuroglancerPrecomputedMeshFileService]).asEagerSingleton()
     bind(classOf[DSChunkCacheService]).asEagerSingleton()
+    bind(classOf[DSFullMeshService]).asEagerSingleton()
     bind(classOf[DatasetCache]).asEagerSingleton()
+    bind(classOf[S3ClientPoolHolder]).asEagerSingleton()
+    bind(classOf[DataStoreRedisStore]).asEagerSingleton()
   }
 }

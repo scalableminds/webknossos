@@ -1,3 +1,5 @@
+import isEqual from "lodash-es/isEqual";
+
 const defaultItemsPerBatch = 1000;
 let idCounter = 0;
 const idSymbol = Symbol("id");
@@ -16,7 +18,7 @@ const idSymbol = Symbol("id");
  * @template K The key type (must extend number)
  * @template V The value type for each map entry
  */
-class DiffableMap<K extends number, V> implements NotEnumerableByObject {
+class DiffableMap<K extends number | bigint, V> implements NotEnumerableByObject {
   /** Internal array of Map chunks for storing data */
   chunks: Array<Map<K, V>>;
   /** Total number of entries across all chunks */
@@ -62,7 +64,7 @@ class DiffableMap<K extends number, V> implements NotEnumerableByObject {
    * @param mapB Second DiffableMap to merge (its values take precedence on conflicts)
    * @returns A new DiffableMap containing all entries from both maps
    */
-  static merge<K extends number, V>(
+  static merge<K extends number | bigint, V>(
     mapA: DiffableMap<K, V>,
     mapB: DiffableMap<K, V>,
   ): DiffableMap<K, V> {
@@ -387,14 +389,52 @@ class DiffableMap<K extends number, V> implements NotEnumerableByObject {
    *
    * @returns A record object with the same key-value pairs
    */
-  toObject(): Record<K, V> {
-    const result = {} as Record<K, V>;
+  // Only meaningful for DiffableMap<number, V> (e.g. skeleton tree maps) — object/Record keys
+  // cannot be bigint, so this collapses to Record<never, V> for DiffableMap<bigint, V>, which is
+  // fine since no such map is ever converted via toObject().
+  toObject(): Record<K & (string | number | symbol), V> {
+    const result: Record<string, V> = {};
 
     for (const [k, v] of this.entries()) {
-      result[k] = v;
+      result[String(k)] = v;
     }
 
-    return result;
+    return result as Record<K & (string | number | symbol), V>;
+  }
+  /**
+   * Returns a human-readable string representation of this DiffableMap
+   * for debugging and comparison purposes.
+   *
+   * Example output:
+   * DiffableMap#12(size=4, batches=2) {
+   *   chunk[0]: { 1 => "A", 2 => "B" }
+   *   chunk[1]: { 3 => "C", 4 => null }
+   * }
+   */
+  toString(): string {
+    const id = this.getId?.() ?? "unknown";
+    const chunkSummaries = this.chunks.map((map, i) => {
+      // Format each chunk like: chunk[0]: { 1 => "A", 2 => "B" }
+      const entries = Array.from(map.entries())
+        .map(([k, v]) => {
+          const vStr =
+            v === null
+              ? "null"
+              : v === undefined
+                ? "undefined"
+                : v instanceof DiffableMap
+                  ? v.toString()
+                  : typeof v === "object"
+                    ? JSON.stringify(v)
+                    : String(v);
+          return `${k} => ${vStr}`;
+        })
+        .join(", ");
+      return `  chunk[${i}]: { ${entries} }`;
+    });
+
+    const summary = `DiffableMap#${id}(size=${this.entryCount}, batches=${this.chunks.length}, itemsPerBatch=${this.itemsPerBatch})`;
+    return `${summary} {\n${chunkSummaries.join("\n")}\n}`;
   }
 }
 
@@ -407,7 +447,7 @@ class DiffableMap<K extends number, V> implements NotEnumerableByObject {
  * @returns A new DiffableMap with references to the same chunks
  * @private
  */
-function shallowCopy<K extends number, V>(template: DiffableMap<K, V>): DiffableMap<K, V> {
+function shallowCopy<K extends number | bigint, V>(template: DiffableMap<K, V>): DiffableMap<K, V> {
   const newMap = new DiffableMap();
   newMap.setId(template.getId());
   newMap.chunks = template.chunks.slice();
@@ -432,20 +472,25 @@ function shallowCopy<K extends number, V>(template: DiffableMap<K, V>): Diffable
  * { changed: [], onlyA: [], onlyB: []}
  * if mapA === mapB
  */
-export function diffDiffableMaps<K extends number, V>(
+export function diffDiffableMaps<K extends number | bigint, V>(
   mapA: DiffableMap<K, V>,
   mapB: DiffableMap<K, V>,
+  useDeepEqualityCheck: boolean = false,
 ): {
   changed: Array<K>;
   onlyA: Array<K>;
   onlyB: Array<K>;
 } {
+  const areDifferent = useDeepEqualityCheck
+    ? (valueA: V | undefined, valueB: V | undefined) => !isEqual(valueA, valueB)
+    : (valueA: V | undefined, valueB: V | undefined) => valueA !== valueB;
+
   // For the edge case that one of the maps is empty, we will consider them dependent, anyway
   const areDiffsDependent = mapA.getId() === mapB.getId() || mapA.size() === 0 || mapB.size() === 0;
   let idx = 0;
-  const changed = [];
-  const onlyA = [];
-  const onlyB = [];
+  const changed: Array<K> = [];
+  const onlyA: Array<K> = [];
+  const onlyB: Array<K> = [];
 
   // Compare the chunks of mapA and mapB by identity. For independent
   // maps, all chunks will be identified as "different". This will
@@ -473,7 +518,7 @@ export function diffDiffableMaps<K extends number, V>(
 
       for (const key of setA.values()) {
         if (setB.has(key)) {
-          if (currentMapA.get(key) !== currentMapB.get(key)) {
+          if (areDifferent(currentMapA.get(key), currentMapB.get(key))) {
             changed.push(key);
           } else {
             // The key exists in both chunks, do not emit this key.
@@ -497,32 +542,32 @@ export function diffDiffableMaps<K extends number, V>(
     idx++;
   }
 
-  if (!areDiffsDependent) {
-    // Since, the DiffableMaps don't share the same structure, we might have
-    // aggregated false-positives, meaning onlyA and onlyB can include the same
-    // keys, which might or might not belong to the changed set.
-    // Construct a set for fast lookup
-    const setA = new Set(onlyA);
-    // Intersection of onlyA and onlyB:
-    const missingChangedIds = onlyB.filter((id) => setA.has(id));
-    const missingChangedIdSet = new Set(missingChangedIds);
-    const newOnlyA = onlyA.filter((id) => !missingChangedIdSet.has(id));
-    const newOnlyB = onlyB.filter((id) => !missingChangedIdSet.has(id));
-    // Ensure that these elements are not equal before adding them to "changed"
-    const newChanged = changed.concat(
-      missingChangedIds.filter((id) => mapA.getOrThrow(id) !== mapB.getOrThrow(id)),
-    );
+  if (areDiffsDependent) {
     return {
-      changed: newChanged,
-      onlyA: newOnlyA,
-      onlyB: newOnlyB,
+      changed,
+      onlyA,
+      onlyB,
     };
   }
 
+  // Since, the DiffableMaps don't share the same structure, we might have
+  // aggregated false-positives, meaning onlyA and onlyB can include the same
+  // keys, which might or might not belong to the changed set.
+  // Construct a set for fast lookup
+  const setA = new Set(onlyA);
+  // Intersection of onlyA and onlyB:
+  const missingChangedIds = onlyB.filter((id) => setA.has(id));
+  const missingChangedIdSet = new Set(missingChangedIds);
+  const newOnlyA = onlyA.filter((id) => !missingChangedIdSet.has(id));
+  const newOnlyB = onlyB.filter((id) => !missingChangedIdSet.has(id));
+  // Ensure that these elements are not equal before adding them to "changed"
+  const newChanged = changed.concat(
+    missingChangedIds.filter((id) => areDifferent(mapA.getOrThrow(id), mapB.getOrThrow(id))),
+  );
   return {
-    changed,
-    onlyA,
-    onlyB,
+    changed: newChanged,
+    onlyA: newOnlyA,
+    onlyB: newOnlyB,
   };
 }
 

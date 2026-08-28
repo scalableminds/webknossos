@@ -1,8 +1,8 @@
-import { useIsMutating } from "@tanstack/react-query";
+import { useIsMutating, useQueryClient } from "@tanstack/react-query";
 import { type DatasetUpdater, getDatastores, triggerDatasetCheck } from "admin/rest_api";
 import { useEffectOnlyOnce, usePrevious, useWkSelector } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
-import _ from "lodash";
+import last from "lodash-es/last";
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type {
@@ -22,6 +22,15 @@ import {
   useUpdateDatasetMutation,
   useUpdateFolderMutation,
 } from "./queries";
+
+// Describes which folder modal is currently open (if any). A single one is open at a time,
+// either to create a new folder below a parent or to edit an existing folder. This lives in the
+// context (rather than being prop-drilled) because the triggers are spread across the dataset
+// view, the folder tree and the details sidebar. The modal itself is rendered by
+// DatasetFolderView, so the context never imports the modal component (which would be cyclic).
+export type FolderModalState =
+  | { mode: "edit"; folderId: string }
+  | { mode: "create"; parentFolderId: string };
 
 export type DatasetCollectionContextValue = {
   datasets: Array<APIDatasetCompact>;
@@ -44,7 +53,8 @@ export type DatasetCollectionContextValue = {
   setSearchRecursively: (val: boolean) => void;
   getBreadcrumbs: (dataset: APIDatasetCompactWithoutStatusAndLayerNames) => string[] | null;
   getActiveSubfolders: () => FolderItem[];
-  showCreateFolderPrompt: (parentFolderId: string) => void;
+  folderModalState: FolderModalState | null;
+  setFolderModalState: (state: FolderModalState | null) => void;
   queries: {
     folderHierarchyQuery: ReturnType<typeof useFolderHierarchyQuery>;
     datasetsInFolderQuery: ReturnType<typeof useDatasetsInFolderQuery>;
@@ -58,7 +68,7 @@ export type DatasetCollectionContextValue = {
   usedStorageInOrga: number | undefined;
 };
 
-export const DatasetCollectionContext = createContext<DatasetCollectionContextValue | undefined>(
+const DatasetCollectionContext = createContext<DatasetCollectionContextValue | undefined>(
   undefined,
 );
 
@@ -81,7 +91,10 @@ export default function DatasetCollectionContextProvider({
   const [activeFolderId, setActiveFolderId] = useState<string | null>(
     UserLocalStorage.getItem(ACTIVE_FOLDER_ID_STORAGE_KEY) || null,
   );
-  const mostRecentlyUsedActiveFolderId = usePrevious(activeFolderId, true);
+  const [mostRecentlyUsedActiveFolderId, clearMostRecentlyUsedActiveFolderId] = usePrevious(
+    activeFolderId,
+    true,
+  );
   const [isChecking, setIsChecking] = useState(false);
   const isMutating = useIsMutating() > 0;
   const { data: folder, isError: didFolderLoadingError } = useFolderQuery(activeFolderId);
@@ -89,12 +102,14 @@ export default function DatasetCollectionContextProvider({
 
   const [selectedDatasets, setSelectedDatasets] = useState<APIDatasetCompact[]>([]);
   const [selectedFolder, setSelectedFolder] = useState<FolderItem | null>(null);
+  const [folderModalState, setFolderModalState] = useState<FolderModalState | null>(null);
   const [globalSearchQuery, setGlobalSearchQueryInner] = useState<string | null>(null);
   const setGlobalSearchQuery = useCallback((value: string | null) => {
     // Empty string should be handled as null
     setGlobalSearchQueryInner(value ? value : null);
   }, []);
   const [searchRecursively, setSearchRecursively] = useState<boolean>(true);
+  const queryClient = useQueryClient();
 
   // Keep url GET parameters in sync with search and active folder
   useManagedUrlParams(
@@ -117,8 +132,18 @@ export default function DatasetCollectionContextProvider({
 
     if (didFolderLoadingError) {
       setActiveFolderId(null);
+      clearMostRecentlyUsedActiveFolderId();
+      if (!folderHierarchyQuery.isFetching) {
+        queryClient.invalidateQueries({ queryKey: ["folders"] });
+      }
     }
-  }, [folder, activeFolderId, didFolderLoadingError]);
+  }, [
+    folder,
+    activeFolderId,
+    didFolderLoadingError,
+    clearMostRecentlyUsedActiveFolderId,
+    queryClient,
+  ]);
 
   const folderHierarchyQuery = useFolderHierarchyQuery();
   const datasetsInFolderQuery = useDatasetsInFolderQuery(
@@ -137,18 +162,6 @@ export default function DatasetCollectionContextProvider({
     globalSearchQuery == null ? activeFolderId : null,
   );
   const datasets = (globalSearchQuery ? datasetSearchQuery.data : datasetsInFolderQuery.data) || [];
-
-  const showCreateFolderPrompt = useCallback(
-    (parentFolderId: string) => {
-      const folderName = prompt("Please input a name for the new folder", "New folder");
-      if (!folderName) {
-        // The user hit escape/cancel
-        return;
-      }
-      createFolderMutation.mutateAsync([parentFolderId, folderName]);
-    },
-    [createFolderMutation.mutateAsync],
-  );
 
   function fetchDatasets(): void {
     datasetsInFolderQuery.refetch();
@@ -198,9 +211,9 @@ export default function DatasetCollectionContextProvider({
         datasetsInFolderQuery.isFetching ||
         datasetsInFolderQuery.isRefetching) || isMutating;
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies(fetchDatasets): <explanation>
-  // biome-ignore lint/correctness/useExhaustiveDependencies(reloadDataset): <explanation>
-  // biome-ignore lint/correctness/useExhaustiveDependencies(updateCachedDataset): <explanation>
+  // biome-ignore lint/correctness/useExhaustiveDependencies(fetchDatasets): omitted to maintain stability as underlying data dependencies are already tracked
+  // biome-ignore lint/correctness/useExhaustiveDependencies(reloadDataset): omitted to maintain stability as underlying data dependencies are already tracked
+  // biome-ignore lint/correctness/useExhaustiveDependencies(updateCachedDataset): omitted to maintain stability as underlying data dependencies are already tracked
   const value: DatasetCollectionContextValue = useMemo(
     () => ({
       supportsFolders: true as const,
@@ -214,10 +227,11 @@ export default function DatasetCollectionContextProvider({
       selectedFolder,
       setSelectedFolder,
       mostRecentlyUsedActiveFolderId,
-      showCreateFolderPrompt,
       isChecking,
       getBreadcrumbs,
       getActiveSubfolders,
+      folderModalState,
+      setFolderModalState,
       checkDatasets: async (organizationId: string | undefined) => {
         if (isChecking) {
           console.warn("Ignore second rechecking request, since a recheck is already in progress");
@@ -262,7 +276,6 @@ export default function DatasetCollectionContextProvider({
       isChecking,
       datasets,
       isLoading,
-      showCreateFolderPrompt,
       activeFolderId,
       mostRecentlyUsedActiveFolderId,
       folderHierarchyQuery,
@@ -276,13 +289,14 @@ export default function DatasetCollectionContextProvider({
       updateDatasetMutation,
       selectedDatasets,
       globalSearchQuery,
-      // biome-ignore lint/correctness/useExhaustiveDependencies:
+      // biome-ignore lint/correctness/useExhaustiveDependencies: intentional
       getActiveSubfolders,
-      // biome-ignore lint/correctness/useExhaustiveDependencies:
+      // biome-ignore lint/correctness/useExhaustiveDependencies: intentional
       getBreadcrumbs,
       selectedFolder,
       setGlobalSearchQuery,
       usedStorageInOrga,
+      folderModalState,
     ],
   );
 
@@ -315,11 +329,11 @@ function useManagedUrlParams(
     const recursive = params.get("recursive");
     if (recursive != null) setSearchRecursively(recursive === "true");
 
-    const folderSpecifier = _.last(location.pathname.split("/"));
+    const folderSpecifier = last(location.pathname.split("/"));
 
     if (folderSpecifier?.includes("-")) {
       const nameChunksAndFolderId = folderSpecifier.split("-");
-      const folderId = _.last(nameChunksAndFolderId);
+      const folderId = last(nameChunksAndFolderId);
       if (folderId) {
         setActiveFolderId(folderId);
       }

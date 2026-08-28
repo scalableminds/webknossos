@@ -1,15 +1,15 @@
+import type { Matrix4x4 } from "mjs";
 import { Euler, Matrix4 } from "three";
 export type AdditionalCoordinate = { name: string; value: number };
 
-export const ViewModeValues = ["orthogonal", "flight", "oblique"] as ViewMode[];
+export const ViewModeValues = ["orthogonal", "flight"] as ViewMode[];
 
 export const ViewModeValuesIndices = {
   Orthogonal: 0,
   Flight: 1,
-  Oblique: 2,
   Volume: 3,
 };
-export type ViewMode = "orthogonal" | "oblique" | "flight";
+export type ViewMode = "orthogonal" | "flight";
 export type Vector2 = [number, number];
 export type Vector3 = [number, number, number];
 export type Vector4 = [number, number, number, number];
@@ -46,11 +46,8 @@ export type Rect = {
   height: number;
 };
 export const AnnotationContentTypes = ["skeleton", "volume", "hybrid"];
-export const Vector2Indicies = [0, 1] as const;
-export const Vector3Indicies = [0, 1, 2] as const;
-export const Vector4Indicies = [0, 1, 2, 3] as const;
-export const Vector5Indicies = [0, 1, 2, 3, 4] as const;
-export const Vector6Indicies = [0, 1, 2, 3, 4, 5] as const;
+export const Vector2Indices = [0, 1] as const;
+export const Vector3Indices = [0, 1, 2] as const;
 export enum OrthoViews {
   PLANE_XY = "PLANE_XY",
   PLANE_YZ = "PLANE_YZ",
@@ -70,18 +67,16 @@ export type OrthoViewMap<T> = Record<OrthoView, T>;
 export type OrthoViewWithoutTDMap<T> = Record<OrthoViewWithoutTD, T>;
 export type OrthoViewExtents = Readonly<OrthoViewMap<Vector2>>;
 export type OrthoViewRects = Readonly<OrthoViewMap<Rect>>;
-export const ArbitraryViewport = "arbitraryViewport";
-export const ArbitraryViews = {
-  arbitraryViewport: "arbitraryViewport",
+export const FlightViewport = "flightViewport";
+export const FlightViews = {
+  flightViewport: "flightViewport",
   TDView: "TDView",
 } as const;
-export const ArbitraryViewsToName = {
-  arbitraryViewport: "Arbitrary View",
+export const FlightViewsToName = {
+  flightViewport: "Flight View",
   TDView: "3D",
 };
-export type ArbitraryView = keyof typeof ArbitraryViews;
-export type Viewport = OrthoView | typeof ArbitraryViewport;
-export const allViewports = Object.keys(OrthoViews).concat([ArbitraryViewport]) as Viewport[];
+export type Viewport = OrthoView | typeof FlightViewport;
 export type ViewportMap<T> = Record<Viewport, T>;
 export type ViewportRects = Readonly<ViewportMap<Rect>>;
 export const OrthoViewValues = Object.keys(OrthoViews) as OrthoView[];
@@ -109,7 +104,7 @@ export const NumberToOrthoView: Record<number, OrthoView> = {
   1: OrthoViews.PLANE_YZ,
   2: OrthoViews.PLANE_XZ,
   3: OrthoViews.TDView,
-  4: OrthoViews.PLANE_XY, // Arbitrary view is equal to the XY plane.
+  4: OrthoViews.PLANE_XY, // Flight view is equal to the XY plane.
 };
 
 const PINK = 0xeb4b98;
@@ -237,11 +232,6 @@ export enum OverwriteModeEnum {
 }
 export type OverwriteMode = keyof typeof OverwriteModeEnum;
 
-export enum InterpolationModeEnum {
-  INTERPOLATE = "INTERPOLATE",
-  EXTRUDE = "EXTRUDE",
-}
-export type InterpolationMode = keyof typeof InterpolationModeEnum;
 export enum FillModeEnum {
   // The leading underscore is a workaround, since leading numbers are not valid identifiers
   // in JS.
@@ -255,12 +245,28 @@ export enum TDViewDisplayModeEnum {
   DATA = "DATA",
 }
 export type TDViewDisplayMode = keyof typeof TDViewDisplayModeEnum;
+// This name can be used to retrieve the perspective camera of the 3D viewport
+// from the scene (the orthographic camera is named after the viewport itself).
+export const TDViewPerspectiveCameraName = "TDView_perspective";
+export const TDViewPerspectiveFov = 45;
 export enum MappingStatusEnum {
   DISABLED = "DISABLED",
   ACTIVATING = "ACTIVATING",
   ENABLED = "ENABLED",
 }
 export type MappingStatus = keyof typeof MappingStatusEnum;
+export type MappingType = "JSON" | "AGGLOMERATE";
+
+// The agglomerate mapping type used to be called "HDF5". Persisted mapping types (e.g., in
+// sharing links or in the default view configuration of a dataset) can still contain that
+// legacy value, so it needs to be migrated whenever a mapping type is read from such a source.
+export function normalizeMappingType(mappingType: unknown): MappingType {
+  // Only JSON mappings are treated specially. Everything else (including the legacy
+  // "HDF5" value) refers to an agglomerate mapping.
+  return typeof mappingType === "string" && mappingType.toUpperCase() === "JSON"
+    ? "JSON"
+    : "AGGLOMERATE";
+}
 export enum TreeTypeEnum {
   DEFAULT = "DEFAULT",
   AGGLOMERATE = "AGGLOMERATE",
@@ -270,21 +276,36 @@ export const NODE_ID_REF_REGEX = /#([0-9]+)/g;
 export const POSITION_REF_REGEX = /#\(([0-9]+,[0-9]+,[0-9]+)\)/g;
 const VIEWPORT_WIDTH = 376;
 
-// ARBITRARY_CAM_DISTANCE has to be calculated such that with cam
+// FLIGHT_CAM_DISTANCE has to be calculated such that with cam
 // angle 45°, the plane of width Constants.VIEWPORT_WIDTH fits exactly in the
 // viewport.
-export const ARBITRARY_CAM_DISTANCE = VIEWPORT_WIDTH / 2 / Math.tan(((Math.PI / 180) * 45) / 2);
+export const FLIGHT_CAM_DISTANCE = VIEWPORT_WIDTH / 2 / Math.tan(((Math.PI / 180) * 45) / 2);
 
-export const ensureSmallerEdge = false;
+// A subdivision of 100 means that there will be 100 segments per axis
+// and thus 101 vertices per axis (i.e., the vertex shader is executed 101**2).
+// In an extreme scenario, these vertices would have a distance to each other
+// of 32 voxels. Thus, each square (two triangles) would render one bucket.
+// 100**2 == 10,000 buckets per plane are currently unrealistic and therefore
+// a valid upper bound.
+// However, note that in case of anisotropic datasets, the above calculation
+// needs to be adapted a bit. For example, consider a dataset with mag 8-8-1.
+// The XZ plane could render 100 buckets along the X coordinate (as above), but
+// only ~13 buckets along the Z coordinate. This would require 1300 which is not
+// unrealistic. PLANE_SUBDIVISION values of 80 showed rare problems which is why
+// a value of 100 is now used. If this should become problematic, too, a dynamic
+// subdivision would probably be the next step.
+export const PLANE_SUBDIVISION = 100;
+
 export const Unicode = {
   ThinSpace: "\u202f",
   NonBreakingSpace: "\u00a0",
   MultiplicationSymbol: "×",
 };
 // A LabeledVoxelsMap maps from a bucket address
-// to a 2D slice of labeled voxels. These labeled voxels
-// are stored in a Uint8Array in a binary way (which cell
-// id the voxels should be changed to is not encoded).
+// to a 2D slice of labeled voxels within a bucket.
+// These labeled voxels are stored in a Uint8Array in a binary way (which
+// segment id the voxels should be changed to is not encoded).
+// The array should have BUCKET_WIDTH**2 entries.
 export type LabeledVoxelsMap = Map<BucketAddress, Uint8Array>;
 
 // LabelMasksByBucketAndW is similar to LabeledVoxelsMap with the difference
@@ -293,18 +314,17 @@ export type LabeledVoxelsMap = Map<BucketAddress, Uint8Array>;
 export type LabelMasksByBucketAndW = Map<BucketAddress, Map<number, Uint8Array>>;
 
 const Constants = {
-  ARBITRARY_VIEW: 4,
+  FLIGHT_VIEW: 4,
   DEFAULT_BORDER_WIDTH: 400,
   DEFAULT_BORDER_WIDTH_IN_IFRAME: 200,
   MODE_PLANE_TRACING: "orthogonal" as ViewMode,
-  MODE_ARBITRARY: "flight" as ViewMode,
-  MODE_ARBITRARY_PLANE: "oblique" as ViewMode,
+  MODE_FLIGHT: "flight" as ViewMode,
   MODE_VOLUME: "volume" as ViewMode,
   MODES_PLANE: ["orthogonal", "volume"] as ViewMode[],
-  MODES_ARBITRARY: ["flight", "oblique"] as ViewMode[],
-  MODES_SKELETON: ["orthogonal", "flight", "oblique"] as ViewMode[],
+  MODES_SKELETON: ["orthogonal", "flight"] as ViewMode[],
   BUCKET_WIDTH: 32,
   BUCKET_SIZE: 32 ** 3,
+  BUCKET_SHAPE: [32, 32, 32] as Vector3,
   VIEWPORT_WIDTH,
   DEFAULT_NAVBAR_HEIGHT: 48,
   BANNER_HEIGHT: 38,
@@ -335,12 +355,12 @@ const Constants = {
   MAXIMUM_BUCKET_COUNT_PER_LAYER: 5000,
   FLOOD_FILL_EXTENTS: {
     // In 2D mode, the third axis is set to 1 later in the code.
-    _2D: (process.env.IS_TESTING ? [512, 512, 512] : [768, 768, 768]) as Vector3,
-    _3D: (process.env.IS_TESTING ? [64, 64, 32] : [96, 96, 96]) as Vector3,
+    _2D: (import.meta.env.MODE === "test" ? [512, 512, 512] : [768, 768, 768]) as Vector3,
+    _3D: (import.meta.env.MODE === "test" ? [64, 64, 32] : [200, 200, 200]) as Vector3,
   },
   // When the user uses the "isFloodfillRestrictedToBoundingBox" setting,
   // we are more lax with the flood fill extent.
-  FLOOD_FILL_MULTIPLIER_FOR_BBOX_RESTRICTION: 10,
+  FLOOD_FILL_MULTIPLIER_FOR_BBOX_RESTRICTION: 5,
   MAXIMUM_DATE_TIMESTAMP: 8640000000000000,
   SCALEBAR_HEIGHT: 22,
   SCALEBAR_OFFSET: 10,
@@ -348,7 +368,28 @@ const Constants = {
   REGISTER_SEGMENTS_BB_MAX_VOLUME_VX: 512 * 512 * 512,
   REGISTER_SEGMENTS_BB_MAX_SEGMENT_COUNT: 5000,
   DEFAULT_MESH_OPACITY: 1,
+  PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT: 32,
+  // Maximum number of segments for which precomputed meshes are loaded simultaneously.
+  // This way, the first meshes are fully loaded (and visible) early and the
+  // memory pressure of in-flight chunk buffers stays bounded when meshes are
+  // requested for many segments at once (e.g., for a whole segment group).
+  PARALLEL_MESH_LOADING_SEGMENT_COUNT: 4,
+  NARROW_SCREEN_WIDTH: 1400,
+  VERY_NARROW_SCREEN_WIDTH: 1200,
+  NUMBER_OF_TOOLS_IN_TOOLBAR: 5,
+  SETTING_SAVE_DEBOUNCE_MS: 2500, // delay before user, layer and dataset settings are saved
+
+  // How many IDs should be held in a buffer for new instances of segment groups, trees etc
+  // (see id reservation saga).
+  // Note: this value 10 should match the limit in the backend see AnnotationController.reserveIds
+  IDEAL_ID_BUFFER_SIZE: import.meta.env.MODE === "test" ? 5 : 10,
 } as const;
+
+/* Note that this must stay in sync with the back-end constant MaxMagForAgglomerateMapping
+  compare https://github.com/scalableminds/webknossos/issues/5223.
+ */
+export const MAX_MAG_FOR_AGGLOMERATE_MAPPING = 16;
+
 export default Constants;
 
 export type TypedArray =
@@ -381,9 +422,10 @@ export enum LOG_LEVELS {
 export enum BLEND_MODES {
   Additive = "Additive",
   Cover = "Cover",
+  CoverWithBlackAsTransparent = "CoverWithBlackAsTransparent",
 }
 
-export const Identity4x4 = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+export const Identity4x4: Matrix4x4 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 export const IdentityTransform = {
   type: "affine",
   affineMatrix: Identity4x4,
@@ -391,7 +433,7 @@ export const IdentityTransform = {
 } as const;
 export const EMPTY_OBJECT = {} as const;
 
-const isMac = (() => {
+export const isMac = (() => {
   try {
     // Even though navigator.platform¹ is deprecated, this still
     // seems to be the best mechanism to find out whether the machine is
@@ -507,4 +549,9 @@ export enum AnnotationStateFilterEnum {
   ALL = "All",
   ACTIVE = "Active",
   FINISHED_OR_ARCHIVED = "Finished",
+}
+
+export enum PerformanceMarkEnum {
+  TRACING_VIEW_LOAD = "tracing_view_load_start",
+  SHADER_COMPILE = "shader_compile_start",
 }

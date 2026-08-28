@@ -1,23 +1,23 @@
 import { DownOutlined } from "@ant-design/icons";
+import { getUsersOrganizations } from "admin/api/organization";
 import {
   type AcceptanceInfo,
   acceptTermsOfService,
   getTermsOfService,
   requiresTermsOfServiceAcceptance,
 } from "admin/api/terms_of_service";
-import { getUsersOrganizations } from "admin/rest_api";
 import { Dropdown, type MenuProps, Modal, Space, Spin } from "antd";
 import { AsyncButton } from "components/async_clickables";
 import dayjs from "dayjs";
 import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
-import _ from "lodash";
+import noop from "lodash-es/noop";
 import { switchTo } from "navbar";
 import type React from "react";
 import { useEffect, useState } from "react";
 import type { APIUser } from "types/api_types";
-import { formatDateInLocalTimeZone } from "./formatted_date";
+import FormattedDate from "./formatted_date";
 
 const SNOOZE_DURATION_IN_DAYS = 3;
 const LAST_TERMS_OF_SERVICE_WARNING_KEY = "lastTermsOfServiceWarning";
@@ -44,7 +44,7 @@ export function CheckTermsOfServices() {
   useEffect(() => {
     // Show ToS modal when the acceptance is needed and it wasn't snoozed
     // (unless the deadline is exceeded).
-    if (!acceptanceInfo || !acceptanceInfo.acceptanceNeeded) {
+    if (!acceptanceInfo?.acceptanceNeeded) {
       return;
     }
     if (acceptanceInfo.acceptanceNeeded && acceptanceInfo.acceptanceDeadlinePassed) {
@@ -53,7 +53,7 @@ export function CheckTermsOfServices() {
     }
 
     const lastWarningString = UserLocalStorage.getItem(LAST_TERMS_OF_SERVICE_WARNING_KEY);
-    const lastWarning = dayjs(lastWarningString ? Number.parseInt(lastWarningString) : 0);
+    const lastWarning = dayjs(lastWarningString ? Number.parseInt(lastWarningString, 10) : 0);
     const isLastWarningOld = dayjs().diff(lastWarning, "days") > SNOOZE_DURATION_IN_DAYS;
     setIsModalOpen(isLastWarningOld);
   }, [acceptanceInfo]);
@@ -111,7 +111,7 @@ function OrganizationSwitchMenu({
   }));
 
   return (
-    <Dropdown menu={{ items }} overlayStyle={{ maxHeight: "60vh", overflow: "auto" }}>
+    <Dropdown menu={{ items }} styles={{ root: { maxHeight: "60vh", overflow: "auto" } }}>
       <a onClick={(e) => e.preventDefault()}>
         <Space style={style}>
           Switch Organization
@@ -144,9 +144,9 @@ function AcceptTermsOfServiceModal({
       open={isModalOpen}
       title="Terms of Services"
       closable={!acceptanceInfo.acceptanceDeadlinePassed}
-      onCancel={acceptanceInfo.acceptanceDeadlinePassed ? _.noop : closeModal}
+      onCancel={acceptanceInfo.acceptanceDeadlinePassed ? noop : closeModal}
       width={850}
-      maskClosable={false}
+      mask={{ closable: false }}
       footer={[
         <OrganizationSwitchMenu
           activeUser={activeUser}
@@ -180,11 +180,14 @@ function AcceptTermsOfServiceModal({
 }
 
 function getDeadlineExplanation(acceptanceInfo: AcceptanceInfo) {
-  return acceptanceInfo.acceptanceDeadlinePassed
-    ? null
-    : `If the terms are not accepted until ${formatDateInLocalTimeZone(
-        acceptanceInfo.acceptanceDeadline,
-      )}, WEBKNOSSOS cannot be used until the terms are accepted.`;
+  if (acceptanceInfo.acceptanceDeadlinePassed) return null;
+  return (
+    <>
+      If the terms are not accepted until{" "}
+      <FormattedDate timestamp={acceptanceInfo.acceptanceDeadline} />, WEBKNOSSOS cannot be used
+      until the terms are accepted.
+    </>
+  );
 }
 
 function TermsOfServiceAcceptanceMissingModal({
@@ -205,7 +208,7 @@ function TermsOfServiceAcceptanceMissingModal({
       closable={!acceptanceInfo.acceptanceDeadlinePassed}
       onCancel={closeModal}
       footer={[<OrganizationSwitchMenu activeUser={activeUser} key={"switch-org"} />]}
-      maskClosable={false}
+      mask={{ closable: false }}
     >
       Please ask the organization owner to accept the terms of services. {deadlineExplanation}
     </Modal>

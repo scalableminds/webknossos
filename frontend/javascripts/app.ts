@@ -2,7 +2,7 @@ import { createNanoEvents } from "nanoevents";
 
 class WebknossosApplication {
   // This event emitter is currently only used for two types of events:
-  // 1) webknossos:ready
+  // 1) webknossos:initialized
   //    When WK is done with initialization, the front-end API can be constructed.
   // 2) rerender
   //    Most of the time, rendering happens when something in the Store changes. However,

@@ -1,6 +1,7 @@
 import type { ShaderModule } from "./shader_module_system";
 import { getColorForCoords } from "./texture_access.glsl";
-export const getBilinearColorFor: ShaderModule = {
+
+const getBilinearColorFor: ShaderModule = {
   requirements: [getColorForCoords],
   code: `
 
@@ -15,21 +16,31 @@ export const getBilinearColorFor: ShaderModule = {
       coordsUVW = floor(coordsUVW);
       bool supportsPrecomputedBucketAddress = false;
 
-      // Do not unroll this loop as it will lead to much slower compilation and
+      // On most systems unrolling this loop will lead to much slower shader compilation and
       // possibly WebGL crashes, because some compilers cannot optimize it as well then.
+      // However, on windows machines the loop often leads to compilation crashes and
+      // the unrolled version can be optimized much better.
       vec4 samples[4];
-      int idx = 0;
-      for (int y = 0; y <= 1; y++) {
-          for (int x = 0; x <= 1; x++) {
-              vec3 offset = vec3(x, y, 0);
-              samples[idx] = getColorForCoords(
-                  layerIndex, d_texture_width, packingDegree,
-                  coordsUVW + offset,
-                  supportsPrecomputedBucketAddress
-              );
-              idx++;
-          }
-      }
+
+      <% if (isWindows) { %>
+       samples[0] = getColorForCoords(layerIndex, d_texture_width, packingDegree, coordsUVW, supportsPrecomputedBucketAddress);
+       samples[1] = getColorForCoords(layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(1, 0, 0), supportsPrecomputedBucketAddress);
+       samples[2] = getColorForCoords(layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(0, 1, 0), supportsPrecomputedBucketAddress);
+       samples[3] = getColorForCoords(layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(1, 1, 0), supportsPrecomputedBucketAddress);
+      <% } else { %>
+        int idx = 0;
+        for (int y = 0; y <= 1; y++) {
+            for (int x = 0; x <= 1; x++) {
+                vec3 offset = vec3(x, y, 0);
+                samples[idx] = getColorForCoords(
+                    layerIndex, d_texture_width, packingDegree,
+                    coordsUVW + offset,
+                    supportsPrecomputedBucketAddress
+                );
+                idx++;
+            }
+        }
+      <% } %>
 
       if (samples[0].a < 0.0 || samples[1].a < 0.0 || samples[2].a < 0.0 || samples[3].a < 0.0) {
         // We need to check all four colors for a negative parts, because there will be black
@@ -44,7 +55,7 @@ export const getBilinearColorFor: ShaderModule = {
     }
   `,
 };
-export const getTrilinearColorFor: ShaderModule = {
+const getTrilinearColorFor: ShaderModule = {
   requirements: [getColorForCoords],
   code: `
     vec4 getTrilinearColorFor(
@@ -58,23 +69,37 @@ export const getTrilinearColorFor: ShaderModule = {
       coordsUVW = floor(coordsUVW);
       bool supportsPrecomputedBucketAddress = false;
 
-      // Do not unroll this loop as it will lead to much slower compilation and
+      // On most systems unrolling this loop will lead to much slower shader compilation and
       // possibly WebGL crashes, because some compilers cannot optimize it as well then.
+      // However, on windows machines the loop often leads to compilation crashes and
+      // the unrolled version can be optimized much better.
       vec4 samples[8];
-      int idx = 0;
-      for (int z = 0; z <= 1; z++) {
-          for (int y = 0; y <= 1; y++) {
-              for (int x = 0; x <= 1; x++) {
-                  vec3 offset = vec3(x, y, z);
-                  samples[idx] = getColorForCoords(
-                      layerIndex, d_texture_width, packingDegree,
-                      coordsUVW + offset,
-                      supportsPrecomputedBucketAddress
-                  );
-                  idx++;
-              }
-          }
-      }
+
+      <% if (isWindows) { %>
+        samples[0] = getColorForCoords(layerIndex, d_texture_width, packingDegree, coordsUVW, supportsPrecomputedBucketAddress);
+        samples[1] = getColorForCoords(layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(1, 0, 0), supportsPrecomputedBucketAddress);
+        samples[2] = getColorForCoords(layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(0, 1, 0), supportsPrecomputedBucketAddress);
+        samples[3] = getColorForCoords(layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(1, 1, 0), supportsPrecomputedBucketAddress);
+        samples[4] = getColorForCoords(layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(0, 0, 1), supportsPrecomputedBucketAddress);
+        samples[5] = getColorForCoords(layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(1, 0, 1), supportsPrecomputedBucketAddress);
+        samples[6] = getColorForCoords(layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(0, 1, 1), supportsPrecomputedBucketAddress);
+        samples[7] = getColorForCoords(layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(1, 1, 1), supportsPrecomputedBucketAddress);
+      <% } else { %>
+        int idx = 0;
+        for (int z = 0; z <= 1; z++) {
+            for (int y = 0; y <= 1; y++) {
+                for (int x = 0; x <= 1; x++) {
+                    vec3 offset = vec3(x, y, z);
+                    samples[idx] = getColorForCoords(
+                        layerIndex, d_texture_width, packingDegree,
+                        coordsUVW + offset,
+                        supportsPrecomputedBucketAddress
+                    );
+                    idx++;
+                }
+            }
+        }
+      <% } %>
 
       if (samples[0].a < 0.0 || samples[1].a < 0.0 || samples[2].a < 0.0 || samples[3].a < 0.0 ||
         samples[4].a < 0.0 || samples[5].a < 0.0 || samples[6].a < 0.0 || samples[7].a < 0.0) {

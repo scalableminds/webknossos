@@ -1,5 +1,6 @@
 import { document } from "libs/window";
-import * as React from "react";
+import type React from "react";
+import { Component } from "react";
 import ReactDOM from "react-dom";
 
 // The actual content of a layout pane is a portal target,
@@ -22,7 +23,7 @@ function getOrCreatePortalTargetNode(id: string) {
 
 // This is the placeholder component to which can be rendered from somewhere else
 // via RenderToPortal.
-export class PortalTarget extends React.Component<any, any> {
+export class PortalTarget extends Component<any, any> {
   componentWillUnmount() {
     const child = getOrCreatePortalTargetNode(this.props.portalId);
     if (child.parentNode != null) {
@@ -46,7 +47,13 @@ export class PortalTarget extends React.Component<any, any> {
     );
   }
 }
-// This component is used to render the provided children into a PortalTarget (referenced by id) if that portal exists
+// This component is used to render the provided children into a PortalTarget (referenced by id).
+// We use getOrCreatePortalTargetNode instead of document.getElementById to avoid a race condition:
+// if this component renders before PortalTarget has mounted and appended the node to the DOM,
+// getElementById returns null and nothing renders. Since RenderToPortal has no way to observe
+// DOM changes, it would stay blank until an unrelated re-render. Using the cached node directly
+// works because React portals render into detached nodes — the content becomes visible as soon
+// as PortalTarget appends the node to the DOM.
 export function RenderToPortal({
   children,
   portalId,
@@ -54,6 +61,6 @@ export function RenderToPortal({
   children: React.ReactNode;
   portalId: string;
 }) {
-  const portalEl = document.getElementById(getPortalId(portalId));
-  return portalEl && ReactDOM.createPortal(children, portalEl);
+  const portalEl = getOrCreatePortalTargetNode(portalId);
+  return ReactDOM.createPortal(children, portalEl);
 }

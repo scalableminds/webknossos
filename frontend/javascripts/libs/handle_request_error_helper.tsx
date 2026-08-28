@@ -2,17 +2,25 @@ import { Button } from "antd";
 import type { ServerErrorMessage } from "types/api_types";
 import Toast, { showToastOnce } from "./toast";
 
+let _pingFn: (str: string) => void = () => {
+  console.warn(
+    "pingMentionedDataStores was called before registerPingFn — datastore health check skipped",
+  );
+};
+
+export function registerPingFn(fn: (str: string) => void): void {
+  _pingFn = fn;
+}
+
 export const handleError = async (
   requestedUrl: string,
   showErrorToast: boolean,
   doInvestigate: boolean,
-  error: Response | Error,
+  error: Response | Error | DOMException,
 ): Promise<void> => {
   if (doInvestigate) {
-    // Avoid circular imports via dynamic import
-    const { pingMentionedDataStores } = await import("admin/datastore_health_check");
     // Check whether this request failed due to a problematic datastore
-    pingMentionedDataStores(requestedUrl);
+    _pingFn(requestedUrl);
     if (error instanceof Response) {
       // Handle 401 Unauthorized errors and ensure an understandable error toast is shown.
       // This might happen e.g. after a user logged out everywhere.
@@ -50,7 +58,7 @@ export const handleError = async (
             }
             // Check whether the error chain mentions an url which belongs
             // to a datastore. Then, ping the datastore
-            pingMentionedDataStores(text);
+            _pingFn(text);
 
             /* eslint-disable-next-line prefer-promise-reject-errors */
             return Promise.reject({ ...json, url: requestedUrl });
@@ -77,11 +85,24 @@ export const handleError = async (
     }
   }
 
-  // If doInvestigate is false or the error is not instanceof Response,
-  // still add additional information to the error
-  if (!(error instanceof Response)) {
-    error.message += ` - Url: ${requestedUrl}`;
+  // If doInvestigate is false but the error is still a Response, read the body
+  // so callers get a proper Error with the status and body text instead of a
+  // raw Response object (whose body is a ReadableStream that can't be inspected).
+  if (error instanceof Response) {
+    const text = await error.text().catch(() => "<unreadable body>");
+    return Promise.reject(
+      new Error(`Request failed with status ${error.status} for ${requestedUrl}: ${text}`),
+    );
   }
 
+  // DOMException (e.g. an aborted fetch, whether via a caller-supplied signal or
+  // an options.timeout-triggered abort in request.ts) isn't an Error subclass and
+  // its .message shouldn't be mutated -- just propagate it as-is so callers can
+  // still detect it via error.name === "AbortError".
+  if (error instanceof DOMException) {
+    return Promise.reject(error);
+  }
+
+  error.message += ` - Url: ${requestedUrl}`;
   return Promise.reject(error);
 };

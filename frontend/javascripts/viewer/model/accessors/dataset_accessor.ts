@@ -2,22 +2,35 @@ import ErrorHandling from "libs/error_handling";
 import { formatExtentInUnitWithLength, formatNumberToLength } from "libs/format_utils";
 import { V3 } from "libs/mjs";
 import { aggregateBoundingBox, maxValue } from "libs/utils";
-import _ from "lodash";
+import flattenDeep from "lodash-es/flattenDeep";
+import intersection from "lodash-es/intersection";
+import max from "lodash-es/max";
+import maxBy from "lodash-es/maxBy";
+import memoize from "lodash-es/memoize";
+import uniqBy from "lodash-es/uniqBy";
+import uniqWith from "lodash-es/uniqWith";
 import memoizeOne from "memoize-one";
 import messages from "messages";
 import type {
+  AdditionalAxis,
   APIAllowedMode,
   APIDataLayer,
   APIDataset,
   APIDatasetCompact,
   APIMaybeUnimportedDataset,
   APISegmentationLayer,
-  AdditionalAxis,
   ElementClass,
 } from "types/api_types";
 import type { DataLayer } from "types/schemas/datasource.types";
-import { LongUnitToShortUnitMap, type Vector3, type ViewMode } from "viewer/constants";
-import constants, { ViewModeValues, Vector3Indicies, MappingStatusEnum } from "viewer/constants";
+import constants, {
+  LongUnitToShortUnitMap,
+  MappingStatusEnum,
+  Unicode,
+  type Vector3,
+  Vector3Indices,
+  type ViewMode,
+  ViewModeValues,
+} from "viewer/constants";
 import type {
   ActiveMappingInfo,
   BoundingBoxObject,
@@ -27,9 +40,14 @@ import type {
   WebknossosState,
 } from "viewer/store";
 import BoundingBox from "../bucket_data_handling/bounding_box";
-import { getSupportedValueRangeForElementClass } from "../bucket_data_handling/data_rendering_logic";
-import { MagInfo, convertToDenseMags } from "../helpers/mag_info";
+import {
+  getSegmentIdRangeForElementClass,
+  getSupportedValueRangeForElementClass,
+} from "../bucket_data_handling/data_rendering_logic";
+import { convertToDenseMags, MagInfo } from "../helpers/mag_info";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
+
+const { ThinSpace } = Unicode;
 
 function _getMagInfo(magnifications: Array<{ mag: Vector3 }>): MagInfo {
   return new MagInfo(magnifications.map((magObj) => magObj.mag));
@@ -37,7 +55,7 @@ function _getMagInfo(magnifications: Array<{ mag: Vector3 }>): MagInfo {
 
 // Don't use memoizeOne here, since we want to cache the mags for all layers
 // (which are not that many).
-export const getMagInfo = _.memoize(_getMagInfo);
+export const getMagInfo = memoize(_getMagInfo);
 
 function _getMagInfoByLayer(dataset: APIDataset): Record<string, MagInfo> {
   const infos: Record<string, MagInfo> = {};
@@ -49,7 +67,7 @@ function _getMagInfoByLayer(dataset: APIDataset): Record<string, MagInfo> {
   return infos;
 }
 
-export const getMagInfoByLayer = _.memoize(_getMagInfoByLayer);
+export const getMagInfoByLayer = memoize(_getMagInfoByLayer);
 
 export function getDenseMagsForLayerName(dataset: APIDataset, layerName: string) {
   return getMagInfoByLayer(dataset)[layerName].getDenseMags();
@@ -82,7 +100,7 @@ export const getMagnificationUnion = memoizeOne((dataset: APIDataset): Array<Vec
 
   for (const keyStr of Object.keys(magUnionDict)) {
     const key = Number(keyStr);
-    magUnionDict[key] = _.uniqWith(magUnionDict[key], V3.isEqual);
+    magUnionDict[key] = uniqWith(magUnionDict[key], V3.isEqual);
   }
 
   const keys = Object.keys(magUnionDict)
@@ -97,19 +115,16 @@ export function getWidestMags(dataset: APIDataset): Vector3[] {
     convertToDenseMags(layer.mags.map((magObj) => magObj.mag)),
   );
 
-  return _.maxBy(allLayerMags, (mags) => mags.length) || [];
+  return maxBy(allLayerMags, (mags) => mags.length) || [];
 }
 
-export const getSomeMagInfoForDataset = memoizeOne((dataset: APIDataset): MagInfo => {
-  const magUnion = getMagnificationUnion(dataset);
-  const areMagsDistinct = magUnion.every((mags) => mags.length <= 1);
-
-  if (areMagsDistinct) {
-    return new MagInfo(magUnion.map((mags) => mags[0]));
-  } else {
-    return new MagInfo(getWidestMags(dataset));
-  }
-});
+export const getSomeMagInfoForDataset = memoizeOne(
+  (dataset: APIDataset): MagInfo =>
+    // Use one representative (real) mag per existing mag level. This never
+    // synthesizes non-existent mags (unlike dense mags), so index queries such
+    // as getFinestMagIndex reflect the actually available mags of the dataset.
+    new MagInfo(getMagnificationUnion(dataset).map((mags) => mags[0])),
+);
 
 function _getMaxZoomStep(dataset: APIDataset | null | undefined): number {
   const minimumZoomStepCount = 1;
@@ -120,7 +135,7 @@ function _getMaxZoomStep(dataset: APIDataset | null | undefined): number {
 
   const maxZoomstep = Math.max(
     minimumZoomStepCount,
-    _.max(_.flattenDeep(getMagnificationUnion(dataset))) || minimumZoomStepCount,
+    max(flattenDeep(getMagnificationUnion(dataset))) || minimumZoomStepCount,
   );
 
   return maxZoomstep;
@@ -150,7 +165,7 @@ export function getLayerByName(
   alsoMatchFallbackLayer: boolean = false,
 ): DataLayerType {
   const dataLayers = getDataLayers(dataset);
-  const hasUniqueNames = _.uniqBy(dataLayers, "name").length === dataLayers.length;
+  const hasUniqueNames = uniqBy(dataLayers, "name").length === dataLayers.length;
   ErrorHandling.assert(hasUniqueNames, messages["dataset.unique_layer_names"]);
   const layer = dataLayers.find(
     (l) =>
@@ -181,18 +196,11 @@ export function getMappings(dataset: APIDataset, layerName: string): string[] {
   // @ts-expect-error ts-migrate(2339) FIXME: Property 'mappings' does not exist on type 'APIDat... Remove this comment to see the full error message
   return getLayerByName(dataset, layerName).mappings || [];
 }
-export function isRgb(dataset: APIDataset, layerName: string): boolean {
-  return (
-    getLayerByName(dataset, layerName).category === "color" &&
-    getByteCount(dataset, layerName) === 3
-  );
-}
+
 export function getByteCountFromLayer(layerInfo: DataLayerType): number {
   return getBitDepth(layerInfo) / 8;
 }
-export function getByteCount(dataset: APIDataset, layerName: string): number {
-  return getByteCountFromLayer(getLayerByName(dataset, layerName));
-}
+
 export function getElementClass(dataset: APIDataset, layerName: string): ElementClass {
   return getLayerByName(dataset, layerName).elementClass;
 }
@@ -228,7 +236,16 @@ export function getLayerBoundingBox(dataset: APIDataset, layerName: string): Bou
   });
 }
 
-export function getDatasetBoundingBox(dataset: APIDataset): BoundingBox {
+// Layer bounding boxes are not stored as user bounding boxes and therefore have no id of their
+// own. Real user bounding box ids are always >= 1 and -1 is already used as the "Full layer"
+// sentinel id in the TIFF export tab, so layer bounding boxes are assigned stable negative ids
+// starting at -2 (based on their index in getDataLayers) wherever an id is needed, e.g. to key
+// per-bbox MIP settings.
+export function getLayerBoundingBoxId(layerIndex: number): number {
+  return -2 - layerIndex;
+}
+
+function _getUntransformedDatasetBoundingBox(dataset: APIDataset): BoundingBox {
   const min: Vector3 = [
     Number.POSITIVE_INFINITY,
     Number.POSITIVE_INFINITY,
@@ -244,7 +261,7 @@ export function getDatasetBoundingBox(dataset: APIDataset): BoundingBox {
   for (const dataLayer of layers) {
     const layerBox = getLayerBoundingBox(dataset, dataLayer.name);
 
-    for (const i of Vector3Indicies) {
+    for (const i of Vector3Indices) {
       min[i] = Math.min(min[i], layerBox.min[i]);
       max[i] = Math.max(max[i], layerBox.max[i]);
     }
@@ -255,9 +272,9 @@ export function getDatasetBoundingBox(dataset: APIDataset): BoundingBox {
     max,
   });
 }
-export function getDatasetCenter(dataset: APIDataset): Vector3 {
-  return getDatasetBoundingBox(dataset).getCenter();
-}
+
+export const getUntransformedDatasetBoundingBox = memoizeOne(_getUntransformedDatasetBoundingBox);
+
 export function getDatasetExtentInVoxel(dataset: APIDataset) {
   const datasetLayers = dataset.dataSource.dataLayers;
   const allBoundingBoxes = datasetLayers.map((layer) => layer.boundingBox);
@@ -297,7 +314,7 @@ export function getDatasetExtentAsString(
 
   if (inVoxel) {
     const extentInVoxel = getDatasetExtentInVoxel(dataset);
-    return `${formatExtentInUnitWithLength(extentInVoxel, (x) => `${x}`)} voxel`;
+    return `${formatExtentInUnitWithLength(extentInVoxel, (x) => `${x}`)}${ThinSpace}Vx`;
   }
 
   const extent = getDatasetExtentInUnit(dataset);
@@ -305,11 +322,7 @@ export function getDatasetExtentAsString(
     formatNumberToLength(length, LongUnitToShortUnitMap[dataset.dataSource.scale.unit]),
   );
 }
-function getDatasetExtentAsProduct(extent: {
-  width: number;
-  height: number;
-  depth: number;
-}) {
+function getDatasetExtentAsProduct(extent: { width: number; height: number; depth: number }) {
   return extent.width * extent.height * extent.depth;
 }
 export function getDatasetExtentInVoxelAsProduct(dataset: APIDataset) {
@@ -324,7 +337,7 @@ export function determineAllowedModes(settings?: Settings): {
 } {
   // The order of allowedModes should be independent from the server and instead be similar to ViewModeValues
   const allowedModes = settings
-    ? _.intersection(ViewModeValues, settings.allowedModes)
+    ? intersection(ViewModeValues, settings.allowedModes)
     : ViewModeValues;
   let preferredMode = null;
 
@@ -343,16 +356,19 @@ export function determineAllowedModes(settings?: Settings): {
 }
 
 export function getMaximumSegmentIdForLayer(dataset: APIDataset, layerName: string) {
-  return getDefaultValueRangeOfLayer(dataset, layerName)[1];
+  return BigInt(getDefaultValueRangeOfLayer(dataset, layerName)[1]);
 }
 
+// Used for validating segment/cell ids, which are always bigint. uint64 and int64 ids can
+// exceed Number.MAX_SAFE_INTEGER, so this uses the bigint-based getSegmentIdRangeForElementClass
+// rather than the JS-number-based getSupportedValueRangeForElementClass.
 export function isInSupportedValueRangeForLayer(
   dataset: APIDataset,
   layerName: string,
-  value: number,
+  value: bigint,
 ): boolean {
   const elementClass = getElementClass(dataset, layerName);
-  const [min, max] = getSupportedValueRangeForElementClass(elementClass);
+  const [min, max] = getSegmentIdRangeForElementClass(elementClass);
   return value >= min && value <= max;
 }
 
@@ -411,8 +427,7 @@ export function isElementClassSupported(layerInfo: DataLayerType): boolean {
 
     case "uint64":
     case "int64": {
-      // We only support 64 bit for segmentation (note that only segment ids
-      // below 2**53 - 1 will be handled properly due to the JS Number type currently).
+      // We only support 64 bit for segmentation.
       return layerInfo.category === "segmentation";
     }
 
@@ -490,7 +505,7 @@ export function getSegmentationLayerWithMappingSupport(
   return null;
 }
 
-export function getFirstSegmentationLayer(
+function getFirstSegmentationLayer(
   dataset: APIMaybeUnimportedDataset,
 ): APISegmentationLayer | null | undefined {
   if (!dataset.isActive) {
@@ -505,9 +520,7 @@ export function getFirstSegmentationLayer(
 
   return null;
 }
-export function _getSegmentationLayers(
-  dataset: APIMaybeUnimportedDataset,
-): Array<APISegmentationLayer> {
+function _getSegmentationLayers(dataset: APIMaybeUnimportedDataset): Array<APISegmentationLayer> {
   if (!dataset.isActive) {
     return [];
   }
@@ -591,9 +604,7 @@ export const getEnabledColorLayers = memoizeOne(_getEnabledColorLayers);
 export function getThumbnailURL(dataset: APIDataset): string {
   const layers = dataset.dataSource.dataLayers;
 
-  const colorLayer = _.find(layers, {
-    category: "color",
-  });
+  const colorLayer = layers.find((l) => l.category === "color");
 
   if (colorLayer) {
     return `/api/datasets/${dataset.id}/layers/${colorLayer.name}/thumbnail`;
@@ -623,12 +634,12 @@ export function isLayerVisible(
     return false;
   }
 
-  const isArbitraryMode = constants.MODES_ARBITRARY.includes(viewMode);
-  const isHiddenBecauseOfArbitraryMode = isArbitraryMode && isSegmentationLayer(dataset, layerName);
-  return !layerConfig.isDisabled && layerConfig.alpha > 0 && !isHiddenBecauseOfArbitraryMode;
+  const isFlightMode = viewMode === constants.MODE_FLIGHT;
+  const isHiddenInFlightMode = isFlightMode && isSegmentationLayer(dataset, layerName);
+  return !layerConfig.isDisabled && layerConfig.alpha > 0 && !isHiddenInFlightMode;
 }
 
-export function hasFallbackLayer(layer: APIDataLayer) {
+function _hasFallbackLayer(layer: APIDataLayer) {
   return "fallbackLayer" in layer && layer.fallbackLayer != null;
 }
 
@@ -716,20 +727,7 @@ export function getMappingInfoForSupportedLayer(state: WebknossosState): ActiveM
   );
 }
 
-export function getEffectiveIntensityRange(
-  dataset: APIDataset,
-  layerName: string,
-  datasetConfiguration: DatasetConfiguration,
-): readonly [number, number] {
-  const defaultIntensityRange = getDefaultValueRangeOfLayer(dataset, layerName);
-  const layerConfiguration = datasetConfiguration.layers[layerName];
-
-  return layerConfiguration.intensityRange || defaultIntensityRange;
-}
-
-// Note that `hasSegmentIndex` needs to be loaded first (otherwise, the returned
-// value will be undefined). Dispatch an ensureSegmentIndexIsLoadedAction to make
-// sure this info is fetched.
+/** Returns whether the segment index is available for the given layer. Requires `hasSegmentIndex` to be loaded first — dispatch `ensureSegmentIndexIsLoadedAction` before calling this. */
 export function getMaybeSegmentIndexAvailability(
   dataset: APIDataset,
   layerName: string | null | undefined,
@@ -737,7 +735,15 @@ export function getMaybeSegmentIndexAvailability(
   if (layerName == null) {
     return false;
   }
-  return dataset.dataSource.dataLayers.find((layer) => layer.name === layerName)?.hasSegmentIndex;
+  const availability = dataset.dataSource.dataLayers.find(
+    (layer) => layer.name === layerName,
+  )?.hasSegmentIndex;
+  if (availability == null) {
+    console.warn(
+      "getMaybeSegmentIndexAvailability: hasSegmentIndex is not loaded yet. Dispatch ensureSegmentIndexIsLoadedAction first.",
+    );
+  }
+  return availability;
 }
 
 function getURLSanitizedName(dataset: APIDataset | APIDatasetCompact | { name: string }) {
@@ -750,10 +756,38 @@ export function getReadableURLPart(
   return `${getURLSanitizedName(dataset)}-${dataset.id}`;
 }
 
+export function getViewDatasetURL(
+  dataset: APIDataset | APIDatasetCompact | { name: string; id: string },
+) {
+  return `/datasets/${getReadableURLPart(dataset)}/view`;
+}
+
 export function getDatasetIdOrNameFromReadableURLPart(datasetNameAndId: string) {
   const datasetIdOrName = datasetNameAndId.split("-").pop();
   const isId = /^[a-f0-9]{24}$/.test(datasetIdOrName || "");
   return isId
     ? { datasetId: datasetIdOrName, datasetName: null }
     : { datasetId: null, datasetName: datasetNameAndId };
+}
+
+// This helper function creates a map from layer names in the "enriched" dataset (meaning, volume annotation layers were added to the base dataset) to the original name in the base dataset.
+// As a result:
+// - each color layer name will map to itself
+// - each segmentation layer name that does not have a volume tracing will map to itself
+// - volume tracing layers with a fallback layer will map to their original segmentation layer name
+// - volume tracing layers without a fallback layer won't occur in the returned map
+export function getMappingFromLayerNameToBaseDatasetLayerName(
+  dataset: APIDataset,
+): Map<string, string> {
+  const layerWithFallbackOrColor = dataset.dataSource.dataLayers.filter(
+    (layer) => !("tracingId" in layer) || layer.fallbackLayer != null,
+  );
+  const namePairs = layerWithFallbackOrColor.map(
+    (layer) =>
+      [layer.name, "tracingId" in layer ? (layer.fallbackLayer ?? layer.name) : layer.name] as [
+        string,
+        string,
+      ],
+  );
+  return new Map(namePairs);
 }

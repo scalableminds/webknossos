@@ -19,9 +19,8 @@ trait LRUConcurrentCache[K, V] {
 
   def put(key: K, value: V): Unit =
     cache.synchronized {
-      val previous = cache.put(key, value)
-      if (previous != null)
-        onElementRemoval(key, previous)
+      val previousOpt = Option(cache.put(key, value))
+      previousOpt.foreach(onElementRemoval(key, _))
     }
 
   def get(key: K): Option[V] =
@@ -36,8 +35,7 @@ trait LRUConcurrentCache[K, V] {
       value
     }
 
-  /**
-    * Use if load function returns Option and only Some should be cached
+  /** Use if load function returns Option and only Some should be cached
     */
   def getOrLoadAndPutOptional(key: K)(loadFunction: K => Option[V]): Option[V] =
     get(key).orElse {
@@ -48,13 +46,14 @@ trait LRUConcurrentCache[K, V] {
 
   def remove(key: K): Unit =
     cache.synchronized {
-      val previous = cache.remove(key)
-      if (previous != null)
-        onElementRemoval(key, previous)
+      val previousOpt = Option(cache.remove(key))
+      previousOpt.foreach(onElementRemoval(key, _))
     }
 
   def size(): Int =
-    cache.size()
+    cache.synchronized {
+      cache.size()
+    }
 
   def clear(predicate: K => Boolean): Int =
     cache.synchronized {
@@ -73,5 +72,7 @@ trait LRUConcurrentCache[K, V] {
     }
 
   def clear(): Unit =
-    cache.clear()
+    cache.synchronized {
+      cache.clear()
+    }
 }

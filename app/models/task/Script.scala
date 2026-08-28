@@ -1,12 +1,12 @@
 package models.task
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.webknossos.schema.Tables.{Scripts, ScriptsRow, GetResultScriptsRow}
 import models.user.{UserDAO, UserService}
-import play.api.libs.json._
-import slick.lifted.Rep
+import play.api.libs.json.*
 import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 
@@ -22,38 +22,33 @@ case class Script(
     isDeleted: Boolean = false
 )
 
-class ScriptService @Inject()(userDAO: UserDAO, userService: UserService) {
+class ScriptService @Inject() (userDAO: UserDAO, userService: UserService) {
 
   def publicWrites(script: Script): Fox[JsObject] = {
     implicit val ctx: GlobalAccessContext.type = GlobalAccessContext
     for {
-      owner <- userDAO.findOne(script._owner) ?~> "user.notFound"
+      owner <- userDAO.findOne(script._owner) ?~> Msg.User.notFound(script._owner)
       ownerJs <- userService.compactWrites(owner)
-    } yield {
-      Json.obj(
-        "id" -> script._id.toString,
-        "name" -> script.name,
-        "gist" -> script.gist,
-        "owner" -> ownerJs
-      )
-    }
+    } yield Json.obj(
+      "id" -> script._id.toString,
+      "name" -> script.name,
+      "gist" -> script.gist,
+      "owner" -> ownerJs
+    )
   }
 
   def assertValidScriptName(scriptName: String)(implicit ec: ExecutionContext): Fox[Unit] =
-    Fox.fromBool(scriptName.matches("^[A-Za-z0-9\\-_\\. ß]+$")) ?~> "script.name.invalid.characters"
+    for {
+      _ <- Fox.fromBool(scriptName.length >= 2) ?~> Msg.Script.nameTooShort
+      _ <- Fox.fromBool(scriptName.length <= 50) ?~> Msg.Script.nameTooLong
+      _ <- Fox.fromBool(scriptName.matches("^[A-Za-z0-9\\-_\\. ß]+$")) ?~> Msg.Script.nameInvalidChars(scriptName)
+    } yield ()
 }
 
-object Script {
-  def fromForm(name: String, gist: String, _owner: ObjectId): Script =
-    Script(ObjectId.generate, _owner, name, gist)
-}
-
-class ScriptDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class ScriptDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Script, ScriptsRow, Scripts](sqlClient) {
   protected val collection = Scripts
-
-  protected def idColumn(x: Scripts): Rep[String] = x._Id
-  protected def isDeletedColumn(x: Scripts): Rep[Boolean] = x.isdeleted
+  protected def resultConverter = GetResultScriptsRow
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     q"(SELECT _organization FROM webknossos.users_ u WHERE u._id = _owner) = (SELECT _organization FROM webknossos.users_ u WHERE u._id = $requestingUserId)"
@@ -61,13 +56,14 @@ class ScriptDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected def parse(r: ScriptsRow): Fox[Script] =
     Fox.successful(
       Script(
-        ObjectId(r._Id),
-        ObjectId(r._Owner),
+        ObjectId(r._id),
+        ObjectId(r._owner),
         r.name,
         r.gist,
         Instant.fromSql(r.created),
         r.isdeleted
-      ))
+      )
+    )
 
   def insertOne(s: Script): Fox[Unit] =
     for {
@@ -75,8 +71,8 @@ class ScriptDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                    VALUES(${s._id}, ${s._owner}, ${s.name}, ${s.gist}, ${s.created}, ${s.isDeleted})""".asUpdate)
     } yield ()
 
-  def updateOne(s: Script)(implicit ctx: DBAccessContext): Fox[Unit] =
-    for { //note that s.created is skipped
+  def updateOne(s: Script)(using ctx: DBAccessContext): Fox[Unit] =
+    for { // note that s.created is skipped
       _ <- assertUpdateAccess(s._id)
       _ <- run(q"""UPDATE webknossos.scripts
                    SET
@@ -87,10 +83,4 @@ class ScriptDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                    WHERE _id = ${s._id}""".asUpdate)
     } yield ()
 
-  override def findAll(implicit ctx: DBAccessContext): Fox[List[Script]] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery".as[ScriptsRow])
-      parsed <- Fox.combined(r.toList.map(parse))
-    } yield parsed
 }

@@ -1,18 +1,22 @@
+import logoScreenshot from "@images/logo-screenshot.svg";
 import { saveAs } from "file-saver";
+import importDynamic from "libs/import_dynamic";
 import { convertBufferToImage } from "libs/utils";
 import {
   type OrthographicCamera,
   type PerspectiveCamera,
   type Scene,
-  WebGLRenderTarget,
   type WebGLRenderer,
+  WebGLRenderTarget,
 } from "three";
-import { ARBITRARY_CAM_DISTANCE, type OrthoView } from "viewer/constants";
 import constants, {
-  ArbitraryViewport,
+  FLIGHT_CAM_DISTANCE,
+  FlightViewport,
+  type OrthoView,
   OrthoViewColors,
-  OrthoViewValues,
   OrthoViews,
+  OrthoViewValues,
+  TDViewPerspectiveCameraName,
 } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { getFlooredPosition } from "viewer/model/accessors/flycam_accessor";
@@ -21,6 +25,13 @@ import Store from "viewer/store";
 
 const getBackgroundColor = (): number =>
   Store.getState().uiInformation.theme === "dark" ? 0x000000 : 0xffffff;
+
+// Shared with PlaneView.getActiveTDViewCamera so both places agree on which
+// camera is actually active for the TD viewport.
+export const getActiveTDViewCameraName = (
+  tdViewUsePerspectiveCamera: boolean,
+): OrthoView | typeof TDViewPerspectiveCameraName =>
+  tdViewUsePerspectiveCamera ? TDViewPerspectiveCameraName : OrthoViews.TDView;
 
 export const setupRenderArea = (
   renderer: WebGLRenderer,
@@ -43,7 +54,7 @@ export const clearCanvas = (renderer: WebGLRenderer) => {
   renderer.clear();
 };
 export function renderToTexture(
-  plane: OrthoView | typeof ArbitraryViewport,
+  plane: OrthoView | typeof FlightViewport,
   scene?: Scene,
   camera?: OrthographicCamera | PerspectiveCamera,
   // When withFarClipping is true, the user-specified clipping distance is used.
@@ -53,12 +64,19 @@ export function renderToTexture(
   // this behavior is not problematic for us.
   withFarClipping?: boolean,
   clearColor?: number,
+  enableAntialiasing: boolean = false,
 ): Uint8Array {
   const SceneController = getSceneController();
   const { renderer, scene: defaultScene } = SceneController;
   const state = Store.getState();
   scene = scene || defaultScene;
-  camera = (camera || scene.getObjectByName(plane)) as OrthographicCamera | PerspectiveCamera;
+  if (camera == null) {
+    const cameraName =
+      plane === OrthoViews.TDView
+        ? getActiveTDViewCameraName(state.userConfiguration.tdViewUsePerspectiveCamera)
+        : plane;
+    camera = scene.getObjectByName(cameraName) as OrthographicCamera | PerspectiveCamera;
+  }
 
   // Don't respect withFarClipping for the TDViewport as we don't do any clipping for
   // nodes there.
@@ -66,15 +84,13 @@ export function renderToTexture(
     function adaptCameraToCurrentClippingDistance<T extends OrthographicCamera | PerspectiveCamera>(
       camera: T,
     ): T {
-      const isArbitraryMode = constants.MODES_ARBITRARY.includes(
-        state.temporaryConfiguration.viewMode,
-      );
+      const isFlightMode = state.temporaryConfiguration.viewMode === constants.MODE_FLIGHT;
       const adaptedCamera = camera.clone() as T;
-      // The near value is already set in the camera (done in the CameraController/ArbitraryView).
-      if (isArbitraryMode) {
+      // The near value is already set in the camera (done in the CameraController/FlightModeView).
+      if (isFlightMode) {
         // The far value has to be set, since in normal rendering the far clipping is
         // achieved by the data plane which is not rendered during node picking
-        adaptedCamera.far = ARBITRARY_CAM_DISTANCE;
+        adaptedCamera.far = FLIGHT_CAM_DISTANCE;
       } else {
         // The far value has to be set, since in normal rendering the far clipping is
         // achieved by offsetting the plane instead of setting the far property.
@@ -96,9 +112,10 @@ export function renderToTexture(
   renderer.setScissorTest(false);
   renderer.setClearColor(clearColor === 0xffffff ? getBackgroundColor() : clearColor, 1);
   const renderTarget = new WebGLRenderTarget(width, height);
+  if (enableAntialiasing) renderTarget.samples = 4;
   const buffer = new Uint8Array(width * height * 4);
 
-  if (plane !== ArbitraryViewport) {
+  if (plane !== FlightViewport) {
     SceneController.updateSceneForCam(plane);
   }
 
@@ -106,34 +123,41 @@ export function renderToTexture(
   renderer.render(scene, camera);
   renderer.readRenderTargetPixels(renderTarget, 0, 0, width, height, buffer);
   renderer.setRenderTarget(null);
+  renderTarget.dispose();
   return buffer;
 }
 
 function getScreenshotLogoImage(): Promise<HTMLImageElement> {
   const logo = document.createElement("img");
-  logo.src = "/assets/images/logo-screenshot.svg";
+  logo.src = logoScreenshot;
   return new Promise((resolve) => {
     logo.onload = () => resolve(logo);
   });
 }
 
-export async function downloadScreenshot() {
+export type ScreenshotBlob = { name: string; blob: Blob };
+
+export async function captureScreenshots(prefix?: string): Promise<ScreenshotBlob[]> {
   const { dataset, flycam, temporaryConfiguration, userConfiguration } = Store.getState();
   const { renderWatermark } = userConfiguration;
   const { viewMode } = temporaryConfiguration;
   const datasetName = dataset.name;
   const [x, y, z] = getFlooredPosition(flycam);
-  const baseName = `${datasetName}__${x}_${y}_${z}`;
-  const planeIds: Array<OrthoView | typeof ArbitraryViewport> =
-    viewMode === constants.MODE_PLANE_TRACING ? OrthoViewValues : [ArbitraryViewport];
+  const positionSuffix = `${datasetName}__${x}_${y}_${z}`;
+  const baseName = prefix != null ? `${prefix}__${positionSuffix}` : positionSuffix;
+  const planeIds: Array<OrthoView | typeof FlightViewport> =
+    viewMode === constants.MODE_PLANE_TRACING ? OrthoViewValues : [FlightViewport];
   const logo = renderWatermark ? await getScreenshotLogoImage() : null;
+
+  const results: ScreenshotBlob[] = [];
 
   for (const planeId of planeIds) {
     const { width, height } = getInputCatcherRect(Store.getState(), planeId);
     if (width === 0 || height === 0) continue;
-    const clearColor = planeId !== "arbitraryViewport" ? OrthoViewColors[planeId] : 0xffffff;
+    const clearColor = planeId !== FlightViewport ? OrthoViewColors[planeId] : 0xffffff;
 
-    const buffer = renderToTexture(planeId, undefined, undefined, false, clearColor);
+    // Always anti-alias when creating screenshots since it looks better and performance is mostly irrelevant
+    const buffer = renderToTexture(planeId, undefined, undefined, false, clearColor, true);
 
     const inputCatcherElement = document.querySelector(`#inputcatcher_${planeId}`);
     const drawImageIntoCanvasCallback =
@@ -155,16 +179,22 @@ export async function downloadScreenshot() {
         : null;
     const canvas =
       inputCatcherElement != null
-        ? await import("html2canvas").then((html2canvas) =>
-            html2canvas.default(inputCatcherElement as HTMLElement, {
-              backgroundColor: null,
-              // Since the viewports do not honor devicePixelRation yet, always use a scale of 1
-              // as otherwise the two images would not fit together on a HiDPI screen.
-              // Can be removed once https://github.com/scalableminds/webknossos/issues/5116 is fixed.
-              scale: 1,
-              ignoreElements: (element) => element.id === "TDViewControls",
-            }),
-          )
+        ? await importDynamic(() => import("html2canvas"))
+            .then((html2canvas) =>
+              html2canvas.default(inputCatcherElement as HTMLElement, {
+                backgroundColor: null,
+                // Since the viewports do not honor devicePixelRation yet, always use a scale of 1
+                // as otherwise the two images would not fit together on a HiDPI screen.
+                // Can be removed once https://github.com/scalableminds/webknossos/issues/5116 is fixed.
+                scale: 1,
+                ignoreElements: (element) => element.id === "TDViewControls",
+              }),
+            )
+            .catch((error) => {
+              // Still create the screenshot, but without the HTML overlay (e.g., the scalebar).
+              console.error("Could not render HTML overlay for screenshot.", error);
+              return null;
+            })
         : null;
 
     const blob = await convertBufferToImage(
@@ -177,10 +207,36 @@ export async function downloadScreenshot() {
     );
     if (blob != null) {
       const planeDescriptor = viewMode === constants.MODE_PLANE_TRACING ? planeId : viewMode;
-      saveAs(blob, `${baseName}__${planeDescriptor}.png`);
+      results.push({ name: `${baseName}__${planeDescriptor}.png`, blob });
     }
   }
+
   if (logo) {
     logo.remove();
   }
+
+  return results;
+}
+
+export async function downloadScreenshot() {
+  const screenshots = await captureScreenshots();
+  for (const { name, blob } of screenshots) {
+    saveAs(blob, name);
+  }
+}
+
+export async function downloadScreenshotsAsZip(
+  screenshots: ScreenshotBlob[],
+  zipName = "screenshots",
+) {
+  // @zip.js is a fairly large module
+  // Dynamically import it to avoid loading it on Dashboard/admin pages.
+  const { BlobReader, ZipWriter, BlobWriter } = await importDynamic(() => import("@zip.js/zip.js"));
+  const zipBlob = new BlobWriter("application/zip");
+  const zipWriter = new ZipWriter(zipBlob);
+  for (const { name, blob } of screenshots) {
+    await zipWriter.add(name, new BlobReader(blob));
+  }
+  await zipWriter.close();
+  saveAs(await zipBlob.getData(), `${zipName}.zip`);
 }

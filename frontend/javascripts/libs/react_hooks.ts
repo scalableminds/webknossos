@@ -1,18 +1,29 @@
-import _ from "lodash";
+import type { QueryKey, UseQueryOptions } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import type { ApiResult } from "admin/api/api_result";
+import { unwrapOrThrow } from "admin/api/api_result";
+import { handleGenericError } from "libs/error_handling";
+import { isPlainObject } from "lodash-es";
+import debounce from "lodash-es/debounce";
+import noop from "lodash-es/noop";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type EqualityFn, useSelector } from "react-redux";
 import { useLocation } from "react-router-dom";
 import constants from "viewer/constants";
 import type { WebknossosState } from "viewer/store";
+import { bigIntReplacer } from "./bigint_helpers";
 import { KEYBOARD_BUTTON_LOOP_INTERVAL } from "./input";
 
 /**
  * Hook that returns the previous value of a state or prop.
  * @param value - The current value to track
  * @param ignoreNullAndUndefined - If true, null/undefined values won't update the previous value
- * @returns The previous value, or null if no previous value exists
+ * @returns The previous value, or null if no previous value exists; and a function to clear the stored previous value
  */
-export function usePrevious<T>(value: T, ignoreNullAndUndefined: boolean = false): T | null {
+export function usePrevious<T>(
+  value: T,
+  ignoreNullAndUndefined: boolean = false,
+): [T | null, () => void] {
   // Adapted from: https://usehooks.com/usePrevious/
 
   // The ref object is a generic container whose current property is mutable ...
@@ -24,17 +35,21 @@ export function usePrevious<T>(value: T, ignoreNullAndUndefined: boolean = false
       ref.current = value;
     }
   }, [value, ignoreNullAndUndefined]);
+
+  const clearFn = useCallback(() => {
+    ref.current = null;
+  }, []);
   // Only re-run if value changes
   // Return previous value (happens before update in useEffect above)
-  return ref.current;
+  return [ref.current, clearFn];
 }
 
 const extractModifierState = <K extends keyof WindowEventMap>(event: WindowEventMap[K]) => ({
-  // @ts-ignore
+  // @ts-expect-error
   Shift: event.shiftKey,
-  // @ts-ignore
+  // @ts-expect-error
   Alt: event.altKey, // This is the option key ⌥ on MacOS
-  // @ts-ignore
+  // @ts-expect-error
   ControlOrMeta: event.ctrlKey || event.metaKey,
 });
 
@@ -154,7 +169,7 @@ export function useRepeatedButtonTrigger(
   return {
     // Don't do anything on click to avoid that the trigger
     // is called twice on touch start.
-    onClick: _.noop,
+    onClick: noop,
     onTouchStart,
     onTouchEnd,
   };
@@ -285,6 +300,72 @@ export function useIsMounted() {
 }
 
 /**
+ * Wrapper around `useQuery` that automatically calls `handleGenericError` when the query fails.
+ * This ensures the user sees a toast notification for any unhandled query error.
+ * Pass `fallbackMessage` to override the default generic error message.
+ */
+export function useQueryWithErrorHandling<
+  TQueryFnData = unknown,
+  TError extends Error = Error,
+  TData = TQueryFnData,
+  TQueryKey extends QueryKey = QueryKey,
+>(options: UseQueryOptions<TQueryFnData, TError, TData, TQueryKey>, fallbackMessage?: string) {
+  const result = useQuery({
+    queryKeyHashFn: (queryKey) => {
+      return JSON.stringify(queryKey, (key, val) => {
+        // react-query cannot hash bigints by default which is why we take care of these
+        // here. Since this value won't be sent to the backend (this is only the hashed
+        // query key), we don't need to use the unsignedBigIntReplacer which creates
+        // a wrapper for each bigint.
+        if (typeof val === "bigint") {
+          return bigIntReplacer(key, val);
+        }
+        // The following is basically react-query's default queryKeyHashFn implementation:
+        // https://github.com/TanStack/query/blob/34f7ceed09c10e4a3aa2df31a106ddf02ec4e787/packages/query-core/src/utils.ts#L232
+        if (isPlainObject(val)) {
+          const obj = val as Record<string, unknown>;
+          return Object.keys(obj)
+            .sort()
+            .reduce((result: Record<string, unknown>, key: string) => {
+              result[key] = obj[key];
+              return result;
+            }, {});
+        }
+        return val;
+      });
+    },
+    ...options,
+  });
+
+  useEffect(() => {
+    if (result.error != null) {
+      handleGenericError(result.error, fallbackMessage ?? null);
+    }
+  }, [result.error, fallbackMessage]);
+
+  return result;
+}
+
+/**
+ * Wrapper around `useQuery` for rest_api.ts functions that return an `ApiResult`
+ * (see libs/api_result.ts) and already retry internally. Unwraps the ApiResult so
+ * `data`/`error` behave like a normal useQuery result, and disables useQuery's own
+ * retry — the retrying already happened inside the queryFn, so retrying again here
+ * would compound backoff on top of backoff.
+ */
+export function useApi<TData, TQueryKey extends QueryKey = QueryKey>(
+  options: Omit<UseQueryOptions<TData, Error, TData, TQueryKey>, "queryFn" | "retry"> & {
+    queryFn: () => Promise<ApiResult<TData>>;
+  },
+) {
+  return useQuery({
+    ...options,
+    queryFn: async () => unwrapOrThrow(await options.queryFn()),
+    retry: false,
+  });
+}
+
+/**
  * Hook that provides type-safe access to the Webknossos Redux store.
  * @param fn - Selector function that receives the Webknossos state
  * @returns Selected state value
@@ -304,7 +385,7 @@ export function useDebouncedValue<T>(value: T, delay: number): T {
 
   const debouncedSetter = useMemo(
     () =>
-      _.debounce((val: T) => {
+      debounce((val: T) => {
         setDebouncedValue(val);
       }, delay),
     [delay],
@@ -322,4 +403,18 @@ export function useDebouncedValue<T>(value: T, delay: number): T {
   }, [debouncedSetter]);
 
   return debouncedValue;
+}
+
+export function useWindowWidth() {
+  const [width, setWidth] = useState<number>(window.innerWidth);
+
+  useEffect(() => {
+    const handler = () => setWidth(window.innerWidth);
+    window.addEventListener("resize", handler);
+    return () => {
+      window.removeEventListener("resize", handler);
+    };
+  }, []);
+
+  return width;
 }

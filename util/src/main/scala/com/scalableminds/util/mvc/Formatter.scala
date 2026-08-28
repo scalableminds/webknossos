@@ -1,12 +1,12 @@
 package com.scalableminds.util.mvc
 
+import com.scalableminds.util.box.{Box, Failure, Full, ParamFailure}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.TextUtils
-import com.scalableminds.util.tools.{Box, Failure, Full, ParamFailure}
-import play.api.i18n.{Messages, MessagesProvider}
 
 import java.text.SimpleDateFormat
-import java.util.Date
+import java.time.format.DateTimeFormatter
+import java.util.{Date, Locale}
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.FiniteDuration
 
@@ -18,6 +18,10 @@ trait Formatter {
     val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm")
     sdf.format(date)
   }
+
+  // Day without time, spelled out for user-facing texts such as emails, e.g. “1 September 2026”
+  protected def formatDateOnly(instant: Instant): String =
+    DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.ENGLISH).format(instant.toZonedDateTime)
 
   protected def formatDateForFilename(date: Date): String = {
     val sdf = new SimpleDateFormat("YYYY-MM-dd_HH-mm")
@@ -45,7 +49,9 @@ trait Formatter {
       val labelElements: ListBuffer[String] = new ListBuffer[String]
 
       var days = Math.floor(millisAbs.toDouble / 1000 / 3600 / 24).toLong
-      if (millisAbs - days * 24 * 3600 * 1000 > 23 * 3600 * 1000 + 59 * 60 * 1000 + minuteRoundingThresholdMillisForRenderingSeconds) { // extra day to avoid 24h/60m/60s
+      if (
+        millisAbs - days * 24 * 3600 * 1000 > 23 * 3600 * 1000 + 59 * 60 * 1000 + minuteRoundingThresholdMillisForRenderingSeconds
+      ) { // extra day to avoid 24h/60m/60s
         days += 1
       }
       val includeSeconds = days == 0
@@ -81,10 +87,11 @@ trait Formatter {
     }
   }
 
-  protected def formatFailureChain(failure: Failure,
-                                   includeStackTraces: Boolean = false,
-                                   includeTime: Boolean = false,
-                                   messagesProviderOpt: Option[MessagesProvider] = None): String = {
+  protected def formatFailureChain(
+      failure: Failure,
+      includeStackTraces: Boolean = false,
+      includeTime: Boolean = false
+  ): String = {
 
     def formatStackTrace(failure: Failure) =
       failure.exception match {
@@ -98,17 +105,14 @@ trait Formatter {
 
     def formatNextChain(chainBox: Box[Failure]): String = chainBox match {
       case Full(chainFailure) =>
-        " <~ " + formatFailureChain(chainFailure, includeStackTraces, includeTime = false, messagesProviderOpt)
+        " <~ " + formatFailureChain(chainFailure, includeStackTraces)
       case _ => ""
     }
 
-    def formatMsg(msg: String): String =
-      messagesProviderOpt.map(mp => Messages(msg)(mp)).getOrElse(msg)
-
     def formatOneFailure(failure: Failure): String =
       failure match {
-        case ParamFailure(msg, _, _, param) => formatMsg(msg) + " " + param.toString
-        case Failure(msg, _, _)             => formatMsg(msg)
+        case ParamFailure(msg, _, _, param) => msg + " " + param.toString
+        case Failure(msg, _, _)             => msg
       }
 
     val serverTimeMsg = if (includeTime) s"[Server Time ${Instant.now}] " else ""

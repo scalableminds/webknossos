@@ -1,5 +1,6 @@
 import { Form, Select } from "antd";
 import type React from "react";
+import type { ReactElement } from "react";
 
 type LayerSelectionProps<L extends { name: string }> = {
   name: string | Array<string | number>;
@@ -29,7 +30,7 @@ export function LayerSelection<L extends { name: string }>({
   // default property names for controlled antd FormItems.
   onChange?: (a: string) => void;
   value?: string | null;
-}): JSX.Element {
+}): ReactElement {
   const onSelect = onChange ? (layerName: string) => onChange(layerName) : undefined;
   const maybeLayerType = layerType || "";
   const maybeSpace = layerType != null ? " " : "";
@@ -37,25 +38,19 @@ export function LayerSelection<L extends { name: string }>({
     <Select
       showSearch
       placeholder={`Select a ${maybeLayerType}${maybeSpace}layer`}
-      optionFilterProp="children"
+      optionFilterProp="label"
       filterOption={(input, option) =>
-        // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
-        option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+        (option?.label ?? "").toLowerCase().indexOf(input.toLowerCase()) >= 0
       }
       disabled={fixedLayerName != null}
       onSelect={onSelect}
       style={style}
       value={value}
-    >
-      {layers.map((layer) => {
-        const readableName = getReadableNameForLayer(layer);
-        return (
-          <Select.Option key={layer.name} value={layer.name}>
-            {readableName}
-          </Select.Option>
-        );
-      })}
-    </Select>
+      options={layers.map((layer) => ({
+        value: layer.name,
+        label: getReadableNameForLayer(layer),
+      }))}
+    />
   );
 }
 
@@ -67,7 +62,7 @@ export function LayerSelectionFormItem<L extends { name: string }>({
   fixedLayerName,
   label,
   onChange,
-}: LayerSelectionProps<L>): JSX.Element {
+}: LayerSelectionProps<L>): ReactElement {
   const layerType = chooseSegmentationLayer ? "segmentation" : "color";
   return (
     <Form.Item

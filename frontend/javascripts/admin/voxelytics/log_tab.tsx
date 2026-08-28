@@ -1,14 +1,14 @@
 import { SyncOutlined } from "@ant-design/icons";
 import { getVoxelyticsLogs } from "admin/rest_api";
 import Ansi from "ansi-to-react";
-import { Button, Select, Switch, message } from "antd";
+import { Button, Flex, message, Select, Switch } from "antd";
 import chalk from "chalk";
 import classnames from "classnames";
 import { usePolling } from "libs/react_hooks";
 import { useMemo, useState } from "react";
 import type { VoxelyticsLogLine } from "types/api_types";
 import { LOG_LEVELS } from "viewer/constants";
-import { type Result, VX_POLLING_INTERVAL, addAfterPadding, addBeforePadding } from "./utils";
+import { addAfterPadding, addBeforePadding, type Result, VX_POLLING_INTERVAL } from "./utils";
 
 type LogResult = Result<Array<VoxelyticsLogLine>>;
 
@@ -149,8 +149,8 @@ export default function LogTab({
 
   return (
     <div className={classnames("log-tab", { "log-tab-fullscreen": isFullscreen })}>
-      <div className="log-tab-header">
-        <span style={{ marginRight: 16 }}>
+      <Flex gap="small" justify="end" align="center" className="log-tab-header">
+        <span>
           <Switch
             checked={showTimestamps}
             size="small"
@@ -161,7 +161,7 @@ export default function LogTab({
           Show Timestamps
         </span>
 
-        <span style={{ marginRight: 16 }}>
+        <span>
           <Switch
             checked={isFullscreen}
             size="small"
@@ -171,18 +171,17 @@ export default function LogTab({
           />{" "}
           Fullscreen
         </span>
-        <Button onClick={() => loadLog()}>
-          <SyncOutlined spin={isLoading} /> Refresh
+        <Button onClick={() => loadLog()} icon={<SyncOutlined spin={isLoading} />}>
+          Refresh
         </Button>
         <Button onClick={downloadFullLog}>Download</Button>
-        <Select onChange={(value) => setLevel(value)} value={level} style={{ marginLeft: -1 }}>
-          {Object.values(LOG_LEVELS).map((_level) => (
-            <Select.Option value={_level} key={_level}>
-              {_level}
-            </Select.Option>
-          ))}
-        </Select>
-      </div>
+        <Select
+          onChange={(value) => setLevel(value)}
+          value={level}
+          style={{ marginLeft: -1 }}
+          options={Object.values(LOG_LEVELS).map((_level) => ({ value: _level, label: _level }))}
+        />
+      </Flex>
       {logText.length >= LOG_LINE_LIMIT && (
         <p className="log-tab-warning">
           Only the {LOG_LINE_LIMIT} latest log lines are shown.{" "}

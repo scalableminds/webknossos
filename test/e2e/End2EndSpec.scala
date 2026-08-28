@@ -2,9 +2,9 @@ package e2e
 
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.typesafe.scalalogging.LazyLogging
-import org.scalatestplus.play.guice._
+import org.scalatestplus.play.guice.*
 import org.specs2.main.Arguments
-import org.specs2.mutable._
+import org.specs2.mutable.*
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.test.WithServer
@@ -12,8 +12,8 @@ import play.api.test.WithServer
 import java.io.File
 import java.nio.file.Path
 import scala.concurrent.Await
-import scala.concurrent.duration._
-import scala.sys.process._
+import scala.concurrent.duration.*
+import scala.sys.process.*
 
 class End2EndSpec(arguments: Arguments) extends Specification with GuiceFakeApplicationFactory with LazyLogging {
 
@@ -29,16 +29,21 @@ class End2EndSpec(arguments: Arguments) extends Specification with GuiceFakeAppl
   "my application" should {
 
     "pass the e2e tests" in new WithServer(app = application, port = testPort) {
+      override def running(): Unit = {
 
-      ensureTestDataset()
+        runFrontendBuild()
+        ensureTestDataset()
 
-      val resp: WSResponse = Await.result(ws.url(s"http://localhost:$testPort").get(), 2 seconds)
-      resp.status === 200
+        val resp: WSResponse = Await.result(ws.url(s"http://localhost:$testPort/api/health").get(), 2 seconds)
+        resp.status === 200
 
-      runWebdriverTests === 0
+        runWebdriverTests === 0
+      }
     }
 
   }
+
+  private def runFrontendBuild() = "yarn build".run().exitValue()
 
   private def runWebdriverTests = "yarn test-e2e".run().exitValue()
 

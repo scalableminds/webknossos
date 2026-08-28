@@ -1,23 +1,24 @@
+import { toBigInt } from "libs/bigint_helpers";
 import ErrorHandling from "libs/error_handling";
 import { V3, V4 } from "libs/mjs";
+import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
 import type { ProgressCallback } from "libs/progress_callback";
 import Toast from "libs/toast";
-import {
-  areBoundingBoxesOverlappingOrTouching,
-  castForArrayType,
-  isNumberMap,
-  mod,
-  union,
-} from "libs/utils";
-import _ from "lodash";
-import { type Emitter, createNanoEvents } from "nanoevents";
+import { areBoundingBoxesOverlappingOrTouching, castForArrayType, mod, union } from "libs/utils";
+import keyBy from "lodash-es/keyBy";
+import once from "lodash-es/once";
+import { createNanoEvents, type Emitter } from "nanoevents";
 import { type Mesh, Ray, Raycaster, Vector3 as ThreeVector3 } from "three";
-import type { AdditionalAxis, BucketDataArray, ElementClass } from "types/api_types";
-import type { AdditionalCoordinate } from "types/api_types";
+import type {
+  AdditionalAxis,
+  AdditionalCoordinate,
+  BucketDataArray,
+  ElementClass,
+} from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { BucketAddress, LabelMasksByBucketAndW, Vector3, Vector4 } from "viewer/constants";
-import constants, { MappingStatusEnum } from "viewer/constants";
 import Constants from "viewer/constants";
+import constants, { MappingStatusEnum } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
@@ -34,13 +35,17 @@ import type { DimensionMap } from "viewer/model/dimensions";
 import Dimensions from "viewer/model/dimensions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import { globalPositionToBucketPosition } from "viewer/model/helpers/position_converter";
-import { VoxelNeighborQueue2D, VoxelNeighborQueue3D } from "viewer/model/volumetracing/volumelayer";
-import type { Mapping } from "viewer/store";
+import {
+  VoxelNeighborQueue2D,
+  VoxelNeighborQueue3D,
+} from "viewer/model/volumetracing/section_labeling";
+import type { Mapping, NumberLike } from "viewer/store";
 import Store from "viewer/store";
 import type { MagInfo } from "../helpers/mag_info";
 import { getConstructorForElementClass } from "../helpers/typed_buffer";
+import { getMappedIdAsBigInt } from "../sagas/volume/proofreading/preparation_sagas";
 
-const warnAboutTooManyAllocations = _.once(() => {
+const warnAboutTooManyAllocations = once(() => {
   const msg =
     "WEBKNOSSOS needed to allocate an unusually large amount of image data. It is advised to save your work and reload the page.";
   ErrorHandling.notify(new Error(msg));
@@ -143,7 +148,7 @@ class DataCube {
     this.isSegmentation = isSegmentation;
     this.magInfo = magInfo;
     this.layerName = layerName;
-    this.additionalAxes = _.keyBy(additionalAxes, "name");
+    this.additionalAxes = keyBy(additionalAxes, "name");
     this.emitter = createNanoEvents();
 
     this.cubes = {};
@@ -210,25 +215,22 @@ class DataCube {
       : false;
   }
 
-  mapId(unmappedId: number): number {
+  mapId(unmappedId: bigint): bigint {
     // Note that the return value can be an unmapped id even when
     // a mapping is active, if it is a HDF5 mapping that is partially loaded
     // and no entry exists yet for the input id.
-    let mappedId: number | null | undefined = null;
+    let mappedId: bigint | number | null | undefined = null;
     const mapping = this.getMapping();
 
     if (mapping != null && this.isMappingEnabled()) {
-      mappedId = isNumberMap(mapping)
-        ? mapping.get(Number(unmappedId))
-        : // TODO: Proper 64 bit support (#6921)
-          Number(mapping.get(BigInt(unmappedId)));
+      mappedId = getMappedIdAsBigInt(mapping, unmappedId);
     }
-    if (mappedId == null || isNaN(mappedId)) {
+    if (mappedId == null || (typeof mappedId === "number" && Number.isNaN(mappedId))) {
       // The id couldn't be mapped.
-      return this.shouldHideUnmappedIds() ? 0 : unmappedId;
+      return this.shouldHideUnmappedIds() ? 0n : unmappedId;
     }
 
-    return mappedId;
+    return toBigInt(mappedId);
   }
 
   private getCubeKey(zoomStep: number, allCoords: AdditionalCoordinate[] | undefined | null) {
@@ -492,8 +494,8 @@ class DataCube {
     this.bucketIterator = notCollectedBuckets.length;
   }
 
-  triggerBucketDataChanged(): void {
-    this.emitter.emit("bucketDataChanged");
+  triggerRenderedBucketDataChanged(): void {
+    this.emitter.emit("renderedBucketDataChanged");
   }
 
   shouldEagerlyMaintainUsedValueSet() {
@@ -502,16 +504,16 @@ class DataCube {
     return Date.now() - (this.lastRequestForValueSet || 0) < 2 * 60 * 1000;
   }
 
-  getValueSetForAllBuckets(): Set<number> | Set<bigint> {
+  getValueSetForAllAccessedBuckets(): Set<number> | Set<bigint> {
     this.lastRequestForValueSet = Date.now();
 
     // Theoretically, we could ignore coarser buckets for which we know that
     // finer buckets are already loaded. However, the current performance
     // is acceptable which is why this optimization isn't implemented.
     const valueSets = this.buckets
-      .filter((bucket) => bucket.state === "LOADED")
+      .filter((bucket) => bucket.state === "LOADED" && bucket.accessed)
       .map((bucket) => bucket.getValueSet());
-    // @ts-ignore The buckets of a single layer all have the same element class, so they are all number or all bigint
+    // @ts-expect-error The buckets of a single layer all have the same element class, so they are all number or all bigint
     const valueSet = union(valueSets);
     return valueSet;
   }
@@ -531,7 +533,7 @@ class DataCube {
     additionalCoordinates: AdditionalCoordinate[] | null,
     label: number,
     zoomStep: number,
-    activeSegmentId: number | null | undefined,
+    activeSegmentId: bigint | null | undefined,
   ): Promise<void> {
     // This function is only provided for testing purposes and should not be used internally,
     // since it only operates on one voxel and therefore is not performance-optimized. It should
@@ -566,7 +568,7 @@ class DataCube {
   async floodFill(
     globalSeedVoxel: Vector3,
     additionalCoordinates: AdditionalCoordinate[] | null,
-    segmentIdNumber: number,
+    segmentIdNumber: bigint,
     dimensionIndices: DimensionMap,
     _floodfillBoundingBox: BoundingBoxMinMaxType,
     zoomStep: number,
@@ -973,7 +975,7 @@ class DataCube {
     mapping: Mapping | null | undefined,
     zoomStep: number = 0,
     channelIndex: number = 0,
-  ): number {
+  ): NumberLike {
     if (!this.magInfo.hasIndex(zoomStep)) {
       return 0;
     }
@@ -990,18 +992,13 @@ class DataCube {
       const dataValue = data[voxelIndex];
 
       if (mapping) {
-        const mappedValue = isNumberMap(mapping)
-          ? mapping.get(Number(dataValue))
-          : mapping.get(BigInt(dataValue));
-
+        const mappedValue = new NumberLikeMapWrapper(mapping).get(dataValue);
         if (mappedValue != null) {
-          // TODO: Proper 64 bit support (#6921)
-          return Number(mappedValue);
+          return mappedValue;
         }
       }
 
-      // TODO: Proper 64 bit support (#6921)
-      return Number(dataValue);
+      return dataValue;
     }
 
     return 0;
@@ -1011,7 +1008,7 @@ class DataCube {
     voxel: Vector3,
     additionalCoordinates: AdditionalCoordinate[] | null,
     zoomStep: number = 0,
-  ): number {
+  ): NumberLike {
     return this.getDataValue(
       voxel,
       additionalCoordinates,
@@ -1075,7 +1072,9 @@ class DataCube {
   destroy() {
     this.cubes = {};
     this.buckets = [];
-    this.storePropertyUnsubscribers.forEach((fn) => fn());
+    this.storePropertyUnsubscribers.forEach((fn) => {
+      fn();
+    });
     this.storePropertyUnsubscribers = [];
   }
 }

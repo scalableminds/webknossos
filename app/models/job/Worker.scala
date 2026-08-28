@@ -6,59 +6,59 @@ import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
-import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.webknossos.schema.Tables.{Workers, WorkersRow, GetResultWorkersRow}
 import com.typesafe.scalalogging.LazyLogging
 import models.job.JobCommand.JobCommand
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json}
-import slick.lifted.Rep
 import telemetry.SlackNotificationService
 import utils.sql.{SQLDAO, SqlClient}
 import utils.WkConf
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
-case class Worker(_id: ObjectId,
-                  _dataStore: String,
-                  name: String,
-                  key: String,
-                  maxParallelHighPriorityJobs: Int,
-                  maxParallelLowPriorityJobs: Int,
-                  supportedJobCommands: Set[JobCommand],
-                  lastHeartBeat: Instant = Instant.zero,
-                  created: Instant = Instant.now,
-                  isDeleted: Boolean = false)
+case class Worker(
+    _id: ObjectId,
+    _dataStore: String,
+    name: String,
+    key: String,
+    maxParallelHighPriorityJobs: Int,
+    maxParallelLowPriorityJobs: Int,
+    supportedJobCommands: Set[JobCommand],
+    lastHeartBeat: Instant = Instant.zero,
+    lastReportedVersion: Option[String] = None,
+    created: Instant = Instant.now,
+    isDeleted: Boolean = false
+)
 
-class WorkerDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class WorkerDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Worker, WorkersRow, Workers](sqlClient) {
   protected val collection = Workers
-
-  protected def idColumn(x: Workers): Rep[String] = x._Id
-
-  protected def isDeletedColumn(x: Workers): Rep[Boolean] = x.isdeleted
+  protected def resultConverter = GetResultWorkersRow
 
   protected def parse(r: WorkersRow): Fox[Worker] =
     for {
       supportedJobCommands <- Fox.serialCombined(parseArrayLiteral(r.supportedjobcommands)) { s =>
         JobCommand.fromString(s).toFox ?~> f"$s is not a valid job command"
       }
-    } yield
-      Worker(
-        ObjectId(r._Id),
-        r._Datastore,
-        r.name,
-        r.key,
-        r.maxparallelhighpriorityjobs,
-        r.maxparallellowpriorityjobs,
-        supportedJobCommands.toSet,
-        Instant.fromSql(r.lastheartbeat),
-        Instant.fromSql(r.created),
-        r.isdeleted
-      )
+    } yield Worker(
+      ObjectId(r._id),
+      r._datastore,
+      r.name,
+      r.key,
+      r.maxparallelhighpriorityjobs,
+      r.maxparallellowpriorityjobs,
+      supportedJobCommands.toSet,
+      Instant.fromSql(r.lastheartbeat),
+      r.lastreportedversion,
+      Instant.fromSql(r.created),
+      r.isdeleted
+    )
 
   def findOneByKey(key: String): Fox[Worker] =
     for {
@@ -69,18 +69,25 @@ class WorkerDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def findAllByDataStore(dataStoreName: String): Fox[List[Worker]] =
     for {
       r: Seq[WorkersRow] <- run(
-        q"SELECT $columns FROM $existingCollectionName WHERE _dataStore = $dataStoreName".as[WorkersRow])
+        q"SELECT $columns FROM $existingCollectionName WHERE _dataStore = $dataStoreName".as[WorkersRow]
+      )
       parsed <- parseAll(r)
     } yield parsed
 
-  def updateHeartBeat(_id: ObjectId): Unit = {
-    run(q"UPDATE webknossos.workers SET lastHeartBeat = NOW() WHERE _id = ${_id}".asUpdate)
+  def updateHeartBeat(workerId: ObjectId): Unit = {
+    run(q"UPDATE webknossos.workers SET lastHeartBeat = NOW() WHERE _id = $workerId".asUpdate)
+    // Note that this should not block the jobs polling operation, failures here are not critical
+    ()
+  }
+
+  def updateLastReportedVersion(workerId: ObjectId, reportedVersion: String): Unit = {
+    run(q"UPDATE webknossos.workers SET lastReportedVersion = $reportedVersion WHERE _id = $workerId".asUpdate)
     // Note that this should not block the jobs polling operation, failures here are not critical
     ()
   }
 }
 
-class WorkerService @Inject()(conf: WkConf) {
+class WorkerService @Inject() (conf: WkConf) {
 
   def lastHeartBeatIsRecent(worker: Worker): Boolean =
     Instant.since(worker.lastHeartBeat) < conf.Jobs.workerLivenessTimeout
@@ -94,18 +101,21 @@ class WorkerService @Inject()(conf: WkConf) {
       "supportedJobCommands" -> worker.supportedJobCommands,
       "created" -> worker.created,
       "lastHeartBeat" -> worker.lastHeartBeat,
-      "lastHeartBeatIsRecent" -> lastHeartBeatIsRecent(worker)
+      "lastHeartBeatIsRecent" -> lastHeartBeatIsRecent(worker),
+      "lastReportedVersion" -> worker.lastReportedVersion
     )
 
 }
 
-class WorkerLivenessService @Inject()(workerService: WorkerService,
-                                      workerDAO: WorkerDAO,
-                                      slackNotificationService: SlackNotificationService,
-                                      reportedAsDeadTemporaryStore: TemporaryStore[ObjectId, Unit],
-                                      conf: WkConf,
-                                      val lifecycle: ApplicationLifecycle,
-                                      val actorSystem: ActorSystem)(implicit val ec: ExecutionContext)
+class WorkerLivenessService @Inject() (
+    workerService: WorkerService,
+    workerDAO: WorkerDAO,
+    slackNotificationService: SlackNotificationService,
+    reportedAsDeadTemporaryStore: TemporaryStore[ObjectId, Unit],
+    conf: WkConf,
+    val lifecycle: ApplicationLifecycle,
+    val actorSystem: ActorSystem
+)(implicit val ec: ExecutionContext)
     extends IntervalScheduler
     with Formatter
     with LazyLogging {
@@ -116,7 +126,7 @@ class WorkerLivenessService @Inject()(workerService: WorkerService,
 
   override protected def tick(): Fox[Unit] =
     for {
-      workers <- workerDAO.findAll(GlobalAccessContext)
+      workers <- workerDAO.findAll(using GlobalAccessContext)
       _ = workers.foreach(reportIfLivenessChanged)
     } yield ()
 

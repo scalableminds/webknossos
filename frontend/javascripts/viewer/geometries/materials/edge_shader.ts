@@ -1,6 +1,7 @@
 import { M4x4 } from "libs/mjs";
 import type TPS3D from "libs/thin_plate_spline";
-import _ from "lodash";
+import range from "lodash-es/range";
+import template from "lodash-es/template";
 import { type DataTexture, GLSL3, RawShaderMaterial } from "three";
 import { COLOR_TEXTURE_WIDTH_FIXED } from "viewer/geometries/materials/node_shader";
 import type { Uniforms } from "viewer/geometries/materials/plane_material_factory";
@@ -40,6 +41,16 @@ class EdgeShader {
       treeColors: {
         value: treeColorTexture,
       },
+      // When >= 0, edge fragments are discarded unless they lie on the currently
+      // visible section. The value is the perpendicular axis of the rendered
+      // viewport (0 = x, 1 = y, 2 = z). -1 disables section clipping. It is set
+      // per render pass, see SceneController.updateSceneForCam.
+      clippingAxis: {
+        value: -1,
+      },
+      currentSectionFlycamPosition: {
+        value: [0, 0, 0],
+      },
     };
 
     const dataset = Store.getState().dataset;
@@ -53,19 +64,19 @@ class EdgeShader {
 
     const { additionalCoordinates } = Store.getState().flycam;
 
-    _.each(additionalCoordinates, (_val, idx) => {
-      this.uniforms[`currentAdditionalCoord_${idx}`] = {
+    for (const coord of additionalCoordinates ?? []) {
+      this.uniforms[`currentAdditionalCoord_${coord.name}`] = {
         value: 0,
       };
-    });
+    }
 
     this.storePropertyUnsubscribers = [
       listenToStoreProperty(
         (storeState) => storeState.flycam.additionalCoordinates,
         (additionalCoordinates) => {
-          _.each(additionalCoordinates, (coord, idx) => {
-            this.uniforms[`currentAdditionalCoord_${idx}`].value = coord.value;
-          });
+          for (const coord of additionalCoordinates ?? []) {
+            this.uniforms[`currentAdditionalCoord_${coord.name}`].value = coord.value;
+          }
         },
         true,
       ),
@@ -117,7 +128,7 @@ class EdgeShader {
   getVertexShader(): string {
     const { additionalCoordinates } = Store.getState().flycam;
 
-    return _.template(`
+    return template(`
 precision highp float;
 precision highp int;
 
@@ -135,23 +146,26 @@ uniform mat4 transform;
   <%= generateCalculateTpsOffsetFunction("Skeleton", true) %>
 <% } %>
 
-<% _.range(additionalCoordinateLength).map((idx) => { %>
-  uniform float currentAdditionalCoord_<%= idx %>;
+<% additionalCoordinates.map((coord) => { %>
+  uniform float currentAdditionalCoord_<%= coord.name %>;
 <% }) %>
 
 in vec3 position;
 in float treeId;
 
-<% _.range(additionalCoordinateLength).map((idx) => { %>
-  in float additionalCoord_<%= idx %>;
+<% additionalCoordinates.map((coord) => { %>
+  in float additionalCoord_<%= coord.name %>;
 <% }) %>
 
 out float alpha;
+// Passed to the fragment shader so edges can be clipped partway along their
+// length to the currently visible section (in voxel coordinates).
+out vec3 v_position;
 
 void main() {
     alpha = 1.0;
-    <% _.range(additionalCoordinateLength).map((idx) => { %>
-      if (additionalCoord_<%= idx %> != currentAdditionalCoord_<%= idx %>) {
+    <% additionalCoordinates.map((coord) => { %>
+      if (!isnan(additionalCoord_<%= coord.name %>) && additionalCoord_<%= coord.name %> != currentAdditionalCoord_<%= coord.name %>) {
         alpha = 0.;
       }
     <% }) %>
@@ -172,34 +186,56 @@ void main() {
       return;
     }
 
+    // As nodes are rendered in the center of a voxel, so are edges.
+    vec3 positionWithOffset = position + vec3(0.5);
+    v_position = positionWithOffset;
+
     <% if (tpsTransform != null) { %>
-      vec3 tpsOffset = calculateTpsOffsetForSkeleton(position);
-      vec4 transformedCoord = vec4(position + tpsOffset, 1.);
+      vec3 tpsOffset = calculateTpsOffsetForSkeleton(positionWithOffset);
+      vec4 transformedCoord = vec4(positionWithOffset + tpsOffset, 1.);
     <% } else { %>
-      vec4 transformedCoord = transform * vec4(position, 1.);
+      vec4 transformedCoord = transform * vec4(positionWithOffset, 1.);
     <% } %>
     gl_Position = projectionMatrix * modelViewMatrix * transformedCoord;
 
 
     color = rgba.rgb;
 }`)({
-      additionalCoordinateLength: (additionalCoordinates || []).length,
+      additionalCoordinates: additionalCoordinates || [],
       tpsTransform: this.scaledTps,
       generateTpsInitialization,
       generateCalculateTpsOffsetFunction,
+      range,
     });
   }
 
   getFragmentShader(): string {
     return `
 precision highp float;
+precision highp int;
+
+uniform int clippingAxis;
+uniform vec3 currentSectionFlycamPosition;
 
 out vec4 fragColor;
 in vec3 color;
 in float alpha;
+in vec3 v_position;
 
 void main()
 {
+    // Clip the edge to the currently visible section. Because v_position is
+    // interpolated linearly across the edge (orthographic projection), this
+    // discards exactly the part of the edge that lies outside the section,
+    // yielding a partially rendered edge instead of an all-or-nothing one.
+    if (clippingAxis >= 0) {
+      float sectionStart = floor(currentSectionFlycamPosition[clippingAxis]);
+      float perpCoord = v_position[clippingAxis];
+      if (perpCoord < sectionStart || perpCoord >= sectionStart + 1.0) {
+        discard;
+      }
+    }
+
     fragColor = vec4(color, alpha);
 }`;
   }

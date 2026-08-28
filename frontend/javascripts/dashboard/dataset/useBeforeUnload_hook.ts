@@ -24,7 +24,7 @@ const useBeforeUnload = (hasUnsavedChanges: boolean, message: string) => {
     [hasUnsavedChanges, message],
   );
 
-  // @ts-ignore beforeUnload signature is overloaded
+  // @ts-expect-error beforeUnload signature is overloaded
   const blocker = useBlocker(beforeUnload);
   const blockTimeoutIdRef = useRef<number | null>(null);
 

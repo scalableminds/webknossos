@@ -1,17 +1,23 @@
 import type { RequestOptionsBase } from "libs/request";
+
 type SerializedHeaders = Array<[string, string]>;
 type RequestOptionsWithParsedHeaders = RequestOptionsBase<Headers>;
 type SerializedRequestOptions = RequestOptionsBase<SerializedHeaders>;
 export const requestOptionsTransferHandler = {
-  canHandle(obj: any) {
-    return obj != null && !(obj instanceof Response) && obj.headers instanceof Headers;
+  canHandle(obj: unknown): obj is RequestOptionsWithParsedHeaders {
+    return (
+      obj != null &&
+      typeof obj === "object" &&
+      "headers" in obj &&
+      !((obj as any) instanceof Response) &&
+      (obj as any).headers instanceof Headers
+    );
   },
 
   serialize(obj: RequestOptionsWithParsedHeaders): [SerializedRequestOptions, []] {
     const clone = Object.assign({}, obj);
 
     if (obj.headers && clone.headers) {
-      // @ts-ignore
       const headers: Array<[string, string]> = Array.from(obj.headers.entries());
       // @ts-expect-error ts-migrate(2739) FIXME: Type '[string, string][]' is missing the following... Remove this comment to see the full error message
       clone.headers = headers;
@@ -53,8 +59,13 @@ type SerializedErrorOrResponse = {
 // This handler is designed to overwrite the default "throw" handler of the comlink library, as this handler does not convert object that cannot be send via postMessage.
 export const throwTransferHandlerWithResponseSupport = {
   // Errors from a worker are wrapped into an object containing the error as value.
-  canHandle(obj: any) {
-    return obj != null && (obj.value instanceof Error || obj.value instanceof Response);
+  canHandle(obj: unknown): obj is { value: Error | Response } {
+    return (
+      obj != null &&
+      typeof obj === "object" &&
+      "value" in obj &&
+      ((obj as any).value instanceof Error || (obj as any).value instanceof Response)
+    );
   },
 
   serialize({ value }: { value: Error | Response }): [SerializedErrorOrResponse, []] {

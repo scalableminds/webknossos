@@ -1,10 +1,10 @@
 import { SyncOutlined } from "@ant-design/icons";
 import { getVoxelyticsChunkStatistics } from "admin/rest_api";
-import { Button, Tooltip } from "antd";
+import { Button, Flex, Tooltip } from "antd";
 import dayjs from "dayjs";
 import {
-  formatCPU,
   formatCountToDataAmountUnit,
+  formatCPU,
   formatDurationStrict,
   formatNumber,
   formatTimeIntervalStrict,
@@ -233,18 +233,17 @@ export default function StatisticsTab({
 
   return (
     <>
-      <div
+      <Flex
+        justify="end"
+        align="center"
         style={{
-          display: "flex",
-          justifyContent: "end",
-          alignItems: "center",
           marginBottom: 8,
         }}
       >
-        <Button onClick={() => loadStatistics()}>
-          <SyncOutlined spin={isLoading} /> Refresh
+        <Button onClick={() => loadStatistics()} icon={<SyncOutlined spin={isLoading} />}>
+          Refresh
         </Button>
-      </div>
+      </Flex>
       {renderContent()}
     </>
   );

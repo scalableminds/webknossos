@@ -1,3 +1,4 @@
+import app from "app";
 import PriorityQueue from "js-priority-queue";
 import { asAbortable, sleep } from "libs/utils";
 import type { BucketAddress } from "viewer/constants";
@@ -86,7 +87,7 @@ class PullQueue {
     let hasErrored = false;
     let failedBucketAddresses = [];
     try {
-      const bucketBuffers = await asAbortable(
+      const bucketResults = await asAbortable(
         requestWithFallback(layerInfo, batch),
         this.abortController.signal,
         PULL_ABORTION_ERROR,
@@ -94,17 +95,33 @@ class PullQueue {
 
       for (const [index, bucketAddress] of batch.entries()) {
         try {
-          const bucketBuffer = bucketBuffers[index];
+          const bucketResult = bucketResults[index];
           const bucket = this.cube.getOrCreateBucket(bucketAddress);
 
           if (bucket.type !== "data") {
             continue;
           }
 
-          if (bucketBuffer == null && !renderMissingDataBlack) {
-            bucket.markAsFailed(true);
-          } else {
-            this.handleBucket(bucket, bucketBuffer);
+          switch (bucketResult.type) {
+            case "data": {
+              this.handleBucket(bucket, bucketResult.data);
+              break;
+            }
+            case "empty": {
+              if (renderMissingDataBlack) {
+                // Render empty buckets as black (zeroed) data.
+                this.handleBucket(bucket, null);
+              } else {
+                bucket.markAsMissing();
+              }
+              break;
+            }
+            case "failure": {
+              // The bucket could not be read. Schedule it for a retry via the
+              // batch-level error handling below.
+              failedBucketAddresses.push(bucketAddress);
+              break;
+            }
           }
         } catch {
           failedBucketAddresses.push(bucketAddress);
@@ -122,8 +139,12 @@ class PullQueue {
       for (const bucketAddress of failedBucketAddresses) {
         const bucket = this.cube.getBucket(bucketAddress);
 
-        if (bucket.type === "data") {
-          bucket.markAsFailed(false);
+        // Only mark the bucket as failed if it is still in the REQUESTED state.
+        // A bucket might have already transitioned to another state (e.g. LOADED
+        // via an earlier result in the same batch), in which case markAsFailed()
+        // would throw. Skipping it lets the loop safely handle the remaining buckets.
+        if (bucket.type === "data" && bucket.isRequested()) {
+          bucket.markAsFailed();
 
           if (bucket.dirty) {
             bucket.addToPullQueueWithHighestPriority();
@@ -161,6 +182,10 @@ class PullQueue {
           });
         }
       }
+
+      if (!this.isDestroyed && this.isEmpty() && !this.isRetryScheduled) {
+        app.vent.emit("pullqueue:empty", this.layerName);
+      }
     }
   }
 
@@ -177,11 +202,15 @@ class PullQueue {
       // If we assume that the value set of the bucket is needed often (for proofreading),
       // we compute it here eagerly and then send the data to the bucket.
       // That way, the computations of the value set are spread out over time instead of being
-      // clustered when DataCube.getValueSetForAllBuckets is called. This improves the FPS rate.
+      // clustered when DataCube.getValueSetForAllAccessedBuckets is called. This improves the FPS rate.
       bucket.receiveData(bucketData, true);
     } else {
       bucket.receiveData(bucketData);
     }
+  }
+
+  isEmpty(): boolean {
+    return this.priorityQueue.length === 0 && this.fetchingBatchCount === 0;
   }
 
   add(item: PullQueueItem): void {

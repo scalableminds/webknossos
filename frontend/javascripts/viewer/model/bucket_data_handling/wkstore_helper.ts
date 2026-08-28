@@ -14,7 +14,7 @@ export function getDataOrTracingStoreUrl(layerSourceInfo: LayerSourceInfo) {
   if (annotation == null || tracingId == null || useDataStore) {
     return `${dataset.dataStore.url}/data/datasets/${dataset.id}/layers/${segmentationLayerName}`;
   } else {
-    const tracingStoreHost = annotation?.tracingStore.url;
+    const tracingStoreHost = annotation.tracingStore.url;
     return `${tracingStoreHost}/tracings/volume/${tracingId}`;
   }
 }

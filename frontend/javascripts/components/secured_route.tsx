@@ -1,7 +1,8 @@
+import { unwrapOrThrow } from "admin/api/api_result";
 import LoginView from "admin/auth/login_view";
 import {
-  type PricingPlanEnum,
   isFeatureAllowedByPricingPlan,
+  type PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
 import { getUnversionedAnnotationInformation } from "admin/rest_api";
 import { PageUnavailableForYourPlanView } from "components/pricing_enforcers";
@@ -12,7 +13,7 @@ import { memo, useCallback, useEffect, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import { PageNotAvailableToNormalUser } from "./permission_enforcer";
 
-export type SecuredRouteProps = {
+type SecuredRouteProps = {
   children: React.ReactNode;
   requiredPricingPlan?: PricingPlanEnum;
   requiresAdminOrManagerRole?: boolean;
@@ -36,7 +37,9 @@ function SecuredRoute({
   const getIsResourcePublic = useCallback(async () => {
     if (id) {
       try {
-        const annotationInformation = await getUnversionedAnnotationInformation(id || "");
+        const annotationInformation = unwrapOrThrow(
+          await getUnversionedAnnotationInformation(id || ""),
+        );
         return annotationInformation.visibility === "Public";
       } catch (_ex) {
         // Annotation could not be found

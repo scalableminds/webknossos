@@ -5,7 +5,6 @@ import { getAgglomeratesForDatasetLayer, getMappingsForDatasetLayer } from "admi
 import { Col, Form, Input, InputNumber, Row, Select, Switch, Table, Tooltip } from "antd";
 import { Slider } from "components/slider";
 import { Vector3Input } from "libs/vector_input";
-import _ from "lodash";
 import messages, { layerViewConfigurations, settings, settingsTooltips } from "messages";
 import { useMemo, useState } from "react";
 import type { APIDataset } from "types/api_types";
@@ -129,32 +128,34 @@ const DatasetSettingsViewConfigTabWithDataset = ({ dataset }: { dataset: APIData
     mapping: {
       shortComment: "Active Mapping",
       tooltip:
-        "The mapping whose type and name is active by default. This field is an object with the keys 'type' and 'name' like {name: 'agglomerate_65', type: 'HDF5'}.",
+        "The mapping whose type and name is active by default. This field is an object with the keys 'type' and 'name' like {name: 'agglomerate_65', type: 'AGGLOMERATE'}.",
     },
   };
-  const layerViewConfigurationEntries = _.map(
-    { ...getDefaultLayerViewConfiguration(), min: 0, max: 255, intensityRange: [0, 255] },
-    (defaultValue: any, key: string) => {
-      // @ts-ignore Typescript doesn't infer that key will be of type keyof DatasetLayerConfiguration
-      const layerViewConfigurationKey: keyof DatasetLayerConfiguration = key;
-      const name = layerViewConfigurations[layerViewConfigurationKey];
-      const comment = comments[layerViewConfigurationKey];
-      const commentContent =
-        comment != null ? (
-          <Tooltip title={comment.tooltip}>
-            {comment.shortComment} <InfoCircleOutlined />
-          </Tooltip>
-        ) : (
-          ""
-        );
-      return {
-        name,
-        key,
-        value: defaultValue == null ? "not set" : defaultValue.toString(),
-        comment: commentContent,
-      };
-    },
-  );
+  const layerViewConfigurationEntries = Object.entries({
+    ...getDefaultLayerViewConfiguration(),
+    min: 0,
+    max: 255,
+    intensityRange: [0, 255],
+  }).map(([key, defaultValue]: [string, any]) => {
+    // @ts-expect-error Typescript doesn't infer that key will be of type keyof DatasetLayerConfiguration
+    const layerViewConfigurationKey: keyof DatasetLayerConfiguration = key;
+    const name = layerViewConfigurations[layerViewConfigurationKey];
+    const comment = comments[layerViewConfigurationKey];
+    const commentContent =
+      comment != null ? (
+        <Tooltip key={key} title={comment.tooltip}>
+          {comment.shortComment} <InfoCircleOutlined />
+        </Tooltip>
+      ) : (
+        ""
+      );
+    return {
+      name,
+      key,
+      value: defaultValue == null ? "not set" : defaultValue.toString(),
+      comment: commentContent,
+    };
+  });
 
   const viewConfigItems: SettingsCardProps[] = [
     {
@@ -254,10 +255,13 @@ const DatasetSettingsViewConfigTabWithDataset = ({ dataset }: { dataset: APIData
       tooltip: settingsTooltips.blendMode,
       content: (
         <Form.Item name={["defaultConfiguration", "blendMode"]}>
-          <Select allowClear>
-            <Select.Option value={BLEND_MODES.Additive}>Additive</Select.Option>
-            <Select.Option value={BLEND_MODES.Cover}>Cover</Select.Option>
-          </Select>
+          <Select
+            allowClear
+            options={[
+              { value: BLEND_MODES.Additive, label: "Additive" },
+              { value: BLEND_MODES.Cover, label: "Cover" },
+            ]}
+          />
         </Form.Item>
       ),
     },
@@ -266,17 +270,19 @@ const DatasetSettingsViewConfigTabWithDataset = ({ dataset }: { dataset: APIData
       tooltip: settingsTooltips.loadingStrategy,
       content: (
         <Form.Item name={["defaultConfiguration", "loadingStrategy"]}>
-          <Select allowClear>
-            <Select.Option value={"BEST_QUALITY_FIRST"}>Best quality first</Select.Option>
-            <Select.Option value={"PROGRESSIVE_QUALITY"}>Progressive quality</Select.Option>
-          </Select>
+          <Select
+            allowClear
+            options={[
+              { value: "BEST_QUALITY_FIRST", label: "Best quality first" },
+              { value: "PROGRESSIVE_QUALITY", label: "Progressive quality" },
+            ]}
+          />
         </Form.Item>
       ),
     },
     {
       title: "Color Layer Order",
-      tooltip:
-        "Set the order in which color layers are rendered. This setting is only relevant if the cover blend mode is active.",
+      tooltip: settingsTooltips.colorLayerOrder,
       content: (
         <Form.Item
           name={["defaultConfiguration", "colorLayerOrder"]}

@@ -1,6 +1,7 @@
 package com.scalableminds.util.collections
 
 import scala.collection.Searching.{Found, InsertionPoint}
+import scala.reflect.ClassTag
 
 object SequenceUtils {
   def findUniqueElement[T](list: Seq[T]): Option[T] = {
@@ -60,4 +61,21 @@ object SequenceUtils {
       case Found(i)          => i
       case InsertionPoint(i) => i
     }
+
+  def concatArrays[T](arrays: Seq[Array[T]])(using ClassTag[T]): Array[T] =
+    if (arrays.size == 1)
+      arrays.head
+    else {
+      val size = arrays.map(_.length).sum
+      val combined = new Array[T](size)
+      var idx = 0
+      var i = 0
+      while (i < arrays.length) {
+        Array.copy(arrays(i), 0, combined, idx, arrays(i).length)
+        idx += arrays(i).length
+        i += 1
+      }
+      combined
+    }
+
 }

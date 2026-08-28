@@ -1,15 +1,18 @@
+import { handleGenericError } from "libs/error_handling";
 import { V3 } from "libs/mjs";
 import { document } from "libs/window";
-import _ from "lodash";
+import throttle from "lodash-es/throttle";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { OrthoView, Point2, Vector2, Vector3 } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
+import { getIsRebasingOrForwarding } from "viewer/model/accessors/annotation_accessor";
 import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import {
   calculateGlobalDelta,
   calculateGlobalPos,
   calculateMaybeGlobalPos,
 } from "viewer/model/accessors/view_mode_accessor";
+import { dispatchGetNewIdAsync } from "viewer/model/actions/actions";
 import {
   addUserBoundingBoxAction,
   changeUserBoundingBoxAction,
@@ -17,7 +20,7 @@ import {
 import type { DimensionIndices, DimensionMap } from "viewer/model/dimensions";
 import Dimension from "viewer/model/dimensions";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
-import Store, { type WebknossosState, type UserBoundingBox } from "viewer/store";
+import Store, { type UserBoundingBox, type WebknossosState } from "viewer/store";
 
 const BOUNDING_BOX_HOVERING_THROTTLE_TIME = 100;
 const getNeighbourEdgeIndexByEdgeIndex: { [key: number]: Vector2 } = {
@@ -230,23 +233,39 @@ export function getClosestHoveredBoundingBox(
   return [primaryEdge, secondaryEdge];
 }
 
-export function createBoundingBoxAndGetEdges(
+export async function createBoundingBoxAndGetEdges(
   pos: Point2,
   plane: OrthoView,
-): [SelectedEdge, SelectedEdge | null | undefined] | null {
+): Promise<[SelectedEdge, SelectedEdge | null | undefined] | null> {
   const state = Store.getState();
+  // A drag-created box cannot be meaningfully deferred, so we simply don't start one while a
+  // rebase/forwarding is active (the add would be dropped by the rebase edit guard anyway).
+  if (getIsRebasingOrForwarding(state)) return null;
   const globalPosition = calculateMaybeGlobalPos(state, pos, plane);
   if (globalPosition == null || globalPosition.rounded == null) return null;
 
+  const tracingId = getSomeTracing(state.annotation).tracingId;
+  let id: number;
+  try {
+    id = await dispatchGetNewIdAsync(Store.dispatch, tracingId, "BoundingBox");
+  } catch (error) {
+    handleGenericError(error as Error, "Could not create a new bounding box.");
+    return null;
+  }
+
   Store.dispatch(
-    addUserBoundingBoxAction({
-      boundingBox: {
-        min: globalPosition.rounded,
-        // The last argument ensures that a Vector3 is used and not a
-        // Float32Array.
-        max: V3.add(globalPosition.rounded, [1, 1, 1], [0, 0, 0]),
+    addUserBoundingBoxAction(
+      {
+        boundingBox: {
+          min: globalPosition.rounded,
+          // The last argument ensures that a Vector3 is used and not a
+          // Float32Array.
+          max: V3.add(globalPosition.rounded, [1, 1, 1], [0, 0, 0]),
+        },
       },
-    }),
+      undefined,
+      id,
+    ),
   );
   const { userBoundingBoxes } = getSomeTracing(Store.getState().annotation);
 
@@ -266,7 +285,7 @@ export function createBoundingBoxAndGetEdges(
   return [primaryEdge, secondaryEdge];
 }
 
-export const highlightAndSetCursorOnHoveredBoundingBox = _.throttle(
+export const highlightAndSetCursorOnHoveredBoundingBox = throttle(
   (position: Point2, planeId: OrthoView, event: MouseEvent | KeyboardEvent) => {
     const hoveredEdgesInfo = getClosestHoveredBoundingBox(position, planeId);
     // Access the parent element as that is where the cursor style property is set
@@ -315,7 +334,7 @@ export function handleResizingBoundingBox(
   secondaryEdge: SelectedEdge | null | undefined,
 ) {
   const state = Store.getState();
-  const globalMousePosition = calculateGlobalPos(state, mousePosition, planeId);
+  const globalMousePosition = calculateGlobalPos(state, mousePosition, planeId, true);
   const bboxToResize = getBoundingBoxOfPrimaryEdge(primaryEdge, state);
 
   if (!bboxToResize || globalMousePosition == null || globalMousePosition.rounded == null) {
@@ -390,23 +409,42 @@ export function handleMovingBoundingBox(
   delta: Point2,
   planeId: OrthoView,
   primaryEdge: SelectedEdge,
+  movementAccumulator: Vector3,
 ) {
   const state = Store.getState();
   const globalDelta = calculateGlobalDelta(state, delta, planeId);
   const bboxToResize = getBoundingBoxOfPrimaryEdge(primaryEdge, state);
 
   if (!bboxToResize) {
-    return;
+    return movementAccumulator;
   }
 
-  const updatedBounds = {
-    min: V3.toArray(V3.add(bboxToResize.boundingBox.min, globalDelta)),
-    max: V3.toArray(V3.add(bboxToResize.boundingBox.max, globalDelta)),
-  };
+  const accumulatedDelta = V3.add(movementAccumulator, globalDelta);
 
-  Store.dispatch(
-    changeUserBoundingBoxAction(primaryEdge.boxId, {
-      boundingBox: updatedBounds,
-    }),
-  );
+  // As bounding box positions are stored as integers, only move by whole numbers.
+  const roundedDelta = V3.round(accumulatedDelta);
+
+  if (roundedDelta.some((delta) => delta !== 0)) {
+    const minPosition = V3.add(bboxToResize.boundingBox.min, roundedDelta);
+    const maxPosition = V3.add(bboxToResize.boundingBox.max, roundedDelta);
+
+    const updatedBounds = {
+      min: minPosition,
+      max: maxPosition,
+    };
+
+    Store.dispatch(
+      changeUserBoundingBoxAction(primaryEdge.boxId, {
+        boundingBox: updatedBounds,
+      }),
+    );
+  }
+
+  // Store the fractional remainder for next time
+  movementAccumulator = [
+    accumulatedDelta[0] - roundedDelta[0],
+    accumulatedDelta[1] - roundedDelta[1],
+    accumulatedDelta[2] - roundedDelta[2],
+  ];
+  return movementAccumulator;
 }

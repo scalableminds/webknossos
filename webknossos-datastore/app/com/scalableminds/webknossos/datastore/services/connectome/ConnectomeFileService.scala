@@ -1,10 +1,13 @@
 package com.scalableminds.webknossos.datastore.services.connectome
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.{Box, Empty}
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
+import com.scalableminds.webknossos.datastore.helpers.UnsignedLong
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayer,
   DataSourceId,
@@ -12,8 +15,8 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   LayerAttachmentDataformat
 }
 import com.scalableminds.webknossos.datastore.services.connectome.SynapticPartnerDirection.SynapticPartnerDirection
+import com.scalableminds.webknossos.datastore.storage.AttachmentKey
 import com.typesafe.scalalogging.LazyLogging
-import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{Json, OFormat}
 
 import javax.inject.Inject
@@ -22,7 +25,7 @@ import scala.concurrent.ExecutionContext
 
 case class ByAgglomerateIdsRequest(
     connectomeFile: String,
-    agglomerateIds: Seq[Long]
+    agglomerateIds: Seq[UnsignedLong]
 )
 
 object ByAgglomerateIdsRequest {
@@ -60,7 +63,7 @@ object DirectedSynapseListMutable {
 
 case class SynapseTypesWithLegend(
     synapseTypes: Seq[Long],
-    typeToString: Seq[String],
+    typeToString: Seq[String]
 )
 
 object SynapseTypesWithLegend {
@@ -77,82 +80,102 @@ object ConnectomeFileNameWithMappingName {
 }
 
 case class ConnectomeFileKey(dataSourceId: DataSourceId, layerName: String, attachment: LayerAttachment)
+    extends AttachmentKey
 
-class ConnectomeFileService @Inject()(hdf5ConnectomeFileService: Hdf5ConnectomeFileService,
-                                      zarrConnectomeFileService: ZarrConnectomeFileService,
-                                      config: DataStoreConfig)
-    extends FoxImplicits
-    with LazyLogging {
+class ConnectomeFileService @Inject() (
+    hdf5ConnectomeFileService: Hdf5ConnectomeFileService,
+    zarrConnectomeFileService: ZarrConnectomeFileService,
+    config: DataStoreConfig
+) extends LazyLogging {
 
-  private val connectomeFileKeyCache
-    : AlfuCache[(DataSourceId, String, String), ConnectomeFileKey] = AlfuCache() // dataSourceId, layerName, connectomeFileName → ConnectomeFileKey
+  private val connectomeFileKeyCache: AlfuCache[(DataSourceId, String, String), ConnectomeFileKey] =
+    AlfuCache() // dataSourceId, layerName, connectomeFileName → ConnectomeFileKey
 
-  def lookUpConnectomeFileKey(dataSourceId: DataSourceId, dataLayer: DataLayer, connectomeFileName: String)(
-      implicit ec: ExecutionContext): Fox[ConnectomeFileKey] =
+  def lookUpConnectomeFileKey(dataSourceId: DataSourceId, dataLayer: DataLayer, connectomeFileName: String)(implicit
+      ec: ExecutionContext
+  ): Fox[ConnectomeFileKey] =
     connectomeFileKeyCache.getOrLoad(
       (dataSourceId, dataLayer.name, connectomeFileName),
-      _ => lookUpConnectomeFileKeyImpl(dataSourceId, dataLayer, connectomeFileName).toFox)
+      _ => lookUpConnectomeFileKeyImpl(dataSourceId, dataLayer, connectomeFileName).toFox
+    )
 
-  private def lookUpConnectomeFileKeyImpl(dataSourceId: DataSourceId,
-                                          dataLayer: DataLayer,
-                                          connectomeFileName: String): Box[ConnectomeFileKey] =
+  private def lookUpConnectomeFileKeyImpl(
+      dataSourceId: DataSourceId,
+      dataLayer: DataLayer,
+      connectomeFileName: String
+  ): Box[ConnectomeFileKey] =
     for {
-      attachment <- Box(dataLayer.attachments match {
-        case Some(attachments) => attachments.connectomes.find(_.name == connectomeFileName)
-        case None              => None
-      })
-      resolvedPath <- tryo(attachment.resolvedPath(config.Datastore.baseDirectory, dataSourceId))
-    } yield
-      ConnectomeFileKey(
-        dataSourceId,
-        dataLayer.name,
-        attachment.copy(path = resolvedPath)
-      )
+      attachment <- dataLayer.attachments match {
+        case Some(attachments) => Box.fromOption(attachments.connectomes.find(_.name == connectomeFileName))
+        case None              => Empty
+      }
+      _ <- Box.fromBool(attachment.path.isAbsolute) ?~> Msg.ConnectomeFile.pathNotAbsolute
+    } yield ConnectomeFileKey(
+      dataSourceId,
+      dataLayer.name,
+      attachment
+    )
 
-  def listConnectomeFiles(dataSourceId: DataSourceId, dataLayer: DataLayer)(
-      implicit ec: ExecutionContext,
-      tc: TokenContext,
-      m: MessagesProvider): Fox[List[ConnectomeFileNameWithMappingName]] = {
+  def listConnectomeFiles(dataSourceId: DataSourceId, dataLayer: DataLayer)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Seq[ConnectomeFileNameWithMappingName]] = {
     val connectomeFileNames = dataLayer.attachments.map(_.connectomes).getOrElse(Seq.empty).map(_.name)
 
     Fox.fromFuture(
       Fox
         .serialSequence(connectomeFileNames) { connectomeFileName =>
           for {
-            connectomeFileKey <- lookUpConnectomeFileKey(dataSourceId, dataLayer, connectomeFileName) ?~> Messages(
-              "connectome.file.lookup.failed",
-              connectomeFileName)
-            mappingName <- mappingNameForConnectomeFile(connectomeFileKey) ?~> Messages(
-              "connectome.file.readMappingName.failed",
-              connectomeFileName)
+            connectomeFileKey <- lookUpConnectomeFileKey(
+              dataSourceId,
+              dataLayer,
+              connectomeFileName
+            ) ?~> Msg.ConnectomeFile.lookUpFailed(connectomeFileName)
+            mappingName <- mappingNameForConnectomeFile(connectomeFileKey) ?~> Msg.ConnectomeFile
+              .readMappingNameFailed(connectomeFileName)
           } yield ConnectomeFileNameWithMappingName(connectomeFileName, mappingName)
         }
         // Only return successes, we don’t want a malformed file breaking the list request.
-        .map(_.flatten))
+        .map { (boxes: Seq[Box[ConnectomeFileNameWithMappingName]]) =>
+          boxes.filter(_.isEmpty).foreach { emptyBox =>
+            logger.warn(s"Failed to list a connectome file for $dataSourceId: $emptyBox")
+          }
+          boxes.flatten
+        }
+    )
   }
 
-  private def mappingNameForConnectomeFile(connectomeFileKey: ConnectomeFileKey)(implicit ec: ExecutionContext,
-                                                                                 tc: TokenContext): Fox[String] =
+  private def mappingNameForConnectomeFile(
+      connectomeFileKey: ConnectomeFileKey
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[String] =
     connectomeFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 => zarrConnectomeFileService.mappingNameForConnectomeFile(connectomeFileKey)
       case LayerAttachmentDataformat.hdf5  => hdf5ConnectomeFileService.mappingNameForConnectomeFile(connectomeFileKey)
       case _                               => unsupportedDataFormat(connectomeFileKey)
     }
 
-  def synapsesForAgglomerates(connectomeFileKey: ConnectomeFileKey, agglomerateIds: Seq[Long])(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[Seq[DirectedSynapseList]] =
+  def synapsesForAgglomerates(connectomeFileKey: ConnectomeFileKey, agglomerateIds: Seq[Long])(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Seq[DirectedSynapseList]] =
     if (agglomerateIds.length == 1) {
       for {
         agglomerateId <- agglomerateIds.headOption.toFox ?~> "Failed to extract the single agglomerate ID from request"
-        inSynapses <- ingoingSynapsesForAgglomerate(connectomeFileKey, agglomerateId) ?~> "Failed to read ingoing synapses"
-        outSynapses <- outgoingSynapsesForAgglomerate(connectomeFileKey, agglomerateId) ?~> "Failed to read outgoing synapses"
+        inSynapses <- ingoingSynapsesForAgglomerate(
+          connectomeFileKey,
+          agglomerateId
+        ) ?~> "Failed to read ingoing synapses"
+        outSynapses <- outgoingSynapsesForAgglomerate(
+          connectomeFileKey,
+          agglomerateId
+        ) ?~> "Failed to read outgoing synapses"
       } yield List(DirectedSynapseList(inSynapses, outSynapses))
     } else {
       val agglomeratePairs = directedPairs(agglomerateIds.toSet.toSeq)
       for {
         synapsesPerPair <- Fox.serialCombined(agglomeratePairs)(pair =>
-          synapseIdsForDirectedPair(connectomeFileKey, pair._1, pair._2))
+          synapseIdsForDirectedPair(connectomeFileKey, pair._1, pair._2)
+        )
         synapseListsMap = gatherPairSynapseLists(agglomerateIds, agglomeratePairs, synapsesPerPair)
         synapseListsOrdered = agglomerateIds.map(id => synapseListsMap(id))
       } yield synapseListsOrdered
@@ -161,14 +184,16 @@ class ConnectomeFileService @Inject()(hdf5ConnectomeFileService: Hdf5ConnectomeF
   private def directedPairs(items: Seq[Long]): Seq[(Long, Long)] =
     (for { x <- items; y <- items } yield (x, y)).filter(pair => pair._1 != pair._2)
 
-  private def gatherPairSynapseLists(agglomerateIds: Seq[Long],
-                                     agglomeratePairs: Seq[(Long, Long)],
-                                     synapsesPerPair: List[Seq[Long]]): collection.Map[Long, DirectedSynapseList] = {
+  private def gatherPairSynapseLists(
+      agglomerateIds: Seq[Long],
+      agglomeratePairs: Seq[(Long, Long)],
+      synapsesPerPair: List[Seq[Long]]
+  ): collection.Map[Long, DirectedSynapseList] = {
     val directedSynapseListsMutable = scala.collection.mutable.Map[Long, DirectedSynapseListMutable]()
     agglomerateIds.foreach { agglomerateId =>
       directedSynapseListsMutable(agglomerateId) = DirectedSynapseListMutable.empty
     }
-    agglomeratePairs.zip(synapsesPerPair).foreach { pairWithSynapses: ((Long, Long), Seq[Long]) =>
+    agglomeratePairs.zip(synapsesPerPair).foreach { (pairWithSynapses: ((Long, Long), Seq[Long])) =>
       val srcAgglomerate = pairWithSynapses._1._1
       val dstAgglomerate = pairWithSynapses._1._2
       directedSynapseListsMutable(srcAgglomerate).out ++= pairWithSynapses._2
@@ -177,9 +202,10 @@ class ConnectomeFileService @Inject()(hdf5ConnectomeFileService: Hdf5ConnectomeF
     directedSynapseListsMutable.view.mapValues(_.freeze).toMap
   }
 
-  private def ingoingSynapsesForAgglomerate(connectomeFileKey: ConnectomeFileKey, agglomerateId: Long)(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[Seq[Long]] =
+  private def ingoingSynapsesForAgglomerate(connectomeFileKey: ConnectomeFileKey, agglomerateId: Long)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Seq[Long]] =
     connectomeFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
         zarrConnectomeFileService.ingoingSynapsesForAgglomerate(connectomeFileKey, agglomerateId)
@@ -188,9 +214,10 @@ class ConnectomeFileService @Inject()(hdf5ConnectomeFileService: Hdf5ConnectomeF
       case _ => unsupportedDataFormat(connectomeFileKey)
     }
 
-  private def outgoingSynapsesForAgglomerate(connectomeFileKey: ConnectomeFileKey, agglomerateId: Long)(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[Seq[Long]] =
+  private def outgoingSynapsesForAgglomerate(connectomeFileKey: ConnectomeFileKey, agglomerateId: Long)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Seq[Long]] =
     connectomeFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
         zarrConnectomeFileService.outgoingSynapsesForAgglomerate(connectomeFileKey, agglomerateId)
@@ -202,7 +229,8 @@ class ConnectomeFileService @Inject()(hdf5ConnectomeFileService: Hdf5ConnectomeF
   private def synapseIdsForDirectedPair(
       connectomeFileKey: ConnectomeFileKey,
       srcAgglomerateId: Long,
-      dstAgglomerateId: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Seq[Long]] =
+      dstAgglomerateId: Long
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Seq[Long]] =
     connectomeFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
         zarrConnectomeFileService.synapseIdsForDirectedPair(connectomeFileKey, srcAgglomerateId, dstAgglomerateId)
@@ -214,7 +242,8 @@ class ConnectomeFileService @Inject()(hdf5ConnectomeFileService: Hdf5ConnectomeF
   def synapticPartnerForSynapses(
       connectomeFileKey: ConnectomeFileKey,
       synapseIds: List[Long],
-      direction: SynapticPartnerDirection)(implicit ec: ExecutionContext, tc: TokenContext): Fox[List[Long]] =
+      direction: SynapticPartnerDirection
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[List[Long]] =
     connectomeFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
         zarrConnectomeFileService.synapticPartnerForSynapses(connectomeFileKey, synapseIds, direction)
@@ -223,9 +252,10 @@ class ConnectomeFileService @Inject()(hdf5ConnectomeFileService: Hdf5ConnectomeF
       case _ => unsupportedDataFormat(connectomeFileKey)
     }
 
-  def positionsForSynapses(connectomeFileKey: ConnectomeFileKey, synapseIds: List[Long])(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[Seq[Seq[Long]]] =
+  def positionsForSynapses(connectomeFileKey: ConnectomeFileKey, synapseIds: List[Long])(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Seq[Seq[Long]]] =
     connectomeFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
         zarrConnectomeFileService.positionsForSynapses(connectomeFileKey, synapseIds)
@@ -234,9 +264,10 @@ class ConnectomeFileService @Inject()(hdf5ConnectomeFileService: Hdf5ConnectomeF
       case _ => unsupportedDataFormat(connectomeFileKey)
     }
 
-  def typesForSynapses(connectomeFileKey: ConnectomeFileKey, synapseIds: List[Long])(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[SynapseTypesWithLegend] =
+  def typesForSynapses(connectomeFileKey: ConnectomeFileKey, synapseIds: List[Long])(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[SynapseTypesWithLegend] =
     connectomeFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 => zarrConnectomeFileService.typesForSynapses(connectomeFileKey, synapseIds)
       case LayerAttachmentDataformat.hdf5  => hdf5ConnectomeFileService.typesForSynapses(connectomeFileKey, synapseIds)
@@ -244,9 +275,8 @@ class ConnectomeFileService @Inject()(hdf5ConnectomeFileService: Hdf5ConnectomeF
     }
 
   def clearCache(dataSourceId: DataSourceId, layerNameOpt: Option[String]): Int = {
-    connectomeFileKeyCache.clear {
-      case (keyDataSourceId, keyLayerName, _) =>
-        dataSourceId == keyDataSourceId && layerNameOpt.forall(_ == keyLayerName)
+    connectomeFileKeyCache.clear { case (keyDataSourceId, keyLayerName, _) =>
+      dataSourceId == keyDataSourceId && layerNameOpt.forall(_ == keyLayerName)
     }
 
     val clearedHdf5Count = hdf5ConnectomeFileService.clearCache(dataSourceId, layerNameOpt)
@@ -258,6 +288,7 @@ class ConnectomeFileService @Inject()(hdf5ConnectomeFileService: Hdf5ConnectomeF
 
   private def unsupportedDataFormat(connectomeFileKey: ConnectomeFileKey)(implicit ec: ExecutionContext) =
     Fox.failure(
-      s"Trying to load connectome file with unsupported data format ${connectomeFileKey.attachment.dataFormat}")
+      s"Trying to load connectome file with unsupported data format ${connectomeFileKey.attachment.dataFormat}"
+    )
 
 }

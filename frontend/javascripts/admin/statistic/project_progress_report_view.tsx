@@ -1,55 +1,38 @@
-import { PauseCircleOutlined, ReloadOutlined, SettingOutlined } from "@ant-design/icons";
+import { FilterOutlined, PauseCircleOutlined, ReloadOutlined } from "@ant-design/icons";
+import AdminPage from "admin/admin_page";
 import { getProjectProgressReport } from "admin/rest_api";
-import { Badge, Card, Spin, Table } from "antd";
+import { Badge, Button, Space, Spin, Table } from "antd";
 import FormattedDate from "components/formatted_date";
-import Loop from "components/loop";
 import StackedBarChart, { colors } from "components/stacked_bar_chart";
-import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
+import { useQueryWithErrorHandling } from "libs/react_hooks";
+import { compareBy, localeCompareBy, millisecondsToHours, scrollToTop } from "libs/utils";
 import messages from "messages";
-import * as React from "react";
 import { useState } from "react";
 import type { APIProjectProgressReport, APITeam } from "types/api_types";
-import TeamSelectionForm from "./team_selection_form";
+
 const { Column, ColumnGroup } = Table;
 const RELOAD_INTERVAL = 10 * 60 * 1000; // 10 min
 
 function ProjectProgressReportView() {
   const [areSettingsVisible, setAreSettingsVisible] = useState(true);
-  const [data, setData] = useState<APIProjectProgressReport[]>([]);
   const [team, setTeam] = useState<APITeam | undefined>(undefined);
-  const [isLoading, setIsLoading] = useState(false);
-  const [updatedAt, setUpdatedAt] = useState<number | undefined>(undefined);
 
-  async function fetchData(team: APITeam | undefined, suppressLoadingState: boolean = false) {
-    if (team == null) {
-      setData([]);
-    } else if (suppressLoadingState) {
-      const errorToastKey = "progress-report-failed-to-refresh";
-
-      try {
-        const progessData = await getProjectProgressReport(team.id);
-        setData(progessData);
-        setUpdatedAt(Date.now());
-        Toast.close(errorToastKey);
-      } catch (_err) {
-        Toast.error(messages["project.report.failed_to_refresh"], {
-          sticky: true,
-          key: errorToastKey,
-        });
-      }
-    } else {
-      setIsLoading(true);
-      const progessData = await getProjectProgressReport(team.id);
-      setData(progessData);
-      setUpdatedAt(Date.now());
-      setIsLoading(false);
-    }
-  }
-  // biome-ignore lint/correctness/useExhaustiveDependencies(fetchData):
-  React.useEffect(() => {
-    fetchData(team);
-  }, [team]);
+  const {
+    data = [],
+    isLoading,
+    isFetching,
+    refetch,
+    dataUpdatedAt,
+  } = useQueryWithErrorHandling(
+    {
+      queryKey: ["projectProgressReport", team?.id],
+      enabled: team != null,
+      queryFn: () => getProjectProgressReport(team!.id),
+      refetchInterval: RELOAD_INTERVAL,
+    },
+    messages["project.report.failed_to_refresh"],
+  );
 
   function handleTeamChange(newTeam: APITeam) {
     setTeam(newTeam);
@@ -60,40 +43,56 @@ function ProjectProgressReportView() {
     setAreSettingsVisible(true);
   }
 
-  function handleReload() {
-    fetchData(team);
-  }
-
-  function handleAutoReload() {
-    fetchData(team, true);
-  }
-
   return (
-    <div className="container">
-      <Loop onTick={handleAutoReload} interval={RELOAD_INTERVAL} />
-      <div className="pull-right">
-        {updatedAt != null ? <FormattedDate timestamp={updatedAt} /> : null}{" "}
-        <SettingOutlined onClick={handleOpenSettings} />
-        <ReloadOutlined onClick={handleReload} />
-      </div>
-      <h3>Project Progress</h3>
-      {areSettingsVisible ? (
-        <Card>
-          <TeamSelectionForm value={team} onChange={handleTeamChange} />
-        </Card>
-      ) : null}
-
+    <AdminPage
+      title="Project Progress"
+      descriptionURI="https://docs.webknossos.org/webknossos/tasks_projects/projects.html"
+      description="Monitor project throughput, task instance status, and billed annotation time."
+      actions={
+        <Space>
+          {dataUpdatedAt > 0 ? <FormattedDate timestamp={dataUpdatedAt} /> : null}
+          <Button
+            icon={<FilterOutlined />}
+            variant="outlined"
+            onClick={handleOpenSettings}
+            disabled={team == null}
+          >
+            Filter
+          </Button>
+          <Button
+            icon={<ReloadOutlined spin={isFetching} />}
+            variant="outlined"
+            onClick={() => refetch()}
+            disabled={team == null}
+          >
+            Refresh
+          </Button>
+        </Space>
+      }
+      filters={
+        areSettingsVisible ? (
+          <div style={{ maxWidth: 400 }}>
+            <TeamSelectionComponent
+              value={team}
+              onChange={(selectedTeam) => {
+                if (!Array.isArray(selectedTeam) && selectedTeam != null) {
+                  handleTeamChange(selectedTeam);
+                }
+              }}
+              prefix={<FilterOutlined />}
+            />
+          </div>
+        ) : null
+      }
+    >
       <Spin spinning={isLoading}>
         <Table
           dataSource={data}
           pagination={{
             defaultPageSize: 100,
+            onChange: scrollToTop,
           }}
           rowKey="projectName"
-          style={{
-            marginTop: 30,
-            marginBottom: 30,
-          }}
           size="small"
           className="large-table"
         >
@@ -101,9 +100,7 @@ function ProjectProgressReportView() {
             title="Project"
             dataIndex="projectName"
             defaultSortOrder="ascend"
-            sorter={Utils.localeCompareBy<APIProjectProgressReport>(
-              (project) => project.projectName,
-            )}
+            sorter={localeCompareBy<APIProjectProgressReport>((project) => project.projectName)}
             render={(text: string, item: APIProjectProgressReport) => (
               <span>
                 {item.paused ? <PauseCircleOutlined /> : null} {text}
@@ -113,23 +110,24 @@ function ProjectProgressReportView() {
           <Column
             title="Tasks"
             dataIndex="totalTasks"
-            sorter={Utils.compareBy<APIProjectProgressReport>((project) => project.totalTasks)}
+            align="right"
+            sorter={compareBy<APIProjectProgressReport>((project) => project.totalTasks)}
             render={(number) => number.toLocaleString()}
           />
           <Column
             title="Priority"
             dataIndex="priority"
-            sorter={Utils.compareBy<APIProjectProgressReport>((project) => project.priority)}
+            align="right"
+            sorter={compareBy<APIProjectProgressReport>((project) => project.priority)}
             render={(number) => number.toLocaleString()}
           />
           <Column
             title="Time [h]"
             dataIndex="billedMilliseconds"
-            sorter={Utils.compareBy<APIProjectProgressReport>(
-              (project) => project.billedMilliseconds,
-            )}
+            align="right"
+            sorter={compareBy<APIProjectProgressReport>((project) => project.billedMilliseconds)}
             render={(number) =>
-              Utils.millisecondsToHours(number).toLocaleString(undefined, {
+              millisecondsToHours(number).toLocaleString(undefined, {
                 maximumFractionDigits: 1,
               })
             }
@@ -138,18 +136,18 @@ function ProjectProgressReportView() {
             <Column
               title="Total"
               width={100}
+              align="right"
               dataIndex="totalInstances"
-              sorter={Utils.compareBy<APIProjectProgressReport>(
-                (project) => project.totalInstances,
-              )}
+              sorter={compareBy<APIProjectProgressReport>((project) => project.totalInstances)}
               render={(number) => number.toLocaleString()}
             />
             <Column
               title="Progress"
               key="progress"
+              align="right"
               dataIndex="finishedInstances"
               width={100}
-              sorter={Utils.compareBy<APIProjectProgressReport>(
+              sorter={compareBy<APIProjectProgressReport>(
                 ({ finishedInstances, totalInstances }) => finishedInstances / totalInstances,
               )}
               render={(finishedInstances, item) =>
@@ -175,9 +173,7 @@ function ProjectProgressReportView() {
                 />
               }
               dataIndex="finishedInstances"
-              sorter={Utils.compareBy<APIProjectProgressReport>(
-                (project) => project.finishedInstances,
-              )}
+              sorter={compareBy<APIProjectProgressReport>((project) => project.finishedInstances)}
               render={(_text, item: APIProjectProgressReport) => ({
                 props: {
                   colSpan: 3,
@@ -201,9 +197,7 @@ function ProjectProgressReportView() {
                 />
               }
               dataIndex="activeInstances"
-              sorter={Utils.compareBy<APIProjectProgressReport>(
-                (project) => project.activeInstances,
-              )}
+              sorter={compareBy<APIProjectProgressReport>((project) => project.activeInstances)}
               render={() => ({
                 props: {
                   colSpan: 0,
@@ -221,9 +215,7 @@ function ProjectProgressReportView() {
                 />
               }
               dataIndex="pendingInstances"
-              sorter={Utils.compareBy<APIProjectProgressReport>(
-                (project) => project.pendingInstances,
-              )}
+              sorter={compareBy<APIProjectProgressReport>((project) => project.pendingInstances)}
               render={() => ({
                 props: {
                   colSpan: 0,
@@ -234,7 +226,7 @@ function ProjectProgressReportView() {
           </ColumnGroup>
         </Table>
       </Spin>
-    </div>
+    </AdminPage>
   );
 }
 

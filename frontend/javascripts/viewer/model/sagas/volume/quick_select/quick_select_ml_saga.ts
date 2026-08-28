@@ -3,10 +3,10 @@ import { estimateBBoxInMask } from "libs/find_bounding_box_in_nd";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import { map3, sleep } from "libs/utils";
-import _ from "lodash";
+import range from "lodash-es/range";
 import ndarray, { type NdArray } from "ndarray";
 import { call, cancel, fork, put } from "typed-redux-saga";
-import type { APIDataset, AdditionalCoordinate } from "types/api_types";
+import type { AdditionalCoordinate, APIDataset } from "types/api_types";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import type { OrthoView, TypedArrayWithoutBigInt, Vector3 } from "viewer/constants";
 import type {
@@ -14,8 +14,8 @@ import type {
   ComputeQuickSelectForRectAction,
 } from "viewer/model/actions/volumetracing_actions";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import type { WebknossosState } from "viewer/store";
 import { getPlaneExtentInVoxelFromStore } from "../../../accessors/view_mode_accessor";
 import { setGlobalProgressAction } from "../../../actions/ui_actions";
@@ -124,7 +124,7 @@ function* getMask(
   // a.lo(x,y) => a[x:, y:]
   return [
     maskBoxInMag,
-    _.range(0, depth).map(
+    range(0, depth).map(
       (zOffset) =>
         ndarr.hi(ndarr.shape[0], ndarr.shape[1], zOffset + 1).lo(0, 0, zOffset) as NdArray<
           Uint8Array<ArrayBuffer>
@@ -292,9 +292,7 @@ export default function* performQuickSelect(
         targetBox.fromMagToMag1(labeledMag),
         targetW,
         // a.hi(x,y) => a[:x, :y], // a.lo(x,y) => a[x:, y:]
-        mask
-          .hi(maxUV[0], maxUV[1], 1)
-          .lo(minUV[0], minUV[1], 0),
+        mask.hi(maxUV[0], maxUV[1], 1).lo(minUV[0], minUV[1], 0),
         overwriteMode,
         labeledZoomStep,
         // Only finish annotation stroke in the last iteration.

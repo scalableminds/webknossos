@@ -1,8 +1,8 @@
-import { describe, it, expect } from "vitest";
-import { getMagnificationUnion } from "viewer/model/accessors/dataset_accessor";
-import type { Vector3 } from "viewer/constants";
 import type { APIDataset } from "types/api_types";
+import type { Vector3 } from "viewer/constants";
+import { getMagnificationUnion } from "viewer/model/accessors/dataset_accessor";
 import { convertToDenseMags } from "viewer/model/helpers/mag_info";
+import { describe, expect, it } from "vitest";
 
 describe("Model mags", () => {
   it("Simple convertToDenseMags", () => {

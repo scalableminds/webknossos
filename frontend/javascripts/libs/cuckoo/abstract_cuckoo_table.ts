@@ -4,6 +4,9 @@ import { getRenderer } from "viewer/controller/renderer";
 import { createUpdatableTexture } from "viewer/geometries/materials/plane_material_factory_helpers";
 
 const DEFAULT_LOAD_FACTOR = 0.9;
+// Sentinel for subclasses whose key domain includes 0 as a legitimate value (e.g., bucket
+// coordinates in CuckooTableVec5). Subclasses whose keys are segment ids should use 0 instead
+// so that segment id = 2 ** 32 - 1 is still supported.
 export const EMPTY_KEY_VALUE = 2 ** 32 - 1;
 const REHASH_THRESHOLD = 20;
 
@@ -106,9 +109,20 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
 
   private initializeTableArray() {
     this.entryCount = 0;
-    this.table = new Uint32Array(this.getClass().getElementsPerEntry() * this.entryCapacity).fill(
-      EMPTY_KEY_VALUE,
-    );
+    const elementsPerEntry = this.getClass().getElementsPerEntry();
+    this.table = new Uint32Array(elementsPerEntry * this.entryCapacity);
+
+    // Determine the raw (possibly packed) representation of an empty entry.
+    this.writeEntryToTable(this.getEmptyKey(), this.getEmptyValue(), 0);
+    const emptyEntry = this.table.slice(0, elementsPerEntry);
+
+    if (emptyEntry.some((element) => element !== 0)) {
+      // The typed array is already zero-initialized, so only tile the empty entry across the
+      // table if its representation is not all zeros.
+      for (let offset = elementsPerEntry; offset < this.table.length; offset += elementsPerEntry) {
+        this.table.set(emptyEntry, offset);
+      }
+    }
 
     // The chance of colliding seeds is super low which is why
     // we ignore this case (a rehash would happen automatically, anyway).
@@ -136,7 +150,9 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
   }
 
   notifySeedListeners() {
-    this.seedSubscribers.forEach((fn) => fn(this.seeds));
+    this.seedSubscribers.forEach((fn) => {
+      fn(this.seeds);
+    });
   }
 
   getUniformValues() {
@@ -260,14 +276,14 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
   }
 
   /*
-   The empty key should be either EMPTY_KEY_VALUE or a tuple in the form of
-   [EMPTY_KEY_VALUE, EMPTY_KEY_VALUE, ..., EMPTY_KEY_VALUE].
+   The empty key must be a value (or tuple of values) that can never occur as a real key
+   in this table's domain. See the comment on EMPTY_KEY_VALUE for how to choose it.
    */
   abstract getEmptyKey(): K;
 
   /*
-   The empty value should be either EMPTY_KEY_VALUE or a tuple in the form of
-   [EMPTY_KEY_VALUE, EMPTY_KEY_VALUE, ..., EMPTY_KEY_VALUE].
+   The value written alongside an empty key. Since a slot is only ever recognized as empty by
+   comparing its key against getEmptyKey(), this can be any value (it is never inspected).
    */
   abstract getEmptyValue(): V;
 
@@ -281,13 +297,13 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
       offset < this.entryCapacity * this.getClass().getElementsPerEntry();
       offset += this.getClass().getElementsPerEntry()
     ) {
-      if (oldTable[offset] === EMPTY_KEY_VALUE) {
-        continue;
-      }
       const [key, value] = this.getEntryAtAddress(
         offset / this.getClass().getElementsPerEntry(),
         oldTable,
       );
+      if (this._areKeysEqual(key, this.getEmptyKey())) {
+        continue;
+      }
       if (this.internalSet(key, value, skipTextureUpdate) != null) {
         // Rehash did not work
         return false;

@@ -84,6 +84,8 @@ def parse_change_files():
                         migration_sections[section].append(line.strip())
                         added_lines += 1
 
+        migration_sections["Postgres Evolutions"].sort()
+
         if added_lines == 0:
             print(
                 f"Warning: {file_name} did not contain any changes that could be parsed."

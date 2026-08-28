@@ -1,0 +1,10 @@
+@(name: String, aiPlan: String, pricingPlan: String, additionalFooter: String, organizationName: String)
+
+@emailBaseTemplate(additionalFooter) {
+<p>Hi @{name}</p>
+<p>Thank you for your interest in the WEBKNOSSOS AI Add-on. To discuss your specific needs, our sales team will contact you shortly.</p>
+<p>Organization: @organizationName</p>
+<p>Current plan: @pricingPlan</p>
+<p>Requested AI Add-on: @aiPlan</p>
+<p>With best regards,<br />the WEBKNOSSOS team</p>
+}

@@ -1,13 +1,16 @@
 package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.{Box, Full}
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.storage.{
+  CredentializedUPath,
   DataVaultCredential,
   HttpBasicAuthCredential,
   LegacyDataVaultCredential,
-  CredentializedUPath
+  XAuthTokenCredential
 }
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.lang3.builder.HashCodeBuilder
@@ -16,13 +19,11 @@ import play.api.libs.ws.{WSAuthScheme, WSClient, WSRequest, WSResponse}
 
 import java.net.URI
 import scala.concurrent.duration.DurationInt
-import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
 class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, dataStoreHost: String)
     extends DataVault
-    with LazyLogging
-    with FoxImplicits {
+    with LazyLogging {
 
   private val readTimeout = 10 minutes
 
@@ -31,30 +32,34 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
 
   private lazy val dataStoreAuthority = new URI(dataStoreHost).getAuthority
 
-  override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[(Array[Byte], Encoding.Value)] = {
-    val uri = path.toRemoteUriUnsafe
+  override def readBytesPlusEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[(Array[Byte], Encoding.Value, Option[String])] =
     for {
+      uri <- path.toRemoteUri.toFox
       response <- range match {
-        case StartEnd(r)          => getWithRange(uri, r)
-        case SuffixLength(length) => getWithSuffixRange(uri, length)
-        case Complete()           => getComplete(uri)
+        case r: StartEndExclusiveByteRange => getWithRange(uri, r)
+        case r: SuffixLengthByteRange      => getWithSuffixRange(uri, r)
+        case CompleteByteRange()           => getComplete(uri)
       }
       encoding <- Encoding.fromRfc7231String(response.header("Content-Encoding").getOrElse("")).toFox
-      result <- if (Status.isSuccessful(response.status)) {
-        Fox.successful((response.bodyAsBytes.toArray, encoding))
-      } else if (response.status == 404) Fox.empty
-      else Fox.failure(s"Https read failed for uri $uri: ${response.status} ${response.statusText}")
+      rangeHeader = response.header("Content-Range")
+      result <-
+        if (Status.isSuccessful(response.status)) {
+          Fox.successful((response.bodyAsBytes.toArray, encoding, rangeHeader))
+        } else if (response.status == 404) Fox.empty
+        else Fox.failure(s"Https read failed for uri $uri: ${response.status} ${response.statusText}")
     } yield result
 
-  }
-
-  override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
+  override def listDirectory(path: VaultPath, maxItems: Int)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Seq[VaultPath]] =
     // HTTP file listing is currently not supported.
-    Fox.successful(List.empty)
+    Fox.successful(Seq.empty)
 
-  override def getUsedStorageBytes(path: VaultPath)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
+  override def getUsedStorageBytes(path: VaultPath)(using ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     // paid HTTP file storage is not supported.
     Fox.successful(0L)
 
@@ -62,43 +67,46 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
 
   private def getHeaderInformation(uri: URI)(implicit ec: ExecutionContext): Fox[(Boolean, Long)] =
     headerInfoCache.getOrLoad(
-      uri, { uri =>
+      uri,
+      uri =>
         for {
           response <- Fox.fromFuture(ws.url(uri.toString).withRequestTimeout(readTimeout).head())
           acceptsPartialRequests = response.headerValues("Accept-Ranges").contains("bytes")
           dataSize = response.header("Content-Length").map(_.toLong).getOrElse(0L)
         } yield (acceptsPartialRequests, dataSize)
-      }
     )
 
-  private def getWithRange(uri: URI, range: NumericRange[Long])(implicit ec: ExecutionContext,
-                                                                tc: TokenContext): Fox[WSResponse] =
+  private def getWithRange(uri: URI, range: StartEndExclusiveByteRange)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[WSResponse] =
     for {
       _ <- ensureRangeRequestsSupported(uri)
-      response <- Fox.fromFuture(
-        buildRequest(uri).withHttpHeaders("Range" -> s"bytes=${range.start}-${range.end - 1}").get())
+      response <- Fox.fromFuture(buildRequest(uri).withHttpHeaders("Range" -> range.toRangeHeader).get())
       _ = updateRangeRequestsSupportedForResponse(response)
     } yield response
 
-  private def getWithSuffixRange(uri: URI, length: Long)(implicit ec: ExecutionContext,
-                                                         tc: TokenContext): Fox[WSResponse] =
+  private def getWithSuffixRange(uri: URI, range: SuffixLengthByteRange)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[WSResponse] =
     for {
       _ <- ensureRangeRequestsSupported(uri)
-      response <- Fox.fromFuture(buildRequest(uri).withHttpHeaders("Range" -> s"bytes=-$length").get())
+      response <- Fox.fromFuture(buildRequest(uri).withHttpHeaders("Range" -> range.toRangeHeader).get())
       _ = updateRangeRequestsSupportedForResponse(response)
     } yield response
 
-  private def getComplete(uri: URI)(implicit ec: ExecutionContext, tc: TokenContext): Fox[WSResponse] =
+  private def getComplete(uri: URI)(using ec: ExecutionContext, tc: TokenContext): Fox[WSResponse] =
     Fox.fromFuture(buildRequest(uri).get())
 
   private def ensureRangeRequestsSupported(uri: URI)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       supported <- supportsRangeRequests match {
         case Some(supports) => Fox.successful(supports)
-        case None =>
+        case None           =>
           for {
             headerInfos <- getHeaderInformation(uri)
-          } yield {
+          } yield
             if (!headerInfos._1) {
               // Head is not conclusive, do the range request and check the response afterwards (see updateRangeRequestsSupportedForResponse)
               true
@@ -106,7 +114,6 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
               supportsRangeRequests = Some(true)
               true
             }
-          }
       }
       _ <- Fox.fromBool(supported) ?~> s"Range requests are not supported for this data vault at $uri"
     } yield ()
@@ -116,7 +123,7 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
       supportsRangeRequests = Some(response.header("Content-Range").isDefined)
     }
 
-  private def buildRequest(uri: URI)(implicit tc: TokenContext): WSRequest = {
+  private def buildRequest(uri: URI)(using tc: TokenContext): WSRequest = {
     val request = ws.url(uri.toString).withRequestTimeout(readTimeout)
     tc.userTokenOpt match {
       // If a user token is present, and this request is targeted at the data store, use the user token to authenticate at the datastore
@@ -126,19 +133,26 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
         getBasicAuthCredential match {
           case Some(credential) =>
             request.withAuth(credential.username, credential.password, WSAuthScheme.BASIC)
-          case None => request
+          case None =>
+            getXAuthTokenCredential match {
+              case Some(credential) => request.withHttpHeaders("X-Auth-Token" -> credential.tokenValue)
+              case None             => request
+            }
         }
     }
-
   }
 
   private def getBasicAuthCredential: Option[HttpBasicAuthCredential] =
-    credential.flatMap { c =>
-      c match {
-        case h: HttpBasicAuthCredential   => Some(h)
-        case l: LegacyDataVaultCredential => Some(l.toBasicAuth)
-        case _                            => None
-      }
+    credential.flatMap {
+      case h: HttpBasicAuthCredential   => Some(h)
+      case l: LegacyDataVaultCredential => Some(l.toBasicAuth)
+      case _                            => None
+    }
+
+  private def getXAuthTokenCredential: Option[XAuthTokenCredential] =
+    credential.flatMap {
+      case x: XAuthTokenCredential => Some(x)
+      case _                       => None
     }
 
   private def getCredential = credential
@@ -156,13 +170,14 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
 
 object HttpsDataVault {
 
-  /**
-    * Factory method to create a new HttpsDataVault instance.
-    * @param credentializedUpath
+  /** Factory method to create a new HttpsDataVault instance.
+    * @param credentializedUPath
     * @param ws
-    * @param dataStoreHost The host of the local data store that this vault is accessing. This is used to determine if a user token should be applied in requests.
+    * @param dataStoreHost
+    *   The host of the local data store that this vault is accessing. This is used to determine if a user token should
+    *   be applied in requests.
     * @return
     */
-  def create(credentializedUpath: CredentializedUPath, ws: WSClient, dataStoreHost: String): HttpsDataVault =
-    new HttpsDataVault(credentializedUpath.credential, ws, dataStoreHost)
+  def create(credentializedUPath: CredentializedUPath, ws: WSClient, dataStoreHost: String): Box[HttpsDataVault] =
+    Full(new HttpsDataVault(credentializedUPath.credential, ws, dataStoreHost))
 }

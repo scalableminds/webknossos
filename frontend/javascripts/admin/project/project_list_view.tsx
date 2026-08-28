@@ -11,6 +11,8 @@ import {
   TeamOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
+import { useQueryClient } from "@tanstack/react-query";
+import AdminPage from "admin/admin_page";
 import { getTasks } from "admin/api/tasks";
 import TransferAllTasksModal from "admin/project/transfer_all_tasks_modal";
 import {
@@ -28,12 +30,19 @@ import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import { handleGenericError } from "libs/error_handling";
 import Persistence from "libs/persistence";
-import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
+import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import _ from "lodash";
+import {
+  compareBy,
+  filterWithSearchQueryAND,
+  localeCompareBy,
+  millisecondsToHours,
+  scrollToTop,
+} from "libs/utils";
+import partial from "lodash-es/partial";
+import uniqBy from "lodash-es/uniqBy";
 import messages from "messages";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import {
   type APIProject,
@@ -61,70 +70,64 @@ function ProjectListView() {
   const initialSearchValue = location.hash.slice(1);
 
   const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
-  const [isLoading, setIsLoading] = useState(true);
-  const [projects, setProjects] = useState<APIProjectWithStatus[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
+  const queryClient = useQueryClient();
+
+  const {
+    data: projects = [],
+    isFetching: isLoadingProjects,
+    refetch,
+  } = useQueryWithErrorHandling({
+    queryKey: ["projectsWithStatus", taskTypeId],
+    queryFn: async () => {
+      const projects = taskTypeId
+        ? await getProjectsForTaskType(taskTypeId)
+        : await getProjectsWithStatus();
+      return projects.filter((p) => p.owner != null);
+    },
+    refetchOnWindowFocus: false,
+  });
+
+  const { data: taskType } = useQueryWithErrorHandling({
+    queryKey: ["taskType", taskTypeId],
+    queryFn: () => getTaskType(taskTypeId!),
+    enabled: taskTypeId != null,
+    refetchOnWindowFocus: false,
+  });
+  const taskTypeName = taskType?.summary;
+
+  const [searchQuery, setSearchQuery] = useState(() =>
+    initialSearchValue !== "" ? initialSearchValue : persistence.load().searchQuery || "",
+  );
+  const [isLoadingMutation, setIsLoadingMutation] = useState(false);
   const [isTransferTasksVisible, setIsTransferTasksVisible] = useState(false);
   const [selectedProject, setSelectedProject] = useState<APIProjectWithStatus | undefined>(
     undefined,
   );
-  const [taskTypeName, setTaskTypeName] = useState<string | undefined>("");
 
-  useEffectOnlyOnce(() => {
-    const { searchQuery } = persistence.load();
-    setSearchQuery(searchQuery || "");
-    if (initialSearchValue != null && initialSearchValue !== "") {
-      // Only override the persisted value if the provided initialSearchValue is not empty
-      setSearchQuery(initialSearchValue);
-    }
-    fetchData(taskTypeId);
-  });
-
-  useEffect(() => {
-    fetchData(taskTypeId);
-  }, [taskTypeId]);
-
-  useEffect(() => {
-    persistence.persist({ searchQuery });
-  }, [searchQuery]);
-
-  async function fetchData(taskTypeId?: string): Promise<void> {
-    let projects;
-    let taskTypeName;
-    let taskType;
-
-    if (taskTypeId) {
-      [projects, taskType] = await Promise.all([
-        getProjectsForTaskType(taskTypeId),
-        getTaskType(taskTypeId || ""),
-      ]);
-      taskTypeName = taskType.summary;
-    } else {
-      projects = await getProjectsWithStatus();
-    }
-
-    setIsLoading(false);
-    setProjects(projects.filter((p) => p.owner != null));
-    setTaskTypeName(taskTypeName);
-  }
+  const isLoading = isLoadingProjects || isLoadingMutation;
 
   function handleSearch(event: React.ChangeEvent<HTMLInputElement>): void {
-    setSearchQuery(event.target.value);
+    const newSearchQuery = event.target.value;
+    setSearchQuery(newSearchQuery);
+    persistence.persist({ searchQuery: newSearchQuery });
   }
 
   function deleteProject(project: APIProjectWithStatus) {
     modal.confirm({
       title: messages["project.delete"],
       onOk: async () => {
-        setIsLoading(true);
-
+        setIsLoadingMutation(true);
         try {
           await deleteProjectAPI(project.id);
-          setProjects(projects.filter((p) => p.id !== project.id));
+          queryClient.setQueryData(
+            ["projectsWithStatus", taskTypeId],
+            (currentProjects: APIProjectWithStatus[]) =>
+              currentProjects.filter((p) => p.id !== project.id),
+          );
         } catch (error) {
           handleGenericError(error as Error);
         } finally {
-          setIsLoading(false);
+          setIsLoadingMutation(false);
         }
       },
     });
@@ -142,8 +145,12 @@ function ProjectListView() {
     APICall: (arg0: string) => Promise<APIProject>,
   ) {
     const updatedProject = await APICall(project.id);
-    setProjects(
-      projects.map((p) => (p.id === project.id ? mergeProjectWithUpdated(p, updatedProject) : p)),
+    queryClient.setQueryData(
+      ["projectsWithStatus", taskTypeId],
+      (currentProjects: APIProjectWithStatus[]) =>
+        currentProjects.map((p) =>
+          p.id === project.id ? mergeProjectWithUpdated(p, updatedProject) : p,
+        ),
     );
   }
 
@@ -152,13 +159,17 @@ function ProjectListView() {
       title: messages["project.increase_instances"],
       onOk: async () => {
         try {
-          setIsLoading(true);
+          setIsLoadingMutation(true);
           const updatedProject = await increaseProjectTaskInstancesAPI(project.id);
-          setProjects(projects.map((p) => (p.id === project.id ? updatedProject : p)));
+          queryClient.setQueryData(
+            ["projectsWithStatus", taskTypeId],
+            (currentProjects: APIProjectWithStatus[]) =>
+              currentProjects.map((p) => (p.id === project.id ? updatedProject : p)),
+          );
         } catch (error) {
           handleGenericError(error as Error);
         } finally {
-          setIsLoading(false);
+          setIsLoadingMutation(false);
         }
       },
     });
@@ -183,7 +194,7 @@ function ProjectListView() {
 
   function onTaskTransferComplete() {
     setIsTransferTasksVisible(false);
-    fetchData(taskTypeId);
+    refetch();
   }
 
   function renderPlaceholder() {
@@ -207,7 +218,7 @@ function ProjectListView() {
     },
   ];
 
-  const filteredProjects = Utils.filterWithSearchQueryAND(
+  const filteredProjects = filterWithSearchQueryAND(
     projects,
     ["name", "team", "priority", "owner", "pendingInstances", "tracingTime"],
 
@@ -215,252 +226,238 @@ function ProjectListView() {
   );
 
   return (
-    <div className="container TestProjectListView">
-      <div>
-        <div className="pull-right">
-          {taskTypeId ? null : (
-            <Link to="/projects/create">
-              <Button icon={<PlusOutlined />} style={{ marginRight: 20 }} type="primary">
-                Add Project
-              </Button>
-            </Link>
-          )}
-          <Search
-            style={{
-              width: 200,
-            }}
-            onChange={handleSearch}
-            value={searchQuery}
-          />
-        </div>
-        <h3>{taskTypeName ? `Projects for task type ${taskTypeName}` : "Projects"}</h3>
-        <div
-          className="clearfix"
-          style={{
-            margin: "20px 0px",
+    <AdminPage
+      title={taskTypeName ? `Projects for task type ${taskTypeName}` : "Projects"}
+      descriptionURI="https://docs.webknossos.org/webknossos/tasks_projects/projects.html"
+      description="Create projects, monitor progress, and manage annotation workload."
+      actions={
+        taskTypeId ? null : (
+          <Link to="/projects/create">
+            <Button icon={<PlusOutlined />} type="primary">
+              Add Project
+            </Button>
+          </Link>
+        )
+      }
+      search={<Search allowClear onChange={handleSearch} value={searchQuery} />}
+    >
+      <Spin spinning={isLoading} size="large">
+        <Table
+          dataSource={filteredProjects}
+          rowKey="id"
+          pagination={{
+            defaultPageSize: 50,
+            onChange: scrollToTop,
           }}
-        />
-        <Spin spinning={isLoading} size="large">
-          <Table
-            dataSource={filteredProjects}
-            rowKey="id"
-            pagination={{
-              defaultPageSize: 50,
-            }}
-            style={{
-              marginTop: 30,
-              marginBottom: 30,
-            }}
-            locale={{
-              emptyText: renderPlaceholder(),
-            }}
-            scroll={{
-              x: "max-content",
-            }}
-            className="large-table"
-          >
-            <Column
-              title="Name"
-              dataIndex="name"
-              key="name"
-              sorter={Utils.localeCompareBy<APIProjectWithStatus>((project) => project.name)}
-              width={250}
-            />
-            <Column
-              title="Pending Task Instances"
-              dataIndex="pendingInstances"
-              key="pendingInstances"
-              sorter={Utils.compareBy<APIProjectWithStatus>((project) => project.pendingInstances)}
-              filters={greaterThanZeroFilters}
-              onFilter={(value, project: APIProjectWithStatus) => {
-                if (value === "0") {
-                  return project.tracingTime === 0;
-                }
-                return project.tracingTime > 0;
-              }}
-            />
-            <Column
-              title={
-                <Tooltip title="Total annotating time spent on this project">Time [h]</Tooltip>
-              }
-              dataIndex="tracingTime"
-              key="tracingTime"
-              sorter={Utils.compareBy<APIProjectWithStatus>((project) => project.tracingTime)}
-              render={(tracingTimeMs) =>
-                Utils.millisecondsToHours(tracingTimeMs).toLocaleString(undefined, {
-                  maximumFractionDigits: 1,
-                })
-              }
-              filters={greaterThanZeroFilters}
-              onFilter={(value, project: APIProjectWithStatus) => {
-                if (value === "0") {
-                  return project.tracingTime === 0;
-                }
-                return project.tracingTime > 0;
-              }}
-            />
-            <Column
-              title="Team"
-              dataIndex="teamName"
-              key="teamName"
-              sorter={Utils.localeCompareBy<APIProjectWithStatus>((project) => project.team)}
-              filters={_.uniqBy(
-                filteredProjects.map((project) => ({
-                  text: project.teamName,
-                  value: project.team,
-                })),
-                "text",
-              )}
-              onFilter={(value, project: APIProjectWithStatus) => value === project.team}
-              filterMultiple
-            />
-            <Column
-              title="Owner"
-              dataIndex="owner"
-              key="owner"
-              sorter={Utils.localeCompareBy<APIProjectWithStatus>(
-                (project) => project.owner.lastName,
-              )}
-              render={(owner: APIUserBase) => (
-                <>
-                  <div>{owner.email ? `${owner.lastName}, ${owner.firstName}` : "-"}</div>
-                  <div>{owner.email ? `(${owner.email})` : "-"}</div>
-                </>
-              )}
-              filters={_.uniqBy(
-                filteredProjects.map((project) => ({
-                  text: `${project.owner.firstName} ${project.owner.lastName}`,
-                  value: project.owner.id,
-                })),
-                "text",
-              )}
-              onFilter={(value, project: APIProjectWithStatus) => value === project.owner.id}
-              filterMultiple
-            />
-            <Column
-              title="Creation Date"
-              dataIndex="created"
-              key="created"
-              sorter={Utils.compareBy<APIProjectWithStatus>((project) => project.created)}
-              render={(created) => <FormattedDate timestamp={created} />}
-              defaultSortOrder="descend"
-            />
-            <Column
-              title="Priority"
-              dataIndex="priority"
-              key="priority"
-              sorter={Utils.compareBy<APIProjectWithStatus>((project) => project.priority)}
-              render={(priority, project: APIProjectWithStatus) =>
-                `${priority} ${project.paused ? "(paused)" : ""}`
-              }
-              filters={[
-                {
-                  text: "Paused",
-                  value: "paused",
-                },
-              ]}
-              onFilter={(_value, project: APIProjectWithStatus) => project.paused}
-            />
-            <Column
-              title="Time Limit"
-              dataIndex="expectedTime"
-              key="expectedTime"
-              sorter={Utils.compareBy<APIProjectWithStatus>((project) => project.expectedTime)}
-              render={(expectedTime) => `${expectedTime}m`}
-            />
-            <Column
-              title="Action"
-              key="actions"
-              fixed="right"
-              width={200}
-              render={(__, project: APIProjectWithStatus) => (
-                <span>
-                  <Link
-                    to={`/annotations/CompoundProject/${project.id}`}
-                    title="Show Compound Annotation of All Finished Annotations"
-                  >
-                    <EyeOutlined className="icon-margin-right" />
-                    View Merged
-                  </Link>
-                  <br />
-                  <Link to={`/projects/${project.id}/edit`} title="Edit Project">
-                    <EditOutlined className="icon-margin-right" />
-                    Edit
-                  </Link>
-                  <br />
-                  {project.paused ? (
-                    <div>
-                      <a
-                        onClick={_.partial(pauseResumeProject, project, resumeProject)}
-                        title="Resume Project"
-                      >
-                        <PlayCircleOutlined className="icon-margin-right" />
-                        Resume
-                      </a>
-                      <br />
-                    </div>
-                  ) : (
-                    <div>
-                      <a
-                        onClick={_.partial(pauseResumeProject, project, pauseProject)}
-                        title="Pause Tasks"
-                      >
-                        <PauseCircleOutlined className="icon-margin-right" />
-                        Pause
-                      </a>
-                      <br />
-                    </div>
-                  )}
-                  <Link to={`/projects/${project.id}/tasks`} title="View Tasks">
-                    <ScheduleOutlined className="icon-margin-right" />
-                    Tasks
-                  </Link>
-                  <br />
-                  <a
-                    onClick={_.partial(increaseProjectTaskInstances, project)}
-                    title="Increase Task Instances"
-                  >
-                    <PlusSquareOutlined className="icon-margin-right" />
-                    Increase Instances
-                  </a>
-                  <br />
-                  <AsyncLink
-                    href="#"
-                    onClick={async () => {
-                      maybeShowNoFallbackDataInfo(project.id);
-                      await downloadAnnotation(project.id, "CompoundProject");
-                    }}
-                    title="Download All Finished Annotations"
-                    icon={<DownloadOutlined key="download-icon" className="icon-margin-right" />}
-                  >
-                    Download
-                  </AsyncLink>
-                  <br />
-                  <a onClick={_.partial(showActiveUsersModal, project)}>
-                    <TeamOutlined className="icon-margin-right" />
-                    Show active users
-                  </a>
-                  <br />
-                  {project.owner.email === activeUser.email ? (
-                    <a onClick={_.partial(deleteProject, project)}>
-                      <DeleteOutlined className="icon-margin-right" />
-                      Delete
-                    </a>
-                  ) : null}
-                </span>
-              )}
-            />
-          </Table>
-        </Spin>
-        {isTransferTasksVisible ? (
-          <TransferAllTasksModal
-            project={selectedProject}
-            onCancel={onTaskTransferComplete}
-            onComplete={onTaskTransferComplete}
+          locale={{
+            emptyText: renderPlaceholder(),
+          }}
+          scroll={{
+            x: "max-content",
+          }}
+          className="large-table"
+        >
+          <Column
+            title="Name"
+            dataIndex="name"
+            key="name"
+            sorter={localeCompareBy<APIProjectWithStatus>((project) => project.name)}
+            width={250}
           />
-        ) : null}
-      </div>
-    </div>
+          <Column
+            title="Pending Task Instances"
+            dataIndex="pendingInstances"
+            align="right"
+            key="pendingInstances"
+            sorter={compareBy<APIProjectWithStatus>((project) => project.pendingInstances)}
+            filters={greaterThanZeroFilters}
+            onFilter={(value, project: APIProjectWithStatus) => {
+              if (value === "0") {
+                return project.pendingInstances === 0;
+              }
+              return project.pendingInstances > 0;
+            }}
+          />
+          <Column
+            title={<Tooltip title="Total annotating time spent on this project">Time [h]</Tooltip>}
+            dataIndex="tracingTime"
+            align="right"
+            key="tracingTime"
+            sorter={compareBy<APIProjectWithStatus>((project) => project.tracingTime)}
+            render={(tracingTimeMs) =>
+              millisecondsToHours(tracingTimeMs).toLocaleString(undefined, {
+                maximumFractionDigits: 1,
+              })
+            }
+            filters={greaterThanZeroFilters}
+            onFilter={(value, project: APIProjectWithStatus) => {
+              if (value === "0") {
+                return project.tracingTime === 0;
+              }
+              return project.tracingTime > 0;
+            }}
+          />
+          <Column
+            title="Team"
+            dataIndex="teamName"
+            key="teamName"
+            sorter={localeCompareBy<APIProjectWithStatus>((project) => project.team)}
+            filters={uniqBy(
+              filteredProjects.map((project) => ({
+                text: project.teamName,
+                value: project.team,
+              })),
+              "text",
+            )}
+            onFilter={(value, project: APIProjectWithStatus) => value === project.team}
+            filterMultiple
+          />
+          <Column
+            title="Owner"
+            dataIndex="owner"
+            key="owner"
+            sorter={localeCompareBy<APIProjectWithStatus>((project) => project.owner.lastName)}
+            render={(owner: APIUserBase) => (
+              <>
+                <div>{owner.email ? `${owner.lastName}, ${owner.firstName}` : "-"}</div>
+                <div>{owner.email ? `(${owner.email})` : "-"}</div>
+              </>
+            )}
+            filters={uniqBy(
+              filteredProjects.map((project) => ({
+                text: `${project.owner.firstName} ${project.owner.lastName}`,
+                value: project.owner.id,
+              })),
+              "text",
+            )}
+            onFilter={(value, project: APIProjectWithStatus) => value === project.owner.id}
+            filterMultiple
+          />
+          <Column
+            title="Creation Date"
+            dataIndex="created"
+            key="created"
+            sorter={compareBy<APIProjectWithStatus>((project) => project.created)}
+            render={(created) => <FormattedDate timestamp={created} />}
+            defaultSortOrder="descend"
+          />
+          <Column
+            title="Priority"
+            dataIndex="priority"
+            key="priority"
+            align="right"
+            sorter={compareBy<APIProjectWithStatus>((project) => project.priority)}
+            render={(priority, project: APIProjectWithStatus) =>
+              `${priority} ${project.paused ? "(paused)" : ""}`
+            }
+            filters={[
+              {
+                text: "Paused",
+                value: "paused",
+              },
+            ]}
+            onFilter={(_value, project: APIProjectWithStatus) => project.paused}
+          />
+          <Column
+            title="Time Limit"
+            dataIndex="expectedTime"
+            align="right"
+            key="expectedTime"
+            sorter={compareBy<APIProjectWithStatus>((project) => project.expectedTime)}
+            render={(expectedTime) => `${expectedTime}m`}
+          />
+          <Column
+            title="Action"
+            key="actions"
+            fixed="right"
+            width={200}
+            render={(__, project: APIProjectWithStatus) => (
+              <span>
+                <Link
+                  to={`/annotations/CompoundProject/${project.id}`}
+                  title="Show Compound Annotation of All Finished Annotations"
+                >
+                  <EyeOutlined className="icon-margin-right" />
+                  View Merged
+                </Link>
+                <br />
+                <Link to={`/projects/${project.id}/edit`} title="Edit Project">
+                  <EditOutlined className="icon-margin-right" />
+                  Edit
+                </Link>
+                <br />
+                {project.paused ? (
+                  <div>
+                    <a
+                      onClick={partial(pauseResumeProject, project, resumeProject)}
+                      title="Resume Project"
+                    >
+                      <PlayCircleOutlined className="icon-margin-right" />
+                      Resume
+                    </a>
+                    <br />
+                  </div>
+                ) : (
+                  <div>
+                    <a
+                      onClick={partial(pauseResumeProject, project, pauseProject)}
+                      title="Pause Tasks"
+                    >
+                      <PauseCircleOutlined className="icon-margin-right" />
+                      Pause
+                    </a>
+                    <br />
+                  </div>
+                )}
+                <Link to={`/projects/${project.id}/tasks`} title="View Tasks">
+                  <ScheduleOutlined className="icon-margin-right" />
+                  Tasks
+                </Link>
+                <br />
+                <a
+                  onClick={partial(increaseProjectTaskInstances, project)}
+                  title="Increase Task Instances"
+                >
+                  <PlusSquareOutlined className="icon-margin-right" />
+                  Increase Instances
+                </a>
+                <br />
+                <AsyncLink
+                  href="#"
+                  onClick={async () => {
+                    maybeShowNoFallbackDataInfo(project.id);
+                    await downloadAnnotation(project.id, "CompoundProject");
+                  }}
+                  title="Download All Finished Annotations"
+                  icon={<DownloadOutlined key="download-icon" className="icon-margin-right" />}
+                >
+                  Download
+                </AsyncLink>
+                <br />
+                <a onClick={partial(showActiveUsersModal, project)}>
+                  <TeamOutlined className="icon-margin-right" />
+                  Show active users
+                </a>
+                <br />
+                {project.owner.email === activeUser.email ? (
+                  <a onClick={partial(deleteProject, project)}>
+                    <DeleteOutlined className="icon-margin-right" />
+                    Delete
+                  </a>
+                ) : null}
+              </span>
+            )}
+          />
+        </Table>
+      </Spin>
+      {isTransferTasksVisible ? (
+        <TransferAllTasksModal
+          project={selectedProject}
+          onCancel={onTaskTransferComplete}
+          onComplete={onTaskTransferComplete}
+        />
+      ) : null}
+    </AdminPage>
   );
 }
 

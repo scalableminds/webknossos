@@ -6,14 +6,15 @@ import ErrorHandling from "libs/error_handling";
 import { readFileAsText } from "libs/read_file";
 import Toast from "libs/toast";
 import { SoftError } from "libs/utils";
-import _ from "lodash";
+import compact from "lodash-es/compact";
+import zip from "lodash-es/zip";
 import type { Vector3 } from "viewer/constants";
 import { parseNml } from "viewer/model/helpers/nml_helpers";
 import {
   type FileList,
+  tryToFetchDatasetsByNameOrId,
   type WizardComponentProps,
   type WizardContext,
-  tryToFetchDatasetsByNameOrId,
 } from "./common";
 
 const EXPECTED_VALUE_COUNT_PER_CSV_LINE = 8;
@@ -136,8 +137,12 @@ async function parseBigWarpFile(fileList: FileList): Promise<Partial<WizardConte
     const [_pointName, enabled, x1, y1, z1, x2, y2, z2] = fields;
 
     if (enabled) {
-      const source = [x1, y1, z1].map((el) => Number.parseInt(el.replaceAll('"', ""))) as Vector3;
-      const target = [x2, y2, z2].map((el) => Number.parseInt(el.replaceAll('"', ""))) as Vector3;
+      const source = [x1, y1, z1].map((el) =>
+        Number.parseInt(el.replaceAll('"', ""), 10),
+      ) as Vector3;
+      const target = [x2, y2, z2].map((el) =>
+        Number.parseInt(el.replaceAll('"', ""), 10),
+      ) as Vector3;
       sourcePoints.push(source);
       targetPoints.push(target);
     }
@@ -158,19 +163,31 @@ async function parseNmlFiles(fileList: FileList): Promise<Partial<WizardContext>
     throw new SoftError("Expected exactly two NML files.");
   }
 
-  const nmlString1 = await readFileAsText(fileList[0]?.originFileObj!);
-  const nmlString2 = await readFileAsText(fileList[1]?.originFileObj!);
+  if (fileList[0]?.originFileObj == null || fileList[1]?.originFileObj == null) {
+    throw new SoftError("Expected exactly two NML files.");
+  }
+
+  const nmlString1 = await readFileAsText(fileList[0]?.originFileObj);
+  const nmlString2 = await readFileAsText(fileList[1]?.originFileObj);
 
   if (nmlString1 === "" || nmlString2 === "") {
     throw new SoftError("NML files should not be empty.");
   }
 
-  // TODO: Now the datasetName stored in the nml is interpreted as the path of the dataset. -> call to legacy route is necessary.
-  //  Discussion: how to handle this better?
-  const { trees: trees1, datasetName: datasetDirectoryName1 } = await parseNml(nmlString1);
-  const { trees: trees2, datasetName: datasetDirectoryName2 } = await parseNml(nmlString2);
+  const {
+    trees: trees1,
+    datasetName: datasetDirectoryName1,
+    datasetId: datasetId1,
+  } = await parseNml(nmlString1);
+  const {
+    trees: trees2,
+    datasetName: datasetDirectoryName2,
+    datasetId: datasetId2,
+  } = await parseNml(nmlString2);
 
-  if (!datasetDirectoryName1 || !datasetDirectoryName2) {
+  const areDatasetNamesKnown = datasetDirectoryName1 != null && datasetDirectoryName2 != null;
+  const areDatasetIdsKnown = datasetId1 != null && datasetId2 != null;
+  if (!areDatasetNamesKnown && !areDatasetIdsKnown) {
     throw new SoftError("Could not extract dataset names.");
   }
 
@@ -178,7 +195,7 @@ async function parseNmlFiles(fileList: FileList): Promise<Partial<WizardContext>
     throw new SoftError("The two NML files should have the same tree count.");
   }
 
-  for (const [tree1, tree2] of _.zip(
+  for (const [tree1, tree2] of zip(
     trees1
       .values()
       .toArray()
@@ -195,7 +212,7 @@ async function parseNmlFiles(fileList: FileList): Promise<Partial<WizardContext>
     }
     const nodes1 = Array.from(tree1.nodes.values()).sort((a, b) => a.id - b.id);
     const nodes2 = Array.from(tree2.nodes.values()).sort((a, b) => a.id - b.id);
-    for (const [node1, node2] of _.zip(nodes1, nodes2)) {
+    for (const [node1, node2] of zip(nodes1, nodes2)) {
       if ((node1 == null) !== (node2 == null)) {
         throw new SoftError(
           `Tree ${tree1.treeId} and tree ${tree2.treeId} don't have the same amount of trees. Ensure that the NML structures match each other.`,
@@ -213,8 +230,8 @@ async function parseNmlFiles(fileList: FileList): Promise<Partial<WizardContext>
   }
 
   const datasets = await tryToFetchDatasetsByNameOrId(
-    [datasetDirectoryName1, datasetDirectoryName2], // fetch by name
-    [],
+    areDatasetIdsKnown ? [] : compact([datasetDirectoryName1, datasetDirectoryName2]), // fetch by name
+    areDatasetIdsKnown ? [datasetId1, datasetId2] : [], // fetch by id
     "Could not derive datasets from NML. Please specify these manually.",
   );
 

@@ -1,7 +1,10 @@
 import type { Key } from "react";
 import { batchActions } from "redux-batched-actions";
-import type { MetadataEntryProto, ServerSkeletonTracing } from "types/api_types";
-import type { AdditionalCoordinate } from "types/api_types";
+import type {
+  AdditionalCoordinate,
+  MetadataEntryProto,
+  ServerSkeletonTracing,
+} from "types/api_types";
 import type { TreeType, Vector3 } from "viewer/constants";
 import {
   type AddNewUserBoundingBox,
@@ -9,7 +12,8 @@ import {
 } from "viewer/model/actions/annotation_actions";
 import type { MutableTreeMap, Tree, TreeGroup } from "viewer/model/types/tree_types";
 import type { SkeletonTracing } from "viewer/store";
-import type { ApplicableSkeletonUpdateAction } from "../sagas/volume/update_actions";
+import { MISSING_GROUP_ID } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
+import type { ApplicableSkeletonServerUpdateAction } from "../sagas/volume/update_actions";
 
 export type InitializeSkeletonTracingAction = ReturnType<typeof initializeSkeletonTracingAction>;
 export type CreateNodeAction = ReturnType<typeof createNodeAction>;
@@ -46,6 +50,10 @@ type DeselectActiveTreeGroupAction = ReturnType<typeof deselectActiveTreeGroupAc
 export type MergeTreesAction = ReturnType<typeof mergeTreesAction>;
 type SetTreeNameAction = ReturnType<typeof setTreeNameAction>;
 type SetTreeMetadataAction = ReturnType<typeof setTreeMetadataAction>;
+type SetTreeAgglomerateIdAction = ReturnType<typeof setTreeAgglomerateInfoIdAction>;
+type SetTreesAgglomerateInfoTracingIdAction = ReturnType<
+  typeof setTreesAgglomerateInfoTracingIdAction
+>;
 type SelectNextTreeAction = ReturnType<typeof selectNextTreeAction>;
 type SetTreeColorIndexAction = ReturnType<typeof setTreeColorIndexAction>;
 type ShuffleTreeColorAction = ReturnType<typeof shuffleTreeColorAction>;
@@ -63,7 +71,10 @@ type UpdateNavigationListAction = ReturnType<typeof updateNavigationListAction>;
 type ApplySkeletonUpdateActionsFromServerAction = ReturnType<
   typeof applySkeletonUpdateActionsFromServerAction
 >;
-export type LoadAgglomerateSkeletonAction = ReturnType<typeof loadAgglomerateSkeletonAction>;
+export type LoadAgglomerateTreeFromIdAction = ReturnType<typeof loadAgglomerateTreeFromIdAction>;
+export type LoadAgglomerateTreeAtPositionAction = ReturnType<
+  typeof loadAgglomerateTreeAtPositionAction
+>;
 export type NoAction = ReturnType<typeof noAction>;
 
 export type BatchableUpdateTreeAction =
@@ -71,7 +82,7 @@ export type BatchableUpdateTreeAction =
   | DeleteTreeAction
   | DeleteTreesAction
   | SetTreeGroupsAction;
-export type BatchUpdateGroupsAndTreesAction = {
+type BatchUpdateGroupsAndTreesAction = {
   type: "BATCH_UPDATE_GROUPS_AND_TREES";
   payload: BatchableUpdateTreeAction[];
   meta: {
@@ -106,6 +117,8 @@ export type SkeletonTracingAction =
   | MergeTreesAction
   | SetTreeNameAction
   | SetTreeMetadataAction
+  | SetTreeAgglomerateIdAction
+  | SetTreesAgglomerateInfoTracingIdAction
   | SelectNextTreeAction
   | SetTreeColorAction
   | SetTreeTypeAction
@@ -130,9 +143,97 @@ export type SkeletonTracingAction =
   | SetShowSkeletonsAction
   | SetMergerModeEnabledAction
   | UpdateNavigationListAction
-  | LoadAgglomerateSkeletonAction
+  | LoadAgglomerateTreeFromIdAction
+  | LoadAgglomerateTreeAtPositionAction
   | ApplySkeletonUpdateActionsFromServerAction
   | AddNewUserBoundingBox;
+
+// Declarative policy for each skeleton action, used as the single source of truth for the skeleton
+// reducer's permission handling. See `skeletonActionPolicies` below.
+// - `needsUpdatePermission: false` => the action is applied regardless of update permissions
+//   (view/selection state, initialization, server-applied updates). The collaboration mode is
+//   irrelevant for these, hence no `collab` field.
+// - `needsUpdatePermission: true` => the action mutates the annotation and is only applied when
+//   updating is currently allowed. The `collab` field additionally decides whether it may run in
+//   concurrent collaboration ("live collaboration") mode:
+//     - "block": never allowed in concurrent mode.
+//     - "allow": always allowed (only ever touches agglomerate trees anyway).
+//     - "onlyAgglomerateTree": allowed only if the affected tree(s) are agglomerate trees
+//       (i.e. proofreading). The affected trees are resolved at runtime in the reducer.
+// Whether a mutation may run in concurrent collaboration mode: never ("block"), always ("allow",
+// only ever touches agglomerate trees), or only if the affected tree(s) are agglomerate trees
+// ("onlyAgglomerateTree", resolved at runtime in the reducer).
+export type SkeletonCollabPolicy = "block" | "allow" | "onlyAgglomerateTree";
+
+export type SkeletonActionPolicy =
+  | { needsUpdatePermission: false }
+  | { needsUpdatePermission: true; collab: SkeletonCollabPolicy };
+
+export const skeletonActionPolicies: Record<SkeletonTracingAction["type"], SkeletonActionPolicy> = {
+  // Initialization / server-applied updates / view & selection state. Applied unconditionally.
+  INITIALIZE_SKELETONTRACING: { needsUpdatePermission: false },
+  APPLY_SKELETON_UPDATE_ACTIONS_FROM_SERVER: { needsUpdatePermission: false },
+  SET_ACTIVE_NODE: { needsUpdatePermission: false },
+  CENTER_ACTIVE_NODE: { needsUpdatePermission: false },
+  REQUEST_DELETE_BRANCHPOINT: { needsUpdatePermission: false },
+  SET_ACTIVE_TREE: { needsUpdatePermission: false },
+  SET_ACTIVE_TREE_BY_NAME: { needsUpdatePermission: false },
+  DESELECT_ACTIVE_TREE: { needsUpdatePermission: false },
+  SET_TREE_ACTIVE_GROUP: { needsUpdatePermission: false },
+  DESELECT_ACTIVE_TREE_GROUP: { needsUpdatePermission: false },
+  SELECT_NEXT_TREE: { needsUpdatePermission: false },
+  SET_TREE_TYPE: { needsUpdatePermission: false },
+  TOGGLE_TREE: { needsUpdatePermission: false },
+  TOGGLE_ALL_TREES: { needsUpdatePermission: false },
+  TOGGLE_INACTIVE_TREES: { needsUpdatePermission: false },
+  TOGGLE_TREE_GROUP: { needsUpdatePermission: false },
+  SET_TREE_VISIBILITY: { needsUpdatePermission: false },
+  SET_EXPANDED_TREE_GROUPS_BY_KEYS: { needsUpdatePermission: false },
+  SET_EXPANDED_TREE_GROUPS_BY_IDS: { needsUpdatePermission: false },
+  EXPAND_PARENT_GROUPS_OF_TREE: { needsUpdatePermission: false },
+  FOCUS_TREE: { needsUpdatePermission: false },
+  SET_SKELETON_TRACING: { needsUpdatePermission: false },
+  SET_SHOW_SKELETONS: { needsUpdatePermission: false },
+  UPDATE_NAVIGATION_LIST: { needsUpdatePermission: false },
+  LOAD_AGGLOMERATE_TREE_FROM_ID: { needsUpdatePermission: false },
+  LOAD_AGGLOMERATE_TREE_AT_POSITION: { needsUpdatePermission: false },
+  ADD_NEW_USER_BOUNDING_BOX: { needsUpdatePermission: false },
+  NONE: { needsUpdatePermission: false },
+
+  // Mutations that are never allowed in concurrent collaboration mode.
+  CREATE_NODE: { needsUpdatePermission: true, collab: "block" },
+  DELETE_NODE: { needsUpdatePermission: true, collab: "block" },
+  SET_NODE_POSITION: { needsUpdatePermission: true, collab: "block" },
+  CREATE_BRANCHPOINT: { needsUpdatePermission: true, collab: "block" },
+  DELETE_BRANCHPOINT: { needsUpdatePermission: true, collab: "block" },
+  DELETE_BRANCHPOINT_BY_ID: { needsUpdatePermission: true, collab: "block" },
+  CREATE_COMMENT: { needsUpdatePermission: true, collab: "block" },
+  DELETE_COMMENT: { needsUpdatePermission: true, collab: "block" },
+  CREATE_TREE: { needsUpdatePermission: true, collab: "block" },
+  RESET_SKELETON_TRACING: { needsUpdatePermission: true, collab: "block" },
+  SET_TREE_GROUPS: { needsUpdatePermission: true, collab: "block" },
+  SET_MERGER_MODE_ENABLED: { needsUpdatePermission: true, collab: "block" },
+  SET_NODE_RADIUS: { needsUpdatePermission: true, collab: "block" },
+
+  // Only ever touches agglomerate trees, so it is safe in concurrent collaboration mode.
+  SET_TREES_AGGLOMERATE_INFO_TRACING_ID: { needsUpdatePermission: true, collab: "allow" },
+
+  // Mutations allowed in concurrent collaboration mode only when the affected tree is agglomerate.
+  DELETE_EDGE: { needsUpdatePermission: true, collab: "onlyAgglomerateTree" },
+  MERGE_TREES: { needsUpdatePermission: true, collab: "onlyAgglomerateTree" },
+  ADD_TREES_AND_GROUPS: { needsUpdatePermission: true, collab: "onlyAgglomerateTree" },
+  DELETE_TREE: { needsUpdatePermission: true, collab: "onlyAgglomerateTree" },
+  DELETE_TREES: { needsUpdatePermission: true, collab: "onlyAgglomerateTree" },
+  SET_TREE_NAME: { needsUpdatePermission: true, collab: "onlyAgglomerateTree" },
+  SET_TREE_METADATA: { needsUpdatePermission: true, collab: "onlyAgglomerateTree" },
+  SET_TREE_AGGLOMERATE_INFO_ID: { needsUpdatePermission: true, collab: "onlyAgglomerateTree" },
+  SET_EDGES_ARE_VISIBLE: { needsUpdatePermission: true, collab: "onlyAgglomerateTree" },
+  SET_TREE_GROUP: { needsUpdatePermission: true, collab: "onlyAgglomerateTree" },
+  SET_TREE_COLOR: { needsUpdatePermission: true, collab: "onlyAgglomerateTree" },
+  SET_TREE_COLOR_INDEX: { needsUpdatePermission: true, collab: "onlyAgglomerateTree" },
+  SHUFFLE_TREE_COLOR: { needsUpdatePermission: true, collab: "onlyAgglomerateTree" },
+  SHUFFLE_ALL_TREE_COLORS: { needsUpdatePermission: true, collab: "onlyAgglomerateTree" },
+};
 
 export const SkeletonTracingSaveRelevantActions = [
   "INITIALIZE_SKELETONTRACING",
@@ -154,6 +255,8 @@ export const SkeletonTracingSaveRelevantActions = [
   "SET_ACTIVE_TREE",
   "SET_ACTIVE_TREE_BY_NAME",
   "SET_TREE_NAME",
+  "SET_TREE_AGGLOMERATE_INFO_ID",
+  "SET_TREES_AGGLOMERATE_INFO_TRACING_ID",
   "SET_TREE_METADATA",
   "MERGE_TREES",
   "SELECT_NEXT_TREE",
@@ -229,7 +332,7 @@ export const deleteEdgeAction = (
   sourceNodeId: number,
   targetNodeId: number,
   timestamp: number = Date.now(),
-  initiator: "PROOFREADING" | "UNKNOWN" = "UNKNOWN",
+  initiator: "PROOFREADING" | "USER" = "USER",
 ) =>
   ({
     type: "DELETE_EDGE",
@@ -331,17 +434,21 @@ export const addTreesAndGroupsAction = (
   treeGroups: Array<TreeGroup> | null | undefined,
   treeIdsCallback: ((ids: number[]) => void) | undefined = undefined,
   assignTreeToNewGroupId: boolean = true,
+  targetGroupId: number = MISSING_GROUP_ID,
 ) =>
   // If assignTreeToNewGroupId is false, the given group id of a tree will be kept. This is useful
   // when trees are duplicated, as the copied tree should be in the same group as the original tree.
   // If assignTreeToNewGroupId is true, the tree will be assigned to a new group id, as the original
   // group id might already be used by another group.
+  // targetGroupId nests the newly added top-level trees/groups into an already existing group
+  // instead of adding them to the root of the tree hierarchy.
   ({
     type: "ADD_TREES_AND_GROUPS",
     trees,
     treeGroups: treeGroups || [],
     treeIdsCallback,
     assignNewGroupId: assignTreeToNewGroupId,
+    targetGroupId,
   }) as const;
 
 export const deleteTreeAction = (treeId?: number, suppressActivatingNextNode: boolean = false) =>
@@ -462,11 +569,16 @@ export const deselectActiveTreeGroupAction = () =>
     type: "DESELECT_ACTIVE_TREE_GROUP",
   }) as const;
 
-export const mergeTreesAction = (sourceNodeId: number, targetNodeId: number) =>
+export const mergeTreesAction = (
+  sourceNodeId: number,
+  targetNodeId: number,
+  initiator: "PROOFREADING" | "USER" = "USER",
+) =>
   ({
     type: "MERGE_TREES",
     sourceNodeId,
     targetNodeId,
+    initiator,
   }) as const;
 
 export const setTreeNameAction = (
@@ -487,6 +599,19 @@ export const setTreeMetadataAction = (
     type: "SET_TREE_METADATA",
     metadata,
     treeId,
+  }) as const;
+
+export const setTreeAgglomerateInfoIdAction = (agglomerateId: bigint, treeId: number) =>
+  ({
+    type: "SET_TREE_AGGLOMERATE_INFO_ID",
+    agglomerateId,
+    treeId,
+  }) as const;
+
+export const setTreesAgglomerateInfoTracingIdAction = (newAgglomerateMappingTracingId: string) =>
+  ({
+    type: "SET_TREES_AGGLOMERATE_INFO_TRACING_ID",
+    newAgglomerateMappingTracingId,
   }) as const;
 
 export const selectNextTreeAction = (forward: boolean | null | undefined = true) =>
@@ -581,20 +706,46 @@ export const updateNavigationListAction = (list: Array<number>, activeIndex: num
   }) as const;
 
 export const applySkeletonUpdateActionsFromServerAction = (
-  actions: Array<ApplicableSkeletonUpdateAction>,
+  actions: Array<ApplicableSkeletonServerUpdateAction>,
+  ignoreUnsupportedActionTypes: boolean = false,
 ) =>
   ({
     type: "APPLY_SKELETON_UPDATE_ACTIONS_FROM_SERVER",
     actions,
+    ignoreUnsupportedActionTypes,
   }) as const;
 
-export const loadAgglomerateSkeletonAction = (
+// loadAgglomerateTreeAtPositionAction should always be preferred over loadAgglomerateTreeFromIdAction.
+// It uses the position to derive the agglomerate id instead of the the id itself directly.
+// The benefit of passing the position is that this allows to first synchronize with the newest version of the annotation
+// in live-collab mode and then once up-to-date get the latest agglomerate id of the position.
+// Otherwise, if the id is passed to the action, the syncing with the backend might update the id which is requested by this action via e.g. an merge operation.
+// This would lead to the agglomerate id not existing anymore and thus the frontend requesting an agglomerate tree with an outdated agglomerate id.
+
+// loadAgglomerateTreeFromIdAction only exists to keep supporting the frontend api function and
+// initially loading the agglomerate tree stored in the URL during annotation loading.
+export const loadAgglomerateTreeAtPositionAction = (
   layerName: string,
   mappingName: string,
-  agglomerateId: number,
+  agglomeratePosition: Vector3,
 ) =>
   ({
-    type: "LOAD_AGGLOMERATE_SKELETON",
+    type: "LOAD_AGGLOMERATE_TREE_AT_POSITION",
+    layerName,
+    mappingName,
+    agglomeratePosition,
+  }) as const;
+
+// Is unsafe in live collab-scenario. It is only save in case the mutex has been acquired, the annotation is in sync with the server
+// and the latest mapping info was used to determine the passed agglomerate id.
+// Currently, only exists for legacy support: initial agglomerate tree loading via URL and old frontend api function.
+export const loadAgglomerateTreeFromIdAction = (
+  layerName: string,
+  mappingName: string,
+  agglomerateId: bigint,
+) =>
+  ({
+    type: "LOAD_AGGLOMERATE_TREE_FROM_ID",
     layerName,
     mappingName,
     agglomerateId,

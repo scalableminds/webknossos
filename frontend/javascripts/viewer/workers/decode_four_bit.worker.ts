@@ -1,4 +1,4 @@
-import { expose } from "./comlink_wrapper";
+import { expose } from "./comlink_core";
 
 // This function receives and returns ArrayBuffer, since that can be transferred without
 // copying to/out of the webworker

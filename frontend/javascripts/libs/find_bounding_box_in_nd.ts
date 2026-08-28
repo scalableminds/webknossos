@@ -47,7 +47,7 @@ export function estimateBBoxInMask(mask: NdArray, initialBBox: BoundingBox2D, ma
 }
 
 // Only exported for tests
-export function hasTrueOnBorder(mask: NdArray, initialBBox: BoundingBox2D) {
+function hasTrueOnBorder(mask: NdArray, initialBBox: BoundingBox2D) {
   let u, v;
   let top = false;
   let right = false;

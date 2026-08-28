@@ -1,8 +1,12 @@
+import Deferred from "libs/async/deferred";
+import type { Dispatch } from "redux";
+import type { AnnotationIdDomain } from "types/api_types";
 import type { AnnotationActionTypes } from "viewer/model/actions/annotation_actions";
 import type { ConnectomeAction } from "viewer/model/actions/connectome_actions";
 import type { DatasetAction } from "viewer/model/actions/dataset_actions";
 import type { FlycamAction } from "viewer/model/actions/flycam_actions";
 import type { FlycamInfoCacheAction } from "viewer/model/actions/flycam_info_cache_actions";
+import type { OperationContextAction } from "viewer/model/actions/operation_context_actions";
 import type { OrganizationAction } from "viewer/model/actions/organization_actions";
 import type { ProofreadAction } from "viewer/model/actions/proofread_actions";
 import type { SaveAction } from "viewer/model/actions/save_actions";
@@ -14,8 +18,14 @@ import type { UiAction } from "viewer/model/actions/ui_actions";
 import type { UserAction } from "viewer/model/actions/user_actions";
 import type { ViewModeAction } from "viewer/model/actions/view_mode_actions";
 import type { VolumeTracingAction } from "viewer/model/actions/volumetracing_actions";
+import type { IdReservation } from "viewer/store";
 
 export type EscalateErrorAction = ReturnType<typeof escalateErrorAction>;
+export type GetNewIdAction = ReturnType<typeof getNewIdAction>;
+export type SetIdReservationsAction = ReturnType<typeof setIdReservationsAction>;
+export type RequestIdReplenishmentAction = ReturnType<typeof requestIdReplenishmentAction>;
+export type IdsReplenishedAction = ReturnType<typeof idsReplenishedAction>;
+export type IdsReplenishmentFailedAction = ReturnType<typeof idsReplenishmentFailedAction>;
 
 export type Action =
   | SkeletonTracingAction
@@ -34,16 +44,33 @@ export type Action =
   | ConnectomeAction
   | ProofreadAction
   | OrganizationAction
-  | ReturnType<typeof wkReadyAction>
-  | ReturnType<typeof sceneControllerReadyAction>
+  | OperationContextAction
+  | ReturnType<typeof wkInitializedAction>
+  | ReturnType<typeof uiReadyAction>
+  | ReturnType<typeof sceneControllerInitializedAction>
   | ReturnType<typeof restartSagaAction>
   | ReturnType<typeof resetStoreAction>
   | ReturnType<typeof cancelSagaAction>
-  | EscalateErrorAction;
+  | EscalateErrorAction
+  | GetNewIdAction
+  | SetIdReservationsAction
+  | RequestIdReplenishmentAction
+  | IdsReplenishedAction
+  | IdsReplenishmentFailedAction;
 
-export const wkReadyAction = () =>
+// This action indicates that webknossos was initialized successfully, meaning all relevant data
+// was fetched and the controllers, sagas and keyboard handlers were initialized.
+export const wkInitializedAction = () =>
   ({
-    type: "WK_READY",
+    type: "WK_INITIALIZED",
+  }) as const;
+
+// This action indicates that in addition to the successful webknossos initialization, all relevant views
+// were initialized, the WebGL shaders were compiled and the first render pass was completed.
+// Once this action was dispatched, the loading spinner will be hidden and the full UI is shown.
+export const uiReadyAction = () =>
+  ({
+    type: "UI_READY",
   }) as const;
 
 export const resetStoreAction = () =>
@@ -51,9 +78,9 @@ export const resetStoreAction = () =>
     type: "RESET_STORE",
   }) as const;
 
-export const sceneControllerReadyAction = () =>
+export const sceneControllerInitializedAction = () =>
   ({
-    type: "SCENE_CONTROLLER_READY",
+    type: "SCENE_CONTROLLER_INITIALIZED",
   }) as const;
 
 export const restartSagaAction = () =>
@@ -69,5 +96,78 @@ export const cancelSagaAction = () =>
 export const escalateErrorAction = (error: unknown) =>
   ({
     type: "ESCALATE_ERROR",
+    error,
+  }) as const;
+
+export const getNewIdAction = (
+  callback: (newId: number) => void,
+  errorCallback: (error: unknown) => void,
+  tracingId: string,
+  domain: AnnotationIdDomain,
+) =>
+  ({
+    type: "GET_NEW_ID",
+    callback,
+    errorCallback,
+    tracingId,
+    domain,
+  }) as const;
+
+// Domains for which the id reservation mechanism is actually implemented (as opposed to
+// AnnotationIdDomain, which lists all domains the back-end knows about, including ones that
+// aren't wired up on the frontend, yet).
+export type ReservableIdDomain = "SegmentGroup" | "BoundingBox";
+
+export const dispatchGetNewIdAsync = async (
+  dispatch: Dispatch<any>,
+  tracingId: string,
+  domain: ReservableIdDomain,
+): Promise<number> => {
+  const readyDeferred = new Deferred<number, unknown>();
+  const action = getNewIdAction(
+    (newId) => readyDeferred.resolve(newId),
+    (error) => readyDeferred.reject(error),
+    tracingId,
+    domain,
+  );
+  dispatch(action);
+  return await readyDeferred.promise();
+};
+
+export const setIdReservationsAction = (
+  tracingId: string,
+  domain: ReservableIdDomain,
+  reservations: IdReservation[],
+) =>
+  ({
+    type: "SET_ID_RESERVATIONS",
+    tracingId,
+    domain,
+    reservations,
+  }) as const;
+
+export const requestIdReplenishmentAction = (tracingId: string, domain: ReservableIdDomain) =>
+  ({
+    type: "REQUEST_ID_REPLENISHMENT",
+    tracingId,
+    domain,
+  }) as const;
+
+export const idsReplenishedAction = (tracingId: string, domain: ReservableIdDomain) =>
+  ({
+    type: "IDS_REPLENISHED",
+    tracingId,
+    domain,
+  }) as const;
+
+export const idsReplenishmentFailedAction = (
+  tracingId: string,
+  domain: ReservableIdDomain,
+  error: unknown,
+) =>
+  ({
+    type: "IDS_REPLENISHMENT_FAILED",
+    tracingId,
+    domain,
     error,
   }) as const;

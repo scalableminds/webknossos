@@ -8,7 +8,6 @@ import {
   hsvToRgb,
   jsColormapJet,
   jsGetElementOfPermutation,
-  jsRgb2hsv,
 } from "viewer/shaders/utils.glsl";
 import { getUnrotatedWorldCoordUVW } from "./coords.glsl";
 import { getMaybeFilteredColorOrFallback } from "./filtering.glsl";
@@ -276,31 +275,31 @@ export const convertCellIdToRGB: ShaderModule = {
 // This function mirrors the above convertCellIdToRGB-function.
 // Output is in [0,1] for R, G, B, and A
 export const jsConvertCellIdToRGBA = (
-  id: number,
+  id: bigint,
   customColors?: Array<Vector3> | null | undefined,
   alpha: number = 1,
 ): Vector4 => {
-  if (id === 0) {
+  if (id === 0n) {
     // Return white
     return [1, 1, 1, 1];
   }
 
   let rgb;
-
-  id = Math.abs(id);
+  const absId = id < 0n ? -id : id;
 
   if (customColors != null) {
-    const last8Bits = id % 2 ** 8;
+    const last8Bits = Number(absId % 2n ** 8n);
     rgb = customColors[last8Bits] || [0, 0, 0];
   } else {
     // The shader always derives the segment color by using a 64-bit id from which
     // - the lower 16 bits of the lower 32 bits and
     // - the lower 16 bits of the upper 32 bits
     // are used to derive the color.
-    // In JS, we do it similarly:
-    const bigId = BigInt(id);
-    const highPart = Number((bigId >> 32n) % 2n ** 16n);
-    const lowPart = id % 2 ** 16;
+    // In JS, we do it similarly. Note that this must be done with BigInt arithmetic
+    // throughout, since converting the full id to a JS number loses precision (and
+    // therefore the low bits) for ids beyond 2**53.
+    const highPart = Number((absId >> 32n) % 2n ** 16n);
+    const lowPart = Number(absId % 2n ** 16n);
     const significantSegmentIndex = highPart + lowPart;
     const colorCount = 19;
     const colorIndex = jsGetElementOfPermutation(significantSegmentIndex, colorCount, 2);
@@ -309,16 +308,6 @@ export const jsConvertCellIdToRGBA = (
   }
 
   return [...rgb, alpha];
-};
-// Output is in [0,1] for H, S, L, and A
-export const jsConvertCellIdToHSLA = (
-  id: number,
-  customColors?: Array<Vector3> | null | undefined,
-  alpha: number = 1,
-): Vector4 => {
-  const [r, g, b] = jsConvertCellIdToRGBA(id, customColors, alpha);
-  const hue = (1 / 360) * jsRgb2hsv([r, g, b])[0];
-  return [hue, 1, 0.5, alpha];
 };
 
 export const getBrushOverlay: ShaderModule = {
@@ -348,16 +337,16 @@ export const getBrushOverlay: ShaderModule = {
   `,
 };
 
-export const getCrossHairOverlay: ShaderModule = {
+export const getProofreadingCrossHairOverlay: ShaderModule = {
   code: `
-    vec4 getCrossHairOverlay(vec3 worldCoordUVW) {
+    vec4 getProofreadingCrossHairOverlay(vec3 worldCoordUVW) {
       // An active segment position of -1, -1, -1 indicates that the position is not available
-      if (activeSegmentPosition == vec3(-1.0)) {
+      if (proofreadingMarkerPosition == vec3(-1.0)) {
         return vec4(0.0);
       }
 
-      vec3 flooredGlobalPosUVW = transDim(floor(worldCoordUVW));
-      vec3 activeSegmentPosUVW = transDim(activeSegmentPosition);
+      vec3 flooredGlobalPosUVW = floor(worldCoordUVW);
+      vec3 activeSegmentPosUVW = transDim(proofreadingMarkerPosition);
 
       // Compute the anisotropy of the dataset so that the cross hair looks the same in
       // each viewport
@@ -393,10 +382,10 @@ export const getSegmentId: ShaderModule = {
   requirements: [convertCellIdToRGB, attemptMappingLookUp, getMaybeFilteredColorOrFallback],
   code: `
 
-  <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
+  <% each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
     void getSegmentId_<%= segmentationName %>(vec3 worldPositionUVW, out vec4[2] segment_id, out vec4[2] mapped_id) {
-      vec3 transformedCoordUVW = transDim((<%= segmentationName %>_transform * vec4(transDim(worldPositionUVW), 1.0)).xyz);
-      if (isOutsideOfBoundingBox(transformedCoordUVW)) {
+      vec3 layerCoordUVW = transDim((<%= segmentationName %>_transform * vec4(transDim(worldPositionUVW), 1.0)).xyz);
+      if (isOutsideOfBoundingBox(layerCoordUVW, <%= segmentationName %>_bboxMin, <%= segmentationName %>_bboxMax)) {
         // Some GPUs don't null-initialize the variables.
         segment_id[0] = vec4(0.);
         segment_id[1] = vec4(0.);
@@ -410,7 +399,7 @@ export const getSegmentId: ShaderModule = {
           <%= formatNumberAsGLSLFloat(colorLayerNames.length + layerIndex) %>,
           <%= segmentationName %>_data_texture_width,
           <%= formatNumberAsGLSLFloat(textureLayerInfos[segmentationName].packingDegree) %>,
-          transformedCoordUVW,
+          layerCoordUVW,
           vec4(0.0, 0.0, 0.0, 0.0),
           !<%= segmentationName %>_has_transform
         );

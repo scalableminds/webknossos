@@ -11,32 +11,34 @@ function ProofreadingReducer(state: WebknossosState, action: ProofreadAction): W
   }
   switch (action.type) {
     case "TOGGLE_SEGMENT_IN_PARTITION": {
-      const layerData = state.localSegmentationData[layerName];
-      if (!layerData || !layerData.minCutPartitions) {
+      const layerData = state.localSegmentationStateByLayer[layerName];
+      if (!layerData?.minCutPartitions) {
         return state;
       }
       const minCutPartitions = layerData.minCutPartitions;
       const otherPartitionIndex = action.partition === 1 ? 2 : 1;
+      const actionAgglomerateId = action.agglomerateId;
+      const actionUnmappedSegmentId = action.unmappedSegmentId;
       if (
         minCutPartitions.agglomerateId != null &&
-        minCutPartitions.agglomerateId !== action.agglomerateId
+        minCutPartitions.agglomerateId !== actionAgglomerateId
       ) {
         // Ignore the action if the selected agglomerate ids do not match.
         // The proofread saga will show an info toast in this case.
         return state;
       } else if (minCutPartitions.agglomerateId == null) {
         return update(state, {
-          localSegmentationData: {
+          localSegmentationStateByLayer: {
             [layerName]: {
               minCutPartitions: {
                 [action.partition]: {
-                  $set: [action.unmappedSegmentId],
+                  $set: [actionUnmappedSegmentId],
                 },
                 [otherPartitionIndex]: {
                   $set: [],
                 },
                 agglomerateId: {
-                  $set: action.agglomerateId,
+                  $set: actionAgglomerateId,
                 },
               },
             },
@@ -44,15 +46,15 @@ function ProofreadingReducer(state: WebknossosState, action: ProofreadAction): W
         });
       }
       const partition = minCutPartitions[action.partition];
-      const updatedPartition = partition.includes(action.unmappedSegmentId)
-        ? partition.filter((s) => s !== action.unmappedSegmentId)
-        : partition.concat(action.unmappedSegmentId);
+      const updatedPartition = partition.includes(actionUnmappedSegmentId)
+        ? partition.filter((s) => s !== actionUnmappedSegmentId)
+        : partition.concat(actionUnmappedSegmentId);
       const otherPartitionWithoutSegment = minCutPartitions[otherPartitionIndex].filter(
-        (s) => s !== action.unmappedSegmentId,
+        (s) => s !== actionUnmappedSegmentId,
       );
 
       return update(state, {
-        localSegmentationData: {
+        localSegmentationStateByLayer: {
           [layerName]: {
             minCutPartitions: {
               [action.partition]: {
@@ -69,7 +71,7 @@ function ProofreadingReducer(state: WebknossosState, action: ProofreadAction): W
 
     case "RESET_MULTI_CUT_TOOL_PARTITIONS": {
       return update(state, {
-        localSegmentationData: {
+        localSegmentationStateByLayer: {
           [layerName]: {
             minCutPartitions: {
               [1]: {

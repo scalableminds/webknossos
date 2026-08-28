@@ -24,12 +24,14 @@ object N5Transform { implicit val jsonFormat: OFormat[N5Transform] = Json.format
 // Below are the classes used for the more “compact” multiscales metadata as described in https://github.com/google/neuroglancer/blob/master/src/datasource/n5/index.rst
 // Note: only metadata with downsamplingFactors (or scales) in the toplevel are supported at the moment.
 
-case class N5CompactMultiscalesMetadata(axes: Option[List[String]],
-                                        downsamplingFactors: Option[List[List[Int]]],
-                                        scales: Option[List[List[Int]]],
-                                        multiScale: Option[Boolean],
-                                        resolution: List[Double],
-                                        units: Option[List[String]])
+case class N5CompactMultiscalesMetadata(
+    axes: Option[List[String]],
+    downsamplingFactors: Option[List[List[Int]]],
+    scales: Option[List[List[Int]]],
+    multiScale: Option[Boolean],
+    resolution: List[Double],
+    units: Option[List[String]]
+)
 
 object N5CompactMultiscalesMetadata {
   implicit val jsonFormat: OFormat[N5CompactMultiscalesMetadata] = Json.format[N5CompactMultiscalesMetadata]

@@ -1,18 +1,18 @@
-import { describe, it, expect } from "vitest";
+import update from "immutability-helper";
+import { location } from "libs/window";
+import clone from "lodash-es/clone";
+import { FlycamMatrixWithDefaultRotation } from "test/fixtures/flycam_object";
+import Constants, { type Vector3, ViewModeValues } from "viewer/constants";
 import UrlManager, {
-  updateTypeAndId,
   encodeUrlHash,
-  type UrlManagerState,
   getDatasetNameFromLocation,
   getUpdatedPathnameWithNewDatasetName,
+  type UrlManagerState,
+  updateTypeAndId,
 } from "viewer/controller/url_manager";
-import { location } from "libs/window";
-import Constants, { type Vector3, ViewModeValues } from "viewer/constants";
 import defaultState from "viewer/default_state";
-import update from "immutability-helper";
+import { describe, expect, it } from "vitest";
 import DATASET from "../fixtures/dataset_server_object";
-import _ from "lodash";
-import { FlycamMatrixWithDefaultRotation } from "test/fixtures/flycam_object";
 
 describe("UrlManager", () => {
   it("should replace tracing in url", () => {
@@ -97,7 +97,7 @@ describe("UrlManager", () => {
   });
 
   it("should build csv url hash and parse it again", () => {
-    const mode = Constants.MODE_ARBITRARY;
+    const mode = Constants.MODE_FLIGHT;
     const urlState = {
       position: [0, 0, 0] as Vector3,
       mode,
@@ -117,7 +117,7 @@ describe("UrlManager", () => {
   });
 
   it("should build csv url hash with additional coordinates and parse it again", () => {
-    const mode = Constants.MODE_ARBITRARY;
+    const mode = Constants.MODE_FLIGHT;
     const urlState = {
       position: [0, 0, 0] as Vector3,
       mode,
@@ -187,9 +187,11 @@ describe("UrlManager", () => {
   });
 
   it("should build json url hash and parse it again", () => {
-    const mode = Constants.MODE_ARBITRARY;
+    const mode = Constants.MODE_FLIGHT;
     const urlState = {
       position: [0, 0, 0] as Vector3,
+      clippingDistance: 50,
+      clipSkeletonToCurrentSection: false,
       additionalCoordinates: [],
       mode,
       nativelyRenderedLayerName: null,
@@ -200,6 +202,46 @@ describe("UrlManager", () => {
       temporaryConfiguration: {
         viewMode: {
           $set: mode,
+        },
+      },
+    });
+    const hash = UrlManager.buildUrlHashJson(initialState);
+    location.hash = `#${hash}`;
+    expect(UrlManager.parseUrlHash()).toEqual(urlState as Partial<UrlManagerState>);
+  });
+
+  it("should build json url hash with the td camera and parse it again", () => {
+    const mode = Constants.MODE_FLIGHT;
+    const tdCamera = {
+      position: [12.5, -3, 100] as Vector3,
+      up: [0, -1, 0] as Vector3,
+      left: -500,
+      right: 500,
+      top: 250,
+      bottom: -250,
+    };
+    const urlState = {
+      position: [0, 0, 0] as Vector3,
+      clippingDistance: 50,
+      clipSkeletonToCurrentSection: false,
+      additionalCoordinates: [],
+      mode,
+      nativelyRenderedLayerName: null,
+      zoomStep: 1.3,
+      rotation: [0, 0, 180] as Vector3,
+      tdCamera,
+    };
+    const initialState = update(defaultState, {
+      temporaryConfiguration: {
+        viewMode: {
+          $set: mode,
+        },
+      },
+      viewModeData: {
+        plane: {
+          tdCamera: {
+            $merge: tdCamera,
+          },
         },
       },
     });
@@ -284,8 +326,8 @@ describe("UrlManager", () => {
   });
 
   it("Inserting an updated dataset name in the URL should yield the correct URL", () => {
-    const testDatasetEasy = update(_.clone(DATASET), { name: { $set: "extract_me" } });
-    const testDatasetComplex = update(_.clone(DATASET), { name: { $set: "$3xtr4c7-me9" } });
+    const testDatasetEasy = update(clone(DATASET), { name: { $set: "extract_me" } });
+    const testDatasetComplex = update(clone(DATASET), { name: { $set: "$3xtr4c7-me9" } });
     // View
     location.pathname = `/datasets/replace_me-${testDatasetEasy.id}/view`;
     const newPathName1 = getUpdatedPathnameWithNewDatasetName(location, testDatasetEasy);

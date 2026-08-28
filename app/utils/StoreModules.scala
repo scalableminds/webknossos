@@ -1,8 +1,8 @@
 package utils
 
-import javax.inject._
+import javax.inject.*
 
-class StoreModules @Inject()(conf: WkConf) {
+class StoreModules @Inject() (conf: WkConf) {
   def localTracingStoreEnabled: Boolean = {
     val key = "com.scalableminds.webknossos.tracingstore.TracingStoreModule"
     conf.Play.Modules.enabled.contains(key) && !conf.Play.Modules.disabled.contains(key)

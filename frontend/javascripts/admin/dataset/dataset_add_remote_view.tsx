@@ -1,22 +1,25 @@
 import { CardContainer, DatastoreFormItem } from "admin/dataset/dataset_components";
 import { isDatasetNameValid, storeRemoteDataset } from "admin/rest_api";
-import { Button, Col, Divider, Form, type FormInstance, List, Modal, Row } from "antd";
+import { Button, Col, Divider, Flex, Form, type FormInstance, List, Modal, Row } from "antd";
 import BrainSpinner from "components/brain_spinner";
 import type { DatasetSettingsFormData } from "dashboard/dataset/dataset_settings_context";
-import DatasetSettingsDataTab from "dashboard/dataset/dataset_settings_data_tab";
-import {
-  DatasetSettingsProvider, // Sync simple with advanced and get newest datasourceJson
-} from "dashboard/dataset/dataset_settings_provider";
+import DatasetSettingsDataTab, {
+  TransformationsMode,
+} from "dashboard/dataset/dataset_settings_data_tab";
+import { DatasetSettingsProvider } from "dashboard/dataset/dataset_settings_provider";
 import { FormItemWithInfo, Hideable } from "dashboard/dataset/helper_components";
 import FolderSelection from "dashboard/folders/folder_selection";
-import { useWkSelector } from "libs/react_hooks";
+import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import messages from "messages";
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { computeHash } from "libs/utils";
+import { useState } from "react";
 import type { APIDataStore } from "types/api_types";
-import type { DatasourceConfiguration } from "types/schemas/datasource.types";
+import type {
+  DataLayer,
+  DataLayerWithTransformations,
+  DatasourceConfiguration,
+} from "types/schemas/datasource.types";
+import type { RotationAndMirroringSettings } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { dataPrivacyInfo } from "./dataset_upload_view";
 import { AddRemoteLayer } from "./remote/add_remote_layer";
 
@@ -77,30 +80,53 @@ function DatasetAddRemoteView(props: Props) {
   const [targetFolderId, setTargetFolderId] = useState<string | null>(null);
   const maybeDataLayers = Form.useWatch(["dataSource", "dataLayers"], form);
   const datasourceConfig = Form.useWatch(["dataSource"], form);
-  const navigate = useNavigate();
 
-  useEffect(() => {
+  useEffectOnlyOnce(() => {
     const params = new URLSearchParams(location.search);
     const targetFolderId = params.get("to");
     setTargetFolderId(targetFolderId);
-  }, []);
+  });
 
   const getDefaultDatasetName = (url: string) => {
     if (url === "") return "";
     let urlPathElements = url.split(/[^a-zA-Z\d_\-.~]/); // split by non url-safe characters
     const defaultName = urlPathElements.filter((el) => el !== "").at(-1);
-    const urlHash = Utils.computeHash(url);
+    const urlHash = computeHash(url);
     return defaultName + "-" + urlHash;
   };
 
-  const maybeOpenExistingDataset = () => {
-    const maybeDSNameError = form
-      .getFieldError(["dataset", "name"])
-      .filter((error) => error === messages["dataset.name.already_taken"]);
-    if (maybeDSNameError == null) return;
-    navigate(
-      `/datasets/${activeUser?.organization}/${form.getFieldValue(["dataSource", "id", "name"])}`,
+  const setEmptyTransformations = (config: DatasourceConfiguration) => {
+    const initialRotationSettingsPerAxis: RotationAndMirroringSettings = {
+      rotationInDegrees: 0,
+      isMirrored: false,
+    };
+    const initialRotationSettings = {
+      x: initialRotationSettingsPerAxis,
+      y: initialRotationSettingsPerAxis,
+      z: initialRotationSettingsPerAxis,
+    };
+
+    form.setFieldsValue({
+      datasetRotation: initialRotationSettings,
+    });
+    form.setFieldValue("isRotationOnly", true);
+
+    const dataLayersWithTransformations: DataLayerWithTransformations[] = config.dataLayers.map(
+      (layer: DataLayer) => ({
+        name: layer.name,
+        coordinateTransformations: [],
+      }),
     );
+    const layersWithCoordTransformationsJSON = JSON.stringify(
+      dataLayersWithTransformations,
+      null,
+      2,
+    );
+    form.setFieldsValue({
+      coordinateTransformations: layersWithCoordTransformationsJSON,
+    });
+
+    form.setFieldValue("transformationsMode", TransformationsMode.NONE);
   };
 
   const hasFormAnyErrors = (form: FormInstance) =>
@@ -111,6 +137,8 @@ function DatasetAddRemoteView(props: Props) {
     const mergedConfig = mergeNewLayers(datasourceConfig, newDataSourceConfig);
     form.setFieldValue("dataSource", mergedConfig);
 
+    setEmptyTransformations(mergedConfig);
+
     if (defaultDatasetUrl == null) {
       setShowLoadingOverlay(false);
       setShowAddLayerModal(false);
@@ -120,18 +148,13 @@ function DatasetAddRemoteView(props: Props) {
     if (!showLoadingOverlay) setShowLoadingOverlay(true); // show overlay again, e.g. after credentials were passed
 
     const defaultDatasetName = getDefaultDatasetName(url);
-    form.setFieldValue(["dataSource", "id"], { name: defaultDatasetName, team: "" });
+    form.setFieldValue(["dataset", "name"], defaultDatasetName);
 
     try {
       await form.validateFields();
     } catch (_e) {
       console.warn(_e);
-      if (defaultDatasetUrl != null) {
-        maybeOpenExistingDataset();
-        return;
-      }
     }
-
     if (!hasFormAnyErrors(form)) {
       handleStoreDataset();
     } else {
@@ -145,10 +168,6 @@ function DatasetAddRemoteView(props: Props) {
       await form.validateFields();
     } catch (_e) {
       console.warn(_e);
-      if (defaultDatasetUrl != null) {
-        maybeOpenExistingDataset();
-        return;
-      }
     }
     if (hasFormAnyErrors(form)) {
       setShowLoadingOverlay(false);
@@ -178,6 +197,7 @@ function DatasetAddRemoteView(props: Props) {
           datastoreToUse.name,
           datasetName,
           dataSource,
+          defaultDatasetUrl,
           targetFolderId,
         );
         onAdded(newDatasetId, datasetName);
@@ -262,11 +282,11 @@ function DatasetAddRemoteView(props: Props) {
           {!hideDatasetUI && (
             <>
               <Divider />
-              <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
+              <Flex justify="center" style={{ marginBottom: 24 }}>
                 <Button type="link" onClick={() => setShowAddLayerModal(true)}>
                   Add Layer
                 </Button>
-              </div>
+              </Flex>
               <Row gutter={8}>
                 <Col span={12} />
                 <Col span={6}>

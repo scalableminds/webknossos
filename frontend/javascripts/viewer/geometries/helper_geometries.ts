@@ -15,8 +15,8 @@ import {
   Mesh,
   MeshBasicMaterial,
   PlaneGeometry,
-  RGBAFormat,
   RepeatWrapping,
+  RGBAFormat,
   Vector3 as ThreeVector3,
   Vector2,
 } from "three";
@@ -89,7 +89,7 @@ export class ContourGeometry {
   addEdgePoint(pos: Vector3) {
     const pointCount = this.vertexBuffer.getLength();
     const lastPoint = this.vertexBuffer.getBuffer().subarray((pointCount - 1) * 3, pointCount * 3);
-    if (V3.equals(pos, lastPoint)) {
+    if (V3.equals(pos, [lastPoint[0], lastPoint[1], lastPoint[2]])) {
       // Skip adding the point if it is the same as the last one.
       return;
     }
@@ -168,6 +168,13 @@ export class ContourGeometry {
     if (this.showConnectingLine) {
       this.connectingLine.visible = true;
     }
+  }
+
+  destroy() {
+    this.line.geometry.dispose();
+    this.line.material.dispose();
+    this.connectingLine.geometry.dispose();
+    this.connectingLine.material.dispose();
   }
 }
 
@@ -318,7 +325,7 @@ export class QuickSelectGeometry {
     return this.meshGroup;
   }
 
-  attachTextureMask(ndData: Uint8Array, width: number, height: number) {
+  attachTextureMask(ndData: Uint8Array<ArrayBuffer>, width: number, height: number) {
     // Attach the array as a binary mask so that the rectangle preview
     // is only rendered where the passed array is 1.
     const texture = new DataTexture(ndData, width, height, RGBAFormat);
@@ -327,6 +334,9 @@ export class QuickSelectGeometry {
     texture.needsUpdate = true;
 
     const rectangle = this.rectangle;
+    // Dispose the previous mask texture (if any) as three.js would keep it
+    // on the GPU otherwise.
+    rectangle.material.alphaMap?.dispose();
     rectangle.material.alphaMap = texture;
     rectangle.material.needsUpdate = true;
   }
@@ -335,7 +345,17 @@ export class QuickSelectGeometry {
     // Detach the texture mask, so that the full rectangle is visible again
     // (important while drawing the rectangle).
     const rectangle = this.rectangle;
+    rectangle.material.alphaMap?.dispose();
     rectangle.material.alphaMap = null;
+    rectangle.material.needsUpdate = true;
+  }
+
+  destroy() {
+    this.rectangle.material.alphaMap?.dispose();
+    this.rectangle.geometry.dispose();
+    this.rectangle.material.dispose();
+    this.centerMarker.geometry.dispose();
+    this.centerMarker.material.dispose();
   }
 }
 
@@ -455,5 +475,10 @@ export class LineMeasurementGeometry {
     } else {
       this.line.visible = false;
     }
+  }
+
+  destroy() {
+    this.line.geometry.dispose();
+    this.line.material.dispose();
   }
 }

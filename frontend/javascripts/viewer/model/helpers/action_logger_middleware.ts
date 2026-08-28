@@ -1,5 +1,5 @@
-import _ from "lodash";
-import type { Dispatch } from "redux";
+import drop from "lodash-es/drop";
+import type { Dispatch, Middleware, MiddlewareAPI } from "redux";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Action } from "viewer/model/actions/actions";
 
@@ -11,11 +11,13 @@ let lastActionName: string | null = null;
 let lastActionCount: number = 0;
 
 const actionBlacklist = [
-  "ADD_TO_LAYER",
+  "ADD_TO_CONTOUR_LIST",
   "MOVE_FLYCAM",
   "MOVE_FLYCAM_ABSOLUTE",
   "MOVE_FLYCAM_ORTHO",
   "MOVE_PLANE_FLYCAM_ORTHO",
+  "MOVE_TD_VIEW_BY_VECTOR_WITHOUT_TIME_TRACKING",
+  "SET_TD_CAMERA_WITHOUT_TIME_TRACKING",
   "PUSH_SAVE_QUEUE_TRANSACTION",
   "SET_DIRECTION",
   "SET_INPUT_CATCHER_RECT",
@@ -30,12 +32,9 @@ const actionBlacklist = [
 export function getActionLog(): Array<string> {
   return actionLog;
 }
-export default function actionLoggerMiddleware<A extends Action>(): (
-  next: Dispatch<A>,
-) => Dispatch<A> {
-  // @ts-expect-error ts-migrate(2322) FIXME: Type '(next: Dispatch<A>) => (action: A) => A' is ... Remove this comment to see the full error message
-  return (next: Dispatch<A>) =>
-    (action: A): A => {
+export default (function actionLoggerMiddleware(_store: MiddlewareAPI) {
+  return (next: Dispatch<Action>) =>
+    (action: Action): Action => {
       const isBlackListed = actionBlacklist.includes(action.type);
 
       if (!isBlackListed) {
@@ -49,13 +48,12 @@ export default function actionLoggerMiddleware<A extends Action>(): (
         lastActionName = action.type;
 
         const overflowCount = Math.max(actionLog.length - MAX_ACTION_LOG_LENGTH, 0);
-        actionLog = _.drop(actionLog, overflowCount);
+        actionLog = drop(actionLog, overflowCount);
 
-        if (WkDevFlags.logActions) {
+        if (WkDevFlags.logActions || WkDevFlags.logFullActionObjects) {
           console.group(action.type);
-          console.info("dispatching", action);
+          console.info("dispatching", WkDevFlags.logFullActionObjects ? action : action.type);
           let result = next(action);
-          // console.log('next state', store.getState())
           console.groupEnd();
           return result;
         }
@@ -63,4 +61,4 @@ export default function actionLoggerMiddleware<A extends Action>(): (
 
       return next(action);
     };
-}
+} as Middleware);

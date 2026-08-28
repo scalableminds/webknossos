@@ -1,42 +1,43 @@
 package utils.sql
 
-import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import com.scalableminds.util.tools.{Fox, TextUtils}
 import com.typesafe.scalalogging.LazyLogging
 import slick.dbio.{DBIO, DBIOAction, Effect, NoStream}
-import slick.jdbc.PostgresProfile.api._
+import slick.jdbc.PostgresProfile.api.*
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.sql.SqlAction
 import slick.util.{Dumpable, TreePrinter}
-import utils.sql.SqlInterpolation.sqlInterpolation
-
 import java.io.{ByteArrayOutputStream, PrintWriter}
 import java.nio.charset.StandardCharsets
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
 
-class SimpleSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
-    extends FoxImplicits
-    with LazyLogging
+class SimpleSQLDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
+    extends LazyLogging
     with SqlTypeImplicits
-    with SqlEscaping {
+    with SqlEscaping
+    with SqlInterpolationSyntax {
 
-  implicit protected def sqlInterpolationWrapper(s: StringContext): SqlInterpolator = sqlInterpolation(s)
-
+  // Concurrent access for Serializable transactions leads to this error, can be solved by retry.
   protected lazy val transactionSerializationError = "could not serialize access"
+  // This error tends to occur only after schema changes (type recreation), e.g. during tests. Can be solved by retry.
+  private lazy val cacheLookupFailedForTypeError = "cache lookup failed for type"
 
-  protected def run[R](query: DBIOAction[R, NoStream, Nothing],
-                       retryCount: Int = 0,
-                       retryIfErrorContains: List[String] = List()): Fox[R] = {
+  protected def run[R](
+      query: DBIOAction[R, NoStream, Nothing],
+      retryCount: Int = 0,
+      retryIfErrorContains: List[String] = List()
+  ): Fox[R] = {
     val stackMarker = new Throwable()
-    val foxFuture = sqlClient.db.run(query.asTry).map { result: Try[R] =>
+    val foxFuture = sqlClient.db.run(query.asTry).map { (result: Try[R]) =>
       result match {
         case Success(res) =>
           Fox.successful(res)
         case Failure(e: Throwable) =>
           val msg = e.getMessage
           if (retryIfErrorContains.exists(msg.contains(_)) && retryCount > 0) {
-            logger.debug(s"Retrying SQL Query ($retryCount remaining) due to $msg")
+            logger.info(s"Retrying SQL Query ($retryCount remaining) due to $msg")
             Thread.sleep(20)
             run(query, retryCount - 1, retryIfErrorContains)
           } else {
@@ -51,8 +52,8 @@ class SimpleSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
 
   private def logError[R](ex: Throwable, stackMarker: Throwable, query: DBIOAction[R, NoStream, Nothing]): Unit = {
     logger.error("SQL Error: " + ex)
-    logger.debug("SQL Error causing query:\n" + querySummary(query).take(8000))
-    logger.debug("SQL Error stack trace: " + TextUtils.stackTraceAsString(stackMarker))
+    logger.info("SQL Error causing query:\n" + querySummary(query).take(8000))
+    logger.info("SQL Error stack trace: " + TextUtils.stackTraceAsString(stackMarker))
   }
 
   private def reportErrorToSlack[R](ex: Throwable, query: DBIOAction[R, NoStream, Nothing]): Unit =
@@ -69,15 +70,26 @@ class SimpleSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
     new String(os.toByteArray, StandardCharsets.UTF_8)
   }
 
-  def replaceSequentiallyAsTransaction(clearQuery: SqlAction[Int, NoStream, Effect],
-                                       insertQueries: Seq[SqlAction[Int, NoStream, Effect]]): Fox[Unit] = {
-    val composedQuery = DBIO.sequence(List(clearQuery) ++ insertQueries)
+  /* Runs queries in a single serializable transaction, so that either all or none of them are applied.
+   * Serializable isolation also guards against concurrent transactions. */
+  protected def runAsSerializableTransaction(queries: Seq[SqlAction[Int, NoStream, Effect]]): Fox[Unit] =
     for {
       _ <- run(
-        composedQuery.transactionally.withTransactionIsolation(Serializable),
+        DBIO.sequence(queries.toList).transactionally.withTransactionIsolation(Serializable),
         retryCount = 50,
-        retryIfErrorContains = List(transactionSerializationError)
+        retryIfErrorContains = List(transactionSerializationError, cacheLookupFailedForTypeError)
       )
     } yield ()
-  }
+
+  /* Runs queries in a single serializable transaction, so that either all or none of them are applied.
+   * Serializable isolation also guards against concurrent transactions. */
+  protected def runAsSerializableTransaction(query: SqlAction[Int, NoStream, Effect]): Fox[Unit] =
+    for {
+      _ <- run(
+        query.transactionally.withTransactionIsolation(Serializable),
+        retryCount = 50,
+        retryIfErrorContains = List(transactionSerializationError, cacheLookupFailedForTypeError)
+      )
+    } yield ()
+
 }

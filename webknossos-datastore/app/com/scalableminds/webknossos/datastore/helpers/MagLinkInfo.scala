@@ -4,12 +4,14 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import play.api.libs.json.{Format, Json}
 
-case class DataSourceMagInfo(dataSourceId: DataSourceId,
-                             dataLayerName: String,
-                             mag: Vec3Int,
-                             path: Option[String],
-                             realPath: Option[String],
-                             hasLocalData: Boolean)
+case class DataSourceMagInfo(
+    dataSourceId: DataSourceId,
+    dataLayerName: String,
+    mag: Vec3Int,
+    path: Option[String],
+    realPath: Option[String],
+    hasLocalData: Boolean
+)
 
 object DataSourceMagInfo {
   implicit val jsonFormat: Format[DataSourceMagInfo] = Json.format[DataSourceMagInfo]

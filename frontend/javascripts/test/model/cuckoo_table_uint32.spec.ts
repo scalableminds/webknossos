@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import "test/mocks/updatable_texture.mock";
 import { generateRandomCuckooEntrySet } from "./cuckoo_table_helpers";

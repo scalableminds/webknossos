@@ -11,7 +11,8 @@ GET         /annotation/:annotationId/updateActionLog                           
 GET         /annotation/:annotationId/newestVersion                                 @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.newestVersion(annotationId: ObjectId)
 POST        /annotation/:annotationId/duplicate                                     @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.duplicate(annotationId: ObjectId, newAnnotationId: ObjectId, ownerId: ObjectId, requestingUserId: ObjectId, version: Option[Long], isFromTask: Boolean, datasetBoundingBox: Option[String])
 POST        /annotation/:annotationId/resetToBase                                   @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.resetToBase(annotationId: ObjectId)
-POST        /annotation/mergedFromIds                                               @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.mergedFromIds(toTemporaryStore: Boolean, newAnnotationId: ObjectId, requestingUserId: ObjectId)
+GET         /annotation/:annotationId/largestIdOrZero                               @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.largestIdOrZero(annotationId: ObjectId, tracingId: String, domain: String)
+POST        /annotation/mergedFromIds                                               @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.mergedFromIds(toTemporaryStore: Boolean, newAnnotationId: ObjectId, requestingUserId: ObjectId, remapSegmentIds: Boolean)
 
 # Volume tracings
 POST        /volume/save                                                            @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.save(newTracingId: String)
@@ -30,15 +31,18 @@ POST        /volume/:tracingId/segmentStatistics/volume                         
 POST        /volume/:tracingId/segmentStatistics/boundingBox                        @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.getSegmentBoundingBox(tracingId: String)
 POST        /volume/:tracingId/segmentStatistics/surfaceArea                        @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.getSegmentSurfaceArea(tracingId: String)
 POST        /volume/getMultiple                                                     @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.getMultiple
+POST        /volume/initializeForMerge                                              @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.initializeForMerge(newTracingId: String)
 POST        /volume/mergedFromContents                                              @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.mergedFromContents(newTracingId: String)
 
 # Editable Mappings
 GET         /mapping/:tracingId/info                                                @com.scalableminds.webknossos.tracingstore.controllers.EditableMappingController.editableMappingInfo(tracingId: String, annotationId: ObjectId, version: Option[Long])
-GET         /mapping/:tracingId/segmentsForAgglomerate                              @com.scalableminds.webknossos.tracingstore.controllers.EditableMappingController.segmentIdsForAgglomerate(tracingId: String, agglomerateId: Long)
+GET         /mapping/:tracingId/segmentsForAgglomerate                              @com.scalableminds.webknossos.tracingstore.controllers.EditableMappingController.segmentIdsForAgglomerate(tracingId: String, agglomerateId: Long, version: Option[Long])
 POST        /mapping/:tracingId/agglomeratesForSegments                             @com.scalableminds.webknossos.tracingstore.controllers.EditableMappingController.agglomerateIdsForSegments(tracingId: String, annotationId: ObjectId, version: Option[Long])
 POST        /mapping/:tracingId/agglomerateGraphMinCut                              @com.scalableminds.webknossos.tracingstore.controllers.EditableMappingController.agglomerateGraphMinCut(tracingId: String)
 POST        /mapping/:tracingId/agglomerateGraphNeighbors                           @com.scalableminds.webknossos.tracingstore.controllers.EditableMappingController.agglomerateGraphNeighbors(tracingId: String)
-GET         /mapping/:tracingId/agglomerateSkeleton/:agglomerateId                  @com.scalableminds.webknossos.tracingstore.controllers.EditableMappingController.agglomerateSkeleton(tracingId: String, agglomerateId: Long)
+GET         /mapping/:tracingId/agglomerateTree/:agglomerateId                      @com.scalableminds.webknossos.tracingstore.controllers.EditableMappingController.agglomerateTree(tracingId: String, agglomerateId: Long, version: Option[Long])
+# Alias route kept for one release cycle for backwards compatibility for open browser sessions. Remove after 2026-06
+GET         /mapping/:tracingId/agglomerateSkeleton/:agglomerateId                  @com.scalableminds.webknossos.tracingstore.controllers.EditableMappingController.agglomerateTree(tracingId: String, agglomerateId: Long, version: Option[Long])
 GET         /mapping/:tracingId/agglomerateGraph/:agglomerateId                     @com.scalableminds.webknossos.tracingstore.controllers.EditableMappingController.agglomerateGraph(tracingId: String, agglomerateId: Long, version: Option[Long])
 GET         /mapping/:tracingId/editedEdgesZip                                      @com.scalableminds.webknossos.tracingstore.controllers.EditableMappingController.editedEdgesZip(tracingId: String, version: Option[Long])
 POST        /mapping/:tracingId/save                                                @com.scalableminds.webknossos.tracingstore.controllers.EditableMappingController.saveFromZip(tracingId: String, annotationId: ObjectId, startVersion: Long, baseMappingName: String)
@@ -58,6 +62,18 @@ GET         /volume/zarr/:tracingId/:mag/.zarray                                
 GET         /volume/zarr/:tracingId/:mag/:coordinates                               @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.rawZarrCube(tracingId: String, mag: String, coordinates: String)
 
 # Zarr version 3
+GET         /volume/zarr3/json/:tracingId                                          @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.volumeTracingDirectoryContentJson(tracingId: String, zarrVersion: Int = 3)
+GET         /volume/zarr3/json/:tracingId/:mag                                     @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.volumeTracingMagDirectoryContentJson(tracingId: String, mag: String, zarrVersion: Int = 3)
+GET         /volume/zarr3/:tracingId                                               @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.volumeTracingDirectoryContent(tracingId: String, zarrVersion: Int = 3)
+GET         /volume/zarr3/:tracingId/                                              @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.volumeTracingDirectoryContent(tracingId: String, zarrVersion: Int = 3)
+GET         /volume/zarr3/:tracingId/zarrSource                                    @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.zarrSource(tracingId: String, tracingName: Option[String], zarrVersion: Int = 3)
+GET         /volume/zarr3/:tracingId/zarr.json                                     @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.zarrJson(tracingId: String)
+GET         /volume/zarr3/:tracingId/:mag                                          @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.volumeTracingMagDirectoryContent(tracingId: String, mag: String, zarrVersion: Int = 3)
+GET         /volume/zarr3/:tracingId/:mag/                                         @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.volumeTracingMagDirectoryContent(tracingId: String, mag: String, zarrVersion: Int = 3)
+GET         /volume/zarr3/:tracingId/:mag/zarr.json                                @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.zarrJsonForMag(tracingId: String, mag: String)
+GET         /volume/zarr3/:tracingId/:mag/:coordinates                             @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.rawZarrCube(tracingId: String, mag: String, coordinates: String)
+
+# Zarr3 routes under old “experimental” path, kept for backwards compatibility
 GET         /volume/zarr3_experimental/json/:tracingId                              @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.volumeTracingDirectoryContentJson(tracingId: String, zarrVersion: Int = 3)
 GET         /volume/zarr3_experimental/json/:tracingId/:mag                         @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.volumeTracingMagDirectoryContentJson(tracingId: String, mag: String, zarrVersion: Int = 3)
 GET         /volume/zarr3_experimental/:tracingId                                   @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.volumeTracingDirectoryContent(tracingId: String, zarrVersion: Int = 3)

@@ -2,48 +2,52 @@ package models.voxelytics
 
 import com.scalableminds.util.time.Instant
 import models.voxelytics.VoxelyticsRunState.VoxelyticsRunState
-import play.api.libs.json._
+import play.api.libs.json.*
 
 trait WorkflowEvent {}
 
 case class RunStateChangeEvent(state: VoxelyticsRunState, timestamp: Instant) extends WorkflowEvent
 
-case class TaskStateChangeEvent(taskName: String,
-                                state: VoxelyticsRunState,
-                                timestamp: Instant,
-                                artifacts: Map[String, WorkflowDescriptionArtifact])
-    extends WorkflowEvent
+case class TaskStateChangeEvent(
+    taskName: String,
+    state: VoxelyticsRunState,
+    timestamp: Instant,
+    artifacts: Map[String, WorkflowDescriptionArtifact]
+) extends WorkflowEvent
 
-case class ChunkStateChangeEvent(taskName: String,
-                                 executionId: String,
-                                 chunkName: String,
-                                 timestamp: Instant,
-                                 state: VoxelyticsRunState)
-    extends WorkflowEvent
+case class ChunkStateChangeEvent(
+    taskName: String,
+    executionId: String,
+    chunkName: String,
+    timestamp: Instant,
+    state: VoxelyticsRunState
+) extends WorkflowEvent
 
 case class RunHeartbeatEvent(timestamp: Instant) extends WorkflowEvent
 
-case class ChunkProfilingEvent(taskName: String,
-                               executionId: String,
-                               chunkName: String,
-                               hostname: String,
-                               pid: Long,
-                               memory: Double,
-                               cpuUser: Double,
-                               cpuSystem: Double,
-                               timestamp: Instant)
-    extends WorkflowEvent
+case class ChunkProfilingEvent(
+    taskName: String,
+    executionId: String,
+    chunkName: String,
+    hostname: String,
+    pid: Long,
+    memory: Double,
+    cpuUser: Double,
+    cpuSystem: Double,
+    timestamp: Instant
+) extends WorkflowEvent
 
-case class ArtifactFileChecksumEvent(taskName: String,
-                                     artifactName: String,
-                                     path: String,
-                                     resolvedPath: String,
-                                     checksumMethod: String,
-                                     checksum: String,
-                                     fileSize: Long,
-                                     lastModified: Instant,
-                                     timestamp: Instant)
-    extends WorkflowEvent
+case class ArtifactFileChecksumEvent(
+    taskName: String,
+    artifactName: String,
+    path: String,
+    resolvedPath: String,
+    checksumMethod: String,
+    checksum: String,
+    fileSize: Long,
+    lastModified: Instant,
+    timestamp: Instant
+) extends WorkflowEvent
 
 object RunStateChangeEvent {
   implicit val jsonFormat: OFormat[RunStateChangeEvent] = Json.format[RunStateChangeEvent]
@@ -83,18 +87,19 @@ object WorkflowEvent {
 
     override def writes(a: WorkflowEvent): JsObject = a match {
       case s: RunStateChangeEvent =>
-        Json.obj("type" -> "RUN_STATE_CHANGE") ++ Json.toJson(s)(RunStateChangeEvent.jsonFormat).as[JsObject]
+        Json.obj("type" -> "RUN_STATE_CHANGE") ++ Json.toJson(s)(using RunStateChangeEvent.jsonFormat).as[JsObject]
       case s: TaskStateChangeEvent =>
-        Json.obj("type" -> "TASK_STATE_CHANGE") ++ Json.toJson(s)(TaskStateChangeEvent.jsonFormat).as[JsObject]
+        Json.obj("type" -> "TASK_STATE_CHANGE") ++ Json.toJson(s)(using TaskStateChangeEvent.jsonFormat).as[JsObject]
       case s: ChunkStateChangeEvent =>
-        Json.obj("type" -> "CHUNK_STATE_CHANGE") ++ Json.toJson(s)(ChunkStateChangeEvent.jsonFormat).as[JsObject]
+        Json.obj("type" -> "CHUNK_STATE_CHANGE") ++ Json.toJson(s)(using ChunkStateChangeEvent.jsonFormat).as[JsObject]
       case s: RunHeartbeatEvent =>
-        Json.obj("type" -> "RUN_HEARTBEAT") ++ Json.toJson(s)(RunHeartbeatEvent.jsonFormat).as[JsObject]
+        Json.obj("type" -> "RUN_HEARTBEAT") ++ Json.toJson(s)(using RunHeartbeatEvent.jsonFormat).as[JsObject]
       case s: ChunkProfilingEvent =>
-        Json.obj("type" -> "CHUNK_PROFILING") ++ Json.toJson(s)(ChunkProfilingEvent.jsonFormat).as[JsObject]
+        Json.obj("type" -> "CHUNK_PROFILING") ++ Json.toJson(s)(using ChunkProfilingEvent.jsonFormat).as[JsObject]
       case s: ArtifactFileChecksumEvent =>
-        Json
-          .obj("type" -> "ARTIFACT_FILE_CHECKSUM") ++ Json.toJson(s)(ArtifactFileChecksumEvent.jsonFormat).as[JsObject]
+        Json.obj("type" -> "ARTIFACT_FILE_CHECKSUM") ++ Json
+          .toJson(s)(using ArtifactFileChecksumEvent.jsonFormat)
+          .as[JsObject]
     }
   }
 }

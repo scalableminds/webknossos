@@ -1,7 +1,9 @@
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import { document } from "libs/window";
-import _ from "lodash";
+import max from "lodash-es/max";
+import memoize from "lodash-es/memoize";
+import min from "lodash-es/min";
 import {
   ByteType,
   FloatType,
@@ -24,7 +26,6 @@ type GpuSpecs = {
 };
 const lookupTextureCount = 1;
 export function getSupportedTextureSpecs(): GpuSpecs {
-  // @ts-ignore
   const canvas = document.createElement("canvas");
   const contextProvider =
     "getContext" in canvas
@@ -79,7 +80,7 @@ export function getSupportedTextureSpecs(): GpuSpecs {
   const supportedTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
   const maxTextureImageUnits = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS);
 
-  if (!process.env.IS_TESTING) {
+  if (import.meta.env.MODE !== "test") {
     console.log("maxTextureImageUnits", maxTextureImageUnits);
   }
 
@@ -222,7 +223,7 @@ function getSmallestCommonBucketCapacity<
       sizeAndCount.packingDegree,
     ),
   );
-  return _.min(capacities) || 0;
+  return min(capacities) || 0;
 }
 
 function getRenderSupportedLayerCount<
@@ -240,7 +241,7 @@ function getRenderSupportedLayerCount<
   // here (because some layers might need fewer textures), but this would be harder to communicate to
   // the user and also more complex to maintain code-wise.
   const maximumTextureCountForLayer =
-    _.max(
+    max(
       Array.from(textureInformationPerLayer.values()).map(
         (sizeAndCount) => sizeAndCount.textureCount,
       ),
@@ -284,7 +285,7 @@ export function computeDataTexturesSetup<
     hasSegmentation,
   );
 
-  if (!process.env.IS_TESTING) {
+  if (import.meta.env.MODE !== "test") {
     console.log("maximumLayerCountToRender", maximumLayerCountToRender);
   }
 
@@ -311,8 +312,8 @@ function _getSupportedValueRangeForElementClass(
   elementClass: ElementClass,
 ): readonly [number, number] {
   // The returned range is inclusive (min and max).
-  // This function needs to be adapted when a new dtype should/element class needs
-  // to be supported.
+  // The function should not be called for (u)int64, because number is not precise enough.
+  // Prefer getSegmentIdRangeForElementClass for (u)int64.
   switch (elementClass) {
     case "int8":
       return [-(2 ** 7), 2 ** 7 - 1];
@@ -349,9 +350,11 @@ function _getSupportedValueRangeForElementClass(
     }
 
     case "uint64":
-      return [0, 2 ** 53 - 1];
+      // Note that these high values can only be correctly stored in bigint (and not number).
+      // Prefer getSegmentIdRangeForElementClass for (u)int64.
+      return [0, 2 ** 64 - 1];
     case "int64":
-      return [-(2 ** 53 - 1), 2 ** 53 - 1];
+      return [-(2 ** 64 - 1), 2 ** 64 - 1];
     default:
       throw new Error("Unknown elementClass: " + elementClass);
   }
@@ -359,9 +362,34 @@ function _getSupportedValueRangeForElementClass(
 
 // Use memoization to ensure that the returned tuples always have the
 // same identity.
-export const getSupportedValueRangeForElementClass = _.memoize(
+export const getSupportedValueRangeForElementClass = memoize(
   _getSupportedValueRangeForElementClass,
 );
+
+function _getSegmentIdRangeForElementClass(elementClass: ElementClass): readonly [bigint, bigint] {
+  // The valid (inclusive) range of segment ids for a segmentation layer of the given element
+  // class. In contrast to getSupportedValueRangeForElementClass (which is JS-number-based and
+  // used for intensity/color ranges), this returns bigint bounds so that uint64/int64 segment
+  // ids beyond Number.MAX_SAFE_INTEGER are represented exactly (no 2**53 cap).
+  switch (elementClass) {
+    case "uint64":
+      return [0n, 2n ** 64n - 1n];
+    case "int64":
+      // Segment ids are non-negative; int64 segmentations use the positive half of the range.
+      return [0n, 2n ** 63n - 1n];
+    case "float":
+    case "double":
+      // Floating-point layers are never segmentation layers, so they have no segment-id range.
+      throw new Error(`elementClass ${elementClass} has no segment id range`);
+    default: {
+      const [min, max] = getSupportedValueRangeForElementClass(elementClass);
+      return [BigInt(min), BigInt(max)];
+    }
+  }
+}
+
+// Use memoization to ensure that the returned tuples always have the same identity.
+export const getSegmentIdRangeForElementClass = memoize(_getSegmentIdRangeForElementClass);
 
 export function getDtypeConfigForElementClass(elementClass: ElementClass): {
   textureType: TextureDataType;

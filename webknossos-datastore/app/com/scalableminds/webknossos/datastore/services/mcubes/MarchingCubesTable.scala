@@ -5,28 +5,34 @@ import com.scalableminds.util.geometry.Vec3Float
 object MarchingCubesTable {
 
   val triangleTable: Array[Array[Vec3Float]] = Array(
-    Array(),
+    Array.empty[Vec3Float],
     Array(Vec3Float(0, 0.5f, 0), Vec3Float(0, 0, 0.5f), Vec3Float(0.5f, 0, 0)),
     Array(Vec3Float(1, 0, 0.5f), Vec3Float(1, 0.5f, 0), Vec3Float(0.5f, 0, 0)),
-    Array(Vec3Float(0, 0.5f, 0),
-          Vec3Float(0, 0, 0.5f),
-          Vec3Float(1, 0.5f, 0),
-          Vec3Float(1, 0.5f, 0),
-          Vec3Float(0, 0, 0.5f),
-          Vec3Float(1, 0, 0.5f)),
+    Array(
+      Vec3Float(0, 0.5f, 0),
+      Vec3Float(0, 0, 0.5f),
+      Vec3Float(1, 0.5f, 0),
+      Vec3Float(1, 0.5f, 0),
+      Vec3Float(0, 0, 0.5f),
+      Vec3Float(1, 0, 0.5f)
+    ),
     Array(Vec3Float(1, 1, 0.5f), Vec3Float(0.5f, 1, 0), Vec3Float(1, 0.5f, 0)),
-    Array(Vec3Float(0, 0.5f, 0),
-          Vec3Float(0, 0, 0.5f),
-          Vec3Float(0.5f, 0, 0),
-          Vec3Float(1, 1, 0.5f),
-          Vec3Float(0.5f, 1, 0),
-          Vec3Float(1, 0.5f, 0)),
-    Array(Vec3Float(1, 1, 0.5f),
-          Vec3Float(0.5f, 1, 0),
-          Vec3Float(1, 0, 0.5f),
-          Vec3Float(1, 0, 0.5f),
-          Vec3Float(0.5f, 1, 0),
-          Vec3Float(0.5f, 0, 0)),
+    Array(
+      Vec3Float(0, 0.5f, 0),
+      Vec3Float(0, 0, 0.5f),
+      Vec3Float(0.5f, 0, 0),
+      Vec3Float(1, 1, 0.5f),
+      Vec3Float(0.5f, 1, 0),
+      Vec3Float(1, 0.5f, 0)
+    ),
+    Array(
+      Vec3Float(1, 1, 0.5f),
+      Vec3Float(0.5f, 1, 0),
+      Vec3Float(1, 0, 0.5f),
+      Vec3Float(1, 0, 0.5f),
+      Vec3Float(0.5f, 1, 0),
+      Vec3Float(0.5f, 0, 0)
+    ),
     Array(
       Vec3Float(0, 0.5f, 0),
       Vec3Float(0, 0, 0.5f),
@@ -39,18 +45,22 @@ object MarchingCubesTable {
       Vec3Float(1, 1, 0.5f)
     ),
     Array(Vec3Float(0.5f, 1, 0), Vec3Float(0, 1, 0.5f), Vec3Float(0, 0.5f, 0)),
-    Array(Vec3Float(0.5f, 1, 0),
-          Vec3Float(0, 1, 0.5f),
-          Vec3Float(0.5f, 0, 0),
-          Vec3Float(0.5f, 0, 0),
-          Vec3Float(0, 1, 0.5f),
-          Vec3Float(0, 0, 0.5f)),
-    Array(Vec3Float(0.5f, 0, 0),
-          Vec3Float(1, 0, 0.5f),
-          Vec3Float(1, 0.5f, 0),
-          Vec3Float(0, 1, 0.5f),
-          Vec3Float(0, 0.5f, 0),
-          Vec3Float(0.5f, 1, 0)),
+    Array(
+      Vec3Float(0.5f, 1, 0),
+      Vec3Float(0, 1, 0.5f),
+      Vec3Float(0.5f, 0, 0),
+      Vec3Float(0.5f, 0, 0),
+      Vec3Float(0, 1, 0.5f),
+      Vec3Float(0, 0, 0.5f)
+    ),
+    Array(
+      Vec3Float(0.5f, 0, 0),
+      Vec3Float(1, 0, 0.5f),
+      Vec3Float(1, 0.5f, 0),
+      Vec3Float(0, 1, 0.5f),
+      Vec3Float(0, 0.5f, 0),
+      Vec3Float(0.5f, 1, 0)
+    ),
     Array(
       Vec3Float(0.5f, 1, 0),
       Vec3Float(0, 1, 0.5f),
@@ -62,12 +72,14 @@ object MarchingCubesTable {
       Vec3Float(0, 0, 0.5f),
       Vec3Float(1, 0, 0.5f)
     ),
-    Array(Vec3Float(1, 0.5f, 0),
-          Vec3Float(1, 1, 0.5f),
-          Vec3Float(0, 0.5f, 0),
-          Vec3Float(0, 0.5f, 0),
-          Vec3Float(1, 1, 0.5f),
-          Vec3Float(0, 1, 0.5f)),
+    Array(
+      Vec3Float(1, 0.5f, 0),
+      Vec3Float(1, 1, 0.5f),
+      Vec3Float(0, 0.5f, 0),
+      Vec3Float(0, 0.5f, 0),
+      Vec3Float(1, 1, 0.5f),
+      Vec3Float(0, 1, 0.5f)
+    ),
     Array(
       Vec3Float(1, 0.5f, 0),
       Vec3Float(1, 1, 0.5f),
@@ -90,25 +102,31 @@ object MarchingCubesTable {
       Vec3Float(1, 1, 0.5f),
       Vec3Float(0, 1, 0.5f)
     ),
-    Array(Vec3Float(1, 1, 0.5f),
-          Vec3Float(0, 0, 0.5f),
-          Vec3Float(1, 0, 0.5f),
-          Vec3Float(0, 1, 0.5f),
-          Vec3Float(0, 0, 0.5f),
-          Vec3Float(1, 1, 0.5f)),
+    Array(
+      Vec3Float(1, 1, 0.5f),
+      Vec3Float(0, 0, 0.5f),
+      Vec3Float(1, 0, 0.5f),
+      Vec3Float(0, 1, 0.5f),
+      Vec3Float(0, 0, 0.5f),
+      Vec3Float(1, 1, 0.5f)
+    ),
     Array(Vec3Float(0, 0, 0.5f), Vec3Float(0, 0.5f, 1), Vec3Float(0.5f, 0, 1)),
-    Array(Vec3Float(0.5f, 0, 0),
-          Vec3Float(0, 0.5f, 0),
-          Vec3Float(0.5f, 0, 1),
-          Vec3Float(0.5f, 0, 1),
-          Vec3Float(0, 0.5f, 0),
-          Vec3Float(0, 0.5f, 1)),
-    Array(Vec3Float(1, 0, 0.5f),
-          Vec3Float(1, 0.5f, 0),
-          Vec3Float(0.5f, 0, 0),
-          Vec3Float(0, 0.5f, 1),
-          Vec3Float(0.5f, 0, 1),
-          Vec3Float(0, 0, 0.5f)),
+    Array(
+      Vec3Float(0.5f, 0, 0),
+      Vec3Float(0, 0.5f, 0),
+      Vec3Float(0.5f, 0, 1),
+      Vec3Float(0.5f, 0, 1),
+      Vec3Float(0, 0.5f, 0),
+      Vec3Float(0, 0.5f, 1)
+    ),
+    Array(
+      Vec3Float(1, 0, 0.5f),
+      Vec3Float(1, 0.5f, 0),
+      Vec3Float(0.5f, 0, 0),
+      Vec3Float(0, 0.5f, 1),
+      Vec3Float(0.5f, 0, 1),
+      Vec3Float(0, 0, 0.5f)
+    ),
     Array(
       Vec3Float(1, 0, 0.5f),
       Vec3Float(1, 0.5f, 0),
@@ -120,12 +138,14 @@ object MarchingCubesTable {
       Vec3Float(0, 0.5f, 0),
       Vec3Float(0, 0.5f, 1)
     ),
-    Array(Vec3Float(1, 1, 0.5f),
-          Vec3Float(0.5f, 1, 0),
-          Vec3Float(1, 0.5f, 0),
-          Vec3Float(0, 0.5f, 1),
-          Vec3Float(0.5f, 0, 1),
-          Vec3Float(0, 0, 0.5f)),
+    Array(
+      Vec3Float(1, 1, 0.5f),
+      Vec3Float(0.5f, 1, 0),
+      Vec3Float(1, 0.5f, 0),
+      Vec3Float(0, 0.5f, 1),
+      Vec3Float(0.5f, 0, 1),
+      Vec3Float(0, 0, 0.5f)
+    ),
     Array(
       Vec3Float(0, 0.5f, 1),
       Vec3Float(0.5f, 0, 1),
@@ -162,12 +182,14 @@ object MarchingCubesTable {
       Vec3Float(1, 0, 0.5f),
       Vec3Float(0, 0.5f, 1)
     ),
-    Array(Vec3Float(0, 0.5f, 1),
-          Vec3Float(0.5f, 0, 1),
-          Vec3Float(0, 0, 0.5f),
-          Vec3Float(0.5f, 1, 0),
-          Vec3Float(0, 1, 0.5f),
-          Vec3Float(0, 0.5f, 0)),
+    Array(
+      Vec3Float(0, 0.5f, 1),
+      Vec3Float(0.5f, 0, 1),
+      Vec3Float(0, 0, 0.5f),
+      Vec3Float(0.5f, 1, 0),
+      Vec3Float(0, 1, 0.5f),
+      Vec3Float(0, 0.5f, 0)
+    ),
     Array(
       Vec3Float(0, 0.5f, 1),
       Vec3Float(0.5f, 0, 1),
@@ -255,18 +277,22 @@ object MarchingCubesTable {
       Vec3Float(1, 0, 0.5f)
     ),
     Array(Vec3Float(0.5f, 0, 1), Vec3Float(1, 0.5f, 1), Vec3Float(1, 0, 0.5f)),
-    Array(Vec3Float(0.5f, 0, 1),
-          Vec3Float(1, 0.5f, 1),
-          Vec3Float(1, 0, 0.5f),
-          Vec3Float(0, 0.5f, 0),
-          Vec3Float(0, 0, 0.5f),
-          Vec3Float(0.5f, 0, 0)),
-    Array(Vec3Float(0.5f, 0, 1),
-          Vec3Float(1, 0.5f, 1),
-          Vec3Float(0.5f, 0, 0),
-          Vec3Float(0.5f, 0, 0),
-          Vec3Float(1, 0.5f, 1),
-          Vec3Float(1, 0.5f, 0)),
+    Array(
+      Vec3Float(0.5f, 0, 1),
+      Vec3Float(1, 0.5f, 1),
+      Vec3Float(1, 0, 0.5f),
+      Vec3Float(0, 0.5f, 0),
+      Vec3Float(0, 0, 0.5f),
+      Vec3Float(0.5f, 0, 0)
+    ),
+    Array(
+      Vec3Float(0.5f, 0, 1),
+      Vec3Float(1, 0.5f, 1),
+      Vec3Float(0.5f, 0, 0),
+      Vec3Float(0.5f, 0, 0),
+      Vec3Float(1, 0.5f, 1),
+      Vec3Float(1, 0.5f, 0)
+    ),
     Array(
       Vec3Float(0.5f, 0, 1),
       Vec3Float(1, 0.5f, 1),
@@ -278,12 +304,14 @@ object MarchingCubesTable {
       Vec3Float(1, 0.5f, 0),
       Vec3Float(0, 0.5f, 0)
     ),
-    Array(Vec3Float(1, 1, 0.5f),
-          Vec3Float(0.5f, 1, 0),
-          Vec3Float(1, 0.5f, 0),
-          Vec3Float(0.5f, 0, 1),
-          Vec3Float(1, 0.5f, 1),
-          Vec3Float(1, 0, 0.5f)),
+    Array(
+      Vec3Float(1, 1, 0.5f),
+      Vec3Float(0.5f, 1, 0),
+      Vec3Float(1, 0.5f, 0),
+      Vec3Float(0.5f, 0, 1),
+      Vec3Float(1, 0.5f, 1),
+      Vec3Float(1, 0, 0.5f)
+    ),
     Array(
       Vec3Float(0, 0, 0.5f),
       Vec3Float(0.5f, 0, 0),
@@ -320,12 +348,14 @@ object MarchingCubesTable {
       Vec3Float(0.5f, 0, 1),
       Vec3Float(0, 0.5f, 0)
     ),
-    Array(Vec3Float(0.5f, 0, 1),
-          Vec3Float(1, 0.5f, 1),
-          Vec3Float(1, 0, 0.5f),
-          Vec3Float(0, 1, 0.5f),
-          Vec3Float(0, 0.5f, 0),
-          Vec3Float(0.5f, 1, 0)),
+    Array(
+      Vec3Float(0.5f, 0, 1),
+      Vec3Float(1, 0.5f, 1),
+      Vec3Float(1, 0, 0.5f),
+      Vec3Float(0, 1, 0.5f),
+      Vec3Float(0, 0.5f, 0),
+      Vec3Float(0.5f, 1, 0)
+    ),
     Array(
       Vec3Float(0.5f, 1, 0),
       Vec3Float(0, 1, 0.5f),
@@ -412,12 +442,14 @@ object MarchingCubesTable {
       Vec3Float(0, 0, 0.5f),
       Vec3Float(1, 1, 0.5f)
     ),
-    Array(Vec3Float(0, 0, 0.5f),
-          Vec3Float(0, 0.5f, 1),
-          Vec3Float(1, 0, 0.5f),
-          Vec3Float(1, 0, 0.5f),
-          Vec3Float(0, 0.5f, 1),
-          Vec3Float(1, 0.5f, 1)),
+    Array(
+      Vec3Float(0, 0, 0.5f),
+      Vec3Float(0, 0.5f, 1),
+      Vec3Float(1, 0, 0.5f),
+      Vec3Float(1, 0, 0.5f),
+      Vec3Float(0, 0.5f, 1),
+      Vec3Float(1, 0.5f, 1)
+    ),
     Array(
       Vec3Float(0.5f, 0, 0),
       Vec3Float(0, 0.5f, 0),
@@ -440,12 +472,14 @@ object MarchingCubesTable {
       Vec3Float(1, 0.5f, 1),
       Vec3Float(1, 0.5f, 0)
     ),
-    Array(Vec3Float(0, 0.5f, 0),
-          Vec3Float(1, 0.5f, 1),
-          Vec3Float(1, 0.5f, 0),
-          Vec3Float(0, 0.5f, 1),
-          Vec3Float(1, 0.5f, 1),
-          Vec3Float(0, 0.5f, 0)),
+    Array(
+      Vec3Float(0, 0.5f, 0),
+      Vec3Float(1, 0.5f, 1),
+      Vec3Float(1, 0.5f, 0),
+      Vec3Float(0, 0.5f, 1),
+      Vec3Float(1, 0.5f, 1),
+      Vec3Float(0, 0.5f, 0)
+    ),
     Array(
       Vec3Float(0, 0, 0.5f),
       Vec3Float(0, 0.5f, 1),
@@ -594,25 +628,31 @@ object MarchingCubesTable {
       Vec3Float(0, 0.5f, 1),
       Vec3Float(1, 0.5f, 1)
     ),
-    Array(Vec3Float(1, 0.5f, 1),
-          Vec3Float(1, 1, 0.5f),
-          Vec3Float(0, 1, 0.5f),
-          Vec3Float(1, 0.5f, 1),
-          Vec3Float(0, 1, 0.5f),
-          Vec3Float(0, 0.5f, 1)),
+    Array(
+      Vec3Float(1, 0.5f, 1),
+      Vec3Float(1, 1, 0.5f),
+      Vec3Float(0, 1, 0.5f),
+      Vec3Float(1, 0.5f, 1),
+      Vec3Float(0, 1, 0.5f),
+      Vec3Float(0, 0.5f, 1)
+    ),
     Array(Vec3Float(1, 0.5f, 1), Vec3Float(0.5f, 1, 1), Vec3Float(1, 1, 0.5f)),
-    Array(Vec3Float(0, 0.5f, 0),
-          Vec3Float(0, 0, 0.5f),
-          Vec3Float(0.5f, 0, 0),
-          Vec3Float(0.5f, 1, 1),
-          Vec3Float(1, 1, 0.5f),
-          Vec3Float(1, 0.5f, 1)),
-    Array(Vec3Float(1, 0.5f, 0),
-          Vec3Float(0.5f, 0, 0),
-          Vec3Float(1, 0, 0.5f),
-          Vec3Float(0.5f, 1, 1),
-          Vec3Float(1, 1, 0.5f),
-          Vec3Float(1, 0.5f, 1)),
+    Array(
+      Vec3Float(0, 0.5f, 0),
+      Vec3Float(0, 0, 0.5f),
+      Vec3Float(0.5f, 0, 0),
+      Vec3Float(0.5f, 1, 1),
+      Vec3Float(1, 1, 0.5f),
+      Vec3Float(1, 0.5f, 1)
+    ),
+    Array(
+      Vec3Float(1, 0.5f, 0),
+      Vec3Float(0.5f, 0, 0),
+      Vec3Float(1, 0, 0.5f),
+      Vec3Float(0.5f, 1, 1),
+      Vec3Float(1, 1, 0.5f),
+      Vec3Float(1, 0.5f, 1)
+    ),
     Array(
       Vec3Float(0, 0.5f, 0),
       Vec3Float(0, 0, 0.5f),
@@ -624,12 +664,14 @@ object MarchingCubesTable {
       Vec3Float(1, 1, 0.5f),
       Vec3Float(1, 0.5f, 1)
     ),
-    Array(Vec3Float(1, 0.5f, 1),
-          Vec3Float(0.5f, 1, 1),
-          Vec3Float(1, 0.5f, 0),
-          Vec3Float(1, 0.5f, 0),
-          Vec3Float(0.5f, 1, 1),
-          Vec3Float(0.5f, 1, 0)),
+    Array(
+      Vec3Float(1, 0.5f, 1),
+      Vec3Float(0.5f, 1, 1),
+      Vec3Float(1, 0.5f, 0),
+      Vec3Float(1, 0.5f, 0),
+      Vec3Float(0.5f, 1, 1),
+      Vec3Float(0.5f, 1, 0)
+    ),
     Array(
       Vec3Float(1, 0.5f, 1),
       Vec3Float(0.5f, 1, 1),
@@ -666,12 +708,14 @@ object MarchingCubesTable {
       Vec3Float(0.5f, 1, 0),
       Vec3Float(0, 0.5f, 0)
     ),
-    Array(Vec3Float(0, 1, 0.5f),
-          Vec3Float(0, 0.5f, 0),
-          Vec3Float(0.5f, 1, 0),
-          Vec3Float(1, 0.5f, 1),
-          Vec3Float(0.5f, 1, 1),
-          Vec3Float(1, 1, 0.5f)),
+    Array(
+      Vec3Float(0, 1, 0.5f),
+      Vec3Float(0, 0.5f, 0),
+      Vec3Float(0.5f, 1, 0),
+      Vec3Float(1, 0.5f, 1),
+      Vec3Float(0.5f, 1, 1),
+      Vec3Float(1, 1, 0.5f)
+    ),
     Array(
       Vec3Float(0, 0, 0.5f),
       Vec3Float(0.5f, 0, 0),
@@ -758,12 +802,14 @@ object MarchingCubesTable {
       Vec3Float(1, 0, 0.5f),
       Vec3Float(0, 1, 0.5f)
     ),
-    Array(Vec3Float(0.5f, 1, 1),
-          Vec3Float(1, 1, 0.5f),
-          Vec3Float(1, 0.5f, 1),
-          Vec3Float(0, 0, 0.5f),
-          Vec3Float(0, 0.5f, 1),
-          Vec3Float(0.5f, 0, 1)),
+    Array(
+      Vec3Float(0.5f, 1, 1),
+      Vec3Float(1, 1, 0.5f),
+      Vec3Float(1, 0.5f, 1),
+      Vec3Float(0, 0, 0.5f),
+      Vec3Float(0, 0.5f, 1),
+      Vec3Float(0.5f, 0, 1)
+    ),
     Array(
       Vec3Float(0.5f, 0, 0),
       Vec3Float(0, 0.5f, 0),
@@ -974,12 +1020,14 @@ object MarchingCubesTable {
       Vec3Float(0, 1, 0.5f),
       Vec3Float(0, 0.5f, 1)
     ),
-    Array(Vec3Float(1, 0, 0.5f),
-          Vec3Float(0.5f, 0, 1),
-          Vec3Float(1, 1, 0.5f),
-          Vec3Float(1, 1, 0.5f),
-          Vec3Float(0.5f, 0, 1),
-          Vec3Float(0.5f, 1, 1)),
+    Array(
+      Vec3Float(1, 0, 0.5f),
+      Vec3Float(0.5f, 0, 1),
+      Vec3Float(1, 1, 0.5f),
+      Vec3Float(1, 1, 0.5f),
+      Vec3Float(0.5f, 0, 1),
+      Vec3Float(0.5f, 1, 1)
+    ),
     Array(
       Vec3Float(0.5f, 1, 1),
       Vec3Float(1, 1, 0.5f),
@@ -1041,12 +1089,14 @@ object MarchingCubesTable {
       Vec3Float(0.5f, 1, 1),
       Vec3Float(0.5f, 1, 0)
     ),
-    Array(Vec3Float(0.5f, 0, 1),
-          Vec3Float(0.5f, 1, 0),
-          Vec3Float(0.5f, 0, 0),
-          Vec3Float(0.5f, 1, 1),
-          Vec3Float(0.5f, 1, 0),
-          Vec3Float(0.5f, 0, 1)),
+    Array(
+      Vec3Float(0.5f, 0, 1),
+      Vec3Float(0.5f, 1, 0),
+      Vec3Float(0.5f, 0, 0),
+      Vec3Float(0.5f, 1, 1),
+      Vec3Float(0.5f, 1, 0),
+      Vec3Float(0.5f, 0, 1)
+    ),
     Array(
       Vec3Float(0.5f, 1, 0),
       Vec3Float(0, 0.5f, 0),
@@ -1156,12 +1206,14 @@ object MarchingCubesTable {
       Vec3Float(0.5f, 1, 1),
       Vec3Float(0.5f, 0, 0)
     ),
-    Array(Vec3Float(0, 0, 0.5f),
-          Vec3Float(0.5f, 0, 1),
-          Vec3Float(0.5f, 1, 1),
-          Vec3Float(0, 0, 0.5f),
-          Vec3Float(0.5f, 1, 1),
-          Vec3Float(0, 1, 0.5f)),
+    Array(
+      Vec3Float(0, 0, 0.5f),
+      Vec3Float(0.5f, 0, 1),
+      Vec3Float(0.5f, 1, 1),
+      Vec3Float(0, 0, 0.5f),
+      Vec3Float(0.5f, 1, 1),
+      Vec3Float(0, 1, 0.5f)
+    ),
     Array(
       Vec3Float(0.5f, 1, 1),
       Vec3Float(1, 1, 0.5f),
@@ -1254,12 +1306,14 @@ object MarchingCubesTable {
       Vec3Float(0.5f, 0, 0),
       Vec3Float(0.5f, 1, 1)
     ),
-    Array(Vec3Float(0.5f, 1, 0),
-          Vec3Float(0, 0.5f, 0),
-          Vec3Float(0, 0.5f, 1),
-          Vec3Float(0.5f, 1, 0),
-          Vec3Float(0, 0.5f, 1),
-          Vec3Float(0.5f, 1, 1)),
+    Array(
+      Vec3Float(0.5f, 1, 0),
+      Vec3Float(0, 0.5f, 0),
+      Vec3Float(0, 0.5f, 1),
+      Vec3Float(0.5f, 1, 0),
+      Vec3Float(0, 0.5f, 1),
+      Vec3Float(0.5f, 1, 1)
+    ),
     Array(
       Vec3Float(0, 1, 0.5f),
       Vec3Float(0, 0.5f, 0),
@@ -1339,12 +1393,14 @@ object MarchingCubesTable {
       Vec3Float(0, 0.5f, 0),
       Vec3Float(1, 0.5f, 0)
     ),
-    Array(Vec3Float(1, 0.5f, 0),
-          Vec3Float(1, 0, 0.5f),
-          Vec3Float(0.5f, 0, 0),
-          Vec3Float(0, 0.5f, 1),
-          Vec3Float(0.5f, 1, 1),
-          Vec3Float(0, 1, 0.5f)),
+    Array(
+      Vec3Float(1, 0.5f, 0),
+      Vec3Float(1, 0, 0.5f),
+      Vec3Float(0.5f, 0, 0),
+      Vec3Float(0, 0.5f, 1),
+      Vec3Float(0.5f, 1, 1),
+      Vec3Float(0, 1, 0.5f)
+    ),
     Array(
       Vec3Float(0.5f, 0, 0),
       Vec3Float(0, 0, 0.5f),
@@ -1361,18 +1417,22 @@ object MarchingCubesTable {
     ),
     Array(Vec3Float(0.5f, 1, 1), Vec3Float(0, 1, 0.5f), Vec3Float(0, 0.5f, 1)),
     Array(Vec3Float(0, 1, 0.5f), Vec3Float(0.5f, 1, 1), Vec3Float(0, 0.5f, 1)),
-    Array(Vec3Float(0, 0, 0.5f),
-          Vec3Float(0.5f, 0, 0),
-          Vec3Float(0, 0.5f, 0),
-          Vec3Float(0.5f, 1, 1),
-          Vec3Float(0, 0.5f, 1),
-          Vec3Float(0, 1, 0.5f)),
-    Array(Vec3Float(1, 0, 0.5f),
-          Vec3Float(1, 0.5f, 0),
-          Vec3Float(0.5f, 0, 0),
-          Vec3Float(0.5f, 1, 1),
-          Vec3Float(0, 0.5f, 1),
-          Vec3Float(0, 1, 0.5f)),
+    Array(
+      Vec3Float(0, 0, 0.5f),
+      Vec3Float(0.5f, 0, 0),
+      Vec3Float(0, 0.5f, 0),
+      Vec3Float(0.5f, 1, 1),
+      Vec3Float(0, 0.5f, 1),
+      Vec3Float(0, 1, 0.5f)
+    ),
+    Array(
+      Vec3Float(1, 0, 0.5f),
+      Vec3Float(1, 0.5f, 0),
+      Vec3Float(0.5f, 0, 0),
+      Vec3Float(0.5f, 1, 1),
+      Vec3Float(0, 0.5f, 1),
+      Vec3Float(0, 1, 0.5f)
+    ),
     Array(
       Vec3Float(1, 0, 0.5f),
       Vec3Float(1, 0.5f, 0),
@@ -1384,12 +1444,14 @@ object MarchingCubesTable {
       Vec3Float(0, 0.5f, 1),
       Vec3Float(0, 1, 0.5f)
     ),
-    Array(Vec3Float(0.5f, 1, 0),
-          Vec3Float(1, 0.5f, 0),
-          Vec3Float(1, 1, 0.5f),
-          Vec3Float(0, 0.5f, 1),
-          Vec3Float(0, 1, 0.5f),
-          Vec3Float(0.5f, 1, 1)),
+    Array(
+      Vec3Float(0.5f, 1, 0),
+      Vec3Float(1, 0.5f, 0),
+      Vec3Float(1, 1, 0.5f),
+      Vec3Float(0, 0.5f, 1),
+      Vec3Float(0, 1, 0.5f),
+      Vec3Float(0.5f, 1, 1)
+    ),
     Array(
       Vec3Float(1, 1, 0.5f),
       Vec3Float(0.5f, 1, 0),
@@ -1426,12 +1488,14 @@ object MarchingCubesTable {
       Vec3Float(1, 0, 0.5f),
       Vec3Float(1, 1, 0.5f)
     ),
-    Array(Vec3Float(0, 0.5f, 0),
-          Vec3Float(0.5f, 1, 0),
-          Vec3Float(0, 0.5f, 1),
-          Vec3Float(0, 0.5f, 1),
-          Vec3Float(0.5f, 1, 0),
-          Vec3Float(0.5f, 1, 1)),
+    Array(
+      Vec3Float(0, 0.5f, 0),
+      Vec3Float(0.5f, 1, 0),
+      Vec3Float(0, 0.5f, 1),
+      Vec3Float(0, 0.5f, 1),
+      Vec3Float(0.5f, 1, 0),
+      Vec3Float(0.5f, 1, 1)
+    ),
     Array(
       Vec3Float(0, 0, 0.5f),
       Vec3Float(0.5f, 0, 0),
@@ -1518,12 +1582,14 @@ object MarchingCubesTable {
       Vec3Float(1, 1, 0.5f),
       Vec3Float(0, 0, 0.5f)
     ),
-    Array(Vec3Float(0.5f, 0, 1),
-          Vec3Float(0, 0, 0.5f),
-          Vec3Float(0.5f, 1, 1),
-          Vec3Float(0.5f, 1, 1),
-          Vec3Float(0, 0, 0.5f),
-          Vec3Float(0, 1, 0.5f)),
+    Array(
+      Vec3Float(0.5f, 0, 1),
+      Vec3Float(0, 0, 0.5f),
+      Vec3Float(0.5f, 1, 1),
+      Vec3Float(0.5f, 1, 1),
+      Vec3Float(0, 0, 0.5f),
+      Vec3Float(0, 1, 0.5f)
+    ),
     Array(
       Vec3Float(0, 1, 0.5f),
       Vec3Float(0.5f, 1, 1),
@@ -1627,12 +1693,14 @@ object MarchingCubesTable {
       Vec3Float(0.5f, 1, 1),
       Vec3Float(0.5f, 0, 1)
     ),
-    Array(Vec3Float(0.5f, 1, 0),
-          Vec3Float(0.5f, 0, 1),
-          Vec3Float(0.5f, 0, 0),
-          Vec3Float(0.5f, 1, 0),
-          Vec3Float(0.5f, 1, 1),
-          Vec3Float(0.5f, 0, 1)),
+    Array(
+      Vec3Float(0.5f, 1, 0),
+      Vec3Float(0.5f, 0, 1),
+      Vec3Float(0.5f, 0, 0),
+      Vec3Float(0.5f, 1, 0),
+      Vec3Float(0.5f, 1, 1),
+      Vec3Float(0.5f, 0, 1)
+    ),
     Array(
       Vec3Float(0.5f, 0, 0),
       Vec3Float(1, 0, 0.5f),
@@ -1700,18 +1768,22 @@ object MarchingCubesTable {
       Vec3Float(1, 0, 0.5f),
       Vec3Float(1, 1, 0.5f)
     ),
-    Array(Vec3Float(0.5f, 0, 1),
-          Vec3Float(1, 0, 0.5f),
-          Vec3Float(1, 1, 0.5f),
-          Vec3Float(0.5f, 0, 1),
-          Vec3Float(1, 1, 0.5f),
-          Vec3Float(0.5f, 1, 1)),
-    Array(Vec3Float(1, 0.5f, 1),
-          Vec3Float(1, 0, 0.5f),
-          Vec3Float(0.5f, 0, 1),
-          Vec3Float(0, 1, 0.5f),
-          Vec3Float(0.5f, 1, 1),
-          Vec3Float(0, 0.5f, 1)),
+    Array(
+      Vec3Float(0.5f, 0, 1),
+      Vec3Float(1, 0, 0.5f),
+      Vec3Float(1, 1, 0.5f),
+      Vec3Float(0.5f, 0, 1),
+      Vec3Float(1, 1, 0.5f),
+      Vec3Float(0.5f, 1, 1)
+    ),
+    Array(
+      Vec3Float(1, 0.5f, 1),
+      Vec3Float(1, 0, 0.5f),
+      Vec3Float(0.5f, 0, 1),
+      Vec3Float(0, 1, 0.5f),
+      Vec3Float(0.5f, 1, 1),
+      Vec3Float(0, 0.5f, 1)
+    ),
     Array(
       Vec3Float(0, 0.5f, 0),
       Vec3Float(0, 0, 0.5f),
@@ -2076,12 +2148,14 @@ object MarchingCubesTable {
       Vec3Float(0.5f, 1, 0),
       Vec3Float(0.5f, 1, 1)
     ),
-    Array(Vec3Float(0.5f, 1, 1),
-          Vec3Float(1, 0.5f, 1),
-          Vec3Float(1, 0.5f, 0),
-          Vec3Float(0.5f, 1, 1),
-          Vec3Float(1, 0.5f, 0),
-          Vec3Float(0.5f, 1, 0)),
+    Array(
+      Vec3Float(0.5f, 1, 1),
+      Vec3Float(1, 0.5f, 1),
+      Vec3Float(1, 0.5f, 0),
+      Vec3Float(0.5f, 1, 1),
+      Vec3Float(1, 0.5f, 0),
+      Vec3Float(0.5f, 1, 0)
+    ),
     Array(
       Vec3Float(0.5f, 1, 1),
       Vec3Float(0, 0.5f, 0),
@@ -2113,19 +2187,23 @@ object MarchingCubesTable {
       Vec3Float(0.5f, 1, 1),
       Vec3Float(1, 0.5f, 1)
     ),
-    Array(Vec3Float(0, 0, 0.5f),
-          Vec3Float(0, 0.5f, 0),
-          Vec3Float(0.5f, 0, 0),
-          Vec3Float(1, 1, 0.5f),
-          Vec3Float(0.5f, 1, 1),
-          Vec3Float(1, 0.5f, 1)),
+    Array(
+      Vec3Float(0, 0, 0.5f),
+      Vec3Float(0, 0.5f, 0),
+      Vec3Float(0.5f, 0, 0),
+      Vec3Float(1, 1, 0.5f),
+      Vec3Float(0.5f, 1, 1),
+      Vec3Float(1, 0.5f, 1)
+    ),
     Array(Vec3Float(0.5f, 1, 1), Vec3Float(1, 0.5f, 1), Vec3Float(1, 1, 0.5f)),
-    Array(Vec3Float(1, 1, 0.5f),
-          Vec3Float(1, 0.5f, 1),
-          Vec3Float(0, 1, 0.5f),
-          Vec3Float(0, 1, 0.5f),
-          Vec3Float(1, 0.5f, 1),
-          Vec3Float(0, 0.5f, 1)),
+    Array(
+      Vec3Float(1, 1, 0.5f),
+      Vec3Float(1, 0.5f, 1),
+      Vec3Float(0, 1, 0.5f),
+      Vec3Float(0, 1, 0.5f),
+      Vec3Float(1, 0.5f, 1),
+      Vec3Float(0, 0.5f, 1)
+    ),
     Array(
       Vec3Float(1, 1, 0.5f),
       Vec3Float(1, 0.5f, 1),
@@ -2274,12 +2352,14 @@ object MarchingCubesTable {
       Vec3Float(1, 0.5f, 1),
       Vec3Float(0, 0.5f, 1)
     ),
-    Array(Vec3Float(1, 0.5f, 1),
-          Vec3Float(0, 0.5f, 0),
-          Vec3Float(1, 0.5f, 0),
-          Vec3Float(1, 0.5f, 1),
-          Vec3Float(0, 0.5f, 1),
-          Vec3Float(0, 0.5f, 0)),
+    Array(
+      Vec3Float(1, 0.5f, 1),
+      Vec3Float(0, 0.5f, 0),
+      Vec3Float(1, 0.5f, 0),
+      Vec3Float(1, 0.5f, 1),
+      Vec3Float(0, 0.5f, 1),
+      Vec3Float(0, 0.5f, 0)
+    ),
     Array(
       Vec3Float(0, 0.5f, 1),
       Vec3Float(0, 0, 0.5f),
@@ -2302,12 +2382,14 @@ object MarchingCubesTable {
       Vec3Float(0, 0.5f, 0),
       Vec3Float(1, 0.5f, 1)
     ),
-    Array(Vec3Float(0, 0.5f, 1),
-          Vec3Float(0, 0, 0.5f),
-          Vec3Float(1, 0, 0.5f),
-          Vec3Float(0, 0.5f, 1),
-          Vec3Float(1, 0, 0.5f),
-          Vec3Float(1, 0.5f, 1)),
+    Array(
+      Vec3Float(0, 0.5f, 1),
+      Vec3Float(0, 0, 0.5f),
+      Vec3Float(1, 0, 0.5f),
+      Vec3Float(0, 0.5f, 1),
+      Vec3Float(1, 0, 0.5f),
+      Vec3Float(1, 0.5f, 1)
+    ),
     Array(
       Vec3Float(0.5f, 0, 1),
       Vec3Float(0, 0, 0.5f),
@@ -2412,12 +2494,14 @@ object MarchingCubesTable {
       Vec3Float(0, 0, 0.5f),
       Vec3Float(0, 1, 0.5f)
     ),
-    Array(Vec3Float(1, 0.5f, 1),
-          Vec3Float(0.5f, 0, 1),
-          Vec3Float(1, 0, 0.5f),
-          Vec3Float(0, 0.5f, 0),
-          Vec3Float(0, 1, 0.5f),
-          Vec3Float(0.5f, 1, 0)),
+    Array(
+      Vec3Float(1, 0.5f, 1),
+      Vec3Float(0.5f, 0, 1),
+      Vec3Float(1, 0, 0.5f),
+      Vec3Float(0, 0.5f, 0),
+      Vec3Float(0, 1, 0.5f),
+      Vec3Float(0.5f, 1, 0)
+    ),
     Array(
       Vec3Float(1, 1, 0.5f),
       Vec3Float(1, 0.5f, 1),
@@ -2485,12 +2569,14 @@ object MarchingCubesTable {
       Vec3Float(1, 0.5f, 1),
       Vec3Float(0, 0.5f, 0)
     ),
-    Array(Vec3Float(1, 0.5f, 1),
-          Vec3Float(0.5f, 0, 1),
-          Vec3Float(0.5f, 0, 0),
-          Vec3Float(1, 0.5f, 1),
-          Vec3Float(0.5f, 0, 0),
-          Vec3Float(1, 0.5f, 0)),
+    Array(
+      Vec3Float(1, 0.5f, 1),
+      Vec3Float(0.5f, 0, 1),
+      Vec3Float(0.5f, 0, 0),
+      Vec3Float(1, 0.5f, 1),
+      Vec3Float(0.5f, 0, 0),
+      Vec3Float(1, 0.5f, 0)
+    ),
     Array(
       Vec3Float(1, 0.5f, 1),
       Vec3Float(0.5f, 0, 1),
@@ -2666,12 +2752,14 @@ object MarchingCubesTable {
       Vec3Float(0.5f, 0, 0),
       Vec3Float(0.5f, 0, 1)
     ),
-    Array(Vec3Float(0.5f, 1, 0),
-          Vec3Float(1, 1, 0.5f),
-          Vec3Float(1, 0.5f, 0),
-          Vec3Float(0.5f, 0, 1),
-          Vec3Float(0, 0.5f, 1),
-          Vec3Float(0, 0, 0.5f)),
+    Array(
+      Vec3Float(0.5f, 1, 0),
+      Vec3Float(1, 1, 0.5f),
+      Vec3Float(1, 0.5f, 0),
+      Vec3Float(0.5f, 0, 1),
+      Vec3Float(0, 0.5f, 1),
+      Vec3Float(0, 0, 0.5f)
+    ),
     Array(
       Vec3Float(1, 0.5f, 0),
       Vec3Float(1, 0, 0.5f),
@@ -2697,19 +2785,23 @@ object MarchingCubesTable {
       Vec3Float(0, 0.5f, 1),
       Vec3Float(0, 0, 0.5f)
     ),
-    Array(Vec3Float(0, 0.5f, 0),
-          Vec3Float(0.5f, 0, 0),
-          Vec3Float(0.5f, 0, 1),
-          Vec3Float(0, 0.5f, 0),
-          Vec3Float(0.5f, 0, 1),
-          Vec3Float(0, 0.5f, 1)),
+    Array(
+      Vec3Float(0, 0.5f, 0),
+      Vec3Float(0.5f, 0, 0),
+      Vec3Float(0.5f, 0, 1),
+      Vec3Float(0, 0.5f, 0),
+      Vec3Float(0.5f, 0, 1),
+      Vec3Float(0, 0.5f, 1)
+    ),
     Array(Vec3Float(0, 0.5f, 1), Vec3Float(0, 0, 0.5f), Vec3Float(0.5f, 0, 1)),
-    Array(Vec3Float(0, 0, 0.5f),
-          Vec3Float(1, 1, 0.5f),
-          Vec3Float(1, 0, 0.5f),
-          Vec3Float(0, 0, 0.5f),
-          Vec3Float(0, 1, 0.5f),
-          Vec3Float(1, 1, 0.5f)),
+    Array(
+      Vec3Float(0, 0, 0.5f),
+      Vec3Float(1, 1, 0.5f),
+      Vec3Float(1, 0, 0.5f),
+      Vec3Float(0, 0, 0.5f),
+      Vec3Float(0, 1, 0.5f),
+      Vec3Float(1, 1, 0.5f)
+    ),
     Array(
       Vec3Float(1, 0, 0.5f),
       Vec3Float(0.5f, 0, 0),
@@ -2732,12 +2824,14 @@ object MarchingCubesTable {
       Vec3Float(1, 1, 0.5f),
       Vec3Float(0, 0, 0.5f)
     ),
-    Array(Vec3Float(1, 1, 0.5f),
-          Vec3Float(1, 0.5f, 0),
-          Vec3Float(0, 0.5f, 0),
-          Vec3Float(1, 1, 0.5f),
-          Vec3Float(0, 0.5f, 0),
-          Vec3Float(0, 1, 0.5f)),
+    Array(
+      Vec3Float(1, 1, 0.5f),
+      Vec3Float(1, 0.5f, 0),
+      Vec3Float(0, 0.5f, 0),
+      Vec3Float(1, 1, 0.5f),
+      Vec3Float(0, 0.5f, 0),
+      Vec3Float(0, 1, 0.5f)
+    ),
     Array(
       Vec3Float(0, 1, 0.5f),
       Vec3Float(0.5f, 1, 0),
@@ -2763,12 +2857,14 @@ object MarchingCubesTable {
       Vec3Float(0, 1, 0.5f),
       Vec3Float(0.5f, 1, 0)
     ),
-    Array(Vec3Float(0, 1, 0.5f),
-          Vec3Float(0.5f, 1, 0),
-          Vec3Float(0.5f, 0, 0),
-          Vec3Float(0, 1, 0.5f),
-          Vec3Float(0.5f, 0, 0),
-          Vec3Float(0, 0, 0.5f)),
+    Array(
+      Vec3Float(0, 1, 0.5f),
+      Vec3Float(0.5f, 1, 0),
+      Vec3Float(0.5f, 0, 0),
+      Vec3Float(0, 1, 0.5f),
+      Vec3Float(0.5f, 0, 0),
+      Vec3Float(0, 0, 0.5f)
+    ),
     Array(Vec3Float(0, 1, 0.5f), Vec3Float(0.5f, 1, 0), Vec3Float(0, 0.5f, 0)),
     Array(
       Vec3Float(0, 0, 0.5f),
@@ -2781,12 +2877,14 @@ object MarchingCubesTable {
       Vec3Float(0, 0, 0.5f),
       Vec3Float(1, 1, 0.5f)
     ),
-    Array(Vec3Float(0.5f, 1, 0),
-          Vec3Float(1, 1, 0.5f),
-          Vec3Float(1, 0, 0.5f),
-          Vec3Float(0.5f, 1, 0),
-          Vec3Float(1, 0, 0.5f),
-          Vec3Float(0.5f, 0, 0)),
+    Array(
+      Vec3Float(0.5f, 1, 0),
+      Vec3Float(1, 1, 0.5f),
+      Vec3Float(1, 0, 0.5f),
+      Vec3Float(0.5f, 1, 0),
+      Vec3Float(1, 0, 0.5f),
+      Vec3Float(0.5f, 0, 0)
+    ),
     Array(
       Vec3Float(0, 0, 0.5f),
       Vec3Float(0, 0.5f, 0),
@@ -2802,15 +2900,17 @@ object MarchingCubesTable {
       Vec3Float(1, 0.5f, 0)
     ),
     Array(Vec3Float(0.5f, 1, 0), Vec3Float(1, 1, 0.5f), Vec3Float(1, 0.5f, 0)),
-    Array(Vec3Float(0, 0, 0.5f),
-          Vec3Float(0, 0.5f, 0),
-          Vec3Float(1, 0.5f, 0),
-          Vec3Float(0, 0, 0.5f),
-          Vec3Float(1, 0.5f, 0),
-          Vec3Float(1, 0, 0.5f)),
+    Array(
+      Vec3Float(0, 0, 0.5f),
+      Vec3Float(0, 0.5f, 0),
+      Vec3Float(1, 0.5f, 0),
+      Vec3Float(0, 0, 0.5f),
+      Vec3Float(1, 0.5f, 0),
+      Vec3Float(1, 0, 0.5f)
+    ),
     Array(Vec3Float(1, 0.5f, 0), Vec3Float(1, 0, 0.5f), Vec3Float(0.5f, 0, 0)),
     Array(Vec3Float(0, 0, 0.5f), Vec3Float(0, 0.5f, 0), Vec3Float(0.5f, 0, 0)),
-    Array()
+    Array.empty[Vec3Float]
   )
 
 }

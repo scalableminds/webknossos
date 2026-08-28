@@ -2,7 +2,7 @@ import { isUserAdminOrManager } from "libs/utils";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "react-redux";
-import type { ArbitraryFunction } from "types/globals";
+import type { ArbitraryFunction } from "types/type_utils";
 import type { WebknossosState } from "viewer/store";
 import { useWkSelector } from "./react_hooks";
 import Toast from "./toast";
@@ -13,7 +13,7 @@ export function useInterval(
   delay: number | null | undefined,
   ...additionalDependencies: Array<any>
 ) {
-  const savedCallback = useRef<ArbitraryFunction>();
+  const savedCallback = useRef<ArbitraryFunction>(null);
   // Remember the latest callback.
   useEffect(() => {
     savedCallback.current = callback;
@@ -44,9 +44,9 @@ export function useFetch<T>(
     setValue(fetchedValue);
   };
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: fetchValue is recomputed every time. Therefore, it is not included in the dependencies.
   useEffect(() => {
     fetchValue();
+    // biome-ignore lint/correctness/useExhaustiveDependencies: fetchValue is recomputed every time. Therefore, it is not included in the dependencies.
   }, dependencies);
   return value;
 }
@@ -81,9 +81,9 @@ export function useGuardedFetch<T>(
     }
   }
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies(loadData):
   useEffect(() => {
     loadData();
+    // biome-ignore lint/correctness/useExhaustiveDependencies: dynamic dependencies can not be inferred by biome
   }, dependencies);
 
   return [value, isLoading];
@@ -134,5 +134,3 @@ export function useIsActiveUserAdminOrManager() {
   const user = useWkSelector((state) => state.activeUser);
   return user != null && isUserAdminOrManager(user);
 }
-
-export default {};

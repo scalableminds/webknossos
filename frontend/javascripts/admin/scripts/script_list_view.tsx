@@ -1,15 +1,17 @@
 import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
+import AdminPage from "admin/admin_page";
 import { deleteScript as deleteScriptAPI, getScripts } from "admin/rest_api";
-import { App, Button, Input, Spin, Table } from "antd";
+import { App, Button, Input, Space, Spin, Table } from "antd";
+import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
 import { handleGenericError } from "libs/error_handling";
 import Persistence from "libs/persistence";
-import * as Utils from "libs/utils";
-import _ from "lodash";
+import { filterWithSearchQueryAND, localeCompareBy, scrollToTop } from "libs/utils";
+import partial from "lodash-es/partial";
 import messages from "messages";
-import * as React from "react";
-import { useEffect, useState } from "react";
+import type React from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { APIScript, APIUser } from "types/api_types";
 
@@ -69,7 +71,7 @@ function ScriptListView() {
 
   function renderPlaceholder() {
     return isLoading ? null : (
-      <React.Fragment>
+      <Fragment>
         {"There are no scripts. You can "}
         <Link to="/scripts/create">add a script</Link>
         {
@@ -81,118 +83,98 @@ function ScriptListView() {
           Frontend API Documentation
         </Link>
         {" for more information."}
-      </React.Fragment>
+      </Fragment>
     );
   }
 
-  const marginRight = {
-    marginRight: 20,
-  };
   return (
-    <div className="container">
-      <div>
-        <div className="pull-right">
-          <Link to="/scripts/create">
-            <Button icon={<PlusOutlined />} style={marginRight} type="primary">
-              Add Script
-            </Button>
-          </Link>
-          <Search
-            style={{
-              width: 200,
-            }}
-            onChange={handleSearch}
-            value={searchQuery}
-          />
-        </div>
-        <h3>Scripts</h3>
-        <div
-          className="clearfix"
-          style={{
-            margin: "20px 0px",
+    <AdminPage
+      title="Scripts"
+      descriptionURI="https://docs.webknossos.org/webknossos/tasks_projects/scripts.html"
+      description="Maintain reusable frontend scripts for automated task workflows."
+      actions={
+        <Link to="/scripts/create">
+          <Button icon={<PlusOutlined />} type="primary">
+            Add Script
+          </Button>
+        </Link>
+      }
+      search={<Search allowClear onChange={handleSearch} value={searchQuery} />}
+    >
+      <Spin spinning={isLoading} size="large">
+        <Table
+          dataSource={filterWithSearchQueryAND(
+            scripts,
+            ["name", "id", "owner", "gist"],
+            searchQuery,
+          )}
+          rowKey="id"
+          pagination={{
+            defaultPageSize: 50,
+            onChange: scrollToTop,
           }}
-        />
+          locale={{
+            emptyText: renderPlaceholder(),
+          }}
+          scroll={{
+            x: "max-content",
+          }}
+          className="large-table"
+        >
+          <Column
+            title="ID"
+            dataIndex="id"
+            render={(id) => <FormattedId id={id} />}
+            key="id"
+            sorter={localeCompareBy<APIScript>((script) => script.id)}
+            width={150}
+          />
+          <Column
+            title="Name"
+            dataIndex="name"
+            key="name"
+            sorter={localeCompareBy<APIScript>((script) => script.name)}
+            width={250}
+          />
 
-        <Spin spinning={isLoading} size="large">
-          <Table
-            dataSource={Utils.filterWithSearchQueryAND(
-              scripts,
-              ["name", "id", "owner", "gist"],
-              searchQuery,
+          <Column
+            title="Owner"
+            dataIndex="owner"
+            key="owner"
+            sorter={localeCompareBy<APIScript>((script) => script.owner.lastName)}
+            render={(owner: APIUser) => `${owner.firstName} ${owner.lastName}`}
+          />
+          <Column
+            title="Gist URL"
+            dataIndex="gist"
+            key="gist"
+            sorter={localeCompareBy<APIScript>((script) => script.gist)}
+            render={(gist: string) => (
+              <a href={gist} target="_blank" rel="noopener noreferrer">
+                {gist}
+              </a>
             )}
-            rowKey="id"
-            pagination={{
-              defaultPageSize: 50,
-            }}
-            style={{
-              marginTop: 30,
-              marginBottom: 30,
-            }}
-            locale={{
-              emptyText: renderPlaceholder(),
-            }}
-            scroll={{
-              x: "max-content",
-            }}
-            className="large-table"
-          >
-            <Column
-              title="ID"
-              dataIndex="id"
-              key="id"
-              className="monospace-id"
-              sorter={Utils.localeCompareBy<APIScript>((script) => script.id)}
-              width={150}
-            />
-            <Column
-              title="Name"
-              dataIndex="name"
-              key="name"
-              sorter={Utils.localeCompareBy<APIScript>((script) => script.name)}
-              width={250}
-            />
-
-            <Column
-              title="Owner"
-              dataIndex="owner"
-              key="owner"
-              sorter={Utils.localeCompareBy<APIScript>((script) => script.owner.lastName)}
-              render={(owner: APIUser) => `${owner.firstName} ${owner.lastName}`}
-            />
-            <Column
-              title="Gist URL"
-              dataIndex="gist"
-              key="gist"
-              sorter={Utils.localeCompareBy<APIScript>((script) => script.gist)}
-              render={(gist: string) => (
-                <a href={gist} target="_blank" rel="noopener noreferrer">
-                  {gist}
-                </a>
-              )}
-            />
-            <Column
-              title="Action"
-              key="actions"
-              fixed="right"
-              width={180}
-              render={(__, script: APIScript) => (
-                <span>
-                  <Link to={`/scripts/${script.id}/edit`}>
-                    <EditOutlined className="icon-margin-right" />
-                    Edit
-                  </Link>
-                  <br />
-                  <LinkButton onClick={_.partial(deleteScript, script)}>
-                    <DeleteOutlined className="icon-margin-right" />
-                    Delete
-                  </LinkButton>
-                </span>
-              )}
-            />
-          </Table>
-        </Spin>
-      </div>
-    </div>
+          />
+          <Column
+            title="Action"
+            key="actions"
+            fixed="right"
+            width={180}
+            render={(__, script: APIScript) => (
+              <Space orientation="vertical" size={0}>
+                <Link to={`/scripts/${script.id}/edit`}>
+                  <EditOutlined className="icon-margin-right" />
+                  Edit
+                </Link>
+                <LinkButton onClick={partial(deleteScript, script)} icon={<DeleteOutlined />}>
+                  Delete
+                </LinkButton>
+              </Space>
+            )}
+          />
+        </Table>
+      </Spin>
+    </AdminPage>
   );
 }
 

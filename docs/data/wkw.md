@@ -14,7 +14,7 @@ You can try the WKW support with the following datasets. Upload them to WEBKNOSS
     - [https://static.webknossos.org/data/e2006_wkw.zip](https://static.webknossos.org/data/e2006_wkw.zip)  
     - Source: Connectomic reconstruction of the inner plexiform layer in the mouse retina.  M Helmstaedter, KL Briggman, S Turaga, V Jain, HS Seung, W Denk.  Nature. 08 August 2013. [https://doi.org/10.1038/nature12346](https://doi.org/10.1038/nature12346)
 
-- Mourse Cortex SBEM and segmentation (sample cutout, 316 MB)
+- Mouse Cortex SBEM and segmentation (sample cutout, 316 MB)
     - [https://static.webknossos.org/data/FD0144_wkw.zip](https://static.webknossos.org/data/FD0144_wkw.zip)  
     - Source: FluoEM, virtual labeling of axons in three-dimensional electron microscopy data for long-range connectomics.  F Drawitsch, A Karimi, KM Boergens, M Helmstaedter.  eLife. 14 August 2018. [https://doi.org/10.7554/eLife.38976](https://doi.org/10.7554/eLife.38976)
 
@@ -44,7 +44,7 @@ my_dataset             # One root folder per dataset
 ```
 
 ## KNOSSOS Datasets
-You can convert KNOSSOS-cube datasets with the [WEBKNOSSOS CLI tool](https://webknossos.org) to WKW and import that.
+You can convert KNOSSOS-cube datasets with the [WEBKNOSSOS CLI tool](https://docs.webknossos.org/cli/) to WKW and import that.
 
 ```
 webknossos convert-knossos --layer-name color --voxel-size 11.24,11.24,25 data/source/mag1 data/target
@@ -56,7 +56,7 @@ Volume annotations can be downloaded and imported using ZIP files that contain [
 The ZIP archive contains one NML file that holds meta information including the dataset name and the user's position.
 Additionally, there is another embedded ZIP file that contains the volume annotations in WKW file format.
 
-!!!info
+!!! info 
     In contrast to on-disk WKW datasets, the WKW files in downloaded volume annotations only contain a single 32^3 bucket in each file.
     Therefore, also the addressing of the WKW files (e.g. `z48/y5444/x5748.wkw`) is in steps of 32 instead of 1024.
 

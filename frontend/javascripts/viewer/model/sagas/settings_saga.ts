@@ -2,21 +2,23 @@ import { updateDatasetConfiguration, updateUserConfiguration } from "admin/rest_
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import messages from "messages";
-import { all, call, debounce, put, retry, takeEvery } from "typed-redux-saga";
-import { ControlModeEnum } from "viewer/constants";
+import { all, call, debounce, delay, put, retry, takeEvery, takeLatest } from "typed-redux-saga";
+import Constants, { ControlModeEnum, LongUnitToShortUnitMap } from "viewer/constants";
 import {
   type SetViewModeAction,
   type UpdateUserSettingAction,
   updateUserSettingAction,
 } from "viewer/model/actions/settings_actions";
-import { type Saga, select, take } from "viewer/model/sagas/effect-generators";
+import { type Saga, select, take } from "viewer/model/sagas/effect_generators";
 import {
   SETTINGS_MAX_RETRY_COUNT,
   SETTINGS_RETRY_DELAY,
 } from "viewer/model/sagas/saving/save_saga_constants";
 import type { DatasetConfiguration, DatasetLayerConfiguration } from "viewer/store";
+import { mayEditAnnotation } from "../accessors/annotation_accessor";
+import { getMappingFromLayerNameToBaseDatasetLayerName } from "../accessors/dataset_accessor";
 import { Toolkit } from "../accessors/tool_accessor";
-import { ensureWkReady } from "./ready_sagas";
+import { ensureWkInitialized } from "./ready_sagas";
 
 function* pushUserSettingsAsync(): Saga<void> {
   const activeUser = yield* select((state) => state.activeUser);
@@ -31,14 +33,18 @@ function* pushUserSettingsAsync(): Saga<void> {
 }
 
 function* pushDatasetSettingsAsync(originalDatasetSettings: DatasetConfiguration): Saga<void> {
+  yield* delay(Constants.SETTING_SAVE_DEBOUNCE_MS);
   const activeUser = yield* select((state) => state.activeUser);
   if (activeUser == null) return;
   const dataset = yield* select((state) => state.dataset);
+  const layerNamesOfDatasetToFallbackNameMaybe =
+    getMappingFromLayerNameToBaseDatasetLayerName(dataset);
   const datasetConfiguration = yield* select((state) => state.datasetConfiguration);
 
   const maybeMaskedDatasetConfiguration = yield* prepareDatasetSettingsForSaving(
     datasetConfiguration,
     originalDatasetSettings,
+    layerNamesOfDatasetToFallbackNameMaybe,
   );
 
   try {
@@ -58,7 +64,7 @@ function* pushDatasetSettingsAsync(originalDatasetSettings: DatasetConfiguration
       throw error;
     } else {
       // Still log the error to airbrake in view mode.
-      // @ts-ignore
+      // @ts-expect-error
       yield* call({ context: ErrorHandling, fn: ErrorHandling.notify }, error);
     }
   }
@@ -67,6 +73,7 @@ function* pushDatasetSettingsAsync(originalDatasetSettings: DatasetConfiguration
 function* prepareDatasetSettingsForSaving(
   datasetConfiguration: DatasetConfiguration,
   originalDatasetSettings: DatasetConfiguration,
+  layerNamesOfDatasetToFallbackNameMaybe: Map<string, string>,
 ) {
   /**
    * If an annotation is open, we don't want to change the visibility settings for
@@ -88,17 +95,20 @@ function* prepareDatasetSettingsForSaving(
     return datasetConfiguration;
   }
 
-  const newLayers: Record<string, DatasetLayerConfiguration> = {};
+  const newLayersWithNamingAdjusted: Record<string, DatasetLayerConfiguration> = {};
   for (const layerName of Object.keys(datasetConfiguration.layers)) {
-    newLayers[layerName] = {
-      ...datasetConfiguration.layers[layerName],
-      isDisabled: originalDatasetSettings.layers[layerName].isDisabled,
-    };
+    const layerNameOfDataset = layerNamesOfDatasetToFallbackNameMaybe.get(layerName);
+    if (layerNameOfDataset) {
+      newLayersWithNamingAdjusted[layerNameOfDataset] = {
+        ...datasetConfiguration.layers[layerName],
+        isDisabled: originalDatasetSettings.layers[layerName].isDisabled,
+      };
+    }
   }
 
   const maskedDatasetConfiguration = {
     ...datasetConfiguration,
-    layers: newLayers,
+    layers: newLayersWithNamingAdjusted,
   };
   return maskedDatasetConfiguration;
 }
@@ -108,7 +118,10 @@ function* showUserSettingToast(action: UpdateUserSettingAction): Saga<void> {
 
   if (propertyName === "moveValue" || propertyName === "moveValue3d") {
     const moveValue = yield* select((state) => state.userConfiguration[propertyName]);
-    const moveValueMessage = messages["tracing.changed_move_value"] + moveValue;
+    const unit = yield* select(
+      (state) => LongUnitToShortUnitMap[state.dataset.dataSource.scale.unit],
+    );
+    const moveValueMessage = messages["tracing.changed_move_value"] + moveValue + ` ${unit}/s`;
     Toast.success(moveValueMessage, {
       key: "CHANGED_MOVE_VALUE",
     });
@@ -119,11 +132,11 @@ function* ensureValidToolkit(): Saga<void> {
   /*
    * Default to the ALL_TOOLS toolkit if the annotation/dataset is read-only.
    */
-  yield* call(ensureWkReady);
+  yield* call(ensureWkInitialized);
   const isViewMode = yield* select(
     (state) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   );
-  const isReadOnly = yield* select((state) => !state.annotation.restrictions.allowUpdate);
+  const isReadOnly = yield* select((state) => !mayEditAnnotation(state));
 
   if (isViewMode || isReadOnly) {
     yield* put(updateUserSettingAction("activeToolkit", Toolkit.ALL_TOOLS));
@@ -145,11 +158,10 @@ export default function* watchPushSettingsAsync(): Saga<void> {
   const { originalDatasetSettings } = action;
 
   yield* all([
-    debounce(2500, "UPDATE_USER_SETTING", pushUserSettingsAsync),
-    debounce(2500, "UPDATE_DATASET_SETTING", () =>
+    debounce(Constants.SETTING_SAVE_DEBOUNCE_MS, "UPDATE_USER_SETTING", pushUserSettingsAsync),
+    takeLatest(["UPDATE_DATASET_SETTING", "UPDATE_LAYER_SETTING"], () =>
       pushDatasetSettingsAsync(originalDatasetSettings),
     ),
-    debounce(2500, "UPDATE_LAYER_SETTING", () => pushDatasetSettingsAsync(originalDatasetSettings)),
     takeEvery("UPDATE_USER_SETTING", showUserSettingToast),
     call(ensureValidToolkit),
   ]);

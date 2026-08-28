@@ -1,4 +1,4 @@
-import _ from "lodash";
+import compact from "lodash-es/compact";
 export type ShaderModule = {
   requirements?: ShaderModule[];
   code: string;
@@ -34,6 +34,6 @@ function gatherAllModules(
 }
 
 export default function compile(...requirements: (ShaderModule | null | undefined)[]): string {
-  const allModules = gatherAllModules(_.compact(requirements));
+  const allModules = gatherAllModules(compact(requirements));
   return allModules.map((m) => m.code).join("\n\n");
 }

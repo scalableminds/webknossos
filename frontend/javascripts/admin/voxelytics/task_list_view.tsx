@@ -2,6 +2,7 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
+  DownOutlined,
   ExclamationCircleOutlined,
   ExportOutlined,
   FieldTimeOutlined,
@@ -9,6 +10,7 @@ import {
   MinusCircleOutlined,
   SyncOutlined,
 } from "@ant-design/icons";
+import { deleteWorkflow, getVoxelyticsLogs } from "admin/rest_api";
 import {
   App,
   Button,
@@ -16,19 +18,18 @@ import {
   Collapse,
   type CollapseProps,
   Dropdown,
+  Flex,
   Input,
   type MenuProps,
-  Row,
-  Select,
-  Tag,
-  Tooltip,
   message,
   notification,
+  Row,
+  Select,
+  Space,
+  Tag,
+  Tooltip,
+  Typography,
 } from "antd";
-import MiniSearch from "minisearch";
-import React, { useEffect, useState, useMemo } from "react";
-
-import { deleteWorkflow, getVoxelyticsLogs } from "admin/rest_api";
 import dayjs from "dayjs";
 import {
   formatDateMedium,
@@ -36,8 +37,10 @@ import {
   formatTimeInterval,
   formatTimeIntervalStrict,
 } from "libs/format_utils";
-import { useSearchParams, useUpdateEvery, useWkSelector } from "libs/react_hooks";
+import { useUpdateEvery, useWkSelector } from "libs/react_hooks";
 import { notEmpty } from "libs/utils";
+import MiniSearch from "minisearch";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   VoxelyticsRunState,
@@ -47,7 +50,7 @@ import {
   type VoxelyticsTaskInfo,
   type VoxelyticsWorkflowReport,
 } from "types/api_types";
-import type { ArrayElement } from "types/globals";
+import type { ArrayElement } from "types/type_utils";
 import { LOG_LEVELS } from "viewer/constants";
 import ArtifactsDiskUsageList from "./artifacts_disk_usage_list";
 import DAGView, { colorHasher } from "./dag_view";
@@ -252,6 +255,7 @@ export default function TaskListView({
   isLoading,
   onToggleExpandedMetaTaskKey,
   onReload,
+  runId,
 }: {
   report: VoxelyticsWorkflowReport;
   tasksWithHierarchy: Array<VoxelyticsTaskConfigWithHierarchy>;
@@ -260,10 +264,10 @@ export default function TaskListView({
   isLoading: boolean;
   onToggleExpandedMetaTaskKey: (v: string) => void;
   onReload: () => void;
+  runId: string | null;
 }) {
   const { modal } = App.useApp();
   const [searchQuery, setSearchQuery] = useState("");
-  const { runId } = useSearchParams();
   const navigate = useNavigate();
 
   // expandedTask = state of the collapsible list
@@ -343,10 +347,11 @@ export default function TaskListView({
     );
 
     navigator.clipboard.writeText(artifactPaths.join("\n")).then(
-      () => notification.success({ message: "All artifacts path were copied to the clipboard" }),
+      () => notification.success({ title: "All artifact paths were copied to the clipboard" }),
       () =>
         notification.error({
-          message: `Could not copy the following artifact paths to clipboard: ${artifactPaths.join(
+          title: "Could not copy artifact paths",
+          description: `Could not copy the following artifact paths to clipboard: ${artifactPaths.join(
             "\n",
           )}`,
         }),
@@ -563,13 +568,13 @@ export default function TaskListView({
             }}
           />
           {foreignWorkflow != null ? (
-            <>
-              <Link to={`/workflows/${foreignWorkflow[0]}?runId=${foreignWorkflow[1]}`}>
-                {task.taskName}
-                &nbsp;
-                <ExportOutlined />
-              </Link>
-            </>
+            <Link
+              to={`/workflows/${foreignWorkflow[0]}/run/${encodeURIComponent(foreignWorkflow[1])}`}
+            >
+              {task.taskName}
+              &nbsp;
+              <ExportOutlined />
+            </Link>
           ) : (
             task.taskName
           )}
@@ -621,32 +626,40 @@ export default function TaskListView({
         minHeight: "calc(100vh - 100px)",
       }}
     >
-      <Col xs={10} style={{ display: "flex", flexDirection: "column" }}>
-        <h3
-          style={{
-            marginBottom: 0,
-            maxWidth: "100%",
-            overflowWrap: "anywhere",
-          }}
-          title={readableWorkflowName}
-        >
-          {readableWorkflowName}
-        </h3>
-        <h4 style={{ color: "#51686e" }}>
-          {formatDateMedium(new Date(runBeginTimeString))}{" "}
-          <Tooltip title={formatDurationStrict(totalRuntime)}>
-            <FieldTimeOutlined style={{ marginLeft: 20 }} className="icon-margin-right" />
-            {totalRuntime.humanize()}
-          </Tooltip>
-        </h4>
-        <div style={{ flex: 1, position: "relative" }}>
-          <DAGView
-            key={filteredTasks.map((t) => t.taskName).join("_")}
-            dag={report.dag}
-            filteredTasks={filteredTasks}
-            onClickHandler={handleSelectTask}
-          />
-        </div>
+      <Col xs={10}>
+        <Flex vertical style={{ height: "100%" }}>
+          <Typography.Title
+            level={3}
+            style={{
+              marginBottom: 0,
+              maxWidth: "100%",
+              overflowWrap: "anywhere",
+            }}
+            title={readableWorkflowName}
+          >
+            {readableWorkflowName}
+          </Typography.Title>
+          {/* marginTop: 0 keeps the previous spacing; antd would otherwise add a top margin
+              because this heading directly follows another Typography element. */}
+          <Typography.Title
+            level={4}
+            style={{ color: "var(--ant-color-text-secondary)", marginTop: 0 }}
+          >
+            {formatDateMedium(new Date(runBeginTimeString))}{" "}
+            <Tooltip title={formatDurationStrict(totalRuntime)}>
+              <FieldTimeOutlined style={{ marginLeft: 20 }} className="icon-margin-right" />
+              {totalRuntime.humanize()}
+            </Tooltip>
+          </Typography.Title>
+          <div style={{ flex: 1, position: "relative" }}>
+            <DAGView
+              key={filteredTasks.map((t) => t.taskName).join("_")}
+              dag={report.dag}
+              filteredTasks={filteredTasks}
+              onClickHandler={handleSelectTask}
+            />
+          </div>
+        </Flex>
       </Col>
       <Col xs={14} className="task-panel">
         {openMetatask != null && (
@@ -660,42 +673,52 @@ export default function TaskListView({
           className="ant-collapse tasks-header"
           style={{
             marginBottom: 10,
-            padding: 5,
             zIndex: 1,
-            display: "flex",
           }}
         >
-          <Search
-            placeholder="Filter workflows"
-            onSearch={handleOnSearch}
-            style={{ minWidth: 150 }}
-            allowClear
-          />
-          <div style={{ flex: 1 }} />
-          <Button onClick={() => onReload()}>
-            <SyncOutlined spin={isLoading} /> Refresh
-          </Button>
-          <Select
-            value={runId ?? ""}
-            onChange={(value) =>
-              navigate(
-                value === ""
-                  ? removeUrlParam(location, "runId")
-                  : addUrlParam(location, "runId", value),
-              )
-            }
-            style={{ maxWidth: "70%" }}
-          >
-            <Select.Option value="">Consolidated</Select.Option>
-            {report.runs.map((run) => (
-              <Select.Option value={run.id} key={run.id}>
-                {run.name}
-              </Select.Option>
-            ))}
-          </Select>
-          <Dropdown.Button menu={overflowMenu} onClick={() => setExpandedTasks([])}>
-            Collapse All
-          </Dropdown.Button>
+          <Flex gap={"small"}>
+            <Search
+              placeholder="Filter tasks"
+              onSearch={handleOnSearch}
+              style={{ minWidth: 150 }}
+              allowClear
+            />
+            <Space>
+              <Button onClick={() => onReload()} icon={<SyncOutlined spin={isLoading} />}>
+                Refresh
+              </Button>
+              <Select
+                value={runId ?? ""}
+                onChange={(value) => {
+                  const basePath = `/workflows/${report.workflow.hash}`;
+                  navigate(
+                    value === "" ? `${basePath}` : `${basePath}/run/${encodeURIComponent(value)}`,
+                  );
+                }}
+                popupMatchSelectWidth={false}
+                styles={{
+                  root: {
+                    maxWidth: 200,
+                  },
+                  popup: {
+                    root: {
+                      maxWidth: "90vw",
+                    },
+                  },
+                }}
+                options={[
+                  { value: "", label: "Consolidated" },
+                  ...report.runs.map((run) => ({ value: run.id, label: run.name })),
+                ]}
+              />
+              <Space.Compact>
+                <Button onClick={() => setExpandedTasks([])}>Collapse All</Button>
+                <Dropdown menu={overflowMenu}>
+                  <Button icon={<DownOutlined />} />
+                </Dropdown>
+              </Space.Compact>
+            </Space>
+          </Flex>
         </div>
 
         <div style={{ overflowY: "auto", flex: 1 }}>
@@ -816,10 +839,22 @@ function aggregateTaskInfos(
   }
 
   const taskInfo = allTaskInfos.find((t) => t.taskName === task.taskName) as VoxelyticsTaskInfo;
+  if (taskInfo === undefined) {
+    throw new Error(`Task info not found for task ${task.taskName}.`);
+  }
+
   if (runId != null) {
+    const taskRun = taskInfo.runs.find((tr) => tr.runId === runId);
+    if (taskRun === undefined) {
+      throw new Error(
+        `Task run ${runId} not found for task ${task.taskName}. Task might be from a different VX report.`,
+      );
+    }
+
     return {
-      ...taskInfo.runs.find((tr) => tr.runId === runId),
+      ...taskRun,
       taskName: taskInfo.taskName,
+      runs: [],
     } as VoxelyticsTaskInfo;
   }
   return taskInfo;

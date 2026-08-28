@@ -1,9 +1,14 @@
-import { CaretDownOutlined, CaretUpOutlined, ExpandAltOutlined } from "@ant-design/icons";
-import { Space, Tooltip } from "antd";
+import Icon, { CaretDownOutlined, CaretUpOutlined, ExpandAltOutlined } from "@ant-design/icons";
+import IconSidebarLeft from "@images/icons/icon-sidebar-left.svg?react";
+import IconSidebarRight from "@images/icons/icon-sidebar-right.svg?react";
+import { ConfigProvider, Space, Tooltip } from "antd";
 import { useRepeatedButtonTrigger, useWkSelector } from "libs/react_hooks";
 import type * as React from "react";
+import { useCallback } from "react";
+import { useDispatch } from "react-redux";
+import { getAntdTheme } from "theme";
 import { OrthoViews, OrthoViewsToName } from "viewer/constants";
-import * as MoveHandlers from "viewer/controller/combinations/move_handlers";
+import { moveW } from "viewer/controller/combinations/move_handlers";
 import { getMoveOffset, getMoveOffset3d } from "viewer/model/accessors/flycam_accessor";
 import { moveFlycamAction } from "viewer/model/actions/flycam_actions";
 import { Store } from "viewer/singletons";
@@ -11,26 +16,33 @@ import { LayoutEvents, layoutEmitter } from "viewer/view/layouting/layout_persis
 import ButtonComponent from "../components/button_component";
 
 const moveForward = (timeFactor: number, isFirst: boolean) =>
-  MoveHandlers.moveW(getMoveOffset(Store.getState(), timeFactor), isFirst);
+  moveW(getMoveOffset(Store.getState(), timeFactor), isFirst);
 const moveBackward = (timeFactor: number, isFirst: boolean) =>
-  MoveHandlers.moveW(-getMoveOffset(Store.getState(), timeFactor), isFirst);
+  moveW(-getMoveOffset(Store.getState(), timeFactor), isFirst);
 
-const moveForwardArbitrary = (timeFactor: number) =>
-  Store.dispatch(moveFlycamAction([0, 0, getMoveOffset3d(Store.getState(), timeFactor)]));
-const moveBackwardArbitrary = (timeFactor: number) =>
-  Store.dispatch(moveFlycamAction([0, 0, -getMoveOffset3d(Store.getState(), timeFactor)]));
-
+const LIGHT_THEME = getAntdTheme("light");
 const BUTTON_STYLE = { userSelect: "none", WebkitUserSelect: "none" } as const;
-const ICON_TRANSFORM_VALUE = "scale(1)";
 
 export function FloatingMobileControls() {
+  const dispatch = useDispatch();
   const viewMode = useWkSelector((state) => state.temporaryConfiguration.viewMode);
 
+  const moveForwardFlightMode = useCallback(
+    (timeFactor: number) =>
+      dispatch(moveFlycamAction([0, 0, getMoveOffset3d(Store.getState(), timeFactor)])),
+    [dispatch],
+  );
+  const moveBackwardFlightMode = useCallback(
+    (timeFactor: number) =>
+      dispatch(moveFlycamAction([0, 0, -getMoveOffset3d(Store.getState(), timeFactor)])),
+    [dispatch],
+  );
+
   const moveForwardProps = useRepeatedButtonTrigger(
-    viewMode === "orthogonal" ? moveForward : moveForwardArbitrary,
+    viewMode === "orthogonal" ? moveForward : moveForwardFlightMode,
   );
   const moveBackwardProps = useRepeatedButtonTrigger(
-    viewMode === "orthogonal" ? moveBackward : moveBackwardArbitrary,
+    viewMode === "orthogonal" ? moveBackward : moveBackwardFlightMode,
   );
   const activeViewport = useWkSelector((state) => state.viewModeData.plane.activeViewport);
   const handleContextMenu = (event: React.SyntheticEvent) => {
@@ -38,74 +50,76 @@ export function FloatingMobileControls() {
   };
 
   return (
-    <div
-      className="floating-buttons-bar"
-      style={{ position: "fixed", left: 8, bottom: 28, zIndex: 1000 }}
-      onContextMenu={handleContextMenu}
-    >
-      <Space>
-        <ButtonComponent
-          size="large"
-          type="primary"
-          shape="circle"
-          style={BUTTON_STYLE}
-          onClick={() => layoutEmitter.emit(LayoutEvents.toggleBorder, "left")}
-          icon={
-            <img
-              alt="Toggle left sidebar"
-              src="/assets/images/icon-sidebar-hide-left-bright.svg"
-              style={{ filter: "brightness(10)", transform: ICON_TRANSFORM_VALUE }}
-            />
-          }
-        />
-        <ButtonComponent
-          size="large"
-          type="primary"
-          shape="circle"
-          style={BUTTON_STYLE}
-          onClick={() => layoutEmitter.emit(LayoutEvents.toggleBorder, "right")}
-          icon={
-            <img
-              alt="Toggle right sidebar"
-              src="/assets/images/icon-sidebar-hide-right-bright.svg"
-              style={{ filter: "brightness(10)", transform: ICON_TRANSFORM_VALUE }}
-            />
-          }
-        />
-        <ButtonComponent
-          size="large"
-          type="primary"
-          shape="circle"
-          style={BUTTON_STYLE}
-          disabled={activeViewport === OrthoViews.TDView}
-          icon={<CaretUpOutlined style={{ transform: ICON_TRANSFORM_VALUE }} />}
-          {...moveForwardProps}
-        />
-        <ButtonComponent
-          size="large"
-          type="primary"
-          shape="circle"
-          style={BUTTON_STYLE}
-          disabled={activeViewport === OrthoViews.TDView}
-          icon={<CaretDownOutlined style={{ transform: ICON_TRANSFORM_VALUE }} />}
-          {...moveBackwardProps}
-        />
-        <ButtonComponent
-          size="large"
-          type="primary"
-          shape="circle"
-          style={BUTTON_STYLE}
-          onClick={() => layoutEmitter.emit(LayoutEvents.toggleMaximize)}
-          icon={<ExpandAltOutlined style={{ transform: ICON_TRANSFORM_VALUE }} />}
-        />
-        {viewMode === "orthogonal" && (
-          <Tooltip title="The navigation and maximization button refers to the active viewport. A viewport can be activated by tapping on it.">
-            <ButtonComponent size="large" shape="circle" style={BUTTON_STYLE}>
-              {OrthoViewsToName[activeViewport]}
-            </ButtonComponent>
-          </Tooltip>
-        )}
-      </Space>
-    </div>
+    <ConfigProvider theme={LIGHT_THEME}>
+      <div
+        className="floating-buttons-bar"
+        style={{ position: "fixed", left: 8, bottom: 28, zIndex: 1000 }}
+        onContextMenu={handleContextMenu}
+      >
+        <Space>
+          <ButtonComponent
+            size="large"
+            type="primary"
+            shape="circle"
+            style={BUTTON_STYLE}
+            onClick={() => layoutEmitter.emit(LayoutEvents.toggleBorder, "left")}
+            icon={
+              <Icon
+                component={IconSidebarLeft}
+                aria-label="Toggle left sidebar"
+                style={{ filter: "brightness(10)" }}
+              />
+            }
+          />
+          <ButtonComponent
+            size="large"
+            type="primary"
+            shape="circle"
+            style={BUTTON_STYLE}
+            onClick={() => layoutEmitter.emit(LayoutEvents.toggleBorder, "right")}
+            icon={
+              <Icon
+                component={IconSidebarRight}
+                aria-label="Toggle right sidebar"
+                style={{ filter: "brightness(10)" }}
+              />
+            }
+          />
+          <ButtonComponent
+            size="large"
+            type="primary"
+            shape="circle"
+            style={BUTTON_STYLE}
+            disabled={activeViewport === OrthoViews.TDView}
+            icon={<CaretUpOutlined />}
+            {...moveForwardProps}
+          />
+          <ButtonComponent
+            size="large"
+            type="primary"
+            shape="circle"
+            style={BUTTON_STYLE}
+            disabled={activeViewport === OrthoViews.TDView}
+            icon={<CaretDownOutlined />}
+            {...moveBackwardProps}
+          />
+          <ButtonComponent
+            size="large"
+            type="primary"
+            shape="circle"
+            style={BUTTON_STYLE}
+            onClick={() => layoutEmitter.emit(LayoutEvents.toggleMaximize)}
+            icon={<ExpandAltOutlined />}
+          />
+          {viewMode === "orthogonal" && (
+            <Tooltip title="The navigation and maximization button refers to the active viewport. A viewport can be activated by tapping on it.">
+              <ButtonComponent size="large" shape="circle" style={BUTTON_STYLE}>
+                {OrthoViewsToName[activeViewport]}
+              </ButtonComponent>
+            </Tooltip>
+          )}
+        </Space>
+      </div>
+    </ConfigProvider>
   );
 }

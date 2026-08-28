@@ -1,9 +1,8 @@
-import { CloseCircleOutlined } from "@ant-design/icons";
 import { Collapse, notification } from "antd";
-import _ from "lodash";
+import debounce from "lodash-es/debounce";
 import type React from "react";
 import { useEffect } from "react";
-import { animationFrame, sleep } from "./utils";
+import { ensureUserIsAttentive, sleep } from "./utils";
 
 export type ToastStyle = "info" | "warning" | "success" | "error";
 export type Message = {
@@ -13,7 +12,7 @@ export type Message = {
   key?: string;
 };
 
-export type ToastConfig = {
+type ToastConfig = {
   sticky?: boolean;
   timeout?: number;
   key?: string;
@@ -22,10 +21,10 @@ export type ToastConfig = {
   className?: string;
 };
 
-export type NotificationAPI = ReturnType<typeof notification.useNotification>[0];
+type NotificationAPI = ReturnType<typeof notification.useNotification>[0];
 
 export function ToastContextMountRoot() {
-  const [toastAPI, contextHolder] = notification.useNotification();
+  const [toastAPI, contextHolder] = notification.useNotification({ stack: false });
   useEffect(() => {
     Toast.notificationAPI = toastAPI;
   }, [toastAPI]);
@@ -38,19 +37,6 @@ type ToastParams = {
   config: ToastConfig;
   details?: string;
 };
-
-export async function guardedWithErrorToast(fn: () => Promise<any>) {
-  try {
-    await fn();
-  } catch (error) {
-    import("libs/error_handling").then((_ErrorHandling) => {
-      const ErrorHandling = _ErrorHandling.default;
-      Toast.error("An unexpected error occurred. Please check the console for details");
-      console.error(error);
-      ErrorHandling.notify(error as Error);
-    });
-  }
-}
 
 const Toast = {
   // The notificationAPI is designed to be a singleton spawned by the ToastContextMountRoot
@@ -74,7 +60,7 @@ const Toast = {
         this.error(
           singleMessage.error,
           {
-            sticky: true,
+            timeout: 13000,
             key: singleMessage.key,
           },
           errorChainString,
@@ -96,21 +82,16 @@ const Toast = {
       <div>
         {title}
         <Collapse
-          className="collapsibleToastDetails"
           bordered={false}
+          ghost
           style={{
-            background: "transparent",
             marginLeft: -16,
           }}
+          size="small"
           items={[
             {
               key: "toast-panel",
               label: "Show more information",
-              style: {
-                background: "transparent",
-                border: 0,
-                fontSize: 10,
-              },
               children: details,
             },
           ]}
@@ -145,35 +126,24 @@ const Toast = {
     const timeOutInSeconds = timeout / 1000;
     const useManualTimeout = !sticky && key != null;
     let toastConfig = {
-      icon: undefined,
       key,
       duration: useManualTimeout || sticky ? 0 : timeOutInSeconds,
-      message: toastMessage,
+      title: toastMessage,
       style: {},
       className: config.className || "",
       onClose,
-      btn: config.customFooter,
+      actions: config.customFooter,
     };
 
-    if (type === "error") {
-      toastConfig = Object.assign(toastConfig, {
-        icon: <CloseCircleOutlined />,
-      });
-    }
-
-    // Make sure that toasts don't just disappear while the user has WK in a background tab (e.g. while uploading large dataset).
-    // Most browsers pause requestAnimationFrame() if the current tab is not active, but Firefox does not seem to do that.
+    // Make sure that toasts don't just disappear while the user is not attentive (e.g. the tab is
+    // in the background, or another OS window covers WK, while uploading a large dataset).
     if (useManualTimeout) {
       // In case a toast with the same key is already open, close it first.
       this.closePendingToastsEarlyMap[key]?.();
       let cancelledTimeout = false;
       const timeoutToastManually = async () => {
-        const splitTimeout = timeout / 2;
-        await animationFrame(); // ensure tab is active
-        await sleep(splitTimeout);
-        await animationFrame();
-        // If the user has switched the tab, show the toast again so that the user doesn't just see the toast disappear.
-        await sleep(splitTimeout);
+        await ensureUserIsAttentive();
+        await sleep(timeout);
         if (cancelledTimeout) {
           // If the toast has been closed early, don't close it again.
           return;
@@ -248,7 +218,7 @@ const Toast = {
 };
 export default Toast;
 
-export const showToastOnce = _.debounce(
+export const showToastOnce = debounce(
   (
     type: ToastStyle,
     message: React.ReactNode,

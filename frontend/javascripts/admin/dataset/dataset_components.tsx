@@ -1,4 +1,4 @@
-import { Card, Form, type FormInstance, Input, Select } from "antd";
+import { Card, Form, type FormInstance, Input, Select, Typography } from "antd";
 import { FormItemWithInfo } from "dashboard/dataset/helper_components";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import messages from "messages";
@@ -28,12 +28,15 @@ export function CardContainer({
           marginLeft: "auto",
           marginRight: "auto",
         }}
-        bordered={false}
+        variant="borderless"
         title={
           <>
-            <h3 style={{ lineHeight: "10px", marginTop: subtitle != null ? "22px" : "12px" }}>
+            <Typography.Title
+              level={3}
+              style={{ lineHeight: "10px", marginTop: subtitle != null ? "22px" : "12px" }}
+            >
               {title}
-            </h3>
+            </Typography.Title>
             <span style={{ fontSize: 12, marginTop: 0, marginLeft: 1, color: "grey" }}>
               {subtitle}
             </span>
@@ -51,7 +54,7 @@ const sharedRules = [
   },
   {
     validator: syncValidator(
-      (value: string | null) => !value || !value.startsWith("."),
+      (value: string | null) => !value?.startsWith("."),
       "The name must not start with a dot.",
     ),
   },
@@ -133,9 +136,8 @@ export function DatastoreFormItem({
       initialValue={datastores.length ? datastores[0].url : null}
     >
       <Select
-        showSearch
+        showSearch={{ optionFilterProp: "label" }}
         placeholder="Select a Datastore"
-        optionFilterProp="label"
         disabled={disabled}
         style={{
           width: "100%",
@@ -161,7 +163,7 @@ export function AllowedTeamsFormItem({
   selectedTeams: APITeam | Array<APITeam>;
   setSelectedTeams: (teams: APITeam | Array<APITeam>) => void;
   afterFetchedTeams?: (arg0: Array<APITeam>) => void;
-  formRef: React.RefObject<FormInstance<any>>;
+  formRef: React.RefObject<FormInstance<any> | null>;
   disabled?: boolean;
 }) {
   return (

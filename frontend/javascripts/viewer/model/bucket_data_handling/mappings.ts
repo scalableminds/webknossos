@@ -1,18 +1,16 @@
-import { message } from "antd";
-import type UpdatableTexture from "libs/UpdatableTexture";
 import { CuckooTableUint32 } from "libs/cuckoo/cuckoo_table_uint32";
 import { CuckooTableUint64 } from "libs/cuckoo/cuckoo_table_uint64";
 import Toast from "libs/toast";
+import type UpdatableTexture from "libs/UpdatableTexture";
 import { diffMaps } from "libs/utils";
-import _ from "lodash";
+import size from "lodash-es/size";
+import throttle from "lodash-es/throttle";
 import memoizeOne from "memoize-one";
 import {
   getElementClass,
   getMappingInfo,
   getMappings,
 } from "viewer/model/accessors/dataset_accessor";
-import { finishMappingInitializationAction } from "viewer/model/actions/settings_actions";
-import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import type { Mapping, NumberLike } from "viewer/store";
 import Store from "viewer/store";
 
@@ -32,7 +30,7 @@ function diffMappings(
   return diffMaps<NumberLike, NumberLike>(mappingA, mappingB);
 }
 
-export const cachedDiffMappings = memoizeOne(
+const cachedDiffMappings = memoizeOne(
   diffMappings,
   (newInputs, lastInputs) =>
     // If cacheResult was passed, the inputs must be considered as not equal
@@ -47,7 +45,7 @@ export const setCacheResultForDiffMappings = (
   cachedDiffMappings(mappingA, mappingB, cacheResult);
 };
 
-const throttledCapacityWarning = _.throttle(() => {
+const throttledCapacityWarning = throttle(() => {
   const msg =
     "The mapping is becoming too large and will only be partially applied. Please zoom further in to avoid that too many segment ids are present. Also consider refreshing the page.";
   console.warn(msg);
@@ -58,10 +56,11 @@ class Mappings {
   layerName: string;
   mappingTexture!: UpdatableTexture;
   mappingLookupTexture!: UpdatableTexture;
+  // cuckooTable stores a map from unmapped to mapped segment ids (keys and values
+  // are either both 32-bit or 64-bit). This table is accessed from the GPU during rendering.
   cuckooTable: CuckooTableUint64 | CuckooTableUint32 | null = null;
   previousMapping: Mapping | null | undefined = null;
   currentKeyCount: number = 0;
-  storePropertyUnsubscribers: Array<() => void> = [];
 
   constructor(layerName: string) {
     this.layerName = layerName;
@@ -77,16 +76,14 @@ class Mappings {
       ? new CuckooTableUint64(MAPPING_TEXTURE_WIDTH)
       : new CuckooTableUint32(MAPPING_TEXTURE_WIDTH);
 
-    this.storePropertyUnsubscribers.push(
-      listenToStoreProperty(
-        (state) =>
-          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, this.layerName).mapping,
-        (mapping) => {
-          this.updateMappingTextures(mapping);
-        },
-        true,
-      ),
-    );
+    // The textures are usually kept up to date by the mapping saga (see finishMappingActivation
+    // which calls updateMappingTextures). However, when the textures are (lazily) set up after a
+    // mapping was already activated, we need to populate them once from the current store state.
+    const mapping = getMappingInfo(
+      Store.getState().temporaryConfiguration.activeMappingByLayer,
+      this.layerName,
+    ).mapping;
+    this.updateMappingTextures(mapping);
   }
 
   is64Bit() {
@@ -97,7 +94,10 @@ class Mappings {
   async updateMappingTextures(mapping: Mapping | null | undefined): Promise<void> {
     if (mapping == null) return;
     if (this.cuckooTable == null) {
-      throw new Error("cuckooTable null when updateMappingTextures was called.");
+      // The textures have not been set up yet (e.g. the layer is not being rendered, or this is
+      // running in a test context without a GPU). Once setupMappingTextures runs, it populates the
+      // textures from the current store state, so there is nothing to do here.
+      return;
     }
 
     const { changed, onlyA, onlyB } =
@@ -105,7 +105,7 @@ class Mappings {
         ? cachedDiffMappings(this.previousMapping, mapping)
         : { changed: [], onlyA: [], onlyB: Array.from(mapping.keys() as Iterable<number>) };
 
-    const totalUpdateCount = _.size(changed) + _.size(onlyA) + _.size(onlyB);
+    const totalUpdateCount = size(changed) + size(onlyA) + size(onlyB);
     const doFullTextureUpdate = totalUpdateCount > 10000;
     if (doFullTextureUpdate) {
       this.cuckooTable.disableAutoTextureUpdate();
@@ -139,9 +139,6 @@ class Mappings {
     }
 
     this.previousMapping = mapping;
-
-    message.destroy(MAPPING_MESSAGE_KEY);
-    Store.dispatch(finishMappingInitializationAction(this.layerName));
   }
 
   getCuckooTable() {
@@ -156,8 +153,8 @@ class Mappings {
   }
 
   destroy() {
-    this.storePropertyUnsubscribers.forEach((fn) => fn());
-    this.storePropertyUnsubscribers = [];
+    this.cuckooTable = null;
+    this.previousMapping = null;
   }
 }
 

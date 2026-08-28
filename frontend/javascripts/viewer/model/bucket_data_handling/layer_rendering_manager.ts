@@ -1,12 +1,14 @@
 import app from "app";
-import type UpdatableTexture from "libs/UpdatableTexture";
 import LatestTaskExecutor, { SKIPPED_TASK_REASON } from "libs/async/latest_task_executor";
 import { CuckooTableVec3 } from "libs/cuckoo/cuckoo_table_vec3";
 import { CuckooTableVec5 } from "libs/cuckoo/cuckoo_table_vec5";
 import DiffableMap from "libs/diffable_map";
 import { M4x4, type Matrix4x4, V3 } from "libs/mjs";
 import Toast from "libs/toast";
-import _ from "lodash";
+import type UpdatableTexture from "libs/UpdatableTexture";
+import identity from "lodash-es/identity";
+import isEqual from "lodash-es/isEqual";
+import throttle from "lodash-es/throttle";
 import memoizeOne from "memoize-one";
 import type { DataTexture } from "three";
 import type { AdditionalCoordinate } from "types/api_types";
@@ -23,8 +25,8 @@ import type PullQueue from "viewer/model/bucket_data_handling/pullqueue";
 import TextureBucketManager from "viewer/model/bucket_data_handling/texture_bucket_manager";
 import shaderEditor from "viewer/model/helpers/shader_editor";
 import Store, { type PlaneRects, type SegmentMap } from "viewer/store";
-import AsyncBucketPickerWorker from "viewer/workers/async_bucket_picker.worker";
 import { createWorker } from "viewer/workers/comlink_wrapper";
+import type AsyncBucketPicker from "../../workers/async_bucket_picker.worker";
 import {
   getTransformsForLayer,
   invertAndTranspose,
@@ -32,19 +34,21 @@ import {
 import { getViewportRects } from "../accessors/view_mode_accessor";
 import {
   getHideUnregisteredSegmentsForLayer,
+  getSegmentJournalForLayer,
   getSegmentsForLayer,
 } from "../accessors/volumetracing_accessor";
 import { listenToStoreProperty } from "../helpers/listener_helpers";
-import { cachedDiffSegmentLists } from "../sagas/volumetracing_saga";
+import { cachedDiffSegmentLists } from "../sagas/diffing/volume_diffing";
 
 // 512**2 (entries) * 0.25 (load capacity) == 65_536 custom segment colors
 const CUSTOM_COLORS_TEXTURE_WIDTH = 512;
 // 256**2 (entries) * 0.25 (load capacity) / 8 (layers) == 2048 buckets/layer
 const LOOKUP_CUCKOO_TEXTURE_WIDTH = 256;
 
-const asyncBucketPickRaw = createWorker(AsyncBucketPickerWorker);
+const asyncBucketPickRaw = createWorker<typeof AsyncBucketPicker>("async_bucket_picker.worker.ts");
+
 const asyncBucketPick = memoizeOne(asyncBucketPickRaw, (oldArgs, newArgs) =>
-  _.isEqual(oldArgs, newArgs),
+  isEqual(oldArgs, newArgs),
 );
 const dummyBuffer = new ArrayBuffer(0);
 export type EnqueueFunction = (arg0: Vector4, arg1: number) => void;
@@ -105,7 +109,7 @@ export function getGlobalLayerIndexForLayerName(
   layerName: string,
   optSanitizer?: (arg: string) => string,
 ): number {
-  const sanitizer = optSanitizer || _.identity;
+  const sanitizer = optSanitizer || identity;
   const dataset = Store.getState().dataset;
   const layerIndex = dataset.dataSource.dataLayers.findIndex(
     (layer) => sanitizer(layer.name) === layerName,
@@ -218,13 +222,13 @@ export default class LayerRenderingManager {
     const maximumZoomForAllMags = state.flycamInfoCache.maximumZoomForAllMags[this.name];
 
     if (
-      !_.isEqual(this.lastZoomedMatrix, matrix) ||
+      !isEqual(this.lastZoomedMatrix, matrix) ||
       viewMode !== this.lastViewMode ||
       sphericalCapRadius !== this.lastSphericalCapRadius ||
       isVisible !== this.lastIsVisible ||
       rects !== this.lastRects ||
-      !_.isEqual(additionalCoordinates, this.additionalCoordinates) ||
-      !_.isEqual(maximumZoomForAllMags, this.maximumZoomForAllMags) ||
+      !isEqual(additionalCoordinates, this.additionalCoordinates) ||
+      !isEqual(maximumZoomForAllMags, this.maximumZoomForAllMags) ||
       this.needsRefresh
     ) {
       this.lastZoomedMatrix = matrix;
@@ -287,7 +291,9 @@ export default class LayerRenderingManager {
   }
 
   destroy() {
-    this.storePropertyUnsubscribers.forEach((fn) => fn());
+    this.storePropertyUnsubscribers.forEach((fn) => {
+      fn();
+    });
     if (this.textureBucketManager != null) {
       // In some tests, this.textureBucketManager is null (even
       // though it should never be null in non-tests).
@@ -353,21 +359,45 @@ export default class LayerRenderingManager {
 
     const updateToNewSegments = (newSegments: SegmentMap) => {
       const cuckoo = this.getCustomColorCuckooTable();
-      const hideUnregisteredSegments = getHideUnregisteredSegmentsForLayer(
-        Store.getState(),
+      const storeState = Store.getState();
+      const segmentJournal = getSegmentJournalForLayer(storeState, this.name);
+      const hideUnregisteredSegments = getHideUnregisteredSegmentsForLayer(storeState, this.name);
+
+      for (const updateAction of cachedDiffSegmentLists(
         this.name,
-      );
-      for (const updateAction of cachedDiffSegmentLists(this.name, prevSegments, newSegments)) {
+        prevSegments,
+        newSegments,
+        // The diffing function actually wants the previous and current segment journal.
+        // However, we just pass the most up to date segment journal here twice which is
+        // not completely correct, but done for the following reasons:
+        // - that way we don't need to keep a reference to the previous segment journal
+        //   (which would be a bit tedious)
+        // - we don't need to handle the mergeSegments case which the differ could emit
+        //   otherwise
+        // A small disadvantage is that — when the user merges two segments — the differ
+        // runs twice (instead of being cached). However, this should happen so rarely
+        // that it's not a big impact.
+        segmentJournal,
+        segmentJournal,
+      )) {
         if (
-          updateAction.name === "updateSegment" ||
+          updateAction.name === "updateSegmentPartial" ||
           updateAction.name === "createSegment" ||
           updateAction.name === "deleteSegment" ||
           updateAction.name === "updateSegmentVisibility"
         ) {
-          const { id } = updateAction.value;
+          // For legacy reasons, update actions are typed with number | bigint for segment ids.
+          // The update actions were just produced, so they won't contain numbers, but we still cast
+          // to make typescript happy.
+          const id = BigInt(updateAction.value.id);
           const newSegment = newSegments.getNullable(id);
           const isVisible = newSegment?.isVisible ?? !hideUnregisteredSegments;
           const color = newSegment?.color;
+          // The custom-color cuckoo table is a GPU-side lookup structure that stores its key
+          // in a single 32-bit texture slot (see CuckooTableVec3), so segment ids beyond 2^32
+          // are truncated to their low 32 bits here. This is a genuine storage-width limit,
+          // not a JS-precision issue, analogous to the STL mesh export id truncation.
+          const cuckooKey = Number(BigInt.asUintN(32, id));
 
           if (cuckoo.entryCount >= cuckoo.getCriticalCapacity()) {
             ignoreCustomColors();
@@ -390,14 +420,14 @@ export default class LayerRenderingManager {
                 if (hideUnregisteredSegments) {
                   // Remove from cuckoo, because the rendering defaults to
                   // hiding unregistered segments.
-                  cuckoo.unset(id);
+                  cuckoo.unset(cuckooKey);
                 } else {
                   // Explicitly set to [0, 0, 0] because it should be invisible
                   // (default color is chosen by shader on hover).
                   // [0, 0, 0] encodes that this segment is only listed so that
                   // the hideUnregisteredSegments behavior does not apply for it.
                   // No actual color is encoded so that the default color is used.
-                  cuckoo.set(id, [0, 0, 0]);
+                  cuckoo.set(cuckooKey, [0, 0, 0]);
                 }
               } else {
                 // The segment has a special color. Even though, the segment should
@@ -410,10 +440,10 @@ export default class LayerRenderingManager {
                   // If the user provided [0, 0, 0] as the segment's color, we have to take
                   // care so that this does not get interpreted as "use the default color".
                   // For that reason, we cast that color value to [0, 0, 2].
-                  cuckoo.set(id, [0, 0, 2]);
+                  cuckoo.set(cuckooKey, [0, 0, 2]);
                 } else {
                   const blueChannel = extractAdaptedBlueChannel(color, false);
-                  cuckoo.set(id, [255 * color[0], 255 * color[1], blueChannel]);
+                  cuckoo.set(cuckooKey, [255 * color[0], 255 * color[1], blueChannel]);
                 }
               }
             } else if (color != null) {
@@ -422,7 +452,7 @@ export default class LayerRenderingManager {
               // The special value of [0, 0, 0] won't be used here ever, because
               // of the + 1.
               const blueChannel = extractAdaptedBlueChannel(color, true);
-              cuckoo.set(id, [255 * color[0], 255 * color[1], blueChannel]);
+              cuckoo.set(cuckooKey, [255 * color[0], 255 * color[1], blueChannel]);
             } else {
               // The segment should be visible and no custom color exists for it.
               if (hideUnregisteredSegments) {
@@ -431,11 +461,11 @@ export default class LayerRenderingManager {
                 // [0, 0, 0] encodes that this segment is only listed so that
                 // the hideUnregisteredSegments behavior does not apply for it.
                 // No actual color is encoded so that the default color is used.
-                cuckoo.set(id, [0, 0, 0]);
+                cuckoo.set(cuckooKey, [0, 0, 0]);
               } else {
                 // Remove from cuckoo, because the rendering defaults to
                 // showing unregistered segments.
-                cuckoo.unset(id);
+                cuckoo.unset(cuckooKey);
               }
             }
           } catch {
@@ -455,6 +485,6 @@ function showTooManyCustomColorsWarning() {
   );
 }
 
-const throttledShowTooManyCustomColorsWarning = _.throttle(showTooManyCustomColorsWarning, 5000, {
+const throttledShowTooManyCustomColorsWarning = throttle(showTooManyCustomColorsWarning, 5000, {
   leading: true,
 });

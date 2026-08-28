@@ -1,224 +1,197 @@
+import { FileTextOutlined, SyncOutlined, TeamOutlined } from "@ant-design/icons";
+import { useQuery } from "@tanstack/react-query";
+import AdminPage from "admin/admin_page";
+import { getUsersOrganizations } from "admin/api/organization";
+import { getShowTrainingDataLink, JobState } from "admin/job/job_list_view";
+import { getAiModels, updateAiModel } from "admin/rest_api";
 import {
-  EyeOutlined,
-  FileTextOutlined,
-  PlusOutlined,
-  SyncOutlined,
-  TeamOutlined,
-} from "@ant-design/icons";
-import { JobState, getShowTrainingDataLink } from "admin/job/job_list_view";
-import { getAiModels, getUsersOrganizations, updateAiModel } from "admin/rest_api";
-import { Button, Col, Modal, Row, Select, Space, Table, Typography } from "antd";
+  App,
+  Button,
+  Col,
+  Flex,
+  Input,
+  Modal,
+  Row,
+  Select,
+  Space,
+  Spin,
+  Table,
+  type TableProps,
+  Typography,
+} from "antd";
 import FormattedDate from "components/formatted_date";
-import { PageNotAvailableToNormalUser } from "components/permission_enforcer";
-import { useFetch, useGuardedFetch } from "libs/react_helpers";
+import FormattedId from "components/formatted_id";
+import LinkButton from "components/link_button";
+import Markdown from "libs/markdown_adapter";
+import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import _ from "lodash";
-import { useState } from "react";
+import { filterWithSearchQueryAND, scrollToTop } from "libs/utils";
+import uniq from "lodash-es/uniq";
 import type { Key } from "react";
-import type { Vector3 } from "viewer/constants";
-import { getMagInfo, getSegmentationLayerByName } from "viewer/model/accessors/dataset_accessor";
-import { formatUserName } from "viewer/model/accessors/user_accessor";
-import { TrainAiModelForm } from "viewer/view/action-bar/ai_job_modals/forms/train_ai_model_form";
-import type { AnnotationInfoForAITrainingJob } from "viewer/view/action-bar/ai_job_modals/utils";
-
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import type { APIAnnotation, AiModel } from "types/api_types";
+import type { AiModel } from "types/api_types";
+import { enforceActiveUser, formatUserName } from "viewer/model/accessors/user_accessor";
+
+const { Search } = Input;
 
 export default function AiModelListView() {
-  const activeUser = useWkSelector((state) => state.activeUser);
-  const [refreshCounter, setRefreshCounter] = useState(0);
-  const [isTrainModalVisible, setIsTrainModalVisible] = useState(false);
+  const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
   const [currentlyEditedModel, setCurrentlyEditedModel] = useState<AiModel | null>(null);
-  const [aiModels, isLoading] = useGuardedFetch(
-    getAiModels,
-    [],
-    [refreshCounter],
-    "Could not load model list.",
-  );
+  const [searchQuery, setSearchQuery] = useState("");
+  const { modal } = App.useApp();
 
-  if (!activeUser?.isSuperUser) {
-    return <PageNotAvailableToNormalUser />;
-  }
+  const {
+    data: aiModels = [],
+    refetch,
+    isFetching,
+  } = useQuery({
+    queryKey: ["aiModels"],
+    queryFn: async () => {
+      try {
+        return await getAiModels();
+      } catch (err) {
+        Toast.error("Could not load model list.");
+        console.error(err);
+        throw err;
+      }
+    },
+  });
+
+  const columns: TableProps<AiModel>["columns"] = [
+    {
+      title: "Name",
+      dataIndex: "name",
+      key: "name",
+      render: (name: string, model: AiModel) => (
+        <Space orientation="vertical">
+          {name}
+          <FormattedId id={model.id} />
+        </Space>
+      ),
+    },
+    {
+      title: "Created at",
+      key: "created",
+      defaultSortOrder: "descend",
+      sorter: (a: AiModel, b: AiModel) => a.created - b.created,
+      render: (model: AiModel) => <FormattedDate timestamp={model.created} />,
+    },
+    {
+      title: "User",
+      dataIndex: "user",
+      key: "user",
+      render: (user: AiModel["user"]) => formatUserName(activeUser, user),
+      filters: uniq(aiModels.map((model) => formatUserName(null, model.user))).map((username) => ({
+        text: username,
+        value: username,
+      })),
+      onFilter: (value: Key | boolean, model: AiModel) =>
+        formatUserName(null, model.user).startsWith(String(value)),
+      filterSearch: true,
+    },
+    {
+      title: "Status",
+      dataIndex: "trainingJob",
+      key: "status",
+      render: (trainingJob: AiModel["trainingJob"]) =>
+        trainingJob && <JobState job={trainingJob} />,
+    },
+    {
+      title: "Comment",
+      dataIndex: "comment",
+      key: "comment",
+      render: (comment: AiModel["comment"]) => <Markdown>{comment}</Markdown>,
+    },
+    {
+      title: "Actions",
+      render: (aiModel: AiModel) =>
+        renderActionsForModel(modal, aiModel, () => setCurrentlyEditedModel(aiModel)),
+      key: "actions",
+    },
+  ];
 
   return (
-    <div className="container voxelytics-view">
-      {isTrainModalVisible ? (
-        <TrainNewAiJobModal onClose={() => setIsTrainModalVisible(false)} />
-      ) : null}
+    <>
       {currentlyEditedModel ? (
         <EditModelSharedOrganizationsModal
           model={currentlyEditedModel}
           onClose={() => {
             setCurrentlyEditedModel(null);
-            setRefreshCounter((val) => val + 1);
+            refetch();
           }}
           owningOrganization={activeUser.organization}
         />
       ) : null}
-      <div className="pull-right">
-        <Space>
-          <Button onClick={() => setIsTrainModalVisible(true)}>
-            <PlusOutlined /> Train new Model
+      <AdminPage
+        title="AI Models"
+        descriptionURI="https://docs.webknossos.org/webknossos/automation/index.html"
+        description="Review available AI models, compare training status and ownership, and manage cross-organization access for models owned by your organization."
+        actions={
+          <Button onClick={() => refetch()} icon={<SyncOutlined spin={isFetching} />}>
+            Refresh
           </Button>
-          <Button onClick={() => setRefreshCounter((val) => val + 1)}>
-            <SyncOutlined spin={isLoading} /> Refresh
-          </Button>
-        </Space>
-      </div>
-      <h3>AI Models</h3>
-      <Table
-        bordered
-        rowKey={(run: AiModel) => `${run.id}`}
-        pagination={{ pageSize: 100 }}
-        columns={[
-          {
-            title: "Name",
-            dataIndex: "name",
-            key: "name",
-          },
-          {
-            title: "Created at",
-            key: "created",
-            defaultSortOrder: "descend",
-            sorter: (a: AiModel, b: AiModel) => a.created - b.created,
-            render: (model: AiModel) => <FormattedDate timestamp={model.created} />,
-          },
-          {
-            title: "User",
-            dataIndex: "user",
-            key: "user",
-            render: (user: AiModel["user"]) => formatUserName(activeUser, user),
-            filters: _.uniq(aiModels.map((model) => formatUserName(null, model.user))).map(
-              (username) => ({
-                text: username,
-                value: username,
-              }),
-            ),
-            onFilter: (value: Key | boolean, model: AiModel) =>
-              formatUserName(null, model.user).startsWith(String(value)),
-            filterSearch: true,
-          },
-          {
-            title: "Status",
-            dataIndex: "trainingJob",
-            key: "status",
-            render: (trainingJob: AiModel["trainingJob"]) =>
-              trainingJob && <JobState job={trainingJob} />,
-          },
-          {
-            title: "Comment",
-            dataIndex: "comment",
-            key: "comment",
-          },
-          {
-            title: "Actions",
-            render: (aiModel: AiModel) =>
-              renderActionsForModel(aiModel, () => setCurrentlyEditedModel(aiModel)),
-            key: "actions",
-          },
-        ]}
-        dataSource={aiModels}
-      />
-    </div>
+        }
+        search={
+          <Search
+            allowClear
+            onChange={(event) => setSearchQuery(event.target.value)}
+            value={searchQuery}
+          />
+        }
+      >
+        <Spin spinning={isFetching} size="large">
+          <Table
+            rowKey={(run: AiModel) => `${run.id}`}
+            pagination={{ pageSize: 100, onChange: scrollToTop }}
+            columns={columns}
+            dataSource={filterWithSearchQueryAND(
+              aiModels,
+              [
+                "name",
+                "comment",
+                (model) => formatUserName(null, model.user),
+                (model) => model.trainingJob?.state || "",
+              ],
+              searchQuery,
+            )}
+          />
+        </Spin>
+      </AdminPage>
+    </>
   );
 }
 
-function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
-  const [annotationInfosForAiJob, setAnnotationInfosForAiJob] = useState<
-    AnnotationInfoForAITrainingJob<APIAnnotation>[]
-  >([]);
-
-  const getMagsForSegmentationLayer = (annotationId: string, layerName: string) => {
-    // The layer name is a human-readable one. It can either belong to an annotationLayer
-    // (therefore, also to a volume tracing) or to the actual dataset.
-    // Both are checked below. This won't be ambiguous because annotationLayers must not
-    // have names that dataset layers already have.
-
-    const annotationWithDataset = annotationInfosForAiJob.find(({ annotation }) => {
-      return annotation.id === annotationId;
-    });
-    if (annotationWithDataset == null) {
-      throw new Error("Cannot find annotation for specified id.");
-    }
-
-    const { annotation, dataset, volumeTracings, volumeTracingMags } = annotationWithDataset;
-
-    let annotationLayer = annotation.annotationLayers.find((l) => l.name === layerName);
-    if (annotationLayer != null) {
-      const volumeTracingIndex = volumeTracings.findIndex(
-        (tracing) => tracing.tracingId === annotationLayer.tracingId,
-      );
-      const mags = volumeTracingMags[volumeTracingIndex] || [{ mag: [1, 1, 1] as Vector3 }];
-      return getMagInfo(mags);
-    } else {
-      const segmentationLayer = getSegmentationLayerByName(dataset, layerName);
-      return getMagInfo(segmentationLayer.mags);
-    }
-  };
-
-  return (
-    <Modal
-      width={875}
-      open
-      title={
-        <>
-          <i className="fas fa-magic icon-margin-right" />
-          AI Analysis
-        </>
-      }
-      onCancel={onClose}
-      footer={null}
-      maskClosable={false}
-    >
-      <TrainAiModelForm
-        getMagsForSegmentationLayer={getMagsForSegmentationLayer}
-        onClose={onClose}
-        annotationInfos={annotationInfosForAiJob}
-        onAddAnnotationsInfos={(newItems) => {
-          setAnnotationInfosForAiJob([...annotationInfosForAiJob, ...newItems]);
-        }}
-      />
-    </Modal>
-  );
-}
-
-const renderActionsForModel = (model: AiModel, onChangeSharedOrganizations: () => void) => {
-  const organizationSharingButton = model.isOwnedByUsersOrganization ? (
-    <a onClick={onChangeSharedOrganizations}>
-      <TeamOutlined className="icon-margin-right" />
-      Manage Access
-    </a>
-  ) : null;
+const renderActionsForModel = (
+  modal: ReturnType<typeof App.useApp>["modal"],
+  model: AiModel,
+  onChangeSharedOrganizations: () => void,
+) => {
+  const organizationSharingButton =
+    model.isOwnedByUsersOrganization && !model.isPretrained ? (
+      <LinkButton onClick={onChangeSharedOrganizations} icon={<TeamOutlined />}>
+        Manage Access
+      </LinkButton>
+    ) : null;
   if (model.trainingJob == null) {
     return organizationSharingButton;
   }
-  const {
-    voxelyticsWorkflowHash,
-    trainingAnnotations,
-    state: trainingJobState,
-  } = model.trainingJob;
+  const { voxelyticsWorkflowHash, state: trainingJobState } = model.trainingJob;
+  const trainingAnnotations = model.trainingJob.args.trainingAnnotations;
 
   return (
     <Col>
       {trainingJobState === "SUCCESS" ? <Row>{organizationSharingButton}</Row> : null}
       {voxelyticsWorkflowHash != null ? (
-        /* margin left is needed  as organizationSharingButton is a button with a 16 margin */
         <Row>
           <Link to={`/workflows/${voxelyticsWorkflowHash}`}>
-            <FileTextOutlined className="icon-margin-right" />
-            Voxelytics Report
+            <LinkButton icon={<FileTextOutlined />}>Voxelytics Report</LinkButton>
           </Link>
         </Row>
       ) : null}
       {trainingAnnotations != null ? (
-        <Row>
-          <EyeOutlined
-            className="icon-margin-right"
-            style={{ color: "var(--ant-color-primary)" }}
-          />
-          {getShowTrainingDataLink(trainingAnnotations)}
-        </Row>
+        <Row>{getShowTrainingDataLink(modal, trainingAnnotations)}</Row>
       ) : null}
     </Col>
   );
@@ -228,7 +201,11 @@ function EditModelSharedOrganizationsModal({
   model,
   onClose,
   owningOrganization,
-}: { model: AiModel; onClose: () => void; owningOrganization: string }) {
+}: {
+  model: AiModel;
+  onClose: () => void;
+  owningOrganization: string;
+}) {
   const [selectedOrganizationIds, setSelectedOrganizationIds] = useState<string[]>(
     model.sharedOrganizationIds || [owningOrganization],
   );
@@ -264,36 +241,35 @@ function EditModelSharedOrganizationsModal({
 
   return (
     <Modal
-      title={`Edit Organizations with Access to AI Model ${model.name}`}
+      title={"Edit Organizations with Access to this AI Model"}
       open
       onOk={submitNewSharedOrganizations}
       onCancel={onClose}
-      onClose={onClose}
-      maskClosable={false}
+      mask={{ closable: false }}
       width={800}
     >
       <p>
-        Select all organization that should have access to the AI model{" "}
+        Select all organizations that should have access to the AI model{" "}
         <Typography.Text italic>{model.name}</Typography.Text>.
       </p>
       <Typography.Paragraph type="secondary">
-        You can only select or deselect organizations that you are a member of. However, other users
-        in your organization may have granted access to additional organizations that you are not
-        part of. Only members of your organization who have access to those organizations can modify
-        their access.
+        You can only manage access for organizations you belong to. Other members of your
+        organization may have access to additional organizations not listed here. Only they can
+        modify access for those organizations.
       </Typography.Paragraph>
-      <Col span={14} offset={4}>
+      <Flex justify="center">
         <Select
           mode="multiple"
           allowClear
           autoFocus
-          style={{ width: "100%" }}
+          style={{ minWidth: 400 }}
+          popupMatchSelectWidth={false}
           placeholder="Please select"
           onChange={handleChange}
           options={options}
           value={selectedOrganizationIds}
         />
-      </Col>
+      </Flex>
     </Modal>
   );
 }

@@ -1,13 +1,13 @@
 import { requestVerificationMail, verifyEmail } from "admin/rest_api";
-import { Spin } from "antd";
+import { Flex, Spin } from "antd";
+import { extractServerErrorMessage } from "libs/error_handling";
 import { useFetch } from "libs/react_helpers";
 import Toast from "libs/toast";
 import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import type { ServerErrorMessage } from "types/api_types";
 import { Store } from "viewer/singletons";
 
-export const VERIFICATION_ERROR_TOAST_KEY = "verificationError";
+const VERIFICATION_ERROR_TOAST_KEY = "verificationError";
 
 export const handleResendVerificationEmail = async () => {
   const { activeUser } = Store.getState();
@@ -69,24 +69,17 @@ export default function VerifyEmailView() {
       Toast.success("Successfully verified your email.");
     }
     if (exception) {
-      let errorMessage;
-      if (typeof exception === "object" && "messages" in exception) {
-        errorMessage = ((exception as any).messages as ServerErrorMessage[])
-          .map((m: any) => m.error || "")
-          .join(" ");
-      }
-      errorMessage = errorMessage || "Verification failed.";
-
-      showVerificationErrorToast(errorMessage);
+      showVerificationErrorToast(extractServerErrorMessage(exception, "Verification failed."));
     }
 
     if (result || exception) {
       navigate("/");
     }
   }, [result, exception]);
+
   return (
-    <div style={{ display: "flex", justifyContent: "center", marginTop: 64 }}>
+    <Flex justify="center" style={{ marginTop: 64 }}>
       <Spin size="large" spinning />
-    </div>
+    </Flex>
   );
 }

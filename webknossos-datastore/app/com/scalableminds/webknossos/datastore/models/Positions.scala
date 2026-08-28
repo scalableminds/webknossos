@@ -26,15 +26,15 @@ case class VoxelPosition(
 
   def toMag1: VoxelPosition = this.copy(mag = Vec3Int.ones) // other properties are already in mag1 and do not change.
 
-  override def toString = s"($mag1X, $mag1Y, $mag1Z) / $mag"
+  override def toString: String = s"($mag1X, $mag1Y, $mag1Z) / $mag"
 
   override def equals(obj: scala.Any): Boolean =
     obj match {
       case other: VoxelPosition =>
         other.mag1X == mag1X &&
-          other.mag1Y == mag1Y &&
-          other.mag1Z == mag1Z &&
-          other.mag == mag
+        other.mag1Y == mag1Y &&
+        other.mag1Z == mag1Z &&
+        other.mag == mag
       case _ =>
         false
     }

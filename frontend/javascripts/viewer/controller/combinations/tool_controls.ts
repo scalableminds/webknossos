@@ -163,7 +163,7 @@ export class MoveToolController extends ToolController {
       scroll: (delta: number, type: ModifierKeys | null | undefined) => {
         switch (type) {
           case null: {
-            moveW(delta, true);
+            moveW(delta, true, false, true);
             break;
           }
 

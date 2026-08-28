@@ -12,6 +12,8 @@ import { TreeTypeEnum } from "viewer/constants";
 import type { Tree } from "viewer/model/types/tree_types";
 import type { StoreAnnotation, WebknossosState } from "viewer/store";
 import { sum } from "../helpers/iterator_utils";
+import { reuseInstanceOnEquality } from "./accessor_helpers";
+import type { DisabledInfo } from "./disabled_tool_accessor";
 
 export function mayEditAnnotationProperties(state: WebknossosState) {
   const { owner, restrictions } = state.annotation;
@@ -127,6 +129,40 @@ export function getReasonForCantEditSkeletonTree(
 
   return undefined;
 }
+
+export function mayEditAnnotationLayerSet(state: WebknossosState): boolean {
+  // Adding, deleting, converting (making writable) or merging annotation layers
+  // changes the tracing's set of layers, which cannot be represented as an
+  // incorporable diff during a concurrent rebase (see #9052). These actions are
+  // therefore disallowed while simultaneous editing is enabled.
+  return mayEditAnnotation(state) && !isConcurrentCollaborationMode(state);
+}
+
+export function getReasonForCantChangeAnnotationLayerSet(
+  state: WebknossosState,
+): string | undefined {
+  // If mayChangeAnnotationLayerSet is false, this provides a human-readable reason for that. Otherwise, undefined will be returned.
+  if (!mayEditAnnotation(state)) {
+    const isAnnotationLockedByUser = state.annotation.isLockedByOwner;
+    const isOwner = isAnnotationOwner(state);
+    return messages["tracing.read_only_mode_notification"](isAnnotationLockedByUser, isOwner);
+  }
+  if (isConcurrentCollaborationMode(state)) {
+    return messages["tracing.layer_management_disabled_in_live_collab"](isAnnotationOwner(state));
+  }
+  return undefined;
+}
+
+function _isEditingAnnotationLayerSetDisabled(state: WebknossosState): DisabledInfo {
+  return {
+    isDisabled: !mayEditAnnotationLayerSet(state),
+    explanation: getReasonForCantChangeAnnotationLayerSet(state) ?? "",
+  };
+}
+
+export const isEditingAnnotationLayerSetDisabled = reuseInstanceOnEquality(
+  _isEditingAnnotationLayerSetDisabled,
+);
 
 export function mayEditAnnotationViewConfig(state: WebknossosState) {
   // All users that are allowed to update the annotation have their own view

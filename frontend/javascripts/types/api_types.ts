@@ -1389,11 +1389,8 @@ export type SegmentStatisticsMetric =
 export type SegmentCovarianceMatrix = [Vector3, Vector3, Vector3];
 
 export type SegmentStatisticsFileInfo = {
-  // The mag the file was computed for. Queries in finer mags are rejected by the backend.
   mag: Vector3;
   availableMetrics: SegmentStatisticsMetric[];
-  // Omitted (not null) by the backend when the file was computed without a mapping,
-  // i.e. for the oversegmentation.
   mappingName?: string | null;
 };
 

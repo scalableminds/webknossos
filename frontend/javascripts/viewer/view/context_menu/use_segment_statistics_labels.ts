@@ -25,9 +25,8 @@ function formatStatistic<T>(statistic: SegmentStatistic<T>, format: (value: T) =
 
 /*
  * Formats the subset of segment statistics that the viewport context menu shows for the clicked
- * segment. The statistics themselves come from the same hook the segment statistics table uses, so
- * both agree on the requested mag and on which layers can answer at all; this menu simply displays
- * fewer of them.
+ * segment. The statistics themselves come from the useSegmentStatistics hook; this menu displays
+ * fewer statistics to not blow up the context menu.
  *
  * Nothing is requested until the user explicitly asks for the statistics, which is what
  * `segmentStatsTriggerDate` tracks.

@@ -12,7 +12,7 @@ export type SegmentStatisticsFile = {
  * Reports the segment statistics attachment of the given layer, if it has one, together with the
  * mag and mapping it was computed for and the metrics it contains.
  *
- * The backing routes live on the datastore only, so a layer that belongs to a volume annotation
+ * The backend routes live on the datastore only, so a layer that belongs to a volume annotation
  * never has a usable file. Callers share one react-query cache entry per layer, so querying this
  * from several components does not cause additional requests.
  */

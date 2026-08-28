@@ -29,7 +29,7 @@ const NO_METRICS: AvailableFileMetrics = {
 
 /**
  * Decides which of the statistics-file-backed metrics may be requested for the currently active
- * mapping. This mirrors the backend's `checkMagAndMappingNameMatch`: max distance and sphericity
+ * mapping (keep in sync with backend logic `checkMagAndMappingNameMatch`): max distance and sphericity
  * require the file's mapping to match exactly, while center of mass and covariance matrix can also
  * be served for a different mapping by recombining oversegmentation values – but only if the file
  * itself was computed without a mapping, and only if the arrays needed for that recombination are
@@ -41,7 +41,7 @@ const NO_METRICS: AvailableFileMetrics = {
  * The mag is deliberately not checked here: callers request the file's own mag, which the backend
  * always accepts.
  */
-export function getAvailableFileMetrics(
+export function getAvailableMetricsFromFileInfo(
   fileInfo: SegmentStatisticsFileInfo | null | undefined,
   activeMappingName: string | null | undefined,
 ): AvailableFileMetrics {
@@ -88,7 +88,7 @@ export function covarianceMatrixToPrincipalExtents(
   );
 
   const eigenvalues = new EigenvalueDecomposition(new Matrix(covarianceInUnit2)).realEigenvalues
-    // A covariance matrix is positive semi-definite, so negative eigenvalues can only come from
+    // A covariance matrix is positive semi-definite, so negative eigenvalues can only come fromsegmentStatistics_l4_sample_segment_statistics
     // floating point error and are clamped away before taking the square root.
     .map((eigenvalue) => Math.sqrt(Math.max(eigenvalue, 0)));
 

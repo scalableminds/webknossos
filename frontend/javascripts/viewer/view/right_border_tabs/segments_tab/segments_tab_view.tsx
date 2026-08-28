@@ -58,7 +58,6 @@ function SegmentStatisticsModalContainer({
   );
 }
 
-/** Distinguishes exports of the same layer from one another; the root group needs no suffix. */
 function getCsvFilenameSuffix(target: SegmentStatisticsTarget, segments: Segment[]): string | null {
   if (target.kind === "group") {
     return target.groupId === MISSING_GROUP_ID ? null : `group-${target.groupId}`;

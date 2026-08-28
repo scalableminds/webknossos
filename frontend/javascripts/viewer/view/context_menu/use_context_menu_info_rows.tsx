@@ -66,7 +66,7 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
     segmentVolumeLabel,
     boundingBoxInfoLabel,
     segmentSurfaceAreaLabel,
-    areSegmentStatisticsAvailable: canLayerAnswerSegmentStatistics,
+    areSegmentStatisticsAvailable,
     isBoundingBoxAvailable,
     isVolumeAvailable,
     isSurfaceAreaAvailable,
@@ -120,8 +120,9 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
 
   const infoRows: ItemType[] = [];
 
-  const areSegmentStatisticsAvailable = wasSegmentOrMeshClicked && canLayerAnswerSegmentStatistics;
-  if (areSegmentStatisticsAvailable) {
+  const isSegmentActionAndAreStatisticsAvailable =
+    wasSegmentOrMeshClicked && areSegmentStatisticsAvailable;
+  if (isSegmentActionAndAreStatisticsAvailable) {
     infoRows.push({
       key: "load-stats",
       icon: <BarChartOutlined />,
@@ -217,7 +218,7 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
     }
   }
 
-  if (areSegmentStatisticsAvailable && segmentStatsTriggerDate != null) {
+  if (isSegmentActionAndAreStatisticsAvailable && segmentStatsTriggerDate != null) {
     // Each statistic is only shown when this layer can actually answer it — otherwise the row would
     // be permanently stuck on an error message.
     if (isSurfaceAreaAvailable) {

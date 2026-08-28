@@ -15,6 +15,7 @@ import type {
   SegmentCovarianceMatrix,
   SegmentStatisticsFileInfo,
 } from "types/api_types";
+import type { BoundingBoxObject } from "types/bounding_box";
 import type { Vector3 } from "viewer/constants";
 import {
   getMagInfo,
@@ -23,15 +24,11 @@ import {
 import { getCurrentMappingName } from "viewer/model/accessors/volumetracing_accessor";
 import type { LayerSourceInfo } from "viewer/model/bucket_data_handling/wkstore_helper";
 import { api, Store } from "viewer/singletons";
-import { type AvailableFileMetrics, getAvailableFileMetrics } from "../segment_statistics_helpers";
+import {
+  type AvailableFileMetrics,
+  getAvailableMetricsFromFileInfo,
+} from "../segment_statistics_helpers";
 import { useSegmentStatisticsFile } from "./use_segment_statistics_file";
-
-export type SegmentBoundingBox = {
-  topLeft: Vector3;
-  width: number;
-  height: number;
-  depth: number;
-};
 
 export type SegmentStatistic<T> = {
   // Positional, matching the requested segment ids.
@@ -41,22 +38,23 @@ export type SegmentStatistic<T> = {
 };
 
 export type SegmentStatistics = {
-  /** False when neither a segment index nor a statistics file can answer anything for this layer. */
+  // False when neither a segment index nor a statistics file can answer anything for this layer.
   areSegmentStatisticsAvailable: boolean;
   fileInfo: SegmentStatisticsFileInfo | null;
-  /** The mag every statistic except the bounding box is requested in. */
+  // The mag every statistic except the bounding box is requested in.
   statisticsMag: Vector3;
-  /** Bounding boxes are never in the statistics file and stay on the layer's finest mag. */
+  // Bounding boxes are never in the statistics file and stay on the layer's finest mag.
   boundingBoxMag: Vector3;
-  /** Bounding boxes can only be computed from a segment index; there is no fallback for them. */
+  // Bounding boxes can only be computed from a segment index; there is no fallback for them.
   isBoundingBoxAvailable: boolean;
-  /** Either the statistics file holds volumes, or a segment index can be counted. */
+  // Either the statistics file holds volumes, or a segment index can be counted.
   isVolumeAvailable: boolean;
-  /** Either the statistics file holds surfaces, or a segment index can drive ad-hoc meshing. */
+  // Either the statistics file holds surfaces, or a segment index can drive ad-hoc meshing.
   isSurfaceAreaAvailable: boolean;
   availableFileMetrics: AvailableFileMetrics;
+  // Note, that the segment statistics file format has slightly different keys as some are in plural and some in singular.
   volumes: SegmentStatistic<number>;
-  boundingBoxes: SegmentStatistic<SegmentBoundingBox>;
+  boundingBoxes: SegmentStatistic<BoundingBoxObject>;
   surfaceAreas: SegmentStatistic<number>;
   maxDistances: SegmentStatistic<number>;
   sphericities: SegmentStatistic<number>;
@@ -67,23 +65,26 @@ export type SegmentStatistics = {
 type Options = {
   layer: APISegmentationLayer | null | undefined;
   segmentIds: bigint[];
-  /** Set to false to defer fetching, e.g. until the user asks for the statistics. */
+  // Set to false to defer fetching, e.g. until the user asks for the statistics.
   enabled?: boolean;
-  /** Change this to force a refetch, e.g. for an explicit reload button. */
+  // Change this to force a refetch, e.g. for an explicit reload button.
   refreshToken?: number | null;
 };
 
 const NOT_REQUESTED = { data: undefined, isLoading: false, isError: false };
 
 /*
- * Fetches segment statistics for a list of segments. This is the single source of truth for both
- * the segment statistics table and the viewport context menu, so that both agree on which mag to
- * request, which metrics the layer can answer, and how partial failures are reported. Consumers
- * are free to display only a subset.
+ * Fetches segment statistics for a list of segments. This hook should be used by and component using
+ * the segment statistics as it has a shared query cache.
  *
  * Volume, surface area and bounding box are always requested (the backend falls back to computing
  * them). The remaining four come from a precomputed statistics file and are only requested when
  * that file offers them for the currently active mapping.
+ *
+ * How the fallback works: Volume falls back to counting the segment index. Surface area falls back
+ * to a precomputed mesh file, or failing that to ad-hoc meshing, which itself walks the segment index.
+ * When no source applies, the route 404s rather than returning a value, so it must not be requested at
+ * all. We don't support the ad-hoc meshing via seed position here though.
  */
 export function useSegmentStatistics({
   layer,
@@ -104,7 +105,7 @@ export function useSegmentStatistics({
 
   const { fileInfo, isLoading: isLoadingFileInfo } = useSegmentStatisticsFile(layer);
   const availableFileMetrics = useMemo(
-    () => getAvailableFileMetrics(fileInfo, mappingName),
+    () => getAvailableMetricsFromFileInfo(fileInfo, mappingName),
     [fileInfo, mappingName],
   );
 
@@ -118,15 +119,7 @@ export function useSegmentStatistics({
 
   const areSegmentStatisticsAvailable = isSegmentIndexAvailable || fileInfo != null;
 
-  /*
-   * Which of the three fallback-capable statistics this layer can actually answer.
-   *
-   * Volume falls back to counting the segment index. Surface area falls back to a precomputed mesh
-   * file, or failing that to ad-hoc meshing, which itself walks the segment index. When no source
-   * applies, the route 404s rather than returning a value, so it must not be requested at all.
-   * (Ad-hoc meshing can also run from a seed position instead of a segment index, but the request
-   * body has no field to carry one, so that path is out of reach from here.)
-   */
+  // Which of the three fallback-capable statistics this layer can actually answer.
   const isVolumeAvailable = availableFileMetrics.volume || isSegmentIndexAvailable;
   // The backend only uses the selected mesh file when its mapping is exactly the requested one,
   // otherwise it falls through to ad-hoc meshing. Mirrors `meshFileMappingMatches` in

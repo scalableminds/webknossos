@@ -84,6 +84,7 @@ const exportStatisticsToCSV = (
 ) => {
   const csvHeader = specs.flatMap((spec) => spec.csvHeaders);
   const segmentStatisticsAsRows = segmentInformation.map((row) =>
+    // Fill missing statistics with "" to also include incomplete statistic rows.
     transformToCSVRow(specs.flatMap((spec) => spec.getCsvValues(row)).map((value) => value ?? "")),
   );
 
@@ -300,7 +301,7 @@ export function SegmentStatisticsModal({
 
     if (isVolumeAvailable) {
       specs.push({
-        key: "formattedSize",
+        key: "volume",
         title: "Volume",
         dataIndex: "formattedSize",
         isLoading: volumes.isLoading,
@@ -312,7 +313,7 @@ export function SegmentStatisticsModal({
 
     if (isSurfaceAreaAvailable) {
       specs.push({
-        key: "formattedSurfaceArea",
+        key: "surfaceArea",
         title: "Surface Area",
         dataIndex: "formattedSurfaceArea",
         isLoading: surfaceAreas.isLoading,
@@ -324,7 +325,7 @@ export function SegmentStatisticsModal({
 
     if (availableFileMetrics.maxDistance) {
       specs.push({
-        key: "formattedMaxDistance",
+        key: "maxDistance",
         title: "Max Distance",
         dataIndex: "formattedMaxDistance",
         isLoading: maxDistances.isLoading,
@@ -336,7 +337,7 @@ export function SegmentStatisticsModal({
 
     if (availableFileMetrics.sphericity) {
       specs.push({
-        key: "formattedSphericity",
+        key: "sphericity",
         title: "Sphericity",
         dataIndex: "formattedSphericity",
         isLoading: sphericities.isLoading,
@@ -349,7 +350,7 @@ export function SegmentStatisticsModal({
     if (availableFileMetrics.covariance) {
       specs.push(
         {
-          key: "formattedPrincipalExtents",
+          key: "principalExtents",
           title: "Principal Extents",
           dataIndex: "formattedPrincipalExtents",
           width: 200,
@@ -450,9 +451,6 @@ export function SegmentStatisticsModal({
       };
     });
 
-  // Statistics that failed are exported as empty cells rather than blocking the export, because a
-  // single unavailable metric (e.g. bounding boxes on a dataset without a segment index) should not
-  // make the remaining ones unexportable.
   const isAnyStatisticLoading = statisticSpecs.some((spec) => spec.isLoading);
 
   return (

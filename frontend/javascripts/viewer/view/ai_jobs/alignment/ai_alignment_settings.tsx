@@ -1,23 +1,12 @@
 import { InfoCircleOutlined, SettingOutlined } from "@ant-design/icons";
 import type { FormProps } from "antd";
-import {
-  Card,
-  Checkbox,
-  Col,
-  Collapse,
-  ConfigProvider,
-  Form,
-  Input,
-  Row,
-  Space,
-  Tooltip,
-} from "antd";
+import { Card, Checkbox, Col, Collapse, ConfigProvider, Form, Input, Row, Space } from "antd";
+import FastTooltip from "components/fast_tooltip";
 import { KeyValuePairsFormItem } from "components/key_value_pairs";
 import type React from "react";
 import { ColorWKBlue } from "theme";
 import { ShouldUseManualMatchesFormItem } from "../components/should_use_trees_form_item";
 import { useAlignmentJobContext } from "./ai_alignment_job_context";
-import FastTooltip from "components/fast_tooltip";
 
 export const AiAlignmentSettings: React.FC = () => {
   const {

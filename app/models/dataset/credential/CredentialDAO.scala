@@ -7,7 +7,8 @@ import com.scalableminds.webknossos.datastore.storage.{
   DataVaultCredential,
   GoogleServiceAccountCredential,
   HttpBasicAuthCredential,
-  S3AccessKeyCredential
+  S3AccessKeyCredential,
+  XAuthTokenCredential
 }
 import com.scalableminds.webknossos.schema.Tables.{Credentials, CredentialsRow}
 import play.api.libs.json.JsValue
@@ -68,6 +69,16 @@ class CredentialDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
       )
     } yield ()
 
+  private def parseAsXAuthTokenCredential(r: CredentialsRow): Fox[XAuthTokenCredential] =
+    for {
+      tokenValue <- r.secret.toFox
+    } yield XAuthTokenCredential(
+      r.name,
+      tokenValue,
+      Some(r._user),
+      Some(r._organization)
+    )
+
   def insertOne(_id: ObjectId, credential: S3AccessKeyCredential): Fox[Unit] =
     for {
       _ <- credential.assertScopedToUserAndOrga
@@ -86,6 +97,15 @@ class CredentialDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
       )
     } yield ()
 
+  def insertOne(_id: ObjectId, credential: XAuthTokenCredential): Fox[Unit] =
+    for {
+      _ <- credential.assertScopedToUserAndOrga
+      _ <- run(
+        q"""INSERT INTO webknossos.credentials(_id, type, name, secret, _user, _organization)
+                   VALUES(${_id}, ${CredentialType.HttpToken}, ${credential.name}, ${credential.tokenValue}, ${credential.user}, ${credential.organization})""".asUpdate
+      )
+    } yield ()
+
   def findOne(id: ObjectId): Fox[DataVaultCredential] =
     for {
       r <- run(q"SELECT $columns FROM webknossos.credentials_ WHERE _id = $id".as[CredentialsRow])
@@ -100,6 +120,7 @@ class CredentialDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
         case CredentialType.HttpBasicAuth        => parseAsHttpBasicAuthCredential(r)
         case CredentialType.S3AccessKey          => parseAsS3AccessKeyCredential(r)
         case CredentialType.GoogleServiceAccount => parseAsGoogleServiceAccountCredential(r)
+        case CredentialType.HttpToken            => parseAsXAuthTokenCredential(r)
         // Keep in sync with config reader methods in CredentialConfigReader
         case _ => Fox.failure(s"Unknown credential type: ${r.`type`}")
       }

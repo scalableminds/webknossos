@@ -131,6 +131,15 @@ export const AllUserBoundingBoxActions: Action["type"][] = [
   "DELETE_USER_BOUNDING_BOX",
   "ADD_USER_BOUNDING_BOXES",
 ];
+
+// Actions whose effect on annotation-level metadata (layer names, description) should be
+// diffed into the save queue, mirroring SkeletonTracingSaveRelevantActions /
+// VolumeTracingSaveRelevantActions.
+export const AnnotationMetadataSaveRelevantActions: Action["type"][] = [
+  "EDIT_ANNOTATION_LAYER",
+  "SET_ANNOTATION_DESCRIPTION",
+];
+
 export const initializeAnnotationAction = (annotation: Annotation) =>
   ({
     type: "INITIALIZE_ANNOTATION",

@@ -6,10 +6,11 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.storage.{
+  CredentializedUPath,
   DataVaultCredential,
   HttpBasicAuthCredential,
   LegacyDataVaultCredential,
-  CredentializedUPath
+  XAuthTokenCredential
 }
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.lang3.builder.HashCodeBuilder
@@ -132,10 +133,13 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
         getBasicAuthCredential match {
           case Some(credential) =>
             request.withAuth(credential.username, credential.password, WSAuthScheme.BASIC)
-          case None => request
+          case None =>
+            getXAuthTokenCredential match {
+              case Some(credential) => request.withHttpHeaders("X-Auth-Token" -> credential.tokenValue)
+              case None             => request
+            }
         }
     }
-
   }
 
   private def getBasicAuthCredential: Option[HttpBasicAuthCredential] =
@@ -143,6 +147,12 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
       case h: HttpBasicAuthCredential   => Some(h)
       case l: LegacyDataVaultCredential => Some(l.toBasicAuth)
       case _                            => None
+    }
+
+  private def getXAuthTokenCredential: Option[XAuthTokenCredential] =
+    credential.flatMap {
+      case x: XAuthTokenCredential => Some(x)
+      case _                       => None
     }
 
   private def getCredential = credential

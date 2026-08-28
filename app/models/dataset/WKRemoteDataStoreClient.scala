@@ -142,6 +142,16 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
         .delete()
     } yield ()
 
+  def cleanUpUploadFiles(organizationId: String, directoryName: String, jobId: String): Fox[Unit] =
+    for {
+      _ <- rpc(s"${dataStore.url}/data/datasets/upload/dataset/cleanUpUploadFiles")
+        .addQueryParam("organizationId", organizationId)
+        .addQueryParam("directoryName", directoryName)
+        .addQueryParam("jobId", jobId)
+        .addQueryParam("token", RpcTokenHolder.webknossosToken)
+        .delete()
+    } yield ()
+
   def getOneBaseDirForOrgaAbsolute(organizationId: String): Fox[UPath] =
     rpc(s"${dataStore.url}/data/datasets/getOneBaseDirForOrgaAbsolute")
       .addQueryParam("organizationId", organizationId)

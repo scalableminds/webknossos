@@ -116,12 +116,6 @@ export default {
   "datastore.health": template(
     "The datastore server at <%- url %> does not seem to be available. Please check back in five minutes.",
   ),
-  "datastore.version.too_new": template(
-    "The datastore server at (<%- url %>) supplies a newer API version (<%- suppliedDatastoreApiVersion %>) than this WEBKNOSSOS expects (<%- expectedDatastoreApiVersion %>). Please contact your admins to upgrade this WEBKNOSSOS instance",
-  ),
-  "datastore.version.too_old": template(
-    "The datastore server at (<%- url %>) supplies an older API version (<%- suppliedDatastoreApiVersion %>) than this WEBKNOSSOS expects (<%- expectedDatastoreApiVersion %>). Please contact the admins of the remote data store to upgrade.",
-  ),
   "save.failed_simultaneous_tracing": `The annotation couldn't be saved because there was a conflict (annotation was edited either by someone else or in another browser tab).
 
 A reload is necessary to return to a valid state.`,
@@ -213,6 +207,8 @@ instead. Only enable this option if you understand its effect. All layers will n
       : "This annotation is in read-only mode and cannot be updated.",
   "tracing.skeleton_editing_disabled_in_live_collab":
     "Skeleton editing is disabled because simultaneous editing is enabled in the sharing settings. Currently, only agglomerate trees (created in proofreading mode) may be edited.",
+  "tracing.layer_management_disabled_in_live_collab": (isOwner: boolean) =>
+    `Adding, deleting or converting annotation layers is disabled because simultaneous editing is enabled in the sharing settings. Please ${isOwner ? "" : "ask the owner to "}disable simultaneous editing, perform this change, and enable it again afterwards.`,
   "tracing.volume_missing_segmentation": "Volume is allowed, but segmentation does not exist.",
   "tracing.volume_layer_name_duplication":
     "This layer name already exists! Please change it to resolve duplicates.",

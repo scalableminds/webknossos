@@ -1,7 +1,7 @@
 import type { APIAiModelCategory } from "admin/api/jobs";
 import type { AiPlanEnum, PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import partition from "lodash-es/partition";
-import type { BoundingBoxProto } from "types/bounding_box";
+import type { BoundingBoxObject, BoundingBoxProto } from "types/bounding_box";
 import type {
   AdditionalCoordinate,
   ColorObject,
@@ -20,12 +20,7 @@ import type {
 } from "viewer/model/accessors/annotation_accessor";
 import type { ServerUpdateAction } from "viewer/model/sagas/volume/update_actions";
 import type { CommentType, Edge, TreeGroup } from "viewer/model/types/tree_types";
-import type {
-  BoundingBoxObject,
-  MeshInformation,
-  RecommendedConfiguration,
-  SegmentGroup,
-} from "viewer/store";
+import type { MeshInformation, RecommendedConfiguration, SegmentGroup } from "viewer/store";
 import type { EmptyObject } from "./type_utils";
 
 // Re-export

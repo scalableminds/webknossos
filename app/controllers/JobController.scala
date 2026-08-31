@@ -538,7 +538,7 @@ class JobController @Inject() (
         job <- jobDAO.findOne(jobId)
         dataStore <- dataStoreDAO.findOneByName(job._dataStore) ?~> Msg.DataStore.notFound
         userAuthToken <- Fox.fromFuture(
-          wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(request.identity.loginInfo)
+          wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateTokenForUser(request.identity._id)
         )
         uri = s"${dataStore.publicUrl}/data/exports/$jobId/download"
       } yield Redirect(uri, Map(("token", Seq(userAuthToken.id))))

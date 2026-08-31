@@ -189,9 +189,10 @@ class AnnotationTransactionService @Inject() (
         actions = allActionGroups.flatMap(_.actions),
         stats = lastActionGroup.stats, // the latest stats do count
         info = lastActionGroup.info, // frontend sets this identically for all groups of transaction
-        transactionId = f"${lastActionGroup.transactionId}-concatenated",
+        transactionId = lastActionGroup.transactionId, // needed for correct handledGroup lookup in case of retry
         transactionGroupCount = 1,
-        transactionGroupIndex = 0
+        transactionGroupIndex =
+          lastActionGroup.transactionGroupIndex // needed for correct handledGroup lookup in case of retry
       )
     }
 
@@ -219,17 +220,19 @@ class AnnotationTransactionService @Inject() (
       ec: ExecutionContext,
       tc: TokenContext,
       stats: UpdateTimingStats = new UpdateTimingStats
-  ): Fox[Long] = {
-    stats.recordRequestShape(updateGroups)
-    if (updateGroups.forall(_.transactionGroupCount == 1)) {
-      commitUpdates(annotationId, updateGroups)
-    } else {
-      updateGroups.foldLeft(annotationService.currentMaterializableVersion(annotationId)) {
-        (currentCommittedVersionFox, updateGroup) =>
-          handleUpdateGroupOfTransaction(annotationId, currentCommittedVersionFox, updateGroup)
+  ): Fox[Long] = for {
+    _ <- handledGroupIdStore.checkHealth
+    _ = stats.recordRequestShape(updateGroups)
+    newVersion <-
+      if (updateGroups.forall(_.transactionGroupCount == 1)) {
+        commitUpdates(annotationId, updateGroups)
+      } else {
+        updateGroups.foldLeft(annotationService.currentMaterializableVersion(annotationId)) {
+          (currentCommittedVersionFox, updateGroup) =>
+            handleUpdateGroupOfTransaction(annotationId, currentCommittedVersionFox, updateGroup)
+        }
       }
-    }
-  }
+  } yield newVersion
 
   // Perform version check and commit the passed updates
   private def commitUpdates(annotationId: ObjectId, updateGroups: List[UpdateActionGroup])(using

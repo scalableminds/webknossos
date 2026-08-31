@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.annotation
 
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.AutoJsonFormat
+import com.scalableminds.util.tools.JsonAutoFormat
 import com.scalableminds.webknossos.tracingstore.tracings.IdWithBoolUtils
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   MergeAgglomerateUpdateAction,
@@ -388,7 +388,7 @@ case class UpdateActionGroup(
     transactionId: String,
     transactionGroupCount: Int,
     transactionGroupIndex: Int
-) derives AutoJsonFormat {
+) derives JsonAutoFormat {
 
   def significantChangesCount: Int = actions.count(!_.isViewOnlyChange)
   def viewChangesCount: Int = actions.count(_.isViewOnlyChange)

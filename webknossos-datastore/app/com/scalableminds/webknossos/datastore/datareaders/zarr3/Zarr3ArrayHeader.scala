@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.datareaders.zarr3
 import com.scalableminds.util.box.{Box, Full}
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.box.Box.tryo
-import com.scalableminds.util.tools.{AutoJsonFormat, JsonHelper}
+import com.scalableminds.util.tools.{JsonAutoFormat, JsonHelper}
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
@@ -102,21 +102,21 @@ case class Zarr3ArrayHeader(
 
 case class ChunkGridConfiguration(
     chunk_shape: Array[Int]
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
 case class ChunkGridSpecification(
     name: String,
     configuration: ChunkGridConfiguration
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
 case class ChunkKeyEncodingConfiguration(
     separator: Option[String]
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
 case class ChunkKeyEncoding(
     name: String,
     configuration: Option[ChunkKeyEncodingConfiguration]
-) derives AutoJsonFormat {
+) derives JsonAutoFormat {
   private def isDefaultEncoding = name == "default"
   private def isV2Encoding = name == "v2"
 
@@ -133,7 +133,7 @@ case class ChunkKeyEncoding(
 case class StorageTransformerSpecification(
     name: String,
     configuration: Option[Map[String, String]] // Should be specified once storage transformers are implemented
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
 object Zarr3ArrayHeader extends JsonImplicits {
 

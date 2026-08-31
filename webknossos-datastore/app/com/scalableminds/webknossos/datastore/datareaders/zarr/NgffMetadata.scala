@@ -1,10 +1,10 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
-import com.scalableminds.util.tools.AutoJsonFormat
+import com.scalableminds.util.tools.JsonAutoFormat
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 
-case class NgffGroupHeader(zarr_format: Int) derives AutoJsonFormat
+case class NgffGroupHeader(zarr_format: Int) derives JsonAutoFormat
 object NgffGroupHeader {
   val FILENAME_DOT_ZGROUP = ".zgroup"
 }
@@ -19,9 +19,9 @@ case class NgffMultiscalesItem(
       NgffAxis(name = "z", `type` = "space", unit = Some("nanometer"))
     ),
     datasets: List[NgffDataset]
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
-case class NgffMetadata(multiscales: List[NgffMultiscalesItem], omero: Option[NgffOmeroMetadata]) derives AutoJsonFormat
+case class NgffMetadata(multiscales: List[NgffMultiscalesItem], omero: Option[NgffOmeroMetadata]) derives JsonAutoFormat
 
 object NgffMetadata {
   def fromNameVoxelSizeAndMags(
@@ -56,7 +56,7 @@ object NgffMetadata {
   val FILENAME_DOT_ZATTRS = ".zattrs"
 }
 
-case class NgffLabelsGroup(labels: List[String]) derives AutoJsonFormat
+case class NgffLabelsGroup(labels: List[String]) derives JsonAutoFormat
 
 object NgffLabelsGroup {
   val LABEL_PATH = "labels/.zattrs"

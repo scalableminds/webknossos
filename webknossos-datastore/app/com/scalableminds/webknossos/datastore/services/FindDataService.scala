@@ -7,7 +7,7 @@ import com.scalableminds.util.box.Full
 import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{AutoJsonFormat, Fox}
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, ElementClass}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
@@ -16,7 +16,7 @@ import com.scalableminds.webknossos.datastore.models.{DataRequest, VoxelPosition
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 
-case class Histogram(elementCounts: Array[Long], min: Double, max: Double) derives AutoJsonFormat
+case class Histogram(elementCounts: Array[Long], min: Double, max: Double) derives JsonAutoFormat
 
 class FindDataService @Inject() (dataServicesHolder: BinaryDataServiceHolder)(implicit ec: ExecutionContext)
     extends DataConverter

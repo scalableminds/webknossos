@@ -2,7 +2,7 @@ package controllers
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{AutoJsonFormat, Fox}
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
 import models.project.*
 import models.task.*
@@ -24,9 +24,9 @@ case class ProjectParameters(
     expectedTime: Option[Long],
     owner: ObjectId,
     isBlacklistedFromReport: Boolean
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
-case class TransferActiveTasksParameters(userId: ObjectId) derives AutoJsonFormat
+case class TransferActiveTasksParameters(userId: ObjectId) derives JsonAutoFormat
 
 class ProjectController @Inject() (
     projectService: ProjectService,

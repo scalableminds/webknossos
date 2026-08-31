@@ -1,7 +1,7 @@
 package models.shortlinks
 
 import com.scalableminds.util.accesscontext.DBAccessContext
-import com.scalableminds.util.tools.{AutoJsonFormat, Fox}
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.webknossos.schema.Tables.{GetResultShortlinksRow, Shortlinks, ShortlinksRow}
 import utils.sql.{SQLDAO, SqlClient}
 import com.scalableminds.util.objectid.ObjectId
@@ -9,7 +9,7 @@ import com.scalableminds.util.objectid.ObjectId
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-case class ShortLink(_id: ObjectId, key: String, longLink: String) derives AutoJsonFormat
+case class ShortLink(_id: ObjectId, key: String, longLink: String) derives JsonAutoFormat
 
 class ShortLinkDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[ShortLink, ShortlinksRow, Shortlinks](sqlClient) {

@@ -8,7 +8,7 @@ import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{AutoJsonFormat, Fox}
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.Annotation.{
   AnnotationLayerProto,
@@ -43,7 +43,7 @@ case class MergedFromIdsRequest(
     annotationIds: Seq[ObjectId],
     ownerIds: Seq[ObjectId],
     additionalBoundingBoxes: Seq[NamedBoundingBox]
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
 class TSAnnotationController @Inject() (
     accessTokenService: TracingStoreAccessTokenService,

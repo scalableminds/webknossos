@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.services.mesh
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Float
-import com.scalableminds.util.tools.{AutoJsonFormat, Fox}
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.ShardingSpecification
 import com.scalableminds.webknossos.datastore.datavault.{ByteRange, VaultPath}
@@ -18,7 +18,7 @@ case class NeuroglancerPrecomputedMeshInfo(
     transform: Array[Double],
     sharding: Option[ShardingSpecification],
     vertex_quantization_bits: Int
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
 class NeuroglancerPrecomputedMeshFileService @Inject() (dataVaultService: DataVaultService)(implicit
     ec: ExecutionContext

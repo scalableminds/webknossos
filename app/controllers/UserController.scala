@@ -4,7 +4,7 @@ import com.scalableminds.util.Msg
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.box.{Failure, Full}
-import com.scalableminds.util.tools.{AutoJsonFormat, Fox}
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
 import models.organization.OrganizationService
 import models.team.*
@@ -40,7 +40,7 @@ object UserUpdateParameters {
   implicit val jsonReads: Reads[UserUpdateParameters] = Json.reads[UserUpdateParameters]
 }
 
-case class UpdateLastTaskTypeIdParameters(lastTaskTypeId: Option[ObjectId]) derives AutoJsonFormat
+case class UpdateLastTaskTypeIdParameters(lastTaskTypeId: Option[ObjectId]) derives JsonAutoFormat
 
 class UserController @Inject() (
     userService: UserService,

@@ -6,7 +6,7 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{AutoJsonFormat, Fox}
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
@@ -38,7 +38,7 @@ case class AnnotationUpdatesReport(
     significantChangesCount: Int,
     viewChangesCount: Int,
     userToken: Option[String]
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
 class TSRemoteWebknossosClient @Inject() (
     rpc: RPC,

@@ -2,7 +2,7 @@ package controllers
 
 import com.scalableminds.util.Msg
 import play.silhouette.api.Silhouette
-import com.scalableminds.util.tools.{AutoJsonFormat, Fox}
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import models.team.*
 import play.api.libs.json.*
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
@@ -12,7 +12,7 @@ import com.scalableminds.util.objectid.ObjectId
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-case class TeamParameters(name: String) derives AutoJsonFormat
+case class TeamParameters(name: String) derives JsonAutoFormat
 
 class TeamController @Inject() (teamDAO: TeamDAO, teamService: TeamService, sil: Silhouette[WkEnv])(implicit
     ec: ExecutionContext,

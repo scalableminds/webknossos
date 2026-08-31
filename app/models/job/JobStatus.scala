@@ -1,7 +1,7 @@
 package models.job
 
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.AutoJsonFormat
+import com.scalableminds.util.tools.JsonAutoFormat
 import models.job.JobState.JobState
 
 case class JobStatus(
@@ -10,4 +10,4 @@ case class JobStatus(
     returnValue: Option[String],
     started: Option[Instant],
     ended: Option[Instant]
-) derives AutoJsonFormat
+) derives JsonAutoFormat

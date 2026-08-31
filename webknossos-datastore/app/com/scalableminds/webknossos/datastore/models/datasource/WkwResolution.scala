@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.models.datasource
 
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.AutoJsonFormat
+import com.scalableminds.util.tools.JsonAutoFormat
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.helpers.UPath
 
@@ -10,7 +10,7 @@ case class WkwResolution(
     cubeLength: Option[Int] = None,
     path: Option[UPath] = None,
     credentialId: Option[String] = None
-) derives AutoJsonFormat {
+) derives JsonAutoFormat {
   def toMagLocator: MagLocator =
     MagLocator(mag = resolution, path = path, credentialId = credentialId)
 

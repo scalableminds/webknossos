@@ -1,13 +1,13 @@
 package com.scalableminds.webknossos.datastore.helpers
 
-import com.scalableminds.util.tools.AutoJsonFormat
+import com.scalableminds.util.tools.JsonAutoFormat
 import com.scalableminds.webknossos.datastore.SkeletonTracing.TreeAgglomerateInfoProto
 
 case class TreeAgglomerateInfo(
     agglomerateId: UnsignedLong,
     tracingId: Option[String] = None,
     mappingName: Option[String] = None
-) derives AutoJsonFormat {
+) derives JsonAutoFormat {
   def toProto: TreeAgglomerateInfoProto = TreeAgglomerateInfoProto(
     agglomerateId.toLong,
     tracingId,

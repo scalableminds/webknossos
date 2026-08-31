@@ -5,7 +5,7 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.mvc.Formatter
-import com.scalableminds.util.tools.{AutoJsonFormat, Fox}
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
@@ -22,15 +22,15 @@ import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
 
 case class ExploreRemoteDatasetRequest(layerParameters: List[ExploreRemoteLayerParameters], organizationId: String)
-    derives AutoJsonFormat
+    derives JsonAutoFormat
 
-case class ExploreRemoteDatasetResponse(dataSource: Option[UsableDataSource], report: String) derives AutoJsonFormat
+case class ExploreRemoteDatasetResponse(dataSource: Option[UsableDataSource], report: String) derives JsonAutoFormat
 
 case class ExploreRemoteLayerParameters(
     remoteUri: String,
     credentialId: Option[String],
     preferredVoxelSize: Option[VoxelSize]
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
 // Calls explorers on dataset uris compatible with DataVaults (can also be file:/// for local)
 class ExploreRemoteLayerService @Inject() (

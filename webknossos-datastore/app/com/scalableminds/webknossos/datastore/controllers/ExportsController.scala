@@ -4,7 +4,7 @@ import java.nio.file.{Files, Path}
 import com.google.inject.Inject
 import com.scalableminds.util.Msg
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{AutoJsonFormat, Fox}
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.services.{
   BaseDirService,
@@ -17,7 +17,7 @@ import play.api.mvc.{Action, AnyContent}
 import scala.concurrent.ExecutionContext
 
 case class JobExportProperties(jobId: String, runId: String, organizationId: String, exportFileName: String)
-    derives AutoJsonFormat {
+    derives JsonAutoFormat {
 
   def fullPathIn(orgaDir: Path): Path =
     orgaDir.resolve(".export").resolve(runId).resolve(exportFileName)

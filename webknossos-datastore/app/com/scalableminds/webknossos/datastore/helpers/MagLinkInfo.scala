@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.helpers
 
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.AutoJsonFormat
+import com.scalableminds.util.tools.JsonAutoFormat
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 
 case class DataSourceMagInfo(
@@ -11,8 +11,8 @@ case class DataSourceMagInfo(
     path: Option[String],
     realPath: Option[String],
     hasLocalData: Boolean
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
-case class MagLinkInfo(mag: DataSourceMagInfo, linkedMags: Seq[DataSourceMagInfo]) derives AutoJsonFormat
+case class MagLinkInfo(mag: DataSourceMagInfo, linkedMags: Seq[DataSourceMagInfo]) derives JsonAutoFormat
 
-case class LayerMagLinkInfo(layerName: String, magLinkInfos: Seq[MagLinkInfo]) derives AutoJsonFormat
+case class LayerMagLinkInfo(layerName: String, magLinkInfos: Seq[MagLinkInfo]) derives JsonAutoFormat

@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr
 
 import com.scalableminds.util.box.{Box, Failure, Full}
-import com.scalableminds.util.tools.AutoJsonFormat
+import com.scalableminds.util.tools.JsonAutoFormat
 import com.scalableminds.webknossos.datastore.models
 import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 
@@ -9,12 +9,12 @@ case class NgffCoordinateTransformation(
     `type`: String = "scale",
     scale: Option[List[Double]],
     translation: Option[List[Double]]
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
 case class NgffDataset(path: String, coordinateTransformations: List[NgffCoordinateTransformation])
-    derives AutoJsonFormat
+    derives JsonAutoFormat
 
-case class NgffAxis(name: String, `type`: String, unit: Option[String] = None) derives AutoJsonFormat {
+case class NgffAxis(name: String, `type`: String, unit: Option[String] = None) derives JsonAutoFormat {
 
   def lengthUnit: Box[models.LengthUnit.Value] =
     if (`type` != "space")
@@ -27,9 +27,9 @@ case class NgffAxis(name: String, `type`: String, unit: Option[String] = None) d
     }
 }
 
-case class NgffOmeroMetadata(channels: List[NgffChannelAttributes]) derives AutoJsonFormat
+case class NgffOmeroMetadata(channels: List[NgffChannelAttributes]) derives JsonAutoFormat
 
-case class NgffChannelWindow(min: Double, max: Double, start: Double, end: Double) derives AutoJsonFormat
+case class NgffChannelWindow(min: Double, max: Double, start: Double, end: Double) derives JsonAutoFormat
 
 case class NgffChannelAttributes(
     color: Option[String],
@@ -37,4 +37,4 @@ case class NgffChannelAttributes(
     window: Option[NgffChannelWindow],
     inverted: Option[Boolean],
     active: Option[Boolean]
-) derives AutoJsonFormat
+) derives JsonAutoFormat

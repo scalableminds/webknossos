@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.tracingstore.annotation
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.AutoJsonFormat
+import com.scalableminds.util.tools.JsonAutoFormat
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayer
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType.AnnotationLayerType
@@ -36,7 +36,7 @@ case class AddLayerAnnotationAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends AnnotationUpdateAction
-    with ApplyImmediatelyUpdateAction derives AutoJsonFormat {
+    with ApplyImmediatelyUpdateAction derives JsonAutoFormat {
   override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
@@ -52,7 +52,7 @@ case class DeleteLayerAnnotationAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends AnnotationUpdateAction
-    with ApplyImmediatelyUpdateAction derives AutoJsonFormat {
+    with ApplyImmediatelyUpdateAction derives JsonAutoFormat {
   override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
@@ -67,7 +67,7 @@ case class UpdateLayerMetadataAnnotationAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends AnnotationUpdateAction
-    with ApplyImmediatelyUpdateAction derives AutoJsonFormat {
+    with ApplyImmediatelyUpdateAction derives JsonAutoFormat {
   override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
@@ -81,7 +81,7 @@ case class UpdateMetadataAnnotationAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends AnnotationUpdateAction
-    with ApplyImmediatelyUpdateAction derives AutoJsonFormat {
+    with ApplyImmediatelyUpdateAction derives JsonAutoFormat {
   override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
@@ -95,7 +95,7 @@ case class RevertToVersionAnnotationAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends AnnotationUpdateAction
-    with ApplyImmediatelyUpdateAction derives AutoJsonFormat {
+    with ApplyImmediatelyUpdateAction derives JsonAutoFormat {
   override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
@@ -109,7 +109,7 @@ case class ResetToBaseAnnotationAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends AnnotationUpdateAction
-    with ApplyImmediatelyUpdateAction derives AutoJsonFormat {
+    with ApplyImmediatelyUpdateAction derives JsonAutoFormat {
   override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
@@ -121,7 +121,7 @@ case class UpdateTdCameraAnnotationAction(
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
-) extends AnnotationUpdateAction derives AutoJsonFormat {
+) extends AnnotationUpdateAction derives JsonAutoFormat {
 
   override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
@@ -141,7 +141,7 @@ case class UpdateCameraAnnotationAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends AnnotationUpdateAction
-    with UserStateUpdateAction derives AutoJsonFormat {
+    with UserStateUpdateAction derives JsonAutoFormat {
 
   override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))

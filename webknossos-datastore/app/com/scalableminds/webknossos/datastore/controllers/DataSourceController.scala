@@ -7,7 +7,7 @@ import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{AutoJsonFormat, Fox}
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
@@ -43,7 +43,7 @@ import scala.concurrent.ExecutionContext
 case class PathValidationResult(
     path: UPath,
     valid: Boolean
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
 class DataSourceController @Inject() (
     dataSourceService: DataSourceService,

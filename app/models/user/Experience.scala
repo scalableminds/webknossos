@@ -1,6 +1,6 @@
 package models.user
 
-import com.scalableminds.util.tools.AutoJsonFormat
+import com.scalableminds.util.tools.JsonAutoFormat
 
 /** Experience a user needs to hold to acquire a task. The task itself defines the minimum experience needed.
   * @param domain
@@ -8,6 +8,6 @@ import com.scalableminds.util.tools.AutoJsonFormat
   * @param value
   *   Amount of experience
   */
-case class Experience(domain: String, value: Int) derives AutoJsonFormat {
+case class Experience(domain: String, value: Int) derives JsonAutoFormat {
   def trim: Experience = this.copy(domain = this.domain.trim)
 }

@@ -1,7 +1,7 @@
 package security
 
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.AutoJsonFormat
+import com.scalableminds.util.tools.JsonAutoFormat
 import com.webauthn4j.data.client.challenge.Challenge
 import play.api.libs.json.JsValue
 
@@ -20,7 +20,7 @@ case class WebAuthnPublicKeyCredentialCreationOptions(
     timeout: Int, // timeout in milliseconds
     rp: WebAuthnCreationOptionsRelyingParty,
     user: WebAuthnCreationOptionsUser
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
 /** Object reference:
   * https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions#authenticatorselection
@@ -34,7 +34,7 @@ case class WebAuthnCreationOptionsAuthenticatorSelection(
     requireResidentKey: Boolean = true,
     residentKey: String = "required",
     userVerification: String = "preferred"
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
 /** Object reference:
   * https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions#excludecredentials
@@ -45,7 +45,7 @@ case class WebAuthnCreationOptionsAuthenticatorSelection(
 case class WebAuthnCreationOptionsExcludeCredentials(
     id: String,
     `type`: String = "public-key" // must be set to "public-key"
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
 /** Object reference:
   * https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions#pubkeycredparams
@@ -53,14 +53,14 @@ case class WebAuthnCreationOptionsExcludeCredentials(
 case class WebAuthnCreationOptionsPubKeyParam(
     alg: Int,
     `type`: String = "public-key" // must be set to "public-key"
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
 /** Object reference: https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions#rp
   */
 case class WebAuthnCreationOptionsRelyingParty(
     id: String, // Should be set to the hostname
     name: String
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
 case class WebAuthnChallenge(data: Array[Byte]) extends Challenge {
   def getValue: Array[Byte] = data
@@ -72,7 +72,7 @@ case class WebAuthnCreationOptionsUser(
     displayName: String,
     id: String,
     name: String
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
 /** Object reference: https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialRequestOptions
   *
@@ -86,17 +86,17 @@ case class WebAuthnPublicKeyCredentialRequestOptions(
     rpId: Option[String] = None, // Relying party ID
     userVerification: Option[String] = Some("preferred"), // "required", "preferred", "discouraged"
     hints: Option[Seq[String]] = None // UI hints for the user-agent
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
 /** Custom carrier object. Contains name of the key to register and a key instance of PublicKeyCredentialType
   * (https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredential).
   */
-case class WebAuthnRegistration(name: String, key: JsValue) derives AutoJsonFormat
+case class WebAuthnRegistration(name: String, key: JsValue) derives JsonAutoFormat
 
 /** Wrapper of PublicKeyCredential (https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredential).
   */
-case class WebAuthnAuthentication(key: JsValue) derives AutoJsonFormat
+case class WebAuthnAuthentication(key: JsValue) derives JsonAutoFormat
 
 /** Custom object for WebAuthnCredential's id and name.
   */
-case class WebAuthnKeyDescriptor(id: ObjectId, name: String) derives AutoJsonFormat
+case class WebAuthnKeyDescriptor(id: ObjectId, name: String) derives JsonAutoFormat

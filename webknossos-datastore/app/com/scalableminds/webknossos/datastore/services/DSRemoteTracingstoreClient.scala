@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.services
 
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.tools.{AutoJsonFormat, Fox}
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffMetadata, ZarrHeader}
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.{NgffZarr3GroupHeader, Zarr3ArrayHeader}
 import com.scalableminds.webknossos.datastore.helpers.UnsignedLong
@@ -15,7 +15,7 @@ import play.api.libs.json.JsObject
 case class EditableMappingSegmentListResult(
     segmentIds: List[UnsignedLong],
     agglomerateIdIsPresent: Boolean
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
 class DSRemoteTracingstoreClient @Inject() (
     rpc: RPC,

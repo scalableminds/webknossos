@@ -5,7 +5,7 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{AutoJsonFormat, Fox}
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import play.api.mvc.Result
 import play.api.mvc.Results.Forbidden
 
@@ -22,10 +22,10 @@ object AccessResourceType extends ExtendedEnumeration {
   val dataset, tracing, annotation, webknossos, jobExport = Value
 }
 
-case class UserAccessAnswer(granted: Boolean, msg: Option[String] = None) derives AutoJsonFormat
+case class UserAccessAnswer(granted: Boolean, msg: Option[String] = None) derives JsonAutoFormat
 
 case class UserAccessRequest(resourceId: Option[String], resourceType: AccessResourceType.Value, mode: AccessMode.Value)
-    derives AutoJsonFormat
+    derives JsonAutoFormat
 object UserAccessRequest {
 
   def administrateDatasets: UserAccessRequest =

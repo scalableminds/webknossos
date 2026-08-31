@@ -1,21 +1,21 @@
 package models.voxelytics
 
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.AutoJsonFormat
+import com.scalableminds.util.tools.JsonAutoFormat
 import models.voxelytics.VoxelyticsRunState.VoxelyticsRunState
 import play.api.libs.json.*
 
 trait WorkflowEvent {}
 
 case class RunStateChangeEvent(state: VoxelyticsRunState, timestamp: Instant) extends WorkflowEvent
-    derives AutoJsonFormat
+    derives JsonAutoFormat
 
 case class TaskStateChangeEvent(
     taskName: String,
     state: VoxelyticsRunState,
     timestamp: Instant,
     artifacts: Map[String, WorkflowDescriptionArtifact]
-) extends WorkflowEvent derives AutoJsonFormat
+) extends WorkflowEvent derives JsonAutoFormat
 
 case class ChunkStateChangeEvent(
     taskName: String,
@@ -23,9 +23,9 @@ case class ChunkStateChangeEvent(
     chunkName: String,
     timestamp: Instant,
     state: VoxelyticsRunState
-) extends WorkflowEvent derives AutoJsonFormat
+) extends WorkflowEvent derives JsonAutoFormat
 
-case class RunHeartbeatEvent(timestamp: Instant) extends WorkflowEvent derives AutoJsonFormat
+case class RunHeartbeatEvent(timestamp: Instant) extends WorkflowEvent derives JsonAutoFormat
 
 case class ChunkProfilingEvent(
     taskName: String,
@@ -37,7 +37,7 @@ case class ChunkProfilingEvent(
     cpuUser: Double,
     cpuSystem: Double,
     timestamp: Instant
-) extends WorkflowEvent derives AutoJsonFormat
+) extends WorkflowEvent derives JsonAutoFormat
 
 case class ArtifactFileChecksumEvent(
     taskName: String,
@@ -49,7 +49,7 @@ case class ArtifactFileChecksumEvent(
     fileSize: Long,
     lastModified: Instant,
     timestamp: Instant
-) extends WorkflowEvent derives AutoJsonFormat
+) extends WorkflowEvent derives JsonAutoFormat
 
 object WorkflowEvent {
   implicit object workflowEventFormat extends Format[WorkflowEvent] {

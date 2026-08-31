@@ -2,7 +2,7 @@ package controllers
 
 import com.scalableminds.util.Msg
 import play.silhouette.api.Silhouette
-import com.scalableminds.util.tools.{AutoJsonFormat, Fox}
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import models.annotation.{TracingStoreDAO, TracingStoreService}
 import play.api.libs.json.Json
 
@@ -12,7 +12,7 @@ import security.WkEnv
 
 import scala.concurrent.ExecutionContext
 
-case class TracingStoreParameters(name: String, url: String, publicUrl: String) derives AutoJsonFormat
+case class TracingStoreParameters(name: String, url: String, publicUrl: String) derives JsonAutoFormat
 
 class TracingStoreController @Inject() (
     tracingStoreService: TracingStoreService,

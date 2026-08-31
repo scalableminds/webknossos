@@ -2,13 +2,13 @@ package models.task
 
 import com.scalableminds.util.box.{Box, Empty, Failure, Full, ParamFailure}
 import com.scalableminds.util.mvc.JsonResultAttributes
-import com.scalableminds.util.tools.{AutoJsonFormat, Fox}
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import play.api.http.Status
 import play.api.libs.json.*
 
 import scala.concurrent.{ExecutionContext, Future}
 
-case class TaskCreationResult(tasks: List[JsObject], warnings: List[String]) derives AutoJsonFormat
+case class TaskCreationResult(tasks: List[JsObject], warnings: List[String]) derives JsonAutoFormat
 
 object TaskCreationResult extends JsonResultAttributes with Status {
 

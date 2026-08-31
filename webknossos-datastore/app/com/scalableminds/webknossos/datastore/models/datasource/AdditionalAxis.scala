@@ -2,12 +2,12 @@ package com.scalableminds.webknossos.datastore.models.datasource
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.box.{Box, Failure, Full}
-import com.scalableminds.util.tools.AutoJsonFormat
+import com.scalableminds.util.tools.JsonAutoFormat
 import com.scalableminds.webknossos.datastore.geometry.{AdditionalAxisProto, Vec2IntProto}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 
 // bounds: lower bound inclusive, upper bound exclusive
-case class AdditionalAxis(name: String, bounds: Seq[Int], index: Int) derives AutoJsonFormat {
+case class AdditionalAxis(name: String, bounds: Seq[Int], index: Int) derives JsonAutoFormat {
   lazy val lowerBound: Int = bounds(0)
   lazy val upperBound: Int = bounds(1)
   lazy val highestValue: Int = upperBound - 1

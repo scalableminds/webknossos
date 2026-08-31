@@ -1,6 +1,6 @@
 package models.voxelytics
 
-import com.scalableminds.util.tools.AutoJsonFormat
+import com.scalableminds.util.tools.JsonAutoFormat
 import play.api.libs.json.{JsObject, JsValue, Json}
 
 case class WorkflowDescriptionTaskConfig(
@@ -10,7 +10,7 @@ case class WorkflowDescriptionTaskConfig(
     distribution: JsValue,
     output_paths: JsValue,
     task: String
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
 case class WorkflowDescriptionConfig(
     global_parameters: Map[String, JsValue],
@@ -18,7 +18,7 @@ case class WorkflowDescriptionConfig(
     schema_version: Option[Long],
     git_hash: Option[String],
     tasks: Map[String, WorkflowDescriptionTaskConfig]
-) derives AutoJsonFormat {
+) derives JsonAutoFormat {
   def asJsonWithoutTasks: JsValue =
     Json.obj("global_parameters" -> global_parameters, "paths" -> paths, "schema_version" -> schema_version)
 }
@@ -31,19 +31,19 @@ case class WorkflowDescriptionArtifact(
     attributes: JsValue,
     iframes: JsValue,
     links: JsValue
-) derives AutoJsonFormat {
+) derives JsonAutoFormat {
   def metadataAsJson: JsObject =
     Json.obj("attributes" -> attributes, "iframes" -> iframes, "links" -> links)
 }
 
 case class WorkflowDescriptionRun(name: String, user: String, hostname: String, voxelyticsVersion: String)
-    derives AutoJsonFormat
+    derives JsonAutoFormat
 
-case class WorkflowDescriptionWorkflow(name: String, hash: String, yamlContent: Option[String]) derives AutoJsonFormat
+case class WorkflowDescriptionWorkflow(name: String, hash: String, yamlContent: Option[String]) derives JsonAutoFormat
 
 case class WorkflowDescription(
     config: WorkflowDescriptionConfig,
     artifacts: Map[String, Map[String, WorkflowDescriptionArtifact]],
     run: WorkflowDescriptionRun,
     workflow: WorkflowDescriptionWorkflow
-) derives AutoJsonFormat
+) derives JsonAutoFormat

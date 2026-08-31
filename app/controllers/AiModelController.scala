@@ -3,7 +3,7 @@ package controllers
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
-import com.scalableminds.util.tools.{AutoJsonFormat, Fox}
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
 import models.aimodels.{AiInference, AiInferenceDAO, AiInferenceService, AiModel, AiModelDAO, AiModelService}
 import models.annotation.AnnotationDAO
@@ -28,7 +28,7 @@ case class TrainingAnnotationSpecification(
     colorLayerName: String,
     segmentationLayerName: String,
     mag: Vec3Int
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
 case class RunNeuronModelTrainingParameters(
     trainingAnnotations: List[TrainingAnnotationSpecification],
@@ -37,7 +37,7 @@ case class RunNeuronModelTrainingParameters(
     comment: Option[String],
     workflowYaml: Option[String],
     customConfiguration: Option[JsObject]
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
 case class RunInstanceModelTrainingParameters(
     trainingAnnotations: List[TrainingAnnotationSpecification],
@@ -47,7 +47,7 @@ case class RunInstanceModelTrainingParameters(
     comment: Option[String],
     workflowYaml: Option[String],
     customConfiguration: Option[JsObject]
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
 case class RunInferenceParameters(
     datasetId: ObjectId,
@@ -65,10 +65,10 @@ case class RunInferenceParameters(
     evalSparseTubeThresholdNm: Option[Double],
     evalMinMergerPathLengthNm: Option[Double],
     customConfiguration: Option[JsObject]
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
 case class UpdateAiModelParameters(name: String, comment: Option[String], sharedOrganizationIds: Option[List[String]])
-    derives AutoJsonFormat
+    derives JsonAutoFormat
 
 case class ReserveAiModelUploadToPathParameters(
     existingAiModelId: Option[ObjectId], // if empty, a new model entry is generated and returned
@@ -77,7 +77,7 @@ case class ReserveAiModelUploadToPathParameters(
     comment: Option[String],
     category: Option[AiModelCategory],
     pathPrefix: Option[UPath]
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
 class AiModelController @Inject() (
     aiModelDAO: AiModelDAO,

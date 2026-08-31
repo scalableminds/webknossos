@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.AutoJsonFormat
+import com.scalableminds.util.tools.JsonAutoFormat
 import com.scalableminds.webknossos.datastore.helpers.UnsignedLong
 import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, UpdateAction}
 
@@ -23,7 +23,7 @@ case class SplitAgglomerateUpdateAction(
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
-) extends EditableMappingUpdateAction derives AutoJsonFormat {
+) extends EditableMappingUpdateAction derives JsonAutoFormat {
   override def addTimestamp(timestamp: Long): EditableMappingUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
   override def addAuthorId(authorId: Option[ObjectId]): UpdateAction =
@@ -46,7 +46,7 @@ case class MergeAgglomerateUpdateAction(
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
-) extends EditableMappingUpdateAction derives AutoJsonFormat {
+) extends EditableMappingUpdateAction derives JsonAutoFormat {
   override def addTimestamp(timestamp: Long): EditableMappingUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
   override def addAuthorId(authorId: Option[ObjectId]): UpdateAction =

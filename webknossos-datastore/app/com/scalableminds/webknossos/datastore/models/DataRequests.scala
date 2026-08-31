@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.models
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
-import com.scalableminds.util.tools.AutoJsonFormat
+import com.scalableminds.util.tools.JsonAutoFormat
 import com.scalableminds.webknossos.datastore.geometry.AdditionalCoordinateProto
 import com.scalableminds.webknossos.datastore.helpers.UnsignedLong
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
@@ -34,7 +34,7 @@ case class WebknossosDataRequest(
     applyAgglomerate: Option[String],
     additionalCoordinates: Option[Seq[AdditionalCoordinate]],
     version: Option[Long]
-) extends AbstractDataRequest derives AutoJsonFormat {
+) extends AbstractDataRequest derives JsonAutoFormat {
 
   def cuboid(dataLayer: DataLayer): Cuboid =
     Cuboid(VoxelPosition(position.x, position.y, position.z, mag), cubeSize, cubeSize, cubeSize)
@@ -54,7 +54,7 @@ case class WebknossosAdHocMeshRequest(
     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
     annotationVersion: Option[Long],
     findNeighbors: Boolean = true
-) derives AutoJsonFormat {
+) derives JsonAutoFormat {
   def cuboid: Cuboid =
     Cuboid(VoxelPosition(position.x, position.y, position.z, mag), cubeSize.x, cubeSize.y, cubeSize.z)
 }
@@ -64,7 +64,7 @@ case class RawCuboidRequest(
     cubeSize: Vec3Int,
     mag: Vec3Int,
     additionalCoordinates: Option[Seq[AdditionalCoordinate]]
-) extends AbstractDataRequest derives AutoJsonFormat {
+) extends AbstractDataRequest derives JsonAutoFormat {
   override def cuboid(dataLayer: DataLayer): Cuboid =
     Cuboid(VoxelPosition(position.x, position.y, position.z, mag), cubeSize.x, cubeSize.y, cubeSize.z)
 
@@ -75,7 +75,7 @@ case class RawCuboidRequest(
 case class AdditionalCoordinate(
     name: String,
     value: Int
-) derives AutoJsonFormat {
+) derives JsonAutoFormat {
   override def toString: String = s"$name=$value"
 }
 

@@ -4,7 +4,7 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{AutoJsonFormat, Fox}
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.explore.ExploreLayerUtils
 import com.scalableminds.webknossos.datastore.models.VoxelSize
@@ -21,14 +21,14 @@ case class ComposeRequest(
     organizationId: String,
     voxelSize: VoxelSize,
     layers: Seq[ComposeRequestLayer]
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
 case class ComposeRequestLayer(
     sourceDatasetId: ObjectId,
     sourceLayerName: String,
     targetLayerName: String,
     transformations: Option[Seq[CoordinateTransformation]]
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
 case class ComposeAddMagRequest(
     sourceDatasetId: ObjectId,
@@ -36,7 +36,7 @@ case class ComposeAddMagRequest(
     targetLayerName: String,
     sourceMag: Vec3Int,
     targetMag: Option[Vec3Int] // None means use sourceMag
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
 case class ComposeAddAttachmentRequest(
     sourceDatasetId: ObjectId,
@@ -45,7 +45,7 @@ case class ComposeAddAttachmentRequest(
     attachmentType: LayerAttachmentType,
     sourceAttachmentName: String,
     targetAttachmentName: Option[String] // None means use sourceAttachmentName
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
 class ComposeService @Inject() (datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDAO, datasetService: DatasetService)(
     implicit ec: ExecutionContext

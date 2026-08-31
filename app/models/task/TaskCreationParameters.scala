@@ -2,7 +2,7 @@ package models.task
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.AutoJsonFormat
+import com.scalableminds.util.tools.JsonAutoFormat
 import models.user.Experience
 
 case class TaskParameters(
@@ -21,7 +21,7 @@ case class TaskParameters(
     newSkeletonTracingId: Option[String],
     newVolumeTracingId: Option[String],
     newAnnotationId: Option[ObjectId]
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
 case class NmlTaskParameters(
     taskTypeId: ObjectId,
@@ -30,8 +30,8 @@ case class NmlTaskParameters(
     projectName: String,
     scriptId: Option[ObjectId],
     boundingBox: Option[BoundingBox]
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
 // baseId is the id of the old Annotation which should be used as base for the new annotation, skeletonId/volumeId are the ids of the duplicated tracings from baseId
 case class BaseAnnotation(baseId: String, skeletonId: Option[String] = None, volumeId: Option[String] = None)
-    derives AutoJsonFormat
+    derives JsonAutoFormat

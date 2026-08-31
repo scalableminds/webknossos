@@ -4,7 +4,7 @@ import com.scalableminds.util.Msg
 import com.google.inject.Inject
 import com.scalableminds.util.box.Full
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{AutoJsonFormat, Fox, JsonHelper}
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.zarr.Zarr3OutputHelper
 import com.scalableminds.webknossos.datastore.helpers.UnsignedLong
@@ -32,7 +32,7 @@ case class LegacyReserveManualUploadInformation(
     initialTeamIds: Seq[ObjectId],
     folderId: Option[ObjectId],
     requireUniqueName: Boolean = false
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
 case class LegacyReserveUploadInformationV11(
     uploadId: String, // upload id that was also used in chunk upload (this time without file paths)
@@ -47,7 +47,7 @@ case class LegacyReserveUploadInformationV11(
     requireUniqueName: Option[Boolean],
     isVirtual: Option[Boolean], // Only set (to false) for legacy manual uploads
     needsConversion: Option[Boolean] // None means false
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
 case class LegacyLinkedLayerIdentifier(
     organizationId: Option[String],
@@ -57,7 +57,7 @@ case class LegacyLinkedLayerIdentifier(
     dataSetName: String,
     layerName: String,
     newLayerName: Option[String] = None
-) derives AutoJsonFormat {
+) derives JsonAutoFormat {
 
   def getOrganizationId: String = this.organizationId.getOrElse(this.organizationName.getOrElse(""))
 }
@@ -72,7 +72,7 @@ object LegacyLinkedLayerIdentifier {
     new LegacyLinkedLayerIdentifier(Some(organizationId), None, None, dataSetName, layerName, newLayerName)
 }
 
-case class LegacyUploadInformation(uploadId: String, needsConversion: Option[Boolean]) derives AutoJsonFormat
+case class LegacyUploadInformation(uploadId: String, needsConversion: Option[Boolean]) derives JsonAutoFormat
 
 case class ReserveUploadInformationV13(
     uploadId: String, // upload id that was also used in chunk upload (this time without file paths)
@@ -87,7 +87,7 @@ case class ReserveUploadInformationV13(
     requireUniqueName: Option[Boolean],
     isVirtual: Option[Boolean], // Only set (to false) for legacy manual uploads
     needsConversion: Option[Boolean] // None means false
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
 class DSLegacyApiController @Inject() (
     accessTokenService: DataStoreAccessTokenService,

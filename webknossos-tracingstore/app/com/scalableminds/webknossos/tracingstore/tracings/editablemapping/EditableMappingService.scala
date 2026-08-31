@@ -8,7 +8,7 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{AutoJsonFormat, Fox}
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
@@ -62,22 +62,22 @@ case class MinCutParameters(
     mag: Vec3Int,
     agglomerateId: UnsignedLong,
     version: Long
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
 case class NeighborsParameters(segmentId: UnsignedLong, mag: Vec3Int, agglomerateId: UnsignedLong, version: Long)
-    derives AutoJsonFormat
+    derives JsonAutoFormat
 
 case class EdgeWithPositions(
     segmentId1: UnsignedLong,
     segmentId2: UnsignedLong,
     position1: Vec3Int,
     position2: Vec3Int
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
 case class NodeWithPosition(
     segmentId: UnsignedLong,
     position: Vec3Int
-) derives AutoJsonFormat
+) derives JsonAutoFormat
 
 class EditableMappingService @Inject() (
     datasetErrorLoggingService: TSDatasetErrorLoggingService,

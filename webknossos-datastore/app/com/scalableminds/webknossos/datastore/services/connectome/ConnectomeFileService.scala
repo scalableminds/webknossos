@@ -4,7 +4,7 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.box.{Box, Empty}
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.tools.{AutoFormat, Fox}
+import com.scalableminds.util.tools.{AutoJsonFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.helpers.UnsignedLong
@@ -25,17 +25,17 @@ import scala.concurrent.ExecutionContext
 case class ByAgglomerateIdsRequest(
     connectomeFile: String,
     agglomerateIds: Seq[UnsignedLong]
-) derives AutoFormat
+) derives AutoJsonFormat
 
 case class BySynapseIdsRequest(
     connectomeFile: String,
     synapseIds: List[Long]
-) derives AutoFormat
+) derives AutoJsonFormat
 
 case class DirectedSynapseList(
     in: Seq[Long],
     out: Seq[Long]
-) derives AutoFormat
+) derives AutoJsonFormat
 
 case class DirectedSynapseListMutable(
     in: ListBuffer[Long],
@@ -51,12 +51,12 @@ object DirectedSynapseListMutable {
 case class SynapseTypesWithLegend(
     synapseTypes: Seq[Long],
     typeToString: Seq[String]
-) derives AutoFormat
+) derives AutoJsonFormat
 
 case class ConnectomeFileNameWithMappingName(
     connectomeFileName: String,
     mappingName: String
-) derives AutoFormat
+) derives AutoJsonFormat
 
 case class ConnectomeFileKey(dataSourceId: DataSourceId, layerName: String, attachment: LayerAttachment)
     extends AttachmentKey

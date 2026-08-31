@@ -2,7 +2,7 @@ package models.job
 
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{AutoFormat, Fox, JsonHelper}
+import com.scalableminds.util.tools.{AutoJsonFormat, Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.schema.Tables.{Jobs, JobsRow, GetResultJobsRow}
 import models.job.JobState.JobState
@@ -82,7 +82,7 @@ case class JobCompactInfo(
     ended: Option[Instant],
     lastRetry: Option[Instant],
     costInMilliCredits: Option[Int]
-) extends JobResultLinks derives AutoFormat {
+) extends JobResultLinks derives AutoJsonFormat {
 
   protected def effectiveState: JobState = state
 

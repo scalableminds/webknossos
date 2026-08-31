@@ -1,12 +1,12 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
-import com.scalableminds.util.tools.AutoFormat
+import com.scalableminds.util.tools.AutoJsonFormat
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import play.api.libs.json.{JsValue, Json}
 
 // Defines the axis order of a DatasetArray. Note that this ignores transpose codecs/ArrayOrder.F/C.
 // Those will have to be applied on individual chunk’s contents.
-case class AxisOrder(x: Int, y: Int, z: Option[Int], c: Option[Int] = None) derives AutoFormat {
+case class AxisOrder(x: Int, y: Int, z: Option[Int], c: Option[Int] = None) derives AutoJsonFormat {
 
   def hasZAxis: Boolean = z.isDefined
 

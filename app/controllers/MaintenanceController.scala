@@ -4,7 +4,7 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{AutoFormat, Fox}
+import com.scalableminds.util.tools.{AutoJsonFormat, Fox}
 import models.user.UserService
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
@@ -107,7 +107,7 @@ case class Maintenance(
     isDeleted: Boolean = false
 )
 
-case class MaintenanceParameters(startTime: Instant, endTime: Instant, message: String) derives AutoFormat
+case class MaintenanceParameters(startTime: Instant, endTime: Instant, message: String) derives AutoJsonFormat
 
 class MaintenanceService @Inject() () {
   def publicWrites(m: Maintenance): JsObject =

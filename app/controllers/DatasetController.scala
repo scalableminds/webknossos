@@ -7,7 +7,7 @@ import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{AutoFormat, Fox, TristateOptionJsonHelper}
+import com.scalableminds.util.tools.{AutoJsonFormat, Fox, TristateOptionJsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.helpers.UPath
@@ -72,15 +72,15 @@ case class DatasetUpdateParameters(
     tags: List[String],
     metadata: Option[JsArray],
     folderId: Option[ObjectId]
-) derives AutoFormat
+) derives AutoJsonFormat
 
-case class LayerRenaming(oldName: String, newName: String) derives AutoFormat
+case class LayerRenaming(oldName: String, newName: String) derives AutoJsonFormat
 case class AttachmentRenaming(
     layerName: String, // Note: if a request contains a layer renaming *and* attachment renaming, this must use the *new* layerName.
     oldName: String,
     attachmentType: LayerAttachmentType,
     newName: String
-) derives AutoFormat
+) derives AutoJsonFormat
 
 case class ReserveDatasetUploadToPathsRequest(
     datasetName: String,
@@ -90,12 +90,12 @@ case class ReserveDatasetUploadToPathsRequest(
     initialTeamIds: Seq[ObjectId] = Seq.empty,
     requireUniqueName: Boolean = false,
     pathPrefix: Option[UPath]
-) derives AutoFormat
+) derives AutoJsonFormat
 
 case class ReserveDatasetUploadToPathsForPreliminaryRequest(
     dataSource: UsableDataSource,
     pathPrefix: Option[UPath]
-) derives AutoFormat
+) derives AutoJsonFormat
 
 case class ReserveMagUploadToPathRequest(
     layerName: String,
@@ -104,7 +104,7 @@ case class ReserveMagUploadToPathRequest(
     channelIndex: Option[Int],
     pathPrefix: Option[UPath],
     overwritePending: Boolean
-) derives AutoFormat
+) derives AutoJsonFormat
 
 case class ReserveAttachmentUploadToPathRequest(
     layerName: String,
@@ -113,7 +113,7 @@ case class ReserveAttachmentUploadToPathRequest(
     attachmentDataformat: LayerAttachmentDataformat.Value,
     pathPrefix: Option[UPath],
     overwritePending: Option[Boolean] = None
-) derives AutoFormat
+) derives AutoJsonFormat
 
 object SAMInteractionType extends ExtendedEnumeration {
   type SAMInteractionType = Value
@@ -133,14 +133,14 @@ case class SegmentAnythingMaskParameters(
     selectionBottomRightY: Option[Int],
     pointX: Option[Int], // in target-mag, relative to paddedBoundingBox topleft
     pointY: Option[Int]
-) derives AutoFormat
+) derives AutoJsonFormat
 
 case class DataSourceRegistrationInfo(
     dataSource: UsableDataSource,
     folderId: Option[ObjectId],
     dataStoreName: String,
     importUrl: Option[String]
-) derives AutoFormat
+) derives AutoJsonFormat
 
 case class StorageDetailEntry(
     layerName: String,
@@ -148,7 +148,7 @@ case class StorageDetailEntry(
     attachmentType: Option[LayerAttachmentType],
     usedStorageBytes: Long,
     lastUpdated: Instant
-) derives AutoFormat
+) derives AutoJsonFormat
 
 class DatasetController @Inject() (
     userService: UserService,

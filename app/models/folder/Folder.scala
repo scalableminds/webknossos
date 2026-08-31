@@ -3,7 +3,7 @@ package models.folder
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{AutoFormat, Fox, JsonHelper}
+import com.scalableminds.util.tools.{AutoJsonFormat, Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.schema.Tables.{Folders, FoldersRow, GetResultFoldersRow}
 import com.typesafe.scalalogging.LazyLogging
@@ -30,7 +30,7 @@ case class FolderWithParent(
     created: Instant = Instant.now
 )
 
-case class FolderParameters(name: String, allowedTeams: List[ObjectId], metadata: JsArray) derives AutoFormat
+case class FolderParameters(name: String, allowedTeams: List[ObjectId], metadata: JsArray) derives AutoJsonFormat
 
 class FolderService @Inject() (
     teamDAO: TeamDAO,

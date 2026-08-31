@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.models
 
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.AutoFormat
+import com.scalableminds.util.tools.AutoJsonFormat
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 
 case class UnfinishedUpload(
@@ -12,7 +12,7 @@ case class UnfinishedUpload(
     created: Instant,
     filePaths: Option[Seq[String]],
     allowedTeams: Seq[String]
-) derives AutoFormat {
+) derives AutoJsonFormat {
   def withoutDataSourceId: UnfinishedUploadWithoutDataSourceId =
     UnfinishedUploadWithoutDataSourceId(uploadId, datasetName, folderId, created, filePaths, allowedTeams)
 }
@@ -24,4 +24,4 @@ case class UnfinishedUploadWithoutDataSourceId(
     created: Instant,
     filePaths: Option[Seq[String]],
     allowedTeams: Seq[String]
-) derives AutoFormat
+) derives AutoJsonFormat

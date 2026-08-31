@@ -1,5 +1,5 @@
 package com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating
 
-import com.scalableminds.util.tools.AutoFormat
+import com.scalableminds.util.tools.AutoJsonFormat
 
-case class UpdateActionBranchPoint(nodeId: Int, timestamp: Long) derives AutoFormat
+case class UpdateActionBranchPoint(nodeId: Int, timestamp: Long) derives AutoJsonFormat

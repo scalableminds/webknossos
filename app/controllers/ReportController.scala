@@ -3,7 +3,7 @@ package controllers
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import play.silhouette.api.Silhouette
-import com.scalableminds.util.tools.{AutoFormat, Fox}
+import com.scalableminds.util.tools.{AutoJsonFormat, Fox}
 import models.annotation.{AnnotationDAO, AnnotationType}
 import models.team.TeamDAO
 import models.user.{MultiUserDAO, User, UserDAO, UserService}
@@ -21,7 +21,7 @@ case class AvailableTaskCountsEntry(
     user: String,
     totalAvailableTasks: Int,
     availableTasksByProjects: Map[String, Int]
-) derives AutoFormat
+) derives AutoJsonFormat
 
 case class ProjectProgressEntry(
     projectName: String,
@@ -33,7 +33,7 @@ case class ProjectProgressEntry(
     finishedInstances: Int,
     activeInstances: Int,
     billedMilliseconds: Long
-) derives AutoFormat
+) derives AutoJsonFormat
 
 class ReportDAO @Inject() (sqlClient: SqlClient, annotationDAO: AnnotationDAO)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {

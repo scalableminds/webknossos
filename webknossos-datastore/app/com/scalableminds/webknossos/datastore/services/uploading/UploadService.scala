@@ -14,7 +14,7 @@ import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.box.Box.tryo
-import com.scalableminds.util.tools.{AutoFormat, Fox, JsonHelper, TextUtils}
+import com.scalableminds.util.tools.{AutoJsonFormat, Fox, JsonHelper, TextUtils}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
@@ -60,7 +60,7 @@ case class ResumableUploadInfo(
     totalFileCount: Long,
     filePaths: Option[Seq[String]],
     totalFileSizeInBytes: Option[Long]
-) derives AutoFormat
+) derives AutoJsonFormat
 
 case class DatasetUploadInfo(
     resumableUploadInfo: ResumableUploadInfo,
@@ -74,7 +74,7 @@ case class DatasetUploadInfo(
     needsConversion: Option[Boolean], // None means false
     voxelSizeFactor: Option[Vec3Double],
     voxelSizeUnit: Option[LengthUnit]
-) derives AutoFormat
+) derives AutoJsonFormat
 
 case class MagUploadInfo(
     resumableUploadInfo: ResumableUploadInfo,
@@ -82,7 +82,7 @@ case class MagUploadInfo(
     layerName: String,
     mag: MagLocator,
     overwritePending: Boolean
-) derives AutoFormat
+) derives AutoJsonFormat
 
 case class AttachmentUploadInfo(
     resumableUploadInfo: ResumableUploadInfo,
@@ -91,13 +91,13 @@ case class AttachmentUploadInfo(
     attachmentType: LayerAttachmentType,
     attachment: LayerAttachment,
     overwritePending: Boolean
-) derives AutoFormat
+) derives AutoJsonFormat
 
-case class DatasetUploadAdditionalInfo(newDatasetId: ObjectId, directoryName: String) derives AutoFormat
+case class DatasetUploadAdditionalInfo(newDatasetId: ObjectId, directoryName: String) derives AutoJsonFormat
 
-case class MagUploadAdditionalInfo(dataSourceId: DataSourceId) derives AutoFormat
+case class MagUploadAdditionalInfo(dataSourceId: DataSourceId) derives AutoJsonFormat
 
-case class AttachmentUploadAdditionalInfo(dataSourceId: DataSourceId) derives AutoFormat
+case class AttachmentUploadAdditionalInfo(dataSourceId: DataSourceId) derives AutoJsonFormat
 
 case class ReportDatasetUploadParameters(
     needsConversion: Boolean,
@@ -105,14 +105,14 @@ case class ReportDatasetUploadParameters(
     dataSourceOpt: Option[UsableDataSource], // must be set if needsConversion is false
     layersToLink: Seq[LinkedLayerIdentifier],
     voxelSize: Option[VoxelSize]
-) derives AutoFormat
+) derives AutoJsonFormat
 
 case class ReportMagUploadParameters(
     datasetId: ObjectId,
     layerName: String,
     mag: MagLocator,
     magSizeBytes: Long
-) derives AutoFormat
+) derives AutoJsonFormat
 
 case class ReportAttachmentUploadParameters(
     datasetId: ObjectId,
@@ -120,10 +120,10 @@ case class ReportAttachmentUploadParameters(
     attachmentType: LayerAttachmentType,
     attachment: LayerAttachment,
     attachmentSizeBytes: Long
-) derives AutoFormat
+) derives AutoJsonFormat
 
 case class LinkedLayerIdentifier(datasetId: ObjectId, layerName: String, newLayerName: Option[String] = None)
-    derives AutoFormat
+    derives AutoJsonFormat
 
 class UploadService @Inject() (
     dataSourceService: DataSourceService,

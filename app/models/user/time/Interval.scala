@@ -1,7 +1,7 @@
 package models.user.time
 
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.AutoFormat
+import com.scalableminds.util.tools.AutoJsonFormat
 
 import java.time.temporal.TemporalAdjusters
 import java.time.temporal.TemporalAdjusters.firstInMonth
@@ -13,7 +13,7 @@ trait Interval {
   def end: Instant
 }
 
-case class Month(month: Int, year: Int) extends Interval with Ordered[Month] derives AutoFormat {
+case class Month(month: Int, year: Int) extends Interval with Ordered[Month] derives AutoJsonFormat {
 
   def compare(p: Month): Int = 12 * (year - p.year) + (month - p.month)
 
@@ -28,7 +28,7 @@ case class Month(month: Int, year: Int) extends Interval with Ordered[Month] der
   private def asZonedDateTime: ZonedDateTime = ZonedDateTime.of(year, month, 1, 0, 0, 0, 0, ZoneId.of("UTC"))
 }
 
-case class Week(week: Int, year: Int) extends Interval with Ordered[Week] derives AutoFormat {
+case class Week(week: Int, year: Int) extends Interval with Ordered[Week] derives AutoJsonFormat {
 
   def compare(p: Week): Int = 53 * (year - p.year) + (week - p.week)
   override def toString: String = f"$year%d-W$week%02d"
@@ -50,7 +50,7 @@ case class Week(week: Int, year: Int) extends Interval with Ordered[Week] derive
       .plusWeeks(week - 1)
 }
 
-case class Day(day: Int, month: Int, year: Int) extends Interval with Ordered[Day] derives AutoFormat {
+case class Day(day: Int, month: Int, year: Int) extends Interval with Ordered[Day] derives AutoJsonFormat {
 
   def compare(p: Day): Int = 500 * (year - p.year) + 40 * (month - p.month) + (day - p.day)
 

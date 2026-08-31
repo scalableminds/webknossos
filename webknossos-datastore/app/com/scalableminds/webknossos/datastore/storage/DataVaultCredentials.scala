@@ -1,12 +1,12 @@
 package com.scalableminds.webknossos.datastore.storage
 
-import com.scalableminds.util.tools.{AutoFormat, Fox}
+import com.scalableminds.util.tools.{AutoJsonFormat, Fox}
 import play.api.libs.json.JsValue
 import software.amazon.awssdk.auth.credentials.{AwsBasicCredentials, StaticCredentialsProvider}
 
 import scala.concurrent.ExecutionContext
 
-sealed trait DataVaultCredential derives AutoFormat {
+sealed trait DataVaultCredential derives AutoJsonFormat {
   def userId: Option[String]
   def organization: Option[String]
   def name: String
@@ -22,7 +22,7 @@ case class HttpBasicAuthCredential(
     password: String,
     user: Option[String],
     organization: Option[String]
-) extends DataVaultCredential derives AutoFormat {
+) extends DataVaultCredential derives AutoJsonFormat {
   override def userId: Option[String] = user
 }
 
@@ -31,7 +31,7 @@ case class XAuthTokenCredential(
     tokenValue: String,
     user: Option[String],
     organization: Option[String]
-) extends DataVaultCredential derives AutoFormat {
+) extends DataVaultCredential derives AutoJsonFormat {
   override def userId: Option[String] = user
 }
 
@@ -41,7 +41,7 @@ case class S3AccessKeyCredential(
     secretAccessKey: String,
     user: Option[String],
     organization: Option[String]
-) extends DataVaultCredential derives AutoFormat {
+) extends DataVaultCredential derives AutoJsonFormat {
   override def userId: Option[String] = user
 
   def toCredentialsProvider: StaticCredentialsProvider = StaticCredentialsProvider.create(
@@ -54,12 +54,12 @@ case class GoogleServiceAccountCredential(
     secretJson: JsValue,
     user: Option[String],
     organization: Option[String]
-) extends DataVaultCredential derives AutoFormat {
+) extends DataVaultCredential derives AutoJsonFormat {
   override def userId: Option[String] = user
 }
 
 case class LegacyDataVaultCredential(user: String, password: Option[String]) extends DataVaultCredential
-    derives AutoFormat {
+    derives AutoJsonFormat {
   def toBasicAuth: HttpBasicAuthCredential =
     HttpBasicAuthCredential(
       name = "",

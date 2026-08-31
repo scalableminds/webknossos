@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.helpers
 
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.AutoFormat
+import com.scalableminds.util.tools.AutoJsonFormat
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 
 case class GetSegmentIndexParameters(
@@ -10,7 +10,7 @@ case class GetSegmentIndexParameters(
     additionalCoordinates: Option[Seq[AdditionalCoordinate]],
     mappingName: Option[String], // Specify the mapping when querying the datastore
     annotationVersion: Option[Long]
-) derives AutoFormat
+) derives AutoJsonFormat
 
 case class GetMultipleSegmentIndexParameters(
     segmentIds: List[UnsignedLong],
@@ -19,7 +19,7 @@ case class GetMultipleSegmentIndexParameters(
     mappingName: Option[String],
     editableMappingTracingId: Option[String],
     annotationVersion: Option[Long]
-) derives AutoFormat
+) derives AutoJsonFormat
 
 // positions = List of indices of buckets directly in a requested mag
-case class SegmentIndexData(segmentId: UnsignedLong, positions: Seq[Vec3Int]) derives AutoFormat
+case class SegmentIndexData(segmentId: UnsignedLong, positions: Seq[Vec3Int]) derives AutoJsonFormat

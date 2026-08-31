@@ -2,7 +2,7 @@ package models.annotation
 
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{AutoFormat, Fox}
+import com.scalableminds.util.tools.{AutoJsonFormat, Fox}
 import com.scalableminds.webknossos.schema.Tables.{
   AnnotationPrivatelinks,
   AnnotationPrivatelinksRow,
@@ -22,9 +22,9 @@ case class AnnotationPrivateLink(
     accessToken: String,
     expirationDateTime: Option[Instant],
     isDeleted: Boolean = false
-) derives AutoFormat
+) derives AutoJsonFormat
 
-case class AnnotationPrivateLinkParams(annotation: String, expirationDateTime: Option[Instant]) derives AutoFormat
+case class AnnotationPrivateLinkParams(annotation: String, expirationDateTime: Option[Instant]) derives AutoJsonFormat
 
 class AnnotationPrivateLinkService @Inject() ()(implicit ec: ExecutionContext) {
   def publicWrites(annotationPrivateLink: AnnotationPrivateLink): Fox[JsValue] =

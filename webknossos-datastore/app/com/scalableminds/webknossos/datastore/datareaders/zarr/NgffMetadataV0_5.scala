@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
-import com.scalableminds.util.tools.AutoFormat
+import com.scalableminds.util.tools.AutoJsonFormat
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 
@@ -16,7 +16,7 @@ case class NgffMultiscalesItemV0_5(
       NgffAxis(name = "z", `type` = "space", unit = Some("nanometer"))
     ),
     datasets: List[NgffDataset]
-) derives AutoFormat
+) derives AutoJsonFormat
 
 object NgffMultiscalesItemV0_5 {
 
@@ -33,7 +33,7 @@ case class NgffMetadataV0_5(
     version: String,
     multiscales: List[NgffMultiscalesItemV0_5],
     omero: Option[NgffOmeroMetadata]
-) derives AutoFormat
+) derives AutoJsonFormat
 
 object NgffMetadataV0_5 {
   def fromNameVoxelSizeAndMags(

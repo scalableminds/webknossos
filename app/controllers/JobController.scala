@@ -4,7 +4,7 @@ import com.scalableminds.util.Msg
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.accesscontext.GlobalAccessContext
-import com.scalableminds.util.tools.{AutoFormat, Fox, JsonHelper}
+import com.scalableminds.util.tools.{AutoJsonFormat, Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
 import models.dataset.{DataStoreDAO, DatasetDAO, DatasetLayerAdditionalAxesDAO, DatasetService}
 import models.job.*
@@ -50,14 +50,14 @@ case class AnimationJobOptions(
     includeSkeletons: Boolean,
     hideImageData: Boolean,
     saveBlenderFile: Boolean
-) derives AutoFormat
+) derives AutoJsonFormat
 
 case class AlignSectionsJobOptions(
     layerName: String,
     newDatasetName: String,
     annotationId: Option[ObjectId],
     customConfiguration: Option[JsObject]
-) derives AutoFormat
+) derives AutoJsonFormat
 
 class JobController @Inject() (
     jobDAO: JobDAO,

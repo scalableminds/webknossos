@@ -3,7 +3,7 @@ package models.dataset.explore
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.collections.SequenceUtils
-import com.scalableminds.util.tools.{AutoFormat, Fox}
+import com.scalableminds.util.tools.{AutoJsonFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.explore.{
   ExploreLayerUtils,
@@ -31,7 +31,7 @@ case class WKExploreRemoteLayerParameters(
     credentialSecret: Option[String],
     preferredVoxelSize: Option[VoxelSize],
     dataStoreName: Option[String]
-) derives AutoFormat
+) derives AutoJsonFormat
 
 case class ExploreAndAddRemoteDatasetParameters(
     remoteUri: String,
@@ -41,7 +41,7 @@ case class ExploreAndAddRemoteDatasetParameters(
     folderId: Option[ObjectId],
     folderPath: Option[String],
     dataStoreName: Option[String]
-) derives AutoFormat
+) derives AutoJsonFormat
 
 class WKExploreRemoteLayerService @Inject() (
     credentialService: CredentialService,

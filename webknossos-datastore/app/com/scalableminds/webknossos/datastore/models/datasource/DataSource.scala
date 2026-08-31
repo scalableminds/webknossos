@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.models.datasource
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
-import com.scalableminds.util.tools.AutoFormat
+import com.scalableminds.util.tools.AutoJsonFormat
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
@@ -50,7 +50,7 @@ case class UnusableDataSource(
     status: String,
     scale: Option[VoxelSize] = None,
     existingDataSourceProperties: Option[JsValue] = None
-) extends DataSource derives AutoFormat {
+) extends DataSource derives AutoJsonFormat {
   val toUsable: Option[UsableDataSource] = None
 
   val voxelSizeOpt: Option[VoxelSize] = scale
@@ -70,7 +70,7 @@ case class UsableDataSource(
     scale: VoxelSize,
     defaultViewConfiguration: Option[DatasetViewConfiguration] = None,
     statusOpt: Option[String] = None
-) extends DataSource derives AutoFormat {
+) extends DataSource derives AutoJsonFormat {
 
   val toUsable: Option[UsableDataSource] = Some(this)
 

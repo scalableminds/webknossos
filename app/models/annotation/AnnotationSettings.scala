@@ -1,7 +1,7 @@
 package models.annotation
 
 import com.scalableminds.util.enumeration.ExtendedEnumeration
-import com.scalableminds.util.tools.AutoFormat
+import com.scalableminds.util.tools.AutoJsonFormat
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.volume.MagRestrictions
@@ -19,7 +19,7 @@ case class AnnotationSettings(
     volumeInterpolationAllowed: Boolean = true,
     mergerMode: Boolean = false,
     magRestrictions: MagRestrictions = MagRestrictions.empty
-) derives AutoFormat
+) derives AutoJsonFormat
 
 object AnnotationSettings {
   def defaultFor(tracingType: TracingType): AnnotationSettings = tracingType match {

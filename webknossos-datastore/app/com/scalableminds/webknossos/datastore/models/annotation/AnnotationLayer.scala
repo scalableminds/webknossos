@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.models.annotation
 
 import com.scalableminds.util.Msg
-import com.scalableminds.util.tools.{AutoFormat, Fox}
+import com.scalableminds.util.tools.{AutoJsonFormat, Fox}
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationLayerProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -16,7 +16,7 @@ case class AnnotationLayer(
     typ: AnnotationLayerType,
     name: String,
     stats: JsObject
-) derives AutoFormat {
+) derives AutoJsonFormat {
   def toProto: AnnotationLayerProto =
     AnnotationLayerProto(tracingId, name, AnnotationLayerType.toProto(typ))
 }

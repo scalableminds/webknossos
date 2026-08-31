@@ -4,7 +4,7 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{AutoFormat, Fox, JsonHelper, TextUtils}
+import com.scalableminds.util.tools.{AutoJsonFormat, Fox, JsonHelper, TextUtils}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.webauthn4j.data.attestation.statement.COSEAlgorithmIdentifier
@@ -51,7 +51,8 @@ import scala.concurrent.duration.*
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters.*
 
-case class CreateOrganizationWithExistingUserParams(userId: ObjectId, newOrganizationName: String) derives AutoFormat
+case class CreateOrganizationWithExistingUserParams(userId: ObjectId, newOrganizationName: String)
+    derives AutoJsonFormat
 
 case class CreateUserInOrganizationParameters(
     firstName: String,
@@ -59,7 +60,7 @@ case class CreateUserInOrganizationParameters(
     email: String,
     password: Option[String],
     autoActivate: Option[Boolean]
-) derives AutoFormat
+) derives AutoJsonFormat
 
 case class InviteParameters(
     recipients: Seq[String],

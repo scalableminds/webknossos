@@ -6,7 +6,7 @@ import com.scalableminds.util.box.Box
 import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.{AutoFormat, Fox, JsonHelper}
+import com.scalableminds.util.tools.{AutoJsonFormat, Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.datareaders.DatasetArray
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3Array
@@ -22,7 +22,7 @@ case class SegmentStatisticsFileKey(dataSourceId: DataSourceId, layerName: Strin
     extends AttachmentKey
 
 case class SegmentStatisticsFileInfos(mag: Vec3Int, availableMetrics: Seq[String], mappingName: Option[String])
-    derives AutoFormat
+    derives AutoJsonFormat
 
 case class SegmentStatisticsFileAttributes(formatVersion: Long, mag: Option[Vec3Int], mappingName: Option[String])
 

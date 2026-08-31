@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
 import com.scalableminds.util.box.Box
 import com.scalableminds.util.enumeration.ExtendedEnumeration
-import com.scalableminds.util.tools.{AutoFormat, ByteUtils}
+import com.scalableminds.util.tools.{AutoJsonFormat, ByteUtils}
 import com.scalableminds.webknossos.datastore.datareaders.{
   BloscCompressor,
   BoolCompressionSetting,
@@ -229,7 +229,8 @@ object BytesCodecConfiguration {
   val name = "bytes"
 }
 
-final case class TransposeCodecConfiguration(order: TransposeSetting) extends CodecConfiguration derives AutoFormat {
+final case class TransposeCodecConfiguration(order: TransposeSetting) extends CodecConfiguration
+    derives AutoJsonFormat {
   override def name: String = TransposeCodecConfiguration.name
 }
 
@@ -242,7 +243,7 @@ final case class BloscCodecConfiguration(
     shuffle: CompressionSetting,
     typesize: Option[Int],
     blocksize: Int
-) extends CodecConfiguration derives AutoFormat {
+) extends CodecConfiguration derives AutoJsonFormat {
   override def name: String = BloscCodecConfiguration.name
 }
 
@@ -266,14 +267,15 @@ object BloscCodecConfiguration {
     )
 }
 
-final case class GzipCodecConfiguration(level: Int) extends CodecConfiguration derives AutoFormat {
+final case class GzipCodecConfiguration(level: Int) extends CodecConfiguration derives AutoJsonFormat {
   override def name: String = GzipCodecConfiguration.name
 }
 object GzipCodecConfiguration {
   val name = "gzip"
 }
 
-final case class ZstdCodecConfiguration(level: Int, checksum: Boolean) extends CodecConfiguration derives AutoFormat {
+final case class ZstdCodecConfiguration(level: Int, checksum: Boolean) extends CodecConfiguration
+    derives AutoJsonFormat {
   override def name: String = ZstdCodecConfiguration.name
 }
 object ZstdCodecConfiguration {
@@ -305,14 +307,14 @@ object CodecConfiguration extends JsonImplicits {
   }
 }
 
-case class CodecSpecification(name: String, configuration: CodecConfiguration) derives AutoFormat
+case class CodecSpecification(name: String, configuration: CodecConfiguration) derives AutoJsonFormat
 
 final case class ShardingCodecConfiguration(
     chunk_shape: Array[Int],
     codecs: Seq[CodecConfiguration],
     index_codecs: Seq[CodecConfiguration],
     index_location: IndexLocationSetting.IndexLocationSetting = IndexLocationSetting.end
-) extends CodecConfiguration derives AutoFormat {
+) extends CodecConfiguration derives AutoJsonFormat {
   override def name: String = ShardingCodecConfiguration.name
   def isSupported: Box[Unit] =
     for {

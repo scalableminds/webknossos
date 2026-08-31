@@ -4,7 +4,7 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{AutoFormat, Fox}
+import com.scalableminds.util.tools.{AutoJsonFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationIdDomain.AnnotationIdDomain
 import com.scalableminds.webknossos.datastore.models.annotation.{
@@ -42,18 +42,18 @@ case class ReserveIdParameters(
     tracingId: String,
     numberOfIdsToReserve: Int,
     idsToRelease: Seq[Long]
-) derives AutoFormat
+) derives AutoJsonFormat
 
-case class FinishAllParameters(annotations: Seq[ObjectId]) derives AutoFormat
+case class FinishAllParameters(annotations: Seq[ObjectId]) derives AutoJsonFormat
 
 case class EditAnnotationParameters(
     name: Option[String],
     visibility: Option[AnnotationVisibility.Value],
     tags: Option[Seq[String]],
     viewConfiguration: Option[JsObject]
-) derives AutoFormat
+) derives AutoJsonFormat
 
-case class TransferAnnotationParameters(userId: ObjectId) derives AutoFormat
+case class TransferAnnotationParameters(userId: ObjectId) derives AutoJsonFormat
 
 class AnnotationController @Inject() (
     annotationDAO: AnnotationDAO,

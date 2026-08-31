@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.services.mesh
 import com.google.common.io.LittleEndianDataInputStream
 import com.scalableminds.util.box.Box
 import com.scalableminds.util.geometry.{Vec3Float, Vec3Int}
-import com.scalableminds.util.tools.AutoFormat
+import com.scalableminds.util.tools.AutoJsonFormat
 import Box.tryo
 import com.scalableminds.webknossos.datastore.helpers.UnsignedLong
 
@@ -93,16 +93,16 @@ case class MeshChunk(
     byteOffset: Long,
     byteSize: Int,
     unmappedSegmentId: UnsignedLong
-) derives AutoFormat
+) derives AutoJsonFormat
 
-case class MeshLodInfo(chunks: List[MeshChunk], transform: Array[Array[Double]]) derives AutoFormat
+case class MeshLodInfo(chunks: List[MeshChunk], transform: Array[Array[Double]]) derives AutoJsonFormat
 
 case class WebknossosSegmentInfo(
     meshFormat: String,
     lods: List[MeshLodInfo],
     chunkScale: Array[Double] =
       Array(1.0, 1.0, 1.0) // Used for Neuroglancer Precomputed Meshes to account for vertex quantization
-) derives AutoFormat
+) derives AutoJsonFormat
 
 object WebknossosSegmentInfo {
 

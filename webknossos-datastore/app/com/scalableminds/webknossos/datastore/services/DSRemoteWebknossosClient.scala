@@ -6,7 +6,7 @@ import com.google.inject.name.Named
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{AutoFormat, Fox}
+import com.scalableminds.util.tools.{AutoJsonFormat, Fox}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.helpers.{IntervalScheduler, UPath}
@@ -33,22 +33,22 @@ import java.nio.file.Path
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.*
 
-case class DataStoreStatus(ok: Boolean, url: String) derives AutoFormat
+case class DataStoreStatus(ok: Boolean, url: String) derives AutoJsonFormat
 
 case class DataSourceWithRootPathInfo(dataSource: DataSource, rootPath: Option[String], rootRealPath: Option[String])
-    derives AutoFormat
+    derives AutoJsonFormat
 
-case class TracingStoreInfo(name: String, url: String) derives AutoFormat
+case class TracingStoreInfo(name: String, url: String) derives AutoJsonFormat
 
 case class DataSourcePathInfo(
     dataSourceId: DataSourceId,
     magPathInfos: Seq[RealPathInfo],
     attachmentPathInfos: Seq[RealPathInfo]
-) derives AutoFormat {
+) derives AutoJsonFormat {
   def nonEmpty: Boolean = magPathInfos.nonEmpty || attachmentPathInfos.nonEmpty
 }
 
-case class RealPathInfo(path: UPath, realPath: UPath, hasLocalData: Boolean) derives AutoFormat
+case class RealPathInfo(path: UPath, realPath: UPath, hasLocalData: Boolean) derives AutoJsonFormat
 
 trait RemoteWebknossosClient {
   def requestUserAccess(accessRequest: UserAccessRequest)(using tc: TokenContext): Fox[UserAccessAnswer]

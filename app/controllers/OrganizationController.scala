@@ -4,7 +4,7 @@ import com.scalableminds.util.Msg
 import org.apache.pekko.actor.ActorSystem
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.tools.{AutoFormat, Fox}
+import com.scalableminds.util.tools.{AutoJsonFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
 import mail.{DefaultMails, Send}
 
@@ -28,7 +28,7 @@ import security.{WkEnv, WkSilhouetteEnvironment}
 
 import scala.concurrent.ExecutionContext
 
-case class OrganizationParameters(name: String, newUserMailingList: String) derives AutoFormat
+case class OrganizationParameters(name: String, newUserMailingList: String) derives AutoJsonFormat
 
 class OrganizationController @Inject() (
     organizationDAO: OrganizationDAO,
@@ -73,7 +73,7 @@ class OrganizationController @Inject() (
   }
 
   case class OrganizationCreationParameters(organization: Option[String], organizationName: String, ownerEmail: String)
-      derives AutoFormat
+      derives AutoJsonFormat
   def create: Action[OrganizationCreationParameters] =
     sil.SecuredAction.fox(validateJson[OrganizationCreationParameters]) { implicit request =>
       for {

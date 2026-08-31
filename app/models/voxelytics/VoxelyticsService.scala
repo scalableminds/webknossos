@@ -1,7 +1,7 @@
 package models.voxelytics
 
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{AutoFormat, Fox}
+import com.scalableminds.util.tools.{AutoJsonFormat, Fox}
 import models.user.User
 import models.voxelytics.VoxelyticsRunState.VoxelyticsRunState
 import play.api.libs.json.{JsArray, JsObject, Json}
@@ -23,7 +23,7 @@ case class RunEntry(
     state: VoxelyticsRunState,
     beginTime: Option[Instant],
     endTime: Option[Instant]
-) derives AutoFormat
+) derives AutoJsonFormat
 
 case class TaskRunEntry(
     runId: ObjectId,
@@ -35,16 +35,16 @@ case class TaskRunEntry(
     endTime: Option[Instant],
     currentExecutionId: Option[String],
     chunkCounts: ChunkCounts
-) derives AutoFormat
+) derives AutoJsonFormat
 
 case class CombinedTaskRunEntry(taskName: String, currentExecutionId: Option[String], chunkCounts: ChunkCounts)
-    derives AutoFormat
+    derives AutoJsonFormat
 
 case class WorkflowEntry(
     name: String,
     hash: String,
     _organization: String
-) derives AutoFormat
+) derives AutoJsonFormat
 
 case class TaskCounts(
     total: Long,
@@ -54,9 +54,9 @@ case class TaskCounts(
     cancelled: Long,
     fileSize: Long,
     inodeCount: Long
-) derives AutoFormat
+) derives AutoJsonFormat
 
-case class ChunkCounts(total: Long, failed: Long, skipped: Long, complete: Long, cancelled: Long) derives AutoFormat
+case class ChunkCounts(total: Long, failed: Long, skipped: Long, complete: Long, cancelled: Long) derives AutoJsonFormat
 
 case class WorkflowListingRunEntry(
     id: ObjectId,
@@ -71,7 +71,7 @@ case class WorkflowListingRunEntry(
     taskCounts: TaskCounts,
     userFirstName: Option[String],
     userLastName: Option[String]
-) derives AutoFormat
+) derives AutoJsonFormat
 
 case class ArtifactEntry(
     artifactId: ObjectId,
@@ -84,11 +84,13 @@ case class ArtifactEntry(
     metadata: JsObject,
     taskName: String,
     foreignWorkflow: Option[(String, String)]
-) derives AutoFormat
+) derives AutoJsonFormat
 
-case class TaskEntry(taskId: ObjectId, runId: ObjectId, name: String, task: String, config: JsObject) derives AutoFormat
+case class TaskEntry(taskId: ObjectId, runId: ObjectId, name: String, task: String, config: JsObject)
+    derives AutoJsonFormat
 
-case class StatisticsEntry(max: Double, median: Double, stddev: Double, sum: Option[Double] = None) derives AutoFormat
+case class StatisticsEntry(max: Double, median: Double, stddev: Double, sum: Option[Double] = None)
+    derives AutoJsonFormat
 
 case class ChunkStatisticsEntry(
     executionId: String,
@@ -100,7 +102,7 @@ case class ChunkStatisticsEntry(
     cpuUser: StatisticsEntry,
     cpuSystem: StatisticsEntry,
     duration: StatisticsEntry
-) derives AutoFormat
+) derives AutoJsonFormat
 
 case class ArtifactChecksumEntry(
     taskName: String,
@@ -112,7 +114,7 @@ case class ArtifactChecksumEntry(
     checksum: String,
     fileSize: Long,
     lastModified: Instant
-) derives AutoFormat
+) derives AutoJsonFormat
 
 class VoxelyticsService @Inject() (voxelyticsDAO: VoxelyticsDAO)(implicit ec: ExecutionContext) {
 

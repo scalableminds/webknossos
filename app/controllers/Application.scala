@@ -1,6 +1,6 @@
 package controllers
 
-import com.scalableminds.util.tools.{AutoFormat, Fox}
+import com.scalableminds.util.tools.{AutoJsonFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
 import com.typesafe.config.ConfigRenderOptions
 import mail.{DefaultMails, Send}
@@ -20,7 +20,7 @@ import scala.concurrent.ExecutionContext
 case class HelpEmailParameters(
     message: String,
     currentUrl: String
-) derives AutoFormat
+) derives AutoJsonFormat
 
 class Application @Inject() (
     actorSystem: ActorSystem,

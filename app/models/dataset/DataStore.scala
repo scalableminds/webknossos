@@ -3,7 +3,7 @@ package models.dataset
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{AutoFormat, Fox}
+import com.scalableminds.util.tools.{AutoJsonFormat, Fox}
 import com.scalableminds.webknossos.schema.Tables.{Datastores, DatastoresRow, GetResultDatastoresRow}
 import models.job.JobService
 
@@ -26,7 +26,7 @@ case class DataStore(
     allowsUploadToPaths: Boolean = true,
     reportUsedStorageEnabled: Boolean = false,
     onlyAllowedOrganization: Option[String] = None
-) derives AutoFormat
+) derives AutoJsonFormat
 
 class DataStoreService @Inject() (dataStoreDAO: DataStoreDAO, jobService: JobService, conf: WkConf)(implicit
     ec: ExecutionContext

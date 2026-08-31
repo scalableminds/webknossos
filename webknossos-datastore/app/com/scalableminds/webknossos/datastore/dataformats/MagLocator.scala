@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.dataformats
 
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.AutoFormat
+import com.scalableminds.util.tools.AutoJsonFormat
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.datasource.MagFormatHelper
@@ -14,7 +14,7 @@ case class MagLocator(
     axisOrder: Option[AxisOrder] = None,
     channelIndex: Option[Int] = None,
     credentialId: Option[String] = None
-) derives AutoFormat {
+) derives AutoJsonFormat {
 
   def withoutCredentials: MagLocator = this.copy(credentials = None, credentialId = None)
 }

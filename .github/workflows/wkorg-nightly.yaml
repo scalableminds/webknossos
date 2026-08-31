@@ -4,7 +4,7 @@ on:
   workflow_dispatch: {}
   schedule:
     # Runs every day at 12:00 AM UTC
-    - cron: '0 0 * * *'
+    - cron: "0 0 * * *"
 
 jobs:
   nightly-screenshot-tests:
@@ -13,15 +13,15 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-            node-version: 22
+          node-version: 22
 
       - name: Install dependencies
         run: |
-            corepack enable && yarn install --immutable
+          corepack enable && yarn install --immutable
 
       - name: Run screenshot tests
         run: |
@@ -30,15 +30,14 @@ jobs:
           URL: https://webknossos.org/
           WK_AUTH_TOKEN: ${{ secrets.WK_ORG_AUTH_TOKEN }}
           BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
-          BROWSERSTACK_ACCESS_KEY : ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+          BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
 
       - name: Upload screenshots as artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: screenshots
           path: frontend/javascripts/test/screenshots
-
 
   nightly-gzip-test:
     runs-on: ubuntu-latest

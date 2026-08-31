@@ -149,77 +149,166 @@ export function sendFailedRequestAnalyticsEvent(
 }
 
 // ### Users
-export async function loginUser(formValues: {
-  email: string;
-  password: string;
-}): Promise<[APIUser, APIOrganization]> {
-  await Request.sendJSONReceiveJSON("/api/auth/login", {
-    data: formValues,
-  });
-  const activeUser = await getActiveUser();
-  const organization = await getOrganization(activeUser.organization);
+export async function loginUser(
+  formValues: {
+    email: string;
+    password: string;
+  },
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<[APIUser, APIOrganization]>> {
+  return requestResult(
+    async (adaptedOptions) => {
+      await Request.sendJSONReceiveJSON("/api/auth/login", {
+        ...adaptedOptions,
+        data: formValues,
+      });
+      const activeUser = await getActiveUser();
+      const organization = await getOrganization(activeUser.organization);
 
-  return [activeUser, organization];
+      return [activeUser, organization];
+    },
+    options,
+    retryOptions,
+  );
 }
 
-export async function logoutUser(): Promise<string> {
-  return await Request.receiveJSON("/api/auth/logout", { method: "POST" });
+export async function logoutUser(
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<string>> {
+  return requestResult(
+    (adaptedOptions) =>
+      Request.receiveJSON("/api/auth/logout", { ...adaptedOptions, method: "POST" }),
+    options,
+    retryOptions,
+  );
 }
 
-export async function logoutUserEverywhere(): Promise<void> {
-  await Request.receiveJSON("/api/auth/logoutEverywhere", { method: "POST" });
+export async function logoutUserEverywhere(
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<void>> {
+  return requestResult(
+    (adaptedOptions) =>
+      Request.receiveJSON("/api/auth/logoutEverywhere", { ...adaptedOptions, method: "POST" }),
+    options,
+    retryOptions,
+  );
 }
 
-export async function getUsers(options: RequestOptions = {}): Promise<Array<APIUser>> {
-  const users = await Request.receiveJSON("/api/users", options);
-  assertResponseLimit(users);
-  return users;
+export async function getUsers(
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<Array<APIUser>>> {
+  return requestResult(
+    async (adaptedOptions) => {
+      const users = await Request.receiveJSON("/api/users", adaptedOptions);
+      assertResponseLimit(users);
+      return users;
+    },
+    options,
+    retryOptions,
+  );
 }
 
-export async function getTeamManagerOrAdminUsers(): Promise<Array<APIUser>> {
-  const users = await Request.receiveJSON("/api/users?isTeamManagerOrAdmin=true");
-  assertResponseLimit(users);
-  return users;
+export async function getTeamManagerOrAdminUsers(
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<Array<APIUser>>> {
+  return requestResult(
+    async (adaptedOptions) => {
+      const users = await Request.receiveJSON(
+        "/api/users?isTeamManagerOrAdmin=true",
+        adaptedOptions,
+      );
+      assertResponseLimit(users);
+      return users;
+    },
+    options,
+    retryOptions,
+  );
 }
 
-export async function getAdminUsers(): Promise<Array<APIUser>> {
-  const users = await Request.receiveJSON("/api/users?isAdmin=true");
-  assertResponseLimit(users);
-  return users;
+export async function getAdminUsers(
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<Array<APIUser>>> {
+  return requestResult(
+    async (adaptedOptions) => {
+      const users = await Request.receiveJSON("/api/users?isAdmin=true", adaptedOptions);
+      assertResponseLimit(users);
+      return users;
+    },
+    options,
+    retryOptions,
+  );
 }
 
-export async function getEditableUsers(): Promise<Array<APIUser>> {
-  const users = await Request.receiveJSON("/api/users?isEditable=true");
-  assertResponseLimit(users);
-  return users;
+export async function getEditableUsers(
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<Array<APIUser>>> {
+  return requestResult(
+    async (adaptedOptions) => {
+      const users = await Request.receiveJSON("/api/users?isEditable=true", adaptedOptions);
+      assertResponseLimit(users);
+      return users;
+    },
+    options,
+    retryOptions,
+  );
 }
 
-export function getUser(userId: string): Promise<APIUser> {
-  return Request.receiveJSON(`/api/users/${userId}`);
+export async function getUser(
+  userId: string,
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<APIUser>> {
+  return requestResult(
+    (adaptedOptions) => Request.receiveJSON(`/api/users/${userId}`, adaptedOptions),
+    options,
+    retryOptions,
+  );
 }
 
-export function updateUser(newUser: Partial<APIUser>): Promise<APIUser> {
-  return Request.sendJSONReceiveJSON(`/api/users/${newUser.id}`, {
-    method: "PATCH",
-    data: newUser,
-  });
+export async function updateUser(
+  newUser: Partial<APIUser>,
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<APIUser>> {
+  return requestResult(
+    (adaptedOptions) =>
+      Request.sendJSONReceiveJSON(`/api/users/${newUser.id}`, {
+        ...adaptedOptions,
+        method: "PATCH",
+        data: newUser,
+      }),
+    options,
+    retryOptions,
+  );
 }
 
 export function updateNovelUserExperienceInfos(
   user: APIUser,
   novelUserExperienceShape: Record<string, any>,
-): [APIUser, Promise<APIUser>] {
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): [APIUser, Promise<ApiResult<APIUser>>] {
   const novelUserExperienceInfos = {
     ...user.novelUserExperienceInfos,
     ...novelUserExperienceShape,
   };
   const newUserSync = { ...user, novelUserExperienceInfos };
-  const newUserAsync = Request.sendJSONReceiveJSON(
-    `/api/users/${user.id}/novelUserExperienceInfos`,
-    {
-      method: "PUT",
-      data: novelUserExperienceInfos,
-    },
+  const newUserAsync = requestResult(
+    (adaptedOptions) =>
+      Request.sendJSONReceiveJSON(`/api/users/${user.id}/novelUserExperienceInfos`, {
+        ...adaptedOptions,
+        method: "PUT",
+        data: novelUserExperienceInfos,
+      }),
+    options,
+    retryOptions,
   );
   return [newUserSync, newUserAsync];
 }

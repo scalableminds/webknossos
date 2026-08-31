@@ -8,7 +8,7 @@ import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{AutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.Annotation.{
   AnnotationLayerProto,
@@ -33,7 +33,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.*
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingMergeService
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.SkeletonTracingService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
 import scala.concurrent.ExecutionContext
@@ -43,11 +43,7 @@ case class MergedFromIdsRequest(
     annotationIds: Seq[ObjectId],
     ownerIds: Seq[ObjectId],
     additionalBoundingBoxes: Seq[NamedBoundingBox]
-)
-
-object MergedFromIdsRequest {
-  implicit val jsonFormat: OFormat[MergedFromIdsRequest] = Json.format[MergedFromIdsRequest]
-}
+) derives AutoFormat
 
 class TSAnnotationController @Inject() (
     accessTokenService: TracingStoreAccessTokenService,

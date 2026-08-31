@@ -7,7 +7,7 @@ import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{AutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
@@ -30,7 +30,7 @@ import com.scalableminds.webknossos.datastore.services.connectome.{
 }
 import com.scalableminds.webknossos.datastore.services.mapping.{AgglomerateService, MappingService}
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
-import play.api.libs.json.{Json, OFormat, Writes}
+import play.api.libs.json.{Json, Writes}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
 import java.net.URI
@@ -43,11 +43,7 @@ import scala.concurrent.ExecutionContext
 case class PathValidationResult(
     path: UPath,
     valid: Boolean
-)
-
-object PathValidationResult {
-  implicit val jsonFormat: OFormat[PathValidationResult] = Json.format[PathValidationResult]
-}
+) derives AutoFormat
 
 class DataSourceController @Inject() (
     dataSourceService: DataSourceService,

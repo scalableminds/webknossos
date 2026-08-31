@@ -1,8 +1,8 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
-import play.api.libs.json.{Json, OFormat}
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.image.Color
+import com.scalableminds.util.tools.AutoFormat
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto as ProtoBoundingBox
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.SkeletonUpdateActionHelper
@@ -14,9 +14,7 @@ case class NamedBoundingBox(
     color: Option[Color],
     boundingBox: BoundingBox
 ) extends ProtoGeometryConversions
-    with SkeletonUpdateActionHelper {
+    with SkeletonUpdateActionHelper derives AutoFormat {
   def toProto: ProtoBoundingBox =
     ProtoBoundingBox(id, name, isVisible, colorOptToProto(color), boundingBoxToProto(boundingBox))
 }
-
-object NamedBoundingBox { implicit val jsonFormat: OFormat[NamedBoundingBox] = Json.format[NamedBoundingBox] }

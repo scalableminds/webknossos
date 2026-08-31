@@ -2,9 +2,9 @@ package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
+import com.scalableminds.util.tools.AutoFormat
 import com.scalableminds.webknossos.datastore.helpers.UnsignedLong
 import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, UpdateAction}
-import play.api.libs.json.*
 
 trait EditableMappingUpdateAction extends LayerUpdateAction {
   override def withActionTracingId(newTracingId: String): EditableMappingUpdateAction
@@ -23,17 +23,13 @@ case class SplitAgglomerateUpdateAction(
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
-) extends EditableMappingUpdateAction {
+) extends EditableMappingUpdateAction derives AutoFormat {
   override def addTimestamp(timestamp: Long): EditableMappingUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
   override def addAuthorId(authorId: Option[ObjectId]): UpdateAction =
     this.copy(actionAuthorId = authorId)
   override def withActionTracingId(newTracingId: String): EditableMappingUpdateAction =
     this.copy(actionTracingId = newTracingId)
-}
-
-object SplitAgglomerateUpdateAction {
-  implicit val jsonFormat: OFormat[SplitAgglomerateUpdateAction] = Json.format[SplitAgglomerateUpdateAction]
 }
 
 // we switched from positions to segment ids in https://github.com/scalableminds/webknossos/pull/7742.
@@ -50,15 +46,11 @@ case class MergeAgglomerateUpdateAction(
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
-) extends EditableMappingUpdateAction {
+) extends EditableMappingUpdateAction derives AutoFormat {
   override def addTimestamp(timestamp: Long): EditableMappingUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
   override def addAuthorId(authorId: Option[ObjectId]): UpdateAction =
     this.copy(actionAuthorId = authorId)
   override def withActionTracingId(newTracingId: String): EditableMappingUpdateAction =
     this.copy(actionTracingId = newTracingId)
-}
-
-object MergeAgglomerateUpdateAction {
-  implicit val jsonFormat: OFormat[MergeAgglomerateUpdateAction] = Json.format[MergeAgglomerateUpdateAction]
 }

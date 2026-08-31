@@ -2,34 +2,24 @@ package com.scalableminds.webknossos.datastore.services
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.box.Full
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{AutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
-import play.api.libs.json.{Json, OFormat}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-case class PathStorageUsageRequest(paths: Seq[String])
-object PathStorageUsageRequest {
-  implicit val jsonFormat: OFormat[PathStorageUsageRequest] = Json.format[PathStorageUsageRequest]
-}
+case class PathStorageUsageRequest(paths: Seq[String]) derives AutoFormat
 
 case class PathStorageReport(
     path: String,
     usedStorageBytes: Long
-)
-object PathStorageReport {
-  implicit val jsonFormat: OFormat[PathStorageReport] = Json.format[PathStorageReport]
-}
+) derives AutoFormat
 
-case class PathStorageUsageResponse(reports: Seq[PathStorageReport])
-object PathStorageUsageResponse {
-  implicit val jsonFormat: OFormat[PathStorageUsageResponse] = Json.format[PathStorageUsageResponse]
-}
+case class PathStorageUsageResponse(reports: Seq[PathStorageReport]) derives AutoFormat
 
 case class PathPair(original: String, upath: UPath)
 

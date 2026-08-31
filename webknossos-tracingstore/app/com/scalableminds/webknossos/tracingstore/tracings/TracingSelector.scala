@@ -1,7 +1,5 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
-import play.api.libs.json.{Json, OFormat}
+import com.scalableminds.util.tools.AutoFormat
 
-case class TracingSelector(tracingId: String, version: Option[Long] = None)
-
-object TracingSelector { implicit val jsonFormat: OFormat[TracingSelector] = Json.format[TracingSelector] }
+case class TracingSelector(tracingId: String, version: Option[Long] = None) derives AutoFormat

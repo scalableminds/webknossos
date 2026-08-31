@@ -1,12 +1,12 @@
 package com.scalableminds.webknossos.datastore.models.annotation
 
 import com.scalableminds.util.Msg
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{AutoFormat, Fox}
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationLayerProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType.AnnotationLayerType
-import play.api.libs.json.{JsObject, Json, OFormat}
+import play.api.libs.json.{JsObject, Json}
 import scalapb.GeneratedMessage
 
 import scala.concurrent.ExecutionContext
@@ -16,13 +16,12 @@ case class AnnotationLayer(
     typ: AnnotationLayerType,
     name: String,
     stats: JsObject
-) {
+) derives AutoFormat {
   def toProto: AnnotationLayerProto =
     AnnotationLayerProto(tracingId, name, AnnotationLayerType.toProto(typ))
 }
 
 object AnnotationLayer {
-  implicit val jsonFormat: OFormat[AnnotationLayer] = Json.format[AnnotationLayer]
 
   def fromProto(p: AnnotationLayerProto): AnnotationLayer =
     AnnotationLayer(p.tracingId, AnnotationLayerType.fromProto(p.typ), p.name, AnnotationLayerStatistics.unknown)

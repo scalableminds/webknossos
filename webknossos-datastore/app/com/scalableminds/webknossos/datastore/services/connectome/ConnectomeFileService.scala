@@ -4,7 +4,7 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.box.{Box, Empty}
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{AutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.helpers.UnsignedLong
@@ -17,7 +17,6 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 import com.scalableminds.webknossos.datastore.services.connectome.SynapticPartnerDirection.SynapticPartnerDirection
 import com.scalableminds.webknossos.datastore.storage.AttachmentKey
 import com.typesafe.scalalogging.LazyLogging
-import play.api.libs.json.{Json, OFormat}
 
 import javax.inject.Inject
 import scala.collection.mutable.ListBuffer
@@ -26,29 +25,17 @@ import scala.concurrent.ExecutionContext
 case class ByAgglomerateIdsRequest(
     connectomeFile: String,
     agglomerateIds: Seq[UnsignedLong]
-)
-
-object ByAgglomerateIdsRequest {
-  implicit val jsonFormat: OFormat[ByAgglomerateIdsRequest] = Json.format[ByAgglomerateIdsRequest]
-}
+) derives AutoFormat
 
 case class BySynapseIdsRequest(
     connectomeFile: String,
     synapseIds: List[Long]
-)
-
-object BySynapseIdsRequest {
-  implicit val jsonFormat: OFormat[BySynapseIdsRequest] = Json.format[BySynapseIdsRequest]
-}
+) derives AutoFormat
 
 case class DirectedSynapseList(
     in: Seq[Long],
     out: Seq[Long]
-)
-
-object DirectedSynapseList {
-  implicit val jsonFormat: OFormat[DirectedSynapseList] = Json.format[DirectedSynapseList]
-}
+) derives AutoFormat
 
 case class DirectedSynapseListMutable(
     in: ListBuffer[Long],
@@ -64,20 +51,12 @@ object DirectedSynapseListMutable {
 case class SynapseTypesWithLegend(
     synapseTypes: Seq[Long],
     typeToString: Seq[String]
-)
-
-object SynapseTypesWithLegend {
-  implicit val jsonFormat: OFormat[SynapseTypesWithLegend] = Json.format[SynapseTypesWithLegend]
-}
+) derives AutoFormat
 
 case class ConnectomeFileNameWithMappingName(
     connectomeFileName: String,
     mappingName: String
-)
-
-object ConnectomeFileNameWithMappingName {
-  implicit val jsonFormat: OFormat[ConnectomeFileNameWithMappingName] = Json.format[ConnectomeFileNameWithMappingName]
-}
+) derives AutoFormat
 
 case class ConnectomeFileKey(dataSourceId: DataSourceId, layerName: String, attachment: LayerAttachment)
     extends AttachmentKey

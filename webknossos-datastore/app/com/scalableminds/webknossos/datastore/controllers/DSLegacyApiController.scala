@@ -4,7 +4,7 @@ import com.scalableminds.util.Msg
 import com.google.inject.Inject
 import com.scalableminds.util.box.Full
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.{AutoFormat, Fox, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.zarr.Zarr3OutputHelper
 import com.scalableminds.webknossos.datastore.helpers.UnsignedLong
@@ -21,7 +21,7 @@ import com.scalableminds.webknossos.datastore.services.{
 }
 import play.api.http.HttpEntity
 import play.api.libs.Files
-import play.api.libs.json.{JsObject, JsValue, Json, OFormat}
+import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers, Result}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -32,11 +32,7 @@ case class LegacyReserveManualUploadInformation(
     initialTeamIds: Seq[ObjectId],
     folderId: Option[ObjectId],
     requireUniqueName: Boolean = false
-)
-object LegacyReserveManualUploadInformation {
-  implicit val jsonFormat: OFormat[LegacyReserveManualUploadInformation] =
-    Json.format[LegacyReserveManualUploadInformation]
-}
+) derives AutoFormat
 
 case class LegacyReserveUploadInformationV11(
     uploadId: String, // upload id that was also used in chunk upload (this time without file paths)
@@ -51,10 +47,7 @@ case class LegacyReserveUploadInformationV11(
     requireUniqueName: Option[Boolean],
     isVirtual: Option[Boolean], // Only set (to false) for legacy manual uploads
     needsConversion: Option[Boolean] // None means false
-)
-object LegacyReserveUploadInformationV11 {
-  implicit val jsonFormat: OFormat[LegacyReserveUploadInformationV11] = Json.format[LegacyReserveUploadInformationV11]
-}
+) derives AutoFormat
 
 case class LegacyLinkedLayerIdentifier(
     organizationId: Option[String],
@@ -64,7 +57,7 @@ case class LegacyLinkedLayerIdentifier(
     dataSetName: String,
     layerName: String,
     newLayerName: Option[String] = None
-) {
+) derives AutoFormat {
 
   def getOrganizationId: String = this.organizationId.getOrElse(this.organizationName.getOrElse(""))
 }
@@ -77,14 +70,9 @@ object LegacyLinkedLayerIdentifier {
       newLayerName: Option[String]
   ): LegacyLinkedLayerIdentifier =
     new LegacyLinkedLayerIdentifier(Some(organizationId), None, None, dataSetName, layerName, newLayerName)
-  implicit val jsonFormat: OFormat[LegacyLinkedLayerIdentifier] = Json.format[LegacyLinkedLayerIdentifier]
 }
 
-case class LegacyUploadInformation(uploadId: String, needsConversion: Option[Boolean])
-
-object LegacyUploadInformation {
-  implicit val jsonFormat: OFormat[LegacyUploadInformation] = Json.format[LegacyUploadInformation]
-}
+case class LegacyUploadInformation(uploadId: String, needsConversion: Option[Boolean]) derives AutoFormat
 
 case class ReserveUploadInformationV13(
     uploadId: String, // upload id that was also used in chunk upload (this time without file paths)
@@ -99,10 +87,7 @@ case class ReserveUploadInformationV13(
     requireUniqueName: Option[Boolean],
     isVirtual: Option[Boolean], // Only set (to false) for legacy manual uploads
     needsConversion: Option[Boolean] // None means false
-)
-object ReserveUploadInformationV13 {
-  implicit val jsonFormat: OFormat[ReserveUploadInformationV13] = Json.format[ReserveUploadInformationV13]
-}
+) derives AutoFormat
 
 class DSLegacyApiController @Inject() (
     accessTokenService: DataStoreAccessTokenService,

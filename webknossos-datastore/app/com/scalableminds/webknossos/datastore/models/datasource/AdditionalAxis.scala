@@ -2,12 +2,12 @@ package com.scalableminds.webknossos.datastore.models.datasource
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.box.{Box, Failure, Full}
+import com.scalableminds.util.tools.AutoFormat
 import com.scalableminds.webknossos.datastore.geometry.{AdditionalAxisProto, Vec2IntProto}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
-import play.api.libs.json.{Format, Json}
 
 // bounds: lower bound inclusive, upper bound exclusive
-case class AdditionalAxis(name: String, bounds: Seq[Int], index: Int) {
+case class AdditionalAxis(name: String, bounds: Seq[Int], index: Int) derives AutoFormat {
   lazy val lowerBound: Int = bounds(0)
   lazy val upperBound: Int = bounds(1)
   lazy val highestValue: Int = upperBound - 1
@@ -28,7 +28,6 @@ case class AdditionalAxis(name: String, bounds: Seq[Int], index: Int) {
 }
 
 object AdditionalAxis {
-  implicit val jsonFormat: Format[AdditionalAxis] = Json.format[AdditionalAxis]
 
   def toProto(additionalAxesOpt: Option[Seq[AdditionalAxis]]): Seq[AdditionalAxisProto] =
     additionalAxesOpt match {

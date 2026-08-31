@@ -2,12 +2,12 @@ package com.scalableminds.webknossos.datastore.controllers
 
 import com.scalableminds.util.geometry.Vec3Double
 import com.scalableminds.util.tools.Fox.toFox
-import com.scalableminds.util.tools.JsonHelper
+import com.scalableminds.util.tools.{AutoFormat, JsonHelper}
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.services.{DataStoreAccessTokenService, UserAccessRequest}
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.Json
 import play.api.mvc.{Action, PlayBodyParsers}
 
 import javax.inject.Inject
@@ -15,17 +15,9 @@ import scala.concurrent.ExecutionContext
 
 case class GetEffectiveVoxelSizeParameters(
     modelPath: UPath
-)
+) derives AutoFormat
 
-object GetEffectiveVoxelSizeParameters {
-  implicit val jsonFormat: OFormat[GetEffectiveVoxelSizeParameters] = Json.format[GetEffectiveVoxelSizeParameters]
-}
-
-case class ModelStatistics(scale: Vec3Double)
-
-object ModelStatistics {
-  implicit val jsonFormat: OFormat[ModelStatistics] = Json.format[ModelStatistics]
-}
+case class ModelStatistics(scale: Vec3Double) derives AutoFormat
 
 class DSAiModelController @Inject() (
     accessTokenService: DataStoreAccessTokenService,

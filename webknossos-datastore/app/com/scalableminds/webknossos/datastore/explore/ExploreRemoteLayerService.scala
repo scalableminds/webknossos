@@ -5,7 +5,7 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.mvc.Formatter
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{AutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
@@ -15,7 +15,6 @@ import com.scalableminds.webknossos.datastore.services.DSRemoteWebknossosClient
 import com.scalableminds.webknossos.datastore.storage.{CredentializedUPath, DataVaultCredential, DataVaultService}
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.webknossos.datastore.helpers.{UPath, ZipEntryUPath}
-import play.api.libs.json.{Json, OFormat}
 
 import java.nio.file.Path
 import javax.inject.Inject
@@ -23,26 +22,15 @@ import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
 
 case class ExploreRemoteDatasetRequest(layerParameters: List[ExploreRemoteLayerParameters], organizationId: String)
+    derives AutoFormat
 
-object ExploreRemoteDatasetRequest {
-  implicit val jsonFormat: OFormat[ExploreRemoteDatasetRequest] = Json.format[ExploreRemoteDatasetRequest]
-}
-
-case class ExploreRemoteDatasetResponse(dataSource: Option[UsableDataSource], report: String)
-
-object ExploreRemoteDatasetResponse {
-  implicit val jsonFormat: OFormat[ExploreRemoteDatasetResponse] = Json.format[ExploreRemoteDatasetResponse]
-}
+case class ExploreRemoteDatasetResponse(dataSource: Option[UsableDataSource], report: String) derives AutoFormat
 
 case class ExploreRemoteLayerParameters(
     remoteUri: String,
     credentialId: Option[String],
     preferredVoxelSize: Option[VoxelSize]
-)
-
-object ExploreRemoteLayerParameters {
-  implicit val jsonFormat: OFormat[ExploreRemoteLayerParameters] = Json.format[ExploreRemoteLayerParameters]
-}
+) derives AutoFormat
 
 // Calls explorers on dataset uris compatible with DataVaults (can also be file:/// for local)
 class ExploreRemoteLayerService @Inject() (

@@ -1,27 +1,19 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr
 
 import com.scalableminds.util.box.{Box, Failure, Full}
+import com.scalableminds.util.tools.AutoFormat
 import com.scalableminds.webknossos.datastore.models
 import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
-import play.api.libs.json.{Json, OFormat}
 
 case class NgffCoordinateTransformation(
     `type`: String = "scale",
     scale: Option[List[Double]],
     translation: Option[List[Double]]
-)
+) derives AutoFormat
 
-object NgffCoordinateTransformation {
-  implicit val jsonFormat: OFormat[NgffCoordinateTransformation] = Json.format[NgffCoordinateTransformation]
-}
+case class NgffDataset(path: String, coordinateTransformations: List[NgffCoordinateTransformation]) derives AutoFormat
 
-case class NgffDataset(path: String, coordinateTransformations: List[NgffCoordinateTransformation])
-
-object NgffDataset {
-  implicit val jsonFormat: OFormat[NgffDataset] = Json.format[NgffDataset]
-}
-
-case class NgffAxis(name: String, `type`: String, unit: Option[String] = None) {
+case class NgffAxis(name: String, `type`: String, unit: Option[String] = None) derives AutoFormat {
 
   def lengthUnit: Box[models.LengthUnit.Value] =
     if (`type` != "space")
@@ -34,19 +26,9 @@ case class NgffAxis(name: String, `type`: String, unit: Option[String] = None) {
     }
 }
 
-object NgffAxis {
-  implicit val jsonFormat: OFormat[NgffAxis] = Json.format[NgffAxis]
-}
+case class NgffOmeroMetadata(channels: List[NgffChannelAttributes]) derives AutoFormat
 
-case class NgffOmeroMetadata(channels: List[NgffChannelAttributes])
-object NgffOmeroMetadata {
-  implicit val jsonFormat: OFormat[NgffOmeroMetadata] = Json.format[NgffOmeroMetadata]
-}
-
-case class NgffChannelWindow(min: Double, max: Double, start: Double, end: Double)
-object NgffChannelWindow {
-  implicit val jsonFormat: OFormat[NgffChannelWindow] = Json.format[NgffChannelWindow]
-}
+case class NgffChannelWindow(min: Double, max: Double, start: Double, end: Double) derives AutoFormat
 
 case class NgffChannelAttributes(
     color: Option[String],
@@ -54,7 +36,4 @@ case class NgffChannelAttributes(
     window: Option[NgffChannelWindow],
     inverted: Option[Boolean],
     active: Option[Boolean]
-)
-object NgffChannelAttributes {
-  implicit val jsonFormat: OFormat[NgffChannelAttributes] = Json.format[NgffChannelAttributes]
-}
+) derives AutoFormat

@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.image.Color
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.TristateOptionJsonHelper
+import com.scalableminds.util.tools.{AutoFormat, TristateOptionJsonHelper}
 import com.scalableminds.webknossos.datastore.IdWithBool.{Id32WithBool, Id64WithBool}
 import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing, VolumeUserStateProto}
@@ -81,7 +81,7 @@ case class UpdateBucketVolumeAction(
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
-) extends BucketMutatingVolumeUpdateAction {
+) extends BucketMutatingVolumeUpdateAction derives AutoFormat {
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
@@ -115,7 +115,7 @@ case class UpdateTracingVolumeAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends ApplyableVolumeUpdateAction
-    with ProtoGeometryConversions {
+    with ProtoGeometryConversions derives AutoFormat {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
@@ -142,7 +142,7 @@ case class UpdateActiveSegmentIdVolumeAction(
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
-) extends UserStateVolumeUpdateAction {
+) extends UserStateVolumeUpdateAction derives AutoFormat {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
@@ -168,7 +168,7 @@ case class UpdateLargestSegmentIdVolumeAction(
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
-) extends ApplyableVolumeUpdateAction {
+) extends ApplyableVolumeUpdateAction derives AutoFormat {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
@@ -186,7 +186,7 @@ case class UpdateVolumeBucketDataHasChangedVolumeAction(
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
-) extends ApplyableVolumeUpdateAction {
+) extends ApplyableVolumeUpdateAction derives AutoFormat {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
@@ -204,7 +204,7 @@ case class UpdateUserBoundingBoxesVolumeAction(
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
-) extends ApplyableVolumeUpdateAction {
+) extends ApplyableVolumeUpdateAction derives AutoFormat {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
@@ -223,7 +223,7 @@ case class AddUserBoundingBoxVolumeAction(
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
-) extends ApplyableVolumeUpdateAction {
+) extends ApplyableVolumeUpdateAction derives AutoFormat {
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
     tracing.withUserBoundingBoxes(tracing.userBoundingBoxes :+ boundingBox.toProto)
 
@@ -242,7 +242,7 @@ case class DeleteUserBoundingBoxVolumeAction(
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
-) extends ApplyableVolumeUpdateAction {
+) extends ApplyableVolumeUpdateAction derives AutoFormat {
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
     tracing.withUserBoundingBoxes(tracing.userBoundingBoxes.filter(_.id != boundingBoxId))
 
@@ -300,7 +300,7 @@ case class UpdateUserBoundingBoxVisibilityVolumeAction(
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
-) extends UserStateVolumeUpdateAction {
+) extends UserStateVolumeUpdateAction derives AutoFormat {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
@@ -335,7 +335,7 @@ case class RemoveFallbackLayerVolumeAction(
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
-) extends ApplyableVolumeUpdateAction {
+) extends ApplyableVolumeUpdateAction derives AutoFormat {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
@@ -353,7 +353,7 @@ case class ImportVolumeDataVolumeAction(
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
-) extends ApplyableVolumeUpdateAction {
+) extends ApplyableVolumeUpdateAction derives AutoFormat {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
@@ -371,7 +371,7 @@ case class AddSegmentIndexVolumeAction(
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
-) extends ApplyableVolumeUpdateAction {
+) extends ApplyableVolumeUpdateAction derives AutoFormat {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
@@ -398,7 +398,7 @@ case class CreateSegmentVolumeAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends ApplyableVolumeUpdateAction
-    with ProtoGeometryConversions {
+    with ProtoGeometryConversions derives AutoFormat {
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
@@ -439,7 +439,7 @@ case class LegacyUpdateSegmentVolumeAction(
     info: Option[String] = None
 ) extends ApplyableVolumeUpdateAction
     with ProtoGeometryConversions
-    with VolumeUpdateActionHelper {
+    with VolumeUpdateActionHelper derives AutoFormat {
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
@@ -514,7 +514,7 @@ case class UpdateMetadataOfSegmentVolumeAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends ApplyableVolumeUpdateAction
-    with VolumeUpdateActionHelper {
+    with VolumeUpdateActionHelper derives AutoFormat {
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
@@ -548,7 +548,7 @@ case class DeleteSegmentVolumeAction(
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
-) extends ApplyableVolumeUpdateAction {
+) extends ApplyableVolumeUpdateAction derives AutoFormat {
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
@@ -569,7 +569,7 @@ case class DeleteSegmentDataVolumeAction(
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
-) extends BucketMutatingVolumeUpdateAction {
+) extends BucketMutatingVolumeUpdateAction derives AutoFormat {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
@@ -586,7 +586,7 @@ case class UpdateMappingNameVolumeAction(
     actionTimestamp: Option[Long],
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
-) extends ApplyableVolumeUpdateAction {
+) extends ApplyableVolumeUpdateAction derives AutoFormat {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
@@ -611,7 +611,7 @@ case class LegacyUpdateSegmentGroupsVolumeAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends ApplyableVolumeUpdateAction
-    with VolumeUpdateActionHelper {
+    with VolumeUpdateActionHelper derives AutoFormat {
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
     tracing.withSegmentGroups(segmentGroups.map(convertSegmentGroup))
 
@@ -633,7 +633,7 @@ case class MergeSegmentItemsVolumeAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends ApplyableVolumeUpdateAction
-    with VolumeUpdateActionHelper {
+    with VolumeUpdateActionHelper derives AutoFormat {
   override def applyOn(tracing: VolumeTracing): VolumeTracing = {
     val agglomerateId1L = agglomerateId1.toLong
     val agglomerateId2L = agglomerateId2.toLong
@@ -719,7 +719,7 @@ case class UpsertSegmentGroupVolumeAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends ApplyableVolumeUpdateAction
-    with VolumeUpdateActionHelper {
+    with VolumeUpdateActionHelper derives AutoFormat {
   override def applyOn(tracing: VolumeTracing): VolumeTracing = {
     val newGroup = SegmentGroup(
       name = name.getOrElse(s"Group $groupId"),
@@ -811,7 +811,7 @@ case class DeleteSegmentGroupVolumeAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends ApplyableVolumeUpdateAction
-    with VolumeUpdateActionHelper {
+    with VolumeUpdateActionHelper derives AutoFormat {
   override def applyOn(tracing: VolumeTracing): VolumeTracing = {
     def removeFromGroupHierarchy(groups: Seq[SegmentGroup]): Seq[SegmentGroup] =
       groups.collect {
@@ -838,7 +838,7 @@ case class UpdateSegmentGroupsExpandedStateVolumeAction(
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
-) extends UserStateVolumeUpdateAction {
+) extends UserStateVolumeUpdateAction derives AutoFormat {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
@@ -872,7 +872,7 @@ case class UpdateSegmentVisibilityVolumeAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends UserStateVolumeUpdateAction
-    with VolumeUpdateActionHelper {
+    with VolumeUpdateActionHelper derives AutoFormat {
 
   def applyOnUserState(
       tracing: VolumeTracing,
@@ -909,7 +909,7 @@ case class UpdateSegmentGroupVisibilityVolumeAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends UserStateVolumeUpdateAction
-    with VolumeUpdateActionHelper {
+    with VolumeUpdateActionHelper derives AutoFormat {
 
   override def applyOnUserState(
       tracing: VolumeTracing,
@@ -990,97 +990,11 @@ object CompactVolumeUpdateAction {
   }
 }
 
-object UpdateBucketVolumeAction {
-  implicit val jsonFormat: OFormat[UpdateBucketVolumeAction] = Json.format[UpdateBucketVolumeAction]
-}
-object UpdateTracingVolumeAction {
-  implicit val jsonFormat: OFormat[UpdateTracingVolumeAction] = Json.format[UpdateTracingVolumeAction]
-}
-object UpdateActiveSegmentIdVolumeAction {
-  implicit val jsonFormat: OFormat[UpdateActiveSegmentIdVolumeAction] = Json.format[UpdateActiveSegmentIdVolumeAction]
-}
-object UpdateLargestSegmentIdVolumeAction {
-  implicit val jsonFormat: OFormat[UpdateLargestSegmentIdVolumeAction] =
-    Json.format[UpdateLargestSegmentIdVolumeAction]
-}
-object UpdateVolumeBucketDataHasChangedVolumeAction {
-  implicit val jsonFormat: OFormat[UpdateVolumeBucketDataHasChangedVolumeAction] =
-    Json.format[UpdateVolumeBucketDataHasChangedVolumeAction]
-}
-object UpdateUserBoundingBoxesVolumeAction {
-  implicit val jsonFormat: OFormat[UpdateUserBoundingBoxesVolumeAction] =
-    Json.format[UpdateUserBoundingBoxesVolumeAction]
-}
-object AddUserBoundingBoxVolumeAction {
-  implicit val jsonFormat: OFormat[AddUserBoundingBoxVolumeAction] =
-    Json.format[AddUserBoundingBoxVolumeAction]
-}
-object DeleteUserBoundingBoxVolumeAction {
-  implicit val jsonFormat: OFormat[DeleteUserBoundingBoxVolumeAction] =
-    Json.format[DeleteUserBoundingBoxVolumeAction]
-}
 object UpdateUserBoundingBoxVolumeAction extends TristateOptionJsonHelper {
   implicit val jsonFormat: OFormat[UpdateUserBoundingBoxVolumeAction] =
     Json.configured(using tristateOptionParsing).format[UpdateUserBoundingBoxVolumeAction]
 }
-object UpdateUserBoundingBoxVisibilityVolumeAction {
-  implicit val jsonFormat: OFormat[UpdateUserBoundingBoxVisibilityVolumeAction] =
-    Json.format[UpdateUserBoundingBoxVisibilityVolumeAction]
-}
-object RemoveFallbackLayerVolumeAction {
-  implicit val jsonFormat: OFormat[RemoveFallbackLayerVolumeAction] = Json.format[RemoveFallbackLayerVolumeAction]
-}
-object ImportVolumeDataVolumeAction {
-  implicit val jsonFormat: OFormat[ImportVolumeDataVolumeAction] = Json.format[ImportVolumeDataVolumeAction]
-}
-object AddSegmentIndexVolumeAction {
-  implicit val jsonFormat: OFormat[AddSegmentIndexVolumeAction] = Json.format[AddSegmentIndexVolumeAction]
-}
-object CreateSegmentVolumeAction {
-  implicit val jsonFormat: OFormat[CreateSegmentVolumeAction] = Json.format[CreateSegmentVolumeAction]
-}
-object LegacyUpdateSegmentVolumeAction {
-  implicit val jsonFormat: OFormat[LegacyUpdateSegmentVolumeAction] = Json.format[LegacyUpdateSegmentVolumeAction]
-}
 object UpdateSegmentPartialVolumeAction extends TristateOptionJsonHelper {
   implicit val jsonFormat: OFormat[UpdateSegmentPartialVolumeAction] =
     Json.configured(using tristateOptionParsing).format[UpdateSegmentPartialVolumeAction]
-}
-object UpdateMetadataOfSegmentVolumeAction {
-  implicit val jsonFormat: OFormat[UpdateMetadataOfSegmentVolumeAction] =
-    Json.format[UpdateMetadataOfSegmentVolumeAction]
-}
-object MergeSegmentItemsVolumeAction {
-  implicit val jsonFormat: OFormat[MergeSegmentItemsVolumeAction] = Json.format[MergeSegmentItemsVolumeAction]
-}
-object DeleteSegmentVolumeAction {
-  implicit val jsonFormat: OFormat[DeleteSegmentVolumeAction] = Json.format[DeleteSegmentVolumeAction]
-}
-object DeleteSegmentDataVolumeAction {
-  implicit val jsonFormat: OFormat[DeleteSegmentDataVolumeAction] = Json.format[DeleteSegmentDataVolumeAction]
-}
-object UpdateMappingNameVolumeAction {
-  implicit val jsonFormat: OFormat[UpdateMappingNameVolumeAction] = Json.format[UpdateMappingNameVolumeAction]
-}
-object LegacyUpdateSegmentGroupsVolumeAction {
-  implicit val jsonFormat: OFormat[LegacyUpdateSegmentGroupsVolumeAction] =
-    Json.format[LegacyUpdateSegmentGroupsVolumeAction]
-}
-object UpsertSegmentGroupVolumeAction {
-  implicit val jsonFormat: OFormat[UpsertSegmentGroupVolumeAction] = Json.format[UpsertSegmentGroupVolumeAction]
-}
-object DeleteSegmentGroupVolumeAction {
-  implicit val jsonFormat: OFormat[DeleteSegmentGroupVolumeAction] = Json.format[DeleteSegmentGroupVolumeAction]
-}
-object UpdateSegmentGroupsExpandedStateVolumeAction {
-  implicit val jsonFormat: OFormat[UpdateSegmentGroupsExpandedStateVolumeAction] =
-    Json.format[UpdateSegmentGroupsExpandedStateVolumeAction]
-}
-object UpdateSegmentVisibilityVolumeAction {
-  implicit val jsonFormat: OFormat[UpdateSegmentVisibilityVolumeAction] =
-    Json.format[UpdateSegmentVisibilityVolumeAction]
-}
-object UpdateSegmentGroupVisibilityVolumeAction {
-  implicit val jsonFormat: OFormat[UpdateSegmentGroupVisibilityVolumeAction] =
-    Json.format[UpdateSegmentGroupVisibilityVolumeAction]
 }

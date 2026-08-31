@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
 import com.scalableminds.util.box.Box
 import com.scalableminds.util.enumeration.ExtendedEnumeration
-import com.scalableminds.util.tools.ByteUtils
+import com.scalableminds.util.tools.{AutoFormat, ByteUtils}
 import com.scalableminds.webknossos.datastore.datareaders.{
   BloscCompressor,
   BoolCompressionSetting,
@@ -14,7 +14,7 @@ import com.scalableminds.webknossos.datastore.datareaders.{
 }
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
 import com.typesafe.scalalogging.LazyLogging
-import play.api.libs.json.{Format, JsObject, JsResult, JsString, JsSuccess, JsValue, Json, OFormat, Reads, Writes}
+import play.api.libs.json.{Format, JsObject, JsResult, JsString, JsSuccess, JsValue, Json, Reads, Writes}
 import play.api.libs.json.Json.WithDefaultValues
 import ucar.ma2.Array as MultiArray
 
@@ -229,13 +229,11 @@ object BytesCodecConfiguration {
   val name = "bytes"
 }
 
-final case class TransposeCodecConfiguration(order: TransposeSetting) extends CodecConfiguration {
+final case class TransposeCodecConfiguration(order: TransposeSetting) extends CodecConfiguration derives AutoFormat {
   override def name: String = TransposeCodecConfiguration.name
 }
 
 object TransposeCodecConfiguration {
-  implicit val jsonFormat: OFormat[TransposeCodecConfiguration] =
-    Json.format[TransposeCodecConfiguration]
   val name = "transpose"
 }
 final case class BloscCodecConfiguration(
@@ -244,12 +242,11 @@ final case class BloscCodecConfiguration(
     shuffle: CompressionSetting,
     typesize: Option[Int],
     blocksize: Int
-) extends CodecConfiguration {
+) extends CodecConfiguration derives AutoFormat {
   override def name: String = BloscCodecConfiguration.name
 }
 
 object BloscCodecConfiguration {
-  implicit val jsonFormat: OFormat[BloscCodecConfiguration] = Json.format[BloscCodecConfiguration]
   val name = "blosc"
 
   private def shuffleSettingFromInt(shuffle: Int): String = shuffle match {
@@ -269,19 +266,17 @@ object BloscCodecConfiguration {
     )
 }
 
-final case class GzipCodecConfiguration(level: Int) extends CodecConfiguration {
+final case class GzipCodecConfiguration(level: Int) extends CodecConfiguration derives AutoFormat {
   override def name: String = GzipCodecConfiguration.name
 }
 object GzipCodecConfiguration {
-  implicit val jsonFormat: OFormat[GzipCodecConfiguration] = Json.format[GzipCodecConfiguration]
   val name = "gzip"
 }
 
-final case class ZstdCodecConfiguration(level: Int, checksum: Boolean) extends CodecConfiguration {
+final case class ZstdCodecConfiguration(level: Int, checksum: Boolean) extends CodecConfiguration derives AutoFormat {
   override def name: String = ZstdCodecConfiguration.name
 }
 object ZstdCodecConfiguration {
-  implicit val jsonFormat: OFormat[ZstdCodecConfiguration] = Json.format[ZstdCodecConfiguration]
   val name = "zstd"
 }
 
@@ -310,17 +305,14 @@ object CodecConfiguration extends JsonImplicits {
   }
 }
 
-case class CodecSpecification(name: String, configuration: CodecConfiguration)
-object CodecSpecification {
-  implicit val jsonFormat: OFormat[CodecSpecification] = Json.format[CodecSpecification]
-}
+case class CodecSpecification(name: String, configuration: CodecConfiguration) derives AutoFormat
 
 final case class ShardingCodecConfiguration(
     chunk_shape: Array[Int],
     codecs: Seq[CodecConfiguration],
     index_codecs: Seq[CodecConfiguration],
     index_location: IndexLocationSetting.IndexLocationSetting = IndexLocationSetting.end
-) extends CodecConfiguration {
+) extends CodecConfiguration derives AutoFormat {
   override def name: String = ShardingCodecConfiguration.name
   def isSupported: Box[Unit] =
     for {
@@ -336,8 +328,6 @@ final case class ShardingCodecConfiguration(
 }
 
 object ShardingCodecConfiguration {
-  implicit val jsonFormat: OFormat[ShardingCodecConfiguration] =
-    Json.format[ShardingCodecConfiguration]
   val name = "sharding_indexed"
 }
 

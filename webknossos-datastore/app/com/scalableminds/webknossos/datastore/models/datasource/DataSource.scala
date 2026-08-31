@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.models.datasource
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+import com.scalableminds.util.tools.AutoFormat
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
@@ -33,12 +34,12 @@ object DataSource {
   implicit def dataSourceFormat: Format[DataSource] =
     new Format[DataSource] {
       def reads(json: JsValue): JsResult[DataSource] =
-        UnusableDataSource.jsonFormat.reads(json).orElse(UsableDataSource.jsonFormat.reads(json))
+        Json.fromJson[UnusableDataSource](json).orElse(Json.fromJson[UsableDataSource](json))
 
       def writes(ds: DataSource): JsValue =
         ds match {
-          case ds: UsableDataSource   => UsableDataSource.jsonFormat.writes(ds)
-          case ds: UnusableDataSource => UnusableDataSource.jsonFormat.writes(ds)
+          case ds: UsableDataSource   => Json.toJson(ds)
+          case ds: UnusableDataSource => Json.toJson(ds)
         }
     }
 }
@@ -49,7 +50,7 @@ case class UnusableDataSource(
     status: String,
     scale: Option[VoxelSize] = None,
     existingDataSourceProperties: Option[JsValue] = None
-) extends DataSource {
+) extends DataSource derives AutoFormat {
   val toUsable: Option[UsableDataSource] = None
 
   val voxelSizeOpt: Option[VoxelSize] = scale
@@ -63,17 +64,13 @@ case class UnusableDataSource(
   def allLayers: List[StaticLayer] = dataLayers.getOrElse(List.empty)
 }
 
-object UnusableDataSource {
-  implicit def jsonFormat: Format[UnusableDataSource] = Json.format[UnusableDataSource]
-}
-
 case class UsableDataSource(
     id: DataSourceId,
     dataLayers: List[StaticLayer],
     scale: VoxelSize,
     defaultViewConfiguration: Option[DatasetViewConfiguration] = None,
     statusOpt: Option[String] = None
-) extends DataSource {
+) extends DataSource derives AutoFormat {
 
   val toUsable: Option[UsableDataSource] = Some(this)
 
@@ -110,7 +107,5 @@ case class UsableDataSource(
 }
 
 object UsableDataSource {
-  implicit def jsonFormat: Format[UsableDataSource] = Json.format[UsableDataSource]
-
   val FILENAME_DATASOURCE_PROPERTIES_JSON: String = "datasource-properties.json"
 }

@@ -6,7 +6,7 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{AutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
@@ -25,7 +25,7 @@ import com.scalableminds.webknossos.tracingstore.annotation.AnnotationLayerParam
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.SkeletonTracingWithUpdatedTreeIds
 import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
-import play.api.libs.json.{JsObject, Json, OFormat}
+import play.api.libs.json.{JsObject, Json}
 import play.api.libs.ws.WSResponse
 
 import scala.concurrent.ExecutionContext
@@ -38,10 +38,7 @@ case class AnnotationUpdatesReport(
     significantChangesCount: Int,
     viewChangesCount: Int,
     userToken: Option[String]
-)
-object AnnotationUpdatesReport {
-  implicit val jsonFormat: OFormat[AnnotationUpdatesReport] = Json.format[AnnotationUpdatesReport]
-}
+) derives AutoFormat
 
 class TSRemoteWebknossosClient @Inject() (
     rpc: RPC,

@@ -3,9 +3,9 @@ package com.scalableminds.webknossos.datastore.services.mesh
 import com.google.common.io.LittleEndianDataInputStream
 import com.scalableminds.util.box.Box
 import com.scalableminds.util.geometry.{Vec3Float, Vec3Int}
+import com.scalableminds.util.tools.AutoFormat
 import Box.tryo
 import com.scalableminds.webknossos.datastore.helpers.UnsignedLong
-import play.api.libs.json.{Json, OFormat}
 
 import java.io.ByteArrayInputStream
 import scala.collection.mutable.ListBuffer
@@ -93,25 +93,18 @@ case class MeshChunk(
     byteOffset: Long,
     byteSize: Int,
     unmappedSegmentId: UnsignedLong
-)
+) derives AutoFormat
 
-object MeshChunk {
-  implicit val jsonFormat: OFormat[MeshChunk] = Json.format[MeshChunk]
-}
-case class MeshLodInfo(chunks: List[MeshChunk], transform: Array[Array[Double]])
+case class MeshLodInfo(chunks: List[MeshChunk], transform: Array[Array[Double]]) derives AutoFormat
 
-object MeshLodInfo {
-  implicit val jsonFormat: OFormat[MeshLodInfo] = Json.format[MeshLodInfo]
-}
 case class WebknossosSegmentInfo(
     meshFormat: String,
     lods: List[MeshLodInfo],
     chunkScale: Array[Double] =
       Array(1.0, 1.0, 1.0) // Used for Neuroglancer Precomputed Meshes to account for vertex quantization
-)
+) derives AutoFormat
 
 object WebknossosSegmentInfo {
-  implicit val jsonFormat: OFormat[WebknossosSegmentInfo] = Json.format[WebknossosSegmentInfo]
 
   def fromMeshInfosAndMetadata(
       chunkInfos: List[List[MeshLodInfo]],

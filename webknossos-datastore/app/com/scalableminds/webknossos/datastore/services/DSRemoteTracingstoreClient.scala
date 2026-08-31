@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.services
 
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{AutoFormat, Fox}
 import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffMetadata, ZarrHeader}
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.{NgffZarr3GroupHeader, Zarr3ArrayHeader}
 import com.scalableminds.webknossos.datastore.helpers.UnsignedLong
@@ -10,15 +10,12 @@ import com.scalableminds.webknossos.datastore.models.datasource.StaticSegmentati
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
-import play.api.libs.json.{JsObject, Json, OFormat}
+import play.api.libs.json.JsObject
 
 case class EditableMappingSegmentListResult(
     segmentIds: List[UnsignedLong],
     agglomerateIdIsPresent: Boolean
-)
-object EditableMappingSegmentListResult {
-  implicit val jsonFormat: OFormat[EditableMappingSegmentListResult] = Json.format[EditableMappingSegmentListResult]
-}
+) derives AutoFormat
 
 class DSRemoteTracingstoreClient @Inject() (
     rpc: RPC,

@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.datareaders.zarr3
 import com.scalableminds.util.box.{Box, Full}
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.box.Box.tryo
-import com.scalableminds.util.tools.JsonHelper
+import com.scalableminds.util.tools.{AutoFormat, JsonHelper}
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
@@ -102,36 +102,21 @@ case class Zarr3ArrayHeader(
 
 case class ChunkGridConfiguration(
     chunk_shape: Array[Int]
-)
-
-object ChunkGridConfiguration {
-  implicit val jsonFormat: OFormat[ChunkGridConfiguration] =
-    Json.format[ChunkGridConfiguration]
-}
+) derives AutoFormat
 
 case class ChunkGridSpecification(
     name: String,
     configuration: ChunkGridConfiguration
-)
-
-object ChunkGridSpecification {
-  implicit val jsonFormat: OFormat[ChunkGridSpecification] =
-    Json.format[ChunkGridSpecification]
-}
+) derives AutoFormat
 
 case class ChunkKeyEncodingConfiguration(
     separator: Option[String]
-)
-
-object ChunkKeyEncodingConfiguration {
-  implicit val jsonFormat: OFormat[ChunkKeyEncodingConfiguration] =
-    Json.format[ChunkKeyEncodingConfiguration]
-}
+) derives AutoFormat
 
 case class ChunkKeyEncoding(
     name: String,
     configuration: Option[ChunkKeyEncodingConfiguration]
-) {
+) derives AutoFormat {
   private def isDefaultEncoding = name == "default"
   private def isV2Encoding = name == "v2"
 
@@ -145,20 +130,10 @@ case class ChunkKeyEncoding(
     }
 }
 
-object ChunkKeyEncoding {
-  implicit val jsonFormat: OFormat[ChunkKeyEncoding] =
-    Json.format[ChunkKeyEncoding]
-}
-
 case class StorageTransformerSpecification(
     name: String,
     configuration: Option[Map[String, String]] // Should be specified once storage transformers are implemented
-)
-
-object StorageTransformerSpecification {
-  implicit val jsonFormat: OFormat[StorageTransformerSpecification] =
-    Json.format[StorageTransformerSpecification]
-}
+) derives AutoFormat
 
 object Zarr3ArrayHeader extends JsonImplicits {
 

@@ -60,7 +60,8 @@ case class AlignSectionsJobOptions(
     layerName: String,
     newDatasetName: String,
     annotationId: Option[ObjectId],
-    customConfiguration: Option[JsObject]
+    customConfiguration: Option[JsObject],
+    fineAlignmentOnly: Option[Boolean]
 )
 
 object AlignSectionsJobOptions {
@@ -290,7 +291,8 @@ class JobController @Inject() (
             "new_dataset_name" -> request.body.newDatasetName,
             "layer_name" -> request.body.layerName,
             "annotation_id" -> request.body.annotationId,
-            "custom_configuration" -> request.body.customConfiguration
+            "custom_configuration" -> request.body.customConfiguration,
+            "fine_alignment_only" -> request.body.fineAlignmentOnly.getOrElse(false)
           )
           creditTransactionComment = s"Align dataset ${dataset.name}"
           job <- jobService.submitPaidJob(

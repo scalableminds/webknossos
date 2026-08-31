@@ -1,6 +1,7 @@
-import { SettingOutlined } from "@ant-design/icons";
+import { InfoCircleOutlined, SettingOutlined } from "@ant-design/icons";
 import type { FormProps } from "antd";
-import { Card, Col, Collapse, ConfigProvider, Form, Input, Row, Space } from "antd";
+import { Card, Checkbox, Col, Collapse, ConfigProvider, Form, Input, Row, Space } from "antd";
+import FastTooltip from "components/fast_tooltip";
 import { KeyValuePairsFormItem } from "components/key_value_pairs";
 import type React from "react";
 import { ColorWKBlue } from "theme";
@@ -15,6 +16,8 @@ export const AiAlignmentSettings: React.FC = () => {
     setShouldUseManualMatches,
     customConfiguration,
     setCustomConfiguration,
+    fineAlignmentOnly,
+    setFineAlignmentOnly,
   } = useAlignmentJobContext();
 
   const handleValuesChange: FormProps["onValuesChange"] = (changedValues) => {
@@ -27,12 +30,16 @@ export const AiAlignmentSettings: React.FC = () => {
     if ("customConfiguration" in changedValues) {
       setCustomConfiguration(changedValues.customConfiguration);
     }
+    if ("fineAlignmentOnly" in changedValues) {
+      setFineAlignmentOnly(changedValues.fineAlignmentOnly);
+    }
   };
 
   const formFields = [
     { name: ["newDatasetName"], value: newDatasetName },
     { name: ["useAnnotation"], value: shouldUseManualMatches },
     { name: ["customConfiguration"], value: customConfiguration },
+    { name: ["fineAlignmentOnly"], value: fineAlignmentOnly },
   ];
 
   return (
@@ -70,6 +77,14 @@ export const AiAlignmentSettings: React.FC = () => {
         >
           <Collapse ghost bordered={false}>
             <Collapse.Panel header="Advanced Settings" key="1">
+              <Form.Item name="fineAlignmentOnly" valuePropName="checked">
+                <Checkbox>
+                  Perform fine alignment only{" "}
+                  <FastTooltip title="Enable this if the dataset is already roughly aligned and only needs fine-tuning, rather than a full alignment from scratch.">
+                    <InfoCircleOutlined />
+                  </FastTooltip>
+                </Checkbox>
+              </Form.Item>
               <KeyValuePairsFormItem name="customConfiguration" label="Custom Configuration" />
             </Collapse.Panel>
           </Collapse>

@@ -309,12 +309,13 @@ export function startAlignSectionsJob(
   datasetId: string,
   layerName: string,
   newDatasetName: string,
-  annotationId?: string,
-  customConfiguration?: Record<string, JsonValue>,
+  annotationId: string | undefined,
+  customConfiguration: Record<string, JsonValue>,
+  fineAlignmentOnly: boolean,
 ): Promise<APIJob> {
   return Request.sendJSONReceiveJSON(`/api/jobs/run/alignSections/${datasetId}`, {
     method: "POST",
-    data: { layerName, newDatasetName, annotationId, customConfiguration },
+    data: { layerName, newDatasetName, annotationId, customConfiguration, fineAlignmentOnly },
   });
 }
 

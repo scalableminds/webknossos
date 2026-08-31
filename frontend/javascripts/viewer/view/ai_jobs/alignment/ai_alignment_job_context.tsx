@@ -24,6 +24,8 @@ interface AlignmentJobContextType {
   setShouldUseManualMatches: (shouldUseManualMatches: boolean) => void;
   customConfiguration: KeyValuePairs;
   setCustomConfiguration: (config: KeyValuePairs) => void;
+  fineAlignmentOnly: boolean;
+  setFineAlignmentOnly: (fineAlignmentOnly: boolean) => void;
   areParametersValid: boolean;
 }
 
@@ -36,6 +38,7 @@ export const AlignmentJobContextProvider: React.FC<{ children: React.ReactNode }
   const [newDatasetName, setNewDatasetName] = useState("");
   const [shouldUseManualMatches, setShouldUseManualMatches] = useState(false);
   const [customConfiguration, setCustomConfiguration] = useState<KeyValuePairs>({});
+  const [fineAlignmentOnly, setFineAlignmentOnly] = useState(false);
   const dispatch = useDispatch();
 
   const dataset = useWkSelector((state) => state.dataset);
@@ -70,6 +73,7 @@ export const AlignmentJobContextProvider: React.FC<{ children: React.ReactNode }
         newDatasetName,
         shouldUseManualMatches ? annotationId : undefined,
         customConfiguration,
+        fineAlignmentOnly,
       );
       Toast.success("Alignment started successfully!");
       dispatch(setAIJobDrawerStateAction("invisible"));
@@ -85,6 +89,7 @@ export const AlignmentJobContextProvider: React.FC<{ children: React.ReactNode }
     annotationId,
     shouldUseManualMatches,
     customConfiguration,
+    fineAlignmentOnly,
   ]);
 
   const value = {
@@ -99,6 +104,8 @@ export const AlignmentJobContextProvider: React.FC<{ children: React.ReactNode }
     setShouldUseManualMatches,
     customConfiguration,
     setCustomConfiguration,
+    fineAlignmentOnly,
+    setFineAlignmentOnly,
     areParametersValid,
   };
 

@@ -4,14 +4,13 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{AutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.explore.ExploreLayerUtils
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType.LayerAttachmentType
 import com.scalableminds.webknossos.datastore.models.datasource.*
 import models.user.User
-import play.api.libs.json.{Json, OFormat}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -22,21 +21,14 @@ case class ComposeRequest(
     organizationId: String,
     voxelSize: VoxelSize,
     layers: Seq[ComposeRequestLayer]
-)
+) derives AutoFormat
 
-object ComposeRequest {
-  implicit val composeRequestFormat: OFormat[ComposeRequest] = Json.format[ComposeRequest]
-}
 case class ComposeRequestLayer(
     sourceDatasetId: ObjectId,
     sourceLayerName: String,
     targetLayerName: String,
     transformations: Option[Seq[CoordinateTransformation]]
-)
-
-object ComposeRequestLayer {
-  implicit val composeLayerFormat: OFormat[ComposeRequestLayer] = Json.format[ComposeRequestLayer]
-}
+) derives AutoFormat
 
 case class ComposeAddMagRequest(
     sourceDatasetId: ObjectId,
@@ -44,11 +36,7 @@ case class ComposeAddMagRequest(
     targetLayerName: String,
     sourceMag: Vec3Int,
     targetMag: Option[Vec3Int] // None means use sourceMag
-)
-
-object ComposeAddMagRequest {
-  implicit val jsonFormat: OFormat[ComposeAddMagRequest] = Json.format[ComposeAddMagRequest]
-}
+) derives AutoFormat
 
 case class ComposeAddAttachmentRequest(
     sourceDatasetId: ObjectId,
@@ -57,11 +45,7 @@ case class ComposeAddAttachmentRequest(
     attachmentType: LayerAttachmentType,
     sourceAttachmentName: String,
     targetAttachmentName: Option[String] // None means use sourceAttachmentName
-)
-
-object ComposeAddAttachmentRequest {
-  implicit val jsonFormat: OFormat[ComposeAddAttachmentRequest] = Json.format[ComposeAddAttachmentRequest]
-}
+) derives AutoFormat
 
 class ComposeService @Inject() (datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDAO, datasetService: DatasetService)(
     implicit ec: ExecutionContext

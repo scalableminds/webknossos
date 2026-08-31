@@ -3,7 +3,7 @@ package controllers
 import com.scalableminds.util.Msg
 
 import javax.inject.Inject
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{AutoFormat, Fox}
 import models.task.*
 import play.silhouette.api.Silhouette
 import models.user.UserService
@@ -18,10 +18,7 @@ case class ScriptParameters(
     name: String,
     gist: String,
     owner: ObjectId
-)
-object ScriptParameters {
-  implicit val jsonFormat: OFormat[ScriptParameters] = Json.format[ScriptParameters]
-}
+) derives AutoFormat
 
 class ScriptController @Inject() (
     scriptDAO: ScriptDAO,

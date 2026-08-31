@@ -3,12 +3,12 @@ package models.dataset
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{AutoFormat, Fox}
 import com.scalableminds.webknossos.schema.Tables.{Datastores, DatastoresRow, GetResultDatastoresRow}
 import models.job.JobService
 
 import javax.inject.Inject
-import play.api.libs.json.{Format, JsObject, Json}
+import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Result, Results}
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import utils.WkConf
@@ -26,11 +26,7 @@ case class DataStore(
     allowsUploadToPaths: Boolean = true,
     reportUsedStorageEnabled: Boolean = false,
     onlyAllowedOrganization: Option[String] = None
-)
-
-object DataStore {
-  implicit val jsonFormat: Format[DataStore] = Json.format[DataStore]
-}
+) derives AutoFormat
 
 class DataStoreService @Inject() (dataStoreDAO: DataStoreDAO, jobService: JobService, conf: WkConf)(implicit
     ec: ExecutionContext

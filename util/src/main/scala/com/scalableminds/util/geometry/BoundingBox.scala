@@ -1,9 +1,10 @@
 package com.scalableminds.util.geometry
 
+import com.scalableminds.util.tools.AutoFormat
 import com.scalableminds.util.tools.MathUtils.ceilDiv
 import play.api.libs.json.{JsObject, Json}
 
-case class BoundingBox(topLeft: Vec3Int, width: Int, height: Int, depth: Int) {
+case class BoundingBox(topLeft: Vec3Int, width: Int, height: Int, depth: Int) derives AutoFormat {
 
   lazy val bottomRight: Vec3Int = topLeft.move(width, height, depth)
 
@@ -148,6 +149,4 @@ object BoundingBox {
       case (3, Some(t)) => Some(BoundingBox(t, size(0), size(1), size(2)))
       case _            => None
     }
-
-  implicit val jsonFormat: OFormat[BoundingBox] = Json.format[BoundingBox]
 }

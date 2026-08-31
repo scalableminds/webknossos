@@ -2,7 +2,7 @@ package controllers
 
 import com.scalableminds.util.Msg
 import play.silhouette.api.Silhouette
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{AutoFormat, Fox}
 
 import javax.inject.Inject
 import models.dataset.{DataStore, DataStoreDAO, DataStoreService}
@@ -21,10 +21,7 @@ case class DataStoreParameters(
     isScratch: Option[Boolean],
     allowsUpload: Option[Boolean],
     allowsUploadToPaths: Option[Boolean]
-)
-object DataStoreParameters {
-  implicit val jsonFormat: OFormat[DataStoreParameters] = Json.format[DataStoreParameters]
-}
+) derives AutoFormat
 
 class DataStoreController @Inject() (
     dataStoreDAO: DataStoreDAO,

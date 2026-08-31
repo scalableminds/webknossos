@@ -1,6 +1,6 @@
 package models.user
 
-import play.api.libs.json.{Json, OFormat}
+import com.scalableminds.util.tools.AutoFormat
 
 /** Experience a user needs to hold to acquire a task. The task itself defines the minimum experience needed.
   * @param domain
@@ -8,10 +8,6 @@ import play.api.libs.json.{Json, OFormat}
   * @param value
   *   Amount of experience
   */
-case class Experience(domain: String, value: Int) {
+case class Experience(domain: String, value: Int) derives AutoFormat {
   def trim: Experience = this.copy(domain = this.domain.trim)
-}
-
-object Experience {
-  implicit val jsonFormat: OFormat[Experience] = Json.format[Experience]
 }

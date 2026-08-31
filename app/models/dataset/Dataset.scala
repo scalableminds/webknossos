@@ -6,7 +6,7 @@ import com.scalableminds.util.box.{Box, Full}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.{AutoFormat, Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
@@ -109,12 +109,8 @@ case class DatasetCompactInfo(
     colorLayerNames: List[String],
     segmentationLayerNames: List[String],
     usedStorageBytes: Long
-) {
+) derives AutoFormat {
   def dataSourceId = new DataSourceId(directoryName, owningOrganization)
-}
-
-object DatasetCompactInfo {
-  implicit val jsonFormat: Format[DatasetCompactInfo] = Json.format[DatasetCompactInfo]
 }
 
 trait DatasetDAOLike {

@@ -368,6 +368,7 @@ export function useApi<TData, TQueryKey extends QueryKey = QueryKey>(
 /**
  * Hook that provides type-safe access to the Webknossos Redux store.
  * @param fn - Selector function that receives the Webknossos state
+ * @param equalityFn — An optional equality function or options object for customizing the behavior of the selector.
  * @returns Selected state value
  */
 export function useWkSelector<T>(fn: (state: WebknossosState) => T, equalityFn?: EqualityFn<T>): T {

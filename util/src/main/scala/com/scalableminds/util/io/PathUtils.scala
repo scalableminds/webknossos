@@ -155,24 +155,26 @@ object PathUtils extends LazyLogging {
         Failure(errorMsg)
     }
 
-  /*
-   * removes the end of a path, starting at the last element that contains any of cutOffList
-   *    example:  /path/to/color/layer/that/is/named/color/and/has/files
-   *    becomes  /path/to/color/layer/that/is/named
-   *    if "color" is in cutOffList
-   * Note that the caller should pass a path that is relative to the directory the search should be
-   * limited to, so that no element outside of it can accidentally match.
-   */
-  def cutOffPathAtLastOccurrenceOf(path: Path, cutOffList: List[String]): Path = {
-    var lastCutOffIndex = -1
-    path.iterator().asScala.zipWithIndex.foreach { case (subPath, idx) =>
-      cutOffList.foreach { e =>
-        if (subPath.toString.contains(e)) {
-          lastCutOffIndex = idx
-        }
-      }
-    }
-    lastCutOffIndex match {
+  // Longest common prefix of paths, truncated so it doesn't reach past a boundaryDirNames match,
+  // with a lone remaining filename stripped off.
+  def findCommonRootDirectory(paths: List[Path], boundaryDirNames: List[String]): Path = {
+    val longestCommonPrefix = commonPrefix(paths)
+    val truncatedAtLastBoundary = cutOffPathAtLastOccurrenceOf(longestCommonPrefix, boundaryDirNames)
+    removeSingleFileNameFromPrefix(truncatedAtLastBoundary, paths)
+  }
+
+  // Cuts path off right before the last element that exactly matches a name in boundaryDirNames (path
+  // should be relative to the directory the search is limited to, so unrelated elements can't accidentally match).
+  private def cutOffPathAtLastOccurrenceOf(path: Path, boundaryDirNames: List[String]): Path = {
+    val lastMatchingIndex = path
+      .iterator()
+      .asScala
+      .zipWithIndex
+      .collect { case (subPath, idx) if boundaryDirNames.contains(subPath.toString) => idx }
+      .toList
+      .lastOption
+      .getOrElse(-1)
+    lastMatchingIndex match {
       case -1 => path
       // subpath(0, 0) is forbidden, therefore we handle this special case ourselves
       case 0 => Path.of("")
@@ -183,16 +185,12 @@ object PathUtils extends LazyLogging {
     }
   }
 
-  // Remove a single file name from previously computed common prefix
-  def removeSingleFileNameFromPrefix(prefix: Path, fileNames: List[String]): Path = {
-    def isFileNameInPrefix(prefix: Path, fileName: String) = prefix.endsWith(Path.of(fileName).getFileName)
-
-    fileNames match {
-      case head :: tail if tail.isEmpty && isFileNameInPrefix(prefix, head) =>
-        removeOneName(prefix)
-      case _ => prefix
+  // Strips prefix's last name if it is in fact paths' one lone entry's file name (i.e. commonPrefix of a single file).
+  private def removeSingleFileNameFromPrefix(prefix: Path, paths: List[Path]): Path =
+    paths match {
+      case singlePath :: Nil if prefix.endsWith(singlePath.getFileName) => removeOneName(prefix)
+      case _                                                            => prefix
     }
-  }
 
   private def removeOneName(path: Path): Path =
     if (path.getNameCount == 1) {

@@ -15,11 +15,11 @@ import toPairs from "lodash-es/toPairs";
 import uniq from "lodash-es/uniq";
 import zipObject from "lodash-es/zipObject";
 import type { APIDataset, APIUser, MapEntries } from "types/api_types";
-import type { BoundingBoxMinMaxType } from "types/bounding_box";
+import type { BoundingBoxMinMaxType, BoundingBoxObject } from "types/bounding_box";
 import type { ArbitraryObject, Comparator } from "types/type_utils";
 import type { Point3, TypedArray, Vector3, Vector4, Vector6 } from "viewer/constants";
 import type { TreeGroup } from "viewer/model/types/tree_types";
-import type { BoundingBoxObject, Mapping, NumberLike, SegmentGroup } from "viewer/store";
+import type { Mapping, NumberLike, SegmentGroup } from "viewer/store";
 
 type UrlParams = Record<string, string>;
 

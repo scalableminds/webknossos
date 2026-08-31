@@ -125,13 +125,26 @@ class AnnotationTransactionService @Inject() (
   ): Fox[Long] =
     for {
       previousActionGroupsToCommit <- getAllUncommittedFor(annotationId, updateGroup.transactionId)
-      _ <- Fox.fromBool(
-        previousActionGroupsToCommit.exists(_.transactionGroupIndex == 0) || updateGroup.transactionGroupCount == 1
-      ) ?~> "Trying to commit a transaction without a group that has transactionGroupIndex 0."
+      _ <- assertAllGroupsInTransactionArePresent(annotationId, updateGroup, previousActionGroupsToCommit)
       concatenatedGroup = concatenateUpdateGroupsOfTransaction(previousActionGroupsToCommit, updateGroup)
       commitResult <- commitUpdates(annotationId, List(concatenatedGroup))
       _ <- removeAllUncommittedFor(annotationId, updateGroup.transactionId)
     } yield commitResult
+
+  // The last group (updateGroup itself) is not part of previousActionGroupsToCommit, so all indices
+  // from 0 until (but excluding) its own index are expected to have been found among them.
+  private def assertAllGroupsInTransactionArePresent(
+      annotationId: ObjectId,
+      updateGroup: UpdateActionGroup,
+      previousActionGroupsToCommit: List[UpdateActionGroup]
+  )(implicit ec: ExecutionContext): Fox[Unit] = {
+    val expectedPreviousIndices = (0 until updateGroup.transactionGroupIndex).toSet
+    val actualPreviousIndices = previousActionGroupsToCommit.map(_.transactionGroupIndex).toSet
+    val missingIndices = (expectedPreviousIndices -- actualPreviousIndices).toSeq.sorted
+    val errorMessage = s"Trying to commit transaction ${updateGroup.transactionId} for annotation $annotationId, " +
+      s"but not all update groups are present. Missing indices: ${missingIndices.mkString(", ")}"
+    Fox.fromBool(missingIndices.isEmpty) ?~> errorMessage
+  }
 
   private def removeAllUncommittedFor(annotationId: ObjectId, transactionId: String): Fox[Unit] =
     uncommittedUpdatesStore.removeAllConditional(patternFor(annotationId, transactionId))
@@ -176,9 +189,10 @@ class AnnotationTransactionService @Inject() (
         actions = allActionGroups.flatMap(_.actions),
         stats = lastActionGroup.stats, // the latest stats do count
         info = lastActionGroup.info, // frontend sets this identically for all groups of transaction
-        transactionId = f"${lastActionGroup.transactionId}-concatenated",
+        transactionId = lastActionGroup.transactionId, // needed for correct handledGroup lookup in case of retry
         transactionGroupCount = 1,
-        transactionGroupIndex = 0
+        transactionGroupIndex =
+          lastActionGroup.transactionGroupIndex // needed for correct handledGroup lookup in case of retry
       )
     }
 
@@ -206,17 +220,19 @@ class AnnotationTransactionService @Inject() (
       ec: ExecutionContext,
       tc: TokenContext,
       stats: UpdateTimingStats = new UpdateTimingStats
-  ): Fox[Long] = {
-    stats.recordRequestShape(updateGroups)
-    if (updateGroups.forall(_.transactionGroupCount == 1)) {
-      commitUpdates(annotationId, updateGroups)
-    } else {
-      updateGroups.foldLeft(annotationService.currentMaterializableVersion(annotationId)) {
-        (currentCommittedVersionFox, updateGroup) =>
-          handleUpdateGroupOfTransaction(annotationId, currentCommittedVersionFox, updateGroup)
+  ): Fox[Long] = for {
+    _ <- handledGroupIdStore.checkHealth
+    _ = stats.recordRequestShape(updateGroups)
+    newVersion <-
+      if (updateGroups.forall(_.transactionGroupCount == 1)) {
+        commitUpdates(annotationId, updateGroups)
+      } else {
+        updateGroups.foldLeft(annotationService.currentMaterializableVersion(annotationId)) {
+          (currentCommittedVersionFox, updateGroup) =>
+            handleUpdateGroupOfTransaction(annotationId, currentCommittedVersionFox, updateGroup)
+        }
       }
-    }
-  }
+  } yield newVersion
 
   // Perform version check and commit the passed updates
   private def commitUpdates(annotationId: ObjectId, updateGroups: List[UpdateActionGroup])(using

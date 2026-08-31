@@ -709,11 +709,12 @@ class AuthenticationController @Inject() (
   ): Request[AnyContent] => Fox[Result] = { implicit request: Request[AnyContent] =>
     userService.userFromMultiUserEmail(openIdConnectUserInfo.email)(using GlobalAccessContext).shiftBox.flatMap {
       case Full(user) =>
-// Assuming email verification was done by OIDC provider
+        // Assuming email verification was done by OIDC provider
         loginUser(user._id, label = "OIDC single sign-on", redirectToDashboard = true, skipEmailVerification = true)
       case Empty =>
         for {
           organization: Organization <- organizationService.findOneByInviteOrDefault(None)(using GlobalAccessContext)
+          // Assuming email verification was done by OIDC provider
           user <- createUser(
             organization,
             openIdConnectUserInfo.email,
@@ -722,7 +723,7 @@ class AuthenticationController @Inject() (
             autoActivate = true,
             None,
             isEmailVerified = true
-          ) // Assuming email verification was done by OIDC provider
+          )
           _ = logger.info(s"New user ${user._id} created via first OIDC single sign-on")
           // After registering, also login
           loginResult <- loginUser(

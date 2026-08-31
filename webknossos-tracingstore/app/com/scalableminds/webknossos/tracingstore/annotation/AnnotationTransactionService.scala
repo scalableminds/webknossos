@@ -85,7 +85,7 @@ class AnnotationTransactionService @Inject() (
       annotationId: ObjectId,
       previousVersionFox: Fox[Long],
       updateGroup: UpdateActionGroup
-  )(using ec: ExecutionContext, tc: TokenContext): Fox[Long] =
+  )(using ec: ExecutionContext, tc: TokenContext, stats: UpdateTimingStats): Fox[Long] =
     for {
       previousCommittedVersion: Long <- previousVersionFox
       result <-
@@ -120,17 +120,31 @@ class AnnotationTransactionService @Inject() (
   // and commit them all.
   private def commitWithPending(annotationId: ObjectId, updateGroup: UpdateActionGroup)(using
       ec: ExecutionContext,
-      tc: TokenContext
+      tc: TokenContext,
+      stats: UpdateTimingStats
   ): Fox[Long] =
     for {
       previousActionGroupsToCommit <- getAllUncommittedFor(annotationId, updateGroup.transactionId)
-      _ <- Fox.fromBool(
-        previousActionGroupsToCommit.exists(_.transactionGroupIndex == 0) || updateGroup.transactionGroupCount == 1
-      ) ?~> "Trying to commit a transaction without a group that has transactionGroupIndex 0."
+      _ <- assertAllGroupsInTransactionArePresent(annotationId, updateGroup, previousActionGroupsToCommit)
       concatenatedGroup = concatenateUpdateGroupsOfTransaction(previousActionGroupsToCommit, updateGroup)
       commitResult <- commitUpdates(annotationId, List(concatenatedGroup))
       _ <- removeAllUncommittedFor(annotationId, updateGroup.transactionId)
     } yield commitResult
+
+  // The last group (updateGroup itself) is not part of previousActionGroupsToCommit, so all indices
+  // from 0 until (but excluding) its own index are expected to have been found among them.
+  private def assertAllGroupsInTransactionArePresent(
+      annotationId: ObjectId,
+      updateGroup: UpdateActionGroup,
+      previousActionGroupsToCommit: List[UpdateActionGroup]
+  )(implicit ec: ExecutionContext): Fox[Unit] = {
+    val expectedPreviousIndices = (0 until updateGroup.transactionGroupIndex).toSet
+    val actualPreviousIndices = previousActionGroupsToCommit.map(_.transactionGroupIndex).toSet
+    val missingIndices = (expectedPreviousIndices -- actualPreviousIndices).toSeq.sorted
+    val errorMessage = s"Trying to commit transaction ${updateGroup.transactionId} for annotation $annotationId, " +
+      s"but not all update groups are present. Missing indices: ${missingIndices.mkString(", ")}"
+    Fox.fromBool(missingIndices.isEmpty) ?~> errorMessage
+  }
 
   private def removeAllUncommittedFor(annotationId: ObjectId, transactionId: String): Fox[Unit] =
     uncommittedUpdatesStore.removeAllConditional(patternFor(annotationId, transactionId))
@@ -175,9 +189,10 @@ class AnnotationTransactionService @Inject() (
         actions = allActionGroups.flatMap(_.actions),
         stats = lastActionGroup.stats, // the latest stats do count
         info = lastActionGroup.info, // frontend sets this identically for all groups of transaction
-        transactionId = f"${lastActionGroup.transactionId}-concatenated",
+        transactionId = lastActionGroup.transactionId, // needed for correct handledGroup lookup in case of retry
         transactionGroupCount = 1,
-        transactionGroupIndex = 0
+        transactionGroupIndex =
+          lastActionGroup.transactionGroupIndex // needed for correct handledGroup lookup in case of retry
       )
     }
 
@@ -203,21 +218,27 @@ class AnnotationTransactionService @Inject() (
 
   def handleUpdateGroups(annotationId: ObjectId, updateGroups: List[UpdateActionGroup])(using
       ec: ExecutionContext,
-      tc: TokenContext
-  ): Fox[Long] =
-    if (updateGroups.forall(_.transactionGroupCount == 1)) {
-      commitUpdates(annotationId, updateGroups)
-    } else {
-      updateGroups.foldLeft(annotationService.currentMaterializableVersion(annotationId)) {
-        (currentCommittedVersionFox, updateGroup) =>
-          handleUpdateGroupOfTransaction(annotationId, currentCommittedVersionFox, updateGroup)
+      tc: TokenContext,
+      stats: UpdateTimingStats = new UpdateTimingStats
+  ): Fox[Long] = for {
+    _ <- handledGroupIdStore.checkHealth
+    _ = stats.recordRequestShape(updateGroups)
+    newVersion <-
+      if (updateGroups.forall(_.transactionGroupCount == 1)) {
+        commitUpdates(annotationId, updateGroups)
+      } else {
+        updateGroups.foldLeft(annotationService.currentMaterializableVersion(annotationId)) {
+          (currentCommittedVersionFox, updateGroup) =>
+            handleUpdateGroupOfTransaction(annotationId, currentCommittedVersionFox, updateGroup)
+        }
       }
-    }
+  } yield newVersion
 
   // Perform version check and commit the passed updates
   private def commitUpdates(annotationId: ObjectId, updateGroups: List[UpdateActionGroup])(using
       ec: ExecutionContext,
-      tc: TokenContext
+      tc: TokenContext,
+      stats: UpdateTimingStats
   ): Fox[Long] =
     for {
       _ <- reportUpdates(annotationId, updateGroups)
@@ -226,7 +247,7 @@ class AnnotationTransactionService @Inject() (
         previousVersion.flatMap { (prevVersion: Long) =>
           if (prevVersion + 1 == updateGroup.version) {
             for {
-              _ <- handleUpdateGroup(annotationId, updateGroup)
+              _ <- stats.time("handleUpdateGroup")(handleUpdateGroup(annotationId, updateGroup))
               _ <- saveToHandledGroupIdStore(
                 annotationId,
                 updateGroup.transactionId,
@@ -255,7 +276,8 @@ class AnnotationTransactionService @Inject() (
 
   private def handleUpdateGroup(annotationId: ObjectId, updateActionGroup: UpdateActionGroup)(using
       ec: ExecutionContext,
-      tc: TokenContext
+      tc: TokenContext,
+      stats: UpdateTimingStats
   ): Fox[Unit] =
     for {
       updateActionsProcessed <- Fox.successful(preprocessActionsForStorage(updateActionGroup))
@@ -263,24 +285,29 @@ class AnnotationTransactionService @Inject() (
         updateActionsProcessed.length <= 1000000
       ) ?~> "Annotation update transactions with more than 1M update actions are not currently supported"
       updateActionsJson = Json.toJson(updateActionsProcessed)
-      _ <- tracingDataStore.annotationUpdates.put(
-        annotationId.toString,
-        updateActionGroup.version,
-        jsonToBytes(updateActionsJson)
+      _ <- stats.time("annotationUpdates.put")(
+        tracingDataStore.annotationUpdates.put(
+          annotationId.toString,
+          updateActionGroup.version,
+          jsonToBytes(updateActionsJson)
+        )
       )
       bucketMutatingActions = findBucketMutatingActions(updateActionGroup)
+      _ = stats.count("volumeBucketMutatingActions", bucketMutatingActions.length)
       actionsGrouped: Map[String, List[BucketMutatingVolumeUpdateAction]] = bucketMutatingActions.groupBy(
         _.actionTracingId
       )
       _ <- Fox.serialCombined(actionsGrouped.keys.toList) { volumeTracingId =>
         for {
-          tracing <- annotationService.findVolume(annotationId, volumeTracingId)
-          _ <- volumeTracingService.applyBucketMutatingActions(
-            volumeTracingId,
-            annotationId,
-            tracing,
-            actionsGrouped(volumeTracingId),
-            updateActionGroup.version
+          tracing <- stats.time("findVolume")(annotationService.findVolume(annotationId, volumeTracingId))
+          _ <- stats.time("applyBucketMutatingActions")(
+            volumeTracingService.applyBucketMutatingActions(
+              volumeTracingId,
+              annotationId,
+              tracing,
+              actionsGrouped(volumeTracingId),
+              updateActionGroup.version
+            )
           )
         } yield ()
       }

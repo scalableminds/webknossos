@@ -209,6 +209,20 @@ class UploadService @Inject() (
       orgaDir <- baseDirService.getOneLocalForOrga(organizationId, requireAllowsUpload = true)
     } yield orgaDir.resolve(trashDir).resolve(s"uploadBackup__$uploadId")
 
+  def cleanUpUploadFilesAfterConvertJob(organizationId: String, directoryName: String, jobId: String): Unit =
+    if (dataStoreConfig.Datastore.Upload.deleteTemporaryFilesAfterUpload) {
+      baseDirService.getOneLocalForOrga(organizationId, requireAllowsUpload = true).foreach { orgaDir =>
+        PathUtils.deleteDirectoryRecursively(
+          orgaDir.resolve(forConversionDir).resolve(directoryName),
+          enforceContainedIn = Some(orgaDir)
+        )
+        PathUtils.deleteDirectoryRecursively(
+          orgaDir.resolve(convertingDir).resolve(jobId),
+          enforceContainedIn = Some(orgaDir)
+        )
+      }
+    }
+
   def reserveDatasetUpload(
       datasetUploadInfo: DatasetUploadInfo,
       datasetId: ObjectId,
@@ -417,8 +431,12 @@ class UploadService @Inject() (
       _ = logger.info(s"Finishing ${uploadFullName(UploadDomain.dataset, uploadId, datasetId, dataSourceId)}...")
       linkedLayerIdentifiers <- datasetUploadMetadataStore.findLinkedLayerIdentifiers(uploadId)
       uploadDir <- uploadDirectoryFor(dataSourceId.organizationId, uploadId, UploadDomain.dataset).toFox
-      uploadBackupDir <- uploadBackupDirectoryFor(dataSourceId.organizationId, uploadId).toFox
-      _ <- backupRawUploadedData(uploadDir, uploadBackupDir, datasetId).toFox
+      _ <- Fox.runIf(!dataStoreConfig.Datastore.Upload.deleteTemporaryFilesAfterUpload) {
+        for {
+          uploadBackupDir <- uploadBackupDirectoryFor(dataSourceId.organizationId, uploadId).toFox
+          _ <- backupRawUploadedData(uploadDir, uploadBackupDir, datasetId).toFox
+        } yield ()
+      }
       _ <- checkWithinRequestedFileSize(
         uploadDir,
         uploadId,
@@ -807,6 +825,25 @@ class UploadService @Inject() (
     } yield filesToDelete
   }
 
+  private def deleteFailedUploadDir(
+      datasetId: ObjectId,
+      unpackToDir: Path,
+      dataSourceId: DataSourceId,
+      reason: String
+  ): Unit =
+    if (dataStoreConfig.Datastore.Upload.deleteTemporaryFilesAfterUpload) {
+      logger.info(s"Deleting failed-upload directory $unpackToDir because $reason.")
+      PathUtils.deleteDirectoryRecursively(unpackToDir)
+    } else {
+      localDatasetDeletionService.moveToTrash(
+        datasetId,
+        unpackToDir,
+        dataSourceId.organizationId,
+        dataSourceId.directoryName,
+        Some(reason)
+      )
+    }
+
   private def cleanUpOnFailure[T](
       domain: UploadDomain,
       result: Box[T],
@@ -819,23 +856,11 @@ class UploadService @Inject() (
       case Full(_) =>
         Full(())
       case Empty =>
-        localDatasetDeletionService.deleteOnDisk(
-          datasetId,
-          unpackToDir,
-          dataSourceId.organizationId,
-          dataSourceId.directoryName,
-          Some("the upload failed")
-        )
+        deleteFailedUploadDir(datasetId, unpackToDir, dataSourceId, "the upload failed")
         Failure(s"Unknown error $label")
       case f: Failure =>
         logger.warn(s"Error while $label: ${formatFailureChain(f, includeStackTraces = true)}")
-        localDatasetDeletionService.deleteOnDisk(
-          datasetId,
-          unpackToDir,
-          dataSourceId.organizationId,
-          dataSourceId.directoryName,
-          Some("the upload failed")
-        )
+        deleteFailedUploadDir(datasetId, unpackToDir, dataSourceId, "the upload failed")
         if (domain == UploadDomain.dataset) {
           remoteWebknossosClient.deleteDataset(datasetId)
         }
@@ -1033,7 +1058,7 @@ class UploadService @Inject() (
     for {
       _ <- PathUtils.ensureDirectoryBox(unpackToDir.getParent).toFox ?~> "dataset.import.fileAccessDenied"
       shallowFileList <- PathUtils.listFiles(uploadDir, silent = false).toFox
-      excludeFromPrefix = LayerCategory.values.map(_.toString).toList
+      layerDirNames = LayerCategory.values.map(_.toString).toList
       isSingleZip = shallowFileList.length == 1 && shallowFileList.headOption.exists(f =>
         ZipEntryUPath.relevantFileExtensions.exists(f.toString.toLowerCase.endsWith)
       )
@@ -1049,7 +1074,7 @@ class UploadService @Inject() (
                 includeHiddenFiles = false,
                 hiddenFilesWhitelist = List(".zarray", ".zattrs"),
                 truncateCommonPrefix = true,
-                Some(excludeFromPrefix)
+                boundaryDirNames = Some(layerDirNames)
               )
               .toFox
             _ <- Fox.fromBool(unpackToDir.toFile.exists()) ?~> Msg.Dataset.Upload.noFiles
@@ -1062,14 +1087,10 @@ class UploadService @Inject() (
             _ = logger.info(
               s"Detected $uploadDomain root during finishUpload of $datasetId from ${deepFileList.length} files in $uploadDir with commonPrefixPreliminary=$commonPrefixPreliminary"
             )
-            strippedPrefix = PathUtils.cutOffPathAtLastOccurrenceOf(commonPrefixPreliminary, excludeFromPrefix)
-            commonPrefix = PathUtils.removeSingleFileNameFromPrefix(
-              strippedPrefix,
-              deepFileList.map(_.getFileName.toString)
-            )
-            _ <- Fox.fromBool(commonPrefix.startsWith(uploadDir)) ?~> Msg.Dataset.Upload.datasetRootDetectionFailed
+            commonRootDir = PathUtils.findCommonRootDirectory(deepFileList, layerDirNames)
+            _ <- Fox.fromBool(commonRootDir.startsWith(uploadDir)) ?~> Msg.Dataset.Upload.datasetRootDetectionFailed
             _ <- tryo(
-              FileUtils.moveDirectory(new File(commonPrefix.toString), new File(unpackToDir.toString))
+              FileUtils.moveDirectory(new File(commonRootDir.toString), new File(unpackToDir.toString))
             ).toFox ?~> Msg.Dataset.Upload.moveToTargetFailed
           } yield ()
         }

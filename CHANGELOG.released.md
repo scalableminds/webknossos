@@ -75,6 +75,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed agglomerate loading in connectome tab. [#9909](https://github.com/scalableminds/webknossos/pull/9909)
 - Fixed that the dataset's bounding box did not adapt to layer transformations. [#9912](https://github.com/scalableminds/webknossos/pull/9912)
 
+
 ## [26.08.1](https://github.com/scalableminds/webknossos/releases/tag/26.08.1) - 2026-08-03
 [Commits](https://github.com/scalableminds/webknossos/compare/26.08.0...26.08.1)
 
@@ -93,7 +94,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added Maximum Intensity Projection (MIP) rendering for bounding boxes in the 3D viewport. Right-click any bounding box and choose "Render as MIP" to project a data layer through the volume, displaying the highest intensity value along each ray. [#9584](https://github.com/scalableminds/webknossos/pull/9584)
 - Added the option to edit the transforms of a layer live while viewing or annotating the data. [#9664](https://github.com/scalableminds/webknossos/pull/9664)
 - The bounding box tab now also lists the dataset layers' bounding boxes as read-only entries at the end of the list (below the editable user bounding boxes). Their name and bounds cannot be edited, but their visibility and color of the rendered outline can be toggled, and they can be navigated to, used to register their segments, and exported. They are shown even when only viewing a dataset (without an annotation). [#9276](https://github.com/scalableminds/webknossos/pull/9276)
-
 
 ### Added
 - The bounding box tab now also lists the dataset layers' bounding boxes as read-only entries at the end of the list (below the editable user bounding boxes). Their name and bounds cannot be edited, but their visibility and color of the rendered outline can be toggled, and they can be navigated to, used to register their segments, and exported. They are shown even when only viewing a dataset (without an annotation). [#9276](https://github.com/scalableminds/webknossos/pull/9276)
@@ -136,7 +136,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Improved the error messages shown when importing a volume annotation ZIP fails, e.g. because the annotation has no editable volume layer or because the mags of the imported data don't match. Previously, a generic "could not be parsed" message was shown instead of the actual reason. [#9708](https://github.com/scalableminds/webknossos/pull/9708)
 - Fixed the spinner on the refresh button in the voxelytics workflow task list. [#9712](https://github.com/scalableminds/webknossos/pull/9712)
 - Fixed a bug where the failed bucket loading could not be distinguished from black data, leading to wrong displayed data and wrong volume annotation data. [#9716](https://github.com/scalableminds/webknossos/pull/9716)
-- Reenabled volume tool keyboard shortcuts for the fill tool. For example, pressing `c` now creates a new segment again. [#9720](https://github.com/scalableminds/webknossos/pull/9720)
+- Re-enabled volume tool keyboard shortcuts for the fill tool. For example, pressing `c` now creates a new segment again. [#9720](https://github.com/scalableminds/webknossos/pull/9720)
 - Fixed that auxiliary helping meshes during proofreading were removed upon a proofreading action if the option to auto reload them was turned off. They are now preserved and still auto updated. [#9730](https://github.com/scalableminds/webknossos/pull/9730)
 - Fixed that the visibility of agglomerate meshes was reset to the default (visible) when the meshes were reloaded after an agglomerate merge/split, including when such changes are synced from other users during live collaboration. See #9699 as a related PR. [#9731](https://github.com/scalableminds/webknossos/pull/9731)
 - Fixed a crash when the network request failed that checks whether WEBKNOSSOS is in maintenance mode. [#9739](https://github.com/scalableminds/webknossos/pull/9739)

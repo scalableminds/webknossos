@@ -1,3 +1,4 @@
+import { unwrapOrThrow } from "admin/api/api_result";
 import LoginView from "admin/auth/login_view";
 import {
   isFeatureAllowedByPricingPlan,
@@ -36,7 +37,9 @@ function SecuredRoute({
   const getIsResourcePublic = useCallback(async () => {
     if (id) {
       try {
-        const annotationInformation = await getUnversionedAnnotationInformation(id || "");
+        const annotationInformation = unwrapOrThrow(
+          await getUnversionedAnnotationInformation(id || ""),
+        );
         return annotationInformation.visibility === "Public";
       } catch (_ex) {
         // Annotation could not be found

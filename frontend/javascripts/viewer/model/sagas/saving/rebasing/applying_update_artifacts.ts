@@ -17,7 +17,10 @@ export type ApplyingUpdateArtifacts = {
   meshesToLoadPerLayer: ReadonlyMap<string, ReadonlyMap<bigint, PreservedMeshDisplayProps>>;
 };
 
-export type ApplyingUpdateResults = { success: boolean; artifactInfos: ApplyingUpdateArtifacts };
+export type ApplyingUpdateResults = {
+  success: boolean;
+  artifactInfos: ApplyingUpdateArtifacts;
+};
 
 export const FailedIncorporateActionsReturnValue: ApplyingUpdateResults = {
   success: false,

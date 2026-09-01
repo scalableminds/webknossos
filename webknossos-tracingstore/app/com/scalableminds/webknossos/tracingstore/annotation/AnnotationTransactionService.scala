@@ -337,8 +337,11 @@ class AnnotationTransactionService @Inject() (
     }
     actionsWithInfo.map {
       case a: UpdateBucketVolumeAction => a.withoutBase64Data
-      case a: AddLayerAnnotationAction => a.copy(tracingId = Some(TracingId.generate))
-      case a                           => a
+      case a: AddLayerAnnotationAction =>
+        // Note: this generated tracingId must not be read from this action before it was committed to fossildb,
+        // to keep save retries idempotent.
+        a.copy(tracingId = Some(TracingId.generate))
+      case a => a
     }
   }
 

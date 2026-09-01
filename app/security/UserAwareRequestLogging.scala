@@ -1,6 +1,5 @@
 package security
 
-import com.scalableminds.util.mvc.FoxToResultHelpers
 import play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import com.scalableminds.util.requestlogging.AbstractRequestLogging
 import com.scalableminds.util.tools.Fox
@@ -8,7 +7,7 @@ import play.api.mvc.{Request, Result}
 
 import scala.concurrent.ExecutionContext
 
-trait UserAwareRequestLogging extends AbstractRequestLogging with FoxToResultHelpers {
+trait UserAwareRequestLogging extends AbstractRequestLogging {
 
   case class RequesterIdOpt(id: Option[String]) // forcing implicit conversion
 

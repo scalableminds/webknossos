@@ -10,7 +10,7 @@ import play.api.mvc.{Request, Result}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.*
 
-trait AbstractRequestLogging extends LazyLogging with Formatter {
+trait AbstractRequestLogging extends LazyLogging with Formatter with FoxToResultHelpers {
 
   def logRequestFormatted(
       request: Request[?],
@@ -34,7 +34,7 @@ trait AbstractRequestLogging extends LazyLogging with Formatter {
 
   def logTime(notifier: String => Unit, durationThreshold: FiniteDuration = 2 minutes)(
       block: => Fox[Result]
-  )(implicit request: Request[?]): Fox[Result] = {
+  )(implicit request: Request[?], ec: ExecutionContext): Fox[Result] = {
     def logTimeFormatted(executionTime: FiniteDuration, request: Request[?], result: Result): Unit = {
       val debugString =
         s"Request `${request.method}` `${request.uri}` took ${formatDuration(executionTime)} and was${
@@ -46,16 +46,16 @@ trait AbstractRequestLogging extends LazyLogging with Formatter {
     }
 
     val start = Instant.now
-    for {
-      result: Result <- block
+    Fox.fromFuture(for {
+      result: Result <- block.futureBox.map(boxToResult)
       executionTime = Instant.since(start)
       _ = if (executionTime > durationThreshold) logTimeFormatted(executionTime, request, result)
-    } yield result
+    } yield result)
   }
 
 }
 
-trait RequestLogging extends AbstractRequestLogging with FoxToResultHelpers {
+trait RequestLogging extends AbstractRequestLogging {
   // Hint: within webknossos itself, UserAwareRequestLogging is available, which additionally logs the requester user id
 
   def log(

@@ -25,12 +25,12 @@ import { BoundingBoxInput, Vector3Input } from "libs/vector_input";
 import type React from "react";
 import { cloneElement, useEffect } from "react";
 import { type APIDataLayer, type APIDataset, APIJobCommand } from "types/api_types";
+import type { BoundingBoxObject } from "types/bounding_box";
 import type { DataLayer, DataLayerWithTransformations } from "types/schemas/datasource.types";
 import { syncValidator, validateTransformationsJSON } from "types/validation";
 import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
 import type { RotationAndMirroringSettings } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getSegmentIdRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
-import type { BoundingBoxObject } from "viewer/store";
 import {
   AxisRotationSettingForDataset,
   getDatasetBoundingBoxFromLayers,

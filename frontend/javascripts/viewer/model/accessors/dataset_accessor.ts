@@ -21,6 +21,7 @@ import type {
   APISegmentationLayer,
   ElementClass,
 } from "types/api_types";
+import type { BoundingBoxObject } from "types/bounding_box";
 import type { DataLayer } from "types/schemas/datasource.types";
 import constants, {
   LongUnitToShortUnitMap,
@@ -33,7 +34,6 @@ import constants, {
 } from "viewer/constants";
 import type {
   ActiveMappingInfo,
-  BoundingBoxObject,
   DataLayerType,
   DatasetConfiguration,
   Settings,

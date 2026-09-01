@@ -59,6 +59,12 @@ describe("Proofreading (with mesh actions)", () => {
   function* simulateMergeAgglomeratesViaMeshes(
     context: WebknossosTestContext,
     injectVersionFn?: () => void,
+    // Defaults to the Number-typed mapping expected for the shared uint16 test layer. Pass a
+    // bigint-typed mapping instead when the surrounding test set up a genuinely 64-bit
+    // segmentation layer (see the "with an explicitly 64-bit segmentation layer" describe block
+    // below) -- this saga's own logic doesn't change at all between the two cases, only what a
+    // correct mapping looks like for the layer under test.
+    expectedInitialMapping: Map<NumberLike, NumberLike> = initialMapping,
   ): Saga<void> {
     const { api } = context;
     const { tracingId } = yield* select((state: WebknossosState) => state.annotation.volumes[0]);
@@ -67,7 +73,7 @@ describe("Proofreading (with mesh actions)", () => {
       (state: WebknossosState) =>
         getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
     );
-    expect(mapping0).toEqual(initialMapping);
+    expect(mapping0).toEqual(expectedInitialMapping);
 
     // Set up the merge-related segment partners. Normally, this would happen
     // due to the user's interactions.
@@ -86,7 +92,7 @@ describe("Proofreading (with mesh actions)", () => {
           ) as ActiveMappingInfo
         ).mapping,
     );
-    expect(mapping1).toEqual(initialMapping);
+    expect(mapping1).toEqual(expectedInitialMapping);
 
     if (injectVersionFn != null) {
       yield call(injectVersionFn);
@@ -151,17 +157,17 @@ describe("Proofreading (with mesh actions)", () => {
 
       expect(finalMapping).toEqual(
         new Map([
-          [1n, 1n],
-          [2n, 1n],
-          [3n, 1n],
-          [4n, 4n],
-          [5n, 4n],
-          [6n, 6n],
-          [7n, 6n],
-          // [1337n, 1n], not loaded due to no rebasing performed as this test has no injected updated actions.
+          [1, 1],
+          [2, 1],
+          [3, 1],
+          [4, 4],
+          [5, 4],
+          [6, 6],
+          [7, 6],
+          // [1337, 1], not loaded due to no rebasing performed as this test has no injected updated actions.
           // If there would be injected updates (simulating other users' changes) the segment id 1337 would
           // been looked up for rebasing and thus added to the loaded mapping.
-          // [1338n, 1n], not loaded
+          // [1338, 1], not loaded
         ]),
       );
       yield call(() => context.api.tracing.save());
@@ -199,15 +205,15 @@ describe("Proofreading (with mesh actions)", () => {
 
       expect(finalMapping).toEqual(
         new Map([
-          [1n, 1n],
-          [2n, 1n],
-          [3n, 1n],
-          [4n, 4n],
-          [5n, 4n],
-          [6n, 4n],
-          [7n, 4n],
-          [1337n, 1n], // loaded due to rebasing was necessary due to injected update action.
-          // [1338n, 1n], not loaded
+          [1, 1],
+          [2, 1],
+          [3, 1],
+          [4, 4],
+          [5, 4],
+          [6, 4],
+          [7, 4],
+          [1337, 1], // loaded due to rebasing was necessary due to injected update action.
+          // [1338, 1], not loaded
         ]),
       );
 
@@ -221,6 +227,118 @@ describe("Proofreading (with mesh actions)", () => {
       );
     });
     await task.toPromise();
+  });
+
+  // Test that the mocking keeps the mapping type in accordance to the segmentation layer element class.
+  // The mock is uint16 -> thus the mapping entries' type should be number, not bigint.
+  it("should keep the local mapping homogeneously (Number-)typed after a mesh-triggered rebase reload", async (context: WebknossosTestContext) => {
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+
+    const injectFn = () => backendMock.injectMultipleVersions(mergeSegment5And6, 7);
+
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
+
+    const task = startSaga(function* task(): Saga<void> {
+      yield simulateMergeAgglomeratesViaMeshes(context, injectFn);
+
+      const finalMapping = (yield* select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      )) as Map<NumberLike, NumberLike>;
+
+      expect(finalMapping).toEqual(
+        new Map([
+          [1, 1],
+          [2, 1],
+          [3, 1],
+          [4, 4],
+          [5, 4],
+          [6, 4],
+          [7, 4],
+          [1337, 1], // loaded due to rebasing being necessary because of the injected update action.
+        ]),
+      );
+      //
+      const keyTypes = new Set([...finalMapping.keys()].map((key) => typeof key));
+      const valueTypes = new Set([...finalMapping.values()].map((value) => typeof value));
+      expect(keyTypes.size).toBe(1);
+      expect(valueTypes.size).toBe(1);
+      expect(keyTypes.has("number")).toBe(true);
+    });
+
+    await task.toPromise();
+  });
+
+  // Regression test for a bug introduced by full uint64 support (#9765): addMissingSegmentsToLoadedMappings
+  // (rewrite_for_reapplying_sagas.ts) merged the reloaded ids (always bigint, since IdsToReloadPerMappingId
+  // is hardcoded to Set<bigint>, and thus so is every id reload request during rebasing regardless of the
+  // layer's element class) into the local mapping without adapting them to the mapping's native number/bigint
+  // type. => breaking non-64-bit layers. Thus, we test explicitly the bigint-based scenario.
+  describe("with an explicitly 64-bit (uint64) segmentation layer", () => {
+    beforeEach<WebknossosTestContext>(async (context) => {
+      await setupWebknossosForTestingWithRestrictions(
+        context,
+        "Exclusive",
+        true,
+        false,
+        "hybrid",
+        "uint64",
+      );
+    });
+
+    it("should keep the local mapping homogeneously (bigint-)typed after a mesh-triggered rebase reload", async (context: WebknossosTestContext) => {
+      const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState(), {
+        elementClass: "uint64",
+      });
+
+      const injectFn = () => backendMock.injectMultipleVersions(mergeSegment5And6, 7);
+
+      const { annotation } = Store.getState();
+      const { tracingId } = annotation.volumes[0];
+
+      const task = startSaga(function* task(): Saga<void> {
+        yield simulateMergeAgglomeratesViaMeshes(
+          context,
+          injectFn,
+          new Map([
+            [1n, 1n],
+            [2n, 1n],
+            [3n, 1n],
+            [4n, 4n],
+            [5n, 4n],
+            [6n, 6n],
+            [7n, 6n],
+          ]),
+        );
+
+        const finalMapping = (yield* select(
+          (state) =>
+            getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+        )) as Map<NumberLike, NumberLike>;
+
+        expect(finalMapping).toEqual(
+          new Map([
+            [1n, 1n],
+            [2n, 1n],
+            [3n, 1n],
+            [4n, 4n],
+            [5n, 4n],
+            [6n, 4n],
+            [7n, 4n],
+            [1337n, 1n], // loaded due to rebasing being necessary because of the injected update action.
+          ]),
+        );
+
+        const keyTypes = new Set([...finalMapping.keys()].map((key) => typeof key));
+        const valueTypes = new Set([...finalMapping.values()].map((value) => typeof value));
+        expect(keyTypes.size).toBe(1);
+        expect(valueTypes.size).toBe(1);
+        expect(keyTypes.has("bigint")).toBe(true);
+      });
+
+      await task.toPromise();
+    });
   });
 
   const mockEdgesForNormalAgglomerateMinCut = (mocks: WebknossosTestContext["mocks"]) =>
@@ -263,13 +381,13 @@ describe("Proofreading (with mesh actions)", () => {
     const { api } = context;
     const { tracingId } = yield* select((state: WebknossosState) => state.annotation.volumes[0]);
     const expectedInitialMapping = new Map([
-      [1n, 6n],
-      [2n, 6n],
-      [3n, 6n],
-      [4n, 4n],
-      [5n, 4n],
-      [6n, 6n],
-      [7n, 6n],
+      [1, 6],
+      [2, 6],
+      [3, 6],
+      [4, 4],
+      [5, 4],
+      [6, 6],
+      [7, 6],
     ]);
 
     yield call(initializeMappingAndTool, context, tracingId);
@@ -377,17 +495,17 @@ describe("Proofreading (with mesh actions)", () => {
 
       expect(finalMapping).toEqual(
         new Map([
-          [1n, 1339n],
-          [2n, 1339n],
-          [3n, 1339n],
-          [4n, 4n],
-          [5n, 4n],
-          [6n, 6n],
-          [7n, 6n],
-          // [1337n, 6n], not loaded due to no rebasing performed as this test has no injected updated actions.
+          [1, 1339],
+          [2, 1339],
+          [3, 1339],
+          [4, 4],
+          [5, 4],
+          [6, 6],
+          [7, 6],
+          // [1337, 6], not loaded due to no rebasing performed as this test has no injected updated actions.
           // If there would be injected updates (simulating other users' changes) the segment id 1337 would
           // been looked up for rebasing and thus added to the loaded mapping.
-          // [1338n, 1339n], also not loaded. see above.
+          // [1338, 1339], also not loaded. see above.
         ]),
       );
 
@@ -486,16 +604,16 @@ describe("Proofreading (with mesh actions)", () => {
 
       expect(finalMapping).toEqual(
         new Map([
-          [1n, 1339n],
-          [2n, 1339n],
-          [3n, 1339n],
-          [4n, 4n],
-          [5n, 4n],
-          [6n, 4n],
-          [7n, 4n],
+          [1, 1339],
+          [2, 1339],
+          [3, 1339],
+          [4, 4],
+          [5, 4],
+          [6, 4],
+          [7, 4],
           // Same here not loaded due to no rebasing
-          [1337n, 4n], // loaded due to split mesh operation
-          [1338n, 1339n], // loaded due to split mesh operation
+          [1337, 4], // loaded due to split mesh operation
+          [1338, 1339], // loaded due to split mesh operation
         ]),
       );
 
@@ -584,15 +702,15 @@ describe("Proofreading (with mesh actions)", () => {
 
       expect(finalMapping).toEqual(
         new Map([
-          [1n, 1n],
-          [2n, 1n],
-          [3n, 1n],
-          [4n, 4n],
-          [5n, 4n],
-          [6n, 6n],
-          [7n, 6n],
-          [1337n, 1339n], // Loaded as this segment is part of a split proofreading action done in this test.
-          [1338n, 1339n], // Loaded as this segment is part of a split proofreading action done in this test.
+          [1, 1],
+          [2, 1],
+          [3, 1],
+          [4, 4],
+          [5, 4],
+          [6, 6],
+          [7, 6],
+          [1337, 1339], // Loaded as this segment is part of a split proofreading action done in this test.
+          [1338, 1339], // Loaded as this segment is part of a split proofreading action done in this test.
         ]),
       );
 
@@ -710,15 +828,15 @@ describe("Proofreading (with mesh actions)", () => {
 
       expect(finalMapping).toEqual(
         new Map([
-          [1n, 1n],
-          [2n, 1n],
-          [3n, 1n],
-          [4n, 1n],
-          [5n, 1n],
-          [6n, 6n],
-          [7n, 6n],
-          [1337n, 1n], // Loaded as this segment is part of a split proofreading action done in this test.
-          [1338n, 1n], // Loaded as this segment is part of a split proofreading action done in this test.
+          [1, 1],
+          [2, 1],
+          [3, 1],
+          [4, 1],
+          [5, 1],
+          [6, 6],
+          [7, 6],
+          [1337, 1], // Loaded as this segment is part of a split proofreading action done in this test.
+          [1338, 1], // Loaded as this segment is part of a split proofreading action done in this test.
         ]),
       );
 

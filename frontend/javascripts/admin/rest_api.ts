@@ -155,7 +155,11 @@ export async function loginUser(
     password: string;
   },
   options: RequestOptions = {},
-  retryOptions?: RetryOptions,
+  // The requester below performs the login POST plus follow-up reads as one
+  // unit. Since a login POST isn't idempotent, this must not be retried as a
+  // whole -- otherwise a failing getActiveUser/getOrganization call after a
+  // successful login would cause a duplicate login POST.
+  retryOptions: RetryOptions = { retries: 0 },
 ): Promise<ApiResult<[APIUser, APIOrganization]>> {
   return requestResult(
     async (adaptedOptions) => {

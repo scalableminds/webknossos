@@ -177,9 +177,10 @@ user_A, user_B, user_C, user_D, user_E
     const result = await updateUser(newUser, { showErrorToast: false });
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.cause).toMatchObject(
-        getExpectedErrorObject("You are not authorized to view or edit this resource."),
-      );
+      expect(result.error.cause).toMatchObject({
+        status: 403,
+        messages: [{ error: "You are not authorized to view or edit this resource." }],
+      });
     }
   });
 

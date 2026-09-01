@@ -72,6 +72,8 @@ import {
   type ExperienceDomainList,
   type LayerLink,
   type MaintenanceInfo,
+  type SegmentCovarianceMatrix,
+  type SegmentStatisticsFileInfo,
   type ServerEditableMapping,
   type ServerTracing,
   type ShortLink,
@@ -1078,6 +1080,121 @@ export function getSegmentBoundingBoxes(
       data: { additionalCoordinates, mag, segmentIds, mappingName, annotationVersion },
       method: "POST",
     }),
+  );
+}
+
+/**
+ * Reports the segment statistics attachment of a layer, if it has one. The backend answers with an
+ * array of zero or one element, which is unwrapped here. Any error (e.g. a file with non-dense ids,
+ * which the backend rejects) is treated as "no usable file".
+ */
+export async function getSegmentStatisticsFileInfo(
+  dataStoreUrl: string,
+  datasetId: string,
+  dataLayerName: string,
+): Promise<SegmentStatisticsFileInfo | null> {
+  try {
+    const infos: SegmentStatisticsFileInfo[] = await doWithToken((token) =>
+      Request.receiveJSON(
+        `${dataStoreUrl}/data/datasets/${datasetId}/layers/${dataLayerName}/segmentStatisticsFile?token=${token}`,
+      ),
+    );
+    return infos[0] ?? null;
+  } catch (_error) {
+    return null;
+  }
+}
+
+/**
+ * The statistics-file-backed routes below exist only on the datastore, so they are always requested
+ * from there – even for a layer that belongs to a volume annotation.
+ */
+function fetchSegmentStatistic<T>(
+  layerSourceInfo: LayerSourceInfo,
+  route: string,
+  mag: Vector3,
+  segmentIds: Array<bigint>,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
+  mappingName: string | null | undefined,
+): Promise<T[]> {
+  const requestUrl = getDataOrTracingStoreUrl({ ...layerSourceInfo, useDataStore: true });
+  return doWithToken((token) =>
+    Request.sendJSONReceiveJSON(`${requestUrl}/segmentStatistics/${route}?token=${token}`, {
+      data: { additionalCoordinates, mag, segmentIds, mappingName },
+      method: "POST",
+    }),
+  );
+}
+
+/** Longest distance within each segment, in the dataset unit. */
+export function getSegmentMaxDistances(
+  layerSourceInfo: LayerSourceInfo,
+  mag: Vector3,
+  segmentIds: Array<bigint>,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
+  mappingName: string | null | undefined,
+): Promise<number[]> {
+  return fetchSegmentStatistic<number>(
+    layerSourceInfo,
+    "maxDistance",
+    mag,
+    segmentIds,
+    additionalCoordinates,
+    mappingName,
+  );
+}
+
+/** Dimensionless and scale-invariant, in [0, 1]. */
+export function getSegmentSphericities(
+  layerSourceInfo: LayerSourceInfo,
+  mag: Vector3,
+  segmentIds: Array<bigint>,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
+  mappingName: string | null | undefined,
+): Promise<number[]> {
+  return fetchSegmentStatistic<number>(
+    layerSourceInfo,
+    "sphericity",
+    mag,
+    segmentIds,
+    additionalCoordinates,
+    mappingName,
+  );
+}
+
+/** Centers of mass in mag1 voxels (floats, not rounded to voxel positions). */
+export function getSegmentCentersOfMass(
+  layerSourceInfo: LayerSourceInfo,
+  mag: Vector3,
+  segmentIds: Array<bigint>,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
+  mappingName: string | null | undefined,
+): Promise<Vector3[]> {
+  return fetchSegmentStatistic<Vector3>(
+    layerSourceInfo,
+    "centerOfMass",
+    mag,
+    segmentIds,
+    additionalCoordinates,
+    mappingName,
+  );
+}
+
+/** Row-major 3×3 covariance matrices in squared mag1 voxels. */
+export function getSegmentCovarianceMatrices(
+  layerSourceInfo: LayerSourceInfo,
+  mag: Vector3,
+  segmentIds: Array<bigint>,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
+  mappingName: string | null | undefined,
+): Promise<SegmentCovarianceMatrix[]> {
+  return fetchSegmentStatistic<SegmentCovarianceMatrix>(
+    layerSourceInfo,
+    "covarianceMatrix",
+    mag,
+    segmentIds,
+    additionalCoordinates,
+    mappingName,
   );
 }
 

@@ -18,7 +18,7 @@ import update from "immutability-helper";
 import { toBigInt } from "libs/bigint_helpers";
 import { V3 } from "libs/mjs";
 import Request, { type RequestOptions } from "libs/request";
-import { sleep } from "libs/utils";
+import { getAdaptToTypeFunctionFromList, sleep } from "libs/utils";
 import cloneDeep from "lodash-es/cloneDeep";
 import flattenDeep from "lodash-es/flattenDeep";
 import { dummyMeshFile } from "test/fixtures/dummy_mesh_file";
@@ -187,9 +187,10 @@ vi.mock("admin/rest_api.ts", async () => {
   (mockedSendRequestWithToken as any).receivedDataPerSaveRequest = receivedDataPerSaveRequest;
 
   const getAgglomeratesForSegmentsImpl = async (
-    segmentIds: Array<NumberLike>,
+    segmentIdsIterable: Iterable<NumberLike>,
     version?: number | null | undefined,
   ) => {
+    const segmentIds = Array.from(segmentIdsIterable);
     // Requested segment ids might be plain numbers (e.g. read from a uint16-backed voxel
     // buffer) even though the mapping itself is keyed by bigint (mirroring how the real
     // backend doesn't care which JS type the frontend used locally, since both serialize
@@ -203,7 +204,19 @@ vi.mock("admin/rest_api.ts", async () => {
         "Incorrect mock implementation of getAgglomeratesForSegmentsImpl detected. The requested segment ids were not properly served.",
       );
     }
-    return new Map(entries);
+    // Mirrors production's admin/rest_api.ts (_getAgglomeratesForSegmentsHelper): the response's
+    // ids are adapted to match the type of the *requested* segment ids (see
+    // getAdaptToTypeFunctionFromList), instead of always being bigint. This is what makes it
+    // possible to test non-64-bit (Number-mapped) segmentation layers realistically: whichever
+    // type of ids a saga queries with is also the type it gets back, exactly like the real
+    // backend helper.
+    const adaptToType = getAdaptToTypeFunctionFromList(segmentIds);
+    return new Map(
+      entries.map(([key, value]): [NumberLike, NumberLike] => [
+        adaptToType(key),
+        adaptToType(value),
+      ]),
+    );
   };
   const getAgglomeratesForSegmentsFromDatastoreMock = vi.fn(
     (
@@ -211,7 +224,7 @@ vi.mock("admin/rest_api.ts", async () => {
       _dataSourceId: unknown,
       _layerName: string,
       _mappingId: string,
-      segmentIds: Array<NumberLike>,
+      segmentIds: Iterable<NumberLike>,
     ) => {
       return getAgglomeratesForSegmentsImpl(segmentIds, 0);
     },
@@ -221,7 +234,7 @@ vi.mock("admin/rest_api.ts", async () => {
     (
       _tracingStoreUrl: string,
       _tracingId: string,
-      segmentIds: Array<NumberLike>,
+      segmentIds: Iterable<NumberLike>,
       _annotationId: string,
       version?: number | null | undefined,
     ) => {
@@ -486,7 +499,13 @@ export function createBucketResponseFunction(
             z * Constants.BUCKET_WIDTH ** 2 +
             y * Constants.BUCKET_WIDTH +
             x;
-          typedArray[indexInBucket] = value;
+          if (typedArray instanceof BigInt64Array || typedArray instanceof BigUint64Array) {
+            typedArray[indexInBucket] = BigInt(value);
+          } else {
+            (typedArray as Exclude<typeof typedArray, BigInt64Array | BigUint64Array>)[
+              indexInBucket
+            ] = value;
+          }
         }
       }
     }
@@ -682,6 +701,11 @@ export async function setupWebknossosForTestingWithRestrictions(
   allowUpdate: boolean,
   makeProofread: boolean = false,
   tracingTestMode: "hybrid" | "multiVolume" = "hybrid",
+  // Defaults to the shared volume tracing fixture's own declared element class (uint16,
+  // non-64-bit). Pass "uint64"/"int64" to exercise the bigint-mapping code path instead --
+  // see mockInitialBucketAndAgglomerateData's matching elementClass option, which must be
+  // passed the same value so the mocked bucket bytes stay consistent with this declaration.
+  elementClass?: ElementClass,
 ) {
   await setupWebknossosForTesting(
     context,
@@ -691,8 +715,12 @@ export async function setupWebknossosForTestingWithRestrictions(
         restrictions: { allowUpdate: { $set: allowUpdate }, allowSave: { $set: allowUpdate } },
         collaborationMode: { $set: collaborationMode ?? "OwnerOnly" },
       });
+      let updatedTracings = makeProofread ? makeProofreadAnnotation(tracings) : tracings;
+      if (elementClass != null) {
+        updatedTracings = withElementClass(updatedTracings, elementClass);
+      }
       return {
-        tracings: makeProofread ? makeProofreadAnnotation(tracings) : tracings,
+        tracings: updatedTracings,
         annotationProto,
         dataset,
         annotation: annotationWithUpdatingAllowedTrue,
@@ -714,4 +742,15 @@ function makeProofreadAnnotation(
     }
     return tracing;
   });
+}
+
+function withElementClass(
+  tracings: (ServerSkeletonTracing | ServerVolumeTracing)[],
+  elementClass: ElementClass,
+): (ServerSkeletonTracing | ServerVolumeTracing)[] {
+  return tracings.map((tracing) =>
+    tracing.typ === "Volume" && tracing.id === volumeTracing.id
+      ? update(tracing, { elementClass: { $set: elementClass } })
+      : tracing,
+  );
 }

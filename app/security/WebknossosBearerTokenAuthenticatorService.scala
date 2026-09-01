@@ -1,6 +1,5 @@
 package security
 
-import play.silhouette.api.LoginInfo
 import play.silhouette.api.exceptions.{AuthenticatorCreationException, AuthenticatorInitializationException}
 import play.silhouette.api.services.AuthenticatorService.{CreateError, InitError}
 import play.silhouette.api.util.{Clock, IDGenerator}
@@ -47,18 +46,18 @@ class WebknossosBearerTokenAuthenticatorService(
     idGenerator.generate.map { id =>
       BearerTokenAuthenticator(
         id = id,
-        loginInfo = loginInfoFromUserId(userId),
+        loginInfo = LoginInfoAdapter.loginInfoFromUserId(userId),
         lastUsedDateTime = clock.now,
         expirationDateTime = Instant.in(expiry).toZonedDateTime,
         idleTimeout = settings.authenticatorIdleTimeout
       )
     }.recover { case e =>
-      throw new AuthenticatorCreationException(CreateError.format(ID, loginInfoFromUserId(userId)), Some(e))
+      throw new AuthenticatorCreationException(
+        CreateError.format(ID, LoginInfoAdapter.loginInfoFromUserId(userId)),
+        Some(e)
+      )
     }
   }
-
-  private def loginInfoFromUserId(userId: ObjectId) =
-    LoginInfo("credentials", userId.toString)
 
   def init(authenticator: BearerTokenAuthenticator, tokenType: TokenType, deleteOld: Boolean): Future[String] =
     repository

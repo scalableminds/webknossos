@@ -5,6 +5,7 @@ import type {
   MetadataEntryProto,
   TreeAgglomerateInfo,
 } from "types/api_types";
+import type { BoundingBoxObject } from "types/bounding_box";
 import type { TreeType, Vector3 } from "viewer/constants";
 import type { SendBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import { convertUserBoundingBoxFromFrontendToServer } from "viewer/model/reducers/reducer_helpers";
@@ -16,7 +17,6 @@ import type {
   TreeGroup,
 } from "viewer/model/types/tree_types";
 import type {
-  BoundingBoxObject,
   SegmentGroup,
   UserBoundingBox,
   UserBoundingBoxWithOptIsVisible,

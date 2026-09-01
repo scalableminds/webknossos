@@ -316,6 +316,7 @@ async function onUpdateNode(mergerModeState: MergerModeState, node: UpdateAction
       );
     }
 
+    // Comparisons like > do support mixing bigint and number. Thus, no conversion needed here.
     if (unmappedSegmentId != null && unmappedSegmentId > 0) {
       await onCreateNode(
         mergerModeState,
@@ -445,6 +446,7 @@ async function mergeSegmentsOfAlreadyExistingTrees(
 
     const unmappedSegmentId = await api.data.getDataValue(segmentationLayerName, segmentPosition);
 
+    // Comparisons like > do support mixing bigint and number. Thus, no conversion needed here.
     if (unmappedSegmentId != null && unmappedSegmentId > 0) {
       // Store the segment id
       nodeToUnmappedSegmentMap[node.id] = unmappedSegmentId;

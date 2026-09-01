@@ -21,9 +21,16 @@ trait AbstractRequestLogging extends LazyLogging with Formatter with FoxToResult
     if (!Status.isSuccessful(result.header.status)) {
       val userIdMsg = requesterId.map(id => s" for user $id").getOrElse("")
       val resultMsg = s": `${resultBody(result)}`"
-      val msg = s"Answering ${result.header.status} at ${request.uri}$userIdMsg$resultMsg"
+      val msg = s"Answering ${result.header.status} at ${redactUri(request.uri)}$userIdMsg$resultMsg"
       logger.warn(msg)
       notifier.foreach(_(msg))
+    }
+
+  private val redactedUriParams = Seq("key", "token")
+
+  private def redactUri(uri: String): String =
+    redactedUriParams.foldLeft(uri) { (uriAcc, param) =>
+      uriAcc.replaceAll(s"([?&]$param=)[^&]*", "$1xxx")
     }
 
   private def resultBody(result: Result): String =
@@ -37,7 +44,7 @@ trait AbstractRequestLogging extends LazyLogging with Formatter with FoxToResult
   )(implicit request: Request[?], ec: ExecutionContext): Fox[Result] = {
     def logTimeFormatted(executionTime: FiniteDuration, request: Request[?], result: Result): Unit = {
       val debugString =
-        s"Request `${request.method}` `${request.uri}` took ${formatDuration(executionTime)} and was${
+        s"Request `${request.method}` `${redactUri(request.uri)}` took ${formatDuration(executionTime)} and was${
             if (result.header.status != 200) " not "
             else " "
           }successful"

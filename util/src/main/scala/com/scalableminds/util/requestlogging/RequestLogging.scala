@@ -1,12 +1,13 @@
 package com.scalableminds.util.requestlogging
 
-import com.scalableminds.util.mvc.Formatter
+import com.scalableminds.util.mvc.{Formatter, FoxToResultHelpers}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import play.api.http.{HttpEntity, Status}
 import play.api.mvc.{Request, Result}
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.*
 
 trait AbstractRequestLogging extends LazyLogging with Formatter {
@@ -54,15 +55,15 @@ trait AbstractRequestLogging extends LazyLogging with Formatter {
 
 }
 
-trait RequestLogging extends AbstractRequestLogging {
+trait RequestLogging extends AbstractRequestLogging with FoxToResultHelpers {
   // Hint: within webknossos itself, UserAwareRequestLogging is available, which additionally logs the requester user id
 
   def log(
       notifier: Option[String => Unit] = None
-  )(block: => Fox[Result])(implicit request: Request[?]): Fox[Result] =
-    for {
-      result: Result <- block
+  )(block: => Fox[Result])(implicit request: Request[?], ec: ExecutionContext): Fox[Result] =
+    Fox.fromFuture(for {
+      result: Result <- block.futureBox.map(boxToResult)
       _ = logRequestFormatted(request, result, notifier)
-    } yield result
+    } yield result)
 
 }

@@ -13,6 +13,7 @@ import constants, { type TypedArray } from "viewer/constants";
 import { getRenderer } from "viewer/controller/renderer";
 import { createUpdatableTexture } from "viewer/geometries/materials/plane_material_factory_helpers";
 import type { DataBucket } from "viewer/model/bucket_data_handling/bucket";
+import type DataCube from "viewer/model/bucket_data_handling/data_cube";
 import {
   getBucketCapacity,
   getBucketHeightInTexture,
@@ -128,8 +129,14 @@ export default class TextureBucketManager {
   elementClass: ElementClass;
   // The number of voxels a single bucket occupies in this layer's atlas. Equal to
   // constants.BUCKET_SIZE, unless the layer has a degenerate (e.g., z-extent-1) axis.
-  // See DataCube.effectiveBucketDepth / getEffectiveBucketDepth.
+  // See DataCube.effectiveBucketDepth / getEffectiveBucketDepth. For a t-recycling
+  // layer, this is the full BUCKET_SIZE (see isTRecyclingEnabled below).
   bucketVoxelCount: number;
+  // When true, this layer's (always-0) z-addressing slot is repurposed to cache
+  // several t (time) slices of a z-degenerate layer simultaneously on the GPU,
+  // instead of shrinking the bucket footprint to depth 1. See DataBucket.getT()
+  // and the "t-recycling" design notes above setActiveBucketsTRecycling.
+  isTRecyclingEnabled: boolean;
   isDestroyed: boolean = false;
   private areTexturesReady: boolean = false;
   private isWriterQueueProcessingScheduled: boolean = false;
@@ -138,13 +145,34 @@ export default class TextureBucketManager {
     textureWidth: number,
     dataTextureCount: number,
     elementClass: ElementClass,
-    bucketVoxelCount: number = constants.BUCKET_SIZE,
+    cube: DataCube,
   ) {
     // If there is one byte per voxel, we pack 4 bytes into one texel (packingDegree = 4)
     // Otherwise, we don't pack bytes together (packingDegree = 1)
     this.packingDegree = getDtypeConfigForElementClass(elementClass).packingDegree;
     this.elementClass = elementClass;
-    this.bucketVoxelCount = bucketVoxelCount;
+
+    const hasTAxis = cube.additionalAxes.t != null;
+    const wantsRecycling = cube.effectiveBucketDepth === 1 && hasTAxis;
+    // A t-slice can only be written via one rectangular texSubImage2D call if it is
+    // row-aligned within the (unshrunk) bucket's row-block, since z is the highest-
+    // stride (outermost) axis. This holds iff a full 32-deep bucket spans at least
+    // 32 whole texture rows, i.e. iff textureWidth <= packedSliceSize.
+    const packedSliceSize = constants.BUCKET_WIDTH ** 2 / this.packingDegree;
+    const isRowAligned = textureWidth <= packedSliceSize;
+    this.isTRecyclingEnabled = wantsRecycling && isRowAligned;
+
+    if (wantsRecycling && !isRowAligned) {
+      console.warn(
+        "t-recycling was requested for a layer but textureWidth is too large relative to " +
+          "the bucket's slice size to guarantee row-aligned writes. Falling back to the " +
+          "shrink-to-1 GPU packing for this layer instead.",
+      );
+    }
+
+    this.bucketVoxelCount = this.isTRecyclingEnabled
+      ? constants.BUCKET_SIZE
+      : cube.getEffectiveBucketVoxelCount();
     this.maximumCapacity = getBucketCapacity(
       dataTextureCount,
       textureWidth,
@@ -185,6 +213,24 @@ export default class TextureBucketManager {
     this.setActiveBuckets([]);
   }
 
+  // For t-recycling-enabled layers, the (always-0) real z-addressing slot is
+  // repurposed to encode a "t-batch index" (floor(t/32)) instead, since up to 32
+  // t-slices of a z-degenerate layer share one atlas region (see processWriterQueue's
+  // zSlot computation for where t%32 is used instead). This keeps the cuckoo table's
+  // key format/structure completely unchanged.
+  private getCuckooKey(bucket: DataBucket): [number, number, number, number, number] {
+    const z = this.isTRecyclingEnabled
+      ? Math.floor(bucket.getT() / constants.BUCKET_WIDTH)
+      : bucket.zoomedAddress[2];
+    return [
+      bucket.zoomedAddress[0],
+      bucket.zoomedAddress[1],
+      z,
+      bucket.zoomedAddress[3],
+      this.layerIndex,
+    ];
+  }
+
   freeBucket(bucket: DataBucket): void {
     const unusedIndex = this.activeBucketToIndexMap.get(bucket);
 
@@ -199,13 +245,7 @@ export default class TextureBucketManager {
     this.activeBucketToIndexMap.delete(bucket);
     this.committedBucketSet.delete(bucket);
     this.freeIndexSet.add(unusedIndex);
-    this.lookUpCuckooTable.unset([
-      bucket.zoomedAddress[0],
-      bucket.zoomedAddress[1],
-      bucket.zoomedAddress[2],
-      bucket.zoomedAddress[3],
-      this.layerIndex,
-    ]);
+    this.lookUpCuckooTable.unset(this.getCuckooKey(bucket));
 
     // If a bucket is evicted from the GPU, it should not be rendered, anymore.
     // This is especially important when new buckets take a while to load. In that
@@ -264,19 +304,12 @@ export default class TextureBucketManager {
     this.writerQueue = uniqBy(this.writerQueue, (el) => el._index);
     const maxTimePerFrame = 16;
     const startingTime = performance.now();
-    const packedBucketSize = this.getPackedBucketSize();
     const bucketHeightInTexture = getBucketHeightInTexture(
       this.textureWidth,
       this.packingDegree,
       this.bucketVoxelCount,
     );
     const bucketsPerTexture = this.textureWidth / bucketHeightInTexture;
-    // Ratio between the raw elements needed to fill a whole texture row and the raw
-    // elements a single bucket naturally produces. Equal to 1 unless
-    // bucketHeightInTexture was clamped to one full row (see getBucketHeightInTexture),
-    // in which case a bucket's data needs to be padded to fill out that row for
-    // texSubImage2D (which requires the source buffer to cover the full upload area).
-    const rowPaddingRatio = (this.textureWidth * bucketHeightInTexture) / packedBucketSize;
 
     while (this.writerQueue.length > 0 && performance.now() - startingTime < maxTimePerFrame) {
       // @ts-expect-error pop cannot return null due to the while condition
@@ -309,33 +342,47 @@ export default class TextureBucketManager {
         data.byteLength / TypedArrayClass.BYTES_PER_ELEMENT,
       );
 
-      const rgbPaddedSrc = maybePadRgbData(rawSrc, this.elementClass, this.bucketVoxelCount);
+      // For t-recycling-enabled layers, this bucket's data is only one t-slice
+      // (32x32x1 voxels, per the CPU-side shrink) that belongs at z-sub-slot t%32
+      // within the otherwise-full-depth (32768-voxel) atlas region for its
+      // (x,y,mag,t-batch) group — not at the whole region. writeHeight/zSlot express
+      // that sub-region; for non-t-recycling layers these collapse to the bucket's
+      // full height at slot 0, unchanged from before.
+      const zSlot = this.isTRecyclingEnabled ? bucket.getT() % constants.BUCKET_WIDTH : 0;
+      const sliceVoxelCount = this.isTRecyclingEnabled
+        ? this.bucketVoxelCount / constants.BUCKET_WIDTH
+        : this.bucketVoxelCount;
+      const writeHeight = this.isTRecyclingEnabled
+        ? bucketHeightInTexture / constants.BUCKET_WIDTH
+        : bucketHeightInTexture;
+      const packedSliceSize = sliceVoxelCount / this.packingDegree;
+      // Ratio between the raw elements needed to fill a whole texture row and the raw
+      // elements a single slice naturally produces. Equal to 1 unless writeHeight was
+      // clamped to one full row (see getBucketHeightInTexture) or (always, by
+      // construction, see the row-alignment guard in the constructor) for
+      // t-recycling, in which case a slice's data needs to be padded to fill out
+      // that row for texSubImage2D (which requires the source buffer to cover the
+      // full upload area).
+      const rowPaddingRatio = (this.textureWidth * writeHeight) / packedSliceSize;
+
+      const rgbPaddedSrc = maybePadRgbData(rawSrc, this.elementClass, sliceVoxelCount);
       const src =
         rowPaddingRatio > 1
           ? padToFullRow(rgbPaddedSrc, Math.round(rgbPaddedSrc.length * rowPaddingRatio))
           : rgbPaddedSrc;
 
-      console.time("upload bucket to gpu")
+      console.time("upload bucket to gpu");
       this.dataTextures[dataTextureIndex].update(
         src,
         0,
-        bucketHeightInTexture * indexInDataTexture,
+        bucketHeightInTexture * indexInDataTexture + writeHeight * zSlot,
         this.textureWidth,
-        bucketHeightInTexture,
+        writeHeight,
       );
       this.committedBucketSet.add(bucket);
-      console.timeEnd("upload bucket to gpu")
+      console.timeEnd("upload bucket to gpu");
 
-      this.lookUpCuckooTable.set(
-        [
-          bucket.zoomedAddress[0],
-          bucket.zoomedAddress[1],
-          bucket.zoomedAddress[2],
-          bucket.zoomedAddress[3],
-          this.layerIndex,
-        ],
-        _index,
-      );
+      this.lookUpCuckooTable.set(this.getCuckooKey(bucket), _index);
 
       // bucket.setVisualizationColor("#00ff00");
       // bucket.visualize();
@@ -382,16 +429,7 @@ export default class TextureBucketManager {
     this.freeIndexSet.delete(index);
     this.activeBucketToIndexMap.set(bucket, index);
 
-    this.lookUpCuckooTable.set(
-      [
-        bucket.zoomedAddress[0],
-        bucket.zoomedAddress[1],
-        bucket.zoomedAddress[2],
-        bucket.zoomedAddress[3],
-        this.layerIndex,
-      ],
-      NOT_YET_COMMITTED_VALUE,
-    );
+    this.lookUpCuckooTable.set(this.getCuckooKey(bucket), NOT_YET_COMMITTED_VALUE);
 
     const enqueueBucket = (_index: number) => {
       if (!bucket.hasData()) {

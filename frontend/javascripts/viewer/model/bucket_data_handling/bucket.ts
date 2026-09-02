@@ -254,6 +254,13 @@ export class DataBucket {
     return this.zoomedAddress[4];
   }
 
+  // Convenience accessor for the "t" (time) additional coordinate, used by
+  // TextureBucketManager's t-recycling support. Returns 0 if the layer has no
+  // t-axis (matching the addressing default used elsewhere for missing coordinates).
+  getT(): number {
+    return this.getAdditionalCoordinates()?.find((coord) => coord.name === "t")?.value ?? 0;
+  }
+
   is3DVoxelInsideBucket = (voxel: Vector3, zoomStep: number) => {
     // Checks whether a given 3D voxel is outside of the bucket it refers to (i.e., a coordinate is negative
     // or greater than 32). If this is the case, the bucket address of the neighbor which contains the position

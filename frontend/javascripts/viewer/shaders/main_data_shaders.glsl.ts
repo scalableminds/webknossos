@@ -83,6 +83,14 @@ uniform float activeMagIndices[<%= globalLayerCount %>];
 // bucketSize for most layers, except for those with a degenerate (e.g., z-extent-1)
 // axis, whose buckets are packed with a smaller footprint. See getEffectiveBucketDepth.
 uniform float bucketVoxelCountPerLayer[<%= globalLayerCount %>];
+// Per-layer flag: whether this layer's (always-0) z-addressing slot is repurposed to
+// cache several t (time) slices simultaneously (see TextureBucketManager.isTRecyclingEnabled
+// and maybeOverrideBucketPositionZ/maybeOverrideOffsetInBucketZ in texture_access.glsl.ts).
+uniform float isTRecyclingEnabledPerLayer[<%= globalLayerCount %>];
+// The current value of the flycam's "t" additional coordinate (global, not per-layer,
+// since additionalCoordinates is flycam-global). Only meaningful for layers where
+// isTRecyclingEnabledPerLayer is set.
+uniform float currentAdditionalCoordinateValue;
 uniform uint availableLayerIndexToGlobalLayerIndex[<%= globalLayerCount %>];
 uniform vec3 allMagnifications[<%= magnificationsCount %>];
 uniform uint magnificationCountCumSum[<%= globalLayerCount %>];
@@ -616,6 +624,7 @@ void main() {
       renderedMagIdx = activeMagIdx + i;
       vec3 coords = floor(getAbsoluteCoords(worldCoordUVW, renderedMagIdx, globalLayerIndex));
       vec3 absoluteBucketPosition = div(coords, bucketWidth);
+      absoluteBucketPosition.z = maybeOverrideBucketPositionZ(globalLayerIndex, absoluteBucketPosition.z);
       bucketAddress = lookUpBucket(
         globalLayerIndex,
         uvec4(uvec3(absoluteBucketPosition), activeMagIdx + i),

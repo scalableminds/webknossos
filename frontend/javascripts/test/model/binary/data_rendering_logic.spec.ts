@@ -47,12 +47,14 @@ const createGrayscaleLayer = () => ({
   elementClass: grayscaleElementClass,
   category: "color",
   boundingBox: { depth: NON_DEGENERATE_DEPTH },
+  additionalAxes: null,
 });
 const createVolumeLayer = () => ({
   byteCount: volumeByteCount,
   elementClass: volumeElementClass,
   category: "segmentation",
   boundingBox: { depth: NON_DEGENERATE_DEPTH },
+  additionalAxes: null,
 });
 
 function createLayers(grayscaleCount: number, volumeCount: number) {
@@ -140,6 +142,7 @@ function computeDataTexturesSetupCurried(spec: typeof minSpecs, hasSegmentation:
         elementClass: ElementClass;
         category: "color" | "segmentation";
         boundingBox: { depth: number };
+        additionalAxes: null;
       }[],
       hasSegmentation,
       DEFAULT_REQUIRED_BUCKET_CAPACITY,

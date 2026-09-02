@@ -26,11 +26,20 @@ const temporalBucketManagerMock = {
   isEmpty: () => true,
 };
 
-const mockedCube = {
-  isSegmentation: false,
-  triggerRenderedBucketDataChanged: () => {},
-  getEffectiveBucketVoxelCount: () => 32 ** 3,
-};
+function makeMockCube(overrides: Partial<ReturnType<typeof makeMockCubeBase>> = {}) {
+  return { ...makeMockCubeBase(), ...overrides };
+}
+function makeMockCubeBase() {
+  return {
+    isSegmentation: false,
+    triggerRenderedBucketDataChanged: () => {},
+    effectiveBucketDepth: 32,
+    additionalAxes: {} as Record<string, { bounds: [number, number]; index: number; name: string }>,
+    getEffectiveBucketVoxelCount: () => 32 ** 3,
+  };
+}
+
+const mockedCube = makeMockCube();
 
 const buildBucket = (zoomedAddress: Vector4, firstByte: number) => {
   const bucket = new DataBucket(
@@ -82,7 +91,7 @@ describe("TextureBucketManager", () => {
   });
 
   it("basic functionality", () => {
-    const tbm = new TextureBucketManager(2048, 1, "uint8");
+    const tbm = new TextureBucketManager(2048, 1, "uint8", mockedCube as any);
     tbm.setupDataTextures(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
 
     const activeBuckets = [
@@ -98,7 +107,7 @@ describe("TextureBucketManager", () => {
   });
 
   it("changing active buckets", () => {
-    const tbm = new TextureBucketManager(2048, 2, "uint8");
+    const tbm = new TextureBucketManager(2048, 2, "uint8", mockedCube as any);
     tbm.setupDataTextures(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
 
     const activeBuckets = [
@@ -120,12 +129,11 @@ describe("TextureBucketManager", () => {
 
   it("supports a shrunk bucket footprint (e.g., 2D datasets)", () => {
     const textureWidth = 2048;
-    const bucketVoxelCount = 32 * 32 * 1; // z-degenerate (2D) layer
-    const shrunkMockedCube = {
-      isSegmentation: false,
-      triggerRenderedBucketDataChanged: () => {},
+    const bucketVoxelCount = 32 * 32 * 1; // z-degenerate (2D) layer, no t-axis
+    const shrunkMockedCube = makeMockCube({
+      effectiveBucketDepth: 1,
       getEffectiveBucketVoxelCount: () => bucketVoxelCount,
-    };
+    });
     const buildShrunkBucket = (zoomedAddress: Vector4, firstByte: number) => {
       const bucket = new DataBucket(
         "uint8",
@@ -144,7 +152,7 @@ describe("TextureBucketManager", () => {
       return bucket;
     };
 
-    const tbm = new TextureBucketManager(textureWidth, 1, "uint8", bucketVoxelCount);
+    const tbm = new TextureBucketManager(textureWidth, 1, "uint8", shrunkMockedCube as any);
     tbm.setupDataTextures(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
 
     const activeBuckets = [
@@ -182,5 +190,55 @@ describe("TextureBucketManager", () => {
       // @ts-expect-error - texture is available in our mock but not in the real type
       expect(tbm.dataTextures[0].texture[bucketLocation]).toBe(expectedFirstByte);
     }
+  });
+
+  it("t-recycling: places a t-slice at its z-sub-slot, addressed via the t-batch (Stage A)", () => {
+    // Row-alignment guard requires textureWidth <= (32^2 / packingDegree) = 256 for uint8.
+    const textureWidth = 256;
+    const t = 45; // batch index = floor(45/32) = 1, zSlot = 45 % 32 = 13
+    const tRecyclingMockedCube = makeMockCube({
+      effectiveBucketDepth: 1,
+      additionalAxes: { t: { name: "t", bounds: [0, 1000], index: 3 } },
+      // CPU-side data for a t-recycling-eligible layer stays shrunk to one z-slice.
+      getEffectiveBucketVoxelCount: () => 32 * 32 * 1,
+    });
+
+    const bucket = new DataBucket(
+      "uint8",
+      [1, 1, 0, 0, [{ name: "t", value: t }]] as any,
+      temporalBucketManagerMock as any,
+      { type: "full" },
+      tRecyclingMockedCube as any,
+    );
+    bucket._fallbackBucket = NULL_BUCKET;
+    bucket.markAsRequested();
+    const data = new Uint8Array(32 ** 3); // full wire payload; receiveData slices it down
+    data[0] = 77;
+    bucket.receiveData(data);
+
+    const tbm = new TextureBucketManager(textureWidth, 1, "uint8", tRecyclingMockedCube as any);
+    expect(tbm.isTRecyclingEnabled).toBe(true);
+    tbm.setupDataTextures(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
+
+    setActiveBucketsAndWait(tbm, [bucket]);
+
+    // Looked up via the t-batch index (1), not the bucket's real (always-0) z.
+    const bucketAddress = tbm.lookUpCuckooTable.get([1, 1, 1, 0, LAYER_INDEX]);
+    if (bucketAddress == null) {
+      throw new Error("Bucket address is null");
+    }
+
+    const bucketHeightInTexture = getBucketHeightInTexture(
+      textureWidth,
+      tbm.packingDegree,
+      tbm.bucketVoxelCount,
+    );
+    expect(bucketHeightInTexture).toBe(32); // full-depth atlas geometry, not shrunk
+    const writeHeight = bucketHeightInTexture / 32;
+    const zSlot = t % 32;
+    const bucketLocation =
+      (bucketHeightInTexture * bucketAddress + writeHeight * zSlot) * textureWidth;
+    // @ts-expect-error - texture is available in our mock but not in the real type
+    expect(tbm.dataTextures[0].texture[bucketLocation]).toBe(77);
   });
 });

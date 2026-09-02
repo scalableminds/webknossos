@@ -172,6 +172,26 @@ export const getColorForCoords: ShaderModule = {
       return bucketAddressInTexture;
     }
 
+    // For t-recycling-enabled layers (see TextureBucketManager.isTRecyclingEnabled),
+    // the bucket's (always-0) real z-addressing is repurposed: the cuckoo lookup key
+    // uses a "t-batch index" (floor(t/32)) instead of real z, and the in-bucket voxel
+    // offset uses t%32 instead of real offsetInBucket.z, since up to 32 t-slices of a
+    // z-degenerate layer share one atlas region (one z-sub-slot each). See
+    // TextureBucketManager.getCuckooKey / processWriterQueue's zSlot on the JS side.
+    float maybeOverrideBucketPositionZ(uint globalLayerIndex, float realZ) {
+      if (isTRecyclingEnabledPerLayer[globalLayerIndex] > 0.5) {
+        return floor(currentAdditionalCoordinateValue / bucketWidth);
+      }
+      return realZ;
+    }
+
+    float maybeOverrideOffsetInBucketZ(uint globalLayerIndex, float realOffsetZ) {
+      if (isTRecyclingEnabledPerLayer[globalLayerIndex] > 0.5) {
+        return mod(currentAdditionalCoordinateValue, bucketWidth);
+      }
+      return realOffsetZ;
+    }
+
     vec4[2] getColorForCoords64(
       float localLayerIndex,
       float d_texture_width,
@@ -224,6 +244,7 @@ export const getColorForCoords: ShaderModule = {
           renderedMagIdx = activeMagIdx + i;
           vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx, globalLayerIndex));
           vec3 absoluteBucketPosition = div(coords, bucketWidth);
+          absoluteBucketPosition.z = maybeOverrideBucketPositionZ(globalLayerIndex, absoluteBucketPosition.z);
           offsetInBucket = mod(coords, bucketWidth);
           bucketAddress = lookUpBucket(
             globalLayerIndex,
@@ -241,6 +262,7 @@ export const getColorForCoords: ShaderModule = {
         renderedMagIdx = outputMagIdx[globalLayerIndex];
         vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx, globalLayerIndex));
         vec3 absoluteBucketPosition = div(coords, bucketWidth);
+        absoluteBucketPosition.z = maybeOverrideBucketPositionZ(globalLayerIndex, absoluteBucketPosition.z);
         offsetInBucket = mod(coords, bucketWidth);
         bucketAddress = lookUpBucket(
           globalLayerIndex,
@@ -293,6 +315,11 @@ export const getColorForCoords: ShaderModule = {
           / magnificationFactors
         );
       }
+
+      // Applied once, here, after all of the above (re-)computations of
+      // offsetInBucket.z from real world coordinates, so it can't be stomped by a
+      // later reassignment. See maybeOverrideOffsetInBucketZ's doc comment.
+      offsetInBucket.z = maybeOverrideOffsetInBucketZ(globalLayerIndex, offsetInBucket.z);
 
       // bucketAddress can span multiple data textures. If the address is higher
       // than the capacity of one texture, we mod the value and use the div (floored division) as the

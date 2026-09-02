@@ -401,6 +401,17 @@ export function getEffectiveBucketDepth(layerDepthInMag1: number): number {
   return layerDepthInMag1 <= 1 ? 1 : Constants.BUCKET_WIDTH;
 }
 
+// For a z-degenerate layer that also has a time ("t") axis, the otherwise-unused
+// z-dimension of a bucket can instead be used to cache up to BUCKET_WIDTH different
+// t-slices simultaneously on the GPU (see TextureBucketManager's t-recycling support).
+// This is mutually exclusive with (and takes priority over) the plain depth-shrink
+// optimization for such layers, since it needs the full z-depth to hold those slices.
+// This check must be applied consistently wherever bucket/atlas sizing decisions are
+// made (both before a DataCube exists, from raw dataset metadata, and afterwards).
+export function wantsTRecycling(layerDepthInMag1: number, hasTAxis: boolean): boolean {
+  return getEffectiveBucketDepth(layerDepthInMag1) === 1 && hasTAxis;
+}
+
 export type TypedArray =
   | Uint8Array<ArrayBuffer>
   | Uint8ClampedArray<ArrayBuffer>

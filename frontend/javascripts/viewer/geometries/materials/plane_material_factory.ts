@@ -205,6 +205,12 @@ class PlaneMaterialFactory {
       viewportExtent: {
         value: [0, 0],
       },
+      // The flycam's current "t" (time) additional coordinate. Only meaningful for
+      // layers with isTRecyclingEnabledPerLayer set. See startListeningForUniforms
+      // for how this is kept in sync.
+      currentAdditionalCoordinateValue: {
+        value: 0,
+      },
       shouldApplyMappingOnGPU: {
         value: false,
       },
@@ -350,6 +356,12 @@ class PlaneMaterialFactory {
   attachTextures(): void {
     let sharedLookUpTexture;
     let sharedLookUpCuckooTable;
+    // Same ordering as activeMagIndices/bucketVoxelCountPerLayer (all iterate
+    // Model.getAllLayers()), matching globalLayerIndex. Built up here (rather than
+    // alongside bucketVoxelCountPerLayer in setupUniforms) because
+    // textureBucketManager is only guaranteed to exist once getDataTextures() below
+    // has triggered its lazy setup.
+    const isTRecyclingEnabledPerLayer: number[] = [];
     // Add data and look up textures for each layer
     for (const dataLayer of Model.getAllLayers()) {
       const { name } = dataLayer;
@@ -363,7 +375,13 @@ class PlaneMaterialFactory {
       this.uniforms[`${layerName}_data_texture_width`] = {
         value: dataLayer.layerRenderingManager.textureWidth,
       };
+      isTRecyclingEnabledPerLayer.push(
+        dataLayer.layerRenderingManager.textureBucketManager.isTRecyclingEnabled ? 1 : 0,
+      );
     }
+    this.uniforms.isTRecyclingEnabledPerLayer = {
+      value: isTRecyclingEnabledPerLayer,
+    };
 
     if (!sharedLookUpCuckooTable) {
       throw new Error("Empty layer list at unexpected point.");
@@ -518,6 +536,14 @@ class PlaneMaterialFactory {
         (storeState) => getViewportExtents(storeState),
         (extents) => {
           this.uniforms.viewportExtent.value = extents[this.planeID];
+        },
+        true,
+      ),
+      listenToStoreProperty(
+        (storeState) => storeState.flycam.additionalCoordinates,
+        (additionalCoordinates) => {
+          this.uniforms.currentAdditionalCoordinateValue.value =
+            additionalCoordinates?.find((coord) => coord.name === "t")?.value ?? 0;
         },
         true,
       ),

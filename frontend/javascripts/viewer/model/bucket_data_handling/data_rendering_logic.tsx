@@ -16,8 +16,8 @@ import {
   UnsignedByteType,
   UnsignedShortType,
 } from "three";
-import type { ElementClass } from "types/api_types";
-import constants, { getEffectiveBucketDepth } from "viewer/constants";
+import type { AdditionalAxis, ElementClass } from "types/api_types";
+import constants, { getEffectiveBucketDepth, wantsTRecycling } from "viewer/constants";
 import type { TypedArrayConstructor } from "../helpers/typed_buffer";
 
 type GpuSpecs = {
@@ -233,6 +233,7 @@ function buildTextureInformationMap<
     elementClass: ElementClass;
     category: "color" | "segmentation";
     boundingBox: { depth: number };
+    additionalAxes: Array<AdditionalAxis> | null;
   },
 >(
   layers: Array<Layer>,
@@ -241,8 +242,13 @@ function buildTextureInformationMap<
 ): Map<Layer, DataTextureSizeAndCount> {
   const textureInformationPerLayer = new Map();
   layers.forEach((layer) => {
-    const bucketVoxelCount =
-      constants.BUCKET_WIDTH ** 2 * getEffectiveBucketDepth(layer.boundingBox.depth);
+    const hasTAxis = layer.additionalAxes?.some((axis) => axis.name === "t") ?? false;
+    // A layer that will use t-recycling (see TextureBucketManager) needs its atlas
+    // sized for full-depth buckets, not the shrunk depth, even though it's
+    // z-degenerate. Both decisions must stay in sync, hence the shared helper.
+    const bucketVoxelCount = wantsTRecycling(layer.boundingBox.depth, hasTAxis)
+      ? constants.BUCKET_SIZE
+      : constants.BUCKET_WIDTH ** 2 * getEffectiveBucketDepth(layer.boundingBox.depth);
     const sizeAndCount = calculateTextureSizeAndCountForLayer(
       specs,
       layer.elementClass,
@@ -316,6 +322,7 @@ export function computeDataTexturesSetup<
     elementClass: ElementClass;
     category: "color" | "segmentation";
     boundingBox: { depth: number };
+    additionalAxes: Array<AdditionalAxis> | null;
   },
 >(specs: GpuSpecs, layers: Array<Layer>, hasSegmentation: boolean, requiredBucketCapacity: number) {
   const textureInformationPerLayer = buildTextureInformationMap(

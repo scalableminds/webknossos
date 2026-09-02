@@ -46,6 +46,7 @@ import { TAB_SESSION_ID as SESSION_ID } from "libs/tab_session_id";
 import Toast from "libs/toast";
 import {
   filterWithSearchQueryAND,
+  hasUrlParam,
   isUserAdmin,
   isUserAdminOrManager,
   isUserAdminOrTeamManager,
@@ -876,10 +877,24 @@ function Navbar() {
   const isAdminOrManager = isUserAdminOrManager(activeUser);
   const collapseAllNavItems = isInAnnotationView;
   const hideNavbarLogin = features().hideNavbarLogin || !hasOrganizations;
+  // BigWarp-style alignment workers (viewer/view/layouting/align_datasets_view.tsx)
+  // need this navbar for its tool/position/rotation controls (rendered into the
+  // PortalTarget below), but must not offer a way to navigate away from the page -
+  // leaving loses that worker's yet-to-be-synced landmarks and breaks the tool's
+  // dual-iframe setup. See BIGWARP_ALIGNMENT_PLAN.md §5.3.
+  const isBigWarpWorker = hasUrlParam("bigwarpWorker");
   const menuItems: ItemType[] = [
     {
       key: "0",
-      label: (
+      label: isBigWarpWorker ? (
+        <span style={{ verticalAlign: "middle", cursor: "default" }}>
+          {getCollapsibleMenuTitle(
+            "WEBKNOSSOS",
+            <Icon component={WkLogoIcon} className="logo icon-margin-right" />,
+            collapseAllNavItems,
+          )}
+        </span>
+      ) : (
         <Link
           to="/dashboard"
           style={{
@@ -897,7 +912,7 @@ function Navbar() {
   ];
   const trailingNavItems = [];
 
-  if (isAuthenticated) {
+  if (isAuthenticated && !isBigWarpWorker) {
     const loggedInUser: APIUser = activeUser;
     menuItems.push(getDashboardSubMenu(collapseAllNavItems));
     menuItems.push(getAnalysisSubMenu(collapseAllNavItems));
@@ -924,20 +939,22 @@ function Navbar() {
     );
   }
 
-  if (!(isAuthenticated || hideNavbarLogin)) {
+  if (!(isAuthenticated || hideNavbarLogin) && !isBigWarpWorker) {
     trailingNavItems.push(<AnonymousAvatar key="anonymous-avatar" />);
   }
 
-  menuItems.push(
-    getHelpSubMenu(
-      version,
-      polledVersion,
-      isAuthenticated,
-      isAdminOrManager,
-      collapseAllNavItems,
-      () => setIsHelpModalOpen(true),
-    ),
-  );
+  if (!isBigWarpWorker) {
+    menuItems.push(
+      getHelpSubMenu(
+        version,
+        polledVersion,
+        isAuthenticated,
+        isAdminOrManager,
+        collapseAllNavItems,
+        () => setIsHelpModalOpen(true),
+      ),
+    );
+  }
   // Don't highlight active menu items, when showing the narrow version of the navbar,
   // since this makes the icons appear more crowded.
   const selectedKeys = collapseAllNavItems ? [] : [historyLocation.pathname];
@@ -969,6 +986,13 @@ function Navbar() {
         // although there is ample space available, see https://github.com/ant-design/ant-design/issues/32277
         disabledOverflow
         items={menuItems}
+      />
+      {/* Lets align_datasets_view.tsx (the BigWarp coordinator page) render its
+      "Open Alignment Tools" button here, next to Help, instead of floating over its
+      iframes. Empty on every other page. */}
+      <PortalTarget
+        portalId="navbarAlignToolsSlot"
+        style={{ display: "flex", alignItems: "center", marginLeft: 16 }}
       />
       {isInAnnotationView ? separator : null}
       <HelpModal

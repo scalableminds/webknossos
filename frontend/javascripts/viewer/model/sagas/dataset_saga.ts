@@ -139,7 +139,7 @@ function* watchZ1Downsampling(): Saga<void> {
         break;
       }
     }
-    if (false && showWarning) {
+    if (showWarning) {
       Toast.warning(messages["dataset.z1_downsampling_hint"], {
         sticky: true,
         key: "DOWNSAMPLING_CAUSES_BAD_QUALITY",

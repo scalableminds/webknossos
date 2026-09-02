@@ -29,14 +29,19 @@ import {
   saveNowAction,
   undoAction,
 } from "viewer/model/actions/save_actions";
-import { setViewModeAction, updateLayerSettingAction } from "viewer/model/actions/settings_actions";
+import {
+  setViewModeAction,
+  updateDatasetSettingAction,
+  updateLayerSettingAction,
+  updateUserSettingAction,
+} from "viewer/model/actions/settings_actions";
 import { setIsInAnnotationViewAction } from "viewer/model/actions/ui_actions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import { HANDLED_ERROR } from "viewer/model_initialization";
 import { Model } from "viewer/singletons";
 import type { TraceOrViewCommand, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
-import { AnnotationTool } from "./model/accessors/tool_accessor";
+import { AnnotationTool, Toolkit } from "./model/accessors/tool_accessor";
 import {
   toggleAllTreesAction,
   toggleInactiveTreesAction,
@@ -159,51 +164,79 @@ class Controller extends PureComponent<PropsWithRouter, State> {
   }
 
   async modelFetchDone() {
-    const beforeUnload = (args: BeforeUnloadEvent | BlockerFunction): boolean | undefined => {
-      // Navigation blocking can be triggered by two sources:
-      // 1. The browser's native beforeunload event
-      // 2. The React-Router block function (useBlocker or withBlocker HOC)
-
-      // If the annotation isn't in a saved state, we ask the user if they really want
-      // to exit the page.
-      if (!Model.stateSaved() && Store.getState().annotation.restrictions.allowUpdate) {
-        window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
-
-        setTimeout(() => {
-          if (!this._isMounted) {
-            return false;
-          }
-
-          Store.dispatch(saveNowAction());
-          // restore the event handler in case a user chose to stay on the page
-          window.onbeforeunload = beforeUnload;
-        }, 500);
-
-        // The native event requires a truthy return value to show a generic message
-        // The React Router blocker accepts a boolean
-        return "preventDefault" in args ? true : !confirm(messages["save.leave_page_unfinished"]);
+    const isBigWarpWorker = hasUrlParam("bigwarpWorker");
+    // BigWarp-style alignment workers are one half of a dual-iframe tool (see
+    // align_datasets_view.tsx) - navigating away breaks that setup and (for the
+    // browser-native case) can't show a custom message anyway, but for in-app
+    // navigation (React Router) we can and do explain why it's blocked. This is a
+    // hard block, unlike the "unsaved changes" confirmation below: a sandbox worker's
+    // own tracing state is never itself "saved" (see settings_saga.ts's SANDBOX
+    // guards), so that existing logic wouldn't otherwise fire here at all.
+    const blockBigWarpWorkerNavigation = (
+      args: BeforeUnloadEvent | BlockerFunction,
+    ): boolean | undefined => {
+      if ("preventDefault" in args) {
+        // The native event requires a truthy return value to show the browser's own
+        // (non-customizable) "leave site?" dialog.
+        return true;
       }
-
-      // Only when the state is left with a clean state, we dispatched the
-      // following action. Currently, that action is only used for releasing a mutex
-      // that is potentially held by the current user.
-      // If the user decides to leave the annotation in a non-clean state, we don't really
-      // have a way to react to that.
-      // If we dispatched the action even though the user decides to stay on the page,
-      // saving would not work anymore (because the mutex was released).
-      Store.dispatch(exitingAnnotationAction());
-
-      // The native event requires an empty return value to not show a message
-      return;
+      return !confirm("Leaving this view is not allowed while aligning layers. Leave anyway?");
     };
 
-    window.onbeforeunload = beforeUnload;
-    this.props.setBlocking({
-      // @ts-expect-error beforeUnload signature is overloaded
-      shouldBlock: beforeUnload,
-    });
+    if (isBigWarpWorker) {
+      window.onbeforeunload = blockBigWarpWorkerNavigation;
+      this.props.setBlocking({
+        // @ts-expect-error beforeUnload signature is overloaded
+        shouldBlock: blockBigWarpWorkerNavigation,
+      });
+    } else {
+      const beforeUnload = (args: BeforeUnloadEvent | BlockerFunction): boolean | undefined => {
+        // Navigation blocking can be triggered by two sources:
+        // 1. The browser's native beforeunload event
+        // 2. The React-Router block function (useBlocker or withBlocker HOC)
+
+        // If the annotation isn't in a saved state, we ask the user if they really want
+        // to exit the page.
+        if (!Model.stateSaved() && Store.getState().annotation.restrictions.allowUpdate) {
+          window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
+
+          setTimeout(() => {
+            if (!this._isMounted) {
+              return false;
+            }
+
+            Store.dispatch(saveNowAction());
+            // restore the event handler in case a user chose to stay on the page
+            window.onbeforeunload = beforeUnload;
+          }, 500);
+
+          // The native event requires a truthy return value to show a generic message
+          // The React Router blocker accepts a boolean
+          return "preventDefault" in args ? true : !confirm(messages["save.leave_page_unfinished"]);
+        }
+
+        // Only when the state is left with a clean state, we dispatched the
+        // following action. Currently, that action is only used for releasing a mutex
+        // that is potentially held by the current user.
+        // If the user decides to leave the annotation in a non-clean state, we don't really
+        // have a way to react to that.
+        // If we dispatched the action even though the user decides to stay on the page,
+        // saving would not work anymore (because the mutex was released).
+        Store.dispatch(exitingAnnotationAction());
+
+        // The native event requires an empty return value to not show a message
+        return;
+      };
+
+      window.onbeforeunload = beforeUnload;
+      this.props.setBlocking({
+        // @ts-expect-error beforeUnload signature is overloaded
+        shouldBlock: beforeUnload,
+      });
+    }
 
     UrlManager.startUrlUpdater();
+    this.applyBigWarpWorkerSettingsIfNeeded();
     await initializeSceneController();
     this.initKeyboard();
     this.initTaskScript();
@@ -211,6 +244,23 @@ class Controller extends PureComponent<PropsWithRouter, State> {
     app.vent.emit("webknossos:initialized");
     Store.dispatch(wkInitializedAction());
     this.props.setControllerStatus("loaded");
+  }
+
+  // Called once, right after the annotation finished loading. Used by the BigWarp-style
+  // dataset alignment coordinator (align_datasets_view.tsx) to configure a worker iframe:
+  // pin the layer whose raw coordinate frame the worker's landmark nodes should live in,
+  // switch to single-node-tree ("soma clicking") mode, and restrict the toolbar to just
+  // the move/skeleton tools needed for landmark clicking. See BIGWARP_ALIGNMENT_PLAN.md §3.
+  // None of this is persisted to the user's account/dataset defaults - see the
+  // ControlModeEnum.SANDBOX guards added to settings_saga.ts for why that's safe.
+  applyBigWarpWorkerSettingsIfNeeded() {
+    if (!hasUrlParam("bigwarpWorker")) {
+      return;
+    }
+    const dominantLayerName = getUrlParamValue("bigwarpWorker");
+    Store.dispatch(updateDatasetSettingAction("nativelyRenderedLayerName", dominantLayerName));
+    Store.dispatch(updateUserSettingAction("newNodeNewTree", true));
+    Store.dispatch(updateUserSettingAction("activeToolkit", Toolkit.BIGWARP_LANDMARKS));
   }
 
   async initTaskScript() {

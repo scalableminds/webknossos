@@ -6,7 +6,7 @@ import { Alert, Button, Dropdown, Modal, Popover, Space } from "antd";
 import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";
 import { NewVolumeLayerSelection } from "dashboard/advanced_dataset/create_explorative_modal";
 import { useWkSelector } from "libs/react_hooks";
-import { isUserAdminOrManager } from "libs/utils";
+import { hasUrlParam, isUserAdminOrManager } from "libs/utils";
 import { ArbitraryVectorInput } from "libs/vector_input";
 import type React from "react";
 import { Fragment, PureComponent, useState } from "react";
@@ -256,9 +256,12 @@ function ModesView() {
   const isOrthoMode = useWkSelector(
     (state) => state.temporaryConfiguration.viewMode === "orthogonal",
   );
+  // BigWarp-style alignment workers get their toolkit forced to a fixed, restricted
+  // set (see controller.tsx) - don't offer a way to switch away from it.
+  const isBigWarpWorker = hasUrlParam("bigwarpWorker");
 
   // The outer div is necessary for proper spacing.
-  return isViewMode || isReadOnly || !isOrthoMode ? null : (
+  return isViewMode || isReadOnly || !isOrthoMode || isBigWarpWorker ? null : (
     <div>
       <Space.Compact>
         <ToolkitView />

@@ -3,6 +3,7 @@ import app from "app";
 import ErrorHandling from "libs/error_handling";
 import Request from "libs/request";
 import Toast from "libs/toast";
+import { hasUrlParam } from "libs/utils";
 import window, { document, location } from "libs/window";
 import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
 import debounce from "lodash-es/debounce";
@@ -55,7 +56,7 @@ import TracingView from "viewer/view/tracing_view";
 import VersionView from "viewer/view/version_view";
 import TabTitle from "../components/tab_title_component";
 import VoxelValueTooltip from "../voxel_pipette_tooltip";
-import { determineLayout } from "./default_layout_configs";
+import { determineLayout, getBigWarpWorkerLayoutConfig } from "./default_layout_configs";
 import FlexLayoutWrapper from "./flex_layout_wrapper";
 import { FloatingMobileControls } from "./floating_mobile_controls";
 
@@ -178,7 +179,12 @@ class TracingLayoutView extends PureComponent<PropsWithRouter, State> {
     const { initialCommandType, viewMode, is2d } = this.props;
     const layoutType = determineLayout(initialCommandType.type, viewMode, is2d);
     const lastActiveLayoutName = getLastActiveLayout(layoutType);
-    const layout = getLayoutConfig(layoutType, lastActiveLayoutName);
+    // BigWarp-style alignment workers always use a dedicated, non-persisted
+    // single-viewport layout instead of whatever layout the user has stored/active.
+    // See BIGWARP_ALIGNMENT_PLAN.md §5.3.
+    const layout = hasUrlParam("bigwarpWorker")
+      ? getBigWarpWorkerLayoutConfig()
+      : getLayoutConfig(layoutType, lastActiveLayoutName);
     this.setState({
       activeLayoutName: lastActiveLayoutName,
       model: layout,

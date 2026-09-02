@@ -302,6 +302,22 @@ const _getDefaultLayouts = () => {
 
 const getDefaultLayouts = memoize(_getDefaultLayouts);
 
+// Layout for a BigWarp-style dataset-alignment "worker" iframe (see
+// viewer/view/layouting/align_datasets_view.tsx and BIGWARP_ALIGNMENT_PLAN.md §5.3):
+// only the XY plane viewport, no right border (no need for the skeleton/comment/etc.
+// tabs while placing landmarks), left border present but closed by default so the
+// user can still reopen it to tweak cosmetic layer settings.
+export const getBigWarpWorkerLayoutConfig = (): ModelConfig => {
+  const leftBorder = buildBorder(
+    "left",
+    [borderTabs.LayerSettingsTab, borderTabs.ControlsAndRenderingSettingsTab],
+    leftBorderWidth,
+    false,
+  );
+  const mainLayout = buildMainLayout([[[OrthoViewports.PLANE_XY]]]);
+  return buildLayout(globalLayoutSettings, [leftBorder], mainLayout);
+};
+
 export const resetDefaultLayouts = () => {
   // @ts-expect-error ts-migrate(2722) FIXME: Cannot invoke an object which is possibly 'undefin... Remove this comment to see the full error message
   getDefaultLayouts.cache.clear();

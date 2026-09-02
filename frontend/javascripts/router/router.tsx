@@ -85,6 +85,10 @@ const AsyncWorkflowListView = loadable<EmptyObject>(
 );
 
 function RootLayout() {
+  // Note: BigWarp-style alignment workers (viewer/view/layouting/align_datasets_view.tsx)
+  // keep this navbar - it's the only way to reach the tool/position/rotation
+  // controls, which live in a portal target rendered by Navbar. Navbar itself
+  // restricts navigation away from the page while `bigwarpWorker` is set.
   return (
     <Layout style={{ height: "100%" }}>
       <CommandPalette />
@@ -486,7 +490,14 @@ const routes = createRoutesFromElements(
     <Route path="/privacy" element={<Privacy />} />
     <Route path="/links/:key" element={<ShortLinksRouteWrapper />} />
     <Route path="/onboarding" element={<OnboardingRouteWrapper />} />
-    <Route path="/align-datasets" element={<AlignDatasetsView />} />
+    <Route
+      path="/align-datasets/:datasetNameAndId"
+      element={
+        <SecuredRoute>
+          <AlignDatasetsView />
+        </SecuredRoute>
+      }
+    />
     <Route
       path="/account"
       element={

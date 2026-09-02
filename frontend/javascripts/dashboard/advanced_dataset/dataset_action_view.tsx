@@ -4,6 +4,7 @@ import {
   EllipsisOutlined,
   EyeOutlined,
   LoadingOutlined,
+  NodeIndexOutlined,
   PlusOutlined,
   ReloadOutlined,
   SettingOutlined,
@@ -303,6 +304,11 @@ export function getDatasetActionContextMenu({
     return getNoActionsAvailableMenu(hideContextMenu);
   }
   const dataset = datasets[0];
+  console.log(
+    "dataset.isActive && dataset.colorLayerNames.length + dataset.segmentationLayerNames.length >= 2",
+    dataset.isActive,
+    dataset.colorLayerNames.length + dataset.segmentationLayerNames.length >= 2,
+  );
 
   return {
     onClick: hideContextMenu,
@@ -333,6 +339,17 @@ export function getDatasetActionContextMenu({
                 label: "Open Settings",
                 onClick: () => {
                   window.location.href = `/datasets/${getReadableURLPart(dataset)}/edit`;
+                },
+              }
+            : null,
+          dataset.isActive &&
+          dataset.colorLayerNames.length + dataset.segmentationLayerNames.length >= 2
+            ? {
+                key: "align-layers",
+                icon: <NodeIndexOutlined className="icon-margin-right" />,
+                label: "Align Layers…",
+                onClick: () => {
+                  window.location.href = `/align-datasets/${getReadableURLPart(dataset)}`;
                 },
               }
             : null,

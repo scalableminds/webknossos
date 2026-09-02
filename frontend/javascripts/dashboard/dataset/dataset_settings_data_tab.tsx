@@ -24,10 +24,12 @@ import Toast from "libs/toast";
 import { BoundingBoxInput, Vector3Input } from "libs/vector_input";
 import type React from "react";
 import { cloneElement, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { type APIDataLayer, type APIDataset, APIJobCommand } from "types/api_types";
 import type { DataLayer, DataLayerWithTransformations } from "types/schemas/datasource.types";
 import { syncValidator, validateTransformationsJSON } from "types/validation";
 import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
+import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
 import type { RotationAndMirroringSettings } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getSegmentIdRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import type { BoundingBoxObject } from "viewer/store";
@@ -40,10 +42,20 @@ import { useDatasetSettingsContext } from "./dataset_settings_context";
 
 export default function DatasetSettingsDataTab() {
   const { dataset, form } = useDatasetSettingsContext();
+  const navigate = useNavigate();
 
   return (
     <div>
-      <SettingsTitle title="Data Source" description="Configure the data source" />
+      <Flex justify="space-between" align="center">
+        <SettingsTitle title="Data Source" description="Configure the data source" />
+        {dataset != null && dataset.dataSource.dataLayers.length >= 2 && (
+          <Tooltip title="Interactively align two layers of this dataset by placing matching landmarks in each">
+            <Button onClick={() => navigate(`/align-datasets/${getReadableURLPart(dataset)}`)}>
+              Align Layers…
+            </Button>
+          </Tooltip>
+        )}
+      </Flex>
       <SimpleDatasetForm dataset={dataset} form={form} />
     </div>
   );

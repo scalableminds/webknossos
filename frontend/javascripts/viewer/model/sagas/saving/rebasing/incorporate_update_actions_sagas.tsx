@@ -38,6 +38,10 @@ import {
   updateMappingWithMerge,
 } from "../../volume/proofreading/local_mapping_update_sagas";
 import {
+  reconcileMultiCutSelectionAfterForeignMerge,
+  reconcileMultiCutSelectionAfterForeignSplit,
+} from "../../volume/proofreading/multi_split_selection_sagas";
+import {
   getMeshDisplayPropsByOldAgglomerateId,
   type PreservedMeshDisplayProps,
 } from "../../volume/proofreading/segment_and_mesh_refresh_sagas";
@@ -243,6 +247,14 @@ export function* tryToIncorporateActions(
             // itself takes care of reloading the meshes, no need to track this here.
             break;
           }
+          // Keep an active multi-cut ("partitioned min-cut") selection consistent with this
+          // foreign merge, independently of whether any mesh is loaded.
+          yield* call(
+            reconcileMultiCutSelectionAfterForeignMerge,
+            actionTracingId,
+            agglomerateId1,
+            agglomerateId2,
+          );
           const hasAnyOfBothAgglomerateMeshesLoaded = yield* select(
             (state) =>
               isMeshLoaded(state, agglomerateId1, actionTracingId) ||
@@ -494,6 +506,16 @@ export function* tryToIncorporateActions(
             // finishedApplyingMissingUpdatesAction action takes care of storing the
             // newest info in RebaseRelevantAnnotationState after the backend updates are applied.
           ),
+        );
+        // Keep an active multi-cut ("partitioned min-cut") selection consistent with this
+        // foreign split, independently of whether any mesh is loaded.
+        yield* call(
+          reconcileMultiCutSelectionAfterForeignSplit,
+          tracingId,
+          oldAgglomerateIds,
+          activeMapping,
+          mappingWithSplitApplied,
+          actionBatch.version,
         );
         const loadedMeshes = yield* select((state) => getAllLoadedMeshes(state, tracingId));
         const loadedMeshesOfSplitAction = loadedMeshes.intersection(oldAgglomerateIds);

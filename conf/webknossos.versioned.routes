@@ -22,7 +22,11 @@
 ->       /v15/                                                                webknossos.latest.Routes
 
 # v14: support changes to v15
-GET      /v14/datasets/:datasetId                                             controllers.LegacyApiController.readV14(datasetId: ObjectId, sharingToken: Option[String])
+# datasetId excludes "pathsToDelete" and "findByImportURL", which are literal routes in webknossos.latest.routes.
+# Without the exclusion, this route would greedily match e.g. /v14/datasets/pathsToDelete, fail to bind it as an ObjectId, and
+# answer 400 before ever falling through to the forwarded literal route. Keep this list in sync with any literal route added directly
+# under /datasets in webknossos.latest.routes (RouteShadowingTestSuite catches a missed one).
+GET      /v14/datasets/$datasetId<(?!pathsToDelete$|findByImportURL$)[^/]+>   controllers.LegacyApiController.readV14(datasetId: ObjectId, sharingToken: Option[String])
 GET      /v14/datasets                                                        controllers.LegacyApiController.listV14(isActive: Option[Boolean], isUnreported: Option[Boolean], organizationId: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[ObjectId], folderId: Option[ObjectId], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int], compact: Option[Boolean])
 PATCH    /v14/datasets/:datasetId/updatePartial                               controllers.LegacyApiController.updatePartialV14(datasetId: ObjectId)
 POST     /v14/datasets/reserveUploadToPaths                                   controllers.LegacyApiController.reserveUploadToPathsV14()
@@ -30,7 +34,8 @@ POST     /v14/datasets/:datasetId/reserveUploadToPathsForPreliminary          co
 ->       /v14/                                                                webknossos.latest.Routes
 
 # v13: support changes to v15
-GET      /v13/datasets/:datasetId                                             controllers.LegacyApiController.readV14(datasetId: ObjectId, sharingToken: Option[String])
+# datasetId exclusions, see comment on the v14 route above.
+GET      /v13/datasets/$datasetId<(?!pathsToDelete$|findByImportURL$)[^/]+>   controllers.LegacyApiController.readV14(datasetId: ObjectId, sharingToken: Option[String])
 GET      /v13/datasets                                                        controllers.LegacyApiController.listV14(isActive: Option[Boolean], isUnreported: Option[Boolean], organizationId: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[ObjectId], folderId: Option[ObjectId], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int], compact: Option[Boolean])
 PATCH    /v13/datasets/:datasetId/updatePartial                               controllers.LegacyApiController.updatePartialV14(datasetId: ObjectId)
 POST     /v13/datasets/reserveUploadToPaths                                   controllers.LegacyApiController.reserveUploadToPathsV14()
@@ -38,7 +43,8 @@ POST     /v13/datasets/:datasetId/reserveUploadToPathsForPreliminary          co
 ->       /v13/                                                                webknossos.latest.Routes
 
 # v12: support changes to v15
-GET      /v12/datasets/:datasetId                                             controllers.LegacyApiController.readV14(datasetId: ObjectId, sharingToken: Option[String])
+# datasetId exclusions, see comment on the v14 route above.
+GET      /v12/datasets/$datasetId<(?!pathsToDelete$|findByImportURL$)[^/]+>   controllers.LegacyApiController.readV14(datasetId: ObjectId, sharingToken: Option[String])
 GET      /v12/datasets                                                        controllers.LegacyApiController.listV14(isActive: Option[Boolean], isUnreported: Option[Boolean], organizationId: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[ObjectId], folderId: Option[ObjectId], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int], compact: Option[Boolean])
 PATCH    /v12/datasets/:datasetId/updatePartial                               controllers.LegacyApiController.updatePartialV12(datasetId: ObjectId)
 POST     /v12/datasets/reserveUploadToPaths                                   controllers.LegacyApiController.reserveUploadToPathsV14()
@@ -46,7 +52,8 @@ POST     /v12/datasets/:datasetId/reserveUploadToPathsForPreliminary          co
 ->       /v12/                                                                webknossos.latest.Routes
 
 # v11: support changes to v15
-GET      /v11/datasets/:datasetId                                             controllers.LegacyApiController.readV14(datasetId: ObjectId, sharingToken: Option[String])
+# datasetId exclusions, see comment on the v14 route above.
+GET      /v11/datasets/$datasetId<(?!pathsToDelete$|findByImportURL$)[^/]+>   controllers.LegacyApiController.readV14(datasetId: ObjectId, sharingToken: Option[String])
 GET      /v11/datasets                                                        controllers.LegacyApiController.listV14(isActive: Option[Boolean], isUnreported: Option[Boolean], organizationId: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[ObjectId], folderId: Option[ObjectId], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int], compact: Option[Boolean])
 PATCH    /v11/datasets/:datasetId/updatePartial                               controllers.LegacyApiController.updatePartialV12(datasetId: ObjectId)
 POST     /v11/datasets/reserveUploadToPaths                                   controllers.LegacyApiController.reserveUploadToPathsV14()
@@ -54,7 +61,8 @@ POST     /v11/datasets/:datasetId/reserveUploadToPathsForPreliminary          co
 ->       /v11/                                                                webknossos.latest.Routes
 
 # v10: support changes to v15
-GET      /v10/datasets/:datasetId                                             controllers.LegacyApiController.readV14(datasetId: ObjectId, sharingToken: Option[String])
+# datasetId exclusions, see comment on the v14 route above.
+GET      /v10/datasets/$datasetId<(?!pathsToDelete$|findByImportURL$)[^/]+>   controllers.LegacyApiController.readV14(datasetId: ObjectId, sharingToken: Option[String])
 GET      /v10/datasets                                                        controllers.LegacyApiController.listV14(isActive: Option[Boolean], isUnreported: Option[Boolean], organizationId: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[ObjectId], folderId: Option[ObjectId], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int], compact: Option[Boolean])
 PATCH    /v10/datasets/:datasetId/updatePartial                               controllers.LegacyApiController.updatePartialV12(datasetId: ObjectId)
 POST     /v10/datasets/reserveUploadToPaths                                   controllers.LegacyApiController.reserveUploadToPathsV14()

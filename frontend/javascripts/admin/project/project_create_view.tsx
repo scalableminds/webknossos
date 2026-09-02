@@ -1,4 +1,5 @@
 import AdminPage from "admin/admin_page";
+import { unwrapOrThrow } from "admin/api/api_result";
 import {
   createProject,
   getEditableTeams,
@@ -34,7 +35,8 @@ function ProjectCreateView() {
 
   async function fetchData() {
     setIsFetchingData(true);
-    const [fetchedUsers, fetchedTeams] = await Promise.all([getUsers(), getEditableTeams()]);
+    const [fetchedUsersResult, fetchedTeams] = await Promise.all([getUsers(), getEditableTeams()]);
+    const fetchedUsers = unwrapOrThrow(fetchedUsersResult);
     setUsers(fetchedUsers);
     setTeams(fetchedTeams);
     setIsFetchingData(false);

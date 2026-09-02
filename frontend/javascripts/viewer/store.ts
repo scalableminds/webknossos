@@ -81,8 +81,6 @@ import ProofreadingReducer from "./model/reducers/proofreading_reducer";
 import type { TreeGroup, TreeMap } from "./model/types/tree_types";
 import type { StartAiJobDrawerState } from "./view/ai_jobs/constants";
 
-export type { BoundingBoxObject } from "types/bounding_box";
-
 export type UserBoundingBoxForServer = {
   boundingBox: BoundingBoxObject;
   id: number;

@@ -72,6 +72,8 @@ import {
   type ExperienceDomainList,
   type LayerLink,
   type MaintenanceInfo,
+  type SegmentCovarianceMatrix,
+  type SegmentStatisticsFileInfo,
   type ServerEditableMapping,
   type ServerTracing,
   type ShortLink,
@@ -149,77 +151,170 @@ export function sendFailedRequestAnalyticsEvent(
 }
 
 // ### Users
-export async function loginUser(formValues: {
-  email: string;
-  password: string;
-}): Promise<[APIUser, APIOrganization]> {
-  await Request.sendJSONReceiveJSON("/api/auth/login", {
-    data: formValues,
-  });
-  const activeUser = await getActiveUser();
-  const organization = await getOrganization(activeUser.organization);
+export async function loginUser(
+  formValues: {
+    email: string;
+    password: string;
+  },
+  options: RequestOptions = {},
+  // The requester below performs the login POST plus follow-up reads as one
+  // unit. Since a login POST isn't idempotent, this must not be retried as a
+  // whole -- otherwise a failing getActiveUser/getOrganization call after a
+  // successful login would cause a duplicate login POST.
+  retryOptions: RetryOptions = { retries: 0 },
+): Promise<ApiResult<[APIUser, APIOrganization]>> {
+  return requestResult(
+    async (adaptedOptions) => {
+      await Request.sendJSONReceiveJSON("/api/auth/login", {
+        ...adaptedOptions,
+        data: formValues,
+      });
+      const activeUser = await getActiveUser();
+      const organization = await getOrganization(activeUser.organization);
 
-  return [activeUser, organization];
+      return [activeUser, organization];
+    },
+    options,
+    retryOptions,
+  );
 }
 
-export async function logoutUser(): Promise<string> {
-  return await Request.receiveJSON("/api/auth/logout", { method: "POST" });
+export async function logoutUser(
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<string>> {
+  return requestResult(
+    (adaptedOptions) =>
+      Request.receiveJSON("/api/auth/logout", { ...adaptedOptions, method: "POST" }),
+    options,
+    retryOptions,
+  );
 }
 
-export async function logoutUserEverywhere(): Promise<void> {
-  await Request.receiveJSON("/api/auth/logoutEverywhere", { method: "POST" });
+export async function logoutUserEverywhere(
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<void>> {
+  return requestResult(
+    (adaptedOptions) =>
+      Request.receiveJSON("/api/auth/logoutEverywhere", { ...adaptedOptions, method: "POST" }),
+    options,
+    retryOptions,
+  );
 }
 
-export async function getUsers(options: RequestOptions = {}): Promise<Array<APIUser>> {
-  const users = await Request.receiveJSON("/api/users", options);
-  assertResponseLimit(users);
-  return users;
+export async function getUsers(
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<Array<APIUser>>> {
+  return requestResult(
+    async (adaptedOptions) => {
+      const users = await Request.receiveJSON("/api/users", adaptedOptions);
+      assertResponseLimit(users);
+      return users;
+    },
+    options,
+    retryOptions,
+  );
 }
 
-export async function getTeamManagerOrAdminUsers(): Promise<Array<APIUser>> {
-  const users = await Request.receiveJSON("/api/users?isTeamManagerOrAdmin=true");
-  assertResponseLimit(users);
-  return users;
+export async function getTeamManagerOrAdminUsers(
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<Array<APIUser>>> {
+  return requestResult(
+    async (adaptedOptions) => {
+      const users = await Request.receiveJSON(
+        "/api/users?isTeamManagerOrAdmin=true",
+        adaptedOptions,
+      );
+      assertResponseLimit(users);
+      return users;
+    },
+    options,
+    retryOptions,
+  );
 }
 
-export async function getAdminUsers(): Promise<Array<APIUser>> {
-  const users = await Request.receiveJSON("/api/users?isAdmin=true");
-  assertResponseLimit(users);
-  return users;
+export async function getAdminUsers(
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<Array<APIUser>>> {
+  return requestResult(
+    async (adaptedOptions) => {
+      const users = await Request.receiveJSON("/api/users?isAdmin=true", adaptedOptions);
+      assertResponseLimit(users);
+      return users;
+    },
+    options,
+    retryOptions,
+  );
 }
 
-export async function getEditableUsers(): Promise<Array<APIUser>> {
-  const users = await Request.receiveJSON("/api/users?isEditable=true");
-  assertResponseLimit(users);
-  return users;
+export async function getEditableUsers(
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<Array<APIUser>>> {
+  return requestResult(
+    async (adaptedOptions) => {
+      const users = await Request.receiveJSON("/api/users?isEditable=true", adaptedOptions);
+      assertResponseLimit(users);
+      return users;
+    },
+    options,
+    retryOptions,
+  );
 }
 
-export function getUser(userId: string): Promise<APIUser> {
-  return Request.receiveJSON(`/api/users/${userId}`);
+export async function getUser(
+  userId: string,
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<APIUser>> {
+  return requestResult(
+    (adaptedOptions) => Request.receiveJSON(`/api/users/${userId}`, adaptedOptions),
+    options,
+    retryOptions,
+  );
 }
 
-export function updateUser(newUser: Partial<APIUser>): Promise<APIUser> {
-  return Request.sendJSONReceiveJSON(`/api/users/${newUser.id}`, {
-    method: "PATCH",
-    data: newUser,
-  });
+export async function updateUser(
+  newUser: Partial<APIUser>,
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<APIUser>> {
+  return requestResult(
+    (adaptedOptions) =>
+      Request.sendJSONReceiveJSON(`/api/users/${newUser.id}`, {
+        ...adaptedOptions,
+        method: "PATCH",
+        data: newUser,
+      }),
+    options,
+    retryOptions,
+  );
 }
 
 export function updateNovelUserExperienceInfos(
   user: APIUser,
   novelUserExperienceShape: Record<string, any>,
-): [APIUser, Promise<APIUser>] {
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): [APIUser, Promise<ApiResult<APIUser>>] {
   const novelUserExperienceInfos = {
     ...user.novelUserExperienceInfos,
     ...novelUserExperienceShape,
   };
   const newUserSync = { ...user, novelUserExperienceInfos };
-  const newUserAsync = Request.sendJSONReceiveJSON(
-    `/api/users/${user.id}/novelUserExperienceInfos`,
-    {
-      method: "PUT",
-      data: novelUserExperienceInfos,
-    },
+  const newUserAsync = requestResult(
+    (adaptedOptions) =>
+      Request.sendJSONReceiveJSON(`/api/users/${user.id}/novelUserExperienceInfos`, {
+        ...adaptedOptions,
+        method: "PUT",
+        data: novelUserExperienceInfos,
+      }),
+    options,
+    retryOptions,
   );
   return [newUserSync, newUserAsync];
 }
@@ -985,6 +1080,121 @@ export function getSegmentBoundingBoxes(
       data: { additionalCoordinates, mag, segmentIds, mappingName, annotationVersion },
       method: "POST",
     }),
+  );
+}
+
+/**
+ * Reports the segment statistics attachment of a layer, if it has one. The backend answers with an
+ * array of zero or one element, which is unwrapped here. Any error (e.g. a file with non-dense ids,
+ * which the backend rejects) is treated as "no usable file".
+ */
+export async function getSegmentStatisticsFileInfo(
+  dataStoreUrl: string,
+  datasetId: string,
+  dataLayerName: string,
+): Promise<SegmentStatisticsFileInfo | null> {
+  try {
+    const infos: SegmentStatisticsFileInfo[] = await doWithToken((token) =>
+      Request.receiveJSON(
+        `${dataStoreUrl}/data/datasets/${datasetId}/layers/${dataLayerName}/segmentStatisticsFile?token=${token}`,
+      ),
+    );
+    return infos[0] ?? null;
+  } catch (_error) {
+    return null;
+  }
+}
+
+/**
+ * The statistics-file-backed routes below exist only on the datastore, so they are always requested
+ * from there – even for a layer that belongs to a volume annotation.
+ */
+function fetchSegmentStatistic<T>(
+  layerSourceInfo: LayerSourceInfo,
+  route: string,
+  mag: Vector3,
+  segmentIds: Array<bigint>,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
+  mappingName: string | null | undefined,
+): Promise<T[]> {
+  const requestUrl = getDataOrTracingStoreUrl({ ...layerSourceInfo, useDataStore: true });
+  return doWithToken((token) =>
+    Request.sendJSONReceiveJSON(`${requestUrl}/segmentStatistics/${route}?token=${token}`, {
+      data: { additionalCoordinates, mag, segmentIds, mappingName },
+      method: "POST",
+    }),
+  );
+}
+
+/** Longest distance within each segment, in the dataset unit. */
+export function getSegmentMaxDistances(
+  layerSourceInfo: LayerSourceInfo,
+  mag: Vector3,
+  segmentIds: Array<bigint>,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
+  mappingName: string | null | undefined,
+): Promise<number[]> {
+  return fetchSegmentStatistic<number>(
+    layerSourceInfo,
+    "maxDistance",
+    mag,
+    segmentIds,
+    additionalCoordinates,
+    mappingName,
+  );
+}
+
+/** Dimensionless and scale-invariant, in [0, 1]. */
+export function getSegmentSphericities(
+  layerSourceInfo: LayerSourceInfo,
+  mag: Vector3,
+  segmentIds: Array<bigint>,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
+  mappingName: string | null | undefined,
+): Promise<number[]> {
+  return fetchSegmentStatistic<number>(
+    layerSourceInfo,
+    "sphericity",
+    mag,
+    segmentIds,
+    additionalCoordinates,
+    mappingName,
+  );
+}
+
+/** Centers of mass in mag1 voxels (floats, not rounded to voxel positions). */
+export function getSegmentCentersOfMass(
+  layerSourceInfo: LayerSourceInfo,
+  mag: Vector3,
+  segmentIds: Array<bigint>,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
+  mappingName: string | null | undefined,
+): Promise<Vector3[]> {
+  return fetchSegmentStatistic<Vector3>(
+    layerSourceInfo,
+    "centerOfMass",
+    mag,
+    segmentIds,
+    additionalCoordinates,
+    mappingName,
+  );
+}
+
+/** Row-major 3×3 covariance matrices in squared mag1 voxels. */
+export function getSegmentCovarianceMatrices(
+  layerSourceInfo: LayerSourceInfo,
+  mag: Vector3,
+  segmentIds: Array<bigint>,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
+  mappingName: string | null | undefined,
+): Promise<SegmentCovarianceMatrix[]> {
+  return fetchSegmentStatistic<SegmentCovarianceMatrix>(
+    layerSourceInfo,
+    "covarianceMatrix",
+    mag,
+    segmentIds,
+    additionalCoordinates,
+    mappingName,
   );
 }
 

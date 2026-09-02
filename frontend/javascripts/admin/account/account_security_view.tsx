@@ -1,4 +1,5 @@
 import { EditOutlined, LockOutlined } from "@ant-design/icons";
+import { unwrapOrThrow } from "admin/api/api_result";
 import { changePassword, logoutUserEverywhere } from "admin/rest_api";
 import { Alert, App, Button, Col, Form, Input, Row, Space } from "antd";
 import features from "features";
@@ -30,7 +31,7 @@ function AccountSecurityView() {
     try {
       await changePassword(formValues);
       Toast.success(messages["auth.reset_pw_confirmation"]);
-      await logoutUserEverywhere();
+      unwrapOrThrow(await logoutUserEverywhere());
       dispatch(logoutUserAction());
       navigate("/auth/login");
     } catch (error) {
@@ -194,6 +195,7 @@ function AccountSecurityView() {
 
   async function handleLogout() {
     logoutUserEverywhere()
+      .then((result) => unwrapOrThrow(result))
       .then(() => {
         dispatch(logoutUserAction());
         navigate("/auth/login");

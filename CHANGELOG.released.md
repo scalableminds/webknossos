@@ -7,6 +7,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
+## [26.09.1](https://github.com/scalableminds/webknossos/releases/tag/26.09.1) - 2026-08-27
+[Commits](https://github.com/scalableminds/webknossos/compare/26.09.0...26.09.1)
+
+### Fixed
+- Fixed volume interpolation for non-uint64 volume tracings. [#9928](https://github.com/scalableminds/webknossos/pull/9928)
+- Fixed rare crash when opening an annotation (mostly when loaded in a background tab). [#9869](https://github.com/scalableminds/webknossos/pull/9869)
+- Fixed a bug where pinging a datastore's health endpoint could throw an error, because a version check relied on a `datastoreApiVersion` field that the backend has stopped sending. Removed the stale field and check. [#9923](https://github.com/scalableminds/webknossos/pull/9923)
+
 ## [26.09.0](https://github.com/scalableminds/webknossos/releases/tag/26.09.0) - 2026-08-21
 [Commits](https://github.com/scalableminds/webknossos/compare/26.08.1...26.09.0)
 
@@ -50,7 +58,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed shortcuts on punctuation keys being displayed incorrectly in the info tab, and shortcut collisions not being reported when re-recording a key that a default shortcut already used. [#9834](https://github.com/scalableminds/webknossos/pull/9834)
 - Fixed the raw JSON view of the keyboard shortcut settings falling out of sync with the table view after resetting to defaults. [#9834](https://github.com/scalableminds/webknossos/pull/9834)
 - Fixed an issue where tree visibility in the viewports could become out of sync with the visibility setting in the Trees tab. [#9835](https://github.com/scalableminds/webknossos/pull/9835)
-- Fixes a bug that single file uploads with "color" or "segmentation" in their name yielded errors. [#9844](https://github.com/scalableminds/webknossos/pull/9844)
+- Fixed a bug that single file uploads with "color" or "segmentation" in their name yielded errors. [#9844](https://github.com/scalableminds/webknossos/pull/9844)
 - Fixed that various confirmation and info dialogs were not rendered with the active WEBKNOSSOS theme (e.g. in dark mode). [#9846](https://github.com/scalableminds/webknossos/pull/9846)
 - Fixed several hardcoded colors that did not adapt to the dark theme. Greys, status colors and borders in the annotation list, dataset table, publication cards, user and job lists, the voxelytics workflow view, the project progress report, the shortcut recorder and the help chat now use the theme tokens and are legible in both the light and the dark theme. [#9850](https://github.com/scalableminds/webknossos/pull/9850)
 - Fixed the delete buttons in the dataset and annotation metadata tables not appearing greyed out while a save was in progress or in read-only annotations. [#9857](https://github.com/scalableminds/webknossos/pull/9857)
@@ -66,6 +74,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a regression which caused too many versions to be saved in the annotation history. [#9905](https://github.com/scalableminds/webknossos/pull/9905)
 - Fixed agglomerate loading in connectome tab. [#9909](https://github.com/scalableminds/webknossos/pull/9909)
 - Fixed that the dataset's bounding box did not adapt to layer transformations. [#9912](https://github.com/scalableminds/webknossos/pull/9912)
+
 
 ## [26.08.1](https://github.com/scalableminds/webknossos/releases/tag/26.08.1) - 2026-08-03
 [Commits](https://github.com/scalableminds/webknossos/compare/26.08.0...26.08.1)
@@ -85,7 +94,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added Maximum Intensity Projection (MIP) rendering for bounding boxes in the 3D viewport. Right-click any bounding box and choose "Render as MIP" to project a data layer through the volume, displaying the highest intensity value along each ray. [#9584](https://github.com/scalableminds/webknossos/pull/9584)
 - Added the option to edit the transforms of a layer live while viewing or annotating the data. [#9664](https://github.com/scalableminds/webknossos/pull/9664)
 - The bounding box tab now also lists the dataset layers' bounding boxes as read-only entries at the end of the list (below the editable user bounding boxes). Their name and bounds cannot be edited, but their visibility and color of the rendered outline can be toggled, and they can be navigated to, used to register their segments, and exported. They are shown even when only viewing a dataset (without an annotation). [#9276](https://github.com/scalableminds/webknossos/pull/9276)
-
 
 ### Added
 - The bounding box tab now also lists the dataset layers' bounding boxes as read-only entries at the end of the list (below the editable user bounding boxes). Their name and bounds cannot be edited, but their visibility and color of the rendered outline can be toggled, and they can be navigated to, used to register their segments, and exported. They are shown even when only viewing a dataset (without an annotation). [#9276](https://github.com/scalableminds/webknossos/pull/9276)

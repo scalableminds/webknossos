@@ -2,13 +2,13 @@ package models.annotation
 
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.webknossos.schema.Tables.{
   AnnotationPrivatelinks,
   AnnotationPrivatelinksRow,
   GetResultAnnotationPrivatelinksRow
 }
-import play.api.libs.json.{JsValue, Json, OFormat}
+import play.api.libs.json.{JsValue, Json}
 import security.RandomIDGenerator
 import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
@@ -22,17 +22,9 @@ case class AnnotationPrivateLink(
     accessToken: String,
     expirationDateTime: Option[Instant],
     isDeleted: Boolean = false
-)
+) derives JsonAutoFormat
 
-object AnnotationPrivateLink {
-  implicit val jsonFormat: OFormat[AnnotationPrivateLink] = Json.format[AnnotationPrivateLink]
-}
-
-case class AnnotationPrivateLinkParams(annotation: String, expirationDateTime: Option[Instant])
-
-object AnnotationPrivateLinkParams {
-  implicit val jsonFormat: OFormat[AnnotationPrivateLinkParams] = Json.format[AnnotationPrivateLinkParams]
-}
+case class AnnotationPrivateLinkParams(annotation: String, expirationDateTime: Option[Instant]) derives JsonAutoFormat
 
 class AnnotationPrivateLinkService @Inject() ()(implicit ec: ExecutionContext) {
   def publicWrites(annotationPrivateLink: AnnotationPrivateLink): Fox[JsValue] =

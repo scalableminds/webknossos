@@ -7,7 +7,7 @@ import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, TristateOptionJsonHelper}
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox, TristateOptionJsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.helpers.UPath
@@ -72,24 +72,15 @@ case class DatasetUpdateParameters(
     tags: List[String],
     metadata: Option[JsArray],
     folderId: Option[ObjectId]
-)
-object DatasetUpdateParameters {
-  implicit val jsonFormat: OFormat[DatasetUpdateParameters] = Json.format[DatasetUpdateParameters]
-}
+) derives JsonAutoFormat
 
-case class LayerRenaming(oldName: String, newName: String)
-object LayerRenaming {
-  implicit val jsonFormat: OFormat[LayerRenaming] = Json.format[LayerRenaming]
-}
+case class LayerRenaming(oldName: String, newName: String) derives JsonAutoFormat
 case class AttachmentRenaming(
     layerName: String, // Note: if a request contains a layer renaming *and* attachment renaming, this must use the *new* layerName.
     oldName: String,
     attachmentType: LayerAttachmentType,
     newName: String
-)
-object AttachmentRenaming {
-  implicit val jsonFormat: OFormat[AttachmentRenaming] = Json.format[AttachmentRenaming]
-}
+) derives JsonAutoFormat
 
 case class ReserveDatasetUploadToPathsRequest(
     datasetName: String,
@@ -99,21 +90,12 @@ case class ReserveDatasetUploadToPathsRequest(
     initialTeamIds: Seq[ObjectId] = Seq.empty,
     requireUniqueName: Boolean = false,
     pathPrefix: Option[UPath]
-)
-
-object ReserveDatasetUploadToPathsRequest {
-  implicit val jsonFormat: OFormat[ReserveDatasetUploadToPathsRequest] = Json.format[ReserveDatasetUploadToPathsRequest]
-}
+) derives JsonAutoFormat
 
 case class ReserveDatasetUploadToPathsForPreliminaryRequest(
     dataSource: UsableDataSource,
     pathPrefix: Option[UPath]
-)
-
-object ReserveDatasetUploadToPathsForPreliminaryRequest {
-  implicit val jsonFormat: OFormat[ReserveDatasetUploadToPathsForPreliminaryRequest] =
-    Json.format[ReserveDatasetUploadToPathsForPreliminaryRequest]
-}
+) derives JsonAutoFormat
 
 case class ReserveMagUploadToPathRequest(
     layerName: String,
@@ -122,12 +104,7 @@ case class ReserveMagUploadToPathRequest(
     channelIndex: Option[Int],
     pathPrefix: Option[UPath],
     overwritePending: Boolean
-)
-
-object ReserveMagUploadToPathRequest {
-  implicit val jsonFormat: OFormat[ReserveMagUploadToPathRequest] =
-    Json.format[ReserveMagUploadToPathRequest]
-}
+) derives JsonAutoFormat
 
 case class ReserveAttachmentUploadToPathRequest(
     layerName: String,
@@ -136,12 +113,7 @@ case class ReserveAttachmentUploadToPathRequest(
     attachmentDataformat: LayerAttachmentDataformat.Value,
     pathPrefix: Option[UPath],
     overwritePending: Option[Boolean] = None
-)
-
-object ReserveAttachmentUploadToPathRequest {
-  implicit val jsonFormat: OFormat[ReserveAttachmentUploadToPathRequest] =
-    Json.format[ReserveAttachmentUploadToPathRequest]
-}
+) derives JsonAutoFormat
 
 object SAMInteractionType extends ExtendedEnumeration {
   type SAMInteractionType = Value
@@ -161,22 +133,14 @@ case class SegmentAnythingMaskParameters(
     selectionBottomRightY: Option[Int],
     pointX: Option[Int], // in target-mag, relative to paddedBoundingBox topleft
     pointY: Option[Int]
-)
-
-object SegmentAnythingMaskParameters {
-  implicit val jsonFormat: Format[SegmentAnythingMaskParameters] = Json.format[SegmentAnythingMaskParameters]
-}
+) derives JsonAutoFormat
 
 case class DataSourceRegistrationInfo(
     dataSource: UsableDataSource,
     folderId: Option[ObjectId],
     dataStoreName: String,
     importUrl: Option[String]
-)
-
-object DataSourceRegistrationInfo {
-  implicit val jsonFormat: OFormat[DataSourceRegistrationInfo] = Json.format[DataSourceRegistrationInfo]
-}
+) derives JsonAutoFormat
 
 case class StorageDetailEntry(
     layerName: String,
@@ -184,11 +148,7 @@ case class StorageDetailEntry(
     attachmentType: Option[LayerAttachmentType],
     usedStorageBytes: Long,
     lastUpdated: Instant
-)
-
-object StorageDetailEntry {
-  implicit val jsonFormat: OFormat[StorageDetailEntry] = Json.format[StorageDetailEntry]
-}
+) derives JsonAutoFormat
 
 class DatasetController @Inject() (
     userService: UserService,

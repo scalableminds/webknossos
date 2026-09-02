@@ -1,8 +1,8 @@
 package com.scalableminds.webknossos.datastore.helpers
 
 import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.tools.JsonAutoFormat
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
-import play.api.libs.json.{Format, Json, OFormat}
 
 case class GetSegmentIndexParameters(
     mag: Vec3Int,
@@ -10,11 +10,7 @@ case class GetSegmentIndexParameters(
     additionalCoordinates: Option[Seq[AdditionalCoordinate]],
     mappingName: Option[String], // Specify the mapping when querying the datastore
     annotationVersion: Option[Long]
-)
-
-object GetSegmentIndexParameters {
-  implicit val format: Format[GetSegmentIndexParameters] = Json.format[GetSegmentIndexParameters]
-}
+) derives JsonAutoFormat
 
 case class GetMultipleSegmentIndexParameters(
     segmentIds: List[UnsignedLong],
@@ -23,15 +19,7 @@ case class GetMultipleSegmentIndexParameters(
     mappingName: Option[String],
     editableMappingTracingId: Option[String],
     annotationVersion: Option[Long]
-)
-
-object GetMultipleSegmentIndexParameters {
-  implicit val format: Format[GetMultipleSegmentIndexParameters] = Json.format[GetMultipleSegmentIndexParameters]
-}
+) derives JsonAutoFormat
 
 // positions = List of indices of buckets directly in a requested mag
-case class SegmentIndexData(segmentId: UnsignedLong, positions: Seq[Vec3Int])
-
-object SegmentIndexData {
-  implicit val format: Format[SegmentIndexData] = Json.format[SegmentIndexData]
-}
+case class SegmentIndexData(segmentId: UnsignedLong, positions: Seq[Vec3Int]) derives JsonAutoFormat

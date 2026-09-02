@@ -434,7 +434,8 @@ object Msg {
     val allowedTeamsNotFound: String = "Could not find allowed teams for dataset."
     val voxelSizeFailedToFetch: String = "Could not fetch voxel size for annotation."
     val additionalCoordinatesDiffer: String = "Additional coordinates differ in merged units."
-    val findByImportURLFailed = "Failed to look up whether a dataset with the import url already exists."
+    val findByImportURLFailed = "Could not look up whether a dataset with the import url already exists."
+    val deleteFromDbFailed = "Could not delete dataset from the database."
     object Compose {
       val failed: String = "Could not compose dataset."
       val addAttachmentFailed: String = "Could not add attachment to composed dataset."

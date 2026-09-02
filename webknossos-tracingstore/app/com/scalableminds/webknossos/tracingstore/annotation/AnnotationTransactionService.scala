@@ -274,6 +274,14 @@ class AnnotationTransactionService @Inject() (
     case _                               => false
   }
 
+  /* Handles a single update group by applying bucket-mutating actions and storing the updates as a single version entry
+     in annotationUpdates.
+     Note on ordering: bucket-mutating actions are applied *before* the update actions are written to annotationUpdates.
+     This protects against inconsistent states because all readers will consider annotationUpdates the source of truth
+     for the newest version number. Only after that last put succeeds the data is considered committed.
+     If it or anything before fails, readers will see the previous versions and a save retry will write the same data
+     at the same version again.
+   */
   private def handleUpdateGroup(annotationId: ObjectId, updateActionGroup: UpdateActionGroup)(using
       ec: ExecutionContext,
       tc: TokenContext,
@@ -284,14 +292,6 @@ class AnnotationTransactionService @Inject() (
       _ <- Fox.fromBool(
         updateActionsProcessed.length <= 1000000
       ) ?~> "Annotation update transactions with more than 1M update actions are not currently supported"
-      updateActionsJson = Json.toJson(updateActionsProcessed)
-      _ <- stats.time("annotationUpdates.put")(
-        tracingDataStore.annotationUpdates.put(
-          annotationId.toString,
-          updateActionGroup.version,
-          jsonToBytes(updateActionsJson)
-        )
-      )
       bucketMutatingActions = findBucketMutatingActions(updateActionGroup)
       _ = stats.count("volumeBucketMutatingActions", bucketMutatingActions.length)
       actionsGrouped: Map[String, List[BucketMutatingVolumeUpdateAction]] = bucketMutatingActions.groupBy(
@@ -311,6 +311,14 @@ class AnnotationTransactionService @Inject() (
           )
         } yield ()
       }
+      updateActionsJson = Json.toJson(updateActionsProcessed)
+      _ <- stats.time("annotationUpdates.put")(
+        tracingDataStore.annotationUpdates.put(
+          annotationId.toString,
+          updateActionGroup.version,
+          jsonToBytes(updateActionsJson)
+        )
+      )
     } yield ()
 
   private def findBucketMutatingActions(updateActionGroup: UpdateActionGroup): List[BucketMutatingVolumeUpdateAction] =
@@ -329,8 +337,11 @@ class AnnotationTransactionService @Inject() (
     }
     actionsWithInfo.map {
       case a: UpdateBucketVolumeAction => a.withoutBase64Data
-      case a: AddLayerAnnotationAction => a.copy(tracingId = Some(TracingId.generate))
-      case a                           => a
+      case a: AddLayerAnnotationAction =>
+        // Note: this generated tracingId must not be read from this action before it was committed to fossildb,
+        // to keep save retries idempotent.
+        a.copy(tracingId = Some(TracingId.generate))
+      case a => a
     }
   }
 

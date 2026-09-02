@@ -63,7 +63,8 @@ class AnnotationUserStateTestSuite extends AsyncWordSpec with AnnotationUserStat
           .emptyUserState(userAId)
           .copy(
             segmentVisibilities = Seq(Id64WithBool(1L, true)),
-            segmentGroupExpandedStates = Seq(Id32WithBool(1, true))
+            segmentGroupExpandedStates = Seq(Id32WithBool(1, true)),
+            boundingBoxVisibilities = Seq(Id32WithBool(1, true))
           )
       )
       val tracingBUserStates = Seq(
@@ -71,17 +72,21 @@ class AnnotationUserStateTestSuite extends AsyncWordSpec with AnnotationUserStat
           .emptyUserState(userAId)
           .copy(
             segmentVisibilities = Seq(Id64WithBool(1L, false)),
-            segmentGroupExpandedStates = Seq(Id32WithBool(1, false))
+            segmentGroupExpandedStates = Seq(Id32WithBool(1, false)),
+            boundingBoxVisibilities = Seq(Id32WithBool(1, false))
           )
       )
 
       val segmentIdMapB = Map((1L, 2L))
+      // Unlike segment/group ids, tracing A's bounding box ids can also be remapped (see BoundingBoxMerger),
+      // so bboxIdMapA is applied to A's user state just like bboxIdMapB is applied to B's.
       val mergedUserStates = mergeVolumeUserStates(
         tracingAUserStates,
         tracingBUserStates,
         groupMappingB = (groupId: Int) => groupId + 5,
         segmentIdMapB,
-        Map.empty
+        bboxIdMapA = Map(1 -> 10),
+        bboxIdMapB = Map(1 -> 11)
       )
       assert(
         mergedUserStates == Seq(
@@ -89,7 +94,8 @@ class AnnotationUserStateTestSuite extends AsyncWordSpec with AnnotationUserStat
             .emptyUserState(userAId)
             .copy(
               segmentVisibilities = Seq(Id64WithBool(1, true), Id64WithBool(2L, false)),
-              segmentGroupExpandedStates = Seq(Id32WithBool(1, true), Id32WithBool(6, false))
+              segmentGroupExpandedStates = Seq(Id32WithBool(1, true), Id32WithBool(6, false)),
+              boundingBoxVisibilities = Seq(Id32WithBool(10, true), Id32WithBool(11, false))
             )
         )
       )

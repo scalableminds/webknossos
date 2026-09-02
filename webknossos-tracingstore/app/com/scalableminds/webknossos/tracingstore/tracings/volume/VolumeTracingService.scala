@@ -865,10 +865,11 @@ class VolumeTracingService @Inject() (
     val mergedGroups = GroupUtils.mergeSegmentGroups(tracingA.segmentGroups, tracingB.segmentGroups, groupMappingB)
     val mergedBoundingBox = combineBoundingBoxes(Some(tracingA.boundingBox), Some(tracingB.boundingBox))
     // Tracing A's segment ids are never remapped; tracing B's are (see MergedVolume), matching the
-    // A-fixed/B-remapped convention also used for segment groups, tree/node ids and bounding boxes.
+    // A-fixed/B-remapped convention also used for segment groups and tree/node ids. Bounding boxes are
+    // the exception (see BoundingBoxMerger): both sides may be remapped there.
     val segmentIdMapB =
       if (indexB >= mergedVolumeStats.idMaps.length) Map.empty[Long, Long] else mergedVolumeStats.idMaps(indexB)
-    val (mergedUserBoundingBoxes, bboxIdMapB) = combineUserBoundingBoxes(
+    val (mergedUserBoundingBoxes, bboxIdMapA, bboxIdMapB) = combineUserBoundingBoxes(
       tracingA.userBoundingBox,
       tracingB.userBoundingBox,
       tracingA.userBoundingBoxes,
@@ -880,6 +881,7 @@ class VolumeTracingService @Inject() (
         tracingB.userStates,
         groupMappingB,
         segmentIdMapB,
+        bboxIdMapA,
         bboxIdMapB
       )
     for {

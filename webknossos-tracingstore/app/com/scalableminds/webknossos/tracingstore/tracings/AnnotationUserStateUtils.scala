@@ -229,14 +229,17 @@ trait AnnotationUserStateUtils extends BoundingBoxMerger with IdWithBoolUtils {
     idToBools.copy(id = functionalIdMapping(idToBools.id))
 
   // Merges user states of multiple skeleton tracings, respecting mapped ids of the tracing elements. The user set is preserved.
-  // Tracing A's ids are never remapped (see TreeUtils/GroupUtils/BoundingBoxMerger), so only B's user state needs id mapping.
+  // Tracing A's tree/group ids are never remapped (see TreeUtils/GroupUtils), so only B's user state needs that mapping.
+  // Bounding box ids are the exception (see BoundingBoxMerger): both sides may be remapped, so both bboxIdMaps are applied.
   protected def mergeSkeletonUserStates(
       tracingAUserStates: Seq[SkeletonUserStateProto],
       tracingBUserStates: Seq[SkeletonUserStateProto],
       groupMappingB: FunctionalGroupMapping,
       treeIdMapB: TreeIdMap,
+      bboxIdMapA: UserBboxIdMap,
       bboxIdMapB: UserBboxIdMap
   ): Seq[SkeletonUserStateProto] = {
+    val tracingAUserStatesMapped = tracingAUserStates.map(applyBboxIdMapOnSkeletonUserState(_, bboxIdMapA))
     val tracingBUserStatesMapped = tracingBUserStates
       .map(userState =>
         userState.copy(
@@ -247,7 +250,7 @@ trait AnnotationUserStateUtils extends BoundingBoxMerger with IdWithBoolUtils {
       .map(applyBboxIdMapOnSkeletonUserState(_, bboxIdMapB))
 
     val byUserId = scala.collection.mutable.Map[String, SkeletonUserStateProto]()
-    tracingAUserStates.foreach { userState =>
+    tracingAUserStatesMapped.foreach { userState =>
       byUserId.put(userState.userId, userState)
     }
     tracingBUserStatesMapped.foreach { userState =>
@@ -288,14 +291,17 @@ trait AnnotationUserStateUtils extends BoundingBoxMerger with IdWithBoolUtils {
   }
 
   // Merges user states of multiple volume tracings, respecting mapped ids of the tracing elements. The user set is preserved.
-  // Tracing A's ids are never remapped (see GroupUtils/BoundingBoxMerger/MergedVolume), so only B's user state needs id mapping.
+  // Tracing A's group/segment ids are never remapped (see GroupUtils/MergedVolume), so only B's user state needs that mapping.
+  // Bounding box ids are the exception (see BoundingBoxMerger): both sides may be remapped, so both bboxIdMaps are applied.
   protected def mergeVolumeUserStates(
       tracingAUserStates: Seq[VolumeUserStateProto],
       tracingBUserStates: Seq[VolumeUserStateProto],
       groupMappingB: FunctionalGroupMapping,
       segmentIdMapB: Map[Long, Long],
+      bboxIdMapA: UserBboxIdMap,
       bboxIdMapB: UserBboxIdMap
   ): Seq[VolumeUserStateProto] = {
+    val tracingAUserStatesMapped = tracingAUserStates.map(applyBboxIdMapOnVolumeUserState(_, bboxIdMapA))
     val tracingBUserStatesMapped =
       tracingBUserStates
         .map(userState =>
@@ -307,7 +313,7 @@ trait AnnotationUserStateUtils extends BoundingBoxMerger with IdWithBoolUtils {
         .map(applyBboxIdMapOnVolumeUserState(_, bboxIdMapB))
 
     val byUserId = scala.collection.mutable.Map[String, VolumeUserStateProto]()
-    tracingAUserStates.foreach { userState =>
+    tracingAUserStatesMapped.foreach { userState =>
       byUserId.put(userState.userId, userState)
     }
     tracingBUserStatesMapped.foreach { userState =>

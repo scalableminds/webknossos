@@ -6,8 +6,9 @@ import com.scalableminds.webknossos.tracingstore.tracings.{BoundingBoxMerger, Gr
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.TreeUtils
 import org.scalatest.wordspec.AnyWordSpec
 
-// Covers the merge convention shared by TreeUtils, GroupUtils and BoundingBoxMerger: tracing A's ids
-// are never remapped, tracing B's ids are densified/deduplicated and offset to continue right after A's.
+// Covers the merge convention of TreeUtils and GroupUtils: tracing A's ids are never remapped, tracing
+// B's ids are densified and offset to continue right after A's. BoundingBoxMerger is the deliberate
+// exception: bounding boxes support content-based deduplication, so both tracings' ids may be remapped.
 class MergeUtilsTestSuite extends AnyWordSpec with BoundingBoxMerger {
 
   private def bbox(id: Int, topLeft: Int = 0) =
@@ -76,25 +77,46 @@ class MergeUtilsTestSuite extends AnyWordSpec with BoundingBoxMerger {
   }
 
   "BoundingBoxMerger.combineUserBoundingBoxes" should {
-    "leave tracing A's boxes and ids untouched and append tracing B's non-duplicate boxes with new ids" in {
-      val boxesA = Seq(bbox(1), bbox(3))
-      val boxesB = Seq(bbox(1, topLeft = 1)) // distinct content from any of A's boxes, but has a colliding id
+    "pool and renumber both tracings' boxes from scratch, in A-then-B order" in {
+      val boxesA = Seq(bbox(1), bbox(3, topLeft = 1))
+      val boxesB = Seq(bbox(1, topLeft = 2)) // distinct content from A's boxes, but a colliding id
 
-      val (merged, idMapB) = combineUserBoundingBoxes(None, None, boxesA, boxesB)
+      val (merged, idMapA, idMapB) = combineUserBoundingBoxes(None, None, boxesA, boxesB)
 
-      assert(merged.take(2) == boxesA)
-      assert(merged(2).id == 4)
-      assert(idMapB == Map(1 -> 4))
+      assert(merged.map(_.boundingBox) == (boxesA ++ boxesB).map(_.boundingBox))
+      assert(merged.map(_.id) == Seq(0, 1, 2))
+      assert(idMapA == Map(1 -> 0, 3 -> 1))
+      assert(idMapB == Map(1 -> 2))
     }
 
-    "drop tracing B's boxes that duplicate one of tracing A's by content, without touching A" in {
+    "deduplicate a box that exists identically in both tracings, keeping tracing A's copy" in {
       val boxesA = Seq(bbox(1))
       val boxesB = Seq(bbox(7)) // same content (topLeft = 0) as A's box, just a different id
 
-      val (merged, idMapB) = combineUserBoundingBoxes(None, None, boxesA, boxesB)
+      val (merged, idMapA, idMapB) = combineUserBoundingBoxes(None, None, boxesA, boxesB)
 
-      assert(merged == boxesA)
-      assert(idMapB.isEmpty)
+      assert(merged == Seq(bbox(0)))
+      assert(idMapA == Map(1 -> 0))
+      assert(idMapB.isEmpty) // B's duplicate was dropped entirely, not remapped onto anything
+    }
+
+    "deduplicate two boxes with the same content within tracing A itself" in {
+      val boxesA = Seq(bbox(1), bbox(2)) // both topLeft = 0, i.e. identical content
+
+      val (merged, idMapA, _) = combineUserBoundingBoxes(None, None, boxesA, Seq.empty)
+
+      assert(merged == Seq(bbox(0)))
+      assert(idMapA == Map(1 -> 0)) // id 2 was dropped as a duplicate and is absent from the map
+    }
+
+    "fold tracing A's deprecated legacy single bounding box into the same pool" in {
+      val boxesA = Seq(bbox(3))
+      val singleA = BoundingBoxProto(Vec3IntProto(5, 0, 0), 1, 1, 1) // distinct content from boxesA
+
+      val (merged, idMapA, _) = combineUserBoundingBoxes(Some(singleA), None, boxesA, Seq.empty)
+
+      assert(merged.map(_.boundingBox) == Seq(boxesA.head.boundingBox, singleA))
+      assert(idMapA == Map(3 -> 0))
     }
   }
 }

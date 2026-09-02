@@ -124,7 +124,7 @@ class SkeletonTracingService @Inject() (
       )
       mergedGroups = GroupUtils.mergeTreeGroups(tracingA.treeGroups, tracingB.treeGroups, groupMappingB)
       mergedBoundingBox = combineBoundingBoxes(tracingA.boundingBox, tracingB.boundingBox)
-      (userBoundingBoxes, bboxIdMapB) = combineUserBoundingBoxes(
+      (userBoundingBoxes, bboxIdMapA, bboxIdMapB) = combineUserBoundingBoxes(
         tracingA.userBoundingBox,
         tracingB.userBoundingBox,
         tracingA.userBoundingBoxes,
@@ -135,6 +135,7 @@ class SkeletonTracingService @Inject() (
         tracingB.userStates,
         groupMappingB,
         treeMappingB,
+        bboxIdMapA,
         bboxIdMapB
       )
     } yield tracingA.copy(

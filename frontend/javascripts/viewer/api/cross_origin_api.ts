@@ -7,7 +7,14 @@ import { api } from "viewer/singletons";
 
 // The keys the BigWarp-style dataset alignment coordinator listens for (see
 // viewer/view/layouting/align_datasets_view.tsx and BIGWARP_ALIGNMENT_PLAN.md §5.5).
-const BIG_WARP_WORKER_SHORTCUT_KEYS = new Set(["t", "f", "q"]);
+// "f" and "q" were the original choices, matching BigWarp itself (see
+// BIGWARP_ALIGNMENT_PLAN.md §2.1) - both collide with WK's own plane-mode bindings
+// ("f" = move forward, "q" = download screenshot, see
+// keyboard_shortcut_constants.ts), which also fire since this listener only calls
+// preventDefault() (stops the browser's default action) not stopPropagation() (stops
+// other JS listeners) - see §0.12. Renamed to unbound letters instead of also
+// suppressing propagation, since that's simpler and lower-risk.
+const BIG_WARP_WORKER_SHORTCUT_KEYS = new Set(["t", "x", "y"]);
 
 // This component allows cross origin communication, for example, between a host page
 // and an embedded webKnossos iframe.

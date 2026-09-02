@@ -2,7 +2,7 @@
 
 Branch: `live-warp` (currently just a spike/demo, not production code)
 Owner: Michael Büßemeyer
-Last updated: 2026-09-01 (v5 — skeleton-toolbar restriction + correspondence table redesign, see §0.6)
+Last updated: 2026-09-02 (v10 — XY-maximized via flexlayout's own mechanism instead of a restricted layout, see §0.18)
 
 > **Purpose of this file**: this feature spans multiple sessions and a lot of context
 > (old spike code, related PRs/issues, an external design doc). Context gets
@@ -455,6 +455,290 @@ general WK correctness fix (same category as §0.4's `mayEditAnnotationViewConfi
 test pass to confirm the diagnostic line actually starts showing ✅s and the
 correspondence table populates.
 
+### 0.11 Colleague feedback round (2026-09-02) — implemented items
+
+Michael got a review pass from a colleague and replied to each point himself; he asked
+for only the 👍/"good idea"-confirmed items to be implemented, with the rest left as
+open discussion (recorded in §0.12). Implemented this pass:
+
+- **WK logo/icon dropped entirely from worker navbars** (`navbar.tsx`) - previously
+  kept as a non-clickable label (§0.5); now not rendered at all for `bigwarpWorker`
+  mode, per *"das wk icon in der rechten navbar braucht man auch nicht"* / *"Hätte ich
+  in beiden iframes einfach weg gemacht, wenn die top level navbar bleibt."*
+- **"Sandbox" tag + "Copy To My Account" button dropped from worker navbars**
+  (`viewer/view/action_bar/save_actions.tsx`'s `SaveActions`, gated on
+  `hasUrlParam("bigwarpWorker")`, `UndoRedoActions` kept) - these come from the
+  generic, pre-existing `SandboxActions` component every WK sandbox session shows;
+  BigWarp's own workers already transparently sync their landmarks out into the real,
+  persisted "landmark annotation" (the hidden "store" iframe), so "copy this sandbox to
+  your account" would just create an unrelated, disconnected annotation that doesn't
+  fit the flow at all.
+- **Workers now auto-jump to a spot that actually contains data on load**
+  (`controller.tsx`'s `applyBigWarpWorkerSettingsIfNeeded`, now `async`) - reuses the
+  same `findDataPositionForLayer` lookup the layer settings tab's manual "Find data"
+  button already calls, dispatching `setPositionAction`/`setZoomStepAction` once it
+  resolves. No transform adjustment needed since the found layer is always the same one
+  pinned as `nativelyRenderedLayerName`. Addresses *"'find my data' könnte vielleicht
+  automatisch passieren... wenn man es zum ersten mal öffnet?"* / *"Jo, hatte ich mir
+  auch schon gedacht."* (The sibling ask in the same thread, "iframes should default to
+  a maximized XY view like BigWarp," was **already true** - §0.1's
+  `getBigWarpWorkerLayoutConfig()` has been single-viewport/XY-only since v1 - so
+  nothing needed changing there.)
+- **`f`/`q` shortcuts renamed to `x`/`y`** (`cross_origin_api.ts`'s
+  `BIG_WARP_WORKER_SHORTCUT_KEYS`, `align_datasets_view.tsx`'s `handleShortcut` + UI
+  copy) - per *"der 'f' shortcut hat auch noch die alte belegung von 'move forward'...
+  am besten wir finden einen anderen shortcut" / "👍"*. Root cause, found while fixing
+  this (not just "an old binding still exists"): the BigWarp worker's own `keydown`
+  listener (`cross_origin_api.ts`) only calls `preventDefault()` on its handled keys,
+  not `stopPropagation()`/`stopImmediatePropagation()` - so WK's own `InputKeyboard`
+  handler for the *same physical keydown event* still fires too. **`f` collides with
+  "Move Forward (Direction Aware)" and `q` collides with "Download Screenshot(s) of
+  Viewport(s)"**, both bound in `PLANE_NAVIGATION`/`PLANE_GENERAL`
+  (`keyboard_shortcut_constants.ts`), i.e. exactly the view mode BigWarp workers use -
+  Michael's colleague only noticed the `f` one, but `q` (already in use for "sync other
+  view to this one") has the exact same latent bug, just presumably less
+  attention-grabbing than the view unexpectedly moving a slice. Fixed by picking two
+  keys confirmed unbound anywhere in `keyboard_shortcut_constants.ts` (`t` was already
+  safe and is unchanged) rather than making the listener suppress propagation, which
+  felt like a bigger, riskier change for comparatively little benefit.
+- **Landmark tree colors shown in the correspondence table** (`align_datasets_view.tsx`)
+  - `getCorrespondencePoints` became `getCorrespondenceEntries`, now carrying each
+  node's parent tree's `color: Vector3` alongside its position (all call sites that
+  only need positions, e.g. `onAlign`'s transform math, now do
+  `.map((entry) => entry.position)`); the table renders a small colored dot per side
+  using the same `color.map(c => Math.round(c * 255))` → `rgb(...)` conversion already
+  used elsewhere (`skeleton_specific_ui.tsx`'s `CreateTreeButton`). Per *"die landmark
+  farben könnten in der tabelle auch gezeigt werden" / "Jo, gute Idee 👍."*
+- Cleaned up a couple of stray `console.log` debug statements Michael had added to the
+  sync loop himself while investigating §0.10's "always ⏳" bug - no longer needed now
+  that that root cause is fixed.
+
+All changes verified via `yarn typecheck`, `yarn fix-frontend`/`check-frontend`, and
+`yarn test` (3204/3204 passing at time of writing) - not yet re-confirmed live.
+
+### 0.12 Colleague feedback round (2026-09-02) — open questions, not implemented
+
+Recorded per Michael's request (only 👍-confirmed items get implemented; these are
+"think about it, give an opinion, don't touch the code" - see conversation for full
+back-and-forth and Claude's opinions on each):
+
+1. **Drop the top-level coordinator navbar entirely**, moving "Open Alignment Tools"
+   into a worker's own navbar - Michael's own reply already flagged the tradeoff
+   (losing the ability to navigate to the dashboard/etc. from the coordinator).
+2. **"Alignment tools" as a floating window** instead of the collapsible drawer -
+   Michael pushed back (confused by the suggestion; worried a permanently-visible
+   floating window would block too much of the view).
+3. **Auto-run "Align" on every landmark change** instead of requiring the button/`t`
+   press - technically trivial (the `onAlign` logic doesn't care who calls it), open
+   UX question of whether continuous re-alignment while still placing landmarks is
+   desirable or distracting.
+4. **Simplify layer visibility to exactly two global modes** ("show everything" vs.
+   "show only the native layer per side," toggled together via `x` in both iframes at
+   once, surfaced in the navbar) instead of today's independent per-side toggle -
+   Michael has no strong preference; the one hard requirement (native layer initially
+   the only visible one) already holds regardless of which model is picked.
+5. **Per-landmark residual error display** - what this means concretely: once a
+   transform is estimated, apply it to a pair's *moving* (B) position and measure the
+   distance to the corresponding *fixed* (A) position; since the affine fit is a global
+   least-squares match across all pairs, individual pairs will generally have nonzero
+   residuals, and unusually large ones flag likely mis-clicks or genuinely
+   non-affine-explainable local distortion. Cheap to add once decided - `transformBtoA`
+   and the point-transform helpers already exist; would slot into the same table row
+   the color dot (§0.11) now occupies.
+6. **Delete landmark** - clarified this splits into two independent parts: deleting a
+   node *inside a worker iframe* already works today with zero new code (ordinary WK
+   skeleton editing, e.g. right-click delete / delete key, isn't restricted by the
+   `BIGWARP_LANDMARKS` toolkit); what's *not* built is deleting from the table itself,
+   or propagating a worker-side deletion into the persisted store (see next point and
+   §0.2 point 2's "additions-only sync" gap).
+7. **Positional (index-based) landmark pairing breaks under deletion**: deleting a
+   non-last node on one side shifts every later row's pairing in the table, since
+   `getCorrespondenceEntries`/the table's `zip()` match purely by sorted position within
+   each side, not by any stable identity. Claude's recommendation if/when this is
+   picked up: stop pairing by array position entirely - instead assign each landmark a
+   stable id/tag *once*, at the moment the coordinator first syncs it from a worker into
+   the store (e.g. bake a monotonic "pair index" into the synced tree's name, or a
+   dedicated metadata field), and have the correspondence table group by that tag
+   instead of by sorted-array index. That way deleting an earlier landmark just leaves a
+   gap (or removes one side of a pair) instead of reshuffling every subsequent row's
+   pairing - the same class of fix as moving from "diff by position" to "diff by
+   identity," which is exactly the reasoning §0.2 point 2 already used to justify
+   preferring a future `diffTrees`-based sync over the current additions-only one.
+
+### 0.13 Coordinator's own top-level navbar dropped; navigation forwarded from the left worker instead (2026-09-02, tryout)
+
+Follow-up from §0.12 point 1: the colleague's actual concern wasn't "must be able to
+reach the dashboard specifically" so much as *"allgemein gehts mir darum, dass ich
+nicht den doppelten navbar space haben will"* (not wanting the doubled-up navbar
+space - the coordinator's own top-level navbar stacked directly above each worker
+iframe's own navbar). Their proposed resolution, which Michael asked to try: keep the
+WK logo in the **left** worker's navbar, have it navigate the **parent** frame, and
+let the coordinator's own top-level navbar go away entirely.
+
+- **`router.tsx`'s `RootLayout`** now checks `useLocation().pathname.startsWith("/align-datasets")`
+  and skips rendering `<Navbar />` for that route - this is the coordinator's own,
+  top-level navbar going away, distinct from each worker iframe's own (separate)
+  navbar, which is unaffected.
+- **`align_datasets_view.tsx`'s `workerASrc`** (only A, the *left*/fixed-layer worker)
+  now also carries `&bigwarpPrimary=true`.
+- **`navbar.tsx`** reads that as `isBigWarpPrimaryWorker` and, only for that worker:
+  - Renders the WK logo again as a real `<Link to="/dashboard" target="_top">` -
+    `target="_top"` is the standard, built-in HTML mechanism for "this link, inside an
+    iframe, should navigate the outermost page" - no custom postMessage plumbing
+    needed for this part. Verified against this repo's `react-router-dom` (6.30.1)
+    source: `shouldProcessLinkClick` explicitly skips its `preventDefault()`/client-side
+    `navigate()` path whenever `target` is set to anything other than `"_self"`,
+    falling through to the browser's native anchor behavior - which is exactly the
+    "navigate the top browsing context" semantics `target="_top"` defines.
+  - Adds a small "Alignment Tools" button to the trailing nav items, which
+    `window.parent.postMessage({type: "bigwarpToggleDrawer"}, "*")`s instead of
+    rendering into a portal (the coordinator's own navbar - and therefore the
+    `navbarAlignToolsSlot` portal target that used to live inside it - no longer
+    exists for this route, so the previous `RenderToPortal`-based approach doesn't
+    apply here: `RenderToPortal`/`PortalTarget` only bridge two React trees in the
+    *same* window, and a worker iframe is a genuinely separate window/JS realm from
+    the coordinator).
+  - The right worker still drops the logo entirely, as before - showing it on both
+    sides would reintroduce the exact "double chrome" feeling this is meant to fix.
+- **`align_datasets_view.tsx`'s message listener** gained a `"bigwarpToggleDrawer"`
+  case (mirroring the existing `"bigwarpShortcut"` one) that flips `drawerOpen`,
+  guarded to only accept it from worker A's `contentWindow`.
+
+**Known tradeoff, not addressed in this tryout**: the "Alignment Tools" toggle now only
+exists once worker A has finished loading (it lives inside that iframe's own navbar) -
+there's a brief window on initial page load with no way to open the drawer at all. The
+previous portal-based button in the coordinator's own navbar was available immediately.
+Worth watching for whether this is annoying in practice; if so, a small fallback
+trigger directly in the coordinator's own page content (not a navbar) would be an easy
+follow-up.
+
+**Not yet confirmed live.**
+
+### 0.14 Leftover navbar-height gap + orphaned separator line after §0.13 (2026-09-02)
+
+Two follow-up bugs Michael found immediately after §0.13's navbar removal, both fixed:
+
+- **Phantom gap above the coordinator's content**: `body`'s global
+  `padding-top: var(--navbar-height)` (`main.less`) assumes a navbar is always present.
+  Normally kept correct because `MaintenanceBanner`/`UpgradeVersionBanner` (rendered
+  inside `<Navbar/>`) re-measure and re-set that CSS variable via
+  `useSetNavbarHeight` (`banners.tsx`) every time they mount - but since `<Navbar/>`
+  doesn't render at all on `/align-datasets` (§0.13), that never happens, and the
+  variable is simply left at whatever it was before navigating there (the `48px`
+  default, or more if a banner was showing) - `body` keeps applying that padding
+  regardless. **Fix**: `router.tsx`'s `RootLayout` now sets
+  `--navbar-height: 0px` via a `useEffect` whenever `isAlignDatasetsCoordinator` is
+  true. No cleanup/restore needed - navigating away remounts `<Navbar/>`, whose
+  banners set the correct value again on their own via the same existing mechanism.
+- **Orphaned vertical separator line in the right worker's navbar**: `.navbar-separator`
+  (a `border-left`) is rendered whenever `isInAnnotationView` is true, meant to divide
+  the main `<Menu>` (logo + Dashboard/Analysis/etc.) from the toolbar/trailing area -
+  but the right worker's `menuItems` is empty (no logo, §0.11/§0.13), so the separator
+  rendered with nothing to its left, looking orphaned right where the hidden logo used
+  to be. **Fix**: `navbar.tsx` now also requires
+  `!(isBigWarpWorker && !isBigWarpPrimaryWorker)` before showing it.
+- **Also removed**: a duplicate `border-top` in `main.less`'s `.adv-worker iframe`
+  rules, left over from before the borders were moved to inline styles in
+  `align_datasets_view.tsx` - Michael had already removed the inline version (the top
+  border is no longer needed now that there's no coordinator navbar to visually
+  separate from), but this second, independent copy in the stylesheet kept rendering
+  the same border regardless. The `border-left`/`border-right` between the two panes
+  stays.
+
+### 0.15 Per-landmark residual error column (2026-09-02, colleague follow-up to §0.12's "residual error" item)
+
+The colleague asked what a landmark's "residual error" actually is (§0.12 had this as
+an open/deferred item), then - once explained - asked for it to be added to the table.
+Implemented: `align_datasets_view.tsx` now computes, per row, `posA - transformBtoA(posB)`
+(via the existing `transformPointUnscaled` helper) and shows its length in a new "Error"
+table column, rounded to 1 decimal. This is exactly the quantity the colleague described:
+how far apart a specific matched pair still ends up after the overall least-squares fit,
+so an outlier value on one row usually means that pair was clicked imprecisely (or is
+mismatched with its counterpart), since the other pairs "outvote" it. Null (shown as "–")
+until `onAlign` has actually computed a transform, or if a row's pair is incomplete
+(unmatched landmark on one side). No new state - purely derived per-render from
+`correspondencesA`/`correspondencesB`/`transformBtoA`, all already tracked.
+
+### 0.16 "Maximized" single-viewport layout was dead code (2026-09-02, found while investigating Michael's report that it "isn't working")
+
+§0.1 claimed the XY-only worker layout was done via a dedicated
+`getBigWarpWorkerLayoutConfig()` FlexLayout config (`default_layout_configs.ts`), applied
+in `tracing_layout_view.tsx`'s `setControllerStatus`. That part was true - but the result
+was only ever written into `TracingLayoutView`'s own `this.state.model`, which **is never
+actually rendered**: `<FlexLayoutWrapper>` (the component that owns and renders the real
+`flexlayout-react` `Model`) is passed only `layoutKey`/`layoutName` props, and builds its
+own model independently via its own `loadCurrentModel()`, which called
+`getLayoutConfig(layoutKey, layoutName)` unconditionally - with no knowledge of
+`bigwarpWorker` at all. So every worker was actually rendering the normal 4-pane
+(XY/YZ/XZ/3D) layout the whole time; `getBigWarpWorkerLayoutConfig()`'s output was
+silently discarded. No delay/race was involved - this was a pure wiring bug, present since
+§0.1, that manual QA hadn't caught before because a maximized-looking XY pane was assumed
+to already be there.
+
+**Fix**: moved the `hasUrlParam("bigwarpWorker") ? getBigWarpWorkerLayoutConfig() : ...`
+branch into `FlexLayoutWrapper.loadCurrentModel()` (`flex_layout_wrapper.tsx`) - the actual
+place the rendered model is built, covering both initial mount and `rebuildLayout()`.
+Removed the now-provably-dead branch (and its now-unused `hasUrlParam`/
+`getBigWarpWorkerLayoutConfig` imports) from `tracing_layout_view.tsx`'s
+`setControllerStatus`, which still assigns `getLayoutConfig(...)` to its own
+`this.state.model` as a same-as-before placeholder value that's immediately superseded
+once `FlexLayoutWrapper` mounts and reports its real model back up via `onLayoutChange`.
+
+### 0.17 Crash right after §0.16: "Cannot read properties of undefined (reading 'getExtraData')" (2026-09-02)
+
+Direct fallout of §0.16 actually taking effect for the first time: once workers really got
+the single-viewport, left-border-only layout (`getBigWarpWorkerLayoutConfig()` has no right
+border at all), `FlexLayoutWrapper.updateToModelStateAndAdjustIt()` - run via a `setTimeout`
+right after every mount/rebuild - calls `adaptModelToConditionalTabs(model)`, which
+unconditionally did `model.getNodeById("right-border-tab-container").getExtraData()`. With
+no right border in the model, `getNodeById` returns `undefined`, and `.getExtraData()` on
+that throws exactly the reported `TypeError`. This code path only exists to show/hide the
+opt-in Connectome tab inside the right border, so it's simply a no-op when there's no right
+border to adapt. **Fix**: `flex_layout_wrapper.tsx`'s `adaptModelToConditionalTabs` now
+early-returns when `model.getNodeById(rightBorderId)` is `null`/`undefined`, before touching
+`.getExtraData()`. The two other `getBorderOpenStatus`/`adjustModelToBorderOpenStatus`
+helpers (`flex_layout_helper.ts`) were already safe, since they iterate over whatever
+borders actually exist in the model rather than assuming a hardcoded "right" border.
+
+### 0.18 Superseded §0.1/§0.16's restricted single-viewport layout with flexlayout's native maximize (2026-09-02, per Michael's request)
+
+Once §0.16 actually wired up the single-tab, no-right-border layout, Michael reported the
+regression this necessarily caused: no way to un-maximize the XY viewport (the "." shortcut
+had nothing to toggle - there was only ever one tab) and no way to open the right border's
+Skeleton tab (it didn't exist in that layout at all). He asked for the opposite design:
+start with XY maximized, but otherwise keep the *entire* normal WK layout and all its
+shortcuts available underneath.
+
+This is in fact the "maximize flexlayout mechanism" §0.1 explicitly considered and passed
+on at the time (see the note there) - it was deemed unnecessary complexity back when the
+requirement was only "restrict to XY, no unmaximize needed." With the requirement now
+reversed, it's the right tool. Implemented:
+
+- `default_layout_configs.ts`'s `getBigWarpWorkerLayoutConfig(baseLayout: ModelConfig)` no
+  longer builds a bespoke minimal layout. It now takes the *normal* layout config for
+  whatever `layoutKey`/`layoutName` a skeleton annotation would use in this context
+  (borders, all four viewports, the right border's Skeleton/Comment/Segments/etc. tabs -
+  all identical to any other WK annotation view), deep-clones it (`lodash-es/cloneDeep`,
+  since `getLayoutConfig`'s return value is a shared/memoized or Redux-owned object that
+  must not be mutated), and marks the tabset containing the `PLANE_XY` tab as
+  `maximized: true` via a small recursive `markTabsetAsMaximized` tree search. This is a
+  real, JSON-level attribute flexlayout-react itself understands at `Model.fromJson()` time
+  (confirmed by reading `node_modules/flexlayout-react/dist/index.js`: `if (json.maximized
+  === true) { layoutWindow.maximizedTabSet = newLayoutNode; }`) - so from flexlayout's own
+  perspective this is indistinguishable from the user having pressed "." themselves. Every
+  existing mechanism (the "." shortcut's `Actions.maximizeToggle`, `getMaximizedItemId`,
+  `adjustModelToBorderOpenStatus`'s auto-close-borders-while-maximized behavior, etc.) keeps
+  working exactly as-is - only the *initial* state differs.
+- `flex_layout_wrapper.tsx`'s `loadCurrentModel()` now always computes the normal
+  `baseLayout = getLayoutConfig(layoutKey, layoutName)` first, then only for
+  `bigwarpWorker` mode passes it through `getBigWarpWorkerLayoutConfig(baseLayout)`.
+- Left/right borders already start **closed** by default for BigWarp workers with no
+  BigWarp-specific code at all: `default_layout_configs.ts`'s `_getDefaultLayouts()` sets
+  `borderIsOpenByDefault = !getIsInIframe()`, and every worker is (by construction) loaded
+  in an iframe. §0.17's defensive `adaptModelToConditionalTabs` guard (right border node
+  may not exist) is now dead for BigWarp workers specifically (the right border is back),
+  but left in place since it's a correct guard regardless of layout shape.
+
 ### 0.3 Not started / explicitly out of scope for this pass
 
 - **Manual browser QA in progress** (started 2026-08-31, see §0.4) - the single bug
@@ -883,15 +1167,17 @@ Resolved: XY-only viewport restriction (§0.1, done via a dedicated single-tab F
 
 ## 11. File index (for quick navigation next session)
 
-- `frontend/javascripts/viewer/view/layouting/align_datasets_view.tsx` — the coordinator (§0.1 v1 rewrite; correspondence table redesigned in §0.6).
+- `frontend/javascripts/viewer/view/layouting/align_datasets_view.tsx` — the coordinator (§0.1 v1 rewrite; correspondence table redesigned in §0.6, `x`/`y` shortcut rename + landmark colors in §0.11; drawer now toggled via a `"bigwarpToggleDrawer"` postMessage from worker A's navbar instead of a portal-rendered button, §0.13).
 - `frontend/javascripts/viewer/view/action_bar/tools/toolbar_view.tsx` — `ToolSpecificSettings` hides `SkeletonSpecificButtons` for `bigwarpWorker` mode (§0.6).
-- `frontend/javascripts/viewer/api/cross_origin_api.ts` — iframe postMessage bridge; has the v1 additions (`ensureLandmarkGroups`, `importNmlIntoGroup`, `exportTreesInGroupAsNmlString`, `exportTreesByIdsAsNmlString`, the `bigwarpShortcut` keydown relay) plus `save` (§0.9, backs the "Force Save" button); the "init" handshake itself was rewritten in §0.10 (general WK correctness fix, not BigWarp-specific).
+- `frontend/javascripts/viewer/view/action_bar/save_actions.tsx` — `SaveActions` hides `SandboxActions` ("Sandbox" tag + "Copy To My Account") for `bigwarpWorker` mode, keeping `UndoRedoActions` (§0.11).
+- `frontend/javascripts/viewer/api/cross_origin_api.ts` — iframe postMessage bridge; has the v1 additions (`ensureLandmarkGroups`, `importNmlIntoGroup`, `exportTreesInGroupAsNmlString`, `exportTreesByIdsAsNmlString`, the `bigwarpShortcut` keydown relay, now `x`/`y` instead of `f`/`q` per §0.11) plus `save` (§0.9, backs the "Force Save" button); the "init" handshake itself was rewritten in §0.10 (general WK correctness fix, not BigWarp-specific).
 - `frontend/javascripts/viewer/api/api_latest.ts` — backing implementations of the above cross-origin commands.
-- `frontend/javascripts/viewer/controller.tsx` — `applyBigWarpWorkerSettingsIfNeeded()` (§0.1/§0.5) + the align-mode navigation blocker (§0.5).
-- `frontend/javascripts/viewer/view/layouting/default_layout_configs.ts` — `getBigWarpWorkerLayoutConfig()` (§0.1, XY-only viewport).
-- `frontend/javascripts/viewer/view/layouting/tracing_layout_view.tsx` — uses the above when `bigwarpWorker` is set.
-- `frontend/javascripts/router/router.tsx` — the `/align-datasets/:datasetNameAndId` route. `RootLayout` always renders `<Navbar />` again as of §0.5.
-- `frontend/javascripts/navbar.tsx` — restricts navigation-away affordances for `bigwarpWorker` mode while keeping the `navbarTracingSlot` portal target (§0.5); also hosts the `navbarAlignToolsSlot` portal target next to Help, used by the coordinator's own (unrestricted) navbar (§0.8).
+- `frontend/javascripts/viewer/controller.tsx` — `applyBigWarpWorkerSettingsIfNeeded()` (§0.1/§0.5, now also auto-jumps to a data position via `findDataPositionForLayer` per §0.11) + the align-mode navigation blocker (§0.5).
+- `frontend/javascripts/viewer/view/layouting/default_layout_configs.ts` — `getBigWarpWorkerLayoutConfig(baseLayout)` (originally XY-only/no-right-border in §0.1; as of §0.18 takes the normal layout and marks XY's tabset `maximized: true` instead, so the full layout/shortcuts stay available).
+- `frontend/javascripts/viewer/view/layouting/flex_layout_wrapper.tsx` — `loadCurrentModel()` actually applies `getBigWarpWorkerLayoutConfig()` for `bigwarpWorker` mode as of §0.16 (this, not `tracing_layout_view.tsx`, is where the rendered FlexLayout `Model` is built - §0.1's original wiring into `TracingLayoutView.state.model` was dead code, since that state is never read by the renderer); `adaptModelToConditionalTabs` guarded against a missing right border in §0.17 (no longer hit by BigWarp workers after §0.18, but a correct guard regardless).
+- `frontend/javascripts/viewer/view/layouting/tracing_layout_view.tsx` — no longer branches on `bigwarpWorker` itself as of §0.16; its `state.model` is just `FlexLayoutWrapper`'s pre-mount placeholder.
+- `frontend/javascripts/router/router.tsx` — the `/align-datasets/:datasetNameAndId` route. `RootLayout` rendered `<Navbar />` unconditionally as of §0.5, but as of §0.13 skips it entirely for that one route (the coordinator's own top-level navbar) - worker iframes' own navbars are a separate thing, unaffected.
+- `frontend/javascripts/navbar.tsx` — restricts navigation-away affordances for `bigwarpWorker` mode while keeping the `navbarTracingSlot` portal target (§0.5); drops the WK logo entirely for `bigwarpWorker` mode as of §0.11 (previously kept as a non-clickable label), then as of §0.13 brings it back **just for the left/"primary" worker** as a real `target="_top"` link, plus a "bigwarpToggleDrawer"-postMessage-sending "Alignment Tools" button - the `navbarAlignToolsSlot` portal target from §0.8 is gone (dead once the coordinator's own navbar stopped rendering).
 - `frontend/javascripts/viewer/model/accessors/tool_accessor.ts` — `Toolkit.BIGWARP_LANDMARKS` (§0.5).
 - `frontend/javascripts/viewer/view/action_bar_view.tsx` — `ModesView` hides the toolkit switcher for `bigwarpWorker` mode (§0.5).
 - `frontend/javascripts/viewer/model/sagas/settings_saga.ts` — `pushUserSettingsAsync`/`pushDatasetSettingsAsync` SANDBOX guards (§0.5, general WK bug fix, same class as §0.4's).

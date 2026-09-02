@@ -1,3 +1,4 @@
+import { findDataPositionForLayer } from "admin/rest_api";
 import app from "app";
 import BrainSpinner, { BrainSpinnerWithError, CoverWithLogin } from "components/brain_spinner";
 import { fetchGistContent } from "libs/gist";
@@ -20,9 +21,16 @@ import { initializeSceneController } from "viewer/controller/scene_controller";
 import UrlManager from "viewer/controller/url_manager";
 import FlightModeController from "viewer/controller/viewmodes/arbitrary_controller";
 import PlaneController from "viewer/controller/viewmodes/plane_controller";
-import { getAdditionalCoordinatesShiftedBy } from "viewer/model/accessors/flycam_accessor";
+import {
+  getAdditionalCoordinatesShiftedBy,
+  getMaxZoomValueForMag,
+} from "viewer/model/accessors/flycam_accessor";
 import { wkInitializedAction } from "viewer/model/actions/actions";
-import { setAdditionalCoordinatesAction } from "viewer/model/actions/flycam_actions";
+import {
+  setAdditionalCoordinatesAction,
+  setPositionAction,
+  setZoomStepAction,
+} from "viewer/model/actions/flycam_actions";
 import {
   exitingAnnotationAction,
   redoAction,
@@ -253,7 +261,7 @@ class Controller extends PureComponent<PropsWithRouter, State> {
   // the move/skeleton tools needed for landmark clicking. See BIGWARP_ALIGNMENT_PLAN.md §3.
   // None of this is persisted to the user's account/dataset defaults - see the
   // ControlModeEnum.SANDBOX guards added to settings_saga.ts for why that's safe.
-  applyBigWarpWorkerSettingsIfNeeded() {
+  async applyBigWarpWorkerSettingsIfNeeded() {
     if (!hasUrlParam("bigwarpWorker")) {
       return;
     }
@@ -261,6 +269,29 @@ class Controller extends PureComponent<PropsWithRouter, State> {
     Store.dispatch(updateDatasetSettingAction("nativelyRenderedLayerName", dominantLayerName));
     Store.dispatch(updateUserSettingAction("newNodeNewTree", true));
     Store.dispatch(updateUserSettingAction("activeToolkit", Toolkit.BIGWARP_LANDMARKS));
+
+    // Jump straight to a spot that actually contains data instead of leaving the
+    // camera at the sandbox's default position (often an empty corner of the
+    // bounding box) - reuses the same "Find data" lookup the layer settings tab
+    // exposes manually. No transform adjustment is needed for the found position
+    // since nativelyRenderedLayerName is pinned to this same layer above. See
+    // BIGWARP_ALIGNMENT_PLAN.md §0.11.
+    try {
+      const { dataset } = Store.getState();
+      const { position, mag } = await findDataPositionForLayer(
+        dataset.dataStore.url,
+        dataset,
+        dominantLayerName,
+      );
+      if (position != null && mag != null) {
+        Store.dispatch(setPositionAction(position));
+        Store.dispatch(
+          setZoomStepAction(getMaxZoomValueForMag(Store.getState(), dominantLayerName, mag)),
+        );
+      }
+    } catch (error) {
+      console.error("BigWarp: could not find a data position for", dominantLayerName, error);
+    }
   }
 
   async initTaskScript() {

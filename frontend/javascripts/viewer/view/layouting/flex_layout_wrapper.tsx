@@ -5,6 +5,7 @@ import type { Action, BorderNode, TabNode, TabSetNode } from "flexlayout-react";
 import { Actions, DockLocation, Layout as FlexLayoutComponent, Model } from "flexlayout-react";
 import { InputKeyboard } from "libs/input";
 import Toast from "libs/toast";
+import { hasUrlParam } from "libs/utils";
 import cloneDeep from "lodash-es/cloneDeep";
 import messages from "messages";
 import type React from "react";
@@ -27,6 +28,7 @@ import InputCatcher from "viewer/view/input_catcher";
 import type { LayoutKeys } from "viewer/view/layouting/default_layout_configs";
 import {
   DEFAULT_LAYOUT_NAME,
+  getBigWarpWorkerLayoutConfig,
   getTabDescriptorForBorderTab,
   resetDefaultLayouts,
 } from "viewer/view/layouting/default_layout_configs";
@@ -168,7 +170,16 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
 
   loadCurrentModel() {
     const { layoutName, layoutKey } = this.props;
-    const layout = getLayoutConfig(layoutKey, layoutName);
+    const baseLayout = getLayoutConfig(layoutKey, layoutName);
+    // BigWarp-style alignment workers start with the XY viewport maximized, but
+    // otherwise use the exact same layout/shortcuts as any other WK view - see
+    // BIGWARP_ALIGNMENT_PLAN.md §0.18. This is the actual place the rendered model is
+    // built (TracingLayoutView.setControllerStatus computes an initial state.model
+    // too, but that's just a placeholder immediately superseded once this component
+    // mounts and reports its real model back up).
+    const layout = hasUrlParam("bigwarpWorker")
+      ? getBigWarpWorkerLayoutConfig(baseLayout)
+      : baseLayout;
     const model = Model.fromJson(layout);
     return model;
   }
@@ -195,8 +206,14 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
      * tabs, too.
      */
     const rightBorderId = "right-border-tab-container";
+    const rightBorderNode = model.getNodeById(rightBorderId);
+    // BigWarp-style alignment workers use a layout with no right border at all - see
+    // BIGWARP_ALIGNMENT_PLAN.md §0.17.
+    if (rightBorderNode == null) {
+      return;
+    }
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'getExtraData' does not exist on type 'No... Remove this comment to see the full error message
-    const rightBorderModel = model.getNodeById(rightBorderId).getExtraData().model;
+    const rightBorderModel = rightBorderNode.getExtraData().model;
 
     if (rightBorderModel == null) {
       return;

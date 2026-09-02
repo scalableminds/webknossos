@@ -33,6 +33,7 @@ import DashboardView from "dashboard/dashboard_view";
 import PublicationDetailView from "dashboard/publication_details_view";
 import loadable from "libs/lazy_loader";
 import Navbar from "navbar";
+import { useEffect } from "react";
 import {
   createBrowserRouter,
   createRoutesFromElements,
@@ -40,6 +41,7 @@ import {
   Outlet,
   Route,
   redirect,
+  useLocation,
 } from "react-router-dom";
 import type { EmptyObject } from "types/type_utils";
 import { CommandPalette } from "viewer/view/components/command_palette";
@@ -85,14 +87,34 @@ const AsyncWorkflowListView = loadable<EmptyObject>(
 );
 
 function RootLayout() {
-  // Note: BigWarp-style alignment workers (viewer/view/layouting/align_datasets_view.tsx)
-  // keep this navbar - it's the only way to reach the tool/position/rotation
-  // controls, which live in a portal target rendered by Navbar. Navbar itself
-  // restricts navigation away from the page while `bigwarpWorker` is set.
+  // Note: BigWarp-style alignment workers (viewer/view/layouting/align_datasets_view.tsx,
+  // the two visible iframes) still keep THEIR OWN navbar - it's the only way to reach
+  // the tool/position/rotation controls, which live in a portal target rendered by
+  // Navbar. Navbar itself restricts navigation away from the page while `bigwarpWorker`
+  // is set. The *coordinator's own* top-level navbar (this component, for the
+  // /align-datasets route itself) is a different thing - it's dropped entirely below,
+  // to avoid stacking two navbar-height bars on top of each other (the coordinator's
+  // own, plus each worker iframe's). Navigation and the "Open Alignment Tools" trigger
+  // now live in the left worker's own navbar instead - see BIGWARP_ALIGNMENT_PLAN.md
+  // §0.13.
+  const location = useLocation();
+  const isAlignDatasetsCoordinator = location.pathname.startsWith("/align-datasets");
+  // body's global `padding-top: var(--navbar-height)` (main.less) assumes a navbar is
+  // always present - normally kept correct by Navbar's own banners re-measuring and
+  // re-setting this CSS variable on every mount (banners.tsx's useSetNavbarHeight), but
+  // since <Navbar/> doesn't render at all here, that never happens and the variable is
+  // just left at whatever it was before navigating here, leaving a phantom gap above
+  // the coordinator's content. No cleanup needed: navigating away remounts <Navbar/>,
+  // whose banners set the correct value again on their own via the same mechanism.
+  useEffect(() => {
+    if (isAlignDatasetsCoordinator) {
+      document.documentElement.style.setProperty("--navbar-height", "0px");
+    }
+  }, [isAlignDatasetsCoordinator]);
   return (
     <Layout style={{ height: "100%" }}>
       <CommandPalette />
-      <Navbar />
+      {!isAlignDatasetsCoordinator && <Navbar />}
       <Content>
         <ErrorBoundary>
           <Outlet />

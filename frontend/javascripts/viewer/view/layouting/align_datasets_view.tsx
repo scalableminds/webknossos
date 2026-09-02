@@ -20,7 +20,6 @@ import {
   type Transform,
   transformPointUnscaled,
 } from "viewer/model/helpers/transformation_helpers";
-import { RenderToPortal } from "viewer/view/layouting/portal_utils";
 
 // This is the "coordinator" of the BigWarp-style dataset alignment feature. See
 // BIGWARP_ALIGNMENT_PLAN.md for the full design (architecture decision in §3, this
@@ -62,22 +61,43 @@ type CorrespondenceRow = {
   key: number;
   posA: Vector3 | null | undefined;
   posB: Vector3 | null | undefined;
+  colorA: Vector3 | null | undefined;
+  colorB: Vector3 | null | undefined;
+  // Distance between posA and transformBtoA(posB) - i.e. how far apart this specific
+  // landmark pair still ends up after applying the *overall* least-squares transform.
+  // A high value relative to the other rows usually means this particular pair was
+  // clicked imprecisely (or mismatched), since all other pairs are "pulling" the fit
+  // away from it. Null until an alignment has actually been computed, or if either
+  // side of the pair doesn't exist (unmatched landmark).
+  residual: number | null;
 };
+
+type CorrespondenceEntry = { position: Vector3; color: Vector3 };
 
 // Pairs up landmarks positionally (the Nth tree/node on one side is assumed to
 // correspond to the Nth on the other), same as the original spike. Superseded by a
 // real id/name-based correspondence table once one exists - see
 // BIGWARP_ALIGNMENT_PLAN.md §9.
-function getCorrespondencePoints(trees: Awaited<ReturnType<typeof parseNml>>["trees"]): Vector3[] {
+function getCorrespondenceEntries(
+  trees: Awaited<ReturnType<typeof parseNml>>["trees"],
+): CorrespondenceEntry[] {
   const sortedTrees = Array.from(trees.values()).toSorted((a, b) => a.treeId - b.treeId);
-  const points: Vector3[] = [];
+  const entries: CorrespondenceEntry[] = [];
   for (const tree of sortedTrees) {
     const sortedNodes = Array.from(tree.nodes.values()).toSorted((a, b) => a.id - b.id);
     for (const node of sortedNodes) {
-      points.push(node.untransformedPosition);
+      entries.push({ position: node.untransformedPosition, color: tree.color });
     }
   }
-  return points;
+  return entries;
+}
+
+function rgbColorString(color: Vector3): string {
+  return `rgb(${color.map((c) => Math.round(c * 255)).join(",")})`;
+}
+
+function vectorLength(v: Vector3): number {
+  return Math.sqrt(v[0] ** 2 + v[1] ** 2 + v[2] ** 2);
 }
 
 function LayerPairPicker({
@@ -146,8 +166,8 @@ function AlignDatasetsView() {
     B: false,
   });
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [correspondencesA, setCorrespondencesA] = useState<Vector3[]>([]);
-  const [correspondencesB, setCorrespondencesB] = useState<Vector3[]>([]);
+  const [correspondencesA, setCorrespondencesA] = useState<CorrespondenceEntry[]>([]);
+  const [correspondencesB, setCorrespondencesB] = useState<CorrespondenceEntry[]>([]);
   const [transformBtoA, setTransformBtoA] = useState<Transform | null>(null);
   const [otherLayerVisible, setOtherLayerVisible] = useState<Record<Side, boolean>>({
     A: false,
@@ -201,9 +221,9 @@ function AlignDatasetsView() {
   const handleShortcut = useCallback((side: Side, key: string) => {
     if (key === "t") {
       onAlignRef.current();
-    } else if (key === "f") {
+    } else if (key === "x") {
       toggleShowOtherLayerRef.current(side);
-    } else if (key === "q") {
+    } else if (key === "y") {
       syncOtherViewToFocusedRef.current(side);
     }
   }, []);
@@ -232,6 +252,16 @@ function AlignDatasetsView() {
           handleShortcut("A", data.key);
         } else if (event.source === iframeRefs.current.B?.contentWindow) {
           handleShortcut("B", data.key);
+        }
+        return;
+      }
+
+      // Sent by the "Alignment Tools" button in worker A's own navbar - the
+      // coordinator's top-level navbar is gone (router.tsx's RootLayout), so this is
+      // now the only way to reach that toggle. See BIGWARP_ALIGNMENT_PLAN.md §0.13.
+      if (data.type === "bigwarpToggleDrawer") {
+        if (event.source === iframeRefs.current.A?.contentWindow) {
+          setDrawerOpen((open) => !open);
         }
         return;
       }
@@ -392,10 +422,8 @@ function AlignDatasetsView() {
         if (cancelled) {
           return;
         }
-        setCorrespondencesA(getCorrespondencePoints(treesA));
-        console.log("Set setCorrespondencesA to ", getCorrespondencePoints(treesA));
-        setCorrespondencesB(getCorrespondencePoints(treesB));
-        console.log("Set setCorrespondencesB to ", getCorrespondencePoints(treesB));
+        setCorrespondencesA(getCorrespondenceEntries(treesA));
+        setCorrespondencesB(getCorrespondenceEntries(treesB));
         setLastSyncedAt(Date.now());
         setLastSyncError(null);
 
@@ -440,15 +468,17 @@ function AlignDatasetsView() {
       );
       return;
     }
+    const positionsA = correspondencesA.map((entry) => entry.position);
+    const positionsB = correspondencesB.map((entry) => entry.position);
     try {
-      checkLandmarksForThinPlateSpline(correspondencesB, correspondencesA);
+      checkLandmarksForThinPlateSpline(positionsB, positionsA);
     } catch {
       Toast.warning(
         "The current landmarks all lie in (roughly) one plane, which isn't enough to estimate a 3D transform. Add a landmark outside the current plane.",
       );
       return;
     }
-    const transform = createAffineTransform(correspondencesB, correspondencesA);
+    const transform = createAffineTransform(positionsB, positionsA);
     setTransformBtoA(transform);
     if (layerAName != null && layerBName != null) {
       await sendMessage("A", "setAffineLayerTransforms", [layerBName, transform.affineMatrix]);
@@ -562,7 +592,11 @@ function AlignDatasetsView() {
     if (dataset == null || layerAName == null) {
       return undefined;
     }
-    return `/datasets/${dataset.name}-${dataset.id}/sandbox/skeleton?bigwarpWorker=${encodeURIComponent(layerAName)}`;
+    // bigwarpPrimary marks A as the "left" worker whose own navbar hosts the
+    // dashboard link (forwarded to the top-level page via target="_top") and the
+    // "Alignment Tools" drawer toggle, now that the coordinator's own top-level
+    // navbar is gone. See BIGWARP_ALIGNMENT_PLAN.md §0.13.
+    return `/datasets/${dataset.name}-${dataset.id}/sandbox/skeleton?bigwarpWorker=${encodeURIComponent(layerAName)}&bigwarpPrimary=true`;
   }, [dataset, layerAName]);
   const workerBSrc = useMemo(() => {
     if (dataset == null || layerBName == null) {
@@ -604,39 +638,82 @@ function AlignDatasetsView() {
     },
     {
       title: layerAName,
-      dataIndex: "posA",
       key: "posA",
-      width: 160,
+      width: 180,
       align: "center",
-      render: (pos: Vector3 | undefined) =>
-        pos != null ? (
+      render: (_value, row) =>
+        row.posA != null ? (
           <span>
-            {pos?.join(", ")} <EyeOutlined onClick={() => onFocusCorrespondenceSide("A", pos)} />
+            <span
+              style={{
+                display: "inline-block",
+                width: 10,
+                height: 10,
+                borderRadius: "50%",
+                background: row.colorA != null ? rgbColorString(row.colorA) : undefined,
+                marginRight: 4,
+              }}
+            />
+            {row.posA.join(", ")}{" "}
+            <EyeOutlined
+              onClick={() => row.posA != null && onFocusCorrespondenceSide("A", row.posA)}
+            />
           </span>
         ) : null,
     },
     {
       title: layerBName,
-      dataIndex: "posB",
       key: "posB",
-      width: 160,
+      width: 180,
       align: "center",
-      render: (pos: Vector3 | undefined) =>
-        pos != null ? (
+      render: (_value, row) =>
+        row.posB != null ? (
           <span>
-            {pos.join(", ")} <EyeOutlined onClick={() => onFocusCorrespondenceSide("B", pos)} />
+            <span
+              style={{
+                display: "inline-block",
+                width: 10,
+                height: 10,
+                borderRadius: "50%",
+                background: row.colorB != null ? rgbColorString(row.colorB) : undefined,
+                marginRight: 4,
+              }}
+            />
+            {row.posB.join(", ")}{" "}
+            <EyeOutlined
+              onClick={() => row.posB != null && onFocusCorrespondenceSide("B", row.posB)}
+            />
           </span>
         ) : (
           "–"
         ),
     },
+    {
+      title: "Error",
+      key: "residual",
+      width: 70,
+      align: "center",
+      render: (_value, row) => (row.residual != null ? row.residual.toFixed(1) : "–"),
+    },
   ];
   const tableData: CorrespondenceRow[] = zip(correspondencesA, correspondencesB).map(
-    ([posA, posB], index) => ({
-      key: index,
-      posA,
-      posB,
-    }),
+    ([entryA, entryB], index) => {
+      const posA = entryA?.position;
+      const posB = entryB?.position;
+      let residual: number | null = null;
+      if (transformBtoA != null && posA != null && posB != null) {
+        const posBInA = transformPointUnscaled(transformBtoA)(posB);
+        residual = vectorLength([posA[0] - posBInA[0], posA[1] - posBInA[1], posA[2] - posBInA[2]]);
+      }
+      return {
+        key: index,
+        posA,
+        colorA: entryA?.color,
+        posB,
+        colorB: entryB?.color,
+        residual,
+      };
+    },
   );
 
   return (
@@ -667,15 +744,15 @@ function AlignDatasetsView() {
           </Space>
           <Space wrap>
             <Button onClick={() => toggleShowOtherLayer("A")}>
-              {otherLayerVisible.A ? "Hide" : "Show"} {layerBName} in {layerAName} view (f)
+              {otherLayerVisible.A ? "Hide" : "Show"} {layerBName} in {layerAName} view (x)
             </Button>
             <Button onClick={() => toggleShowOtherLayer("B")}>
-              {otherLayerVisible.B ? "Hide" : "Show"} {layerAName} in {layerBName} view (f)
+              {otherLayerVisible.B ? "Hide" : "Show"} {layerAName} in {layerBName} view (x)
             </Button>
           </Space>
           <Typography.Text type="secondary">
-            While a view has keyboard focus: <b>t</b> aligns, <b>f</b> toggles the other layer in
-            that view, <b>q</b> syncs the other view to that view's position.
+            While a view has keyboard focus: <b>t</b> aligns, <b>x</b> toggles the other layer in
+            that view, <b>y</b> syncs the other view to that view's position.
           </Typography.Text>
           <Typography.Text
             type={lastSyncError != null ? "danger" : "secondary"}
@@ -698,11 +775,6 @@ function AlignDatasetsView() {
           />
         </Space>
       </Drawer>
-      <RenderToPortal portalId="navbarAlignToolsSlot">
-        <Button type="primary" onClick={() => setDrawerOpen((open) => !open)}>
-          {drawerOpen ? "Close Alignment Tools" : "Open Alignment Tools"}
-        </Button>
-      </RenderToPortal>
       <div className="adv-worker">
         <iframe
           ref={(el) => {
@@ -712,7 +784,6 @@ function AlignDatasetsView() {
           style={{
             width: "100%",
             height: "100%",
-            borderTop: "4px solid var(--ant-color-primary)",
             borderRight: "2px solid var(--ant-color-primary)",
           }}
           src={workerASrc}
@@ -727,7 +798,6 @@ function AlignDatasetsView() {
           style={{
             width: "100%",
             height: "100%",
-            borderTop: "4px solid var(--ant-color-primary)",
             borderLeft: "2px solid var(--ant-color-primary)",
           }}
           src={workerBSrc}

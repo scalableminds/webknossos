@@ -24,6 +24,7 @@ import type { MenuProps } from "antd";
 import {
   Avatar,
   Badge,
+  Button,
   ConfigProvider,
   Flex,
   Input,
@@ -884,34 +885,68 @@ function Navbar() {
   // leaving loses that worker's yet-to-be-synced landmarks and breaks the tool's
   // dual-iframe setup. See BIGWARP_ALIGNMENT_PLAN.md §5.3.
   const isBigWarpWorker = hasUrlParam("bigwarpWorker");
-  const menuItems: ItemType[] = [
-    {
-      key: "0",
-      label: isBigWarpWorker ? (
-        <span style={{ verticalAlign: "middle", cursor: "default" }}>
-          {getCollapsibleMenuTitle(
-            "WEBKNOSSOS",
-            <Icon component={WkLogoIcon} className="logo icon-margin-right" />,
-            collapseAllNavItems,
-          )}
-        </span>
-      ) : (
-        <Link
-          to="/dashboard"
-          style={{
-            verticalAlign: "middle",
-          }}
-        >
-          {getCollapsibleMenuTitle(
-            "WEBKNOSSOS",
-            <Icon component={WkLogoIcon} className="logo icon-margin-right" />,
-            collapseAllNavItems,
-          )}
-        </Link>
-      ),
-    },
-  ];
+  // The coordinator's own top-level navbar is dropped entirely for the
+  // /align-datasets route (router.tsx's RootLayout), to avoid stacking it on top of
+  // each worker iframe's own navbar - so the *left* ("primary") worker's navbar is now
+  // the only place left to reach the dashboard and to toggle the coordinator's
+  // alignment-tools drawer. See BIGWARP_ALIGNMENT_PLAN.md §0.13.
+  const isBigWarpPrimaryWorker = isBigWarpWorker && hasUrlParam("bigwarpPrimary");
+  // The right worker still drops the logo entirely - it isn't useful there, and
+  // showing it on both sides would just reintroduce the "double chrome" feeling this
+  // was meant to fix.
+  const menuItems: ItemType[] =
+    isBigWarpWorker && !isBigWarpPrimaryWorker
+      ? []
+      : [
+          {
+            key: "0",
+            label: isBigWarpPrimaryWorker ? (
+              // target="_top" makes the browser navigate the outermost page instead of
+              // this iframe - the standard, built-in way for an iframe to forward a
+              // navigation to its parent, no postMessage plumbing needed.
+              <Link
+                to="/dashboard"
+                target="_top"
+                style={{
+                  verticalAlign: "middle",
+                }}
+              >
+                {getCollapsibleMenuTitle(
+                  "WEBKNOSSOS",
+                  <Icon component={WkLogoIcon} className="logo icon-margin-right" />,
+                  collapseAllNavItems,
+                )}
+              </Link>
+            ) : (
+              <Link
+                to="/dashboard"
+                style={{
+                  verticalAlign: "middle",
+                }}
+              >
+                {getCollapsibleMenuTitle(
+                  "WEBKNOSSOS",
+                  <Icon component={WkLogoIcon} className="logo icon-margin-right" />,
+                  collapseAllNavItems,
+                )}
+              </Link>
+            ),
+          },
+        ];
   const trailingNavItems = [];
+
+  if (isBigWarpPrimaryWorker) {
+    trailingNavItems.push(
+      <Button
+        key="bigwarp-toggle-drawer"
+        type="primary"
+        size="small"
+        onClick={() => window.parent.postMessage({ type: "bigwarpToggleDrawer" }, "*")}
+      >
+        Alignment Tools
+      </Button>,
+    );
+  }
 
   if (isAuthenticated && !isBigWarpWorker) {
     const loggedInUser: APIUser = activeUser;
@@ -960,6 +995,9 @@ function Navbar() {
   // since this makes the icons appear more crowded.
   const selectedKeys = collapseAllNavItems ? [] : [historyLocation.pathname];
   const separator = <div className="navbar-separator" />;
+  // The right worker's menuItems is empty (no logo, see above), so the separator would
+  // otherwise render as an orphaned vertical line with nothing to its left.
+  const showSeparator = isInAnnotationView && !(isBigWarpWorker && !isBigWarpPrimaryWorker);
 
   return (
     <Header
@@ -988,14 +1026,7 @@ function Navbar() {
         disabledOverflow
         items={menuItems}
       />
-      {/* Lets align_datasets_view.tsx (the BigWarp coordinator page) render its
-      "Open Alignment Tools" button here, next to Help, instead of floating over its
-      iframes. Empty on every other page. */}
-      <PortalTarget
-        portalId="navbarAlignToolsSlot"
-        style={{ display: "flex", alignItems: "center", marginLeft: 16 }}
-      />
-      {isInAnnotationView ? separator : null}
+      {showSeparator ? separator : null}
       <HelpModal
         isModalOpen={isHelpModalOpen}
         onCancel={() => setIsHelpModalOpen(false)}

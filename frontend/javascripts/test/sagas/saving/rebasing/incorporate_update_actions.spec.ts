@@ -667,14 +667,14 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
 
       expect(result?.success).toBe(true);
       const mapping = Store.getState().temporaryConfiguration.activeMappingByLayer[tracingId]
-        ?.mapping as Map<bigint, bigint> | undefined;
+        ?.mapping as Map<number, number> | undefined;
       // segmentId1 (1n) always keeps its agglomerate id; segmentId2 (2n, and 3n which hangs off of
       // it) get split off into a new agglomerate id. The exact new id is an internal detail of the
       // (already thoroughly tested elsewhere, see proofreading_split_mapping.spec.ts) mapping-split
       // machinery, so this only asserts the split actually happened, not which id it produced.
-      expect(mapping?.get(1n)).toBe(1n);
-      expect(mapping?.get(2n)).not.toBe(1n);
-      expect(mapping?.get(2n)).toBe(mapping?.get(3n));
+      expect(mapping?.get(1)).toBe(1);
+      expect(mapping?.get(2)).not.toBe(1);
+      expect(mapping?.get(2)).toBe(mapping?.get(3));
       expect(result?.artifactInfos.meshIdsToRemovePerLayer.get(tracingId)?.has(1n)).toBe(true);
       expect(result?.artifactInfos.meshesToLoadPerLayer.get(tracingId)?.size).toBeGreaterThan(0);
     });

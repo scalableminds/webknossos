@@ -6,7 +6,7 @@ import com.google.inject.name.Named
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.helpers.{IntervalScheduler, UPath}
@@ -28,44 +28,27 @@ import com.scalableminds.webknossos.datastore.services.uploading.{
 import com.scalableminds.webknossos.datastore.storage.DataVaultCredential
 import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
-import play.api.libs.json.{Json, OFormat}
 
 import java.nio.file.Path
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.*
 
-case class DataStoreStatus(ok: Boolean, url: String)
-object DataStoreStatus {
-  implicit val jsonFormat: OFormat[DataStoreStatus] = Json.format[DataStoreStatus]
-}
+case class DataStoreStatus(ok: Boolean, url: String) derives JsonAutoFormat
 
 case class DataSourceWithRootPathInfo(dataSource: DataSource, rootPath: Option[String], rootRealPath: Option[String])
-object DataSourceWithRootPathInfo {
-  implicit val jsonFormat: OFormat[DataSourceWithRootPathInfo] = Json.format[DataSourceWithRootPathInfo]
-}
+    derives JsonAutoFormat
 
-case class TracingStoreInfo(name: String, url: String)
-object TracingStoreInfo {
-  implicit val jsonFormat: OFormat[TracingStoreInfo] = Json.format[TracingStoreInfo]
-}
+case class TracingStoreInfo(name: String, url: String) derives JsonAutoFormat
 
 case class DataSourcePathInfo(
     dataSourceId: DataSourceId,
     magPathInfos: Seq[RealPathInfo],
     attachmentPathInfos: Seq[RealPathInfo]
-) {
+) derives JsonAutoFormat {
   def nonEmpty: Boolean = magPathInfos.nonEmpty || attachmentPathInfos.nonEmpty
 }
 
-object DataSourcePathInfo {
-  implicit val jsonFormat: OFormat[DataSourcePathInfo] = Json.format[DataSourcePathInfo]
-}
-
-case class RealPathInfo(path: UPath, realPath: UPath, hasLocalData: Boolean)
-
-object RealPathInfo {
-  implicit val jsonFormat: OFormat[RealPathInfo] = Json.format[RealPathInfo]
-}
+case class RealPathInfo(path: UPath, realPath: UPath, hasLocalData: Boolean) derives JsonAutoFormat
 
 trait RemoteWebknossosClient {
   def requestUserAccess(accessRequest: UserAccessRequest)(using tc: TokenContext): Fox[UserAccessAnswer]

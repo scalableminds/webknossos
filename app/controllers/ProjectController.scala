@@ -2,12 +2,12 @@ package controllers
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
 import models.project.*
 import models.task.*
 import models.user.UserService
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import play.silhouette.api.Silhouette
 import play.silhouette.api.actions.SecuredRequest
@@ -24,15 +24,9 @@ case class ProjectParameters(
     expectedTime: Option[Long],
     owner: ObjectId,
     isBlacklistedFromReport: Boolean
-)
-object ProjectParameters {
-  implicit val jsonFormat: OFormat[ProjectParameters] = Json.format[ProjectParameters]
-}
+) derives JsonAutoFormat
 
-case class TransferActiveTasksParameters(userId: ObjectId)
-object TransferActiveTasksParameters {
-  implicit val jsonFormat: OFormat[TransferActiveTasksParameters] = Json.format[TransferActiveTasksParameters]
-}
+case class TransferActiveTasksParameters(userId: ObjectId) derives JsonAutoFormat
 
 class ProjectController @Inject() (
     projectService: ProjectService,

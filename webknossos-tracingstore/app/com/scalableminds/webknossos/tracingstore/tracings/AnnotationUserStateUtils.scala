@@ -228,24 +228,26 @@ trait AnnotationUserStateUtils extends BoundingBoxMerger with IdWithBoolUtils {
   private def mapIdBool(idToBools: Id32WithBool, functionalIdMapping: FunctionalGroupMapping): Id32WithBool =
     idToBools.copy(id = functionalIdMapping(idToBools.id))
 
-  // Merges user states of multiple skeleton tracings, respecting mapped ids of the tracing elements. The user set is preserved
+  // Merges user states of multiple skeleton tracings, respecting mapped ids of the tracing elements. The user set is preserved.
+  // Tracing A's ids are never remapped (see TreeUtils/GroupUtils/BoundingBoxMerger), so only B's user state needs id mapping.
   protected def mergeSkeletonUserStates(
       tracingAUserStates: Seq[SkeletonUserStateProto],
       tracingBUserStates: Seq[SkeletonUserStateProto],
-      groupMapping: FunctionalGroupMapping,
-      treeIdMapA: TreeIdMap,
+      groupMappingB: FunctionalGroupMapping,
       treeIdMapB: TreeIdMap,
-      bboxIdMapA: UserBboxIdMap,
       bboxIdMapB: UserBboxIdMap
   ): Seq[SkeletonUserStateProto] = {
-    val tracingAUserStatesMapped =
-      tracingAUserStates.map(applyIdMappingsOnSkeletonUserState(_, groupMapping, treeIdMapA, bboxIdMapA))
     val tracingBUserStatesMapped = tracingBUserStates
-      .map(userState => userState.copy(treeVisibilities = mapId32Bools(userState.treeVisibilities, treeIdMapB)))
+      .map(userState =>
+        userState.copy(
+          treeVisibilities = mapId32Bools(userState.treeVisibilities, treeIdMapB),
+          treeGroupExpandedStates = mapIdBools(userState.treeGroupExpandedStates, groupMappingB)
+        )
+      )
       .map(applyBboxIdMapOnSkeletonUserState(_, bboxIdMapB))
 
     val byUserId = scala.collection.mutable.Map[String, SkeletonUserStateProto]()
-    tracingAUserStatesMapped.foreach { userState =>
+    tracingAUserStates.foreach { userState =>
       byUserId.put(userState.userId, userState)
     }
     tracingBUserStatesMapped.foreach { userState =>
@@ -271,17 +273,6 @@ trait AnnotationUserStateUtils extends BoundingBoxMerger with IdWithBoolUtils {
       treeVisibilities = tracingAUserState.treeVisibilities ++ tracingBUserState.treeVisibilities
     )
 
-  private def applyIdMappingsOnSkeletonUserState(
-      userStateA: SkeletonUserStateProto,
-      groupMapping: FunctionalGroupMapping,
-      treeIdMapA: TreeIdMap,
-      bboxIdMapA: Map[Int, Int]
-  ): SkeletonUserStateProto =
-    applyBboxIdMapOnSkeletonUserState(userStateA, bboxIdMapA).copy(
-      treeGroupExpandedStates = mapIdBools(userStateA.treeGroupExpandedStates, groupMapping),
-      treeVisibilities = mapId32Bools(userStateA.treeVisibilities, treeIdMapA)
-    )
-
   private def applyBboxIdMapOnSkeletonUserState(
       userState: SkeletonUserStateProto,
       bboxIdMap: Map[Int, Int]
@@ -296,26 +287,27 @@ trait AnnotationUserStateUtils extends BoundingBoxMerger with IdWithBoolUtils {
     userState.copy(boundingBoxVisibilities = newVisibilities)
   }
 
-  // Merges user states of multiple skeleton tracings, respecting mapped ids of the tracing elements. The user set is preserved
+  // Merges user states of multiple volume tracings, respecting mapped ids of the tracing elements. The user set is preserved.
+  // Tracing A's ids are never remapped (see GroupUtils/BoundingBoxMerger/MergedVolume), so only B's user state needs id mapping.
   protected def mergeVolumeUserStates(
       tracingAUserStates: Seq[VolumeUserStateProto],
       tracingBUserStates: Seq[VolumeUserStateProto],
-      groupMappingA: FunctionalGroupMapping,
+      groupMappingB: FunctionalGroupMapping,
       segmentIdMapB: Map[Long, Long],
-      bboxIdMapA: UserBboxIdMap,
       bboxIdMapB: UserBboxIdMap
   ): Seq[VolumeUserStateProto] = {
-    val tracingAUserStatesMapped =
-      tracingAUserStates.map(applyIdMappingsOnVolumeUserState(_, groupMappingA, bboxIdMapA))
     val tracingBUserStatesMapped =
       tracingBUserStates
         .map(userState =>
-          userState.copy(segmentVisibilities = mapId64Bools(userState.segmentVisibilities, segmentIdMapB))
+          userState.copy(
+            segmentVisibilities = mapId64Bools(userState.segmentVisibilities, segmentIdMapB),
+            segmentGroupExpandedStates = mapIdBools(userState.segmentGroupExpandedStates, groupMappingB)
+          )
         )
         .map(applyBboxIdMapOnVolumeUserState(_, bboxIdMapB))
 
     val byUserId = scala.collection.mutable.Map[String, VolumeUserStateProto]()
-    tracingAUserStatesMapped.foreach { userState =>
+    tracingAUserStates.foreach { userState =>
       byUserId.put(userState.userId, userState)
     }
     tracingBUserStatesMapped.foreach { userState =>
@@ -340,15 +332,6 @@ trait AnnotationUserStateUtils extends BoundingBoxMerger with IdWithBoolUtils {
         tracingAUserState.segmentGroupExpandedStates ++ tracingBUserState.segmentGroupExpandedStates,
       boundingBoxVisibilities = tracingAUserState.boundingBoxVisibilities ++ tracingBUserState.boundingBoxVisibilities,
       segmentVisibilities = tracingAUserState.segmentVisibilities ++ tracingBUserState.segmentVisibilities
-    )
-
-  private def applyIdMappingsOnVolumeUserState(
-      userStateA: VolumeUserStateProto,
-      groupMappingA: FunctionalGroupMapping,
-      bboxIdMapA: Map[Int, Int]
-  ): VolumeUserStateProto =
-    applyBboxIdMapOnVolumeUserState(userStateA, bboxIdMapA).copy(
-      segmentGroupExpandedStates = mapIdBools(userStateA.segmentGroupExpandedStates, groupMappingA)
     )
 
   private def applyBboxIdMapOnVolumeUserState(

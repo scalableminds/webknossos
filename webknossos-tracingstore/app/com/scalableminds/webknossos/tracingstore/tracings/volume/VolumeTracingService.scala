@@ -861,12 +861,14 @@ class VolumeTracingService @Inject() (
   ): Box[VolumeTracing] = {
     val largestSegmentId =
       combineLargestSegmentIdsByMaxDefined(tracingA.largestSegmentId, tracingB.largestSegmentId)
-    val groupMappingA = GroupUtils.calculateSegmentGroupMapping(tracingA.segmentGroups, tracingB.segmentGroups)
-    val mergedGroups = GroupUtils.mergeSegmentGroups(tracingA.segmentGroups, tracingB.segmentGroups, groupMappingA)
+    val groupMappingB = GroupUtils.calculateSegmentGroupMapping(tracingA.segmentGroups, tracingB.segmentGroups)
+    val mergedGroups = GroupUtils.mergeSegmentGroups(tracingA.segmentGroups, tracingB.segmentGroups, groupMappingB)
     val mergedBoundingBox = combineBoundingBoxes(Some(tracingA.boundingBox), Some(tracingB.boundingBox))
+    // Tracing A's segment ids are never remapped; tracing B's are (see MergedVolume), matching the
+    // A-fixed/B-remapped convention also used for segment groups, tree/node ids and bounding boxes.
     val segmentIdMapB =
       if (indexB >= mergedVolumeStats.idMaps.length) Map.empty[Long, Long] else mergedVolumeStats.idMaps(indexB)
-    val (mergedUserBoundingBoxes, bboxIdMapA, bboxIdMapB) = combineUserBoundingBoxes(
+    val (mergedUserBoundingBoxes, bboxIdMapB) = combineUserBoundingBoxes(
       tracingA.userBoundingBox,
       tracingB.userBoundingBox,
       tracingA.userBoundingBoxes,
@@ -876,9 +878,8 @@ class VolumeTracingService @Inject() (
       mergeVolumeUserStates(
         tracingA.userStates,
         tracingB.userStates,
-        groupMappingA,
+        groupMappingB,
         segmentIdMapB,
-        bboxIdMapA,
         bboxIdMapB
       )
     for {
@@ -894,8 +895,8 @@ class VolumeTracingService @Inject() (
             )
           }
         }
-      tracingASegments = tracingA.segments.map(s =>
-        s.groupId.map(groupId => s.copy(groupId = Some(groupMappingA(groupId)))).getOrElse(s)
+      tracingBSegmentsMapped = tracingBSegments.map(s =>
+        s.groupId.map(groupId => s.copy(groupId = Some(groupMappingB(groupId)))).getOrElse(s)
       )
     } yield tracingA.copy(
       largestSegmentId = largestSegmentId,
@@ -904,7 +905,7 @@ class VolumeTracingService @Inject() (
           .BoundingBoxProto(com.scalableminds.webknossos.datastore.geometry.Vec3IntProto(0, 0, 0), 0, 0, 0)
       ), // should never be empty for volumes
       userBoundingBoxes = mergedUserBoundingBoxes,
-      segments = (tracingASegments ++ tracingBSegments).distinctBy(_.segmentId),
+      segments = (tracingA.segments ++ tracingBSegmentsMapped).distinctBy(_.segmentId),
       segmentGroups = mergedGroups,
       additionalAxes = AdditionalAxis.toProto(mergedAdditionalAxes),
       userStates = userStates

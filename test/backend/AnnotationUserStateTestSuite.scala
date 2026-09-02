@@ -79,9 +79,8 @@ class AnnotationUserStateTestSuite extends AsyncWordSpec with AnnotationUserStat
       val mergedUserStates = mergeVolumeUserStates(
         tracingAUserStates,
         tracingBUserStates,
-        groupMappingA = (groupId: Int) => groupId + 5,
+        groupMappingB = (groupId: Int) => groupId + 5,
         segmentIdMapB,
-        Map.empty,
         Map.empty
       )
       assert(
@@ -90,7 +89,7 @@ class AnnotationUserStateTestSuite extends AsyncWordSpec with AnnotationUserStat
             .emptyUserState(userAId)
             .copy(
               segmentVisibilities = Seq(Id64WithBool(1, true), Id64WithBool(2L, false)),
-              segmentGroupExpandedStates = Seq(Id32WithBool(6, true), Id32WithBool(1, false))
+              segmentGroupExpandedStates = Seq(Id32WithBool(1, true), Id32WithBool(6, false))
             )
         )
       )

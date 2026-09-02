@@ -1,6 +1,7 @@
 import { MailOutlined, SaveOutlined } from "@ant-design/icons";
 import { SettingsCard } from "admin/account/helpers/settings_card";
 import { SettingsTitle } from "admin/account/helpers/settings_title";
+import { unwrapOrThrow } from "admin/api/api_result";
 import { updateOrganization } from "admin/api/organization";
 import { getUsers } from "admin/rest_api";
 import { Button, Col, Form, Input, Row } from "antd";
@@ -28,7 +29,7 @@ export function OrganizationNotificationsView() {
 
   useEffect(() => {
     async function fetchOwnerEmail() {
-      const users = await getUsers();
+      const users = unwrapOrThrow(await getUsers());
       const owner = users.find(
         (user) => user.isOrganizationOwner && user.organization === organization.id,
       );

@@ -29,11 +29,11 @@ trait FoxToResultHelpers extends Formatter with RemoteOriginHelpers with HeaderN
 
   extension [R[_], B](ab: ActionBuilder[R, B])
     def fox(block: R[B] => Fox[Result])(using ec: ExecutionContext): Action[B] =
-      ab.async(req => block(req).futureBox.map(asResult))
+      ab.async(req => block(req).futureBox.map(boxToResult))
     def fox[A](bodyParser: BodyParser[A])(block: R[A] => Fox[Result])(using ec: ExecutionContext): Action[A] =
-      ab.async(bodyParser)(req => block(req).futureBox.map(asResult))
+      ab.async(bodyParser)(req => block(req).futureBox.map(boxToResult))
 
-  private def asResult[T <: Result](b: Box[T]): Result = {
+  protected def boxToResult[T <: Result](b: Box[T]): Result = {
     val result = b match {
       case Full(result) =>
         result

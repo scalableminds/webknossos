@@ -512,3 +512,28 @@ body {
     margin-top: 0 !important;
   }
 }
+
+
+
+
+// BigWarp-style dataset alignment coordinator (align_datasets_view.tsx): the two
+// worker iframes side by side. The tool UI itself lives in an antd Drawer, which is
+// positioned independently and doesn't need a dedicated grid column.
+.adv-parent {
+  display: flex;
+  height: 100%;
+
+  .adv-worker {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  
+  .adv-worker {
+  &:nth-of-type(1) iframe {
+    border-right: 2px solid var(--ant-color-primary, #5660ff);
+  }
+  &:nth-of-type(2) iframe {
+    border-left: 2px solid var(--ant-color-primary, #5660ff);
+  }
+}
+}

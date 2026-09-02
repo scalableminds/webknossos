@@ -24,6 +24,7 @@ import type { MenuProps } from "antd";
 import {
   Avatar,
   Badge,
+  Button,
   ConfigProvider,
   Flex,
   Input,
@@ -47,6 +48,7 @@ import { TAB_SESSION_ID as SESSION_ID } from "libs/tab_session_id";
 import Toast from "libs/toast";
 import {
   filterWithSearchQueryAND,
+  hasUrlParam,
   isUserAdmin,
   isUserAdminOrManager,
   isUserAdminOrTeamManager,
@@ -877,28 +879,76 @@ function Navbar() {
   const isAdminOrManager = isUserAdminOrManager(activeUser);
   const collapseAllNavItems = isInAnnotationView;
   const hideNavbarLogin = features().hideNavbarLogin || !hasOrganizations;
-  const menuItems: ItemType[] = [
-    {
-      key: "0",
-      label: (
-        <Link
-          to="/dashboard"
-          style={{
-            verticalAlign: "middle",
-          }}
-        >
-          {getCollapsibleMenuTitle(
-            "WEBKNOSSOS",
-            <Icon component={WkLogoIcon} className="logo icon-margin-right" />,
-            collapseAllNavItems,
-          )}
-        </Link>
-      ),
-    },
-  ];
+  // BigWarp-style alignment workers (viewer/view/layouting/align_datasets_view.tsx)
+  // need this navbar for its tool/position/rotation controls (rendered into the
+  // PortalTarget below), but must not offer a way to navigate away from the page -
+  // leaving loses that worker's yet-to-be-synced landmarks and breaks the tool's
+  // dual-iframe setup. See BIGWARP_ALIGNMENT_PLAN.md §5.3.
+  const isBigWarpWorker = hasUrlParam("bigwarpWorker");
+  // The coordinator's own top-level navbar is dropped entirely for the
+  // /align-datasets route (router.tsx's RootLayout), to avoid stacking it on top of
+  // each worker iframe's own navbar - so the *left* ("primary") worker's navbar is now
+  // the only place left to reach the dashboard and to toggle the coordinator's
+  // alignment-tools drawer. See BIGWARP_ALIGNMENT_PLAN.md §0.13.
+  const isBigWarpPrimaryWorker = isBigWarpWorker && hasUrlParam("bigwarpPrimary");
+  // The right worker still drops the logo entirely - it isn't useful there, and
+  // showing it on both sides would just reintroduce the "double chrome" feeling this
+  // was meant to fix.
+  const menuItems: ItemType[] =
+    isBigWarpWorker && !isBigWarpPrimaryWorker
+      ? []
+      : [
+          {
+            key: "0",
+            label: isBigWarpPrimaryWorker ? (
+              // target="_top" makes the browser navigate the outermost page instead of
+              // this iframe - the standard, built-in way for an iframe to forward a
+              // navigation to its parent, no postMessage plumbing needed.
+              <Link
+                to="/dashboard"
+                target="_top"
+                style={{
+                  verticalAlign: "middle",
+                }}
+              >
+                {getCollapsibleMenuTitle(
+                  "WEBKNOSSOS",
+                  <Icon component={WkLogoIcon} className="logo icon-margin-right" />,
+                  collapseAllNavItems,
+                )}
+              </Link>
+            ) : (
+              <Link
+                to="/dashboard"
+                style={{
+                  verticalAlign: "middle",
+                }}
+              >
+                {getCollapsibleMenuTitle(
+                  "WEBKNOSSOS",
+                  <Icon component={WkLogoIcon} className="logo icon-margin-right" />,
+                  collapseAllNavItems,
+                )}
+              </Link>
+            ),
+          },
+        ];
   const trailingNavItems = [];
 
-  if (isAuthenticated) {
+  if (isBigWarpPrimaryWorker) {
+    trailingNavItems.push(
+      <Button
+        key="bigwarp-toggle-drawer"
+        type="primary"
+        size="small"
+        onClick={() => window.parent.postMessage({ type: "bigwarpToggleDrawer" }, "*")}
+      >
+        Alignment Tools
+      </Button>,
+    );
+  }
+
+  if (isAuthenticated && !isBigWarpWorker) {
     const loggedInUser: APIUser = activeUser;
     menuItems.push(getDashboardSubMenu(collapseAllNavItems));
     menuItems.push(getAnalysisSubMenu(collapseAllNavItems));
@@ -925,24 +975,29 @@ function Navbar() {
     );
   }
 
-  if (!(isAuthenticated || hideNavbarLogin)) {
+  if (!(isAuthenticated || hideNavbarLogin) && !isBigWarpWorker) {
     trailingNavItems.push(<AnonymousAvatar key="anonymous-avatar" />);
   }
 
-  menuItems.push(
-    getHelpSubMenu(
-      version,
-      polledVersion,
-      isAuthenticated,
-      isAdminOrManager,
-      collapseAllNavItems,
-      () => setIsHelpModalOpen(true),
-    ),
-  );
+  if (!isBigWarpWorker) {
+    menuItems.push(
+      getHelpSubMenu(
+        version,
+        polledVersion,
+        isAuthenticated,
+        isAdminOrManager,
+        collapseAllNavItems,
+        () => setIsHelpModalOpen(true),
+      ),
+    );
+  }
   // Don't highlight active menu items, when showing the narrow version of the navbar,
   // since this makes the icons appear more crowded.
   const selectedKeys = collapseAllNavItems ? [] : [historyLocation.pathname];
   const separator = <div className="navbar-separator" />;
+  // The right worker's menuItems is empty (no logo, see above), so the separator would
+  // otherwise render as an orphaned vertical line with nothing to its left.
+  const showSeparator = isInAnnotationView && !(isBigWarpWorker && !isBigWarpPrimaryWorker);
 
   return (
     <Header
@@ -971,7 +1026,7 @@ function Navbar() {
         disabledOverflow
         items={menuItems}
       />
-      {isInAnnotationView ? separator : null}
+      {showSeparator ? separator : null}
       <HelpModal
         isModalOpen={isHelpModalOpen}
         onCancel={() => setIsHelpModalOpen(false)}

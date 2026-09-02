@@ -5,6 +5,7 @@ import FastTooltip from "components/fast_tooltip";
 import features from "features";
 import { handleGenericError } from "libs/error_handling";
 import { useKeyPress, useWindowWidth, useWkSelector } from "libs/react_hooks";
+import { hasUrlParam } from "libs/utils";
 import { useCallback, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import Constants, { ControlModeEnum } from "viewer/constants";
@@ -166,7 +167,14 @@ function ToolSpecificSettings({
   isControlOrMetaPressed: boolean;
   isShiftPressed: boolean;
 }) {
-  const showSkeletonButtons = hasSkeleton && adaptedActiveTool === AnnotationTool.SKELETON;
+  // BigWarp workers force single-node-tree mode on permanently and restrict the
+  // toolkit to Move + Skeleton (see controller.tsx's
+  // applyBigWarpWorkerSettingsIfNeeded) - these buttons would let the user turn that
+  // (and merger mode / continuous node creation) back off, which isn't meaningful for
+  // landmark placement.
+  const isBigWarpWorker = hasUrlParam("bigwarpWorker");
+  const showSkeletonButtons =
+    hasSkeleton && adaptedActiveTool === AnnotationTool.SKELETON && !isBigWarpWorker;
   const showNewBoundingBoxButton = adaptedActiveTool === AnnotationTool.BOUNDING_BOX;
   const showCreateCellButton = hasVolume && VolumeTools.includes(adaptedActiveTool);
   const showChangeBrushSizeButton =

@@ -178,6 +178,10 @@ class TracingLayoutView extends PureComponent<PropsWithRouter, State> {
     const { initialCommandType, viewMode, is2d } = this.props;
     const layoutType = determineLayout(initialCommandType.type, viewMode, is2d);
     const lastActiveLayoutName = getLastActiveLayout(layoutType);
+    // Note: for BigWarp-style alignment workers, FlexLayoutWrapper's own
+    // loadCurrentModel() overrides this with a dedicated single-viewport layout - see
+    // BIGWARP_ALIGNMENT_PLAN.md §0.16. This state.model is just the initial value
+    // before FlexLayoutWrapper reports its real (mounted) model via onLayoutChange.
     const layout = getLayoutConfig(layoutType, lastActiveLayoutName);
     this.setState({
       activeLayoutName: lastActiveLayoutName,

@@ -201,6 +201,15 @@
   flex-direction: row-reverse;
 }
 
+// flexlayout-react's own light.css centers .flexlayout__tab_toolbar's children
+// (align-items: center) but not .flexlayout__tabset_leading's, leaving our left-border
+// toggle button (rendered into "leading") 1px lower than the right-border one (rendered
+// into "buttons", i.e. inside .flexlayout__tab_toolbar) despite both being the same
+// component/size.
+.flexlayout__tabset_leading {
+  align-items: center;
+}
+
 // Select the first vertical border splitter and ignore all its pointer events to disable resizing of the border.
 // This is only active when the left border is open and therefore only disables the splitter of the left border.
 // More info about this css trick: https://stackoverflow.com/questions/2717480/css-selector-for-first-element-with-class.

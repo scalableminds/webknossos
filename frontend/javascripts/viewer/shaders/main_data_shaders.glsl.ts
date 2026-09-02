@@ -79,6 +79,10 @@ const SHARED_UNIFORM_DECLARATIONS = `
 uniform vec2 viewportExtent;
 
 uniform float activeMagIndices[<%= globalLayerCount %>];
+// The number of voxels a single bucket occupies in each layer's atlas. Equal to
+// bucketSize for most layers, except for those with a degenerate (e.g., z-extent-1)
+// axis, whose buckets are packed with a smaller footprint. See getEffectiveBucketDepth.
+uniform float bucketVoxelCountPerLayer[<%= globalLayerCount %>];
 uniform uint availableLayerIndexToGlobalLayerIndex[<%= globalLayerCount %>];
 uniform vec3 allMagnifications[<%= magnificationsCount %>];
 uniform uint magnificationCountCumSum[<%= globalLayerCount %>];

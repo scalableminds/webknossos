@@ -296,9 +296,17 @@ export const getColorForCoords: ShaderModule = {
 
       // bucketAddress can span multiple data textures. If the address is higher
       // than the capacity of one texture, we mod the value and use the div (floored division) as the
-      // texture index
-      float packedBucketSize = bucketSize / packingDegree;
-      float bucketCapacityPerTexture = d_texture_width * d_texture_width / packedBucketSize;
+      // texture index.
+      // Each bucket occupies a whole number of texture rows (a row cannot be shared
+      // by two buckets). For most (non-degenerate) layers, a bucket's packed data is
+      // larger than one texture row, so bucketHeightInTexture is simply that natural
+      // (possibly multi-row) value. For layers with a much smaller bucket footprint
+      // (e.g., 2D datasets), a bucket may pack into less than one row; the height is
+      // then rounded up to one full row (matching TextureBucketManager/padToFullRow
+      // on the JS side), at the cost of some unused padding within that row.
+      float packedBucketSize = bucketVoxelCountPerLayer[globalLayerIndex] / packingDegree;
+      float bucketHeightInTexture = max(1., packedBucketSize / d_texture_width);
+      float bucketCapacityPerTexture = d_texture_width / bucketHeightInTexture;
       float textureIndex = floor(bucketAddress / bucketCapacityPerTexture);
       bucketAddress = mod(bucketAddress, bucketCapacityPerTexture);
 
@@ -311,7 +319,7 @@ export const getColorForCoords: ShaderModule = {
         linearizeVec3ToIndex(offsetInBucket / packingDegree, bucketWidth);
       float y =
         div(pixelIdxInBucket, d_texture_width) +
-        div(packedBucketSize * bucketAddress, d_texture_width);
+        bucketHeightInTexture * bucketAddress;
 
       // The lower 32-bit of the value.
       vec4 bucketColor = getRgbaAtXYIndex(

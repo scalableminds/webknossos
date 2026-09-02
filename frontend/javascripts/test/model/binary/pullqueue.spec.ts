@@ -75,6 +75,7 @@ describe("PullQueue", () => {
         removeOutsideArea: vi.fn(),
       },
       shouldEagerlyMaintainUsedValueSet: () => false,
+      getEffectiveBucketVoxelCount: () => 32 ** 3,
       // Will be set later:
       pullQueue: null as PullQueue | null,
     };

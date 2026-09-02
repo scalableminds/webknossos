@@ -443,7 +443,7 @@ export class DataBucket {
      */
     if (this.data == null) {
       const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
-      this.data = new TypedArrayClass(channelCount * Constants.BUCKET_SIZE);
+      this.data = new TypedArrayClass(channelCount * this.cube.getEffectiveBucketVoxelCount());
 
       if (!this.isMissing()) {
         this.temporalBucketManager.addBucket(this);
@@ -646,16 +646,20 @@ export class DataBucket {
     arrayBuffer: Uint8Array<ArrayBuffer> | null | undefined,
     computeValueSet: boolean = false,
   ): void {
-    const data = uint8ToTypedBuffer(arrayBuffer, this.elementClass);
+    // The backend always sends (or, for missing buckets, uint8ToTypedBuffer synthesizes)
+    // a full 32^3-voxel cube. wireData is validated against that full size below and then
+    // sliced down to this layer's effective (possibly shrunk) bucket footprint, so that
+    // `this.data` never retains more memory than the layer actually needs.
+    const wireData = uint8ToTypedBuffer(arrayBuffer, this.elementClass);
     const [_TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
 
-    if (data.length !== channelCount * Constants.BUCKET_SIZE) {
+    if (wireData.length !== channelCount * Constants.BUCKET_SIZE) {
       const debugInfo = // Disable this conditional if you need verbose output here.
         import.meta.env.MODE === "test"
           ? " (<omitted>)"
           : {
               arrayBuffer,
-              actual: data.length,
+              actual: wireData.length,
               expected: channelCount * Constants.BUCKET_SIZE,
               channelCount,
             };
@@ -666,6 +670,12 @@ export class DataBucket {
       ErrorHandling.notify(error);
       throw error;
     }
+
+    const effectiveVoxelCount = this.cube.getEffectiveBucketVoxelCount();
+    const data =
+      effectiveVoxelCount === Constants.BUCKET_SIZE
+        ? wireData
+        : (wireData.slice(0, channelCount * effectiveVoxelCount) as BucketDataArray);
 
     switch (this.state) {
       case BucketStateEnum.REQUESTED: {

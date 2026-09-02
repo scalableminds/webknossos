@@ -165,6 +165,7 @@ export default class LayerRenderingManager {
       this.textureWidth,
       this.dataTextureCount,
       elementClass,
+      this.cube.getEffectiveBucketVoxelCount(),
     );
 
     const layerIndex = getGlobalLayerIndexForLayerName(this.name);

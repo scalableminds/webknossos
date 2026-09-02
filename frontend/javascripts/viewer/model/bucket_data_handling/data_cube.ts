@@ -18,7 +18,7 @@ import type {
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { BucketAddress, LabelMasksByBucketAndW, Vector3, Vector4 } from "viewer/constants";
 import Constants from "viewer/constants";
-import constants, { MappingStatusEnum } from "viewer/constants";
+import constants, { getEffectiveBucketDepth, MappingStatusEnum } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
@@ -103,6 +103,16 @@ class DataCube {
   bucketIterator: number = 0;
   private cubes: Record<string, CubeEntry>;
   boundingBox: BoundingBox;
+  // The layer's intrinsic bounding box (independent of any tracing bounding box
+  // restriction the user may set, which is reflected in `boundingBox` above and can
+  // change at runtime). Used to detect degenerate (e.g., 2D) layers once at construction
+  // time so that bucket storage can be shrunk accordingly. See `effectiveBucketDepth`.
+  private readonly layerBoundingBox: BoundingBox;
+  // For layers whose z-extent is a single voxel (e.g., 2D datasets), every bucket only
+  // ever holds real data in its first z-slice. In that case, storage for the bucket's
+  // typed array (and, on the GPU, the atlas footprint) can be shrunk to this depth,
+  // since the addressing/picking machinery still treats buckets as 32^3 for bookkeeping.
+  readonly effectiveBucketDepth: number;
   additionalAxes: Record<string, AdditionalAxis>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'pullQueue' has no initializer and is not... Remove this comment to see the full error message
   pullQueue: PullQueue;
@@ -150,6 +160,8 @@ class DataCube {
     this.layerName = layerName;
     this.additionalAxes = keyBy(additionalAxes, "name");
     this.emitter = createNanoEvents();
+    this.layerBoundingBox = layerBBox;
+    this.effectiveBucketDepth = getEffectiveBucketDepth(layerBBox.getSize()[2]);
 
     this.cubes = {};
     this.buckets = [];
@@ -187,6 +199,10 @@ class DataCube {
 
   getNullBucket(): Bucket {
     return NULL_BUCKET;
+  }
+
+  getEffectiveBucketVoxelCount(): number {
+    return constants.BUCKET_WIDTH * constants.BUCKET_WIDTH * this.effectiveBucketDepth;
   }
 
   isMappingEnabled(): boolean {

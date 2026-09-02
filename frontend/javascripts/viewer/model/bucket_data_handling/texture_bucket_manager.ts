@@ -15,6 +15,7 @@ import { createUpdatableTexture } from "viewer/geometries/materials/plane_materi
 import type { DataBucket } from "viewer/model/bucket_data_handling/bucket";
 import {
   getBucketCapacity,
+  getBucketHeightInTexture,
   getDtypeConfigForElementClass,
 } from "viewer/model/bucket_data_handling/data_rendering_logic";
 
@@ -49,8 +50,10 @@ function getSomeValue<T>(set: Set<T>): T {
   return value;
 }
 
+// Sized for the largest possible (non-shrunk) bucket; layers with a smaller
+// effective bucket footprint simply use a prefix of this scratch buffer.
 const tmpPaddingBuffer = new Uint8Array(4 * constants.BUCKET_SIZE);
-function maybePadRgbData(src: TypedArray, elementClass: ElementClass) {
+function maybePadRgbData(src: TypedArray, elementClass: ElementClass, bucketVoxelCount: number) {
   if (elementClass !== "uint24") {
     return src;
   }
@@ -59,7 +62,7 @@ function maybePadRgbData(src: TypedArray, elementClass: ElementClass) {
   // since r137.
   let idx = 0;
   let srcIdx = 0;
-  while (srcIdx < 3 * constants.BUCKET_SIZE) {
+  while (srcIdx < 3 * bucketVoxelCount) {
     // @ts-expect-error BigInt is not a problem as this code here only handles uint24 data
     tmpPaddingBuffer[idx++] = src[srcIdx++];
     // @ts-expect-error BigInt is not a problem as this code here only handles uint24 data
@@ -69,7 +72,36 @@ function maybePadRgbData(src: TypedArray, elementClass: ElementClass) {
     tmpPaddingBuffer[idx++] = 255;
   }
 
-  return tmpPaddingBuffer;
+  return tmpPaddingBuffer.subarray(0, idx);
+}
+
+// A bucket's packed data may be smaller than one texture row (see
+// getBucketHeightInTexture), in which case it still occupies a full row in the
+// atlas, with the remainder left unused. gl.texSubImage2D requires the source
+// buffer to cover the full row/height being uploaded, so the real data is copied
+// into a zero-filled scratch buffer of the right size for that (rare) case.
+let tmpRowPaddingBuffer: TypedArray | null = null;
+function padToFullRow(src: TypedArray, requiredElementCount: number): TypedArray {
+  if (src.length >= requiredElementCount) {
+    return src;
+  }
+
+  if (
+    tmpRowPaddingBuffer == null ||
+    tmpRowPaddingBuffer.constructor !== src.constructor ||
+    tmpRowPaddingBuffer.length < requiredElementCount
+  ) {
+    // @ts-expect-error TypedArray constructors all accept a length argument.
+    tmpRowPaddingBuffer = new src.constructor(requiredElementCount);
+  }
+
+  const buffer = tmpRowPaddingBuffer as TypedArray;
+  const target = buffer.subarray(0, requiredElementCount);
+  // @ts-expect-error BigInt is not a problem in practice; only used for byte-level GPU upload buffers.
+  target.fill(0);
+  // @ts-expect-error src and target always share the same underlying element type.
+  target.set(src);
+  return target;
 }
 
 export default class TextureBucketManager {
@@ -94,16 +126,31 @@ export default class TextureBucketManager {
   maximumCapacity: number;
   packingDegree: number;
   elementClass: ElementClass;
+  // The number of voxels a single bucket occupies in this layer's atlas. Equal to
+  // constants.BUCKET_SIZE, unless the layer has a degenerate (e.g., z-extent-1) axis.
+  // See DataCube.effectiveBucketDepth / getEffectiveBucketDepth.
+  bucketVoxelCount: number;
   isDestroyed: boolean = false;
   private areTexturesReady: boolean = false;
   private isWriterQueueProcessingScheduled: boolean = false;
 
-  constructor(textureWidth: number, dataTextureCount: number, elementClass: ElementClass) {
+  constructor(
+    textureWidth: number,
+    dataTextureCount: number,
+    elementClass: ElementClass,
+    bucketVoxelCount: number = constants.BUCKET_SIZE,
+  ) {
     // If there is one byte per voxel, we pack 4 bytes into one texel (packingDegree = 4)
     // Otherwise, we don't pack bytes together (packingDegree = 1)
     this.packingDegree = getDtypeConfigForElementClass(elementClass).packingDegree;
     this.elementClass = elementClass;
-    this.maximumCapacity = getBucketCapacity(dataTextureCount, textureWidth, this.packingDegree);
+    this.bucketVoxelCount = bucketVoxelCount;
+    this.maximumCapacity = getBucketCapacity(
+      dataTextureCount,
+      textureWidth,
+      this.packingDegree,
+      this.bucketVoxelCount,
+    );
     this.textureWidth = textureWidth;
     this.dataTextureCount = dataTextureCount;
     this.freeIndexSet = new Set(range(this.maximumCapacity));
@@ -195,7 +242,7 @@ export default class TextureBucketManager {
   }
 
   getPackedBucketSize() {
-    return constants.BUCKET_SIZE / this.packingDegree;
+    return this.bucketVoxelCount / this.packingDegree;
   }
 
   // Commit "active" buckets by writing these to the dataTexture.
@@ -218,8 +265,18 @@ export default class TextureBucketManager {
     const maxTimePerFrame = 16;
     const startingTime = performance.now();
     const packedBucketSize = this.getPackedBucketSize();
-    const bucketHeightInTexture = packedBucketSize / this.textureWidth;
-    const bucketsPerTexture = (this.textureWidth * this.textureWidth) / packedBucketSize;
+    const bucketHeightInTexture = getBucketHeightInTexture(
+      this.textureWidth,
+      this.packingDegree,
+      this.bucketVoxelCount,
+    );
+    const bucketsPerTexture = this.textureWidth / bucketHeightInTexture;
+    // Ratio between the raw elements needed to fill a whole texture row and the raw
+    // elements a single bucket naturally produces. Equal to 1 unless
+    // bucketHeightInTexture was clamped to one full row (see getBucketHeightInTexture),
+    // in which case a bucket's data needs to be padded to fill out that row for
+    // texSubImage2D (which requires the source buffer to cover the full upload area).
+    const rowPaddingRatio = (this.textureWidth * bucketHeightInTexture) / packedBucketSize;
 
     while (this.writerQueue.length > 0 && performance.now() - startingTime < maxTimePerFrame) {
       // @ts-expect-error pop cannot return null due to the while condition
@@ -252,8 +309,13 @@ export default class TextureBucketManager {
         data.byteLength / TypedArrayClass.BYTES_PER_ELEMENT,
       );
 
-      const src = maybePadRgbData(rawSrc, this.elementClass);
+      const rgbPaddedSrc = maybePadRgbData(rawSrc, this.elementClass, this.bucketVoxelCount);
+      const src =
+        rowPaddingRatio > 1
+          ? padToFullRow(rgbPaddedSrc, Math.round(rgbPaddedSrc.length * rowPaddingRatio))
+          : rgbPaddedSrc;
 
+      console.time("upload bucket to gpu")
       this.dataTextures[dataTextureIndex].update(
         src,
         0,
@@ -262,6 +324,7 @@ export default class TextureBucketManager {
         bucketHeightInTexture,
       );
       this.committedBucketSet.add(bucket);
+      console.timeEnd("upload bucket to gpu")
 
       this.lookUpCuckooTable.set(
         [

@@ -283,6 +283,11 @@ class PlaneMaterialFactory {
     this.uniforms.activeMagIndices = {
       value: Object.values(activeMagIndices),
     };
+    // Same ordering as activeMagIndices (both iterate the layers in the order of
+    // Model.getAllLayers() / dataset.dataSource.dataLayers), matching globalLayerIndex.
+    this.uniforms.bucketVoxelCountPerLayer = {
+      value: Model.getAllLayers().map((dataLayer) => dataLayer.cube.getEffectiveBucketVoxelCount()),
+    };
     const { nativelyRenderedLayerName } = Store.getState().datasetConfiguration;
     const dataset = Store.getState().dataset;
     for (const dataLayer of Model.getAllLayers()) {

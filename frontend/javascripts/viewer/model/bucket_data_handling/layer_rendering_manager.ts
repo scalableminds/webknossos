@@ -222,16 +222,34 @@ export default class LayerRenderingManager {
     const additionalCoordinates = state.flycam.additionalCoordinates;
     const maximumZoomForAllMags = state.flycamInfoCache.maximumZoomForAllMags[this.name];
 
-    if (
+    const otherThingsChanged =
       !isEqual(this.lastZoomedMatrix, matrix) ||
       viewMode !== this.lastViewMode ||
       sphericalCapRadius !== this.lastSphericalCapRadius ||
       isVisible !== this.lastIsVisible ||
       rects !== this.lastRects ||
-      !isEqual(additionalCoordinates, this.additionalCoordinates) ||
       !isEqual(maximumZoomForAllMags, this.maximumZoomForAllMags) ||
-      this.needsRefresh
+      this.needsRefresh;
+    const additionalCoordinatesChanged = !isEqual(
+      additionalCoordinates,
+      this.additionalCoordinates,
+    );
+
+    if (
+      !otherThingsChanged &&
+      additionalCoordinatesChanged &&
+      this.textureBucketManager.isTRecyclingEnabled
     ) {
+      // Pure t-scrubbing on an otherwise-unchanged viewport: skip the full re-pick
+      // (which would clear the pull queue and call cube.markBucketsAsUnneeded(),
+      // undermining t-recycling's whole point of keeping sibling t-slices
+      // resident) and instead retarget the already-active groups directly.
+      this.additionalCoordinates = additionalCoordinates;
+      this.textureBucketManager.retargetToNewT(additionalCoordinates);
+      return;
+    }
+
+    if (otherThingsChanged || additionalCoordinatesChanged) {
       this.lastZoomedMatrix = matrix;
       this.lastViewMode = viewMode;
       this.lastSphericalCapRadius = sphericalCapRadius;

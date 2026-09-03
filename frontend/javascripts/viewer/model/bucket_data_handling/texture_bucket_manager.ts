@@ -7,7 +7,7 @@ import noop from "lodash-es/noop";
 import range from "lodash-es/range";
 import uniqBy from "lodash-es/uniqBy";
 import type { DataTexture } from "three";
-import type { ElementClass } from "types/api_types";
+import type { AdditionalCoordinate, ElementClass } from "types/api_types";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import type { BucketAddress } from "viewer/constants";
 import constants, { type TypedArray } from "viewer/constants";
@@ -120,6 +120,10 @@ export default class TextureBucketManager {
   // setActiveBucketsTRecycling.
   private activeGroups: Map<string, { index: number; slots: Map<number, DataBucket> }> = new Map();
   private bucketToGroupKey: Map<DataBucket, string> = new Map();
+  // t-recycling only: the primary buckets passed into the last setActiveBuckets
+  // call, kept so retargetToNewT can re-derive the desired bucket set for a new t
+  // without needing a fresh spatial pick.
+  private lastPrimaryBuckets: Array<DataBucket> = [];
   // Maintains the set of committed buckets
   committedBucketSet: WeakSet<DataBucket> = new WeakSet();
   // Maintains a set of free indices within the data texture.
@@ -348,6 +352,7 @@ export default class TextureBucketManager {
   }
 
   private setActiveBucketsTRecycling(primaryBuckets: Array<DataBucket>): void {
+    this.lastPrimaryBuckets = primaryBuckets;
     const desired = new Set<DataBucket>();
 
     for (const bucket of primaryBuckets) {
@@ -369,6 +374,30 @@ export default class TextureBucketManager {
         this.reserveSlotForBucket(nextBucket);
       }
     }
+  }
+
+  // For a pure t change (no camera/zoom/viewport change), re-derives the desired
+  // bucket set from the last primary buckets with the new t swapped in, instead of
+  // requiring a fresh spatial pick. If the new t is in the same batch as before,
+  // getBatchSiblings/setActiveBucketsTRecycling's diffing naturally finds every
+  // bucket already resident (no-op); if it's a different batch, the same diffing
+  // correctly frees the old batch's group(s) and fetches/reserves the new one(s).
+  // Only meaningful when isTRecyclingEnabled; callers should check that themselves.
+  retargetToNewT(additionalCoordinates: AdditionalCoordinate[] | null): void {
+    const newPrimaryBuckets = this.lastPrimaryBuckets
+      .map((oldBucket) => {
+        const newAddress: BucketAddress = [
+          oldBucket.zoomedAddress[0],
+          oldBucket.zoomedAddress[1],
+          oldBucket.zoomedAddress[2],
+          oldBucket.zoomedAddress[3],
+          additionalCoordinates ?? [],
+        ];
+        return this.cube.getOrCreateBucket(newAddress);
+      })
+      .filter((bucket): bucket is DataBucket => bucket.type !== "null");
+
+    this.setActiveBucketsTRecycling(newPrimaryBuckets);
   }
 
   // t-recycling counterpart to freeBucket: frees a single sibling's slot within

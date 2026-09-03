@@ -386,4 +386,91 @@ describe("TextureBucketManager", () => {
       expect(tbm.dataTextures[0].texture[bucketLocation]).toBe(expectedFirstByte);
     }
   });
+
+  it("t-recycling: retargetToNewT reuses an already-resident batch, but re-picks across a batch boundary (Stage C)", () => {
+    const textureWidth = 256;
+    const primaryT = 32; // batch 1, zSlot 0
+    const siblingT = 40; // batch 1, zSlot 8
+    const otherBatchT = 64; // batch 2, zSlot 0
+
+    const tRecyclingMockedCube = makeMockCube({
+      effectiveBucketDepth: 1,
+      additionalAxes: { t: { name: "t", bounds: [0, 1000], index: 3 } },
+      getEffectiveBucketVoxelCount: () => 32 * 32 * 1,
+    });
+
+    const buildTRecyclingBucket = (t: number, firstByte: number) => {
+      const bucket = new DataBucket(
+        "uint8",
+        [1, 1, 0, 0, [{ name: "t", value: t }]] as any,
+        temporalBucketManagerMock as any,
+        { type: "full" },
+        tRecyclingMockedCube as any,
+      );
+      bucket._fallbackBucket = NULL_BUCKET;
+      bucket.markAsRequested();
+      const data = new Uint8Array(32 ** 3);
+      data[0] = firstByte;
+      bucket.receiveData(data);
+      return bucket;
+    };
+
+    const primaryBucket = buildTRecyclingBucket(primaryT, 11);
+    const siblingBucket = buildTRecyclingBucket(siblingT, 22);
+    const otherBatchBucket = buildTRecyclingBucket(otherBatchT, 33);
+
+    tRecyclingMockedCube.getOrCreateBucket = ((address: [number, number, number, number, any]) => {
+      const t = address[4]?.find((coord: { name: string }) => coord.name === "t")?.value;
+      if (t === siblingT) return siblingBucket;
+      if (t === otherBatchT) return otherBatchBucket;
+      return NULL_BUCKET;
+    }) as any;
+
+    const tbm = new TextureBucketManager(textureWidth, 1, "uint8", tRecyclingMockedCube as any);
+    tbm.setupDataTextures(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
+
+    setActiveBucketsAndWait(tbm, [primaryBucket]);
+    const originalBucketAddress = tbm.lookUpCuckooTable.get([1, 1, 1, 0, LAYER_INDEX]);
+    if (originalBucketAddress == null) {
+      throw new Error("Bucket address is null");
+    }
+
+    // Retargeting to a t within the SAME batch should be a no-op: both the
+    // primary and its sibling are already resident, so nothing gets evicted.
+    tbm.retargetToNewT([{ name: "t", value: siblingT }]);
+    tbm.processWriterQueue();
+    expect(tbm.lookUpCuckooTable.get([1, 1, 1, 0, LAYER_INDEX])).toBe(originalBucketAddress);
+
+    const bucketHeightInTexture = getBucketHeightInTexture(
+      textureWidth,
+      tbm.packingDegree,
+      tbm.bucketVoxelCount,
+    );
+    const writeHeight = bucketHeightInTexture / 32;
+    for (const [t, expectedFirstByte] of [
+      [primaryT, 11],
+      [siblingT, 22],
+    ] as const) {
+      const zSlot = t % 32;
+      const bucketLocation =
+        (bucketHeightInTexture * originalBucketAddress + writeHeight * zSlot) * textureWidth;
+      // @ts-expect-error - texture is available in our mock but not in the real type
+      expect(tbm.dataTextures[0].texture[bucketLocation]).toBe(expectedFirstByte);
+    }
+
+    // Retargeting across a batch boundary should evict the old batch's group
+    // entirely (cuckoo entry unset) and create/populate a new one.
+    tbm.retargetToNewT([{ name: "t", value: otherBatchT }]);
+    tbm.processWriterQueue();
+    expect(tbm.lookUpCuckooTable.get([1, 1, 1, 0, LAYER_INDEX])).toBeNull();
+    const newBucketAddress = tbm.lookUpCuckooTable.get([1, 1, 2, 0, LAYER_INDEX]);
+    if (newBucketAddress == null) {
+      throw new Error("New bucket address is null");
+    }
+    const newZSlot = otherBatchT % 32;
+    const newBucketLocation =
+      (bucketHeightInTexture * newBucketAddress + writeHeight * newZSlot) * textureWidth;
+    // @ts-expect-error - texture is available in our mock but not in the real type
+    expect(tbm.dataTextures[0].texture[newBucketLocation]).toBe(33);
+  });
 });

@@ -8,6 +8,7 @@ import {
   LoadingOutlined,
   PlayCircleOutlined,
   QuestionCircleTwoTone,
+  WarningOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -393,25 +394,47 @@ function JobListView() {
     } else if (job.state === "FAILURE" || job.state === "CANCELLED") {
       // Regular users may retry a job once. Super users may always retry.
       const canRetry = isCurrentUserSuperUser || job.lastRetry == null;
+      const showErrorLink =
+        job.errorDetails != null ? (
+          <a
+            onClick={() =>
+              modal.error({
+                title: "Job Error Details",
+                width: 600,
+                content: (
+                  <pre style={{ maxHeight: 400, overflow: "auto" }}>
+                    {JSON.stringify(job.errorDetails, null, 2)}
+                  </pre>
+                ),
+              })
+            }
+          >
+            <WarningOutlined className="icon-margin-right" />
+            Show Error
+          </a>
+        ) : null;
       if (canRetry) {
         return (
-          <Tooltip title="Restarts the workflow from the failed task, skipping and reusing artifacts from preceding tasks that were already successful.">
-            <AsyncLink
-              onClick={async () => {
-                try {
-                  await retryJob(job.id);
-                  await queryClient.invalidateQueries({ queryKey: ["jobs"] });
-                  Toast.success("Job is being retried");
-                } catch (e) {
-                  console.error("Could not retry job", e);
-                  Toast.error("Failed to start retrying the job");
-                }
-              }}
-              icon={<PlayCircleOutlined className="icon-margin-right" />}
-            >
-              Retry
-            </AsyncLink>
-          </Tooltip>
+          <Space direction="vertical" size={4}>
+            <Tooltip title="Restarts the workflow from the failed task, skipping and reusing artifacts from preceding tasks that were already successful.">
+              <AsyncLink
+                onClick={async () => {
+                  try {
+                    await retryJob(job.id);
+                    await queryClient.invalidateQueries({ queryKey: ["jobs"] });
+                    Toast.success("Job is being retried");
+                  } catch (e) {
+                    console.error("Could not retry job", e);
+                    Toast.error("Failed to start retrying the job");
+                  }
+                }}
+                icon={<PlayCircleOutlined className="icon-margin-right" />}
+              >
+                Retry
+              </AsyncLink>
+            </Tooltip>
+            {showErrorLink}
+          </Space>
         );
       }
       if (job.state === "FAILURE") {
@@ -423,12 +446,15 @@ function JobListView() {
           "Please contact an administrator for help."
         );
         return (
-          <Tooltip title="This job has already been retried once and failed again. This is likely a persistent failure.">
-            <span>{failureMessage}</span>
-          </Tooltip>
+          <Space direction="vertical" size={4}>
+            <Tooltip title="This job has already been retried once and failed again. This is likely a persistent failure.">
+              <span>{failureMessage}</span>
+            </Tooltip>
+            {showErrorLink}
+          </Space>
         );
       }
-      return null;
+      return showErrorLink;
     } else if (
       job.command === APIJobCommand.CONVERT_TO_WKW ||
       job.command === APIJobCommand.COMPUTE_SEGMENT_INDEX_FILE ||

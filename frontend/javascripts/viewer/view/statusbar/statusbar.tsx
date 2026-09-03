@@ -22,19 +22,30 @@ function Statusbar() {
   // elements remain reachable.
   const items = useShortcutItems();
 
+  // The following refs will be used to measure the available space for the shortcut hints.
+  // - containerRef: the full status bar
+  // - leftRef: for the "left sidebar toggle")
+  // - infosRef: for the dataset/annotation-specific infos)
+  // - rightRef: for the "right sidebar toggle")
   const containerRef = useRef<HTMLSpanElement>(null);
   const leftRef = useRef<HTMLSpanElement>(null);
   const infosRef = useRef<HTMLSpanElement>(null);
   const rightRef = useRef<HTMLSpanElement>(null);
-  const measureRowRef = useRef<HTMLSpanElement>(null);
-  const measureMoreRef = useRef<HTMLSpanElement>(null);
-  const measureAllHiddenRef = useRef<HTMLSpanElement>(null);
+  // The following refs will be used to measure the needed space for the shortcut hints.
+  // The corresponding dom elements will be hidden to the user (the actual visibility depends
+  // on the available space).
+  // - fullShortcutRowRef: the actual shortcut hints
+  // - showMoreShortcutsRef: the "more shortcuts" button
+  // - showAllShortcutsRef: the "show shortcuts" button
+  const fullShortcutRowRef = useRef<HTMLSpanElement>(null);
+  const showMoreShortcutsRef = useRef<HTMLSpanElement>(null);
+  const showAllShortcutsRef = useRef<HTMLSpanElement>(null);
 
   const { visibleCount, setItemRef } = useOverflowMeasurement({
     containerRef,
     fixedRefs: [leftRef, infosRef, rightRef],
-    measureRowRef,
-    triggerMeasureRefs: [measureMoreRef, measureAllHiddenRef],
+    measureRowRef: fullShortcutRowRef,
+    triggerMeasureRefs: [showMoreShortcutsRef, showAllShortcutsRef],
     itemKeys: items.map((item) => item.key),
     minGap: MIN_GAP_BEFORE_INFOS,
   });
@@ -58,16 +69,17 @@ function Statusbar() {
       <span ref={rightRef} style={{ display: "inline-flex" }}>
         <BorderToggleButton side="right" inFooter />
       </span>
-      <span ref={measureRowRef} className="statusbar-measurer" aria-hidden="true">
+      { /* The following span is completely invisible to the user and only used for measurement. */}
+      <span ref={fullShortcutRowRef} className="statusbar-measurer" aria-hidden="true">
         {items.map((item) => (
           <span key={item.key} ref={setItemRef(item.key)} style={{ display: "inline-flex" }}>
             {item.node}
           </span>
         ))}
-        <span ref={measureMoreRef} style={{ display: "inline-flex" }}>
+        <span ref={showMoreShortcutsRef} style={{ display: "inline-flex" }}>
           <MoreButtonLabel label={MORE_LABEL} />
         </span>
-        <span ref={measureAllHiddenRef} style={{ display: "inline-flex" }}>
+        <span ref={showAllShortcutsRef} style={{ display: "inline-flex" }}>
           <MoreButtonLabel label={ALL_HIDDEN_LABEL} />
         </span>
       </span>

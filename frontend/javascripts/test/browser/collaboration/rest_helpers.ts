@@ -1,4 +1,5 @@
 import urljoin from "url-join";
+import { unwrapOrThrow } from "../../../admin/api/api_result";
 import { createExplorational, getUsers } from "../../../admin/rest_api";
 import { BASE_URL, ORG_NAME, WK_AUTH_TOKEN } from "./config";
 
@@ -76,7 +77,7 @@ export function apiPatch<T>(apiPath: string, body: unknown): Promise<T> {
 // ---------------------------------------------------------------------------
 
 export async function getUserByEmail(email: string): Promise<APIUser | undefined> {
-  const users = await getUsers(adminRequestOptions());
+  const users = unwrapOrThrow(await getUsers(adminRequestOptions()));
   return users.find((u) => u.email === email);
 }
 

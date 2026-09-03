@@ -188,7 +188,7 @@ class EditableMappingIOService @Inject() (
           includeHiddenFiles = true,
           List.empty,
           truncateCommonPrefix = false,
-          excludeFromPrefix = None
+          boundaryDirNames = None
         )
         .toFox
       unzippedVaultPath = new VaultPath(UPath.fromLocalPath(unzippedDir), FileSystemDataVault.create)

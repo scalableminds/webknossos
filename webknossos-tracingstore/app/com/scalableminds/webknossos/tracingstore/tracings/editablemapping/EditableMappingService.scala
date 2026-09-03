@@ -8,7 +8,7 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
@@ -43,7 +43,7 @@ import Box.tryo
 import com.scalableminds.webknossos.tracingstore.annotation.{UpdateAction, UpdateGroupHandling}
 import org.jgrapht.alg.flow.PushRelabelMFImpl
 import org.jgrapht.graph.{DefaultWeightedEdge, SimpleWeightedGraph}
-import play.api.libs.json.{JsObject, Json, OFormat}
+import play.api.libs.json.{JsObject, Json}
 
 import java.util
 import scala.concurrent.ExecutionContext
@@ -62,37 +62,22 @@ case class MinCutParameters(
     mag: Vec3Int,
     agglomerateId: UnsignedLong,
     version: Long
-)
-
-object MinCutParameters {
-  implicit val jsonFormat: OFormat[MinCutParameters] = Json.format[MinCutParameters]
-}
+) derives JsonAutoFormat
 
 case class NeighborsParameters(segmentId: UnsignedLong, mag: Vec3Int, agglomerateId: UnsignedLong, version: Long)
-
-object NeighborsParameters {
-  implicit val jsonFormat: OFormat[NeighborsParameters] = Json.format[NeighborsParameters]
-}
+    derives JsonAutoFormat
 
 case class EdgeWithPositions(
     segmentId1: UnsignedLong,
     segmentId2: UnsignedLong,
     position1: Vec3Int,
     position2: Vec3Int
-)
-
-object EdgeWithPositions {
-  implicit val jsonFormat: OFormat[EdgeWithPositions] = Json.format[EdgeWithPositions]
-}
+) derives JsonAutoFormat
 
 case class NodeWithPosition(
     segmentId: UnsignedLong,
     position: Vec3Int
-)
-
-object NodeWithPosition {
-  implicit val jsonFormat: OFormat[NodeWithPosition] = Json.format[NodeWithPosition]
-}
+) derives JsonAutoFormat
 
 class EditableMappingService @Inject() (
     datasetErrorLoggingService: TSDatasetErrorLoggingService,

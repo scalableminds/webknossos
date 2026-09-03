@@ -335,7 +335,7 @@ class JobDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       _ <- run(q"""UPDATE webknossos.jobs SET
                    latestRunId = ${s.latestRunId},
-                   errorDetails = ${s.errorDetails},
+                   latestRunErrorDetails = ${s.errorDetails},
                    state = ${s.state},
                    returnValue = ${s.returnValue},
                    started = ${s.started},

@@ -1,11 +1,11 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.tools.JsonAutoFormat
 import com.scalableminds.webknossos.datastore.models.datasource.{StaticLayer, UsableDataSource}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto as ProtoPoint3D
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
-import play.api.libs.json.{Format, Json}
 
 object VolumeTracingMags extends ProtoGeometryConversions {
 
@@ -37,13 +37,12 @@ object VolumeTracingMags extends ProtoGeometryConversions {
 
 object MagRestrictions {
   def empty: MagRestrictions = MagRestrictions(None, None)
-  implicit val jsonFormat: Format[MagRestrictions] = Json.format[MagRestrictions]
 }
 
 case class MagRestrictions(
     min: Option[Int],
     max: Option[Int]
-) {
+) derives JsonAutoFormat {
   def filterAllowed(mags: Seq[Vec3Int]): Seq[Vec3Int] =
     mags.filter(isAllowed)
 

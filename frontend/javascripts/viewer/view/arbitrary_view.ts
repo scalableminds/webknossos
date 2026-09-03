@@ -109,12 +109,15 @@ class FlightModeView {
 
       this.group = new Object3D();
       this.group.add(this.camera);
-      const { rootGroup, renderer, scene } = getSceneController();
+      const sceneController = getSceneController();
+      const { rootGroup, renderer, scene } = sceneController;
       rootGroup.add(this.group);
       this.resizeImpl();
 
-      renderer
-        .compileAsync(scene, this.camera)
+      const compileAsyncPromise = renderer.compileAsync(scene, this.camera);
+      // See SceneController.waitForPendingCompiles for why this needs to be tracked.
+      sceneController.registerPendingCompile(compileAsyncPromise);
+      compileAsyncPromise
         .then(() => {
           // Counter-intuitively this is not the moment where the webgl program is fully compiled.
           // There is another stall once render or getProgramInfoLog is called, since not all work is done yet.

@@ -1,7 +1,7 @@
 package controllers
 
 import com.scalableminds.util.Msg
-import play.silhouette.api.{LoginInfo, Silhouette}
+import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.box.Full
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
@@ -123,7 +123,6 @@ Samplecountry
     defaultOrganization._id,
     Instant.now,
     Json.obj(),
-    userService.createLoginInfo(userId),
     isAdmin = true,
     isOrganizationOwner = true,
     isDatasetManager = true,
@@ -146,7 +145,6 @@ Samplecountry
     defaultOrganization._id,
     Instant.now,
     Json.obj(),
-    userService.createLoginInfo(userId2),
     isAdmin = false,
     isOrganizationOwner = false,
     isDatasetManager = false,
@@ -467,13 +465,13 @@ Samplecountry
 
   private def insertToken(): Fox[Unit] = {
     val expiryTime = conf.Silhouette.TokenAuthenticator.authenticatorExpiry
-    tokenDAO.findOneByLoginInfo("credentials", defaultUser._id.id, TokenType.Authentication).shiftBox.flatMap {
+    tokenDAO.findOneByUserIdAndType(defaultUser._id, TokenType.Authentication).shiftBox.flatMap {
       case Full(_) => Fox.successful(())
       case _       =>
         val newToken = Token(
           ObjectId.generate,
           defaultUserToken,
-          LoginInfo("credentials", defaultUser._id.id),
+          defaultUser._id,
           Instant.now,
           Instant.in(expiryTime),
           None,

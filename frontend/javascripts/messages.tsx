@@ -207,6 +207,8 @@ instead. Only enable this option if you understand its effect. All layers will n
       : "This annotation is in read-only mode and cannot be updated.",
   "tracing.skeleton_editing_disabled_in_live_collab":
     "Skeleton editing is disabled because simultaneous editing is enabled in the sharing settings. Currently, only agglomerate trees (created in proofreading mode) may be edited.",
+  "tracing.layer_management_disabled_in_live_collab": (isOwner: boolean) =>
+    `Adding, deleting or converting annotation layers is disabled because simultaneous editing is enabled in the sharing settings. Please ${isOwner ? "" : "ask the owner to "}disable simultaneous editing, perform this change, and enable it again afterwards.`,
   "tracing.volume_missing_segmentation": "Volume is allowed, but segmentation does not exist.",
   "tracing.volume_layer_name_duplication":
     "This layer name already exists! Please change it to resolve duplicates.",
@@ -317,6 +319,8 @@ instead. Only enable this option if you understand its effect. All layers will n
   "proofreading.multi_cut.no_valid_agglomerate":
     "No agglomerate for the selected segments could be found. Please retry with a new selection.",
   "proofreading.multi_cut.split_failed": "Could not determine a valid split. Operation failed.",
+  "proofreading.multi_cut.selection_invalidated_by_other_user":
+    "Another user changed this agglomerate, so your multi-split selection now spans multiple agglomerates (which cannot be split) and was cleared. Please re-select.",
   "proofreading.post_processing_info_not_found":
     "Could not retrieve updated post processing information necessary for processing this proofreading operation. Please try again.",
 

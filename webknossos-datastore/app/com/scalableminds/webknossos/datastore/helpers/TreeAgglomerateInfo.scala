@@ -1,13 +1,13 @@
 package com.scalableminds.webknossos.datastore.helpers
 
+import com.scalableminds.util.tools.JsonAutoFormat
 import com.scalableminds.webknossos.datastore.SkeletonTracing.TreeAgglomerateInfoProto
-import play.api.libs.json.{Json, OFormat}
 
 case class TreeAgglomerateInfo(
     agglomerateId: UnsignedLong,
     tracingId: Option[String] = None,
     mappingName: Option[String] = None
-) {
+) derives JsonAutoFormat {
   def toProto: TreeAgglomerateInfoProto = TreeAgglomerateInfoProto(
     agglomerateId.toLong,
     tracingId,
@@ -22,6 +22,4 @@ object TreeAgglomerateInfo {
       propertyProto.tracingId,
       propertyProto.mappingName
     )
-
-  implicit val jsonFormat: OFormat[TreeAgglomerateInfo] = Json.format[TreeAgglomerateInfo]
 }

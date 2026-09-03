@@ -3,7 +3,14 @@
   margin-right: 25px;
   font-size: 14px;
   display: flex;
-  flex-wrap: wrap;
+  // Kept as nowrap (rather than wrap), and with white-space: nowrap below, so that
+  // overflow can be measured reliably via scrollWidth/clientWidth (see statusbar.tsx),
+  // which drives collapsing the shortcut hints into an overflow menu once they don't
+  // fit anymore. Without white-space: nowrap, flex items would shrink and their text
+  // would wrap onto multiple lines instead of producing a measurable horizontal
+  // overflow, breaking both the layout and the overflow measurement.
+  flex-wrap: nowrap;
+  white-space: nowrap;
   overflow: hidden;
 
   .info-element {
@@ -19,10 +26,51 @@
 
   .shortcut-info-element {
     margin-left: 20px;
+    white-space: nowrap;
   }
 
   .ant-typography kbd {
     // increase brightness/contrast for <Typography.Text keyboard>...</Typography.Text>
     background-color: rgb(150 150 150 / 37%);
+  }
+
+  .statusbar-measurer {
+    // display: inline-flex (rather than the default block) is essential here: it makes
+    // the hidden measurer's children lay out exactly like the visible shortcutsSlot
+    // (also inline-flex), so that flex items (e.g. the "Ctrl+P" hint's <div>) hug their
+    // content instead of stretching to fill the block container, which would otherwise
+    // throw off the measured width.
+    display: inline-flex;
+    position: absolute;
+    visibility: hidden;
+    white-space: nowrap;
+    pointer-events: none;
+    top: 0;
+    left: 0;
+  }
+}
+
+// Not scoped under .statusbar: antd's Popover renders its content into a portal
+// (typically appended to document.body), so this needs to apply regardless of where
+// in the DOM the link ends up.
+.statusbar-doc-link,
+.statusbar-doc-link:visited {
+  color: rgba(255, 255, 255, 0.67);
+  text-decoration: none;
+
+  &:hover,
+  &:focus {
+    color: rgba(255, 255, 255, 0.67);
+    text-decoration: underline;
+  }
+}
+
+.statusbar-overflow-content {
+  // The left/right-drag icons have their mouse glyph off-center (to make room for the
+  // drag arrow), which reads fine inline in the statusbar but looks visually
+  // mis-aligned against the other icons when stacked in this vertical list -- nudge
+  // them back towards center here only.
+  .statusbar-drag-icon {
+    transform: translateX(2px);
   }
 }

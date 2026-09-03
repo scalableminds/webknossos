@@ -303,7 +303,6 @@ export default class TextureBucketManager {
   // that haven't arrived yet may render stale/incorrect data for their z-slot in
   // the meantime — accepted for now (see plan notes).
   private getBatchSiblings(bucket: DataBucket): Array<DataBucket> {
-    return;
     const t = bucket.getT();
     const batchStart = Math.floor(t / constants.BUCKET_WIDTH) * constants.BUCKET_WIDTH;
     const bounds = this.cube.additionalAxes.t?.bounds;

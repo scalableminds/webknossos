@@ -2,12 +2,57 @@ import app from "app";
 import PriorityQueue from "js-priority-queue";
 import { asAbortable, sleep } from "libs/utils";
 import type { BucketAddress } from "viewer/constants";
+import constants from "viewer/constants";
 import { getLayerByName } from "viewer/model/accessors/dataset_accessor";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
 import { requestWithFallback } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import type { DataStoreInfo } from "viewer/store";
 import Store from "viewer/store";
 import type { DataBucket } from "./bucket";
+
+// For a layer where t should be treated like z (see DataCube.isTRecyclingEligible), widens
+// a single-t request address into a full 32-t-aligned-batch request address, so that the
+// wire request always fetches a whole batch instead of one t-slice at a time (see
+// getTBatchSiblingAddresses for how the response is then fanned out to every t within it).
+function snapToTBatchAddress(cube: DataCube, address: BucketAddress): BucketAddress {
+  if (!cube.isTRecyclingEligible) {
+    return address;
+  }
+  const additionalCoordinates = address[4] ?? [];
+  const t = additionalCoordinates.find((coord) => coord.name === "t")?.value ?? 0;
+  const batchStart = Math.floor(t / constants.BUCKET_WIDTH) * constants.BUCKET_WIDTH;
+  const batchedCoordinates = additionalCoordinates.map((coord) =>
+    coord.name === "t" ? { ...coord, value: batchStart, length: constants.BUCKET_WIDTH } : coord,
+  );
+  return [address[0], address[1], address[2], address[3], batchedCoordinates];
+}
+
+// The addresses of every bucket whose data is present in the response for `address` (see
+// snapToTBatchAddress): just `address` itself for a non-t-recycling-eligible layer, or every
+// valid t within the aligned 32-batch `address` belongs to otherwise.
+function getTBatchSiblingAddresses(cube: DataCube, address: BucketAddress): Array<BucketAddress> {
+  if (!cube.isTRecyclingEligible) {
+    return [address];
+  }
+  const additionalCoordinates = address[4] ?? [];
+  const t = additionalCoordinates.find((coord) => coord.name === "t")?.value ?? 0;
+  const batchStart = Math.floor(t / constants.BUCKET_WIDTH) * constants.BUCKET_WIDTH;
+  const bounds = cube.additionalAxes.t?.bounds;
+  const siblings: Array<BucketAddress> = [];
+
+  for (let dt = 0; dt < constants.BUCKET_WIDTH; dt++) {
+    const nt = batchStart + dt;
+    if (bounds != null && (nt < bounds[0] || nt >= bounds[1])) {
+      continue;
+    }
+    const siblingCoordinates = additionalCoordinates.map((coord) =>
+      coord.name === "t" ? { ...coord, value: nt } : coord,
+    );
+    siblings.push([address[0], address[1], address[2], address[3], siblingCoordinates]);
+  }
+
+  return siblings;
+}
 
 export type PullQueueItem = {
   priority: number;
@@ -83,12 +128,18 @@ class PullQueue {
     const { dataset } = Store.getState();
     const layerInfo = getLayerByName(dataset, this.layerName);
     const { renderMissingDataBlack } = Store.getState().datasetConfiguration;
+    // For a t-recycling-eligible layer, always request a whole aligned 32-t batch instead
+    // of a single t (see snapToTBatchAddress) — never just the one t-slice that happens to
+    // be needed right now. The response is then fanned out to every valid t within it (see
+    // getTBatchSiblingAddresses/handleBatchedBucketResult), so scrubbing through t within an
+    // already-fetched batch needs no further request from any consumer, not just rendering.
+    const wireBatch = batch.map((address) => snapToTBatchAddress(this.cube, address));
 
     let hasErrored = false;
     let failedBucketAddresses = [];
     try {
       const bucketResults = await asAbortable(
-        requestWithFallback(layerInfo, batch),
+        requestWithFallback(layerInfo, wireBatch),
         this.abortController.signal,
         PULL_ABORTION_ERROR,
       );
@@ -96,24 +147,19 @@ class PullQueue {
       for (const [index, bucketAddress] of batch.entries()) {
         try {
           const bucketResult = bucketResults[index];
-          const bucket = this.cube.getOrCreateBucket(bucketAddress);
-
-          if (bucket.type !== "data") {
-            continue;
-          }
+          const siblingAddresses = getTBatchSiblingAddresses(this.cube, bucketAddress);
 
           switch (bucketResult.type) {
             case "data": {
-              this.handleBucket(bucket, bucketResult.data);
+              this.handleBatchedBucketResult(
+                siblingAddresses,
+                bucketResult.data,
+                renderMissingDataBlack,
+              );
               break;
             }
             case "empty": {
-              if (renderMissingDataBlack) {
-                // Render empty buckets as black (zeroed) data.
-                this.handleBucket(bucket, null);
-              } else {
-                bucket.markAsMissing();
-              }
+              this.handleBatchedBucketResult(siblingAddresses, null, renderMissingDataBlack);
               break;
             }
             case "failure": {
@@ -197,15 +243,60 @@ class PullQueue {
   private handleBucket(
     bucket: DataBucket,
     bucketData: Uint8Array<ArrayBuffer> | null | undefined,
+    voxelOffsetInWireData: number = 0,
   ): void {
     if (this.cube.shouldEagerlyMaintainUsedValueSet()) {
       // If we assume that the value set of the bucket is needed often (for proofreading),
       // we compute it here eagerly and then send the data to the bucket.
       // That way, the computations of the value set are spread out over time instead of being
       // clustered when DataCube.getValueSetForAllAccessedBuckets is called. This improves the FPS rate.
-      bucket.receiveData(bucketData, true);
+      bucket.receiveData(bucketData, true, voxelOffsetInWireData);
     } else {
-      bucket.receiveData(bucketData);
+      bucket.receiveData(bucketData, false, voxelOffsetInWireData);
+    }
+  }
+
+  // Applies one wire response (data or empty) to every sibling address it covers (see
+  // getTBatchSiblingAddresses — just the one originally-requested bucket for a plain
+  // request, or every valid t within a fetched batch). Siblings beyond the one actually
+  // requested via pull() are opportunistically transitioned from UNREQUESTED to REQUESTED
+  // here so they can receive this "free" data too (this is the whole point of always
+  // fetching full t-batches); a sibling already in some other state (e.g. still loading via
+  // a different concurrent request) is left untouched.
+  private handleBatchedBucketResult(
+    siblingAddresses: Array<BucketAddress>,
+    bucketData: Uint8Array<ArrayBuffer> | null,
+    renderMissingDataBlack: boolean,
+  ): void {
+    const isBatched = siblingAddresses.length > 1;
+
+    for (const siblingAddress of siblingAddresses) {
+      const sibling = this.cube.getOrCreateBucket(siblingAddress);
+
+      if (sibling.type !== "data") {
+        continue;
+      }
+      if (sibling.needsRequest()) {
+        sibling.markAsRequested();
+      }
+      if (!sibling.isRequested()) {
+        continue;
+      }
+
+      if (bucketData == null) {
+        if (renderMissingDataBlack) {
+          // Render empty buckets as black (zeroed) data.
+          this.handleBucket(sibling, null);
+        } else {
+          sibling.markAsMissing();
+        }
+        continue;
+      }
+
+      const voxelOffsetInWireData = isBatched
+        ? (sibling.getT() % constants.BUCKET_WIDTH) * this.cube.getEffectiveBucketVoxelCount()
+        : 0;
+      this.handleBucket(sibling, bucketData, voxelOffsetInWireData);
     }
   }
 

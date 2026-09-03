@@ -35,9 +35,10 @@ function makeMockCubeBase() {
     triggerRenderedBucketDataChanged: () => {},
     effectiveBucketDepth: 32,
     additionalAxes: {} as Record<string, { bounds: [number, number]; index: number; name: string }>,
+    isTRecyclingEligible: false,
     getEffectiveBucketVoxelCount: () => 32 ** 3,
-    // Only exercised by t-recycling's sibling fetch (getBatchSiblings); default to
-    // "no siblings exist" so non-t-recycling tests are unaffected.
+    // Only exercised by t-recycling's retargetToNewT; default to "no siblings exist"
+    // so non-t-recycling tests are unaffected.
     getOrCreateBucket: () => NULL_BUCKET,
     pullQueue: { add: () => {}, pull: () => {} },
   };
@@ -196,15 +197,16 @@ describe("TextureBucketManager", () => {
     }
   });
 
-  it("t-recycling: places a t-slice at its z-sub-slot, addressed via the t-batch (Stage A)", () => {
-    // Row-alignment guard requires textureWidth <= (32^2 / packingDegree) = 256 for uint8.
+  it("t-recycling: uploads a bucket's whole shared batch buffer in one shot, addressed via the t-batch", () => {
     const textureWidth = 256;
     const t = 45; // batch index = floor(45/32) = 1, zSlot = 45 % 32 = 13
+    const sliceVoxelCount = 32 * 32; // effectiveBucketDepth === 1
     const tRecyclingMockedCube = makeMockCube({
       effectiveBucketDepth: 1,
       additionalAxes: { t: { name: "t", bounds: [0, 1000], index: 3 } },
+      isTRecyclingEligible: true,
       // CPU-side data for a t-recycling-eligible layer stays shrunk to one z-slice.
-      getEffectiveBucketVoxelCount: () => 32 * 32 * 1,
+      getEffectiveBucketVoxelCount: () => sliceVoxelCount,
     });
 
     const bucket = new DataBucket(
@@ -216,9 +218,13 @@ describe("TextureBucketManager", () => {
     );
     bucket._fallbackBucket = NULL_BUCKET;
     bucket.markAsRequested();
-    const data = new Uint8Array(32 ** 3); // full wire payload; receiveData slices it down
-    data[0] = 77;
-    bucket.receiveData(data);
+    // Simulates a real batched fetch (see PullQueue.handleBatchedBucketResult): the wire
+    // payload covers the whole 32-t batch, and this bucket's own t-slice is placed at its
+    // corresponding offset within it, not at offset 0.
+    const zSlot = t % 32;
+    const rawBatchBuffer = new Uint8Array(32 ** 3);
+    rawBatchBuffer[zSlot * sliceVoxelCount] = 77;
+    bucket.receiveData(rawBatchBuffer, false, zSlot * sliceVoxelCount);
 
     const tbm = new TextureBucketManager(textureWidth, 1, "uint8", tRecyclingMockedCube as any);
     expect(tbm.isTRecyclingEnabled).toBe(true);
@@ -238,26 +244,36 @@ describe("TextureBucketManager", () => {
       tbm.bucketVoxelCount,
     );
     expect(bucketHeightInTexture).toBe(32); // full-depth atlas geometry, not shrunk
-    const writeHeight = bucketHeightInTexture / 32;
-    const zSlot = t % 32;
+    // The whole raw batch buffer is uploaded verbatim (unpacked byte layout, see
+    // MockUpdatableTexture.update), so a marker's position within it carries straight
+    // through to its position within the bucket's row-aligned region of the atlas.
     const bucketLocation =
-      (bucketHeightInTexture * bucketAddress + writeHeight * zSlot) * textureWidth;
+      bucketHeightInTexture * bucketAddress * textureWidth + zSlot * sliceVoxelCount;
     // @ts-expect-error - texture is available in our mock but not in the real type
     expect(tbm.dataTextures[0].texture[bucketLocation]).toBe(77);
   });
 
-  it("t-recycling: siblings fetched from the same t-batch share one atlas index (Stage B)", () => {
+  it("t-recycling: a batch's whole shared buffer lands on the GPU from just its active (primary) bucket", () => {
     const textureWidth = 256;
     const primaryT = 32; // batch 1, zSlot 0
     const siblingT = 40; // batch 1, zSlot 8
+    const sliceVoxelCount = 32 * 32;
 
     const tRecyclingMockedCube = makeMockCube({
       effectiveBucketDepth: 1,
       additionalAxes: { t: { name: "t", bounds: [0, 1000], index: 3 } },
-      getEffectiveBucketVoxelCount: () => 32 * 32 * 1,
+      isTRecyclingEligible: true,
+      getEffectiveBucketVoxelCount: () => sliceVoxelCount,
     });
 
-    const buildTRecyclingBucket = (t: number, firstByte: number) => {
+    // Simulates the real PullQueue flow: one network response for the whole batch,
+    // shared verbatim across every t within it (see handleBatchedBucketResult) —
+    // both markers below live in the very same buffer.
+    const rawBatchBuffer = new Uint8Array(32 ** 3);
+    rawBatchBuffer[(primaryT % 32) * sliceVoxelCount] = 11;
+    rawBatchBuffer[(siblingT % 32) * sliceVoxelCount] = 22;
+
+    const buildTRecyclingBucket = (t: number) => {
       const bucket = new DataBucket(
         "uint8",
         [1, 1, 0, 0, [{ name: "t", value: t }]] as any,
@@ -267,22 +283,15 @@ describe("TextureBucketManager", () => {
       );
       bucket._fallbackBucket = NULL_BUCKET;
       bucket.markAsRequested();
-      const data = new Uint8Array(32 ** 3);
-      data[0] = firstByte;
-      bucket.receiveData(data);
+      bucket.receiveData(rawBatchBuffer, false, (t % 32) * sliceVoxelCount);
       return bucket;
     };
 
-    const primaryBucket = buildTRecyclingBucket(primaryT, 11);
-    const siblingBucket = buildTRecyclingBucket(siblingT, 22);
-
-    // Only one of the 31 possible siblings actually "exists"; the rest resolve to
-    // NULL_BUCKET (via makeMockCubeBase's default), same as an unloaded/out-of-range
-    // sibling would in the real DataCube.
-    tRecyclingMockedCube.getOrCreateBucket = ((address: [number, number, number, number, any]) => {
-      const t = address[4]?.find((coord: { name: string }) => coord.name === "t")?.value;
-      return t === siblingT ? siblingBucket : NULL_BUCKET;
-    }) as any;
+    const primaryBucket = buildTRecyclingBucket(primaryT);
+    // Note: this sibling is never passed to setActiveBuckets, nor looked up via
+    // getOrCreateBucket by the manager. With the new design that's fine: its data
+    // already rode along in the primary's single bulk upload of the shared buffer.
+    buildTRecyclingBucket(siblingT);
 
     const tbm = new TextureBucketManager(textureWidth, 1, "uint8", tRecyclingMockedCube as any);
     tbm.setupDataTextures(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
@@ -299,107 +308,39 @@ describe("TextureBucketManager", () => {
       tbm.packingDegree,
       tbm.bucketVoxelCount,
     );
-    const writeHeight = bucketHeightInTexture / 32;
-
     for (const [t, expectedFirstByte] of [
       [primaryT, 11],
       [siblingT, 22],
     ] as const) {
       const zSlot = t % 32;
       const bucketLocation =
-        (bucketHeightInTexture * bucketAddress + writeHeight * zSlot) * textureWidth;
+        bucketHeightInTexture * bucketAddress * textureWidth + zSlot * sliceVoxelCount;
       // @ts-expect-error - texture is available in our mock but not in the real type
       expect(tbm.dataTextures[0].texture[bucketLocation]).toBe(expectedFirstByte);
     }
   });
 
-  it("t-recycling: packs multiple slices side by side within a row when packedSliceSize < textureWidth", () => {
-    // This is exactly the regime that used to be rejected by the (now-removed)
-    // row-alignment guard: packedSliceSize = 1024/4 = 256, well below textureWidth.
-    // slicesPerRow = 1024/256 = 4.
-    const textureWidth = 1024;
-    const primaryT = 32; // batch 1, zSlot 0 -> row 0, col 0
-    const siblingT = 37; // batch 1, zSlot 5 -> row 1, col 1
-
-    const tRecyclingMockedCube = makeMockCube({
-      effectiveBucketDepth: 1,
-      additionalAxes: { t: { name: "t", bounds: [0, 1000], index: 3 } },
-      getEffectiveBucketVoxelCount: () => 32 * 32 * 1,
-    });
-
-    const buildTRecyclingBucket = (t: number, firstByte: number) => {
-      const bucket = new DataBucket(
-        "uint8",
-        [1, 1, 0, 0, [{ name: "t", value: t }]] as any,
-        temporalBucketManagerMock as any,
-        { type: "full" },
-        tRecyclingMockedCube as any,
-      );
-      bucket._fallbackBucket = NULL_BUCKET;
-      bucket.markAsRequested();
-      const data = new Uint8Array(32 ** 3);
-      data[0] = firstByte;
-      bucket.receiveData(data);
-      return bucket;
-    };
-
-    const primaryBucket = buildTRecyclingBucket(primaryT, 111);
-    const siblingBucket = buildTRecyclingBucket(siblingT, 222);
-
-    tRecyclingMockedCube.getOrCreateBucket = ((address: [number, number, number, number, any]) => {
-      const t = address[4]?.find((coord: { name: string }) => coord.name === "t")?.value;
-      return t === siblingT ? siblingBucket : NULL_BUCKET;
-    }) as any;
-
-    const tbm = new TextureBucketManager(textureWidth, 1, "uint8", tRecyclingMockedCube as any);
-    expect(tbm.isTRecyclingEnabled).toBe(true);
-    tbm.setupDataTextures(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
-
-    setActiveBucketsAndWait(tbm, [primaryBucket]);
-
-    const bucketAddress = tbm.lookUpCuckooTable.get([1, 1, 1, 0, LAYER_INDEX]);
-    if (bucketAddress == null) {
-      throw new Error("Bucket address is null");
-    }
-
-    const bucketHeightInTexture = getBucketHeightInTexture(
-      textureWidth,
-      tbm.packingDegree,
-      tbm.bucketVoxelCount,
-    );
-    const packedSliceSize = (32 * 32) / tbm.packingDegree; // 256
-    const sliceWidth = Math.min(packedSliceSize, textureWidth); // 256
-    const sliceHeight = Math.max(1, packedSliceSize / textureWidth); // 1
-    const slicesPerRow = textureWidth / sliceWidth; // 4
-    expect(slicesPerRow).toBeGreaterThan(1); // sanity-check this test exercises the new regime
-
-    for (const [t, expectedFirstByte] of [
-      [primaryT, 111],
-      [siblingT, 222],
-    ] as const) {
-      const zSlot = t % 32;
-      const x = (zSlot % slicesPerRow) * sliceWidth;
-      const y =
-        bucketHeightInTexture * bucketAddress + Math.floor(zSlot / slicesPerRow) * sliceHeight;
-      const bucketLocation = y * textureWidth + x;
-      // @ts-expect-error - texture is available in our mock but not in the real type
-      expect(tbm.dataTextures[0].texture[bucketLocation]).toBe(expectedFirstByte);
-    }
-  });
-
-  it("t-recycling: retargetToNewT reuses an already-resident batch, but re-picks across a batch boundary (Stage C)", () => {
+  it("t-recycling: retargetToNewT reuses an already-resident batch, but re-picks across a batch boundary", () => {
     const textureWidth = 256;
     const primaryT = 32; // batch 1, zSlot 0
     const siblingT = 40; // batch 1, zSlot 8
     const otherBatchT = 64; // batch 2, zSlot 0
+    const sliceVoxelCount = 32 * 32;
 
     const tRecyclingMockedCube = makeMockCube({
       effectiveBucketDepth: 1,
       additionalAxes: { t: { name: "t", bounds: [0, 1000], index: 3 } },
-      getEffectiveBucketVoxelCount: () => 32 * 32 * 1,
+      isTRecyclingEligible: true,
+      getEffectiveBucketVoxelCount: () => sliceVoxelCount,
     });
 
-    const buildTRecyclingBucket = (t: number, firstByte: number) => {
+    const batch1Buffer = new Uint8Array(32 ** 3);
+    batch1Buffer[(primaryT % 32) * sliceVoxelCount] = 11;
+    batch1Buffer[(siblingT % 32) * sliceVoxelCount] = 22;
+    const batch2Buffer = new Uint8Array(32 ** 3);
+    batch2Buffer[(otherBatchT % 32) * sliceVoxelCount] = 33;
+
+    const buildTRecyclingBucket = (t: number, rawBatchBuffer: Uint8Array<ArrayBuffer>) => {
       const bucket = new DataBucket(
         "uint8",
         [1, 1, 0, 0, [{ name: "t", value: t }]] as any,
@@ -409,15 +350,13 @@ describe("TextureBucketManager", () => {
       );
       bucket._fallbackBucket = NULL_BUCKET;
       bucket.markAsRequested();
-      const data = new Uint8Array(32 ** 3);
-      data[0] = firstByte;
-      bucket.receiveData(data);
+      bucket.receiveData(rawBatchBuffer, false, (t % 32) * sliceVoxelCount);
       return bucket;
     };
 
-    const primaryBucket = buildTRecyclingBucket(primaryT, 11);
-    const siblingBucket = buildTRecyclingBucket(siblingT, 22);
-    const otherBatchBucket = buildTRecyclingBucket(otherBatchT, 33);
+    const primaryBucket = buildTRecyclingBucket(primaryT, batch1Buffer);
+    const siblingBucket = buildTRecyclingBucket(siblingT, batch1Buffer);
+    const otherBatchBucket = buildTRecyclingBucket(otherBatchT, batch2Buffer);
 
     tRecyclingMockedCube.getOrCreateBucket = ((address: [number, number, number, number, any]) => {
       const t = address[4]?.find((coord: { name: string }) => coord.name === "t")?.value;
@@ -435,8 +374,9 @@ describe("TextureBucketManager", () => {
       throw new Error("Bucket address is null");
     }
 
-    // Retargeting to a t within the SAME batch should be a no-op: both the
-    // primary and its sibling are already resident, so nothing gets evicted.
+    // Retargeting to a t within the SAME batch should be a no-op for the atlas: the
+    // group's index is unchanged, and no new upload happens — the whole batch's buffer,
+    // including the sibling's slice, already landed via the primary's earlier upload.
     tbm.retargetToNewT([{ name: "t", value: siblingT }]);
     tbm.processWriterQueue();
     expect(tbm.lookUpCuckooTable.get([1, 1, 1, 0, LAYER_INDEX])).toBe(originalBucketAddress);
@@ -446,14 +386,13 @@ describe("TextureBucketManager", () => {
       tbm.packingDegree,
       tbm.bucketVoxelCount,
     );
-    const writeHeight = bucketHeightInTexture / 32;
     for (const [t, expectedFirstByte] of [
       [primaryT, 11],
       [siblingT, 22],
     ] as const) {
       const zSlot = t % 32;
       const bucketLocation =
-        (bucketHeightInTexture * originalBucketAddress + writeHeight * zSlot) * textureWidth;
+        bucketHeightInTexture * originalBucketAddress * textureWidth + zSlot * sliceVoxelCount;
       // @ts-expect-error - texture is available in our mock but not in the real type
       expect(tbm.dataTextures[0].texture[bucketLocation]).toBe(expectedFirstByte);
     }
@@ -469,7 +408,7 @@ describe("TextureBucketManager", () => {
     }
     const newZSlot = otherBatchT % 32;
     const newBucketLocation =
-      (bucketHeightInTexture * newBucketAddress + writeHeight * newZSlot) * textureWidth;
+      bucketHeightInTexture * newBucketAddress * textureWidth + newZSlot * sliceVoxelCount;
     // @ts-expect-error - texture is available in our mock but not in the real type
     expect(tbm.dataTextures[0].texture[newBucketLocation]).toBe(33);
   });

@@ -118,6 +118,14 @@ export class DataBucket {
   accessed: boolean;
   previousAccessed: boolean;
   data: BucketDataArray | null | undefined;
+  // The full 32^3-voxel wire-format buffer `data` was extracted from (see receiveData).
+  // For most layers this covers exactly the same memory as `data`. For a t-recycling
+  // layer's bucket, this is the *shared* 32-t-slice batch buffer fetched together (see
+  // PullQueue.pullBatch), of which `data` is only this bucket's own single-slice window
+  // (a view, not a copy) — TextureBucketManager uploads this whole buffer to the GPU in
+  // one call instead of `data`'s narrow slice. May be backed by memory shared with
+  // sibling buckets — never mutate it.
+  rawBucketData: BucketDataArray | null | undefined;
   temporalBucketManager: TemporalBucketManager;
   cube: DataCube;
   _fallbackBucket: Bucket | null | undefined;
@@ -148,6 +156,7 @@ export class DataBucket {
     this.accessed = false;
     this.previousAccessed = false;
     this.data = null;
+    this.rawBucketData = null;
 
     if (this.cube.isSegmentation) {
       this.throttledTriggerLabeled = throttle(() => this.trigger("bucketLabeled"), 10);
@@ -214,6 +223,7 @@ export class DataBucket {
     // so that at least the big memory hog is tamed (unfortunately,
     // this doesn't help against references which point directly to this.data)
     this.data = null;
+    this.rawBucketData = null;
     this.invalidateValueSet();
     this.trigger("bucketCollected");
     // Remove all event handlers (see https://github.com/ai/nanoevents#remove-all-listeners)
@@ -652,11 +662,15 @@ export class DataBucket {
   receiveData(
     arrayBuffer: Uint8Array<ArrayBuffer> | null | undefined,
     computeValueSet: boolean = false,
+    voxelOffsetInWireData: number = 0,
   ): void {
     // The backend always sends (or, for missing buckets, uint8ToTypedBuffer synthesizes)
     // a full 32^3-voxel cube. wireData is validated against that full size below and then
     // sliced down to this layer's effective (possibly shrunk) bucket footprint, so that
-    // `this.data` never retains more memory than the layer actually needs.
+    // `this.data` never retains more memory than the layer actually needs. For a batched
+    // request (voxelOffsetInWireData != 0, see PullQueue.pullBatch), wireData additionally
+    // covers *several* buckets' worth of data (e.g. a whole t-batch); voxelOffsetInWireData
+    // then picks out this bucket's own window within it.
     const wireData = uint8ToTypedBuffer(arrayBuffer, this.elementClass);
     const [_TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
 
@@ -678,11 +692,16 @@ export class DataBucket {
       throw error;
     }
 
+    this.rawBucketData = wireData;
+
     const effectiveVoxelCount = this.cube.getEffectiveBucketVoxelCount();
     const data =
-      effectiveVoxelCount === Constants.BUCKET_SIZE
+      effectiveVoxelCount === Constants.BUCKET_SIZE && voxelOffsetInWireData === 0
         ? wireData
-        : (wireData.slice(0, channelCount * effectiveVoxelCount) as BucketDataArray);
+        : (wireData.subarray(
+            channelCount * voxelOffsetInWireData,
+            channelCount * (voxelOffsetInWireData + effectiveVoxelCount),
+          ) as BucketDataArray);
 
     switch (this.state) {
       case BucketStateEnum.REQUESTED: {

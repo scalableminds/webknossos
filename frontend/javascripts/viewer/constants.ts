@@ -1,6 +1,10 @@
 import type { Matrix4x4 } from "mjs";
 import { Euler, Matrix4 } from "three";
-export type AdditionalCoordinate = { name: string; value: number };
+// `length`: number of consecutive values starting at `value` to request along this axis,
+// instead of just one (e.g. for a 32-t-batch request against a Z-degenerate layer — see
+// DataCube.isTRecyclingEligible and PullQueue.pullBatch). Only meaningful on requests sent
+// to the backend; a bucket's own address always carries a single-point `value`.
+export type AdditionalCoordinate = { name: string; value: number; length?: number };
 
 export const ViewModeValues = ["orthogonal", "flight"] as ViewMode[];
 

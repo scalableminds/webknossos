@@ -9,7 +9,7 @@ import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.datavault.{ByteRange, StartEndExclusiveByteRange, VaultPath}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
-import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
+import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer}
 import com.scalableminds.util.box.Box.tryo
 import ucar.ma2.Array as MultiArray
 
@@ -78,7 +78,7 @@ class DatasetArray(
       (offsetArray, shapeArray) <- tryo(
         constructOffsetAndShapeArrays(offsetXYZ, shapeXYZ, additionalCoordinatesOpt, shouldReadUint24)
       ).toFox ?~> "failed to construct shape and offset array for requested coordinates"
-      bytes <- readBytes(offsetArray, shapeArray)
+      bytes <- readBytes(offsetArray, shapeArray, additionalCoordinatesOpt)
     } yield bytes
 
   private def constructOffsetAndShapeArrays(
@@ -87,6 +87,13 @@ class DatasetArray(
       additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]],
       shouldReadUint24: Boolean
   ): (Array[Int], Array[Int]) = {
+    val batchedCoordinates = additionalCoordinatesOpt.getOrElse(Seq.empty).filter(_.length.exists(_ > 1))
+    require(batchedCoordinates.size <= 1, "Reading more than one batched additional axis at once is not supported")
+    require(
+      batchedCoordinates.isEmpty || !axisOrder.hasZAxis,
+      "Reading a batched additional axis is only supported for datasets without a real z axis"
+    )
+
     val offsetArray: Array[Int] = Array.fill(rank)(0)
     offsetArray(rank - 3) = offsetXYZ.x
     offsetArray(rank - 2) = offsetXYZ.y
@@ -113,20 +120,48 @@ class DatasetArray(
       for (additionalCoordinate <- additionalCoordinates) {
         val index = fullAxisOrder.arrayToWkPermutation(additionalAxesMap(additionalCoordinate.name).index)
         offsetArray(index) = additionalCoordinate.value
-        // shapeArray at positions of additional coordinates is always 1
+        // shapeArray at positions of additional coordinates is 1, unless a batch of consecutive
+        // values along that axis was requested (see AdditionalCoordinate.length / repackBatchedAxisIntoZSlot).
+        // Clamped defensively since, unlike the fixed 32 for x/y/z, this is client-controlled sizing input.
+        shapeArray(index) = additionalCoordinate.length.getOrElse(1).min(DataLayer.bucketLength)
       }
     }
     (offsetArray, shapeArray)
   }
 
+  // If a batched additional coordinate (length > 1) was requested, the read above widened that axis's
+  // shape instead of the usual synthetic (size-1) z axis. That axis naturally ends up as the
+  // fastest-varying dimension of the read result (additional axes sit at the front of "wk" order, which
+  // ends up last/fastest after readAsFortranOrder's shape.reverse), but the wire format this bucket is
+  // returned in expects the depth axis (z) to be the slowest-varying one (see BinaryDataService.cutOutCuboid's
+  // x + y*32 + z*32*32 stride convention). This swaps the batched axis into z's dimension so the batch is
+  // packed into the byte layout a client already expects for a normal 32-deep bucket.
+  // `.copy()` is required (not just `.transpose()`, which returns a view): BytesConverter.toByteArray reads
+  // `.getStorage()` directly, which would otherwise bypass the transpose's index remapping.
+  private def repackBatchedAxisIntoZSlot(
+      multiArray: MultiArray,
+      additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]]
+  ): MultiArray =
+    additionalCoordinatesOpt.flatMap(_.find(_.length.exists(_ > 1))) match {
+      case Some(batched) =>
+        val batchedAxisWkSlot = fullAxisOrder.arrayToWkPermutation(additionalAxesMap(batched.name).index)
+        // readAsFortranOrder builds its target array with shape.reverse, so wk slot `s` lives at
+        // dimension `rank - 1 - s`. Z's wk slot is always rank - 1, i.e. dimension 0.
+        val batchedAxisDimension = rank - 1 - batchedAxisWkSlot
+        multiArray.transpose(batchedAxisDimension, 0).copy()
+      case None => multiArray
+    }
+
   // returns byte array in fortran-order with little-endian values
-  private def readBytes(offset: Array[Int], shape: Array[Int])(using
-      ec: ExecutionContext,
-      tc: TokenContext
-  ): Fox[Array[Byte]] =
+  private def readBytes(
+      offset: Array[Int],
+      shape: Array[Int],
+      additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]]
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
       typedMultiArray <- readAsFortranOrder(offset, shape)
-      asBytes <- BytesConverter.toByteArray(typedMultiArray, header.resolvedDataType, ByteOrder.LITTLE_ENDIAN).toFox
+      repackedMultiArray = repackBatchedAxisIntoZSlot(typedMultiArray, additionalCoordinatesOpt)
+      asBytes <- BytesConverter.toByteArray(repackedMultiArray, header.resolvedDataType, ByteOrder.LITTLE_ENDIAN).toFox
     } yield asBytes
 
   private def printAsInner(values: Array[Int], flip: Boolean = false): String = {

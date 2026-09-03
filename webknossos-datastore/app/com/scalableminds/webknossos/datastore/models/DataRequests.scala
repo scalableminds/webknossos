@@ -86,7 +86,12 @@ object RawCuboidRequest {
 
 case class AdditionalCoordinate(
     name: String,
-    value: Int
+    value: Int,
+    // Number of consecutive values starting at `value` to read along this axis, instead of just one.
+    // Only supported for a single additional axis at a time, and only for datasets without a real Z axis
+    // (see DatasetArray.constructOffsetAndShapeArrays/repackBatchedAxisIntoZSlot), where the batch is packed
+    // into the byte position normally occupied by the (otherwise size-1) synthetic Z axis.
+    length: Option[Int] = None
 ) {
   override def toString: String = s"$name=$value"
 }

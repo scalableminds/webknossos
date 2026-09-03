@@ -18,7 +18,11 @@ import type {
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { BucketAddress, LabelMasksByBucketAndW, Vector3, Vector4 } from "viewer/constants";
 import Constants from "viewer/constants";
-import constants, { getEffectiveBucketDepth, MappingStatusEnum } from "viewer/constants";
+import constants, {
+  getEffectiveBucketDepth,
+  MappingStatusEnum,
+  wantsTRecycling,
+} from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
@@ -113,6 +117,12 @@ class DataCube {
   // typed array (and, on the GPU, the atlas footprint) can be shrunk to this depth,
   // since the addressing/picking machinery still treats buckets as 32^3 for bookkeeping.
   readonly effectiveBucketDepth: number;
+  // Whether this layer's buckets should always be fetched/cached in aligned 32-t batches
+  // instead of one t at a time (Z is degenerate and a t axis exists), so that a whole
+  // batch's data is fetched together and shared (see PullQueue.pullBatch and
+  // DataBucket.rawBucketData) rather than in per-t network requests. See TextureBucketManager
+  // for how the GPU atlas reuses one shared upload for a whole batch.
+  readonly isTRecyclingEligible: boolean;
   additionalAxes: Record<string, AdditionalAxis>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'pullQueue' has no initializer and is not... Remove this comment to see the full error message
   pullQueue: PullQueue;
@@ -162,6 +172,10 @@ class DataCube {
     this.emitter = createNanoEvents();
     this.layerBoundingBox = layerBBox;
     this.effectiveBucketDepth = getEffectiveBucketDepth(layerBBox.getSize()[2]);
+    this.isTRecyclingEligible = wantsTRecycling(
+      layerBBox.getSize()[2],
+      this.additionalAxes.t != null,
+    );
 
     this.cubes = {};
     this.buckets = [];

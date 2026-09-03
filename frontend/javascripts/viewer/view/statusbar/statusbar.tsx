@@ -69,7 +69,7 @@ function Statusbar() {
       <span ref={rightRef} style={{ display: "inline-flex" }}>
         <BorderToggleButton side="right" inFooter />
       </span>
-      { /* The following span is completely invisible to the user and only used for measurement. */}
+      {/* The following span is completely invisible to the user and only used for measurement. */}
       <span ref={fullShortcutRowRef} className="statusbar-measurer" aria-hidden="true">
         {items.map((item) => (
           <span key={item.key} ref={setItemRefFactory(item.key)} style={{ display: "inline-flex" }}>

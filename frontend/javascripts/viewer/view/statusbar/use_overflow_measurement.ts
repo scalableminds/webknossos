@@ -1,3 +1,4 @@
+import { compact } from "lodash-es";
 import { type RefObject, useLayoutEffect, useRef, useState } from "react";
 
 type UseOverflowMeasurementParams = {
@@ -103,13 +104,14 @@ export function useOverflowMeasurement({
     recompute();
 
     const resizeObserver = new ResizeObserver(recompute);
-    resizeObserver.observe(container);
-    for (const ref of fixedRefs) {
-      if (ref.current != null) {
-        resizeObserver.observe(ref.current);
-      }
+    const elementsToObserve = [
+      container,
+      ...compact(fixedRefs.map((ref) => ref.current)),
+      measureRow,
+    ];
+    for (const element of elementsToObserve) {
+      resizeObserver.observe(element);
     }
-    resizeObserver.observe(measureRow);
     return () => resizeObserver.disconnect();
     // biome-ignore lint/correctness/useExhaustiveDependencies: refs are stable across
     // renders, and item/content changes are picked up via the ResizeObserver instead

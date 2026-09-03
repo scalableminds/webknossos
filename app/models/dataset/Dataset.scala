@@ -200,9 +200,12 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
   }
 
   override def readAccessQ(requestingUserId: ObjectId): SqlToken =
-    q"""isPublic
+    readAccessQWithPrefix(requestingUserId, q"")
+
+  def readAccessQWithPrefix(requestingUserId: ObjectId, prefix: SqlToken): SqlToken =
+    q"""${prefix}isPublic
         OR ( -- user is matching orga admin or dataset manager
-          _organization IN (
+          ${prefix}_organization IN (
             SELECT _organization
             FROM webknossos.users_
             WHERE _id = $requestingUserId
@@ -210,7 +213,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
           )
         )
         OR ( -- user is in a team that is allowed for the dataset
-          _id IN (
+          ${prefix}_id IN (
             SELECT _dataset
             FROM webknossos.dataset_allowedTeams dt
             JOIN webknossos.user_team_roles utr ON dt._team = utr._team
@@ -218,7 +221,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
           )
         )
         OR ( -- user is in a team that is allowed for the folder or its ancestors
-          _folder IN (
+          ${prefix}_folder IN (
             SELECT fp._descendant
             FROM webknossos.folder_paths fp
             WHERE fp._ancestor IN (

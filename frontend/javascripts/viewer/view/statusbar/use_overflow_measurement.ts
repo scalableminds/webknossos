@@ -8,7 +8,7 @@ type UseOverflowMeasurementParams = {
   // container's width to get the width available for the measured items.
   fixedRefs: RefObject<HTMLElement | null>[];
   // Hidden row wrapping a full-size (never collapsed) measurement of every item, keyed
-  // via setItemRef below. Observed as a whole so that content changes (e.g. item text
+  // via setItemRefFactory below. Observed as a whole so that content changes (e.g. item text
   // changing) trigger a re-measurement without needing one observer per item.
   measureRowRef: RefObject<HTMLElement | null>;
   // Candidate widths for the overflow trigger (e.g. a "More" vs. an "everything is
@@ -25,7 +25,7 @@ type UseOverflowMeasurementParams = {
 type UseOverflowMeasurementResult = {
   visibleCount: number;
   // Callback-ref factory for the hidden per-item measurer elements, keyed by item key.
-  setItemRef: (key: string) => (el: HTMLElement | null) => void;
+  setItemRefFactory: (key: string) => (el: HTMLElement | null) => void;
 };
 
 /**
@@ -116,7 +116,7 @@ export function useOverflowMeasurement({
     // (itemKeys is read through itemKeysRef so this can stay mount-only).
   }, []);
 
-  const setItemRef = (key: string) => (el: HTMLElement | null) => {
+  const setItemRefFactory = (key: string) => (el: HTMLElement | null) => {
     if (el) {
       itemRefs.current.set(key, el);
     } else {
@@ -124,5 +124,5 @@ export function useOverflowMeasurement({
     }
   };
 
-  return { visibleCount, setItemRef };
+  return { visibleCount, setItemRefFactory };
 }

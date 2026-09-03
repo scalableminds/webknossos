@@ -41,7 +41,7 @@ function Statusbar() {
   const showMoreShortcutsRef = useRef<HTMLSpanElement>(null);
   const showAllShortcutsRef = useRef<HTMLSpanElement>(null);
 
-  const { visibleCount, setItemRef } = useOverflowMeasurement({
+  const { visibleCount, setItemRefFactory } = useOverflowMeasurement({
     containerRef,
     fixedRefs: [leftRef, infosRef, rightRef],
     measureRowRef: fullShortcutRowRef,
@@ -72,7 +72,7 @@ function Statusbar() {
       { /* The following span is completely invisible to the user and only used for measurement. */}
       <span ref={fullShortcutRowRef} className="statusbar-measurer" aria-hidden="true">
         {items.map((item) => (
-          <span key={item.key} ref={setItemRef(item.key)} style={{ display: "inline-flex" }}>
+          <span key={item.key} ref={setItemRefFactory(item.key)} style={{ display: "inline-flex" }}>
             {item.node}
           </span>
         ))}

@@ -1,7 +1,7 @@
 import type { APIAiModelCategory } from "admin/api/jobs";
 import type { AiPlanEnum, PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import partition from "lodash-es/partition";
-import type { BoundingBoxProto } from "types/bounding_box";
+import type { BoundingBoxObject, BoundingBoxProto } from "types/bounding_box";
 import type {
   AdditionalCoordinate,
   ColorObject,
@@ -20,12 +20,7 @@ import type {
 } from "viewer/model/accessors/annotation_accessor";
 import type { ServerUpdateAction } from "viewer/model/sagas/volume/update_actions";
 import type { CommentType, Edge, TreeGroup } from "viewer/model/types/tree_types";
-import type {
-  BoundingBoxObject,
-  MeshInformation,
-  RecommendedConfiguration,
-  SegmentGroup,
-} from "viewer/store";
+import type { MeshInformation, RecommendedConfiguration, SegmentGroup } from "viewer/store";
 import type { EmptyObject } from "./type_utils";
 
 // Re-export
@@ -1365,7 +1360,34 @@ export type ServerErrorMessage = {
   error: string;
 };
 
-export type LayerAttachmentType = "mesh" | "agglomerate" | "segmentIndex" | "connectome" | "cumsum";
+export type LayerAttachmentType =
+  | "mesh"
+  | "agglomerate"
+  | "segmentIndex"
+  | "connectome"
+  | "cumsum"
+  | "segmentStatistics";
+
+// Names of the arrays within a segment statistics attachment. `positions` has no route to query it
+// yet, and `ids` is used internally by the backend but never reported as available.
+export type SegmentStatisticsMetric =
+  | "positions"
+  | "ids"
+  | "max_distances"
+  | "volumes"
+  | "center_of_mass"
+  | "covariance_matrix"
+  | "surfaces"
+  | "sphericities";
+
+/** Row-major 3×3 matrix, i.e. `matrix[row][column]`. */
+export type SegmentCovarianceMatrix = [Vector3, Vector3, Vector3];
+
+export type SegmentStatisticsFileInfo = {
+  mag: Vector3;
+  availableMetrics: SegmentStatisticsMetric[];
+  mappingName?: string | null;
+};
 
 export type APIStorageDetailEntry = {
   layerName: string;

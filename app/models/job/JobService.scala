@@ -191,8 +191,8 @@ class JobService @Inject() (
         organizationId <- commandArgs.get("organization_id").map(_.as[String]).toFox
         dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(datasetDirectoryName, organizationId)(using
           GlobalAccessContext
-        )
-        _ <- datasetDAO.deleteDataset(dataset._id)
+        ) ?~> Msg.Dataset.notFound(datasetDirectoryName)
+        _ <- datasetDAO.deleteDataset(dataset._id) ?~> Msg.Dataset.deleteFromDbFailed
       } yield ()
     } else Fox.successful(())
 

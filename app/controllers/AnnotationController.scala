@@ -4,7 +4,7 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationIdDomain.AnnotationIdDomain
 import com.scalableminds.webknossos.datastore.models.annotation.{
@@ -42,30 +42,18 @@ case class ReserveIdParameters(
     tracingId: String,
     numberOfIdsToReserve: Int,
     idsToRelease: Seq[Long]
-)
-object ReserveIdParameters {
-  implicit val jsonFormat: OFormat[ReserveIdParameters] = Json.format[ReserveIdParameters]
-}
+) derives JsonAutoFormat
 
-case class FinishAllParameters(annotations: Seq[ObjectId])
-object FinishAllParameters {
-  implicit val jsonFormat: OFormat[FinishAllParameters] = Json.format[FinishAllParameters]
-}
+case class FinishAllParameters(annotations: Seq[ObjectId]) derives JsonAutoFormat
 
 case class EditAnnotationParameters(
     name: Option[String],
     visibility: Option[AnnotationVisibility.Value],
     tags: Option[Seq[String]],
     viewConfiguration: Option[JsObject]
-)
-object EditAnnotationParameters {
-  implicit val jsonFormat: OFormat[EditAnnotationParameters] = Json.format[EditAnnotationParameters]
-}
+) derives JsonAutoFormat
 
-case class TransferAnnotationParameters(userId: ObjectId)
-object TransferAnnotationParameters {
-  implicit val jsonFormat: OFormat[TransferAnnotationParameters] = Json.format[TransferAnnotationParameters]
-}
+case class TransferAnnotationParameters(userId: ObjectId) derives JsonAutoFormat
 
 class AnnotationController @Inject() (
     annotationDAO: AnnotationDAO,

@@ -30,13 +30,8 @@ trait BoundingBoxMerger extends ProtoGeometryConversions {
       )
     } yield boundingBoxToProto(union)
 
-  // Bounding boxes are the one merged element type that supports content-based deduplication (unlike
-  // node, tree, group or segment ids, which never carry duplicate meaning and so always follow the
-  // simpler "A fixed, B remapped" convention used everywhere else, see TreeUtils/GroupUtils/MergedVolume).
-  // A duplicate pair can involve two boxes from the same tracing, so both sides may need renumbering:
-  // all of A's and B's boxes (plus their deprecated legacy single-box fields) are pooled, deduplicated
-  // by content, and renumbered from scratch. Both idMapA and idMapB are returned and must be applied to
-  // that tracing's own user states, unlike the other merged elements where only B's user state needs it.
+  // Bounding boxes are deduplicated based on content across A and B and given all-new IDs.
+  // This approach is different from merging trees and groups, where we just shift the ids of B.
   protected def combineUserBoundingBoxes(
       singleBoundingBoxAOpt: Option[ProtoBoundingBox],
       singleBoundingBoxBOpt: Option[ProtoBoundingBox],

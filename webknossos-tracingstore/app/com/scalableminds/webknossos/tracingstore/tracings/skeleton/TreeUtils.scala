@@ -5,12 +5,11 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing.Tree
 import scala.util.matching.Regex
 import scala.util.matching.Regex.Match
 
-// Merge convention: tracing A's node/tree ids are left untouched. Tracing B's are densified and
-// offset to continue right after A's, then appended. The same convention applies to tree/segment
-// groups (see GroupUtils) and to segment ids (see MergedVolume) so a merge only ever remaps one side.
+// Merge convention: tracing A’s node/tree ids are left untouched. Tracing B’s are offset to continue right after A’s.
+// For tree ids, B’s are also densified because sparse tree ids exist in the context of agglomerate trees.
 object TreeUtils {
-  type FunctionalNodeMapping = Function[Int, Int]
-  type FunctionalGroupMapping = Function[Int, Int]
+  private type FunctionalNodeMapping = Function[Int, Int]
+  private type FunctionalGroupMapping = Function[Int, Int]
   type TreeIdMap = Map[Int, Int]
 
   private val nodeIdReferenceRegex: Regex = "#([0-9]+)" r
@@ -79,11 +78,11 @@ object TreeUtils {
     (nodeId: Int) => nodeId + nodeIdOffset
   }
 
-  // A's tree ids are kept as-is; B's are densified (renumbered 1..n) and offset to continue right after A's.
+  // A’s tree ids are kept, B’s are densified and offset to continue right after A’s.
   def calculateTreeMapping(treesA: Seq[Tree], treesB: Seq[Tree]): TreeIdMap =
     densifyTreeIds(treesB, maxTreeId(treesA))
 
-  // We're densifying the tree ids to avoid sparse ids growing too fast
+  // We’re densifying the tree ids to avoid sparse ids growing too fast
   private def densifyTreeIds(trees: Seq[Tree], offset: Int): Map[Int, Int] =
     trees
       .map(_.treeId)
@@ -95,7 +94,7 @@ object TreeUtils {
       .toMap
 
   // When merging two skeletons, the node ids of skeleton B are remapped by adding this offset
-  // to keep everything unique, continuing right after skeleton A's node ids.
+  // to keep everything unique, continuing right after skeleton A’s node ids.
   // If the existing nodes of B don’t start at 0, their start is subtracted, densifying the ids.
   private def calculateNodeOffset(treesA: Seq[Tree], treesB: Seq[Tree]) =
     if (treesB.isEmpty)

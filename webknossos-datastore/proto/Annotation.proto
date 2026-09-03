@@ -16,6 +16,7 @@ message AnnotationProto {
   optional bool skeletonMayHavePendingUpdates = 5; // relevant only for annotations migrated by https://github.com/scalableminds/webknossos/pull/7917
   optional bool editableMappingsMayHavePendingUpdates = 6; // relevant only for annotations migrated by https://github.com/scalableminds/webknossos/pull/7917
   repeated AnnotationUserStateProto userStates = 7;
+  repeated AnnotationBookmarkProto bookmarks = 8;
 }
 
 message AnnotationLayerProto {
@@ -30,4 +31,12 @@ message AnnotationUserStateProto {
   required Vec3DoubleProto editRotation = 3;
   required double zoomLevel = 4;
   repeated AdditionalCoordinateProto editPositionAdditionalCoordinates = 5;
+}
+
+message AnnotationBookmarkProto {
+  required int32 id = 1;
+  required int64 created = 2;
+  optional string name = 3;
+  required string stateHash = 4;
+  optional bytes thumbnailData = 5;
 }

@@ -177,6 +177,7 @@ export async function initialize(
         description: annotationProto.description,
         annotationProto: annotationProto.earliestAccessibleVersion,
         annotationLayers: layersWithStats,
+        bookmarks: annotationProto.bookmarks,
       };
       annotation = completeAnnotation;
     }

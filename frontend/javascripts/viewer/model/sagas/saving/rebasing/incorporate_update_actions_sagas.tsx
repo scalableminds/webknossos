@@ -12,6 +12,7 @@ import {
   isMeshLoaded,
 } from "viewer/model/accessors/volumetracing_accessor";
 import {
+  addBookmarkAction,
   editAnnotationLayerAction,
   setAnnotationDescriptionAction,
   setIsUpdatingAnnotationCurrentlyAllowedAction,
@@ -391,6 +392,10 @@ export function* tryToIncorporateActions(
         }
         case "updateMetadataOfAnnotation": {
           yield* put(setAnnotationDescriptionAction(action.value.description));
+          break;
+        }
+        case "addBookmark": {
+          yield* put(addBookmarkAction(action.value));
           break;
         }
         case "addSegmentIndex": {

@@ -1,10 +1,9 @@
 import { EditOutlined } from "@ant-design/icons";
 import { Space } from "antd";
 import { useWkSelector } from "libs/react_hooks";
-import type React from "react";
 import { getSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import ButtonComponent from "viewer/view/components/button_component";
-import InputComponent from "viewer/view/components/input_component";
+import { InputWithUpdateOnBlur } from "viewer/view/components/input_with_update_on_blur";
 import { MarkdownModal } from "viewer/view/components/markdown_modal";
 import { useActiveComment } from "./hooks/use_active_comment";
 import { useCommentEditPermission } from "./hooks/use_comment_edit_permission";
@@ -46,6 +45,9 @@ export function CommentEditor({
   const inputValue = activeComment != null ? encodeLineBreaks(activeComment.content) : "";
 
   const handleSave = (content: string) => {
+    if (content === (activeComment?.content ?? "")) {
+      return;
+    }
     saveComment(content);
     if (content !== "") {
       onCommentCreated();
@@ -54,16 +56,11 @@ export function CommentEditor({
 
   return (
     <Space>
-      <InputComponent
+      <InputWithUpdateOnBlur
         value={inputValue}
         disabled={isDisabled}
         title={disabledReason ?? undefined}
-        onChange={(evt: React.ChangeEvent<HTMLInputElement>) =>
-          handleSave(decodeLineBreaks(evt.target.value))
-        }
-        onPressEnter={(evt: React.KeyboardEvent<HTMLInputElement>) =>
-          (evt.target as HTMLElement).blur()
-        }
+        onChange={(value) => handleSave(decodeLineBreaks(value))}
         placeholder="Add comment"
         size="small"
       />

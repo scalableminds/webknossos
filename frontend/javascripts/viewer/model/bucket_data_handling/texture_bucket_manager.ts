@@ -9,6 +9,7 @@ import uniqBy from "lodash-es/uniqBy";
 import type { DataTexture } from "three";
 import type { ElementClass } from "types/api_types";
 import { WkDevFlags } from "viewer/api/wk_dev";
+import type { BucketAddress } from "viewer/constants";
 import constants, { type TypedArray } from "viewer/constants";
 import { getRenderer } from "viewer/controller/renderer";
 import { createUpdatableTexture } from "viewer/geometries/materials/plane_material_factory_helpers";
@@ -110,8 +111,15 @@ export default class TextureBucketManager {
   layerIndex: number = -1;
   lookUpCuckooTable!: CuckooTableVec5;
   // Holds the index for each active bucket, to which it should (or already
-  // has been was) written in the data texture.
+  // has been was) written in the data texture. Used for all layers EXCEPT
+  // t-recycling-enabled ones, which use activeGroups/bucketToGroupKey instead
+  // (since several sibling buckets there share one atlas index).
   activeBucketToIndexMap: Map<DataBucket, number> = new Map();
+  // t-recycling only: groups up to 32 sibling buckets (same x/y/mag, different t,
+  // same t-batch) sharing one atlas index, one z-sub-slot (t % 32) each. See
+  // setActiveBucketsTRecycling.
+  private activeGroups: Map<string, { index: number; slots: Map<number, DataBucket> }> = new Map();
+  private bucketToGroupKey: Map<DataBucket, string> = new Map();
   // Maintains the set of committed buckets
   committedBucketSet: WeakSet<DataBucket> = new WeakSet();
   // Maintains a set of free indices within the data texture.
@@ -137,6 +145,7 @@ export default class TextureBucketManager {
   // instead of shrinking the bucket footprint to depth 1. See DataBucket.getT()
   // and the "t-recycling" design notes above setActiveBucketsTRecycling.
   isTRecyclingEnabled: boolean;
+  private cube: DataCube;
   isDestroyed: boolean = false;
   private areTexturesReady: boolean = false;
   private isWriterQueueProcessingScheduled: boolean = false;
@@ -151,24 +160,15 @@ export default class TextureBucketManager {
     // Otherwise, we don't pack bytes together (packingDegree = 1)
     this.packingDegree = getDtypeConfigForElementClass(elementClass).packingDegree;
     this.elementClass = elementClass;
+    this.cube = cube;
 
     const hasTAxis = cube.additionalAxes.t != null;
-    const wantsRecycling = cube.effectiveBucketDepth === 1 && hasTAxis;
-    // A t-slice can only be written via one rectangular texSubImage2D call if it is
-    // row-aligned within the (unshrunk) bucket's row-block, since z is the highest-
-    // stride (outermost) axis. This holds iff a full 32-deep bucket spans at least
-    // 32 whole texture rows, i.e. iff textureWidth <= packedSliceSize.
-    const packedSliceSize = constants.BUCKET_WIDTH ** 2 / this.packingDegree;
-    const isRowAligned = textureWidth <= packedSliceSize;
-    this.isTRecyclingEnabled = wantsRecycling && isRowAligned;
-
-    if (wantsRecycling && !isRowAligned) {
-      console.warn(
-        "t-recycling was requested for a layer but textureWidth is too large relative to " +
-          "the bucket's slice size to guarantee row-aligned writes. Falling back to the " +
-          "shrink-to-1 GPU packing for this layer instead.",
-      );
-    }
+    // No row-alignment guard needed: packedSliceSize (32^2/packingDegree) and
+    // textureWidth are both always powers of 2, so a slice's texels either span an
+    // exact whole number of full rows, or several slices fit exactly side by side
+    // within one row — never a partial straddle. See processWriterQueue for the
+    // general slice-placement formula that handles both cases.
+    this.isTRecyclingEnabled = cube.effectiveBucketDepth === 1 && hasTAxis;
 
     this.bucketVoxelCount = this.isTRecyclingEnabled
       ? constants.BUCKET_SIZE
@@ -257,6 +257,11 @@ export default class TextureBucketManager {
   // are written to the dataTexture. The lookUpTexture will be updated to reflect the
   // new buckets.
   setActiveBuckets(buckets: Array<DataBucket>): void {
+    if (this.isTRecyclingEnabled) {
+      this.setActiveBucketsTRecycling(buckets);
+      return;
+    }
+
     // Find out which buckets are not needed anymore
     const freeBucketSet = new Set(this.activeBucketToIndexMap.keys());
 
@@ -281,6 +286,185 @@ export default class TextureBucketManager {
     }
   }
 
+  private getGroupKey(bucket: DataBucket): string {
+    const [x, y, , mag] = bucket.zoomedAddress;
+    const batchIndex = Math.floor(bucket.getT() / constants.BUCKET_WIDTH);
+    return `${x}_${y}_${mag}_${batchIndex}`;
+  }
+
+  // For a bucket belonging to a t-recycling-enabled layer, fetches/creates the
+  // other (up to 31) buckets that share its t-batch (same x/y/mag, t values
+  // floor(t/32)*32 .. +31, excluding the bucket's own t), so they can all be
+  // written into the same shared atlas region. This eagerly requests the whole
+  // batch rather than a bounded window around the current t: the backend may
+  // eventually serve a full xyt bucket in one request, at which point "the whole
+  // batch" is naturally just one fetch; until then this simulates that by
+  // requesting all siblings individually via the existing pull queue. Buckets
+  // that haven't arrived yet may render stale/incorrect data for their z-slot in
+  // the meantime — accepted for now (see plan notes).
+  private getBatchSiblings(bucket: DataBucket): Array<DataBucket> {
+    return;
+    const t = bucket.getT();
+    const batchStart = Math.floor(t / constants.BUCKET_WIDTH) * constants.BUCKET_WIDTH;
+    const bounds = this.cube.additionalAxes.t?.bounds;
+    const additionalCoordinates = bucket.getAdditionalCoordinates() ?? [];
+    const siblings: Array<DataBucket> = [];
+
+    for (let dt = 0; dt < constants.BUCKET_WIDTH; dt++) {
+      const nt = batchStart + dt;
+      if (nt === t) {
+        continue;
+      }
+      if (bounds != null && (nt < bounds[0] || nt >= bounds[1])) {
+        continue;
+      }
+
+      const siblingCoordinates = additionalCoordinates.map((coord) =>
+        coord.name === "t" ? { ...coord, value: nt } : coord,
+      );
+      const siblingAddress: BucketAddress = [
+        bucket.zoomedAddress[0],
+        bucket.zoomedAddress[1],
+        bucket.zoomedAddress[2],
+        bucket.zoomedAddress[3],
+        siblingCoordinates,
+      ];
+      const sibling = this.cube.getOrCreateBucket(siblingAddress);
+
+      if (sibling.type === "null") {
+        continue;
+      }
+
+      sibling.markAsNeeded();
+      if (!sibling.hasData()) {
+        // Lower priority than normal spatial prefetch/highest-priority requests
+        // (smaller number = higher priority, see PullQueueConstants).
+        this.cube.pullQueue.add({ bucket: sibling.zoomedAddress, priority: 100 });
+      }
+      siblings.push(sibling);
+    }
+
+    this.cube.pullQueue.pull();
+    return siblings;
+  }
+
+  private setActiveBucketsTRecycling(primaryBuckets: Array<DataBucket>): void {
+    const desired = new Set<DataBucket>();
+
+    for (const bucket of primaryBuckets) {
+      desired.add(bucket);
+      for (const sibling of this.getBatchSiblings(bucket)) {
+        desired.add(sibling);
+      }
+    }
+
+    // Remove unused buckets
+    for (const activeBucket of this.bucketToGroupKey.keys()) {
+      if (!desired.has(activeBucket)) {
+        this.freeBucketSlot(activeBucket);
+      }
+    }
+
+    for (const nextBucket of desired) {
+      if (!this.bucketToGroupKey.has(nextBucket)) {
+        this.reserveSlotForBucket(nextBucket);
+      }
+    }
+  }
+
+  // t-recycling counterpart to freeBucket: frees a single sibling's slot within
+  // its group, only returning the group's shared atlas index (and unsetting its
+  // cuckoo entry) once every slot in the group has been freed.
+  private freeBucketSlot(bucket: DataBucket): void {
+    const groupKey = this.bucketToGroupKey.get(bucket);
+
+    if (groupKey == null) {
+      return;
+    }
+
+    const group = this.activeGroups.get(groupKey);
+
+    if (group == null) {
+      return;
+    }
+
+    if (WkDevFlags.bucketDebugging.visualizeBucketsOnGPU) {
+      bucket.unvisualize();
+    }
+
+    group.slots.delete(bucket.getT() % constants.BUCKET_WIDTH);
+    this.bucketToGroupKey.delete(bucket);
+    this.committedBucketSet.delete(bucket);
+
+    if (group.slots.size === 0) {
+      this.activeGroups.delete(groupKey);
+      this.freeIndexSet.add(group.index);
+      this.lookUpCuckooTable.unset(this.getCuckooKey(bucket));
+    }
+
+    app.vent.emit("rerender");
+  }
+
+  // t-recycling counterpart to reserveIndexForBucket: assigns the bucket to its
+  // group's z-sub-slot (t % 32), reserving a fresh shared atlas index for the
+  // group the first time any of its siblings becomes active.
+  private reserveSlotForBucket(bucket: DataBucket): void {
+    const groupKey = this.getGroupKey(bucket);
+    let group = this.activeGroups.get(groupKey);
+
+    if (group == null) {
+      if (this.freeIndexSet.size === 0) {
+        throw new Error("A new bucket should be stored but there is no space for it?");
+      }
+
+      const index = getSomeValue(this.freeIndexSet);
+      this.freeIndexSet.delete(index);
+      group = { index, slots: new Map() };
+      this.activeGroups.set(groupKey, group);
+      this.lookUpCuckooTable.set(this.getCuckooKey(bucket), NOT_YET_COMMITTED_VALUE);
+    }
+
+    const groupForClosure = group;
+    group.slots.set(bucket.getT() % constants.BUCKET_WIDTH, bucket);
+    this.bucketToGroupKey.set(bucket, groupKey);
+
+    const enqueueBucket = () => {
+      if (!bucket.hasData()) {
+        return;
+      }
+
+      this.writerQueue.unshift({
+        bucket,
+        _index: groupForClosure.index,
+      });
+      this.scheduleWriterQueueProcessing();
+    };
+
+    enqueueBucket();
+    let unlistenToLoadedFn = noop;
+    let unlistenToLabeledFn = noop;
+
+    const updateBucketData = () => {
+      // Check that the bucket is still assigned to a slot in this group.
+      if (this.bucketToGroupKey.get(bucket) === groupKey) {
+        enqueueBucket();
+      } else {
+        unlistenToLabeledFn();
+      }
+    };
+
+    if (!bucket.hasData()) {
+      unlistenToLoadedFn = bucket.on("bucketLoaded", updateBucketData);
+    }
+
+    unlistenToLabeledFn = bucket.on("bucketLabeled", updateBucketData);
+    bucket.once("bucketCollected", () => {
+      unlistenToLoadedFn();
+      unlistenToLabeledFn();
+      this.freeBucketSlot(bucket);
+    });
+  }
+
   getPackedBucketSize() {
     return this.bucketVoxelCount / this.packingDegree;
   }
@@ -296,12 +480,19 @@ export default class TextureBucketManager {
       // enqueued (see scheduleWriterQueueProcessing).
       return;
     }
-    // uniqBy removes multiple write-buckets-requests for the same index.
+    // uniqBy removes multiple write-buckets-requests for the same (index, zSlot).
     // It preserves the first occurrence of each duplicate, which is why
     // this queue has to be filled from the front (via unshift) und read from the
     // back (via pop). This ensures that the newest bucket "wins" if there are
-    // multiple buckets for the same index.
-    this.writerQueue = uniqBy(this.writerQueue, (el) => el._index);
+    // multiple buckets for the same (index, zSlot). Note that zSlot is part of the
+    // key so that sibling buckets sharing one t-recycling group's index (but
+    // occupying different z-sub-slots) don't get deduped away from each other; for
+    // non-t-recycling buckets, getT() is always 0, so this degenerates to a plain
+    // per-index dedup (unchanged behavior).
+    this.writerQueue = uniqBy(
+      this.writerQueue,
+      (el) => `${el._index}_${el.bucket.getT() % constants.BUCKET_WIDTH}`,
+    );
     const maxTimePerFrame = 16;
     const startingTime = performance.now();
     const bucketHeightInTexture = getBucketHeightInTexture(
@@ -315,7 +506,7 @@ export default class TextureBucketManager {
       // @ts-expect-error pop cannot return null due to the while condition
       const { bucket, _index } = this.writerQueue.pop();
 
-      if (!this.activeBucketToIndexMap.has(bucket)) {
+      if (!this.activeBucketToIndexMap.has(bucket) && !this.bucketToGroupKey.has(bucket)) {
         // This bucket is not needed anymore
         continue;
       }
@@ -342,43 +533,59 @@ export default class TextureBucketManager {
         data.byteLength / TypedArrayClass.BYTES_PER_ELEMENT,
       );
 
-      // For t-recycling-enabled layers, this bucket's data is only one t-slice
-      // (32x32x1 voxels, per the CPU-side shrink) that belongs at z-sub-slot t%32
-      // within the otherwise-full-depth (32768-voxel) atlas region for its
-      // (x,y,mag,t-batch) group — not at the whole region. writeHeight/zSlot express
-      // that sub-region; for non-t-recycling layers these collapse to the bucket's
-      // full height at slot 0, unchanged from before.
-      const zSlot = this.isTRecyclingEnabled ? bucket.getT() % constants.BUCKET_WIDTH : 0;
-      const sliceVoxelCount = this.isTRecyclingEnabled
-        ? this.bucketVoxelCount / constants.BUCKET_WIDTH
-        : this.bucketVoxelCount;
-      const writeHeight = this.isTRecyclingEnabled
-        ? bucketHeightInTexture / constants.BUCKET_WIDTH
-        : bucketHeightInTexture;
-      const packedSliceSize = sliceVoxelCount / this.packingDegree;
-      // Ratio between the raw elements needed to fill a whole texture row and the raw
-      // elements a single slice naturally produces. Equal to 1 unless writeHeight was
-      // clamped to one full row (see getBucketHeightInTexture) or (always, by
-      // construction, see the row-alignment guard in the constructor) for
-      // t-recycling, in which case a slice's data needs to be padded to fill out
-      // that row for texSubImage2D (which requires the source buffer to cover the
-      // full upload area).
-      const rowPaddingRatio = (this.textureWidth * writeHeight) / packedSliceSize;
+      let x: number;
+      let y: number;
+      let width: number;
+      let height: number;
+      let src: TypedArray;
 
-      const rgbPaddedSrc = maybePadRgbData(rawSrc, this.elementClass, sliceVoxelCount);
-      const src =
-        rowPaddingRatio > 1
-          ? padToFullRow(rgbPaddedSrc, Math.round(rgbPaddedSrc.length * rowPaddingRatio))
-          : rgbPaddedSrc;
+      if (this.isTRecyclingEnabled) {
+        // This bucket's data is only one t-slice (32x32x1 voxels, per the CPU-side
+        // shrink) that belongs at z-sub-slot t%32 within the otherwise-full-depth
+        // (32768-voxel) atlas region for its (x,y,mag,t-batch) group. Since both
+        // packedSliceSize and textureWidth are always powers of 2, a slice's
+        // texels are always expressible as a single rectangle: either several
+        // slices fit exactly side by side within one row, or one slice spans an
+        // exact whole number of full rows — never a partial straddle.
+        const zSlot = bucket.getT() % constants.BUCKET_WIDTH;
+        const sliceVoxelCount = this.bucketVoxelCount / constants.BUCKET_WIDTH;
+        const packedSliceSize = sliceVoxelCount / this.packingDegree;
+        const sliceWidth = Math.min(packedSliceSize, this.textureWidth);
+        const sliceHeight = Math.max(1, packedSliceSize / this.textureWidth);
+        const slicesPerRow = this.textureWidth / sliceWidth;
+
+        x = (zSlot % slicesPerRow) * sliceWidth;
+        y =
+          bucketHeightInTexture * indexInDataTexture +
+          Math.floor(zSlot / slicesPerRow) * sliceHeight;
+        width = sliceWidth;
+        height = sliceHeight;
+        // rgbPaddedSrc already has exactly sliceWidth*sliceHeight (== packedSliceSize)
+        // texels' worth of data — no padding needed, unlike the non-recycling path below.
+        src = maybePadRgbData(rawSrc, this.elementClass, sliceVoxelCount);
+      } else {
+        const packedBucketSize = this.getPackedBucketSize();
+        // Ratio between the raw elements needed to fill a whole texture row and the
+        // raw elements a single bucket naturally produces. Equal to 1 unless
+        // bucketHeightInTexture was clamped to one full row (see
+        // getBucketHeightInTexture), in which case a bucket's data needs to be
+        // padded to fill out that row for texSubImage2D (which requires the source
+        // buffer to cover the full upload area).
+        const rowPaddingRatio = (this.textureWidth * bucketHeightInTexture) / packedBucketSize;
+        const rgbPaddedSrc = maybePadRgbData(rawSrc, this.elementClass, this.bucketVoxelCount);
+
+        x = 0;
+        y = bucketHeightInTexture * indexInDataTexture;
+        width = this.textureWidth;
+        height = bucketHeightInTexture;
+        src =
+          rowPaddingRatio > 1
+            ? padToFullRow(rgbPaddedSrc, Math.round(rgbPaddedSrc.length * rowPaddingRatio))
+            : rgbPaddedSrc;
+      }
 
       console.time("upload bucket to gpu");
-      this.dataTextures[dataTextureIndex].update(
-        src,
-        0,
-        bucketHeightInTexture * indexInDataTexture + writeHeight * zSlot,
-        this.textureWidth,
-        writeHeight,
-      );
+      this.dataTextures[dataTextureIndex].update(src, x, y, width, height);
       this.committedBucketSet.add(bucket);
       console.timeEnd("upload bucket to gpu");
 
@@ -480,5 +687,7 @@ export default class TextureBucketManager {
     this.lookUpCuckooTable = null;
     this.isDestroyed = true;
     this.activeBucketToIndexMap = new Map();
+    this.activeGroups = new Map();
+    this.bucketToGroupKey = new Map();
   }
 }

@@ -1,12 +1,12 @@
 package com.scalableminds.webknossos.datastore.storage
 
-import com.scalableminds.util.tools.Fox
-import play.api.libs.json.{JsValue, Json, OFormat}
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
+import play.api.libs.json.JsValue
 import software.amazon.awssdk.auth.credentials.{AwsBasicCredentials, StaticCredentialsProvider}
 
 import scala.concurrent.ExecutionContext
 
-sealed trait DataVaultCredential {
+sealed trait DataVaultCredential derives JsonAutoFormat {
   def userId: Option[String]
   def organization: Option[String]
   def name: String
@@ -16,22 +16,23 @@ sealed trait DataVaultCredential {
     Fox.fromBool(isScopedToUserAndOrga) ?~> "stored credentials must be scoped to user and organization"
 }
 
-object DataVaultCredential {
-  implicit val jsonFormat: OFormat[DataVaultCredential] = Json.format[DataVaultCredential]
-}
-
 case class HttpBasicAuthCredential(
     name: String,
     username: String,
     password: String,
     user: Option[String],
     organization: Option[String]
-) extends DataVaultCredential {
+) extends DataVaultCredential derives JsonAutoFormat {
   override def userId: Option[String] = user
 }
 
-object HttpBasicAuthCredential {
-  implicit val jsonFormat: OFormat[HttpBasicAuthCredential] = Json.format[HttpBasicAuthCredential]
+case class XAuthTokenCredential(
+    name: String,
+    tokenValue: String,
+    user: Option[String],
+    organization: Option[String]
+) extends DataVaultCredential derives JsonAutoFormat {
+  override def userId: Option[String] = user
 }
 
 case class S3AccessKeyCredential(
@@ -40,7 +41,7 @@ case class S3AccessKeyCredential(
     secretAccessKey: String,
     user: Option[String],
     organization: Option[String]
-) extends DataVaultCredential {
+) extends DataVaultCredential derives JsonAutoFormat {
   override def userId: Option[String] = user
 
   def toCredentialsProvider: StaticCredentialsProvider = StaticCredentialsProvider.create(
@@ -48,24 +49,17 @@ case class S3AccessKeyCredential(
   )
 }
 
-object S3AccessKeyCredential {
-  implicit val jsonFormat: OFormat[S3AccessKeyCredential] = Json.format[S3AccessKeyCredential]
-}
-
 case class GoogleServiceAccountCredential(
     name: String,
     secretJson: JsValue,
     user: Option[String],
     organization: Option[String]
-) extends DataVaultCredential {
+) extends DataVaultCredential derives JsonAutoFormat {
   override def userId: Option[String] = user
 }
 
-object GoogleServiceAccountCredential {
-  implicit val jsonFormat: OFormat[GoogleServiceAccountCredential] = Json.format[GoogleServiceAccountCredential]
-}
-
-case class LegacyDataVaultCredential(user: String, password: Option[String]) extends DataVaultCredential {
+case class LegacyDataVaultCredential(user: String, password: Option[String]) extends DataVaultCredential
+    derives JsonAutoFormat {
   def toBasicAuth: HttpBasicAuthCredential =
     HttpBasicAuthCredential(
       name = "",
@@ -87,8 +81,4 @@ case class LegacyDataVaultCredential(user: String, password: Option[String]) ext
   override def name: String = ""
   override def userId: Option[String] = Some("")
   override def organization: Option[String] = Some("")
-}
-
-object LegacyDataVaultCredential {
-  implicit val jsonFormat: OFormat[LegacyDataVaultCredential] = Json.format[LegacyDataVaultCredential]
 }

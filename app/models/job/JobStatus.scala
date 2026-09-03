@@ -1,8 +1,9 @@
 package models.job
 
 import com.scalableminds.util.time.Instant
+import com.scalableminds.util.tools.JsonAutoFormat
 import models.job.JobState.JobState
-import play.api.libs.json.{JsObject, Json, OFormat}
+import play.api.libs.json.JsObject
 
 case class JobStatus(
     latestRunId: Option[String],
@@ -11,8 +12,4 @@ case class JobStatus(
     started: Option[Instant],
     ended: Option[Instant],
     errorDetails: Option[JsObject]
-)
-
-object JobStatus {
-  implicit val jsonFormat: OFormat[JobStatus] = Json.format[JobStatus]
-}
+) derives JsonAutoFormat

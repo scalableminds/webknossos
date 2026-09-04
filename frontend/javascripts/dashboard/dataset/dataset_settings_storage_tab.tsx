@@ -20,7 +20,7 @@ const { Text } = Typography;
 
 export default function DatasetSettingsStorageTab() {
   const { dataset } = useDatasetSettingsContext();
-  if (dataset == null) {
+  if (dataset == null || !dataset.isActive) {
     return null;
   }
   return <DatasetSettingsStorageTabWithDataset dataset={dataset} />;

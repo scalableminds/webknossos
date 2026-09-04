@@ -5,10 +5,10 @@ import {
 import {
   getAnnotationCompoundInformation,
   getAnnotationProto,
-  getDataset,
   getDatasetViewConfiguration,
   getEditableMappingInfo,
   getEmptySandboxAnnotationInformation,
+  getImportedDataset,
   getKeyboardShortcutsConfig,
   getSharingTokenFromUrlParameters,
   getTracingsForAnnotation,
@@ -325,7 +325,7 @@ async function fetchParallel(
   version: number | undefined | null,
 ): Promise<[APIDataset, UserConfiguration, Array<ServerTracing>, Partial<KeyboardShortcutsMap>]> {
   return Promise.all([
-    getDataset(datasetId, getSharingTokenFromUrlParameters()),
+    getImportedDataset(datasetId, getSharingTokenFromUrlParameters()),
     getUserConfiguration(), // Fetch the actual tracing from the datastore, if there is an skeletonAnnotation
     annotation ? getTracingsForAnnotation(annotation, version) : [],
     getKeyboardShortcutsConfig(),

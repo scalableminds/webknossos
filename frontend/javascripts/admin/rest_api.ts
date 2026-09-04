@@ -1182,16 +1182,11 @@ export async function getImportedDataset(
   options: RequestOptions = {},
   filterZeroMagLayers: boolean = true,
 ): Promise<APIDataset> {
-  const ds = await getDataset(
-    datasetId,
-    sharingToken,
-    options,
-    filterZeroMagLayers,
-  );
+  const ds = await getDataset(datasetId, sharingToken, options, filterZeroMagLayers);
   if ("dataLayers" in ds.dataSource) {
     return ds as APIDataset;
   }
-  throw new Error(`Dataset with id ${datasetId} is not imported.`)
+  throw new Error(`Dataset with id ${datasetId} is not imported.`);
 }
 
 export async function getDatasetLegacy(
@@ -1277,7 +1272,7 @@ export function updateDatasetDefaultConfiguration(
   });
 }
 
-export function getDatasetAccessList(dataset: APIDataset): Promise<Array<APIUser>> {
+export function getDatasetAccessList(dataset: APIMaybeUnimportedDataset): Promise<Array<APIUser>> {
   return Request.receiveJSON(`/api/datasets/${dataset.id}/accessList`);
 }
 

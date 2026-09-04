@@ -24,7 +24,7 @@ import Toast from "libs/toast";
 import { BoundingBoxInput, Vector3Input } from "libs/vector_input";
 import type React from "react";
 import { cloneElement, useEffect } from "react";
-import { type APIDataLayer, type APIDataset, APIJobCommand } from "types/api_types";
+import { type APIDataLayer, APIJobCommand, type APIMaybeUnimportedDataset } from "types/api_types";
 import type { DataLayer, DataLayerWithTransformations } from "types/schemas/datasource.types";
 import { syncValidator, validateTransformationsJSON } from "types/validation";
 import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
@@ -150,7 +150,7 @@ function SimpleDatasetForm({
   dataset,
 }: {
   form: FormInstance;
-  dataset: APIDataset | null | undefined;
+  dataset: APIMaybeUnimportedDataset | null | undefined;
 }) {
   const activeUser = useWkSelector((state) => state.activeUser);
   const onRemoveLayer = (layer: DataLayer) => {
@@ -405,12 +405,15 @@ function SimpleLayerForm({
   index: number;
   onRemoveLayer: (layer: DataLayer) => void;
   form: FormInstance;
-  dataset: APIDataset | null | undefined;
+  dataset: APIMaybeUnimportedDataset | null | undefined;
 }) {
   const dataLayers = Form.useWatch(["dataSource", "dataLayers"], form);
   const category = Form.useWatch(["dataSource", "dataLayers", index, "category"], form);
 
-  const layerCategorySavedOnServer = dataset?.dataSource.dataLayers[index]?.category;
+  const layerCategorySavedOnServer =
+    dataset != null && "dataLayers" in dataset.dataSource
+      ? dataset.dataSource.dataLayers[index]?.category
+      : undefined;
   const isStoredAsSegmentationLayer = layerCategorySavedOnServer === "segmentation";
   const isSegmentation = category === "segmentation";
   // The (bigint) range of valid segment ids. Only integer element classes have one; float/double

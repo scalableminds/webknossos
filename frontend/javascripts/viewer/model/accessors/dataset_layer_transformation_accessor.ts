@@ -633,8 +633,9 @@ export function getTransformedDatasetCenter(
 }
 
 // The live SRT transform format uses exactly 7 affine matrices in this order:
-// [0]  dataset center → origin translation, [1] scale, [2] rotX, [3] rotY, [4] rotZ,
-// [5] user translation, [6] origin → center dataset translation.
+// [0]  pivot → origin translation, [1] scale, [2] rotX, [3] rotY, [4] rotZ,
+// [5] user translation, [6] origin → pivot translation.
+// The pivot is the point that scaling and rotation happen around.
 // They are stored separately to keep the extracted value consistent between reloads.
 // Else e.g. some rotations might be shown differently as euler angles are not deterministic.
 export const EXPECTED_LIVE_TRANSFORMATION_LENGTH = 7;
@@ -652,7 +653,8 @@ export const DEFAULT_SRT: SRTValues = {
 
 // Returns true when the transform list is in a format editable by the live SRT editor:
 // null/empty (no transforms) or exactly the 7-affine pattern: translation, scale,
-// rotX, rotY, rotZ, translation, translation.
+// rotX, rotY, rotZ, translation, translation, where the first and the last translation move to and
+// back from the same pivot.
 export function hasValidLiveTransformationPattern(
   transforms: CoordinateTransformation[] | null | undefined,
 ): boolean {
@@ -660,6 +662,15 @@ export function hasValidLiveTransformationPattern(
   if (transforms.length !== EXPECTED_LIVE_TRANSFORMATION_LENGTH) return false;
   if (!transforms.every((t) => t.type === "affine")) return false;
   const t = transforms as AffineTransformation[];
+
+  // The first and last matrix are the translations from/to the pivot point (the point we rotate/scale around).
+  // Those translations must be inverse of each other.
+  const fromPivot = extractTranslationFromMatrix(t[0]);
+  const toPivot = extractTranslationFromMatrix(t[6]);
+  const isSymmetricPivotPair = fromPivot.every(
+    (value, i) => Math.abs(value + toPivot[i]) <= EPSILON,
+  );
+
   return (
     isTranslationOnly(t[0]) &&
     isScaleOnly(t[1]) &&
@@ -667,7 +678,8 @@ export function hasValidLiveTransformationPattern(
     isRotationOnly(t[3]) &&
     isRotationOnly(t[4]) &&
     isTranslationOnly(t[5]) &&
-    isTranslationOnly(t[6])
+    isTranslationOnly(t[6]) &&
+    isSymmetricPivotPair
   );
 }
 
@@ -722,21 +734,65 @@ export function extractSRTFromTransforms(transforms: CoordinateTransformation[])
   };
 }
 
+// Extracts the pivot (the point that scaling and rotation happen around) from a 7 matrix
+// coordinate transformation of a layer. It is stored as the negated translation of the first matrix.
+export function extractPivotFromTransforms(transforms: CoordinateTransformation[]): Vector3 | null {
+  if (transforms.length !== EXPECTED_LIVE_TRANSFORMATION_LENGTH) return null;
+  const [x, y, z] = extractTranslationFromMatrix(transforms[0] as AffineTransformation);
+  return [-x, -y, -z];
+}
+
+// Returns the translation that expresses the same overall transform around a different pivot.
+//
+// With T being translation, R being rotation and S being scaling,
+// the chain is T(pivot) * T(t) * R * S * T(-pivot), so as a point map it is
+//   M x = A (x - pivot) + pivot + t   with the linear part A = R * S.
+// A carries no pivot information, which is why the rotation and the scale stay untouched and the
+// whole difference is absorbed by the translation. Matching the total translation for an old pivot p
+// and a new pivot q
+//   (I - A) q + t' = (I - A) p + t
+// gives the result below. See docs in the spec: t' = t + (I - A)(p - q).
+export function rebaseTranslationToPivot(
+  srt: SRTValues,
+  oldPivot: Vector3,
+  newPivot: Vector3,
+): Vector3 {
+  const delta: Vector3 = [
+    oldPivot[0] - newPivot[0],
+    oldPivot[1] - newPivot[1],
+    oldPivot[2] - newPivot[2],
+  ];
+  if (delta[0] === 0 && delta[1] === 0 && delta[2] === 0) {
+    // Nothing to do. Returning early also keeps the values bit-for-bit identical.
+    return srt.translation;
+  }
+  // The linear part is taken from the very chain that buildLiveTransforms produces, so that this
+  // function cannot disagree with it about the rotation order or the matrix convention.
+  const chain = buildLiveTransforms(srt.scale, srt.rotation, [0, 0, 0], [0, 0, 0]);
+  const linearPart = combineCoordinateTransformations(chain.slice(1, 5), [1, 1, 1]);
+  const mappedDelta = transformPointUnscaled(linearPart)(delta);
+  return [
+    srt.translation[0] + delta[0] - mappedDelta[0],
+    srt.translation[1] + delta[1] - mappedDelta[1],
+    srt.translation[2] + delta[2] - mappedDelta[2],
+  ];
+}
+
 // Build the 7-matrix SRT transform array for a layer.
-// Order: center→origin, scale, rotX, rotY, rotZ, translation, origin→center
+// Order: pivot→origin, scale, rotX, rotY, rotZ, translation, origin→pivot
 export function buildLiveTransforms(
   scale: [number, number, number],
   rotation: [number, number, number],
   translation: [number, number, number],
-  datasetBbox: BoundingBox,
+  pivot: Vector3,
 ): AffineTransformation[] {
   return [
-    fromCenterToOriginAsAffine(datasetBbox),
+    makeTranslationMatrix(-pivot[0], -pivot[1], -pivot[2]),
     makeScaleMatrix(...scale),
     getRotationMatrixAroundAxis("x", { rotationInDegrees: rotation[0], isMirrored: false }),
     getRotationMatrixAroundAxis("y", { rotationInDegrees: rotation[1], isMirrored: false }),
     getRotationMatrixAroundAxis("z", { rotationInDegrees: rotation[2], isMirrored: false }),
     makeTranslationMatrix(...translation),
-    fromOriginToCenterAsAffine(datasetBbox),
+    makeTranslationMatrix(...pivot),
   ];
 }

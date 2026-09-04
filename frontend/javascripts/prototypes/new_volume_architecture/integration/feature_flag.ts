@@ -9,8 +9,7 @@
  * already imports the latter for the FLOOD_FILL watcher, so a dependency in
  * the other direction would close a loop.
  *
- * Disabled under test: the existing integration specs for both tools assert on
- * update actions and behaviour this path deliberately does not produce. The
- * spike has its own coverage in test/prototypes/new_volume_architecture.
+ * Always on, including under test: the new code paths should get exercised by
+ * the existing test suite too, not just by test/prototypes/new_volume_architecture.
  */
-export const USE_NEW_VOLUME_ARCHITECTURE = !process.env.IS_TESTING;
+export const USE_NEW_VOLUME_ARCHITECTURE = true;

@@ -80,7 +80,11 @@ case class FullAxisOrder(axes: Seq[Axis]) {
   lazy val arrayFToWkFPermutation: Array[Int] = arrayToWkPermutation.reverse.map(elem => rank - 1 - elem)
   lazy val arrayCToWkFPermutation: Array[Int] = arrayToWkPermutation.reverse
 
-  private lazy val wkToArrayPermutation: Array[Int] = {
+  // wkToArrayPermutation(physicalIndex) gives the wk slot for that physical/array index —
+  // the inverse of arrayToWkPermutation(wkSlot), which gives the physical index for a wk slot.
+  // Not private: also used to look up an additional axis's (or the channel axis's) wk slot from
+  // its declared physical index (see DatasetArray.constructOffsetAndShapeArrays).
+  lazy val wkToArrayPermutation: Array[Int] = {
     val permutationMutable: Array[Int] = Array.fill(arrayToWkPermutation.length)(0)
     arrayToWkPermutation.zipWithIndex.foreach { case (p, i) =>
       permutationMutable(p) = i

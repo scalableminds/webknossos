@@ -90,6 +90,7 @@ export class VolumeTransaction {
         entry.writes.mask.mark(index);
       },
       markRun(start: VoxelIndex, length: number) {
+        // todop: can we make this more efficient?
         for (let i = start; i < start + length; i++) captureBefore(i);
         entry.writes.mask.markRun(start, length);
       },

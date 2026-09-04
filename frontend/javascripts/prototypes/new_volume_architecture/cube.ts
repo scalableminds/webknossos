@@ -34,6 +34,17 @@ export interface TransactionCube {
   backgroundProbe(address: BucketAddress): ((index: number) => boolean) | null;
 }
 
+/**
+ * The narrow surface the resolver needs to load data during a traversal (e.g.
+ * flood fill, §5.1: "the only component permitted to await a bucket load").
+ * Kept separate from WorkingDataCube for the same reason as TransactionCube —
+ * see `integration/wk_cube_adapter.ts`.
+ */
+export interface LoadingVoxelCube extends TransactionCube {
+  /** Load a bucket and return its dense content. The resolver's only await. */
+  ensureLoaded(address: BucketAddress): Promise<BigUint64Array>;
+}
+
 /** What the cube fetches from. Tests supply an in-memory implementation. */
 export interface BackendLike {
   fetchBucket(address: BucketAddress): Promise<{ data: BigUint64Array; version: number }>;
@@ -57,7 +68,7 @@ interface CubeEntry {
  *   - On load, the journal folds local entries over the fetched data. The cube
  *     does not merge anything itself.
  */
-export class WorkingDataCube implements TransactionCube {
+export class WorkingDataCube implements LoadingVoxelCube {
   private readonly buckets = new Map<BucketKey, CubeEntry>();
   /** Buckets whose texture would need re-uploading. Tests assert on this. */
   readonly gpuDirty = new Set<BucketKey>();

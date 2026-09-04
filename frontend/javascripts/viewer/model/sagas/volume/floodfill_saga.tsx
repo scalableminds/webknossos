@@ -6,6 +6,8 @@ import { V2, V3 } from "libs/mjs";
 import createProgressCallback, { type ProgressCallback } from "libs/progress_callback";
 import Toast from "libs/toast";
 import sortBy from "lodash-es/sortBy";
+import { USE_NEW_VOLUME_ARCHITECTURE } from "prototypes/new_volume_architecture/integration/feature_flag";
+import { runFloodFill } from "prototypes/new_volume_architecture/integration/flood_fill_driver";
 import { call, put, takeEvery } from "typed-redux-saga";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { FillMode, LabeledVoxelsMap, OrthoView, Vector2, Vector3 } from "viewer/constants";
@@ -252,6 +254,49 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
     } else {
       Toast.close(NO_FLOODFILL_BBOX_TOAST_KEY);
     }
+    const fillMode = yield* select((state) => state.userConfiguration.fillMode);
+
+    // ── SPIKE: new volume architecture ────────────────────────────────────
+    // isSplitToolkit is excluded: it needs splitBoundaryMesh to clip the fill,
+    // which runFloodFill does not know about. Falling through to the old path
+    // for that case keeps the "Split Segments" toolkit correct.
+    if (USE_NEW_VOLUME_ARCHITECTURE && !isSplitToolkit) {
+      const labeledMag = magInfo.getMagByIndexOrThrow(labeledZoomStep);
+      const toSourceMagVoxel = (position: Vector3): Vector3 => [
+        position[0] / labeledMag[0],
+        position[1] / labeledMag[1],
+        position[2] / labeledMag[2],
+      ];
+      const stats = yield* call(runFloodFill, {
+        cube,
+        denseMags: magInfo.getDenseMags(),
+        magIndex: labeledZoomStep,
+        segmentId: activeCellId,
+        additionalCoordinates: additionalCoordinates ?? null,
+        seed: toSourceMagVoxel(seedPosition),
+        is3D: fillMode === FillModeEnum._3D,
+        bounds: {
+          min: toSourceMagVoxel(boundingBoxForFloodFill.min),
+          max: toSourceMagVoxel(boundingBoxForFloodFill.max),
+        },
+      });
+      console.info(
+        `[spike] floodFill: ${stats.voxels} voxels across ${stats.buckets} buckets, mags [${stats.mags.join(", ")}], ${stats.durationMs.toFixed(1)} ms`,
+      );
+      yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
+      yield* put(
+        updateSegmentAction(
+          volumeTracing.activeCellId,
+          {
+            anchorPosition: seedPosition,
+            additionalCoordinates: additionalCoordinates || undefined,
+          },
+          volumeTracing.tracingId,
+        ),
+      );
+      return;
+    }
+
     const progressCallback = createProgressCallback({
       pauseDelay: 200,
       successMessageDelay: 2000,
@@ -259,7 +304,6 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
     yield* call(progressCallback, false, "Performing floodfill...");
     console.time("cube.floodFill");
     const startTimeOfFloodfill = performance.now();
-    const fillMode = yield* select((state) => state.userConfiguration.fillMode);
 
     const {
       bucketsWithLabeledVoxelsMap: labelMasksByBucketAndW,

@@ -1,4 +1,4 @@
-import type { WorkingDataCube } from "./cube";
+import type { LoadingVoxelCube } from "./cube";
 import type { DataDependentShape } from "./intents";
 import {
   type BucketAddress,
@@ -24,7 +24,7 @@ import { type VoxelWriteSet, WriteSetBuilder } from "./write_set";
 export async function resolve(
   shape: DataDependentShape,
   ctx: EditContext,
-  cube: WorkingDataCube,
+  cube: LoadingVoxelCube,
   signal?: AbortSignal,
 ): Promise<VoxelWriteSet> {
   switch (shape.kind) {
@@ -43,7 +43,7 @@ export interface FloodFillOptions {
 async function resolveFloodFill(
   shape: Extract<DataDependentShape, { kind: "floodFill" }>,
   ctx: EditContext,
-  cube: WorkingDataCube,
+  cube: LoadingVoxelCube,
   signal?: AbortSignal,
   options: FloodFillOptions = {},
 ): Promise<VoxelWriteSet> {
@@ -112,7 +112,11 @@ function sameAddress(a: BucketAddress, b: BucketAddress): boolean {
   return a[0] === b[0] && a[1] === b[1] && a[2] === b[2] && a[3] === b[3];
 }
 
-async function readVoxel(cube: WorkingDataCube, voxel: Vector3, magIndex: number): Promise<bigint> {
+async function readVoxel(
+  cube: LoadingVoxelCube,
+  voxel: Vector3,
+  magIndex: number,
+): Promise<bigint> {
   const address = bucketAddressOfVoxel(voxel, magIndex);
   const data = await cube.ensureLoaded(address);
   const offset = voxelOffsetInBucket(voxel);

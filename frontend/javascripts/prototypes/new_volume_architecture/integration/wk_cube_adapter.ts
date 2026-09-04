@@ -13,8 +13,8 @@
 import type { BucketDataArray } from "types/api_types";
 import type { AdditionalCoordinate, BucketAddress as WkBucketAddress } from "viewer/constants";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
-import type { TransactionCube } from "../cube";
-import { type BucketAddress, type Mag, MagList, type Vector3 } from "../types";
+import type { LoadingVoxelCube, TransactionCube } from "../cube";
+import { BUCKET_VOXEL_COUNT, type BucketAddress, type Mag, MagList, type Vector3 } from "../types";
 import type { BucketWrites } from "../write_set";
 
 export class WkDataCubeAdapter implements TransactionCube {
@@ -22,11 +22,11 @@ export class WkDataCubeAdapter implements TransactionCube {
   private readonly touched = new Set<string>();
 
   constructor(
-    private readonly cube: DataCube,
-    private readonly additionalCoordinates: AdditionalCoordinate[] | null,
+    protected readonly cube: DataCube,
+    protected readonly additionalCoordinates: AdditionalCoordinate[] | null,
   ) {}
 
-  private toWkAddress(address: BucketAddress): WkBucketAddress {
+  protected toWkAddress(address: BucketAddress): WkBucketAddress {
     return [address[0], address[1], address[2], address[3], this.additionalCoordinates];
   }
 
@@ -104,6 +104,41 @@ export class WkDataCubeAdapter implements TransactionCube {
     const bucket = this.cube.getBucket(this.toWkAddress(address));
     if (bucket.type === "null" || !bucket.hasData()) return null;
     return bucket.getData();
+  }
+}
+
+/**
+ * WkDataCubeAdapter plus the ability to await a bucket load, for the resolver
+ * (§5.1: "the only component permitted to await a bucket load"). Kept separate
+ * from WkDataCubeAdapter because the brush never needs to await anything —
+ * §5.4 pointedly evaluates the overwrite predicate against whatever is
+ * resident rather than fetching, so blocking reads would be a regression, not
+ * a feature, on that path.
+ */
+export class WkLoadingCubeAdapter extends WkDataCubeAdapter implements LoadingVoxelCube {
+  /**
+   * Load a bucket and return its dense content, converted to segment ids. Real
+   * buckets may hold any element class, but the resolver only ever compares
+   * values for equality (it never writes through this array), so a lossless
+   * per-voxel bigint cast is enough — no shared representation is needed the
+   * way `WkDataCubeAdapter.getResident` would need one to be writable.
+   */
+  async ensureLoaded(address: BucketAddress): Promise<BigUint64Array> {
+    const bucket = this.cube.getOrCreateBucket(this.toWkAddress(address));
+    if (bucket.type === "null") {
+      // Out of the dataset's bounds. `ctx.editableBoundingBox` / `shape.bounds`
+      // (§5.1) should already keep the traversal from reaching here in the
+      // normal case; treat it as an all-background bucket rather than
+      // throwing, so a fill that grazes the edge doesn't abort outright.
+      return new BigUint64Array(BUCKET_VOXEL_COUNT);
+    }
+
+    const data = await bucket.getDataForMutation();
+    if (data instanceof BigUint64Array) return data;
+
+    const converted = new BigUint64Array(BUCKET_VOXEL_COUNT);
+    for (let i = 0; i < data.length; i++) converted[i] = BigInt(data[i]);
+    return converted;
   }
 }
 

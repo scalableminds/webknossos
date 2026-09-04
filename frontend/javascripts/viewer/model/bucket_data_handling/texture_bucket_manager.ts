@@ -20,6 +20,7 @@ import {
   getBucketHeightInTexture,
   getDtypeConfigForElementClass,
 } from "viewer/model/bucket_data_handling/data_rendering_logic";
+import { PullQueueConstants } from "viewer/model/bucket_data_handling/pullqueue";
 
 // A TextureBucketManager instance is responsible for making buckets available
 // to the GPU.
@@ -292,6 +293,52 @@ export default class TextureBucketManager {
     return `${x}_${y}_${mag}_${batchIndex}`;
   }
 
+  // Every DataBucket ever created stays in DataCube's GC pool forever (see
+  // DataCube.addBucketToGarbageCollection) until explicitly marked needed/unneeded; a
+  // bucket that's never marked needed is an immediate, permanent GC target. Since only
+  // the primary bucket passed to setActiveBucketsTRecycling goes through the normal
+  // pick -> markAsNeeded cycle, its up-to-31 batch siblings (created as a side effect of
+  // PullQueue's t-batched fetch, see pullqueue.ts) would otherwise be collected shortly
+  // after being fetched — defeating the point of keeping a whole batch resident for fast
+  // scrubbing, and, worse, inflating bucket churn enough to make the GC scan (which runs
+  // on every single new-bucket creation once the pool exceeds BUCKET_COUNT_SOFT_LIMIT)
+  // run far more often, making it far more likely to catch some *other*, still-needed
+  // bucket in the brief markBucketsAsUnneeded->markAsNeeded window every re-pick has.
+  // Calling this every re-pick (mirroring how a primary bucket gets re-marked every
+  // cycle) keeps the whole batch protected for as long as any t within it is desired.
+  private markBatchSiblingsAsNeeded(bucket: DataBucket): void {
+    const t = bucket.getT();
+    const batchStart = Math.floor(t / constants.BUCKET_WIDTH) * constants.BUCKET_WIDTH;
+    const bounds = this.cube.additionalAxes.t?.bounds;
+    const additionalCoordinates = bucket.getAdditionalCoordinates() ?? [];
+
+    for (let dt = 0; dt < constants.BUCKET_WIDTH; dt++) {
+      const nt = batchStart + dt;
+      if (nt === t) {
+        continue;
+      }
+      if (bounds != null && (nt < bounds[0] || nt >= bounds[1])) {
+        continue;
+      }
+
+      const siblingCoordinates = additionalCoordinates.map((coord) =>
+        coord.name === "t" ? { ...coord, value: nt } : coord,
+      );
+      const siblingAddress: BucketAddress = [
+        bucket.zoomedAddress[0],
+        bucket.zoomedAddress[1],
+        bucket.zoomedAddress[2],
+        bucket.zoomedAddress[3],
+        siblingCoordinates,
+      ];
+      const sibling = this.cube.getOrCreateBucket(siblingAddress);
+      if (sibling.type === "null") {
+        continue;
+      }
+      sibling.markAsNeeded();
+    }
+  }
+
   // t-recycling-enabled layers always fetch a bucket's whole t-batch in one request
   // (see pullqueue.ts's use of DataCube.isTRecyclingEligible), and every bucket in that
   // batch ends up with its `.data` backed by one shared buffer (see
@@ -304,6 +351,7 @@ export default class TextureBucketManager {
 
     for (const bucket of primaryBuckets) {
       desiredGroups.set(this.getGroupKey(bucket), bucket);
+      this.markBatchSiblingsAsNeeded(bucket);
     }
 
     // Remove unused groups
@@ -388,6 +436,19 @@ export default class TextureBucketManager {
     if (bucket.hasData()) {
       this.writerQueue.unshift({ bucket, _index: index });
       this.scheduleWriterQueueProcessing();
+    } else if (bucket.needsRequest()) {
+      // A genuinely new group (a fresh t-batch) needs its data actively requested. Unlike
+      // a full viewport re-pick (see LayerRenderingManager.updateDataTextures), which
+      // enqueues every missing bucket itself, retargetToNewT's pure-t-scrub fast path only
+      // looks up/creates this bucket — nothing else is guaranteed to ever request it, so
+      // without this call this group would sit at NOT_YET_COMMITTED_VALUE forever. Pull
+      // queue's own t-batching (see pullqueue.ts) takes care of fetching this bucket's
+      // whole sibling batch from just this one request.
+      this.cube.pullQueue.add({
+        bucket: bucket.zoomedAddress,
+        priority: PullQueueConstants.PRIORITY_HIGHEST,
+      });
+      this.cube.pullQueue.pull();
     }
 
     this.attachGroupLifecycleListeners(groupKey, bucket);

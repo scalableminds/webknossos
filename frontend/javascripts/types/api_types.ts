@@ -316,6 +316,7 @@ type APIUnimportedDataset = APIDatasetBase & {
   readonly isActive: false;
 };
 export type APIMaybeUnimportedDataset = APIUnimportedDataset | APIDataset;
+export type APIMaybeUnimportedDataSource = APIMaybeUnimportedDataset["dataSource"]
 export type APITeamMembership = {
   readonly id: string;
   readonly name: string;

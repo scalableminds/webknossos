@@ -87,12 +87,14 @@ class DatasetArray(
       additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]],
       shouldReadUint24: Boolean
   ): (Array[Int], Array[Int]) = {
+    // Multiple simultaneously-batched axes aren't supported: the repack below (see
+    // repackBatchedAxisIntoZSlot) can only swap one axis into z's byte slot. Correctness
+    // beyond that — i.e. only requesting a batch against a dataset whose z is actually
+    // degenerate — is the caller's responsibility (see DataCube.isTRecyclingEligible on the
+    // frontend): the dataset's own array metadata (axisOrder/datasetShape) turned out not to
+    // reliably expose z's true depth across formats, so it isn't re-validated here.
     val batchedCoordinates = additionalCoordinatesOpt.getOrElse(Seq.empty).filter(_.length.exists(_ > 1))
     require(batchedCoordinates.size <= 1, "Reading more than one batched additional axis at once is not supported")
-    require(
-      batchedCoordinates.isEmpty || !axisOrder.hasZAxis,
-      "Reading a batched additional axis is only supported for datasets without a real z axis"
-    )
 
     val offsetArray: Array[Int] = Array.fill(rank)(0)
     offsetArray(rank - 3) = offsetXYZ.x
@@ -133,13 +135,25 @@ class DatasetArray(
         shapeArray(index) = additionalCoordinate.length.getOrElse(1).min(DataLayer.bucketLength)
       }
     }
+
+    if (batchedCoordinates.nonEmpty) {
+      // The wire format always carries exactly bucketLength^3 voxels' worth of data (see
+      // repackBatchedAxisIntoZSlot). z's shape (set to shapeXYZ.z, i.e. bucketLength, above)
+      // must shrink to 1 to make room for the batch — otherwise this read would ask for
+      // bucketLength^4 voxels (one full-width z axis *and* a full-width batch axis) instead
+      // of the intended "batch replaces z" swap.
+      shapeArray(rank - 1) = 1
+    }
     (offsetArray, shapeArray)
   }
 
   // If a batched additional coordinate (length > 1) was requested, the read above widened that axis's
-  // shape instead of the usual synthetic (size-1) z axis. That axis naturally ends up as the
-  // fastest-varying dimension of the read result (additional axes sit at the front of "wk" order, which
-  // ends up last/fastest after readAsFortranOrder's shape.reverse), but the wire format this bucket is
+  // shape to bucketLength while shrinking z's own shape to 1 (see constructOffsetAndShapeArrays), so
+  // the result still has exactly bucketLength^3 voxels total — the caller is expected to only do this
+  // when z is degenerate (see AdditionalCoordinate.length), so shrinking it away loses nothing real.
+  // The batched axis naturally ends up as the fastest-varying dimension of the read result (additional
+  // axes sit at the front of "wk" order, which ends up last/fastest after readAsFortranOrder's
+  // shape.reverse), but the wire format this bucket is
   // returned in expects the depth axis (z) to be the slowest-varying one (see BinaryDataService.cutOutCuboid's
   // x + y*32 + z*32*32 stride convention). This swaps the batched axis into z's dimension so the batch is
   // packed into the byte layout a client already expects for a normal 32-deep bucket.
@@ -151,7 +165,7 @@ class DatasetArray(
   ): MultiArray =
     additionalCoordinatesOpt.flatMap(_.find(_.length.exists(_ > 1))) match {
       case Some(batched) =>
-        val batchedAxisWkSlot = fullAxisOrder.arrayToWkPermutation(additionalAxesMap(batched.name).index)
+        val batchedAxisWkSlot = fullAxisOrder.wkToArrayPermutation(additionalAxesMap(batched.name).index)
         // readAsFortranOrder builds its target array with shape.reverse, so wk slot `s` lives at
         // dimension `rank - 1 - s`. Z's wk slot is always rank - 1, i.e. dimension 0.
         val batchedAxisDimension = rank - 1 - batchedAxisWkSlot

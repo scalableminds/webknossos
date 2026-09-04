@@ -195,6 +195,13 @@ function emitSpansAlongRow(
   }
 }
 
+/**
+ * Axis-aligned bounding box of the capsule swept from `from` to `to` with
+ * per-axis `radius` (§4: physical, not voxel, roundness). Along `planeAxis`
+ * the box collapses to the single slice at `from`'s coordinate, since a 2D
+ * brush paints only that slice regardless of how far `to` moved along it.
+ * Integer voxel bounds, min inclusive / max exclusive.
+ */
 function capsuleBoundingBox(
   from: Vector3,
   to: Vector3,

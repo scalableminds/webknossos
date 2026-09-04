@@ -262,10 +262,15 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
     // for that case keeps the "Split Segments" toolkit correct.
     if (USE_NEW_VOLUME_ARCHITECTURE && !isSplitToolkit) {
       const labeledMag = magInfo.getMagByIndexOrThrow(labeledZoomStep);
+      // Floored, unlike brush's toMagVoxel: a flood-fill seed is used for direct
+      // array indexing (resolveFloodFill), so it must land exactly on a
+      // source-mag voxel. A mag1 position is only guaranteed to divide evenly
+      // by the mag factor when it happens to be mag-aligned (e.g. z=43 at
+      // mag-factor 2 is not), so this floor is required, not just tidiness.
       const toSourceMagVoxel = (position: Vector3): Vector3 => [
-        position[0] / labeledMag[0],
-        position[1] / labeledMag[1],
-        position[2] / labeledMag[2],
+        Math.floor(position[0] / labeledMag[0]),
+        Math.floor(position[1] / labeledMag[1]),
+        Math.floor(position[2] / labeledMag[2]),
       ];
       const stats = yield* call(runFloodFill, {
         cube,

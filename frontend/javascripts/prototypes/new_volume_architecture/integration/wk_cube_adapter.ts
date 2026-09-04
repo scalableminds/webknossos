@@ -17,6 +17,24 @@ import type { LoadingVoxelCube, TransactionCube } from "../cube";
 import { BUCKET_VOXEL_COUNT, type BucketAddress, type Mag, MagList, type Vector3 } from "../types";
 import type { BucketWrites } from "../write_set";
 
+/** Fill the runs of `writes` into `data`, whatever element class it is. */
+function writeRuns(data: BucketDataArray, writes: BucketWrites): void {
+  // todop: similar to WkDataCubeAdapter.applyWrites ?
+  if (data instanceof BigUint64Array) {
+    for (const { start, length } of writes.mask.runs()) {
+      data.fill(writes.value, start, start + length);
+    }
+  } else {
+    // Every non-64-bit variant of BucketDataArray takes a number; TypeScript
+    // cannot narrow the union's `fill` overloads, hence the single cast.
+    const numeric = data as Uint32Array;
+    const value = Number(writes.value);
+    for (const { start, length } of writes.mask.runs()) {
+      numeric.fill(value, start, start + length);
+    }
+  }
+}
+
 export class WkDataCubeAdapter implements TransactionCube {
   /** Buckets touched during the current stroke, so mutations can be flushed. */
   private readonly touched = new Set<string>();
@@ -64,22 +82,20 @@ export class WkDataCubeAdapter implements TransactionCube {
     const key = bucket.zoomedAddress.join(",");
     if (!this.touched.has(key)) {
       bucket.startDataMutation();
-      // todop: maybe add the buckets directly because we will later iterate over them anyway?
+      // todop: maybe add the buckets directly (instead of the key) because we will later iterate over them anyway?
       this.touched.add(key);
     }
 
-    if (data instanceof BigUint64Array) {
-      for (const { start, length } of writes.mask.runs()) {
-        data.fill(writes.value, start, start + length);
-      }
-    } else {
-      // Every non-64-bit variant of BucketDataArray takes a number; TypeScript
-      // cannot narrow the union's `fill` overloads, hence the single cast.
-      const numeric = data as Uint32Array;
-      const value = Number(writes.value);
-      for (const { start, length } of writes.mask.runs()) {
-        numeric.fill(value, start, start + length);
-      }
+    writeRuns(data, writes);
+
+    // getOrCreateData's own docstring warns it is unsafe to mutate directly:
+    // if the backend's data for this bucket has not arrived yet, that fetch
+    // will later overwrite `data` wholesale (see bucket_snapshot.ts), silently
+    // erasing the write above. bucket.needsBackendData() is the same check
+    // Bucket.applyVoxelMap uses to decide whether to additionally register a
+    // pendingOperation that replays the write once real data lands.
+    if (bucket.needsBackendData()) {
+      bucket.pendingOperations.push((laterData) => writeRuns(laterData, writes));
     }
   }
 

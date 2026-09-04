@@ -57,6 +57,13 @@ export interface MaskShape {
  */
 export type DataDependentShape = {
   kind: "floodFill";
+  /**
+   * An integer voxel coordinate in source-mag space. Unlike AnalyticShape
+   * coordinates (which are continuous, for geometric precision), this is used
+   * for direct array indexing, so a caller converting from a coarser mag must
+   * floor the result rather than pass it through unrounded — a mag1 position
+   * only divides evenly by the mag factor when it happens to be mag-aligned.
+   */
   seed: Vector3;
   is3D: boolean;
   bounds: BoundingBox | null;

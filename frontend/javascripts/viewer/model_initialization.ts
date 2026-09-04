@@ -327,7 +327,12 @@ async function fetchParallel(
   datasetId: string,
   version: number | undefined | null,
 ): Promise<
-  [APIMaybeUnimportedDataset, UserConfiguration, Array<ServerTracing>, Partial<KeyboardShortcutsMap>]
+  [
+    APIMaybeUnimportedDataset,
+    UserConfiguration,
+    Array<ServerTracing>,
+    Partial<KeyboardShortcutsMap>,
+  ]
 > {
   return Promise.all([
     getDataset(datasetId, getSharingTokenFromUrlParameters()),

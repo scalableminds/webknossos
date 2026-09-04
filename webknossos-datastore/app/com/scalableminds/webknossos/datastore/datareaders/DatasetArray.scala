@@ -118,7 +118,14 @@ class DatasetArray(
 
     additionalCoordinatesOpt.foreach { additionalCoordinates =>
       for (additionalCoordinate <- additionalCoordinates) {
-        val index = fullAxisOrder.arrayToWkPermutation(additionalAxesMap(additionalCoordinate.name).index)
+        // additionalAxesMap(...).index is a physical/array index; wkToArrayPermutation (despite
+        // its name) is the physIndex -> wkSlot lookup we need here, i.e. the inverse of
+        // arrayToWkPermutation (wkSlot -> physIndex). Using arrayToWkPermutation directly here
+        // was a latent bug: it only coincidentally resolved to the right slot for axis layouts
+        // where the two permutations happen to agree (true for most datasets seen so far, but
+        // not in general) — e.g. it mis-set the wrong axis's offset for a dataset with a real
+        // (non-synthetic) z axis and an additional axis declared after x/y/z.
+        val index = fullAxisOrder.wkToArrayPermutation(additionalAxesMap(additionalCoordinate.name).index)
         offsetArray(index) = additionalCoordinate.value
         // shapeArray at positions of additional coordinates is 1, unless a batch of consecutive
         // values along that axis was requested (see AdditionalCoordinate.length / repackBatchedAxisIntoZSlot).

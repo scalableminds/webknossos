@@ -65,6 +65,23 @@ function rasterizeCapsule(
   const box = clipBox(capsuleBoundingBox(from, to, radius, planeAxis), ctx.editableBoundingBox);
   if (box == null) return;
 
+  /* todop:
+  the design doc wrote this which only gets one writer per bucket. seems better?
+
+  for (const { address, localBox } of bucketsIntersecting(bbox, ctx)) {
+    const w = tx.writerFor(address, ctx.activeSegmentId);   // once per bucket
+
+    for (const { y, z } of rowsOf(localBox, shape.planeAxis)) {
+      const rowStart = y * BUCKET_WIDTH + z * BUCKET_WIDTH ** 2;  // x === 0
+
+      for (const [x0, x1] of capsuleRowSpans(a, b, shape.radius, y, z, localBox)) {
+        emitSpan(w, rowStart + x0, x1 - x0 + 1, ctx);
+      }
+    }
+  }
+
+   */
+
   forEachBucketRow(box, ctx, (address, rowY, rowZ, xStart, xEnd) => {
     const writer = tx.writerFor(address, ctx.activeSegmentId);
     const rowBase = rowBaseIndex(address, rowY, rowZ);

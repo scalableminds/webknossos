@@ -3,7 +3,7 @@ import window from "libs/window";
 import { uniq } from "lodash-es";
 import uniqBy from "lodash-es/uniqBy";
 import { all, call, put } from "typed-redux-saga";
-import type { AdditionalCoordinate, APIMeshFileInfo } from "types/api_types";
+import type { AdditionalCoordinate } from "types/api_types";
 import Constants, { type Vector3 } from "viewer/constants";
 import { getLayerByName, getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { getMeshInfoForSegment, isMeshLoaded } from "viewer/model/accessors/volumetracing_accessor";
@@ -43,18 +43,6 @@ function proofreadCoarseMagIndex(): number {
     ? // @ts-expect-error
       window.__proofreadCoarseResolutionIndex
     : 3;
-}
-
-// A mapping-less, formatVersion >= 3 mesh file can be meshed per-supervoxel on the fly for any
-// mapping (see loadPrecomputedMeshForSegmentId in precomputed_mesh_saga.ts), which is what makes
-// the local merge/split editing in this file possible in the first place - ad-hoc meshes carry no
-// per-supervoxel tagging at all. Picks the first matching file, mirroring how
-// maybeFetchMeshFiles/maybeActivateMeshFile auto-activates the first available file when none is
-// selected yet.
-function findPreferredPrecomputedMeshFile(
-  availableMeshFiles: APIMeshFileInfo[],
-): APIMeshFileInfo | undefined {
-  return availableMeshFiles.find((file) => file.formatVersion >= 3 && file.mappingName == null);
 }
 
 export function* ensureSegmentItemAndMaybeLoadCoarseMesh(
@@ -148,6 +136,33 @@ function* loadCoarseMesh(
   }
 }
 
+// TODO: this convenience wrapper takes exactly two named IdInfo/IdInfoOpt-shaped sides (each
+// requiring an `unmappedId`, i.e. one specific selected supervoxel) rather than a plain
+// refreshInfos array, which is a narrower type than what its two callers' actual 1:1 pairing
+// (handleProofreadMerge, handleMinCutAgglomerate in proofread_action_handler_sagas.ts) strictly
+// needs. Note that "1:1 pairing" isn't the same as "merge" here - handleMinCutAgglomerate's two
+// sides end up with the *same* old id and two *different* new ids (a genuine 2-way split), and
+// that still fits this wrapper fine, since the wrapper only cares about there being two sides, not
+// about whether their old ids happen to match.
+//
+// The other two proofreading handlers duplicate this function's exact tail
+// (updateAffectedSegmentItems -> syncWithBackend -> build a meshUpdateEffect ->
+// scheduleMeshUpdate) inline instead of using it, for two different reasons:
+// - performPartitionedMinCut is *also* just a 2-way split (one old id -> two new ids), so its
+//   refreshInfos shape would fit this wrapper perfectly - but a min-cut partition is a whole
+//   subgraph of supervoxels, not one selected node, so it has no natural `unmappedId` to put into
+//   an IdInfo for either side. It's blocked by this wrapper's parameter *type*, not by anything
+//   structural about merges vs. splits.
+// - handleProofreadCutFromNeighbors produces 1 + N items (target + however many neighbors), which
+//   can't fit a signature hardcoded to two named parameters at all, regardless of their type.
+//
+// Cleaner: change this function (or a replacement) to take an already-built refreshInfos array
+// directly, like updateAffectedSegmentItems/syncAffectedAndMaybeLoadMissingMeshes already do. Then
+// every caller can converge on one shared tail: handleProofreadMerge/handleMinCutAgglomerate build
+// their 2-item array from sourceInfo/targetInfo (trivial, same as today), performPartitionedMinCut
+// builds its 2-item array from the two partition ids/positions it already has (no IdInfo needed),
+// and handleProofreadCutFromNeighbors keeps building its N-item array as it does now - none of the
+// four call sites would need to hand-roll the tail anymore.
 export function* updateProofreadingSegmentsAndScheduleSyncMeshes(
   volumeTracingId: string,
   sourceInfo: IdInfo,

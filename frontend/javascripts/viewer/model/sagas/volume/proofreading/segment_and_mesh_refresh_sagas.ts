@@ -3,7 +3,7 @@ import window from "libs/window";
 import { uniq } from "lodash-es";
 import uniqBy from "lodash-es/uniqBy";
 import { all, call, put } from "typed-redux-saga";
-import type { AdditionalCoordinate } from "types/api_types";
+import type { AdditionalCoordinate, APIMeshFileInfo } from "types/api_types";
 import Constants, { type Vector3 } from "viewer/constants";
 import { getLayerByName, getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { getMeshInfoForSegment, isMeshLoaded } from "viewer/model/accessors/volumetracing_accessor";
@@ -23,9 +23,19 @@ import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import { Store } from "viewer/singletons";
 import type { OperationContext } from "../../operation_context_saga";
-import { spawnUntilCanceled } from "../../saga_helpers";
 import { syncWithBackend } from "./backend_sync_helper_sagas";
-import type { IdInfo, IdInfoOpt } from "./proofreading_types";
+import {
+  detectMergeAndSplitChanges,
+  tryLocalMeshMerge,
+  trySplitMeshLocally,
+} from "./local_mesh_change_sagas";
+import { scheduleMeshUpdate } from "./mesh_update_registry_saga";
+import type {
+  AgglomerateChangeItem,
+  IdInfo,
+  IdInfoOpt,
+  PreservedMeshDisplayProps,
+} from "./proofreading_types";
 
 function proofreadCoarseMagIndex(): number {
   // @ts-expect-error
@@ -33,6 +43,18 @@ function proofreadCoarseMagIndex(): number {
     ? // @ts-expect-error
       window.__proofreadCoarseResolutionIndex
     : 3;
+}
+
+// A mapping-less, formatVersion >= 3 mesh file can be meshed per-supervoxel on the fly for any
+// mapping (see loadPrecomputedMeshForSegmentId in precomputed_mesh_saga.ts), which is what makes
+// the local merge/split editing in this file possible in the first place - ad-hoc meshes carry no
+// per-supervoxel tagging at all. Picks the first matching file, mirroring how
+// maybeFetchMeshFiles/maybeActivateMeshFile auto-activates the first available file when none is
+// selected yet.
+function findPreferredPrecomputedMeshFile(
+  availableMeshFiles: APIMeshFileInfo[],
+): APIMeshFileInfo | undefined {
+  return availableMeshFiles.find((file) => file.formatVersion >= 3 && file.mappingName == null);
 }
 
 export function* ensureSegmentItemAndMaybeLoadCoarseMesh(
@@ -126,7 +148,7 @@ function* loadCoarseMesh(
   }
 }
 
-export function* refreshProofreadingSegmentsAndMeshes(
+export function* updateProofreadingSegmentsAndScheduleSyncMeshes(
   volumeTracingId: string,
   sourceInfo: IdInfo,
   targetInfo: IdInfoOpt,
@@ -152,14 +174,22 @@ export function* refreshProofreadingSegmentsAndMeshes(
         targetInfo.position ?? sourceInfo.position,
     },
   ];
-  yield* call(refreshAffectedSegmentItems, volumeTracingId, refreshInfos);
+  yield* call(updateAffectedSegmentItems, volumeTracingId, refreshInfos);
   yield* call(syncWithBackend, ctx);
 
-  // Refreshing the meshes might take a while and won't block the saga here.
-  yield* spawnUntilCanceled(maybeRefreshAffectedMeshes, volumeTracingId, refreshInfos);
+  // Refreshing the meshes might take a while and won't block the saga here. A still-running mesh
+  // update for an overlapping agglomerate id (e.g. the previous proofreading action's, if the user
+  // is proofreading faster than meshes can reload) is superseded - see
+  // mesh_update_registry_saga.ts.
+  const meshUpdateEffect = call(
+    syncAffectedAndMaybeLoadMissingMeshes,
+    volumeTracingId,
+    refreshInfos,
+  );
+  yield* call(scheduleMeshUpdate, meshUpdateEffect, volumeTracingId, refreshInfos);
 }
 
-export function* refreshAffectedSegmentItems(
+export function* updateAffectedSegmentItems(
   layerName: string,
   items: Array<{
     oldAgglomerateId?: bigint;
@@ -210,12 +240,6 @@ export function* shouldReloadMeshesAfterProofreadAction(
   return hasAnyInvolvedMeshLoaded;
 }
 
-// Display properties of a mesh that should survive a reload.
-export type PreservedMeshDisplayProps = {
-  opacity?: number;
-  isVisible?: boolean;
-};
-
 // Capture the current opacity and visibility of the given old agglomerates' meshes, keyed by
 // agglomerate id, so that reloaded meshes can keep the user-chosen opacity and visibility.
 // Duplicate and nullish ids are ignored, so callers can pass the raw oldAgglomerateId of every
@@ -249,62 +273,43 @@ export function* getMeshDisplayPropsByOldAgglomerateId(
   });
 }
 
-export function* maybeRefreshAffectedMeshes(
+export function* syncAffectedAndMaybeLoadMissingMeshes(
   layerName: string,
-  items: Array<{
-    oldAgglomerateId?: bigint;
-    newAgglomerateId: bigint;
-    nodePosition: Vector3;
-    opacity?: number; // see refreshAffectedMeshes below.
-  }>,
-) {
-  const shouldDoMeshRefreshing = yield* call(shouldReloadMeshesAfterProofreadAction, layerName, [
-    ...items.map((i) => i.oldAgglomerateId).filter((id) => id != null),
-  ]);
+  items: AgglomerateChangeItem[],
+): Saga<void> {
+  const oldAgglomerateIds = items.map((item) => item.oldAgglomerateId).filter((id) => id != null);
+  const shouldDoMeshRefreshing = yield* call(
+    shouldReloadMeshesAfterProofreadAction,
+    layerName,
+    oldAgglomerateIds,
+  );
   if (shouldDoMeshRefreshing) {
-    // Refreshing the meshes might take a while and won't block the saga
-    // here.
-    yield* spawnUntilCanceled(refreshAffectedMeshes, layerName, items);
+    // syncAffectedAndMaybeLoadMissingMeshes is itself always invoked as a detached, cancellable task via
+    // scheduleMeshUpdate (see callers), so no separate spawn is needed here to avoid blocking.
+    yield* call(syncAffectedAndLoadMissingMeshes, layerName, items);
   }
 }
 
-export function* refreshAffectedMeshes(
+// Hard-reloads every item that couldn't be handled locally (no merge/split shape detected in the
+// first place, or the local attempt failed): removes the old mesh(es) and loads the new one(s)
+// fresh, same as before this feature existed. Kept as its own function, separate from the local
+// merge/split attempts in syncAffectedAndLoadMissingMeshes, so the "give up and reload" path reads
+// as one clearly-named step instead of being buried at the end of a much longer function.
+//
+// Exported so parked_pooled_local_mesh_change_scheduler.ts's alternate orchestrator can reuse it
+// without duplicating it - see that file for context.
+export function* reloadMeshes(
   layerName: string,
-  items: Array<{
-    oldAgglomerateId?: bigint;
-    newAgglomerateId: bigint;
-    nodePosition: Vector3;
-    // Opacity and visibility to apply to the reloaded mesh. If unset, the values of the old
-    // mesh (oldAgglomerateId) are used before its removal (see below).
-    opacity?: number;
-    isVisible?: boolean;
-  }>,
-) {
-  // ATTENTION: This saga should usually be called with `spawnUntilCanceled` to avoid that the user
-  // is blocked (via takeEveryUnlessBusy) while the meshes are refreshed.
-
-  // Segmentations with more than 3 dimensions are currently not compatible
-  // with proofreading. Once such datasets appear, this parameter needs to be
-  // adapted.
-  const additionalCoordinates = undefined;
-
-  // Capture the opacity and visibility of all old meshes up front, i.e. before any of them are
-  // removed below, so that reloaded meshes keep the user-chosen opacity and visibility. This must
-  // happen before the removal loop because removing one item's old mesh must not prevent another
-  // item from reading the original properties.
-  const displayPropsByOldAgglomerateId = yield* call(
-    getMeshDisplayPropsByOldAgglomerateId,
-    layerName,
-    items.map((item) => item.oldAgglomerateId),
-    additionalCoordinates,
-  );
-
+  itemsToReload: AgglomerateChangeItem[],
+  displayPropsByOldAgglomerateId: Map<bigint, PreservedMeshDisplayProps>,
+  additionalCoordinates: AdditionalCoordinate[] | undefined,
+): Saga<void> {
   // Remember which meshes were removed in this saga
   // and which were fetched again to avoid doing redundant work.
   const removedIds = new Set();
   const newlyLoadedIds = new Set();
-  const meshLoadingEffects = [];
-  for (const item of items) {
+  const meshLoadingEffects: Array<() => Saga<void>> = [];
+  for (const item of itemsToReload) {
     // Opacity and visibility are either passed in explicitly (e.g. by the rebasing saga, which
     // removes the old mesh before this saga runs) or taken from the old mesh captured above.
     const oldDisplayProps =
@@ -338,5 +343,76 @@ export function* refreshAffectedMeshes(
     processTaskWithPool,
     meshLoadingEffects,
     Constants.PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT,
+  );
+}
+
+export function* syncAffectedAndLoadMissingMeshes(
+  layerName: string,
+  changeInfoItems: AgglomerateChangeItem[],
+): Saga<void> {
+  // ATTENTION: This saga should usually be called with `spawnUntilCanceled` to avoid that the user
+  // is blocked (via takeEveryUnlessBusy) while the meshes are refreshed.
+
+  // Segmentations with more than 3 dimensions are currently not compatible
+  // with proofreading. Once such datasets appear, this parameter needs to be
+  // adapted.
+  const additionalCoordinates = undefined;
+
+  // Capture the opacity and visibility of all old meshes up front, i.e. before any of them are
+  // removed below, so that reloaded meshes keep the user-chosen opacity and visibility. This must
+  // happen before the removal loop because removing one item's old mesh must not prevent another
+  // item from reading the original properties.
+  const oldAgglomerateIds = changeInfoItems
+    .map((item) => item.oldAgglomerateId)
+    .filter((id) => id != null);
+  const displayPropsByOldAgglomerateId = yield* call(
+    getMeshDisplayPropsByOldAgglomerateId,
+    layerName,
+    oldAgglomerateIds,
+    additionalCoordinates,
+  );
+
+  const { mergeGroups, splitGroups, remainingItems } = detectMergeAndSplitChanges(changeInfoItems);
+
+  // Try to splice already-loaded meshes together locally instead of removing and reloading them.
+  // Groups whose merge attempt didn't fully succeed (e.g. mixed ad-hoc/precomputed meshes, or
+  // nothing loaded to splice) fall through to the reload loop below. Merge groups run one after
+  // another rather than in parallel - see parked_pooled_local_mesh_change_scheduler.ts for a
+  // parallel/dependency-aware alternative that was parked as too complex for now.
+  const itemsToReload: AgglomerateChangeItem[] = [...remainingItems];
+  for (const { newAgglomerateId, oldIds, items } of mergeGroups) {
+    const handledLocally = yield* call(
+      tryLocalMeshMerge,
+      layerName,
+      oldIds,
+      newAgglomerateId,
+      additionalCoordinates,
+    );
+    if (!handledLocally) itemsToReload.push(...items);
+  }
+
+  // Try to split an already-loaded mesh locally instead of removing and reloading it. Groups whose
+  // split attempt didn't fully succeed (no precomputed mesh loaded, or its supervoxels couldn't be
+  // confidently classified) fall through to the reload loop below. Also runs sequentially - see the
+  // note above.
+  for (const { oldAgglomerateId, newIds, items } of splitGroups) {
+    const handledLocally = yield* call(
+      trySplitMeshLocally,
+      layerName,
+      oldAgglomerateId,
+      newIds,
+      additionalCoordinates,
+    );
+    if (!handledLocally) itemsToReload.push(...items);
+  }
+
+  if (itemsToReload.length === 0) return;
+
+  yield* call(
+    reloadMeshes,
+    layerName,
+    itemsToReload,
+    displayPropsByOldAgglomerateId,
+    additionalCoordinates,
   );
 }

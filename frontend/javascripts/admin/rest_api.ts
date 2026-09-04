@@ -2336,14 +2336,41 @@ export function getAgglomeratesForSegmentsFromTracingstore<T extends number | bi
   version: number,
 ): Promise<Mapping> {
   const extraParams = new URLSearchParams({ annotationId });
-  if (version != null) {
-    extraParams.set("version", version.toString());
-  }
+  extraParams.set("version", version.toString());
   return _getAgglomeratesForSegmentsHelper(
     segmentIds,
     `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments`,
     extraParams,
   );
+}
+
+type AgglomerateRequest = {
+  segmentIds: bigint[];
+  agglomerateIdIsPresent: boolean;
+};
+export async function getSegmentsForAgglomerateFromTracingStore<T extends number | bigint>(
+  tracingStoreUrl: string,
+  tracingId: string,
+  agglomerateId: T,
+  version: number,
+): Promise<bigint[]> {
+  const result: AgglomerateRequest = await doWithToken((token) => {
+    const params = new URLSearchParams({
+      agglomerateId: agglomerateId.toString(),
+      version: version.toString(),
+      token: token,
+    });
+    return retryAsyncFunction(() =>
+      Request.receiveJSON(
+        `${tracingStoreUrl}/tracings/mapping/${tracingId}/segmentsForAgglomerate?${params}`,
+        {
+          method: "GET",
+          showErrorToast: false,
+        },
+      ),
+    );
+  });
+  return result.segmentIds;
 }
 
 export function getEditableAgglomerateTreeAsSkeletonTracing(

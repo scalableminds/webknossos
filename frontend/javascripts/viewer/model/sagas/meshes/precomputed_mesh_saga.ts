@@ -285,7 +285,11 @@ function* getMappingName(segmentationLayer: APISegmentationLayer) {
   return editableMapping != null ? editableMapping.baseMappingName : meshExtraInfo.mappingName;
 }
 
-function* _getChunkLoadingDescriptors(
+// Exported so the proofreading merge orchestration (segment_and_mesh_refresh_sagas.ts) can list
+// the full, current chunk set of a (possibly just-merged) agglomerate id, in order to diff it
+// against what's already loaded for one side of a merge and fetch only the missing delta chunks
+// (see fetchAndMergePrecomputedChunks below).
+export function* _getChunkLoadingDescriptors(
   segmentId: bigint,
   dataset: APIDataset,
   segmentationLayer: APISegmentationLayer,
@@ -394,6 +398,19 @@ function* loadPrecomputedMeshesInChunksForLod(
     (chunk) => chunk.byteSize,
   );
 
+  // TODO(#9932): this batch-fetch/decode/tag/scale/translate/computeVertexNormals loop (through
+  // the mergeGeometries/VertexSegmentMapping/computeBvhAsync step below) is duplicated almost
+  // verbatim in fetchAndMergePrecomputedChunks further down this file, which was added later for
+  // the proofreading merge-delta-fetch path instead of factoring a shared helper out of this
+  // function. The two differ only in: this one eagerly adds each decoded chunk to the scene before
+  // merging (see the addMeshFromGeometry call below) and collects/reports per-chunk errors via
+  // errorsWithDetails, while fetchAndMergePrecomputedChunks skips the eager scene-add (by design -
+  // it's for a small delta merge, not a full progressive load) and silently skips missing
+  // chunks/data instead of collecting errors. Worth extracting a shared
+  // "fetch+decode+tag+transform a batch of chunks into UnmergedBufferGeometryWithInfo[]" helper
+  // (and, separately, a shared "sort+mergeGeometries+VertexSegmentMapping+computeBvhAsync" helper
+  // for the merge step both do afterwards) that both callers parametrize over the eager-add/error-
+  // handling behavior they need.
   let bufferGeometries: UnmergedBufferGeometryWithInfo[] = [];
   const tasks = batches.map(
     (chunks) =>
@@ -546,6 +563,98 @@ function* loadPrecomputedMeshesInChunksForLod(
     opacity,
     true,
   );
+}
+
+/**
+ * Fetches and decodes an explicit, already-known list of mesh-file chunks (no chunk-listing
+ * round-trip - the caller already knows which chunks it wants), merging them into a single
+ * geometry with an attached VertexSegmentMapping. Unlike loadPrecomputedMeshesInChunksForLod
+ * above, this doesn't eagerly add individual chunks to the scene before merging them - it's used
+ * by the proofreading merge orchestration (local_mesh_change_sagas.ts) to fetch only the
+ * "delta" chunks belonging to the not-yet-loaded side of a merge, which is typically a small,
+ * one-shot addition rather than a full progressive load.
+ *
+ * TODO(#9932): the fetch/decode/tag/scale/translate/computeVertexNormals/merge pipeline below
+ * duplicates loadPrecomputedMeshesInChunksForLod above almost verbatim - see the TODO on that
+ * function for what a shared extraction could look like.
+ */
+export function* fetchAndMergePrecomputedChunks(
+  dataset: APIDataset,
+  meshFile: APIMeshFileInfo,
+  segmentationLayer: APISegmentationLayer,
+  segmentIdForRequest: bigint,
+  chunks: meshApi.MeshChunk[],
+  chunkScale: Vector3 | null,
+): Saga<BufferGeometryWithInfo | null> {
+  if (chunks.length === 0) return null;
+  const loader = getDracoLoader();
+  const batches = chunkDynamically(chunks, MIN_BATCH_SIZE_IN_BYTES, (chunk) => chunk.byteSize);
+
+  const bufferGeometries: UnmergedBufferGeometryWithInfo[] = [];
+  const tasks = batches.map(
+    (batchChunks) =>
+      function* loadChunks(): Saga<void> {
+        const dataForChunks = yield* call(
+          meshApi.getMeshFileChunkData,
+          dataset.dataStore.url,
+          dataset.id,
+          getBaseSegmentationName(segmentationLayer),
+          {
+            meshFileName: meshFile.name,
+            requests: batchChunks.map(({ byteOffset, byteSize }) => ({
+              byteOffset,
+              byteSize,
+              segmentId: segmentIdForRequest,
+            })),
+          },
+        );
+
+        for (const [chunk, data] of zip(batchChunks, dataForChunks)) {
+          if (chunk == null || data == null) continue;
+          const position = chunk.position;
+          const bufferGeometry = (yield* call(
+            loader.decodeDracoFileAsync,
+            data,
+          )) as UnmergedBufferGeometryWithInfo;
+          bufferGeometry.unmappedSegmentId = chunk.unmappedSegmentId;
+          if (chunkScale != null) {
+            bufferGeometry.scale(...chunkScale);
+          }
+          bufferGeometry.translate(position[0], position[1], position[2]);
+          bufferGeometry.computeVertexNormals();
+          bufferGeometries.push(bufferGeometry);
+          yield* call(sleep, 0);
+        }
+      },
+  );
+
+  try {
+    yield* call(processTaskWithPool, tasks, Constants.PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT);
+  } catch (exception) {
+    Toast.warning(`Some mesh chunks could not be loaded for segment ${segmentIdForRequest}.`);
+    console.error(exception);
+  }
+
+  const sortedBufferGeometries = sortBy(
+    bufferGeometries,
+    (geometryWithInfo) => geometryWithInfo.unmappedSegmentId,
+  );
+  if (sortedBufferGeometries.length === 0) return null;
+
+  try {
+    const mergedGeometry = mergeGeometries(
+      sortedBufferGeometries,
+      false,
+    ) as BufferGeometryWithInfo | null;
+    if (mergedGeometry != null) {
+      mergedGeometry.vertexSegmentMapping = new VertexSegmentMapping(sortedBufferGeometries);
+      mergedGeometry.boundsTree = yield* call(computeBvhAsync, mergedGeometry);
+    }
+    return mergedGeometry;
+  } catch (exception) {
+    console.error(`Failed to merge mesh chunks for segment ${segmentIdForRequest}:`, exception);
+    return null;
+  }
 }
 
 export default function* precomputedMeshSaga(): Saga<void> {

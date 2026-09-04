@@ -37,10 +37,8 @@ import {
   splitAgglomeratesInMapping,
   updateMappingWithMerge,
 } from "../../volume/proofreading/local_mapping_update_sagas";
-import {
-  getMeshDisplayPropsByOldAgglomerateId,
-  type PreservedMeshDisplayProps,
-} from "../../volume/proofreading/segment_and_mesh_refresh_sagas";
+import type { PreservedMeshDisplayProps } from "../../volume/proofreading/proofreading_types";
+import { getMeshDisplayPropsByOldAgglomerateId } from "../../volume/proofreading/segment_and_mesh_refresh_sagas";
 import {
   type ApplyingUpdateResults,
   FailedIncorporateActionsReturnValue,

@@ -27,7 +27,6 @@ import {
 import { Store } from "viewer/singletons";
 import type { Action } from "../../../actions/actions";
 import type { OperationContext } from "../../operation_context_saga";
-import { spawnUntilCanceled } from "../../saga_helpers";
 import { syncAgglomerateTreesAfterMergeAction } from "./agglomerate_tree_syncing_saga_helpers";
 import {
   pushPendingProofreadingOperationInfo,
@@ -37,6 +36,7 @@ import {
 } from "./backend_sync_helper_sagas";
 import { performCutFromNeighbors, performMinCut } from "./cut_operation_helper_sagas";
 import { splitAgglomerateInMapping, updateMappingWithMerge } from "./local_mapping_update_sagas";
+import { scheduleMeshUpdate } from "./mesh_update_registry_saga";
 import {
   gatherInfoForOperation,
   getAgglomerateInfos,
@@ -47,9 +47,9 @@ import {
   reloadMappingAndAggloIds,
 } from "./preparation_sagas";
 import {
-  maybeRefreshAffectedMeshes,
-  refreshAffectedSegmentItems,
-  refreshProofreadingSegmentsAndMeshes,
+  syncAffectedAndMaybeLoadMissingMeshes,
+  updateAffectedSegmentItems,
+  updateProofreadingSegmentsAndScheduleSyncMeshes,
 } from "./segment_and_mesh_refresh_sagas";
 
 export function* performPartitionedMinCut(
@@ -216,15 +216,21 @@ export function* performPartitionedMinCut(
         nodePosition: meshLoadingPositionForPartition2,
       },
     ];
-    yield* call(refreshAffectedSegmentItems, volumeTracingId, refreshInfos);
+    yield* call(updateAffectedSegmentItems, volumeTracingId, refreshInfos);
 
     // Now that the segment items are up-to-date we can sync with the back-end
     // and release the mutex.
     yield* call(syncWithBackend, ctx);
 
-    // Refreshing the meshes might take a while and won't block the saga
-    // here.
-    yield* spawnUntilCanceled(maybeRefreshAffectedMeshes, volumeTracingId, refreshInfos);
+    // Refreshing the meshes might take a while and won't block the saga here. A still-running
+    // mesh update for an overlapping agglomerate id is superseded - see
+    // mesh_update_registry_saga.ts.
+    const meshUpdateEffect = call(
+      syncAffectedAndMaybeLoadMissingMeshes,
+      volumeTracingId,
+      refreshInfos,
+    );
+    yield* call(scheduleMeshUpdate, meshUpdateEffect, volumeTracingId, refreshInfos);
   } finally {
     if (unsubscribeFromAnnotationMutex) {
       yield* call(unsubscribeFromAnnotationMutex);
@@ -339,7 +345,7 @@ export function* handleProofreadMerge(action: ProofreadMergeAction, ctx: Operati
     );
 
     yield* call(
-      refreshProofreadingSegmentsAndMeshes,
+      updateProofreadingSegmentsAndScheduleSyncMeshes,
       volumeTracingId,
       sourceInfo,
       targetInfo,
@@ -456,7 +462,8 @@ export function* handleMinCutAgglomerate(
     // Now that the changes are saved, we can split the local mapping (because it requires
     // communication with the back-end).
     const autoUpdateAgglomerateTrees = true;
-    const splitMappingInfo = yield* splitAgglomerateInMapping(
+    const splitMappingInfo = yield* call(
+      splitAgglomerateInMapping,
       activeMapping,
       latestSourceAgglomerateId,
       [sourceInfo.unmappedId],
@@ -484,7 +491,7 @@ export function* handleMinCutAgglomerate(
     // reload the agglomerate id info and the mapping.
     const newInfo = yield* call(
       reloadMappingAndAggloIds,
-      volumeTracing.tracingId,
+      volumeTracingId,
       sourceInfo.unmappedId,
       targetInfo.unmappedId,
     );
@@ -499,7 +506,7 @@ export function* handleMinCutAgglomerate(
     targetAgglomerateId = newInfo.targetAgglomerateId;
 
     yield* call(
-      refreshProofreadingSegmentsAndMeshes,
+      updateProofreadingSegmentsAndScheduleSyncMeshes,
       volumeTracingId,
       sourceInfo,
       targetInfo,
@@ -652,13 +659,19 @@ export function* handleProofreadCutFromNeighbors(action: Action, ctx: OperationC
         nodePosition: neighbor.position,
       })),
     ];
-    yield* call(refreshAffectedSegmentItems, volumeTracingId, refreshInfos);
+    yield* call(updateAffectedSegmentItems, volumeTracingId, refreshInfos);
 
     yield* call(syncWithBackend, ctx);
 
-    // Refreshing the meshes might take a while and won't block the saga
-    // here.
-    yield* spawnUntilCanceled(maybeRefreshAffectedMeshes, volumeTracingId, refreshInfos);
+    // Refreshing the meshes might take a while and won't block the saga here. A still-running
+    // mesh update for an overlapping agglomerate id is superseded - see
+    // mesh_update_registry_saga.ts.
+    const meshUpdateEffect = call(
+      syncAffectedAndMaybeLoadMissingMeshes,
+      volumeTracingId,
+      refreshInfos,
+    );
+    yield* call(scheduleMeshUpdate, meshUpdateEffect, volumeTracingId, refreshInfos);
   } finally {
     if (unsubscribeFromAnnotationMutex) {
       yield* call(unsubscribeFromAnnotationMutex);

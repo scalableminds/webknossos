@@ -80,6 +80,8 @@ export type UpdateCurrentMeshFileAction = ReturnType<typeof updateCurrentMeshFil
 export type RemoveMeshAction = ReturnType<typeof removeMeshAction>;
 export type AddAdHocMeshAction = ReturnType<typeof addAdHocMeshAction>;
 export type AddPrecomputedMeshAction = ReturnType<typeof addPrecomputedMeshAction>;
+export type RelabelMeshAction = ReturnType<typeof mergeMeshesAction>;
+export type SplitMeshAction = ReturnType<typeof splitMeshAction>;
 export type SetCollaborationModeAction = ReturnType<typeof setCollaborationModeAction>;
 
 export type AnnotationActionTypes =
@@ -110,6 +112,8 @@ export type AnnotationActionTypes =
   | RemoveMeshAction
   | AddAdHocMeshAction
   | AddPrecomputedMeshAction
+  | RelabelMeshAction
+  | SplitMeshAction
   | SetCollaborationModeAction
   | SetMipForBBoxAction
   | RemoveMipForBBoxAction
@@ -417,6 +421,42 @@ export const addPrecomputedMeshAction = (
     mappingName,
     opacity: opacity ?? Constants.DEFAULT_MESH_OPACITY,
     isVisible: isVisible ?? true,
+  }) as const;
+
+// Renames an already-loaded mesh's MeshInformation entry from oldSegmentId to newSegmentId
+// (merging with an existing newSegmentId entry, if any), without removing/re-adding it. Used by
+// the proofreading merge orchestration to keep MeshInformation in sync with a local
+// SegmentMeshController.relabelMesh scene-graph rename, avoiding a full mesh reload.
+export const mergeMeshesAction = (
+  layerName: string,
+  oldSegmentId: bigint,
+  newSegmentId: bigint,
+  additionalCoordinates?: AdditionalCoordinate[] | null,
+) =>
+  ({
+    type: "MERGE_MESHES",
+    layerName,
+    oldSegmentId,
+    newSegmentId,
+    additionalCoordinates,
+  }) as const;
+
+// Replaces oldSegmentId's MeshInformation entry with one entry per id in newSegmentIds, carrying
+// over the old entry's opacity/isVisible. Used by the proofreading split orchestration to keep
+// MeshInformation in sync with a local SegmentMeshController.splitMeshByUnmappedSegmentIds scene-
+// graph split, avoiding a full mesh reload.
+export const splitMeshAction = (
+  layerName: string,
+  oldSegmentId: bigint,
+  newSegmentIds: bigint[],
+  additionalCoordinates?: AdditionalCoordinate[] | null,
+) =>
+  ({
+    type: "SPLIT_MESH",
+    layerName,
+    oldSegmentId,
+    newSegmentIds,
+    additionalCoordinates,
   }) as const;
 
 export const setCollaborationModeAction = (collaborationMode: AnnotationCollaborationMode) =>

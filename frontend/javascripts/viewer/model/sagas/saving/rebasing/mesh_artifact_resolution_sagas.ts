@@ -9,7 +9,7 @@ import { removeMeshAction } from "viewer/model/actions/annotation_actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import { spawnUntilCanceled, waitUntilNoActiveOperations } from "../../saga_helpers";
-import { refreshAffectedMeshes } from "../../volume/proofreading/segment_and_mesh_refresh_sagas";
+import { syncAffectedAndLoadMissingMeshes } from "../../volume/proofreading/segment_and_mesh_refresh_sagas";
 import type { ApplyingUpdateArtifacts } from "./applying_update_artifacts";
 
 export function* resolveApplyingUpdateArtifacts(
@@ -43,7 +43,7 @@ function* reloadMeshes(
 ): Saga<void> {
   // First wait in case an operation is running (e.g. proofreading) until it finishes.
   yield call(waitUntilNoActiveOperations);
-  const refreshAffectedMeshesEffects = [];
+  const syncAffectedAndLoadMissingMeshesEffects = [];
   for (const [tracingId, displayPropsByAgglomerateId] of meshesToReloadPerLayer.entries()) {
     const refreshList: Array<{
       newAgglomerateId: bigint;
@@ -69,7 +69,9 @@ function* reloadMeshes(
         });
       }
     }
-    refreshAffectedMeshesEffects.push(call(refreshAffectedMeshes, tracingId, refreshList));
+    syncAffectedAndLoadMissingMeshesEffects.push(
+      call(syncAffectedAndLoadMissingMeshes, tracingId, refreshList),
+    );
   }
-  yield* all(refreshAffectedMeshesEffects);
+  yield* all(syncAffectedAndLoadMissingMeshesEffects);
 }

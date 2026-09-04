@@ -2,6 +2,7 @@ import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import messages from "messages";
 import { BrushDriver } from "prototypes/new_volume_architecture/integration/brush_driver";
+import { USE_NEW_VOLUME_ARCHITECTURE } from "prototypes/new_volume_architecture/integration/feature_flag";
 import type { Channel } from "redux-saga";
 import type { ActionPattern } from "redux-saga/effects";
 import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
@@ -82,20 +83,14 @@ import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_sag
 
 const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
 
-/**
- * SPIKE TOGGLE — route brushing through the new volume architecture
- * (frontend/javascripts/prototypes/new_volume_architecture) instead of the
- * VoxelBuffer2D path.
- *
- * Dirty on purpose: buckets are mutated in place, nothing reaches the save
- * queue or the undo stack, and the trace/fill tools are unaffected (they still
- * use the old path). Flip to false to restore the original behaviour.
- *
- * Disabled under test, because the existing brush integration specs assert on
- * the update actions this path deliberately does not emit. The spike has its
- * own coverage in test/prototypes/new_volume_architecture.
- */
-const USE_NEW_VOLUME_ARCHITECTURE = !process.env.IS_TESTING;
+// SPIKE TOGGLE: route brushing through the new volume architecture
+// (frontend/javascripts/prototypes/new_volume_architecture) instead of the
+// VoxelBuffer2D path. See feature_flag.ts for the full rationale — the same
+// toggle also gates flood fill in floodfill_saga.tsx.
+//
+// Dirty on purpose: buckets are mutated in place, nothing reaches the save
+// queue or the undo stack. The trace tool is unaffected (it still uses the
+// old path).
 
 /** Global (mag-1) layer-space position -> source-mag voxel coordinates. */
 function toMagVoxel(position: Vector3, mag: Vector3): Vector3 {

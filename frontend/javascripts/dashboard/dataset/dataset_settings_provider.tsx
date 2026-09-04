@@ -18,7 +18,7 @@ import size from "lodash-es/size";
 import messages from "messages";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { APIDataLayer, APIDataSource, APIDataset, MutableAPIDataset } from "types/api_types";
+import type { APIDataLayer, APIDataSource, APIDataset, APIMaybeUnimportedDataSource, APIMaybeUnimportedDataset, MutableAPIDataset } from "types/api_types";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 import type { DataLayerWithTransformations } from "types/schemas/datasource.types";
 import {
@@ -90,13 +90,13 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
 
   const [hasFormErrors, setHasFormErrors] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [dataset, setDataset] = useState<APIDataset | null | undefined>(null);
+  const [dataset, setDataset] = useState<APIMaybeUnimportedDataset | null | undefined>(null);
   const [datasetDefaultConfiguration, setDatasetDefaultConfiguration] = useState<
     DatasetConfiguration | null | undefined
   >(null);
   const [isLoading, setIsLoading] = useState(true);
   const [savedDataSourceOnServer, setSavedDataSourceOnServer] = useState<
-    APIDataSource | null | undefined
+    APIMaybeUnimportedDataSource | null | undefined
   >(null);
 
   const fetchData = useCallback(async (): Promise<string | undefined> => {
@@ -132,40 +132,42 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
         dataSource,
       });
 
-      const initialRotationSettings = getRotationFromCoordinateTransformations(dataSource);
+      if ("dataLayers" in dataSource) {
+        const initialRotationSettings = getRotationFromCoordinateTransformations(dataSource);
 
-      form.setFieldsValue({
-        datasetRotation: initialRotationSettings,
-      });
+        form.setFieldsValue({
+          datasetRotation: initialRotationSettings,
+        });
 
-      // This reads the coordinate transformations from the backend, thus it does not
-      // need to be updated when the user changes rotation settings in the form.
-      const isRotationOnlyInBackend = doAllLayersHaveTheSameRotation(dataSource.dataLayers);
-      form.setFieldValue("isRotationOnly", isRotationOnlyInBackend);
+        // This reads the coordinate transformations from the backend, thus it does not
+        // need to be updated when the user changes rotation settings in the form.
+        const isRotationOnlyInBackend = doAllLayersHaveTheSameRotation(dataSource.dataLayers);
+        form.setFieldValue("isRotationOnly", isRotationOnlyInBackend);
 
-      const dataLayersWithTransformations: DataLayerWithTransformations[] =
-        dataSource.dataLayers.map((layer: APIDataLayer) => ({
-          name: layer.name,
-          coordinateTransformations: layer.coordinateTransformations || [],
-        }));
-      const layersWithCoordTransformationsJSON = JSON.stringify(
-        dataLayersWithTransformations,
-        null,
-        2,
-      );
-      form.setFieldsValue({
-        coordinateTransformations: layersWithCoordTransformationsJSON,
-      });
+        const dataLayersWithTransformations: DataLayerWithTransformations[] =
+          dataSource.dataLayers.map((layer: APIDataLayer) => ({
+            name: layer.name,
+            coordinateTransformations: layer.coordinateTransformations || [],
+          }));
+        const layersWithCoordTransformationsJSON = JSON.stringify(
+          dataLayersWithTransformations,
+          null,
+          2,
+        );
+        form.setFieldsValue({
+          coordinateTransformations: layersWithCoordTransformationsJSON,
+        });
 
-      let initialTransformationsMode;
-      if (initialRotationSettings === NULLED_DS_ROTATION_SETTINGS) {
-        initialTransformationsMode = TransformationsMode.NONE;
-      } else if (isRotationOnlyInBackend) {
-        initialTransformationsMode = TransformationsMode.SIMPLE;
-      } else {
-        initialTransformationsMode = TransformationsMode.ADVANCED;
+        let initialTransformationsMode;
+        if (initialRotationSettings === NULLED_DS_ROTATION_SETTINGS) {
+          initialTransformationsMode = TransformationsMode.NONE;
+        } else if (isRotationOnlyInBackend) {
+          initialTransformationsMode = TransformationsMode.SIMPLE;
+        } else {
+          initialTransformationsMode = TransformationsMode.ADVANCED;
+        }
+        form.setFieldValue("transformationsMode", initialTransformationsMode);
       }
-      form.setFieldValue("transformationsMode", initialTransformationsMode);
 
       const fetchedDatasetDefaultConfiguration = await getDatasetDefaultConfiguration(datasetId);
       enforceValidatedDatasetViewConfiguration(

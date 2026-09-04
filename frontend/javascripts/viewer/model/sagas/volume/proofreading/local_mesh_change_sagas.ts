@@ -143,10 +143,9 @@ function* fetchAndAppendMissingPrecomputedMergeChunks(
     );
     if (mergedDeltaGeometry == null) continue;
 
-    // TODO(#9932): this adds the delta as a second sibling node next to oldId's existing merged
-    // node instead of folding them into one - see the consolidation TODO in tryLocalMeshMerge
-    // below for why that breaks the "one merged node per (segment, LOD)" invariant fresh loads
-    // maintain, and the fix to apply here too once that's implemented.
+    // This adds the delta as a second sibling node next to oldId's existing merged node instead
+    // of folding them into one - tryLocalMeshMerge consolidates them back down (see
+    // consolidateMergedMesh below) once oldId has been relabeled to newId.
     yield* call(
       {
         context: segmentMeshController,
@@ -163,6 +162,30 @@ function* fetchAndAppendMissingPrecomputedMergeChunks(
     );
   }
   return true;
+}
+
+// Consolidates newId's mesh back down to a single node per LOD after a local merge spread it
+// across sibling nodes (moveMeshesToNewSegmentId only reparents chunk groups, it doesn't re-merge
+// their geometries; fetchAndAppendMissingPrecomputedMergeChunks appends a delta as another
+// sibling for the same reason). No-op for ad-hoc meshes or a precomputed mesh that fell back to
+// unmerged chunks - see SegmentMeshController.consolidateMeshGroups for the actual algorithm.
+function* consolidateMergedMesh(
+  layerName: string,
+  newId: bigint,
+  additionalCoordinates: AdditionalCoordinate[] | undefined,
+): Saga<void> {
+  const { segmentMeshController } = yield* call(getSceneController);
+  const opacity = yield* select(
+    (state) =>
+      getMeshInfoForSegment(state, additionalCoordinates ?? null, layerName, newId)?.opacity,
+  );
+  yield* call(
+    { context: segmentMeshController, fn: segmentMeshController.consolidateMeshGroups },
+    newId,
+    layerName,
+    opacity,
+    additionalCoordinates,
+  );
 }
 
 // Tries to splice oldIds' already-loaded meshes together locally under newId, instead of
@@ -219,6 +242,7 @@ export function* tryLocalMeshMerge(
     segmentMeshController.moveMeshesToNewSegmentId(oldId, newId, layerName, additionalCoordinates);
     yield* put(mergeMeshesAction(layerName, oldId, newId, additionalCoordinates));
     segmentMeshController.setMeshColor(newId, layerName);
+    yield* call(consolidateMergedMesh, layerName, newId, additionalCoordinates);
     return true;
   }
 
@@ -233,22 +257,15 @@ export function* tryLocalMeshMerge(
     return false;
   }
 
-  // TODO(#9932): moveMeshesToNewSegmentId only reparents each side's chunk groups under newId -
-  // it doesn't re-merge their geometries, so newId ends up with one sibling MeshSceneNode per
-  // loaded old side (each keeping its own separate VertexSegmentMapping) instead of a single
-  // merged node/geometry. Everything that reads mesh state already tolerates this (highlighting
-  // and the split machinery traverse all nodes independently), but it breaks the "one merged node
-  // per (segment, LOD)" invariant fresh loads maintain, and repeated merges/splits on the same
-  // lineage accumulate ever more small nodes that never get consolidated back down. Fix: after
-  // reparenting, if a LOD ends up with >1 sibling node that all carry a vertexSegmentMapping,
-  // explode each back into per-id vertex slices, pool them, and re-run them through the same
-  // sort-by-id -> mergeGeometries -> new VertexSegmentMapping(...) pipeline
-  // precomputed_mesh_saga.ts uses for a fresh load, replacing the siblings with one final node.
+  // moveMeshesToNewSegmentId only reparents each side's chunk groups under newId - it doesn't
+  // re-merge their geometries, so newId ends up with one sibling MeshSceneNode per loaded old
+  // side. consolidateMergedMesh below folds them back into a single merged node/geometry per LOD.
   for (const { oldId } of oldIdsWithMeshInfo) {
     segmentMeshController.moveMeshesToNewSegmentId(oldId, newId, layerName, additionalCoordinates);
     yield* put(mergeMeshesAction(layerName, oldId, newId, additionalCoordinates));
   }
   segmentMeshController.setMeshColor(newId, layerName);
+  yield* call(consolidateMergedMesh, layerName, newId, additionalCoordinates);
   return true;
 }
 

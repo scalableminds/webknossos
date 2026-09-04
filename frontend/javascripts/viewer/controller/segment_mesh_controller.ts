@@ -1,9 +1,10 @@
 import app from "app";
-import { mergeVertices } from "libs/BufferGeometryUtils";
+import { mergeGeometries, mergeVertices } from "libs/BufferGeometryUtils";
 import { computeBvhAsync } from "libs/compute_bvh_async";
 import get from "lodash-es/get";
 import isEqual from "lodash-es/isEqual";
 import setWith from "lodash-es/setWith";
+import sortBy from "lodash-es/sortBy";
 import throttle from "lodash-es/throttle";
 import {
   AmbientLight,
@@ -33,7 +34,12 @@ import {
 } from "viewer/model/accessors/volumetracing_accessor";
 import { NO_LOD_MESH_INDEX } from "viewer/model/sagas/meshes/common_mesh_saga";
 import Store, { type MinCutPartitions } from "viewer/store";
-import { type BufferGeometryWithInfo, extractSubGeometry } from "./mesh_helpers";
+import {
+  type BufferGeometryWithInfo,
+  extractSubGeometry,
+  type UnmergedBufferGeometryWithInfo,
+  VertexSegmentMapping,
+} from "./mesh_helpers";
 
 // Add the raycast function. Assumes the BVH is available on
 // the `boundsTree` variable
@@ -530,6 +536,101 @@ export default class SegmentMeshController {
     additionalCoordinates?: AdditionalCoordinate[] | null,
   ): boolean {
     return this.collectSplittableNodesByLod(oldSegmentId, layerName, additionalCoordinates) != null;
+  }
+
+  /**
+   * Consolidates a segment's mesh at every LOD that currently has more than one sibling chunk
+   * node back down to a single merged node/geometry - restoring the "one merged node per
+   * (segment, LOD)" invariant that a fresh load produces (see loadPrecomputedMeshesInChunksForLod
+   * in precomputed_mesh_saga.ts). moveMeshesToNewSegmentId (splicing a proofreading merge's
+   * already-loaded sides together) and fetchAndAppendMissingPrecomputedMergeChunks (adding a
+   * merge's not-yet-loaded delta, in local_mesh_change_sagas.ts) both just add/reparent an extra
+   * sibling node next to whatever was already there rather than folding geometries together
+   * immediately, since that's cheap and keeps the merge itself fast - call this once afterwards
+   * to catch up before the result is shown or edited further (e.g. split) again.
+   *
+   * No-op for LODs that are already down to one node, or where any node lacks a
+   * vertexSegmentMapping (ad-hoc meshes, or a precomputed mesh that fell back to unmerged chunks -
+   * nothing to consolidate, and no way to reconstruct a per-id mapping for them anyway). Leaves a
+   * LOD's siblings as-is (rather than partially consolidated) if merging fails.
+   */
+  async consolidateMeshGroups(
+    segmentId: bigint,
+    layerName: string,
+    opacity: number | undefined,
+    additionalCoordinates?: AdditionalCoordinate[] | null,
+  ): Promise<void> {
+    const nodesByLod = this.collectSplittableNodesByLod(
+      segmentId,
+      layerName,
+      additionalCoordinates,
+    );
+    if (nodesByLod == null) return;
+
+    for (const { lod, scale, nodes } of nodesByLod) {
+      if (nodes.length <= 1) continue;
+
+      // Explode every sibling node back into one geometry per unmapped/supervoxel id (reusing
+      // extractSubGeometry, the same primitive splitMeshByUnmappedSegmentIds uses), pool them
+      // across all siblings, and re-run them through the same sort-by-id -> mergeGeometries ->
+      // new VertexSegmentMapping(...) pipeline a fresh load uses.
+      const perIdGeometries: UnmergedBufferGeometryWithInfo[] = [];
+      for (const node of nodes) {
+        // collectSplittableNodesByLod already guarantees every node has a vertexSegmentMapping.
+        const { unmappedSegmentIds } = node.geometry.vertexSegmentMapping!;
+        for (const id of unmappedSegmentIds) {
+          const subGeometry = extractSubGeometry(node.geometry, new Set([id]));
+          if (subGeometry == null) continue;
+          (subGeometry as UnmergedBufferGeometryWithInfo).unmappedSegmentId = id;
+          perIdGeometries.push(subGeometry as UnmergedBufferGeometryWithInfo);
+        }
+      }
+      const sortedGeometries = sortBy(perIdGeometries, (geometry) => geometry.unmappedSegmentId);
+
+      let mergedGeometry: BufferGeometryWithInfo | null = null;
+      try {
+        mergedGeometry =
+          sortedGeometries.length > 0
+            ? (mergeGeometries(sortedGeometries, false) as BufferGeometryWithInfo | null)
+            : null;
+        if (mergedGeometry != null) {
+          mergedGeometry.vertexSegmentMapping = new VertexSegmentMapping(sortedGeometries);
+          mergedGeometry.boundsTree = await computeBvhAsync(mergedGeometry);
+        }
+      } catch (exception) {
+        mergedGeometry?.dispose();
+        mergedGeometry = null;
+        console.error(`Failed to consolidate mesh chunks for segment ${segmentId}:`, exception);
+      }
+      // The per-id slices were only an intermediate step - mergeGeometries copies their data into
+      // an independent geometry, so they can be disposed regardless of whether that succeeded.
+      for (const geometry of sortedGeometries) {
+        geometry.dispose();
+      }
+      if (mergedGeometry == null) continue;
+
+      this.removeMeshById(segmentId, layerName, { lod, additionalCoordinates });
+      this.addMeshFromGeometry(
+        mergedGeometry,
+        segmentId,
+        null,
+        lod,
+        layerName,
+        additionalCoordinates,
+        opacity,
+        true,
+      );
+      // addMeshFromGeometry only derives a scale from its `scale` param when it creates a
+      // brand-new target group; make sure the new group matches the original scale (dataset/mag-
+      // derived), which we captured above before removing it.
+      const newTargetGroup = this.getMeshGroupsByLOD(
+        additionalCoordinates,
+        layerName,
+        segmentId,
+        lod,
+      );
+      newTargetGroup?.scale.copy(scale);
+    }
   }
 
   /**

@@ -98,6 +98,7 @@ export class VolumeTransaction {
   }
 
   /** Merge a whole write set (from the resolver, or a remote peer). */
+  // todop: could this be cheaper in case the current transaction is empty?
   recordAll(writeSet: VoxelWriteSet): void {
     for (const incoming of writeSet.values()) {
       const writer = this.writerFor(incoming.address, incoming.writes.value);

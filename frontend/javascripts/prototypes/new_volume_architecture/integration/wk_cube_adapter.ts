@@ -64,6 +64,7 @@ export class WkDataCubeAdapter implements TransactionCube {
     const key = bucket.zoomedAddress.join(",");
     if (!this.touched.has(key)) {
       bucket.startDataMutation();
+      // todop: maybe add the buckets directly because we will later iterate over them anyway?
       this.touched.add(key);
     }
 

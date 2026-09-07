@@ -1,6 +1,7 @@
 import type { LoadingVoxelCube } from "./cube";
 import type { DataDependentShape } from "./intents";
 import {
+  type BoundingBox,
   type BucketAddress,
   bucketAddressOfVoxel,
   type EditContext,
@@ -29,7 +30,7 @@ export async function resolve(
 ): Promise<VoxelWriteSet> {
   switch (shape.kind) {
     case "floodFill":
-      return resolveFloodFill(shape, ctx, cube, signal);
+      return (await resolveFloodFill(shape, ctx, cube, signal)).writeSet;
   }
 }
 
@@ -40,13 +41,34 @@ export interface FloodFillOptions {
   maxVisitedVoxels?: number;
 }
 
+export interface FloodFillResolution {
+  writeSet: VoxelWriteSet;
+  /**
+   * True iff the traversal reached a voxel it would otherwise have continued
+   * into (unvisited, matching the seed) but for `shape.bounds` — i.e. the
+   * fill's true extent may be larger than what got written. Always false when
+   * `shape.bounds` is null, since there is then nothing to exceed. Callers
+   * that need to warn the user, or that today create a bounding box marking
+   * the covered region so its borders can be checked manually (mirroring the
+   * pre-existing `wasBoundingBoxExceeded` in `data_cube.ts`'s own floodFill),
+   * key off this.
+   */
+  wasBoundingBoxExceeded: boolean;
+  /**
+   * Tight bounding box (source-mag voxel space, max exclusive) around every
+   * voxel actually written. Null when nothing was written — including the
+   * seed-already-matches no-op below, where there is nothing to bound.
+   */
+  coveredBoundingBox: BoundingBox | null;
+}
+
 async function resolveFloodFill(
   shape: Extract<DataDependentShape, { kind: "floodFill" }>,
   ctx: EditContext,
   cube: LoadingVoxelCube,
   signal?: AbortSignal,
   options: FloodFillOptions = {},
-): Promise<VoxelWriteSet> {
+): Promise<FloodFillResolution> {
   const maxVisited = options.maxVisitedVoxels ?? DEFAULT_MAX_VISITED_VOXELS;
   const out = new WriteSetBuilder(ctx.sourceMagIndex, ctx.activeSegmentId);
 
@@ -54,11 +76,14 @@ async function resolveFloodFill(
   if (seedValue === ctx.activeSegmentId) {
     // Nothing to do: the region already carries the target value, and treating
     // it as a fill would traverse it only to write what is already there.
-    return out.build();
+    return { writeSet: out.build(), wasBoundingBoxExceeded: false, coveredBoundingBox: null };
   }
 
   const queue: Vector3[] = [shape.seed];
   let visited = 0;
+  let wasBoundingBoxExceeded = false;
+  let coveredMin: Vector3 | null = null;
+  let coveredMax: Vector3 | null = null;
 
   // A cache of the bucket most recently read, so a run of neighbours inside one
   // bucket does not re-enter the async path.
@@ -69,7 +94,14 @@ async function resolveFloodFill(
     signal?.throwIfAborted();
     const voxel = queue.pop() as Vector3;
 
-    if (!isInBoundingBox(voxel, shape.bounds)) continue;
+    if (!isInBoundingBox(voxel, shape.bounds)) {
+      // The neighbour genuinely would have been explored otherwise — this is
+      // not "not part of the region", it is "part of the region we did not
+      // get to look at". shape.bounds is null for at most maxVisited-style
+      // callers, so this never fires when there is nothing to exceed.
+      wasBoundingBoxExceeded = true;
+      continue;
+    }
     if (!isInBoundingBox(voxel, ctx.editableBoundingBox)) continue;
     if (out.has(voxel)) continue; // the mask doubles as the visited set
 
@@ -88,10 +120,25 @@ async function resolveFloodFill(
       throw new Error(`Flood fill exceeded ${maxVisited} voxels. Restrict it with a bounding box.`);
     }
 
+    if (coveredMin == null || coveredMax == null) {
+      coveredMin = [...voxel];
+      coveredMax = [voxel[0] + 1, voxel[1] + 1, voxel[2] + 1];
+    } else {
+      for (let axis = 0; axis < 3; axis++) {
+        coveredMin[axis] = Math.min(coveredMin[axis], voxel[axis]);
+        coveredMax[axis] = Math.max(coveredMax[axis], voxel[axis] + 1);
+      }
+    }
+
     for (const neighbour of neighbours(voxel, shape.is3D)) queue.push(neighbour);
   }
 
-  return out.build();
+  return {
+    writeSet: out.build(),
+    wasBoundingBoxExceeded,
+    coveredBoundingBox:
+      coveredMin != null && coveredMax != null ? { min: coveredMin, max: coveredMax } : null,
+  };
 }
 
 function neighbours(voxel: Vector3, is3D: boolean): Vector3[] {

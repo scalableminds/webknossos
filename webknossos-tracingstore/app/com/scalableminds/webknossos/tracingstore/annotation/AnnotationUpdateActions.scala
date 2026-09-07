@@ -41,6 +41,7 @@ case class AddBookmarkAnnotationAction(
     id: Int,
     created: Long,
     name: Option[String],
+    description: Option[String],
     stateHash: String,
     thumbnailDataBase64: Option[String],
     actionTimestamp: Option[Long] = None,
@@ -53,6 +54,7 @@ case class AddBookmarkAnnotationAction(
         id = id,
         created = created,
         name = name,
+        description = description,
         stateHash = stateHash,
         thumbnailData = thumbnailDataBase64.map(base64 => ByteString.copyFrom(Base64.getDecoder.decode(base64)))
       )
@@ -65,13 +67,18 @@ case class AddBookmarkAnnotationAction(
 case class UpdateBookmarkAnnotationAction(
     id: Int,
     name: Option[Option[String]], // tristate: outer None = untouched, Some(None) = clear, Some(Some(x)) = set to x.
+    description: Option[
+      Option[String]
+    ], // tristate: outer None = untouched, Some(None) = clear, Some(Some(x)) = set to x.
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends ApplyableAnnotationUpdateAction {
   override def applyOn(annotation: AnnotationProto): AnnotationProto =
     annotation.copy(bookmarks = annotation.bookmarks.map { bookmark =>
-      if (bookmark.id == id) bookmark.copy(name = name.getOrElse(bookmark.name)) else bookmark
+      if (bookmark.id == id)
+        bookmark.copy(name = name.getOrElse(bookmark.name), description = description.getOrElse(bookmark.description))
+      else bookmark
     })
   override def addTimestamp(timestamp: Long): UpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)

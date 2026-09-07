@@ -37,6 +37,7 @@ message AnnotationBookmarkProto {
   required int32 id = 1;
   required int64 created = 2;
   optional string name = 3;
-  required string stateHash = 4;
-  optional bytes thumbnailData = 5;
+  optional string description = 4;
+  required string stateHash = 5;
+  optional bytes thumbnailData = 6;
 }

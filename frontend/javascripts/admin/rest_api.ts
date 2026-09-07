@@ -1343,8 +1343,6 @@ export async function getDatasets(
     params.set("includeSubfolders", includeSubfolders ? "true" : "false");
   }
 
-  params.set("compact", "true");
-
   const datasets = await Request.receiveJSON(`/api/datasets?${params}`);
   assertResponseLimit(datasets);
   return datasets;

@@ -394,6 +394,14 @@ function JobListView() {
     } else if (job.state === "FAILURE" || job.state === "CANCELLED") {
       // Regular users may retry a job once. Super users may always retry.
       const canRetry = isCurrentUserSuperUser || job.lastRetry == null;
+      const message =
+        job.errorDetails?.message != null ? (
+          <p>{job.errorDetails.message as string}</p>
+        ) : (
+          <pre style={{ maxHeight: 400, overflow: "auto" }}>
+            {JSON.stringify(job.errorDetails, null, 2)}
+          </pre>
+        );
       const showErrorLink =
         job.errorDetails != null ? (
           <a
@@ -401,11 +409,7 @@ function JobListView() {
               modal.error({
                 title: "Job Error Details",
                 width: 600,
-                content: (
-                  <pre style={{ maxHeight: 400, overflow: "auto" }}>
-                    {JSON.stringify(job.errorDetails, null, 2)}
-                  </pre>
-                ),
+                content: message,
               })
             }
           >

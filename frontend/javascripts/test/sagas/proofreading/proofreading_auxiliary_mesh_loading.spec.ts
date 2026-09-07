@@ -104,15 +104,33 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
     return [locallyMergedIntoIds, forkedEffect];
   }
 
+  function* trackSplitMeshActions(): Saga<[Set<bigint>, Task<any>]> {
+    const locallySplitIntoIds = new Set<bigint>();
+    function handleSplitMesh(action: Action) {
+      if (action.type === "SPLIT_MESH") {
+        for (const newSegmentId of action.newSegmentIds) {
+          locallySplitIntoIds.add(newSegmentId);
+        }
+      }
+    }
+    const forkedEffect = (yield* takeEvery("SPLIT_MESH", handleSplitMesh)) as Task<any>;
+    return [locallySplitIntoIds, forkedEffect];
+  }
+
   function* trackMeshes(context: WebknossosTestContext, tracingId: string) {
     const [removedMeshes, forkedEffect1] = yield* trackRemovedMeshActions();
     const [addedMeshes, forkedEffect2] = yield* trackAddedMeshActions();
     const [locallyMergedIntoIds, forkedEffect3] = yield* trackMergeMeshActions();
+    const [locallySplitIntoIds, forkedEffect4] = yield* trackSplitMeshActions();
     // A merge settles either via a fresh reload (FINISHED_LOADING_MESH) or via a local splice
-    // (MERGE_MESHES) - consumeFinishedLoadingActions waits for either kind of "settle" event.
+    // (MERGE_MESHES); a split settles either via a fresh reload (FINISHED_LOADING_MESH) or via a
+    // local split (SPLIT_MESH) - consumeFinishedLoadingActions waits for any of these "settle"
+    // events.
     const channel = yield* actionChannel(
       ((action: Action) =>
-        action.type === "FINISHED_LOADING_MESH" || action.type === "MERGE_MESHES") as ActionPattern,
+        action.type === "FINISHED_LOADING_MESH" ||
+        action.type === "MERGE_MESHES" ||
+        action.type === "SPLIT_MESH") as ActionPattern,
     );
 
     const consumeFinishedLoadingActions = function* (n: number): Saga<void> {
@@ -132,6 +150,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       yield cancel(forkedEffect1);
       yield cancel(forkedEffect2);
       yield cancel(forkedEffect3);
+      yield cancel(forkedEffect4);
       channel.close();
     };
 
@@ -139,6 +158,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       removedMeshes,
       addedMeshes,
       locallyMergedIntoIds,
+      locallySplitIntoIds,
       loadedMeshIds: getAllCurrentlyLoadedMeshIds(context, tracingId),
     });
 
@@ -336,9 +356,12 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         addedMeshes,
         loadedMeshIds: loadedMeshIdsAfterMerge,
       } = meshTracker.getMeshInfos();
+      // Agglomerate 4 and 6 were both already loaded, so the foreign merge is now spliced locally
+      // (see segment_and_mesh_refresh_sagas.ts) instead of reloading both meshes from scratch.
       expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1n, 4n]);
-      expect(sortBy([...removedMeshes])).toEqual([4n, 6n]);
-      expect(sortBy([...addedMeshes])).toEqual([4n]);
+      expect(sortBy([...removedMeshes])).toEqual([]);
+      expect(sortBy([...addedMeshes])).toEqual([]);
+      expect(sortBy([...meshTracker.getMeshInfos().locallyMergedIntoIds])).toEqual([4n]);
       yield* meshTracker.cleanUp();
       yield expectSegmentList(tracingId, [
         {
@@ -582,9 +605,13 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         addedMeshes,
         loadedMeshIds: loadedMeshIdsAfterMerge,
       } = meshTracker.getMeshInfos();
+      // Agglomerate 1's own split falls back to a hard reload (1 and 1339), but the interfering
+      // foreign merge (4 <- 1, from mergeSegment1And4) finds both sides already loaded and
+      // splices locally instead - so 4 is relabeled away (MERGE_MESHES) rather than removed.
       expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1n, 6n, 1339n]);
-      expect(sortBy([...removedMeshes])).toEqual([1n, 4n, 1339n]);
+      expect(sortBy([...removedMeshes])).toEqual([1n, 1339n]);
       expect(sortBy([...addedMeshes])).toEqual([1n, 1339n]);
+      expect(sortBy([...meshTracker.getMeshInfos().locallyMergedIntoIds])).toEqual([1n]);
       yield* meshTracker.cleanUp();
       yield expectSegmentList(tracingId, [
         {
@@ -983,10 +1010,26 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         ]),
       );
 
-      yield take(
-        ((action: Action) =>
-          action.type === "FINISHED_LOADING_MESH" && action.segmentId === 4n) as ActionPattern,
-      );
+      // Wait for both the foreign merge (4 <- 6) and the local split (1 -> 1, 1339) to settle.
+      // Each settles either via a fresh reload (FINISHED_LOADING_MESH) or, since the meshes
+      // involved were already loaded, via a local splice/split (MERGE_MESHES/SPLIT_MESH) - see
+      // segment_and_mesh_refresh_sagas.ts. A local splice/split resolves much faster than a
+      // network reload, so waiting on id 4 alone (as a fresh reload would have implied) is no
+      // longer a reliable proxy for "every affected mesh has settled" - wait on the new split
+      // piece (1339, which never existed before) too.
+      yield all([
+        take(
+          ((action: Action) =>
+            (action.type === "FINISHED_LOADING_MESH" && action.segmentId === 4n) ||
+            (action.type === "MERGE_MESHES" && action.newSegmentId === 4n)) as ActionPattern,
+        ),
+        take(
+          ((action: Action) =>
+            (action.type === "FINISHED_LOADING_MESH" && action.segmentId === 1339n) ||
+            (action.type === "SPLIT_MESH" &&
+              action.newSegmentIds.includes(1339n))) as ActionPattern,
+        ),
+      ]);
       // Then check auxiliary meshes.
       const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context, tracingId);
       expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1n, 4n, 1339n]);

@@ -1,6 +1,6 @@
 import { Button } from "antd";
 import Toast from "libs/toast";
-import { addToNestedMap, addToSetMap } from "libs/utils";
+import { addToNestedMap } from "libs/utils";
 import { actionChannel, call, put } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
 import type { LayerNameAsKey } from "types/type_utils";
@@ -46,6 +46,7 @@ import { getMeshDisplayPropsByOldAgglomerateId } from "../../volume/proofreading
 import {
   type ApplyingUpdateResults,
   FailedIncorporateActionsReturnValue,
+  type MeshReloadEntry,
 } from "./applying_update_artifacts";
 
 const ANNOTATION_REVERTED_TOAST_KEY = "annotation_reverted_warning";
@@ -80,27 +81,58 @@ export function* tryToIncorporateActions(
     }
   }
 
-  // Tracks which agglomerate ids were changed of which the frontend has loaded meshes to assist proofreading.
-  // Maps from the old agglomerate id to a potentially new one.
-  // Duplicates are later ignored when refreshing the meshes.
-  const meshIdsToRemovePerLayer: Map<string, Set<bigint>> = new Map();
-  // Maps each layer's agglomerate ids whose meshes should be (re)loaded to the display properties
-  // (opacity and visibility) the reloaded mesh should inherit from the agglomerate it originated
-  // from (empty if nothing was stored). These must be gathered here while the original meshes still
-  // exist; the meshes are only removed later in resolveApplyingUpdateArtifacts.
-  const meshesToLoadPerLayer: Map<
-    LayerNameAsKey,
-    Map<bigint, PreservedMeshDisplayProps>
-  > = new Map();
+  // Maps each layer's agglomerate ids whose meshes should be (re)loaded to which old agglomerate
+  // id(s) it came from plus the display properties (opacity and visibility) the reloaded/spliced
+  // mesh should inherit from the agglomerate(s) it originated from (empty if nothing was
+  // stored). Both must be gathered here while the original meshes still exist; the actual
+  // scene-graph work (local splice, or remove+reload as a fallback) only happens later in
+  // resolveApplyingUpdateArtifacts, via the same syncAffectedAndLoadMissingMeshes engine that
+  // handles the current user's own proofreading actions.
+  const meshesToLoadPerLayer: Map<LayerNameAsKey, Map<bigint, MeshReloadEntry>> = new Map();
   function recordMeshToLoad(
     tracingId: string,
-    agglomerateId: bigint,
+    newAgglomerateId: bigint,
+    oldAgglomerateId: bigint,
     displayProps: PreservedMeshDisplayProps,
   ) {
     if (!meshesToLoadPerLayer.has(tracingId)) {
       meshesToLoadPerLayer.set(tracingId, new Map());
     }
-    meshesToLoadPerLayer.get(tracingId)?.set(agglomerateId, displayProps);
+    const layerMap = meshesToLoadPerLayer.get(tracingId);
+    const existingEntry = layerMap?.get(newAgglomerateId);
+    if (existingEntry != null) {
+      layerMap?.set(newAgglomerateId, {
+        oldAgglomerateIds: new Set(existingEntry.oldAgglomerateIds).add(oldAgglomerateId),
+        displayProps,
+      });
+    } else {
+      layerMap?.set(newAgglomerateId, {
+        oldAgglomerateIds: new Set([oldAgglomerateId]),
+        displayProps,
+      });
+    }
+  }
+  // If newAgglomerateId already has its own queued entry (e.g. it was itself a fresh id from an
+  // earlier split within this same incorporation batch) and is now itself being merged away into
+  // some other id, fold its contributing old ids onto that other id instead of just dropping
+  // them - otherwise a split-then-merge chain within one rebase round would lose the old id(s)
+  // needed to recognize the merge/split shape for local splicing.
+  function foldMeshReloadEntry(
+    tracingId: string,
+    fromAgglomerateId: bigint,
+    toAgglomerateId: bigint,
+    displayProps: PreservedMeshDisplayProps,
+  ) {
+    // A (degenerate but real - e.g. a self-merge used to intentionally create a cycle in a
+    // agglomerate graph) fromAgglomerateId === toAgglomerateId would otherwise re-add the
+    // entry's own old ids to itself and then immediately delete that very entry.
+    if (fromAgglomerateId === toAgglomerateId) return;
+    const existingEntry = meshesToLoadPerLayer.get(tracingId)?.get(fromAgglomerateId);
+    if (existingEntry == null) return;
+    for (const oldAgglomerateId of existingEntry.oldAgglomerateIds) {
+      recordMeshToLoad(tracingId, toAgglomerateId, oldAgglomerateId, displayProps);
+    }
+    meshesToLoadPerLayer.get(tracingId)?.delete(fromAgglomerateId);
   }
 
   for (const actionBatch of newerActions) {
@@ -261,14 +293,10 @@ export function* tryToIncorporateActions(
           if (!hasAnyOfBothAgglomerateMeshesLoaded) {
             break;
           }
-          // agglomerateId2 is merged into agglomerateId1 and the frontend currently has at least one of the meshes loaded.
-          // Outdate agglomerateId1 and agglomerateId2. Only agglomerateId1 needs to be reloaded however.
-          // Track outdated and updated agglomerateIds to refresh after applying updates.
-          addToSetMap(meshIdsToRemovePerLayer, actionTracingId, agglomerateId1);
-          addToSetMap(meshIdsToRemovePerLayer, actionTracingId, agglomerateId2);
-          // The merged mesh keeps agglomerateId1 (the source), so it should inherit the source's
-          // opacity and visibility. Fall back to the target's mesh in case only the target mesh was
-          // loaded.
+          // agglomerateId2 is merged into agglomerateId1 and the frontend currently has at least
+          // one of the meshes loaded. The merged mesh keeps agglomerateId1 (the source), so it
+          // should inherit the source's opacity and visibility. Fall back to the target's mesh in
+          // case only the target mesh was loaded.
           const mergedMeshDisplayProps: PreservedMeshDisplayProps = yield* select((state) => {
             const meshInfo =
               getMeshInfoForSegment(
@@ -285,10 +313,22 @@ export function* tryToIncorporateActions(
               );
             return { opacity: meshInfo?.opacity, isVisible: meshInfo?.isVisible };
           });
-          // Only agglomerateId1 needs to be reloaded; record it with the props to inherit.
-          recordMeshToLoad(actionTracingId, agglomerateId1, mergedMeshDisplayProps);
-          // Drop any previously queued reload of agglomerateId2 as it was merged into agglomerateId1.
-          meshesToLoadPerLayer.get(actionTracingId)?.delete(agglomerateId2);
+          // agglomerateId2 might itself already be queued as a "new id" from an earlier split
+          // within this same incorporation batch - fold that entry's old ids onto agglomerateId1
+          // instead of dropping them, so a split-then-merge chain stays eligible for local
+          // splicing too.
+          foldMeshReloadEntry(
+            actionTracingId,
+            agglomerateId2,
+            agglomerateId1,
+            mergedMeshDisplayProps,
+          );
+          // Record both sides as old ids feeding into the surviving agglomerateId1, so
+          // detectMergeAndSplitChanges can recognize this as a merge and try to splice it locally
+          // instead of a hard reload (mirrors how updateProofreadingSegmentsAndScheduleSyncMeshes
+          // builds refreshInfos for the current user's own merges).
+          recordMeshToLoad(actionTracingId, agglomerateId1, agglomerateId1, mergedMeshDisplayProps);
+          recordMeshToLoad(actionTracingId, agglomerateId1, agglomerateId2, mergedMeshDisplayProps);
           break;
         }
         case "splitAgglomerate": {
@@ -530,15 +570,11 @@ export function* tryToIncorporateActions(
             oldAgglomerateIds,
             additionalCoordinates,
           );
-          oldAgglomerateIds.forEach((oldAggloId) => {
-            addToSetMap(meshIdsToRemovePerLayer, tracingId, oldAggloId);
-          });
           newAgglomerateIds.forEach((newAggloId) => {
             const oldAggloId = newToOldAgglomerateIds.get(newAggloId);
-            const displayProps =
-              (oldAggloId != null ? displayPropsByOldAgglomerateId.get(oldAggloId) : undefined) ??
-              {};
-            recordMeshToLoad(tracingId, newAggloId, displayProps);
+            if (oldAggloId == null) return;
+            const displayProps = displayPropsByOldAgglomerateId.get(oldAggloId) ?? {};
+            recordMeshToLoad(tracingId, newAggloId, oldAggloId, displayProps);
           });
         }
       }
@@ -548,6 +584,6 @@ export function* tryToIncorporateActions(
   yield* call(finalize);
   return {
     success: true,
-    artifactInfos: { meshIdsToRemovePerLayer, meshesToLoadPerLayer },
+    artifactInfos: { meshesToLoadPerLayer },
   };
 }

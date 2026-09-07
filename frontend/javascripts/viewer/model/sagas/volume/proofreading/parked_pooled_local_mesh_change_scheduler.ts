@@ -66,8 +66,12 @@ export type ScheduledMeshChange = {
 // in parallel.
 export function* scheduleLocalMeshChangesRespectingDependencies(
   changes: ScheduledMeshChange[],
-): Saga<AgglomerateChangeItem[]> {
+): Saga<{ itemsToReload: AgglomerateChangeItem[]; locallyHandledNewIds: Set<bigint> }> {
   const itemsToReload: AgglomerateChangeItem[] = [];
+  // Ids produced by a change that succeeded locally - reloadMeshes must never remove one of
+  // these as a side effect of processing a different, unrelated failed change (see the
+  // equivalent tracking/comment in segment_and_mesh_refresh_sagas.ts's syncAffectedAndLoadMissingMeshes).
+  const locallyHandledNewIds = new Set<bigint>();
   let remaining = changes;
 
   while (remaining.length > 0) {
@@ -100,7 +104,11 @@ export function* scheduleLocalMeshChangesRespectingDependencies(
       (change) =>
         function* (): Saga<void> {
           const handledLocally = yield* call(change.run);
-          if (!handledLocally) itemsToReload.push(...change.items);
+          if (handledLocally) {
+            for (const id of change.producedIds) locallyHandledNewIds.add(id);
+          } else {
+            itemsToReload.push(...change.items);
+          }
         },
     );
     yield* call(processTaskWithPool, tasks, Constants.PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT);
@@ -108,7 +116,7 @@ export function* scheduleLocalMeshChangesRespectingDependencies(
     remaining = ready.length > 0 ? blocked : [];
   }
 
-  return itemsToReload;
+  return { itemsToReload, locallyHandledNewIds };
 }
 
 // Drop-in alternative to syncAffectedAndLoadMissingMeshes (segment_and_mesh_refresh_sagas.ts) that
@@ -166,7 +174,7 @@ export function* syncAffectedAndLoadMissingMeshesWithPooledLocalChanges(
       }),
     ),
   ];
-  const failedLocalChangeItems = yield* call(
+  const { itemsToReload: failedLocalChangeItems, locallyHandledNewIds } = yield* call(
     scheduleLocalMeshChangesRespectingDependencies,
     localChanges,
   );
@@ -180,5 +188,6 @@ export function* syncAffectedAndLoadMissingMeshesWithPooledLocalChanges(
     itemsToReload,
     displayPropsByOldAgglomerateId,
     additionalCoordinates,
+    locallyHandledNewIds,
   );
 }

@@ -635,8 +635,11 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
       await startSaga(function* () {
         yield* expectMapping(tracingId, expectedMappingAfterMerge);
       }).toPromise();
-      expect(result?.artifactInfos.meshIdsToRemovePerLayer.get(tracingId)?.has(1n)).toBe(true);
-      expect(result?.artifactInfos.meshesToLoadPerLayer.get(tracingId)?.has(1n)).toBe(true);
+      // agglomerate 1 survives the merge (agglomerateId1), so it's queued for reload under its
+      // own id, with both itself and the merged-away agglomerate 4 as contributing old ids.
+      const meshReloadEntry = result?.artifactInfos.meshesToLoadPerLayer.get(tracingId)?.get(1n);
+      expect(meshReloadEntry?.oldAgglomerateIds.has(1n)).toBe(true);
+      expect(meshReloadEntry?.oldAgglomerateIds.has(4n)).toBe(true);
     });
 
     it<WebknossosTestContext>("splits agglomerates and records mesh artifacts for splitAgglomerate", async (context) => {
@@ -675,7 +678,14 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
       expect(mapping?.get(1)).toBe(1);
       expect(mapping?.get(2)).not.toBe(1);
       expect(mapping?.get(2)).toBe(mapping?.get(3));
-      expect(result?.artifactInfos.meshIdsToRemovePerLayer.get(tracingId)?.has(1n)).toBe(true);
+      // segmentId1 (1n) keeps agglomerate id 1, so it's queued for reload with old id 1 among its
+      // contributing old ids.
+      expect(
+        result?.artifactInfos.meshesToLoadPerLayer
+          .get(tracingId)
+          ?.get(1n)
+          ?.oldAgglomerateIds.has(1n),
+      ).toBe(true);
       expect(result?.artifactInfos.meshesToLoadPerLayer.get(tracingId)?.size).toBeGreaterThan(0);
     });
 

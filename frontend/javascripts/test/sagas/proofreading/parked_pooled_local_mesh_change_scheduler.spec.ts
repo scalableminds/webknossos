@@ -139,12 +139,14 @@ describe("scheduleLocalMeshChangesRespectingDependencies", () => {
       },
     };
 
-    const itemsToReload = await runSaga({}, scheduleLocalMeshChangesRespectingDependencies, [
-      succeeding,
-      failing,
-    ]).toPromise();
+    const { itemsToReload, locallyHandledNewIds } = await runSaga(
+      {},
+      scheduleLocalMeshChangesRespectingDependencies,
+      [succeeding, failing],
+    ).toPromise();
 
     expect(itemsToReload).toEqual([fakeItem(2n)]);
+    expect(locallyHandledNewIds).toEqual(new Set([1n]));
   });
 
   it("falls back to running everything without further ordering rather than hanging on a cycle", async () => {

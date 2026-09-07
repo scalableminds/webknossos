@@ -194,7 +194,11 @@ function copyAndRemapIndexForRanges(
     }
   }
   const IndexArrayCtor = totalVertexCount > 65535 ? Uint32Array : Uint16Array;
-  targetGeometry.setIndex(new IndexArrayCtor(newIndices) as unknown as number[]);
+  // BufferGeometry.setIndex only auto-wraps a plain Array into a BufferAttribute - a typed array
+  // is stored as-is, which leaves geometry.index without the usage/onUploadCallback etc. that a
+  // real BufferAttribute has, crashing the renderer as soon as it tries to upload it. Wrap it
+  // explicitly instead of relying on setIndex's own (narrower) auto-wrapping.
+  targetGeometry.setIndex(new BufferAttribute(new IndexArrayCtor(newIndices), 1));
 }
 
 /**

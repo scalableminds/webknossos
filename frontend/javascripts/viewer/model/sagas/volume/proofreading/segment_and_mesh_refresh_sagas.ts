@@ -318,6 +318,7 @@ export function* reloadMeshes(
   itemsToReload: AgglomerateChangeItem[],
   displayPropsByOldAgglomerateId: Map<bigint, PreservedMeshDisplayProps>,
   additionalCoordinates: AdditionalCoordinate[] | undefined,
+  locallyHandledNewIds: Set<bigint>,
 ): Saga<void> {
   // Remember which meshes were removed in this saga
   // and which were fetched again to avoid doing redundant work.
@@ -333,8 +334,17 @@ export function* reloadMeshes(
         : undefined;
     const opacity = item.opacity ?? oldDisplayProps?.opacity;
     const isVisible = item.isVisible ?? oldDisplayProps?.isVisible;
-    // Remove old agglomerate mesh(es) and load updated agglomerate mesh(es)
-    if (item.oldAgglomerateId && !removedIds.has(item.oldAgglomerateId)) {
+    // Remove old agglomerate mesh(es) and load updated agglomerate mesh(es). Skip removal if
+    // oldAgglomerateId is itself the id a *different*, already-successful merge/split group in
+    // this same batch just spliced and kept alive - e.g. a merge that lives on as agglomerate 1
+    // and an unrelated, independently-processed split leftover that also references old id 1.
+    // Removing it here would destroy a mesh that's already correct, purely as a side effect of
+    // processing an unrelated item.
+    if (
+      item.oldAgglomerateId &&
+      !removedIds.has(item.oldAgglomerateId) &&
+      !locallyHandledNewIds.has(item.oldAgglomerateId)
+    ) {
       yield* put(removeMeshAction(layerName, item.oldAgglomerateId));
       removedIds.add(item.oldAgglomerateId);
     }
@@ -394,6 +404,10 @@ export function* syncAffectedAndLoadMissingMeshes(
   // TODO: discuss whether we want the parallelized scheduled variation allowing
   // parallel local merges and splits.
   const itemsToReload: AgglomerateChangeItem[] = [...remainingItems];
+  // Ids that a merge/split group below successfully spliced locally - reloadMeshes must never
+  // remove one of these, even if a *different*, unrelated item elsewhere in this same batch
+  // happens to reference it as an oldAgglomerateId (see reloadMeshes for why).
+  const locallyHandledNewIds = new Set<bigint>();
   for (const { newAgglomerateId, oldIds, items } of mergeGroups) {
     const handledLocally = yield* call(
       tryLocalMeshMerge,
@@ -402,7 +416,20 @@ export function* syncAffectedAndLoadMissingMeshes(
       newAgglomerateId,
       additionalCoordinates,
     );
-    if (!handledLocally) itemsToReload.push(...items);
+    console.log(
+      "tryLocalMeshMerge",
+      "oldIds",
+      oldIds,
+      "newAgglomerateId",
+      newAgglomerateId,
+      "handledLocally",
+      handledLocally,
+    );
+    if (handledLocally) {
+      locallyHandledNewIds.add(newAgglomerateId);
+    } else {
+      itemsToReload.push(...items);
+    }
   }
 
   // Try to locally split the meshes whose agglomerates were split.
@@ -414,10 +441,25 @@ export function* syncAffectedAndLoadMissingMeshes(
       newIds,
       additionalCoordinates,
     );
-    if (!handledLocally) itemsToReload.push(...items);
+    console.log(
+      "trySplitMeshLocally",
+      "oldAgglomerateId",
+      oldAgglomerateId,
+      "newIds",
+      newIds,
+      "handledLocally",
+      handledLocally,
+    );
+    if (handledLocally) {
+      for (const newId of newIds) locallyHandledNewIds.add(newId);
+    } else {
+      itemsToReload.push(...items);
+    }
   }
 
   if (itemsToReload.length === 0) return;
+
+  console.log("reloadMeshes", itemsToReload);
 
   // Fallback to full reload for failed operations.
   yield* call(
@@ -426,5 +468,6 @@ export function* syncAffectedAndLoadMissingMeshes(
     itemsToReload,
     displayPropsByOldAgglomerateId,
     additionalCoordinates,
+    locallyHandledNewIds,
   );
 }

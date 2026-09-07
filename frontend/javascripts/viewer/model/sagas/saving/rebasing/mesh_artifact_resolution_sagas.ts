@@ -1,5 +1,4 @@
 import { all, call, put } from "typed-redux-saga";
-import type { Vector3 } from "viewer/constants";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
 import {
   getSegmentsForLayer,
@@ -9,6 +8,7 @@ import { removeMeshAction } from "viewer/model/actions/annotation_actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import { spawnUntilCanceled, waitUntilNoActiveOperations } from "../../saga_helpers";
+import type { AgglomerateChangeItem } from "../../volume/proofreading/proofreading_types";
 import { syncAffectedAndLoadMissingMeshes } from "../../volume/proofreading/segment_and_mesh_refresh_sagas";
 import type { ApplyingUpdateArtifacts } from "./applying_update_artifacts";
 
@@ -19,22 +19,11 @@ export function* resolveApplyingUpdateArtifacts(
   if (!activeVolumeTracingId) {
     return;
   }
-  // The opacities to apply to the reloaded meshes were already gathered while applying the
-  // update actions (see meshesToLoadPerLayer), i.e. before the original meshes are removed below.
-  yield* call(removeOutdatedMeshes, artifactInfos.meshIdsToRemovePerLayer);
-  // The reloading of the meshes is spawned detached so that it does not block the rebasing.
+  // Spawned detached so that it does not block the rebasing. Removal (for whatever couldn't be
+  // spliced locally) and reload both happen inside syncAffectedAndLoadMissingMeshes now, rather
+  // than eagerly removing old meshes here - a locally-splice-able merge/split needs the old
+  // mesh's scene-graph data to still exist when the splice runs (see local_mesh_change_sagas.ts).
   yield* spawnUntilCanceled(reloadMeshes, artifactInfos.meshesToLoadPerLayer);
-}
-
-function* removeOutdatedMeshes(
-  meshIdsToRemovePerLayer: ApplyingUpdateArtifacts["meshIdsToRemovePerLayer"],
-): Saga<void> {
-  // Remove all outdated meshes.
-  for (const [tracingId, meshIdsToRemove] of meshIdsToRemovePerLayer.entries()) {
-    for (const aggloId of meshIdsToRemove) {
-      yield* put(removeMeshAction(tracingId, aggloId));
-    }
-  }
 }
 
 // Potentially waits until saving is done. Thus, !must be called with spawn!.
@@ -44,26 +33,40 @@ function* reloadMeshes(
   // First wait in case an operation is running (e.g. proofreading) until it finishes.
   yield call(waitUntilNoActiveOperations);
   const syncAffectedAndLoadMissingMeshesEffects = [];
-  for (const [tracingId, displayPropsByAgglomerateId] of meshesToReloadPerLayer.entries()) {
-    const refreshList: Array<{
-      newAgglomerateId: bigint;
-      nodePosition: Vector3;
-      opacity?: number;
-      isVisible?: boolean;
-    }> = [];
+  for (const [tracingId, reloadEntryByAgglomerateId] of meshesToReloadPerLayer.entries()) {
+    const refreshList: AgglomerateChangeItem[] = [];
     const { hasSegmentIndex } = yield* select((state) =>
       getVolumeTracingById(state.annotation, tracingId),
     );
     const segments = yield* select((state) => getSegmentsForLayer(state, tracingId));
 
-    for (const [agglomerateId, displayProps] of displayPropsByAgglomerateId) {
-      const segment = segments.getNullable(agglomerateId);
-      // Only load meshes for segments still present.
-      if (segment && (segment?.anchorPosition || hasSegmentIndex)) {
+    for (const [
+      newAgglomerateId,
+      { oldAgglomerateIds, displayProps },
+    ] of reloadEntryByAgglomerateId) {
+      const segment = segments.getNullable(newAgglomerateId);
+      // No segment exists for newAgglomerateId anymore - this can happen if, by the time this
+      // runs, newAgglomerateId itself was already superseded by something else (e.g. a
+      // concurrent local proofreading action independently relabeled it onto a further id).
+      // There's nothing meaningful left to load or splice into, so just clean up every
+      // contributing old id's now-stale mesh directly, rather than silently leaving it orphaned
+      // under an id nothing references anymore.
+      if (!(segment && (segment?.anchorPosition || hasSegmentIndex))) {
+        for (const oldAgglomerateId of oldAgglomerateIds) {
+          yield* put(removeMeshAction(tracingId, oldAgglomerateId));
+        }
+        continue;
+      }
+      // If the annotation has a segment index, the seed position for the mesh generation is ignored. In that case we can simply use [0, 0, 0].
+      const nodePosition = segment?.anchorPosition ?? [0, 0, 0];
+      // Emit one item per contributing old agglomerate id, so detectMergeAndSplitChanges (inside
+      // syncAffectedAndLoadMissingMeshes) can recognize merge/split shapes and try to splice them
+      // locally instead of always doing a hard reload.
+      for (const oldAgglomerateId of oldAgglomerateIds) {
         refreshList.push({
-          newAgglomerateId: agglomerateId,
-          // If the annotation has a segment index, the seed position for the mesh generation is ignored. In that case we can simply use [0, 0, 0].
-          nodePosition: segment?.anchorPosition ?? [0, 0, 0],
+          oldAgglomerateId,
+          newAgglomerateId,
+          nodePosition,
           opacity: displayProps.opacity,
           isVisible: displayProps.isVisible,
         });

@@ -13,7 +13,7 @@
 
 import type { AdditionalCoordinate } from "viewer/constants";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
-import { resolve } from "../resolver";
+import { resolveFloodFill } from "../resolver";
 import { VolumeTransaction } from "../transaction";
 import type { BoundingBox, EditContext, MagIndex, SegmentId, Vector3 } from "../types";
 import { magListFromDenseMags, WkLoadingCubeAdapter } from "./wk_cube_adapter";
@@ -40,6 +40,20 @@ export interface FloodFillResult {
   buckets: number;
   mags: number[];
   durationMs: number;
+  /**
+   * True iff `bounds` cut the fill off before it ran out of matching,
+   * connected voxels on its own — i.e. the true region may extend beyond
+   * `coveredBoundingBox`. Mirrors `wasBoundingBoxExceeded` from the old
+   * `DataCube.floodFill` (data_cube.ts), which the caller used to decide
+   * whether to warn the user and mark the covered region with a bounding box.
+   */
+  wasBoundingBoxExceeded: boolean;
+  /**
+   * Tight bounding box around every written voxel, in mag-1 (global) space —
+   * the same space `addUserBoundingBoxAction` expects. Null if nothing was
+   * written (including the seed-already-matches no-op).
+   */
+  coveredBoundingBox: BoundingBox | null;
 }
 
 /**
@@ -60,7 +74,7 @@ export async function runFloodFill(options: FloodFillDriverOptions): Promise<Flo
     editableBoundingBox: null,
   };
 
-  const writeSet = await resolve(
+  const { writeSet, wasBoundingBoxExceeded, coveredBoundingBox } = await resolveFloodFill(
     { kind: "floodFill", seed: options.seed, is3D: options.is3D, bounds: options.bounds },
     ctx,
     adapter,
@@ -84,10 +98,34 @@ export async function runFloodFill(options: FloodFillDriverOptions): Promise<Flo
   for (const bucketDiff of diff.bucketDiffs) {
     for (const run of bucketDiff.runs) voxels += run.length;
   }
+
+  // coveredBoundingBox is in source-mag voxels, max exclusive; a source voxel
+  // q covers the mag1 block [q*mag, (q+1)*mag), so both bounds convert by the
+  // same per-axis multiply — including the exclusive max, since (q+1)*mag is
+  // exactly the mag1-space exclusive upper bound of the block at index q.
+  const mag = options.denseMags[options.magIndex];
+  const coveredBoundingBoxMag1: BoundingBox | null =
+    coveredBoundingBox == null
+      ? null
+      : {
+          min: [
+            coveredBoundingBox.min[0] * mag[0],
+            coveredBoundingBox.min[1] * mag[1],
+            coveredBoundingBox.min[2] * mag[2],
+          ],
+          max: [
+            coveredBoundingBox.max[0] * mag[0],
+            coveredBoundingBox.max[1] * mag[1],
+            coveredBoundingBox.max[2] * mag[2],
+          ],
+        };
+
   return {
     voxels,
     buckets: diff.bucketDiffs.length,
     mags: [...new Set(diff.bucketDiffs.map((d) => d.address[3]))].sort((a, b) => a - b),
     durationMs: performance.now() - startedAt,
+    wasBoundingBoxExceeded,
+    coveredBoundingBox: coveredBoundingBoxMag1,
   };
 }

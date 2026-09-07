@@ -270,10 +270,7 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
     const startTimeOfFloodfill = performance.now();
 
     // ── SPIKE: new volume architecture ────────────────────────────────────
-    // isSplitToolkit is excluded: it needs splitBoundaryMesh to clip the fill,
-    // which runFloodFill does not know about. Falling through to the old path
-    // for that case keeps the "Split Segments" toolkit correct.
-    if (USE_NEW_VOLUME_ARCHITECTURE && !isSplitToolkit) {
+    if (USE_NEW_VOLUME_ARCHITECTURE) {
       const labeledMag = magInfo.getMagByIndexOrThrow(labeledZoomStep);
       // Floored, unlike brush's toMagVoxel: a flood-fill seed is used for direct
       // array indexing (resolveFloodFill), so it must land exactly on a
@@ -297,6 +294,7 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
           min: toSourceMagVoxel(boundingBoxForFloodFill.min),
           max: toSourceMagVoxel(boundingBoxForFloodFill.max),
         },
+        splitBoundaryMesh,
       });
       console.info(
         `[spike] floodFill: ${stats.voxels} voxels across ${stats.buckets} buckets, mags [${stats.mags.join(", ")}], ${stats.durationMs.toFixed(1)} ms`,

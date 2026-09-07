@@ -67,6 +67,19 @@ export type DataDependentShape = {
   seed: Vector3;
   is3D: boolean;
   bounds: BoundingBox | null;
+  /**
+   * Optional per-edge traversal gate, checked once for each candidate voxel
+   * transition (both `from` and `to` in source-mag voxel space), independent
+   * of whether the two voxels share a bucket. Returning true prevents the
+   * traversal from ever crossing that specific edge, though `to` may still be
+   * reached via a different, unblocked edge from another voxel.
+   *
+   * Exists for the "Split Segments" toolkit, whose caller builds this from a
+   * boundary mesh (a 3D raycast against user-drawn geometry) — a concern this
+   * module has no reason to know about, so it is injected rather than
+   * modelled here.
+   */
+  isBlocked?: (from: Vector3, to: Vector3) => boolean;
 };
 
 export function isDataDependent(intent: EditIntent): intent is DataDependentShape {

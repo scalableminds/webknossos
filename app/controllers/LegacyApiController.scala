@@ -223,8 +223,6 @@ class LegacyApiController @Inject() (
         limit
       )
 
-  // Legacy (pre-v16) full/grouped dataset listing, moved here verbatim from DatasetController.list's
-  // former `else` branch — only reachable via v10-v15 routes now.
   private def listFull(
       isActive: Option[Boolean],
       isUnreported: Option[Boolean],
@@ -256,7 +254,6 @@ class LegacyApiController @Inject() (
       _ = Fox.runOptional(request.identity)(user => userDAO.updateLastActivity(user._id))
     } yield addRemoteOriginHeaders(Ok(Json.toJson(js)))
 
-  // Moved verbatim from DatasetController.
   private def listGrouped(datasets: List[Dataset], requestingUser: Option[User])(using
       ctx: DBAccessContext
   ): Fox[List[JsObject]] =

@@ -4,7 +4,7 @@
 # Note: keep this in sync with the reported version numbers in the com.scalableminds.util.mvc.ApiVersioning trait
 
 # version log
- # changed in v16: GET /datasets no longer accepts the compact param; the response is now always in the compact format. Older API versions (v10-v15) keep the old dual-mode behavior.
+ # changed in v16: GET /datasets no longer accepts the compact param; the response is now always in the compact format.
  # changed in v15: largestSegmentId is now written using a bigint envelope (to support the full uint64 range) for routes that return datasources. Older API versions keep receiving it as a plain number whenever that does not lose precision.
  # changed in v14: Dataset upload routes and parameters have been refactored, introduced upload domain
  # changed in v13: Attachments not mentioned in the dataSource passed to updatePartial will now be deleted.

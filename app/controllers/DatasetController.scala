@@ -290,7 +290,7 @@ class DatasetController @Inject() (
       } yield Ok(Json.obj("newDatasetId" -> dataset._id))
     }
 
-  // List all accessible datasets in the compact format (list of json objects, one per dataset)
+  // List all accessible datasets (list of compact json objects, one per dataset)
   def list(
       // Optional filtering: If true, list only active datasets, if false, list only inactive datasets
       isActive: Option[Boolean],

@@ -22,8 +22,8 @@ import {
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import {
-  getChunkLoadingDescriptors,
   fetchAndMergePrecomputedChunks,
+  getChunkLoadingDescriptors,
 } from "viewer/model/sagas/meshes/precomputed_mesh_saga";
 import { Store } from "viewer/singletons";
 import type {

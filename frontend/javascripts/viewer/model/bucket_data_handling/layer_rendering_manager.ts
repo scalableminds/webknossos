@@ -13,6 +13,7 @@ import memoizeOne from "memoize-one";
 import type { DataTexture } from "three";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { BucketAddress, Vector3, Vector4, ViewMode } from "viewer/constants";
+import constants from "viewer/constants";
 import {
   getElementClass,
   getLayerByName,
@@ -103,6 +104,31 @@ function consumeBucketsFromArrayBuffer(
   }
 
   return bucketsWithPriorities;
+}
+
+// Whether two additional-coordinate sets differ only in "t", and only within one
+// aligned 32-t batch (i.e. floor(t / BUCKET_WIDTH) is unchanged). Such a change needs no
+// work at all on a t-recycling layer — see updateDataTextures.
+function isWithinSameTBatch(
+  oldCoordinates: AdditionalCoordinate[] | null,
+  newCoordinates: AdditionalCoordinate[] | null,
+): boolean {
+  if (oldCoordinates == null || newCoordinates == null) {
+    return false;
+  }
+  const getT = (coordinates: AdditionalCoordinate[]) =>
+    coordinates.find((coord) => coord.name === "t")?.value;
+  const oldT = getT(oldCoordinates);
+  const newT = getT(newCoordinates);
+  if (oldT == null || newT == null) {
+    return false;
+  }
+  const withoutT = (coordinates: AdditionalCoordinate[]) =>
+    coordinates.filter((coord) => coord.name !== "t");
+  return (
+    Math.floor(oldT / constants.BUCKET_WIDTH) === Math.floor(newT / constants.BUCKET_WIDTH) &&
+    isEqual(withoutT(oldCoordinates), withoutT(newCoordinates))
+  );
 }
 
 export function getGlobalLayerIndexForLayerName(
@@ -238,14 +264,19 @@ export default class LayerRenderingManager {
     if (
       !otherThingsChanged &&
       additionalCoordinatesChanged &&
-      this.textureBucketManager.isTRecyclingEnabled
+      this.textureBucketManager.isTRecyclingEnabled &&
+      isWithinSameTBatch(this.additionalCoordinates, additionalCoordinates)
     ) {
-      // Pure t-scrubbing on an otherwise-unchanged viewport: skip the full re-pick
-      // (which would clear the pull queue and call cube.markBucketsAsUnneeded(),
-      // undermining t-recycling's whole point of keeping sibling t-slices
-      // resident) and instead retarget the already-active groups directly.
+      // Pure t-scrubbing within an already-resident t-batch on an otherwise-unchanged
+      // viewport. There is genuinely nothing to do here: the buckets on the GPU each hold
+      // their whole 32-t batch (see PullQueue.pullBatch and TextureBucketManager's
+      // t-recycling support) and are keyed by t-batch rather than by t, so the shader
+      // simply reads a different z-sub-slot of the very same atlas data. Skipping the full
+      // re-pick is not just a shortcut: the re-pick would clear the pull queue and
+      // markBucketsAsUnneeded()/markAsNeeded() every bucket on every single t step, for no
+      // gain at all. Crossing a batch boundary falls through to the regular path below,
+      // which re-keys and re-fetches everything as usual.
       this.additionalCoordinates = additionalCoordinates;
-      this.textureBucketManager.retargetToNewT(additionalCoordinates);
       return;
     }
 

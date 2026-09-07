@@ -81,7 +81,9 @@ uniform vec2 viewportExtent;
 uniform float activeMagIndices[<%= globalLayerCount %>];
 // The number of voxels a single bucket occupies in each layer's atlas. Equal to
 // bucketSize for most layers, except for those with a degenerate (e.g., z-extent-1)
-// axis, whose buckets are packed with a smaller footprint. See getEffectiveBucketDepth.
+// axis, whose buckets are packed with a smaller footprint (see getEffectiveBucketDepth) —
+// unless they use t-recycling, in which case the full footprint holds a batch of t-slices
+// instead. Mirrors TextureBucketManager.bucketVoxelCount exactly.
 uniform float bucketVoxelCountPerLayer[<%= globalLayerCount %>];
 // Per-layer flag: whether this layer's (always-0) z-addressing slot is repurposed to
 // cache several t (time) slices simultaneously (see TextureBucketManager.isTRecyclingEnabled

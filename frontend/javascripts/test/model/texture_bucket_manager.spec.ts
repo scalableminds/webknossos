@@ -37,10 +37,6 @@ function makeMockCubeBase() {
     additionalAxes: {} as Record<string, { bounds: [number, number]; index: number; name: string }>,
     isTRecyclingEligible: false,
     getEffectiveBucketVoxelCount: () => 32 ** 3,
-    // Only exercised by t-recycling's retargetToNewT; default to "no siblings exist"
-    // so non-t-recycling tests are unaffected.
-    getOrCreateBucket: () => NULL_BUCKET,
-    pullQueue: { add: () => {}, pull: () => {} },
   };
 }
 
@@ -320,11 +316,10 @@ describe("TextureBucketManager", () => {
     }
   });
 
-  it("t-recycling: retargetToNewT reuses an already-resident batch, but re-picks across a batch boundary", () => {
+  it("t-recycling: crossing a batch boundary re-keys and re-uploads", () => {
     const textureWidth = 256;
-    const primaryT = 32; // batch 1, zSlot 0
-    const siblingT = 40; // batch 1, zSlot 8
-    const otherBatchT = 64; // batch 2, zSlot 0
+    const oldT = 40; // batch 1, zSlot 8
+    const newT = 64; // batch 2, zSlot 0
     const sliceVoxelCount = 32 * 32;
 
     const tRecyclingMockedCube = makeMockCube({
@@ -335,10 +330,9 @@ describe("TextureBucketManager", () => {
     });
 
     const batch1Buffer = new Uint8Array(32 ** 3);
-    batch1Buffer[(primaryT % 32) * sliceVoxelCount] = 11;
-    batch1Buffer[(siblingT % 32) * sliceVoxelCount] = 22;
+    batch1Buffer[(oldT % 32) * sliceVoxelCount] = 22;
     const batch2Buffer = new Uint8Array(32 ** 3);
-    batch2Buffer[(otherBatchT % 32) * sliceVoxelCount] = 33;
+    batch2Buffer[(newT % 32) * sliceVoxelCount] = 33;
 
     const buildTRecyclingBucket = (t: number, rawBatchBuffer: Uint8Array<ArrayBuffer>) => {
       const bucket = new DataBucket(
@@ -354,61 +348,29 @@ describe("TextureBucketManager", () => {
       return bucket;
     };
 
-    const primaryBucket = buildTRecyclingBucket(primaryT, batch1Buffer);
-    const siblingBucket = buildTRecyclingBucket(siblingT, batch1Buffer);
-    const otherBatchBucket = buildTRecyclingBucket(otherBatchT, batch2Buffer);
-
-    tRecyclingMockedCube.getOrCreateBucket = ((address: [number, number, number, number, any]) => {
-      const t = address[4]?.find((coord: { name: string }) => coord.name === "t")?.value;
-      if (t === siblingT) return siblingBucket;
-      if (t === otherBatchT) return otherBatchBucket;
-      return NULL_BUCKET;
-    }) as any;
-
     const tbm = new TextureBucketManager(textureWidth, 1, "uint8", tRecyclingMockedCube as any);
     tbm.setupDataTextures(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
 
-    setActiveBucketsAndWait(tbm, [primaryBucket]);
-    const originalBucketAddress = tbm.lookUpCuckooTable.get([1, 1, 1, 0, LAYER_INDEX]);
-    if (originalBucketAddress == null) {
-      throw new Error("Bucket address is null");
+    setActiveBucketsAndWait(tbm, [buildTRecyclingBucket(oldT, batch1Buffer)]);
+    expect(tbm.lookUpCuckooTable.get([1, 1, 1, 0, LAYER_INDEX])).not.toBeNull();
+
+    // Crossing a batch boundary goes through the regular re-pick path (see
+    // LayerRenderingManager.updateDataTextures), i.e. plain setActiveBuckets with the
+    // freshly picked buckets. The old batch's key must be gone and the new one populated.
+    setActiveBucketsAndWait(tbm, [buildTRecyclingBucket(newT, batch2Buffer)]);
+    expect(tbm.lookUpCuckooTable.get([1, 1, 1, 0, LAYER_INDEX])).toBeNull();
+
+    const newBucketAddress = tbm.lookUpCuckooTable.get([1, 1, 2, 0, LAYER_INDEX]);
+    if (newBucketAddress == null) {
+      throw new Error("New bucket address is null");
     }
-
-    // Retargeting to a t within the SAME batch should be a no-op for the atlas: the
-    // group's index is unchanged, and no new upload happens — the whole batch's buffer,
-    // including the sibling's slice, already landed via the primary's earlier upload.
-    tbm.retargetToNewT([{ name: "t", value: siblingT }]);
-    tbm.processWriterQueue();
-    expect(tbm.lookUpCuckooTable.get([1, 1, 1, 0, LAYER_INDEX])).toBe(originalBucketAddress);
-
     const bucketHeightInTexture = getBucketHeightInTexture(
       textureWidth,
       tbm.packingDegree,
       tbm.bucketVoxelCount,
     );
-    for (const [t, expectedFirstByte] of [
-      [primaryT, 11],
-      [siblingT, 22],
-    ] as const) {
-      const zSlot = t % 32;
-      const bucketLocation =
-        bucketHeightInTexture * originalBucketAddress * textureWidth + zSlot * sliceVoxelCount;
-      // @ts-expect-error - texture is available in our mock but not in the real type
-      expect(tbm.dataTextures[0].texture[bucketLocation]).toBe(expectedFirstByte);
-    }
-
-    // Retargeting across a batch boundary should evict the old batch's group
-    // entirely (cuckoo entry unset) and create/populate a new one.
-    tbm.retargetToNewT([{ name: "t", value: otherBatchT }]);
-    tbm.processWriterQueue();
-    expect(tbm.lookUpCuckooTable.get([1, 1, 1, 0, LAYER_INDEX])).toBeNull();
-    const newBucketAddress = tbm.lookUpCuckooTable.get([1, 1, 2, 0, LAYER_INDEX]);
-    if (newBucketAddress == null) {
-      throw new Error("New bucket address is null");
-    }
-    const newZSlot = otherBatchT % 32;
     const newBucketLocation =
-      bucketHeightInTexture * newBucketAddress * textureWidth + newZSlot * sliceVoxelCount;
+      bucketHeightInTexture * newBucketAddress * textureWidth + (newT % 32) * sliceVoxelCount;
     // @ts-expect-error - texture is available in our mock but not in the real type
     expect(tbm.dataTextures[0].texture[newBucketLocation]).toBe(33);
   });

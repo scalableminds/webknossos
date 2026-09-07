@@ -7,9 +7,8 @@ import noop from "lodash-es/noop";
 import range from "lodash-es/range";
 import uniqBy from "lodash-es/uniqBy";
 import type { DataTexture } from "three";
-import type { AdditionalCoordinate, ElementClass } from "types/api_types";
+import type { BucketDataArray, ElementClass } from "types/api_types";
 import { WkDevFlags } from "viewer/api/wk_dev";
-import type { BucketAddress } from "viewer/constants";
 import constants, { type TypedArray } from "viewer/constants";
 import { getRenderer } from "viewer/controller/renderer";
 import { createUpdatableTexture } from "viewer/geometries/materials/plane_material_factory_helpers";
@@ -20,7 +19,6 @@ import {
   getBucketHeightInTexture,
   getDtypeConfigForElementClass,
 } from "viewer/model/bucket_data_handling/data_rendering_logic";
-import { PullQueueConstants } from "viewer/model/bucket_data_handling/pullqueue";
 
 // A TextureBucketManager instance is responsible for making buckets available
 // to the GPU.
@@ -112,20 +110,8 @@ export default class TextureBucketManager {
   layerIndex: number = -1;
   lookUpCuckooTable!: CuckooTableVec5;
   // Holds the index for each active bucket, to which it should (or already
-  // has been was) written in the data texture. Used for all layers EXCEPT
-  // t-recycling-enabled ones, which use activeGroups instead (since several
-  // sibling buckets there share one atlas index).
+  // has been was) written in the data texture.
   activeBucketToIndexMap: Map<DataBucket, number> = new Map();
-  // t-recycling only: one shared atlas index per (x,y,mag,t-batch) group. The whole batch
-  // (all 32 t-slices) is fetched and uploaded to the GPU together (see pullqueue.ts and
-  // DataBucket.rawBucketData), so a group only ever needs a single representative bucket
-  // reference (whichever t is currently the "primary" one) rather than per-slot tracking.
-  // See setActiveBucketsTRecycling.
-  private activeGroups: Map<string, { index: number; bucket: DataBucket }> = new Map();
-  // t-recycling only: the primary buckets passed into the last setActiveBuckets
-  // call, kept so retargetToNewT can re-derive the desired bucket set for a new t
-  // without needing a fresh spatial pick.
-  private lastPrimaryBuckets: Array<DataBucket> = [];
   // Maintains the set of committed buckets
   committedBucketSet: WeakSet<DataBucket> = new WeakSet();
   // Maintains a set of free indices within the data texture.
@@ -148,8 +134,8 @@ export default class TextureBucketManager {
   bucketVoxelCount: number;
   // When true, this layer's (always-0) z-addressing slot is repurposed to cache
   // several t (time) slices of a z-degenerate layer simultaneously on the GPU,
-  // instead of shrinking the bucket footprint to depth 1. See DataBucket.getT()
-  // and the "t-recycling" design notes above setActiveBucketsTRecycling.
+  // instead of shrinking the bucket footprint to depth 1. See getCuckooKey and
+  // DataBucket.getT().
   isTRecyclingEnabled: boolean;
   private cube: DataCube;
   isDestroyed: boolean = false;
@@ -257,12 +243,16 @@ export default class TextureBucketManager {
   // Takes an array of buckets and ensures that these
   // are written to the dataTexture. The lookUpTexture will be updated to reflect the
   // new buckets.
+  //
+  // For a t-recycling layer, the passed buckets all share the flycam's current t (they
+  // come from one bucket pick), and therefore all belong to the same t-batch. Since the
+  // cuckoo key only encodes the *batch* (see getCuckooKey) and one upload covers the whole
+  // batch (see processWriterQueue), no extra bookkeeping is needed here: one active bucket
+  // per (x, y, mag) maps to one atlas slot, exactly like for any other layer. Note that
+  // two active buckets of a t-recycling layer can never collide on the same cuckoo key,
+  // because such a layer is z-degenerate, so DataCube's containment check only ever hands
+  // out z == 0 buckets.
   setActiveBuckets(buckets: Array<DataBucket>): void {
-    if (this.isTRecyclingEnabled) {
-      this.setActiveBucketsTRecycling(buckets);
-      return;
-    }
-
     // Find out which buckets are not needed anymore
     const freeBucketSet = new Set(this.activeBucketToIndexMap.keys());
 
@@ -287,200 +277,6 @@ export default class TextureBucketManager {
     }
   }
 
-  private getGroupKey(bucket: DataBucket): string {
-    const [x, y, , mag] = bucket.zoomedAddress;
-    const batchIndex = Math.floor(bucket.getT() / constants.BUCKET_WIDTH);
-    return `${x}_${y}_${mag}_${batchIndex}`;
-  }
-
-  // Every DataBucket ever created stays in DataCube's GC pool forever (see
-  // DataCube.addBucketToGarbageCollection) until explicitly marked needed/unneeded; a
-  // bucket that's never marked needed is an immediate, permanent GC target. Since only
-  // the primary bucket passed to setActiveBucketsTRecycling goes through the normal
-  // pick -> markAsNeeded cycle, its up-to-31 batch siblings (created as a side effect of
-  // PullQueue's t-batched fetch, see pullqueue.ts) would otherwise be collected shortly
-  // after being fetched — defeating the point of keeping a whole batch resident for fast
-  // scrubbing, and, worse, inflating bucket churn enough to make the GC scan (which runs
-  // on every single new-bucket creation once the pool exceeds BUCKET_COUNT_SOFT_LIMIT)
-  // run far more often, making it far more likely to catch some *other*, still-needed
-  // bucket in the brief markBucketsAsUnneeded->markAsNeeded window every re-pick has.
-  // Calling this every re-pick (mirroring how a primary bucket gets re-marked every
-  // cycle) keeps the whole batch protected for as long as any t within it is desired.
-  private markBatchSiblingsAsNeeded(bucket: DataBucket): void {
-    const t = bucket.getT();
-    const batchStart = Math.floor(t / constants.BUCKET_WIDTH) * constants.BUCKET_WIDTH;
-    const bounds = this.cube.additionalAxes.t?.bounds;
-    const additionalCoordinates = bucket.getAdditionalCoordinates() ?? [];
-
-    for (let dt = 0; dt < constants.BUCKET_WIDTH; dt++) {
-      const nt = batchStart + dt;
-      if (nt === t) {
-        continue;
-      }
-      if (bounds != null && (nt < bounds[0] || nt >= bounds[1])) {
-        continue;
-      }
-
-      const siblingCoordinates = additionalCoordinates.map((coord) =>
-        coord.name === "t" ? { ...coord, value: nt } : coord,
-      );
-      const siblingAddress: BucketAddress = [
-        bucket.zoomedAddress[0],
-        bucket.zoomedAddress[1],
-        bucket.zoomedAddress[2],
-        bucket.zoomedAddress[3],
-        siblingCoordinates,
-      ];
-      const sibling = this.cube.getOrCreateBucket(siblingAddress);
-      if (sibling.type === "null") {
-        continue;
-      }
-      sibling.markAsNeeded();
-    }
-  }
-
-  // t-recycling-enabled layers always fetch a bucket's whole t-batch in one request
-  // (see pullqueue.ts's use of DataCube.isTRecyclingEligible), and every bucket in that
-  // batch ends up with its `.data` backed by one shared buffer (see
-  // DataBucket.rawBucketData). So a group only needs to track whichever single t is
-  // currently "primary" (the one actually requested for rendering) — its rawBucketData
-  // already holds the full batch, ready to upload in one go (see processWriterQueue).
-  private setActiveBucketsTRecycling(primaryBuckets: Array<DataBucket>): void {
-    this.lastPrimaryBuckets = primaryBuckets;
-    const desiredGroups = new Map<string, DataBucket>();
-
-    for (const bucket of primaryBuckets) {
-      desiredGroups.set(this.getGroupKey(bucket), bucket);
-      this.markBatchSiblingsAsNeeded(bucket);
-    }
-
-    // Remove unused groups
-    for (const [groupKey, group] of this.activeGroups) {
-      if (!desiredGroups.has(groupKey)) {
-        this.freeGroup(groupKey, group);
-      }
-    }
-
-    for (const [groupKey, bucket] of desiredGroups) {
-      this.reserveOrUpdateGroup(groupKey, bucket);
-    }
-  }
-
-  // For a pure t change (no camera/zoom/viewport change), re-derives the desired
-  // bucket set from the last primary buckets with the new t swapped in, instead of
-  // requiring a fresh spatial pick. If the new t is in the same batch as before,
-  // setActiveBucketsTRecycling's group diffing naturally finds the group already
-  // resident (no new GPU upload); if it's a different batch, the same diffing
-  // correctly frees the old batch's group(s) and reserves/uploads the new one(s).
-  // Only meaningful when isTRecyclingEnabled; callers should check that themselves.
-  retargetToNewT(additionalCoordinates: AdditionalCoordinate[] | null): void {
-    const newPrimaryBuckets = this.lastPrimaryBuckets
-      .map((oldBucket) => {
-        const newAddress: BucketAddress = [
-          oldBucket.zoomedAddress[0],
-          oldBucket.zoomedAddress[1],
-          oldBucket.zoomedAddress[2],
-          oldBucket.zoomedAddress[3],
-          additionalCoordinates ?? [],
-        ];
-        return this.cube.getOrCreateBucket(newAddress);
-      })
-      .filter((bucket): bucket is DataBucket => bucket.type !== "null");
-
-    this.setActiveBucketsTRecycling(newPrimaryBuckets);
-  }
-
-  // t-recycling counterpart to freeBucket: frees the group's shared atlas index and
-  // unsets its cuckoo entry. Only called once a group has no primary bucket left that
-  // needs it (see setActiveBucketsTRecycling), or when its representative bucket is
-  // collected (see attachGroupLifecycleListeners).
-  private freeGroup(groupKey: string, group: { index: number; bucket: DataBucket }): void {
-    if (WkDevFlags.bucketDebugging.visualizeBucketsOnGPU) {
-      group.bucket.unvisualize();
-    }
-
-    this.activeGroups.delete(groupKey);
-    this.committedBucketSet.delete(group.bucket);
-    this.freeIndexSet.add(group.index);
-    this.lookUpCuckooTable.unset(this.getCuckooKey(group.bucket));
-
-    app.vent.emit("rerender");
-  }
-
-  // t-recycling counterpart to reserveIndexForBucket. A group's whole t-batch is always
-  // fetched and uploaded to the GPU together (see pullqueue.ts, DataBucket.rawBucketData,
-  // and processWriterQueue), so scrubbing to a different t within an already-resident
-  // batch only needs to swap which bucket represents the group (for future lifecycle
-  // listeners) — no new GPU upload. Only a genuinely new group needs an index reserved
-  // and its first upload enqueued.
-  private reserveOrUpdateGroup(groupKey: string, bucket: DataBucket): void {
-    const existingGroup = this.activeGroups.get(groupKey);
-
-    if (existingGroup != null) {
-      if (existingGroup.bucket !== bucket) {
-        existingGroup.bucket = bucket;
-        this.attachGroupLifecycleListeners(groupKey, bucket);
-      }
-      return;
-    }
-
-    if (this.freeIndexSet.size === 0) {
-      throw new Error("A new bucket should be stored but there is no space for it?");
-    }
-
-    const index = getSomeValue(this.freeIndexSet);
-    this.freeIndexSet.delete(index);
-    this.activeGroups.set(groupKey, { index, bucket });
-    this.lookUpCuckooTable.set(this.getCuckooKey(bucket), NOT_YET_COMMITTED_VALUE);
-
-    if (bucket.hasData()) {
-      this.writerQueue.unshift({ bucket, _index: index });
-      this.scheduleWriterQueueProcessing();
-    } else if (bucket.needsRequest()) {
-      // A genuinely new group (a fresh t-batch) needs its data actively requested. Unlike
-      // a full viewport re-pick (see LayerRenderingManager.updateDataTextures), which
-      // enqueues every missing bucket itself, retargetToNewT's pure-t-scrub fast path only
-      // looks up/creates this bucket — nothing else is guaranteed to ever request it, so
-      // without this call this group would sit at NOT_YET_COMMITTED_VALUE forever. Pull
-      // queue's own t-batching (see pullqueue.ts) takes care of fetching this bucket's
-      // whole sibling batch from just this one request.
-      this.cube.pullQueue.add({
-        bucket: bucket.zoomedAddress,
-        priority: PullQueueConstants.PRIORITY_HIGHEST,
-      });
-      this.cube.pullQueue.pull();
-    }
-
-    this.attachGroupLifecycleListeners(groupKey, bucket);
-  }
-
-  // Enqueues a (re-)upload of `bucket`'s group once its data arrives, and frees the
-  // group once `bucket` is collected — but only as long as `bucket` is still the
-  // group's current representative (it may have been swapped out by a later call to
-  // reserveOrUpdateGroup for a different t in the same batch in the meantime).
-  private attachGroupLifecycleListeners(groupKey: string, bucket: DataBucket): void {
-    let unlistenToLoadedFn = noop;
-
-    if (!bucket.hasData()) {
-      unlistenToLoadedFn = bucket.on("bucketLoaded", () => {
-        const group = this.activeGroups.get(groupKey);
-        if (group?.bucket !== bucket) {
-          return;
-        }
-        this.writerQueue.unshift({ bucket, _index: group.index });
-        this.scheduleWriterQueueProcessing();
-      });
-    }
-
-    bucket.once("bucketCollected", () => {
-      unlistenToLoadedFn();
-      const group = this.activeGroups.get(groupKey);
-      if (group?.bucket === bucket) {
-        this.freeGroup(groupKey, group);
-      }
-    });
-  }
-
   getPackedBucketSize() {
     return this.bucketVoxelCount / this.packingDegree;
   }
@@ -500,9 +296,8 @@ export default class TextureBucketManager {
     // preserves the first occurrence of each duplicate, which is why this queue has to
     // be filled from the front (via unshift) und read from the back (via pop). This
     // ensures that the newest bucket "wins" if there are multiple requests for the same
-    // index — including for a t-recycling group, where each request uploads that
-    // bucket's whole (shared) batch buffer in one go, so only the latest one needs to
-    // land.
+    // index — including on a t-recycling layer, where each request uploads that bucket's
+    // whole (shared) batch buffer in one go, so only the latest one needs to land.
     this.writerQueue = uniqBy(this.writerQueue, (el) => el._index);
     const maxTimePerFrame = 16;
     const startingTime = performance.now();
@@ -517,13 +312,7 @@ export default class TextureBucketManager {
       // @ts-expect-error pop cannot return null due to the while condition
       const { bucket, _index } = this.writerQueue.pop();
 
-      if (this.isTRecyclingEnabled) {
-        if (this.activeGroups.get(this.getGroupKey(bucket))?.bucket !== bucket) {
-          // This bucket is no longer its group's representative (a different t within
-          // the same batch took over, or the group was freed entirely) — nothing to do.
-          continue;
-        }
-      } else if (!this.activeBucketToIndexMap.has(bucket)) {
+      if (!this.activeBucketToIndexMap.has(bucket)) {
         // This bucket is not needed anymore
         continue;
       }
@@ -548,10 +337,17 @@ export default class TextureBucketManager {
       // CPU-side shrink) — uploading it in full writes every t-slice in the batch to its
       // correct z-sub-slot in one call, since the batch buffer's byte layout already
       // matches the atlas's z-major layout (see DataBucket.rawBucketData/receiveData).
-      // This is why bucketVoxelCount is the full BUCKET_SIZE for t-recycling layers: the
-      // upload below is otherwise identical to the plain, non-recycling case.
-      const uploadSource =
-        this.isTRecyclingEnabled && bucket.rawBucketData != null ? bucket.rawBucketData : data;
+      // This is why bucketVoxelCount is the full BUCKET_SIZE for t-recycling layers.
+      const useRawBatchData = this.isTRecyclingEnabled && bucket.rawBucketData != null;
+      const uploadSource = useRawBatchData ? (bucket.rawBucketData as BucketDataArray) : data;
+      // How many voxels the source covers: the full atlas footprint for a batch buffer,
+      // and the layer's (possibly shrunk) per-bucket footprint otherwise. The latter can
+      // also happen on a t-recycling layer, for a bucket whose data never came from the
+      // wire (e.g. locally created volume-annotation data); such an upload is zero-padded
+      // to the atlas footprint below, i.e. only its own t-slot holds real data.
+      const uploadVoxelCount = useRawBatchData
+        ? this.bucketVoxelCount
+        : this.cube.getEffectiveBucketVoxelCount();
 
       const rawSrc = new TypedArrayClass(
         uploadSource.buffer,
@@ -559,24 +355,20 @@ export default class TextureBucketManager {
         uploadSource.byteLength / TypedArrayClass.BYTES_PER_ELEMENT,
       );
 
-      const packedBucketSize = this.getPackedBucketSize();
-      // Ratio between the raw elements needed to fill a whole texture row and the
-      // raw elements a single bucket naturally produces. Equal to 1 unless
-      // bucketHeightInTexture was clamped to one full row (see
-      // getBucketHeightInTexture), in which case a bucket's data needs to be
-      // padded to fill out that row for texSubImage2D (which requires the source
-      // buffer to cover the full upload area).
-      const rowPaddingRatio = (this.textureWidth * bucketHeightInTexture) / packedBucketSize;
-      const rgbPaddedSrc = maybePadRgbData(rawSrc, this.elementClass, this.bucketVoxelCount);
+      const rgbPaddedSrc = maybePadRgbData(rawSrc, this.elementClass, uploadVoxelCount);
 
       const x = 0;
       const y = bucketHeightInTexture * indexInDataTexture;
       const width = this.textureWidth;
       const height = bucketHeightInTexture;
-      const src =
-        rowPaddingRatio > 1
-          ? padToFullRow(rgbPaddedSrc, Math.round(rgbPaddedSrc.length * rowPaddingRatio))
-          : rgbPaddedSrc;
+      // texSubImage2D requires the source buffer to cover the whole (x, y, width, height)
+      // region. The source may fall short of it, either because a bucket packs into less
+      // than one full texture row (see getBucketHeightInTexture) or because it covers less
+      // than the atlas footprint (see uploadVoxelCount). Both are fixed by zero-padding.
+      const requiredElementCount = Math.round(
+        (rgbPaddedSrc.length * width * height) / (uploadVoxelCount / this.packingDegree),
+      );
+      const src = padToFullRow(rgbPaddedSrc, requiredElementCount);
 
       this.dataTextures[dataTextureIndex].update(src, x, y, width, height);
       this.committedBucketSet.add(bucket);
@@ -679,6 +471,5 @@ export default class TextureBucketManager {
     this.lookUpCuckooTable = null;
     this.isDestroyed = true;
     this.activeBucketToIndexMap = new Map();
-    this.activeGroups = new Map();
   }
 }

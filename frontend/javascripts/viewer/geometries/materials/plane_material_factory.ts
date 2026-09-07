@@ -289,11 +289,6 @@ class PlaneMaterialFactory {
     this.uniforms.activeMagIndices = {
       value: Object.values(activeMagIndices),
     };
-    // Same ordering as activeMagIndices (both iterate the layers in the order of
-    // Model.getAllLayers() / dataset.dataSource.dataLayers), matching globalLayerIndex.
-    this.uniforms.bucketVoxelCountPerLayer = {
-      value: Model.getAllLayers().map((dataLayer) => dataLayer.cube.getEffectiveBucketVoxelCount()),
-    };
     const { nativelyRenderedLayerName } = Store.getState().datasetConfiguration;
     const dataset = Store.getState().dataset;
     for (const dataLayer of Model.getAllLayers()) {
@@ -356,12 +351,16 @@ class PlaneMaterialFactory {
   attachTextures(): void {
     let sharedLookUpTexture;
     let sharedLookUpCuckooTable;
-    // Same ordering as activeMagIndices/bucketVoxelCountPerLayer (all iterate
-    // Model.getAllLayers()), matching globalLayerIndex. Built up here (rather than
-    // alongside bucketVoxelCountPerLayer in setupUniforms) because
+    // Same ordering as activeMagIndices (all iterate Model.getAllLayers()), matching
+    // globalLayerIndex. Built up here (rather than in setupUniforms) because
     // textureBucketManager is only guaranteed to exist once getDataTextures() below
     // has triggered its lazy setup.
     const isTRecyclingEnabledPerLayer: number[] = [];
+    // Note that this must be the *atlas* footprint of a bucket, which is not the same as
+    // the cube's effective (CPU-side) bucket voxel count for a t-recycling layer: there,
+    // one atlas slot holds a whole batch of shrunk t-slices. The shader derives its
+    // row/texture addressing from this, so it has to match TextureBucketManager exactly.
+    const bucketVoxelCountPerLayer: number[] = [];
     // Add data and look up textures for each layer
     for (const dataLayer of Model.getAllLayers()) {
       const { name } = dataLayer;
@@ -375,12 +374,15 @@ class PlaneMaterialFactory {
       this.uniforms[`${layerName}_data_texture_width`] = {
         value: dataLayer.layerRenderingManager.textureWidth,
       };
-      isTRecyclingEnabledPerLayer.push(
-        dataLayer.layerRenderingManager.textureBucketManager.isTRecyclingEnabled ? 1 : 0,
-      );
+      const { textureBucketManager } = dataLayer.layerRenderingManager;
+      isTRecyclingEnabledPerLayer.push(textureBucketManager.isTRecyclingEnabled ? 1 : 0);
+      bucketVoxelCountPerLayer.push(textureBucketManager.bucketVoxelCount);
     }
     this.uniforms.isTRecyclingEnabledPerLayer = {
       value: isTRecyclingEnabledPerLayer,
+    };
+    this.uniforms.bucketVoxelCountPerLayer = {
+      value: bucketVoxelCountPerLayer,
     };
 
     if (!sharedLookUpCuckooTable) {

@@ -136,6 +136,14 @@ class DatasetArray(
       }
     }
 
+    // Note that the batch is deliberately NOT clamped to the axis's real extent: a trailing
+    // batch (e.g. t=32..63 against an axis that only has 50 values) still asks for the full
+    // bucketLength, because the wire format is fixed-size and the client validates the response
+    // length against it (see DataBucket.receiveData). Asking beyond the end is safe:
+    // ChunkUtils.computeChunkIndices clamps chunk indices to the array shape, so no chunk past
+    // the end is ever requested and readAsFortranOrder's target buffer simply stays zero there.
+    // The client never addresses those slots either (see getTBatchSiblingAddresses on the
+    // frontend, which does clamp to the axis bounds).
     if (batchedCoordinates.nonEmpty) {
       // The wire format always carries exactly bucketLength^3 voxels' worth of data (see
       // repackBatchedAxisIntoZSlot). z's shape (set to shapeXYZ.z, i.e. bucketLength, above)
@@ -146,6 +154,11 @@ class DatasetArray(
     }
     (offsetArray, shapeArray)
   }
+
+  private def batchedAxisOf(
+      additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]]
+  ): Option[AdditionalCoordinate] =
+    additionalCoordinatesOpt.flatMap(_.find(_.length.exists(_ > 1)))
 
   // If a batched additional coordinate (length > 1) was requested, the read above widened that axis's
   // shape to bucketLength while shrinking z's own shape to 1 (see constructOffsetAndShapeArrays), so
@@ -163,7 +176,7 @@ class DatasetArray(
       multiArray: MultiArray,
       additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]]
   ): MultiArray =
-    additionalCoordinatesOpt.flatMap(_.find(_.length.exists(_ > 1))) match {
+    batchedAxisOf(additionalCoordinatesOpt) match {
       case Some(batched) =>
         val batchedAxisWkSlot = fullAxisOrder.wkToArrayPermutation(additionalAxesMap(batched.name).index)
         // readAsFortranOrder builds its target array with shape.reverse, so wk slot `s` lives at
@@ -180,7 +193,11 @@ class DatasetArray(
       additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]]
   )(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
-      typedMultiArray <- readAsFortranOrder(offset, shape)
+      typedMultiArray <- readAsFortranOrder(
+        offset,
+        shape,
+        isBatchedRead = batchedAxisOf(additionalCoordinatesOpt).isDefined
+      )
       repackedMultiArray = repackBatchedAxisIntoZSlot(typedMultiArray, additionalCoordinatesOpt)
       asBytes <- BytesConverter.toByteArray(repackedMultiArray, header.resolvedDataType, ByteOrder.LITTLE_ENDIAN).toFox
     } yield asBytes
@@ -212,7 +229,7 @@ class DatasetArray(
   // The local variables like chunkIndices are also in this order unless explicitly named.
   // Loading data adapts to the array's axis order so that …CXYZ data in fortran-order is
   // returned, regardless of the array’s internal storage.
-  private def readAsFortranOrder(offset: Array[Int], shape: Array[Int])(using
+  private def readAsFortranOrder(offset: Array[Int], shape: Array[Int], isBatchedRead: Boolean = false)(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[MultiArray] = {
@@ -223,7 +240,13 @@ class DatasetArray(
       shape,
       totalOffset.map(_.toLong)
     )
-    if (partialCopyingIsNotNeededForWkOrder(shape, totalOffset, chunkIndices)) {
+    // The single-chunk shortcut below hands back the source chunk as-is, i.e. in the array's own
+    // dimension order rather than the `shape.reverse` layout the copying branch produces. That is
+    // equivalent for a plain read (which is why the shortcut exists), but not for a batched one:
+    // repackBatchedAxisIntoZSlot transposes by dimension index and derives those indices from the
+    // `shape.reverse` layout, so it would swap the wrong two dimensions and silently scramble the
+    // bucket. Batched reads are rare enough that always taking the copying branch costs nothing.
+    if (!isBatchedRead && partialCopyingIsNotNeededForWkOrder(shape, totalOffset, chunkIndices)) {
       for {
         chunkIndex <- chunkIndices.headOption.toFox
         sourceChunk: MultiArray <- getSourceChunkDataWithCache(

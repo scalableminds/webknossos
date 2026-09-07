@@ -578,10 +578,8 @@ export default class TextureBucketManager {
           ? padToFullRow(rgbPaddedSrc, Math.round(rgbPaddedSrc.length * rowPaddingRatio))
           : rgbPaddedSrc;
 
-      console.time("upload bucket to gpu");
       this.dataTextures[dataTextureIndex].update(src, x, y, width, height);
       this.committedBucketSet.add(bucket);
-      console.timeEnd("upload bucket to gpu");
 
       this.lookUpCuckooTable.set(this.getCuckooKey(bucket), _index);
 

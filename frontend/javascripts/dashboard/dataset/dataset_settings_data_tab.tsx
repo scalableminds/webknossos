@@ -49,17 +49,18 @@ export default function DatasetSettingsDataTab() {
   );
 }
 
-function parseAsBigInt(value: string) {
+function parseAsBigInt(value: string | number | bigint | null | undefined): {
+  error: true | null;
+  parsed: bigint | null;
+} {
   if (value == null || value === "") {
     return { error: null, parsed: null };
   }
-  let parsed: bigint;
   try {
-    parsed = BigInt(value);
+    return { error: null, parsed: BigInt(value) };
   } catch {
     return { error: true, parsed: null };
   }
-  return { error: null, parsed };
 }
 
 function copyDatasetID(datasetId: string | null | undefined) {
@@ -645,6 +646,10 @@ function SimpleLayerForm({
                       ? `${layer.largestSegmentId}`
                       : undefined
                   }
+                  getValueFromEvent={(value) => {
+                    const { parsed, error } = parseAsBigInt(value);
+                    return error ? value : (parsed ?? undefined);
+                  }}
                   rules={[
                     {
                       validator: (_rule, value) => {

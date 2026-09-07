@@ -423,10 +423,7 @@ export const addPrecomputedMeshAction = (
     isVisible: isVisible ?? true,
   }) as const;
 
-// Renames an already-loaded mesh's MeshInformation entry from oldSegmentId to newSegmentId
-// (merging with an existing newSegmentId entry, if any), without removing/re-adding it. Used by
-// the proofreading merge orchestration to keep MeshInformation in sync with a local
-// SegmentMeshController.relabelMesh scene-graph rename, avoiding a full mesh reload.
+// Action to update the store mesh metadata cause by a locally merged precomputed mesh.
 export const mergeMeshesAction = (
   layerName: string,
   oldSegmentId: bigint,
@@ -441,10 +438,7 @@ export const mergeMeshesAction = (
     additionalCoordinates,
   }) as const;
 
-// Replaces oldSegmentId's MeshInformation entry with one entry per id in newSegmentIds, carrying
-// over the old entry's opacity/isVisible. Used by the proofreading split orchestration to keep
-// MeshInformation in sync with a local SegmentMeshController.splitMeshByUnmappedSegmentIds scene-
-// graph split, avoiding a full mesh reload.
+// Action to update the store mesh metadata cause by a locally split precomputed mesh.
 export const splitMeshAction = (
   layerName: string,
   oldSegmentId: bigint,

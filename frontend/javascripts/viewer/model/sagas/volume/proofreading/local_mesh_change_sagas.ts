@@ -22,7 +22,7 @@ import {
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import {
-  _getChunkLoadingDescriptors,
+  getChunkLoadingDescriptors,
   fetchAndMergePrecomputedChunks,
 } from "viewer/model/sagas/meshes/precomputed_mesh_saga";
 import { Store } from "viewer/singletons";
@@ -35,10 +35,6 @@ import type {
 import { getMappedIdAsBigInt } from "./preparation_sagas";
 import type { AgglomerateChangeItem } from "./proofreading_types";
 
-// Waits until segmentId's mesh has finished loading (if it's currently loading at all) before
-// returning. Used before any local scene-graph surgery (relabeling/splicing/splitting), since the
-// per-chunk loading sagas reference the segment id directly throughout their run - touching the
-// scene graph mid-flight would orphan whatever chunks arrive afterward.
 export function* waitForMeshFullyLoaded(
   layerName: string,
   segmentId: bigint,
@@ -58,26 +54,27 @@ export function* waitForMeshFullyLoaded(
   );
 }
 
-// Thin wrapper around _getChunkLoadingDescriptors that turns a failure (e.g. the backend
-// couldn't resolve the agglomerate, or a network error) into a null return instead of a thrown
-// exception, so callers can use plain type inference on the result instead of having to spell
-// out the generator's return type themselves.
-function* safeGetChunkLoadingDescriptors(...args: Parameters<typeof _getChunkLoadingDescriptors>) {
+/*
+ * Thin wrapper around _getChunkLoadingDescriptors that turns a failure (e.g. the backend
+ * couldn't resolve the agglomerate, or a network error) into a null return instead of a thrown
+ * exception, so callers can use plain type inference on the result instead of having to spell
+ * out the generator's return type themselves.
+ */
+function* safeGetChunkLoadingDescriptors(...args: Parameters<typeof getChunkLoadingDescriptors>) {
   try {
-    return yield* call(_getChunkLoadingDescriptors, ...args);
+    return yield* call(getChunkLoadingDescriptors, ...args);
   } catch (exception) {
     console.warn(`Could not list mesh chunks for agglomerate ${args[0]}:`, exception);
     return null;
   }
 }
 
-// Fetches only the mesh-file chunks that are missing from oldId's already-loaded geometry -
-// i.e. the ones belonging to the not-yet-loaded side of a merge - by listing newId's full,
-// current chunk set (the backend resolves the merged agglomerate id to all of its member
-// supervoxels) and diffing it against what's already loaded under oldId, per LOD. Appends the
-// fetched chunks to oldId's existing scene-graph entry (the caller relabels oldId -> newId
-// afterwards). Returns false (nothing mutated for this side, but not a hard failure) if the
-// chunk listing itself couldn't be resolved - the caller then falls back to a full reload.
+/*
+ * Fetches only the mesh-file chunks that are missing from oldId's already-loaded geometry.
+ * Done by fetching the newIds chunks and checking whether all are present in the scene.
+ * If some are missing, these are fetched and added to the oldId's scene group.
+ * Used to prepare a local merge of meshes cause by a proofreading interaction.
+ */
 function* fetchAndAppendMissingPrecomputedMergeChunks(
   layerName: string,
   oldId: bigint,
@@ -86,6 +83,10 @@ function* fetchAndAppendMissingPrecomputedMergeChunks(
   additionalCoordinates: AdditionalCoordinate[] | undefined,
 ): Saga<boolean> {
   const { segmentMeshController } = yield* call(getSceneController);
+  if (!segmentMeshController.hasFullyMergedMesh(oldId, layerName, additionalCoordinates)) {
+    return false;
+  }
+
   const dataset = yield* select((state) => state.dataset);
   const segmentationLayer = yield* select((state) =>
     getSegmentationLayerByName(state.dataset, layerName),
@@ -144,7 +145,7 @@ function* fetchAndAppendMissingPrecomputedMergeChunks(
     if (mergedDeltaGeometry == null) continue;
 
     // This adds the delta as a second sibling node next to oldId's existing merged node instead
-    // of folding them into one - tryLocalMeshMerge consolidates them back down (see
+    // of folding them into one - tryLocalMeshMerge merges them back down to one geometry (see
     // consolidateMergedMesh below) once oldId has been relabeled to newId.
     yield* call(
       {
@@ -164,12 +165,10 @@ function* fetchAndAppendMissingPrecomputedMergeChunks(
   return true;
 }
 
-// Consolidates newId's mesh back down to a single node per LOD after a local merge spread it
-// across sibling nodes (moveMeshesToNewSegmentId only reparents chunk groups, it doesn't re-merge
-// their geometries; fetchAndAppendMissingPrecomputedMergeChunks appends a delta as another
-// sibling for the same reason). No-op for ad-hoc meshes or a precomputed mesh that fell back to
-// unmerged chunks - see SegmentMeshController.consolidateMeshGroups for the actual algorithm.
-function* consolidateMergedMesh(
+/*
+ * Used to clean up a local merge by merging sibling mesh parts into one geometry.
+ */
+function* mergeMeshSiblingsIntoOneGeometry(
   layerName: string,
   newId: bigint,
   additionalCoordinates: AdditionalCoordinate[] | undefined,
@@ -180,7 +179,7 @@ function* consolidateMergedMesh(
       getMeshInfoForSegment(state, additionalCoordinates ?? null, layerName, newId)?.opacity,
   );
   yield* call(
-    { context: segmentMeshController, fn: segmentMeshController.consolidateMeshGroups },
+    { context: segmentMeshController, fn: segmentMeshController.mergeMeshSiblingsIntoOneGeometry },
     newId,
     layerName,
     opacity,
@@ -188,12 +187,10 @@ function* consolidateMergedMesh(
   );
 }
 
-// Tries to splice oldIds' already-loaded meshes together locally under newId, instead of
-// removing and reloading them (the pattern a proofreading merge produces: 2+ old agglomerate ids
-// collapsing into 1 new one). Returns true if it fully handled the merge locally (the caller
-// should skip the normal remove+reload for these items); false if the caller should fall back to
-// the normal reload path (nothing was loaded to splice, or the loaded sides are different mesh
-// types - see the module-level docs in the plan for why mixed types aren't spliced).
+/*
+ * Tries to locally merge precomputed based agglomerate meshes locally together to avoid a full reload.
+ * Returns true if the merge was successfully locally handled; else false -> a full reload is needed.
+ */
 export function* tryLocalMeshMerge(
   layerName: string,
   oldIds: bigint[],
@@ -242,14 +239,11 @@ export function* tryLocalMeshMerge(
     segmentMeshController.moveMeshesToNewSegmentId(oldId, newId, layerName, additionalCoordinates);
     yield* put(mergeMeshesAction(layerName, oldId, newId, additionalCoordinates));
     segmentMeshController.setMeshColor(newId, layerName);
-    yield* call(consolidateMergedMesh, layerName, newId, additionalCoordinates);
+    yield* call(mergeMeshSiblingsIntoOneGeometry, layerName, newId, additionalCoordinates);
     return true;
   }
 
-  // Two (or more) sides loaded: only splice locally if every side is the same mesh type. Mixing a
-  // precomputed mesh's oversegmentation info with an untagged ad-hoc mesh isn't representable by a
-  // single MeshInformation entry, and discarding the precomputed side's tagging to make them match
-  // would work against the goal of keeping meshes precomputed whenever possible.
+  // We can only merge precomputed meshes locally.
   const allSameType = oldIdsWithMeshInfo.every(
     (entry) => entry.meshInfo.isPrecomputed === oldIdsWithMeshInfo[0].meshInfo.isPrecomputed,
   );
@@ -257,25 +251,21 @@ export function* tryLocalMeshMerge(
     return false;
   }
 
-  // moveMeshesToNewSegmentId only reparents each side's chunk groups under newId - it doesn't
-  // re-merge their geometries, so newId ends up with one sibling MeshSceneNode per loaded old
-  // side. consolidateMergedMesh below folds them back into a single merged node/geometry per LOD.
+  // Move mesh into new parent agglomerate id group and then merge them together into one geometry.
   for (const { oldId } of oldIdsWithMeshInfo) {
     segmentMeshController.moveMeshesToNewSegmentId(oldId, newId, layerName, additionalCoordinates);
     yield* put(mergeMeshesAction(layerName, oldId, newId, additionalCoordinates));
   }
   segmentMeshController.setMeshColor(newId, layerName);
-  yield* call(consolidateMergedMesh, layerName, newId, additionalCoordinates);
+  yield* call(mergeMeshSiblingsIntoOneGeometry, layerName, newId, additionalCoordinates);
   return true;
 }
 
-// Classifies each of `supervoxelIds` into whichever of `newIds` it now belongs to, after a split.
-// Prefers the local (already up-to-date) mapping, which requires no network call; only for
-// supervoxel ids missing there does it fall back to one bulk reverse-lookup request (agglomerates
-// for these exact segment ids), regardless of how many new ids resulted from the split. Returns
-// null (instead of a partial result) if any supervoxel id can't be confidently classified into one
-// of `newIds`, since an incomplete/uncertain classification would produce visibly wrong geometry
-// (missing or misplaced chunks) rather than just a slower reload.
+/*
+ * After a proofread split, this function loads the new agglomerate ids of affected segments loaded
+ * by the mesh that was splitted. The new ids are put into a map which is returned.
+ * If mapping information is missing, it is requested from the backend.
+ */
 function* getNewAgglomerateIdsToSegmentIdsMap(
   layerName: string,
   segmentIds: bigint[],
@@ -342,12 +332,14 @@ function* getNewAgglomerateIdsToSegmentIdsMap(
   return newAgglomerateIdToSegmentIds;
 }
 
-// Tries to split oldId's already-loaded mesh locally into newIds, instead of removing and
-// reloading it (the pattern a proofreading split produces: 1 old agglomerate id fanning out into
-// 2+ new ones, including N-way splits like "split from all neighbours"). Returns true if it fully
-// handled the split locally (the caller should skip the normal remove+reload for these items);
-// false if the caller should fall back to the normal reload path (no precomputed mesh loaded for
-// oldId, or its supervoxels couldn't be confidently classified).
+/*
+ * Tries to split a local mesh by separating it into sub geometries based on the latest mapping info
+ * retrieved via getNewAgglomerateIdsToSegmentIdsMap. The split off meshes get assigned to their own
+ * scene graph mesh group and the old one is kept with its designated sub geometry only if the split
+ * left over some parts of the mesh for the old agglomerate id.
+ * Returns true if the local split worked and false if not. False means a full reload of the meshes
+ * is needed.
+ */
 export function* trySplitMeshLocally(
   layerName: string,
   oldId: bigint,
@@ -365,7 +357,7 @@ export function* trySplitMeshLocally(
   }
 
   const { segmentMeshController } = yield* call(getSceneController);
-  if (!segmentMeshController.canSplitMeshLocally(oldId, layerName, additionalCoordinates)) {
+  if (!segmentMeshController.hasFullyMergedMesh(oldId, layerName, additionalCoordinates)) {
     return false;
   }
 
@@ -383,7 +375,7 @@ export function* trySplitMeshLocally(
   if (newAgglomerateIdToSegmentIds == null) return false;
 
   // Update Redux (and thus the new ids' isVisible, which addMeshFromGeometry reads when creating
-  // their target groups) before touching the scene graph - canSplitMeshLocally already confirmed
+  // their target groups) before touching the scene graph - hasFullyMergedMesh already confirmed
   // the split itself will succeed, so there's no window where Redux and the scene could end up
   // inconsistent.
   yield* put(splitMeshAction(layerName, oldId, newIds, additionalCoordinates));
@@ -397,7 +389,7 @@ export function* trySplitMeshLocally(
     additionalCoordinates,
   );
   if (!succeeded) {
-    // Shouldn't happen given the canSplitMeshLocally check above, but guard against drift between
+    // Shouldn't happen given the hasFullyMergedMesh check above, but guard against drift between
     // the two anyway rather than leaving Redux and the scene inconsistent.
     console.error(`splitMeshByUnmappedSegmentIds unexpectedly failed for segment ${oldId}.`);
     return false;
@@ -412,6 +404,7 @@ export function* trySplitMeshLocally(
 // Exported so the parked, currently-unused pooled/dependency-aware scheduler in
 // parked_pooled_local_mesh_change_scheduler.ts can reuse this type without duplicating it - see
 // that file for context on why it isn't wired in here.
+// TODO discuss whether we want to keep this version or switch to the dependency-aware scheduler.
 export type MergeGroup = {
   newAgglomerateId: bigint;
   oldIds: bigint[];
@@ -442,6 +435,12 @@ export type SplitGroup = {
 // that combination falls back to a plain reload instead of a local split. This should be rare
 // enough in practice (it needs a failed merge *and* an unrelated split sharing the same old id, in
 // the same batch) that it isn't worth re-running detection on the merge fallback's leftovers.
+/*
+ * Detects the underlying merges and split based on the passed AgglomerateChangeItems.
+ * A merge means multiple old ids now share the same new id and a split has multiple items
+ * that have new ids but share old ones. Both patterns are detected and returned together with
+ * left over items that could not be sorted into any case.
+ */
 export function detectMergeAndSplitChanges(changeInfoItems: AgglomerateChangeItem[]): {
   mergeGroups: MergeGroup[];
   splitGroups: SplitGroup[];

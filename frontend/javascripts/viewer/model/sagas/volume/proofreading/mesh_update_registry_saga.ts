@@ -5,11 +5,7 @@ import type { Vector3 } from "viewer/constants";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { spawnEffectUntilCanceled, spawnUntilCanceled } from "../../saga_helpers";
 
-// The shape shared by every proofreading mesh-refresh entry point (syncAffectedAndMaybeLoadMissingMeshes /
-// syncAffectedAndLoadMissingMeshes), which is what this registry schedules. Kept non-generic (rather than
-// parametrized over arbitrary saga functions) since this module is purpose-built for that one
-// use case, and a generic signature confuses typed-redux-saga's `call`/`fork` overload
-// resolution.
+// A small module orchestrating background mesh syncing (with potential fallback to a full reload).
 type MeshRefreshItem = {
   oldAgglomerateId?: bigint;
   newAgglomerateId: bigint;
@@ -19,24 +15,13 @@ type MeshRefreshItem = {
 };
 type MeshUpdateEffect = SagaGenerator<void, CallEffect<void>>;
 
-// Keyed by agglomerate id (both ids being retired and ids being produced by a proofreading
-// mesh-refresh feed into the same map), so that starting a new mesh update cancels only
-// already-running mesh update(s) that touch an overlapping agglomerate id - unrelated concurrent
-// mesh work (different agglomerates) keeps running undisturbed. This mirrors the keyed
-// cancel-then-fork pattern in mip_saga.ts, but keyed by (possibly several) agglomerate ids per
-// task rather than a single bbox/layer key.
-// indexed by layer name & agglomerate id.
+// A local registry storing ongoing operations per agglomerate id because new scheduled
+// mesh sync operations should stop old ongoing once before starting to not get interleaved
+// by an old operation.
 const activeMeshUpdateTasksRegistry = new Map<string, Map<bigint, Task>>();
 
 /**
- * Runs `sagaFn(...args)` as a detached, cancellable task registered under every id in
- * `agglomerateIds`. If a mesh update task is already registered under any of those ids (from a
- * still-running previous proofreading action affecting an overlapping agglomerate), that task is
- * cancelled first - the new operation supersedes it.
- *
- * Replaces the fire-and-forget `spawnUntilCanceled` calls that used to kick off proofreading mesh
- * refresh work (see segment_and_mesh_refresh_sagas.ts / tree_proofreading_sagas.ts /
- * proofread_action_handler_sagas.ts), whose only cancellation point was a full saga-root restart.
+ * Schedules a mesh updating / syncing effect and cancels old running ones.
  */
 export function* scheduleMeshUpdate(
   meshUpdateEffect: MeshUpdateEffect,
@@ -64,22 +49,13 @@ export function* scheduleMeshUpdate(
   } else {
     activeMeshUpdateTasksRegistry.set(layerName, new Map());
   }
-  // spawn (not fork): this task must be detached from the calling saga's lifecycle - e.g. the
-  // proofreading handler that triggered it releases its operation-context slot and mutex well
-  // before the mesh refresh is done, and a fork would keep the caller (and thus, transitively,
-  // takeEveryInOperationContext's dispatcher) blocked until this task settles, serializing
-  // otherwise-independent proofreading actions on the mesh refresh itself.
-  // TODO: spawn can hurt us. Maybe instead us a dispatch action with a take listener or so.
-  // but it is tracked in the map. as long as we properly clean this up, things should be fine.
+  // Must be a spawn operation due to else this task the thus the caller only terminating once
+  // the syncing is done.
   const task = yield* spawnEffectUntilCanceled(meshUpdateEffect);
   for (const id of deduplicatedAgglomerateIds) {
     activeMeshUpdateTasksRegistry.get(layerName)?.set(id, task);
   }
 
-  // Once this task settles (success, error, or cancellation by a future call here), drop its
-  // registrations - but only if nothing newer has already replaced them - so the map doesn't grow
-  // unboundedly over a long proofreading session and a future operation on these ids doesn't try
-  // to cancel an already-finished task.
   yield* spawnUntilCanceled(function* cleanupOnceSettled(): Saga<void> {
     try {
       yield* join(task);

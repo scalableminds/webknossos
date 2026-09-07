@@ -303,9 +303,7 @@ export function* handleMergeViaTree(action: MergeTreesAction, ctx: OperationCont
     // Now that the segment items are up-to-date we can sync with the back-end and release the mutex.
     yield* call(syncWithBackend, ctx);
 
-    // Refreshing the meshes might take a while and won't block the saga here. A still-running
-    // mesh update for an overlapping agglomerate id is superseded - see
-    // mesh_update_registry_saga.ts.
+    // Refreshing the meshes might take a while and won't block the saga here.
     const meshUpdateEffect = call(
       syncAffectedAndMaybeLoadMissingMeshes,
       volumeTracingId,
@@ -524,9 +522,7 @@ export function* handleSplitViaTree(
     // Now that the segment items are up-to-date we can sync with the back-end and release the mutex.
     yield* call(syncWithBackend, ctx);
 
-    // Refreshing the meshes might take a while and won't block the saga here. A still-running
-    // mesh update for an overlapping agglomerate id is superseded - see
-    // mesh_update_registry_saga.ts.
+    // Refreshing the meshes might take a while and won't block the saga here.
     const meshUpdateEffect = call(
       syncAffectedAndMaybeLoadMissingMeshes,
       volumeTracingId,

@@ -224,7 +224,7 @@ function* loadPrecomputedMeshForSegmentId(
     let lods: MeshLodInfo[] | null = null;
     try {
       const chunkDescriptors = yield* call(
-        _getChunkLoadingDescriptors,
+        getChunkLoadingDescriptors,
         segmentId,
         dataset,
         segmentationLayer,
@@ -285,11 +285,7 @@ function* getMappingName(segmentationLayer: APISegmentationLayer) {
   return editableMapping != null ? editableMapping.baseMappingName : meshExtraInfo.mappingName;
 }
 
-// Exported so the proofreading merge orchestration (segment_and_mesh_refresh_sagas.ts) can list
-// the full, current chunk set of a (possibly just-merged) agglomerate id, in order to diff it
-// against what's already loaded for one side of a merge and fetch only the missing delta chunks
-// (see fetchAndMergePrecomputedChunks below).
-export function* _getChunkLoadingDescriptors(
+export function* getChunkLoadingDescriptors(
   segmentId: bigint,
   dataset: APIDataset,
   segmentationLayer: APISegmentationLayer,

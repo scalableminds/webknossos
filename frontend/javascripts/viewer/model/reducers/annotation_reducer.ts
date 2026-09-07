@@ -502,9 +502,6 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
       }
       const meshes = maybeMeshes as Record<string, MeshInformation>;
       const oldMeshInfo = meshes[oldSegmentId.toString()];
-      // If newSegmentId already has a mesh (both sides of a merge were already loaded and locally
-      // spliced together in the scene graph), keep its existing display properties and just drop
-      // the old entry. Otherwise, rename oldSegmentId's entry to newSegmentId.
       const newMeshInfo: MeshInformation = meshes[newSegmentId.toString()] ?? {
         ...oldMeshInfo,
         segmentId: newSegmentId,

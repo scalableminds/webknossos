@@ -663,8 +663,7 @@ export function* handleProofreadCutFromNeighbors(action: Action, ctx: OperationC
 
     yield* call(syncWithBackend, ctx);
 
-    // Refreshing the meshes might take a while and won't block the saga here. A still-running
-    // mesh update for an overlapping agglomerate id is superseded - see
+    // Refreshing the meshes might take a while and won't block the saga here.
     // mesh_update_registry_saga.ts.
     const meshUpdateEffect = call(
       syncAffectedAndMaybeLoadMissingMeshes,

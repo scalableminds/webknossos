@@ -1,10 +1,9 @@
 import app from "app";
-import { mergeGeometries, mergeVertices } from "libs/BufferGeometryUtils";
+import { mergeVertices } from "libs/BufferGeometryUtils";
 import { computeBvhAsync } from "libs/compute_bvh_async";
 import get from "lodash-es/get";
 import isEqual from "lodash-es/isEqual";
 import setWith from "lodash-es/setWith";
-import sortBy from "lodash-es/sortBy";
 import throttle from "lodash-es/throttle";
 import {
   AmbientLight,
@@ -37,8 +36,7 @@ import Store, { type MinCutPartitions } from "viewer/store";
 import {
   type BufferGeometryWithInfo,
   extractSubGeometry,
-  type UnmergedBufferGeometryWithInfo,
-  VertexSegmentMapping,
+  mergeGeometriesByUnmappedSegmentId,
 } from "./mesh_helpers";
 
 // Add the raycast function. Assumes the BVH is available on
@@ -421,16 +419,8 @@ export default class SegmentMeshController {
   }
 
   /**
-   * Renames all scene-graph bookkeeping for oldSegmentId to newSegmentId without touching any
-   * geometry - a pure rename/reparent, no network calls, no disposal. If newSegmentId already
-   * has mesh groups for a given LOD (i.e. both sides of a proofreading merge are already
-   * loaded), oldSegmentId's chunk groups are reparented into the existing target group instead
-   * of replacing it, so both meshes' geometry ends up combined under newSegmentId.
-   *
-   * Callers are responsible for dispatching the corresponding Redux mesh-info update (so that
-   * `MeshInformation` stays in sync with the scene graph) and, if colors may now be stale (the
-   * merge case, since reparented chunks keep whichever color they were constructed with), calling
-   * `setMeshColor(newSegmentId, layerName)` afterwards.
+   * Moves the meshes belonging to oldSegmentId to the group belonging to newSegmentId (creating if needed).
+   * Only updates the scene graph structure / bookkeeping, nothing else.
    */
   moveMeshesToNewSegmentId(
     oldSegmentId: bigint,
@@ -493,11 +483,7 @@ export default class SegmentMeshController {
 
   /**
    * Collects every chunk node of oldSegmentId's mesh, grouped by LOD, and validates that all of
-   * them carry a vertexSegmentMapping (i.e. it's a precomputed mesh that merged successfully, not
-   * an ad-hoc mesh or a precomputed mesh that fell back to unmerged chunks). Returns null without
-   * any side effects if oldSegmentId has no mesh or fails that check, so callers can decide to
-   * fall back to a full reload *before* touching Redux/scene state - see
-   * canSplitMeshLocally/splitMeshByUnmappedSegmentIds below.
+   * them carry a vertexSegmentMapping. If at least one has no vertexSegmentMapping, null is returned.
    */
   private collectSplittableNodesByLod(
     oldSegmentId: bigint,
@@ -525,12 +511,10 @@ export default class SegmentMeshController {
   }
 
   /**
-   * Pure feasibility check for splitMeshByUnmappedSegmentIds below - no side effects. Callers can
-   * check this first, dispatch the corresponding Redux mesh-info changes only once they know the
-   * split will actually succeed, and only then call splitMeshByUnmappedSegmentIds - avoiding a
-   * window where Redux and the scene graph could end up inconsistent if the split failed partway.
+   * Checks whether oldSegmentId's mesh is fully present and has a vertexSegmentMapping
+   * at every LOD it has.
    */
-  canSplitMeshLocally(
+  hasFullyMergedMesh(
     oldSegmentId: bigint,
     layerName: string,
     additionalCoordinates?: AdditionalCoordinate[] | null,
@@ -539,22 +523,10 @@ export default class SegmentMeshController {
   }
 
   /**
-   * Consolidates a segment's mesh at every LOD that currently has more than one sibling chunk
-   * node back down to a single merged node/geometry - restoring the "one merged node per
-   * (segment, LOD)" invariant that a fresh load produces (see loadPrecomputedMeshesInChunksForLod
-   * in precomputed_mesh_saga.ts). moveMeshesToNewSegmentId (splicing a proofreading merge's
-   * already-loaded sides together) and fetchAndAppendMissingPrecomputedMergeChunks (adding a
-   * merge's not-yet-loaded delta, in local_mesh_change_sagas.ts) both just add/reparent an extra
-   * sibling node next to whatever was already there rather than folding geometries together
-   * immediately, since that's cheap and keeps the merge itself fast - call this once afterwards
-   * to catch up before the result is shown or edited further (e.g. split) again.
-   *
-   * No-op for LODs that are already down to one node, or where any node lacks a
-   * vertexSegmentMapping (ad-hoc meshes, or a precomputed mesh that fell back to unmerged chunks -
-   * nothing to consolidate, and no way to reconstruct a per-id mapping for them anyway). Leaves a
-   * LOD's siblings as-is (rather than partially consolidated) if merging fails.
+   * Merges all sibling mesh chunks pre LOD associated with one id into one single mesh chunk
+   * with a vertexSegmentMapping.
    */
-  async consolidateMeshGroups(
+  async mergeMeshSiblingsIntoOneGeometry(
     segmentId: bigint,
     layerName: string,
     opacity: number | undefined,
@@ -570,42 +542,20 @@ export default class SegmentMeshController {
     for (const { lod, scale, nodes } of nodesByLod) {
       if (nodes.length <= 1) continue;
 
-      // Explode every sibling node back into one geometry per unmapped/supervoxel id (reusing
-      // extractSubGeometry, the same primitive splitMeshByUnmappedSegmentIds uses), pool them
-      // across all siblings, and re-run them through the same sort-by-id -> mergeGeometries ->
-      // new VertexSegmentMapping(...) pipeline a fresh load uses.
-      const perIdGeometries: UnmergedBufferGeometryWithInfo[] = [];
-      for (const node of nodes) {
-        // collectSplittableNodesByLod already guarantees every node has a vertexSegmentMapping.
-        const { unmappedSegmentIds } = node.geometry.vertexSegmentMapping!;
-        for (const id of unmappedSegmentIds) {
-          const subGeometry = extractSubGeometry(node.geometry, new Set([id]));
-          if (subGeometry == null) continue;
-          (subGeometry as UnmergedBufferGeometryWithInfo).unmappedSegmentId = id;
-          perIdGeometries.push(subGeometry as UnmergedBufferGeometryWithInfo);
-        }
-      }
-      const sortedGeometries = sortBy(perIdGeometries, (geometry) => geometry.unmappedSegmentId);
-
+      // Each sibling node already knows its own ids' vertex ranges via its own
+      // vertexSegmentMapping - mergeGeometriesByUnmappedSegmentId reads those directly and
+      // interleaves them into one globally-sorted geometry, instead of exploding every sibling
+      // down to one throwaway geometry per id first.
       let mergedGeometry: BufferGeometryWithInfo | null = null;
       try {
-        mergedGeometry =
-          sortedGeometries.length > 0
-            ? (mergeGeometries(sortedGeometries, false) as BufferGeometryWithInfo | null)
-            : null;
+        mergedGeometry = mergeGeometriesByUnmappedSegmentId(nodes.map((node) => node.geometry));
         if (mergedGeometry != null) {
-          mergedGeometry.vertexSegmentMapping = new VertexSegmentMapping(sortedGeometries);
           mergedGeometry.boundsTree = await computeBvhAsync(mergedGeometry);
         }
       } catch (exception) {
         mergedGeometry?.dispose();
         mergedGeometry = null;
         console.error(`Failed to consolidate mesh chunks for segment ${segmentId}:`, exception);
-      }
-      // The per-id slices were only an intermediate step - mergeGeometries copies their data into
-      // an independent geometry, so they can be disposed regardless of whether that succeeded.
-      for (const geometry of sortedGeometries) {
-        geometry.dispose();
       }
       if (mergedGeometry == null) continue;
 
@@ -634,16 +584,11 @@ export default class SegmentMeshController {
   }
 
   /**
-   * Locally splits oldSegmentId's mesh into one mesh per entry of newIdToKeepIds, by slicing the
-   * vertex ranges belonging to each entry's unmapped/supervoxel ids out of the existing merged
-   * geometry (see extractSubGeometry in mesh_helpers.ts) - no network round-trip. Only works for
-   * meshes whose chunk geometries carry a vertexSegmentMapping (precomputed/mesh-file meshes);
-   * returns false without mutating anything if oldSegmentId has no mesh, or if any of its chunk
-   * geometries lack a vertexSegmentMapping (ad-hoc meshes, or a precomputed mesh that fell back to
-   * unmerged chunks) - callers should check canSplitMeshLocally first and fall back to a full
-   * reload if it returns false, rather than relying on this method's own (equivalent) check.
+   * Locally splits oldSegmentId's mesh based on newAgglomerateIdToSegmentIds entries.
+   * The function maintains vertexSegmentMappings and moves the split off mesh chunks
+   * to the new scene graph group.
    *
-   * Callers must dispatch the Redux mesh-info entries for every id in newIdToKeepIds *before*
+   * Note: Callers must dispatch the Redux mesh-info entries for every id in newIdToKeepIds *before*
    * calling this (mirroring how addPrecomputedMeshAction/addAdHocMeshAction are always dispatched
    * before the corresponding addMeshFromGeometry call elsewhere), since addMeshFromGeometry reads
    * the new segment's isVisible from the store when first creating its target group.
@@ -656,14 +601,14 @@ export default class SegmentMeshController {
     additionalCoordinates?: AdditionalCoordinate[] | null,
   ): Promise<boolean> {
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
-    const nodesByLod = this.collectSplittableNodesByLod(
+    const nodesByLodOfOriginalMesh = this.collectSplittableNodesByLod(
       oldSegmentId,
       layerName,
       additionalCoordinates,
     );
-    if (nodesByLod == null) return false;
+    if (nodesByLodOfOriginalMesh == null) return false;
 
-    for (const { lod, scale, nodes } of nodesByLod) {
+    for (const { lod, scale, nodes } of nodesByLodOfOriginalMesh) {
       for (const [newSegmentId, keepIds] of newAgglomerateIdToSegmentIds) {
         for (const node of nodes) {
           const subGeometry = extractSubGeometry(node.geometry, keepIds);
@@ -679,9 +624,6 @@ export default class SegmentMeshController {
             opacity,
             true,
           );
-          // addMeshFromGeometry only derives a scale from its `scale` param when it creates a
-          // brand-new target group; make sure the new group matches the source group's scale
-          // (dataset/mag-derived) regardless of whether this was its first chunk or not.
           const newTargetGroup = this.getMeshGroupsByLOD(
             additionalCoordinates,
             layerName,
@@ -689,6 +631,9 @@ export default class SegmentMeshController {
             lod,
           );
           if (newTargetGroup) {
+            // Need to set scale manually as addMeshFromGeometry takes the scale and adapts it to the
+            // dataset scale. Thus, changing the original input scale. But we want the potentially new
+            // mesh group to have the same scale as its previous group had. The plain copy achieves this.
             newTargetGroup.scale.copy(scale);
           } else {
             throw new Error(
@@ -699,13 +644,11 @@ export default class SegmentMeshController {
       }
     }
 
-    // Remove exactly the old (pre-split) chunk nodes collected above - not a blanket
-    // removeMeshById(oldSegmentId, ...), since one of newIdToKeepIds' keys may equal
-    // oldSegmentId (e.g. a min-cut that keeps the original id for one of its two output pieces),
-    // in which case the newly split-off chunks were appended into that very same target group
-    // above and must survive this cleanup.
+    // Remove all old nodes and remove now empty scene groups.
+    // In a split usually one of the split off segments should remain in the original segment group.
+    // Thus, the check below targetGroup.children.length === 0 never removes the original group.
     const layerLODGroup = this.getLODGroupOfLayer(layerName);
-    for (const { lod, nodes } of nodesByLod) {
+    for (const { lod, nodes } of nodesByLodOfOriginalMesh) {
       for (const node of nodes) {
         const chunkGroup = node.parent;
         this.disposeMeshGroup(chunkGroup);

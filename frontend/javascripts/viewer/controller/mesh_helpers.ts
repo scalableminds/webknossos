@@ -85,11 +85,7 @@ export class VertexSegmentMapping {
 
   /**
    * Builds a VertexSegmentMapping directly from (segmentId, vertexCount) pairs, without going
-   * through the normal constructor (which expects actual buffer geometries). Used when a
-   * sub-geometry is sliced out of an already-merged geometry (see extractSubGeometry in
-   * segment_mesh_controller.ts): the caller already knows, per kept unmapped segment id, how
-   * many vertices were carried over, and the ids are already in sorted order because they were
-   * filtered from an existing (sorted) VertexSegmentMapping.
+   * through the normal constructor. Used when a sub-geometry is sliced out of an already-merged geometry.
    */
   static fromSegmentIdSortedCountList(
     entries: Array<{ segmentId: bigint; count: number }>,
@@ -107,37 +103,43 @@ export class VertexSegmentMapping {
   }
 }
 
-// Copies every attribute (position, normal, ...) from sourceGeometry into targetGeometry,
-// keeping only the vertex-attribute ranges listed in `ranges` (each [start, end) pair is a range
-// of vertex indices, in the units BufferGeometry itself uses for e.g. draw ranges - not raw array
-// offsets; those get derived below via itemSize). `color` is skipped: it's uniform-per-segment and
-// gets (re-)applied once the extracted geometry is registered under its new segment id (see
-// SegmentMeshController.constructMesh / setMeshColor), so the old segment's color doesn't need to
-// be carried over.
+// A copyable slice of vertices from one source geometry - [start, end) is a range of vertex
+// indices (not raw typed-array offsets). copyAttributesForRanges/copyAndRemapIndexForRanges below
+// take a list of these so several different source geometries can be merged into one target
+// geometry in a single pass (see mergeGeometriesByUnmappedSegmentId), not just ranges of one.
+type GeometryRange = { geometry: BufferGeometry; start: number; end: number };
+
+// Copies every attribute (position, normal, ...) except color from each range's source geometry
+// into targetGeometry, concatenated in the given order. Assumes every source shares the same
+// attribute names and typed-array types, which holds for all geometries this module deals with
+// (they're all produced by the same precomputed-mesh pipeline).
 function copyAttributesForRanges(
-  sourceGeometry: BufferGeometry,
   targetGeometry: BufferGeometry,
-  ranges: Array<[number, number]>,
+  ranges: GeometryRange[],
   totalVertexCount: number,
 ): void {
-  const attributeNamesToCopy = Object.keys(sourceGeometry.attributes).filter(
+  if (ranges.length === 0) return;
+  const attributeNamesToCopy = Object.keys(ranges[0].geometry.attributes).filter(
     (name) => name !== "color",
   );
   for (const attributeName of attributeNamesToCopy) {
-    const oldAttribute = sourceGeometry.getAttribute(attributeName);
-    const oldArray = oldAttribute.array as unknown as {
-      constructor: new (length: number) => typeof oldAttribute.array;
-      subarray: (start: number, end: number) => typeof oldAttribute.array;
-    };
-    const itemSize = oldAttribute.itemSize;
-    // Create a new array of the same type as the previous attribute array (Float32Array |
-    // Uint16Array | Int16Array | ...), sized for just the extracted vertices.
-    const newArray = new oldArray.constructor(totalVertexCount * itemSize) as unknown as {
-      set: (source: typeof oldAttribute.array, offset: number) => void;
+    const templateAttribute = ranges[0].geometry.getAttribute(attributeName);
+    const itemSize = templateAttribute.itemSize;
+    // Create a new array of the same type as the source attribute (Float32Array | Uint16Array |
+    // Int16Array | ...), sized for just the copied vertices.
+    const newArray = new (
+      templateAttribute.array.constructor as new (
+        length: number,
+      ) => typeof templateAttribute.array
+    )(totalVertexCount * itemSize) as unknown as {
+      set: (source: typeof templateAttribute.array, offset: number) => void;
     };
     let writeOffset = 0;
-    // Copy over the ranges of the extracted part of the mesh.
-    for (const [start, end] of ranges) {
+    for (const { geometry, start, end } of ranges) {
+      const oldAttribute = geometry.getAttribute(attributeName);
+      const oldArray = oldAttribute.array as unknown as {
+        subarray: (start: number, end: number) => typeof oldAttribute.array;
+      };
       newArray.set(oldArray.subarray(start * itemSize, end * itemSize), writeOffset);
       writeOffset += (end - start) * itemSize;
     }
@@ -145,49 +147,50 @@ function copyAttributesForRanges(
     // the source attribute happened to use).
     targetGeometry.setAttribute(
       attributeName,
-      new BufferAttribute(newArray as any, itemSize, oldAttribute.normalized),
+      new BufferAttribute(newArray as any, itemSize, templateAttribute.normalized),
     );
   }
 }
 
-// Copies sourceGeometry's index (triangle) buffer into targetGeometry, keeping only triangles
-// whose vertices all fall within `ranges`, and rewriting ("remapping") their vertex indices to
-// point into the *new*, compacted attribute arrays that copyAttributesForRanges produced - the
-// index buffer stores vertex indices (positions into the position/normal/... arrays), not raw
-// data, so once vertices are dropped and the remaining ones shift down to fill the gap, every
-// surviving triangle's indices have to be translated to match. No-op if sourceGeometry isn't
-// indexed.
+/*
+ * Copies each range's source geometry's index (triangle) buffer into targetGeometry, keeping only
+ * triangles whose vertices all fall within a kept range, and rewriting ("remapping") their vertex
+ * indices to point into the *new*, compacted attribute arrays that copyAttributesForRanges
+ * produced. One source can contribute several (possibly non-adjacent, in the merged output)
+ * ranges, so the old-to-new vertex mapping is built per source before its index buffer is scanned.
+ */
 function copyAndRemapIndexForRanges(
-  sourceGeometry: BufferGeometry,
   targetGeometry: BufferGeometry,
-  ranges: Array<[number, number]>,
+  ranges: GeometryRange[],
   totalVertexCount: number,
 ): void {
-  if (sourceGeometry.index == null) return;
+  if (ranges.length === 0 || ranges[0].geometry.index == null) return;
 
-  // For each kept old vertex index, the slot it now occupies in the new (compacted) attribute
-  // arrays - built in the same order copyAttributesForRanges concatenated the ranges in, so the
-  // numbering here matches exactly where each vertex's data actually ended up.
-  const oldToNewVertexIndex = new Map<number, number>();
+  const oldToNewVertexIndexBySource = new Map<BufferGeometry, Map<number, number>>();
   let newVertexIndex = 0;
-  for (const [start, end] of ranges) {
+  for (const { geometry, start, end } of ranges) {
+    let oldToNewVertexIndex = oldToNewVertexIndexBySource.get(geometry);
+    if (oldToNewVertexIndex == null) {
+      oldToNewVertexIndex = new Map();
+      oldToNewVertexIndexBySource.set(geometry, oldToNewVertexIndex);
+    }
     for (let oldVertexIndex = start; oldVertexIndex < end; oldVertexIndex++) {
       oldToNewVertexIndex.set(oldVertexIndex, newVertexIndex);
       newVertexIndex++;
     }
   }
 
-  // Chunks are geometrically disjoint (each triangle's vertices all belong to the same unmapped
-  // segment id), so a triangle is either fully kept or fully dropped - no triangle straddles a
-  // kept/dropped boundary.
-  const oldIndices = sourceGeometry.index.array;
   const newIndices: number[] = [];
-  for (let i = 0; i < oldIndices.length; i += 3) {
-    const a = oldToNewVertexIndex.get(oldIndices[i]);
-    const b = oldToNewVertexIndex.get(oldIndices[i + 1]);
-    const c = oldToNewVertexIndex.get(oldIndices[i + 2]);
-    if (a != null && b != null && c != null) {
-      newIndices.push(a, b, c);
+  for (const [sourceGeometry, oldToNewVertexIndex] of oldToNewVertexIndexBySource) {
+    if (sourceGeometry.index == null) continue;
+    const oldIndices = sourceGeometry.index.array;
+    for (let i = 0; i < oldIndices.length; i += 3) {
+      const a = oldToNewVertexIndex.get(oldIndices[i]);
+      const b = oldToNewVertexIndex.get(oldIndices[i + 1]);
+      const c = oldToNewVertexIndex.get(oldIndices[i + 2]);
+      if (a != null && b != null && c != null) {
+        newIndices.push(a, b, c);
+      }
     }
   }
   const IndexArrayCtor = totalVertexCount > 65535 ? Uint32Array : Uint16Array;
@@ -195,19 +198,17 @@ function copyAndRemapIndexForRanges(
 }
 
 /**
- * Slices a subset of unmapped/supervoxel ids out of a merged mesh geometry (one that carries a
- * vertexSegmentMapping, i.e. a precomputed mesh's merged chunk geometry - see
- * precomputed_mesh_saga.ts), returning a new, independent BufferGeometry containing only the
- * vertices (and, if indexed, only the triangles) belonging to `keepIds`. Returns null if the
- * geometry has no vertexSegmentMapping (e.g. an ad-hoc mesh, or a precomputed mesh that fell back
- * to unmerged chunks) or if none of `keepIds` are present in it.
+ * Slices a subset of unmapped segment/supervoxel ids out of a merged mesh geometry representing
+ * an agglomerate. This has to carry a vertexSegmentMapping for this.
+ * The function returns a new, independent BufferGeometry containing only the
+ * vertices (and, if indexed, only the triangles) belonging to `segmentIdsToKeep`. Returns null if the
+ * geometry has no vertexSegmentMapping.
  *
- * Used to locally split a proofreading agglomerate's mesh into its post-split pieces without a
- * network round-trip (see SegmentMeshController.splitMeshByUnmappedSegmentIds).
+ * Used to update a mesh locally after a split proofreading operation to save a network round-trip.
  */
 export function extractSubGeometry(
   geometry: BufferGeometryWithInfo,
-  keepIds: Set<bigint>,
+  segmentIdsToKeep: Set<bigint>,
 ): BufferGeometryWithInfo | null {
   const vertexSegmentMapping = geometry.vertexSegmentMapping;
   if (vertexSegmentMapping == null) return null;
@@ -215,27 +216,76 @@ export function extractSubGeometry(
   const { unmappedSegmentIds, cumulativeStartPosition } = vertexSegmentMapping;
   // Vertex-attribute ranges to keep, in the same (sorted-by-unmapped-segment-id) order as they
   // appear in the source geometry.
-  const ranges: Array<[number, number]> = [];
-  const keptEntries: Array<{ segmentId: bigint; count: number }> = [];
+  const rangesToCopy: GeometryRange[] = [];
+  const rangeLengthAndIdsList: Array<{ segmentId: bigint; count: number }> = [];
   for (let i = 0; i < unmappedSegmentIds.length; i++) {
     const segmentId = unmappedSegmentIds[i];
-    if (keepIds.has(segmentId)) {
+    if (segmentIdsToKeep.has(segmentId)) {
       const start = cumulativeStartPosition[i];
       const end = cumulativeStartPosition[i + 1];
-      ranges.push([start, end]);
-      keptEntries.push({ segmentId, count: end - start });
+      rangesToCopy.push({ geometry, start, end });
+      rangeLengthAndIdsList.push({ segmentId, count: end - start });
     }
   }
-  if (ranges.length === 0) return null;
+  if (rangesToCopy.length === 0) return null;
 
-  const totalVertexCount = keptEntries.reduce((sum, entry) => sum + entry.count, 0);
+  const totalVertexCount = rangeLengthAndIdsList.reduce((sum, entry) => sum + entry.count, 0);
   const newGeometry = new BufferGeometry() as BufferGeometryWithInfo;
 
-  copyAttributesForRanges(geometry, newGeometry, ranges, totalVertexCount);
-  copyAndRemapIndexForRanges(geometry, newGeometry, ranges, totalVertexCount);
+  copyAttributesForRanges(newGeometry, rangesToCopy, totalVertexCount);
+  copyAndRemapIndexForRanges(newGeometry, rangesToCopy, totalVertexCount);
 
-  newGeometry.vertexSegmentMapping = VertexSegmentMapping.fromSegmentIdSortedCountList(keptEntries);
+  newGeometry.vertexSegmentMapping =
+    VertexSegmentMapping.fromSegmentIdSortedCountList(rangeLengthAndIdsList);
   return newGeometry;
+}
+
+/**
+ * Merges several already-tagged (vertexSegmentMapping-carrying) geometries into one, with a fresh
+ * VertexSegmentMapping sorted globally by unmapped/supervoxel id. Unlike three.js's mergeGeometries
+ * + `new VertexSegmentMapping(...)` (which only works when every input geometry has exactly one
+ * unmapped id each, e.g. the individual chunks a fresh load decodes - see
+ * precomputed_mesh_saga.ts), this handles inputs that each already bundle several ids, such as the
+ * sibling mesh nodes a local proofreading merge leaves behind (see
+ * SegmentMeshController.consolidateMeshGroups) - by reading each input's own vertexSegmentMapping
+ * directly instead of re-deriving one id at a time via extractSubGeometry. Returns null if none of
+ * the inputs have any ids.
+ */
+export function mergeGeometriesByUnmappedSegmentId(
+  geometries: BufferGeometryWithInfo[],
+): BufferGeometryWithInfo | null {
+  const entries: Array<{ segmentId: bigint; range: GeometryRange }> = [];
+  for (const geometry of geometries) {
+    const vertexSegmentMapping = geometry.vertexSegmentMapping;
+    if (vertexSegmentMapping == null) continue;
+    const { unmappedSegmentIds, cumulativeStartPosition } = vertexSegmentMapping;
+    for (let i = 0; i < unmappedSegmentIds.length; i++) {
+      entries.push({
+        segmentId: unmappedSegmentIds[i],
+        range: {
+          geometry,
+          start: cumulativeStartPosition[i],
+          end: cumulativeStartPosition[i + 1],
+        },
+      });
+    }
+  }
+  if (entries.length === 0) return null;
+  entries.sort((a, b) => (a.segmentId < b.segmentId ? -1 : a.segmentId > b.segmentId ? 1 : 0));
+
+  const ranges = entries.map((entry) => entry.range);
+  const rangeLengthAndIdsList = entries.map((entry) => ({
+    segmentId: entry.segmentId,
+    count: entry.range.end - entry.range.start,
+  }));
+  const totalVertexCount = rangeLengthAndIdsList.reduce((sum, entry) => sum + entry.count, 0);
+
+  const mergedGeometry = new BufferGeometry() as BufferGeometryWithInfo;
+  copyAttributesForRanges(mergedGeometry, ranges, totalVertexCount);
+  copyAndRemapIndexForRanges(mergedGeometry, ranges, totalVertexCount);
+  mergedGeometry.vertexSegmentMapping =
+    VertexSegmentMapping.fromSegmentIdSortedCountList(rangeLengthAndIdsList);
+  return mergedGeometry;
 }
 
 export function sortByDistanceTo(

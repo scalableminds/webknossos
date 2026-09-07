@@ -361,16 +361,17 @@ export function* reloadMeshes(
   );
 }
 
+/*
+ * This saga takes AgglomerateChangeItems and from them detects merges and splits, Then tries
+ * to apply the changes to the loaded meshes locally and only falls back to a full refresh in
+ * case the local mesh update failed. The whole idea is to save a very costly backend full mesh
+ * reload.
+ * Should be called in a spawnUntilCanceled context to avoid blocking.
+ */
 export function* syncAffectedAndLoadMissingMeshes(
   layerName: string,
   changeInfoItems: AgglomerateChangeItem[],
 ): Saga<void> {
-  // ATTENTION: This saga should usually be called with `spawnUntilCanceled` to avoid that the user
-  // is blocked (via takeEveryUnlessBusy) while the meshes are refreshed.
-
-  // Segmentations with more than 3 dimensions are currently not compatible
-  // with proofreading. Once such datasets appear, this parameter needs to be
-  // adapted.
   const additionalCoordinates = undefined;
 
   // Capture the opacity and visibility of all old meshes up front, i.e. before any of them are
@@ -389,11 +390,9 @@ export function* syncAffectedAndLoadMissingMeshes(
 
   const { mergeGroups, splitGroups, remainingItems } = detectMergeAndSplitChanges(changeInfoItems);
 
-  // Try to splice already-loaded meshes together locally instead of removing and reloading them.
-  // Groups whose merge attempt didn't fully succeed (e.g. mixed ad-hoc/precomputed meshes, or
-  // nothing loaded to splice) fall through to the reload loop below. Merge groups run one after
-  // another rather than in parallel - see parked_pooled_local_mesh_change_scheduler.ts for a
-  // parallel/dependency-aware alternative that was parked as too complex for now.
+  // Try locally merging the detected merges.
+  // TODO: discuss whether we want the parallelized scheduled variation allowing
+  // parallel local merges and splits.
   const itemsToReload: AgglomerateChangeItem[] = [...remainingItems];
   for (const { newAgglomerateId, oldIds, items } of mergeGroups) {
     const handledLocally = yield* call(
@@ -406,10 +405,7 @@ export function* syncAffectedAndLoadMissingMeshes(
     if (!handledLocally) itemsToReload.push(...items);
   }
 
-  // Try to split an already-loaded mesh locally instead of removing and reloading it. Groups whose
-  // split attempt didn't fully succeed (no precomputed mesh loaded, or its supervoxels couldn't be
-  // confidently classified) fall through to the reload loop below. Also runs sequentially - see the
-  // note above.
+  // Try to locally split the meshes whose agglomerates were split.
   for (const { oldAgglomerateId, newIds, items } of splitGroups) {
     const handledLocally = yield* call(
       trySplitMeshLocally,
@@ -423,6 +419,7 @@ export function* syncAffectedAndLoadMissingMeshes(
 
   if (itemsToReload.length === 0) return;
 
+  // Fallback to full reload for failed operations.
   yield* call(
     reloadMeshes,
     layerName,

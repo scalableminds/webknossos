@@ -1,3 +1,5 @@
+// TODO: needs to be discussed whether we want this.
+
 // PARKED, NOT WIRED IN. This file is not imported by any live saga - it exists purely so a
 // dependency-aware, task-pool-parallelized alternative to
 // segment_and_mesh_refresh_sagas.ts's syncAffectedAndLoadMissingMeshes is easy to recover and

@@ -256,6 +256,13 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
     }
     const fillMode = yield* select((state) => state.userConfiguration.fillMode);
 
+    const progressCallback = createProgressCallback({
+      pauseDelay: 200,
+      successMessageDelay: 2000,
+    });
+    yield* call(progressCallback, false, "Performing floodfill...");
+    const startTimeOfFloodfill = performance.now();
+
     // ── SPIKE: new volume architecture ────────────────────────────────────
     // isSplitToolkit is excluded: it needs splitBoundaryMesh to clip the fill,
     // which runFloodFill does not know about. Falling through to the old path
@@ -299,16 +306,24 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
           volumeTracing.tracingId,
         ),
       );
+      yield* call(
+        notifyUserAboutResult,
+        stats.wasBoundingBoxExceeded,
+        startTimeOfFloodfill,
+        progressCallback,
+        fillMode,
+        // Only read by notifyUserAboutResult when wasBoundingBoxExceeded is
+        // true, in which case coveredBoundingBox is never null (see
+        // FloodFillResult's doc comment) — the fallback here is unreachable.
+        stats.coveredBoundingBox ?? { min: [0, 0, 0], max: [0, 0, 0] },
+        oldSegmentIdAtSeed,
+        activeCellId,
+        seedPosition,
+      );
       return;
     }
 
-    const progressCallback = createProgressCallback({
-      pauseDelay: 200,
-      successMessageDelay: 2000,
-    });
-    yield* call(progressCallback, false, "Performing floodfill...");
     console.time("cube.floodFill");
-    const startTimeOfFloodfill = performance.now();
 
     const {
       bucketsWithLabeledVoxelsMap: labelMasksByBucketAndW,
@@ -326,7 +341,6 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
       fillMode === FillModeEnum._3D,
       splitBoundaryMesh,
     );
-    console.timeEnd("cube.floodFill");
     yield* call(progressCallback, false, "Finalizing floodfill...");
     const indexSet: Set<number> = new Set();
 
@@ -374,6 +388,7 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
     );
 
     console.timeEnd("applyLabeledVoxelMapToAllMissingMags");
+    console.timeEnd("cube.floodFill");
 
     yield* call(
       notifyUserAboutResult,

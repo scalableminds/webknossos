@@ -1348,8 +1348,8 @@ export async function getDatasets(
   return datasets;
 }
 
-export async function getActiveDatasetsOfMyOrganization(): Promise<Array<APIDataset>> {
-  const datasets: Array<APIDataset> = await Request.receiveJSON(
+export async function getActiveDatasetsOfMyOrganization(): Promise<Array<APIDatasetCompact>> {
+  const datasets: Array<APIDatasetCompact> = await Request.receiveJSON(
     "/api/datasets?isActive=true&onlyMyOrganization=true",
   );
   assertResponseLimit(datasets);

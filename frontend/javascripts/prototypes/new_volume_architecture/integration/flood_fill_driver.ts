@@ -11,8 +11,11 @@
  * mutated in place only, exactly like brush_driver.ts.
  */
 
+import { V3 } from "libs/mjs";
+import type { Mesh } from "three";
 import type { AdditionalCoordinate } from "viewer/constants";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
+import { checkLineIntersection } from "viewer/model/bucket_data_handling/data_cube";
 import { resolveFloodFill } from "../resolver";
 import { VolumeTransaction } from "../transaction";
 import type { BoundingBox, EditContext, MagIndex, SegmentId, Vector3 } from "../types";
@@ -32,6 +35,11 @@ export interface FloodFillDriverOptions {
    * what keeps an unbounded fill from running away.
    */
   bounds: BoundingBox | null;
+  /**
+   * "Split Segments" toolkit boundary: the fill will not cross it. Mirrors
+   * `splitBoundaryMesh` in the old `DataCube.floodFill` (data_cube.ts).
+   */
+  splitBoundaryMesh: Mesh | null;
   signal?: AbortSignal;
 }
 
@@ -74,8 +82,24 @@ export async function runFloodFill(options: FloodFillDriverOptions): Promise<Flo
     editableBoundingBox: null,
   };
 
+  // checkLineIntersection expects mag1 voxel coordinates; a source-mag voxel
+  // q sits at mag1 position q*mag (the same conversion coveredBoundingBoxMag1
+  // uses below, just for a point rather than a box corner).
+  const mag = options.denseMags[options.magIndex];
+  const splitBoundaryMesh = options.splitBoundaryMesh;
+  const isBlocked = splitBoundaryMesh
+    ? (from: Vector3, to: Vector3): boolean =>
+        checkLineIntersection(splitBoundaryMesh, V3.scale3(from, mag), V3.scale3(to, mag))
+    : undefined;
+
   const { writeSet, wasBoundingBoxExceeded, coveredBoundingBox } = await resolveFloodFill(
-    { kind: "floodFill", seed: options.seed, is3D: options.is3D, bounds: options.bounds },
+    {
+      kind: "floodFill",
+      seed: options.seed,
+      is3D: options.is3D,
+      bounds: options.bounds,
+      isBlocked,
+    },
     ctx,
     adapter,
     options.signal,
@@ -103,7 +127,6 @@ export async function runFloodFill(options: FloodFillDriverOptions): Promise<Flo
   // q covers the mag1 block [q*mag, (q+1)*mag), so both bounds convert by the
   // same per-axis multiply — including the exclusive max, since (q+1)*mag is
   // exactly the mag1-space exclusive upper bound of the block at index q.
-  const mag = options.denseMags[options.magIndex];
   const coveredBoundingBoxMag1: BoundingBox | null =
     coveredBoundingBox == null
       ? null

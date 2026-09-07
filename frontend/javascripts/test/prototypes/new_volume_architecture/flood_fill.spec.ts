@@ -114,6 +114,36 @@ describe("new volume architecture — flood fill", () => {
     }
   });
 
+  it("respects isBlocked, refusing to cross a blocked edge", async () => {
+    // Splits REGION at x=33 (both halves stay within the same mag-0 bucket
+    // pair the other tests already exercise), like the "Split Segments"
+    // toolkit's boundary mesh does in production.
+    const { cube, session, backend } = createHarness();
+    seedRegion(backend);
+    await materialize(cube, [
+      [0, 0, 0, 1],
+      [0, 0, 0, 2],
+    ]);
+
+    const isBlocked = (from: Vector3, to: Vector3) =>
+      (from[0] < 33 && to[0] >= 33) || (from[0] >= 33 && to[0] < 33);
+
+    await session.floodFill(
+      { kind: "floodFill", seed: [30, 12, 3], is3D: false, bounds: null, isBlocked },
+      editContext({ activeSegmentId: FILL }),
+    );
+
+    // The seed's side of the boundary is filled...
+    for (const voxel of voxelsInBox(REGION_MIN, [33, 15, 4])) {
+      expect(cube.peek(voxel, 0)).toBe(FILL);
+    }
+    // ...but the traversal never crosses into the other side, which keeps
+    // its original segment id rather than becoming FILL.
+    for (const voxel of voxelsInBox([33, 10, 3], REGION_MAX)) {
+      expect(cube.peek(voxel, 0)).toBe(EXISTING);
+    }
+  });
+
   it("respects a bounding box, stopping the traversal early", async () => {
     const { cube, session, backend } = createHarness();
     seedRegion(backend);

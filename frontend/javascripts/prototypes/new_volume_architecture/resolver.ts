@@ -130,7 +130,10 @@ async function resolveFloodFill(
       }
     }
 
-    for (const neighbour of neighbours(voxel, shape.is3D)) queue.push(neighbour);
+    for (const neighbour of neighbours(voxel, shape.is3D)) {
+      if (shape.isBlocked?.(voxel, neighbour)) continue;
+      queue.push(neighbour);
+    }
   }
 
   return {

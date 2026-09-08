@@ -13,9 +13,9 @@
 import type { BucketDataArray } from "types/api_types";
 import type { AdditionalCoordinate, BucketAddress as WkBucketAddress } from "viewer/constants";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
+import type { BucketWrite } from "../bucket_write_map";
 import type { LoadingVoxelCube, TransactionCube } from "../cube";
 import { BUCKET_VOXEL_COUNT, type BucketAddress, type Mag, MagList, type Vector3 } from "../types";
-import type { BucketWrite } from "../write_set";
 
 /** Fill the runs of `write` into `data`, whatever element class it is. */
 function writeRuns(data: BucketDataArray, write: BucketWrite): void {

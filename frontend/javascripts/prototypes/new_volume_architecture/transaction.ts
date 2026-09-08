@@ -1,3 +1,5 @@
+import { BucketVoxelMask } from "./bucket_voxel_mask";
+import type { BucketWriteMap, BucketWriteMapEntry } from "./bucket_write_map";
 import type { TransactionCube } from "./cube";
 import { bucketDiffsOf, type TransactionDiff, type TransactionId } from "./diff";
 import { propagate } from "./mag_propagation";
@@ -11,8 +13,6 @@ import {
   type SegmentId,
   type VoxelIndex,
 } from "./types";
-import { BucketVoxelMask } from "./voxel_mask";
-import type { BucketWriteMap, BucketWriteMapEntry } from "./write_set";
 
 /**
  * Bucket-scoped write cursor. Obtained once per bucket, then written to in a

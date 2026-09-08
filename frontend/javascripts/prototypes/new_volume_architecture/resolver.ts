@@ -10,7 +10,7 @@ import {
   voxelIndexOf,
   voxelOffsetInBucket,
 } from "./types";
-import { type VoxelWriteSet, WriteSetBuilder } from "./write_set";
+import { type BucketWriteMap, BucketWriteMapBuilder } from "./write_set";
 
 /**
  * Resolves data-dependent intents into a write set.
@@ -20,17 +20,17 @@ import { type VoxelWriteSet, WriteSetBuilder } from "./write_set";
  *
  * Note there is no intermediate shape: resolution *is* rasterization for these
  * tools. A traversal naturally works bucket by bucket, which is exactly the
- * shape of a VoxelWriteSet, so it writes into one as it goes.
+ * shape of a BucketWriteMap, so it writes into one as it goes.
  */
 export async function resolve(
   shape: DataDependentShape,
   ctx: EditContext,
   cube: LoadingVoxelCube,
   signal?: AbortSignal,
-): Promise<VoxelWriteSet> {
+): Promise<BucketWriteMap> {
   switch (shape.kind) {
     case "floodFill":
-      return (await resolveFloodFill(shape, ctx, cube, signal)).writeSet;
+      return (await resolveFloodFill(shape, ctx, cube, signal)).bucketWrites;
   }
 }
 
@@ -42,7 +42,7 @@ export interface FloodFillOptions {
 }
 
 export interface FloodFillResolution {
-  writeSet: VoxelWriteSet;
+  bucketWrites: BucketWriteMap;
   /**
    * True iff the traversal reached a voxel it would otherwise have continued
    * into (unvisited, matching the seed) but for `shape.bounds` — i.e. the
@@ -70,13 +70,13 @@ async function resolveFloodFill(
   options: FloodFillOptions = {},
 ): Promise<FloodFillResolution> {
   const maxVisited = options.maxVisitedVoxels ?? DEFAULT_MAX_VISITED_VOXELS;
-  const out = new WriteSetBuilder(ctx.sourceMagIndex, ctx.activeSegmentId);
+  const out = new BucketWriteMapBuilder(ctx.sourceMagIndex, ctx.activeSegmentId);
 
   const seedValue = await readVoxel(cube, shape.seed, ctx.sourceMagIndex);
   if (seedValue === ctx.activeSegmentId) {
     // Nothing to do: the region already carries the target value, and treating
     // it as a fill would traverse it only to write what is already there.
-    return { writeSet: out.build(), wasBoundingBoxExceeded: false, coveredBoundingBox: null };
+    return { bucketWrites: out.build(), wasBoundingBoxExceeded: false, coveredBoundingBox: null };
   }
 
   const queue: Vector3[] = [shape.seed];
@@ -137,7 +137,7 @@ async function resolveFloodFill(
   }
 
   return {
-    writeSet: out.build(),
+    bucketWrites: out.build(),
     wasBoundingBoxExceeded,
     coveredBoundingBox:
       coveredMin != null && coveredMax != null ? { min: coveredMin, max: coveredMax } : null,

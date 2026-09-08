@@ -92,7 +92,7 @@ export async function runFloodFill(options: FloodFillDriverOptions): Promise<Flo
         checkLineIntersection(splitBoundaryMesh, V3.scale3(from, mag), V3.scale3(to, mag))
     : undefined;
 
-  const { writeSet, wasBoundingBoxExceeded, coveredBoundingBox } = await resolveFloodFill(
+  const { bucketWrites, wasBoundingBoxExceeded, coveredBoundingBox } = await resolveFloodFill(
     {
       kind: "floodFill",
       seed: options.seed,
@@ -111,7 +111,7 @@ export async function runFloodFill(options: FloodFillDriverOptions): Promise<Flo
     adapter,
     magListFromDenseMags(options.denseMags),
   );
-  transaction.recordAll(writeSet);
+  transaction.recordAll(bucketWrites);
   transaction.flushToCube();
   adapter.flush();
 

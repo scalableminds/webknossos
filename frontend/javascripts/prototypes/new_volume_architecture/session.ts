@@ -119,9 +119,9 @@ export class VolumeEditingSession {
     ctx: EditContext,
     signal?: AbortSignal,
   ): Promise<TransactionDiff> {
-    const writeSet = await resolve(shape, ctx, this.cube, signal);
+    const bucketWrites = await resolve(shape, ctx, this.cube, signal);
     const tx = this.nextTransaction(ctx);
-    tx.recordAll(writeSet);
+    tx.recordAll(bucketWrites);
     tx.flushToCube();
     return this.finish(tx, "floodFill");
   }

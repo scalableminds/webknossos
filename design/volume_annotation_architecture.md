@@ -197,7 +197,7 @@ interface EditContext {
 // ── The central intermediary representation ─────────────────────────────────
 
 /** One bit per voxel: 32_768 bits = 1024 words = 4 KB per bucket. */
-class VoxelMask {
+class BucketVoxelMask {
   /**
    * A "word" is one Uint32 holding the flags of 32 consecutive voxels, so
    * voxel `i` lives at bit `i & 31` of word `i >>> 5`.
@@ -230,20 +230,20 @@ class VoxelMask {
  * one interpolation each write one activeSegmentId, and mag propagation
  * preserves values — so no per-voxel value is ever stored.
  */
-interface BucketWrites {
-  mask: VoxelMask;
+interface BucketWrite {
+  mask: BucketVoxelMask;
   value: SegmentId;
 }
 
 /** Voxel writes across buckets — the output of rasterization and propagation. */
-type VoxelWriteSet = Map<BucketKey, { address: BucketAddress; writes: BucketWrites }>;
+type BucketWriteMap = Map<BucketKey, { address: BucketAddress; write: BucketWrite }>;
 ```
 
-`VoxelWriteSet` is deliberately the *only* currency exchanged between the rasterizer, the mag propagation service and the transaction. Every tool, at every mag, produces one of these, and nothing downstream needs to know which tool produced it.
+`BucketWriteMap` is deliberately the *only* currency exchanged between the rasterizer, the mag propagation service and the transaction. Every tool, at every mag, produces one of these, and nothing downstream needs to know which tool produced it.
 
 **Why a mask and not `Map<VoxelIndex, SegmentId>`.** The per-voxel map is the obvious encoding and it does not survive contact with the numbers. The mag-16 stroke measured in §5.4 writes 9.25 M voxels; at V8's ~40–50 bytes per `Map` entry that is ~400 MB of hash-table overhead, versus 2.9 MB for 736 buckets' worth of 4 KB masks. It also pays a per-voxel value slot for a degree of freedom nothing uses. The mask form additionally makes §5.6's run extraction a word scan instead of a sort.
 
-**Why there is no multi-valued variant.** Nothing produces one. Tools are single-valued by construction; propagation preserves values; undo folds stored runs directly into bucket arrays (§5.7) rather than building a write set; and undo is communicated to the backend as a skip marker rather than as a compensating diff (§5.8), so no "restore these various old values" write set is ever assembled. The one genuinely multi-valued data in the design is the pre-transaction values (`beforeAccumulating` / `beforeCommitted`, §5.2), which are never a `BucketWrites`.
+**Why there is no multi-valued variant.** Nothing produces one. Tools are single-valued by construction; propagation preserves values; undo folds stored runs directly into bucket arrays (§5.7) rather than building a write set; and undo is communicated to the backend as a skip marker rather than as a compensating diff (§5.8), so no "restore these various old values" write set is ever assembled. The one genuinely multi-valued data in the design is the pre-transaction values (`beforeAccumulating` / `beforeCommitted`, §5.2), which are never a `BucketWrite`.
 
 A sparse form (a short index list) would beat a 4 KB mask for buckets the stroke merely grazes at its edges. Worth adding if profiling says edge buckets dominate; not worth the branch until then.
 
@@ -265,7 +265,7 @@ A sparse form (a short index list) would beat a 4 KB mask for buckets the stroke
    │  + overwrite │                              │
    │    predicate │                              │
    └──────┬───────┘                              │
-          │ VoxelWriteSet @ source mag           │
+          │ BucketWriteMap @ source mag          │
           ▼                                      │
    ┌──────────────────────┐                      │
    │ VolumeTransaction    │──── apply writes ───▶│
@@ -348,9 +348,9 @@ A second, cross-cutting distinction: analytic shapes are mag-independent — the
 
 Adding a tool means adding an `EditIntent` variant and one producer case — nothing else in the system changes.
 
-**Why `MaskShape` is a byte array while `VoxelMask` (§4) is a packed `Uint32Array`.** They are solving different problems, and the divergence is deliberate.
+**Why `MaskShape` is a byte array while `BucketVoxelMask` (§4) is a packed `Uint32Array`.** They are solving different problems, and the divergence is deliberate.
 
-`VoxelMask` is an internal hot-path structure. It is always exactly `32³` bits, `markRun` fills whole words, `runs()` scans them, and one word maps exactly onto one x-row of a bucket. The word width is load-bearing; nothing about it would survive a different representation.
+`BucketVoxelMask` is an internal hot-path structure. It is always exactly `32³` bits, `markRun` fills whole words, `runs()` scans them, and one word maps exactly onto one x-row of a bucket. The word width is load-bearing; nothing about it would survive a different representation.
 
 `MaskShape` is an **interchange** format, and its constraints come from whoever hands it to us:
 
@@ -363,11 +363,11 @@ The cost is 8× the memory of a packed bitset — 256 KB rather than 32 KB for a
 
 #### Two producers, one output
 
-Both families end at the same place, a `VoxelWriteSet` (§4). They differ only in whether getting there can block:
+Both families end at the same place, a `BucketWriteMap` (§4). They differ only in whether getting there can block:
 
 ```
-RasterizableShape  ──Rasterizer.rasterize (sync)───────▶  VoxelWriteSet
-DataDependentShape ──ShapeResolver.resolve (async)─────▶  VoxelWriteSet
+RasterizableShape  ──Rasterizer.rasterize (sync)───────▶  BucketWriteMap
+DataDependentShape ──ShapeResolver.resolve (async)─────▶  BucketWriteMap
 ```
 
 ```ts
@@ -375,7 +375,7 @@ interface ShapeResolver {
   /** The only component in the design permitted to await a bucket load. */
   resolve(
     shape: DataDependentShape, ctx: EditContext, signal: AbortSignal,
-  ): Promise<VoxelWriteSet>;
+  ): Promise<BucketWriteMap>;
 }
 
 /** Loading reader, distinct from §5.3's deliberately non-fetching VoxelReader. */
@@ -386,11 +386,11 @@ interface LoadingVoxelReader {
 
 Flood fill cannot be rasterized the way a brush can: its region is discovered by walking the data, the walk crosses bucket boundaries, and buckets it reaches may not be loaded, so it must `await`. Putting that in the rasterizer would cost the properties that make the rasterizer worth having — synchronous, pure, side-effect-free, and therefore a Web Worker candidate (§11).
 
-**The resolver produces a write set directly; there is no intermediate shape.** For these tools, resolution and rasterization are the same step — once the walk finishes there is nothing left to convert. A traversal naturally works bucket by bucket (load a bucket, mark voxels, move on), which is exactly the shape of a `VoxelWriteSet`, so it can write into one as it goes:
+**The resolver produces a write set directly; there is no intermediate shape.** For these tools, resolution and rasterization are the same step — once the walk finishes there is nothing left to convert. A traversal naturally works bucket by bucket (load a bucket, mark voxels, move on), which is exactly the shape of a `BucketWriteMap`, so it can write into one as it goes:
 
 ```ts
-async function resolveFloodFill(shape, ctx, reader, signal): Promise<VoxelWriteSet> {
-  const out = new WriteSetBuilder(ctx.sourceMagIndex, ctx);
+async function resolveFloodFill(shape, ctx, reader, signal): Promise<BucketWriteMap> {
+  const out = new BucketWriteMapBuilder(ctx.sourceMagIndex, ctx);
   const seedValue = (await reader.ensureLoaded(bucketOf(shape.seed)))[indexOf(shape.seed)];
   const queue = [shape.seed];
 
@@ -410,7 +410,7 @@ async function resolveFloodFill(shape, ctx, reader, signal): Promise<VoxelWriteS
 
 Note `out.has(v)` doubles as the **visited** set. A flood fill only enqueues voxels matching the seed value, so visited and painted coincide, and the write set *is* the traversal state — no second allocation.
 
-**Why not resolve to a dense `MaskShape` first.** Because a fill with `bounds: null` has no known extent, so a dense box-shaped mask would mean either allocating the worst case up front (unbounded — the layer's maximum extent), computing the bbox by walking twice, or reallocating as the frontier grows. All of that to then convert into per-bucket masks, which is what `VoxelWriteSet` already is. Per-bucket `VoxelMask`s allocate 4 KB only for buckets actually touched, which is also what production does today.
+**Why not resolve to a dense `MaskShape` first.** Because a fill with `bounds: null` has no known extent, so a dense box-shaped mask would mean either allocating the worst case up front (unbounded — the layer's maximum extent), computing the bbox by walking twice, or reallocating as the frontier grows. All of that to then convert into per-bucket masks, which is what `BucketWriteMap` already is. Per-bucket `BucketVoxelMask`s allocate 4 KB only for buckets actually touched, which is also what production does today.
 
 That overhead is negligible in context: 4 KB of mask against the 256 KB of bucket data the fill had to load in order to visit that bucket at all — about 1.5%. The data is the real cost, which is why bounding a fill is still an open question (§10) and not something this structure solves.
 
@@ -445,7 +445,7 @@ class VolumeTransaction {
   readonly id: TransactionId;
   readonly ctx: EditContext;
 
-  private writes = new Map<BucketKey, { address: BucketAddress; writes: BucketWrites }>();
+  private bucketWrites = new Map<BucketKey, { address: BucketAddress; write: BucketWrite }>();
 
   /** Pre-transaction values, recorded on first touch — only for resident buckets. */
   private beforeAccumulating = new Map<BucketKey, Map<VoxelIndex, SegmentId>>();
@@ -457,8 +457,8 @@ class VolumeTransaction {
    */
   writerFor(address: BucketAddress, value: SegmentId): BucketWriter;
 
-  /** Merge a whole VoxelWriteSet (from mag propagation, or a remote peer). */
-  recordAll(writeSet: VoxelWriteSet): void;
+  /** Merge a whole BucketWriteMap (from mag propagation, or a remote peer). */
+  recordAll(bucketWrites: BucketWriteMap): void;
 
   /** Finalize: run mag propagation, drop no-ops, build the diff. */
   commit(propagation: MagPropagationService): TransactionDiff;
@@ -468,7 +468,7 @@ class VolumeTransaction {
 }
 ```
 
-**The API is bucket-scoped on purpose, independently of how `BucketWrites` is represented.** A per-voxel `record(address, index, value)` would be the more obvious signature, but it pushes address-to-key computation into every rasterizer inner loop, and it shapes all calling code into a per-voxel style — so changing the representation later would become a call-site migration across every tool rather than a swap behind an interface. `writerFor` + `markRun` costs nothing extra today and keeps the mask, a sparse list, or a slice-oriented buffer interchangeable.
+**The API is bucket-scoped on purpose, independently of how `BucketWrite` is represented.** A per-voxel `record(address, index, value)` would be the more obvious signature, but it pushes address-to-key computation into every rasterizer inner loop, and it shapes all calling code into a per-voxel style — so changing the representation later would become a call-site migration across every tool rather than a swap behind an interface. `writerFor` + `markRun` costs nothing extra today and keeps the mask, a sparse list, or a slice-oriented buffer interchangeable.
 
 Why a write set at all, rather than "snapshot the bucket, mutate freely, diff at the end":
 
@@ -480,7 +480,7 @@ Why a write set at all, rather than "snapshot the bucket, mutate freely, diff at
 
 | | accumulating (live, in the transaction) | committed (frozen, on the diff) |
 |---|---|---|
-| new values | `BucketWrites` — mask + one value | `BucketDiff.runs` |
+| new values | `BucketWrite` — mask + one value | `BucketDiff.runs` |
 | old values | `beforeAccumulating` — `Map<VoxelIndex, SegmentId>` | `BucketDiff.beforeCommitted` — `VoxelRun[]` |
 
 The shapes differ because the stages have different access patterns. While the stroke is open, values are recorded lazily on first touch of each voxel and arrive in whatever order the brush wanders, so the accumulator needs O(1) "have I already recorded this one?" checks — a `Map`. At commit the same run-grouping pass that builds `runs` freezes it into `beforeCommitted`, which from then on is only iterated in order.
@@ -603,13 +603,13 @@ interface MagPropagationService {
    * chain (§1.2).
    */
   propagate(
-    sourceWrites: VoxelWriteSet, ctx: EditContext,
-  ): Map<MagIndex, VoxelWriteSet>;
+    sourceWrites: BucketWriteMap, ctx: EditContext,
+  ): Map<MagIndex, BucketWriteMap>;
 }
 
 // Sketch of the walk. `relativeFactor(a, b)` is the per-axis ratio between
 // two adjacent mags — normally [2,2,1] or [2,2,2], never the ratio to mag 1.
-function propagate(sourceWrites: VoxelWriteSet, ctx: EditContext) {
+function propagate(sourceWrites: BucketWriteMap, ctx: EditContext) {
   const out = new Map([[ctx.sourceMagIndex, sourceWrites]]);
 
   let writes = sourceWrites;                                   // Step A: finer
@@ -639,11 +639,11 @@ A voxel `q` at one level covers the axis-aligned block `[q · f, (q+1) · f)` at
 
 ```ts
 function upsampleOneLevel(
-  writes: VoxelWriteSet, f: Mag, targetMagIndex: MagIndex, ctx: EditContext,
-): VoxelWriteSet {
-  const out = new WriteSetBuilder(targetMagIndex, ctx);
+  bucketWrites: BucketWriteMap, f: Mag, targetMagIndex: MagIndex, ctx: EditContext,
+): BucketWriteMap {
+  const out = new BucketWriteMapBuilder(targetMagIndex, ctx);
 
-  for (const { address, writes: bw } of writes.values()) {
+  for (const { address, write: bw } of bucketWrites.values()) {
     const origin = originVoxelOf(address);                   // this level's grid
     for (const { start, length, value } of runsOf(bw)) {
       const [x, y, z] = voxelOffsetOf(start);
@@ -704,11 +704,11 @@ At each step, a voxel `p` belongs to coarse voxel `⌊p / f⌋` at the next coar
  * x, so the whole pyramid is built without ever visiting an individual voxel.
  */
 function downsampleOneLevel(
-  writes: VoxelWriteSet, f: Mag, targetMagIndex: MagIndex, ctx: EditContext,
-): VoxelWriteSet {
-  const out = new WriteSetBuilder(targetMagIndex, ctx);
+  bucketWrites: BucketWriteMap, f: Mag, targetMagIndex: MagIndex, ctx: EditContext,
+): BucketWriteMap {
+  const out = new BucketWriteMapBuilder(targetMagIndex, ctx);
 
-  for (const { address, writes: bw } of writes.values()) {
+  for (const { address, write: bw } of bucketWrites.values()) {
     const origin = originVoxelOf(address);                   // this level's grid
     for (const { start, length, value } of runsOf(bw)) {
       const [x, y, z] = voxelOffsetOf(start);
@@ -723,7 +723,7 @@ function downsampleOneLevel(
 }
 ```
 
-`WriteSetBuilder` is the propagation-side counterpart of `BucketWriter`: it caches the current bucket and only re-resolves the address when a run crosses a bucket boundary.
+`BucketWriteMapBuilder` is the propagation-side counterpart of `BucketWriter`: it caches the current bucket and only re-resolves the address when a run crosses a bucket boundary.
 
 Three things about this rule are worth stating explicitly, because they are choices, not consequences:
 
@@ -773,7 +773,7 @@ interface WorkingDataCube extends VoxelReader {
    *  Called on write only when the bucket is visible or about to be. */
   materialize(address: BucketAddress): void;
   /** Applies a whole bucket's writes at once, walking the mask's runs. */
-  applyWrites(address: BucketAddress, writes: BucketWrites): void;
+  applyWrites(address: BucketAddress, write: BucketWrite): void;
   markDirtyForGpu(address: BucketAddress): void;
 }
 ```
@@ -862,10 +862,10 @@ interface TransactionDiff {
 Building the diff from the write set falls out of the representation — a word scan over the mask, with no sort and no per-voxel value lookup:
 
 ```ts
-function toRuns(writes: BucketWrites): VoxelRun[] {
-  // VoxelMask.runs() walks 1024 words, emitting per-row spans of set bits.
-  return [...writes.mask.runs()].map(({ start, length }) => ({
-    start, length, values: writes.value,            // constant run: one value
+function toRuns(write: BucketWrite): VoxelRun[] {
+  // BucketVoxelMask.runs() walks 1024 words, emitting per-row spans of set bits.
+  return [...write.mask.runs()].map(({ start, length }) => ({
+    start, length, values: write.value,            // constant run: one value
   }));
 }
 ```
@@ -1056,8 +1056,8 @@ sequenceDiagram
         R->>R: split each scanline where current[i] is not 0n
       end
       R->>T: markRun(start, length) per scanline
-      Note over T: VoxelMask bit-fill,<br/>4 KB per touched bucket
-      T->>C: applyWrites(address, BucketWrites)
+      Note over T: BucketVoxelMask bit-fill,<br/>4 KB per touched bucket
+      T->>C: applyWrites(address, BucketWrite)
       C->>C: markDirtyForGpu
     end
     C-->>U: stroke visible at the source mag
@@ -1067,7 +1067,7 @@ sequenceDiagram
   B->>T: commit(propagation)
   T->>P: propagate(sourceWrites, ctx)
   Note over P: Step A: upsample source → finest<br/>Step B: downsample source → coarsest<br/>one adjacent level at a time
-  P-->>T: writes per mag (MagIndex to VoxelWriteSet)
+  P-->>T: writes per mag (MagIndex to BucketWriteMap)
   T->>C: applyWrites(...) for resident buckets only
   T->>T: toRuns() per bucket
   Note right of T: TransactionDiff { id, sequence,<br/>sourceMagIndex, bucketDiffs, sideEffects }
@@ -1086,8 +1086,8 @@ What crosses each boundary:
 | `EditContext` | BrushTool, at pointer-down | everything downstream | §4 |
 | `EditIntent` | BrushTool, growing per move | Rasterizer | §5.1 |
 | `BucketWriter` | VolumeTransaction, one per bucket | Rasterizer's inner loop | §5.2 |
-| `BucketWrites` (mask + value) | accumulated in the transaction | cube, `toRuns` | §4 |
-| `VoxelWriteSet` | Rasterizer, then propagation | transaction, cube | §4 |
+| `BucketWrite` (mask + value) | accumulated in the transaction | cube, `toRuns` | §4 |
+| `BucketWriteMap` | Rasterizer, then propagation | transaction, cube | §4 |
 | `TransactionDiff` | `commit()` | BucketJournal, SaveQueue | §5.6 |
 | `UpdateBucketDiffAction[]` | SaveQueue encoder | backend | §5.8 |
 
@@ -1108,7 +1108,7 @@ Running mag propagation on *every pointer-move* was considered and discarded: it
 
 Two costs come with that choice. A second viewport showing a different mag lags until pointer-up. And the propagation work lands as a spike on pointer-up rather than being spread across the stroke, which may read as a hitch even though the total CPU cost is lower.
 
-**Both are tunable without touching the architecture.** Propagation is a pure function `VoxelWriteSet → VoxelWriteSet` applied to the cube, not to the diff, and — because upsampling and written-value-wins are both per-voxel maps — it distributes over the write set: `propagate(A ∪ B) == propagate(A) ∪ propagate(B)`. So running it mid-stroke on a throttle, for visible mags only, produces exactly the same result as running it once at commit. The throttle interval is a free parameter, including "never", which is the default above.
+**Both are tunable without touching the architecture.** Propagation is a pure function `BucketWriteMap → BucketWriteMap` applied to the cube, not to the diff, and — because upsampling and written-value-wins are both per-voxel maps — it distributes over the write set: `propagate(A ∪ B) == propagate(A) ∪ propagate(B)`. So running it mid-stroke on a throttle, for visible mags only, produces exactly the same result as running it once at commit. The throttle interval is a free parameter, including "never", which is the default above.
 
 The spike is worst for coarse-mag strokes, and there the throttle is the wrong lever — see §9.
 
@@ -1392,7 +1392,7 @@ Both are fixed by the same thing: let a bucket's payload be an axis-aligned sub-
 | XY disk, r = 10 | ~20 runs → 80 B | 62 B |
 | mag-16 upsample, full bucket | 1024 runs → 4 KB | solid box → **6 B** |
 
-This is preferable to the more obvious fix of adding a **stride** to each run (`start, count, stride`, so a YZ column becomes one strided run). Strides help only the YZ case and do nothing for block fills; they require detecting stride patterns during `VoxelMask.runs()`, which is an awkward word scan; and extracting a sub-box bitmask from the mask is simpler than either.
+This is preferable to the more obvious fix of adding a **stride** to each run (`start, count, stride`, so a YZ column becomes one strided run). Strides help only the YZ case and do nothing for block fills; they require detecting stride patterns during `BucketVoxelMask.runs()`, which is an awkward word scan; and extracting a sub-box bitmask from the mask is simpler than either.
 
 The degenerate case of `BOX_MASK` — box = the whole bucket — is just "a `32³` bitmask plus one value", the alternative weighed in §5.8. It is a fixed 4 KB and therefore beats runs for densely-written buckets while losing badly for lightly-grazed ones. Letting the encoder choose per bucket is what makes the two complementary rather than competing.
 
@@ -1404,10 +1404,10 @@ Note this does not help the CPU side: filling the mask for a YZ stroke is bit-at
 
 `MaskShape` carries one byte per voxel (§5.1), which is 8× a packed bitset — 256 KB rather than 32 KB for a `512×512` patch, and 16 MB rather than 2 MB for a `256³` volume patch. Simplicity was chosen over density because the format is an interchange boundary: byte arrays impose no alignment constraint on the producer, have unambiguous byte order across worker and WASM boundaries, and match what a thresholded model output already looks like.
 
-Packing it is a contained change — the producers, and the loop that converts a mask into a `VoxelWriteSet`. Nothing else reads `selected`. Two caveats if it is done:
+Packing it is a contained change — the producers, and the loop that converts a mask into a `BucketWriteMap`. Nothing else reads `selected`. Two caveats if it is done:
 
 - The bit addressing must be specified, not assumed: index `x + y·size[0] + z·size[0]·size[1]`, LSB-first within each byte, is the obvious convention but two implementations will otherwise disagree about it.
-- It cannot reuse `VoxelMask`. That class is fixed at `32³` and its word/x-row alignment is meaningful only inside a bucket; a mask over an arbitrary box shares none of that.
+- It cannot reuse `BucketVoxelMask`. That class is fixed at `32³` and its word/x-row alignment is meaningful only inside a bucket; a mask over an arbitrary box shares none of that.
 
 Worth doing when a tool starts producing large 3D patches. For the 2D patches quick-select emits today, the absolute numbers are small and transient — the mask is discarded as soon as it becomes a write set.
 

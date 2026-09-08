@@ -117,7 +117,7 @@ describe("new volume architecture — brush", () => {
   });
 
   it("does not streak across rows when a stroke fills entire bucket rows", async () => {
-    // Regression: VoxelMask.runs() used to merge set bits across word
+    // Regression: BucketVoxelMask.runs() used to merge set bits across word
     // boundaries. A word is one x-row, so a stroke filling a row edge-to-edge
     // produced a "run" spanning rows, which mag propagation then projected as
     // a long x-extent — visible as horizontal streaks in the coarser mags.

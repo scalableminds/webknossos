@@ -9,7 +9,7 @@ import {
   type Vector3,
   voxelOffsetOf,
 } from "./types";
-import { type VoxelWriteSet, WriteSetBuilder } from "./write_set";
+import { type BucketWriteMap, BucketWriteMapBuilder } from "./write_set";
 
 /**
  * Source mag → every other mag, walking the pyramid outward one adjacent level
@@ -24,11 +24,11 @@ import { type VoxelWriteSet, WriteSetBuilder } from "./write_set";
  * each step works from the nearest, smallest write set instead of the largest.
  */
 export function propagate(
-  sourceWrites: VoxelWriteSet,
+  sourceWrites: BucketWriteMap,
   ctx: EditContext,
   mags: MagList,
-): Map<MagIndex, VoxelWriteSet> {
-  const result = new Map<MagIndex, VoxelWriteSet>();
+): Map<MagIndex, BucketWriteMap> {
+  const result = new Map<MagIndex, BucketWriteMap>();
   result.set(ctx.sourceMagIndex, sourceWrites);
 
   // Step A: upsample toward the finest mag.
@@ -56,16 +56,16 @@ export function propagate(
  * of `length * f[0]` per (dy, dz) — not `length * f[0]*f[1]*f[2]` writes.
  */
 export function upsampleOneLevel(
-  writes: VoxelWriteSet,
+  bucketWrites: BucketWriteMap,
   factor: Mag,
   targetMagIndex: MagIndex,
   value: bigint,
-): VoxelWriteSet {
-  const out = new WriteSetBuilder(targetMagIndex, value);
+): BucketWriteMap {
+  const out = new BucketWriteMapBuilder(targetMagIndex, value);
 
-  for (const entry of writes.values()) {
+  for (const entry of bucketWrites.values()) {
     const origin = originVoxelOf(entry.address);
-    for (const run of entry.writes.mask.runs()) {
+    for (const run of entry.write.mask.runs()) {
       const [x, y, z] = voxelOffsetOf(run.start);
       const base: Vector3 = [
         (origin[0] + x) * factor[0],
@@ -88,16 +88,16 @@ export function upsampleOneLevel(
  * there is nothing to decide between.
  */
 export function downsampleOneLevel(
-  writes: VoxelWriteSet,
+  bucketWrites: BucketWriteMap,
   factor: Mag,
   targetMagIndex: MagIndex,
   value: bigint,
-): VoxelWriteSet {
-  const out = new WriteSetBuilder(targetMagIndex, value);
+): BucketWriteMap {
+  const out = new BucketWriteMapBuilder(targetMagIndex, value);
 
-  for (const entry of writes.values()) {
+  for (const entry of bucketWrites.values()) {
     const origin = originVoxelOf(entry.address);
-    for (const run of entry.writes.mask.runs()) {
+    for (const run of entry.write.mask.runs()) {
       const [x, y, z] = voxelOffsetOf(run.start);
       const globalY = origin[1] + y;
       const globalZ = origin[2] + z;

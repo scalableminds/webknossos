@@ -10,7 +10,7 @@ import {
   voxelIndexOf,
   voxelOffsetInBucket,
 } from "./types";
-import { VoxelMask } from "./voxel_mask";
+import { BucketVoxelMask } from "./voxel_mask";
 
 /**
  * Writes for one bucket: which voxels were touched, and the single value being
@@ -18,44 +18,44 @@ import { VoxelMask } from "./voxel_mask";
  * each write one activeSegmentId, and mag propagation preserves values — so no
  * per-voxel value is ever stored.
  */
-export interface BucketWrites {
-  mask: VoxelMask;
+export interface BucketWrite {
+  mask: BucketVoxelMask;
   value: SegmentId;
 }
 
-export interface WriteSetEntry {
+export interface BucketWriteMapEntry {
   address: BucketAddress;
-  writes: BucketWrites;
+  write: BucketWrite;
 }
 
 /**
  * Voxel writes across buckets. This is the one currency exchanged between the
  * rasterizer, the resolver, mag propagation and the transaction.
  */
-export type VoxelWriteSet = Map<BucketKey, WriteSetEntry>;
+export type BucketWriteMap = Map<BucketKey, BucketWriteMapEntry>;
 
 /**
  * Accumulates writes for one mag, addressing voxels in that mag's global grid
  * and splitting them into buckets. Caches the last bucket touched so a run of
  * marks in the same bucket costs one lookup.
  */
-export class WriteSetBuilder {
-  private readonly entries: VoxelWriteSet = new Map();
+export class BucketWriteMapBuilder {
+  private readonly entries: BucketWriteMap = new Map();
   private cachedKey: BucketKey | null = null;
-  private cachedEntry: WriteSetEntry | null = null;
+  private cachedEntry: BucketWriteMapEntry | null = null;
 
   constructor(
     private readonly magIndex: MagIndex,
     private readonly value: SegmentId,
   ) {}
 
-  private entryFor(address: BucketAddress): WriteSetEntry {
+  private entryFor(address: BucketAddress): BucketWriteMapEntry {
     const key = bucketKey(address);
     if (key === this.cachedKey && this.cachedEntry != null) return this.cachedEntry;
 
     let entry = this.entries.get(key);
     if (entry == null) {
-      entry = { address, writes: { mask: new VoxelMask(), value: this.value } };
+      entry = { address, write: { mask: new BucketVoxelMask(), value: this.value } };
       this.entries.set(key, entry);
     }
     this.cachedKey = key;
@@ -67,7 +67,7 @@ export class WriteSetBuilder {
   mark(voxel: Vector3): void {
     const entry = this.entryFor(bucketAddressOfVoxel(voxel, this.magIndex));
     const [x, y, z] = voxelOffsetInBucket(voxel);
-    entry.writes.mask.mark(voxelIndexOf(x, y, z));
+    entry.write.mask.mark(voxelIndexOf(x, y, z));
   }
 
   /**
@@ -84,7 +84,7 @@ export class WriteSetBuilder {
       const offset = voxelOffsetInBucket([x, y, z]);
       const lengthInBucket = Math.min(remaining, BUCKET_WIDTH - offset[0]);
       const entry = this.entryFor(address);
-      entry.writes.mask.markRun(voxelIndexOf(offset[0], offset[1], offset[2]), lengthInBucket);
+      entry.write.mask.markRun(voxelIndexOf(offset[0], offset[1], offset[2]), lengthInBucket);
       x += lengthInBucket;
       remaining -= lengthInBucket;
     }
@@ -96,23 +96,23 @@ export class WriteSetBuilder {
     const entry = this.entries.get(key);
     if (entry == null) return false;
     const [x, y, z] = voxelOffsetInBucket(voxel);
-    return entry.writes.mask.has(voxelIndexOf(x, y, z));
+    return entry.write.mask.has(voxelIndexOf(x, y, z));
   }
 
   get markedVoxelCount(): number {
     let total = 0;
-    for (const entry of this.entries.values()) total += entry.writes.mask.count;
+    for (const entry of this.entries.values()) total += entry.write.mask.count;
     return total;
   }
 
-  build(): VoxelWriteSet {
+  build(): BucketWriteMap {
     return this.entries;
   }
 }
 
 /** Total number of marked voxels across a write set. Used by tests. */
-export function countVoxels(writeSet: VoxelWriteSet): number {
+export function countVoxels(bucketWriteMap: BucketWriteMap): number {
   let total = 0;
-  for (const entry of writeSet.values()) total += entry.writes.mask.count;
+  for (const entry of bucketWriteMap.values()) total += entry.write.mask.count;
   return total;
 }

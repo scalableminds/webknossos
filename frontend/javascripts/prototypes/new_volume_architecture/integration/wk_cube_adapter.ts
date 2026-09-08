@@ -15,21 +15,21 @@ import type { AdditionalCoordinate, BucketAddress as WkBucketAddress } from "vie
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
 import type { LoadingVoxelCube, TransactionCube } from "../cube";
 import { BUCKET_VOXEL_COUNT, type BucketAddress, type Mag, MagList, type Vector3 } from "../types";
-import type { BucketWrites } from "../write_set";
+import type { BucketWrite } from "../write_set";
 
-/** Fill the runs of `writes` into `data`, whatever element class it is. */
-function writeRuns(data: BucketDataArray, writes: BucketWrites): void {
+/** Fill the runs of `write` into `data`, whatever element class it is. */
+function writeRuns(data: BucketDataArray, write: BucketWrite): void {
   // todop: similar to WkDataCubeAdapter.applyWrites ?
   if (data instanceof BigUint64Array) {
-    for (const { start, length } of writes.mask.runs()) {
-      data.fill(writes.value, start, start + length);
+    for (const { start, length } of write.mask.runs()) {
+      data.fill(write.value, start, start + length);
     }
   } else {
     // Every non-64-bit variant of BucketDataArray takes a number; TypeScript
     // cannot narrow the union's `fill` overloads, hence the single cast.
     const numeric = data as Uint32Array;
-    const value = Number(writes.value);
-    for (const { start, length } of writes.mask.runs()) {
+    const value = Number(write.value);
+    for (const { start, length } of write.mask.runs()) {
       numeric.fill(value, start, start + length);
     }
   }
@@ -71,7 +71,7 @@ export class WkDataCubeAdapter implements TransactionCube {
     return (index) => data[index] === 0;
   }
 
-  applyWrites(address: BucketAddress, writes: BucketWrites): void {
+  applyWrites(address: BucketAddress, write: BucketWrite): void {
     const bucket = this.cube.getOrCreateBucket(this.toWkAddress(address));
     if (bucket.type === "null") return;
 
@@ -86,7 +86,7 @@ export class WkDataCubeAdapter implements TransactionCube {
       this.touched.add(key);
     }
 
-    writeRuns(data, writes);
+    writeRuns(data, write);
 
     // getOrCreateData's own docstring warns it is unsafe to mutate directly:
     // if the backend's data for this bucket has not arrived yet, that fetch
@@ -95,7 +95,7 @@ export class WkDataCubeAdapter implements TransactionCube {
     // Bucket.applyVoxelMap uses to decide whether to additionally register a
     // pendingOperation that replays the write once real data lands.
     if (bucket.needsBackendData()) {
-      bucket.pendingOperations.push((laterData) => writeRuns(laterData, writes));
+      bucket.pendingOperations.push((laterData) => writeRuns(laterData, write));
     }
   }
 

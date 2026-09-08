@@ -414,12 +414,20 @@ trait VolumeTracingBucketHelper
       version: Option[Long]
   )(using ec: ExecutionContext): FoxIterator[(BucketPosition, Array[Byte], Long)] = {
     val keyPrefix = buildKeyPrefix(volumeLayer.name)
-    new VersionedBucketIterator(
+    new ReversionAwareVersionedFossilDbIterator[(BucketPosition, Array[Byte], Long)](
       keyPrefix,
       volumeDataStore,
-      volumeLayer.expectedUncompressedBucketSize,
-      version,
-      volumeLayer.additionalAxes
+      version
+    )(keyValuePair =>
+      parseBucketKey(keyValuePair.key, volumeLayer.additionalAxes).map { case (_, bucketPosition) =>
+        val debugInfo =
+          s"key: ${keyValuePair.key}, ${keyValuePair.value.length} bytes, version ${keyValuePair.version}"
+        (
+          bucketPosition,
+          decompressIfNeeded(keyValuePair.value, volumeLayer.expectedUncompressedBucketSize, debugInfo),
+          keyValuePair.version
+        )
+      }
     )
   }
 
@@ -432,49 +440,9 @@ trait VolumeTracingBucketHelper
   }
 }
 
-// Wraps a VersionedFossilDbIterator, adding reversion-filtering, bucket-key-parsing and decompression.
-// Only used where the caller can await Fox results (see bucketStreamWithVersion); bucketStream/BucketIterator
-// below needs a blocking Iterator instead, so it does not build on top of this class.
-class VersionedBucketIterator(
-    prefix: String,
-    volumeDataStore: FossilDBClient,
-    expectedUncompressedBucketSize: Int,
-    version: Option[Long] = None,
-    additionalAxes: Option[Seq[AdditionalAxis]]
-)(implicit ec: ExecutionContext)
-    extends FoxIterator[(BucketPosition, Array[Byte], Long)]
-    with VolumeBucketCompression
-    with BucketKeys
-    with ReversionHelper {
-
-  private val rawIterator = new VersionedFossilDbIterator(prefix, volumeDataStore, version)
-
-  override def next(): Fox[(BucketPosition, Array[Byte], Long)] =
-    for {
-      keyValuePair <- rawIterator.next()
-      result <-
-        if (isRevertedElement(keyValuePair)) next()
-        else
-          parseBucketKey(keyValuePair.key, additionalAxes) match {
-            case Some((_, bucketPosition)) =>
-              val debugInfo =
-                s"key: ${keyValuePair.key}, ${keyValuePair.value.length} bytes, version ${keyValuePair.version}"
-              Fox.successful(
-                (
-                  bucketPosition,
-                  decompressIfNeeded(keyValuePair.value, expectedUncompressedBucketSize, debugInfo),
-                  keyValuePair.version
-                )
-              )
-            case None => next()
-          }
-    } yield result
-
-}
-
-// A blocking counterpart to VersionedBucketIterator, for callers that need a synchronous Iterator (e.g. lazily
-// zipping bucket data into an output stream). Duplicates the batch-fetch loop rather than building on
-// VersionedBucketIterator, since that one pulls asynchronously via getMultipleKeys.
+// A blocking counterpart to bucketStreamWithVersion's ReversionAwareVersionedFossilDbIterator, for callers that
+// need a synchronous Iterator (e.g. lazily zipping bucket data into an output stream). Duplicates the batch-fetch
+// loop rather than building on that one, since that one pulls asynchronously via getMultipleKeys.
 class BucketIterator(
     prefix: String,
     volumeDataStore: FossilDBClient,

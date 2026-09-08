@@ -184,6 +184,16 @@ export function roundTo(value: number, digits: number): number {
   return Math.round(value * digitMultiplier) / digitMultiplier;
 }
 
+// Returns whether the given value is a power of two (1, 2, 4, ...). Values that are only
+// approximately a power of two are accepted, so that this can be used on quotients of floats.
+export function isPowerOfTwo(value: number, epsilon: number = 1e-4): boolean {
+  if (!Number.isFinite(value) || value <= 0) {
+    return false;
+  }
+  const exponent = Math.log2(value);
+  return Math.abs(exponent - Math.round(exponent)) < epsilon;
+}
+
 // Color conversion helpers (rgbToHex, hexToRgb, stringToNormalizedRgbColor, …) live in
 // libs/colors.ts.
 

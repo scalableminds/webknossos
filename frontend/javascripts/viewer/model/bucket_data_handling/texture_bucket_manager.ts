@@ -76,14 +76,21 @@ function maybePadRgbData(src: TypedArray, elementClass: ElementClass, bucketVoxe
   return tmpPaddingBuffer.subarray(0, idx);
 }
 
-// A bucket's packed data may be smaller than one texture row (see
-// getBucketHeightInTexture), in which case it still occupies a full row in the
-// atlas, with the remainder left unused. gl.texSubImage2D requires the source
-// buffer to cover the full row/height being uploaded, so the real data is copied
-// into a zero-filled scratch buffer of the right size for that (rare) case.
+// A bucket's packed data may cover less than the atlas region it is uploaded into —
+// either because it packs into less than one full texture row (see
+// getBucketHeightInTexture), which it still occupies entirely with the remainder unused,
+// or because it is a single t-slice going into a full-depth t-recycling region. Since
+// gl.texSubImage2D requires the source buffer to cover the whole region being uploaded,
+// the real data is copied into a zero-filled scratch buffer of the right size, at
+// destElementOffset (nonzero only for the t-recycling case, where the slice belongs in
+// its own t-slot rather than at the start).
 let tmpRowPaddingBuffer: TypedArray | null = null;
-function padToFullRow(src: TypedArray, requiredElementCount: number): TypedArray {
-  if (src.length >= requiredElementCount) {
+function padToUploadRegion(
+  src: TypedArray,
+  requiredElementCount: number,
+  destElementOffset: number = 0,
+): TypedArray {
+  if (destElementOffset === 0 && src.length >= requiredElementCount) {
     return src;
   }
 
@@ -101,7 +108,7 @@ function padToFullRow(src: TypedArray, requiredElementCount: number): TypedArray
   // @ts-expect-error BigInt is not a problem in practice; only used for byte-level GPU upload buffers.
   target.fill(0);
   // @ts-expect-error src and target always share the same underlying element type.
-  target.set(src);
+  target.set(src, destElementOffset);
   return target;
 }
 
@@ -341,10 +348,7 @@ export default class TextureBucketManager {
       const useRawBatchData = this.isTRecyclingEnabled && bucket.rawBucketData != null;
       const uploadSource = useRawBatchData ? (bucket.rawBucketData as BucketDataArray) : data;
       // How many voxels the source covers: the full atlas footprint for a batch buffer,
-      // and the layer's (possibly shrunk) per-bucket footprint otherwise. The latter can
-      // also happen on a t-recycling layer, for a bucket whose data never came from the
-      // wire (e.g. locally created volume-annotation data); such an upload is zero-padded
-      // to the atlas footprint below, i.e. only its own t-slot holds real data.
+      // and the layer's (possibly shrunk) per-bucket footprint otherwise.
       const uploadVoxelCount = useRawBatchData
         ? this.bucketVoxelCount
         : this.cube.getEffectiveBucketVoxelCount();
@@ -368,7 +372,17 @@ export default class TextureBucketManager {
       const requiredElementCount = Math.round(
         (rgbPaddedSrc.length * width * height) / (uploadVoxelCount / this.packingDegree),
       );
-      const src = padToFullRow(rgbPaddedSrc, requiredElementCount);
+      // A lone t-slice must land in the t-slot the shader will read it from (t % 32, see
+      // texture_access.glsl.ts's maybeOverrideOffsetInBucketZ), not at the start of the
+      // region. Slices are equally sized, so the slot's offset is just zSlot source-lengths
+      // in. This should not be reachable now that editable layers are excluded from
+      // t-recycling (see wantsTRecycling) — the eligible ones always upload a whole shared
+      // batch buffer — but placing the slice correctly beats silently rendering it at t=0.
+      const destElementOffset =
+        this.isTRecyclingEnabled && !useRawBatchData
+          ? (bucket.getT() % constants.BUCKET_WIDTH) * rgbPaddedSrc.length
+          : 0;
+      const src = padToUploadRegion(rgbPaddedSrc, requiredElementCount, destElementOffset);
 
       this.dataTextures[dataTextureIndex].update(src, x, y, width, height);
       this.committedBucketSet.add(bucket);

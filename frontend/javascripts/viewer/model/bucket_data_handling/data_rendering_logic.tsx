@@ -234,6 +234,9 @@ function buildTextureInformationMap<
     category: "color" | "segmentation";
     boundingBox: { depth: number };
     additionalAxes: Array<AdditionalAxis> | null;
+    // Set for layers backed by a volume tracing (see APISegmentationLayer). Needed here
+    // because atlas sizing has to make the same t-recycling decision the runtime does.
+    tracingId?: string;
   },
 >(
   layers: Array<Layer>,
@@ -246,7 +249,14 @@ function buildTextureInformationMap<
     // A layer that will use t-recycling (see TextureBucketManager) needs its atlas
     // sized for full-depth buckets, not the shrunk depth, even though it's
     // z-degenerate. Both decisions must stay in sync, hence the shared helper.
-    const bucketVoxelCount = wantsTRecycling(layer.boundingBox.depth, hasTAxis)
+    // Volume tracing layers are already merged into the dataset's layers (with their
+    // tracingId set) by preprocessDataset before this runs, so the editability check
+    // here sees the same thing DataCube's constructor later will.
+    const bucketVoxelCount = wantsTRecycling(
+      layer.boundingBox.depth,
+      hasTAxis,
+      layer.tracingId != null,
+    )
       ? constants.BUCKET_SIZE
       : constants.BUCKET_WIDTH ** 2 * getEffectiveBucketDepth(layer.boundingBox.depth);
     const sizeAndCount = calculateTextureSizeAndCountForLayer(
@@ -323,6 +333,7 @@ export function computeDataTexturesSetup<
     category: "color" | "segmentation";
     boundingBox: { depth: number };
     additionalAxes: Array<AdditionalAxis> | null;
+    tracingId?: string;
   },
 >(specs: GpuSpecs, layers: Array<Layer>, hasSegmentation: boolean, requiredBucketCapacity: number) {
   const textureInformationPerLayer = buildTextureInformationMap(

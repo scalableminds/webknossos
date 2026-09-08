@@ -316,6 +316,56 @@ describe("TextureBucketManager", () => {
     }
   });
 
+  it("t-recycling: a lone slice without a batch buffer lands in its own t-slot", () => {
+    // Not reachable in practice now that editable layers are excluded from t-recycling
+    // (see wantsTRecycling), since eligible layers always upload a whole shared batch
+    // buffer. Guards the placement arithmetic against silently rendering at t=0 anyway.
+    const textureWidth = 256;
+    const t = 45; // batch 1, zSlot 13
+    const sliceVoxelCount = 32 * 32;
+    const tRecyclingMockedCube = makeMockCube({
+      effectiveBucketDepth: 1,
+      additionalAxes: { t: { name: "t", bounds: [0, 1000], index: 3 } },
+      isTRecyclingEligible: true,
+      getEffectiveBucketVoxelCount: () => sliceVoxelCount,
+    });
+
+    const bucket = new DataBucket(
+      "uint8",
+      [1, 1, 0, 0, [{ name: "t", value: t }]] as any,
+      temporalBucketManagerMock as any,
+      { type: "full" },
+      tRecyclingMockedCube as any,
+    );
+    bucket._fallbackBucket = NULL_BUCKET;
+    bucket.markAsRequested();
+    // Locally created data (no wire response), so there is no rawBucketData behind it.
+    const localData = new Uint8Array(sliceVoxelCount);
+    localData[0] = 55;
+    bucket.data = localData;
+    expect(bucket.rawBucketData).toBeNull();
+
+    const tbm = new TextureBucketManager(textureWidth, 1, "uint8", tRecyclingMockedCube as any);
+    tbm.setupDataTextures(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
+    setActiveBucketsAndWait(tbm, [bucket]);
+
+    const bucketAddress = tbm.lookUpCuckooTable.get([1, 1, 1, 0, LAYER_INDEX]);
+    if (bucketAddress == null) {
+      throw new Error("Bucket address is null");
+    }
+    const bucketHeightInTexture = getBucketHeightInTexture(
+      textureWidth,
+      tbm.packingDegree,
+      tbm.bucketVoxelCount,
+    );
+    const regionStart = bucketHeightInTexture * bucketAddress * textureWidth;
+    // The marker belongs at the start of slot 13, not at the start of the region.
+    // @ts-expect-error - texture is available in our mock but not in the real type
+    expect(tbm.dataTextures[0].texture[regionStart + (t % 32) * sliceVoxelCount]).toBe(55);
+    // @ts-expect-error - texture is available in our mock but not in the real type
+    expect(tbm.dataTextures[0].texture[regionStart]).toBe(0);
+  });
+
   it("t-recycling: crossing a batch boundary re-keys and re-uploads", () => {
     const textureWidth = 256;
     const oldT = 40; // batch 1, zSlot 8

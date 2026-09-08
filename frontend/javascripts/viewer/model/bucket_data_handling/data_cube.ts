@@ -162,6 +162,9 @@ class DataCube {
     elementClass: ElementClass,
     isSegmentation: boolean,
     layerName: string,
+    // Whether this layer is backed by a volume tracing, i.e. can be edited. Only relevant
+    // for the t-recycling eligibility check below (see wantsTRecycling).
+    isEditableVolumeLayer: boolean = false,
   ) {
     this.elementClass = elementClass;
     this.channelCount = getConstructorForElementClass(this.elementClass)[1];
@@ -175,6 +178,7 @@ class DataCube {
     this.isTRecyclingEligible = wantsTRecycling(
       layerBBox.getSize()[2],
       this.additionalAxes.t != null,
+      isEditableVolumeLayer,
     );
 
     this.cubes = {};

@@ -69,14 +69,10 @@ export function* watchForNewerAnnotationVersion(): Saga<void> {
       yield* maybeRequeuePollAndWait(ensureHasNewestVersion);
       continue;
     }
-    const { successful, shouldTerminate } = yield* ctx.execute(function* () {
+    const { successful } = yield* ctx.execute(function* () {
       return yield* call(performRebasingIfNecessary);
     });
 
-    if (shouldTerminate) {
-      // A hard error was thrown. Terminate this saga.
-      break;
-    }
     if (successful) {
       yield* call(fulfillAllEnsureHasNewestVersionActions, ensureHasNewestVersion, channel);
     } else {

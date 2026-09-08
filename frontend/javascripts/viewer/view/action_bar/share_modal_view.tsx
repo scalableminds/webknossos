@@ -202,7 +202,7 @@ const LEFT_COL_STYLE = {
   paddingRight: 6,
 };
 
-function _ShareModalView(props: Props) {
+function ShareModalViewInner(props: Props) {
   const { isOpen, onOk, annotationType, annotationId } = props;
   const dispatch = useDispatch();
 
@@ -682,5 +682,5 @@ export function CopyableSharingLink({
   );
 }
 
-const ShareModalView = makeComponentLazy(_ShareModalView);
+const ShareModalView = makeComponentLazy(ShareModalViewInner);
 export default ShareModalView;

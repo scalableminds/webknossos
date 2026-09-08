@@ -24,8 +24,7 @@ import play.api.libs.json.*
 import play.silhouette.api.LoginInfo
 import play.silhouette.api.services.IdentityService
 import play.silhouette.api.util.PasswordInfo
-import play.silhouette.impl.providers.CredentialsProvider
-import security.{PasswordHasher, TokenDAO}
+import security.{LoginInfoAdapter, PasswordHasher, TokenDAO}
 import utils.sql.SqlEscaping
 import utils.WkConf
 
@@ -133,7 +132,6 @@ class UserService @Inject() (
         organizationId,
         Instant.now,
         Json.obj(),
-        LoginInfo(CredentialsProvider.ID, newUserId.id),
         isAdmin,
         isOrganizationOwner,
         isDatasetManager = isDatasetManager,
@@ -190,11 +188,9 @@ class UserService @Inject() (
   ): Fox[User] =
     for {
       newUserId <- Fox.successful(ObjectId.generate)
-      loginInfo = LoginInfo(CredentialsProvider.ID, newUserId.id)
       user = originalUser.copy(
         _id = newUserId,
         _organization = organizationId,
-        loginInfo = loginInfo,
         lastActivity = Instant.now,
         isAdmin = isAdmin,
         isDatasetManager = isDatasetManager,
@@ -242,7 +238,6 @@ class UserService @Inject() (
       _ <- userDAO.updateTeamMembershipsForUser(user._id, teamMemberships)
       _ <- userExperiencesDAO.updateExperiencesForUser(user, experiences)
       _ = removeUserFromCache(user._id)
-      _ <- if (oldEmail == email) Fox.successful(()) else tokenDAO.updateEmail(oldEmail, email)
       updated <- userDAO.findOne(user._id)
     } yield updated
   }
@@ -253,10 +248,9 @@ class UserService @Inject() (
   def getPasswordInfo(passwordOpt: Option[String]): PasswordInfo =
     passwordOpt.map(passwordHasher.hash).getOrElse(getOpenIdConnectPasswordInfo)
 
-  def changePasswordInfo(loginInfo: LoginInfo, passwordInfo: PasswordInfo): Fox[PasswordInfo] =
+  def changePasswordInfo(userId: ObjectId, passwordInfo: PasswordInfo): Fox[PasswordInfo] =
     for {
-      userIdValidated <- ObjectId.fromString(loginInfo.providerKey)
-      user <- findOneCached(userIdValidated)(using GlobalAccessContext)
+      user <- findOneCached(userId)(using GlobalAccessContext)
       _ <- multiUserDAO.updatePasswordInfo(user._multiUser, passwordInfo)(using GlobalAccessContext)
     } yield passwordInfo
 
@@ -304,10 +298,7 @@ class UserService @Inject() (
     }
 
   def retrieve(loginInfo: LoginInfo): Future[Option[User]] =
-    findOneCached(ObjectId(loginInfo.providerKey))(using GlobalAccessContext).futureBox.map(_.toOption)
-
-  def createLoginInfo(userId: ObjectId): LoginInfo =
-    LoginInfo(CredentialsProvider.ID, userId.id)
+    findOneCached(LoginInfoAdapter.userIdFromLoginInfo(loginInfo))(using GlobalAccessContext).futureBox.map(_.toOption)
 
   def createPasswordInfo(pw: String): PasswordInfo =
     PasswordInfo("SCrypt", SCrypt.hashPassword(pw))

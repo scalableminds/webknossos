@@ -130,9 +130,8 @@ function ExperienceModalView({
   }
 
   function sendUserToServer(newUser: APIUser, oldUser: APIUser): Promise<APIUser> {
-    return updateUser(newUser).then(
-      () => Promise.resolve(newUser),
-      () => Promise.reject(oldUser),
+    return updateUser(newUser).then((result) =>
+      result.ok ? Promise.resolve(newUser) : Promise.reject(oldUser),
     );
   }
 

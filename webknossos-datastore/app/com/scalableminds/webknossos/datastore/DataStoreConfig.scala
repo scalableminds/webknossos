@@ -62,8 +62,12 @@ class DataStoreConfig @Inject() (configuration: Configuration) extends ConfigRea
     object DataVaults {
       val credentials: List[Config] = getList[Config]("datastore.dataVaults.credentials")
     }
+    object Upload {
+      val deleteTemporaryFilesAfterUpload: Boolean =
+        get[Boolean]("datastore.upload.deleteTemporaryFilesAfterUpload")
+    }
     val children: List[Object] =
-      List(WebKnossos, WatchFileSystem, Cache, AdHocMesh, Redis, AgglomerateTree, AgglomerateGraph, DataVaults)
+      List(WebKnossos, WatchFileSystem, Cache, AdHocMesh, Redis, AgglomerateTree, AgglomerateGraph, DataVaults, Upload)
   }
 
   object SlackNotifications {

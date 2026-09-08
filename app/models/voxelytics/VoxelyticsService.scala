@@ -1,10 +1,10 @@
 package models.voxelytics
 
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import models.user.User
 import models.voxelytics.VoxelyticsRunState.VoxelyticsRunState
-import play.api.libs.json.{JsArray, JsObject, Json, OFormat}
+import play.api.libs.json.{JsArray, JsObject, Json}
 import com.scalableminds.util.objectid.ObjectId
 
 import javax.inject.Inject
@@ -23,11 +23,7 @@ case class RunEntry(
     state: VoxelyticsRunState,
     beginTime: Option[Instant],
     endTime: Option[Instant]
-)
-
-object RunEntry {
-  implicit val jsonFormat: OFormat[RunEntry] = Json.format[RunEntry]
-}
+) derives JsonAutoFormat
 
 case class TaskRunEntry(
     runId: ObjectId,
@@ -39,27 +35,16 @@ case class TaskRunEntry(
     endTime: Option[Instant],
     currentExecutionId: Option[String],
     chunkCounts: ChunkCounts
-)
-
-object TaskRunEntry {
-  implicit val jsonFormat: OFormat[TaskRunEntry] = Json.format[TaskRunEntry]
-}
+) derives JsonAutoFormat
 
 case class CombinedTaskRunEntry(taskName: String, currentExecutionId: Option[String], chunkCounts: ChunkCounts)
-
-object CombinedTaskRunEntry {
-  implicit val jsonFormat: OFormat[TaskRunEntry] = Json.format[TaskRunEntry]
-}
+    derives JsonAutoFormat
 
 case class WorkflowEntry(
     name: String,
     hash: String,
     _organization: String
-)
-
-object WorkflowEntry {
-  implicit val jsonFormat: OFormat[WorkflowEntry] = Json.format[WorkflowEntry]
-}
+) derives JsonAutoFormat
 
 case class TaskCounts(
     total: Long,
@@ -69,17 +54,9 @@ case class TaskCounts(
     cancelled: Long,
     fileSize: Long,
     inodeCount: Long
-)
+) derives JsonAutoFormat
 
-object TaskCounts {
-  implicit val jsonFormat: OFormat[TaskCounts] = Json.format[TaskCounts]
-}
-
-case class ChunkCounts(total: Long, failed: Long, skipped: Long, complete: Long, cancelled: Long)
-
-object ChunkCounts {
-  implicit val jsonFormat: OFormat[ChunkCounts] = Json.format[ChunkCounts]
-}
+case class ChunkCounts(total: Long, failed: Long, skipped: Long, complete: Long, cancelled: Long) derives JsonAutoFormat
 
 case class WorkflowListingRunEntry(
     id: ObjectId,
@@ -94,11 +71,7 @@ case class WorkflowListingRunEntry(
     taskCounts: TaskCounts,
     userFirstName: Option[String],
     userLastName: Option[String]
-)
-
-object WorkflowListingRunEntry {
-  implicit val jsonFormat: OFormat[WorkflowListingRunEntry] = Json.format[WorkflowListingRunEntry]
-}
+) derives JsonAutoFormat
 
 case class ArtifactEntry(
     artifactId: ObjectId,
@@ -111,23 +84,13 @@ case class ArtifactEntry(
     metadata: JsObject,
     taskName: String,
     foreignWorkflow: Option[(String, String)]
-)
-
-object ArtifactEntry {
-  implicit val jsonFormat: OFormat[ArtifactEntry] = Json.format[ArtifactEntry]
-}
+) derives JsonAutoFormat
 
 case class TaskEntry(taskId: ObjectId, runId: ObjectId, name: String, task: String, config: JsObject)
-
-object TaskEntry {
-  implicit val jsonFormat: OFormat[TaskEntry] = Json.format[TaskEntry]
-}
+    derives JsonAutoFormat
 
 case class StatisticsEntry(max: Double, median: Double, stddev: Double, sum: Option[Double] = None)
-
-object StatisticsEntry {
-  implicit val jsonFormat: OFormat[StatisticsEntry] = Json.format[StatisticsEntry]
-}
+    derives JsonAutoFormat
 
 case class ChunkStatisticsEntry(
     executionId: String,
@@ -139,11 +102,7 @@ case class ChunkStatisticsEntry(
     cpuUser: StatisticsEntry,
     cpuSystem: StatisticsEntry,
     duration: StatisticsEntry
-)
-
-object ChunkStatisticsEntry {
-  implicit val jsonFormat: OFormat[ChunkStatisticsEntry] = Json.format[ChunkStatisticsEntry]
-}
+) derives JsonAutoFormat
 
 case class ArtifactChecksumEntry(
     taskName: String,
@@ -155,11 +114,7 @@ case class ArtifactChecksumEntry(
     checksum: String,
     fileSize: Long,
     lastModified: Instant
-)
-
-object ArtifactChecksumEntry {
-  implicit val jsonFormat: OFormat[ArtifactChecksumEntry] = Json.format[ArtifactChecksumEntry]
-}
+) derives JsonAutoFormat
 
 class VoxelyticsService @Inject() (voxelyticsDAO: VoxelyticsDAO)(implicit ec: ExecutionContext) {
 

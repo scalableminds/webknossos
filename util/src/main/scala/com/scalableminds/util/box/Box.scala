@@ -20,7 +20,7 @@ package com.scalableminds.util.box
 
 object Box extends Tryo {
 
-  /* Applies f on all elements of seq, then returns a single box. If all resuls of f are Full,
+  /* Applies f on all elements of seq, then returns a single box. If all results of f are Full,
    * returns Full with the whole sequence.
    * If any are non-Full (Empty, Failure, or ParamFailure) returns the first of those. */
   def combined[A, B](seq: Seq[A])(f: A => Box[B]): Box[Seq[B]] =

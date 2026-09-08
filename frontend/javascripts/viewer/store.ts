@@ -38,6 +38,7 @@ import type {
   ControlModeEnum,
   FillMode,
   MappingStatus,
+  MappingType,
   OrthoView,
   OrthoViewWithoutTD,
   OverwriteMode,
@@ -79,8 +80,6 @@ import OrganizationReducer from "./model/reducers/organization_reducer";
 import ProofreadingReducer from "./model/reducers/proofreading_reducer";
 import type { TreeGroup, TreeMap } from "./model/types/tree_types";
 import type { StartAiJobDrawerState } from "./view/ai_jobs/constants";
-
-export type { BoundingBoxObject } from "types/bounding_box";
 
 export type UserBoundingBoxForServer = {
   boundingBox: BoundingBoxObject;
@@ -421,7 +420,6 @@ export type Mapping = Map<number, number> | Map<bigint, bigint>;
 export type NumberLike = number | bigint;
 export type NumberLikeMap = Map<NumberLike, NumberLike>;
 
-export type MappingType = "JSON" | "HDF5";
 export type ActiveMappingInfo = {
   readonly mappingName: string | null | undefined;
   readonly mapping: Mapping | null | undefined;
@@ -663,8 +661,18 @@ type ConnectomeData = {
   readonly activeAgglomerateIds: Array<bigint>;
   readonly skeleton: SkeletonTracing | null | undefined;
 };
-export type MinCutPartitions = { 1: bigint[]; 2: bigint[]; agglomerateId: bigint | null };
-
+export const MinCutPartitionKeys = ["partitionA", "partitionB"] as const;
+export type MinCutPartitions =
+  | {
+      partitionA: bigint[];
+      partitionB: bigint[];
+      agglomerateId: bigint;
+    }
+  | {
+      partitionA: [];
+      partitionB: [];
+      agglomerateId: null;
+    };
 export type LocalMeshesInfo =
   | Record<LayerNameAsKey, Record<BigIntAsKey, MeshInformation> | undefined>
   | undefined;

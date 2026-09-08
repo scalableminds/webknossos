@@ -60,9 +60,9 @@ const viewOverrides: Record<string, string> = {
   dsA_2: "1024,1024,64,0,0.424",
   "Multi-Channel-Test": "1201,1072,7,0,0.683",
   "test-agglomerate-file":
-    '{"position":[60,60,60],"mode":"orthogonal","zoomStep":0.5,"stateByLayer":{"segmentation":{"mappingInfo":{"mappingName":"agglomerate_view_70","mappingType":"HDF5","agglomerateIdsToImport":[1, 6]}}}}',
+    '{"position":[60,60,60],"mode":"orthogonal","zoomStep":0.5,"stateByLayer":{"segmentation":{"mappingInfo":{"mappingName":"agglomerate_view_70","mappingType":"AGGLOMERATE","agglomerateIdsToImport":[1, 6]}}}}',
   "test-agglomerate-file-with-meshes":
-    '{"position":[63,67,118],"mode":"orthogonal","zoomStep":0.826,"stateByLayer":{"segmentation":{"meshInfo":{"meshFileName":"meshfile-with-name","meshes":[{"segmentId":7,"seedPosition":[64,75,118],"isPrecomputed":true,"meshFileName":"meshfile_1-1-1"},{"segmentId":12,"seedPosition":[107,125,118],"isPrecomputed":false,"mappingName":"agglomerate_view_70","mappingType":"HDF5"},{"segmentId":79,"seedPosition":[110,78,118],"isPrecomputed":false,"mappingName":null,"mappingType":null}]}}}}',
+    '{"position":[63,67,118],"mode":"orthogonal","zoomStep":0.826,"stateByLayer":{"segmentation":{"meshInfo":{"meshFileName":"meshfile-with-name","meshes":[{"segmentId":7,"seedPosition":[64,75,118],"isPrecomputed":true,"meshFileName":"meshfile_1-1-1"},{"segmentId":12,"seedPosition":[107,125,118],"isPrecomputed":false,"mappingName":"agglomerate_view_70","mappingType":"AGGLOMERATE"},{"segmentId":79,"seedPosition":[110,78,118],"isPrecomputed":false,"mappingName":null,"mappingType":null}]}}}}',
   connectome_file_test_dataset:
     '{"position":[102,109,60],"mode":"orthogonal","zoomStep":0.734,"stateByLayer":{"segmentation":{"connectomeInfo":{"connectomeName":"connectome","agglomerateIdsToImport":[1]}}}}',
   kiwi: "1191,1112,21,0,8.746",
@@ -198,129 +198,121 @@ describe("Dataset Rendering", () => {
     },
   );
 
-  it.sequential<ScreenshotTestContext>(
-    "should render a dataset with mappings correctly",
-    { retry: 3 },
-    async ({ browser }) => {
-      const datasetName = "ROI2017_wkw";
-      const mappingName = "astrocyte";
+  it.sequential<ScreenshotTestContext>("should render a dataset with mappings correctly", {
+    retry: 3,
+  }, async ({ browser }) => {
+    const datasetName = "ROI2017_wkw";
+    const mappingName = "astrocyte";
 
-      const page = await getNewPage(browser);
+    const page = await getNewPage(browser);
 
-      const { screenshot, width, height } = await screenshotDatasetWithMapping(
-        page,
-        URL,
-        datasetNameToId[datasetName],
-        mappingName,
-      );
+    const { screenshot, width, height } = await screenshotDatasetWithMapping(
+      page,
+      URL,
+      datasetNameToId[datasetName],
+      mappingName,
+    );
 
-      const changedPixels = await compareScreenshot(
-        screenshot,
-        width,
-        height,
-        SCREENSHOTS_PATH,
-        `${datasetName}_with_mapping_${mappingName}`,
-      );
-      await page.close();
+    const changedPixels = await compareScreenshot(
+      screenshot,
+      width,
+      height,
+      SCREENSHOTS_PATH,
+      `${datasetName}_with_mapping_${mappingName}`,
+    );
+    await page.close();
 
-      expect(
-        isPixelEquivalent(changedPixels, width, height),
-        `Dataset with name: "${datasetName}" and mapping: "${mappingName}" does not look the same.`,
-      ).toBe(true);
-    },
-  );
+    expect(
+      isPixelEquivalent(changedPixels, width, height),
+      `Dataset with name: "${datasetName}" and mapping: "${mappingName}" does not look the same.`,
+    ).toBe(true);
+  });
 
-  it.sequential<ScreenshotTestContext>(
-    "should render a dataset linked to with an active mapping and agglomerate tree correctly",
-    { retry: 3 },
-    async ({ browser }) => {
-      const datasetName = "test-agglomerate-file";
-      const viewOverride = viewOverrides[datasetName];
+  it.sequential<ScreenshotTestContext>("should render a dataset linked to with an active mapping and agglomerate tree correctly", {
+    retry: 3,
+  }, async ({ browser }) => {
+    const datasetName = "test-agglomerate-file";
+    const viewOverride = viewOverrides[datasetName];
 
-      const page = await getNewPage(browser);
+    const page = await getNewPage(browser);
 
-      const { screenshot, width, height } = await screenshotDatasetWithMappingLink(
-        page,
-        URL,
-        datasetNameToId[datasetName],
-        viewOverride,
-      );
+    const { screenshot, width, height } = await screenshotDatasetWithMappingLink(
+      page,
+      URL,
+      datasetNameToId[datasetName],
+      viewOverride,
+    );
 
-      const changedPixels = await compareScreenshot(
-        screenshot,
-        width,
-        height,
-        SCREENSHOTS_PATH,
-        `${datasetName}_with_mapping_link`,
-      );
-      await page.close();
+    const changedPixels = await compareScreenshot(
+      screenshot,
+      width,
+      height,
+      SCREENSHOTS_PATH,
+      `${datasetName}_with_mapping_link`,
+    );
+    await page.close();
 
-      expect(
-        isPixelEquivalent(changedPixels, width, height),
-        `Dataset with name: "${datasetName}", mapping link and loaded agglomerate tree does not look the same.`,
-      ).toBe(true);
-    },
-  );
+    expect(
+      isPixelEquivalent(changedPixels, width, height),
+      `Dataset with name: "${datasetName}", mapping link and loaded agglomerate tree does not look the same.`,
+    ).toBe(true);
+  });
 
-  it.sequential<ScreenshotTestContext>(
-    "should render a dataset sandbox linked to with an active mapping and agglomerate tree correctly",
-    { retry: 3 },
-    async ({ browser }) => {
-      const datasetName = "test-agglomerate-file";
-      const viewOverride = viewOverrides[datasetName];
+  it.sequential<ScreenshotTestContext>("should render a dataset sandbox linked to with an active mapping and agglomerate tree correctly", {
+    retry: 3,
+  }, async ({ browser }) => {
+    const datasetName = "test-agglomerate-file";
+    const viewOverride = viewOverrides[datasetName];
 
-      const page = await getNewPage(browser);
-      const { screenshot, width, height } = await screenshotSandboxWithMappingLink(
-        page,
-        URL,
-        datasetNameToId[datasetName],
-        viewOverride,
-      );
-      // Should look the same as an explorative tracing on the same dataset with the same mapping link
-      const changedPixels = await compareScreenshot(
-        screenshot,
-        width,
-        height,
-        SCREENSHOTS_PATH,
-        `${datasetName}_with_mapping_link`,
-      );
-      await page.close();
-      expect(
-        isPixelEquivalent(changedPixels, width, height),
-        `Sandbox of dataset with name: "${datasetName}", mapping link and loaded agglomerate tree does not look the same.`,
-      ).toBe(true);
-    },
-  );
+    const page = await getNewPage(browser);
+    const { screenshot, width, height } = await screenshotSandboxWithMappingLink(
+      page,
+      URL,
+      datasetNameToId[datasetName],
+      viewOverride,
+    );
+    // Should look the same as an explorative tracing on the same dataset with the same mapping link
+    const changedPixels = await compareScreenshot(
+      screenshot,
+      width,
+      height,
+      SCREENSHOTS_PATH,
+      `${datasetName}_with_mapping_link`,
+    );
+    await page.close();
+    expect(
+      isPixelEquivalent(changedPixels, width, height),
+      `Sandbox of dataset with name: "${datasetName}", mapping link and loaded agglomerate tree does not look the same.`,
+    ).toBe(true);
+  });
 
-  it.sequential<ScreenshotTestContext>(
-    "should render a dataset linked to with ad-hoc and precomputed meshes correctly",
-    { retry: 3 },
-    async ({ browser }) => {
-      const datasetName = "test-agglomerate-file";
-      const viewOverride = viewOverrides["test-agglomerate-file-with-meshes"];
+  it.sequential<ScreenshotTestContext>("should render a dataset linked to with ad-hoc and precomputed meshes correctly", {
+    retry: 3,
+  }, async ({ browser }) => {
+    const datasetName = "test-agglomerate-file";
+    const viewOverride = viewOverrides["test-agglomerate-file-with-meshes"];
 
-      const page = await getNewPage(browser);
-      const { screenshot, width, height } = await screenshotDataset(
-        page,
-        URL,
-        datasetNameToId[datasetName],
-        undefined,
-        {
-          viewOverride: viewOverride,
-        },
-      );
-      const changedPixels = await compareScreenshot(
-        screenshot,
-        width,
-        height,
-        SCREENSHOTS_PATH,
-        `${datasetName}_with_meshes_link`,
-      );
-      await page.close();
-      expect(
-        isPixelEquivalent(changedPixels, width, height),
-        `Dataset with name: "${datasetName}", ad-hoc and precomputed meshes does not look the same.`,
-      ).toBe(true);
-    },
-  );
+    const page = await getNewPage(browser);
+    const { screenshot, width, height } = await screenshotDataset(
+      page,
+      URL,
+      datasetNameToId[datasetName],
+      undefined,
+      {
+        viewOverride: viewOverride,
+      },
+    );
+    const changedPixels = await compareScreenshot(
+      screenshot,
+      width,
+      height,
+      SCREENSHOTS_PATH,
+      `${datasetName}_with_meshes_link`,
+    );
+    await page.close();
+    expect(
+      isPixelEquivalent(changedPixels, width, height),
+      `Dataset with name: "${datasetName}", ad-hoc and precomputed meshes does not look the same.`,
+    ).toBe(true);
+  });
 });

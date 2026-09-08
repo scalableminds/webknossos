@@ -158,7 +158,7 @@ class Controller extends PureComponent<PropsWithRouter, State> {
       });
   }
 
-  modelFetchDone() {
+  async modelFetchDone() {
     const beforeUnload = (args: BeforeUnloadEvent | BlockerFunction): boolean | undefined => {
       // Navigation blocking can be triggered by two sources:
       // 1. The browser's native beforeunload event
@@ -204,7 +204,7 @@ class Controller extends PureComponent<PropsWithRouter, State> {
     });
 
     UrlManager.startUrlUpdater();
-    initializeSceneController();
+    await initializeSceneController();
     this.initKeyboard();
     this.initTaskScript();
     window.webknossos = new ApiLoader(Model);

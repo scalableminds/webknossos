@@ -164,60 +164,60 @@ describe("Proofreading (With Agglomerate Tree interactions)", () => {
     await task.toPromise();
   });
 
-  describe.each([
-    false,
-    true,
-  ])("With shouldSaveAfterLoadingTrees=%s", (shouldSaveAfterLoadingTrees: boolean) => {
-    it("should merge two agglomerate trees optimistically, perform the merge proofreading action and incorporate a new merge action from backend", async (context: WebknossosTestContext) => {
-      const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
-      backendMock.planMultipleVersionInjections(9, mergeSegment5And6WithAgglomerateTree1And4);
+  describe.each([false, true])(
+    "With shouldSaveAfterLoadingTrees=%s",
+    (shouldSaveAfterLoadingTrees: boolean) => {
+      it("should merge two agglomerate trees optimistically, perform the merge proofreading action and incorporate a new merge action from backend", async (context: WebknossosTestContext) => {
+        const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+        backendMock.planMultipleVersionInjections(9, mergeSegment5And6WithAgglomerateTree1And4);
 
-      const { annotation } = Store.getState();
-      const { tracingId } = annotation.volumes[0];
+        const { annotation } = Store.getState();
+        const { tracingId } = annotation.volumes[0];
 
-      const task = startSaga(function* task() {
-        yield performMergeTreesProofreading(context, shouldSaveAfterLoadingTrees, false);
-        const injectedMergeUpdates = context.receivedDataPerSaveRequest.slice(4, 8);
-        assertUpdatesMatchInjectedUpdates(
-          injectedMergeUpdates,
-          mergeSegment5And6WithAgglomerateTree1And4,
-          9,
-        );
+        const task = startSaga(function* task() {
+          yield performMergeTreesProofreading(context, shouldSaveAfterLoadingTrees, false);
+          const injectedMergeUpdates = context.receivedDataPerSaveRequest.slice(4, 8);
+          assertUpdatesMatchInjectedUpdates(
+            injectedMergeUpdates,
+            mergeSegment5And6WithAgglomerateTree1And4,
+            9,
+          );
 
-        const latestUpdateActionRequestPayload = getNestedUpdateActions(context).slice(-4)!;
-        yield expect(latestUpdateActionRequestPayload).toMatchFileSnapshot(
-          "./__snapshots__/proofreading_agglomerate_trees_interaction.spec.ts/merge_trees_simple.json",
-        );
+          const latestUpdateActionRequestPayload = getNestedUpdateActions(context).slice(-4)!;
+          yield expect(latestUpdateActionRequestPayload).toMatchFileSnapshot(
+            "./__snapshots__/proofreading_agglomerate_trees_interaction.spec.ts/merge_trees_simple.json",
+          );
 
-        yield expectSegmentList(tracingId, [
-          {
-            id: 1n,
+          yield expectSegmentList(tracingId, [
+            {
+              id: 1n,
 
-            anchorPosition: [3, 3, 3],
-          },
-        ]);
+              anchorPosition: [3, 3, 3],
+            },
+          ]);
 
-        const finalMapping = yield* select(
-          (state) =>
-            getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-        );
+          const finalMapping = yield* select(
+            (state) =>
+              getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+          );
 
-        expect(finalMapping).toEqual(
-          new Map([
-            [1n, 1n],
-            [2n, 1n],
-            [3n, 1n],
-            [4n, 1n],
-            [5n, 1n],
-            [6n, 1n],
-            [7n, 1n],
-          ]),
-        );
+          expect(finalMapping).toEqual(
+            new Map([
+              [1, 1],
+              [2, 1],
+              [3, 1],
+              [4, 1],
+              [5, 1],
+              [6, 1],
+              [7, 1],
+            ]),
+          );
+        });
+
+        await task.toPromise();
       });
-
-      await task.toPromise();
-    });
-  });
+    },
+  );
 
   it("should not merge two agglomerate trees if interfering merge makes it a no-op.", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
@@ -257,13 +257,13 @@ describe("Proofreading (With Agglomerate Tree interactions)", () => {
 
       expect(finalMapping).toEqual(
         new Map([
-          [1n, 1n],
-          [2n, 1n],
-          [3n, 1n],
-          [4n, 1n],
-          [5n, 1n],
-          [6n, 6n],
-          [7n, 6n],
+          [1, 1],
+          [2, 1],
+          [3, 1],
+          [4, 1],
+          [5, 1],
+          [6, 6],
+          [7, 6],
         ]),
       );
     });
@@ -317,13 +317,13 @@ describe("Proofreading (With Agglomerate Tree interactions)", () => {
 
       expect(finalMapping).toEqual(
         new Map([
-          [1n, 1n],
-          [2n, 1339n],
-          [3n, 1340n],
-          [4n, 4n],
-          [5n, 4n],
-          [6n, 6n],
-          [7n, 6n],
+          [1, 1],
+          [2, 1339],
+          [3, 1340],
+          [4, 4],
+          [5, 4],
+          [6, 6],
+          [7, 6],
         ]),
       );
     });
@@ -374,13 +374,13 @@ describe("Proofreading (With Agglomerate Tree interactions)", () => {
       // Agglomerate 1 and 6 were merged and then split between segment 2 and 3.
       expect(finalMapping).toEqual(
         new Map([
-          [1n, 1n],
-          [2n, 1n],
-          [3n, 1339n],
-          [4n, 4n],
-          [5n, 4n],
-          [6n, 1339n],
-          [7n, 1339n],
+          [1, 1],
+          [2, 1],
+          [3, 1339],
+          [4, 4],
+          [5, 4],
+          [6, 1339],
+          [7, 1339],
         ]),
       );
     });
@@ -436,13 +436,13 @@ describe("Proofreading (With Agglomerate Tree interactions)", () => {
       // Agglomerate 1 was split twice between 2 and 3.
       expect(finalMapping).toEqual(
         new Map([
-          [1n, 1339n],
-          [2n, 1339n],
-          [3n, 1n],
-          [4n, 4n],
-          [5n, 4n],
-          [6n, 6n],
-          [7n, 6n],
+          [1, 1339],
+          [2, 1339],
+          [3, 1],
+          [4, 4],
+          [5, 4],
+          [6, 6],
+          [7, 6],
         ]),
       );
     });
@@ -508,13 +508,13 @@ describe("Proofreading (With Agglomerate Tree interactions)", () => {
       // Agglomerate 4 and 6 were merged and then agglomerate 1 was split between segment 2 and 3.
       expect(finalMapping).toEqual(
         new Map([
-          [1n, 1339n],
-          [2n, 1339n],
-          [3n, 1n],
-          [4n, 4n],
-          [5n, 4n],
-          [6n, 4n],
-          [7n, 4n],
+          [1, 1339],
+          [2, 1339],
+          [3, 1],
+          [4, 4],
+          [5, 4],
+          [6, 4],
+          [7, 4],
         ]),
       );
     });
@@ -579,13 +579,13 @@ describe("Proofreading (With Agglomerate Tree interactions)", () => {
       // Agglomerate 1 and 6 were merged and then split between segment 2 and 3.
       expect(finalMapping).toEqual(
         new Map([
-          [1n, 1339n],
-          [2n, 1339n],
-          [3n, 1n],
-          [4n, 1n],
-          [5n, 1n],
-          [6n, 6n],
-          [7n, 6n],
+          [1, 1339],
+          [2, 1339],
+          [3, 1],
+          [4, 1],
+          [5, 1],
+          [6, 6],
+          [7, 6],
         ]),
       );
     });
@@ -688,13 +688,13 @@ describe("Proofreading (With Agglomerate Tree interactions)", () => {
       // Agglomerate 1 and 6 were merged and then split between segment 2 and 3.
       expect(finalMapping).toEqual(
         new Map([
-          [1n, 1n],
-          [2n, 1n],
-          [3n, 1n],
-          [4n, 4n],
-          [5n, 4n],
-          [6n, 6n],
-          [7n, 6n],
+          [1, 1],
+          [2, 1],
+          [3, 1],
+          [4, 4],
+          [5, 4],
+          [6, 6],
+          [7, 6],
         ]),
       );
     });

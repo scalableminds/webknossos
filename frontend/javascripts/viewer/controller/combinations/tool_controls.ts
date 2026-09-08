@@ -163,7 +163,7 @@ export class MoveToolController extends ToolController {
       scroll: (delta: number, type: ModifierKeys | null | undefined) => {
         switch (type) {
           case null: {
-            moveW(delta, true);
+            moveW(delta, true, false, true);
             break;
           }
 
@@ -1427,7 +1427,7 @@ export class ProofreadToolController extends ToolController {
         // No valid ids were found, ignore action.
         return;
       }
-      const partition = event.shiftKey ? 2 : 1;
+      const partition = event.shiftKey ? "partitionB" : "partitionA";
       Store.dispatch(toggleSegmentInPartitionAction(unmappedSegmentId, partition, mappedSegmentId));
       return;
     }

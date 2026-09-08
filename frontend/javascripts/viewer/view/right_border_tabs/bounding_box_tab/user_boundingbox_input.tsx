@@ -16,10 +16,8 @@ import { numberArrayToVector6, stringToNumberArray } from "libs/utils";
 import messages from "messages";
 import { useEffect, useState } from "react";
 import type { Vector3, Vector6 } from "viewer/constants";
-import {
-  getDatasetBoundingBox,
-  getVisibleSegmentationLayer,
-} from "viewer/model/accessors/dataset_accessor";
+import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
+import { getTransformedDatasetBoundingBox } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { api } from "viewer/singletons";
 import ButtonComponent from "../../components/button_component";
 import ColorSetting from "../../left_border_tabs/components/color_setting";
@@ -102,7 +100,12 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
   const [name, setName] = useState(propName);
 
   const visibleSegmentationLayer = useWkSelector((state) => getVisibleSegmentationLayer(state));
-  const datasetBoundingBox = useWkSelector((state) => getDatasetBoundingBox(state.dataset));
+  const datasetBoundingBox = useWkSelector((state) =>
+    getTransformedDatasetBoundingBox(
+      state.dataset,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    ),
+  );
   const mipContextMenuItems = useMipContextMenuItems(bboxId, propValue, onHideContextMenu);
 
   useEffect(() => {

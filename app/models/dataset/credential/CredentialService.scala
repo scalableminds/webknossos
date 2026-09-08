@@ -7,7 +7,8 @@ import com.scalableminds.webknossos.datastore.storage.{
   DataVaultCredential,
   GoogleServiceAccountCredential,
   HttpBasicAuthCredential,
-  S3AccessKeyCredential
+  S3AccessKeyCredential,
+  XAuthTokenCredential
 }
 import play.api.libs.json.JsValue
 
@@ -26,15 +27,22 @@ class CredentialService @Inject() (credentialDAO: CredentialDAO) {
   ): Option[DataVaultCredential] =
     uri.getScheme match {
       case PathSchemes.schemeHttps | PathSchemes.schemeHttp =>
-        credentialIdentifier.map(username =>
-          HttpBasicAuthCredential(
-            uri.toString,
-            username,
-            credentialSecret.getOrElse(""),
-            userId.map(_.toString),
-            organizationId
-          )
-        )
+        credentialIdentifier.filter(_.nonEmpty) match {
+          case Some(username) =>
+            Some(
+              HttpBasicAuthCredential(
+                uri.toString,
+                username,
+                credentialSecret.getOrElse(""),
+                userId.map(_.toString),
+                organizationId
+              )
+            )
+          case None =>
+            credentialSecret.map(tokenValue =>
+              XAuthTokenCredential(uri.toString, tokenValue, userId.map(_.toString), organizationId)
+            )
+        }
       case PathSchemes.schemeS3 =>
         (credentialIdentifier, credentialSecret) match {
           case (Some(keyId), Some(secretKey)) =>
@@ -57,6 +65,7 @@ class CredentialService @Inject() (credentialDAO: CredentialDAO) {
         case c: HttpBasicAuthCredential        => credentialDAO.insertOne(_id, c)
         case c: S3AccessKeyCredential          => credentialDAO.insertOne(_id, c)
         case c: GoogleServiceAccountCredential => credentialDAO.insertOne(_id, c)
+        case c: XAuthTokenCredential           => credentialDAO.insertOne(_id, c)
         case _                                 => Fox.failure("Unknown credential type")
       }
     } yield _id

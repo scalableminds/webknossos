@@ -22,6 +22,7 @@ import keyBy from "lodash-es/keyBy";
 import uniq from "lodash-es/uniq";
 import { useEffect, useState } from "react";
 import type { APIDatasetCompact, Folder } from "types/api_types";
+import Constants from "viewer/constants";
 import {
   DatasetExtentRow,
   OwningOrganizationRow,
@@ -67,7 +68,9 @@ export function DetailsSidebar({
   }, [selectedDatasets, context.activeFolderId]);
 
   return (
-    <div style={{ width: 300, padding: 16 }}>
+    <div
+      style={{ width: 300, padding: 16, position: "sticky", top: Constants.DEFAULT_NAVBAR_HEIGHT }}
+    >
       {selectedDatasets.length === 1 ? (
         <DatasetDetails selectedDataset={selectedDatasets[0]} />
       ) : selectedDatasets.length > 1 ? (

@@ -17,7 +17,7 @@ import com.scalableminds.webknossos.datastore.models.{
   VoxelSize,
   WebknossosAdHocMeshRequest
 }
-import com.scalableminds.webknossos.datastore.services.mesh.{FullMeshHelper, FullMeshRequest}
+import com.scalableminds.webknossos.datastore.services.mesh.{FullMeshHelper, FullMeshRequest, MappingType}
 import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.scalableminds.webknossos.tracingstore.tracings.FallbackDataHelper
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
@@ -66,7 +66,7 @@ class TSFullMeshService @Inject() (
             mappingName = baseMappingName,
             editableMappingTracingId = Some(tracingId),
             annotationVersion = fullMeshRequest.annotationVersion.orElse(Some(tracing.version)),
-            mappingType = Some("HDF5")
+            mappingType = Some(MappingType.AGGLOMERATE)
           )
         else fullMeshRequest
       array <- remoteDatastoreClient.loadFullMeshStl(remoteFallbackLayer, fullMeshRequestAdapted)

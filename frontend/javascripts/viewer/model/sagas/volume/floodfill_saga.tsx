@@ -12,7 +12,8 @@ import type { FillMode, LabeledVoxelsMap, OrthoView, Vector2, Vector3 } from "vi
 import Constants, { FillModeEnum, Unicode } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
-import { getDatasetBoundingBox, getMagInfo } from "viewer/model/accessors/dataset_accessor";
+import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
+import { getTransformedDatasetBoundingBox } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getDisabledInfoForTools } from "viewer/model/accessors/disabled_tool_accessor";
 import { getActiveMagIndexForLayer } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool, Toolkit } from "viewer/model/accessors/tool_accessor";
@@ -120,7 +121,12 @@ function* getBoundingBoxForFloodFillWhenUnrestricted(
     currentViewportBounding.max[thirdDimension] = position[thirdDimension] + numberOfSlices;
   }
 
-  const datasetBoundingBox = yield* select((state) => getDatasetBoundingBox(state.dataset));
+  const datasetBoundingBox = yield* select((state) =>
+    getTransformedDatasetBoundingBox(
+      state.dataset,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    ),
+  );
   const { min: clippedMin, max: clippedMax } = new BoundingBox(
     currentViewportBounding,
   ).intersectedWith(datasetBoundingBox);

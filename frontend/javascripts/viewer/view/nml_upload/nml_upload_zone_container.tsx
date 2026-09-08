@@ -17,7 +17,7 @@ const EMPTY_TREE_GROUPS: TreeGroup[] = [];
 
 /** The destination the user picked in the import modal. */
 export type NmlImportOptions = {
-  createGroupForEachFile: boolean; // Wether to wrap each file's trees in a new group.
+  createGroupForEachFile: boolean; // Whether to wrap each file's trees in a new group.
   targetGroupId: number;
   newGroupName?: string; // If createGroupForEachFile is set -> the name of the wrapping group.
 };

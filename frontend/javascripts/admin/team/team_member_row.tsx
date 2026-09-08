@@ -1,5 +1,6 @@
 import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
 import { useQueryClient } from "@tanstack/react-query";
+import { unwrapOrThrow } from "admin/api/api_result";
 import { updateUser } from "admin/rest_api";
 import { Button, Select, Tag, Tooltip } from "antd";
 import { Flex } from "antd/lib";
@@ -67,7 +68,7 @@ export function TeamMembersRow({ team, users }: { team: APITeam; users: APIUser[
 
   async function updateTeamMembership(user: APIUser, newTeams: APITeamMembership[]) {
     try {
-      await updateUser({ ...user, teams: newTeams });
+      unwrapOrThrow(await updateUser({ ...user, teams: newTeams }));
       await queryClient.invalidateQueries({ queryKey: ["editableUsers"] });
     } catch (error) {
       handleGenericError(error as Error);

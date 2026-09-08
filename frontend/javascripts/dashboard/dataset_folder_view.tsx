@@ -231,7 +231,6 @@ function DatasetFolderViewInner(props: Props) {
       <div
         style={{
           gridColumn: "3 / 4",
-          overflow: "auto",
           borderLeft: "1px solid var(--ant-color-border)",
           marginLeft: 4,
         }}

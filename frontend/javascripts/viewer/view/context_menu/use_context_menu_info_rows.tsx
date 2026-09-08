@@ -24,7 +24,7 @@ import type { ContextMenuInfo } from "viewer/store";
 import Store from "viewer/store";
 import { CopyIconWithTooltip } from "./copy_icon_with_tooltip";
 import { getInfoMenuItem, positionToString } from "./helpers";
-import { useSegmentStatistics } from "./use_segment_statistics";
+import { useSegmentStatisticsLabels } from "./use_segment_statistics_labels";
 
 export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAtPosition: bigint) {
   const {
@@ -66,8 +66,11 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
     segmentVolumeLabel,
     boundingBoxInfoLabel,
     segmentSurfaceAreaLabel,
-    isSegmentIndexAvailable,
-  } = useSegmentStatistics(
+    areSegmentStatisticsAvailable,
+    isBoundingBoxAvailable,
+    isVolumeAvailable,
+    isSurfaceAreaAvailable,
+  } = useSegmentStatisticsLabels(
     clickedSegmentOrMeshId,
     segmentStatsTriggerDate,
     contextMenuPosition,
@@ -117,8 +120,9 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
 
   const infoRows: ItemType[] = [];
 
-  const areSegmentStatisticsAvailable = wasSegmentOrMeshClicked && isSegmentIndexAvailable;
-  if (areSegmentStatisticsAvailable) {
+  const isSegmentActionAndAreStatisticsAvailable =
+    wasSegmentOrMeshClicked && areSegmentStatisticsAvailable;
+  if (isSegmentActionAndAreStatisticsAvailable) {
     infoRows.push({
       key: "load-stats",
       icon: <BarChartOutlined />,
@@ -214,42 +218,50 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
     }
   }
 
-  if (areSegmentStatisticsAvailable && segmentStatsTriggerDate != null) {
-    infoRows.push(
-      getInfoMenuItem(
-        "surfaceInfo",
-        <Space size="small">
-          <i>m²</i>
-          {`Surface Area: ${segmentSurfaceAreaLabel}`}
-          <CopyIconWithTooltip value={segmentSurfaceAreaLabel} label="surface area" />
-        </Space>,
-      ),
-    );
+  if (isSegmentActionAndAreStatisticsAvailable && segmentStatsTriggerDate != null) {
+    // Each statistic is only shown when this layer can actually answer it — otherwise the row would
+    // be permanently stuck on an error message.
+    if (isSurfaceAreaAvailable) {
+      infoRows.push(
+        getInfoMenuItem(
+          "surfaceInfo",
+          <Space size="small">
+            <i>m²</i>
+            {`Surface Area: ${segmentSurfaceAreaLabel}`}
+            <CopyIconWithTooltip value={segmentSurfaceAreaLabel} label="surface area" />
+          </Space>,
+        ),
+      );
+    }
 
-    infoRows.push(
-      getInfoMenuItem(
-        "volumeInfo",
-        <Space size="small">
-          <i>m³</i>
-          {`Volume: ${segmentVolumeLabel}`}
-          <CopyIconWithTooltip value={segmentVolumeLabel} label="segment volume" />
-        </Space>,
-      ),
-    );
+    if (isVolumeAvailable) {
+      infoRows.push(
+        getInfoMenuItem(
+          "volumeInfo",
+          <Space size="small">
+            <i>m³</i>
+            {`Volume: ${segmentVolumeLabel}`}
+            <CopyIconWithTooltip value={segmentVolumeLabel} label="segment volume" />
+          </Space>,
+        ),
+      );
+    }
 
-    infoRows.push(
-      getInfoMenuItem(
-        "boundingBoxPositionInfo",
-        <Space size="small">
-          <Icon component={BoundingBoxIcon} />
-          {`Bounding Box: ${boundingBoxInfoLabel}`}
-          <CopyIconWithTooltip
-            value={boundingBoxInfoLabel}
-            label="Bbox top left point and extent"
-          />
-        </Space>,
-      ),
-    );
+    if (isBoundingBoxAvailable) {
+      infoRows.push(
+        getInfoMenuItem(
+          "boundingBoxPositionInfo",
+          <Space size="small">
+            <Icon component={BoundingBoxIcon} />
+            {`Bounding Box: ${boundingBoxInfoLabel}`}
+            <CopyIconWithTooltip
+              value={boundingBoxInfoLabel}
+              label="Bbox top left point and extent"
+            />
+          </Space>,
+        ),
+      );
+    }
   }
 
   if (infoRows.length > 0) {

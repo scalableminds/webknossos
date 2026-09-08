@@ -17,7 +17,7 @@ type UserScriptsModalViewProps = {
   isOpen: boolean;
 };
 
-const _UserScriptsModalView: React.FC<UserScriptsModalViewProps> = ({ onOK, isOpen }) => {
+const UserScriptsModalViewInner: React.FC<UserScriptsModalViewProps> = ({ onOK, isOpen }) => {
   const { modal } = App.useApp();
   const [code, setCode] = useState("");
   const [isCodeChanged, setIsCodeChanged] = useState(false);
@@ -116,6 +116,6 @@ const _UserScriptsModalView: React.FC<UserScriptsModalViewProps> = ({ onOK, isOp
   );
 };
 
-const UserScriptsModalView = makeComponentLazy(memo(_UserScriptsModalView));
+const UserScriptsModalView = makeComponentLazy(memo(UserScriptsModalViewInner));
 
 export default UserScriptsModalView;

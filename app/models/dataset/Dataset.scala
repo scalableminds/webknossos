@@ -6,7 +6,7 @@ import com.scalableminds.util.box.{Box, Full}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
@@ -109,12 +109,8 @@ case class DatasetCompactInfo(
     colorLayerNames: List[String],
     segmentationLayerNames: List[String],
     usedStorageBytes: Long
-) {
+) derives JsonAutoFormat {
   def dataSourceId = new DataSourceId(directoryName, owningOrganization)
-}
-
-object DatasetCompactInfo {
-  implicit val jsonFormat: Format[DatasetCompactInfo] = Json.format[DatasetCompactInfo]
 }
 
 trait DatasetDAOLike {
@@ -204,9 +200,12 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
   }
 
   override def readAccessQ(requestingUserId: ObjectId): SqlToken =
-    q"""isPublic
+    readAccessQWithPrefix(requestingUserId, q"")
+
+  def readAccessQWithPrefix(requestingUserId: ObjectId, prefix: SqlToken): SqlToken =
+    q"""${prefix}isPublic
         OR ( -- user is matching orga admin or dataset manager
-          _organization IN (
+          ${prefix}_organization IN (
             SELECT _organization
             FROM webknossos.users_
             WHERE _id = $requestingUserId
@@ -214,7 +213,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
           )
         )
         OR ( -- user is in a team that is allowed for the dataset
-          _id IN (
+          ${prefix}_id IN (
             SELECT _dataset
             FROM webknossos.dataset_allowedTeams dt
             JOIN webknossos.user_team_roles utr ON dt._team = utr._team
@@ -222,7 +221,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
           )
         )
         OR ( -- user is in a team that is allowed for the folder or its ancestors
-          _folder IN (
+          ${prefix}_folder IN (
             SELECT fp._descendant
             FROM webknossos.folder_paths fp
             WHERE fp._ancestor IN (
@@ -1388,12 +1387,16 @@ class DatasetLayerAttachmentDAO @Inject() (sqlClient: SqlClient)(implicit ec: Ex
       cumsumFiles <- Fox.serialCombined(rows.filter(_.`type` == LayerAttachmentType.cumsum.toString))(
         parseAttachmentRow(_, useRealPaths)
       )
+      segmentStatisticsFiles <- Fox.serialCombined(
+        rows.filter(_.`type` == LayerAttachmentType.segmentStatistics.toString)
+      )(parseAttachmentRow(_, useRealPaths))
     } yield AttachmentWrapper(
       agglomerates = agglomerateFiles,
       connectomes = connectomeFiles,
       segmentIndex = segmentIndexFiles.headOption,
       meshes = meshFiles,
-      cumsum = cumsumFiles.headOption
+      cumsum = cumsumFiles.headOption,
+      segmentStatistics = segmentStatisticsFiles.headOption
     )
 
   def findAllForDatasetAndDataLayerName(
@@ -1437,6 +1440,8 @@ class DatasetLayerAttachmentDAO @Inject() (sqlClient: SqlClient)(implicit ec: Ex
             insertQuery(mesh, layer.name, LayerAttachmentType.mesh)
           } ++ attachments.cumsum.map { cumsumFile =>
             insertQuery(cumsumFile, layer.name, LayerAttachmentType.cumsum)
+          } ++ attachments.segmentStatistics.map { segmentStatistics =>
+            insertQuery(segmentStatistics, layer.name, LayerAttachmentType.segmentStatistics)
           }
         case None =>
           List.empty

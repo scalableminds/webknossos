@@ -1,3 +1,4 @@
+import { unwrapOrThrow } from "admin/api/api_result";
 import { cachedGetPricingPlanStatus } from "admin/api/organization";
 import { PlanAboutToExceedAlert, PlanExceededAlert } from "admin/organization/organization_cards";
 import { getUser, updateNovelUserExperienceInfos } from "admin/rest_api";
@@ -114,7 +115,9 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
 
   async fetchData(): Promise<void> {
     const user =
-      this.props.userId != null ? await getUser(this.props.userId) : this.props.activeUser;
+      this.props.userId != null
+        ? unwrapOrThrow(await getUser(this.props.userId))
+        : this.props.activeUser;
 
     // Use a cached version of this route to avoid that a tab switch in the dashboard
     // causes a whole-page spinner. Since the different tabs are controlled by the

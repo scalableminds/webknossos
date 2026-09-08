@@ -9,7 +9,7 @@
     "url": "git://github.com/scalableminds/webknossos.git"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.3.13",
+    "@biomejs/biome": "^2.5.8",
     "@redux-saga/testing-utils": "^1.1.5",
     "@rolldown/plugin-babel": "^0.2.3",
     "@shaderfrog/glsl-parser": "^0.3.0",
@@ -99,7 +99,7 @@
     "check-untyped-saga-selects": "./tools/check-no-untyped-select-imports.js",
     "check-untyped-use-selector": "./tools/check-no-untyped-use-selector-imports.js",
     "check-bare-dynamic-imports": "./tools/check-no-bare-dynamic-imports.js",
-    "check-frontend": "yarn run biome check --diagnostic-level=error --max-diagnostics 50 frontend package.json && tools/assert-no-test-only.sh && yarn check-untyped-saga-selects && yarn check-untyped-use-selector && yarn check-bare-dynamic-imports",
+    "check-frontend": "yarn run biome check --reporter=concise --diagnostic-level=error --max-diagnostics 50 frontend package.json && tools/assert-no-test-only.sh && yarn check-untyped-saga-selects && yarn check-untyped-use-selector && yarn check-bare-dynamic-imports",
     "fix-frontend": "yarn run biome check --diagnostic-level=error --max-diagnostics 50 frontend package.json --write && echo Please proofread the applied suggestions, as they may not be safe.",
     "fix-backend": "sbt --client \";scalafmt; Test/scalafmt; util/scalafmt; webknossosTracingstore/scalafmt; webknossosDatastore/scalafmt; webknossosSlickCodegen/scalafmt; scalafix ; Test/scalafix ; util/scalafix ; webknossosTracingstore/scalafix ; webknossosDatastore/scalafix ; webknossosSlickCodegen/scalafix \"",
     "licenses-backend": "sbt --client dumpLicenseReport",

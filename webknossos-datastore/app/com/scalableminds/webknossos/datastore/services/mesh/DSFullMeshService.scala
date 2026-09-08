@@ -7,7 +7,7 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, SegmentationLayer, UsableDataSource}
@@ -19,7 +19,6 @@ import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.webknossos.datastore.services.mapping.MappingService
 import com.scalableminds.webknossos.datastore.services.segmentindex.SegmentIndexFileService
-import play.api.libs.json.{Json, OFormat}
 
 import scala.concurrent.ExecutionContext
 
@@ -28,17 +27,14 @@ case class FullMeshRequest(
     lod: Option[Int],
     segmentId: UnsignedLong, // if mappingName is set, this is an agglomerate id
     mappingName: Option[String],
-    mappingType: Option[String], // json, agglomerate, editableMapping
+    // An editable mapping is signaled via editableMappingTracingId below, not via mappingType (which stays AGGLOMERATE for it).
+    mappingType: Option[MappingType.Value],
     editableMappingTracingId: Option[String],
     annotationVersion: Option[Long],
     mag: Option[Vec3Int], // required for ad-hoc meshing
     seedPosition: Option[Vec3Int], // required for ad-hoc meshing
     additionalCoordinates: Option[Seq[AdditionalCoordinate]]
-)
-
-object FullMeshRequest {
-  implicit val jsonFormat: OFormat[FullMeshRequest] = Json.format[FullMeshRequest]
-}
+) derives JsonAutoFormat
 
 class DSFullMeshService @Inject() (
     meshFileService: MeshFileService,

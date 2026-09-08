@@ -140,7 +140,7 @@ class AbstractTreeRenderer {
    * @param  {Number} @activeNodeId node id
    */
 
-  // biome-ignore lint/suspicious/useAdjacentOverloadSignatures: Careful, there is a static drawTree() method as well.
+  // Careful, there is a static drawTree() method as well.
   drawTree(tree: Tree, activeNodeId: number) {
     let root;
     this.tree = tree;

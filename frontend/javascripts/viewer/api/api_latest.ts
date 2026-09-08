@@ -31,6 +31,7 @@ import type {
   BucketAddress,
   ControlMode,
   LabeledVoxelsMap,
+  MappingType,
   OrthoView,
   TypedArray,
   Vector3,
@@ -40,6 +41,7 @@ import Constants, {
   ControlModeEnum,
   EMPTY_OBJECT,
   MappingStatusEnum,
+  normalizeMappingType,
   OrthoViews,
   TDViewDisplayModeEnum,
 } from "viewer/constants";
@@ -188,7 +190,6 @@ import { api, Model } from "viewer/singletons";
 import type {
   DatasetConfiguration,
   Mapping,
-  MappingType,
   NumberLike,
   Segment,
   SegmentGroup,
@@ -1848,7 +1849,15 @@ class DataApi {
       throw new Error(messages["mapping.unsupported_layer"]);
     }
 
-    Store.dispatch(setMappingAction(effectiveLayerName, mappingName, mappingType, false));
+    Store.dispatch(
+      setMappingAction(
+        effectiveLayerName,
+        mappingName,
+        // User scripts written before the rename can still pass "HDF5".
+        normalizeMappingType(mappingType),
+        false,
+      ),
+    );
   }
 
   /**

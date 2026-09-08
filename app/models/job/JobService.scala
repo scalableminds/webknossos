@@ -5,7 +5,7 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.box.Full
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.webknossos.datastore.models.VoxelSize
-import models.dataset.{Dataset, DatasetDAO}
+import models.dataset.{Dataset, DatasetDAO, DataStoreDAO, WKRemoteDataStoreClient}
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
@@ -17,6 +17,7 @@ import models.job.JobCommand.JobCommand
 import models.organization.{CreditTransactionService, OrganizationDAO, OrganizationService}
 import models.user.{MultiUserDAO, User, UserDAO, UserService}
 import com.scalableminds.webknossos.datastore.helpers.UPath
+import com.scalableminds.webknossos.datastore.rpc.RPC
 import org.apache.pekko.actor.ActorSystem
 import play.api.http.Status.FORBIDDEN
 import play.api.libs.json.{JsObject, JsValue, Json}
@@ -43,7 +44,9 @@ class JobService @Inject() (
     userService: UserService,
     creditTransactionService: CreditTransactionService,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-    slackNotificationService: SlackNotificationService
+    slackNotificationService: SlackNotificationService,
+    dataStoreDAO: DataStoreDAO,
+    rpc: RPC
 )(implicit ec: ExecutionContext)
     extends LazyLogging
     with Formatter {
@@ -170,9 +173,13 @@ class JobService @Inject() (
     for {
       multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
       datasetName = job.datasetName.getOrElse("")
+      errorMessage = job.latestRunErrorDetails
+        .flatMap(details => (details \ "message").asOpt[String])
+        .map(_.trim)
+        .filter(_.nonEmpty)
       emailTemplate = job.command match {
-        case JobCommand.convert_to_wkw => defaultMails.jobFailedUploadConvertMail(multiUser, datasetName)
-        case _ => defaultMails.jobFailedGenericMail(multiUser, datasetName, job.command.toString)
+        case JobCommand.convert_to_wkw => defaultMails.jobFailedUploadConvertMail(multiUser, datasetName, errorMessage)
+        case _ => defaultMails.jobFailedGenericMail(multiUser, datasetName, job.command.toString, errorMessage)
       }
       _ = Mailer ! Send(emailTemplate)
     } yield ()
@@ -188,10 +195,26 @@ class JobService @Inject() (
         organizationId <- commandArgs.get("organization_id").map(_.as[String]).toFox
         dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(datasetDirectoryName, organizationId)(using
           GlobalAccessContext
-        )
-        _ <- datasetDAO.deleteDataset(dataset._id)
+        ) ?~> Msg.Dataset.notFound(datasetDirectoryName)
+        _ <- datasetDAO.deleteDataset(dataset._id) ?~> Msg.Dataset.deleteFromDbFailed
       } yield ()
     } else Fox.successful(())
+
+  def cleanUpUploadFilesIfNeeded(jobBeforeChange: Job, jobAfterChange: Job): Unit = {
+    val jobJustEnded =
+      jobBeforeChange.state != jobAfterChange.state &&
+        Set(JobState.SUCCESS, JobState.FAILURE, JobState.CANCELLED).contains(jobAfterChange.state)
+    Fox.runIf(jobAfterChange.command == JobCommand.convert_to_wkw && jobJustEnded) {
+      for {
+        commandArgs = jobAfterChange.args.value
+        organizationId <- commandArgs.get("organization_id").map(_.as[String]).toFox
+        directoryName <- commandArgs.get("dataset_directory_name").map(_.as[String]).toFox
+        dataStore <- dataStoreDAO.findOneByName(jobAfterChange._dataStore)(using GlobalAccessContext)
+        remoteClient = new WKRemoteDataStoreClient(dataStore, rpc)
+        _ <- remoteClient.cleanUpUploadFiles(organizationId, directoryName, jobAfterChange._id.id)
+      } yield ()
+    }
+  }
 
   def publicWrites(job: Job)(using ctx: DBAccessContext): Fox[JsValue] =
     for {
@@ -209,6 +232,7 @@ class JobService @Inject() (
         ownerEmail = ownerMultiUser.email,
         args = job.args - "webknossos_token" - "user_auth_token",
         state = job.effectiveState,
+        errorDetails = job.latestRunErrorDetails,
         returnValue = job.returnValue,
         resultLink = job.constructResultLink(organization._id),
         voxelyticsWorkflowHash = job._voxelyticsWorkflowHash,

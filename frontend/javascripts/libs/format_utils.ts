@@ -11,6 +11,7 @@ import utc from "dayjs/plugin/utc";
 import weekday from "dayjs/plugin/weekday";
 import memoize from "lodash-es/memoize";
 import type { VoxelSize, WkLibsNdBoundingBox } from "types/api_types";
+import type { BoundingBoxObject } from "types/bounding_box";
 import {
   LongUnitToShortUnitMap,
   Unicode,
@@ -18,7 +19,6 @@ import {
   type Vector3,
   type Vector6,
 } from "viewer/constants";
-import type { BoundingBoxObject } from "viewer/store";
 import { map3, roundTo } from "./utils";
 
 dayjs.extend(updateLocale);

@@ -449,10 +449,10 @@ export const CommandPalette = () => {
 
   const [commands, setCommands] = useState<CommandWithoutId[]>(allStaticCommands);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: rerun when inputs that the
-  // static commands close over change. userConfig is included so the "Toggle …" commands
-  // capture the current boolean value and actually flip it instead of repeatedly applying
-  // the value that was current when the palette mounted.
+  // Rerun when inputs that the static commands close over change. userConfig is included so
+  // the "Toggle …" commands capture the current boolean value and actually flip it instead of
+  // repeatedly applying the value that was current when the palette mounted.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: see comment above
   useEffect(() => {
     setCommands(allStaticCommands);
   }, [allowUpdate, userConfig]);

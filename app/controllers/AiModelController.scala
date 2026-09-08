@@ -3,14 +3,14 @@ package controllers
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
 import models.aimodels.{AiInference, AiInferenceDAO, AiInferenceService, AiModel, AiModelDAO, AiModelService}
 import models.annotation.AnnotationDAO
 import models.dataset.{DataStoreDAO, DatasetDAO, DatasetService, UploadToPathsService}
 import models.job.{JobCommand, JobService}
 import models.user.User
-import play.api.libs.json.{JsObject, Json, OFormat}
+import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import play.silhouette.api.Silhouette
 import security.WkEnv
@@ -28,11 +28,7 @@ case class TrainingAnnotationSpecification(
     colorLayerName: String,
     segmentationLayerName: String,
     mag: Vec3Int
-)
-
-object TrainingAnnotationSpecification {
-  implicit val jsonFormat: OFormat[TrainingAnnotationSpecification] = Json.format[TrainingAnnotationSpecification]
-}
+) derives JsonAutoFormat
 
 case class RunNeuronModelTrainingParameters(
     trainingAnnotations: List[TrainingAnnotationSpecification],
@@ -41,11 +37,7 @@ case class RunNeuronModelTrainingParameters(
     comment: Option[String],
     workflowYaml: Option[String],
     customConfiguration: Option[JsObject]
-)
-
-object RunNeuronModelTrainingParameters {
-  implicit val jsonFormat: OFormat[RunNeuronModelTrainingParameters] = Json.format[RunNeuronModelTrainingParameters]
-}
+) derives JsonAutoFormat
 
 case class RunInstanceModelTrainingParameters(
     trainingAnnotations: List[TrainingAnnotationSpecification],
@@ -55,11 +47,7 @@ case class RunInstanceModelTrainingParameters(
     comment: Option[String],
     workflowYaml: Option[String],
     customConfiguration: Option[JsObject]
-)
-
-object RunInstanceModelTrainingParameters {
-  implicit val jsonFormat: OFormat[RunInstanceModelTrainingParameters] = Json.format[RunInstanceModelTrainingParameters]
-}
+) derives JsonAutoFormat
 
 case class RunInferenceParameters(
     datasetId: ObjectId,
@@ -77,17 +65,10 @@ case class RunInferenceParameters(
     evalSparseTubeThresholdNm: Option[Double],
     evalMinMergerPathLengthNm: Option[Double],
     customConfiguration: Option[JsObject]
-)
-
-object RunInferenceParameters {
-  implicit val jsonFormat: OFormat[RunInferenceParameters] = Json.format[RunInferenceParameters]
-}
+) derives JsonAutoFormat
 
 case class UpdateAiModelParameters(name: String, comment: Option[String], sharedOrganizationIds: Option[List[String]])
-
-object UpdateAiModelParameters {
-  implicit val jsonFormat: OFormat[UpdateAiModelParameters] = Json.format[UpdateAiModelParameters]
-}
+    derives JsonAutoFormat
 
 case class ReserveAiModelUploadToPathParameters(
     existingAiModelId: Option[ObjectId], // if empty, a new model entry is generated and returned
@@ -96,12 +77,7 @@ case class ReserveAiModelUploadToPathParameters(
     comment: Option[String],
     category: Option[AiModelCategory],
     pathPrefix: Option[UPath]
-)
-
-object ReserveAiModelUploadToPathParameters {
-  implicit val jsonFormat: OFormat[ReserveAiModelUploadToPathParameters] =
-    Json.format[ReserveAiModelUploadToPathParameters]
-}
+) derives JsonAutoFormat
 
 class AiModelController @Inject() (
     aiModelDAO: AiModelDAO,

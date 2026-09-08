@@ -1,6 +1,6 @@
 package models.user
 
-import play.silhouette.api.{Identity, LoginInfo}
+import play.silhouette.api.Identity
 import com.scalableminds.util.accesscontext.*
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, JsonHelper}
@@ -26,17 +26,12 @@ import models.organization.PricingPlan
 
 import scala.concurrent.ExecutionContext
 
-object User {
-  val default_login_provider_id: String = "credentials"
-}
-
 case class User(
     _id: ObjectId,
     _multiUser: ObjectId,
     _organization: String,
     lastActivity: Instant = Instant.now,
     userConfiguration: JsObject,
-    loginInfo: LoginInfo,
     isAdmin: Boolean,
     isOrganizationOwner: Boolean,
     isDatasetManager: Boolean,
@@ -105,7 +100,6 @@ class UserDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
       r._organization,
       Instant.fromSql(r.lastactivity),
       userConfiguration,
-      LoginInfo(User.default_login_provider_id, r._id),
       r.isadmin,
       r.isorganizationowner,
       r.isdatasetmanager,

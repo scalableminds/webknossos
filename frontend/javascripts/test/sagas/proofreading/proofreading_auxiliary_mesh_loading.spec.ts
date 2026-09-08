@@ -152,66 +152,64 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       await task.toPromise();
     });
 
-    it(
-      "should reload auxiliary meshes after merge",
-      { retry: { count: 3, delay: 10 } },
-      async (context: WebknossosTestContext) => {
-        const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    it("should reload auxiliary meshes after merge", {
+      retry: { count: 3, delay: 10 },
+    }, async (context: WebknossosTestContext) => {
+      const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
-        const task = startSaga(function* task(): Saga<void> {
-          const { tracingId } = yield* select(
-            (state: WebknossosState) => state.annotation.volumes[0],
-          );
-          yield call(initializeMappingAndTool, context, tracingId);
-          if (othersMayEdit) {
-            yield put(setCollaborationModeAction(othersMayEdit ? "Concurrent" : "OwnerOnly"));
-          }
+      const task = startSaga(function* task(): Saga<void> {
+        const { tracingId } = yield* select(
+          (state: WebknossosState) => state.annotation.volumes[0],
+        );
+        yield call(initializeMappingAndTool, context, tracingId);
+        if (othersMayEdit) {
+          yield put(setCollaborationModeAction(othersMayEdit ? "Concurrent" : "OwnerOnly"));
+        }
 
-          // Set up the merge-related segment partners. Normally, this would happen
-          // due to the user's interactions.
-          yield loadAgglomerateMeshes([1, 6]);
+        // Set up the merge-related segment partners. Normally, this would happen
+        // due to the user's interactions.
+        yield loadAgglomerateMeshes([1, 6]);
 
-          yield put(
-            updateSegmentAction(1n, { anchorPosition: getPositionForSegmentId(1) }, tracingId),
-          );
-          yield put(setActiveCellAction(1n));
-          // Give mesh loading a little time
-          const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context, tracingId);
-          expect(sortBy([...loadedMeshIds])).toEqual([1n, 6n]);
-          yield loadAgglomerateMeshes([4]);
+        yield put(
+          updateSegmentAction(1n, { anchorPosition: getPositionForSegmentId(1) }, tracingId),
+        );
+        yield put(setActiveCellAction(1n));
+        // Give mesh loading a little time
+        const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context, tracingId);
+        expect(sortBy([...loadedMeshIds])).toEqual([1n, 6n]);
+        yield loadAgglomerateMeshes([4]);
 
-          const loadedMeshIds2 = getAllCurrentlyLoadedMeshIds(context, tracingId);
-          expect(sortBy([...loadedMeshIds2])).toEqual([1n, 4n, 6n]);
+        const loadedMeshIds2 = getAllCurrentlyLoadedMeshIds(context, tracingId);
+        expect(sortBy([...loadedMeshIds2])).toEqual([1n, 4n, 6n]);
 
-          // Execute the actual merge and wait for the finished mapping.
-          const meshTracker = yield* trackMeshes(context, tracingId);
-          yield put(proofreadMergeAction(getPositionForSegmentId(4), 4n));
-          yield take(operationFinished("PROOFREADING")); // operation finished
-          yield meshTracker.consumeFinishedLoadingActions(1);
+        // Execute the actual merge and wait for the finished mapping.
+        const meshTracker = yield* trackMeshes(context, tracingId);
+        yield put(proofreadMergeAction(getPositionForSegmentId(4), 4n));
+        yield take(operationFinished("PROOFREADING")); // operation finished
+        yield meshTracker.consumeFinishedLoadingActions(1);
 
-          const {
-            removedMeshes,
-            addedMeshes,
-            loadedMeshIds: loadedMeshIdsAfterMerge,
-          } = meshTracker.getMeshInfos();
-          expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1n, 6n]);
-          expect(sortBy([...removedMeshes])).toEqual([1n, 4n]);
-          expect([...addedMeshes]).toEqual([1n]);
-          yield* meshTracker.cleanUp();
-          yield expectSegmentList(tracingId, [
-            {
-              id: 1n,
-              anchorPosition: [1, 1, 1],
-            },
-            {
-              id: 6n,
-              anchorPosition: [6, 6, 6],
-            },
-          ]);
-        });
-        await task.toPromise();
-      },
-    );
+        const {
+          removedMeshes,
+          addedMeshes,
+          loadedMeshIds: loadedMeshIdsAfterMerge,
+        } = meshTracker.getMeshInfos();
+        expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1n, 6n]);
+        expect(sortBy([...removedMeshes])).toEqual([1n, 4n]);
+        expect([...addedMeshes]).toEqual([1n]);
+        yield* meshTracker.cleanUp();
+        yield expectSegmentList(tracingId, [
+          {
+            id: 1n,
+            anchorPosition: [1, 1, 1],
+          },
+          {
+            id: 6n,
+            anchorPosition: [6, 6, 6],
+          },
+        ]);
+      });
+      await task.toPromise();
+    });
 
     it("should reload auxiliary meshes after split", async (context: WebknossosTestContext) => {
       const { mocks } = context;
@@ -629,6 +627,21 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       expect(sortBy([...removedMeshes])).toEqual([1n, 1339n, 1340n]);
       expect(sortBy([...addedMeshes])).toEqual([1n, 1339n, 1340n]);
       yield* meshTracker.cleanUp();
+      const finalMapping = yield* select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+      expect(finalMapping).toEqual(
+        new Map([
+          [1, 1339],
+          [2, 1340],
+          [3, 1],
+          [4, 4],
+          [5, 4],
+          [6, 6],
+          [7, 6],
+        ]),
+      );
       yield expectSegmentList(tracingId, [
         {
           id: 1n,
@@ -673,13 +686,13 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       );
       expect(finalMapping).toEqual(
         new Map([
-          [1n, 1339n],
-          [2n, 1n],
-          [3n, 1340n],
-          [4n, 4n],
-          [5n, 4n],
-          [6n, 6n],
-          [7n, 6n],
+          [1, 1339],
+          [2, 1],
+          [3, 1340],
+          [4, 4],
+          [5, 4],
+          [6, 6],
+          [7, 6],
         ]),
       );
       yield take(
@@ -739,13 +752,13 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       );
       expect(finalMapping).toEqual(
         new Map([
-          [1n, 1n],
-          [2n, 1339n],
-          [3n, 1340n],
-          [4n, 4n],
-          [5n, 4n],
-          [6n, 6n],
-          [7n, 6n],
+          [1, 1],
+          [2, 1339],
+          [3, 1340],
+          [4, 4],
+          [5, 4],
+          [6, 6],
+          [7, 6],
         ]),
       );
       yield take(
@@ -804,13 +817,13 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       );
       expect(finalMapping).toEqual(
         new Map([
-          [1n, 1n],
-          [2n, 1n],
-          [3n, 1n],
-          [4n, 1n],
-          [5n, 1n],
-          [6n, 1n],
-          [7n, 1n],
+          [1, 1],
+          [2, 1],
+          [3, 1],
+          [4, 1],
+          [5, 1],
+          [6, 1],
+          [7, 1],
         ]),
       );
 
@@ -852,13 +865,13 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
 
       expect(finalMapping).toEqual(
         new Map([
-          [1n, 1n],
-          [2n, 1339n],
-          [3n, 1340n],
-          [4n, 4n],
-          [5n, 4n],
-          [6n, 6n],
-          [7n, 6n],
+          [1, 1],
+          [2, 1339],
+          [3, 1340],
+          [4, 4],
+          [5, 4],
+          [6, 6],
+          [7, 6],
         ]),
       );
 
@@ -926,13 +939,13 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       // Agglomerate 4 and 6 were merged and then agglomerate 1 was split between segment 2 and 3.
       expect(finalMapping).toEqual(
         new Map([
-          [1n, 1339n],
-          [2n, 1339n],
-          [3n, 1n],
-          [4n, 4n],
-          [5n, 4n],
-          [6n, 4n],
-          [7n, 4n],
+          [1, 1339],
+          [2, 1339],
+          [3, 1],
+          [4, 4],
+          [5, 4],
+          [6, 4],
+          [7, 4],
         ]),
       );
 
@@ -1055,15 +1068,15 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
 
       expect(finalMapping).toEqual(
         new Map([
-          [1n, 1n],
-          [2n, 1n],
-          [3n, 1n],
-          [4n, 1n],
-          [5n, 1n],
-          [6n, 6n],
-          [7n, 6n],
-          [1337n, 1n], // Loaded as this segment is part of a split proofreading action done in this test.
-          [1338n, 1n], // Loaded as this segment is part of a split proofreading action done in this test.
+          [1, 1],
+          [2, 1],
+          [3, 1],
+          [4, 1],
+          [5, 1],
+          [6, 6],
+          [7, 6],
+          [1337, 1], // Loaded as this segment is part of a split proofreading action done in this test.
+          [1338, 1], // Loaded as this segment is part of a split proofreading action done in this test.
         ]),
       );
 

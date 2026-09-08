@@ -11,7 +11,6 @@ import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.*
 import com.scalableminds.webknossos.datastore.datavault.{FileSystemDataVault, VaultPath}
 import com.scalableminds.webknossos.datastore.helpers.{UPath, UnsignedLong}
-import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.tracingstore.TSChunkCacheService
 import com.scalableminds.webknossos.tracingstore.annotation.UpdateAction
 import com.scalableminds.webknossos.tracingstore.files.TsTempFileService
@@ -189,26 +188,16 @@ class EditableMappingIOService @Inject() (
           includeHiddenFiles = true,
           List.empty,
           truncateCommonPrefix = false,
-          excludeFromPrefix = None
+          boundaryDirNames = None
         )
         .toFox
       unzippedVaultPath = new VaultPath(UPath.fromLocalPath(unzippedDir), FileSystemDataVault.create)
-      editedEdgesZarrArray <- Zarr3Array.open(
+      editedEdgesZarrArray <- Zarr3Array.openForAttachment(
         unzippedVaultPath / "edges/",
-        DataSourceId("dummy", "unused"),
-        "layer",
-        None,
-        None,
-        None,
         chunkCacheService.sharedChunkContentsCache
       )
-      edgeIsAdditionZarrArray <- Zarr3Array.open(
+      edgeIsAdditionZarrArray <- Zarr3Array.openForAttachment(
         unzippedVaultPath / "edgeIsAddition/",
-        DataSourceId("dummy", "unused"),
-        "layer",
-        None,
-        None,
-        None,
         chunkCacheService.sharedChunkContentsCache
       )
       numEdges <- editedEdgesZarrArray.datasetShape.flatMap(_.headOption).toFox

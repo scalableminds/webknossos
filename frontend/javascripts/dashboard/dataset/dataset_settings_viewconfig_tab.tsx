@@ -128,7 +128,7 @@ const DatasetSettingsViewConfigTabWithDataset = ({ dataset }: { dataset: APIData
     mapping: {
       shortComment: "Active Mapping",
       tooltip:
-        "The mapping whose type and name is active by default. This field is an object with the keys 'type' and 'name' like {name: 'agglomerate_65', type: 'HDF5'}.",
+        "The mapping whose type and name is active by default. This field is an object with the keys 'type' and 'name' like {name: 'agglomerate_65', type: 'AGGLOMERATE'}.",
     },
   };
   const layerViewConfigurationEntries = Object.entries({

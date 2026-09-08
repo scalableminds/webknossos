@@ -62,6 +62,18 @@ GET         /volume/zarr/:tracingId/:mag/.zarray                                
 GET         /volume/zarr/:tracingId/:mag/:coordinates                               @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.rawZarrCube(tracingId: String, mag: String, coordinates: String)
 
 # Zarr version 3
+GET         /volume/zarr3/json/:tracingId                                          @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.volumeTracingDirectoryContentJson(tracingId: String, zarrVersion: Int = 3)
+GET         /volume/zarr3/json/:tracingId/:mag                                     @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.volumeTracingMagDirectoryContentJson(tracingId: String, mag: String, zarrVersion: Int = 3)
+GET         /volume/zarr3/:tracingId                                               @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.volumeTracingDirectoryContent(tracingId: String, zarrVersion: Int = 3)
+GET         /volume/zarr3/:tracingId/                                              @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.volumeTracingDirectoryContent(tracingId: String, zarrVersion: Int = 3)
+GET         /volume/zarr3/:tracingId/zarrSource                                    @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.zarrSource(tracingId: String, tracingName: Option[String], zarrVersion: Int = 3)
+GET         /volume/zarr3/:tracingId/zarr.json                                     @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.zarrJson(tracingId: String)
+GET         /volume/zarr3/:tracingId/:mag                                          @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.volumeTracingMagDirectoryContent(tracingId: String, mag: String, zarrVersion: Int = 3)
+GET         /volume/zarr3/:tracingId/:mag/                                         @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.volumeTracingMagDirectoryContent(tracingId: String, mag: String, zarrVersion: Int = 3)
+GET         /volume/zarr3/:tracingId/:mag/zarr.json                                @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.zarrJsonForMag(tracingId: String, mag: String)
+GET         /volume/zarr3/:tracingId/:mag/:coordinates                             @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.rawZarrCube(tracingId: String, mag: String, coordinates: String)
+
+# Zarr3 routes under old “experimental” path, kept for backwards compatibility
 GET         /volume/zarr3_experimental/json/:tracingId                              @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.volumeTracingDirectoryContentJson(tracingId: String, zarrVersion: Int = 3)
 GET         /volume/zarr3_experimental/json/:tracingId/:mag                         @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.volumeTracingMagDirectoryContentJson(tracingId: String, mag: String, zarrVersion: Int = 3)
 GET         /volume/zarr3_experimental/:tracingId                                   @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.volumeTracingDirectoryContent(tracingId: String, zarrVersion: Int = 3)

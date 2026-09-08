@@ -7,6 +7,7 @@ import uniqWith from "lodash-es/uniqWith";
 import type { Writeable } from "types/type_utils";
 import {
   type ContourMode,
+  type MappingType,
   OrthoViews,
   type OrthoViewWithoutTD,
   type Vector3,
@@ -25,7 +26,6 @@ import { setDirectionReducer } from "viewer/model/reducers/flycam_reducer";
 import type {
   LabelAction,
   LocalSegmentationState,
-  MappingType,
   Segment,
   SegmentGroup,
   SegmentMap,

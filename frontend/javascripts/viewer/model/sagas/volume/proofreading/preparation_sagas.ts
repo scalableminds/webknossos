@@ -50,7 +50,7 @@ export function* createEditableMapping(ctx?: OperationContext): Saga<string> {
    */
   // Get volume tracing again to make sure the version is up to date
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
-  if (!volumeTracing || !volumeTracing.mappingName) {
+  if (!volumeTracing?.mappingName) {
     // This should never occur, because the proofreading tool is only available when a volume tracing layer is active.
     throw new Error("No active segmentation tracing layer. Cannot create editable mapping.");
   }
@@ -58,7 +58,7 @@ export function* createEditableMapping(ctx?: OperationContext): Saga<string> {
   const volumeTracingId = volumeTracing.tracingId;
   const layerName = volumeTracingId;
   const baseMappingName = volumeTracing.mappingName;
-  yield* put(setMappingNameAction(layerName, volumeTracingId, "HDF5"));
+  yield* put(setMappingNameAction(layerName, volumeTracingId, "AGGLOMERATE"));
   yield* put(setHasEditableMappingAction(volumeTracingId));
 
   // Ensure a saved state so that the mapping is locked and editable before doing the first proofreading operation.

@@ -177,85 +177,86 @@ describe("Update Action Application for SkeletonTracing", () => {
       ? [hardcodedBeforeVersionIndex]
       : range(0, userActions.length);
 
-  describe.each(
-    compactionModes,
-  )("[Compaction=%s]: should re-apply update actions from complex diff and get same state", (withCompaction) => {
-    describe.each(beforeVersionIndices)("From v=%i", (beforeVersionIndex: number) => {
-      const afterVersionIndices =
-        hardcodedAfterVersionIndex != null
-          ? [hardcodedAfterVersionIndex]
-          : range(beforeVersionIndex, userActions.length + 1);
+  describe.each(compactionModes)(
+    "[Compaction=%s]: should re-apply update actions from complex diff and get same state",
+    (withCompaction) => {
+      describe.each(beforeVersionIndices)("From v=%i", (beforeVersionIndex: number) => {
+        const afterVersionIndices =
+          hardcodedAfterVersionIndex != null
+            ? [hardcodedAfterVersionIndex]
+            : range(beforeVersionIndex, userActions.length + 1);
 
-      test.each(afterVersionIndices)("To v=%i", (afterVersionIndex: number) => {
-        const state2WithActiveTree = applyActions(
-          initialState,
-          userActions.slice(0, beforeVersionIndex),
-        );
-
-        // The active user bounding box and the active group are user-local state
-        // that is not tracked via update actions. Reset them in both state
-        // variants so that the whole-state comparison below is not affected.
-        const normalizationActions = [
-          setActiveUserBoundingBoxId(null),
-          deselectActiveTreeGroupAction(),
-        ];
-        const state2WithoutLocalState = applyActions(state2WithActiveTree, normalizationActions);
-
-        const actionsToApply = userActions.slice(beforeVersionIndex, afterVersionIndex + 1);
-        const state3 = applyActions(
-          state2WithActiveTree,
-          actionsToApply.concat(normalizationActions),
-        );
-        expect(state2WithoutLocalState !== state3).toBeTruthy();
-
-        const skeletonTracing2 = enforceSkeletonTracing(state2WithoutLocalState.annotation);
-        const skeletonTracing3 = enforceSkeletonTracing(state3.annotation);
-
-        const updateActionsBeforeCompaction = Array.from(
-          diffSkeletonTracing(skeletonTracing2, skeletonTracing3),
-        );
-        const maybeCompact = withCompaction
-          ? compactUpdateActions
-          : (updateActions: UpdateActionWithoutIsolationRequirement[]) => updateActions;
-
-        const updateActions = addMissingTimestampProp(
-          maybeCompact(updateActionsBeforeCompaction, skeletonTracing2, skeletonTracing3),
-        );
-
-        for (const action of updateActions) {
-          seenActionTypes.add(action.name);
-        }
-
-        const reappliedNewState = transformStateAsReadOnly(state2WithoutLocalState, (state) =>
-          applyActions(state, [
-            applySkeletonUpdateActionsFromServerAction(updateActions),
-            setActiveUserBoundingBoxId(null),
-          ]),
-        );
-
-        if (skeletonTracing3.activeNodeId != null) {
-          // If an active node exists, the user-local activeTreeId must be
-          // consistent with it (it is re-derived from the active node while
-          // applying an updateActiveNode action).
-          expect(reappliedNewState.localSkeletonState.activeTreeId).toBe(
-            state3.localSkeletonState.activeTreeId,
+        test.each(afterVersionIndices)("To v=%i", (afterVersionIndex: number) => {
+          const state2WithActiveTree = applyActions(
+            initialState,
+            userActions.slice(0, beforeVersionIndex),
           );
-        }
 
-        // The activeTreeId is user-local state that is not tracked via update
-        // actions. During a real rebase it is not rewound (localSkeletonState is
-        // not part of the snapshot), so it is masked in the comparison below.
-        // Without an active node that anchors it, the replay cannot (and does
-        // not need to) restore it.
-        const stateWithRevertedActiveTreeChange = update(state3, {
-          localSkeletonState: {
-            activeTreeId: { $set: reappliedNewState.localSkeletonState.activeTreeId },
-          },
+          // The active user bounding box and the active group are user-local state
+          // that is not tracked via update actions. Reset them in both state
+          // variants so that the whole-state comparison below is not affected.
+          const normalizationActions = [
+            setActiveUserBoundingBoxId(null),
+            deselectActiveTreeGroupAction(),
+          ];
+          const state2WithoutLocalState = applyActions(state2WithActiveTree, normalizationActions);
+
+          const actionsToApply = userActions.slice(beforeVersionIndex, afterVersionIndex + 1);
+          const state3 = applyActions(
+            state2WithActiveTree,
+            actionsToApply.concat(normalizationActions),
+          );
+          expect(state2WithoutLocalState !== state3).toBeTruthy();
+
+          const skeletonTracing2 = enforceSkeletonTracing(state2WithoutLocalState.annotation);
+          const skeletonTracing3 = enforceSkeletonTracing(state3.annotation);
+
+          const updateActionsBeforeCompaction = Array.from(
+            diffSkeletonTracing(skeletonTracing2, skeletonTracing3),
+          );
+          const maybeCompact = withCompaction
+            ? compactUpdateActions
+            : (updateActions: UpdateActionWithoutIsolationRequirement[]) => updateActions;
+
+          const updateActions = addMissingTimestampProp(
+            maybeCompact(updateActionsBeforeCompaction, skeletonTracing2, skeletonTracing3),
+          );
+
+          for (const action of updateActions) {
+            seenActionTypes.add(action.name);
+          }
+
+          const reappliedNewState = transformStateAsReadOnly(state2WithoutLocalState, (state) =>
+            applyActions(state, [
+              applySkeletonUpdateActionsFromServerAction(updateActions),
+              setActiveUserBoundingBoxId(null),
+            ]),
+          );
+
+          if (skeletonTracing3.activeNodeId != null) {
+            // If an active node exists, the user-local activeTreeId must be
+            // consistent with it (it is re-derived from the active node while
+            // applying an updateActiveNode action).
+            expect(reappliedNewState.localSkeletonState.activeTreeId).toBe(
+              state3.localSkeletonState.activeTreeId,
+            );
+          }
+
+          // The activeTreeId is user-local state that is not tracked via update
+          // actions. During a real rebase it is not rewound (localSkeletonState is
+          // not part of the snapshot), so it is masked in the comparison below.
+          // Without an active node that anchors it, the replay cannot (and does
+          // not need to) restore it.
+          const stateWithRevertedActiveTreeChange = update(state3, {
+            localSkeletonState: {
+              activeTreeId: { $set: reappliedNewState.localSkeletonState.activeTreeId },
+            },
+          });
+          expect(reappliedNewState).toEqual(stateWithRevertedActiveTreeChange);
         });
-        expect(reappliedNewState).toEqual(stateWithRevertedActiveTreeChange);
       });
-    });
-  });
+    },
+  );
 
   it("should clear the active node if it was deleted", () => {
     const createNode = createNodeAction(position, null, rotation, viewport, mag);

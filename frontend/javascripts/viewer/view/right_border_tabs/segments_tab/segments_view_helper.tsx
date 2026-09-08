@@ -125,7 +125,7 @@ export function withMappingActivationConfirmation(
           return;
         }
         if (mappingName != null) {
-          Store.dispatch(setMappingAction(layerName, mappingName, "HDF5", false));
+          Store.dispatch(setMappingAction(layerName, mappingName, "AGGLOMERATE", false));
           await waitForCondition(
             () =>
               getMappingInfo(

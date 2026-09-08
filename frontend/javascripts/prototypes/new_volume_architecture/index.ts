@@ -8,6 +8,13 @@
  * coordinates, no save/backend transport beyond an in-memory fake.
  */
 
+export { BucketVoxelMask } from "./bucket_voxel_mask";
+export {
+  type BucketWrite,
+  type BucketWriteMap,
+  BucketWriteMapBuilder,
+  countVoxels,
+} from "./bucket_write_map";
 export { type BackendLike, type BucketState, FakeBackend, WorkingDataCube } from "./cube";
 export {
   applyRun,
@@ -56,10 +63,3 @@ export {
   voxelOffsetInBucket,
   voxelOffsetOf,
 } from "./types";
-export { BucketVoxelMask } from "./voxel_mask";
-export {
-  type BucketWrite,
-  type BucketWriteMap,
-  BucketWriteMapBuilder,
-  countVoxels,
-} from "./write_set";

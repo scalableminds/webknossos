@@ -44,10 +44,11 @@ class DatasetArrayAxisOrderTestSuite extends AsyncWordSpec {
   "constructOffsetAndShapeArrays" should {
 
     // Repro of the "xyt" dataset from the bug report: on-disk dimension order is (x, y, z, t),
-    // with "t" a genuine additional axis declared at physical/array index 3 (i.e. after x, y, z,
-    // not before them). This is the case that exposed the bug: arrayToWkPermutation(3) happened
-    // to collide with the wk slot of "y", so every read silently used the requested t value as a
-    // y-offset instead of indexing into the t axis at all.
+    // with "t" a genuine additional axis declared at physical index 3 (i.e. after x, y, z,
+    // not before them). This is the case that exposed the bug: physicalToWkPermutation(3) (i.e.
+    // treating the physical index 3 as if it were a wk slot) happened to collide with the wk slot
+    // of "y", so every read silently used the requested t value as a y-offset instead of indexing
+    // into the t axis at all.
     "place an additional axis declared after x/y/z into its own wk slot, not into x/y/z's slot" in {
       val axisOrder = AxisOrder(x = 0, y = 1, z = Some(2))
       val additionalAxes = Some(Seq(AdditionalAxis("t", Seq(0, 101), index = 3)))
@@ -66,8 +67,8 @@ class DatasetArrayAxisOrderTestSuite extends AsyncWordSpec {
     }
 
     // Same idea, but for the channel axis: a layout where "c" is not at its usual wk-canonical
-    // position (array order x, y, c, z instead of c, x, y, z) exposes the identical bug, since
-    // axisOrder.c is a physical/array index just like AdditionalAxis.index.
+    // position (physical order x, y, c, z instead of c, x, y, z) exposes the identical bug, since
+    // axisOrder.c is a physical index just like AdditionalAxis.index.
     "place the channel axis into its own wk slot, not into x/y/z's slot" in {
       val axisOrder = AxisOrder(x = 0, y = 1, z = Some(3), c = Some(2))
       val array = arrayOf(axisOrder, channelIndex = Some(7))
@@ -85,7 +86,7 @@ class DatasetArrayAxisOrderTestSuite extends AsyncWordSpec {
     }
 
     // Control case matching the vast majority of real datasets (no additional axes, channel-first
-    // xyz layout): array and wk order coincide, so this passed even with the old, buggy code.
+    // xyz layout): physical and wk order coincide, so this passed even with the old, buggy code.
     "leave offsets untouched for a plain c,x,y,z layout with no additional axes" in {
       val axisOrder = AxisOrder.cxyz
       val array = arrayOf(axisOrder, channelIndex = Some(2))

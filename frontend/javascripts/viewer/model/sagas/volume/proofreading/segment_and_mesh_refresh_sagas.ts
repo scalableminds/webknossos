@@ -30,12 +30,7 @@ import {
   trySplitMeshLocally,
 } from "./local_mesh_change_sagas";
 import { scheduleMeshUpdate } from "./mesh_update_registry_saga";
-import type {
-  AgglomerateChangeItem,
-  IdInfo,
-  IdInfoOpt,
-  PreservedMeshDisplayProps,
-} from "./proofreading_types";
+import type { AgglomerateChangeItem, PreservedMeshDisplayProps } from "./proofreading_types";
 
 function proofreadCoarseMagIndex(): number {
   // @ts-expect-error
@@ -136,59 +131,17 @@ function* loadCoarseMesh(
   }
 }
 
-// TODO: this convenience wrapper takes exactly two named IdInfo/IdInfoOpt-shaped sides (each
-// requiring an `unmappedId`, i.e. one specific selected supervoxel) rather than a plain
-// refreshInfos array, which is a narrower type than what its two callers' actual 1:1 pairing
-// (handleProofreadMerge, handleMinCutAgglomerate in proofread_action_handler_sagas.ts) strictly
-// needs. Note that "1:1 pairing" isn't the same as "merge" here - handleMinCutAgglomerate's two
-// sides end up with the *same* old id and two *different* new ids (a genuine 2-way split), and
-// that still fits this wrapper fine, since the wrapper only cares about there being two sides, not
-// about whether their old ids happen to match.
-//
-// The other two proofreading handlers duplicate this function's exact tail
-// (updateAffectedSegmentItems -> syncWithBackend -> build a meshUpdateEffect ->
-// scheduleMeshUpdate) inline instead of using it, for two different reasons:
-// - performPartitionedMinCut is *also* just a 2-way split (one old id -> two new ids), so its
-//   refreshInfos shape would fit this wrapper perfectly - but a min-cut partition is a whole
-//   subgraph of supervoxels, not one selected node, so it has no natural `unmappedId` to put into
-//   an IdInfo for either side. It's blocked by this wrapper's parameter *type*, not by anything
-//   structural about merges vs. splits.
-// - handleProofreadCutFromNeighbors produces 1 + N items (target + however many neighbors), which
-//   can't fit a signature hardcoded to two named parameters at all, regardless of their type.
-//
-// Cleaner: change this function (or a replacement) to take an already-built refreshInfos array
-// directly, like updateAffectedSegmentItems/syncAffectedAndMaybeLoadMissingMeshes already do. Then
-// every caller can converge on one shared tail: handleProofreadMerge/handleMinCutAgglomerate build
-// their 2-item array from sourceInfo/targetInfo (trivial, same as today), performPartitionedMinCut
-// builds its 2-item array from the two partition ids/positions it already has (no IdInfo needed),
-// and handleProofreadCutFromNeighbors keeps building its N-item array as it does now - none of the
-// four call sites would need to hand-roll the tail anymore.
+// Shared tail for all four proofreading handlers (handleProofreadMerge, handleMinCutAgglomerate,
+// performPartitionedMinCut, handleProofreadCutFromNeighbors): ensure segment items exist/are
+// removed for the affected agglomerate ids, sync with the backend, and schedule a (possibly
+// locally-spliced) mesh refresh. Each caller builds its own refreshInfos array - a 2-item one for
+// the two merge/min-cut handlers, a 1+N-item one for cut-from-neighbors - since the shape differs
+// per caller, but the tail itself doesn't need to know anything about that shape.
 export function* updateProofreadingSegmentsAndScheduleSyncMeshes(
   volumeTracingId: string,
-  sourceInfo: IdInfo,
-  targetInfo: IdInfoOpt,
-  sourceAgglomerateId: bigint,
-  targetAgglomerateId: bigint,
+  refreshInfos: AgglomerateChangeItem[],
   ctx: OperationContext,
 ): Saga<void> {
-  /* Ensure segment items exist for affected segments and reload affected meshes */
-  const refreshInfos = [
-    {
-      oldAgglomerateId: sourceInfo.agglomerateId,
-      newAgglomerateId: sourceAgglomerateId,
-      nodePosition: sourceInfo.position,
-    },
-    {
-      oldAgglomerateId: targetInfo.agglomerateId,
-      newAgglomerateId: targetAgglomerateId,
-      nodePosition:
-        // targetInfo.position can only be undefined in case of
-        // a merge (see idInfos.type). In that case,
-        // this element was merged into another element.
-        // Therefore, sourceInfo.position is a valid replacement.
-        targetInfo.position ?? sourceInfo.position,
-    },
-  ];
   yield* call(updateAffectedSegmentItems, volumeTracingId, refreshInfos);
   yield* call(syncWithBackend, ctx);
 
@@ -204,14 +157,7 @@ export function* updateProofreadingSegmentsAndScheduleSyncMeshes(
   yield* call(scheduleMeshUpdate, meshUpdateEffect, volumeTracingId, refreshInfos);
 }
 
-export function* updateAffectedSegmentItems(
-  layerName: string,
-  items: Array<{
-    oldAgglomerateId?: bigint;
-    newAgglomerateId: bigint;
-    nodePosition: Vector3;
-  }>,
-) {
+export function* updateAffectedSegmentItems(layerName: string, items: AgglomerateChangeItem[]) {
   // Segmentations with more than 3 dimensions are currently not compatible
   // with proofreading. Once such datasets appear, this parameter needs to be
   // adapted.
@@ -222,7 +168,9 @@ export function* updateAffectedSegmentItems(
   const removedIds = new Set(outdatedIds).difference(
     new Set(itemsToAddOrUpdate.map((item) => item.newAgglomerateId)),
   );
-  const removeEffects = [...removedIds].map((id) => put(removeSegmentAction(id, layerName)));
+  // preserveMesh: true - the removed id is one of `items`' oldAgglomerateIds, so it's about to be
+  // handed to syncAffectedAndLoadMissingMeshes (either synced or removed).
+  const removeEffects = [...removedIds].map((id) => put(removeSegmentAction(id, layerName, true)));
   yield* all(removeEffects);
 
   const ensureSegmentItemEffects = uniqBy(items, (item) => item.newAgglomerateId).map((item) =>

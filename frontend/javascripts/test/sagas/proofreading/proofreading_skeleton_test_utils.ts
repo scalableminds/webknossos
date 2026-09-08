@@ -249,12 +249,22 @@ export function* performMergeTreesProofreading(
   context: WebknossosTestContext,
   shouldSaveAfterLoadingTrees: boolean,
   loadMeshes: boolean,
+  // Invoked right after the initial meshes are loaded (if loadMeshes is set) and before the merge
+  // itself is triggered. Lets callers register a mesh-settle listener (e.g. trackMeshes) at the
+  // one point where it won't also pick up the initial load's own settle events, and won't risk
+  // missing the merge's - which can settle via a local splice before this saga's own
+  // operationFinished wait below even returns, since scheduleMeshUpdate spawns the mesh sync
+  // detached rather than waiting for it.
+  afterLoadingMeshes?: () => Saga<void>,
 ): Saga<void> {
   const { tracingId } = yield* select((state: WebknossosState) => state.annotation.volumes[0]);
   yield call(initializeMappingAndTool, context, tracingId);
   yield* expectMapping(tracingId, initialMapping);
   if (loadMeshes) {
     yield loadInitialMeshes(context, tracingId);
+  }
+  if (afterLoadingMeshes) {
+    yield* afterLoadingMeshes();
   }
 
   // Set up the merge-related segment partners. Normally, this would happen

@@ -335,12 +335,17 @@ export const mergeSegmentItemsAction = (
 export const removeSegmentAction = (
   segmentId: bigint,
   layerName: string,
+  // When set, the segment-list entry is removed but the segment's mesh (if any) is left alone,
+  // so a subsequent syncAffectedAndLoadMissingMeshes call can try to adjust the mesh locally instead of
+  // it being disposed upfront. See handleRemoveSegment in common_mesh_saga.ts.
+  preserveMesh: boolean = false,
   timestamp: number = Date.now(),
 ) =>
   ({
     type: "REMOVE_SEGMENT",
     segmentId,
     layerName,
+    preserveMesh,
     timestamp,
   }) as const;
 

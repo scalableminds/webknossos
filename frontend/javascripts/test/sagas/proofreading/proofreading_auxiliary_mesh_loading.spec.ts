@@ -233,13 +233,12 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
           loadedMeshIds: loadedMeshIdsAfterMerge,
         } = meshTracker.getMeshInfos();
         // Agglomerate 1 and 4 were both already loaded, so the merge is spliced locally (see
-        // segment_and_mesh_refresh_sagas.ts) instead of reloading both meshes from scratch.
+        // segment_and_mesh_refresh_sagas.ts) instead of reloading both meshes from scratch. The
+        // segment-list entry for 4 is removed immediately (for save-queue purposes), but its mesh
+        // is preserved (not eagerly removed) so the splice above can reuse it - see
+        // updateAffectedSegmentItems's preserveMesh flag.
         expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1n, 6n]);
-        // Agglomerate 4's mesh gets removed by the generic post-save mesh-artifact-resolution
-        // logic (mesh_artifact_resolution_sagas.ts, unrelated to proofreading's own merge
-        // handling), which by the time it runs finds that 4's content was already relabeled onto
-        // 1 (see relabeledToIds below) - so no reload is needed for it either.
-        expect(sortBy([...removedMeshes])).toEqual([4n]);
+        expect(sortBy([...removedMeshes])).toEqual([]);
         // Mesh 4 was already loaded and thus can be locally merged -> not reloaded from backend
         expect([...addedMeshes]).toEqual([]);
         expect(sortBy([...meshTracker.getMeshInfos().locallyMergedIntoIds])).toEqual([1n]);
@@ -536,8 +535,14 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         loadedMeshIds: loadedMeshIdsAfterMerge,
       } = meshTracker.getMeshInfos();
       expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1n, 6n, 1339n]);
-      expect(sortBy([...removedMeshes])).toEqual([1n, 4n, 1339n]);
+      // The interfering split renumbers the merge's source position onto new id 1339 (instead of
+      // 1) before the merge is applied. Agglomerate 4 was already loaded, so merging it into 1339
+      // is spliced locally instead of reloading it - only 1 (reloaded because of the unrelated
+      // split leftover sharing its old id - see detectMergeAndSplitChanges's known limitation) and
+      // 1339 (the split's other new id) go through a real remove+reload.
+      expect(sortBy([...removedMeshes])).toEqual([1n, 1339n]);
       expect(sortBy([...addedMeshes])).toEqual([1n, 1339n]);
+      expect(sortBy([...meshTracker.getMeshInfos().locallyMergedIntoIds])).toEqual([1339n]);
       yield* meshTracker.cleanUp();
       yield expectSegmentList(tracingId, [
         {
@@ -866,8 +871,26 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* task() {
+      // Registered right after the initial meshes are loaded but before the merge itself is
+      // triggered (via performMergeTreesProofreading's afterLoadingMeshes hook), so the initial
+      // load's own FINISHED_LOADING_MESH events aren't mistaken for the merge settling below, and
+      // so the merge's own settle event - which can fire (via a local splice) before
+      // performMergeTreesProofreading's own operationFinished signal returns, since
+      // scheduleMeshUpdate spawns the mesh sync detached rather than waiting for it - isn't missed
+      // by a plain take() placed after the call returns.
+      let meshTracker:
+        | (ReturnType<typeof trackMeshes> extends Generator<any, infer R, any> ? R : never)
+        | undefined;
       const shouldSaveAfterLoadingTrees = false;
-      yield performMergeTreesProofreading(context, shouldSaveAfterLoadingTrees, true);
+      yield* performMergeTreesProofreading(
+        context,
+        shouldSaveAfterLoadingTrees,
+        true,
+        function* (): Saga<void> {
+          meshTracker = yield* trackMeshes(context, tracingId);
+        },
+      );
+      if (!meshTracker) throw new Error("meshTracker was not initialized");
 
       const finalMapping = yield* select(
         (state) =>
@@ -885,17 +908,14 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         ]),
       );
 
-      // The merge settles either via a fresh reload (FINISHED_LOADING_MESH) or,
-      // if the meshes are merged locally (MERGE_MESHES).
-      yield take(
-        ((action: Action) =>
-          (action.type === "FINISHED_LOADING_MESH" && action.segmentId === 1n) ||
-          (action.type === "MERGE_MESHES" && action.newSegmentId === 1n)) as ActionPattern,
-      );
+      // One settle event for the foreign merge (5<-6, folded into agglomerate 4) and one for the
+      // local tree merge (agglomerate 4 into 1).
+      yield* meshTracker.consumeFinishedLoadingActions(2);
 
       // Then check auxiliary meshes.
       const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context, tracingId);
       expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1n]);
+      yield* meshTracker.cleanUp();
       yield expectSegmentList(tracingId, [
         {
           id: 1n,

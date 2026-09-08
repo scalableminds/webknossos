@@ -80,17 +80,22 @@ case class FullAxisOrder(axes: Seq[Axis]) {
   lazy val arrayFToWkFPermutation: Array[Int] = arrayToWkPermutation.reverse.map(elem => rank - 1 - elem)
   lazy val arrayCToWkFPermutation: Array[Int] = arrayToWkPermutation.reverse
 
-  // wkToArrayPermutation(physicalIndex) gives the wk slot for that physical/array index —
+  // wkToArrayPermutation(physicalIndex) gives the wk slot for that physical/array index,
   // the inverse of arrayToWkPermutation(wkSlot), which gives the physical index for a wk slot.
-  // Not private: also used to look up an additional axis's (or the channel axis's) wk slot from
-  // its declared physical index (see DatasetArray.constructOffsetAndShapeArrays).
-  lazy val wkToArrayPermutation: Array[Int] = {
+  private lazy val wkToArrayPermutation: Array[Int] = {
     val permutationMutable: Array[Int] = Array.fill(arrayToWkPermutation.length)(0)
     arrayToWkPermutation.zipWithIndex.foreach { case (p, i) =>
       permutationMutable(p) = i
     }
     permutationMutable
   }
+
+  // Scalar counterparts to the permutation arrays above, for looking up a single axis's slot
+  // (e.g. the channel axis, or one additional axis) rather than reordering a whole rank-length
+  // tuple. Prefer these over indexing arrayToWkPermutation/wkToArrayPermutation directly, since
+  // their names read backwards for single-index lookups (see DatasetArray.constructOffsetAndShapeArrays).
+  def wkSlotOfPhysicalIndex(physicalIndex: Int): Int = wkToArrayPermutation(physicalIndex)
+  def physicalIndexOfWkSlot(wkSlot: Int): Int = arrayToWkPermutation(wkSlot)
 
   def permuteIndicesWkToArray(indices: Array[Int]): Array[Int] =
     wkToArrayPermutation.map(indices(_))

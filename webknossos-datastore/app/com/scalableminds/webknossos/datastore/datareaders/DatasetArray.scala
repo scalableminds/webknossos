@@ -100,11 +100,9 @@ class DatasetArray(
     shapeArray(rank - 1) = shapeXYZ.z
 
     axisOrder.c.foreach { channelAxisInner =>
-      // channelAxisInner is a physical/array index (see AxisOrder); wkToArrayPermutation (despite
-      // its name) is the physIndex -> wkSlot lookup we need here, i.e. the inverse of
-      // arrayToWkPermutation (wkSlot -> physIndex). See the additionalCoordinate case below for
-      // why using arrayToWkPermutation directly here would be a latent bug.
-      val channelAxisOuter = fullAxisOrder.wkToArrayPermutation(channelAxisInner)
+      // channelAxisInner is a physical/array index (see AxisOrder); wkSlotOfPhysicalIndex looks
+      // up its wk slot.
+      val channelAxisOuter = fullAxisOrder.wkSlotOfPhysicalIndex(channelAxisInner)
       // If a channelIndex is requested, and a channel axis is known, add an offset to the channel axis
       channelIndex.foreach { requestedChannelOffset =>
         offsetArray(channelAxisOuter) = requestedChannelOffset
@@ -117,14 +115,13 @@ class DatasetArray(
 
     additionalCoordinatesOpt.foreach { additionalCoordinates =>
       for (additionalCoordinate <- additionalCoordinates) {
-        // additionalAxesMap(...).index is a physical/array index; wkToArrayPermutation (despite
-        // its name) is the physIndex -> wkSlot lookup we need here, i.e. the inverse of
-        // arrayToWkPermutation (wkSlot -> physIndex). Using arrayToWkPermutation directly here
-        // was a latent bug: it only coincidentally resolved to the right slot for axis layouts
-        // where the two permutations happen to agree (true for most datasets seen so far, but
-        // not in general) — e.g. it mis-set the wrong axis's offset for a dataset with a real
-        // (non-synthetic) z axis and an additional axis declared after x/y/z.
-        val index = fullAxisOrder.wkToArrayPermutation(additionalAxesMap(additionalCoordinate.name).index)
+        // additionalAxesMap(...).index is a physical/array index; wkSlotOfPhysicalIndex looks up
+        // its wk slot. (Using arrayToWkPermutation directly here used to be a latent bug: it only
+        // coincidentally resolved to the right slot for axis layouts where the two permutations
+        // happen to agree — true for most datasets seen so far, but not in general — e.g. it
+        // mis-set the wrong axis's offset for a dataset with a real (non-synthetic) z axis and an
+        // additional axis declared after x/y/z.)
+        val index = fullAxisOrder.wkSlotOfPhysicalIndex(additionalAxesMap(additionalCoordinate.name).index)
         offsetArray(index) = additionalCoordinate.value
         // shapeArray at positions of additional coordinates is always 1
       }
